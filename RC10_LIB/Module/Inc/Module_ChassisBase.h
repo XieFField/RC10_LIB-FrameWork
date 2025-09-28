@@ -93,6 +93,9 @@ protected:
     Robot_Twist robot_target_twist_ = {0}; // 机器人坐标系目标速度
     Robot_Twist world_target_twist_ = {0}; // 世界坐标系目标速度
 
+    Robot_Twist robot_twistByCalc_ = {0}; // 正解算出的机器人坐标系当前速度
+    Robot_Twist world_twistByCalc_ = {0}; // 正解算出的世界坐标系当前速度
+
     Angle_Twist angle_twist_ = {0}; // 从传感器得到的角速度、角度数据
 
     
@@ -107,7 +110,7 @@ protected:
     // 时间戳，用于加速度斜坡
     float last_update_time_s_ = 0.0f; //单位：秒
 
-    float wheele_target_rpm_[WheelCount] = {0}; // 存储逆解算出的各轮目标RPM
+    float wheel_target_rpm_[WheelCount] = {0}; // 存储逆解算出的各轮目标RPM
 
     Motor_Base* wheels_[WheelCount] = {nullptr}; // 轮子电机指针数组
     float dt_ = 0.0f; //更新时间差

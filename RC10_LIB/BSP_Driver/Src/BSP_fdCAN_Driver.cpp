@@ -10,7 +10,8 @@ static fdCANbus* g_fdcan_bus_map[3] = {nullptr, nullptr, nullptr};
  */
 void register_fdcan_bus_for_isr(fdCANbus* bus) 
 {
-    if(!bus) return;
+    if(!bus) 
+        return;
     FDCAN_HandleTypeDef* h = bus->getFDCANHandle();
     if(h == &hfdcan1)       
         g_fdcan_bus_map[0] = bus;

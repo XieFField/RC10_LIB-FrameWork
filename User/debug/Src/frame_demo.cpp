@@ -6,23 +6,23 @@ M3508 m3508_1(7, CAN1_Bus);
 
 //目前不错的参数 by XieFField
 PID_Param_Config m3508_speed_pid_params = {
-    .kp = 18.0f,
-    .ki = 0.015f,
+    .kp = 32.0f,
+    .ki = 0.085f,
     .kd = 0.0f,
     .I_Outlimit = 8000.0f, 
     .isIOutlimit = true, 
     .output_limit = 15000.0f,   
-    .deadband = 5.0f 
+    .deadband = 0.5f 
 };
 
 PID_Param_Config m3508_angle_pid_params = {
-    .kp = 30.0f,
+    .kp = 32.0f,
     .ki = 0.0f,
     .kd = 1.1f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
     .output_limit = 400.0f,   
-    .deadband = 0.8f // 
+    .deadband = 0.5f // 
 };
 
 
@@ -45,7 +45,7 @@ void DJI_MotorDemo::init()
     start_signal = 0;
     start(osPriorityNormal, 256);
 }
-
+int cnt = 0;
 void DJI_MotorDemo::loop()
 {
     // 任务循环
@@ -61,45 +61,38 @@ void DJI_MotorDemo::loop()
         m3508_1.setTargetCurrent(1000);
 
     else if(start_signal == 2)
-    {
         m3508_1.setTargetRPM(100);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getRPM(), m3508_1.getTargetRPM());
-    }
     else if(start_signal == 3)
-    {
         m3508_1.setTargetRPM(-100);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getRPM(), m3508_1.getTargetRPM());
-    }
+
     else if(start_signal == 4)
         m3508_1.setTargetRPM(0);
+
     else if(start_signal == 5)
-    {
         m3508_1.setTargetAngle(90.0f);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getAngle(), m3508_1.getTargetAngle());
-    }
+
     else if(start_signal == 6)
-    {
-        m3508_1.setTargetAngle(-90.0f);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getAngle(), m3508_1.getTargetAngle());
-    }
+        m3508_1.setTargetAngle(270.0f);
+
     else if(start_signal == 7)
-    {
         m3508_1.setTargetAngle(0.0f);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getAngle(), m3508_1.getTargetAngle());
-    }
+
     else if(start_signal == 8)
-    {
         m3508_1.setTargetTotalAngle(720.0f);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getTotalAngle(), m3508_1.getTargetTotalAngle());
-    }
+    
     else if(start_signal == 9)
-    {
         m3508_1.setTargetTotalAngle(-720.0f);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getTotalAngle(), m3508_1.getTargetTotalAngle());
-    }
+    
     else
         m3508_1.setTargetCurrent(0);
-
+    cnt++;
+    if(cnt > 3)
+    {
+        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getTotalAngle(), m3508_1.getTargetTotalAngle());
+        cnt= 0;
+    }
+    
+    
 }
 
 
