@@ -109,6 +109,10 @@
     "stdexcept": "cpp",
     "streambuf": "cpp",
     "cmsis_os.h": "c",
-    "setup_configinit.h": "c"
-  }
+    "setup_configinit.h": "c",
+    "motor_go.h": "c"
+  },
+  "C_Cpp.errorSquiggles": "disabled",
+  "files.encoding": "gb2312",
+
 }
