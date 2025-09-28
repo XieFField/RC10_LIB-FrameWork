@@ -1,8 +1,8 @@
 #include "frame_demo.h"
 
-fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1, 1); // 获取FDCAN1的唯一实例
-DJI_Group GroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4号M3508/M2006电机
-M3508 m3508_1(1, CAN1_Bus);
+fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
+DJI_Group GroupCAN1_Low(send_idHigh(), CAN1_Bus); // 1~4号M3508/M2006电机
+M3508 m3508_1(7, CAN1_Bus);
 
 //目前不错的参数 by XieFField
 PID_Param_Config m3508_speed_pid_params = {

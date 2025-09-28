@@ -10,9 +10,14 @@ static fdCANbus* g_fdcan_bus_map[3] = {nullptr, nullptr, nullptr};
  */
 void register_fdcan_bus_for_isr(fdCANbus* bus) 
 {
-    if (bus && bus->getbusID() > 0 && bus->getbusID() <= 3) 
-        g_fdcan_bus_map[bus->getbusID() - 1] = bus;
-    
+    if(!bus) return;
+    FDCAN_HandleTypeDef* h = bus->getFDCANHandle();
+    if(h == &hfdcan1)       
+        g_fdcan_bus_map[0] = bus;
+    else if(h == &hfdcan2)  
+        g_fdcan_bus_map[1] = bus;
+    else if(h == &hfdcan3)  
+        g_fdcan_bus_map[2] = bus;
 }
 
 
@@ -275,29 +280,41 @@ extern "C" void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t 
   }
 }
 
-fdCANbus* fdCANbus::getInstance(FDCAN_HandleTypeDef* hfdcan, uint8_t bus_id)
+fdCANbus* fdCANbus::getInstance(FDCAN_HandleTypeDef* hfdcan)
 {
 
     // 为每个CAN总线定义一个静态的、在函数内初始化的实例。
     // 它们在第一次被调用时才会被创建，且存储在静态数据区，而非堆上。
-    static fdCANbus instance1(&hfdcan1, 1);
-    static fdCANbus instance2(&hfdcan2, 2);
-    static fdCANbus instance3(&hfdcan3, 3);
+    static fdCANbus instance1(&hfdcan1);
+    static fdCANbus instance2(&hfdcan2);
+    static fdCANbus instance3(&hfdcan3);
 
     
-    if(hfdcan == &hfdcan1)
-        return &instance1;
-    else if(hfdcan == &hfdcan2)
-        return &instance2;
-    else if(hfdcan == &hfdcan3)
-        return &instance3;
-    else
-        return nullptr; // 不支持的 FDCAN 句柄
+    fdCANbus* inst = nullptr;
+    if(hfdcan == &hfdcan1) 
+        inst = &instance1;
+    else if(hfdcan == &hfdcan2) 
+        inst = &instance2;
+    else if(hfdcan == &hfdcan3) 
+        inst = &instance3;
+    else 
+        return nullptr;
+
+    if(inst)
+    {
+        if(hfdcan == &hfdcan1 && g_fdcan_bus_map[0] != inst) 
+            g_fdcan_bus_map[0] = inst;
+        if(hfdcan == &hfdcan2 && g_fdcan_bus_map[1] != inst) 
+            g_fdcan_bus_map[1] = inst;
+        if(hfdcan == &hfdcan3 && g_fdcan_bus_map[2] != inst) 
+            g_fdcan_bus_map[2] = inst;
+    }
+
+    return inst;
 }
 
-fdCANbus::fdCANbus(FDCAN_HandleTypeDef* hfdcan, uint32_t bus_id)
+fdCANbus::fdCANbus(FDCAN_HandleTypeDef* hfdcan)
     : hfdcan_(hfdcan),
-      bus_id_(bus_id),
       rxQueue_(64),
       rxTask_(this),
       schedulerTask_(this)

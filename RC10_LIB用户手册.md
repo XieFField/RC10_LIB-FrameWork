@@ -320,9 +320,12 @@ void MecanumChassis::forwardKinematics() {
 #include "BSP_IMU.h" // 假设你有一个IMU模块
 
 // --- 全局对象定义 ---
-fdCANbus CAN1_Bus(&hfdcan1, 1);
-M3508 wheel_motors[4] = { M3508(1, &CAN1_Bus), M3508(2, &CAN1_Bus), M3508(3, &CAN1_Bus), M3508(4, &CAN1_Bus) };
-DJI_Group DJI_Group_1(0x200, &CAN1_Bus);
+// 【修改】通过 getInstance 获取 CAN 总线的唯一实例指针
+fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1, 1);
+
+// 【保持不变】静态创建电机和底盘对象
+M3508 wheel_motors[4] = { M3508(1, CAN1_Bus), M3508(2, CAN1_Bus), M3508(3, CAN1_Bus), M3508(4, CAN1_Bus) };
+DJI_Group DJI_Group_1(0x200, CAN1_Bus);
 MecanumChassis my_chassis(0.076f, 450.0f, 0.2f, 0.25f); // 轮半径, 最大RPM, x间距, y间距
 IMU_Class my_imu; // 假设的IMU对象
 
@@ -332,10 +335,11 @@ void user_setup() {
     for (int i = 0; i < 4; ++i) {
         wheel_motors[i].pid_init(/* ... */);
         DJI_Group_1.addMotor(&wheel_motors[i]);
-        CAN1_Bus.registerMotor(&wheel_motors[i]);
+        // 【修改】注册电机时，使用 CAN1_Bus 指针
+        CAN1_Bus->registerMotor(&wheel_motors[i]);
     }
-    CAN1_Bus.registerMotor(&DJI_Group_1);
-    CAN1_Bus.init();
+    CAN1_Bus->registerMotor(&DJI_Group_1);
+    CAN1_Bus->init();
 
     // 2. 注册轮子到机箱模型
     // 注意轮子顺序要与你的运动学模型一致
@@ -443,10 +447,12 @@ protected:
 #include "Motor_DJI.h"
 
 // 1. 定义全局对象
-// 注意：这里直接定义对象，而不是指针，以避免动态内存分配
-fdCANbus CAN1_Bus(&hfdcan1, 1); // CAN总线
-M3508 m3508_1(1, &CAN1_Bus);     // M3508电机, ID为1
-DJI_Group DJI_Group_1(0x200, &CAN1_Bus); // DJI电机组, 发送ID为0x200
+// 【修改】不再直接定义 fdCANbus 对象，而是通过 getInstance 获取其唯一实例的指针
+fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1, 1);
+
+// 【保持不变】静态创建电机和电机组对象，并将 CAN1_Bus 指针传递给它们
+M3508 m3508_1(1, CAN1_Bus);     // M3508电机, ID为1
+DJI_Group DJI_Group_1(0x200, CAN1_Bus); // DJI电机组, 发送ID为0x200
 
 // 2. 创建一个初始化函数
 void user_setup()
@@ -473,14 +479,16 @@ void user_setup()
     // DJI_Group_1.addMotor(&another_motor);
 
     // 【重要】将电机本身和电机组都注册到CAN总线
+    // 【修改】通过 CAN1_Bus 指针调用 registerMotor
     // 1. 注册电机本身，使其能接收反馈报文并更新状态
-    CAN1_Bus.registerMotor(&m3508_1);
+    CAN1_Bus->registerMotor(&m3508_1);
     // 2. 注册电机组，使其能被调度器调用 packCommand() 来打包发送电流指令
-    CAN1_Bus.registerMotor(&DJI_Group_1);
+    CAN1_Bus->registerMotor(&DJI_Group_1);
 
     // --- 启动总线 ---
+    // 【修改】通过 CAN1_Bus 指针调用 init
     // 这会启动CAN的接收中断和1kHz的调度任务
-    CAN1_Bus.init();
+    CAN1_Bus->init();
 }
 
 // 在 main() 函数中调用

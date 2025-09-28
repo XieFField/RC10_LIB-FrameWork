@@ -65,7 +65,7 @@ private:
     /**
      *  @brief 构造函数，私有化，使用 getInstance() 获取实例
      */
-    fdCANbus(FDCAN_HandleTypeDef* hfdcan, uint32_t bus_id);
+    fdCANbus(FDCAN_HandleTypeDef* hfdcan);
 
     ~fdCANbus() = default;
 
@@ -78,10 +78,9 @@ public:
     /**
      * @brief 获取或创建fdCANbus的唯一实例
      * @param hfdcan FDCAN硬件句柄，如 &hfdcan1
-     * @param can_id CAN总线的ID (1, 2, 或 3)
      * @return 指向对应硬件的fdCANbus唯一实例的指针
      */
-    static fdCANbus* getInstance(FDCAN_HandleTypeDef* hfdcan, uint8_t bus_id);
+    static fdCANbus* getInstance(FDCAN_HandleTypeDef* hfdcan);
 
     // 最大电机数（每路）
     static constexpr size_t MAX_MOTORS = 8;
@@ -112,7 +111,7 @@ public:
      */
     bool pushRxFromISR(const CanFrame& cf, BaseType_t* pxHigherPriorityTaskWoken);
 
-    uint8_t getbusID() const{return bus_id_;}
+
 
     // 在中断/ISR 中调用，唤醒该 fdCANbus 的 scheduler task
     // pxHigherPriorityTaskWoken 可以从 ISR 传入并用于 portYIELD_FROM_ISR
@@ -126,7 +125,7 @@ public:
 protected:
     
     FDCAN_HandleTypeDef* hfdcan_; //protected character
-    uint32_t bus_id_;
+
 
     /**
      * @brief Rx任务主体
