@@ -61,8 +61,8 @@ void Chassis_Base<WheelCount>::update()
 
     for(std::size_t i = 0; i < WheelCount; i++)
     {
-        constrain(wheel_target_rpm_[i], -max_wheel_rpm_, max_wheel_rpm_); //оч╥Ы
+        constrain(wheele_target_rpm_[i], -max_wheel_rpm_, max_wheel_rpm_); //оч╥Ы
         if(wheels_[i] != nullptr)
-            wheels_[i]->setTargetRPM(wheel_target_rpm_[i]);
+            wheels_[i]->setTargetRPM(wheele_target_rpm_[i]);
     }
 }

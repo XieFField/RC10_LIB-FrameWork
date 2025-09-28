@@ -107,8 +107,6 @@
     "ostream": "cpp",
     "sstream": "cpp",
     "stdexcept": "cpp",
-    "streambuf": "cpp",
-    "cmsis_os.h": "c",
-    "setup_configinit.h": "c"
+    "streambuf": "cpp"
   }
 }

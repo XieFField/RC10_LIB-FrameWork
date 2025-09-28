@@ -83,7 +83,7 @@ public:
             if(cf.ID < (0x200 + 1) || cf.ID > (0x200 + 8))
                 return false; // 非法ID
 
-            else if(cf.ID >= (0x200 + 1) && cf.ID <= (0x200 + 8))
+            else if(cf.ID >= (0x200 + 1) && cf.ID < (0x200 + 8))
                 return (cf.ID == (0x200 + motor_id_));
 
             else
@@ -184,8 +184,6 @@ private:
     uint8_t motor_count_ = 0;
 
     bool containsGM6020 = false; //是否包含GM6020, M3508/M2006不和GM6020混用
-
-    int calcSlot(uint32_t motorID, DJI_MotorType type) const; // 计算槽位
 };
 
 #define M3508_DECRATION 19.2032f //减速比
