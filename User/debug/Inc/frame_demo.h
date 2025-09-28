@@ -32,22 +32,8 @@ extern "C"
 #include "BSP_TimeStamp.h"
 #include "Module_ChassisBase.h"
 #include "Module_Air_joy.h"
-class FrameDemo : public RtosTask
-{
-public:
-    FrameDemo() : RtosTask("FrameDemo", 1) {}
-    void init();
-    void loop() override;
-    
-};
 
-class CanTest : public fdCANbus
-{
-public:
-    CanTest(FDCAN_HandleTypeDef* hfdcan, uint32_t bus_id) : fdCANbus(hfdcan, bus_id) {}
-    ~CanTest(){}
-    
-};
+
 
 
 class DJI_MotorDemo: public RtosTask{
@@ -56,7 +42,9 @@ public:
     void init();
     void loop() override;
     Debug_Printf debug_uart;
+
 private:
+    
 };
 
 

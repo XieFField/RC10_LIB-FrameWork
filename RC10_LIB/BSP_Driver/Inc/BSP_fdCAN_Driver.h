@@ -26,7 +26,7 @@
 extern "C" 
 {
     #include "fdcan.h"
-    #include<cstdint>
+    
     #include "stm32h7xx_hal.h"
     #include "cmsis_os.h"
     #include "BSP_CanFrame.h"
@@ -37,6 +37,9 @@ extern "C"
 #include "BSP_RTOS.h"
 #include "Motor_Base.h" 
 #include <cstring>
+#include<cstdint>
+
+
 
     class Motor_Base; // 前置声明
 
@@ -48,6 +51,7 @@ extern "C"
   * - rxTask_ 负责从 rxQueue_ pop 并分发给 motor -> motor->updateFeedback()
   * - schedulerTask_ 每 1ms 调度 motorList，收集 packCommand() 并调用 sendFrame()，从而实现1kHz的发送频率
   * - 哈基米
+  * - 你将无法重复创建fdCAN实例，后续将只能
   * @attention 此类不做任何具体的报文解析，全部交给电机类
  */
 class fdCANbus;
@@ -56,27 +60,33 @@ extern "C" void fdcan_global_rx_isr(FDCAN_HandleTypeDef* hfdcan);
 extern "C" void fdcan_global_scheduler_tick_isr();
 
 class fdCANbus{
+
+private:
+    /**
+     *  @brief 构造函数，私有化，使用 getInstance() 获取实例
+     */
+    fdCANbus(FDCAN_HandleTypeDef* hfdcan, uint32_t bus_id);
+
+    ~fdCANbus() = default;
+
+    // 禁用拷贝构造和赋值操作，确保唯一性
+    fdCANbus(const fdCANbus&) = delete;
+    fdCANbus& operator=(const fdCANbus&) = delete;
+
 public:
+
+    /**
+     * @brief 获取或创建fdCANbus的唯一实例
+     * @param hfdcan FDCAN硬件句柄，如 &hfdcan1
+     * @param can_id CAN总线的ID (1, 2, 或 3)
+     * @return 指向对应硬件的fdCANbus唯一实例的指针
+     */
+    static fdCANbus* getInstance(FDCAN_HandleTypeDef* hfdcan, uint8_t bus_id);
+
     // 最大电机数（每路）
     static constexpr size_t MAX_MOTORS = 8;
 
-    fdCANbus(FDCAN_HandleTypeDef* hfdcan, uint32_t bus_id): hfdcan_(hfdcan)
-    , bus_id_(bus_id)
-    , rxQueue_(64)                // 队列长度可调整
-    , rxTask_(this)
-    , schedulerTask_(this)
-    {
-        for (std::size_t i = 0; i < MAX_MOTORS; ++i) 
-            motorList_[i] = nullptr;
-
-        tx_mutex_ = xSemaphoreCreateMutex(); //创建互斥锁
-        schedSem_ = xSemaphoreCreateBinary();
-    }
-
-    ~fdCANbus()
-    {
-        // 任务删除通常在系统停机，不在析构里自动删除
-    }
+    
 
     /**
      * @brief 初始化 (滤波/中断/启动任务)

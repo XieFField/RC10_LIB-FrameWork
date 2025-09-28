@@ -274,3 +274,39 @@ extern "C" void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t 
     fdcan_global_rx_isr(hfdcan);
   }
 }
+
+fdCANbus* fdCANbus::getInstance(FDCAN_HandleTypeDef* hfdcan, uint8_t bus_id)
+{
+
+    // 为每个CAN总线定义一个静态的、在函数内初始化的实例。
+    // 它们在第一次被调用时才会被创建，且存储在静态数据区，而非堆上。
+    static fdCANbus instance1(&hfdcan1, 1);
+    static fdCANbus instance2(&hfdcan2, 2);
+    static fdCANbus instance3(&hfdcan3, 3);
+
+    
+    if(hfdcan == &hfdcan1)
+        return &instance1;
+    else if(hfdcan == &hfdcan2)
+        return &instance2;
+    else if(hfdcan == &hfdcan3)
+        return &instance3;
+    else
+        return nullptr; // 不支持的 FDCAN 句柄
+}
+
+fdCANbus::fdCANbus(FDCAN_HandleTypeDef* hfdcan, uint32_t bus_id)
+    : hfdcan_(hfdcan),
+      bus_id_(bus_id),
+      rxQueue_(64),
+      rxTask_(this),
+      schedulerTask_(this)
+{
+    for (std::size_t i = 0; i < MAX_MOTORS; ++i) 
+            motorList_[i] = nullptr;
+
+        tx_mutex_ = xSemaphoreCreateMutex(); //创建互斥锁
+        schedSem_ = xSemaphoreCreateBinary(); //创建二值信号量
+}
+
+

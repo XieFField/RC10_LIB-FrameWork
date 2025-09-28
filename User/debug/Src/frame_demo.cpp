@@ -1,8 +1,8 @@
 #include "frame_demo.h"
 
-fdCANbus CAN1_Bus(&hfdcan2, 1); // CAN1
-DJI_Group DJI_Group_1(send_idHigh(), &CAN1_Bus); // 低片 0x200
-M3508 m3508_1(7, &CAN1_Bus);
+fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1, 1); // 获取FDCAN1的唯一实例
+DJI_Group GroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4号M3508/M2006电机
+M3508 m3508_1(1, CAN1_Bus);
 
 //目前不错的参数 by XieFField
 PID_Param_Config m3508_speed_pid_params = {
@@ -29,20 +29,26 @@ PID_Param_Config m3508_angle_pid_params = {
 // 使用 volatile 防止编译器优化，确保在调试时可以观察到值的变化
 volatile int counter = 0;
 volatile uint8_t start_signal = 0;
-void FrameDemo::loop()
-{
 
-}
-
-void FrameDemo::init()
-{
-    start(osPriorityNormal, 256);
-}
 volatile int a = 0;
 volatile float delta_time = 0.0f; //目前使用的单位是微秒
 volatile uint64_t last_time = 0;
+
+
+void DJI_MotorDemo::init()
+{
+    GroupCAN1_Low.addMotor(&m3508_1);
+    CAN1_Bus->registerMotor(&GroupCAN1_Low);
+    CAN1_Bus->registerMotor(&m3508_1);
+    CAN1_Bus->init();
+    m3508_1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
+    start_signal = 0;
+    start(osPriorityNormal, 256);
+}
+
 void DJI_MotorDemo::loop()
 {
+    // 任务循环
     uint64_t time_now = TimeStamp::getInstance().getMicroseconds();
     if(last_time > 0)
     {
@@ -50,83 +56,50 @@ void DJI_MotorDemo::loop()
         // 可以在这里使用 delta_time 进行其他计算
     }
     last_time = time_now;
-    debug_uart.printf_DMA("%f,%f\r\n",m3508_1.getTotalAngle(), m3508_1.getTargetTotalAngle());
-    //HAL_UART_Transmit(&huart1, (uint8_t*)"Tick\r\n", 6, HAL_MAX_DELAY);
+
     if(start_signal == 1)
-    {
-        m3508_1.setTargetCurrent(500.0f);
-    }
-    else if(start_signal == 0)
-    {
-        m3508_1.setTargetCurrent(0.0f);
-    }
+        m3508_1.setTargetCurrent(1000);
+
     else if(start_signal == 2)
     {
-        m3508_1.setTargetCurrent(-500.0f);
+        m3508_1.setTargetRPM(100);
+        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getRPM(), m3508_1.getTargetRPM());
     }
-    else if (start_signal == 3)
+    else if(start_signal == 3)
     {
-        /* code */
-        m3508_1.setTargetRPM(60.0f);
+        m3508_1.setTargetRPM(-100);
+        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getRPM(), m3508_1.getTargetRPM());
     }
-    else if (start_signal == 4)
+    else if(start_signal == 4)
+        m3508_1.setTargetRPM(0);
+    else if(start_signal == 5)
     {
-        /* code */
-        m3508_1.setTargetRPM(-60.0f);
+        m3508_1.setTargetAngle(90.0f);
+        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getAngle(), m3508_1.getTargetAngle());
     }
-    else if (start_signal == 5)
+    else if(start_signal == 6)
     {
-        /* code */
-        m3508_1.setTargetAngle(180.0f);
+        m3508_1.setTargetAngle(-90.0f);
+        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getAngle(), m3508_1.getTargetAngle());
     }
-    else if (start_signal == 6)
+    else if(start_signal == 7)
     {
-        /* code */
-        m3508_1.setTargetAngle(-180.0f);
+        m3508_1.setTargetAngle(0.0f);
+        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getAngle(), m3508_1.getTargetAngle());
     }
-    else if (start_signal == 7)
+    else if(start_signal == 8)
     {
-        /* code */
         m3508_1.setTargetTotalAngle(720.0f);
-    }
-    else if (start_signal == 8)
-    {
-        /* code */
-        m3508_1.setTargetTotalAngle(-720.0f);
+        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getTotalAngle(), m3508_1.getTargetTotalAngle());
     }
     else if(start_signal == 9)
     {
-        m3508_1.setTargetRPM(0.0f);
+        m3508_1.setTargetTotalAngle(-720.0f);
+        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getTotalAngle(), m3508_1.getTargetTotalAngle());
     }
     else
-    {
-        m3508_1.setTargetCurrent(0.0f);
-    }
+        m3508_1.setTargetCurrent(0);
 
-    if(air_joy.LEFT_X >= 1000 && air_joy.LEFT_X < 1400)
-    {
-        a = 1;
-    }
-    else if(air_joy.LEFT_X >= 1450 && air_joy.LEFT_X < 1550)
-    {
-        a = 100;
-    }
 }
-
-void DJI_MotorDemo::init()
-{
-    DJI_Group_1.addMotor(&m3508_1);
-    CAN1_Bus.registerMotor(&m3508_1); // 注册电机本身
-    CAN1_Bus.registerMotor(&DJI_Group_1); // 同时注册Group用于发送
-    m3508_1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-    CAN1_Bus.init();
-    start(osPriorityNormal, 256);
-    
-    const char *msg = "Hello UART1 on PB6/PB7\r\n";
-    HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-    
-    
-}
-
 
 
