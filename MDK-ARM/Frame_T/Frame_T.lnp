@@ -54,6 +54,7 @@
 "frame_t\app_pid.o"
 "frame_t\app_tool.o"
 "frame_t\app_coordconvert.o"
+"frame_t\app_speedplanner.o"
 "frame_t\module_encoder.o"
 "frame_t\module_chassisbase.o"
 "frame_t\module_air_joy.o"
