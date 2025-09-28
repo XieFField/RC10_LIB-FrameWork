@@ -58,3 +58,5 @@
 /MDK-ARM/Frame_T/usart.o
 /MDK-ARM/RTE/Device/STM32H723ZGTx/STM32H723_725_730_733_735.dbgconf.update@1.0.2
 /MDK-ARM/RTE/_Frame_T/RTE_Components.h
+/.vs/RC10_LIB-FrameWork
+/.vs
