@@ -92,20 +92,26 @@ public:
      */
     void updateFeedback(const CanFrame& cf) override;
 
+    /**
+     * @brief 读取电机当前模式
+     */
+    void readKposAndKspd();
+
 private:
     enum class Motor_Mode : uint8_t
     {
-        DEFAULT = 0,
-        FOC = 1,
-        CALIBRATION = 2,
+        DEFAULT = 0, // 锁定
+        FOC = 1, // FOC闭环
+        CALIBRATION = 2, // 编码器校准
     };
 
     enum class Motor_Control_Mode : uint8_t
     {
-        MODE_1 = 0, // 每控制一次电机CAN就返回一次电机数据，高频率下会导致can总线占满
-        MODE_2 = 1, // 每控制一次电机CAN不返回电机数据除非电机报错，报错时会返回电机数据，用户需要电机数据时需要发送问答命令，电机将返回最后一次通讯时保留的数据
-        MODE_3 = 2, // 设置kpos和kspd
-        MODE_4 = 3, // 读取kpos和kspd
+        MODE_10 = 10, // 每控制一次电机CAN就返回一次电机数据，高频率下会导致can总线占满
+        MODE_11 = 11, // 设置kpos和kspd
+        MODE_12 = 12, // 读取kpos和kspd
+        MODE_13 = 13, // 每控制一次电机CAN不返回电机数据除非电机报错，报错时会返回电机数据，用户需要电机数据时需要发送问答命令，电机将返回最后一次通讯时保留的数据
+        MODE_2 = 2, // 发送读取命令（控制模式12）可回读对应ID电机设置的KposKspd(返回内容:2)
     };
 
     typedef struct CAN_extended_id_s
@@ -116,7 +122,7 @@ private:
         unsigned int low_3 : 8;   // 8位：低位3
         unsigned int low_2 : 8;   // 8位：低位2
         unsigned int low_1 : 8;   // 8位：低位1
-        unsigned int reserved : 3;   // 2位：保留位
+        unsigned int reserved : 3;   // 3位：填充补全位，将29位的CAN ID段补全为32位
     } CAN_extended_id_t;
 
     typedef struct CAN_data_s
@@ -132,6 +138,7 @@ private:
     } CAN_data_t;
 
     Motor_Mode motor_mode_ = Motor_Mode::DEFAULT;
+    Motor_Control_Mode motor_control_mode_ = Motor_Control_Mode::MODE_13; // 默认模式13
 
 
     float kp_ = 0.f; // 电机刚度系数/位置误差比例系数（输入）
@@ -148,6 +155,9 @@ private:
     float current_angle_ = 0.f; // 当前输出轴角度
     float current_rpm_ = 0.f; // 当前输出轴转速
     float current_torque_ = 0.f; // 当前输出轴转矩
+
+    float current_atm_ = 0.f; // 当前气压
+    int8_t current_motor_temperature_ = 0; // 当前电机温度
     
 };
 

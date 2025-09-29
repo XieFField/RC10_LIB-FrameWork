@@ -10,5 +10,7 @@ void ALL_Setup_ConfigInit(void)
    dji_motor_demo.init();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
 
+   
+
 }
 

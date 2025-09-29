@@ -11,7 +11,7 @@
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
       <pArmCC>6240000::V6.24::ARMCLANG</pArmCC>
-      <pCCUsed>6230000::V6.23::ARMCLANG</pCCUsed>
+      <pCCUsed>6240000::V6.24::ARMCLANG</pCCUsed>
       <uAC6>1</uAC6>
       <TargetOption>
         <TargetCommonOption>
@@ -955,6 +955,16 @@
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Motor\Src\Motor_VESC.cpp</FilePath>
             </File>
+            <File>
+              <FileName>Motor_GO.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Motor\Inc\Motor_GO.h</FilePath>
+            </File>
+            <File>
+              <FileName>Motor_GO.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Motor\Src\Motor_GO.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -969,6 +979,16 @@
               <FileName>frame_demo.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\debug\Inc\frame_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>Motor_GO_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\Motor_GO_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>Motor_GO_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\Motor_GO_demo.cpp</FilePath>
             </File>
           </Files>
         </Group>
