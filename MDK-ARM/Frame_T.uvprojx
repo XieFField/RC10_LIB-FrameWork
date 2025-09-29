@@ -941,6 +941,11 @@
               <FilePath>..\RC10_LIB\Motor\Src\Motor_DJI.cpp</FilePath>
             </File>
             <File>
+              <FileName>Motor_GO.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Motor\Src\Motor_GO.cpp</FilePath>
+            </File>
+            <File>
               <FileName>Motor_DJI.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Motor\Inc\Motor_DJI.h</FilePath>
@@ -959,11 +964,6 @@
               <FileName>Motor_GO.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Motor\Inc\Motor_GO.h</FilePath>
-            </File>
-            <File>
-              <FileName>Motor_GO.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Motor\Src\Motor_GO.cpp</FilePath>
             </File>
           </Files>
         </Group>

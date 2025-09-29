@@ -36,8 +36,8 @@ bool GO_Motor::matchesFrame(const CanFrame& cf) const
 {
     if(!cf.isextended) 
         return false; // GO电机使用拓展帧
-    if(cf.ID > 15 || cf.ID < 0)
-        return false; // GO电机ID范围为0-15
+    if(!(cf.ID >> 27 < 14 && cf.ID >> 27 >= 0))
+        return false; // GO电机ID范围为0-14
     return true;
 }
 

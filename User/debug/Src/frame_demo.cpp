@@ -116,8 +116,8 @@ void DJI_MotorDemo::loop()
 void DJI_MotorDemo::init()
 {
     DJI_Group_1.addMotor(&m3508_1);
-    CAN1_Bus.registerMotor(&m3508_1); // 注册电机本身
-    CAN1_Bus.registerMotor(&DJI_Group_1); // 同时注册Group用于发送
+//    CAN1_Bus.registerMotor(&m3508_1); // 注册电机本身
+//    CAN1_Bus.registerMotor(&DJI_Group_1); // 同时注册Group用于发送
     m3508_1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
     CAN1_Bus.init();
     start(osPriorityNormal, 256);
