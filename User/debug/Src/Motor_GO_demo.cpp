@@ -5,7 +5,7 @@
 
 extern fdCANbus CAN1_Bus; // CAN1
 
-GO_Motor GO_Motor_1(15, &CAN1_Bus);
+GO_Motor GO_Motor_1(0, &CAN1_Bus);
 
 
 extern volatile uint8_t start_signal;
@@ -36,11 +36,11 @@ void GO_MotorDemo::loop()
     //HAL_UART_Transmit(&huart1, (uint8_t*)"Tick\r\n", 6, HAL_MAX_DELAY);
     if(start_signal == 1)
     {
-        GO_Motor_1.readKposAndKspd();
+        
     }
     else if(start_signal == 0)
     {
-       
+       GO_Motor_1.readKposAndKspd();
     }
     else if(start_signal == 2)
     {

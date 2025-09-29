@@ -4,13 +4,15 @@
 DJI_MotorDemo dji_motor_demo;
 
 
+GO_MotorDemo go_motor_demo;
+
 
 void ALL_Setup_ConfigInit(void)
 {
    dji_motor_demo.init();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
 
-   
+   go_motor_demo.init();  
 
 }
 

@@ -22,6 +22,7 @@ extern "C" {
 
 #ifdef __cplusplus
 #include "frame_demo.h"
+#include "Motor_GO_demo.h"
 #include <cstdint>
 #include "BSP_CANFrame.h"
 #include "BSP_RTOS.h"

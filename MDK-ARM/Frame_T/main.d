@@ -63,4 +63,5 @@ frame_t/main.o: ..\Core\Src\main.cpp ..\Core\Inc\main.h \
   ..\RC10_LIB\Motor\Inc\Motor_VESC.h \
   ..\RC10_LIB\Module\Inc\Module_ChassisBase.h \
   ..\RC10_LIB\Module\Inc\Module_Air_joy.h \
-  ..\User\Setup\Inc\Setup_ConfigInit.h
+  ..\User\Setup\Inc\Setup_ConfigInit.h ..\User\debug\Inc\Motor_GO_demo.h \
+  ..\RC10_LIB\Motor\Inc\Motor_GO.h
