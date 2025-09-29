@@ -55,11 +55,7 @@ public:
 
     void update(); // 更新轮速应用到电机
 
-    virtual void updateKinematics() = 0; // 更新运动学，调用逆解和正解
-
-    virtual void inverseKinematics(const Robot_Twist& twist) = 0; // 逆解，根据目标速度计算轮速
-
-    virtual void forwardKinematics() = 0; // 正解，根据轮速计算机器人速度
+    virtual void updateKinematics() = 0; // 更新运动学，调用逆解
 
 
     void updateAngleData(const Angle_Twist& angle_twist) { angle_twist_ = angle_twist; } // 更新角速度数据
@@ -68,7 +64,7 @@ public:
     {
         if(wheel_index >= WheelCount)
             return 0.0f;
-        return wheele_target_rpm_[wheel_index];
+        return wheel_target_rpm_[wheel_index];
     }
 
     Robot_Twist getRobotSpeed() const { return robot_twist_; } // 获取机器人速度（机器人坐标系）
@@ -93,12 +89,9 @@ protected:
     Robot_Twist robot_target_twist_ = {0}; // 机器人坐标系目标速度
     Robot_Twist world_target_twist_ = {0}; // 世界坐标系目标速度
 
-    Robot_Twist robot_twistByCalc_ = {0}; // 正解算出的机器人坐标系当前速度
-    Robot_Twist world_twistByCalc_ = {0}; // 正解算出的世界坐标系当前速度
-
     Angle_Twist angle_twist_ = {0}; // 从传感器得到的角速度、角度数据
 
-    
+    virtual void inverseKinematics(const Robot_Twist& twist) = 0; // 逆解，根据目标速度计算轮速
 
     bool accel_Limit_ = false; // 是否启用加速度限幅
     float accel_value_ = 0.0f; // 当前线加速度值
@@ -114,6 +107,15 @@ protected:
 
     Motor_Base* wheels_[WheelCount] = {nullptr}; // 轮子电机指针数组
     float dt_ = 0.0f; //更新时间差
+
+    /**
+     * @brief 把轮子线速度转换为电机转轴转速
+     */
+
+    float wheelSpeedToMotorRPM(float wheel_speed)
+    {
+        return (wheel_speed / (2 * PI * wheel_radius_)) * 60.0f;
+    }
 };
 
 #endif // __cplusplus

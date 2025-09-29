@@ -57,6 +57,7 @@
 "frame_t\module_encoder.o"
 "frame_t\module_chassisbase.o"
 "frame_t\module_air_joy.o"
+"frame_t\module_chassisomni.o"
 "..\Drivers\CMSIS\DSP\Lib\ARM\arm_cortexM7lfsp_math.lib"
 "frame_t\usb_device.o"
 "frame_t\usbd_desc.o"

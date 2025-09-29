@@ -50,7 +50,7 @@ void Chassis_Base<WheelCount>::update()
     else
         robot_twist_ = robot_target_twist_;
 
-    updateKinematics(); //调用逆解和正解，更新轮速和机器人速度
+    updateKinematics(); //调用逆解更新机器人速度
 
     // 更新世界坐标系速度
     float cos_yaw = arm_cos_f32(deg_to_rad(angle_twist_.yaw_angle));
