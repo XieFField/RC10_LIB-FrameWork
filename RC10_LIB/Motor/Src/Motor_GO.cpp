@@ -36,8 +36,8 @@ bool GO_Motor::matchesFrame(const CanFrame& cf) const
 {
     if(!cf.isextended) 
         return false; // GO电机使用拓展帧
-    if(!(cf.ID >> 27 < 14 && cf.ID >> 27 >= 0))
-        return false; // GO电机ID范围为0-14
+    if(!(cf.ID >> 27 < 15 && cf.ID >> 27 >= 0))
+        return false; // GO电机ID范围为0-15
     return true;
 }
 
@@ -61,7 +61,7 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         .upload_or_download = 0,
         .control_or_response = 0,
         .low_3 = (uint8_t)motor_control_mode_,
-        .low_2 = motor_id_ << 4 | (uint8_t)motor_mode_ << 1 | 0,
+        .low_2 =   (uint8_t)motor_mode_ << 4 | motor_id_ << 0,
         .low_1 = 0,
         .reserved = 0,
     };
@@ -90,15 +90,15 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
     {
         case Motor_Control_Mode::MODE_11:
         {
-            int16_t kpos_int = (int16_t)(kpos_);
-            int16_t kspd_int = (int16_t)(kspd_);
+            int16_t kpos_int = (int16_t)(target_kpos_);
+            int16_t kspd_int = (int16_t)(target_kspd_);
             data.byte_0 = (uint8_t)(kpos_int >> 8);
             data.byte_1 = (uint8_t)(kpos_int);
             data.byte_2 = (uint8_t)(kspd_int >> 8);
             data.byte_3 = (uint8_t)(kspd_int);
             break;
         }
-        default:
+        default:    
         {
             float theta_set = target_angle_ / 360 * 32768;
             int32_t theta_int = (int32_t)(theta_set);
@@ -107,10 +107,10 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
             data.byte_2 = (uint8_t)(theta_int >> 8);
             data.byte_3 = (uint8_t)(theta_int);
 
-            float omega_set = target_rpm_ / 60 * 256;
-            int16_t omega_int = (int16_t)(omega_set);
-            data.byte_4 = (uint8_t)(omega_int >> 8);
-            data.byte_5 = (uint8_t)(omega_int);
+            float rpm_set = target_rpm_ / 60 * 256;
+            int16_t rpm_int = (int16_t)(rpm_set);
+            data.byte_4 = (uint8_t)(rpm_int >> 8);
+            data.byte_5 = (uint8_t)(rpm_int);
 
             float torque_set = target_torque_ * 256;
             int16_t torque_int = (int16_t)(torque_set);
@@ -139,6 +139,9 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
  */
 void GO_Motor::setTargetRPM(float rpm_set)
 {
+    motor_mode_ = Motor_Mode::FOC;
+    motor_control_mode_ = Motor_Control_Mode::MODE_10;
+
     target_rpm_ = rpm_set;
 }
 
@@ -148,6 +151,9 @@ void GO_Motor::setTargetRPM(float rpm_set)
  */
 void GO_Motor::setTargetAngle(float angle_set)
 {
+    motor_mode_ = Motor_Mode::FOC;
+    motor_control_mode_ = Motor_Control_Mode::MODE_10;
+
     target_angle_ = angle_set;
 }
 
@@ -182,8 +188,8 @@ void GO_Motor::updateFeedback(const CanFrame& cf)
     {
         int16_t kpos_int = (data.byte_0 << 8) | data.byte_1;
         int16_t kspd_int = (data.byte_2 << 8) | data.byte_3;
-        kpos_ = static_cast<float>(kpos_int) / 32768 * 360;
-        kspd_ = static_cast<float>(kspd_int) / 32768 * 360;
+        current_kpos_ = static_cast<float>(kpos_int);
+        current_kspd_ = static_cast<float>(kspd_int);
     }
     else if (extended_id.low_1 == -128)
     {
@@ -216,6 +222,21 @@ void GO_Motor::readKposAndKspd()
 {
     motor_control_mode_ = Motor_Control_Mode::MODE_12;
 }
+
+
+/**
+ * @brief 设置电机Kpos和Kspd
+ * @param kpos 电机刚度系数/位置误差比例系数
+ * @param kspd 电机阻尼系数/速度误差比例系数
+ */
+void GO_Motor::setKposAndKspd(float kpos, float kspd)
+{
+    motor_control_mode_ = Motor_Control_Mode::MODE_11;
+    
+    target_kpos_ = kpos;
+    target_kspd_ = kspd;
+}
+
 
 
 

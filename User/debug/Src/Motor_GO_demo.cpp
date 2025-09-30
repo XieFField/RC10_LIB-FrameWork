@@ -12,6 +12,12 @@ extern volatile uint8_t start_signal;
 extern volatile float delta_time; //目前使用的单位是微秒
 extern volatile uint64_t last_time;
 
+volatile float GO_demo_Kpos = 0.0f;
+volatile float GO_demo_Kspd = 0.0f;
+volatile float GO_demo_RPM = 0.0f;
+volatile float GO_demo_Angle = 0.0f;
+
+
 
 void GO_MotorDemo::init()
 {
@@ -36,7 +42,7 @@ void GO_MotorDemo::loop()
     //HAL_UART_Transmit(&huart1, (uint8_t*)"Tick\r\n", 6, HAL_MAX_DELAY);
     if(start_signal == 1)
     {
-        
+        GO_Motor_1.setKposAndKspd(GO_demo_Kpos, GO_demo_Kspd);
     }
     else if(start_signal == 0)
     {
@@ -44,11 +50,11 @@ void GO_MotorDemo::loop()
     }
     else if(start_signal == 2)
     {
-        
+        GO_Motor_1.setTargetRPM(GO_demo_RPM);
     }
     else if (start_signal == 3)
     {
-       
+        GO_Motor_1.setTargetAngle(GO_demo_Angle);
        
     }
     else if (start_signal == 4)

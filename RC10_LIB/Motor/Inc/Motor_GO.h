@@ -93,9 +93,16 @@ public:
     void updateFeedback(const CanFrame& cf) override;
 
     /**
-     * @brief 读取电机当前模式
+     * @brief 读取电机当前Kpos和Kspd
      */
     void readKposAndKspd();
+
+    /**
+     * @brief 设置电机Kpos和Kspd
+     * @param kpos 电机刚度系数/位置误差比例系数
+     * @param kspd 电机阻尼系数/速度误差比例系数
+     */
+    void setKposAndKspd(float kpos, float kspd);
 
 private:
     enum class Motor_Mode : uint8_t
@@ -111,7 +118,7 @@ private:
         MODE_11 = 11, // 设置kpos和kspd
         MODE_12 = 12, // 读取kpos和kspd
         MODE_13 = 13, // 每控制一次电机CAN不返回电机数据除非电机报错，报错时会返回电机数据，用户需要电机数据时需要发送问答命令，电机将返回最后一次通讯时保留的数据
-        MODE_2 = 2, // 发送读取命令（控制模式12）可回读对应ID电机设置的KposKspd(返回内容:2)
+        MODE_2 = 2, // 接收到读取命令（控制模式12）可回读对应ID电机设置的KposKspd(返回内容:2)
     };
 
     typedef struct CAN_extended_id_s
@@ -141,16 +148,16 @@ private:
     Motor_Control_Mode motor_control_mode_ = Motor_Control_Mode::MODE_13; // 默认模式13
 
 
-    float kp_ = 0.f; // 电机刚度系数/位置误差比例系数（输入）
-    float kw_ = 0.f; // 电机阻尼系数/速度误差比例系数（输入）
+    float target_kpos_ = 0.f; // 电机刚度系数/位置误差比例系数（输入）
+    float target_kspd_ = 0.f; // 电机阻尼系数/速度误差比例系数（输入）
 
     float target_rpm_ = 0.f; // 目标输出轴转速
     float target_angle_ = 0.f; // 目标输出轴角度
     float target_torque_ = 0.f; // 目标输出轴转矩
 
 
-    float kpos_ = 0.f; // 电机刚度系数/位置误差比例系数
-    float kspd_ = 0.f; // 电机阻尼系数/速度误差比例系数
+    float current_kpos_ = 0.f; // 电机刚度系数/位置误差比例系数
+    float current_kspd_ = 0.f; // 电机阻尼系数/速度误差比例系数
 
     float current_angle_ = 0.f; // 当前输出轴角度
     float current_rpm_ = 0.f; // 当前输出轴转速
