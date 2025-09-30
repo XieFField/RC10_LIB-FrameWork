@@ -1033,6 +1033,16 @@
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\APP\Inc\APP_Speedplanner.h</FilePath>
             </File>
+            <File>
+              <FileName>APP_Vector2D.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_Vector2D.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>APP_Vector2D.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\APP\Inc\APP_Vector2D.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
