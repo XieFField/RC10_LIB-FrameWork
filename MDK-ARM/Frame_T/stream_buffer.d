@@ -1,6 +1,9 @@
 frame_t/stream_buffer.o: \
   ..\Middlewares\Third_Party\FreeRTOS\Source\stream_buffer.c \
+  D:\ProgramFile\MDK\Core\ARM\ARMCLANG\Bin\..\include\stdint.h \
+  D:\ProgramFile\MDK\Core\ARM\ARMCLANG\Bin\..\include\string.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\FreeRTOS.h \
+  D:\ProgramFile\MDK\Core\ARM\ARMCLANG\Bin\..\include\stddef.h \
   ..\Core\Inc\FreeRTOSConfig.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\projdefs.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\portable.h \

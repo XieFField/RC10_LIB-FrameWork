@@ -1,5 +1,9 @@
 frame_t/queue.o: ..\Middlewares\Third_Party\FreeRTOS\Source\queue.c \
+  D:\ProgramFile\MDK\Core\ARM\ARMCLANG\Bin\..\include\stdlib.h \
+  D:\ProgramFile\MDK\Core\ARM\ARMCLANG\Bin\..\include\string.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\FreeRTOS.h \
+  D:\ProgramFile\MDK\Core\ARM\ARMCLANG\Bin\..\include\stddef.h \
+  D:\ProgramFile\MDK\Core\ARM\ARMCLANG\Bin\..\include\stdint.h \
   ..\Core\Inc\FreeRTOSConfig.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\projdefs.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\portable.h \
