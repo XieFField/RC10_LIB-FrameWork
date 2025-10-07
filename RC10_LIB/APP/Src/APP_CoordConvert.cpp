@@ -65,7 +65,7 @@ Point2D HomogeneousTransform2D::apply(const Point2D& point) const
     // Ö´ĞĞ¾ØÕó³Ë·¨: p_out = M * p_in
     arm_mat_mult_f32(&m_matrix, &p_in_mat, &p_out_mat);
     
-    return Point2D(p_out[0], p_out[1]);
+    return Point2D{p_out[0], p_out[1]};
 }
 
 // ¾ØÕó³Ë·¨
@@ -173,7 +173,7 @@ Point3D HomogeneousTransform3D::apply(const Point3D& point) const
     // Ö´ĞĞ¾ØÕó³Ë·¨: p_out = M * p_in
     arm_mat_mult_f32(&m_matrix, &p_in_mat, &p_out_mat);
     
-    return Point3D(p_out[0], p_out[1], p_out[2]);
+    return Point3D{p_out[0], p_out[1], p_out[2]};
 }
 
 // ¾ØÕó³Ë·¨
