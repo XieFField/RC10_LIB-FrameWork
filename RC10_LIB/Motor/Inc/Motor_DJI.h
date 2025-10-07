@@ -123,6 +123,16 @@ public:
         anglePid_timePSC = reset_value;
     }
 
+    void relocate_totalAngle(float now_totalAngle)
+    {
+        encoder_.relocate_totalAngle(now_totalAngle);
+        totalAngle_ = encoder_.getTotalAngle() / get_GearRatio();
+
+        this->angle_ = fmodf(this->totalAngle_, 360.0f);
+        if(this->angle_ < 0) 
+            this->angle_ += 360.0f;
+    }
+
 protected:
     int anglePid_timePSC = 10; //角度时间分频 默认为 10 即控制频率为100Hz
     int anglePid_timeCnt = 0; //角度时间计数
@@ -253,6 +263,8 @@ public:
     float getTotalAngle() const override;
     float get_GearRatio() const override { return GEAR_RATIO; }
     void reset_GearRatio(float reset_value){GEAR_RATIO = reset_value;}
+
+
 private:
     ControlMode mode_ = CURRENT_CONTROL;
     float GEAR_RATIO = 36.0f;

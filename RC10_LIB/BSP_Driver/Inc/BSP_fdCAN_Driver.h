@@ -51,7 +51,7 @@ extern "C"
   * - rxTask_ 负责从 rxQueue_ pop 并分发给 motor -> motor->updateFeedback()
   * - schedulerTask_ 每 1ms 调度 motorList，收集 packCommand() 并调用 sendFrame()，从而实现1kHz的发送频率
   * - 哈基米
-  * - 你将无法重复创建fdCAN实例，后续将只能
+  * @attention 你将无法创建fdCAN实例，后续将只能使用get_Instance的方式来访问fdCANbus
   * @attention 此类不做任何具体的报文解析，全部交给电机类
  */
 class fdCANbus;
@@ -83,7 +83,7 @@ public:
     static fdCANbus* getInstance(FDCAN_HandleTypeDef* hfdcan);
 
     // 最大电机数（每路）
-    static constexpr size_t MAX_MOTORS = 8;
+    static constexpr size_t MAX_MOTORS = 10; //本来应该是8，但是如果是挂的DJI，那会有两个group，那就变成8+2了
 
     
 
