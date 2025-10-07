@@ -50,6 +50,7 @@
 "frame_t\motor_dji.o"
 "frame_t\motor_vesc.o"
 "frame_t\frame_demo.o"
+"frame_t\robot_arm.o"
 "frame_t\setup_configinit.o"
 "frame_t\app_pid.o"
 "frame_t\app_tool.o"

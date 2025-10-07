@@ -1638,6 +1638,53 @@ I (..\RC10_LIB\Motor\Inc\Motor_VESC.h)(0x68D9286A)
 I (..\RC10_LIB\Module\Inc\Module_ChassisBase.h)(0x68DA049B)
 I (..\RC10_LIB\Module\Inc\Module_Air_joy.h)(0x68D9286A)
 F (..\User\debug\Inc\frame_demo.h)(0x68D9286A)()
+F (..\User\Control\Inc\Robot_Arm.h)(0x68E4CF3B)()
+F (..\User\Control\Src\Robot_Arm.cpp)(0x68E493A9)(-xc++ -std=c++17 --target=arm-arm-none-eabi -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 -mfloat-abi=hard -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar -fno-exceptions-gdwarf-4 -O3 -ffunction-sections -w -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../RC10_LIB/BSP_Driver/Inc -I ../RC10_LIB/Motor/Inc -I ../RC10_LIB/APP/Inc -I ../User/Control/Inc -I ../User/debug/Inc -I ../User/Setup/Inc -I ../RC10_LIB/Module/Inc -I ../Middlewares/ST/ARM/DSP/Inc -I ../Drivers/CMSIS/DSP/Include -I ../USB_DEVICE/App -I ../USB_DEVICE/Target -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -finput-charset=UTF-8-I./RTE/_Frame_T-IC:/Keil_v5/ARM/PACK/ARM/CMSIS/6.1.0/CMSIS/Core/Include-D__UVISION_VERSION="542" -DSTM32H723xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7 -DARM_MATH -DARM_MATH_MATRIX_CHECK -DARM_MATH_ROUNDING-o frame_t/robot_arm.o -MMD)
+I (..\User\Control\Inc\Robot_Arm.h)(0x68E4CF3B)
+I (..\Middlewares\ST\ARM\DSP\Inc\arm_math.h)(0x687F7C6B)
+I (..\Drivers\CMSIS\Include\cmsis_compiler.h)(0x689E0651)
+I (..\Drivers\CMSIS\Include\cmsis_armclang.h)(0x689E0651)
+I (..\RC10_LIB\Motor\Inc\Motor_Base.h)(0x68DA8096)
+I (..\RC10_LIB\BSP_Driver\Inc\BSP_CanFrame.h)(0x68CA1ED2)
+I (..\RC10_LIB\Motor\Inc\Motor_DJI.h)(0x68E4A56C)
+I (..\RC10_LIB\APP\Inc\APP_tool.h)(0x68E4A5B4)
+I (..\RC10_LIB\APP\Inc\APP_PID.h)(0x68DA83FD)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal.h)(0x689E06BF)
+I (..\Core\Inc\stm32h7xx_hal_conf.h)(0x68D39C77)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_rcc.h)(0x689E06BE)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_def.h)(0x689E06BF)
+I (..\Drivers\CMSIS\Device\ST\STM32H7xx\Include\stm32h7xx.h)(0x689E06BF)
+I (..\Drivers\CMSIS\Device\ST\STM32H7xx\Include\stm32h723xx.h)(0x689E06BF)
+I (..\Drivers\CMSIS\Include\core_cm7.h)(0x689E0651)
+I (..\Drivers\CMSIS\Device\ST\STM32H7xx\Include\system_stm32h7xx.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\Legacy\stm32_hal_legacy.h)(0x689E06BE)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_rcc_ex.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_gpio.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_gpio_ex.h)(0x689E06BE)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_dma.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_dma_ex.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_mdma.h)(0x689E06BE)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_exti.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_cortex.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_fdcan.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_flash.h)(0x689E06BE)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_flash_ex.h)(0x689E06BE)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_hsem.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_i2c.h)(0x689E06BE)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_i2c_ex.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_pwr.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_pwr_ex.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_tim.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_tim_ex.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_uart.h)(0x689E06BE)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_uart_ex.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_pcd.h)(0x689E06BE)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_ll_usb.h)(0x689E06BF)
+I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_pcd_ex.h)(0x689E06BE)
+I (..\RC10_LIB\BSP_Driver\Inc\BSP_TimeStamp.h)(0x68D364D6)
+I (..\Core\Inc\tim.h)(0x68D75F5A)
+I (..\Core\Inc\main.h)(0x68D7630C)
+I (..\RC10_LIB\Module\Inc\Module_Encoder.h)(0x68E4A487)
 F (..\User\Setup\Inc\Setup_ConfigInit.h)(0x68D69F80)()
 F (..\User\Setup\Src\Setup_ConfigInit.cpp)(0x68D75162)(-xc++ -std=c++17 --target=arm-arm-none-eabi -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 -mfloat-abi=hard -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar -fno-exceptions-gdwarf-4 -O3 -ffunction-sections -w -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../RC10_LIB/BSP_Driver/Inc -I ../RC10_LIB/Motor/Inc -I ../RC10_LIB/APP/Inc -I ../User/Control/Inc -I ../User/debug/Inc -I ../User/Setup/Inc -I ../RC10_LIB/Module/Inc -I ../Middlewares/ST/ARM/DSP/Inc -I ../Drivers/CMSIS/DSP/Include -I ../USB_DEVICE/App -I ../USB_DEVICE/Target -I ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc -I ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -finput-charset=UTF-8-I./RTE/_Frame_T-IC:/Keil_v5/ARM/PACK/ARM/CMSIS/6.1.0/CMSIS/Core/Include-D__UVISION_VERSION="542" -DSTM32H723xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7 -DARM_MATH -DARM_MATH_MATRIX_CHECK -DARM_MATH_ROUNDING-o frame_t/setup_configinit.o -MMD)
 I (..\User\Setup\Inc\Setup_ConfigInit.h)(0x68D69F80)

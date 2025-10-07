@@ -974,6 +974,18 @@
         </Group>
         <Group>
           <GroupName>User/Control</GroupName>
+          <Files>
+            <File>
+              <FileName>Robot_Arm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Control\Inc\Robot_Arm.h</FilePath>
+            </File>
+            <File>
+              <FileName>Robot_Arm.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Src\Robot_Arm.cpp</FilePath>
+            </File>
+          </Files>
         </Group>
         <Group>
           <GroupName>User/Setup</GroupName>
