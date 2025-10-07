@@ -5911,11 +5911,11 @@ Removing Unused input sections from the image.
     Removing frame_demo.o(.bss.counter), (4 bytes).
     Removing frame_demo.o(.bss.a), (4 bytes).
     Removing robot_arm.o(.text), (0 bytes).
-    Removing robot_arm.o(.text._ZN9Robot_ArmC2E14Arm_InitData_S), (62 bytes).
+    Removing robot_arm.o(.text._ZN9Robot_ArmC2E14Arm_InitData_S), (76 bytes).
     Removing robot_arm.o(.ARM.exidx.text._ZN9Robot_ArmC2E14Arm_InitData_S), (8 bytes).
-    Removing robot_arm.o(.text._ZN9Robot_Arm6updateEv), (148 bytes).
+    Removing robot_arm.o(.text._ZN9Robot_Arm6updateEv), (220 bytes).
     Removing robot_arm.o(.ARM.exidx.text._ZN9Robot_Arm6updateEv), (8 bytes).
-    Removing robot_arm.o(.text._ZN9Robot_Arm17inverseKinematicsE11Arm_Point_S), (80 bytes).
+    Removing robot_arm.o(.text._ZN9Robot_Arm17inverseKinematicsE11Arm_Point_S), (72 bytes).
     Removing robot_arm.o(.ARM.exidx.text._ZN9Robot_Arm17inverseKinematicsE11Arm_Point_S), (8 bytes).
     Removing setup_configinit.o(.text), (0 bytes).
     Removing setup_configinit.o(.ARM.exidx.text.ALL_Setup_ConfigInit), (8 bytes).
@@ -6333,7 +6333,7 @@ Removing Unused input sections from the image.
     Removing frame_demo.o(.ARM.exidx.text._ZN13DJI_MotorDemoD0Ev), (8 bytes).
     Removing frame_demo.o(.ARM.exidx.text._ZN8RtosTask3runEv), (8 bytes).
 
-2473 unused section(s) (total 837851 bytes) removed from the image.
+2473 unused section(s) (total 837929 bytes) removed from the image.
 
 ==============================================================================
 
