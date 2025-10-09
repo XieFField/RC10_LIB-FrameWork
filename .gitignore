@@ -23,3 +23,5 @@ MDK-ARM/Frame_T/cmsis_os2.o
 MDK-ARM/Frame_T/croutine.d
 MDK-ARM/Frame_T/croutine.o
 MDK-ARM/Frame_T/event_groups.d
+MDK-ARM/Frame_T/system_stm32h7xx.o
+*.d
