@@ -1,29 +1,10 @@
 #include "frame_demo.h"
 
-fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
-DJI_Group GroupCAN1_Low(send_idHigh(), CAN1_Bus); // 1~4号M3508/M2006电机
-M3508 m3508_1(7, CAN1_Bus);
+fdCANbus* const demoCAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
+DJI_Group GroupCAN1_Low(send_idHigh(), demoCAN1_Bus); // 1~4号M3508/M2006电机
+M3508 m3508_1(7, demoCAN1_Bus);
 
-//目前不错的参数 by XieFField
-PID_Param_Config m3508_speed_pid_params = {
-    .kp = 32.0f,
-    .ki = 0.085f,
-    .kd = 0.0f,
-    .I_Outlimit = 8000.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 15000.0f,   
-    .deadband = 0.5f 
-};
 
-PID_Param_Config m3508_angle_pid_params = {
-    .kp = 32.0f,
-    .ki = 0.0f,
-    .kd = 1.1f,
-    .I_Outlimit = 0.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 400.0f,   
-    .deadband = 0.5f // 
-};
 
 
 // 使用 volatile 防止编译器优化，确保在调试时可以观察到值的变化
@@ -38,9 +19,9 @@ volatile uint64_t last_time = 0;
 void DJI_MotorDemo::init()
 {
     GroupCAN1_Low.addMotor(&m3508_1);
-    CAN1_Bus->registerMotor(&GroupCAN1_Low);
-    CAN1_Bus->registerMotor(&m3508_1);
-    CAN1_Bus->init();
+    demoCAN1_Bus->registerMotor(&GroupCAN1_Low);
+    demoCAN1_Bus->registerMotor(&m3508_1);
+    demoCAN1_Bus->init();
     m3508_1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
     start_signal = 0;
     start(osPriorityNormal, 256);

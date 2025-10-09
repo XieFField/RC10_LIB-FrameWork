@@ -175,6 +175,8 @@ protected:
     int HAL_FDCAN_Start_ERROR = 0; // 记录 HAL_FDCAN_Start 是否成功
 
     int HAL_FDCAN_ActivateNotification_ERROR = 0; // 记录 HAL_FDCAN_ActivateNotification 是否成功
+
+    bool can_init_done_ = false; // 标记 init() 是否已成功调用
 };
 
 

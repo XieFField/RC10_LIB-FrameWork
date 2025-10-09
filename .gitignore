@@ -8,3 +8,8 @@
 *.d
 *.d
 /MDK-ARM/Frame_T
+MDK-ARM/Frame_T/stm32h7xx_hal_uart_ex.o
+/MDK-ARM/Frame_T
+/MDK-ARM/Frame_T
+*.d
+*.d

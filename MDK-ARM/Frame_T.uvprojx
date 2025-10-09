@@ -970,6 +970,16 @@
               <FileType>5</FileType>
               <FilePath>..\User\debug\Inc\frame_demo.h</FilePath>
             </File>
+            <File>
+              <FileName>arm_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\arm_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>arm_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\arm_demo.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

@@ -54,7 +54,7 @@ typedef struct{
     float y;
     float z;
 
-    SuckerJoint_E suckerJoint_status_ = Place_Status; // 末端关节状态
+    float suckerJoint_status_ ; // 末端关节状态
 }Arm_Point_S;
 
 
@@ -81,6 +81,7 @@ public:
     void registerMotor_Launch(DJI_Motor* motor){ motor_launch_ = motor; }
     void registerMotor_Stretch(DJI_Motor* motor){ motor_stretch_ = motor; }
     void registerMotor_Rotate(DJI_Motor* motor){ motor_rotate_ = motor; }
+    void registerMotor_Pitch(DJI_Motor* motor){ motor_pitch_ = motor; }
 
     // 设置目标位置
     void setArmTarget(Arm_Point_S target){ arm_target_ = target; }

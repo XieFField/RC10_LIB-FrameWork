@@ -123,6 +123,9 @@ public:
         anglePid_timePSC = reset_value;
     }
 
+    /**
+     * @brief 将编码器的总路程重新定位到指定值，重定义偏移量
+     */
     void relocate_totalAngle(float now_totalAngle)
     {
         encoder_.relocate_totalAngle(now_totalAngle);

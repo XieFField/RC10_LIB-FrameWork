@@ -14,29 +14,18 @@ void Robot_Arm::update()
     float target_rotateMotorAngle = 0.0f;
     float target_stretchMotorAngle = 0.0f;
     float target_launchMotorAngle = 0.0f;
-
-    if(arm_target_.suckerJoint_status_ == SuckerJoint_E::Flat_Status)
-    {
-        if(motor_pitch_ != nullptr)
-            target_pitch_angle_ = pitchAngle_to_MotorTotalAngle(90.0f);
-    }
-    else if(arm_target_.suckerJoint_status_ == SuckerJoint_E::Place_Status)
-    {
-        if(motor_pitch_ != nullptr)
-            target_pitch_angle_ = pitchAngle_to_MotorTotalAngle(0.0f);
-    }
+    float target_pitchMotorAngle = 0.0f;
 
     target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_rotate_angle_);
     target_stretchMotorAngle = stretchLength_to_MotorTotalAngle(target_stretch_length_);
     target_launchMotorAngle = launchHeight_to_MotorTotalAngle(target_launch_height_);
+    target_pitchMotorAngle = pitchAngle_to_MotorTotalAngle(target_pitch_angle_);
+    /*暂时不做斜坡处理*/
 
-  /*暂时不做斜坡处理*/
-
-    motorlaunch_height_ = target_launch_height_;
-    motorstretch_length_ = target_stretch_length_;
-    motorrotate_angle_ = target_rotate_angle_;
-    motorpitch_angle_ = target_pitch_angle_;
-
+    motorlaunch_height_ = target_launchMotorAngle;
+    motorstretch_length_ = target_stretchMotorAngle;
+    motorrotate_angle_ = target_rotateMotorAngle;
+    motorpitch_angle_ = target_pitchMotorAngle;
 
     if(motor_rotate_ != nullptr)
         motor_rotate_->setTargetTotalAngle(motorrotate_angle_);

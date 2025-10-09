@@ -27,6 +27,8 @@ void register_fdcan_bus_for_isr(fdCANbus* bus)
 // --- init: 启动任务并配置 CAN（filter/interrupt） ---
 void fdCANbus::init() 
 {
+    if(can_init_done_) 
+        return; // 防止重复初始化
     FDCAN_FilterTypeDef sFilterConfig = {0};
     sFilterConfig.FilterType = FDCAN_FILTER_MASK;
     sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
@@ -66,6 +68,8 @@ void fdCANbus::init()
     //任务启动
     rxTask_.start(tskIDLE_PRIORITY + 3, 256);
     schedulerTask_.start(tskIDLE_PRIORITY + 4, 256);
+
+    can_init_done_ = true;
 }
 
 // --- registerMotor ---
