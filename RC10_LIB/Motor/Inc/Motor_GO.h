@@ -3,9 +3,9 @@
  * @brief
  * @author      ZhangJiaJia (Zhang643328686@163.com)
  * @date        2025-09-28 (创建日期)
- * @date        2025-09- (最后修改日期)
+ * @date        2025-10- (最后修改日期)
  * @platform	
- * @version     0.1.0
+ * @version     0.2.0
  * @details
  * @note		
  * @warning		
@@ -13,8 +13,8 @@
  *
  * @par 版本修订历史
  * @{
- *  @li 版本号: 0.1.0
- *      - 修订日期: 2025-09-
+ *  @li 版本号: 0.2.0
+ *      - 修订日期: 2025-10-
  *      - 主要变更:
  *			- 
  *		- 不足之处:
@@ -74,6 +74,14 @@ public:
      */
     std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) override;
 
+
+
+    /**
+     * @brief 设置目标输出轴转矩，单位N.m
+     * @param torque_set 目标输出轴转矩
+     */
+    void setTargetTorque(float torque_set);
+
     /**
      * @brief 设置目标输出轴转速，单位RPM
      * @param rpm_set 目标输出轴转速
@@ -92,10 +100,6 @@ public:
      */
     void updateFeedback(const CanFrame& cf) override;
 
-    /**
-     * @brief 读取电机当前Kpos和Kspd
-     */
-    void readKposAndKspd();
 
     /**
      * @brief 设置电机Kpos和Kspd
@@ -105,6 +109,14 @@ public:
     void setKposAndKspd(float kpos, float kspd);
 
 private:
+    enum class Mode : uint8_t
+    {
+        SET_DEFAULT = 0, // 锁定模式
+        SET_TORQUE, // 转矩模式
+        SET_RPM, // 速度模式
+        SET_POS, // 位置模式
+    };
+
     enum class Motor_Mode : uint8_t
     {
         DEFAULT = 0, // 锁定
@@ -144,8 +156,20 @@ private:
         uint8_t byte_7; // 字节7
     } CAN_data_t;
 
+
+    // 这两个都是先验量
+    bool isInit_ = false; // 标记是否初始化，默认为否
+    bool isReturnData_ = true; // 标记是否每控制一次电机就返回一次数据，默认为是
+    
+    // 这三个都是先验量
+    Mode mode_ = Mode::SET_DEFAULT;
     Motor_Mode motor_mode_ = Motor_Mode::DEFAULT;
     Motor_Control_Mode motor_control_mode_ = Motor_Control_Mode::MODE_13; // 默认模式13
+
+
+    // 这两个既是先验量，也是后验量
+    bool isSetKposKspd_ = false; // 标记是否需要重新设置电机刚度系数和阻尼系数，默认为否
+    bool isReadKposKspd_ = false; // 标记是否需要重新读取电机刚度系数和阻尼系数，默认为否
 
 
     float target_kpos_ = 0.f; // 电机刚度系数/位置误差比例系数（输入）
@@ -163,7 +187,7 @@ private:
     float current_rpm_ = 0.f; // 当前输出轴转速
     float current_torque_ = 0.f; // 当前输出轴转矩
 
-    float current_atm_ = 0.f; // 当前气压
+    float current_atm_ = 0.f; // 当前气压，GO电机好像并不回传此项
     int8_t current_motor_temperature_ = 0; // 当前电机温度
     
 };

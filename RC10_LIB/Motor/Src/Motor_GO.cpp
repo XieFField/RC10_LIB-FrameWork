@@ -3,18 +3,18 @@
  * @brief
  * @author      ZhangJiaJia (Zhang643328686@163.com)
  * @date        2025-09-28 (创建日期)
- * @date        2025-09- (最后修改日期)
+ * @date        2025-10- (最后修改日期)
  * @platform	
- * @version     0.1.0
+ * @version     0.2.0
  * @details     
- * @note		
+ * @note        1. 待解决GO电机编码器初始化指令要确认存在有效接收对象的问题
  * @warning		
  * @license     WTFPL License
  *
  * @par 版本修订历史
  * @{
- *  @li 版本号: 0.1.0
- *      - 修订日期: 2025-09-
+ *  @li 版本号: 0.2.0
+ *      - 修订日期: 2025-10-
  *      - 主要变更:
  *			- 
  *		- 不足之处:
@@ -56,6 +56,86 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
     outFrames[0].DLC = 8;
     memset(outFrames[0].data, 0, 8);
 
+
+
+
+
+
+    int16_t inputTorque = (int16_t)(target_torque_ * 256.0f); // 没有四舍五入，直接截断
+
+
+    if(!isInit_)
+    {
+        motor_control_mode_ = Motor_Control_Mode::MODE_10; // MODE_10 和 MODE_13 均可以
+
+        GO_Motor_1.setKposAndKspd(0, 0);
+    }
+    else if(isSetKposKspd_)
+    {
+        motor_control_mode_ = Motor_Control_Mode::MODE_11; // 设置kpos和kspd
+        isReadKposKspd_ = true;
+    }
+    else if(isReadKposKspd_)
+    {
+        motor_control_mode_ = Motor_Control_Mode::MODE_12; // 读取kpos和kspd
+    }
+    else if(isReturnData_)
+    {
+        motor_control_mode_ = Motor_Control_Mode::MODE_10; // 每控制一次电机就返回一次数据
+    }
+    else if(!isReturnData_)
+    {
+        motor_control_mode_ = Motor_Control_Mode::MODE_13; 
+        // 每控制一次电机CAN不返回电机数据
+        // 除非电机报错，报错时会返回电机数据
+        // 用户需要电机数据时需要发送问答命令，电机将返回最后一次通讯时保留的数据
+    }
+    else
+    {
+        // 意料之外的情况，待处理
+    }
+
+    if(isSetKposKspd_ || isReadKposKspd_)
+    {
+        mode_ = Mode::SET_DEFAULT;
+    }
+
+    switch(mode_)
+    {
+        case Mode::SET_DEFAULT:
+        {
+            motor_mode_ = Motor_Mode::DEFAULT;
+            break;
+        }
+        case Mode::SET_TORQUE:
+        {
+            motor_mode_ = Motor_Mode::FOC;
+            break;
+        }
+        case Mode::SET_RPM:
+        {
+            motor_mode_ = Motor_Mode::FOC;
+            break;
+        }
+        case Mode::SET_POS:
+        {
+            motor_mode_ = Motor_Mode::FOC;
+            break;
+        }
+    }
+
+
+    if(!isInit_)
+    {
+        motor_mode_ = Motor_Mode::CALIBRATION;
+        isInit_ = true;
+    }
+
+
+
+
+
+
     CAN_extended_id_t extended_id = {
         .module_id = 3,
         .upload_or_download = 0,
@@ -66,7 +146,33 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         .reserved = 0,
     };
 
-    
+    CAN_data_t data = {
+         .byte_0 = 0,
+         .byte_1 = 0,
+         .byte_2 = 0,
+         .byte_3 = 0,
+         .byte_4 = 0,
+         .byte_5 = 0,
+         .byte_6 = (uint8_t)(inputTorque >> 8),
+         .byte_7 = (uint8_t)(inputTorque),
+    };      
+
+
+    if(isSetKposKspd_)
+    {
+        uint16_t input_kpos = (uint16_t)(target_kpos_ * 1280.0f); // 没有四舍五入，直接截断
+        uint16_t input_kspd = (uint16_t)(target_kspd_ * 1280.0f); // 没有四舍五入，直接截断
+
+        data.byte_0 = (uint8_t)(input_kpos >> 8);
+        data.byte_1 = (uint8_t)(input_kpos);
+        data.byte_2 = (uint8_t)(input_kspd >> 8);
+        data.byte_3 = (uint8_t)(input_kspd);
+		
+		isSetKposKspd_ = false;
+    }
+
+
+
     CAN_extended_id_t& id = extended_id;
     outFrames[0].ID =   (id.module_id << 27) | 
                         (id.upload_or_download << 26) |
@@ -74,52 +180,6 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
                         (id.low_3 << 16) |
                         (id.low_2 << 8) |
                         id.low_1;
-
-    CAN_data_t data = {
-         .byte_0 = 0, // 后面待修改
-         .byte_1 = 0, // 后面待修改
-         .byte_2 = 0, // 后面待修改
-         .byte_3 = 0, // 后面待修改
-         .byte_4 = (uint8_t)(((int16_t)(target_rpm_)) >> 8),
-         .byte_5 = (uint8_t)((int16_t)(target_rpm_)),
-         .byte_6 = (uint8_t)(((int16_t)(target_torque_)) >> 8),
-         .byte_7 = (uint8_t)((int16_t)(target_torque_)),
-    };         
-
-    switch (motor_control_mode_)
-    {
-        case Motor_Control_Mode::MODE_11:
-        {
-            int16_t kpos_int = (int16_t)(target_kpos_);
-            int16_t kspd_int = (int16_t)(target_kspd_);
-            data.byte_0 = (uint8_t)(kpos_int >> 8);
-            data.byte_1 = (uint8_t)(kpos_int);
-            data.byte_2 = (uint8_t)(kspd_int >> 8);
-            data.byte_3 = (uint8_t)(kspd_int);
-            break;
-        }
-        default:    
-        {
-            float theta_set = target_angle_ / 360 * 32768;
-            int32_t theta_int = (int32_t)(theta_set);
-            data.byte_0 = (uint8_t)(theta_int >> 24);
-            data.byte_1 = (uint8_t)(theta_int >> 16);
-            data.byte_2 = (uint8_t)(theta_int >> 8);
-            data.byte_3 = (uint8_t)(theta_int);
-
-            float rpm_set = target_rpm_ / 60 * 256;
-            int16_t rpm_int = (int16_t)(rpm_set);
-            data.byte_4 = (uint8_t)(rpm_int >> 8);
-            data.byte_5 = (uint8_t)(rpm_int);
-
-            float torque_set = target_torque_ * 256;
-            int16_t torque_int = (int16_t)(torque_set);
-            data.byte_6 = (uint8_t)(torque_int >> 8);
-            data.byte_7 = (uint8_t)(torque_int);
-
-            break;
-        }
-    }
 
     outFrames[0].data[0] = data.byte_0;
     outFrames[0].data[1] = data.byte_1;
@@ -134,14 +194,22 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
 }
 
 /**
+ * @brief 设置目标输出轴转矩，单位N.m
+ * @param torque_set 目标输出轴转矩
+ */
+void GO_Motor::setTargetTorque(float torque_set)
+{
+    mode_ = Mode::SET_TORQUE;
+    target_torque_ = torque_set; // 没有输入检查
+}
+
+/**
  * @brief 设置目标输出轴转速，单位RPM
  * @param rpm_set 目标输出轴转速
  */
 void GO_Motor::setTargetRPM(float rpm_set)
 {
-    motor_mode_ = Motor_Mode::FOC;
-    motor_control_mode_ = Motor_Control_Mode::MODE_10;
-
+    mode_ = Mode::SET_RPM;
     target_rpm_ = rpm_set;
 }
 
@@ -151,9 +219,7 @@ void GO_Motor::setTargetRPM(float rpm_set)
  */
 void GO_Motor::setTargetAngle(float angle_set)
 {
-    motor_mode_ = Motor_Mode::FOC;
-    motor_control_mode_ = Motor_Control_Mode::MODE_10;
-
+    mode_ = Mode::SET_POS;
     target_angle_ = angle_set;
 }
 
@@ -184,12 +250,23 @@ void GO_Motor::updateFeedback(const CanFrame& cf)
         .byte_7 = cf.data[7],
     };
 
+
+    
+
     if ( extended_id.low_3 == (uint8_t)Motor_Control_Mode::MODE_2)
     {
         int16_t kpos_int = (data.byte_0 << 8) | data.byte_1;
         int16_t kspd_int = (data.byte_2 << 8) | data.byte_3;
-        current_kpos_ = static_cast<float>(kpos_int);
-        current_kspd_ = static_cast<float>(kspd_int);
+        current_kpos_ = static_cast<float>(kpos_int) / 1280.0f;
+        current_kspd_ = static_cast<float>(kspd_int) / 1280.0f;
+
+        isReadKposKspd_ = false;
+
+        // 暂时注释
+        // if(target_kpos_ != current_kpos_ || target_kspd_ != current_kspd_)
+        // {
+        //     isSetKposKspd_ = true;
+        // }
     }
     else if (extended_id.low_1 == -128)
     {
@@ -204,7 +281,7 @@ void GO_Motor::updateFeedback(const CanFrame& cf)
         current_angle_ = (float)angle_int / 32768 * 360;
 
         int16_t omega_int = (data.byte_4 << 8) | data.byte_5;
-        target_rpm_ = (float)omega_int / 256 * 60;
+        current_rpm_ = (float)omega_int / 256 * 60;
 
         int16_t torque_int = (data.byte_6 << 8) | data.byte_7;
         current_torque_ = (float)torque_int / 256;
@@ -215,13 +292,7 @@ void GO_Motor::updateFeedback(const CanFrame& cf)
     }
 }
 
-/**
- * @brief 读取电机当前模式
- */
-void GO_Motor::readKposAndKspd()
-{
-    motor_control_mode_ = Motor_Control_Mode::MODE_12;
-}
+
 
 
 /**
@@ -231,10 +302,14 @@ void GO_Motor::readKposAndKspd()
  */
 void GO_Motor::setKposAndKspd(float kpos, float kspd)
 {
-    motor_control_mode_ = Motor_Control_Mode::MODE_11;
-    
     target_kpos_ = kpos;
     target_kspd_ = kspd;
+
+    // 临时用的，待处理
+    // target_kpos_ = 0;
+    // target_kspd_ = 0;
+
+    isSetKposKspd_ = true;
 }
 
 
