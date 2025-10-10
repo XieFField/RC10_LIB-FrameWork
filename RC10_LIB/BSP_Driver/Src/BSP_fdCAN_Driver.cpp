@@ -2,7 +2,17 @@
 
 // --- 全局变量与函数 ---
 // 最多支持3个FDCAN总线实例
-static fdCANbus* g_fdcan_bus_map[3] = {nullptr, nullptr, nullptr};
+ static fdCANbus* g_fdcan_bus_map[3] = {nullptr, nullptr, nullptr};
+
+// 为类内 static 成员提供定义
+#if FD_CAN_DEBUG
+CanFrame fdCANbus::debug_last_frames_[fdCANbus::MAX_MOTORS * 2] = {0};
+#endif
+
+
+#if FD_CAN_DEBUG
+fdCANbus* g_fdcan_bus_map_dbg[3] = {nullptr, nullptr, nullptr}; // 全局可见别名
+#endif
 
 /**
  * @brief 注册一个fdCANbus实例以进行全局中断路由
@@ -13,12 +23,28 @@ void register_fdcan_bus_for_isr(fdCANbus* bus)
     if(!bus) 
         return;
     FDCAN_HandleTypeDef* h = bus->getFDCANHandle();
-    if(h == &hfdcan1)       
+    if(h == &hfdcan1)
+    {       
         g_fdcan_bus_map[0] = bus;
-    else if(h == &hfdcan2)  
+#if FD_CAN_DEBUG
+        g_fdcan_bus_map_dbg[0] = bus;
+#endif
+    }
+    else if(h == &hfdcan2)
+    {
         g_fdcan_bus_map[1] = bus;
+#if FD_CAN_DEBUG
+        g_fdcan_bus_map_dbg[1] = bus;
+#endif
+    }
+
     else if(h == &hfdcan3)  
+    {
         g_fdcan_bus_map[2] = bus;
+#if FD_CAN_DEBUG
+        g_fdcan_bus_map_dbg[2] = bus;
+#endif
+    }
 }
 
 
@@ -190,6 +216,15 @@ void fdCANbus::schedulerTaskbody()
                 break;
         }
     
+#if FD_CAN_DEBUG
+        // 将“将要发送”的帧做一次快照，方便 Watch 里查看
+        debug_last_frame_count_ = frameCnt;
+        for(std::size_t k=0; k<frameCnt && k< (MAX_MOTORS*2); ++k)
+        {
+            debug_last_frames_[k] = frames_to_send[k];
+        }
+#endif
+
         // 3. 发送所有打包好的指令
         for (std::size_t j = 0; j < frameCnt; ++j)
             sendFrame(frames_to_send[j]);
@@ -289,7 +324,7 @@ fdCANbus* fdCANbus::getInstance(FDCAN_HandleTypeDef* hfdcan)
 {
 
     // 为每个CAN总线定义一个静态的、在函数内初始化的实例。
-    // 它们在第一次被调用时才会被创建，且存储在静态数据区，而非堆上。
+    // 它们在第一次被调用时才会被创建，且存储在静态数据区，a而非堆上。
     static fdCANbus instance1(&hfdcan1);
     static fdCANbus instance2(&hfdcan2);
     static fdCANbus instance3(&hfdcan3);
@@ -308,11 +343,28 @@ fdCANbus* fdCANbus::getInstance(FDCAN_HandleTypeDef* hfdcan)
     if(inst)
     {
         if(hfdcan == &hfdcan1 && g_fdcan_bus_map[0] != inst) 
+        {
             g_fdcan_bus_map[0] = inst;
+#if FD_CAN_DEBUG
+            g_fdcan_bus_map_dbg[0] = inst;
+#endif
+        }
         if(hfdcan == &hfdcan2 && g_fdcan_bus_map[1] != inst) 
+        {
             g_fdcan_bus_map[1] = inst;
-        if(hfdcan == &hfdcan3 && g_fdcan_bus_map[2] != inst) 
+#if FD_CAN_DEBUG
+            g_fdcan_bus_map_dbg[1] = inst;
+#endif
+
+        }
+        if(hfdcan == &hfdcan3 && g_fdcan_bus_map[2] != inst)
+        {
             g_fdcan_bus_map[2] = inst;
+#if FD_CAN_DEBUG
+            g_fdcan_bus_map_dbg[2] = inst;
+#endif
+
+        }
     }
 
     return inst;

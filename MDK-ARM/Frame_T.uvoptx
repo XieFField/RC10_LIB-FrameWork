@@ -178,22 +178,27 @@
         <Ww>
           <count>4</count>
           <WinNumber>1</WinNumber>
-          <ItemText>arm_demo</ItemText>
+          <ItemText>GroupCAN1_Low</ItemText>
         </Ww>
         <Ww>
           <count>5</count>
           <WinNumber>1</WinNumber>
-          <ItemText>ArmGroupCAN1_Low,0x0A</ItemText>
+          <ItemText>m2006_1</ItemText>
         </Ww>
         <Ww>
           <count>6</count>
           <WinNumber>1</WinNumber>
-          <ItemText>GroupCAN1_Low</ItemText>
+          <ItemText>m2006_signal</ItemText>
         </Ww>
         <Ww>
           <count>7</count>
           <WinNumber>1</WinNumber>
-          <ItemText>test_point</ItemText>
+          <ItemText>m2006_targetAngle</ItemText>
+        </Ww>
+        <Ww>
+          <count>8</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>hfdcan1,0x0A</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>

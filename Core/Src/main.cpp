@@ -72,7 +72,7 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-// CanTest test_demo(&hfdcan1, 0x001); // CAN1 ≤‚ ‘ µ¿˝
+
 /* USER CODE END 0 */
 
 /**
