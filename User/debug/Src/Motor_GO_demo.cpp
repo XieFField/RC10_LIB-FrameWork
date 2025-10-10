@@ -21,13 +21,13 @@ volatile float GO_demo_Angle = 0.0f;
 
 
 PID_Param_Config Go_speed_pid_params = {
-    .kp = 0.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f, 
+    .kp = 10.0f,
+    .ki = 1.0f,
+    .kd = 0.01f,
+    .I_Outlimit = 0.05f, 
     .isIOutlimit = true, 
-    .output_limit = 0.0f,   
-    .deadband = 0.0f 
+    .output_limit = 0.2f,   
+    .deadband = 1.0f 
 };
 
 PID_Param_Config Go_angle_pid_params = {
@@ -63,7 +63,7 @@ void GO_MotorDemo::loop()
         // 可以在这里使用 delta_time 进行其他计算
     }
     last_time = time_now;
-    debug_uart.printf_DMA("%f,%f\r\n",GO_Motor_1.getRPM(), GO_Motor_1.getAngle());
+    debug_uart.printf_DMA("%f,%f\r\n",GO_Motor_1.getRPM(), GO_Motor_1.getTargetRPM());
     // HAL_UART_Transmit(&huart1, (uint8_t*)"Tick\r\n", 6, HAL_MAX_DELAY);
     if(start_signal == 1)
     {

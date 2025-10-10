@@ -139,6 +139,9 @@ public:
      */
     float getTotalAngle() const override;
 
+
+    float getTargetRPM();
+
 private:
     /**
      * @brief 设置电机Kpos和Kspd
@@ -151,6 +154,9 @@ private:
      * @brief 重置电机控制参数，防止控制参数冲突
      */
     void resetParam();
+
+
+  
 
 
     enum class Mode : uint8_t
