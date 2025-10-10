@@ -139,8 +139,17 @@ public:
      */
     float getTotalAngle() const override;
 
+    /**
+     * @brief 获取当前目标输出轴转速
+     * @return float 当前目标输出轴转速
+     */
+    float getTargetRPM() const;
 
-    float getTargetRPM();
+     /**
+     * @brief 获取当前目标输出轴总角度
+     * @return float 当前目标输出轴总角度
+     */
+    float getTargetTotalAngle() const;
 
 private:
     /**
@@ -156,7 +165,8 @@ private:
     void resetParam();
 
 
-  
+    int anglePid_timePSC_ = 10; //角度时间分频 默认为 10 即控制频率为100Hz
+    int anglePid_timeCnt_ = 0; //角度时间计数
 
 
     enum class Mode : uint8_t
@@ -247,7 +257,7 @@ private:
     float current_atm_ = 0.f; // 当前气压，GO电机好像并不回传此项
     int8_t current_motor_temperature_ = 0; // 当前电机温度
 
-    PID_Incremental speed_pid_;
+    PID_Position speed_pid_;
     PID_Position angle_pid_;
 };
 

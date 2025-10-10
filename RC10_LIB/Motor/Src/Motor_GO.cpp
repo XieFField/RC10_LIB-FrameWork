@@ -341,10 +341,30 @@ void GO_Motor::setKposAndKspd(float kpos, float kspd)
  */
 void GO_Motor::resetParam()
 {
-    target_torque_ = 0;
-    target_rpm_ = 0;
-    target_angle_ = 0;
-    target_totalAngle_ = 0;
+    switch (mode_)
+    {
+    case Mode::SET_DEFAULT:
+        target_torque_ = 0;
+        target_rpm_ = 0;
+        target_angle_ = 0;
+        target_totalAngle_ = 0;
+        break;
+    case Mode::SET_TORQUE:
+        target_rpm_ = 0;
+        target_angle_ = 0;
+        target_totalAngle_ = 0;
+        break;
+    case Mode::SET_RPM:
+        target_angle_ = 0;
+        target_totalAngle_ = 0;
+        break;
+    case Mode::SET_POS:
+        // NONE
+        break;
+    default:
+        // 不应该出现这种情况，待处理
+        break;
+    }
 }
 
 /**
@@ -375,14 +395,14 @@ void GO_Motor::update()
         target_torque_ = speed_pid_.pid_calc(target_rpm_, current_rpm_);
         break;
     case Mode::SET_POS:
-        // anglePid_timeCnt++;
-        //     if(anglePid_timeCnt >= anglePid_timePSC)
-        //     {
-        //         float expected_rpm = angle_pid_.pid_calc(target_totalAngle_, getTotalAngle());
-        //         target_rpm_ = expected_rpm;
-        //         anglePid_timeCnt = 0;
-        //     }
-        //     target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
+        anglePid_timeCnt_++;
+            if(anglePid_timeCnt_ >= anglePid_timePSC_)
+            {
+                float expected_rpm = angle_pid_.pid_calc(target_totalAngle_, current_totalAngle_);
+                target_rpm_ = expected_rpm;
+                anglePid_timeCnt_ = 0;
+            }
+            target_torque_ = speed_pid_.pid_calc(target_rpm_, current_rpm_);
         break;
     default:
         // 不应该出现这种情况，待处理
@@ -438,8 +458,20 @@ float GO_Motor::getTotalAngle() const
     return current_totalAngle_;
 }
 
-
-float GO_Motor::getTargetRPM()
+/**
+ * @brief 获取当前目标输出轴转速
+ * @return float 当前目标输出轴转速
+ */
+float GO_Motor::getTargetRPM() const
 {
     return target_rpm_;
+}
+
+/**
+ * @brief 获取当前目标输出轴总角度
+ * @return float 当前目标输出轴总角度
+ */
+float GO_Motor::getTargetTotalAngle() const
+{
+    return target_totalAngle_;
 }
