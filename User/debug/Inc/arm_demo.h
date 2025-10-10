@@ -30,7 +30,7 @@ extern "C"
 #include "APP_Tool.h"
 #include "Module_Air_joy.h"
 
-#define ARM_DEMO_DAEBUG 1
+
 
 extern AirJoy air_joy;
 

@@ -980,6 +980,11 @@
               <FileType>8</FileType>
               <FilePath>..\User\debug\Src\arm_demo.cpp</FilePath>
             </File>
+            <File>
+              <FileName>debug_setup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\debug_setup.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

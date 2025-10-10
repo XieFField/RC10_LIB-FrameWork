@@ -22,7 +22,7 @@ void Robot_ArmDemo::armInit(DJI_Motor *motor_ArmLaunch, DJI_Motor *motor_ArmStre
 }
 
 Arm_Point_S test_point = {
-    .x = 0.0f,
+    .x = 0.3f,
     .y = 0.0f,
     .z = 0.0f,
 
@@ -56,10 +56,10 @@ void Robot_ArmDemo::loop()
     const float v_xyz = 0.2f;     
     const float v_aux = 0.5f;     
 
-    test_point.z += step_pm(air_joy.LEFT_Y)  * v_xyz * dt;
-    test_point.x += step_pm(air_joy.LEFT_X)  * v_xyz * dt;
-    test_point.y += step_pm(air_joy.RIGHT_Y) * v_xyz * dt;
-    test_point.suckerJoint_status_ += step_pm(air_joy.RIGHT_X) * v_aux * dt;
+//    test_point.z += step_pm(air_joy.LEFT_Y)  * v_xyz * dt;
+//    test_point.x += step_pm(air_joy.LEFT_X)  * v_xyz * dt;
+//    test_point.y += step_pm(air_joy.RIGHT_Y) * v_xyz * dt;
+//    test_point.suckerJoint_status_ += step_pm(air_joy.RIGHT_X) * v_aux * dt;
 
     this->setArmTarget(test_point);
     this->update();

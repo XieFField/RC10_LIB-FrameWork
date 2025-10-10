@@ -1,9 +1,14 @@
 #include "Setup_ConfigInit.h"
 
 
-DJI_MotorDemo dji_motor_demo;
+#if DEBUG_M2006
 
-#if ARM_DEMO_DAEBUG
+DJI_MotorDemo dji_motor_demo;
+#endif
+
+/*================================ debug  机械吸盘 =============================*/
+
+#if ARM_DEMO_DEBUG
 
 fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
 DJI_Group ArmGroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4号M3508/M2006电机
@@ -47,16 +52,41 @@ void arm_motorInit()
    
 }
 #endif
+
+/*============================== debug  机械吸盘 ===============================*/
+
+
+
+
+
+void debug_init()
+{
+   /*============================= debug  机械吸盘 ================================*/
+#if ARM_DEMO_DEBUG
+   arm_motorInit();
+   arm_demo.armInit(&m3508_ArmLaunch, &m3508_ArmStretch, &m3508_ArmRotate, &m3508_ArmPitch);
+#endif
+/*============================== debug  机械吸盘 ===============================*/
+
+
+/*============================== debug  M2006 ===============================*/
+#if DEBUG_M2006
+   dji_motor_demo.init();
+#endif
+/*============================== debug  M2006 ===============================*/
+
+}
+
+
 void ALL_Setup_ConfigInit(void)
 {
    dji_motor_demo.init();
    
 
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
+   debug_init();
 
-#if ARM_DEMO_DAEBUG
-   arm_motorInit();
-   arm_demo.armInit(&m3508_ArmLaunch, &m3508_ArmStretch, &m3508_ArmRotate, &m3508_ArmPitch);
-#endif
+
+   //other init
 }
 
