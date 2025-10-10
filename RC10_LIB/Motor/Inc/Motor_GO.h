@@ -6,8 +6,9 @@
  * @date        2025-10- (最后修改日期)
  * @platform	
  * @version     0.1.0
- * @details
- * @note		
+ * @details     
+ * @note        1. 把KposKspd的设置和读取从程序里删掉
+ *              2. 待解决GO电机编码器初始化指令要确认存在有效接收对象的问题
  * @warning		
  * @license     WTFPL License
  *
@@ -16,8 +17,6 @@
  *  @li 版本号: 0.1.0
  *      - 修订日期: 2025-10-
  *      - 主要变更:
- *			- 
- *		- 不足之处:
  *			- 
  *      - 作者: ZhangJiaJia
  */
@@ -37,9 +36,13 @@
 #include <cstring>
 #include <cstdint>
 #include <cstddef>
+#include <cmath>    
 
-#include "Module_Encoder.h"
+
 #include "Motor_Base.h"
+#include "APP_PID.h"
+
+
 
 /**
  * @brief 
@@ -57,6 +60,8 @@ public:
     GO_Motor(uint32_t id, fdCANbus *bus) : Motor_Base(id, true, bus){};
 
     ~GO_Motor(){};
+
+    void pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa);
 
     /**
      * @brief 检查CAN帧是否符合电机的报文格式
@@ -94,14 +99,45 @@ public:
      */
     void setTargetAngle(float angle_set) override;
 
+     /**
+     * @brief 设置目标输出轴总角度，单位度
+     * @param totalAngle_set 目标输出轴总角度
+     */
+    void setTargetTotalAngle(float totalAngle_set) override;
+
     /**
      * @brief 解析电机返回的CAN报文
      * @param cf 电机返回的CAN报文
      */
     void updateFeedback(const CanFrame& cf) override;
 
+    /**
+     * @brief 周期性被唤醒函数，可用于更新电机状态
+     */
+    void update() override;
 
-    
+    /**
+     * @brief 重置输出轴总角度为0度
+     */
+    void resetTotalAngle();
+
+    /**
+     * @brief 获取当前输出轴转速
+     * @return float 当前输出轴转速
+     */
+    float getRPM() const override;
+
+    /**
+     * @brief 获取当前输出轴角度
+     * @return float 当前输出轴角度
+     */
+    float getAngle() const override;
+
+    /**
+     * @brief 获取当前输出轴总角度
+     * @return float 当前输出轴总角度
+     */
+    float getTotalAngle() const override;
 
 private:
     /**
@@ -110,6 +146,11 @@ private:
      * @param kspd 电机阻尼系数/速度误差比例系数
      */
     void setKposAndKspd(float kpos, float kspd);
+
+    /**
+     * @brief 重置电机控制参数，防止控制参数冲突
+     */
+    void resetParam();
 
 
     enum class Mode : uint8_t
@@ -170,16 +211,20 @@ private:
     Motor_Control_Mode motor_control_mode_ = Motor_Control_Mode::MODE_13; // 默认模式13
 
 
-    // 这两个既是先验量，也是后验量
+    // 这三个既是先验量，也是后验量
     bool isSetKposKspd_ = false; // 标记是否需要重新设置电机刚度系数和阻尼系数，默认为否
     bool isReadKposKspd_ = false; // 标记是否需要重新读取电机刚度系数和阻尼系数，默认为否
+    bool isResetTotalAngle_ = true; // 标记是否需要重置输出轴总角度为0度，默认为是
 
+
+    const float GEAR_RATIO_ = 6.33f; // GO电机减速比为6.33
 
     float target_kpos_ = 0.f; // 电机刚度系数/位置误差比例系数（输入）
     float target_kspd_ = 0.f; // 电机阻尼系数/速度误差比例系数（输入）
 
     float target_rpm_ = 0.f; // 目标输出轴转速
     float target_angle_ = 0.f; // 目标输出轴角度
+    float target_totalAngle_ = 0.f; // 目标输出轴总角度
     float target_torque_ = 0.f; // 目标输出轴转矩
 
 
@@ -187,12 +232,17 @@ private:
     float current_kspd_ = 0.f; // 电机阻尼系数/速度误差比例系数
 
     float current_angle_ = 0.f; // 当前输出轴角度
+    float current_totalAngle_original_ = 0.f; // 当前输出轴总角度（原始值）
+    float current_totalAngle_offset_ = 0.f; // 当前输出轴总角度（偏移值）
+    float current_totalAngle_ = 0.f; // 当前输出轴总角度
     float current_rpm_ = 0.f; // 当前输出轴转速
     float current_torque_ = 0.f; // 当前输出轴转矩
 
     float current_atm_ = 0.f; // 当前气压，GO电机好像并不回传此项
     int8_t current_motor_temperature_ = 0; // 当前电机温度
-    
+
+    PID_Incremental speed_pid_;
+    PID_Position angle_pid_;
 };
 
 

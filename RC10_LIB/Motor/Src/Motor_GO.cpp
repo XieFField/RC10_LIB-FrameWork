@@ -7,7 +7,8 @@
  * @platform	
  * @version     0.1.0
  * @details     
- * @note        1. 待解决GO电机编码器初始化指令要确认存在有效接收对象的问题
+ * @note        1. 把KposKspd的设置和读取从程序里删掉
+ *              2. 待解决GO电机编码器初始化指令要确认存在有效接收对象的问题
  * @warning		
  * @license     WTFPL License
  *
@@ -16,8 +17,6 @@
  *  @li 版本号: 0.1.0
  *      - 修订日期: 2025-10-
  *      - 主要变更:
- *			- 
- *		- 不足之处:
  *			- 
  *      - 作者: ZhangJiaJia
  */
@@ -200,6 +199,7 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
 void GO_Motor::setTargetTorque(float torque_set)
 {
     mode_ = Mode::SET_TORQUE;
+    resetParam();
     target_torque_ = torque_set; // 没有输入检查
 }
 
@@ -210,6 +210,7 @@ void GO_Motor::setTargetTorque(float torque_set)
 void GO_Motor::setTargetRPM(float rpm_set)
 {
     mode_ = Mode::SET_RPM;
+    resetParam();
     target_rpm_ = rpm_set;
 }
 
@@ -220,7 +221,20 @@ void GO_Motor::setTargetRPM(float rpm_set)
 void GO_Motor::setTargetAngle(float angle_set)
 {
     mode_ = Mode::SET_POS;
+    resetParam();
     target_angle_ = angle_set;
+
+    float angle_offset = target_angle_ - current_angle_;
+    if(angle_offset > 180.0f)
+    {
+        angle_offset -= 360.0f;
+    }
+    else if(angle_offset < -180.0f)
+    {
+        angle_offset += 360.0f;
+    }
+
+    target_totalAngle_ = current_totalAngle_ + angle_offset;
 }
 
 /**
@@ -277,11 +291,28 @@ void GO_Motor::updateFeedback(const CanFrame& cf)
         current_atm_ = (float)extended_id.low_3;
         current_motor_temperature_ = extended_id.low_1;
 
+        
         int32_t angle_int = (data.byte_3 << 24) | (data.byte_2 << 16) | (data.byte_1 << 8) | data.byte_0;
-        current_angle_ = (float)angle_int / 32768 * 360;
+        float current_eangle = (float)angle_int / 32768 * 360;
+        current_totalAngle_original_ = current_eangle / GEAR_RATIO_;
+        current_totalAngle_ = current_totalAngle_original_ - current_totalAngle_offset_;
+        current_angle_ = fmod(current_totalAngle_, 360.0f);
+        if(current_angle_ < 0) 
+            current_angle_ += 360.0f;
+		
+		if (isResetTotalAngle_)
+        {
+            current_totalAngle_offset_ = current_totalAngle_original_;
+            isResetTotalAngle_ = false;
+        }
 
         int16_t omega_int = (data.byte_5 << 8) | data.byte_4;
-        current_rpm_ = (float)omega_int / 256 * 60;
+        float current_erpm = (float)omega_int / 256 * 60;
+        current_rpm_ = current_erpm / GEAR_RATIO_;
+        if(fabsf(current_rpm_) < 1.5f)
+        {
+            current_rpm_ = 0.0f;
+        }
 
         int16_t torque_int = (data.byte_7 << 8) | data.byte_6;
         current_torque_ = (float)torque_int / 256;
@@ -291,9 +322,6 @@ void GO_Motor::updateFeedback(const CanFrame& cf)
         // 不应该发生的情况，待处理
     }
 }
-
-
-
 
 /**
  * @brief 设置电机Kpos和Kspd
@@ -305,16 +333,100 @@ void GO_Motor::setKposAndKspd(float kpos, float kspd)
     target_kpos_ = kpos;
     target_kspd_ = kspd;
 
-    // 临时用的，待处理
-    target_kpos_ = 0;
-    target_kspd_ = 0;
-
     isSetKposKspd_ = true;
 }
 
+/**
+ * @brief 重置电机控制参数，防止控制参数冲突
+ */
+void GO_Motor::resetParam()
+{
+    target_torque_ = 0;
+    target_rpm_ = 0;
+    target_angle_ = 0;
+    target_totalAngle_ = 0;
+}
 
+/**
+ * @brief 设置目标输出轴总角度，单位度
+ * @param totalAngle_set 目标输出轴总角度
+ */
+void GO_Motor::setTargetTotalAngle(float totalAngle_set)
+{
+    mode_ = Mode::SET_POS;
+    resetParam();
+    target_totalAngle_ = totalAngle_set;
+}
 
+/**
+ * @brief 周期性被唤醒函数，可用于更新电机状态
+ */
+void GO_Motor::update()
+{
+    switch (mode_)
+    {
+    case Mode::SET_DEFAULT:
+        // NONE
+        break;
+    case Mode::SET_TORQUE:
+        // NONE
+        break;
+    case Mode::SET_RPM:
+        target_torque_ = speed_pid_.pid_calc(target_rpm_, current_rpm_);
+        break;
+    case Mode::SET_POS:
+        
+        break;
+    default:
+        // 不应该出现这种情况，待处理
+        break;
+    }
+}
 
+/**
+ * @brief 重置输出轴总角度为0度
+ */
+void GO_Motor::resetTotalAngle()
+{
+    isResetTotalAngle_ = true;
+}
 
+/**
+ * @brief 初始化PID参数
+ * @param speed_params 速度PID参数
+ * @param speed_tdRatio 速度PID微分时间比例
+ * @param angle_params 角度PID参数
+ * @param angle_I_Separa 角度PID积分分离阈值
+ */
+void GO_Motor::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa)
+{
+    speed_pid_.set_params(speed_params, speed_tdRatio);
+    angle_pid_.set_params(angle_params, angle_I_Separa);
+}
 
+/**
+ * @brief 获取当前输出轴转速
+ * @return float 当前输出轴转速
+ */
+float GO_Motor::getRPM() const
+{
+    return current_rpm_;
+}
 
+/**
+ * @brief 获取当前输出轴角度
+ * @return float 当前输出轴角度
+ */
+float GO_Motor::getAngle() const
+{
+    return current_angle_;
+}
+
+/**
+ * @brief 获取当前输出轴总角度
+ * @return float 当前输出轴总角度
+ */
+float GO_Motor::getTotalAngle() const
+{
+    return current_totalAngle_;
+}

@@ -20,7 +20,7 @@
 
 class GO_MotorDemo: public RtosTask {
 public:
-    GO_MotorDemo() : RtosTask("GO_MotorDemo", 1), debug_uart(&huart1) {}
+    GO_MotorDemo() : RtosTask("GO_MotorDemo", 10), debug_uart(&huart1) {}
     void init();
     void loop() override;
     Debug_Printf debug_uart;

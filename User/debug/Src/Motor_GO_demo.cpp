@@ -20,11 +20,34 @@ volatile float GO_demo_RPM = 0.0f;
 volatile float GO_demo_Angle = 0.0f;
 
 
+PID_Param_Config Go_speed_pid_params = {
+    .kp = 0.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 0.0f,   
+    .deadband = 0.0f 
+};
+
+PID_Param_Config Go_angle_pid_params = {
+    .kp = 0.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 0.0f,   
+    .deadband = 0.0f 
+};
+
 
 void GO_MotorDemo::init()
 {
     CAN1_Bus.registerMotor(&GO_Motor_1); // 注册电机本身
     start(osPriorityNormal, 256);
+
+    // 初始化PID参数
+    GO_Motor_1.pid_init(Go_speed_pid_params, 0.0f, Go_angle_pid_params, 0.0f);
     
     const char *msg2 = "Hallo GO_MotorDemo!\r\n";
     HAL_UART_Transmit(&huart1, (uint8_t*)msg2, strlen(msg2), HAL_MAX_DELAY);
@@ -40,8 +63,8 @@ void GO_MotorDemo::loop()
         // 可以在这里使用 delta_time 进行其他计算
     }
     last_time = time_now;
-    // debug_uart.printf_DMA("%f,%f\r\n",m3508_1.getTotalAngle(), m3508_1.getTargetTotalAngle());
-    //HAL_UART_Transmit(&huart1, (uint8_t*)"Tick\r\n", 6, HAL_MAX_DELAY);
+    debug_uart.printf_DMA("%f,%f\r\n",GO_Motor_1.getRPM(), GO_Motor_1.getAngle());
+    // HAL_UART_Transmit(&huart1, (uint8_t*)"Tick\r\n", 6, HAL_MAX_DELAY);
     if(start_signal == 1)
     {
         GO_Motor_1.setTargetTorque(GO_demo_Torque);
@@ -61,11 +84,28 @@ void GO_MotorDemo::loop()
     }
     else if (start_signal == 4)
     {
-
+        GO_Motor_1.resetTotalAngle();
     }
     else if (start_signal == 5)
     {
+
+       static uint64_t last_switch_time = 0;
+       uint64_t current_time = HAL_GetTick();
+       static bool temp = true;
        
+       if (current_time - last_switch_time >= 10000) {
+           last_switch_time = current_time;
+           if(temp)
+           {
+               temp = false;
+               GO_Motor_1.setTargetRPM(250);
+           }
+           else
+           {
+               temp = true;
+               GO_Motor_1.setTargetRPM(-250);
+           }
+       }
     }
     else if (start_signal == 6)
     {
