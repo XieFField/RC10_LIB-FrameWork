@@ -280,6 +280,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>GO_demo_Torque</ItemText>
         </Ww>
+        <Ww>
+          <count>25</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>inputTorque,0x10</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

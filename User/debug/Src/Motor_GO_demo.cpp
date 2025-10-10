@@ -13,8 +13,6 @@ extern volatile float delta_time; //目前使用的单位是微秒
 extern volatile uint64_t last_time;
 
 
-volatile float GO_demo_Kpos = 0.0f;
-volatile float GO_demo_Kspd = 0.0f;
 
 
 volatile float GO_demo_Torque = 0.0f;
@@ -63,8 +61,7 @@ void GO_MotorDemo::loop()
     }
     else if (start_signal == 4)
     {
-        GO_Motor_1.setKposAndKspd(GO_demo_Kpos, GO_demo_Kspd);
-        start_signal = 0;
+
     }
     else if (start_signal == 5)
     {

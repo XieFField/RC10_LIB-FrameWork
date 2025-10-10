@@ -5,7 +5,7 @@
  * @date        2025-09-28 (创建日期)
  * @date        2025-10- (最后修改日期)
  * @platform	
- * @version     0.2.0
+ * @version     0.1.0
  * @details
  * @note		
  * @warning		
@@ -13,7 +13,7 @@
  *
  * @par 版本修订历史
  * @{
- *  @li 版本号: 0.2.0
+ *  @li 版本号: 0.1.0
  *      - 修订日期: 2025-10-
  *      - 主要变更:
  *			- 
@@ -101,6 +101,9 @@ public:
     void updateFeedback(const CanFrame& cf) override;
 
 
+    
+
+private:
     /**
      * @brief 设置电机Kpos和Kspd
      * @param kpos 电机刚度系数/位置误差比例系数
@@ -108,7 +111,7 @@ public:
      */
     void setKposAndKspd(float kpos, float kspd);
 
-private:
+
     enum class Mode : uint8_t
     {
         SET_DEFAULT = 0, // 锁定模式

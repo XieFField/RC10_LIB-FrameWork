@@ -5,7 +5,7 @@
  * @date        2025-09-28 (创建日期)
  * @date        2025-10- (最后修改日期)
  * @platform	
- * @version     0.2.0
+ * @version     0.1.0
  * @details     
  * @note        1. 待解决GO电机编码器初始化指令要确认存在有效接收对象的问题
  * @warning		
@@ -13,7 +13,7 @@
  *
  * @par 版本修订历史
  * @{
- *  @li 版本号: 0.2.0
+ *  @li 版本号: 0.1.0
  *      - 修订日期: 2025-10-
  *      - 主要变更:
  *			- 
@@ -68,7 +68,7 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
     {
         motor_control_mode_ = Motor_Control_Mode::MODE_10; // MODE_10 和 MODE_13 均可以
 
-        GO_Motor_1.setKposAndKspd(0, 0);
+        this->setKposAndKspd(0, 0);
     }
     else if(isSetKposKspd_)
     {
@@ -153,8 +153,8 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
          .byte_3 = 0,
          .byte_4 = 0,
          .byte_5 = 0,
-         .byte_6 = (uint8_t)(inputTorque >> 8),
-         .byte_7 = (uint8_t)(inputTorque),
+         .byte_6 = (uint8_t)(inputTorque),
+         .byte_7 = (uint8_t)(inputTorque >> 8),
     };      
 
 
@@ -163,10 +163,10 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         uint16_t input_kpos = (uint16_t)(target_kpos_ * 1280.0f); // 没有四舍五入，直接截断
         uint16_t input_kspd = (uint16_t)(target_kspd_ * 1280.0f); // 没有四舍五入，直接截断
 
-        data.byte_0 = (uint8_t)(input_kpos >> 8);
-        data.byte_1 = (uint8_t)(input_kpos);
-        data.byte_2 = (uint8_t)(input_kspd >> 8);
-        data.byte_3 = (uint8_t)(input_kspd);
+        data.byte_0 = (uint8_t)(input_kpos);
+        data.byte_1 = (uint8_t)(input_kpos >> 8);
+        data.byte_2 = (uint8_t)(input_kspd);
+        data.byte_3 = (uint8_t)(input_kspd >> 8);
 		
 		isSetKposKspd_ = false;
     }
@@ -255,8 +255,8 @@ void GO_Motor::updateFeedback(const CanFrame& cf)
 
     if ( extended_id.low_3 == (uint8_t)Motor_Control_Mode::MODE_2)
     {
-        int16_t kpos_int = (data.byte_0 << 8) | data.byte_1;
-        int16_t kspd_int = (data.byte_2 << 8) | data.byte_3;
+        int16_t kpos_int = (data.byte_1 << 8) | data.byte_0;
+        int16_t kspd_int = (data.byte_3 << 8) | data.byte_2;
         current_kpos_ = static_cast<float>(kpos_int) / 1280.0f;
         current_kspd_ = static_cast<float>(kspd_int) / 1280.0f;
 
@@ -277,13 +277,13 @@ void GO_Motor::updateFeedback(const CanFrame& cf)
         current_atm_ = (float)extended_id.low_3;
         current_motor_temperature_ = extended_id.low_1;
 
-        int32_t angle_int = (data.byte_0 << 24) | (data.byte_1 << 16) | (data.byte_2 << 8) | data.byte_3;
+        int32_t angle_int = (data.byte_3 << 24) | (data.byte_2 << 16) | (data.byte_1 << 8) | data.byte_0;
         current_angle_ = (float)angle_int / 32768 * 360;
 
-        int16_t omega_int = (data.byte_4 << 8) | data.byte_5;
+        int16_t omega_int = (data.byte_5 << 8) | data.byte_4;
         current_rpm_ = (float)omega_int / 256 * 60;
 
-        int16_t torque_int = (data.byte_6 << 8) | data.byte_7;
+        int16_t torque_int = (data.byte_7 << 8) | data.byte_6;
         current_torque_ = (float)torque_int / 256;
     }
     else 
@@ -306,8 +306,8 @@ void GO_Motor::setKposAndKspd(float kpos, float kspd)
     target_kspd_ = kspd;
 
     // 临时用的，待处理
-    // target_kpos_ = 0;
-    // target_kspd_ = 0;
+    target_kpos_ = 0;
+    target_kspd_ = 0;
 
     isSetKposKspd_ = true;
 }
