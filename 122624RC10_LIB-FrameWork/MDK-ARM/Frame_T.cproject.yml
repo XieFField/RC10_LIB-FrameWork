@@ -1,0 +1,291 @@
+project:
+  packs:
+    - pack: ARM::CMSIS@^6.1.0
+    - pack: Keil::STM32H7xx_DFP@^4.1.2
+    - pack: ARM::CMSIS-NN@^4.0.0
+    - pack: ARM::CMSIS-DSP@^1.10.1
+  setups:
+    - setup: Options for Frame_T
+      processor:
+        fpu: sp
+      add-path:
+        - ../Core/Inc
+        - ../Drivers/STM32H7xx_HAL_Driver/Inc
+        - ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy
+        - ../Middlewares/Third_Party/FreeRTOS/Source/include
+        - ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2
+        - ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F
+        - ../Drivers/CMSIS/Device/ST/STM32H7xx/Include
+        - ../Drivers/CMSIS/Include
+        - ../RC10_LIB/BSP_Driver/Inc
+        - ../RC10_LIB/Motor/Inc
+        - ../RC10_LIB/APP/Inc
+        - ../User/Control/Inc
+        - ../User/debug/Inc
+        - ../User/Setup/Inc
+        - ../RC10_LIB/Module/Inc
+        - ../Middlewares/ST/ARM/DSP/Inc
+        - ../Drivers/CMSIS/DSP/Include
+        - ../USB_DEVICE/App
+        - ../USB_DEVICE/Target
+        - ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc
+        - ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc
+        - ../MyChassis
+      debug: "on"
+      define:
+        - USE_PWR_LDO_SUPPLY
+        - USE_HAL_DRIVER
+        - STM32H723xx
+        - ARM_MATH_CM7
+        - ARM_MATH
+        - ARM_MATH_MATRIX_CHECK
+        - ARM_MATH_ROUNDING
+      misc:
+        - C:
+            - -std=c99
+          C-CPP:
+            - -fno-rtti
+            - -funsigned-char
+            - -fshort-enums
+            - -fshort-wchar
+            - -ffunction-sections
+            - -w
+            - -finput-charset=UTF-8
+          CPP:
+            - -xc++
+            - -std=c++17
+            - -fno-exceptions
+          ASM:
+            - -masm=auto
+          Link:
+            - --map
+            - --load_addr_map_info
+            - --xref
+            - --callgraph
+            - --symbols
+            - --info sizes
+            - --info totals
+            - --info unused
+            - --info veneers
+            - --strict
+            - --summary_stderr
+            - --info summarysizes
+  linker:
+    - script: Frame_T_Frame_T.sct
+  groups:
+    - group: Application/MDK-ARM
+      files:
+        - file: startup_stm32h723xx.s
+    - group: Application/User/Core
+      files:
+        - file: ../Core/Src/main.cpp
+        - file: ../Core/Src/gpio.c
+        - file: ../Core/Src/freertos.c
+        - file: ../Core/Src/dma.c
+          misc:
+            - CPP:
+                - -xc++
+        - file: ../Core/Src/fdcan.c
+        - file: ../Core/Src/tim.c
+          misc:
+            - CPP:
+                - -xc++
+        - file: ../Core/Src/usart.c
+        - file: ../Core/Src/stm32h7xx_it.c
+        - file: ../Core/Src/stm32h7xx_hal_msp.c
+        - file: ../Core/Src/stm32h7xx_hal_timebase_tim.c
+    - group: Drivers/STM32H7xx_HAL_Driver
+      files:
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c
+          misc:
+            - CPP:
+                - -xc++
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c
+          misc:
+            - CPP:
+                - -xc++
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c
+          misc:
+            - CPP:
+                - -xc++
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_fdcan.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c
+        - file: ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c
+    - group: Drivers/CMSIS
+      files:
+        - file: ../Core/Src/system_stm32h7xx.c
+    - group: Middlewares/FreeRTOS
+      files:
+        - file: ../Middlewares/Third_Party/FreeRTOS/Source/croutine.c
+        - file: ../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c
+        - file: ../Middlewares/Third_Party/FreeRTOS/Source/list.c
+        - file: ../Middlewares/Third_Party/FreeRTOS/Source/queue.c
+        - file: ../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c
+        - file: ../Middlewares/Third_Party/FreeRTOS/Source/tasks.c
+        - file: ../Middlewares/Third_Party/FreeRTOS/Source/timers.c
+        - file: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c
+        - file: ../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
+        - file: ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c
+    - group: RC10_LIB/BSP
+      files:
+        - file: ../RC10_LIB/BSP_Driver/Src/BSP_fdCAN_Driver.cpp
+        - file: ../RC10_LIB/BSP_Driver/Inc/BSP_fdCAN_Driver.h
+        - file: ../RC10_LIB/BSP_Driver/Inc/BSP_CanFrame.h
+        - file: ../RC10_LIB/BSP_Driver/Inc/BSP_RTOS.h
+        - file: ../RC10_LIB/BSP_Driver/Src/BSP_TimeStamp.cpp
+        - file: ../RC10_LIB/BSP_Driver/Inc/BSP_TimeStamp.h
+    - group: RC10_LIB/Motor
+      files:
+        - file: ../RC10_LIB/Motor/Inc/Motor_Base.h
+        - file: ../RC10_LIB/Motor/Src/Motor_DJI.cpp
+        - file: ../RC10_LIB/Motor/Inc/Motor_DJI.h
+        - file: ../RC10_LIB/Motor/Inc/Motor_VESC.h
+        - file: ../RC10_LIB/Motor/Src/Motor_VESC.cpp
+    - group: User/debug
+      files:
+        - file: ../User/debug/Src/frame_demo.cpp
+        - file: ../User/debug/Inc/frame_demo.h
+    - group: User/Setup
+      files:
+        - file: ../User/Setup/Inc/Setup_ConfigInit.h
+        - file: ../User/Setup/Src/Setup_ConfigInit.cpp
+    - group: RC10_LIB/APP
+      files:
+        - file: ../RC10_LIB/APP/Src/APP_PID.cpp
+        - file: ../RC10_LIB/APP/Src/APP_tool.cpp
+        - file: ../RC10_LIB/APP/Inc/APP_PID.h
+        - file: ../RC10_LIB/APP/Inc/APP_tool.h
+        - file: ../RC10_LIB/APP/Src/APP_CoordConvert.cpp
+        - file: ../RC10_LIB/APP/Inc/APP_CoordConvert.h
+    - group: RC10_LIB/Module
+      files:
+        - file: ../RC10_LIB/Module/Src/Module_Encoder.cpp
+        - file: ../RC10_LIB/Module/Src/Module_ChassisBase.cpp
+        - file: ../RC10_LIB/Module/Inc/Module_ChassisBase.h
+        - file: ../RC10_LIB/Module/Inc/Module_Encoder.h
+        - file: ../RC10_LIB/Module/Inc/Module_Air_joy.h
+        - file: ../RC10_LIB/Module/Src/Module_Air_joy.cpp
+    - group: CMSIS/DSP
+      files:
+        - file: ../Drivers/CMSIS/DSP/Lib/ARM/arm_cortexM7lfsp_math.lib
+    - group: Application/User/USB_DEVICE/App
+      misc:
+        - C-CPP:
+            - -Wno-packed
+            - -Wno-missing-variable-declarations
+            - -Wno-missing-prototypes
+            - -Wno-missing-noreturn
+            - -Wno-sign-conversion
+            - -Wno-nonportable-include-path
+            - -Wno-reserved-id-macro
+            - -Wno-unused-macros
+            - -Wno-documentation-unknown-command
+            - -Wno-documentation
+            - -Wno-license-management
+            - -Wno-parentheses-equality
+            - -Wno-covered-switch-default
+            - -Wno-unreachable-code-break
+          CPP:
+            - -xc++
+            - -fno-exceptions
+      files:
+        - file: ../USB_DEVICE/App/usb_device.c
+          misc:
+            - CPP:
+                - -xc++
+        - file: ../USB_DEVICE/App/usbd_desc.c
+          misc:
+            - CPP:
+                - -xc++
+        - file: ../USB_DEVICE/App/usbd_cdc_if.c
+          misc:
+            - CPP:
+                - -xc++
+    - group: Application/User/USB_DEVICE/Target
+      misc:
+        - C-CPP:
+            - -Wno-packed
+            - -Wno-missing-variable-declarations
+            - -Wno-missing-prototypes
+            - -Wno-missing-noreturn
+            - -Wno-sign-conversion
+            - -Wno-nonportable-include-path
+            - -Wno-reserved-id-macro
+            - -Wno-unused-macros
+            - -Wno-documentation-unknown-command
+            - -Wno-documentation
+            - -Wno-license-management
+            - -Wno-parentheses-equality
+            - -Wno-covered-switch-default
+            - -Wno-unreachable-code-break
+          CPP:
+            - -xc++
+            - -fno-exceptions
+      files:
+        - file: ../USB_DEVICE/Target/usbd_conf.c
+          misc:
+            - CPP:
+                - -xc++
+    - group: Middlewares/USB_Device_Library
+      misc:
+        - C-CPP:
+            - -Wno-packed
+            - -Wno-missing-variable-declarations
+            - -Wno-missing-prototypes
+            - -Wno-missing-noreturn
+            - -Wno-sign-conversion
+            - -Wno-nonportable-include-path
+            - -Wno-reserved-id-macro
+            - -Wno-unused-macros
+            - -Wno-documentation-unknown-command
+            - -Wno-documentation
+            - -Wno-license-management
+            - -Wno-parentheses-equality
+            - -Wno-covered-switch-default
+            - -Wno-unreachable-code-break
+          CPP:
+            - -xc++
+            - -fno-exceptions
+      files:
+        - file: ../Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c
+          misc:
+            - CPP:
+                - -xc++
+        - file: ../Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c
+          misc:
+            - CPP:
+                - -xc++
+        - file: ../Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c
+          misc:
+            - CPP:
+                - -xc++
+        - file: ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c
+          misc:
+            - CPP:
+                - -xc++
+    - group: MyChassis
+      files:
+        - file: ../MyChassis/MyChassis.h
+        - file: ../MyChassis/user_setup.cpp
+        - file: ../MyChassis/MyChassis.cpp
+        - file: ../MyChassis/user_setup.h
+  components:
+    - component: ARM::CMSIS:CORE

@@ -1,0 +1,7 @@
+1 out of 1 target(s) converted
+Created solution: D:/stm32/willow/RC10_LIB-FrameWork-main/MDK-ARM/Frame_T.csolution.yml
+With projects:
+- D:/stm32/willow/RC10_LIB-FrameWork-main/MDK-ARM/Frame_T.cproject.yml
+Error: 0 error(s), 1 warning(s):
+Warnings:
+	For target "Frame_T" file 'D:/stm32/willow/RC10_LIB-FrameWork-main/User/Control/Inc' does not exists
