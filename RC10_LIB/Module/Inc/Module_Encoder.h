@@ -38,12 +38,6 @@ public:
     float getAngle_redian() const { return angle_ * (PI / 180.0f); }
 
     float getTotalAngle_redian() const { return total_angle_ * (PI / 180.0f); }
-
-    /**
-     * 将当前时刻的总路程重新定位到指定值，重定定义偏移量
-     */
-    void relocate_totalAngle(float now_totalAngle);
-
 private:
 
     float angle_ = 0.0f; //当前角度
@@ -53,9 +47,8 @@ private:
     uint16_t offset_ = 0;
     uint16_t last_ = 0;
     int32_t round_cnt_ = 0;
-    uint16_t range_;
 
-    float bias_deg_ = 0.0f; //角度偏移(单位:度)
+    uint16_t range_;
 };
 
 #endif

@@ -23,8 +23,7 @@
                 "_DEBUG",
                 "UNICODE",
                 "_UNICODE"
-            ],
-            "cStandard": "c17",
+            ],            "cStandard": "c17",
             "cppStandard": "gnu++14",
             "compilerPath": "C:/MinGW/mingw64/bin/gcc.exe",
             "intelliSenseMode": "windows-gcc-x64"
