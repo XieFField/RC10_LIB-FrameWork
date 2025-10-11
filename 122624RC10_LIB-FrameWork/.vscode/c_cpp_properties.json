@@ -1,0 +1,33 @@
+{
+    "configurations": [
+        {
+            "name": "windows-gcc-x64",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${default}",
+                "${workspaceFolder}/Core/Inc",
+                "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc",
+                "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
+                "${workspaceFolder}/RC10_LIB/APP/Inc",
+                "${workspaceFolder}/Drivers/CMSIS/RTOS2/Include",
+                "${workspaceFolder}/Drivers/CMSIS/RTOS/Template",
+                "${workspaceFolder}/RC10_LIB/BSP_Driver/Inc",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F",
+                "${workspaceFolder}/RC10_LIB/Motor/Inc",
+                "${workspaceFolder}/User/Setup/Inc",
+                "${workspaceFolder}/RC10_LIB/Module/Inc",
+                "${workspaceFolder}/Drivers/CMSIS/DSP/Include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],            "cStandard": "c17",
+            "cppStandard": "gnu++14",
+            "compilerPath": "C:/MinGW/mingw64/bin/gcc.exe",
+            "intelliSenseMode": "windows-gcc-x64"
+        }
+    ],
+    "version": 4
+}
