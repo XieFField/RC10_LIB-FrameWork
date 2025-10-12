@@ -193,7 +193,7 @@ float PID_Incremental::pid_calc(float target, float feedback)
     return output_;
 }
 
-//目前3508不错的参数 by XieFField
+//目前3508不错的参数 
 PID_Param_Config m3508_speed_pid_params = {
     .kp = 32.0f,
     .ki = 0.085f,
