@@ -1,3 +1,27 @@
+/**
+ * @file		Motor_GO_demo.h
+ * @brief       宇树GO-M8010-6电机驱动测试
+ * @author      ZhangJiaJia (Zhang643328686@163.com)
+ * @date        2025-09 (创建日期)
+ * @date        2025-10-14 (最后修改日期)
+ * @platform	学院STM32H723ZGT6核心板
+ * @version     0.1.0
+ * @details     暂无
+ * @todo        暂无
+ * @note        暂无
+ * @warning		暂无
+ * @license     WTFPL License
+ *
+ * @par 版本修订历史
+ * @{
+ *  @li 版本号: 0.1.0
+ *      - 修订日期: 2025-10-14
+ *      - 主要变更:
+ *			- 完成GO电机驱动测试
+ *      - 作者: ZhangJiaJia
+ */
+
+
 #ifndef __MOTOR_GO_DEMO_H__
 #define __MOTOR_GO_DEMO_H__
 

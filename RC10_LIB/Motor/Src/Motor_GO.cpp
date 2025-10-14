@@ -1,23 +1,26 @@
 /**
  * @file		Motor_Go.c
- * @brief
+ * @brief       宇树GO-M8010-6电机驱动，支持力矩、速度和角度三种独立控制模式
  * @author      ZhangJiaJia (Zhang643328686@163.com)
  * @date        2025-09-28 (创建日期)
- * @date        2025-10- (最后修改日期)
- * @platform	
+ * @date        2025-10-14 (最后修改日期)
+ * @platform	学院STM32H723ZGT6核心板
  * @version     0.1.0
- * @details     
- * @note        1. 把KposKspd的设置和读取从程序里删掉
+ * @details     暂无
+ * @todo        1. 把KposKspd的设置和读取从程序里删掉
  *              2. 待解决GO电机编码器初始化指令要确认存在有效接收对象的问题
- * @warning		
+ *              3. 代码表述待优化
+ * @note        暂无
+ * @warning		暂无
  * @license     WTFPL License
  *
  * @par 版本修订历史
  * @{
  *  @li 版本号: 0.1.0
- *      - 修订日期: 2025-10-
+ *      - 修订日期: 2025-10-14
  *      - 主要变更:
- *			- 
+ *			- 完成基本功能，可以并入主代码
+ *          - 支持力矩、速度和角度三种独立控制模式
  *      - 作者: ZhangJiaJia
  */
 
@@ -474,4 +477,13 @@ float GO_Motor::getTargetRPM() const
 float GO_Motor::getTargetTotalAngle() const
 {
     return target_totalAngle_;
+}
+
+/**
+ * @brief 获取当前输出轴转矩
+ * @return float 当前输出轴转矩
+ */
+float GO_Motor::getTorque() const
+{
+    return current_torque_;
 }
