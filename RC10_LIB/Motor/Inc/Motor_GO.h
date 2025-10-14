@@ -25,8 +25,7 @@
  */
 
 
-#ifndef __MOTOR_GO_H__
-#define __MOTOR_GO_H__
+
 
 #pragma once    // 再次冗余保证不重复包含
 
