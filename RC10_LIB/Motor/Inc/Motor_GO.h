@@ -23,18 +23,21 @@
  *          - 支持力矩、速度和角度三种独立控制模式
  *      - 作者: ZhangJiaJia
  */
-
+#ifndef MOTOR_GO_H
+#define MOTOR_GO_H
 
 
 
 #pragma once    // 再次冗余保证不重复包含
 
-#if defined(__cplusplus) && __cplusplus < 201103L
-#error "此文件需要支持C++11及以上编译环境,请确保编译器支持C++11或更高版本。"
-#elif !defined(__cplusplus)
-#error "此文件需要支持C++编译环境,请确保编译器支持__cplusplus宏。"
-#endif
+//#if defined(__cplusplus) && __cplusplus < 201103L
+//#error "此文件需要支持C++11及以上编译环境,请确保编译器支持C++11或更高版本。"
+//#endif
+//#if !defined(__cplusplus)
+//#error "此文件需要支持C++编译环境,请确保编译器支持__cplusplus宏。"
+//#endif
 
+#ifdef __cplusplus
 #include <cstring>
 #include <cstdint>
 #include <cstddef>
@@ -80,8 +83,6 @@ public:
      * @return std::size_t 实际打包的CAN帧数量
      */
     std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) override;
-
-
 
     /**
      * @brief 设置目标输出轴转矩，单位N.m
@@ -271,12 +272,6 @@ private:
 };
 
 
-
-
-
-
-
-
-
+#endif
 
 #endif // __MOTOR_GO_H__

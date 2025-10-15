@@ -25,7 +25,7 @@
  */
 
 
-#include "Motor_Go.h"
+#include "Motor_GO.h"
 
 
 /**
@@ -57,19 +57,10 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
     outFrames[0].isextended = true;
     outFrames[0].DLC = 8;
     memset(outFrames[0].data, 0, 8);
-
-
-
-
-
-
     int16_t inputTorque = (int16_t)(target_torque_ * 256.0f); // 没有四舍五入，直接截断
-
-
     if(!isInit_)
     {
         motor_control_mode_ = Motor_Control_Mode::MODE_10; // MODE_10 和 MODE_13 均可以
-
         this->setKposAndKspd(0, 0);
     }
     else if(isSetKposKspd_)
@@ -96,7 +87,7 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
     {
         // 意料之外的情况，待处理
     }
-
+    
     if(isSetKposKspd_ || isReadKposKspd_)
     {
         mode_ = Mode::SET_DEFAULT;
@@ -478,6 +469,7 @@ float GO_Motor::getTargetTotalAngle() const
 {
     return target_totalAngle_;
 }
+
 
 /**
  * @brief 获取当前输出轴转矩

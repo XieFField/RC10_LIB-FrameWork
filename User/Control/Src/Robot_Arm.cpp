@@ -7,8 +7,9 @@ Robot_Arm::Robot_Arm(Arm_InitData_S init_Data)
 
 void Robot_Arm::update()
 {
-    inverseKinematics(arm_target_);
-
+    if(control_mode_ == TARGET_POSITION_MODE)
+        inverseKinematics(arm_target_);
+    
   // 机械臂位置更新
   
     float target_rotateMotorAngle = 0.0f;

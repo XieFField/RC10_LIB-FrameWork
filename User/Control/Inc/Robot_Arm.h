@@ -57,7 +57,10 @@ typedef struct{
     float suckerJoint_status_ ; // 末端关节状态
 }Arm_Point_S;
 
-
+typedef enum{
+    TARGET_POSITION_MODE, // 目标位置模式
+    MANUAL_MODE // 手动模式
+}Arm_Control_mode_E;
 
 /** 
  * @brief 又变成四自由度了，好，那么好。
@@ -77,6 +80,8 @@ public:
      * 
      */
     void update();
+
+    void set_controlMode(Arm_Control_mode_E mode){ control_mode_ = mode; }
 
     void registerMotor_Launch(DJI_Motor* motor){ motor_launch_ = motor; }
     void registerMotor_Stretch(DJI_Motor* motor){ motor_stretch_ = motor; }
@@ -161,6 +166,8 @@ private:
     Arm_Point_S arm_ = {0.0f, 0.0f, 0.0f, SuckerJoint_E::Place_Status}; // 机械臂关节末端当前位置
 
     Sucker_Status_E sucker_status_ = Sucker_Status_E::STOP; // 吸盘状态
+
+    Arm_Control_mode_E control_mode_ = TARGET_POSITION_MODE; // 机械臂控制模式
 };
 
 
