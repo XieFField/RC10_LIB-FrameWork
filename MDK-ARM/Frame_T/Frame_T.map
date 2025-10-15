@@ -9424,62 +9424,62 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
-       932         24          0          0          0      19071   app_pid.o
-      1856          0         65          0        616      31213   bsp_fdcan_driver.o
-       348          8          0          0         24      17826   bsp_timestamp.o
-       368          0          0          0       1724      45713   cmsis_os2.o
-        52          0          0          0          0       5387   dma.o
-       820          0          0          0        484      12088   fdcan.o
-       686         36         36         56        364      24946   frame_demo.o
-        48          0         48          0          4       2814   freertos.o
-       162          0          0          0          0       5830   gpio.o
-       710          0          0          0      15392       5876   heap_4.o
-       186          0          0          0          0       2343   list.o
-       394          0          0          0          0      23700   main.o
-       208          0          0         16         56      16039   module_air_joy.o
-       120          8         20          0          0      20868   module_chassisbase.o
-       144          4          0          0          0      15783   module_encoder.o
-      1462         20        140          0          0      41292   motor_dji.o
-       680         12         20          0          0      20330   mychassis.o
-      1010         16          0          4          8       4340   port.o
-      3338          0          0          0         64      30990   queue.o
-        34          0         14        124          0      20191   setup_configinit.o
-        72         30        716          0       1536        844   startup_stm32h723xx.o
-       178          0          0          8          4      15992   stm32h7xx_hal.o
-       308          0          0          0          0      12410   stm32h7xx_hal_cortex.o
-      7784         98          0          0          0      18217   stm32h7xx_hal_dma.o
-      2922          0         92          0          0      62555   stm32h7xx_hal_fdcan.o
-       442          0          0          0          0       7007   stm32h7xx_hal_gpio.o
-        42          0          0          0          0       5428   stm32h7xx_hal_msp.o
-      3704          0          0          0          0      17534   stm32h7xx_hal_pcd.o
-       254          0          0          0          0       6425   stm32h7xx_hal_pcd_ex.o
-        94          0          0          0          0       9730   stm32h7xx_hal_pwr_ex.o
-      2560         24          0          0          0      11671   stm32h7xx_hal_rcc.o
-      3898        144          0          0          0      20060   stm32h7xx_hal_rcc_ex.o
-      2876         14          0          0          0      67546   stm32h7xx_hal_tim.o
-       228          0          0          0          0      27263   stm32h7xx_hal_tim_ex.o
-       160          0          0          0         76       9640   stm32h7xx_hal_timebase_tim.o
-      5352        332         36          0          0      43777   stm32h7xx_hal_uart.o
-       340          0         16          0          0      11563   stm32h7xx_hal_uart_ex.o
-       140          0          0          0          0      12634   stm32h7xx_it.o
-      5008          0          0          0          0      37631   stm32h7xx_ll_usb.o
-       254          0         16          8          0       5636   system_stm32h7xx.o
-      3622          8          0          0       1280      43655   tasks.o
-       564          0          0          0        228      11820   tim.o
-      1070         18          5          0        300      16782   timers.o
-       348          0          0          0        268      11505   usart.o
-       108          0          0          0        732       3269   usb_device.o
-      1158         12          0        133          0      12011   usbd_cdc.o
-        84          0          0         20       4096       4902   usbd_cdc_if.o
-       762          0          0          0       1796      22272   usbd_conf.o
-       984          0          0          0          0      11389   usbd_core.o
-      1668         34          0          0          1      11514   usbd_ctlreq.o
-       560         72          0         80        512       4364   usbd_desc.o
-       132          0          0          0          0       4736   usbd_ioreq.o
-       148         12          4          0       1428      20759   user_setup.o
+       932         24          0          0          0      19053   app_pid.o
+      1856          0         65          0        616      31195   bsp_fdcan_driver.o
+       348          8          0          0         24      17808   bsp_timestamp.o
+       368          0          0          0       1724      45695   cmsis_os2.o
+        52          0          0          0          0       5369   dma.o
+       820          0          0          0        484      12070   fdcan.o
+       686         36         36         56        364      24928   frame_demo.o
+        48          0         48          0          4       2796   freertos.o
+       162          0          0          0          0       5812   gpio.o
+       710          0          0          0      15392       5858   heap_4.o
+       186          0          0          0          0       2325   list.o
+       394          0          0          0          0      23682   main.o
+       208          0          0         16         56      16021   module_air_joy.o
+       120          8         20          0          0      20850   module_chassisbase.o
+       144          4          0          0          0      15765   module_encoder.o
+      1462         20        140          0          0      41274   motor_dji.o
+       680         12         20          0          0      20312   mychassis.o
+      1010         16          0          4          8       4322   port.o
+      3338          0          0          0         64      30972   queue.o
+        34          0         14        124          0      20173   setup_configinit.o
+        72         30        716          0       1536        828   startup_stm32h723xx.o
+       178          0          0          8          4      15974   stm32h7xx_hal.o
+       308          0          0          0          0      12392   stm32h7xx_hal_cortex.o
+      7784         98          0          0          0      18199   stm32h7xx_hal_dma.o
+      2922          0         92          0          0      62537   stm32h7xx_hal_fdcan.o
+       442          0          0          0          0       6989   stm32h7xx_hal_gpio.o
+        42          0          0          0          0       5410   stm32h7xx_hal_msp.o
+      3704          0          0          0          0      17516   stm32h7xx_hal_pcd.o
+       254          0          0          0          0       6407   stm32h7xx_hal_pcd_ex.o
+        94          0          0          0          0       9712   stm32h7xx_hal_pwr_ex.o
+      2560         24          0          0          0      11653   stm32h7xx_hal_rcc.o
+      3898        144          0          0          0      20042   stm32h7xx_hal_rcc_ex.o
+      2876         14          0          0          0      67528   stm32h7xx_hal_tim.o
+       228          0          0          0          0      27245   stm32h7xx_hal_tim_ex.o
+       160          0          0          0         76       9622   stm32h7xx_hal_timebase_tim.o
+      5352        332         36          0          0      43759   stm32h7xx_hal_uart.o
+       340          0         16          0          0      11545   stm32h7xx_hal_uart_ex.o
+       140          0          0          0          0      12616   stm32h7xx_it.o
+      5008          0          0          0          0      37613   stm32h7xx_ll_usb.o
+       254          0         16          8          0       5618   system_stm32h7xx.o
+      3622          8          0          0       1280      43637   tasks.o
+       564          0          0          0        228      11802   tim.o
+      1070         18          5          0        300      16764   timers.o
+       348          0          0          0        268      11487   usart.o
+       108          0          0          0        732       3251   usb_device.o
+      1158         12          0        133          0      11993   usbd_cdc.o
+        84          0          0         20       4096       4884   usbd_cdc_if.o
+       762          0          0          0       1796      22254   usbd_conf.o
+       984          0          0          0          0      11371   usbd_core.o
+      1668         34          0          0          1      11496   usbd_ctlreq.o
+       560         72          0         80        512       4346   usbd_desc.o
+       132          0          0          0          0       4718   usbd_ioreq.o
+       148         12          4          0       1428      20741   user_setup.o
 
     ----------------------------------------------------------------------
-     62718        966       1260        456      31008     949181   Object Totals
+     62718        966       1260        456      31008     948229   Object Totals
          0          0         32          0          0          0   (incl. Generated)
       1336         40          0          7         15          0   (incl. Padding)
 
@@ -9635,8 +9635,8 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   
 
-     72388       1422       1960        464      31104     955092   Grand Totals
-     72388       1422       1960        280      31104     955092   ELF Image Totals (compressed)
+     72388       1422       1960        464      31104     954140   Grand Totals
+     72388       1422       1960        280      31104     954140   ELF Image Totals (compressed)
      72388       1422       1960        280          0          0   ROM Totals
 
 ==============================================================================
