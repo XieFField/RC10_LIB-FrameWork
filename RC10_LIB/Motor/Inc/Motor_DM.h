@@ -76,13 +76,13 @@ public:
 	std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames);
 //以下函数用于模式切换
 /*------------------------------------------------------------------------------------*/	
-	void setTargetTotalAngle(float v_target ,float totalAngle_set); 
-    void setTargetRPM(float rpm_set);
-	void setMIT(float pos,float vel,float kp, float kd ,float t_ff);
-	void motorEnable(void){dm_mode_=MOTOR_ENABLE_MODE;}
-	void motorDisable(void){dm_mode_=MOTOR_DISABLE_MODE;}
-	void motorSetZero(void){dm_mode_=MOTOR_SETZERO_MODE;}
-	void motorClearErr(void){dm_mode_=MOTOR_CLEARERR_MODE;}
+	void setTargetTotalAngle(float v_target ,float totalAngle_set);       //位置模式
+    void setTargetRPM(float rpm_set);									  //速度模式
+	void setMIT(float pos,float vel,float kp, float kd ,float t_ff);	  //MIT模式
+	void motorEnable(void){dm_mode_=MOTOR_ENABLE_MODE;}					  //使能
+	void motorDisable(void){dm_mode_=MOTOR_DISABLE_MODE;}				  //失能
+	void motorSetZero(void){dm_mode_=MOTOR_SETZERO_MODE;}				  //设置零点
+	void motorClearErr(void){dm_mode_=MOTOR_CLEARERR_MODE;}				  //清除当前错误
 /*------------------------------------------------------------------------------------*/
 
 	float getCurrentVel(){return v_int;}

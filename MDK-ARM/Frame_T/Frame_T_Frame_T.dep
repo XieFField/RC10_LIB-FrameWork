@@ -65,7 +65,7 @@ I (..\RC10_LIB\APP\Inc\APP_debugTool.h)(0x68D502B6)
 I (..\RC10_LIB\APP\Inc\APP_CoordConvert.h)(0x68D502B6)
 I (..\RC10_LIB\Motor\Inc\Motor_VESC.h)(0x68D502B6)
 I (..\RC10_LIB\Module\Inc\Module_ChassisBase.h)(0x68D502B6)
-I (..\RC10_LIB\Motor\Inc\Motor_DM.h)(0x68F0DDBB)
+I (..\RC10_LIB\Motor\Inc\Motor_DM.h)(0x68F0F270)
 I (..\User\Setup\Inc\Setup_ConfigInit.h)(0x68D502B6)
 F (../Core/Src/gpio.c)(0x68D502AC)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 -mfloat-abi=hard -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-gdwarf-4 -O0 -ffunction-sections -w -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../RC10_LIB/BSP_Driver/Inc -I ../RC10_LIB/Motor/Inc -I ../RC10_LIB/APP/Inc -I ../User/Control/Inc -I ../User/debug/Inc -I ../User/Setup/Inc -I ../RC10_LIB/Module/Inc -I ../Middlewares/ST/ARM/DSP/Inc -I ../Drivers/CMSIS/DSP/Include -finput-charset=UTF-8-I./RTE/_Frame_T-ID:/Keil5/Pack/ARM/CMSIS/6.2.0/CMSIS/Core/Include-D__UVISION_VERSION="543" -DSTM32H723xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7 -DARM_MATH -DARM_MATH_MATRIX_CHECK -DARM_MATH_ROUNDING-o frame_t/gpio.o -MMD)
 I (..\Core\Inc\gpio.h)(0x68D502AC)
@@ -1357,7 +1357,7 @@ I (..\RC10_LIB\BSP_Driver\Inc\BSP_RTOS.h)(0x68EF53A8)
 I (..\Middlewares\Third_Party\FreeRTOS\Source\include\queue.h)(0x68D502B5)
 I (..\Middlewares\Third_Party\FreeRTOS\Source\include\semphr.h)(0x68D502B5)
 F (..\RC10_LIB\Motor\Src\Motor_DM.cpp)(0x68F08F6A)(-xc++ -std=c++14 --target=arm-arm-none-eabi -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 -mfloat-abi=hard -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar -fno-exceptions-gdwarf-4 -O0 -ffunction-sections -w -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../RC10_LIB/BSP_Driver/Inc -I ../RC10_LIB/Motor/Inc -I ../RC10_LIB/APP/Inc -I ../User/Control/Inc -I ../User/debug/Inc -I ../User/Setup/Inc -I ../RC10_LIB/Module/Inc -I ../Middlewares/ST/ARM/DSP/Inc -I ../Drivers/CMSIS/DSP/Include -finput-charset=UTF-8-I./RTE/_Frame_T-ID:/Keil5/Pack/ARM/CMSIS/6.2.0/CMSIS/Core/Include-D__UVISION_VERSION="543" -DSTM32H723xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7 -DARM_MATH -DARM_MATH_MATRIX_CHECK -DARM_MATH_ROUNDING-o frame_t/motor_dm.o -MMD)
-I (..\RC10_LIB\Motor\Inc\Motor_DM.h)(0x68F0DDBB)
+I (..\RC10_LIB\Motor\Inc\Motor_DM.h)(0x68F0F270)
 I (..\RC10_LIB\BSP_Driver\Inc\BSP_CanFrame.h)(0x68D502B6)
 I (..\RC10_LIB\Motor\Inc\Motor_Base.h)(0x68D502B6)
 I (..\RC10_LIB\APP\Inc\APP_tool.h)(0x68D502B6)
@@ -1398,8 +1398,8 @@ I (..\RC10_LIB\BSP_Driver\Inc\BSP_TimeStamp.h)(0x68D502B6)
 I (..\Core\Inc\tim.h)(0x68D502AC)
 I (..\Core\Inc\main.h)(0x68D502AC)
 I (..\RC10_LIB\Module\Inc\Module_Encoder.h)(0x68D502B6)
-F (..\RC10_LIB\Motor\Inc\Motor_DM.h)(0x68F0DDBB)()
-F (..\User\debug\Src\frame_demo.cpp)(0x68F08551)(-xc++ -std=c++14 --target=arm-arm-none-eabi -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 -mfloat-abi=hard -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar -fno-exceptions-gdwarf-4 -O0 -ffunction-sections -w -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../RC10_LIB/BSP_Driver/Inc -I ../RC10_LIB/Motor/Inc -I ../RC10_LIB/APP/Inc -I ../User/Control/Inc -I ../User/debug/Inc -I ../User/Setup/Inc -I ../RC10_LIB/Module/Inc -I ../Middlewares/ST/ARM/DSP/Inc -I ../Drivers/CMSIS/DSP/Include -finput-charset=UTF-8-I./RTE/_Frame_T-ID:/Keil5/Pack/ARM/CMSIS/6.2.0/CMSIS/Core/Include-D__UVISION_VERSION="543" -DSTM32H723xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7 -DARM_MATH -DARM_MATH_MATRIX_CHECK -DARM_MATH_ROUNDING-o frame_t/frame_demo.o -MMD)
+F (..\RC10_LIB\Motor\Inc\Motor_DM.h)(0x68F0F270)()
+F (..\User\debug\Src\frame_demo.cpp)(0x68F0F151)(-xc++ -std=c++14 --target=arm-arm-none-eabi -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 -mfloat-abi=hard -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar -fno-exceptions-gdwarf-4 -O0 -ffunction-sections -w -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../RC10_LIB/BSP_Driver/Inc -I ../RC10_LIB/Motor/Inc -I ../RC10_LIB/APP/Inc -I ../User/Control/Inc -I ../User/debug/Inc -I ../User/Setup/Inc -I ../RC10_LIB/Module/Inc -I ../Middlewares/ST/ARM/DSP/Inc -I ../Drivers/CMSIS/DSP/Include -finput-charset=UTF-8-I./RTE/_Frame_T-ID:/Keil5/Pack/ARM/CMSIS/6.2.0/CMSIS/Core/Include-D__UVISION_VERSION="543" -DSTM32H723xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7 -DARM_MATH -DARM_MATH_MATRIX_CHECK -DARM_MATH_ROUNDING-o frame_t/frame_demo.o -MMD)
 I (..\User\debug\Inc\frame_demo.h)(0x68E8F184)
 I (..\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os.h)(0x68D502B5)
 I (..\Middlewares\Third_Party\FreeRTOS\Source\include\FreeRTOS.h)(0x68D502B5)
@@ -1462,7 +1462,7 @@ I (..\RC10_LIB\APP\Inc\APP_debugTool.h)(0x68D502B6)
 I (..\RC10_LIB\APP\Inc\APP_CoordConvert.h)(0x68D502B6)
 I (..\RC10_LIB\Motor\Inc\Motor_VESC.h)(0x68D502B6)
 I (..\RC10_LIB\Module\Inc\Module_ChassisBase.h)(0x68D502B6)
-I (..\RC10_LIB\Motor\Inc\Motor_DM.h)(0x68F0DDBB)
+I (..\RC10_LIB\Motor\Inc\Motor_DM.h)(0x68F0F270)
 F (..\User\debug\Inc\frame_demo.h)(0x68E8F184)()
 F (..\User\Setup\Inc\Setup_ConfigInit.h)(0x68D502B6)()
 F (..\User\Setup\Src\Setup_ConfigInit.cpp)(0x68E8FBFC)(-xc++ -std=c++14 --target=arm-arm-none-eabi -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 -mfloat-abi=hard -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar -fno-exceptions-gdwarf-4 -O0 -ffunction-sections -w -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../RC10_LIB/BSP_Driver/Inc -I ../RC10_LIB/Motor/Inc -I ../RC10_LIB/APP/Inc -I ../User/Control/Inc -I ../User/debug/Inc -I ../User/Setup/Inc -I ../RC10_LIB/Module/Inc -I ../Middlewares/ST/ARM/DSP/Inc -I ../Drivers/CMSIS/DSP/Include -finput-charset=UTF-8-I./RTE/_Frame_T-ID:/Keil5/Pack/ARM/CMSIS/6.2.0/CMSIS/Core/Include-D__UVISION_VERSION="543" -DSTM32H723xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7 -DARM_MATH -DARM_MATH_MATRIX_CHECK -DARM_MATH_ROUNDING-o frame_t/setup_configinit.o -MMD)
@@ -1529,7 +1529,7 @@ I (..\RC10_LIB\APP\Inc\APP_debugTool.h)(0x68D502B6)
 I (..\RC10_LIB\APP\Inc\APP_CoordConvert.h)(0x68D502B6)
 I (..\RC10_LIB\Motor\Inc\Motor_VESC.h)(0x68D502B6)
 I (..\RC10_LIB\Module\Inc\Module_ChassisBase.h)(0x68D502B6)
-I (..\RC10_LIB\Motor\Inc\Motor_DM.h)(0x68F0DDBB)
+I (..\RC10_LIB\Motor\Inc\Motor_DM.h)(0x68F0F270)
 F (..\RC10_LIB\APP\Src\APP_PID.cpp)(0x68D502B6)(-xc++ -std=c++14 --target=arm-arm-none-eabi -mcpu=cortex-m7 -mfpu=fpv5-sp-d16 -mfloat-abi=hard -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar -fno-exceptions-gdwarf-4 -O0 -ffunction-sections -w -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../RC10_LIB/BSP_Driver/Inc -I ../RC10_LIB/Motor/Inc -I ../RC10_LIB/APP/Inc -I ../User/Control/Inc -I ../User/debug/Inc -I ../User/Setup/Inc -I ../RC10_LIB/Module/Inc -I ../Middlewares/ST/ARM/DSP/Inc -I ../Drivers/CMSIS/DSP/Include -finput-charset=UTF-8-I./RTE/_Frame_T-ID:/Keil5/Pack/ARM/CMSIS/6.2.0/CMSIS/Core/Include-D__UVISION_VERSION="543" -DSTM32H723xx -D_RTE_ -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7 -DARM_MATH -DARM_MATH_MATRIX_CHECK -DARM_MATH_ROUNDING-o frame_t/app_pid.o -MMD)
 I (..\RC10_LIB\APP\Inc\APP_PID.h)(0x68D502B6)
 I (..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal.h)(0x68D502B4)

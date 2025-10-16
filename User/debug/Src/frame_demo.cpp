@@ -122,8 +122,8 @@ void DM_MotorDemo::loop()
     if(start_signal == 1)
     {
 //		dm_motor.setMIT(test_pos,test_rpm,test_kp,test_kd,test_kff);
-//		dm_motor.setTargetRPM(test_rpm);
-		dm_motor.setTargetTotalAngle(test_rpm,test_pos);
+		dm_motor.setTargetRPM(test_rpm);
+//		dm_motor.setTargetTotalAngle(test_rpm,test_pos);
     }
     else if(start_signal == 0)
     {
