@@ -28,9 +28,6 @@ frame_t/main.o: ..\Core\Src\main.cpp ..\Core\Inc\main.h \
   ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_tim_ex.h \
   ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_uart.h \
   ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_uart_ex.h \
-  ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_pcd.h \
-  ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_ll_usb.h \
-  ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_pcd_ex.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\FreeRTOS.h \
   ..\Core\Inc\FreeRTOSConfig.h \
@@ -42,11 +39,9 @@ frame_t/main.o: ..\Core\Src\main.cpp ..\Core\Inc\main.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\task.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\list.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os2.h \
-  ..\Core\Inc\dma.h ..\Core\Inc\fdcan.h ..\Core\Inc\tim.h \
-  ..\Core\Inc\usart.h ..\USB_DEVICE\App\usb_device.h \
-  ..\Middlewares\ST\STM32_USB_Device_Library\Core\Inc\usbd_def.h \
-  ..\USB_DEVICE\Target\usbd_conf.h ..\Core\Inc\gpio.h \
-  ..\User\debug\Inc\frame_demo.h ..\RC10_LIB\BSP_Driver\Inc\BSP_RTOS.h \
+  ..\Core\Inc\fdcan.h ..\Core\Inc\tim.h ..\Core\Inc\usart.h \
+  ..\Core\Inc\gpio.h ..\User\debug\Inc\frame_demo.h \
+  ..\RC10_LIB\BSP_Driver\Inc\BSP_RTOS.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\queue.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\semphr.h \
   ..\RC10_LIB\BSP_Driver\Inc\BSP_fdCAN_Driver.h \
@@ -62,5 +57,4 @@ frame_t/main.o: ..\Core\Src\main.cpp ..\Core\Inc\main.h \
   ..\RC10_LIB\APP\Inc\APP_CoordConvert.h \
   ..\RC10_LIB\Motor\Inc\Motor_VESC.h \
   ..\RC10_LIB\Module\Inc\Module_ChassisBase.h \
-  ..\RC10_LIB\Module\Inc\Module_Air_joy.h \
-  ..\User\Setup\Inc\Setup_ConfigInit.h
+  ..\RC10_LIB\Motor\Inc\Motor_DM.h ..\User\Setup\Inc\Setup_ConfigInit.h

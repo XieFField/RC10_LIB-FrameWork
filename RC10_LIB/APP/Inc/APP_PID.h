@@ -54,7 +54,7 @@ typedef struct {
     float deadband;      // 死区
 } PID_Param_Config;
 
-// 位置式 PID 控制器，采用了梯形积分，微分先行，积分分离的改进式PID 默认控制频率100Hz
+// 位置式 PID 控制器，采用了梯形积分，微分先行，积分分离的改进式PID
 class PID_Position {
 public:
     /**

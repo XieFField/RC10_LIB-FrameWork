@@ -156,6 +156,4 @@ std::size_t VESC_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         }
             
     }
-
-    return 1;
 }

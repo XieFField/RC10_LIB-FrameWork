@@ -87,7 +87,7 @@
         
 
 
-2. FreeRTOS驱动设计
+1. FreeRTOS驱动设计
    1. 封成相应的父类，这部分我暂时没想的太多
    2. 任务系统类，提供统一接口来创建和管理任务，绕过CubeMX的配置生成。
       1. 类似ROS节点中的`spin()`,继承任务系统的子类只需要负责`run`或者`loop`
@@ -111,7 +111,7 @@
 
 
    
-3. 电机封装的实现
+2. 电机封装的实现
    1. 首先有一个Motor_Base抽象类，作为父类，统一电机所需要的通用接口被后续的子类电机重写。
    2. **核心设计：接收即转换与尺度统一**
       *   **接收即转换**: 在 `DJI_Motor::updateFeedback()` 方法中，从CAN总线收到的原始电机转子数据（编码器值、转速）会**立即**通过调用 `virtual float get_GearRatio() const` 函数获得正确的减速比，并被转换为**输出轴尺度**的数据。
@@ -171,7 +171,7 @@
          2. 其实也可以把matchFrame删了，然后直接调用fdCANbus的matchesFrameDefualt。其实也是实现等价逻辑
       7. 做好注册唯一性检查(IMPORTANT!)
       8. 电机生命周期应该是和单片机运行周期等价，感觉没有做析构的必要。
-   
+
 
     
 
@@ -261,117 +261,34 @@ flowchart TD
                         │   FDCAN TX FIFO         │
                         │   HAL_FDCAN_AddMessage  │
                         └─────────────────────────┘
+
+
 ```
-4. 串口(USART/USB)底层驱动类以及ROS-like的框架内通信机制。
-   1. USART/USB
-      1. USART/USB抽象硬件层 SerialDevice
-         1. **设计思想**：严格遵循 `fdCANbus` 经过考验的设计经验。`SerialDevice` 只关心“如何”收发字节块，对数据内容无感知。它通过依赖注入的协议解析器 `I_Protocol` 来处理数据帧的打包与解析。
-         2. **发送机制**：使用 FreeRTOS 的**互斥锁 (Mutex)** 保护硬件发送接口。任何任务想发送数据，必须先获取锁，发送完成后在中断回调中释放锁。这确保了多任务环境下发送操作的线程安全。
-         3. **接收机制**：使用 FreeRTOS 的**队列 (Queue)** 作为中断与任务之间的桥梁。硬件接收中断（如 UART IDLE 中断）在收到一个数据块后，将其封装成一个结构体并立即推入接收队列 `rx_queue_`，然后退出中断。一个独立的 `RxTask` 任务会阻塞等待该队列，从而实现中断与数据处理的完全解耦。
-      2. 协议解析层 I_Protocol
-         1. 定义了“什么”是有效的数据包。它负责从字节流中解析出数据帧（`parse_stream`）和将应用层数据打包成字节流（`pack_frame`）。
-      3. 面向接口与依赖注入
-         1. 定义一个 `I_Protocol` 纯虚基类作为接口。任何具体协议（如Modbus或自定义协议）都继承并实现此接口。
-         2. 在创建 `SerialDevice` 对象时，将一个具体的 `I_Protocol` 实现“注入”进去，实现硬件与协议的解耦。
-      4. 具体实现：【AI生成，仅供参考】
-         1.  **协议接口 (I_Protocol)**
-             1.  这是整个设计的关键，它定义了通信协议的“规矩”。
-             2.  思路： 创建一个纯虚基类 `I_Protocol`，它强制所有具体的协议实现都必须提供两个核心功能：
-                 1. `parse_stream()`: 从一个连续的字节流中，尝试解析出一个或多个完整的数据包。
-                 2. `pack_frame()`: 将一个结构化的数据对象打包成一串准备发送的字节。
-               ```cpp
-               // I_Protocol.h (伪代码) [仅供参考] 
+#### Module层
+1. 底盘基层 Chassis_Base
+   1. **定位**：这是一个纯粹的运动学模型，负责将机器人（世界或机器人坐标系）的目标速度分解为各个轮子的目标转速（逆解），以及将轮子的实际速度合成为机器人的当前速度（正解）。
+   2. **设计哲学**：
+      *   **静态与泛型**：使用C++模板 `template <std::size_t WheelCount>` 实现，允许用户在编译时定义底盘的轮子数量，所有相关数组（如电机指针、目标RPM）都基于此静态分配，完全避免动态内存。
+      *   **接口与实现分离**：`Chassis_Base` 定义了通用的控制流程和接口，但将具体的运动学解算（`inverseKinematics`, `forwardKinematics`）作为纯虚函数，强制子类（如 `MecanumChassis`, `OmniChassis`）根据其特定的几何构型去实现。
+      *   **坐标系管理**：内部同时维护机器人坐标系（`robot_twist_`）和世界坐标系（`world_twist_`）的速度。通过 `updateAngleData` 注入外部姿态数据（通常来自IMU的yaw角），`Chassis_Base` 能够自动处理两个坐标系之间的转换。
+      *   **独立的控制循环**：`Chassis_Base` **不**被 `fdCANbus` 调度器自动调用。它拥有自己的 `update()` 方法，用户需要在自己的控制任务中以期望的频率（例如100Hz）调用此函数。`update()` 负责：
+          1.  计算时间差 `dt_`。
+          2.  应用加速度斜坡（`ramp`）平滑速度变化。
+          3.  调用子类实现的 `updateKinematics()` 来执行核心解算。
+          4.  将最终计算出的各轮目标RPM通过 `setTargetRPM()` 应用到已注册的 `Motor_Base` 对象上。
+   3. **数据流**：
+      1.  **输入**：用户通过 `setWorldSpeed()` 或 `setRobotSpeed()` 设置目标速度，并通过 `updateAngleData()` 提供当前姿态。
+      2.  **处理**：在用户的任务中周期性调用 `update()`。`update()` 函数内部会调用 `updateKinematics()`，而 `updateKinematics()` 通常会调用 `inverseKinematics()` 来计算 `wheele_target_rpm_` 数组，并可能调用 `forwardKinematics()` 来更新 `robot_twist_`。
+      3.  **输出**：`update()` 的最后一步是遍历 `wheels_` 数组，将 `wheele_target_rpm_` 的值设置给对应的电机实例。后续电机的PID闭环和CAN报文打包则由 `fdCANbus` 的1kHz调度器自动完成。
+   4. **注册机制**：通过 `registerWheelMotor()` 方法，将具体的电机实例（`Motor_Base` 指针）与底盘模型的特定轮子索引关联起来，实现了运动学模型与电机驱动的解耦。
 
-               // 用于描述一个解析出的数据包
-               struct DataFrame {
-                  uint8_t data[64];
-                  size_t  length;
-               };
 
-               // 协议接口
-               class I_Protocol {
-               public:
-                  virtual ~I_Protocol() = default;
+#### User层
+    用于存放基于RC10_LIB所写的应用层，如机构控制类，Debug类，demo类。
+    以及实际所需要创建的任务或启动项。
 
-                  /**
-                  * @brief 尝试从接收缓冲区中解析一个完整的数据包
-                  * @param buffer 包含原始字节流的缓冲区
-                  * @param len 缓冲区中的数据长度
-                  * @param frame_callback 如果解析成功，通过此回调函数传递数据包
-                  */
-                  virtual void parse_stream(uint8_t* buffer, size_t len, std::function<void(const DataFrame&)> frame_callback) = 0;
-
-                  /**
-                  * @brief 将应用层数据打包成待发送的字节帧
-                  * @param app_data    来自应用层的数据
-                  * @param out_buffer  打包后的字节流将存放在这里
-                  * @return 打包后的字节数
-                  */
-                  virtual size_t pack_frame(const YourAppData& app_data, uint8_t* out_buffer) = 0;
-               };
-               ```
-         2. **硬件驱动 (SerialDevice)**
-            1. 思路：
-               1. **统一接口**：用一个 `enum class DeviceType` 来区分 `UART` 和 `USB_VCP`。
-               2. **发送机制 (信号量保护)**：一个 `send()` 方法，内部使用互斥锁来保证同一时间只有一个任务能调用 `HAL_UART_Transmit_DMA` 等发送函数。
-               3. **接收机制 (队列驱动)**：使用 `HAL_UARTEx_ReceiveToIdle_DMA` 等方式接收不定长数据。在 `HAL_UARTEx_RxEventCallback` 中断里，将收到的数据块（指针+长度）打包成结构体，通过 `xQueueSendFromISR` 发送到 `rx_queue_`。
-               4. **任务分离**：`SerialDevice` 内部包含一个 `RxTask` 实例（类似 `fdCANbus`），该任务的主体是一个循环，它阻塞在 `xQueueReceive` 上等待 `rx_queue_` 的数据，收到后调用 `I_Protocol` 的 `parse_stream` 进行解析。
-               5. **回调机制**：`parse_stream` 解析出完整的数据帧后，通过回调函数通知上层应用。
-            2. 伪代码：[AI生成，仅供参考]
-               ```cpp
-               // SerialDevice.h (伪代码) [仅供参考]
-
-               #include "I_Protocol.h"
-               #include "BSP_RTOS.h" // 包含 RtosTask 和 RtosQueue
-
-               // 定义设备类型
-               enum class DeviceType { UART, USB_VCP };
-
-               // 中断推向队列的数据结构
-               struct RxDataBlock {
-                   uint8_t* buffer;
-                   size_t   size;
-               };
-
-               class SerialDevice {
-               public:
-                  SerialDevice(DeviceType type, I_Protocol& protocol, UART_HandleTypeDef* uart_handle = nullptr);
-                  void init(); // 启动任务和硬件
-                  bool send(const uint8_t* data, size_t len, uint32_t timeout_ms = 10);
-                  void register_receive_callback(std::function<void(const DataFrame&)> callback);
-
-                  // --- 中断回调入口 ---
-                  void tx_cplt_callback(); // 在 HAL_UART_TxCpltCallback 中调用
-                  void rx_event_callback(uint16_t size); // 在 HAL_UARTEx_RxEventCallback 中调用
-
-               private:
-                  void rx_task_body(); // RxTask 的主循环体
-
-                  // ---- 成员变量 ----
-                  DeviceType type_;
-                  I_Protocol& protocol_;
-                  UART_HandleTypeDef* uart_handle_;
-                  
-                  // 发送机制
-                  SemaphoreHandle_t tx_mutex_;
-                  int tx_retry_count_ = 10;
-
-                  // 接收机制
-                  RtosQueue<RxDataBlock> rx_queue_{16}; // 接收队列
-                  uint8_t rx_dma_buffer_[RX_BUFFER_SIZE]; // DMA接收缓冲区
-                  std::function<void(const DataFrame&)> on_frame_received_callback_;
-
-                  // Rx任务
-                  class RxTask : public RtosTask {
-                  public:
-                      explicit RxTask(SerialDevice* parent) : RtosTask("SerialRx", 0), parent_(parent) {}
-                  protected:
-                      void run() override { parent_->rx_task_body(); }
-                  private:
-                      SerialDevice* parent_;
-                  };
-                  RxTask rx_task_{this};
-               };
-               ```
+### 后续开发协作规定
+1. 代码中尽量写入多的注释，如果自己懒得写可以使用vscode自带的ai进行补全，笔者的注释也基本是用ai写的。
+2. 
 
 
