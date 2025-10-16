@@ -110,5 +110,6 @@
     "streambuf": "cpp",
     "cmsis_os.h": "c",
     "setup_configinit.h": "c"
-  }
+  },
+  "C_Cpp.errorSquiggles": "disabled"
 }

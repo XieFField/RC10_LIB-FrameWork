@@ -1,7 +1,7 @@
 /**
  * @file frame_demo.h
  * @author XieFField
- * @brief ¼Ü¹¹²âÊÔ
+ * @brief ï¿½Ü¹ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 
 #ifndef __FRAME_DEMO_H
@@ -47,6 +47,15 @@ private:
     
 };
 
+
+class DM_MotorDemo: public RtosTask{
+public:
+    DM_MotorDemo() : RtosTask("DM_MotorDemo", 1), debug_uart(&huart1) {}
+    void init();
+    void loop() override;
+    Debug_Printf debug_uart;
+private:    
+};
 
 
 #endif // __cplusplus
