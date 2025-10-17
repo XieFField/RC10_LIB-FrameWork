@@ -43,6 +43,12 @@ extern "C"
 
     class Motor_Base; // 前置声明
 
+#define FD_CAN_DEBUG 1  //在debug中可以查看fdcan实例内部
+
+#if FD_CAN_DEBUG
+extern fdCANbus* g_fdcan_bus_map_dbg[3];
+#endif
+
 /** 
   * fdCANbus：管理一条fdCAN总线
   * - 每一路CAN生成一个实例
@@ -51,7 +57,7 @@ extern "C"
   * - rxTask_ 负责从 rxQueue_ pop 并分发给 motor -> motor->updateFeedback()
   * - schedulerTask_ 每 1ms 调度 motorList，收集 packCommand() 并调用 sendFrame()，从而实现1kHz的发送频率
   * - 哈基米
-  * - 你将无法重复创建fdCAN实例，后续将只能
+  * @attention 你将无法创建fdCAN实例，后续将只能使用get_Instance的方式来访问fdCANbus
   * @attention 此类不做任何具体的报文解析，全部交给电机类
  */
 class fdCANbus;
@@ -73,7 +79,20 @@ private:
     fdCANbus(const fdCANbus&) = delete;
     fdCANbus& operator=(const fdCANbus&) = delete;
 
+
+
 public:
+
+#if FD_CAN_DEBUG
+    // 调试接口应为“非 static 成员函数”
+    std::size_t debug_getMotorCount() const {
+        std::size_t n=0; for(std::size_t i=0;i<MAX_MOTORS;i++) if(motorList_[i]) n++; return n;
+    }
+    Motor_Base* debug_getMotor(std::size_t i) const { return (i<MAX_MOTORS)? motorList_[i] : nullptr; }
+    std::size_t debug_getLastFrameCount() const { return debug_last_frame_count_; }
+    const CanFrame* debug_getLastFrames() const { return debug_last_frames_; } // 移除 static，保留 const
+#endif
+
 
     /**
      * @brief 获取或创建fdCANbus的唯一实例
@@ -83,7 +102,7 @@ public:
     static fdCANbus* getInstance(FDCAN_HandleTypeDef* hfdcan);
 
     // 最大电机数（每路）
-    static constexpr size_t MAX_MOTORS = 8;
+    static constexpr size_t MAX_MOTORS = 10; //本来应该是8，但是如果是挂的DJI，那会有两个group，那就变成8+2了
 
     
 
@@ -175,6 +194,14 @@ protected:
     int HAL_FDCAN_Start_ERROR = 0; // 记录 HAL_FDCAN_Start 是否成功
 
     int HAL_FDCAN_ActivateNotification_ERROR = 0; // 记录 HAL_FDCAN_ActivateNotification 是否成功
+
+    bool can_init_done_ = false; // 标记 init() 是否已成功调用
+
+private:
+#if FD_CAN_DEBUG
+    volatile std::size_t debug_last_frame_count_ = 0;
+    static CanFrame  debug_last_frames_[MAX_MOTORS * 2] ;
+#endif
 };
 
 

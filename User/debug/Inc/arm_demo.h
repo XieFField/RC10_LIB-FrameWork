@@ -1,7 +1,7 @@
 /**
  * @file arm_demo.h
  * @author XieFField
- * @brief »úĞµÎüÅÌ²âÊÔDemo
+ * @brief ï¿½ï¿½Ğµï¿½ï¿½ï¿½Ì²ï¿½ï¿½ï¿½Demo
  */
 
 #ifndef __ARM_DEMO_H
@@ -46,7 +46,7 @@ protected:
 
     static inline float step_pm(uint16_t us, uint16_t mid=1500, uint16_t dead=60, float rate=0.25f)
     {
-        // ·µ»Øµ¥Î»²½½øËÙÂÊÏµÊı£¨-rate..+rate£©
+        // ï¿½ï¿½ï¿½Øµï¿½Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½-rate..+rateï¿½ï¿½
         if(us > mid + dead) return +rate;
         if(us < mid - dead) return -rate;
         return 0.0f;

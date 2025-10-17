@@ -1,6 +1,6 @@
 #include "Module_ChassisOmni.h"
 
-//Äæ½âËã
+//ï¿½ï¿½ï¿½ï¿½ï¿½
 template <std::size_t WheelCount>
 void Chassis_Omni<WheelCount>::inverseKinematics(const Robot_Twist& twist)
 {
@@ -19,7 +19,7 @@ void Chassis_Omni<WheelCount>::inverseKinematics(const Robot_Twist& twist)
     }
     else
     {
-        // ÆäËûÂÖÊıµÄÈ«ÏòÂÖµ×ÅÌÔİ²»Ö§³Ö
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½İ²ï¿½Ö§ï¿½ï¿½
         return;
     }
 }
@@ -37,3 +37,4 @@ Chassis_Omni<WheelCount>::Chassis_Omni(float wheel_radius, float max_wheel_rpm, 
 {
 }
 
+template class Chassis_Omni<4>;

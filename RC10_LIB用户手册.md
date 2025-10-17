@@ -25,7 +25,7 @@ RC10_LIB将提供大量预制菜，旨在让对底层驱动不熟悉的用户也
 ### User
 1. 机构控制类放在Control
 2. 调试debug/demo类放在debug
-3. Setup用于放初始化文件
+3. Setup是功能初始化、以及功能运行的地方
 
 ### RC10_LIB的核心设计原则
 1. 严格分层，职责单一
@@ -233,6 +233,123 @@ void transform_example_3d()
 - **职责分离**: `Chassis_Base` 只负责运动学计算。它计算出每个轮子应该达到的目标转速（RPM），然后通过 `setTargetRPM()` 将这个目标传递给已注册的电机对象。实际的电机PID闭环控制和CAN报文发送则由 `fdCANbus` 的调度器自动完成。
 - **坐标系管理**: 内置机器人坐标系和世界坐标系的速度管理。你只需通过 `updateAngleData()` 提供实时的偏航角（yaw），基类就能自动处理两个坐标系之间的速度转换。
 - **独立的更新循环**: `Chassis_Base` 的 `update()` 方法**不会**被 `fdCANbus` 自动调用。你需要在自己的控制任务中，以你期望的频率来调用它。
+
+
+GitHub Copilot
+
+以下内容可直接粘贴到“RC10_LIB用户手册.md”。
+
+## Module_Air_joy 航模遥控 PPM 驱动使用指南
+
+AirJoy 是一个基于 EXTI 中断与微秒级时间戳的 PPM 解码器。它将 8 路航模通道脉宽（约 1000–2000 us）解析为易用的数值成员，供底盘、机械臂等上层模块直接读取。
+
+### 1. 功能与依赖
+- 功能：PPM 输入，自动识别帧头，解析 8 路通道到成员变量：
+  - 模拟量：LEFT_X, LEFT_Y, RIGHT_X, RIGHT_Y（单位：微秒，950–2050）
+  - 开关量：SWA, SWB, SWC, SWD（同样是脉宽值，常见为两/三档）
+- 依赖：
+  - 微秒级时间戳服务：BSP_TimeStamp（需先初始化）
+  - GPIO 外部中断（EXTI）
+  - HAL 库（STM32H7）
+
+### 2. 硬件与 CubeMX 配置
+- 将 PPM 信号接入一个支持 EXTI 的 GPIO（3.3V 逻辑，建议外部上拉/下拉按接收器要求配置）。
+- CubeMX 配置步骤：
+  1. 选择用于 PPM 的 GPIO 引脚，模式设为 External Interrupt Mode（上升沿触发即可）。
+  2. 使能该 EXTI 的 NVIC 中断。
+  3. 选择一个定时器供 TimeStamp 使用（任意稳定时钟源），保持一直运行。
+  4. 确认系统时钟已正确配置。
+
+### 3. 初始化与回调
+- 初始化 TimeStamp（示例）：
+    ````cpp
+    #include "BSP_TimeStamp.h"
+    extern TIM_HandleTypeDef htim2;
+
+    void user_setup()
+    {
+        TimeStamp::getInstance().init(&htim2); // 让微秒计时开始跑
+        // ... 其他初始化 ...
+    }
+    ````
+
+- EXTI 回调（库已内置示例）：
+  - Module_Air_joy.cpp 中已实现
+    air_joy.data_update(GPIO_Pin, GPIO_PIN_8);
+  - 如你的 PPM 不在 PIN_8，请把第二个参数改为实际使用的那个 GPIO_PIN_XX。
+  - 如果你打算自己写回调，可参考：
+    ````cpp
+    #include "Module_Air_joy.h"
+
+    extern "C" void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+    {
+        // 假设 PPM 接在 PB6
+        air_joy.data_update(GPIO_Pin, GPIO_PIN_6);
+    }
+    ````
+
+### 4. 读取数据与归一化
+- AirJoy 成员变量实时更新（在每收到一整帧后写入），单位均为微秒：
+  - LEFT_X = PPM_buf[0]
+  - LEFT_Y = PPM_buf[1]
+  - RIGHT_X = PPM_buf[3]
+  - RIGHT_Y = PPM_buf[2]
+  - SWA = PPM_buf[4], SWB = PPM_buf[5], SWC = PPM_buf[6], SWD = PPM_buf[7]
+- 典型归一化方法（将 1000–2000 us 映射到 -1~+1 或 0~1）：
+    ````cpp
+    ```cpp
+    static inline float ppm_to_norm_pm(const uint16_t us, uint16_t mid=1500, float span=500.0f)
+    {
+        // [-1, +1]，1500 为中值，±500us 为满量程
+        return (static_cast<float>(us) - static_cast<float>(mid)) / span;
+    }
+
+    static inline float ppm_to_norm_01(const uint16_t us, uint16_t min_us=1000, uint16_t max_us=2000)
+    {
+        float u = (float)(us - min_us) / (float)(max_us - min_us);
+        if(u < 0.f) u = 0.f;
+        if(u > 1.f) u = 1.f;
+        return u;
+    }
+    ````
+
+    - 示例：将通道映射为底盘速度指令
+    ````cpp
+    ```cpp
+    // 假设使用全向底盘，单位自定（例如 m/s、rad/s）
+    float vx_cmd  = ppm_to_norm_pm(air_joy.LEFT_Y)  * 1.0f; // 前/后
+    float vy_cmd  = ppm_to_norm_pm(air_joy.RIGHT_X) * 1.0f; // 左/右
+    float yaw_cmd = ppm_to_norm_pm(air_joy.LEFT_X)  * 2.0f; // 旋转
+    // 按需限幅后送入 setRobotSpeed 或 setWorldSpeed
+    ````
+
+### 5. 与任务循环的关系
+- AirJoy 通过 EXTI 中断按边沿采样并计算脉宽，不需要你在任务里专门“更新”。
+- 建议以固定周期（例如 10ms）读取成员变量并做归一化，再下发给底盘/执行器。
+- 如果需要判断“数据是否新鲜”，可在用户代码中记录上次使用的值或时间，并对 TimeStamp 取差值做超时判定（例如 >50ms 则认为遥控断联，进入安全模式）。
+
+### 6. 通道/引脚自定义
+- 最大通道数：默认 8（MAX_CHANNELS=8）。
+- 通道映射：在 Module_Air_joy.cpp 中可调整 PPM_buf 索引到 LEFT/RIGHT/SW 的映射。
+- EXTI 引脚：修改 HAL_GPIO_EXTI_Callback 中传给 data_update 的 GPIO_PIN_* 常量即可。
+- 时间阈值：
+  - 帧结束阈值 FRAME_END_MIN（默认 2100 us）
+  - PWM_MIN/PWM_MAX（默认 950/2050 us）
+  根据你的接收机协议适当调整。
+
+### 7. 常见问题
+- 无数据更新：
+  - 确认 TimeStamp 已 init 且在跑（微秒递增）。
+  - 确认 EXTI 配置到正确引脚、触发沿、NVIC 已使能。
+  - 确认 HAL_GPIO_EXTI_Callback 中使用的 GPIO_PIN_* 与实际一致。
+- 抖动/数值跳变：
+  - 线长、干扰、上拉/下拉配置不当都会导致错误触发。
+  - 可在驱动内增加简单滤波（当前实现为“直接采样”，便于低延迟）。
+- 只有部分通道更新：
+  - 检查接收机输出是否为 PPM（不是 SBUS/IBUS）。
+  - 检查 MAX_CHANNELS 与你的接收机通道数是否匹配。
+
+以上即可快速把 PPM 遥控接入你的应用。建议先串口打印四个主通道的原始 us 值，确认范围与中值，再做归一化映射与控制联调。
 
 ##### 如何使用 `Chassis_Base`
 

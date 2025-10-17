@@ -110,8 +110,5 @@
     "streambuf": "cpp",
     "cmsis_os.h": "c",
     "setup_configinit.h": "c"
-  },
-  "clangd.arguments": [
-    "--compile-commands-dir=d:\\stm32\\willow\\RC10_LIB-FrameWork-main\\MDK-ARM\\out\\Frame_T\\Frame_T"
-  ]
+  }
 }

@@ -47,4 +47,5 @@ void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
 
     /*Ω«∂»÷∆ */
     target_rotate_angle_ = atan2(target_point.y, target_point.x) * 180.0f / 3.1415926f;
+    target_pitch_angle_ = target_point.suckerJoint_status_;
 }

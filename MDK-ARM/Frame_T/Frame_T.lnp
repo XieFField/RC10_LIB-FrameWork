@@ -50,6 +50,9 @@
 "frame_t\motor_dji.o"
 "frame_t\motor_vesc.o"
 "frame_t\frame_demo.o"
+"frame_t\arm_demo.o"
+"frame_t\mychassis_demo.o"
+"frame_t\robot_arm.o"
 "frame_t\setup_configinit.o"
 "frame_t\app_pid.o"
 "frame_t\app_tool.o"
@@ -57,6 +60,8 @@
 "frame_t\module_encoder.o"
 "frame_t\module_chassisbase.o"
 "frame_t\module_air_joy.o"
+"frame_t\module_chassisomni.o"
+"frame_t\module_mychassis.o"
 "..\Drivers\CMSIS\DSP\Lib\ARM\arm_cortexM7lfsp_math.lib"
 "frame_t\usb_device.o"
 "frame_t\usbd_desc.o"
@@ -66,8 +71,6 @@
 "frame_t\usbd_ctlreq.o"
 "frame_t\usbd_ioreq.o"
 "frame_t\usbd_cdc.o"
-"frame_t\user_setup.o"
-"frame_t\mychassis.o"
 --strict --scatter "Frame_T\Frame_T.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers

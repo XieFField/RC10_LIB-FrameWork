@@ -1,29 +1,13 @@
 #include "frame_demo.h"
 
-fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
-DJI_Group GroupCAN1_Low(send_idHigh(), CAN1_Bus); // 1~4号M3508/M2006电机
-M3508 m3508_1(7, CAN1_Bus);
+fdCANbus* const demoCAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
+DJI_Group GroupCAN1_High(send_idHigh(), demoCAN1_Bus); // 5~8号M3508/M2006电机
+M3508 m3508_1(7, demoCAN1_Bus);
 
-//目前不错的参数 by XieFField
-PID_Param_Config m3508_speed_pid_params = {
-    .kp = 18.0f,
-    .ki = 0.015f,
-    .kd = 0.0f,
-    .I_Outlimit = 8000.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 15000.0f,   
-    .deadband = 5.0f 
-};
 
-PID_Param_Config m3508_angle_pid_params = {
-    .kp = 30.0f,
-    .ki = 0.0f,
-    .kd = 1.1f,
-    .I_Outlimit = 0.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 400.0f,   
-    .deadband = 0.8f // 
-};
+DJI_Group GroupCAN1_Low(send_idLow(), demoCAN1_Bus); // 1~4号M3508/M2006电机
+M2006 m2006_1(1, demoCAN1_Bus);
+
 
 
 // 使用 volatile 防止编译器优化，确保在调试时可以观察到值的变化
@@ -37,14 +21,27 @@ volatile uint64_t last_time = 0;
 
 void DJI_MotorDemo::init()
 {
-    GroupCAN1_Low.addMotor(&m3508_1);
-    CAN1_Bus->registerMotor(&GroupCAN1_Low);
-    CAN1_Bus->registerMotor(&m3508_1);
-    CAN1_Bus->init();
+    GroupCAN1_High.addMotor(&m3508_1);
+    demoCAN1_Bus->registerMotor(&GroupCAN1_High);
+    demoCAN1_Bus->registerMotor(&m3508_1);
+    
     m3508_1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
     start_signal = 0;
+
+    GroupCAN1_Low.addMotor(&m2006_1);
+    demoCAN1_Bus->registerMotor(&GroupCAN1_Low);
+    demoCAN1_Bus->registerMotor(&m2006_1);
+
+    demoCAN1_Bus->init();
+    m2006_1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
+
+
     start(osPriorityNormal, 256);
 }
+int cnt = 0;
+
+float m2006_targetAngle = 0.0f;
+int m2006_signal = 1;
 
 void DJI_MotorDemo::loop()
 {
@@ -61,44 +58,41 @@ void DJI_MotorDemo::loop()
         m3508_1.setTargetCurrent(1000);
 
     else if(start_signal == 2)
-    {
         m3508_1.setTargetRPM(100);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getRPM(), m3508_1.getTargetRPM());
-    }
     else if(start_signal == 3)
-    {
         m3508_1.setTargetRPM(-100);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getRPM(), m3508_1.getTargetRPM());
-    }
+
     else if(start_signal == 4)
         m3508_1.setTargetRPM(0);
+
     else if(start_signal == 5)
-    {
         m3508_1.setTargetAngle(90.0f);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getAngle(), m3508_1.getTargetAngle());
-    }
+
     else if(start_signal == 6)
-    {
-        m3508_1.setTargetAngle(-90.0f);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getAngle(), m3508_1.getTargetAngle());
-    }
+        m3508_1.setTargetAngle(270.0f);
+
     else if(start_signal == 7)
-    {
         m3508_1.setTargetAngle(0.0f);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getAngle(), m3508_1.getTargetAngle());
-    }
+
     else if(start_signal == 8)
-    {
         m3508_1.setTargetTotalAngle(720.0f);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getTotalAngle(), m3508_1.getTargetTotalAngle());
-    }
+    
     else if(start_signal == 9)
-    {
         m3508_1.setTargetTotalAngle(-720.0f);
-        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getTotalAngle(), m3508_1.getTargetTotalAngle());
-    }
+    
     else
         m3508_1.setTargetCurrent(0);
+    cnt++;
+    if(cnt > 3)
+    {
+        debug_uart.printf_DMA("%f,%f\r\n", m3508_1.getTotalAngle(), m3508_1.getTargetTotalAngle());
+        cnt= 0;
+    }
+    
+    if(m2006_signal == 2)
+        m2006_1.setTargetAngle(m2006_targetAngle);
+    if(m2006_signal == 1)
+        m2006_1.setTargetCurrent(0);
 
 }
 

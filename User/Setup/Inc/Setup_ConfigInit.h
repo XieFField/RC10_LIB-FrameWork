@@ -1,8 +1,10 @@
 /**
  * @file Setup_ConfigInit.h
- * @brief Æô¶¯ÅäÖÃ³õÊ¼»¯
+ * @brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã³ï¿½Ê¼ï¿½ï¿½
  */
 
+
+ 
 #ifndef SETUP_CONFIGINIT_H
 #define SETUP_CONFIGINIT_H
 
@@ -30,10 +32,18 @@ extern "C" {
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 
+#include "debug_setup.h"
 
+#if ARM_DEMO_DEBUG
 
+        #include "arm_demo.h"
+#endif
 
+#if MYCHASSIS_DEMO_DEBUG
 
+        #include "mychassis_demo.h"
+
+#endif
 
 #endif // __cplusplus
 

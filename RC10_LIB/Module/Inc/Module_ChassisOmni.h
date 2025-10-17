@@ -1,7 +1,7 @@
 /**
  * @file Module_ChassisOmni.h
  * @author XieFField
- * @brief х╚оР╣велдё©И
+ * @brief х╚О©╫О©╫О©╫О©╫О©╫дёО©╫О©╫
  * @version 1.0
  */
 #ifndef __MODULE_CHASSISOMNI_H
@@ -32,13 +32,14 @@ extern "C" {
 
 #include "Module_ChassisBase.h"
 #include "APP_tool.h"
+#include "Motor_DJI.h"
 
 #ifdef __cplusplus
 
 /*
-    вЬ╠Йо╣╡исцсрйжо╣ё╛╫гкы╤хуЩ╥╫оРвЯя╜срйж╤╗тРё╛╪╢дФй╠уКн╙уЩ╥╫оР
+    О©╫О©╫О©╫О©╫о╣О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫о╣О©╫О©╫О©╫О©╫О©╫ы╤О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫я╜О©╫О©╫О©╫ж╤О©╫О©╫Рё╛╪О©╫О©╫О©╫й╠О©╫О©╫н╙О©╫О©╫О©╫О©╫О©╫О©╫
 
-    ж╩╟Э╨╛4/3бжх╚оР╣велё╛с╕╦ц╡╩╩Асц╣╫фДкШбжйЩ╣дх╚оРбж╣вел╟и
+    ж╩О©╫О©╫О©╫О©╫4/3О©╫О©╫х╚О©╫О©╫О©╫О©╫лёО©╫с╕О©╫ц╡О©╫О©╫О©╫О©╫ц╣О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫х╚О©╫О©╫О©╫ж╣О©╫О©╫л╟О©╫
 */
 
 #define COS_30 0.86602540378f
@@ -47,11 +48,11 @@ extern "C" {
 #define SIN_45 0.70710678118f
 
 /*
-хЩбжё╨   2 /    \ 3   ╤тс╕╣д╣вел╣Г╩З╠Ю╨е
+О©╫О©╫О©╫жёО©╫   2 /    \ 3   О©╫О©╫с╕О©╫д╣О©╫О©╫л╣О©╫О©╫О©╫О©╫О©╫
             ___
              1
 
-кдбж:     2 /     \  3 ╤тс╕╣д╣вел╣Г╩З╠Ю╨е
+О©╫О©╫О©╫О©╫:     2 /     \  3 О©╫О©╫с╕О©╫д╣О©╫О©╫л╣О©╫О©╫О©╫О©╫О©╫
                          
           1 \     / 4
 */
@@ -60,12 +61,17 @@ template <std::size_t WheelCount>
 class Chassis_Omni : public Chassis_Base<WheelCount> {
 public:
     Chassis_Omni(float wheel_radius, float max_wheel_rpm, float chassis_radius);
-
-    void updateKinematics() override; // ╦Эпбтк╤╞я╖ё╛╣ВсцдФ╫Б╨муЩ╫Б
-
+    void registerChassisMotor(int i, DJI_Motor* motors) {
+	  if(i>=0  && i<4)
+	  {
+		wheel_[i] = motors;
+	  }
+	}
+    void updateKinematics() override; // О©╫О©╫О©╫О©╫О©╫к╤О©╫я╖О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫
+    void inverseKinematics(const Robot_Twist& twist) override; // О©╫О©╫Бё╛О©╫О©╫О©╫О©╫д©О©╫О©╫О©╫ы╤х╪О©╫О©╫О©╫О©╫О©╫О©╫О©╫
+    float chassis_radius_; // О©╫О©╫О©╫л╟К╬╤ (m)
 private:
-    void inverseKinematics(const Robot_Twist& twist) override; // дФ╫Бё╛╦Ы╬щд©╠Йкы╤х╪фкЦбжкы
-    float chassis_radius_; // ╣вел╟К╬╤ (m)
+    DJI_Motor* wheel_[4] = {nullptr};
 };
 
 

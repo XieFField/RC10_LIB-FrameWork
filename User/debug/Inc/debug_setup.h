@@ -2,12 +2,13 @@
 #define DEBUG_SETUP_H
 
 /**
- * @brief Ò»Ð©Ïà¹ØµÄdebugÆô¶¯ºê¶¨Òå¿ÉÒÔ·ÅÕâÀï
+ * @brief Ò»Ð©ï¿½ï¿½Øµï¿½debugï¿½ï¿½ï¿½ï¿½ï¿½ê¶¨ï¿½ï¿½ï¿½ï¿½Ô·ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 
 
 #define ARM_DEMO_DEBUG 0
-#define DEBUG_M2006 1
+#define DEBUG_M2006 0
 
+#define MYCHASSIS_DEMO_DEBUG 1
 
 #endif // DEBUG_SETUP_H

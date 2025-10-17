@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <cmath>
-#include "math.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,22 +49,19 @@ float rad_to_deg(float rad);
 float deg_to_rad(float deg);
 
 // 2D点结构体
-struct Point2D {
+typedef struct  {
     float x, y;
     float theta; // 旋转角度，单位弧度
-    Point2D(float x = 0.0f, float y = 0.0f, float theta = 0.0f)
-    : x(x), y(y), theta(theta) {} // 构造函数
-};
+} Point2D;
 
 // 3D点结构体
-struct Point3D {
+typedef struct {
     float x, y, z;
     float roll, pitch, yaw; // 欧拉角，单位弧度
-    Point3D(float x = 0.0f, float y = 0.0f, float z = 0.0f, float roll = 0.0f, float pitch = 0.0f, float yaw = 0.0f)
-    : x(x), y(y), z(z), roll(roll), pitch(pitch), yaw(yaw) {} // 构造函数
-};
+    
+}Point3D;
 
-struct Robot_Twist{
+typedef struct {
     float vx;
     float vy;
     float vz;
@@ -74,13 +70,10 @@ struct Robot_Twist{
     float pitch_rate;
     float roll_rate;
 
-    Robot_Twist(float vx = 0.0f, float vy = 0.0f, float vz = 0.0f, 
-                 float yaw_rate = 0.0f, float pitch_rate = 0.0f, float roll_rate = 0.0f)
-    : vx(vx), vy(vy), vz(vz), yaw_rate(yaw_rate), pitch_rate(pitch_rate), roll_rate(roll_rate) {}
-};
+    
+}Robot_Twist;
 
-struct Angle_Twist
-{
+typedef struct {
     float yaw_rate;
     float pitch_rate;
     float roll_rate;
@@ -88,12 +81,8 @@ struct Angle_Twist
     float yaw_angle;
     float pitch_angle;
     float roll_angle;
-
-    Angle_Twist(float yaw_rate = 0.0f, float pitch_rate = 0.0f, float roll_rate = 0.0f,
-                 float yaw_angle = 0.0f, float pitch_angle = 0.0f, float roll_angle = 0.0f)
-    : yaw_rate(yaw_rate), pitch_rate(pitch_rate), roll_rate(roll_rate),
-      yaw_angle(yaw_angle), pitch_angle(pitch_angle), roll_angle(roll_angle) {}
-};
+    
+}Angle_Twist;
 
 
 #ifdef __cplusplus

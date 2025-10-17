@@ -62,7 +62,11 @@ public:
      * @brief 检查给定的CAN帧是否属于此电机
      * @return 如果匹配则返回true，否则返回false
      */
-    virtual bool matchesFrame(const CanFrame& cf) const{};
+    virtual bool matchesFrame(const CanFrame& cf) const
+    {
+        (void)cf;
+        return false;
+    }
 
     virtual float get_GearRatio() const { return GEAR_RATIO; }
 

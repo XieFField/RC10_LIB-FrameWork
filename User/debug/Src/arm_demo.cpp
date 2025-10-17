@@ -1,7 +1,5 @@
 #include "arm_demo.h"
 
-
-
 Robot_ArmDemo::Robot_ArmDemo(Arm_InitData_S init_Data) : 
         Robot_Arm(init_Data), RtosTask("Robot_ArmDemo",1) 
 {

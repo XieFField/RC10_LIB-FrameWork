@@ -139,7 +139,7 @@
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\UL2V8M.DLL</Flash2>
-          <Flash3>"" ()</Flash3>
+          <Flash3></Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -315,7 +315,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>4</Optim>
+            <Optim>2</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -341,7 +341,7 @@
               <MiscControls>-finput-charset=UTF-8</MiscControls>
               <Define>USE_PWR_LDO_SUPPLY,USE_HAL_DRIVER,STM32H723xx,ARM_MATH_CM7 ARM_MATH,ARM_MATH_MATRIX_CHECK,ARM_MATH_ROUNDING</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include;../RC10_LIB/BSP_Driver/Inc;../RC10_LIB/Motor/Inc;../RC10_LIB/APP/Inc;../User/Control/Inc;../User/debug/Inc;../User/Setup/Inc;../RC10_LIB/Module/Inc;../Middlewares/ST/ARM/DSP/Inc;../Drivers/CMSIS/DSP/Include;../USB_DEVICE/App;../USB_DEVICE/Target;../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc;..\MyChassis</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include;../RC10_LIB/BSP_Driver/Inc;../RC10_LIB/Motor/Inc;../RC10_LIB/APP/Inc;../User/Control/Inc;../User/debug/Inc;../User/Setup/Inc;../RC10_LIB/Module/Inc;../Middlewares/ST/ARM/DSP/Inc;../Drivers/CMSIS/DSP/Include;../USB_DEVICE/App;../USB_DEVICE/Target;../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -970,10 +970,47 @@
               <FileType>5</FileType>
               <FilePath>..\User\debug\Inc\frame_demo.h</FilePath>
             </File>
+            <File>
+              <FileName>arm_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\arm_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>arm_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\arm_demo.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>debug_setup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\debug_setup.h</FilePath>
+            </File>
+            <File>
+              <FileName>mychassis_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\mychassis_demo.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>mychassis_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\mychassis_demo.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
           <GroupName>User/Control</GroupName>
+          <Files>
+            <File>
+              <FileName>Robot_Arm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Control\Inc\Robot_Arm.h</FilePath>
+            </File>
+            <File>
+              <FileName>Robot_Arm.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Src\Robot_Arm.cpp</FilePath>
+            </File>
+          </Files>
         </Group>
         <Group>
           <GroupName>User/Setup</GroupName>
@@ -1057,6 +1094,26 @@
               <FileName>Module_Air_joy.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_Air_joy.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_ChassisOmni.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_ChassisOmni.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_ChassisOmni.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisOmni.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_MyChassis.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_MyChassis.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_MyChassis.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_MyChassis.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -1737,31 +1794,6 @@
                   </Cads>
                 </FileArmAds>
               </FileOption>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>MyChassis</GroupName>
-          <Files>
-            <File>
-              <FileName>MyChassis.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\MyChassis\MyChassis.h</FilePath>
-            </File>
-            <File>
-              <FileName>user_setup.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\MyChassis\user_setup.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>MyChassis.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\MyChassis\MyChassis.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>user_setup.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\MyChassis\user_setup.h</FilePath>
             </File>
           </Files>
         </Group>
