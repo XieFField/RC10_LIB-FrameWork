@@ -21,7 +21,7 @@ extern "C"
 #endif
 
 #ifdef __cplusplus
-    
+
 #include "BSP_RTOS.h"
 #include "BSP_fdCAN_Driver.h"
 #include "Motor_DJI.h"
@@ -31,9 +31,25 @@ extern "C"
 #include "Motor_VESC.h"
 #include "BSP_TimeStamp.h"
 #include "Module_ChassisBase.h"
-#include "Module_Air_joy.h"
+#include "Motor_DM.h"
 
 
+class FrameDemo : public RtosTask
+{
+public:
+    FrameDemo() : RtosTask("FrameDemo", 1) {}
+    void init();
+    void loop() override;
+    
+};
+
+class CanTest : public fdCANbus
+{
+public:
+    CanTest(FDCAN_HandleTypeDef* hfdcan, uint32_t bus_id) : fdCANbus(hfdcan, bus_id) {}
+    ~CanTest(){}
+    
+};
 
 
 class DJI_MotorDemo: public RtosTask{
@@ -42,12 +58,17 @@ public:
     void init();
     void loop() override;
     Debug_Printf debug_uart;
-
 private:
-    
 };
 
-
+class DM_MotorDemo:public RtosTask{
+public:
+	DM_MotorDemo() : RtosTask("DM_MotorDemo", 1), debug_uart(&huart1) {}
+    void init();
+    void loop() override;
+    Debug_Printf debug_uart;
+private:
+};
 
 #endif // __cplusplus
 
