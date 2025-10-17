@@ -20,13 +20,13 @@ void Chassis_Base<WheelCount>::setWorldSpeed(const Robot_Twist& twist)
 {
     world_target_twist_ = twist;
 
-    // 使用yaw角将世界系速度转换到机器人坐标系
+    // 使锟斤拷yaw锟角斤拷锟斤拷锟斤拷系锟劫讹拷转锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷系
     float cos_yaw = arm_cos_f32(-deg_to_rad(angle_twist_.yaw_angle));
     float sin_yaw = arm_sin_f32(-deg_to_rad(angle_twist_.yaw_angle));
 
     robot_target_twist_.vx = twist.vx * cos_yaw - twist.vy * sin_yaw;
     robot_target_twist_.vy = twist.vx * sin_yaw + twist.vy * cos_yaw;
-    robot_target_twist_.yaw_rate = twist.yaw_rate; // 角速度在2D平面上不变
+    robot_target_twist_.yaw_rate = twist.yaw_rate; // 锟斤拷锟劫讹拷锟斤拷2D平锟斤拷锟较诧拷锟斤拷
 }
 
 template<std::size_t WheelCount>
@@ -36,7 +36,7 @@ void Chassis_Base<WheelCount>::update()
     float current_time_s = TimeStamp::getInstance().getSeconds();
     dt_ = current_time_s - last_update_time_s_;
     if(dt_ <= 0.0f || dt_ > 0.1f)
-        dt_ = 0.001f; //异常值处理
+        dt_ = 0.001f; //锟届常值锟斤拷锟斤拷
 
     last_update_time_s_ = current_time_s;
 
@@ -45,14 +45,14 @@ void Chassis_Base<WheelCount>::update()
         ramp(robot_target_twist_.vx, robot_twist_.vx, accel_value_, dt_);
         ramp(robot_target_twist_.vy, robot_twist_.vy, accel_value_, dt_);
 
-        robot_twist_.yaw_rate = robot_target_twist_.yaw_rate; // 角速度不做加速度限制
+        robot_twist_.yaw_rate = robot_target_twist_.yaw_rate; // 锟斤拷锟劫度诧拷锟斤拷锟斤拷锟劫讹拷锟斤拷锟斤拷
     }
     else
         robot_twist_ = robot_target_twist_;
 
-    updateKinematics(); //调用逆解更新机器人速度
+    updateKinematics(); //锟斤拷锟斤拷锟斤拷锟斤拷锟铰伙拷锟斤拷锟斤拷锟劫讹拷
 
-    // 更新世界坐标系速度
+    // 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷系锟劫讹拷
     float cos_yaw = arm_cos_f32(deg_to_rad(angle_twist_.yaw_angle));
     float sin_yaw = arm_sin_f32(deg_to_rad(angle_twist_.yaw_angle));
     world_twist_.vx = robot_twist_.vx * cos_yaw - robot_twist_.vy * sin_yaw;
@@ -61,8 +61,12 @@ void Chassis_Base<WheelCount>::update()
 
     for(std::size_t i = 0; i < WheelCount; i++)
     {
-        constrain(wheel_target_rpm_[i], -max_wheel_rpm_, max_wheel_rpm_); //限幅
+        constrain(wheel_target_rpm_[i], -max_wheel_rpm_, max_wheel_rpm_); //锟睫凤拷
         if(wheels_[i] != nullptr)
             wheels_[i]->setTargetRPM(wheel_target_rpm_[i]);
     }
 }
+
+// 鏄惧紡瀹炰緥鍖栨ā鏉跨被
+template class Chassis_Base<3>;
+template class Chassis_Base<4>;

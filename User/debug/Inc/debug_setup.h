@@ -7,7 +7,7 @@
 
 
 #define ARM_DEMO_DEBUG 0
-#define DEBUG_M2006 1
-
+#define DEBUG_M2006 0
+#define ONIM_DEMO_DEBUG 1
 
 #endif // DEBUG_SETUP_H

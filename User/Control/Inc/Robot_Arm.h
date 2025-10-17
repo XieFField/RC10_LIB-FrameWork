@@ -1,7 +1,7 @@
 /**
  * @file Robot_Arm.h
  * @author XieFField
- * @brief 机械吸盘运动建模,可以当做一个刚性串联臂；
+ * @brief 串联刚体臂吸盘运动建模.
  *        目前是纯手动模型，后期再改进为半自动
  */
 

@@ -1,10 +1,11 @@
 /**
  * @file Setup_ConfigInit.h
- * @brief Æô¶¯ÅäÖÃ³õÊ¼»¯
+ * @brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã³ï¿½Ê¼ï¿½ï¿½
  */
 
 #ifndef SETUP_CONFIGINIT_H
 #define SETUP_CONFIGINIT_H
+
 
 #ifdef __cplusplus
 #pragma once
@@ -36,7 +37,9 @@ extern "C" {
 
         #include "arm_demo.h"
 #endif
-
+#if ONIM_DEMO_DEBUG
+        #include "Onim_demo.h"
+#endif
 #endif // __cplusplus
 
 #endif

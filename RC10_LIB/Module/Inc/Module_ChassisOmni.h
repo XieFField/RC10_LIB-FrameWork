@@ -1,7 +1,7 @@
 /**
  * @file Module_ChassisOmni.h
  * @author XieFField
- * @brief È«Ïòµ×ÅÌÄ£¿é
+ * @brief È«ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½
  * @version 1.0
  */
 #ifndef __MODULE_CHASSISOMNI_H
@@ -36,9 +36,9 @@ extern "C" {
 #ifdef __cplusplus
 
 /*
-    ×ø±êÏµ²ÉÓÃÓÒÊÖÏµ£¬½ÇËÙ¶ÈÕı·½Ïò×ñÑ­ÓÒÊÖ¶¨Ôò£¬¼´ÄæÊ±ÕëÎªÕı·½Ïò
+    ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ò£¬¼ï¿½ï¿½ï¿½Ê±ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    Ö»°üº¬4/3ÂÖÈ«Ïòµ×ÅÌ£¬Ó¦¸Ã²»»áÓÃµ½ÆäËûÂÖÊıµÄÈ«ÏòÂÖµ×ÅÌ°É
+    Ö»ï¿½ï¿½ï¿½ï¿½4/3ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½Ì£ï¿½Ó¦ï¿½Ã²ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½Öµï¿½ï¿½Ì°ï¿½
 */
 
 #define COS_30 0.86602540378f
@@ -47,11 +47,11 @@ extern "C" {
 #define SIN_45 0.70710678118f
 
 /*
-ÈıÂÖ£º   2 /    \ 3   ¶ÔÓ¦µÄµ×ÅÌµç»ú±àºÅ
+ï¿½ï¿½ï¿½Ö£ï¿½   2 /    \ 3   ï¿½ï¿½Ó¦ï¿½Äµï¿½ï¿½Ìµï¿½ï¿½ï¿½ï¿½ï¿½
             ___
              1
 
-ËÄÂÖ:     2 /     \  3 ¶ÔÓ¦µÄµ×ÅÌµç»ú±àºÅ
+ï¿½ï¿½ï¿½ï¿½:     2 /     \  3 ï¿½ï¿½Ó¦ï¿½Äµï¿½ï¿½Ìµï¿½ï¿½ï¿½ï¿½ï¿½
                          
           1 \     / 4
 */
@@ -61,11 +61,12 @@ class Chassis_Omni : public Chassis_Base<WheelCount> {
 public:
     Chassis_Omni(float wheel_radius, float max_wheel_rpm, float chassis_radius);
 
-    void updateKinematics() override; // ¸üĞÂÔË¶¯Ñ§£¬µ÷ÓÃÄæ½âºÍÕı½â
+    void updateKinematics() override; // ï¿½ï¿½ï¿½ï¿½ï¿½Ë¶ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 private:
-    void inverseKinematics(const Robot_Twist& twist) override; // Äæ½â£¬¸ù¾İÄ¿±êËÙ¶È¼ÆËãÂÖËÙ
-    float chassis_radius_; // µ×ÅÌ°ë¾¶ (m)
+    void inverseKinematics(const Robot_Twist& twist) override; // ï¿½ï¿½â£¬ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½Ù¶È¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    void forwardKinematics(const Robot_Twist& twist); // Ñ§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    float chassis_radius_; // ï¿½ï¿½ï¿½Ì°ë¾¶ (m)
 };
 
 
