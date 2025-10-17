@@ -109,12 +109,7 @@ void chassis_motorInit()
    
    CAN1_Bus->registerMotor(&ChassisGroupCAN1_Low); // 注册底盘对象到总线
    CAN1_Bus->init();
-  
-     
-
-   onim_demo.initWheels(&wheel_motor1, &wheel_motor2, &wheel_motor3, &wheel_motor4);
-
-   onim_demo.start(osPriorityNormal, 128);
+   onim_demo.init();
 }
 
 

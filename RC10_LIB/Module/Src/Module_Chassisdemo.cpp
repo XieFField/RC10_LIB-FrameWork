@@ -32,9 +32,9 @@ void Chassis_Demo<WheelCount>::forwardKinematics(Robot_Twist& twist)
         twist.yaw_rate = (wheel_speeds[0] + wheel_speeds[1] + wheel_speeds[2]) / (3.0f * chassis_radius_);
     } else if constexpr (WheelCount == 4) {
         // 四轮差速底盘的前向运动学计算
-        twist.vx = (wheel_speeds[0] + wheel_speeds[1] + wheel_speeds[2] + wheel_speeds[3]) / 4.0f;
-        twist.vy = (-wheel_speeds[0] + wheel_speeds[1] + wheel_speeds[2] - wheel_speeds[3]) / 4.0f;
-        twist.yaw_rate = (-wheel_speeds[0] + wheel_speeds[1] - wheel_speeds[2] + wheel_speeds[3]) / (4.0f * chassis_radius_);
+        twist.yaw_rate = (wheel_speeds[0] + wheel_speeds[1] + wheel_speeds[2] + wheel_speeds[3]) / (4.0f * chassis_radius_);
+        twist.vy = (-wheel_speeds[0] - wheel_speeds[1] + wheel_speeds[2]+ wheel_speeds[3]) / (2.0f*1.4142f);
+        twist.vx = (wheel_speeds[0] - wheel_speeds[1] - wheel_speeds[2] + wheel_speeds[3]) / (2.0f*1.4142f);
     }
 }
 
@@ -75,8 +75,8 @@ Chassis_Demo<WheelCount>::Chassis_Demo(float wheel_radius, float max_wheel_rpm, 
 // ... existing code ...
 
 // 显式实例化Chassis_Base模板类
-template class Chassis_Base<3>;
-template class Chassis_Base<4>;
+//template class Chassis_Base<3>;
+//template class Chassis_Base<4>;
 
 // 显式实例化模板类
 template class Chassis_Demo<3>;

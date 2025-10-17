@@ -19,7 +19,6 @@ void Chassis_Omni<WheelCount>::inverseKinematics(const Robot_Twist& twist)
     }
     else
     {
-        // ����������ȫ���ֵ����ݲ�֧��
         return;
     }
 }
@@ -33,7 +32,6 @@ void Chassis_Omni<WheelCount>::updateKinematics()
 template <std::size_t WheelCount>
 void Chassis_Omni<WheelCount>::forwardKinematics(const Robot_Twist& twist)
 {
-    
 }
 template <std::size_t WheelCount>
 Chassis_Omni<WheelCount>::Chassis_Omni(float wheel_radius, float max_wheel_rpm, float chassis_radius_)

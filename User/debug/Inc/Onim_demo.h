@@ -29,13 +29,11 @@ template <std::size_t WheelCount>
 class OnimDemo:public Chassis_Demo<WheelCount>, public RtosTask{
 public:
    OnimDemo(float wheel_radius, float max_wheel_rpm, float chassis_radius); 
-   void initWheels(Motor_Base* motor1, Motor_Base* motor2, Motor_Base* motor3, Motor_Base* motor4) {
-        // 子类中可直接访问父类的 protected 成员 wheels_
-        this->wheels_[0] = motor1;
-        this->wheels_[1] = motor2;
-        this->wheels_[2] = motor3;
-        this->wheels_[3] = motor4;
-    }
+   void init()
+	 {
+		 start(osPriorityNormal, 128);
+		 init_flag = true;
+	 }
 protected: 
     void loop() override; 
 
