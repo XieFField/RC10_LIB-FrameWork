@@ -11,6 +11,7 @@
 
 #pragma once
 
+
 #ifdef __cplusplus
 extern "C" {
     #include "stm32h7xx_hal.h"

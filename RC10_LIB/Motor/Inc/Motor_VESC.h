@@ -77,6 +77,10 @@ public:
     }
 
     void setTargetCurrent(float current_set) override;
+
+    /**
+     * @brief 设置目标转速，单位RPM (注意不是eRPM，是RPM)
+     */
     void setTargetRPM(float rpm_set) override;
     void setTargetAngle(float angle_set) override{};
     void setTargetTotalAngle(float totalAngle_set) override;

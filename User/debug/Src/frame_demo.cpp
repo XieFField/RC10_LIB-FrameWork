@@ -1,12 +1,12 @@
 #include "frame_demo.h"
 
-fdCANbus* const demoCAN2_Bus = fdCANbus::getInstance(&hfdcan2); // 获取FDCAN2的唯一实例
-DJI_Group GroupCAN2_High(send_idHigh(), demoCAN2_Bus); // 5~8号M3508/M2006电机
-M3508 m3508_2(7, demoCAN2_Bus);
+fdCANbus* const demoCAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
+DJI_Group GroupCAN1_High(send_idHigh(), demoCAN1_Bus); // 5~8号M3508/M2006电机
+M3508 m3508_1(7, demoCAN1_Bus);
 
 
-DJI_Group GroupCAN2_Low(send_idLow(), demoCAN2_Bus); // 1~4号M3508/M2006电机
-M2006 m2006_1(1, demoCAN2_Bus);
+DJI_Group GroupCAN1_Low(send_idLow(), demoCAN1_Bus); // 1~4号M3508/M2006电机
+M2006 m2006_1(1, demoCAN1_Bus);
 
 
 
@@ -21,18 +21,18 @@ volatile uint64_t last_time = 0;
 
 void DJI_MotorDemo::init()
 {
-    GroupCAN2_High.addMotor(&m3508_2);
-    demoCAN2_Bus->registerMotor(&GroupCAN2_High);
-    demoCAN2_Bus->registerMotor(&m3508_2);
-
-    m3508_2.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
+    GroupCAN1_High.addMotor(&m3508_1);
+    demoCAN1_Bus->registerMotor(&GroupCAN1_High);
+    demoCAN1_Bus->registerMotor(&m3508_1);
+    
+    m3508_1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
     start_signal = 0;
 
-    GroupCAN2_Low.addMotor(&m2006_1);
-    demoCAN2_Bus->registerMotor(&GroupCAN2_Low);
-    demoCAN2_Bus->registerMotor(&m2006_1);
+    GroupCAN1_Low.addMotor(&m2006_1);
+    demoCAN1_Bus->registerMotor(&GroupCAN1_Low);
+    demoCAN1_Bus->registerMotor(&m2006_1);
 
-    demoCAN2_Bus->init();
+    demoCAN1_Bus->init();
     m2006_1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
 
 
@@ -93,10 +93,6 @@ void DJI_MotorDemo::loop()
         m2006_1.setTargetAngle(m2006_targetAngle);
     if(m2006_signal == 1)
         m2006_1.setTargetCurrent(0);
-    if(m2006_signal == 3)
-        m2006_1.setTargetTotalAngle(200.0f);
-    if(m2006_signal == 4)
-        m2006_1.setTargetTotalAngle(-200.0f);
 
 }
 
