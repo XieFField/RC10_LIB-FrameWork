@@ -1050,6 +1050,16 @@
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\APP\Inc\APP_CoordConvert.h</FilePath>
             </File>
+            <File>
+              <FileName>APP_Path_Planner.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_Path_Planner.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>APP_Path_Planner.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\APP\Inc\APP_Path_Planner.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
