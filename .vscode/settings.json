@@ -110,7 +110,14 @@
     "streambuf": "cpp",
     "cmsis_os.h": "c",
     "setup_configinit.h": "c",
-    "motor_go.h": "c"
+    "motor_go.h": "c",
+    "ctime": "cpp",
+    "iostream": "cpp",
+    "list": "cpp",
+    "functional": "cpp",
+    "iterator": "cpp",
+    "numeric": "cpp",
+    "random": "cpp"
   },
   "C_Cpp.errorSquiggles": "disabled",
   "files.encoding": "gb2312"
