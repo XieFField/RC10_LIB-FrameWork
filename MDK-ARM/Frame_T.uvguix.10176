@@ -1946,9 +1946,9 @@
       </Doc>
       <Doc>
         <Name>..\User\debug\Inc\arm_demo.h</Name>
-        <ColumnNumber>22</ColumnNumber>
+        <ColumnNumber>0</ColumnNumber>
         <TopLine>1</TopLine>
-        <CurrentLine>35</CurrentLine>
+        <CurrentLine>22</CurrentLine>
         <Folding>1</Folding>
         <ContractedFolders></ContractedFolders>
         <PaneID>0</PaneID>

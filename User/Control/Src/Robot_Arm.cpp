@@ -55,33 +55,20 @@ void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
 bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
 {
 
-
-    float d = target_stretch_length_;
-    float h = target_launch_height_;
-    float theta_deg = target_rotate_angle_;
-    float alpha_deg = target_pitch_angle_;
-
     float L0 = init_data_.arm_length_;
-    float Ls = 0.0f; //吸盘刚体长臂长,可以通过end_link_length_更改
-#ifdef __cplusplus
-    // 如果类中有 end_link_length_ 成员则使用，否则默认为0
-#endif
+    float theta = target_rotate_angle_ * 3.1415926f / 180.0f;
+    float alpha = target_pitch_angle_ * 3.1415926f / 180.0f;
 
-    float theta = theta_deg * 3.1415926f / 180.0f;
-    float alpha = alpha_deg * 3.1415926f / 180.0f;
-
-    float Ltot = L0 + d;
+    float Ltot = L0 + target_stretch_length_;
     float pjx = Ltot * cosf(theta);
     float pjy = Ltot * sinf(theta);
-    float pjz = h;
+    float pjz = target_launch_height_;
 
     // Rz(theta) * Ry(alpha) * [Ls,0,0]^T
-    // Ry(alpha) * [Ls,0,0]^T = [Ls*cosα, 0, -Ls*sinα]^T
     float v_x = end_link_length_ * cosf(alpha);
     float v_y = 0.0f;
     float v_z = -end_link_length_ * sinf(alpha);
 
-    // Rz(theta) * v = [ cosθ -sinθ 0; sinθ cosθ 0; 0 0 1 ] * v
     float vsx = cosf(theta) * v_x - sinf(theta) * v_y;
     float vsy = sinf(theta) * v_x + cosf(theta) * v_y;
     float vsz = v_z;
@@ -89,7 +76,7 @@ bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
     out.x = pjx + vsx;
     out.y = pjy + vsy;
     out.z = pjz + vsz;
-    out.suckerJoint_status_ = alpha_deg;
+    out.suckerJoint_status_ = target_pitch_angle_;
 
     return true;
 }
