@@ -34,9 +34,9 @@ volatile int counter = 0;
 volatile uint8_t start_signal = 0;
 volatile float test_rpm=0.0f;
 volatile float test_pos=0.0f;
-volatile float test_kff =3;
+volatile float test_kff =0;
 volatile float test_kp =0;
-volatile float test_kd =1;
+volatile float test_kd =0;
 void FrameDemo::loop()
 {
 
@@ -122,14 +122,14 @@ void DM_MotorDemo::loop()
     if(start_signal == 1)
     {
 //		dm_motor.setMIT(test_pos,test_rpm,test_kp,test_kd,test_kff);
-		dm_motor.setTargetRPM(test_rpm);
-//		dm_motor.setTargetTotalAngle(test_rpm,test_pos);
+//		dm_motor.setTargetRPM(test_rpm);
+		dm_motor.setTargetTotalAngle(test_rpm,test_pos);
     }
     else if(start_signal == 0)
     {
 		dm_motor.motorEnable();
 //		dm_motor.motorSetZero();
-		start_signal = 1;
+//		start_signal = 1;
     }
     else if(start_signal == 2)
     {

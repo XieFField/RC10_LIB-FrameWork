@@ -890,6 +890,16 @@
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Module\Inc\Module_Encoder.h</FilePath>
             </File>
+            <File>
+              <FileName>Module_GPIO.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_GPIO.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_GPIO.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_GPIO.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
