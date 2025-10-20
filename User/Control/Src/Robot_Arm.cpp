@@ -43,6 +43,12 @@ void Robot_Arm::update()
 
 void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
 {
+    if (std::abs(target_point.x) < 1e-6 && std::abs(target_point.y) < 1e-6) 
+        target_rotate_angle_ = 0.0f; // ´¦ÀíÆæÒìµã
+     
+    else
+        target_rotate_angle_ = atan2(target_point.y, target_point.x) * 180.0f / PI;
+    
     target_launch_height_ = target_point.z;
     target_stretch_length_ = sqrt(target_point.x * target_point.x + target_point.y * target_point.y) - init_data_.arm_length_;
 
