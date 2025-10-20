@@ -95,6 +95,14 @@ public:
     void setSuckerStatus(Sucker_Status_E status){ sucker_status_ = status; }
     Sucker_Status_E getSuckerStatus() const { return sucker_status_; }
 
+    
+    // 正运动学：计算末端位姿（基于当前目标或电机角度）
+    // 返回 true 表示计算成功，结果写入 out
+    bool forwardKinematics(Arm_Point_S& out) const;
+    // 设置末端连杆长度 Ls（单位 米），用于计算末端吸盘位置
+    void setEndLinkLength(float Ls) { end_link_length_ = Ls; }
+
+
 private:
     Arm_InitData_S init_data_;
 
@@ -156,8 +164,10 @@ private:
     float target_stretch_length_ = 0.0f; // 目标伸展长度
     float target_rotate_angle_ = 0.0f; // 目标旋转角度
     float target_pitch_angle_ = 0.0f; // 目标末端关节角度
+    float end_link_length_ = 0.0f;   // 吸盘刚体长臂长，单位米
 
     void inverseKinematics(Arm_Point_S arm_target_); // 运动学逆解
+  
 
     const float minRotateAngle_ = 0.0f; // 旋转最小角度
     const float maxRotateAngle_ = 180.0f; // 旋转最大角度
