@@ -31,7 +31,7 @@ void Chassis_Demo<WheelCount>::forwardKinematics(Robot_Twist& twist)
         twist.vy = (wheel_speeds[1]*SIN_30 + wheel_speeds[2]*SIN_30) / 3.0f;
         twist.yaw_rate = (wheel_speeds[0] + wheel_speeds[1] + wheel_speeds[2]) / (3.0f * chassis_radius_);
     } else if constexpr (WheelCount == 4) {
-        // 四轮差速底盘的前向运动学计算
+        // 四轮全向底盘的前向运动学计算
         twist.yaw_rate = (wheel_speeds[0] + wheel_speeds[1] + wheel_speeds[2] + wheel_speeds[3]) / (4.0f * chassis_radius_);
         twist.vy = (-wheel_speeds[0] - wheel_speeds[1] + wheel_speeds[2]+ wheel_speeds[3]) / (2.0f*1.4142f);
         twist.vx = (wheel_speeds[0] - wheel_speeds[1] - wheel_speeds[2] + wheel_speeds[3]) / (2.0f*1.4142f);
@@ -42,7 +42,8 @@ template <std::size_t WheelCount>
 void Chassis_Demo<WheelCount>::updateKinematics()
 {
     inverseKinematics(this->robot_twist_);
-    //forwardKinematics(this->robot_twist_);  
+    robot_twist_foward = this->robot_twist_;
+    forwardKinematics(this->robot_twist_foward);  
 }
 
 template <std::size_t WheelCount>
@@ -71,8 +72,6 @@ Chassis_Demo<WheelCount>::Chassis_Demo(float wheel_radius, float max_wheel_rpm, 
     arm_mat_init_f32(&input_mat_, 3, 1, input_vector_);
     arm_mat_init_f32(&output_mat_, WheelCount, 1, output_vector_);
 }
-
-// ... existing code ...
 
 // 显式实例化Chassis_Base模板类
 //template class Chassis_Base<3>;

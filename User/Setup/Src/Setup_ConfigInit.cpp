@@ -74,9 +74,9 @@ DJI_Group ChassisGroupCAN1_Low(send_idLow(), CAN1_Bus); // 底盘电机组
 // namespace ChassisDem
 
 // 底盘参数
-const float wheel_radius = 0.076f;   // 轮子半径 (m)
+const float wheel_radius = 0.085f;   // 轮子半径 (m)
 const float max_wheel_rpm = 7000.0f; // 最大轮速 (RPM)
-const float chassis_radius = 0.2f;   // 底盘半径 (m)
+const float chassis_radius = 0.640f;   // 底盘半径 (m)
 
 // 在全局作用域声明 onim_demo 对象
 OnimDemo<4> onim_demo(wheel_radius, max_wheel_rpm, chassis_radius);

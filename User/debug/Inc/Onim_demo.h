@@ -24,6 +24,7 @@ extern "C"
 #include "Module_Chassisdemo.h"
 #include "Module_Air_joy.h"
 
+extern AirJoy air_joy;
 
 template <std::size_t WheelCount>
 class OnimDemo:public Chassis_Demo<WheelCount>, public RtosTask{

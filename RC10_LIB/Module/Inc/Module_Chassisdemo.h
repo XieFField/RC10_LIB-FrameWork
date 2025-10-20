@@ -18,7 +18,9 @@ class Chassis_Demo : public Chassis_Base<WheelCount> {
 public: 
     Chassis_Demo(float wheel_radius, float max_wheel_rpm, float chassis_radius);
     void updateKinematics() override;
-    
+
+protected:
+    Robot_Twist robot_twist_foward = {0};
 private:
     float chassis_radius_;//底盘的半径
     void inverseKinematics(const Robot_Twist& twist);
