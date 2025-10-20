@@ -25,12 +25,9 @@
 #include "usart.h"
 #include "usb_device.h"
 #include "gpio.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
-/*FRAMEDEMO_BEGIN*/
-#include "frame_demo.h"
-/*FRAMEDEMO_END*/
 
 /* USER CODE END Includes */
 
@@ -46,28 +43,21 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#include "Setup_ConfigInit.h"
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-extern void fdcan_global_scheduler_tick_isr(void);
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
-
-/* USER CODE BEGIN PFP */
-#ifdef __cplusplus
-extern "C"{
-#endif
 void MX_FREERTOS_Init(void);
-    
-#ifdef __cplusplus
-}
-#endif
+/* USER CODE BEGIN PFP */
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -116,8 +106,6 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
-  ALL_Setup_ConfigInit();
 
   /* USER CODE END 2 */
 
@@ -250,15 +238,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-  if(htim->Instance == TIM6)
-  {
-    fdcan_global_scheduler_tick_isr();
-  }
-  
-    if (htim->Instance == TIM4) // 假设你使用的是 TIM4
-    {
-        TimeStamp::overflowCallback();
-    }
+
   /* USER CODE END Callback 1 */
 }
 
@@ -282,7 +262,7 @@ void Error_Handler(void)
   *         where the assert_param error has occurred.
   * @param  file: pointer to the source file name
   * @param  line: assert_param error line source number
-  * @retval None Hard_Fa
+  * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
 {
