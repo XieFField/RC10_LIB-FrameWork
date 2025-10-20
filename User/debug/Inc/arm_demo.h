@@ -44,7 +44,7 @@ public:
 protected:
     void loop() override;
 
-    static inline float step_pm(uint16_t us, uint16_t mid=1500, uint16_t dead=60, float rate=0.25f)
+    static inline float step_pm(uint16_t us, uint16_t mid=1500, uint16_t dead=50, float rate=0.25f)
     {
         // 返回单位步进速率系数（-rate..+rate）
         if(us > mid + dead) return +rate;
