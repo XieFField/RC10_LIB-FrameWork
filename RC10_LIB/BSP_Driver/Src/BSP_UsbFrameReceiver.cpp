@@ -1,4 +1,4 @@
-#include "UsbFrameReceiver.h"
+#include "BSP_UsbFrameReceiver.h"
 #include "usbd_cdc_if.h"
 
 // 静态成员初始化

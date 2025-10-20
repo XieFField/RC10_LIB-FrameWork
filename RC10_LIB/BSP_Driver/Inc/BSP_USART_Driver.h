@@ -4,8 +4,8 @@
  * @brief UARTÇý¶¯ÎÄ¼þ
  */
 
-#ifndef __RC10_UART_H
-#define __RC10_UART_H
+#ifndef BSP_USART_DRIVER_H
+#define BSP_USART_DRIVER_H
 #include "usart.h"
 
 #ifdef __cplusplus

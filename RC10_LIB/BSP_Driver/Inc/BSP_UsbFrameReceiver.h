@@ -1,5 +1,5 @@
-#ifndef USB_FRAME_RECEIVER_H
-#define USB_FRAME_RECEIVER_H
+#ifndef BSP_USB_FRAME_RECEIVER_H
+#define BSP_USB_FRAME_RECEIVER_H
 
 #include "usbd_cdc_if.h"
 #include <stdint.h>
