@@ -58,8 +58,8 @@ public:
      * @brief 构造函数
      * @param name 任务名
      * @param period 任务周期 (Ticks)。
-     *               - period > 0: 创建一个周期性任务，用户需实现 loop()。
-     *               - period = 0 (默认): 创建一个事件驱动任务，用户需重写 run()。
+     *               - period > 0 (默认 = 1): 创建一个周期性任务，用户需实现 loop()。
+     *               - period = 0           : 创建一个事件驱动任务，用户需重写 run()。
      */
     explicit RtosTask(const char* name, TickType_t period = 1) 
         : name_(name), handle_(nullptr), period_(period) {}

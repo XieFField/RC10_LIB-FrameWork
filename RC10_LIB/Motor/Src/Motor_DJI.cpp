@@ -47,11 +47,11 @@ float DJI_Motor::virtualCurrent_to_realCurrent(int16_t virtualCurrent)
     switch(type_)
     {
         case M3508_Type:
-            return static_cast<float>(virtualCurrent) / 16384.0f * 20.0f; // 20A满量程
+            return static_cast<float>(virtualCurrent) / 16384.0f * 20000.0f; // 20000mA满量程
         case M2006_Type:
-            return static_cast<float>(virtualCurrent) / 10000.0f * 10.0f; // 10A满量程
+            return static_cast<float>(virtualCurrent) / 10000.0f * 10000.0f; // 10000mA满量程
         case GM6020_Type:
-            return static_cast<float>(virtualCurrent) * 16384.0f * 3.0f;  //3A满量程
+            return static_cast<float>(virtualCurrent) / 16384.0f * 3000.0f;  //3000mA满量程
         default:
             return 0.0f;
     }
@@ -148,9 +148,44 @@ bool DJI_Group::addMotor(DJI_Motor* motor)
             return false; // 不能在同一片上混用GM6020和其他型号
     }
 
-    motors_p[motor_count_] = motor;
+    int slot = calcSlot(mid, type);
+    if(slot < 0 || slot >= static_cast<int>(MAX_GROUP_SIZE))
+        return false;
+
+    if(motors_p[slot] != nullptr)
+        return false; //被占用
+
+    motors_p[slot] = motor;
     motor_count_++;
     return true;
+}
+
+int DJI_Group::calcSlot(uint32_t mid, DJI_MotorType type)const
+{
+    if(type == GM6020_Type) 
+    {
+        if(baseTxID_ == send_idLow6020()) 
+        { // 1~4
+            if(mid >=1 && mid <=4) return static_cast<int>(mid) - 1;
+        } 
+        else if(baseTxID_ == send_idHigh6020()) 
+        { // 5~7 (占前3槽位)
+            if(mid >=5 && mid <=7) return static_cast<int>(mid) - 5;
+        }
+        return -1;
+    } 
+    else 
+    { // M3508 / M2006
+        if(baseTxID_ == send_idLow()) 
+        {        // 1~4
+            if(mid >=1 && mid <=4) return static_cast<int>(mid) - 1;
+        } 
+        else if(baseTxID_ == send_idHigh()) 
+        { // 5~8
+            if(mid >=5 && mid <=8) return static_cast<int>(mid) - 5;
+        }
+        return -1;
+    }
 }
 
 std::size_t DJI_Group::packCommand(CanFrame outFrames[], std::size_t maxFrames)
@@ -163,9 +198,12 @@ std::size_t DJI_Group::packCommand(CanFrame outFrames[], std::size_t maxFrames)
     f.isextended = false;
     f.DLC = 8;
     std::memset(f.data, 0, 8);
-    for(std::size_t i = 0; i < motor_count_; ++i)
-    {
-        int16_t current = motors_p[i]->realCurrent_to_virtualCurrent(motors_p[i]->getTargetCurrent());
+    for(std::size_t i = 0; i < 4; ++i)
+    { 
+        DJI_Motor* m = motors_p[i];
+        if(!m)
+            continue;
+        int16_t current = m->realCurrent_to_virtualCurrent(m->getTargetCurrent());
         f.data[i*2] = (current >> 8) & 0xFF;
         f.data[i*2 + 1] = current & 0xFF;
     }
@@ -345,7 +383,7 @@ void M2006::update()
             anglePid_timeCnt++;
             if(anglePid_timeCnt >= anglePid_timePSC)
             {
-                float expected_rpm = angle_pid_.pid_calc(target_angle_, getTotalAngle());
+                float expected_rpm = angle_pid_.pid_calc(target_totalAngle_, getTotalAngle());
                 target_rpm_ = expected_rpm;
                 anglePid_timeCnt = 0;
             }

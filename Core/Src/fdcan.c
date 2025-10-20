@@ -72,7 +72,15 @@ void MX_FDCAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN FDCAN1_Init 2 */
+//  if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
+//  {
+//    Error_Handler(); // ����ʧ��ֱ�ӽ�������
+//  }
 
+//  // ����FIFO0����Ϣ�ж�
+//  if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK) {
+//    Error_Handler(); // �����ж�ʧ��ֱ�ӽ�������
+//  }
   /* USER CODE END FDCAN1_Init 2 */
 
 }
@@ -120,7 +128,15 @@ void MX_FDCAN2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN FDCAN2_Init 2 */
+//  if (HAL_FDCAN_Start(&hfdcan2) != HAL_OK)
+//  {
+//    Error_Handler(); // ����ʧ��ֱ�ӽ�������
+//  }
 
+//  // ����FIFO0����Ϣ�ж�
+//  if (HAL_FDCAN_ActivateNotification(&hfdcan2, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK) {
+//    Error_Handler(); // �����ж�ʧ��ֱ�ӽ�������
+//  }
   /* USER CODE END FDCAN2_Init 2 */
 
 }
@@ -168,7 +184,15 @@ void MX_FDCAN3_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN FDCAN3_Init 2 */
+//  if (HAL_FDCAN_Start(&hfdcan3) != HAL_OK)
+//  {
+//    Error_Handler(); // ����ʧ��ֱ�ӽ�������
+//  }
 
+//  // ����FIFO0����Ϣ�ж�
+//  if (HAL_FDCAN_ActivateNotification(&hfdcan3, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK) {
+//    Error_Handler(); // �����ж�ʧ��ֱ�ӽ�������
+//  }
   /* USER CODE END FDCAN3_Init 2 */
 
 }

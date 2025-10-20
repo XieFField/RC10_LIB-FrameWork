@@ -171,7 +171,7 @@
          2. 其实也可以把matchFrame删了，然后直接调用fdCANbus的matchesFrameDefualt。其实也是实现等价逻辑
       7. 做好注册唯一性检查(IMPORTANT!)
       8. 电机生命周期应该是和单片机运行周期等价，感觉没有做析构的必要。
-
+   
 
     
 

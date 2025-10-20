@@ -50,7 +50,7 @@ void Chassis_Base<WheelCount>::update()
     else
         robot_twist_ = robot_target_twist_;
 
-    updateKinematics(); //调用逆解和正解，更新轮速和机器人速度
+    updateKinematics(); //调用逆解更新机器人速度
 
     // 更新世界坐标系速度
     float cos_yaw = arm_cos_f32(deg_to_rad(angle_twist_.yaw_angle));
@@ -61,8 +61,8 @@ void Chassis_Base<WheelCount>::update()
 
     for(std::size_t i = 0; i < WheelCount; i++)
     {
-        constrain(wheele_target_rpm_[i], -max_wheel_rpm_, max_wheel_rpm_); //限幅
+        constrain(wheel_target_rpm_[i], -max_wheel_rpm_, max_wheel_rpm_); //限幅
         if(wheels_[i] != nullptr)
-            wheels_[i]->setTargetRPM(wheele_target_rpm_[i]);
+            wheels_[i]->setTargetRPM(wheel_target_rpm_[i]);
     }
 }

@@ -31,7 +31,8 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "position.h"
+#include "Rc10_Uart.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -53,10 +54,17 @@ void MX_DMA_Init(void);
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void UART_IDLE_Callback(uint16_t received_length);
+void parse_uart_data(uint8_t data);
+//void UART_IdleCallback(UART_HandleTypeDef *huart);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define AirJoy_Pin GPIO_PIN_8
+#define AirJoy_GPIO_Port GPIOF
+#define AirJoy_EXTI_IRQn EXTI9_5_IRQn
+#define PPM_Pin GPIO_PIN_9
+#define PPM_GPIO_Port GPIOF
 
 /* USER CODE BEGIN Private defines */
 

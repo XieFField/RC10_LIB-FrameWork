@@ -83,7 +83,7 @@ public:
             if(cf.ID < (0x200 + 1) || cf.ID > (0x200 + 8))
                 return false; // 非法ID
 
-            else if(cf.ID >= (0x200 + 1) && cf.ID < (0x200 + 8))
+            else if(cf.ID >= (0x200 + 1) && cf.ID <= (0x200 + 8))
                 return (cf.ID == (0x200 + motor_id_));
 
             else
@@ -121,6 +121,19 @@ public:
     void reset_AnglePidTimePSC(int reset_value = 0)
     {
         anglePid_timePSC = reset_value;
+    }
+
+    /**
+     * @brief 将编码器的总路程重新定位到指定值，重定义偏移量
+     */
+    void relocate_totalAngle(float now_totalAngle)
+    {
+        encoder_.relocate_totalAngle(now_totalAngle);
+        totalAngle_ = encoder_.getTotalAngle() / get_GearRatio();
+
+        this->angle_ = fmodf(this->totalAngle_, 360.0f);
+        if(this->angle_ < 0) 
+            this->angle_ += 360.0f;
     }
 
 protected:
@@ -184,6 +197,8 @@ private:
     uint8_t motor_count_ = 0;
 
     bool containsGM6020 = false; //是否包含GM6020, M3508/M2006不和GM6020混用
+
+    int calcSlot(uint32_t motorID, DJI_MotorType type) const; // 计算槽位
 };
 
 #define M3508_DECRATION 19.2032f //减速比
@@ -251,6 +266,8 @@ public:
     float getTotalAngle() const override;
     float get_GearRatio() const override { return GEAR_RATIO; }
     void reset_GearRatio(float reset_value){GEAR_RATIO = reset_value;}
+
+
 private:
     ControlMode mode_ = CURRENT_CONTROL;
     float GEAR_RATIO = 36.0f;

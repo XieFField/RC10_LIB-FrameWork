@@ -30,10 +30,12 @@ extern "C" {
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 
+#include "debug_setup.h"
 
+#if ARM_DEMO_DEBUG
 
-
-
+        #include "arm_demo.h"
+#endif
 
 #endif // __cplusplus
 
