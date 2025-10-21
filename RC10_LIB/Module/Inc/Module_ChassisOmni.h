@@ -1,7 +1,7 @@
 /**
- * @file Module_ChassisOmni.h
- * @author XieFField
- * @brief ȫ�����ģ��
+ * @file   Module_Chassis.h
+ * @author XieFField/hst
+ * @brief  底盘的正逆解
  * @version 1.0
  */
 #ifndef __MODULE_CHASSISOMNI_H
