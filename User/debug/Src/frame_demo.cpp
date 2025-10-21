@@ -2,11 +2,13 @@
 
 
 //fdCANbus CAN1_Bus(&hfdcan1, 1); // CAN1
-fdCANbus CAN2_Bus(&hfdcan2,1);
+//fdCANbus CAN2_Bus(&hfdcan2,1);
 //DJI_Group DJI_Group_1(send_idLow(), &CAN1_Bus); // 低片 0x200
 //M3508 m3508_1(1, &CAN1_Bus);
 
-DM_Motor dm_motor(J4310_Type,0x05,0x05,&CAN2_Bus);
+//DM_Motor dm_motor(J4310_Type,0x05,0x05,&CAN2_Bus);
+
+GPIODevice elcdoor(GPIOG,GPIO_PIN_8);
 
 PID_Param_Config m3508_speed_pid_params = {
     .kp = 32.0f,
@@ -108,36 +110,93 @@ volatile uint64_t last_time = 0;
 //    }
 
 //}
-void DM_MotorDemo::loop()
+//void DM_MotorDemo::loop()
+//{
+//	 uint64_t time_now = TimeStamp::getInstance().getMicroseconds();
+//    if(last_time > 0)
+//    {
+//        delta_time = static_cast<float>(time_now - last_time); 
+//        // 可以在这里使用 delta_time 进行其他计算
+//    }
+//    last_time = time_now;
+////    debug_uart.printf_DMA("%f,%f\r\n",m3508_1.getRPM(), m3508_1.getTargetRPM());
+//    //HAL_UART_Transmit(&huart1, (uint8_t*)"Tick\r\n", 6, HAL_MAX_DELAY);
+//    if(start_signal == 1)
+//    {
+////		dm_motor.setMIT(test_pos,test_rpm,test_kp,test_kd,test_kff);
+////		dm_motor.setTargetRPM(test_rpm);
+//		dm_motor.setTargetTotalAngle(test_rpm,test_pos);
+//    }
+//    else if(start_signal == 0)
+//    {
+//		dm_motor.motorEnable();
+////		dm_motor.motorSetZero();
+////		start_signal = 1;
+//    }
+//    else if(start_signal == 2)
+//    {
+//		dm_motor.motorDisable();
+//    }
+//    else if (start_signal == 3)
+//    {
+//		dm_motor.motorSetZero();
+//        /* code */
+
+//    }
+//    else if (start_signal == 4)
+//    {
+//        /* code */
+
+//    }
+//    else if (start_signal == 5)
+//    {
+//        /* code */
+//    }
+//    else if (start_signal == 6)
+//    {
+//        /* code */
+//        
+//    }
+//    else if (start_signal == 7)
+//    {
+//        /* code */
+//    }
+//    else if (start_signal == 8)
+//    {
+//        /* code */
+//        
+//    }
+//    else
+//    {
+//        
+//    }
+//}
+bool state=0;
+void GPIODemo::loop()
 {
-	 uint64_t time_now = TimeStamp::getInstance().getMicroseconds();
+	uint64_t time_now = TimeStamp::getInstance().getMicroseconds();
     if(last_time > 0)
     {
         delta_time = static_cast<float>(time_now - last_time); 
         // 可以在这里使用 delta_time 进行其他计算
     }
     last_time = time_now;
-//    debug_uart.printf_DMA("%f,%f\r\n",m3508_1.getRPM(), m3508_1.getTargetRPM());
-    //HAL_UART_Transmit(&huart1, (uint8_t*)"Tick\r\n", 6, HAL_MAX_DELAY);
+
     if(start_signal == 1)
     {
-//		dm_motor.setMIT(test_pos,test_rpm,test_kp,test_kd,test_kff);
-//		dm_motor.setTargetRPM(test_rpm);
-		dm_motor.setTargetTotalAngle(test_rpm,test_pos);
+		elcdoor.Reset_pin();
     }
     else if(start_signal == 0)
     {
-		dm_motor.motorEnable();
-//		dm_motor.motorSetZero();
-//		start_signal = 1;
+		elcdoor.Set_pin();
     }
     else if(start_signal == 2)
     {
-		dm_motor.motorDisable();
+		elcdoor.Toggle_pin();
     }
     else if (start_signal == 3)
     {
-		dm_motor.motorSetZero();
+		state=elcdoor.Read_pin();
         /* code */
 
     }
@@ -170,6 +229,11 @@ void DM_MotorDemo::loop()
     }
 }
 
+void GPIODemo::init()
+{
+	start(osPriorityNormal, 256);
+}
+
 //void DJI_MotorDemo::init()
 //{
 //    DJI_Group_1.addMotor(&m3508_1);
@@ -185,16 +249,16 @@ void DM_MotorDemo::loop()
 //    
 //}
 
-void DM_MotorDemo::init()
-{
-	CAN2_Bus.registerMotor(&dm_motor); // 注册电机本身
-//    CAN1_Bus.registerMotor(&DJI_Group_1); // 同时注册Group用于发送
-//    m3508_1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-    CAN2_Bus.init();
-    start(osPriorityNormal, 256);
-   
-    const char *msg = "Hello UART1 on PB6/PB7\r\n";
-    HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-}
+//void DM_MotorDemo::init()
+//{
+//	CAN2_Bus.registerMotor(&dm_motor); // 注册电机本身
+////    CAN1_Bus.registerMotor(&DJI_Group_1); // 同时注册Group用于发送
+////    m3508_1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
+//    CAN2_Bus.init();
+//    start(osPriorityNormal, 256);
+//   
+//    const char *msg = "Hello UART1 on PB6/PB7\r\n";
+//    HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+//}
 
 

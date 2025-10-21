@@ -31,7 +31,7 @@ extern "C" {
 class GPIODevice {
 public:
 	GPIODevice(GPIO_TypeDef* port,uint16_t pin);
-	~GPIODevice();
+	~GPIODevice(){};
 void Set_pin();    
 void Reset_pin();
 void Toggle_pin();

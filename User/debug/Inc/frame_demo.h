@@ -32,7 +32,7 @@ extern "C"
 #include "BSP_TimeStamp.h"
 #include "Module_ChassisBase.h"
 #include "Motor_DM.h"
-
+#include "Module_GPIO.h"
 
 class FrameDemo : public RtosTask
 {
@@ -68,6 +68,13 @@ public:
     void loop() override;
     Debug_Printf debug_uart;
 private:
+};
+
+class GPIODemo:public RtosTask{
+public:
+	GPIODemo() :RtosTask("GPIODemo", 1){}
+	void init();
+    void loop() override;
 };
 
 #endif // __cplusplus
