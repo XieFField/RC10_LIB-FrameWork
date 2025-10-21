@@ -11,7 +11,6 @@
 #include "usart.h"
 #include <stdint.h>
 #include "math.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif 
@@ -69,8 +68,8 @@ extern RealPos RealPosData;
 void Reposition_SendData(float X, float Y);
 void POS_Relocate_ByDiff(float X, float Y, float yaw);
 void UART_IdleCallback(UART_HandleTypeDef *huart);
-uint32_t Position_UART1_RxCallback(uint8_t *buf, uint16_t len);
-
+void Position_UART1_RxCallback(uint8_t *buf, uint16_t len);
+void USB_DataReceivedCallback(uint8_t* buf, uint16_t len);
 void Update_RawPosition(float value[5]);
 
 

@@ -16,7 +16,6 @@ extern "C" {
     #include "task.h"
     #include "queue.h"
     #include "semphr.h"
-    
     void ALL_Setup_ConfigInit(void);
 }
 
@@ -29,9 +28,8 @@ extern "C" {
 #include "Motor_DJI.h"
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
-
+#include "Rc10_Uart.h"
 #include "debug_setup.h"
-
 #if ARM_DEMO_DEBUG
 
         #include "arm_demo.h"

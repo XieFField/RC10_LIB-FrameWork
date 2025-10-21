@@ -341,7 +341,7 @@
               <MiscControls>-finput-charset=UTF-8</MiscControls>
               <Define>USE_PWR_LDO_SUPPLY,USE_HAL_DRIVER,STM32H723xx,ARM_MATH_CM7 ARM_MATH,ARM_MATH_MATRIX_CHECK,ARM_MATH_ROUNDING</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include;../RC10_LIB/BSP_Driver/Inc;../RC10_LIB/Motor/Inc;../RC10_LIB/APP/Inc;../User/Control/Inc;../User/debug/Inc;../User/Setup/Inc;../RC10_LIB/Module/Inc;../Middlewares/ST/ARM/DSP/Inc;../Drivers/CMSIS/DSP/Include;../USB_DEVICE/App;../USB_DEVICE/Target;../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc;..\RC10_LIB\RC_UART</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include;../RC10_LIB/BSP_Driver/Inc;../RC10_LIB/Motor/Inc;../RC10_LIB/APP/Inc;../User/Control/Inc;../User/debug/Inc;../User/Setup/Inc;../RC10_LIB/Module/Inc;../Middlewares/ST/ARM/DSP/Inc;../Drivers/CMSIS/DSP/Include;../USB_DEVICE/App;../USB_DEVICE/Target;../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc;../RC10_LIB/RC_UART</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -1791,14 +1791,14 @@
               <FilePath>..\RC10_LIB\RC_UART\position.h</FilePath>
             </File>
             <File>
-              <FileName>Rc10_Uart.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\RC10_LIB\RC_UART\Rc10_Uart.c</FilePath>
-            </File>
-            <File>
               <FileName>Rc10_Uart.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\RC_UART\Rc10_Uart.h</FilePath>
+            </File>
+            <File>
+              <FileName>Rc10_Uart.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\RC_UART\Rc10_Uart.cpp</FilePath>
             </File>
           </Files>
         </Group>

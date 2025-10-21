@@ -17,6 +17,7 @@
 
 #include "position.h"
 #include <math.h>
+#include "usbd_cdc_if.h"
 
 RawPos RawPosData = {0};
 RealPos RealPosData = {0};
@@ -30,7 +31,7 @@ union
 } posture;
 
 //接收回调函数
-uint32_t Position_UART1_RxCallback(uint8_t *buf, uint16_t len)
+void Position_UART1_RxCallback(uint8_t *buf, uint16_t len)
 {
     uint8_t count = 0;
 	uint8_t i = 0;
@@ -180,7 +181,7 @@ uint32_t Position_UART1_RxCallback(uint8_t *buf, uint16_t len)
 		}
 		
 	}
-	return 0;
+	
 }
 
 // 数据更新函数：将解析后的值存入 RawPos 和 RealPos
@@ -288,5 +289,13 @@ void UART_IdleCallback(UART_HandleTypeDef *huart)
         
         // 重新启动DMA接收
         HAL_UART_Receive_DMA(&huart1, rx_buffer, sizeof(rx_buffer));
+    }
+}
+void USB_DataReceivedCallback(uint8_t* buf, uint16_t len)
+{
+    // 接收到数据后立即回传（echo功能）
+    if(len > 0 && len <= RX_BUFFER_SIZE)
+    {
+        CDC_Transmit_HS(buf, len);
     }
 }

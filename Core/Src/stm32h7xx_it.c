@@ -22,6 +22,7 @@
 #include "stm32h7xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "Rc10_Uart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,14 +42,11 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-/*#define TARGET_BUFFER_SIZE  7
-uint8_t target_buffer[TARGET_BUFFER_SIZE];*/
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
-
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -68,6 +66,7 @@ extern DMA_HandleTypeDef hdma_usart1_tx;
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim8;
+
 /* USER CODE BEGIN EV */
 extern void fdcan_global_scheduler_tick_isr(void);
 /* USER CODE END EV */
@@ -256,19 +255,13 @@ void TIM4_IRQHandler(void)
 /**
   * @brief This function handles USART1 global interrupt.
   */
-/**
-  * @brief This function handles USART1 global interrupt.
-  */
 void USART1_IRQHandler(void)
 {
   /* USER CODE BEGIN USART1_IRQn 0 */
 	if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE) != RESET)
   {
-    // 清除IDLE中断标志
     __HAL_UART_CLEAR_IDLEFLAG(&huart1);
-    Uart_Receive_Callback(&usart1_struct);
-    // 调用自定义的IDLE回调函数
-    //UART_IdleCallback(&huart1);
+		Uart_USB_Receive_Callback_Global(NULL,NULL,UART1_MODE);
   }
   /* USER CODE END USART1_IRQn 0 */
   HAL_UART_IRQHandler(&huart1);
