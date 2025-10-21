@@ -10,25 +10,25 @@
 
 GPIODevice elcdoor(GPIOG,GPIO_PIN_8);
 
-PID_Param_Config m3508_speed_pid_params = {
-    .kp = 32.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 20000.0f,   
-    .deadband = 5.0f 
-};
+//PID_Param_Config m3508_speed_pid_params = {
+//    .kp = 32.0f,
+//    .ki = 0.0f,
+//    .kd = 0.0f,
+//    .I_Outlimit = 0.0f, 
+//    .isIOutlimit = true, 
+//    .output_limit = 20000.0f,   
+//    .deadband = 5.0f 
+//};
 
-PID_Param_Config m3508_angle_pid_params = {
-    .kp = 100.0f,
-    .ki = 0.0f,
-    .kd = 0.005f,
-    .I_Outlimit = 8000.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 20000.0f,   
-    .deadband = 5.0f // 
-};
+//PID_Param_Config m3508_angle_pid_params = {
+//    .kp = 100.0f,
+//    .ki = 0.0f,
+//    .kd = 0.005f,
+//    .I_Outlimit = 8000.0f, 
+//    .isIOutlimit = true, 
+//    .output_limit = 20000.0f,   
+//    .deadband = 5.0f // 
+//};
 
 
 // 使用 volatile 防止编译器优化，确保在调试时可以观察到值的变化

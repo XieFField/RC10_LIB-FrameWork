@@ -43,13 +43,13 @@ public:
     
 };
 
-class CanTest : public fdCANbus
-{
-public:
-    CanTest(FDCAN_HandleTypeDef* hfdcan, uint32_t bus_id) : fdCANbus(hfdcan, bus_id) {}
-    ~CanTest(){}
-    
-};
+//class CanTest : public fdCANbus
+//{
+//public:
+//    CanTest(FDCAN_HandleTypeDef* hfdcan, uint32_t bus_id) : fdCANbus(hfdcan, bus_id) {}
+//    ~CanTest(){}
+//    
+//};
 
 
 class DJI_MotorDemo: public RtosTask{
