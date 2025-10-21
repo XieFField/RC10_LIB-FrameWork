@@ -213,3 +213,23 @@ PID_Param_Config m3508_angle_pid_params = {
     .output_limit = 400.0f,   
     .deadband = 0.5f // 
 };
+
+PID_Param_Config m2006_speed_pid_params = {
+    .kp = 67.0f,   
+    .ki = 1.0f, 
+    .kd = 0.0f,
+    .I_Outlimit = 8000.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 80000.0f,   
+    .deadband = 0.05f 
+};
+
+PID_Param_Config m2006_angle_pid_params = {
+    .kp = 2.3f,
+    .ki = 0.0f,
+    .kd = 0.24,
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 416.0f,   
+    .deadband = 0.05f 
+};

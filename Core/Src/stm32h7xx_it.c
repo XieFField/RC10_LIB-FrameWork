@@ -266,7 +266,7 @@ void USART1_IRQHandler(void)
   {
     // 清除IDLE中断标志
     __HAL_UART_CLEAR_IDLEFLAG(&huart1);
-    Uart_Receive_Callback(&usart1_struct);
+//    Uart_Receive_Callback(&usart1_struct);
     // 调用自定义的IDLE回调函数
     //UART_IdleCallback(&huart1);
   }

@@ -31,8 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "position.h"
-#include "Rc10_Uart.h"
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

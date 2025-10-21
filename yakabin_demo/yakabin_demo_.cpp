@@ -82,7 +82,8 @@ public:
     }
 
     // 角度规范化到 [-pi, pi)
-    static float normalizeAngle(float a) {
+    static float normalizeAngle(float a) 
+    {
         const float PI = 3.14159265358979323846f;
         while (a >= PI) a -= 2.0f*PI;
         while (a < -PI) a += 2.0f*PI;
