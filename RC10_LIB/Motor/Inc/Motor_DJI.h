@@ -46,17 +46,18 @@ typedef enum {
 
 //
 /**
- * @brief 大疆电机基类，由于大疆电机协议高度相似，所以这么做
+ * @brief     负责打包4电机合帧
  * @attention 如果你想要在同一路CAN上搭载GM6020和M3508/M2006，请确保GM6020在下片上
- *            而M3508/M2006在上片上。因为M3508/M2006的ID范围是0x201~0x208, 
- *            而GM6020的ID范围是0x204~0x207
+ *            而M3508/M2006在上片上。因为M3508/M2006的ID范围是0x201到0x208, 
+ *            而GM6020的ID范围是0x205到0x211
  */
 class DJI_Motor : public Motor_Base {
 public:
     /**
+     * @brief     负责打包4电机合帧
      * @attention 如果你想要在同一路CAN上搭载GM6020和M3508/M2006，请确保GM6020在下片上
      *            而M3508/M2006在上片上。因为M3508/M2006的ID范围是0x201到0x208, 
-     *            而GM6020的ID范围是0x204到0x207
+     *            而GM6020的ID范围是0x205到0x211
      */
     DJI_Motor(DJI_MotorType type, uint32_t id, fdCANbus *bus);
     ~DJI_Motor(){};
@@ -82,7 +83,7 @@ public:
             if(cf.ID < (0x200 + 1) || cf.ID > (0x200 + 8))
                 return false; // 非法ID
 
-            else if(cf.ID >= (0x200 + 1) && cf.ID < (0x200 + 8))
+            else if(cf.ID >= (0x200 + 1) && cf.ID <= (0x200 + 8))
                 return (cf.ID == (0x200 + motor_id_));
 
             else
@@ -122,6 +123,19 @@ public:
         anglePid_timePSC = reset_value;
     }
 
+    /**
+     * @brief 将编码器的总路程重新定位到指定值，重定义偏移量
+     */
+    void relocate_totalAngle(float now_totalAngle)
+    {
+        encoder_.relocate_totalAngle(now_totalAngle);
+        totalAngle_ = encoder_.getTotalAngle() / get_GearRatio();
+
+        this->angle_ = fmodf(this->totalAngle_, 360.0f);
+        if(this->angle_ < 0) 
+            this->angle_ += 360.0f;
+    }
+
 protected:
     int anglePid_timePSC = 10; //角度时间分频 默认为 10 即控制频率为100Hz
     int anglePid_timeCnt = 0; //角度时间计数
@@ -150,7 +164,7 @@ uint32_t send_idHigh6020();
  * @brief     负责打包4电机合帧
  * @attention 如果你想要在同一路CAN上搭载GM6020和M3508/M2006，请确保GM6020在下片上
  *            而M3508/M2006在上片上。因为M3508/M2006的ID范围是0x201到0x208, 
- *            而GM6020的ID范围是0x204到0x207
+ *            而GM6020的ID范围是0x205到0x211
  */
 class DJI_Group : public Motor_Base {
 public:
@@ -183,6 +197,8 @@ private:
     uint8_t motor_count_ = 0;
 
     bool containsGM6020 = false; //是否包含GM6020, M3508/M2006不和GM6020混用
+
+    int calcSlot(uint32_t motorID, DJI_MotorType type) const; // 计算槽位
 };
 
 #define M3508_DECRATION 19.2032f //减速比
@@ -250,6 +266,8 @@ public:
     float getTotalAngle() const override;
     float get_GearRatio() const override { return GEAR_RATIO; }
     void reset_GearRatio(float reset_value){GEAR_RATIO = reset_value;}
+
+
 private:
     ControlMode mode_ = CURRENT_CONTROL;
     float GEAR_RATIO = 36.0f;

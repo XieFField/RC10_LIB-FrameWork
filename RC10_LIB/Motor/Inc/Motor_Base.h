@@ -43,14 +43,30 @@ public:
     virtual float getAngle() const{};
     virtual float getTotalAngle() const{};
 
-    // 抽象：打包命令 -> 返回需要发送的帧数
+    
+    /**
+     * @brief 将电机的控制命令打包成CAN帧
+     * @param outFrames 用于存放打包后CAN帧的数组
+     * @param maxFrames 数组的最大容量
+     * @return 实际打包的CAN帧数量
+     */
     virtual std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) = 0;
 
-    // 抽象：解析反馈帧
+    
+    /**
+     * @brief 解析并处理来自电机的反馈CAN帧
+     */
     virtual void updateFeedback(const CanFrame& cf) = 0;
 
-    // 帧匹配（默认简单 ID/Ext 匹配）
-    virtual bool matchesFrame(const CanFrame& cf) const{};
+    /**
+     * @brief 检查给定的CAN帧是否属于此电机
+     * @return 如果匹配则返回true，否则返回false
+     */
+    virtual bool matchesFrame(const CanFrame& cf) const
+    {
+        (void)cf;
+        return false;
+    }
 
     virtual float get_GearRatio() const { return GEAR_RATIO; }
 

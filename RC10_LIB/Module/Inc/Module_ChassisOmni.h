@@ -7,6 +7,17 @@
 #ifndef __MODULE_CHASSISOMNI_H
 #define __MODULE_CHASSISOMNI_H
 
+/*
+
+   ________                    _         ____                  _ 
+  / ____/ /_  ____ ___________(_)____   / __ \____ ___  ____  (_)
+ / /   / __ \/ __ `/ ___/ ___/ / ___/  / / / / __ `__ \/ __ \/ / 
+/ /___/ / / / /_/ (__  |__  ) (__  )  / /_/ / / / / / / / / / /  
+\____/_/ /_/\__,_/____/____/_/____/   \____/_/ /_/ /_/_/ /_/_/   
+                                                                 
+
+*/
+
 #pragma once
 #ifdef __cplusplus
 extern "C" {
@@ -30,19 +41,31 @@ extern "C" {
     只包含4/3轮全向底盘，应该不会用到其他轮数的全向轮底盘吧
 */
 
+#define COS_30 0.86602540378f
+#define SIN_30 0.5f
+#define COS_45 0.70710678118f
+#define SIN_45 0.70710678118f
+
+/*
+三轮：   2 /    \ 3   对应的底盘电机编号
+            ___
+             1
+
+四轮:     2 /     \  3 对应的底盘电机编号
+                         
+          1 \     / 4
+*/
+
 template <std::size_t WheelCount>
 class Chassis_Omni : public Chassis_Base<WheelCount> {
 public:
-    Chassis_Omni(float wheel_radius, float max_wheel_rpm);
+    Chassis_Omni(float wheel_radius, float max_wheel_rpm, float chassis_radius);
 
     void updateKinematics() override; // 更新运动学，调用逆解和正解
 
-    void inverseKinematics(const Robot_Twist& twist) override; // 逆解，根据目标速度计算轮速
-
-    void forwardKinematics() override; // 正解，根据轮速计算机器人速度
-
 private:
-    
+    void inverseKinematics(const Robot_Twist& twist) override; // 逆解，根据目标速度计算轮速
+    float chassis_radius_; // 底盘半径 (m)
 };
 
 

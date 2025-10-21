@@ -22,6 +22,7 @@ extern "C" {
 
 #ifdef __cplusplus
 #include "frame_demo.h"
+#include "Motor_GO_demo.h"
 #include <cstdint>
 #include "BSP_CANFrame.h"
 #include "BSP_RTOS.h"
@@ -30,10 +31,12 @@ extern "C" {
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 
+#include "debug_setup.h"
 
+#if ARM_DEMO_DEBUG
 
-
-
+        #include "arm_demo.h"
+#endif
 
 #endif // __cplusplus
 
@@ -41,3 +44,4 @@ extern "C" {
 
 
 #endif
+
