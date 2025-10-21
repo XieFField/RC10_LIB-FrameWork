@@ -21,13 +21,13 @@ extern "C"
 #include "APP_debugTool.h"
 #include "BSP_TimeStamp.h"
 #include "APP_Tool.h"
-#include "Module_Chassisdemo.h"
+#include "Module_ChassisOmni.h"
 #include "Module_Air_joy.h"
 
 extern AirJoy air_joy;
 
 template <std::size_t WheelCount>
-class OnimDemo:public Chassis_Demo<WheelCount>, public RtosTask{
+class OnimDemo:public Chassis_Onim<WheelCount>, public RtosTask{
 public:
    OnimDemo(float wheel_radius, float max_wheel_rpm, float chassis_radius); 
    void init()
@@ -61,6 +61,6 @@ private:
 
 #endif
   
-// Chassis_Demo.cpp 末尾
+// Chassis_Onim.cpp 末尾
 // 显式实例化4轮底盘模板类 
 

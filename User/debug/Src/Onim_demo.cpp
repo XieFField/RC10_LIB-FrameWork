@@ -2,7 +2,7 @@
 
 template <std::size_t WheelCount>
 OnimDemo<WheelCount>::OnimDemo(float wheel_radius, float max_wheel_rpm, float chassis_radius) : 
-    Chassis_Demo<WheelCount>(wheel_radius, max_wheel_rpm, chassis_radius),  // 调用第一个基类的构造函数
+    Chassis_Onim<WheelCount>(wheel_radius, max_wheel_rpm, chassis_radius),  // 调用第一个基类的构造函数
     RtosTask("OnimDemo", 1)  // 调用第二个基类的构造函数
 {                                                           
 

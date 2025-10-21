@@ -18,59 +18,39 @@
 
 */
 
-#pragma once
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "arm_math.h"
 #include "cmsis_os.h"
-
-#ifdef __cplusplus
-}
-#endif
-
 #include "Module_ChassisBase.h"
 #include "APP_tool.h"
 
 #ifdef __cplusplus
 
-/*
-    ����ϵ��������ϵ�����ٶ���������ѭ���ֶ��򣬼���ʱ��Ϊ������
-
-    ֻ����4/3��ȫ����̣�Ӧ�ò����õ�����������ȫ���ֵ��̰�
-*/
-
 #define COS_30 0.86602540378f
 #define SIN_30 0.5f
 #define COS_45 0.70710678118f
-#define SIN_45 0.70710678118f
-
-/*
-���֣�   2 /    \ 3   ��Ӧ�ĵ��̵�����
-            ___
-             1
-
-����:     2 /     \  3 ��Ӧ�ĵ��̵�����
-                         
-          1 \     / 4
-*/
+#define SIN_45 0.70710678118f               
 
 template <std::size_t WheelCount>
-class Chassis_Omni : public Chassis_Base<WheelCount> {
-public:
-    Chassis_Omni(float wheel_radius, float max_wheel_rpm, float chassis_radius);
+class Chassis_Onim : public Chassis_Base<WheelCount> {
+public: 
+    Chassis_Onim(float wheel_radius, float max_wheel_rpm, float chassis_radius);
+    void updateKinematics() override;
 
-    void updateKinematics() override; // �����˶�ѧ��������������
-
+protected:
+    Robot_Twist robot_twist_foward = {0};
 private:
-    void inverseKinematics(const Robot_Twist& twist) override; // ��⣬����Ŀ���ٶȼ�������
-    void forwardKinematics(const Robot_Twist& twist); // ѧ���������
-    float chassis_radius_; // ���̰뾶 (m)
+    float chassis_radius_;//?????
+    void inverseKinematics(const Robot_Twist& twist);
+    void forwardKinematics(Robot_Twist& twist);
+    arm_matrix_instance_f32 kinematics_matrix; // WheelCount x 3
+    arm_matrix_instance_f32 input_mat_; // 3x1
+    arm_matrix_instance_f32 output_mat_; // WheelCount x 1
+
+    // ??????
+    float32_t kinematics_matrix_data_[WheelCount * 3];
+    float32_t input_vector_[3]; // 3x1
+    float32_t output_vector_[WheelCount]; // 4x1    
 };
 
-
-
 #endif // __cplusplus
-
-#endif // __MODULE_OMNICHASSIS_H
+#endif // __MODULE_CHASSISDEMO_H__
