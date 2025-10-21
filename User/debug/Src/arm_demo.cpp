@@ -56,7 +56,7 @@ void Robot_ArmDemo::loop()
 
 //    test_point.z += step_pm(air_joy.LEFT_Y)  * v_xyz * dt;
 //    test_point.x += step_pm(air_joy.LEFT_X)  * v_xyz * dt;
-//    test_point.y += step_pm(air_joy.RIGHT_Y) * v_xyz * dt;
+//    test_point                       .y += step_pm(air_joy.RIGHT_Y) * v_xyz * dt;
 //    test_point.suckerJoint_status_ += step_pm(air_joy.RIGHT_X) * v_aux * dt;
 
     this->setArmTarget(test_point);

@@ -65,7 +65,7 @@ M3508 M3508_1(1, CAN1_Bus),M3508_2(2, CAN1_Bus),M3508_3(3, CAN1_Bus),M3508_4(4, 
 
 DJI_Motor* wheel_[4] = {&M3508_1, &M3508_2, &M3508_3, &M3508_4}; 
 
-MyChassisController<4> myChassisController(0.076f, 7000.0f, 0.2f);
+MyChassisController<4> myChassisController(0.085f, 7000.0f, 0.64f);
 
 void MyChassis_Init()
 {

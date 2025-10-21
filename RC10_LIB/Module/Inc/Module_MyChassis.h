@@ -15,9 +15,13 @@ class MyChassis : public Chassis_Base<WheelCount>
 public:
 	MyChassis(float wheel_radius, float max_wheel_rpm, float chassis_radius);
 	void updateKinematics()override;
-private:
-	void inverseKinematics(const Robot_Twist& twist);
+private:	
+float wheel_radius;
+DJI_Motor* motors_[WheelCount];
 	float chassis_radius_; 
+	void inverseKinematics(const Robot_Twist& twist);
+  void forwardKinematics();
+
 	arm_matrix_instance_f32 mat_;
 	arm_matrix_instance_f32 in;    // 初始化输入矩阵
   arm_matrix_instance_f32 out;

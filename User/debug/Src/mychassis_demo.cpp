@@ -1,8 +1,5 @@
 #include "mychassis_demo.h"
 
-volatile uint8_t my_start_signal = 0;
-volatile float my_delta_time = 0.0f; 
-volatile uint64_t my_last_time = 0;
 
 template <std::size_t WheelCount>
 MyChassisController<WheelCount>::MyChassisController(float wheel_radius, float max_wheel_rpm, float chassis_radius)
@@ -47,8 +44,8 @@ void MyChassisController<WheelCount>::loop()
    if(my_start_signal == 1)
    {
         // 前进0.5 m/s
-        target_speed.vx = 0.8f; // m/s
-        target_speed.vy = 0.5f; // m/s
+        target_speed.vx = 0.3f; // m/s
+        target_speed.vy = 0.0f; // m/s
         target_speed.yaw_rate = 0.0f; // rad/s
    }
     else if(my_start_signal == 2)
@@ -65,12 +62,17 @@ void MyChassisController<WheelCount>::loop()
         target_speed.vy = 0.0f; // m/s
         target_speed.yaw_rate = 1.0f; // rad/s
     }
-    else
+    else if(my_start_signal == 0)
     {
         // 停止
         target_speed.vx = 0.0f; // m/s
         target_speed.vy = 0.0f; // m/s
         target_speed.yaw_rate = 0.0f; // rad/s
+    }
+    else if(my_start_signal == 5){
+        target_speed.vx = ppm_to_norm_pm(air_joy.LEFT_Y) * 1.0f; // m/s
+        target_speed.vy = ppm_to_norm_pm(air_joy.LEFT_X) * 1.0f; // m/s
+        target_speed.yaw_rate = ppm_to_norm_pm(air_joy.RIGHT_X) * 2.0f; // rad/s
     }
 		this->robot_twist_ = target_speed ;
     this->updateKinematics();
