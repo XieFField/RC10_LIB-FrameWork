@@ -32,7 +32,7 @@ typedef struct {
  */
 typedef enum {
     LINEAR_INTERPOLATION,  // Ö±Ïß²å²¹
-    CIRCULAR_INTERPOLATION // Ô²»¡²å²¹£¨´ýÊµÏÖ£©
+    CIRCULAR_INTERPOLATION // Ô²»¡²å²¹
 } PathPlanningMode_E;
 
 /**

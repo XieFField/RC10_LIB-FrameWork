@@ -1000,6 +1000,16 @@
               <FileType>8</FileType>
               <FilePath>..\User\Control\Src\Robot_Arm.cpp</FilePath>
             </File>
+            <File>
+              <FileName>PathPlanner.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Src\PathPlanner.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>PathPlanner.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Control\Inc\PathPlanner.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
