@@ -258,11 +258,7 @@ void TIM4_IRQHandler(void)
 void USART1_IRQHandler(void)
 {
   /* USER CODE BEGIN USART1_IRQn 0 */
-	if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE) != RESET)
-  {
-    __HAL_UART_CLEAR_IDLEFLAG(&huart1);
-		Uart_USB_Receive_Callback_Global(NULL,NULL,UART1_MODE);
-  }
+
   /* USER CODE END USART1_IRQn 0 */
   HAL_UART_IRQHandler(&huart1);
   /* USER CODE BEGIN USART1_IRQn 1 */

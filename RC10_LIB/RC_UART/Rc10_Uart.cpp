@@ -63,9 +63,9 @@ void USB_USART::USB_UART_Init() {
             Error_Handler();
 
         if(uarthandle_->Instance == USART1 || uarthandle_->Instance == USART2) {
-            __HAL_UART_CLEAR_IDLEFLAG(uarthandle_);
-            __HAL_UART_ENABLE_IT(uarthandle_, UART_IT_IDLE);
-            HAL_UART_Receive_DMA(uarthandle_, usb_uart->rx_buffer, usb_uart->rx_buffer_size);
+            //__HAL_UART_CLEAR_IDLEFLAG(uarthandle_);
+            //__HAL_UART_ENABLE_IT(uarthandle_, UART_IT_IDLE);
+            HAL_UARTEx_ReceiveToIdle_DMA(uarthandle_, usb_uart->rx_buffer, usb_uart->rx_buffer_size);
         } else {
             Error_Handler();
         }
@@ -97,6 +97,16 @@ void Uart_USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len,USB_UART_mode_E
     }
 }
 
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+    USB_USART* instance = InstanceManager::GetInstanceByUartHandle(huart);
+    if (instance != nullptr) {
+        // 调用实例的接收处理，使用HAL提供的Size参数
+        instance->Receive_Callback(huart->pRxBuffPtr, Size);
+        
+        // 重新启动DMA接收
+        HAL_UARTEx_ReceiveToIdle_DMA(huart, huart->pRxBuffPtr, huart->RxXferSize);
+    }
+}
 // UART 空闲中断回调
 /*void HAL_UART_IdleCallback(UART_HandleTypeDef *huart) {
     USB_USART* instance = InstanceManager::GetInstanceByUartHandle(huart);

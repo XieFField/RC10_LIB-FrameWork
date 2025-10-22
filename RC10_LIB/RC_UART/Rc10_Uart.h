@@ -51,7 +51,7 @@ public:
     ~USB_USART(){}
 		void Receive_Callback(uint8_t* Buf, uint32_t Len);
 	  void USB_UART_Init();
-		    USB_UART_mode_E GetMode() const { return control_mode_; }
+		USB_UART_mode_E GetMode() const { return control_mode_; }
     UART_HandleTypeDef* GetUartHandle() const { return uarthandle_; }
 private:
 	  UART_USB_Struct *usb_uart;//结构体指针
