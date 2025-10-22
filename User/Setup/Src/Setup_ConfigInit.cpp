@@ -87,7 +87,11 @@ void ALL_Setup_ConfigInit(void)
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
 
-
-   //other init
+   fsm_controller.init();
+   
 }
+
+
+
+
 

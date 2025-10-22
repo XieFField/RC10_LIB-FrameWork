@@ -13,6 +13,13 @@ extern "C" {
 
 #endif
 
+template<typename Type> 
+Type _tool_Abs(Type x) 
+{
+    return ((x > 0) ? x : -x);
+}
+
+
 /**
  * @brief  将矩阵设置为单位矩阵
  * @param[in,out] M   指向矩阵实例

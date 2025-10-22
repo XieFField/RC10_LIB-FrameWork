@@ -1,0 +1,67 @@
+#include "FSM_Controller.h"
+
+void FSM_Controller::loop()
+{
+    if(!init_flag_)
+        return;
+
+    //遥控器链接失败
+    if(air_joy.LEFT_X == 0 || air_joy.LEFT_Y == 0 || air_joy.RIGHT_X == 0 || air_joy.RIGHT_Y == 0 ||
+       air_joy.SWA == 0 || air_joy.SWB == 0 || air_joy.SWC == 0 || air_joy.SWD == 0)
+    {
+       airjoy_connected_ = false;
+       return;
+    }
+    else
+       airjoy_connected_ = true;
+    
+    if(_tool_Abs(air_joy.SWA - 1000) < 50)
+        robot_status_ = ALL_STOP;
+    else if(_tool_Abs(air_joy.SWA - 2000) < 50)
+    {
+        if(_tool_Abs(air_joy.SWD - 1000) < 50)
+            robot_status_ = MANUAL_CONTROL;
+        else if(_tool_Abs(air_joy.SWD - 2000) < 50)
+            robot_status_ = AUTO_CONTROL;
+    }
+
+   switch (robot_status_)
+   {
+    case ALL_STOP:
+        all_stop();
+        break;
+
+    case MANUAL_CONTROL:
+        // 手动控制逻辑实现
+        manual_ctrl();
+        break;
+
+    case AUTO_CONTROL:
+        // 自动控制逻辑实现
+        auto_ctrl();
+        break;
+
+    default:
+        break;
+   }
+}
+
+void FSM_Controller::all_stop()
+{
+   // 停止所有机构动作的实现
+   
+}
+
+void FSM_Controller::manual_ctrl()
+{
+   // 手动控制模式下的实现
+   
+}
+
+
+void FSM_Controller::auto_ctrl()
+{
+   // 半自动控制模式下的实现
+}
+
+
