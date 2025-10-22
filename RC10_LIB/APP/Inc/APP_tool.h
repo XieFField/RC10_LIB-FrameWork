@@ -48,6 +48,11 @@ float rad_to_deg(float rad);
 //角度转换为弧度函数
 float deg_to_rad(float deg);
 
+float normalize_deg_0_360(float a);
+
+float normalize_deg_pm180(float a);
+// 将 val_deg 映射到“最接近 ref_deg(0..360)”的等价角，并返回 0..360
+float wrap_to_nearest_0_360(float ref_deg_0_360, float val_deg_any);
 // 2D点结构体
 typedef struct  {
     float x, y;

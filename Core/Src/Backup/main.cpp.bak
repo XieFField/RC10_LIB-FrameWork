@@ -25,9 +25,10 @@
 #include "usart.h"
 #include "usb_device.h"
 #include "gpio.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+//#include "position.h"
 /*FRAMEDEMO_BEGIN*/
 #include "frame_demo.h"
 /*FRAMEDEMO_END*/
@@ -52,7 +53,21 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-extern void fdcan_global_scheduler_tick_isr(void);
+/*#define TARGET_BUFFER_SIZE  7
+#define RX_BUFFER_SIZE 7
+#define MAX_FRAME_SIZE 64
+*/
+
+
+/*
+uint8_t frame_buffer[MAX_FRAME_SIZE];
+uart_frame_t parsed_frame;
+uint8_t target_buffer[TARGET_BUFFER_SIZE];
+*/
+
+
+/* USER CODE END PV */
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,6 +80,7 @@ extern "C"{
 #endif
 void MX_FREERTOS_Init(void);
     
+
 #ifdef __cplusplus
 }
 #endif
@@ -119,6 +135,9 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
   ALL_Setup_ConfigInit();
 
+
+
+  
   /* USER CODE END 2 */
 
   /* Init scheduler */

@@ -39,10 +39,10 @@ typedef struct {
 
     
 
-    float stretch_Ratio_; // 伸展比率，伸展电机转一圈，伸展多少米
-    float launch_Ratio_; // 升降比率，升降电机转一圈，升降多少米
-    float rotate_gearRatio_; // 旋转减速比，旋转电机转一圈，机械臂转多少度
-    float pitch_gearRatio_; // 俯仰减速比，俯仰电机转一圈，末端关节转多少度
+    float stretch_Ratio_; // 伸展比率，伸展电机转一圈，伸展多少米   0.00942米(94.2mm)
+    float launch_Ratio_; // 升降比率，升降电机转一圈，升降多少米    0.01099米(109.9mm)
+    float rotate_gearRatio_; // 旋转减速比，旋转电机转一圈，机械臂转多少度 144.878度()
+    float pitch_gearRatio_; // 俯仰减速比，俯仰电机转一圈，末端关节转多少度 360度，直驱
 }Arm_InitData_S;
 
 typedef enum {
@@ -64,8 +64,8 @@ typedef struct{
 }Arm_Point_S;
 
 typedef struct{
-    float launchJoint_angle_; // 升降关节状态
-    float stretchJoint_angle_; // 伸展关节状态
+    float launchJoint_Height_; // 升降关节状态
+    float stretchJoint_Length_; // 伸展关节状态
     float rotateJoint_angle_; // 旋转关节状态
     float suckerJoint_angle_; // 末端关节状态
 }Joint_Status_S;
@@ -95,6 +95,9 @@ public:
      */
     void update();
 
+    /**
+     * @brief 设置机械臂控制模式
+     */
     void set_controlMode(Arm_Control_mode_E mode){ control_mode_ = mode; }
 
     void registerMotor_Launch(DJI_Motor* motor){ motor_launch_ = motor; }
@@ -132,6 +135,46 @@ public:
     {
         hdot_max_ = hdot_max; ddot_max_ = ddot_max; thetadot_deg_max_ = thetadot_deg_max;
     }
+    
+
+    /**
+     * @brief 手动设置每个自由度的目标位置，单位：m或度
+     */
+
+    void set_LaunchHeight(float height)
+    {
+        target_joint_angle_.launchJoint_Height_ = height;
+    }
+
+    /**
+     * @brief 手动设置每个自由度的目标位置，单位：m或度
+     */
+    void set_StretchLength(float length)
+    {
+        target_joint_angle_.stretchJoint_Length_ = length;
+    }
+
+    /**
+     * @brief 手动设置每个自由度的目标位置，单位：m或度
+     */
+    void set_RotateAngle(float angle)
+    {
+        target_joint_angle_.rotateJoint_angle_ = angle;
+    }
+
+    /**
+     * @brief 手动设置每个自由度的目标位置，单位：m或度
+     */
+
+    void set_PitchAngle(float angle)
+    {
+        target_joint_angle_.suckerJoint_angle_ = angle;
+    }
+
+    void setLaunchReversed(bool reversed) {sign_launch_  = reversed ? -1.0f : 1.0f;}
+    void setStretchReversed(bool reversed) {sign_stretch_ = reversed ? -1.0f : 1.0f;}
+    void setRotateReversed(bool reversed) {sign_rotate_  = reversed ? -1.0f : 1.0f;}
+    void setPitchReversed(bool reversed) {sign_pitch_  = reversed ? -1.0f : 1.0f;}
 
 private:
     Arm_InitData_S init_data_;
@@ -143,18 +186,9 @@ private:
     DJI_Motor* motor_pitch_ = nullptr; // 末端关节俯仰电机
 
 
-    // float motorlaunch_height_ = 0.0f; // 当前升降高度
-    // float motorstretch_length_ = 0.0f; // 当前伸展长度
-    // float motorrotate_angle_ = 0.0f; // 当前旋转角度
-    // float motorpitch_angle_ = 0.0f; // 当前末端关节角度
-    Joint_Status_S joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f};
+    Joint_Status_S joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 当前关节角度
 
-    // float target_launch_height_ = 0.0f; // 目标升降高度
-    // float target_stretch_length_ = 0.0f; // 目标伸展长度
-    // float target_rotate_angle_ = 0.0f; // 目标旋转角度
-    // float target_pitch_angle_ = 0.0f; // 目标末端关节角度
-
-    Joint_Status_S target_joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f};
+    Joint_Status_S target_joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 目标关节角度
     
     void inverseKinematics(Arm_Point_S arm_target_); // 运动学逆解
 
@@ -165,7 +199,7 @@ private:
     bool forwardKinematics(Arm_Point_S& out) const;
 
     const float minRotateAngle_ = 0.0f; // 旋转最小角度
-    const float maxRotateAngle_ = 180.0f; // 旋转最大角度
+    const float maxRotateAngle_ = 359.999f; // 旋转最大角度
 
     Arm_Point_S arm_target_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 机械臂末端目标位置
     Arm_Point_S arm_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 机械臂关节末端当前位置
@@ -189,10 +223,10 @@ private:
     float jac_lambda_ = 0.02f;
 
     // 限幅
-    float vmax_xy_ = 0.30f;  // 末端 XY 平面最大线速 m/s
-    float vmax_z_  = 0.30f;  // 末端 Z 轴最大线速 m/s
-    float hdot_max_ = 0.50f;             // 升降关节最大速度 m/s
-    float ddot_max_ = 0.50f;             // 伸展关节最大速度 m/s
+    float vmax_xy_ = 0.60f;  // 末端 XY 平面最大线速 m/s
+    float vmax_z_  = 0.60f;  // 末端 Z 轴最大线速 m/s
+    float hdot_max_ = 0.80f;             // 升降关节最大速度 m/s
+    float ddot_max_ = 0.80f;             // 伸展关节最大速度 m/s
     float thetadot_deg_max_ = 90.0f;     // 旋转关节最大角速度 deg/s
 
 
@@ -206,47 +240,50 @@ private:
     /*关节角度->电机总角度*/
     float launchHeight_to_MotorTotalAngle(float height)
     {
-        return height / init_data_.launch_Ratio_ * 360.0f;
+        return sign_launch_ * height / init_data_.launch_Ratio_ * 360.0f;
     }
 
     float stretchLength_to_MotorTotalAngle(float length)
     {
-        return length / init_data_.stretch_Ratio_ * 360.0f;
+        return sign_stretch_ * length / init_data_.stretch_Ratio_ * 360.0f;
     }
 
     float rotateAngle_to_MotorTotalAngle(float angle)
     {
-        return angle / init_data_.rotate_gearRatio_ * 360.0f;
+        return sign_rotate_ * angle / init_data_.rotate_gearRatio_ * 360.0f;
     }
 
     float pitchAngle_to_MotorTotalAngle(float angle)
     {
-        return angle / init_data_.pitch_gearRatio_ * 360.0f;
+        return sign_pitch_ * angle / init_data_.pitch_gearRatio_ * 360.0f;
     }
 
 /*=================================================================*/
     /*电机总角度->关节角度*/
     float MotorTotalAngle_to_launchHeight(float motor_angle)
     {
-        return motor_angle * init_data_.launch_Ratio_ / 360.0f;
+        return sign_launch_ * motor_angle * init_data_.launch_Ratio_ / 360.0f;
     }
 
     float MotorTotalAngle_to_stretchLength(float motor_angle)
     {
-        return motor_angle * init_data_.stretch_Ratio_ / 360.0f;
+        return sign_stretch_ * motor_angle * init_data_.stretch_Ratio_ / 360.0f;
     }
 
     float MotorTotalAngle_to_rotateAngle(float motor_angle)
     {
-        return motor_angle * init_data_.rotate_gearRatio_ / 360.0f;
+        return sign_rotate_ * motor_angle * init_data_.rotate_gearRatio_ / 360.0f;
     }
 
     float MotorTotalAngle_to_pitchAngle(float motor_angle)
     {
-        return motor_angle * init_data_.pitch_gearRatio_ / 360.0f;
+        return sign_pitch_ * motor_angle * init_data_.pitch_gearRatio_ / 360.0f;
     }
 
-
+    float sign_launch_ = 1.0f;
+    float sign_stretch_ = 1.0f;
+    float sign_rotate_ = 1.0f;
+    float sign_pitch_ = 1.0f;
 
 };
 
