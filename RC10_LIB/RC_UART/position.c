@@ -3,7 +3,7 @@
  * @author HA ji cao 
  * @brief position驱动文件
  * @attention 此文件用于position而非action
- * @date 2025-06-25
+ * @date 2025-10-22
  */
 
 /*
@@ -104,6 +104,7 @@ void Position_UART1_RxCallback(uint8_t *buf, uint16_t len)
 				if (i > len - 24)
 				{
 					break_flag = 0;
+					break;
 				}
 				
 				for(j = 0; j < 24; j++)
@@ -274,6 +275,7 @@ void POS_Relocate_ByDiff(float X, float Y, float yaw)
 	RealPosData.dx = X - RealPosData.world_x;
 	RealPosData.dy = Y - RealPosData.world_y;
 }
+/*
 void UART_IdleCallback(UART_HandleTypeDef *huart)
 {
     if(huart->Instance == USART1)
@@ -283,14 +285,14 @@ void UART_IdleCallback(UART_HandleTypeDef *huart)
                 // 发送接收到的数据
                 uint16_t received_length = sizeof(rx_buffer);
                 HAL_UART_Transmit(&huart1, rx_buffer, sizeof(rx_buffer), 100);
-  /*              break;
+                break;
             }
-        }*/
+        }
         
-        // 重新启动DMA接收
+      
         HAL_UART_Receive_DMA(&huart1, rx_buffer, sizeof(rx_buffer));
     }
-}
+}*/
 void USB_DataReceivedCallback(uint8_t* buf, uint16_t len)
 {
     // 接收到数据后立即回传（echo功能）

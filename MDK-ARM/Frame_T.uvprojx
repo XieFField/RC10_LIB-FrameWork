@@ -925,6 +925,16 @@
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\BSP_Driver\Inc\BSP_TimeStamp.h</FilePath>
             </File>
+            <File>
+              <FileName>BSP_USB_UART_Driver.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\BSP_Driver\Src\BSP_USB_UART_Driver.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>BSP_USB_UART_Driver.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\BSP_Driver\Inc\BSP_USB_UART_Driver.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1789,16 +1799,6 @@
               <FileName>position.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\RC_UART\position.h</FilePath>
-            </File>
-            <File>
-              <FileName>Rc10_Uart.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\RC_UART\Rc10_Uart.h</FilePath>
-            </File>
-            <File>
-              <FileName>Rc10_Uart.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\RC_UART\Rc10_Uart.cpp</FilePath>
             </File>
           </Files>
         </Group>

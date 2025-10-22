@@ -28,7 +28,7 @@ extern "C" {
 #include "Motor_DJI.h"
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
-#include "Rc10_Uart.h"
+#include "BSP_USB_UART_Driver.h"
 #include "debug_setup.h"
 #if ARM_DEMO_DEBUG
 

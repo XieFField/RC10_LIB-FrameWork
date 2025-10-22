@@ -68,7 +68,7 @@ void MX_USART1_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
-  // ÆôÓÃIDLEÖÐ¶Ï __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+  // ï¿½ï¿½ï¿½ï¿½IDLEï¿½Ð¶ï¿½ __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
   /* USER CODE END USART1_Init 2 */
 
 }

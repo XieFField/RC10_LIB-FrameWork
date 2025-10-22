@@ -59,7 +59,7 @@ typedef struct RawPos   //处理前
 	float REAL_Y;
 }RawPos;
 
-#define RX_BUFFER_SIZE 35
+#define RX_BUFFER_SIZE 64
 
 // 全局变量
 extern uint8_t rx_buffer[RX_BUFFER_SIZE];
