@@ -1,297 +1,370 @@
 #include "PathPlanner.h"
-#include <stdlib.h>
+#include <math.h>
+#include <string.h>
 
-#define PI 3.14159265359f
-#define DEG_TO_RAD (PI / 180.0f)
-#define RAD_TO_DEG (180.0f / PI)
+// 8个方向的移动向量 (上, 右上, 右, 右下, 下, 左下, 左, 左上)
+// 用于A*算法中的邻居节点扩展
+static const int16_t DIRECTION_X[8] = {0, 1, 1, 1, 0, -1, -1, -1};
+static const int16_t DIRECTION_Y[8] = {-1, -1, 0, 1, 1, 1, 0, -1};
 
-// 默认构造函数（不分配缓冲区）
-PathPlanner::PathPlanner() {
-    waypoints_ = nullptr;
-    max_waypoints_ = 0;
-    current_waypoint_count_ = 0;
-    current_target_index_ = 0;
-
-    // 初始化机器人状态
-    robot_state_.current_x = 0.0f;
-    robot_state_.current_y = 0.0f;
-    robot_state_.current_theta = 0.0f;
-    robot_state_.linear_velocity = 0.0f;
-    robot_state_.angular_velocity = 0.0f;
-
-    // 默认配置
-    config_.max_linear_velocity = 0.5f;
-    config_.max_angular_velocity = 1.0f;
-    config_.linear_acceleration = 0.1f;
-    config_.angular_acceleration = 0.5f;
-    config_.goal_tolerance = 0.05f;
-    config_.lookahead_distance = 0.3f;
-}
-
-// 构造但不分配：保留 max_points 但仍需 init(buffer, max_points) 注入
-PathPlanner::PathPlanner(unsigned int max_points) {
-    waypoints_ = nullptr;
-    max_waypoints_ = max_points;
-    current_waypoint_count_ = 0;
-    current_target_index_ = 0;
-
-    robot_state_.current_x = 0.0f;
-    robot_state_.current_y = 0.0f;
-    robot_state_.current_theta = 0.0f;
-    robot_state_.linear_velocity = 0.0f;
-    robot_state_.angular_velocity = 0.0f;
-
-    config_.max_linear_velocity = 0.5f;
-    config_.max_angular_velocity = 1.0f;
-    config_.linear_acceleration = 0.1f;
-    config_.angular_acceleration = 0.5f;
-    config_.goal_tolerance = 0.05f;
-    config_.lookahead_distance = 0.3f;
-}
-
-// 通过外部缓冲区构造
-PathPlanner::PathPlanner(Waypoint* buffer, unsigned int max_points) {
-    waypoints_ = buffer;
-    max_waypoints_ = max_points;
-    current_waypoint_count_ = 0;
-    current_target_index_ = 0;
-
-    robot_state_.current_x = 0.0f;
-    robot_state_.current_y = 0.0f;
-    robot_state_.current_theta = 0.0f;
-    robot_state_.linear_velocity = 0.0f;
-    robot_state_.angular_velocity = 0.0f;
-
-    config_.max_linear_velocity = 0.5f;
-    config_.max_angular_velocity = 1.0f;
-    config_.linear_acceleration = 0.1f;
-    config_.angular_acceleration = 0.5f;
-    config_.goal_tolerance = 0.05f;
-    config_.lookahead_distance = 0.3f;
-}
-
-// 析构函数：不释放外部 buffer（调用者负责）
-PathPlanner::~PathPlanner() {
-    // waypoints_ 指向的缓冲区由调用者或创建者管理；不要 delete[]
-    waypoints_ = nullptr;
-}
-
-// 计算两点间距离
-float PathPlanner::calculateDistance(float x1, float y1, float x2, float y2) {
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    return sqrtf(dx * dx + dy * dy);
-}
-
-// 角度归一化到 [-PI, PI]
-float PathPlanner::normalizeAngle(float angle) {
-    while (angle > PI) angle -= 2.0f * PI;
-    while (angle < -PI) angle += 2.0f * PI;
-    return angle;
-}
-
-// 计算到目标点的角度
-float PathPlanner::calculateAngleToTarget(float target_x, float target_y) {
-    float dx = target_x - robot_state_.current_x;
-    float dy = target_y - robot_state_.current_y;
-    return atan2f(dy, dx);
-}
-
-// 检查是否到达目标点
-bool PathPlanner::isGoalReached(float target_x, float target_y) {
-    float distance = calculateDistance(robot_state_.current_x, robot_state_.current_y, 
-                                      target_x, target_y);
-    return distance <= config_.goal_tolerance;
-}
-
-// Pure Pursuit 控制算法
-void PathPlanner::purePursuitControl(float target_x, float target_y) {
-    // 计算到目标点的距离和角度
-    float dx = target_x - robot_state_.current_x;
-    float dy = target_y - robot_state_.current_y;
-    float distance_to_target = sqrtf(dx * dx + dy * dy);
+// 构造函数 - 初始化路径规划器并使用外部提供的缓冲区
+PathPlanner::PathPlanner(uint8_t* map_buffer, AStarNode* nodes_buffer,
+                         AStarNode** open_list_buffer, GridPoint* path_buffer,
+                         uint16_t map_width, uint16_t map_height,
+                         uint16_t max_open_list_size, uint16_t max_path_length) {
+    // 初始化配置参数
+    config_.map_width = map_width;
+    config_.map_height = map_height;
+    config_.max_path_length = max_path_length;
+    config_.diagonal_cost = 1.414f;  // 对角线移动代价 √2 ≈ 1.414
+    config_.straight_cost = 1.0f;    // 直线移动代价
     
-    // 计算目标点在机器人坐标系中的位置
-    float target_global_angle = atan2f(dy, dx);
-    float alpha = normalizeAngle(target_global_angle - robot_state_.current_theta);
+    // 设置外部提供的缓冲区
+    map_data_ = map_buffer;
+    nodes_ = nodes_buffer;
+    open_list_ = open_list_buffer;
+    path_ = path_buffer;
     
-    // 计算曲率和角速度
-    if (distance_to_target > 0.001f) {
-        float curvature = 2.0f * sinf(alpha) / distance_to_target;
-        robot_state_.angular_velocity = robot_state_.linear_velocity * curvature;
-        
-        // 限制角速度
-        if (robot_state_.angular_velocity > config_.max_angular_velocity) {
-            robot_state_.angular_velocity = config_.max_angular_velocity;
-        } else if (robot_state_.angular_velocity < -config_.max_angular_velocity) {
-            robot_state_.angular_velocity = -config_.max_angular_velocity;
+    // 初始化开放列表
+    open_list_capacity_ = max_open_list_size;
+    open_list_size_ = 0;
+    path_length_ = 0;
+    
+    // 初始化节点网格状态
+    initNodes();
+}
+
+// 初始化所有节点状态 - 为A*搜索做准备
+void PathPlanner::initNodes() {
+    uint32_t total_nodes = config_.map_width * config_.map_height;
+    for (uint32_t i = 0; i < total_nodes; i++) {
+        nodes_[i].x = i % config_.map_width;     // 计算节点x坐标
+        nodes_[i].y = i / config_.map_width;     // 计算节点y坐标
+        nodes_[i].g_cost = 1e9f;  // 初始化为极大值，表示尚未访问
+        nodes_[i].h_cost = 0;
+        nodes_[i].f_cost = 1e9f;
+        nodes_[i].parent_x = -1;  // 无效父节点坐标
+        nodes_[i].parent_y = -1;
+        nodes_[i].is_open = false;    // 不在开放列表中
+        nodes_[i].is_closed = false;  // 不在关闭列表中
+    }
+}
+
+// 重置节点状态 - 用于新的路径搜索
+void PathPlanner::resetNodes() {
+    uint32_t total_nodes = config_.map_width * config_.map_height;
+    for (uint32_t i = 0; i < total_nodes; i++) {
+        nodes_[i].g_cost = 1e9f;
+        nodes_[i].f_cost = 1e9f;
+        nodes_[i].parent_x = -1;
+        nodes_[i].parent_y = -1;
+        nodes_[i].is_open = false;
+        nodes_[i].is_closed = false;
+    }
+    open_list_size_ = 0;    // 清空开放列表
+    path_length_ = 0;       // 重置路径长度
+}
+
+// 计算启发式代价 - 使用对角线距离（适合8方向移动）
+float PathPlanner::calculateHeuristic(int16_t x1, int16_t y1, int16_t x2, int16_t y2) {
+    int16_t dx = abs(x1 - x2);
+    int16_t dy = abs(y1 - y2);
+    // 对角线距离公式：D*(dx+dy) + (D2-2*D)*min(dx,dy)
+    // 其中D是直线代价，D2是对角线代价
+    return config_.straight_cost * (dx + dy) + 
+           (config_.diagonal_cost - 2 * config_.straight_cost) * fmin(dx, dy);
+}
+
+// 检查坐标是否在地图有效范围内
+bool PathPlanner::isValidCell(int16_t x, int16_t y) {
+    return (x >= 0 && x < config_.map_width && y >= 0 && y < config_.map_height);
+}
+
+// 检查指定单元格是否为障碍物
+bool PathPlanner::isObstacle(int16_t x, int16_t y) {
+    if (!isValidCell(x, y)) return true;  // 地图外视为障碍物
+    uint32_t index = y * config_.map_width + x;
+    return (map_data_[index] == CELL_OBSTACLE);
+}
+
+// 添加节点到开放列表 - 使用插入排序保持列表有序（按f_cost升序）
+void PathPlanner::addToOpenList(AStarNode* node) {
+    if (open_list_size_ >= open_list_capacity_) return;  // 开放列表已满
+    
+    open_list_[open_list_size_++] = node;
+    node->is_open = true;
+    
+    // 插入排序 - 将新节点插入到正确位置
+    for (int i = open_list_size_ - 1; i > 0; i--) {
+        if (open_list_[i]->f_cost < open_list_[i-1]->f_cost) {
+            // 交换节点位置
+            AStarNode* temp = open_list_[i];
+            open_list_[i] = open_list_[i-1];
+            open_list_[i-1] = temp;
+        } else {
+            break;  // 列表已有序
         }
-    } else {
-        robot_state_.angular_velocity = 0.0f;
     }
 }
 
-// 添加路径点
-bool PathPlanner::addWaypoint(float x, float y, float theta) {
-    if (waypoints_ == nullptr || max_waypoints_ == 0) {
-        return false; // 未初始化缓冲区
-    }
-    if (current_waypoint_count_ >= max_waypoints_) {
-        return false; // 路径点已满
-    }
-
-    waypoints_[current_waypoint_count_].x = x;
-    waypoints_[current_waypoint_count_].y = y;
-    waypoints_[current_waypoint_count_].theta = theta;
-    current_waypoint_count_++;
-
-    return true;
-}
-
-// 清空路径点
-bool PathPlanner::clearWaypoints() {
-    current_waypoint_count_ = 0;
-    current_target_index_ = 0;
-    return true;
-}
-
-// 获取路径点数量
-unsigned int PathPlanner::getWaypointCount() {
-    return current_waypoint_count_;
-}
-
-// 设置规划器配置
-void PathPlanner::setConfig(float max_linear_vel, float max_angular_vel, 
-                           float linear_accel, float angular_accel,
-                           float tolerance, float lookahead) {
-    config_.max_linear_velocity = max_linear_vel;
-    config_.max_angular_velocity = max_angular_vel;
-    config_.linear_acceleration = linear_accel;
-    config_.angular_acceleration = angular_accel;
-    config_.goal_tolerance = tolerance;
-    config_.lookahead_distance = lookahead;
-}
-
-// 获取配置
-PathPlannerConfig PathPlanner::getConfig() {
-    return config_;
-}
-
-// 设置机器人状态
-void PathPlanner::setRobotState(float x, float y, float theta) {
-    robot_state_.current_x = x;
-    robot_state_.current_y = y;
-    robot_state_.current_theta = normalizeAngle(theta);
-}
-
-// 获取机器人状态
-RobotState PathPlanner::getRobotState() {
-    return robot_state_;
-}
-
-// 路径规划
-bool PathPlanner::planPath() {
-    if (current_waypoint_count_ == 0) {
-        return false;
+// 从开放列表中取出代价最小的节点（列表首元素）
+AStarNode* PathPlanner::popBestFromOpenList() {
+    if (open_list_size_ == 0) return nullptr;
+    
+    AStarNode* best = open_list_[0];  // 最小代价节点在列表开头
+    
+    // 移动剩余元素向前填充
+    for (uint16_t i = 1; i < open_list_size_; i++) {
+        open_list_[i-1] = open_list_[i];
     }
     
-    current_target_index_ = 0;
-    return true;
+    open_list_size_--;
+    best->is_open = false;
+    return best;
 }
 
-// 执行一步路径跟踪
-// dt_seconds: 本次步骤经过的时间（秒），必须由调用者提供
-void PathPlanner::executeOneStep(float dt_seconds) {
-    if (current_waypoint_count_ == 0 || current_target_index_ >= current_waypoint_count_) {
-        return;
+// 从开放列表中移除指定节点
+void PathPlanner::removeFromOpenList(AStarNode* node) {
+    for (uint16_t i = 0; i < open_list_size_; i++) {
+        if (open_list_[i] == node) {
+            // 移动后续元素向前填充
+            for (uint16_t j = i + 1; j < open_list_size_; j++) {
+                open_list_[j-1] = open_list_[j];
+            }
+            open_list_size_--;
+            node->is_open = false;
+            break;
+        }
+    }
+}
+
+// 设置地图数据 - 复制外部地图到内部缓冲区
+void PathPlanner::setMapData(const uint8_t* map_data) {
+    memcpy(map_data_, map_data, config_.map_width * config_.map_height * sizeof(uint8_t));
+}
+
+// 设置移动代价配置
+void PathPlanner::setConfig(float diagonal_cost, float straight_cost) {
+    config_.diagonal_cost = diagonal_cost;
+    config_.straight_cost = straight_cost;
+}
+
+// A*路径规划主函数 - 在起点和终点之间寻找最优路径
+bool PathPlanner::findPath(int16_t start_x, int16_t start_y, 
+                          int16_t goal_x, int16_t goal_y) {
+    // 重置节点状态，准备新的搜索
+    resetNodes();
+    
+    // 检查起点和终点是否有效
+    if (!isValidCell(start_x, start_y) || !isValidCell(goal_x, goal_y) ||
+        isObstacle(start_x, start_y) || isObstacle(goal_x, goal_y)) {
+        return false;  // 无效的起点或终点
     }
     
-    Waypoint current_target = waypoints_[current_target_index_];
+    // 获取起点节点
+    uint32_t start_index = start_y * config_.map_width + start_x;
+    AStarNode* start_node = &nodes_[start_index];
     
-    // 检查是否到达当前目标点
-    if (isGoalReached(current_target.x, current_target.y)) {
-        current_target_index_++;
+    // 初始化起点节点
+    start_node->g_cost = 0;  // 起点到起点的代价为0
+    start_node->h_cost = calculateHeuristic(start_x, start_y, goal_x, goal_y);
+    start_node->f_cost = start_node->h_cost;  // f = g + h
+    start_node->parent_x = -1;  // 起点没有父节点
+    start_node->parent_y = -1;
+    
+    addToOpenList(start_node);  // 将起点加入开放列表
+    
+    // A*主循环 - 直到开放列表为空或找到路径
+    while (open_list_size_ > 0) {
+        // 获取当前代价最小的节点
+        AStarNode* current = popBestFromOpenList();
+        if (current == nullptr) break;
         
-        if (current_target_index_ >= current_waypoint_count_) {
-            // 到达最终目标，停止
-            robot_state_.linear_velocity = 0.0f;
-            robot_state_.angular_velocity = 0.0f;
-            return;
+        current->is_closed = true;  // 将当前节点标记为已处理
+        
+        // 检查是否到达目标点
+        if (current->x == goal_x && current->y == goal_y) {
+            reconstructPath(goal_x, goal_y);  // 回溯重构路径
+            return true;  // 成功找到路径
         }
         
-        current_target = waypoints_[current_target_index_];
+        // 扩展当前节点的邻居节点
+        expandNode(current, goal_x, goal_y);
     }
     
-    // 使用Pure Pursuit算法计算控制命令（该函数会设置 robot_state_.angular_velocity）
-    purePursuitControl(current_target.x, current_target.y);
+    return false;  // 没有找到路径
+}
 
-    // 更新线速度（基于 dt_seconds）
-    float desired_linear_vel = config_.max_linear_velocity;
-
-    // 根据角速度调整线速度
-    if (fabsf(robot_state_.angular_velocity) > config_.max_angular_velocity * 0.5f) {
-        desired_linear_vel *= 0.7f; // 转弯时减速
-    }
-
-    // 平滑加速 / 减速，基于真实 dt
-    if (desired_linear_vel > robot_state_.linear_velocity) {
-        robot_state_.linear_velocity += config_.linear_acceleration * dt_seconds;
-        if (robot_state_.linear_velocity > desired_linear_vel) {
-            robot_state_.linear_velocity = desired_linear_vel;
+// 扩展当前节点的8个邻居节点
+void PathPlanner::expandNode(AStarNode* current, int16_t goal_x, int16_t goal_y) {
+    for (int i = 0; i < 8; i++) {
+        // 计算邻居节点坐标
+        int16_t neighbor_x = current->x + DIRECTION_X[i];
+        int16_t neighbor_y = current->y + DIRECTION_Y[i];
+        
+        // 检查邻居是否有效且不是障碍物
+        if (!isValidCell(neighbor_x, neighbor_y) || isObstacle(neighbor_x, neighbor_y)) {
+            continue;
         }
-    } else if (desired_linear_vel < robot_state_.linear_velocity) {
-        robot_state_.linear_velocity -= config_.linear_acceleration * dt_seconds;
-        if (robot_state_.linear_velocity < desired_linear_vel) {
-            robot_state_.linear_velocity = desired_linear_vel;
+        
+        // 对角线移动的特殊检查：确保相邻单元格可通行
+        if (DIRECTION_X[i] != 0 && DIRECTION_Y[i] != 0) {
+            if (isObstacle(current->x + DIRECTION_X[i], current->y) &&
+                isObstacle(current->x, current->y + DIRECTION_Y[i])) {
+                continue;  // 如果两个相邻单元格都是障碍物，禁止对角线移动
+            }
+        }
+        
+        // 获取邻居节点
+        uint32_t neighbor_index = neighbor_y * config_.map_width + neighbor_x;
+        AStarNode* neighbor = &nodes_[neighbor_index];
+        
+        // 跳过已关闭的节点
+        if (neighbor->is_closed) continue;
+        
+        // 计算移动到邻居节点的代价
+        float move_cost = (DIRECTION_X[i] != 0 && DIRECTION_Y[i] != 0) ? 
+                         config_.diagonal_cost : config_.straight_cost;
+        
+        float tentative_g = current->g_cost + move_cost;  // 经过当前节点到邻居的代价
+        
+        // 如果找到更好的路径到邻居节点
+        if (tentative_g < neighbor->g_cost) {
+            neighbor->parent_x = current->x;  // 更新父节点
+            neighbor->parent_y = current->y;
+            neighbor->g_cost = tentative_g;   // 更新实际代价
+            neighbor->h_cost = calculateHeuristic(neighbor_x, neighbor_y, goal_x, goal_y);
+            neighbor->f_cost = neighbor->g_cost + neighbor->h_cost;  // 更新总代价
+            
+            if (!neighbor->is_open) {
+                addToOpenList(neighbor);  // 首次发现，加入开放列表
+            } else {
+                // 节点已在开放列表中，需要重新排序
+                removeFromOpenList(neighbor);
+                addToOpenList(neighbor);
+            }
         }
     }
 }
 
-// 检查路径是否完成
-bool PathPlanner::isPathCompleted() {
-    return current_target_index_ >= current_waypoint_count_;
-}
-
-// 计算运动控制命令
-void PathPlanner::calculateMotionCommands(float* linear_vel, float* angular_vel) {
-    if (linear_vel != nullptr) {
-        *linear_vel = robot_state_.linear_velocity;
-    }
-    if (angular_vel != nullptr) {
-        *angular_vel = robot_state_.angular_velocity;
-    }
-}
-
-// 获取当前目标点
-Waypoint PathPlanner::getCurrentTarget() {
-    if (current_target_index_ < current_waypoint_count_) {
-        return waypoints_[current_target_index_];
-    } else if (current_waypoint_count_ > 0) {
-        return waypoints_[current_waypoint_count_ - 1];
-    } else {
-        Waypoint empty = {0, 0, 0};
-        return empty;
-    }
-}
-
-// 计算路径总长度
-float PathPlanner::getPathLength() {
-    float total_length = 0.0f;
+// 从终点回溯重构路径
+void PathPlanner::reconstructPath(int16_t end_x, int16_t end_y) {
+    // 第一遍遍历：从终点回溯计数路径长度
+    uint16_t temp_length = 0;
+    int16_t cx = end_x;
+    int16_t cy = end_y;
     
-    for (unsigned int i = 1; i < current_waypoint_count_; i++) {
-        total_length += calculateDistance(waypoints_[i-1].x, waypoints_[i-1].y,
-                                         waypoints_[i].x, waypoints_[i].y);
+    // 回溯直到起点（父节点为-1）或达到最大路径长度
+    while (cx != -1 && cy != -1 && isValidCell(cx, cy) && temp_length < config_.max_path_length) {
+        temp_length++;
+        uint32_t idx = cy * config_.map_width + cx;
+        AStarNode* node = &nodes_[idx];
+        cx = node->parent_x;
+        cy = node->parent_y;
     }
+
+    if (temp_length == 0) {
+        path_length_ = 0;
+        return;  // 空路径
+    }
+
+    // 第二遍遍历：从终点回溯，将路径点按从起点到终点的顺序存储
+    uint16_t write_pos = (temp_length > 0) ? (temp_length - 1) : 0;
+    cx = end_x;
+    cy = end_y;
+    uint16_t written = 0;
     
-    return total_length;
+    while (cx != -1 && cy != -1 && isValidCell(cx, cy) && written < temp_length) {
+        path_[write_pos].x = cx;  // 存储路径点坐标
+        path_[write_pos].y = cy;
+        written++;
+        if (write_pos == 0) break; // 防止下溢
+        write_pos--;
+        uint32_t idx = cy * config_.map_width + cx;
+        AStarNode* node = &nodes_[idx];
+        cx = node->parent_x;
+        cy = node->parent_y;
+    }
+
+    path_length_ = written;  // 设置最终路径长度
 }
 
-// 注入外部缓冲区，避免内部动态分配
-bool PathPlanner::init(Waypoint* buffer, unsigned int max_points) {
-    if (buffer == nullptr || max_points == 0) return false;
-    waypoints_ = buffer;
-    max_waypoints_ = max_points;
-    current_waypoint_count_ = 0;
-    current_target_index_ = 0;
-    return true;
+// 获取当前路径长度
+uint16_t PathPlanner::getPathLength() const {
+    return path_length_;
+}
+
+// 获取路径点数组
+const GridPoint* PathPlanner::getPath() const {
+    return path_;
+}
+
+// 检查两点之间是否有直视路径（无障碍物）
+bool PathPlanner::lineOfSight(int16_t x1, int16_t y1, int16_t x2, int16_t y2) {
+    // Bresenham直线算法变种，用于检查直线上的障碍物
+    int16_t dx = abs(x2 - x1);
+    int16_t dy = abs(y2 - y1);
+    int16_t sx = (x1 < x2) ? 1 : -1;
+    int16_t sy = (y1 < y2) ? 1 : -1;
+    int16_t err = dx - dy;
+    
+    int16_t current_x = x1;
+    int16_t current_y = y1;
+    
+    // 遍历直线上的所有点
+    while (current_x != x2 || current_y != y2) {
+        if (isObstacle(current_x, current_y)) {
+            return false;  // 发现障碍物，没有直视路径
+        }
+        
+        // Bresenham算法步进
+        int16_t e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            current_x += sx;
+        }
+        if (e2 < dx) {
+            err += dx;
+            current_y += sy;
+        }
+    }
+    
+    return true;  // 没有发现障碍物，存在直视路径
+}
+
+// 路径简化 - 使用贪婪算法移除不必要的中间点
+void PathPlanner::simplifyPath() {
+    if (path_length_ <= 2) return;  // 路径太短无需简化
+    
+    // 原地贪婪法：从起点开始，每次寻找最远的可视点作为下一个保留点
+    uint16_t write_idx = 0;
+    uint16_t read_idx = 0;
+    
+    // 保留起点
+    path_[write_idx++] = path_[0];
+
+    while (read_idx < path_length_ - 1) {
+        // 寻找从当前点能直接看到的最远点
+        uint16_t farthest = read_idx + 1;
+        for (uint16_t j = read_idx + 1; j < path_length_; ++j) {
+            if (lineOfSight(path_[read_idx].x, path_[read_idx].y, path_[j].x, path_[j].y)) {
+                farthest = j;  // 更新最远可视点
+            } else {
+                break;  // 发现不可视点，停止搜索
+            }
+        }
+
+        // 将最远可视点加入简化路径
+        path_[write_idx++] = path_[farthest];
+
+        if (farthest >= path_length_ - 1) break;  // 到达终点
+        read_idx = farthest;  // 从新的点继续搜索
+    }
+
+    path_length_ = write_idx;  // 更新简化后的路径长度
+}
+
+// 清除当前路径
+void PathPlanner::clearPath() {
+    path_length_ = 0;
 }
