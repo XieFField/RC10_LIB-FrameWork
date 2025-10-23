@@ -1000,6 +1000,31 @@
               <FileType>8</FileType>
               <FilePath>..\User\Control\Src\Robot_Arm.cpp</FilePath>
             </File>
+            <File>
+              <FileName>PathPlanner.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Src\PathPlanner.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>PathTracing.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Src\PathTracing.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>PathPlanner.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Control\Inc\PathPlanner.h</FilePath>
+            </File>
+            <File>
+              <FileName>PathTracing.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Control\Inc\PathTracing.h</FilePath>
+            </File>
+            <File>
+              <FileName>pathplanner_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Test\pathplanner_demo.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
