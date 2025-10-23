@@ -20,11 +20,12 @@ L_min = 0.67;  L_max = 0.80;     % 伸长量=0.13m
 t_lift = 0.40;
 t_extend = 0.15;                 % 0.13m/0.15s
 t_spin   = 0.50;                 % 0.5s/圈
-v_base = 0.50;                   % 0.5m/s
+v_base = 1.0;                   % 0.5m/s
 suction_offset = 0.02;           % 吸盘侧面间隙
 safety_margin = 0.01;            % 与柱安全裕度
-bind_xy_tol   = 0.030;           % 绑定水平容差(米)
-bind_h_tol    = 0.020;           % 绑定高度容差(米)
+bind_xy_tol   = 0.050;           % 绑定水平容差(米) ← 放宽
+bind_h_tol    = 0.030;           % 绑定高度容差(米) ← 放宽
+rotate_start_dist = 1.00;        % 接近后才允许旋转
 % 预测采样
 probe_dt_rot  = 0.01;            % 旋转预测步距(s)
 probe_dt_ext  = 0.01;            % 伸展预测步距(s)
@@ -34,6 +35,11 @@ dt = 0.02; T_total = 15.0;
 omega_max = 2*pi / t_spin;                       % rad/s
 vL_max    = (L_max - L_min) / max(t_extend,1e-6);
 vh_max    = (h_max - h_min) / max(t_lift,  1e-6);
+
+% 旋转触发距离：只有靠近目标桩后才允许开始旋转（云台一开始不要转）
+rotate_start_dist = 1.00;        % 可根据林带密度调 0.8~1.2m
+% 新增：以“底盘前沿”作为触发判据（沿 +X 行驶，前沿 = x_b + base_size/2）
+rotate_trigger_margin_front = 0.20;   % 前沿进入到桩前 0.2m 即触发
 
 % ====== 场景 ======
 figure('Color','w'); hold on; axis equal;
@@ -46,8 +52,12 @@ cubes = place_cubes(pillars, allowed_cube_ids, cube_ids, cube_size);
 
 % ====== 初始位姿 ======
 forest_ymin = forest_rect.y - forest_rect.h/2;
+% x_b = forest_rect.x - forest_rect.w/2 - 2.0;
+% y_b = forest_ymin - 0.40 - base_size/2;
+% 平行林带行进：把“与林带前缘的间隙”从 0.40 改为 0.30（0.30~0.35 皆可）
+lane_clearance = 0.30;      % 与林带前缘的间隙（米）
 x_b = forest_rect.x - forest_rect.w/2 - 2.0;
-y_b = forest_ymin - 0.40 - base_size/2;
+y_b = forest_ymin - lane_clearance - base_size/2;
 yaw = 0;
 theta = 0; L = L_min; h = h_min;
 
@@ -60,12 +70,30 @@ target_idx = 1;
 target_cube = cubes(target_idx);
 cz = target_cube.zbase + target_cube.h/2;
 
+% 一开始就将高度抬到目标的中心高度
+h_target = min(max(cz, h_min), h_max);
+h = h_target;
+% 同步刷新初始姿态（确保画面也抬高了）
+update_robot_pose(patchBase, patchTurret, lineArmFix, lineArmExt, ...
+    x_b, y_b, yaw, theta, L, h, base_size, base_thick, turret_radius, L_min);
+
 STATE_ALIGN   = 1;   % 旋转对准立方体所在平面法向
 STATE_AIM_EXT = 2;   % 预测触发伸展（只伸长/升降）
 STATE_CARRY   = 3;   % 吸附后搬运回底盘
-STATE_DONE    = 4;
+STATE_RETURN = 4;   % 放下后回位（抬高5cm并回初始姿态）
+STATE_DONE    = 5;
 state = STATE_ALIGN;
 grabbed = false;
+placed  = false;     % 已放置在底盘上并与底盘绑定
+retract_phase = false;      % 吸附后立即回收阶段
+theta_home    = 0;          % 待机云台角（初始角）
+drop_offset_xy = [0, 0];    % 放置相对底盘中心的XY偏移
+place_h        = NaN;       % 放置甲板高度（Z）
+
+% 记录上一帧臂端位置（用于“线段与方块相交”绑定判定）
+[xt0, yt0] = turret_mount_xy(x_b, y_b, yaw, base_size);
+x_tip_prev = xt0 + L*cos(yaw + theta);
+y_tip_prev = yt0 + L*sin(yaw + theta);
 
 title('运动规划仿真');
 
@@ -82,21 +110,23 @@ for t = 0:dt:T_total
     % 云台目标朝向：立方体所在平面法向（从支点指向立方体）
     cx = target_cube.x; cy = target_cube.y;
     theta_goal = wrapTo2Pi(atan2(cy - yt, cx - xt) - yaw);
+    r_to_cube = hypot(cx - xt, cy - yt);  % 与目标立方体的当前距离
 
     switch state
         case STATE_ALIGN
-            % 目标朝向：支点→方块中心的法向
-            dth_des = sign(atan2(sin(theta_goal-theta), cos(theta_goal-theta))) ...
-                      * min(omega_max*dt, abs(atan2(sin(theta_goal-theta), cos(theta_goal-theta))));
-            % 先抬到方块中心高度（更快评估为可旋转）
-            h_cmd = min(max(cz, h_min), h_max);
-            L_cmd = L_min; % 旋转时收臂最安全
+            % 一直保持到目标高度 & 收臂（旋转更安全）
+            h_cmd = h_target;
+            L_cmd = L_min;
 
-            % 整段预测：若从现在起全速旋到 theta_goal 全程不撞桩 → 允许本帧全速旋转
-            if can_rotate_now(xt, yt, yaw, theta, theta_goal, h, vh_max, h_cmd, v_base, L_min, pillars, safety_margin, omega_max, probe_dt_rot)
-                theta_cmd = theta + dth_des;   % 放行：全速转
+            % 以“底盘前沿进入目标桩前区域”为唯一触发条件，不做任何干涉判断
+            x_front = x_b + base_size/2;
+            if x_front >= (cx - rotate_trigger_margin_front)
+                % 触发后：无条件按最大角速度朝 theta_goal 全速旋转
+                dth_des = sign(atan2(sin(theta_goal-theta), cos(theta_goal-theta))) ...
+                          * min(omega_max*dt, abs(atan2(sin(theta_goal-theta), cos(theta_goal-theta))));
+                theta_cmd = theta + dth_des;      % ≈14.4°/帧（720°/s）
             else
-                theta_cmd = theta;             % 禁转：等待更安全的时机
+                theta_cmd = theta; % 未触发前不转
             end
 
             % 对齐判据
@@ -105,17 +135,15 @@ for t = 0:dt:T_total
             end
 
         case STATE_AIM_EXT
-            % 保持对齐（微调时也用整段预测，允许则按满速微调）
+            % 微调阶段也不做任何碰撞预测，直接全速旋转到位
             ang_rem   = abs(atan2(sin(theta_goal-theta), cos(theta_goal-theta)));
             dth_des   = sign(atan2(sin(theta_goal-theta), cos(theta_goal-theta))) * min(omega_max*dt, ang_rem);
-            if can_rotate_now(xt, yt, yaw, theta, theta_goal, h, vh_max, cz, v_base, L_min, pillars, safety_margin, omega_max, probe_dt_rot)
-                theta_cmd = theta + dth_des;
-            else
-                theta_cmd = theta;
-            end
-            h_cmd = min(max(cz, h_min), h_max);
+            theta_cmd = theta + dth_des;
 
-            % 预测对齐时刻的支点位置和接触点
+            % 高度保持到目标平面
+            h_cmd = h_target;
+
+            % 预测对齐时刻的支点位置和接触点（用于决定是否伸展）
             t_rot_rem = abs(atan2(sin(theta_goal-theta), cos(theta_goal-theta))) / max(omega_max,1e-6);
             xtf = xt + v_base * t_rot_rem; ytf = yt;
             dirf = [xtf - cx, ytf - cy]; nrm = hypot(dirf(1),dirf(2)) + 1e-9;
@@ -126,25 +154,21 @@ for t = 0:dt:T_total
             L_goal_f = dot(pick_xy - [xtf, ytf], vhat);
             L_goal_f = min(max(L_goal_f, L_min), L_max);
 
-            % 整段预测伸展：若从现在起按最大伸速伸到 L_goal_f，全程不撞桩 → 允许本帧全速伸展
-            if can_extend_now(xt, yt, yaw, theta, L, L_goal_f, h, vh_max, cz, v_base, pillars, safety_margin, vL_max, probe_dt_ext)
-                L_cmd = L_goal_f;   % 放行：全速伸
+            % 调试：显示是否可达（超出 L_max 则本轮必然无法触碰）
+            % fprintf('L_goal=%.3f L_max=%.3f reach=%d\n', L_goal_f, L_max, L_goal_f<=L_max+1e-6);
+
+            % 伸展仍保持原策略：预测可行才全速伸，否则保持 L_min
+            % 注意：用 theta_goal（对齐后的朝向）做整段预测，避免当前θ未对齐导致“误判不可伸”
+            if can_extend_now(xt, yt, yaw, theta_goal, L, L_goal_f, h, vh_max, h_target, v_base, pillars, safety_margin, vL_max, probe_dt_ext)
+                L_cmd = L_goal_f;
             else
-                L_cmd = L_min;      % 禁伸：继续等
+                L_cmd = L_min;
             end
 
-            % 接触即绑定（允许接触瞬间穿模并立即绑定）
-            phi_now = yaw + theta;
-            dir_now = [xt - cx, yt - cy]; unow = dir_now / (hypot(dir_now(1),dir_now(2)) + 1e-9);
-            pick_xy_now = [cx, cy] - (cube_size/2 + suction_offset) * unow;
-            x_tip = xt + L*cos(phi_now); y_tip = yt + L*sin(phi_now);
-            if hypot(x_tip - pick_xy_now(1), y_tip - pick_xy_now(2)) < bind_xy_tol && abs(h - cz) < bind_h_tol
-                grabbed = true;
-                state = STATE_CARRY;
-            end
-
+            % 注意：原先这里的“接触即绑定”提前判定删除
+            % 绑定逻辑已移到“速率更新之后”，避免错过接触瞬间
         case STATE_CARRY
-            % 3) 搬运回底盘中心上方并放置
+            % 3) 搬运回底盘并放置
             goal_xy = [x_b, y_b];
             deck_h  = base_thick + target_cube.h/2;
 
@@ -158,11 +182,20 @@ for t = 0:dt:T_total
                 theta_cmd = theta_try;
             end
 
-            vec = goal_xy - [xt, yt];
-            L_cmd = min(max(norm(vec), L_min), L_max);
+           % 触碰后优先“立即回收”：先把臂收至 L_min，再进行放置流程
+           if retract_phase
+               L_cmd = L_min;
+               if abs(L - L_min) < 1e-3
+                   retract_phase = false; % 回收到位，开始靠近并放置
+               end
+           else
+               % 回收到位后，靠近底盘中心上方准备放置
+               vec = goal_xy - [xt, yt];
+               L_cmd = min(max(norm(vec), L_min), L_max);
+           end
             h_cmd = min(max(deck_h, h_min), h_max);
 
-            % 立方体绑定随动
+            % 立方体绑定随动（仍在被吸附阶段：跟随臂端）
             if grabbed
                 phi_c = yaw + theta;
                 x_tip = xt + L*cos(phi_c);
@@ -170,12 +203,38 @@ for t = 0:dt:T_total
                 move_patch_center(target_cube.patch, [x_tip, y_tip, h]);
             end
 
-            if abs(atan2(sin(theta_goal2-theta), cos(theta_goal2-theta))) < deg2rad(3) && (abs(L-L_cmd)+abs(h-h_cmd) < 0.02)
-                grabbed = false; state = STATE_DONE;
+            % 放置判据到位 → 与底盘绑定（保持“放下位置”的相对偏移）
+            if ~retract_phase && abs(atan2(sin(theta_goal2-theta), cos(theta_goal2-theta))) < deg2rad(3) ...
+                    && (abs(L-L_cmd)+abs(h-h_cmd) < 0.02)
+               grabbed = false;
+               placed  = true;                     % 开始与底盘绑定
+               % 记录放置瞬间的相对偏移（保持落点不变，而不是贴底盘中心）
+               phi_c = yaw + theta;
+               x_tip = xt + L*cos(phi_c);
+               y_tip = yt + L*sin(phi_c);
+               drop_offset_xy = [x_tip - x_b, y_tip - y_b];
+               place_h = deck_h;
+               % 把方块放到当前末端落点的甲板高度
+               move_patch_center(target_cube.patch, [x_b + drop_offset_xy(1), y_b + drop_offset_xy(2), place_h]);
+               % 进入回位阶段
+               state = STATE_RETURN;
+            end
+
+        case STATE_RETURN
+            % 4) 回位：在放置高度基础上抬高5cm，并回初始姿态待机
+            theta_cmd = theta_home;
+            L_cmd     = L_min;
+            h_cmd     = min(max(place_h + 0.05, h_min), h_max);
+            if abs(atan2(sin(theta_cmd-theta), cos(theta_cmd-theta))) < deg2rad(2) ...
+                    && abs(L - L_cmd) < 0.01 && abs(h - h_cmd) < 0.01
+                state = STATE_DONE;
             end
 
         case STATE_DONE
-            theta_cmd = theta; L_cmd = L_min; h_cmd = h_min;
+            % 待机：保持回位后的姿态不变
+            theta_cmd = theta; 
+            L_cmd     = L; 
+            h_cmd     = h;
     end
 
     % ====== 速率限制 + 强约束（绝不碰柱）======
@@ -192,6 +251,42 @@ for t = 0:dt:T_total
 
     % 应用
     theta = theta_next; L = L_next; h = h_next;
+
+    % 若已放在底盘上：每帧将方块中心跟随到底盘，但保留“放下位置”的相对偏移
+    if placed
+        place_h = base_thick + target_cube.h/2;
+        move_patch_center(target_cube.patch, [x_b + drop_offset_xy(1), y_b + drop_offset_xy(2), place_h]);
+    end
+
+    % ====== 接触即绑定（移到位姿更新之后，更稳）======
+    % 使用“两种方式择一命中”：1) 末端到“当前侧面接触点”的距离；2) 末端运动线段与方块AABB相交
+    if ~grabbed && ~placed && (state==STATE_ALIGN || state==STATE_AIM_EXT)
+        % 当前帧臂端
+        phi_now = yaw + theta;
+        x_tip_now = xt + L*cos(phi_now);
+        y_tip_now = yt + L*sin(phi_now);
+
+        % 1) 侧面接触点距离
+        dir_now = [xt - cx, yt - cy]; unow = dir_now / (hypot(dir_now(1),dir_now(2)) + 1e-9);
+        pick_xy_now = [cx, cy] - (cube_size/2 + suction_offset) * unow;
+        near_hit = hypot(x_tip_now - pick_xy_now(1), y_tip_now - pick_xy_now(2)) < bind_xy_tol;
+
+        % 2) 线段与方块AABB（XY平面）相交（带吸盘厚度）
+        rect_center = [cx, cy];
+        rect_size   = [cube_size + 2*suction_offset, cube_size + 2*suction_offset];
+        seg_hit = seg_rect_intersect([x_tip_prev, y_tip_prev], [x_tip_now, y_tip_now], rect_center, rect_size);
+
+        if (near_hit || seg_hit) && abs(h - cz) < bind_h_tol
+            grabbed = true;
+            state = STATE_CARRY;
+            retract_phase = true;  % 触碰即进入“立即回收”阶段
+            % 立即把方块吸附到臂端
+            move_patch_center(target_cube.patch, [x_tip_now, y_tip_now, h]);
+        end
+        % 更新“上一帧臂端”
+        x_tip_prev = x_tip_now;
+        y_tip_prev = y_tip_now;
+    end
 
     % 绘制
     update_robot_pose(patchBase, patchTurret, lineArmFix, lineArmExt, ...
