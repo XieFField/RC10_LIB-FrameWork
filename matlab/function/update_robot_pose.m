@@ -1,14 +1,21 @@
-function update_robot_pose(pBase, pTurret, lFix, lExt, x, y, yaw, theta, L, h, base_size, base_thick, turret_r, L_min)
-% 更新底盘盒
+function update_robot_pose(pBase, pTurret, lFix, lExt, x, y, yaw, theta, L, h, base_size, base_thick, turret_r, L_min, L_draw_override)
+% 更新底盘
 set_box_pose(pBase, [x,y,base_thick/2], [base_size, base_size, base_thick], yaw);
 
-% 更新云台柱
+% 更新云台
 [xt, yt] = turret_mount_xy(x, y, yaw, base_size);
 set_cylinder_pose(pTurret, [xt, yt, 0], turret_r, h);
 
-% 更新臂两段
-L_fix = min(L, L_min);        % 固定段长度
-L_ext = max(L - L_min, 0.0);  % 伸长段长度
+% 可视长度：默认用 L；若提供了 L_draw_override，则用覆写值
+if nargin >= 15 && ~isempty(L_draw_override)
+    L_vis = L_draw_override;
+else
+    L_vis = L;
+end
+
+% 直臂分段（固定段/伸出段）基于 L_vis 计算
+L_fix = min(L_vis, L_min);
+L_ext = max(L_vis - L_min, 0.0);
 phi = yaw + theta;
 
 x1 = xt; y1 = yt;

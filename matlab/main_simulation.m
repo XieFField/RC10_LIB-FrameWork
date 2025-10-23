@@ -32,11 +32,12 @@ cup_radius = 0.050;
 margin_arm = safety_margin + arm_radius;
 margin_cup = safety_margin + cup_radius;
 extend_full_130mm = true;       % 预测可命中后，是否一口气伸满 130mm 到 L_max
-cup_len         = 0.05;        % 吸盘长度（米）
-bind_depth_tol  = 0.005;       % 与侧面“法向距离”容差，用于触发吸附/穿模校正（米）
+cup_len         = 0.15;        % 吸盘长度（米）
+bind_depth_tol  = 0.005;       % 与侧面“法向距离”容差
 % 预测采样
-probe_dt_rot  = 0.01;            % 旋转预测步距(s)
-probe_dt_ext  = 0.01;            % 伸展预测步距(s)
+probe_dt_rot  = 0.01; probe_dt_ext = 0.01;
+% pitch 旋转前的竖直余量（保证旋转圆弧不会碰到甲板/提前顶到）
+pitch_clear_z = 0.03;         % 3cm 可按需调大/调小
 
 % 衍生速率
 dt = 0.02; T_total = 15.0;
@@ -72,6 +73,9 @@ theta = 0; L = L_min; h = h_min;
 [patchBase, patchTurret, lineArmFix, lineArmExt] = draw_robot(x_b, y_b, yaw, theta, L, h, base_size, base_thick, turret_radius);
 hTurretDot = plot3(NaN,NaN,NaN,'ko','MarkerFaceColor','k');   % 云台支点
 hTipDot    = plot3(NaN,NaN,NaN,'ro','MarkerFaceColor','r');   % 臂端
+% 新增：末端刚体杆与吸盘前端的可视化
+hPitchRod = plot3(NaN,NaN,NaN,'g-','LineWidth',4);           % 俯仰杆（pivot→杯面中心）
+hCupFront = plot3(NaN,NaN,NaN,'bo','MarkerFaceColor','b');   % 吸盘前端面中心
 
 % 任务：取第一个立方体
 target_idx = 1;
@@ -96,7 +100,7 @@ h = h_target;
 update_robot_pose(patchBase, patchTurret, lineArmFix, lineArmExt, ...
     x_b, y_b, yaw, theta, L, h, base_size, base_thick, turret_radius, L_min);
 
-% 计算目标方块所在“柱”的索引，以及“同一排(prev)柱”的区域起始线（沿 +X 行进）
+% 计算目标方块所在“柱”的索引，以及“同一排(prev)柱”的区域起始线（沿 +X 行驶）
 % 规则：进入“前一柱的前方区域”（prev.x - prev.w/2）后，才开始旋转预判；此前保持 theta 不动
 eps_row = 1e-6;
 % 找到与 target_cube 最近的柱（目标柱）
@@ -138,6 +142,10 @@ drop_offset_xy = [0, 0];    % 放置相对底盘中心的XY偏移
 place_h        = NaN;       % 放置甲板高度（Z）
 allow_extend  = false;     % 仅当预测伸展安全时才允许从 L_min 伸出
 place_center_margin = 0.01; % 放置中心到边界的最小边距，防止数值越界
+% 放置朝向规划
+place_phi_planned = false;
+place_phi_world   = NaN;     % 放置的世界系朝向 phi_place
+theta_goal_place  = NaN;     % 相对云台角（=phi_place - yaw）
 
 % 记录上一帧臂端位置（用于“线段与方块相交”绑定判定）
 [xt0, yt0] = turret_mount_xy(x_b, y_b, yaw, base_size);
@@ -146,14 +154,34 @@ y_tip_prev = yt0 + L*sin(yaw + theta);
 
 title('运动规划仿真');
 
+% ========== 末端吸盘 Pitch 自由度 ==========
+v_pitch_max     = deg2rad(180);      % 吸盘俯仰最大角速度（rad/s）
+cup_pitch       = 0.0;               % 0=水平指向臂方向，>0=杯口朝下
+cup_pitch_tgt   = 0.0;               % 目标俯仰角
+cup_reoriented  = false;             % 已完成90°旋转
+clear_margin_from_pillars = 0.15;    % 认定“已离开林带”的安全余量
+
+% 机械臂/吸盘厚度碰撞余量
+arm_radius = 0.025;
+margin_arm = safety_margin + arm_radius;
+margin_cup = safety_margin + cup_radius;
+
+% 抓取/放置状态
+grabbed = false;
+placed  = false;
+retract_phase = false;
+theta_home    = 0;
+drop_offset_xy = [0, 0];
+place_h        = NaN;
+allow_extend   = false;
+
 % ====== 主循环 ======
 for t = 0:dt:T_total
     % 底盘直行
     x_b = x_b + v_base * dt;
     [xt, yt] = turret_mount_xy(x_b, y_b, yaw, base_size);
-    set(hTurretDot,'XData',xt,'YData',yt,'ZData',h);
 
-    % 默认保持
+    % 缺省命令
     theta_cmd = theta; L_cmd = L; h_cmd = h;
 
     % 云台目标“垂直于边界线”的朝向（相对云台角）
@@ -243,68 +271,112 @@ for t = 0:dt:T_total
             % fprintf('AIM_EXT: t_tan=%.3f t_need=%.3f start=%d L=%.3f -> L_needed=%.3f\n', ...
             %     t_tan, t_need, start_now, L, L_needed);
         case STATE_CARRY
-            % 3) 搬运回底盘并放置
-            goal_xy = [x_b, y_b];
-            deck_h  = base_thick + target_cube.h/2;
-
-            % 云台朝后（与行进方向相反）
+            % 1) 朝后离开林带（带方块整段预测）
             theta_goal2 = wrapTo2Pi(pi);
-
-            % 带方块整段预测旋转：臂段用臂半径，方块用 cube_rad
             dth = sign(atan2(sin(theta_goal2-theta), cos(theta_goal2-theta))) ...
                   * min(omega_max*dt, abs(atan2(sin(theta_goal2-theta), cos(theta_goal2-theta))));
-            if can_rotate_with_payload_clear(xt, yt, yaw, theta, theta_goal2, L, h, v_base, pillars, margin_arm, omega_max, probe_dt_rot, cube_rad + safety_margin)
+            L_pivot_now = max(L - cup_len, 0);
+            if can_rotate_with_payload_clear(xt, yt, yaw, theta, theta_goal2, L_pivot_now, h, v_base, pillars, margin_arm, omega_max, probe_dt_rot, cube_size/2 + safety_margin)
                 theta_cmd = theta + dth;
-            else
-                theta_cmd = theta; % 不安全 → 等下一帧（通常等L回收到L_min或底盘再前进一点）
             end
 
-            % 触碰后优先“立即回收”：先把臂收至 L_min，再进行放置流程（此时朝向已朝后）
+            % 2) 回收到“pivot 对应最小臂长”
             if retract_phase
-                L_cmd = L_min;
-                if abs(L - L_min) < 1e-3
-                    retract_phase = false; % 回收到位，开始靠近并放置
-                end
-            else
-                % 回收到位后，沿“朝后射线”把吸盘前端物理地推到甲板内某点，再下放
-                v_back  = [cos(yaw+theta_goal2), sin(yaw+theta_goal2)];  % 朝后单位向量
-                o_ray   = [xt, yt];                                      % 射线起点：云台支点
-                c_rect  = [x_b, y_b];                                    % 甲板中心
-                half    = base_size/2 - place_center_margin;             % 留少许内缩边距
-                [s0, s1, hit] = ray_rect_intersection_param(o_ray, v_back, c_rect, [half, half]);
-                if hit
-                    % 选甲板内的中点作为“方块中心”目标（物理放置，不瞬移）
-                    s_center = 0.5*(s0 + s1);                     % 该点在射线参数上的位置（方块中心）
-                    % 吸盘中心需要落在“方块中心”外退 (cup_len/2 + cube_size/2) 处
-                    s_cup_center = s_center - (cup_len/2 + cube_size/2);
-                    % 需要的臂长（沿 v_back 的投影）：L_place
-                    L_place = min(max(s_cup_center, L_min), L_max);
-                    % 放置阶段命令长度：以最大伸缩速率接近 L_place
-                    L_cmd = L_place;
-                else
-                    % 射线与甲板不相交（极少见），保持 L_min 等待
-                    L_cmd = L_min;
+                L_cmd = max(L_min - cup_len, 0);
+                if abs(L - L_cmd) < 1e-3
+                    retract_phase = false;
                 end
             end
-            % 下放高度到甲板高度（方块中心与甲板齐平）
-            h_cmd = min(max(deck_h, h_min), h_max);
 
-            % 放置判据到位 → 与底盘绑定（保持“放下位置”的相对偏移）
-            if ~retract_phase && abs(atan2(sin(theta_goal2-theta), cos(theta_goal2-theta))) < deg2rad(3) ...
-                    && (abs(L-L_cmd)+abs(h-h_cmd) < 0.02)
+            % 3) 回收到位后，规划放置朝向（让 pivot XY 落在底盘内）
+            if ~retract_phase && ~place_phi_planned
+                half = base_size/2 - place_center_margin;
+                rect = struct('cx',x_b,'cy',y_b,'hx',half,'hy',half);
+                L_pivot_plan = max(L - cup_len, 0);
+                place_phi_world = find_place_phi_on_circle([xt,yt], L_pivot_plan, rect);
+                theta_goal_place = wrapTo2Pi(place_phi_world - yaw);
+                place_phi_planned = true;
+            end
+
+            % 4) 旋到放置朝向（带整段预测）
+            if place_phi_planned
+                dth_p = sign(atan2(sin(theta_goal_place-theta), cos(theta_goal_place-theta))) ...
+                        * min(omega_max*dt, abs(atan2(sin(theta_goal_place-theta), cos(theta_goal_place-theta))));
+                L_pivot_now = max(L - cup_len, 0);
+                if can_rotate_with_payload_clear(xt, yt, yaw, theta, theta_goal_place, L_pivot_now, h, v_base, pillars, margin_arm, omega_max, probe_dt_rot, cube_size/2 + safety_margin)
+                    theta_cmd = theta + dth_p;
+                end
+            end
+
+            % 5) 俯仰轴/杆/吸盘几何
+            phi_now = yaw + theta;
+            u0 = [cos(phi_now), sin(phi_now), 0];
+            w  = [-sin(phi_now), cos(phi_now), 0];
+            u  = rotate_about_axis(u0, w, cup_pitch);
+            L_pivot_now = max(L - cup_len, 0);
+            tip_pivot = [xt + L_pivot_now*cos(phi_now), yt + L_pivot_now*sin(phi_now), h];
+            cup_front_now = tip_pivot + u * cup_len;
+            cube_center_now = tip_pivot + u * (cup_len + cube_size/2);
+
+            % 6) 在旋 pitch 前先升高：h_raise = 甲板高度 + (cup_len + cube_size/2) + 预留
+            deck_h   = base_thick + target_cube.h/2;
+            len_off  = (cup_len + cube_size/2);
+            h_raise  = min(max(deck_h + len_off + pitch_clear_z, h_min), h_max);
+            h_place  = min(max(deck_h + len_off,               h_min), h_max);
+
+            % 到达放置朝向且已离开林带后，若高度已达 h_raise，则放行俯仰到 +90°
+            if place_phi_planned ...
+               && abs(atan2(sin(theta_goal_place-theta), cos(theta_goal_place-theta))) < deg2rad(3) ...
+               && point_clear_of_pillars_xy(cube_center_now(1:2), pillars, (cube_size/2 + margin_cup + 0.02)) ...
+               && (h >= h_raise - 1e-3)
+                cup_pitch_tgt = +pi/2;       % 开始旋 pitch
+            end
+
+            % 俯仰角速控
+            dPitch = sign(cup_pitch_tgt - cup_pitch) * min(v_pitch_max*dt, abs(cup_pitch_tgt - cup_pitch));
+            cup_pitch = cup_pitch + dPitch;
+            if abs(cup_pitch - pi/2) < deg2rad(2)
+                cup_reoriented = true;
+            end
+            u  = rotate_about_axis(u0, w, cup_pitch);
+
+            % 7) 长度/高度命令
+            % 长度：固定在“允许打破 L_min”的最小值（把 pivot 放在底盘内）
+            L_cmd = max(L_min - cup_len, 0);
+
+            % 高度：
+            % - 未到 h_raise 或 pitch 未到位 → 先抬到 h_raise（旋转全过程保持此高度，避免提前碰板）
+            % - pitch 达 90° 后 → 落到 h_place（此时方块中心=deck_h，底面贴板）
+            if ~cup_reoriented
+                h_cmd = h_raise;
+            else
+                h_cmd = h_place;
+            end
+            h_cmd = min(max(h_cmd, h_min), h_max);
+
+            % 8) 抓取随动（绕俯仰轴圆弧）
+            if grabbed
+                center3d  = tip_pivot + u * (cup_len + cube_size/2);
+                move_patch_center(target_cube.patch, center3d);
+            end
+            % 可视化：末端刚体杆与杯面中心
+            cup_front_now = tip_pivot + u * cup_len;
+            set(hPitchRod,'XData',[tip_pivot(1) cup_front_now(1)], ...
+                          'YData',[tip_pivot(2) cup_front_now(2)], ...
+                          'ZData',[tip_pivot(3) cup_front_now(3)]);
+            set(hCupFront,'XData',cup_front_now(1), 'YData',cup_front_now(2), 'ZData',cup_front_now(3));
+
+            % 9) 放置判据：朝向到位 + pitch≈90° + L 到位 + 高度到 h_place
+            if place_phi_planned ...
+               && abs(atan2(sin(theta_goal_place-theta), cos(theta_goal_place-theta))) < deg2rad(3) ...
+               && abs(cup_pitch - pi/2) < deg2rad(3) ...
+               && abs(L - L_cmd) < 0.01 ...
+               && abs(h - h_place) < 0.01
                 grabbed = false;
-                placed  = true;                     % 开始与底盘绑定
-                % 记录放置瞬间的相对偏移（使用机械臂当前放置到的真实位置，不做钳制）
-                phi_c = yaw + theta;
-                tip_xy = [xt + L*cos(phi_c), yt + L*sin(phi_c)];   % 吸盘中心XY
-                v_back = [cos(phi_c), sin(phi_c)];
-                cup_front = tip_xy + v_back*(cup_len/2);           % 吸盘前端面中心
-                cube_center_xy = cup_front + v_back*(cube_size/2); % 方块中心XY（真实落点）
-                drop_offset_xy = cube_center_xy - [x_b, y_b];
-                place_h = deck_h;
-                % 将方块保持在当前由机械臂放置到的真实位置（物理意义），随后绑定随底盘移动
-                move_patch_center(target_cube.patch, [cube_center_xy(1), cube_center_xy(2), place_h]);
-                % 进入回位阶段
+                placed  = true;
+                center3d  = tip_pivot + u * (cup_len + cube_size/2);
+                drop_offset_xy = center3d(1:2) - [x_b, y_b];
+                move_patch_center(target_cube.patch, [center3d(1), center3d(2), deck_h]);
                 state = STATE_RETURN;
             end
 
@@ -325,22 +397,23 @@ for t = 0:dt:T_total
             h_cmd     = h;
     end
 
-    % ====== 速率限制 + 强约束（绝不碰柱）======
+    % ====== 速率限制与长度裁剪 ======
     theta_next = theta_cmd;
-
-    % 高度
     h_next = h + sign(h_cmd - h) * min(vh_max*dt, abs(h_cmd - h));
 
-    % 伸长
     if state==STATE_ALIGN || (state==STATE_AIM_EXT && ~allow_extend)
-        % 旋转/瞄准但未放行伸展：严格保持 L_min，不做裁剪以免被“缩短”
+        % 未放行伸展：严格保持 L_min
         L_next = L + sign(L_min - L) * min(vL_max*dt, abs(L_min - L));
     else
-        % 已放行伸展 或 其他阶段：按命令并做安全裁剪（考虑臂/吸盘厚度）
         dL_max = min(vL_max*dt, abs(L_cmd - L));
         L_try  = L + sign(L_cmd - L) * dL_max;
+        % 在 CARRY/RETURN 阶段允许“打破 L_min”到 L_min - cup_len
+        if (state==STATE_CARRY || state==STATE_RETURN)
+            L_lower = max(L_min - cup_len, 0);
+            L_try = max(L_try, L_lower);
+        end
         phi_for_len = yaw + theta_next;
-        margin_len = max(margin_arm, margin_cup);          % 考虑臂/吸盘直径
+        margin_len = max(margin_arm, margin_cup);
         L_maxSafe = max_safe_length_along_ray(xt, yt, phi_for_len, h_next, pillars, margin_len, L_try);
         L_next = min(L_try, L_maxSafe);
     end
@@ -348,16 +421,10 @@ for t = 0:dt:T_total
     % 应用
     theta = theta_next; L = L_next; h = h_next;
 
-    % 若已放在底盘上：每帧将方块中心跟随到底盘，但保留“放下位置”的相对偏移
+    % 放下后绑定随动（保持物理落点，不再钳制）
     if placed
         place_h = base_thick + target_cube.h/2;
-        % 保证跟随过程中中心仍在底盘范围内（底盘移动时也生效）
-        half = base_size/2 - place_center_margin;
-        x_center = x_b + drop_offset_xy(1);
-        y_center = y_b + drop_offset_xy(2);
-        x_center = min(max(x_center, x_b - half), x_b + half);
-        y_center = min(max(y_center, y_b - half), y_b + half);
-        move_patch_center(target_cube.patch, [x_center, y_center, place_h]);
+        move_patch_center(target_cube.patch, [x_b + drop_offset_xy(1), y_b + drop_offset_xy(2), place_h]);
     end
 
     % ====== 接触即绑定（位姿更新之后）======
@@ -397,11 +464,26 @@ for t = 0:dt:T_total
     end
 
     % 绘制
-    update_robot_pose(patchBase, patchTurret, lineArmFix, lineArmExt, ...
-        x_b, y_b, yaw, theta, L, h, base_size, base_thick, turret_radius, L_min);
+    % 在搬运/回位阶段，直臂只画到“俯仰关节”（L - cup_len）；其他阶段按原 L 画
+    if state == STATE_CARRY || state == STATE_RETURN
+        L_draw = max(L - cup_len, 0);
+    else
+        L_draw = L;
+    end
 
-    % 臂端标记
-    set(hTipDot,'XData',xt + L*cos(yaw+theta), 'YData', yt + L*sin(yaw+theta), 'ZData', h);
+    update_robot_pose(patchBase, patchTurret, lineArmFix, lineArmExt, ...
+        x_b, y_b, yaw, theta, L, h, base_size, base_thick, turret_radius, L_min, L_draw);
+
+    % 臂端标记（pivot 位置）
+    L_pivot_vis = max(L - cup_len, 0);
+    phi_vis = yaw + theta;
+    tip_pivot_vis = [xt + L_pivot_vis*cos(phi_vis), yt + L_pivot_vis*sin(phi_vis), h];
+    set(hTipDot,'XData',tip_pivot_vis(1), 'YData', tip_pivot_vis(2), 'ZData', tip_pivot_vis(3));
+    % 若未进入 CARRY，隐藏杆/吸盘，避免误导
+    if state ~= STATE_CARRY
+        set(hPitchRod,'XData',NaN,'YData',NaN,'ZData',NaN);
+        set(hCupFront,'XData',NaN,'YData',NaN,'ZData',NaN);
+    end
 
     drawnow;
 end
@@ -574,3 +656,60 @@ function [s0, s1, hit] = ray_rect_intersection_param(o, d, c, half)
     s1 = smax;
     hit = (s1 >= s0);
 end
+
+function ok = point_clear_of_pillars_xy(p, pillars, expand)
+    % p: 1x2 点；expand: 以该半径外扩每根柱的AABB
+    ok = true;
+    for k=1:numel(pillars)
+        rect_center = [pillars(k).x, pillars(k).y];
+        half = [pillars(k).w/2 + expand, pillars(k).d/2 + expand];
+        if abs(p(1)-rect_center(1)) <= half(1) && abs(p(2)-rect_center(2)) <= half(2)
+            ok = false; return;
+        end
+    end
+end
+
+function u = tip_axis_vector(phi, cup_pitch)
+    % 约定：cup_pitch=0 → 水平沿臂方向；cup_pitch>0 → 杯口朝下（-Z）
+    % u = [ux, uy, uz], |u|=1
+    c = cos(cup_pitch); s = sin(cup_pitch);
+    ux = cos(phi)*c;
+    uy = sin(phi)*c;
+    uz = -s;           % 朝下为负
+    u = [ux, uy, uz];
+end
+
+function vout = rotate_about_axis(v, w, angle)
+    % 输入/输出均为 1x3 行向量；w 自动单位化
+    % 罗德里格向量形式：v' = v*c + (k×v)*s + k*(k·v)*(1-c)
+    v = v(:).';                % 1x3
+    k = w(:).';
+    kn = k / max(1e-12, norm(k));
+    c = cos(angle); s = sin(angle);
+    vout = v*c + cross(kn, v)*s + kn*(dot(kn, v))*(1 - c);  % 1x3
+end
+
+function phi = find_place_phi_on_circle(o_xy, r, rect)
+% 在以 o_xy 为圆心、半径 r 的圆上，找到一个点落在轴对齐矩形 rect 内部的角度 phi
+% 若有多个，取“距离矩形边界的最小裕度”最大的那个；若无解，退化到指向最近角的方向
+    cx=rect.cx; cy=rect.cy; hx=rect.hx; hy=rect.hy;
+    best_phi = NaN; best_margin = -Inf;
+    for k=0:359
+        ang = deg2rad(k);
+        p = o_xy + r*[cos(ang), sin(ang)];
+        if p(1) >= cx-hx && p(1) <= cx+hx && p(2) >= cy-hy && p(2) <= cy+hy
+            margin = min([p(1)-(cx-hx), (cx+hx)-p(1), p(2)-(cy-hy), (cy+hy)-p(2)]);
+            if margin > best_margin
+                best_margin = margin; best_phi = ang;
+            end
+        end
+    end
+    if ~isnan(best_phi)
+        phi = best_phi; return;
+    end
+    % 无交（理论上 L_min<=对角半径时不会发生）：退化到最近角方向
+    corners = [cx-hx, cy-hy; cx+hx, cy-hy; cx+hx, cy+hy; cx-hx, cy+hy];
+    [~,i] = min(vecnorm(corners - o_xy,2,2));
+    v = corners(i,:) - o_xy; phi = atan2(v(2), v(1));
+end
+
