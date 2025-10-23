@@ -46,7 +46,10 @@ extern "C" {
 template <std::size_t WheelCount>
 class Chassis_Base{
 public:
-    Chassis_Base(float wheel_radius, float max_wheel_rpm);
+    Chassis_Base(float wheel_radius, float max_wheel_rpm)
+    {
+        last_update_time_s_ = TimeStamp::getInstance().getSeconds();
+    }
     ~Chassis_Base(){}
 
     void setRobotSpeed(const Robot_Twist& twist); // 设置机器人速度（机器人坐标系）
@@ -86,12 +89,17 @@ protected:
     Robot_Twist robot_twist_ = {0}; // 机器人坐标系当前速度
     Robot_Twist world_twist_ = {0}; // 世界坐标系当前速度
 
+    Robot_Twist robot_twist_forward = {0}; //正解算得到的机器人坐标系速度
+    Robot_Twist world_twist_forward = {0}; //正解算得到的世界坐标系速度
+
     Robot_Twist robot_target_twist_ = {0}; // 机器人坐标系目标速度
     Robot_Twist world_target_twist_ = {0}; // 世界坐标系目标速度
 
     Angle_Twist angle_twist_ = {0}; // 从传感器得到的角速度、角度数据
 
     virtual void inverseKinematics(const Robot_Twist& twist) = 0; // 逆解，根据目标速度计算轮速
+
+    virtual void forwardKinematics(){};
 
     bool accel_Limit_ = false; // 是否启用加速度限幅
     float accel_value_ = 0.0f; // 当前线加速度值

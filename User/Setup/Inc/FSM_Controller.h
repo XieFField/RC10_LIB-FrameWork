@@ -25,6 +25,7 @@ extern "C" {
 #include "BSP_TimeStamp.h"
 #include "FSMstauts_enum.h"
 #include "Arm_Setup.h"
+#include "omni_chassisSetup.h"
 
 extern AirJoy air_joy;
 
@@ -38,9 +39,17 @@ public:
         arm_setup_registered_ = true;
     }
 
+    void registerChassisSetup(OmniChassis_Setup *chassis_setup)
+    {
+        chassis_setup_ = chassis_setup;
+        chassis_setup_registered_ = true;
+    }
+
     void init()
     {
         if(!arm_setup_registered_)
+            init_flag_ = false;
+        if(!chassis_setup_registered_)
             init_flag_ = false;
         
         start(osPriorityHigh, 256);
@@ -66,6 +75,7 @@ private:
     
     
     ArmSetup *arm_setup_ = nullptr;  bool arm_setup_registered_ = false; ARM_Status_E arm_status_;
+    OmniChassis_Setup *chassis_setup_ = nullptr; bool chassis_setup_registered_ = false;
 
     bool init_flag_ = false; //所有需要注册的机构都已经注册完成
 };

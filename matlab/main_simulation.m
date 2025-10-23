@@ -9,7 +9,7 @@ addpath(fullfile(thisdir,'function'));
 map_size = 12.0;
 cell_size = 1.2; nx = 3; ny = 4;
 allowed_cube_ids = [1,2,3,4,6,7,9,10,11,12];
-cube_ids = [3,7,11];
+cube_ids = [2,7,11];
 cube_size = 0.35;
 
 % 机器人参数

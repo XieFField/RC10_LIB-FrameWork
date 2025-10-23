@@ -66,6 +66,16 @@ public:
 private:
     void inverseKinematics(const Robot_Twist& twist) override; // 逆解，根据目标速度计算轮速
     float chassis_radius_; // 底盘半径 (m)
+
+    void forwardKinematics(Robot_Twist& twist) override;
+
+    // arm_matrix_instance_f32 kinematics_matrix; // WheelCount x 3
+    // arm_matrix_instance_f32 input_mat_; // 3x1
+    // arm_matrix_instance_f32 output_mat_; // WheelCount x 1
+
+    // float32_t kinematics_matrix_data_[WheelCount * 3];
+    // float32_t input_vector_[3]; // 3x1
+    // float32_t output_vector_[WheelCount]; // 4x1    
 };
 
 
