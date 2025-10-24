@@ -176,6 +176,9 @@ public:
     void setRotateReversed(bool reversed) {sign_rotate_  = reversed ? -1.0f : 1.0f;}
     void setPitchReversed(bool reversed) {sign_pitch_  = reversed ? -1.0f : 1.0f;}
 
+    Joint_Status_S get_currentJointStatus() const { return joint_angle_; }
+    Joint_Status_S get_targetJointStatus() const { return target_joint_angle_; }
+
 private:
     Arm_InitData_S init_data_;
 

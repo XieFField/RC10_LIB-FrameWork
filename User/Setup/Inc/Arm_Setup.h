@@ -14,6 +14,10 @@ extern "C" {
 #include "stdint.h"
 }
 #endif
+
+
+
+#ifdef __cplusplus
 #include "BSP_RTOS.h"
 #include "Robot_Arm.h"
 #include "APP_Tool.h"
@@ -21,9 +25,9 @@ extern "C" {
 #include "Motor_DJI.h"
 #include "BSP_TimeStamp.h"
 #include "APP_debugTool.h"
+#include "FSMstauts_enum.h"
 
-
-#ifdef __cplusplus
+extern AirJoy air_joy;
 
 class ArmSetup: public RtosTask ,public Robot_Arm {
 public:
@@ -32,8 +36,8 @@ public:
     {
     }
 
-    void init(DJI_Motor *motor_ArmLaunch, DJI_Motor *motor_ArmStretch, 
-        DJI_Motor *motor_ArmRotate, DJI_Motor *motor_ArmPitch)
+    void init(M3508 *motor_ArmLaunch, M2006 *motor_ArmStretch, 
+        M3508 *motor_ArmRotate, M2006 *motor_ArmPitch)
     {
         this->registerMotor_Launch(motor_ArmLaunch);
         this->registerMotor_Stretch(motor_ArmStretch);
@@ -45,10 +49,16 @@ public:
         init_flag = true;
     }
 
+    void setArmStatus(ARM_Status_E status)
+    {
+        arm_status_ = status;
+    }
     
     
 private:
     bool init_flag = false;
+
+    bool is_calibrating = false;
 
     Debug_Printf debug_uart = Debug_Printf(&huart1);
 protected:
@@ -61,6 +71,18 @@ protected:
         if(us < mid - dead) return -rate;
         return 0.0f;
     }
+
+    ARM_Status_E arm_status_ = ARM_MANUAL_CONTROL;
+
+
+    //控制函数
+    void manualControl();
+    void autoControl();
+    void stop();
+    void idle();
+
+    //上电校准M2006电机位置
+    void calibrateM2006();
 };
 
 #endif //__cplusplus

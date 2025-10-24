@@ -1,3 +1,9 @@
+/**
+ * @file   APP_tool.h
+ * @brief  通用工具函数头文件
+ * @author XieFField
+ */
+
 #ifndef __APP_TOOL_H
 #define __APP_TOOL_H
 
@@ -45,6 +51,44 @@ static inline T constrain(T value, T min, T max)
     if (value > max) return max;
     return value;
 }
+
+template <typename T>
+static inline T m_to_cm(T value_m)
+{
+    return value_m * 100.0f;
+}
+
+template <typename T>
+static inline T cm_to_m(T value_cm)
+{
+    return value_cm / 100.0f;
+}
+
+template <typename T>
+static inline T mm_to_cm(T value_mm)
+{
+    return value_mm / 10.0f;
+}
+
+template <typename T>
+static inline T cm_to_mm(T value_cm)
+{
+    return value_cm * 10.0f;
+}
+
+template <typename T>
+static inline T m_to_mm(T value_m)
+{
+    return value_m * 1000.0f;
+}
+
+template <typename T>
+static inline T mm_to_m(T value_mm)
+{
+    return value_mm / 1000.0f;
+}
+
+
 
 //斜坡函数
 void ramp(float target, float& current, float max_change_rate, float dt);

@@ -23,18 +23,17 @@ typedef enum{
 
     ARM_AUTO_CONTROL, //串联臂自动控制模式
 
-    ARM_IDLE, //串联臂空闲状态
+    ARM_IDLE, //串联臂空闲状态，维持当前状态
 
     ARM_STOP,
 }ARM_Status_E;
 
 
 typedef enum{
-    CHASSIS_MANUAL_CONTROL, //底盘手动控制模式
+    CHASSIS_MANUAL_CONTROL_A, //底盘手动控制模式（角速度可控）
+    CHASSIS_MANUAL_CONTROL_B, //底盘手动控制模式（角速度为0，锁定角度）
 
     CHASSIS_AUTO_CONTROL, //底盘自动控制模式
-
-    CHASSIS_IDLE, //底盘空闲状态
 
     CHASSIS_STOP,
 }CHASSIS_Status_E;
