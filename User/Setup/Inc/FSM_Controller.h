@@ -52,7 +52,7 @@ public:
         if(!chassis_setup_registered_)
             init_flag_ = false;
         
-        start(osPriorityHigh, 256);
+        this->start(osPriorityHigh, 256);
     }
 
     void reset_airjoy_deadzone(float deadzone)

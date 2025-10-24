@@ -1,5 +1,21 @@
 #include "Setup_ConfigInit.h"
 
+OmniChassis_Setup ChassisOmni(1,2,3);
+FSM_Controller Finite_StateMachine;
+
+Arm_InitData_S arm_initData = {
+   .max_launchHeight_ = 0.8f,
+   .max_stretchLength_ = 0.130f,
+   .arm_length_ = 0.3f,
+   .end_link_length_ = 0.1f,
+
+   .stretch_Ratio_ = 0.03098f,
+   .launch_Ratio_ = 0.1f,
+   .rotate_gearRatio_ = 10.0f,
+   .pitch_gearRatio_ = 10.0f,
+};
+
+ArmSetup ARM_Controller(arm_initData);
 
 #if DEBUG_M2006
 
@@ -85,9 +101,12 @@ void ALL_Setup_ConfigInit(void)
    
 
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
-   debug_init();
+   //debug_init();
 
-   fsm_controller.init();
+   Finite_StateMachine.registerArmSetup(&ARM_Controller);
+   Finite_StateMachine.registerChassisSetup(&ChassisOmni);
+
+   Finite_StateMachine.init();
    
 }
 

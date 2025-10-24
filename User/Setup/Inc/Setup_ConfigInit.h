@@ -35,9 +35,14 @@ extern "C" {
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 
-#include "FSM_Controller.h"
-
 #include "debug_setup.h"
+
+/*==============Controller===============*/
+#include "FSM_Controller.h"
+#include "Arm_Setup.h"
+#include "omni_chassisSetup.h"
+
+
 
 #if ARM_DEMO_DEBUG
 

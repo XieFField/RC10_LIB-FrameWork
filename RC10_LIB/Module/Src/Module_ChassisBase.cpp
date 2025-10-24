@@ -66,3 +66,5 @@ void Chassis_Base<WheelCount>::update()
             wheels_[i]->setTargetRPM(wheel_target_rpm_[i]);
     }
 }
+
+template class Chassis_Base<4>;
