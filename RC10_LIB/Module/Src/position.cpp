@@ -1,6 +1,6 @@
 /**
  * @file position.cpp
- * @author HA ji cao 
+ * @author WU Jia HA Ji cao 
  * @brief position驱动文件
  * @attention 此文件用于position而非action
  * @date 2025-10-22
@@ -164,7 +164,7 @@ void Position_UART1_RxCallback(uint8_t *buf, uint16_t len)
 				{	
 					//在接收包尾2后才开始启动回调
 					//UART_IdleCallback(&huart1);
-					Reposition_SendData(10.2f, 5.7f);
+				//	Reposition_SendData(10.2f, 5.7f);
 					Update_RawPosition(posture.ActVal);
 				}
 				count = 0;
