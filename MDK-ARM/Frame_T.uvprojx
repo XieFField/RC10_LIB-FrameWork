@@ -936,14 +936,14 @@
               <FilePath>..\RC10_LIB\Motor\Inc\Motor_Base.h</FilePath>
             </File>
             <File>
-              <FileName>Motor_DJI.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Motor\Src\Motor_DJI.cpp</FilePath>
-            </File>
-            <File>
               <FileName>Motor_DJI.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Motor\Inc\Motor_DJI.h</FilePath>
+            </File>
+            <File>
+              <FileName>Motor_DJI.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Motor\Src\Motor_DJI.cpp</FilePath>
             </File>
             <File>
               <FileName>Motor_VESC.h</FileName>
@@ -955,20 +955,30 @@
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Motor\Src\Motor_VESC.cpp</FilePath>
             </File>
+            <File>
+              <FileName>Motor_DM.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Motor\Inc\Motor_DM.h</FilePath>
+            </File>
+            <File>
+              <FileName>Motor_DM.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Motor\Src\Motor_DM.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
           <GroupName>User/debug</GroupName>
           <Files>
             <File>
-              <FileName>frame_demo.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\debug\Src\frame_demo.cpp</FilePath>
-            </File>
-            <File>
               <FileName>frame_demo.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\debug\Inc\frame_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>frame_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\frame_demo.cpp</FilePath>
             </File>
             <File>
               <FileName>arm_demo.h</FileName>
@@ -1001,19 +1011,14 @@
               <FilePath>..\User\Control\Src\Robot_Arm.cpp</FilePath>
             </File>
             <File>
-              <FileName>PathPlanner.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Control\Src\PathPlanner.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>PathTracing.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Control\Src\PathTracing.cpp</FilePath>
-            </File>
-            <File>
               <FileName>PathPlanner.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Control\Inc\PathPlanner.h</FilePath>
+            </File>
+            <File>
+              <FileName>PathPlanner.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Src\PathPlanner.cpp</FilePath>
             </File>
             <File>
               <FileName>PathTracing.h</FileName>
@@ -1021,9 +1026,9 @@
               <FilePath>..\User\Control\Inc\PathTracing.h</FilePath>
             </File>
             <File>
-              <FileName>pathplanner_demo.cpp</FileName>
+              <FileName>PathTracing.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\User\Control\Test\pathplanner_demo.cpp</FilePath>
+              <FilePath>..\User\Control\Src\PathTracing.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -1046,9 +1051,19 @@
               <FilePath>..\User\Setup\Inc\FSM_Controller.h</FilePath>
             </File>
             <File>
+              <FileName>FSM_Controller.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\FSM_Controller.cpp</FilePath>
+            </File>
+            <File>
               <FileName>Arm_Setup.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Setup\Inc\Arm_Setup.h</FilePath>
+            </File>
+            <File>
+              <FileName>Arm_Setup.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\Arm_Setup.cpp</FilePath>
             </File>
             <File>
               <FileName>FSMstauts_enum.h</FileName>
@@ -1061,16 +1076,6 @@
               <FilePath>..\User\Setup\Inc\omni_chassisSetup.h</FilePath>
             </File>
             <File>
-              <FileName>Arm_Setup.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\Arm_Setup.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>FSM_Controller.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\FSM_Controller.cpp</FilePath>
-            </File>
-            <File>
               <FileName>omni_chassisSetup.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\omni_chassisSetup.cpp</FilePath>
@@ -1081,19 +1086,14 @@
           <GroupName>RC10_LIB/APP</GroupName>
           <Files>
             <File>
-              <FileName>APP_PID.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_PID.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>APP_tool.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_tool.cpp</FilePath>
-            </File>
-            <File>
               <FileName>APP_PID.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\APP\Inc\APP_PID.h</FilePath>
+            </File>
+            <File>
+              <FileName>APP_PID.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_PID.cpp</FilePath>
             </File>
             <File>
               <FileName>APP_tool.h</FileName>
@@ -1101,14 +1101,19 @@
               <FilePath>..\RC10_LIB\APP\Inc\APP_tool.h</FilePath>
             </File>
             <File>
-              <FileName>APP_CoordConvert.cpp</FileName>
+              <FileName>APP_tool.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_CoordConvert.cpp</FilePath>
+              <FilePath>..\RC10_LIB\APP\Src\APP_tool.cpp</FilePath>
             </File>
             <File>
               <FileName>APP_CoordConvert.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\APP\Inc\APP_CoordConvert.h</FilePath>
+            </File>
+            <File>
+              <FileName>APP_CoordConvert.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_CoordConvert.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -1154,6 +1159,16 @@
               <FileName>Module_ChassisOmni.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisOmni.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_GPIO.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_GPIO.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_GPIO.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_GPIO.cpp</FilePath>
             </File>
           </Files>
         </Group>

@@ -32,7 +32,7 @@ extern "C" {
  * @brief 一切单位都是米和度
  */
 typedef struct {
-    float max_launchHeight_; // 升降最大行程，单位米
+    float max_launchHeight_; // 升降最大行程，单位米 0
     float max_stretchLength_; // 伸展最大行程，单位米
     float arm_length_; // 机械臂长度
     float end_link_length_; // 末端连杆长度，吸盘到机械臂连接点的距离，单位米
@@ -81,6 +81,10 @@ typedef enum{
  * @note 这里的坐标或者行程单位都是米，角度单位是度，角度制。
  */
 class Robot_Arm {
+
+protected:
+    Arm_InitData_S init_data_;
+
 public:
     
 
@@ -180,7 +184,6 @@ public:
     Joint_Status_S get_targetJointStatus() const { return target_joint_angle_; }
 
 private:
-    Arm_InitData_S init_data_;
 
     DJI_Motor* motor_launch_ = nullptr; // 升降电机
     DJI_Motor* motor_stretch_ = nullptr; // 伸展电机
@@ -237,7 +240,6 @@ private:
     float last_time_s_ = 0.0f;
     float dt_ = 0.0f;
     bool  time_initialized_ = false;
-
 
 /*================================================================*/
     /*关节角度->电机总角度*/

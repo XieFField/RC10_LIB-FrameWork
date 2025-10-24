@@ -55,15 +55,7 @@ void FSM_Controller::all_stop()
 void FSM_Controller::manual_ctrl()
 {
    
-    if(last_robot_status_ != MANUAL_CONTROL)//若首次非此模式，需复制一下上次状态，免得跳变
-    {
-        /*串联臂*/
-        last_joint_status_ = arm_setup_->get_currentJointStatus();
-        target_joint_status_ = last_joint_status_;
-        last_robot_status_ = MANUAL_CONTROL;
 
-        /*底盘*/
-    }
 
    //底盘线速度控制;
     if(_tool_Abs(air_joy.SWC - 1000) < 50)

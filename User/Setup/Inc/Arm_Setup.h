@@ -64,16 +64,13 @@ private:
 protected:
     void loop() override;
 
-    static inline float step_pm(uint16_t us, uint16_t mid=1500, uint16_t dead=60, float rate=0.25f)
-    {
-        // 返回单位步进速率系数（-rate..+rate）
-        if(us > mid + dead) return +rate;
-        if(us < mid - dead) return -rate;
-        return 0.0f;
-    }
+
 
     ARM_Status_E arm_status_ = ARM_MANUAL_CONTROL;
+    ARM_Status_E last_arm_status_ = ARM_MANUAL_CONTROL;
 
+    Joint_Status_S last_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
+    Joint_Status_S target_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
 
     //控制函数
     void manualControl();

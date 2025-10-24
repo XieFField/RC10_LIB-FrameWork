@@ -5,20 +5,6 @@ void ArmSetup::loop()
     if(!init_flag)
         return;
     
-    static uint64_t last_us = 0;
-    uint64_t now_us = TimeStamp::getInstance().getMicroseconds();
-    if(last_us == 0) 
-    { 
-        last_us = now_us; 
-        return; 
-    }
-    uint64_t dt_us = (now_us >= last_us) ? (now_us - last_us) : 0;
-    last_us = now_us;
-    if(dt_us == 0) 
-        return;
-    if(dt_us > 200000) 
-        dt_us = 200000; 
-    float dt = dt_us * 1e-6f;
 
     if(!is_calibrating)
     {
@@ -56,12 +42,59 @@ void ArmSetup::loop()
     }
 
     this->update(); //将控制信息发送给电机
+    last_arm_status_ = arm_status_;
 }
 
 void ArmSetup::manualControl()
 {
     // 手动控制函数
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    
+    if(last_arm_status_ != ARM_MANUAL_CONTROL)//若首次非此模式，需复制一下上次状态，免得跳变
+    {
+        /*串联臂*/
+        last_joint_status_ = this->get_currentJointStatus();
+        target_joint_status_ = last_joint_status_;
+
+        last_arm_status_ = ARM_MANUAL_CONTROL;
+    }
+
+    // 读取遥控器输入，计算目标关节位置
+
+    if(air_joy.RIGHT_X < 1450)
+        target_joint_status_.rotateJoint_angle_ -= 5.0f; // 旋转关节逆时针
+    else if(air_joy.RIGHT_X > 1550)
+        target_joint_status_.rotateJoint_angle_ += 5.0f; // 旋转关节顺时针
+    else
+        target_joint_status_ = target_joint_status_; // 保持不变
+
+
+
+    if(air_joy.RIGHT_Y < 1450)
+        target_joint_status_.launchJoint_Height_ -= 0.005f; // 伸展关节收回
+    else if(air_joy.RIGHT_Y > 1550)
+        target_joint_status_.launchJoint_Height_ += 0.005f; // 伸展关节伸出
+    else
+        target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_; // 保持不变
+
+
+
+
+    if(_tool_Abs(air_joy.SWA - 1000) < 50)
+        target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位置
+    else if(_tool_Abs(air_joy.SWA - 2000) < 50)
+        target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
+    else 
+        target_joint_status_.stretchJoint_Length_ = target_joint_status_.stretchJoint_Length_; // 保持不变
+
+
+
+    if(_tool_Abs(air_joy.SWD - 1000) < 50)
+        target_joint_status_.suckerJoint_angle_ = 0.0f; // 末端关节收
+    else if(_tool_Abs(air_joy.SWD - 2000) < 50)
+        target_joint_status_.suckerJoint_angle_ = 90.0f; // 末端关节开
+    else 
+        target_joint_status_.suckerJoint_angle_ = target_joint_status_.suckerJoint_angle_; // 保持不变
 }
 
 
@@ -91,15 +124,15 @@ void ArmSetup::idle()
 
 
 Arm_InitData_S arm_initData = {
-   .max_launchHeight_ = 0.8f,
+   .max_launchHeight_ = 0.4f,
    .max_stretchLength_ = 0.130f,
    .arm_length_ = 0.3f,
    .end_link_length_ = 0.1f,
 
-   .stretch_Ratio_ = 0.03098f,
-   .launch_Ratio_ = 0.1f,
-   .rotate_gearRatio_ = 10.0f,
-   .pitch_gearRatio_ = 10.0f,
+   .stretch_Ratio_ = 0.00942f,
+   .launch_Ratio_ = 0.01099f,
+   .rotate_gearRatio_ = 144.878f,
+   .pitch_gearRatio_ = 360.0f,
 };
 
 

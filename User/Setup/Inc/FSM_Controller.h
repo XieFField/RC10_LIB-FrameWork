@@ -76,15 +76,13 @@ private:
     
     ArmSetup *arm_setup_ = nullptr;  
     bool arm_setup_registered_ = false; 
-    Joint_Status_S last_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
-    Joint_Status_S target_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
+    
 
     OmniChassis_Setup *chassis_setup_ = nullptr; 
     bool chassis_setup_registered_ = false; 
     bool init_flag_ = false; //所有需要注册的机构都已经注册完成
 
-    Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
-    Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    
 };
 
 #endif
