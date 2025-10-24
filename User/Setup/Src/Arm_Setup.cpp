@@ -90,4 +90,16 @@ void ArmSetup::idle()
 }
 
 
+Arm_InitData_S arm_initData = {
+   .max_launchHeight_ = 0.8f,
+   .max_stretchLength_ = 0.130f,
+   .arm_length_ = 0.3f,
+   .end_link_length_ = 0.1f,
+
+   .stretch_Ratio_ = 0.03098f,
+   .launch_Ratio_ = 0.1f,
+   .rotate_gearRatio_ = 10.0f,
+   .pitch_gearRatio_ = 10.0f,
+};
+
 

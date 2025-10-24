@@ -34,7 +34,7 @@ extern "C" {
 #include "Motor_DJI.h"
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
-
+#include "APP_PID.h"
 #include "debug_setup.h"
 
 /*==============Controller===============*/

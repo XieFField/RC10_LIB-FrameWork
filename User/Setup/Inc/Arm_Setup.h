@@ -85,6 +85,9 @@ protected:
     void calibrateM2006();
 };
 
+
+extern Arm_InitData_S arm_initData;
+
 #endif //__cplusplus
 
 
