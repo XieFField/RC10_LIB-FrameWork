@@ -1,7 +1,7 @@
 /**
  * @file Arm_setup.h
- * @author Your Name
- * @brief ARM Cortex-M7 Setup Header
+ * @author XieFField
+ * @brief 串联臂控制实现
  * @version 1.0
  * @date 2025-09-17
  */

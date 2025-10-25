@@ -16,9 +16,11 @@ FSM_Controller Finite_StateMachine;
 
 /*================Motor Instances==============*/
 
+                           /* 底盘 */
 M3508 omni_wheel1(1, CAN1_Bus); M3508 omni_wheel2(2, CAN1_Bus); 
 M3508 omni_wheel3(3, CAN1_Bus); M3508 omni_wheel4(4, CAN1_Bus);
 
+                           /* 串联臂 */      
 M3508 arm_launchMotor(5, CAN1_Bus); M2006 arm_stretchMotor(6, CAN1_Bus);
 M3508 arm_rotateMotor(7, CAN1_Bus); M2006 arm_pitchMotor(8, CAN1_Bus);
 
@@ -109,6 +111,17 @@ void ALL_Setup_ConfigInit(void)
 
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    //debug_init();
+
+   ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
+   ARM_Controller.setArmStatus(ARM_IDLE);
+
+   ChassisOmni.registerWheelMotor(0, &omni_wheel1);
+   ChassisOmni.registerWheelMotor(1, &omni_wheel2);
+   ChassisOmni.registerWheelMotor(2, &omni_wheel3);
+   ChassisOmni.registerWheelMotor(3, &omni_wheel4);
+   ChassisOmni.init();
+
+   ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
    Finite_StateMachine.registerArmSetup(&ARM_Controller);
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);

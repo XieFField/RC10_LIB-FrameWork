@@ -2,6 +2,7 @@
  * @file FSM_Controller.h
  * @version 1.0
  * @author XieFField
+ * @brief 机器人总状态机控制器
  */
 
 

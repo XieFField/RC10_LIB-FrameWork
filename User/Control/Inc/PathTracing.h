@@ -1,3 +1,11 @@
+/**
+ * @file PathTracing.h
+ * @author Zhang Hongli
+ * @brief 路径跟踪器头文件，基于Pure Pursuit算法实现
+ * @version 1.0
+ */
+
+
 #ifndef PATH_TRACING_H
 #define PATH_TRACING_H
 

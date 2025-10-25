@@ -1,3 +1,10 @@
+/**
+ * @file PathPlanner.h
+ * @author Zhang Hongli
+ * @brief 网格路径规划器头文件，基于A*算法实现
+ * @version 1.0
+ */
+
 #ifndef PATH_PLANNER_H
 #define PATH_PLANNER_H
 
