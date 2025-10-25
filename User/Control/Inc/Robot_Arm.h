@@ -84,6 +84,11 @@ class Robot_Arm {
 
 protected:
     Arm_InitData_S init_data_;
+    DJI_Motor* motor_launch_ = nullptr; // 升降电机
+    DJI_Motor* motor_stretch_ = nullptr; // 伸展电机
+    DJI_Motor* motor_rotate_ = nullptr; // 旋转电机
+
+    DJI_Motor* motor_pitch_ = nullptr; // 末端关节俯仰电机
 
 public:
     
@@ -185,11 +190,7 @@ public:
 
 private:
 
-    DJI_Motor* motor_launch_ = nullptr; // 升降电机
-    DJI_Motor* motor_stretch_ = nullptr; // 伸展电机
-    DJI_Motor* motor_rotate_ = nullptr; // 旋转电机
-
-    DJI_Motor* motor_pitch_ = nullptr; // 末端关节俯仰电机
+    
 
 
     Joint_Status_S joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 当前关节角度

@@ -79,7 +79,8 @@ protected:
     void idle();
 
     //上电校准M2006电机位置
-    void calibrateM2006();
+    void calibrateM2006(); float calibrate_startTime = 0; bool calibrate_start = false;
+    float now_time_s_ = 0; float last_time_s_ = 0;
 };
 
 

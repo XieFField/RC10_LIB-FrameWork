@@ -43,7 +43,11 @@ void ArmSetup::loop()
 
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
+
+    now_time_s_ = TimeStamp::getInstance().getSeconds();
+    last_time_s_ = now_time_s_;
 }
+    
 
 void ArmSetup::manualControl()
 {
@@ -95,6 +99,16 @@ void ArmSetup::manualControl()
         target_joint_status_.suckerJoint_angle_ = 90.0f; // 末端关节开
     else 
         target_joint_status_.suckerJoint_angle_ = target_joint_status_.suckerJoint_angle_; // 保持不变
+
+    this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
+    this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
+    this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
+    this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
+
+    if(_tool_Abs(air_joy.SWC-2000) < 50)
+        this->setSuckerStatus(Sucker_Status_E::SUCK);
+    else
+        this->setSuckerStatus(Sucker_Status_E::STOP);
 }
 
 
@@ -114,20 +128,51 @@ void ArmSetup::calibrateM2006()
 {
     // 上电校准M2006电机位置
     // 给予M2006一个小电流顶住限位，然后计时1s，将当前位置重定位为0度
+    if(!calibrate_start)
+    {
+        calibrate_startTime = TimeStamp::getInstance().getSeconds();
+        calibrate_start = true;
+    }
+    this->motor_stretch_->setTargetCurrent(800.0f); // 给予一个小电流顶住限位
+    this->motor_pitch_->setTargetCurrent(800.0f); // 给予一个小电流顶住限位
+
+    if(TimeStamp::getInstance().getSeconds() - calibrate_startTime > 1.0f)
+    {
+        this->motor_stretch_->setTargetCurrent(0.0f);
+        this->motor_pitch_->setTargetCurrent(0.0f);
+        this->motor_stretch_->relocate_totalAngle(0.0f);
+        this->motor_pitch_->relocate_totalAngle(0.0f);
+        calibrate_start = false;
+    }
+
 }
 
 void ArmSetup::idle()
 {
-    // 空闲控制函数
+    // 空闲控制函数，若上一时刻非此模式，则记忆上一时刻位置，并维持不变
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    if(last_arm_status_ != ARM_IDLE)
+    {
+        last_joint_status_ = this->get_currentJointStatus();
+        target_joint_status_ = last_joint_status_;
+
+        last_arm_status_ = ARM_IDLE;
+    }
+
+    this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
+    this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
+    this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
+    this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
+
+    this->setSuckerStatus(Sucker_Status_E::STOP);
 }
 
 
 Arm_InitData_S arm_initData = {
    .max_launchHeight_ = 0.4f,
    .max_stretchLength_ = 0.130f,
-   .arm_length_ = 0.3f,
-   .end_link_length_ = 0.1f,
+   .arm_length_ = 0.6f,
+   .end_link_length_ = 0.08f,
 
    .stretch_Ratio_ = 0.00942f,
    .launch_Ratio_ = 0.01099f,

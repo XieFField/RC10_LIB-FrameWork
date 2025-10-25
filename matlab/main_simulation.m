@@ -16,7 +16,7 @@ cube_size = 0.35;
 base_size = 1.0; base_thick = 0.08;
 turret_radius = 0.06;
 h_min = 0.375; h_max = 0.775;
-L_min = 0.67;  L_max = 0.80;     % 伸长量=0.13m
+L_min = 0.47;  L_max = 0.60;     % 伸长量=0.13m
 t_lift = 0.40;
 t_extend = 0.15;                 % 0.13m/0.15s
 t_spin   = 0.50;                 % 0.5s/圈
@@ -32,7 +32,7 @@ cup_radius = 0.050;
 margin_arm = safety_margin + arm_radius;
 margin_cup = safety_margin + cup_radius;
 extend_full_130mm = true;       % 预测可命中后，是否一口气伸满 130mm 到 L_max
-cup_len         = 0.15;        % 吸盘长度（米）
+cup_len         = 0.08;        % 吸盘长度（米）
 bind_depth_tol  = 0.005;       % 与侧面“法向距离”容差
 % 预测采样
 probe_dt_rot  = 0.01; probe_dt_ext = 0.01;
@@ -40,7 +40,7 @@ probe_dt_rot  = 0.01; probe_dt_ext = 0.01;
 pitch_clear_z = 0.03;         % 3cm 可按需调大/调小
 
 % 衍生速率
-dt = 0.02; T_total = 15.0;
+dt = 0.02; T_total = 8.0;
 omega_max = 2*pi / t_spin;                       % rad/s
 vL_max    = (L_max - L_min) / max(t_extend,1e-6);
 vh_max    = (h_max - h_min) / max(t_lift,  1e-6);
@@ -64,7 +64,7 @@ forest_ymin = forest_rect.y - forest_rect.h/2;
 % x_b = forest_rect.x - forest_rect.w/2 - 2.0;
 % y_b = forest_ymin - 0.40 - base_size/2;
 % 平行林带行进：“与林带前缘的间隙”
-lane_clearance = 0.35;      % 与林带前缘的间隙（米）
+lane_clearance = 0.10;      % 与林带前缘的间隙（米）
 x_b = forest_rect.x - forest_rect.w/2 - 2.0;
 y_b = forest_ymin - lane_clearance - base_size/2;
 yaw = 0;
@@ -174,6 +174,13 @@ theta_home    = 0;
 drop_offset_xy = [0, 0];
 place_h        = NaN;
 allow_extend   = false;
+
+% 等待用户点击“开始”后再运行仿真
+fig = uifigure('Name','仿真控制','Position',[300 300 320 120],'Resize','off');
+uilabel(fig,'Text','点击“开始”以运行仿真','HorizontalAlignment','center','Position',[10 70 300 30],'FontSize',12);
+uibutton(fig,'Text','开始','Position',[110 20 100 36],'ButtonPushedFcn',@(src,event) uiresume(fig));
+uiwait(fig);    % 等待按钮触发 uiresume
+close(fig);
 
 % ====== 主循环 ======
 for t = 0:dt:T_total
