@@ -90,8 +90,8 @@ update_robot_pose(patchBase, patchTurret, lineArmFix, lineArmExt, ...
     x_b, y_b, yaw, theta, L, h, base_size, base_thick, turret_radius, L_min);
 
 % ====== 目标与“前一柱区域”触发线 ======
-target_idx = 1;
-target_cube = cubes(target_idx);
+% target_idx = 1;
+% target_cube = cubes(target_idx);
 cz = target_cube.zbase + target_cube.h/2;
 
 % 一开始就将高度抬到目标的中心高度
@@ -719,4 +719,3 @@ function phi = find_place_phi_on_circle(o_xy, r, rect)
     [~,i] = min(vecnorm(corners - o_xy,2,2));
     v = corners(i,:) - o_xy; phi = atan2(v(2), v(1));
 end
-
