@@ -144,7 +144,6 @@ void ArmSetup::calibrateM2006()
         this->motor_pitch_->relocate_totalAngle(0.0f);
         calibrate_start = false;
     }
-
 }
 
 void ArmSetup::idle()
