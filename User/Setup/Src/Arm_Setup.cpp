@@ -65,34 +65,34 @@ void ArmSetup::manualControl()
 
     // 读取遥控器输入，计算目标关节位置
 
-    if(AirJoy::getInstance().RIGHT_X < 1450)
+    if(AirJoy::getinstance().RIGHT_X < 1450)
         target_joint_status_.rotateJoint_angle_ -= 5.0f; // 旋转关节逆时针
-    else if(AirJoy::getInstance().RIGHT_X > 1550)
+    else if(AirJoy::getinstance().RIGHT_X > 1550)
         target_joint_status_.rotateJoint_angle_ += 5.0f; // 旋转关节顺时针
     else
         target_joint_status_ = target_joint_status_; // 保持不变
 
 
 
-    if(AirJoy::getInstance().RIGHT_Y < 1450)
+    if(AirJoy::getinstance().RIGHT_Y < 1450)
         target_joint_status_.launchJoint_Height_ -= 0.005f; // 伸展关节收回
-    else if(AirJoy::getInstance().RIGHT_Y > 1550)
+    else if(AirJoy::getinstance().RIGHT_Y > 1550)
         target_joint_status_.launchJoint_Height_ += 0.005f; // 伸展关节伸出
     else
         target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_; // 保持不变
 
-    if(_tool_Abs(AirJoy::getInstance().SWA - 1000) < 50)
+    if(_tool_Abs(AirJoy::getinstance().SWA - 1000) < 50)
         target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位置
-    else if(_tool_Abs(AirJoy::getInstance().SWA - 2000) < 50)
+    else if(_tool_Abs(AirJoy::getinstance().SWA - 2000) < 50)
         target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
     else 
         target_joint_status_.stretchJoint_Length_ = target_joint_status_.stretchJoint_Length_; // 保持不变
 
 
 
-    if(_tool_Abs(AirJoy::getInstance().SWD - 1000) < 50)
+    if(_tool_Abs(AirJoy::getinstance().SWD - 1000) < 50)
         target_joint_status_.suckerJoint_angle_ = 0.0f; // 末端关节收
-    else if(_tool_Abs(AirJoy::getInstance().SWD - 2000) < 50)
+    else if(_tool_Abs(AirJoy::getinstance().SWD - 2000) < 50)
         target_joint_status_.suckerJoint_angle_ = 90.0f; // 末端关节开
     else 
         target_joint_status_.suckerJoint_angle_ = target_joint_status_.suckerJoint_angle_; // 保持不变
@@ -102,7 +102,7 @@ void ArmSetup::manualControl()
     this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
     this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
 
-    if(_tool_Abs(AirJoy::getInstance().SWC - 2000) < 50)
+    if(_tool_Abs(AirJoy::getinstance().SWC - 2000) < 50)
         this->setSuckerStatus(Sucker_Status_E::SUCK);
     else
         this->setSuckerStatus(Sucker_Status_E::STOP);

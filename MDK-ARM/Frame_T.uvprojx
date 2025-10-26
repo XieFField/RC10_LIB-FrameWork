@@ -1033,56 +1033,6 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>User/Setup</GroupName>
-          <Files>
-            <File>
-              <FileName>Setup_ConfigInit.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\Setup_ConfigInit.h</FilePath>
-            </File>
-            <File>
-              <FileName>Setup_ConfigInit.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\Setup_ConfigInit.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>FSM_Controller.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\FSM_Controller.h</FilePath>
-            </File>
-            <File>
-              <FileName>FSM_Controller.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\FSM_Controller.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Arm_Setup.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\Arm_Setup.h</FilePath>
-            </File>
-            <File>
-              <FileName>Arm_Setup.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\Arm_Setup.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>FSMstauts_enum.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\FSMstauts_enum.h</FilePath>
-            </File>
-            <File>
-              <FileName>omni_chassisSetup.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\omni_chassisSetup.h</FilePath>
-            </File>
-            <File>
-              <FileName>omni_chassisSetup.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\omni_chassisSetup.cpp</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
           <GroupName>RC10_LIB/APP</GroupName>
           <Files>
             <File>
@@ -1179,6 +1129,56 @@
               <FileName>arm_cortexM7lfsp_math.lib</FileName>
               <FileType>4</FileType>
               <FilePath>..\Drivers\CMSIS\DSP\Lib\ARM\arm_cortexM7lfsp_math.lib</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>User/Setup</GroupName>
+          <Files>
+            <File>
+              <FileName>Setup_ConfigInit.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\Setup_ConfigInit.h</FilePath>
+            </File>
+            <File>
+              <FileName>Setup_ConfigInit.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\Setup_ConfigInit.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>FSM_Controller.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\FSM_Controller.h</FilePath>
+            </File>
+            <File>
+              <FileName>FSM_Controller.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\FSM_Controller.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Arm_Setup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\Arm_Setup.h</FilePath>
+            </File>
+            <File>
+              <FileName>Arm_Setup.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\Arm_Setup.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>FSMstauts_enum.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\FSMstauts_enum.h</FilePath>
+            </File>
+            <File>
+              <FileName>omni_chassisSetup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\omni_chassisSetup.h</FilePath>
+            </File>
+            <File>
+              <FileName>omni_chassisSetup.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\omni_chassisSetup.cpp</FilePath>
             </File>
           </Files>
         </Group>

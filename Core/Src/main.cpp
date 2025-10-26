@@ -30,6 +30,7 @@
 //#include "position.h"
 /*FRAMEDEMO_BEGIN*/
 #include "frame_demo.h"
+#include "Module_Air_joy.h"
 /*FRAMEDEMO_END*/
 
 /* USER CODE END Includes */
@@ -110,7 +111,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+    
   /* USER CODE END Init */
 
   /* Configure the system clock */

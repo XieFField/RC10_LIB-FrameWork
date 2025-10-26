@@ -36,6 +36,7 @@ extern "C" {
 #include "BSP_TimeStamp.h"
 #include "APP_PID.h"
 #include "debug_setup.h"
+#include "Module_Air_joy.h"
 
 /*==============Controller===============*/
 #include "FSM_Controller.h"

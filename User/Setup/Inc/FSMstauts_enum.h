@@ -15,6 +15,8 @@ typedef enum{
     MANUAL_CONTROL, //手动控制模式
 
     AUTO_CONTROL, //半自动控制模式
+
+    DEBUG_MODE, //调试模式
 }FSM_Status_E;
 
 
@@ -38,6 +40,19 @@ typedef enum{
     CHASSIS_STOP,
 }CHASSIS_Status_E;
 
+
+//临时调试使用
+typedef struct{
+    uint16_t SWA;
+    uint16_t SWB;
+    uint16_t SWC;
+    uint16_t SWD;
+    uint16_t LEFT_X;
+    uint16_t LEFT_Y;
+    uint16_t RIGHT_X;
+    uint16_t RIGHT_Y;
+    
+}airjoy_S;
 
 #endif // __cplusplus
 
