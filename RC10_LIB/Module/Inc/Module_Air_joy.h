@@ -1,8 +1,6 @@
 /**
  * @file   Module_Air_joy.h
- * @author Zhan HongLi
- * @brief  é¥æ§å™¨PPMè§£ç 
- * @version 1.0
+ * @brief  Ò£¿ØÆ÷PPM½âÂë£¨µ¥Àı£©
  */
 
 #ifndef MODULE_AIR_JOY_H
@@ -16,42 +14,57 @@
 #include "string.h"
 #include "BSP_TimeStamp.h"
 
+#define DEBUG_AIR_JOY 1
+
+class AirJoy;
+
+#if DEBUG_AIR_JOY
+extern AirJoy *air_joy_debug; // ¹©µ÷ÊÔÊ¹ÓÃµÄÈ«¾ÖÖ¸Õë
+#endif
+
 #ifdef __cplusplus
 class AirJoy
 {
 public:
+    // µ¥Àı·ÃÎÊ
+    static AirJoy& getInstance();
+
+    // ÖĞ¶ÏÖĞµ÷ÓÃ£¬¸üĞÂPPM
     void data_update(uint16_t GPIO_Pin, uint16_t GPIO_EXTI_USED_PIN);
+
+    // ±£³Ö¼æÈİ£ºÍ¨µÀÊı¾İÈÔ¿ÉÖ±½Ó·ÃÎÊ£¨Ò²¿É¸ÄÓÃ getter£©
     volatile uint16_t SWA=0,SWB=0,SWC=0,SWD=0;
     volatile uint16_t LEFT_X=0,LEFT_Y=0,RIGHT_X=0,RIGHT_Y=0;
-    
+
 private:
-    // å¸¸é‡å®šä¹‰
-    static constexpr uint16_t FRAME_END_MIN = 2100;    // å¸§ç»“æŸæœ€å°æ—¶é—´
-    static constexpr uint16_t PWM_MIN = 950;           // PWMæœ€å°è„‰å®½
-    static constexpr uint16_t PWM_MAX = 2050;          // PWMæœ€å¤§è„‰å®½
-    static constexpr uint8_t MAX_CHANNELS = 8;         // æœ€å¤§é€šé“æ•°
-    static constexpr uint16_t FILTER_THRESHOLD_PERCENT = 15; // æ»¤æ³¢é˜ˆå€¼ç™¾åˆ†æ¯”
-    
+    // ¹¹Ôì/Îö¹¹Ë½ÓĞ»¯£¬½ûÖ¹¿½±´
+    AirJoy() = default;
+    ~AirJoy() = default;
+    AirJoy(const AirJoy&) = delete;
+    AirJoy& operator=(const AirJoy&) = delete;
+
+    // ³£Á¿¶¨Òå
+    static constexpr uint16_t FRAME_END_MIN = 2100;    // Ö¡½áÊø×îĞ¡Ê±¼ä
+    static constexpr uint16_t PWM_MIN = 950;           // PWM×îĞ¡Âö¿í
+    static constexpr uint16_t PWM_MAX = 2050;          // PWM×î´óÂö¿í
+    static constexpr uint8_t  MAX_CHANNELS = 8;        // ×î´óÍ¨µÀÊı
+    static constexpr uint16_t FILTER_THRESHOLD_PERCENT = 15; // ÂË²¨ãĞÖµ°Ù·Ö±È
+
     volatile uint32_t last_ppm_time=0, now_ppm_time=0;
-    uint8_t ppm_ready=0, //ä¸€èˆ¬åˆå§‹åŒ–æ—¶å€™ï¼ŒPPMè§£ç çŠ¶æ€ä¸ºæœªå‡†å¤‡å¥½
-                 ppm_sample_cnt=0;
+    uint8_t ppm_ready=0, ppm_sample_cnt=0;
     uint8_t ppm_update_flag=0;
-    volatile uint16_t ppm_time_delta=0;   // å¾—åˆ°ä¸Šå‡æ²¿ä¸ä¸‹é™æ²¿çš„æ—¶é—´
-    uint16_t PPM_buf[10]={0};   
+    volatile uint16_t ppm_time_delta=0;   // Âö¿í(us)
+    uint16_t PPM_buf[10]={0};
     static uint16_t last_valid[8];
 };
+#endif // __cplusplus
 
-
-
-
+#ifdef __cplusplus
 extern "C" {
 #endif
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 #ifdef __cplusplus
 }
-extern AirJoy air_joy;
 #endif
 
 #endif // MODULE_AIR_JOY_H
-
-//123123

@@ -63,13 +63,13 @@ void Robot_ArmDemo::loop()
 
     // this->setArmTarget(test_point);
 
-    this->set_controlMode(Arm_Control_mode_E::MANUAL_JOINT_SPEED_MODE);
+    // this->set_controlMode(Arm_Control_mode_E::MANUAL_JOINT_SPEED_MODE);
 
-    this->setManualSpeed(
-        step_pm(air_joy.LEFT_Y)  * v_xyz,
-        step_pm(air_joy.LEFT_X)  * v_xyz,
-        step_pm(air_joy.RIGHT_Y) * v_xyz
-    );
+    // this->setManualSpeed(
+    //     step_pm(air_joy.LEFT_Y)  * v_xyz,
+    //     step_pm(air_joy.LEFT_X)  * v_xyz,
+    //     step_pm(air_joy.RIGHT_Y) * v_xyz
+    // );
 
     this->update();
     // Main loop code here

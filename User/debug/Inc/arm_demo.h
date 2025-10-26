@@ -32,7 +32,7 @@ extern "C"
 
 
 
-extern AirJoy air_joy;
+// extern AirJoy air_joy;
 
 class Robot_ArmDemo: public Robot_Arm, public RtosTask{
 public:

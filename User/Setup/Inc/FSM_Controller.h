@@ -28,7 +28,6 @@ extern "C" {
 #include "Arm_Setup.h"
 #include "omni_chassisSetup.h"
 
-extern AirJoy air_joy;
 
 class FSM_Controller:public RtosTask {
 public:

@@ -6,20 +6,22 @@ void FSM_Controller::loop()
         return;
 
     //遥控器链接失败
-    if(air_joy.LEFT_X == 0 || air_joy.LEFT_Y == 0 || air_joy.RIGHT_X == 0 || air_joy.RIGHT_Y == 0 ||
-       air_joy.SWA == 0 || air_joy.SWB == 0 || air_joy.SWC == 0 || air_joy.SWD == 0)
+    if(AirJoy::getInstance().LEFT_X == 0 || AirJoy::getInstance().LEFT_Y == 0 || 
+        AirJoy::getInstance().RIGHT_X == 0 || AirJoy::getInstance().RIGHT_Y == 0 ||
+        AirJoy::getInstance().SWA == 0 || AirJoy::getInstance().SWB == 0 || 
+        AirJoy::getInstance().SWC == 0 || AirJoy::getInstance().SWD == 0)
     {
        airjoy_connected_ = false;
        return;
     }
     else
        airjoy_connected_ = true;
-    
-    if(_tool_Abs(air_joy.SWB - 1000) < 50)
+
+    if(_tool_Abs(AirJoy::getInstance().SWB - 1000) < 50)
         robot_status_ = ALL_STOP;
-    else if(_tool_Abs(air_joy.SWB - 1500) < 50)
+    else if(_tool_Abs(AirJoy::getInstance().SWB - 1500) < 50)
         robot_status_ = MANUAL_CONTROL;
-    else if(_tool_Abs(air_joy.SWB - 2000) < 50)
+    else if(_tool_Abs(AirJoy::getInstance().SWB - 2000) < 50)
         robot_status_ = AUTO_CONTROL;
 
 
@@ -60,13 +62,13 @@ void FSM_Controller::manual_ctrl()
 
 
    //底盘线速度控制;
-    if(_tool_Abs(air_joy.SWC - 1000) < 50)
+    if(_tool_Abs(AirJoy::getInstance().SWC - 1000) < 50)
         chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
     else
         chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
 
     //串联臂关节位置控制
-    if(_tool_Abs(air_joy.SWC - 1500) < airjoy_deadzone_ || _tool_Abs(air_joy.SWC - 2000) < airjoy_deadzone_)
+    if(_tool_Abs(AirJoy::getInstance().SWC - 1500) < airjoy_deadzone_ || _tool_Abs(AirJoy::getInstance().SWC - 2000) < airjoy_deadzone_)
         arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
     else
         arm_setup_->setArmStatus(ARM_IDLE);

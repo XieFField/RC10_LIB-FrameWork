@@ -27,7 +27,6 @@ extern "C" {
 #include "APP_debugTool.h"
 #include "FSMstauts_enum.h"
 
-extern AirJoy air_joy;
 
 class ArmSetup: public RtosTask ,public Robot_Arm {
 public:
