@@ -60,6 +60,18 @@ private:
     bool is_calibrating = false;
 
     Debug_Printf debug_uart = Debug_Printf(&huart1);
+
+    //控制函数
+    void manualControl();
+    void autoControl();
+    void stop();
+    void idle();
+    void debug();
+
+    //上电校准M2006电机位置
+    void calibrateM2006(); float calibrate_startTime = 0; bool calibrate_start = false;
+
+    uint8_t debug_start = 0;
 protected:
     void loop() override;
 
@@ -71,14 +83,7 @@ protected:
     Joint_Status_S last_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
     Joint_Status_S target_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
 
-    //控制函数
-    void manualControl();
-    void autoControl();
-    void stop();
-    void idle();
-
-    //上电校准M2006电机位置
-    void calibrateM2006(); float calibrate_startTime = 0; bool calibrate_start = false;
+    
     float now_time_s_ = 0; float last_time_s_ = 0;
 };
 

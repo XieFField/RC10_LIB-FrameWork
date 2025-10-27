@@ -96,15 +96,17 @@ airjoy_S debug_airjoy;
 void FSM_Controller::debug()
 {
    // 调试模式下的实现
-   debug_airjoy.SWA = AirJoy::getinstance().SWA;
-   debug_airjoy.SWB = AirJoy::getinstance().SWB;
-   debug_airjoy.SWC = AirJoy::getinstance().SWC;
-   debug_airjoy.SWD = AirJoy::getinstance().SWD;
+    debug_airjoy.SWA = AirJoy::getinstance().SWA;
+    debug_airjoy.SWB = AirJoy::getinstance().SWB;
+    debug_airjoy.SWC = AirJoy::getinstance().SWC;
+    debug_airjoy.SWD = AirJoy::getinstance().SWD;
 
     debug_airjoy.LEFT_X = AirJoy::getinstance().LEFT_X;
 
     debug_airjoy.LEFT_Y = AirJoy::getinstance().LEFT_Y;
     debug_airjoy.RIGHT_X = AirJoy::getinstance().RIGHT_X;
     debug_airjoy.RIGHT_Y = AirJoy::getinstance().RIGHT_Y;
+
+    arm_setup_->setArmStatus(ARM_DEBUG);
 }
 

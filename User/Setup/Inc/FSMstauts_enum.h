@@ -28,6 +28,8 @@ typedef enum{
     ARM_IDLE, //´®Áª±Û¿ÕÏÐ×´Ì¬£¬Î¬³Öµ±Ç°×´Ì¬
 
     ARM_STOP,
+
+    ARM_DEBUG,
 }ARM_Status_E;
 
 

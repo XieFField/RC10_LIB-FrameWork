@@ -37,6 +37,14 @@ void ArmSetup::loop()
             // 空闲状态，维持当前状态
             idle();
         }
+
+    case ARM_DEBUG:
+        {
+            // 调试状态
+            if(debug_start)
+                debug();
+        }
+        break;
     default:
         break;
     }
@@ -163,6 +171,84 @@ void ArmSetup::idle()
     this->setSuckerStatus(Sucker_Status_E::STOP);
 }
 
+uint8_t test_signal = 0;
+float test_current = 0.0f;
+float rotate_rate = 5.0f;
+float launch_rate = 0.005f;
+void ArmSetup::debug()
+{
+    //测试
+    if(test_signal == 0) //所有电机电流强制为0；检查电机转动方向是否需要置反
+    {
+        this->set_controlMode(CURRENT_CONTROL_MODE);
+        this->set_LaunchHeight(0.0f);
+        this->set_StretchLength(0.0f);
+        this->set_RotateAngle(0.0f);
+        this->set_PitchAngle(0.0f);
+    }
+
+    //1~4 signal test用于测试电机电流方向和电机转动方向是否同相
+    else if(test_signal == 1)
+        this->motor_launch_->setTargetCurrent(test_current);
+
+    else if(test_signal == 2)
+        this->motor_stretch_->setTargetCurrent(test_current);
+
+    else if(test_signal == 3)
+        this->motor_rotate_->setTargetCurrent(test_current);
+        
+    else if(test_signal == 4)
+        this->motor_pitch_->setTargetCurrent(test_current);
+
+    //航模遥控操纵测试
+    if(test_signal == 5)
+    {
+        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+        // 读取遥控器输入，计算目标关节位置
+
+        if(AirJoy::getinstance().RIGHT_X < 1450)
+            target_joint_status_.rotateJoint_angle_ -= 5.0f; // 旋转关节逆时针
+        else if(AirJoy::getinstance().RIGHT_X > 1550)
+            target_joint_status_.rotateJoint_angle_ += 5.0f; // 旋转关节顺时针
+        else
+            target_joint_status_ = target_joint_status_; // 保持不变
+
+
+
+        if(AirJoy::getinstance().RIGHT_Y < 1450)
+            target_joint_status_.launchJoint_Height_ -= 0.005f; // 伸展关节收回
+        else if(AirJoy::getinstance().RIGHT_Y > 1550)
+            target_joint_status_.launchJoint_Height_ += 0.005f; // 伸展关节伸出
+        else
+            target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_; // 保持不变
+
+        if(_tool_Abs(AirJoy::getinstance().SWA - 1000) < 50)
+            target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位置
+        else if(_tool_Abs(AirJoy::getinstance().SWA - 2000) < 50)
+            target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
+        else 
+            target_joint_status_.stretchJoint_Length_ = target_joint_status_.stretchJoint_Length_; // 保持不变
+
+
+
+        if(_tool_Abs(AirJoy::getinstance().SWD - 1000) < 50)
+            target_joint_status_.suckerJoint_angle_ = 0.0f; // 末端关节收
+        else if(_tool_Abs(AirJoy::getinstance().SWD - 2000) < 50)
+            target_joint_status_.suckerJoint_angle_ = 90.0f; // 末端关节开
+        else 
+            target_joint_status_.suckerJoint_angle_ = target_joint_status_.suckerJoint_angle_; // 保持不变
+
+        this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
+        this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
+        this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
+        this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
+
+        if(_tool_Abs(AirJoy::getinstance().SWC - 2000) < 50)
+            this->setSuckerStatus(Sucker_Status_E::SUCK);
+        else
+            this->setSuckerStatus(Sucker_Status_E::STOP);
+    }
+}
 
 Arm_InitData_S arm_initData = {
    .max_launchHeight_ = 0.4f,

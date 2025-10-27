@@ -73,9 +73,16 @@ typedef struct{
 typedef enum{
     TARGET_POSITION_MODE, // 目标位置模式
     MANUAL_MOTOR_POSITION_MODE, // 手动电机位置模式
-    MANUAL_JOINT_SPEED_MODE // 手动关节速度模式
+    MANUAL_JOINT_SPEED_MODE, // 手动关节速度模式
+    CURRENT_CONTROL_MODE // 电流控制模式 依旧使用Joint_Status_S存储目标电流值
 }Arm_Control_mode_E;
 
+typedef struct{
+    float launch_current; //升降电机电流
+    float stretch_current; //伸展电机电流
+    float rotate_current; //旋转电机电流
+    float pitch_current; //末端关节电机电流
+}ARMotor_Current_S;
 /** 
  * @brief 又变成四自由度了，好，那么好。
  * @note 这里的坐标或者行程单位都是米，角度单位是度，角度制。
@@ -180,6 +187,11 @@ public:
         target_joint_angle_.suckerJoint_angle_ = angle;
     }
 
+    void setTargetMotorCurrent(ARMotor_Current_S target_current)
+    {
+        target_motor_current_ = target_current;
+    }
+
     void setLaunchReversed(bool reversed) {sign_launch_  = reversed ? -1.0f : 1.0f;}
     void setStretchReversed(bool reversed) {sign_stretch_ = reversed ? -1.0f : 1.0f;}
     void setRotateReversed(bool reversed) {sign_rotate_  = reversed ? -1.0f : 1.0f;}
@@ -197,6 +209,7 @@ private:
 
     Joint_Status_S target_joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 目标关节角度
     
+    ARMotor_Current_S target_motor_current_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 目标电机电流
     void inverseKinematics(Arm_Point_S arm_target_); // 运动学逆解
 
 
