@@ -58,6 +58,9 @@ void UART_::UART_Init()
 									Error_Handler();}
        else {
             HAL_UARTEx_ReceiveToIdle_DMA(uarthandle_, rx_buffer, rx_buffer_size);
+//				 	 for(volatile uint32_t i = 0; i < 299999; i++) {
+//            __NOP();
+//   }
         } 
 }
 void UART_::UART_Receive_Callback(uint8_t* Buf, uint32_t Len) {

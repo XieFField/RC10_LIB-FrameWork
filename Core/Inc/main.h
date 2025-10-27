@@ -31,8 +31,8 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "position.h"
-#include "BSP_USB_UART_Driver.h"
+//#include "position.h"
+//#include "BSP_USB_UART_Driver.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

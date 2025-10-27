@@ -7,15 +7,18 @@
 
 #ifndef POSITION_H
 #define POSITION_H
-//#include "drive_uart.h"
-#include "usart.h"
-#include <stdint.h>
-#include "math.h"
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif 
 
-
+#include "usart.h"
+#include <stdint.h>
+#include "math.h"
+#include "BSP_USB_UART_Driver.h"
+	
+	
 #define PI 3.14159265358979f
 #define FRAME_HEAD_POSITION_0 0xfc  //包头
 #define FRAME_HEAD_POSITION_1 0xfb
@@ -59,7 +62,7 @@ typedef struct RawPos   //处理前
 	float REAL_Y;
 }RawPos;
 
-#define RX_BUFFER_SIZE 2048      
+#define RX_BUFFER_SIZE 64     
 
 // 全局变量
 extern uint8_t rx_buffer[RX_BUFFER_SIZE];
@@ -67,15 +70,45 @@ extern RealPos RealPosData;
 
 void Reposition_SendData(float X, float Y);
 void POS_Relocate_ByDiff(float X, float Y, float yaw);
-void UART_IdleCallback(UART_HandleTypeDef *huart);
-void Position_UART1_RxCallback(uint8_t *buf, uint16_t len);
+void UART_Idleallback(UART_HandleTypeDef *huart);
+void Position_CUART1_RxCallback(uint8_t *buf, uint16_t len);
 void USB_DataReceivedCallback(uint8_t* buf, uint16_t len);
 void Update_RawPosition(float value[5]);
-
 
 #ifdef __cplusplus
 }
 #endif
 
+#ifdef __cplusplus
 
-#endif //POSITION_H
+class Position {
+public:
+    // 获取单例实例
+    static Position* GetInstance();
+    
+    // 初始化UART
+    void InitUART(UART_HandleTypeDef *uart_handle);
+    
+    // 删除拷贝构造函数和赋值运算符
+    Position(const Position&) = delete;
+    Position& operator=(const Position&) = delete;
+
+private:
+    Position(); // 私有构造函数
+    ~Position() = default;
+    
+    // UART实例
+    UART_* uart_instance_;
+    
+    // 单例实例
+  //  static Position* instance_;
+    
+    // 初始化标志
+    bool uart_initialized_;
+
+		uint8_t rx_buffer_[RX_BUFFER_SIZE];
+};
+
+#endif // __cplusplus
+
+#endif

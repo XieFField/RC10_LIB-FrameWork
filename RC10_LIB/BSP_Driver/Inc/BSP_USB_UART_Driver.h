@@ -29,13 +29,12 @@ void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len);
 }
 
 #endif
-
 #ifdef __cplusplus
 
 #define UART_MAX 10
 #define USB_MAX 10
 
-class UART_ {
+class UART_{
 public:
     
     UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,RxCallback RxCallback_Fuc,UART_HandleTypeDef *uart_handle);
@@ -49,6 +48,7 @@ private:
     RxCallback RxCallback_Fuc;	  
 		UART_HandleTypeDef *uarthandle_;//UART¾ä±ú
 };
+
 class USB_CDC_{
 	public:
     USB_CDC_(RxCallback RxCallback_Fuc,USBD_HandleTypeDef *usb_handle);

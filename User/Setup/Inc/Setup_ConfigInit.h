@@ -17,6 +17,7 @@ extern "C" {
     #include "queue.h"
     #include "semphr.h"
     void ALL_Setup_ConfigInit(void);
+	  void Position_UART1_RxCallback(uint8_t *buf, uint16_t len);
 }
 
 #ifdef __cplusplus
@@ -30,6 +31,7 @@ extern "C" {
 #include "BSP_TimeStamp.h"
 #include "BSP_USB_UART_Driver.h"
 #include "debug_setup.h"
+#include "position.h"
 #if ARM_DEMO_DEBUG
 
         #include "arm_demo.h"

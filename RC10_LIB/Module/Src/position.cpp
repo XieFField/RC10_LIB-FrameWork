@@ -14,7 +14,6 @@
 */
 
 // 联合体用于将20字节的浮点数接收到 float 数组中
-
 #include "position.h"
 #include <math.h>
 #include "usbd_cdc_if.h"
@@ -30,7 +29,6 @@ union
 	float ActVal[6];
 } posture;
 
-//接收回调函数
 void Position_UART1_RxCallback(uint8_t *buf, uint16_t len)
 {
     uint8_t count = 0;
@@ -164,7 +162,7 @@ void Position_UART1_RxCallback(uint8_t *buf, uint16_t len)
 				{	
 					//在接收包尾2后才开始启动回调
 					//UART_IdleCallback(&huart1);
-				//	Reposition_SendData(10.2f, 5.7f);
+					Reposition_SendData(10.2f, 5.7f);
 					Update_RawPosition(posture.ActVal);
 				}
 				count = 0;
@@ -183,6 +181,45 @@ void Position_UART1_RxCallback(uint8_t *buf, uint16_t len)
 		
 	}
 	
+}
+
+// 获取单例实例
+//Position* Position::instance_ = nullptr;
+
+// 获取单例实例
+Position* Position::GetInstance() 
+{
+	  static Position instance;
+    return &instance;
+}
+Position::Position() 
+    : uart_instance_(nullptr)
+    , uart_initialized_(false)
+    , rx_buffer_{0}
+{
+}
+
+// 初始化UART
+void Position::InitUART(UART_HandleTypeDef *uart_handle) 
+{
+    if (uart_initialized_) {
+        return; // 已经初始化过
+    }
+    
+    // 创建UART实例 - 
+    static UART_ uart_instance(
+        RX_BUFFER_SIZE,
+        rx_buffer_,
+        Position_UART1_RxCallback,
+        uart_handle
+    );
+    
+    uart_instance_ = &uart_instance;
+    
+    // 初始化UART
+    uart_instance_->UART_Init();
+    
+    uart_initialized_ = true;
 }
 
 // 数据更新函数：将解析后的值存入 RawPos 和 RealPos

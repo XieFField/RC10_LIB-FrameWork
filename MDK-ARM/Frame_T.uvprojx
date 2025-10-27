@@ -1791,14 +1791,14 @@
           <GroupName>RC10_LIB/RC_UART</GroupName>
           <Files>
             <File>
-              <FileName>position.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\RC10_LIB\RC_UART\position.c</FilePath>
-            </File>
-            <File>
               <FileName>position.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\RC_UART\position.h</FilePath>
+            </File>
+            <File>
+              <FileName>position.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\RC_UART\position.cpp</FilePath>
             </File>
           </Files>
         </Group>

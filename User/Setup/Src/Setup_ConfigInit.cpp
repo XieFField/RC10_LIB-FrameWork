@@ -1,14 +1,15 @@
 #include "Setup_ConfigInit.h"
 #include "usb_device.h"
-#include "BSP_USB_UART_Driver.h"
-extern USBD_HandleTypeDef hUsbDeviceHS;
+//#include "BSP_USB_UART_Driver.h"
+//extern USBD_HandleTypeDef hUsbDeviceHS;
 #if DEBUG_M2006
 
 DJI_MotorDemo dji_motor_demo;
 #endif
 
 /*================================ debug  机械吸盘 =============================*/
-extern class UART_ m;
+//extern class UART_ m;
+
 uint8_t rx_buffer[RX_BUFFER_SIZE];
 #if ARM_DEMO_DEBUG
 
@@ -30,10 +31,10 @@ Arm_InitData_S arm_demoInit_data={
    .pitch_gearRatio_ = 10.0f,
 };
 //数据设置成原来两倍不影响后续的数据解析，用到的UART空闲触只要有一个完整数据帧传入就可触发数据解析即使数据大小小于64
-UART_ uar(64,rx_buffer,Position_UART1_RxCallback,&huart1);
-USB_CDC_ uscdc(USB_DataReceivedCallback,&hUsbDeviceHS);
+//UART_ uar(64,rx_buffer,Position_UART1_RxCallback,&huart1);
+//USB_CDC_ uscdc(USB_DataReceivedCallback,&hUsbDeviceHS);
 Robot_ArmDemo arm_demo(arm_demoInit_data);
-
+//position s(64,rx_buffer,Position_UART1_RxCallback,&huart1);
 void arm_motorInit()
 {
 		
@@ -69,9 +70,10 @@ void debug_init()
 {
    /*============================= debug  机械吸盘 ================================*/
 #if ARM_DEMO_DEBUG
-   arm_motorInit();
-   arm_demo.armInit(&m3508_ArmLaunch, &m2006_ArmStretch, &m3508_ArmRotate, &m2006_ArmPitch);
-	 uar.UART_Init();
+	 
+//   arm_motorInit();
+//   arm_demo.armInit(&m3508_ArmLaunch, &m2006_ArmStretch, &m3508_ArmRotate, &m2006_ArmPitch);
+	// uar.UART_Init();
 #endif
 /*============================== debug  机械吸盘 ===============================*/
 
@@ -89,7 +91,9 @@ void ALL_Setup_ConfigInit(void)
 {
 
    
-
+		    // 获取Position单例并初始化UART
+   Position* pos = Position::GetInstance();
+   pos->InitUART(&huart1);
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
 
