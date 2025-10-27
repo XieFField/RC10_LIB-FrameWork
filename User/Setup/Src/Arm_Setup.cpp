@@ -41,7 +41,7 @@ void ArmSetup::loop()
     case ARM_DEBUG:
         {
             // 调试状态
-            if(debug_start)
+            if(debug_start == 1)
                 debug();
         }
         break;
@@ -121,12 +121,34 @@ void ArmSetup::autoControl()
 {
     // 自动控制函数
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+
+    //暂时应该是只写无梅花桩的自动；这就比较简单了，都不需要关心避障，只需要做吸取的预判而已；
+
+
 }
 
 void ArmSetup::stop()
 {
     // 停止控制函数
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    this->setSuckerStatus(Sucker_Status_E::STOP);
+
+    this->set_LaunchHeight(0.0f);
+    this->set_StretchLength(0.0f);
+    this->set_RotateAngle(0.0f);
+    this->set_PitchAngle(0.0f);
+
+    if(_tool_Abs(this->motor_launch_->getTotalAngle() - 0.0f) < 0.1f)
+        this->motor_launch_->setTargetCurrent(0.0f);
+    
+    if(_tool_Abs(this->motor_stretch_->getTotalAngle() - 0.0f) < 0.1f)
+        this->motor_stretch_->setTargetCurrent(0.0f);
+
+    if(_tool_Abs(this->motor_rotate_->getTotalAngle() - 0.0f) < 0.1f)
+        this->motor_rotate_->setTargetCurrent(0.0f);
+
+    if(_tool_Abs(this->motor_pitch_->getTotalAngle() - 0.0f) < 0.1f)
+        this->motor_pitch_->setTargetCurrent(0.0f);
 }
 
 void ArmSetup::calibrateM2006()
@@ -201,24 +223,24 @@ void ArmSetup::debug()
         this->motor_pitch_->setTargetCurrent(test_current);
 
     //航模遥控操纵测试
-    if(test_signal == 5)
+    else if(test_signal == 5)
     {
         this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
         // 读取遥控器输入，计算目标关节位置
 
         if(AirJoy::getinstance().RIGHT_X < 1450)
-            target_joint_status_.rotateJoint_angle_ -= 5.0f; // 旋转关节逆时针
+            target_joint_status_.rotateJoint_angle_ -= rotate_rate; // 旋转关节逆时针
         else if(AirJoy::getinstance().RIGHT_X > 1550)
-            target_joint_status_.rotateJoint_angle_ += 5.0f; // 旋转关节顺时针
+            target_joint_status_.rotateJoint_angle_ += rotate_rate; // 旋转关节顺时针
         else
             target_joint_status_ = target_joint_status_; // 保持不变
 
 
 
         if(AirJoy::getinstance().RIGHT_Y < 1450)
-            target_joint_status_.launchJoint_Height_ -= 0.005f; // 伸展关节收回
+            target_joint_status_.launchJoint_Height_ -= launch_rate; // 伸展关节收回
         else if(AirJoy::getinstance().RIGHT_Y > 1550)
-            target_joint_status_.launchJoint_Height_ += 0.005f; // 伸展关节伸出
+            target_joint_status_.launchJoint_Height_ += launch_rate; // 伸展关节伸出
         else
             target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_; // 保持不变
 
@@ -247,6 +269,27 @@ void ArmSetup::debug()
             this->setSuckerStatus(Sucker_Status_E::SUCK);
         else
             this->setSuckerStatus(Sucker_Status_E::STOP);
+    }
+
+    else if(test_signal == 6) //测试stop功能
+    {
+        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+        this->stop();
+    }
+
+    else if(test_signal == 7) //测试idle功能
+    {
+        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+        this->idle();
+    }
+
+    else //empty
+    {
+        this->set_controlMode(CURRENT_CONTROL_MODE);
+        this->set_LaunchHeight(0.0f);
+        this->set_StretchLength(0.0f);
+        this->set_RotateAngle(0.0f);
+        this->set_PitchAngle(0.0f);
     }
 }
 

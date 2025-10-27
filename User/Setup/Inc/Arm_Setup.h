@@ -1,9 +1,8 @@
 /**
  * @file Arm_setup.h
  * @author XieFField
- * @brief 串联臂控制实现
+ * @brief 串联臂运动控制实现
  * @version 1.0
- * @date 2025-09-17
  */
 
 #ifndef __ARM_SETUP_H
@@ -71,7 +70,7 @@ private:
     //上电校准M2006电机位置
     void calibrateM2006(); float calibrate_startTime = 0; bool calibrate_start = false;
 
-    uint8_t debug_start = 0;
+    uint8_t debug_start = 0; //调试开始标志 == 1 开始调试
 protected:
     void loop() override;
 
