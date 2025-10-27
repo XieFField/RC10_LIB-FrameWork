@@ -100,6 +100,7 @@ protected:
 public:
     
 
+
     Robot_Arm(Arm_InitData_S init_Data);
     ~Robot_Arm(){}
 
@@ -192,6 +193,7 @@ public:
         target_motor_current_ = target_current;
     }
 
+    //设置电机是否反相
     void setLaunchReversed(bool reversed) {sign_launch_  = reversed ? -1.0f : 1.0f;}
     void setStretchReversed(bool reversed) {sign_stretch_ = reversed ? -1.0f : 1.0f;}
     void setRotateReversed(bool reversed) {sign_rotate_  = reversed ? -1.0f : 1.0f;}
