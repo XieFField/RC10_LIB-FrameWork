@@ -89,11 +89,9 @@ void debug_init()
 
 void ALL_Setup_ConfigInit(void)
 {
-
-   
 		    // 获取Position单例并初始化UART
-   Position* pos = Position::GetInstance();
-   pos->InitUART(&huart1);
+   Position* pos = Position::GetInstance(&huart1);
+   pos->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
 

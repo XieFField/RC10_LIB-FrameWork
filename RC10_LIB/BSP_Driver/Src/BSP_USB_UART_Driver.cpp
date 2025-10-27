@@ -34,11 +34,10 @@ UART_* InstanceManager::GetInstanceByUartHandle(UART_HandleTypeDef *huart) {
 }
 //USART
 // UART_ 类实现
-UART_::UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,RxCallback RxCallback_Fuc,UART_HandleTypeDef *uart_handle)
+UART_::UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle)
 {
 				this->rx_buffer= rx_buffer;
 				this->rx_buffer_size=rx_buffer_size;
-				this->RxCallback_Fuc=RxCallback_Fuc;
         this->uarthandle_ = uart_handle;
         if(this->uarthandle_ == NULL)
 				{
@@ -58,16 +57,8 @@ void UART_::UART_Init()
 									Error_Handler();}
        else {
             HAL_UARTEx_ReceiveToIdle_DMA(uarthandle_, rx_buffer, rx_buffer_size);
-//				 	 for(volatile uint32_t i = 0; i < 299999; i++) {
-//            __NOP();
-//   }
         } 
 }
-void UART_::UART_Receive_Callback(uint8_t* Buf, uint32_t Len) {
-        // UART模式
-        RxCallback_Fuc(Buf, Len);
-}
-
 
 
 //虚拟串口
@@ -115,7 +106,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
     if (instance != nullptr) {
         // 调用实例的接收处理，使用HAL提供的Size参数
-      instance->UART_Receive_Callback(huart->pRxBuffPtr,instance->rx_buffer_size);        
+      instance->Callback_Fuc(huart->pRxBuffPtr,instance->rx_buffer_size);        
         // 重新启动DMA接收
 			
 			HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);

@@ -29,7 +29,44 @@ union
 	float ActVal[6];
 } posture;
 
-void Position_UART1_RxCallback(uint8_t *buf, uint16_t len)
+// 获取单例实例
+//Position* Position::instance_ = nullptr;
+
+// 获取单例实例
+
+
+Position::Position(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle) 
+    :UART_(rx_buffer_size,rx_buffer,uart_handle),
+		uart_instance_(nullptr)
+    , uart_initialized_(false)
+    , rx_buffer_{0}
+{
+}
+
+Position* Position::GetInstance(UART_HandleTypeDef *uart_handle) 
+{
+	  static uint8_t static_rx_buffer[RX_BUFFER_SIZE] = {0};
+	  static Position instance(RX_BUFFER_SIZE,static_rx_buffer,uart_handle);
+    return &instance;
+}
+
+// 初始化UART
+void Position::InitUART() 
+{
+    if (uart_initialized_) {
+        return; // 已经初始化过
+    }
+    UART_HandleTypeDef *uart_handle=Position::UART_::GetUartHandle();
+
+    uart_instance_ = InstanceManager::GetInstanceByUartHandle(uart_handle);
+    
+    // 初始化UART
+    uart_instance_->UART_Init();
+    
+    uart_initialized_ = true;
+}
+
+void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 {
     uint8_t count = 0;
 	uint8_t i = 0;
@@ -183,44 +220,6 @@ void Position_UART1_RxCallback(uint8_t *buf, uint16_t len)
 	
 }
 
-// 获取单例实例
-//Position* Position::instance_ = nullptr;
-
-// 获取单例实例
-Position* Position::GetInstance() 
-{
-	  static Position instance;
-    return &instance;
-}
-Position::Position() 
-    : uart_instance_(nullptr)
-    , uart_initialized_(false)
-    , rx_buffer_{0}
-{
-}
-
-// 初始化UART
-void Position::InitUART(UART_HandleTypeDef *uart_handle) 
-{
-    if (uart_initialized_) {
-        return; // 已经初始化过
-    }
-    
-    // 创建UART实例 - 
-    static UART_ uart_instance(
-        RX_BUFFER_SIZE,
-        rx_buffer_,
-        Position_UART1_RxCallback,
-        uart_handle
-    );
-    
-    uart_instance_ = &uart_instance;
-    
-    // 初始化UART
-    uart_instance_->UART_Init();
-    
-    uart_initialized_ = true;
-}
 
 // 数据更新函数：将解析后的值存入 RawPos 和 RealPos
 void Update_RawPosition(float value[5])
@@ -312,24 +311,7 @@ void POS_Relocate_ByDiff(float X, float Y, float yaw)
 	RealPosData.dx = X - RealPosData.world_x;
 	RealPosData.dy = Y - RealPosData.world_y;
 }
-/*
-void UART_IdleCallback(UART_HandleTypeDef *huart)
-{
-    if(huart->Instance == USART1)
-    {
-        // 停止DMA传输
-        HAL_UART_DMAStop(&huart1);
-                // 发送接收到的数据
-                uint16_t received_length = sizeof(rx_buffer);
-                HAL_UART_Transmit(&huart1, rx_buffer, sizeof(rx_buffer), 100);
-                break;
-            }
-        }
-        
-      
-        HAL_UART_Receive_DMA(&huart1, rx_buffer, sizeof(rx_buffer));
-    }
-}*/
+/*调试USB用的
 void USB_DataReceivedCallback(uint8_t* buf, uint16_t len)
 {
     // 接收到数据后立即回传（echo功能）
@@ -337,4 +319,4 @@ void USB_DataReceivedCallback(uint8_t* buf, uint16_t len)
     {
         CDC_Transmit_HS(buf, len);
     }
-}
+}*/

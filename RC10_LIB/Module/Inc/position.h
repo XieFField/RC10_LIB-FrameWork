@@ -70,9 +70,6 @@ extern RealPos RealPosData;
 
 void Reposition_SendData(float X, float Y);
 void POS_Relocate_ByDiff(float X, float Y, float yaw);
-void UART_Idleallback(UART_HandleTypeDef *huart);
-void Position_CUART1_RxCallback(uint8_t *buf, uint16_t len);
-void USB_DataReceivedCallback(uint8_t* buf, uint16_t len);
 void Update_RawPosition(float value[5]);
 
 #ifdef __cplusplus
@@ -81,27 +78,26 @@ void Update_RawPosition(float value[5]);
 
 #ifdef __cplusplus
 
-class Position {
+class Position:public UART_{
 public:
     // 获取单例实例
-    static Position* GetInstance();
+    static Position* GetInstance(UART_HandleTypeDef *uart_handle);
     
     // 初始化UART
-    void InitUART(UART_HandleTypeDef *uart_handle);
-    
+    void InitUART();
+		//重写虚函数.cpp
+    void Callback_Fuc(uint8_t *buf, uint16_t len) override;
     // 删除拷贝构造函数和赋值运算符
     Position(const Position&) = delete;
     Position& operator=(const Position&) = delete;
 
 private:
-    Position(); // 私有构造函数
+    Position(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle); // 私有构造函数
     ~Position() = default;
     
     // UART实例
     UART_* uart_instance_;
     
-    // 单例实例
-  //  static Position* instance_;
     
     // 初始化标志
     bool uart_initialized_;

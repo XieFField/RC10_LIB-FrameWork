@@ -157,9 +157,9 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>96</LineNumber>
+          <LineNumber>93</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134220498</Address>
+          <Address>134220492</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -168,7 +168,7 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>..\User\Setup\Src\Setup_ConfigInit.cpp</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\96</Expression>
+          <Expression>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\93</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
