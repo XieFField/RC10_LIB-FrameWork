@@ -2,7 +2,9 @@
  * @file retarget_io.cpp
  * @brief 重定向 C 库的输入输出到 UART（适用于 Arm Compiler）
  *        解决半主机模式下 _sys_open 未实现导致的断点问题。
- *        先前代碼無法正常運行，找了半天才找到的原因，特此記錄。
+ *        先前代碼無法正常運行，csdn上沒找到什麼能用的方法，
+ *        基本都是說打開MicroLib，但是MicroLib不支持cpp,
+ *        找了半天才找到的原因和解決方法
  * @author XieFField
  * 
  */
@@ -29,18 +31,15 @@ extern "C" __attribute__((used)) void __aeabi_assert(const char* expr, const cha
 #endif
 
 extern "C" {
-
-// FILEHANDLE 是 ARM C 库用于文件描述符的类型，通常是 int 的别名。
+。
 typedef int FILEHANDLE;
 
-// --- 解决 _sys_open 问题的关键部分 ---
 FILEHANDLE _sys_open(const char *name, int openmode) {
     (void)name;
     (void)openmode;
     return 1; // 返回一个虚拟句柄
 }
-
-// --- 最底层的 I/O 重定向 ---
+//I/O重定向
 int _sys_write(FILEHANDLE fh, const unsigned char *buf, unsigned int len, int mode) {
     (void)fh;
     (void)mode;
@@ -61,7 +60,6 @@ int _sys_read(FILEHANDLE fh, unsigned char *buf, unsigned int len, int mode) {
     }
 }
 
-// --- 解决 _ttywrch 问题的关键部分 ---
 /**
  * @brief 重定向 _ttywrch 函数
  * 用于处理无缓冲的单个字符输出。
@@ -73,7 +71,7 @@ void _ttywrch(int ch) {
 }
 
 
-// --- 其他必要的桩函数，防止链接半主机版本 ---
+// --- 其他必要的函数，防止链接半主机版本 ---
 
 void _sys_exit(int return_code) {
     (void)return_code;
