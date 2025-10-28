@@ -39,7 +39,7 @@ typedef struct {
 
     
 
-    float stretch_Ratio_; // 伸展比率，伸展电机转一圈，伸展多少米   0.00942米(94.2mm)
+    float stretch_Ratio_; // 伸展比率，伸展电机转一圈，伸展多少米   0.0942米(94.2mm)
     float launch_Ratio_; // 升降比率，升降电机转一圈，升降多少米    0.01099米(109.9mm)
     float rotate_gearRatio_; // 旋转减速比，旋转电机转一圈，机械臂转多少度 144.878度()
     float pitch_gearRatio_; // 俯仰减速比，俯仰电机转一圈，末端关节转多少度 360度，直驱
@@ -153,7 +153,6 @@ public:
         hdot_max_ = hdot_max; ddot_max_ = ddot_max; thetadot_deg_max_ = thetadot_deg_max;
     }
     
-
     /**
      * @brief 手动设置每个自由度的目标位置，单位：m或度
      */
@@ -188,12 +187,8 @@ public:
         target_joint_angle_.suckerJoint_angle_ = angle;
     }
 
-    void setTargetMotorCurrent(ARMotor_Current_S target_current)
-    {
-        target_motor_current_ = target_current;
-    }
 
-    //设置电机是否反相
+    //设置电机是否反相 true取反，false不取反
     void setLaunchReversed(bool reversed) {sign_launch_  = reversed ? -1.0f : 1.0f;}
     void setStretchReversed(bool reversed) {sign_stretch_ = reversed ? -1.0f : 1.0f;}
     void setRotateReversed(bool reversed) {sign_rotate_  = reversed ? -1.0f : 1.0f;}
@@ -207,11 +202,10 @@ private:
     
 
 
-    Joint_Status_S joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 当前关节角度
+    Joint_Status_S joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; 
 
-    Joint_Status_S target_joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 目标关节角度
+    Joint_Status_S target_joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; 
     
-    ARMotor_Current_S target_motor_current_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 目标电机电流
     void inverseKinematics(Arm_Point_S arm_target_); // 运动学逆解
 
 

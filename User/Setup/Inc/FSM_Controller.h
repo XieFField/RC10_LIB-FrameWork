@@ -82,7 +82,7 @@ private:
     OmniChassis_Setup *chassis_setup_ = nullptr; 
     bool chassis_setup_registered_ = false; 
     bool init_flag_ = false; //所有需要注册的机构都已经注册完成
-    uint8_t debug_flag_ = 0;
+    uint8_t debug_flag_ = 1;
     
 };
 

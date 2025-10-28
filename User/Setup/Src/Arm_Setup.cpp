@@ -5,12 +5,13 @@ void ArmSetup::loop()
     if(!init_flag)
         return;
     
-
+    now_time_s_ = TimeStamp::getInstance().getSeconds();
     if(!is_calibrating)
     {
         calibrateM2006();
-        is_calibrating = true;
+        return;
     }
+
 
     switch(arm_status_)
     {
@@ -51,9 +52,6 @@ void ArmSetup::loop()
 
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
-
-    now_time_s_ = TimeStamp::getInstance().getSeconds();
-    last_time_s_ = now_time_s_;
 }
     
 
@@ -160,16 +158,17 @@ void ArmSetup::calibrateM2006()
         calibrate_startTime = TimeStamp::getInstance().getSeconds();
         calibrate_start = true;
     }
-    this->motor_stretch_->setTargetCurrent(800.0f); // 给予一个小电流顶住限位
-    this->motor_pitch_->setTargetCurrent(800.0f); // 给予一个小电流顶住限位
+    this->motor_stretch_->setTargetCurrent(-600.0f); // 给予一个小电流顶住限位
+    this->motor_pitch_->setTargetCurrent(600.0f); // 给予一个小电流顶住限位
 
-    if(TimeStamp::getInstance().getSeconds() - calibrate_startTime > 1.0f)
+    if(now_time_s_ - calibrate_startTime > 1.0f)
     {
-        this->motor_stretch_->setTargetCurrent(0.0f);
-        this->motor_pitch_->setTargetCurrent(0.0f);
         this->motor_stretch_->relocate_totalAngle(0.0f);
         this->motor_pitch_->relocate_totalAngle(0.0f);
-        calibrate_start = false;
+        this->motor_stretch_->setTargetCurrent(0.0f);
+        this->motor_pitch_->setTargetCurrent(0.0f);
+        
+        is_calibrating = true;
     }
 }
 
@@ -203,10 +202,10 @@ void ArmSetup::debug()
     if(test_signal == 0) //所有电机电流强制为0；检查电机转动方向是否需要置反
     {
         this->set_controlMode(CURRENT_CONTROL_MODE);
-        this->set_LaunchHeight(0.0f);
-        this->set_StretchLength(0.0f);
-        this->set_RotateAngle(0.0f);
-        this->set_PitchAngle(0.0f);
+        this->motor_launch_->setTargetCurrent(0.0f);
+        this->motor_stretch_->setTargetCurrent(0.0f);
+        this->motor_rotate_->setTargetCurrent(0.0f);
+        this->motor_pitch_->setTargetCurrent(0.0f);
     }
 
     //1~4 signal test用于测试电机电流方向和电机转动方向是否同相
@@ -299,7 +298,7 @@ Arm_InitData_S arm_initData = {
    .arm_length_ = 0.6f,
    .end_link_length_ = 0.08f,
 
-   .stretch_Ratio_ = 0.00942f,
+   .stretch_Ratio_ = 0.0942f,
    .launch_Ratio_ = 0.01099f,
    .rotate_gearRatio_ = 144.878f,
    .pitch_gearRatio_ = 360.0f,

@@ -40,19 +40,8 @@ void Robot_Arm::update()
         target_joint_angle_.rotateJoint_angle_   = constrain(target_joint_angle_.rotateJoint_angle_,   minRotateAngle_, maxRotateAngle_);
     }
     else if(control_mode_ == CURRENT_CONTROL_MODE)
-    {
         // 电流控制模式下的处理
-        
-        if(motor_launch_ != nullptr)
-            motor_launch_->setTargetCurrent(target_motor_current_.launch_current);
-        if(motor_stretch_ != nullptr)
-            motor_stretch_->setTargetCurrent(target_motor_current_.stretch_current);
-        if(motor_rotate_ != nullptr)
-            motor_rotate_->setTargetCurrent(target_motor_current_.rotate_current);
-        if(motor_pitch_ != nullptr)
-            motor_pitch_->setTargetCurrent(target_motor_current_.pitch_current);
         return; // 直接返回，不进行位置更新
-    }
     
 
   
@@ -79,12 +68,6 @@ void Robot_Arm::update()
 
     if(motor_pitch_ != nullptr)
         motor_pitch_->setTargetTotalAngle(target_pitchMotorAngle);
-
-    target_motor_current_.launch_current = this->motor_launch_->getTargetCurrent();
-    target_motor_current_.stretch_current = this->motor_stretch_->getTargetCurrent();
-    target_motor_current_.rotate_current = this->motor_rotate_->getTargetCurrent();
-    target_motor_current_.pitch_current = this->motor_pitch_->getTargetCurrent();
-
 }
 
 void Robot_Arm::inverseKinematics(Arm_Point_S target_point)

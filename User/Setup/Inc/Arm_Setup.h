@@ -42,6 +42,9 @@ public:
         this->registerMotor_Rotate(motor_ArmRotate);
         this->registerMotor_Pitch(motor_ArmPitch);
 
+        this->setPitchReversed(true); //俯仰电机反向
+        this->setStretchReversed(false); //伸展电机不反向
+
         start(osPriorityNormal, 256);
 
         init_flag = true;
@@ -70,7 +73,7 @@ private:
     //上电校准M2006电机位置
     void calibrateM2006(); float calibrate_startTime = 0; bool calibrate_start = false;
 
-    uint8_t debug_start = 0; //调试开始标志 == 1 开始调试
+    uint8_t debug_start = 1; //调试开始标志 == 1 开始调试
 protected:
     void loop() override;
 
@@ -83,7 +86,7 @@ protected:
     Joint_Status_S target_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
 
     
-    float now_time_s_ = 0; float last_time_s_ = 0;
+    float now_time_s_ = 0; 
 };
 
 

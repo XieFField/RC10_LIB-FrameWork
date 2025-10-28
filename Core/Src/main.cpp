@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file           : main.c
+  * @file           : main.cpp
   * @brief          : Main program body
   ******************************************************************************
   * @attention
@@ -274,10 +274,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     fdcan_global_scheduler_tick_isr();
   }
   
-    if (htim->Instance == TIM4) // 假设你使用的是 TIM4
-    {
-        TimeStamp::overflowCallback();
-    }
+  if (htim->Instance == TIM4) // 假设你使用的是 TIM4
+  {
+      TimeStamp::overflowCallback();
+  }
   /* USER CODE END Callback 1 */
 }
 

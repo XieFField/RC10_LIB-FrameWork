@@ -925,6 +925,11 @@
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\BSP_Driver\Inc\BSP_TimeStamp.h</FilePath>
             </File>
+            <File>
+              <FileName>retarget_io.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\BSP_Driver\Src\retarget_io.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
