@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file           : main.c
+  * @file           : main.cpp
   * @brief          : Main program body
   ******************************************************************************
   * @attention
@@ -23,13 +23,14 @@
 #include "fdcan.h"
 #include "tim.h"
 #include "usart.h"
-#include "usb_device.h"
 #include "gpio.h"
+//#include "usb_device.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+//#include "position.h"
 /*FRAMEDEMO_BEGIN*/
 #include "frame_demo.h"
+#include "Module_Air_joy.h"
 /*FRAMEDEMO_END*/
 
 /* USER CODE END Includes */
@@ -52,7 +53,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-extern void fdcan_global_scheduler_tick_isr(void);
+
+
+/* USER CODE END PV */
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,6 +69,7 @@ extern "C"{
 #endif
 void MX_FREERTOS_Init(void);
     
+
 #ifdef __cplusplus
 }
 #endif
@@ -72,7 +77,7 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-// CanTest test_demo(&hfdcan1, 0x001); // CAN1 测试实例
+
 /* USER CODE END 0 */
 
 /**
@@ -95,7 +100,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+    
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -119,6 +124,9 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
   ALL_Setup_ConfigInit();
 
+
+
+  
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -163,8 +171,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 5;
@@ -199,8 +208,20 @@ void SystemClock_Config(void)
   }
 }
 
-/* USER CODE BEGIN 4 */
 
+/* USER CODE BEGIN 4 */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*void Uart_USB_Receive_Callback_Wrapper(void)
+{
+    m.Uart_USB_Receive_Callback();
+}*/
+
+#ifdef __cplusplus
+}
+#endif
 /* USER CODE END 4 */
 
  /* MPU Configuration */
@@ -255,10 +276,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     fdcan_global_scheduler_tick_isr();
   }
   
-    if (htim->Instance == TIM4) // 假设你使用的是 TIM4
-    {
-        TimeStamp::overflowCallback();
-    }
+  if (htim->Instance == TIM4) // 假设你使用的是 TIM4
+  {
+      TimeStamp::overflowCallback();
+  }
   /* USER CODE END Callback 1 */
 }
 

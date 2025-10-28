@@ -242,12 +242,17 @@ void M3508::setTargetCurrent(float current_set)
 {
     mode_ = CURRENT_CONTROL;
     target_current_ = current_set;
+    target_rpm_ = 0.0f;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
 }
 
 void M3508::setTargetRPM(float rpm_set)
 {
     mode_ = SPEED_CONTROL;
     target_rpm_ = rpm_set;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
 }
 
 void M3508::setTargetAngle(float angle_set)
@@ -255,6 +260,8 @@ void M3508::setTargetAngle(float angle_set)
     mode_ = ANGLE_CONTROL;
     target_angle_ = angle_set;
     angle_pid_.set_as_circular(); //最小路径处理
+
+    target_totalAngle_ = 0.0f;
 }
 
 
@@ -263,6 +270,8 @@ void M3508::setTargetTotalAngle(float totalAngle_set)
     mode_ = TOTAL_ANGLE_CONTROL;
     target_totalAngle_ = totalAngle_set;
     angle_pid_.set_as_linear(); //线性处理
+
+    target_angle_ = 0.0f;
 }
 
 //volatile float cur = 0;
@@ -352,12 +361,17 @@ void M2006::setTargetCurrent(float current_set)
 {
     mode_ = CURRENT_CONTROL;
     target_current_ = current_set;
+    target_rpm_ = 0.0f;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
 }
 
 void M2006::setTargetRPM(float rpm_set)
 {
     mode_ = SPEED_CONTROL;
     target_rpm_ = rpm_set;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
 }
 
 void M2006::setTargetAngle(float angle_set)
@@ -365,6 +379,8 @@ void M2006::setTargetAngle(float angle_set)
     mode_ = ANGLE_CONTROL;
     target_angle_ = angle_set;
     angle_pid_.set_as_circular(); //最小路径处理
+
+    target_totalAngle_ = 0.0f;
 }
 
 void M2006::setTargetTotalAngle(float totalAngle_set)
@@ -372,6 +388,8 @@ void M2006::setTargetTotalAngle(float totalAngle_set)
     mode_ = TOTAL_ANGLE_CONTROL;
     target_totalAngle_ = totalAngle_set;
     angle_pid_.set_as_linear(); //线性处理
+
+    target_angle_ = 0.0f;
 }
 
 void M2006::update()
@@ -442,12 +460,17 @@ void GM6020::setTargetCurrent(float current_set)
 {
     mode_ = CURRENT_CONTROL;
     target_current_ = current_set;
+    target_rpm_ = 0.0f;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
 }
 
 void GM6020::setTargetRPM(float rpm_set)
 {
     mode_ = SPEED_CONTROL;
     target_rpm_ = rpm_set;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
 }
 
 void GM6020::setTargetAngle(float angle_set)
@@ -455,6 +478,7 @@ void GM6020::setTargetAngle(float angle_set)
     mode_ = ANGLE_CONTROL;
     target_angle_ = angle_set;
     angle_pid_.set_as_circular(); //最小路径处理
+    target_totalAngle_ = 0.0f;
 }
 
 void GM6020::setTargetTotalAngle(float totalAngle_set)
@@ -462,6 +486,7 @@ void GM6020::setTargetTotalAngle(float totalAngle_set)
     mode_ = TOTAL_ANGLE_CONTROL;
     target_totalAngle_ = totalAngle_set;
     angle_pid_.set_as_linear(); //线性处理
+    target_angle_ = 0.0f;
 }
 
 void GM6020::update()

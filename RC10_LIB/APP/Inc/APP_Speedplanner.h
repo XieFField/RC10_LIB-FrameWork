@@ -1,9 +1,11 @@
 /**
  * @file APP_Speedplanner.h
  * @author naoganlin
- * @brief 速度控制器(s型暂不可用)
- * @version 0.40
- * @date 2025-10-13
+ * @brief 速度控制器
+ * 1.s型还没能实现远到近的速度规划，2d和1d都是
+ * 2.梯形的规划要么得有给初速度，要么给初位置
+ * @version 1.0
+ * @date 2025-10-28
  */
 
 #ifndef __APP_SPEEDPLANNER_H
@@ -21,6 +23,23 @@ extern "C"
 #include "APP_Vector2D.h"  // 二维向量类头文件，定义了 Vector2D 类型
 #include "arm_math.h"      // ARM CMSIS DSP 库，用于数学运算优化
 #include <cmath>           // 标准数学库，用于 sqrt, pow 等函数
+
+/**
+ * @brief S型速度规划的运动阶段枚举
+ *
+ * 用于描述S型速度曲线的各个阶段。
+ */
+enum SPhase
+{
+    S_ACCEL_JERK_UP_PHASE,   // 加速段：加加速度（Jerk）从0增加到最大值
+    S_ACCEL_CONST_PHASE,     // 加速段：加速度保持恒定在最大值
+    S_ACCEL_JERK_DOWN_PHASE, // 加速段：加加速度（Jerk）从最大值减小到0
+    S_CONST_VEL_PHASE,       // 匀速段：速度保持恒定在最大值
+    S_DECEL_JERK_UP_PHASE,   // 减速段：加加速度（Jerk）从0增加到最大负值（开始减速）
+    S_DECEL_CONST_PHASE,     // 减速段：加速度保持恒定在最大负值
+    S_DECEL_JERK_DOWN_PHASE, // 减速段：加加速度（Jerk）从最大负值减小到0（减速结束）
+    S_FINISHED_PHASE         // 规划完成阶段
+};
 
 /**
  * @brief 运动阶段枚举，包含PID点追踪控制
@@ -66,43 +85,6 @@ typedef struct
 } Speedplanner_1D_Param_Config;
 
 /**
- * @brief 一维TD平滑器
- *
- * 用于对输入信号进行平滑处理，R参数越小越平滑，越大越灵敏。
- */
-class  
-{
-public:
-    /**
-     * @brief 构造函数，设置R参数
-     * @param td_r_ R参数，越小越平滑
-     */
-    Td(float td_r_ = 0.0f);
-
-    /**
-     * @brief 设置R参数
-     * @param td_r_ R参数
-     */
-    void set_R(float td_r_); // R越小越平滑。越大越猛
-
-    /**
-     * @brief TD平滑函数
-     * @param input_expect 期望输入
-     * @return 平滑输出
-     */
-    float plan(float input_expect);
-
-private:
-    float r_ = 0.0f;             // TD平滑参数R
-    float V1_ = 0.0f;            // 内部状态变量1
-    float V2_ = 0.0f;            // 内部状态变量2
-    float fh_ = 0.0f;            // 辅助变量
-    float expect_ = 0.0f;        // 期望值
-    float Ts_ = 0.0f;            // 采样周期
-    uint32_t previous_time_ = 0; // 上一次调用的时间戳
-};
-
-/**
  * @brief 一维速度规划器基类（抽象类）
  *
  * 提供速度规划的基本接口，所有一维速度规划器的派生类都需要实现这些接口。
@@ -127,6 +109,25 @@ public:
      * @brief 重置规划器状态（纯虚函数）
      */
     virtual void reset() = 0;
+
+    /**
+     * @brief 重置规划器参数（纯虚函数）
+     * @param params 速度规划参数
+     */
+    virtual void param_reset(Speedplanner_1D_Param_Config params) = 0;
+
+protected:
+    // 规划参数
+    float m_maxAcc_ = 0.0f;        // 最大加速度
+    float m_maxDec_ = 0.0f;        // 最大减速度
+    float m_maxJerk_ = 0.0f;       // 最大加加速度
+    float m_maxSpeed_ = 0.0f;      // 最大速度
+    float m_initialSpeed_ = 0.0f;  // 起始速度
+    float m_finalSpeed_ = 0.0f;    // 目标速度
+    float m_startPos_ = 0.0f;      // 起始位置
+    float m_targetPos_ = 0.0f;     // 目标位置
+    float m_totalDistance_ = 0.0f; // 总路程
+    float m_deadzone_ = 0.00001f;  // 死区范围
 };
 
 /**
@@ -141,7 +142,7 @@ public:
      * @brief 构造函数：初始化规划器参数
      * @param params 速度规划参数，默认为零
      */
-    TrapePlanner1D(Speedplanner_1D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
+    TrapePlanner1D(Speedplanner_1D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.00001f});
 
     /**
      * @brief 根据当前已行驶的距离，规划目标速度
@@ -181,19 +182,6 @@ public:
     Phase getPhase() const { return m_phase; }
 
 protected:
-    // 规划参数(原基类protected)
-    float m_maxAcc_ = 0.0f;        // 最大加速度
-    float m_maxDec_ = 0.0f;        // 最大减速度
-    float m_maxJerk_ = 0.0f;       // 最大加加速度
-    float m_maxSpeed_ = 0.0f;      // 最大速度
-    float m_initialSpeed_ = 0.0f;  // 起始速度
-    float m_finalSpeed_ = 0.0f;    // 目标速度
-    float m_startPos_ = 0.0f;      // 起始位置
-    float m_targetPos_ = 0.0f;     // 目标位置
-    float m_totalDistance_ = 0.0f; // 总路程
-    float m_deadzone_ = 0.0f;      // 死区范围
-    float traveled_ = 0.0f;        // 已行驶路程
-
     // 内部状态
     Phase m_phase = FINISHED_PHASE; // 当前阶段
     // 各阶段路程
@@ -209,68 +197,121 @@ protected:
  *
  * 实现一维S型速度曲线的规划。
  */
-class TdPlanner1D : public Speedplanner1D_Base
+class SShapedPlanner1D : public Speedplanner1D_Base
 {
 public:
     /**
      * @brief 构造函数：初始化所有成员变量为零或默认值
      * @param params 速度规划参数，默认为零
      */
-    TdPlanner1D(Speedplanner_1D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}, float td_r = 0.0f) : trapeplanner_(params), td_(td_r)
-    {
-    }
+    SShapedPlanner1D(Speedplanner_1D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.00001f});
 
     /**
      * @brief 规划目标速度
      * @param now_dis 当前已行驶的距离
      * @return 规划的目标速度
      */
-    float plan(float now_dis)
-    {
-        // 先使用梯形规划器计算目标速度
-        float v_trape = trapeplanner_.plan(now_dis);
-        // 再使用TD平滑器对目标速度进行平滑处理
-        float v_td = td_.plan(v_trape);
-        return v_td;
-    }
+    float plan(float now_dis);
 
     /**
      * @brief 判断规划是否已完成
      * @return 如果规划已完成则返回 true，否则返回 false
      */
-    bool isFinished() { return trapeplanner_.isFinished(); }
+    bool isFinished() { return m_phase == S_FINISHED_PHASE; }
 
     /**
      * @brief 重置规划器状态
      */
-    void reset(void) { trapeplanner_.reset(); }
+    void reset(void);
 
     /**
      * @brief 重置规划器参数
      * @param params 速度规划参数
      */
-    void param_reset(Speedplanner_1D_Param_Config params, float td_r)
-    {
-        trapeplanner_.param_reset(params);
-        td_.set_R(td_r);
-    }
+    void param_reset(Speedplanner_1D_Param_Config params);
 
     /**
      * @brief 获取当前S型规划阶段
      * @return 当前 S 型规划阶段
      */
-    Phase getPhase() const { return trapeplanner_.getPhase(); }
+    SPhase getPhase() const { return m_phase; }
 
     /**
      * @brief 判断当前S型阶段
      * @param traveled 已行驶的距离
      * @return 当前 S 型规划阶段
      */
-    Phase determinePhase(float traveled) { return trapeplanner_.determinePhase(traveled); }
+    SPhase determinePhase(float traveled);
 
 private:
-    TrapePlanner1D trapeplanner_; // 内部使用的梯形规划器
-    Td td_;                       // 内部使用的td型规划器
+    // 内部状态变量
+    SPhase m_phase = S_FINISHED_PHASE; // 当前规划所处的阶段
+
+    // 预计算的 S 型规划各个阶段的距离
+    float m_accelJerkUpDistance_ = 0.0f;   // 加速段：Jerk 上升阶段的路程
+    float m_accelConstDistance_ = 0.0f;    // 加速段：加速度恒定阶段的路程
+    float m_accelJerkDownDistance_ = 0.0f; // 加速段：Jerk 下降阶段的路程
+    float m_constVelDistance_ = 0.0f;      // 匀速段：恒定速度阶段的路程
+    float m_decelJerkUpDistance_ = 0.0f;   // 减速段：Jerk 上升（减速开始）阶段的路程
+    float m_decelConstDistance_ = 0.0f;    // 减速段：加速度恒定（减速中）阶段的路程
+    float m_decelJerkDownDistance_ = 0.0f; // 减速段：Jerk 下降（减速结束）阶段的路程
+
+    int err_ = 0; // 错误标志，0表示无错误，1表示参数计算错误
+    float m_t1_ = 0.0f;
+    float m_t2_ = 0.0f;
+    float m_t3_ = 0.0f;
+    float m_t4_ = 0.0f;
+    float m_t5_ = 0.0f;
+    float m_t6_ = 0.0f;
+    float m_t7_ = 0.0f;
+    float m_vlim_ = 0.0f;
+    /**
+     * @brief 预计算各阶段的距离
+     */
+    void
+    cal_PhaseDistances();
+
+    /**
+     * @brief 加速段：Jerk 上升阶段的速度
+     * @param traveled 已行驶距离
+     * @return 当前速度
+     */
+    float cal_Acc_JerkUpSpeed(float traveled);
+
+    /**
+     * @brief 加速段：加速度恒定阶段的速度
+     * @param traveled 已行驶距离
+     * @return 当前速度
+     */
+    float cal_Acc_ConstSpeed(float traveled);
+
+    /**
+     * @brief 加速段：Jerk 下降阶段的速度
+     * @param traveled 已行驶距离
+     * @return 当前速度
+     */
+    float cal_Acc_JerkDownSpeed(float traveled);
+
+    /**
+     * @brief 减速段：Jerk 上升阶段的速度
+     * @param traveled 已行驶距离
+     * @return 当前速度
+     */
+    float cal_Dec_JerkUpSpeed(float traveled);
+
+    /**
+     * @brief 减速段：加速度恒定阶段的速度
+     * @param traveled 已行驶距离
+     * @return 当前速度
+     */
+    float cal_Dec_ConstSpeed(float traveled);
+
+    /**
+     * @brief 减速段：Jerk 下降阶段的速度
+     * @param traveled 已行驶距离
+     * @return 当前速度
+     */
+    float cal_Dec_JerkDownSpeed(float traveled);
 };
 
 ///////////////////////////////    2D 版本     //////////////////////////
@@ -309,7 +350,7 @@ public:
      * @param now_dis 当前已行驶的距离
      * @return 规划的目标速度
      */
-    virtual Vector2D plan(const Vector2D &now_dis) = 0;
+    virtual Vector2D plan(Vector2D &now_dis) = 0;
 
     /**
      * @brief 判断规划是否完成（纯虚函数）
@@ -329,6 +370,17 @@ public:
     virtual void param_reset(Speedplanner_2D_Param_Config params) = 0;
 
 protected:
+    // 规划参数
+    float m_maxAcc_ = 0.0f;                       // 最大加速度
+    float m_maxDec_ = 0.0f;                       // 最大减速度
+    float m_maxJerk_ = 0.0f;                      // 最大加加速度
+    float m_maxSpeed_ = 0.0f;                     // 最大速度
+    float m_initialSpeed_ = 0.0f;                 // 起始速度
+    float m_finalSpeed_ = 0.0f;                   // 目标速度
+    Vector2D m_startPos_ = Vector2D(0.0f, 0.0f);  // 起始位置
+    Vector2D m_targetPos_ = Vector2D(0.0f, 0.0f); // 目标位置
+    float m_totalDistance_ = 0.0f;                // 总路程
+    float m_deadzone_ = 0.00001f;                 // 死区范围
 };
 
 /**
@@ -343,14 +395,14 @@ public:
      * @brief 构造函数：初始化规划器参数
      * @param params 速度规划参数，默认为零
      */
-    TrapePlanner2D(Speedplanner_2D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, {0.0f, 0.0f}, {0.0f, 0.0f}, 0.0f});
+    TrapePlanner2D(Speedplanner_2D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, {0.0f, 0.0f}, {0.0f, 0.0f}, 0.00001f});
 
     /**
      * @brief 规划目标速度
      * @param now_dis 当前已行驶的距离
      * @return 规划的目标速度
      */
-    Vector2D plan(const Vector2D &now_dis);
+    Vector2D plan(Vector2D &now_dis);
 
     /**
      * @brief 判断规划是否完成
@@ -383,19 +435,6 @@ public:
     Phase getPhase() const { return m_phase; }
 
 protected:
-    // 规划参数(原基类protected)
-    float m_maxAcc_ = 0.0f;                       // 最大加速度
-    float m_maxDec_ = 0.0f;                       // 最大减速度
-    float m_maxJerk_ = 0.0f;                      // 最大加加速度
-    float m_maxSpeed_ = 0.0f;                     // 最大速度
-    float m_initialSpeed_ = 0.0f;                 // 起始速度
-    float m_finalSpeed_ = 0.0f;                   // 目标速度
-    Vector2D m_startPos_ = Vector2D(0.0f, 0.0f);  // 起始位置
-    Vector2D m_targetPos_ = Vector2D(0.0f, 0.0f); // 目标位置
-    float m_totalDistance_ = 0.0f;                // 总路程
-    float m_deadzone_ = 0.0f;                     // 死区范围
-    float traveled_ = 0.0f;                       // 已行驶路程
-
     // 内部状态
     ProfileType m_profileType;
     Phase m_phase = FINISHED_PHASE; // 当前阶段
@@ -408,70 +447,128 @@ protected:
     float v_target_ = 0.0f;       // 目标速度
 };
 
-class TdPlanner2D : public Speedplanner2D_Base
+/**
+ * @brief 二维S型速度规划器（派生类）
+ *
+ * 实现二维S型速度曲线的规划。
+ */
+class SShapedPlanner2D : public Speedplanner2D_Base
 {
 public:
     /**
      * @brief 构造函数：初始化所有成员变量为零或默认值
      * @param params 速度规划参数，默认为零
      */
-    TdPlanner2D(Speedplanner_2D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, {0.0f, 0.0f}, {0.0f, 0.0f}, 0.0f}, float td_r = 0.0f) : trapeplanner_(params), td_(td_r)
-    {
-    }
+    SShapedPlanner2D(Speedplanner_2D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, {0.0f, 0.0f}, {0.0f, 0.0f}, 0.00001f});
 
     /**
      * @brief 规划目标速度
      * @param now_dis 当前已行驶的距离
      * @return 规划的目标速度
      */
-    Vector2D plan(const Vector2D &now_dis)
-    {
-        // 先使用梯形规划器计算目标速度
-        Vector2D v_trape = trapeplanner_.plan(now_dis);
-        // 再使用TD平滑器对目标速度进行平滑处理
-        Vector2D v_td;
-        v_td.x = td_.plan(v_trape.x);
-        v_td.y = td_.plan(v_trape.y);
-        return v_td;
-    }
+    Vector2D plan(Vector2D &now_dis);
 
     /**
      * @brief 判断规划是否已完成
      * @return 如果规划已完成则返回 true，否则返回 false
      */
-    bool isFinished() { return trapeplanner_.isFinished(); }
+    bool isFinished() { return m_phase == S_FINISHED_PHASE; }
 
     /**
      * @brief 重置规划器状态
      */
-    void reset(void) { trapeplanner_.reset(); }
+    void reset(void);
 
     /**
      * @brief 重置规划器参数
      * @param params 速度规划参数
      */
-    void param_reset(Speedplanner_2D_Param_Config params, float td_r)
-    {
-        trapeplanner_.param_reset(params);
-        td_.set_R(td_r);
-    }
+    void param_reset(Speedplanner_2D_Param_Config params);
 
     /**
      * @brief 获取当前S型规划阶段
      * @return 当前 S 型规划阶段
      */
-    Phase getPhase() const { return trapeplanner_.getPhase(); }
+    SPhase getPhase() const { return m_phase; }
 
     /**
      * @brief 判断当前S型阶段
      * @param traveled 已行驶的距离
      * @return 当前 S 型规划阶段
      */
-    Phase determinePhase(float traveled) { return trapeplanner_.determinePhase(traveled); }
+    SPhase determinePhase(float traveled);
 
 private:
-    TrapePlanner2D trapeplanner_; // 内部使用的梯形规划器
-    Td td_;                       // 内部使用的td型规划器
+    // 内部状态变量
+    SPhase m_phase = S_FINISHED_PHASE; // 当前规划所处的阶段
+
+    // 预计算的 S 型规划各个阶段的距离
+    float m_accelJerkUpDistance_ = 0.0f;   // 加速段：Jerk 上升阶段的路程
+    float m_accelConstDistance_ = 0.0f;    // 加速段：加速度恒定阶段的路程
+    float m_accelJerkDownDistance_ = 0.0f; // 加速段：Jerk 下降阶段的路程
+    float m_constVelDistance_ = 0.0f;      // 匀速段：恒定速度阶段的路程
+    float m_decelJerkUpDistance_ = 0.0f;   // 减速段：Jerk 上升（减速开始）阶段的路程
+    float m_decelConstDistance_ = 0.0f;    // 减速段：加速度恒定（减速中）阶段的路程
+    float m_decelJerkDownDistance_ = 0.0f; // 减速段：Jerk 下降（减速结束）阶段的路程
+
+    Vector2D m_startPos1_ = Vector2D(0.0f, 0.0f);
+
+    int err_ = 0;         // 错误标志，0表示无错误，1表示参数计算错误
+    float m_t1_ = 0.0f;   //  phase 1 的截至时间
+    float m_t2_ = 0.0f;   //  phase 2 的截至时间
+    float m_t3_ = 0.0f;   //  phase 3 的截至时间
+    float m_t4_ = 0.0f;   //  phase 4 的截至时间
+    float m_t5_ = 0.0f;   //  phase 5 的截至时间
+    float m_t6_ = 0.0f;   //  phase 6 的截至时间
+    float m_t7_ = 0.0f;   //  phase 7 的截至时间
+    float m_vlim_ = 0.0f; //  限制的最大速度
+
+    /**
+     * @brief 预计算各阶段的距离
+     */
+    void cal_PhaseDistances();
+
+    /**
+     * @brief 加速段：Jerk 上升阶段的速度
+     * @param traveled 已行驶距离
+     * @return 当前速度
+     */
+    float cal_Acc_JerkUpSpeed(float traveled);
+
+    /**
+     * @brief 加速段：加速度恒定阶段的速度
+     * @param traveled 已行驶距离
+     * @return 当前速度
+     */
+    float cal_Acc_ConstSpeed(float traveled);
+
+    /**
+     * @brief 加速段：Jerk 下降阶段的速度
+     * @param traveled 已行驶距离
+     * @return 当前速度
+     */
+    float cal_Acc_JerkDownSpeed(float traveled);
+
+    /**
+     * @brief 减速段：Jerk 上升阶段的速度
+     * @param traveled 已行驶距离
+     * @return 当前速度
+     */
+    float cal_Dec_JerkUpSpeed(float traveled);
+
+    /**
+     * @brief 减速段：加速度恒定阶段的速度
+     * @param traveled 已行驶距离
+     * @return 当前速度
+     */
+    float cal_Dec_ConstSpeed(float traveled);
+
+    /**
+     * @brief 减速段：Jerk 下降阶段的速度
+     * @param traveled 已行驶距离
+     * @return 当前速度
+     */
+    float cal_Dec_JerkDownSpeed(float traveled);
 };
 
 /**
@@ -519,6 +616,42 @@ private:
     float lastOutput_;      // 上一次输出的速度（单位 m/s）
 };
 
+/**
+ * @brief 一维TD平滑器
+ *
+ * 用于对输入信号进行平滑处理，R参数越小越平滑，越大越灵敏。
+ */
+class Td
+{
+public:
+    /**
+     * @brief 构造函数，设置R参数
+     * @param td_r_ R参数，越小越平滑
+     */
+    Td(float td_r_ = 0.0f);
+
+    /**
+     * @brief 设置R参数
+     * @param td_r_ R参数
+     */
+    void set_R(float td_r_); // R越小越平滑。越大越猛
+
+    /**
+     * @brief TD平滑函数
+     * @param input_expect 期望输入
+     * @return 平滑输出
+     */
+    float plan(float input_expect);
+
+private:
+    float r_ = 0.0f;             // TD平滑参数R
+    float V1_ = 0.0f;            // 内部状态变量1
+    float V2_ = 0.0f;            // 内部状态变量2
+    float fh_ = 0.0f;            // 辅助变量
+    float expect_ = 0.0f;        // 期望值
+    float Ts_ = 0.0f;            // 采样周期
+    uint32_t previous_time_ = 0; // 上一次调用的时间戳
+};
 
 #endif
 

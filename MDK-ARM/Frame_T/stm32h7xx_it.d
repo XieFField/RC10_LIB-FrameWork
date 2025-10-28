@@ -31,4 +31,8 @@ frame_t/stm32h7xx_it.o: ..\Core\Src\stm32h7xx_it.c ..\Core\Inc\main.h \
   ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_pcd.h \
   ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_ll_usb.h \
   ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_pcd_ex.h \
-  ..\Core\Inc\stm32h7xx_it.h
+  ..\Core\Inc\stm32h7xx_it.h \
+  ..\RC10_LIB\BSP_Driver\Inc\BSP_USB_UART_Driver.h ..\Core\Inc\usart.h \
+  ..\USB_DEVICE\App\usb_device.h \
+  ..\Middlewares\ST\STM32_USB_Device_Library\Core\Inc\usbd_def.h \
+  ..\USB_DEVICE\Target\usbd_conf.h

@@ -60,4 +60,4 @@ frame_t/frame_demo.o: ..\User\debug\Src\frame_demo.cpp \
   ..\RC10_LIB\APP\Inc\APP_CoordConvert.h \
   ..\RC10_LIB\Motor\Inc\Motor_VESC.h \
   ..\RC10_LIB\Module\Inc\Module_ChassisBase.h \
-  ..\RC10_LIB\Module\Inc\Module_Air_joy.h
+  ..\RC10_LIB\Motor\Inc\Motor_DM.h ..\RC10_LIB\Module\Inc\Module_GPIO.h

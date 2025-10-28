@@ -1,3 +1,9 @@
+/**
+ * @file   APP_tool.h
+ * @brief  通用工具函数头文件
+ * @author XieFField
+ */
+
 #ifndef __APP_TOOL_H
 #define __APP_TOOL_H
 
@@ -12,6 +18,13 @@ extern "C" {
     
 
 #endif
+
+template<typename Type> 
+Type _tool_Abs(Type x) 
+{
+    return ((x > 0) ? x : -x);
+}
+
 
 /**
  * @brief  将矩阵设置为单位矩阵
@@ -39,6 +52,44 @@ static inline T constrain(T value, T min, T max)
     return value;
 }
 
+template <typename T>
+static inline T m_to_cm(T value_m)
+{
+    return value_m * 100.0f;
+}
+
+template <typename T>
+static inline T cm_to_m(T value_cm)
+{
+    return value_cm / 100.0f;
+}
+
+template <typename T>
+static inline T mm_to_cm(T value_mm)
+{
+    return value_mm / 10.0f;
+}
+
+template <typename T>
+static inline T cm_to_mm(T value_cm)
+{
+    return value_cm * 10.0f;
+}
+
+template <typename T>
+static inline T m_to_mm(T value_m)
+{
+    return value_m * 1000.0f;
+}
+
+template <typename T>
+static inline T mm_to_m(T value_mm)
+{
+    return value_mm / 1000.0f;
+}
+
+
+
 //斜坡函数
 void ramp(float target, float& current, float max_change_rate, float dt);
 
@@ -48,23 +99,25 @@ float rad_to_deg(float rad);
 //角度转换为弧度函数
 float deg_to_rad(float deg);
 
+float normalize_deg_0_360(float a);
+
+float normalize_deg_pm180(float a);
+// 将 val_deg 映射到“最接近 ref_deg(0..360)”的等价角，并返回 0..360
+float wrap_to_nearest_0_360(float ref_deg_0_360, float val_deg_any);
 // 2D点结构体
-struct Point2D {
+typedef struct  {
     float x, y;
     float theta; // 旋转角度，单位弧度
-    Point2D(float x = 0.0f, float y = 0.0f, float theta = 0.0f)
-    : x(x), y(y), theta(theta) {} // 构造函数
-};
+} Point2D;
 
 // 3D点结构体
-struct Point3D {
+typedef struct {
     float x, y, z;
     float roll, pitch, yaw; // 欧拉角，单位弧度
-    Point3D(float x = 0.0f, float y = 0.0f, float z = 0.0f, float roll = 0.0f, float pitch = 0.0f, float yaw = 0.0f)
-    : x(x), y(y), z(z), roll(roll), pitch(pitch), yaw(yaw) {} // 构造函数
-};
+    
+}Point3D;
 
-struct Robot_Twist{
+typedef struct {
     float vx;
     float vy;
     float vz;
@@ -73,13 +126,10 @@ struct Robot_Twist{
     float pitch_rate;
     float roll_rate;
 
-    Robot_Twist(float vx = 0.0f, float vy = 0.0f, float vz = 0.0f, 
-                 float yaw_rate = 0.0f, float pitch_rate = 0.0f, float roll_rate = 0.0f)
-    : vx(vx), vy(vy), vz(vz), yaw_rate(yaw_rate), pitch_rate(pitch_rate), roll_rate(roll_rate) {}
-};
+    
+}Robot_Twist;
 
-struct Angle_Twist
-{
+typedef struct {
     float yaw_rate;
     float pitch_rate;
     float roll_rate;
@@ -87,12 +137,8 @@ struct Angle_Twist
     float yaw_angle;
     float pitch_angle;
     float roll_angle;
-
-    Angle_Twist(float yaw_rate = 0.0f, float pitch_rate = 0.0f, float roll_rate = 0.0f,
-                 float yaw_angle = 0.0f, float pitch_angle = 0.0f, float roll_angle = 0.0f)
-    : yaw_rate(yaw_rate), pitch_rate(pitch_rate), roll_rate(roll_rate),
-      yaw_angle(yaw_angle), pitch_angle(pitch_angle), roll_angle(roll_angle) {}
-};
+    
+}Angle_Twist;
 
 
 #ifdef __cplusplus

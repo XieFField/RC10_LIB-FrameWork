@@ -43,10 +43,8 @@ frame_t/main.o: ..\Core\Src\main.cpp ..\Core\Inc\main.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\list.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os2.h \
   ..\Core\Inc\dma.h ..\Core\Inc\fdcan.h ..\Core\Inc\tim.h \
-  ..\Core\Inc\usart.h ..\USB_DEVICE\App\usb_device.h \
-  ..\Middlewares\ST\STM32_USB_Device_Library\Core\Inc\usbd_def.h \
-  ..\USB_DEVICE\Target\usbd_conf.h ..\Core\Inc\gpio.h \
-  ..\User\debug\Inc\frame_demo.h ..\RC10_LIB\BSP_Driver\Inc\BSP_RTOS.h \
+  ..\Core\Inc\usart.h ..\Core\Inc\gpio.h ..\User\debug\Inc\frame_demo.h \
+  ..\RC10_LIB\BSP_Driver\Inc\BSP_RTOS.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\queue.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\semphr.h \
   ..\RC10_LIB\BSP_Driver\Inc\BSP_fdCAN_Driver.h \
@@ -62,5 +60,10 @@ frame_t/main.o: ..\Core\Src\main.cpp ..\Core\Inc\main.h \
   ..\RC10_LIB\APP\Inc\APP_CoordConvert.h \
   ..\RC10_LIB\Motor\Inc\Motor_VESC.h \
   ..\RC10_LIB\Module\Inc\Module_ChassisBase.h \
+  ..\RC10_LIB\Motor\Inc\Motor_DM.h ..\RC10_LIB\Module\Inc\Module_GPIO.h \
   ..\RC10_LIB\Module\Inc\Module_Air_joy.h \
-  ..\User\Setup\Inc\Setup_ConfigInit.h
+  ..\User\Setup\Inc\Setup_ConfigInit.h ..\User\debug\Inc\debug_setup.h \
+  ..\User\Setup\Inc\FSM_Controller.h ..\User\Setup\Inc\FSMstauts_enum.h \
+  ..\User\Setup\Inc\Arm_Setup.h ..\User\Control\Inc\Robot_Arm.h \
+  ..\User\Setup\Inc\omni_chassisSetup.h \
+  ..\RC10_LIB\Module\Inc\Module_ChassisOmni.h

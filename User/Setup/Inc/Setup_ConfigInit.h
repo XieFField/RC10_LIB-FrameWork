@@ -21,7 +21,12 @@ extern "C" {
 }
 
 #ifdef __cplusplus
+
+#if M2006_DEMO
 #include "frame_demo.h"
+#endif
+
+
 #include <cstdint>
 #include "BSP_CANFrame.h"
 #include "BSP_RTOS.h"
@@ -29,6 +34,28 @@ extern "C" {
 #include "Motor_DJI.h"
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
+#include "APP_PID.h"
+#include "debug_setup.h"
+#include "Module_Air_joy.h"
+
+/*==============Controller===============*/
+#include "FSM_Controller.h"
+#include "Arm_Setup.h"
+#include "omni_chassisSetup.h"
+
+#if SPEEDPLANNER_DEMO_DEBUG
+    #include "speedplanner_demo.h"
+#endif
+
+
+#if ARM_DEMO_DEBUG
+
+        #include "arm_demo.h"
+#endif
+
+
+
+
 
 
 
@@ -41,3 +68,4 @@ extern "C" {
 
 
 #endif
+
