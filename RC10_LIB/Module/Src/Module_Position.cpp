@@ -1,6 +1,6 @@
 /**
- * @file position.cpp
- * @author WU Jia HA Ji cao 
+ * @file Module_Position.cpp
+ * @author XieFField HA Ji cao 
  * @brief position驱动文件
  * @attention 此文件用于position而非action
  * @date 2025-10-22
@@ -12,9 +12,8 @@
   额外重定位yaw, id3可将imu断电重启
   
 */
-
+#include "Module_Position.h"
 // 联合体用于将20字节的浮点数接收到 float 数组中
-#include "position.h"
 #include <math.h>
 #include "usbd_cdc_if.h"
 
@@ -222,23 +221,13 @@ void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 
 
 // 数据更新函数：将解析后的值存入 RawPos 和 RealPos
-void Update_RawPosition(float value[5])
+void Position::Update_RawPosition(float value[5])
 {
-//	//赋值
-	// RawPosData.LAST_Pos_X = RawPosData.Pos_X;
-	// RawPosData.LAST_Pos_Y = RawPosData.Pos_Y;
-
-	// 处理数据
-    // 将位置单位从 mm 转换为 m（除以 1000）
 	RawPosData.Pos_X = value[0] / 1000.f; 
 	RawPosData.Pos_Y = value[1] / 1000.f; 
 	RawPosData.angle_Z = value[2];
 	RawPosData.Speed_Yaw = value[3];
 	RawPosData.Speed_Y = value[4];
-
-//   //差分运算
-	// RawPosData.DELTA_Pos_X = RawPosData.Pos_X - RawPosData.LAST_Pos_X;
-	// RawPosData.DELTA_Pos_Y = RawPosData.Pos_Y - RawPosData.LAST_Pos_Y;
 
    //世界坐标
 	RealPosData.world_yaw = RawPosData.angle_Z;
@@ -247,21 +236,11 @@ void Update_RawPosition(float value[5])
 
 	RealPosData.dyaw = RawPosData.Speed_Yaw;
 
-
-	//加入安装误差
-    //累加位移
-	// RawPosData.REAL_X += (RawPosData.DELTA_Pos_X);
-	// RawPosData.REAL_Y += (RawPosData.DELTA_Pos_Y);
-	
-    // 若需考虑安装误差，可取消注释下方代码：
-    //解算安装误差
-	// RealPosData.world_x = RawPosData.REAL_X + INSTALL_ERROR_X * sinf(RealPosData.world_yaw * PI / 180.f);
-	// RealPosData.world_y = RawPosData.REAL_Y + INSTALL_ERROR_Y * cosf(RealPosData.world_yaw * PI / 180.f);
 }
 
 
 
-void Reposition_SendData(float X, float Y)
+void Position::Reposition_SendData(float X, float Y)
 {
 	uint8_t txBuffer[16] = {0};
 
@@ -302,15 +281,7 @@ void Reposition_SendData(float X, float Y)
 	HAL_UART_Transmit(&huart1, txBuffer, 16, HAL_MAX_DELAY);
 }
 
-/** 
- * @brief position重定位 差分运算
- * @version 0.1
- */
-void POS_Relocate_ByDiff(float X, float Y, float yaw)
-{
-	RealPosData.dx = X - RealPosData.world_x;
-	RealPosData.dy = Y - RealPosData.world_y;
-}
+
 /*调试USB用的
 void USB_DataReceivedCallback(uint8_t* buf, uint16_t len)
 {

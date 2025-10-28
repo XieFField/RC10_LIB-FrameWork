@@ -893,6 +893,106 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>RC10_LIB/APP</GroupName>
+          <Files>
+            <File>
+              <FileName>APP_PID.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\APP\Inc\APP_PID.h</FilePath>
+            </File>
+            <File>
+              <FileName>APP_PID.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_PID.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>APP_tool.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\APP\Inc\APP_tool.h</FilePath>
+            </File>
+            <File>
+              <FileName>APP_tool.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_tool.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>APP_CoordConvert.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\APP\Inc\APP_CoordConvert.h</FilePath>
+            </File>
+            <File>
+              <FileName>APP_CoordConvert.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_CoordConvert.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>RC10_LIB/Module</GroupName>
+          <Files>
+            <File>
+              <FileName>Module_Encoder.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_Encoder.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_ChassisBase.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_ChassisBase.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_ChassisBase.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisBase.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_Encoder.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_Encoder.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_Air_joy.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_Air_joy.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_Air_joy.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_Air_joy.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_ChassisOmni.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_ChassisOmni.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_ChassisOmni.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisOmni.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_GPIO.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_GPIO.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_GPIO.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_GPIO.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_Position.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_Position.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_Position.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_Position.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>RC10_LIB/BSP</GroupName>
           <Files>
             <File>
@@ -929,6 +1029,16 @@
               <FileName>retarget_io.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\BSP_Driver\Src\retarget_io.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>BSP_USB_UART_Driver.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\BSP_Driver\Inc\BSP_USB_UART_Driver.h</FilePath>
+            </File>
+            <File>
+              <FileName>BSP_USB_UART_Driver.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\BSP_Driver\Src\BSP_USB_UART_Driver.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -1038,106 +1148,6 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>RC10_LIB/APP</GroupName>
-          <Files>
-            <File>
-              <FileName>APP_PID.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\APP\Inc\APP_PID.h</FilePath>
-            </File>
-            <File>
-              <FileName>APP_PID.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_PID.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>APP_tool.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\APP\Inc\APP_tool.h</FilePath>
-            </File>
-            <File>
-              <FileName>APP_tool.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_tool.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>APP_CoordConvert.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\APP\Inc\APP_CoordConvert.h</FilePath>
-            </File>
-            <File>
-              <FileName>APP_CoordConvert.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_CoordConvert.cpp</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>RC10_LIB/Module</GroupName>
-          <Files>
-            <File>
-              <FileName>Module_Encoder.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_Encoder.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Module_ChassisBase.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_ChassisBase.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Module_ChassisBase.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisBase.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_Encoder.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_Encoder.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_Air_joy.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_Air_joy.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_Air_joy.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_Air_joy.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Module_ChassisOmni.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_ChassisOmni.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Module_ChassisOmni.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisOmni.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_GPIO.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_GPIO.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_GPIO.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_GPIO.cpp</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>CMSIS/DSP</GroupName>
-          <Files>
-            <File>
-              <FileName>arm_cortexM7lfsp_math.lib</FileName>
-              <FileType>4</FileType>
-              <FilePath>..\Drivers\CMSIS\DSP\Lib\ARM\arm_cortexM7lfsp_math.lib</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
           <GroupName>User/Setup</GroupName>
           <Files>
             <File>
@@ -1184,6 +1194,16 @@
               <FileName>omni_chassisSetup.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\omni_chassisSetup.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>CMSIS/DSP</GroupName>
+          <Files>
+            <File>
+              <FileName>arm_cortexM7lfsp_math.lib</FileName>
+              <FileType>4</FileType>
+              <FilePath>..\Drivers\CMSIS\DSP\Lib\ARM\arm_cortexM7lfsp_math.lib</FilePath>
             </File>
           </Files>
         </Group>

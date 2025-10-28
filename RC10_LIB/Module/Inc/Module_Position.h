@@ -1,12 +1,12 @@
 /**
- * @file position.h
- * @author WU Jia Zhuang Ji cao
+ * @file Module_Position.h
+ * @author XieFField HA Ji cao
  * @brief position驱动文件
  * @attention 此文件用于position而非action
  */
 
-#ifndef POSITION_H
-#define POSITION_H
+#ifndef MODULE_POSITION_H
+#define MODULE_POSITION_H
 
 
 #ifdef __cplusplus
@@ -68,9 +68,8 @@ typedef struct RawPos   //处理前
 extern uint8_t rx_buffer[RX_BUFFER_SIZE];
 extern RealPos RealPosData;
 
-void Reposition_SendData(float X, float Y);
-void POS_Relocate_ByDiff(float X, float Y, float yaw);
-void Update_RawPosition(float value[5]);
+
+
 
 #ifdef __cplusplus
 }
@@ -91,10 +90,14 @@ public:
     Position(const Position&) = delete;
     Position& operator=(const Position&) = delete;
 
+    void Reposition_SendData(float X, float Y);
+
 private:
     Position(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle); // 私有构造函数
     ~Position() = default;
     
+    void Update_RawPosition(float value[5]);
+
     // UART实例
     UART_* uart_instance_;
     
