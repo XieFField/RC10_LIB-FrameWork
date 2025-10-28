@@ -22,7 +22,10 @@ extern "C" {
 
 #ifdef __cplusplus
 
-#if M2006_DEMO
+#include "debug_setup.h"
+
+
+#if DEBUG_DJI_Motor
 #include "frame_demo.h"
 #endif
 

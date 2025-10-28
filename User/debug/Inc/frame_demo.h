@@ -54,11 +54,12 @@ public:
 
 class DJI_MotorDemo: public RtosTask{
 public:
-    DJI_MotorDemo() : RtosTask("DJI_MotorDemo", 1), debug_uart(&huart1) {}
-    void init();
+    DJI_MotorDemo() : RtosTask("DJI_MotorDemo", 10), debug_uart(&huart1) {}
+    void init(DJI_Motor *motor);
     void loop() override;
     Debug_Printf debug_uart;
 private:
+    DJI_Motor *motor_;
 };
 
 class DM_MotorDemo:public RtosTask{
