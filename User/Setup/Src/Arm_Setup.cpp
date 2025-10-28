@@ -2,11 +2,10 @@
 
 void ArmSetup::loop()
 {
-    if(!init_flag)
+    if(!arm_ctrlStatus.init_flag)
         return;
-    
-    now_time_s_ = TimeStamp::getInstance().getSeconds();
-    if(!is_calibrating)
+
+    if(!arm_ctrlStatus.is_calibrating)
     {
         calibrateM2006();
         return;
@@ -42,7 +41,7 @@ void ArmSetup::loop()
     case ARM_DEBUG:
         {
             // 调试状态
-            if(debug_start == 1)
+            if(arm_ctrlStatus.debug_start == 1)
                 debug();
         }
         break;
@@ -147,28 +146,40 @@ void ArmSetup::stop()
 
     if(_tool_Abs(this->motor_pitch_->getTotalAngle() - 0.0f) < 0.1f)
         this->motor_pitch_->setTargetCurrent(0.0f);
+    if((_tool_Abs(this->motor_launch_->getTotalAngle() - 0.0f) < 0.1f) && 
+       (_tool_Abs(this->motor_stretch_->getTotalAngle() - 0.0f) < 0.1f) &&
+       (_tool_Abs(this->motor_rotate_->getTotalAngle() - 0.0f) < 0.1f) &&
+       (_tool_Abs(this->motor_pitch_->getTotalAngle() - 0.0f) < 0.1f))
+    {
+        //全部到位后，切换到空闲模式
+        this->set_controlMode(CURRENT_CONTROL_MODE);
+        this->motor_launch_->setTargetCurrent(0.0f);
+        this->motor_stretch_->setTargetCurrent(0.0f);
+        this->motor_rotate_->setTargetCurrent(0.0f);
+        this->motor_pitch_->setTargetCurrent(0.0f);
+    }
 }
 
 void ArmSetup::calibrateM2006()
 {
     // 上电校准M2006电机位置
     // 给予M2006一个小电流顶住限位，然后计时1s，将当前位置重定位为0度
-    if(!calibrate_start)
+    if(!arm_ctrlStatus.calibrate_start)
     {
-        calibrate_startTime = TimeStamp::getInstance().getSeconds();
-        calibrate_start = true;
+        arm_ctrlStatus.calibrate_startTime = TimeStamp::getInstance().getSeconds();
+        arm_ctrlStatus.calibrate_start = true;
     }
     this->motor_stretch_->setTargetCurrent(-600.0f); // 给予一个小电流顶住限位
     this->motor_pitch_->setTargetCurrent(600.0f); // 给予一个小电流顶住限位
 
-    if(now_time_s_ - calibrate_startTime > 1.0f)
+    if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.0f)
     {
         this->motor_stretch_->relocate_totalAngle(0.0f);
         this->motor_pitch_->relocate_totalAngle(0.0f);
         this->motor_stretch_->setTargetCurrent(0.0f);
         this->motor_pitch_->setTargetCurrent(0.0f);
-        
-        is_calibrating = true;
+
+        arm_ctrlStatus.is_calibrating = true;
     }
 }
 
@@ -302,6 +313,9 @@ Arm_InitData_S arm_initData = {
    .launch_Ratio_ = 0.01099f,
    .rotate_gearRatio_ = 144.878f,
    .pitch_gearRatio_ = 360.0f,
+
+   .min_rotate_angle_ = 0.0f,
+   .max_rotate_angle_ = 359.999f,
 };
 
 

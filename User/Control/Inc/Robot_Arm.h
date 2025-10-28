@@ -43,6 +43,9 @@ typedef struct {
     float launch_Ratio_; // 升降比率，升降电机转一圈，升降多少米    0.01099米(109.9mm)
     float rotate_gearRatio_; // 旋转减速比，旋转电机转一圈，机械臂转多少度 144.878度()
     float pitch_gearRatio_; // 俯仰减速比，俯仰电机转一圈，末端关节转多少度 360度，直驱
+
+    float min_rotate_angle_; // 最小旋转角度
+    float max_rotate_angle_; // 最大旋转角度
 }Arm_InitData_S;
 
 typedef enum {
@@ -83,6 +86,26 @@ typedef struct{
     float rotate_current; //旋转电机电流
     float pitch_current; //末端关节电机电流
 }ARMotor_Current_S;
+
+typedef struct{
+    // 阻尼系数 λ
+    float jac_lambda_ = 0.02f;
+
+    // 限幅
+    float vmax_xy_ = 0.60f;  // 末端 XY 平面最大线速 m/s
+    float vmax_z_  = 0.60f;  // 末端 Z 轴最大线速 m/s
+    float hdot_max_ = 0.80f;             // 升降关节最大速度 m/s
+    float ddot_max_ = 0.80f;             // 伸展关节最大速度 m/s
+    float thetadot_deg_max_ = 90.0f;     // 旋转关节最大角速度 deg/s
+}Jacobian_InitData_S;
+
+typedef struct{
+    float sign_launch_ = 1.0f;
+    float sign_stretch_ = 1.0f;
+    float sign_rotate_ = 1.0f;
+    float sign_pitch_ = 1.0f;
+}MotorReversed_S;
+
 /** 
  * @brief 又变成四自由度了，好，那么好。
  * @note 这里的坐标或者行程单位都是米，角度单位是度，角度制。
@@ -90,6 +113,7 @@ typedef struct{
 class Robot_Arm {
 
 protected:
+    float now_time_s_ = 0; 
     Arm_InitData_S init_data_;
     DJI_Motor* motor_launch_ = nullptr; // 升降电机
     DJI_Motor* motor_stretch_ = nullptr; // 伸展电机
@@ -136,22 +160,16 @@ public:
      */
     void setManualSpeed(float vx, float vy, float vz) 
     {
-        manual_vx_ = vx; manual_vy_ = vy; manual_vz_ = vz;
+        manual_v_.vx = vx; manual_v_.vy = vy; manual_v_.vz = vz;
     }
 
-    /**
-     * @brief 设置雅可比阻尼系数（默认 0.02）
-     */
-    void setJacobianDamping(float lambda) { jac_lambda_ = lambda; }
 
-    //速度限幅
-    void setCartesianVelLimit(float vmax_xy, float vmax_z) { vmax_xy_ = vmax_xy; vmax_z_ = vmax_z; }
 
-    //速度限幅
-    void setJointVelLimit(float hdot_max, float ddot_max, float thetadot_deg_max) 
+    void setJacobianInitData(Jacobian_InitData_S jac_init_data)
     {
-        hdot_max_ = hdot_max; ddot_max_ = ddot_max; thetadot_deg_max_ = thetadot_deg_max;
+        jac_init_data_ = jac_init_data;
     }
+
     
     /**
      * @brief 手动设置每个自由度的目标位置，单位：m或度
@@ -189,19 +207,15 @@ public:
 
 
     //设置电机是否反相 true取反，false不取反
-    void setLaunchReversed(bool reversed) {sign_launch_  = reversed ? -1.0f : 1.0f;}
-    void setStretchReversed(bool reversed) {sign_stretch_ = reversed ? -1.0f : 1.0f;}
-    void setRotateReversed(bool reversed) {sign_rotate_  = reversed ? -1.0f : 1.0f;}
-    void setPitchReversed(bool reversed) {sign_pitch_  = reversed ? -1.0f : 1.0f;}
+    void setLaunchReversed(bool reversed) {sign_reversed_.sign_launch_ = reversed ? -1.0f : 1.0f;}
+    void setStretchReversed(bool reversed) {sign_reversed_.sign_stretch_ = reversed ? -1.0f : 1.0f;}
+    void setRotateReversed(bool reversed) {sign_reversed_.sign_rotate_  = reversed ? -1.0f : 1.0f;}
+    void setPitchReversed(bool reversed) {sign_reversed_.sign_pitch_  = reversed ? -1.0f : 1.0f;}
 
     Joint_Status_S get_currentJointStatus() const { return joint_angle_; }
     Joint_Status_S get_targetJointStatus() const { return target_joint_angle_; }
 
-private:
-
-    
-
-
+private:    
     Joint_Status_S joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; 
 
     Joint_Status_S target_joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; 
@@ -213,9 +227,6 @@ private:
     // 正运动学：计算末端位姿（基于当前目标或电机角度）
     // 返回 true 表示计算成功，结果写入 out
     bool forwardKinematics(Arm_Point_S& out) const;
-
-    const float minRotateAngle_ = 0.0f; // 旋转最小角度
-    const float maxRotateAngle_ = 359.999f; // 旋转最大角度
 
     Arm_Point_S arm_target_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 机械臂末端目标位置
     Arm_Point_S arm_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 机械臂关节末端当前位置
@@ -231,19 +242,11 @@ private:
 
 
     // Jacobian 速度控制用目标末端速度（m/s）
-    float manual_vx_ = 0.0f, manual_vy_ = 0.0f, manual_vz_ = 0.0f;
+    Robot_Twist manual_v_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
     void jacobianMatrix(); // 雅可比矩阵计算
 
-    // 阻尼系数 λ
-    float jac_lambda_ = 0.02f;
-
-    // 限幅
-    float vmax_xy_ = 0.60f;  // 末端 XY 平面最大线速 m/s
-    float vmax_z_  = 0.60f;  // 末端 Z 轴最大线速 m/s
-    float hdot_max_ = 0.80f;             // 升降关节最大速度 m/s
-    float ddot_max_ = 0.80f;             // 伸展关节最大速度 m/s
-    float thetadot_deg_max_ = 90.0f;     // 旋转关节最大角速度 deg/s
+    Jacobian_InitData_S jac_init_data_;
 
 
     // 时间戳（秒）
@@ -255,50 +258,47 @@ private:
     /*关节角度->电机总角度*/
     float launchHeight_to_MotorTotalAngle(float height)
     {
-        return sign_launch_ * height / init_data_.launch_Ratio_ * 360.0f;
+        return sign_reversed_.sign_launch_ * height / init_data_.launch_Ratio_ * 360.0f;
     }
 
     float stretchLength_to_MotorTotalAngle(float length)
     {
-        return sign_stretch_ * length / init_data_.stretch_Ratio_ * 360.0f;
+        return sign_reversed_.sign_stretch_ * length / init_data_.stretch_Ratio_ * 360.0f;
     }
 
     float rotateAngle_to_MotorTotalAngle(float angle)
     {
-        return sign_rotate_ * angle / init_data_.rotate_gearRatio_ * 360.0f;
+        return sign_reversed_.sign_rotate_ * angle / init_data_.rotate_gearRatio_ * 360.0f;
     }
 
     float pitchAngle_to_MotorTotalAngle(float angle)
     {
-        return sign_pitch_ * angle / init_data_.pitch_gearRatio_ * 360.0f;
+        return sign_reversed_.sign_pitch_ * angle / init_data_.pitch_gearRatio_ * 360.0f;
     }
 
 /*=================================================================*/
     /*电机总角度->关节角度*/
     float MotorTotalAngle_to_launchHeight(float motor_angle)
     {
-        return sign_launch_ * motor_angle * init_data_.launch_Ratio_ / 360.0f;
+        return sign_reversed_.sign_launch_ * motor_angle * init_data_.launch_Ratio_ / 360.0f;
     }
 
     float MotorTotalAngle_to_stretchLength(float motor_angle)
     {
-        return sign_stretch_ * motor_angle * init_data_.stretch_Ratio_ / 360.0f;
+        return sign_reversed_.sign_stretch_ * motor_angle * init_data_.stretch_Ratio_ / 360.0f;
     }
 
     float MotorTotalAngle_to_rotateAngle(float motor_angle)
     {
-        return sign_rotate_ * motor_angle * init_data_.rotate_gearRatio_ / 360.0f;
+        return sign_reversed_.sign_rotate_ * motor_angle * init_data_.rotate_gearRatio_ / 360.0f;
     }
 
     float MotorTotalAngle_to_pitchAngle(float motor_angle)
     {
-        return sign_pitch_ * motor_angle * init_data_.pitch_gearRatio_ / 360.0f;
+        return sign_reversed_.sign_pitch_ * motor_angle * init_data_.pitch_gearRatio_ / 360.0f;
     }
 
-    float sign_launch_ = 1.0f;
-    float sign_stretch_ = 1.0f;
-    float sign_rotate_ = 1.0f;
-    float sign_pitch_ = 1.0f;
+    MotorReversed_S sign_reversed_  = {1.0f, 1.0f, 1.0f, 1.0f};
 
 };
 

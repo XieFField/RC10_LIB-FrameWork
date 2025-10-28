@@ -10,6 +10,7 @@ Robot_Arm::Robot_Arm(Arm_InitData_S init_Data)
 void Robot_Arm::update()
 {
     /*电机当前的角度转换成关节当前的角度 */
+    now_time_s_ = TimeStamp::getInstance().getSeconds();
 
     if(motor_rotate_ != nullptr)
         joint_angle_.rotateJoint_angle_ = MotorTotalAngle_to_rotateAngle(motor_rotate_->getTotalAngle());
@@ -37,7 +38,7 @@ void Robot_Arm::update()
         target_joint_angle_.launchJoint_Height_  = constrain(target_joint_angle_.launchJoint_Height_,  0.0f, init_data_.max_launchHeight_);
         target_joint_angle_.stretchJoint_Length_ = constrain(target_joint_angle_.stretchJoint_Length_, 0.0f, init_data_.max_stretchLength_);
         target_joint_angle_.rotateJoint_angle_   = normalize_deg_0_360(target_joint_angle_.rotateJoint_angle_);
-        target_joint_angle_.rotateJoint_angle_   = constrain(target_joint_angle_.rotateJoint_angle_,   minRotateAngle_, maxRotateAngle_);
+        target_joint_angle_.rotateJoint_angle_   = constrain(target_joint_angle_.rotateJoint_angle_,   init_data_.min_rotate_angle_, init_data_.max_rotate_angle_);
     }
     else if(control_mode_ == CURRENT_CONTROL_MODE)
         // 电流控制模式下的处理
@@ -116,33 +117,32 @@ bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
 
 void Robot_Arm::jacobianMatrix()
 {
-    float now_time_s = TimeStamp::getInstance().getSeconds();
     if(!time_initialized_)
     {
-        last_time_s_ = now_time_s;
+        last_time_s_ = now_time_s_;
         time_initialized_ = true;
         // 首次对齐，后续基于“目标”积分
         target_joint_angle_ = joint_angle_;
         return;
     }
 
-    dt_ = now_time_s - last_time_s_;
-    last_time_s_ = now_time_s;
+    dt_ = now_time_s_ - last_time_s_;
+    last_time_s_ = now_time_s_;
     if(dt_ <= 1e-6f || dt_ > 0.1f) 
         return;
 
     // 末端速度限幅
-    float vx = manual_vx_, vy = manual_vy_, vz = manual_vz_;
-    float vxy_2 = vx*vx + vy*vy, vmax_xy_2 = vmax_xy_ * vmax_xy_;
+    float vx = manual_v_.vx, vy = manual_v_.vy, vz = manual_v_.vz;
+        float vxy_2 = vx*vx + vy*vy, vmax_xy_2 = jac_init_data_.vmax_xy_ * jac_init_data_.vmax_xy_;
     if(vxy_2 > vmax_xy_2)
     {
         float norm = 0.0f;
         arm_sqrt_f32(vxy_2, &norm);
-        float scale = vmax_xy_ /(norm + 1e-6f);
+        float scale = jac_init_data_.vmax_xy_ /(norm + 1e-6f);
         vx *= scale; 
         vy *= scale;
     }
-    vz = constrain(vz, -vmax_z_, vmax_z_);
+    vz = constrain(vz, -jac_init_data_.vmax_z_, jac_init_data_.vmax_z_);
 
     // 1 用反馈姿态计算雅可比
     const float h_fb = joint_angle_.launchJoint_Height_;
@@ -185,7 +185,7 @@ void Robot_Arm::jacobianMatrix()
         return;
 
     //Sl = S + λ^2 I
-    const float lambda_2 = jac_lambda_ * jac_lambda_;
+    const float lambda_2 = jac_init_data_.jac_lambda_ * jac_init_data_.jac_lambda_;
     for(uint32_t r=0; r < 3; ++r)
     {
         for(uint32_t c_idx = 0; c_idx < 3; ++c_idx)
@@ -198,9 +198,9 @@ void Robot_Arm::jacobianMatrix()
     if(arm_mat_mult_f32(&Sl_inv, &vec_v, &vec_tmp) != ARM_MATH_SUCCESS) return;
     if(arm_mat_mult_f32(&JT, &vec_tmp, &vec_qdot) != ARM_MATH_SUCCESS) return;
 
-    float hdot = constrain(qdot_data[0], -hdot_max_, hdot_max_);                 // m/s
-    float ddot = constrain(qdot_data[1], -ddot_max_, ddot_max_);                 // m/s
-    float thetadot_deg = constrain(rad_to_deg(qdot_data[2]), -thetadot_deg_max_, thetadot_deg_max_); // deg/s
+    float hdot = constrain(qdot_data[0], -jac_init_data_.hdot_max_, jac_init_data_.hdot_max_);                 // m/s
+    float ddot = constrain(qdot_data[1], -jac_init_data_.ddot_max_, jac_init_data_.ddot_max_);                 // m/s
+    float thetadot_deg = constrain(rad_to_deg(qdot_data[2]), -jac_init_data_.thetadot_deg_max_, jac_init_data_.thetadot_deg_max_); // deg/s
 
     //  积分到目标位置
     float h_cmd     = target_joint_angle_.launchJoint_Height_;

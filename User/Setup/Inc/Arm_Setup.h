@@ -26,6 +26,17 @@ extern "C" {
 #include "APP_debugTool.h"
 #include "FSMstauts_enum.h"
 
+typedef struct{
+    bool init_flag = false;
+
+    
+    uint8_t debug_start = 1; //调试开始标志 == 1 开始调试
+
+    float calibrate_startTime = 0; 
+    bool calibrate_start = false;
+    bool is_calibrating = false;
+
+}arm_ctrl_status_S;
 
 class ArmSetup: public RtosTask ,public Robot_Arm {
 public:
@@ -47,7 +58,7 @@ public:
 
         start(osPriorityNormal, 256);
 
-        init_flag = true;
+        arm_ctrlStatus.init_flag = true;
     }
 
     void setArmStatus(ARM_Status_E status)
@@ -57,9 +68,7 @@ public:
     
     
 private:
-    bool init_flag = false;
 
-    bool is_calibrating = false;
 
     Debug_Printf debug_uart = Debug_Printf(&huart1);
 
@@ -71,22 +80,24 @@ private:
     void debug();
 
     //上电校准M2006电机位置
-    void calibrateM2006(); float calibrate_startTime = 0; bool calibrate_start = false;
+    void calibrateM2006();
 
-    uint8_t debug_start = 1; //调试开始标志 == 1 开始调试
 protected:
     void loop() override;
 
-
+    arm_ctrl_status_S arm_ctrlStatus = {
+        .init_flag = false,
+        .debug_start = 1,
+        .calibrate_startTime = 0,
+        .calibrate_start = false,
+        .is_calibrating = false,
+    };
 
     ARM_Status_E arm_status_ = ARM_MANUAL_CONTROL;
     ARM_Status_E last_arm_status_ = ARM_MANUAL_CONTROL;
 
     Joint_Status_S last_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
     Joint_Status_S target_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
-
-    
-    float now_time_s_ = 0; 
 };
 
 
