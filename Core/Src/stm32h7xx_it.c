@@ -22,6 +22,7 @@
 #include "stm32h7xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "BSP_USB_UART_Driver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,14 +42,11 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-/*#define TARGET_BUFFER_SIZE  7
-uint8_t target_buffer[TARGET_BUFFER_SIZE];*/
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
-
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -291,14 +289,6 @@ void TIM4_IRQHandler(void)
 void USART1_IRQHandler(void)
 {
   /* USER CODE BEGIN USART1_IRQn 0 */
-	if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE) != RESET)
-  {
-    // ���IDLE�жϱ�־
-    __HAL_UART_CLEAR_IDLEFLAG(&huart1);
-//    Uart_Receive_Callback(&usart1_struct);
-    // �����Զ����IDLE�ص�����
-    //UART_IdleCallback(&huart1);
-  }
   /* USER CODE END USART1_IRQn 0 */
   HAL_UART_IRQHandler(&huart1);
   /* USER CODE BEGIN USART1_IRQn 1 */
