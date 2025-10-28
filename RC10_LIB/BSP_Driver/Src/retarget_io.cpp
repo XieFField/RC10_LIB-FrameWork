@@ -31,33 +31,37 @@ extern "C" __attribute__((used)) void __aeabi_assert(const char* expr, const cha
 #endif
 
 extern "C" {
-。
+
 typedef int FILEHANDLE;
 
-FILEHANDLE _sys_open(const char *name, int openmode) {
+FILEHANDLE _sys_open(const char *name, int openmode) 
+{
     (void)name;
     (void)openmode;
     return 1; // 返回一个虚拟句柄
 }
 //I/O重定向
-int _sys_write(FILEHANDLE fh, const unsigned char *buf, unsigned int len, int mode) {
+int _sys_write(FILEHANDLE fh, const unsigned char *buf, unsigned int len, int mode) 
+{
     (void)fh;
     (void)mode;
-    if (HAL_UART_Transmit(&huart1, (uint8_t*)buf, len, HAL_MAX_DELAY) == HAL_OK) {
+    if (HAL_UART_Transmit(&huart1, (uint8_t*)buf, len, HAL_MAX_DELAY) == HAL_OK) 
         return 0; // 返回 0 表示成功
-    } else {
+    
+    else 
         return -1; // 返回错误
-    }
+    
 }
 
-int _sys_read(FILEHANDLE fh, unsigned char *buf, unsigned int len, int mode) {
+int _sys_read(FILEHANDLE fh, unsigned char *buf, unsigned int len, int mode) 
+{
     (void)fh;
     (void)mode;
-    if (HAL_UART_Receive(&huart1, buf, len, HAL_MAX_DELAY) == HAL_OK) {
+    if (HAL_UART_Receive(&huart1, buf, len, HAL_MAX_DELAY) == HAL_OK) 
         return len; // 返回成功读取的字节数
-    } else {
+    else 
         return -1; // 返回错误
-    }
+    
 }
 
 /**
@@ -65,7 +69,8 @@ int _sys_read(FILEHANDLE fh, unsigned char *buf, unsigned int len, int mode) {
  * 用于处理无缓冲的单个字符输出。
  * @param ch 要发送的字符
  */
-void _ttywrch(int ch) {
+void _ttywrch(int ch) 
+{
     char c = (char)ch;
     HAL_UART_Transmit(&huart1, (uint8_t*)&c, 1, HAL_MAX_DELAY);
 }
@@ -73,37 +78,51 @@ void _ttywrch(int ch) {
 
 // --- 其他必要的函数，防止链接半主机版本 ---
 
-void _sys_exit(int return_code) {
+void _sys_exit(int return_code) 
+{
     (void)return_code;
-    while (1) { __NOP(); }
+    while (1)  
+        __NOP(); 
 }
 
-int _sys_close(FILEHANDLE fh) {
+int _sys_close(FILEHANDLE fh) 
+{
     (void)fh;
     return 0;
 }
 
-int _sys_istty(FILEHANDLE fh) {
+int _sys_istty(FILEHANDLE fh) 
+{
     (void)fh;
-    if (fh <= 2) {
+    if (fh <= 2) 
         return 1;
-    }
+    
     return 0;
 }
 
-int _sys_seek(FILEHANDLE fh, long pos) {
+int _sys_seek(FILEHANDLE fh, long pos) 
+{
     (void)fh;
     (void)pos;
     return -1;
 }
 
-long _sys_flen(FILEHANDLE fh) {
+long _sys_flen(FILEHANDLE fh) 
+{
     (void)fh;
     return -1;
 }
 
 // C++ 纯虚函数和异常处理相关的桩
-void __cxa_pure_virtual() { while (1) { __NOP(); } }
-void __cxa_deleted_virtual() { while (1) { __NOP(); } }
+void __cxa_pure_virtual() 
+{ 
+    while (1)  
+        __NOP(); 
+}
+void __cxa_deleted_virtual() 
+{ 
+    while (1)  
+        __NOP();  
+}
 
 } // extern "C"
