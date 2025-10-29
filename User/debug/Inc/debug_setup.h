@@ -14,6 +14,7 @@
 #if DEMO_DEBUG_TEST
     #define ARM_DEMO_DEBUG 0
     #define DEBUG_M2006 0
+    #define SPEEDPLANNER_DEMO_DEBUG 0
 #endif
 
 #endif // DEBUG_SETUP_H

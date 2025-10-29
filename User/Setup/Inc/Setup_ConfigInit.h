@@ -43,6 +43,9 @@ extern "C" {
 #include "Arm_Setup.h"
 #include "omni_chassisSetup.h"
 
+#if SPEEDPLANNER_DEMO_DEBUG
+    #include "speedplanner_demo.h"
+#endif
 
 
 #if ARM_DEMO_DEBUG

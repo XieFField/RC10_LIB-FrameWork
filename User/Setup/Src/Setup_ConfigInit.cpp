@@ -28,6 +28,10 @@ M3508 arm_rotateMotor(7, CAN1_Bus); M2006 arm_pitchMotor(8, CAN1_Bus);
 
 
 
+#if SPEEDPLANNER_DEMO_DEBUG
+
+SpeedPlanner_Demo speedplanner_demo;
+#endif
 
 #if DEBUG_M2006
 
@@ -99,6 +103,13 @@ void debug_init()
    dji_motor_demo.init();
 #endif
 /*============================== debug  M2006 ===============================*/
+ 
+/*============================== debug   speedplanner ===============================*/    
+#if SPEEDPLANNER_DEMO_DEBUG
+
+   speedplanner_demo.init();
+#endif
+/*============================== debug   speedplanner ===============================*/
 
 }
 
