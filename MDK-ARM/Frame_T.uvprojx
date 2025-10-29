@@ -925,6 +925,26 @@
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\APP\Src\APP_CoordConvert.cpp</FilePath>
             </File>
+            <File>
+              <FileName>APP_Speedplanner.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\APP\Inc\APP_Speedplanner.h</FilePath>
+            </File>
+            <File>
+              <FileName>APP_Vector2D.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\APP\Inc\APP_Vector2D.h</FilePath>
+            </File>
+            <File>
+              <FileName>APP_Speedplanner.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_Speedplanner.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>APP_Vector2D.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_Vector2D.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1109,6 +1129,16 @@
               <FileName>debug_setup.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\debug\Inc\debug_setup.h</FilePath>
+            </File>
+            <File>
+              <FileName>speedplanner_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\speedplanner_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>speedplanner_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\speedplanner_demo.cpp</FilePath>
             </File>
           </Files>
         </Group>
