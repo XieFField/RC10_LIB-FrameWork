@@ -33,6 +33,7 @@ extern "C"
 #include "Module_ChassisBase.h"
 #include "Motor_DM.h"
 #include "Module_GPIO.h"
+#include "Module_Air_joy.h"
 
 class FrameDemo : public RtosTask
 {

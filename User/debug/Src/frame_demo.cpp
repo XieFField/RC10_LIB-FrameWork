@@ -48,6 +48,8 @@ volatile float delta_time = 0.0f; //目前使用的单位是微秒
 volatile uint64_t last_time = 0;
 
 
+volatile int16_t left_x = 0;
+
 void DJI_MotorDemo::loop()
 {
    uint64_t time_now = TimeStamp::getInstance().getMicroseconds();
@@ -57,10 +59,26 @@ void DJI_MotorDemo::loop()
        // 可以在这里使用 delta_time 进行其他计算
    }
    last_time = time_now;
-   debug_uart.printf_DMA("%f,%f\r\n",motor_->getTargetRPM(), motor_->getRPM());
+   debug_uart.printf_DMA("%d,%f,%f\r\n",left_x,motor_->getTargetRPM(), motor_->getRPM());
+   
+   left_x = (int16_t)AirJoy::getinstance().LEFT_X;
+   if(left_x < 950 || left_x > 2050)
+   {
+	    left_x = 0;
+   }
+   else 
+   {
+        left_x -= 1500;
+   }
+
+   if(abs(left_x) < 50)
+   {
+	   left_x = 0;
+   }
+   
    if(start_signal == 1)
    {
-    
+       motor_->setTargetRPM(left_x);
    }
    else if(start_signal == 0)
    {
