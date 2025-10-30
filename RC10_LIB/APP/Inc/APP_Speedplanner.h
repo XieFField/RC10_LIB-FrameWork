@@ -3,14 +3,14 @@
  * @author naoganlin
  * @brief 速度控制器
  * 1.s型还没能实现远到近的速度规划，2d和1d都是
- * 2.梯形的规划要么得有给初速度，要么给初位置
+ * 2.两种速度规划最好要么得有给初速度，要么给初位置
  * @version 1.0
  * @date 2025-10-28
  */
 
 #ifndef __APP_SPEEDPLANNER_H
 #define __APP_SPEEDPLANNER_H
-
+#include <arm_math.h>
 #pragma once
 
 #ifdef __cplusplus
