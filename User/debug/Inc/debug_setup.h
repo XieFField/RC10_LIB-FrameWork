@@ -9,7 +9,7 @@
  * @brief 一些相关的debug启动宏定义可以放这里
  */
 
-#define DEMO_DEBUG_TEST 1
+#define DEMO_DEBUG_TEST 0
 
 #if DEMO_DEBUG_TEST
     #define ARM_DEMO_DEBUG 0
