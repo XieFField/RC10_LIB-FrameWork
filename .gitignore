@@ -25,3 +25,11 @@ MDK-ARM/Frame_T/croutine.o
 MDK-ARM/Frame_T/event_groups.d
 MDK-ARM/Frame_T/system_stm32h7xx.o
 *.d
+/.vs
+/MDK-ARM/RTE/Device/STM32H723ZGTx
+/MDK-ARM/Frame_T.uvprojx
+/MDK-ARM/Frame_T.uvguix.ayou
+/MDK-ARM/Frame_T.uvoptx
+/MDK-ARM/Frame_T.uvoptx
+/MDK-ARM/RTE/_Frame_T/RTE_Components.h
+/MDK-ARM/Frame_T.uvprojx

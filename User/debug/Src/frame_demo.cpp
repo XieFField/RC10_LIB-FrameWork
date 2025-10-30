@@ -1,12 +1,7 @@
 #include "frame_demo.h"
 
 
-//fdCANbus CAN1_Bus(&hfdcan1, 1); // CAN1
-//fdCANbus CAN2_Bus(&hfdcan2,1);
-//DJI_Group DJI_Group_1(send_idLow(), &CAN1_Bus); // 低片 0x200
-//M3508 m3508_1(1, &CAN1_Bus);
 
-//DM_Motor dm_motor(J4310_Type,0x05,0x05,&CAN2_Bus);
 
 GPIODevice elcdoor(GPIOG,GPIO_PIN_8);
 
@@ -51,65 +46,79 @@ void FrameDemo::init()
 
 volatile float delta_time = 0.0f; //目前使用的单位是微秒
 volatile uint64_t last_time = 0;
-//void DJI_MotorDemo::loop()
-//{
-//    uint64_t time_now = TimeStamp::getInstance().getMicroseconds();
-//    if(last_time > 0)
-//    {
-//        delta_time = static_cast<float>(time_now - last_time); 
-//        // 可以在这里使用 delta_time 进行其他计算
-//    }
-//    last_time = time_now;
-//    debug_uart.printf_DMA("%f,%f\r\n",m3508_1.getRPM(), m3508_1.getTargetRPM());
-//    //HAL_UART_Transmit(&huart1, (uint8_t*)"Tick\r\n", 6, HAL_MAX_DELAY);
-//    if(start_signal == 1)
-//    {
-//        m3508_1.setTargetCurrent(500.0f);
-//    }
-//    else if(start_signal == 0)
-//    {
-//        m3508_1.setTargetCurrent(0.0f);
-//    }
-//    else if(start_signal == 2)
-//    {
-//        m3508_1.setTargetCurrent(-500.0f);
-//    }
-//    else if (start_signal == 3)
-//    {
-//        /* code */
-//        m3508_1.setTargetRPM(60.0f);
-//    }
-//    else if (start_signal == 4)
-//    {
-//        /* code */
-//        m3508_1.setTargetRPM(-60.0f);
-//    }
-//    else if (start_signal == 5)
-//    {
-//        /* code */
-//        m3508_1.setTargetAngle(180.0f);
-//    }
-//    else if (start_signal == 6)
-//    {
-//        /* code */
-//        m3508_1.setTargetAngle(-180.0f);
-//    }
-//    else if (start_signal == 7)
-//    {
-//        /* code */
-//        m3508_1.setTargetAngle(720.0f);
-//    }
-//    else if (start_signal == 8)
-//    {
-//        /* code */
-//        m3508_1.setTargetAngle(-720.0f);
-//    }
-//    else
-//    {
-//        m3508_1.setTargetCurrent(0.0f);
-//    }
 
-//}
+
+volatile int16_t left_x = 0;
+
+void DJI_MotorDemo::loop()
+{
+   uint64_t time_now = TimeStamp::getInstance().getMicroseconds();
+   if(last_time > 0)
+   {
+       delta_time = static_cast<float>(time_now - last_time); 
+       // 可以在这里使用 delta_time 进行其他计算
+   }
+   last_time = time_now;
+   debug_uart.printf_DMA("%d,%f,%f\r\n",left_x,motor_->getTargetRPM(), motor_->getRPM());
+   
+   left_x = (int16_t)AirJoy::getinstance().LEFT_X;
+   if(left_x < 950 || left_x > 2050)
+   {
+	    left_x = 0;
+   }
+   else 
+   {
+        left_x -= 1500;
+   }
+
+   if(abs(left_x) < 50)
+   {
+	   left_x = 0;
+   }
+   
+   if(start_signal == 1)
+   {
+       motor_->setTargetRPM(left_x);
+   }
+   else if(start_signal == 0)
+   {
+
+   }
+   else if(start_signal == 2)
+   {
+       motor_->setTargetRPM(test_rpm);
+   }
+   else if (start_signal == 3)
+   {
+       motor_->setTargetAngle(test_pos);
+   }
+   else if (start_signal == 4)
+   {
+
+   }
+   else if (start_signal == 5)
+   {
+
+   }
+   else if (start_signal == 6)
+   {
+
+   }
+   else if (start_signal == 7)
+   {
+
+   }
+   else if (start_signal == 8)
+   {
+
+   }
+   else
+   {
+       motor_->setTargetCurrent(0.0f);
+   }
+}
+
+
 //void DM_MotorDemo::loop()
 //{
 //	 uint64_t time_now = TimeStamp::getInstance().getMicroseconds();
@@ -234,20 +243,14 @@ void GPIODemo::init()
 	start(osPriorityNormal, 256);
 }
 
-//void DJI_MotorDemo::init()
-//{
-//    DJI_Group_1.addMotor(&m3508_1);
-//    CAN1_Bus.registerMotor(&m3508_1); // 注册电机本身
-//    CAN1_Bus.registerMotor(&DJI_Group_1); // 同时注册Group用于发送
-//    m3508_1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-//    CAN1_Bus.init();
-//    start(osPriorityNormal, 256);
-//    
-//    const char *msg = "Hello UART1 on PB6/PB7\r\n";
-//    HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-//    
-//    
-//}
+void DJI_MotorDemo::init(DJI_Motor *motor)
+{
+   motor_ = motor;
+
+   start(osPriorityNormal, 256);
+
+   debug_uart.printf_DMA("DJI_MotorDemo init\r\n");
+}
 
 //void DM_MotorDemo::init()
 //{

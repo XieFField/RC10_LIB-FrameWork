@@ -33,6 +33,7 @@ extern "C"
 #include "Module_ChassisBase.h"
 #include "Motor_DM.h"
 #include "Module_GPIO.h"
+#include "Module_Air_joy.h"
 
 class FrameDemo : public RtosTask
 {
@@ -54,11 +55,12 @@ public:
 
 class DJI_MotorDemo: public RtosTask{
 public:
-    DJI_MotorDemo() : RtosTask("DJI_MotorDemo", 1), debug_uart(&huart1) {}
-    void init();
+    DJI_MotorDemo() : RtosTask("DJI_MotorDemo", 10), debug_uart(&huart1) {}
+    void init(DJI_Motor *motor);
     void loop() override;
     Debug_Printf debug_uart;
 private:
+    DJI_Motor *motor_;
 };
 
 class DM_MotorDemo:public RtosTask{

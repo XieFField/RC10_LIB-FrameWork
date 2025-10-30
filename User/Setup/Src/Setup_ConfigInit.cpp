@@ -27,16 +27,35 @@ M3508 arm_rotateMotor(7, CAN1_Bus); M2006 arm_pitchMotor(8, CAN1_Bus);
 /*================Motor Instances==============*/
 
 
+/*============================== debug  DJI_Motor ===============================*/
+
+#if DEBUG_DJI_Motor
 
 #if SPEEDPLANNER_DEMO_DEBUG
 
 SpeedPlanner_Demo speedplanner_demo;
 #endif
 
-#if DEBUG_M2006
+M2006 m2006_1(5, CAN1_Bus);
 
 DJI_MotorDemo dji_motor_demo;
+
+void dji_motor_Init()
+{
+   DJIGroupCAN1_High.addMotor(&m2006_1);
+
+   CAN1_Bus->registerMotor(&DJIGroupCAN1_High);
+
+   CAN1_Bus->registerMotor(&m2006_1);
+
+   CAN1_Bus->init();
+
+   m2006_1.pid_init(m2006_speed_pid_params, 0.0f, m2006_angle_pid_params, 0.0f);
+}
 #endif
+
+/*============================== debug  DJI_Motor ===============================*/
+
 
 /*================================ debug  机械吸盘 =============================*/
 
@@ -98,9 +117,10 @@ void debug_init()
 /*============================== debug  机械吸盘 ===============================*/
 
 
-/*============================== debug  M2006 ===============================*/
-#if DEBUG_M2006
-   dji_motor_demo.init();
+/*============================== debug  DJI_Motor ===============================*/
+#if DEBUG_DJI_Motor
+   dji_motor_Init();
+   dji_motor_demo.init(&m2006_1);
 #endif
 /*============================== debug  M2006 ===============================*/
  
@@ -110,6 +130,7 @@ void debug_init()
    speedplanner_demo.init();
 #endif
 /*============================== debug   speedplanner ===============================*/
+/*============================== debug  DJI_Motor ===============================*/
 
 }
 
@@ -118,10 +139,10 @@ void CAN_Motor_Init(void);
 void ALL_Setup_ConfigInit(void)
 {
 
-   CAN_Motor_Init();
+   // CAN_Motor_Init();
 
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
-   //debug_init();
+   debug_init();
 
    ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
    ARM_Controller.setArmStatus(ARM_IDLE);
