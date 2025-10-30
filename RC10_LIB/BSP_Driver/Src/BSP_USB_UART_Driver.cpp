@@ -53,11 +53,11 @@ UART_::UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart
 
 void UART_::UART_Init()
 {
-				if(uarthandle_ == NULL){
-									Error_Handler();}
-       else {
-            HAL_UARTEx_ReceiveToIdle_DMA(uarthandle_, rx_buffer, rx_buffer_size);
-        } 
+				if(uarthandle_ == NULL)
+          Error_Handler();
+       else 
+        HAL_UARTEx_ReceiveToIdle_DMA(uarthandle_, rx_buffer, rx_buffer_size);
+        
 }
 
 
@@ -83,11 +83,12 @@ USB_CDC_::USB_CDC_(RxCallback RxCallback_Fuc,USBD_HandleTypeDef *usb_handle)
 				else
 				{
 				// 注册到实例管理器
-				InstanceManager::RegisterInstance(NULL,this);
+				  InstanceManager::RegisterInstance(NULL,this);
 				}
 }
-void USB_CDC_::CDC_Receive_Callback(uint8_t* Buf, uint32_t Len) {
-        RxCallback_Fuc(Buf, Len);
+void USB_CDC_::CDC_Receive_Callback(uint8_t* Buf, uint32_t Len) 
+{
+    RxCallback_Fuc(Buf, Len);
 }
 
 
@@ -102,9 +103,11 @@ void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len) {
      InstanceManager::GetInstanceByUSBHandle()->CDC_Receive_Callback(Buf,Len);
 }
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) 
+{
     UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
-    if (instance != nullptr) {
+    if (instance != nullptr) 
+    {
         // 调用实例的接收处理，使用HAL提供的Size参数
       instance->Callback_Fuc(huart->pRxBuffPtr,instance->rx_buffer_size);        
         // 重新启动DMA接收
