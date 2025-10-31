@@ -12,6 +12,7 @@ UART_* InstanceManager::uart_instances[UART_MAX] = {nullptr};
 USB_CDC_* InstanceManager::usb_instances[2]={nullptr};
 uint8_t n=0;
 uint8_t m=0;
+extern uint8_t large_data_buffer[];
 void InstanceManager::RegisterInstance(UART_* uart_instance,USB_CDC_* usb_instance) {
 	if(n<UART_MAX&&uart_instance!=NULL)
 	{
@@ -56,15 +57,20 @@ void UART_::UART_Init()
 				if(uarthandle_ == NULL){
 									Error_Handler();}
        else {
-            HAL_UARTEx_ReceiveToIdle_DMA(uarthandle_, rx_buffer, rx_buffer_size);
-        } 
+				__HAL_UART_CLEAR_IDLEFLAG(uarthandle_);
+        __HAL_UART_CLEAR_FLAG(uarthandle_, UART_FLAG_RXNE);
+				__HAL_UART_CLEAR_IDLEFLAG(uarthandle_);
+			  __HAL_UART_ENABLE_IT(uarthandle_, UART_IT_PE);     // 奇偶错误中断
+        __HAL_UART_ENABLE_IT(uarthandle_, UART_IT_ERR);
+				__HAL_UART_ENABLE_IT(uarthandle_, UART_IT_IDLE);
+				HAL_UART_Receive_DMA(uarthandle_,this->rx_buffer,this->rx_buffer_size);
+}
 }
 
-
 //虚拟串口
-USB_CDC_* InstanceManager::GetInstanceByUSBHandle() {
+USB_CDC_* InstanceManager::GetInstanceByUSBHandle(USBD_HandleTypeDef *usb_handle) {
     for (int i = 0; i < USB_MAX; i++) {
-             if(usb_instances[i]!=NULL){
+            if (usb_instances[i]->GetUSBHandle() == usb_handle) {
                 return usb_instances[i];
             }
 						 else{
@@ -72,9 +78,8 @@ USB_CDC_* InstanceManager::GetInstanceByUSBHandle() {
 						 }
   }
 }
-USB_CDC_::USB_CDC_(RxCallback RxCallback_Fuc,USBD_HandleTypeDef *usb_handle)
+USB_CDC_::USB_CDC_(USBD_HandleTypeDef *usb_handle)
 {
-				this->RxCallback_Fuc=RxCallback_Fuc;
         this->usbhandle_ = usb_handle;
         if(this->usbhandle_ == NULL)
 				{
@@ -86,34 +91,53 @@ USB_CDC_::USB_CDC_(RxCallback RxCallback_Fuc,USBD_HandleTypeDef *usb_handle)
 				InstanceManager::RegisterInstance(NULL,this);
 				}
 }
-void USB_CDC_::CDC_Receive_Callback(uint8_t* Buf, uint32_t Len) {
-        RxCallback_Fuc(Buf, Len);
-}
-
-
-
 
 // C 接口的全局回调函数
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len) {
-     InstanceManager::GetInstanceByUSBHandle()->CDC_Receive_Callback(Buf,Len);
+//hUsbDeviceHS
+void CDC_Receive_Callback(uint8_t *buf, uint16_t len,USBD_HandleTypeDef *usb_handle) {
+	  USB_CDC_* instance = InstanceManager::GetInstanceByUSBHandle(usb_handle);
+    if (instance != nullptr) {
+        instance->Callback_Fuc(buf,len);
 }
-
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+}
+void UART_Receive_Callback(UART_HandleTypeDef *huart)
+{
     UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
     if (instance != nullptr) {
-        // 调用实例的接收处理，使用HAL提供的Size参数
-      instance->Callback_Fuc(huart->pRxBuffPtr,instance->rx_buffer_size);        
-        // 重新启动DMA接收
-			
-			HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
-
+        __HAL_UART_CLEAR_IDLEFLAG(huart);
+        
+        // 停止DMA
+        HAL_UART_DMAStop(huart);
+        
+        // 计算实际接收的数据长度
+        uint16_t received_len;
+        
+        // 方法1：使用RX XferCount（如果HAL库维护了此计数）
+        if (huart->RxXferCount > 0) {
+            received_len = instance->rx_buffer_size - huart->RxXferCount;
+        } 
+        // 方法2：使用DMA计数器（带保护）
+        else if (huart->hdmarx != NULL) {
+            received_len = instance->rx_buffer_size - __HAL_DMA_GET_COUNTER(huart->hdmarx);
+            
+            // 验证长度合理性
+            if (received_len > instance->rx_buffer_size) {
+                received_len = instance->rx_buffer_size; // 限制到最大缓冲区大小
+            }
+        } else {
+            received_len = instance->rx_buffer_size; // 回退方案
+        }        
+        if (received_len > 0) {
+            instance->Callback_Fuc(instance->rx_buffer, received_len);
+        }
+        
+        // 重新启动DMA
+        HAL_UART_Receive_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
     }
 }
-
 #ifdef __cplusplus
 }
 #endif

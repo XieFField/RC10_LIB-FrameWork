@@ -17,7 +17,6 @@ extern "C" {
     #include "queue.h"
     #include "semphr.h"
     void ALL_Setup_ConfigInit(void);
-	  void Position_UART1_RxCallback(uint8_t *buf, uint16_t len);
 }
 
 #ifdef __cplusplus

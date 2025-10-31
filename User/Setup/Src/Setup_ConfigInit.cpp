@@ -10,7 +10,7 @@ DJI_MotorDemo dji_motor_demo;
 /*================================ debug  机械吸盘 =============================*/
 //extern class UART_ m;
 
-uint8_t rx_buffer[RX_BUFFER_SIZE];
+//uint8_t rx_buffer[RX_BUFFER_SIZE];
 #if ARM_DEMO_DEBUG
 
 fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
@@ -90,11 +90,9 @@ void debug_init()
 void ALL_Setup_ConfigInit(void)
 {
 		    // 获取Position单例并初始化UART
-   Position* pos = Position::GetInstance(&huart1);
-   pos->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
-
-   //other init
+	Position *pos=Position::GetInstance(&huart3);
+  pos->InitUART();
 }
 
