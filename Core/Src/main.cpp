@@ -32,8 +32,7 @@
 /*FRAMEDEMO_BEGIN*/
 #include "frame_demo.h"
 /*FRAMEDEMO_END*/
-#include "BSP_USB_UART_Driver.h"
-#include "position.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,11 +55,9 @@
 /* USER CODE BEGIN PV */
 // 全局变量
 #define large_data_size 64
-//#define RX_BUFFER_SIZE 35 
-//uint8_t rx_buffer[RX_BUFFER_SIZE];
- 
+uint8_t rx_buffer[RX_BUFFER_SIZE];
 
-//uint8_t large_data_buffer[large_data_size];
+uint8_t large_data_buffer[large_data_size];
 
 
 /* USER CODE END PV */
@@ -71,7 +68,7 @@ uint8_t ab[4];
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
-void Disable_UART_Receive(UART_HandleTypeDef *huart);
+
 /* USER CODE BEGIN PFP */
 #ifdef __cplusplus
 extern "C"{
@@ -118,6 +115,7 @@ int main(void)
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
+
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
@@ -125,14 +123,14 @@ int main(void)
   MX_FDCAN2_Init();
   MX_FDCAN3_Init();
   MX_USART1_UART_Init();
-	MX_USART3_UART_Init();
-	Disable_UART_Receive(&huart3);
+	HAL_UART_Receive_IT(&huart1, rx_buffer, RX_BUFFER_SIZE);
+  HAL_UART_Transmit_DMA(&huart1, large_data_buffer, large_data_size);
 	MX_TIM6_Init();
   MX_TIM4_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
- // ALL_Setup_ConfigInit();
+  ALL_Setup_ConfigInit();
 	
 	
 
@@ -224,31 +222,20 @@ void SystemClock_Config(void)
 extern "C" {
 #endif
 
-//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-//{
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
 
-//			 // HAL_UART_Transmit_DMA(&huart1, large_data_buffer, large_data_size);
-//        HAL_UART_Receive_IT(huart, rx_buffer, RX_BUFFER_SIZE);
-//}
+			 // HAL_UART_Transmit_DMA(&huart1, large_data_buffer, large_data_size);
+        HAL_UART_Receive_IT(huart, rx_buffer, RX_BUFFER_SIZE);
+}
 
 #ifdef __cplusplus
 }
 #endif
-// 失能UART接收（包括DMA和中断）
-void Disable_UART_Receive(UART_HandleTypeDef *huart)
-{
-    // 停止DMA接收
-    HAL_UART_DMAStop(huart);
-    
-    // 失能UART接收中断
-    __HAL_UART_DISABLE_IT(huart, UART_IT_RXNE);  // 接收寄存器非空中断
-    __HAL_UART_DISABLE_IT(huart, UART_IT_IDLE);  // 空闲中断
-    __HAL_UART_DISABLE_IT(huart, UART_IT_PE);    // 奇偶错误中断
-    __HAL_UART_DISABLE_IT(huart, UART_IT_ERR);   // 错误中断
-}
 /* USER CODE END 4 */
 
  /* MPU Configuration */
+
 void MPU_Config(void)
 {
   MPU_Region_InitTypeDef MPU_InitStruct = {0};
@@ -275,7 +262,6 @@ void MPU_Config(void)
   HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 
 }
-
 
 /**
   * @brief  Period elapsed callback in non blocking mode

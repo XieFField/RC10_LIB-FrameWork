@@ -32,8 +32,7 @@
 /*FRAMEDEMO_BEGIN*/
 #include "frame_demo.h"
 /*FRAMEDEMO_END*/
-#include "BSP_USB_UART_Driver.h"
-#include "position.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,12 +54,8 @@
 
 /* USER CODE BEGIN PV */
 // 全局变量
-#define large_data_size 64
-//#define RX_BUFFER_SIZE 35 
-//uint8_t rx_buffer[RX_BUFFER_SIZE];
- 
 
-//uint8_t large_data_buffer[large_data_size];
+//uint8_t rx_buffer[RX_BUFFER_SIZE];
 
 
 /* USER CODE END PV */
@@ -118,6 +113,7 @@ int main(void)
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
+
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
@@ -125,18 +121,14 @@ int main(void)
   MX_FDCAN2_Init();
   MX_FDCAN3_Init();
   MX_USART1_UART_Init();
-	Position *pos=Position::GetInstance(&huart1);
-  pos->InitUART();
-//  UART_ m(RX_BUFFER_SIZE,rx_buffer,&huart1);
-//  m.UART_Init();
-	MX_TIM6_Init();
+  MX_TIM6_Init();
   MX_TIM4_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
   ALL_Setup_ConfigInit();
-	
-	
+
+
 
   
   /* USER CODE END 2 */
@@ -226,12 +218,10 @@ void SystemClock_Config(void)
 extern "C" {
 #endif
 
-//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-//{
-
-//			 // HAL_UART_Transmit_DMA(&huart1, large_data_buffer, large_data_size);
-//        HAL_UART_Receive_IT(huart, rx_buffer, RX_BUFFER_SIZE);
-//}
+/*void Uart_USB_Receive_Callback_Wrapper(void)
+{
+    m.Uart_USB_Receive_Callback();
+}*/
 
 #ifdef __cplusplus
 }

@@ -20,8 +20,6 @@ extern "C" {
 //定义函数被指针
 typedef void (*RxCallback)(uint8_t *buf, uint16_t len);
 //USB和UART回调函数
-void UART_Receive_Callback(UART_HandleTypeDef *huart);
-void CDC_Receive_Callback(uint8_t *buf, uint16_t len,USBD_HandleTypeDef *usb_handle);
 void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len);	
 /** 
 * @brief define the uart struct
@@ -43,26 +41,22 @@ public:
     ~UART_(){}
 			//定义虚函数
 		virtual void Callback_Fuc(uint8_t *buf, uint16_t len){};
-	//	void UART_Receive_Callback(UART_HandleTypeDef *huart);
+		void UART_Receive_Callback(uint8_t* Buf, uint32_t Len);
     UART_HandleTypeDef* GetUartHandle() const { return uarthandle_;}
 		void UART_Init();
 		uint16_t rx_buffer_size;
 		uint8_t *rx_buffer;
-		UART_HandleTypeDef *uarthandle_;
 private:
-    //RxCallback RxCallback_Fuc;	  
-		//UART句柄
+    RxCallback RxCallback_Fuc;	  
+		UART_HandleTypeDef *uarthandle_;//UART句柄
 };
 
 class USB_CDC_{
 	public:
-    USB_CDC_(USBD_HandleTypeDef *usb_handle);
+    USB_CDC_(RxCallback RxCallback_Fuc,USBD_HandleTypeDef *usb_handle);
     ~USB_CDC_(){}
-		virtual void Callback_Fuc(uint8_t *buf, uint16_t len){};
-    USBD_HandleTypeDef* GetUSBHandle() const { return usbhandle_; 
-		uint16_t rx_usb_buffer_size;
-		uint8_t *rx_usb_buffer;
-		}
+		void CDC_Receive_Callback(uint8_t* Buf, uint32_t Len);
+    USBD_HandleTypeDef* GetUSBHandle() const { return usbhandle_; }
 private:
     RxCallback RxCallback_Fuc;	 
 		USBD_HandleTypeDef *usbhandle_;//USB句柄
@@ -71,7 +65,7 @@ private:
 class InstanceManager {
 public:
     static void RegisterInstance(UART_* uart_instance,USB_CDC_* usb_instance);//注册
-    static USB_CDC_* GetInstanceByUSBHandle(USBD_HandleTypeDef *usb_handle);
+    static USB_CDC_* GetInstanceByUSBHandle();
     static UART_* GetInstanceByUartHandle(UART_HandleTypeDef *huart);
 private:
 		static USB_CDC_* usb_instances[2];

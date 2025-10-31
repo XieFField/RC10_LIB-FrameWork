@@ -20,7 +20,7 @@
 
 RawPos RawPosData = {0};
 RealPos RealPosData = {0};
-uint8_t Position::rx_buffer_[RX_BUFFER_SIZE];
+
 #define NEW_OR_OLD 1
 
 union
@@ -35,16 +35,18 @@ union
 // 获取单例实例
 
 
-Position::Position(UART_HandleTypeDef *uart_handle) 
-    :UART_(RX_BUFFER_SIZE,rx_buffer_,uart_handle),
+Position::Position(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle) 
+    :UART_(rx_buffer_size,rx_buffer,uart_handle),
 		uart_instance_(nullptr)
     , uart_initialized_(false)
+    , rx_buffer_{0}
 {
 }
 
 Position* Position::GetInstance(UART_HandleTypeDef *uart_handle) 
 {
-	  static Position instance(uart_handle);
+	  static uint8_t static_rx_buffer[RX_BUFFER_SIZE] = {0};
+	  static Position instance(RX_BUFFER_SIZE,static_rx_buffer,uart_handle);
     return &instance;
 }
 
@@ -59,6 +61,10 @@ void Position::InitUART()
 
     uart_instance_ = InstanceManager::GetInstanceByUartHandle(uart_handle);;
     
+    // 清空接收缓冲区
+    memset(rx_buffer_, 0, RX_BUFFER_SIZE);
+    
+    __HAL_UART_ENABLE(uart_handle);
     // 初始化UART
     uart_instance_->UART_Init();
     
@@ -198,6 +204,8 @@ void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 				if (buf[i] == FRAME_TAIL_POSITION_1)  //接收包尾2
 				{	
 					//在接收包尾2后才开始启动回调
+					//UART_IdleCallback(&huart1);
+//					Reposition_SendData(10.2f, 5.7f);
 					Update_RawPosition(posture.ActVal);
 				}
 				count = 0;

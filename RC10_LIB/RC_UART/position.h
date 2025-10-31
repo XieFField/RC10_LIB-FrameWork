@@ -62,10 +62,10 @@ typedef struct RawPos   //处理前
 	float REAL_Y;
 }RawPos;
 
-#define RX_BUFFER_SIZE 35
+#define RX_BUFFER_SIZE 64   
 
 // 全局变量
-
+extern uint8_t rx_buffer[RX_BUFFER_SIZE];
 extern RealPos RealPosData;
 
 void Reposition_SendData(float X, float Y);
@@ -92,7 +92,7 @@ public:
     Position& operator=(const Position&) = delete;
 
 private:
-    Position(UART_HandleTypeDef *uart_handle); // 私有构造函数
+    Position(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle); // 私有构造函数
     ~Position() = default;
     
     // UART实例
@@ -101,7 +101,8 @@ private:
     
     // 初始化标志
     bool uart_initialized_;
-    static uint8_t rx_buffer_[RX_BUFFER_SIZE];
+
+		uint8_t rx_buffer_[RX_BUFFER_SIZE];
 };
 
 #endif // __cplusplus
