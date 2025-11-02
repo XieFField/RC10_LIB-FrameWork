@@ -139,7 +139,7 @@ void CAN_Motor_Init(void);
 void ALL_Setup_ConfigInit(void)
 {
 
-   // CAN_Motor_Init();
+   CAN_Motor_Init();
 
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();

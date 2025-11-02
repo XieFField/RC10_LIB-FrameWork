@@ -8,7 +8,7 @@ void ArmSetup::loop()
     if(!arm_ctrlStatus.is_calibrating)
     {
         calibrateM2006();
-        return;
+        arm_status_ = ARM_CALIBRATE;
     }
 
 
@@ -45,6 +45,13 @@ void ArmSetup::loop()
                     debug();
             }
             break;
+
+        case ARM_CALIBRATE:
+            {
+                // 校准状态
+                // 上电校准M2006电机位置
+                break;
+            }
         default:
             break;
     }
@@ -162,6 +169,7 @@ void ArmSetup::stop()
 
 void ArmSetup::calibrateM2006()
 {
+    this->set_controlMode(CURRENT_CONTROL_MODE);
     // 上电校准M2006电机位置
     // 给予M2006一个小电流顶住限位，然后计时1s，将当前位置重定位为0度
     if(!arm_ctrlStatus.calibrate_start)
@@ -169,10 +177,10 @@ void ArmSetup::calibrateM2006()
         arm_ctrlStatus.calibrate_startTime = TimeStamp::getInstance().getSeconds();
         arm_ctrlStatus.calibrate_start = true;
     }
-    this->motor_stretch_->setTargetCurrent(-600.0f); // 给予一个小电流顶住限位
-    this->motor_pitch_->setTargetCurrent(600.0f); // 给予一个小电流顶住限位
+    this->motor_stretch_->setTargetCurrent(-1000.0f); // 给予一个小电流顶住限位
+    this->motor_pitch_->setTargetCurrent(1000.0f); // 给予一个小电流顶住限位
 
-    if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.0f)
+    if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.5f)
     {
         this->motor_stretch_->relocate_totalAngle(0.0f);
         this->motor_pitch_->relocate_totalAngle(0.0f);
@@ -207,6 +215,13 @@ uint8_t test_signal = 0;
 float test_current = 0.0f;
 float rotate_rate = 5.0f;
 float launch_rate = 0.005f;
+
+float stretch_starttime = 0;
+bool stretch_flag = false;
+float pitch_starttime = 0;
+bool pitch_flag = false;
+float stretch_usetime = 0;
+float pitch_usetime = 0;
 void ArmSetup::debug()
 {
     //测试
@@ -266,7 +281,7 @@ void ArmSetup::debug()
         if(_tool_Abs(AirJoy::getinstance().SWD - 1000) < 50)
             target_joint_status_.suckerJoint_angle_ = 0.0f; // 末端关节收
         else if(_tool_Abs(AirJoy::getinstance().SWD - 2000) < 50)
-            target_joint_status_.suckerJoint_angle_ = 90.0f; // 末端关节开
+            target_joint_status_.suckerJoint_angle_ = 95.0f; // 末端关节开
         else 
             target_joint_status_.suckerJoint_angle_ = target_joint_status_.suckerJoint_angle_; // 保持不变
 
@@ -309,7 +324,7 @@ Arm_InitData_S arm_initData = {
    .arm_length_ = 0.6f,
    .end_link_length_ = 0.08f,
 
-   .stretch_Ratio_ = 0.0942f,
+   .stretch_Ratio_ = 0.08417f,
    .launch_Ratio_ = 0.01099f,
    .rotate_gearRatio_ = 144.878f,
    .pitch_gearRatio_ = 360.0f,

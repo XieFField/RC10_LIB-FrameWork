@@ -30,6 +30,8 @@ typedef enum{
     ARM_STOP,
 
     ARM_DEBUG,
+
+    ARM_CALIBRATE, //串联臂校准模式
 }ARM_Status_E;
 
 
