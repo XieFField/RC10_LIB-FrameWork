@@ -40,6 +40,7 @@ extern "C" {
 #include "APP_PID.h"
 #include "debug_setup.h"
 #include "Module_Air_joy.h"
+#include "Module_Position.h"
 
 /*==============Controller===============*/
 #include "FSM_Controller.h"

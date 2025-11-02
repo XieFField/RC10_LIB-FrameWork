@@ -14,39 +14,39 @@ void ArmSetup::loop()
 
     switch(arm_status_)
     {
-    case ARM_MANUAL_CONTROL:
-        {
-            manualControl();
-        }
-        break;
+        case ARM_MANUAL_CONTROL:
+            {
+                manualControl();
+            }
+            break;
 
-    case ARM_AUTO_CONTROL:
-        {
-            autoControl();
-        }
-        break;
+        case ARM_AUTO_CONTROL:
+            {
+                autoControl();
+            }
+            break;
 
-    case ARM_STOP: 
-        {
-            // 停止状态, 将各个关节回归初始位置后，将电流置零
-            stop();
-        }
-        break;
-    case ARM_IDLE:
-        {
-            // 空闲状态，维持当前状态
-            idle();
-        }
+        case ARM_STOP: 
+            {
+                // 停止状态, 将各个关节回归初始位置后，将电流置零
+                stop();
+            }
+            break;
+        case ARM_IDLE:
+            {
+                // 空闲状态，维持当前状态
+                idle();
+            }
 
-    case ARM_DEBUG:
-        {
-            // 调试状态
-            if(arm_ctrlStatus.debug_start == 1)
-                debug();
-        }
-        break;
-    default:
-        break;
+        case ARM_DEBUG:
+            {
+                // 调试状态
+                if(arm_ctrlStatus.debug_start == 1)
+                    debug();
+            }
+            break;
+        default:
+            break;
     }
 
     this->update(); //将控制信息发送给电机

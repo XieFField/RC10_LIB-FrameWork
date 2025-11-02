@@ -13,6 +13,7 @@
 #include "usart.h"	
 #include "usb_device.h"
 #include "stm32h7xx_hal.h"
+#include "stm32h7xx_hal_dma.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -31,7 +32,7 @@ void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len);
 #endif
 #ifdef __cplusplus
 
-#define UART_MAX 10
+#define UART_MAX 1
 #define USB_MAX 10
 
 class UART_{

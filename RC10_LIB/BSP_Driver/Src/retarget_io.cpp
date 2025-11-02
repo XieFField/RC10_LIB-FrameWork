@@ -21,9 +21,11 @@ extern UART_HandleTypeDef huart1;
 #if defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
 // Arm Compiler 6 (armclang)
 __asm(".global __use_no_semihosting");
-extern "C" __attribute__((used)) void __aeabi_assert(const char* expr, const char* file, int line) {
+extern "C" __attribute__((used)) void __aeabi_assert(const char* expr, const char* file, int line) 
+{
     (void)expr; (void)file; (void)line;
-    while (1) { __NOP(); }
+    while (1)  
+        __NOP(); 
 }
 #else
 // Arm Compiler 5 (armcc)

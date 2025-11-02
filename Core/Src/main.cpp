@@ -112,15 +112,16 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  
+  MX_DMA_Init();
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
   MX_FDCAN3_Init();
   MX_USART1_UART_Init();
+
   MX_TIM6_Init();
   MX_TIM4_Init();
   MX_TIM14_Init();
-  MX_DMA_Init();
+
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
   ALL_Setup_ConfigInit();

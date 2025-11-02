@@ -144,6 +144,9 @@ void ALL_Setup_ConfigInit(void)
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
 
+   Position* pos = Position::GetInstance(&huart1);
+   pos->InitUART();
+
    ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
    ARM_Controller.setArmStatus(ARM_IDLE);
 
