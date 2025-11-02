@@ -162,7 +162,6 @@ void ALL_Setup_ConfigInit(void)
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
 
    Finite_StateMachine.init();
-   
 }
 
 

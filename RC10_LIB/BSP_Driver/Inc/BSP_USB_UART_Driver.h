@@ -34,7 +34,7 @@ void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len);
 
 #define UART_MAX 1
 #define USB_MAX 10
-
+#define large_data_size 64
 class UART_{
 public:
     

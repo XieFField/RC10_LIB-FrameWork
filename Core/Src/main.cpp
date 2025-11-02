@@ -53,6 +53,11 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+// 全局变量
+#define large_data_size 64
+uint8_t rx_buffer[RX_BUFFER_SIZE];
+
+uint8_t large_data_buffer[large_data_size];
 
 
 /* USER CODE END PV */
@@ -119,14 +124,17 @@ int main(void)
   MX_USART1_UART_Init();
 
   MX_TIM6_Init();
+	HAL_UART_Receive_IT(&huart1, rx_buffer, RX_BUFFER_SIZE);
+  HAL_UART_Transmit_DMA(&huart1, large_data_buffer, large_data_size);
+	MX_TIM6_Init();
   MX_TIM4_Init();
   MX_TIM14_Init();
 
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
   ALL_Setup_ConfigInit();
-
-
+	
+	
 
   
   /* USER CODE END 2 */
@@ -216,10 +224,12 @@ void SystemClock_Config(void)
 extern "C" {
 #endif
 
-/*void Uart_USB_Receive_Callback_Wrapper(void)
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-    m.Uart_USB_Receive_Callback();
-}*/
+
+			 // HAL_UART_Transmit_DMA(&huart1, large_data_buffer, large_data_size);
+        HAL_UART_Receive_IT(huart, rx_buffer, RX_BUFFER_SIZE);
+}
 
 #ifdef __cplusplus
 }
