@@ -1,0 +1,95 @@
+/**
+ * @file FSM_Controller.h
+ * @version 1.0
+ * @author XieFField
+ * @brief 机器人总状态机控制器
+ */
+
+
+#ifndef __FSM_CONTROLLER_H
+#define __FSM_CONTROLLER_H
+
+#pragma once
+
+#ifdef __cplusplus
+extern "C" {
+
+}
+#endif  
+
+
+#ifdef __cplusplus
+
+#include "BSP_RTOS.h"
+#include "Module_Air_joy.h"
+#include "APP_tool.h"
+#include "BSP_TimeStamp.h"
+#include "FSMstauts_enum.h"
+#include "Arm_Setup.h"
+#include "omni_chassisSetup.h"
+
+
+class FSM_Controller:public RtosTask {
+public:
+    FSM_Controller() : RtosTask("FSM_Controller", 1) {}
+
+    void registerArmSetup(ArmSetup *arm_setup)
+    {
+        arm_setup_ = arm_setup;
+        arm_setup_registered_ = true;
+    }
+
+    void registerChassisSetup(OmniChassis_Setup *chassis_setup)
+    {
+        chassis_setup_ = chassis_setup;
+        chassis_setup_registered_ = true;
+    }
+
+    void init()
+    {
+        if(!arm_setup_registered_ || !chassis_setup_registered_)
+            init_flag_ = false;
+        
+        this->start(osPriorityHigh, 256);
+        init_flag_ = true;
+    }
+
+    void reset_airjoy_deadzone(float deadzone)
+    {
+        airjoy_deadzone_ = deadzone;
+    }
+private:
+    void loop() override;
+
+    //全部停下
+    void all_stop();
+
+    void manual_ctrl();
+
+    void auto_ctrl();
+
+    void debug();
+
+    FSM_Status_E robot_status_; FSM_Status_E last_robot_status_;
+
+    float airjoy_deadzone_ = 50.0f; bool airjoy_connected_ = false;
+    
+    
+    ArmSetup *arm_setup_ = nullptr;  
+    bool arm_setup_registered_ = false; 
+    
+
+    OmniChassis_Setup *chassis_setup_ = nullptr; 
+    bool chassis_setup_registered_ = false; 
+    bool init_flag_ = false; //所有需要注册的机构都已经注册完成
+    uint8_t debug_flag_ = 1;
+    
+};
+
+#endif
+
+
+
+
+#endif
+

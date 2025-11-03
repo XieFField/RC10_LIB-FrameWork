@@ -1,11 +1,10 @@
 /**
  * @file Setup_ConfigInit.h
- * @brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã³ï¿½Ê¼ï¿½ï¿½
+ * @brief Æô¶¯ÅäÖÃ³õÊ¼»¯
  */
 
 #ifndef SETUP_CONFIGINIT_H
 #define SETUP_CONFIGINIT_H
-
 
 #ifdef __cplusplus
 #pragma once
@@ -22,7 +21,15 @@ extern "C" {
 }
 
 #ifdef __cplusplus
+
+#include "debug_setup.h"
+
+
+#if DEBUG_DJI_Motor
 #include "frame_demo.h"
+#endif
+
+
 #include <cstdint>
 #include "BSP_CANFrame.h"
 #include "BSP_RTOS.h"
@@ -30,19 +37,39 @@ extern "C" {
 #include "Motor_DJI.h"
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
-
+#include "APP_PID.h"
 #include "debug_setup.h"
+#include "Module_Air_joy.h"
+#include "Module_Position.h"
+
+/*==============Controller===============*/
+#include "FSM_Controller.h"
+#include "Arm_Setup.h"
+#include "omni_chassisSetup.h"
+
+#if SPEEDPLANNER_DEMO_DEBUG
+    #include "speedplanner_demo.h"
+#endif
+
 
 #if ARM_DEMO_DEBUG
 
         #include "arm_demo.h"
 #endif
-#if ONIM_DEMO_DEBUG
-        #include "Onim_demo.h"
-#endif
+
+
+
+
+
+
+
+
+
+
 #endif // __cplusplus
 
 #endif
 
 
 #endif
+

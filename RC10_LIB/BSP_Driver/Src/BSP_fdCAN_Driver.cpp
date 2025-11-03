@@ -255,7 +255,7 @@ void fdCANbus::SchedTask::run()
     parent_->schedulerTaskbody();
 }
 
-// --- 全局C风格回调函数 ---
+//extern "C"
 
 /**
  * @brief 全局的FDCAN接收中断处理函数

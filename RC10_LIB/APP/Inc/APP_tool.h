@@ -1,3 +1,9 @@
+/**
+ * @file   APP_tool.h
+ * @brief  通用工具函数头文件
+ * @author XieFField
+ */
+
 #ifndef __APP_TOOL_H
 #define __APP_TOOL_H
 
@@ -12,6 +18,13 @@ extern "C" {
     
 
 #endif
+
+template<typename Type> 
+Type _tool_Abs(Type x) 
+{
+    return ((x > 0) ? x : -x);
+}
+
 
 /**
  * @brief  将矩阵设置为单位矩阵
@@ -39,6 +52,44 @@ static inline T constrain(T value, T min, T max)
     return value;
 }
 
+template <typename T>
+static inline T m_to_cm(T value_m)
+{
+    return value_m * 100.0f;
+}
+
+template <typename T>
+static inline T cm_to_m(T value_cm)
+{
+    return value_cm / 100.0f;
+}
+
+template <typename T>
+static inline T mm_to_cm(T value_mm)
+{
+    return value_mm / 10.0f;
+}
+
+template <typename T>
+static inline T cm_to_mm(T value_cm)
+{
+    return value_cm * 10.0f;
+}
+
+template <typename T>
+static inline T m_to_mm(T value_m)
+{
+    return value_m * 1000.0f;
+}
+
+template <typename T>
+static inline T mm_to_m(T value_mm)
+{
+    return value_mm / 1000.0f;
+}
+
+
+
 //斜坡函数
 void ramp(float target, float& current, float max_change_rate, float dt);
 
@@ -48,6 +99,11 @@ float rad_to_deg(float rad);
 //角度转换为弧度函数
 float deg_to_rad(float deg);
 
+float normalize_deg_0_360(float a);
+
+float normalize_deg_pm180(float a);
+// 将 val_deg 映射到“最接近 ref_deg(0..360)”的等价角，并返回 0..360
+float wrap_to_nearest_0_360(float ref_deg_0_360, float val_deg_any);
 // 2D点结构体
 typedef struct  {
     float x, y;

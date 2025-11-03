@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file           : main.c
+  * @file           : main.cpp
   * @brief          : Main program body
   ******************************************************************************
   * @attention
@@ -23,13 +23,14 @@
 #include "fdcan.h"
 #include "tim.h"
 #include "usart.h"
-#include "usb_device.h"
 #include "gpio.h"
+//#include "usb_device.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+//#include "position.h"
 /*FRAMEDEMO_BEGIN*/
 #include "frame_demo.h"
+#include "Module_Air_joy.h"
 /*FRAMEDEMO_END*/
 
 /* USER CODE END Includes */
@@ -52,7 +53,15 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-extern void fdcan_global_scheduler_tick_isr(void);
+// 全局变量
+#define large_data_size 64
+uint8_t rx_buffer[RX_BUFFER_SIZE];
+
+uint8_t large_data_buffer[large_data_size];
+
+
+/* USER CODE END PV */
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,6 +74,7 @@ extern "C"{
 #endif
 void MX_FREERTOS_Init(void);
     
+
 #ifdef __cplusplus
 }
 #endif
@@ -95,7 +105,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+    
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -112,13 +122,21 @@ int main(void)
   MX_FDCAN2_Init();
   MX_FDCAN3_Init();
   MX_USART1_UART_Init();
+	MX_USART2_UART_Init();
   MX_TIM6_Init();
+	HAL_UART_Receive_IT(&huart1, rx_buffer, RX_BUFFER_SIZE);
+  HAL_UART_Transmit_DMA(&huart1, large_data_buffer, large_data_size);
+	MX_TIM6_Init();
   MX_TIM4_Init();
   MX_TIM14_Init();
+
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
   ALL_Setup_ConfigInit();
+	
+	
 
+  
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -163,8 +181,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 5;
@@ -199,8 +218,22 @@ void SystemClock_Config(void)
   }
 }
 
-/* USER CODE BEGIN 4 */
 
+/* USER CODE BEGIN 4 */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+
+			 // HAL_UART_Transmit_DMA(&huart1, large_data_buffer, large_data_size);
+        HAL_UART_Receive_IT(huart, rx_buffer, RX_BUFFER_SIZE);
+}
+
+#ifdef __cplusplus
+}
+#endif
 /* USER CODE END 4 */
 
  /* MPU Configuration */
@@ -255,10 +288,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     fdcan_global_scheduler_tick_isr();
   }
   
-    if (htim->Instance == TIM4) // 假设你使用的是 TIM4
-    {
-        TimeStamp::overflowCallback();
-    }
+  if (htim->Instance == TIM4) // 假设你使用的是 TIM4
+  {
+      TimeStamp::overflowCallback();
+  }
   /* USER CODE END Callback 1 */
 }
 
