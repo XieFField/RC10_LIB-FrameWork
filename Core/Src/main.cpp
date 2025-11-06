@@ -122,6 +122,7 @@ int main(void)
   MX_FDCAN2_Init();
   MX_FDCAN3_Init();
   MX_USART1_UART_Init();
+  MX_USART2_UART_Init();
 
   MX_TIM6_Init();
 	HAL_UART_Receive_IT(&huart1, rx_buffer, RX_BUFFER_SIZE);

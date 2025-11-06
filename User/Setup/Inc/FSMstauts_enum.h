@@ -1,3 +1,9 @@
+/**
+ * @file FSMstauts_enum.h
+ * @author XieFField
+ * @brief 状态机相关的数据库
+ */
+
 #ifndef __FSM_STATUS_ENUM_H
 #define __FSM_STATUS_ENUM_H
 
@@ -8,6 +14,10 @@ extern "C" {
 #endif
 
 #ifdef __cplusplus
+
+#include <iostream>
+#include <cmath>  
+#include "APP_tool.h"
 
 typedef enum{
     ALL_STOP, //全部机构停止工作
@@ -45,7 +55,7 @@ typedef enum{
 }CHASSIS_Status_E;
 
 
-//临时调试使用
+//遥控临时调试使用
 typedef struct{
     uint16_t SWA;
     uint16_t SWB;
@@ -57,6 +67,9 @@ typedef struct{
     uint16_t RIGHT_Y;
     
 }airjoy_S;
+
+
+
 
 #endif // __cplusplus
 

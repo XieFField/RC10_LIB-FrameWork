@@ -69,6 +69,13 @@ void Robot_Arm::update()
 
     if(motor_pitch_ != nullptr)
         motor_pitch_->setTargetTotalAngle(target_pitchMotorAngle);
+
+    if(sucker_status_ == SUCK)
+        HAL_GPIO_WritePin(init_data_.Sucker_GPIO_Port, init_data_.Sucker_GPIO_Pin, GPIO_PIN_SET);
+    
+    else
+        HAL_GPIO_WritePin(init_data_.Sucker_GPIO_Port, init_data_.Sucker_GPIO_Pin, GPIO_PIN_RESET);
+    
 }
 
 void Robot_Arm::inverseKinematics(Arm_Point_S target_point)

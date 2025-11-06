@@ -1175,6 +1175,16 @@
               <FileType>8</FileType>
               <FilePath>..\User\Control\Src\PathTracing.cpp</FilePath>
             </File>
+            <File>
+              <FileName>AutoCtrler.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Control\Inc\AutoCtrler.h</FilePath>
+            </File>
+            <File>
+              <FileName>AutoCtrler.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Src\AutoCtrler.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

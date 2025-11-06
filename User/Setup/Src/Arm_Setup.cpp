@@ -59,7 +59,11 @@ void ArmSetup::loop()
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
 }
-    
+
+uint8_t test_signal = 0;
+float test_current = 0.0f;
+float rotate_rate = 5.0f;
+float launch_rate = 0.005f;
 
 void ArmSetup::manualControl()
 {
@@ -75,49 +79,47 @@ void ArmSetup::manualControl()
         last_arm_status_ = ARM_MANUAL_CONTROL;
     }
 
-    // 读取遥控器输入，计算目标关节位置
-
     if(AirJoy::getinstance().RIGHT_X < 1450)
-        target_joint_status_.rotateJoint_angle_ -= 5.0f; // 旋转关节逆时针
-    else if(AirJoy::getinstance().RIGHT_X > 1550)
-        target_joint_status_.rotateJoint_angle_ += 5.0f; // 旋转关节顺时针
-    else
-        target_joint_status_ = target_joint_status_; // 保持不变
+            target_joint_status_.rotateJoint_angle_ -= rotate_rate; // 旋转关节逆时针
+        else if(AirJoy::getinstance().RIGHT_X > 1550)
+            target_joint_status_.rotateJoint_angle_ += rotate_rate; // 旋转关节顺时针
+        else
+            target_joint_status_ = target_joint_status_; // 保持不变
 
 
 
-    if(AirJoy::getinstance().RIGHT_Y < 1450)
-        target_joint_status_.launchJoint_Height_ -= 0.005f; // 伸展关节收回
-    else if(AirJoy::getinstance().RIGHT_Y > 1550)
-        target_joint_status_.launchJoint_Height_ += 0.005f; // 伸展关节伸出
-    else
-        target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_; // 保持不变
+        if(AirJoy::getinstance().RIGHT_Y < 1450)
+            target_joint_status_.launchJoint_Height_ -= launch_rate; // 伸展关节收回
+        else if(AirJoy::getinstance().RIGHT_Y > 1550)
+            target_joint_status_.launchJoint_Height_ += launch_rate; // 伸展关节伸出
+        else
+            target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_; // 保持不变
 
-    if(_tool_Abs(AirJoy::getinstance().SWA - 1000) < 50)
-        target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位置
-    else if(_tool_Abs(AirJoy::getinstance().SWA - 2000) < 50)
-        target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
-    else 
-        target_joint_status_.stretchJoint_Length_ = target_joint_status_.stretchJoint_Length_; // 保持不变
+        if(_tool_Abs(AirJoy::getinstance().SWA - 1000) < 50)
+            target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位置
+        else if(_tool_Abs(AirJoy::getinstance().SWA - 2000) < 50)
+            target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
+        else 
+            target_joint_status_.stretchJoint_Length_ = target_joint_status_.stretchJoint_Length_; // 保持不变
 
 
 
-    if(_tool_Abs(AirJoy::getinstance().SWD - 1000) < 50)
-        target_joint_status_.suckerJoint_angle_ = 0.0f; // 末端关节收
-    else if(_tool_Abs(AirJoy::getinstance().SWD - 2000) < 50)
-        target_joint_status_.suckerJoint_angle_ = 90.0f; // 末端关节开
-    else 
-        target_joint_status_.suckerJoint_angle_ = target_joint_status_.suckerJoint_angle_; // 保持不变
+        if(_tool_Abs(AirJoy::getinstance().SWD - 1000) < 50)
+            target_joint_status_.suckerJoint_angle_ = 0.0f; // 末端关节收
+        else if(_tool_Abs(AirJoy::getinstance().SWD - 2000) < 50)
+            target_joint_status_.suckerJoint_angle_ = 95.0f; // 末端关节开
+        else 
+            target_joint_status_.suckerJoint_angle_ = target_joint_status_.suckerJoint_angle_; // 保持不变
 
-    this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
-    this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
-    this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
-    this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
+        this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
+        this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
+        this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
+        this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
 
-    if(_tool_Abs(AirJoy::getinstance().SWC - 2000) < 50)
-        this->setSuckerStatus(Sucker_Status_E::SUCK);
-    else
-        this->setSuckerStatus(Sucker_Status_E::STOP);
+        if(_tool_Abs(AirJoy::getinstance().SWC - 2000) < 50)
+            this->setSuckerStatus(Sucker_Status_E::SUCK);
+        else
+            this->setSuckerStatus(Sucker_Status_E::STOP);
 }
 
 
@@ -211,10 +213,7 @@ void ArmSetup::idle()
     this->setSuckerStatus(Sucker_Status_E::STOP);
 }
 
-uint8_t test_signal = 0;
-float test_current = 0.0f;
-float rotate_rate = 5.0f;
-float launch_rate = 0.005f;
+
 
 float stretch_starttime = 0;
 bool stretch_flag = false;

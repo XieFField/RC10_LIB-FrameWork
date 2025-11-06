@@ -1,29 +1,38 @@
 {
-  "configurations": [
-    {
-      "name": "windows-gcc-x64",
-      "includePath": [
-        "${workspaceFolder}/**",
-        "${default}",
-        "${workspaceFolder}/Core/Inc",
-        "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc",
-        "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
-        "${workspaceFolder}/RC10_LIB/APP/Inc",
-        "${workspaceFolder}/Drivers/CMSIS/RTOS2/Include",
-        "${workspaceFolder}/Drivers/CMSIS/RTOS/Template",
-        "${workspaceFolder}/RC10_LIB/BSP_Driver/Inc",
-        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
-        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F",
-        "${workspaceFolder}/RC10_LIB/Motor/Inc"
-      ],
-      "compilerPath": "C:/MinGW/mingw64/bin/gcc.exe",
-      "cStandard": "c17",
-      "cppStandard": "gnu++14",
-      "intelliSenseMode": "windows-gcc-x64",
-      "compilerArgs": [
-        ""
-      ]
-    }
-  ],
-  "version": 4
+    "version": 4,
+    "configurations": [
+        {
+            "name": "windows-gcc-x64",
+            "compilerPath": "C:/MinGW/mingw64/bin/gcc.exe",
+            "intelliSenseMode": "windows-gcc-x64",
+            "cStandard": "c17",
+            "cppStandard": "gnu++14",
+            "defines": [
+                "USE_HAL_DRIVER",
+                "STM32H7xx",
+                "HSE_VALUE=25000000U"
+            ],
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${default}",
+                "${workspaceFolder}/Core/Inc",
+                "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc",
+                "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
+                "${workspaceFolder}/RC10_LIB/APP/Inc",
+                "${workspaceFolder}/Drivers/CMSIS/RTOS2/Include",
+                "${workspaceFolder}/Drivers/CMSIS/RTOS/Template",
+                "${workspaceFolder}/RC10_LIB/BSP_Driver/Inc",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F",
+                "${workspaceFolder}/RC10_LIB/Motor/Inc",
+                "${workspaceFolder}/User/Control/Inc",
+                "${workspaceFolder}/Drivers/CMSIS/Include",
+                "${workspaceFolder}/Drivers/CMSIS/DSP/Include",
+                "${workspaceFolder}/Middlewares/ST/ARM/DSP/Inc",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
+                "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F",
+                "${workspaceFolder}"
+            ]
+        }
+    ]
 }

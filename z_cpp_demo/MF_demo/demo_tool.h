@@ -12,7 +12,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-    #include "arm_math.h"
+    // #include "arm_math.h"
     #define PI 3.14159265358979323846f
 }
     
@@ -31,7 +31,7 @@ Type _tool_Abs(Type x)
  * @param[in,out] M   指向矩阵实例
  * @note   要求矩阵是方阵 (numRows == numCols)
  */
-void arm_set_identity_f32(arm_matrix_instance_f32 *M);
+// void arm_set_identity_f32(arm_matrix_instance_f32 *M);
 
 /**
  * @brief Perform binary search on a sorted array
