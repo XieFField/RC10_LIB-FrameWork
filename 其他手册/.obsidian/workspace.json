@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "自动模式方案书.md",
+                "file": "串联臂自动逻辑.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "自动模式方案书"
+              "title": "串联臂自动逻辑"
             }
           }
         ]
@@ -171,12 +171,14 @@
   },
   "active": "727b45ad564964da",
   "lastOpenFiles": [
-    "自动模式方案书_tmp.html",
-    "串联臂自动逻辑.md",
-    "自动模式方案书.pdf",
     "自动模式方案书.md",
-    "自动模式方案书",
+    "ROS在全国机器人大赛中的应用.pdf",
     "初代状态机.md",
+    "串联臂自动逻辑.md",
+    "串联臂自动逻辑.pdf",
+    "自动模式方案书_tmp.html",
+    "自动模式方案书.pdf",
+    "自动模式方案书",
     "初代状态机_tmp.html",
     "初代状态机.pdf",
     "串联刚体臂吸盘解算.md"
