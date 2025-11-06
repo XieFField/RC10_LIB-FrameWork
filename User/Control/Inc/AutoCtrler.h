@@ -53,12 +53,12 @@ typedef struct{
     int8_t entranceMap;
     int8_t bestB1;
     int8_t bestB2;
-    const int8_t exitMap = 19;
+    const int8_t exitMap = 30; //固定出口
 }PathNode_S;
 
 
 // 求解梅花桩所有前一通道结果
-static RoadResult_S MFNum_ToRoadResult(int8_t MFNum);
+RoadResult_S MFNum_ToRoadResult(int8_t MFNum);
 
 // 求解方格的行列坐标
 static Point2D MapNum_ToMatrixPos(int8_t MapNum);

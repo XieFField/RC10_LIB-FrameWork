@@ -12,14 +12,14 @@ int main(void)
     
     PathNode_S result = PathNodeResult_calc(robotPos, MF1, MF2);
 
-    RoadResult_S road1 = MFNum_ToRoadResult(MF1);
-    RoadResult_S road2 = MFNum_ToRoadResult(MF2);
+    // RoadResult_S road1 = MFNum_ToRoadResult(MF1);
+    // RoadResult_S road2 = MFNum_ToRoadResult(MF2);
 
-    cout << "MF1 Road Results: " << (int)road1.result1 << ", "
-         << (int)road1.result2 << ", " << (int)road1.result3 << endl;
+    // cout << "MF1 Road Results: " << (int)road1.result1 << ", "
+    //      << (int)road1.result2 << ", " << (int)road1.result3 << endl;
 
-    cout << "MF2 Road Results: " << (int)road2.result1 << ", "
-         << (int)road2.result2 << ", " << (int)road2.result3 << endl;
+    // cout << "MF2 Road Results: " << (int)road2.result1 << ", "
+    //      << (int)road2.result2 << ", " << (int)road2.result3 << endl;
 
     cout << "Entrance Map: " << (int)result.entranceMap << endl;
     cout << "Best B1: " << (int)result.bestB1 << endl;

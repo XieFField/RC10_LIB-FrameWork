@@ -1,5 +1,5 @@
 #include "AutoCtrler.h"
-
+// #include <iostream>
 
 
 namespace MF_AutoCtrler{
@@ -20,28 +20,29 @@ void Map_ToCR(int8_t map, int8_t& c, int8_t& r)
 
 static int8_t MFNum_TransforMapNum(int8_t MFNum)//½«Ã·»¨×®±àºÅ×ª»»ÎªÃ·»¨ÁÖ·½¸ñµØÍ¼±àºÅ
 {
-    if(MFNum < 1 || MFNum > 12 || (MFNum == 5 || MFNum == 8))
+    if(MFNum < 1 || MFNum > 12 )
         return -1;
 
-    return MFNum + 6 + 2 * ((MFNum - 1) / 3.0);
+    return MFNum + 6 + 2 * (static_cast<int8_t>((MFNum - 1) / 3.0));
 }
 
 static int8_t MapNum_TransformMFNum(int8_t mapNum)//½«Ã·»¨ÁÖ·½¸ñµØÍ¼±àºÅ×ª»»ÎªÃ·»¨×®±àºÅ
 {
     int8_t MFNum_ = mapNum - 6 - 2 * ((mapNum - 7) / 3);
-    if(MFNum_ < 1 || MFNum_ > 12 || (MFNum_ == 5 || MFNum_ == 8))
+    if(MFNum_ < 1 || MFNum_ > 12 )
         return -1;
     return MFNum_;
 }
 
-static RoadResult_S MFNum_ToRoadResult(int8_t MFNum) //Çó½âÃ·»¨×®ËùÓÐÇ°Ò»Í¨µÀ½á¹û
+RoadResult_S MFNum_ToRoadResult(int8_t MFNum) //Çó½âÃ·»¨×®ËùÓÐÇ°Ò»Í¨µÀ½á¹û
 {
 	RoadResult_S result = {0, 0, 0};
-	if(MFNum < 1 || MFNum > 12 || (MFNum == 5 || MFNum == 8))
+	if(MFNum < 1 || MFNum > 12 )
         return result;
 	
 	int8_t mapNum_ = MFNum_TransforMapNum(MFNum);
 	
+
 	int8_t candidate[4];
 	candidate[0] = mapNum_ - 6;
 	candidate[1] = mapNum_ - 4;
@@ -50,10 +51,20 @@ static RoadResult_S MFNum_ToRoadResult(int8_t MFNum) //Çó½âÃ·»¨×®ËùÓÐÇ°Ò»Í¨µÀ½á¹
 	
 	for(int i = 0; i < 4; i++)
 	{
-		int8_t mf = MapNum_TransformMFNum(candidate[i]);
-		//¹ýÂËÃ·»¨×®¿é
-        if(mf < 1 || mf > 12 || mf == 5 || mf == 8)
-            candidate[i] = 0;
+        if (candidate[i] < 1 || candidate[i] > 30) { candidate[i] = 0; continue; }
+		// int8_t mf = MapNum_TransformMFNum(candidate[i]);
+
+		// //¹ýÂËÃ·»¨×®¿é
+        // if(mf < 1 || mf > 12 || mf == 5 || mf == 8)
+        //     candidate[i] = 0;
+
+        for(int j = 1; j <=12; j++)
+        {
+            int8_t mf_map = MFNum_TransforMapNum(j);
+            if(candidate[i] == mf_map)
+                candidate[i] = 0;
+            
+        }
 	}
 	
 
@@ -93,9 +104,13 @@ static bool IsWalkable(int8_t map)
 {
     if (map < 1 || map > 30) 
         return false;
-    int8_t mf = MapNum_TransformMFNum(map);
-    // mf==-1 ¡ú Í¨µÀ£»·ñÔòÎªÃ·»¨×®¸ñ£¨ÕÏ°­£©
-    return (mf == -1);
+    // int8_t mf = MapNum_TransformMFNum(map);
+    // // mf==-1 ¡ú Í¨µÀ£»·ñÔòÎªÃ·»¨×®¸ñ£¨ÕÏ°­£©
+    // return (mf == -1);
+
+    int8_t c, r; Map_ToCR(map, c, r);
+    // ÖÐÐÄÇøÓò c=2..4 ÇÒ r=2..5 Îª²»¿É×ß
+    return !(c >= 2 && c <= 4 && r >= 2 && r <= 5); 
 }
 
 static Point2D MapNum_ToMatrixPos(int8_t MapNum) //Çó½â·½¸ñµÄÐÐÁÐ×ø±ê
@@ -148,7 +163,7 @@ int8_t BestEntrance_calc(Point2D robotPos, RoadResult_S* B1)
     for(uint8_t i = 0; i < ecount; ++i)
     {
         int8_t e = entrance[i];
-        float d_out = euclid(robotPos, MapCenterWorld(e));
+        float d_out = euclid(robotPos, MapNum_RealPos[(int)e-1]);
 
         int minSteps = BFS_INF; 
 
@@ -223,7 +238,7 @@ int8_t BestEntrance_calc(Point2D robotPos, RoadResult_S* B1)
 PathNode_S PathNodeResult_calc(Point2D robotPos, 
                                  int8_t MF1, int8_t MF2)
 {
-    PathNode_S out{0,0,0,19};
+    PathNode_S out{0,0,0,30};
 
     //ºòÑ¡B1
 
@@ -273,6 +288,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
                 break;
             }
         }
+        //std::cout << "B1 num:" << (int)i << " " << bestS << std::endl;
     }
 
     //ºòÑ¡B2
@@ -321,6 +337,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
                 break;
             }
         }
+        //std::cout << "B2 num:" << (int)i << " " << bestS2 << std::endl;
     }
 
     return out;
@@ -332,13 +349,18 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
 int BFS_Steps(int8_t startMap, int8_t goalMap)// BFS ×îÉÙ²½Êý
 {
     using namespace MF_AutoCtrler;
-    if (startMap == goalMap) return 0;
+    if (startMap == goalMap) 
+        return 0;
     if (!IsWalkable(startMap) || !IsWalkable(goalMap)) 
         return BFS_INF;
 
     static int16_t dist[31];
     static uint8_t vis[31];
-    for (int i = 1; i <= 30; ++i) { dist[i] = (int16_t)BFS_INF; vis[i] = 0; }
+    for (int i = 1; i <= 30; ++i) 
+    {   
+        dist[i] = (int16_t)BFS_INF; 
+        vis[i] = 0; 
+    }
 
     // ¼òÒ×»·ÐÎ¶ÓÁÐ£¨ÈÝÁ¿32£©
     static int8_t q[32]; uint8_t h=0, t=0;
