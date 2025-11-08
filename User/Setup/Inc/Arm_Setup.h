@@ -38,6 +38,14 @@ typedef struct{
 
 }arm_ctrl_status_S;
 
+const float MF_high[12] = 
+{
+    40.0f, 20.0f, 40.0f,
+    20.0f, 40.0f, 60.0f,
+    40.0f, 60.0f, 40.0f,
+    20.0f, 40.0f, 20.0f
+};
+
 class ArmSetup: public RtosTask ,public Robot_Arm {
 public:
     ArmSetup(Arm_InitData_S init_Data)
@@ -98,6 +106,9 @@ protected:
 
     Joint_Status_S last_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
     Joint_Status_S target_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
+
+    float launch20cm_time = 0.5f;
+    float stretch40cm_time = 1.0f;
 };
 
 

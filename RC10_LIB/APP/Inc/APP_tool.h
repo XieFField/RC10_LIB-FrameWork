@@ -106,15 +106,15 @@ float normalize_deg_pm180(float a);
 float wrap_to_nearest_0_360(float ref_deg_0_360, float val_deg_any);
 // 2D点结构体
 typedef struct  {
-    float x, y;
-    float theta; // 旋转角度，单位弧度
+    float x = 0, y = 0;
+    float theta = 0; // 旋转角度，单位弧度
 } Point2D;
 
 // 3D点结构体
 typedef struct {
-    float x, y, z;
-    float roll, pitch, yaw; // 欧拉角，单位弧度
-    
+    float x = 0, y = 0, z = 0;
+    float roll = 0, pitch = 0, yaw = 0; // 欧拉角，单位弧度
+
 }Point3D;
 
 typedef struct {

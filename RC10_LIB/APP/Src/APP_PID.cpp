@@ -230,6 +230,6 @@ PID_Param_Config m2006_angle_pid_params = {
     .kd = 0.24,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 416.0f,   
-    .deadband = 0.05f 
+    .output_limit = 480.0f,   
+    .deadband = 0.09f 
 };

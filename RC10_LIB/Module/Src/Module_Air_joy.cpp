@@ -60,6 +60,9 @@ void AirJoy::data_update(uint16_t GPIO_Pin, uint16_t GPIO_EXTI_USED_PIN)
                 SWC     = PPM_buf[6]; 
                 SWD     = PPM_buf[7];
                 
+                if(_tool_Abs(SWD - 1500) < 50)
+                    SWD = 1000;
+                
                 ppm_ready = 0;
                 ppm_sample_cnt = 0;
             }

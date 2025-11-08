@@ -293,7 +293,6 @@ void M3508::update()
             //cur = target_current_;
             break;
         }
-        //注意：此处不break，继续执行速度环计算
         case SPEED_CONTROL:
         {
             // 目标值 target_rpm_ 和反馈值 this->rpm_ 都已经是输出轴转速，尺度统一
@@ -408,12 +407,10 @@ void M2006::update()
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
             //cur = target_current_;
             break;
-            // Fallthrough to speed control
         }
 
         case SPEED_CONTROL:
         {
-            // 目标值 target_rpm_ 和反馈值 this->rpm_ 都已经是输出轴转速，尺度统一
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
             break;
         }
@@ -512,9 +509,6 @@ void GM6020::update()
         case SPEED_CONTROL:
         {
             // GM6020没有减速比，直接使用目标转速
-            // 目标值是输出轴转速 (target_rpm_)
-            // 反馈值也是输出轴转速 (this->rpm_)
-            // 两者尺度统一，PID可以正确工作
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
             break;
         }

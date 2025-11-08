@@ -18,7 +18,7 @@ turret_radius = 0.06;
 h_min = 0.375; h_max = 0.775;
 L_min = 0.47;  L_max = 0.60;     % 伸长量=0.13m
 t_lift = 0.40;
-t_extend = 0.15;                 % 0.13m/0.15s
+t_extend = 0.60;                 % 0.13m/0.15s
 t_spin   = 0.50;                 % 0.5s/圈
 v_base = 0.90;                   % 0.5m/s
 suction_offset = 0.02;           % 吸盘侧面间隙
@@ -128,11 +128,15 @@ prev_region_x_start = pillars(prev_p).x - pillars(prev_p).w/2 + pre_rot_margin;
 face_sign = 1; % 你当前路径在林带前方，固定 +Y
 phi_perp_world = face_sign * pi/2;  % 世界系法向方向（+Y 或 -Y）
 
+
+
 STATE_ALIGN   = 1;   % 旋转对准立方体所在平面法向
 STATE_AIM_EXT = 2;   % 预测触发伸展（只伸长/升降）
 STATE_CARRY   = 3;   % 吸附后搬运回底盘
 STATE_RETURN = 4;   % 放下后回位（抬高5cm并回初始姿态）
 STATE_DONE    = 5;
+
+
 state = STATE_ALIGN;
 grabbed = false;
 placed  = false;     % 已放置在底盘上并与底盘绑定

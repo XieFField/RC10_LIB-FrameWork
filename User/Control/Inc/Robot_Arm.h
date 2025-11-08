@@ -1,14 +1,12 @@
 /**
  * @file Robot_Arm.h
  * @author XieFField
- * @brief 串联刚体臂吸盘运动建模.
- *        目前是纯手动模型，后期再改进为半自动
- *        
+ * @brief 串联刚体臂吸盘运动建模.      
  */
 
 #ifndef __ROBOT_ARM_H
 #define __ROBOT_ARM_H
-
+/* 南北路多 */
 #pragma once
 
 #ifdef __cplusplus
@@ -26,6 +24,7 @@ extern "C" {
 #include "Motor_DJI.h"
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
+#include "Module_GPIO.h"
 
 
 /**
@@ -46,6 +45,9 @@ typedef struct {
 
     float min_rotate_angle_; // 最小旋转角度
     float max_rotate_angle_; // 最大旋转角度
+
+    GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘控制GPIO端口
+    uint16_t Sucker_GPIO_Pin;      // 吸盘控制GPIO引脚
 }Arm_InitData_S;
 
 typedef enum {

@@ -50,11 +50,10 @@ void register_fdcan_bus_for_isr(fdCANbus* bus)
 
                                     
 
-// --- init: 启动任务并配置 CAN（filter/interrupt） ---
 void fdCANbus::init() 
 {
     if(can_init_done_) 
-        return; // 防止重复初始化
+        return; 
     FDCAN_FilterTypeDef sFilterConfig = {0};
     sFilterConfig.FilterType = FDCAN_FILTER_MASK;
     sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
@@ -63,7 +62,7 @@ void fdCANbus::init()
     sFilterConfig.FilterIndex = 0;
     
     sFilterConfig.FilterID1 = 0x000;
-    sFilterConfig.FilterID2 = 0x000; // Mask为0，表示不关心任何位，全部接收
+    sFilterConfig.FilterID2 = 0x000;
     HAL_FDCAN_ConfigFilter(hfdcan_, &sFilterConfig);
 
     // 配置一个接收所有扩展帧的滤波器
@@ -91,14 +90,12 @@ void fdCANbus::init()
     // 注册自身到全局映射表
     register_fdcan_bus_for_isr(this);
 
-    //任务启动
     rxTask_.start(tskIDLE_PRIORITY + 3, 256);
     schedulerTask_.start(tskIDLE_PRIORITY + 4, 256);
 
     can_init_done_ = true;
 }
 
-// --- registerMotor ---
 bool fdCANbus::registerMotor(Motor_Base* m) 
 {
     for (std::size_t i = 0; i < MAX_MOTORS; ++i) 
@@ -114,12 +111,12 @@ bool fdCANbus::registerMotor(Motor_Base* m)
 volatile HAL_StatusTypeDef success ; 
 volatile int add_before = 0;
 volatile int add_after = 0;
-// --- sendFrame: 调用 HAL 发送 ---
+
 bool fdCANbus::sendFrame(const CanFrame& cf) 
 {
-    // 使用互斥锁保护硬件访问，设置1ms的超时等待
+
      if (xSemaphoreTake(tx_mutex_, pdMS_TO_TICKS(1)) != pdTRUE) 
-         return false; // 获取锁失败，直接返回，不阻塞调度任务
+         return false; 
     
 
      if (!hfdcan_) 
@@ -134,7 +131,6 @@ bool fdCANbus::sendFrame(const CanFrame& cf)
     alignas(4) static uint8_t aligned_buf[8];
     std::memcpy(aligned_buf, cf.data, 8);
 
-    //std::memset(&tx_header, 0, sizeof(tx_header));
 
     tx_header.Identifier = cf.ID;
     tx_header.IdType = (cf.isextended ? FDCAN_EXTENDED_ID : FDCAN_STANDARD_ID);
@@ -146,8 +142,7 @@ bool fdCANbus::sendFrame(const CanFrame& cf)
     tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
     tx_header.MessageMarker = 0;
     
-    //HAL_StatusTypeDef status = HAL_FDCAN_AddMessageToTxFifoQ(hfdcan_, &tx_header, const_cast<uint8_t*>(cf.data));
-
+    
     HAL_StatusTypeDef status = HAL_FDCAN_AddMessageToTxFifoQ(hfdcan_, &tx_header, aligned_buf);
     success = status;
     xSemaphoreGive(tx_mutex_); // 释放锁
@@ -155,13 +150,13 @@ bool fdCANbus::sendFrame(const CanFrame& cf)
     return status == HAL_OK;
 }
 
-// --- pushRxFromISR ---
+
 bool fdCANbus::pushRxFromISR(const CanFrame& cf, BaseType_t* pxHigherPriorityTaskWoken) 
 {
     return rxQueue_.sendFromISR(cf, pxHigherPriorityTaskWoken);
 }
 
-// --- rxTaskBody ---
+
 void fdCANbus::rxTaskbody() 
 {
     CanFrame cf;
@@ -182,16 +177,14 @@ void fdCANbus::rxTaskbody()
     }
 }
 
-// --- schedulerTaskBody ---
+
 void fdCANbus::schedulerTaskbody() 
 {
     static CanFrame frames_to_send[MAX_MOTORS * 2];
     for (;;) 
     {
-        // 永久阻塞等待，直到被TIM中断的ISR唤醒
         xSemaphoreTake(schedSem_, portMAX_DELAY);
 
-         // 1. 更新所有电机的控制状态
         for (std::size_t i = 0; i < MAX_MOTORS; ++i)
         {
             Motor_Base* m = motorList_[i];
@@ -200,16 +193,14 @@ void fdCANbus::schedulerTaskbody()
             
         }
 
-        // 2. 打包所有电机的指令
 
         std::size_t frameCnt = 0; //计数值，记录打包了多少帧
         for (std::size_t i = 0; i < MAX_MOTORS; ++i) 
         {
             Motor_Base* m = motorList_[i];
-            if (!m) // 如果电机不存在，则跳过
+            if (!m) 
                 continue;
                 
-            // 调用电机的打包函数,并累加返回的帧数
             frameCnt += m->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt);
 
             if (frameCnt >= (sizeof(frames_to_send)/sizeof(frames_to_send[0]))) 
@@ -217,15 +208,12 @@ void fdCANbus::schedulerTaskbody()
         }
     
 #if FD_CAN_DEBUG
-        // 将“将要发送”的帧做一次快照，方便 Watch 里查看
         debug_last_frame_count_ = frameCnt;
         for(std::size_t k=0; k<frameCnt && k< (MAX_MOTORS*2); ++k)
-        {
             debug_last_frames_[k] = frames_to_send[k];
-        }
+        
 #endif
 
-        // 3. 发送所有打包好的指令
         for (std::size_t j = 0; j < frameCnt; ++j)
             sendFrame(frames_to_send[j]);
     }
@@ -323,8 +311,6 @@ extern "C" void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t 
 fdCANbus* fdCANbus::getInstance(FDCAN_HandleTypeDef* hfdcan)
 {
 
-    // 为每个CAN总线定义一个静态的、在函数内初始化的实例。
-    // 它们在第一次被调用时才会被创建，且存储在静态数据区，a而非堆上。
     static fdCANbus instance1(&hfdcan1);
     static fdCANbus instance2(&hfdcan2);
     static fdCANbus instance3(&hfdcan3);

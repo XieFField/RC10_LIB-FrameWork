@@ -30,10 +30,16 @@ extern "C"
 #include "BSP_TimeStamp.h"
 #include "APP_Speedplanner.h"
 #include "debug_setup.h"
+#include "APP_Bezier_Curve.h"
+#include "APP_Path.h"
 
+#if SPEEDPLANNER_DEMO_DEBUG
+#define Path 1
+#define Bezier_Curve 0
 #define trapezoid_Velocitytype 0
 #define Positionaltype_1D 0
 #define Positionaltype_2D 0
+#endif
 
 class SpeedPlanner_Demo : public RtosTask
 {
