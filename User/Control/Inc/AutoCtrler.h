@@ -19,7 +19,6 @@ using std::sqrt;
 // 计算最少步数 BFS
 int BFS_Steps(int8_t startMap, int8_t goalMap);
 
-//梅花林自动控制
 namespace MF_AutoCtrler{
 
 static constexpr int   MAP_COLS = 5;

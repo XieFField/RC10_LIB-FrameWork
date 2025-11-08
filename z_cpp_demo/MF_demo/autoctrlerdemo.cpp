@@ -11,8 +11,8 @@ int main(void)
 {
     using namespace MF_AutoCtrler;
     using namespace std;
-    int8_t MF1 = 3;
-    int8_t MF2 = 12;
+    int8_t MF1 = 1;
+    int8_t MF2 = 6;
 
     Point2D robotPos = {0.0f, 0.0f, 0.0f};
     
