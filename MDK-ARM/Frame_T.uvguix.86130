@@ -93,8 +93,8 @@
       <flags>2</flags>
       <showCmd>3</showCmd>
       <MinPosition>
-        <xPos>-1</xPos>
-        <yPos>-1</yPos>
+        <xPos>-32000</xPos>
+        <yPos>-32000</yPos>
       </MinPosition>
       <MaxPosition>
         <xPos>-1</xPos>
@@ -1530,7 +1530,7 @@
         <RecentRowIndex>0</RecentRowIndex>
         <RectRecentDocked>
           <Len>16</Len>
-          <Data>DC00000066000000ED04000081000000</Data>
+          <Data>DC00000066000000DE02000081000000</Data>
         </RectRecentDocked>
         <RectRecentFloat>
           <Len>16</Len>
@@ -3768,7 +3768,7 @@
       </Doc>
       <Doc>
         <Name>..\User\Control\Inc\AutoCtrler.h</Name>
-        <ColumnNumber>6</ColumnNumber>
+        <ColumnNumber>5</ColumnNumber>
         <TopLine>6</TopLine>
         <CurrentLine>19</CurrentLine>
         <Folding>1</Folding>
