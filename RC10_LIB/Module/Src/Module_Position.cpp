@@ -17,8 +17,6 @@
 #include <math.h>
 #include "usbd_cdc_if.h"
 
-RawPos RawPosData = {0};
-RealPos RealPosData = {0};
 
 #define NEW_OR_OLD 1
 

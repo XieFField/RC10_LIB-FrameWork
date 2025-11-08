@@ -41,7 +41,7 @@ const Point2D MapNum_RealPos[30] = {
 static int8_t MFNum_TransforMapNum(int8_t MFNum);
 
 // 将梅花林方格地图编号映射为梅花桩编号。
-static int8_t MapNum_TransformMFNum(int8_t mapNum);
+static int8_t MapNum_TransforMFNum(int8_t mapNum);
 
 typedef struct{
 	int8_t result1 = 0;
@@ -52,7 +52,9 @@ typedef struct{
 typedef struct{
     int8_t entranceMap;
     int8_t bestB1;
+    int8_t targetMF1;
     int8_t bestB2;
+    int8_t targetMF2;
     const int8_t exitMap = 30; //固定出口
 }PathNode_S;
 

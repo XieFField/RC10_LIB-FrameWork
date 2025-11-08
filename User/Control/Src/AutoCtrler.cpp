@@ -26,7 +26,7 @@ static int8_t MFNum_TransforMapNum(int8_t MFNum)//将梅花桩编号转换为梅花林方格地
     return MFNum + 6 + 2 * (static_cast<int8_t>((MFNum - 1) / 3.0));
 }
 
-static int8_t MapNum_TransformMFNum(int8_t mapNum)//将梅花林方格地图编号转换为梅花桩编号
+static int8_t MapNum_TransforMFNum(int8_t mapNum)//将梅花林方格地图编号转换为梅花桩编号
 {
     int8_t MFNum_ = mapNum - 6 - 2 * ((mapNum - 7) / 3);
     if(MFNum_ < 1 || MFNum_ > 12 )
@@ -52,7 +52,7 @@ RoadResult_S MFNum_ToRoadResult(int8_t MFNum) //求解梅花桩所有前一通道结果
 	for(int i = 0; i < 4; i++)
 	{
         if (candidate[i] < 1 || candidate[i] > 30) { candidate[i] = 0; continue; }
-		// int8_t mf = MapNum_TransformMFNum(candidate[i]);
+		// int8_t mf = MapNum_TransforMFNum(candidate[i]);
 
 		// //过滤梅花桩块
         // if(mf < 1 || mf > 12 || mf == 5 || mf == 8)
@@ -104,7 +104,7 @@ static bool IsWalkable(int8_t map)
 {
     if (map < 1 || map > 30) 
         return false;
-    // int8_t mf = MapNum_TransformMFNum(map);
+    // int8_t mf = MapNum_TransforMFNum(map);
     // // mf==-1 → 通道；否则为梅花桩格（障碍）
     // return (mf == -1);
 
@@ -288,7 +288,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
                 break;
             }
         }
-        //std::cout << "B1 num:" << (int)i << " " << bestS << std::endl;
+       // std::cout << "B1 num:" << (int)i << " " << bestS << std::endl;
     }
 
     //候选B2
@@ -339,6 +339,9 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
         }
         //std::cout << "B2 num:" << (int)i << " " << bestS2 << std::endl;
     }
+
+    out.targetMF1 = MapNum_TransforMFNum(MF1);
+    out.targetMF2 = MapNum_TransforMFNum(MF2);
 
     return out;
 }//PathNodeResult_calc
