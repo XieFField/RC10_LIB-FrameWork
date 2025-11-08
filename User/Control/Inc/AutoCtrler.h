@@ -51,23 +51,26 @@ typedef struct{
 
 typedef struct{
     int8_t entranceMap;
-    int8_t bestB1;
-    int8_t targetMF1;
+    int8_t bestB1;     //前一桩
+    int8_t bestBMF1;   //正对桩
     int8_t bestB2;
-    int8_t targetMF2;
+    int8_t bestBMF2;
     const int8_t exitMap = 30; //固定出口
 }PathNode_S;
 
 
 // 求解梅花桩所有前一通道结果
 RoadResult_S MFNum_ToRoadResult(int8_t MFNum);
-
+static bool IsWalkable(int8_t map);
 // 求解方格的行列坐标
 static Point2D MapNum_ToMatrixPos(int8_t MapNum);
 
-// 计算最优入口点
-int8_t SelectBestEntrance(Point2D robotPos, 
-                          const int8_t* B1, uint8_t B1Count);
+// // 计算最优入口点
+// int8_t BestEntrance_calc(Point2D robotPos,
+//                          const RoadResult_S* B1,
+//                          const RoadResult_S* B2,
+//                          int8_t* outBestB1,
+//                          int8_t* outBestB2);
 // 行列转地图编号
 int8_t CR_ToMap(int8_t c, int8_t r);
 // 地图编号转行列
@@ -82,6 +85,8 @@ static Point2D MapCenterWorld(int8_t map);
 // 计算路径节点结果
 PathNode_S PathNodeResult_calc(Point2D robotPos,
                                  int8_t MF1, int8_t MF2);
+
+RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum); //求解拾取KFS时候所处通道 最多两解
 }
 #endif
 #endif // AUTOCTRLER_H
