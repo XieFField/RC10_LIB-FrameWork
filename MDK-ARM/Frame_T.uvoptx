@@ -157,9 +157,9 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>209</LineNumber>
+          <LineNumber>118</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134301372</Address>
+          <Address>134295856</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -168,7 +168,7 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>..\RC10_LIB\RC_UART\position.cpp</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Frame_T\../RC10_LIB/RC_UART/position.cpp\209</Expression>
+          <Expression>\\Frame_T\../RC10_LIB/RC_UART/position.cpp\118</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -246,6 +246,46 @@
           <count>14</count>
           <WinNumber>1</WinNumber>
           <ItemText>posture</ItemText>
+        </Ww>
+        <Ww>
+          <count>15</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>byte</ItemText>
+        </Ww>
+        <Ww>
+          <count>16</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>RealPosData.world_yaw</ItemText>
+        </Ww>
+        <Ww>
+          <count>17</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>RealPosData.world_x</ItemText>
+        </Ww>
+        <Ww>
+          <count>18</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>RealPosData.world_y</ItemText>
+        </Ww>
+        <Ww>
+          <count>19</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>RealPosData.dyaw</ItemText>
+        </Ww>
+        <Ww>
+          <count>20</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>value[0] </ItemText>
+        </Ww>
+        <Ww>
+          <count>21</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>value</ItemText>
+        </Ww>
+        <Ww>
+          <count>22</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>rx_frame_mat.rx_temp_data_mat</ItemText>
         </Ww>
       </WatchWindow1>
       <MemoryWindow1>

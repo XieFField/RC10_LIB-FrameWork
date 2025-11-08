@@ -28,10 +28,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-//#include "position.h"
-/*FRAMEDEMO_BEGIN*/
-#include "frame_demo.h"
-/*FRAMEDEMO_END*/
 
 /* USER CODE END Includes */
 
@@ -47,38 +43,21 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#include "Setup_ConfigInit.h"
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-// 全局变量
-#define large_data_size 64
-uint8_t rx_buffer[RX_BUFFER_SIZE];
 
-uint8_t large_data_buffer[large_data_size];
-
-
-/* USER CODE END PV */
-extern void fdcan_global_scheduler_tick_isr(void);
-uint8_t ab[4];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
-
-/* USER CODE BEGIN PFP */
-#ifdef __cplusplus
-extern "C"{
-#endif
 void MX_FREERTOS_Init(void);
-    
+/* USER CODE BEGIN PFP */
 
-#ifdef __cplusplus
-}
-#endif
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -123,18 +102,11 @@ int main(void)
   MX_FDCAN2_Init();
   MX_FDCAN3_Init();
   MX_USART1_UART_Init();
-//	HAL_UART_Receive_IT(&huart1, rx_buffer, RX_BUFFER_SIZE);
-//  HAL_UART_Transmit_DMA(&huart1, large_data_buffer, large_data_size);
-	MX_TIM6_Init();
+  MX_TIM6_Init();
   MX_TIM4_Init();
   MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
-  ALL_Setup_ConfigInit();
-	
-	
 
-  
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -216,15 +188,8 @@ void SystemClock_Config(void)
   }
 }
 
-
 /* USER CODE BEGIN 4 */
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-#ifdef __cplusplus
-}
-#endif
 /* USER CODE END 4 */
 
  /* MPU Configuration */
@@ -274,15 +239,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-  if(htim->Instance == TIM6)
-  {
-    fdcan_global_scheduler_tick_isr();
-  }
-  
-    if (htim->Instance == TIM4) // 假设你使用的是 TIM4
-    {
-        TimeStamp::overflowCallback();
-    }
+
   /* USER CODE END Callback 1 */
 }
 
@@ -306,7 +263,7 @@ void Error_Handler(void)
   *         where the assert_param error has occurred.
   * @param  file: pointer to the source file name
   * @param  line: assert_param error line source number
-  * @retval None Hard_Fa
+  * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
 {

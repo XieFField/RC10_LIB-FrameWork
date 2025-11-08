@@ -40,7 +40,7 @@ public:
     UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle);
     ~UART_(){}
 			//¶¨ÒåÐéº¯Êý
-		virtual void Callback_Fuc(uint8_t *buf, uint16_t len){};
+		virtual void Callback_Fuc(uint8_t byte){};
 		void UART_Receive_Callback(uint8_t* Buf, uint32_t Len);
     UART_HandleTypeDef* GetUartHandle() const { return uarthandle_;}
 		void UART_Init();
