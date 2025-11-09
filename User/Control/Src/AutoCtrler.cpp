@@ -572,7 +572,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
             }
         }
 
-        // NEW: 为回退分支补充 BMF1/BMF2（各自需与 B1/B2 四邻接）
+        //为回退分支补充 BMF1/BMF2（各自需与 B1/B2 四邻接）
         // 选择使剩余代价最小的相邻通道
         // 1) BMF1
         int bestCost_m1 = BFS_INF;
