@@ -1,5 +1,6 @@
 clc; clear; close all;
-
+addpath(genpath('F:\MyProjectFlies\STM32H7\Frame_T\matlab_MFctrlerTest\function'));
+addpath('F:\MyProjectFlies\STM32H7\Frame_T\matlab\function');
 % 路径
 thisdir = fileparts(mfilename('fullpath'));
 addpath(thisdir);
@@ -13,14 +14,14 @@ cube_ids = [2,7,11];
 cube_size = 0.35;
 
 % 机器人参数
-base_size = 1.0; base_thick = 0.08;
+base_size = 0.8; base_thick = 0.08;
 turret_radius = 0.06;
 h_min = 0.375; h_max = 0.775;
 L_min = 0.47;  L_max = 0.60;     % 伸长量=0.13m
 t_lift = 0.40;
 t_extend = 0.60;                 % 0.13m/0.15s
 t_spin   = 0.50;                 % 0.5s/圈
-v_base = 0.90;                   % 0.5m/s
+v_base = 0;                   % 0.5m/s
 suction_offset = 0.02;           % 吸盘侧面间隙
 safety_margin = 0.01;            % 与柱安全裕度
 bind_xy_tol   = 0.050;           % 绑定水平容差(米) ← 放宽
@@ -37,7 +38,7 @@ bind_depth_tol  = 0.005;       % 与侧面“法向距离”容差
 % 预测采样
 probe_dt_rot  = 0.01; probe_dt_ext = 0.01;
 % pitch 旋转前的竖直余量（保证旋转圆弧不会碰到甲板/提前顶到）
-pitch_clear_z = 0.03;         % 3cm 可按需调大/调小
+pitch_clear_z = 0.03;         % 3cm 
 
 % 衍生速率
 dt = 0.02; T_total = 8.0;
@@ -51,13 +52,35 @@ rotate_start_dist = 1.00;        % 可根据林带密度调 0.8~1.2m
 rotate_trigger_margin_front = 0.20;   % 前沿进入到桩前 0.2m 即触发
 
 % ====== 场景 ======
-figure('Color','w'); hold on; axis equal;
-xlabel('X'); ylabel('Y'); zlabel('Z'); view(45,20);
-xlim([0 map_size]); ylim([0 map_size]); zlim([0 1.5]); grid on;
+C = mf_consts(); % 常量与坐标
+CELL = C.CELL_M;
 
-map_center = [map_size/2, map_size/2];
-[pillars, forest_rect] = create_forest(map_center, nx, ny, cell_size);
+figure('Color','w'); hold on; axis ([-1.2 6 -1.2 12]);
+xlabel('X'); ylabel('Y'); zlabel('Z'); view(45,20);
+xlim([0 6]); ylim([0 map_size]); zlim([0 1.5]); grid on;
+set(gca,'DataAspectRatio',[1 1 1]);   % 等比例
+% 生成 3×4 梅花林
+center = [3.0, 5.6]; 
+nx = 3; ny = 4;
+[pillars, forest_rect] = create_forest(center, nx, ny, CELL);
 cubes = place_cubes(pillars, allowed_cube_ids, cube_ids, cube_size);
+
+% 画出 5×6 所有格中心点与编号
+P = C.MapNum_RealPos; % 30×3
+for k = 1:30
+    p = P(k, :);
+
+    if IsWalkable(k)
+        col = [0.85 0.95 1.0];
+    else
+        col = [0.85 0.85 0.85];
+    end
+
+    rectangle('Position', [p(1)-CELL/2, p(2)-CELL/2, CELL, CELL], ...
+              'FaceColor', col, 'EdgeColor', [0.5 0.5 0.5]);
+    text(p(1), p(2), num2str(k), 'HorizontalAlignment','center', ...
+         'Color', [0 0 0], 'FontSize', 8);
+end
 
 % ====== 初始位姿 ======
 forest_ymin = forest_rect.y - forest_rect.h/2;
@@ -73,12 +96,59 @@ theta = 0; L = L_min; h = h_min;
 [patchBase, patchTurret, lineArmFix, lineArmExt] = draw_robot(x_b, y_b, yaw, theta, L, h, base_size, base_thick, turret_radius);
 hTurretDot = plot3(NaN,NaN,NaN,'ko','MarkerFaceColor','k');   % 云台支点
 hTipDot    = plot3(NaN,NaN,NaN,'ro','MarkerFaceColor','r');   % 臂端
-% 新增：末端刚体杆与吸盘前端的可视化
+
 hPitchRod = plot3(NaN,NaN,NaN,'g-','LineWidth',4);           % 俯仰杆（pivot→杯面中心）
 hCupFront = plot3(NaN,NaN,NaN,'bo','MarkerFaceColor','b');   % 吸盘前端面中心
 
+% 显示最优路径
+
+robotPos = [x_b, y_b, 0];
+
+if numel(cube_ids) >= 1
+    MF1 = cube_ids(1);
+else 
+    MF1 = 1;
+
+end
+if numel(cube_ids) >= 2
+    MF2 = cube_ids(2);
+else 
+    MF2 = MF1;
+end
+
+R = PathNodeResult_calc(robotPos, MF1, MF2);
+
+fprintf('Optimal Path Result:\n');
+fprintf('Entrance Map: %d\n', R.entranceMap);
+fprintf('Best B1: %d\n', R.bestB1);
+fprintf('Best BMF1: %d\n', R.bestBMF1);
+fprintf('Best B2: %d\n', R.bestB2);
+fprintf('Best BMF2: %d\n', R.bestBMF2);
+fprintf('Exit Map: %d\n', R.exitMap);
+
+seq = [R.entranceMap, R.bestB1, R.bestBMF1, R.bestB2, R.bestBMF2, R.exitMap];
+seq = seq(seq~=0);
+if R.entranceMap == 0 && R.bestB1 ~= 0
+    seq = [R.bestB1, R.bestBMF1, R.bestB2, R.bestBMF2, R.exitMap];
+    seq = seq(seq~=0);
+end
+gridPath = BuildFullPath(seq);
+DrawGridPath(gridPath);
+
+mark = @(idx, lab, col) plot3(C.MapNum_RealPos(idx,1), C.MapNum_RealPos(idx,2), 0.02, ...
+    'o','MarkerFaceColor',col,'MarkerEdgeColor','k','MarkerSize',8);
+if R.entranceMap~=0, mark(R.entranceMap,'E',[0.2 0.6 1.0]); end
+if R.bestB1~=0,      mark(R.bestB1,'B1',[1.0 0.7 0.2]); end
+if R.bestBMF1~=0,    mark(R.bestBMF1,'M1',[0.9 0.1 0.1]); end
+if R.bestB2~=0,      mark(R.bestB2,'B2',[0.4 0.8 0.4]); end
+if R.bestBMF2~=0,    mark(R.bestBMF2,'M2',[0.1 0.5 0.1]); end
+mark(R.exitMap,'X',[0.5 0 0.9]);
+
+plot3(robotPos(1), robotPos(2), 0.03, '^', 'MarkerFaceColor',[0 0 0], 'MarkerEdgeColor','w','MarkerSize',9);
+
 % 任务：取第一个立方体
 target_idx = 1;
+
 target_cube = cubes(target_idx);
 cz = target_cube.zbase + target_cube.h/2;
 
@@ -90,8 +160,7 @@ update_robot_pose(patchBase, patchTurret, lineArmFix, lineArmExt, ...
     x_b, y_b, yaw, theta, L, h, base_size, base_thick, turret_radius, L_min);
 
 % ====== 目标与“前一柱区域”触发线 ======
-% target_idx = 1;
-% target_cube = cubes(target_idx);
+
 cz = target_cube.zbase + target_cube.h/2;
 
 % 一开始就将高度抬到目标的中心高度
@@ -100,6 +169,9 @@ h = h_target;
 update_robot_pose(patchBase, patchTurret, lineArmFix, lineArmExt, ...
     x_b, y_b, yaw, theta, L, h, base_size, base_thick, turret_radius, L_min);
 
+
+
+    
 % 计算目标方块所在“柱”的索引，以及“同一排(prev)柱”的区域起始线（沿 +X 行驶）
 % 规则：进入“前一柱的前方区域”（prev.x - prev.w/2）后，才开始旋转预判；此前保持 theta 不动
 eps_row = 1e-6;

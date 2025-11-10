@@ -10,7 +10,7 @@ C = mf_consts(); % 常量与坐标
 CELL = C.CELL_M;
 
 % 生成 3×4 梅花林
-center = [3.0, 5.6]; % 与 AutoCtrler.h 的 MapNum_RealPos 对应的中心
+center = [3.0, 5.6];
 nx = 3; ny = 4;
 [pillars, forest_rect] = create_forest(center, nx, ny, CELL); 
 
@@ -37,7 +37,7 @@ for k = 1:30
 end
 
 % 输入：机器人位置与目标桩
-robotPos = [3, 0.0, 0]; 
+robotPos = [0.6, 1, 0]; 
 MF1 = 1;
 MF2 = 9;
 

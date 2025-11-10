@@ -3,6 +3,8 @@ C = mf_consts();
 out = struct('entranceMap',int8(0),'bestB1',int8(0),'bestBMF1',int8(0), ...
              'bestB2',int8(0),'bestBMF2',int8(0),'exitMap',int8(30));
 
+found = false;
+
 % 候选 B1
 B1_can = MFNum_ToRoadResult(MF1);
 B1set = int8([B1_can.result1, B1_can.result2, B1_can.result3]);
@@ -74,7 +76,8 @@ elseif isAbove
         end
     end
 else
-    eCount = uint8(0); % 林内无需入口，以B1为起点
+    eCount = 1; % 林内无需入口，以B1为起点
+    entrances(1) = int8(0);
 end
 
 bestCost = 1.0e9;
@@ -85,7 +88,12 @@ fprintf("eCout:%d\n", eCount);
 for ie = 1:double(eCount)
     fprintf("尝试入口:%d\n", entrances(ie));
     E = entrances(ie);
-    d_out = euclid(robotPos, MapCenterWorld(E)); % robot→入口 欧氏
+    d_out = 0;
+
+    if isInside
+        E = int8(0); % 林内无需入口，以B1为起点
+        d_out = 0.0;
+    end
 
     for i1 = 1:double(nB1)
         B1 = B1set(i1);
@@ -93,7 +101,19 @@ for ie = 1:double(eCount)
             continue;
         end
 
-        sE1 = BFS_Steps(E, B1);
+        % sE1 = BFS_Steps(E, B1);
+
+        if isInside
+            d_out = euclid(robotPos, MapCenterWorld(B1)); % robot→B1 欧氏
+            sE1 = 0; % 林内无需入口，入口到B1步数为0
+
+        else
+            d_out = euclid(robotPos, MapCenterWorld(E)); % robot→入口 欧氏
+            sE1 = BFS_Steps(E, B1);
+        end
+
+
+
         if sE1 >= C.BFS_INF
             continue;
         end
@@ -130,6 +150,7 @@ for ie = 1:double(eCount)
                     bestBMF1 = BMF1;
                     bestB2 = int8(0);
                     bestBMF2 = int8(0);
+                    found = true;
                 end
                 continue;
             end
@@ -177,6 +198,7 @@ for ie = 1:double(eCount)
                         bestBMF1 = BMF1;
                         bestB2 = B2;
                         bestBMF2 = BMF2;
+                        found = true;
                     end
                 end
             end
@@ -185,7 +207,7 @@ for ie = 1:double(eCount)
 end
 
 % 回退策略：若没有任何可达链路
-if bestE == 0
+if ~found
     % 简单回退：选离机器人最近的入口；再选入口→B1 步数最小；再选 B1→B2 最小
     if eCount == 0
         out.entranceMap = int8(0);

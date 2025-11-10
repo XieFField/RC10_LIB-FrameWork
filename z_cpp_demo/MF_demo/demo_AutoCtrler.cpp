@@ -337,7 +337,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
                                int8_t MF1, int8_t MF2)
 {
     PathNode_S out{0,0,0,0,0,30};
-
+    bool found = false;
     // 候选 B1
     RoadResult_S B1_can = MFNum_ToRoadResult(MF1);
     int8_t B1set[3] = { B1_can.result1, B1_can.result2, B1_can.result3 };
@@ -424,7 +424,8 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
     }
     else //inside
     {
-        eCount = 0; // 林内无需入口，以B1为起点
+        eCount = 1; // 林内无需入口，以B1为起点
+        entrances[0] = 0;
     }
 
 
@@ -437,7 +438,11 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
     for(uint8_t ie = 0; ie < eCount; ++ie)
     {
         int8_t E = entrances[ie];
-        float d_out = euclid(robotPos, MapCenterWorld(E)); // robot→入口 欧氏
+
+        if(isInside)
+            E = 0; //林内无需入口，以B1为起点
+
+        float d_out = 0.0f;
 
         for(uint8_t i1 = 0; i1 < nB1; i1++)
         {
@@ -445,7 +450,18 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
             if(!B1) 
                 continue;
 
-            int sE1 = BFS_Steps(E, B1);
+            int sE1 = 0;
+            if(!isInside)
+            {
+                d_out = euclid(robotPos, MapCenterWorld(E)); // robot→入口 欧氏
+                sE1 = BFS_Steps(E, B1);               // 入口→B1 步数
+            }
+            else
+            {
+                d_out = euclid(robotPos, MapCenterWorld(B1)); // robot→B1 欧氏
+                sE1 = 0;                                   // 林内无需入口，入口→B1 步数=0
+            }
+            
             if(sE1 >= BFS_INF) 
                 continue;
 
@@ -472,12 +488,14 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
                     float J = d_out + CELL_M * (sE1 + s1m1 + s_m1_X);
                     if(J < bestCost)
                     {
+                        std::cout << "找到更优解 无第二段 J=" << J << std::endl;
                         bestCost = J;
                         bestE = E;
                         bestB1 = B1;
                         bestBMF1 = BMF1;
                         bestB2 = 0;
                         bestBMF2 = 0;
+                        found = true;
                     }
                     continue;
                 }
@@ -519,6 +537,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
                             bestBMF1 = BMF1;
                             bestB2 = B2;
                             bestBMF2 = BMF2;
+                            found = true;
                         }
                     }
                 }
@@ -526,8 +545,8 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
         }
     }
 
-    // 回退策略：若没有任何可达链路
-    if(bestE == 0)
+    // 回退策略
+    if(!found)
     {
         // 简单回退：选离机器人最近的入口；再选入口→B1 步数最小；再选 B1→B2 最小
         if(eCount == 0) 
@@ -608,6 +627,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
                     }
             }
         }
+        std::cout << "PathNodeResult_calc 回退分支" << std::endl;
     }
 
     out.entranceMap = bestE;
