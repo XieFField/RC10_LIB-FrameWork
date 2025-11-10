@@ -135,14 +135,17 @@ end
 gridPath = BuildFullPath(seq);
 DrawGridPath(gridPath);
 
+
+
+
 mark = @(idx, lab, col) plot3(C.MapNum_RealPos(idx,1), C.MapNum_RealPos(idx,2), 0.02, ...
     'o','MarkerFaceColor',col,'MarkerEdgeColor','k','MarkerSize',8);
-if R.entranceMap~=0, mark(R.entranceMap,'E',[0.2 0.6 1.0]); end
-if R.bestB1~=0,      mark(R.bestB1,'B1',[1.0 0.7 0.2]); end
-if R.bestBMF1~=0,    mark(R.bestBMF1,'M1',[0.9 0.1 0.1]); end
-if R.bestB2~=0,      mark(R.bestB2,'B2',[0.4 0.8 0.4]); end
-if R.bestBMF2~=0,    mark(R.bestBMF2,'M2',[0.1 0.5 0.1]); end
-mark(R.exitMap,'X',[0.5 0 0.9]);
+if R.entranceMap~=0, mark(R.entranceMap,'E',[1.0 1.0 0.0]); end % 黃
+if R.bestB1~=0,      mark(R.bestB1,'B1',[1.0 0.0 0.0]); end % 紅
+if R.bestBMF1~=0,    mark(R.bestBMF1,'M1',[0.0 0.0 1.0]); end % 藍
+if R.bestB2~=0,      mark(R.bestB2,'B2',[0.0 1.0 0.0]); end % 綠
+if R.bestBMF2~=0,    mark(R.bestBMF2,'M2',[0.6 0.0 0.8]); end % 紫
+mark(R.exitMap,'X',[1.0 0 0.9]);
 
 plot3(robotPos(1), robotPos(2), 0.03, '^', 'MarkerFaceColor',[0 0 0], 'MarkerEdgeColor','w','MarkerSize',9);
 

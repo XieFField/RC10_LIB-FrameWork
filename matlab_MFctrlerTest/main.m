@@ -38,7 +38,7 @@ end
 
 % 输入：机器人位置与目标桩
 robotPos = [0.6, 1, 0]; 
-MF1 = 1;
+MF1 = 4;
 MF2 = 9;
 
 % 计算最优点位
@@ -85,11 +85,11 @@ DrawGridPath(gridPath);
 % 标注关键点（保持不变）
 mark = @(idx, str, c) plot3(C.MapNum_RealPos(idx,1), C.MapNum_RealPos(idx,2), 0.01, ...
     'o', 'MarkerFaceColor', c, 'MarkerEdgeColor', 'k', 'MarkerSize', 8);
-if R.entranceMap~=0, mark(R.entranceMap,'E',[0.2 0.6 1.0]); end
-if R.bestB1~=0,      mark(R.bestB1,'B1',[1.0 0.7 0.2]); end
-if R.bestBMF1~=0,    mark(R.bestBMF1,'M1',[0.9 0.1 0.1]); end
-if R.bestB2~=0,      mark(R.bestB2,'B2',[0.4 0.8 0.4]); end
-if R.bestBMF2~=0,    mark(R.bestBMF2,'M2',[0.1 0.5 0.1]); end
-mark(R.exitMap,'X',[0.5 0 0.9]);
+if R.entranceMap~=0, mark(R.entranceMap,'E',[1.0 1.0 0.0]); end % 黃
+if R.bestB1~=0,      mark(R.bestB1,'B1',[1.0 0.0 0.0]); end % 紅
+if R.bestBMF1~=0,    mark(R.bestBMF1,'M1',[0.0 0.0 1.0]); end % 藍
+if R.bestB2~=0,      mark(R.bestB2,'B2',[0.0 1.0 0.0]); end % 綠
+if R.bestBMF2~=0,    mark(R.bestBMF2,'M2',[0.6 0.0 0.8]); end % 紫
+mark(R.exitMap,'X',[1.0 0 0.9]);
 
 hold off;
