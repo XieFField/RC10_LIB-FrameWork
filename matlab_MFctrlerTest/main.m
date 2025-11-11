@@ -15,8 +15,8 @@ nx = 3; ny = 4;
 [pillars, forest_rect] = create_forest(center, nx, ny, CELL); 
 
 % 绘制通道网格
-hold on; axis([-1.2 6 -1.2 12]); grid on; view(2);
-title('梅花林通道与最优路径');
+hold on; axis([0 6 0 12]); grid on; view(2);
+title('输出结果');
 xlabel('X (m)'); ylabel('Y (m)');
 set(gca,'DataAspectRatio',[1 1 1]);   % 等比例
 % 画出 5×6 所有格中心点与编号
@@ -37,9 +37,15 @@ for k = 1:30
 end
 
 % 输入：机器人位置与目标桩
-robotPos = [0.6, 1, 0]; 
-MF1 = 4;
+robotPos = [4.6, 1, 0]; 
+MF1 = 2;
 MF2 = 9;
+
+cubes_ids = [MF1, MF2];
+cube_nums = 2;
+cube_size = 0.35; % KFS 尺寸
+allowed_cube_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+cubes = place_cubes(pillars, allowed_cube_ids, cubes_ids, cube_size, cube_nums);
 
 % 计算最优点位
 R = PathNodeResult_calc(robotPos, MF1, MF2);
@@ -92,4 +98,8 @@ if R.bestB2~=0,      mark(R.bestB2,'B2',[0.0 1.0 0.0]); end % 綠
 if R.bestBMF2~=0,    mark(R.bestBMF2,'M2',[0.6 0.0 0.8]); end % 紫
 mark(R.exitMap,'X',[1.0 0 0.9]);
 
+
+hRobot = plot3(robotPos(1), robotPos(2), 0.10, '^', ...
+    'MarkerFaceColor',[0 0 0], 'MarkerEdgeColor','w', 'MarkerSize',9, 'Clipping','off');
+try, uistack(hRobot,'top'); end
 hold off;

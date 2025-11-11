@@ -248,7 +248,8 @@ void PathTracing::executeOneStep(float dt_seconds) {
     }
 
     // 线速度加速度限制 - 确保速度平滑变化
-    if (desired_linear_vel > robot_state_.linear_velocity) {
+    if (desired_linear_vel > robot_state_.linear_velocity) 
+    {
         robot_state_.linear_velocity += config_.linear_acceleration * dt_seconds;
         if (robot_state_.linear_velocity > desired_linear_vel) robot_state_.linear_velocity = desired_linear_vel;
     } else if (desired_linear_vel < robot_state_.linear_velocity) {

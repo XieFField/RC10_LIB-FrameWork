@@ -62,8 +62,9 @@ set(gca,'DataAspectRatio',[1 1 1]);   % 等比例
 % 生成 3×4 梅花林
 center = [3.0, 5.6]; 
 nx = 3; ny = 4;
+cube_nums = 2;
 [pillars, forest_rect] = create_forest(center, nx, ny, CELL);
-cubes = place_cubes(pillars, allowed_cube_ids, cube_ids, cube_size);
+cubes = place_cubes(pillars, allowed_cube_ids, cube_ids, cube_size, cube_nums);
 
 % 画出 5×6 所有格中心点与编号
 P = C.MapNum_RealPos; % 30×3
