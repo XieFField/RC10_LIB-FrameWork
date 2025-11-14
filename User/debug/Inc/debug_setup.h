@@ -1,20 +1,20 @@
 /**
- * @brief ÈÆ¿ª×´Ì¬»úµÄµ¥¶Àdemo²âÊÔ
+ * @brief ï¿½Æ¿ï¿½×´Ì¬ï¿½ï¿½ï¿½Äµï¿½ï¿½ï¿½demoï¿½ï¿½ï¿½ï¿½
  */
 
 #ifndef DEBUG_SETUP_H
 #define DEBUG_SETUP_H
 
 /**
- * @brief Ò»Ð©Ïà¹ØµÄdebugÆô¶¯ºê¶¨Òå¿ÉÒÔ·ÅÕâÀï
+ * @brief Ò»Ð©ï¿½ï¿½Øµï¿½debugï¿½ï¿½ï¿½ï¿½ï¿½ê¶¨ï¿½ï¿½ï¿½ï¿½Ô·ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 
-#define DEMO_DEBUG_TEST 0
+#define DEMO_DEBUG_TEST 1
 
 #if DEMO_DEBUG_TEST
     #define ARM_DEMO_DEBUG 0
     #define DEBUG_M2006 0
-    #define SPEEDPLANNER_DEMO_DEBUG 0
+    #define SPEEDPLANNER_DEMO_DEBUG 1
     #define DEBUG_DJI_Motor 1
 #endif
 

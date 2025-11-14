@@ -56,7 +56,7 @@ typedef struct{
     int8_t bestB2;
     int8_t bestBMF2;
     const int8_t exitMap = 30; //固定出口
-}PathNode_S;
+}PathNode_S; //值为0就意味着没有这个节点
 
 
 // 求解梅花桩所有前一通道结果

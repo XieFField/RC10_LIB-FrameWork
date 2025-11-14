@@ -2,6 +2,8 @@
  * @file AutoCtrler.h
  * @author XieFField
  * @brief 自动控制相关
+ * @version 1.0
+ *          优化MF_AutoCtrler，规范入口位置。
  */
 
 
@@ -19,8 +21,7 @@ using std::sqrt;
 // 计算最少步数 BFS
 int BFS_Steps(int8_t startMap, int8_t goalMap);
 
-//梅花林自动控制
-namespace MF_AutoCtrler{
+namespace MF_AutoCtrler{ //梅花林中必经点位输出
 
 static constexpr int   MAP_COLS = 5;
 static constexpr int   MAP_ROWS = 6;
@@ -56,7 +57,7 @@ typedef struct{
     int8_t bestB2;
     int8_t bestBMF2;
     const int8_t exitMap = 30; //固定出口
-}PathNode_S;
+}PathNode_S;//值为0就意味着没有这个节点
 
 
 // 求解梅花桩所有前一通道结果

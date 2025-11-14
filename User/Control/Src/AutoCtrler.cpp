@@ -399,10 +399,35 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
     int8_t entrances[30]; 
     uint8_t eCount=0;
 
-    for(int8_t m=1; m<=30; ++m)
+    const bool isBelow = (robotPos.y < MapNum_RealPos[0].y);    //梅花林下
+    const bool isAbove = (robotPos.y > MapNum_RealPos[29].y);   //梅花林上
+    const bool isInside = (!isBelow && !isAbove);               //梅花林中
+        
+
+    // for(int8_t m=1; m<=30; ++m)
+    // {
+    //     if(IsWalkable(m)) 
+    //         entrances[eCount++] = m;
+    // }
+    if(isBelow)
     {
-        if(IsWalkable(m)) 
-            entrances[eCount++] = m;
+        for(int8_t m = 1; m <= 5; ++m)
+        {
+            if(IsWalkable(m)) 
+                entrances[eCount++] = m;
+        }
+    }
+    else if(isAbove)
+    {
+        for(int8_t m = 26; m <= 30; ++m)
+        {
+            if(IsWalkable(m)) 
+                entrances[eCount++] = m;
+        }
+    }
+    else //inside
+    {
+        eCount = 0; // 林内无需入口，以B1为起点
     }
 
 
@@ -547,7 +572,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
             }
         }
 
-        
+        //为回退分支补充 BMF1/BMF2（各自需与 B1/B2 四邻接）
         // 选择使剩余代价最小的相邻通道
         // 1) BMF1
         int bestCost_m1 = BFS_INF;

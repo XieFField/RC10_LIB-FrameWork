@@ -965,6 +965,11 @@
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\APP\Inc\APP_Path.h</FilePath>
             </File>
+            <File>
+              <FileName>APP_Bezier_Curve.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_Bezier_Curve.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1204,6 +1209,26 @@
               <FileName>AutoCtrler.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Control\Src\AutoCtrler.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>PathA.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Src\PathA.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>PathA.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Control\Inc\PathA.h</FilePath>
+            </File>
+            <File>
+              <FileName>Pure_Pursuit.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Src\Pure_Pursuit.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Pure_Pursuit.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Control\Inc\Pure_Pursuit.h</FilePath>
             </File>
           </Files>
         </Group>

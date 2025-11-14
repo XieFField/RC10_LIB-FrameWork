@@ -1,6 +1,6 @@
 /**
  * @file omni_chassisSetup.h
- * @brief È«Ïòµ×ÅÌ¿ØÖÆ
+ * @brief È«ï¿½ï¿½ï¿½ï¿½Ì¿ï¿½ï¿½ï¿½
  */
 #ifndef __OMNI_CHASSISSETUP_H
 #define __OMNI_CHASSISSETUP_H
@@ -15,11 +15,19 @@
 #include "Module_ChassisOmni.h"
 #include "Motor_Base.h"
 #include "FSMstauts_enum.h"
+#include "APP_debugTool.h"
+#include "APP_CoordConvert.h"
+#include "BSP_TimeStamp.h"
+#include "APP_Speedplanner.h"
+#include "debug_setup.h"
+#include "APP_Bezier_Curve.h"
+#include "APP_Path.h"
+#include "speedplanner_demo.h"
 
 class OmniChassis_Setup:public RtosTask, public Chassis_Omni<4>{
 public:
-    OmniChassis_Setup(float wheel_radius, float max_wheel_rpm, float chassis_radius)
-        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<4>(wheel_radius, max_wheel_rpm, chassis_radius)
+    OmniChassis_Setup(float wheel_radius, float max_wheel_rpm, float chassis_radius)   
+        : RtosTask("OmniChassis_Setup", 2), Chassis_Omni<4>(wheel_radius, max_wheel_rpm, chassis_radius)
     {}
 
     void setChassisStatus(CHASSIS_Status_E status)
@@ -35,6 +43,7 @@ public:
         
         this->start(osPriorityHigh, 256);
         init_flag = true;
+        
     }
 
 
@@ -42,7 +51,9 @@ public:
 private:
         void loop() override;
         bool init_flag = false;
-
+        int num;
+        
+        void Chassis_Control_Auto();
         Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
         Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
         

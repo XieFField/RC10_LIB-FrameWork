@@ -1,21 +1,24 @@
 #include "speedplanner_demo.h"
 
 #if Path
-
-Vector2D start_point(1.0f, 10.0f);
+Vector2D start_point(-RealPosData.world_x, RealPosData.world_y);
 Vector2D control_point(-6.0f, 16.0f);
 Vector2D end_point(16.0f, 20.0f);
 Vector2D speed(0.0f, 0.0f);
 int num = 0;
 
 Speedplanner_1D_Param_Config Param_1d{.maxAcc = 1.0f, .maxDec = 1.0f, .maxJerk = 1.5f, .maxSpeed = 2.0f, .initialSpeed = 0.001f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};
-// Path_Bezier path(start_point, control_point, end_point, Param_1d);
+Path_Bezier path(start_point, control_point, end_point, Param_1d);
 // Path_Bezier path(start_point, end_point, Param_1d);
 // Vector2D point(1.0f, 10.0f);
 
-Path_Bezier path(end_point, control_point, start_point, Param_1d);
+//Path_Bezier path(end_point, control_point, start_point, Param_1d);
 // Path_Bezier path(end_point,start_point,  Param_1d);
-Vector2D point(16.0f, 20.0f);
+Vector2D real_point(0.0f, 0.0f);//实时去更新位置
+Vector2D point(-RealPosData.world_x, RealPosData.world_y);
+Vector2D error(0.0f, 0.0f);
+Vector2D final_speed(0.0f, 0.0f);
+
 #endif
 
 #if Bezier_Curve
@@ -37,8 +40,8 @@ float speed_tar = 10.0f;
 float speed_now = 0.0f;
 float pos_now = 0.0f;
 Td td(10.0f);
-// 速度式
-ConstantAcc ca(0.02f); // 注意代码运行系统的周期
+// ????
+ConstantAcc ca(0.02f); // ??????????????????
 #endif
 
 #if Positionaltype_1D
@@ -48,7 +51,7 @@ float td_pos_now = 0.0f;
 float tp_speed_now = 0.0f;
 float tp_pos_now = 0.0f;
 Td td(10.0f);
-// 1D的位置式
+// 1D??λ???
 Speedplanner_1D_Param_Config Param_1d{.maxAcc = 2.9f, .maxDec = 2.0f, .maxJerk = 1.5f, .maxSpeed = 6.0f, .initialSpeed = 0.0f, .finalSpeed = 0.0f, .startPos = 0.0000000001f, .targetPos = 30.0f, .deadzone = 0.00001f};
 // TrapePlanner1D TP_1d(Param_1d);
 SShapedPlanner1D TP_1d(Param_1d);
@@ -64,9 +67,10 @@ TrapePlanner2D TP_2d(Param_2d);
 #endif
 void SpeedPlanner_Demo::init()
 {
-    const char *msg = "Hello UART1 on PB6/PB7\r\n";
-    HAL_UART_Transmit(&huart1, (uint8_t *)msg, strlen(msg), HAL_MAX_DELAY);
+    const char *msg = "Hello UART2 on PB6/PB7\r\n";
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), HAL_MAX_DELAY);
     start(osPriorityNormal, 256);
+    //pid_track.set_params(track_pid_params, 0.0f);
 }
 
 void SpeedPlanner_Demo::loop()
@@ -74,11 +78,23 @@ void SpeedPlanner_Demo::loop()
 
 #if Path
 
+    //从RealPosData获取机器人实际当前位置实时去更新
+    real_point.x = -RealPosData.world_x;
+    real_point.y = RealPosData.world_y;
+    
     num++;
     if (path.isFinished() == false)
     {
         speed = path.plan(point);
         point = point + (speed * 0.001f);
+
+        error = point-real_point;
+
+        Vector2D correcction;
+        correcction=error*0.01f; 
+
+        final_speed = speed + correcction;
+        
         if (num > 5)
         {
             debug_uart.printf_DMA("%f,%f,%f\n", point.x, point.y, speed.magnitude());
@@ -88,8 +104,7 @@ void SpeedPlanner_Demo::loop()
     else if (num > 2000)
     {
         path.reset();
-        // point={1.0f, 10.0f};
-        point = {16.0f, 20.0f};
+        point=start_point;
         num = 0;
     }
 

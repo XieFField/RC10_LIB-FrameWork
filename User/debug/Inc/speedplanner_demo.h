@@ -1,7 +1,7 @@
 /**
  * @file speedplanner_demo.h
  * @author naoganlin
- * @brief ËÙ¶È¿ØÖÆÆ÷demo,ÓÃºê¶¨Òåµ÷ÓÃ¿ª¹Ø
+ * @brief ï¿½Ù¶È¿ï¿½ï¿½ï¿½ï¿½ï¿½demo,ï¿½Ãºê¶¨ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½
  * @version 1.0
  * @date 2025-10-28
  */
@@ -32,6 +32,7 @@ extern "C"
 #include "debug_setup.h"
 #include "APP_Bezier_Curve.h"
 #include "APP_Path.h"
+#include "Module_Position.h"
 
 #if SPEEDPLANNER_DEMO_DEBUG
 #define Path 1
@@ -44,14 +45,17 @@ extern "C"
 class SpeedPlanner_Demo : public RtosTask
 {
 public:
-    SpeedPlanner_Demo() : RtosTask("SpeedPlanner_Demo", 1), debug_uart(&huart1) {}
+    SpeedPlanner_Demo() : RtosTask("SpeedPlanner_Demo", 1), debug_uart(&huart2) {}
     void init();
     void loop() override;
     Debug_Printf debug_uart;
 
 private:
+    //PID_Position pid_track;
 };
 
+extern Vector2D speed;
+extern Vector2D final_speed;
 #endif // __cplusplus
 
 #endif

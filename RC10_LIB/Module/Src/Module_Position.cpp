@@ -1,19 +1,19 @@
 /**
  * @file Module_Position.cpp
  * @author XieFField HA Ji cao 
- * @brief positionÇý¶¯ÎÄ¼þ
- * @attention ´ËÎÄ¼þÓÃÓÚposition¶ø·Çaction
+ * @brief positionï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
+ * @attention ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½positionï¿½ï¿½ï¿½ï¿½action
  * @date 2025-10-22
  */
 
 /*
 
-  Reposition_SendDataº¯ÊýÓÃÓÚÖØ¶¨Î»£¬idÎª1Ôò½öÖØ¶¨Î»X,Y×ø±ê£»id2¿ÉÒÔ
-  ¶îÍâÖØ¶¨Î»yaw, id3¿É½«imu¶ÏµçÖØÆô
+  Reposition_SendDataï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø¶ï¿½Î»ï¿½ï¿½idÎª1ï¿½ï¿½ï¿½ï¿½Ø¶ï¿½Î»X,Yï¿½ï¿½ï¿½ê£»id2ï¿½ï¿½ï¿½ï¿½
+  ï¿½ï¿½ï¿½ï¿½ï¿½Ø¶ï¿½Î»yaw, id3ï¿½É½ï¿½imuï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½
   
 */
 #include "Module_Position.h"
-// ÁªºÏÌåÓÃÓÚ½«20×Ö½ÚµÄ¸¡µãÊý½ÓÊÕµ½ float Êý×éÖÐ
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú½ï¿½20ï¿½Ö½ÚµÄ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õµï¿½ float ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 #include <math.h>
 #include "usbd_cdc_if.h"
 
@@ -26,11 +26,12 @@ union
 	float ActVal[6];
 } posture;
 
-// »ñÈ¡µ¥ÀýÊµÀý
+// ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
 //Position* Position::instance_ = nullptr;
 
-// »ñÈ¡µ¥ÀýÊµÀý
+// ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
 
+RealPos RealPosData;
 
 Position::Position(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle) 
     :UART_(rx_buffer_size,rx_buffer,uart_handle),
@@ -47,17 +48,17 @@ Position* Position::GetInstance(UART_HandleTypeDef *uart_handle)
     return &instance;
 }
 
-// ³õÊ¼»¯UART
+// ï¿½ï¿½Ê¼ï¿½ï¿½UART
 void Position::InitUART() 
 {
     if (uart_initialized_) {
-        return; // ÒÑ¾­³õÊ¼»¯¹ý
+        return; // ï¿½Ñ¾ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
     }
     UART_HandleTypeDef *uart_handle=Position::UART_::GetUartHandle();
 
     uart_instance_ = InstanceManager::GetInstanceByUartHandle(uart_handle);
     
-    // ³õÊ¼»¯UART
+    // ï¿½ï¿½Ê¼ï¿½ï¿½UART
     uart_instance_->UART_Init();
     
     uart_initialized_ = true;
@@ -67,7 +68,7 @@ void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 {
     uint8_t count = 0;
 	uint8_t i = 0;
-	uint8_t CRC_check[2];//CRCÐ£ÑéÎ»£¬´ËÎÄ¼þÎ´ÆôÓÃ
+	uint8_t CRC_check[2];//CRCÐ£ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½Î´ï¿½ï¿½ï¿½ï¿½
 	
 	
 	
@@ -78,7 +79,7 @@ void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 		{
 			case 0:
 			{
-				if (buf[i] == FRAME_HEAD_POSITION_0)   //½ÓÊÕ°üÍ·1
+				if (buf[i] == FRAME_HEAD_POSITION_0)   //ï¿½ï¿½ï¿½Õ°ï¿½Í·1
 				{
 					count++;
 				}
@@ -91,7 +92,7 @@ void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 			}
 			case 1:
 			{
-				if (buf[i] == FRAME_HEAD_POSITION_1) //½ÓÊÕ°üÍ·2
+				if (buf[i] == FRAME_HEAD_POSITION_1) //ï¿½ï¿½ï¿½Õ°ï¿½Í·2
 				{
 					count++;
 				}
@@ -102,7 +103,7 @@ void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 				i++;
 				break;
 			}
-			case 2://½ÓÊÕÖ¡IDºÍÊý¾Ý³¤¶È
+			case 2://ï¿½ï¿½ï¿½ï¿½Ö¡IDï¿½ï¿½ï¿½ï¿½ï¿½Ý³ï¿½ï¿½ï¿½
 			{
 				if (buf[i] == 0x01) 
 				{
@@ -128,7 +129,7 @@ void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 				i++;
 				break;
 			}
-			case 4://¿ªÊ¼½ÓÊÕÊý¾Ý
+			case 4://ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			{
 				uint8_t j;
 				
@@ -162,7 +163,7 @@ void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 				break;
 			}
 			
-			//½ÓÊÕCRCÐ£ÑéÂë
+			//ï¿½ï¿½ï¿½ï¿½CRCÐ£ï¿½ï¿½ï¿½ï¿½
 			case 5:
 			{
 				uint8_t j;
@@ -178,7 +179,7 @@ void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 			
 			case 6:
 			{
-				if (buf[i] == FRAME_TAIL_POSITION_0)  //½ÓÊÕ°üÎ²1
+				if (buf[i] == FRAME_TAIL_POSITION_0)  //ï¿½ï¿½ï¿½Õ°ï¿½Î²1
 				{
 					count++;
 				}
@@ -192,9 +193,9 @@ void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 			
 			case 7:
 			{
-				if (buf[i] == FRAME_TAIL_POSITION_1)  //½ÓÊÕ°üÎ²2
+				if (buf[i] == FRAME_TAIL_POSITION_1)  //ï¿½ï¿½ï¿½Õ°ï¿½Î²2
 				{	
-					//ÔÚ½ÓÊÕ°üÎ²2ºó²Å¿ªÊ¼Æô¶¯»Øµ÷
+					//ï¿½Ú½ï¿½ï¿½Õ°ï¿½Î²2ï¿½ï¿½Å¿ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½
 					//UART_IdleCallback(&huart1);
 					Update_RawPosition(posture.ActVal);
 				}
@@ -217,7 +218,7 @@ void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 }
 
 
-// Êý¾Ý¸üÐÂº¯Êý£º½«½âÎöºóµÄÖµ´æÈë RawPos ºÍ RealPos
+// ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½Âºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ RawPos ï¿½ï¿½ RealPos
 void Position::Update_RawPosition(float value[5])
 {
 	RawPosData.Pos_X = value[0] / 1000.f; 
@@ -226,7 +227,7 @@ void Position::Update_RawPosition(float value[5])
 	RawPosData.Speed_Yaw = value[3];
 	RawPosData.Speed_Y = value[4];
 
-   //ÊÀ½ç×ø±ê
+   //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	RealPosData.world_yaw = RawPosData.angle_Z;
     RealPosData.world_x   =  RawPosData.Pos_X + RealPosData.dx;
 	RealPosData.world_y   =  RawPosData.Pos_Y + RealPosData.dy;
@@ -247,15 +248,15 @@ void Position::Reposition_SendData(float X, float Y)
         uint8_t bytes[4];
     } floatUnion;
 
-	//°üÍ·
+	//ï¿½ï¿½Í·
 	txBuffer[0] = FRAME_HEAD_POSITION_0;
 	txBuffer[1] = FRAME_HEAD_POSITION_1;
     txBuffer[2]=0x01;
 
-	//Êý¾Ý³¤¶È
+	//ï¿½ï¿½ï¿½Ý³ï¿½ï¿½ï¿½
 	txBuffer[3] = 0x08;
 
-	//Êý¾Ý
+	//ï¿½ï¿½ï¿½ï¿½
 	floatUnion.f = X;
 	txBuffer[4] = floatUnion.bytes[0];
     txBuffer[5] = floatUnion.bytes[1];
@@ -271,7 +272,7 @@ void Position::Reposition_SendData(float X, float Y)
 	//CRC
 	txBuffer[12] = 0;
 	txBuffer[13] = 0;
-	//°üÎ²
+	//ï¿½ï¿½Î²
 	txBuffer[14] = FRAME_TAIL_POSITION_0;
 	txBuffer[15] = FRAME_TAIL_POSITION_1;
 
@@ -279,10 +280,10 @@ void Position::Reposition_SendData(float X, float Y)
 }
 
 
-/*µ÷ÊÔUSBÓÃµÄ
+/*ï¿½ï¿½ï¿½ï¿½USBï¿½Ãµï¿½
 void USB_DataReceivedCallback(uint8_t* buf, uint16_t len)
 {
-    // ½ÓÊÕµ½Êý¾ÝºóÁ¢¼´»Ø´«£¨echo¹¦ÄÜ£©
+    // ï¿½ï¿½ï¿½Õµï¿½ï¿½ï¿½ï¿½Ýºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø´ï¿½ï¿½ï¿½echoï¿½ï¿½ï¿½Ü£ï¿½
     if(len > 0 && len <= RX_BUFFER_SIZE)
     {
         CDC_Transmit_HS(buf, len);

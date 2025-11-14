@@ -18,6 +18,7 @@ void OmniChassis_Setup::loop()
         }
         case CHASSIS_AUTO_CONTROL:
         {
+            Chassis_Control_Auto();
             break;
         }
 
@@ -30,4 +31,11 @@ void OmniChassis_Setup::loop()
     }
  
     this->update();
+}
+
+void OmniChassis_Setup::Chassis_Control_Auto()
+{
+    target_chassis_twist_.vx=final_speed.x;
+    target_chassis_twist_.vy=final_speed.y;
+    setWorldSpeed(target_chassis_twist_);
 }
