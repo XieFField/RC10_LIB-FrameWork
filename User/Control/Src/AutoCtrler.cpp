@@ -244,7 +244,7 @@ static Point2D MapCenterWorld(int8_t map)
 int8_t BestEntrance_calc(Point2D robotPos, RoadResult_S* B1) 
 {
     int8_t entrance[30]; uint8_t ecount = 0;
-=    for(int8_t i =1; i <=30; ++i)
+    for(int8_t i =1; i <=30; ++i)
     {
         if(IsWalkable(i))
             entrance[ecount++] = i;
