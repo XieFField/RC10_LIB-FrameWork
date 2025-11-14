@@ -56,9 +56,8 @@ void Robot_Arm::update()
         // 手动电机位置模式下的处理
         target_joint_angle_.launchJoint_Height_  = constrain(target_joint_angle_.launchJoint_Height_,  0.0f, init_data_.max_launchHeight_);
         target_joint_angle_.stretchJoint_Length_ = constrain(target_joint_angle_.stretchJoint_Length_, 0.0f, init_data_.max_stretchLength_);
-        // 关键：与当前角就近等效映射，保持多圈连续，避免 0/360 跳变
+        // 与当前角就近等效映射，保持多圈连续，避免 0/360 跳变
         target_joint_angle_.rotateJoint_angle_   = wrap_to_nearest_cont(joint_angle_.rotateJoint_angle_, target_joint_angle_.rotateJoint_angle_);
-        // 如需物理限位，请对连续角做“宽范围”限幅（按机械结构定义），不要强制 0..360 归一化
     }
     else if(control_mode_ == CURRENT_CONTROL_MODE)
         // 电流控制模式下的处理
