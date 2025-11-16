@@ -1,10 +1,14 @@
+%emmm，接下来你写一个新功能，就是我底盘的机械臂是安装在侧边的，我要去拾取的时候，要将机械臂那边贴靠梅花林，但是有一些梅花桩如果不考虑取的位置的话存在多解；你要写的就是根据行进或者说要取的方向去得到单一解
+%然后等战鸿利搞完他那个你给他的路径规划部分融进来 然后实现一些按既定路线连续拾取两个KFS的效果 这个功能在自动模式方案书那个.md文件里，写一下数学上的逻辑
+%还有就是林书衡写了个贝塞尔曲线的代码，你把他移植成matlab里的，因为对这种我给出既定点位的，用贝塞尔其实是最直接的；
 clc; clear; close all;
-addpath(genpath('F:\MyProjectFlies\STM32H7\Frame_T\matlab_MFctrlerTest\function'));
-addpath('F:\MyProjectFlies\STM32H7\Frame_T\matlab\function');
+
 % 路径
 thisdir = fileparts(mfilename('fullpath'));
 addpath(thisdir);
 addpath(fullfile(thisdir,'function'));
+
+addpath('E:\桌面\RC10_LIB-FrameWork-main\matlab_MFctrlerTest\function');
 
 % ====== 参数 ======
 map_size = 12.0;
@@ -21,7 +25,7 @@ L_min = 0.47;  L_max = 0.60;     % 伸长量=0.13m
 t_lift = 0.40;
 t_extend = 0.60;                 % 0.13m/0.15s
 t_spin   = 0.50;                 % 0.5s/圈
-v_base = 0;                   % 0.5m/s
+v_base = 0;                   % 0.5m/s  
 suction_offset = 0.02;           % 吸盘侧面间隙
 safety_margin = 0.01;            % 与柱安全裕度
 bind_xy_tol   = 0.050;           % 绑定水平容差(米) ← 放宽
@@ -57,14 +61,13 @@ CELL = C.CELL_M;
 
 figure('Color','w'); hold on; axis ([-1.2 6 -1.2 12]);
 xlabel('X'); ylabel('Y'); zlabel('Z'); view(45,20);
-xlim([0 6]); ylim([0 map_size]); zlim([0 1.5]); grid on;
+xlim([0 9]); ylim([0 18]); zlim([0 1.5]); grid on;
 set(gca,'DataAspectRatio',[1 1 1]);   % 等比例
 % 生成 3×4 梅花林
 center = [3.0, 5.6]; 
 nx = 3; ny = 4;
-cube_nums = 2;
 [pillars, forest_rect] = create_forest(center, nx, ny, CELL);
-cubes = place_cubes(pillars, allowed_cube_ids, cube_ids, cube_size, cube_nums);
+cubes = place_cubes(pillars, allowed_cube_ids, cube_ids, cube_size);
 
 % 画出 5×6 所有格中心点与编号
 P = C.MapNum_RealPos; % 30×3
@@ -82,6 +85,11 @@ for k = 1:30
     text(p(1), p(2), num2str(k), 'HorizontalAlignment','center', ...
          'Color', [0 0 0], 'FontSize', 8);
 end
+
+%====== 场地 ======
+origin = [0, 0]; 
+create_field(origin);
+%pcy的改动
 
 % ====== 初始位姿 ======
 forest_ymin = forest_rect.y - forest_rect.h/2;
