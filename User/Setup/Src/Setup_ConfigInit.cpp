@@ -1,16 +1,13 @@
 #include "Setup_ConfigInit.h"
 #include "usb_device.h"
-//#include "BSP_USB_UART_Driver.h"
-//extern USBD_HandleTypeDef hUsbDeviceHS;
+
 #if DEBUG_M2006
 
 DJI_MotorDemo dji_motor_demo;
 #endif
 
 /*================================ debug  机械吸盘 =============================*/
-//extern class UART_ m;
 
-//uint8_t rx_buffer[RX_BUFFER_SIZE];
 #if ARM_DEMO_DEBUG
 
 fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
@@ -30,11 +27,12 @@ Arm_InitData_S arm_demoInit_data={
    .rotate_gearRatio_ = 10.0f,
    .pitch_gearRatio_ = 10.0f,
 };
-//数据设置成原来两倍不影响后续的数据解析，用到的UART空闲触只要有一个完整数据帧传入就可触发数据解析即使数据大小小于64
-//UART_ uar(64,rx_buffer,Position_UART1_RxCallback,&huart1);
-//USB_CDC_ uscdc(USB_DataReceivedCallback,&hUsbDeviceHS);
+
 Robot_ArmDemo arm_demo(arm_demoInit_data);
-//position s(64,rx_buffer,Position_UART1_RxCallback,&huart1);
+//激光测距
+LaserPosition laserpos(&huart3,&huart6);
+
+
 void arm_motorInit()
 {
 		
@@ -90,11 +88,13 @@ void debug_init()
 void ALL_Setup_ConfigInit(void)
 {
 		    // 获取Position单例并初始化UART
-
-   TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
-   debug_init();
    Position* pos = Position::GetInstance(&huart1);
    pos->InitUART();
+   TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
+   debug_init();
+	 laserpos.Init();//激光测距
+
+	
    //other init
 }
 

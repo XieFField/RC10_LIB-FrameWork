@@ -30,7 +30,8 @@ extern "C" {
 #include "BSP_TimeStamp.h"
 #include "BSP_USB_UART_Driver.h"
 #include "debug_setup.h"
-#include "position.h"
+#include "Module_Position.h"
+#include "Module_LaserPosition.h"
 #if ARM_DEMO_DEBUG
 
         #include "arm_demo.h"

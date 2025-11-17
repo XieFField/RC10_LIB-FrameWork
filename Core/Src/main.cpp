@@ -56,11 +56,7 @@
 // 全局变量
 #define large_data_size 64
 uint8_t rx_buffer[RX_BUFFER_SIZE];
-
 uint8_t large_data_buffer[large_data_size];
-
-
-/* USER CODE END PV */
 extern void fdcan_global_scheduler_tick_isr(void);
 uint8_t ab[4];
 /* USER CODE END PV */
@@ -117,25 +113,24 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init();
+   MX_GPIO_Init();
   MX_DMA_Init();
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
   MX_FDCAN3_Init();
   MX_USART1_UART_Init();
-//	HAL_UART_Receive_IT(&huart1, rx_buffer, RX_BUFFER_SIZE);
-//  HAL_UART_Transmit_DMA(&huart1, large_data_buffer, large_data_size);
-	MX_TIM6_Init();
+  MX_TIM6_Init();
   MX_TIM4_Init();
   MX_TIM14_Init();
+  MX_USART6_UART_Init();
+  MX_USART3_UART_Init();
+  MX_UART4_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
   ALL_Setup_ConfigInit();
-	
-	
-
+	//HAL_UART_Transmit_DMA(&huart3,rx_buffer,RX_BUFFER_SIZE);
   
-  /* USER CODE END 2 */
+	/* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
@@ -217,6 +212,9 @@ void SystemClock_Config(void)
 }
 
 
+
+
+
 /* USER CODE BEGIN 4 */
 #ifdef __cplusplus
 extern "C" {
@@ -225,9 +223,14 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+//void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+//{
+//	
+//}
 /* USER CODE END 4 */
 
  /* MPU Configuration */
+
 
 void MPU_Config(void)
 {
@@ -255,7 +258,6 @@ void MPU_Config(void)
   HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 
 }
-
 /**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM8 interrupt took place, inside

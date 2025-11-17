@@ -1,6 +1,6 @@
 /**
- * @file position.cpp
- * @author HA Ji cao 
+ * @file Module_Position.cpp
+ * @author XieFField HA Ji cao 
  * @brief position驱动文件
  * @attention 此文件用于position而非action
  * @date 2025-10-22
@@ -12,14 +12,24 @@
   额外重定位yaw, id3可将imu断电重启
   
 */
-
+#include "Module_Position.h"
 // 联合体用于将20字节的浮点数接收到 float 数组中
-#include "position.h"
 #include <math.h>
 #include "usbd_cdc_if.h"
 
 
 #define NEW_OR_OLD 1
+
+union
+{
+	uint8_t data[24];
+	float ActVal[6];
+} posture;
+
+// 获取单例实例
+//Position* Position::instance_ = nullptr;
+
+// 获取单例实例
 
 
 Position::Position(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle) 
@@ -44,85 +54,169 @@ void Position::InitUART()
         return; // 已经初始化过
     }
     UART_HandleTypeDef *uart_handle=Position::UART_::GetUartHandle();
-		
 
-    uart_instance_ = InstanceManager::GetInstanceByUartHandle(uart_handle);;
+    uart_instance_ = InstanceManager::GetInstanceByUartHandle(uart_handle);
     
-    // 清空接收缓冲区
-    memset(rx_buffer_, 0, RX_BUFFER_SIZE);
-    
-    __HAL_UART_ENABLE(uart_handle);
     // 初始化UART
     uart_instance_->UART_Init();
     
     uart_initialized_ = true;
 }
-uint8_t count = 0;
 
-void Position::Callback_Fuc(uint8_t byte)
+void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 {
-	 switch (state_)
-    {
-    case WAITING_FOR_HEADER_0:
-        if (byte == FRAME_HEAD_POSITION_0)
-        {
-            state_ = WAITING_FOR_HEADER_1;
-        }
-        break;
-    case WAITING_FOR_HEADER_1:
-        if (byte == FRAME_HEAD_POSITION_1)
-        {
-            state_ = WAITING_FOR_ID;
-        }
-        else
-        {
-            state_ = WAITING_FOR_HEADER_0;
-        }
-        break;
-    case WAITING_FOR_ID:
-        state_ = WAITING_FOR_LENGTH;
-        break;
-    case WAITING_FOR_LENGTH:
-        rx_frame_mat.data_length = byte; // 存储数据长度
-        rxIndex_ = 0;
-        state_ = WAITING_FOR_DATA;
-        break;
-		case WAITING_FOR_DATA:
-        rx_frame_mat.data.buff_msg[rxIndex_++] = byte; // 存储接收到的数据
-        if (rxIndex_ >= rx_frame_mat.data_length)
-        {
-
-            state_ = WAITING_FOR_CRC_0;
-        }
-        break;
-    case WAITING_FOR_CRC_0:
-        state_ = WAITING_FOR_CRC_1;
-        break;
-    case WAITING_FOR_CRC_1:
-        state_ = WAITING_FOR_END_0;
-        break;
-    case WAITING_FOR_END_0:
-        if (byte == FRAME_TAIL_POSITION_0)
-        {
-            state_ = WAITING_FOR_END_1;
-        }
-        else
-        {
-            state_ = WAITING_FOR_HEADER_0;
-        }
-        break;
-    case WAITING_FOR_END_1:
-        if (byte == FRAME_TAIL_POSITION_1)
-        {
-				Update_RawPosition(rx_frame_mat.data.msg_get);
-        state_ = WAITING_FOR_HEADER_0;
-        break;
+    uint8_t count = 0;
+	uint8_t i = 0;
+	uint8_t CRC_check[2];//CRC校验位，此文件未启用
+	
+	
+	
+	uint8_t break_flag = 1;
+	while(i < len && break_flag == 1)
+	{
+		switch (count)
+		{
+			case 0:
+			{
+				if (buf[i] == FRAME_HEAD_POSITION_0)   //接收包头1
+				{
+					count++;
 				}
-    default:
-        state_ = WAITING_FOR_HEADER_0;
-        break;
-    }
+				else
+				{
+					count = 0;
+				}
+				i++;
+				break;
+			}
+			case 1:
+			{
+				if (buf[i] == FRAME_HEAD_POSITION_1) //接收包头2
+				{
+					count++;
+				}
+				else
+				{
+					count = 0;
+				}
+				i++;
+				break;
+			}
+			case 2://接收帧ID和数据长度
+			{
+				if (buf[i] == 0x01) 
+				{
+					count++;
+				}
+				else
+				{
+					count = 0;
+				}
+				i++;
+				break;
+			}
+			case 3:
+			{
+				if (buf[i] == 0x18) //0x0c
+				{
+					count++;
+				}
+				else
+				{
+					count = 0;
+				}
+				i++;
+				break;
+			}
+			case 4://开始接收数据
+			{
+				uint8_t j;
+				
+				#if NEW_OR_OLD
+				if (i > len - 24)
+				{
+					break_flag = 0;
+					break;
+				}
+				
+				for(j = 0; j < 24; j++)
+				{
+					posture.data[j] = buf[i];
+					i++;
+				}
+                
+                #else
+                if (i > len - 24)
+				{
+					break_flag = 0;
+				}
+				
+				for(j = 0; j < 20; j++)
+				{
+					posture.data[j] = buf[i];
+					i++;
+				}
+                
+                #endif
+				count++;
+				break;
+			}
+			
+			//接收CRC校验码
+			case 5:
+			{
+				uint8_t j;
+				
+				for(j = 0; j < 2; j++)
+				{
+					CRC_check[j] = buf[i];
+					i++;
+				}
+				count++;
+				break;
+			}
+			
+			case 6:
+			{
+				if (buf[i] == FRAME_TAIL_POSITION_0)  //接收包尾1
+				{
+					count++;
+				}
+				else
+				{
+					count = 0;
+				}
+				i++;
+				break;
+			}
+			
+			case 7:
+			{
+				if (buf[i] == FRAME_TAIL_POSITION_1)  //接收包尾2
+				{	
+					//在接收包尾2后才开始启动回调
+					//UART_IdleCallback(&huart1);
+					Update_RawPosition(posture.ActVal);
+				}
+				count = 0;
+				
+				break_flag = 0;
+				
+				break;
+			}
+			
+			default:
+			{
+				count = 0;
+				break;
+			}
+		}
+		
 	}
+	
+}
+
+
 // 数据更新函数：将解析后的值存入 RawPos 和 RealPos
 void Position::Update_RawPosition(float value[5])
 {
@@ -134,7 +228,7 @@ void Position::Update_RawPosition(float value[5])
 
    //世界坐标
 	RealPosData.world_yaw = RawPosData.angle_Z;
-  RealPosData.world_x   =  RawPosData.Pos_X + RealPosData.dx;
+    RealPosData.world_x   =  RawPosData.Pos_X + RealPosData.dx;
 	RealPosData.world_y   =  RawPosData.Pos_Y + RealPosData.dy;
 
 	RealPosData.dyaw = RawPosData.Speed_Yaw;
@@ -143,7 +237,7 @@ void Position::Update_RawPosition(float value[5])
 
 
 
-void Reposition_SendData(float X, float Y)
+void Position::Reposition_SendData(float X, float Y)
 {
 	uint8_t txBuffer[16] = {0};
 
@@ -183,6 +277,7 @@ void Reposition_SendData(float X, float Y)
 
 	HAL_UART_Transmit(&huart1, txBuffer, 16, HAL_MAX_DELAY);
 }
+
 
 /*调试USB用的
 void USB_DataReceivedCallback(uint8_t* buf, uint16_t len)

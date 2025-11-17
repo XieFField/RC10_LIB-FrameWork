@@ -12,7 +12,6 @@ UART_* InstanceManager::uart_instances[UART_MAX] = {nullptr};
 USB_CDC_* InstanceManager::usb_instances[2]={nullptr};
 uint8_t n=0;
 uint8_t m=0;
-extern uint8_t large_data_buffer[];
 void InstanceManager::RegisterInstance(UART_* uart_instance,USB_CDC_* usb_instance) {
 	if(n<UART_MAX&&uart_instance!=NULL)
 	{
@@ -57,9 +56,10 @@ void UART_::UART_Init()
 				if(uarthandle_ == NULL){
 									Error_Handler();}
        else {
-				 HAL_UART_Receive_IT(uarthandle_,rx_buffer,rx_buffer_size);
+            HAL_UARTEx_ReceiveToIdle_DMA(uarthandle_, rx_buffer, rx_buffer_size);
+        } 
 }
-}
+
 
 //虚拟串口
 USB_CDC_* InstanceManager::GetInstanceByUSBHandle() {
@@ -89,9 +89,11 @@ USB_CDC_::USB_CDC_(RxCallback RxCallback_Fuc,USBD_HandleTypeDef *usb_handle)
 void USB_CDC_::CDC_Receive_Callback(uint8_t* Buf, uint32_t Len) {
         RxCallback_Fuc(Buf, Len);
 }
-
-
-
+void UART_::Callback_Fuc(uint8_t *buf, uint16_t len){
+    if (RxCallback_Fuc != nullptr) {
+        RxCallback_Fuc(buf, len);
+    }
+}
 
 // C 接口的全局回调函数
 #ifdef __cplusplus
@@ -102,18 +104,46 @@ void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len) {
      InstanceManager::GetInstanceByUSBHandle()->CDC_Receive_Callback(Buf,Len);
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-	uint8_t rxByte;
-	UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
-    if(instance != nullptr)
-    {
-			  rxByte = instance->rx_buffer[0];
-        instance->Callback_Fuc(rxByte);  
-				HAL_UART_Receive_IT(huart, instance->rx_buffer, instance->rx_buffer_size);
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+    UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
+    if (instance != nullptr) {
+        // 调用实例的接收处理，使用HAL提供的Size参数
+      instance->Callback_Fuc(huart->pRxBuffPtr,instance->rx_buffer_size);        
+        // 重新启动DMA接收
+			HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
     }
 }
-
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+	  UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
+	// 清除所有可能的错误标志
+    if (__HAL_UART_GET_FLAG(huart, UART_FLAG_PE))
+    {
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_PEF);// 清除奇偶校验错误标志
+    }
+    
+    if (__HAL_UART_GET_FLAG(huart, UART_FLAG_FE))
+    {
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_FEF);// 清除帧错误标志
+    }
+    
+    if (__HAL_UART_GET_FLAG(huart, UART_FLAG_NE))
+    {
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_NEF);// 清除噪声错误标志
+    }
+    
+    if (__HAL_UART_GET_FLAG(huart, UART_FLAG_ORE))
+    {
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_OREF);// 清除溢出错误标志
+    }
+	
+	if (__HAL_UART_GET_FLAG(huart, UART_FLAG_LBDF))
+    {
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_LBDF);// LIN断点检测标志处理
+    }
+	
+	HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
+}
 #ifdef __cplusplus
 }
 #endif
