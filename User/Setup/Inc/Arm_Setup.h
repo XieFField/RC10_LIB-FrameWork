@@ -51,6 +51,7 @@ public:
     ArmSetup(Arm_InitData_S init_Data)
         : Robot_Arm(init_Data), RtosTask("ArmSetup", 1) 
     {
+        
     }
 
     void init(M3508 *motor_ArmLaunch, M2006 *motor_ArmStretch, 

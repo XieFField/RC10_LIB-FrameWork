@@ -1,4 +1,4 @@
-#include "Setup_ConfigInit.h"
+  #include "Setup_ConfigInit.h"
 
 fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
 DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4号M3508/M2006电机

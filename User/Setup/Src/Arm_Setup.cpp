@@ -62,8 +62,8 @@ void ArmSetup::loop()
 
 uint8_t test_signal = 0;
 float test_current = 0.0f;
-float rotate_rate = 5.0f;
-float launch_rate = 0.005f;
+float rotate_rate = 0.02f;
+float launch_rate = 9.99999975e-05;
 
 void ArmSetup::manualControl()
 {
@@ -221,6 +221,12 @@ float pitch_starttime = 0;
 bool pitch_flag = false;
 float stretch_usetime = 0;
 float pitch_usetime = 0;
+
+
+float test_rotate_angle = 0.2f;
+
+float test_launch_height = 0.01f;
+volatile float launch_see = 0.0f;
 void ArmSetup::debug()
 {
     //测试
@@ -261,12 +267,14 @@ void ArmSetup::debug()
 
 
 
-        if(AirJoy::getinstance().RIGHT_Y < 1450)
-            target_joint_status_.launchJoint_Height_ -= launch_rate; // 伸展关节收回
-        else if(AirJoy::getinstance().RIGHT_Y > 1550)
-            target_joint_status_.launchJoint_Height_ += launch_rate; // 伸展关节伸出
+        if(AirJoy::getinstance().LEFT_Y < 1450)
+            target_joint_status_.launchJoint_Height_ -= launch_rate; 
+        else if(AirJoy::getinstance().LEFT_Y > 1550)
+            target_joint_status_.launchJoint_Height_ += launch_rate; 
         else
             target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_; // 保持不变
+
+        launch_see = target_joint_status_.launchJoint_Height_;
 
         if(_tool_Abs(AirJoy::getinstance().SWA - 1000) < 50)
             target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位置
@@ -306,7 +314,16 @@ void ArmSetup::debug()
         this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
         this->idle();
     }
-
+    else if(test_signal == 8)
+    {
+        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+        this->set_LaunchHeight(test_launch_height);
+    } 
+    else if(test_signal == 9)
+    {
+        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+        this->set_RotateAngle(test_rotate_angle);
+    }
     else //empty
     {
         this->set_controlMode(CURRENT_CONTROL_MODE);
@@ -315,6 +332,7 @@ void ArmSetup::debug()
         this->set_RotateAngle(0.0f);
         this->set_PitchAngle(0.0f);
     }
+    
 }
 
 Arm_InitData_S arm_initData = {
@@ -324,7 +342,7 @@ Arm_InitData_S arm_initData = {
    .end_link_length_ = 0.08f,
 
    .stretch_Ratio_ = 0.08417f,
-   .launch_Ratio_ = 0.01099f,
+   .launch_Ratio_ = 0.07221f,
    .rotate_gearRatio_ = 144.878f,
    .pitch_gearRatio_ = 360.0f,
 

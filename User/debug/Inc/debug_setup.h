@@ -1,12 +1,12 @@
 /**
- * @brief ï¿½Æ¿ï¿½×´Ì¬ï¿½ï¿½ï¿½Äµï¿½ï¿½ï¿½demoï¿½ï¿½ï¿½ï¿½
+ * @brief ÈÆ¿ª×´Ì¬»úµÄµ¥¶Àdemo²âÊÔ
  */
 
 #ifndef DEBUG_SETUP_H
 #define DEBUG_SETUP_H
 
 /**
- * @brief Ò»Ð©ï¿½ï¿½Øµï¿½debugï¿½ï¿½ï¿½ï¿½ï¿½ê¶¨ï¿½ï¿½ï¿½ï¿½Ô·ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @brief Ò»Ð©Ïà¹ØµÄdebugÆô¶¯ºê¶¨Òå¿ÉÒÔ·ÅÕâÀï
  */
 
 #define DEMO_DEBUG_TEST 1

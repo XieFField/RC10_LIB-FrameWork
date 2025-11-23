@@ -12,9 +12,9 @@ int main(void)
     using namespace MF_AutoCtrler;
     using namespace std;
     int8_t MF1 = 1;
-    int8_t MF2 = 6;
+    int8_t MF2 = 9;
 
-    Point2D robotPos = {0.0f, 0.0f, 0.0f};
+    Point2D robotPos = {0.6f, 5.0f, 0.0f};
     
     PathNode_S result = PathNodeResult_calc(robotPos, MF1, MF2);
 

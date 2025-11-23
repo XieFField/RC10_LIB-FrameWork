@@ -93,3 +93,11 @@ float wrap_to_nearest_0_360(float ref_deg_0_360, float val_deg_any)
     float delta = normalize_deg_pm180(val_deg_any - ref);  // 差值用 ±180 归一化
     return normalize_deg_0_360(ref + delta);               // 最终保持 0..360
 }
+
+// 将 val_deg（任意/0..360）映射到“最接近 ref_deg_cont（连续角）”的等效角，返回连续角（可超出0..360）
+float wrap_to_nearest_cont(float ref_deg_cont, float val_deg_any)
+{
+    float base = normalize_deg_0_360(val_deg_any);
+    float k = roundf((ref_deg_cont - base) / 360.0f);
+    return base + 360.0f * k; // 连续角
+}

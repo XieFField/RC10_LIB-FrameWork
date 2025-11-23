@@ -10,14 +10,14 @@ float PID_Position::pid_calc(float target, float feedback)
     if (isFirst_)
     {
         isFirst_ = false;
-        // ï¿½Úµï¿½Ò»ï¿½Î¼ï¿½ï¿½ï¿½Ê±ï¿½ï¿½dt ï¿½ï¿½ï¿½Ü·Ç³ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½Ä¬ï¿½ï¿½Öµ
+        // ÔÚµÚÒ»´Î¼ÆËãÊ±£¬dt ¿ÉÄÜ·Ç³£´ó»ò²»È·¶¨£¬Ê¹ÓÃÄ¬ÈÏÖµ
         dt_ = dt_error_; 
-        error_last_ = target - feedback; // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½Ï´ï¿½ï¿½ï¿½ï¿½
+        error_last_ = target - feedback; // ³õÊ¼»¯ÉÏ´ÎÎó²î
         feedback_last_ = feedback;
     }
 
-    // ï¿½ï¿½dtï¿½ï¿½ï¿½ï¿½ï¿½ì³£Öµï¿½ï¿½ï¿½ï¿½
-    if (dt_ <= 0.0f || dt_ > 0.1f) // ï¿½ï¿½ï¿½dtÐ¡ï¿½Úµï¿½ï¿½ï¿½0ï¿½ï¿½ï¿½ï¿½ï¿½100msï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ì³£
+    // ¶Ôdt½øÐÐÒì³£Öµ´¦Àí
+    if (dt_ <= 0.0f || dt_ > 0.1f) // Èç¹ûdtÐ¡ÓÚµÈÓÚ0»ò´óÓÚ100ms£¬ÔòÈÏÎªÒì³£
     {
         dt_ = dt_error_;
     }
@@ -34,14 +34,14 @@ float PID_Position::pid_calc(float target, float feedback)
         {
             if (feedback > 0 && target < 0)
             {
-                float positive = (180.0f - feedback) + (180.0f + target); // ï¿½ï¿½Â·ï¿½ï¿½
+                float positive = (180.0f - feedback) + (180.0f + target); // ÕýÂ·¾¶
                 float negative = target - feedback;
                 if (fabsf(positive) <= fabsf(negative))
                     error_ = positive;
                 
                     
                 else
-                    error_ = negative; // Ñ¡ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ï¶Ìµï¿½Â·ï¿½ï¿½
+                    error_ = negative; // Ñ¡ÔñÒ»¸ö½Ï¶ÌµÄÂ·¾¶
                 
             }
             else // (feedback < 0 && target > 0)
@@ -52,13 +52,13 @@ float PID_Position::pid_calc(float target, float feedback)
                     error_ = positive;
                 
                 else
-                    error_ = negative; // Ñ¡ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ï¶Ìµï¿½Â·ï¿½ï¿½
+                    error_ = negative; // Ñ¡ÔñÒ»¸ö½Ï¶ÌµÄÂ·¾¶
                 
             }
         }
     }
     else
-        // ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½Ö±ï¿½Ó¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        // ÏßÐÔÄ£Ê½£¬Ö±½Ó¼ÆËãÎó²î
         error_ = target - feedback;
     
 
@@ -69,7 +69,7 @@ float PID_Position::pid_calc(float target, float feedback)
     // calc P
     P_Term = params_.kp * error_;
 
-    // calc I (ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½)
+    // calc I (ÌÝÐÎ»ý·Ö)
     if(fabsf(error_) < I_SeparaThreshold_ && I_SeparaThreshold_ > 0)
     {
         I_Term += params_.ki * (error_ + error_last_) * dt_ / 2.0f;
@@ -81,7 +81,7 @@ float PID_Position::pid_calc(float target, float feedback)
         I_Term = 0;
     }
 
-    // calc D (Î¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
+    // calc D (Î¢·ÖÏÈÐÐ)
     if (dt_ > 0.0f)
         D_Term = params_.kd * (feedback - feedback_last_) / dt_;
     else
@@ -110,11 +110,11 @@ void PID_Position::set_params(const PID_Param_Config& params, float I_SeparaThre
 
 /* =================================================================================== */
 
-//ï¿½ï¿½ï¿½ï¿½Ê½
+//ÔöÁ¿Ê½
 
 void PID_Incremental::calc_track_D(float expect, float dt)
 {
-    //ï¿½ï¿½ï¿½×¸ï¿½ï¿½ï¿½Î¢ï¿½ï¿½
+    //¶þ½×¸ú×ÙÎ¢·Ö
     float fh = -td_ratio_ * td_ratio_ *(td_v1_ - expect) - 2.0f * td_v2_ * td_ratio_;
 
     td_v1_ += td_v2_ * dt;
@@ -132,13 +132,13 @@ float PID_Incremental::pid_calc(float target, float feedback)
     float current_time_s = TimeStamp::getInstance().getSeconds();
     dt_ = current_time_s - last_time_s_;
 
-    // ï¿½ï¿½dtï¿½ï¿½ï¿½ï¿½ï¿½ì³£Öµï¿½ï¿½ï¿½ï¿½
+    // ¶Ôdt½øÐÐÒì³£Öµ´¦Àí
     if (dt_ <= 0.0f)
     {
         dt_ = 0.001f;
     }
 
-    // 1. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½td
+    // 1. Èç¹ûÆôÓÃtd
     float current_target = target;
     if(td_ratio_ > 0.0f)
     {
@@ -146,7 +146,7 @@ float PID_Incremental::pid_calc(float target, float feedback)
         current_target = td_v1_;
     }
 
-    // 2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // 2. ¼ÆËãÎó²î
     error_ = current_target - feedback;
     if(fabs(error_) < params_.deadband)
         error_ = 0.0f;
@@ -160,14 +160,14 @@ float PID_Incremental::pid_calc(float target, float feedback)
     }
     else
     {
-        // 3. ï¿½ï¿½ï¿½ï¿½PIDï¿½ï¿½ï¿½ï¿½
-        // Pï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        // 3. ¼ÆËãPIDÔöÁ¿
+        // PÏîÔöÁ¿
         P_Term = params_.kp * (error_ - error_last_);
 
-        // Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        // IÏîÔöÁ¿
         I_Term = params_.ki * error_;
         
-        // Dï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        // DÏîÔöÁ¿
         if (dt_ > 0.0f)
         {
             D_Term = params_.kd * (error_ - 2.0f * error_last_ + error_earlier_);
@@ -177,23 +177,23 @@ float PID_Incremental::pid_calc(float target, float feedback)
             D_Term = 0.0f;
         }
 
-        // ï¿½ï¿½ï¿½ãµ±Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ = ï¿½Ï´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ + ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        // ¼ÆËãµ±Ç°×ÜÊä³ö = ÉÏ´Î×ÜÊä³ö + ±¾´Î×ÜÔöÁ¿
         output_ = output_last_ + (P_Term + I_Term + D_Term);
     }
 
-    // ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
+    // Êä³öÏÞ·ù
     output_ = constrain(output_, -params_.output_limit, params_.output_limit);
 
-    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê·Öµ
+    // ¸üÐÂÀúÊ·Öµ
     error_earlier_ = error_last_;
     error_last_ = error_;
-    output_last_ = output_; // ï¿½ï¿½ï¿½æµ±Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½Â´Î¼ï¿½ï¿½ï¿½Ä¡ï¿½ï¿½Ï´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    output_last_ = output_; // ±£´æµ±Ç°×ÜÊä³ö£¬×÷ÎªÏÂ´Î¼ÆËãµÄ¡°ÉÏ´Î×ÜÊä³ö¡±
     last_time_s_ = current_time_s;
 
     return output_;
 }
 
-//Ä¿Ç°3508ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½ 
+//Ä¿Ç°3508²»´íµÄ²ÎÊý 
 PID_Param_Config m3508_speed_pid_params = {
     .kp = 32.0f,
     .ki = 0.085f,
@@ -236,10 +236,10 @@ PID_Param_Config m2006_angle_pid_params = {
 
 PID_Param_Config track_pid_params = {
     .kp = 1.0f,
-    .ki = 0.085f,
+    .ki = 0.0f,
     .kd = 0.0f,
-    .I_Outlimit = 8.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 10.0f,   
-    .deadband = 0.5f 
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = false, 
+    .output_limit = 300.0f,   
+    .deadband = 0.0f 
 };
