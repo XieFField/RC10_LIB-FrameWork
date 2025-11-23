@@ -1,0 +1,186 @@
+{
+  "main": {
+    "id": "02d699eb7de63352",
+    "type": "split",
+    "children": [
+      {
+        "id": "be517bb137866a98",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "727b45ad564964da",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "串联臂自动逻辑.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "串联臂自动逻辑"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "ebbe63b0bdf7a075",
+    "type": "split",
+    "children": [
+      {
+        "id": "b9b41189e895a5fe",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "e62554a7a3cd8e20",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "343552e22ec05ce9",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "1c81eb6adb9cb25d",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "8027ee1eb249bd80",
+    "type": "split",
+    "children": [
+      {
+        "id": "df7df3e4156493ae",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "46b65f7d2e6f3774",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "串联臂自动逻辑.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for 串联臂自动逻辑"
+            }
+          },
+          {
+            "id": "fb6282061d07b1e2",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "串联臂自动逻辑.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from 串联臂自动逻辑"
+            }
+          },
+          {
+            "id": "9461d1d9f955ca28",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "a33517ce681575f0",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "串联臂自动逻辑.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of 串联臂自动逻辑"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "727b45ad564964da",
+  "lastOpenFiles": [
+    "自动模式方案书.md",
+    "ROS在全国机器人大赛中的应用.pdf",
+    "初代状态机.md",
+    "串联臂自动逻辑.md",
+    "串联臂自动逻辑.pdf",
+    "自动模式方案书_tmp.html",
+    "自动模式方案书.pdf",
+    "自动模式方案书",
+    "初代状态机_tmp.html",
+    "初代状态机.pdf",
+    "串联刚体臂吸盘解算.md"
+  ]
+}

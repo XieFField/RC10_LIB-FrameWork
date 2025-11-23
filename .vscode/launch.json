@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "f:/MyProjectFlies/STM32H7/Frame_T/RC10_LIB/BSP_Driver/Src",
-      "program": "f:/MyProjectFlies/STM32H7/Frame_T/RC10_LIB/BSP_Driver/Src/build/Debug/outDebug",
+      "cwd": "f:/MyProjectFlies/STM32H7/Frame_T/z_cpp_demo/MF_demo",
+      "program": "f:/MyProjectFlies/STM32H7/Frame_T/z_cpp_demo/MF_demo/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

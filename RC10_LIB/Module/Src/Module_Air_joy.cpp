@@ -1,45 +1,56 @@
 #include "Module_Air_joy.h"
-#include <cstdlib>  // ç”¨äºabså‡½æ•°
+#include <cstdlib>  // ÓÃÓÚ abs º¯Êı
 
-// å®šä¹‰é™æ€æˆå‘˜å˜é‡
-uint16_t AirJoy::last_valid[8] = {1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500};
+// ¶¨Òå¾²Ì¬³ÉÔ±±äÁ¿
+uint16_t AirJoy::last_valid[8] = {1500,1500,1500,1500,1500,1500,1500,1500};
 
-AirJoy air_joy;
+AirJoy* debug_airjoy_ = nullptr;
 
+// ¿ÉÑ¡µ÷ÊÔ¼ÆÊı
 volatile int cnt_ = 0;
+
+// µ¥ÀıÊµÏÖ£¨º¯ÊıÄÚ¾²Ì¬£©
+// ½¨ÒéÔÚÖĞ¶ÏÊ¹ÄÜÇ°£¬ÏÈÔÚÏµÍ³³õÊ¼»¯´¦µ÷ÓÃÒ»´Î AirJoy::instance();
+AirJoy& AirJoy::getinstance()
+{
+    static AirJoy s;
+    return s;
+}
 
 void AirJoy::data_update(uint16_t GPIO_Pin, uint16_t GPIO_EXTI_USED_PIN)
 {
+    // ½ö´¦Àí°ó¶¨µÄ PPM EXTI Òı½Å
     if(GPIO_Pin != GPIO_EXTI_USED_PIN) 
         return;
     
-    // è·å–æ—¶é—´æˆ³
+    // »ñÈ¡Ê±¼ä´Á
     last_ppm_time = now_ppm_time;
-    now_ppm_time = TimeStamp::getInstance().getMicroseconds();
+    now_ppm_time  = TimeStamp::getInstance().getMicroseconds();
     ppm_time_delta = now_ppm_time - last_ppm_time;
 
-    // å¼€å§‹è§£åŒ…PPMä¿¡å·
-    if(ppm_ready == 1)    // åˆ¤æ–­å¸§ç»“æŸåï¼Œè¿›è¡Œä¸‹ä¸€è½®è§£æ
+    // ½âÂë PPM Ö¡
+    if(ppm_ready == 1)    // ÒÑ½øÈë²ÉÑùÁ÷³Ì
     {
-        // å¸§ç»“æŸç”µå¹³è‡³å°‘2ms=2000us(ç•™ç‚¹ä½™é‡)
-        if(ppm_time_delta >= FRAME_END_MIN)  // å¸§å¤´
+        // Ö¡Í·£ºµÍ/¸ßµçÆ½¼ä¸ô´óÓÚ×îĞ¡Ê±³¤ÅĞ¶¨ÎªĞÂÖ¡
+        if(ppm_time_delta >= FRAME_END_MIN)
         {
             ppm_ready = 1;
             ppm_sample_cnt = 0;
             ppm_update_flag = 1;
         } 
-        else if(ppm_time_delta >= PWM_MIN && ppm_time_delta <= PWM_MAX) // å•ä¸ªPWMè„‰å®½åœ¨1000-2000us
+        // ÓĞĞ§Í¨µÀÂö¿í
+        else if(ppm_time_delta >= PWM_MIN && ppm_time_delta <= PWM_MAX)
         {         
-            // ç›´æ¥å­˜å…¥ç¼“å†²åŒºï¼Œä¸åšä»»ä½•æ»¤æ³¢
-            PPM_buf[ppm_sample_cnt] = ppm_time_delta;
+            // »º´æ£¬²»×öÂË²¨
+            PPM_buf[ppm_sample_cnt]    = ppm_time_delta;
             last_valid[ppm_sample_cnt] = ppm_time_delta;
             ppm_sample_cnt++;
             cnt_ = ppm_sample_cnt;
             
-            // è¾¹ç•Œæ£€æŸ¥
-            if(ppm_sample_cnt >= MAX_CHANNELS)   
+            // Í¨µÀ²ÉÂú£¬Í³Ò»Ó³Éä¸üĞÂ
+            if(ppm_sample_cnt >= MAX_CHANNELS)
             {
-                // é€šé“æ˜ å°„ï¼šæ ¹æ®å®é™…é¥æ§å™¨è°ƒæ•´
+                // Í¨µÀÓ³Éä£º°´ÄãµÄ½ÓÊÕ»úÊµ¼ÊË³Ğòµ÷Õû
                 LEFT_X  = PPM_buf[0]; 
                 LEFT_Y  = PPM_buf[1]; 
                 RIGHT_X = PPM_buf[3]; 
@@ -49,31 +60,34 @@ void AirJoy::data_update(uint16_t GPIO_Pin, uint16_t GPIO_EXTI_USED_PIN)
                 SWC     = PPM_buf[6]; 
                 SWD     = PPM_buf[7];
                 
+                if(_tool_Abs(SWD - 1500) < 50)
+                    SWD = 1000;
+                
                 ppm_ready = 0;
                 ppm_sample_cnt = 0;
             }
         }
         else 
         {
-            // æ— æ•ˆè„‰å†²å®½åº¦ï¼Œé‡ç½®çŠ¶æ€
+            // ÎŞĞ§Âö¿í£¬ÖØÖÃµÈ´ıÖ¡Í·
             ppm_ready = 0;
             ppm_sample_cnt = 0;
         }
     }
-    else if(ppm_time_delta >= FRAME_END_MIN) // å¸§å°¾ç”µå¹³è‡³å°‘2ms=2000us
+    else if(ppm_time_delta >= FRAME_END_MIN) // Ö¡Î²/Ö¡¼ä¸ô×ã¹»£¬ÊÓ×÷ĞÂÖ¡¿ªÊ¼
     {
         ppm_ready = 1;
         ppm_sample_cnt = 0;
         ppm_update_flag = 0;
     }
+    debug_airjoy_ = this;
 }
 
 /**
- * @brief GPIO çš„å¤–éƒ¨ä¸­æ–­å›è°ƒå‡½æ•°
- * 
- * @param GPIO_Pin è§¦å‘çš„IOå£
+ * @brief GPIO Íâ²¿ÖĞ¶Ï»Øµ÷£¨±£³Ö¾ÉÈë¿Ú²»±ä£©
  */
 extern "C" void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    air_joy.data_update(GPIO_Pin, GPIO_PIN_8);
+    // ½« GPIO_PIN_8 ¸ÄÎªÄãµÄÊµ¼Ê PPM EXTI Òı½Å
+    AirJoy::getinstance().data_update(GPIO_Pin, GPIO_PIN_8);
 }

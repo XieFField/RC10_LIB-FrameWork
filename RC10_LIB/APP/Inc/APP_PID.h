@@ -126,6 +126,10 @@ public:
     float get_D_Term() const { return D_Term; }
     float get_dt() const { return dt_; }
 
+    void reset_dt_error(float set)
+    {
+        dt_error_ = set;
+    }
 private:
     float I_Term = 0;			/* 积分器输出 */
     float P_Term = 0;			/* 比例器输出 */
@@ -138,10 +142,10 @@ private:
     float error_last_ = 0.0f;       // 上次误差
     float feedback_last_ = 0.0f;    // 上次反馈值
 
-    float dt_ = 0.001f;             // 采样时间，单位秒
+    float dt_ = 0.01f;             // 采样时间，单位秒
     float last_time_s_ = 0.0f;      // 上次调用的时间，单位秒
     bool isFirst_ = true; // 是否为第一次计算
-
+    float dt_error_ = 0.01f; //dt默认值
     // 循环设定
     bool is_circular_ = false;
 };
@@ -220,6 +224,8 @@ private:
 extern PID_Param_Config m3508_speed_pid_params;
 extern PID_Param_Config m3508_angle_pid_params;
 
+extern PID_Param_Config m2006_speed_pid_params;
+extern PID_Param_Config m2006_angle_pid_params;
 
 #endif
 

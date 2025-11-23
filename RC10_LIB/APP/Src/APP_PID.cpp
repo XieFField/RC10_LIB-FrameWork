@@ -11,7 +11,7 @@ float PID_Position::pid_calc(float target, float feedback)
     {
         isFirst_ = false;
         // 在第一次计算时，dt 可能非常大或不确定，使用默认值
-        dt_ = 0.01f; 
+        dt_ = dt_error_; 
         error_last_ = target - feedback; // 初始化上次误差
         feedback_last_ = feedback;
     }
@@ -19,7 +19,7 @@ float PID_Position::pid_calc(float target, float feedback)
     // 对dt进行异常值处理
     if (dt_ <= 0.0f || dt_ > 0.1f) // 如果dt小于等于0或大于100ms，则认为异常
     {
-        dt_ = 0.01f;
+        dt_ = dt_error_;
     }
 
     // calc error
@@ -212,4 +212,24 @@ PID_Param_Config m3508_angle_pid_params = {
     .isIOutlimit = true, 
     .output_limit = 400.0f,   
     .deadband = 0.5f // 
+};
+
+PID_Param_Config m2006_speed_pid_params = {
+    .kp = 67.0f,   
+    .ki = 1.0f, 
+    .kd = 0.0f,
+    .I_Outlimit = 8000.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 80000.0f,   
+    .deadband = 0.05f 
+};
+
+PID_Param_Config m2006_angle_pid_params = {
+    .kp = 2.3f,
+    .ki = 0.0f,
+    .kd = 0.24,
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 480.0f,   
+    .deadband = 0.09f 
 };

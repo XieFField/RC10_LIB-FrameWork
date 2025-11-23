@@ -1,8 +1,11 @@
 *** Using Compiler 'V6.24', folder: 'C:\Keil_v5\ARM\ARMCLANG\Bin'
 Build target 'Frame_T'
-compiling Module_MyChassis.cpp...
+Note: source file '..\RC10_LIB\APP\Src\APP_SlopeCompensate.cpp' - object file renamed from 'Frame_T\APP_SlopeCompensate.o' to 'Frame_T\app_slopecompensate_1.o'.compiling APP_SlopeCompensate.cpp...
 linking...
-Program Size: Code=56628 RO-data=1544 RW-data=356 ZI-data=31972  
-FromELF: creating hex file...
-"Frame_T\Frame_T.axf" - 0 Error(s), 0 Warning(s).
-Build Time Elapsed:  00:00:01
+Frame_T\Frame_T.axf: Error: L6218E: Undefined symbol RealPosData (referred from omni_chassissetup.o).
+Not enough information to list image symbols.
+Not enough information to list load addresses in the image map.
+Finished: 2 information, 0 warning and 1 error messages.
+"Frame_T\Frame_T.axf" - 1 Error(s), 0 Warning(s).
+Target not created.
+Build Time Elapsed:  00:00:03

@@ -1,7 +1,7 @@
 /**
  * @file Module_ChassisOmni.h
  * @author XieFField
- * @brief х╚О©╫О©╫О©╫О©╫О©╫дёО©╫О©╫
+ * @brief х╚оР╣велдё©И
  * @version 1.0
  */
 #ifndef __MODULE_CHASSISOMNI_H
@@ -32,14 +32,13 @@ extern "C" {
 
 #include "Module_ChassisBase.h"
 #include "APP_tool.h"
-#include "Motor_DJI.h"
 
 #ifdef __cplusplus
 
 /*
-    О©╫О©╫О©╫О©╫о╣О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫о╣О©╫О©╫О©╫О©╫О©╫ы╤О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫я╜О©╫О©╫О©╫ж╤О©╫О©╫Рё╛╪О©╫О©╫О©╫й╠О©╫О©╫н╙О©╫О©╫О©╫О©╫О©╫О©╫
+    вЬ╠Йо╣╡исцсрйжо╣ё╛╫гкы╤хуЩ╥╫оРвЯя╜срйж╤╗тРё╛╪╢дФй╠уКн╙уЩ╥╫оР
 
-    ж╩О©╫О©╫О©╫О©╫4/3О©╫О©╫х╚О©╫О©╫О©╫О©╫лёО©╫с╕О©╫ц╡О©╫О©╫О©╫О©╫ц╣О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫х╚О©╫О©╫О©╫ж╣О©╫О©╫л╟О©╫
+    ж╩╟Э╨╛4/3бжх╚оР╣велё╛с╕╦ц╡╩╩Асц╣╫фДкШбжйЩ╣дх╚оРбж╣вел╟и
 */
 
 #define COS_30 0.86602540378f
@@ -48,11 +47,11 @@ extern "C" {
 #define SIN_45 0.70710678118f
 
 /*
-О©╫О©╫О©╫жёО©╫   2 /    \ 3   О©╫О©╫с╕О©╫д╣О©╫О©╫л╣О©╫О©╫О©╫О©╫О©╫
+хЩбжё╨   2 /    \ 3   ╤тс╕╣д╣вел╣Г╩З╠Ю╨е
             ___
              1
 
-О©╫О©╫О©╫О©╫:     2 /     \  3 О©╫О©╫с╕О©╫д╣О©╫О©╫л╣О©╫О©╫О©╫О©╫О©╫
+кдбж:     2 /     \  3 ╤тс╕╣д╣вел╣Г╩З╠Ю╨е
                          
           1 \     / 4
 */
@@ -61,17 +60,22 @@ template <std::size_t WheelCount>
 class Chassis_Omni : public Chassis_Base<WheelCount> {
 public:
     Chassis_Omni(float wheel_radius, float max_wheel_rpm, float chassis_radius);
-    void registerChassisMotor(int i, DJI_Motor* motors) {
-	  if(i>=0  && i<4)
-	  {
-		wheel_[i] = motors;
-	  }
-	}
-    void updateKinematics() override; // О©╫О©╫О©╫О©╫О©╫к╤О©╫я╖О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫
-    void inverseKinematics(const Robot_Twist& twist) override; // О©╫О©╫Бё╛О©╫О©╫О©╫О©╫д©О©╫О©╫О©╫ы╤х╪О©╫О©╫О©╫О©╫О©╫О©╫О©╫
-    float chassis_radius_; // О©╫О©╫О©╫л╟К╬╤ (m)
+
+    void updateKinematics() override; // ╦Эпбтк╤╞я╖ё╛╣ВсцдФ╫Б╨муЩ╫Б
+
 private:
-    DJI_Motor* wheel_[4] = {nullptr};
+    void inverseKinematics(const Robot_Twist& twist) override; // дФ╫Бё╛╦Ы╬щд©╠Йкы╤х╪фкЦбжкы
+    float chassis_radius_; // ╣вел╟К╬╤ (m)
+
+    void forwardKinematics() override;
+
+    // arm_matrix_instance_f32 kinematics_matrix; // WheelCount x 3
+    // arm_matrix_instance_f32 input_mat_; // 3x1
+    // arm_matrix_instance_f32 output_mat_; // WheelCount x 1
+
+    // float32_t kinematics_matrix_data_[WheelCount * 3];
+    // float32_t input_vector_[3]; // 3x1
+    // float32_t output_vector_[WheelCount]; // 4x1    
 };
 
 

@@ -20,13 +20,13 @@ void Chassis_Base<WheelCount>::setWorldSpeed(const Robot_Twist& twist)
 {
     world_target_twist_ = twist;
 
-    // Ê¹ï¿½ï¿½yawï¿½Ç½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½Ù¶ï¿½×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµ
+    // Ê¹ÓÃyaw½Ç½«ÊÀ½çÏµËÙ¶È×ª»»µ½»úÆ÷ÈË×ø±êÏµ
     float cos_yaw = arm_cos_f32(-deg_to_rad(angle_twist_.yaw_angle));
     float sin_yaw = arm_sin_f32(-deg_to_rad(angle_twist_.yaw_angle));
 
     robot_target_twist_.vx = twist.vx * cos_yaw - twist.vy * sin_yaw;
     robot_target_twist_.vy = twist.vx * sin_yaw + twist.vy * cos_yaw;
-    robot_target_twist_.yaw_rate = twist.yaw_rate; // ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½2DÆ½ï¿½ï¿½ï¿½Ï²ï¿½ï¿½ï¿½
+    robot_target_twist_.yaw_rate = twist.yaw_rate; // ½ÇËÙ¶ÈÔÚ2DÆ½ÃæÉÏ²»±ä
 }
 
 template<std::size_t WheelCount>
@@ -36,7 +36,7 @@ void Chassis_Base<WheelCount>::update()
     float current_time_s = TimeStamp::getInstance().getSeconds();
     dt_ = current_time_s - last_update_time_s_;
     if(dt_ <= 0.0f || dt_ > 0.1f)
-        dt_ = 0.001f; //ï¿½ì³£Öµï¿½ï¿½ï¿½ï¿½
+        dt_ = 0.001f; //Òì³£Öµ´¦Àí
 
     last_update_time_s_ = current_time_s;
 
@@ -45,14 +45,14 @@ void Chassis_Base<WheelCount>::update()
         ramp(robot_target_twist_.vx, robot_twist_.vx, accel_value_, dt_);
         ramp(robot_target_twist_.vy, robot_twist_.vy, accel_value_, dt_);
 
-        robot_twist_.yaw_rate = robot_target_twist_.yaw_rate; // ï¿½ï¿½ï¿½Ù¶È²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½
+        robot_twist_.yaw_rate = robot_target_twist_.yaw_rate; // ½ÇËÙ¶È²»×ö¼ÓËÙ¶ÈÏÞÖÆ
     }
     else
         robot_twist_ = robot_target_twist_;
 
-    updateKinematics(); //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
+    updateKinematics(); //µ÷ÓÃÄæ½â¸üÐÂ»úÆ÷ÈËËÙ¶È
 
-    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½Ù¶ï¿½
+    // ¸üÐÂÊÀ½ç×ø±êÏµËÙ¶È
     float cos_yaw = arm_cos_f32(deg_to_rad(angle_twist_.yaw_angle));
     float sin_yaw = arm_sin_f32(deg_to_rad(angle_twist_.yaw_angle));
     world_twist_.vx = robot_twist_.vx * cos_yaw - robot_twist_.vy * sin_yaw;
@@ -61,9 +61,10 @@ void Chassis_Base<WheelCount>::update()
 
     for(std::size_t i = 0; i < WheelCount; i++)
     {
-        constrain(wheel_target_rpm_[i], -max_wheel_rpm_, max_wheel_rpm_); //ï¿½Þ·ï¿½
+        constrain(wheel_target_rpm_[i], -max_wheel_rpm_, max_wheel_rpm_); //ÏÞ·ù
         if(wheels_[i] != nullptr)
             wheels_[i]->setTargetRPM(wheel_target_rpm_[i]);
     }
 }
+
 template class Chassis_Base<4>;
