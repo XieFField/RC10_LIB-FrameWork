@@ -30,7 +30,7 @@ typedef struct{
     bool init_flag = false;
 
     
-    uint8_t debug_start = 1; //调试开始标志 == 1 开始调试
+    uint8_t debug_start = 0; //调试开始标志 == 1 开始调试
 
     float calibrate_startTime = 0; 
     bool calibrate_start = false;
@@ -109,7 +109,7 @@ protected:
     Joint_Status_S target_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
 
     float launch20cm_time = 0.5f;
-    float stretch40cm_time = 1.0f;
+    float launch40cm_time = 1.0f;
 };
 
 

@@ -36,7 +36,7 @@ public:
 
     // 周期性更新函数，用于执行控制逻辑，在调度任务被唤醒，并周期性执行。
     virtual void update(){};
-
+    
     // 反馈读取
     virtual float getRPM() const{};
     virtual float getCurrent() const{};
