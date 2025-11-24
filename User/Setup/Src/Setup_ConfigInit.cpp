@@ -134,7 +134,9 @@ void debug_init()
 #endif
 /*============================== debug   speedplanner ===============================*/
 /*============================== debug  DJI_Motor ===============================*/
-
+#if DEBUG
+laserpos.Init();//激光测距
+#endif
 }
 
 void CAN_Motor_Init(void);
@@ -166,9 +168,8 @@ void ALL_Setup_ConfigInit(void)
 
    Finite_StateMachine.init();
 		    // 获取Position单例并初始化UART
-   TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
-	 laserpos.Init();//激光测距
+	 
 
 	
    //other init
