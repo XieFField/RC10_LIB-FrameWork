@@ -52,6 +52,8 @@ extern "C" {
 #endif
 
 
+#include "Module_Position.h"
+#include "Module_LaserPosition.h"
 #if ARM_DEMO_DEBUG
 
         #include "arm_demo.h"

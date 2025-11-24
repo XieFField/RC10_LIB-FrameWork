@@ -79,6 +79,9 @@ Arm_InitData_S arm_demoInit_data={
 };
 
 Robot_ArmDemo arm_demo(arm_demoInit_data);
+//激光测距
+LaserPosition laserpos(&huart3,&huart6);
+
 
 void arm_motorInit()
 {
@@ -162,6 +165,13 @@ void ALL_Setup_ConfigInit(void)
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
 
    Finite_StateMachine.init();
+		    // 获取Position单例并初始化UART
+   TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
+   debug_init();
+	 laserpos.Init();//激光测距
+
+	
+   //other init
 }
 
 
