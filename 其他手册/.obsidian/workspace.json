@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "贝塞尔曲线中轨迹修正方案.md",
+                "file": "串联臂自动逻辑.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "贝塞尔曲线中轨迹修正方案"
+              "title": "串联臂自动逻辑"
             }
           }
         ],
@@ -186,13 +186,13 @@
   },
   "active": "4c1d92abdb2dbc77",
   "lastOpenFiles": [
+    "串联臂自动逻辑.pdf",
+    "贝塞尔曲线中轨迹修正方案.md",
     "串联刚体臂吸盘解算.md",
     "串联臂自动逻辑.md",
-    "贝塞尔曲线中轨迹修正方案.md",
     "自动模式方案书.md",
     "ROS在全国机器人大赛中的应用.pdf",
     "初代状态机.md",
-    "串联臂自动逻辑.pdf",
     "自动模式方案书_tmp.html",
     "自动模式方案书.pdf",
     "自动模式方案书",

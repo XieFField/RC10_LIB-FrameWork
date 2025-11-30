@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cmath>
 #include "APP_tool.h"
+#include <array>
 using std::sqrt;
 
 // 计算最少步数 BFS
@@ -28,15 +29,17 @@ static constexpr int   MAP_ROWS = 6;
 static constexpr float CELL_M   = 1.2f;
 static constexpr int   BFS_INF  = 30000;
 
-const Point2D MapNum_RealPos[30] = {
-    {0.6, 2.6, 0}, {1.8, 2.6, 0}, {3.0, 2.6, 0}, {4.2, 2.6, 0}, {5.4, 2.6, 0},
-    {0.6, 3.8, 0}, {1.8, 3.8, 0}, {3.0, 3.8, 0}, {4.2, 3.8, 0}, {5.4, 3.8, 0},
-    {0.6, 5.0, 0}, {1.8, 5.0, 0}, {3.0, 5.0, 0}, {4.2, 5.0, 0}, {5.4, 5.0, 0},
-    {0.6, 6.2, 0}, {1.8, 6.2, 0}, {3.0, 6.2, 0}, {4.2, 6.2, 0}, {5.4, 6.2, 0},
-    {0.6, 7.4, 0}, {1.8, 7.4, 0}, {3.0, 7.4, 0}, {4.2, 7.4, 0}, {5.4, 7.4, 0},
-    {0.6, 8.6, 0}, {1.8, 8.6, 0}, {3.0, 8.6, 0}, {4.2, 8.6, 0}, {5.4, 8.6, 0}
-};
+extern const Point2D MapNum_RealPos[30] ;
 
+typedef enum{
+    Positive_X,
+    Negative_X,
+
+    Positive_Y,
+    Negative_Y,
+
+    NONE,
+}Direction_E;
 
 // 将梅花桩编号映射为梅花林方格地图所对应的编号。
 static int8_t MFNum_TransforMapNum(int8_t MFNum);
@@ -88,6 +91,10 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
                                  int8_t MF1, int8_t MF2);
 
 RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum); //求解拾取KFS时候所处通道 最多两解
+
+void get_MoveDiretion(Point2D robotPos,
+                                 int8_t MF1, int8_t MF2,
+                                Direction_E Diresult[]);
 }
 #endif
 #endif // AUTOCTRLER_H

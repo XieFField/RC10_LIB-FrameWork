@@ -8,9 +8,9 @@ figure('Color', 'w', 'Name', 'Robocon 2026 Simulation: Precise Approach & Grab')
 axis equal; grid on; hold on;
 xlabel('X (m)'); ylabel('Y (m)'); zlabel('Z (m)');
 view(3); 
-light('Position', [1 -2 1], 'Style', 'infinite');
-light('Position', [-1 2 0.5], 'Style', 'infinite');
-lighting gouraud;
+% light('Position', [1 -2 1], 'Style', 'infinite');
+% light('Position', [-1 2 0.5], 'Style', 'infinite');
+% lighting gouraud;
 xlim([-1.5 1.0]); ylim([-2.0 1.0]); zlim([0 1.5]);
 
 % ==========================================
@@ -71,8 +71,16 @@ robot_rot = 0;
 % --- 关键坐标计算 ---
 x_contact = -0.11; 
 x_start_gap = x_contact - 0.05; 
-y_approach = -0.70;
-y_final = -0.49; % 抵住下横梁的位置
+
+% 修正: Y轴接近位置 (y_approach)
+% 逻辑: 凸起(130mm长)越过武器架前沿60mm. 
+% 此时缺口台阶面距离武器架前沿 130 - 60 = 70mm.
+% 武器架前沿 Y = -0.13m.
+% 机器人凸起前端局部 Y = +0.49m.
+% y_approach + 0.49 = -0.13 + 0.06 => y_approach = -0.56m
+y_approach = -0.56;
+
+y_final = -0.49; % 抵住下横梁的位置 (前进70mm后到达)
 y_start_far = -1.5;
 
 z_high = 980;
@@ -88,9 +96,13 @@ speed_y = max_chassis_speed;           % 前进/后退使用最大速度
 speed_z = 0.8;                         % 升降速度独立控制
 
 % --- 阶段时间计算 ---
-% Phase 1-3: 接近与抓取
+% Phase 1: Y轴接近 (到达 -0.56)
 t1 = abs(y_approach - y_start_far) / speed_y;
+
+% Phase 2: X轴横移 (贴靠侧边)
 t2 = abs(x_contact - x_start_gap) / speed_x;
+
+% Phase 3: Y轴继续前进 (消除70mm间隙, 抵住下横梁)
 t3_move = abs(y_final - y_approach) / speed_y;
 t3_z = abs(z_high - z_low) / 1000 / speed_z;
 t3 = max(t3_move, t3_z);
@@ -151,6 +163,13 @@ title('Robocon 2026: 自动取矛流程仿真');
 % 目标矛杆索引
 target_wep_idx = 1; 
 target_hole_pos = [hole_x_positions(target_wep_idx)/1000, y_hole_center/1000, z_contact_lower/1000];
+
+% 等待用户点击“开始”后再运行仿真
+fig = uifigure('Name','仿真控制','Position',[300 300 320 120],'Resize','off');
+uilabel(fig,'Text','点击“开始”以运行仿真','HorizontalAlignment','center','Position',[10 70 300 30],'FontSize',12);
+uibutton(fig,'Text','开始','Position',[110 20 100 36],'ButtonPushedFcn',@(src,event) uiresume(fig));
+uiwait(fig);    % 等待按钮触发 uiresume
+close(fig);
 
 % ==========================================
 % 3. 动画循环

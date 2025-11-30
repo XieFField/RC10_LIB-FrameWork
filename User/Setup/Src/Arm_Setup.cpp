@@ -12,6 +12,7 @@ void ArmSetup::loop()
     }
 
 
+    auto_ctrl_.now_armPosition = get_nowArmPosition();
     switch(arm_status_)
     {
         case ARM_MANUAL_CONTROL:
@@ -121,17 +122,121 @@ void ArmSetup::manualControl()
         else
             this->setSuckerStatus(Sucker_Status_E::STOP);
 }
+/*=======================================================*/
 
-
+/**
+ * @brief 如果有两个目标KFS，则第一个KFS拾取完后放到存储机构
+ *        第二个KFS拾取完后留在吸盘上
+ *        如果没有第二个，就吸在吸盘上，不必放到存储机构
+ * 
+ * 自动计算逻辑遵从串联臂自动逻辑末尾的数学公式
+ */
 void ArmSetup::autoControl()
 {
     // 自动控制函数
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    //暂时应该是只写无梅花桩的自动；这就比较简单了，都不需要关心避障，只需要做吸取的预判而已；
+    /**
+     * 整体流程：
+     * 1. 升降到目标高度,吸盘pitch90度
+     * 2. 锁住云台，等待移动到目标前一桩，云台开始预判旋转时机
+     * 3. 旋转执行后，机械臂末端已经对住KFS侧法平面，预判并伸展到KFS位置
+     * 4. 云台对准时候就打开吸盘，伸展到底后，停留延迟x(0.3)s，后缩回
+     * 5. 缩回后，云台旋转回目标位置(初始or存储机构位置)
+     */
+    
+    if(auto_ctrl_.targetKFS[0] == 0)
+        return; //没有目标KFS，直接返回
+
+    switch(auto_ctrl_.kfs_num)
+    {
+        case ONLY_ONE:
+        {
+            break;
+        }
+        
+        case TWO:
+        {
+            break;
+        }
+    }
 
 
 }
+
+//流程函数
+
+void ArmSetup::state_toTargetHight(int targetKFS)
+{
+    /**
+     * 1. 根据KFS编号，查询对应高度
+     * 2. 升降到对应高度，吸盘pitch90度
+     * 3. 锁住云台，等待移动到目标前一桩，云台开始预判旋转时机
+     */
+
+    //20cm台阶 升降0m, 40cm台阶升降 0.2m, 60cm台阶升降0.4m
+    float kfs_height = MF_high[targetKFS -1]; //获取目标KFS高度
+
+    this->set_LaunchHeight((kfs_height - 0.2f)); 
+    this->set_PitchAngle(90.0f); //吸盘pitch90度
+    this->setRotateReversed(0.0f); //锁住云台
+}
+
+void ArmSetup::state_signAlign(int targetKFS)
+{
+    MF_AutoCtrler::Direction_E move_direction;
+    Point2D target_pos = {0, 0 ,0};
+    if(targetKFS == auto_ctrl_.targetKFS[0])
+    {
+        move_direction = auto_ctrl_.KFS_Movedirection[0];
+        target_pos = auto_ctrl_.targetKFS_pos[0];
+    }
+    else if(targetKFS == auto_ctrl_.targetKFS[1])
+    {
+        move_direction = auto_ctrl_.KFS_Movedirection[1];
+        target_pos = auto_ctrl_.targetKFS_pos[1];
+    }
+    else
+        return;
+
+    //开始预判计算部分
+    switch(move_direction) //还未到目标位置，不进入计算
+    {
+        case MF_AutoCtrler::Positive_X:
+        {
+            if(auto_ctrl_.now_armPosition.x < auto_ctrl_.pathPos.bestB1.x - 0.1f)
+                return; //未到达目标位置，直接返回
+            break;
+        }
+        case MF_AutoCtrler::Negative_X:
+        {
+            if(auto_ctrl_.now_armPosition.x > auto_ctrl_.pathPos.bestB1.x + 0.1f)
+                return; //未到达目标位置，直接返回
+            break;
+        }
+
+        case MF_AutoCtrler::Positive_Y:
+        {
+            if(auto_ctrl_.now_armPosition.y < auto_ctrl_.pathPos.bestB1.y - 0.1f)
+                return; //未到达目标位置，直接返回
+            break;
+        }
+        case MF_AutoCtrler::Negative_Y:
+        {
+            if(auto_ctrl_.now_armPosition.y > auto_ctrl_.pathPos.bestB1.y + 0.1f)
+                return; //未到达目标位置，直接返回
+            break;
+        }
+        default:
+            break;
+    }
+
+    //达到目标位置，开始计算
+    
+}
+
+
+/*=================================================================*/
 
 void ArmSetup::stop()
 {
@@ -349,5 +454,6 @@ Arm_InitData_S arm_initData = {
    .min_rotate_angle_ = 0.0f,
    .max_rotate_angle_ = 359.999f,
 };
+
 
 

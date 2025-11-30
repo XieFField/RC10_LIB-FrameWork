@@ -38,14 +38,14 @@ end
 
 % 输入：机器人位置与目标桩
 robotPos = [4.6, 1, 0]; 
-MF1 = 2;
-MF2 = 9;
+MF1 = 0;
+MF2 = 0;
 
-cubes_ids = [MF1, MF2];
+cubes_ids = [MF1, MF2, 11];
 cube_nums = 2;
 cube_size = 0.35; % KFS 尺寸
 allowed_cube_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-cubes = place_cubes(pillars, allowed_cube_ids, cubes_ids, cube_size, cube_nums);
+% cubes = place_cubes(pillars, allowed_cube_ids, cubes_ids, cube_nums);
 
 % 计算最优点位
 R = PathNodeResult_calc(robotPos, MF1, MF2);

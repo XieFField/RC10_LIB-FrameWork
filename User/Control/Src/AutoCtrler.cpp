@@ -7,6 +7,122 @@
 
 namespace MF_AutoCtrler{
 
+const Point2D MapNum_RealPos[30] = {
+    {0.6, 2.6, 0}, {1.8, 2.6, 0}, {3.0, 2.6, 0}, {4.2, 2.6, 0}, {5.4, 2.6, 0},
+    {0.6, 3.8, 0}, {1.8, 3.8, 0}, {3.0, 3.8, 0}, {4.2, 3.8, 0}, {5.4, 3.8, 0},
+    {0.6, 5.0, 0}, {1.8, 5.0, 0}, {3.0, 5.0, 0}, {4.2, 5.0, 0}, {5.4, 5.0, 0},
+    {0.6, 6.2, 0}, {1.8, 6.2, 0}, {3.0, 6.2, 0}, {4.2, 6.2, 0}, {5.4, 6.2, 0},
+    {0.6, 7.4, 0}, {1.8, 7.4, 0}, {3.0, 7.4, 0}, {4.2, 7.4, 0}, {5.4, 7.4, 0},
+    {0.6, 8.6, 0}, {1.8, 8.6, 0}, {3.0, 8.6, 0}, {4.2, 8.6, 0}, {5.4, 8.6, 0}
+};
+
+void get_MoveDiretion(Point2D robotPos,
+                                 int8_t MF1, int8_t MF2,
+                                Direction_E Diresult[])
+{
+    PathNode_S path = PathNodeResult_calc(robotPos, MF1, MF2);
+
+    int8_t bestB1_c_, bestB1_r_, //列 行
+           bestB2_c_, bestB2_r_,
+           bestBMF1_c_, bestBMF1_r_,
+           bestBMF2_c_, bestBMF2_r_;
+
+    Direction_E result_[2] = {NONE, NONE};
+
+    Map_ToCR(path.bestB1, bestB1_c_, bestB1_r_);
+    Map_ToCR(path.bestB2, bestB2_c_, bestB2_r_);
+    Map_ToCR(path.bestBMF1, bestBMF1_c_, bestBMF1_r_);
+    Map_ToCR(path.bestBMF2, bestBMF2_c_, bestBMF2_r_);
+
+    if(MF1 !=0 && MF2 !=0)
+    {
+        if(bestB1_c_ == bestBMF1_c_) //同列不同行
+        {
+            if(bestB1_r_ < bestBMF1_r_)
+                result_[0] = Positive_Y;
+            else
+                result_[0] = Negative_Y;
+        }
+        else if(bestB1_r_ == bestBMF1_r_) //同行不同列
+        {
+            if(bestB1_c_ < bestBMF1_c_)
+                result_[0] = Positive_X;
+            else
+                result_[0] = Negative_X;
+        }
+        else
+            result_[0] = NONE;
+
+
+        if(bestB2_c_ == bestBMF2_c_) //同列不同行
+        {
+            if(bestB2_r_ < bestBMF2_r_)
+                result_[1] = Positive_Y;
+            else
+                result_[1] = Negative_Y;
+        }
+        else if(bestB2_r_ == bestBMF2_r_) //同行不同列
+        {
+            if(bestB2_c_ < bestBMF2_c_)
+                result_[1] = Positive_X;
+            else
+                result_[1] = Negative_X;
+        }
+        else
+            result_[1] = NONE;
+    }
+    else
+    {
+        if(MF1 !=0)
+        {
+            if(bestB1_c_ == bestBMF1_c_) //同行不同列
+            {
+                if(bestB1_r_ < bestBMF1_r_)
+                    result_[0] = Positive_Y;
+                else
+                    result_[0] = Negative_Y;
+            }
+            else if(bestB1_r_ == bestBMF1_r_) //同列不同航
+            {
+                if(bestB1_c_ < bestBMF1_c_)
+                    result_[0] = Positive_X;
+                else
+                    result_[0] = Negative_X;
+            }
+            else
+                result_[0] = NONE;
+        }
+        else 
+            result_[0] = NONE;
+
+        if(MF2 !=0)
+        {
+            if(bestB2_c_ == bestBMF2_c_) //同行不同列
+            {
+                if(bestB2_r_ < bestBMF2_r_)
+                    result_[1] = Positive_Y;
+                else
+                    result_[1] = Negative_Y;
+            }
+            else if(bestB2_r_ == bestBMF2_r_) //同列不同航
+            {
+                if(bestB2_c_ < bestBMF2_c_)
+                    result_[1] = Positive_X;
+                else
+                    result_[1] = Negative_X;
+            }
+            else
+                result_[1] = NONE;
+        }
+        else 
+            result_[1] = NONE;
+    }
+
+    Diresult[0] = result_[0];
+    Diresult[1] = result_[1];
+}
+
+
 //行列转地图编号
 int8_t CR_ToMap(int8_t c, int8_t r) 
 {

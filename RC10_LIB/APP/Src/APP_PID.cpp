@@ -195,8 +195,8 @@ float PID_Incremental::pid_calc(float target, float feedback)
 
 //目前3508不错的参数 
 PID_Param_Config m3508_speed_pid_params = {
-    .kp = 32.0f,
-    .ki = 0.085f,
+    .kp = 25.0f,
+    .ki = 0.06f,
     .kd = 0.0f,
     .I_Outlimit = 8000.0f, 
     .isIOutlimit = true, 
@@ -205,13 +205,13 @@ PID_Param_Config m3508_speed_pid_params = {
 };
 
 PID_Param_Config m3508_angle_pid_params = {
-    .kp = 32.0f,
+    .kp = 30.0f,
     .ki = 0.0f,
-    .kd = 1.1f,
+    .kd = 0.95f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
     .output_limit = 400.0f,   
-    .deadband = 0.5f // 
+    .deadband = 0.1f // 
 };
 
 PID_Param_Config m2006_speed_pid_params = {
