@@ -37,8 +37,8 @@ float speed_tar = 10.0f;
 float speed_now = 0.0f;
 float pos_now = 0.0f;
 Td td(10.0f);
-// ËÙ¶ÈÊ½
-ConstantAcc ca(0.02f); // ×¢Òâ´úÂëÔËÐÐÏµÍ³µÄÖÜÆÚ
+// ï¿½Ù¶ï¿½Ê½
+ConstantAcc ca(0.02f); // ×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 #endif
 
 #if Positionaltype_1D
@@ -48,7 +48,7 @@ float td_pos_now = 0.0f;
 float tp_speed_now = 0.0f;
 float tp_pos_now = 0.0f;
 Td td(10.0f);
-// 1DµÄÎ»ÖÃÊ½
+// 1Dï¿½ï¿½Î»ï¿½ï¿½Ê½
 Speedplanner_1D_Param_Config Param_1d{.maxAcc = 2.9f, .maxDec = 2.0f, .maxJerk = 1.5f, .maxSpeed = 6.0f, .initialSpeed = 0.0f, .finalSpeed = 0.0f, .startPos = 0.0000000001f, .targetPos = 30.0f, .deadzone = 0.00001f};
 // TrapePlanner1D TP_1d(Param_1d);
 SShapedPlanner1D TP_1d(Param_1d);

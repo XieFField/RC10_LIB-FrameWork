@@ -3755,6 +3755,8 @@ Section Cross References
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup4loopEv) refers to bsp_timestamp.o(.text._ZN9TimeStamp11getInstanceEv) for TimeStamp::getInstance()
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup4loopEv) refers to bsp_timestamp.o(.text._ZNK9TimeStamp15getMicrosecondsEv) for TimeStamp::getMicroseconds() const
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup4loopEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup4loopEvE7last_us) for OmniChassis_Setup::loop()::last_us
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup4loopEv) refers to usart.o(.bss.huart1) for huart1
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup4loopEv) refers to module_position.o(.text._ZN8Position11GetInstanceEP20__UART_HandleTypeDef) for Position::GetInstance(__UART_HandleTypeDef*)
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup4loopEv) refers to module_air_joy.o(.text._ZN6AirJoy11getinstanceEv) for AirJoy::getinstance()
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup4loopEv) refers to omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) for OmniChassis_Setup::chassis_auto_control()
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup4loopEv) refers to omni_chassissetup.o(.text._ZN17OmniChassis_Setup24chassis_manual_control_BEv) for OmniChassis_Setup::chassis_manual_control_B()
@@ -3769,40 +3771,33 @@ Section Cross References
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup24chassis_manual_control_BEv) refers to app_pid.o(.text._ZN12PID_Position8pid_calcEff) for PID_Position::pid_calc(float, float)
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup24chassis_manual_control_BEv) refers to module_air_joy.o(.text._ZN6AirJoy11getinstanceEv) for AirJoy::getinstance()
     omni_chassissetup.o(.ARM.exidx.text._ZN17OmniChassis_Setup24chassis_manual_control_BEv) refers to omni_chassissetup.o(.text._ZN17OmniChassis_Setup24chassis_manual_control_BEv) for [Anonymous Symbol]
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZGVZN17OmniChassis_Setup20chassis_auto_controlEvE6pid_bc) for guard variable for OmniChassis_Setup::chassis_auto_control()::pid_bc
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup20chassis_auto_controlEvE13pid_bc_inited) for OmniChassis_Setup::chassis_auto_control()::pid_bc_inited
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup20chassis_auto_controlEvE6pid_bc) for OmniChassis_Setup::chassis_auto_control()::pid_bc
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_pid.o(.text._ZN12PID_Position10set_paramsERK16PID_Param_Configf) for PID_Position::set_params(PID_Param_Config const&, float)
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_vector2d.o(.text._ZN8Vector2DC2Eff) for Vector2D::Vector2D(float, float)
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZGVZN17OmniChassis_Setup20chassis_auto_controlEvE7planner) for guard variable for OmniChassis_Setup::chassis_auto_control()::planner
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup20chassis_auto_controlEvE14planner_inited) for OmniChassis_Setup::chassis_auto_control()::planner_inited
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup20chassis_auto_controlEvE7map_buf) for OmniChassis_Setup::chassis_auto_control()::map_buf
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZGVZN17OmniChassis_Setup20chassis_auto_controlEvE11path_points) for guard variable for OmniChassis_Setup::chassis_auto_control()::path_points
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to new.cpp.o(__lcxx_override) for operator new(unsigned int)
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.rodata._ZN13MF_AutoCtrlerL14MapNum_RealPosE) for MF_AutoCtrler::MapNum_RealPos
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to new.cpp.o(.text._ZdlPvj) for operator delete(void*, unsigned int)
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup20chassis_auto_controlEvE11path_points) for OmniChassis_Setup::chassis_auto_control()::path_points
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup20chassis_auto_controlEvE13prev_map_hash) for OmniChassis_Setup::chassis_auto_control()::prev_map_hash
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.data._ZZN17OmniChassis_Setup20chassis_auto_controlEvE7prev_sx) for OmniChassis_Setup::chassis_auto_control()::prev_sx
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.data._ZZN17OmniChassis_Setup20chassis_auto_controlEvE7prev_sy) for OmniChassis_Setup::chassis_auto_control()::prev_sy
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.data._ZZN17OmniChassis_Setup20chassis_auto_controlEvE7prev_gx) for OmniChassis_Setup::chassis_auto_control()::prev_gx
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.data._ZZN17OmniChassis_Setup20chassis_auto_controlEvE7prev_gy) for OmniChassis_Setup::chassis_auto_control()::prev_gy
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup20chassis_auto_controlEvE7planner) for OmniChassis_Setup::chassis_auto_control()::planner
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to pathplanner.o(.text._ZN11PathPlanner8findPathEssss) for PathPlanner::findPath(short, short, short, short)
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to pathplanner.o(.text._ZNK11PathPlanner13getPathLengthEv) for PathPlanner::getPathLength() const
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to pathplanner.o(.text._ZNK11PathPlanner7getPathEv) for PathPlanner::getPath() const
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup20chassis_auto_controlEvE12follow_index) for OmniChassis_Setup::chassis_auto_control()::follow_index
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZGVZN17OmniChassis_Setup20chassis_auto_controlEvE2bc) for guard variable for OmniChassis_Setup::chassis_auto_control()::bc
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to usart.o(.bss.huart1) for huart1
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to module_position.o(.text._ZN8Position11GetInstanceEP20__UART_HandleTypeDef) for Position::GetInstance(__UART_HandleTypeDef*)
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup20chassis_auto_controlEvE2bc) for OmniChassis_Setup::chassis_auto_control()::bc
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_bezier_curve.o(.text._ZN11BezierCurve20Get_Nearest_DistanceE8Vector2DPf) for BezierCurve::Get_Nearest_Distance(Vector2D, float*)
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_bezier_curve.o(.text._ZN11BezierCurve9Get_PointEf) for BezierCurve::Get_Point(float)
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_bezier_curve.o(.text._ZN11BezierCurve18Get_Tangent_VectorEf) for BezierCurve::Get_Tangent_Vector(float)
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_vector2d.o(.text._ZNK8Vector2DmiERKS_) for Vector2D::operator-(Vector2D const&) const
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_vector2d.o(.text._ZN8Vector2DaSERKS_) for Vector2D::operator=(Vector2D const&)
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_bezier_curve.o(.text._ZN11BezierCurve15Get_Current_LenEf) for BezierCurve::Get_Current_Len(float)
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_vector2d.o(.text._ZNK8Vector2D9magnitudeEv) for Vector2D::magnitude() const
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_vector2d.o(.text._ZNK8Vector2D9normalizeEv) for Vector2D::normalize() const
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_pid.o(.text._ZN12PID_Position8pid_calcEff) for PID_Position::pid_calc(float, float)
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_vector2d.o(.text._ZNK8Vector2DmlEf) for Vector2D::operator*(float) const
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_vector2d.o(.text._ZNK8Vector2DplERKS_) for Vector2D::operator+(Vector2D const&) const
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to cosf.o(i.__hardfp_cosf) for __hardfp_cosf
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to sinf.o(i.__hardfp_sinf) for __hardfp_sinf
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to atan2f.o(i.__hardfp_atan2f) for __hardfp_atan2f
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.text._ZNKSt3__26vectorI8Vector2DNS_9allocatorIS1_EEE20__throw_length_errorB8nn200000Ev) for std::__2::vector<Vector2D, std::__2::allocator<Vector2D>>::__throw_length_error[abi:nn200000]() const
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss.pid_yaw) for pid_yaw
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to cxa_guard.cpp.o(.text.unlikely.__cxa_guard_acquire) for __cxa_guard_acquire
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup20chassis_auto_controlEvE8path_buf) for OmniChassis_Setup::chassis_auto_control()::path_buf
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup20chassis_auto_controlEvE9nodes_buf) for OmniChassis_Setup::chassis_auto_control()::nodes_buf
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.bss._ZZN17OmniChassis_Setup20chassis_auto_controlEvE13open_list_buf) for OmniChassis_Setup::chassis_auto_control()::open_list_buf
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to pathplanner.o(.text._ZN11PathPlannerC2EPhP9AStarNodePS2_P9GridPointtttt) for PathPlanner::PathPlanner(unsigned char*, AStarNode*, AStarNode**, GridPoint*, unsigned short, unsigned short, unsigned short, unsigned short)
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.text._ZN12PID_PositionC2E16PID_Param_Configf) for PID_Position::PID_Position__sub_object(PID_Param_Config, float)
     omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to cxa_guard.cpp.o(.text.unlikely.__cxa_guard_release) for __cxa_guard_release
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.text._ZNSt3__26vectorI8Vector2DNS_9allocatorIS1_EEED2B8nn200000Ev) for std::__2::vector<Vector2D, std::__2::allocator<Vector2D>>::~vector__sub_object[abi:nn200000]()
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to cxa_atexit.o(.text) for __cxa_atexit
-    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to sqrtf.o(i.__hardfp_sqrtf) for __hardfp_sqrtf
+    omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to app_bezier_curve.o(.text._ZN11BezierCurveC2E8Vector2DS0_S0_) for BezierCurve::BezierCurve(Vector2D, Vector2D, Vector2D)
     omni_chassissetup.o(.ARM.exidx.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) refers to omni_chassissetup.o(.text._ZN17OmniChassis_Setup20chassis_auto_controlEv) for [Anonymous Symbol]
     omni_chassissetup.o(.ARM.exidx.text._ZN17OmniChassis_Setup12chassis_stopEv) refers to omni_chassissetup.o(.text._ZN17OmniChassis_Setup12chassis_stopEv) for [Anonymous Symbol]
     omni_chassissetup.o(.text._GLOBAL__sub_I_omni_chassisSetup.cpp) refers to omni_chassissetup.o(.bss._ZNSt3__2L19__start_std_streamsE) for std::__2::__start_std_streams
@@ -4268,10 +4263,6 @@ Section Cross References
     new.cpp.o(.ARM.exidx.text._ZdaPvSt11align_val_tRKSt9nothrow_t) refers to new.cpp.o(.text._ZdaPvSt11align_val_tRKSt9nothrow_t) for [Anonymous Symbol]
     new.cpp.o(.text._ZdaPvjSt11align_val_t) refers to new.cpp.o(.text._ZdaPvSt11align_val_t) for operator delete[](void*, std::align_val_t)
     new.cpp.o(.ARM.exidx.text._ZdaPvjSt11align_val_t) refers to new.cpp.o(.text._ZdaPvjSt11align_val_t) for [Anonymous Symbol]
-    verbose_abort.cpp.o(.text._ZNSt3__222__libcpp_verbose_abortEPKcz) refers to stdio_streams.o(.bss) for __stderr
-    verbose_abort.cpp.o(.text._ZNSt3__222__libcpp_verbose_abortEPKcz) refers to vfprintf.o(.text) for vfprintf
-    verbose_abort.cpp.o(.text._ZNSt3__222__libcpp_verbose_abortEPKcz) refers to abort.o(.text) for abort
-    verbose_abort.cpp.o(.ARM.exidx.text._ZNSt3__222__libcpp_verbose_abortEPKcz) refers to verbose_abort.cpp.o(.text._ZNSt3__222__libcpp_verbose_abortEPKcz) for [Anonymous Symbol]
     cxa_guard.cpp.o(.text.unlikely.__cxa_guard_acquire) refers to cxa_guard.cpp.o(.rodata.str1.1) for .L.str
     cxa_guard.cpp.o(.text.unlikely.__cxa_guard_acquire) refers to abort_message.cpp.o(.text.unlikely.abort_message) for abort_message
     cxa_guard.cpp.o(.ARM.exidx.text.unlikely.__cxa_guard_acquire) refers to cxa_guard.cpp.o(.text.unlikely.__cxa_guard_acquire) for [Anonymous Symbol]
@@ -4425,41 +4416,6 @@ Section Cross References
     heap2_threads.o(i.realloc$realtime$concurrent) refers to fdtree.o(i._FDTree_Delete) for _FDTree_Delete
     heap2_threads.o(i.realloc$realtime$concurrent) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
     _rserrno.o(.text) refers to rt_errno_addr_intlibspace.o(.text) for __aeabi_errno_addr
-    vfprintf.o(.text) refers (Special) to _printf_a.o(.ARM.Collect$$_printf_percent$$00000006) for _printf_a
-    vfprintf.o(.text) refers (Special) to _printf_c.o(.ARM.Collect$$_printf_percent$$00000013) for _printf_c
-    vfprintf.o(.text) refers (Special) to _printf_charcount.o(.text) for _printf_charcount
-    vfprintf.o(.text) refers (Special) to _printf_d.o(.ARM.Collect$$_printf_percent$$00000009) for _printf_d
-    vfprintf.o(.text) refers (Special) to _printf_e.o(.ARM.Collect$$_printf_percent$$00000004) for _printf_e
-    vfprintf.o(.text) refers (Special) to _printf_f.o(.ARM.Collect$$_printf_percent$$00000003) for _printf_f
-    vfprintf.o(.text) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
-    vfprintf.o(.text) refers (Special) to printf2.o(x$fpl$printf2) for _printf_fp_hex
-    vfprintf.o(.text) refers (Special) to _printf_g.o(.ARM.Collect$$_printf_percent$$00000005) for _printf_g
-    vfprintf.o(.text) refers (Special) to _printf_i.o(.ARM.Collect$$_printf_percent$$00000008) for _printf_i
-    vfprintf.o(.text) refers (Special) to _printf_dec.o(.text) for _printf_int_dec
-    vfprintf.o(.text) refers (Special) to _printf_l.o(.ARM.Collect$$_printf_percent$$00000012) for _printf_l
-    vfprintf.o(.text) refers (Special) to _printf_lc.o(.ARM.Collect$$_printf_percent$$00000015) for _printf_lc
-    vfprintf.o(.text) refers (Special) to _printf_ll.o(.ARM.Collect$$_printf_percent$$00000007) for _printf_ll
-    vfprintf.o(.text) refers (Special) to _printf_lld.o(.ARM.Collect$$_printf_percent$$0000000E) for _printf_lld
-    vfprintf.o(.text) refers (Special) to _printf_lli.o(.ARM.Collect$$_printf_percent$$0000000D) for _printf_lli
-    vfprintf.o(.text) refers (Special) to _printf_llo.o(.ARM.Collect$$_printf_percent$$00000010) for _printf_llo
-    vfprintf.o(.text) refers (Special) to _printf_llu.o(.ARM.Collect$$_printf_percent$$0000000F) for _printf_llu
-    vfprintf.o(.text) refers (Special) to _printf_llx.o(.ARM.Collect$$_printf_percent$$00000011) for _printf_llx
-    vfprintf.o(.text) refers (Special) to _printf_longlong_dec.o(.text) for _printf_longlong_dec
-    vfprintf.o(.text) refers (Special) to _printf_hex_int_ll_ptr.o(.text) for _printf_longlong_hex
-    vfprintf.o(.text) refers (Special) to _printf_oct_int_ll.o(.text) for _printf_longlong_oct
-    vfprintf.o(.text) refers (Special) to _printf_ls.o(.ARM.Collect$$_printf_percent$$00000016) for _printf_ls
-    vfprintf.o(.text) refers (Special) to _printf_n.o(.ARM.Collect$$_printf_percent$$00000001) for _printf_n
-    vfprintf.o(.text) refers (Special) to _printf_o.o(.ARM.Collect$$_printf_percent$$0000000B) for _printf_o
-    vfprintf.o(.text) refers (Special) to _printf_p.o(.ARM.Collect$$_printf_percent$$00000002) for _printf_p
-    vfprintf.o(.text) refers (Special) to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
-    vfprintf.o(.text) refers (Special) to _printf_pad.o(.text) for _printf_post_padding
-    vfprintf.o(.text) refers (Special) to _printf_s.o(.ARM.Collect$$_printf_percent$$00000014) for _printf_s
-    vfprintf.o(.text) refers (Special) to _printf_str.o(.text) for _printf_str
-    vfprintf.o(.text) refers (Special) to _printf_truncate.o(.text) for _printf_truncate_signed
-    vfprintf.o(.text) refers (Special) to _printf_u.o(.ARM.Collect$$_printf_percent$$0000000A) for _printf_u
-    vfprintf.o(.text) refers (Special) to _printf_wctomb.o(.text) for _printf_wctomb
-    vfprintf.o(.text) refers (Special) to _printf_x.o(.ARM.Collect$$_printf_percent$$0000000C) for _printf_x
-    vfprintf.o(.text) refers to _printf_char_file.o(.text) for _printf_char_file
     __printf.o(.text) refers to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
     _printf_str.o(.text) refers (Special) to _printf_char.o(.text) for _printf_cs_common
     _printf_str.o(.text) refers (Weak) to _printf_pad.o(.text) for _printf_pre_padding
@@ -4559,9 +4515,6 @@ Section Cross References
     fflush_locked.o(.text) refers to fflush.o(.text) for _do_fflush
     fflush_locked.o(.text) refers to streamlock.o(.data) for _stream_list_lock
     fflush_locked.o(.text) refers to stdio_streams.o(.bss) for __stdin
-    abort.o(.text) refers to defsig_abrt_outer.o(.text) for __rt_SIGABRT
-    abort.o(.text) refers (Weak) to libshutdown.o(.ARM.Collect$$libshutdown$$00000000) for __rt_lib_shutdown
-    abort.o(.text) refers to retarget_io.o(.text._sys_exit) for _sys_exit
     atexit_aeabi.o(.text) refers to aeabi_atexit.o(.text) for __aeabi_atexit
     atexit_aeabi.o(.ARM.exidx) refers to atexit_aeabi.o(.text) for .text
     aeabi_atexit.o(.text) refers (Special) to cxa_finalize.o(.text) for __cxa_finalize
@@ -7766,9 +7719,6 @@ Section Cross References
     _printf_fp_hex.o(.text) refers to _printf_fp_hex.o(.constdata) for .constdata
     _printf_fp_hex.o(.constdata) refers (Special) to usenofp.o(x$fpl$usenofp) for __I$use$fp
     _printf_char.o(.text) refers (Weak) to _printf_str.o(.text) for _printf_str
-    _printf_char_file.o(.text) refers to _printf_char_common.o(.text) for _printf_char_common
-    _printf_char_file.o(.text) refers to ferror.o(.text) for ferror
-    _printf_char_file.o(.text) refers to fputc.o(i.fputc) for fputc
     _printf_wchar.o(.text) refers (Weak) to _printf_wctomb.o(.text) for _printf_wctomb
     __ARM_vsscanf.o(.text) refers (Special) to _scanf_int.o(.text) for _scanf_int
     __ARM_vsscanf.o(.text) refers (Special) to _scanf_longlong.o(.text) for _scanf_longlong
@@ -7872,6 +7822,9 @@ Section Cross References
     wcsnrtombs.o(.text) refers to rt_memcpy_v6.o(.text) for __aeabi_memcpy
     _c16rtomb.o(.text) refers to rt_ctype_table.o(.text) for __rt_ctype_table
     _mbcurmax.o(.text) refers to rt_ctype_table.o(.text) for __rt_ctype_table
+    abort.o(.text) refers to defsig_abrt_outer.o(.text) for __rt_SIGABRT
+    abort.o(.text) refers (Weak) to libshutdown.o(.ARM.Collect$$libshutdown$$00000000) for __rt_lib_shutdown
+    abort.o(.text) refers to retarget_io.o(.text._sys_exit) for _sys_exit
     cxa_finalize.o(.text) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$00000001) for __rt_lib_shutdown_cpp_2
     cxa_finalize.o(.text) refers to rt_ddtor_pointer_addr_intlibspace.o(.text) for __rt_ddtor_pointer_addr
     cxa_finalize.o(.text) refers to atexit_init.o(.data) for _atexit_mutex
@@ -7883,9 +7836,6 @@ Section Cross References
     atexit_init.o(.text) refers to mutex_dummy.o(.text) for _mutex_initialize
     atexit_init.o(.text) refers to atexit_init.o(.data) for .data
     atexit_init.o(.data) refers (Special) to libinit2.o(.ARM.Collect$$libinit$$0000001C) for __rt_lib_init_atexit_2
-    defsig_abrt_outer.o(.text) refers to defsig_abrt_inner.o(.text) for __rt_SIGABRT_inner
-    defsig_abrt_outer.o(.text) refers to defsig_exit.o(.text) for __sig_exit
-    defsig_abrt_formal.o(.text) refers to rt_raise.o(.text) for __rt_raise
     strcoll.o(.text) refers (Special) to lc_collate_c.o(locale$$code) for _get_lc_collate
     strcoll.o(.text) refers to rt_locale_intlibspace.o(.text) for __rt_locale
     strcoll.o(.text) refers to strcmpv7m_pel.o(.text) for strcmp
@@ -8002,7 +7952,7 @@ Section Cross References
     string.cpp.o(.text._ZNKSt3__221__basic_string_commonILb1EE20__throw_length_errorEv) refers (Special) to _printf_f.o(.ARM.Collect$$_printf_percent$$00000003) for _printf_f
     string.cpp.o(.text._ZNKSt3__221__basic_string_commonILb1EE20__throw_length_errorEv) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
     string.cpp.o(.text._ZNKSt3__221__basic_string_commonILb1EE20__throw_length_errorEv) refers to string.cpp.o(.rodata.str1.1) for .L.str
-    string.cpp.o(.text._ZNKSt3__221__basic_string_commonILb1EE20__throw_length_errorEv) refers to omni_chassissetup.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) for std::__2::__throw_length_error[abi:nn200000](char const*)
+    string.cpp.o(.text._ZNKSt3__221__basic_string_commonILb1EE20__throw_length_errorEv) refers to ios.cpp.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) for std::__2::__throw_length_error[abi:nn200000](char const*)
     string.cpp.o(.ARM.exidx.text._ZNKSt3__221__basic_string_commonILb1EE20__throw_length_errorEv) refers (Special) to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
     string.cpp.o(.ARM.exidx.text._ZNKSt3__221__basic_string_commonILb1EE20__throw_length_errorEv) refers (Special) to _printf_f.o(.ARM.Collect$$_printf_percent$$00000003) for _printf_f
     string.cpp.o(.ARM.exidx.text._ZNKSt3__221__basic_string_commonILb1EE20__throw_length_errorEv) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
@@ -8568,6 +8518,10 @@ Section Cross References
     system_error.cpp.o(.rodata._ZTINSt3__212system_errorE) refers to private_typeinfo.cpp.o(.rodata._ZTVN10__cxxabiv120__si_class_type_infoE) for vtable for __cxxabiv1::__si_class_type_info
     system_error.cpp.o(.rodata._ZTINSt3__212system_errorE) refers to system_error.cpp.o(.rodata._ZTSNSt3__212system_errorE) for typeinfo name for std::__2::system_error
     system_error.cpp.o(.rodata._ZTINSt3__212system_errorE) refers to stdlib_stdexcept.cpp.o(.rodata._ZTISt13runtime_error) for typeinfo for std::runtime_error
+    verbose_abort.cpp.o(.text._ZNSt3__222__libcpp_verbose_abortEPKcz) refers to stdio_streams.o(.bss) for __stderr
+    verbose_abort.cpp.o(.text._ZNSt3__222__libcpp_verbose_abortEPKcz) refers to vfprintf.o(.text) for vfprintf
+    verbose_abort.cpp.o(.text._ZNSt3__222__libcpp_verbose_abortEPKcz) refers to abort.o(.text) for abort
+    verbose_abort.cpp.o(.ARM.exidx.text._ZNSt3__222__libcpp_verbose_abortEPKcz) refers to verbose_abort.cpp.o(.text._ZNSt3__222__libcpp_verbose_abortEPKcz) for [Anonymous Symbol]
     cxa_default_handlers.cpp.o(.text._ZSt14set_unexpectedPFvvE) refers to cxa_default_handlers.cpp.o(.data.__cxa_unexpected_handler) for __cxa_unexpected_handler
     cxa_default_handlers.cpp.o(.text._ZSt14set_unexpectedPFvvE) refers to cxa_handlers.cpp.o(.text._ZSt9terminatev) for std::terminate()
     cxa_default_handlers.cpp.o(.ARM.exidx.text._ZSt14set_unexpectedPFvvE) refers to cxa_default_handlers.cpp.o(.text._ZSt14set_unexpectedPFvvE) for [Anonymous Symbol]
@@ -8739,8 +8693,6 @@ Section Cross References
     libspace.o(.text) refers to libspace.o(.bss) for __libspace_start
     sys_stackheap_outer.o(.text) refers to libspace.o(.text) for __user_perproc_libspace
     sys_stackheap_outer.o(.text) refers to startup_stm32h723xx.o(.text) for __user_initial_stackheap
-    rt_raise.o(.text) refers to __raise.o(.text) for __raise
-    rt_raise.o(.text) refers to retarget_io.o(.text._sys_exit) for _sys_exit
     rt_locale.o(.text) refers to rt_locale.o(.bss) for __rt_locale_data
     rt_locale_intlibspace.o(.text) refers to libspace.o(.bss) for __libspace_start
     maybetermalloc2.o(.text) refers (Special) to term_alloc.o(.text) for _terminate_alloc
@@ -8748,6 +8700,41 @@ Section Cross References
     h1_extend_threads.o(.text) refers to h1_free_threads.o(.text) for free_internal$concurrent
     _iswspace.o(.text) refers to wclass_c.o(.text) for _wclass
     wclass_c.o(.text) refers to rt_ctype_table.o(.text) for __rt_ctype_table
+    vfprintf.o(.text) refers (Special) to _printf_a.o(.ARM.Collect$$_printf_percent$$00000006) for _printf_a
+    vfprintf.o(.text) refers (Special) to _printf_c.o(.ARM.Collect$$_printf_percent$$00000013) for _printf_c
+    vfprintf.o(.text) refers (Special) to _printf_charcount.o(.text) for _printf_charcount
+    vfprintf.o(.text) refers (Special) to _printf_d.o(.ARM.Collect$$_printf_percent$$00000009) for _printf_d
+    vfprintf.o(.text) refers (Special) to _printf_e.o(.ARM.Collect$$_printf_percent$$00000004) for _printf_e
+    vfprintf.o(.text) refers (Special) to _printf_f.o(.ARM.Collect$$_printf_percent$$00000003) for _printf_f
+    vfprintf.o(.text) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
+    vfprintf.o(.text) refers (Special) to printf2.o(x$fpl$printf2) for _printf_fp_hex
+    vfprintf.o(.text) refers (Special) to _printf_g.o(.ARM.Collect$$_printf_percent$$00000005) for _printf_g
+    vfprintf.o(.text) refers (Special) to _printf_i.o(.ARM.Collect$$_printf_percent$$00000008) for _printf_i
+    vfprintf.o(.text) refers (Special) to _printf_dec.o(.text) for _printf_int_dec
+    vfprintf.o(.text) refers (Special) to _printf_l.o(.ARM.Collect$$_printf_percent$$00000012) for _printf_l
+    vfprintf.o(.text) refers (Special) to _printf_lc.o(.ARM.Collect$$_printf_percent$$00000015) for _printf_lc
+    vfprintf.o(.text) refers (Special) to _printf_ll.o(.ARM.Collect$$_printf_percent$$00000007) for _printf_ll
+    vfprintf.o(.text) refers (Special) to _printf_lld.o(.ARM.Collect$$_printf_percent$$0000000E) for _printf_lld
+    vfprintf.o(.text) refers (Special) to _printf_lli.o(.ARM.Collect$$_printf_percent$$0000000D) for _printf_lli
+    vfprintf.o(.text) refers (Special) to _printf_llo.o(.ARM.Collect$$_printf_percent$$00000010) for _printf_llo
+    vfprintf.o(.text) refers (Special) to _printf_llu.o(.ARM.Collect$$_printf_percent$$0000000F) for _printf_llu
+    vfprintf.o(.text) refers (Special) to _printf_llx.o(.ARM.Collect$$_printf_percent$$00000011) for _printf_llx
+    vfprintf.o(.text) refers (Special) to _printf_longlong_dec.o(.text) for _printf_longlong_dec
+    vfprintf.o(.text) refers (Special) to _printf_hex_int_ll_ptr.o(.text) for _printf_longlong_hex
+    vfprintf.o(.text) refers (Special) to _printf_oct_int_ll.o(.text) for _printf_longlong_oct
+    vfprintf.o(.text) refers (Special) to _printf_ls.o(.ARM.Collect$$_printf_percent$$00000016) for _printf_ls
+    vfprintf.o(.text) refers (Special) to _printf_n.o(.ARM.Collect$$_printf_percent$$00000001) for _printf_n
+    vfprintf.o(.text) refers (Special) to _printf_o.o(.ARM.Collect$$_printf_percent$$0000000B) for _printf_o
+    vfprintf.o(.text) refers (Special) to _printf_p.o(.ARM.Collect$$_printf_percent$$00000002) for _printf_p
+    vfprintf.o(.text) refers (Special) to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
+    vfprintf.o(.text) refers (Special) to _printf_pad.o(.text) for _printf_post_padding
+    vfprintf.o(.text) refers (Special) to _printf_s.o(.ARM.Collect$$_printf_percent$$00000014) for _printf_s
+    vfprintf.o(.text) refers (Special) to _printf_str.o(.text) for _printf_str
+    vfprintf.o(.text) refers (Special) to _printf_truncate.o(.text) for _printf_truncate_signed
+    vfprintf.o(.text) refers (Special) to _printf_u.o(.ARM.Collect$$_printf_percent$$0000000A) for _printf_u
+    vfprintf.o(.text) refers (Special) to _printf_wctomb.o(.text) for _printf_wctomb
+    vfprintf.o(.text) refers (Special) to _printf_x.o(.ARM.Collect$$_printf_percent$$0000000C) for _printf_x
+    vfprintf.o(.text) refers to _printf_char_file.o(.text) for _printf_char_file
     sprintf.o(.text) refers (Special) to _printf_a.o(.ARM.Collect$$_printf_percent$$00000006) for _printf_a
     sprintf.o(.text) refers (Special) to _printf_c.o(.ARM.Collect$$_printf_percent$$00000013) for _printf_c
     sprintf.o(.text) refers (Special) to _printf_charcount.o(.text) for _printf_charcount
@@ -8794,8 +8781,6 @@ Section Cross References
     noretval__2swprintf.o(.text) refers to _snputwc.o(.text) for _snputwc
     _printf_fp_infnan.o(.text) refers (Weak) to _printf_pad.o(.text) for _printf_pre_padding
     _printf_fp_infnan.o(.text) refers (Weak) to _printf_pad.o(.text) for _printf_post_padding
-    _printf_char_file_locked.o(.text) refers to _printf_char_common.o(.text) for _printf_char_common
-    _printf_char_file_locked.o(.text) refers to fputc.o(i._fputc$unlocked) for _fputc$unlocked
     _scanf_longlong.o(.text) refers to _chval.o(.text) for _chval
     _scanf_int.o(.text) refers to _chval.o(.text) for _chval
     scanf_fp.o(.text) refers (Special) to usenofp.o(x$fpl$usenofp) for __I$use$fp
@@ -8920,8 +8905,9 @@ Section Cross References
     lc_time_c.o(locale$$code) refers to strcmpv7m_pel.o(.text) for strcmp
     lc_time_c.o(locale$$code) refers to lc_time_c.o(locale$$data) for __lctime_c_name
     exit.o(.text) refers to rtexit.o(.ARM.Collect$$rtexit$$00000000) for __rt_exit
-    defsig_exit.o(.text) refers to retarget_io.o(.text._sys_exit) for _sys_exit
-    defsig_abrt_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig_abrt_outer.o(.text) refers to defsig_abrt_inner.o(.text) for __rt_SIGABRT_inner
+    defsig_abrt_outer.o(.text) refers to defsig_exit.o(.text) for __sig_exit
+    defsig_abrt_formal.o(.text) refers to rt_raise.o(.text) for __rt_raise
     defsig_fpe_outer.o(.text) refers to defsig_fpe_inner.o(.text) for __rt_SIGFPE_inner
     defsig_fpe_outer.o(.text) refers to defsig_exit.o(.text) for __sig_exit
     defsig_fpe_formal.o(.text) refers to rt_raise.o(.text) for __rt_raise
@@ -9046,10 +9032,17 @@ Section Cross References
     rtexit.o(.ARM.exidx) refers (Special) to rtexit2.o(.ARM.Collect$$rtexit$$00000003) for __rt_exit_ls
     rtexit.o(.ARM.exidx) refers (Special) to rtexit2.o(.ARM.Collect$$rtexit$$00000002) for __rt_exit_prels_1
     rtexit.o(.ARM.exidx) refers to rtexit.o(.ARM.Collect$$rtexit$$00000000) for .ARM.Collect$$rtexit$$00000000
+    rt_raise.o(.text) refers to __raise.o(.text) for __raise
+    rt_raise.o(.text) refers to retarget_io.o(.text._sys_exit) for _sys_exit
     term_alloc.o(.text) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$0000000E) for __rt_lib_shutdown_heap_2
     term_alloc.o(.text) refers to rt_heap_descriptor_intlibspace.o(.text) for __rt_heap_descriptor
     term_alloc.o(.text) refers to h1_final.o(.text) for __Heap_Finalize
     isspace.o(.text) refers to rt_ctype_table.o(.text) for __rt_ctype_table
+    _printf_char_file.o(.text) refers to _printf_char_common.o(.text) for _printf_char_common
+    _printf_char_file.o(.text) refers to ferror.o(.text) for ferror
+    _printf_char_file.o(.text) refers to fputc.o(i.fputc) for fputc
+    _printf_char_file_locked.o(.text) refers to _printf_char_common.o(.text) for _printf_char_common
+    _printf_char_file_locked.o(.text) refers to fputc.o(i._fputc$unlocked) for _fputc$unlocked
     _printf_wchar_common.o(.text) refers to __printf_flags_ss_wp.o(.text) for __printf
     _scanf.o(.text) refers (Weak) to scanf1.o(x$fpl$scanf1) for _scanf_real
     _scanf.o(.text) refers (Weak) to _scanf_longlong.o(.text) for _scanf_longlong
@@ -9093,8 +9086,8 @@ Section Cross References
     flushlinebuffered_locked.o(.text) refers to fflush.o(.text) for _do_fflush
     flushlinebuffered_locked.o(.text) refers to streamlock.o(.data) for _stream_list_lock
     flushlinebuffered_locked.o(.text) refers to stdio_streams.o(.bss) for __stdin
-    __raise.o(.text) refers to defsig.o(CL$$defsig) for __default_signal_handler
-    defsig_general.o(.text) refers to retarget_io.o(.text._ttywrch) for _ttywrch
+    defsig_exit.o(.text) refers to retarget_io.o(.text._sys_exit) for _sys_exit
+    defsig_abrt_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
     defsig_fpe_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
     defsig_rtred_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
     defsig_rtmem_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
@@ -9129,10 +9122,8 @@ Section Cross References
     scanf_hexfp.o(.text) refers to narrow.o(i.__mathlib_narrow) for __mathlib_narrow
     _wcstoull.o(.text) refers to _chval.o(.text) for _chval
     _wcstoull.o(.text) refers to rt_errno_addr_intlibspace.o(.text) for __aeabi_errno_addr
-    defsig.o(CL$$defsig) refers to defsig_abrt_inner.o(.text) for __rt_SIGABRT_inner
-    defsig.o(CL$$defsig) refers to defsig_fpe_inner.o(.text) for __rt_SIGFPE_inner
-    defsig.o(CL$$defsig) refers to defsig_rtred_inner.o(.text) for __rt_SIGRTRED_inner
-    defsig.o(CL$$defsig) refers to defsig_rtmem_inner.o(.text) for __rt_SIGRTMEM_inner
+    __raise.o(.text) refers to defsig.o(CL$$defsig) for __default_signal_handler
+    defsig_general.o(.text) refers to retarget_io.o(.text._ttywrch) for _ttywrch
     drleqf.o(x$fpl$drleqf) refers (Special) to usenofp.o(x$fpl$usenofp) for __I$use$fp
     drleqf.o(x$fpl$drleqf) refers to dleqf.o(x$fpl$dleqf) for __fpl_dcmple_InfNaN
     frexp.o(i.__hardfp_frexp) refers (Special) to usenofp.o(x$fpl$usenofp) for __I$use$fp
@@ -9141,11 +9132,10 @@ Section Cross References
     frexp.o(i.__softfp_frexp) refers to dmul.o(x$fpl$dmul) for __aeabi_dmul
     frexp.o(i.frexp) refers (Special) to usenofp.o(x$fpl$usenofp) for __I$use$fp
     frexp.o(i.frexp) refers to dmul.o(x$fpl$dmul) for __aeabi_dmul
-    defsig_stak_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
-    defsig_pvfn_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
-    defsig_cppl_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
-    defsig_segv_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
-    defsig_other.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig.o(CL$$defsig) refers to defsig_abrt_inner.o(.text) for __rt_SIGABRT_inner
+    defsig.o(CL$$defsig) refers to defsig_fpe_inner.o(.text) for __rt_SIGFPE_inner
+    defsig.o(CL$$defsig) refers to defsig_rtred_inner.o(.text) for __rt_SIGRTRED_inner
+    defsig.o(CL$$defsig) refers to defsig_rtmem_inner.o(.text) for __rt_SIGRTMEM_inner
     libshutdown.o(.ARM.Collect$$libshutdown$$00000000) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$00000002) for __rt_lib_shutdown_cpp_1
     libshutdown.o(.ARM.Collect$$libshutdown$$00000000) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$00000007) for __rt_lib_shutdown_fp_trap_1
     libshutdown.o(.ARM.Collect$$libshutdown$$00000000) refers (Special) to libshutdown2.o(.ARM.Collect$$libshutdown$$0000000F) for __rt_lib_shutdown_heap_1
@@ -9165,6 +9155,11 @@ Section Cross References
     ldexp.o(i.__support_ldexp) refers to ldexp.o(i.__hardfp_ldexp) for __hardfp_ldexp
     ldexp.o(i.ldexp) refers (Special) to usenofp.o(x$fpl$usenofp) for __I$use$fp
     ldexp.o(i.ldexp) refers to ldexp.o(i.__hardfp_ldexp) for __hardfp_ldexp
+    defsig_stak_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig_pvfn_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig_cppl_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig_segv_inner.o(.text) refers to defsig_general.o(.text) for __default_signal_display
+    defsig_other.o(.text) refers to defsig_general.o(.text) for __default_signal_display
     scalbn.o(x$fpl$scalbn) refers (Special) to usenofp.o(x$fpl$usenofp) for __I$use$fp
     scalbn.o(x$fpl$scalbn) refers to dcheck1.o(x$fpl$dcheck1) for __fpl_dcheck_NaN1
     dunder.o(i.__mathlib_dbl_divzero) refers to ddiv.o(x$fpl$ddiv) for __aeabi_ddiv
@@ -9325,18 +9320,10 @@ Section Cross References
     arm_setup.o(.ARM.exidx.text._ZN8ArmSetupD2Ev) refers to arm_setup.o(.text._ZN8ArmSetupD2Ev) for [Anonymous Symbol]
     arm_setup.o(.text._ZN8ArmSetupD0Ev) refers to new.cpp.o(.text._ZdlPvj) for operator delete(void*, unsigned int)
     arm_setup.o(.ARM.exidx.text._ZN8ArmSetupD0Ev) refers to arm_setup.o(.text._ZN8ArmSetupD0Ev) for [Anonymous Symbol]
-    omni_chassissetup.o(.text._ZNSt3__26vectorI8Vector2DNS_9allocatorIS1_EEED2B8nn200000Ev) refers to new.cpp.o(.text._ZdlPvj) for operator delete(void*, unsigned int)
-    omni_chassissetup.o(.ARM.exidx.text._ZNSt3__26vectorI8Vector2DNS_9allocatorIS1_EEED2B8nn200000Ev) refers to omni_chassissetup.o(.text._ZNSt3__26vectorI8Vector2DNS_9allocatorIS1_EEED2B8nn200000Ev) for [Anonymous Symbol]
+    omni_chassissetup.o(.ARM.exidx.text._ZN12PID_PositionC2E16PID_Param_Configf) refers to omni_chassissetup.o(.text._ZN12PID_PositionC2E16PID_Param_Configf) for [Anonymous Symbol]
     omni_chassissetup.o(.ARM.exidx.text._ZN17OmniChassis_SetupD2Ev) refers to omni_chassissetup.o(.text._ZN17OmniChassis_SetupD2Ev) for [Anonymous Symbol]
     omni_chassissetup.o(.text._ZN17OmniChassis_SetupD0Ev) refers to new.cpp.o(.text._ZdlPvj) for operator delete(void*, unsigned int)
     omni_chassissetup.o(.ARM.exidx.text._ZN17OmniChassis_SetupD0Ev) refers to omni_chassissetup.o(.text._ZN17OmniChassis_SetupD0Ev) for [Anonymous Symbol]
-    omni_chassissetup.o(.text._ZNKSt3__26vectorI8Vector2DNS_9allocatorIS1_EEE20__throw_length_errorB8nn200000Ev) refers to omni_chassissetup.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) for std::__2::__throw_length_error[abi:nn200000](char const*)
-    omni_chassissetup.o(.ARM.exidx.text._ZNKSt3__26vectorI8Vector2DNS_9allocatorIS1_EEE20__throw_length_errorB8nn200000Ev) refers to omni_chassissetup.o(.text._ZNKSt3__26vectorI8Vector2DNS_9allocatorIS1_EEE20__throw_length_errorB8nn200000Ev) for [Anonymous Symbol]
-    omni_chassissetup.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) refers to omni_chassissetup.o(.rodata.str1.1) for .L.str.2
-    omni_chassissetup.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) refers to verbose_abort.cpp.o(.text._ZNSt3__222__libcpp_verbose_abortEPKcz) for std::__2::__libcpp_verbose_abort(char const*, ...)
-    omni_chassissetup.o(.ARM.exidx.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) refers to omni_chassissetup.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) for [Anonymous Symbol]
-    omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) refers to verbose_abort.cpp.o(.text._ZNSt3__222__libcpp_verbose_abortEPKcz) for std::__2::__libcpp_verbose_abort(char const*, ...)
-    omni_chassissetup.o(.ARM.exidx.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for [Anonymous Symbol]
     iostream.cpp.o(.text._ZNSt3__210__stdinbufIcEC2EPSt6__FILEPSt11__mbstate_t) refers to ios.instantiations.cpp.o(.text._ZNSt3__215basic_streambufIcNS_11char_traitsIcEEEC2Ev) for std::__2::basic_streambuf<char, std::__2::char_traits<char>>::basic_streambuf__sub_object()
     iostream.cpp.o(.text._ZNSt3__210__stdinbufIcEC2EPSt6__FILEPSt11__mbstate_t) refers to iostream.cpp.o(.rodata._ZTVNSt3__210__stdinbufIcEE) for vtable for std::__2::__stdinbuf<char>
     iostream.cpp.o(.text._ZNSt3__210__stdinbufIcEC2EPSt6__FILEPSt11__mbstate_t) refers to locale.cpp.o(.text._ZNSt3__26localeC2ERKS0_) for std::__2::locale::locale(std::__2::locale const&)
@@ -9507,6 +9494,9 @@ Section Cross References
     ios.cpp.o(.ARM.exidx.text._ZNSt3__215__throw_failureB8nn200000EPKc) refers to ios.cpp.o(.text._ZNSt3__215__throw_failureB8nn200000EPKc) for [Anonymous Symbol]
     ios.cpp.o(.text._ZNSt3__219__iostream_categoryD0Ev) refers to new.cpp.o(.text._ZdlPvj) for operator delete(void*, unsigned int)
     ios.cpp.o(.ARM.exidx.text._ZNSt3__219__iostream_categoryD0Ev) refers to ios.cpp.o(.text._ZNSt3__219__iostream_categoryD0Ev) for [Anonymous Symbol]
+    ios.cpp.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) refers to ios.cpp.o(.rodata.str1.1) for .L.str.4
+    ios.cpp.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) refers to verbose_abort.cpp.o(.text._ZNSt3__222__libcpp_verbose_abortEPKcz) for std::__2::__libcpp_verbose_abort(char const*, ...)
+    ios.cpp.o(.ARM.exidx.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) refers to ios.cpp.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) for [Anonymous Symbol]
     ios.instantiations.cpp.o(.text._ZNSt3__29basic_iosIcNS_11char_traitsIcEEED2Ev) refers to ios.cpp.o(.text._ZNSt3__28ios_baseD2Ev) for std::__2::ios_base::~ios_base__sub_object()
     ios.instantiations.cpp.o(.ARM.exidx.text._ZNSt3__29basic_iosIcNS_11char_traitsIcEEED2Ev) refers to ios.instantiations.cpp.o(.text._ZNSt3__29basic_iosIcNS_11char_traitsIcEEED2Ev) for [Anonymous Symbol]
     ios.instantiations.cpp.o(.text._ZNSt3__29basic_iosIcNS_11char_traitsIcEEED0Ev) refers to ios.instantiations.cpp.o(.text._ZNSt3__29basic_iosIcNS_11char_traitsIcEEED2Ev) for std::__2::basic_ios<char, std::__2::char_traits<char>>::~basic_ios()
@@ -11885,7 +11875,7 @@ Section Cross References
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000Ejw) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000Ejw) refers to new.cpp.o(__lcxx_override) for operator new(unsigned int)
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000Ejw) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_length_error[abi:nn200000]() const
-    locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000Ejw) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000Ejw) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000Ejw) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000Ejw) refers to locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000Ejw) for [Anonymous Symbol]
     locale.cpp.o(.text._ZNKSt3__210moneypunctIwLb0EE14do_frac_digitsEv) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
@@ -12385,7 +12375,7 @@ Section Cross References
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000ILi0EEEPKw) refers to new.cpp.o(__lcxx_override) for operator new(unsigned int)
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000ILi0EEEPKw) refers to rt_memmove_v6.o(.text) for __aeabi_memmove
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000ILi0EEEPKw) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_length_error[abi:nn200000]() const
-    locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000ILi0EEEPKw) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000ILi0EEEPKw) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000ILi0EEEPKw) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000ILi0EEEPKw) refers to locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2B8nn200000ILi0EEEPKw) for [Anonymous Symbol]
     locale.cpp.o(.text._ZNSt3__214__scan_keywordB8nn200000IPcPNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEENS_5ctypeIcEEEET0_RT_SC_SB_SB_RKT1_Rjb) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
@@ -12736,19 +12726,23 @@ Section Cross References
     locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE16__init_with_sizeB8nn200000IPKcS8_EEvT_T0_j) refers to locale.cpp.o(.text._ZNSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE16__init_with_sizeB8nn200000IPKcS8_EEvT_T0_j) for [Anonymous Symbol]
     locale.cpp.o(.text._ZNKSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE20__throw_length_errorB8nn200000Ev) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.text._ZNKSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE20__throw_length_errorB8nn200000Ev) refers to locale.cpp.o(.rodata.str1.1) for .L.str.46
-    locale.cpp.o(.text._ZNKSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE20__throw_length_errorB8nn200000Ev) refers to omni_chassissetup.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) for std::__2::__throw_length_error[abi:nn200000](char const*)
+    locale.cpp.o(.text._ZNKSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE20__throw_length_errorB8nn200000Ev) refers to ios.cpp.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) for std::__2::__throw_length_error[abi:nn200000](char const*)
     locale.cpp.o(.ARM.exidx.text._ZNKSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE20__throw_length_errorB8nn200000Ev) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.ARM.exidx.text._ZNKSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE20__throw_length_errorB8nn200000Ev) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE20__throw_length_errorB8nn200000Ev) for [Anonymous Symbol]
+    locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
+    locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) refers to verbose_abort.cpp.o(.text._ZNSt3__222__libcpp_verbose_abortEPKcz) for std::__2::__libcpp_verbose_abort(char const*, ...)
+    locale.cpp.o(.ARM.exidx.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
+    locale.cpp.o(.ARM.exidx.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for [Anonymous Symbol]
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPKwS8_EEvT_T0_j) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPKwS8_EEvT_T0_j) refers to new.cpp.o(__lcxx_override) for operator new(unsigned int)
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPKwS8_EEvT_T0_j) refers to rt_memmove_v6.o(.text) for __aeabi_memmove
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPKwS8_EEvT_T0_j) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_length_error[abi:nn200000]() const
-    locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPKwS8_EEvT_T0_j) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPKwS8_EEvT_T0_j) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPKwS8_EEvT_T0_j) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPKwS8_EEvT_T0_j) refers to locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPKwS8_EEvT_T0_j) for [Anonymous Symbol]
     locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) refers to locale.cpp.o(.rodata.str1.1) for .L.str.46
-    locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) refers to omni_chassissetup.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) for std::__2::__throw_length_error[abi:nn200000](char const*)
+    locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) refers to ios.cpp.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) for std::__2::__throw_length_error[abi:nn200000](char const*)
     locale.cpp.o(.ARM.exidx.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.ARM.exidx.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for [Anonymous Symbol]
     locale.cpp.o(.text._ZNSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE9__grow_byB8nn200000Ejjjjjj) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
@@ -12769,14 +12763,14 @@ Section Cross References
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE9__grow_byB8nn200000Ejjjjjj) refers to rt_memmove_v6.o(.text) for __aeabi_memmove
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE9__grow_byB8nn200000Ejjjjjj) refers to new.cpp.o(.text._ZdlPvj) for operator delete(void*, unsigned int)
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE9__grow_byB8nn200000Ejjjjjj) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_length_error[abi:nn200000]() const
-    locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE9__grow_byB8nn200000Ejjjjjj) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE9__grow_byB8nn200000Ejjjjjj) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE9__grow_byB8nn200000Ejjjjjj) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE9__grow_byB8nn200000Ejjjjjj) refers to locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE9__grow_byB8nn200000Ejjjjjj) for [Anonymous Symbol]
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPwS7_EEvT_T0_j) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPwS7_EEvT_T0_j) refers to new.cpp.o(__lcxx_override) for operator new(unsigned int)
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPwS7_EEvT_T0_j) refers to rt_memmove_v6.o(.text) for __aeabi_memmove
     locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPwS7_EEvT_T0_j) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_length_error[abi:nn200000]() const
-    locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPwS7_EEvT_T0_j) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPwS7_EEvT_T0_j) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPwS7_EEvT_T0_j) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPwS7_EEvT_T0_j) refers to locale.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPwS7_EEvT_T0_j) for [Anonymous Symbol]
     locale.cpp.o(.text._ZNSt3__26vectorIPNS_6locale5facetENS_15__sso_allocatorIS3_Lj30EEEE11__vallocateB8nn200000Ej) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
@@ -12785,12 +12779,12 @@ Section Cross References
     locale.cpp.o(.ARM.exidx.text._ZNSt3__26vectorIPNS_6locale5facetENS_15__sso_allocatorIS3_Lj30EEEE11__vallocateB8nn200000Ej) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.ARM.exidx.text._ZNSt3__26vectorIPNS_6locale5facetENS_15__sso_allocatorIS3_Lj30EEEE11__vallocateB8nn200000Ej) refers to locale.cpp.o(.text._ZNSt3__26vectorIPNS_6locale5facetENS_15__sso_allocatorIS3_Lj30EEEE11__vallocateB8nn200000Ej) for [Anonymous Symbol]
     locale.cpp.o(.text._ZNKSt3__26vectorIPNS_6locale5facetENS_15__sso_allocatorIS3_Lj30EEEE20__throw_length_errorB8nn200000Ev) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
-    locale.cpp.o(.text._ZNKSt3__26vectorIPNS_6locale5facetENS_15__sso_allocatorIS3_Lj30EEEE20__throw_length_errorB8nn200000Ev) refers to omni_chassissetup.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) for std::__2::__throw_length_error[abi:nn200000](char const*)
+    locale.cpp.o(.text._ZNKSt3__26vectorIPNS_6locale5facetENS_15__sso_allocatorIS3_Lj30EEEE20__throw_length_errorB8nn200000Ev) refers to ios.cpp.o(.text._ZNSt3__220__throw_length_errorB8nn200000EPKc) for std::__2::__throw_length_error[abi:nn200000](char const*)
     locale.cpp.o(.ARM.exidx.text._ZNKSt3__26vectorIPNS_6locale5facetENS_15__sso_allocatorIS3_Lj30EEEE20__throw_length_errorB8nn200000Ev) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.ARM.exidx.text._ZNKSt3__26vectorIPNS_6locale5facetENS_15__sso_allocatorIS3_Lj30EEEE20__throw_length_errorB8nn200000Ev) refers to locale.cpp.o(.text._ZNKSt3__26vectorIPNS_6locale5facetENS_15__sso_allocatorIS3_Lj30EEEE20__throw_length_errorB8nn200000Ev) for [Anonymous Symbol]
     locale.cpp.o(.text._ZNSt3__215__sso_allocatorIPNS_6locale5facetELj30EE8allocateB8nn200000EjPKv) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.text._ZNSt3__215__sso_allocatorIPNS_6locale5facetELj30EE8allocateB8nn200000EjPKv) refers to new.cpp.o(__lcxx_override) for operator new(unsigned int)
-    locale.cpp.o(.text._ZNSt3__215__sso_allocatorIPNS_6locale5facetELj30EE8allocateB8nn200000EjPKv) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    locale.cpp.o(.text._ZNSt3__215__sso_allocatorIPNS_6locale5facetELj30EE8allocateB8nn200000EjPKv) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     locale.cpp.o(.ARM.exidx.text._ZNSt3__215__sso_allocatorIPNS_6locale5facetELj30EE8allocateB8nn200000EjPKv) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
     locale.cpp.o(.ARM.exidx.text._ZNSt3__215__sso_allocatorIPNS_6locale5facetELj30EE8allocateB8nn200000EjPKv) refers to locale.cpp.o(.text._ZNSt3__215__sso_allocatorIPNS_6locale5facetELj30EE8allocateB8nn200000EjPKv) for [Anonymous Symbol]
     locale.cpp.o(.text._ZNSt3__26vectorIPNS_6locale5facetENS_15__sso_allocatorIS3_Lj30EEEE18__assign_with_sizeB8nn200000IPS3_S8_EEvT_T0_i) refers (Special) to scanf1.o(x$fpl$scanf1) for _scanf_real
@@ -14108,7 +14102,7 @@ Section Cross References
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE21__grow_by_and_replaceEjjjjjjPKw) refers (Special) to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE21__grow_by_and_replaceEjjjjjjPKw) refers (Special) to _printf_f.o(.ARM.Collect$$_printf_percent$$00000003) for _printf_f
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE21__grow_by_and_replaceEjjjjjjPKw) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
-    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE21__grow_by_and_replaceEjjjjjjPKw) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE21__grow_by_and_replaceEjjjjjjPKw) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE21__grow_by_and_replaceEjjjjjjPKw) refers to new.cpp.o(__lcxx_override) for operator new(unsigned int)
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE21__grow_by_and_replaceEjjjjjjPKw) refers to rt_memmove_v6.o(.text) for __aeabi_memmove
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE21__grow_by_and_replaceEjjjjjjPKw) refers to rt_memcpy_v6.o(.text) for __aeabi_memcpy
@@ -14131,7 +14125,7 @@ Section Cross References
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwjj) refers to new.cpp.o(__lcxx_override) for operator new(unsigned int)
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwjj) refers to rt_memmove_v6.o(.text) for __aeabi_memmove
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwjj) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_length_error[abi:nn200000]() const
-    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwjj) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwjj) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwjj) refers (Special) to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwjj) refers (Special) to _printf_f.o(.ARM.Collect$$_printf_percent$$00000003) for _printf_f
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwjj) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
@@ -14192,7 +14186,7 @@ Section Cross References
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwj) refers to new.cpp.o(__lcxx_override) for operator new(unsigned int)
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwj) refers to rt_memmove_v6.o(.text) for __aeabi_memmove
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwj) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_length_error[abi:nn200000]() const
-    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwj) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwj) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwj) refers (Special) to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwj) refers (Special) to _printf_f.o(.ARM.Collect$$_printf_percent$$00000003) for _printf_f
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEPKwj) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
@@ -14203,7 +14197,7 @@ Section Cross References
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE25__init_copy_ctor_externalEPKwj) refers to new.cpp.o(__lcxx_override) for operator new(unsigned int)
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE25__init_copy_ctor_externalEPKwj) refers to rt_memmove_v6.o(.text) for __aeabi_memmove
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE25__init_copy_ctor_externalEPKwj) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_length_error[abi:nn200000]() const
-    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE25__init_copy_ctor_externalEPKwj) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE25__init_copy_ctor_externalEPKwj) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE25__init_copy_ctor_externalEPKwj) refers (Special) to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE25__init_copy_ctor_externalEPKwj) refers (Special) to _printf_f.o(.ARM.Collect$$_printf_percent$$00000003) for _printf_f
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE25__init_copy_ctor_externalEPKwj) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
@@ -14268,7 +14262,7 @@ Section Cross References
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7reserveEj) refers to rt_memmove_v6.o(.text) for __aeabi_memmove
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7reserveEj) refers to new.cpp.o(.text._ZdlPvj) for operator delete(void*, unsigned int)
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7reserveEj) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_length_error[abi:nn200000]() const
-    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7reserveEj) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7reserveEj) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7reserveEj) refers (Special) to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7reserveEj) refers (Special) to _printf_f.o(.ARM.Collect$$_printf_percent$$00000003) for _printf_f
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7reserveEj) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
@@ -14307,7 +14301,7 @@ Section Cross References
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2ERKS5_jjRKS4_) refers to rt_memmove_v6.o(.text) for __aeabi_memmove
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2ERKS5_jjRKS4_) refers to string.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_out_of_rangeB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_out_of_range[abi:nn200000]() const
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2ERKS5_jjRKS4_) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_length_error[abi:nn200000]() const
-    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2ERKS5_jjRKS4_) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2ERKS5_jjRKS4_) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2ERKS5_jjRKS4_) refers (Special) to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2ERKS5_jjRKS4_) refers (Special) to _printf_f.o(.ARM.Collect$$_printf_percent$$00000003) for _printf_f
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC2ERKS5_jjRKS4_) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
@@ -14325,7 +14319,7 @@ Section Cross References
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEjw) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEjw) refers to new.cpp.o(__lcxx_override) for operator new(unsigned int)
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEjw) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_length_error[abi:nn200000]() const
-    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEjw) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEjw) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEjw) refers (Special) to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEjw) refers (Special) to _printf_f.o(.ARM.Collect$$_printf_percent$$00000003) for _printf_f
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6__initEjw) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
@@ -14609,7 +14603,7 @@ Section Cross References
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPcS7_EEvT_T0_j) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPcS7_EEvT_T0_j) refers to new.cpp.o(__lcxx_override) for operator new(unsigned int)
     string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPcS7_EEvT_T0_j) refers to locale.cpp.o(.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev) for std::__2::basic_string<wchar_t, std::__2::char_traits<wchar_t>, std::__2::allocator<wchar_t>>::__throw_length_error[abi:nn200000]() const
-    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPcS7_EEvT_T0_j) refers to omni_chassissetup.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
+    string.cpp.o(.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPcS7_EEvT_T0_j) refers to locale.cpp.o(.text._ZSt28__throw_bad_array_new_lengthB8nn200000v) for std::__throw_bad_array_new_length[abi:nn200000]()
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPcS7_EEvT_T0_j) refers (Special) to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPcS7_EEvT_T0_j) refers (Special) to _printf_f.o(.ARM.Collect$$_printf_percent$$00000003) for _printf_f
     string.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPcS7_EEvT_T0_j) refers (Special) to printf1.o(x$fpl$printf1) for _printf_fp_dec
@@ -16714,22 +16708,16 @@ Removing Unused input sections from the image.
     Removing app_speedplanner.o(.rodata._ZTV14TrapePlanner2D), (24 bytes).
     Removing app_speedplanner.o(.rodata._ZTV16SShapedPlanner2D), (24 bytes).
     Removing app_vector2d.o(.text), (0 bytes).
-    Removing app_vector2d.o(.text._ZN8Vector2DC2Ev), (8 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZN8Vector2DC2Ev), (8 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZN8Vector2DC2Eff), (8 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZN8Vector2DaSERKS_), (8 bytes).
-    Removing app_vector2d.o(.text._ZNK8Vector2DplERKS_), (26 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZNK8Vector2DplERKS_), (8 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZNK8Vector2DmiERKS_), (8 bytes).
-    Removing app_vector2d.o(.text._ZNK8Vector2DmlERKS_), (26 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZNK8Vector2DmlERKS_), (8 bytes).
-    Removing app_vector2d.o(.text._ZNK8Vector2DmlEf), (22 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZNK8Vector2DmlEf), (8 bytes).
     Removing app_vector2d.o(.text._ZmlfRK8Vector2D), (22 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZmlfRK8Vector2D), (8 bytes).
-    Removing app_vector2d.o(.text._ZNK8Vector2D9magnitudeEv), (40 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZNK8Vector2D9magnitudeEv), (8 bytes).
-    Removing app_vector2d.o(.text._ZNK8Vector2D9normalizeEv), (84 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZNK8Vector2D9normalizeEv), (8 bytes).
     Removing app_vector2d.o(.text._ZNK8Vector2D12project_ontoERKS_), (46 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZNK8Vector2D12project_ontoERKS_), (8 bytes).
@@ -16737,9 +16725,7 @@ Removing Unused input sections from the image.
     Removing app_vector2d.o(.ARM.exidx.text._ZNK8Vector2DngEv), (8 bytes).
     Removing app_vector2d.o(.text._ZNK8Vector2D5crossERKS_), (26 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZNK8Vector2D5crossERKS_), (8 bytes).
-    Removing app_vector2d.o(.text._ZN8Vector2D4lerpERKS_S1_f), (52 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZN8Vector2D4lerpERKS_S1_f), (8 bytes).
-    Removing app_vector2d.o(.text._ZN8Vector2D15distanceSquaredERKS_S1_), (34 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZN8Vector2D15distanceSquaredERKS_S1_), (8 bytes).
     Removing app_vector2d.o(.text._ZN8Vector2D24curvatureFromThreePointsERKS_S1_S1_), (308 bytes).
     Removing app_vector2d.o(.ARM.exidx.text._ZN8Vector2D24curvatureFromThreePointsERKS_S1_S1_), (8 bytes).
@@ -16775,19 +16761,12 @@ Removing Unused input sections from the image.
     Removing app_bezier_curve.o(.ARM.exidx.text._ZN11BezierCurveC2E8Vector2DS0_), (8 bytes).
     Removing app_bezier_curve.o(.text._ZN11BezierCurve13Bezier_UpdateE8Vector2DS0_), (124 bytes).
     Removing app_bezier_curve.o(.ARM.exidx.text._ZN11BezierCurve13Bezier_UpdateE8Vector2DS0_), (8 bytes).
-    Removing app_bezier_curve.o(.text._ZN11BezierCurveC2E8Vector2DS0_S0_), (122 bytes).
     Removing app_bezier_curve.o(.ARM.exidx.text._ZN11BezierCurveC2E8Vector2DS0_S0_), (8 bytes).
-    Removing app_bezier_curve.o(.text._ZN11BezierCurve13Bezier_UpdateE8Vector2DS0_S0_), (520 bytes).
     Removing app_bezier_curve.o(.ARM.exidx.text._ZN11BezierCurve13Bezier_UpdateE8Vector2DS0_S0_), (8 bytes).
-    Removing app_bezier_curve.o(.text._ZN11BezierCurve13Get_CurvatureEf), (400 bytes).
     Removing app_bezier_curve.o(.ARM.exidx.text._ZN11BezierCurve13Get_CurvatureEf), (8 bytes).
-    Removing app_bezier_curve.o(.text._ZN11BezierCurve9Get_PointEf), (138 bytes).
     Removing app_bezier_curve.o(.ARM.exidx.text._ZN11BezierCurve9Get_PointEf), (8 bytes).
-    Removing app_bezier_curve.o(.text._ZN11BezierCurve20Get_Nearest_DistanceE8Vector2DPf), (740 bytes).
     Removing app_bezier_curve.o(.ARM.exidx.text._ZN11BezierCurve20Get_Nearest_DistanceE8Vector2DPf), (8 bytes).
-    Removing app_bezier_curve.o(.text._ZN11BezierCurve15Get_Current_LenEf), (160 bytes).
     Removing app_bezier_curve.o(.ARM.exidx.text._ZN11BezierCurve15Get_Current_LenEf), (8 bytes).
-    Removing app_bezier_curve.o(.text._ZN11BezierCurve18Get_Tangent_VectorEf), (132 bytes).
     Removing app_bezier_curve.o(.ARM.exidx.text._ZN11BezierCurve18Get_Tangent_VectorEf), (8 bytes).
     Removing app_bezier_curve.o(.text._ZN11BezierCurve11Get_Max_VelEf), (288 bytes).
     Removing app_bezier_curve.o(.ARM.exidx.text._ZN11BezierCurve11Get_Max_VelEf), (8 bytes).
@@ -17047,6 +17026,7 @@ Removing Unused input sections from the image.
     Removing robot_arm.o(.ARM.exidx.text._ZN9Robot_Arm14jacobianMatrixEv), (8 bytes).
     Removing robot_arm.o(.ARM.exidx.text._GLOBAL__sub_I_Robot_Arm.cpp), (8 bytes).
     Removing pathplanner.o(.text), (0 bytes).
+    Removing pathplanner.o(.text._ZN11PathPlannerC2EPhP9AStarNodePS2_P9GridPointtttt), (136 bytes).
     Removing pathplanner.o(.ARM.exidx.text._ZN11PathPlannerC2EPhP9AStarNodePS2_P9GridPointtttt), (8 bytes).
     Removing pathplanner.o(.text._ZN11PathPlanner9initNodesEv), (80 bytes).
     Removing pathplanner.o(.ARM.exidx.text._ZN11PathPlanner9initNodesEv), (8 bytes).
@@ -17068,10 +17048,15 @@ Removing Unused input sections from the image.
     Removing pathplanner.o(.ARM.exidx.text._ZN11PathPlanner10setMapDataEPKh), (8 bytes).
     Removing pathplanner.o(.text._ZN11PathPlanner9setConfigEff), (10 bytes).
     Removing pathplanner.o(.ARM.exidx.text._ZN11PathPlanner9setConfigEff), (8 bytes).
+    Removing pathplanner.o(.text._ZN11PathPlanner8findPathEssss), (544 bytes).
     Removing pathplanner.o(.ARM.exidx.text._ZN11PathPlanner8findPathEssss), (8 bytes).
+    Removing pathplanner.o(.text._ZN11PathPlanner15reconstructPathEss), (360 bytes).
     Removing pathplanner.o(.ARM.exidx.text._ZN11PathPlanner15reconstructPathEss), (8 bytes).
+    Removing pathplanner.o(.text._ZN11PathPlanner10expandNodeEP9AStarNodess), (876 bytes).
     Removing pathplanner.o(.ARM.exidx.text._ZN11PathPlanner10expandNodeEP9AStarNodess), (8 bytes).
+    Removing pathplanner.o(.text._ZNK11PathPlanner13getPathLengthEv), (4 bytes).
     Removing pathplanner.o(.ARM.exidx.text._ZNK11PathPlanner13getPathLengthEv), (8 bytes).
+    Removing pathplanner.o(.text._ZNK11PathPlanner7getPathEv), (4 bytes).
     Removing pathplanner.o(.ARM.exidx.text._ZNK11PathPlanner7getPathEv), (8 bytes).
     Removing pathplanner.o(.text._ZN11PathPlanner11lineOfSightEssss), (240 bytes).
     Removing pathplanner.o(.ARM.exidx.text._ZN11PathPlanner11lineOfSightEssss), (8 bytes).
@@ -17455,8 +17440,6 @@ Removing Unused input sections from the image.
     Removing new.cpp.o(.ARM.exidx.text._ZdaPvSt11align_val_tRKSt9nothrow_t), (8 bytes).
     Removing new.cpp.o(.text._ZdaPvjSt11align_val_t), (6 bytes).
     Removing new.cpp.o(.ARM.exidx.text._ZdaPvjSt11align_val_t), (8 bytes).
-    Removing verbose_abort.cpp.o(.text), (0 bytes).
-    Removing verbose_abort.cpp.o(.ARM.exidx.text._ZNSt3__222__libcpp_verbose_abortEPKcz), (8 bytes).
     Removing cxa_guard.cpp.o(.text), (0 bytes).
     Removing cxa_guard.cpp.o(.ARM.exidx.text.unlikely.__cxa_guard_acquire), (8 bytes).
     Removing cxa_guard.cpp.o(.ARM.exidx.text.unlikely.__cxa_guard_release), (8 bytes).
@@ -18632,6 +18615,8 @@ Removing Unused input sections from the image.
     Removing system_error.cpp.o(.rodata._ZTINSt3__223__system_error_categoryE), (12 bytes).
     Removing system_error.cpp.o(.rodata._ZTSNSt3__212system_errorE), (23 bytes).
     Removing system_error.cpp.o(.rodata._ZTINSt3__212system_errorE), (12 bytes).
+    Removing verbose_abort.cpp.o(.text), (0 bytes).
+    Removing verbose_abort.cpp.o(.ARM.exidx.text._ZNSt3__222__libcpp_verbose_abortEPKcz), (8 bytes).
     Removing cxa_default_handlers.cpp.o(.text), (0 bytes).
     Removing cxa_default_handlers.cpp.o(.text._ZSt14set_unexpectedPFvvE), (30 bytes).
     Removing cxa_default_handlers.cpp.o(.ARM.exidx.text._ZSt14set_unexpectedPFvvE), (8 bytes).
@@ -18895,12 +18880,9 @@ Removing Unused input sections from the image.
     Removing fsm_controller.o(.ARM.exidx.text._ZN14FSM_ControllerD0Ev), (8 bytes).
     Removing arm_setup.o(.ARM.exidx.text._ZN8ArmSetupD2Ev), (8 bytes).
     Removing arm_setup.o(.ARM.exidx.text._ZN8ArmSetupD0Ev), (8 bytes).
-    Removing omni_chassissetup.o(.ARM.exidx.text._ZNSt3__26vectorI8Vector2DNS_9allocatorIS1_EEED2B8nn200000Ev), (8 bytes).
+    Removing omni_chassissetup.o(.ARM.exidx.text._ZN12PID_PositionC2E16PID_Param_Configf), (8 bytes).
     Removing omni_chassissetup.o(.ARM.exidx.text._ZN17OmniChassis_SetupD2Ev), (8 bytes).
     Removing omni_chassissetup.o(.ARM.exidx.text._ZN17OmniChassis_SetupD0Ev), (8 bytes).
-    Removing omni_chassissetup.o(.ARM.exidx.text._ZNKSt3__26vectorI8Vector2DNS_9allocatorIS1_EEE20__throw_length_errorB8nn200000Ev), (8 bytes).
-    Removing omni_chassissetup.o(.ARM.exidx.text._ZNSt3__220__throw_length_errorB8nn200000EPKc), (8 bytes).
-    Removing omni_chassissetup.o(.ARM.exidx.text._ZSt28__throw_bad_array_new_lengthB8nn200000v), (8 bytes).
     Removing iostream.cpp.o(.ARM.exidx.text._ZNSt3__210__stdinbufIcEC2EPSt6__FILEPSt11__mbstate_t), (8 bytes).
     Removing iostream.cpp.o(.ARM.exidx.text._ZNSt3__211__stdoutbufIcEC2EPSt6__FILEPSt11__mbstate_t), (8 bytes).
     Removing iostream.cpp.o(.ARM.exidx.text._ZNSt3__210__stdinbufIwEC2EPSt6__FILEPSt11__mbstate_t), (8 bytes).
@@ -18931,6 +18913,7 @@ Removing Unused input sections from the image.
     Removing ios.cpp.o(.ARM.exidx.text._ZNSt3__215__throw_failureB8nn200000EPKc), (8 bytes).
     Removing ios.cpp.o(.text._ZNSt3__219__iostream_categoryD0Ev), (16 bytes).
     Removing ios.cpp.o(.ARM.exidx.text._ZNSt3__219__iostream_categoryD0Ev), (8 bytes).
+    Removing ios.cpp.o(.ARM.exidx.text._ZNSt3__220__throw_length_errorB8nn200000EPKc), (8 bytes).
     Removing ios.instantiations.cpp.o(.text._ZNSt3__29basic_iosIcNS_11char_traitsIcEEED2Ev), (4 bytes).
     Removing ios.instantiations.cpp.o(.ARM.exidx.text._ZNSt3__29basic_iosIcNS_11char_traitsIcEEED2Ev), (8 bytes).
     Removing ios.instantiations.cpp.o(.text._ZNSt3__29basic_iosIcNS_11char_traitsIcEEED0Ev), (20 bytes).
@@ -19935,6 +19918,7 @@ Removing Unused input sections from the image.
     Removing locale.cpp.o(.ARM.exidx.text._ZNSt3__215messages_bynameIwED0Ev), (8 bytes).
     Removing locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE16__init_with_sizeB8nn200000IPKcS8_EEvT_T0_j), (8 bytes).
     Removing locale.cpp.o(.ARM.exidx.text._ZNKSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE20__throw_length_errorB8nn200000Ev), (8 bytes).
+    Removing locale.cpp.o(.ARM.exidx.text._ZSt28__throw_bad_array_new_lengthB8nn200000v), (8 bytes).
     Removing locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE16__init_with_sizeB8nn200000IPKwS8_EEvT_T0_j), (8 bytes).
     Removing locale.cpp.o(.ARM.exidx.text._ZNKSt3__212basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE20__throw_length_errorB8nn200000Ev), (8 bytes).
     Removing locale.cpp.o(.ARM.exidx.text._ZNSt3__212basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE9__grow_byB8nn200000Ejjjjjj), (8 bytes).
@@ -20241,4 +20225,4 @@ Removing Unused input sections from the image.
     Removing system_error.cpp.o(.text._ZNSt3__223__system_error_categoryD0Ev), (16 bytes).
     Removing system_error.cpp.o(.ARM.exidx.text._ZNSt3__223__system_error_categoryD0Ev), (8 bytes).
 
-5600 unused section(s) (total 928138 bytes) removed from the image.
+5590 unused section(s) (total 927550 bytes) removed from the image.
