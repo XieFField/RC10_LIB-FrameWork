@@ -122,6 +122,85 @@ void get_MoveDiretion(Point2D robotPos,
     Diresult[1] = result_[1];
 }
 
+//依旧屎上堆屎
+/**
+ * @brief 根据当前所在的地图格(bestB1)和行进方向，计算机械臂初始朝向；
+ * @param mapNum 输入bestB的地图编号
+ * @param dir 机械臂行进方向
+ */
+float Get_ArmBaseTargetAngle(int8_t mapNum, Direction_E dir)
+{
+    int8_t c, r;
+    Map_ToCR(mapNum, c, r);
+
+    float tar = 0.0f;
+
+    switch(dir)
+    {
+        case Positive_Y:
+        {
+           if(c == 1) //左侧
+               tar = 180.0f;
+
+            else if (c == 5)//右侧
+                tar = 0.0f;
+
+            break;
+        }
+
+        case Negative_Y:
+        {
+            if(c == 1) //左侧
+                tar = 0.0f;
+
+            else if (c == 5)//右侧
+                tar = 180.0f;
+
+            break;
+        }   
+
+
+        case Positive_X:
+        {
+            if(r == 1)//下侧
+                tar = 0.0f;
+            else if (r == 6)//上侧
+                tar = 180.0f;
+
+            break;
+        }
+
+        case Negative_X:
+        {
+            if(r == 1)//下侧
+                tar = 180.0f;
+            else if (r == 6)//上侧
+                tar = 0.0f;
+
+            break;
+        }
+    }
+    return tar;
+}
+
+float Get_ArmWorldAngle(float chassis_yaw_deg, float gimbal_angle_deg)
+{
+    float arm_world_angle = chassis_yaw_deg + gimbal_angle_deg;
+    // 归一化到 [0, 360)
+    while (arm_world_angle > 360.0f)
+    {
+        arm_world_angle -= 360.0f;
+    }
+    while (arm_world_angle < 0.0f)
+    {
+        arm_world_angle += 360.0f;
+    }
+    return arm_world_angle;
+}
+
+
+
+
 
 //行列转地图编号
 int8_t CR_ToMap(int8_t c, int8_t r) 
@@ -346,7 +425,7 @@ static float euclid(Point2D a, Point2D b)
 
 
 // 仅用于把 map 号变成格中心世界坐标（米）
-static Point2D MapCenterWorld(int8_t map)
+ Point2D MapCenterWorld(int8_t map)
 {
     if (map < 1 || map > 30) 
     {

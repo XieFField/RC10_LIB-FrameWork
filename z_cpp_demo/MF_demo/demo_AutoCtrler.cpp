@@ -1,37 +1,31 @@
 #include "demo_AutoCtrler.h"
 #include <iostream>
 
-
 namespace MF_AutoCtrler{
+const Point2D MapNum_RealPos[30] = {
+    {0.6, 2.6, 0}, {1.8, 2.6, 0}, {3.0, 2.6, 0}, {4.2, 2.6, 0}, {5.4, 2.6, 0},
+    {0.6, 3.8, 0}, {1.8, 3.8, 0}, {3.0, 3.8, 0}, {4.2, 3.8, 0}, {5.4, 3.8, 0},
+    {0.6, 5.0, 0}, {1.8, 5.0, 0}, {3.0, 5.0, 0}, {4.2, 5.0, 0}, {5.4, 5.0, 0},
+    {0.6, 6.2, 0}, {1.8, 6.2, 0}, {3.0, 6.2, 0}, {4.2, 6.2, 0}, {5.4, 6.2, 0},
+    {0.6, 7.4, 0}, {1.8, 7.4, 0}, {3.0, 7.4, 0}, {4.2, 7.4, 0}, {5.4, 7.4, 0},
+    {0.6, 8.6, 0}, {1.8, 8.6, 0}, {3.0, 8.6, 0}, {4.2, 8.6, 0}, {5.4, 8.6, 0}
+};
 
-//ÐÐÁÐ×ªµØÍ¼±àºÅ
+
+// ÐÐÁÐ×ªµØÍ¼±àºÅ
 int8_t CR_ToMap(int8_t c, int8_t r) 
 {
     return (int8_t)((r - 1) * MAP_COLS + c);
 }
-//×²Ç½ÅÐ¶Ï(Ã·»¨×®)
-static bool IsWalkable(int8_t map) 
-{
-    if (map < 1 || map > 30) 
-        return false;
-    // int8_t mf = MapNum_TransforMFNum(map);
-    // // mf==-1 ¡ú Í¨µÀ£»·ñÔòÎªÃ·»¨×®¸ñ£¨ÕÏ°­£©
-    // return (mf == -1);
 
-    int8_t c, r; Map_ToCR(map, c, r);
-    // ÖÐÐÄÇøÓò c=2..4 ÇÒ r=2..5 Îª²»¿É×ß
-    return !(c >= 2 && c <= 4 && r >= 2 && r <= 5); 
-}
-
-//µØÍ¼±àºÅ×ªÐÐÁÐ
+// µØÍ¼±àºÅ×ªÐÐÁÐ
 void Map_ToCR(int8_t map, int8_t& c, int8_t& r) 
 {
     r = (int8_t)((map - 1) / MAP_COLS + 1);
     c = (int8_t)((map - 1) % MAP_COLS + 1);
-
 }
 
-static int8_t MFNum_TransforMapNum(int8_t MFNum)//½«Ã·»¨×®±àºÅ×ª»»ÎªÃ·»¨ÁÖ·½¸ñµØÍ¼±àºÅ
+int8_t MFNum_TransforMapNum(int8_t MFNum)//½«Ã·»¨×®±àºÅ×ª»»ÎªÃ·»¨ÁÖ·½¸ñµØÍ¼±àºÅ
 {
     if(MFNum < 1 || MFNum > 12 )
         return -1;
@@ -39,12 +33,22 @@ static int8_t MFNum_TransforMapNum(int8_t MFNum)//½«Ã·»¨×®±àºÅ×ª»»ÎªÃ·»¨ÁÖ·½¸ñµØ
     return MFNum + 6 + 2 * (static_cast<int8_t>((MFNum - 1) / 3.0));
 }
 
-static int8_t MapNum_TransforMFNum(int8_t mapNum)//½«Ã·»¨ÁÖ·½¸ñµØÍ¼±àºÅ×ª»»ÎªÃ·»¨×®±àºÅ
+int8_t MapNum_TransforMFNum(int8_t mapNum)//½«Ã·»¨ÁÖ·½¸ñµØÍ¼±àºÅ×ª»»ÎªÃ·»¨×®±àºÅ
 {
     int8_t MFNum_ = mapNum - 6 - 2 * ((mapNum - 7) / 3);
     if(MFNum_ < 1 || MFNum_ > 12 )
         return -1;
     return MFNum_;
+}
+
+// ×²Ç½ÅÐ¶Ï(Ã·»¨×®)
+bool IsWalkable(int8_t map) 
+{
+    if (map < 1 || map > 30) 
+        return false;
+    int8_t c, r; Map_ToCR(map, c, r);
+    // ÖÐÐÄÇøÓò c=2..4 ÇÒ r=2..5 Îª²»¿É×ß
+    return !(c >= 2 && c <= 4 && r >= 2 && r <= 5); 
 }
 
 static bool IsAdjacent4(int8_t a, int8_t b)
@@ -207,9 +211,7 @@ RoadResult_S MFNum_ToRoadResult(int8_t MFNum) //Çó½âÃ·»¨×®ËùÓÐÇ°Ò»Í¨µÀ½á¹û(½øÈëÍ
     return result;
 }
 
-
-
-static Point2D MapNum_ToMatrixPos(int8_t MapNum) //Çó½â·½¸ñµÄÐÐÁÐ×ø±ê
+Point2D MapNum_ToMatrixPos(int8_t MapNum) //Çó½â·½¸ñµÄÐÐÁÐ×ø±ê
 {
 	Point2D result_ = {0, 0, 0}; 
 	
@@ -218,7 +220,7 @@ static Point2D MapNum_ToMatrixPos(int8_t MapNum) //Çó½â·½¸ñµÄÐÐÁÐ×ø±ê
 	return result_;
 }
 
-static float euclid(Point2D a, Point2D b) 
+float euclid(Point2D a, Point2D b) 
 {
     float dx = a.x - b.x;
     float dy = a.y - b.y;
@@ -227,7 +229,7 @@ static float euclid(Point2D a, Point2D b)
 
 
 // ½öÓÃÓÚ°Ñ map ºÅ±ä³É¸ñÖÐÐÄÊÀ½ç×ø±ê£¨Ã×£©
-static Point2D MapCenterWorld(int8_t map)
+ Point2D MapCenterWorld(int8_t map)
 {
     if (map < 1 || map > 30) 
     {
@@ -488,7 +490,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
                     float J = d_out + CELL_M * (sE1 + s1m1 + s_m1_X);
                     if(J < bestCost)
                     {
-                        std::cout << "ÕÒµ½¸üÓÅ½â ÎÞµÚ¶þ¶Î J=" << J << std::endl;
+                        // std::cout << "ÕÒµ½¸üÓÅ½â ÎÞµÚ¶þ¶Î J=" << J << std::endl;
                         bestCost = J;
                         bestE = E;
                         bestB1 = B1;
@@ -639,7 +641,53 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,
 }
 
 
-}//namespace MF_AutoCtrler
+void get_MoveDiretion(Point2D robotPos, int8_t MF1, int8_t MF2, Direction_E Diresult[])
+{
+    PathNode_S path = PathNodeResult_calc(robotPos, MF1, MF2);
+    int8_t bestB1_c_, bestB1_r_, bestBMF1_c_, bestBMF1_r_;
+    int8_t bestB2_c_, bestB2_r_, bestBMF2_c_, bestBMF2_r_;
+    Direction_E result_[2] = {NONE, NONE};
+
+    Map_ToCR(path.bestB1, bestB1_c_, bestB1_r_);
+    Map_ToCR(path.bestB2, bestB2_c_, bestB2_r_);
+    Map_ToCR(path.bestBMF1, bestBMF1_c_, bestBMF1_r_);
+    Map_ToCR(path.bestBMF2, bestBMF2_c_, bestBMF2_r_);
+
+    // ¼ò»¯°æÂß¼­£¬½ö´¦ÀíµÚÒ»¶Î
+    if(MF1 != 0) {
+        if(bestB1_c_ == bestBMF1_c_) {
+            result_[0] = (bestB1_r_ < bestBMF1_r_) ? Positive_Y : Negative_Y;
+        } else if(bestB1_r_ == bestBMF1_r_) {
+            result_[0] = (bestB1_c_ < bestBMF1_c_) ? Positive_X : Negative_X;
+        }
+    }
+    // ... µÚ¶þ¶ÎÂß¼­Ê¡ÂÔ£¬·ÂÕæÔÝ²»ÐèÒª ...
+    Diresult[0] = result_[0];
+}
+
+float Get_ArmBaseTargetAngle(int8_t mapNum, Direction_E dir)
+{
+    int8_t c, r;
+    Map_ToCR(mapNum, c, r);
+    float tar = 0.0f;
+    switch(dir) {
+        case Positive_Y: tar = (c == 1) ? 180.0f : 0.0f; break;
+        case Negative_Y: tar = (c == 1) ? 0.0f : 180.0f; break;
+        case Positive_X: tar = (r == 1) ? 0.0f : 180.0f; break;
+        case Negative_X: tar = (r == 1) ? 180.0f : 0.0f; break;
+    }
+    return tar;
+}
+
+float Get_ArmWorldAngle(float chassis_yaw_deg, float gimbal_angle_deg)
+{
+    float arm_world_angle = chassis_yaw_deg + gimbal_angle_deg;
+    while (arm_world_angle > 360.0f) arm_world_angle -= 360.0f;
+    while (arm_world_angle < 0.0f) arm_world_angle += 360.0f;
+    return arm_world_angle;
+}
+
+} // namespace MF_AutoCtrler
 
 int BFS_Steps(int8_t startMap, int8_t goalMap)// BFS ×îÉÙ²½Êý
 {

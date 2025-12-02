@@ -179,11 +179,45 @@ void ArmSetup::state_toTargetHight(int targetKFS)
 
     this->set_LaunchHeight((kfs_height - 0.2f)); 
     this->set_PitchAngle(90.0f); //吸盘pitch90度
-    this->setRotateReversed(0.0f); //锁住云台
+}
+
+
+bool ArmSetup::check_Arm_collision(float px, float py, 
+                            float pivot_x, float pivot_y, 
+                            float arm_world_angle_deg, float L_arm, 
+                            float W_arm)
+{   //云台旋转碰撞判定
+    float angle_rad = arm_world_angle_deg * (PI / 180.0f);
+
+    float c = cosf(angle_rad);
+    float s = sinf(angle_rad);
+
+    Point2D d = {
+        px - pivot_x,
+        py - pivot_y,
+        0.0f
+    };
+
+    Point2D local = {
+        -d.x * s + d.y * c,
+         d.x * c + d.y * s,
+         0.0f
+    };
+    
+    // 矩形碰撞判断: x in [0, L], y in [-W/2, W/2]
+    if(local.x >= 0.0f && local.x <= L_arm && _tool_Abs(local.y) <= (W_arm / 2.0f))
+        return true; //碰撞
+    else
+        return false; //未碰撞
 }
 
 void ArmSetup::state_signAlign(int targetKFS)
 {
+    /**
+     * 云台旋转时机预判，以及执行
+     * 
+     * @details 依旧屎山堆积
+     */
     MF_AutoCtrler::Direction_E move_direction;
     Point2D target_pos = {0, 0 ,0};
     if(targetKFS == auto_ctrl_.targetKFS[0])
@@ -198,6 +232,8 @@ void ArmSetup::state_signAlign(int targetKFS)
     }
     else
         return;
+
+    
 
     //开始预判计算部分
     switch(move_direction) //还未到目标位置，不进入计算
@@ -231,9 +267,125 @@ void ArmSetup::state_signAlign(int targetKFS)
             break;
     }
 
-    //达到目标位置，开始计算
+    //达到目标位置，开始计算, 计算频率100Hz
+    auto_ctrl_.gimbal_calcCount++;
+    if(auto_ctrl_.gimbal_calcCount < 1000.0f/ static_cast<float>(auto_ctrl_.gimbal_calcHz))
+        return; //未到计算时间，直接返回
+
+    //开始计算
+    auto_ctrl_.gimbal_calcCount = 0;
+    get_GimbalMF_PAPB(targetKFS, auto_ctrl_.point_PAB[0], auto_ctrl_.point_PAB[1]);
+
+    Point2D PA = auto_ctrl_.point_PAB[0];
+    Point2D PB = auto_ctrl_.point_PAB[1];
+
+    float vx = 0.0f, vy = 0.0f;
+    switch(move_direction)
+    {
+        case MF_AutoCtrler::Positive_X:
+        {
+            vx = auto_ctrl_.now_chassis_speed;
+            vy = 0.0f;
+            break;
+        }
+        case MF_AutoCtrler::Negative_X:
+        {
+            vx = -auto_ctrl_.now_chassis_speed;
+            vy = 0.0f;
+            break;
+        }
+
+        case MF_AutoCtrler::Positive_Y:
+        {
+            vx = 0.0f;
+            vy = auto_ctrl_.now_chassis_speed;
+            break;
+        }
+        case MF_AutoCtrler::Negative_Y:
+        {
+            vx = 0.0f;
+            vy = -auto_ctrl_.now_chassis_speed;
+            break;
+        }
+        default:
+            break;
+    }
+        float current_deg = this->get_currentJointStatus().rotateJoint_angle_;
+        float target_deg = 90.0f;
+
+        float diff = target_deg - current_deg;
+
+        //简单角度归一化
+        if(diff > 180.0f)
+            diff -= 360.0f;
+        else if(diff < -180.0f)
+            diff += 360.0f;
+
+        //步进预测循环
+        float T_rot = _tool_Abs(diff) * (PI / 180.0f) / (auto_ctrl_.time_set.gimbal_max_rad * 0.8); //云台旋转所需时间(s)
+
+        bool safe = true;
+
+    //碰撞检测 Lambda函数
+    // 对齐法平面
+        
+    for(float t = 0.0f; t <= T_rot; t+= 0.05f)
+    {
+        Point2D pivot{ //pivot(t)
+             .x = auto_ctrl_.now_armPosition.x + vx * t,
+             .y = auto_ctrl_.now_armPosition.y + vy * t,
+             .theta = 0.0f
+        };
+
+        float step_deg = 0.0f;
+        if(diff > 0 )
+            step_deg = 1.0f * (auto_ctrl_.time_set.gimbal_max_rad * 180.0f / PI) * t; //每步旋转
+        else
+            step_deg = -1.0f * (auto_ctrl_.time_set.gimbal_max_rad * 180.0f / PI) * t; //每步旋转
+
+        // theta(t)
+        if(_tool_Abs(step_deg) > _tool_Abs(diff))
+            step_deg = diff; //最后一步直接到达目标角度
+        float gimbal_angle_t  = current_deg + step_deg;
+        //phi(t) = yaw + theta(t)
+        float world_angle_t = MF_AutoCtrler::Get_ArmWorldAngle(auto_ctrl_.now_ChassisPosition.theta, gimbal_angle_t);
+
+        //碰撞检测
+        //Edge_L Edge_R 与PA PB不重合
+        if(check_Arm_collision(PA.x, PA.y, 
+                            pivot.x, pivot.y, 
+                            world_angle_t, 
+                            auto_ctrl_.arm_width, auto_ctrl_.arm_width)
+            &&
+            check_Arm_collision(PB.x, PB.y, 
+                            pivot.x, pivot.y, 
+                            world_angle_t, 
+                            auto_ctrl_.arm_width, auto_ctrl_.arm_width))
+        {
+            safe = false;
+            break;
+        }
+    }
+
+    //执行
+    if(safe)
+    {
+        this->set_RotateAngle(target_deg);
+        if(_tool_Abs(diff) < 2.0f)
+        
+            //到达目标角度后，打开吸盘
+            this->setSuckerStatus(Sucker_Status_E::SUCK);
+        
+    }
+    else
+        this->set_RotateAngle(current_deg); //保持不变
+}
+
+void ArmSetup::state_aimExt(int targetKFS)
+{
     
 }
+
 
 
 /*=================================================================*/
