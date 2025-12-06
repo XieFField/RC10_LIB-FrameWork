@@ -68,6 +68,7 @@ float launch_rate = 9.99999975e-05;
 
 void ArmSetup::manualControl()
 {
+    this->setRotateStrategy(ROTATE_PATH_SHORTEST);
     // 手动控制函数
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
@@ -274,12 +275,17 @@ void ArmSetup::state_signAlign(int targetKFS)
     if(auto_ctrl_.gimbal_calcCount < 1000.0f/ static_cast<float>(auto_ctrl_.gimbal_calcHz))
         return; //未到计算时间，直接返回
 
+    int index = 0;
+    if(targetKFS == auto_ctrl_.targetKFS[0])
+        index = 0;
+    else if(targetKFS == auto_ctrl_.targetKFS[1])
+        index = 1;
+
     //开始计算
     auto_ctrl_.gimbal_calcCount = 0;
-    get_GimbalMF_PAPB(targetKFS, auto_ctrl_.point_PAB[0], auto_ctrl_.point_PAB[1]);
-
-    Point2D PA = auto_ctrl_.point_PAB[0];
-    Point2D PB = auto_ctrl_.point_PAB[1];
+    get_GimbalMF_PAPB(targetKFS, auto_ctrl_.PointPAB[index].PA, auto_ctrl_.PointPAB[index].PB);
+    Point2D PA = auto_ctrl_.PointPAB[index].PA;
+    Point2D PB = auto_ctrl_.PointPAB[index].PB;
 
     float vx = 0.0f, vy = 0.0f;
     switch(move_direction)
@@ -358,7 +364,7 @@ void ArmSetup::state_signAlign(int targetKFS)
                             pivot.x, pivot.y, 
                             world_angle_t, 
                             auto_ctrl_.arm_width, auto_ctrl_.arm_width)
-            &&
+            ||
             check_Arm_collision(PB.x, PB.y, 
                             pivot.x, pivot.y, 
                             world_angle_t, 
@@ -368,6 +374,21 @@ void ArmSetup::state_signAlign(int targetKFS)
             break;
         }
     }
+
+    //选择旋转策略
+    if(diff - target_deg >0)
+        auto_ctrl_.current_strategy = ROTATE_PATH_POSITIVE;
+    
+    else if (diff - target_deg <0)
+        /* code */
+        auto_ctrl_.current_strategy = ROTATE_PATH_NEGATIVE;
+    
+    else
+        auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
+    
+
+
+    this->setRotateStrategy(auto_ctrl_.current_strategy);
 
     //执行
     if(safe)
@@ -397,7 +418,8 @@ void ArmSetup::state_aimExt(int targetKFS)
 void ArmSetup::state_carrying(int targetKFS)
 {
     /**
-     * 缩回后， 开始预判能否转回来；
+     * 
+     *  缩回后， 开始预判能否转回来；
      *  并将目标KFS放到存储机构位置
      * 
      * 具体流程：1. 判断可执行旋转，云台执行旋转
@@ -405,10 +427,128 @@ void ArmSetup::state_carrying(int targetKFS)
      *             高度是否高于存储机构高度，若高于，则维持，若低于，则抬高；
      *          3. 旋转到目标位置后，降低云台放置KFS到存储机构位置，0.2s后吸盘关闭
      *          4. 抬高云台到安全高度
+     * 
+     *          将350mm的长度纳入机械臂长度考虑
      */
 
-    
+    MF_AutoCtrler::Direction_E move_direction;
+    if(targetKFS == auto_ctrl_.targetKFS[0])
+    {
+        move_direction = auto_ctrl_.KFS_Movedirection[0];
+    }
+    else if(targetKFS == auto_ctrl_.targetKFS[1])
+    {
+        move_direction = auto_ctrl_.KFS_Movedirection[1];
+    }
+    else
+        return;
 
+    int index = 0;
+    if(targetKFS == auto_ctrl_.targetKFS[0])
+        index = 0;
+    else if(targetKFS == auto_ctrl_.targetKFS[1])
+        index = 1;
+
+    //获取障碍点 PA PB
+    get_GimbalMF_PAPB(targetKFS, auto_ctrl_.PointPAB[index].PA, auto_ctrl_.PointPAB[index].PB);
+    Point2D PA = auto_ctrl_.PointPAB[index].PA;
+    Point2D PB = auto_ctrl_.PointPAB[index].PB;
+
+    float vx = 0.0f, vy = 0.0f;
+
+    /**
+     * @details 我真受不了先前埋的这坨屎了
+     */
+    switch(move_direction)
+    {
+        case MF_AutoCtrler::Positive_X:
+        {
+            vx = auto_ctrl_.now_chassis_speed;
+            vy = 0.0f;
+            break;
+        }
+        case MF_AutoCtrler::Negative_X:
+        {
+            vx = -auto_ctrl_.now_chassis_speed;
+            vy = 0.0f;
+            break;
+        }
+
+        case MF_AutoCtrler::Positive_Y:
+        {
+            vx = 0.0f;
+            vy = auto_ctrl_.now_chassis_speed;
+            break;
+        }
+        case MF_AutoCtrler::Negative_Y:
+        {
+            vx = 0.0f;
+            vy = -auto_ctrl_.now_chassis_speed;
+            break;
+        }
+        default:
+            break;
+    }
+
+    float current_deg = this->get_currentJointStatus().rotateJoint_angle_;
+    float target_deg = 0.0f; //存储机构位置角度为0度
+
+    //Rotate_Strategy_E strategy = auto_ctrl_.current_strategy;
+
+    //计算符合 的 diff
+    float diff = 0.0f;
+    float current_mod = fmodf(current_deg, 360.0f);
+    if(current_mod <0)
+        current_mod += 360.0f;
+    float target_mod = 0.0f;
+
+    float raw_diff = target_mod - current_mod;
+
+    switch(auto_ctrl_.current_strategy)
+    {
+        case ROTATE_PATH_POSITIVE:
+        {
+            //必须正转
+            if(raw_diff <= 0.0f)
+                diff = raw_diff + 360.0f;
+            else
+                diff = raw_diff;
+            break;
+        }
+
+        case ROTATE_PATH_NEGATIVE:
+        {
+            //必须负转
+            if(raw_diff >= 0.0f)
+                diff = raw_diff - 360.0f;
+            else
+                diff = raw_diff;
+            break;
+        }
+
+        case ROTATE_PATH_SHORTEST:
+        {
+            diff = raw_diff;
+            break;
+        }
+
+        default:
+            break;
+    }
+
+    //碰撞检测
+    float kfs_size = 0.35f; //考虑350mm的KFS长度
+
+    //Lenggth
+    float check_L = init_data_.arm_length_ + kfs_size + init_data_.end_link_length_;
+
+    //width
+    float check_W = (auto_ctrl_.arm_width > kfs_size) ? auto_ctrl_.arm_width : kfs_size;
+
+    bool safe = true;
+
+    //time calc
+    //float T_rot
 }
 
 /*=================================================================*/
@@ -535,52 +675,7 @@ void ArmSetup::debug()
     //航模遥控操纵测试
     else if(test_signal == 5)
     {
-        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-        // 读取遥控器输入，计算目标关节位置
-
-        if(AirJoy::getinstance().RIGHT_X < 1450)
-            target_joint_status_.rotateJoint_angle_ -= rotate_rate; // 旋转关节逆时针
-        else if(AirJoy::getinstance().RIGHT_X > 1550)
-            target_joint_status_.rotateJoint_angle_ += rotate_rate; // 旋转关节顺时针
-        else
-            target_joint_status_ = target_joint_status_; // 保持不变
-
-
-
-        if(AirJoy::getinstance().LEFT_Y < 1450)
-            target_joint_status_.launchJoint_Height_ -= launch_rate; 
-        else if(AirJoy::getinstance().LEFT_Y > 1550)
-            target_joint_status_.launchJoint_Height_ += launch_rate; 
-        else
-            target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_; // 保持不变
-
-        launch_see = target_joint_status_.launchJoint_Height_;
-
-        if(_tool_Abs(AirJoy::getinstance().SWA - 1000) < 50)
-            target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位置
-        else if(_tool_Abs(AirJoy::getinstance().SWA - 2000) < 50)
-            target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
-        else 
-            target_joint_status_.stretchJoint_Length_ = target_joint_status_.stretchJoint_Length_; // 保持不变
-
-
-
-        if(_tool_Abs(AirJoy::getinstance().SWD - 1000) < 50)
-            target_joint_status_.suckerJoint_angle_ = 0.0f; // 末端关节收
-        else if(_tool_Abs(AirJoy::getinstance().SWD - 2000) < 50)
-            target_joint_status_.suckerJoint_angle_ = 95.0f; // 末端关节开
-        else 
-            target_joint_status_.suckerJoint_angle_ = target_joint_status_.suckerJoint_angle_; // 保持不变
-
-        this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
-        this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
-        this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
-        this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
-
-        if(_tool_Abs(AirJoy::getinstance().SWC - 2000) < 50)
-            this->setSuckerStatus(Sucker_Status_E::SUCK);
-        else
-            this->setSuckerStatus(Sucker_Status_E::STOP);
+        this->manualControl();
     }
 
     else if(test_signal == 6) //测试stop功能

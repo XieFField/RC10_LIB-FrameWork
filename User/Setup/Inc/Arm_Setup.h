@@ -88,7 +88,11 @@ typedef struct{
 
     Point2D targetKFS_pos[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //目标KFS位置
 
-    Point2D point_PAB[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //PA PB
+    //Point2D point_PAB[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //PA PB
+    struct {
+        Point2D PA;
+        Point2D PB;
+    }PointPAB[2];
 
     MF_AutoCtrler::Direction_E KFS_Movedirection[2] = {MF_AutoCtrler::NONE, MF_AutoCtrler::NONE}; //目标KFS方向
 
@@ -107,6 +111,13 @@ typedef struct{
     int gimbal_calcHz = 100; //云台预判计算频率
 
     arm_timeset_S time_set;
+
+
+    /**
+     * @brief 旋转路径策略 正方向表示角度正增，负方向表示角度负增；
+     *                    正增为逆时针旋转，负增为顺时针旋转
+     */
+    Rotate_Strategy_E current_strategy = ROTATE_PATH_SHORTEST; 
 }ARM_AUTO_S;
 
 

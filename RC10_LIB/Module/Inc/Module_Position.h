@@ -92,7 +92,7 @@ public:
 
     void Reposition_SendData(float X, float Y);
 
-  RealPos getRealPosData() const { return RealPosData; }
+    RealPos getRealPosData() const { return RealPosData; }
 
 private:
     Position(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle); // ??????
