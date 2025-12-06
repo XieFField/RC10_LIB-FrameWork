@@ -118,8 +118,14 @@ typedef struct{
      *                    正增为逆时针旋转，负增为顺时针旋转
      */
     Rotate_Strategy_E current_strategy = ROTATE_PATH_SHORTEST; 
-}ARM_AUTO_S;
 
+    struct{
+        const float safe_height = 0.2f; //安全高度，单位米  待定
+        const float store_height = 0.05f; //存储机构高度，单位米 待定
+
+        bool is_toPlace = false; //是否到达可放置状态
+    }store[2];
+}ARM_AUTO_S;
 
 
 

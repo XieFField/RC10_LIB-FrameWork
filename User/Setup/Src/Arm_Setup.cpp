@@ -272,7 +272,8 @@ void ArmSetup::state_signAlign(int targetKFS)
 
     //达到目标位置，开始计算, 计算频率100Hz
     auto_ctrl_.gimbal_calcCount++;
-    if(auto_ctrl_.gimbal_calcCount < 1000.0f/ static_cast<float>(auto_ctrl_.gimbal_calcHz))
+    if(auto_ctrl_.gimbal_calcCount < 1000.0f/ 
+                static_cast<float>(auto_ctrl_.gimbal_calcHz))
         return; //未到计算时间，直接返回
 
     int index = 0;
@@ -283,7 +284,8 @@ void ArmSetup::state_signAlign(int targetKFS)
 
     //开始计算
     auto_ctrl_.gimbal_calcCount = 0;
-    get_GimbalMF_PAPB(targetKFS, auto_ctrl_.PointPAB[index].PA, auto_ctrl_.PointPAB[index].PB);
+    get_GimbalMF_PAPB(targetKFS, auto_ctrl_.PointPAB[index].PA, 
+            auto_ctrl_.PointPAB[index].PB);
     Point2D PA = auto_ctrl_.PointPAB[index].PA;
     Point2D PB = auto_ctrl_.PointPAB[index].PB;
 
@@ -330,7 +332,8 @@ void ArmSetup::state_signAlign(int targetKFS)
             diff += 360.0f;
 
         //步进预测循环
-        float T_rot = _tool_Abs(diff) * (PI / 180.0f) / (auto_ctrl_.time_set.gimbal_max_rad * 0.8); //云台旋转所需时间(s)
+        float T_rot = _tool_Abs(diff) * (PI / 180.0f) / 
+                    (auto_ctrl_.time_set.gimbal_max_rad * 0.8); //云台旋转所需时间(s)
 
         bool safe = true;
 
@@ -347,16 +350,19 @@ void ArmSetup::state_signAlign(int targetKFS)
 
         float step_deg = 0.0f;
         if(diff > 0 )
-            step_deg = 1.0f * (auto_ctrl_.time_set.gimbal_max_rad * 180.0f / PI) * t; //每步旋转
+            step_deg = 1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
+                    * 0.87f * 180.0f / PI) * t; //每步旋转
         else
-            step_deg = -1.0f * (auto_ctrl_.time_set.gimbal_max_rad * 180.0f / PI) * t; //每步旋转
+            step_deg = -1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
+                    * 0.87f * 180.0f / PI) * t; //每步旋转
 
         // theta(t)
         if(_tool_Abs(step_deg) > _tool_Abs(diff))
             step_deg = diff; //最后一步直接到达目标角度
         float gimbal_angle_t  = current_deg + step_deg;
         //phi(t) = yaw + theta(t)
-        float world_angle_t = MF_AutoCtrler::Get_ArmWorldAngle(auto_ctrl_.now_ChassisPosition.theta, gimbal_angle_t);
+        float world_angle_t = MF_AutoCtrler::Get_ArmWorldAngle
+            (auto_ctrl_.now_ChassisPosition.theta, gimbal_angle_t);
 
         //碰撞检测
         //Edge_L Edge_R 与PA PB不重合
@@ -423,8 +429,8 @@ void ArmSetup::state_carrying(int targetKFS)
      *  并将目标KFS放到存储机构位置
      * 
      * 具体流程：1. 判断可执行旋转，云台执行旋转
-     *          2. 当旋转到abs(arm_pos - KFS_pos) > 120度时候，判断当前
-     *             高度是否高于存储机构高度，若高于，则维持，若低于，则抬高；
+     *          2. 在旋转开始时候，判定当前云台高度是否比存储时候所需云台高度要高，否则，抬高
+     *             是，则维持
      *          3. 旋转到目标位置后，降低云台放置KFS到存储机构位置，0.2s后吸盘关闭
      *          4. 抬高云台到安全高度
      * 
@@ -450,7 +456,8 @@ void ArmSetup::state_carrying(int targetKFS)
         index = 1;
 
     //获取障碍点 PA PB
-    get_GimbalMF_PAPB(targetKFS, auto_ctrl_.PointPAB[index].PA, auto_ctrl_.PointPAB[index].PB);
+    get_GimbalMF_PAPB(targetKFS, auto_ctrl_.PointPAB[index].PA, 
+            auto_ctrl_.PointPAB[index].PB);
     Point2D PA = auto_ctrl_.PointPAB[index].PA;
     Point2D PB = auto_ctrl_.PointPAB[index].PB;
 
@@ -548,7 +555,122 @@ void ArmSetup::state_carrying(int targetKFS)
     bool safe = true;
 
     //time calc
-    //float T_rot
+    float T_rot = _tool_Abs(diff) * (PI / 180.0f) / 
+                (auto_ctrl_.time_set.gimbal_max_rad * 0.8); //云台旋转所需时间(s)
+
+    for(float t = 0.0f; t <= T_rot; t+= 0.05f)
+    {
+        Point2D pivot{
+            .x = auto_ctrl_.now_armPosition.x + vx * t,
+            .y = auto_ctrl_.now_armPosition.y + vy * t,
+            .theta = 0.0f
+        };
+
+        float step_deg = 0.0f;
+        if(diff > 0 )
+            step_deg = 1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
+                    * 0.87f * 180.0f / PI) * t; //每步旋转
+
+        else
+            step_deg = -1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
+                    * 0.87f * 180.0f / PI) * t; //每步旋转
+
+        //theta(t)
+        if(_tool_Abs(step_deg) > _tool_Abs(diff))
+            step_deg = diff; //最后一步直接到达目标角度
+
+        // 旋转超过90度的时候，则视为安全——如果之后发现阈值不如，就进行调整
+        if(_tool_Abs(step_deg) >= 90.0f)
+            break;
+
+        float gimbal_angle_t  = current_deg + step_deg;
+
+        //phi(t) = yaw + theta(t)
+        float world_angle_t = 
+            MF_AutoCtrler::Get_ArmWorldAngle(
+                auto_ctrl_.now_ChassisPosition.theta, 
+                gimbal_angle_t);
+
+        //碰撞检测
+        // 当Edge_L Edge_R 与PA PB不重合
+        if(check_Arm_collision(PA.x, PA.y, 
+                            pivot.x, pivot.y, 
+                            world_angle_t, 
+                            check_L, check_W)
+            ||
+            check_Arm_collision(PB.x, PB.y, 
+                            pivot.x, pivot.y, 
+                            world_angle_t, 
+                            check_L, check_W))
+        {
+            safe = false;
+            break;
+        }
+    }
+
+    if(auto_ctrl_.store->is_toPlace == false)
+    {
+        if(this->get_currentJointStatus().launchJoint_Height_
+            < auto_ctrl_.store->safe_height)
+        {
+            this->set_LaunchHeight(auto_ctrl_.store->safe_height);
+        }
+        else
+        {
+            this->set_LaunchHeight(this->get_currentJointStatus().launchJoint_Height_);
+        }
+    }
+    //执行
+    if(safe)
+    {
+        this->set_RotateAngle(target_deg);
+
+        //旋转到目标位置后
+        static float wait_startTime = 0.0f;
+
+        if(_tool_Abs(diff) > 5.0f)
+        {
+            auto_ctrl_.store->is_toPlace = false;
+        }
+        else if(_tool_Abs(diff) <= 2.0f)
+        {
+            if(auto_ctrl_.store->is_toPlace == false)
+            {
+                //降低云台放置KFS到存储机构位置
+                this->set_LaunchHeight(auto_ctrl_.store->store_height);
+
+                wait_startTime = this->now_time_s_;
+                auto_ctrl_.store->is_toPlace = true;
+            }
+
+            else if(auto_ctrl_.store->is_toPlace == true)
+            {
+                this->set_LaunchHeight(auto_ctrl_.store->store_height); //维持不变
+
+                //0.2s后吸盘关闭
+                if(this->now_time_s_ - wait_startTime > 0.2f)     
+                    this->setSuckerStatus(Sucker_Status_E::STOP);
+                
+
+                else if(this->now_time_s_ - wait_startTime > 0.5f)
+                    //抬高云台到安全高度
+                    this->set_LaunchHeight(auto_ctrl_.store->safe_height);        
+            }
+        
+        }
+    }
+
+    //不安全，保持不变
+    else    
+    {
+        this->set_RotateAngle(current_deg); //保持不变
+    }
+    
+}
+
+void ArmSetup::state_return(int next_targetKFS)
+{
+
 }
 
 /*=================================================================*/
