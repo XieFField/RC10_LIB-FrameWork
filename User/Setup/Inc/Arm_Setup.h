@@ -7,8 +7,8 @@
  *  测试基础的串联臂运动控制
  * @version 2.0
  *  开始写自动拾取相关
- *      依旧屎山堆叠 O(∩_∩)O 经典梦到哪句写哪句 ε=(?ο｀*)))唉
- *      酣畅淋漓的。。。屎山堆积，以后多用数组以及、、、硬编码?
+ *      依旧屎山堆叠 O(∩_∩)O 经典梦到哪句写哪句 
+ *      酣畅淋漓的。。。屎山堆积，以后多用数组以及、、、硬编码:>
  *      
  */
 
@@ -216,6 +216,7 @@ private:
     void state_signAlign(int targetKFS);
     void state_aimExt(int targetKFS);
     void state_carrying(int targetKFS);
+    void state_return(int next_targetKFS);
 
 
     /**

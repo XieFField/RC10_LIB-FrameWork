@@ -93,8 +93,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 200,
-    "collapsed": true
+    "width": 200
   },
   "right": {
     "id": "8027ee1eb249bd80",
@@ -187,11 +186,11 @@
   },
   "active": "4c1d92abdb2dbc77",
   "lastOpenFiles": [
+    "自动模式方案书.md",
+    "串联臂自动逻辑.md",
     "串联臂自动逻辑.pdf",
     "贝塞尔曲线中轨迹修正方案.md",
     "串联刚体臂吸盘解算.md",
-    "串联臂自动逻辑.md",
-    "自动模式方案书.md",
     "ROS在全国机器人大赛中的应用.pdf",
     "初代状态机.md",
     "自动模式方案书_tmp.html",

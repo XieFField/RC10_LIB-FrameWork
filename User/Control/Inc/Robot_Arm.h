@@ -2,6 +2,12 @@
  * @file Robot_Arm.h
  * @author XieFField
  * @brief 串联刚体臂吸盘运动建模.      
+ * @version 1.0
+ * 完成基本控制功能
+ * @version 2.0
+ * 增加雅可比矩阵计算，支持手动关节速度模式
+ * @version 3.0
+ * 增加旋转路径策略支持
  */
 
 #ifndef __ROBOT_ARM_H
@@ -82,6 +88,13 @@ typedef enum{
     CURRENT_CONTROL_MODE // 电流控制模式 依旧使用Joint_Status_S存储目标电流值
 }Arm_Control_mode_E;
 
+//rotate 旋转路径枚举
+typedef enum {
+    ROTATE_PATH_SHORTEST,   // 最短路径
+    ROTATE_PATH_POSITIVE,   // 正向路径
+    ROTATE_PATH_NEGATIVE    // 负向路径
+}Rotate_Strategy_E;
+
 typedef struct{
     float launch_current; //升降电机电流
     float stretch_current; //伸展电机电流
@@ -157,6 +170,16 @@ public:
 
     Sucker_Status_E getSuckerStatus() const { return sucker_status_; }
 
+    /**
+     * @brief 设置旋转路径策略
+     */
+    void setRotateStrategy(Rotate_Strategy_E strategy){ rotate_strategy_ = strategy; }
+
+    Rotate_Strategy_E getRotateStrategy() const { return rotate_strategy_; }
+
+    float calc_rotate_targetByStrategy(float current_cont_angle, float target_raw_0_360);
+    
+
     /** 
      * @brief 设置手动末端速度速度
      */
@@ -218,6 +241,7 @@ public:
     Joint_Status_S get_targetJointStatus() const { return target_joint_angle_; }
 
 private:    
+    Rotate_Strategy_E rotate_strategy_ = ROTATE_PATH_SHORTEST; // 旋转路径策略，默认最短路径
     Joint_Status_S joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; 
 
     Joint_Status_S target_joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; 

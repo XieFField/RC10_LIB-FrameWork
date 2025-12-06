@@ -152,11 +152,13 @@ void ArmSetup::autoControl()
     {
         case ONLY_ONE:
         {
+
             break;
         }
         
         case TWO:
         {
+
             break;
         }
     }
@@ -375,18 +377,39 @@ void ArmSetup::state_signAlign(int targetKFS)
         
             //到达目标角度后，打开吸盘
             this->setSuckerStatus(Sucker_Status_E::SUCK);
-        
+
     }
     else
         this->set_RotateAngle(current_deg); //保持不变
 }
 
+/**
+ * @brief 伸展到目标KFS位置 条件预判
+ */
 void ArmSetup::state_aimExt(int targetKFS)
 {
-    
+    /**
+     * 设置 伸展所需要的 时间 t_need 以及 底盘移动到目标位置的时间 t_tan
+     * 伸展到目标KFS位置后，停留0.3s，后缩回
+     */
 }
 
+void ArmSetup::state_carrying(int targetKFS)
+{
+    /**
+     * 缩回后， 开始预判能否转回来；
+     *  并将目标KFS放到存储机构位置
+     * 
+     * 具体流程：1. 判断可执行旋转，云台执行旋转
+     *          2. 当旋转到abs(arm_pos - KFS_pos) > 120度时候，判断当前
+     *             高度是否高于存储机构高度，若高于，则维持，若低于，则抬高；
+     *          3. 旋转到目标位置后，降低云台放置KFS到存储机构位置，0.2s后吸盘关闭
+     *          4. 抬高云台到安全高度
+     */
 
+    
+
+}
 
 /*=================================================================*/
 

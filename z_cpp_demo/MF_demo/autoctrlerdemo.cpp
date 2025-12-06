@@ -1,7 +1,8 @@
 /**
  * @file autoctrlerdemo.cpp
  * @author XieFField
- * @brief 梅花林路径点测试程序 (包含 get_GimbalMF_PAPB 严格移植测试)
+ * @brief 梅花林自动测试程序 (包含 get_GimbalMF_PAPB 移植测试)
+ *        里面不少是用哈基米3生成的，把正式代码移植到demo是真好用
  */
 
 #include "demo_AutoCtrler.h"
