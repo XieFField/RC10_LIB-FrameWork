@@ -56,7 +56,7 @@ typedef enum{
     STATE_AIM_EXT,         //阶段3：伸展预判
     STATE_CARRYING,        //阶段4：吸附后搬回
     STATE_RETURN,          //阶段5：返回初始位置
-    STATE_DONE,            //待机
+    STATE_DONE,            //待机，还未进入梅花林
 }ARM_AUTO_E;
 
 typedef enum{
@@ -84,6 +84,7 @@ typedef struct{
     int now_targetIndex = 0;
     KFS_NUM_E kfs_num = ONLY_ONE;
     ARM_AUTO_E now_state = STATE_DONE;
+    bool start_to_autoctrl = false;
 
     Point2D now_armPosition = {0.0f, 0.0f, 0.0f}; //机械臂当前位置
 
@@ -107,7 +108,7 @@ typedef struct{
 
     float dt = 0.01f; //控制周期，单位秒
 
-    float now_chassis_speed = 1.0f; //当前底盘速度，单位米每秒
+    Point2D now_chassis_speed = {0.0f, 0.0f, 0.0f}; //当前底盘速度，单位米每秒
 
     const float arm_width = 0.12f; //机械臂宽度，单位米
 
@@ -169,6 +170,8 @@ public:
     {
         arm_status_ = status;
     }
+
+    void inputChassisSpeed(){}
 
     /**
      * @brief 设置目标抓取梅花桩编号
@@ -239,6 +242,7 @@ private:
     void state_carrying(int targetKFS);
     void state_return(int next_targetKFS);
 
+    void auto_onlyOne();
 
     /**
      * @brief 云台碰撞检测
@@ -275,7 +279,7 @@ protected:
      */
     Point2D get_nowChassisSpeed()
     {
-
+        
     }
 
     /**
@@ -314,15 +318,18 @@ protected:
      */
     void get_GimbalMF_PAPB(int target_KFSIndex, Point2D& PA, Point2D& PB)
     {   
-        if(target_KFSIndex != 0 && target_KFSIndex != 1) return;
+        if(target_KFSIndex != 0 && target_KFSIndex != 1) 
+            return;
 
         // 1. 获取 KFS 中心坐标 (直接从结构体获取，无需转换)
         Point2D KFS_Pos = auto_ctrl_.targetKFS_pos[target_KFSIndex];
         
         // 2. 获取参考点 (路径起点 B)
         Point2D Robot_Pos;
-        if(target_KFSIndex == 0) Robot_Pos = auto_ctrl_.pathPos.bestB1;
-        else Robot_Pos = auto_ctrl_.pathPos.bestB2;
+        if(target_KFSIndex == 0) 
+            Robot_Pos = auto_ctrl_.pathPos.bestB1;
+        else 
+            Robot_Pos = auto_ctrl_.pathPos.bestB2;
         
         // 3. 单元格半宽 (1.2m / 2 = 0.6m)
         float half_cell = 0.6f; 
@@ -331,48 +338,70 @@ protected:
         MF_AutoCtrler::Direction_E dir = auto_ctrl_.KFS_Movedirection[target_KFSIndex];
         
         // 5. 逻辑修正：PA 必须是运动方向上先遇到的点 (Near Corner)
-        if (dir == MF_AutoCtrler::Positive_X || dir == MF_AutoCtrler::Negative_X) {
+        if (dir == MF_AutoCtrler::Positive_X || dir == MF_AutoCtrler::Negative_X) 
+        {
             // 水平运动，比较 Y 坐标
-            if (KFS_Pos.y > Robot_Pos.y) {
+            if (KFS_Pos.y > Robot_Pos.y) 
+            {
                 // KFS 在上方 (North)，底盘在下方通过 -> 障碍面是 KFS 下表面
                 float common_y = KFS_Pos.y - half_cell;
-                if (dir == MF_AutoCtrler::Positive_X) {
+                if (dir == MF_AutoCtrler::Positive_X) 
+                {
                     PA.x = KFS_Pos.x - half_cell; PA.y = common_y; // Left-Bottom
                     PB.x = KFS_Pos.x + half_cell; PB.y = common_y; // Right-Bottom
-                } else { // Negative_X
+                } 
+                else 
+                { // Negative_X
                     PA.x = KFS_Pos.x + half_cell; PA.y = common_y; // Right-Bottom
                     PB.x = KFS_Pos.x - half_cell; PB.y = common_y; // Left-Bottom
                 }
-            } else {
+            } 
+            else 
+            {
                 // KFS 在下方 (South) -> 障碍面是 KFS 上表面
                 float common_y = KFS_Pos.y + half_cell;
-                if (dir == MF_AutoCtrler::Positive_X) {
+                if (dir == MF_AutoCtrler::Positive_X) 
+                {
                     PA.x = KFS_Pos.x - half_cell; PA.y = common_y; // Left-Top
                     PB.x = KFS_Pos.x + half_cell; PB.y = common_y; // Right-Top
-                } else { // Negative_X
+                } 
+                else 
+                { // Negative_X
                     PA.x = KFS_Pos.x + half_cell; PA.y = common_y; // Right-Top
                     PB.x = KFS_Pos.x - half_cell; PB.y = common_y; // Left-Top
                 }
             }
-        } else {
+        } 
+        else 
+        {
+
             // 垂直运动，比较 X 坐标
-            if (KFS_Pos.x > Robot_Pos.x) {
+            if (KFS_Pos.x > Robot_Pos.x) 
+            {
                 // KFS 在右侧 (East) -> 障碍面是 KFS 左表面
                 float common_x = KFS_Pos.x - half_cell;
-                if (dir == MF_AutoCtrler::Positive_Y) {
+                if (dir == MF_AutoCtrler::Positive_Y) 
+                {
                     PA.x = common_x; PA.y = KFS_Pos.y - half_cell; // Left-Bottom
                     PB.x = common_x; PB.y = KFS_Pos.y + half_cell; // Left-Top
-                } else { // Negative_Y
+                } 
+                else 
+                { // Negative_Y
                     PA.x = common_x; PA.y = KFS_Pos.y + half_cell; // Left-Top
                     PB.x = common_x; PB.y = KFS_Pos.y - half_cell; // Left-Bottom
                 }
-            } else {
+            } 
+            else 
+            {
                 // KFS 在左侧 (West) -> 障碍面是 KFS 右表面
                 float common_x = KFS_Pos.x + half_cell;
-                if (dir == MF_AutoCtrler::Positive_Y) {
+                if (dir == MF_AutoCtrler::Positive_Y) 
+                {
                     PA.x = common_x; PA.y = KFS_Pos.y - half_cell; // Right-Bottom
                     PB.x = common_x; PB.y = KFS_Pos.y + half_cell; // Right-Top
-                } else { // Negative_Y
+                } 
+                else 
+                { // Negative_Y
                     PA.x = common_x; PA.y = KFS_Pos.y + half_cell; // Right-Top
                     PB.x = common_x; PB.y = KFS_Pos.y - half_cell; // Left-Bottom
                 }

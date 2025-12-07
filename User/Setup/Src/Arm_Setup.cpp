@@ -153,13 +153,14 @@ void ArmSetup::autoControl()
     {
         case ONLY_ONE:
         {
+            //单个KFS拾取流程
 
             break;
         }
         
         case TWO:
         {
-
+            //两个KFS拾取流程
             break;
         }
     }
@@ -297,13 +298,13 @@ void ArmSetup::state_signAlign(int targetKFS)
     {
         case MF_AutoCtrler::Positive_X:
         {
-            vx = auto_ctrl_.now_chassis_speed;
+            vx = auto_ctrl_.now_chassis_speed.x;
             vy = 0.0f;
             break;
         }
         case MF_AutoCtrler::Negative_X:
         {
-            vx = -auto_ctrl_.now_chassis_speed;
+            vx = -auto_ctrl_.now_chassis_speed.x;
             vy = 0.0f;
             break;
         }
@@ -311,13 +312,13 @@ void ArmSetup::state_signAlign(int targetKFS)
         case MF_AutoCtrler::Positive_Y:
         {
             vx = 0.0f;
-            vy = auto_ctrl_.now_chassis_speed;
+            vy = auto_ctrl_.now_chassis_speed.y;
             break;
         }
         case MF_AutoCtrler::Negative_Y:
         {
             vx = 0.0f;
-            vy = -auto_ctrl_.now_chassis_speed;
+            vy = -auto_ctrl_.now_chassis_speed.y;
             break;
         }
         default:
@@ -473,13 +474,13 @@ void ArmSetup::state_carrying(int targetKFS)
     {
         case MF_AutoCtrler::Positive_X:
         {
-            vx = auto_ctrl_.now_chassis_speed;
+            vx = auto_ctrl_.now_chassis_speed.x;
             vy = 0.0f;
             break;
         }
         case MF_AutoCtrler::Negative_X:
         {
-            vx = -auto_ctrl_.now_chassis_speed;
+            vx = -auto_ctrl_.now_chassis_speed.x;
             vy = 0.0f;
             break;
         }
@@ -487,13 +488,13 @@ void ArmSetup::state_carrying(int targetKFS)
         case MF_AutoCtrler::Positive_Y:
         {
             vx = 0.0f;
-            vy = auto_ctrl_.now_chassis_speed;
+            vy = auto_ctrl_.now_chassis_speed.y;
             break;
         }
         case MF_AutoCtrler::Negative_Y:
         {
             vx = 0.0f;
-            vy = -auto_ctrl_.now_chassis_speed;
+            vy = -auto_ctrl_.now_chassis_speed.y;
             break;
         }
         default:
@@ -677,6 +678,41 @@ void ArmSetup::state_return(int next_targetKFS)
 {
     
 }
+
+void ArmSetup::auto_onlyOne()
+{
+    /**
+     * @brief 大致流程
+     * 1. 升降到目标高度,吸盘pitch90度
+     * 2. 云台旋转到起始位置，emmm，也可以调用return；
+     * 3. 然后调用state_signAlign，预判旋转时机并执行对准KFS法平面，旋转完成后打开吸盘
+     * 4. 伸展到目标KFS位置，吸附，停留0.3s后缩回
+     * 5. 云台旋转回车头位置
+     */
+
+    switch(auto_ctrl_.now_state)
+    {
+        case STATE_DONE:
+        {
+            if(auto_ctrl_.start_to_autoctrl)
+            {
+                auto_ctrl_.now_state = STATE_TO_TARGET_HIGHT;
+            }
+            else
+            {
+                this->idle();
+            }
+            break;
+        }
+
+        case STATE_TO_TARGET_HIGHT:
+        {
+            
+        }
+    }
+}
+
+
 
 /*=================================================================*/
 
