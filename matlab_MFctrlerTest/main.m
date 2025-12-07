@@ -37,8 +37,8 @@ for k = 1:30
 end
 
 % 输入：机器人位置与目标桩
-robotPos = [4.6, 1, 0]; 
-MF1 = 0;
+robotPos = [0.0, 0.0, 0]; 
+MF1 = 3;
 MF2 = 0;
 
 cubes_ids = [MF1, MF2, 11];

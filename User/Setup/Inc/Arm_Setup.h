@@ -192,8 +192,8 @@ public:
         else
             auto_ctrl_.kfs_num = ONLY_ONE;
 
-        auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[auto_ctrl_.targetKFS[0] - 1];
-        auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[auto_ctrl_.targetKFS[1] - 1];
+        auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0] - 1)];
+        auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[1] - 1)];
         
         MF_AutoCtrler::get_MoveDiretion(auto_ctrl_.now_armPosition,
                                         auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1],
@@ -202,7 +202,8 @@ public:
         auto_ctrl_.now_targetIndex = 0;
 
         MF_AutoCtrler::PathNode_S temp = MF_AutoCtrler::PathNodeResult_calc(auto_ctrl_.now_armPosition,
-                                        auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1]);
+                                       auto_ctrl_.targetKFS[0], 
+                                        auto_ctrl_.targetKFS[1]);
         auto_ctrl_.path.bestB1 = temp.bestB1;
         auto_ctrl_.path.bestBMF1 = temp.bestBMF1;
         auto_ctrl_.path.bestB2 = temp.bestB2;
@@ -306,189 +307,77 @@ protected:
     ARM_AUTO_S auto_ctrl_;
 
     /**
-     * @brief 这里的输入是已经初始化的targetKFS的index
+     * @brief 这里的输入是已经初始化的targetKFS的index (0 或 1)
      * @return 云台旋转时候末端需要避障的PA PB点 
      * 
-     * @details 前面不规范创建的结构体，导致现在只能把这坨屎山堆下去
+     * @details [修复] 使用基于方向的几何判定，修复了直线路径下PA点计算为(0,0)的BUG
      */
     void get_GimbalMF_PAPB(int target_KFSIndex, Point2D& PA, Point2D& PB)
     {   
-        /*
-            0~3索引分别对应从左下角的点，逆时针到左上角的点
-        */
-        Point2D targetMF_p[4];
-        for(int i = 0; i < 4; i++)
-            targetMF_p[i] = {0.0f, 0.0f, 0.0f};
-        Point2D targetBestMF_p[4];
-        for(int i = 0; i < 4; i++)
-            targetBestMF_p[i] = {0.0f, 0.0f, 0.0f};
+        if(target_KFSIndex != 0 && target_KFSIndex != 1) return;
 
-        Point2D targetbestB_p[4];
-            for(int i = 0; i < 4; i++)
-                targetbestB_p[i] = {0.0f, 0.0f, 0.0f};
-
-        if(target_KFSIndex != 0 && target_KFSIndex !=1)
-            return;
-
-        Point2D result[2]= {{0}, {0}}; //0 PA 1 PB
-
-
-        for(int i = 0; i < 4; i++)
-        {
-            switch(i)
-            {
-                case 0:
-                {
-                    targetMF_p[i].x = auto_ctrl_.targetKFS_pos[target_KFSIndex].x - 0.6f;
-                    targetMF_p[i].y = auto_ctrl_.targetKFS_pos[target_KFSIndex].y - 0.6f;
-
-                    if(target_KFSIndex == 0)
-                    {
-                        targetBestMF_p[i].x = auto_ctrl_.pathPos.bestBMF1.x - 0.6f;
-                        targetBestMF_p[i].y = auto_ctrl_.pathPos.bestBMF1.y - 0.6f;
-
-                        targetbestB_p[i].x = auto_ctrl_.pathPos.bestB1.x - 0.6f;
-                        targetbestB_p[i].y = auto_ctrl_.pathPos.bestB1.y - 0.6f;
-                    }
-                    else
-                    {
-                        targetBestMF_p[i].x = auto_ctrl_.pathPos.bestBMF2.x - 0.6f;
-                        targetBestMF_p[i].y = auto_ctrl_.pathPos.bestBMF2.y - 0.6f;
-
-                        targetbestB_p[i].x = auto_ctrl_.pathPos.bestB2.x - 0.6f;
-                        targetbestB_p[i].y = auto_ctrl_.pathPos.bestB2.y - 0.6f;
-                    }
-                    break;
-                }
-
-                case 1:
-                {
-                    targetMF_p[i].x = auto_ctrl_.targetKFS_pos[target_KFSIndex].x + 0.6f;
-                    targetMF_p[i].y = auto_ctrl_.targetKFS_pos[target_KFSIndex].y - 0.6f;
-
-                    if(target_KFSIndex == 0)
-                    {
-                        targetBestMF_p[i].x = auto_ctrl_.pathPos.bestBMF1.x + 0.6f;
-                        targetBestMF_p[i].y = auto_ctrl_.pathPos.bestBMF1.y - 0.6f;
-
-                        targetbestB_p[i].x = auto_ctrl_.pathPos.bestB1.x + 0.6f;
-                        targetbestB_p[i].y = auto_ctrl_.pathPos.bestB1.y - 0.6f;
-                    }
-                    else
-                    {
-                        targetBestMF_p[i].x = auto_ctrl_.pathPos.bestBMF2.x + 0.6f;
-                        targetBestMF_p[i].y = auto_ctrl_.pathPos.bestBMF2.y - 0.6f;
-
-                        targetbestB_p[i].x = auto_ctrl_.pathPos.bestB2.x + 0.6f;
-                        targetbestB_p[i].y = auto_ctrl_.pathPos.bestB2.y - 0.6f;
-                    }
-
-                    break;
-                }
-
-                case 2:
-                {
-                    targetMF_p[i].x = auto_ctrl_.targetKFS_pos[target_KFSIndex].x + 0.6f;
-                    targetMF_p[i].y = auto_ctrl_.targetKFS_pos[target_KFSIndex].y + 0.6f;
-
-                    if(target_KFSIndex == 0)
-                    {
-                        targetBestMF_p[i].x = auto_ctrl_.pathPos.bestBMF1.x + 0.6f;
-                        targetBestMF_p[i].y = auto_ctrl_.pathPos.bestBMF1.y + 0.6f;
-
-                        targetbestB_p[i].x = auto_ctrl_.pathPos.bestB1.x + 0.6f;
-                        targetbestB_p[i].y = auto_ctrl_.pathPos.bestB1.y + 0.6f;
-                    }
-                    else
-                    {
-                        targetBestMF_p[i].x = auto_ctrl_.pathPos.bestBMF2.x + 0.6f;
-                        targetBestMF_p[i].y = auto_ctrl_.pathPos.bestBMF2.y + 0.6f;
-
-                        targetbestB_p[i].x = auto_ctrl_.pathPos.bestB2.x + 0.6f;
-                        targetbestB_p[i].y = auto_ctrl_.pathPos.bestB2.y + 0.6f;
-                    }
-
-                    break;
-                }
-
-                case 3:
-                {
-                    targetMF_p[i].x = auto_ctrl_.targetKFS_pos[target_KFSIndex].x - 0.6f;
-                    targetMF_p[i].y = auto_ctrl_.targetKFS_pos[target_KFSIndex].y + 0.6f;
-
-                    if(target_KFSIndex == 0)
-                    {
-                        targetBestMF_p[i].x = auto_ctrl_.pathPos.bestBMF1.x - 0.6f;
-                        targetBestMF_p[i].y = auto_ctrl_.pathPos.bestBMF1.y + 0.6f;
-
-                        targetbestB_p[i].x = auto_ctrl_.pathPos.bestB1.x - 0.6f;
-                        targetbestB_p[i].y = auto_ctrl_.pathPos.bestB1.y + 0.6f;
-                    }
-                    else
-                    {
-                        targetBestMF_p[i].x = auto_ctrl_.pathPos.bestBMF2.x - 0.6f;
-                        targetBestMF_p[i].y = auto_ctrl_.pathPos.bestBMF2.y + 0.6f;
-
-                        targetbestB_p[i].x = auto_ctrl_.pathPos.bestB2.x - 0.6f;
-                        targetbestB_p[i].y = auto_ctrl_.pathPos.bestB2.y + 0.6f;
-                    }
-
-                    break;
-                }
-
-                default:
-                    break;
-            }
-        }
-
-        //判断重合的点，如果MF、bestB、bestBMF都重合，即PA，只有MF、bestBMF重合，即为PB
-
-        Point2D temp[2] = {{0,0,0}, {0,0,0}}; 
-        int temp_index = 0;
+        // 1. 获取 KFS 中心坐标 (直接从结构体获取，无需转换)
+        Point2D KFS_Pos = auto_ctrl_.targetKFS_pos[target_KFSIndex];
         
-        // 1. 找出 MF 和 BMF 的重合点
-        for(int i = 0; i < 4; i++)
-        {
-            for(int j = 0; j < 4; j++)
-            {
-            
-                if(std::abs(targetMF_p[i].x - targetBestMF_p[j].x) < 0.001f &&
-                std::abs(targetMF_p[i].y - targetBestMF_p[j].y) < 0.001f)
-                {
-                    if(temp_index < 2) {
-                        temp[temp_index] = targetMF_p[i];
-                        temp_index++;
-                    }
-                    break; // 找到一个重合点后跳出内层循环
-                }
-            }
-        }
-
-        // 2. 区分 PA 和 PB
+        // 2. 获取参考点 (路径起点 B)
+        Point2D Robot_Pos;
+        if(target_KFSIndex == 0) Robot_Pos = auto_ctrl_.pathPos.bestB1;
+        else Robot_Pos = auto_ctrl_.pathPos.bestB2;
         
-        for(int i = 0; i < temp_index; i++)
-        {
-            bool is_PA = false;
-            for(int j = 0; j < 4; j++)
-            {
-                // 判断是否与 bestB 重合
-                if(std::abs(temp[i].x - targetbestB_p[j].x) < 0.001f &&
-                std::abs(temp[i].y - targetbestB_p[j].y) < 0.001f)
-                {
-                    result[0] = temp[i]; // 既重合 bestB，又是 MF/BMF 公共点 -> PA
-                    is_PA = true;
-                    break; // 确认为 PA，跳出
+        // 3. 单元格半宽 (1.2m / 2 = 0.6m)
+        float half_cell = 0.6f; 
+        
+        // 4. 获取运动方向
+        MF_AutoCtrler::Direction_E dir = auto_ctrl_.KFS_Movedirection[target_KFSIndex];
+        
+        // 5. 逻辑修正：PA 必须是运动方向上先遇到的点 (Near Corner)
+        if (dir == MF_AutoCtrler::Positive_X || dir == MF_AutoCtrler::Negative_X) {
+            // 水平运动，比较 Y 坐标
+            if (KFS_Pos.y > Robot_Pos.y) {
+                // KFS 在上方 (North)，底盘在下方通过 -> 障碍面是 KFS 下表面
+                float common_y = KFS_Pos.y - half_cell;
+                if (dir == MF_AutoCtrler::Positive_X) {
+                    PA.x = KFS_Pos.x - half_cell; PA.y = common_y; // Left-Bottom
+                    PB.x = KFS_Pos.x + half_cell; PB.y = common_y; // Right-Bottom
+                } else { // Negative_X
+                    PA.x = KFS_Pos.x + half_cell; PA.y = common_y; // Right-Bottom
+                    PB.x = KFS_Pos.x - half_cell; PB.y = common_y; // Left-Bottom
+                }
+            } else {
+                // KFS 在下方 (South) -> 障碍面是 KFS 上表面
+                float common_y = KFS_Pos.y + half_cell;
+                if (dir == MF_AutoCtrler::Positive_X) {
+                    PA.x = KFS_Pos.x - half_cell; PA.y = common_y; // Left-Top
+                    PB.x = KFS_Pos.x + half_cell; PB.y = common_y; // Right-Top
+                } else { // Negative_X
+                    PA.x = KFS_Pos.x + half_cell; PA.y = common_y; // Right-Top
+                    PB.x = KFS_Pos.x - half_cell; PB.y = common_y; // Left-Top
                 }
             }
-            
-            //遍历完所有 bestB 的角后，如果都不是，才是 PB
-            if(!is_PA)
-                result[1] = temp[i]; // 只是 MF/BMF 公共点 -> PB
-            
+        } else {
+            // 垂直运动，比较 X 坐标
+            if (KFS_Pos.x > Robot_Pos.x) {
+                // KFS 在右侧 (East) -> 障碍面是 KFS 左表面
+                float common_x = KFS_Pos.x - half_cell;
+                if (dir == MF_AutoCtrler::Positive_Y) {
+                    PA.x = common_x; PA.y = KFS_Pos.y - half_cell; // Left-Bottom
+                    PB.x = common_x; PB.y = KFS_Pos.y + half_cell; // Left-Top
+                } else { // Negative_Y
+                    PA.x = common_x; PA.y = KFS_Pos.y + half_cell; // Left-Top
+                    PB.x = common_x; PB.y = KFS_Pos.y - half_cell; // Left-Bottom
+                }
+            } else {
+                // KFS 在左侧 (West) -> 障碍面是 KFS 右表面
+                float common_x = KFS_Pos.x + half_cell;
+                if (dir == MF_AutoCtrler::Positive_Y) {
+                    PA.x = common_x; PA.y = KFS_Pos.y - half_cell; // Right-Bottom
+                    PB.x = common_x; PB.y = KFS_Pos.y + half_cell; // Right-Top
+                } else { // Negative_Y
+                    PA.x = common_x; PA.y = KFS_Pos.y + half_cell; // Right-Top
+                    PB.x = common_x; PB.y = KFS_Pos.y - half_cell; // Left-Bottom
+                }
+            }
         }
-
-        PA = result[0];
-        PB = result[1];
     }
     
 };

@@ -201,9 +201,12 @@ bool ArmSetup::check_Arm_collision(float px, float py,
         0.0f
     };
 
+    // [修正] 正确的坐标变换：将世界坐标投影到机械臂局部坐标系
+    // Local X: 沿机械臂轴向 (点乘方向向量 (c, s))
+    // Local Y: 垂直机械臂轴向 (点乘法向量 (-s, c))
     Point2D local = {
-        -d.x * s + d.y * c,
-         d.x * c + d.y * s,
+         d.x * c + d.y * s, // Local X
+        -d.x * s + d.y * c, // Local Y
          0.0f
     };
     
@@ -536,6 +539,8 @@ void ArmSetup::state_carrying(int targetKFS)
         case ROTATE_PATH_SHORTEST:
         {
             diff = raw_diff;
+            if(diff > 180.0f) diff -= 360.0f; 
+            else if(diff < -180.0f) diff += 360.0f;
             break;
         }
 
@@ -670,7 +675,7 @@ void ArmSetup::state_carrying(int targetKFS)
 
 void ArmSetup::state_return(int next_targetKFS)
 {
-
+    
 }
 
 /*=================================================================*/
