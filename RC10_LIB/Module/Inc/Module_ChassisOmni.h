@@ -45,6 +45,8 @@ extern "C" {
 #define SIN_30 0.5f
 #define COS_45 0.70710678118f
 #define SIN_45 0.70710678118f
+#define SIN_31_87 0.52799374f
+#define COS_31_87 0.84924826f
 
 /*
 三轮：   2 /    \ 3   对应的底盘电机编号

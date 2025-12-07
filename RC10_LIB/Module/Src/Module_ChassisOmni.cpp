@@ -1,14 +1,14 @@
 #include "Module_ChassisOmni.h"
 
-//Äæ½âËã
+//ï¿½ï¿½ï¿½ï¿½ï¿½
 template <std::size_t WheelCount>
 void Chassis_Omni<WheelCount>::inverseKinematics(const Robot_Twist& twist)
 {
     if constexpr (WheelCount == 3)
     {
         this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(twist.vx + twist.yaw_rate * chassis_radius_);
-        this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(-twist.vx * SIN_30 - twist.vy * COS_30 + twist.yaw_rate * chassis_radius_);
-        this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vx * SIN_30 + twist.vy * COS_30 + twist.yaw_rate * chassis_radius_);
+        this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(-twist.vx * SIN_31_87 - twist.vy * COS_31_87 + twist.yaw_rate * chassis_radius_);
+        this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vx * SIN_31_87 + twist.vy * COS_31_87 + twist.yaw_rate * chassis_radius_);
     }
     else if constexpr (WheelCount == 4)
     {
@@ -19,7 +19,7 @@ void Chassis_Omni<WheelCount>::inverseKinematics(const Robot_Twist& twist)
     }
     else
     {
-        // ÆäËûÂÖÊýµÄÈ«ÏòÂÖµ×ÅÌÔÝ²»Ö§³Ö
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Ý²ï¿½Ö§ï¿½ï¿½
         return;
     }
 }
@@ -45,18 +45,18 @@ void Chassis_Omni<WheelCount>::forwardKinematics()
 {
     float wheel_speeds[WheelCount];
     for (uint8_t i = 0; i < WheelCount; ++i) 
-        wheel_speeds[i] = this->getWheelTargetRPM(i)*2.0f*PI/60.0f*this->wheel_radius_; // ×ª»»ÎªÏßËÙ¶È (m/s)
+        wheel_speeds[i] = this->getWheelTargetRPM(i)*2.0f*PI/60.0f*this->wheel_radius_; // ×ªï¿½ï¿½Îªï¿½ï¿½ï¿½Ù¶ï¿½ (m/s)
     
     if constexpr (WheelCount == 3) 
     {
-        // ÈýÂÖÈ«Ïòµ×ÅÌµÄÇ°ÏòÔË¶¯Ñ§¼ÆËã
-        this->robot_twist_forward.vx = (wheel_speeds[0] + wheel_speeds[1]*COS_30 - wheel_speeds[2]*COS_30) / 3.0f;
-        this->robot_twist_forward.vy = (wheel_speeds[1]*SIN_30 + wheel_speeds[2]*SIN_30) / 3.0f;
+        // ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½Ìµï¿½Ç°ï¿½ï¿½ï¿½Ë¶ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½
+        this->robot_twist_forward.vx = (wheel_speeds[0] + wheel_speeds[1]*COS_31_87 - wheel_speeds[2]*COS_31_87) / 3.0f;
+        this->robot_twist_forward.vy = (wheel_speeds[1]*SIN_31_87 + wheel_speeds[2]*SIN_31_87) / 3.0f;
         this->robot_twist_forward.yaw_rate = (wheel_speeds[0] + wheel_speeds[1] + wheel_speeds[2]) / (3.0f * chassis_radius_);
     } 
     else if constexpr (WheelCount == 4) 
     {
-        // ËÄÂÖÈ«Ïòµ×ÅÌµÄÇ°ÏòÔË¶¯Ñ§¼ÆËã
+        // ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½Ìµï¿½Ç°ï¿½ï¿½ï¿½Ë¶ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½
         this->robot_twist_forward.yaw_rate = (wheel_speeds[0] + wheel_speeds[1] + wheel_speeds[2] + wheel_speeds[3]) / (4.0f * chassis_radius_);
         this->robot_twist_forward.vy = (-wheel_speeds[0] - wheel_speeds[1] + wheel_speeds[2]+ wheel_speeds[3]) / (2.0f*1.41421356f);
         this->robot_twist_forward.vx = (wheel_speeds[0] - wheel_speeds[1] - wheel_speeds[2] + wheel_speeds[3]) / (2.0f*1.41421356f);
