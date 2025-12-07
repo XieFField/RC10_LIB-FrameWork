@@ -45,11 +45,14 @@ extern "C" {
 #define SIN_30 0.5f
 #define COS_45 0.70710678118f
 #define SIN_45 0.70710678118f
+#define SIN_31_87 0.5278984245f   
+#define COS_31_87 0.8493846882f
 
 /*
-三轮：   2 /    \ 3   对应的底盘电机编号
-            ___
-             1
+三轮： 
+        |1
+
+    3 /    \ 2   对应的底盘电机编号
 
 四轮:     2 /     \  3 对应的底盘电机编号
                          
@@ -66,7 +69,7 @@ public:
 private:
     void inverseKinematics(const Robot_Twist& twist) override; // 逆解，根据目标速度计算轮速
     float chassis_radius_; // 底盘半径 (m)
-
+    float chassis_radius_bottom_; // 底盘底部到中心的距离 (m)
     void forwardKinematics() override;
 
     // arm_matrix_instance_f32 kinematics_matrix; // WheelCount x 3

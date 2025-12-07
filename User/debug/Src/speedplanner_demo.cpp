@@ -85,12 +85,12 @@ void SpeedPlanner_Demo::loop()
             num = 0;
         }
     }
-    else
+    else if (num > 2000)
     {
-        speed = {0.0f, 0.0f};
         path.reset();
-        //point = {16.0f, 20.0f};
-        //num = 0;
+        // point={1.0f, 10.0f};
+        point = {16.0f, 20.0f};
+        num = 0;
     }
 
 #endif

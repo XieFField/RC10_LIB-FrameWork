@@ -31,7 +31,8 @@ union
 
 // 获取单例实例
 
-RealPos RealPosData;  // 定义：实际分配内存空间
+RawPos RawPosData = {0};
+RealPos RealPosData = {0};
 
 Position::Position(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle) 
     :UART_(rx_buffer_size,rx_buffer,uart_handle),

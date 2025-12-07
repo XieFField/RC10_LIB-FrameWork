@@ -34,14 +34,15 @@ void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len);
 
 #define UART_MAX 1
 #define USB_MAX 10
-#define large_data_size 64
+
 class UART_{
 public:
     
     UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle);
     ~UART_(){}
 			//定义虚函数
-		virtual void Callback_Fuc(uint8_t *buf, uint16_t len){};
+		virtual void Callback_Fuc(uint8_t *buf, uint16_t len);
+		void SetCallback(RxCallback callback) {RxCallback_Fuc = callback;}// 回调函数指针
 		void UART_Receive_Callback(uint8_t* Buf, uint32_t Len);
     UART_HandleTypeDef* GetUartHandle() const { return uarthandle_;}
 		void UART_Init();
@@ -57,6 +58,7 @@ class USB_CDC_{
     USB_CDC_(RxCallback RxCallback_Fuc,USBD_HandleTypeDef *usb_handle);
     ~USB_CDC_(){}
 		void CDC_Receive_Callback(uint8_t* Buf, uint32_t Len);
+
     USBD_HandleTypeDef* GetUSBHandle() const { return usbhandle_; }
 private:
     RxCallback RxCallback_Fuc;	 

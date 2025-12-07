@@ -54,6 +54,14 @@ typedef enum{
     CHASSIS_STOP,
 }CHASSIS_Status_E;
 
+typedef enum{
+    WEAPONSAGE_MANUAL_CONTROL, //手操
+    WEAPONSAGE_AUTO_CONTROL, //自动控制模式
+    WEAPONSAGE_STOP,        //停止
+    WEAPONSAGE_DEBUG,       //调试模式  
+    WEAPONSAGE_IDLE,    //空闲状态，维持当前状态
+}WeaponSage_Status_E;
+
 
 //遥控临时调试使用
 typedef struct{

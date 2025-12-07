@@ -20,8 +20,23 @@
               "icon": "lucide-file",
               "title": "贝塞尔曲线中轨迹修正方案"
             }
+          },
+          {
+            "id": "4c1d92abdb2dbc77",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "串联臂自动逻辑.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "串联臂自动逻辑"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -78,7 +93,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 200,
+    "collapsed": true
   },
   "right": {
     "id": "8027ee1eb249bd80",
@@ -169,19 +185,19 @@
       "bases:Create new base": false
     }
   },
-  "active": "727b45ad564964da",
+  "active": "4c1d92abdb2dbc77",
   "lastOpenFiles": [
-    "串联臂自动逻辑.md",
+    "串联臂自动逻辑.pdf",
     "贝塞尔曲线中轨迹修正方案.md",
+    "串联刚体臂吸盘解算.md",
+    "串联臂自动逻辑.md",
     "自动模式方案书.md",
     "ROS在全国机器人大赛中的应用.pdf",
     "初代状态机.md",
-    "串联臂自动逻辑.pdf",
     "自动模式方案书_tmp.html",
     "自动模式方案书.pdf",
     "自动模式方案书",
     "初代状态机_tmp.html",
-    "初代状态机.pdf",
-    "串联刚体臂吸盘解算.md"
+    "初代状态机.pdf"
   ]
 }

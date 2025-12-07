@@ -79,6 +79,9 @@ Arm_InitData_S arm_demoInit_data={
 };
 
 Robot_ArmDemo arm_demo(arm_demoInit_data);
+//激光测距
+LaserPosition laserpos(&huart3,&huart6);
+
 
 void arm_motorInit()
 {
@@ -131,7 +134,9 @@ void debug_init()
 #endif
 /*============================== debug   speedplanner ===============================*/
 /*============================== debug  DJI_Motor ===============================*/
-
+#if DEBUG
+laserpos.Init();//激光测距
+#endif
 }
 
 void CAN_Motor_Init(void);
@@ -162,6 +167,12 @@ void ALL_Setup_ConfigInit(void)
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
 
    Finite_StateMachine.init();
+		    // 获取Position单例并初始化UART
+   debug_init();
+	 
+
+	
+   //other init
 }
 
 

@@ -25,7 +25,7 @@ L_min = 0.47;  L_max = 0.60;     % 伸长量=0.13m
 t_lift = 0.40;
 t_extend = 0.60;                 % 0.13m/0.15s
 t_spin   = 0.50;                 % 0.5s/圈
-v_base = 0;                   % 0.5m/s  
+v_base = 0.5;                   % 0.5m/s  
 suction_offset = 0.02;           % 吸盘侧面间隙
 safety_margin = 0.01;            % 与柱安全裕度
 bind_xy_tol   = 0.050;           % 绑定水平容差(米) ← 放宽

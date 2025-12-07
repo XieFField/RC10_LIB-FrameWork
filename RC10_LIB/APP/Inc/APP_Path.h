@@ -133,29 +133,6 @@ public:
      */
     bool isFinished() { return m_phase == S_FINISHED_PHASE; }
 
-    float Get_Nearest_Distance(const Vector2D point, float *t) {
-        // 直接调用内部bc_的同名函数，转发参数和返回值
-        return bc_.Get_Nearest_Distance(point, t);
-    }
-
-    /**
-     * @brief 转发调用bc_的Get_Point，获取t对应的路径点
-     * @param t 曲线参数（0~1）
-     * @return Vector2D t对应的路径点坐标
-     */
-    Vector2D Get_Point(float t) {
-        // 直接调用内部bc_的Get_Point，转发参数和返回值
-        return bc_.Get_Point(t);
-    }
-    /**
-     * @brief 转发调用bc_的Get_Tangent_Vector，获取t对应的切线向量
-     * @param t 曲线参数（0~1）
-     * @return Vector2D t对应的切线向量
-     */
-    Vector2D Get_Tangent_Vector(float t) {
-        // 直接调用内部bc_的Get_Tangent_Vector，转发参数和返回值
-        return bc_.Get_Tangent_Vector(t);
-    }
 private:
     SPhase m_phase = S_FINISHED_PHASE;           // 当前规划所处的阶段
     BezierCurve bc_;                             // 贝塞尔曲线对象

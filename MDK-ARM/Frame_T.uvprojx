@@ -976,9 +976,9 @@
           <GroupName>RC10_LIB/Module</GroupName>
           <Files>
             <File>
-              <FileName>Module_Encoder.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_Encoder.cpp</FilePath>
+              <FileName>Module_ChassisBase.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisBase.h</FilePath>
             </File>
             <File>
               <FileName>Module_ChassisBase.cpp</FileName>
@@ -986,14 +986,14 @@
               <FilePath>..\RC10_LIB\Module\Src\Module_ChassisBase.cpp</FilePath>
             </File>
             <File>
-              <FileName>Module_ChassisBase.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisBase.h</FilePath>
-            </File>
-            <File>
               <FileName>Module_Encoder.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Module\Inc\Module_Encoder.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_Encoder.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_Encoder.cpp</FilePath>
             </File>
             <File>
               <FileName>Module_Air_joy.h</FileName>
@@ -1006,14 +1006,14 @@
               <FilePath>..\RC10_LIB\Module\Src\Module_Air_joy.cpp</FilePath>
             </File>
             <File>
-              <FileName>Module_ChassisOmni.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_ChassisOmni.cpp</FilePath>
-            </File>
-            <File>
               <FileName>Module_ChassisOmni.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisOmni.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_ChassisOmni.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_ChassisOmni.cpp</FilePath>
             </File>
             <File>
               <FileName>Module_GPIO.h</FileName>
@@ -1034,6 +1034,16 @@
               <FileName>Module_Position.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_Position.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_LaserPosition.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_LaserPosition.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_LaserPosition.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_LaserPosition.cpp</FilePath>
             </File>
           </Files>
         </Group>
