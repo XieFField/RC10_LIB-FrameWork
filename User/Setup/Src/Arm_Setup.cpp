@@ -421,7 +421,13 @@ void ArmSetup::state_aimExt(int targetKFS)
 {
     /**
      * 设置 伸展所需要的 时间 t_need 以及 底盘移动到目标位置的时间 t_tan
-     * 伸展到目标KFS位置后，停留0.3s，后缩回
+     * 判定是否可以伸展
+     * 可以，则伸展 this->set_StretchLength(max_length)
+     * 
+     * this->get_currentJointStatus().stretchJoint_Length_ 获取当前伸展长度
+     * 
+     * 判断是否伸展完毕， 
+     * 是， 则停留0.3s，后缩回 this->set_StretchLength(0.0f)
      */
 }
 
@@ -676,7 +682,19 @@ void ArmSetup::state_carrying(int targetKFS)
 
 void ArmSetup::state_return(int next_targetKFS)
 {
-    
+    /**
+     * @brief 
+     *  1. 传入的下一个点
+     *      a. 有下一个KFS，判断下一段拾取路径的车头朝向
+     *      b. 将云台旋转至其方向
+     * 
+     * 2. 无下一个点， 云台转向0度
+     * 
+     *  3. 云台旋转时候，只能在车身投影内进行旋转
+     *     (即，角度变化只能是在180度~ 359.999f)
+     * 
+     * 4. 传入非0和1的数，就默认没有下一个KFS，直接转回0度
+     */
 }
 
 void ArmSetup::auto_onlyOne()
@@ -707,7 +725,7 @@ void ArmSetup::auto_onlyOne()
 
         case STATE_TO_TARGET_HIGHT:
         {
-            
+
         }
     }
 }
@@ -754,7 +772,7 @@ void ArmSetup::stop()
 
 void ArmSetup::calibrateM2006()
 {
-    this->set_controlMode(CURRENT_CONTROL_MODE);
+    this->set_controlMode(CURRENT_CONTROL_MODE); 
     // 上电校准M2006电机位置
     // 给予M2006一个小电流顶住限位，然后计时1s，将当前位置重定位为0度
     if(!arm_ctrlStatus.calibrate_start)
