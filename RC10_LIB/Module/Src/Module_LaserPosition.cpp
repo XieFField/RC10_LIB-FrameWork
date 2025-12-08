@@ -77,7 +77,8 @@ void LaserPosition::Uart1Callback(uint8_t *buf, uint16_t len) {
     uart1_callback_result = result;
 }
 // 处理激光模块2的数据  
-void LaserPosition::Uart2Callback(uint8_t *buf, uint16_t len) {
+void LaserPosition::Uart2Callback(uint8_t *buf, uint16_t len) 
+{
     // 在这里处理激光模块2接收到的数据
 	   uint8_t result = 0;
     // 设置回调执行状态
@@ -122,7 +123,7 @@ void LaserPosition::loop()
 		LaserModuleGroupState |= LaserModuleGroup_AnalysisModulesMeasurementResults(&LaserModuleDataGroup);			// 激光测距模块组读取测量结果
 
 		Laser_X = LaserModuleDataGroup.LaserModule2.MeasurementData.Distance;
-    Laser_Y = LaserModuleDataGroup.LaserModule1.MeasurementData.Distance;
+    	Laser_Y = LaserModuleDataGroup.LaserModule1.MeasurementData.Distance;
 
 		if(Laser_X == 0 || Laser_Y == 0)
 		{
@@ -130,8 +131,8 @@ void LaserPosition::loop()
 			LaserModuleGroup_Init(&LaserModuleDataGroup);		// 激光测距模块组初始化
 			osDelay(1000);
 		}		
-        Laser_X_return = -(float)(Laser_X + 257) / 1000.f + delta_hoop_x;
-        Laser_Y_return = (float)(Laser_Y + 374) / 1000.f - delta_hoop_y;	
+        // Laser_X_return = -(float)(Laser_X + 257) / 1000.f + delta_hoop_x; //不需要
+        // Laser_Y_return = (float)(Laser_Y + 374) / 1000.f - delta_hoop_y;	
 		vTaskDelayUntil(&LastTimestamp, pdMS_TO_TICKS(40));		// 每40ms执行一次任务
 }
 	

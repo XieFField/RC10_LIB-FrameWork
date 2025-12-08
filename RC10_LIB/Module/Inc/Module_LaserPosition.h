@@ -4,6 +4,12 @@
  * @brief USB UART驱动文件
  * @attention 此文件用于USB UART
  * @date 2025-10-1
+ * 
+ * 
+ * @brief 类封装，只对应一个模块
+ * 
+ * 		 激光类，实例化后对应一个激光模块
+ * 		 对外的功能接口，只需要一个， return_LaserDate()->返回此激光模块的测距数据(单位/米)
  */
 
 #ifndef __MODULE_LaserPosition_H

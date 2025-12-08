@@ -11,8 +11,11 @@ void ArmSetup::loop()
         arm_status_ = ARM_CALIBRATE;
     }
 
-
+    auto_ctrl_.now_chassis_speed = get_nowChassisSpeed();
     auto_ctrl_.now_armPosition = get_nowArmPosition();
+    auto_ctrl_.now_ChassisPosition = get_nowChassisPose();
+    
+
     switch(arm_status_)
     {
         case ARM_MANUAL_CONTROL:
@@ -37,6 +40,7 @@ void ArmSetup::loop()
             {
                 // 空闲状态，维持当前状态
                 idle();
+                break;
             }
 
         case ARM_DEBUG:
@@ -44,8 +48,10 @@ void ArmSetup::loop()
                 // 调试状态
                 if(arm_ctrlStatus.debug_start == 1)
                     debug();
+
+                break;
             }
-            break;
+            
 
         case ARM_CALIBRATE:
             {
@@ -154,7 +160,7 @@ void ArmSetup::autoControl()
         case ONLY_ONE:
         {
             //单个KFS拾取流程
-
+            auto_onlyOne();
             break;
         }
         
@@ -218,7 +224,7 @@ bool ArmSetup::check_Arm_collision(float px, float py,
         return false; //未碰撞
 }
 
-void ArmSetup::state_signAlign(int targetKFS)
+void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
 {
     /**
      * 云台旋转时机预判，以及执行
@@ -337,7 +343,7 @@ void ArmSetup::state_signAlign(int targetKFS)
 
         //步进预测循环
         float T_rot = _tool_Abs(diff) * (PI / 180.0f) / 
-                    (auto_ctrl_.time_set.gimbal_max_rad * 0.8); //云台旋转所需时间(s)
+                    (auto_ctrl_.time_set.gimbal_max_rad * 0.3); //云台旋转所需时间(s)
 
         bool safe = true;
 
@@ -355,10 +361,10 @@ void ArmSetup::state_signAlign(int targetKFS)
         float step_deg = 0.0f;
         if(diff > 0 )
             step_deg = 1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
-                    * 0.87f * 180.0f / PI) * t; //每步旋转
+                    * 0.3f * 180.0f / PI) * t; //每步旋转
         else
             step_deg = -1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
-                    * 0.87f * 180.0f / PI) * t; //每步旋转
+                    * 0.3f * 180.0f / PI) * t; //每步旋转
 
         // theta(t)
         if(_tool_Abs(step_deg) > _tool_Abs(diff))
@@ -405,19 +411,25 @@ void ArmSetup::state_signAlign(int targetKFS)
     {
         this->set_RotateAngle(target_deg);
         if(_tool_Abs(diff) < 2.0f)
-        
+        {
             //到达目标角度后，打开吸盘
             this->setSuckerStatus(Sucker_Status_E::SUCK);
+            align_done = true; //对齐完成
+
+        }
 
     }
     else
+    {
         this->set_RotateAngle(current_deg); //保持不变
+        return; //对齐未完成
+    }
 }
 
 /**
  * @brief 伸展到目标KFS位置 条件预判
  */
-void ArmSetup::state_aimExt(int targetKFS)
+bool ArmSetup::state_aimExt(int targetKFS)
 {
     /**
      * 设置 伸展所需要的 时间 t_need 以及 底盘移动到目标位置的时间 t_tan
@@ -429,9 +441,11 @@ void ArmSetup::state_aimExt(int targetKFS)
      * 判断是否伸展完毕， 
      * 是， 则停留0.3s，后缩回 this->set_StretchLength(0.0f)
      */
+
+     return true;
 }
 
-void ArmSetup::state_carrying(int targetKFS)
+void ArmSetup::state_carrying(int targetKFS, bool &carrying_done)
 {
     /**
      * 
@@ -568,7 +582,7 @@ void ArmSetup::state_carrying(int targetKFS)
 
     //time calc
     float T_rot = _tool_Abs(diff) * (PI / 180.0f) / 
-                (auto_ctrl_.time_set.gimbal_max_rad * 0.8); //云台旋转所需时间(s)
+                (auto_ctrl_.time_set.gimbal_max_rad * 0.32f); //云台旋转所需时间(s)
 
     for(float t = 0.0f; t <= T_rot; t+= 0.05f)
     {
@@ -581,12 +595,11 @@ void ArmSetup::state_carrying(int targetKFS)
         float step_deg = 0.0f;
         if(diff > 0 )
             step_deg = 1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
-                    * 0.87f * 180.0f / PI) * t; //每步旋转
+                    * 0.32f * 180.0f / PI) * t; //每步旋转
 
         else
             step_deg = -1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
-                    * 0.87f * 180.0f / PI) * t; //每步旋转
-
+                    * 0.32f * 180.0f / PI) * t; //每步旋转
         //theta(t)
         if(_tool_Abs(step_deg) > _tool_Abs(diff))
             step_deg = diff; //最后一步直接到达目标角度
@@ -665,8 +678,13 @@ void ArmSetup::state_carrying(int targetKFS)
                 
 
                 else if(this->now_time_s_ - wait_startTime > 0.5f)
+                {
                     //抬高云台到安全高度
                     this->set_LaunchHeight(auto_ctrl_.store->safe_height);        
+                    carrying_done = true; //放置完成
+
+
+                }
             }
         
         }
@@ -680,7 +698,7 @@ void ArmSetup::state_carrying(int targetKFS)
     
 }
 
-void ArmSetup::state_return(int next_targetKFS)
+bool ArmSetup::state_return(int next_targetKFS)
 {
     /**
      * @brief 
@@ -695,6 +713,8 @@ void ArmSetup::state_return(int next_targetKFS)
      * 
      * 4. 传入非0和1的数，就默认没有下一个KFS，直接转回0度
      */
+
+     return true;
 }
 
 void ArmSetup::auto_onlyOne()
@@ -714,6 +734,11 @@ void ArmSetup::auto_onlyOne()
         {
             if(auto_ctrl_.start_to_autoctrl)
             {
+                auto_ctrl_.flag.align_done = false;
+                auto_ctrl_.flag.ext_done = false;
+                auto_ctrl_.flag.carry_done = false;
+                auto_ctrl_.flag.return_done = false;
+
                 auto_ctrl_.now_state = STATE_TO_TARGET_HIGHT;
             }
             else
@@ -725,8 +750,64 @@ void ArmSetup::auto_onlyOne()
 
         case STATE_TO_TARGET_HIGHT:
         {
-
+            state_toTargetHight(auto_ctrl_.targetKFS[0]);
+            //判断是否到达目标高度
+            if(_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ 
+                - (MF_high[auto_ctrl_.targetKFS[0]-1] - 0.2f)) < 0.01f)
+            {
+                auto_ctrl_.now_state = STATE_SIGN_ALIGN;
+            }
+            break;
         }
+
+        case STATE_SIGN_ALIGN:
+        {
+            // static bool align_done = false;
+            state_signAlign(auto_ctrl_.targetKFS[0], auto_ctrl_.flag.align_done);
+            if(auto_ctrl_.flag.align_done)
+            {
+                auto_ctrl_.now_state = STATE_AIM_EXT;
+            }
+            break;
+        }
+
+        case STATE_AIM_EXT:
+        {
+            // static bool ext_done = false;
+            auto_ctrl_.flag.ext_done = state_aimExt(auto_ctrl_.targetKFS[0]);
+            if(auto_ctrl_.flag.ext_done)
+            {
+                auto_ctrl_.now_state = STATE_CARRYING;
+            }
+            break;
+        }
+
+        case STATE_CARRYING:
+        {
+            // static bool carrying_done = false;
+            state_carrying(auto_ctrl_.targetKFS[0], auto_ctrl_.flag.carry_done);
+            //判断是否放置完毕
+            if(auto_ctrl_.flag.carry_done)
+            {
+                auto_ctrl_.now_state = STATE_RETURN;
+            }
+            break;
+        }
+
+        case STATE_RETURN:
+        {
+            // static bool return_done = false;
+            auto_ctrl_.flag.return_done = state_return(0); //无下一个KFS，传入0
+            if(auto_ctrl_.flag.return_done)
+            {
+                auto_ctrl_.now_state = STATE_DONE;
+                auto_ctrl_.start_to_autoctrl = false; //自动流程结束
+            }
+            break;
+        }
+
+        default:
+            break;
     }
 }
 

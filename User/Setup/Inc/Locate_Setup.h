@@ -20,6 +20,7 @@ extern "C" {
 #include "BSP_TimeStamp.h"
 #include "APP_debugTool.h"
 #include "BSP_RTOS.h"
+#include "Module_LaserPosition.h"
 
 class Locate_Setup : public UART_, public RtosTask {
 public:
@@ -70,6 +71,26 @@ private:
 protected:
     void loop() override;
 };
+
+class LaerRelocate_Manager : public RtosTask {
+public:
+    LaerRelocate_Manager(LaserPosition laser_module1, LaserPosition laser_module2, LaserPosition laser_module3)
+        :RtosTask("LaerRelocate_Manager", 1)
+    {
+
+    }
+
+
+    ~LaerRelocate_Manager() = default;
+
+
+    Point2D get_RobotPos_inWorld(){}
+
+private:
+    LaserPosition* laser_position_module_[3];
+
+}
+
 
 #endif
 

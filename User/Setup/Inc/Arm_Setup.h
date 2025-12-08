@@ -38,6 +38,10 @@ extern "C" {
 #include "APP_CoordConvert.h"
 #include "AutoCtrler.h"
 
+#define ARM_AUTO_DEBUG_NOCHASSIS 1  //無底盤下，用虛擬坐標進行驗證自動邏輯
+
+
+
 typedef struct{
     bool init_flag = false;
 
@@ -52,7 +56,7 @@ typedef struct{
 
 typedef enum{
     STATE_TO_TARGET_HIGHT, //阶段1：升高到对应高度
-    SIGN_ALIGN,            //阶段2：旋转对齐，打开吸盘
+    STATE_SIGN_ALIGN,            //阶段2：旋转对齐，打开吸盘
     STATE_AIM_EXT,         //阶段3：伸展预判
     STATE_CARRYING,        //阶段4：吸附后搬回
     STATE_RETURN,          //阶段5：返回初始位置
@@ -129,6 +133,14 @@ typedef struct{
 
         bool is_toPlace = false; //是否到达可放置状态
     }store[2];
+
+    struct{
+        bool align_done = false; //对齐完成标志
+        bool ext_done = false;   //伸展完成标志
+        bool carry_done = false; //搬运完成标志
+        bool return_done = false; //返回完成标志
+    }flag;
+
 }ARM_AUTO_S;
 
 
@@ -237,10 +249,10 @@ private:
     //自动控制流程私密函数
 
     void state_toTargetHight(int targetKFS);
-    void state_signAlign(int targetKFS);
-    void state_aimExt(int targetKFS);
-    void state_carrying(int targetKFS);
-    void state_return(int next_targetKFS);
+    void state_signAlign(int targetKFS ,bool &align_done);
+    bool state_aimExt(int targetKFS);
+    void state_carrying(int targetKFS, bool &carrying_done);
+    bool state_return(int next_targetKFS);
 
     void auto_onlyOne();
 
@@ -271,7 +283,7 @@ protected:
      */
     Point2D get_nowArmPosition()
     {
-
+        
     }
     /**
      * @brief 预留接口后续补全，获得当前底盘速度
