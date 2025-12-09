@@ -46,7 +46,9 @@ typedef struct{
     bool init_flag = false;
 
     
-    uint8_t debug_start = 1; //调试开始标志 == 1 开始调试
+    uint8_t debug_start = 0; //调试开始标志 == 1 开始调试
+
+    uint8_t auto_debug_start = 0; //自动调试开始标志 == 1 开始自动调试
 
     float calibrate_startTime = 0; 
     bool calibrate_start = false;
@@ -94,6 +96,8 @@ typedef struct{
 
     Point2D now_ChassisPosition = {0.0f, 0.0f, 0.0f}; //底盘当前位置
 
+    Point2D now_chassis_speed = {0.0f, 0.0f, 0.0f}; //当前底盘速度，单位米每秒
+
     Point2D targetKFS_pos[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //目标KFS位置
 
     //Point2D point_PAB[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //PA PB
@@ -110,9 +114,9 @@ typedef struct{
 
     int gimbal_calcCount = 0; //云台预判计算计数
 
-    float dt = 0.01f; //控制周期，单位秒
+    // float dt = 0.01f; //控制周期，单位秒
 
-    Point2D now_chassis_speed = {0.0f, 0.0f, 0.0f}; //当前底盘速度，单位米每秒
+    
 
     const float arm_width = 0.12f; //机械臂宽度，单位米
 
@@ -139,6 +143,15 @@ typedef struct{
         bool ext_done = false;   //伸展完成标志
         bool carry_done = false; //搬运完成标志
         bool return_done = false; //返回完成标志
+
+        bool ext_started = false; //伸展开始标志
+
+        bool is_reachingTarget = false; //是否到达目标位置
+
+        float reach_finishTime = 0.0f; //到达目标位置的时间戳
+
+        bool gimbal_ok =false;
+
     }flag;
 
 }ARM_AUTO_S;
@@ -148,10 +161,10 @@ typedef struct{
 
 const float MF_high[12] = 
 {
-    40.0f, 20.0f, 40.0f,
-    20.0f, 40.0f, 60.0f,
-    40.0f, 60.0f, 40.0f,
-    20.0f, 40.0f, 20.0f
+    0.4f, 0.2f, 0.4f,
+    0.2f, 0.4f, 0.6f,
+    0.4f, 0.6f, 0.4f,
+    0.2f, 0.4f, 0.2f
 };
 
 class ArmSetup: public RtosTask ,public Robot_Arm {
@@ -173,7 +186,7 @@ public:
         this->setPitchReversed(true); //俯仰电机反向
         this->setStretchReversed(false); //伸展电机不反向
 
-        start(osPriorityNormal, 1024);
+        start(osPriorityNormal, 256);
 
         arm_ctrlStatus.init_flag = true;
     }
@@ -183,7 +196,15 @@ public:
         arm_status_ = status;
     }
 
-    void inputChassisSpeed(){}
+
+    void start_toAutoCtrl(bool start)
+    {
+        if(start)
+            auto_ctrl_.start_to_autoctrl = true;
+
+        else
+            auto_ctrl_.start_to_autoctrl = false;
+    }
 
     /**
      * @brief 设置目标抓取梅花桩编号
@@ -230,6 +251,10 @@ public:
         auto_ctrl_.pathPos.bestBMF2 = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.bestBMF2);
         auto_ctrl_.pathPos.entranceMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.entranceMap);
         auto_ctrl_.pathPos.exitMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.exitMap);
+
+        auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
+
+        auto_ctrl_.now_ChassisPosition.y -= 1.2f; //假设已经到达前一桩正前方0.5米处
 
         return true;
     }
@@ -283,7 +308,7 @@ protected:
      */
     Point2D get_nowArmPosition()
     {
-        
+        return get_nowChassisPose();
     }
     /**
      * @brief 预留接口后续补全，获得当前底盘速度
@@ -291,7 +316,13 @@ protected:
      */
     Point2D get_nowChassisSpeed()
     {
+         Point2D speed = {0.0f, 0.0f, 0.0f};
+        if(arm_ctrlStatus.auto_debug_start == 1)
+           speed = {0.0f, 0.3f, 0.0f};
 
+        else
+             speed = {0.0f, 0.0f, 0.0f};
+        return speed;
     }
 
     /**
@@ -300,7 +331,16 @@ protected:
 
     Point2D get_nowChassisPose()
     {
-        
+        Point2D pose = auto_ctrl_.now_ChassisPosition;
+         Point2D speed = get_nowChassisSpeed();
+
+
+        pose.x += speed.x * get_dt();
+                
+        pose.y += speed.y * get_dt();
+                
+
+        return pose;
     }
 
     void loop() override;

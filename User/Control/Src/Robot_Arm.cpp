@@ -12,6 +12,19 @@ void Robot_Arm::update()
     /*电机当前的角度转换成关节当前的角度 */
     now_time_s_ = TimeStamp::getInstance().getSeconds();
 
+    if(!time_initialized_)
+    {
+        last_time_s_ = now_time_s_;
+        time_initialized_ = true;
+        // 首次对齐，后续基于“目标”积分
+        target_joint_angle_ = joint_angle_;
+        return;
+    }
+
+    dt_ = now_time_s_ - last_time_s_;
+    last_time_s_ = now_time_s_;
+
+
     if(motor_rotate_ != nullptr)
     {
         // 单圈测量（0..360）-> 连续角解包，避免 0/360 跳变
@@ -163,17 +176,7 @@ bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
 
 void Robot_Arm::jacobianMatrix()
 {
-    if(!time_initialized_)
-    {
-        last_time_s_ = now_time_s_;
-        time_initialized_ = true;
-        // 首次对齐，后续基于“目标”积分
-        target_joint_angle_ = joint_angle_;
-        return;
-    }
 
-    dt_ = now_time_s_ - last_time_s_;
-    last_time_s_ = now_time_s_;
     if(dt_ <= 1e-6f || dt_ > 0.1f) 
         return;
 

@@ -151,6 +151,8 @@ public:
      */
     void update();
 
+    float get_dt(){return this->dt_;}
+
     /**
      * @brief 设置机械臂控制模式
      */

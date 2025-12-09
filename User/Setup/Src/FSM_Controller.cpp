@@ -109,6 +109,6 @@ void FSM_Controller::debug()
     debug_airjoy.RIGHT_X = AirJoy::getinstance().RIGHT_X;
     debug_airjoy.RIGHT_Y = AirJoy::getinstance().RIGHT_Y;
 
-    arm_setup_->setArmStatus(ARM_DEBUG);
+    arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
 }
 
