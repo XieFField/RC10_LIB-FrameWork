@@ -21,10 +21,12 @@ extern "C" {
 #include "APP_debugTool.h"
 #include "BSP_RTOS.h"
 #include "Module_LaserPosition.h"
-
-class Locate_Setup : public UART_, public RtosTask {
+#include "math.h"
+#define PI							3.14159265358979323846f			// 定义圆周率常量PI
+class Locate_Setup : public RtosTask {
 public:
-    Locate_Setup():RtosTask("Locate_Setup", 1){}
+    Locate_Setup(Laser_InstanceManager* Laser_pos_instance):RtosTask("Locate_Setup", 1)
+		{this->Laser_pos_instance=Laser_pos_instance;}
     ~Locate_Setup() = default;    
     /**
      * @brief 无输入则默认在底盘中心
@@ -42,18 +44,27 @@ public:
 
         install_pose_init_ = true;
     }
-
-
-
+		void RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_instance);
+		
     Point2D get_ArmPos_inWorld(){return arm_pose_inWorld_;}
 
     Point2D get_RobotPos_inWorld(){return robot_pose_inWorld_;}
 
     Point2D get_LidarPos_inWorld(){return lidar_pose_inWorld_;}
+		
+		void locate_setup_init(){this->start(osPriorityNormal, 256);}
 private:
-
+	  
+	  float x1;//规定激光实例管理的第一个为x的数据，第二三个为y的数据
+    float y1;
+    float y2;
+    float d=0.25;
+    float delta_x1;
+    float delta_y1;
+    float delta_y2;
+    Laser_InstanceManager* Laser_pos_instance;
     void update(); //更新
-
+    
     Point2D update_Lidar_data(); //更新雷达数据
 
     Point2D lidar_install_pose_ = {0}; // 雷达安装相对底盘中心
@@ -72,24 +83,24 @@ protected:
     void loop() override;
 };
 
-class LaerRelocate_Manager : public RtosTask {
-public:
-    LaerRelocate_Manager(LaserPosition laser_module1, LaserPosition laser_module2, LaserPosition laser_module3)
-        :RtosTask("LaerRelocate_Manager", 1)
-    {
+//class LaerRelocate_Manager : public RtosTask {
+//public:
+//    LaerRelocate_Manager(LaserPosition laser_module1, LaserPosition laser_module2, LaserPosition laser_module3)
+//        :RtosTask("LaerRelocate_Manager", 1)
+//    {
 
-    }
-
-
-    ~LaerRelocate_Manager() = default;
+//    }
 
 
-    Point2D get_RobotPos_inWorld(){}
+//    ~LaerRelocate_Manager() = default;
 
-private:
-    LaserPosition* laser_position_module_[3];
 
-}
+//    Point2D get_RobotPos_inWorld(){}
+
+//private:
+//    LaserPosition* laser_position_module_[3];
+
+//}
 
 
 #endif

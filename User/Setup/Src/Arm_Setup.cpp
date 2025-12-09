@@ -11,9 +11,9 @@ void ArmSetup::loop()
         arm_status_ = ARM_CALIBRATE;
     }
 
-    auto_ctrl_.now_chassis_speed = get_nowChassisSpeed();
-    auto_ctrl_.now_armPosition = get_nowArmPosition();
-    auto_ctrl_.now_ChassisPosition = get_nowChassisPose();
+//    auto_ctrl_.now_chassis_speed = get_nowChassisSpeed();
+//    auto_ctrl_.now_armPosition = get_nowArmPosition();
+//    auto_ctrl_.now_ChassisPosition = get_nowChassisPose();
     
 
     switch(arm_status_)

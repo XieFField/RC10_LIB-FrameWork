@@ -5,7 +5,15 @@ DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4号M3508/M2006电机
 DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8号M3508/M2006电机
 
 /*==============Controller Instances===========*/
-
+uint8_t laser_rx_buffer[20];
+uint8_t laser_rx_buffer1[20];
+uint8_t laser_rx_buffer2[20];
+//激光测距
+LaserPosition laserpos(15,laser_rx_buffer,&huart3);
+LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
+LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
+Laser_InstanceManager instance_man;
+Locate_Setup set1(&instance_man);
 OmniChassis_Setup ChassisOmni(1,2,3); // 轮子半径，最大轮子转速，底盘半径
 ArmSetup ARM_Controller(arm_initData);
 FSM_Controller Finite_StateMachine;
@@ -144,35 +152,16 @@ void CAN_Motor_Init(void);
 void ALL_Setup_ConfigInit(void)
 {
 
-   CAN_Motor_Init();
-
+   Position* pos = Position::GetInstance(&huart1);
+   pos->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
 
-   Position* pos = Position::GetInstance(&huart1);
-   pos->InitUART();
-
-   ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
-   ARM_Controller.setArmStatus(ARM_IDLE);
-
-   ChassisOmni.registerWheelMotor(0, &omni_wheel1);
-   ChassisOmni.registerWheelMotor(1, &omni_wheel2);
-   ChassisOmni.registerWheelMotor(2, &omni_wheel3);
-   ChassisOmni.registerWheelMotor(3, &omni_wheel4);
-   ChassisOmni.init();
-
-   ChassisOmni.setChassisStatus(CHASSIS_STOP);
-
-   Finite_StateMachine.registerArmSetup(&ARM_Controller);
-   Finite_StateMachine.registerChassisSetup(&ChassisOmni);
-
-   Finite_StateMachine.init();
-		    // 获取Position单例并初始化UART
-   debug_init();
-	 
-
-	
-   //other init
+	 instance_man.RegisterInstance(&laserpos);
+	 instance_man.RegisterInstance(&laserpos1);
+	 instance_man.RegisterInstance(&laserpos2);
+	 instance_man.InstanceManager_Init();
+	 set1.locate_setup_init();
 }
 
 
