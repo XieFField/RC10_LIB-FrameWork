@@ -1,30 +1,30 @@
 /**
- * @file Module_LaserPosition.
- * @author Ha Ji cao ++
- * @brief USB UART驱动文件
- * @attention 此文件用于USB UART
- * @date 2025-10-1
- */
+* @file Module_LaserPosition.
+* @author Ha Ji cao ++
+* @brief USB UART驱动文件
+* @attention 此文件用于USB UART
+* @date 2025-10-1
+*/
 #include "Module_LaserPosition.h"
 uint8_t count=0;
 // 静态成员变量定义
 LaserPosition* LaserPosition::instance_ = nullptr;
 LaserModuleDataGroupTypedef LaserPosition::LaserModuleDataGroup;
 LaserPosition::LaserPosition(UART_HandleTypeDef *uart_handle1, UART_HandleTypeDef *uart_handle2) 
-    : uart1_(RX_BUFFER_SIZE_Laser, rx_buffer1, uart_handle1),
-      uart2_(RX_BUFFER_SIZE_Laser, rx_buffer2, uart_handle2),
-      RtosTask("LaserTask", 1),
+   : uart1_(RX_BUFFER_SIZE_Laser, rx_buffer1, uart_handle1),
+     uart2_(RX_BUFFER_SIZE_Laser, rx_buffer2, uart_handle2),
+     RtosTask("LaserTask", 1),
 			uart1_handle(uart_handle1),
 			uart2_handle(uart_handle2),
 			uart1_callback_executed(0),
-      uart1_callback_result(0),
-      uart2_callback_executed(0),
-      uart2_callback_result(0)
+     uart1_callback_result(0),
+     uart2_callback_executed(0),
+     uart2_callback_result(0)
 {
-    instance_ = this;  // 设置静态实例指针
-    // 为每个UART实例设置回调函数
+   instance_ = this;  // 设置静态实例指针
+   // 为每个UART实例设置回调函数
 		uart1_.SetCallback(StaticUart1Callback);
-    uart2_.SetCallback(StaticUart2Callback);
+   uart2_.SetCallback(StaticUart2Callback);
 }
 void LaserPosition::Config(LaserModuleDataGroupTypedef* LaserModuleDataGroup)
 {
@@ -48,42 +48,42 @@ void LaserPosition::Config(LaserModuleDataGroupTypedef* LaserModuleDataGroup)
 }
 void LaserPosition::Init() 
 {
-    uart_instance_1 = InstanceManager::GetInstanceByUartHandle(uart1_handle);
-    uart_instance_2 = InstanceManager::GetInstanceByUartHandle(uart2_handle);
-    // 初始化UART
-    uart_instance_1->UART_Init();
-    uart_instance_2->UART_Init();
+   uart_instance_1 = InstanceManager::GetInstanceByUartHandle(uart1_handle);
+   uart_instance_2 = InstanceManager::GetInstanceByUartHandle(uart2_handle);
+   // 初始化UART
+   uart_instance_1->UART_Init();
+   uart_instance_2->UART_Init();
 	  start(osPriorityNormal, 256);
 	  Config(&LaserModuleDataGroup);
 
 }
 // 静态回调函数 - 转发到实例函数
 void LaserPosition::StaticUart1Callback(uint8_t *buf, uint16_t len) {
-    if (instance_ != nullptr) {
-        instance_->Uart1Callback(buf, len);
-    }
+   if (instance_ != nullptr) {
+       instance_->Uart1Callback(buf, len);
+   }
 }
 
 void LaserPosition::StaticUart2Callback(uint8_t *buf, uint16_t len) {
-    if (instance_ != nullptr) {
-        instance_->Uart2Callback(buf, len);
-    }
+   if (instance_ != nullptr) {
+       instance_->Uart2Callback(buf, len);
+   }
 }
 // 处理激光模块1的数据
 void LaserPosition::Uart1Callback(uint8_t *buf, uint16_t len) {
-    uint8_t result = 0;
-    // 设置回调执行状态
-    uart1_callback_executed = 1;
-    uart1_callback_result = result;
+   uint8_t result = 0;
+   // 设置回调执行状态
+   uart1_callback_executed = 1;
+   uart1_callback_result = result;
 }
 // 处理激光模块2的数据  
 void LaserPosition::Uart2Callback(uint8_t *buf, uint16_t len) 
 {
-    // 在这里处理激光模块2接收到的数据
+   // 在这里处理激光模块2接收到的数据
 	   uint8_t result = 0;
-    // 设置回调执行状态
-    uart2_callback_executed = 1;
-    uart2_callback_result = result;
+   // 设置回调执行状态
+   uart2_callback_executed = 1;
+   uart2_callback_result = result;
 
 }
 
@@ -93,7 +93,7 @@ uint8_t LaserPosition::LaserModuleGroup_Init(LaserModuleDataGroupTypedef* LaserM
 	// 激光测距模块1初始化
 	TickType_t Timestamp = 0;
 	vTaskDelayUntil(&Timestamp, pdMS_TO_TICKS(1000));	// 确保自上电以来已经延时3000ms，确保激光测距模块已完成模块内部初始化
-  osDelay(100);
+ osDelay(100);
 
 	LaserModuleGroupState |= LaserModule_StateContinuousAutomaticMeasurement(&LaserModuleDataGroup->LaserModule1);	// 激光测距模块1连续自动测量状态设置
 	LaserModuleGroupState |= LaserModule_StateContinuousAutomaticMeasurement(&LaserModuleDataGroup->LaserModule2);	// 激光测距模块2连续自动测量状态设置
@@ -107,7 +107,7 @@ void LaserPosition::loop()
 	uint8_t LaserPositioningState = 0;	// 激光定位状态变量
 
 	if(count==0){
-  LaserModuleGroupState |= LaserModuleGroup_Init(&LaserModuleDataGroup);
+ LaserModuleGroupState |= LaserModuleGroup_Init(&LaserModuleDataGroup);
 	count++;
 	}
 //	LaserModuleGroupState |= LaserModule_StateContinuousAutomaticMeasurement(&(LaserModuleDataGroup.LaserModule1 ));	// 激光测距模块1连续自动测量状态设置
@@ -123,7 +123,7 @@ void LaserPosition::loop()
 		LaserModuleGroupState |= LaserModuleGroup_AnalysisModulesMeasurementResults(&LaserModuleDataGroup);			// 激光测距模块组读取测量结果
 
 		Laser_X = LaserModuleDataGroup.LaserModule2.MeasurementData.Distance;
-    	Laser_Y = LaserModuleDataGroup.LaserModule1.MeasurementData.Distance;
+   	Laser_Y = LaserModuleDataGroup.LaserModule1.MeasurementData.Distance;
 
 		if(Laser_X == 0 || Laser_Y == 0)
 		{
@@ -131,8 +131,8 @@ void LaserPosition::loop()
 			LaserModuleGroup_Init(&LaserModuleDataGroup);		// 激光测距模块组初始化
 			osDelay(1000);
 		}		
-        // Laser_X_return = -(float)(Laser_X + 257) / 1000.f + delta_hoop_x; //不需要
-        // Laser_Y_return = (float)(Laser_Y + 374) / 1000.f - delta_hoop_y;	
+       // Laser_X_return = -(float)(Laser_X + 257) / 1000.f + delta_hoop_x; //不需要
+       // Laser_Y_return = (float)(Laser_Y + 374) / 1000.f - delta_hoop_y;	
 		vTaskDelayUntil(&LastTimestamp, pdMS_TO_TICKS(40));		// 每40ms执行一次任务
 }
 	
@@ -155,7 +155,7 @@ uint8_t LaserPosition::LaserModule_StateContinuousAutomaticMeasurement(LaserModu
 uint8_t LaserPosition::LaserModule_StopContinuousAutomaticMeasurement(LaserModuleDataTypedef* LaserModuleData)
 {
 	uint8_t LaserModuleState = 0;	// 激光测距模块状态变量
-  uint8_t CMD[1] = { 0x58 };
+ uint8_t CMD[1] = { 0x58 };
 	LaserModuleState |= HAL_UART_Transmit_DMA(LaserModuleData->ConfigurationData.UartHandle, CMD, sizeof(CMD));		// 发送设置停止连续自动测量模块的命令
 	for(int i=0;i<100000;i++)
 	{}
@@ -290,11 +290,11 @@ void LaserPosition::LaserPositioning_GetYaw(float* Yaw)
 }
 
 /**
- * @brief		获得Position的偏航角
- * @param[in]	float* Yaw 偏航角指针，单位弧度
- * @return		无
- * @note		偏航角的单位是弧度，范围是-PI到PI之间
- */
+* @brief		获得Position的偏航角
+* @param[in]	float* Yaw 偏航角指针，单位弧度
+* @return		无
+* @note		偏航角的单位是弧度，范围是-PI到PI之间
+*/
 void LaserPosition::GetPositionYaw(float* Yaw)
 {
 	// 待实现
@@ -320,24 +320,24 @@ void LaserPosition::LaserPositioning_SendXYWorldCoordinates(const WorldXYCoordin
 	Position_Y = -PositionXYCoordinates_Direction * sinf(PositionXYCoordinates_XAngleOffset) * (WorldXYCoordinates->X + PositionXYCoordinates_OriginOffset_X) + PositionXYCoordinates_Direction * cosf(PositionXYCoordinates_XAngleOffset) * (WorldXYCoordinates->Y + PositionXYCoordinates_OriginOffset_Y);		// Position的Y坐标计算
 
 	// 发送Position的世界坐标系XY坐标数据
- WorldXYCoordinatesTypedef tempCoords = {Position_X, Position_Y};
- SendPositionXYCoordinates(&tempCoords);	// 发送Position的世界坐标系XY坐标数据
+WorldXYCoordinatesTypedef tempCoords = {Position_X, Position_Y};
+SendPositionXYCoordinates(&tempCoords);	// 发送Position的世界坐标系XY坐标数据
 }
 
 /**
- * @brief		发送Position的世界坐标系XY坐标数据
- * @param[in]	WorldXYCoordinatesTypedef* WorldXYCoordinates 世界坐标系XY坐标数据指针
- * @return		无
- * @note		世界坐标系XY坐标数据的单位是m
- */
+* @brief		发送Position的世界坐标系XY坐标数据
+* @param[in]	WorldXYCoordinatesTypedef* WorldXYCoordinates 世界坐标系XY坐标数据指针
+* @return		无
+* @note		世界坐标系XY坐标数据的单位是m
+*/
 void LaserPosition::SendPositionXYCoordinates(const WorldXYCoordinatesTypedef* WorldXYCoordinates)
 {
 	// 待实现
 }
 void LaserPosition::ResetCallbackStatus()
 {
-    uart1_callback_executed = 0;
-    uart2_callback_executed = 0;
+   uart1_callback_executed = 0;
+   uart2_callback_executed = 0;
 }
 
 

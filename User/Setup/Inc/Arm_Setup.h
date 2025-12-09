@@ -173,7 +173,7 @@ public:
         this->setPitchReversed(true); //俯仰电机反向
         this->setStretchReversed(false); //伸展电机不反向
 
-        start(osPriorityNormal, 256);
+        start(osPriorityNormal, 1024);
 
         arm_ctrlStatus.init_flag = true;
     }
@@ -291,7 +291,7 @@ protected:
      */
     Point2D get_nowChassisSpeed()
     {
-        
+
     }
 
     /**
@@ -300,7 +300,7 @@ protected:
 
     Point2D get_nowChassisPose()
     {
-
+        
     }
 
     void loop() override;

@@ -1,16 +1,16 @@
 /**
- * @file Module_LaserPosition.
- * @author Zhuang Ji cao  Zhang Jia jia
- * @brief USB UART驱动文件
- * @attention 此文件用于USB UART
- * @date 2025-10-1
- * 
- * 
- * @brief 类封装，只对应一个模块
- * 
- * 		 激光类，实例化后对应一个激光模块
- * 		 对外的功能接口，只需要一个， return_LaserDate()->返回此激光模块的测距数据(单位/米)
- */
+* @file Module_LaserPosition.
+* @author Zhuang Ji cao  Zhang Jia jia
+* @brief USB UART驱动文件
+* @attention 此文件用于USB UART
+* @date 2025-10-1
+* 
+* 
+* @brief 类封装，只对应一个模块
+* 
+* 		 激光类，实例化后对应一个激光模块
+* 		 对外的功能接口，只需要一个， return_LaserDate()->返回此激光模块的测距数据(单位/米)
+*/
 
 #ifndef __MODULE_LaserPosition_H
 #define __MODULE_LaserPosition_H
@@ -100,54 +100,54 @@ public:
 	static constexpr uint16_t deltaY = 220;
 	float YYY;
 	float XXX;
-  LaserPosition(UART_HandleTypeDef *uart_handle1, UART_HandleTypeDef *uart_handle2);
-  uint8_t LaserPositioningState = 0;	// 激光定位状态变量
-  WorldXYCoordinatesTypedef WorldXYCoordinates;	// 世界坐标系XY坐标变量，在场地内面向正北，场地右上角顶点为坐标原点，正西为X轴，正南为Y轴
-  float Yaw = (3.0f / 2.0f) * PI;					// 偏航角变量，单位弧度，0表示世界坐标系正X轴方向，逆时针为正方向，范围是-PI到PI之间
-  TickType_t LastTimestamp = xTaskGetTickCount();			// 上次时间戳变量，用于vTaskDelayUntil()函数的绝对
-  uint8_t LaserModuleGroup_Init(LaserModuleDataGroupTypedef* LaserModuleDataGroup);
-  //uint8_t LaserModule_TurnOnTheLaserPointer(LaserModuleDataTypedef* LaserModuleData);
-  uint8_t LaserModule_StateContinuousAutomaticMeasurement(LaserModuleDataTypedef* LaserModuleData);
-  uint8_t LaserModule_StopContinuousAutomaticMeasurement(LaserModuleDataTypedef* LaserModuleData);
-  uint8_t LaserModuleGroup_AnalysisModulesMeasurementResults(LaserModuleDataGroupTypedef* LaserModuleDataGroup);
-  uint8_t LaserModule_AnalysisModulesMeasurementResults(LaserModuleDataTypedef* LaserModuleData);
-  uint8_t LaserPositioning_YawJudgment(float* Yaw);
-  void LaserPositioning_XYWorldCoordinatesCalculate(WorldXYCoordinatesTypedef* WorldXYCoordinates, float Yaw, uint32_t FrontLaser, uint32_t RightLaser);
-  void LaserPositioning_GetYaw(float* Yaw);
-  void GetPositionYaw(float* Yaw);
-  uint8_t LaserPositioning_XYWorldCoordinatesVerification(const WorldXYCoordinatesTypedef* WorldXYCoordinates, float Yaw);
-  void LaserPositioning_SendXYWorldCoordinates(const WorldXYCoordinatesTypedef* WorldXYCoordinates);
-  void SendPositionXYCoordinates(const WorldXYCoordinatesTypedef* WorldXYCoordinates);
+ LaserPosition(UART_HandleTypeDef *uart_handle1, UART_HandleTypeDef *uart_handle2);
+ uint8_t LaserPositioningState = 0;	// 激光定位状态变量
+ WorldXYCoordinatesTypedef WorldXYCoordinates;	// 世界坐标系XY坐标变量，在场地内面向正北，场地右上角顶点为坐标原点，正西为X轴，正南为Y轴
+ float Yaw = (3.0f / 2.0f) * PI;					// 偏航角变量，单位弧度，0表示世界坐标系正X轴方向，逆时针为正方向，范围是-PI到PI之间
+ TickType_t LastTimestamp = xTaskGetTickCount();			// 上次时间戳变量，用于vTaskDelayUntil()函数的绝对
+ uint8_t LaserModuleGroup_Init(LaserModuleDataGroupTypedef* LaserModuleDataGroup);
+ //uint8_t LaserModule_TurnOnTheLaserPointer(LaserModuleDataTypedef* LaserModuleData);
+ uint8_t LaserModule_StateContinuousAutomaticMeasurement(LaserModuleDataTypedef* LaserModuleData);
+ uint8_t LaserModule_StopContinuousAutomaticMeasurement(LaserModuleDataTypedef* LaserModuleData);
+ uint8_t LaserModuleGroup_AnalysisModulesMeasurementResults(LaserModuleDataGroupTypedef* LaserModuleDataGroup);
+ uint8_t LaserModule_AnalysisModulesMeasurementResults(LaserModuleDataTypedef* LaserModuleData);
+ uint8_t LaserPositioning_YawJudgment(float* Yaw);
+ void LaserPositioning_XYWorldCoordinatesCalculate(WorldXYCoordinatesTypedef* WorldXYCoordinates, float Yaw, uint32_t FrontLaser, uint32_t RightLaser);
+ void LaserPositioning_GetYaw(float* Yaw);
+ void GetPositionYaw(float* Yaw);
+ uint8_t LaserPositioning_XYWorldCoordinatesVerification(const WorldXYCoordinatesTypedef* WorldXYCoordinates, float Yaw);
+ void LaserPositioning_SendXYWorldCoordinates(const WorldXYCoordinatesTypedef* WorldXYCoordinates);
+ void SendPositionXYCoordinates(const WorldXYCoordinatesTypedef* WorldXYCoordinates);
 	void Init();
 	void Config(LaserModuleDataGroupTypedef* LaserModuleDataGroup);
 protected:
-    void loop() override;
+   void loop() override;
 
 private:
 	 static LaserModuleDataGroupTypedef LaserModuleDataGroup;
 	 static constexpr uint32_t TX_TIMEOUT_MS = 10;  // 发送超时时间
 	 UART_ uart1_;  
-   UART_ uart2_;
-   UART_HandleTypeDef *uart1_handle;
-   UART_HandleTypeDef *uart2_handle;
-   uint8_t rx_buffer1[RX_BUFFER_SIZE_Laser];
-   uint8_t rx_buffer2[RX_BUFFER_SIZE_Laser];	
-   bool init_flag = false;
+  UART_ uart2_;
+  UART_HandleTypeDef *uart1_handle;
+  UART_HandleTypeDef *uart2_handle;
+  uint8_t rx_buffer1[RX_BUFFER_SIZE_Laser];
+  uint8_t rx_buffer2[RX_BUFFER_SIZE_Laser];	
+  bool init_flag = false;
 // 实例成员函数
-  void Uart1Callback(uint8_t *buf, uint16_t len);
-  void Uart2Callback(uint8_t *buf, uint16_t len);
+ void Uart1Callback(uint8_t *buf, uint16_t len);
+ void Uart2Callback(uint8_t *buf, uint16_t len);
 	void ResetCallbackStatus(); 
-  volatile uint8_t uart1_callback_executed;
+ volatile uint8_t uart1_callback_executed;
 	volatile uint8_t uart1_callback_result;
 	volatile uint8_t uart2_callback_executed; 
 	volatile uint8_t uart2_callback_result;
-  // 静态成员函数
-  static void StaticUart1Callback(uint8_t *buf, uint16_t len);
-  static void StaticUart2Callback(uint8_t *buf, uint16_t len);
+ // 静态成员函数
+ static void StaticUart1Callback(uint8_t *buf, uint16_t len);
+ static void StaticUart2Callback(uint8_t *buf, uint16_t len);
 	UART_* uart_instance_1;
-  UART_* uart_instance_2;
+ UART_* uart_instance_2;
 	// 保存实例指针用于静态函数访
-  static LaserPosition* instance_; 
+ static LaserPosition* instance_; 
 
 };
 
