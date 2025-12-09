@@ -1,5 +1,5 @@
 #include "Locate_Setup.h"
-
+float aaa;
 void Locate_Setup::loop()
 {
     // 在此处添加定位相关的周期性任务代码
@@ -43,9 +43,11 @@ void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_in
 	 robot_pose_inWorld_.x=x1*cos(robot_pose_inWorld_.theta);
 	 robot_pose_inWorld_.y=(y1+y2)*cos(robot_pose_inWorld_.theta);
 	 robot_pose_inWorld_.theta=robot_pose_inWorld_.theta*180/PI;
-	 if(y1<y2)
+	
+	 if(y1>y2)
 	 {
-		 robot_pose_inWorld_.theta=-robot_pose_inWorld_.theta;
+		 robot_pose_inWorld_.theta=360-robot_pose_inWorld_.theta;
+		 aaa=robot_pose_inWorld_.theta;
 	 }
 	
 }
