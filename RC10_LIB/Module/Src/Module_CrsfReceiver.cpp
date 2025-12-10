@@ -10,7 +10,8 @@ void CrsfReceiver::StaticUartCallback(uint8_t *buf, uint16_t len)
 {
     if (instance_ != nullptr)
     {
-        instance_->processBatchData(buf, len);
+        // 为避免在ISR/回调中做大量计算，改为快速拷贝到环形缓冲，由主循环消费
+        instance_->appendFromISR(buf, len);
     }
 }
 
@@ -20,7 +21,8 @@ CrsfReceiver::CrsfReceiver(UART_HandleTypeDef *huart) :
     new_data_available_(false),
     emergency_stop_triggered_(false),
     rx_state_(STATE_WAIT_ADDR),
-    crc_(CRSF_CRC_POLY)
+    crc_(CRSF_CRC_POLY),
+    uart_driver_(256, rx_buffer_, huart)
 {
     instance_ = this;
     
@@ -30,10 +32,9 @@ CrsfReceiver::CrsfReceiver(UART_HandleTypeDef *huart) :
         channels_[i] = RM_POCKET_CHANNEL_MID;
     }
     
-    // 初始化UART驱动
-    uart_driver_ = new UART_(256, rx_buffer_, huart);
-    uart_driver_->SetCallback(StaticUartCallback);
-    uart_driver_->UART_Init();
+    // 初始化UART驱动（静态成员）
+    uart_driver_.SetCallback(StaticUartCallback);
+    uart_driver_.UART_Init();
     
     // 设置默认目标地址为遥控器
     // RadioMaster-POCKET接收地址通常是0xEA（遥控器发射机）
@@ -41,10 +42,15 @@ CrsfReceiver::CrsfReceiver(UART_HandleTypeDef *huart) :
 
 CrsfReceiver::~CrsfReceiver()
 {
-    if (uart_driver_ != nullptr)
+    // 如果需要，可在此处停止UART/DMA（例如调用uart_driver_.UART_DeInit()）
+    // 在析构前先禁用回调，防止在析构过程中被中断/DMA回调访问
+    uart_driver_.SetCallback(nullptr);
+    // 尝试中止正在进行的接收（如果底层HAL支持）
+    UART_HandleTypeDef *hu = uart_driver_.GetUartHandle();
+    if (hu != nullptr)
     {
-        delete uart_driver_;
-        uart_driver_ = nullptr;
+        // 最小化副作用：尝试中止接收（若HAL提供）
+        HAL_UART_AbortReceive(hu);
     }
     instance_ = nullptr;
 }
@@ -85,6 +91,68 @@ void CrsfReceiver::processBatchData(uint8_t *buf, uint16_t len)
     {
         handleByte(buf[i]);
     }
+}
+
+// 快速将回调收到的数据拷贝到环形缓冲（用于ISR上下文）
+void CrsfReceiver::appendFromISR(const uint8_t *buf, uint16_t len)
+{
+    // 计算可写入的最大字节数
+    uint16_t head = rx_ring_head_;
+    uint16_t tail = rx_ring_tail_;
+    uint16_t free_space = (tail + RX_RING_SIZE - head - 1) % RX_RING_SIZE;
+    if (free_space == 0) return; // 环形缓冲已满，丢弃
+
+    uint16_t to_copy = (len <= free_space) ? len : free_space;
+
+    // 先拷贝第一段
+    uint16_t chunk = RX_RING_SIZE - head;
+    if (chunk > to_copy) chunk = to_copy;
+    if (chunk)
+    {
+        memcpy(&rx_ring_[head], buf, chunk);
+        head = (head + chunk) % RX_RING_SIZE;
+    }
+
+    // 拷贝剩余（如果有）
+    uint16_t rem = to_copy - chunk;
+    if (rem)
+    {
+        memcpy(&rx_ring_[head], buf + chunk, rem);
+        head = (head + rem) % RX_RING_SIZE;
+    }
+
+    // 更新写指针（尽量原子地更新单个volatile变量）
+    rx_ring_head_ = head;
+}
+
+// 在主循环中调用以消费环形缓冲数据（会调用现有的processBatchData）
+void CrsfReceiver::consumeRingBuffer()
+{
+    // 如果空则返回
+    uint16_t head = rx_ring_head_;
+    uint16_t tail = rx_ring_tail_;
+    if (head == tail) return;
+
+    // 处理连续段1：从tail到缓冲末尾或head
+    uint16_t chunk = (head > tail) ? (head - tail) : (RX_RING_SIZE - tail);
+    if (chunk)
+    {
+        processBatchData(&rx_ring_[tail], chunk);
+        tail = (tail + chunk) % RX_RING_SIZE;
+    }
+
+    // 如果还有数据并且head wrapped到前面，再处理
+    if (tail != head)
+    {
+        uint16_t chunk2 = (head > tail) ? (head - tail) : 0;
+        if (chunk2)
+        {
+            processBatchData(&rx_ring_[tail], chunk2);
+            tail = (tail + chunk2) % RX_RING_SIZE;
+        }
+    }
+
+    rx_ring_tail_ = tail;
 }
 
 // 获取原始通道值
@@ -392,58 +460,58 @@ void CrsfReceiver::sendTelemetryData(const RmPocketData_t *data)
         // CRC（简化）
         tx_buffer_[11] = 0;
         
-        HAL_UART_Transmit_DMA(uart_driver_->GetUartHandle(), tx_buffer_, 12);
+        HAL_UART_Transmit_DMA(uart_driver_.GetUartHandle(), tx_buffer_, 12);
         
         last_battery_send_ = now;
     }
     
     // 发送GPS数据（如果可用，定期发送）
-    if (data->gps_satellites > 0 && now - last_gps_send_ >= telemetry_gps_interval_)
-    {
-        const int32_t lat_scaled = (int32_t)(data->gps_latitude * 1e7);
-        const int32_t lon_scaled = (int32_t)(data->gps_longitude * 1e7);
-        const uint16_t speed_scaled = (uint16_t)(data->gps_speed * 10.0f);  // km/h * 10
-        
-        tx_buffer_[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
-        tx_buffer_[1] = 17;  // 15 + 2
-        tx_buffer_[2] = CRSF_FRAMETYPE_GPS;
-        
-        // 纬度
-        tx_buffer_[3] = lat_scaled & 0xFF;
-        tx_buffer_[4] = (lat_scaled >> 8) & 0xFF;
-        tx_buffer_[5] = (lat_scaled >> 16) & 0xFF;
-        tx_buffer_[6] = (lat_scaled >> 24) & 0xFF;
-        
-        // 经度
-        tx_buffer_[7] = lon_scaled & 0xFF;
-        tx_buffer_[8] = (lon_scaled >> 8) & 0xFF;
-        tx_buffer_[9] = (lon_scaled >> 16) & 0xFF;
-        tx_buffer_[10] = (lon_scaled >> 24) & 0xFF;
-        
-        // 地速
-        tx_buffer_[11] = speed_scaled & 0xFF;
-        tx_buffer_[12] = (speed_scaled >> 8) & 0xFF;
-        
-        // 航向（使用小车航向或固定值）
-        uint16_t heading = 0;  // 0-359度
-        tx_buffer_[13] = heading & 0xFF;
-        tx_buffer_[14] = (heading >> 8) & 0xFF;
-        
-        // 海拔（默认0）
-        uint16_t altitude = 0;
-        tx_buffer_[15] = altitude & 0xFF;
-        tx_buffer_[16] = (altitude >> 8) & 0xFF;
-        
-        // 卫星数量
-        tx_buffer_[17] = data->gps_satellites;
-        
-        // CRC（简化）
-        tx_buffer_[18] = 0;
-        
-        HAL_UART_Transmit_DMA(uart_driver_->GetUartHandle(), tx_buffer_, 19);
-        
-        last_gps_send_ = now;
-    }
+//    if (data->gps_satellites > 0 && now - last_gps_send_ >= telemetry_gps_interval_)
+//    {
+//        const int32_t lat_scaled = (int32_t)(data->gps_latitude * 1e7);
+//        const int32_t lon_scaled = (int32_t)(data->gps_longitude * 1e7);
+//        const uint16_t speed_scaled = (uint16_t)(data->gps_speed * 10.0f);  // km/h * 10
+//        
+//        tx_buffer_[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;
+//        tx_buffer_[1] = 17;  // 15 + 2
+//        tx_buffer_[2] = CRSF_FRAMETYPE_GPS;
+//        
+//        // 纬度
+//        tx_buffer_[3] = lat_scaled & 0xFF;
+//        tx_buffer_[4] = (lat_scaled >> 8) & 0xFF;
+//        tx_buffer_[5] = (lat_scaled >> 16) & 0xFF;
+//        tx_buffer_[6] = (lat_scaled >> 24) & 0xFF;
+//        
+//        // 经度
+//        tx_buffer_[7] = lon_scaled & 0xFF;
+//        tx_buffer_[8] = (lon_scaled >> 8) & 0xFF;
+//        tx_buffer_[9] = (lon_scaled >> 16) & 0xFF;
+//        tx_buffer_[10] = (lon_scaled >> 24) & 0xFF;
+//        
+//        // 地速
+//        tx_buffer_[11] = speed_scaled & 0xFF;
+//        tx_buffer_[12] = (speed_scaled >> 8) & 0xFF;
+//        
+//        // 航向（使用小车航向或固定值）
+//        uint16_t heading = 0;  // 0-359度
+//        tx_buffer_[13] = heading & 0xFF;
+//        tx_buffer_[14] = (heading >> 8) & 0xFF;
+//        
+//        // 海拔（默认0）
+//        uint16_t altitude = 0;
+//        tx_buffer_[15] = altitude & 0xFF;
+//        tx_buffer_[16] = (altitude >> 8) & 0xFF;
+//        
+//        // 卫星数量
+//        tx_buffer_[17] = data->gps_satellites;
+//        
+//        // CRC（简化）
+//        tx_buffer_[18] = 0;
+//        
+//        HAL_UART_Transmit_DMA(uart_driver_.GetUartHandle(), tx_buffer_, 19);
+//        
+//        last_gps_send_ = now;
+//    }
 }
 
 // 主处理函数（在main循环中调用）
@@ -456,6 +524,12 @@ void CrsfReceiver::process()
         new_data_available_ = false;
     }
     
-    // 检查是否需要发送遥测数据
-    // （sendTelemetryData会在内部检查时间）
+        if (new_data_available_)
+        {
+            // 处理完毕后清标志（上层调用者可自行clearNewDataFlag）
+            new_data_available_ = false;
+        }
+
+        // 先消费ISR写入的环形缓冲（将会执行解包/映射/CRC校验等）
+        consumeRingBuffer();
 }

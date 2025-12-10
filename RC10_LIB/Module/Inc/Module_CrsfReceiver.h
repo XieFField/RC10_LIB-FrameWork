@@ -12,9 +12,12 @@
  * 3. NVIC: 使能UART和DMA中断
  * 
  * 代码集成（3行）
- * CrsfReceiver *radio = new CrsfReceiver(&huart1); // 初始化
- * radio->process();                               // 主循环调用
- * radio->getControlData(&ctrl);                   // 获取数据
+ * // 推荐在嵌入式环境中使用静态或自动分配实例，避免堆分配
+ * static CrsfReceiver radio(&huart1); // 全局或静态实例（推荐）
+ * // 或者在main中定义：
+ * // CrsfReceiver radio(&huart1); // 自动存储期
+ * radio.process();                               // 主循环调用
+ * radio.getControlData(&ctrl);                   // 获取数据
  * 
  * 控制数据结构（RmPocketData_t）
  * 摇杆: throttle(前进), steering(转向), auxiliary1/2(备用)
@@ -132,12 +135,12 @@ typedef struct
     float temperature;                // 温度(°C)
     uint8_t signal_strength;          // 信号强度(%)
     
-    // GPS数据（如果小车有GPS）
-    double gps_latitude;              // 纬度
-    double gps_longitude;             // 经度
-    float gps_speed;                  // GPS速度(km/h)
-    uint8_t gps_satellites;           // 卫星数量
-    
+//    // GPS数据（如果小车有GPS）
+//    double gps_latitude;              // 纬度
+//    double gps_longitude;             // 经度
+//    float gps_speed;                  // GPS速度(km/h)
+//    uint8_t gps_satellites;           // 卫星数量
+//    
 } RmPocketData_t;
 
 // 原始CRSF数据结构（保持与协议一致）
@@ -250,13 +253,19 @@ private:
     uint8_t channels_payload_[CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE];
     uint8_t packet_byte_index_;
     uint8_t *payload_ptr_;
-    bool new_data_available_;
+    volatile bool new_data_available_;
     bool emergency_stop_triggered_;
     
     // UART相关
-    UART_* uart_driver_;
     uint8_t rx_buffer_[256];
+    UART_ uart_driver_;
     uint8_t tx_buffer_[CRSF_MAX_PACKET_SIZE];
+
+    // 环形缓冲：由UART回调（ISR上下文）快速写入，由主循环在process()中消费
+    static const uint16_t RX_RING_SIZE = 512;
+    uint8_t rx_ring_[RX_RING_SIZE];
+    volatile uint16_t rx_ring_head_ = 0; // 写指针（由ISR更新）
+    volatile uint16_t rx_ring_tail_ = 0; // 读指针（由主循环更新）
     
     // CRC
     GENERIC_CRC8 crc_;
@@ -289,6 +298,10 @@ private:
     void unpackChannels(const uint8_t *payload, int channels[CRSF_NUM_CHANNELS]);
     void computeMappedValues();
     void updateSwitchesAndButtons();
+    // ISR-friendly append (快速拷贝，不做复杂运算)
+    void appendFromISR(const uint8_t *buf, uint16_t len);
+    // 在主循环中消费环形缓冲的数据
+    void consumeRingBuffer();
     
     // 静态回调
     static CrsfReceiver* instance_;
