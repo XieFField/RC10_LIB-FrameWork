@@ -35,7 +35,28 @@ namespace WeaponSage_Setup
         bool calibrate_start = false;
         bool is_calibrating = false;
     }ctrl_status_S;
+
+    typedef enum{
+        //将自动过程的每个状态枚举
+        STATE_AIM_POSITION, //对准位置
+        STATE_LOWER_CLAW,  //下降爪子
+        STATE_GRAB_CLAW,   //抓取爪子
+        STATE_LIFT_POSITION, //提升位置
+    }auot_GRABstate_S;
+
+
+    typedef struct{
+
+        struct{
+            // bool start
+
+        }auto_state_bool_S; //局部状态结构体
+    }auto_ctrl_S;
 }
+
+
+
+
 
 class Robot_WeaponSage_Setup : public RtosTask, public Robot_WeaponSage {
 public:
@@ -64,7 +85,16 @@ public:
         ctrl_status_.init_flag = true;
     }
 
+    void setLowerClawStart(bool start)
+    {
 
+    }
+
+    Point2D getClawPos()
+    {   
+        Point2D pos = {0.0f, 0.0f, 0.0f};
+        return pos;
+    }
 
 protected:
     void loop() override;
@@ -77,7 +107,7 @@ private:
     void idle();
     void stop();
     void debug();
-
+    void autoControl();
 
     void calibrate();
 
