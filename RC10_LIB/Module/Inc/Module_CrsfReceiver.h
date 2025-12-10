@@ -1,28 +1,28 @@
 /**
  * @file Module_CrsfReceiver.h
  * @brief RadioMaster POCKET CRSF接收机
- * 
- * 一、硬件连接（4根线）
+ *
+ *硬件连接（4根线）
  * POCKET JR插槽 → STM32 UART
  * GND → GND, 5V → VCC, TX → RX, RX → TX
  * 
- * 二、CubeMX配置（3步）
+ * CubeMX配置（3步）
  * 1. UART: 波特率=420000, 8N1
  * 2. DMA: 开启USART_RX（Circular模式）
  * 3. NVIC: 使能UART和DMA中断
  * 
- * 三、代码集成（3行）
+ * 代码集成（3行）
  * CrsfReceiver *radio = new CrsfReceiver(&huart1); // 初始化
  * radio->process();                               // 主循环调用
  * radio->getControlData(&ctrl);                   // 获取数据
  * 
- * 四、控制数据结构（RmPocketData_t）
+ * 控制数据结构（RmPocketData_t）
  * 摇杆: throttle(前进), steering(转向), auxiliary1/2(备用)
  * 开关: sw_left/sw_right(三段), sw_sa/sw_sb/sw_sc(两段)
  * 按钮: btn_l1/l2/r1/r2/menu/enter
  * 安全: emergency_stop（触发时停车）
  * 
- * 五、如何修改遥测数据（核心）
+ * 如何修改遥测数据（核心）
  * 默认发送电池电压/电流/百分比。
  * 想发送其他数据（如温度/距离）：
  * 
@@ -42,7 +42,7 @@
  *   radio->sendTelemetryData(&telem); // 自动发送
  
  
- * 七、常用函数
+ * 常用函数
  * radio->setStickDeadzone(0.05f);    // 设置死区
  * radio->setThrottleCurve(1.2f);     // 设置曲线
  * radio->isEmergencyStop();          // 检查急停
