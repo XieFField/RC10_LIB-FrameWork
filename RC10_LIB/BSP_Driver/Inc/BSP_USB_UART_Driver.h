@@ -13,7 +13,6 @@
 #include "usart.h"	
 #include "usb_device.h"
 #include "stm32h7xx_hal.h"
-#include "stm32h7xx_hal_dma.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -32,7 +31,7 @@ void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len);
 #endif
 #ifdef __cplusplus
 
-#define UART_MAX 1
+#define UART_MAX 10
 #define USB_MAX 10
 
 class UART_{
@@ -42,7 +41,7 @@ public:
     ~UART_(){}
 			//定义虚函数
 		virtual void Callback_Fuc(uint8_t *buf, uint16_t len);
-		void SetCallback(RxCallback callback) {RxCallback_Fuc = callback;}// 回调函数指针
+		//void SetCallback(RxCallback callback) {RxCallback_Fuc = callback;}// 回调函数指针
 		void UART_Receive_Callback(uint8_t* Buf, uint32_t Len);
     UART_HandleTypeDef* GetUartHandle() const { return uarthandle_;}
 		void UART_Init();
@@ -72,7 +71,7 @@ public:
     static UART_* GetInstanceByUartHandle(UART_HandleTypeDef *huart);
 private:
 		static USB_CDC_* usb_instances[2];
-    static UART_* uart_instances[UART_MAX]; // 支持最多4个实例
+    static UART_* uart_instances[UART_MAX]; // 支持最多10个实例
 };
 
 #endif // __cplusplus

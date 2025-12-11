@@ -41,7 +41,7 @@ extern "C" {
 #include "debug_setup.h"
 #include "Module_Air_joy.h"
 #include "Module_Position.h"
-
+#include "Locate_Setup.h"
 /*==============Controller===============*/
 #include "FSM_Controller.h"
 #include "Arm_Setup.h"
