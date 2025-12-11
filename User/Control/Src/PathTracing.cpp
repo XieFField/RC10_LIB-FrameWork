@@ -4,31 +4,31 @@
 
 
 
-// Ä¬ÈÏ¹¹Ôìº¯Êý - ³õÊ¼»¯ËùÓÐ³ÉÔ±±äÁ¿
+// Ä¬ï¿½Ï¹ï¿½ï¿½ìº¯ï¿½ï¿½ - ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Ð³ï¿½Ô±ï¿½ï¿½ï¿½ï¿½
 PathTracing::PathTracing() {
     waypoints_ = nullptr;
     max_waypoints_ = 0;
     current_waypoint_count_ = 0;
     current_target_index_ = 0;
 
-    // ³õÊ¼»¯»úÆ÷ÈË×´Ì¬ÎªÁã
+    // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬Îªï¿½ï¿½
     robot_state_.current_x = 0.0f;
     robot_state_.current_y = 0.0f;
     robot_state_.current_theta = 0.0f;
     robot_state_.linear_velocity = 0.0f;
     robot_state_.angular_velocity = 0.0f;
-    last_angular_velocity_ = 0.0f;  // ³õÊ¼»¯ÉÏÒ»Ê±¿Ì½ÇËÙ¶È
+    last_angular_velocity_ = 0.0f;  // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ò»Ê±ï¿½Ì½ï¿½ï¿½Ù¶ï¿½
 
-    // Ä¬ÈÏÅäÖÃ²ÎÊý - ÊÊÓÃÓÚÐ¡ÐÍÒÆ¶¯»úÆ÷ÈË
+    // Ä¬ï¿½ï¿½ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½Æ¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     config_.max_linear_velocity = 0.5f;
     config_.max_angular_velocity = 1.0f;
     config_.linear_acceleration = 0.1f;
     config_.angular_acceleration = 0.5f;
-    config_.goal_tolerance = 0.05f;     // 5ÀåÃ×ÈÝ²î
-    config_.lookahead_distance = 0.3f;  // 30ÀåÃ×Ç°ÊÓ¾àÀë
+    config_.goal_tolerance = 0.05f;     // 5ï¿½ï¿½ï¿½ï¿½ï¿½Ý²ï¿½
+    config_.lookahead_distance = 0.3f;  // 30ï¿½ï¿½ï¿½ï¿½Ç°ï¿½Ó¾ï¿½ï¿½ï¿½
 }
 
-// ´ø×î´óÂ·¾¶µãÊýµÄ¹¹Ôìº¯Êý
+// ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ìº¯ï¿½ï¿½
 PathTracing::PathTracing(unsigned int max_points) {
     waypoints_ = nullptr;
     max_waypoints_ = max_points;
@@ -50,7 +50,7 @@ PathTracing::PathTracing(unsigned int max_points) {
     config_.lookahead_distance = 0.3f;
 }
 
-// Ê¹ÓÃÍâ²¿»º³åÇøµÄ¹¹Ôìº¯Êý - ±ÜÃâ¶¯Ì¬ÄÚ´æ·ÖÅä
+// Ê¹ï¿½ï¿½ï¿½â²¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ìº¯ï¿½ï¿½ - ï¿½ï¿½ï¿½â¶¯Ì¬ï¿½Ú´ï¿½ï¿½ï¿½ï¿½
 PathTracing::PathTracing(Waypoint* buffer, unsigned int max_points) {
     waypoints_ = buffer;
     max_waypoints_ = max_points;
@@ -72,72 +72,72 @@ PathTracing::PathTracing(Waypoint* buffer, unsigned int max_points) {
     config_.lookahead_distance = 0.3f;
 }
 
-// Îö¹¹º¯Êý - ½öÖØÖÃÖ¸Õë£¬²»ÊÍ·ÅÍâ²¿¹ÜÀíµÄ»º³åÇø
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ë£¬ï¿½ï¿½ï¿½Í·ï¿½ï¿½â²¿ï¿½ï¿½ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½ï¿½ï¿½
 PathTracing::~PathTracing() {
     waypoints_ = nullptr;
 }
 
-// ¼ÆËãÁ½µãÖ®¼äµÄÅ·¼¸ÀïµÃ¾àÀë
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½ï¿½Å·ï¿½ï¿½ï¿½ï¿½Ã¾ï¿½ï¿½ï¿½
 float PathTracing::calculateDistance(float x1, float y1, float x2, float y2) {
     float dx = x2 - x1;
     float dy = y2 - y1;
     return sqrtf(dx * dx + dy * dy);
 }
 
-// ½Ç¶È¹éÒ»»¯ - ½«½Ç¶ÈÏÞÖÆÔÚ[-¦Ð, ¦Ð]·¶Î§ÄÚ
+// ï¿½Ç¶È¹ï¿½Ò»ï¿½ï¿½ - ï¿½ï¿½ï¿½Ç¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½[-ï¿½ï¿½, ï¿½ï¿½]ï¿½ï¿½Î§ï¿½ï¿½
 float PathTracing::normalizeAngle(float angle) {
-    while (angle > PI) angle -= 2.0f * PI;
-    while (angle < -PI) angle += 2.0f * PI;
+    while (angle > PT_PI) angle -= 2.0f * PT_PI;
+    while (angle < -PT_PI) angle += 2.0f * PT_PI;
     return angle;
 }
 
-// ¼ÆËã´Óµ±Ç°Î»ÖÃµ½Ä¿±êµãµÄÈ«¾Ö½Ç¶È
+// ï¿½ï¿½ï¿½ï¿½Óµï¿½Ç°Î»ï¿½Ãµï¿½Ä¿ï¿½ï¿½ï¿½ï¿½È«ï¿½Ö½Ç¶ï¿½
 float PathTracing::calculateAngleToTarget(float target_x, float target_y) {
     float dx = target_x - robot_state_.current_x;
     float dy = target_y - robot_state_.current_y;
-    return atan2f(dy, dx);  // ·µ»ØÏà¶ÔÓÚÊÀ½ç×ø±êÏµµÄ½Ç¶È
+    return atan2f(dy, dx);  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½Ä½Ç¶ï¿½
 }
 
-// ¼ì²éÊÇ·ñµ½´ïÄ¿±êµã - »ùÓÚ¾àÀëÈÝ²îÅÐ¶Ï
+// ï¿½ï¿½ï¿½ï¿½Ç·ñµ½´ï¿½Ä¿ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½Ú¾ï¿½ï¿½ï¿½ï¿½Ý²ï¿½ï¿½Ð¶ï¿½
 bool PathTracing::isGoalReached(float target_x, float target_y) {
     float distance = calculateDistance(robot_state_.current_x, robot_state_.current_y,
                                       target_x, target_y);
     return distance <= config_.goal_tolerance;
 }
 
-// Pure Pursuit¿ØÖÆËã·¨ºËÐÄ - ¼ÆËã¸ú×ÙÄ¿±êµãËùÐèµÄ½ÇËÙ¶È
+// Pure Pursuitï¿½ï¿½ï¿½ï¿½ï¿½ã·¨ï¿½ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä½ï¿½ï¿½Ù¶ï¿½
 void PathTracing::purePursuitControl(float target_x, float target_y) {
-    // ¼ÆËãµ½Ä¿±êµãµÄÏòÁ¿
+    // ï¿½ï¿½ï¿½ãµ½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     float dx = target_x - robot_state_.current_x;
     float dy = target_y - robot_state_.current_y;
     float distance_to_target = sqrtf(dx * dx + dy * dy);
 
-    // ¼ÆËãÄ¿±êµãÔÚÈ«¾Ö×ø±êÏµÖÐµÄ½Ç¶È
+    // ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ÐµÄ½Ç¶ï¿½
     float target_global_angle = atan2f(dy, dx);
-    // ¼ÆËã½Ç¶ÈÎó²î£¨µ±Ç°³¯ÏòÓëÄ¿±ê·½ÏòÖ®¼äµÄ²îÖµ£©
+    // ï¿½ï¿½ï¿½ï¿½Ç¶ï¿½ï¿½ï¿½î£¨ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ê·½ï¿½ï¿½Ö®ï¿½ï¿½Ä²ï¿½Öµï¿½ï¿½
     float alpha = normalizeAngle(target_global_angle - robot_state_.current_theta);
 
     if (distance_to_target > 0.001f) {
-        // Pure PursuitºËÐÄ¹«Ê½£ºÇúÂÊ = 2*sin(¦Á)/L
-        // ÆäÖÐ¦ÁÊÇ½Ç¶ÈÎó²î£¬LÊÇµ½Ä¿±êµãµÄ¾àÀë
+        // Pure Pursuitï¿½ï¿½ï¿½Ä¹ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ = 2*sin(ï¿½ï¿½)/L
+        // ï¿½ï¿½ï¿½Ð¦ï¿½ï¿½Ç½Ç¶ï¿½ï¿½ï¿½î£¬Lï¿½Çµï¿½Ä¿ï¿½ï¿½ï¿½Ä¾ï¿½ï¿½ï¿½
         float curvature = 2.0f * sinf(alpha) / fmaxf(distance_to_target, 1e-6f);
         float desired_omega = robot_state_.linear_velocity * curvature;
 
-        // ½ÇËÙ¶ÈÏÞ·ù£¬È·±£²»³¬¹ý×î´ó½ÇËÙ¶È
+        // ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½Þ·ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
         if (desired_omega > config_.max_angular_velocity) desired_omega = config_.max_angular_velocity;
         if (desired_omega < -config_.max_angular_velocity) desired_omega = -config_.max_angular_velocity;
         robot_state_.angular_velocity = desired_omega;
     } else {
-        robot_state_.angular_velocity = 0.0f;  // ·Ç³£½Ó½üÄ¿±êµãÊ±Í£Ö¹×ª¶¯
+        robot_state_.angular_velocity = 0.0f;  // ï¿½Ç³ï¿½ï¿½Ó½ï¿½Ä¿ï¿½ï¿½ï¿½Ê±Í£Ö¹×ªï¿½ï¿½
     }
 }
 
-// Ìí¼ÓÂ·¾¶µãµ½Â·¾¶ÐòÁÐÖÐ
+// ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ãµ½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 bool PathTracing::addWaypoint(float x, float y, float theta) {
-    if (waypoints_ == nullptr || max_waypoints_ == 0) return false;  // »º³åÇøÎ´³õÊ¼»¯
-    if (current_waypoint_count_ >= max_waypoints_) return false;     // Â·¾¶µãÒÑÂú
+    if (waypoints_ == nullptr || max_waypoints_ == 0) return false;  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î´ï¿½ï¿½Ê¼ï¿½ï¿½
+    if (current_waypoint_count_ >= max_waypoints_) return false;     // Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    // ´æ´¢Â·¾¶µãÊý¾Ý
+    // ï¿½æ´¢Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     waypoints_[current_waypoint_count_].x = x;
     waypoints_[current_waypoint_count_].y = y;
     waypoints_[current_waypoint_count_].theta = theta;
@@ -145,19 +145,19 @@ bool PathTracing::addWaypoint(float x, float y, float theta) {
     return true;
 }
 
-// Çå¿ÕËùÓÐÂ·¾¶µã£¬ÖØÖÃ¸ú×Ù×´Ì¬
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ã£¬ï¿½ï¿½ï¿½Ã¸ï¿½ï¿½ï¿½×´Ì¬
 bool PathTracing::clearWaypoints() {
     current_waypoint_count_ = 0;
     current_target_index_ = 0;
     return true;
 }
 
-// »ñÈ¡µ±Ç°Â·¾¶µãÊýÁ¿
+// ï¿½ï¿½È¡ï¿½ï¿½Ç°Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 unsigned int PathTracing::getWaypointCount() {
     return current_waypoint_count_;
 }
 
-// ÉèÖÃÂ·¾¶¸ú×ÙÅäÖÃ²ÎÊý
+// ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½
 void PathTracing::setConfig(float max_linear_vel, float max_angular_vel,
                             float linear_accel, float angular_accel,
                             float tolerance, float lookahead) {
@@ -169,59 +169,59 @@ void PathTracing::setConfig(float max_linear_vel, float max_angular_vel,
     config_.lookahead_distance = lookahead;
 }
 
-// »ñÈ¡µ±Ç°ÅäÖÃ
+// ï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½
 PathTracingConfig PathTracing::getConfig() {
     return config_;
 }
 
-// ÉèÖÃ»úÆ÷ÈËµ±Ç°×´Ì¬
+// ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½Ëµï¿½Ç°×´Ì¬
 void PathTracing::setRobotState(float x, float y, float theta) {
     robot_state_.current_x = x;
     robot_state_.current_y = y;
-    robot_state_.current_theta = normalizeAngle(theta);  // ¹éÒ»»¯½Ç¶È
+    robot_state_.current_theta = normalizeAngle(theta);  // ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ç¶ï¿½
 }
 
-// »ñÈ¡»úÆ÷ÈËµ±Ç°×´Ì¬
+// ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½Ç°×´Ì¬
 RobotState PathTracing::getRobotState() {
     return robot_state_;
 }
 
-// "¹æ»®"Â·¾¶ - Êµ¼ÊÊÇ³õÊ¼»¯¸ú×Ù×´Ì¬£¬´ÓµÚÒ»¸öÂ·¾¶µã¿ªÊ¼¸ú×Ù
+// "ï¿½æ»®"Â·ï¿½ï¿½ - Êµï¿½ï¿½ï¿½Ç³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½Óµï¿½Ò»ï¿½ï¿½Â·ï¿½ï¿½ï¿½ã¿ªÊ¼ï¿½ï¿½ï¿½ï¿½
 bool PathTracing::planPath() {
-    if (current_waypoint_count_ == 0) return false;  // Ã»ÓÐÂ·¾¶µã¿ÉÓÃ
-    current_target_index_ = 0;  // ´ÓµÚÒ»¸öÂ·¾¶µã¿ªÊ¼¸ú×Ù
+    if (current_waypoint_count_ == 0) return false;  // Ã»ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    current_target_index_ = 0;  // ï¿½Óµï¿½Ò»ï¿½ï¿½Â·ï¿½ï¿½ï¿½ã¿ªÊ¼ï¿½ï¿½ï¿½ï¿½
     return true;
 }
 
-// Ö´ÐÐÒ»²½Â·¾¶¸ú×Ù¿ØÖÆ - ºËÐÄ¿ØÖÆÑ­»·
+// Ö´ï¿½ï¿½Ò»ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½Ù¿ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½
 void PathTracing::executeOneStep(float dt_seconds) {
-    // ¼ì²éÊÇ·ñÓÐÂ·¾¶µã»òÊÇ·ñÒÑÍê³ÉËùÓÐÂ·¾¶µã
+    // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½
     if (current_waypoint_count_ == 0 || current_target_index_ >= current_waypoint_count_) return;
 
     Waypoint current_target = waypoints_[current_target_index_];
     
-    // ¼ì²éÊÇ·ñµ½´ïµ±Ç°Ä¿±êµã£¬Èç¹ûµ½´ïÔòÇÐ»»µ½ÏÂÒ»¸öÄ¿±êµã
+    // ï¿½ï¿½ï¿½ï¿½Ç·ñµ½´ïµ±Ç°Ä¿ï¿½ï¿½ã£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½
     if (isGoalReached(current_target.x, current_target.y)) {
         current_target_index_++;
-        // ¼ì²éÊÇ·ñÍê³ÉËùÓÐÂ·¾¶µã
+        // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½
         if (current_target_index_ >= current_waypoint_count_) {
             robot_state_.linear_velocity = 0.0f;
             robot_state_.angular_velocity = 0.0f;
-            return;  // Â·¾¶Íê³É£¬Í£Ö¹ÔË¶¯
+            return;  // Â·ï¿½ï¿½ï¿½ï¿½É£ï¿½Í£Ö¹ï¿½Ë¶ï¿½
         }
-        current_target = waypoints_[current_target_index_];  // ¸üÐÂµ±Ç°Ä¿±êµã
+        current_target = waypoints_[current_target_index_];  // ï¿½ï¿½ï¿½Âµï¿½Ç°Ä¿ï¿½ï¿½ï¿½
     }
 
-    if (dt_seconds <= 0.0f) return;  // ÎÞÐ§Ê±¼ä²½³¤
+    if (dt_seconds <= 0.0f) return;  // ï¿½ï¿½Ð§Ê±ï¿½ä²½ï¿½ï¿½
 
-    // Ç°ÊÓµã¼ÆËã£ºÑØÂ·¾¶´Óµ±Ç°Ä¿±êµãÏòÇ°Ñ°ÕÒ¾àÀë¡ÝÇ°ÊÓ¾àÀëµÄµã
+    // Ç°ï¿½Óµï¿½ï¿½ï¿½ã£ºï¿½ï¿½Â·ï¿½ï¿½ï¿½Óµï¿½Ç°Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½Ç°Ñ°ï¿½Ò¾ï¿½ï¿½ï¿½ï¿½Ç°ï¿½Ó¾ï¿½ï¿½ï¿½Äµï¿½
     float lookahead = config_.lookahead_distance;
     float accum = 0.0f;
     uint32_t idx = current_target_index_;
     float lx = waypoints_[idx].x;
     float ly = waypoints_[idx].y;
     
-    // ±éÀúÂ·¾¶µã£¬ÀÛ¼Ó¾àÀëÖ±µ½´ïµ½Ç°ÊÓ¾àÀë
+    // ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ã£¬ï¿½Û¼Ó¾ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ïµ½Ç°ï¿½Ó¾ï¿½ï¿½ï¿½
     while (idx + 1 < current_waypoint_count_ && accum < lookahead) {
         float seg = calculateDistance(waypoints_[idx].x, waypoints_[idx].y, 
                                      waypoints_[idx+1].x, waypoints_[idx+1].y);
@@ -231,23 +231,23 @@ void PathTracing::executeOneStep(float dt_seconds) {
         ly = waypoints_[idx].y;
     }
 
-    // »ùÓÚ¾àÀë×îÖÕÄ¿±êµÄ½Ó½ü³Ì¶Èµ÷ÕûÆÚÍûÏßËÙ¶È£¨½Ó½üÊ±¼õËÙ£©
+    // ï¿½ï¿½ï¿½Ú¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ä½Ó½ï¿½ï¿½Ì¶Èµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È£ï¿½ï¿½Ó½ï¿½Ê±ï¿½ï¿½ï¿½Ù£ï¿½
     float dist_to_goal = calculateDistance(robot_state_.current_x, robot_state_.current_y, 
                                           waypoints_[current_waypoint_count_-1].x, 
                                           waypoints_[current_waypoint_count_-1].y);
     float desired_linear_vel = config_.max_linear_velocity;
     
-    // ½Ó½ü×îÖÕÄ¿±êÊ±¼õËÙ
+    // ï¿½Ó½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½
     if (dist_to_goal < config_.goal_tolerance * 10.0f) {
         desired_linear_vel = config_.max_linear_velocity * 0.3f;
     }
 
-    // ¸ù¾Ýµ±Ç°½ÇËÙ¶ÈÓë×î´ó½ÇËÙ¶ÈµÄ±ÈÀý½øÒ»²½µ÷ÕûÏßËÙ¶È£¨×ªÍäÊ±¼õËÙ£©
+    // ï¿½ï¿½ï¿½Ýµï¿½Ç°ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ÈµÄ±ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È£ï¿½×ªï¿½ï¿½Ê±ï¿½ï¿½ï¿½Ù£ï¿½
     if (fabsf(robot_state_.angular_velocity) > config_.max_angular_velocity * 0.5f) {
         desired_linear_vel *= 0.7f;
     }
 
-    // ÏßËÙ¶È¼ÓËÙ¶ÈÏÞÖÆ - È·±£ËÙ¶ÈÆ½»¬±ä»¯
+    // ï¿½ï¿½ï¿½Ù¶È¼ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½ - È·ï¿½ï¿½ï¿½Ù¶ï¿½Æ½ï¿½ï¿½ï¿½ä»¯
     if (desired_linear_vel > robot_state_.linear_velocity) 
     {
         robot_state_.linear_velocity += config_.linear_acceleration * dt_seconds;
@@ -257,45 +257,45 @@ void PathTracing::executeOneStep(float dt_seconds) {
         if (robot_state_.linear_velocity < desired_linear_vel) robot_state_.linear_velocity = desired_linear_vel;
     }
 
-    // Ê¹ÓÃÇ°ÊÓµã¼ÆËãPure Pursuit½ÇËÙ¶È
+    // Ê¹ï¿½ï¿½Ç°ï¿½Óµï¿½ï¿½ï¿½ï¿½Pure Pursuitï¿½ï¿½ï¿½Ù¶ï¿½
     purePursuitControl(lx, ly);
 
-    // ½ÇËÙ¶È±ä»¯ÂÊ£¨¼ÓËÙ¶È£©ÏÞÖÆ - È·±£½ÇËÙ¶ÈÆ½»¬±ä»¯£¬±ÜÃâ¼±×ª
+    // ï¿½ï¿½ï¿½Ù¶È±ä»¯ï¿½Ê£ï¿½ï¿½ï¿½ï¿½Ù¶È£ï¿½ï¿½ï¿½ï¿½ï¿½ - È·ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½Æ½ï¿½ï¿½ï¿½ä»¯ï¿½ï¿½ï¿½ï¿½ï¿½â¼±×ª
     {
         float max_omega_delta = config_.angular_acceleration * dt_seconds;
-        float target_omega = robot_state_.angular_velocity;  // Pure Pursuit¼ÆËãµÄÄ¿±ê½ÇËÙ¶È
-        float delta = target_omega - last_angular_velocity_; // ½ÇËÙ¶È±ä»¯Á¿
+        float target_omega = robot_state_.angular_velocity;  // Pure Pursuitï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
+        float delta = target_omega - last_angular_velocity_; // ï¿½ï¿½ï¿½Ù¶È±ä»¯ï¿½ï¿½
         
-        // ÏÞÖÆ½ÇËÙ¶È±ä»¯ÂÊ
+        // ï¿½ï¿½ï¿½Æ½ï¿½ï¿½Ù¶È±ä»¯ï¿½ï¿½
         if (delta > max_omega_delta) delta = max_omega_delta;
         if (delta < -max_omega_delta) delta = -max_omega_delta;
         
-        robot_state_.angular_velocity = last_angular_velocity_ + delta;  // Ó¦ÓÃÏÞÖÆºóµÄ½ÇËÙ¶È
-        last_angular_velocity_ = robot_state_.angular_velocity;          // ¸üÐÂÉÏÒ»Ê±¿Ì½ÇËÙ¶È
+        robot_state_.angular_velocity = last_angular_velocity_ + delta;  // Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½Æºï¿½Ä½ï¿½ï¿½Ù¶ï¿½
+        last_angular_velocity_ = robot_state_.angular_velocity;          // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»Ê±ï¿½Ì½ï¿½ï¿½Ù¶ï¿½
     }
 }
 
-// ¼ì²éÂ·¾¶ÊÇ·ñÒÑÍê³É¸ú×Ù
+// ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½É¸ï¿½ï¿½ï¿½
 bool PathTracing::isPathCompleted() {
     return current_target_index_ >= current_waypoint_count_;
 }
 
-// »ñÈ¡µ±Ç°ÔË¶¯¿ØÖÆÃüÁî
+// ï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½Ë¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 void PathTracing::calculateMotionCommands(float* linear_vel, float* angular_vel) {
     if (linear_vel) *linear_vel = robot_state_.linear_velocity;
     if (angular_vel) *angular_vel = robot_state_.angular_velocity;
 }
 
-// »ñÈ¡µ±Ç°¸ú×ÙµÄÄ¿±êµã
+// ï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Ùµï¿½Ä¿ï¿½ï¿½ï¿½
 Waypoint PathTracing::getCurrentTarget() {
     if (current_target_index_ < current_waypoint_count_)
         return waypoints_[current_target_index_];
     else if (current_waypoint_count_ > 0)
-        return waypoints_[current_waypoint_count_ - 1];  // ·µ»Ø×îºóÒ»¸öµã
-    return Waypoint{0, 0, 0};  // Ä¬ÈÏ¿Õµã
+        return waypoints_[current_waypoint_count_ - 1];  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½
+    return Waypoint{0, 0, 0};  // Ä¬ï¿½Ï¿Õµï¿½
 }
 
-// ¼ÆËãÂ·¾¶×Ü³¤¶È - ÀÛ¼ÓËùÓÐÂ·¾¶¶Î³¤¶È
+// ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½Ü³ï¿½ï¿½ï¿½ - ï¿½Û¼ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½Î³ï¿½ï¿½ï¿½
 float PathTracing::getPathLength() {
     float total = 0.0f;
     for (unsigned int i = 1; i < current_waypoint_count_; ++i)
@@ -304,9 +304,9 @@ float PathTracing::getPathLength() {
     return total;
 }
 
-// ³õÊ¼»¯Â·¾¶¸ú×ÙÆ÷ - ÉèÖÃÍâ²¿Ìá¹©µÄÂ·¾¶µã»º³åÇø
+// ï¿½ï¿½Ê¼ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½ï¿½ï¿½â²¿ï¿½á¹©ï¿½ï¿½Â·ï¿½ï¿½ï¿½ã»ºï¿½ï¿½ï¿½ï¿½
 bool PathTracing::init(Waypoint* buffer, unsigned int max_points) {
-    if (!buffer || !max_points) return false;  // »º³åÇøÎÞÐ§
+    if (!buffer || !max_points) return false;  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§
     waypoints_ = buffer;
     max_waypoints_ = max_points;
     current_waypoint_count_ = 0;

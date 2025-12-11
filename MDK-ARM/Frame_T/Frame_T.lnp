@@ -52,7 +52,7 @@
 "frame_t\app_vector2d.o"
 "frame_t\app_path.o"
 "frame_t\app_bezier_curve.o"
-"frame_t\app_slopecompensate_1.o"
+"frame_t\app_slopecompensate.o"
 "frame_t\module_encoder.o"
 "frame_t\module_chassisbase.o"
 "frame_t\module_air_joy.o"

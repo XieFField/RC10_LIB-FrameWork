@@ -1,7 +1,7 @@
 /**
  * @file PathTracing.h
  * @author Zhang Hongli
- * @brief Â·¾¶¸ú×ÙÆ÷Í·ÎÄ¼þ£¬»ùÓÚPure PursuitËã·¨ÊµÏÖ
+ * @brief Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Pure Pursuitï¿½ã·¨Êµï¿½ï¿½
  * @version 1.0
  */
 
@@ -10,85 +10,85 @@
 #define PATH_TRACING_H
 
 #include <math.h>
-// ÊýÑ§³£Á¿¶¨Òå
-static const float PI = 3.14159265358979323846f;
-// Â·¾¶µã½á¹¹ - ´æ´¢ÊÀ½ç×ø±êÏµÖÐµÄÂ·¾¶µãÐÅÏ¢
+// ï¿½ï¿½Ñ§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+static const float PT_PI = 3.14159265358979323846f;
+// Â·ï¿½ï¿½ï¿½ï¿½á¹¹ - ï¿½æ´¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½Ðµï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
 typedef struct {
-    float x;        // ÊÀ½ç×ø±êÏµx×ø±ê£¨Ã×£©
-    float y;        // ÊÀ½ç×ø±êÏµy×ø±ê£¨Ã×£©
-    float theta;    // ÆÚÍû³¯Ïò½Ç¶È£¨»¡¶È£©
+    float x;        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµxï¿½ï¿½ï¿½ê£¨ï¿½×£ï¿½
+    float y;        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµyï¿½ï¿½ï¿½ê£¨ï¿½×£ï¿½
+    float theta;    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¶È£ï¿½ï¿½ï¿½ï¿½È£ï¿½
 } Waypoint;
 
-// »úÆ÷ÈË×´Ì¬ - ´æ´¢»úÆ÷ÈËµ±Ç°×´Ì¬ÐÅÏ¢
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ - ï¿½æ´¢ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½Ç°×´Ì¬ï¿½ï¿½Ï¢
 typedef struct {
-    float current_x;        // µ±Ç°x×ø±ê£¨Ã×£©
-    float current_y;        // µ±Ç°y×ø±ê£¨Ã×£©
-    float current_theta;    // µ±Ç°³¯Ïò½Ç¶È£¨»¡¶È£©
-    float linear_velocity;  // µ±Ç°ÏßËÙ¶È£¨Ã×/Ãë£©
-    float angular_velocity; // µ±Ç°½ÇËÙ¶È£¨»¡¶È/Ãë£©
+    float current_x;        // ï¿½ï¿½Ç°xï¿½ï¿½ï¿½ê£¨ï¿½×£ï¿½
+    float current_y;        // ï¿½ï¿½Ç°yï¿½ï¿½ï¿½ê£¨ï¿½×£ï¿½
+    float current_theta;    // ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½Ç¶È£ï¿½ï¿½ï¿½ï¿½È£ï¿½
+    float linear_velocity;  // ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Ù¶È£ï¿½ï¿½ï¿½/ï¿½ë£©
+    float angular_velocity; // ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Ù¶È£ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ë£©
 } RobotState;
 
-// Â·¾¶¸ú×ÙÅäÖÃ²ÎÊý
+// Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½
 typedef struct {
-    float max_linear_velocity;     // ×î´óÏßËÙ¶È£¨Ã×/Ãë£©
-    float max_angular_velocity;    // ×î´ó½ÇËÙ¶È£¨»¡¶È/Ãë£©
-    float linear_acceleration;     // Ïß¼ÓËÙ¶È£¨Ã×/Ãë?£©
-    float angular_acceleration;    // ½Ç¼ÓËÙ¶È£¨»¡¶È/Ãë?£©
-    float goal_tolerance;          // Ä¿±êµãÈÝ²î£¨Ã×£©
-    float lookahead_distance;      // Ç°ÊÓ¾àÀë£¨Ã×£©
+    float max_linear_velocity;     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È£ï¿½ï¿½ï¿½/ï¿½ë£©
+    float max_angular_velocity;    // ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È£ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ë£©
+    float linear_acceleration;     // ï¿½ß¼ï¿½ï¿½Ù¶È£ï¿½ï¿½ï¿½/ï¿½ï¿½?ï¿½ï¿½
+    float angular_acceleration;    // ï¿½Ç¼ï¿½ï¿½Ù¶È£ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½?ï¿½ï¿½
+    float goal_tolerance;          // Ä¿ï¿½ï¿½ï¿½ï¿½Ý²î£¨ï¿½×£ï¿½
+    float lookahead_distance;      // Ç°ï¿½Ó¾ï¿½ï¿½ë£¨ï¿½×£ï¿½
 } PathTracingConfig;
 
 class PathTracing {
 private:
-    Waypoint* waypoints_;                  // Â·¾¶µãÊý×é
-    unsigned int max_waypoints_;           // ×î´óÂ·¾¶µãÊý
-    unsigned int current_waypoint_count_;  // µ±Ç°Â·¾¶µãÊý
-    unsigned int current_target_index_;    // µ±Ç°Ä¿±êµãË÷Òý
+    Waypoint* waypoints_;                  // Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    unsigned int max_waypoints_;           // ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    unsigned int current_waypoint_count_;  // ï¿½ï¿½Ç°Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    unsigned int current_target_index_;    // ï¿½ï¿½Ç°Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    RobotState robot_state_;               // »úÆ÷ÈËµ±Ç°×´Ì¬
-    PathTracingConfig config_;             // ¸ú×ÙÅäÖÃ²ÎÊý
-    // ÉÏÒ»Ê±¿Ì½ÇËÙ¶È£¬ÓÃÓÚ½ÇËÙ¶È¼ÓËÙ¶ÈÏÞÖÆ£¨Ã¿¸öÊµÀýÒ»·Ý£©
-    float last_angular_velocity_;          // ´æ´¢ÉÏÒ»¿ØÖÆÖÜÆÚµÄ½ÇËÙ¶È
+    RobotState robot_state_;               // ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½Ç°×´Ì¬
+    PathTracingConfig config_;             // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½
+    // ï¿½ï¿½Ò»Ê±ï¿½Ì½ï¿½ï¿½Ù¶È£ï¿½ï¿½ï¿½ï¿½Ú½ï¿½ï¿½Ù¶È¼ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½Æ£ï¿½Ã¿ï¿½ï¿½Êµï¿½ï¿½Ò»ï¿½Ý£ï¿½
+    float last_angular_velocity_;          // ï¿½æ´¢ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÚµÄ½ï¿½ï¿½Ù¶ï¿½
 
-    // Ë½ÓÐ·½·¨
-    float calculateDistance(float x1, float y1, float x2, float y2); // ¼ÆËãÁ½µã¼ä¾àÀë
-    float normalizeAngle(float angle);     // ½Ç¶È¹éÒ»»¯µ½[-¦Ð, ¦Ð]
-    float calculateAngleToTarget(float target_x, float target_y); // ¼ÆËãµ½Ä¿±êµãµÄ½Ç¶È
-    bool isGoalReached(float target_x, float target_y);           // ¼ì²éÊÇ·ñµ½´ïÄ¿±êµã
-    void purePursuitControl(float target_x, float target_y);      // Pure Pursuit¿ØÖÆËã·¨
+    // Ë½ï¿½Ð·ï¿½ï¿½ï¿½
+    float calculateDistance(float x1, float y1, float x2, float y2); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    float normalizeAngle(float angle);     // ï¿½Ç¶È¹ï¿½Ò»ï¿½ï¿½ï¿½ï¿½[-ï¿½ï¿½, ï¿½ï¿½]
+    float calculateAngleToTarget(float target_x, float target_y); // ï¿½ï¿½ï¿½ãµ½Ä¿ï¿½ï¿½ï¿½Ä½Ç¶ï¿½
+    bool isGoalReached(float target_x, float target_y);           // ï¿½ï¿½ï¿½ï¿½Ç·ñµ½´ï¿½Ä¿ï¿½ï¿½ï¿½
+    void purePursuitControl(float target_x, float target_y);      // Pure Pursuitï¿½ï¿½ï¿½ï¿½ï¿½ã·¨
 
 public:
-    PathTracing();  // Ä¬ÈÏ¹¹Ôìº¯Êý
-    explicit PathTracing(unsigned int max_points); // Ö¸¶¨×î´óÂ·¾¶µãÊýµÄ¹¹Ôìº¯Êý
-    PathTracing(Waypoint* buffer, unsigned int max_points); // Ê¹ÓÃÍâ²¿»º³åÇøµÄ¹¹Ôìº¯Êý
-    ~PathTracing(); // Îö¹¹º¯Êý
+    PathTracing();  // Ä¬ï¿½Ï¹ï¿½ï¿½ìº¯ï¿½ï¿½
+    explicit PathTracing(unsigned int max_points); // Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ìº¯ï¿½ï¿½
+    PathTracing(Waypoint* buffer, unsigned int max_points); // Ê¹ï¿½ï¿½ï¿½â²¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ìº¯ï¿½ï¿½
+    ~PathTracing(); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    bool init(Waypoint* buffer, unsigned int max_points); // ³õÊ¼»¯Â·¾¶¸ú×ÙÆ÷
+    bool init(Waypoint* buffer, unsigned int max_points); // ï¿½ï¿½Ê¼ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    // Â·¾¶¹ÜÀí
-    bool addWaypoint(float x, float y, float theta); // Ìí¼ÓÂ·¾¶µã
-    bool clearWaypoints();                           // Çå¿ÕËùÓÐÂ·¾¶µã
-    unsigned int getWaypointCount();                 // »ñÈ¡Â·¾¶µãÊýÁ¿
+    // Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    bool addWaypoint(float x, float y, float theta); // ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½
+    bool clearWaypoints();                           // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½
+    unsigned int getWaypointCount();                 // ï¿½ï¿½È¡Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    // ÅäÖÃ¹ÜÀí
+    // ï¿½ï¿½ï¿½Ã¹ï¿½ï¿½ï¿½
     void setConfig(float max_linear_vel, float max_angular_vel,
                    float linear_accel, float angular_accel,
-                   float tolerance, float lookahead); // ÉèÖÃÅäÖÃ²ÎÊý
-    PathTracingConfig getConfig();                    // »ñÈ¡µ±Ç°ÅäÖÃ
+                   float tolerance, float lookahead); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½
+    PathTracingConfig getConfig();                    // ï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½
 
-    // ×´Ì¬¹ÜÀí
-    void setRobotState(float x, float y, float theta); // ÉèÖÃ»úÆ÷ÈË×´Ì¬
-    RobotState getRobotState();                        // »ñÈ¡»úÆ÷ÈË×´Ì¬
+    // ×´Ì¬ï¿½ï¿½ï¿½ï¿½
+    void setRobotState(float x, float y, float theta); // ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬
+    RobotState getRobotState();                        // ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬
 
-    // Â·¾¶¸ú×Ù¿ØÖÆ
-    bool planPath();                       // "¹æ»®"Â·¾¶£¨Êµ¼ÊÊÇ³õÊ¼»¯¸ú×Ù×´Ì¬£©
-    void executeOneStep(float dt_seconds); // Ö´ÐÐÒ»²½¸ú×Ù¿ØÖÆ
-    bool isPathCompleted();                // ¼ì²éÂ·¾¶ÊÇ·ñÍê³É
+    // Â·ï¿½ï¿½ï¿½ï¿½ï¿½Ù¿ï¿½ï¿½ï¿½
+    bool planPath();                       // "ï¿½æ»®"Â·ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½Ç³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½
+    void executeOneStep(float dt_seconds); // Ö´ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ù¿ï¿½ï¿½ï¿½
+    bool isPathCompleted();                // ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½
 
-    // ÔË¶¯¿ØÖÆÊä³ö
-    void calculateMotionCommands(float* linear_vel, float* angular_vel); // »ñÈ¡ÔË¶¯¿ØÖÆÃüÁî
-    Waypoint getCurrentTarget();          // »ñÈ¡µ±Ç°Ä¿±êµã
-    float getPathLength();                // ¼ÆËãÂ·¾¶×Ü³¤¶È
+    // ï¿½Ë¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    void calculateMotionCommands(float* linear_vel, float* angular_vel); // ï¿½ï¿½È¡ï¿½Ë¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    Waypoint getCurrentTarget();          // ï¿½ï¿½È¡ï¿½ï¿½Ç°Ä¿ï¿½ï¿½ï¿½
+    float getPathLength();                // ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½Ü³ï¿½ï¿½ï¿½
 };
 
 #endif // PATH_TRACING_H

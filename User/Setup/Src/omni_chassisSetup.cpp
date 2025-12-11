@@ -1,15 +1,25 @@
 #include "omni_chassisSetup.h"
-#include <cmath>
-#include <vector>
-#include <queue>
-#include <limits>
-#include <cstdint>
-#include "APP_Bezier_Curve.h"
-#include "AutoCtrler.h"
-#include "Module_Position.h"
 
-PID_Position pid_yaw;
-static bool pid_yaw_inited = false;
+// 地图与格子尺寸配置
+static const float CELL_SIZE_M = 1.2f; // 每格 1200mm = 1.2m
+
+// 将栅格 (x,y) 转为世界坐标系中心点 (m)
+static Vector2D gridToWorld(int gx, int gy)
+{
+    Vector2D p;
+    p.x = gx * CELL_SIZE_M + CELL_SIZE_M * 0.5f;
+    p.y = gy * CELL_SIZE_M + CELL_SIZE_M * 0.5f;
+    return p;
+}
+
+// 将格号(1..30) 转为 grid坐标 (0-based)
+static void cellNumToGrid(int cellNum, int &gx, int &gy)
+{
+    int idx = cellNum - 1;
+    gx = idx % 5;
+    gy = idx / 5;
+}
+
 
 
 void OmniChassis_Setup::loop()
@@ -31,15 +41,21 @@ void OmniChassis_Setup::loop()
         dt_us = 200000; 
     float dt = dt_us * 1e-6f; 
 
-    // 读取当前位置（里程计），供本帧使用，避免全局 RealPosData 链接问题
-    RealPos __rp = Position::GetInstance(&huart1)->getRealPosData();
+    // 读取当前位置（里程计），供本帧使用
+    RealPos rp;
+    rp.world_x = RealPosData.world_x;
+    rp.world_y = RealPosData.world_y;
+    rp.world_yaw = RealPosData.world_yaw;
+    rp.dx = RealPosData.dx;
+    rp.dy = RealPosData.dy;
+    rp.dyaw = RealPosData.dyaw;
 
     switch (chassis_status_)
     {
         case CHASSIS_MANUAL_CONTROL_A:
         {
             this->chassis_manual_control_A();
-            this->locked_yaw = __rp.world_yaw;
+            this->locked_yaw = rp.world_yaw;
             break;
         }
 
@@ -50,7 +66,7 @@ void OmniChassis_Setup::loop()
         }
         case CHASSIS_AUTO_CONTROL:
         {
-            this->chassis_auto_control();
+            this->chassis_auto_control(dt);
             break;
         }
 
@@ -78,23 +94,9 @@ void OmniChassis_Setup::chassis_manual_control_A()
 
 void OmniChassis_Setup::chassis_manual_control_B()
 {
-    if (!pid_yaw_inited) {
-        PID_Param_Config locked = {
-            .kp = 0.2f,   
-            .ki = 0.0f,
-            .kd = 0.00006f,
-            .I_Outlimit = 1.0f,
-            .isIOutlimit = true,
-            .output_limit = 1.0f,
-            .deadband = 0.05f
-        };
-        pid_yaw.set_params(locked, 0.0f);
-        pid_yaw_inited = true;
-    }
-
-    
+    // 使用成员变量 pid_yaw_
     this->now_yaw = RealPosData.world_yaw;
-    yaw_ctrl = pid_yaw.pid_calc(this->locked_yaw, this->now_yaw);
+    yaw_ctrl = this->pid_yaw_.pid_calc(this->locked_yaw, this->now_yaw);
 
 	this->target_chassis_twist_.vx = (static_cast<float>(AirJoy::getinstance().LEFT_X) - 1500.0f) / 500.0f * max_wheel_speed_;
     this->target_chassis_twist_.vy = (static_cast<float>(AirJoy::getinstance().LEFT_Y) - 1500.0f) / 500.0f * max_wheel_speed_;
@@ -109,109 +111,107 @@ void OmniChassis_Setup::chassis_stop()
     this->target_chassis_twist_.yaw_rate = 0.0f;
 }
 
-void OmniChassis_Setup::chassis_auto_control()
+// 世界坐标 -> grid (0-based)，并裁剪到地图范围
+static void worldToGrid(float wx, float wy, int &gx, int &gy)
 {
-	static bool pid_bc_inited = false;
-	static PID_Position pid_bc; 
+    int ix = static_cast<int>(floorf(wx / CELL_SIZE_M));
+    int iy = static_cast<int>(floorf(wy / CELL_SIZE_M));
+    if (ix < 0) ix = 0; if (ix > 4) ix = 4;
+    if (iy < 0) iy = 0; if (iy > 5) iy = 5;
+    gx = ix; gy = iy;
+}
 
-	if (!pid_bc_inited) {
-		PID_Param_Config bc_param = { 
-            .kp = 0.1f,
-            .ki = 0.0f,
-            .kd = 0.005f, 
-            .I_Outlimit = 1.0f,
-            .isIOutlimit = true, 
-            .output_limit = 1.5f,
-            .deadband = 0.01f };
-        pid_bc.set_params(bc_param, 0.0f);
-        pid_bc_inited = true;
-	}
 
-	Vector2D start_point(0.0f, 0.0f);
-    Vector2D control_point(-6.0f, 16.0f);
-    Vector2D end_point(12.0f, 14.0f);
-    Vector2D point(0.01f, 0.01f);
-    Vector2D point_last(0.01f, 0.01f);
-	static BezierCurve bc(start_point, control_point, end_point);
 
-    // 使用 Position 单例获取当前位姿，避免依赖未定义的全局符号
-    RealPos rp = Position::GetInstance(&huart1)->getRealPosData();
-    Vector2D robot_pos(rp.world_x, rp.world_y);
-    float robot_yaw = rp.world_yaw;
-
-    // 找到路径上最近的点，并计算横向误差
-    float t_nearest; // 用于接收最近点的 t 参数
-    float nearest_distance = bc.Get_Nearest_Distance(robot_pos, &t_nearest); // 最近点距离
-
-    Vector2D nearest_point = bc.Get_Point(t_nearest);         // 最近点坐标
-    Vector2D tangent_near = bc.Get_Tangent_Vector(t_nearest); // 切线方向
-    Vector2D path_to_robot = robot_pos - nearest_point;      // 路径点指向机器人向量
-
-    // 使用2D向量叉乘的 z 分量来判断机器人在切线的哪一侧
-    float error_side = tangent_near.x * path_to_robot.y - tangent_near.y * path_to_robot.x;
-    float signed_cross_track_error = (error_side >= 0.0f) ? nearest_distance : -nearest_distance;
-
-    // 检查是否已到达终点附近
-    const float goal_radius = 0.1f; 
-    if (bc.Get_Current_Len(t_nearest) > (bc.Get_len() - goal_radius))
-    {
+// 基于 A* 的路径规划与跟踪实现（dt: 控制周期秒）
+void OmniChassis_Setup::chassis_auto_control(float dt)
+{
+    if (path_finished_) {
         this->target_chassis_twist_.vx = 0.0f;
         this->target_chassis_twist_.vy = 0.0f;
         this->target_chassis_twist_.yaw_rate = 0.0f;
         return;
     }
 
-    float current_len = bc.Get_Current_Len(t_nearest);
+    // 获取当前位姿
+    RealPos rp;
+    rp.world_x = RealPosData.world_x;
+    rp.world_y = RealPosData.world_y;
+    rp.world_yaw = RealPosData.world_yaw;
+    rp.dx = RealPosData.dx;
+    rp.dy = RealPosData.dy;
+    rp.dyaw = RealPosData.dyaw;
 
-    // 使用参数步进法在参数空间搜索前视点 t_look
-    // 先计算前视距离
-    const float L_min = 0.12f, L_max = 1.0f;
-    const float k_v = 0.8f; // 比例系数
-    const float Vref = max_wheel_speed_ * 0.4f; // 期望切向速度标量
-    float L = k_v * Vref;//  前视距离
-    if (L < L_min) L = L_min;
-    if (L > L_max) L = L_max;
+    // 如果还未规划路径，则规划（起点为当前位置所属格或固定格1，终点为格号30）
+    if (path_tracer_.getWaypointCount() == 0) {
+        // 强制从格号1开始规划
+        int sx = 0, sy = 0; 
 
-    // 按参数步进搜索 t_look，从 t_nearest 开始，步长为 step_t
-    const float step_t = 0.01f; // 参数步长
-    float t_look = t_nearest;
-    Vector2D p_cur = nearest_point; // P(t_nearest)
-    while (t_look < 1.0f) {
-        float t_next = t_look + step_t;
-        if (t_next > 1.0f) t_next = 1.0f;
-        Vector2D p_next = bc.Get_Point(t_next);
-        float dist = (p_next - p_cur).magnitude();
-        if (dist >= L || t_next >= 1.0f) {
-            t_look = t_next;
-            break;
+        int gx, gy;
+        cellNumToGrid(30, gx, gy); // 终点 cell 30
+
+        debug_uart.printf_DMA("A*: planning from (%d,%d) to (%d,%d)\n", sx, sy, gx, gy);
+
+        bool ok = path_planner_.findPath(static_cast<int16_t>(sx), static_cast<int16_t>(sy),
+                                        static_cast<int16_t>(gx), static_cast<int16_t>(gy));
+        if (!ok) {
+            debug_uart.printf_DMA("A*: path not found\n");
+            path_finished_ = true;
+            return;
         }
-        t_look = t_next;
+
+        // 简化并转换为 world waypoints
+        path_planner_.simplifyPath();
+        const GridPoint* p = path_planner_.getPath();
+        uint16_t len = path_planner_.getPathLength();
+        for (uint16_t i = 0; i < len; ++i) {
+            Vector2D wp = gridToWorld(p[i].x, p[i].y);
+            path_tracer_.addWaypoint(wp.x, wp.y, 0.0f);
+        }
+        path_tracer_.planPath();
+        debug_uart.printf_DMA("A*: planned %d waypoints\n", len);
     }
 
-    // 前视点切向单位向量 vdir
-    Vector2D vdir = bc.Get_Tangent_Vector(t_look).normalize();
+    // 跟踪路径
+    if (path_tracer_.isPathCompleted()) {
+        path_finished_ = true;
+        debug_uart.printf_DMA("A*: path completed\n");
+        return;
+    }
 
-    // 由 PID 速度环得到修正速度 Av（沿法线方向）
-    float lateral_correction = pid_bc.pid_calc(0.0f, -signed_cross_track_error); // 输出为速度（m/s）
-    Vector2D normal(-vdir.y, vdir.x); 
-    Vector2D Av = normal * lateral_correction; // 修正速度向量（世界系）
+    path_tracer_.setRobotState(rp.world_x, rp.world_y, rp.world_yaw);// 设置当前位置
+    path_tracer_.executeOneStep(dt);// 执行一步路径跟踪
 
-    // 合速度 Vcmd = Vref * vdir + Av
-    Vector2D Vcmd_world = vdir * Vref + Av;
+    float linear_vel = 0.0f, angular_vel = 0.0f;// 获取跟踪输出速度
+    path_tracer_.calculateMotionCommands(&linear_vel, &angular_vel);
 
-    // 将世界系速度变换到机器人局部坐标系
-    float cosy = cosf(-robot_yaw);
-    float siny = sinf(-robot_yaw);
-    float vx_body = Vcmd_world.x * cosy - Vcmd_world.y * siny;
-    float vy_body = Vcmd_world.x * siny + Vcmd_world.y * cosy;
+    // 将 Pure Pursuit 输出的全局线速度映射到机器人局部坐标系 (vx, vy)
+    // Pure Pursuit 输出的是沿着当前目标方向的线速度大小 linear_vel
+    // 我们需要获取当前目标点的方向，或者利用 Pure Pursuit 内部计算出的期望航向
+    // 这里简单地假设 linear_vel 是沿着机器人当前朝向到目标点的方向
+    
+    // 获取当前目标点以计算期望方向向量
+    Waypoint target = path_tracer_.getCurrentTarget();
+    float dx = target.x - rp.world_x;
+    float dy = target.y - rp.world_y;
+    float dist = sqrtf(dx*dx + dy*dy);
+    
+    float global_vx = 0.0f;
+    float global_vy = 0.0f;
 
-    this->target_chassis_twist_.vx = vx_body;
-    this->target_chassis_twist_.vy = vy_body;
+    if (dist > 0.001f) {
+        // 归一化方向向量并乘以期望线速度
+        global_vx = (dx / dist) * linear_vel;
+        global_vy = (dy / dist) * linear_vel;
+    }
 
-    // 航向控制：使底盘朝向切线方向
-    float target_yaw = atan2f(vdir.y, vdir.x);
-    float yaw_err = target_yaw - robot_yaw;
-    while (yaw_err > PI) yaw_err -= 2.0f * PI;
-    while (yaw_err < -PI) yaw_err += 2.0f * PI;
-    this->target_chassis_twist_.yaw_rate = pid_yaw.pid_calc(0.0f, -yaw_err);
+    // 将全局速度转换到机器人局部坐标系
+    // vx_body =  cos(yaw)*vx_global + sin(yaw)*vy_global
+    // vy_body = -sin(yaw)*vx_global + cos(yaw)*vy_global
+    float cos_yaw = cosf(rp.world_yaw);
+    float sin_yaw = sinf(rp.world_yaw);
+
+    this->target_chassis_twist_.vx =  cos_yaw * global_vx + sin_yaw * global_vy;
+    this->target_chassis_twist_.vy = -sin_yaw * global_vx + cos_yaw * global_vy;
+    this->target_chassis_twist_.yaw_rate = angular_vel;
 }
