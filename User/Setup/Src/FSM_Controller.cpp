@@ -70,7 +70,7 @@ void FSM_Controller::all_stop()
    // 停止所有机构动作的实现
    arm_setup_->setArmStatus(ARM_STOP);
    chassis_setup_->setChassisStatus(CHASSIS_STOP);
-   
+       
 }
 
 void FSM_Controller::manual_ctrl()
