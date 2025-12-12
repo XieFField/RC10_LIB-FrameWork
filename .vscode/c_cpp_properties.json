@@ -37,7 +37,7 @@
         {
             "name": "Frame_T",
             "includePath": [
-                "f:\\MyProjectFlies\\STM32H7\\Core\\Inc",
+                "${workspaceFolder}\\STM32H7\\Core\\Inc",
                 "f:\\MyProjectFlies\\STM32H7\\Drivers\\STM32H7xx_HAL_Driver\\Inc",
                 "f:\\MyProjectFlies\\STM32H7\\Drivers\\STM32H7xx_HAL_Driver\\Inc\\Legacy",
                 "f:\\MyProjectFlies\\STM32H7\\Middlewares\\Third_Party\\FreeRTOS\\Source\\include",
@@ -74,9 +74,12 @@
                 "f:\\MyProjectFlies\\STM32H7\\User\\debug\\Src",
                 "f:\\MyProjectFlies\\STM32H7\\User\\Control\\Src",
                 "f:\\MyProjectFlies\\STM32H7\\User\\Setup\\Src",
-                "f:\\MyProjectFlies\\STM32H7\\Drivers\\CMSIS\\DSP\\Lib\\ARM",
-                "f:\\MyProjectFlies\\STM32H7\\Middlewares\\ST\\STM32_USB_Device_Library\\Core\\Src",
-                "f:\\MyProjectFlies\\STM32H7\\Middlewares\\ST\\STM32_USB_Device_Library\\Class\\CDC\\Src"
+                "${workspaceFolder}\\STM32H7\\Drivers\\CMSIS\\DSP\\Lib\\ARM",
+                "${workspaceFolder}\\STM32H7\\Middlewares\\ST\\STM32_USB_Device_Library\\Core\\Src",
+                "${workspaceFolder}\\STM32H7\\Middlewares\\ST\\STM32_USB_Device_Library\\Class\\CDC\\Src",
+                "${workspaceFolder}/RC10_LIB/BSP_Driver/Inc",
+                "${workspaceFolder}/RC10_LIB/Module/Inc",
+                "${workspaceFolder}/User/debug/Inc"
             ],
             "defines": [
                 "USE_PWR_LDO_SUPPLY",

@@ -1,8 +1,8 @@
 /**
  * @file BSP_USB_UART_Driver.cpp
  * @author Zhuang Ji cao
- * @brief USB UART驱动文件
- * @attention 此文件用于USB UART
+ * @brief USB UART???????
+ * @attention ?????????USB UART
  * @date 2025-10-1
  */
 
@@ -17,9 +17,9 @@
 extern "C" {
 #endif
 
-//定义函数被指针
+//???庯???????
 typedef void (*RxCallback)(uint8_t *buf, uint16_t len);
-//USB和UART回调函数
+//USB??UART???????
 void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len);	
 /** 
 * @brief define the uart struct
@@ -39,9 +39,9 @@ public:
     
     UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle);
     ~UART_(){}
-			//定义虚函数
+			//?????麯??
 		virtual void Callback_Fuc(uint8_t *buf, uint16_t len);
-		//void SetCallback(RxCallback callback) {RxCallback_Fuc = callback;}// 回调函数指针
+		void SetCallback(RxCallback callback) {RxCallback_Fuc = callback;}// ??????????
 		void UART_Receive_Callback(uint8_t* Buf, uint32_t Len);
     UART_HandleTypeDef* GetUartHandle() const { return uarthandle_;}
 		void UART_Init();
@@ -49,7 +49,7 @@ public:
 		uint8_t *rx_buffer;
 private:
     RxCallback RxCallback_Fuc;	  
-		UART_HandleTypeDef *uarthandle_;//UART句柄
+		UART_HandleTypeDef *uarthandle_;//UART???
 };
 
 class USB_CDC_{
@@ -61,12 +61,12 @@ class USB_CDC_{
     USBD_HandleTypeDef* GetUSBHandle() const { return usbhandle_; }
 private:
     RxCallback RxCallback_Fuc;	 
-		USBD_HandleTypeDef *usbhandle_;//USB句柄
+		USBD_HandleTypeDef *usbhandle_;//USB???
 };
-// 实例管理器
+// ?????????
 class InstanceManager {
 public:
-    static void RegisterInstance(UART_* uart_instance,USB_CDC_* usb_instance);//注册
+    static void RegisterInstance(UART_* uart_instance,USB_CDC_* usb_instance);//???
     static USB_CDC_* GetInstanceByUSBHandle();
     static UART_* GetInstanceByUartHandle(UART_HandleTypeDef *huart);
 private:

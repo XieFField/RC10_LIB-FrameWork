@@ -2,51 +2,51 @@
 // #include "PathPlanner.h"
 // #include "PathTracing.h"
 // static const float M_PI = 3.14159265358979323846f;
-// // ÑÝÊ¾ÓÃµØÍ¼³ß´ç
+// // ï¿½ï¿½Ê¾ï¿½Ãµï¿½Í¼ï¿½ß´ï¿½
 // const uint16_t MAP_WIDTH = 20;
 // const uint16_t MAP_HEIGHT = 20;
 
-// // »º³åÇø¶¨Òå
+// // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 // uint8_t map_buffer[MAP_WIDTH * MAP_HEIGHT];
 // AStarNode nodes_buffer[MAP_WIDTH * MAP_HEIGHT];
-// AStarNode* open_list_buffer[500];  // ¿ª·ÅÁÐ±í»º³åÇø
-// GridPoint path_buffer[200];        // Â·¾¶µã»º³åÇø
-// Waypoint waypoint_buffer[200];     // ÊÀ½ç×ø±êÂ·¾¶µã»º³åÇø
+// AStarNode* open_list_buffer[500];  // ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+// GridPoint path_buffer[200];        // Â·ï¿½ï¿½ï¿½ã»ºï¿½ï¿½ï¿½ï¿½
+// Waypoint waypoint_buffer[200];     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ã»ºï¿½ï¿½ï¿½ï¿½
 
-// // Íø¸ñµ½ÊÀ½ç×ø±êµÄ×ª»»±ÈÀý£¨Ã×/Íø¸ñ£©
+// // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½
 // const float GRID_RESOLUTION = 0.1f;
 
 // /**
-//  * ´´½¨ÑÝÊ¾µØÍ¼ - ÉèÖÃÕÏ°­ÎïºÍ¿ÉÍ¨ÐÐÇøÓò
+//  * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½Í¼ - ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ï¿½ï¿½Í¿ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //  */
 // void createDemoMap(uint8_t* map_data) {
-//     // Çå¿ÕµØÍ¼£¨È«²¿ÉèÎª¿ÉÍ¨ÐÐ£©- Ê¹ÓÃÑ­»·Ìæ´ú memset
+//     // ï¿½ï¿½Õµï¿½Í¼ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Í¨ï¿½Ð£ï¿½- Ê¹ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ memset
 //     for (uint32_t i = 0; i < MAP_WIDTH * MAP_HEIGHT; i++) {
 //         map_data[i] = CELL_FREE;
 //     }
     
-//     // ÉèÖÃ±ß½çÕÏ°­Îï
+//     // ï¿½ï¿½ï¿½Ã±ß½ï¿½ï¿½Ï°ï¿½ï¿½ï¿½
 //     for (int x = 0; x < MAP_WIDTH; x++) {
-//         map_data[0 * MAP_WIDTH + x] = CELL_OBSTACLE;                    // ÉÏ±ß½ç
-//         map_data[(MAP_HEIGHT-1) * MAP_WIDTH + x] = CELL_OBSTACLE;       // ÏÂ±ß½ç
+//         map_data[0 * MAP_WIDTH + x] = CELL_OBSTACLE;                    // ï¿½Ï±ß½ï¿½
+//         map_data[(MAP_HEIGHT-1) * MAP_WIDTH + x] = CELL_OBSTACLE;       // ï¿½Â±ß½ï¿½
 //     }
 //     for (int y = 0; y < MAP_HEIGHT; y++) {
-//         map_data[y * MAP_WIDTH + 0] = CELL_OBSTACLE;                    // ×ó±ß½ç
-//         map_data[y * MAP_WIDTH + (MAP_WIDTH-1)] = CELL_OBSTACLE;        // ÓÒ±ß½ç
+//         map_data[y * MAP_WIDTH + 0] = CELL_OBSTACLE;                    // ï¿½ï¿½ß½ï¿½
+//         map_data[y * MAP_WIDTH + (MAP_WIDTH-1)] = CELL_OBSTACLE;        // ï¿½Ò±ß½ï¿½
 //     }
     
-//     // ÉèÖÃÄÚ²¿ÕÏ°­Îï - ´´½¨Ò»¸öÃÔ¹¬-like »·¾³
-//     // ÕÏ°­Îï1£ºË®Æ½Ç½
+//     // ï¿½ï¿½ï¿½ï¿½ï¿½Ú²ï¿½ï¿½Ï°ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ô¹ï¿½-like ï¿½ï¿½ï¿½ï¿½
+//     // ï¿½Ï°ï¿½ï¿½ï¿½1ï¿½ï¿½Ë®Æ½Ç½
 //     for (int x = 3; x < 15; x++) {
 //         map_data[5 * MAP_WIDTH + x] = CELL_OBSTACLE;
 //     }
     
-//     // ÕÏ°­Îï2£º´¹Ö±Ç½
+//     // ï¿½Ï°ï¿½ï¿½ï¿½2ï¿½ï¿½ï¿½ï¿½Ö±Ç½
 //     for (int y = 3; y < 12; y++) {
 //         map_data[y * MAP_WIDTH + 8] = CELL_OBSTACLE;
 //     }
     
-//     // ÕÏ°­Îï3£ºLÐÎÕÏ°­Îï
+//     // ï¿½Ï°ï¿½ï¿½ï¿½3ï¿½ï¿½Lï¿½ï¿½ï¿½Ï°ï¿½ï¿½ï¿½
 //     for (int x = 12; x < 17; x++) {
 //         map_data[12 * MAP_WIDTH + x] = CELL_OBSTACLE;
 //     }
@@ -54,7 +54,7 @@
 //         map_data[y * MAP_WIDTH + 16] = CELL_OBSTACLE;
 //     }
     
-//     // ÕÏ°­Îï4£ºÐ¡·½¿é
+//     // ï¿½Ï°ï¿½ï¿½ï¿½4ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½
 //     for (int y = 15; y < 18; y++) {
 //         for (int x = 3; x < 6; x++) {
 //             map_data[y * MAP_WIDTH + x] = CELL_OBSTACLE;
@@ -63,7 +63,7 @@
 // }
 
 // /**
-//  * ½«Íø¸ñÂ·¾¶×ª»»ÎªÊÀ½ç×ø±êÂ·¾¶
+//  * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½×ªï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½
 //  */
 // void convertGridPathToWorldPath(const GridPoint* grid_path, uint16_t path_length, 
 //                                Waypoint* world_path, float resolution) {
@@ -71,118 +71,118 @@
 //         world_path[i].x = grid_path[i].x * resolution;
 //         world_path[i].y = grid_path[i].y * resolution;
         
-//         // ¼ÆËã³¯Ïò½Ç¶È£¨Ö¸ÏòÏÂÒ»¸öµã£©
+//         // ï¿½ï¿½ï¿½ã³¯ï¿½ï¿½Ç¶È£ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ã£©
 //         if (i < path_length - 1) {
 //             float dx = world_path[i+1].x - world_path[i].x;
 //             float dy = world_path[i+1].y - world_path[i].y;
 //             world_path[i].theta = atan2f(dy, dx);
 //         } else {
-//             // ×îºóÒ»¸öµã±£³ÖÖ®Ç°µÄ³¯Ïò
+//             // ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ã±£ï¿½ï¿½Ö®Ç°ï¿½Ä³ï¿½ï¿½ï¿½
 //             world_path[i].theta = (i > 0) ? world_path[i-1].theta : 0.0f;
 //         }
 //     }
 // }
 
 // /**
-//  * ¼ÆËãÁ½µãÖ®¼äµÄ½Ç¶È²î£¨ÓÃÓÚÏÔÊ¾¸ú×ÙÎó²î£©
+//  * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½Ä½Ç¶È²î£¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½î£©
 //  */
 // float calculateAngleError(float current_angle, float target_angle) {
 //     float error = target_angle - current_angle;
-//     // ¹éÒ»»¯µ½ [-¦Ð, ¦Ð]
+//     // ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ [-ï¿½ï¿½, ï¿½ï¿½]
 //     while (error > M_PI) error -= 2 * M_PI;
 //     while (error < -M_PI) error += 2 * M_PI;
 //     return error;
 // }
 
 // /**
-//  * ÑÝÊ¾º¯Êý
+//  * ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½
 //  */
 // int test1() {
 //     // ===============================
-//     // µÚÒ»²½£ºÂ·¾¶¹æ»®
+//     // ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½æ»®
 //     // ===============================
     
-//     // ´´½¨Â·¾¶¹æ»®Æ÷
+//     // ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½æ»®ï¿½ï¿½
 //     PathPlanner planner(map_buffer, nodes_buffer, open_list_buffer, path_buffer,
 //                        MAP_WIDTH, MAP_HEIGHT, 500, 200);
     
-//     // ´´½¨²¢ÉèÖÃµØÍ¼
+//     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½Í¼
 //     uint8_t map_data[MAP_WIDTH * MAP_HEIGHT];
 //     createDemoMap(map_data);
 //     planner.setMapData(map_data);
     
-//     // ÉèÖÃÆðµãºÍÖÕµã
-//     int16_t start_x = 1, start_y = 1;      // Íø¸ñ×ø±ê
-//     int16_t goal_x = 18, goal_y = 18;      // Íø¸ñ×ø±ê
+//     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õµï¿½
+//     int16_t start_x = 1, start_y = 1;      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//     int16_t goal_x = 18, goal_y = 18;      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     
-//     // Ö´ÐÐÂ·¾¶¹æ»®
+//     // Ö´ï¿½ï¿½Â·ï¿½ï¿½ï¿½æ»®
 //     bool planning_success = planner.findPath(start_x, start_y, goal_x, goal_y);
     
 //     if (!planning_success) {
 //         return -1;
 //     }
     
-//     // »ñÈ¡¹æ»®½á¹û
+//     // ï¿½ï¿½È¡ï¿½æ»®ï¿½ï¿½ï¿½
 //     uint16_t grid_path_length = planner.getPathLength();
 //     const GridPoint* grid_path = planner.getPath();
     
-//     // Â·¾¶¼ò»¯£¨¿ÉÑ¡£©
+//     // Â·ï¿½ï¿½ï¿½ò»¯£ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½
 //     planner.simplifyPath();
 //     grid_path_length = planner.getPathLength();
     
 //     // ===============================
-//     // µÚ¶þ²½£ºÂ·¾¶¸ú×Ù×¼±¸
+//     // ï¿½Ú¶ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½
 //     // ===============================
     
-//     // ´´½¨Â·¾¶¸ú×ÙÆ÷
+//     // ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //     PathTracing tracker;
 //     tracker.init(waypoint_buffer, 200);
     
-//     // ÅäÖÃ¸ú×Ù²ÎÊý£¨ÊÊºÏÐ¡ÐÍ»úÆ÷ÈË£©
+//     // ï¿½ï¿½ï¿½Ã¸ï¿½ï¿½Ù²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êºï¿½Ð¡ï¿½Í»ï¿½ï¿½ï¿½ï¿½Ë£ï¿½
 //     tracker.setConfig(
-//         0.3f,   // ×î´óÏßËÙ¶È: 0.3 m/s
-//         1.5f,   // ×î´ó½ÇËÙ¶È: 1.5 rad/s
-//         0.2f,   // Ïß¼ÓËÙ¶È: 0.2 m/s2
-//         1.0f,   // ½Ç¼ÓËÙ¶È: 1.0 rad/s2
-//         0.05f,  // Ä¿±êÈÝ²î: 0.05 m
-//         0.2f    // Ç°ÊÓ¾àÀë: 0.2 m
+//         0.3f,   // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½: 0.3 m/s
+//         1.5f,   // ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½: 1.5 rad/s
+//         0.2f,   // ï¿½ß¼ï¿½ï¿½Ù¶ï¿½: 0.2 m/s2
+//         1.0f,   // ï¿½Ç¼ï¿½ï¿½Ù¶ï¿½: 1.0 rad/s2
+//         0.05f,  // Ä¿ï¿½ï¿½ï¿½Ý²ï¿½: 0.05 m
+//         0.2f    // Ç°ï¿½Ó¾ï¿½ï¿½ï¿½: 0.2 m
 //     );
     
-//     // ½«Íø¸ñÂ·¾¶×ª»»ÎªÊÀ½ç×ø±êÂ·¾¶
+//     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½×ªï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½
 //     convertGridPathToWorldPath(grid_path, grid_path_length, waypoint_buffer, GRID_RESOLUTION);
     
-//     // ½«Â·¾¶µãÌí¼Óµ½¸ú×ÙÆ÷
+//     // ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //     for (uint16_t i = 0; i < grid_path_length; i++) {
 //         tracker.addWaypoint(waypoint_buffer[i].x, waypoint_buffer[i].y, waypoint_buffer[i].theta);
 //     }
     
-//     // ÉèÖÃ»úÆ÷ÈË³õÊ¼×´Ì¬£¨ÔÚÊÀ½ç×ø±êÏµÖÐ£©
+//     // ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½Ë³ï¿½Ê¼×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½Ð£ï¿½
 //     float start_world_x = start_x * GRID_RESOLUTION;
 //     float start_world_y = start_y * GRID_RESOLUTION;
-//     float start_theta = 0.0f;  // ³õÊ¼³¯ÏòÎª0»¡¶È£¨ÏòÓÒ£©
+//     float start_theta = 0.0f;  // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Îª0ï¿½ï¿½ï¿½È£ï¿½ï¿½ï¿½ï¿½Ò£ï¿½
     
 //     tracker.setRobotState(start_world_x, start_world_y, start_theta);
     
-//     // ¿ªÊ¼Â·¾¶¸ú×Ù
+//     // ï¿½ï¿½Ê¼Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //     if (!tracker.planPath()) {
 //         return -1;
 //     }
     
 //     // ===============================
-//     // µÚÈý²½£ºÖ´ÐÐÂ·¾¶¸ú×Ù
+//     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //     // ===============================
     
 //     float simulation_time = 0.0f;
-//     const float TIME_STEP = 0.1f;  // 100ms ¿ØÖÆÖÜÆÚ
-//     const float MAX_SIMULATION_TIME = 60.0f;  // ×î´ó·ÂÕæÊ±¼ä60Ãë
+//     const float TIME_STEP = 0.1f;  // 100ms ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//     const float MAX_SIMULATION_TIME = 60.0f;  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½60ï¿½ï¿½
     
 //     while (!tracker.isPathCompleted() && simulation_time < MAX_SIMULATION_TIME) {
-//         // Ö´ÐÐÒ»²½¸ú×Ù¿ØÖÆ
+//         // Ö´ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ù¿ï¿½ï¿½ï¿½
 //         tracker.executeOneStep(TIME_STEP);
         
 //         simulation_time += TIME_STEP;
         
-//         // ¼òµ¥ÑÓÊ±£¬Ä£ÄâÕæÊµ¿ØÖÆÖÜÆÚ£¨ÔÚÊµ¼ÊÏµÍ³ÖÐ²»ÐèÒª£©
+//         // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ï¿½Êµï¿½ï¿½ÏµÍ³ï¿½Ð²ï¿½ï¿½ï¿½Òªï¿½ï¿½
 //         // std::this_thread::sleep_for(std::chrono::milliseconds(100));
 //     }
     
@@ -191,4 +191,4 @@
 //     }
     
 //     return 0;
-// }
+// }123
