@@ -31,6 +31,7 @@ void FSM_Controller::loop()
             robot_status_ = AUTO_CONTROL;
     }
 
+    robot_status_ = MANUAL_CONTROL;
    switch (robot_status_)
    {
     case ALL_STOP:
