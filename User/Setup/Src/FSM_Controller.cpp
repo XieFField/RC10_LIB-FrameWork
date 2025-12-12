@@ -33,8 +33,11 @@ void FSM_Controller::loop()
 //             robot_status_ = AUTO_CONTROL;
 //     }
 
+    airjoy->process();
     robot_status_ = MANUAL_CONTROL;
-    CrsfReceiver::GetInstance(&huart7)->getControlData(&test_airjoy);
+    // 消费 CRSF 接收环形缓冲，推进状态机
+//    CrsfReceiver::GetInstance(&huart7)->process();
+//    CrsfReceiver::GetInstance(&huart7)->getControlData(&test_airjoy);
    switch (robot_status_)
    {
     case ALL_STOP:

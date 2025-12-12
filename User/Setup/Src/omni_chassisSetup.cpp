@@ -5,7 +5,7 @@ void OmniChassis_Setup::loop()
     if (!init_flag)
         return;
     
-    CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+//    CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 
     switch (chassis_status_)
     {

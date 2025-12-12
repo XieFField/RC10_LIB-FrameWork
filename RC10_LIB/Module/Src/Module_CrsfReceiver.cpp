@@ -42,17 +42,10 @@ CrsfReceiver* CrsfReceiver::instance_ = nullptr;
  *   以下实现与 UART7 绑定
  * ====================================================== */
 
-CrsfReceiver* CrsfReceiver::GetInstance(UART_HandleTypeDef *uart_handle) 
-{
-    // 使用静态局部变量实现单例，确保构造函数只被调用一次
-    static CrsfReceiver instance(uart_handle);
-    return &instance;
-}
-
 void CrsfReceiver::StaticUartCallback(uint8_t *buf, uint16_t len)
 {
     if (instance_) 
-		instance_->appendFromISR(buf, len);
+				instance_->appendFromISR(buf, len);
 }
 
 /* 构造 / 析构 */
@@ -77,21 +70,6 @@ CrsfReceiver::CrsfReceiver(UART_HandleTypeDef* huart)
     memset(tx_buffer_, 0, sizeof(tx_buffer_));
     payload_ptr_ = nullptr;
 
-}
-
-void CrsfReceiver::InitUART(void)
-{
-    if(uart_initialized_)
-        return;
-
-    UART_HandleTypeDef* uart_handle = CrsfReceiver::UART_::GetUartHandle();
-
-    uart_instance_ = InstanceManager::GetInstanceByUartHandle(uart_handle);
-
-
-    uart_instance_->UART_Init();
-
-    uart_initialized_ = true;
 }
 
 void CrsfReceiver::Callback_Fuc(uint8_t *buf, uint16_t len)
@@ -330,7 +308,6 @@ void CrsfReceiver::appendFromISR(const uint8_t *buf, uint16_t len)
 {
     if (!buf || !len) return;
     if (len > RX_RING_SIZE) len = RX_RING_SIZE;
-    isr_bytes_ += len;
     uint16_t head = rx_ring_head_ % RX_RING_SIZE;
     uint16_t tail = rx_ring_tail_ % RX_RING_SIZE;
     uint16_t free_space = (tail + RX_RING_SIZE - head - 1) % RX_RING_SIZE;
@@ -366,7 +343,7 @@ void CrsfReceiver::consumeRingBuffer()
     if (head == tail) return;
     uint16_t chunk = (head > tail) ? (head - tail) : (RX_RING_SIZE - tail);
     if (chunk) {
-        processBatchData(&rx_ring_[tail], chunk); consumed_bytes_ += chunk; 
+        processBatchData(&rx_ring_[tail], chunk);
         tail = (tail + chunk) % RX_RING_SIZE;
     }
     if (tail != head) {
