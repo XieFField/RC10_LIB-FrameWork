@@ -12,7 +12,8 @@
 
 /* -------------  Cache 维护宏/函数  ------------- */
 // SCB cache ops 要求地址与大小基于 cache line 对齐(32字节)
-static inline void dcache_clean_range(void* addr, uint32_t len) {
+static inline void dcache_clean_range(void* addr, uint32_t len) 
+{
     if (len == 0 || addr == nullptr) return;
     if ((SCB->CCR & SCB_CCR_DC_Msk) == 0) return; // D-Cache not enabled
     const uint32_t line = 32u;
@@ -20,7 +21,9 @@ static inline void dcache_clean_range(void* addr, uint32_t len) {
     uint32_t end = (((uint32_t)addr + len + (line - 1u)) & ~(line - 1u));
     SCB_CleanDCache_by_Addr((uint32_t*)start, (int32_t)(end - start));
 }
-static inline void dcache_invalidate_range(void* addr, uint32_t len) {
+
+static inline void dcache_invalidate_range(void* addr, uint32_t len) 
+{
     if (len == 0 || addr == nullptr) return;
     if ((SCB->CCR & SCB_CCR_DC_Msk) == 0) return; // D-Cache not enabled
     const uint32_t line = 32u;
@@ -32,7 +35,7 @@ static inline void dcache_invalidate_range(void* addr, uint32_t len) {
 /* -------------  外部句柄  ------------- */
 extern UART_HandleTypeDef huart7;          //  <-- 你用的是 UART7
 
-static CrsfReceiver* g_this = nullptr;
+// CrsfReceiver* instance_ = nullptr;
 CrsfReceiver* CrsfReceiver::instance_ = nullptr;
 
 /* ======================================================= 
@@ -41,7 +44,8 @@ CrsfReceiver* CrsfReceiver::instance_ = nullptr;
 
 void CrsfReceiver::StaticUartCallback(uint8_t *buf, uint16_t len)
 {
-    if (g_this) g_this->appendFromISR(buf, len);
+    if (instance_) 
+				instance_->appendFromISR(buf, len);
 }
 
 /* 构造 / 析构 */
@@ -58,24 +62,26 @@ CrsfReceiver::CrsfReceiver(UART_HandleTypeDef* huart)
       rx_buffer_{0},  // ← 先清零缓冲区
       UART_(256,rx_buffer_,huart)
 {
-//    instance_ = g_this = this;
+    instance_ = this;
     for (int i = 0; i < CRSF_NUM_CHANNELS; ++i)
         channels_[i] = RM_POCKET_CHANNEL_MID;
+
     memset(channels_payload_, 0, sizeof(channels_payload_));
     memset(tx_buffer_, 0, sizeof(tx_buffer_));
     payload_ptr_ = nullptr;
-    this->UART_Init();
+
 }
 
 void CrsfReceiver::Callback_Fuc(uint8_t *buf, uint16_t len)
 {
-	if (g_this) g_this->appendFromISR(buf, len);
+	if (instance_) instance_->appendFromISR(buf, len);
 }
 //CrsfReceiver::~CrsfReceiver()
 //{
 //    uart_driver_.SetCallback(nullptr);
 //    HAL_UART_AbortReceive(uart_driver_.GetUartHandle());
-//    instance_ = g_this = nullptr;
+//    instance_ = instance_ = nullptr
+	
 //}
 
 // 测试接口：临时关闭 D-Cache（调试用）

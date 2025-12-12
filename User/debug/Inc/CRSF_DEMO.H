@@ -6,11 +6,13 @@ public:
 
     void init(CrsfReceiver *crsf) 
     {
+			
         crsf_test_ = crsf;
+				crsf_test_->init();
         start(osPriorityNormal, 256);
     }
 		int a = 0;
-    CrsfReceiver *crsf
+    CrsfReceiver *crsf;
 private:
     void loop() override;
     CrsfReceiver *crsf_test_;

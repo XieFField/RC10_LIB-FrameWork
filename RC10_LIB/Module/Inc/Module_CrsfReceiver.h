@@ -211,7 +211,7 @@ public:
     
     // ��ȡRadioMaster-POCKET�������ݣ��򻯽ӿڣ�
     void getControlData(RmPocketData_t *data);
-    
+    void init(void){    this->UART_Init();}
     // ����ң�����ݵ�RadioMaster-POCKET���򻯽ӿڣ�
     void sendTelemetryData(const RmPocketData_t *data);
     

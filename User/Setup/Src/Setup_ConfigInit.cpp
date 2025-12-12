@@ -152,9 +152,11 @@ void ALL_Setup_ConfigInit(void)
    CAN_Motor_Init();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
-
-   Position* pos = Position::GetInstance(&huart1);
-   pos->InitUART();
+	
+//	crsf_rc.init();
+	
+//   Position* pos = Position::GetInstance(&huart1);
+//   pos->InitUART();
 
 //   ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
 //   ARM_Controller.setArmStatus(ARM_IDLE);
@@ -174,7 +176,7 @@ void ALL_Setup_ConfigInit(void)
 //		    // 获取Position单例并初始化UART
 //   debug_init();
 	 crsf_task.init(&crsf_rc); 
-//crsf_task.init(&crsf_airjoy);
+
 	
    //other init
 }
