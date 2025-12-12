@@ -203,7 +203,7 @@
           <ItemText>angle</ItemText>
         </Ww>
         <Ww>
-          <count>12</count>
+          <count>6</count>
           <WinNumber>1</WinNumber>
           <ItemText>robot_pose_inWorld_</ItemText>
         </Ww>

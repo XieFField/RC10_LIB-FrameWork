@@ -63,6 +63,5 @@ void Chassis_Omni<WheelCount>::forwardKinematics()
     }
 }
 
-template class Chassis_Base<4>;
 template class Chassis_Omni<4>;
 

@@ -67,4 +67,9 @@ void Chassis_Base<WheelCount>::update()
     }
 }
 
+template<std::size_t WheelCount>
+Chassis_Base<WheelCount>::~Chassis_Base()
+{
+}
+
 template class Chassis_Base<4>;

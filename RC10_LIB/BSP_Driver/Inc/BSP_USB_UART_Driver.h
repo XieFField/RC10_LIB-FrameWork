@@ -32,7 +32,7 @@ void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len);
 #ifdef __cplusplus
 
 #define UART_MAX 10
-#define USB_MAX 10
+#define USB_MAX 1
 
 class UART_{
 public:
