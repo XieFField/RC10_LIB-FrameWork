@@ -1,17 +1,17 @@
 /*******************************************************
- *  STM32H7  CRSF æ¥æ”¶æœº  ã€ŒUART7 ä¸“ç”¨ã€æœ€ç»ˆé‡äº§ç‰ˆ
- *  1. æ‰€æœ‰ huart1 â†’ huart7
- *  2. å‘é€å‰ Clean D-Cacheï¼Œæ¥æ”¶å Invalidate
- *  3. ç´§æ€¥åœè‡ªåŠ¨å¤ä½ï¼Œ13 å­—èŠ‚ CRC æ­£ç¡®
- *  4. é“¾æ¥è„šæœ¬é›¶æ”¹åŠ¨ï¼ŒDMA å›è°ƒæŒ‡å‘ UART7
+ *  STM32H7  CRSF ½ÓÊÕ»ú  ¡¸UART7 ×¨ÓÃ¡¹×îÖÕÁ¿²ú°æ
+ *  1. ËùÓĞ huart1 ¡ú huart7
+ *  2. ·¢ËÍÇ° Clean D-Cache£¬½ÓÊÕºó Invalidate
+ *  3. ½ô¼±Í£×Ô¶¯¸´Î»£¬13 ×Ö½Ú CRC ÕıÈ·
+ *  4. Á´½Ó½Å±¾Áã¸Ä¶¯£¬DMA »Øµ÷Ö¸Ïò UART7
  ******************************************************/
 #include "Module_CrsfReceiver.h"
 #include <cstring>
 #include <cmath>
 #include "core_cm7.h"
 
-/* -------------  Cache ç»´æŠ¤å®/å‡½æ•°  ------------- */
-// SCB cache ops è¦æ±‚åœ°å€ä¸å¤§å°åŸºäº cache line å¯¹é½(32å­—èŠ‚)
+/* -------------  Cache Î¬»¤ºê/º¯Êı  ------------- */
+// SCB cache ops ÒªÇóµØÖ·Óë´óĞ¡»ùÓÚ cache line ¶ÔÆë(32×Ö½Ú)
 static inline void dcache_clean_range(void* addr, uint32_t len) 
 {
     if (len == 0 || addr == nullptr) return;
@@ -32,24 +32,31 @@ static inline void dcache_invalidate_range(void* addr, uint32_t len)
     SCB_InvalidateDCache_by_Addr((uint32_t*)start, (int32_t)(end - start));
 }
 
-/* -------------  å¤–éƒ¨å¥æŸ„  ------------- */
-extern UART_HandleTypeDef huart7;          //  <-- ä½ ç”¨çš„æ˜¯ UART7
+/* -------------  Íâ²¿¾ä±ú  ------------- */
+extern UART_HandleTypeDef huart7;          //  <-- ÄãÓÃµÄÊÇ UART7
 
 // CrsfReceiver* instance_ = nullptr;
 CrsfReceiver* CrsfReceiver::instance_ = nullptr;
 
 /* ======================================================= 
- *   ä»¥ä¸‹å®ç°ä¸ UART7 ç»‘å®š
+ *   ÒÔÏÂÊµÏÖÓë UART7 °ó¶¨
  * ====================================================== */
+
+CrsfReceiver* CrsfReceiver::GetInstance(UART_HandleTypeDef *uart_handle) 
+{
+    // Ê¹ÓÃ¾²Ì¬¾Ö²¿±äÁ¿ÊµÏÖµ¥Àı£¬È·±£¹¹Ôìº¯ÊıÖ»±»µ÷ÓÃÒ»´Î
+    static CrsfReceiver instance(uart_handle);
+    return &instance;
+}
 
 void CrsfReceiver::StaticUartCallback(uint8_t *buf, uint16_t len)
 {
     if (instance_) 
-				instance_->appendFromISR(buf, len);
+		instance_->appendFromISR(buf, len);
 }
 
-/* æ„é€  / ææ„ */
-// Module_CrsfReceiver.cpp ä¸­çš„æ„é€ å‡½æ•°
+/* ¹¹Ôì / Îö¹¹ */
+// Module_CrsfReceiver.cpp ÖĞµÄ¹¹Ôìº¯Êı
 
 CrsfReceiver::CrsfReceiver(UART_HandleTypeDef* huart)
     : packet_byte_index_(0),
@@ -59,7 +66,7 @@ CrsfReceiver::CrsfReceiver(UART_HandleTypeDef* huart)
       crc_(CRSF_CRC_POLY),
       rx_ring_head_(0),
       rx_ring_tail_(0),
-      rx_buffer_{0},  // â† å…ˆæ¸…é›¶ç¼“å†²åŒº
+      rx_buffer_{0},  // ¡û ÏÈÇåÁã»º³åÇø
       UART_(256,rx_buffer_,huart)
 {
     instance_ = this;
@@ -70,6 +77,21 @@ CrsfReceiver::CrsfReceiver(UART_HandleTypeDef* huart)
     memset(tx_buffer_, 0, sizeof(tx_buffer_));
     payload_ptr_ = nullptr;
 
+}
+
+void CrsfReceiver::InitUART(void)
+{
+    if(uart_initialized_)
+        return;
+
+    UART_HandleTypeDef* uart_handle = CrsfReceiver::UART_::GetUartHandle();
+
+    uart_instance_ = InstanceManager::GetInstanceByUartHandle(uart_handle);
+
+
+    uart_instance_->UART_Init();
+
+    uart_initialized_ = true;
 }
 
 void CrsfReceiver::Callback_Fuc(uint8_t *buf, uint16_t len)
@@ -84,7 +106,7 @@ void CrsfReceiver::Callback_Fuc(uint8_t *buf, uint16_t len)
 	
 //}
 
-// æµ‹è¯•æ¥å£ï¼šä¸´æ—¶å…³é—­ D-Cacheï¼ˆè°ƒè¯•ç”¨ï¼‰
+// ²âÊÔ½Ó¿Ú£ºÁÙÊ±¹Ø±Õ D-Cache£¨µ÷ÊÔÓÃ£©
 //void CrsfReceiver::setDisableDCacheForTest(bool disable)
 //{
 //    if (disable) {
@@ -100,7 +122,7 @@ void CrsfReceiver::Callback_Fuc(uint8_t *buf, uint16_t len)
 //    }
 //}
 
-// åˆå§‹åŒ–æ—¶æ£€æŸ¥ UART/DMA è®¾ç½®æ˜¯å¦æ­£ç¡®ï¼ˆRX DMA å­˜åœ¨ä¸”ä¸ºå¾ªç¯æ¨¡å¼ï¼‰
+// ³õÊ¼»¯Ê±¼ì²é UART/DMA ÉèÖÃÊÇ·ñÕıÈ·£¨RX DMA ´æÔÚÇÒÎªÑ­»·Ä£Ê½£©
 //void CrsfReceiver::checkDmaConfig()
 //{
 //    UART_HandleTypeDef* h = uart_driver_.GetUartHandle();
@@ -127,7 +149,7 @@ uint8_t GENERIC_CRC8::calc(const uint8_t* data, uint16_t len, uint8_t crc)
     return crc;
 }
 
-/* ----------------  çŠ¶æ€æœº  ---------------- */
+/* ----------------  ×´Ì¬»ú  ---------------- */
 void CrsfReceiver::handleByte(uint8_t byte)
 {
     switch (rx_state_) {
@@ -167,7 +189,7 @@ void CrsfReceiver::handleByte(uint8_t byte)
     }
 }
 
-/* ----------------  è§£åŒ… + æ˜ å°„ + å¼€å…³  ---------------- */
+/* ----------------  ½â°ü + Ó³Éä + ¿ª¹Ø  ---------------- */
 void CrsfReceiver::unpackChannels(const uint8_t* payload, int channels[CRSF_NUM_CHANNELS])
 {
     for (int i = 0; i < CRSF_NUM_CHANNELS; ++i) {
@@ -226,7 +248,7 @@ void CrsfReceiver::updateSwitchesAndButtons()
     btn_enter_ = (channels_[14] > BTN_ON) ? 1 : 0;
 }
 
-/* ----------------  ç´§æ€¥åœæ­¢  ---------------- */
+/* ----------------  ½ô¼±Í£Ö¹  ---------------- */
 void CrsfReceiver::processRcChannels()
 {
     unpackChannels(channels_payload_, channels_);
@@ -243,7 +265,7 @@ void CrsfReceiver::processRcChannels()
     new_data_available_ = true;
 }
 
-/* ----------------  ç”¨æˆ·æ¥å£  ---------------- */
+/* ----------------  ÓÃ»§½Ó¿Ú  ---------------- */
 void CrsfReceiver::getControlData(RmPocketData_t* data)
 {
     if (!data) return;
@@ -268,7 +290,7 @@ void CrsfReceiver::getControlData(RmPocketData_t* data)
     debug_mode = sw_left_;
 }
 
-/* ----------------  é¥æµ‹å‘é€  ---------------- */
+/* ----------------  Ò£²â·¢ËÍ  ---------------- */
 static volatile bool tx_done = true;
 void CrsfReceiver::sendTelemetryData(const RmPocketData_t* data)
 {
@@ -291,23 +313,24 @@ void CrsfReceiver::sendTelemetryData(const RmPocketData_t* data)
         p[10] = data->battery_percent;
         p[11] = crc_.calc(&p[2], 9);     // CRC
         tx_done = false;
-        dcache_clean_range(tx_buffer_, 13);              // â† åˆ· Cache (å¯¹é½)
-        HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 13); // UART7ï¼
+        dcache_clean_range(tx_buffer_, 13);              // ¡û Ë¢ Cache (¶ÔÆë)
+        HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 13); // UART7£¡
         last_battery_send_ = now;
     }
 }
 
-/* ----------------  ä¸»å¾ªç¯  ---------------- */
+/* ----------------  Ö÷Ñ­»·  ---------------- */
 void CrsfReceiver::process()
 {
     consumeRingBuffer();
 }
 
-/* ----------------  ISR æ‹·è´  ---------------- */
+/* ----------------  ISR ¿½±´  ---------------- */
 void CrsfReceiver::appendFromISR(const uint8_t *buf, uint16_t len)
 {
     if (!buf || !len) return;
     if (len > RX_RING_SIZE) len = RX_RING_SIZE;
+    isr_bytes_ += len;
     uint16_t head = rx_ring_head_ % RX_RING_SIZE;
     uint16_t tail = rx_ring_tail_ % RX_RING_SIZE;
     uint16_t free_space = (tail + RX_RING_SIZE - head - 1) % RX_RING_SIZE;
@@ -315,7 +338,7 @@ void CrsfReceiver::appendFromISR(const uint8_t *buf, uint16_t len)
     uint16_t to_copy = (len <= free_space) ? len : free_space;
     uint16_t chunk = RX_RING_SIZE - head;
     if (chunk > to_copy) chunk = to_copy;
-    // ç¡®ä¿ CPU è¯»å– buf å‰å¤±æ•ˆ DCacheï¼Œè¿™æ · memcpy èƒ½æ‹¿åˆ° DMA å†™å…¥çš„æ•°æ®
+    // È·±£ CPU ¶ÁÈ¡ buf Ç°Ê§Ğ§ DCache£¬ÕâÑù memcpy ÄÜÄÃµ½ DMA Ğ´ÈëµÄÊı¾İ
     dcache_invalidate_range((void*)buf, to_copy);
     memcpy(&rx_ring_[head], buf, chunk);
     head = (head + chunk) % RX_RING_SIZE;
@@ -324,7 +347,7 @@ void CrsfReceiver::appendFromISR(const uint8_t *buf, uint16_t len)
         memcpy(&rx_ring_[head], buf + chunk, rem);
         head = (head + rem) % RX_RING_SIZE;
     }
-    // åœ¨æ›´æ–° head å‰ç¡®ä¿æ•°æ®å†…å­˜å±éšœï¼Œé¿å…ä¹±åº
+    // ÔÚ¸üĞÂ head Ç°È·±£Êı¾İÄÚ´æÆÁÕÏ£¬±ÜÃâÂÒĞò
     __asm volatile ("dmb 0xB" ::: "memory");
     rx_ring_head_ = head;
 }
@@ -334,16 +357,16 @@ void CrsfReceiver::processBatchData(uint8_t *buf, uint16_t len)
     for (uint16_t i = 0; i < len; ++i) handleByte(buf[i]);
 }
 
-/* ----------------  æ¶ˆè´¹ç¯å½¢ç¼“å†²  ---------------- */
+/* ----------------  Ïû·Ñ»·ĞÎ»º³å  ---------------- */
 void CrsfReceiver::consumeRingBuffer()
 {
-    dcache_invalidate_range(rx_ring_, RX_RING_SIZE);   // â† æ‰”æ—§ Cache (å¯¹é½)
+    dcache_invalidate_range(rx_ring_, RX_RING_SIZE);   // ¡û ÈÓ¾É Cache (¶ÔÆë)
     uint16_t head = rx_ring_head_ % RX_RING_SIZE;
     uint16_t tail = rx_ring_tail_ % RX_RING_SIZE;
     if (head == tail) return;
     uint16_t chunk = (head > tail) ? (head - tail) : (RX_RING_SIZE - tail);
     if (chunk) {
-        processBatchData(&rx_ring_[tail], chunk);
+        processBatchData(&rx_ring_[tail], chunk); consumed_bytes_ += chunk; 
         tail = (tail + chunk) % RX_RING_SIZE;
     }
     if (tail != head) {
@@ -356,8 +379,8 @@ void CrsfReceiver::consumeRingBuffer()
     rx_ring_tail_ = tail;
 }
 
-/* ----------------  å…¨å±€ C é“¾æ¥ï¼ŒæŒ‡å‘ UART7  ---------------- */
+/* ----------------  È«¾Ö C Á´½Ó£¬Ö¸Ïò UART7  ---------------- */
 extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
 {
-    if (huart == &huart7) tx_done = true;   // åªè®¤ UART7
+    if (huart == &huart7) tx_done = true;   // Ö»ÈÏ UART7
 }

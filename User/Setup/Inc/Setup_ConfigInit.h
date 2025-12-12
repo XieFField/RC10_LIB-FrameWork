@@ -46,7 +46,7 @@ extern "C" {
 #include "FSM_Controller.h"
 #include "Arm_Setup.h"
 #include "omni_chassisSetup.h"
-
+#include "Module_CrsfReceiver.h"
 #if SPEEDPLANNER_DEMO_DEBUG
     #include "speedplanner_demo.h"
 #endif

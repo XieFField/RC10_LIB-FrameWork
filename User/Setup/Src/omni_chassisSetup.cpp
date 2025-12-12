@@ -5,10 +5,13 @@ void OmniChassis_Setup::loop()
     if (!init_flag)
         return;
     
+    CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+
     switch (chassis_status_)
     {
         case CHASSIS_MANUAL_CONTROL_A:
         {
+            
             break;
         }
 
@@ -28,6 +31,6 @@ void OmniChassis_Setup::loop()
         default:
             break;
     }
- 
+    
     this->update();
 }

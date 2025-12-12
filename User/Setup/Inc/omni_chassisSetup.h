@@ -15,7 +15,7 @@
 #include "Module_ChassisOmni.h"
 #include "Motor_Base.h"
 #include "FSMstauts_enum.h"
-
+#include "Module_CrsfReceiver.h"
 class OmniChassis_Setup:public RtosTask, public Chassis_Omni<4>{
 public:
     OmniChassis_Setup(float wheel_radius, float max_wheel_rpm, float chassis_radius)
@@ -47,6 +47,7 @@ private:
         Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
         
         CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
+        RmPocketData_t airjoy_data_;
 };
 #endif // __cplusplus
 

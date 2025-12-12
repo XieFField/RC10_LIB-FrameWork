@@ -162,10 +162,24 @@ void ALL_Setup_ConfigInit(void)
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
 	
-//	crsf_rc.init();
-	
-  Position* pos = Position::GetInstance(&huart1);
-  pos->InitUART();
+   ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
+   ARM_Controller.setArmStatus(ARM_IDLE);
+
+   ChassisOmni.registerWheelMotor(0, &omni_wheel1);
+   ChassisOmni.registerWheelMotor(1, &omni_wheel2);
+   ChassisOmni.registerWheelMotor(2, &omni_wheel3);
+   ChassisOmni.registerWheelMotor(3, &omni_wheel4);
+   ChassisOmni.init();
+
+   ChassisOmni.setChassisStatus(CHASSIS_STOP);
+
+   Finite_StateMachine.registerArmSetup(&ARM_Controller);
+   Finite_StateMachine.registerChassisSetup(&ChassisOmni);
+
+   Finite_StateMachine.init();
+
+    CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
+   crsf_rc->InitUART();
 
 	 instance_man.RegisterInstance(&laserpos);
 	 instance_man.RegisterInstance(&laserpos1);

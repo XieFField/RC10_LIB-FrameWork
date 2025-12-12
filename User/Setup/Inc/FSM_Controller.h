@@ -27,7 +27,7 @@ extern "C" {
 #include "FSMstauts_enum.h"
 #include "Arm_Setup.h"
 #include "omni_chassisSetup.h"
-
+#include "Module_CrsfReceiver.h"
 
 class FSM_Controller:public RtosTask {
 public:
