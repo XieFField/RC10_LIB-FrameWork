@@ -41,6 +41,8 @@ extern "C" {
 #include "debug_setup.h"
 #include "Module_Air_joy.h"
 #include "Module_Position.h"
+#include "CRSF_DEMO.h"
+#include "Module_CrsfReceiver.h"
 
 /*==============Controller===============*/
 #include "FSM_Controller.h"

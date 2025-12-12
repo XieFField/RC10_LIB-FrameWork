@@ -53,7 +53,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-// È«¾Ö±äÁ¿
+// È«ï¿½Ö±ï¿½ï¿½ï¿½
 #define large_data_size 64
 uint8_t rx_buffer[RX_BUFFER_SIZE];
 uint8_t large_data_buffer[large_data_size];
@@ -113,7 +113,7 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-   MX_GPIO_Init();
+  MX_GPIO_Init();
   MX_DMA_Init();
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
@@ -125,8 +125,9 @@ int main(void)
   MX_USART6_UART_Init();
   MX_USART3_UART_Init();
   MX_UART4_Init();
+  MX_UART7_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim6); //Æô¶¯¶¨Ê±Æ÷²»È»CANÈÎÎñ²»»áÅÜµÄ
+  HAL_TIM_Base_Start_IT(&htim6); //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½È»CANï¿½ï¿½ï¿½ñ²»»ï¿½ï¿½Üµï¿½
   ALL_Setup_ConfigInit();
 	//HAL_UART_Transmit_DMA(&huart3,rx_buffer,RX_BUFFER_SIZE);
   
@@ -281,7 +282,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     fdcan_global_scheduler_tick_isr();
   }
   
-    if (htim->Instance == TIM4) // ¼ÙÉèÄãÊ¹ÓÃµÄÊÇ TIM4
+    if (htim->Instance == TIM4) // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ãµï¿½ï¿½ï¿½ TIM4
     {
         TimeStamp::overflowCallback();
     }

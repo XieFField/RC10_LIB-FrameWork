@@ -1190,6 +1190,16 @@
               <FileType>8</FileType>
               <FilePath>..\User\debug\Src\speedplanner_demo.cpp</FilePath>
             </File>
+            <File>
+              <FileName>CRSF_DEMO.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\CRSF_DEMO.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>CRSF_DEMO.H</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\CRSF_DEMO.H</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

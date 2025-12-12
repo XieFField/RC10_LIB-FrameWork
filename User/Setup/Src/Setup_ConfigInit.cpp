@@ -3,6 +3,11 @@
 fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
 DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4号M3508/M2006电机
 DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8号M3508/M2006电机
+//crsf_demo crsf_task;
+//CrsfReceiver uart_driver_(&huart7);           // 构造 UART_ 成员 uart_driver_;
+CrsfReceiver crsf_rc(&huart7);   // 唯一实例
+crsf_demo  crsf_task;          // RTOS 任务封装
+
 
 /*==============Controller Instances===========*/
 
@@ -145,32 +150,31 @@ void ALL_Setup_ConfigInit(void)
 {
 
    CAN_Motor_Init();
-
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
 
    Position* pos = Position::GetInstance(&huart1);
    pos->InitUART();
 
-   ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
-   ARM_Controller.setArmStatus(ARM_IDLE);
+//   ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
+//   ARM_Controller.setArmStatus(ARM_IDLE);
 
-   ChassisOmni.registerWheelMotor(0, &omni_wheel1);
-   ChassisOmni.registerWheelMotor(1, &omni_wheel2);
-   ChassisOmni.registerWheelMotor(2, &omni_wheel3);
-   ChassisOmni.registerWheelMotor(3, &omni_wheel4);
-   ChassisOmni.init();
+//   ChassisOmni.registerWheelMotor(0, &omni_wheel1);
+//   ChassisOmni.registerWheelMotor(1, &omni_wheel2);
+//   ChassisOmni.registerWheelMotor(2, &omni_wheel3);
+//   ChassisOmni.registerWheelMotor(3, &omni_wheel4);
+//   ChassisOmni.init();
 
-   ChassisOmni.setChassisStatus(CHASSIS_STOP);
+//   ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
-   Finite_StateMachine.registerArmSetup(&ARM_Controller);
-   Finite_StateMachine.registerChassisSetup(&ChassisOmni);
+//   Finite_StateMachine.registerArmSetup(&ARM_Controller);
+//   Finite_StateMachine.registerChassisSetup(&ChassisOmni);
 
-   Finite_StateMachine.init();
-		    // 获取Position单例并初始化UART
-   debug_init();
-	 
-
+//   Finite_StateMachine.init();
+//		    // 获取Position单例并初始化UART
+//   debug_init();
+	 crsf_task.init(&crsf_rc); 
+//crsf_task.init(&crsf_airjoy);
 	
    //other init
 }

@@ -64,6 +64,7 @@ extern TIM_HandleTypeDef htim6;
 extern TIM_HandleTypeDef htim14;
 extern DMA_HandleTypeDef hdma_uart4_rx;
 extern DMA_HandleTypeDef hdma_uart4_tx;
+extern DMA_HandleTypeDef hdma_uart7_rx;
 extern DMA_HandleTypeDef hdma_usart1_tx;
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern DMA_HandleTypeDef hdma_usart3_rx;
@@ -71,6 +72,7 @@ extern DMA_HandleTypeDef hdma_usart3_tx;
 extern DMA_HandleTypeDef hdma_usart6_rx;
 extern DMA_HandleTypeDef hdma_usart6_tx;
 extern UART_HandleTypeDef huart4;
+extern UART_HandleTypeDef huart7;
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart6;
@@ -429,6 +431,20 @@ void TIM6_DAC_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles DMA2 stream0 global interrupt.
+  */
+void DMA2_Stream0_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA2_Stream0_IRQn 0 */
+
+  /* USER CODE END DMA2_Stream0_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_uart7_rx);
+  /* USER CODE BEGIN DMA2_Stream0_IRQn 1 */
+
+  /* USER CODE END DMA2_Stream0_IRQn 1 */
+}
+
+/**
   * @brief This function handles USART6 global interrupt.
   */
 void USART6_IRQHandler(void)
@@ -454,6 +470,20 @@ void OTG_HS_IRQHandler(void)
   /* USER CODE BEGIN OTG_HS_IRQn 1 */
 
   /* USER CODE END OTG_HS_IRQn 1 */
+}
+
+/**
+  * @brief This function handles UART7 global interrupt.
+  */
+void UART7_IRQHandler(void)
+{
+  /* USER CODE BEGIN UART7_IRQn 0 */
+
+  /* USER CODE END UART7_IRQn 0 */
+  HAL_UART_IRQHandler(&huart7);
+  /* USER CODE BEGIN UART7_IRQn 1 */
+
+  /* USER CODE END UART7_IRQn 1 */
 }
 
 /**

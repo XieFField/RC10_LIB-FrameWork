@@ -1,55 +1,55 @@
 /**
  * @file Module_CrsfReceiver.h
- * @brief RadioMaster POCKET CRSF½ÓÊÕ»ú
+ * @brief RadioMaster POCKET CRSFï¿½ï¿½ï¿½Õ»ï¿½
  *
- *Ó²¼şÁ¬½Ó£¨4¸ùÏß£©
- * POCKET JR²å²Û ¡ú STM32 UART
- * GND ¡ú GND, 5V ¡ú VCC, TX ¡ú RX, RX ¡ú TX
+ *Ó²ï¿½ï¿½ï¿½ï¿½ï¿½Ó£ï¿½4ï¿½ï¿½ï¿½ß£ï¿½
+ * POCKET JRï¿½ï¿½ï¿½ ï¿½ï¿½ STM32 UART
+ * GND ï¿½ï¿½ GND, 5V ï¿½ï¿½ VCC, TX ï¿½ï¿½ RX, RX ï¿½ï¿½ TX
  * 
- * CubeMXÅäÖÃ£¨3²½£©
- * 1. UART: ²¨ÌØÂÊ=420000, 8N1
- * 2. DMA: ¿ªÆôUSART_RX£¨CircularÄ£Ê½£©
- * 3. NVIC: Ê¹ÄÜUARTºÍDMAÖĞ¶Ï
+ * CubeMXï¿½ï¿½ï¿½Ã£ï¿½3ï¿½ï¿½ï¿½ï¿½
+ * 1. UART: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½=420000, 8N1
+ * 2. DMA: ï¿½ï¿½ï¿½ï¿½USART_RXï¿½ï¿½CircularÄ£Ê½ï¿½ï¿½
+ * 3. NVIC: Ê¹ï¿½ï¿½UARTï¿½ï¿½DMAï¿½Ğ¶ï¿½
  * 
- * ´úÂë¼¯³É£¨3ĞĞ£©
- * // ÍÆ¼öÔÚÇ¶ÈëÊ½»·¾³ÖĞÊ¹ÓÃ¾²Ì¬»ò×Ô¶¯·ÖÅäÊµÀı£¬±ÜÃâ¶Ñ·ÖÅä
- * static CrsfReceiver radio(&huart1); // È«¾Ö»ò¾²Ì¬ÊµÀı£¨ÍÆ¼ö£©
- * // »òÕßÔÚmainÖĞ¶¨Òå£º
- * // CrsfReceiver radio(&huart1); // ×Ô¶¯´æ´¢ÆÚ
- * radio.process();                               // Ö÷Ñ­»·µ÷ÓÃ
- * radio.getControlData(&ctrl);                   // »ñÈ¡Êı¾İ
+ * ï¿½ï¿½ï¿½ë¼¯ï¿½É£ï¿½3ï¿½Ğ£ï¿½
+ * // ï¿½Æ¼ï¿½ï¿½ï¿½Ç¶ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ã¾ï¿½Ì¬ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ·ï¿½ï¿½ï¿½
+ * static CrsfReceiver radio(&huart1); // È«ï¿½Ö»ï¿½Ì¬Êµï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½ï¿½ï¿½
+ * // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½mainï¿½Ğ¶ï¿½ï¿½å£º
+ * // CrsfReceiver radio(&huart1); // ï¿½Ô¶ï¿½ï¿½æ´¢ï¿½ï¿½
+ * radio.process();                               // ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * radio.getControlData(&ctrl);                   // ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½
  * 
- * ¿ØÖÆÊı¾İ½á¹¹£¨RmPocketData_t£©
- * Ò¡¸Ë: throttle(Ç°½ø), steering(×ªÏò), auxiliary1/2(±¸ÓÃ)
- * ¿ª¹Ø: sw_left/sw_right(Èı¶Î), sw_sa/sw_sb/sw_sc(Á½¶Î)
- * °´Å¥: btn_l1/l2/r1/r2/menu/enter
- * °²È«: emergency_stop£¨´¥·¢Ê±Í£³µ£©
+ * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ½á¹¹ï¿½ï¿½RmPocketData_tï¿½ï¿½
+ * Ò¡ï¿½ï¿½: throttle(Ç°ï¿½ï¿½), steering(×ªï¿½ï¿½), auxiliary1/2(ï¿½ï¿½ï¿½ï¿½)
+ * ï¿½ï¿½ï¿½ï¿½: sw_left/sw_right(ï¿½ï¿½ï¿½ï¿½), sw_sa/sw_sb/sw_sc(ï¿½ï¿½ï¿½ï¿½)
+ * ï¿½ï¿½Å¥: btn_l1/l2/r1/r2/menu/enter
+ * ï¿½ï¿½È«: emergency_stopï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±Í£ï¿½ï¿½ï¿½ï¿½
  * 
- * ÈçºÎĞŞ¸ÄÒ£²âÊı¾İ£¨ºËĞÄ£©
- * Ä¬ÈÏ·¢ËÍµç³ØµçÑ¹/µçÁ÷/°Ù·Ö±È¡£
- * Ïë·¢ËÍÆäËûÊı¾İ£¨ÈçÎÂ¶È/¾àÀë£©£º
+ * ï¿½ï¿½ï¿½ï¿½Ş¸ï¿½Ò£ï¿½ï¿½ï¿½ï¿½ï¿½İ£ï¿½ï¿½ï¿½ï¿½Ä£ï¿½
+ * Ä¬ï¿½Ï·ï¿½ï¿½Íµï¿½Øµï¿½Ñ¹/ï¿½ï¿½ï¿½ï¿½/ï¿½Ù·Ö±È¡ï¿½
+ * ï¿½ë·¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ£ï¿½ï¿½ï¿½ï¿½Â¶ï¿½/ï¿½ï¿½ï¿½ë£©ï¿½ï¿½
  * 
- * ·½·¨1£º¸´ÓÃ×Ö¶Î£¨×î¿ì£©
- *   telem.battery_current = motor_temperature; // µçÁ÷×Ö¶Î¸Ä³ÉÎÂ¶È
+ * ï¿½ï¿½ï¿½ï¿½1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶Î£ï¿½ï¿½ï¿½ì£©
+ *   telem.battery_current = motor_temperature; // ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶Î¸Ä³ï¿½ï¿½Â¶ï¿½
  *   radio->sendTelemetryData(&telem);
  * 
- * ·½·¨2£ºÌí¼ÓĞÂ×Ö¶Î£¨ÍÆ¼ö£©
- *   // 1. ÔÚRmPocketData_t½á¹¹ÌåÌí¼Ó£º
- *   float motor_temp;        // µç»úÎÂ¶È
- *   uint16_t obstacle_dist;  // ÕÏ°­Îï¾àÀë
+ * ï¿½ï¿½ï¿½ï¿½2ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶Î£ï¿½ï¿½Æ¼ï¿½ï¿½ï¿½
+ *   // 1. ï¿½ï¿½RmPocketData_tï¿½á¹¹ï¿½ï¿½ï¿½ï¿½ï¿½Ó£ï¿½
+ *   float motor_temp;        // ï¿½ï¿½ï¿½ï¿½Â¶ï¿½
+ *   uint16_t obstacle_dist;  // ï¿½Ï°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  *   
- *   // 2. ÔÚsendTelemetryData()º¯ÊıÖĞÌí¼Ó·¢ËÍÂß¼­
- *   // 3. mainÖĞÌî³äÊı¾İ£º
+ *   // 2. ï¿½ï¿½sendTelemetryData()ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó·ï¿½ï¿½ï¿½ï¿½ß¼ï¿½
+ *   // 3. mainï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ£ï¿½
  *   telem.motor_temp = ReadTemperature();
  *   telem.obstacle_dist = sonar_read();
- *   radio->sendTelemetryData(&telem); // ×Ô¶¯·¢ËÍ
+ *   radio->sendTelemetryData(&telem); // ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½
  
  
- * ³£ÓÃº¯Êı
- * radio->setStickDeadzone(0.05f);    // ÉèÖÃËÀÇø
- * radio->setThrottleCurve(1.2f);     // ÉèÖÃÇúÏß
- * radio->isEmergencyStop();          // ¼ì²é¼±Í£
- * radio->getRawChannel(1);           // »ñÈ¡Ô­Ê¼Í¨µÀÖµ
+ * ï¿½ï¿½ï¿½Ãºï¿½ï¿½ï¿½
+ * radio->setStickDeadzone(0.05f);    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * radio->setThrottleCurve(1.2f);     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * radio->isEmergencyStop();          // ï¿½ï¿½é¼±Í£
+ * radio->getRawChannel(1);           // ï¿½ï¿½È¡Ô­Ê¼Í¨ï¿½ï¿½Öµ
  */
 
 
@@ -73,77 +73,77 @@ extern "C"
 
 #ifdef __cplusplus
 
-// RadioMaster-POCKET µäĞÍÍ¨µÀÖµ
-#define RM_POCKET_CHANNEL_MIN 172      // ×îĞ¡Öµ
-#define RM_POCKET_CHANNEL_MID 992      // ÖĞ¼äÖµ
-#define RM_POCKET_CHANNEL_MAX 1811     // ×î´óÖµ
+// RadioMaster-POCKET ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½Öµ
+#define RM_POCKET_CHANNEL_MIN 172      // ï¿½ï¿½Ğ¡Öµ
+#define RM_POCKET_CHANNEL_MID 992      // ï¿½Ğ¼ï¿½Öµ
+#define RM_POCKET_CHANNEL_MAX 1811     // ï¿½ï¿½ï¿½Öµ
 
-// °´Å¥ãĞÖµ£¨¸ù¾İRadioMaster-POCKETµ÷Õû£©
-#define RM_BTN_OFF 191                 // °´Å¥ÊÍ·Å
-#define RM_BTN_ON 1792                 // °´Å¥°´ÏÂ
+// ï¿½ï¿½Å¥ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½RadioMaster-POCKETï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+#define RM_BTN_OFF 191                 // ï¿½ï¿½Å¥ï¿½Í·ï¿½
+#define RM_BTN_ON 1792                 // ï¿½ï¿½Å¥ï¿½ï¿½ï¿½ï¿½
 
-// RadioMaster-POCKET µäĞÍ¿ª¹ØÉèÖÃ£¨Èı¶Î¿ª¹Ø£©
-#define RM_SWITCH_LOW 191              // ÏÂÎ»ÖÃ
-#define RM_SWITCH_MID 1004             // ÖĞÎ»ÖÃ
-#define RM_SWITCH_HIGH 1792            // ÉÏÎ»ÖÃ
+// RadioMaster-POCKET ï¿½ï¿½ï¿½Í¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½ï¿½Î¿ï¿½ï¿½Ø£ï¿½
+#define RM_SWITCH_LOW 191              // ï¿½ï¿½Î»ï¿½ï¿½
+#define RM_SWITCH_MID 1004             // ï¿½ï¿½Î»ï¿½ï¿½
+#define RM_SWITCH_HIGH 1792            // ï¿½ï¿½Î»ï¿½ï¿½
 
 #define crclen 256
 
-// Ò£¿ØĞ¡³µ×¨ÓÃÊı¾İ½á¹¹
+// Ò£ï¿½ï¿½Ğ¡ï¿½ï¿½×¨ï¿½ï¿½ï¿½ï¿½ï¿½İ½á¹¹
 typedef struct
 {
-    // === ÊäÈë£º´ÓRadioMaster-POCKET½ÓÊÕµÄ¿ØÖÆÊı¾İ ===
-    // Ò¡¸ËÊı¾İ£¨Ó³Éäµ½-1.0µ½1.0·¶Î§£©
-    float throttle;                   // ÓÍÃÅ/Ç°½øºóÍË (-1.0ºóÍË ~ 1.0Ç°½ø) - ½¨Òé£º×óÒ¡¸Ë´¹Ö±
-    float steering;                   // ×ªÏò (-1.0×ó×ª ~ 1.0ÓÒ×ª) - ½¨Òé£º×óÒ¡¸ËË®Æ½
+    // === ï¿½ï¿½ï¿½ë£ºï¿½ï¿½RadioMaster-POCKETï¿½ï¿½ï¿½ÕµÄ¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ===
+    // Ò¡ï¿½ï¿½ï¿½ï¿½ï¿½İ£ï¿½Ó³ï¿½äµ½-1.0ï¿½ï¿½1.0ï¿½ï¿½Î§ï¿½ï¿½
+    float throttle;                   // ï¿½ï¿½ï¿½ï¿½/Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (-1.0ï¿½ï¿½ï¿½ï¿½ ~ 1.0Ç°ï¿½ï¿½) - ï¿½ï¿½ï¿½é£ºï¿½ï¿½Ò¡ï¿½Ë´ï¿½Ö±
+    float steering;                   // ×ªï¿½ï¿½ (-1.0ï¿½ï¿½×ª ~ 1.0ï¿½ï¿½×ª) - ï¿½ï¿½ï¿½é£ºï¿½ï¿½Ò¡ï¿½ï¿½Ë®Æ½
     
-    float auxiliary1;                 // ¸¨Öú¿ØÖÆ1 - ½¨Òé£ºÓÒÒ¡¸ËË®Æ½£¨ÔÆÌ¨×óÓÒ£©
-    float auxiliary2;                 // ¸¨Öú¿ØÖÆ2 - ½¨Òé£ºÓÒÒ¡¸Ë´¹Ö±£¨ÔÆÌ¨ÉÏÏÂ£©
+    float auxiliary1;                 // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½1 - ï¿½ï¿½ï¿½é£ºï¿½ï¿½Ò¡ï¿½ï¿½Ë®Æ½ï¿½ï¿½ï¿½ï¿½Ì¨ï¿½ï¿½ï¿½Ò£ï¿½
+    float auxiliary2;                 // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½2 - ï¿½ï¿½ï¿½é£ºï¿½ï¿½Ò¡ï¿½Ë´ï¿½Ö±ï¿½ï¿½ï¿½ï¿½Ì¨ï¿½ï¿½ï¿½Â£ï¿½
     
-    // RadioMaster-POCKET ¿ª¹Ø×´Ì¬
-    uint8_t sw_left;                  // ×ó3¶Î¿ª¹Ø£º0=ÏÂ, 1=ÖĞ, 2=ÉÏ£¨Í¨³£ÓÃÓÚÄ£Ê½Ñ¡Ôñ£©
-    uint8_t sw_right;                 // ÓÒ3¶Î¿ª¹Ø£º0=ÏÂ, 1=ÖĞ, 2=ÉÏ£¨Í¨³£ÓÃÓÚËÙ¶ÈµµÎ»£©
-    uint8_t sw_sa;                    // SA¿ª¹Ø£º0=ÏÂ, 1=ÉÏ£¨2¶Î¿ª¹Ø£©
-    uint8_t sw_sb;                    // SB¿ª¹Ø£º0=ÏÂ, 1=ÉÏ£¨2¶Î¿ª¹Ø£©
-    uint8_t sw_sc;                    // SC¿ª¹Ø£º0=ÏÂ, 1=ÉÏ£¨2¶Î¿ª¹Ø£©
+    // RadioMaster-POCKET ï¿½ï¿½ï¿½ï¿½×´Ì¬
+    uint8_t sw_left;                  // ï¿½ï¿½3ï¿½Î¿ï¿½ï¿½Ø£ï¿½0=ï¿½ï¿½, 1=ï¿½ï¿½, 2=ï¿½Ï£ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½Ñ¡ï¿½ï¿½
+    uint8_t sw_right;                 // ï¿½ï¿½3ï¿½Î¿ï¿½ï¿½Ø£ï¿½0=ï¿½ï¿½, 1=ï¿½ï¿½, 2=ï¿½Ï£ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶Èµï¿½Î»ï¿½ï¿½
+    uint8_t sw_sa;                    // SAï¿½ï¿½ï¿½Ø£ï¿½0=ï¿½ï¿½, 1=ï¿½Ï£ï¿½2ï¿½Î¿ï¿½ï¿½Ø£ï¿½
+    uint8_t sw_sb;                    // SBï¿½ï¿½ï¿½Ø£ï¿½0=ï¿½ï¿½, 1=ï¿½Ï£ï¿½2ï¿½Î¿ï¿½ï¿½Ø£ï¿½
+    uint8_t sw_sc;                    // SCï¿½ï¿½ï¿½Ø£ï¿½0=ï¿½ï¿½, 1=ï¿½Ï£ï¿½2ï¿½Î¿ï¿½ï¿½Ø£ï¿½
     
-    // °´Å¥×´Ì¬£¨RadioMaster-POCKETÍ¨³£ÓĞ6¸ö¿É±à³Ì°´Å¥£©
-    uint8_t btn_l1;                   // L1°´Å¥£¨×óÉÏ·½£©
-    uint8_t btn_l2;                   // L2°´Å¥£¨×óÏÂ·½£©
-    uint8_t btn_r1;                   // R1°´Å¥£¨ÓÒÉÏ·½£©
-    uint8_t btn_r2;                   // R2°´Å¥£¨ÓÒÏÂ·½£©
-    uint8_t btn_menu;                 // ²Ëµ¥°´Å¥
-    uint8_t btn_enter;                // È·ÈÏ°´Å¥
+    // ï¿½ï¿½Å¥×´Ì¬ï¿½ï¿½RadioMaster-POCKETÍ¨ï¿½ï¿½ï¿½ï¿½6ï¿½ï¿½ï¿½É±ï¿½Ì°ï¿½Å¥ï¿½ï¿½
+    uint8_t btn_l1;                   // L1ï¿½ï¿½Å¥ï¿½ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½ï¿½
+    uint8_t btn_l2;                   // L2ï¿½ï¿½Å¥ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½
+    uint8_t btn_r1;                   // R1ï¿½ï¿½Å¥ï¿½ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½ï¿½
+    uint8_t btn_r2;                   // R2ï¿½ï¿½Å¥ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½
+    uint8_t btn_menu;                 // ï¿½Ëµï¿½ï¿½ï¿½Å¥
+    uint8_t btn_enter;                // È·ï¿½Ï°ï¿½Å¥
     
-    // ÌØÊâ¹¦ÄÜ
-    uint8_t emergency_stop;           // ½ô¼±Í£Ö¹±êÖ¾£¨Í¨³£°ó¶¨µ½Ä³¸ö°´Å¥£©
-    uint8_t trigger_flag;             // ´¥·¢±êÖ¾
+    // ï¿½ï¿½ï¿½â¹¦ï¿½ï¿½
+    uint8_t emergency_stop;           // ï¿½ï¿½ï¿½ï¿½Í£Ö¹ï¿½ï¿½Ö¾ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ó¶¨µï¿½Ä³ï¿½ï¿½ï¿½ï¿½Å¥ï¿½ï¿½
+    uint8_t trigger_flag;             // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾
     
-    // === Êä³ö£º·¢ËÍµ½RadioMaster-POCKETÏÔÊ¾µÄÊı¾İ ===
-    // µç³ØĞÅÏ¢£¨ÏÔÊ¾ÔÚÒ£¿ØÆ÷ÆÁÄ»£©
-    float battery_voltage;            // µç³ØµçÑ¹(V)
-    float battery_current;            // µç³ØµçÁ÷(A)
-    uint8_t battery_percent;          // Ê£ÓàµçÁ¿(%)
-    uint32_t battery_capacity;        // µç³ØÈİÁ¿(mAh)
+    // === ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Íµï¿½RadioMaster-POCKETï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ===
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½Ò£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä»ï¿½ï¿½
+    float battery_voltage;            // ï¿½ï¿½Øµï¿½Ñ¹(V)
+    float battery_current;            // ï¿½ï¿½Øµï¿½ï¿½ï¿½(A)
+    uint8_t battery_percent;          // Ê£ï¿½ï¿½ï¿½ï¿½ï¿½(%)
+    uint32_t battery_capacity;        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(mAh)
     
-    // Ğ¡³µ×´Ì¬
-    float speed_kmh;                  // µ±Ç°ËÙ¶È(km/h)
-    float distance_km;                // ĞĞÊ»¾àÀë(km)
-    uint16_t run_time_minutes;        // ÔËĞĞÊ±¼ä(·ÖÖÓ)
+    // Ğ¡ï¿½ï¿½×´Ì¬
+    float speed_kmh;                  // ï¿½ï¿½Ç°ï¿½Ù¶ï¿½(km/h)
+    float distance_km;                // ï¿½ï¿½Ê»ï¿½ï¿½ï¿½ï¿½(km)
+    uint16_t run_time_minutes;        // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½)
     
-    // ´«¸ĞÆ÷Êı¾İ
-    float temperature;                // ÎÂ¶È(¡ãC)
-    uint8_t signal_strength;          // ĞÅºÅÇ¿¶È(%)
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    float temperature;                // ï¿½Â¶ï¿½(ï¿½ï¿½C)
+    uint8_t signal_strength;          // ï¿½Åºï¿½Ç¿ï¿½ï¿½(%)
     
-//    // GPSÊı¾İ£¨Èç¹ûĞ¡³µÓĞGPS£©
-//    double gps_latitude;              // Î³¶È
-//    double gps_longitude;             // ¾­¶È
-//    float gps_speed;                  // GPSËÙ¶È(km/h)
-//    uint8_t gps_satellites;           // ÎÀĞÇÊıÁ¿
+//    // GPSï¿½ï¿½ï¿½İ£ï¿½ï¿½ï¿½ï¿½Ğ¡ï¿½ï¿½ï¿½ï¿½GPSï¿½ï¿½
+//    double gps_latitude;              // Î³ï¿½ï¿½
+//    double gps_longitude;             // ï¿½ï¿½ï¿½ï¿½
+//    float gps_speed;                  // GPSï¿½Ù¶ï¿½(km/h)
+//    uint8_t gps_satellites;           // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //    
 } RmPocketData_t;
 
-// Ô­Ê¼CRSFÊı¾İ½á¹¹£¨±£³ÖÓëĞ­ÒéÒ»ÖÂ£©
+// Ô­Ê¼CRSFï¿½ï¿½ï¿½İ½á¹¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ­ï¿½ï¿½Ò»ï¿½Â£ï¿½
 typedef struct
 {
     uint8_t device_addr;
@@ -186,7 +186,7 @@ typedef struct
     uint8_t crc;
 } PACKED CrsfBatteryFrame_t;
 
-// CRC8¼ÆËãÀà
+// CRC8ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 class GENERIC_CRC8
 {
 private:
@@ -197,58 +197,64 @@ public:
     GENERIC_CRC8(uint8_t poly);
     uint8_t calc(const uint8_t data);
     uint8_t calc(const uint8_t *data, uint16_t len, uint8_t crc = 0);
+
 };
 
-// RadioMaster-POCKET CRSF½ÓÊÕÆ÷Àà
-class CrsfReceiver
+// RadioMaster-POCKET CRSFï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+class CrsfReceiver:public UART_
 {
 public:
-    // ¹¹Ôìº¯Êı
+    // ï¿½ï¿½ï¿½ìº¯ï¿½ï¿½
     CrsfReceiver(UART_HandleTypeDef *huart);
-    ~CrsfReceiver();
     
-    // ========== Ö÷Òª¿ØÖÆ½Ó¿Ú ==========
+    // ========== ï¿½ï¿½Òªï¿½ï¿½ï¿½Æ½Ó¿ï¿½ ==========
     
-    // »ñÈ¡RadioMaster-POCKET¿ØÖÆÊı¾İ£¨¼ò»¯½Ó¿Ú£©
+    // ï¿½ï¿½È¡RadioMaster-POCKETï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ£ï¿½ï¿½ò»¯½Ó¿Ú£ï¿½
     void getControlData(RmPocketData_t *data);
     
-    // ·¢ËÍÒ£²âÊı¾İµ½RadioMaster-POCKET£¨¼ò»¯½Ó¿Ú£©
+    // ï¿½ï¿½ï¿½ï¿½Ò£ï¿½ï¿½ï¿½ï¿½ï¿½İµï¿½RadioMaster-POCKETï¿½ï¿½ï¿½ò»¯½Ó¿Ú£ï¿½
     void sendTelemetryData(const RmPocketData_t *data);
     
-    // ¼ì²éÊÇ·ñÓĞĞÂ¿ØÖÆÊı¾İ
+    // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Â¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     bool hasNewData() const { return new_data_available_; }
     void clearNewDataFlag() { new_data_available_ = false; }
     
-    // ½ô¼±Í£Ö¹Ïà¹Ø
+    // ï¿½ï¿½ï¿½ï¿½Í£Ö¹ï¿½ï¿½ï¿½
     bool isEmergencyStop() const { return emergency_stop_triggered_; }
     void resetEmergencyStop() { emergency_stop_triggered_ = false; }
     
-    // »ñÈ¡Ô­Ê¼Í¨µÀÖµ£¨¸ß¼¶ÓÃ»§£©
+    // ï¿½ï¿½È¡Ô­Ê¼Í¨ï¿½ï¿½Öµï¿½ï¿½ï¿½ß¼ï¿½ï¿½Ã»ï¿½ï¿½ï¿½
     int getRawChannel(uint8_t ch) const;
     const int* getAllRawChannels() const { return channels_; }
     
-    // ========== ÅäÖÃ½Ó¿Ú ==========
+    // ========== ï¿½ï¿½ï¿½Ã½Ó¿ï¿½ ==========
     
-    // ÉèÖÃÒ¡¸ËËÀÇø£¨·ÀÖ¹Ò¡¸ËÇáÎ¢¶¶¶¯£©
+    // ï¿½ï¿½ï¿½ï¿½Ò¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¹Ò¡ï¿½ï¿½ï¿½ï¿½Î¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     void setStickDeadzone(float deadzone) { stick_deadzone_ = deadzone; }
     
-    // ÉèÖÃÓÍÃÅÇúÏß£¨Ê¹ÏìÓ¦¸üÏßĞÔ»ò¸üÁéÃô£©
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß£ï¿½Ê¹ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½Ô»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     void setThrottleCurve(float curve_factor) { throttle_curve_ = curve_factor; }
     
-    // ÉèÖÃ×ªÏòÇúÏß
+    // ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     void setSteeringCurve(float curve_factor) { steering_curve_ = curve_factor; }
     
-    // ÉèÖÃ·¢ËÍÆµÂÊ
+    // ï¿½ï¿½ï¿½Ã·ï¿½ï¿½ï¿½Æµï¿½ï¿½
     void setTelemetryRate(uint32_t battery_ms, uint32_t gps_ms) {
         telemetry_battery_interval_ = battery_ms;
         telemetry_gps_interval_ = gps_ms;
     }
     
-    // ÔËĞĞÒ»´Î´¦Àí£¨ÔÚÖ÷Ñ­»·ÖĞµ÷ÓÃ£©
+    // ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½Ğµï¿½ï¿½Ã£ï¿½
     void process();
-
+    // æµ‹è¯•ï¼šä¸´æ—¶ç¦ç”¨/å¯ç”¨ D-Cacheï¼ˆä»…ç”¨äºå¿«é€ŸéªŒè¯ï¼‰
+    void setDisableDCacheForTest(bool disable);
+    bool isDCacheTestDisabled() const { return dcache_test_disabled_; }
+    // éªŒè¯ UART/DMA é…ç½®æ˜¯å¦æ»¡è¶³å¾ªç¯æ¥æ”¶ä¸” DMA å·²åˆ†é…
+    bool isDmaConfiguredCorrectly() const { return dma_config_ok_; }
+		UART_HandleTypeDef *uart_handle;
+		void Callback_Fuc(uint8_t *buf, uint16_t len) override;
 private:
-    // ÄÚ²¿Êı¾İ
+    // ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½
     int channels_[CRSF_NUM_CHANNELS];
     uint8_t channels_payload_[CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE];
     uint8_t packet_byte_index_;
@@ -256,32 +262,39 @@ private:
     volatile bool new_data_available_;
     bool emergency_stop_triggered_;
     
-    // UARTÏà¹Ø
-    uint8_t rx_buffer_[256];
-    UART_ uart_driver_;
-    uint8_t tx_buffer_[CRSF_MAX_PACKET_SIZE];
+    // UARTï¿½ï¿½ï¿½
+    // å¯é€‰: å°† DMA ç¼“å†²åŒºæ”¾åˆ°éç¼“å­˜å¤–è®¾å†…å­˜ (æ¯”å¦‚ D2) ä»¥é¿å… D-Cache é—®é¢˜ã€‚
+    // åœ¨é¡¹ç›®ä¸­å®šä¹‰ CRSF_DMA_SECTION_NAME ä¸ºå­—ç¬¦ä¸²å¸¸é‡ï¼Œå¦‚: "\.dma_buffer"
+#ifdef CRSF_DMA_SECTION_NAME
+#define CRSF_DMA_ATTR __attribute__((section(CRSF_DMA_SECTION_NAME), aligned(32)))
+#else
+#define CRSF_DMA_ATTR __attribute__((aligned(32)))
+#endif
+    uint8_t rx_buffer_[256] CRSF_DMA_ATTR;
+    //UART_ uart_driver_;
+    uint8_t tx_buffer_[CRSF_MAX_PACKET_SIZE] CRSF_DMA_ATTR;
 
-    // »·ĞÎ»º³å£ºÓÉUART»Øµ÷£¨ISRÉÏÏÂÎÄ£©¿ìËÙĞ´Èë£¬ÓÉÖ÷Ñ­»·ÔÚprocess()ÖĞÏû·Ñ
+    // ï¿½ï¿½ï¿½Î»ï¿½ï¿½å£ºï¿½ï¿½UARTï¿½Øµï¿½ï¿½ï¿½ISRï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Ğ´ï¿½ë£¬ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½process()ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     static const uint16_t RX_RING_SIZE = 512;
-    uint8_t rx_ring_[RX_RING_SIZE];
-    volatile uint16_t rx_ring_head_ = 0; // Ğ´Ö¸Õë£¨ÓÉISR¸üĞÂ£©
-    volatile uint16_t rx_ring_tail_ = 0; // ¶ÁÖ¸Õë£¨ÓÉÖ÷Ñ­»·¸üĞÂ£©
+    uint8_t rx_ring_[RX_RING_SIZE] CRSF_DMA_ATTR;
+    volatile uint16_t rx_ring_head_ = 0; // Ğ´Ö¸ï¿½ë£¨ï¿½ï¿½ISRï¿½ï¿½ï¿½Â£ï¿½
+    volatile uint16_t rx_ring_tail_ = 0; // ï¿½ï¿½Ö¸ï¿½ë£¨ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½Â£ï¿½
     
     // CRC
     GENERIC_CRC8 crc_;
     
-    // ÅäÖÃ²ÎÊı
-    float stick_deadzone_ = 0.05f;           // 5%ËÀÇø
-    float throttle_curve_ = 1.0f;            // 1.0=ÏßĞÔ
-    float steering_curve_ = 1.0f;            // 1.0=ÏßĞÔ
+    // ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½
+    float stick_deadzone_ = 0.05f;           // 5%ï¿½ï¿½ï¿½ï¿½
+    float throttle_curve_ = 1.0f;            // 1.0=ï¿½ï¿½ï¿½ï¿½
+    float steering_curve_ = 1.0f;            // 1.0=ï¿½ï¿½ï¿½ï¿½
     
-    // Ò£²â·¢ËÍ¶¨Ê±
-    uint32_t telemetry_battery_interval_ = 1000;  // µç³ØÊı¾İ·¢ËÍ¼ä¸ô(ms)
-    uint32_t telemetry_gps_interval_ = 2000;      // GPSÊı¾İ·¢ËÍ¼ä¸ô(ms)
+    // Ò£ï¿½â·¢ï¿½Í¶ï¿½Ê±
+    uint32_t telemetry_battery_interval_ = 1000;  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ·ï¿½ï¿½Í¼ï¿½ï¿½(ms)
+    uint32_t telemetry_gps_interval_ = 2000;      // GPSï¿½ï¿½ï¿½İ·ï¿½ï¿½Í¼ï¿½ï¿½(ms)
     uint32_t last_battery_send_ = 0;
     uint32_t last_gps_send_ = 0;
     
-    // ½ÓÊÕ×´Ì¬»ú
+    // ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½
     enum RxState {
         STATE_WAIT_ADDR,
         STATE_WAIT_SIZE,
@@ -291,30 +304,32 @@ private:
         STATE_PACKET_COMPLETE
     } rx_state_;
     
-    // ÄÚ²¿´¦Àíº¯Êı
+    // ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     void processBatchData(uint8_t *buf, uint16_t len);
     void handleByte(uint8_t byte);
     void processRcChannels();
     void unpackChannels(const uint8_t *payload, int channels[CRSF_NUM_CHANNELS]);
     void computeMappedValues();
     void updateSwitchesAndButtons();
-    // ISR-friendly append (¿ìËÙ¿½±´£¬²»×ö¸´ÔÓÔËËã)
+    // ISR-friendly append (ï¿½ï¿½ï¿½Ù¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
     void appendFromISR(const uint8_t *buf, uint16_t len);
-    // ÔÚÖ÷Ñ­»·ÖĞÏû·Ñ»·ĞÎ»º³åµÄÊı¾İ
+    // ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ»ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     void consumeRingBuffer();
+    // å†…éƒ¨é…ç½®æ£€æŸ¥
+    void checkDmaConfig();
     
-    // ¾²Ì¬»Øµ÷
+    // ï¿½ï¿½Ì¬ï¿½Øµï¿½
     static CrsfReceiver* instance_;
     static void StaticUartCallback(uint8_t *buf, uint16_t len);
     
-    // Ó³ÉäÖµ
+    // Ó³ï¿½ï¿½Öµ
     float throttle_raw_ = 0.0f;
     float steering_raw_ = 0.0f;
     float aux1_raw_ = 0.0f;
     float aux2_raw_ = 0.0f;
     
-    // ¿ª¹Ø/°´Å¥×´Ì¬
-    uint8_t sw_left_ = 1;      // Ä¬ÈÏÎªÖĞ¼äÎ»ÖÃ
+    // ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½Å¥×´Ì¬
+    uint8_t sw_left_ = 1;      // Ä¬ï¿½ï¿½Îªï¿½Ğ¼ï¿½Î»ï¿½ï¿½
     uint8_t sw_right_ = 1;
     uint8_t sw_sa_ = 0;
     uint8_t sw_sb_ = 0;
@@ -326,16 +341,18 @@ private:
     uint8_t btn_menu_ = 0;
     uint8_t btn_enter_ = 0;
     
-    // ÄÚ²¿±êÖ¾
+    // ï¿½Ú²ï¿½ï¿½ï¿½Ö¾
     uint8_t last_emergency_btn_ = 0;
+    bool dma_config_ok_ = false;
+    bool dcache_test_disabled_ = false;
 
 public:
-    // µ÷ÊÔĞÅÏ¢£¨¿ÉÑ¡£©
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½
     float debug_throttle = 0.0f;
     float debug_steering = 0.0f;
     uint8_t debug_mode = 0;
     
-    // ´¥·¢±êÖ¾²Ù×÷£¨Ïòºó¼æÈİ£©
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ£ï¿½
     void reset_trigger_flag() { }
     void set_trigger_flag_busy() { }
 };
