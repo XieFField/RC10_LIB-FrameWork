@@ -15,10 +15,14 @@
 #include "Motor_Base.h"
 #include "FSMstauts_enum.h"
 #include "Module_CrsfReceiver.h"
+#include "APP_debugTool.h"
+#include "usart.h"
+
 class OmniChassis_Setup:public RtosTask, public Chassis_Omni<3>{
 public:
     OmniChassis_Setup(float wheel_radius, float max_wheel_rpm, float base_length, float side_length, bool three_wheel)
         : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(wheel_radius, max_wheel_rpm, base_length, side_length, three_wheel)
+        ,debug_uart(&huart8)
     {}
 
     void setChassisStatus(CHASSIS_Status_E status)
@@ -56,6 +60,8 @@ private:
         CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
         RmPocketData_t airjoy_data_; //摇杆值为 -1 ~ 1
         CrsfReceiver *airjoy_;
+
+        Debug_Printf debug_uart; // 调试打印实例
 };
 #endif // __cplusplus
 

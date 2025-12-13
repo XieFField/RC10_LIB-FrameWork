@@ -48,4 +48,6 @@ void OmniChassis_Setup::manualControl_A()
 
     //速度设置
     this->setRobotSpeed(target_chassis_twist_);
+
+    //this->wheels_[0].getRPM(); 电机实例是protected的，可以通过这样访问电机内部成员
 }

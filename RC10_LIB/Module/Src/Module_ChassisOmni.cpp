@@ -31,11 +31,13 @@ void Chassis_Omni<WheelCount>::updateKinematics()
     inverseKinematics(this->robot_twist_);
     // 若任意轮超出最大转速，所有轮等比缩小（保持方向与比例）
     float max_abs = 0.0f;
-    for (uint8_t i = 0; i < WheelCount; ++i) {
+    for (uint8_t i = 0; i < WheelCount; ++i) 
+    {
         float a = fabsf(this->wheel_target_rpm_[i]);
         if (a > max_abs) max_abs = a;
     }
-    if (max_abs > this->max_wheel_rpm_) {
+    if (max_abs > this->max_wheel_rpm_) 
+    {
         float k = this->max_wheel_rpm_ / max_abs;
         for (uint8_t i = 0; i < WheelCount; ++i) this->wheel_target_rpm_[i] *= k;
     }
