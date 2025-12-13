@@ -73,3 +73,4 @@ Chassis_Base<WheelCount>::~Chassis_Base()
 }
 
 template class Chassis_Base<4>;
+template class Chassis_Base<3>;

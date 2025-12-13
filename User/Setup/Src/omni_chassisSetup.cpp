@@ -6,12 +6,14 @@ void OmniChassis_Setup::loop()
         return;
     
 //    CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
-
+    // airjoy_->process();
+    
+     airjoy_->getControlData(&airjoy_data_);
     switch (chassis_status_)
     {
         case CHASSIS_MANUAL_CONTROL_A:
         {
-            
+            manualControl_A();
             break;
         }
 
@@ -32,6 +34,18 @@ void OmniChassis_Setup::loop()
             break;
     }
     
+
+
     this->update();
 }
 
+
+void OmniChassis_Setup::manualControl_A()
+{
+    target_chassis_twist_.vx = -airjoy_data_.left_x * 3;
+    target_chassis_twist_.vy = airjoy_data_.left_y * 3;
+    target_chassis_twist_.yaw_rate = airjoy_data_.right_x;
+
+    //ËÙ¶ÈÉèÖÃ
+    this->setRobotSpeed(target_chassis_twist_);
+}

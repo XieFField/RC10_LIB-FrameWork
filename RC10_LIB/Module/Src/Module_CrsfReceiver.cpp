@@ -187,43 +187,43 @@ void CrsfReceiver::unpackChannels(const uint8_t* payload, int channels[CRSF_NUM_
 }
 void CrsfReceiver::computeMappedValues()
 {
-    throttle_raw_ = (float)(channels_[2] - RM_POCKET_CHANNEL_MID) /
+   telemetry_data_.left_y = (float)(channels_[2] - RM_POCKET_CHANNEL_MID) /
                     (float)(RM_POCKET_CHANNEL_MAX - RM_POCKET_CHANNEL_MID);
-    steering_raw_ = (float)(channels_[3] - RM_POCKET_CHANNEL_MID) /
+    telemetry_data_.left_x = (float)(channels_[3] - RM_POCKET_CHANNEL_MID) /
                     (float)(RM_POCKET_CHANNEL_MAX - RM_POCKET_CHANNEL_MID);
-    aux1_raw_ = (float)(channels_[0] - RM_POCKET_CHANNEL_MID) /
+    telemetry_data_.right_x = (float)(channels_[0] - RM_POCKET_CHANNEL_MID) /
                 (float)(RM_POCKET_CHANNEL_MAX - RM_POCKET_CHANNEL_MID);
-    aux2_raw_ = (float)(channels_[1] - RM_POCKET_CHANNEL_MID) /
+    telemetry_data_.right_y = (float)(channels_[1] - RM_POCKET_CHANNEL_MID) /
                 (float)(RM_POCKET_CHANNEL_MAX - RM_POCKET_CHANNEL_MID);
-    if (fabsf(throttle_raw_) < stick_deadzone_) throttle_raw_ = 0.0f;
-    if (fabsf(steering_raw_) < stick_deadzone_) steering_raw_ = 0.0f;
-    if (fabsf(aux1_raw_) < stick_deadzone_) aux1_raw_ = 0.0f;
-    if (fabsf(aux2_raw_) < stick_deadzone_) aux2_raw_ = 0.0f;
-    if (throttle_curve_ != 1.0f && throttle_raw_ != 0.0f)
-        throttle_raw_ = copysignf(powf(fabsf(throttle_raw_), throttle_curve_), throttle_raw_);
-    if (steering_curve_ != 1.0f && steering_raw_ != 0.0f)
-        steering_raw_ = copysignf(powf(fabsf(steering_raw_), steering_curve_), steering_raw_);
-    debug_throttle = throttle_raw_;
-    debug_steering = steering_raw_;
+    if (fabsf(telemetry_data_.left_y) < stick_deadzone_) telemetry_data_.left_y = 0.0f;
+    if (fabsf(telemetry_data_.left_x) < stick_deadzone_) telemetry_data_.left_x = 0.0f;
+    if (fabsf(telemetry_data_.right_x) < stick_deadzone_)   telemetry_data_.right_x = 0.0f;
+    if (fabsf(telemetry_data_.right_y) < stick_deadzone_) telemetry_data_.right_y = 0.0f;
+    if (throttle_curve_ != 1.0f && telemetry_data_.left_y != 0.0f)
+        telemetry_data_.left_y = copysignf(powf(fabsf(telemetry_data_.left_y), throttle_curve_), telemetry_data_.left_y);
+    if (steering_curve_ != 1.0f && telemetry_data_.left_x != 0.0f)
+        telemetry_data_.left_x = copysignf(powf(fabsf(telemetry_data_.left_x), steering_curve_), telemetry_data_.left_x);
+    debug_throttle = telemetry_data_.left_y;
+    debug_steering = telemetry_data_.left_x;
 }
 void CrsfReceiver::updateSwitchesAndButtons()
 {
     const int BTN_ON = 1500, SW_LOW = 400, SW_HIGH = 1500;
-    sw_sa_ = (channels_[4] > BTN_ON) ? 1 : 0;
-    sw_sb_ = (channels_[5] > BTN_ON) ? 1 : 0;
-    sw_sc_ = (channels_[6] > BTN_ON) ? 1 : 0;
-    if (channels_[7] < SW_LOW)       sw_left_ = 0;
-    else if (channels_[7] > SW_HIGH) sw_left_ = 2;
-    else                             sw_left_ = 1;
-    if (channels_[8] < SW_LOW)       sw_right_ = 0;
-    else if (channels_[8] > SW_HIGH) sw_right_ = 2;
-    else                             sw_right_ = 1;
-    btn_l1_    = (channels_[9]  > BTN_ON) ? 1 : 0;
-    btn_l2_    = (channels_[10] > BTN_ON) ? 1 : 0;
-    btn_r1_    = (channels_[11] > BTN_ON) ? 1 : 0;
-    btn_r2_    = (channels_[12] > BTN_ON) ? 1 : 0;
-    btn_menu_  = (channels_[13] > BTN_ON) ? 1 : 0;
-    btn_enter_ = (channels_[14] > BTN_ON) ? 1 : 0;
+    telemetry_data_.sw_sa = (channels_[4] > BTN_ON) ? 1 : 0;
+    telemetry_data_.sw_sb = (channels_[5] > BTN_ON) ? 1 : 0;
+    telemetry_data_.sw_sc = (channels_[6] > BTN_ON) ? 1 : 0;
+    if (channels_[7] < SW_LOW)       telemetry_data_.sw_left = 0;
+    else if (channels_[7] > SW_HIGH) telemetry_data_.sw_left = 2;
+    else                             telemetry_data_.sw_left = 1;
+    if (channels_[8] < SW_LOW)       telemetry_data_.sw_right = 0;
+    else if (channels_[8] > SW_HIGH) telemetry_data_.sw_right = 2;
+    else                             telemetry_data_.sw_right = 1;
+    telemetry_data_.btn_l1    = (channels_[9]  > BTN_ON) ? 1 : 0;
+    telemetry_data_.btn_l2    = (channels_[10] > BTN_ON) ? 1 : 0;
+    telemetry_data_.btn_r1    = (channels_[11] > BTN_ON) ? 1 : 0;
+    telemetry_data_.btn_r2    = (channels_[12] > BTN_ON) ? 1 : 0;
+    telemetry_data_.btn_menu  = (channels_[13] > BTN_ON) ? 1 : 0;
+    telemetry_data_.btn_enter = (channels_[14] > BTN_ON) ? 1 : 0;
 }
 
 /* ----------------  ½ô¼±Í£Ö¹  ---------------- */
@@ -235,9 +235,9 @@ void CrsfReceiver::processRcChannels()
     static uint32_t last_chk = 0;
     uint32_t now = HAL_GetTick();
     if (now - last_chk > 50) {
-        if (btn_l2_ == 1 && last_emergency_btn_ == 0)
+        if (telemetry_data_.btn_l2 == 1 && last_emergency_btn_ == 0)
             emergency_stop_triggered_ = true;
-        last_emergency_btn_ = btn_l2_;
+        last_emergency_btn_ = telemetry_data_.btn_l2;
         last_chk = now;
     }
     new_data_available_ = true;
@@ -247,25 +247,49 @@ void CrsfReceiver::processRcChannels()
 void CrsfReceiver::getControlData(RmPocketData_t* data)
 {
     if (!data) return;
-    data->throttle   = throttle_raw_;
-    data->steering   = steering_raw_;
-    data->auxiliary1 = aux1_raw_;
-    data->auxiliary2 = aux2_raw_;
-    data->sw_left    = sw_left_;
-    data->sw_right   = sw_right_;
-    data->sw_sa      = sw_sa_;
-    data->sw_sb      = sw_sb_;
-    data->sw_sc      = sw_sc_;
-    data->btn_l1     = btn_l1_;
-    data->btn_l2     = btn_l2_;
-    data->btn_r1     = btn_r1_;
-    data->btn_r2     = btn_r2_;
-    data->btn_menu   = btn_menu_;
-    data->btn_enter  = btn_enter_;
+    // data->left_y   = left_y;
+    // data->left_x   = left_x;
+    // data->right_x = right_x;
+    // data->right_y = right_y;
+    // data->sw_left    = sw_left_;
+    // data->sw_right   = sw_right_;
+    // data->sw_sa      = sw_sa_;
+    // data->sw_sb      = sw_sb_;
+    // data->sw_sc      = sw_sc_;
+    // data->btn_l1     = btn_l1_;
+    // data->btn_l2     = btn_l2_;
+    // data->btn_r1     = btn_r1_;
+    // data->btn_r2     = btn_r2_;
+    // data->btn_menu   = btn_menu_;
+    // data->btn_enter  = btn_enter_;
+    // data->emergency_stop = emergency_stop_triggered_ ? 1 : 0;
+    // emergency_stop_triggered_ = false;
+    // data->trigger_flag = 0;
+    // debug_mode = sw_left_;
+    // 
+    data->left_y       = telemetry_data_.left_y;
+    data->left_x       = telemetry_data_.left_x;
+    data->right_x      = telemetry_data_.right_x;
+    data->right_y      = telemetry_data_.right_y;
+    data->sw_left      = telemetry_data_.sw_left;
+    data->sw_right     = telemetry_data_.sw_right;
+    data->sw_sa        = telemetry_data_.sw_sa;
+    data->sw_sb        = telemetry_data_.sw_sb;
+    data->sw_sc        = telemetry_data_.sw_sc;
+
+    data->btn_l1       = telemetry_data_.btn_l1;
+    data->btn_l2       = telemetry_data_.btn_l2;
+
+    data->btn_r1       = telemetry_data_.btn_r1;
+    data->btn_r2       = telemetry_data_.btn_r2;
+
+    data->btn_menu     = telemetry_data_.btn_menu;
+    data->btn_enter    = telemetry_data_.btn_enter;
+
     data->emergency_stop = emergency_stop_triggered_ ? 1 : 0;
     emergency_stop_triggered_ = false;
     data->trigger_flag = 0;
-    debug_mode = sw_left_;
+    debug_mode = telemetry_data_.sw_left;
 }
 
 /* ----------------  Ò£²â·¢ËÍ  ---------------- */

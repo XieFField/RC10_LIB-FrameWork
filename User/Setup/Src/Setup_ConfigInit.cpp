@@ -19,7 +19,9 @@ LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
 Locate_Setup set1(&instance_man);
-OmniChassis_Setup ChassisOmni(1,2,3); // 轮子半径，最大轮子转速，底盘半径
+
+OmniChassis_Setup ChassisOmni(0.442f/2.f,420, 0.74f, 0.8363f, true); // 轮子半径，最大轮子转速，底盘 底 腰
+
 ArmSetup ARM_Controller(arm_initData);
 FSM_Controller Finite_StateMachine;
 
@@ -162,13 +164,15 @@ void ALL_Setup_ConfigInit(void)
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
 	
+   CAN_Motor_Init();
+
    ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
    ARM_Controller.setArmStatus(ARM_IDLE);
 
    ChassisOmni.registerWheelMotor(0, &omni_wheel1);
    ChassisOmni.registerWheelMotor(1, &omni_wheel2);
    ChassisOmni.registerWheelMotor(2, &omni_wheel3);
-   ChassisOmni.registerWheelMotor(3, &omni_wheel4);
+   // ChassisOmni.registerWheelMotor(3, &omni_wheel4);
    ChassisOmni.init();
 
    ChassisOmni.setChassisStatus(CHASSIS_STOP);
@@ -177,6 +181,7 @@ void ALL_Setup_ConfigInit(void)
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
     crsf_rc.init();
    Finite_StateMachine.registerAirjoy(&crsf_rc);
+   ChassisOmni.regesiterCrsfReceiver(&crsf_rc);
 
    Finite_StateMachine.init();
 
@@ -219,10 +224,10 @@ void CAN_Motor_Init(void)
    CAN1_Bus->init();
 
    // 底盘轮子电机PID参数初始化
-   omni_wheel1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   omni_wheel2.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   omni_wheel3.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   omni_wheel4.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
+   omni_wheel1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
+   omni_wheel2.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
+   omni_wheel3.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
+   // omni_wheel4.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
 
    // 机械臂电机PID参数初始化
    arm_launchMotor.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);

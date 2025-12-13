@@ -226,6 +226,8 @@ extern PID_Param_Config m3508_angle_pid_params;
 
 extern PID_Param_Config m2006_speed_pid_params;
 extern PID_Param_Config m2006_angle_pid_params;
+extern PID_Param_Config m3508_speed_pid_paramsForSpeedMotor;
+
 
 #endif
 
