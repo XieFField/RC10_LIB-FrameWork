@@ -9,7 +9,6 @@
 
 
 
-
 #ifdef __cplusplus
 #include "BSP_RTOS.h"   
 #include "Module_ChassisOmni.h"
@@ -42,10 +41,12 @@ public:
 private:
         void loop() override;
         bool init_flag = false;
-
+       
+          
         Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
         Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
         
+       
         CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
         RmPocketData_t airjoy_data_;
 };
