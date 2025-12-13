@@ -34,23 +34,18 @@ extern AirJoy air_joy;
 
 #define PI 3.14159265358979323846f
 
-class OmniChassis_Setup:public RtosTask, public Chassis_Omni<4>{
+class OmniChassis_Setup:public RtosTask, public Chassis_Omni<3>{
 public:
     OmniChassis_Setup(float wheel_radius, float max_wheel_rpm, float chassis_radius)
         : RtosTask("OmniChassis_Setup", 1), 
-          Chassis_Omni<4>(wheel_radius, max_wheel_rpm, chassis_radius),
-//          auto_start_point_(0.0f, 0.0f),
-//          auto_control_point_(-1.0f, 3.0f),
-//          auto_goal_point_(3.0f, 3.0f),
-//          bc_param_({10.0f, 10.0f, 5.0f, 3.0f, 0.2f, 0.0f, 0.0f, 0.0f, 0.00001f}),
-//          bc_path_(auto_start_point_, auto_control_point_, auto_goal_point_,bc_param_),
-//          path_point_(auto_start_point_),
+          Chassis_Omni<3>(wheel_radius, max_wheel_rpm, chassis_radius),
           path_planner_(map_data_, nodes_, open_list_, path_buffer_, 5, 6, 30, 30),
-          path_tracer_(waypoints_, 30)
+          path_tracer_(waypoints_, 30),debug_uart(&huart2)
     {
-        initMap();
+         initMap();
+         
     }
-
+    Debug_Printf debug_uart;
     void setChassisStatus(CHASSIS_Status_E status)
     {
         chassis_status_ = status;
@@ -86,7 +81,7 @@ void chassis_manual_control_A();
 void chassis_manual_control_B();
 void chassis_stop();
 void chassis_auto_control(float dt);
-        Debug_Printf debug_uart = Debug_Printf(&huart2);
+       //_uart = Debug_Printf(&huart2);
         CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
 
         PID_Position pid_yaw_;
@@ -98,7 +93,12 @@ void chassis_auto_control(float dt);
      float vx_body ;
     float vy_body;
 
-    
+    RealPos virtual_rp;
+		bool virtual_rp_initialized = false;
+		float world_vx;
+float world_vy;				
+				
+				
     uint8_t map_data_[30];
     AStarNode nodes_[30];
     AStarNode* open_list_[30];

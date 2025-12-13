@@ -68,7 +68,7 @@ public:
 private:
     void inverseKinematics(const Robot_Twist& twist) override; // ��⣬����Ŀ���ٶȼ�������
     float chassis_radius_; // ���̰뾶 (m)
-    float chassis_radius_W1; //轮1到中心距离
+    float chassis_radius_W1 = 0.52041800200f; //轮1到中心距离
 
     void forwardKinematics() override;
 

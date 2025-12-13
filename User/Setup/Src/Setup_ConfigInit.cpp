@@ -6,7 +6,7 @@ DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8号M3508/M2006电机
 
 /*==============Controller Instances===========*/
 
-OmniChassis_Setup ChassisOmni(1,3,3); // 轮子半径，最大轮子转速，底盘半径
+OmniChassis_Setup ChassisOmni(1,3,0.436039001f); // 轮子半径，最大轮子转速，底盘半径
 ArmSetup ARM_Controller(arm_initData);
 FSM_Controller Finite_StateMachine;
 

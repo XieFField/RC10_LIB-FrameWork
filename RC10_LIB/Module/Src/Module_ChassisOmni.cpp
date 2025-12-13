@@ -6,7 +6,7 @@ void Chassis_Omni<WheelCount>::inverseKinematics(const Robot_Twist& twist)
 {
     if constexpr (WheelCount == 3)
     {
-        this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(twist.vx + twist.yaw_rate * chassis_radius_W1);
+        this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(-twist.vx + twist.yaw_rate * chassis_radius_W1);
         this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(-twist.vx * SIN_31_87 - twist.vy * COS_31_87 + twist.yaw_rate * chassis_radius_);
         this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vx * SIN_31_87 + twist.vy * COS_31_87 + twist.yaw_rate * chassis_radius_);
     }
@@ -63,6 +63,6 @@ void Chassis_Omni<WheelCount>::forwardKinematics()
     }
 }
 
-template class Chassis_Base<4>;
-template class Chassis_Omni<4>;
+template class Chassis_Base<3>;
+template class Chassis_Omni<3>;
 

@@ -26,36 +26,59 @@ void OmniChassis_Setup::loop()
 {
     if (!init_flag)
         return;
-     static uint64_t last_us = 0; 
-    uint64_t now_us = TimeStamp::getInstance().getMicroseconds(); 
-    if(last_us == 0) 
-    { 
-        last_us = now_us; 
-        return; 
-    } 
-    uint64_t dt_us = (now_us >= last_us) ? (now_us - last_us) : 0; 
-    last_us = now_us; 
-    if(dt_us == 0) 
-        return; 
-    if(dt_us > 200000) 
-        dt_us = 200000; 
-    float dt = dt_us * 1e-6f; 
+//     static uint64_t last_us = 0; 
+//    uint64_t now_us = TimeStamp::getInstance().getMicroseconds(); 
+//    if(last_us == 0) 
+//    { 
+//        last_us = now_us; 
+//        return; 
+//    } 
+//    uint64_t dt__us = (now_us >= last_us) ? (now_us - last_us) : 0; 
+//    last_us = now_us; 
+//    if(dt__us == 0) 
+//        return; 
+//    if(dt__us > 200000) 
+//        dt__us = 200000; 
+//    float dt_ = dt__us * 1e-6f; 
 
-    // 读取当前位置（里程计），供本帧使用
-    RealPos rp;
-    rp.world_x = RealPosData.world_x;
-    rp.world_y = RealPosData.world_y;
-    rp.world_yaw = RealPosData.world_yaw;
-    rp.dx = RealPosData.dx;
-    rp.dy = RealPosData.dy;
-    rp.dyaw = RealPosData.dyaw;
+    // 1. 定义一个静态的虚拟机器人位姿，并初始化
+    if (!virtual_rp_initialized) {
+        virtual_rp.world_x = 0.6f; // 起点 (0.5 * 1.2m)
+        virtual_rp.world_y = 0.6f; // 起点 (0.5 * 1.2m)
+        virtual_rp.world_yaw = 0; // 0, 朝向X轴正方向
+        virtual_rp_initialized = true;
+    }
+
+    // 2. 根据上一帧的速度指令，对虚拟位置进行积分 (运动学模型更新)
+    // 注意：target_chassis_twist_ 是在上一帧的末尾计算的
+    float last_vx_body = this->target_chassis_twist_.vx;
+    float last_vy_body = this->target_chassis_twist_.vy;
+    //float last_yaw_rate = this->target_chassis_twist_.yaw_rate;
+
+    float cos_yaw = cosf(virtual_rp.world_yaw);
+    float sin_yaw = sinf(virtual_rp.world_yaw);
+
+    // 将机体速度转换到世界坐标系下，然后积分
+    world_vx = last_vx_body * cos_yaw - last_vy_body * sin_yaw;
+    world_vy = last_vx_body * sin_yaw + last_vy_body * cos_yaw;
+
+    virtual_rp.world_x += world_vx * dt_;
+    virtual_rp.world_y += world_vy * dt_;
+    //virtual_rp.world_yaw += last_yaw_rate * dt_;
+
+    // 3. 使用虚拟位置点作为当前帧的输入
+    // 不再读取 RealPosData，而是直接使用我们仿真的 virtual_rp
+    rp = virtual_rp;
 
     switch (chassis_status_)
     {
         case CHASSIS_MANUAL_CONTROL_A:
         {
-            this->chassis_manual_control_A();
-            this->locked_yaw = rp.world_yaw;
+					this->target_chassis_twist_.vx = 0.2f;
+					this->target_chassis_twist_.vy = 0.0f;
+					this->target_chassis_twist_.yaw_rate = 0.0f;
+            //this->chassis_manual_control_A();
+            //this->locked_yaw = rp.world_yaw;
             break;
         }
 
@@ -66,7 +89,7 @@ void OmniChassis_Setup::loop()
         }
         case CHASSIS_AUTO_CONTROL:
         {
-            this->chassis_auto_control(dt);
+            this->chassis_auto_control(dt_);
             break;
         }
 
@@ -81,7 +104,6 @@ void OmniChassis_Setup::loop()
 	
 	this->setWorldSpeed(this->target_chassis_twist_ );
     this->update();
-    //debug_uart.printf_DMA("locked_yaw=%.2f now_yaw=%.2f yaw_ctrl=%.2f\n", this->locked_yaw, this->now_yaw, yaw_ctrl);
 }
 
 
@@ -123,24 +145,25 @@ static void worldToGrid(float wx, float wy, int &gx, int &gy)
 
 
 
-// 基于 A* 的路径规划与跟踪实现（dt: 控制周期秒）
-void OmniChassis_Setup::chassis_auto_control(float dt)
+// 基于 A* 的路径规划与跟踪实现（dt_: 控制周期秒）
+void OmniChassis_Setup::chassis_auto_control(float dt_)
 {
     if (path_finished_) {
         this->target_chassis_twist_.vx = 0.0f;
         this->target_chassis_twist_.vy = 0.0f;
         this->target_chassis_twist_.yaw_rate = 0.0f;
+			  debug_uart.printf_DMA("path finished\n");
         return;
     }
 
     // 获取当前位姿
-    RealPos rp;
-    rp.world_x = RealPosData.world_x;
-    rp.world_y = RealPosData.world_y;
-    rp.world_yaw = RealPosData.world_yaw;
-    rp.dx = RealPosData.dx;
-    rp.dy = RealPosData.dy;
-    rp.dyaw = RealPosData.dyaw;
+    //RealPos rp;
+    //rp.world_x = RealPosData.world_x;
+    //rp.world_y = RealPosData.world_y;
+    //rp.world_yaw = RealPosData.world_yaw;
+    //rp.dx = RealPosData.dx;
+    //rp.dy = RealPosData.dy;
+    //rp.dyaw = RealPosData.dyaw;
 
     // 如果还未规划路径，则规划（起点为当前位置所属格或固定格1，终点为格号30）
     if (path_tracer_.getWaypointCount() == 0) {
@@ -148,8 +171,10 @@ void OmniChassis_Setup::chassis_auto_control(float dt)
         int sx = 0, sy = 0; 
 
         int gx, gy;
+			
         cellNumToGrid(30, gx, gy); // 终点 cell 30
 
+			
         debug_uart.printf_DMA("A*: planning from (%d,%d) to (%d,%d)\n", sx, sy, gx, gy);
 
         bool ok = path_planner_.findPath(static_cast<int16_t>(sx), static_cast<int16_t>(sy),
@@ -180,7 +205,7 @@ void OmniChassis_Setup::chassis_auto_control(float dt)
     }
 
     path_tracer_.setRobotState(rp.world_x, rp.world_y, rp.world_yaw);// 设置当前位置
-    path_tracer_.executeOneStep(dt);// 执行一步路径跟踪
+    path_tracer_.executeOneStep(dt_);// 执行一步路径跟踪
 
     float linear_vel = 0.0f, angular_vel = 0.0f;// 获取跟踪输出速度
     path_tracer_.calculateMotionCommands(&linear_vel, &angular_vel);
