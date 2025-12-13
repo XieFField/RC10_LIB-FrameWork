@@ -16,6 +16,9 @@ void ArmSetup::loop()
    auto_ctrl_.now_armPosition = get_nowArmPosition();
    auto_ctrl_.now_ChassisPosition = get_nowChassisPose();
     
+    CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+
+
    #if ARM_AUTO_DEBUG_NOCHASSIS
     if(arm_ctrlStatus.is_calibrating)
     {

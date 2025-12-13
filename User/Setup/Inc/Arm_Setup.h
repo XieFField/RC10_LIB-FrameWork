@@ -37,6 +37,8 @@ extern "C" {
 #include "FSMstauts_enum.h"
 #include "APP_CoordConvert.h"
 #include "AutoCtrler.h"
+#include "Module_CrsfReceiver.h"
+
 
 #define ARM_AUTO_DEBUG_NOCHASSIS 1  //無底盤下，用虛擬坐標進行驗證自動邏輯
 
@@ -259,7 +261,10 @@ public:
         return true;
     }
 private:
-    Debug_Printf debug_uart = Debug_Printf(&huart1);
+
+    RmPocketData_t airjoy_data_; //摇杆值为 -1 ~ 1
+
+    Debug_Printf debug_uart = Debug_Printf(&huart8);
 
     //控制函数
     void manualControl();
