@@ -42,10 +42,6 @@ public:
         init_flag = true;
     }
 
-    void regesiterCrsfReceiver(CrsfReceiver* receiver)
-    {
-        airjoy_ = receiver;
-    }
 
 private:
         void loop() override;
@@ -59,7 +55,6 @@ private:
        
         CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
         RmPocketData_t airjoy_data_; //摇杆值为 -1 ~ 1
-        CrsfReceiver *airjoy_;
 
         Debug_Printf debug_uart; // 调试打印实例
 };

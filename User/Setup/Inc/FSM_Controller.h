@@ -60,11 +60,6 @@ public:
     {
         airjoy_deadzone_ = deadzone;
     }
-
-    void registerAirjoy(CrsfReceiver *airjoy_receiver)
-    {
-        airjoy = airjoy_receiver;
-    }
 private:
     void loop() override;
 
@@ -91,7 +86,6 @@ private:
     bool init_flag_ = false; //所有需要注册的机构都已经注册完成
     uint8_t debug_flag_ = 1;
 
-    CrsfReceiver * airjoy;
     
 };
 
