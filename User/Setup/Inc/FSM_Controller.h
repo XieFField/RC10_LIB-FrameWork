@@ -50,6 +50,8 @@ public:
         if(!arm_setup_registered_ || !chassis_setup_registered_)
             init_flag_ = false;
         
+        this->arm_setup_->set_TargetKFS(3,0); //设置目标梅花桩编号
+
         this->start(osPriorityHigh, 256);
         init_flag_ = true;
     }

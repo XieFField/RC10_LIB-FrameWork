@@ -67,4 +67,4 @@ void Chassis_Base<WheelCount>::update()
     }
 }
 
-template class Chassis_Base<4>;
+template class Chassis_Base<3>;

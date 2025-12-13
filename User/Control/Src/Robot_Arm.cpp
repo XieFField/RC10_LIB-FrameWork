@@ -12,6 +12,19 @@ void Robot_Arm::update()
     /*电机当前的角度转换成关节当前的角度 */
     now_time_s_ = TimeStamp::getInstance().getSeconds();
 
+    if(!time_initialized_)
+    {
+        last_time_s_ = now_time_s_;
+        time_initialized_ = true;
+        // 首次对齐，后续基于“目标”积分
+        target_joint_angle_ = joint_angle_;
+        return;
+    }
+
+    dt_ = now_time_s_ - last_time_s_;
+    last_time_s_ = now_time_s_;
+
+
     if(motor_rotate_ != nullptr)
     {
         // 单圈测量（0..360）-> 连续角解包，避免 0/360 跳变
@@ -56,8 +69,13 @@ void Robot_Arm::update()
         // 手动电机位置模式下的处理
         target_joint_angle_.launchJoint_Height_  = constrain(target_joint_angle_.launchJoint_Height_,  0.0f, init_data_.max_launchHeight_);
         target_joint_angle_.stretchJoint_Length_ = constrain(target_joint_angle_.stretchJoint_Length_, 0.0f, init_data_.max_stretchLength_);
-        // 与当前角就近等效映射，保持多圈连续，避免 0/360 跳变
-        target_joint_angle_.rotateJoint_angle_   = wrap_to_nearest_cont(joint_angle_.rotateJoint_angle_, target_joint_angle_.rotateJoint_angle_);
+        // // 与当前角就近等效映射，保持多圈连续，避免 0/360 跳变
+        // target_joint_angle_.rotateJoint_angle_   = wrap_to_nearest_cont(joint_angle_.rotateJoint_angle_, target_joint_angle_.rotateJoint_angle_);
+
+        target_joint_angle_.rotateJoint_angle_ = calc_rotate_targetByStrategy(
+            joint_angle_.rotateJoint_angle_,
+            target_joint_angle_.rotateJoint_angle_
+        );
     }
     else if(control_mode_ == CURRENT_CONTROL_MODE)
         // 电流控制模式下的处理
@@ -158,17 +176,7 @@ bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
 
 void Robot_Arm::jacobianMatrix()
 {
-    if(!time_initialized_)
-    {
-        last_time_s_ = now_time_s_;
-        time_initialized_ = true;
-        // 首次对齐，后续基于“目标”积分
-        target_joint_angle_ = joint_angle_;
-        return;
-    }
 
-    dt_ = now_time_s_ - last_time_s_;
-    last_time_s_ = now_time_s_;
     if(dt_ <= 1e-6f || dt_ > 0.1f) 
         return;
 
@@ -256,6 +264,47 @@ void Robot_Arm::jacobianMatrix()
     target_joint_angle_.launchJoint_Height_  = constrain(h_cmd, 0.0f, init_data_.max_launchHeight_);
     target_joint_angle_.stretchJoint_Length_ = constrain(d_cmd, 0.0f, init_data_.max_stretchLength_);
     target_joint_angle_.rotateJoint_angle_  = theta_cmd;
+}
+
+float Robot_Arm::calc_rotate_targetByStrategy(float current_cont_angle, float target_raw_0_360)
+{
+    //连续角度归一化至0~360
+    
+    float current_mod = fmodf(current_cont_angle, 360.0f);
+    if(current_mod < 0)
+        current_mod += 360.0f;
+
+    //归一化目标角度，防止越界
+    float target_mod = fmodf(target_raw_0_360, 360.0f);
+    if(target_mod < 0)
+        target_mod += 360.0f;
+
+    float diff = target_mod - current_mod;
+
+    switch(rotate_strategy_)
+    {
+        case ROTATE_PATH_SHORTEST:
+            // 最短路径：差值限制在 -180 到 +180 之间
+            if (diff > 180.0f)       
+                diff -= 360.0f;
+            else if (diff < -180.0f) 
+                diff += 360.0f;
+            break;
+
+        case ROTATE_PATH_POSITIVE:
+            // 正方向：关节角度必须增加，即 diff 必须 > 0
+            if (diff < 0.0f) 
+                diff += 360.0f;
+            break;
+
+        case ROTATE_PATH_NEGATIVE:
+            // 负方向：关节角度必须减小，即 diff 必须 < 0
+            if (diff > 0.0f) 
+                diff -= 360.0f;
+            break;
+    }
+
+    return current_cont_angle + diff;
 }
 
 

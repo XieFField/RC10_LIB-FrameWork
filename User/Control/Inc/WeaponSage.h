@@ -63,9 +63,9 @@ namespace WeaponSage
     enum WeaponSage_CtrlMode_S 
     {
         /* data */
-        CURRENT_CONTROL,
-        Join_POSITION_CONTROL,
-        TOTAL_ANGLE_CONTROL,
+        CURRENT_CONTROL, // 电流控制模式
+        Join_POSITION_CONTROL, // 关节位置控制模式
+        TOTAL_ANGLE_CONTROL,   // 电机总角度控制模式
     };
     
     typedef struct

@@ -22,6 +22,10 @@ void Robot_WeaponSage_Setup::loop()
         case WEAPONSAGE_DEBUG:
             debug();
             break;
+
+        case WEAPONSAGE_AUTO_CONTROL:
+            //待实现自动控制逻辑
+            break;
         default:
             idle();
             break;
@@ -43,11 +47,28 @@ void Robot_WeaponSage_Setup::idle()
     //空闲状态，维持当前状态
 }
 
+void Robot_WeaponSage_Setup::debug()
+{
+    //待实现
+}
+
+void Robot_WeaponSage_Setup::autoControl()
+{
+    //待实现
+    /**
+     * @brief 自动控制逻辑
+     *  1.对于4个待取矛杆，硬编码四个位置
+     *  2.当底盘靠位完成后，总状态机发来下降指令，执行下降
+     *  3.当下降完成后，且底盘与武器架底部接触，则执行抓取
+     *  4.当底盘后退到能将矛杆抬起的位置后，执行抬起
+     */
+}
+
 void Robot_WeaponSage_Setup::stop()
 {
     //停止，电机不动
-    this->setJointTarget(0.0f, WeaponSage::Launch_Motor);
-    this->setJointTarget(0.0f, WeaponSage::Claw_Motor);
-    this->setJointTarget(0.0f, WeaponSage::Traverse_Motor);
-    this->setJointTarget(0.0f, WeaponSage::Wrist_Motor);
+    this->setTarget(0.0f, WeaponSage::Launch_Motor);
+    this->setTarget(0.0f, WeaponSage::Claw_Motor);
+    this->setTarget(0.0f, WeaponSage::Traverse_Motor);
+    this->setTarget(0.0f, WeaponSage::Wrist_Motor);
 }

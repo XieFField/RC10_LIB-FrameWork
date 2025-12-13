@@ -37,7 +37,7 @@ Chassis_Omni<WheelCount>::Chassis_Omni(float wheel_radius, float max_wheel_rpm, 
     : Chassis_Base<WheelCount>(wheel_radius, max_wheel_rpm),
       chassis_radius_(chassis_radius)
 {
-
+       chassis_radius_bottom_=0.095f; //底盘底部到中心的距离 (m)
 }
 
 template<std::size_t WheelCount>
@@ -49,6 +49,7 @@ void Chassis_Omni<WheelCount>::forwardKinematics()
     
     if constexpr (WheelCount == 3) 
     {
+        // 三轮全向底盘的前向运动学计算
         this->robot_twist_forward.vy = (wheel_speeds[1] - wheel_speeds[2]) / (2.0f*COS_31_87);
         this->robot_twist_forward.yaw_rate = (wheel_speeds[1]/2 + wheel_speeds[2]/2 + wheel_speeds[0]*SIN_31_87) / (SIN_31_87 * chassis_radius_+chassis_radius_bottom_);
         this->robot_twist_forward.vx = this->robot_twist_forward.yaw_rate * chassis_radius_ - wheel_speeds[0];
@@ -62,6 +63,7 @@ void Chassis_Omni<WheelCount>::forwardKinematics()
     }
 }
 
-template class Chassis_Base<4>;
-template class Chassis_Omni<4>;
-
+//template class Chassis_Base<4>;
+//template class Chassis_Omni<4>;
+template class Chassis_Base<3>;
+template class Chassis_Omni<3>;

@@ -229,7 +229,7 @@ void Map_ToCR(int8_t map, int8_t& c, int8_t& r)
 
 }
 
-static int8_t MFNum_TransforMapNum(int8_t MFNum)//将梅花桩编号转换为梅花林方格地图编号
+ int8_t MFNum_TransforMapNum(int8_t MFNum)//将梅花桩编号转换为梅花林方格地图编号
 {
     if(MFNum < 1 || MFNum > 12 )
         return -1;
@@ -237,7 +237,7 @@ static int8_t MFNum_TransforMapNum(int8_t MFNum)//将梅花桩编号转换为梅花林方格地
     return MFNum + 6 + 2 * (static_cast<int8_t>((MFNum - 1) / 3.0));
 }
 
-static int8_t MapNum_TransforMFNum(int8_t mapNum)//将梅花林方格地图编号转换为梅花桩编号
+ int8_t MapNum_TransforMFNum(int8_t mapNum)//将梅花林方格地图编号转换为梅花桩编号
 {
     int8_t MFNum_ = mapNum - 6 - 2 * ((mapNum - 7) / 3);
     if(MFNum_ < 1 || MFNum_ > 12 )

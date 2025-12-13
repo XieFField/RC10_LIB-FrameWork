@@ -315,7 +315,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>2</Optim>
+            <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -330,8 +330,8 @@
             <uC99>1</uC99>
             <uGnu>1</uGnu>
             <useXO>0</useXO>
-            <v6Lang>3</v6Lang>
-            <v6LangP>8</v6LangP>
+            <v6Lang>5</v6Lang>
+            <v6LangP>9</v6LangP>
             <vShortEn>1</vShortEn>
             <vShortWch>1</vShortWch>
             <v6Lto>0</v6Lto>
@@ -926,29 +926,14 @@
               <FilePath>..\RC10_LIB\APP\Src\APP_CoordConvert.cpp</FilePath>
             </File>
             <File>
-              <FileName>APP_Speedplanner.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\APP\Inc\APP_Speedplanner.h</FilePath>
-            </File>
-            <File>
               <FileName>APP_Vector2D.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\APP\Inc\APP_Vector2D.h</FilePath>
             </File>
             <File>
-              <FileName>APP_Speedplanner.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_Speedplanner.cpp</FilePath>
-            </File>
-            <File>
               <FileName>APP_Vector2D.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\APP\Src\APP_Vector2D.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>APP_Path.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_Path.cpp</FilePath>
             </File>
             <File>
               <FileName>APP_Bezier_Curve.h</FileName>
@@ -959,11 +944,6 @@
               <FileName>APP_debugTool.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\APP\Inc\APP_debugTool.h</FilePath>
-            </File>
-            <File>
-              <FileName>APP_Path.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\APP\Inc\APP_Path.h</FilePath>
             </File>
             <File>
               <FileName>APP_Bezier_Curve.cpp</FileName>
@@ -1001,14 +981,14 @@
               <FilePath>..\RC10_LIB\Module\Inc\Module_Air_joy.h</FilePath>
             </File>
             <File>
-              <FileName>Module_Air_joy.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_Air_joy.cpp</FilePath>
-            </File>
-            <File>
               <FileName>Module_ChassisOmni.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisOmni.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_Air_joy.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_Air_joy.cpp</FilePath>
             </File>
             <File>
               <FileName>Module_ChassisOmni.cpp</FileName>
@@ -1165,16 +1145,6 @@
               <FileType>5</FileType>
               <FilePath>..\User\debug\Inc\debug_setup.h</FilePath>
             </File>
-            <File>
-              <FileName>speedplanner_demo.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\debug\Inc\speedplanner_demo.h</FilePath>
-            </File>
-            <File>
-              <FileName>speedplanner_demo.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\debug\Src\speedplanner_demo.cpp</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -1269,6 +1239,16 @@
               <FileName>omni_chassisSetup.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\omni_chassisSetup.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Locate_Setup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\Locate_Setup.h</FilePath>
+            </File>
+            <File>
+              <FileName>Locate_Setup.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\Locate_Setup.cpp</FilePath>
             </File>
           </Files>
         </Group>
