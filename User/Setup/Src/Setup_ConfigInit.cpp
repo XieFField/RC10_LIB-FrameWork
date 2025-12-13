@@ -5,7 +5,7 @@ DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4号M3508/M2006电机
 DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8号M3508/M2006电机
 //crsf_demo crsf_task;
 //CrsfReceiver uart_driver_(&huart7);           // 构造 UART_ 成员 uart_driver_;
-CrsfReceiver crsf_rc(&huart7);   // 唯一实例
+//CrsfReceiver crsf_rc(&huart7);   // 唯一实例
 // crsf_demo  crsf_task;          // RTOS 任务封装
 
 
@@ -179,9 +179,9 @@ void ALL_Setup_ConfigInit(void)
 
    Finite_StateMachine.registerArmSetup(&ARM_Controller);
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
-    crsf_rc.init();
-   Finite_StateMachine.registerAirjoy(&crsf_rc);
-   ChassisOmni.regesiterCrsfReceiver(&crsf_rc);
+//    crsf_rc.init();
+//   Finite_StateMachine.registerAirjoy(&crsf_rc);
+//   ChassisOmni.regesiterCrsfReceiver(&crsf_rc);
 
    Finite_StateMachine.init();
 
