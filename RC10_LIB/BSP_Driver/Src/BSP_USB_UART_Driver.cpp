@@ -47,7 +47,6 @@ UART_::UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart
 				{
 				InstanceManager::RegisterInstance(this,NULL);
 				// 注册到实例管理器
-				
 				}
 }
 
@@ -72,9 +71,8 @@ USB_CDC_* InstanceManager::GetInstanceByUSBHandle() {
 						 }
   }
 }
-USB_CDC_::USB_CDC_(RxCallback RxCallback_Fuc,USBD_HandleTypeDef *usb_handle)
+USB_CDC_::USB_CDC_(USBD_HandleTypeDef *usb_handle)
 {
-				this->RxCallback_Fuc=RxCallback_Fuc;
         this->usbhandle_ = usb_handle;
         if(this->usbhandle_ == NULL)
 				{
@@ -86,24 +84,21 @@ USB_CDC_::USB_CDC_(RxCallback RxCallback_Fuc,USBD_HandleTypeDef *usb_handle)
 				InstanceManager::RegisterInstance(NULL,this);
 				}
 }
-void USB_CDC_::CDC_Receive_Callback(uint8_t* Buf, uint32_t Len) {
-        RxCallback_Fuc(Buf, Len);
-}
 void UART_::Callback_Fuc(uint8_t *buf, uint16_t len){
-    if (RxCallback_Fuc != nullptr) {
+    if (this->RxCallback_Fuc != nullptr) {
         RxCallback_Fuc(buf, len);
     }
 }
-
+void USB_CDC_::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
+{
+    if (this->RxCallback_Fuc != nullptr) {
+        RxCallback_Fuc(buf, len);
+    }
+}
 // C 接口的全局回调函数
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len) {
-     InstanceManager::GetInstanceByUSBHandle()->CDC_Receive_Callback(Buf,Len);
-}
-
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
     if (instance != nullptr) {
@@ -143,6 +138,24 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     }
 	
 	HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
+}
+
+
+void CDC_Receive_(uint8_t* Buf, uint32_t *Len)
+{
+ {
+    USB_CDC_* instance = InstanceManager::GetInstanceByUSBHandle();
+    if (instance != nullptr && Buf != nullptr && Len != nullptr) {
+        // 调用实例的接收处理，使用传入的缓冲区和长度
+        instance->Callback_DCD_Fuc(Buf, *Len);
+        
+        // USB CDC 接收处理完成，通常需要重新启动接收
+        // 注意：USB CDC 使用不同的机制，不是 HAL_UARTEx_ReceiveToIdle_DMA
+        // 通常使用 USBD_CDC_ReceivePacket 或类似函数
+        USBD_CDC_SetRxBuffer(instance->GetUSBHandle(), Buf);
+        USBD_CDC_ReceivePacket(instance->GetUSBHandle());
+    }
+ }
 }
 #ifdef __cplusplus
 }
