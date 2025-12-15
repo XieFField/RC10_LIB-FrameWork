@@ -1,6 +1,6 @@
 /**
  * @file omni_chassisSetup.h
- * @brief ȫ����̿���
+ * @brief ȫ����̿���
  */
 #ifndef __OMNI_CHASSISSETUP_H
 #define __OMNI_CHASSISSETUP_H
@@ -17,6 +17,8 @@
 #include "Module_CrsfReceiver.h"
 #include "APP_debugTool.h"
 #include "usart.h"
+#include "Module_Position.h"
+#include "APP_PID.h"
 
 class OmniChassis_Setup:public RtosTask, public Chassis_Omni<3>{
 public:
@@ -36,6 +38,7 @@ public:
            this->wheels_[2] == nullptr ||this->wheels_[3] == nullptr)
             init_flag = false;
         
+        yaw_pid_.set_params(lock_angle_pid_params, 10000.0f); 
         
 
         this->start(osPriorityHigh, 256);
@@ -46,17 +49,24 @@ public:
 private:
         void loop() override;
         bool init_flag = false;
-       void manualControl_A();
           
         Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
         Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
         
         // Robot_Twist chassis_maxSpeed_ = {0};
-       
-        CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
-        RmPocketData_t airjoy_data_; //ҡ��ֵΪ -1 ~ 1
+        float target_yaw_ = 0.0f;
+        uint8_t yaw_pid_period_ = 3;
+        uint8_t yaw_pid_period_count_ = 0;
+        PID_Position yaw_pid_;
 
-        Debug_Printf debug_uart; // ���Դ�ӡʵ��
+        const float LINESPEED_LIMIT = 10/500.f; // ����ģң��������ֵӳ��Ϊ���ٶȵı���
+        const float YAWSPEED_LIMIT = 1/500.f; // ����ģң��������ֵӳ��Ϊ���ٶȵı���
+
+
+        CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
+        RmPocketData_t airjoy_data_; //ҡ��ֵΪ -1 ~ 1
+
+        Debug_Printf debug_uart; // ���Դ�ӡʵ��
 };
 #endif // __cplusplus
 
