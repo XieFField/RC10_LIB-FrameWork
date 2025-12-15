@@ -119,8 +119,9 @@
     "numeric": "cpp",
     "random": "cpp"
   },
-  "C_Cpp.errorSquiggles": "Enabled",
+  "C_Cpp.errorSquiggles": "disabled",
   "C_Cpp.intelliSenseEngine": "Default",
   "C_Cpp.default.configurationProvider": "",
   "C_Cpp.loggingLevel": "Information"
+  "files.encoding": "gb2312"
 }
