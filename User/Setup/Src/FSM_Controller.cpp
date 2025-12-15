@@ -59,7 +59,7 @@ void FSM_Controller::loop()
 void FSM_Controller::all_stop()
 {
    // 停止所有机构动作的实现
-   arm_setup_->setArmStatus(ARM_STOP);
+   arm_setup_->setArmStatus(ARM_IDLE);
    chassis_setup_->setChassisStatus(CHASSIS_STOP);
        
 }
@@ -80,8 +80,29 @@ void FSM_Controller::manual_ctrl()
 //         arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
 //     else
 //         arm_setup_->setArmStatus(ARM_IDLE);
+    switch(airjoy_data_.SWC)
+    {
+        case 0x00:
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            arm_setup_->setArmStatus(ARM_IDLE);
+            break;
+        }
+        case 0x01:
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
+            break;  
+        }
+        case 0x02:
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            arm_setup_->setArmStatus(ARM_IDLE);
+            break;
+        }
+    }
 
-    chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+    
 
 }
 

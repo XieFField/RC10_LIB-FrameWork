@@ -1,6 +1,6 @@
 /**
  * @file Arm_setup.h
- * @author XieFField
+ * @author XieFField  70er66
  * @brief 串联臂运动控制实现
  *        KFS索引采用1 ~ 12 使用时候 index = KFSNum -1
  * @version 1.0
@@ -12,7 +12,29 @@
  * 
  * @version 3.0
  *   基本完善了云台部分的自动控制，等罗麒麟完善后面部分
- *      
+ * 
+ * @version 4.0
+ *   写完了自动控制部分，目前把发现的Bug都修复了
+ * 
+ * @version 5.0
+ *   重新设计了上电校准逻辑，以及后续的机械臂云台禁区位置。
+ *   将会修改为，机械臂云台常驻safe高度为0.20米；
+ *              如果机械臂云台在safe高度以下，则机械臂云台的活动范围仅为30度~180度(rotate_angle, 不是motor_angle)
+ *              
+ *              包括在自动模式下，state_toTargetHight阶段也会遵守该规则，即便拾取高度低于0.20米
+ *              也要等到云台转到禁区外再下降
+ * 
+ * 
+ * 
+ * @version 6.0
+ *   构造planB的自动拾取，即不多圈旋转；执行过程中的最大rotate角度为270度(abs(起点-终点) <= 270)，意味着云台禁止多圈旋转，旋转3/4圈后
+ *   需要转回来，(防止电机电线缠绕云台底座)，累计走过角度位移[含正负计算，从起点(一般是重定位的位置)开始]，也应当应用在手操当中。
+ *   若起点是0度，则是0->90(state_Align)[最短路径]->270(carrying)[继承state_Align旋转方向]->[0/180 云台需要走和state_carrying相反的方向)(state_return)
+ * 
+ *   若起点是180度，则是180->90(state_Align)[最短路径]->270(carring)[继承state_Align旋转方向]->[0/180 云台需要走和state_carring相反的方向]
+ * 
+ *   在思考这个能不能做成通用接口。
+ *   
  */
 
 #ifndef __ARM_SETUP_H
@@ -134,7 +156,7 @@ typedef struct{
     Rotate_Strategy_E current_strategy = ROTATE_PATH_SHORTEST; 
 
     struct{
-        const float safe_height = 0.2f; //安全高度，单位米  待定
+        
         const float store_height = 0.05f; //存储机构高度，单位米 待定
 
         bool is_toPlace = false; //是否到达可放置状态
@@ -153,7 +175,7 @@ typedef struct{
         float reach_finishTime = 0.0f; //到达目标位置的时间戳
 
         bool gimbal_ok =false;
-
+        const float safe_height = 0.2f; //安全高度，单位米  待定
     }flag;
 
 }ARM_AUTO_S;
@@ -274,7 +296,7 @@ private:
     void debug();
 
     //上电校准M2006电机位置
-    void calibrateM2006();
+    void calibrateMotor();
 
     //自动控制流程私密函数
 
@@ -285,6 +307,59 @@ private:
     bool state_return(int next_targetKFS);
 
     void auto_onlyOne();
+
+    /**
+     * 安全禁区通用接口：根据当前云台高度约束旋转角度
+     * 规则：当高度低于 `auto_ctrl_.flag.safe_height` (带0.01m死区) 时，仅允许旋转角度在 [30°, 180°]
+     * 说明：传入/返回的角度均为 rotate_angle（云台角度，非电机角度）
+     */
+    bool isRotateAllowed(float rotate_angle_deg) const
+    {
+        const float h = this->get_currentJointStatus().launchJoint_Height_;
+        const float safe_h = auto_ctrl_.flag.safe_height;
+        if(h < safe_h - 0.01f)
+            return (rotate_angle_deg >= 30.0f && rotate_angle_deg <= 180.0f);
+        return true;
+    }
+
+    /**
+     * 返回符合安全禁区的角度：
+     * - 当高度低于安全高度(带0.01m死区)时，将角度钳制到 [30°, 180°]
+     * - 当高度高于等于安全高度时，保持原角度
+     * @param desired_deg 期望的旋转角度（云台角度，非电机角度）
+     * @return 符合安全禁区的旋转角度
+     */
+    float sanitizeRotateAngle(float desired_deg) const
+    {
+        const float h = this->get_currentJointStatus().launchJoint_Height_;
+        const float safe_h = auto_ctrl_.flag.safe_height;
+        if(h < safe_h - 0.01f)
+        {
+            // 归一化到 0-360
+            float norm_deg = fmodf(desired_deg, 360.0f);
+            if(norm_deg < 0.0f) norm_deg += 360.0f;
+
+            if(norm_deg < 30.0f) 
+                return 30.0f;
+            if(norm_deg > 180.0f) 
+                return 180.0f;
+            
+            return norm_deg;
+        }
+        return desired_deg;
+    }
+
+    /**
+     * 执行安全门：在任何位置控制前调用，返回是否允许并输出安全角度
+     * @param desired_deg 期望的旋转角度（云台角度，非电机角度）
+     * @param safe_out_deg 输出的安全旋转角度
+     */
+    bool safetyGate_ForRotate(float desired_deg, float& safe_out_deg) const
+    {
+        bool ok = isRotateAllowed(desired_deg);
+        safe_out_deg = sanitizeRotateAngle(desired_deg);
+        return ok;
+    }
 
     /**
      * @brief 云台碰撞检测

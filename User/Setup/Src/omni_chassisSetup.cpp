@@ -45,9 +45,9 @@ void OmniChassis_Setup::loop()
 
 void OmniChassis_Setup::manualControl_A()
 {
-    // target_chassis_twist_.vx = -airjoy_data_.left_x * 3;
-    // target_chassis_twist_.vy = airjoy_data_.left_y * 3;
-    // target_chassis_twist_.yaw_rate = airjoy_data_.right_x;
+    target_chassis_twist_.vx = -airjoy_data_.left_x * 3;
+    target_chassis_twist_.vy = airjoy_data_.left_y * 3;
+    target_chassis_twist_.yaw_rate = airjoy_data_.right_x;
 
     //ËÙ¶ÈÉèÖÃ
     this->setRobotSpeed(target_chassis_twist_);
