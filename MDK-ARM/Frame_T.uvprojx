@@ -981,14 +981,14 @@
               <FilePath>..\RC10_LIB\Module\Inc\Module_Air_joy.h</FilePath>
             </File>
             <File>
-              <FileName>Module_ChassisOmni.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisOmni.h</FilePath>
-            </File>
-            <File>
               <FileName>Module_Air_joy.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_Air_joy.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_ChassisOmni.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisOmni.h</FilePath>
             </File>
             <File>
               <FileName>Module_ChassisOmni.cpp</FileName>
@@ -1024,6 +1024,16 @@
               <FileName>Module_LaserPosition.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_LaserPosition.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_CrsfReceiver.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_CrsfReceiver.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_CrsfReceiver.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_CrsfReceiver.h</FilePath>
             </File>
           </Files>
         </Group>

@@ -87,7 +87,7 @@ public:
 
     void setLowerClawStart(bool start)
     {
-
+        
     }
 
     Point2D getClawPos()

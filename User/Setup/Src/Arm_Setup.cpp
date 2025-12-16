@@ -1,5 +1,8 @@
 #include "Arm_setup.h"
 
+/**
+ * @brief 寻主循环
+ */
 void ArmSetup::loop()
 {
     if(!arm_ctrlStatus.init_flag)
@@ -7,7 +10,7 @@ void ArmSetup::loop()
 
     if(!arm_ctrlStatus.is_calibrating)
     {
-        calibrateM2006();
+        calibrateMotor();
         arm_status_ = ARM_CALIBRATE;
     }
 
@@ -16,6 +19,9 @@ void ArmSetup::loop()
    auto_ctrl_.now_armPosition = get_nowArmPosition();
    auto_ctrl_.now_ChassisPosition = get_nowChassisPose();
     
+    CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+
+
    #if ARM_AUTO_DEBUG_NOCHASSIS
     if(arm_ctrlStatus.is_calibrating)
     {
@@ -81,6 +87,9 @@ float test_current = 0.0f;
 float rotate_rate = 0.02f;
 float launch_rate = 9.99999975e-05;
 
+/**
+ * @brief 寻手操
+ */
 void ArmSetup::manualControl()
 {
     this->setRotateStrategy(ROTATE_PATH_SHORTEST);
@@ -96,47 +105,52 @@ void ArmSetup::manualControl()
         last_arm_status_ = ARM_MANUAL_CONTROL;
     }
 
-    if(AirJoy::getinstance().RIGHT_X < 1450)
-            target_joint_status_.rotateJoint_angle_ -= rotate_rate; // 旋转关节逆时针
-        else if(AirJoy::getinstance().RIGHT_X > 1550)
-            target_joint_status_.rotateJoint_angle_ += rotate_rate; // 旋转关节顺时针
-        else
-            target_joint_status_ = target_joint_status_; // 保持不变
 
+    //升降操控
+    if(airjoy_data_.right_y != 0)
+    {
+        target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_ 
+            + airjoy_data_.right_y * launch_rate * airjoy_data_.right_y;
+    }
+    else
+        target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_; // 保持不变
 
+    
+    //云台操控
+    if(airjoy_data_.right_x != 0)
+    {
+        target_joint_status_.rotateJoint_angle_ = target_joint_status_.rotateJoint_angle_ 
+            + airjoy_data_.right_x * rotate_rate * airjoy_data_.right_x;
+    }
+    else
+        target_joint_status_.rotateJoint_angle_ = target_joint_status_.rotateJoint_angle_; // 保持不变
 
-        if(AirJoy::getinstance().RIGHT_Y < 1450)
-            target_joint_status_.launchJoint_Height_ -= launch_rate; // 伸展关节收回
-        else if(AirJoy::getinstance().RIGHT_Y > 1550)
-            target_joint_status_.launchJoint_Height_ += launch_rate; // 伸展关节伸出
-        else
-            target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_; // 保持不变
+    target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
 
-        if(_tool_Abs(AirJoy::getinstance().SWA - 1000) < 50)
-            target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位置
-        else if(_tool_Abs(AirJoy::getinstance().SWA - 2000) < 50)
-            target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
-        else 
-            target_joint_status_.stretchJoint_Length_ = target_joint_status_.stretchJoint_Length_; // 保持不变
+    //pitch 开关
+    if(airjoy_data_.scroll_wheel == 0x00)
+        target_joint_status_.suckerJoint_angle_ = 0.0f; // 末端关节收
+    else if(airjoy_data_.scroll_wheel == 0x01)
+        target_joint_status_.suckerJoint_angle_ = 95.0f; // 末端关节开
 
+    //stretch 开关
+    if(airjoy_data_.SWA == 0x00)
+        target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位置
+    else if(airjoy_data_.SWA == 0x01)
+        target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
 
+    //吸盘开关
+    if(airjoy_data_.SWD == 0x01)
+        this->setSuckerStatus(Sucker_Status_E::SUCK);
+    else
+        this->setSuckerStatus(Sucker_Status_E::STOP);
+    
 
-        if(_tool_Abs(AirJoy::getinstance().SWD - 1000) < 50)
-            target_joint_status_.suckerJoint_angle_ = 0.0f; // 末端关节收
-        else if(_tool_Abs(AirJoy::getinstance().SWD - 2000) < 50)
-            target_joint_status_.suckerJoint_angle_ = 95.0f; // 末端关节开
-        else 
-            target_joint_status_.suckerJoint_angle_ = target_joint_status_.suckerJoint_angle_; // 保持不变
+    this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
+    this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
+    this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
+    this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
 
-        this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
-        this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
-        this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
-        this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
-
-        if(_tool_Abs(AirJoy::getinstance().SWC - 2000) < 50)
-            this->setSuckerStatus(Sucker_Status_E::SUCK);
-        else
-            this->setSuckerStatus(Sucker_Status_E::STOP);
 }
 /*=======================================================*/
 
@@ -144,6 +158,8 @@ void ArmSetup::manualControl()
  * @brief 如果有两个目标KFS，则第一个KFS拾取完后放到存储机构
  *        第二个KFS拾取完后留在吸盘上
  *        如果没有第二个，就吸在吸盘上，不必放到存储机构
+ * 
+ *        寻自动
  * 
  * 自动计算逻辑遵从串联臂自动逻辑末尾的数学公式
  */
@@ -185,6 +201,9 @@ void ArmSetup::autoControl()
 
 //流程函数
 
+/**
+ * @brief 自动高度
+ */
 void ArmSetup::state_toTargetHight(int targetKFS)
 {
     /**
@@ -196,7 +215,11 @@ void ArmSetup::state_toTargetHight(int targetKFS)
     //20cm台阶 升降0m, 40cm台阶升降 0.2m, 60cm台阶升降0.4m
     float kfs_height = MF_high[targetKFS -1]; //获取目标KFS高度
 
-    this->set_LaunchHeight((kfs_height - 0.2f)); 
+    if(kfs_height - 0.2f < auto_ctrl_.flag.safe_height)
+        this->set_LaunchHeight(auto_ctrl_.flag.safe_height); //安全高度
+    else
+        this->set_LaunchHeight(kfs_height - 0.2f); //目标高度-吸盘高度(0.2m)
+
     this->set_PitchAngle(90.0f); //吸盘pitch90度
 }
 
@@ -233,6 +256,9 @@ bool ArmSetup::check_Arm_collision(float px, float py,
         return false; //未碰撞
 }
 
+/**
+ * @brief 寻自动对齐
+ */
 void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
 {
     /**
@@ -437,6 +463,21 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
     if(safe)
     {
         this->set_RotateAngle(90.0f); //对齐目标角度
+
+        // [新增] 当云台不在禁区时候，再降低云台高度到零点
+
+        float norm_angle = fmodf(current_deg, 360.0f);
+        if(norm_angle < 0.0f) norm_angle += 360.0f;
+
+        // 检查当前角度是否允许处于低高度 (即在 [30, 180] 范围内)
+        if(norm_angle >= 30.0f && norm_angle <= 180.0f)
+        {
+             float kfs_height = MF_high[targetKFS -1];
+             // 如果目标高度低于安全高度，则降低
+             if(kfs_height - 0.2f < auto_ctrl_.flag.safe_height)
+                this->set_LaunchHeight(kfs_height - 0.2f);
+        }
+
         if(_tool_Abs(diff) < 2.0f)
         {
             //到达目标角度后，打开吸盘
@@ -463,6 +504,9 @@ Point2D pos_start_kfs = {0.0f, 0.0f, 0.0f};
 
  bool back = false;
 float angle = 0.0f;
+/**
+ * @brief 寻自动伸展
+ */
 bool ArmSetup::state_aimExt(int targetKFS)
 {
     /**
@@ -601,6 +645,9 @@ bool ArmSetup::state_aimExt(int targetKFS)
 			
 }
 
+/**
+ * @brief 寻自动搬运
+ */
 void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
 {
     /**
@@ -641,6 +688,16 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
     Point2D PA = auto_ctrl_.PointPAB[index].PA;
     Point2D PB = auto_ctrl_.PointPAB[index].PB;
 
+    // [新增] 判定当前云台高度是否比存储时候所需云台高度要高，否则，抬高
+    if(auto_ctrl_.store[targetKFS].is_toPlace == false)
+    {
+         if(this->get_currentJointStatus().launchJoint_Height_ < auto_ctrl_.flag.safe_height - 0.01f)
+        {
+            this->set_LaunchHeight(auto_ctrl_.flag.safe_height);
+            return;
+        }
+    }
+
     float vx = 0.0f, vy = 0.0f;
 
     /**
@@ -678,7 +735,7 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
     }
 
     float current_deg = this->get_currentJointStatus().rotateJoint_angle_;
-    float target_deg = 359.0f; //存储机构位置角度为0度
+    float target_deg = 270.0f; //存储机构位置角度为0度
 
     //Rotate_Strategy_E strategy = auto_ctrl_.current_strategy;
 
@@ -792,9 +849,9 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
     if(auto_ctrl_.store[targetKFS].is_toPlace == false)
     {
         if(this->get_currentJointStatus().launchJoint_Height_
-            < auto_ctrl_.store[targetKFS].safe_height)
+            < auto_ctrl_.flag.safe_height)
         {
-            this->set_LaunchHeight(auto_ctrl_.store[targetKFS].safe_height);
+            this->set_LaunchHeight(auto_ctrl_.flag.safe_height);
         }
         else
         {
@@ -838,7 +895,7 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
                 else if(this->now_time_s_ - wait_startTime > 0.5f)
                 {
                     //抬高云台到安全高度
-                    this->set_LaunchHeight(auto_ctrl_.store[targetKFS].safe_height);        
+                    this->set_LaunchHeight(auto_ctrl_.flag.safe_height);        
                     carrying_done = true; //放置完成
                 }
             }
@@ -856,8 +913,18 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
     
 }
 
+/**
+ * @brief 寻自动返回
+ */
 bool ArmSetup::state_return(int next_targetKFS)
 {
+    //  判定云台在不在安全高度，否则要升到safe高度
+    if(this->get_currentJointStatus().launchJoint_Height_ < auto_ctrl_.flag.safe_height - 0.01f)
+    {
+        this->set_LaunchHeight(auto_ctrl_.flag.safe_height);
+        return false;
+    }
+
     /**
      * @brief 
      *  1. 传入的下一个点
@@ -932,6 +999,9 @@ bool ArmSetup::state_return(int next_targetKFS)
 	}
 }
 
+/**
+ * @brief 寻自动单个
+ */
 void ArmSetup::auto_onlyOne()
 {
     /**
@@ -1039,6 +1109,9 @@ void ArmSetup::auto_onlyOne()
 
 /*=================================================================*/
 
+/**
+ * @brief 寻停止
+ */
 void ArmSetup::stop()
 {
     // 停止控制函数
@@ -1075,7 +1148,19 @@ void ArmSetup::stop()
     }
 }
 
-void ArmSetup::calibrateM2006()
+/**
+ * @brief 寻校准
+ * 
+ * 
+ * @brief 上电校准的重新设计
+ *        1. 上电后，进入校准模式
+ *        2. 伸展电机设计不变，依然是缩到最短
+ *        3. pitch电机改为反向抬到180度进行校正
+ *        4. 云台的话，后续机械会改成抵住铝管限位，限位重定位为180度。
+ *        5. 抬升电机为在最低处，限位重定位为0米
+ */
+
+void ArmSetup::calibrateMotor()
 {
     this->set_controlMode(CURRENT_CONTROL_MODE); 
     // 上电校准M2006电机位置
@@ -1086,19 +1171,29 @@ void ArmSetup::calibrateM2006()
         arm_ctrlStatus.calibrate_start = true;
     }
     this->motor_stretch_->setTargetCurrent(-1000.0f); // 给予一个小电流顶住限位
-    this->motor_pitch_->setTargetCurrent(1000.0f); // 给予一个小电流顶住限位
-
+    this->motor_pitch_->setTargetCurrent(-1000.0f); // 给予一个小电流顶住限位
+    this->motor_rotate_->setTargetCurrent(700.0f);
     if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.5f)
     {
+        //relocate
         this->motor_stretch_->relocate_totalAngle(0.0f);
-        this->motor_pitch_->relocate_totalAngle(0.0f);
+        this->motor_pitch_->relocate_totalAngle(180.0f);
+        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(180.0f));
+        // this->motor_launch_->relocate_totalAngle(0.0f);
+
+        //set current to 0
         this->motor_stretch_->setTargetCurrent(0.0f);
         this->motor_pitch_->setTargetCurrent(0.0f);
+        this->motor_rotate_->setTargetCurrent(0.0f);
+        // this->motor_launch_->setTargetCurrent(0.0f);
 
         arm_ctrlStatus.is_calibrating = true;
     }
 }
 
+/**
+ * @brief 寻空闲
+ */
 void ArmSetup::idle()
 {
     // 空闲控制函数，若上一时刻非此模式，则记忆上一时刻位置，并维持不变
@@ -1131,6 +1226,9 @@ float test_rotate_angle = 0.2f;
 
 float test_launch_height = 0.01f;
 volatile float launch_see = 0.0f;
+/**
+ * @brief 寻调试
+ */
 void ArmSetup::debug()
 {
     //测试

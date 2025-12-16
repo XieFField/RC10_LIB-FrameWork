@@ -23,15 +23,30 @@ extern "C" {
 #include "Module_LaserPosition.h"
 #include "math.h"
 #define PI							3.14159265358979323846f			// 定义圆周率常量PI
+
+typedef struct 
+{
+  /* data */
+    float x1;//规定激光实例管理的第一个为x的数据，第二三个为y的数据
+    float y1;
+    float y2;
+    float d=0.25;
+    float delta_x1;
+    float delta_y1;
+    float delta_y2;
+}Laser_initData_S;
+
+
 class Locate_Setup : public RtosTask {
 public:
-    Locate_Setup(Laser_InstanceManager* Laser_pos_instance):RtosTask("Locate_Setup", 1)
-		{this->Laser_pos_instance=Laser_pos_instance;}
+    Locate_Setup(Laser_InstanceManager* instance_man = nullptr):RtosTask("Locate_Setup", 1), Laser_pos_instance(instance_man)
+		{}
     ~Locate_Setup() = default;    
     /**
      * @brief 无输入则默认在底盘中心
      */
-    void init(Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0})
+    void init(Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0}, 
+              Laser_initData_S laser_initData = {0})
     {   
         if(install_pose_init_)
             return;
@@ -42,10 +57,25 @@ public:
 
         T_robot_to_arm.setTransform(arm_install_pose_);
 
+        laser_initData_ = laser_initData;
+
         install_pose_init_ = true;
     }
-		void RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_instance);
+	void RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_instance);
 		
+    void register_laserManager(Laser_InstanceManager* Laser_pos_instance)
+    {
+        this->Laser_pos_instance = Laser_pos_instance;
+    }
+
+    /**
+     * @brief 设置是否启动激光重定位
+     */
+    void set_startToLRL(bool is_startToLRL)
+    {
+        this->is_startToLRL_ = is_startToLRL;
+    }
+
     Point2D get_ArmPos_inWorld(){return arm_pose_inWorld_;}
 
     Point2D get_RobotPos_inWorld(){return robot_pose_inWorld_;}
@@ -54,15 +84,10 @@ public:
 		
 		void locate_setup_init(){this->start(osPriorityNormal, 256);}
 private:
-	  
-	  float x1;//规定激光实例管理的第一个为x的数据，第二三个为y的数据
-    float y1;
-    float y2;
-    float d=0.25;
-    float delta_x1;
-    float delta_y1;
-    float delta_y2;
+	
+	Laser_initData_S laser_initData_;
     Laser_InstanceManager* Laser_pos_instance;
+    bool is_startToLRL_ = false; // 是否启动激光重定位
     void update(); //更新
     
     Point2D update_Lidar_data(); //更新雷达数据
@@ -84,7 +109,7 @@ protected:
 };
 
 //class LaerRelocate_Manager : public RtosTask {
-//public:
+//publi@brc:
 //    LaerRelocate_Manager(LaserPosition laser_module1, LaserPosition laser_module2, LaserPosition laser_module3)
 //        :RtosTask("LaerRelocate_Manager", 1)
 //    {
@@ -101,6 +126,7 @@ protected:
 //    LaserPosition* laser_position_module_[3];
 
 //}
+
 
 
 #endif

@@ -63,6 +63,8 @@ template <std::size_t WheelCount>
 class Chassis_Omni : public Chassis_Base<WheelCount> {
 public:
     Chassis_Omni(float wheel_radius, float max_wheel_rpm, float chassis_radius);
+    // 等腰三角形参数构造（仅三轮）：base=底边长度，side=腰长
+    Chassis_Omni(float wheel_radius, float max_wheel_rpm, float base_length, float side_length, bool three_wheel);
 
     void updateKinematics() override; // 更新运动学，调用逆解和正解
 
@@ -70,7 +72,12 @@ private:
     void inverseKinematics(const Robot_Twist& twist) override; // 逆解，根据目标速度计算轮速
     float chassis_radius_; // 底盘半径 (m)
     float chassis_radius_bottom_; // 底盘底部到中心的距离 (m)
-    void forwardKinematics() override; // 正解，根据轮速计算底盘速度
+    void forwardKinematics() override;
+    // 依据等腰三角形几何计算两个半径：顶点半径与底边半径
+    void computeIsoscelesRadii(float base_length, float side_length, float& top_radius, float& bottom_radius);
+
+    // 三轮解算器选择标志（只在 WheelCount==3 时有效）
+    bool use_three_solver_ = true;
 
     // arm_matrix_instance_f32 kinematics_matrix; // WheelCount x 3
     // arm_matrix_instance_f32 input_mat_; // 3x1
@@ -80,6 +87,8 @@ private:
     // float32_t input_vector_[3]; // 3x1
     // float32_t output_vector_[WheelCount]; // 4x1    
 };
+
+
 
 #endif // __cplusplus
 

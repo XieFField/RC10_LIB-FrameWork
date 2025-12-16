@@ -4,6 +4,8 @@ fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // »ñÈ¡FDCAN1µÄÎ¨Ò»Ê
 DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4ºÅM3508/M2006µç»ú
 DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8ºÅM3508/M2006µç»ú
 
+
+
 /*==============Controller Instances===========*/
 uint8_t laser_rx_buffer[20];
 uint8_t laser_rx_buffer1[20];
@@ -14,7 +16,9 @@ LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
 Locate_Setup set1(&instance_man);
-OmniChassis_Setup ChassisOmni(1,2,3); // ÂÖ×Ó°ë¾¶£¬×î´óÂÖ×Ó×ªËÙ£¬µ×ÅÌ°ë¾¶
+
+OmniChassis_Setup ChassisOmni(0.442f/2.f,420, 0.74f, 0.8363f, true); // ÂÖ×Ó°ë¾¶£¬×î´óÂÖ×Ó×ªËÙ£¬µ×ÅÌ µ× Ñü
+
 ArmSetup ARM_Controller(arm_initData);
 FSM_Controller Finite_StateMachine;
 
@@ -156,6 +160,32 @@ void ALL_Setup_ConfigInit(void)
    pos->InitUART();
    TimeStamp::getInstance().init(&htim4); // ÆôÓÃÊ±¼ä´Á·şÎñ
    debug_init();
+	
+   CAN_Motor_Init();
+
+   ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
+   ARM_Controller.setArmStatus(ARM_IDLE);
+
+   ChassisOmni.registerWheelMotor(0, &omni_wheel1);
+   ChassisOmni.registerWheelMotor(1, &omni_wheel2);
+   ChassisOmni.registerWheelMotor(2, &omni_wheel3);
+   // ChassisOmni.registerWheelMotor(3, &omni_wheel4);
+   ChassisOmni.init();
+
+   ChassisOmni.setChassisStatus(CHASSIS_STOP);
+
+   Finite_StateMachine.registerArmSetup(&ARM_Controller);
+   Finite_StateMachine.registerChassisSetup(&ChassisOmni);
+
+   //CrsfReceiver* crsf_rc=CrsfReceiver::instance(&huart7);
+
+   CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
+   crsf_rc->init();
+
+   Finite_StateMachine.init();
+
+   //  CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
+   
 
 	 instance_man.RegisterInstance(&laserpos);
 	 instance_man.RegisterInstance(&laserpos1);
@@ -193,10 +223,10 @@ void CAN_Motor_Init(void)
    CAN1_Bus->init();
 
    // µ×ÅÌÂÖ×Óµç»úPID²ÎÊı³õÊ¼»¯
-   omni_wheel1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   omni_wheel2.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   omni_wheel3.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   omni_wheel4.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
+   omni_wheel1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
+   omni_wheel2.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
+   omni_wheel3.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
+   // omni_wheel4.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
 
    // »úĞµ±Ûµç»úPID²ÎÊı³õÊ¼»¯
    arm_launchMotor.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);

@@ -65,10 +65,12 @@ uint8_t MPQ3446::MPQ3446_ReadReg(MPQ3446_Reg reg_addr, uint16_t* data)
 {
 	uint8_t rx_buf[2];
 	uint8_t reg=(uint8_t)reg_addr;
-	 if (HAL_I2C_Master_Transmit(port_,addr_, &reg, 1,HAL_MAX_DELAY) != 0) {
+	 if (HAL_I2C_Master_Transmit(port_,addr_, &reg, 1,HAL_MAX_DELAY) != 0) 
+	 {
         return 0; // 发送失败
     }
-	 if (HAL_I2C_Master_Receive(port_,addr_, rx_buf, 2,HAL_MAX_DELAY) != 0) {
+	 if (HAL_I2C_Master_Receive(port_,addr_, rx_buf, 2,HAL_MAX_DELAY) != 0) 
+	 {
         return 0; // 接收失败
     }
 	*data = (rx_buf[0] << 8) | rx_buf[1]; // 拼接16位数据
