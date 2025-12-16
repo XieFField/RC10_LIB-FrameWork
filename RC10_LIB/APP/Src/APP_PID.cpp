@@ -193,9 +193,10 @@ float PID_Incremental::pid_calc(float target, float feedback)
     return output_;
 }
 
+//目前3508不错的参数 
 PID_Param_Config m3508_speed_pid_params = {
-    .kp = 25.0f,
-    .ki = 0.06f,
+    .kp = 32.0f,
+    .ki = 0.085f,
     .kd = 0.0f,
     .I_Outlimit = 8000.0f, 
     .isIOutlimit = true, 
@@ -204,13 +205,13 @@ PID_Param_Config m3508_speed_pid_params = {
 };
 
 PID_Param_Config m3508_angle_pid_params = {
-    .kp = 3.5f,
+    .kp = 32.0f,
     .ki = 0.0f,
-    .kd = 0.05f,
+    .kd = 1.1f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 500.0f,   
-    .deadband = 0.03f
+    .output_limit = 400.0f,   
+    .deadband = 0.5f // 
 };
 
 PID_Param_Config m2006_speed_pid_params = {
@@ -233,23 +234,12 @@ PID_Param_Config m2006_angle_pid_params = {
     .deadband = 0.09f 
 };
 
-
-PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
-    .kp = 250.0f,
-    .ki = 12.0f,
+PID_Param_Config track_pid_params = {
+    .kp = 10.0f,
+    .ki = 5.0f,
     .kd = 0.0f,
-    .I_Outlimit = 10000.0f, 
+    .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 15000.0f,   
-    .deadband = 0.0f 
-};
-
-PID_Param_Config lock_angle_pid_params = {
-    .kp = 0.3f,
-    .ki = 1.5f,
-    .kd = 0.0f,
-    .I_Outlimit = 2.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 3.0f,   
-    .deadband = 0.003f 
+    .output_limit = 100.0f,   
+    .deadband = 0.0009f 
 };

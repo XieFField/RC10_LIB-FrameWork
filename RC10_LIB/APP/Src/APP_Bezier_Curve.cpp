@@ -451,3 +451,41 @@ float BezierCurve::Get_Max_Vel(float t)
 
 	return current_max_vel;
 }
+
+/**
+ * @brief 获取法向量
+ * @param point 目标点
+ * @param t 曲线参数，范围[0, 1]
+ * @return Vector2D 法向量
+ */
+Vector2D BezierCurve::Get_Normal_Vector(const Vector2D &point, const float t)
+{
+	if (order != FIRST_ORDER_BEZIER)
+	{
+		normal_vector = Get_Tangent_Vector(t).perpendicular(); // 同时更新tangent_vector;
+	}
+
+	float cross_result; // 叉乘结果
+
+	if (order == FIRST_ORDER_BEZIER)
+	{
+		cross_result = tangent_vector.cross(point - start_point);
+	}
+	else
+	{
+		cross_result = tangent_vector.cross(point - Get_Point(t));
+	}
+
+	if (cross_result > 0)
+	{
+		return normal_vector;
+	}
+	else if (cross_result < 0)
+	{
+		return -normal_vector;
+	}
+	else
+	{
+		return Vector2D(0, 0);
+	}
+}

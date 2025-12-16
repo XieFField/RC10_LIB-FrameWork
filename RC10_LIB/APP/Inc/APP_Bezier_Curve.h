@@ -15,8 +15,8 @@
 #ifdef __cplusplus
 
 // 常量定义
-#define FIND_NEAREST_DISTANCE_STEP_COUNT 10	  // 查找最近点的迭代次数
-#define BEZIER_SAMPLE_NUM 100				  // 贝塞尔曲线采样点数量（不包含起点）
+#define FIND_NEAREST_DISTANCE_STEP_COUNT 200  // 查找最近点的迭代次数
+#define BEZIER_SAMPLE_NUM 200				  // 贝塞尔曲线采样点数量（不包含起点）
 #define GOLDEN_RATIO (sqrtf(5.f) - 1.f) / 2.f // 黄金分割比例 (~0.618)
 
 /**
@@ -109,6 +109,14 @@ public:
 	Vector2D Get_Tangent_Vector(float t);
 
 	/**
+	 * @brief 获取法向量
+	 * @param point 目标点
+	 * @param t 曲线参数，范围[0, 1]
+	 * @return Vector2D 法向量
+	 */
+	Vector2D Get_Normal_Vector(const Vector2D &point, const float t);
+
+	/**
 	 * @brief 获取起始点
 	 * @return Vector2D 起始点
 	 */
@@ -166,6 +174,7 @@ protected:
 	Vector2D control_point;			 // 控制点（仅二阶曲线使用）
 
 	Vector2D tangent_vector; // 切向量
+	Vector2D normal_vector;	 // 法向量
 
 private:
 	float end_vel = 0;						   // 结束速度

@@ -15,10 +15,10 @@ void TrapePlanner1D::param_reset(Speedplanner_1D_Param_Config params)
     m_maxSpeed_ = abs(params.maxSpeed);                         // 最大速度
     m_initialSpeed_ = abs(params.initialSpeed);                 // 起始速度
     m_finalSpeed_ = abs(params.finalSpeed);                     // 目标速度
-    m_startPos_ = params.startPos;                              // 起始位置
-    m_targetPos_ = params.targetPos;                            // 目标位置
-    m_totalDistance_ = abs(params.targetPos - params.startPos); // 总路程
     m_deadzone_ = abs(params.deadzone);                         // 死区范围
+    m_startPos_ = params.startPos;                              // 起始位置
+    m_targetPos_ = (params.targetPos);                          // 目标位置
+    m_totalDistance_ = abs(params.targetPos - params.startPos); // 总路程
 
     // 根据目标位置与起始位置计算运动方向
     if (params.targetPos - params.startPos > 0.0f)
@@ -164,21 +164,23 @@ void TrapePlanner1D::reset()
  */
 void SShapedPlanner1D::param_reset(Speedplanner_1D_Param_Config params)
 {
-    m_maxAcc_ = params.maxAcc;
-    m_maxDec_ = params.maxDec;
-    m_maxJerk_ = params.maxJerk;
-    m_maxSpeed_ = params.maxSpeed;
-    m_initialSpeed_ = params.initialSpeed;
-    m_finalSpeed_ = params.finalSpeed;
+    m_maxAcc_ = abs(params.maxAcc);
+    m_maxDec_ = abs(params.maxDec);
+    m_maxJerk_ = abs(params.maxJerk);
+    m_maxSpeed_ = abs(params.maxSpeed);
+    m_initialSpeed_ = abs(params.initialSpeed);
+    m_finalSpeed_ = abs(params.finalSpeed);
     m_startPos_ = params.startPos;
     m_targetPos_ = params.targetPos;
     m_deadzone_ = params.deadzone;
     // 计算总距离
     m_totalDistance_ = abs(m_targetPos_ - m_startPos_);
 
-    // 预计算各个阶段的路程
-    cal_PhaseDistances();
-
+    if (m_totalDistance_ > 0.0f)
+    {
+        // 预计算各个阶段的路程
+        cal_PhaseDistances();
+    }
     // 初始化当前阶段
     m_phase = S_ACCEL_JERK_UP_PHASE;
 }
@@ -205,9 +207,6 @@ float SShapedPlanner1D::plan(float now_dis)
     // 确定当前阶段
     m_phase = determinePhase(traveled_);
 
-    // 根据阶段计算当前速度
-    float currentSpeed = 0.0f;
-
     switch (m_phase)
     {
     case S_ACCEL_JERK_UP_PHASE:
@@ -230,6 +229,11 @@ float SShapedPlanner1D::plan(float now_dis)
         break;
     case S_DECEL_JERK_DOWN_PHASE:
         currentSpeed = cal_Dec_JerkDownSpeed(traveled_);
+        if (currentSpeed <= m_finalSpeed_)
+        {
+            m_phase = S_FINISHED_PHASE;
+        }
+
         break;
     case S_FINISHED_PHASE:
         currentSpeed = m_finalSpeed_;
@@ -246,12 +250,6 @@ float SShapedPlanner1D::plan(float now_dis)
  */
 SPhase SShapedPlanner1D::determinePhase(float traveled)
 {
-    // 检查是否已经完成
-    if (abs(traveled - m_totalDistance_) < m_deadzone_)
-    {
-        return S_FINISHED_PHASE;
-    }
-
     // 累计距离判断当前阶段
     float cumulative = 0.0f;
 
@@ -286,7 +284,11 @@ SPhase SShapedPlanner1D::determinePhase(float traveled)
         return S_DECEL_CONST_PHASE;
 
     // 减速段：Jerk 下降
-    return S_DECEL_JERK_DOWN_PHASE;
+    cumulative += m_decelJerkDownDistance_;
+    if (traveled < cumulative - m_deadzone_)
+        return S_DECEL_JERK_DOWN_PHASE;
+    else
+        return S_FINISHED_PHASE;
 }
 
 // ---------------------------- 内部辅助函数 ----------------------------

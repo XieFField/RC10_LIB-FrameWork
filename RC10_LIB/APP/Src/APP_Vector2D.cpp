@@ -206,6 +206,14 @@ float Vector2D::curvatureFromThreePoints(const Vector2D &p0, const Vector2D &p1,
 }
 
 /**
+ * @brief  获取垂直法向量（逆时针90度）
+ */
+Vector2D Vector2D::perpendicular() const
+{
+    return Vector2D(-this->y, this->x);
+}
+
+/**
  * @brief Vector2DQueue 默认构造函数
  */
 Vector2DQueue::Vector2DQueue() : front(0), rear(-1), size(0) {}
