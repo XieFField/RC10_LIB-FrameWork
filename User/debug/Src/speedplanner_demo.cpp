@@ -13,6 +13,8 @@ Vector2D point = point_start;
 Vector2D point1 = point_start;
 
 int num = 0;
+int flag = 0;
+int flag_run = 1;
 
 Td td(10.0f);
 Td td1(10.0f);
@@ -325,66 +327,96 @@ void SpeedPlanner_Demo::loop()
     //        debug_uart.printf_DMA("%f,%f,%f\n", point.x, point.y, speed.magnitude());
     //        num = 0;
     //    }
-
-    num++;
-    if (path1.Is_End() == true)
+    if (flag == 1)
     {
-        Vector2D speed_temp = path1.plan(point);
-        speed1.y = td12.plan(speed_temp.y);
-        speed1.x = td2.plan(speed_temp.x);
-        point1 = point1 + (speed1 * 0.001f);
+        flag_run = 1;
+        flag = 0;
+
+        path.Add_Start_Point(Vector2D{point.x, point.y}, 0, 0);
+        path.Add_Point(Vector2D{point.x - 1.2f, point.y}, 1.0f);
+        path.Add_Point(Vector2D{point.x - 1.2f, point.y + 1.2f}, 0);
+        path.Add_Point(Vector2D{point.x - 1.2f, point.y + 6.0f}, 0);
+        path.Add_Point(Vector2D{point.x - 1.2f, point.y + 7.2f}, 1.0f);
+        path.Add_Point(Vector2D{point.x, point.y + 7.2f}, 0);
+        path.Add_End_Point(Vector2D{point.x + 3.6f, point.y + 7.2f}, 0);
+
+        path1.Add_Start_Point(Vector2D{point1.x, point1.y}, 0, 0);
+        path1.Add_Point(Vector2D{point1.x - 1.2f, point1.y}, 1.0f);
+        path1.Add_Point(Vector2D{point1.x - 1.2f, point1.y + 1.2f}, 0);
+        path1.Add_Point(Vector2D{point1.x - 1.2f, point1.y + 6.0f}, 0);
+        path1.Add_Point(Vector2D{point1.x - 1.2f, point1.y + 7.2f}, 1.0f);
+        path1.Add_Point(Vector2D{point1.x, point1.y + 7.2f}, 0);
+        path1.Add_End_Point(Vector2D{point1.x + 3.6f, point1.y + 7.2f}, 0);
     }
 
-    pathEnd = path.get_bezier_curve().Get_Point(1.0f);
-    // 新增：机器人到几何终点的真实距离
-    float distToEnd = (point - pathEnd).magnitude();
-
-    if (path.Is_End() == true)
+    if (flag_run == 1)
     {
-        // 1. 找最近点+t值：获取路径上距离当前位置最近的点及其参数 tNearest
-        nearestPt = GetPathNearestPoint(path.get_bezier_curve(), point, tNearest);
-        // 2. 找前视点+前进方向：根据最近点和前视距离，寻找前视点及其参数 tLookahead
-        lookaheadPt = FindLookaheadPoint(path.get_bezier_curve(), tNearest, tLookahead);
-        lookaheadTangent = path.get_bezier_curve().Get_Tangent_Vector(tLookahead);
-        // 3. 计算横向偏差：计算机器人当前位置到路径切线的垂直距离
-        lateralError = CalculateLateralError(path.get_bezier_curve(), point, nearestPt, tLookahead);
-        // 4. 横向偏差PID控制：计算横向纠偏速度大小
-        correctspeed = pid_track.pid_calc(0.0f, lateralError);
-        Vector2D corrDir(-lookaheadTangent.y, lookaheadTangent.x); // 纠偏方向（垂直前进方向，左右纠偏）
-        corrVelocity = corrDir * correctspeed;                     // 合成纠偏速度（方向+大小）
-        // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-        planspeed = path.plan(point);
-        // baseVelocity = lookaheadTangent * planspeed.magnitude();
-        Vector2D speed_temp = planspeed + corrVelocity; // 最终速度 = 规划的前进速度 + 横向纠偏速度
-        // 6. 速度平滑处理
-        speed.y = td1.plan(speed_temp.y);
-        speed.x = td.plan(speed_temp.x);
-        // 7. 更新模拟位置（实际应用中这一步由物理运动代替）
-        point = point + (speed * 0.001f);
-        if (num > 5)
+        num++;
+        if (path1.Is_End() == true)
         {
-            debug_uart.printf_DMA("%f,%f,%f,%f,%f\n", point.x, point.y, speed_temp.magnitude(), point1.x, point1.y);
-            num = 0;
+            Vector2D speed_temp = path1.plan(point);
+            speed1.y = td12.plan(speed_temp.y);
+            speed1.x = td2.plan(speed_temp.x);
+            point1 = point1 + (speed1 * 0.001f);
+        }
+
+        pathEnd = path.get_bezier_curve().Get_Point(1.0f);
+        // 新增：机器人到几何终点的真实距离
+        float distToEnd = (point - pathEnd).magnitude();
+
+        if (path.Is_End() == true)
+        {
+            // 1. 找最近点+t值：获取路径上距离当前位置最近的点及其参数 tNearest
+            nearestPt = GetPathNearestPoint(path.get_bezier_curve(), point, tNearest);
+            // 2. 找前视点+前进方向：根据最近点和前视距离，寻找前视点及其参数 tLookahead
+            lookaheadPt = FindLookaheadPoint(path.get_bezier_curve(), tNearest, tLookahead);
+            lookaheadTangent = path.get_bezier_curve().Get_Tangent_Vector(tLookahead);
+            // 3. 计算横向偏差：计算机器人当前位置到路径切线的垂直距离
+            lateralError = CalculateLateralError(path.get_bezier_curve(), point, nearestPt, tLookahead);
+            // 4. 横向偏差PID控制：计算横向纠偏速度大小
+            correctspeed = pid_track.pid_calc(0.0f, lateralError);
+            Vector2D corrDir(-lookaheadTangent.y, lookaheadTangent.x); // 纠偏方向（垂直前进方向，左右纠偏）
+            corrVelocity = corrDir * correctspeed;                     // 合成纠偏速度（方向+大小）
+            // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
+            planspeed = path.plan(point);
+            // baseVelocity = lookaheadTangent * planspeed.magnitude();
+            Vector2D speed_temp = planspeed + corrVelocity; // 最终速度 = 规划的前进速度 + 横向纠偏速度
+            // 6. 速度平滑处理
+            speed.y = td1.plan(speed_temp.y);
+            speed.x = td.plan(speed_temp.x);
+            // 7. 更新模拟位置（实际应用中这一步由物理运动代替）
+            point = point + (speed * 0.001f);
+            if (num > 5)
+            {
+                debug_uart.printf_DMA("%f,%f,%f,%f,%f\n", point.x, point.y, speed_temp.magnitude(), point1.x, point1.y);
+                num = 0;
+            }
+        }
+        else
+        {
+            // 路径运行结束后的重置逻辑
+            if (num > 2000)
+            {
+                flag_run = 0;
+                path.plan_reset();
+                td.reset();
+                td1.reset();
+                // point = point_start;
+                num = 0;
+
+                path1.plan_reset();
+                td2.reset();
+                td12.reset();
+                // point1 = point_start;
+                speed = {0.0f, 0.0f};
+
+                path.Reset();
+                path1.Reset();
+                flag = 1;
+            }
         }
     }
-    else
-    {
-        // 路径运行结束后的重置逻辑
-        if (num > 2000)
-        {
-            path.plan_reset();
-            td.reset();
-            td1.reset();
-            point = point_start;
-            num = 0;
 
-            path1.plan_reset();
-            td2.reset();
-            td12.reset();
-            point1 = point_start;
-            speed = {0.0f, 0.0f};
-        }
-    }
 #endif
 
 #if Path_s
