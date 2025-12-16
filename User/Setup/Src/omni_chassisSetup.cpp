@@ -8,15 +8,15 @@ void OmniChassis_Setup::loop()
     RealPos ra = Position::GetInstance(&huart1)->getRealPosData();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 
-    if(airjoy_data_.SWB == 0)
-    {
-        chassis_status_ = CHASSIS_MANUAL_CONTROL_A;
-    }
-    else
-    {
-        chassis_status_ = CHASSIS_MANUAL_CONTROL_B;
-    }
-
+    // if(airjoy_data_.SWB == 0)
+    // {
+    //     chassis_status_ = CHASSIS_MANUAL_CONTROL_A;
+    // }
+    // else
+    // {
+    //     chassis_status_ = CHASSIS_MANUAL_CONTROL_B;
+    // }
+    chassis_status_ = CHASSIS_STOP;
     switch (chassis_status_)
     {
         case CHASSIS_MANUAL_CONTROL_A:

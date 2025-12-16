@@ -229,9 +229,18 @@ void CAN_Motor_Init(void)
    // omni_wheel4.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
 
    // 机械臂电机PID参数初始化
-   arm_launchMotor.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, m2006_angle_pid_params, 0.0f);
-   arm_rotateMotor.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
+   
+   PID_Param_Config arm_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
+   PID_Param_Config arm_3508_anglePID = m3508_angle_pid_params;
+   arm_3508_anglePID.output_limit = 200.0f;
+   // arm_3508_speedPID.output_limit = 420.0f; // 根据机械臂要求调整输出限幅
+   
+   arm_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
+
+   PID_Param_Config arm_strech_anglePID = m2006_angle_pid_params;
+   arm_strech_anglePID.output_limit = 500.0f;
+   arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
+   arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
    arm_pitchMotor.pid_init(m2006_speed_pid_params, 0.0f, m2006_angle_pid_params, 0.0f);
 }
 

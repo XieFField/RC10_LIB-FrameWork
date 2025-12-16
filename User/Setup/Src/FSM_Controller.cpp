@@ -59,7 +59,7 @@ void FSM_Controller::loop()
 void FSM_Controller::all_stop()
 {
    // 停止所有机构动作的实现
-   arm_setup_->setArmStatus(ARM_IDLE);
+   arm_setup_->setArmStatus(ARM_STOP);
    chassis_setup_->setChassisStatus(CHASSIS_STOP);
        
 }
@@ -68,18 +68,6 @@ void FSM_Controller::manual_ctrl()
 {
    
 
-
-//    //底盘线速度控制;
-//     if(_tool_Abs(AirJoy::getinstance().SWC - 1000) < 50)
-//         chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-//     else
-//         chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
-
-//     //串联臂关节位置控制
-//     if(_tool_Abs(AirJoy::getinstance().SWC - 1500) < airjoy_deadzone_ || _tool_Abs(AirJoy::getinstance().SWC - 2000) < airjoy_deadzone_)
-//         arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
-//     else
-//         arm_setup_->setArmStatus(ARM_IDLE);
     switch(airjoy_data_.SWC)
     {
         case 0x00:
@@ -111,7 +99,7 @@ void FSM_Controller::auto_ctrl()
 {
    // 半自动控制模式下的实现
    arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-   chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
+//    chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
 }
 
 

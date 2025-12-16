@@ -19,22 +19,25 @@
  * @version 5.0
  *   重新设计了上电校准逻辑，以及后续的机械臂云台禁区位置。
  *   将会修改为，机械臂云台常驻safe高度为0.20米；
- *              如果机械臂云台在safe高度以下，则机械臂云台的活动范围仅为30度~180度(rotate_angle, 不是motor_angle)
+ *              如果机械臂云台在safe高度以下，则机械臂云台的活动范围仅为60度~135度(rotate_angle, 不是motor_angle)
  *              
  *              包括在自动模式下，state_toTargetHight阶段也会遵守该规则，即便拾取高度低于0.20米
  *              也要等到云台转到禁区外再下降
  * 
  * 
  * 
- * @version 6.0
- *   构造planB的自动拾取，即不多圈旋转；执行过程中的最大rotate角度为270度(abs(起点-终点) <= 270)，意味着云台禁止多圈旋转，旋转3/4圈后
+ * @version 6.0 更新单圈模式的策划方案
+ *   构造planB[单圈模式]的自动拾取，即不多圈旋转；执行过程中的最大rotate角度为270度(abs(起点-终点) <= 270)，意味着云台禁止多圈旋转，旋转3/4圈后
  *   需要转回来，(防止电机电线缠绕云台底座)，累计走过角度位移[含正负计算，从起点(一般是重定位的位置)开始]，也应当应用在手操当中。
  *   若起点是0度，则是0->90(state_Align)[最短路径]->270(carrying)[继承state_Align旋转方向]->[0/180 云台需要走和state_carrying相反的方向)(state_return)
  * 
- *   若起点是180度，则是180->90(state_Align)[最短路径]->270(carring)[继承state_Align旋转方向]->[0/180 云台需要走和state_carring相反的方向]
- * 
+ *   若起点是180度，则是180->90(state_Align)[最短路径]->270(carrying)[继承state_Align旋转方向]->[0/180 云台需要走和state_carring相反的方向]
+ *   且在state_return阶段，需要将云台升高到最高高度（0.4m）【和云台旋转到目标位置同时进行】
  *   在思考这个能不能做成通用接口。
  *   
+ *   使用模式设置void setRotateMultiTurn(bool isMulti)，设定云台多圈以及单圈模式
+ *   一旦设置云台的单圈和多圈，全局适用
+ * 
  */
 
 #ifndef __ARM_SETUP_H
@@ -157,7 +160,7 @@ typedef struct{
 
     struct{
         
-        const float store_height = 0.05f; //存储机构高度，单位米 待定
+        const float store_height = 0.14f; //存储机构高度，单位米 待定
 
         bool is_toPlace = false; //是否到达可放置状态
     }store[2];
@@ -175,7 +178,7 @@ typedef struct{
         float reach_finishTime = 0.0f; //到达目标位置的时间戳
 
         bool gimbal_ok =false;
-        const float safe_height = 0.2f; //安全高度，单位米  待定
+        const float safe_height = 0.14f; //安全高度，单位米  待定
     }flag;
 
 }ARM_AUTO_S;
@@ -209,7 +212,7 @@ public:
 
         this->setPitchReversed(true); //俯仰电机反向
         this->setStretchReversed(false); //伸展电机不反向
-
+        this->setLaunchReversed(true); //升降电机反向
         start(osPriorityNormal, 256);
 
         arm_ctrlStatus.init_flag = true;
@@ -220,6 +223,15 @@ public:
         arm_status_ = status;
     }
 
+    /**
+     * @brief 设置云台多圈/单圈模式
+     *        默认单圈模式，即rotate_multiTurn_ = false
+     *        单圈模式意味着云台禁止多圈旋转，旋转3/4圈后需要转回来，(防止电机电线缠绕云台底座)
+     */
+    void setRotateMultiTurn(bool isMulti)
+    {
+        rotate_multiTurn_ = isMulti;
+    }
 
     void start_toAutoCtrl(bool start)
     {
@@ -278,7 +290,7 @@ public:
 
         auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
 
-        auto_ctrl_.now_ChassisPosition.y -= 1.2f; //假设已经到达前一桩正前方0.5米处
+        auto_ctrl_.now_ChassisPosition.y -= 2.0f; //假设已经到达前一桩正前方0.5米处
 
         return true;
     }
@@ -309,23 +321,38 @@ private:
     void auto_onlyOne();
 
     /**
-     * 安全禁区通用接口：根据当前云台高度约束旋转角度
-     * 规则：当高度低于 `auto_ctrl_.flag.safe_height` (带0.01m死区) 时，仅允许旋转角度在 [30°, 180°]
+     * @brief 安全禁区通用接口：根据当前云台高度约束旋转角度
+     * 规则：
+     * 1. H < 0.03m: [60°, 180°] (重定位/极低高度区间)
+     * 2. 0.03m <= H < Safe_H: [60°, 135°] (机械限位干涉区间)
+     * 3. H >= Safe_H: [0°, 360°] (安全高度)
      * 说明：传入/返回的角度均为 rotate_angle（云台角度，非电机角度）
      */
     bool isRotateAllowed(float rotate_angle_deg) const
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
         const float safe_h = auto_ctrl_.flag.safe_height;
-        if(h < safe_h - 0.01f)
-            return (rotate_angle_deg >= 30.0f && rotate_angle_deg <= 180.0f);
+        
+        // 归一化到 0-360
+        float norm_deg = fmodf(rotate_angle_deg, 360.0f);
+        if(norm_deg < 0.0f) norm_deg += 360.0f;
+
+        if(h < 0.03f)
+        {
+            return (norm_deg >= 60.0f && norm_deg <= 180.0f);
+        }
+        else if(h < safe_h - 0.01f)
+        {
+            return (norm_deg >= 60.0f && norm_deg <= 135.0f);
+        }
         return true;
     }
 
     /**
-     * 返回符合安全禁区的角度：
-     * - 当高度低于安全高度(带0.01m死区)时，将角度钳制到 [30°, 180°]
-     * - 当高度高于等于安全高度时，保持原角度
+     * @brief 返回符合安全禁区的角度：
+     * - H < 0.03m: 钳制到 [60°, 180°]
+     * - 0.03m <= H < Safe_H: 钳制到 [60°, 135°]
+     * - H >= Safe_H: 保持原角度
      * @param desired_deg 期望的旋转角度（云台角度，非电机角度）
      * @return 符合安全禁区的旋转角度
      */
@@ -333,24 +360,33 @@ private:
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
         const float safe_h = auto_ctrl_.flag.safe_height;
+        
         if(h < safe_h - 0.01f)
         {
             // 归一化到 0-360
             float norm_deg = fmodf(desired_deg, 360.0f);
             if(norm_deg < 0.0f) norm_deg += 360.0f;
 
-            if(norm_deg < 30.0f) 
-                return 30.0f;
-            if(norm_deg > 180.0f) 
-                return 180.0f;
-            
-            return norm_deg;
+            if(h < 0.03f)
+            {
+                if(norm_deg < 60.0f) return 60.0f;
+                if(norm_deg > 180.0f && norm_deg < 270.0f) return 180.0f;
+                if(norm_deg >= 270.0f) return 60.0f;
+                return norm_deg;
+            }
+            else
+            {
+                if(norm_deg < 60.0f) return 60.0f;
+                if(norm_deg > 135.0f && norm_deg < 270.0f) return 135.0f; // 135~270区间钳制到135
+                if(norm_deg >= 270.0f) return 60.0f; // 270~360(即-90~0)区间钳制到60
+                return norm_deg;
+            }
         }
         return desired_deg;
     }
 
     /**
-     * 执行安全门：在任何位置控制前调用，返回是否允许并输出安全角度
+     * @brief 执行安全门：在任何位置控制前调用，返回是否允许并输出安全角度
      * @param desired_deg 期望的旋转角度（云台角度，非电机角度）
      * @param safe_out_deg 输出的安全旋转角度
      */
@@ -398,7 +434,7 @@ protected:
     {
          Point2D speed = {0.0f, 0.0f, 0.0f};
         if(arm_ctrlStatus.auto_debug_start == 1)
-           speed = {0.0f, 0.3f, 0.0f};
+           speed = {0.0f, 0.9f, 0.0f};
 
         else
              speed = {0.0f, 0.0f, 0.0f};
@@ -439,8 +475,13 @@ protected:
     Joint_Status_S last_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
     Joint_Status_S target_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
 
+    bool rotate_multiTurn_ = false; //云台多圈模式标志，默认单圈模式
 
     ARM_AUTO_S auto_ctrl_;
+
+    // 单圈模式相关变量
+    Rotate_Strategy_E recorded_align_strategy_ = ROTATE_PATH_SHORTEST;
+    Rotate_Strategy_E recorded_carrying_strategy_ = ROTATE_PATH_SHORTEST;
 
     /**
      * @brief 这里的输入是已经初始化的targetKFS的index (0 或 1)
