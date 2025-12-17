@@ -13,14 +13,15 @@
 #include "usart.h"	
 #include "usb_device.h"
 #include "stm32h7xx_hal.h"
+#include "usbd_cdc.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 //???庯???????
 typedef void (*RxCallback)(uint8_t *buf, uint16_t len);
-//USB??UART???????
-void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len);	
+extern void CDC_Receive_(uint8_t* buf, uint32_t *len);	
+//USB和UART回调函数
 /** 
 * @brief define the uart struct
 */
@@ -54,10 +55,9 @@ private:
 
 class USB_CDC_{
 	public:
-    USB_CDC_(RxCallback RxCallback_Fuc,USBD_HandleTypeDef *usb_handle);
+    USB_CDC_(USBD_HandleTypeDef *usb_handle);
     ~USB_CDC_(){}
-		void CDC_Receive_Callback(uint8_t* Buf, uint32_t Len);
-
+    virtual void Callback_DCD_Fuc(uint8_t *buf, uint16_t len);
     USBD_HandleTypeDef* GetUSBHandle() const { return usbhandle_; }
 private:
     RxCallback RxCallback_Fuc;	 
