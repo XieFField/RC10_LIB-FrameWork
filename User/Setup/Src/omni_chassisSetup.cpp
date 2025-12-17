@@ -1,5 +1,10 @@
 #include "omni_chassisSetup.h"
 
+#if debug_ladar
+
+int last_cout_ladar_data = -1;
+
+#endif
 void OmniChassis_Setup::loop()
 {
     if (!init_flag)
@@ -7,15 +12,8 @@ void OmniChassis_Setup::loop()
 
     RealPos ra = Position::GetInstance(&huart1)->getRealPosData();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+    ladar_data_ = Lader_position::GetInstance(&hUsbDeviceHS)->Get_Rader_Data();
 
-    // if(airjoy_data_.SWB == 0)
-    // {
-    //     chassis_status_ = CHASSIS_MANUAL_CONTROL_A;
-    // }
-    // else
-    // {
-    //     chassis_status_ = CHASSIS_MANUAL_CONTROL_B;
-    // }
     chassis_status_ = CHASSIS_STOP;
     switch (chassis_status_)
     {
@@ -65,9 +63,21 @@ void OmniChassis_Setup::loop()
         }
     }
 
-    // debug_uart.printf_DMA("%.2f,%.2f,%.2f,%.2f\r\n",target_yaw_,ra.world_yaw,target_chassis_twist_.yaw_rate,ra.dyaw);
-
+    //接收一次雷达数据打印一次
+    
     this->setWorldSpeed(target_chassis_twist_);
 
+    #if debug_ladar
+
+    if(Lader_position::GetInstance(&hUsbDeviceHS)->return_coutlar_data() > last_cout_ladar_data)
+    {
+        debug_uart.Printf_Ladar(ladar_data_.x, ladar_data_.y);    
+        last_cout_ladar_data = Lader_position::GetInstance(&hUsbDeviceHS)->return_coutlar_data();
+    }
+
+    #endif
+    //debug_uart.Printf_Ladar(ladar_data_.x, ladar_data_.y);
     this->update();
+
+    
 }

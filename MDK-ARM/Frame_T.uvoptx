@@ -210,6 +210,16 @@
           <WinNumber>1</WinNumber>
           <ItemText>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\ARM_Controller.arm_ctrlStatus</ItemText>
         </Ww>
+        <Ww>
+          <count>11</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>ChassisOmni</ItemText>
+        </Ww>
+        <Ww>
+          <count>12</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>last_cout_ladar_data</ItemText>
+        </Ww>
       </WatchWindow1>
       <Tracepoint>
         <THDelay>0</THDelay>

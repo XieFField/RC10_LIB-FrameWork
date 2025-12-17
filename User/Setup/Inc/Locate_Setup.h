@@ -156,7 +156,7 @@ public:
     Lader_position(const Lader_position&) = delete;
     Lader_position& operator=(const Lader_position&) = delete;
 
-    void Reposition_SendData(float X, float Y);
+    void Reposition_SendData(float X, float Y){}
 
  //   Lader_position getRealPosData() const { return RealPosData; }
     Lader_Data Get_Rader_Data(){return Lad_Data;}
@@ -168,7 +168,9 @@ public:
 		uint8_t receive_check;
 		uint8_t receive_data[MAX_RECEIVE_DATA_LEN] = {0};
 		uint16_t receive_data_dx = 0;
-    
+    int return_coutlar_data(){return cout_ladar_data;}
+    int cout_ladar_data = 0;
+
 private:
 	  Lader_Data Lad_Data={0};
     Lader_position(USBD_HandleTypeDef *usb_handle); // ??????

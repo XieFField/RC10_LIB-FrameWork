@@ -182,7 +182,6 @@ void ALL_Setup_ConfigInit(void)
    Finite_StateMachine.registerArmSetup(&ARM_Controller);
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
 
-   //CrsfReceiver* crsf_rc=CrsfReceiver::instance(&huart7);
 
    CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
    crsf_rc->init();
@@ -203,7 +202,6 @@ void ALL_Setup_ConfigInit(void)
 	 set1.set_startToLRL(true);
 //雷达定位实例化
 	 Lader_position*ladar=Lader_position::GetInstance(&hUsbDeviceHS);
-	 
 }
 
 

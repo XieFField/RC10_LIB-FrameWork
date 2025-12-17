@@ -1,6 +1,6 @@
 /**
  * @file omni_chassisSetup.h
- * @brief ȫ����̿���
+ * @brief 全锟斤拷锟斤拷炭锟斤拷锟�?
  */
 #ifndef __OMNI_CHASSISSETUP_H
 #define __OMNI_CHASSISSETUP_H
@@ -10,6 +10,18 @@
 
 
 #ifdef __cplusplus
+
+
+extern "C"{
+    #include "stm32h7xx_hal.h"
+    #include "cmsis_os.h"
+    #include "FreeRTOS.h"
+    #include "task.h"
+    #include "queue.h"
+    #include "semphr.h"
+};
+
+
 #include "BSP_RTOS.h"   
 #include "Module_ChassisOmni.h"
 #include "Motor_Base.h"
@@ -19,7 +31,10 @@
 #include "usart.h"
 #include "Module_Position.h"
 #include "APP_PID.h"
-
+#include "Locate_Setup.h"
+#include "BSP_USB_UART_Driver.h"
+#include "usb_device.h"
+#define debug_ladar 0
 class OmniChassis_Setup:public RtosTask, public Chassis_Omni<3>{
 public:
     OmniChassis_Setup(float wheel_radius, float max_wheel_rpm, float base_length, float side_length, bool three_wheel)
@@ -40,6 +55,11 @@ public:
         
         yaw_pid_.set_params(lock_angle_pid_params, 10000.0f); 
         
+            this->setThreeWheelSolver(true);
+
+        #if debug_ladar
+            this->setThreeWheelSolver(false);
+        #endif
 
         this->start(osPriorityHigh, 256);
         init_flag = true;
@@ -59,14 +79,16 @@ private:
         uint8_t yaw_pid_period_count_ = 0;
         PID_Position yaw_pid_;
 
-        const float LINESPEED_LIMIT = 10/500.f; // ����ģң��������ֵӳ��Ϊ���ٶȵı���
-        const float YAWSPEED_LIMIT = 1/500.f; // ����ģң��������ֵӳ��Ϊ���ٶȵı���
+        const float LINESPEED_LIMIT = 10/500.f; // 锟斤拷锟斤拷模遥锟斤拷锟斤拷锟斤拷锟斤拷值映锟斤拷为锟斤拷锟�?度的憋拷锟斤�?
+        const float YAWSPEED_LIMIT = 1/500.f; // 锟斤拷锟斤拷模遥锟斤拷锟斤拷锟斤拷锟斤拷值映锟斤拷为锟斤拷锟�?度的憋拷锟斤�?
 
 
         CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
-        RmPocketData_t airjoy_data_; //ҡ��ֵΪ -1 ~ 1
+        RmPocketData_t airjoy_data_; //摇锟斤拷值为 -1 ~ 1
 
-        Debug_Printf debug_uart; // ���Դ�ӡʵ��
+        Debug_Printf debug_uart = Debug_Printf(&huart8); // 锟斤拷锟皆达拷印实锟斤拷
+        Lader_Data ladar_data_;
+
 };
 #endif // __cplusplus
 

@@ -68,6 +68,9 @@ void Lader_position::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 {
 	uint8_t i = 0;
 	uint8_t break_flag = 1;
+
+	cout_ladar_data++;
+
 	while (i < len && break_flag == 1)
 		{
 			/*-----------------------------------------处理数据--------------------*/

@@ -68,6 +68,10 @@ public:
 
     void updateKinematics() override; // 更新运动学，调用逆解和正解
 
+    void setThreeWheelSolver(bool use_three_solver)
+    {
+        use_three_solver_ = use_three_solver;
+    }
 private:
     void inverseKinematics(const Robot_Twist& twist) override; // 逆解，根据目标速度计算轮速
     float chassis_radius_; // 底盘半径 (m)

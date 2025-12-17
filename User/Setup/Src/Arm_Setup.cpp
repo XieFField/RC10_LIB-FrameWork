@@ -5,7 +5,7 @@ static bool s_has_recorded_strategy = false; // [新增] 记录是否已经记录过策略
 /**
  * @brief 寻主循环
  */
-int print_cout = 0;
+// int print_cout = 0;
 void ArmSetup::loop()
 {
     if(!arm_ctrlStatus.init_flag)
@@ -97,12 +97,12 @@ void ArmSetup::loop()
         default:
             break;
     }
-    print_cout++;
-    if(print_cout >= 10)
-    {
-        debug_uart.Printf_Ladar(auto_ctrl_.now_armPosition.x, auto_ctrl_.now_armPosition.y); 
-        print_cout = 0;
-    }
+    // print_cout++;
+    // if(print_cout >= 10)
+    // {
+    //     debug_uart.Printf_Ladar(auto_ctrl_.now_armPosition.x, auto_ctrl_.now_armPosition.y); 
+    //     print_cout = 0;
+    // }
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
 }
