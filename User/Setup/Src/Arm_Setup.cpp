@@ -1,6 +1,3 @@
-
-
-
 #include "Arm_setup.h"
 
 static bool s_has_recorded_strategy = false; // [新增] 记录是否已经记录过策略
@@ -28,14 +25,6 @@ void ArmSetup::loop()
     }
     
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
-
-
-//    #if ARM_AUTO_DEBUG_NOCHASSIS
-//     if(arm_ctrlStatus.is_calibrating)
-//     {
-//         arm_status_ = ARM_AUTO_CONTROL;
-//     }
-//    #endif
 
     if( arm_status_ == ARM_AUTO_CONTROL)
     {
@@ -107,7 +96,7 @@ void ArmSetup::loop()
         default:
             break;
     }
-
+    debug_uart.Printf_Ladar(auto_ctrl_.now_armPosition.x, auto_ctrl_.now_armPosition.y); 
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
 }
