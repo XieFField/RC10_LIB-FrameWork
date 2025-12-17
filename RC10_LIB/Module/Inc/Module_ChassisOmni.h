@@ -76,6 +76,9 @@ private:
     // 依据等腰三角形几何计算两个半径：顶点半径与底边半径
     void computeIsoscelesRadii(float base_length, float side_length, float& top_radius, float& bottom_radius);
 
+    // 三轮解算器选择标志（只在 WheelCount==3 时有效）
+    bool use_three_solver_ = true;
+
     // arm_matrix_instance_f32 kinematics_matrix; // WheelCount x 3
     // arm_matrix_instance_f32 input_mat_; // 3x1
     // arm_matrix_instance_f32 output_mat_; // WheelCount x 1
