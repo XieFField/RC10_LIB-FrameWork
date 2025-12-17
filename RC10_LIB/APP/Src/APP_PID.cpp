@@ -166,6 +166,7 @@ float PID_Incremental::pid_calc(float target, float feedback)
 
         // I项增量
         I_Term = params_.ki * error_;
+        I_Term = constrain(I_Term, -params_.I_Outlimit, params_.I_Outlimit);
         
         // D项增量
         if (dt_ > 0.0f)
@@ -215,23 +216,23 @@ PID_Param_Config m3508_angle_pid_params = {
 };
 
 PID_Param_Config m2006_speed_pid_params = {
-    .kp = 67.0f,   
-    .ki = 1.0f, 
+    .kp = 300.0f,  
+    .ki = 12.0f, 
     .kd = 0.0f,
-    .I_Outlimit = 8000.0f, 
+    .I_Outlimit = 5000.0f, 
     .isIOutlimit = true, 
-    .output_limit = 80000.0f,   
+    .output_limit = 10000.0f,   
     .deadband = 0.05f 
 };
 
 PID_Param_Config m2006_angle_pid_params = {
-    .kp = 2.3f,
+    .kp = 3.0f,
     .ki = 0.0f,
-    .kd = 0.24,
+    .kd = 0.0f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 480.0f,   
-    .deadband = 0.09f 
+    .output_limit = 450.0f,   
+    .deadband = 0.01f 
 };
 
 PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
