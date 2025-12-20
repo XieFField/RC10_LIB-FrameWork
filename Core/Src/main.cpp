@@ -113,7 +113,7 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-   MX_GPIO_Init();
+  MX_GPIO_Init();
   MX_DMA_Init();
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
@@ -124,7 +124,9 @@ int main(void)
   MX_TIM14_Init();
   MX_USART6_UART_Init();
   MX_USART3_UART_Init();
-  MX_UART4_Init();
+  MX_USART10_UART_Init();
+  MX_UART7_Init();
+  MX_UART8_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
   ALL_Setup_ConfigInit();
@@ -210,6 +212,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 }
+
 
 
 

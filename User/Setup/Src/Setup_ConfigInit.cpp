@@ -1,12 +1,3 @@
-<<<<<<< Updated upstream
-  #include "Setup_ConfigInit.h"
-
-fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // »ñÈ¡FDCAN1µÄÎ¨Ò»ÊµÀý
-DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4ºÅM3508/M2006µç»ú
-DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8ºÅM3508/M2006µç»ú
-
-/*==============Controller Instances===========*/
-=======
 #include "Setup_ConfigInit.h"
  // ï¿½â²¿ï¿½ï¿½ï¿½ï¿½USBï¿½ï¿½ï¿½ï¿½ï¿½è±¸ï¿½ï¿½ï¿½
 extern "C" 
@@ -35,9 +26,7 @@ Laser_InstanceManager instance_man;
 Locate_Setup set1(&instance_man);
 
 OmniChassis_Setup ChassisOmni(0.442f/2.f,420, 0.74f, 0.8363f, true); // ï¿½ï¿½ï¿½Ó°ë¾¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½Ù£ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½
->>>>>>> Stashed changes
 
-OmniChassis_Setup ChassisOmni(1,2,3); // ÂÖ×Ó°ë¾¶£¬×î´óÂÖ×Ó×ªËÙ£¬µ×ÅÌ°ë¾¶
 ArmSetup ARM_Controller(arm_initData);
 FSM_Controller Finite_StateMachine;
 Robot_WeaponSage_Setup Weapon_Controller(initData_);
@@ -177,19 +166,12 @@ void CAN_Motor_Init(void);
 void ALL_Setup_ConfigInit(void)
 {
 
-<<<<<<< Updated upstream
-   CAN_Motor_Init();
-
-   TimeStamp::getInstance().init(&htim4); // ÆôÓÃÊ±¼ä´Á·þÎñ
-=======
    Position* pos = Position::GetInstance(&huart1);
    pos->InitUART();
    TimeStamp::getInstance().init(&htim4); // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
->>>>>>> Stashed changes
    debug_init();
-
-   Position* pos = Position::GetInstance(&huart1);
-   pos->InitUART();
+	
+   CAN_Motor_Init();
 
    ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
    ARM_Controller.setArmStatus(ARM_IDLE);
@@ -200,7 +182,7 @@ void ALL_Setup_ConfigInit(void)
    ChassisOmni.registerWheelMotor(0, &omni_wheel1);
    ChassisOmni.registerWheelMotor(1, &omni_wheel2);
    ChassisOmni.registerWheelMotor(2, &omni_wheel3);
-   ChassisOmni.registerWheelMotor(3, &omni_wheel4);
+   // ChassisOmni.registerWheelMotor(3, &omni_wheel4);
    ChassisOmni.init();
 
    ChassisOmni.setChassisStatus(CHASSIS_STOP);
@@ -208,15 +190,12 @@ void ALL_Setup_ConfigInit(void)
    Finite_StateMachine.registerArmSetup(&ARM_Controller);
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
 
-   Finite_StateMachine.init();
-		    // »ñÈ¡Positionµ¥Àý²¢³õÊ¼»¯UART
-   debug_init();
-	 
 
-<<<<<<< Updated upstream
-	
-   //other init
-=======
+   CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
+   crsf_rc->init();
+
+   Finite_StateMachine.init();
+
    //  CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
    
 
@@ -231,7 +210,6 @@ void ALL_Setup_ConfigInit(void)
 	 set1.set_startToLRL(true);
 //ï¿½×´ï¶¨Î»Êµï¿½ï¿½ï¿½ï¿½
 	 Lader_position*ladar=Lader_position::GetInstance(&hUsbDeviceHS);
->>>>>>> Stashed changes
 }
 
 
@@ -264,18 +242,7 @@ void CAN_Motor_Init(void)
    DJIGroupCAN2_Low.addMotor(&Weapon_clawMotor);
    DJIGroupCAN2_Low.addMotor(&Weapon_traverseMotor);
 
-<<<<<<< Updated upstream
-   // µ×ÅÌÂÖ×Óµç»úPID²ÎÊý³õÊ¼»¯
-   omni_wheel1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   omni_wheel2.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   omni_wheel3.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   omni_wheel4.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
 
-   // »úÐµ±Ûµç»úPID²ÎÊý³õÊ¼»¯
-   arm_launchMotor.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, m2006_angle_pid_params, 0.0f);
-   arm_rotateMotor.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-=======
    CAN2_Bus->registerMotor(&DJIGroupCAN2_Low);
 
    CAN2_Bus->registerMotor(&Weapon_launchMotor);
@@ -305,7 +272,6 @@ void CAN_Motor_Init(void)
    arm_strech_anglePID.output_limit = 500.0f;
    arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
    arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
->>>>>>> Stashed changes
    arm_pitchMotor.pid_init(m2006_speed_pid_params, 0.0f, m2006_angle_pid_params, 0.0f);
 
    Weapon_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);

@@ -131,7 +131,8 @@ public:
      */
     void relocate_totalAngle(float now_totalAngle)
     {
-        encoder_.relocate_totalAngle(now_totalAngle);
+        // [Fix] 修正重定位逻辑，输入为输出轴角度，需转换为转子角度设置编码器
+        encoder_.relocate_totalAngle(now_totalAngle * get_GearRatio());
         totalAngle_ = encoder_.getTotalAngle() / get_GearRatio();
 
         this->angle_ = fmodf(this->totalAngle_, 360.0f);

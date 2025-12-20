@@ -35,8 +35,6 @@ namespace WeaponSage_Setup
         bool calibrate_start = false;
         bool is_calibrating = false;
     }ctrl_status_S;
-<<<<<<< Updated upstream
-=======
 
     typedef enum{
         //���Զ����̵�ÿ��״̬ö��
@@ -58,8 +56,8 @@ namespace WeaponSage_Setup
             bool is_moving = false;
         }auto_state_bool_S; //�ֲ�״̬�ṹ��
         float Pole_pos[4]={0.0f, 0.0f, 0.0f, 0.0f}; 
-        float claw_close_pos = 0.0f;
-        float claw_open_pos = 0.0f;
+        float claw_close_pos = 32.36f;
+        float claw_open_pos = 49.58f;
         float tarch_height = 0.0f; 
         float up_height = 0.0f;
         struct{
@@ -71,8 +69,11 @@ namespace WeaponSage_Setup
         bool auto_ctrl1 = false;
         int pole_num = 0;
     }auto_ctrl_S;
->>>>>>> Stashed changes
 }
+
+
+
+
 
 class Robot_WeaponSage_Setup : public RtosTask, public Robot_WeaponSage {
 public:
@@ -101,9 +102,11 @@ public:
         ctrl_status_.init_flag = true;
     }
 
+    void setLowerClawStart(bool start)
+    {
+        
+    }
 
-<<<<<<< Updated upstream
-=======
     Point2D getClawPos()
     {   
         Point2D pos = {0.0f, 0.0f, 0.0f};
@@ -113,7 +116,6 @@ public:
     {
         weaponSage_status_ = status;
     }
->>>>>>> Stashed changes
 
 protected:
     void loop() override;
@@ -126,7 +128,7 @@ private:
     void idle();
     void stop();
     void debug();
-
+    void autoControl();
 
     void calibrate();
 

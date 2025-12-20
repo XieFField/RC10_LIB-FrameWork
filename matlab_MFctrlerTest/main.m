@@ -38,8 +38,8 @@ end
 
 % 输入：机器人位置与目标桩
 robotPos = [0.0, 0.0, 0]; 
-MF1 = 3;
-MF2 = 0;
+MF1 = 2;
+MF2 = 11;
 
 cubes_ids = [MF1, MF2, 11];
 cube_nums = 2;

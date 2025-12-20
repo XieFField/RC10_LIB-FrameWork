@@ -22,13 +22,14 @@ void Robot_WeaponSage_Setup::loop()
         case WEAPONSAGE_DEBUG:
             debug();
             break;
-<<<<<<< Updated upstream
-=======
 
         case WEAPONSAGE_AUTO_CONTROL:
             //ï¿½ï¿½Êµï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½
             break;
->>>>>>> Stashed changes
+		case WEAPONSAGE_CALIBRATE:
+//			calibrate();
+			State_LowerClaw();
+			break;
         default:
             idle();
             break;
@@ -74,15 +75,6 @@ void Robot_WeaponSage_Setup::idle()
     //ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½Î¬ï¿½Öµï¿½Ç°×´Ì¬
 }
 
-<<<<<<< Updated upstream
-void Robot_WeaponSage_Setup::stop()
-{
-    //Í£Ö¹£¬µç»ú²»¶¯
-    this->setJointTarget(0.0f, WeaponSage::Launch_Motor);
-    this->setJointTarget(0.0f, WeaponSage::Claw_Motor);
-    this->setJointTarget(0.0f, WeaponSage::Traverse_Motor);
-    this->setJointTarget(0.0f, WeaponSage::Wrist_Motor);
-=======
 void Robot_WeaponSage_Setup::debug()
 {
     //ï¿½ï¿½Êµï¿½ï¿½
@@ -185,7 +177,6 @@ void Robot_WeaponSage_Setup::stop()
     this->setTarget(0.0f, WeaponSage::Claw_Motor);
     this->setTarget(0.0f, WeaponSage::Traverse_Motor);
     this->setTarget(0.0f, WeaponSage::Wrist_Motor);
->>>>>>> Stashed changes
 }
 
 bool Robot_WeaponSage_Setup::State_AimPosition(int pole_num)
@@ -206,7 +197,8 @@ bool Robot_WeaponSage_Setup::State_AimPosition(int pole_num)
 void Robot_WeaponSage_Setup::State_LowerClaw()
 {
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-    this->setTarget(auto_ctrl_.claw_open_pos, WeaponSage::Launch_Motor);
+	auto_ctrl_.tarch_height = 0.5*initData_.max_launchHeight_;
+    this->setTarget(auto_ctrl_.tarch_height, WeaponSage::Launch_Motor);
   
     //ï¿½ï¿½ï¿½ï¿½×¦×´Ì¬
 }
@@ -216,8 +208,8 @@ bool Robot_WeaponSage_Setup::State_GrabClaw()
       if(auto_ctrl_.auto_state_bool_S.is_matching)
     {
         this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-        auto_ctrl_.tarch_height = 0.5*initData_.max_launchHeight_;
-        this->setTarget(auto_ctrl_.tarch_height, WeaponSage::Claw_Motor);
+        
+        this->setTarget(auto_ctrl_.claw_close_pos, WeaponSage::Claw_Motor);
         auto_ctrl_.auto_state_bool_S.grab_start = true;
        
     }
@@ -252,13 +244,13 @@ void Robot_WeaponSage_Setup::State_Lift()
 
 WeaponSage_InitData_S initData_=
 {
-		.max_launchHeight_ = 1.0f,
-		.max_clawAngle_ = 90.0f,
-		.max_traverseLength_ = 1.0f,
+		.max_launchHeight_ =0.510f,
+		.max_clawAngle_ = 49.0f,
+		.max_traverseLength_ = 0.470f,
 
 		.wrist_gearRatio_ = 1.0f,
-		.launch_Ratio_ = 1.0f,
-		.claw_gearRatio_  = 1.0f,
-		.traverse_Ratio_  = 1.0f,
+		.launch_Ratio_ = 0.004627f,
+		.claw_gearRatio_  =1.0f ,
+		.traverse_Ratio_  = 0.00218f,
         .max_wristMotorRPM_   = 100.0f,
 };

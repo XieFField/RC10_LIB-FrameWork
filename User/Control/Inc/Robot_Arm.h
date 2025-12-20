@@ -8,6 +8,9 @@
  * 增加雅可比矩阵计算，支持手动关节速度模式
  * @version 3.0
  * 增加旋转路径策略支持
+ * 
+ * @attention 云台旋转路径，在逼近目标值的时候，手动切换为最短路径策略，避免大幅度超调
+ *            反正写和用的人都是我自己，怎么方便怎么来，懒得封装了
  */
 
 #ifndef __ROBOT_ARM_H
@@ -151,6 +154,8 @@ public:
      */
     void update();
 
+    float get_dt(){return this->dt_;}
+
     /**
      * @brief 设置机械臂控制模式
      */
@@ -280,6 +285,7 @@ private:
     float dt_ = 0.0f;
     bool  time_initialized_ = false;
 
+protected:
 /*================================================================*/
     /*关节角度->电机总角度*/
     float launchHeight_to_MotorTotalAngle(float height)
@@ -324,6 +330,7 @@ private:
         return sign_reversed_.sign_pitch_ * motor_angle * init_data_.pitch_gearRatio_ / 360.0f;
     }
 
+private:
     MotorReversed_S sign_reversed_  = {1.0f, 1.0f, 1.0f, 1.0f};
 
 };

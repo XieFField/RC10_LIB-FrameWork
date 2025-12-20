@@ -44,10 +44,10 @@ typedef enum{
 }Direction_E;
 
 // 将梅花桩编号映射为梅花林方格地图所对应的编号。
-int8_t MFNum_TransforMapNum(int8_t MFNum);
+ int8_t MFNum_TransforMapNum(int8_t MFNum);
 
 // 将梅花林方格地图编号映射为梅花桩编号。
-int8_t MapNum_TransforMFNum(int8_t mapNum);
+ int8_t MapNum_TransforMFNum(int8_t mapNum);
 
 typedef struct{
 	int8_t result1 = 0;
@@ -98,7 +98,7 @@ void get_MoveDiretion(Point2D robotPos,
                                  int8_t MF1, int8_t MF2,
                                 Direction_E Diresult[]);
 
-// 根据当前所在的地图格(bestB1)和行进方向
+// 根据当前所在的地图格(bestB1)和行进方向计算出
 float Get_ArmBaseTargetAngle(int8_t mapNum, Direction_E dir);
 
 /**

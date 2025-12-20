@@ -2,7 +2,6 @@
 %然后等战鸿利搞完他那个你给他的路径规划部分融进来 然后实现一些按既定路线连续拾取两个KFS的效果 这个功能在自动模式方案书那个.md文件里，写一下数学上的逻辑
 %还有就是林书衡写了个贝塞尔曲线的代码，你把他移植成matlab里的，因为对这种我给出既定点位的，用贝塞尔其实是最直接的；
 clc; clear; close all;
-
 % 路径
 thisdir = fileparts(mfilename('fullpath'));
 addpath(thisdir);

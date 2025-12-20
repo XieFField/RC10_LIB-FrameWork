@@ -144,6 +144,12 @@ public:
      */
     static float curvatureFromThreePoints(const Vector2D &p0, const Vector2D &p1, const Vector2D &p2);
 
+    /**
+     * @brief 获取垂直法向量（逆时针90度）
+     * @return Vector2D 垂直法向量
+     */
+    Vector2D perpendicular() const;
+
 private:
     /**
      * @brief 辅助函数：检查标量是否接近零

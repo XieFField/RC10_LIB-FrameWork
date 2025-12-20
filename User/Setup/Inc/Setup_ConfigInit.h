@@ -42,17 +42,14 @@ extern "C" {
 #include "debug_setup.h"
 #include "Module_Air_joy.h"
 #include "Module_Position.h"
+#include "Locate_Setup.h"
 
 /*==============Controller===============*/
 #include "FSM_Controller.h"
 #include "Arm_Setup.h"
 #include "omni_chassisSetup.h"
-<<<<<<< Updated upstream
-
-=======
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
->>>>>>> Stashed changes
 #if SPEEDPLANNER_DEMO_DEBUG
     #include "speedplanner_demo.h"
 #endif

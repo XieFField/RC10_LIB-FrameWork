@@ -1,13 +1,13 @@
 /**
  * @file BSP_USB_UART_Driver.cpp
  * @author Zhuang Ji cao
- * @brief USB UARTÇý¶¯ÎÄ¼þ
- * @attention ´ËÎÄ¼þÓÃÓÚUSB UART
+ * @brief USB UART??????????
+ * @attention ?????????????USB UART
  * @date 2025-10-1
  */
 #include "BSP_USB_UART_Driver.h"
 
-// ÊµÀý¹ÜÀíÆ÷ÊµÏÖ
+// ?????????????????
 UART_* InstanceManager::uart_instances[UART_MAX] = {nullptr};
 USB_CDC_* InstanceManager::usb_instances[2]={nullptr};
 uint8_t n=0;
@@ -33,7 +33,7 @@ UART_* InstanceManager::GetInstanceByUartHandle(UART_HandleTypeDef *huart) {
     return nullptr;
 }
 //USART
-// UART_ ÀàÊµÏÖ
+// UART_ ???????
 UART_::UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle)
 {
 				this->rx_buffer= rx_buffer;
@@ -46,8 +46,7 @@ UART_::UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart
 				else
 				{
 				InstanceManager::RegisterInstance(this,NULL);
-				// ×¢²áµ½ÊµÀý¹ÜÀíÆ÷
-				
+				// ????????
 				}
 }
 
@@ -61,7 +60,7 @@ void UART_::UART_Init()
 }
 
 
-//ÐéÄâ´®¿Ú
+//?????????
 USB_CDC_* InstanceManager::GetInstanceByUSBHandle() {
     for (int i = 0; i < USB_MAX; i++) {
              if(usb_instances[i]!=NULL){
@@ -72,9 +71,8 @@ USB_CDC_* InstanceManager::GetInstanceByUSBHandle() {
 						 }
   }
 }
-USB_CDC_::USB_CDC_(RxCallback RxCallback_Fuc,USBD_HandleTypeDef *usb_handle)
+USB_CDC_::USB_CDC_(USBD_HandleTypeDef *usb_handle)
 {
-				this->RxCallback_Fuc=RxCallback_Fuc;
         this->usbhandle_ = usb_handle;
         if(this->usbhandle_ == NULL)
 				{
@@ -82,67 +80,82 @@ USB_CDC_::USB_CDC_(RxCallback RxCallback_Fuc,USBD_HandleTypeDef *usb_handle)
 				}
 				else
 				{
-				// ×¢²áµ½ÊµÀý¹ÜÀíÆ÷
+				// ?????????????????
 				InstanceManager::RegisterInstance(NULL,this);
 				}
 }
-void USB_CDC_::CDC_Receive_Callback(uint8_t* Buf, uint32_t Len) {
-        RxCallback_Fuc(Buf, Len);
-}
 void UART_::Callback_Fuc(uint8_t *buf, uint16_t len){
-    if (RxCallback_Fuc != nullptr) {
+    if (this->RxCallback_Fuc != nullptr) {
         RxCallback_Fuc(buf, len);
     }
 }
-
-// C ½Ó¿ÚµÄÈ«¾Ö»Øµ÷º¯Êý
+void USB_CDC_::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
+{
+    if (this->RxCallback_Fuc != nullptr) {
+        RxCallback_Fuc(buf, len);
+    }
+}
+// C ?????????
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-void USB_Receive_Callback_Global(uint8_t* Buf, uint32_t Len) {
-     InstanceManager::GetInstanceByUSBHandle()->CDC_Receive_Callback(Buf,Len);
-}
-
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
     if (instance != nullptr) {
-        // µ÷ÓÃÊµÀýµÄ½ÓÊÕ´¦Àí£¬Ê¹ÓÃHALÌá¹©µÄSize²ÎÊý
-      instance->Callback_Fuc(huart->pRxBuffPtr,instance->rx_buffer_size);        
-        // ÖØÐÂÆô¶¯DMA½ÓÊÕ
-			HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
+       // ??? HAL ???? Size ?????????????????????
+        instance->Callback_Fuc(huart->pRxBuffPtr, Size);
+        // ???????????MA?
+        HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
     }
 }
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
 	  UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
-	// Çå³ýËùÓÐ¿ÉÄÜµÄ´íÎó±êÖ¾
+	// ??????????????????????
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_PE))
     {
-        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_PEF);// Çå³ýÆæÅ¼Ð£Ñé´íÎó±êÖ¾
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_PEF);// ???????????????????
     }
     
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_FE))
     {
-        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_FEF);// Çå³ýÖ¡´íÎó±êÖ¾
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_FEF);// ??????????????
     }
     
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_NE))
     {
-        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_NEF);// Çå³ýÔëÉù´íÎó±êÖ¾
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_NEF);// ???????????????????
     }
     
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_ORE))
     {
-        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_OREF);// Çå³ýÒç³ö´íÎó±êÖ¾
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_OREF);// ?????????????????
     }
 	
 	if (__HAL_UART_GET_FLAG(huart, UART_FLAG_LBDF))
     {
-        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_LBDF);// LIN¶Ïµã¼ì²â±êÖ¾´¦Àí
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_LBDF);// LIN???????????????
     }
 	
 	HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
+}
+
+
+void CDC_Receive_(uint8_t* Buf, uint32_t *Len)
+{
+ {
+    USB_CDC_* instance = InstanceManager::GetInstanceByUSBHandle();
+    if (instance != nullptr && Buf != nullptr && Len != nullptr) {
+        // ?????????????????????
+        instance->Callback_DCD_Fuc(Buf, *Len);
+        
+        // USB CDC ?????????????????
+        // ???USB CDC ?????????? HAL_UARTEx_ReceiveToIdle_DMA
+        // ???? USBD_CDC_ReceivePacket ?????
+        USBD_CDC_SetRxBuffer(instance->GetUSBHandle(), Buf);
+        USBD_CDC_ReceivePacket(instance->GetUSBHandle());
+    }
+ }
 }
 #ifdef __cplusplus
 }

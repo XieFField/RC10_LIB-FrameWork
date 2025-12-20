@@ -47,7 +47,7 @@ template <std::size_t WheelCount>
 class Chassis_Base{
 public:
     Chassis_Base(float wheel_radius, float max_wheel_rpm);
-    ~Chassis_Base(){}
+    ~Chassis_Base();
 
     void setRobotSpeed(const Robot_Twist& twist); // 设置机器人速度（机器人坐标系）
 

@@ -31,6 +31,8 @@ union
 
 // 获取单例实例
 
+RawPos RawPosData = {0};
+RealPos RealPosData = {0};
 
 Position::Position(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle) 
     :UART_(rx_buffer_size,rx_buffer,uart_handle),
@@ -65,7 +67,7 @@ void Position::InitUART()
 
 void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 {
-    uint8_t count = 0;
+  uint8_t count = 0;
 	uint8_t i = 0;
 	uint8_t CRC_check[2];//CRC校验位，此文件未启用
 	
@@ -228,7 +230,7 @@ void Position::Update_RawPosition(float value[5])
 
    //世界坐标
 	RealPosData.world_yaw = RawPosData.angle_Z;
-    RealPosData.world_x   =  RawPosData.Pos_X + RealPosData.dx;
+  RealPosData.world_x   =  RawPosData.Pos_X + RealPosData.dx;
 	RealPosData.world_y   =  RawPosData.Pos_Y + RealPosData.dy;
 
 	RealPosData.dyaw = RawPosData.Speed_Yaw;
