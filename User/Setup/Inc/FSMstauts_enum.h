@@ -1,7 +1,7 @@
 /**
  * @file FSMstauts_enum.h
  * @author XieFField
- * @brief ×´Ì¬»úÏà¹ØµÄÊý¾Ý¿â
+ * @brief ×´Ì¬ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½Ý¿ï¿½
  */
 
 #ifndef __FSM_STATUS_ENUM_H
@@ -20,50 +20,51 @@ extern "C" {
 #include "APP_tool.h"
 
 typedef enum{
-    ALL_STOP, //È«²¿»ú¹¹Í£Ö¹¹¤×÷
+    ALL_STOP, //È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£Ö¹ï¿½ï¿½ï¿½ï¿½
 
-    MANUAL_CONTROL, //ÊÖ¶¯¿ØÖÆÄ£Ê½
+    MANUAL_CONTROL, //ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½
 
-    AUTO_CONTROL, //°ë×Ô¶¯¿ØÖÆÄ£Ê½
+    AUTO_CONTROL, //ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½
 
-    DEBUG_MODE, //µ÷ÊÔÄ£Ê½
+    DEBUG_MODE, //ï¿½ï¿½ï¿½ï¿½Ä£Ê½
 }FSM_Status_E;
 
 
 typedef enum{
-    ARM_MANUAL_CONTROL, //´®Áª±ÛÊÖ¶¯¿ØÖÆÄ£Ê½
+    ARM_MANUAL_CONTROL, //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½
 
-    ARM_AUTO_CONTROL, //´®Áª±Û×Ô¶¯¿ØÖÆÄ£Ê½
+    ARM_AUTO_CONTROL, //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½
 
-    ARM_IDLE, //´®Áª±Û¿ÕÏÐ×´Ì¬£¬Î¬³Öµ±Ç°×´Ì¬
+    ARM_IDLE, //ï¿½ï¿½ï¿½ï¿½ï¿½Û¿ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½Î¬ï¿½Öµï¿½Ç°×´Ì¬
 
     ARM_STOP,
 
     ARM_DEBUG,
 
-    ARM_CALIBRATE, //´®Áª±ÛÐ£×¼Ä£Ê½
+    ARM_CALIBRATE, //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£×¼Ä£Ê½
 }ARM_Status_E;
 
 
 typedef enum{
-    CHASSIS_MANUAL_CONTROL_A, //µ×ÅÌÊÖ¶¯¿ØÖÆÄ£Ê½£¨½ÇËÙ¶È¿É¿Ø£©
-    CHASSIS_MANUAL_CONTROL_B, //µ×ÅÌÊÖ¶¯¿ØÖÆÄ£Ê½£¨½ÇËÙ¶ÈÎª0£¬Ëø¶¨½Ç¶È£©
+    CHASSIS_MANUAL_CONTROL_A, //ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È¿É¿Ø£ï¿½
+    CHASSIS_MANUAL_CONTROL_B, //ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½Îª0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¶È£ï¿½
 
-    CHASSIS_AUTO_CONTROL, //µ×ÅÌ×Ô¶¯¿ØÖÆÄ£Ê½
+    CHASSIS_AUTO_CONTROL, //ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½
 
     CHASSIS_STOP,
 }CHASSIS_Status_E;
 
 typedef enum{
-    WEAPONSAGE_MANUAL_CONTROL, //ÊÖ²Ù
-    WEAPONSAGE_AUTO_CONTROL, //×Ô¶¯¿ØÖÆÄ£Ê½
+    WEAPONSAGE_MANUAL_CONTROL, //ï¿½Ö²ï¿½
+    WEAPONSAGE_AUTO_CONTROL, //ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½
     WEAPONSAGE_STOP,        //Í£Ö¹
-    WEAPONSAGE_DEBUG,       //µ÷ÊÔÄ£Ê½  
-    WEAPONSAGE_IDLE,    //¿ÕÏÐ×´Ì¬£¬Î¬³Öµ±Ç°×´Ì¬
+    WEAPONSAGE_DEBUG,       //ï¿½ï¿½ï¿½ï¿½Ä£Ê½  
+    WEAPONSAGE_IDLE,    //ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½Î¬ï¿½Öµï¿½Ç°×´Ì¬
+    WEAPONSAGE_CALIBRATE,   //Ð£×¼Ä£Ê½
 }WeaponSage_Status_E;
 
 
-//Ò£¿ØÁÙÊ±µ÷ÊÔÊ¹ÓÃ
+//Ò£ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½
 typedef struct{
     uint16_t SWA;
     uint16_t SWB;

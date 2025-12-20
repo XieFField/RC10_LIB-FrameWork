@@ -1,6 +1,6 @@
 /**
  * @file Setup_ConfigInit.h
- * @brief Æô¶¯ÅäÖÃ³õÊ¼»¯
+ * @brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã³ï¿½Ê¼ï¿½ï¿½
  */
 
 #ifndef SETUP_CONFIGINIT_H
@@ -35,6 +35,7 @@ extern "C" {
 #include "BSP_RTOS.h"
 #include "BSP_fdCAN_Driver.h"
 #include "Motor_DJI.h"
+#include "Motor_DM.h"
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 #include "APP_PID.h"
@@ -46,7 +47,12 @@ extern "C" {
 #include "FSM_Controller.h"
 #include "Arm_Setup.h"
 #include "omni_chassisSetup.h"
+<<<<<<< Updated upstream
 
+=======
+#include "Module_CrsfReceiver.h"
+#include "WeaponSage_Setup.h"
+>>>>>>> Stashed changes
 #if SPEEDPLANNER_DEMO_DEBUG
     #include "speedplanner_demo.h"
 #endif

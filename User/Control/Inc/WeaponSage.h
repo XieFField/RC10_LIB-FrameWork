@@ -118,7 +118,7 @@ public:
 private:
 
     WeaponSage::WeaponSage_CtrlMode_S ctrl_mode_ = WeaponSage::Join_POSITION_CONTROL;
-    WeaponSage_InitData_S initData_;
+    
 
     WeaponSage::MotorReversed_S motor_reversed_; 
 
@@ -145,6 +145,7 @@ protected:
     float MotorTotalAngle_to_Realpos(float motor_angle, WeaponSage::Motor_Type_E motor_type);
 
     bool setMotorTargetTotalAngle(float total_angle, WeaponSage::Motor_Type_E motor_type);
+	WeaponSage_InitData_S initData_;
 };
 
 

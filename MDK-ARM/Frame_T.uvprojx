@@ -1201,15 +1201,26 @@
               <FilePath>..\User\Control\Src\AutoCtrler.cpp</FilePath>
             </File>
             <File>
+<<<<<<< Updated upstream
               <FileName>WeaponSage.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Control\Inc\WeaponSage.h</FilePath>
             </File>
             <File>
+=======
+>>>>>>> Stashed changes
               <FileName>WeaponSage.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Control\Src\WeaponSage.cpp</FilePath>
             </File>
+<<<<<<< Updated upstream
+=======
+            <File>
+              <FileName>WeaponSage.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Control\Inc\WeaponSage.h</FilePath>
+            </File>
+>>>>>>> Stashed changes
           </Files>
         </Group>
         <Group>

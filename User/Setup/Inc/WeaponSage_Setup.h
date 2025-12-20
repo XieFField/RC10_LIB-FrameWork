@@ -1,7 +1,7 @@
 /**
  * @file WeaponSage_Setup.h
  * @author XieFField
- * @brief ÎäÆ÷´óÊ¦Ó¦ÓÃ²ã
+ * @brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¦Ó¦ï¿½Ã²ï¿½
  */
 
 
@@ -29,12 +29,49 @@ namespace WeaponSage_Setup
     typedef struct{
         bool init_flag = false;
 
-        float debug_start = 1; //µ÷ÊÔ¿ªÊ¼±êÖ¾ == 1 ¿ªÊ¼µ÷ÊÔ
+        float debug_start = 1; //ï¿½ï¿½ï¿½Ô¿ï¿½Ê¼ï¿½ï¿½Ö¾ == 1 ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
 
         float calibrate_startTime = 0;
         bool calibrate_start = false;
         bool is_calibrating = false;
     }ctrl_status_S;
+<<<<<<< Updated upstream
+=======
+
+    typedef enum{
+        //ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ìµï¿½Ã¿ï¿½ï¿½×´Ì¬Ã¶ï¿½ï¿½
+        STATE_AIM_POSITION, //ï¿½ï¿½×¼Î»ï¿½ï¿½
+        STATE_LOWER_CLAW,  //ï¿½Â½ï¿½×¦ï¿½ï¿½
+        STATE_GRAB_CLAW,   //×¥È¡×¦ï¿½ï¿½
+        STATE_LIFT_POSITION, //ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
+        STATE_DONE //ï¿½ï¿½ï¿½ï¿½
+    }auto_GRABstate_S;
+
+
+    typedef struct{
+
+        struct{
+            // bool start
+            bool is_matching = false;
+            bool grab_start = false;
+            float grab_startTime = 0.0f;
+            bool is_moving = false;
+        }auto_state_bool_S; //ï¿½Ö²ï¿½×´Ì¬ï¿½á¹¹ï¿½ï¿½
+        float Pole_pos[4]={0.0f, 0.0f, 0.0f, 0.0f}; 
+        float claw_close_pos = 0.0f;
+        float claw_open_pos = 0.0f;
+        float tarch_height = 0.0f; 
+        float up_height = 0.0f;
+        struct{
+            bool aimposition_done = false;
+            bool lowerclaw_done = false;
+            bool grabclaw_done = false;
+            bool lift_done = false;
+        }flag;
+        bool auto_ctrl1 = false;
+        int pole_num = 0;
+    }auto_ctrl_S;
+>>>>>>> Stashed changes
 }
 
 class Robot_WeaponSage_Setup : public RtosTask, public Robot_WeaponSage {
@@ -65,6 +102,18 @@ public:
     }
 
 
+<<<<<<< Updated upstream
+=======
+    Point2D getClawPos()
+    {   
+        Point2D pos = {0.0f, 0.0f, 0.0f};
+        return pos;
+    }
+    void setWeaponSageStatus(WeaponSage_Status_E status)
+    {
+        weaponSage_status_ = status;
+    }
+>>>>>>> Stashed changes
 
 protected:
     void loop() override;
@@ -81,9 +130,17 @@ private:
 
     void calibrate();
 
+
+    bool State_AimPosition(int pole_num);
+    void State_LowerClaw();
+    bool State_GrabClaw();
+    void State_Lift();
+	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
     WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
+	WeaponSage_Setup::auto_GRABstate_S now_state_;
 };
 
+extern WeaponSage_InitData_S initData_;
 
 #endif
 
