@@ -197,7 +197,7 @@ bool Robot_WeaponSage_Setup::State_AimPosition(int pole_num)
 void Robot_WeaponSage_Setup::State_LowerClaw()
 {
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-	auto_ctrl_.tarch_height = 0.5*initData_.max_launchHeight_;
+	auto_ctrl_.tarch_height = initData_.max_launchHeight_;
     this->setTarget(auto_ctrl_.tarch_height, WeaponSage::Launch_Motor);
   
     //����צ״̬
@@ -244,12 +244,12 @@ void Robot_WeaponSage_Setup::State_Lift()
 
 WeaponSage_InitData_S initData_=
 {
-		.max_launchHeight_ =0.510f,
+		.max_launchHeight_ =0.350f,
 		.max_clawAngle_ = 49.0f,
 		.max_traverseLength_ = 0.470f,
 
 		.wrist_gearRatio_ = 1.0f,
-		.launch_Ratio_ = 0.004627f,
+		.launch_Ratio_ = 0.08627f,
 		.claw_gearRatio_  =1.0f ,
 		.traverse_Ratio_  = 0.00218f,
         .max_wristMotorRPM_   = 100.0f,
