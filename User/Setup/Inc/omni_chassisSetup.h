@@ -87,7 +87,7 @@ private:
         RmPocketData_t airjoy_data_; //摇锟斤拷值为 -1 ~ 1
 
         Debug_Printf debug_uart = Debug_Printf(&huart8); // 锟斤拷锟皆达拷印实锟斤拷
-        Lader_Data ladar_data_;
+        Point3D ladar_data_;
 
 };
 #endif // __cplusplus

@@ -133,7 +133,7 @@ private:
 
 
     Point3D robot_pose_inWorld_ = {0}; // 机器人在世界坐标系位置
-    Point2D arm_pose_inWorld_ = {0};   // 机械臂在世界坐标系位置
+    Point2D arm_pose_inWorld_ = {0};   // 机械臂底座在世界坐标系位置
     Point3D lidar_pose_inWorld_ = {0}; // 雷达在世界坐标系位置
 
     static HomogeneousTransform2D ;   // 雷达 -> 机器人
