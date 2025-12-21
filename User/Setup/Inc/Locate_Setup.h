@@ -55,14 +55,15 @@ typedef struct
     float delta_y2;
 }Laser_initData_S;
 
-typedef struct 
-{
-  /* data */
-    float x;//规定激光实例管理的第一个为x的数据，第二三个为y的数据
-    float y;
-    float z;
-    float yaw;
-}Lader_Data;
+// typedef struct 
+// {
+//   /* data */
+//     float x;//规定激光实例管理的第一个为x的数据，第二三个为y的数据
+//     float y;
+//     float z;
+//     float yaw;
+// }Lader_Data;
+
 
 class Locate_Setup : public RtosTask {
 public:
@@ -80,9 +81,6 @@ public:
         lidar_install_pose_ = lidar_install_pose;
         arm_install_pose_ = arm_install_pose;
 
-//        T_lidar_to_robot.setTransform(lidar_install_pose_);
-
-//        T_robot_to_arm.setTransform(arm_install_pose_);
 
         laser_initData_ = laser_initData;
 				
@@ -110,9 +108,9 @@ public:
 
     Point2D get_ArmPos_inWorld(){return arm_pose_inWorld_;}
 
-    Point2D get_RobotPos_inWorld(){return robot_pose_inWorld_;}
+    Point3D get_RobotPos_inWorld(){return robot_pose_inWorld_;}
 
-    Point2D get_LidarPos_inWorld(){return lidar_pose_inWorld_;}
+    Point3D get_LidarPos_inWorld(){return lidar_pose_inWorld_;}
 		
 		void locate_setup_init(){this->start(osPriorityNormal, 256);}
 		
@@ -124,17 +122,21 @@ private:
     Laser_InstanceManager* Laser_pos_instance;
     bool is_startToLRL_ = false; // 是否启动激光重定位
     void update(); //更新
-    
-    Point2D update_Lidar_data(); //更新雷达数据
+    /**
+     * @brief 雷达坐标变换计算->robot_in_world, arm_in_world
+     */
+    void lader_transform_caculate(); //雷达坐标变换计算
+    void update_Lidar_data(); //更新雷达数据
 
     Point2D lidar_install_pose_ = {0}; // 雷达安装相对底盘中心
     Point2D arm_install_pose_ = {0};   // 机械臂安装相对底盘中心
 
-    Point2D robot_pose_inWorld_ = {0}; // 机器人在世界坐标系位置
-    Point2D arm_pose_inWorld_ = {0};   // 机械臂在世界坐标系位置
-    Point2D lidar_pose_inWorld_ = {0}; // 雷达在世界坐标系位置
 
-    static HomogeneousTransform2D T_lidar_to_robot;   // 雷达 -> 机器人
+    Point3D robot_pose_inWorld_ = {0}; // 机器人在世界坐标系位置
+    Point2D arm_pose_inWorld_ = {0};   // 机械臂在世界坐标系位置
+    Point3D lidar_pose_inWorld_ = {0}; // 雷达在世界坐标系位置
+
+    static HomogeneousTransform2D ;   // 雷达 -> 机器人
     static HomogeneousTransform2D T_robot_to_arm;     // 机器人 -> 机械臂
 
     bool install_pose_init_ = false;
@@ -159,7 +161,7 @@ public:
     void Reposition_SendData(float X, float Y){}
 
  //   Lader_position getRealPosData() const { return RealPosData; }
-    Lader_Data Get_Rader_Data(){return Lad_Data;}
+    Point3D Get_Rader_Data(){return Lad_Data;}
 
 //接收数据
 		RECEIVE_FLAG receive_flag = WAIT_HEAD_1;
@@ -172,7 +174,7 @@ public:
     int cout_ladar_data = 0;
 
 private:
-	  Lader_Data Lad_Data={0};
+	  Point3D Lad_Data={0};
     Lader_position(USBD_HandleTypeDef *usb_handle); // ??????
     ~Lader_position() = default;
     
@@ -185,6 +187,8 @@ private:
 
 		uint8_t rx_buffer_[35];
 };
+
+
 uint8_t xor_check(const uint8_t *data, uint32_t length);
 
 

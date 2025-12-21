@@ -1,6 +1,6 @@
 #include "Arm_setup.h"
 
-static bool s_has_recorded_strategy = false; // [新增] 记录是否已经记录过策略
+static bool s_has_recorded_strategy = false; //记录是否已经记录过策略
 
 /**
  * @brief 寻主循环
@@ -29,19 +29,6 @@ void ArmSetup::loop()
 
     if( arm_status_ == ARM_AUTO_CONTROL)
     {
-        // // [Fix] 增加单次触发逻辑，防止循环中重复置位导致无法停止
-        // static bool s_auto_triggered = false;
-        
-        // // 如果刚进入自动模式，重置触发标志
-        // if(last_arm_status_ != ARM_AUTO_CONTROL)
-        //     s_auto_triggered = false;
-
-        // if(arm_ctrlStatus.is_calibrating && !s_auto_triggered)
-        // {
-        //     this->start_toAutoCtrl(true);
-        //     s_auto_triggered = true;
-        // }
-
         static bool ifFirst = true;
         if(ifFirst)
         {
@@ -50,6 +37,8 @@ void ArmSetup::loop()
             ifFirst = false;
         }
     }
+
+
     switch(arm_status_)
     {
         case ARM_MANUAL_CONTROL:
@@ -507,10 +496,14 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
     // [单圈模式] 记录Align阶段的旋转方向
     if(!rotate_multiTurn_)
     {
-        if(auto_ctrl_.current_strategy == ROTATE_PATH_POSITIVE)
-            recorded_align_strategy_ = ROTATE_PATH_POSITIVE;
-        else if(auto_ctrl_.current_strategy == ROTATE_PATH_NEGATIVE)
-            recorded_align_strategy_ = ROTATE_PATH_NEGATIVE;
+        // 仅在尚未记录明确策略时记录，避免后续微调或超调导致策略被覆盖为SHORTEST或反向
+        if(recorded_align_strategy_ == ROTATE_PATH_SHORTEST)
+        {
+            if(auto_ctrl_.current_strategy == ROTATE_PATH_POSITIVE)
+                recorded_align_strategy_ = ROTATE_PATH_POSITIVE;
+            else if(auto_ctrl_.current_strategy == ROTATE_PATH_NEGATIVE)
+                recorded_align_strategy_ = ROTATE_PATH_NEGATIVE;
+        }
     }
 
     this->setRotateStrategy(auto_ctrl_.current_strategy);
@@ -1000,6 +993,7 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
 
 /**
  * @brief 寻自动返回
+ * @param 这个不是KFS的编号，而是索引，0为第一个KFS，1为第二个KFS，其他值视为无下一个KFS
  */
 bool ArmSetup::state_return(int next_targetKFS)
 {
@@ -1170,6 +1164,7 @@ void ArmSetup::auto_onlyOne()
                 auto_ctrl_.flag.reach_finishTime = 0.0f;
                 
                 s_has_recorded_strategy = false; // [新增] 重置策略记录标志
+                recorded_align_strategy_ = ROTATE_PATH_SHORTEST; // [新增] 重置记录的Align策略
 
                 bool return_done = false;
 
@@ -1335,8 +1330,8 @@ void ArmSetup::calibrateMotor()
         arm_ctrlStatus.calibrate_startTime = TimeStamp::getInstance().getSeconds();
         arm_ctrlStatus.calibrate_start = true;
     }
-    this->motor_stretch_->setTargetCurrent(-1000.0f); // 给予一个小电流顶住限位
-    this->motor_pitch_->setTargetCurrent(-1000.0f); // 给予一个小电流顶住限位
+    this->motor_stretch_->setTargetCurrent(-700.0f); // 给予一个小电流顶住限位
+    this->motor_pitch_->setTargetCurrent(-700.0f); // 给予一个小电流顶住限位
     this->motor_rotate_->setTargetCurrent(1000.0f);
     if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.5f)
     {
