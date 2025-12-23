@@ -173,6 +173,118 @@
         <Bp>
           <Number>1</Number>
           <Type>0</Type>
+          <LineNumber>124</LineNumber>
+          <EnabledFlag>0</EnabledFlag>
+          <Address>134319244</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\User\Setup\Src\Locate_Setup.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Frame_T\../User/Setup/Src/Locate_Setup.cpp\124</Expression>
+        </Bp>
+        <Bp>
+          <Number>2</Number>
+          <Type>0</Type>
+          <LineNumber>120</LineNumber>
+          <EnabledFlag>0</EnabledFlag>
+          <Address>134319224</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\User\Setup\Src\Locate_Setup.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Frame_T\../User/Setup/Src/Locate_Setup.cpp\120</Expression>
+        </Bp>
+        <Bp>
+          <Number>3</Number>
+          <Type>0</Type>
+          <LineNumber>26</LineNumber>
+          <EnabledFlag>0</EnabledFlag>
+          <Address>134315058</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\User\Setup\Src\Locate_Setup.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Frame_T\../User/Setup/Src/Locate_Setup.cpp\26</Expression>
+        </Bp>
+        <Bp>
+          <Number>4</Number>
+          <Type>0</Type>
+          <LineNumber>50</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134315446</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\User\Setup\Src\Locate_Setup.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Frame_T\../User/Setup/Src/Locate_Setup.cpp\50</Expression>
+        </Bp>
+        <Bp>
+          <Number>5</Number>
+          <Type>0</Type>
+          <LineNumber>139</LineNumber>
+          <EnabledFlag>0</EnabledFlag>
+          <Address>134319356</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\User\Setup\Src\Locate_Setup.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Frame_T\../User/Setup/Src/Locate_Setup.cpp\139</Expression>
+        </Bp>
+        <Bp>
+          <Number>6</Number>
+          <Type>0</Type>
+          <LineNumber>135</LineNumber>
+          <EnabledFlag>0</EnabledFlag>
+          <Address>134319310</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\User\Setup\Src\Locate_Setup.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Frame_T\../User/Setup/Src/Locate_Setup.cpp\135</Expression>
+        </Bp>
+        <Bp>
+          <Number>7</Number>
+          <Type>0</Type>
+          <LineNumber>24</LineNumber>
+          <EnabledFlag>0</EnabledFlag>
+          <Address>134315046</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\User\Setup\Src\Locate_Setup.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Frame_T\../User/Setup/Src/Locate_Setup.cpp\24</Expression>
+        </Bp>
+        <Bp>
+          <Number>8</Number>
+          <Type>0</Type>
           <LineNumber>598</LineNumber>
           <EnabledFlag>0</EnabledFlag>
           <Address>472</Address>
@@ -187,7 +299,7 @@
           <Expression>\\Frame_T\../User/Control/Src/AutoCtrler.cpp\598</Expression>
         </Bp>
         <Bp>
-          <Number>2</Number>
+          <Number>9</Number>
           <Type>0</Type>
           <LineNumber>90</LineNumber>
           <EnabledFlag>0</EnabledFlag>
@@ -203,7 +315,7 @@
           <Expression>\\Frame_T\../User/Control/Src/AutoCtrler.cpp\90</Expression>
         </Bp>
         <Bp>
-          <Number>3</Number>
+          <Number>10</Number>
           <Type>0</Type>
           <LineNumber>83</LineNumber>
           <EnabledFlag>0</EnabledFlag>
@@ -219,7 +331,7 @@
           <Expression>\\Frame_T\../User/Control/Src/AutoCtrler.cpp\83</Expression>
         </Bp>
         <Bp>
-          <Number>4</Number>
+          <Number>11</Number>
           <Type>0</Type>
           <LineNumber>76</LineNumber>
           <EnabledFlag>0</EnabledFlag>
@@ -235,7 +347,7 @@
           <Expression>\\Frame_T\../User/Control/Src/AutoCtrler.cpp\76</Expression>
         </Bp>
         <Bp>
-          <Number>5</Number>
+          <Number>12</Number>
           <Type>0</Type>
           <LineNumber>537</LineNumber>
           <EnabledFlag>0</EnabledFlag>
@@ -251,11 +363,11 @@
           <Expression>\\Frame_T\../User/Control/Src/AutoCtrler.cpp\537</Expression>
         </Bp>
         <Bp>
-          <Number>6</Number>
+          <Number>13</Number>
           <Type>0</Type>
-          <LineNumber>26</LineNumber>
-          <EnabledFlag>0</EnabledFlag>
-          <Address>134315062</Address>
+          <LineNumber>68</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134315778</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -264,42 +376,10 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>..\User\Setup\Src\Locate_Setup.cpp</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Frame_T\../User/Setup/Src/Locate_Setup.cpp\26</Expression>
+          <Expression>\\Frame_T\../User/Setup/Src/Locate_Setup.cpp\68</Expression>
         </Bp>
         <Bp>
-          <Number>7</Number>
-          <Type>0</Type>
-          <LineNumber>120</LineNumber>
-          <EnabledFlag>0</EnabledFlag>
-          <Address>134318950</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\User\Setup\Src\Locate_Setup.cpp</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\Frame_T\../User/Setup/Src/Locate_Setup.cpp\120</Expression>
-        </Bp>
-        <Bp>
-          <Number>8</Number>
-          <Type>0</Type>
-          <LineNumber>124</LineNumber>
-          <EnabledFlag>0</EnabledFlag>
-          <Address>134318996</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\User\Setup\Src\Locate_Setup.cpp</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\Frame_T\../User/Setup/Src/Locate_Setup.cpp\124</Expression>
-        </Bp>
-        <Bp>
-          <Number>9</Number>
+          <Number>14</Number>
           <Type>0</Type>
           <LineNumber>96</LineNumber>
           <EnabledFlag>0</EnabledFlag>
@@ -315,7 +395,23 @@
           <Expression></Expression>
         </Bp>
         <Bp>
-          <Number>10</Number>
+          <Number>15</Number>
+          <Type>0</Type>
+          <LineNumber>126</LineNumber>
+          <EnabledFlag>0</EnabledFlag>
+          <Address>0</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>0</BreakIfRCount>
+          <Filename>..\RC10_LIB\Module\Src\Module_LaserPosition.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression></Expression>
+        </Bp>
+        <Bp>
+          <Number>16</Number>
           <Type>0</Type>
           <LineNumber>71</LineNumber>
           <EnabledFlag>0</EnabledFlag>
@@ -331,10 +427,26 @@
           <Expression></Expression>
         </Bp>
         <Bp>
-          <Number>11</Number>
+          <Number>17</Number>
           <Type>0</Type>
-          <LineNumber>18</LineNumber>
+          <LineNumber>77</LineNumber>
           <EnabledFlag>0</EnabledFlag>
+          <Address>0</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>0</BreakIfRCount>
+          <Filename>..\User\Setup\Inc\Locate_Setup.h</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression></Expression>
+        </Bp>
+        <Bp>
+          <Number>18</Number>
+          <Type>0</Type>
+          <LineNumber>49</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
           <Address>0</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
@@ -347,9 +459,9 @@
           <Expression></Expression>
         </Bp>
         <Bp>
-          <Number>12</Number>
+          <Number>19</Number>
           <Type>0</Type>
-          <LineNumber>181</LineNumber>
+          <LineNumber>18</LineNumber>
           <EnabledFlag>0</EnabledFlag>
           <Address>0</Address>
           <ByteObject>0</ByteObject>
@@ -358,7 +470,7 @@
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>0</BreakIfRCount>
-          <Filename>..\User\Setup\Src\Setup_ConfigInit.cpp</Filename>
+          <Filename>..\User\Setup\Src\Locate_Setup.cpp</Filename>
           <ExecCommand></ExecCommand>
           <Expression></Expression>
         </Bp>
@@ -448,6 +560,11 @@
           <count>16</count>
           <WinNumber>1</WinNumber>
           <ItemText>*ladar</ItemText>
+        </Ww>
+        <Ww>
+          <count>17</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>robot_pose_inWorld_</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>

@@ -30,6 +30,7 @@ extern "C" {
 #define MAX_RECEIVE_ID 10// 最大id
 
 #define MAX_RECEIVE_DATA_LEN 64
+//雷达接收
 	typedef enum RECEIVE_FLAG
 	{
 		WAIT_HEAD_1,// 0xaa
@@ -40,8 +41,13 @@ extern "C" {
 		WAIT_CHECK,//xor
 		WAIT_TAIL// 0xee
 	} RECEIVE_FLAG;
+//激光重定位类型
 	
-	
+		typedef enum LASER_MODE 
+	{
+    LEFT,
+		RIGHT
+	} LASER_MODE;
 	
 typedef struct 
 {
@@ -118,7 +124,7 @@ public:
 		Laser_initData_S laser_initData_;
 private:
 	
-	  
+	  LASER_MODE laser_mode=LEFT;//默认起始位置在左
     Laser_InstanceManager* Laser_pos_instance;
     bool is_startToLRL_ = false; // 是否启动激光重定位
     void update(); //更新

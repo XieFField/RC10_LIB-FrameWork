@@ -23,8 +23,6 @@ void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_in
 {
 		for(int i=0;i<4;i++)	
 	{
-		for(int i=0;i<4;i++)	
-	{
 		if(Laser_pos_instance->laser_instances[i]!=nullptr)
 		{
 			if(i==0)
@@ -42,10 +40,11 @@ void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_in
 		}
   }
 	 float delta;
+	if(laser_mode==LEFT){
 	 delta=fabs(laser_initData_.y1-laser_initData_.y2);
 	 robot_pose_inWorld_.theta=atan(delta/laser_initData_.d);
 	 robot_pose_inWorld_.x=laser_initData_.x1*cos(robot_pose_inWorld_.theta);
-	 robot_pose_inWorld_.y=(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.theta);
+	 robot_pose_inWorld_.y=0.5*(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.theta);
 	 robot_pose_inWorld_.theta=robot_pose_inWorld_.theta*180/PI;
 	
 	 if(laser_initData_.y1>laser_initData_.y2)
@@ -54,6 +53,22 @@ void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_in
 		 aaa=robot_pose_inWorld_.theta;
 	 }
  }
+	else if(laser_mode==RIGHT)
+	{
+	 delta=fabs(laser_initData_.y1-laser_initData_.y2);
+	 robot_pose_inWorld_.theta=atan(delta/laser_initData_.d);
+	 robot_pose_inWorld_.y=laser_initData_.x1*cos(robot_pose_inWorld_.theta);
+	 robot_pose_inWorld_.x=0.5*(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.theta);
+	 robot_pose_inWorld_.theta=robot_pose_inWorld_.theta*180/PI;
+	
+	 if(laser_initData_.y1>laser_initData_.y2)
+	 {
+		 robot_pose_inWorld_.theta=360-robot_pose_inWorld_.theta;
+		 aaa=robot_pose_inWorld_.theta;
+	 }
+		
+	}
+	
 }
 Lader_position::Lader_position(USBD_HandleTypeDef *usb_handle) 
     :USB_CDC_(usb_handle)
