@@ -1,10 +1,11 @@
 /**
  * @file Locate_Setup.h
  * @brief 定位 主要是雷达接收 位姿变换 激光重定位等功能
- * @author XieFField
+ * @author XieFField    HaJiCao
  */
 #ifndef LOCATE_SETUP_H
 #define LOCATE_SETUP_H
+
 
 #pragma once
 
@@ -12,8 +13,9 @@
 
 extern "C" {
     #include <stdint.h>
-}
+};
 
+#include "RTOS_QueueSetup.h"
 #include "BSP_USB_UART_Driver.h"
 #include "APP_tool.h"
 #include "APP_CoordConvert.h"
@@ -22,6 +24,9 @@ extern "C" {
 #include "BSP_RTOS.h"
 #include "Module_LaserPosition.h"
 #include "math.h"
+#include "Module_Position.h"
+
+
 #define PI							3.14159265358979323846f			// 定义圆周率常量PI
 #define MAX_SEND_BUF_SIZE 128// 发送缓冲区大小
 
@@ -55,27 +60,23 @@ typedef struct
     float delta_y2;
 }Laser_initData_S;
 
-// typedef struct 
-// {
-//   /* data */
-//     float x;//规定激光实例管理的第一个为x的数据，第二三个为y的数据
-//     float y;
-//     float z;
-//     float yaw;
-// }Lader_Data;
-
 
 class Locate_Setup : public RtosTask {
 public:
-    Locate_Setup(Laser_InstanceManager* instance_man = nullptr):RtosTask("Locate_Setup", 1), Laser_pos_instance(instance_man)
-		{}
+    static Locate_Setup* getInstance()
+    {
+        static Locate_Setup instance;
+        return &instance;
+    }
+
     ~Locate_Setup() = default;    
     /**
      * @brief 无输入则默认在底盘中心
      */
-    void init(Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0}, 
+    void init(Laser_InstanceManager* instance_man, Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0}, 
               Laser_initData_S laser_initData = {0})
     {   
+        this->Laser_pos_instance = instance_man;
         if(install_pose_init_)
             return;
         lidar_install_pose_ = lidar_install_pose;
@@ -112,12 +113,16 @@ public:
 
     Point3D get_LidarPos_inWorld(){return lidar_pose_inWorld_;}
 		
+    Point2D get_FK_ChassisSpeed_inWorld(){return fk_chassisSpeed_inWorld_;}
+
 		void locate_setup_init(){this->start(osPriorityNormal, 256);}
 		
-		
+    float get_yaw_from_position(){return yaw_from_position_;}
+    float get_dyaw_from_position(){return dyaw_from_position_;}
+
 		Laser_initData_S laser_initData_;
 private:
-	
+    Locate_Setup():RtosTask("Locate_Setup", 1), Laser_pos_instance(nullptr) {}
 	  
     Laser_InstanceManager* Laser_pos_instance;
     bool is_startToLRL_ = false; // 是否启动激光重定位
@@ -131,12 +136,16 @@ private:
     Point2D lidar_install_pose_ = {0}; // 雷达安装相对底盘中心
     Point2D arm_install_pose_ = {0};   // 机械臂安装相对底盘中心
 
-
     Point3D robot_pose_inWorld_ = {0}; // 机器人在世界坐标系位置
     Point2D arm_pose_inWorld_ = {0};   // 机械臂底座在世界坐标系位置
     Point3D lidar_pose_inWorld_ = {0}; // 雷达在世界坐标系位置
 
-    static HomogeneousTransform2D ;   // 雷达 -> 机器人
+    Point2D fk_chassisSpeed_inWorld_ = {0}; // 正解底盘速度 世界坐标系
+
+    float yaw_from_position_ = 0.0f; // 从里程计position计算得到的偏航角
+    float dyaw_from_position_ = 0.0f;
+
+    static HomogeneousTransform2D T_lader_to_robot;   // 雷达 -> 机器人
     static HomogeneousTransform2D T_robot_to_arm;     // 机器人 -> 机械臂
 
     bool install_pose_init_ = false;
@@ -160,10 +169,10 @@ public:
 
     void Reposition_SendData(float X, float Y){}
 
- //   Lader_position getRealPosData() const { return RealPosData; }
+  //   Lader_position getRealPosData() const { return RealPosData; }
     Point3D Get_Rader_Data(){return Lad_Data;}
 
-//接收数据
+  //接收数据
 		RECEIVE_FLAG receive_flag = WAIT_HEAD_1;
 		uint8_t receive_id;
 		uint8_t receive_len;

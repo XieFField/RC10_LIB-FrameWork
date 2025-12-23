@@ -82,14 +82,6 @@ private:
 
     // 三轮解算器选择标志（只在 WheelCount==3 时有效）
     bool use_three_solver_ = true;
-
-    // arm_matrix_instance_f32 kinematics_matrix; // WheelCount x 3
-    // arm_matrix_instance_f32 input_mat_; // 3x1
-    // arm_matrix_instance_f32 output_mat_; // WheelCount x 1
-
-    // float32_t kinematics_matrix_data_[WheelCount * 3];
-    // float32_t input_vector_[3]; // 3x1
-    // float32_t output_vector_[WheelCount]; // 4x1    
 };
 
 

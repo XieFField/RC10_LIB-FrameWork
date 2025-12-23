@@ -20,7 +20,7 @@ LaserPosition laserpos(15,laser_rx_buffer,&huart3);
 LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
-Locate_Setup set1(&instance_man);
+// Locate_Setup set1(&instance_man);
 
 OmniChassis_Setup ChassisOmni(0.442f/2.f,420, 0.74f, 0.8363f, true); // 轮子半径，最大轮子转速，底盘 底 腰
 
@@ -38,8 +38,8 @@ M3508 omni_wheel1(1, CAN1_Bus); M3508 omni_wheel2(2, CAN1_Bus);
 M3508 omni_wheel3(3, CAN1_Bus); M3508 omni_wheel4(4, CAN1_Bus);
 
                            /* 串联臂 */      
-M3508 arm_launchMotor(5, CAN1_Bus); M2006 arm_stretchMotor(6, CAN1_Bus);
-M3508 arm_rotateMotor(7, CAN1_Bus); M2006 arm_pitchMotor(8, CAN1_Bus);
+M3508 arm_launchMotor(5, CAN1_Bus); M2006 arm_stretchMotor(8, CAN1_Bus);
+M3508 arm_rotateMotor(7, CAN1_Bus); M2006 arm_pitchMotor(6, CAN1_Bus);
 
 /*================Motor Instances==============*/
 
@@ -196,10 +196,11 @@ void ALL_Setup_ConfigInit(void)
 	 instance_man.RegisterInstance(&laserpos2);
 	 instance_man.InstanceManager_Init();
 //激光重定位解析数据初始化
-   set1.init();	
-	 set1.laser_initData_.d=0.5;
-	 set1.locate_setup_init();
-	 set1.set_startToLRL(true);
+     Locate_Setup* set1 = Locate_Setup::getInstance();
+     set1->init(&instance_man);	
+     set1->laser_initData_.d=0.5;
+     set1->locate_setup_init();
+     set1->set_startToLRL(true);
 //雷达定位实例化
 	 Lader_position*ladar=Lader_position::GetInstance(&hUsbDeviceHS);
 }

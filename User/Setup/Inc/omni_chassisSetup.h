@@ -34,6 +34,9 @@ extern "C"{
 #include "Locate_Setup.h"
 #include "BSP_USB_UART_Driver.h"
 #include "usb_device.h"
+#include "RTOS_QueueSetup.h"
+
+
 #define debug_ladar 0
 class OmniChassis_Setup:public RtosTask, public Chassis_Omni<3>{
 public:
@@ -79,16 +82,15 @@ private:
         uint8_t yaw_pid_period_count_ = 0;
         PID_Position yaw_pid_;
 
-        const float LINESPEED_LIMIT = 10/500.f; // 閿熸枻鎷烽敓鏂ゆ嫹妯￠仴閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹鍊兼槧閿熸枻鎷蜂负閿熸枻鎷烽敓鍔?搴︾殑鎲嬫嫹閿熸枻鎷?
-        const float YAWSPEED_LIMIT = 1/500.f; // 閿熸枻鎷烽敓鏂ゆ嫹妯￠仴閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹鍊兼槧閿熸枻鎷蜂负閿熸枻鎷烽敓鍔?搴︾殑鎲嬫嫹閿熸枻鎷?
+        const float LINESPEED_LIMIT = 10/500.f; // 线速度限制
+        const float YAWSPEED_LIMIT = 1/500.f; // yaw速度限制
 
 
         CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
-        RmPocketData_t airjoy_data_; //鎽囬敓鏂ゆ嫹鍊间负 -1 ~ 1
+        RmPocketData_t airjoy_data_; //遥控器数据，范围 -1 ~ 1
 
-        Debug_Printf debug_uart = Debug_Printf(&huart8); // 閿熸枻鎷烽敓鐨嗚揪鎷峰嵃瀹為敓鏂ゆ嫹
+        Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
         Point3D ladar_data_;
-
 };
 #endif // __cplusplus
 

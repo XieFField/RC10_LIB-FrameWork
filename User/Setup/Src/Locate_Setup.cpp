@@ -8,11 +8,25 @@ void Locate_Setup::loop()
 
 void Locate_Setup::update()
 {
+    Point2D fk_speed;
+    if(SpeedFK_Queue.recv(fk_speed, 0))
+    {
+        // 接收到底盘速度数据 fk_speed
+		fk_chassisSpeed_inWorld_.x = fk_speed.x;
+		fk_chassisSpeed_inWorld_.y = fk_speed.y;
+		fk_chassisSpeed_inWorld_.theta = fk_speed.theta;
+    }
+
 	if(is_startToLRL_)
    		RobotPos_inWorld_caculate(this->Laser_pos_instance);
+
 	update_Lidar_data();
 
 	lader_transform_caculate();
+
+    yaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().world_yaw;
+	dyaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().dyaw;
+
 }
 
 
@@ -135,7 +149,7 @@ void Lader_position::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 			case WAIT_CHECK:
 				if (buf[i] == xor_check(receive_data, receive_len)) receive_flag = WAIT_TAIL;
 				else receive_flag = WAIT_HEAD_1;
-			  i++;
+			  	i++;
 				break;
 				
 			case WAIT_TAIL:// 0xee
@@ -145,6 +159,7 @@ void Lader_position::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 				if (receive_len == 16)
 				{
 					Lad_Data.x   = *(float*)(&receive_data[0]);
+					Lad_Data.x   = -Lad_Data.x; // 左手系转右手系
 					Lad_Data.y   = *(float*)(&receive_data[4]);
 					Lad_Data.z   = *(float*)(&receive_data[8]);
 					Lad_Data.yaw = *(float*)(&receive_data[12]);
@@ -159,7 +174,7 @@ void Lader_position::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 			
 			default:
 				receive_flag = WAIT_HEAD_1;
-		    i++;
+		    	i++;
 				break;
 			}
 

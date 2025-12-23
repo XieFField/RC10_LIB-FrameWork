@@ -1260,6 +1260,16 @@
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\Locate_Setup.cpp</FilePath>
             </File>
+            <File>
+              <FileName>RTOS_QueueSetup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\RTOS_QueueSetup.h</FilePath>
+            </File>
+            <File>
+              <FileName>RTOS_QueueSetup.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\RTOS_QueueSetup.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

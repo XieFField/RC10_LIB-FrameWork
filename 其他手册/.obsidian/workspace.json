@@ -34,9 +34,21 @@
               "icon": "lucide-file",
               "title": "串联臂自动逻辑"
             }
+          },
+          {
+            "id": "b5c79636773d3ae4",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.10.6"
+              },
+              "icon": "lucide-book-up",
+              "title": "Release Notes 1.10.6"
+            }
           }
         ],
-        "currentTab": 1
+        "currentTab": 2
       }
     ],
     "direction": "vertical"
@@ -184,7 +196,7 @@
       "bases:Create new base": false
     }
   },
-  "active": "4c1d92abdb2dbc77",
+  "active": "b5c79636773d3ae4",
   "lastOpenFiles": [
     "自动模式方案书.md",
     "串联臂自动逻辑.md",

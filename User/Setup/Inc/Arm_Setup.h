@@ -24,8 +24,6 @@
  *              包括在自动模式下，state_toTargetHight阶段也会遵守该规则，即便拾取高度低于0.20米
  *              也要等到云台转到禁区外再下降
  * 
- * 
- * 
  * @version 6.0 更新单圈模式的策划方案
  *   构造planB[单圈模式]的自动拾取，即不多圈旋转；执行过程中的最大rotate角度为270度(abs(起点-终点) <= 270)，意味着云台禁止多圈旋转，旋转3/4圈后
  *   需要转回来，(防止电机电线缠绕云台底座)，累计走过角度位移[含正负计算，从起点(一般是重定位的位置)开始]，也应当应用在手操当中。
@@ -38,6 +36,13 @@
  *   使用模式设置void setRotateMultiTurn(bool isMulti)，设定云台多圈以及单圈模式
  *   一旦设置云台的单圈和多圈，全局适用
  * 
+ * @version 7.0
+ *   就version 6.0的基础上，从原本的only_one模式，扩展到two模式
+ *   在two模式下，机械臂会依次拾取两个KFS
+ *   1. 执行和only_one模式一样的流程，拾取第一个KFS
+ *   2. 在拾取第一个KFS的state_return阶段，机械臂会前往第二个KFS的初始位置(0/180度)，并且升高到安全高度(0.2m)
+ *   3. 然后进入第二个KFS的拾取流程
+ *   4. 第二个KFS的拾取流程和第一个类似，拾取完成后state_return到初始位置(0度)，结束。
  */
 
 #ifndef __ARM_SETUP_H
@@ -63,6 +68,8 @@ extern "C" {
 #include "APP_CoordConvert.h"
 #include "AutoCtrler.h"
 #include "Module_CrsfReceiver.h"
+#include "Locate_Setup.h"
+
 // #include "usart.h"
 
 #define ARM_AUTO_DEBUG_NOCHASSIS 1  //無底盤下，用虛擬坐標進行驗證自動邏輯
@@ -276,6 +283,7 @@ public:
         MF_AutoCtrler::PathNode_S temp = MF_AutoCtrler::PathNodeResult_calc(auto_ctrl_.now_armPosition,
                                        auto_ctrl_.targetKFS[0], 
                                         auto_ctrl_.targetKFS[1]);
+                                        
         auto_ctrl_.path.bestB1 = temp.bestB1;
         auto_ctrl_.path.bestBMF1 = temp.bestBMF1;
         auto_ctrl_.path.bestB2 = temp.bestB2;
@@ -319,6 +327,7 @@ private:
     bool state_return(int next_targetKFS);
 
     void auto_onlyOne();
+    void auto_two();
 
     /**
      * @brief 安全禁区通用接口：根据当前云台高度约束旋转角度
@@ -424,7 +433,15 @@ protected:
      */
     Point2D get_nowArmPosition()
     {
-        return get_nowChassisPose();
+        #if ARM_AUTO_DEBUG_NOCHASSIS
+            return get_nowChassisPose();
+        #else
+            Locate_Setup *locate_ptr = Locate_Setup::getInstance();
+
+            Point2D arm_pos;
+            arm_pos = locate_ptr->get_ArmPos_inWorld();
+            return arm_pos;
+        #endif
     }
     /**
      * @brief 预留接口后续补全，获得当前底盘速度
@@ -432,13 +449,23 @@ protected:
      */
     Point2D get_nowChassisSpeed()
     {
-         Point2D speed = {0.0f, 0.0f, 0.0f};
+        #if ARM_AUTO_DEBUG_NOCHASSIS
+
+        Point2D speed = {0.0f, 0.0f, 0.0f};
         if(arm_ctrlStatus.auto_debug_start == 1)
            speed = {0.0f, 0.9f, 0.0f};
 
         else
              speed = {0.0f, 0.0f, 0.0f};
         return speed;
+
+        #else
+
+            Locate_Setup *locate_ptr = Locate_Setup::getInstance();
+
+            return locate_ptr->get_FK_ChassisSpeed_inWorld();
+
+        #endif
     }
 
     /**
@@ -447,8 +474,11 @@ protected:
 
     Point2D get_nowChassisPose()
     {
+
+        #if ARM_AUTO_DEBUG_NOCHASSIS
+
         Point2D pose = auto_ctrl_.now_ChassisPosition;
-         Point2D speed = get_nowChassisSpeed();
+        Point2D speed = get_nowChassisSpeed();
 
 
         pose.x += speed.x * get_dt();
@@ -457,6 +487,18 @@ protected:
                 
 
         return pose;
+
+        #else
+
+        Point2D pose = {0};
+
+        Locate_Setup *locate_ptr = Locate_Setup::getInstance();
+        pose.x = locate_ptr->get_RobotPos_inWorld().x;
+        pose.y = locate_ptr->get_RobotPos_inWorld().y;
+        pose.theta = locate_ptr->get_RobotPos_inWorld().yaw;
+
+        return pose;
+        #endif
     }
 
     void loop() override;

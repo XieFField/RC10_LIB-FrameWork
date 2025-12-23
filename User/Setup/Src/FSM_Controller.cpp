@@ -89,17 +89,14 @@ void FSM_Controller::manual_ctrl()
             break;
         }
     }
-
-    
-
 }
 
 
 void FSM_Controller::auto_ctrl()
 {
-   // 半自动控制模式下的实现
-   arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-//    chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
+    // 半自动控制模式下的实现
+    arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+    // chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
 }
 
 
