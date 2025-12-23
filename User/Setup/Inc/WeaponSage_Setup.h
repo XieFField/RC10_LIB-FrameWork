@@ -109,7 +109,14 @@ public:
 
     Point2D getClawPos()
     {   
+		
+		this->current_pos_= get_CurrentPos();
+		
         Point2D pos = {0.0f, 0.0f, 0.0f};
+		pos.x=current_pos_.traverse_pos_;
+		pos.y=current_pos_.launch_pos_;
+		pos.theta=current_pos_.claw_pos_;
+		
         return pos;
     }
     void setWeaponSageStatus(WeaponSage_Status_E status)
@@ -139,7 +146,11 @@ private:
     void State_Lift();
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
     WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
+	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_IDLE;
 	WeaponSage_Setup::auto_GRABstate_S now_state_;
+	
+	
+	
 };
 
 extern WeaponSage_InitData_S initData_;

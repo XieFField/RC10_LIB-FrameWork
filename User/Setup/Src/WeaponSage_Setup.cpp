@@ -8,6 +8,13 @@ Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
 
 void Robot_WeaponSage_Setup::loop()
 {
+	if(!ctrl_status_.init_flag)
+		return;
+	if(!ctrl_status_.is_calibrating)
+	{
+		weaponSage_status_=WEAPONSAGE_CALIBRATE;
+	}
+	
     switch(weaponSage_status_)
     {
         case WEAPONSAGE_MANUAL_CONTROL:
@@ -24,16 +31,18 @@ void Robot_WeaponSage_Setup::loop()
             break;
 
         case WEAPONSAGE_AUTO_CONTROL:
+			autoControl();
             //��ʵ���Զ������߼�
             break;
 		case WEAPONSAGE_CALIBRATE:
-//			calibrate();
-			State_LowerClaw();
+			calibrate();
+//			State_LowerClaw();
 			break;
         default:
             idle();
             break;
     }
+	last_weaponSage_status_=weaponSage_status_;
 }
 
 void Robot_WeaponSage_Setup::calibrate()
@@ -67,11 +76,25 @@ void Robot_WeaponSage_Setup::calibrate()
 
 void Robot_WeaponSage_Setup::manualControl()
 {
+	
+	
     //��ʵ��
 }
 
-void Robot_WeaponSage_Setup::idle()
+void Robot_WeaponSage_Setup::idle()//空闲状态,维持上一个状态
 {
+	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+	if(last_weaponSage_status_ != WEAPONSAGE_IDLE)
+	{
+		this->last_pos_=get_CurrentPos();
+		this->target_pos_=this->last_pos_;
+		last_weaponSage_status_=WEAPONSAGE_IDLE;
+	}
+	this->setTarget(target_pos_.launch_pos_, WeaponSage::Launch_Motor);
+    this->setTarget(target_pos_.claw_pos_, WeaponSage::Claw_Motor);
+    this->setTarget(target_pos_.traverse_pos_, WeaponSage::Traverse_Motor);
+    this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);
+	
     //����״̬��ά�ֵ�ǰ״̬
 }
 
@@ -155,7 +178,7 @@ void Robot_WeaponSage_Setup::autoControl()
             if(auto_ctrl_.flag.lift_done)
             {
                 now_state_ = WeaponSage_Setup::STATE_DONE;
-                if(auto_ctrl_.pole_num < 4)
+                if(auto_ctrl_.pole_num < 3)
                 {
                     auto_ctrl_.pole_num ++;
                 }
