@@ -120,7 +120,7 @@ void Chassis_Omni<WheelCount>::forwardKinematics()
         this->robot_twist_forward.vx = (wheel_speeds[0] - wheel_speeds[1] - wheel_speeds[2] + wheel_speeds[3]) / (2.0f*1.41421356f);
     }
 
-    this->world_twist_forward   
+    //this->world_twist_forward   
 }
 
 template class Chassis_Omni<4>;

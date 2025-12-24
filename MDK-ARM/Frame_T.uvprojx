@@ -1200,6 +1200,16 @@
               <FileType>8</FileType>
               <FilePath>..\User\Control\Src\AutoCtrler.cpp</FilePath>
             </File>
+            <File>
+              <FileName>WeaponSage.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Control\Inc\WeaponSage.h</FilePath>
+            </File>
+            <File>
+              <FileName>WeaponSage.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Src\WeaponSage.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1269,6 +1279,16 @@
               <FileName>RTOS_QueueSetup.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\RTOS_QueueSetup.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>WeaponSage_Setup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\WeaponSage_Setup.h</FilePath>
+            </File>
+            <File>
+              <FileName>WeaponSage_Setup.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\WeaponSage_Setup.cpp</FilePath>
             </File>
           </Files>
         </Group>

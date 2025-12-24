@@ -62,6 +62,7 @@ typedef enum{
     WEAPONSAGE_STOP,        //停止
     WEAPONSAGE_DEBUG,       //调试模式  
     WEAPONSAGE_IDLE,    //空闲状态，维持当前状态
+    WEAPONSAGE_CALIBRATE, //校准模式
 }WeaponSage_Status_E;
 
 

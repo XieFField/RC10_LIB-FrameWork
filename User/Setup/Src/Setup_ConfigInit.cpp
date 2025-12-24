@@ -5,9 +5,13 @@ extern "C"
         extern USBD_HandleTypeDef hUsbDeviceHS;
 }
 fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
+fdCANbus* const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // 获取FDCAN2的唯一实例
+
+
 DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4号M3508/M2006电机
 DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8号M3508/M2006电机
 
+DJI_Group DJIGroupCAN2_Low(send_idLow(), CAN2_Bus); // 1~4号M3508/M2006电机
 
 
 /*==============Controller Instances===========*/
@@ -174,7 +178,7 @@ void ALL_Setup_ConfigInit(void)
    ARM_Controller.setArmStatus(ARM_IDLE);
    
    Weapon_Controller.init(&Weapon_launchMotor, &Weapon_clawMotor,&Weapon_traverseMotor, &Weapon_wristMotor);
-   Weapon_Controller.setWeaponSageStatus(WEAPONSAGE_CALIBRATE);
+   Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
 
    ChassisOmni.registerWheelMotor(0, &omni_wheel1);
    ChassisOmni.registerWheelMotor(1, &omni_wheel2);

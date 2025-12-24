@@ -35,6 +35,8 @@ namespace WeaponSage_Setup
         float calibrate_startTime = 0;
         bool calibrate_start = false;
         bool is_calibrating = false;
+
+        int target_poleIndex = 0; //0~3号索引的矛杆
     }ctrl_status_S;
 
     typedef enum{
@@ -43,18 +45,26 @@ namespace WeaponSage_Setup
         STATE_LOWER_CLAW,  //下降爪子
         STATE_GRAB_CLAW,   //抓取爪子
         STATE_LIFT_POSITION, //提升位置
+        STATE_DONE 
     }auot_GRABstate_S;
 
+
+    typedef struct{
+        float last_right_stick_x = 0.0f;
+        float last_right_stick_y = 0.0f;
+
+        bool changeTarget_state = false; //变更目标状态标志位
+    }manual_ctrlForgrip_S;
 
     typedef struct{
 
         struct{
             // bool start
-
+            
         }auto_state_bool_S; //局部状态结构体
     }auto_ctrl_S;
 
-    float weapon_pos[4] = {0.0f, 0.0f, 0.0f, 0.0f}; //武器位置数组
+     extern float weapon_pos[4]; //武器位置数组
 
 }
 
@@ -94,11 +104,11 @@ public:
         
     }
 
-    Point2D getClawPos()
-    {   
-        Point2D pos = {0.0f, 0.0f, 0.0f};
-        return pos;
-    }
+//    Point2D getClawPos()
+//    {   
+//        Point2D pos = {0.0f, 0.0f, 0.0f};
+//        return pos;
+//    }
 
     void setWeaponSageControlStatus(WeaponSage_Status_E status)
     {
@@ -147,10 +157,12 @@ private:
     
     WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
     RmPocketData_t airjoy_data_; 
+
+    WeaponSage_Setup::manual_ctrlForgrip_S manual_ctrlForgrip_;
 };
 
 extern WeaponSage_InitData_S initData_;
 
 #endif
 
-#endif // WEAPONSAGE_SETUP_H
+#endif // WEAPONSAGE_SETUP_H    
