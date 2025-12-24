@@ -26,14 +26,14 @@ OmniChassis_Setup ChassisOmni(0.442f/2.f,420, 0.74f, 0.8363f, true); // ÂÖ×Ó°ë¾¶
 
 ArmSetup ARM_Controller(arm_initData);
 FSM_Controller Finite_StateMachine;
-
+Robot_WeaponSage_Setup Weapon_Controller(initData_);
 /*==============Controller Instances===========*/
 
 /*=============================================*/
 
 /*================Motor Instances==============*/
 
-                           /* µ×ÅÌ */
+                           /* ï¿½ï¿½ï¿½ï¿½ */
 M3508 omni_wheel1(1, CAN1_Bus); M3508 omni_wheel2(2, CAN1_Bus); 
 M3508 omni_wheel3(3, CAN1_Bus); M3508 omni_wheel4(4, CAN1_Bus);
 
@@ -41,6 +41,8 @@ M3508 omni_wheel3(3, CAN1_Bus); M3508 omni_wheel4(4, CAN1_Bus);
 M3508 arm_launchMotor(5, CAN1_Bus); M2006 arm_stretchMotor(8, CAN1_Bus);
 M3508 arm_rotateMotor(7, CAN1_Bus); M2006 arm_pitchMotor(6, CAN1_Bus);
 
+M3508 Weapon_launchMotor(1, CAN2_Bus); M2006 Weapon_clawMotor(2, CAN2_Bus);
+M2006 Weapon_traverseMotor(3, CAN2_Bus); DM_Motor Weapon_wristMotor(J4310_Type, 0x05,0x05, CAN2_Bus);
 /*================Motor Instances==============*/
 
 
@@ -74,7 +76,7 @@ void dji_motor_Init()
 /*============================== debug  DJI_Motor ===============================*/
 
 
-/*================================ debug  »úÐµÎüÅÌ =============================*/
+/*================================ debug  ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½ =============================*/
 
 #if ARM_DEMO_DEBUG
 
@@ -96,7 +98,7 @@ Arm_InitData_S arm_demoInit_data={
 };
 
 Robot_ArmDemo arm_demo(arm_demoInit_data);
-//¼¤¹â²â¾à
+//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 LaserPosition laserpos(&huart3,&huart6);
 
 
@@ -124,17 +126,17 @@ void arm_motorInit()
 }
 #endif
 
-/*============================== debug  »úÐµÎüÅÌ ===============================*/
+/*============================== debug  ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½ ===============================*/
 
 
 void debug_init()
 {
-   /*============================= debug  »úÐµÎüÅÌ ================================*/
+   /*============================= debug  ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½ ================================*/
 #if ARM_DEMO_DEBUG
    arm_motorInit();
    arm_demo.armInit(&m3508_ArmLaunch, &m2006_ArmStretch, &m3508_ArmRotate, &m2006_ArmPitch);
 #endif
-/*============================== debug  »úÐµÎüÅÌ ===============================*/
+/*============================== debug  ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½ ===============================*/
 
 
 /*============================== debug  DJI_Motor ===============================*/
@@ -152,7 +154,7 @@ void debug_init()
 /*============================== debug   speedplanner ===============================*/
 /*============================== debug  DJI_Motor ===============================*/
 #if DEBUG
-laserpos.Init();//¼¤¹â²â¾à
+laserpos.Init();//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 #endif
 }
 
@@ -170,6 +172,9 @@ void ALL_Setup_ConfigInit(void)
 
    ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
    ARM_Controller.setArmStatus(ARM_IDLE);
+   
+   Weapon_Controller.init(&Weapon_launchMotor, &Weapon_clawMotor,&Weapon_traverseMotor, &Weapon_wristMotor);
+   Weapon_Controller.setWeaponSageStatus(WEAPONSAGE_CALIBRATE);
 
    ChassisOmni.registerWheelMotor(0, &omni_wheel1);
    ChassisOmni.registerWheelMotor(1, &omni_wheel2);
@@ -231,7 +236,20 @@ void CAN_Motor_Init(void)
    CAN1_Bus->registerMotor(&arm_rotateMotor);
    CAN1_Bus->registerMotor(&arm_pitchMotor);
 
+   DJIGroupCAN2_Low.addMotor(&Weapon_launchMotor);
+   DJIGroupCAN2_Low.addMotor(&Weapon_clawMotor);
+   DJIGroupCAN2_Low.addMotor(&Weapon_traverseMotor);
+
+
+   CAN2_Bus->registerMotor(&DJIGroupCAN2_Low);
+
+   CAN2_Bus->registerMotor(&Weapon_launchMotor);
+   CAN2_Bus->registerMotor(&Weapon_clawMotor);
+   CAN2_Bus->registerMotor(&Weapon_traverseMotor);
+   CAN2_Bus->registerMotor(&Weapon_wristMotor);
+
    CAN1_Bus->init();
+   CAN2_Bus->init();
 
    // µ×ÅÌÂÖ×Óµç»úPID²ÎÊý³õÊ¼»¯
    omni_wheel1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
@@ -253,6 +271,11 @@ void CAN_Motor_Init(void)
    arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
    arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
    arm_pitchMotor.pid_init(m2006_speed_pid_params, 0.0f, m2006_angle_pid_params, 0.0f);
+
+   Weapon_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
+   Weapon_clawMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
+   Weapon_traverseMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
+
 }
 
 

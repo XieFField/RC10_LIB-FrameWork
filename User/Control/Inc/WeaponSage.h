@@ -54,7 +54,7 @@ namespace WeaponSage
 
     typedef struct 
     {
-        float launch_reversed_ = 1.0f;
+        float launch_reversed_ = -1.0f;
         float claw_reversed_ = 1.0f;
         float traverse_reversed_ = 1.0f;
         float wrist_reversed_ = 1.0f;
@@ -106,6 +106,8 @@ public:
      * @param reversed 是否反相 true反相，false不反相(默认不反相)
      * @param motor_type 电机类型
      */
+	
+	
     bool setMotorReversed(bool reversed, WeaponSage::Motor_Type_E motor_type);
 
 
@@ -115,10 +117,22 @@ public:
     {
         ctrl_mode_ = mode;
     }
+	
+	WeaponSage::WeaponSage_Pos_S get_CurrentPos()
+	{
+		WeaponSage::WeaponSage_Pos_S current_pos;
+		current_pos.launch_pos_=MotorTotalAngle_to_Realpos(launch_Motor_->getTotalAngle(), WeaponSage::Launch_Motor);
+		current_pos.traverse_pos_=MotorTotalAngle_to_Realpos(traverse_Motor_->getTotalAngle(),WeaponSage::Traverse_Motor);
+		current_pos.claw_pos_=MotorTotalAngle_to_Realpos(claw_Motor_->getTotalAngle(),WeaponSage::Claw_Motor);
+		current_pos.wrist_pos_=MotorTotalAngle_to_Realpos(wrist_Motor_->getTotalAngle(),WeaponSage::Wrist_Motor);
+		return current_pos;
+	}
+	
+	
 private:
 
     WeaponSage::WeaponSage_CtrlMode_S ctrl_mode_ = WeaponSage::Join_POSITION_CONTROL;
-    WeaponSage_InitData_S initData_;
+    
 
     WeaponSage::MotorReversed_S motor_reversed_; 
 
@@ -134,6 +148,7 @@ protected:
 
     WeaponSage::WeaponSage_Pos_S target_pos_;
     WeaponSage::WeaponSage_Pos_S current_pos_;
+	WeaponSage::WeaponSage_Pos_S last_pos_;
 
     /**
      * @brief 真实位置转换为电机总角度
@@ -145,6 +160,7 @@ protected:
     float MotorTotalAngle_to_Realpos(float motor_angle, WeaponSage::Motor_Type_E motor_type);
 
     bool setMotorTargetTotalAngle(float total_angle, WeaponSage::Motor_Type_E motor_type);
+	WeaponSage_InitData_S initData_;
 };
 
 

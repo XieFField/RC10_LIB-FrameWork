@@ -1,7 +1,7 @@
 /**
  * @file WeaponSage_Setup.h
  * @author XieFField
- * @brief ÎäÆ÷´óÊ¦Ó¦ÓÃ²ã
+ * @brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¦Ó¦ï¿½Ã²ï¿½
  */
 
 
@@ -30,7 +30,7 @@ namespace WeaponSage_Setup
     typedef struct{
         bool init_flag = false;
 
-        float debug_start = 1; //µ÷ÊÔ¿ªÊ¼±êÖ¾ == 1 ¿ªÊ¼µ÷ÊÔ
+        float debug_start = 1; //ï¿½ï¿½ï¿½Ô¿ï¿½Ê¼ï¿½ï¿½Ö¾ == 1 ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
 
         float calibrate_startTime = 0;
         bool calibrate_start = false;
@@ -105,6 +105,22 @@ public:
         weaponSage_status_ = status;
     }
 
+    Point2D getClawPos()
+    {   
+		
+		this->current_pos_= get_CurrentPos();
+		
+        Point2D pos = {0.0f, 0.0f, 0.0f};
+		pos.x=current_pos_.traverse_pos_;
+		pos.y=current_pos_.launch_pos_;
+		pos.theta=current_pos_.claw_pos_;
+		
+        return pos;
+    }
+    void setWeaponSageStatus(WeaponSage_Status_E status)
+    {
+        weaponSage_status_ = status;
+    }
 
 protected:
     void loop() override;
@@ -121,10 +137,19 @@ private:
 
     void calibrate();
 
+
+    bool State_AimPosition(int pole_num);
+    void State_LowerClaw();
+    bool State_GrabClaw();
+    void State_Lift();
+	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
+
+    
     WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
     RmPocketData_t airjoy_data_; 
 };
 
+extern WeaponSage_InitData_S initData_;
 
 #endif
 
