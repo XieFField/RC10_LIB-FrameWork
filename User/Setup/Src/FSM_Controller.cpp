@@ -66,8 +66,6 @@ void FSM_Controller::all_stop()
 
 void FSM_Controller::manual_ctrl()
 {
-   
-
     switch(airjoy_data_.SWC)
     {
         case 0x00:
@@ -84,8 +82,9 @@ void FSM_Controller::manual_ctrl()
         }
         case 0x02:
         {
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            chassis_setup_->setChassisStatus(CHASSIS_LOCK_FORWEAPON);
             arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_CONTROL);
             break;
         }
     }
@@ -95,8 +94,37 @@ void FSM_Controller::manual_ctrl()
 void FSM_Controller::auto_ctrl()
 {
     // 半自动控制模式下的实现
-    arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+    // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
     // chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
+
+    switch(airjoy_data_.SWC)
+    {
+        //无操作，进入底盘手操模式
+        case 0x00:
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            break;
+        }
+
+        //arm进入自动模式，底盘进入锁定模式
+        case 0x01:
+        {
+            //暂时不把路径规划部分纳入
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+
+            arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            break;
+        }
+
+        //weaponSage进入自动模式
+        case 0x02:
+        {
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
+            chassis_setup_->setChassisStatus(CHASSIS_LOCK_FORWEAPON);
+            break;
+        }
+    }
+
 }
 
 

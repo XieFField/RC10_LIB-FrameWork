@@ -29,7 +29,7 @@ void OmniChassis_Setup::loop()
             target_chassis_twist_.vy = airjoy_data_.left_y * 6;
             target_chassis_twist_.yaw_rate = -airjoy_data_.right_y * 6;
 			
-			target_yaw_ = dyaw;
+			target_yaw_ = yaw;
             
             break;
         }
@@ -40,7 +40,7 @@ void OmniChassis_Setup::loop()
             target_chassis_twist_.vy = airjoy_data_.left_y * 6;
 
             // 获取当前角度
-            float yaw_real_angle = dyaw;
+            float yaw_real_angle = yaw;
 
             yaw_pid_period_count_++;
             if(yaw_pid_period_count_ >= yaw_pid_period_)
@@ -51,6 +51,23 @@ void OmniChassis_Setup::loop()
 			
             break;
         }
+
+        case CHASSIS_LOCK_FORWEAPON:
+        {
+            float target_yaw_angle = 90.0f;
+
+            float yaw_real_angle = yaw;
+
+            yaw_pid_period_count_++;
+            if(yaw_pid_period_count_ >= yaw_pid_period_)
+            {
+                yaw_pid_period_count_ = 0;
+                target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_angle, yaw_real_angle);
+            }
+
+            break;
+        }
+
         case CHASSIS_AUTO_CONTROL:
         {
             break;

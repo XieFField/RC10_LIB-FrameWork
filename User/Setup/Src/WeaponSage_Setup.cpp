@@ -40,6 +40,10 @@ void Robot_WeaponSage_Setup::calibrate()
 void Robot_WeaponSage_Setup::manualControl()
 {
     //´ýÊµÏÖ
+    
+
+
+
 }
 
 void Robot_WeaponSage_Setup::idle()

@@ -96,6 +96,12 @@ public:
         return pos;
     }
 
+    void setWeaponSageControlStatus(WeaponSage_Status_E status)
+    {
+        weaponSage_status_ = status;
+    }
+
+
 protected:
     void loop() override;
 

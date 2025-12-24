@@ -171,7 +171,7 @@ void ArmSetup::manualControl()
         target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
 
     //吸盘开关
-    if(airjoy_data_.SWD == 0x01)
+    if(airjoy_data_.SWD == 0x01) 
         this->setSuckerStatus(Sucker_Status_E::SUCK);
     else
         this->setSuckerStatus(Sucker_Status_E::STOP);

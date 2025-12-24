@@ -27,28 +27,16 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "串联臂自动逻辑.md",
+                "file": "二代状态机.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "串联臂自动逻辑"
-            }
-          },
-          {
-            "id": "b5c79636773d3ae4",
-            "type": "leaf",
-            "state": {
-              "type": "release-notes",
-              "state": {
-                "currentVersion": "1.10.6"
-              },
-              "icon": "lucide-book-up",
-              "title": "Release Notes 1.10.6"
+              "title": "二代状态机"
             }
           }
         ],
-        "currentTab": 2
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -71,7 +59,7 @@
                 "autoReveal": false
               },
               "icon": "lucide-folder-closed",
-              "title": "Files"
+              "title": "文件列表"
             }
           },
           {
@@ -187,28 +175,31 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "switcher:Open quick switcher": false,
-      "graph:Open graph view": false,
-      "canvas:Create new canvas": false,
-      "daily-notes:Open today's daily note": false,
-      "templates:Insert template": false,
-      "command-palette:Open command palette": false,
-      "bases:Create new base": false
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false,
+      "bases:创建新数据库": false
     }
   },
-  "active": "b5c79636773d3ae4",
+  "active": "4c1d92abdb2dbc77",
   "lastOpenFiles": [
-    "自动模式方案书.md",
     "串联臂自动逻辑.md",
+    "二代状态机.md",
+    "初代状态机.md",
+    "Untitled.base",
+    "Untitled.md",
+    "初代状态机.pdf",
+    "自动模式方案书.md",
     "串联臂自动逻辑.pdf",
     "贝塞尔曲线中轨迹修正方案.md",
     "串联刚体臂吸盘解算.md",
     "ROS在全国机器人大赛中的应用.pdf",
-    "初代状态机.md",
     "自动模式方案书_tmp.html",
     "自动模式方案书.pdf",
     "自动模式方案书",
-    "初代状态机_tmp.html",
-    "初代状态机.pdf"
+    "初代状态机_tmp.html"
   ]
 }
