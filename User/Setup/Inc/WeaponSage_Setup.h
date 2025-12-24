@@ -23,6 +23,7 @@ extern "C" {
 #include "FSMstauts_enum.h"
 #include "BSP_RTOS.h"
 #include "APP_debugTool.h"
+#include "Module_CrsfReceiver.h"
 
 namespace WeaponSage_Setup
 {
@@ -52,6 +53,9 @@ namespace WeaponSage_Setup
 
         }auto_state_bool_S; //局部状态结构体
     }auto_ctrl_S;
+
+    float weapon_pos[4] = {0.0f, 0.0f, 0.0f, 0.0f}; //武器位置数组
+
 }
 
 
@@ -118,6 +122,7 @@ private:
     void calibrate();
 
     WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
+    RmPocketData_t airjoy_data_; 
 };
 
 

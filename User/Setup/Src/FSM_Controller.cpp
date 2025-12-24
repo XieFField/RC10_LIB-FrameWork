@@ -53,6 +53,29 @@ void FSM_Controller::loop()
         break;
    }
 
+
+
+   if(airjoy_data_.SWA ==0x01 && airjoy_data_.SWC==0x00)
+   {
+        if(airjoy_data_.SWA == 0x01)
+        {
+            //底盘用激光进行重定位
+            if(airjoy_data_.botton_click ==1)
+            {
+                Locate_Setup::getInstance()->set_startToLRL(true);
+            }
+            
+        }
+        else
+        {
+            Locate_Setup::getInstance()->set_startToLRL(false);
+        }
+    }
+    else
+    {
+        Locate_Setup::getInstance()->set_startToLRL(false);
+    }
+
    last_robot_status_ = robot_status_;
 }
 
@@ -72,6 +95,7 @@ void FSM_Controller::manual_ctrl()
         {
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
             arm_setup_->setArmStatus(ARM_IDLE);
+
             break;
         }
         case 0x01:

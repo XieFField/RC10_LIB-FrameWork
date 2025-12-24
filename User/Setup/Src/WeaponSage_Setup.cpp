@@ -8,6 +8,9 @@ Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
 
 void Robot_WeaponSage_Setup::loop()
 {
+
+    CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+
     switch(weaponSage_status_)
     {
         case WEAPONSAGE_MANUAL_CONTROL:
@@ -39,8 +42,26 @@ void Robot_WeaponSage_Setup::calibrate()
 
 void Robot_WeaponSage_Setup::manualControl()
 {
-    //待实现
-    
+    switch(airjoy_data_.SWA)
+    {
+        case 0x00:
+        {
+            //夹取武器
+            break;
+        }
+
+        case 0x01:
+        {
+            //进攻模式
+            break;
+        }
+
+        default:
+        {
+            idle();
+            break;
+        }
+    }
 
 
 
