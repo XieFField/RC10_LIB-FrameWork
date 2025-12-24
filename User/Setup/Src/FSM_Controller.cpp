@@ -118,8 +118,8 @@ void FSM_Controller::manual_ctrl()
 void FSM_Controller::auto_ctrl()
 {
     // 半自动控制模式下的实现
-    // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-    // chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
+    arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+    chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
 
     switch(airjoy_data_.SWC)
     {
@@ -148,7 +148,7 @@ void FSM_Controller::auto_ctrl()
             break;
         }
     }
-
+    //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
 }
 
 

@@ -172,7 +172,7 @@ protected:
 private:
 #if FD_CAN_DEBUG
     volatile std::size_t debug_last_frame_count_ = 0;
-    static CanFrame  debug_last_frames_[MAX_MOTORS * 2] ;
+    CanFrame  debug_last_frames_[MAX_MOTORS * 2] ;
 #endif
 };
 

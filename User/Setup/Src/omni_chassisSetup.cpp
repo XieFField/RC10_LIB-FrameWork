@@ -25,9 +25,20 @@ void OmniChassis_Setup::loop()
     {
         case CHASSIS_MANUAL_CONTROL_A:
         {
-            target_chassis_twist_.vx = -airjoy_data_.left_x * 6;
-            target_chassis_twist_.vy = airjoy_data_.left_y * 6;
-            target_chassis_twist_.yaw_rate = -airjoy_data_.right_y * 6;
+            if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                target_chassis_twist_.vx = -airjoy_data_.left_x * 6;
+            else
+                target_chassis_twist_.vx = 0.0f;
+
+            if(_tool_Abs(airjoy_data_.left_y) > 0.05f)
+                target_chassis_twist_.vy = airjoy_data_.left_y * 6;
+            else
+                target_chassis_twist_.vy = 0.0f;
+
+            if(_tool_Abs(airjoy_data_.right_y) > 0.05f)
+                target_chassis_twist_.yaw_rate = -airjoy_data_.right_y * 6;
+            else
+                target_chassis_twist_.yaw_rate = 0.0f;
 			
 			target_yaw_ = yaw;
             
@@ -36,8 +47,15 @@ void OmniChassis_Setup::loop()
 
         case CHASSIS_MANUAL_CONTROL_B:
         {
-            target_chassis_twist_.vx = -airjoy_data_.left_x * 6;
-            target_chassis_twist_.vy = airjoy_data_.left_y * 6;
+            if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                target_chassis_twist_.vx = -airjoy_data_.left_x * 6;
+            else
+                target_chassis_twist_.vx = 0.0f;
+
+            if(_tool_Abs(airjoy_data_.left_y) > 0.05f)
+                target_chassis_twist_.vy = airjoy_data_.left_y * 6;
+            else
+                target_chassis_twist_.vy = 0.0f;
 
             // 获取当前角度
             float yaw_real_angle = yaw;
@@ -74,10 +92,12 @@ void OmniChassis_Setup::loop()
         }
         case CHASSIS_STOP:
         {
-            target_chassis_twist_.vx = 0;
-            target_chassis_twist_.vy = 0;
-            target_chassis_twist_.yaw_rate = 0;
-
+            // target_chassis_twist_.vx = 0;
+            // target_chassis_twist_.vy = 0;
+            // target_chassis_twist_.yaw_rate = 0;
+            this->wheels_[0]->setTargetCurrent(0);
+            this->wheels_[1]->setTargetCurrent(0);
+            this->wheels_[2]->setTargetCurrent(0);
             break;
         }
         default:

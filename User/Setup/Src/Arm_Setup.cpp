@@ -1477,7 +1477,7 @@ void ArmSetup::calibrateMotor()
         arm_ctrlStatus.calibrate_start = true;
     }
     this->motor_stretch_->setTargetCurrent(-700.0f); // 给予一个小电流顶住限位
-    this->motor_pitch_->setTargetCurrent(-700.0f); // 给予一个小电流顶住限位
+    this->motor_pitch_->setTargetCurrent(-1000.0f); // 给予一个小电流顶住限位
     this->motor_rotate_->setTargetCurrent(1000.0f);
     if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.5f)
     {

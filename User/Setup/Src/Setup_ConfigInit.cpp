@@ -197,7 +197,6 @@ void ALL_Setup_ConfigInit(void)
 
    Finite_StateMachine.init();
 
-   //  CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
    
 
 	 instance_man.RegisterInstance(&laserpos);
@@ -220,7 +219,7 @@ void CAN_Motor_Init(void)
    DJIGroupCAN1_Low.addMotor(&omni_wheel1);
    DJIGroupCAN1_Low.addMotor(&omni_wheel2);
    DJIGroupCAN1_Low.addMotor(&omni_wheel3);
-   DJIGroupCAN1_Low.addMotor(&omni_wheel4);
+//   DJIGroupCAN1_Low.addMotor(&omni_wheel4);
 
    DJIGroupCAN1_High.addMotor(&arm_launchMotor);
    DJIGroupCAN1_High.addMotor(&arm_stretchMotor);
@@ -233,7 +232,7 @@ void CAN_Motor_Init(void)
    CAN1_Bus->registerMotor(&omni_wheel1);
    CAN1_Bus->registerMotor(&omni_wheel2);
    CAN1_Bus->registerMotor(&omni_wheel3);
-   CAN1_Bus->registerMotor(&omni_wheel4);
+//   CAN1_Bus->registerMotor(&omni_wheel4);
 
    CAN1_Bus->registerMotor(&arm_launchMotor);
    CAN1_Bus->registerMotor(&arm_stretchMotor);
