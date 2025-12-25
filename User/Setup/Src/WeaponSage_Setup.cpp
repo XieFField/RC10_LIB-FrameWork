@@ -42,7 +42,11 @@ void Robot_WeaponSage_Setup::loop()
             idle();
             break;
     }
+<<<<<<< Updated upstream
 	last_weaponSage_status_=weaponSage_status_;
+=======
+	weaponSage_last_status_=weaponSage_status_;
+>>>>>>> Stashed changes
 }
 
 void Robot_WeaponSage_Setup::calibrate()
@@ -83,19 +87,33 @@ void Robot_WeaponSage_Setup::manualControl()
 
 void Robot_WeaponSage_Setup::idle()//空闲状态,维持上一个状态
 {
+<<<<<<< Updated upstream
 	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
 	if(last_weaponSage_status_ != WEAPONSAGE_IDLE)
 	{
 		this->last_pos_=get_CurrentPos();
 		this->target_pos_=this->last_pos_;
 		last_weaponSage_status_=WEAPONSAGE_IDLE;
+=======
+    //����״̬��ά�ֵ�ǰ״̬
+	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+	if(weaponSage_last_status_!=WEAPONSAGE_IDLE)
+	{
+		this->last_pos_ = this->get_CurrentPos();
+		this->target_pos_=this->last_pos_;
+		weaponSage_last_status_=WEAPONSAGE_IDLE;
+
+>>>>>>> Stashed changes
 	}
 	this->setTarget(target_pos_.launch_pos_, WeaponSage::Launch_Motor);
     this->setTarget(target_pos_.claw_pos_, WeaponSage::Claw_Motor);
     this->setTarget(target_pos_.traverse_pos_, WeaponSage::Traverse_Motor);
     this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);
 	
+<<<<<<< Updated upstream
     //����״̬��ά�ֵ�ǰ״̬
+=======
+>>>>>>> Stashed changes
 }
 
 void Robot_WeaponSage_Setup::debug()
@@ -113,7 +131,11 @@ void Robot_WeaponSage_Setup::autoControl()
      *  3.���½���ɺ��ҵ����������ܵײ��Ӵ�����ִ��ץȡ
      *  4.�����̺��˵��ܽ�ì��̧���λ�ú�ִ��̧��
      */
+<<<<<<< Updated upstream
     switch(now_state_)
+=======
+	   switch(now_state_)
+>>>>>>> Stashed changes
     {
         case WeaponSage_Setup::STATE_DONE:
         {
@@ -192,6 +214,7 @@ void Robot_WeaponSage_Setup::autoControl()
             break;
     }
 }
+	
 
 void Robot_WeaponSage_Setup::stop()
 {
@@ -205,9 +228,15 @@ void Robot_WeaponSage_Setup::stop()
 bool Robot_WeaponSage_Setup::State_AimPosition(int pole_num)
 {
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+<<<<<<< Updated upstream
     this->setTarget(auto_ctrl_.Pole_pos[pole_num], WeaponSage::Traverse_Motor);
     Point2D claw_pos = this->getClawPos();
     if(fabs(claw_pos.y - auto_ctrl_.Pole_pos[pole_num]) <0.001f)
+=======
+    this->setTarget( WeaponSage_Setup::weapon_pos[pole_num], WeaponSage::Traverse_Motor);
+    Point2D claw_pos = this->getClawPos();
+    if(fabs(claw_pos.y -  WeaponSage_Setup::weapon_pos[pole_num]) <0.001f)
+>>>>>>> Stashed changes
     {
         return true;
     }
@@ -220,10 +249,16 @@ bool Robot_WeaponSage_Setup::State_AimPosition(int pole_num)
 void Robot_WeaponSage_Setup::State_LowerClaw()
 {
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+<<<<<<< Updated upstream
 	auto_ctrl_.tarch_height = initData_.max_launchHeight_;
     this->setTarget(auto_ctrl_.tarch_height, WeaponSage::Launch_Motor);
   
     //����צ״̬
+=======
+	auto_ctrl_.tarch_height = 0.5*initData_.max_launchHeight_;
+    this->setTarget(auto_ctrl_.tarch_height, WeaponSage::Launch_Motor);
+  
+>>>>>>> Stashed changes
 }
 
 bool Robot_WeaponSage_Setup::State_GrabClaw()
@@ -251,7 +286,11 @@ bool Robot_WeaponSage_Setup::State_GrabClaw()
     {
         return false;
     }
+<<<<<<< Updated upstream
     //ץȡצ״̬
+=======
+    //?????
+>>>>>>> Stashed changes
 }
 
 void Robot_WeaponSage_Setup::State_Lift()
@@ -262,7 +301,11 @@ void Robot_WeaponSage_Setup::State_Lift()
         auto_ctrl_.up_height = initData_.max_launchHeight_;
         this->setTarget(auto_ctrl_.up_height, WeaponSage::Launch_Motor);
     }
+<<<<<<< Updated upstream
     //����״̬
+=======
+    //??????
+>>>>>>> Stashed changes
 }
 
 WeaponSage_InitData_S initData_=

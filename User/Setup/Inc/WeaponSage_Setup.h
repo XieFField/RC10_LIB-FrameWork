@@ -37,12 +37,21 @@ namespace WeaponSage_Setup
     }ctrl_status_S;
 
     typedef enum{
+<<<<<<< Updated upstream
         //���Զ����̵�ÿ��״̬ö��
         STATE_AIM_POSITION, //��׼λ��
         STATE_LOWER_CLAW,  //�½�צ��
         STATE_GRAB_CLAW,   //ץȡצ��
         STATE_LIFT_POSITION, //����λ��
         STATE_DONE //����
+=======
+        //���Զ����̵�ÿ��״̬ö��
+        STATE_AIM_POSITION, //��׼λ��
+        STATE_LOWER_CLAW,  //�½�צ��
+        STATE_GRAB_CLAW,   //ץȡצ��
+        STATE_LIFT_POSITION, //����λ��
+        STATE_DONE 
+>>>>>>> Stashed changes
     }auto_GRABstate_S;
 
 
@@ -54,8 +63,12 @@ namespace WeaponSage_Setup
             bool grab_start = false;
             float grab_startTime = 0.0f;
             bool is_moving = false;
+<<<<<<< Updated upstream
         }auto_state_bool_S; //�ֲ�״̬�ṹ��
         float Pole_pos[4]={0.0f, 0.0f, 0.0f, 0.0f}; 
+=======
+        }auto_state_bool_S; 
+>>>>>>> Stashed changes
         float claw_close_pos = 32.36f;
         float claw_open_pos = 49.58f;
         float tarch_height = 0.0f; 
@@ -145,12 +158,22 @@ private:
     bool State_GrabClaw();
     void State_Lift();
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
+<<<<<<< Updated upstream
     WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
 	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_IDLE;
 	WeaponSage_Setup::auto_GRABstate_S now_state_;
 	
 	
 	
+=======
+	WeaponSage_Setup::auto_GRABstate_S now_state_;
+    
+    WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
+	WeaponSage_Status_E weaponSage_last_status_=WEAPONSAGE_IDLE;
+    RmPocketData_t airjoy_data_; 
+
+    WeaponSage_Setup::manual_ctrlForgrip_S manual_ctrlForgrip_;
+>>>>>>> Stashed changes
 };
 
 extern WeaponSage_InitData_S initData_;
