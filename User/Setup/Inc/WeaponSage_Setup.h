@@ -45,11 +45,11 @@ namespace WeaponSage_Setup
         STATE_LIFT_POSITION, //ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
         STATE_DONE //ï¿½ï¿½ï¿½ï¿½
 =======
-        //ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ìµï¿½Ã¿ï¿½ï¿½×´Ì¬Ã¶ï¿½ï¿½
-        STATE_AIM_POSITION, //ï¿½ï¿½×¼Î»ï¿½ï¿½
-        STATE_LOWER_CLAW,  //ï¿½Â½ï¿½×¦ï¿½ï¿½
-        STATE_GRAB_CLAW,   //×¥È¡×¦ï¿½ï¿½
-        STATE_LIFT_POSITION, //ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
+        //½«×Ô¶¯¹ý³ÌµÄÃ¿¸ö×´Ì¬Ã¶¾Ù
+        STATE_AIM_POSITION, //¶Ô×¼Î»ÖÃ
+        STATE_LOWER_CLAW,  //ÏÂ½µ×¦×Ó
+        STATE_GRAB_CLAW,   //×¥È¡×¦×Ó
+        STATE_LIFT_POSITION, //ÌáÉýÎ»ÖÃ
         STATE_DONE 
 >>>>>>> Stashed changes
     }auto_GRABstate_S;
@@ -57,7 +57,7 @@ namespace WeaponSage_Setup
 
     typedef struct{
 
-        struct{
+         struct{
             // bool start
             bool is_matching = false;
             bool grab_start = false;
