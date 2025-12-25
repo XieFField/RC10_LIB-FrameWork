@@ -52,9 +52,9 @@ void Robot_WeaponSage_Setup::manualControl()
         case 0x00:
         {
             //夹取武器
-            if(airjoy_data_.SWD == 0x00)
+            if(airjoy_data_.scroll_wheel == 0x00)
                 this->setTarget(0.0f, WeaponSage::Claw_Motor); //张开爪子
-            else if(airjoy_data_.SWD == 0x01)
+            else if(airjoy_data_.scroll_wheel == 0x01)
                 this->setTarget(initData_.max_clawAngle_, WeaponSage::Claw_Motor); //夹紧爪子
             else
                 this->setTarget(0.0f, WeaponSage::Claw_Motor); //张开爪子
@@ -80,7 +80,15 @@ void Robot_WeaponSage_Setup::manualControl()
                 ctrl_status_.target_poleIndex--;
             }
 
+            this->setTarget(WeaponSage_Setup::weapon_pos[ctrl_status_.target_poleIndex], WeaponSage::Traverse_Motor);
 
+            if(airjoy_data_.SWD == 0x00)
+                this->setTarget(0.0f, WeaponSage::Launch_Motor); //下降
+            else if(airjoy_data_.SWD == 0x01)
+                this->setTarget(initData_.max_launchHeight_, WeaponSage::Launch_Motor); //上升
+            else
+                this->setTarget(0.0f, WeaponSage::Launch_Motor); //下降
+                
 
             
 
@@ -93,6 +101,28 @@ void Robot_WeaponSage_Setup::manualControl()
         case 0x01:
         {
             //进攻模式
+            this->setTarget(90.0f, WeaponSage::Wrist_Motor); //手腕前倾90度
+            this->setTarget(initData_.max_clawAngle_, WeaponSage::Claw_Motor); //夹紧爪子
+
+
+            if(_tool_Abs(airjoy_data_.right_y) > 0.1f)
+            {
+                if(airjoy_data_.right_y > 0.1f)
+                    target_pos_.launch_pos_ += 0.001f; //升高
+                else if(airjoy_data_.right_y < -0.1f)
+                    target_pos_.launch_pos_ -= 0.001f; //降低
+            }
+
+            this->setTarget(target_pos_.launch_pos_, WeaponSage::Launch_Motor);
+
+
+            if(airjoy_data_.SWD == 0x00)
+                this->setTarget(0.0f, WeaponSage::Traverse_Motor); //收住
+            else if(airjoy_data_.SWD == 0x01)
+                this->setTarget(initData_.max_traverseLength_, WeaponSage::Traverse_Motor); //进攻
+            else
+                this->setTarget(0.0f, WeaponSage::Traverse_Motor); //收住
+
             break;
         }
 
