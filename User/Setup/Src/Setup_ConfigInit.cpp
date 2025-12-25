@@ -1,31 +1,32 @@
 #include "Setup_ConfigInit.h"
- // ï¿½â²¿ï¿½ï¿½ï¿½ï¿½USBï¿½ï¿½ï¿½ï¿½ï¿½è±¸ï¿½ï¿½ï¿½
+ // Íâ²¿ÉùÃ÷USB¸ßËÙÉè±¸¾ä±ú
 extern "C" 
 {
         extern USBD_HandleTypeDef hUsbDeviceHS;
 }
-fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // ï¿½ï¿½È¡FDCAN1ï¿½ï¿½Î¨Ò»Êµï¿½ï¿½
-DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4ï¿½ï¿½M3508/M2006ï¿½ï¿½ï¿½
-DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8ï¿½ï¿½M3508/M2006ï¿½ï¿½ï¿½
+fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // »ñÈ¡FDCAN1µÄÎ¨Ò»ÊµÀý
+fdCANbus* const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // »ñÈ¡FDCAN2µÄÎ¨Ò»ÊµÀý
 
-fdCANbus* const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // ï¿½ï¿½È¡FDCAN2ï¿½ï¿½Î¨Ò»Êµï¿½ï¿½
-DJI_Group DJIGroupCAN2_Low(send_idLow(), CAN2_Bus); // 1~4ï¿½ï¿½M3508/M2006ï¿½ï¿½ï¿½
-DJI_Group DJIGroupCAN2_High(send_idHigh(), CAN2_Bus); // 5~8ï¿½ï¿½M3508/M2006ï¿½ï¿½ï¿½
+
+DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4ºÅM3508/M2006µç»ú
+DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8ºÅM3508/M2006µç»ú
+
+DJI_Group DJIGroupCAN2_Low(send_idLow(), CAN2_Bus); // 1~4ºÅM3508/M2006µç»ú
 
 
 /*==============Controller Instances===========*/
 uint8_t laser_rx_buffer[20];
 uint8_t laser_rx_buffer1[20];
 uint8_t laser_rx_buffer2[20];
-//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//¼¤¹â²â¾à
 //USB_CDC_ cdc(&hUsbDeviceHS);
 LaserPosition laserpos(15,laser_rx_buffer,&huart3);
 LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
-Locate_Setup set1(&instance_man);
+// Locate_Setup set1(&instance_man);
 
-OmniChassis_Setup ChassisOmni(0.442f/2.f,420, 0.74f, 0.8363f, true); // ï¿½ï¿½ï¿½Ó°ë¾¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½Ù£ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½
+OmniChassis_Setup ChassisOmni(0.442f/2.f,420, 0.74f, 0.8363f, true); // ÂÖ×Ó°ë¾¶£¬×î´óÂÖ×Ó×ªËÙ£¬µ×ÅÌ µ× Ñü
 
 ArmSetup ARM_Controller(arm_initData);
 FSM_Controller Finite_StateMachine;
@@ -40,9 +41,9 @@ Robot_WeaponSage_Setup Weapon_Controller(initData_);
 M3508 omni_wheel1(1, CAN1_Bus); M3508 omni_wheel2(2, CAN1_Bus); 
 M3508 omni_wheel3(3, CAN1_Bus); M3508 omni_wheel4(4, CAN1_Bus);
 
-                           /* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */      
-M3508 arm_launchMotor(5, CAN1_Bus); M2006 arm_stretchMotor(6, CAN1_Bus);
-M3508 arm_rotateMotor(7, CAN1_Bus); M2006 arm_pitchMotor(8, CAN1_Bus);
+                           /* ´®Áª±Û */      
+M3508 arm_launchMotor(5, CAN1_Bus); M2006 arm_stretchMotor(8, CAN1_Bus);
+M3508 arm_rotateMotor(7, CAN1_Bus); M2006 arm_pitchMotor(6, CAN1_Bus);
 
 M3508 Weapon_launchMotor(1, CAN2_Bus); M2006 Weapon_clawMotor(2, CAN2_Bus);
 M2006 Weapon_traverseMotor(3, CAN2_Bus); DM_Motor Weapon_wristMotor(J4310_Type, 0x05,0x05, CAN2_Bus);
@@ -168,7 +169,7 @@ void ALL_Setup_ConfigInit(void)
 
    Position* pos = Position::GetInstance(&huart1);
    pos->InitUART();
-   TimeStamp::getInstance().init(&htim4); // ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+   TimeStamp::getInstance().init(&htim4); // ÆôÓÃÊ±¼ä´Á·þÎñ
    debug_init();
 	
    CAN_Motor_Init();
@@ -177,7 +178,7 @@ void ALL_Setup_ConfigInit(void)
    ARM_Controller.setArmStatus(ARM_IDLE);
    
    Weapon_Controller.init(&Weapon_launchMotor, &Weapon_clawMotor,&Weapon_traverseMotor, &Weapon_wristMotor);
-   Weapon_Controller.setWeaponSageStatus(WEAPONSAGE_CALIBRATE);
+   Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
 
    ChassisOmni.registerWheelMotor(0, &omni_wheel1);
    ChassisOmni.registerWheelMotor(1, &omni_wheel2);
@@ -196,19 +197,19 @@ void ALL_Setup_ConfigInit(void)
 
    Finite_StateMachine.init();
 
-   //  CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
    
 
 	 instance_man.RegisterInstance(&laserpos);
 	 instance_man.RegisterInstance(&laserpos1);
 	 instance_man.RegisterInstance(&laserpos2);
 	 instance_man.InstanceManager_Init();
-//ï¿½ï¿½ï¿½ï¿½ï¿½Ø¶ï¿½Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý³ï¿½Ê¼ï¿½ï¿½
-   set1.init();	
-	 set1.laser_initData_.d=0.5;
-	 set1.locate_setup_init();
-	 set1.set_startToLRL(true);
-//ï¿½×´ï¶¨Î»Êµï¿½ï¿½ï¿½ï¿½
+//¼¤¹âÖØ¶¨Î»½âÎöÊý¾Ý³õÊ¼»¯
+     Locate_Setup* set1 = Locate_Setup::getInstance();
+     set1->init(&instance_man);	
+     set1->laser_initData_.d=0.5;
+     set1->locate_setup_init();
+     set1->set_startToLRL(true);
+//À×´ï¶¨Î»ÊµÀý»¯
 	 Lader_position*ladar=Lader_position::GetInstance(&hUsbDeviceHS);
 }
 
@@ -218,7 +219,7 @@ void CAN_Motor_Init(void)
    DJIGroupCAN1_Low.addMotor(&omni_wheel1);
    DJIGroupCAN1_Low.addMotor(&omni_wheel2);
    DJIGroupCAN1_Low.addMotor(&omni_wheel3);
-   DJIGroupCAN1_Low.addMotor(&omni_wheel4);
+//   DJIGroupCAN1_Low.addMotor(&omni_wheel4);
 
    DJIGroupCAN1_High.addMotor(&arm_launchMotor);
    DJIGroupCAN1_High.addMotor(&arm_stretchMotor);
@@ -231,7 +232,7 @@ void CAN_Motor_Init(void)
    CAN1_Bus->registerMotor(&omni_wheel1);
    CAN1_Bus->registerMotor(&omni_wheel2);
    CAN1_Bus->registerMotor(&omni_wheel3);
-   CAN1_Bus->registerMotor(&omni_wheel4);
+//   CAN1_Bus->registerMotor(&omni_wheel4);
 
    CAN1_Bus->registerMotor(&arm_launchMotor);
    CAN1_Bus->registerMotor(&arm_stretchMotor);
@@ -253,18 +254,18 @@ void CAN_Motor_Init(void)
    CAN1_Bus->init();
    CAN2_Bus->init();
 
-   // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½PIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
+   // µ×ÅÌÂÖ×Óµç»úPID²ÎÊý³õÊ¼»¯
    omni_wheel1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    omni_wheel2.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    omni_wheel3.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    // omni_wheel4.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
 
-   // ï¿½ï¿½Ðµï¿½Ûµï¿½ï¿½PIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
+   // »úÐµ±Ûµç»úPID²ÎÊý³õÊ¼»¯
    
    PID_Param_Config arm_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
    PID_Param_Config arm_3508_anglePID = m3508_angle_pid_params;
    arm_3508_anglePID.output_limit = 200.0f;
-   // arm_3508_speedPID.output_limit = 420.0f; // ï¿½ï¿½ï¿½Ý»ï¿½Ðµï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
+   // arm_3508_speedPID.output_limit = 420.0f; // ¸ù¾Ý»úÐµ±ÛÒªÇóµ÷ÕûÊä³öÏÞ·ù
    
    arm_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
 

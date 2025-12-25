@@ -1,11 +1,11 @@
 #include "Arm_setup.h"
 
-static bool s_has_recorded_strategy = false; // [新增] 记录是否已经记录过策略
+static bool s_has_recorded_strategy = false; //记录是否已经记录过策略
 
 /**
  * @brief 寻主循环
  */
-// int print_cout = 0;
+
 void ArmSetup::loop()
 {
     if(!arm_ctrlStatus.init_flag)
@@ -29,19 +29,6 @@ void ArmSetup::loop()
 
     if( arm_status_ == ARM_AUTO_CONTROL)
     {
-        // // [Fix] 增加单次触发逻辑，防止循环中重复置位导致无法停止
-        // static bool s_auto_triggered = false;
-        
-        // // 如果刚进入自动模式，重置触发标志
-        // if(last_arm_status_ != ARM_AUTO_CONTROL)
-        //     s_auto_triggered = false;
-
-        // if(arm_ctrlStatus.is_calibrating && !s_auto_triggered)
-        // {
-        //     this->start_toAutoCtrl(true);
-        //     s_auto_triggered = true;
-        // }
-
         static bool ifFirst = true;
         if(ifFirst)
         {
@@ -50,6 +37,8 @@ void ArmSetup::loop()
             ifFirst = false;
         }
     }
+
+
     switch(arm_status_)
     {
         case ARM_MANUAL_CONTROL:
@@ -158,8 +147,7 @@ void ArmSetup::manualControl()
     else
         target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_; // 保持不变
 
-    
-    //云台操控
+     //云台操控
     if(airjoy_data_.right_x != 0)
     {
         target_joint_status_.rotateJoint_angle_ = target_joint_status_.rotateJoint_angle_ 
@@ -183,7 +171,7 @@ void ArmSetup::manualControl()
         target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
 
     //吸盘开关
-    if(airjoy_data_.SWD == 0x01)
+    if(airjoy_data_.SWD == 0x01) 
         this->setSuckerStatus(Sucker_Status_E::SUCK);
     else
         this->setSuckerStatus(Sucker_Status_E::STOP);
@@ -192,6 +180,7 @@ void ArmSetup::manualControl()
     this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
     this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
     this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
+   
     this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
 
 }
@@ -235,6 +224,7 @@ void ArmSetup::autoControl()
         case TWO:
         {
             //两个KFS拾取流程
+            auto_two();
             break;
         }
     }
@@ -507,10 +497,14 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
     // [单圈模式] 记录Align阶段的旋转方向
     if(!rotate_multiTurn_)
     {
-        if(auto_ctrl_.current_strategy == ROTATE_PATH_POSITIVE)
-            recorded_align_strategy_ = ROTATE_PATH_POSITIVE;
-        else if(auto_ctrl_.current_strategy == ROTATE_PATH_NEGATIVE)
-            recorded_align_strategy_ = ROTATE_PATH_NEGATIVE;
+        // 仅在尚未记录明确策略时记录，避免后续微调或超调导致策略被覆盖为SHORTEST或反向
+        if(recorded_align_strategy_ == ROTATE_PATH_SHORTEST)
+        {
+            if(auto_ctrl_.current_strategy == ROTATE_PATH_POSITIVE)
+                recorded_align_strategy_ = ROTATE_PATH_POSITIVE;
+            else if(auto_ctrl_.current_strategy == ROTATE_PATH_NEGATIVE)
+                recorded_align_strategy_ = ROTATE_PATH_NEGATIVE;
+        }
     }
 
     this->setRotateStrategy(auto_ctrl_.current_strategy);
@@ -1000,6 +994,7 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
 
 /**
  * @brief 寻自动返回
+ * @param 这个不是KFS的编号，而是索引，0为第一个KFS，1为第二个KFS，其他值视为无下一个KFS
  */
 bool ArmSetup::state_return(int next_targetKFS)
 {
@@ -1081,7 +1076,7 @@ bool ArmSetup::state_return(int next_targetKFS)
 		if(next_targetKFS==1)
 		    TargetMap=auto_ctrl_.path.bestB2;
 		
-		angel=MF_AutoCtrler::Get_ArmBaseTargetAngle(TargetMap,auto_ctrl_.KFS_Movedirection[next_targetKFS]);
+		angel = MF_AutoCtrler::Get_ArmBaseTargetAngle(TargetMap,auto_ctrl_.KFS_Movedirection[next_targetKFS]);
     }
     else
     {
@@ -1170,6 +1165,7 @@ void ArmSetup::auto_onlyOne()
                 auto_ctrl_.flag.reach_finishTime = 0.0f;
                 
                 s_has_recorded_strategy = false; // [新增] 重置策略记录标志
+                recorded_align_strategy_ = ROTATE_PATH_SHORTEST; // [新增] 重置记录的Align策略
 
                 bool return_done = false;
 
@@ -1200,17 +1196,12 @@ void ArmSetup::auto_onlyOne()
             float current_h = this->get_currentJointStatus().launchJoint_Height_;
             
             if(_tool_Abs(current_h - target_h) < 0.01f || 
-               (target_h < auto_ctrl_.flag.safe_height && _tool_Abs(current_h - auto_ctrl_.flag.safe_height) < 0.01f))
+               (target_h < auto_ctrl_.flag.safe_height 
+                    && _tool_Abs(current_h - auto_ctrl_.flag.safe_height) < 0.01f))
             {
                 auto_ctrl_.now_state = STATE_SIGN_ALIGN;
 
             }
-            // if(MF_high[auto_ctrl_.targetKFS[0] - 1] == 0.2f)
-            // {
-            //     if(_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - 
-            //     MF_high[auto_ctrl_.targetKFS[0] - 1] - 0.2f)
-            //         )
-            // }
             break;
         }
 
@@ -1265,6 +1256,188 @@ void ArmSetup::auto_onlyOne()
     }
 }
 
+void ArmSetup::auto_two()
+{
+    /**
+     * 就version 6.0的基础上，从原本的only_one模式，扩展到two模式
+     *   在two模式下，机械臂会依次拾取两个KFS
+     *   1. 执行和only_one模式一样的流程，拾取第一个KFS
+     *   2. 在拾取第一个KFS的state_return阶段，机械臂会前往第二个KFS的初始位置(0/180度)，并且升高到安全高度(0.2m)
+     *   3. 然后进入第二个KFS的拾取流程
+     *   4. 第二个KFS的拾取流程和第一个类似，拾取完成后state_return到初始位置(0度)，结束。
+     * 
+     * 
+     *   大致总体状态机策划
+     *   1.刚进入auto_two模式，拾取第一个KFS的流程和only_one大致相同；
+     *     都是先把标志位都先初始化完毕，然后进入state_done先调整到第一个KFS的初始位置
+     *     然后进入state_to_target_height，升降到第一个KFS的目标高度
+     *     然后进入state_sign_align，对齐第一个KFS 接着是state_aim_ext伸展吸附
+     *     最后是state_carrying放置第一个KFS
+     *     然后执行state_return，返回到第二个KFS的初始位置(0/180度)，并且升高到安全高度(0.2m)
+     *     接着进入第二个KFS的拾取流程
+     *     都是先进入state_to_target_height，升降到第二个KFS的目标高度
+     *     然后进入state_sign_align，对齐第二个KFS
+     *     接着是state_aim_ext伸展吸附
+     *     然后是state_carrying放置第二个KFS
+     *     最后执行state_return，返回到初始位置(0度)，结束。
+     *     
+     *     这里也有一点就是旋转策略的继承
+     *     拾取第二个KFS的时候，旋转策略不继承第一个KFS的。
+     *     而是在state_sign_align阶段重新记录旋转策略。
+     *     这样做的目的是防止第一个KFS的旋转策略对第二个KFS造成影响。
+     * 
+     *     @details 没有人类了
+     */
+
+    switch(auto_ctrl_.now_state)
+    {
+        case STATE_DONE:
+        {
+            if(auto_ctrl_.start_to_autoctrl)
+            {
+                // 初始化标志位
+                auto_ctrl_.flag.align_done = false;
+                auto_ctrl_.flag.ext_done = false;
+                auto_ctrl_.flag.carry_done = false;
+                auto_ctrl_.flag.return_done = false;
+
+                auto_ctrl_.flag.is_reachingTarget = false;
+                auto_ctrl_.flag.reach_finishTime = 0.0f;
+                
+                s_has_recorded_strategy = false; 
+                recorded_align_strategy_ = ROTATE_PATH_SHORTEST; 
+
+                auto_ctrl_.now_targetIndex = 0; // 从第一个KFS开始
+
+                // 前往第一个KFS的初始位置
+                bool return_done = state_return(auto_ctrl_.now_targetIndex); 
+
+                if(return_done)
+                {
+                    auto_ctrl_.now_state = STATE_TO_TARGET_HIGHT; //影色舞
+                }
+            }
+            else
+            {
+                this->idle();
+            }
+            break;
+        }
+
+        case STATE_TO_TARGET_HIGHT:
+        {
+            int current_kfs_idx = auto_ctrl_.now_targetIndex;
+            state_toTargetHight(auto_ctrl_.targetKFS[current_kfs_idx]);
+            
+            // 高度判断逻辑
+            float target_h = 0.0f;
+            float kfs_h = MF_high[auto_ctrl_.targetKFS[current_kfs_idx]-1];
+            
+            if(kfs_h == 0.2f)
+                target_h = 0.0f;
+            else if(kfs_h == 0.4f)
+                target_h = auto_ctrl_.flag.safe_height;
+            else if(kfs_h == 0.6f)
+                target_h = init_data_.max_launchHeight_;
+
+            float current_h = this->get_currentJointStatus().launchJoint_Height_;
+            
+            //判断是否到达目标高度
+            // [Fix] 如果目标高度低于安全高度，且当前已到达安全高度（因禁区限制无法继续下降），
+            // 也允许进入下一状态
+
+            if(_tool_Abs(current_h - target_h) < 0.01f || 
+               (target_h < auto_ctrl_.flag.safe_height && 
+                    _tool_Abs(current_h - auto_ctrl_.flag.safe_height) < 0.01f))
+            {
+                auto_ctrl_.now_state = STATE_SIGN_ALIGN;
+            }
+            break;
+        }
+
+        case STATE_SIGN_ALIGN:
+        {
+            int current_kfs_idx = auto_ctrl_.now_targetIndex;
+            state_signAlign(auto_ctrl_.targetKFS[current_kfs_idx], auto_ctrl_.flag.align_done);
+            if(auto_ctrl_.flag.align_done)
+            {
+                auto_ctrl_.now_state = STATE_AIM_EXT;
+            }
+            break;
+        }
+
+        case STATE_AIM_EXT:
+        {
+            int current_kfs_idx = auto_ctrl_.now_targetIndex;
+            auto_ctrl_.flag.ext_done = state_aimExt(auto_ctrl_.targetKFS[current_kfs_idx]);
+            if(auto_ctrl_.flag.ext_done)
+            {
+                auto_ctrl_.now_state = STATE_CARRYING;
+            }
+            break;
+        }
+
+        case STATE_CARRYING:
+        {
+            int current_kfs_idx = auto_ctrl_.now_targetIndex;
+            state_carrying(auto_ctrl_.targetKFS[current_kfs_idx], auto_ctrl_.flag.carry_done);
+            if(auto_ctrl_.flag.carry_done)
+            {
+                auto_ctrl_.now_state = STATE_RETURN;
+            }
+            break;
+        }
+
+        case STATE_RETURN:
+        {
+            if(auto_ctrl_.now_targetIndex == 0)
+            {
+                // 第一个KFS完成，准备前往第二个KFS
+                // 传入1，表示下一个目标是第二个KFS (index 1)
+                auto_ctrl_.flag.return_done = state_return(1); 
+                
+                if(auto_ctrl_.flag.return_done)
+                {
+                    // 切换到第二个KFS
+                    auto_ctrl_.now_targetIndex = 1;
+                    
+                    // 重置标志位
+                    auto_ctrl_.flag.align_done = false;
+                    auto_ctrl_.flag.ext_done = false;
+                    auto_ctrl_.flag.carry_done = false;
+                    auto_ctrl_.flag.return_done = false;
+                    
+                    auto_ctrl_.flag.is_reachingTarget = false;
+                    auto_ctrl_.flag.reach_finishTime = 0.0f;
+
+                    // 重置策略，防止继承
+                    s_has_recorded_strategy = false;
+                    recorded_align_strategy_ = ROTATE_PATH_SHORTEST;
+
+                    // 回到高度调整状态
+                    auto_ctrl_.now_state = STATE_TO_TARGET_HIGHT;
+                }
+            }
+            else
+            {
+                // 第二个KFS完成，结束
+                // 传入3，表示无下一个目标
+                auto_ctrl_.flag.return_done = state_return(3);
+                
+                if(auto_ctrl_.flag.return_done)
+                {
+                    auto_ctrl_.now_state = STATE_DONE;
+                    auto_ctrl_.start_to_autoctrl = false;
+                }
+            }
+            break;
+        }
+        default:
+            idle();
+            break;
+    }
+
+}
 
 
 /*=================================================================*/
@@ -1274,38 +1447,6 @@ void ArmSetup::auto_onlyOne()
  */
 void ArmSetup::stop()
 {
-    // // 停止控制函数
-    // this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    // this->setSuckerStatus(Sucker_Status_E::STOP);
-
-    // this->set_LaunchHeight(0.0f);
-    // this->set_StretchLength(0.0f);
-    // this->set_RotateAngle(0.0f);
-    // this->set_PitchAngle(0.0f);
-
-    // if(_tool_Abs(this->motor_launch_->getTotalAngle() - 0.0f) < 0.1f)
-    //     this->motor_launch_->setTargetCurrent(0.0f);
-    
-    // if(_tool_Abs(this->motor_stretch_->getTotalAngle() - 0.0f) < 0.1f)
-    //     this->motor_stretch_->setTargetCurrent(0.0f);
-
-    // if(_tool_Abs(this->motor_rotate_->getTotalAngle() - 0.0f) < 0.1f)
-    //     this->motor_rotate_->setTargetCurrent(0.0f);
-
-    // if(_tool_Abs(this->motor_pitch_->getTotalAngle() - 0.0f) < 0.1f)
-    //     this->motor_pitch_->setTargetCurrent(0.0f);
-    // if((_tool_Abs(this->motor_launch_->getTotalAngle() - 0.0f) < 0.1f) && 
-    //    (_tool_Abs(this->motor_stretch_->getTotalAngle() - 0.0f) < 0.1f) &&
-    //    (_tool_Abs(this->motor_rotate_->getTotalAngle() - 0.0f) < 0.1f) &&
-    //    (_tool_Abs(this->motor_pitch_->getTotalAngle() - 0.0f) < 0.1f))
-    // {
-    //     //全部到位后，切换到空闲模式
-    //     this->set_controlMode(CURRENT_CONTROL_MODE);
-    //     this->motor_launch_->setTargetCurrent(0.0f);
-    //     this->motor_stretch_->setTargetCurrent(0.0f);
-    //     this->motor_rotate_->setTargetCurrent(0.0f);
-    //     this->motor_pitch_->setTargetCurrent(0.0f);
-    // }
     this->set_controlMode(CURRENT_CONTROL_MODE);
     this->motor_launch_->setTargetCurrent(0.0f);
     this->motor_stretch_->setTargetCurrent(0.0f);
@@ -1335,7 +1476,7 @@ void ArmSetup::calibrateMotor()
         arm_ctrlStatus.calibrate_startTime = TimeStamp::getInstance().getSeconds();
         arm_ctrlStatus.calibrate_start = true;
     }
-    this->motor_stretch_->setTargetCurrent(-1000.0f); // 给予一个小电流顶住限位
+    this->motor_stretch_->setTargetCurrent(-700.0f); // 给予一个小电流顶住限位
     this->motor_pitch_->setTargetCurrent(-1000.0f); // 给予一个小电流顶住限位
     this->motor_rotate_->setTargetCurrent(1000.0f);
     if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.5f)

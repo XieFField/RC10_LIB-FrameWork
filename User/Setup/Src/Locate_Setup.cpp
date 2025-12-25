@@ -1,5 +1,4 @@
 #include "Locate_Setup.h"
-float aaa;
 void Locate_Setup::loop()
 {
     // 在此处添加定位相关的周期性任务代码
@@ -9,19 +8,42 @@ void Locate_Setup::loop()
 
 void Locate_Setup::update()
 {
+    Point2D fk_speed;
+    if(SpeedFK_Queue.recv(fk_speed, 0))
+    {
+        // 接收到底盘速度数据 fk_speed
+		fk_chassisSpeed_inWorld_.x = fk_speed.x;
+		fk_chassisSpeed_inWorld_.y = fk_speed.y;
+		fk_chassisSpeed_inWorld_.theta = fk_speed.theta;
+    }
+
 	if(is_startToLRL_)
    		RobotPos_inWorld_caculate(this->Laser_pos_instance);
-//   RobotPos_inWorld_caculate(this->Laser_pos_instance);
+
+	update_Lidar_data();
+
+	lader_transform_caculate();
+
+    yaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().world_yaw;
+	dyaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().dyaw;
+
 }
 
-Point2D Locate_Setup::update_Lidar_data()
+
+void Locate_Setup::lader_transform_caculate()
 {
-    
+
 }
 
+void Locate_Setup::update_Lidar_data()
+{
+    lidar_pose_inWorld_ = Lader_position::GetInstance(&hUsbDeviceHS)->Get_Rader_Data();
+}
+
+//重定位
 void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_instance)
 {
-		for(int i=0;i<4;i++)	
+	for(int i=0;i<4;i++)	
 	{
 		for(int i=0;i<4;i++)	
 	{
@@ -43,18 +65,20 @@ void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_in
   }
 	 float delta;
 	 delta=fabs(laser_initData_.y1-laser_initData_.y2);
-	 robot_pose_inWorld_.theta=atan(delta/laser_initData_.d);
-	 robot_pose_inWorld_.x=laser_initData_.x1*cos(robot_pose_inWorld_.theta);
-	 robot_pose_inWorld_.y=(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.theta);
-	 robot_pose_inWorld_.theta=robot_pose_inWorld_.theta*180/PI;
+	 robot_pose_inWorld_.yaw=atan(delta/laser_initData_.d);
+	 robot_pose_inWorld_.x=laser_initData_.x1*cos(robot_pose_inWorld_.yaw);
+	 robot_pose_inWorld_.y=(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.yaw);
+	 robot_pose_inWorld_.yaw=robot_pose_inWorld_.yaw*180/PI;
 	
 	 if(laser_initData_.y1>laser_initData_.y2)
-	 {
-		 robot_pose_inWorld_.theta=360-robot_pose_inWorld_.theta;
-		 aaa=robot_pose_inWorld_.theta;
-	 }
+		 robot_pose_inWorld_.yaw=360-robot_pose_inWorld_.yaw;
+	 
  }
 }
+
+
+
+
 Lader_position::Lader_position(USBD_HandleTypeDef *usb_handle) 
     :USB_CDC_(usb_handle)
 {
@@ -125,7 +149,7 @@ void Lader_position::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 			case WAIT_CHECK:
 				if (buf[i] == xor_check(receive_data, receive_len)) receive_flag = WAIT_TAIL;
 				else receive_flag = WAIT_HEAD_1;
-			  i++;
+			  	i++;
 				break;
 				
 			case WAIT_TAIL:// 0xee
@@ -135,6 +159,7 @@ void Lader_position::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 				if (receive_len == 16)
 				{
 					Lad_Data.x   = *(float*)(&receive_data[0]);
+					Lad_Data.x   = -Lad_Data.x; // 左手系转右手系
 					Lad_Data.y   = *(float*)(&receive_data[4]);
 					Lad_Data.z   = *(float*)(&receive_data[8]);
 					Lad_Data.yaw = *(float*)(&receive_data[12]);
@@ -149,7 +174,7 @@ void Lader_position::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 			
 			default:
 				receive_flag = WAIT_HEAD_1;
-		    i++;
+		    	i++;
 				break;
 			}
 

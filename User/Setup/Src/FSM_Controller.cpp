@@ -53,6 +53,29 @@ void FSM_Controller::loop()
         break;
    }
 
+
+
+   if(airjoy_data_.SWA ==0x01 && airjoy_data_.SWC==0x00)
+   {
+        if(airjoy_data_.SWA == 0x01)
+        {
+            //底盘用激光进行重定位
+            if(airjoy_data_.botton_click ==1)
+            {
+                Locate_Setup::getInstance()->set_startToLRL(true);
+            }
+            
+        }
+        else
+        {
+            Locate_Setup::getInstance()->set_startToLRL(false);
+        }
+    }
+    else
+    {
+        Locate_Setup::getInstance()->set_startToLRL(false);
+    }
+
    last_robot_status_ = robot_status_;
 }
 
@@ -66,14 +89,13 @@ void FSM_Controller::all_stop()
 
 void FSM_Controller::manual_ctrl()
 {
-   
-
     switch(airjoy_data_.SWC)
     {
         case 0x00:
         {
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
             arm_setup_->setArmStatus(ARM_IDLE);
+
             break;
         }
         case 0x01:
@@ -84,22 +106,49 @@ void FSM_Controller::manual_ctrl()
         }
         case 0x02:
         {
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            chassis_setup_->setChassisStatus(CHASSIS_LOCK_FORWEAPON);
             arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_CONTROL);
             break;
         }
     }
-
-    
-
 }
 
 
 void FSM_Controller::auto_ctrl()
 {
-   // 半自动控制模式下的实现
-   arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-//    chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
+    // 半自动控制模式下的实现
+    arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+    chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
+
+    switch(airjoy_data_.SWC)
+    {
+        //无操作，进入底盘手操模式
+        case 0x00:
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            break;
+        }
+
+        //arm进入自动模式，底盘进入锁定模式
+        case 0x01:
+        {
+            //暂时不把路径规划部分纳入
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+
+            arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            break;
+        }
+
+        //weaponSage进入自动模式
+        case 0x02:
+        {
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
+            chassis_setup_->setChassisStatus(CHASSIS_LOCK_FORWEAPON);
+            break;
+        }
+    }
+    //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
 }
 
 

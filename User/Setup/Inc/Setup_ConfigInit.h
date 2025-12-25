@@ -1,6 +1,6 @@
 /**
  * @file Setup_ConfigInit.h
- * @brief �������ó�ʼ��
+ * @brief 锟斤拷锟斤拷锟斤拷锟矫筹拷始锟斤拷
  */
 
 #ifndef SETUP_CONFIGINIT_H
