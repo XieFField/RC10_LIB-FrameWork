@@ -43,19 +43,10 @@ void Locate_Setup::update_Lidar_data()
 
 void Locate_Setup::Relocte_ToLader()
 {
-	//包头：0xaa 0x55
 
-	//id :0x04 重定位
-
-	//lenght 长度
-
-	//data :x(float) y(float) yaw(float)
-
-	//包尾：0xee
 	
-	// uint8_t
 
-	//重定位指令循环发送多次，防止丢包
+	Lader_position::GetInstance(&hUsbDeviceHS)->Reposition_SendData();
 
 }
 
@@ -99,9 +90,40 @@ void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_in
 
 
 
+ void Lader_position::Reposition_SendData()
+ {
+
+	//包头：0xaa 0x55
+
+	//id :0x04 重定位
+
+	//lenght 长度
+
+	//data :0x00
+
+	//包尾：0xee
+
+	uint8_t packet_buf[6];  // 总长度：包头(2) + ID(1) + 长度(1) + 数据(1) + 包尾(1) = 6字节
+
+	packet_buf[0] =  0xAA;  // 包头1: 0xAA
+	packet_buf[1] =  0x55;  // 包头2: 0x55
+	packet_buf[2] = 0x04;     // ID: 0x04（重定位）
+	packet_buf[3] = 0x01;          // 长度：数据部分只有1字节（0x00），所以长度=1
+	packet_buf[4] = 0x00;   // 数据：0x00
+	packet_buf[5] = 0xEE;   // 包尾：0xEE
+
+	uint8_t send_ret = USBD_BUSY;
+	while (send_ret == USBD_BUSY)
+	{
+		/* code */
+		send_ret = CDC_Transmit_HS(packet_buf, sizeof(packet_buf));
+	}
+ }
+
 Lader_position::Lader_position(USBD_HandleTypeDef *usb_handle) 
     :USB_CDC_(usb_handle)
 {
+
 }
 Lader_position* Lader_position::GetInstance(USBD_HandleTypeDef *usb_handle)
 {

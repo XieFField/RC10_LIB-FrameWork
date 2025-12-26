@@ -20,7 +20,6 @@ void OmniChassis_Setup::loop()
     angle_twist.yaw_angle = yaw;
     this->updateAngleData(angle_twist);
 
-    chassis_status_ = CHASSIS_STOP;
     switch (chassis_status_)
     {
         case CHASSIS_MANUAL_CONTROL_A:
