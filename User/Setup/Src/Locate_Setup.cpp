@@ -40,6 +40,26 @@ void Locate_Setup::update_Lidar_data()
     lidar_pose_inWorld_ = Lader_position::GetInstance(&hUsbDeviceHS)->Get_Rader_Data();
 }
 
+
+void Locate_Setup::Relocte_ToLader()
+{
+	//包头：0xaa 0x55
+
+	//id :0x04 重定位
+
+	//lenght 长度
+
+	//data :x(float) y(float) yaw(float)
+
+	//包尾：0xee
+	
+	// uint8_t
+
+	//重定位指令循环发送多次，防止丢包
+
+}
+
+
 //重定位
 void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_instance)
 {
@@ -96,90 +116,90 @@ void Lader_position::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 	cout_ladar_data++;
 
 	while (i < len && break_flag == 1)
+	{
+		/*-----------------------------------------处理数据--------------------*/
+		switch (receive_flag)
 		{
-			/*-----------------------------------------处理数据--------------------*/
-			switch (receive_flag)
+		case WAIT_HEAD_1:// 0xaa
+			if (buf[i] == 0xaa) 
 			{
-			case WAIT_HEAD_1:// 0xaa
-				if (buf[i] == 0xaa) 
-				{
-					receive_flag = WAIT_HEAD_2;
-				}
-				i++;
-				break;
-				
-			case WAIT_HEAD_2:// 0x55
-				if (buf[i] == 0x55) receive_flag = WAIT_ID;
-				else receive_flag = WAIT_HEAD_1;
-			  i++;
-				break;
-				
-			case WAIT_ID:// 1~MAX
-				if (buf[i] > MAX_RECEIVE_ID || buf[i] == 0) receive_flag = WAIT_HEAD_1;
-				else 
-				{
-					receive_id = buf[i];
-					receive_flag = WAIT_LEN;
-				}
-				i++;
-				break;
-				
-			case WAIT_LEN:
-				if (buf[i] > MAX_RECEIVE_DATA_LEN) receive_flag = WAIT_HEAD_1;
-				else
-				{
-					receive_len = buf[i];
-					receive_flag = WAIT_DATA;
-					receive_data_dx = 0;
-				}
-				i++;
-				break;
-				
-			case WAIT_DATA:
-				receive_data[receive_data_dx] = buf[i];
-				receive_data_dx++;
-				if (receive_data_dx >= receive_len) 
-				{
-					receive_flag = WAIT_CHECK;
-					receive_data_dx = 0;
-				}
-				i++;
-				break;
-			
-			case WAIT_CHECK:
-				if (buf[i] == xor_check(receive_data, receive_len)) receive_flag = WAIT_TAIL;
-				else receive_flag = WAIT_HEAD_1;
-			  	i++;
-				break;
-				
-			case WAIT_TAIL:// 0xee
-				if (buf[i] == 0xee)
-				{
-					/*-----------------------分发数据-------------------------*/
-				if (receive_len == 16)
-				{
-					Lad_Data.x   = *(float*)(&receive_data[0]);
-					Lad_Data.x   = -Lad_Data.x; // 左手系转右手系
-					Lad_Data.y   = *(float*)(&receive_data[4]);
-					Lad_Data.z   = *(float*)(&receive_data[8]);
-					Lad_Data.yaw = *(float*)(&receive_data[12]);
-					
-				}
-					/*-----------------------分发数据-------------------------*/
-				  
-				}
-				break_flag = 0;
-				receive_flag = WAIT_HEAD_1;
-				break;
-			
-			default:
-				receive_flag = WAIT_HEAD_1;
-		    	i++;
-				break;
+				receive_flag = WAIT_HEAD_2;
 			}
-
-			/*-------------------------------------处理数据--------------------*/
+			i++;
+			break;
+			
+		case WAIT_HEAD_2:// 0x55
+			if (buf[i] == 0x55) receive_flag = WAIT_ID;
+			else receive_flag = WAIT_HEAD_1;
+			i++;
+			break;
+			
+		case WAIT_ID:// 1~MAX
+			if (buf[i] > MAX_RECEIVE_ID || buf[i] == 0) receive_flag = WAIT_HEAD_1;
+			else 
+			{
+				receive_id = buf[i];
+				receive_flag = WAIT_LEN;
+			}
+			i++;
+			break;
+			
+		case WAIT_LEN:
+			if (buf[i] > MAX_RECEIVE_DATA_LEN) receive_flag = WAIT_HEAD_1;
+			else
+			{
+				receive_len = buf[i];
+				receive_flag = WAIT_DATA;
+				receive_data_dx = 0;
+			}
+			i++;
+			break;
+			
+		case WAIT_DATA:
+			receive_data[receive_data_dx] = buf[i];
+			receive_data_dx++;
+			if (receive_data_dx >= receive_len) 
+			{
+				receive_flag = WAIT_CHECK;
+				receive_data_dx = 0;
+			}
+			i++;
+			break;
+		
+		case WAIT_CHECK:
+			if (buf[i] == xor_check(receive_data, receive_len)) receive_flag = WAIT_TAIL;
+			else receive_flag = WAIT_HEAD_1;
+			i++;
+			break;
+			
+		case WAIT_TAIL:// 0xee
+			if (buf[i] == 0xee)
+			{
+				/*-----------------------分发数据-------------------------*/
+			if (receive_len == 16)
+			{
+				Lad_Data.x   = *(float*)(&receive_data[0]);
+				Lad_Data.x   = -Lad_Data.x; // 左手系转右手系
+				Lad_Data.y   = *(float*)(&receive_data[4]);
+				Lad_Data.z   = *(float*)(&receive_data[8]);
+				Lad_Data.yaw = *(float*)(&receive_data[12]);
+				
+			}
+				/*-----------------------分发数据-------------------------*/
+				
+			}
+			break_flag = 0;
+			receive_flag = WAIT_HEAD_1;
+			break;
+		
+		default:
+			receive_flag = WAIT_HEAD_1;
+			i++;
+			break;
 		}
+
+		/*-------------------------------------处理数据--------------------*/
+	}
 }
 
 // XOR校验

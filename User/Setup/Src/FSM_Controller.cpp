@@ -57,10 +57,10 @@ void FSM_Controller::loop()
    {
         if(airjoy_data_.SWA == 0x01)
         {
-            //底盘用激光进行重定位
+            //重定位
             if(airjoy_data_.botton_click ==1)
             {
-                Locate_Setup::getInstance()->set_startToLRL(true);
+                Locate_Setup::getInstance()->Relocte_ToLader();
             }
             
         }

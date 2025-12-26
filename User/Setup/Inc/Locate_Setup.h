@@ -121,6 +121,9 @@ public:
     float get_dyaw_from_position(){return dyaw_from_position_;}
 
 		Laser_initData_S laser_initData_;
+
+    void Relocte_ToLader();
+
 private:
     Locate_Setup():RtosTask("Locate_Setup", 1), Laser_pos_instance(nullptr) {}
 	  
