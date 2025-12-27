@@ -71,16 +71,21 @@ typedef struct
 }Lader_Data;
 class Locate_Setup : public RtosTask {
 public:
-    Locate_Setup(Laser_InstanceManager* instance_man = nullptr,USB_CDC_ *usb_handle= nullptr):RtosTask("Locate_Setup", 1), Laser_pos_instance(instance_man)
-		{this->usb_handle=usb_handle;}
+    static Locate_Setup* getInstance()
+    {
+        static Locate_Setup instance;
+        return &instance;
+    }
+
     ~Locate_Setup() = default;    
     /**
      * @brief 无输入则默认在底盘中心
      */
-    void init(Laser_InstanceManager* instance_man, Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0}, 
+    void init(Laser_InstanceManager* instance_man,USB_CDC_ *usb_handle, Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0}, 
               Laser_initData_S laser_initData = {0})
     {   
         this->Laser_pos_instance = instance_man;
+		this->usb_handle=usb_handle;
         if(install_pose_init_)
             return;
         lidar_install_pose_ = lidar_install_pose;
@@ -120,20 +125,24 @@ public:
 		
     Point2D get_FK_ChassisSpeed_inWorld(){return fk_chassisSpeed_inWorld_;}
 
-		void locate_setup_init(){this->start(osPriorityNormal, 256);}
+	void locate_setup_init(){this->start(osPriorityNormal, 256);}
 		
     float get_yaw_from_position(){return yaw_from_position_;}
     float get_dyaw_from_position(){return dyaw_from_position_;}
 
-		Laser_initData_S laser_initData_;
+	Laser_initData_S laser_initData_;
 
     void Relocte_ToLader();
 
 private:
+	
+	Locate_Setup():RtosTask("Locate_Setup", 1), Laser_pos_instance(nullptr) {}
+	  
+    Laser_InstanceManager* Laser_pos_instance;
+
 	  Lader_Data Lad_Data={0};
 	  USB_CDC_ *usb_handle;
 	  LASER_MODE laser_mode=LEFT;//默认起始位置在左
-    Laser_InstanceManager* Laser_pos_instance;
     bool is_startToLRL_ = false; // 是否启动激光重定位
     void update(); //更新
     /**

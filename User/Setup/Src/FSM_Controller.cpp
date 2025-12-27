@@ -55,18 +55,23 @@ void FSM_Controller::loop()
 
    if(airjoy_data_.SWA ==0x01 && airjoy_data_.SWC==0x00)
    {
+	   static uint8_t iiii = 0;
+	   
         // if(airjoy_data_.SWA == 0x01)
         // {
             //ÖØ¶¨Î»
-            if(airjoy_data_.botton_click ==1)
+            if(airjoy_data_.botton_click ==1 && iiii == 0)
             {
                 Locate_Setup::getInstance()->Relocte_ToLader();
+				
+				iiii++;
             }
             
         // }
         else
         {
             Locate_Setup::getInstance()->set_startToLRL(false);
+			iiii = 0;
         }
     }
     else

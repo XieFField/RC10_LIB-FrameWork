@@ -3,10 +3,10 @@
 float aaa;
 void Locate_Setup::loop()
 {
-    // ÔÚ´Ë´¦Ìí¼Ó¶¨Î»Ïà¹ØµÄÖÜÆÚÐÔÈÎÎñ´úÂë
-	  uint8_t a =0x11;
-    usb_handle->CDC_Send_(0x04,&a,0x01);
-	  Get_Rader_Data();
+    // ï¿½Ú´Ë´ï¿½ï¿½ï¿½ï¿½Ó¶ï¿½Î»ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//	uint8_t a =0x11;
+//    usb_handle->CDC_Send_(0x04,&a,0x01);
+	Get_Rader_Data();
     this->update();
 	  	
 }
@@ -16,7 +16,7 @@ void Locate_Setup::update()
     Point2D fk_speed;
     if(SpeedFK_Queue.recv(fk_speed, 0))
     {
-        // ½ÓÊÕµ½µ×ÅÌËÙ¶ÈÊý¾Ý fk_speed
+        // ï¿½ï¿½ï¿½Õµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½ fk_speed
 		fk_chassisSpeed_inWorld_.x = fk_speed.x;
 		fk_chassisSpeed_inWorld_.y = fk_speed.y;
 		fk_chassisSpeed_inWorld_.theta = fk_speed.theta;
@@ -31,7 +31,7 @@ void Locate_Setup::update()
 
     yaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().world_yaw;
 	dyaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().dyaw;
-
+	robot_pose_inWorld_ = lidar_pose_inWorld_;
 }
 
 
@@ -42,21 +42,17 @@ void Locate_Setup::lader_transform_caculate()
 
 void Locate_Setup::update_Lidar_data()
 {
-    lidar_pose_inWorld_ = Lader_position::GetInstance(&hUsbDeviceHS)->Get_Rader_Data();
+    Locate_Setup::Get_Rader_Data();
 }
 
 
 void Locate_Setup::Relocte_ToLader()
 {
-
-	
-
-	Lader_position::GetInstance(&hUsbDeviceHS)->Reposition_SendData();
-
+	Locate_Setup::USB_SendData();
 }
 
 
-//ÖØ¶¨Î»
+//ï¿½Ø¶ï¿½Î»
 void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_instance)
 {
 	for(int i=0;i<4;i++)	
@@ -111,7 +107,7 @@ void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_in
 void Locate_Setup::USB_SendData()
  {
 	uint8_t a =0x00;
-  usb_handle->CDC_Send_(0x04,&a,0x01);
+	usb_handle->CDC_Send_(0x04,&a,0x01);
 
  }
 
