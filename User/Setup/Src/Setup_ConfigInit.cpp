@@ -2,7 +2,7 @@
  // 外部声明USB高速设备句柄
 extern "C" 
 {
-        extern USBD_HandleTypeDef hUsbDeviceHS;
+   extern USBD_HandleTypeDef hUsbDeviceHS;
 }
 fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
 fdCANbus* const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // 获取FDCAN2的唯一实例
@@ -20,6 +20,7 @@ uint8_t laser_rx_buffer1[20];
 uint8_t laser_rx_buffer2[20];
 //激光测距
 //USB_CDC_ cdc(&hUsbDeviceHS);
+USB_CDC_ usb_1(&hUsbDeviceHS);
 LaserPosition laserpos(15,laser_rx_buffer,&huart3);
 LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
