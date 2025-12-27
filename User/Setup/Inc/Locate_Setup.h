@@ -12,6 +12,7 @@
 
 extern "C" {
     #include <stdint.h>
+  //  #include "semphr.h"
 }
 
 #include "BSP_USB_UART_Driver.h"
@@ -30,18 +31,6 @@ extern "C" {
 #define MAX_RECEIVE_ID 10// 最大id
 
 #define MAX_RECEIVE_DATA_LEN 64
-//雷达接收
-	typedef enum RECEIVE_FLAG
-	{
-		WAIT_HEAD_1,// 0xaa
-		WAIT_HEAD_2,// 0x55
-		WAIT_ID,// 1~max
-		WAIT_LEN,// 1~64
-		WAIT_DATA,
-		WAIT_CHECK,//xor
-		WAIT_TAIL// 0xee
-	} RECEIVE_FLAG;
-//激光重定位类型
 	
 		typedef enum LASER_MODE 
 	{
@@ -67,13 +56,17 @@ typedef struct
     float x;//规定激光实例管理的第一个为x的数据，第二三个为y的数据
     float y;
     float z;
-    float yaw;
+    float roll;
+	  float pitch;
+	  float yaw;
+		float line_x;
+		float line_y;
+		float line_z;
 }Lader_Data;
-
 class Locate_Setup : public RtosTask {
 public:
-    Locate_Setup(Laser_InstanceManager* instance_man = nullptr):RtosTask("Locate_Setup", 1), Laser_pos_instance(instance_man)
-		{}
+    Locate_Setup(Laser_InstanceManager* instance_man = nullptr,USB_CDC_ *usb_handle= nullptr):RtosTask("Locate_Setup", 1), Laser_pos_instance(instance_man)
+		{this->usb_handle=usb_handle;}
     ~Locate_Setup() = default;    
     /**
      * @brief 无输入则默认在底盘中心
@@ -103,7 +96,8 @@ public:
     {
         this->Laser_pos_instance = Laser_pos_instance;
     }
-
+    void Get_Rader_Data();
+		void USB_SendData();
     /**
      * @brief 设置是否启动激光重定位
      */
@@ -123,7 +117,8 @@ public:
 		
 		Laser_initData_S laser_initData_;
 private:
-	
+	  Lader_Data Lad_Data={0};
+	  USB_CDC_ *usb_handle;
 	  LASER_MODE laser_mode=LEFT;//默认起始位置在左
     Laser_InstanceManager* Laser_pos_instance;
     bool is_startToLRL_ = false; // 是否启动激光重定位
@@ -146,66 +141,7 @@ private:
 protected:
     void loop() override;
 };
-
-
-class Lader_position:public USB_CDC_{
-public:
-    // ??????
-    static Lader_position* GetInstance(USBD_HandleTypeDef *usb_handle);
-    // ???UART
-    void InitUART();
-		//?????.cpp
-    void Callback_DCD_Fuc(uint8_t *buf, uint16_t len) override;
-    // ??????????????
-    Lader_position(const Lader_position&) = delete;
-    Lader_position& operator=(const Lader_position&) = delete;
-
-    void Reposition_SendData(float X, float Y);
-
- //   Lader_position getRealPosData() const { return RealPosData; }
-    Lader_Data Get_Rader_Data(){return Lad_Data;}
-
-//接收数据
-		RECEIVE_FLAG receive_flag = WAIT_HEAD_1;
-		uint8_t receive_id;
-		uint8_t receive_len;
-		uint8_t receive_check;
-		uint8_t receive_data[MAX_RECEIVE_DATA_LEN] = {0};
-		uint16_t receive_data_dx = 0;
-    
-private:
-	  Lader_Data Lad_Data={0};
-    Lader_position(USBD_HandleTypeDef *usb_handle); // ??????
-    ~Lader_position() = default;
-    
-    void Update_RawPosition(float value[5]);
-
-    // UART??
-    UART_* uart_instance_;   
-    // ?????
-    bool uart_initialized_;
-
-		uint8_t rx_buffer_[35];
-};
 uint8_t xor_check(const uint8_t *data, uint32_t length);
-//class LaerRelocate_Manager : public RtosTask {
-//public:
-//    LaerRelocate_Manager(LaserPosition laser_module1, LaserPosition laser_module2, LaserPosition laser_module3)
-//        :RtosTask("LaerRelocate_Manager", 1)
-//    {
-
-//    }
-
-
-//    ~LaerRelocate_Manager() = default;
-
-
-//    Point2D get_RobotPos_inWorld(){}
-
-//private:
-//    LaserPosition* laser_position_module_[3];
-
-//}
 
 
 #endif

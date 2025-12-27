@@ -1,10 +1,14 @@
 #include "Locate_Setup.h"
+#include "semphr.h"
 float aaa;
 void Locate_Setup::loop()
 {
     // 在此处添加定位相关的周期性任务代码
+	  uint8_t a =0x11;
+    usb_handle->CDC_Send_(0x04,&a,0x01);
+	  Get_Rader_Data();
     this->update();
-	  
+	  	
 }
 
 void Locate_Setup::update()
@@ -70,112 +74,22 @@ void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_in
 	}
 	
 }
-Lader_position::Lader_position(USBD_HandleTypeDef *usb_handle) 
-    :USB_CDC_(usb_handle)
-{
-}
-Lader_position* Lader_position::GetInstance(USBD_HandleTypeDef *usb_handle)
-{
-static Lader_position instance(usb_handle);
-return &instance;
-}
-void Lader_position::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
-{
-	uint8_t i = 0;
-	uint8_t break_flag = 1;
-	while (i < len && break_flag == 1)
-		{
-			/*-----------------------------------------处理数据--------------------*/
-			switch (receive_flag)
-			{
-			case WAIT_HEAD_1:// 0xaa
-				if (buf[i] == 0xaa) 
-				{
-					receive_flag = WAIT_HEAD_2;
-				}
-				i++;
-				break;
-				
-			case WAIT_HEAD_2:// 0x55
-				if (buf[i] == 0x55) receive_flag = WAIT_ID;
-				else receive_flag = WAIT_HEAD_1;
-			  i++;
-				break;
-				
-			case WAIT_ID:// 1~MAX
-				if (buf[i] > MAX_RECEIVE_ID || buf[i] == 0) receive_flag = WAIT_HEAD_1;
-				else 
-				{
-					receive_id = buf[i];
-					receive_flag = WAIT_LEN;
-				}
-				i++;
-				break;
-				
-			case WAIT_LEN:
-				if (buf[i] > MAX_RECEIVE_DATA_LEN) receive_flag = WAIT_HEAD_1;
-				else
-				{
-					receive_len = buf[i];
-					receive_flag = WAIT_DATA;
-					receive_data_dx = 0;
-				}
-				i++;
-				break;
-				
-			case WAIT_DATA:
-				receive_data[receive_data_dx] = buf[i];
-				receive_data_dx++;
-				if (receive_data_dx >= receive_len) 
-				{
-					receive_flag = WAIT_CHECK;
-					receive_data_dx = 0;
-				}
-				i++;
-				break;
-			
-			case WAIT_CHECK:
-				if (buf[i] == xor_check(receive_data, receive_len)) receive_flag = WAIT_TAIL;
-				else receive_flag = WAIT_HEAD_1;
-			  i++;
-				break;
-				
-			case WAIT_TAIL:// 0xee
-				if (buf[i] == 0xee)
-				{
-					/*-----------------------分发数据-------------------------*/
-				if (receive_len == 16)
-				{
-					Lad_Data.x   = *(float*)(&receive_data[0]);
-					Lad_Data.y   = *(float*)(&receive_data[4]);
-					Lad_Data.z   = *(float*)(&receive_data[8]);
-					Lad_Data.yaw = *(float*)(&receive_data[12]);
-					
-				}
-					/*-----------------------分发数据-------------------------*/
-				  
-				}
-				break_flag = 0;
-				receive_flag = WAIT_HEAD_1;
-				break;
-			
-			default:
-				receive_flag = WAIT_HEAD_1;
-		    i++;
-				break;
-			}
+void Locate_Setup::USB_SendData()
+ {
+	uint8_t a =0x00;
+  usb_handle->CDC_Send_(0x04,&a,0x01);
 
-			/*-------------------------------------处理数据--------------------*/
-		}
-}
+ }
 
-// XOR校验
-uint8_t xor_check(const uint8_t *data, uint32_t length)
-{
-	uint8_t xor_val = 0;
-	for (uint16_t i = 0; i < length; i++)
-	{
-		xor_val ^= data[i]; // 异或
-	}
-	return xor_val;
-}
+ void Locate_Setup::Get_Rader_Data()
+ {
+	  Lad_Data.x   = usb_handle->Data_.data1[0];
+    Lad_Data.y   = usb_handle->Data_.data1[1];
+    Lad_Data.z   = usb_handle->Data_.data1[2];
+	  Lad_Data.roll= usb_handle->Data_.data1[3];
+	  Lad_Data.pitch= usb_handle->Data_.data1[4];
+	  Lad_Data.yaw= usb_handle->Data_.data1[5];
+		Lad_Data.line_x= usb_handle->Data_.data1[6];
+		Lad_Data.line_y= usb_handle->Data_.data1[7];
+		Lad_Data.line_z= usb_handle->Data_.data1[8];
+ }

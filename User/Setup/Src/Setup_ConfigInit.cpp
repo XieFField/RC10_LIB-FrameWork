@@ -2,7 +2,7 @@
  // 外部声明USB高速设备句柄
 extern "C" 
 {
-        extern USBD_HandleTypeDef hUsbDeviceHS;
+   extern USBD_HandleTypeDef hUsbDeviceHS;
 }
 fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
 DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4号M3508/M2006电机
@@ -14,11 +14,12 @@ uint8_t laser_rx_buffer1[20];
 uint8_t laser_rx_buffer2[20];
 //激光测距
 //USB_CDC_ cdc(&hUsbDeviceHS);
+USB_CDC_ usb_1(&hUsbDeviceHS);
 LaserPosition laserpos(15,laser_rx_buffer,&huart3);
 LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
-Locate_Setup set1(&instance_man);
+Locate_Setup set1(&instance_man,&usb_1);
 OmniChassis_Setup ChassisOmni(1,2,3); // 轮子半径，最大轮子转速，底盘半径
 ArmSetup ARM_Controller(arm_initData);
 FSM_Controller Finite_StateMachine;
@@ -161,6 +162,7 @@ void ALL_Setup_ConfigInit(void)
    pos->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
+	
 //激光注册到实例管理后启动任务
 	 instance_man.RegisterInstance(&laserpos);
 	 instance_man.RegisterInstance(&laserpos1);
@@ -172,7 +174,6 @@ void ALL_Setup_ConfigInit(void)
 	 set1.locate_setup_init();
 	 set1.set_startToLRL(true);
 //雷达定位实例化
-	 Lader_position*ladar=Lader_position::GetInstance(&hUsbDeviceHS);
 	 
 }
 
