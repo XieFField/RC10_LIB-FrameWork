@@ -6,7 +6,7 @@
 
 // 为类内 static 成员提供定义
 #if FD_CAN_DEBUG
-CanFrame fdCANbus::debug_last_frames_[fdCANbus::MAX_MOTORS * 2] = {0};
+//CanFrame fdCANbus::debug_last_frames_[fdCANbus::MAX_MOTORS * 2] = {0};
 #endif
 
 
@@ -180,7 +180,7 @@ void fdCANbus::rxTaskbody()
 
 void fdCANbus::schedulerTaskbody() 
 {
-    static CanFrame frames_to_send[MAX_MOTORS * 2];
+     CanFrame frames_to_send[MAX_MOTORS * 2];
     for (;;) 
     {
         xSemaphoreTake(schedSem_, portMAX_DELAY);

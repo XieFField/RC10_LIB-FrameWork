@@ -31,7 +31,7 @@ namespace WeaponSage_Setup
         bool init_flag = false;
 
         float debug_start = 1; //ï¿½ï¿½ï¿½Ô¿ï¿½Ê¼ï¿½ï¿½Ö¾ == 1 ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
-
+		float now_times=0.0f;
         float calibrate_startTime = 0;
         bool calibrate_start = false;
         bool is_calibrating = false;
@@ -63,6 +63,7 @@ namespace WeaponSage_Setup
             bool grab_start = false;
             float grab_startTime = 0.0f;
             bool is_moving = false;  
+			bool wrist_enable=false;
         }auto_state_bool_S; //¾Ö²¿×´Ì¬½á¹¹Ìå
 		  float claw_close_pos = 32.36f;
         float claw_open_pos = 49.58f;
@@ -165,7 +166,7 @@ private:
     bool State_AimPosition(int pole_num);
     void State_LowerClaw();
     bool State_GrabClaw();
-    void State_Lift();
+    bool State_Lift();
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 
     

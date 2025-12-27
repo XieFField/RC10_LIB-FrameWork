@@ -12,7 +12,7 @@ Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
 
 void Robot_WeaponSage_Setup::loop()
 {
-
+	ctrl_status_.now_times=TimeStamp::getInstance().getSeconds();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 
     switch(weaponSage_status_)
@@ -27,13 +27,42 @@ void Robot_WeaponSage_Setup::loop()
             stop();
             break;
         case WEAPONSAGE_DEBUG:
+		{
             debug();
+//			if(auto_ctrl_.auto_state_bool_S.wrist_enable)
+//			{
+//			this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+//			this->setTarget(0, WeaponSage::Wrist_Motor);
+//			}
             break;
-
+		}
         case WEAPONSAGE_AUTO_CONTROL:
             //待实现自动控制逻辑
-			autoControl();
+//			autoControl();
+		{
+
+	
+//		Weapon_wrist_setzero();
             break;
+	}
+		case WEAPONSAGE_CALIBRATE:
+		{
+			calibrate();
+			if(ctrl_status_.is_calibrating)
+		{
+		auto_ctrl_.auto_state_bool_S.is_matching=true;
+		auto_ctrl_.auto_state_bool_S.is_moving = true;
+		this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+		auto_ctrl_.flag.grabclaw_done=Robot_WeaponSage_Setup::State_GrabClaw();
+		if(auto_ctrl_.flag.grabclaw_done)
+		{
+			auto_ctrl_.flag.lift_done=State_Lift();
+		}
+		if(auto_ctrl_.flag.lift_done&&auto_ctrl_.auto_state_bool_S.wrist_enable)
+			this->setTarget(90.0f,WeaponSage::Wrist_Motor);
+		}
+	}
+			break;
         default:
             idle();
             break;
@@ -49,11 +78,15 @@ void Robot_WeaponSage_Setup::calibrate()
         ctrl_status_.calibrate_startTime = TimeStamp::getInstance().getSeconds();
          ctrl_status_.calibrate_start = true;       
     }
+	
     this->setCtrlMode(WeaponSage::CURRENT_CONTROL);
     this->setTarget(500.0f, WeaponSage::Claw_Motor);
     this->setTarget(-500.0f, WeaponSage::Traverse_Motor);
-    float now_time_s = TimeStamp::getInstance().getSeconds();
-    if(now_time_s - ctrl_status_.calibrate_startTime > 1.5f)
+	if(!auto_ctrl_.auto_state_bool_S.wrist_enable)
+	{
+		Weapon_wrist_enable();
+	}
+    if(ctrl_status_.now_times - ctrl_status_.calibrate_startTime > 1.5f)
     {
         //relocate
         this->claw_Motor_->relocate_totalAngle(0.0f);
@@ -62,9 +95,10 @@ void Robot_WeaponSage_Setup::calibrate()
         
         this->setTarget(0.0f, WeaponSage::Claw_Motor);
         this->setTarget(0.0f, WeaponSage::Traverse_Motor);
-
+		auto_ctrl_.auto_state_bool_S.wrist_enable=true;
         ctrl_status_.is_calibrating = true;
     }
+
 }
 }
 
@@ -275,20 +309,20 @@ bool Robot_WeaponSage_Setup::State_GrabClaw()
 {
       if(auto_ctrl_.auto_state_bool_S.is_matching)
     {
+		
         this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
         
-        this->setTarget(auto_ctrl_.claw_close_pos, WeaponSage::Claw_Motor);
-        auto_ctrl_.auto_state_bool_S.grab_start = true;
+        this->setTarget(initData_.max_clawAngle_, WeaponSage::Claw_Motor);
        
-    }
-    if(auto_ctrl_.auto_state_bool_S.grab_start==true)
+    
+    if(!auto_ctrl_.auto_state_bool_S.grab_start)
     {
-        auto_ctrl_.auto_state_bool_S.grab_start = false;
+        auto_ctrl_.auto_state_bool_S.grab_start = true;
         auto_ctrl_.auto_state_bool_S.grab_startTime = TimeStamp::getInstance().getSeconds();
     }
 
-    float currentTime = TimeStamp::getInstance().getSeconds();
-    if(currentTime - auto_ctrl_.auto_state_bool_S.grab_startTime >= 0.2f)
+    
+    if(ctrl_status_.now_times - auto_ctrl_.auto_state_bool_S.grab_startTime >= 0.2f)
     {
         return true;
     }
@@ -296,28 +330,39 @@ bool Robot_WeaponSage_Setup::State_GrabClaw()
     {
         return false;
     }
-
+	}
+	
 }
 
-void Robot_WeaponSage_Setup::State_Lift()
+bool Robot_WeaponSage_Setup::State_Lift()
 {
     if(auto_ctrl_.auto_state_bool_S.is_moving == true)
     {
         this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-        auto_ctrl_.up_height = initData_.max_launchHeight_;
+        auto_ctrl_.up_height = 0.7*initData_.max_launchHeight_;
         this->setTarget(auto_ctrl_.up_height, WeaponSage::Launch_Motor);
     }
+//	Point2D current_pos;
+//	current_pos=getClawPos();
+	
+//	if(abs(current_pos.y-auto_ctrl_.up_height)<0.01f)
+//	{
+	return true;
+//	}
+//	else{
+//		return false;
+//	}
 }
 
 WeaponSage_InitData_S initData_=
 {
-    .max_launchHeight_ =0.350f,
-    .max_clawAngle_ = 49.0f,
-    .max_traverseLength_ = 0.470f,
+    .max_launchHeight_ =0.420f,
+    .max_clawAngle_ = 50.0f,
+    .max_traverseLength_ = 0.450f,
 
-    .wrist_gearRatio_ = 1.0f,
-    .launch_Ratio_ = 0.08627f,
-    .claw_gearRatio_  =1.0f ,
-    .traverse_Ratio_  = 0.00218f,
-    .max_wristMotorRPM_   = 100.0f,
+    .wrist_gearRatio_ = 360.0f,
+    .launch_Ratio_ = 0.1013056956038f,
+    .claw_gearRatio_  =360.0f ,
+    .traverse_Ratio_  = 0.0785210947199f,
+    .max_wristMotorRPM_   =45.0f,
 };

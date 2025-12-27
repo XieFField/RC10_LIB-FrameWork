@@ -55,7 +55,7 @@ namespace WeaponSage
     typedef struct 
     {
         float launch_reversed_ = -1.0f;
-        float claw_reversed_ = 1.0f;
+        float claw_reversed_ = -1.0f;
         float traverse_reversed_ = 1.0f;
         float wrist_reversed_ = 1.0f;
     }MotorReversed_S;
@@ -128,7 +128,8 @@ public:
 		return current_pos;
 	}
 	
-	
+	void Weapon_wrist_setzero(){wrist_Motor_->motorSetZero();}
+	void Weapon_wrist_enable(){wrist_Motor_->motorEnable();}
 private:
 
     WeaponSage::WeaponSage_CtrlMode_S ctrl_mode_ = WeaponSage::Join_POSITION_CONTROL;
