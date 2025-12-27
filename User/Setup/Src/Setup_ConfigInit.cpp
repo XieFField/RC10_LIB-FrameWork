@@ -282,12 +282,16 @@ void CAN_Motor_Init(void)
 	PID_Param_Config weapon_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
    PID_Param_Config weapon_3508_anglePID = m3508_angle_pid_params;
    
+   PID_Param_Config weapon_2006_speedPID = m2006_speed_pid_params;
+   PID_Param_Config weapon_2006_anglePID =m2006_angle_pid_params;
  
    weapon_3508_anglePID.output_limit=200.0f;
    weapon_3508_speedPID.output_limit=15000.0f;
+   weapon_2006_speedPID.output_limit=4500;
+   weapon_2006_anglePID.output_limit=1000;
    
    Weapon_launchMotor.pid_init(weapon_3508_speedPID, 0.0f,weapon_3508_anglePID, 0.0f);
-   Weapon_clawMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
+   Weapon_clawMotor.pid_init(weapon_2006_speedPID, 0.0f,  weapon_2006_anglePID, 0.0f);
    Weapon_traverseMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
 
 }

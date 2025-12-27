@@ -36,15 +36,15 @@ namespace WeaponSage_Setup
         bool calibrate_start = false;
         bool is_calibrating = false;
 
-        int target_poleIndex = 0; //0~3ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¬ï¿½ï¿½
+        int target_poleIndex = 0; //0~3ºÅË÷ÒýµÄÃ¬¸Ë
     }ctrl_status_S;
 
     typedef enum{
-        //ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ìµï¿½Ã¿ï¿½ï¿½×´Ì¬Ã¶ï¿½ï¿½
-        STATE_AIM_POSITION, //ï¿½ï¿½×¼Î»ï¿½ï¿½
-        STATE_LOWER_CLAW,  //ï¿½Â½ï¿½×¦ï¿½ï¿½
-        STATE_GRAB_CLAW,   //×¥È¡×¦ï¿½ï¿½
-        STATE_LIFT_POSITION, //ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
+        //½«×Ô¶¯¹ý³ÌµÄÃ¿¸ö×´Ì¬Ã¶¾Ù
+        STATE_AIM_POSITION, //¶Ô×¼Î»ÖÃ
+        STATE_LOWER_CLAW,  //ÏÂ½µ×¦×Ó
+        STATE_GRAB_CLAW,   //×¥È¡×¦×Ó
+        STATE_LIFT_POSITION, //ÌáÉýÎ»ÖÃ
         STATE_DONE 
     }auto_GRABstate_S;
 
@@ -53,7 +53,7 @@ namespace WeaponSage_Setup
         float last_right_stick_x = 0.0f;
         float last_right_stick_y = 0.0f;
 
-        bool changeTarget_state = false; //ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½×´Ì¬ï¿½ï¿½Ö¾Î»
+        bool changeTarget_state = false; //±ä¸üÄ¿±ê×´Ì¬±êÖ¾Î»
     }manual_ctrlForgrip_S;
 
     typedef struct{
@@ -64,7 +64,7 @@ namespace WeaponSage_Setup
             float grab_startTime = 0.0f;
             bool is_moving = false;  
 			bool wrist_enable=false;
-        }auto_state_bool_S; //ï¿½Ö²ï¿½×´Ì¬ï¿½á¹¹ï¿½ï¿½
+        }auto_state_bool_S; //¾Ö²¿×´Ì¬½á¹¹Ìå
 		  float claw_close_pos = 32.36f;
         float claw_open_pos = 49.58f;
         float tarch_height = 0.0f; 
@@ -79,7 +79,7 @@ namespace WeaponSage_Setup
         int pole_num = 0;
     }auto_ctrl_S;
 
-     extern float weapon_pos[4]; //ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     extern float weapon_pos[2];//ÎäÆ÷Î»ÖÃÊý×é
 
 }
 
@@ -119,11 +119,6 @@ public:
         
     }
 
-//    Point2D getClawPos()
-//    {   
-//        Point2D pos = {0.0f, 0.0f, 0.0f};
-//        return pos;
-//    }
 
     void setWeaponSageControlStatus(WeaponSage_Status_E status)
     {
@@ -177,8 +172,6 @@ private:
     RmPocketData_t airjoy_data_; 
 
     WeaponSage_Setup::manual_ctrlForgrip_S manual_ctrlForgrip_;
-
-    Point2D Claw_current_pos_;
 };
 
 extern WeaponSage_InitData_S initData_;

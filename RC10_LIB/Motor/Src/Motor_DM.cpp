@@ -43,6 +43,12 @@ void DM_Motor::setMIT(float pos,float vel,float kp, float kd ,float t_ff )
 	dm_mode_=MOTOR_MIT_MODE;
 }
 
+float DM_Motor::getAngle()const 
+	{
+		float current_angle;
+		current_angle=fmodf(angle,360.0f);
+		return current_angle;
+	}
 
 float DM_Motor:: uint_to_float(int x_int, float x_min, float x_max, int bits)
 {
