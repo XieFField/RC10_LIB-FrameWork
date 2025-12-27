@@ -14,6 +14,11 @@ void Robot_WeaponSage_Setup::loop()
 {
 	ctrl_status_.now_times=TimeStamp::getInstance().getSeconds();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+    Claw_current_pos_ = this->getClawPos();
+    if(!ctrl_status_.is_calibrating)
+    {
+        calibrate();
+    }
 
     switch(weaponSage_status_)
     {
@@ -27,7 +32,7 @@ void Robot_WeaponSage_Setup::loop()
             stop();
             break;
         case WEAPONSAGE_DEBUG:
-		{
+		
             debug();
 //			if(auto_ctrl_.auto_state_bool_S.wrist_enable)
 //			{
@@ -35,34 +40,29 @@ void Robot_WeaponSage_Setup::loop()
 //			this->setTarget(0, WeaponSage::Wrist_Motor);
 //			}
             break;
-		}
         case WEAPONSAGE_AUTO_CONTROL:
-            //´ýÊµÏÖ×Ô¶¯¿ØÖÆÂß¼­
-//			autoControl();
-		{
-
-	
+			autoControl();
 //		Weapon_wrist_setzero();
             break;
-	    }
 		case WEAPONSAGE_CALIBRATE:
 		{
 			calibrate();
-			if(ctrl_status_.is_calibrating)
-            {
-                auto_ctrl_.auto_state_bool_S.is_matching=true;
-                auto_ctrl_.auto_state_bool_S.is_moving = true;
-                this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-                auto_ctrl_.flag.grabclaw_done=Robot_WeaponSage_Setup::State_GrabClaw();
-                if(auto_ctrl_.flag.grabclaw_done)
-                {
-                    auto_ctrl_.flag.lift_done=State_Lift();
-                }
-                if(auto_ctrl_.flag.lift_done&&auto_ctrl_.auto_state_bool_S.wrist_enable)
-                    this->setTarget(90.0f,WeaponSage::Wrist_Motor);
-            }
-	    }
+//			if(ctrl_status_.is_calibrating)
+//            {
+//                auto_ctrl_.auto_state_bool_S.is_matching=true;
+//                auto_ctrl_.auto_state_bool_S.is_moving = true;
+//                this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+//                auto_ctrl_.flag.grabclaw_done=Robot_WeaponSage_Setup::State_GrabClaw();
+//                if(auto_ctrl_.flag.grabclaw_done)
+//                {
+//                    auto_ctrl_.flag.lift_done=State_Lift();
+//                }
+//                if(auto_ctrl_.flag.lift_done&&auto_ctrl_.auto_state_bool_S.wrist_enable)
+//                    this->setTarget(90.0f,WeaponSage::Wrist_Motor);
+//            }
 			break;
+	    }
+			
         default:
             idle();
             break;
@@ -109,15 +109,15 @@ void Robot_WeaponSage_Setup::manualControl()
     {
         case 0x00:
         {
-            //¼ÐÈ¡ÎäÆ÷
+            //ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½
             if(airjoy_data_.SWD == 0x00)
-                this->setTarget(0.0f, WeaponSage::Claw_Motor); //ÕÅ¿ª×¦×Ó
+                this->setTarget(0.0f, WeaponSage::Claw_Motor); //ï¿½Å¿ï¿½×¦ï¿½ï¿½
             else if(airjoy_data_.SWD == 0x01)
-                this->setTarget(initData_.max_clawAngle_, WeaponSage::Claw_Motor); //¼Ð½ô×¦×Ó
+                this->setTarget(initData_.max_clawAngle_, WeaponSage::Claw_Motor); //ï¿½Ð½ï¿½×¦ï¿½ï¿½
             else
-                this->setTarget(0.0f, WeaponSage::Claw_Motor); //ÕÅ¿ª×¦×Ó
+                this->setTarget(0.0f, WeaponSage::Claw_Motor); //ï¿½Å¿ï¿½×¦ï¿½ï¿½
 
-            //¼Ð×¦Î»ÖÃ
+            //ï¿½ï¿½×¦Î»ï¿½ï¿½
 
             if(ctrl_status_.target_poleIndex < 0)
                 ctrl_status_.target_poleIndex = 0;
@@ -150,7 +150,7 @@ void Robot_WeaponSage_Setup::manualControl()
 
         case 0x01:
         {
-            //½ø¹¥Ä£Ê½
+            //ï¿½ï¿½ï¿½ï¿½Ä£Ê½
             break;
         }
 
@@ -183,18 +183,18 @@ void Robot_WeaponSage_Setup::idle()
 
 void Robot_WeaponSage_Setup::debug()
 {
-    //´ýÊµÏÖ
+    //ï¿½ï¿½Êµï¿½ï¿½
 }
 
 void Robot_WeaponSage_Setup::autoControl()
 {
-    //´ýÊµÏÖ
+    //ï¿½ï¿½Êµï¿½ï¿½
     /**
-     * @brief ×Ô¶¯¿ØÖÆÂß¼­
-     *  1.¶ÔÓÚ4¸ö´ýÈ¡Ã¬¸Ë£¬Ó²±àÂëËÄ¸öÎ»ÖÃ
-     *  2.µ±µ×ÅÌ¿¿Î»Íê³Éºó£¬×Ü×´Ì¬»ú·¢À´ÏÂ½µÖ¸Áî£¬Ö´ÐÐÏÂ½µ
-     *  3.µ±ÏÂ½µÍê³Éºó£¬ÇÒµ×ÅÌÓëÎäÆ÷¼Üµ×²¿½Ó´¥£¬ÔòÖ´ÐÐ×¥È¡
-     *  4.µ±µ×ÅÌºóÍËµ½ÄÜ½«Ã¬¸ËÌ§ÆðµÄÎ»ÖÃºó£¬Ö´ÐÐÌ§Æð
+     * @brief ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½
+     *  1.ï¿½ï¿½ï¿½ï¿½4ï¿½ï¿½ï¿½ï¿½È¡Ã¬ï¿½Ë£ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½Ä¸ï¿½Î»ï¿½ï¿½
+     *  2.ï¿½ï¿½ï¿½ï¿½ï¿½Ì¿ï¿½Î»ï¿½ï¿½Éºï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â½ï¿½Ö¸ï¿½î£¬Ö´ï¿½ï¿½ï¿½Â½ï¿½
+     *  3.ï¿½ï¿½ï¿½Â½ï¿½ï¿½ï¿½Éºï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Üµ×²ï¿½ï¿½Ó´ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½×¥È¡
+     *  4.ï¿½ï¿½ï¿½ï¿½ï¿½Ìºï¿½ï¿½Ëµï¿½ï¿½Ü½ï¿½Ã¬ï¿½ï¿½Ì§ï¿½ï¿½ï¿½Î»ï¿½Ãºï¿½Ö´ï¿½ï¿½Ì§ï¿½ï¿½
      */
 	switch(now_state_)
 
@@ -277,7 +277,7 @@ void Robot_WeaponSage_Setup::autoControl()
 
 void Robot_WeaponSage_Setup::stop()
 {
-    //Í£Ö¹£¬µç»ú²»¶¯
+    //Í£Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     this->setTarget(0.0f, WeaponSage::Launch_Motor);
     this->setTarget(0.0f, WeaponSage::Claw_Motor);
     this->setTarget(0.0f, WeaponSage::Traverse_Motor);
@@ -314,22 +314,14 @@ bool Robot_WeaponSage_Setup::State_GrabClaw()
         
         this->setTarget(initData_.max_clawAngle_, WeaponSage::Claw_Motor);
        
-    
-        if(!auto_ctrl_.auto_state_bool_S.grab_start)
-        {
-            auto_ctrl_.auto_state_bool_S.grab_start = true;
-            auto_ctrl_.auto_state_bool_S.grab_startTime = TimeStamp::getInstance().getSeconds();
-        }
-
-    
-        if(ctrl_status_.now_times - auto_ctrl_.auto_state_bool_S.grab_startTime >= 0.2f)
+        if(Claw_current_pos_.theta >= initData_.max_clawAngle_ - 1.0f)
         {
             return true;
-        }
-        else
+        }else
         {
             return false;
         }
+        
 	}
     return false;
 }
@@ -343,10 +335,10 @@ bool Robot_WeaponSage_Setup::State_Lift()
         this->setTarget(auto_ctrl_.up_height, WeaponSage::Launch_Motor);
     }
 
-    Point2D current_pos = getClawPos();
+
     
-    // ÅÐ¶ÏÊÇ·ñµ½´ïÄ¿±ê¸ß¶È (ÔÊÐí 1cm µÄÎó²î)
-    if(fabs(current_pos.y - auto_ctrl_.up_height) < 0.01f)
+    // ï¿½Ð¶ï¿½ï¿½Ç·ñµ½´ï¿½Ä¿ï¿½ï¿½ß¶ï¿½ (ï¿½ï¿½ï¿½ï¿½ 1cm ï¿½ï¿½ï¿½ï¿½ï¿½)
+    if(fabs(Claw_current_pos_.y - auto_ctrl_.up_height) < 0.01f)
     {
         return true;
     }
