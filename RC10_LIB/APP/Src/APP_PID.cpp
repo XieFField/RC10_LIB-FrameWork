@@ -242,7 +242,7 @@ PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
     .I_Outlimit = 8000.0f, 
     .isIOutlimit = true, 
     .output_limit = 15000.0f,   
-    .deadband = 0.0f 
+    .deadband = 0.5f 
 };
 
 PID_Param_Config track_pid_params = {

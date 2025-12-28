@@ -116,7 +116,7 @@ public:
 		
     Point2D get_FK_ChassisSpeed_inWorld(){return fk_chassisSpeed_inWorld_;}
 
-		void locate_setup_init(){this->start(osPriorityNormal, 256);}
+		void locate_setup_init(){this->start(osPriorityNormal, 512);}
 		
     float get_yaw_from_position(){return yaw_from_position_;}
     float get_dyaw_from_position(){return dyaw_from_position_;}
@@ -126,7 +126,7 @@ public:
     void Relocte_ToLader();
 
 private:
-    Locate_Setup():RtosTask("Locate_Setup", 1), Laser_pos_instance(nullptr) {}
+    Locate_Setup():RtosTask("Locate_Setup\0", 1), Laser_pos_instance(nullptr) {}
 	  
     Laser_InstanceManager* Laser_pos_instance;
     bool is_startToLRL_ = false; // 是否启动激光重定位

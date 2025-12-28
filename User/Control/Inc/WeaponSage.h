@@ -1,7 +1,7 @@
 /**
  * @file WeaponSage.h
  * @author XieFField
- * @brief ������ʦ������
+ * @brief 锟斤拷锟斤拷锟斤拷师锟斤拷锟斤拷锟斤�?
  * @version 1.0
  */
 #ifndef WEAPONSAGE_H
@@ -25,20 +25,20 @@ extern "C" {
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 
-//һ��ת��������ʱ��Ϊ������
+//一锟斤拷转锟斤拷锟斤拷锟斤拷锟斤拷时锟斤拷为锟斤拷锟斤拷锟斤拷
 typedef struct 
 {
     /* data */
-    float max_launchHeight_; // ��������г̣���λ��
-    float max_clawAngle_; // ץȡ���Ƕȣ���λ��
-    float max_traverseLength_; // ��������г̣���λ��
+    float max_launchHeight_; // 锟斤拷锟斤拷锟斤拷锟斤拷谐蹋锟斤拷锟轿伙拷锟�?
+    float max_clawAngle_; // 抓取锟斤拷锟角度ｏ拷锟斤拷位锟斤�?
+    float max_traverseLength_; // 锟斤拷锟斤拷锟斤拷锟斤拷谐蹋锟斤拷锟轿伙拷锟�?
 
-    float wrist_gearRatio_; // ������ٱȣ�������תһȦ������ת���ٶ�(360����ζ��ֱ��)
-    float launch_Ratio_; // �������ʣ��������תһȦ������������
-    float claw_gearRatio_; // ץȡ���ٱȣ�ץȡ���תһȦ��ץȡ���ٶ�
-    float traverse_Ratio_; // ���Ʊ��ʣ����Ƶ��תһȦ�����ƶ�����
+    float wrist_gearRatio_; // 锟斤拷锟斤拷锟斤拷俦龋锟斤拷锟斤拷锟斤拷锟阶蝗︼拷锟斤拷锟斤拷锟阶拷锟斤拷俣锟�(360锟斤拷锟斤拷味锟斤拷直锟斤拷)
+    float launch_Ratio_; // 锟斤拷锟斤拷锟斤拷锟绞ｏ拷锟斤拷锟斤拷锟斤拷锟阶蝗︼拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟�?
+    float claw_gearRatio_; // 抓取锟斤拷锟�?比ｏ拷抓取锟斤拷锟阶蝗︼拷锟阶ト★拷锟斤拷俣锟�?
+    float traverse_Ratio_; // 锟斤拷锟狡憋拷锟绞ｏ拷锟斤拷锟狡碉拷锟阶蝗︼拷锟斤拷锟斤拷�?锟斤拷锟斤拷锟�
 
-    float max_wristMotorRPM_; // ���������ת�٣���λRPM
+    float max_wristMotorRPM_; // 锟斤拷锟斤拷锟斤拷锟斤拷锟阶拷伲锟斤拷锟轿籖PM
 
 }WeaponSage_InitData_S;
 
@@ -63,9 +63,9 @@ namespace WeaponSage
     enum WeaponSage_CtrlMode_S 
     {
         /* data */
-        CURRENT_CONTROL, // ��������ģʽ
-        Join_POSITION_CONTROL, // �ؽ�λ�ÿ���ģʽ
-        TOTAL_ANGLE_CONTROL,   // ����ܽǶȿ���ģʽ
+        CURRENT_CONTROL, // 锟斤拷锟斤拷锟斤拷锟斤拷模式
+        Join_POSITION_CONTROL, // 锟截斤拷位锟�?匡拷锟斤拷模�?
+        TOTAL_ANGLE_CONTROL,   // 锟斤拷锟斤拷芙嵌瓤锟斤拷锟侥�?�?
     };
     
     typedef struct
@@ -101,13 +101,16 @@ public:
     bool register_wrist_Motor(DM_Motor* motor)
     { wrist_Motor_ = motor; if(wrist_Motor_ != nullptr)return true; }
     
+    	
+	void update();
+    
+
     /**
-     * @brief ���õ������
-     * @param reversed �Ƿ��� true���࣬false������(Ĭ�ϲ�����)
-     * @param motor_type �������
+     * @brief 锟斤拷锟�?碉拷锟斤拷锟斤拷锟�
+     * @param reversed 锟�?�凤拷锟斤拷 true锟斤拷锟洁，false锟斤拷锟斤拷锟斤�?(默锟较�?�拷锟斤拷锟斤拷)
+     * @param motor_type 锟斤拷锟斤拷锟斤拷锟�?
      */
-	
-	
+
     bool setMotorReversed(bool reversed, WeaponSage::Motor_Type_E motor_type);
 
 
@@ -141,10 +144,10 @@ private:
 
 protected:
 
-    M3508 *launch_Motor_ = nullptr; // �������
-    M2006 *claw_Motor_ = nullptr; // ץȡ���
-    M2006 *traverse_Motor_ = nullptr; // ���Ƶ��
-    DM_Motor *wrist_Motor_ = nullptr; // ������
+    M3508 *launch_Motor_ = nullptr; // 锟斤拷锟斤拷锟斤拷锟�?
+    M2006 *claw_Motor_ = nullptr; // 抓取锟斤拷锟�?
+    M2006 *traverse_Motor_ = nullptr; // 锟斤拷锟狡�?�拷锟�
+    DM_Motor *wrist_Motor_ = nullptr; // 锟斤拷锟斤拷锟斤�?
 
 
     WeaponSage::WeaponSage_Pos_S target_pos_;
@@ -152,9 +155,9 @@ protected:
 	WeaponSage::WeaponSage_Pos_S last_pos_;
 
     /**
-     * @brief ��ʵλ��ת��Ϊ����ܽǶ�
-     * @param real_pos ��ʵλ�ã���λ�׻�ȣ������initData_˵��
-     * @param motor_type �������
+     * @brief 锟斤拷实位锟斤拷�?锟斤拷为锟斤拷锟斤拷芙嵌锟�
+     * @param real_pos 锟斤拷实位锟�?ｏ拷锟斤拷位锟阶伙拷龋锟斤拷锟斤拷锟斤拷initData_说锟斤拷
+     * @param motor_type 锟斤拷锟斤拷锟斤拷锟�?
      */
     float Realpos_to_MotorTotalAngle(float real_pos, WeaponSage::Motor_Type_E motor_type);
 

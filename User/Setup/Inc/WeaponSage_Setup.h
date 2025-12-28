@@ -1,7 +1,8 @@
 /**
  * @file WeaponSage_Setup.h
- * @author XieFField
- * @brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¦Ó¦ï¿½Ã²ï¿½
+ * @author XieFField 70er66
+ * @brief ÎäÆ÷¼Ü¿ØÖÆÊµÏÖ
+ * @version 1.0
  */
 
 

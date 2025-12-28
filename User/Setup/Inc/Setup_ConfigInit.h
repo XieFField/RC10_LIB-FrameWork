@@ -64,7 +64,25 @@ extern "C" {
 
 
 
+class test:public RtosTask {
+public:
+    test():RtosTask("test", 1) {}
 
+    void init() {
+        this->start(osPriorityNormal, 256);
+    }
+
+    void loop() override
+    {
+        for(;;)
+        {
+            a++;
+            osDelay(1000);
+        }
+    }
+
+int a = 0;
+};
 
 
 

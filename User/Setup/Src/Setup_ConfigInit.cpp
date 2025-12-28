@@ -28,9 +28,12 @@ Laser_InstanceManager instance_man;
 
 OmniChassis_Setup ChassisOmni(0.442f/2.f,420, 0.74f, 0.8363f, true); // 轮子半径，最大轮子转速，底盘 底 腰
 
-ArmSetup ARM_Controller(arm_initData);
+
+
 FSM_Controller Finite_StateMachine;
+ArmSetup ARM_Controller(arm_initData);
 Robot_WeaponSage_Setup Weapon_Controller(initData_);
+test test_task;
 /*==============Controller Instances===========*/
 
 /*=============================================*/
@@ -166,7 +169,7 @@ void CAN_Motor_Init(void);
 
 void ALL_Setup_ConfigInit(void)
 {
-
+    test_task.init();
    Position* pos = Position::GetInstance(&huart1);
    pos->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
@@ -190,12 +193,15 @@ void ALL_Setup_ConfigInit(void)
 
    Finite_StateMachine.registerArmSetup(&ARM_Controller);
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
+   Finite_StateMachine.registerWeaponSageSetup(&Weapon_Controller);
+
+   Finite_StateMachine.init();
 
 
    CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
    crsf_rc->init();
 
-   Finite_StateMachine.init();
+
 
    
 
@@ -211,6 +217,7 @@ void ALL_Setup_ConfigInit(void)
      set1->set_startToLRL(true);
 //雷达定位实例化
 	 Lader_position*ladar=Lader_position::GetInstance(&hUsbDeviceHS);
+   
 }
 
 
