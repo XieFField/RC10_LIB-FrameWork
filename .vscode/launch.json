@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "f:/MyProjectFlies/STM32H7/Frame_T/matlab_weaponSage",
-      "program": "f:/MyProjectFlies/STM32H7/Frame_T/matlab_weaponSage/build/Debug/outDebug",
+      "cwd": "f:/MyProjectFlies/STM32H7/Frame_T",
+      "program": "f:/MyProjectFlies/STM32H7/Frame_T/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

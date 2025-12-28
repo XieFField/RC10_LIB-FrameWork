@@ -34,6 +34,7 @@ extern "C" {
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 #include "Module_GPIO.h"
+#include "Module_GPIO.h"
 
 
 /**

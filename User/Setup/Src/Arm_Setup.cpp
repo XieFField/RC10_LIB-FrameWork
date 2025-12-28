@@ -17,6 +17,7 @@ void ArmSetup::loop()
         arm_status_ = ARM_CALIBRATE;
     }
 
+
     //目前使用虚拟坐标进行自控逻辑验证
     if(arm_status_ == ARM_AUTO_CONTROL)
     {
@@ -1614,6 +1615,9 @@ Arm_InitData_S arm_initData = {
 
    .min_rotate_angle_ = 0.0f,
    .max_rotate_angle_ = 359.999f,
+
+   .Sucker_GPIO_Port = SUCKER_GPIO_Port,
+    .Sucker_GPIO_Pin = SUCKER_Pin,
 };
 
 
