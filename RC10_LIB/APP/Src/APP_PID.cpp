@@ -221,7 +221,7 @@ PID_Param_Config m2006_speed_pid_params = {
     .kd = 0.0f,
     .I_Outlimit = 5000.0f, 
     .isIOutlimit = true, 
-    .output_limit = 10000.0f,   
+    .output_limit = 6000.0f,   
     .deadband = 0.05f 
 };
 

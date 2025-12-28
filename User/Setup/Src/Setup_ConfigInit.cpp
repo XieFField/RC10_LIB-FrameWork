@@ -6,7 +6,7 @@ extern "C"
 }
 fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
 fdCANbus* const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // 获取FDCAN2的唯一实例
-
+fdCANbus* const CAN3_Bus = fdCANbus::getInstance(&hfdcan3);
 
 DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus); // 1~4号M3508/M2006电机
 DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8号M3508/M2006电机
@@ -249,11 +249,15 @@ void CAN_Motor_Init(void)
    CAN2_Bus->registerMotor(&Weapon_launchMotor);
    CAN2_Bus->registerMotor(&Weapon_clawMotor);
    CAN2_Bus->registerMotor(&Weapon_traverseMotor);
+   
    CAN2_Bus->registerMotor(&Weapon_wristMotor);
+   
+   
 
    CAN1_Bus->init();
    CAN2_Bus->init();
-
+   
+	CAN3_Bus->init();
    // 底盘轮子电机PID参数初始化
    omni_wheel1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    omni_wheel2.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
@@ -274,9 +278,20 @@ void CAN_Motor_Init(void)
    arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
    arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
    arm_pitchMotor.pid_init(m2006_speed_pid_params, 0.0f, m2006_angle_pid_params, 0.0f);
-
-   Weapon_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
-   Weapon_clawMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
+	
+	PID_Param_Config weapon_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
+   PID_Param_Config weapon_3508_anglePID = m3508_angle_pid_params;
+   
+   PID_Param_Config weapon_2006_speedPID = m2006_speed_pid_params;
+   PID_Param_Config weapon_2006_anglePID =m2006_angle_pid_params;
+ 
+   weapon_3508_anglePID.output_limit=200.0f;
+   weapon_3508_speedPID.output_limit=15000.0f;
+   weapon_2006_speedPID.output_limit=4500;
+   weapon_2006_anglePID.output_limit=1000;
+   
+   Weapon_launchMotor.pid_init(weapon_3508_speedPID, 0.0f,weapon_3508_anglePID, 0.0f);
+   Weapon_clawMotor.pid_init(weapon_2006_speedPID, 0.0f,  weapon_2006_anglePID, 0.0f);
    Weapon_traverseMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
 
 }

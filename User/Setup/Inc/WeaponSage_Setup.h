@@ -31,7 +31,7 @@ namespace WeaponSage_Setup
         bool init_flag = false;
 
         float debug_start = 1; //锟斤拷锟皆匡拷始锟斤拷志 == 1 锟斤拷始锟斤拷锟斤拷
-
+		float now_times=0.0f;
         float calibrate_startTime = 0;
         bool calibrate_start = false;
         bool is_calibrating = false;
@@ -46,7 +46,7 @@ namespace WeaponSage_Setup
         STATE_GRAB_CLAW,   //抓取爪子
         STATE_LIFT_POSITION, //提升位置
         STATE_DONE 
-    }auot_GRABstate_S;
+    }auto_GRABstate_S;
 
 
     typedef struct{
@@ -59,12 +59,27 @@ namespace WeaponSage_Setup
     typedef struct{
 
         struct{
-            // bool start
-            
+			bool is_matching = false;
+            bool grab_start = false;
+            float grab_startTime = 0.0f;
+            bool is_moving = false;  
+			bool wrist_enable=false;
         }auto_state_bool_S; //局部状态结构体
+		  float claw_close_pos = 32.36f;
+        float claw_open_pos = 49.58f;
+        float tarch_height = 0.0f; 
+        float up_height = 0.0f;
+        struct{
+            bool aimposition_done = false;
+            bool lowerclaw_done = false;
+            bool grabclaw_done = false;
+            bool lift_done = false;
+        }flag;
+        bool auto_ctrl1 = false;
+        int pole_num = 0;
     }auto_ctrl_S;
 
-     extern float weapon_pos[4]; //武器位置数组
+     extern float weapon_pos[2];//武器位置数组
 
 }
 
@@ -104,11 +119,6 @@ public:
         
     }
 
-//    Point2D getClawPos()
-//    {   
-//        Point2D pos = {0.0f, 0.0f, 0.0f};
-//        return pos;
-//    }
 
     void setWeaponSageControlStatus(WeaponSage_Status_E status)
     {
@@ -151,11 +161,14 @@ private:
     bool State_AimPosition(int pole_num);
     void State_LowerClaw();
     bool State_GrabClaw();
-    void State_Lift();
+    bool State_Lift();
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 
     
     WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
+	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_IDLE;
+	WeaponSage_Setup::auto_GRABstate_S now_state_;
+	
     RmPocketData_t airjoy_data_; 
 
     WeaponSage_Setup::manual_ctrlForgrip_S manual_ctrlForgrip_;
