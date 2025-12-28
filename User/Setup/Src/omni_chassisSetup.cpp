@@ -119,6 +119,9 @@ void OmniChassis_Setup::loop()
 
     #endif
     //debug_uart.Printf_Ladar(ladar_data_.x, ladar_data_.y);
+
+    //debug_uart.printf_DMA("%f,%f,%f,%f\r\n",
+                          target_yaw_,yaw,target_chassis_twist_.yaw_rate,dyaw);
     this->update();
 
     Point2D fk_speed;
