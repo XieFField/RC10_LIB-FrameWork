@@ -49,6 +49,7 @@ void Robot_WeaponSage_Setup::loop()
 		{
 			calibrate();
 			
+<<<<<<< Updated upstream
 			if(ctrl_status_.is_calibrating)
             {
 				auto_ctrl_.flag.aimposition_done=State_AimPosition(1);
@@ -64,6 +65,12 @@ void Robot_WeaponSage_Setup::loop()
 //                if(auto_ctrl_.flag.lift_done&&auto_ctrl_.auto_state_bool_S.wrist_enable)
 //                    this->setTarget(90.0f,WeaponSage::Wrist_Motor);
             }
+=======
+			 if(ctrl_status_.is_calibrating)
+             {
+			 	auto_ctrl_.flag.aimposition_done=State_AimPosition(1);
+             }
+>>>>>>> Stashed changes
             break;
 	    }
 			

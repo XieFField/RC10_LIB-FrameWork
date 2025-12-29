@@ -213,7 +213,11 @@
         <Ww>
           <count>11</count>
           <WinNumber>1</WinNumber>
+<<<<<<< Updated upstream
           <ItemText>Weapon_Controller</ItemText>
+=======
+          <ItemText>Weapon_Controller,0x0A</ItemText>
+>>>>>>> Stashed changes
         </Ww>
         <Ww>
           <count>12</count>
@@ -234,6 +238,14 @@
           <count>15</count>
           <WinNumber>1</WinNumber>
           <ItemText>g_fdcan_bus_map_dbg[1]</ItemText>
+<<<<<<< Updated upstream
+=======
+        </Ww>
+        <Ww>
+          <count>16</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\Weapon_Controller.Robot_WeaponSage.claw_Motor_</ItemText>
+>>>>>>> Stashed changes
         </Ww>
       </WatchWindow1>
       <Tracepoint>
