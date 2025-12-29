@@ -11,7 +11,7 @@
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
       <pArmCC>6240000::V6.24::ARMCLANG</pArmCC>
-      <pCCUsed>6240000::V6.24::ARMCLANG</pCCUsed>
+      <pCCUsed>6230000::V6.23::ARMCLANG</pCCUsed>
       <uAC6>1</uAC6>
       <TargetOption>
         <TargetCommonOption>
@@ -1201,14 +1201,14 @@
               <FilePath>..\User\Control\Src\AutoCtrler.cpp</FilePath>
             </File>
             <File>
-              <FileName>WeaponSage.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Control\Src\WeaponSage.cpp</FilePath>
-            </File>
-            <File>
               <FileName>WeaponSage.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Control\Inc\WeaponSage.h</FilePath>
+            </File>
+            <File>
+              <FileName>WeaponSage.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Src\WeaponSage.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -1271,16 +1271,6 @@
               <FilePath>..\User\Setup\Src\Locate_Setup.cpp</FilePath>
             </File>
             <File>
-              <FileName>WeaponSage_Setup.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\WeaponSage_Setup.h</FilePath>
-            </File>
-            <File>
-              <FileName>WeaponSage_Setup.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\WeaponSage_Setup.cpp</FilePath>
-            </File>
-            <File>
               <FileName>RTOS_QueueSetup.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Setup\Inc\RTOS_QueueSetup.h</FilePath>
@@ -1289,6 +1279,16 @@
               <FileName>RTOS_QueueSetup.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\RTOS_QueueSetup.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>WeaponSage_Setup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\WeaponSage_Setup.h</FilePath>
+            </File>
+            <File>
+              <FileName>WeaponSage_Setup.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\WeaponSage_Setup.cpp</FilePath>
             </File>
           </Files>
         </Group>
