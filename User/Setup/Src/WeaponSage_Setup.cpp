@@ -56,7 +56,7 @@ void Robot_WeaponSage_Setup::loop()
             break;
     }
 
-    this->update();
+     this->update();
 }
 
 void Robot_WeaponSage_Setup::calibrate()

@@ -127,10 +127,10 @@ bool fdCANbus::sendFrame(const CanFrame& cf)
          return false;
      }
 
-    static FDCAN_TxHeaderTypeDef tx_header;
+    FDCAN_TxHeaderTypeDef tx_header;
 
     // 确保发送数据 4 字节对齐
-    alignas(4) static uint8_t aligned_buf[8];
+    alignas(4) uint8_t aligned_buf[8];
     std::memcpy(aligned_buf, cf.data, 8);
 
 
