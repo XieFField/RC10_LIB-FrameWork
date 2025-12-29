@@ -80,8 +80,8 @@ void fdCANbus::init()
         Error_Handler();
     }
 
-    // 激活FIFO0新消息中断
-    if (HAL_FDCAN_ActivateNotification(hfdcan_, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK) {
+    // 激活FIFO0新消息中断 和 BusOff中断
+    if (HAL_FDCAN_ActivateNotification(hfdcan_, FDCAN_IT_RX_FIFO0_NEW_MESSAGE | FDCAN_IT_BUS_OFF, 0) != HAL_OK) {
         // 错误处理
         HAL_FDCAN_ActivateNotification_ERROR = 1;
         Error_Handler();
@@ -90,8 +90,8 @@ void fdCANbus::init()
     // 注册自身到全局映射表
     register_fdcan_bus_for_isr(this);
 
-    rxTask_.start(tskIDLE_PRIORITY + 3, 256);
-    schedulerTask_.start(tskIDLE_PRIORITY + 4, 256);
+    rxTask_.start(tskIDLE_PRIORITY + 3, 512);
+    schedulerTask_.start(tskIDLE_PRIORITY + 4, 512);
 
     can_init_done_ = true;
 }
@@ -185,6 +185,15 @@ void fdCANbus::schedulerTaskbody()
     {
         xSemaphoreTake(schedSem_, portMAX_DELAY);
 
+        if (bus_off_flag_)
+        {
+            // Handle Bus Off Recovery
+            HAL_FDCAN_Stop(hfdcan_);
+            HAL_FDCAN_Start(hfdcan_);
+            // HAL_FDCAN_ActivateNotification(hfdcan_, FDCAN_IT_RX_FIFO0_NEW_MESSAGE | FDCAN_IT_BUS_OFF, 0);
+            bus_off_flag_ = false;
+        }
+
         for (std::size_t i = 0; i < MAX_MOTORS; ++i)
         {
             Motor_Base* m = motorList_[i];
@@ -266,15 +275,32 @@ extern "C" void fdcan_global_rx_isr(FDCAN_HandleTypeDef* hfdcan)
 
     CanFrame rx_frame;
     FDCAN_RxHeaderTypeDef rx_header;
-    if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_frame.data) == HAL_OK) 
+    BaseType_t higher_priority_task_woken = pdFALSE;
+
+    // 循环读取直到 FIFO 为空，防止高负载下数据积压
+    while (HAL_FDCAN_GetRxFifoFillLevel(hfdcan, FDCAN_RX_FIFO0) > 0)
     {
-        rx_frame.ID = rx_header.Identifier;
-        rx_frame.isextended = (rx_header.IdType == FDCAN_EXTENDED_ID);
-        rx_frame.DLC = (rx_header.DataLength >> 16) & 0x0F;
-        BaseType_t higher_priority_task_woken = pdFALSE;
-        target_bus->pushRxFromISR(rx_frame, &higher_priority_task_woken);
-        portYIELD_FROM_ISR(higher_priority_task_woken);
+        if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_frame.data) == HAL_OK) 
+        {
+            rx_frame.ID = rx_header.Identifier;
+            rx_frame.isextended = (rx_header.IdType == FDCAN_EXTENDED_ID);
+            rx_frame.DLC = (rx_header.DataLength >> 16) & 0x0F;
+            
+            BaseType_t current_woken = pdFALSE;
+            target_bus->pushRxFromISR(rx_frame, &current_woken);
+            
+            if(current_woken == pdTRUE)
+            {
+                higher_priority_task_woken = pdTRUE;
+            }
+        }
+        else
+        {
+            break; // 读取失败或 FIFO 空
+        }
     }
+
+    portYIELD_FROM_ISR(higher_priority_task_woken);
 }
 
 /**
@@ -291,6 +317,33 @@ extern "C" void fdcan_global_scheduler_tick_isr()
         }
     }
     portYIELD_FROM_ISR(higher_priority_task_woken);
+}
+
+/**
+ * @brief  FDCAN Error Status Callback
+ * @param  hfdcan pointer to an FDCAN_HandleTypeDef structure that contains
+ *         the configuration information for the specified FDCAN.
+ * @param  ErrorStatusITs Error Status Interrupts flags
+ * @retval None
+ */
+extern "C" void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t ErrorStatusITs)
+{
+    if ((ErrorStatusITs & FDCAN_IT_BUS_OFF) != 0)
+    {
+        // Bus Off detected, set flag and wake up task to recover
+        for (int i = 0; i < 3; ++i) 
+        {
+            if (g_fdcan_bus_map[i] && g_fdcan_bus_map[i]->getFDCANHandle() == hfdcan) 
+            {
+                g_fdcan_bus_map[i]->setBusOffFlag();
+                // Wake up scheduler task to handle recovery immediately
+                BaseType_t higher_priority_task_woken = pdFALSE;
+                xSemaphoreGiveFromISR(g_fdcan_bus_map[i]->schedSem_, &higher_priority_task_woken);
+                portYIELD_FROM_ISR(higher_priority_task_woken);
+                break;
+            }
+        }
+    }
 }
 
 /**

@@ -160,7 +160,14 @@ public:
     /**
      * @brief 设置机械臂控制模式
      */
-    void set_controlMode(Arm_Control_mode_E mode){ control_mode_ = mode; }
+    void set_controlMode(Arm_Control_mode_E mode)
+    {
+        if(control_mode_ != mode)
+        {
+            last_rotate_cmd_ = joint_angle_.rotateJoint_angle_;
+        }
+        control_mode_ = mode;
+    }
 
     void registerMotor_Launch(DJI_Motor* motor){ motor_launch_ = motor; }
     void registerMotor_Stretch(DJI_Motor* motor){ motor_stretch_ = motor; }
@@ -333,6 +340,7 @@ protected:
 
 private:
     MotorReversed_S sign_reversed_  = {1.0f, 1.0f, 1.0f, 1.0f};
+    float last_rotate_cmd_ = 0.0f;
 
 };
 

@@ -49,7 +49,7 @@ typedef enum{
     CHASSIS_MANUAL_CONTROL_A, //底盘手动控制模式（角速度可控）
     CHASSIS_MANUAL_CONTROL_B, //底盘手动控制模式（角速度为0，锁定角度）
     CHASSIS_LOCK_FORWEAPON,    //底盘锁定yaw，为武器大师提供稳定平台
-
+    CHASSIS_MANUAL_CONTROL_C, //底盘手动控制模式C
 
     CHASSIS_AUTO_CONTROL, //底盘自动控制模式
 

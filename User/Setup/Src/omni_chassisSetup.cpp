@@ -40,7 +40,8 @@ void OmniChassis_Setup::loop()
                 target_chassis_twist_.yaw_rate = 0.0f;
 			
 			// target_yaw_ = yaw;
-            
+            this->setWorldSpeed(target_chassis_twist_);
+            this->update();
             break;
         }
 
@@ -66,6 +67,8 @@ void OmniChassis_Setup::loop()
                 target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
             }
 			
+            this->setWorldSpeed(target_chassis_twist_);
+            this->update();
             break;
         }
 
@@ -92,6 +95,8 @@ void OmniChassis_Setup::loop()
             else
                 target_chassis_twist_.vy = 0.0f;
 
+            this->setWorldSpeed(target_chassis_twist_);
+            this->update();
             break;
         }
 
@@ -101,12 +106,28 @@ void OmniChassis_Setup::loop()
         }
         case CHASSIS_STOP:
         {
-            target_chassis_twist_.vx = 0;
-            target_chassis_twist_.vy = 0;
-            target_chassis_twist_.yaw_rate = 0;
-            // this->wheels_[0]->setTargetCurrent(0);
-            // this->wheels_[1]->setTargetCurrent(0);
-            // this->wheels_[2]->setTargetCurrent(0);
+            this->wheels_[0]->setTargetCurrent(0);
+            this->wheels_[1]->setTargetCurrent(0);
+            this->wheels_[2]->setTargetCurrent(0);
+            break;
+        }
+
+        case CHASSIS_MANUAL_CONTROL_C:
+        {
+            target_chassis_twist_.yaw_rate = 0.0f;
+
+            if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                target_chassis_twist_.vx = -airjoy_data_.left_x * 6;
+            else
+                target_chassis_twist_.vx = 0.0f;
+
+            if(_tool_Abs(airjoy_data_.left_y) > 0.05f)
+                target_chassis_twist_.vy = airjoy_data_.left_y * 6;
+            else
+                target_chassis_twist_.vy = 0.0f;
+
+            this->setWorldSpeed(target_chassis_twist_);
+            this->update();
             break;
         }
         default:
@@ -117,7 +138,7 @@ void OmniChassis_Setup::loop()
 
     //接收一次雷达数据打印一次
     
-    this->setWorldSpeed(target_chassis_twist_);
+    
 
     #if debug_ladar
 
@@ -131,8 +152,9 @@ void OmniChassis_Setup::loop()
     //debug_uart.Printf_Ladar(ladar_data_.x, ladar_data_.y);
 
     //debug_uart.printf_DMA("%f,%f,%f,%f\r\n",
-                          target_yaw_,yaw,target_chassis_twist_.yaw_rate,dyaw);
-    this->update();
+    //                      target_yaw_,yaw,target_chassis_twist_.yaw_rate,dyaw);
+
+    
 
     Point2D fk_speed;
     fk_speed.x = this->getWorldSpeed().vx;

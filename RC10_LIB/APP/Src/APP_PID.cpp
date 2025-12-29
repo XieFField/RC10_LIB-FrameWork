@@ -215,6 +215,26 @@ PID_Param_Config m3508_angle_pid_params = {
     .deadband = 0.03f // 
 };
 
+PID_Param_Config m3508Rotate_angle_pid_params = {
+    .kp = 3.5f,
+    .ki = 0.0f,
+    .kd = 0.00f,
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 40.0f,   
+    .deadband = 0.03f // 
+};
+
+PID_Param_Config m3508ForRotate_angle_pid_params = {
+    .kp = 3.5f,
+    .ki = 0.0f,
+    .kd = 0.00f,
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 120.0f,   
+    .deadband = 0.03f // 
+};
+
 PID_Param_Config m2006_speed_pid_params = {
     .kp = 300.0f,  
     .ki = 12.0f, 
@@ -264,3 +284,24 @@ PID_Param_Config lock_angle_pid_params = {
     .output_limit = 3.0f,   
     .deadband = 0.003f 
 };
+
+
+// PID_Param_Config m3508Rotate_speed_pid_params = {
+//     .kp = 32.0f,
+//     .ki = 0.085f,
+//     .kd = 0.0f,
+//     .I_Outlimit = 8000.0f, 
+//     .isIOutlimit = true, 
+//     .output_limit = 15000.0f,   
+//     .deadband = 0.5f 
+// };
+
+// PID_Param_Config m3508Rotate_angle_pid_params = {
+//     .kp = 32.0f,
+//     .ki = 0.0f,
+//     .kd = 1.1f,
+//     .I_Outlimit = 0.0f, 
+//     .isIOutlimit = true, 
+//     .output_limit = 400.0f,   
+//     .deadband = 0.5f // 
+// };

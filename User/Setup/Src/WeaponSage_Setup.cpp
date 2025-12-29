@@ -280,6 +280,7 @@ void Robot_WeaponSage_Setup::autoControl()
 void Robot_WeaponSage_Setup::stop()
 {
     //停止，电机不动
+    this->setCtrlMode(WeaponSage::CURRENT_CONTROL);
     this->setTarget(0.0f, WeaponSage::Launch_Motor);
     this->setTarget(0.0f, WeaponSage::Claw_Motor);
     this->setTarget(0.0f, WeaponSage::Traverse_Motor);
