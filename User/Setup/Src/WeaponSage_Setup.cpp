@@ -151,6 +151,7 @@ void Robot_WeaponSage_Setup::manualControl()
         case 0x01:
         {
             //½ø¹¥Ä£Ê½
+            
             break;
         }
 
