@@ -59,6 +59,12 @@ void Robot_WeaponSage_Setup::loop()
     this->update();
 }
 int CNT=0;
+float traverse_rate=0.0001;
+float weapon_launch_rate=0.0001;
+float Kp_traverse=0.2;
+
+
+
 void Robot_WeaponSage_Setup::calibrate()
 {
     if(!ctrl_status_.is_calibrating)
@@ -134,9 +140,9 @@ void Robot_WeaponSage_Setup::manualControl()
             target_pos_.traverse_pos_ = WeaponSage_Setup::weapon_pos[ctrl_status_.target_poleIndex];
 
             if(airjoy_data_.right_y > 0.5f)
-                target_pos_.launch_pos_ += 0.01f;
+                target_pos_.launch_pos_ += weapon_launch_rate;
             else if(airjoy_data_.right_y < -0.5f)
-                target_pos_.launch_pos_ -= 0.01f;
+                target_pos_.launch_pos_ -= weapon_launch_rate;
             else
                 target_pos_.launch_pos_ = target_pos_.launch_pos_;
 
@@ -162,11 +168,11 @@ void Robot_WeaponSage_Setup::manualControl()
 					manual_ctrlForgrip_.changeTarget_state = true;
 					if(current_pos_.traverse_pos_>0.2*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
 					{
-						target_pos_.traverse_pos_+=0.0005;
+						target_pos_.traverse_pos_+=traverse_rate;
 					}
 					if(current_pos_.traverse_pos_<=0.2*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
 					{
-						target_pos_.traverse_pos_+=0.0001;
+						target_pos_.traverse_pos_+=traverse_rate*Kp_traverse;
 					}
 				}
 				else if(airjoy_data_.right_x < -0.5f)
@@ -174,18 +180,18 @@ void Robot_WeaponSage_Setup::manualControl()
 					manual_ctrlForgrip_.changeTarget_state = true;
 					if(current_pos_.traverse_pos_>0.2*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
 					{
-						target_pos_.traverse_pos_+=0.0005;
+						target_pos_.traverse_pos_+=traverse_rate;
 					}
 					if(current_pos_.traverse_pos_<=0.2*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
 					{
-						target_pos_.traverse_pos_+=0.0001;
+						target_pos_.traverse_pos_+=traverse_rate*Kp_traverse;
 					}
 				}
 
 				if(airjoy_data_.right_y > 0.5f)
-					target_pos_.launch_pos_ += 0.001f;
+					target_pos_.launch_pos_ += weapon_launch_rate;
 				else if(airjoy_data_.right_y < -0.5f)
-					target_pos_.launch_pos_ -= 0.001f;
+					target_pos_.launch_pos_ -= weapon_launch_rate;
 				else
 					target_pos_.launch_pos_ = target_pos_.launch_pos_;
 

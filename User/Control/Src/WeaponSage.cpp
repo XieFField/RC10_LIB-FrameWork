@@ -33,6 +33,11 @@ bool Robot_WeaponSage::setMotorReversed(bool reversed, WeaponSage::Motor_Type_E 
     return true;
 }
 
+void Robot_WeaponSage::update()
+{
+    current_pos_ = get_CurrentPos();
+}
+
 bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E motor_type)
 {
     switch (ctrl_mode_)

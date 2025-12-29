@@ -101,6 +101,10 @@ public:
     bool register_wrist_Motor(DM_Motor* motor)
     { wrist_Motor_ = motor; if(wrist_Motor_ != nullptr)return true; }
     
+	
+	void update();
+	
+	
     /**
      * @brief ���õ������
      * @param reversed �Ƿ��� true���࣬false������(Ĭ�ϲ�����)
