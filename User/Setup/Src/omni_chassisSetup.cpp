@@ -13,7 +13,7 @@ void OmniChassis_Setup::loop()
     float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
     float yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
-    ladar_data_ = Lader_position::GetInstance(&hUsbDeviceHS)->Get_Rader_Data();
+    ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
 
     Angle_Twist angle_twist = {0};
     angle_twist.yaw_rate = dyaw;
@@ -129,6 +129,9 @@ void OmniChassis_Setup::loop()
 
     #endif
     //debug_uart.Printf_Ladar(ladar_data_.x, ladar_data_.y);
+
+    //debug_uart.printf_DMA("%f,%f,%f,%f\r\n",
+                          target_yaw_,yaw,target_chassis_twist_.yaw_rate,dyaw);
     this->update();
 
     Point2D fk_speed;
