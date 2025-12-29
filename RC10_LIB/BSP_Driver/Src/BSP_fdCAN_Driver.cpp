@@ -98,6 +98,8 @@ void fdCANbus::init()
 
 bool fdCANbus::registerMotor(Motor_Base* m) 
 {
+    if (m->bus() != this) return false;
+
     for (std::size_t i = 0; i < MAX_MOTORS; ++i) 
     {
         if (motorList_[i] == nullptr) 
@@ -169,7 +171,7 @@ void fdCANbus::rxTaskbody()
             {
                 Motor_Base* m = motorList_[i];
 
-                if (m && m->matchesFrame(cf)) 
+                if (m && m->bus() == this && m->matchesFrame(cf)) 
                    m->updateFeedback(cf);
             }
 
