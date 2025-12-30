@@ -188,11 +188,11 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
             {
                 if(traverse_Motor_ != nullptr)
                 {
-                        target_pos_.traverse_TotalAngle_ = constrain(targetValue,
-                            Realpos_to_MotorTotalAngle(0.0f, motor_type),
-                            Realpos_to_MotorTotalAngle(initData_.max_traverseLength_, motor_type)
-                        );
-                        target_pos_.traverse_pos_ = MotorTotalAngle_to_Realpos(target_pos_.traverse_TotalAngle_, motor_type);
+                    target_pos_.traverse_TotalAngle_ = constrain(targetValue,
+                        Realpos_to_MotorTotalAngle(0.0f, motor_type),
+                        Realpos_to_MotorTotalAngle(initData_.max_traverseLength_, motor_type)
+                    );
+                    target_pos_.traverse_pos_ = MotorTotalAngle_to_Realpos(target_pos_.traverse_TotalAngle_, motor_type);
                 }
                 else
                     return false;

@@ -53,8 +53,8 @@ void Robot_WeaponSage_Setup::loop()
     this->update();
 }
 int CNT=0;
-float traverse_rate=0.0001;
-float weapon_launch_rate=0.0001;
+float traverse_rate=0.002;
+float weapon_launch_rate=0.002;
 float Kp_traverse=0.2;
 
 
@@ -136,10 +136,11 @@ void Robot_WeaponSage_Setup::manualControl()
                 target_pos_.launch_pos_ -= weapon_launch_rate;
             else
                 target_pos_.launch_pos_ = target_pos_.launch_pos_;
-
+			if(auto_ctrl_.auto_state_bool_S.wrist_enable)
+			{
             target_pos_.wrist_pos_ = 0.0f;
-
-            manual_ctrlForgrip_.last_right_stick_x = airjoy_data_.right_x;
+			}
+			manual_ctrlForgrip_.last_right_stick_x = airjoy_data_.right_x;
             manual_ctrlForgrip_.last_right_stick_y = airjoy_data_.right_y;
 
             break;
@@ -171,11 +172,6 @@ void Robot_WeaponSage_Setup::manualControl()
 					manual_ctrlForgrip_.changeTarget_state = true;
 					if(current_pos_.traverse_pos_>0.2*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
 					{
-						target_pos_.traverse_pos_+=traverse_rate;
-					}
-					if(current_pos_.traverse_pos_<=0.2*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
-					{
-						target_pos_.traverse_pos_+=traverse_rate*Kp_traverse;
 						target_pos_.traverse_pos_-=traverse_rate;
 					}
 					if(current_pos_.traverse_pos_<=0.2*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
@@ -191,9 +187,10 @@ void Robot_WeaponSage_Setup::manualControl()
 					target_pos_.launch_pos_ -= weapon_launch_rate;
 				else
 					target_pos_.launch_pos_ = target_pos_.launch_pos_;
-
+				if(auto_ctrl_.auto_state_bool_S.wrist_enable)
+				{
 				target_pos_.wrist_pos_ = 90.0f;
-
+				}
 				manual_ctrlForgrip_.last_right_stick_x = airjoy_data_.right_x;
 				manual_ctrlForgrip_.last_right_stick_y = airjoy_data_.right_y;
 				CNT=0;
