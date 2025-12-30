@@ -11,12 +11,13 @@ Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
 }
 
 void Robot_WeaponSage_Setup::loop()
-{
+{	
 	ctrl_status_.now_times=TimeStamp::getInstance().getSeconds();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 	if(!ctrl_status_.is_calibrating)
 	{
 		calibrate();
+		weaponSage_status_=WEAPONSAGE_CALIBRATE;
 	}
     switch(weaponSage_status_)
     {
@@ -40,7 +41,7 @@ void Robot_WeaponSage_Setup::loop()
 	    }
 		case WEAPONSAGE_CALIBRATE:
 		{
-			calibrate();
+			//calibrate();
 			
             break;
 	    }
