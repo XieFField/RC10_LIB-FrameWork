@@ -14,7 +14,10 @@ void Robot_WeaponSage_Setup::loop()
 {
 	ctrl_status_.now_times=TimeStamp::getInstance().getSeconds();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
-
+	if(!ctrl_status_.is_calibrating)
+	{
+		calibrate();
+	}
     switch(weaponSage_status_)
     {
         case WEAPONSAGE_MANUAL_CONTROL:
@@ -56,8 +59,15 @@ void Robot_WeaponSage_Setup::loop()
             break;
     }
 
-     this->update();
+    this->update();
 }
+int CNT=0;
+float traverse_rate=0.0001;
+float weapon_launch_rate=0.0001;
+float Kp_traverse=0.2;
+
+
+
 
 void Robot_WeaponSage_Setup::calibrate()
 {
@@ -134,9 +144,9 @@ void Robot_WeaponSage_Setup::manualControl()
             target_pos_.traverse_pos_ = WeaponSage_Setup::weapon_pos[ctrl_status_.target_poleIndex];
 
             if(airjoy_data_.right_y > 0.5f)
-                target_pos_.launch_pos_ += 0.01f;
+                target_pos_.launch_pos_ += weapon_launch_rate;
             else if(airjoy_data_.right_y < -0.5f)
-                target_pos_.launch_pos_ -= 0.01f;
+                target_pos_.launch_pos_ -= weapon_launch_rate;
             else
                 target_pos_.launch_pos_ = target_pos_.launch_pos_;
 
@@ -151,6 +161,57 @@ void Robot_WeaponSage_Setup::manualControl()
         case 0x01:
         {
             //½ø¹¥Ä£Ê½
+			CNT++;
+            if(CNT>10)
+			{
+				if(_tool_Abs(airjoy_data_.right_x) < 0.1)
+                manual_ctrlForgrip_.changeTarget_state = false;
+
+				else if(airjoy_data_.right_x > 0.5f)
+				{
+					manual_ctrlForgrip_.changeTarget_state = true;
+					if(current_pos_.traverse_pos_>0.2*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
+					{
+						target_pos_.traverse_pos_+=traverse_rate;
+					}
+					if(current_pos_.traverse_pos_<=0.2*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
+					{
+						target_pos_.traverse_pos_+=traverse_rate*Kp_traverse;
+					}
+				}
+				else if(airjoy_data_.right_x < -0.5f)
+				{
+					manual_ctrlForgrip_.changeTarget_state = true;
+					if(current_pos_.traverse_pos_>0.2*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
+					{
+						target_pos_.traverse_pos_+=traverse_rate;
+					}
+					if(current_pos_.traverse_pos_<=0.2*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
+					{
+						target_pos_.traverse_pos_+=traverse_rate*Kp_traverse;
+						target_pos_.traverse_pos_-=traverse_rate;
+					}
+					if(current_pos_.traverse_pos_<=0.2*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
+					{
+						target_pos_.traverse_pos_-=traverse_rate*Kp_traverse;
+					}
+				}
+
+                
+				if(airjoy_data_.right_y > 0.5f)
+					target_pos_.launch_pos_ += weapon_launch_rate;
+				else if(airjoy_data_.right_y < -0.5f)
+					target_pos_.launch_pos_ -= weapon_launch_rate;
+				else
+					target_pos_.launch_pos_ = target_pos_.launch_pos_;
+
+				target_pos_.wrist_pos_ = 90.0f;
+
+				manual_ctrlForgrip_.last_right_stick_x = airjoy_data_.right_x;
+				manual_ctrlForgrip_.last_right_stick_y = airjoy_data_.right_y;
+				CNT=0;
+
+			}
             break; 
         }
 

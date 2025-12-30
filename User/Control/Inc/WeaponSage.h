@@ -101,10 +101,10 @@ public:
     bool register_wrist_Motor(DM_Motor* motor)
     { wrist_Motor_ = motor; if(wrist_Motor_ != nullptr)return true; }
     
-    	
+	
 	void update();
-    
-
+	
+	
     /**
      * @brief 锟斤拷锟�?碉拷锟斤拷锟斤拷锟�
      * @param reversed 锟�?�凤拷锟斤拷 true锟斤拷锟洁，false锟斤拷锟斤拷锟斤�?(默锟较�?�拷锟斤拷锟斤拷)
