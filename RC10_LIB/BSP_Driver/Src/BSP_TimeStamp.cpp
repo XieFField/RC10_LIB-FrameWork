@@ -32,7 +32,7 @@ void TimeStamp::init(TIM_HandleTypeDef* htim)
 void TimeStamp::overflowCallback() 
 {
     // 检查定时器是否已初始化且中断标志位已设置
-    if (s_htim_ != nullptr && __HAL_TIM_GET_FLAG(s_htim_, TIM_FLAG_UPDATE) != RESET) 
+    if (s_htim_ != nullptr) 
     {
         if (__HAL_TIM_GET_IT_SOURCE(s_htim_, TIM_IT_UPDATE) != RESET) 
         {

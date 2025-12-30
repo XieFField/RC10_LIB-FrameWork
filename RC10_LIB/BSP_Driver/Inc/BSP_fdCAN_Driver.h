@@ -3,7 +3,7 @@
  * @brief   BSP Driver for fdCAN communication
  * @author  XieFField
  * @version 1.0
- * 
+ * @date 2025-9-17
  */
 
  /* |(*^▽^*)/ 测试通过喵 */
@@ -68,14 +68,11 @@ extern "C" void fdcan_global_scheduler_tick_isr();
 class fdCANbus{
 
 private:
-    /**
-     *  @brief 构造函数，私有化，使用 getInstance() 获取实例
-     */
     fdCANbus(FDCAN_HandleTypeDef* hfdcan);
 
     ~fdCANbus() = default;
 
-    // 禁用拷贝构造和赋值操作，确保唯一性
+
     fdCANbus(const fdCANbus&) = delete;
     fdCANbus& operator=(const fdCANbus&) = delete;
 
@@ -105,23 +102,10 @@ public:
     static constexpr size_t MAX_MOTORS = 10; //本来应该是8，但是如果是挂的DJI，那会有两个group，那就变成8+2了
 
     
-
-    /**
-     * @brief 初始化 (滤波/中断/启动任务)
-     */
     void init();
 
-    /**
-     * @brief 静态注册电机
-     */
     bool registerMotor(Motor_Base* m);
 
-    /**
-     * @brief 发送
-     * @param cf 要发送的帧
-     * @return true 发送成功，false 发送失败
-     * @attention 由scheduler调用
-     */
     bool sendFrame(const CanFrame& cf);
 
     /**
@@ -130,12 +114,6 @@ public:
      */
     bool pushRxFromISR(const CanFrame& cf, BaseType_t* pxHigherPriorityTaskWoken);
 
-
-
-    // 在中断/ISR 中调用，唤醒该 fdCANbus 的 scheduler task
-    // pxHigherPriorityTaskWoken 可以从 ISR 传入并用于 portYIELD_FROM_ISR
-    //用了别的方式实现，这个已经不必了，日后若要取消定时中断唤醒，可以打开来用
-    //static void notifySchedulerFromISR(BaseType_t* pxHigherPriorityTaskWoken);
 
     FDCAN_HandleTypeDef* getFDCANHandle() const { return hfdcan_; }
     
@@ -146,14 +124,8 @@ protected:
     FDCAN_HandleTypeDef* hfdcan_; //protected character
 
 
-    /**
-     * @brief Rx任务主体
-     */
     void rxTaskbody();
 
-    /**
-     * @brief 1kHz 调度任务主体
-     */
     void schedulerTaskbody();
 
     // 默认匹配函数（子类或 motor 可 override motor.matchesFrame）

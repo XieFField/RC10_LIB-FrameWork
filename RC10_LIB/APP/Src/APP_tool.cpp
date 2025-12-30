@@ -68,3 +68,36 @@ float deg_to_rad(float deg)
 {
     return deg / 180.0f * PI;
 }
+
+
+//归一化角度到[0,360)区间
+float normalize_deg_0_360(float a)
+{
+    float r = fmodf(a, 360.0f);
+    if (r < 0.0f) r += 360.0f;
+    return r;            // [0,360)
+}
+
+//归一化角度到[-180,180)区间
+float normalize_deg_pm180(float a)
+{
+    float r = fmodf(a + 180.0f, 360.0f);
+    if (r < 0.0f) r += 360.0f;
+    return r - 180.0f;   // [-180,180)
+}
+
+// 将 val_deg 映射到“最接近 ref_deg(0..360)”的等价角，并返回 0..360
+float wrap_to_nearest_0_360(float ref_deg_0_360, float val_deg_any)
+{
+    float ref = normalize_deg_0_360(ref_deg_0_360);
+    float delta = normalize_deg_pm180(val_deg_any - ref);  // 差值用 ±180 归一化
+    return normalize_deg_0_360(ref + delta);               // 最终保持 0..360
+}
+
+// 将 val_deg（任意/0..360）映射到“最接近 ref_deg_cont（连续角）”的等效角，返回连续角（可超出0..360）
+float wrap_to_nearest_cont(float ref_deg_cont, float val_deg_any)
+{
+    float base = normalize_deg_0_360(val_deg_any);
+    float k = roundf((ref_deg_cont - base) / 360.0f);
+    return base + 360.0f * k; // 连续角
+}

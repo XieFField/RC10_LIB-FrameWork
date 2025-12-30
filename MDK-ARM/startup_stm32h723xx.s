@@ -262,7 +262,7 @@ Reset_Handler    PROC
 
 ; Dummy Exception Handlers (infinite loops which can be modified)
 
-NMI_Handler     PROC
+NMI_Handler     PROC  
                 EXPORT  NMI_Handler                      [WEAK]
                 B       .
                 ENDP

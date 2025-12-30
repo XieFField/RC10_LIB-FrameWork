@@ -1,5 +1,5 @@
 /**
- * @file Moudle_GPIO.h
+ * @file Module_GPIO.h
  * @author 70er66
  * @brief 达妙电机类
  * @version 1.0

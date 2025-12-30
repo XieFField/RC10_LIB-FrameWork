@@ -53,15 +53,24 @@ void Robot_ArmDemo::loop()
     float dt = dt_us * 1e-6f;
 
     
-    const float v_xyz = 0.2f;     
-    const float v_aux = 0.5f;     
+    const float v_xyz = 1.0f;     
+    const float v_aux = 1.0f;     
 
 //    test_point.z += step_pm(air_joy.LEFT_Y)  * v_xyz * dt;
 //    test_point.x += step_pm(air_joy.LEFT_X)  * v_xyz * dt;
 //    test_point.y += step_pm(air_joy.RIGHT_Y) * v_xyz * dt;
 //    test_point.suckerJoint_status_ += step_pm(air_joy.RIGHT_X) * v_aux * dt;
 
-    this->setArmTarget(test_point);
+    // this->setArmTarget(test_point);
+
+    // this->set_controlMode(Arm_Control_mode_E::MANUAL_JOINT_SPEED_MODE);
+
+    // this->setManualSpeed(
+    //     step_pm(air_joy.LEFT_Y)  * v_xyz,
+    //     step_pm(air_joy.LEFT_X)  * v_xyz,
+    //     step_pm(air_joy.RIGHT_Y) * v_xyz
+    // );
+
     this->update();
     // Main loop code here
 }

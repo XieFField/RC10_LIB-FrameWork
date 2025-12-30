@@ -45,17 +45,17 @@ public:
     void relocate_totalAngle(float now_totalAngle);
 
 private:
-
-    float angle_ = 0.0f; //当前角度
-    float total_angle_ = 0.0f; //总角度
-
-    bool is_init_ = false;
-    uint16_t offset_ = 0;
-    uint16_t last_ = 0;
-    int32_t round_cnt_ = 0;
+    float angle_ = 0.0f;        // 当前角(0..360)
+    float total_angle_ = 0.0f;  // 连续角(可多圈)
+    bool  is_init_ = false;
+    uint16_t offset_ = 0;       // 上电原点（原始计数）
+    uint16_t last_raw_ = 0;
     uint16_t range_;
+    float bias_deg_ = 0.0f;     // 连续角偏置(度)
 
-    float bias_deg_ = 0.0f; //角度偏移(单位:度)
+    // 连续角解包状态（基于单圈角）
+    float last_mod_deg_ = 0.0f; // 上一帧单圈角(度, 0..360)
+    float cont_deg_     = 0.0f; // 未加偏置的连续角(度)
 };
 
 #endif

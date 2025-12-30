@@ -242,12 +242,17 @@ void M3508::setTargetCurrent(float current_set)
 {
     mode_ = CURRENT_CONTROL;
     target_current_ = current_set;
+    target_rpm_ = 0.0f;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
 }
 
 void M3508::setTargetRPM(float rpm_set)
 {
     mode_ = SPEED_CONTROL;
     target_rpm_ = rpm_set;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
 }
 
 void M3508::setTargetAngle(float angle_set)
@@ -255,6 +260,8 @@ void M3508::setTargetAngle(float angle_set)
     mode_ = ANGLE_CONTROL;
     target_angle_ = angle_set;
     angle_pid_.set_as_circular(); //最小路径处理
+
+    target_totalAngle_ = 0.0f;
 }
 
 
@@ -263,6 +270,8 @@ void M3508::setTargetTotalAngle(float totalAngle_set)
     mode_ = TOTAL_ANGLE_CONTROL;
     target_totalAngle_ = totalAngle_set;
     angle_pid_.set_as_linear(); //线性处理
+
+    target_angle_ = 0.0f;
 }
 
 //volatile float cur = 0;
@@ -284,7 +293,6 @@ void M3508::update()
             //cur = target_current_;
             break;
         }
-        //注意：此处不break，继续执行速度环计算
         case SPEED_CONTROL:
         {
             // 目标值 target_rpm_ 和反馈值 this->rpm_ 都已经是输出轴转速，尺度统一
@@ -352,12 +360,17 @@ void M2006::setTargetCurrent(float current_set)
 {
     mode_ = CURRENT_CONTROL;
     target_current_ = current_set;
+    target_rpm_ = 0.0f;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
 }
 
 void M2006::setTargetRPM(float rpm_set)
 {
     mode_ = SPEED_CONTROL;
     target_rpm_ = rpm_set;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
 }
 
 void M2006::setTargetAngle(float angle_set)
@@ -365,6 +378,8 @@ void M2006::setTargetAngle(float angle_set)
     mode_ = ANGLE_CONTROL;
     target_angle_ = angle_set;
     angle_pid_.set_as_circular(); //最小路径处理
+
+    target_totalAngle_ = 0.0f;
 }
 
 void M2006::setTargetTotalAngle(float totalAngle_set)
@@ -372,6 +387,8 @@ void M2006::setTargetTotalAngle(float totalAngle_set)
     mode_ = TOTAL_ANGLE_CONTROL;
     target_totalAngle_ = totalAngle_set;
     angle_pid_.set_as_linear(); //线性处理
+
+    target_angle_ = 0.0f;
 }
 
 void M2006::update()
@@ -390,12 +407,10 @@ void M2006::update()
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
             //cur = target_current_;
             break;
-            // Fallthrough to speed control
         }
 
         case SPEED_CONTROL:
         {
-            // 目标值 target_rpm_ 和反馈值 this->rpm_ 都已经是输出轴转速，尺度统一
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
             break;
         }
@@ -442,12 +457,17 @@ void GM6020::setTargetCurrent(float current_set)
 {
     mode_ = CURRENT_CONTROL;
     target_current_ = current_set;
+    target_rpm_ = 0.0f;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
 }
 
 void GM6020::setTargetRPM(float rpm_set)
 {
     mode_ = SPEED_CONTROL;
     target_rpm_ = rpm_set;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
 }
 
 void GM6020::setTargetAngle(float angle_set)
@@ -455,6 +475,7 @@ void GM6020::setTargetAngle(float angle_set)
     mode_ = ANGLE_CONTROL;
     target_angle_ = angle_set;
     angle_pid_.set_as_circular(); //最小路径处理
+    target_totalAngle_ = 0.0f;
 }
 
 void GM6020::setTargetTotalAngle(float totalAngle_set)
@@ -462,6 +483,7 @@ void GM6020::setTargetTotalAngle(float totalAngle_set)
     mode_ = TOTAL_ANGLE_CONTROL;
     target_totalAngle_ = totalAngle_set;
     angle_pid_.set_as_linear(); //线性处理
+    target_angle_ = 0.0f;
 }
 
 void GM6020::update()
@@ -487,9 +509,6 @@ void GM6020::update()
         case SPEED_CONTROL:
         {
             // GM6020没有减速比，直接使用目标转速
-            // 目标值是输出轴转速 (target_rpm_)
-            // 反馈值也是输出轴转速 (this->rpm_)
-            // 两者尺度统一，PID可以正确工作
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
             break;
         }

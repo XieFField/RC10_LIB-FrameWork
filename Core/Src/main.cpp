@@ -23,8 +23,9 @@
 #include "fdcan.h"
 #include "tim.h"
 #include "usart.h"
+#include "usb_device.h"
 #include "gpio.h"
-//#include "usb_device.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 //#include "position.h"
@@ -52,21 +53,12 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-/*#define TARGET_BUFFER_SIZE  7
-#define RX_BUFFER_SIZE 7
-#define MAX_FRAME_SIZE 64
-*/
-
-
-/*
-uint8_t frame_buffer[MAX_FRAME_SIZE];
-uart_frame_t parsed_frame;
-uint8_t target_buffer[TARGET_BUFFER_SIZE];
-*/
-
-
-/* USER CODE END PV */
-
+// 全局变量
+#define large_data_size 64
+uint8_t rx_buffer[RX_BUFFER_SIZE];
+uint8_t large_data_buffer[large_data_size];
+extern void fdcan_global_scheduler_tick_isr(void);
+uint8_t ab[4];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -121,7 +113,7 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init();
+   MX_GPIO_Init();
   MX_DMA_Init();
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
@@ -130,14 +122,15 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM4_Init();
   MX_TIM14_Init();
+  MX_USART6_UART_Init();
+  MX_USART3_UART_Init();
+  MX_UART4_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
   ALL_Setup_ConfigInit();
-
-
-
+	//HAL_UART_Transmit_DMA(&huart3,rx_buffer,RX_BUFFER_SIZE);
   
-  /* USER CODE END 2 */
+	/* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
@@ -181,8 +174,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 5;
@@ -217,11 +211,26 @@ void SystemClock_Config(void)
   }
 }
 
-/* USER CODE BEGIN 4 */
 
+
+
+
+/* USER CODE BEGIN 4 */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+//void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+//{
+//	
+//}
 /* USER CODE END 4 */
 
  /* MPU Configuration */
+
 
 void MPU_Config(void)
 {
@@ -249,7 +258,6 @@ void MPU_Config(void)
   HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 
 }
-
 /**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM8 interrupt took place, inside
