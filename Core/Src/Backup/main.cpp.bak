@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file           : main.c
+  * @file           : main.cpp
   * @brief          : Main program body
   ******************************************************************************
   * @attention
@@ -230,6 +230,17 @@ extern "C" {
 //{
 //	
 //}
+
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
+{
+    // 如果进入这里，说明发生了栈溢出
+    // pcTaskName 是溢出的任务名称
+    taskDISABLE_INTERRUPTS();
+    for(;;);
+}
+
+
+
 /* USER CODE END 4 */
 
  /* MPU Configuration */
@@ -286,7 +297,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   
     if (htim->Instance == TIM4) // 假设你使用的是 TIM4
     {
-        TimeStamp::overflowCallback();
+      TimeStamp::overflowCallback();
     }
   /* USER CODE END Callback 1 */
 }

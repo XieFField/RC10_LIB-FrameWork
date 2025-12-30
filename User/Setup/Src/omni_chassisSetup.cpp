@@ -13,14 +13,13 @@ void OmniChassis_Setup::loop()
     float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
     float yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
-    ladar_data_ = Lader_position::GetInstance(&hUsbDeviceHS)->Get_Rader_Data();
+    ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
 
     Angle_Twist angle_twist = {0};
     angle_twist.yaw_rate = dyaw;
     angle_twist.yaw_angle = yaw;
     this->updateAngleData(angle_twist);
 
-    chassis_status_ = CHASSIS_STOP;
     switch (chassis_status_)
     {
         case CHASSIS_MANUAL_CONTROL_A:
@@ -40,8 +39,9 @@ void OmniChassis_Setup::loop()
             else
                 target_chassis_twist_.yaw_rate = 0.0f;
 			
-			target_yaw_ = yaw;
-            
+			// target_yaw_ = yaw;
+            this->setWorldSpeed(target_chassis_twist_);
+            this->update();
             break;
         }
 
@@ -67,6 +67,8 @@ void OmniChassis_Setup::loop()
                 target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
             }
 			
+            this->setWorldSpeed(target_chassis_twist_);
+            this->update();
             break;
         }
 
@@ -83,6 +85,18 @@ void OmniChassis_Setup::loop()
                 target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_angle, yaw_real_angle);
             }
 
+            if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                target_chassis_twist_.vx = -airjoy_data_.left_x * 6;
+            else
+                target_chassis_twist_.vx = 0.0f;
+
+            if(_tool_Abs(airjoy_data_.left_y) > 0.05f)
+                target_chassis_twist_.vy = airjoy_data_.left_y * 6;
+            else
+                target_chassis_twist_.vy = 0.0f;
+
+            this->setWorldSpeed(target_chassis_twist_);
+            this->update();
             break;
         }
 
@@ -92,12 +106,28 @@ void OmniChassis_Setup::loop()
         }
         case CHASSIS_STOP:
         {
-            // target_chassis_twist_.vx = 0;
-            // target_chassis_twist_.vy = 0;
-            // target_chassis_twist_.yaw_rate = 0;
             this->wheels_[0]->setTargetCurrent(0);
             this->wheels_[1]->setTargetCurrent(0);
             this->wheels_[2]->setTargetCurrent(0);
+            break;
+        }
+
+        case CHASSIS_MANUAL_CONTROL_C:
+        {
+            target_chassis_twist_.yaw_rate = 0.0f;
+
+            if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                target_chassis_twist_.vx = -airjoy_data_.left_x * 6;
+            else
+                target_chassis_twist_.vx = 0.0f;
+
+            if(_tool_Abs(airjoy_data_.left_y) > 0.05f)
+                target_chassis_twist_.vy = airjoy_data_.left_y * 6;
+            else
+                target_chassis_twist_.vy = 0.0f;
+
+            this->setWorldSpeed(target_chassis_twist_);
+            this->update();
             break;
         }
         default:
@@ -108,7 +138,7 @@ void OmniChassis_Setup::loop()
 
     //接收一次雷达数据打印一次
     
-    this->setWorldSpeed(target_chassis_twist_);
+    
 
     #if debug_ladar
 
@@ -120,7 +150,11 @@ void OmniChassis_Setup::loop()
 
     #endif
     //debug_uart.Printf_Ladar(ladar_data_.x, ladar_data_.y);
-    this->update();
+
+    //debug_uart.printf_DMA("%f,%f,%f,%f\r\n",
+    //                      target_yaw_,yaw,target_chassis_twist_.yaw_rate,dyaw);
+
+    
 
     Point2D fk_speed;
     fk_speed.x = this->getWorldSpeed().vx;

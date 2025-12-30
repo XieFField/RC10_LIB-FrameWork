@@ -17,6 +17,7 @@ void ArmSetup::loop()
         arm_status_ = ARM_CALIBRATE;
     }
 
+
     //目前使用虚拟坐标进行自控逻辑验证
     if(arm_status_ == ARM_AUTO_CONTROL)
     {
@@ -92,15 +93,19 @@ void ArmSetup::loop()
     //     debug_uart.Printf_Ladar(auto_ctrl_.now_armPosition.x, auto_ctrl_.now_armPosition.y); 
     //     print_cout = 0;
     // }
+
+    debug_uart.printf_DMA("%f,%f\n\r",this->get_currentJointStatus().rotateJoint_angle_,
+                                target_joint_status_.rotateJoint_angle_);
+
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
 }
 
 uint8_t test_signal = 0;
 float test_current = 0.0f;
-float rotate_rate = 0.02f;
-float launch_rate = 9.99999975e-05;
-
+float rotate_rate = 1.0f;
+float launch_rate = 0.012f;
+int cnt = 0;
 /**
  * @brief 寻手操
  */
@@ -121,11 +126,25 @@ void ArmSetup::manualControl()
 
 
     //升降操控
-    if(airjoy_data_.right_y != 0)
+    if(_tool_Abs(airjoy_data_.right_y) > 0.1)
     {
-        float next_height = target_joint_status_.launchJoint_Height_ 
-            + airjoy_data_.right_y * launch_rate * airjoy_data_.right_y;
-        
+        // float next_height = target_joint_status_.launchJoint_Height_ 
+        //     + airjoy_data_.right_y * launch_rate * airjoy_data_.right_y;
+        float next_height = this->get_currentJointStatus().launchJoint_Height_ ;
+        // if(airjoy_data_.right_y > 0.3)
+        //     target_joint_status_.launchJoint_Height_ += launch_rate;
+        // else if(airjoy_data_.right_y < -0.3)
+        //     target_joint_status_.launchJoint_Height_ -= launch_rate;
+        // else
+        //     target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_ ;
+           
+        if(airjoy_data_.right_y > 0.3)
+            next_height += launch_rate;
+        else if(airjoy_data_.right_y < -0.3)
+            next_height -= launch_rate;
+        else
+            next_height = this->get_currentJointStatus().launchJoint_Height_ ;
+
         // [新增] 抬升限制检查：如果不在30~135度的区间时候，云台禁止往上抬升 (从极低高度区进入干涉区)
         if(next_height > target_joint_status_.launchJoint_Height_) // 正在抬升
         {
@@ -145,18 +164,75 @@ void ArmSetup::manualControl()
         target_joint_status_.launchJoint_Height_ = next_height;
     }
     else
-        target_joint_status_.launchJoint_Height_ = target_joint_status_.launchJoint_Height_; // 保持不变
+        target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // 保持不变
 
-     //云台操控
-    if(airjoy_data_.right_x != 0)
+    //  //云台操控
+    // if(airjoy_data_.right_x != 0)
+    // {
+    //     target_joint_status_.rotateJoint_angle_ = target_joint_status_.rotateJoint_angle_ 
+    //         + airjoy_data_.right_x * rotate_rate * airjoy_data_.right_x;
+    // }
+    // else
+    //     target_joint_status_.rotateJoint_angle_ = target_joint_status_.rotateJoint_angle_; // 保持不变
+
+    cnt++;
+    if(cnt > 10)
     {
-        target_joint_status_.rotateJoint_angle_ = target_joint_status_.rotateJoint_angle_ 
-            + airjoy_data_.right_x * rotate_rate * airjoy_data_.right_x;
-    }
-    else
-        target_joint_status_.rotateJoint_angle_ = target_joint_status_.rotateJoint_angle_; // 保持不变
+        if(airjoy_data_.right_x > 0.5)
+            target_joint_status_.rotateJoint_angle_ += rotate_rate;
+        else if(airjoy_data_.right_x < -0.5)
+            target_joint_status_.rotateJoint_angle_ -= rotate_rate;
+        else
+            target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_; // 保持不变
 
-    target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
+        target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
+        cnt = 0;
+    }
+    // if(_tool_Abs(airjoy_data_.right_x) < 0.1)
+    // {
+    //     auto_ctrl_.manual_ctrlForgrip_.changeTarget_state = false;
+    // }
+    // else if(airjoy_data_.right_x > 0.5f)
+    // {
+    //     if(!auto_ctrl_.manual_ctrlForgrip_.changeTarget_state)
+    //     {
+    //         target_joint_status_.rotateJoint_angle_ += 90.0f;
+    //         auto_ctrl_.manual_ctrlForgrip_.changeTarget_state = true;
+    //     }
+    // }
+    // else if(airjoy_data_.right_x < -0.5f)
+    // {
+    //     if(!auto_ctrl_.manual_ctrlForgrip_.changeTarget_state)
+    //     {
+    //         target_joint_status_.rotateJoint_angle_ -= 90.0f;
+    //         auto_ctrl_.manual_ctrlForgrip_.changeTarget_state = true;
+    //     }
+    // }
+
+    // 云台高度低于safe_height的时候，云台角度限制在90~180度之间
+    // if(this->get_currentJointStatus().launchJoint_Height_ < auto_ctrl_.flag.safe_height)
+    // {
+    //     float current_angle = target_joint_status_.rotateJoint_angle_;
+    //     float norm_angle = fmodf(current_angle, 360.0f);
+    //     if(norm_angle < 0.0f) norm_angle += 360.0f;
+
+    //     // 检查是否在90~180之间
+    //     // 如果不在，强制拉回最近的边界
+    //     if(norm_angle < 90.0f)
+    //     {
+    //         // 比如是 80度，拉回90度
+    //         // 比如是 0度，拉回90度
+    //         // 比如是 350度 (-10)，拉回90度? 不，应该看离谁近，但这里要求限制在90~180
+    //         // 简单处理：直接覆盖为90
+    //          target_joint_status_.rotateJoint_angle_ = 90.0f;
+    //     }
+    //     else if(norm_angle > 182.0f)
+    //     {
+    //         // 比如 190度，拉回180
+    //          target_joint_status_.rotateJoint_angle_ = 180.0f;
+    //     }
+    // }
+
 
     //pitch 开关
     if(airjoy_data_.scroll_wheel == 0x00)
@@ -1452,6 +1528,7 @@ void ArmSetup::stop()
     this->motor_stretch_->setTargetCurrent(0.0f);
     this->motor_rotate_->setTargetCurrent(0.0f);
     this->motor_pitch_->setTargetCurrent(0.0f);
+    this->setSuckerStatus(Sucker_Status_E::STOP);
 }
 
 /**
@@ -1478,13 +1555,13 @@ void ArmSetup::calibrateMotor()
     }
     this->motor_stretch_->setTargetCurrent(-700.0f); // 给予一个小电流顶住限位
     this->motor_pitch_->setTargetCurrent(-1000.0f); // 给予一个小电流顶住限位
-    this->motor_rotate_->setTargetCurrent(1000.0f);
+    //this->motor_rotate_->setTargetCurrent(1000.0f);
     if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.5f)
     {
         //relocate
         this->motor_stretch_->relocate_totalAngle(0.0f);
         this->motor_pitch_->relocate_totalAngle(180.0f);
-        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(180.0f));
+        this->motor_rotate_->relocate_totalAngle(447.272888f);
         this->motor_launch_->relocate_totalAngle(0.0f);
 
         //set current to 0
@@ -1603,7 +1680,7 @@ void ArmSetup::debug()
 
 Arm_InitData_S arm_initData = {
    .max_launchHeight_ = 0.29f,
-   .max_stretchLength_ = 0.130f,
+   .max_stretchLength_ = 0.120f,
    .arm_length_ = 0.6f,
    .end_link_length_ = 0.08f,
 
@@ -1614,6 +1691,9 @@ Arm_InitData_S arm_initData = {
 
    .min_rotate_angle_ = 0.0f,
    .max_rotate_angle_ = 359.999f,
+
+   .Sucker_GPIO_Port = SUCKER_GPIO_Port,
+    .Sucker_GPIO_Pin = SUCKER_Pin,
 };
 
 

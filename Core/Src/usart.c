@@ -171,7 +171,7 @@ void MX_USART1_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
-  // ����IDLE�ж� __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+  // 锟斤拷锟斤拷IDLE锟叫讹拷 __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
   /* USER CODE END USART1_Init 2 */
 
 }

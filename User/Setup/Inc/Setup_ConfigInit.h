@@ -1,6 +1,6 @@
 /**
  * @file Setup_ConfigInit.h
- * @brief é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”ŸçŸ«ç­¹æ‹·å§‹é”Ÿæ–¤æ‹·
+ * @brief Æô¶¯ÎÄ¼þ£¬°üº¬ËùÓÐ¿ØÖÆÆ÷ºÍµç»úµÄÊµÀý»¯ÉùÃ÷
  */
 
 #ifndef SETUP_CONFIGINIT_H
@@ -64,7 +64,25 @@ extern "C" {
 
 
 
+class test:public RtosTask {
+public:
+    test():RtosTask("test", 1) {}
 
+    void init() {
+        this->start(osPriorityNormal, 256);
+    }
+
+    void loop() override
+    {
+        for(;;)
+        {
+            a++;
+            osDelay(1000);
+        }
+    }
+
+int a = 0;
+};
 
 
 

@@ -36,6 +36,33 @@ bool Robot_WeaponSage::setMotorReversed(bool reversed, WeaponSage::Motor_Type_E 
 void Robot_WeaponSage::update()
 {
     current_pos_ = get_CurrentPos();
+    switch(ctrl_mode_)
+    {
+        case WeaponSage::CURRENT_CONTROL:
+            // do nothing
+            break;
+        case WeaponSage::Join_POSITION_CONTROL:
+        {
+            launch_Motor_->setTargetTotalAngle(target_pos_.launch_TotalAngle_);
+            claw_Motor_->setTargetTotalAngle(target_pos_.claw_TotalAngle_);
+            traverse_Motor_->setTargetTotalAngle(target_pos_.traverse_TotalAngle_);
+            wrist_Motor_->setTargetTotalAngle(initData_.max_wristMotorRPM_, target_pos_.wrist_TotalAngle_);
+            break;
+        }
+            
+        case WeaponSage::TOTAL_ANGLE_CONTROL:
+        {
+            launch_Motor_->setTargetTotalAngle(target_pos_.launch_TotalAngle_);
+            claw_Motor_->setTargetTotalAngle(target_pos_.claw_TotalAngle_);
+            traverse_Motor_->setTargetTotalAngle(target_pos_.traverse_TotalAngle_);
+            wrist_Motor_->setTargetTotalAngle(initData_.max_wristMotorRPM_, target_pos_.wrist_TotalAngle_);
+            break;
+        }
+            
+        default:
+            break;
+    }
+
 }
 
 bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E motor_type)
@@ -63,8 +90,7 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
             else if(motor_type == WeaponSage::Traverse_Motor)
             {
                 if(traverse_Motor_ != nullptr)
-                    //traverse_Motor_->setTargetCurrent(targetValue);
-					return false;
+                    traverse_Motor_->setTargetCurrent(targetValue);
                 else
                     return false;
             }
@@ -90,8 +116,6 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
                 {
                     target_pos_.launch_pos_ = constrain(targetValue, 0.0f, initData_.max_launchHeight_);
                     target_pos_.launch_TotalAngle_ = Realpos_to_MotorTotalAngle(target_pos_.launch_pos_, motor_type);
-            
-                    launch_Motor_->setTargetTotalAngle(target_pos_.launch_TotalAngle_);
                 }
                 else
                     return false;
@@ -102,8 +126,6 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
                 {
                     target_pos_.claw_pos_ = constrain(targetValue, 0.0f, initData_.max_clawAngle_);
                     target_pos_.claw_TotalAngle_ = Realpos_to_MotorTotalAngle(target_pos_.claw_pos_, motor_type);
-            
-                    claw_Motor_->setTargetTotalAngle(target_pos_.claw_TotalAngle_);
                 }
                 else
                     return false;
@@ -114,8 +136,6 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
                 {
                     target_pos_.traverse_pos_ = constrain(targetValue, 0.0f, initData_.max_traverseLength_);
                     target_pos_.traverse_TotalAngle_ = Realpos_to_MotorTotalAngle(target_pos_.traverse_pos_, motor_type);
-            
-                    //traverse_Motor_->setTargetTotalAngle(target_pos_.traverse_TotalAngle_);
                 }
                 else
                     return false;
@@ -126,8 +146,6 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
                 {
                     target_pos_.wrist_pos_ = targetValue; //手腕不限制位置
                     target_pos_.wrist_TotalAngle_ = Realpos_to_MotorTotalAngle(target_pos_.wrist_pos_, motor_type);
-            
-                    wrist_Motor_->setTargetTotalAngle(initData_.max_wristMotorRPM_, target_pos_.wrist_TotalAngle_);
                 }
                 else
                     return false;
@@ -144,12 +162,11 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
             {
                 if(launch_Motor_ != nullptr)
                 {
-                    float target_totoalAngle = constrain(targetValue,
+                    target_pos_.launch_TotalAngle_ = constrain(targetValue,
                         Realpos_to_MotorTotalAngle(0.0f, motor_type),
                         Realpos_to_MotorTotalAngle(initData_.max_launchHeight_, motor_type)
                     );
-
-                    launch_Motor_->setTargetTotalAngle(target_totoalAngle);
+                    target_pos_.launch_pos_ = MotorTotalAngle_to_Realpos(target_pos_.launch_TotalAngle_, motor_type);  
                 }
                 else
                     return false;
@@ -158,12 +175,11 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
             {
                 if(claw_Motor_ != nullptr)
                 {
-                    float target_totoalAngle = constrain(targetValue,
+                    target_pos_.claw_TotalAngle_ = constrain(targetValue,
                         Realpos_to_MotorTotalAngle(0.0f, motor_type),
                         Realpos_to_MotorTotalAngle(initData_.max_clawAngle_, motor_type)
                     );
-
-                    claw_Motor_->setTargetTotalAngle(target_totoalAngle);
+                    target_pos_.claw_pos_ = MotorTotalAngle_to_Realpos(target_pos_.claw_TotalAngle_, motor_type);
                 }
                 else
                     return false;
@@ -172,12 +188,11 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
             {
                 if(traverse_Motor_ != nullptr)
                 {
-                    float target_totoalAngle = constrain(targetValue,
-                        Realpos_to_MotorTotalAngle(0.0f, motor_type),
-                        Realpos_to_MotorTotalAngle(initData_.max_traverseLength_, motor_type)
-                    );
-
-                    //traverse_Motor_->setTargetTotalAngle(target_totoalAngle);
+                        target_pos_.traverse_TotalAngle_ = constrain(targetValue,
+                            Realpos_to_MotorTotalAngle(0.0f, motor_type),
+                            Realpos_to_MotorTotalAngle(initData_.max_traverseLength_, motor_type)
+                        );
+                        target_pos_.traverse_pos_ = MotorTotalAngle_to_Realpos(target_pos_.traverse_TotalAngle_, motor_type);
                 }
                 else
                     return false;
@@ -186,7 +201,8 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
             {
                 if(wrist_Motor_ != nullptr)
                 {
-                    wrist_Motor_->setTargetTotalAngle(initData_.max_wristMotorRPM_, targetValue);
+                    target_pos_.wrist_TotalAngle_ = targetValue;
+                    target_pos_.wrist_pos_ = MotorTotalAngle_to_Realpos(target_pos_.wrist_TotalAngle_, motor_type);
                 }
                 else
                     return false;

@@ -68,8 +68,8 @@ uint8_t LaserPosition::LaserModuleGroup_Init(LaserModuleDataTypedef* LaserModule
 {
 	uint8_t LaserModuleGroupState = 0;		// 激光测距模块状态变量
 	TickType_t Timestamp = 0;
-	vTaskDelayUntil(&Timestamp, pdMS_TO_TICKS(1000));	// 确保自上电以来已经延时3000ms，确保激光测距模块已完成模块内部初始化
-  osDelay(100);//16V 电池只用100
+	vTaskDelayUntil(&Timestamp, pdMS_TO_TICKS(3000));	// 确保自上电以来已经延时3000ms，确保激光测距模块已完成模块内部初始化
+ // osDelay(100);//16V 电池只用100
 	LaserModuleGroupState |= LaserModule_StateContinuousAutomaticMeasurement(LaserModuleData);	// 激光测距模块1连续自动测量状态设置
 	return LaserModuleGroupState;			// 返回激光测距模块状态
 }
@@ -97,9 +97,9 @@ void Laser_InstanceManager::loop()
     laser_instances[i]->Data = (laser_instances[i]->LaserModule1).MeasurementData.Distance/1000.f;
 		if(laser_instances[i]->Data == 0)
 		{
-			osDelay(100);
+			//osDelay(100);
 			laser_instances[i]->LaserModuleGroup_Init(&(laser_instances[i]->LaserModule1));		// 激光测距模块组初始化
-			osDelay(100);
+		//	osDelay(100);
 		}		
 	}
 }

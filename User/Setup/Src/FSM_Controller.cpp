@@ -7,8 +7,6 @@ void FSM_Controller::loop()
     if(!init_flag_)
         return;
 
-
-
     CrsfReceiver::GetInstance(&huart7)->process();
 
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
@@ -57,18 +55,22 @@ void FSM_Controller::loop()
 
    if(airjoy_data_.SWA ==0x01 && airjoy_data_.SWC==0x00)
    {
-        if(airjoy_data_.SWA == 0x01)
-        {
-            //底盘用激光进行重定位
-            if(airjoy_data_.botton_click ==1)
+	   static uint8_t iiii = 0;
+	   
+        // if(airjoy_data_.SWA == 0x01)
+        // { 
+            //重定位
+            if(airjoy_data_.botton_click ==1 && iiii == 0)
             {
-                Locate_Setup::getInstance()->set_startToLRL(true);
+                Locate_Setup::getInstance()->Relocte_ToLader();
+				
+				iiii++;
             }
             
-        }
         else
         {
             Locate_Setup::getInstance()->set_startToLRL(false);
+			iiii = 0;
         }
     }
     else
@@ -84,6 +86,7 @@ void FSM_Controller::all_stop()
    // 停止所有机构动作的实现
    arm_setup_->setArmStatus(ARM_STOP);
    chassis_setup_->setChassisStatus(CHASSIS_STOP);
+   weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_STOP);
        
 }
 
@@ -95,18 +98,20 @@ void FSM_Controller::manual_ctrl()
         {
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
             arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
             break;
         }
         case 0x01:
         {
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_C);
             arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             break;  
         }
         case 0x02:
         {
-            chassis_setup_->setChassisStatus(CHASSIS_LOCK_FORWEAPON);
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_C);
             arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_CONTROL);
             break;
@@ -118,8 +123,8 @@ void FSM_Controller::manual_ctrl()
 void FSM_Controller::auto_ctrl()
 {
     // 半自动控制模式下的实现
-    arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-    chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
+    // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+    // chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
 
     switch(airjoy_data_.SWC)
     {

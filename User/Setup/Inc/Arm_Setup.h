@@ -88,6 +88,9 @@ typedef struct{
     bool calibrate_start = false;
     bool is_calibrating = false;
 
+    bool changeTarget_state = false; //切换目标状态标志
+    float last_right_x = 0.0f; //上次右摇杆横向数据
+    float last_right_y = 0.0f; //上次右摇杆纵向数据
 }arm_ctrl_status_S;
 
 typedef enum{
@@ -188,6 +191,10 @@ typedef struct{
         const float safe_height = 0.14f; //安全高度，单位米  待定
     }flag;
 
+    struct{
+        bool changeTarget_state = false; //变更目标状态标志位
+    }manual_ctrlForgrip_;
+
 }ARM_AUTO_S;
 
 
@@ -219,8 +226,9 @@ public:
 
         this->setPitchReversed(true); //俯仰电机反向
         this->setStretchReversed(false); //伸展电机不反向
+        this->setRotateReversed(false);
         this->setLaunchReversed(true); //升降电机反向
-        start(osPriorityNormal, 256);
+        start(osPriorityNormal, 512);
         setRotateMultiTurn(false); //单圈模式
         arm_ctrlStatus.init_flag = true;
     }

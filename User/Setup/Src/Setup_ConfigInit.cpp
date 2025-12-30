@@ -2,7 +2,7 @@
  // 外部声明USB高速设备句柄
 extern "C" 
 {
-        extern USBD_HandleTypeDef hUsbDeviceHS;
+   extern USBD_HandleTypeDef hUsbDeviceHS;
 }
 fdCANbus* const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取FDCAN1的唯一实例
 fdCANbus* const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // 获取FDCAN2的唯一实例
@@ -20,17 +20,20 @@ uint8_t laser_rx_buffer1[20];
 uint8_t laser_rx_buffer2[20];
 //激光测距
 //USB_CDC_ cdc(&hUsbDeviceHS);
+USB_CDC_ usb_1(&hUsbDeviceHS);
 LaserPosition laserpos(15,laser_rx_buffer,&huart3);
 LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
-// Locate_Setup set1(&instance_man);
 
 OmniChassis_Setup ChassisOmni(0.442f/2.f,420, 0.74f, 0.8363f, true); // 轮子半径，最大轮子转速，底盘 底 腰
 
-ArmSetup ARM_Controller(arm_initData);
+
+
 FSM_Controller Finite_StateMachine;
+ArmSetup ARM_Controller(arm_initData);
 Robot_WeaponSage_Setup Weapon_Controller(initData_);
+test test_task;
 /*==============Controller Instances===========*/
 
 /*=============================================*/
@@ -164,9 +167,11 @@ laserpos.Init();//锟斤拷锟斤拷锟斤拷
 
 void CAN_Motor_Init(void);
 
+Locate_Setup* set1 = Locate_Setup::getInstance();
+
 void ALL_Setup_ConfigInit(void)
 {
-
+    test_task.init();
    Position* pos = Position::GetInstance(&huart1);
    pos->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
@@ -190,12 +195,15 @@ void ALL_Setup_ConfigInit(void)
 
    Finite_StateMachine.registerArmSetup(&ARM_Controller);
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
+   Finite_StateMachine.registerWeaponSageSetup(&Weapon_Controller);
+
+   Finite_StateMachine.init();
 
 
    CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
    crsf_rc->init();
 
-   Finite_StateMachine.init();
+
 
    
 
@@ -204,13 +212,14 @@ void ALL_Setup_ConfigInit(void)
 	 instance_man.RegisterInstance(&laserpos2);
 	 instance_man.InstanceManager_Init();
 //激光重定位解析数据初始化
-     Locate_Setup* set1 = Locate_Setup::getInstance();
-     set1->init(&instance_man);	
+	 
+     set1->init(&instance_man,&usb_1);	
      set1->laser_initData_.d=0.5;
      set1->locate_setup_init();
      set1->set_startToLRL(true);
 //雷达定位实例化
-	 Lader_position*ladar=Lader_position::GetInstance(&hUsbDeviceHS);
+	//  Lader_position*ladar=Lader_position::GetInstance(&hUsbDeviceHS);
+   
 }
 
 
@@ -274,9 +283,10 @@ void CAN_Motor_Init(void)
    arm_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
 
    PID_Param_Config arm_strech_anglePID = m2006_angle_pid_params;
-   arm_strech_anglePID.output_limit = 500.0f;
+   arm_strech_anglePID.output_limit = 400.0f;
+   m2006_speed_pid_params.output_limit = 4500.0f;
    arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
-   arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
+   arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508Rotate_angle_pid_params, 0.0f);
    arm_pitchMotor.pid_init(m2006_speed_pid_params, 0.0f, m2006_angle_pid_params, 0.0f);
 	
 	PID_Param_Config weapon_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
@@ -285,12 +295,12 @@ void CAN_Motor_Init(void)
    PID_Param_Config weapon_2006_speedPID = m2006_speed_pid_params;
    PID_Param_Config weapon_2006_anglePID =m2006_angle_pid_params;
  
-   weapon_3508_anglePID.output_limit=200.0f;
+   weapon_3508_anglePID.output_limit=100.0f;
    weapon_3508_speedPID.output_limit=15000.0f;
    weapon_3508_anglePID.output_limit=100.0f;
    weapon_3508_speedPID.output_limit=12000.0f;
    weapon_2006_speedPID.output_limit=4500;
-   weapon_2006_anglePID.output_limit=1000;
+   weapon_2006_anglePID.output_limit=500;
    
    Weapon_launchMotor.pid_init(weapon_3508_speedPID, 0.0f,weapon_3508_anglePID, 0.0f);
    Weapon_clawMotor.pid_init(weapon_2006_speedPID, 0.0f,  weapon_2006_anglePID, 0.0f);

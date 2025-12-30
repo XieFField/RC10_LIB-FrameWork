@@ -13,7 +13,8 @@
 
 extern "C" {
     #include <stdint.h>
-};
+  //  #include "semphr.h"
+}
 
 #include "RTOS_QueueSetup.h"
 #include "BSP_USB_UART_Driver.h"
@@ -25,7 +26,8 @@ extern "C" {
 #include "Module_LaserPosition.h"
 #include "math.h"
 #include "Module_Position.h"
-
+#include "usbd_cdc.h"
+#include "usbd_cdc_if.h"
 
 #define PI							3.14159265358979323846f			// 定义圆周率常量PI
 #define MAX_SEND_BUF_SIZE 128// 发送缓冲区大小
@@ -35,18 +37,12 @@ extern "C" {
 #define MAX_RECEIVE_ID 10// 最大id
 
 #define MAX_RECEIVE_DATA_LEN 64
-	typedef enum RECEIVE_FLAG
+	
+		typedef enum LASER_MODE 
 	{
-		WAIT_HEAD_1,// 0xaa
-		WAIT_HEAD_2,// 0x55
-		WAIT_ID,// 1~max
-		WAIT_LEN,// 1~64
-		WAIT_DATA,
-		WAIT_CHECK,//xor
-		WAIT_TAIL// 0xee
-	} RECEIVE_FLAG;
-	
-	
+    LEFT,
+		RIGHT
+	} LASER_MODE;
 	
 typedef struct 
 {
@@ -60,7 +56,19 @@ typedef struct
     float delta_y2;
 }Laser_initData_S;
 
-
+typedef struct 
+{
+  /* data */
+    float x;//规定激光实例管理的第一个为x的数据，第二三个为y的数据
+    float y;
+    float z;
+    float roll;
+	  float pitch;
+	  float yaw;
+		float line_x;
+		float line_y;
+		float line_z;
+}Lader_Data;
 class Locate_Setup : public RtosTask {
 public:
     static Locate_Setup* getInstance()
@@ -73,10 +81,11 @@ public:
     /**
      * @brief 无输入则默认在底盘中心
      */
-    void init(Laser_InstanceManager* instance_man, Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0}, 
+    void init(Laser_InstanceManager* instance_man,USB_CDC_ *usb_handle, Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0}, 
               Laser_initData_S laser_initData = {0})
     {   
         this->Laser_pos_instance = instance_man;
+		this->usb_handle=usb_handle;
         if(install_pose_init_)
             return;
         lidar_install_pose_ = lidar_install_pose;
@@ -98,7 +107,8 @@ public:
     {
         this->Laser_pos_instance = Laser_pos_instance;
     }
-
+    void Get_Rader_Data();
+		void USB_SendData();
     /**
      * @brief 设置是否启动激光重定位
      */
@@ -115,16 +125,24 @@ public:
 		
     Point2D get_FK_ChassisSpeed_inWorld(){return fk_chassisSpeed_inWorld_;}
 
-		void locate_setup_init(){this->start(osPriorityNormal, 256);}
+	void locate_setup_init(){this->start(osPriorityNormal, 256);}
 		
     float get_yaw_from_position(){return yaw_from_position_;}
     float get_dyaw_from_position(){return dyaw_from_position_;}
 
-		Laser_initData_S laser_initData_;
+	Laser_initData_S laser_initData_;
+
+    void Relocte_ToLader();
+
 private:
-    Locate_Setup():RtosTask("Locate_Setup", 1), Laser_pos_instance(nullptr) {}
+	
+	Locate_Setup():RtosTask("Locate_Setup", 1), Laser_pos_instance(nullptr) {}
 	  
     Laser_InstanceManager* Laser_pos_instance;
+
+	  Lader_Data Lad_Data={0};
+	  USB_CDC_ *usb_handle;
+	  LASER_MODE laser_mode=LEFT;//默认起始位置在左
     bool is_startToLRL_ = false; // 是否启动激光重定位
     void update(); //更新
     /**
@@ -153,54 +171,19 @@ private:
 protected:
     void loop() override;
 };
-
-
-class Lader_position:public USB_CDC_{
-public:
-    // ??????
-    static Lader_position* GetInstance(USBD_HandleTypeDef *usb_handle);
-    // ???UART
-    void InitUART();
-		//?????.cpp
-    void Callback_DCD_Fuc(uint8_t *buf, uint16_t len) override;
-    // ??????????????
-    Lader_position(const Lader_position&) = delete;
-    Lader_position& operator=(const Lader_position&) = delete;
-
-    void Reposition_SendData(float X, float Y){}
-
-  //   Lader_position getRealPosData() const { return RealPosData; }
-    Point3D Get_Rader_Data(){return Lad_Data;}
-
-  //接收数据
-		RECEIVE_FLAG receive_flag = WAIT_HEAD_1;
-		uint8_t receive_id;
-		uint8_t receive_len;
-		uint8_t receive_check;
-		uint8_t receive_data[MAX_RECEIVE_DATA_LEN] = {0};
-		uint16_t receive_data_dx = 0;
-    int return_coutlar_data(){return cout_ladar_data;}
-    int cout_ladar_data = 0;
-
-private:
-	  Point3D Lad_Data={0};
-    Lader_position(USBD_HandleTypeDef *usb_handle); // ??????
-    ~Lader_position() = default;
-    
-    void Update_RawPosition(float value[5]);
-
-    // UART??
-    UART_* uart_instance_;   
-    // ?????
-    bool uart_initialized_;
-
-		uint8_t rx_buffer_[35];
-};
-
-
 uint8_t xor_check(const uint8_t *data, uint32_t length);
+//    }
 
 
+//    ~LaerRelocate_Manager() = default;
+
+
+//    Point2D get_RobotPos_inWorld(){}
+
+//private:
+//    LaserPosition* laser_position_module_[3];
+
+//}
 
 
 #endif

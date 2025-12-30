@@ -64,7 +64,7 @@ public:
             this->setThreeWheelSolver(false);
         #endif
 
-        this->start(osPriorityHigh, 256);
+        this->start(osPriorityHigh, 512);
         init_flag = true;
     }
 

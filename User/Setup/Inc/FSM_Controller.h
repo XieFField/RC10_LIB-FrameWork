@@ -32,7 +32,7 @@ extern "C" {
 
 class FSM_Controller:public RtosTask {
 public:
-    FSM_Controller() : RtosTask("FSM_Controller", 1) {}
+    FSM_Controller() : RtosTask("FSM_Controller\0", 1) {}
 
     void registerArmSetup(ArmSetup *arm_setup)
     {
@@ -59,7 +59,7 @@ public:
         
         this->arm_setup_->set_TargetKFS(3,9); //设置目标梅花桩编号
 
-        this->start(osPriorityHigh, 256);
+        this->start(osPriorityHigh, 512);
         init_flag_ = true;
     }
 

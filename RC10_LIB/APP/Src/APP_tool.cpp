@@ -74,7 +74,7 @@ float deg_to_rad(float deg)
 float normalize_deg_0_360(float a)
 {
     float r = fmodf(a, 360.0f);
-    if (r < 0.0f) r += 360.0f;
+    while (r < 0.0f) r += 360.0f;
     return r;            // [0,360)
 }
 

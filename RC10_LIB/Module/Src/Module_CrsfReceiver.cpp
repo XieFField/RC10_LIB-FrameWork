@@ -86,7 +86,8 @@ CrsfReceiver* CrsfReceiver::GetInstance(UART_HandleTypeDef *huart)
 
 void CrsfReceiver::Callback_Fuc(uint8_t *buf, uint16_t len)
 {
-	if (instance_) instance_->appendFromISR(buf, len);
+	if (instance_) 
+            instance_->appendFromISR(buf, len);
 }
 //CrsfReceiver::~CrsfReceiver()
 //{
@@ -264,8 +265,11 @@ void CrsfReceiver::getControlData(RmPocketData_t* data)
 
     data->left_y       = telemetry_data_.left_y;
     data->left_x       = telemetry_data_.left_x;
-    data->right_x      = telemetry_data_.right_x;
-    data->right_y      = telemetry_data_.right_y;
+
+
+
+    data->right_x      = telemetry_data_.right_y;
+    data->right_y      = telemetry_data_.right_x;
     data->SWD      = telemetry_data_.SWD;
     data->botton_click     = telemetry_data_.botton_click;
     data->SWA        = telemetry_data_.SWA;
