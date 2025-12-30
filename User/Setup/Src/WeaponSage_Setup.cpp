@@ -35,22 +35,13 @@ void Robot_WeaponSage_Setup::loop()
             break;
 		}
         case WEAPONSAGE_AUTO_CONTROL:
-        //待实现自动控制逻辑
-        //autoControl();
 		{
-
-	
-//		Weapon_wrist_setzero();
             break;
 	    }
 		case WEAPONSAGE_CALIBRATE:
 		{
 			calibrate();
 			
-			// if(ctrl_status_.is_calibrating)
-            // {
-			// 	auto_ctrl_.flag.aimposition_done=State_AimPosition(1);
-            // }
             break;
 	    }
 			
@@ -81,7 +72,6 @@ void Robot_WeaponSage_Setup::calibrate()
 	
         this->setCtrlMode(WeaponSage::CURRENT_CONTROL);
         this->setTarget(500.0f, WeaponSage::Claw_Motor);
-//        this->setTarget(-500.0f, WeaponSage::Traverse_Motor);
         if(!auto_ctrl_.auto_state_bool_S.wrist_enable)
         {
             Weapon_wrist_enable();
@@ -111,13 +101,10 @@ void Robot_WeaponSage_Setup::manualControl()
         {
             //夹取武器
             if(airjoy_data_.SWD == 0x00)
-                // this->setTarget(0.0f, WeaponSage::Claw_Motor); //张开爪子
-                target_pos_.claw_pos_ = 0.0f; //夹紧爪子
+                target_pos_.claw_pos_ = 0.0f; //开爪子
             else if(airjoy_data_.SWD == 0x01)
-                //this->setTarget(initData_.max_clawAngle_, WeaponSage::Claw_Motor); //夹紧爪子
-                target_pos_.claw_pos_ = initData_.max_clawAngle_; //张开爪子
+                target_pos_.claw_pos_ = initData_.max_clawAngle_; //紧爪子
             else
-                //this->setTarget(0.0f, WeaponSage::Claw_Motor); //张开爪子
                 target_pos_.claw_pos_ = 0.0f;
 
             //夹爪位置
@@ -197,7 +184,7 @@ void Robot_WeaponSage_Setup::manualControl()
 					}
 				}
 
-                
+
 				if(airjoy_data_.right_y > 0.5f)
 					target_pos_.launch_pos_ += weapon_launch_rate;
 				else if(airjoy_data_.right_y < -0.5f)
