@@ -37,6 +37,7 @@
         {
             "name": "Frame_T",
             "includePath": [
+<<<<<<< Updated upstream
                 "c:\\Users\\admin\\Desktop\\Core\\Inc",
                 "c:\\Users\\admin\\Desktop\\Drivers\\STM32H7xx_HAL_Driver\\Inc",
                 "c:\\Users\\admin\\Desktop\\Drivers\\STM32H7xx_HAL_Driver\\Inc\\Legacy",
@@ -58,10 +59,34 @@
                 "c:\\Users\\admin\\Desktop\\USB_DEVICE\\Target",
                 "c:\\Users\\admin\\Desktop\\Middlewares\\ST\\STM32_USB_Device_Library\\Core\\Inc",
                 "c:\\Users\\admin\\Desktop\\Middlewares\\ST\\STM32_USB_Device_Library\\Class\\CDC\\Inc",
+=======
+                "c:\\Users\\admin\\Desktop\\RCtest\\Core\\Inc",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Drivers\\STM32H7xx_HAL_Driver\\Inc",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Drivers\\STM32H7xx_HAL_Driver\\Inc\\Legacy",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Middlewares\\Third_Party\\FreeRTOS\\Source\\include",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Middlewares\\Third_Party\\FreeRTOS\\Source\\CMSIS_RTOS_V2",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Middlewares\\Third_Party\\FreeRTOS\\Source\\portable\\RVDS\\ARM_CM4F",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Drivers\\CMSIS\\Device\\ST\\STM32H7xx\\Include",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Drivers\\CMSIS\\Include",
+                "c:\\Users\\admin\\Desktop\\RCtest\\RC10_LIB\\BSP_Driver\\Inc",
+                "c:\\Users\\admin\\Desktop\\RCtest\\RC10_LIB\\Motor\\Inc",
+                "c:\\Users\\admin\\Desktop\\RCtest\\RC10_LIB\\APP\\Inc",
+                "c:\\Users\\admin\\Desktop\\RCtest\\User\\Control\\Inc",
+                "c:\\Users\\admin\\Desktop\\RCtest\\User\\debug\\Inc",
+                "c:\\Users\\admin\\Desktop\\RCtest\\User\\Setup\\Inc",
+                "c:\\Users\\admin\\Desktop\\RCtest\\RC10_LIB\\Module\\Inc",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Middlewares\\ST\\ARM\\DSP\\Inc",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Drivers\\CMSIS\\DSP\\Include",
+                "c:\\Users\\admin\\Desktop\\RCtest\\USB_DEVICE\\App",
+                "c:\\Users\\admin\\Desktop\\RCtest\\USB_DEVICE\\Target",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Middlewares\\ST\\STM32_USB_Device_Library\\Core\\Inc",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Middlewares\\ST\\STM32_USB_Device_Library\\Class\\CDC\\Inc",
+>>>>>>> Stashed changes
                 "D:\\Keil5\\Core\\ARM\\ARMCLANG\\include",
                 "D:\\Keil5\\Core\\ARM\\ARMCLANG\\include\\arm_linux",
                 "D:\\Keil5\\Core\\ARM\\ARMCLANG\\include\\arm_linux_compat",
                 "D:\\Keil5\\Core\\ARM\\ARMCLANG\\include\\libcxx",
+<<<<<<< Updated upstream
                 "c:\\Users\\admin\\Desktop\\RC10_LIB-FrameWork",
                 "c:\\Users\\admin\\Desktop\\Core\\Src",
                 "c:\\Users\\admin\\Desktop\\Drivers\\STM32H7xx_HAL_Driver\\Src",
@@ -77,6 +102,23 @@
                 "c:\\Users\\admin\\Desktop\\Drivers\\CMSIS\\DSP\\Lib\\ARM",
                 "c:\\Users\\admin\\Desktop\\Middlewares\\ST\\STM32_USB_Device_Library\\Core\\Src",
                 "c:\\Users\\admin\\Desktop\\Middlewares\\ST\\STM32_USB_Device_Library\\Class\\CDC\\Src"
+=======
+                "c:\\Users\\admin\\Desktop\\RCtest\\RC10_LIB-FrameWork",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Core\\Src",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Drivers\\STM32H7xx_HAL_Driver\\Src",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Middlewares\\Third_Party\\FreeRTOS\\Source",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Middlewares\\Third_Party\\FreeRTOS\\Source\\portable\\MemMang",
+                "c:\\Users\\admin\\Desktop\\RCtest\\RC10_LIB\\APP\\Src",
+                "c:\\Users\\admin\\Desktop\\RCtest\\RC10_LIB\\Module\\Src",
+                "c:\\Users\\admin\\Desktop\\RCtest\\RC10_LIB\\BSP_Driver\\Src",
+                "c:\\Users\\admin\\Desktop\\RCtest\\RC10_LIB\\Motor\\Src",
+                "c:\\Users\\admin\\Desktop\\RCtest\\User\\debug\\Src",
+                "c:\\Users\\admin\\Desktop\\RCtest\\User\\Control\\Src",
+                "c:\\Users\\admin\\Desktop\\RCtest\\User\\Setup\\Src",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Drivers\\CMSIS\\DSP\\Lib\\ARM",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Middlewares\\ST\\STM32_USB_Device_Library\\Core\\Src",
+                "c:\\Users\\admin\\Desktop\\RCtest\\Middlewares\\ST\\STM32_USB_Device_Library\\Class\\CDC\\Src"
+>>>>>>> Stashed changes
             ],
             "defines": [
                 "USE_PWR_LDO_SUPPLY",
