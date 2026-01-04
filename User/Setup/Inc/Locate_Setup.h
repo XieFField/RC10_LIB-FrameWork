@@ -101,7 +101,9 @@ public:
 
         install_pose_init_ = true;
     }
-	  void RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_instance);
+
+    //激光重定位接算
+    void RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_instance);
 		
     void register_laserManager(Laser_InstanceManager* Laser_pos_instance)
     {
@@ -145,6 +147,9 @@ private:
 	  LASER_MODE laser_mode=LEFT;//默认起始位置在左
     bool is_startToLRL_ = false; // 是否启动激光重定位
     void update(); //更新
+
+
+    
     /**
      * @brief 雷达坐标变换计算->robot_in_world, arm_in_world
      */
