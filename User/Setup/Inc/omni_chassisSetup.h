@@ -68,6 +68,13 @@ public:
         init_flag = true;
     }
 
+    void setChassisReverse(bool isReverse)
+    {
+        if(!isReverse)
+            this->is_chassis_reverse_ = 1.0f;
+        else
+            this->is_chassis_reverse_ = -1.0f;
+    }
 
 private:
         void loop() override;
@@ -85,7 +92,7 @@ private:
         const float LINESPEED_LIMIT = 10/500.f; // 线速度限制
         const float YAWSPEED_LIMIT = 1/500.f; // yaw速度限制
 
-
+        float is_chassis_reverse_ = -1.0f;
         CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
         RmPocketData_t airjoy_data_; //遥控器数据，范围 -1 ~ 1
 

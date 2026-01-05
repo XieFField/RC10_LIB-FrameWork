@@ -25,14 +25,12 @@
             "id": "4c1d92abdb2dbc77",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "pdf",
               "state": {
-                "file": "二代状态机.md",
-                "mode": "source",
-                "source": false
+                "file": "3. 电机上手流程(三)-MIT模式说明.pdf"
               },
-              "icon": "lucide-file",
-              "title": "二代状态机"
+              "icon": "lucide-file-text",
+              "title": "3. 电机上手流程(三)-MIT模式说明"
             }
           }
         ],
@@ -186,8 +184,8 @@
   },
   "active": "4c1d92abdb2dbc77",
   "lastOpenFiles": [
-    "串联臂自动逻辑.md",
     "二代状态机.md",
+    "串联臂自动逻辑.md",
     "初代状态机.md",
     "Untitled.base",
     "Untitled.md",

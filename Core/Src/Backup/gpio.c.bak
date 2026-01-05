@@ -55,7 +55,7 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(SUCKER_GPIO_Port, SUCKER_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOG, SUCKER_error_Pin|SUCKERERROR2_Pin|SUCKER_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : AirJoy_Pin */
   GPIO_InitStruct.Pin = AirJoy_Pin;
@@ -63,12 +63,12 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(AirJoy_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : SUCKER_Pin */
-  GPIO_InitStruct.Pin = SUCKER_Pin;
+  /*Configure GPIO pins : SUCKER_error_Pin SUCKERERROR2_Pin SUCKER_Pin */
+  GPIO_InitStruct.Pin = SUCKER_error_Pin|SUCKERERROR2_Pin|SUCKER_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(SUCKER_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 5, 0);
