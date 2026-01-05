@@ -28,8 +28,9 @@ extern "C" {
 #include "Module_Position.h"
 #include "usbd_cdc.h"
 #include "usbd_cdc_if.h"
+#include "gpio.h"
 
-#define PI							3.14159265358979323846f			// 定义圆周率常量PI
+#define PI		3.14159265358979323846f			// 定义圆周率常量PI
 #define MAX_SEND_BUF_SIZE 128// 发送缓冲区大小
 
 #define MAX_RECEIVE_BUF_SIZE 512// 接收缓冲区大小
@@ -63,11 +64,11 @@ typedef struct
     float y;
     float z;
     float roll;
-	  float pitch;
-	  float yaw;
-		float line_x;
-		float line_y;
-		float line_z;
+    float pitch;
+    float yaw;
+    float line_x;
+    float line_y;
+    float line_z;
 }Lader_Data;
 class Locate_Setup : public RtosTask {
 public:
@@ -82,7 +83,8 @@ public:
      * @brief 无输入则默认在底盘中心
      */
     void init(Laser_InstanceManager* instance_man,USB_CDC_ *usb_handle, Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0}, 
-              Laser_initData_S laser_initData = {0})
+              Laser_initData_S laser_initData = {0}
+            )
     {   
         this->Laser_pos_instance = instance_man;
 		this->usb_handle=usb_handle;
@@ -136,6 +138,12 @@ public:
 
     void Relocte_ToLader();
 
+    /**
+     * @brief 获取底盘微动开关状态
+     */
+    bool ifSwitch1On(){return swtich1_isOn;}
+    bool ifSwitch2On(){return swtich2_isOn;}
+
 private:
 	
 	Locate_Setup():RtosTask("Locate_Setup", 1), Laser_pos_instance(nullptr) {}
@@ -149,7 +157,7 @@ private:
     void update(); //更新
 
 
-    
+
     /**
      * @brief 雷达坐标变换计算->robot_in_world, arm_in_world
      */
@@ -168,11 +176,15 @@ private:
     float yaw_from_position_ = 0.0f; // 从里程计position计算得到的偏航角
     float dyaw_from_position_ = 0.0f;
 
-    static HomogeneousTransform2D T_lader_to_robot;   // 雷达 -> 机器人
-    static HomogeneousTransform2D T_robot_to_arm;     // 机器人 -> 机械臂
+    // 2D/3D 坐标转换矩阵
+    HomogeneousTransform2D T_lidar_to_robot_2d; // 雷达 -> 机器人 (2D)
+    HomogeneousTransform2D T_robot_to_arm_2d;  // 机器人 -> 机械臂 (2D)
+    HomogeneousTransform3D T_robot_to_arm_3d;  // 机器人 -> 机械臂 (3D)
 
     bool install_pose_init_ = false;
 
+    bool swtich1_isOn = false;
+    bool swtich2_isOn = false;
 protected:
     void loop() override;
 };
