@@ -100,7 +100,7 @@ void USB_CDC_::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 	uint8_t break_flag = 1;
 	while (i < len && break_flag == 1)
 		{
-			/*-----------------------------------------处理数据--------------------*/
+			/*-----------------------------------------????--------------------*/
 			switch (receive_flag)
 			{
 			case WAIT_HEAD_1:// 0xaa
@@ -158,7 +158,7 @@ void USB_CDC_::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 			case WAIT_TAIL:// 0xee
 				if (buf[i] == 0xee)
 				{
-					/*-----------------------分发数据-------------------------*/
+					/*-----------------------????-------------------------*/
 				if (receive_len != 0)
 				{
 					if(receive_id==1)
@@ -173,7 +173,7 @@ void USB_CDC_::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 				}
 //				uint8_t a=0x11;
 //			  CDC_Send_(0x04,&a,0x01);
-					/*-----------------------分发数据-------------------------*/
+					/*-----------------------????-------------------------*/
 				  
 				}
 				break_flag = 0;
@@ -185,7 +185,7 @@ void USB_CDC_::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 		    i++;
 				break;
 			}
-			/*-------------------------------------处理数据--------------------*/
+			/*-------------------------------------????--------------------*/
 		}
 }
 }
@@ -208,7 +208,7 @@ uint8_t USB_CDC_::xor_check(const uint8_t *data, uint32_t length)
 	uint8_t xor_val = 0;
 	for (uint16_t i = 0; i < length; i++)
 	{
-		xor_val ^= data[i]; // 异或
+		xor_val ^= data[i]; // ??
 	}
 	return xor_val;
 }
