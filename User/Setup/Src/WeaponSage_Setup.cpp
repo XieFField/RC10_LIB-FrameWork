@@ -85,6 +85,8 @@ void Robot_WeaponSage_Setup::calibrate()
             
             this->setTarget(0.0f, WeaponSage::Claw_Motor);
             this->setTarget(0.0f, WeaponSage::Traverse_Motor);
+            
+            
             auto_ctrl_.auto_state_bool_S.wrist_enable=true;
             ctrl_status_.is_calibrating = true;
         }

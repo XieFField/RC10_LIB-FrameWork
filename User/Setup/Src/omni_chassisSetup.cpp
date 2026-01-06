@@ -25,7 +25,7 @@ void OmniChassis_Setup::loop()
         case CHASSIS_MANUAL_CONTROL_A:
         {
             if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
-                target_chassis_twist_.vx = -airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+                target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
             else
                 target_chassis_twist_.vx = 0.0f;
 
@@ -34,8 +34,8 @@ void OmniChassis_Setup::loop()
             else
                 target_chassis_twist_.vy = 0.0f;
 
-            if(_tool_Abs(airjoy_data_.right_y) > 0.05f)
-                target_chassis_twist_.yaw_rate = -airjoy_data_.right_y * 6 ;
+            if(_tool_Abs(airjoy_data_.right_x) > 0.05f)
+                target_chassis_twist_.yaw_rate = airjoy_data_.right_x * 6 ;
             else
                 target_chassis_twist_.yaw_rate = 0.0f;
 			
@@ -48,7 +48,7 @@ void OmniChassis_Setup::loop()
         case CHASSIS_MANUAL_CONTROL_B:
         {
             if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
-                target_chassis_twist_.vx = -airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+                target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
             else
                 target_chassis_twist_.vx = 0.0f;
 
@@ -86,7 +86,7 @@ void OmniChassis_Setup::loop()
             }
 
             if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
-                target_chassis_twist_.vx = -airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+                target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
             else
                 target_chassis_twist_.vx = 0.0f;
 
@@ -117,7 +117,7 @@ void OmniChassis_Setup::loop()
             target_chassis_twist_.yaw_rate = 0.0f;
 
             if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
-                target_chassis_twist_.vx = -airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+                target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
             else
                 target_chassis_twist_.vx = 0.0f;
 
