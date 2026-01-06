@@ -104,14 +104,14 @@ void FSM_Controller::manual_ctrl()
         }
         case 0x01:
         {
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_C);
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
             arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             break;  
         }
         case 0x02:
         {
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_C);
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
             arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_CONTROL);
             break;

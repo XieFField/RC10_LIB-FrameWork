@@ -32,6 +32,7 @@ void Chassis_Base<WheelCount>::setWorldSpeed(const Robot_Twist& twist)
 template<std::size_t WheelCount>
 void Chassis_Base<WheelCount>::update()
 {
+
     //update time stamp
     float current_time_s = TimeStamp::getInstance().getSeconds();
     dt_ = current_time_s - last_update_time_s_;
@@ -39,6 +40,12 @@ void Chassis_Base<WheelCount>::update()
         dt_ = 0.001f; //异常值处理
 
     last_update_time_s_ = current_time_s;
+
+    if(ctrl_mode_ == CURRENT_ZERO_MODE || ctrl_mode_ == SPEED_ZERO_MODE)
+    {
+        forwardKinematics();
+        return; // 置零模式不更新速度
+    }
 
     if(accel_Limit_)
     {

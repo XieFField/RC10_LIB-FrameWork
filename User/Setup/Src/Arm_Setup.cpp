@@ -87,12 +87,6 @@ void ArmSetup::loop()
         default:
             break;
     }
-    // print_cout++;
-    // if(print_cout >= 10)
-    // {
-    //     debug_uart.Printf_Ladar(auto_ctrl_.now_armPosition.x, auto_ctrl_.now_armPosition.y); 
-    //     print_cout = 0;
-    // }
 
     debug_uart.printf_DMA("%f,%f\n\r",this->get_currentJointStatus().rotateJoint_angle_,
                                 target_joint_status_.rotateJoint_angle_);
@@ -120,6 +114,26 @@ void ArmSetup::manualControl()
         /*串联臂*/
         last_joint_status_ = this->get_currentJointStatus();
         target_joint_status_ = last_joint_status_;
+
+        // 绑定伸展状态
+        // 判定当前是伸还是缩
+        // 假设阈值为 max_stretchLength / 2 或者 0.05m
+        float current_stretch = this->get_currentJointStatus().stretchJoint_Length_;
+        int8_t current_extend_logical = (current_stretch > 0.01f) ? 1 : 0;
+        
+        // 记录状态
+        arm_ctrlStatus.last_manual_extend = current_extend_logical;
+        
+        // 计算偏移: offset = switch ^ state
+        // 假设 switch只有0和1
+        arm_ctrlStatus.extend_switch_offset = (airjoy_data_.SWA & 0x01) ^ current_extend_logical;
+
+
+        // 绑定吸盘状态
+        int8_t current_sucker_logical = (this->getSuckerStatus() == Sucker_Status_E::SUCK) ? 1 : 0;
+        arm_ctrlStatus.last_manual_sucker = current_sucker_logical;
+        
+        arm_ctrlStatus.sucker_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_sucker_logical;
 
         last_arm_status_ = ARM_MANUAL_CONTROL;
     }
@@ -241,13 +255,24 @@ void ArmSetup::manualControl()
         target_joint_status_.suckerJoint_angle_ = 95.0f; // 末端关节开
 
     //stretch 开关
-    if(airjoy_data_.SWA == 0x00)
+    // 计算当前应当的逻辑状态 logic = switch ^ offset
+    int8_t target_extend_logical = (airjoy_data_.SWA & 0x01) ^ arm_ctrlStatus.extend_switch_offset;
+    
+    // 更新记忆
+    arm_ctrlStatus.last_manual_extend = target_extend_logical;
+
+    if(target_extend_logical == 0)
         target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位置
-    else if(airjoy_data_.SWA == 0x01)
+    else
         target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
 
     //吸盘开关
-    if(airjoy_data_.SWD == 0x01) 
+    int8_t target_sucker_logical = (airjoy_data_.SWD & 0x01) ^ arm_ctrlStatus.sucker_switch_offset;
+
+    // 更新记忆
+    arm_ctrlStatus.last_manual_sucker = target_sucker_logical;
+
+    if(target_sucker_logical == 1) 
         this->setSuckerStatus(Sucker_Status_E::SUCK);
     else
         this->setSuckerStatus(Sucker_Status_E::STOP);
@@ -1561,7 +1586,7 @@ void ArmSetup::calibrateMotor()
         //relocate
         this->motor_stretch_->relocate_totalAngle(0.0f);
         this->motor_pitch_->relocate_totalAngle(180.0f);
-        this->motor_rotate_->relocate_totalAngle(447.272888f);
+        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(180.0f));
         this->motor_launch_->relocate_totalAngle(0.0f);
 
         //set current to 0
@@ -1597,7 +1622,7 @@ void ArmSetup::idle()
     this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
     this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
 
-    this->setSuckerStatus(Sucker_Status_E::STOP);
+    // this->setSuckerStatus(Sucker_Status_E::STOP); // 保持上一刻状态，不强制关闭
 }
 
 float stretch_starttime = 0;
@@ -1686,7 +1711,8 @@ Arm_InitData_S arm_initData = {
 
    .stretch_Ratio_ = 0.08417f,
    .launch_Ratio_ = 0.07221f,
-   .rotate_gearRatio_ = 144.878f,
+//    .rotate_gearRatio_ = 144.878f,  //旧的
+   .rotate_gearRatio_ = 145.755789f,
    .pitch_gearRatio_ = 360.0f,
 
    .min_rotate_angle_ = 0.0f,
