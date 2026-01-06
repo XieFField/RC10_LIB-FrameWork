@@ -57,7 +57,7 @@ void OmniChassis_Setup::loop()
             else
                 target_chassis_twist_.vy = 0.0f;
 
-            // 鑾峰彇褰撳墠瑙掑害
+            // 获取当前角度
             float yaw_real_angle = yaw;
 
             yaw_pid_period_count_++;
@@ -136,7 +136,7 @@ void OmniChassis_Setup::loop()
         }
     }
 
-    //锟斤拷锟斤拷一锟斤拷锟阶达拷锟斤拷锟捷达拷印一锟斤拷
+    //接收一次雷达数据打印一次
     
     
 
@@ -151,8 +151,8 @@ void OmniChassis_Setup::loop()
     #endif
     //debug_uart.Printf_Ladar(ladar_data_.x, ladar_data_.y);
 
-    debug_uart.printf_DMA("%f,%f,%f,%f\r\n",
-                         target_yaw_,yaw,target_chassis_twist_.yaw_rate,dyaw);
+    // debug_uart.printf_DMA("%f,%f,%f,%f\r\n",
+    //                      target_yaw_,yaw,target_chassis_twist_.yaw_rate,dyaw);
 
     
 

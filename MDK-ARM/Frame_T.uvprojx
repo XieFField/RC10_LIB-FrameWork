@@ -1155,6 +1155,16 @@
               <FileType>5</FileType>
               <FilePath>..\User\debug\Inc\debug_setup.h</FilePath>
             </File>
+            <File>
+              <FileName>SystemDetect_Task.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\SystemDetect_Task.h</FilePath>
+            </File>
+            <File>
+              <FileName>SystemDetect_Task.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\SystemDetect_Task.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

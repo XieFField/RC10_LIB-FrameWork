@@ -76,6 +76,8 @@ public:
             this->is_chassis_reverse_ = -1.0f;
     }
 
+    Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
+
 private:
         void loop() override;
         bool init_flag = false;
@@ -96,7 +98,7 @@ private:
         CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
         RmPocketData_t airjoy_data_; //遥控器数据，范围 -1 ~ 1
 
-        Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
+        
         Point3D ladar_data_;
 };
 #endif // __cplusplus

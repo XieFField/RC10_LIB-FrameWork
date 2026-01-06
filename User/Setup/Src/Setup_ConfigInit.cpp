@@ -163,6 +163,9 @@ void debug_init()
 #if DEBUG
 laserpos.Init();//������
 #endif
+
+
+	SystemDetectTaskHandle = osThreadNew(StartSystemDetectTask, NULL, &SystemDetectTask_attributes);
 }
 
 void CAN_Motor_Init(void);
