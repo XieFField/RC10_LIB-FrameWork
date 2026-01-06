@@ -42,7 +42,7 @@ void OmniChassis_Setup::loop()
 			// target_yaw_ = yaw;
             this->setWorldSpeed(target_chassis_twist_);
             this->update();
-            break;
+            break; 
         }
 
         case CHASSIS_MANUAL_CONTROL_B:
