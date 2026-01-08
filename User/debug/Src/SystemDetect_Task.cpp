@@ -17,13 +17,14 @@ uint64_t SystemDetectTaskTime = 0;
 void StartSystemDetectTask(void *argument)
 {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-
+   
     while(1)
     {
+		
         SystemDetectTaskWaterMark = uxTaskGetStackHighWaterMark(NULL);
         SystemDetectTaskTime = TimeStamp::getInstance().getMicroseconds();
 
-        ChassisOmni.debug_uart.printf_DMA("%llu,%llu\r\n", SystemDetectTaskTime - LastSystemDetectTaskTime, SystemDetectTaskTime);
+        // ChassisOmni.debug_uart.printf_DMA("%llu,%llu\r\n", SystemDetectTaskTime - LastSystemDetectTaskTime, SystemDetectTaskTime);
 
         LastSystemDetectTaskTime = SystemDetectTaskTime;
 
