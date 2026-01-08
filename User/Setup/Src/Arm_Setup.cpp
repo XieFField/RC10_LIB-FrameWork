@@ -97,7 +97,7 @@ void ArmSetup::loop()
 
 uint8_t test_signal = 0;
 float test_current = 0.0f;
-float rotate_rate = 1.0f;
+float rotate_rate = 1.3f;
 float launch_rate = 0.012f;
 int cnt = 0;
 /**

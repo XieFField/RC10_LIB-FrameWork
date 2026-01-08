@@ -15,22 +15,22 @@ void Chassis_Omni<WheelCount>::inverseKinematics(const Robot_Twist& twist)
         {
            // 算法 A（默认）：原有实现，顶点使用 chassis_radius_，底边使用 chassis_radius_bottom_
             this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(twist.vx - twist.yaw_rate * chassis_radius_);
-            this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(twist.vy * COS_31_87 - twist.vx * SIN_31_87 - twist.yaw_rate * chassis_radius_bottom_);
-            this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vy * COS_31_87 - twist.vx * SIN_31_87 - twist.yaw_rate * chassis_radius_bottom_);
+            this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(twist.vy / COS_31_87 - twist.vx / SIN_31_87 - twist.yaw_rate * chassis_radius_bottom_);
+            this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vy / COS_31_87 - twist.vx / SIN_31_87 - twist.yaw_rate * chassis_radius_bottom_);
         }
         else
         {
             this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(twist.vx - twist.yaw_rate * chassis_radius_);
-            this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(twist.vy * COS_30 - twist.vx * SIN_30 - twist.yaw_rate * chassis_radius_);
-            this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vy * COS_30 - twist.vx * SIN_30 - twist.yaw_rate * chassis_radius_);
+            this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(twist.vy / COS_30 - twist.vx / SIN_30 - twist.yaw_rate * chassis_radius_);
+            this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vy / COS_30 - twist.vx / SIN_30 - twist.yaw_rate * chassis_radius_);
         }
     }
     else if constexpr (WheelCount == 4)
     {
-        this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(twist.vx * COS_45 - twist.vy * SIN_45 + twist.yaw_rate * chassis_radius_);
-        this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(-twist.vx * COS_45 - twist.vy * SIN_45 + twist.yaw_rate * chassis_radius_);
-        this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vx * COS_45 + twist.vy * SIN_45 + twist.yaw_rate * chassis_radius_);
-        this->wheel_target_rpm_[3] = this->wheelSpeedToMotorRPM(twist.vx * COS_45 + twist.vy * SIN_45 + twist.yaw_rate * chassis_radius_);
+        this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(twist.vx / COS_45 - twist.vy / SIN_45 + twist.yaw_rate * chassis_radius_);
+        this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(-twist.vx / COS_45 - twist.vy / SIN_45 + twist.yaw_rate * chassis_radius_);
+        this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vx / COS_45 + twist.vy / SIN_45 + twist.yaw_rate * chassis_radius_);
+        this->wheel_target_rpm_[3] = this->wheelSpeedToMotorRPM(twist.vx / COS_45 + twist.vy / SIN_45 + twist.yaw_rate * chassis_radius_);
     }
     else
     {
@@ -106,23 +106,37 @@ void Chassis_Omni<WheelCount>::forwardKinematics()
     {
         if(use_three_solver_==true)
         {
-            this->robot_twist_forward.vy = (wheel_speeds[1] - wheel_speeds[2]) / (2.0f*COS_31_87);
-            this->robot_twist_forward.yaw_rate = -(wheel_speeds[1]/2 + wheel_speeds[2]/2 + wheel_speeds[0]*SIN_31_87) / (SIN_31_87 * chassis_radius_+chassis_radius_bottom_);
-            this->robot_twist_forward.vx = -this->robot_twist_forward.yaw_rate * chassis_radius_ - wheel_speeds[0];
+            // Inverse: vy/C, vx/S.  Forward: vy = (v1-v2)*C/2
+            this->robot_twist_forward.vy = (wheel_speeds[1] - wheel_speeds[2]) * COS_31_87 / 2.0f;
+            
+            // Omega derived from New Inverse: -(v0 + 0.5(v1+v2)S) / (R1 + R2*S)
+            float num = wheel_speeds[0] + (wheel_speeds[1] + wheel_speeds[2]) * 0.5f * SIN_31_87;
+            float den = chassis_radius_ + chassis_radius_bottom_ * SIN_31_87;
+            this->robot_twist_forward.yaw_rate = -num / den;
+
+            // vx = v0 + omega * R1
+            this->robot_twist_forward.vx = wheel_speeds[0] + this->robot_twist_forward.yaw_rate * chassis_radius_;
         }
         else
         {
-            this->robot_twist_forward.vy = (wheel_speeds[1] - wheel_speeds[2]) / (2.0f*COS_30);
-            this->robot_twist_forward.yaw_rate = -(wheel_speeds[0]+wheel_speeds[1]+ wheel_speeds[2]) / (chassis_radius_*3.0f);
-            this->robot_twist_forward.vx = -this->robot_twist_forward.yaw_rate * chassis_radius_ - wheel_speeds[0];
+            this->robot_twist_forward.vy = (wheel_speeds[1] - wheel_speeds[2]) * COS_30 / 2.0f;
+            
+            float num = wheel_speeds[0] + (wheel_speeds[1] + wheel_speeds[2]) * 0.5f * SIN_30;
+            float den = chassis_radius_ + chassis_radius_ * SIN_30;
+            this->robot_twist_forward.yaw_rate = -num / den;
+            
+            this->robot_twist_forward.vx = wheel_speeds[0] + this->robot_twist_forward.yaw_rate * chassis_radius_;
         }
     } 
     else if constexpr (WheelCount == 4) 
     {
         // 四轮全向底盘的前向运动学计算
+        // Inverse uses vx/C, vy/C. Forward needs factor C/4. (Divide by 4/C = 4*sqrt(2) = 5.656)
         this->robot_twist_forward.yaw_rate = (wheel_speeds[0] + wheel_speeds[1] + wheel_speeds[2] + wheel_speeds[3]) / (4.0f * chassis_radius_);
-        this->robot_twist_forward.vy = (-wheel_speeds[0] - wheel_speeds[1] + wheel_speeds[2]+ wheel_speeds[3]) / (2.0f*1.41421356f);
-        this->robot_twist_forward.vx = (wheel_speeds[0] - wheel_speeds[1] - wheel_speeds[2] + wheel_speeds[3]) / (2.0f*1.41421356f);
+        
+        // 4.0f * 1.414... = 5.6568
+        this->robot_twist_forward.vy = (-wheel_speeds[0] - wheel_speeds[1] + wheel_speeds[2]+ wheel_speeds[3]) / (4.0f*1.41421356f);
+        this->robot_twist_forward.vx = (wheel_speeds[0] - wheel_speeds[1] - wheel_speeds[2] + wheel_speeds[3]) / (4.0f*1.41421356f);
     }
 
     //this->world_twist_forward   

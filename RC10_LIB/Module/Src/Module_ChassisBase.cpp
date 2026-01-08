@@ -24,8 +24,8 @@ void Chassis_Base<WheelCount>::setWorldSpeed(const Robot_Twist& twist)
     float cos_yaw = arm_cos_f32(-deg_to_rad(angle_twist_.yaw_angle));
     float sin_yaw = arm_sin_f32(-deg_to_rad(angle_twist_.yaw_angle));
 
-    robot_target_twist_.vx = twist.vx * cos_yaw - twist.vy * sin_yaw;
-    robot_target_twist_.vy = twist.vx * sin_yaw + twist.vy * cos_yaw;
+    robot_target_twist_.vx = (twist.vx * cos_yaw - twist.vy * sin_yaw);
+    robot_target_twist_.vy = (twist.vx * sin_yaw + twist.vy * cos_yaw);
     robot_target_twist_.yaw_rate = twist.yaw_rate; // 角速度在2D平面上不变
 }
 
@@ -63,7 +63,7 @@ void Chassis_Base<WheelCount>::update()
     float cos_yaw = arm_cos_f32(deg_to_rad(angle_twist_.yaw_angle));
     float sin_yaw = arm_sin_f32(deg_to_rad(angle_twist_.yaw_angle));
     world_twist_.vx = robot_twist_.vx * cos_yaw - robot_twist_.vy * sin_yaw;
-    world_twist_.vy = robot_twist_.vx * sin_yaw + robot_twist_.vy * cos_yaw;
+    world_twist_.vy = -(robot_twist_.vx * sin_yaw + robot_twist_.vy * cos_yaw);
     world_twist_.yaw_rate = robot_twist_.yaw_rate;
 
     for(std::size_t i = 0; i < WheelCount; i++)

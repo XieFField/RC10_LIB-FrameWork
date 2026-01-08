@@ -229,11 +229,11 @@ void Position::Update_RawPosition(float value[5])
 	RawPosData.Speed_Y = value[4];
 
    //ÊÀ½ç×ø±ê
-	RealPosData.world_yaw = RawPosData.angle_Z;
+	RealPosData.world_yaw = -RawPosData.angle_Z;
   RealPosData.world_x   =  RawPosData.Pos_X + RealPosData.dx;
 	RealPosData.world_y   =  RawPosData.Pos_Y + RealPosData.dy;
 
-	RealPosData.dyaw = RawPosData.Speed_Yaw;
+	RealPosData.dyaw = -RawPosData.Speed_Yaw;
 
 }
 

@@ -8,7 +8,6 @@ void Locate_Setup::loop()
 //    usb_handle->CDC_Send_(0x04,&a,0x01);
 	Get_Rader_Data();
     this->update();
-	  	
 }
 
 void Locate_Setup::update()
@@ -31,7 +30,17 @@ void Locate_Setup::update()
 
     yaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().world_yaw;
 	dyaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().dyaw;
-	robot_pose_inWorld_ = lidar_pose_inWorld_;
+
+	robot_pose_inWorld_.x = Lad_Data.x * cos(deg_to_rad(-90)) - Lad_Data.y * sin(deg_to_rad(-90)) + coordoffset.x_offset;
+    robot_pose_inWorld_.y = Lad_Data.x * sin(deg_to_rad(-90)) + Lad_Data.y * cos(deg_to_rad(-90)) + coordoffset.y_offset;
+    robot_pose_inWorld_.z = Lad_Data.z;
+    robot_pose_inWorld_.yaw = yaw_from_position_;
+
+    robot_speed_inworld_.x = Lad_Data.line_x * cos(deg_to_rad(-90)) - Lad_Data.line_y * sin(deg_to_rad(-90));
+    robot_speed_inworld_.y = Lad_Data.line_x * sin(deg_to_rad(-90)) + Lad_Data.line_y * cos(deg_to_rad(-90));
+    robot_speed_inworld_.z = Lad_Data.line_z;
+
+    robot_speed_inworld_.yaw = dyaw_from_position_;
 
     if(HAL_GPIO_ReadPin(SWITCH1_GPIO_Port, SWITCH1_Pin) == GPIO_PIN_SET)
     {
@@ -176,4 +185,9 @@ void Locate_Setup::USB_SendData()
     Lad_Data.line_x= usb_handle->Data_.data1[6];
     Lad_Data.line_y= usb_handle->Data_.data1[7];
     Lad_Data.line_z= usb_handle->Data_.data1[8];
+
+    
+
+
+
  }
