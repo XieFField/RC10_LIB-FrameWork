@@ -72,7 +72,7 @@ void OmniChassis_Setup::loop()
 			
             // this->setWorldSpeed(target_chassis_twist_);
             this->set_Target(target_chassis_twist_);
-            this->update();
+            // this->update();
             break;
         }
 
