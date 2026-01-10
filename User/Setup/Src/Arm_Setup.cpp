@@ -88,8 +88,7 @@ void ArmSetup::loop()
             break;
     }
 
-    debug_uart.printf_DMA("%f,%f\n\r",this->get_currentJointStatus().rotateJoint_angle_,
-                                target_joint_status_.rotateJoint_angle_);
+    //debug_uart.printf_DMA("%f,%f\n\r",this->get_currentJointStatus().rotateJoint_angle_,target_joint_status_.rotateJoint_angle_);
 
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;

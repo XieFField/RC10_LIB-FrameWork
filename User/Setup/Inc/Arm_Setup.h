@@ -296,7 +296,7 @@ public:
 
         MF_AutoCtrler::PathNode_S temp = MF_AutoCtrler::PathNodeResult_calc(auto_ctrl_.now_armPosition,
                                        auto_ctrl_.targetKFS[0], 
-                                        auto_ctrl_.targetKFS[1]);
+                                        auto_ctrl_.targetKFS[1],26);
                                         
         auto_ctrl_.path.bestB1 = temp.bestB1;
         auto_ctrl_.path.bestBMF1 = temp.bestBMF1;

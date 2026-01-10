@@ -54,7 +54,7 @@ extern "C"
 class SpeedPlanner_Demo : public RtosTask
 {
 public:
-    SpeedPlanner_Demo() : RtosTask("SpeedPlanner_Demo", 1), debug_uart(&huart2) {}
+    SpeedPlanner_Demo() : RtosTask("SpeedPlanner_Demo", 1), debug_uart(&huart8) {}
 
     /**
      * @brief ³õÊ¼»¯º¯Êý

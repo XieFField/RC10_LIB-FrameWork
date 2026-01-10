@@ -148,8 +148,8 @@ void FSM_Controller::auto_ctrl()
         //weaponSage进入自动模式
         case 0x02:
         {
-            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
-            chassis_setup_->setChassisStatus(CHASSIS_LOCK_FORWEAPON);
+            //weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
+            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
             break;
         }
     }

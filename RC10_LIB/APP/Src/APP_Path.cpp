@@ -5,7 +5,7 @@
 /**
  * @brief 默认构造函数
  */
-Path::Path(Speedplanner_1D_Param_Config params)
+Path::Path()
 {
 	bezier_curve_num = 0;
 	generate_status = GENERATE_WAIT_FIRST_POINT;
@@ -15,9 +15,7 @@ Path::Path(Speedplanner_1D_Param_Config params)
 	total_len = 0;
 	is_init = false;
 	last_smoothness = 0;
-	params.initialSpeed = abs(params.initialSpeed) + 0.001f; // 设置初始速度
-
-	params_ = params;
+	
 }
 
 /**
@@ -43,13 +41,16 @@ bool Path::Add_Point(Vector2D point_, float smoothness_) // 0~0.5)
  * @return true 如果添加成功
  * @return false 如果添加失败
  */
-bool Path::Add_Start_Point(Vector2D point_, bool have_start_angle_, float start_angle_)
+bool Path::Add_Start_Point(Vector2D point_, bool have_start_angle_, float start_angle_,Speedplanner_1D_Param_Config params)
 {
 	if (is_init == true)
 		return false;
 
 	have_start_angle = have_start_angle_;
 	start_angle = start_angle_;
+    
+    params.initialSpeed = abs(params.initialSpeed) + 0.001f; // 设置初始速度
+	params_ = params;
 
 	return Generate_Curve(point_, 0);
 }

@@ -391,9 +391,18 @@ namespace MF_AutoCtrler
         return result;
     }
 
-    static Point2D MapNum_ToMatrixPos(int8_t MapNum) // 求解方格的行列坐标
+    static Point2D MapNum_ToMatrixPos_point(int8_t MapNum) // 求解方格的行列坐标
     {
         Point2D result_ = {0, 0, 0};
+
+        result_.y = static_cast<float>((MapNum - 1) / 5 + 1);
+        result_.x = static_cast<float>((MapNum - 1) % 5 + 1);
+        return result_;
+    }
+    
+    Vector2D MapNum_ToMatrixPos(int8_t MapNum) // 求解方格的行列坐标
+    {
+        Vector2D result_ = {0, 0};
 
         result_.y = static_cast<float>((MapNum - 1) / 5 + 1);
         result_.x = static_cast<float>((MapNum - 1) % 5 + 1);
@@ -416,6 +425,19 @@ namespace MF_AutoCtrler
             return z;
         }
         return MapNum_RealPos[(int)map - 1];
+    }
+    
+    Vector2D MapCenterWorld_Vector2D(int8_t map)
+    {
+        Vector2D z{0, 0};
+        if (map < 1 || map > 30)
+        {
+            
+            return z;
+        }
+        z.x=MapNum_RealPos[(int)map - 1].x;
+        z.y=MapNum_RealPos[(int)map - 1].y;
+        return z;
     }
 
     // 计算最佳入口   卖掉了，应该是不用这段函数了
@@ -516,11 +538,10 @@ namespace MF_AutoCtrler
         return bestE;
     } // BestEntrance_calc
 
-    PathNode_S PathNodeResult_calc(Point2D robotPos,
-                                   int8_t MF1, int8_t MF2)
+    PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EXIT)
     {
-        PathNode_S out{0, 0, 0, 0, 0, 30};
-
+        PathNode_S out{0, 0, 0, 0, 0, 26};
+        out.exitMap=EXIT;
         // 候选 B1
         RoadResult_S B1_can = MFNum_ToRoadResult(MF1);
         int8_t B1set[3] = {B1_can.result1, B1_can.result2, B1_can.result3};
@@ -795,7 +816,8 @@ namespace MF_AutoCtrler
         out.bestBMF2 = bestBMF2;
         return out;
     }
-
+    
+    
     int BFS_Steps(int8_t startMap, int8_t goalMap) // BFS 最少步数
     {
         using namespace MF_AutoCtrler;
@@ -981,3 +1003,4 @@ namespace MF_AutoCtrler
     }
 
 } // namespace MF_AutoCtrler
+

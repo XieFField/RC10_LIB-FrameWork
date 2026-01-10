@@ -331,7 +331,7 @@
             <uGnu>1</uGnu>
             <useXO>0</useXO>
             <v6Lang>5</v6Lang>
-            <v6LangP>9</v6LangP>
+            <v6LangP>8</v6LangP>
             <vShortEn>1</vShortEn>
             <vShortWch>1</vShortWch>
             <v6Lto>0</v6Lto>
@@ -936,11 +936,6 @@
               <FilePath>..\RC10_LIB\APP\Src\APP_Vector2D.cpp</FilePath>
             </File>
             <File>
-              <FileName>APP_debugTool.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\APP\Inc\APP_debugTool.h</FilePath>
-            </File>
-            <File>
               <FileName>APP_Bezier_Curve.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\APP\Inc\APP_Bezier_Curve.h</FilePath>
@@ -951,14 +946,9 @@
               <FilePath>..\RC10_LIB\APP\Src\APP_Bezier_Curve.cpp</FilePath>
             </File>
             <File>
-              <FileName>APP_Speedplanner.h</FileName>
+              <FileName>APP_debugTool.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\APP\Inc\APP_Speedplanner.h</FilePath>
-            </File>
-            <File>
-              <FileName>APP_Speedplanner.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_Speedplanner.cpp</FilePath>
+              <FilePath>..\RC10_LIB\APP\Inc\APP_debugTool.h</FilePath>
             </File>
             <File>
               <FileName>APP_Path.h</FileName>
@@ -969,6 +959,16 @@
               <FileName>APP_Path.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\APP\Src\APP_Path.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>APP_Speedplanner.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\APP\Inc\APP_Speedplanner.h</FilePath>
+            </File>
+            <File>
+              <FileName>APP_Speedplanner.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_Speedplanner.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -1159,6 +1159,16 @@
               <FileName>frame_demo.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\debug\Src\frame_demo.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>speedplanner_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\speedplanner_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>speedplanner_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\speedplanner_demo.cpp</FilePath>
             </File>
             <File>
               <FileName>arm_demo.h</FileName>

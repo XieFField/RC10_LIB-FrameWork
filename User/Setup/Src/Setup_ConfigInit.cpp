@@ -178,7 +178,7 @@ void ALL_Setup_ConfigInit(void)
    Position* pos = Position::GetInstance(&huart1);
    pos->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
-   debug_init();
+   //debug_init();
 	
    CAN_Motor_Init();
 

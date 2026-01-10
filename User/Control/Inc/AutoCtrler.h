@@ -17,6 +17,7 @@
 #include <cmath>
 #include "APP_tool.h"
 #include <array>
+#include "APP_Vector2D.h"
 using std::sqrt;
 
 namespace MF_AutoCtrler
@@ -60,14 +61,17 @@ namespace MF_AutoCtrler
         int8_t bestBMF1; // 正对桩
         int8_t bestB2;
         int8_t bestBMF2;
-        int8_t exitMap = 30; // 固定出口
+        int8_t exitMap = 26; // 固定出口
     } PathNode_S;            // 值为0就意味着没有这个节点
 
     // 求解梅花桩所有前一通道结果
     RoadResult_S MFNum_ToRoadResult(int8_t MFNum);
     static bool IsWalkable(int8_t map);
     // 求解方格的行列坐标
-    static Point2D MapNum_ToMatrixPos(int8_t MapNum);
+    static Point2D MapNum_ToMatrixPos_point(int8_t MapNum);
+    
+    Vector2D MapNum_ToMatrixPos(int8_t MapNum);
+    Vector2D MapCenterWorld_Vector2D(int8_t map);
 
     // // 计算最优入口点
     // int8_t BestEntrance_calc(Point2D robotPos,
@@ -87,8 +91,7 @@ namespace MF_AutoCtrler
     Point2D MapCenterWorld(int8_t map);
 
     // 计算路径节点结果
-    PathNode_S PathNodeResult_calc(Point2D robotPos,
-                                   int8_t MF1, int8_t MF2);
+    PathNode_S PathNodeResult_calc(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t EXIT = 26);
 
     RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum); // 求解拾取KFS时候所处通道 最多两解
 
@@ -118,7 +121,6 @@ namespace MF_AutoCtrler
      * @return int8_t 地图编号 (1-30), 如果超出范围返回 0
      */
     int8_t GetMapNumFromPos(Point2D pos);
-
 }
 #endif
 #endif // AUTOCTRLER_H

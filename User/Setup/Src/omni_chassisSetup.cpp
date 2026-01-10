@@ -1,5 +1,6 @@
 #include "omni_chassisSetup.h"
-
+//Speedplanner_1D_Param_Config path_param({.maxAcc = 3.0f, .maxDec = 3.0f, .maxJerk = 4.0f, .maxSpeed = 0.5f, .initialSpeed = 0.05f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f});   
+//Path_line path_line_(path_param);
 #if debug_ladar
 
 int last_cout_ladar_data = -1;
@@ -14,8 +15,8 @@ void OmniChassis_Setup::loop()
     float yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
-    robot_pos_.x=ladar_data_.x;
-    robot_pos_.y=ladar_data_.y;
+//    robot_pos_.x = -ladar_data_.x;
+//    robot_pos_.y = -ladar_data_.y;
 
     Angle_Twist angle_twist = {0};
     angle_twist.yaw_rate = dyaw;
@@ -69,7 +70,7 @@ void OmniChassis_Setup::loop()
         if (yaw_pid_period_count_ >= yaw_pid_period_)
         {
             yaw_pid_period_count_ = 0;
-            target_chassis_twist_.yaw_rate = -yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
+            target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
         }
 
         // this->setWorldSpeed(target_chassis_twist_);
@@ -109,52 +110,209 @@ void OmniChassis_Setup::loop()
 
     case CHASSIS_AUTO_CONTROL:
     {
-        if (path_.Is_End() == true)
+        if (flag == 1)
         {
-            pathEnd = path_.get_bezier_curve().Get_Point(1.0f);
-            // 1. 找最近点+t值：获取路径上距离当前位置最近的点及其参数 tNearest
-            nearestPt = GetPathNearestPoint(path_.get_bezier_curve(), robot_pos_, tNearest);
-            // 2. 找前视点+前进方向：根据最近点和前视距离，寻找前视点及其参数 tLookahead
-            lookaheadPt = FindLookaheadPoint(path_.get_bezier_curve(), tNearest, tLookahead);
-            lookaheadTangent = path_.get_bezier_curve().Get_Tangent_Vector(tLookahead);
-            // 3. 计算横向偏差：计算机器人当前位置到路径切线的垂直距离
-            lateralError = CalculateLateralError(path_.get_bezier_curve(), robot_pos_, nearestPt, tLookahead);
-            // 4. 横向偏差PID控制：计算横向纠偏速度大小
-            correctspeed = pid_track.pid_calc(0.0f, lateralError);
-            Vector2D corrDir(-lookaheadTangent.y, lookaheadTangent.x); // 纠偏方向（垂直前进方向，左右纠偏）
-            corrVelocity = corrDir * correctspeed;                     // 合成纠偏速度（方向+大小）
-            // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-            Vector2D planspeed = path_.plan(robot_pos_);
-            // baseVelocity = lookaheadTangent * planspeed.magnitude();
-            Vector2D speed = planspeed + corrVelocity; // 最终速度 = 规划的前进速度 + 横向纠偏速度
-            target_chassis_twist_.vx=speed.x;
-            target_chassis_twist_.vy=speed.y;
-            if (num > 5)
+            flag = 0;
+            flag_run = 1;
+            int cho=0;
+            
+            Point2D temp;
+            temp.x=robot_pos_.x=a;
+            temp.y=robot_pos_.y=b;
+            if(robot_pos_.x<0.0f||robot_pos_.x>5.0f||robot_pos_.y<0.0f||robot_pos_.y>8.3f)
             {
-                debug_uart.printf_DMA("%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude());
-                num = 0;
+                flag_run = 0;
+                cho=0;
             }
+            else if(robot_pos_.y<2.0f||robot_pos_.y>8.2f)
+            {
+                cho=1; 
+            }
+            else
+            {
+                cho=2; 
+            }
+            
+            if(cho==1)
+            {
+                KFS_result_=MF_AutoCtrler::PathNodeResult_calc(temp,KFS,0,26);
+                int point_sum=MF_AutoCtrler::BFS_GetPath(KFS_result_.entranceMap,KFS_result_.bestBMF1,path_point_,20);
+                int index=0;
+                for(int i=0;i<point_sum;i++)
+                {
+                    if(path_point_[i]==1||path_point_[i]==5||path_point_[i]==30||path_point_[i]==26||path_point_[i]==KFS_result_.bestBMF1)
+                    {
+                        path_key_point_[index]=path_point_[i];
+                        index++;
+                    }
+                }
+                point_sum=MF_AutoCtrler::BFS_GetPath(KFS_result_.bestBMF1,KFS_result_.exitMap,path_point_,20);
+                for(int i=0;i<point_sum;i++)
+                {
+                    if(path_point_[i]==1||path_point_[i]==5||path_point_[i]==30||path_point_[i]==26||path_point_[i]==KFS_result_.exitMap)
+                    {
+                        path_key_point_[index]=path_point_[i];
+                        index++;
+                    }
+                }
+                
+                path_line_.plan_reset();
+                path_line_.Reset();
+                path_line_.Add_Start_Point(Vector2D{robot_pos_.x , robot_pos_.y},path_param_);
+                for(int i=0;i<index;i++)
+                {
+                    if(i==(index-1))
+                    {
+                        Vector2D temp_vector=MF_AutoCtrler::MapCenterWorld_Vector2D(path_key_point_[i]);
+                        path_line_.Add_End_Point(Vector2D{temp_vector.x-0.5f, temp_vector.y-0.5f});
+                    }
+                    else
+                    {
+                        Vector2D temp_vector=MF_AutoCtrler::MapCenterWorld_Vector2D(path_key_point_[i]);
+                        path_line_.Add_Point(Vector2D{temp_vector.x-0.5f, temp_vector.y-0.5f});
+                    }
+                }
+                
+            }
+            else if(cho==2)
+            {
+                KFS_result_=MF_AutoCtrler::PathNodeResult_calc(Point2D{temp.x,1.2f,0.0f},KFS,0,26);
+                temp.x+=0.5f;
+                temp.y+=0.5f;
+                point_map=MF_AutoCtrler::GetMapNumFromPos(temp);
+                int point_sum=MF_AutoCtrler::BFS_GetPath(point_map,KFS_result_.bestBMF1,path_point_,20);
+                int index=0;
+                for(int i=0;i<point_sum;i++)
+                {
+                    if(path_point_[i]==1||path_point_[i]==5||path_point_[i]==30||path_point_[i]==26||path_point_[i]==KFS_result_.bestBMF1)
+                    {
+                        path_key_point_[index]=path_point_[i];
+                        index++;
+                    }
+                }
+                point_sum=MF_AutoCtrler::BFS_GetPath(KFS_result_.bestBMF1,KFS_result_.exitMap,path_point_,20);
+                for(int i=0;i<point_sum;i++)
+                {
+                    if(path_point_[i]==1||path_point_[i]==5||path_point_[i]==30||path_point_[i]==26||path_point_[i]==KFS_result_.exitMap)
+                    {
+                        path_key_point_[index]=path_point_[i];
+                        index++;
+                    }
+                }
+                
+                path_line_.plan_reset();
+                path_line_.Reset();
+                path_line_.Add_Start_Point(Vector2D{robot_pos_.x , robot_pos_.y},path_param_);
+                for(int i=0;i<index;i++)
+                {
+                    if(i==(index-1))
+                    {
+                        Vector2D temp_vector=MF_AutoCtrler::MapCenterWorld_Vector2D(path_key_point_[i]);
+                        path_line_.Add_End_Point(Vector2D{temp_vector.x-0.5f, temp_vector.y-0.5f});
+                    }
+                    else
+                    {
+                        Vector2D temp_vector=MF_AutoCtrler::MapCenterWorld_Vector2D(path_key_point_[i]);
+                        path_line_.Add_Point(Vector2D{temp_vector.x-0.5f, temp_vector.y-0.5f});
+                    }
+                }
+            }
+            
+            
+//            path_line_.plan_reset();
+//            path_line_.Reset();
+//            path_line_.Add_Start_Point(Vector2D{robot_pos_.x , robot_pos_.y});
+//            path_line_.Add_Point(Vector2D{robot_pos_.x, robot_pos_.y + 1.0f});
+//            path_line_.Add_Point(Vector2D{robot_pos_.x+3.0f, robot_pos_.y + 1.0f});
+//            path_line_.Add_End_Point(Vector2D{robot_pos_.x , robot_pos_.y +4.0f});
+            
+            
+//            path_.plan_reset();
+//            path_.Reset();
+//            path_.Add_Start_Point(Vector2D{robot_pos_.x , robot_pos_.y}, 0, 0);
+//            path_.Add_Point(Vector2D{robot_pos_.x+1.0f, robot_pos_.y + 1.0f}, 0.5f);
+//            path_.Add_Point(Vector2D{robot_pos_.x+3.0f, robot_pos_.y + 1.0f}, 0.5f);
+//            path_.Add_End_Point(Vector2D{robot_pos_.x + 3.5f, robot_pos_.y +1.0f}, 0);
+            
         }
-        else
+        if (flag_run == 1)
         {
-            path_.plan_reset();
-            path_.Reset();
-            target_chassis_twist_.vx=0.0f;
-            target_chassis_twist_.vy=0.0f;
-            chassis_status_=CHASSIS_MANUAL_CONTROL_B;
+            
+            if (path_line_.Is_End() == true)
+            {
+                num++;
+                speed = path_line_.plan(robot_pos_);
+                robot_pos_=robot_pos_+speed*0.001f;
+                target_chassis_twist_.vx = speed.x;
+                target_chassis_twist_.vy = speed.y;
+                if (num > 5)
+                {
+                    debug_uart.printf_DMA("%f,%f,%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(),speed.x,speed.y,corrVelocity.magnitude());
+                    num = 0;
+                }
+            }
+            else
+            {
+                flag = 0;
+                flag_run = 0;
+                path_line_.plan_reset();
+                path_line_.Reset();
+                target_chassis_twist_.vx = 0.0f;
+                target_chassis_twist_.vy = 0.0f;
+                //chassis_status_ = CHASSIS_MANUAL_CONTROL_B;
+            }
+//            if (path_.Is_End() == true)
+//            {
+//                num++;
+//                planspeed = path_.plan(robot_pos_);
+//                pathEnd = path_.get_bezier_curve().Get_Point(1.0f);
+//                float distToEnd = (robot_pos_ - pathEnd).magnitude();
+//                // 1. 找最近点+t值：获取路径上距离当前位置最近的点及其参数 tNearest
+//                nearestPt = GetPathNearestPoint(path_.get_bezier_curve(), robot_pos_, tNearest);
+//                // 2. 找前视点+前进方向：根据最近点和前视距离，寻找前视点及其参数 tLookahead
+//                lookaheadPt = FindLookaheadPoint(path_.get_bezier_curve(), tNearest, tLookahead);
+//                lookaheadTangent = path_.get_bezier_curve().Get_Tangent_Vector(tLookahead);
+//                // 3. 计算横向偏差：计算机器人当前位置到路径切线的垂直距离
+//                lateralError = CalculateLateralError(path_.get_bezier_curve(), robot_pos_, nearestPt, tLookahead);
+//                // 4. 横向偏差PID控制：计算横向纠偏速度大小
+//                correctspeed = pid_track.pid_calc(0.0f, lateralError);
+//                Vector2D corrDir(-lookaheadTangent.y, lookaheadTangent.x); // 纠偏方向（垂直前进方向，左右纠偏）
+//                corrVelocity = corrDir * correctspeed;                     // 合成纠偏速度（方向+大小）
+//                // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
+
+//                // baseVelocity = lookaheadTangent * planspeed.magnitude();
+//                speed = planspeed + corrVelocity; // 最终速度 = 规划的前进速度 + 横向纠偏速度
+//                target_chassis_twist_.vx = speed.x;
+//                target_chassis_twist_.vy = speed.y;
+//                if (num > 2)
+//                {
+//                    debug_uart.printf_DMA("%f,%f,%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(),speed.x,speed.y,corrVelocity.magnitude());
+//                    num = 0;
+//                }
+//            }
+//            else
+//            {
+//                flag = 0;
+//                flag_run = 0;
+//                path_.plan_reset();
+//                path_.Reset();
+//                target_chassis_twist_.vx = 0.0f;
+//                target_chassis_twist_.vy = 0.0f;
+//                chassis_status_ = CHASSIS_MANUAL_CONTROL_B;
+//            }
         }
-        
+
         // 获取当前角度
         float yaw_real_angle = yaw;
+//        float yaw_real_angle = ladar_data_.yaw;
+//        yaw_pid_period_count_++;
+//        if (yaw_pid_period_count_ >= yaw_pid_period_)
+//        {
+//            yaw_pid_period_count_ = 0;
+//            target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
+//        }+
 
-        yaw_pid_period_count_++;
-        if (yaw_pid_period_count_ >= yaw_pid_period_)
-        {
-            yaw_pid_period_count_ = 0;
-            target_chassis_twist_.yaw_rate = -yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
-        }
-
-        this->set_ControlMode(CURRENT_ZERO_MODE);
+        // this->set_ControlMode(CURRENT_ZERO_MODE);
         this->set_Target(target_chassis_twist_);
         break;
     }
