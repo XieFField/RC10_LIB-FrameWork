@@ -222,6 +222,14 @@ public:
         auto_ctrl_.time_set.gimbal_max_rad = (400.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f); //云台最大角速度(rad/s)
     }
 
+    bool isArmcalibrated() const
+    {
+        if(arm_ctrlStatus.is_calibrating)
+            return true;
+        else
+            return false;
+    }
+
     void init(M3508 *motor_ArmLaunch, M2006 *motor_ArmStretch, 
         M3508 *motor_ArmRotate, M2006 *motor_ArmPitch)
     {

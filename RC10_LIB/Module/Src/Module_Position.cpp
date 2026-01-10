@@ -52,7 +52,8 @@ Position* Position::GetInstance(UART_HandleTypeDef *uart_handle)
 // 初始化UART
 void Position::InitUART() 
 {
-    if (uart_initialized_) {
+    if (uart_initialized_) 
+	{
         return; // 已经初始化过
     }
     UART_HandleTypeDef *uart_handle=Position::UART_::GetUartHandle();
@@ -67,7 +68,7 @@ void Position::InitUART()
 
 void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 {
-  uint8_t count = 0;
+  	uint8_t count = 0;
 	uint8_t i = 0;
 	uint8_t CRC_check[2];//CRC校验位，此文件未启用
 	

@@ -140,29 +140,29 @@ void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_in
 	if(laser_mode==LEFT)
     {
         delta=fabs(laser_initData_.y1-laser_initData_.y2);
-        robot_pose_inWorld_.theta=atan(delta/laser_initData_.d);
-        robot_pose_inWorld_.x=laser_initData_.x1*cos(robot_pose_inWorld_.theta);
-        robot_pose_inWorld_.y=0.5*(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.theta);
-        robot_pose_inWorld_.theta=robot_pose_inWorld_.theta*180/PI;
+        robot_pose_inWorld_.yaw=atan(delta/laser_initData_.d);
+        robot_pose_inWorld_.x=laser_initData_.x1*cos(robot_pose_inWorld_.yaw);
+        robot_pose_inWorld_.y=0.5*(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.yaw);
+        robot_pose_inWorld_.yaw=robot_pose_inWorld_.yaw*180/PI;
 	
         if(laser_initData_.y1>laser_initData_.y2)
         {
-            robot_pose_inWorld_.theta=360-robot_pose_inWorld_.theta;
-            aaa=robot_pose_inWorld_.theta;
+            robot_pose_inWorld_.yaw=360-robot_pose_inWorld_.yaw;
+            aaa=robot_pose_inWorld_.yaw;
         }
     }
 	else if(laser_mode==RIGHT)
 	{
         delta=fabs(laser_initData_.y1-laser_initData_.y2);
-        robot_pose_inWorld_.theta=atan(delta/laser_initData_.d);
-        robot_pose_inWorld_.y=laser_initData_.x1*cos(robot_pose_inWorld_.theta);
-        robot_pose_inWorld_.x=0.5*(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.theta);
-        robot_pose_inWorld_.theta=robot_pose_inWorld_.theta*180/PI;
+        robot_pose_inWorld_.yaw=atan(delta/laser_initData_.d);
+        robot_pose_inWorld_.y=laser_initData_.x1*cos(robot_pose_inWorld_.yaw);
+        robot_pose_inWorld_.x=0.5*(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.yaw);
+        robot_pose_inWorld_.yaw=robot_pose_inWorld_.yaw*180/PI;
 	
         if(laser_initData_.y1>laser_initData_.y2)
         {
-            robot_pose_inWorld_.theta=360-robot_pose_inWorld_.theta;
-            aaa=robot_pose_inWorld_.theta;
+            robot_pose_inWorld_.yaw=360-robot_pose_inWorld_.yaw;
+            aaa=robot_pose_inWorld_.yaw;
         }
     }
 	
