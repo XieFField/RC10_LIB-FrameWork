@@ -161,17 +161,17 @@
           <ItemText>set1</ItemText>
         </Ww>
         <Ww>
-          <count>17</count>
+          <count>2</count>
           <WinNumber>1</WinNumber>
           <ItemText>SystemDetectTaskTime,0x0A</ItemText>
         </Ww>
         <Ww>
-          <count>18</count>
+          <count>3</count>
           <WinNumber>1</WinNumber>
           <ItemText>SystemDetectTaskWaterMark,0x0A</ItemText>
         </Ww>
         <Ww>
-          <count>19</count>
+          <count>4</count>
           <WinNumber>1</WinNumber>
           <ItemText>xTickCount,0x0A</ItemText>
         </Ww>
