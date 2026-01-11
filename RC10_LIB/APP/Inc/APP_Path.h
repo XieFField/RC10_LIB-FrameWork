@@ -403,9 +403,10 @@ public:
             v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
 
             // 如果当前曲线段走完（t接近1）或者规划完成
-            if (t_ >= 0.999f || m_phase == S_FINISHED_PHASE)
+            if (t_ >= 0.9880f || m_phase == S_FINISHED_PHASE)
             {
                 index_++; // 切换到下一段曲线
+                t_ =0.0f;
                 if (index_ >= bezier_curve_num)
                 {
                     is_end = false; // 结束运行

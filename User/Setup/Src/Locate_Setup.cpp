@@ -31,8 +31,8 @@ void Locate_Setup::update()
     yaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().world_yaw;
 	dyaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().dyaw;
 
-	robot_pose_inWorld_.x = Lad_Data.x * cos(deg_to_rad(-90)) - Lad_Data.y * sin(deg_to_rad(-90)) + coordoffset.x_offset;
-    robot_pose_inWorld_.y = Lad_Data.x * sin(deg_to_rad(-90)) + Lad_Data.y * cos(deg_to_rad(-90)) + coordoffset.y_offset;
+	robot_pose_inWorld_.x = -(Lad_Data.x * cos(deg_to_rad(-90)) - Lad_Data.y * sin(deg_to_rad(-90))) + coordoffset.x_offset;
+    robot_pose_inWorld_.y = -(Lad_Data.x * sin(deg_to_rad(-90)) + Lad_Data.y * cos(deg_to_rad(-90))) + coordoffset.y_offset;
     robot_pose_inWorld_.z = Lad_Data.z;
     robot_pose_inWorld_.yaw = yaw_from_position_;
 

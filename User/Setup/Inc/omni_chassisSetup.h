@@ -83,12 +83,14 @@ private:
     int flag_run = 0;
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
 
-    Path path_;
+    //Path path_;
     Path_line path_line_;
 
     float a=2.0f;
     float b=0.5f;
+    Vector2D original_point_={-0.50f,-0.52f};
     
+    float yaw=0.0f;
     Point3D ladar_data_;
     Vector2D robot_pos_ = {0.0f, 0.0f};
     
@@ -100,7 +102,7 @@ private:
     int8_t point_map=0;
     int8_t path_point_[20];
     int8_t path_key_point_[10];
-    int8_t KFS=4;
+    int8_t KFS=11;
 
     float target_yaw_ = 0.0f;
     uint8_t yaw_pid_period_ = 3;
@@ -120,7 +122,7 @@ private:
 
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
     
-    Speedplanner_1D_Param_Config path_param_={.maxAcc = 3.0f, .maxDec = 3.0f, .maxJerk = 4.0f, .maxSpeed = 0.5f, .initialSpeed = 0.05f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 30.0f, .maxJerk = 30.0f, .maxSpeed = 2.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
     MF_AutoCtrler::PathNode_S KFS_result_ = {0, 0, 0, 0, 0, 26};
     /**
      * @brief 获取路径上距离机器人最近的点
