@@ -44,6 +44,10 @@ public:
         : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(wheel_radius, max_wheel_rpm, base_length, side_length, three_wheel)
         ,debug_uart(&huart8)
     {}
+    OmniChassis_Setup(Chassis_Omni<3>::init_config& config)
+        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(config)
+        ,debug_uart(&huart8)
+    {}
 
     void setChassisStatus(CHASSIS_Status_E status)
     {

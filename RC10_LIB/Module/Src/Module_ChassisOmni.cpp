@@ -4,33 +4,9 @@
 template <std::size_t WheelCount>
 void Chassis_Omni<WheelCount>::inverseKinematics(const Robot_Twist& twist)
 {
-    if constexpr (WheelCount == 3)
+    for (uint8_t i = 0; i < WheelCount; ++i)
     {
-        if (use_three_solver_==true)
-        {
-            // 算法 A（默认）：原有实现，顶点使用 chassis_radius_，底边使用 chassis_radius_bottom_
-            this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(- twist.vx + twist.yaw_rate * chassis_radius_);
-            this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(twist.vy * COS_31_87 + twist.vx * SIN_31_87 + twist.yaw_rate * chassis_radius_bottom_);
-            this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vy * COS_31_87 + twist.vx * SIN_31_87 + twist.yaw_rate * chassis_radius_bottom_);
-        }
-        else
-        {
-            this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(- twist.vx + twist.yaw_rate * chassis_radius_);
-            this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(twist.vy * COS_30 + twist.vx * SIN_30 + twist.yaw_rate * chassis_radius_);
-            this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vy * COS_30 + twist.vx * SIN_30 + twist.yaw_rate * chassis_radius_);
-        }
-    }
-    else if constexpr (WheelCount == 4)
-    {
-        this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(twist.vx * COS_45 - twist.vy * SIN_45 + twist.yaw_rate * chassis_radius_);
-        this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(-twist.vx * COS_45 - twist.vy * SIN_45 + twist.yaw_rate * chassis_radius_);
-        this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vx * COS_45 + twist.vy * SIN_45 + twist.yaw_rate * chassis_radius_);
-        this->wheel_target_rpm_[3] = this->wheelSpeedToMotorRPM(twist.vx * COS_45 + twist.vy * SIN_45 + twist.yaw_rate * chassis_radius_);
-    }
-    else
-    {
-        // 其他轮数的全向轮底盘暂不支持
-        return;
+        this->wheel_target_rpm_[i] = this->wheelSpeedToMotorRPM(twist.vx * wheel_calculate_config_[i].cos_theta + twist.vy * wheel_calculate_config_[i].sin_theta + twist.yaw_rate * wheel_calculate_config_[i].radius);
     }
 }
 
@@ -73,6 +49,19 @@ Chassis_Omni<3>::Chassis_Omni(float wheel_radius, float max_wheel_rpm, float bas
     computeIsoscelesRadii(base_length, side_length, top_r, bottom_r);
     chassis_radius_ = top_r;
     chassis_radius_bottom_ = bottom_r;
+}
+
+template <std::size_t WheelCount>
+Chassis_Omni<WheelCount>::Chassis_Omni(Chassis_Omni<WheelCount>::init_config& config)
+    : Chassis_Base<WheelCount>(config.wheel_radius, config.max_wheel_rpm)
+{
+    for (uint8_t i = 0; i < WheelCount; ++i)
+    {
+        wheel_config_[i] = config.wheels[i];
+        wheel_calculate_config_[i].cos_theta = cosf(config.wheels[i].theta * PI / 180.0f);
+        wheel_calculate_config_[i].sin_theta = sinf(config.wheels[i].theta * PI / 180.0f);
+        wheel_calculate_config_[i].radius = config.wheels[i].x * wheel_calculate_config_[i].sin_theta - config.wheels[i].y * wheel_calculate_config_[i].cos_theta;
+    }
 }
 
 template <std::size_t WheelCount>

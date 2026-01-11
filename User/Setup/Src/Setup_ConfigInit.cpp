@@ -26,7 +26,26 @@ LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
 
-OmniChassis_Setup ChassisOmni(0.442f/2.f,420, 0.74f, 0.8363f, true); // 轮子半径，最大轮子转速，底盘 底 腰
+Chassis_Omni<3>::init_config chassis_initData = {
+    .wheel_radius = 0.442f/2.f,
+    .max_wheel_rpm = 420,
+    .wheels[0] = {
+        .x = 0.0f,
+        .y = 0.375f,
+        .theta = 0.0f 
+    },
+    .wheels[1] = {
+        .x = -0.37f,
+        .y = -0.375f,
+        .theta = -63.741f + 180.0f
+    },
+    .wheels[2] = {
+        .x = 0.37f,
+        .y = -0.375f,
+        .theta = 63.741f + 180.0f
+    }
+};
+OmniChassis_Setup ChassisOmni(chassis_initData); // 轮子半径，最大轮子转速，底盘 底 腰
 
 
 
