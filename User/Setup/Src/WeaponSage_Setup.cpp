@@ -11,12 +11,13 @@ Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
 }
 
 void Robot_WeaponSage_Setup::loop()
-{
+{	
 	ctrl_status_.now_times=TimeStamp::getInstance().getSeconds();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 	if(!ctrl_status_.is_calibrating)
 	{
 		calibrate();
+		weaponSage_status_=WEAPONSAGE_CALIBRATE;
 	}
     switch(weaponSage_status_)
     {
@@ -25,6 +26,7 @@ void Robot_WeaponSage_Setup::loop()
             break;
         case WEAPONSAGE_IDLE:
             idle();
+
             break;
         case WEAPONSAGE_STOP:
             stop();
@@ -35,12 +37,13 @@ void Robot_WeaponSage_Setup::loop()
             break;
 		}
         case WEAPONSAGE_AUTO_CONTROL:
-		{
+		{	
+			autoControl();
             break;
 	    }
 		case WEAPONSAGE_CALIBRATE:
 		{
-			calibrate();
+			//calibrate();
 			
             break;
 	    }
@@ -49,8 +52,9 @@ void Robot_WeaponSage_Setup::loop()
             idle();
             break;
     }
-
+	
     this->update();
+	auto_ctrl_.auto_state_bool_S.is_matching=Locate_Setup::getInstance()->ifSwitch1On();
 }
 int CNT=0;
 float traverse_rate=0.002;
@@ -85,27 +89,51 @@ void Robot_WeaponSage_Setup::calibrate()
             
             this->setTarget(0.0f, WeaponSage::Claw_Motor);
             this->setTarget(0.0f, WeaponSage::Traverse_Motor);
+		
+			
+		
             auto_ctrl_.auto_state_bool_S.wrist_enable=true;
             ctrl_status_.is_calibrating = true;
         }
 
     }
+	
 }
 
 void Robot_WeaponSage_Setup::manualControl()
 {
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+
+    // 进入Manual模式时的状态绑定逻辑
+    if(last_weaponSage_status_ != WEAPONSAGE_MANUAL_CONTROL)
+    {
+        // 获取当前爪子实际位置，判定逻辑状态
+        float current_claw_theta = this->getClawPos().theta;
+        int8_t current_claw_logical = (current_claw_theta > initData_.max_clawAngle_ * 0.5f) ? 1 : 0;
+        
+        // 记录状态
+        ctrl_status_.last_manual_claw_state = current_claw_logical;
+        
+        // 计算偏移: offset = switch ^ state
+        ctrl_status_.claw_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_claw_logical;
+
+        last_weaponSage_status_ = WEAPONSAGE_MANUAL_CONTROL;
+    }
+
     switch(airjoy_data_.SWA)
     {
         case 0x00:
         {
             //夹取武器
-            if(airjoy_data_.SWD == 0x00)
+            // 计算当前应当的逻辑状态 logic = switch ^ offset
+            int8_t target_claw_logical = (airjoy_data_.SWD & 0x01) ^ ctrl_status_.claw_switch_offset;
+            
+            ctrl_status_.last_manual_claw_state = target_claw_logical;
+
+            if(target_claw_logical == 0)
                 target_pos_.claw_pos_ = 0.0f; //开爪子
-            else if(airjoy_data_.SWD == 0x01)
-                target_pos_.claw_pos_ = initData_.max_clawAngle_; //紧爪子
             else
-                target_pos_.claw_pos_ = 0.0f;
+                target_pos_.claw_pos_ = initData_.max_clawAngle_; //紧爪子
 
             //夹爪位置
 
@@ -235,6 +263,7 @@ void Robot_WeaponSage_Setup::debug()
 
 void Robot_WeaponSage_Setup::autoControl()
 {
+	
     //待实现
     /**
      * @brief 自动控制逻辑
@@ -243,6 +272,8 @@ void Robot_WeaponSage_Setup::autoControl()
      *  3.当下降完成后，且底盘与武器架底部接触，则执行抓取
      *  4.当底盘后退到能将矛杆抬起的位置后，执行抬起
      */
+	
+	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
 	switch(now_state_)
 
     {
@@ -254,8 +285,10 @@ void Robot_WeaponSage_Setup::autoControl()
                 auto_ctrl_.flag.lowerclaw_done = false;
                 auto_ctrl_.flag.grabclaw_done = false;
                 auto_ctrl_.flag.lift_done = false;
-                auto_ctrl_.auto_ctrl1 = false;
+            
                 now_state_ = WeaponSage_Setup::STATE_AIM_POSITION;
+				
+				this->setTarget(0.8*initData_.max_launchHeight_, WeaponSage::Launch_Motor);
             }
             else
             {
@@ -309,11 +342,9 @@ void Robot_WeaponSage_Setup::autoControl()
             if(auto_ctrl_.flag.lift_done)
             {
                 now_state_ = WeaponSage_Setup::STATE_DONE;
-                if(auto_ctrl_.pole_num < 3)
-                {
-                    auto_ctrl_.pole_num ++;
-                }
+				auto_ctrl_.auto_ctrl1 = false;
             }
+			
             break;
         }
 
@@ -337,7 +368,7 @@ bool Robot_WeaponSage_Setup::State_AimPosition(int pole_num)
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
     this->setTarget( WeaponSage_Setup::weapon_pos[pole_num], WeaponSage::Traverse_Motor);
     Point2D claw_pos = this->getClawPos();
-    if(fabs(claw_pos.y -  WeaponSage_Setup::weapon_pos[pole_num]) <0.001f)
+    if(fabs(claw_pos.x -  WeaponSage_Setup::weapon_pos[pole_num]) <0.001f)
     {
         return true;
     }
@@ -348,15 +379,17 @@ bool Robot_WeaponSage_Setup::State_AimPosition(int pole_num)
 }
 void Robot_WeaponSage_Setup::State_LowerClaw()
 {
-    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-	auto_ctrl_.tarch_height = initData_.max_launchHeight_;
-    this->setTarget(auto_ctrl_.tarch_height, WeaponSage::Launch_Motor);
+	 if(auto_ctrl_.auto_state_bool_S.is_matching)
+    {
+		this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+		auto_ctrl_.tarch_height =0.2* initData_.max_launchHeight_;
+		this->setTarget(auto_ctrl_.tarch_height, WeaponSage::Launch_Motor);
+	}
 }
 
 bool Robot_WeaponSage_Setup::State_GrabClaw()
 {
-    if(auto_ctrl_.auto_state_bool_S.is_matching)
-    {
+   
 		
         this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
         
@@ -378,13 +411,14 @@ bool Robot_WeaponSage_Setup::State_GrabClaw()
         {
             return false;
         }
-	}
-	
 }
+	
+
 
 bool Robot_WeaponSage_Setup::State_Lift()
 {
-    if(auto_ctrl_.auto_state_bool_S.is_moving == true)
+    if(!auto_ctrl_.auto_state_bool_S.is_matching)
+    
     {
         this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
         auto_ctrl_.up_height = 0.7f * initData_.max_launchHeight_;

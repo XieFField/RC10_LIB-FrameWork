@@ -24,14 +24,15 @@ void Chassis_Base<WheelCount>::setWorldSpeed(const Robot_Twist& twist)
     float cos_yaw = arm_cos_f32(-deg_to_rad(angle_twist_.yaw_angle));
     float sin_yaw = arm_sin_f32(-deg_to_rad(angle_twist_.yaw_angle));
 
-    robot_target_twist_.vx = twist.vx * cos_yaw - twist.vy * sin_yaw;
-    robot_target_twist_.vy = twist.vx * sin_yaw + twist.vy * cos_yaw;
+    robot_target_twist_.vx = (twist.vx * cos_yaw - twist.vy * sin_yaw);
+    robot_target_twist_.vy = (twist.vx * sin_yaw + twist.vy * cos_yaw);
     robot_target_twist_.yaw_rate = twist.yaw_rate; // 角速度在2D平面上不变
 }
 
 template<std::size_t WheelCount>
 void Chassis_Base<WheelCount>::update()
 {
+
     //update time stamp
     float current_time_s = TimeStamp::getInstance().getSeconds();
     dt_ = current_time_s - last_update_time_s_;
@@ -39,6 +40,12 @@ void Chassis_Base<WheelCount>::update()
         dt_ = 0.001f; //异常值处理
 
     last_update_time_s_ = current_time_s;
+
+    if(ctrl_mode_ == CURRENT_ZERO_MODE || ctrl_mode_ == SPEED_ZERO_MODE)
+    {
+        forwardKinematics();
+        return; // 置零模式不更新速度
+    }
 
     if(accel_Limit_)
     {
@@ -56,7 +63,7 @@ void Chassis_Base<WheelCount>::update()
     float cos_yaw = arm_cos_f32(deg_to_rad(angle_twist_.yaw_angle));
     float sin_yaw = arm_sin_f32(deg_to_rad(angle_twist_.yaw_angle));
     world_twist_.vx = robot_twist_.vx * cos_yaw - robot_twist_.vy * sin_yaw;
-    world_twist_.vy = robot_twist_.vx * sin_yaw + robot_twist_.vy * cos_yaw;
+    world_twist_.vy = -(robot_twist_.vx * sin_yaw + robot_twist_.vy * cos_yaw);
     world_twist_.yaw_rate = robot_twist_.yaw_rate;
 
     for(std::size_t i = 0; i < WheelCount; i++)

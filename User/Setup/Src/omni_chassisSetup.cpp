@@ -24,8 +24,9 @@ void OmniChassis_Setup::loop()
     {
         case CHASSIS_MANUAL_CONTROL_A:
         {
+            this->set_ControlMode(WORLD_SPEED_MODE);
             if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
-                target_chassis_twist_.vx = -airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+                target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
             else
                 target_chassis_twist_.vx = 0.0f;
 
@@ -34,21 +35,23 @@ void OmniChassis_Setup::loop()
             else
                 target_chassis_twist_.vy = 0.0f;
 
-            if(_tool_Abs(airjoy_data_.right_y) > 0.05f)
-                target_chassis_twist_.yaw_rate = -airjoy_data_.right_y * 6 ;
+            if(_tool_Abs(airjoy_data_.right_x) > 0.05f)
+                target_chassis_twist_.yaw_rate = airjoy_data_.right_x * 6 ;
             else
                 target_chassis_twist_.yaw_rate = 0.0f;
 			
-			target_yaw_ = yaw;
-            this->setWorldSpeed(target_chassis_twist_);
-            this->update();
-            break;
+			 target_yaw_ = yaw;
+
+            this->set_Target(target_chassis_twist_);
+
+            break; 
         }
 
         case CHASSIS_MANUAL_CONTROL_B:
         {
+            this->set_ControlMode(WORLD_SPEED_MODE);
             if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
-                target_chassis_twist_.vx = -airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+                target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
             else
                 target_chassis_twist_.vx = 0.0f;
 
@@ -64,16 +67,18 @@ void OmniChassis_Setup::loop()
             if(yaw_pid_period_count_ >= yaw_pid_period_)
             {
                 yaw_pid_period_count_ = 0;
-                target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
+                target_chassis_twist_.yaw_rate = -yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
             }
 			
-            this->setWorldSpeed(target_chassis_twist_);
-            this->update();
+            // this->setWorldSpeed(target_chassis_twist_);
+            this->set_Target(target_chassis_twist_);
+            // this->update();
             break;
         }
 
         case CHASSIS_LOCK_FORWEAPON:
         {
+            this->set_ControlMode(WORLD_SPEED_MODE);
             float target_yaw_angle = 90.0f;
 
             float yaw_real_angle = yaw;
@@ -86,7 +91,7 @@ void OmniChassis_Setup::loop()
             }
 
             if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
-                target_chassis_twist_.vx = -airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+                target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
             else
                 target_chassis_twist_.vx = 0.0f;
 
@@ -95,29 +100,37 @@ void OmniChassis_Setup::loop()
             else
                 target_chassis_twist_.vy = 0.0f;
 
-            this->setWorldSpeed(target_chassis_twist_);
-            this->update();
+            // this->setWorldSpeed(target_chassis_twist_);
+            this->set_Target(target_chassis_twist_);
             break;
         }
 
         case CHASSIS_AUTO_CONTROL:
         {
+            // this->wheels_[0]->setTargetCurrent(0);
+            // this->wheels_[1]->setTargetCurrent(0);
+            // this->wheels_[2]->setTargetCurrent(0);
+            this->set_ControlMode(CURRENT_ZERO_MODE);
+            this->set_Target({0,0,0});
             break;
         }
         case CHASSIS_STOP:
         {
-            this->wheels_[0]->setTargetCurrent(0);
-            this->wheels_[1]->setTargetCurrent(0);
-            this->wheels_[2]->setTargetCurrent(0);
+            // this->wheels_[0]->setTargetCurrent(0);
+            // this->wheels_[1]->setTargetCurrent(0);
+            // this->wheels_[2]->setTargetCurrent(0);
+            this->set_ControlMode(CURRENT_ZERO_MODE);
+            this->set_Target({0,0,0});
             break;
         }
 
         case CHASSIS_MANUAL_CONTROL_C:
         {
+            this->set_ControlMode(WORLD_SPEED_MODE);
             target_chassis_twist_.yaw_rate = 0.0f;
 
             if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
-                target_chassis_twist_.vx = -airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+                target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
             else
                 target_chassis_twist_.vx = 0.0f;
 
@@ -126,8 +139,8 @@ void OmniChassis_Setup::loop()
             else
                 target_chassis_twist_.vy = 0.0f;
 
-            this->setWorldSpeed(target_chassis_twist_);
-            this->update();
+            // this->setWorldSpeed(target_chassis_twist_);
+            this->set_Target(target_chassis_twist_);
             break;
         }
         default:
@@ -154,7 +167,7 @@ void OmniChassis_Setup::loop()
     // debug_uart.printf_DMA("%f,%f,%f,%f\r\n",
     //                      target_yaw_,yaw,target_chassis_twist_.yaw_rate,dyaw);
 
-    
+    this->update();
 
     Point2D fk_speed;
     fk_speed.x = this->getWorldSpeed().vx;

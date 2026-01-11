@@ -91,6 +91,12 @@ typedef struct{
     bool changeTarget_state = false; //切换目标状态标志
     float last_right_x = 0.0f; //上次右摇杆横向数据
     float last_right_y = 0.0f; //上次右摇杆纵向数据
+
+    int8_t last_manual_extend = 0; //上次手动伸展状态
+    int8_t last_manual_sucker = 0; //上次手动吸盘状态
+
+    int8_t extend_switch_offset = 0; // 伸展开关偏移绑定
+    int8_t sucker_switch_offset = 0; // 吸盘开关偏移绑定
 }arm_ctrl_status_S;
 
 typedef enum{
@@ -214,6 +220,14 @@ public:
         : Robot_Arm(init_Data), RtosTask("ArmSetup", 1) 
     {
         auto_ctrl_.time_set.gimbal_max_rad = (400.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f); //云台最大角速度(rad/s)
+    }
+
+    bool isArmcalibrated() const
+    {
+        if(arm_ctrlStatus.is_calibrating)
+            return true;
+        else
+            return false;
     }
 
     void init(M3508 *motor_ArmLaunch, M2006 *motor_ArmStretch, 

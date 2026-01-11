@@ -28,8 +28,9 @@ extern "C" {
 #include "Module_Position.h"
 #include "usbd_cdc.h"
 #include "usbd_cdc_if.h"
+#include "gpio.h"
 
-#define PI							3.14159265358979323846f			// 定义圆周率常量PI
+#define PI		3.14159265358979323846f			// 定义圆周率常量PI
 #define MAX_SEND_BUF_SIZE 128// 发送缓冲区大小
 
 #define MAX_RECEIVE_BUF_SIZE 512// 接收缓冲区大小
@@ -63,11 +64,11 @@ typedef struct
     float y;
     float z;
     float roll;
-	  float pitch;
-	  float yaw;
-		float line_x;
-		float line_y;
-		float line_z;
+    float pitch;
+    float yaw;
+    float line_x;
+    float line_y;
+    float line_z;
 }Lader_Data;
 class Locate_Setup : public RtosTask {
 public:
@@ -82,7 +83,8 @@ public:
      * @brief 无输入则默认在底盘中心
      */
     void init(Laser_InstanceManager* instance_man,USB_CDC_ *usb_handle, Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0}, 
-              Laser_initData_S laser_initData = {0})
+              Laser_initData_S laser_initData = {0}
+            )
     {   
         this->Laser_pos_instance = instance_man;
 		this->usb_handle=usb_handle;
@@ -101,14 +103,15 @@ public:
 
         install_pose_init_ = true;
     }
-	  void RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_instance);
+
+    //激光重定位接算
+    void RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_instance);
 		
     void register_laserManager(Laser_InstanceManager* Laser_pos_instance)
     {
         this->Laser_pos_instance = Laser_pos_instance;
     }
-    void Get_Rader_Data();
-		void USB_SendData();
+
     /**
      * @brief 设置是否启动激光重定位
      */
@@ -120,9 +123,11 @@ public:
     Point2D get_ArmPos_inWorld(){return arm_pose_inWorld_;}
 
     Point3D get_RobotPos_inWorld(){return robot_pose_inWorld_;}
+    Point3D get_RobotSpeed_inWorld(){return robot_speed_inworld_;}
+//    Point3D get_LidarPos_inWorld(){return lidar_pose_inWorld_;}
+	
 
-    Point3D get_LidarPos_inWorld(){return lidar_pose_inWorld_;}
-		
+
     Point2D get_FK_ChassisSpeed_inWorld(){return fk_chassisSpeed_inWorld_;}
 
 	void locate_setup_init(){this->start(osPriorityNormal, 256);}
@@ -134,56 +139,70 @@ public:
 
     void Relocte_ToLader();
 
+    /**
+     * @brief 获取底盘微动开关状态
+     */
+    bool ifSwitch1On(){return swtich1_isOn;}
+    bool ifSwitch2On(){return swtich2_isOn;}
+
 private:
-	
+    void Get_Rader_Data();
+    void USB_SendData();
 	Locate_Setup():RtosTask("Locate_Setup", 1), Laser_pos_instance(nullptr) {}
 	  
     Laser_InstanceManager* Laser_pos_instance;
 
-	  Lader_Data Lad_Data={0};
-	  USB_CDC_ *usb_handle;
-	  LASER_MODE laser_mode=LEFT;//默认起始位置在左
+    Lader_Data Lad_Data={0};
+    USB_CDC_ *usb_handle;
+    LASER_MODE laser_mode=LEFT;//默认起始位置在左
     bool is_startToLRL_ = false; // 是否启动激光重定位
     void update(); //更新
+
+
+
     /**
      * @brief 雷达坐标变换计算->robot_in_world, arm_in_world
      */
     void lader_transform_caculate(); //雷达坐标变换计算
-    void update_Lidar_data(); //更新雷达数据
+    void update_Lidar_data();        //更新雷达数据
 
     Point2D lidar_install_pose_ = {0}; // 雷达安装相对底盘中心
     Point2D arm_install_pose_ = {0};   // 机械臂安装相对底盘中心
 
     Point3D robot_pose_inWorld_ = {0}; // 机器人在世界坐标系位置
+    Point3D robot_speed_inworld_ = {0}; // 机器人在世界坐标系速度
+
+
+
     Point2D arm_pose_inWorld_ = {0};   // 机械臂底座在世界坐标系位置
-    Point3D lidar_pose_inWorld_ = {0}; // 雷达在世界坐标系位置
+
+
+    // Point3D lidar_pose_inWorld_ = {0}; // 雷达在世界坐标系位置
+    
 
     Point2D fk_chassisSpeed_inWorld_ = {0}; // 正解底盘速度 世界坐标系
 
     float yaw_from_position_ = 0.0f; // 从里程计position计算得到的偏航角
     float dyaw_from_position_ = 0.0f;
 
-    static HomogeneousTransform2D T_lader_to_robot;   // 雷达 -> 机器人
-    static HomogeneousTransform2D T_robot_to_arm;     // 机器人 -> 机械臂
+    // 2D/3D 坐标转换矩阵
+    HomogeneousTransform2D T_lidar_to_robot_2d; // 雷达 -> 机器人 (2D)
+    HomogeneousTransform2D T_robot_to_arm_2d;  // 机器人 -> 机械臂 (2D)
+    HomogeneousTransform3D T_robot_to_arm_3d;  // 机器人 -> 机械臂 (3D)
 
     bool install_pose_init_ = false;
 
+    bool swtich1_isOn = false;
+    bool swtich2_isOn = false;
+
+    struct {
+        float x_offset = 0.48f;
+        float y_offset = 0.48f;
+    }coordoffset;
 protected:
     void loop() override;
 };
 uint8_t xor_check(const uint8_t *data, uint32_t length);
-//    }
-
-
-//    ~LaerRelocate_Manager() = default;
-
-
-//    Point2D get_RobotPos_inWorld(){}
-
-//private:
-//    LaserPosition* laser_position_module_[3];
-
-//}
 
 
 #endif

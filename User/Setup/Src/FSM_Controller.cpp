@@ -60,12 +60,12 @@ void FSM_Controller::loop()
         // if(airjoy_data_.SWA == 0x01)
         // { 
             //ÖØ¶¨Î»
-            if(airjoy_data_.botton_click ==1 && iiii == 0)
-            {
-                Locate_Setup::getInstance()->Relocte_ToLader();
-				
-				iiii++;
-            }
+        if(airjoy_data_.botton_click ==1 && iiii == 0)
+        {
+            Locate_Setup::getInstance()->Relocte_ToLader();
+            
+            iiii++;
+        }
             
         else
         {
@@ -111,7 +111,7 @@ void FSM_Controller::manual_ctrl()
         }
         case 0x02:
         {
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_C);
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
             arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_CONTROL);
             break;

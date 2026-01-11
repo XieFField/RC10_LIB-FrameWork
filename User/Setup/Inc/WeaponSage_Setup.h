@@ -25,6 +25,7 @@ extern "C" {
 #include "BSP_RTOS.h"
 #include "APP_debugTool.h"
 #include "Module_CrsfReceiver.h"
+#include "Locate_Setup.h"
 
 namespace WeaponSage_Setup
 {
@@ -38,6 +39,9 @@ namespace WeaponSage_Setup
         bool is_calibrating = false;
 
         int target_poleIndex = 0; //0~3ºÅË÷ÒýµÄÃ¬¸Ë
+
+        int8_t last_manual_claw_state = 0; // 0: open, 1: close
+        int8_t claw_switch_offset = 0;
     }ctrl_status_S;
 
     typedef enum{
@@ -76,7 +80,7 @@ namespace WeaponSage_Setup
             bool grabclaw_done = false;
             bool lift_done = false;
         }flag;
-        bool auto_ctrl1 = false;
+        bool auto_ctrl1 = true;
         int pole_num = 0;
     }auto_ctrl_S;
 
@@ -163,12 +167,13 @@ private:
     void State_LowerClaw();
     bool State_GrabClaw();
     bool State_Lift();
+    
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 
     
     WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
 	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_IDLE;
-	WeaponSage_Setup::auto_GRABstate_S now_state_;
+	WeaponSage_Setup::auto_GRABstate_S now_state_=WeaponSage_Setup::STATE_DONE;
 	
     RmPocketData_t airjoy_data_; 
 
