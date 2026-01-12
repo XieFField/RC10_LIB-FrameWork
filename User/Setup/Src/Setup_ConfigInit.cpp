@@ -35,17 +35,17 @@ Chassis_Omni<3>::init_config chassis_initData = {
     .wheels[0] = {
         .x = 0.0f,
         .y = 0.375f,
-        .theta = 0.0f 
+        .theta = 0.0f  // 单位：度
     },
     .wheels[1] = {
         .x = -0.37f,
         .y = -0.375f,
-        .theta = -63.741f + 180.0f
+        .theta = -63.741f + 180.0f  // 单位：度
     },
     .wheels[2] = {
         .x = 0.37f,
         .y = -0.375f,
-        .theta = 63.741f + 180.0f
+        .theta = 63.741f + 180.0f  // 单位：度
     }
 };
 OmniChassis_Setup ChassisOmni(chassis_initData); // 轮子半径，最大轮子转速，底盘 底 腰

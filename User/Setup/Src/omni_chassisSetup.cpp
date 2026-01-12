@@ -67,7 +67,7 @@ void OmniChassis_Setup::loop()
             if(yaw_pid_period_count_ >= yaw_pid_period_)
             {
                 yaw_pid_period_count_ = 0;
-                target_chassis_twist_.yaw_rate = -yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
+                target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
             }
 			
             // this->setWorldSpeed(target_chassis_twist_);
