@@ -27,6 +27,11 @@ void FSM_Controller::loop()
             break;
     }
 
+    if(arm_setup_->isArmcalibrated() == false || weaponSage_setup_->isWeaponSageCalibrated() == false)
+    {
+        robot_status_ = ALL_STOP;
+    }
+
    switch (robot_status_)
    {
     case ALL_STOP:
@@ -84,10 +89,19 @@ void FSM_Controller::loop()
 void FSM_Controller::all_stop()
 {
    // 停止所有机构动作的实现
-   arm_setup_->setArmStatus(ARM_STOP);
-   chassis_setup_->setChassisStatus(CHASSIS_STOP);
-   weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_STOP);
+
+
+    if(arm_setup_->isArmcalibrated() == true)
+        arm_setup_->setArmStatus(ARM_STOP);
+    else
+        arm_setup_->setArmStatus(ARM_CALIBRATE);
+
+    if(weaponSage_setup_->isWeaponSageCalibrated() == true)
+        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_STOP);
+    else
+        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
        
+    chassis_setup_->setChassisStatus(CHASSIS_STOP);
 }
 
 void FSM_Controller::manual_ctrl()
@@ -139,7 +153,7 @@ void FSM_Controller::auto_ctrl()
         case 0x01:
         {
             //暂时不把路径规划部分纳入
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            chassis_setup_->setChassisStatus(CHASSIS_TESTFOR_ARM);
 
             arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
             break;

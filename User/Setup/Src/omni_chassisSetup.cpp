@@ -72,7 +72,6 @@ void OmniChassis_Setup::loop()
 			
             // this->setWorldSpeed(target_chassis_twist_);
             this->set_Target(target_chassis_twist_);
-            // this->update();
             break;
         }
 
@@ -143,6 +142,29 @@ void OmniChassis_Setup::loop()
             this->set_Target(target_chassis_twist_);
             break;
         }
+
+        case CHASSIS_TESTFOR_ARM:
+        {
+            this->set_ControlMode(WORLD_SPEED_MODE);
+            if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+            else
+                target_chassis_twist_.vx = 0.0f;
+
+            if(_tool_Abs(airjoy_data_.left_y) > 0.05f)
+                target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
+            else
+                target_chassis_twist_.vy = 0.0f;
+            break;
+
+            float target_yaw_angle = 0.0f;
+            target_yaw_angle = MF_AutoCtrler::Get_ChassisYawForArmAlign(target_KFS,
+                                                    path_node_.bestB1,
+                                                    path_node_.bestBMF1);
+
+            target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_angle, angle_twist.yaw_angle);
+        }
+
         default:
         {
             break;

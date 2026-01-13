@@ -122,6 +122,42 @@ void get_MoveDiretion(Point2D robotPos,
     Diresult[1] = result_[1];
 }
 
+float Get_ChassisYawForArmAlign(int8_t B1, int8_t BMF1)
+{
+    int8_t c1, r1, c2, r2;
+    Map_ToCR(B1, c1, r1);
+    Map_ToCR(BMF1, c2, r2);
+
+    float target_yaw = 0.0f;
+
+    /**
+     * 1. 左侧 targetyaw = -180,
+     * 2. 右侧 targetyaw = 0
+     * 3. 上侧 targetyaw = 90
+     * 4. 下侧 targetyaw = -90
+     */
+
+    //上下侧时候，同行不同列 即走x方向
+    if(r1 == r2)
+    {
+        if(r1 == 1 && r2 ==1) //下侧
+            target_yaw = -90.0f;
+        else if (r1 ==6 && r2 ==6) //上侧
+            target_yaw = 90.0f;
+    }
+
+    //左右侧时候， 同列不同行 即走y方向
+    if(c1 == c2)
+    {
+        if(c1 ==1 && c2 ==1) //左侧
+            target_yaw = 180.0f;
+        else if (c1 ==5 && c2 ==5) //右侧
+            target_yaw = 0.0f;
+    }
+}
+
+
+
 //依旧屎上堆屎
 /**
  * @brief 根据当前所在的地图格(bestB1)和行进方向，计算机械臂初始朝向；

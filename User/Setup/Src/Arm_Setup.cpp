@@ -1168,62 +1168,103 @@ bool ArmSetup::state_return(int next_targetKFS)
     float angel = 0.0f;
     bool has_next = (next_targetKFS == 0 || next_targetKFS == 1);
 
-	if(has_next)
-	{
-		int TargetMap;
-		int Target_KFS=auto_ctrl_.targetKFS[next_targetKFS];
-		if(next_targetKFS==0)
-		    TargetMap=auto_ctrl_.path.bestB1;
-		if(next_targetKFS==1)
-		    TargetMap=auto_ctrl_.path.bestB2;
-		
-		angel = MF_AutoCtrler::Get_ArmBaseTargetAngle(TargetMap,auto_ctrl_.KFS_Movedirection[next_targetKFS]);
+    if (has_next)
+    {
+        int TargetMap;
+        int Target_KFS = auto_ctrl_.targetKFS[next_targetKFS];
+        if (next_targetKFS == 0)
+            TargetMap = auto_ctrl_.path.bestB1;
+        if (next_targetKFS == 1)
+            TargetMap = auto_ctrl_.path.bestB2;
+
+        angel = MF_AutoCtrler::Get_ArmBaseTargetAngle(TargetMap, auto_ctrl_.KFS_Movedirection[next_targetKFS]);
     }
     else
     {
-        angel = 0.0f; // 默认返回0度
-    }
-
-//    float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
-    float diff = angel - fmodf(current_angle, 360.0f);
-
-    // 简单的归一化处理，确保 diff 在 -180 ~ 180
-    if(diff > 180.0f) diff -= 360.0f;
-    else if(diff < -180.0f) diff += 360.0f;
-
-    if(_tool_Abs(diff) < 2.0f)
-    {
-        auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST; // 误差极小时，锁定最短路径
-    }
-    else if(has_next)
-    {
-        if(angel == 0)
-            auto_ctrl_.current_strategy=ROTATE_PATH_POSITIVE;
-        else if(angel==180)
-            auto_ctrl_.current_strategy=ROTATE_PATH_NEGATIVE;
-        else
-            auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
-    }
-    else
-    {
-        auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
-    }
-
-    // [单圈模式] 策略修正
-    if(!rotate_multiTurn_)
-    {
-        if(s_has_recorded_strategy)
+        // [Version 8.0] auto_onlyOne return logic
+        if (auto_ctrl_.kfs_num == ONLY_ONE)
         {
-            // [Fix] 有记录：强制反向，严格执行单圈策略 (如 270->180->90->0)
-            if(recorded_carrying_strategy_ == ROTATE_PATH_POSITIVE)
-                auto_ctrl_.current_strategy = ROTATE_PATH_NEGATIVE;
-            else if(recorded_carrying_strategy_ == ROTATE_PATH_NEGATIVE)
-                auto_ctrl_.current_strategy = ROTATE_PATH_POSITIVE;
+            // 获取起始点的地图节点编号
+            int TargetMap = auto_ctrl_.path.bestB1;
+
+            // 获取起始点的朝向 (0度 或 180度)
+            float base_angle = MF_AutoCtrler::Get_ArmBaseTargetAngle(TargetMap, 
+                                    auto_ctrl_.KFS_Movedirection[0]);
+                                
+            // 选择与base_angle相反角度
+            if(_tool_Abs(base_angle - 180.0f) < 0.1f)
+                angel = 0.0f;
+            else if(_tool_Abs(base_angle - 0.0f) < 0.1f)
+                angel = 180.0f;
+            else
+                angel = 0.0f; // Fallback
+
         }
         else
         {
-            // [Fix] 无记录（首次重定位后）：强制最短路径
+            angel = 0.0f; // 默认返回0度
+        }
+    }
+
+    //    float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
+    float diff = angel - fmodf(current_angle, 360.0f);
+
+    // 简单的归一化处理，确保 diff 在 -180 ~ 180
+    if (diff > 180.0f)
+        diff -= 360.0f;
+    else if (diff < -180.0f)
+        diff += 360.0f;
+
+    if (_tool_Abs(diff) < 2.0f)
+    {
+        auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST; // 误差极小时，锁定最短路径
+    }
+    else if (has_next)
+    {
+        if (angel == 0)
+            auto_ctrl_.current_strategy = ROTATE_PATH_POSITIVE;
+        else if (angel == 180)
+            auto_ctrl_.current_strategy = ROTATE_PATH_NEGATIVE;
+        else
             auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
+    }
+    else
+    {
+        if (auto_ctrl_.kfs_num == ONLY_ONE)
+            auto_ctrl_.current_strategy = recorded_align_strategy_;
+        else
+            auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
+    }
+
+    // [单圈模式] 策略修正
+    if (!rotate_multiTurn_)
+    {
+        if (auto_ctrl_.kfs_num == ONLY_ONE)
+        {
+            // [Version 8.0] 单圈模式下，OnlyOne模式强制跟随Align阶段的旋转方向
+            if(s_has_recorded_strategy)
+                auto_ctrl_.current_strategy = recorded_align_strategy_;
+            else
+            {
+                // [Fix] 无记录（首次重定位后）：强制最短路径
+                auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
+            }
+        }
+        else
+        {
+            if (s_has_recorded_strategy)
+            {
+                // [Fix] 有记录：强制反向，严格执行单圈策略 (如 270->180->90->0)
+                if (recorded_carrying_strategy_ == ROTATE_PATH_POSITIVE)
+                    auto_ctrl_.current_strategy = ROTATE_PATH_NEGATIVE;
+                else if (recorded_carrying_strategy_ == ROTATE_PATH_NEGATIVE)
+                    auto_ctrl_.current_strategy = ROTATE_PATH_POSITIVE;
+            }
+            else
+            {
+                // [Fix] 无记录（首次重定位后）：强制最短路径
+                auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
+            }
         }
     }
 
@@ -1323,22 +1364,22 @@ void ArmSetup::auto_onlyOne()
             auto_ctrl_.flag.ext_done = state_aimExt(auto_ctrl_.targetKFS[0]);
             if(auto_ctrl_.flag.ext_done)
             {
-                auto_ctrl_.now_state = STATE_CARRYING;
-            }
-            break;
-        }
-
-        case STATE_CARRYING:
-        {
-            // static bool carrying_done = false;
-            state_carrying(auto_ctrl_.targetKFS[0], auto_ctrl_.flag.carry_done);
-            //判断是否放置完毕
-            if(auto_ctrl_.flag.carry_done)
-            {
                 auto_ctrl_.now_state = STATE_RETURN;
             }
             break;
         }
+
+        // case STATE_CARRYING:
+        // {
+        //     // static bool carrying_done = false;
+        //     state_carrying(auto_ctrl_.targetKFS[0], auto_ctrl_.flag.carry_done);
+        //     //判断是否放置完毕
+        //     if(auto_ctrl_.flag.carry_done)
+        //     {
+        //         auto_ctrl_.now_state = STATE_RETURN;
+        //     }
+        //     break;
+        // }
 
         case STATE_RETURN:
         {
@@ -1585,8 +1626,8 @@ void ArmSetup::calibrateMotor()
     {
         //relocate
         this->motor_stretch_->relocate_totalAngle(0.0f);
-        this->motor_pitch_->relocate_totalAngle(180.0f);
-        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(180.0f));
+        this->motor_pitch_->relocate_totalAngle(179.9f); // 使用179.9f避免180度浮点临界值导致归一化为-180度
+        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(179.9f));
         this->motor_launch_->relocate_totalAngle(0.0f);
 
         //set current to 0

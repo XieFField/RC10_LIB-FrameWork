@@ -35,7 +35,7 @@ extern "C"{
 #include "BSP_USB_UART_Driver.h"
 #include "usb_device.h"
 #include "RTOS_QueueSetup.h"
-
+#include "AutoCtrler.h"
 
 #define debug_ladar 0
 class OmniChassis_Setup:public RtosTask, public Chassis_Omni<3>{
@@ -76,6 +76,27 @@ public:
             this->is_chassis_reverse_ = -1.0f;
     }
 
+    /**
+     * @brief 取值范围0~12
+     * 0 表示没有要抓取的KFS
+     */
+    bool set_TargetKFS(int KFS)
+    {
+        target_KFS = KFS;
+        if(target_KFS <0 || target_KFS >12)
+            return false;
+        MF_AutoCtrler::PathNode_S temp = MF_AutoCtrler::PathNodeResult_calc({0.0f, 0.0f, 0.0f},
+                                                    MF_AutoCtrler::MFNum_TransforMapNum(target_KFS - 1),
+                                                    0);
+        path_node_.bestB1 = temp.bestB1;
+        path_node_.bestBMF1 = temp.bestBMF1;
+
+        path_node_.entranceMap = temp.entranceMap;
+        path_node_.bestB2 = temp.bestB2;
+        path_node_.bestBMF2 = temp.bestBMF2;
+        return true;
+    }
+
 private:
         void loop() override;
         bool init_flag = false;
@@ -98,6 +119,9 @@ private:
 
         Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
         Point3D ladar_data_;
+
+        int8_t target_KFS = 0;
+        MF_AutoCtrler::PathNode_S path_node_; //路径节点数据
 };
 #endif // __cplusplus
 

@@ -31,13 +31,17 @@ void Locate_Setup::update()
     yaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().world_yaw;
 	dyaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().dyaw;
 
-	robot_pose_inWorld_.x = Lad_Data.x * cos(deg_to_rad(-90)) - Lad_Data.y * sin(deg_to_rad(-90)) + coordoffset.x_offset;
-    robot_pose_inWorld_.y = Lad_Data.x * sin(deg_to_rad(-90)) + Lad_Data.y * cos(deg_to_rad(-90)) + coordoffset.y_offset;
+    float ladpos_x = Lad_Data.x * cos(deg_to_rad(-90)) - Lad_Data.y * sin(deg_to_rad(-90));
+    float ladpos_y = Lad_Data.x * sin(deg_to_rad(-90)) + Lad_Data.y * cos(deg_to_rad(-90));
+	robot_pose_inWorld_.x = ladpos_x + coordoffset.x_offset;
+    robot_pose_inWorld_.y = ladpos_y + coordoffset.y_offset;
     robot_pose_inWorld_.z = Lad_Data.z;
     robot_pose_inWorld_.yaw = yaw_from_position_;
 
-    robot_speed_inworld_.x = Lad_Data.line_x * cos(deg_to_rad(-90)) - Lad_Data.line_y * sin(deg_to_rad(-90));
-    robot_speed_inworld_.y = Lad_Data.line_x * sin(deg_to_rad(-90)) + Lad_Data.line_y * cos(deg_to_rad(-90));
+    float ladvel_x = Lad_Data.line_x * cos(deg_to_rad(-90)) - Lad_Data.line_y * sin(deg_to_rad(-90));
+    float ladvel_y = Lad_Data.line_x * sin(deg_to_rad(-90)) + Lad_Data.line_y * cos(deg_to_rad(-90));
+    robot_speed_inworld_.x = ladvel_x;
+    robot_speed_inworld_.y = ladvel_y;
     robot_speed_inworld_.z = Lad_Data.line_z;
 
     robot_speed_inworld_.yaw = dyaw_from_position_;

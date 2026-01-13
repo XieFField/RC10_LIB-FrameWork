@@ -43,6 +43,14 @@
  *   2. 在拾取第一个KFS的state_return阶段，机械臂会前往第二个KFS的初始位置(0/180度)，并且升高到安全高度(0.2m)
  *   3. 然后进入第二个KFS的拾取流程
  *   4. 第二个KFS的拾取流程和第一个类似，拾取完成后state_return到初始位置(0度)，结束。
+ * 
+ *  @version 8.0    
+ *    对auto模式下面的auot_onlyOne进行策略修改
+ *    删去carrying阶段，改为aim_ext执行完，即吸取到KFS后，直接return回初始位置
+ *    但为了云台旋转不会打到KFS，所以在auto_onlyone中，return阶段在云台旋转回初始位置的同时，升到最高高度
+ *    (同样需要遵守安全高度下的安全角度限制)
+ *    且return到的位置不固定为0度，而是和起始位置相反，若起始是0，则return到180度，若起始是180度，则return到0度
+ *    (本质是和行进方向相反)，而且在return阶段的云台旋转策略跟随sign_align阶段的旋转策略。
  */
 
 #ifndef __ARM_SETUP_H
@@ -72,7 +80,7 @@ extern "C" {
 
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS 1  //無底盤下，用虛擬坐標進行驗證自動邏輯
+#define ARM_AUTO_DEBUG_NOCHASSIS 0  //無底盤下，用虛擬坐標進行驗證自動邏輯
 
 
 
@@ -483,10 +491,14 @@ protected:
 
         #else
 
+            // Locate_Setup *locate_ptr = Locate_Setup::getInstance();
+
+            // return locate_ptr->get_FK_ChassisSpeed_inWorld();
             Locate_Setup *locate_ptr = Locate_Setup::getInstance();
-
-            return locate_ptr->get_FK_ChassisSpeed_inWorld();
-
+            Point2D speed = {0};
+            speed.x = locate_ptr->get_FK_ChassisSpeed_inWorld().x;
+            speed.y = locate_ptr->get_FK_ChassisSpeed_inWorld().y;
+            return speed;
         #endif
     }
 
