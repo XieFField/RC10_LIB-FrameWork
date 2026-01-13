@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="450" viewBox="0 0 700 450">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#000" />
+    </marker>
+    <style>
+      .grid { fill: none; stroke: #eee; stroke-width:1 }
+      .axis { stroke-width:3 }
+      .robot { stroke: #1f77b4 }
+      .world { stroke: #d62728 }
+      .text { font-family: Arial, Helvetica, sans-serif; font-size:14px }
+      .note { font-family: Arial; font-size:12px; fill:#333 }
+    </style>
+  </defs>
+
+  <!-- background grid -->
+  <rect x="0" y="0" width="700" height="450" fill="#fff" />
+
+  <!-- center point (robot origin) -->
+  <g transform="translate(300,200)">
+    <circle cx="0" cy="0" r="4" fill="#333" />
+
+    <!-- Robot axes (blue): X_r to right, Y_r up -->
+    <line x1="0" y1="0" x2="140" y2="0" class="axis robot" stroke="#1f77b4" marker-end="url(#arrow)" />
+    <text x="145" y="5" class="text" fill="#1f77b4">X_r (forward)</text>
+
+    <line x1="0" y1="0" x2="0" y2="-120" class="axis robot" stroke="#1f77b4" marker-end="url(#arrow)" />
+    <text x="6" y="-125" class="text" fill="#1f77b4">Y_r (left)</text>
+
+    <!-- World axes (red) rotated by +30° (counter-clockwise) -->
+    <!-- cos30=0.8660254, sin30=0.5 -->
+    <line x1="0" y1="0" x2="120*0.866" y2="-120*0.5" class="axis world" stroke="#d62728" marker-end="url(#arrow)" transform="rotate(30)" />
+    <line x1="0" y1="0" x2="0" y2="0" class="world" stroke="#d62728" />
+
+    <!-- draw world axes explicitly using rotation transform for clarity -->
+    <g transform="rotate(30)">
+      <line x1="0" y1="0" x2="120" y2="0" class="axis world" stroke="#d62728" marker-end="url(#arrow)" />
+      <text x="125" y="5" class="text" fill="#d62728">X_w</text>
+
+      <line x1="0" y1="0" x2="0" y2="-120" class="axis world" stroke="#d62728" marker-end="url(#arrow)" />
+      <text x="6" y="-125" class="text" fill="#d62728">Y_w</text>
+    </g>
+
+    <!-- yaw arc and label -->
+    <path d="M90,0 A90,90 0 0,1 77.94,-45" fill="none" stroke="#333" stroke-width="1" />
+    <text x="70" y="-10" class="text">yaw = +30° (CCW)</text>
+
+    <!-- small legend box -->
+    <rect x="-200" y="120" width="380" height="120" rx="6" ry="6" fill="#fafafa" stroke="#ddd" />
+    <text x="-190" y="140" class="note">变换说明：</text>
+    <text x="-190" y="160" class="note">world_v = R(yaw) * robot_v</text>
+    <text x="-190" y="180" class="note">robot_v = R(-yaw) * world_v</text>
+    <text x="-190" y="200" class="note">其中 R(θ) = [ cosθ  -sinθ; sinθ  cosθ ]，正方向为逆时针（右手系）</text>
+    <text x="-190" y="220" class="note">示例：X_r 指向机器人前方，Y_r 指向机器人左侧，Z 向上。</text>
+
+
+
+
+
+
+
+</svg>  <text x="20" y="410" class="note">生成路径: MDK-ARM/Docs/chassis_coordinate.svg</text>  <text x="20" y="30" class="text">机器人坐标系与世界坐标系示意图（示例 yaw=+30°）</text>  <!-- caption and file info -->n  </g>
