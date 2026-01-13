@@ -19,7 +19,7 @@ void ArmSetup::loop()
 
 
     //目前使用虚拟坐标进行自控逻辑验证
-    if(arm_status_ == ARM_AUTO_CONTROL)
+    if(arm_status_ == ARM_AUTO_CONTROL&&arm_ctrlStatus.auto_debug_start == 1)
     {
         auto_ctrl_.now_chassis_speed = get_nowChassisSpeed();
         auto_ctrl_.now_armPosition = get_nowArmPosition();
@@ -34,8 +34,10 @@ void ArmSetup::loop()
         if(ifFirst)
         {
             if(arm_ctrlStatus.auto_debug_start == 1)
+            {
                 this->start_toAutoCtrl(true);
-            ifFirst = false;
+                ifFirst = false;
+            }
         }
     }
 
@@ -311,7 +313,7 @@ void ArmSetup::autoControl()
      */
     
     if(auto_ctrl_.targetKFS[0] == 0)
-        return; //没有目标KFS，直接返回
+        return; //没有目标KFS，直接返回 
 
     switch(auto_ctrl_.kfs_num)
     {

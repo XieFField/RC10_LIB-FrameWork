@@ -118,7 +118,7 @@ void FSM_Controller::manual_ctrl()
         }
         case 0x01:
         {
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            chassis_setup_->setChassisStatus(CHASSIS_TESTFOR_ARM);
             arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             break;  
@@ -146,6 +146,7 @@ void FSM_Controller::auto_ctrl()
         case 0x00:
         {
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            arm_setup_->setArmStatus(ARM_IDLE);
             break;
         }
 
@@ -153,7 +154,7 @@ void FSM_Controller::auto_ctrl()
         case 0x01:
         {
             //暂时不把路径规划部分纳入
-            chassis_setup_->setChassisStatus(CHASSIS_TESTFOR_ARM);
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
 
             arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
             break;

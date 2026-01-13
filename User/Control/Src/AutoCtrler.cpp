@@ -122,7 +122,7 @@ void get_MoveDiretion(Point2D robotPos,
     Diresult[1] = result_[1];
 }
 
-float Get_ChassisYawForArmAlign(int8_t B1, int8_t BMF1)
+float Get_ChassisYawForArmAlign(int8_t targetKFS, int8_t B1, int8_t BMF1)
 {
     int8_t c1, r1, c2, r2;
     Map_ToCR(B1, c1, r1);
@@ -154,6 +154,8 @@ float Get_ChassisYawForArmAlign(int8_t B1, int8_t BMF1)
         else if (c1 ==5 && c2 ==5) //ср╡Ю
             target_yaw = 0.0f;
     }
+    
+    return target_yaw;
 }
 
 
