@@ -92,6 +92,10 @@ bool DJI_Group::addMotor(DJI_Motor* motor)
     if(motor->getID() < 1 || motor->getID() > 8)
         return false; // 不合法ID范围
 
+    // // [Fix] 防止跨总线注册：Group的总线必须与Motor的总线一致
+    // if(motor->bus() != this->bus())
+    //     return false;
+
     DJI_MotorType type = motor->getType();
     uint32_t mid = motor->getID();
 
@@ -203,6 +207,11 @@ std::size_t DJI_Group::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         DJI_Motor* m = motors_p[i];
         if(!m)
             continue;
+        
+        // // [Fix] 二次检查：防止打包时混入其他总线的电机
+        // if(m->bus() != this->bus())
+        // //     continue;
+
         int16_t current = m->realCurrent_to_virtualCurrent(m->getTargetCurrent());
         f.data[i*2] = (current >> 8) & 0xFF;
         f.data[i*2 + 1] = current & 0xFF;

@@ -1025,6 +1025,26 @@
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_LaserPosition.cpp</FilePath>
             </File>
+            <File>
+              <FileName>Module_CrsfReceiver.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_CrsfReceiver.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_CrsfReceiver.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_CrsfReceiver.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_HWT.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_HWT.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_HWT.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_HWT.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1190,6 +1210,16 @@
               <FileType>8</FileType>
               <FilePath>..\User\Control\Src\AutoCtrler.cpp</FilePath>
             </File>
+            <File>
+              <FileName>WeaponSage.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Control\Inc\WeaponSage.h</FilePath>
+            </File>
+            <File>
+              <FileName>WeaponSage.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Control\Src\WeaponSage.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1249,6 +1279,26 @@
               <FileName>Locate_Setup.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\Locate_Setup.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RTOS_QueueSetup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\RTOS_QueueSetup.h</FilePath>
+            </File>
+            <File>
+              <FileName>RTOS_QueueSetup.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\RTOS_QueueSetup.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>WeaponSage_Setup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\WeaponSage_Setup.h</FilePath>
+            </File>
+            <File>
+              <FileName>WeaponSage_Setup.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\WeaponSage_Setup.cpp</FilePath>
             </File>
           </Files>
         </Group>

@@ -1,6 +1,6 @@
 /**
  * @file Arm_setup.h
- * @author XieFField
+ * @author XieFField  70er66
  * @brief 串联臂运动控制实现
  *        KFS索引采用1 ~ 12 使用时候 index = KFSNum -1
  * @version 1.0
@@ -12,7 +12,37 @@
  * 
  * @version 3.0
  *   基本完善了云台部分的自动控制，等罗麒麟完善后面部分
- *      
+ * 
+ * @version 4.0
+ *   写完了自动控制部分，目前把发现的Bug都修复了
+ * 
+ * @version 5.0
+ *   重新设计了上电校准逻辑，以及后续的机械臂云台禁区位置。
+ *   将会修改为，机械臂云台常驻safe高度为0.20米；
+ *              如果机械臂云台在safe高度以下，则机械臂云台的活动范围仅为60度~135度(rotate_angle, 不是motor_angle)
+ *              
+ *              包括在自动模式下，state_toTargetHight阶段也会遵守该规则，即便拾取高度低于0.20米
+ *              也要等到云台转到禁区外再下降
+ * 
+ * @version 6.0 更新单圈模式的策划方案
+ *   构造planB[单圈模式]的自动拾取，即不多圈旋转；执行过程中的最大rotate角度为270度(abs(起点-终点) <= 270)，意味着云台禁止多圈旋转，旋转3/4圈后
+ *   需要转回来，(防止电机电线缠绕云台底座)，累计走过角度位移[含正负计算，从起点(一般是重定位的位置)开始]，也应当应用在手操当中。
+ *   若起点是0度，则是0->90(state_Align)[最短路径]->270(carrying)[继承state_Align旋转方向]->[0/180 云台需要走和state_carrying相反的方向)(state_return)
+ * 
+ *   若起点是180度，则是180->90(state_Align)[最短路径]->270(carrying)[继承state_Align旋转方向]->[0/180 云台需要走和state_carring相反的方向]
+ *   且在state_return阶段，需要将云台升高到最高高度（0.4m）【和云台旋转到目标位置同时进行】
+ *   在思考这个能不能做成通用接口。
+ *   
+ *   使用模式设置void setRotateMultiTurn(bool isMulti)，设定云台多圈以及单圈模式
+ *   一旦设置云台的单圈和多圈，全局适用
+ * 
+ * @version 7.0
+ *   就version 6.0的基础上，从原本的only_one模式，扩展到two模式
+ *   在two模式下，机械臂会依次拾取两个KFS
+ *   1. 执行和only_one模式一样的流程，拾取第一个KFS
+ *   2. 在拾取第一个KFS的state_return阶段，机械臂会前往第二个KFS的初始位置(0/180度)，并且升高到安全高度(0.2m)
+ *   3. 然后进入第二个KFS的拾取流程
+ *   4. 第二个KFS的拾取流程和第一个类似，拾取完成后state_return到初始位置(0度)，结束。
  */
 
 #ifndef __ARM_SETUP_H
@@ -37,6 +67,10 @@ extern "C" {
 #include "FSMstauts_enum.h"
 #include "APP_CoordConvert.h"
 #include "AutoCtrler.h"
+#include "Module_CrsfReceiver.h"
+#include "Locate_Setup.h"
+
+// #include "usart.h"
 
 #define ARM_AUTO_DEBUG_NOCHASSIS 1  //無底盤下，用虛擬坐標進行驗證自動邏輯
 
@@ -46,12 +80,23 @@ typedef struct{
     bool init_flag = false;
 
     
-    uint8_t debug_start = 1; //调试开始标志 == 1 开始调试
+    uint8_t debug_start = 0; //调试开始标志 == 1 开始调试
+
+    uint8_t auto_debug_start = 0; //自动调试开始标志 == 1 开始自动调试
 
     float calibrate_startTime = 0; 
     bool calibrate_start = false;
     bool is_calibrating = false;
 
+    bool changeTarget_state = false; //切换目标状态标志
+    float last_right_x = 0.0f; //上次右摇杆横向数据
+    float last_right_y = 0.0f; //上次右摇杆纵向数据
+
+    int8_t last_manual_extend = 0; //上次手动伸展状态
+    int8_t last_manual_sucker = 0; //上次手动吸盘状态
+
+    int8_t extend_switch_offset = 0; // 伸展开关偏移绑定
+    int8_t sucker_switch_offset = 0; // 吸盘开关偏移绑定
 }arm_ctrl_status_S;
 
 typedef enum{
@@ -94,6 +139,8 @@ typedef struct{
 
     Point2D now_ChassisPosition = {0.0f, 0.0f, 0.0f}; //底盘当前位置
 
+    Point2D now_chassis_speed = {0.0f, 0.0f, 0.0f}; //当前底盘速度，单位米每秒
+
     Point2D targetKFS_pos[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //目标KFS位置
 
     //Point2D point_PAB[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //PA PB
@@ -110,9 +157,9 @@ typedef struct{
 
     int gimbal_calcCount = 0; //云台预判计算计数
 
-    float dt = 0.01f; //控制周期，单位秒
+    // float dt = 0.01f; //控制周期，单位秒
 
-    Point2D now_chassis_speed = {0.0f, 0.0f, 0.0f}; //当前底盘速度，单位米每秒
+    
 
     const float arm_width = 0.12f; //机械臂宽度，单位米
 
@@ -128,8 +175,8 @@ typedef struct{
     Rotate_Strategy_E current_strategy = ROTATE_PATH_SHORTEST; 
 
     struct{
-        const float safe_height = 0.2f; //安全高度，单位米  待定
-        const float store_height = 0.05f; //存储机构高度，单位米 待定
+        
+        const float store_height = 0.14f; //存储机构高度，单位米 待定
 
         bool is_toPlace = false; //是否到达可放置状态
     }store[2];
@@ -139,7 +186,20 @@ typedef struct{
         bool ext_done = false;   //伸展完成标志
         bool carry_done = false; //搬运完成标志
         bool return_done = false; //返回完成标志
+
+        bool ext_started = false; //伸展开始标志
+
+        bool is_reachingTarget = false; //是否到达目标位置
+
+        float reach_finishTime = 0.0f; //到达目标位置的时间戳
+
+        bool gimbal_ok =false;
+        const float safe_height = 0.14f; //安全高度，单位米  待定
     }flag;
+
+    struct{
+        bool changeTarget_state = false; //变更目标状态标志位
+    }manual_ctrlForgrip_;
 
 }ARM_AUTO_S;
 
@@ -148,10 +208,10 @@ typedef struct{
 
 const float MF_high[12] = 
 {
-    40.0f, 20.0f, 40.0f,
-    20.0f, 40.0f, 60.0f,
-    40.0f, 60.0f, 40.0f,
-    20.0f, 40.0f, 20.0f
+    0.4f, 0.2f, 0.4f,
+    0.2f, 0.4f, 0.6f,
+    0.4f, 0.6f, 0.4f,
+    0.2f, 0.4f, 0.2f
 };
 
 class ArmSetup: public RtosTask ,public Robot_Arm {
@@ -160,6 +220,14 @@ public:
         : Robot_Arm(init_Data), RtosTask("ArmSetup", 1) 
     {
         auto_ctrl_.time_set.gimbal_max_rad = (400.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f); //云台最大角速度(rad/s)
+    }
+
+    bool isArmcalibrated() const
+    {
+        if(arm_ctrlStatus.is_calibrating)
+            return true;
+        else
+            return false;
     }
 
     void init(M3508 *motor_ArmLaunch, M2006 *motor_ArmStretch, 
@@ -172,9 +240,10 @@ public:
 
         this->setPitchReversed(true); //俯仰电机反向
         this->setStretchReversed(false); //伸展电机不反向
-
-        start(osPriorityNormal, 256);
-
+        this->setRotateReversed(false);
+        this->setLaunchReversed(true); //升降电机反向
+        start(osPriorityNormal, 512);
+        setRotateMultiTurn(false); //单圈模式
         arm_ctrlStatus.init_flag = true;
     }
 
@@ -183,7 +252,24 @@ public:
         arm_status_ = status;
     }
 
-    void inputChassisSpeed(){}
+    /**
+     * @brief 设置云台多圈/单圈模式
+     *        默认单圈模式，即rotate_multiTurn_ = false
+     *        单圈模式意味着云台禁止多圈旋转，旋转3/4圈后需要转回来，(防止电机电线缠绕云台底座)
+     */
+    void setRotateMultiTurn(bool isMulti)
+    {
+        rotate_multiTurn_ = isMulti;
+    }
+
+    void start_toAutoCtrl(bool start)
+    {
+        if(start)
+            auto_ctrl_.start_to_autoctrl = true;
+
+        else
+            auto_ctrl_.start_to_autoctrl = false;
+    }
 
     /**
      * @brief 设置目标抓取梅花桩编号
@@ -219,6 +305,7 @@ public:
         MF_AutoCtrler::PathNode_S temp = MF_AutoCtrler::PathNodeResult_calc(auto_ctrl_.now_armPosition,
                                        auto_ctrl_.targetKFS[0], 
                                         auto_ctrl_.targetKFS[1]);
+                                        
         auto_ctrl_.path.bestB1 = temp.bestB1;
         auto_ctrl_.path.bestBMF1 = temp.bestBMF1;
         auto_ctrl_.path.bestB2 = temp.bestB2;
@@ -231,10 +318,17 @@ public:
         auto_ctrl_.pathPos.entranceMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.entranceMap);
         auto_ctrl_.pathPos.exitMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.exitMap);
 
+        auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
+
+        auto_ctrl_.now_ChassisPosition.y -= 2.0f; //假设已经到达前一桩正前方0.5米处
+
         return true;
     }
 private:
-    Debug_Printf debug_uart = Debug_Printf(&huart1);
+
+    RmPocketData_t airjoy_data_; //摇杆值为 -1 ~ 1
+
+    Debug_Printf debug_uart = Debug_Printf(&huart8);
 
     //控制函数
     void manualControl();
@@ -244,7 +338,7 @@ private:
     void debug();
 
     //上电校准M2006电机位置
-    void calibrateM2006();
+    void calibrateMotor();
 
     //自动控制流程私密函数
 
@@ -255,6 +349,84 @@ private:
     bool state_return(int next_targetKFS);
 
     void auto_onlyOne();
+    void auto_two();
+
+    /**
+     * @brief 安全禁区通用接口：根据当前云台高度约束旋转角度
+     * 规则：
+     * 1. H < 0.03m: [60°, 180°] (重定位/极低高度区间)
+     * 2. 0.03m <= H < Safe_H: [60°, 135°] (机械限位干涉区间)
+     * 3. H >= Safe_H: [0°, 360°] (安全高度)
+     * 说明：传入/返回的角度均为 rotate_angle（云台角度，非电机角度）
+     */
+    bool isRotateAllowed(float rotate_angle_deg) const
+    {
+        const float h = this->get_currentJointStatus().launchJoint_Height_;
+        const float safe_h = auto_ctrl_.flag.safe_height;
+        
+        // 归一化到 0-360
+        float norm_deg = fmodf(rotate_angle_deg, 360.0f);
+        if(norm_deg < 0.0f) norm_deg += 360.0f;
+
+        if(h < 0.03f)
+        {
+            return (norm_deg >= 60.0f && norm_deg <= 180.0f);
+        }
+        else if(h < safe_h - 0.01f)
+        {
+            return (norm_deg >= 60.0f && norm_deg <= 135.0f);
+        }
+        return true;
+    }
+
+    /**
+     * @brief 返回符合安全禁区的角度：
+     * - H < 0.03m: 钳制到 [60°, 180°]
+     * - 0.03m <= H < Safe_H: 钳制到 [60°, 135°]
+     * - H >= Safe_H: 保持原角度
+     * @param desired_deg 期望的旋转角度（云台角度，非电机角度）
+     * @return 符合安全禁区的旋转角度
+     */
+    float sanitizeRotateAngle(float desired_deg) const
+    {
+        const float h = this->get_currentJointStatus().launchJoint_Height_;
+        const float safe_h = auto_ctrl_.flag.safe_height;
+        
+        if(h < safe_h - 0.01f)
+        {
+            // 归一化到 0-360
+            float norm_deg = fmodf(desired_deg, 360.0f);
+            if(norm_deg < 0.0f) norm_deg += 360.0f;
+
+            if(h < 0.03f)
+            {
+                if(norm_deg < 60.0f) return 60.0f;
+                if(norm_deg > 180.0f && norm_deg < 270.0f) return 180.0f;
+                if(norm_deg >= 270.0f) return 60.0f;
+                return norm_deg;
+            }
+            else
+            {
+                if(norm_deg < 60.0f) return 60.0f;
+                if(norm_deg > 135.0f && norm_deg < 270.0f) return 135.0f; // 135~270区间钳制到135
+                if(norm_deg >= 270.0f) return 60.0f; // 270~360(即-90~0)区间钳制到60
+                return norm_deg;
+            }
+        }
+        return desired_deg;
+    }
+
+    /**
+     * @brief 执行安全门：在任何位置控制前调用，返回是否允许并输出安全角度
+     * @param desired_deg 期望的旋转角度（云台角度，非电机角度）
+     * @param safe_out_deg 输出的安全旋转角度
+     */
+    bool safetyGate_ForRotate(float desired_deg, float& safe_out_deg) const
+    {
+        bool ok = isRotateAllowed(desired_deg);
+        safe_out_deg = sanitizeRotateAngle(desired_deg);
+        return ok;
+    }
 
     /**
      * @brief 云台碰撞检测
@@ -283,7 +455,15 @@ protected:
      */
     Point2D get_nowArmPosition()
     {
-        
+        #if ARM_AUTO_DEBUG_NOCHASSIS
+            return get_nowChassisPose();
+        #else
+            Locate_Setup *locate_ptr = Locate_Setup::getInstance();
+
+            Point2D arm_pos;
+            arm_pos = locate_ptr->get_ArmPos_inWorld();
+            return arm_pos;
+        #endif
     }
     /**
      * @brief 预留接口后续补全，获得当前底盘速度
@@ -291,7 +471,23 @@ protected:
      */
     Point2D get_nowChassisSpeed()
     {
-        
+        #if ARM_AUTO_DEBUG_NOCHASSIS
+
+        Point2D speed = {0.0f, 0.0f, 0.0f};
+        if(arm_ctrlStatus.auto_debug_start == 1)
+           speed = {0.0f, 0.9f, 0.0f};
+
+        else
+             speed = {0.0f, 0.0f, 0.0f};
+        return speed;
+
+        #else
+
+            Locate_Setup *locate_ptr = Locate_Setup::getInstance();
+
+            return locate_ptr->get_FK_ChassisSpeed_inWorld();
+
+        #endif
     }
 
     /**
@@ -301,6 +497,30 @@ protected:
     Point2D get_nowChassisPose()
     {
 
+        #if ARM_AUTO_DEBUG_NOCHASSIS
+
+        Point2D pose = auto_ctrl_.now_ChassisPosition;
+        Point2D speed = get_nowChassisSpeed();
+
+
+        pose.x += speed.x * get_dt();
+                
+        pose.y += speed.y * get_dt();
+                
+
+        return pose;
+
+        #else
+
+        Point2D pose = {0};
+
+        Locate_Setup *locate_ptr = Locate_Setup::getInstance();
+        pose.x = locate_ptr->get_RobotPos_inWorld().x;
+        pose.y = locate_ptr->get_RobotPos_inWorld().y;
+        pose.theta = locate_ptr->get_RobotPos_inWorld().yaw;
+
+        return pose;
+        #endif
     }
 
     void loop() override;
@@ -319,8 +539,13 @@ protected:
     Joint_Status_S last_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
     Joint_Status_S target_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
 
+    bool rotate_multiTurn_ = false; //云台多圈模式标志，默认单圈模式
 
     ARM_AUTO_S auto_ctrl_;
+
+    // 单圈模式相关变量
+    Rotate_Strategy_E recorded_align_strategy_ = ROTATE_PATH_SHORTEST;
+    Rotate_Strategy_E recorded_carrying_strategy_ = ROTATE_PATH_SHORTEST;
 
     /**
      * @brief 这里的输入是已经初始化的targetKFS的index (0 或 1)

@@ -98,6 +98,8 @@ public:
      */
     static fdCANbus* getInstance(FDCAN_HandleTypeDef* hfdcan);
 
+    void setBusOffFlag() { bus_off_flag_ = true; }
+
     // 最大电机数（每路）
     static constexpr size_t MAX_MOTORS = 10; //本来应该是8，但是如果是挂的DJI，那会有两个group，那就变成8+2了
 
@@ -169,10 +171,12 @@ protected:
 
     bool can_init_done_ = false; // 标记 init() 是否已成功调用
 
+    volatile bool bus_off_flag_ = false; // Bus Off 标志位
+
 private:
 #if FD_CAN_DEBUG
     volatile std::size_t debug_last_frame_count_ = 0;
-    static CanFrame  debug_last_frames_[MAX_MOTORS * 2] ;
+    CanFrame  debug_last_frames_[MAX_MOTORS * 2] ;
 #endif
 };
 

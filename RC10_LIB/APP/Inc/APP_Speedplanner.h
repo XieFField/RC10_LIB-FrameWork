@@ -272,6 +272,8 @@ private:
     float m_decelConstDistance_ = 0.0f;    // 减速段：加速度恒定（减速中）阶段的路程
     float m_decelJerkDownDistance_ = 0.0f; // 减速段：Jerk 下降（减速结束）阶段的路程
 
+    float currentSpeed = 0.0f;
+
     int err_ = 0; // 错误标志，0表示无错误，1表示参数计算错误
     float m_t1_ = 0.0f;
     float m_t2_ = 0.0f;
@@ -658,6 +660,16 @@ public:
      * @return 平滑输出
      */
     float plan(float input_expect);
+
+    void reset(void)
+    {
+        V1_ = 0.0f;
+        V2_ = 0.0f;
+        fh_ = 0.0f;
+        expect_ = 0.0f;
+        Ts_ = 0.0f;
+        previous_time_ = 0;
+    }
 
 private:
     float r_ = 0.0f;             // TD平滑参数R

@@ -1,34 +1,30 @@
 #include "FSM_Controller.h"
 
+
+
 void FSM_Controller::loop()
 {
     if(!init_flag_)
         return;
 
-    //遥控器链接失败
-    if(AirJoy::getinstance().LEFT_X == 0 || AirJoy::getinstance().LEFT_Y == 0 || 
-        AirJoy::getinstance().RIGHT_X == 0 || AirJoy::getinstance().RIGHT_Y == 0 ||
-        AirJoy::getinstance().SWA == 0 || AirJoy::getinstance().SWB == 0 || 
-        AirJoy::getinstance().SWC == 0 || AirJoy::getinstance().SWD == 0)
-    {
-       airjoy_connected_ = false;
-//       return;
-    }
-    else
-       airjoy_connected_ = true;
+    CrsfReceiver::GetInstance(&huart7)->process();
 
-    if(debug_flag_ == 1)
+    CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+
+
+    switch(airjoy_data_.SWB)
     {
-        robot_status_ = DEBUG_MODE;
-    }
-    else
-    {
-        if(_tool_Abs(AirJoy::getinstance().SWB - 1000) < 50)
-                robot_status_ = ALL_STOP;
-        else if(_tool_Abs(AirJoy::getinstance().SWB - 1500) < 50)
+        case 0x00:
+            robot_status_ = ALL_STOP;
+            break;
+
+        case 0x01:
             robot_status_ = MANUAL_CONTROL;
-        else if(_tool_Abs(AirJoy::getinstance().SWB - 2000) < 50)
+            break;  
+
+        case 0x02:
             robot_status_ = AUTO_CONTROL;
+            break;
     }
 
    switch (robot_status_)
@@ -55,6 +51,33 @@ void FSM_Controller::loop()
         break;
    }
 
+
+
+   if(airjoy_data_.SWA ==0x01 && airjoy_data_.SWC==0x00)
+   {
+	   static uint8_t iiii = 0;
+	   
+        // if(airjoy_data_.SWA == 0x01)
+        // { 
+            //重定位
+        if(airjoy_data_.botton_click ==1 && iiii == 0)
+        {
+            Locate_Setup::getInstance()->Relocte_ToLader();
+            
+            iiii++;
+        }
+            
+        else
+        {
+            Locate_Setup::getInstance()->set_startToLRL(false);
+			iiii = 0;
+        }
+    }
+    else
+    {
+        Locate_Setup::getInstance()->set_startToLRL(false);
+    }
+
    last_robot_status_ = robot_status_;
 }
 
@@ -63,52 +86,81 @@ void FSM_Controller::all_stop()
    // 停止所有机构动作的实现
    arm_setup_->setArmStatus(ARM_STOP);
    chassis_setup_->setChassisStatus(CHASSIS_STOP);
-   
+   weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_STOP);
+       
 }
 
 void FSM_Controller::manual_ctrl()
 {
-   
+    switch(airjoy_data_.SWC)
+    {
+        case 0x00:
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
-
-   //底盘线速度控制;
-    if(_tool_Abs(AirJoy::getinstance().SWC - 1000) < 50)
-        chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-    else
-        chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
-
-    //串联臂关节位置控制
-    if(_tool_Abs(AirJoy::getinstance().SWC - 1500) < airjoy_deadzone_ || _tool_Abs(AirJoy::getinstance().SWC - 2000) < airjoy_deadzone_)
-        arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
-    else
-        arm_setup_->setArmStatus(ARM_IDLE);
-
+            break;
+        }
+        case 0x01:
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            break;  
+        }
+        case 0x02:
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_CONTROL);
+            break;
+        }
+    }
 }
 
 
 void FSM_Controller::auto_ctrl()
 {
-   // 半自动控制模式下的实现
-   arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-   chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
+    // 半自动控制模式下的实现
+    // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+    // chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
+
+    switch(airjoy_data_.SWC)
+    {
+        //无操作，进入底盘手操模式
+        case 0x00:
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            break;
+        }
+
+        //arm进入自动模式，底盘进入锁定模式
+        case 0x01:
+        {
+            //暂时不把路径规划部分纳入
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+
+            arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            break;
+        }
+
+        //weaponSage进入自动模式
+        case 0x02:
+        {
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
+            chassis_setup_->setChassisStatus(CHASSIS_LOCK_FORWEAPON);
+            break;
+        }
+    }
+    //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
 }
 
-airjoy_S debug_airjoy;
 
 void FSM_Controller::debug()
 {
    // 调试模式下的实现
-    debug_airjoy.SWA = AirJoy::getinstance().SWA;
-    debug_airjoy.SWB = AirJoy::getinstance().SWB;
-    debug_airjoy.SWC = AirJoy::getinstance().SWC;
-    debug_airjoy.SWD = AirJoy::getinstance().SWD;
 
-    debug_airjoy.LEFT_X = AirJoy::getinstance().LEFT_X;
-
-    debug_airjoy.LEFT_Y = AirJoy::getinstance().LEFT_Y;
-    debug_airjoy.RIGHT_X = AirJoy::getinstance().RIGHT_X;
-    debug_airjoy.RIGHT_Y = AirJoy::getinstance().RIGHT_Y;
-
-    arm_setup_->setArmStatus(ARM_DEBUG);
+    // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
 }
 

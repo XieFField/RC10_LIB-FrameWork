@@ -38,6 +38,14 @@ extern "C" {
 
 #ifdef __cplusplus
 
+
+typedef enum{
+    CURRENT_ZERO_MODE, //电流置零
+    SPEED_ZERO_MODE,   //速度置零 驻车模式
+    ROBOT_SPEED_MODE,  //机器人速度模式
+    WORLD_SPEED_MODE   //世界速度模式
+}CHASSIS_CONTROL_MODE_E;
+
 /**
  * @brief 底盘模块基类
  * @details
@@ -47,11 +55,44 @@ template <std::size_t WheelCount>
 class Chassis_Base{
 public:
     Chassis_Base(float wheel_radius, float max_wheel_rpm);
-    ~Chassis_Base(){}
+    ~Chassis_Base();
 
-    void setRobotSpeed(const Robot_Twist& twist); // 设置机器人速度（机器人坐标系）
+    void set_ControlMode(CHASSIS_CONTROL_MODE_E mode) { ctrl_mode_ = mode; } // 设置底盘控制模式
+    void set_Target(const Robot_Twist& target) // 设置底盘目标速度
+    {
+        switch (ctrl_mode_)
+        {
+            case CURRENT_ZERO_MODE:
+                /* code */
+                this->wheels_[0]->setTargetCurrent(0);
+                this->wheels_[1]->setTargetCurrent(0);
+                this->wheels_[2]->setTargetCurrent(0);
+                if(WheelCount ==4)
+                    this->wheels_[3]->setTargetCurrent(0);
+                break;
+            
+            case SPEED_ZERO_MODE:
+                this->wheels_[0]->setTargetRPM(0);
+                this->wheels_[1]->setTargetRPM(0);
+                this->wheels_[2]->setTargetRPM(0);
+                if(WheelCount ==4)
+                    this->wheels_[3]->setTargetRPM(0);
+                break;
 
-    void setWorldSpeed(const Robot_Twist& twist); // 设置世界速度（世界坐标系）
+            case ROBOT_SPEED_MODE:
+                setRobotSpeed(target);
+                break;
+            
+            case WORLD_SPEED_MODE:
+                setWorldSpeed(target);
+                break;
+            default:
+                break;
+        }
+    }
+
+
+
 
     void update(); // 更新轮速应用到电机
 
@@ -81,8 +122,11 @@ public:
 
     void reset_AccLimitStatus(bool reset) { accel_Limit_ = reset; } // 重置底盘线加速度限幅器
     void reset_AccValue(float reset) {accel_value_ = reset;}; // 重置底盘线加速度值
-protected:
+private:
+    void setRobotSpeed(const Robot_Twist& twist); // 设置机器人速度（机器人坐标系）
 
+    void setWorldSpeed(const Robot_Twist& twist); // 设置世界速度（世界坐标系）
+protected:
     Robot_Twist robot_twist_ = {0}; // 机器人坐标系当前速度
     Robot_Twist world_twist_ = {0}; // 世界坐标系当前速度
 
@@ -121,6 +165,8 @@ protected:
     {
         return (wheel_speed / (2 * PI * wheel_radius_)) * 60.0f;
     }
+
+    CHASSIS_CONTROL_MODE_E ctrl_mode_ = CURRENT_ZERO_MODE; // 底盘控制模式
 };
 
 #endif // __cplusplus

@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file           : main.c
+  * @file           : main.cpp
   * @brief          : Main program body
   ******************************************************************************
   * @attention
@@ -125,6 +125,8 @@ int main(void)
   MX_USART6_UART_Init();
   MX_USART3_UART_Init();
   MX_USART10_UART_Init();
+  MX_UART7_Init();
+  MX_UART8_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim6); //启动定时器不然CAN任务不会跑的
   ALL_Setup_ConfigInit();
@@ -228,6 +230,17 @@ extern "C" {
 //{
 //	
 //}
+
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
+{
+    // 如果进入这里，说明发生了栈溢出
+    // pcTaskName 是溢出的任务名称
+    taskDISABLE_INTERRUPTS();
+    for(;;);
+}
+
+
+
 /* USER CODE END 4 */
 
  /* MPU Configuration */
@@ -284,7 +297,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   
     if (htim->Instance == TIM4) // 假设你使用的是 TIM4
     {
-        TimeStamp::overflowCallback();
+      TimeStamp::overflowCallback();
     }
   /* USER CODE END Callback 1 */
 }

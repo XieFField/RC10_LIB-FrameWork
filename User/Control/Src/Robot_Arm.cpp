@@ -12,6 +12,19 @@ void Robot_Arm::update()
     /*电机当前的角度转换成关节当前的角度 */
     now_time_s_ = TimeStamp::getInstance().getSeconds();
 
+    if(!time_initialized_)
+    {
+        last_time_s_ = now_time_s_;
+        time_initialized_ = true;
+        // 首次对齐，后续基于“目标”积分
+        target_joint_angle_ = joint_angle_;
+        return;
+    }
+
+    dt_ = now_time_s_ - last_time_s_;
+    last_time_s_ = now_time_s_;
+
+
     if(motor_rotate_ != nullptr)
     {
         // 单圈测量（0..360）-> 连续角解包，避免 0/360 跳变
@@ -28,6 +41,7 @@ void Robot_Arm::update()
         else
         {
             float delta = normalize_deg_pm180(meas_mod - rot_last_mod); // 最短角增量
+            if (delta <= -180.0f + 1e-5f) delta += 360.0f;              // 偏好正向 180 度
             rot_cont    += delta;                                       // 得到连续角
             rot_last_mod = meas_mod;
         }
@@ -78,16 +92,15 @@ void Robot_Arm::update()
 
     // 在下发前对旋转通道加一个小滞回，抑制 0/360 附近抖动
     {
-        static float last_theta_cmd = 0.0f;         // 连续角命令保持
         float err_deg = target_joint_angle_.rotateJoint_angle_ - joint_angle_.rotateJoint_angle_;
         if (fabsf(err_deg) < 0.3f) 
         {
             // 误差很小则保持上一命令，避免因噪声来回抖
-            target_joint_angle_.rotateJoint_angle_ = last_theta_cmd;
+            target_joint_angle_.rotateJoint_angle_ = last_rotate_cmd_;
         } 
         else 
         {
-            last_theta_cmd = target_joint_angle_.rotateJoint_angle_;
+            last_rotate_cmd_ = target_joint_angle_.rotateJoint_angle_;
         }
     }
 
@@ -163,17 +176,7 @@ bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
 
 void Robot_Arm::jacobianMatrix()
 {
-    if(!time_initialized_)
-    {
-        last_time_s_ = now_time_s_;
-        time_initialized_ = true;
-        // 首次对齐，后续基于“目标”积分
-        target_joint_angle_ = joint_angle_;
-        return;
-    }
 
-    dt_ = now_time_s_ - last_time_s_;
-    last_time_s_ = now_time_s_;
     if(dt_ <= 1e-6f || dt_ > 0.1f) 
         return;
 

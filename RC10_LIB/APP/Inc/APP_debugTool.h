@@ -85,6 +85,15 @@ public:
         time_out = timeout_ms;
     }
 
+    /**
+     * @brief 打印雷达坐标数据，供上位机绘图
+     *        格式: X:1.23,Y:4.56
+     */
+    void Printf_Ladar(float x, float y)
+    {
+        this->printf_DMA((char*)"X:%.3f,Y:%.3f\r\n", x, y);
+    }
+
 private:
     uint32_t time_out = 100;
     UART_HandleTypeDef *huart_;
