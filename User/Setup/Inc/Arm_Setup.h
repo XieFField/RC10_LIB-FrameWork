@@ -80,7 +80,7 @@ extern "C" {
 
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS 0  //無底盤下，用虛擬坐標進行驗證自動邏輯
+#define ARM_AUTO_DEBUG_NOCHASSIS 1  //無底盤下，用虛擬坐標進行驗證自動邏輯
 
 
 
@@ -227,7 +227,7 @@ public:
     ArmSetup(Arm_InitData_S init_Data)
         : Robot_Arm(init_Data), RtosTask("ArmSetup", 1) 
     {
-        auto_ctrl_.time_set.gimbal_max_rad = (400.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f); //云台最大角速度(rad/s)
+        auto_ctrl_.time_set.gimbal_max_rad = (120.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f); //云台最大角速度(rad/s)
     }
 
     bool isArmcalibrated() const

@@ -5,7 +5,7 @@ static bool s_has_recorded_strategy = false; //记录是否已经记录过策略
 /**
  * @brief 寻主循环
  */
-
+int numnum = 1;
 void ArmSetup::loop()
 {
     if(!arm_ctrlStatus.init_flag)
@@ -89,9 +89,10 @@ void ArmSetup::loop()
         default:
             break;
     }
-
-    debug_uart.printf_DMA("%f,%f\n\r",this->get_currentJointStatus().rotateJoint_angle_,
-                                target_joint_status_.rotateJoint_angle_);
+    if(numnum==1)
+        debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getTotalAngle());
+    else if(numnum == 2)
+        debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getRPM());
 
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
@@ -99,7 +100,7 @@ void ArmSetup::loop()
 
 uint8_t test_signal = 0;
 float test_current = 0.0f;
-float rotate_rate = 1.3f;
+float rotate_rate = 1.2f;
 float launch_rate = 0.012f;
 int cnt = 0;
 /**
@@ -523,7 +524,7 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
 
         //步进预测循环
         float T_rot = _tool_Abs(diff) * (PI / 180.0f) / 
-                    (auto_ctrl_.time_set.gimbal_max_rad * 0.3); //云台旋转所需时间(s)
+                    (auto_ctrl_.time_set.gimbal_max_rad * 0.7f); //云台旋转所需时间(s)
 
         bool safe = true;
 
@@ -975,7 +976,7 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
 
     //time calc
     float T_rot = _tool_Abs(diff) * (PI / 180.0f) / 
-                (auto_ctrl_.time_set.gimbal_max_rad * 0.32f); //云台旋转所需时间(s)
+                (auto_ctrl_.time_set.gimbal_max_rad * 0.7f); //云台旋转所需时间(s)
 
     diff_read = diff;
 
@@ -990,11 +991,11 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
         float step_deg = 0.0f;
         if(diff > 0 )
             step_deg = 1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
-                    * 0.32f * 180.0f / PI) * t; //每步旋转
+                    * 0.7f * 180.0f / PI) * t; //每步旋转
 
         else
             step_deg = -1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
-                    * 0.32f * 180.0f / PI) * t; //每步旋转
+                    * 0.7f * 180.0f / PI) * t; //每步旋转
         //theta(t)
         if(_tool_Abs(step_deg) > _tool_Abs(diff))
             step_deg = diff; //最后一步直接到达目标角度
@@ -1283,6 +1284,7 @@ bool ArmSetup::state_return(int next_targetKFS)
 /**
  * @brief 寻自动单个
  */
+float test_target = 179.0f;
 void ArmSetup::auto_onlyOne()
 {
     /**
@@ -1313,10 +1315,13 @@ void ArmSetup::auto_onlyOne()
 
                 bool return_done = false;
 
-                return_done = state_return(0); //头一个KFS，传入0
+                // return_done = state_return(0); //头一个KFS，传入0
 
-                if(return_done)
-                    auto_ctrl_.now_state = STATE_TO_TARGET_HIGHT;
+//                this->motor_rotate_->setTargetTotalAngle(test_target);
+                this->set_RotateAngle(test_target);
+
+//                if(return_done)
+//                    auto_ctrl_.now_state = STATE_TO_TARGET_HIGHT;
             }
             else
             {

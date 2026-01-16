@@ -205,7 +205,7 @@ private:
     int calcSlot(uint32_t motorID, DJI_MotorType type) const; // 计算槽位
 };
 
-#define M3508_DECRATION 19.2032f //减速比
+#define M3508_DECRATION (3591.0f/187.0f) //减速比
 #define M3508_KT 0.01562f // 3508的内圈转矩常数 单位：N.M/A
 
 // 控制模式枚举
