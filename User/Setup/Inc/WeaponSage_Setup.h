@@ -154,6 +154,28 @@ public:
         weaponSage_status_ = status;
     }
 
+    void setWeaponSageControlStatus(WeaponSage_Status_E status)
+    {
+        weaponSage_status_ = status;
+    }
+
+    Point2D getClawPos()
+    {   
+		
+		this->current_pos_= get_CurrentPos();
+		
+        Point2D pos = {0.0f, 0.0f, 0.0f};
+		pos.x=current_pos_.traverse_pos_;
+		pos.y=current_pos_.launch_pos_;
+		pos.theta=current_pos_.claw_pos_;
+		
+        return pos;
+    }
+    void setWeaponSageStatus(WeaponSage_Status_E status)
+    {
+        weaponSage_status_ = status;
+    }
+
 protected:
     void loop() override;
 
