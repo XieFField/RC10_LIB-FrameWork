@@ -1,10 +1,3 @@
-/*******************************************************
- *  STM32H7  CRSF 接收机  「UART7 专用」最终量产版
- *  1. 所有 huart1 → huart7
- *  2. 发送前 Clean D-Cache，接收后 Invalidate
- *  3. 紧急停自动复位，13 字节 CRC 正确
- *  4. 链接脚本零改动，DMA 回调指向 UART7
- ******************************************************/
 #include "Module_CrsfReceiver.h"
 #include <cstring>
 #include <cmath>
@@ -33,7 +26,7 @@ static inline void dcache_invalidate_range(void* addr, uint32_t len)
 }
 
 /* -------------  外部句柄  ------------- */
-extern UART_HandleTypeDef huart7;          //  <-- 你用的是 UART7
+extern UART_HandleTypeDef huart7;          
 
 // CrsfReceiver* instance_ = nullptr;
 CrsfReceiver* CrsfReceiver::instance_ = nullptr;
@@ -319,7 +312,73 @@ void CrsfReceiver::sendTelemetryData(const RmPocketData_t* data)
         last_battery_send_ = now;
     }
 }
+void CrsfReceiver::send_uint8(uint8_t sub_type, uint8_t value)
+{
+    if (!tx_done) return;  // 等待上次发送完成
+    
+    uint8_t* p = tx_buffer_;
+    
+    // 帧结构：[地址][长度][类型][子类型][数据][CRC]
+    p[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;  // 0xEA
+    p[1] = 4;  // 长度 = payload(2) + 2 = 4 (payload=subtype(1)+data(1))
+    p[2] = CRSF_FRAMETYPE_CUSTOM_TELEMETRY; // 0x0C
+    p[3] = sub_type;    // 子类型（0x00-0xFF，对应Lua的0C00-0CFF）
+    p[4] = value;       // 数据字节
+    
+    // CRC：从类型字段(p[2])开始，包含类型(1)+子类型(1)+数据(1) = 3字节
+    p[5] = crc_.calc(&p[2], 3);
+    
+    tx_done = false;
+    dcache_clean_range(tx_buffer_, 6);  // 6字节总长度
+    HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 6);
+}
 
+void CrsfReceiver::send_uint16(uint8_t sub_type, uint16_t value)
+{
+    if (!tx_done) return;
+    
+    uint8_t* p = tx_buffer_;
+    
+    // 帧结构：[地址][长度][类型][子类型][低字节][高字节][CRC]
+    p[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;  // 0xEA
+    p[1] = 5;  // 长度 = payload(3) + 2 = 5 (payload=subtype(1)+data(2))
+    p[2] = CRSF_FRAMETYPE_CUSTOM_TELEMETRY; // 0x0C
+    p[3] = sub_type;                    // 子类型
+    p[4] = value & 0xFF;                // 低字节（小端序）
+    p[5] = (value >> 8) & 0xFF;         // 高字节
+    
+    // CRC：从类型字段开始，包含类型(1)+子类型(1)+数据(2) = 4字节
+    p[6] = crc_.calc(&p[2], 4);
+    
+    tx_done = false;
+    dcache_clean_range(tx_buffer_, 7);  // 7字节总长度
+    HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 7);
+}
+
+void CrsfReceiver::send_robot(uint16_t x, uint16_t y, uint16_t yaw)
+{
+    send_uint16(0x10, x);      // 子类型 0x10 = X坐标
+
+    send_uint16(0x11, y);      // 子类型 0x11 = Y坐标
+    
+    send_uint16(0x12, yaw);    // 子类型 0x12 = Yaw角度
+}
+void CrsfReceiver::send_kfs(uint8_t x, uint8_t y)
+{
+    
+    send_uint8(0x20, x);  // 子类型 0x20 =x坐标
+	
+    send_uint8(0x21, y);  // 子类型 0x21 =y坐标
+}
+void CrsfReceiver::send_Spear(uint8_t data)
+{
+    send_uint8(0x30, data);   // 子类型 0x30 = 矛杆数据
+}
+void CrsfReceiver::send_controlmode(uint8_t mode)
+{
+   
+    send_uint8(0x40, mode);   // 子类型 0x40 = 控制模式
+}
 /* ----------------  主循环  ---------------- */
 void CrsfReceiver::process()
 {
@@ -382,5 +441,5 @@ void CrsfReceiver::consumeRingBuffer()
 /* ----------------  全局 C 链接，指向 UART7  ---------------- */
 extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
 {
-    if (huart == &huart7) tx_done = true;   // 只认 UART7
+    if (huart == &huart7) tx_done = true;  
 }
