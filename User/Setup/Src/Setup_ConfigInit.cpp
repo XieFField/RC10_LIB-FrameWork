@@ -175,8 +175,11 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 void ALL_Setup_ConfigInit(void)
 {
     test_task.init();
-   Position* pos = Position::GetInstance(&huart1);
-   pos->InitUART();
+   // Position* pos = Position::GetInstance(&huart1);
+   // pos->InitUART();
+
+   HWT101CT* imu = HWT101CT::GetInstance(&huart1);
+   imu->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
 	

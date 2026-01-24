@@ -1035,6 +1035,16 @@
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Module\Inc\Module_CrsfReceiver.h</FilePath>
             </File>
+            <File>
+              <FileName>Module_HWT.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_HWT.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_HWT.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_HWT.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

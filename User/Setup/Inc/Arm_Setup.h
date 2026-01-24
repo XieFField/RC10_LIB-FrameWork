@@ -134,6 +134,7 @@ typedef struct{
     const float stretch_time_s = 0.613f; //伸展时间，单位秒
 
     float gimbal_max_rad = 0.0f; //云台最大旋转角速度，单位弧度每秒
+    float rotateSpeedRate_ = 0.8f; //云台旋转速度比例
 }arm_timeset_S;
 
 typedef struct{
@@ -326,10 +327,11 @@ public:
         auto_ctrl_.pathPos.entranceMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.entranceMap);
         auto_ctrl_.pathPos.exitMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.exitMap);
 
+#if ARM_AUTO_DEBUG_NOCHASSIS
         auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
 
         auto_ctrl_.now_ChassisPosition.y -= 2.0f; //假设已经到达前一桩正前方0.5米处
-
+#endif
         return true;
     }
 private:
@@ -657,6 +659,7 @@ protected:
             }
         }
     }
+    
     
 };
 

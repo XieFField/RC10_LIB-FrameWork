@@ -5,7 +5,7 @@ static bool s_has_recorded_strategy = false; //记录是否已经记录过策略
 /**
  * @brief 寻主循环
  */
-int numnum = 1;
+// int numnum = 1;
 void ArmSetup::loop()
 {
     if(!arm_ctrlStatus.init_flag)
@@ -89,10 +89,10 @@ void ArmSetup::loop()
         default:
             break;
     }
-    if(numnum==1)
-        debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getTotalAngle());
-    else if(numnum == 2)
-        debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getRPM());
+    // if(numnum==1)
+    //     debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getTotalAngle());
+    // else if(numnum == 2)
+    //     debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getRPM());
 
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
@@ -205,51 +205,6 @@ void ArmSetup::manualControl()
         target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
         cnt = 0;
     }
-    // if(_tool_Abs(airjoy_data_.right_x) < 0.1)
-    // {
-    //     auto_ctrl_.manual_ctrlForgrip_.changeTarget_state = false;
-    // }
-    // else if(airjoy_data_.right_x > 0.5f)
-    // {
-    //     if(!auto_ctrl_.manual_ctrlForgrip_.changeTarget_state)
-    //     {
-    //         target_joint_status_.rotateJoint_angle_ += 90.0f;
-    //         auto_ctrl_.manual_ctrlForgrip_.changeTarget_state = true;
-    //     }
-    // }
-    // else if(airjoy_data_.right_x < -0.5f)
-    // {
-    //     if(!auto_ctrl_.manual_ctrlForgrip_.changeTarget_state)
-    //     {
-    //         target_joint_status_.rotateJoint_angle_ -= 90.0f;
-    //         auto_ctrl_.manual_ctrlForgrip_.changeTarget_state = true;
-    //     }
-    // }
-
-    // 云台高度低于safe_height的时候，云台角度限制在90~180度之间
-    // if(this->get_currentJointStatus().launchJoint_Height_ < auto_ctrl_.flag.safe_height)
-    // {
-    //     float current_angle = target_joint_status_.rotateJoint_angle_;
-    //     float norm_angle = fmodf(current_angle, 360.0f);
-    //     if(norm_angle < 0.0f) norm_angle += 360.0f;
-
-    //     // 检查是否在90~180之间
-    //     // 如果不在，强制拉回最近的边界
-    //     if(norm_angle < 90.0f)
-    //     {
-    //         // 比如是 80度，拉回90度
-    //         // 比如是 0度，拉回90度
-    //         // 比如是 350度 (-10)，拉回90度? 不，应该看离谁近，但这里要求限制在90~180
-    //         // 简单处理：直接覆盖为90
-    //          target_joint_status_.rotateJoint_angle_ = 90.0f;
-    //     }
-    //     else if(norm_angle > 182.0f)
-    //     {
-    //         // 比如 190度，拉回180
-    //          target_joint_status_.rotateJoint_angle_ = 180.0f;
-    //     }
-    // }
-
 
     //pitch 开关
     if(airjoy_data_.scroll_wheel == 0x00)
@@ -524,7 +479,7 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
 
         //步进预测循环
         float T_rot = _tool_Abs(diff) * (PI / 180.0f) / 
-                    (auto_ctrl_.time_set.gimbal_max_rad * 0.7f); //云台旋转所需时间(s)
+                    (auto_ctrl_.time_set.gimbal_max_rad * auto_ctrl_.time_set.rotateSpeedRate_); //云台旋转所需时间(s)
 
         bool safe = true;
 
@@ -976,7 +931,7 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
 
     //time calc
     float T_rot = _tool_Abs(diff) * (PI / 180.0f) / 
-                (auto_ctrl_.time_set.gimbal_max_rad * 0.7f); //云台旋转所需时间(s)
+                (auto_ctrl_.time_set.gimbal_max_rad * auto_ctrl_.time_set.rotateSpeedRate_); //云台旋转所需时间(s)
 
     diff_read = diff;
 
@@ -991,11 +946,11 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
         float step_deg = 0.0f;
         if(diff > 0 )
             step_deg = 1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
-                    * 0.7f * 180.0f / PI) * t; //每步旋转
+                    * auto_ctrl_.time_set.rotateSpeedRate_ * 180.0f / PI) * t; //每步旋转
 
         else
             step_deg = -1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
-                    * 0.7f * 180.0f / PI) * t; //每步旋转
+                    * auto_ctrl_.time_set.rotateSpeedRate_ * 180.0f / PI) * t; //每步旋转
         //theta(t)
         if(_tool_Abs(step_deg) > _tool_Abs(diff))
             step_deg = diff; //最后一步直接到达目标角度
@@ -1284,7 +1239,8 @@ bool ArmSetup::state_return(int next_targetKFS)
 /**
  * @brief 寻自动单个
  */
-float test_target = 179.0f;
+
+ float test_target = 180.0f;
 void ArmSetup::auto_onlyOne()
 {
     /**
@@ -1315,13 +1271,12 @@ void ArmSetup::auto_onlyOne()
 
                 bool return_done = false;
 
-                // return_done = state_return(0); //头一个KFS，传入0
+                return_done = state_return(0); //头一个KFS，传入0
+                if(return_done)
+                    auto_ctrl_.now_state = STATE_TO_TARGET_HIGHT;
 
-//                this->motor_rotate_->setTargetTotalAngle(test_target);
-                this->set_RotateAngle(test_target);
+                // this->set_RotateAngle(test_target);
 
-//                if(return_done)
-//                    auto_ctrl_.now_state = STATE_TO_TARGET_HIGHT;
             }
             else
             {
@@ -1753,7 +1708,7 @@ void ArmSetup::debug()
 
 Arm_InitData_S arm_initData = {
    .max_launchHeight_ = 0.29f,
-   .max_stretchLength_ = 0.120f,
+   .max_stretchLength_ = 0.105f,
    .arm_length_ = 0.6f,
    .end_link_length_ = 0.08f,
 
@@ -1764,7 +1719,7 @@ Arm_InitData_S arm_initData = {
    .pitch_gearRatio_ = 360.0f,
 
    .min_rotate_angle_ = 0.0f,
-   .max_rotate_angle_ = 359.999f,
+   .max_rotate_angle_ = 359.99999f,
 
    .Sucker_GPIO_Port = SUCKER_GPIO_Port,
     .Sucker_GPIO_Pin = SUCKER_Pin,
