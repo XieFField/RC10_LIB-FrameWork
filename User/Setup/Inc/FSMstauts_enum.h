@@ -51,6 +51,8 @@ typedef enum{
     CHASSIS_LOCK_FORWEAPON,    //底盘锁定yaw，为武器大师提供稳定平台
     CHASSIS_MANUAL_CONTROL_C, //底盘手动控制模式C
 
+    CHASSIS_TESTFOR_ARM, //底盘测试模式，为串联臂提供稳定平台
+
     CHASSIS_AUTO_CONTROL, //底盘自动控制模式
 
     CHASSIS_STOP,

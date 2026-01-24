@@ -101,6 +101,7 @@ public:
      */
     void set_params(const PID_Param_Config& params, float I_SeparaThreshold);
 
+    PID_Param_Config get_params() const { return params_; }
     /**
      * @brief 将PID设定为循环模式
      * @param range 循环范围，例如360度
@@ -194,6 +195,8 @@ public:
          * @param params 新的PID参数
          */
         void set_params(const PID_Param_Config& params, float td_ratio);
+
+        PID_Param_Config get_params() const { return params_; }
 
         float get_dt() const { return dt_; }
         

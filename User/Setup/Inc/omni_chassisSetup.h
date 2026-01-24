@@ -35,7 +35,7 @@ extern "C"{
 #include "BSP_USB_UART_Driver.h"
 #include "usb_device.h"
 #include "RTOS_QueueSetup.h"
-
+#include "AutoCtrler.h"
 
 #define debug_ladar 0
 class OmniChassis_Setup:public RtosTask, public Chassis_Omni<3>{
@@ -43,11 +43,15 @@ public:
     OmniChassis_Setup(float wheel_radius, float max_wheel_rpm, float base_length, float side_length, bool three_wheel)
         : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(wheel_radius, max_wheel_rpm, base_length, side_length, three_wheel)
         ,debug_uart(&huart8)
-    {}
+    {
+        yaw_pid_.set_as_circular();
+    }
     OmniChassis_Setup(Chassis_Omni<3>::init_config& config)
         : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(config)
         ,debug_uart(&huart8)
-    {}
+    {
+        yaw_pid_.set_as_circular();
+    }
 
     void setChassisStatus(CHASSIS_Status_E status)
     {
@@ -69,6 +73,8 @@ public:
         #endif
 
         this->start(osPriorityHigh, 512);
+           
+           set_TargetKFS(4);
         init_flag = true;
     }
 
@@ -78,6 +84,27 @@ public:
             this->is_chassis_reverse_ = 1.0f;
         else
             this->is_chassis_reverse_ = -1.0f;
+    }
+
+    /**
+     * @brief 取值范围0~12
+     * 0 表示没有要抓取的KFS
+     */
+    bool set_TargetKFS(int KFS)
+    {
+        target_KFS = KFS;
+        if(target_KFS <0 || target_KFS >12)
+            return false;
+        MF_AutoCtrler::PathNode_S temp = MF_AutoCtrler::PathNodeResult_calc({0.0f, 0.0f, 0.0f},
+                                                    target_KFS,
+                                                    0);
+        path_node_.bestB1 = temp.bestB1;
+        path_node_.bestBMF1 = temp.bestBMF1;
+
+        path_node_.entranceMap = temp.entranceMap;
+        path_node_.bestB2 = temp.bestB2;
+        path_node_.bestBMF2 = temp.bestBMF2;
+        return true;
     }
 
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
@@ -104,6 +131,11 @@ private:
 
         
         Point3D ladar_data_;
+
+        int8_t target_KFS = 4;
+        MF_AutoCtrler::PathNode_S path_node_; //路径节点数据
+        
+        volatile float testtargetyaw = 0.0f;
 };
 #endif // __cplusplus
 

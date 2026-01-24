@@ -124,6 +124,13 @@ public:
         
     }
 
+    bool isWeaponSageCalibrated() const
+    {
+        if(ctrl_status_.is_calibrating)
+            return true;
+        else
+            return false;
+    }
 
     void setWeaponSageControlStatus(WeaponSage_Status_E status)
     {
@@ -146,6 +153,7 @@ public:
     {
         weaponSage_status_ = status;
     }
+
 
 protected:
     void loop() override;

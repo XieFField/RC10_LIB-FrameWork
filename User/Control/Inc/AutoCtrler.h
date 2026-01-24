@@ -108,6 +108,13 @@ float Get_ArmBaseTargetAngle(int8_t mapNum, Direction_E dir);
  * @return float 机械臂在世界系下的角度 (度, 0度对应Y轴, 逆时针为正)
  */
 float Get_ArmWorldAngle(float chassis_yaw_deg, float gimbal_angle_deg);
+
+/**
+ * @brief 计算梅花林行进过程中，底盘在林道的yaw角，使得机械臂一端能贴靠梅花林
+ *        由梅林上下左右四条通道，分别四个不同yaw角，可以通过既有的PathNode计算得到
+ */
+float Get_ChassisYawForArmAlign(int8_t targetKFS, int8_t B1, int8_t BMF1);
+
 }
 #endif
 #endif // AUTOCTRLER_H

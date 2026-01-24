@@ -5,6 +5,8 @@
 int last_cout_ladar_data = -1;
 
 #endif
+
+
 void OmniChassis_Setup::loop()
 {
     if (!init_flag)
@@ -72,7 +74,6 @@ void OmniChassis_Setup::loop()
 			
             // this->setWorldSpeed(target_chassis_twist_);
             this->set_Target(target_chassis_twist_);
-            // this->update();
             break;
         }
 
@@ -143,6 +144,46 @@ void OmniChassis_Setup::loop()
             this->set_Target(target_chassis_twist_);
             break;
         }
+
+        case CHASSIS_TESTFOR_ARM:
+        {
+            this->set_ControlMode(WORLD_SPEED_MODE);
+            if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+            else
+                target_chassis_twist_.vx = 0.0f;
+
+            if(_tool_Abs(airjoy_data_.left_y) > 0.05f)
+                target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
+            else
+                target_chassis_twist_.vy = 0.0f;
+                
+            if(_tool_Abs(target_chassis_twist_.vx) > 0.5)
+                target_chassis_twist_.vx = 0.5;
+            
+            if(_tool_Abs(target_chassis_twist_.vy) > 0.5)
+                target_chassis_twist_.vy = 0.5;
+                
+
+//            float target_yaw_angle = 0.0f;
+//            testtargetyaw = MF_AutoCtrler::Get_ChassisYawForArmAlign(target_KFS,
+//                                                    path_node_.bestB1,
+//                                                    path_node_.bestBMF1);
+////            testtargetyaw = target_yaw_angle;
+//            target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(testtargetyaw, angle_twist.yaw_angle);
+            yaw_pid_period_count_++;
+            target_yaw_ = yaw;
+            if(yaw_pid_period_count_ >= yaw_pid_period_)
+            {
+                yaw_pid_period_count_ = 0;
+                target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(180, angle_twist.yaw_angle);
+            }
+              
+             this->set_Target(target_chassis_twist_);
+            
+            break;
+        }
+
         default:
         {
             break;

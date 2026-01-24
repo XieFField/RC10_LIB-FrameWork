@@ -197,8 +197,11 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 void ALL_Setup_ConfigInit(void)
 {
     test_task.init();
-   Position* pos = Position::GetInstance(&huart1);
-   pos->InitUART();
+   // Position* pos = Position::GetInstance(&huart1);
+   // pos->InitUART();
+
+   HWT101CT* imu = HWT101CT::GetInstance(&huart1);
+   imu->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
    debug_init();
 	
@@ -238,7 +241,7 @@ void ALL_Setup_ConfigInit(void)
 	 instance_man.InstanceManager_Init();
 //激光重定位解析数据初始化
 	 
-     set1->init(&instance_man,&usb_1);	
+     set1->init(&instance_man,&usb_1,lader_install_offset ,arm_install_offset);	
      set1->laser_initData_.d=0.5;
      set1->locate_setup_init();
      set1->set_startToLRL(true);
