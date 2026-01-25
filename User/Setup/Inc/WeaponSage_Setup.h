@@ -164,6 +164,7 @@ private:
     void State_LowerClaw();
     bool State_GrabClaw();
     bool State_Lift();
+    
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 
     
