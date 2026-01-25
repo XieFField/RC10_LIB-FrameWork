@@ -47,6 +47,8 @@ public:
     {
         yaw_pid_.set_as_circular();
     }
+
+
     OmniChassis_Setup(Chassis_Omni<3>::init_config& config)
         : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(config)
         ,debug_uart(&huart8)
@@ -69,13 +71,12 @@ public:
 
         this->setThreeWheelSolver(true);
 
-#if debug_ladar
-        this->setThreeWheelSolver(false);
-#endif
+    #if debug_ladar
+            this->setThreeWheelSolver(false);
+    #endif
 
         this->start(osPriorityHigh, 512);
-           
-           set_TargetKFS(4);
+        setTargetKFS(11);
         init_flag = true;
     }
 
@@ -87,29 +88,10 @@ public:
             this->is_chassis_reverse_ = -1.0f;
     }
 
-    /**
-     * @brief 取值范围0~12
-     * 0 表示没有要抓取的KFS
-     */
-    bool set_TargetKFS(int KFS)
+    void setTargetKFS(int targetKFS)
     {
-        target_KFS = KFS;
-        if(target_KFS <0 || target_KFS >12)
-            return false;
-        MF_AutoCtrler::PathNode_S temp = MF_AutoCtrler::PathNodeResult_calc({0.0f, 0.0f, 0.0f},
-                                                    target_KFS,
-                                                    0);
-        path_node_.bestB1 = temp.bestB1;
-        path_node_.bestBMF1 = temp.bestBMF1;
-
-        path_node_.entranceMap = temp.entranceMap;
-        path_node_.bestB2 = temp.bestB2;
-        path_node_.bestBMF2 = temp.bestBMF2;
-        return true;
+        KFS = targetKFS;
     }
-
-    Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
-
 private:
     int flag = 0;
     int flag_run = 0;
@@ -134,7 +116,7 @@ private:
     int8_t point_map=0;
     int8_t path_point_[20];
     int8_t path_key_point_[10];
-    int8_t KFS=11;
+    int8_t KFS=0;
 
     float target_yaw_ = 0.0f;
     uint8_t yaw_pid_period_ = 3;
