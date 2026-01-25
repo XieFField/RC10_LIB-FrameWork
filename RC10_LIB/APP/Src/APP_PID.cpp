@@ -254,9 +254,9 @@ PID_Param_Config track_pid_params = {
 };
 
 PID_Param_Config lock_angle_pid_params = {
- .kp = 0.2f,
+ .kp = 0.15f,
  .ki = 0.0f,
- .kd = 0.015f,
+ .kd = 0.010f,
  .I_Outlimit = 0.0f, 
  .isIOutlimit = true, 
  .output_limit = 6.0f, 
