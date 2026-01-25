@@ -1,7 +1,9 @@
 #include "FSM_Controller.h"
 
-
-
+float x = 123.45f;
+    float y = 67.89f;
+    float yaw = -45.67f;
+int coun = 0;
 void FSM_Controller::loop()
 {
     if(!init_flag_)
@@ -10,8 +12,12 @@ void FSM_Controller::loop()
     CrsfReceiver::GetInstance(&huart7)->process();
 
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
-
-
+		coun++;
+		if(coun>100){
+		  CrsfReceiver::GetInstance(&huart7)->send_robot(x, y, yaw);
+			coun=0;
+		}
+		
     switch(airjoy_data_.SWB)
     {
         case 0x00:

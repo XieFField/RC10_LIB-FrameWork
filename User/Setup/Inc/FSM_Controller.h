@@ -29,6 +29,7 @@ extern "C" {
 #include "omni_chassisSetup.h"
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
+#include "Setup_ConfigInit.h"
 
 class FSM_Controller:public RtosTask {
 public:

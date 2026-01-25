@@ -209,10 +209,11 @@ public:
 	
     void send_uint8(uint8_t sub_type, uint8_t value);
     void send_uint16(uint8_t sub_type, uint16_t value);
-    void send_robot(uint16_t x, uint16_t y, uint16_t yaw);
-		void send_kfs(uint8_t x, uint8_t y);
-		void send_Spear(uint8_t data);
-		void send_controlmode(uint8_t mode);
+		void send_float(uint8_t sub_type, float value);
+		void send_robot(float x, float y, float yaw);
+		void send_kfs(float x, float y);
+		void send_Spear(float data);
+		void send_controlmode(float mode);
     static CrsfReceiver* GetInstance(UART_HandleTypeDef *huart);
     CrsfReceiver(const CrsfReceiver&) = delete;
     CrsfReceiver& operator=(const CrsfReceiver&) = delete;

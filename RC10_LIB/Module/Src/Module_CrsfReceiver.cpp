@@ -3,8 +3,8 @@
 #include <cmath>
 #include "core_cm7.h"
 
-/* -------------  Cache Î¬»¤ºê/º¯Êı  ------------- */
-// SCB cache ops ÒªÇóµØÖ·Óë´óĞ¡»ùÓÚ cache line ¶ÔÆë(32×Ö½Ú)
+/* -------------  Cache Î¬ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½  ------------- */
+// SCB cache ops Òªï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½Ğ¡ï¿½ï¿½ï¿½ï¿½ cache line ï¿½ï¿½ï¿½ï¿½(32ï¿½Ö½ï¿½)
 static inline void dcache_clean_range(void* addr, uint32_t len) 
 {
     if (len == 0 || addr == nullptr) return;
@@ -25,14 +25,14 @@ static inline void dcache_invalidate_range(void* addr, uint32_t len)
     SCB_InvalidateDCache_by_Addr((uint32_t*)start, (int32_t)(end - start));
 }
 
-/* -------------  Íâ²¿¾ä±ú  ------------- */
+/* -------------  ï¿½â²¿ï¿½ï¿½ï¿½  ------------- */
 extern UART_HandleTypeDef huart7;          
 
 // CrsfReceiver* instance_ = nullptr;
 CrsfReceiver* CrsfReceiver::instance_ = nullptr;
 
 /* ======================================================= 
- *   ÒÔÏÂÊµÏÖÓë UART7 °ó¶¨
+ *   ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ UART7 ï¿½ï¿½
  * ====================================================== */
 
 void CrsfReceiver::StaticUartCallback(uint8_t *buf, uint16_t len)
@@ -41,8 +41,8 @@ void CrsfReceiver::StaticUartCallback(uint8_t *buf, uint16_t len)
 		instance_->appendFromISR(buf, len);
 }
 
-/* ¹¹Ôì / Îö¹¹ */
-// Module_CrsfReceiver.cpp ÖĞµÄ¹¹Ôìº¯Êı
+/* ï¿½ï¿½ï¿½ï¿½ / ï¿½ï¿½ï¿½ï¿½ */
+// Module_CrsfReceiver.cpp ï¿½ĞµÄ¹ï¿½ï¿½ìº¯ï¿½ï¿½
 
 CrsfReceiver::CrsfReceiver(UART_HandleTypeDef* huart)
     : packet_byte_index_(0),
@@ -52,7 +52,7 @@ CrsfReceiver::CrsfReceiver(UART_HandleTypeDef* huart)
       crc_(CRSF_CRC_POLY),
       rx_ring_head_(0),
       rx_ring_tail_(0),
-      rx_buffer_{0},  // ¡û ÏÈÇåÁã»º³åÇø
+      rx_buffer_{0},  // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ã»ºï¿½ï¿½ï¿½ï¿½
       UART_(256,rx_buffer_,huart)
 {
     instance_ = this;
@@ -90,7 +90,7 @@ void CrsfReceiver::Callback_Fuc(uint8_t *buf, uint16_t len)
 	
 //}
 
-// ²âÊÔ½Ó¿Ú£ºÁÙÊ±¹Ø±Õ D-Cache£¨µ÷ÊÔÓÃ£©
+// ï¿½ï¿½ï¿½Ô½Ó¿Ú£ï¿½ï¿½ï¿½Ê±ï¿½Ø±ï¿½ D-Cacheï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½
 //void CrsfReceiver::setDisableDCacheForTest(bool disable)
 //{
 //    if (disable) {
@@ -106,7 +106,7 @@ void CrsfReceiver::Callback_Fuc(uint8_t *buf, uint16_t len)
 //    }
 //}
 
-// ³õÊ¼»¯Ê±¼ì²é UART/DMA ÉèÖÃÊÇ·ñÕıÈ·£¨RX DMA ´æÔÚÇÒÎªÑ­»·Ä£Ê½£©
+// ï¿½ï¿½Ê¼ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ UART/DMA ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½È·ï¿½ï¿½RX DMA ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÎªÑ­ï¿½ï¿½Ä£Ê½ï¿½ï¿½
 //void CrsfReceiver::checkDmaConfig()
 //{
 //    UART_HandleTypeDef* h = uart_driver_.GetUartHandle();
@@ -133,7 +133,7 @@ uint8_t GENERIC_CRC8::calc(const uint8_t* data, uint16_t len, uint8_t crc)
     return crc;
 }
 
-/* ----------------  ×´Ì¬»ú  ---------------- */
+/* ----------------  ×´Ì¬ï¿½ï¿½  ---------------- */
 void CrsfReceiver::handleByte(uint8_t byte)
 {
     switch (rx_state_) {
@@ -173,7 +173,7 @@ void CrsfReceiver::handleByte(uint8_t byte)
     }
 }
 
-/* ----------------  ½â°ü + Ó³Éä + ¿ª¹Ø  ---------------- */
+/* ----------------  ï¿½ï¿½ï¿½ + Ó³ï¿½ï¿½ + ï¿½ï¿½ï¿½ï¿½  ---------------- */
 void CrsfReceiver::unpackChannels(const uint8_t* payload, int channels[CRSF_NUM_CHANNELS])
 {
     for (int i = 0; i < CRSF_NUM_CHANNELS; ++i) {
@@ -232,7 +232,7 @@ void CrsfReceiver::updateSwitchesAndButtons()
     telemetry_data_.btn_enter = (channels_[14] > BTN_ON) ? 1 : 0;
 }
 
-/* ----------------  ½ô¼±Í£Ö¹  ---------------- */
+/* ----------------  ï¿½ï¿½ï¿½ï¿½Í£Ö¹  ---------------- */
 void CrsfReceiver::processRcChannels()
 {
     unpackChannels(channels_payload_, channels_);
@@ -249,7 +249,7 @@ void CrsfReceiver::processRcChannels()
     new_data_available_ = true;
 }
 
-/* ----------------  ÓÃ»§½Ó¿Ú  ---------------- */
+/* ----------------  ï¿½Ã»ï¿½ï¿½Ó¿ï¿½  ---------------- */
 void CrsfReceiver::getControlData(RmPocketData_t* data)
 {
     if (!data) 
@@ -284,7 +284,7 @@ void CrsfReceiver::getControlData(RmPocketData_t* data)
     debug_mode = telemetry_data_.SWD;
 }
 
-/* ----------------  Ò£²â·¢ËÍ  ---------------- */
+/* ----------------  Ò£ï¿½â·¢ï¿½ï¿½  ---------------- */
 static volatile bool tx_done = true;
 void CrsfReceiver::sendTelemetryData(const RmPocketData_t* data)
 {
@@ -307,29 +307,29 @@ void CrsfReceiver::sendTelemetryData(const RmPocketData_t* data)
         p[10] = data->battery_percent;
         p[11] = crc_.calc(&p[2], 9);     // CRC
         tx_done = false;
-        dcache_clean_range(tx_buffer_, 13);              // ¡û Ë¢ Cache (¶ÔÆë)
-        HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 13); // UART7£¡
+        dcache_clean_range(tx_buffer_, 13);              // ï¿½ï¿½ Ë¢ Cache (ï¿½ï¿½ï¿½ï¿½)
+        HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 13); // UART7ï¿½ï¿½
         last_battery_send_ = now;
     }
 }
 void CrsfReceiver::send_uint8(uint8_t sub_type, uint8_t value)
 {
-    if (!tx_done) return;  // µÈ´ıÉÏ´Î·¢ËÍÍê³É
+    if (!tx_done) return;  // ï¿½È´ï¿½ï¿½Ï´Î·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     
     uint8_t* p = tx_buffer_;
     
-    // Ö¡½á¹¹£º[µØÖ·][³¤¶È][ÀàĞÍ][×ÓÀàĞÍ][Êı¾İ][CRC]
+    // Ö¡ï¿½á¹¹ï¿½ï¿½[ï¿½ï¿½Ö·][ï¿½ï¿½ï¿½ï¿½][ï¿½ï¿½ï¿½ï¿½][ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½][ï¿½ï¿½ï¿½ï¿½][CRC]
     p[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;  // 0xEA
-    p[1] = 4;  // ³¤¶È = payload(2) + 2 = 4 (payload=subtype(1)+data(1))
+    p[1] = 4;  // ï¿½ï¿½ï¿½ï¿½ = payload(2) + 2 = 4 (payload=subtype(1)+data(1))
     p[2] = CRSF_FRAMETYPE_CUSTOM_TELEMETRY; // 0x0C
-    p[3] = sub_type;    // ×ÓÀàĞÍ£¨0x00-0xFF£¬¶ÔÓ¦LuaµÄ0C00-0CFF£©
-    p[4] = value;       // Êı¾İ×Ö½Ú
+    p[3] = sub_type;    // ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½0x00-0xFFï¿½ï¿½ï¿½ï¿½Ó¦Luaï¿½ï¿½0C00-0CFFï¿½ï¿½
+    p[4] = value;       // ï¿½ï¿½ï¿½ï¿½ï¿½Ö½ï¿½
     
-    // CRC£º´ÓÀàĞÍ×Ö¶Î(p[2])¿ªÊ¼£¬°üº¬ÀàĞÍ(1)+×ÓÀàĞÍ(1)+Êı¾İ(1) = 3×Ö½Ú
-    p[5] = crc_.calc(&p[2], 3);
-    
+    // CRCï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½(p[2])ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(1)+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(1)+ï¿½ï¿½ï¿½ï¿½(1) = 3ï¿½Ö½ï¿½
+//    p[5] = crc_.calc(&p[2], 3);
+     p[5] = 0x00;
     tx_done = false;
-    dcache_clean_range(tx_buffer_, 6);  // 6×Ö½Ú×Ü³¤¶È
+    dcache_clean_range(tx_buffer_, 6);  // 6ï¿½Ö½ï¿½ï¿½Ü³ï¿½ï¿½ï¿½
     HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 6);
 }
 
@@ -339,53 +339,77 @@ void CrsfReceiver::send_uint16(uint8_t sub_type, uint16_t value)
     
     uint8_t* p = tx_buffer_;
     
-    // Ö¡½á¹¹£º[µØÖ·][³¤¶È][ÀàĞÍ][×ÓÀàĞÍ][µÍ×Ö½Ú][¸ß×Ö½Ú][CRC]
+    // Ö¡ï¿½á¹¹ï¿½ï¿½[ï¿½ï¿½Ö·][ï¿½ï¿½ï¿½ï¿½][ï¿½ï¿½ï¿½ï¿½][ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½][ï¿½ï¿½ï¿½Ö½ï¿½][ï¿½ï¿½ï¿½Ö½ï¿½][CRC]
     p[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;  // 0xEA
-    p[1] = 5;  // ³¤¶È = payload(3) + 2 = 5 (payload=subtype(1)+data(2))
+    p[1] = 5;  // ï¿½ï¿½ï¿½ï¿½ = payload(3) + 2 = 5 (payload=subtype(1)+data(2))
     p[2] = CRSF_FRAMETYPE_CUSTOM_TELEMETRY; // 0x0C
-    p[3] = sub_type;                    // ×ÓÀàĞÍ
-    p[4] = value & 0xFF;                // µÍ×Ö½Ú£¨Ğ¡¶ËĞò£©
-    p[5] = (value >> 8) & 0xFF;         // ¸ß×Ö½Ú
+    p[3] = sub_type;                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    p[4] = value & 0xFF;                // ï¿½ï¿½ï¿½Ö½Ú£ï¿½Ğ¡ï¿½ï¿½ï¿½ï¿½
+    p[5] = (value >> 8) & 0xFF;         // ï¿½ï¿½ï¿½Ö½ï¿½
     
-    // CRC£º´ÓÀàĞÍ×Ö¶Î¿ªÊ¼£¬°üº¬ÀàĞÍ(1)+×ÓÀàĞÍ(1)+Êı¾İ(2) = 4×Ö½Ú
+    // CRCï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶Î¿ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(1)+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(1)+ï¿½ï¿½ï¿½ï¿½(2) = 4ï¿½Ö½ï¿½
     p[6] = crc_.calc(&p[2], 4);
     
     tx_done = false;
-    dcache_clean_range(tx_buffer_, 7);  // 7×Ö½Ú×Ü³¤¶È
+    dcache_clean_range(tx_buffer_, 7);  // 7ï¿½Ö½ï¿½ï¿½Ü³ï¿½ï¿½ï¿½
+    HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 7);
+}
+void CrsfReceiver::send_float(uint8_t sub_type, float value)
+{
+    if (!tx_done) return;
+    
+    // é™åˆ¶èŒƒå›´ï¼Œé˜²æ­¢æº¢å‡ºï¼ˆint16èŒƒå›´ï¼š-32768 ~ 32767ï¼‰
+    if (value > 327.67f) value = 327.67f;
+    if (value < -327.68f) value = -327.68f;
+    
+    // æ”¾å¤§100å€ï¼Œä¿ç•™2ä½å°æ•°ï¼ˆ12.34 â†’ 1234ï¼‰
+    int16_t fixed_val = (int16_t)(value * 100.0f);
+    
+    uint8_t* p = tx_buffer_;
+    p[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;  // 0xEA
+    p[1] = 5;                               // é•¿åº¦
+    p[2] = CRSF_FRAMETYPE_CUSTOM_TELEMETRY; // 0x0C
+    p[3] = sub_type;                        // å­ç±»å‹
+    p[4] = fixed_val & 0xFF;                // ä½å­—èŠ‚
+    p[5] = (fixed_val >> 8) & 0xFF;         // é«˜å­—èŠ‚ï¼ˆè‡ªåŠ¨å¤„ç†ç¬¦å·ï¼‰
+    p[6] = crc_.calc(&p[2], 4);             // CRC
+    
+    tx_done = false;
+    dcache_clean_range(tx_buffer_, 7);
     HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 7);
 }
 
-void CrsfReceiver::send_robot(uint16_t x, uint16_t y, uint16_t yaw)
+void CrsfReceiver::send_robot(float x, float y, float yaw)
 {
-    send_uint16(0x10, x);      // ×ÓÀàĞÍ 0x10 = X×ø±ê
+    send_float(0x10, x);      // Xåæ ‡ï¼ˆå¦‚ï¼š123.45ï¼‰
+    send_float(0x11, y);      // Yåæ ‡  
+    send_float(0x12, yaw);    // Yawè§’åº¦ï¼ˆå¦‚ï¼š-45.67ï¼‰
+}
 
-    send_uint16(0x11, y);      // ×ÓÀàĞÍ 0x11 = Y×ø±ê
-    
-    send_uint16(0x12, yaw);    // ×ÓÀàĞÍ 0x12 = Yaw½Ç¶È
-}
-void CrsfReceiver::send_kfs(uint8_t x, uint8_t y)
+void CrsfReceiver::send_kfs(float x, float y)
 {
-    
-    send_uint8(0x20, x);  // ×ÓÀàĞÍ 0x20 =x×ø±ê
-	
-    send_uint8(0x21, y);  // ×ÓÀàĞÍ 0x21 =y×ø±ê
+    send_float(0x20, x);      // KFS X
+    send_float(0x21, y);      // KFS Y
 }
-void CrsfReceiver::send_Spear(uint8_t data)
+
+
+void CrsfReceiver::send_Spear(float data)
 {
-    send_uint8(0x30, data);   // ×ÓÀàĞÍ 0x30 = Ã¬¸ËÊı¾İ
+    send_float(0x30, data);   // Spearæ•°å€¼
 }
-void CrsfReceiver::send_controlmode(uint8_t mode)
+
+
+void CrsfReceiver::send_controlmode(float mode)
 {
-   
-    send_uint8(0x40, mode);   // ×ÓÀàĞÍ 0x40 = ¿ØÖÆÄ£Ê½
+    send_float(0x40, mode);   // æ¨¡å¼ï¼ˆå¦‚ï¼š1.0, 2.0, 5.0ï¼‰
 }
-/* ----------------  Ö÷Ñ­»·  ---------------- */
+/* ----------------  ï¿½ï¿½Ñ­ï¿½ï¿½  ---------------- */
 void CrsfReceiver::process()
 {
     consumeRingBuffer();
 }
 
-/* ----------------  ISR ¿½±´  ---------------- */
+/* ----------------  ISR ï¿½ï¿½ï¿½ï¿½  ---------------- */
 void CrsfReceiver::appendFromISR(const uint8_t *buf, uint16_t len)
 {
     if (!buf || !len) return;
@@ -397,7 +421,7 @@ void CrsfReceiver::appendFromISR(const uint8_t *buf, uint16_t len)
     uint16_t to_copy = (len <= free_space) ? len : free_space;
     uint16_t chunk = RX_RING_SIZE - head;
     if (chunk > to_copy) chunk = to_copy;
-    // È·±£ CPU ¶ÁÈ¡ buf Ç°Ê§Ğ§ DCache£¬ÕâÑù memcpy ÄÜÄÃµ½ DMA Ğ´ÈëµÄÊı¾İ
+    // È·ï¿½ï¿½ CPU ï¿½ï¿½È¡ buf Ç°Ê§Ğ§ DCacheï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ memcpy ï¿½ï¿½ï¿½Ãµï¿½ DMA Ğ´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     dcache_invalidate_range((void*)buf, to_copy);
     memcpy(&rx_ring_[head], buf, chunk);
     head = (head + chunk) % RX_RING_SIZE;
@@ -406,7 +430,7 @@ void CrsfReceiver::appendFromISR(const uint8_t *buf, uint16_t len)
         memcpy(&rx_ring_[head], buf + chunk, rem);
         head = (head + rem) % RX_RING_SIZE;
     }
-    // ÔÚ¸üĞÂ head Ç°È·±£Êı¾İÄÚ´æÆÁÕÏ£¬±ÜÃâÂÒĞò
+    // ï¿½Ú¸ï¿½ï¿½ï¿½ head Ç°È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú´ï¿½ï¿½ï¿½ï¿½Ï£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     __asm volatile ("dmb 0xB" ::: "memory");
     rx_ring_head_ = head;
 }
@@ -416,10 +440,10 @@ void CrsfReceiver::processBatchData(uint8_t *buf, uint16_t len)
     for (uint16_t i = 0; i < len; ++i) handleByte(buf[i]);
 }
 
-/* ----------------  Ïû·Ñ»·ĞÎ»º³å  ---------------- */
+/* ----------------  ï¿½ï¿½ï¿½Ñ»ï¿½ï¿½Î»ï¿½ï¿½ï¿½  ---------------- */
 void CrsfReceiver::consumeRingBuffer()
 {
-    dcache_invalidate_range(rx_ring_, RX_RING_SIZE);   // ¡û ÈÓ¾É Cache (¶ÔÆë)
+    dcache_invalidate_range(rx_ring_, RX_RING_SIZE);   // ï¿½ï¿½ ï¿½Ó¾ï¿½ Cache (ï¿½ï¿½ï¿½ï¿½)
     uint16_t head = rx_ring_head_ % RX_RING_SIZE;
     uint16_t tail = rx_ring_tail_ % RX_RING_SIZE;
     if (head == tail) return;
@@ -438,7 +462,7 @@ void CrsfReceiver::consumeRingBuffer()
     rx_ring_tail_ = tail;
 }
 
-/* ----------------  È«¾Ö C Á´½Ó£¬Ö¸Ïò UART7  ---------------- */
+/* ----------------  È«ï¿½ï¿½ C ï¿½ï¿½ï¿½Ó£ï¿½Ö¸ï¿½ï¿½ UART7  ---------------- */
 extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
 {
     if (huart == &huart7) tx_done = true;  
