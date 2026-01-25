@@ -113,6 +113,20 @@ namespace MF_AutoCtrler
     // 计算最少步数 BFS
     int BFS_Steps(int8_t startMap, int8_t goalMap);
 
+/**
+ * @brief 计算机械臂在世界坐标系下的绝对角度
+ * @param chassis_yaw_deg 底盘在世界系下的Yaw角 (度)
+ * @param gimbal_angle_deg 机械臂云台相对于底盘的角度 (度)
+ * @return float 机械臂在世界系下的角度 (度, 0度对应Y轴, 逆时针为正)
+ */
+float Get_ArmWorldAngle(float chassis_yaw_deg, float gimbal_angle_deg);
+
+/**
+ * @brief 计算梅花林行进过程中，底盘在林道的yaw角，使得机械臂一端能贴靠梅花林
+ *        由梅林上下左右四条通道，分别四个不同yaw角，可以通过既有的PathNode计算得到
+ */
+float Get_ChassisYawForArmAlign(int8_t targetKFS, int8_t B1, int8_t BMF1);
+
     // 获取BFS最短路径序列 (返回路径长度, -1表示缓冲区不足, 0表示不可达)
     int BFS_GetPath(int8_t startMap, int8_t goalMap, int8_t *outPath, int maxLen);
     /**

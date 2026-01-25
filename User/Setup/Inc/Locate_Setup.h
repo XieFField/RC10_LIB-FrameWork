@@ -30,6 +30,8 @@ extern "C" {
 #include "usbd_cdc_if.h"
 #include "gpio.h"
 
+#include "Module_HWT.h"
+
 #define PI		3.14159265358979323846f			// 定义圆周率常量PI
 #define MAX_SEND_BUF_SIZE 128// 发送缓冲区大小
 

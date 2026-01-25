@@ -23,43 +23,18 @@ float PID_Position::pid_calc(float target, float feedback)
     }
 
     // calc error
+    // 计算原始误差
+    error_ = target - feedback;
+
     if (is_circular_)
     {
-        
-        if (feedback * target >= 0)
-        {
-            error_ = target - feedback;
-        }
-        else
-        {
-            if (feedback > 0 && target < 0)
-            {
-                float positive = (180.0f - feedback) + (180.0f + target); // 正路径
-                float negative = target - feedback;
-                if (fabsf(positive) <= fabsf(negative))
-                    error_ = positive;
-                
-                    
-                else
-                    error_ = negative; // 选择一个较短的路径
-                
-            }
-            else // (feedback < 0 && target > 0)
-            {
-                float positive = target - feedback;
-                float negative = -((180.0f + feedback) + (180.0f - target));
-                if (fabsf(positive) <= fabsf(negative))
-                    error_ = positive;
-                
-                else
-                    error_ = negative; // 选择一个较短的路径
-                
-            }
-        }
+        // 环形模式：寻找最短路径，将误差限制在 [-180, 180]
+        // 这样可以兼容 (-180~180) 和 (0~360) 两种格式
+        while (error_ > 180.0f)
+            error_ -= 360.0f;
+        while (error_ < -180.0f)
+            error_ += 360.0f;
     }
-    else
-        // 线性模式，直接计算误差
-        error_ = target - feedback;
     
 
 
@@ -83,7 +58,18 @@ float PID_Position::pid_calc(float target, float feedback)
 
     // calc D (微分先行)
     if (dt_ > 0.0f)
-        D_Term = params_.kd * (feedback - feedback_last_) / dt_;
+    {
+        float diff_feedback = feedback - feedback_last_;
+        if (is_circular_)
+        {
+            // 处理环形
+            if (diff_feedback > 180.0f)
+                diff_feedback -= 360.0f;
+            else if (diff_feedback < -180.0f)
+                diff_feedback += 360.0f;
+        }
+        D_Term = params_.kd * diff_feedback / dt_;
+    }
     else
         D_Term = 0.0f;
     
@@ -268,13 +254,13 @@ PID_Param_Config track_pid_params = {
 };
 
 PID_Param_Config lock_angle_pid_params = {
- .kp = 0.2f,
+ .kp = 0.15f,
  .ki = 0.0f,
- .kd = 0.015f,
+ .kd = 0.010f,
  .I_Outlimit = 0.0f, 
  .isIOutlimit = true, 
  .output_limit = 6.0f, 
- .deadband = 0.07f 
+ .deadband = 0.1f 
 };
 
 

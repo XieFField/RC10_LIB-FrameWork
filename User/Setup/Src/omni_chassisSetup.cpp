@@ -7,6 +7,8 @@
 int last_cout_ladar_data = -1;
 
 #endif
+
+
 void OmniChassis_Setup::loop()
 {
     if (!init_flag)

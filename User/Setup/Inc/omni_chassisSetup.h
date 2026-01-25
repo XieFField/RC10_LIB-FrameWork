@@ -42,9 +42,18 @@ class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>
 {
 public:
     OmniChassis_Setup(float wheel_radius, float max_wheel_rpm, float base_length, float side_length, bool three_wheel)
-        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(wheel_radius, max_wheel_rpm, base_length, side_length, three_wheel),
-          debug_uart(&huart8)
+        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(wheel_radius, max_wheel_rpm, base_length, side_length, three_wheel)
+        ,debug_uart(&huart8)
     {
+        yaw_pid_.set_as_circular();
+    }
+
+
+    OmniChassis_Setup(Chassis_Omni<3>::init_config& config)
+        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(config)
+        ,debug_uart(&huart8)
+    {
+        yaw_pid_.set_as_circular();
     }
 
     void setChassisStatus(CHASSIS_Status_E status)
@@ -62,11 +71,12 @@ public:
 
         this->setThreeWheelSolver(true);
 
-#if debug_ladar
-        this->setThreeWheelSolver(false);
-#endif
+    #if debug_ladar
+            this->setThreeWheelSolver(false);
+    #endif
 
         this->start(osPriorityHigh, 512);
+        setTargetKFS(11);
         init_flag = true;
     }
 
@@ -78,6 +88,10 @@ public:
             this->is_chassis_reverse_ = -1.0f;
     }
 
+    void setTargetKFS(int targetKFS)
+    {
+        KFS = targetKFS;
+    }
 private:
     int flag = 0;
     int flag_run = 0;
@@ -102,7 +116,7 @@ private:
     int8_t point_map=0;
     int8_t path_point_[20];
     int8_t path_key_point_[10];
-    int8_t KFS=11;
+    int8_t KFS=0;
 
     float target_yaw_ = 0.0f;
     uint8_t yaw_pid_period_ = 3;
