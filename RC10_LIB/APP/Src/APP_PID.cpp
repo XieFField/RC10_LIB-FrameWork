@@ -244,12 +244,12 @@ PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
 };
 
 PID_Param_Config track_pid_params = {
-    .kp = 10.0f,
-    .ki = 5.0f,
+    .kp = 0.0f,
+    .ki = 0.0f,
     .kd = 0.0f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 130.0f,   
+    .output_limit = 1.0f,   
     .deadband = 0.0009f 
 };
 

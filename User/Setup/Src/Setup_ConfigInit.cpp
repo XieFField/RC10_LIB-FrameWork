@@ -203,7 +203,7 @@ void ALL_Setup_ConfigInit(void)
    HWT101CT* imu = HWT101CT::GetInstance(&huart1);
    imu->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
-   debug_init();
+   //debug_init();
 	
    CAN_Motor_Init();
 
