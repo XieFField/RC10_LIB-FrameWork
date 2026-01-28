@@ -1301,14 +1301,14 @@
               <FilePath>..\User\Setup\Inc\FSMstauts_enum.h</FilePath>
             </File>
             <File>
-              <FileName>omni_chassisSetup.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\omni_chassisSetup.h</FilePath>
-            </File>
-            <File>
               <FileName>omni_chassisSetup.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\omni_chassisSetup.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>omni_chassisSetup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\omni_chassisSetup.h</FilePath>
             </File>
             <File>
               <FileName>Locate_Setup.h</FileName>

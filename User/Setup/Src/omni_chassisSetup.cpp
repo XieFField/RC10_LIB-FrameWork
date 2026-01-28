@@ -127,28 +127,19 @@ void OmniChassis_Setup::loop()
                 KFS_Selection_Planning();
             }
         }
-        if (path_line_.index_ == 1)
-        {
-            if (path_flag == 0)
-            {
-                target_chassis_twist_.vx = 0.0f;
-                target_chassis_twist_.vy = 0.0f;
-                target_yaw_ = -90.0f;
-                flag_run = 0;
-            }
-            if (abs(target_yaw_ - yaw) < 1.0f)
-            {
-                flag_run = 1;
-            }
-        }
+
         if (flag_run == 1)
         {
             if (path_line_.Is_End() == true)
             {
                 num++;
-                Path_correction();
+
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
+                // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
+                planspeed = path_line_.plan(robot_pos_);
+                Path_correction();
+
                 //                if (num > 2)
                 //                {
                 //                    debug_uart.printf_DMA("%f,%f,%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), speed.x, speed.y, corrVelocity.magnitude());
@@ -157,19 +148,47 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-                flag = 0;
-                flag_run = 0;
-                path_line_.plan_reset();
-                path_line_.Reset();
-                target_chassis_twist_.vx = 0.0f;
-                target_chassis_twist_.vy = 0.0f;
-                chassis_status_ = CHASSIS_STOP;
+                if (flag_1 == 0)
+                {
+                    flag = 0;
+                    planspeed.x = 0.0f;
+                    planspeed.y = 0.0f;
+                    Path_correction();
+                    target_chassis_twist_.vx = speed.x;
+                    target_chassis_twist_.vy = speed.y;
+                }
+                else
+                {
+                    flag = 0;
+                    flag_run = 1;
+                    path_line_.plan_reset();
+                    path_line_.Reset();
+                    planspeed.x = 0.0f;
+                    planspeed.y = 0.0f;
+                    chassis_status_ = CHASSIS_STOP;
+                    Path_correction();
+                    target_chassis_twist_.vx = speed.x;
+                    target_chassis_twist_.vy = speed.y;
+                }
             }
         }
         else
         {
             target_chassis_twist_.vx = 0.0f;
             target_chassis_twist_.vy = 0.0f;
+        }
+        if (path_line_.index_ == 1)
+        {
+            if (path_flag == 0)
+            {
+        
+                target_yaw_ = -90.0f;
+//                if (abs(target_yaw_ - yaw) > 1.0f)
+//                {
+//                    target_chassis_twist_.vx = 0.0f;
+//                    target_chassis_twist_.vy = 0.0f;
+//                }
+            }
         }
         // 获取当前角度
         float yaw_real_angle = yaw;
@@ -515,20 +534,52 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
 
 void OmniChassis_Setup::Path_correction(void)
 {
-    pathEnd = path_line_.get_bezier_curve().Get_Point(1.0f);
+    // 获取曲线（带保护）
+    BezierCurve &curve = path_line_.get_bezier_curve();
+
+    pathEnd = curve.Get_Point(1.0f);
     // 1. 找最近点+t值：获取路径上距离当前位置最近的点及其参数 tNearest
-    nearestPt = GetPathNearestPoint(path_line_.get_bezier_curve(), robot_pos_, tNearest);
+    nearestPt = GetPathNearestPoint(curve, robot_pos_, tNearest);
+
+    // 终点纠偏补丁：如果非常接近终点，直接使用终点位置吸附
+    // tNearest > 0.99 表示基本到了终点，或者 Is_End()==false 表示规划已结束
+    if (tNearest > 0.99f || path_line_.Is_End() == false)
+    {
+        Vector2D endPt = curve.Get_End_point();
+        // 如果曲线未初始化（例如空曲线），不进行操作
+        if (endPt.magnitude() < 0.0001f && curve.Get_Start_point().magnitude() < 0.0001f)
+        {
+            speed = planspeed; // 保持原有速度（通常是0）
+            return;
+        }
+
+        Vector2D errorVec = endPt - robot_pos_;
+
+        // 终点吸附增益，可以根据需要调整，相当于位置环 P 参数
+        float final_kp = 2.0f;
+        corrVelocity = errorVec * final_kp;
+
+        // 限制最大纠偏速度，防止终点抖动
+        float max_corr = 0.5f;
+        if (corrVelocity.magnitude() > max_corr)
+        {
+            corrVelocity = corrVelocity.normalize() * max_corr;
+        }
+
+        speed = planspeed + corrVelocity; // 叠加到规划速度上
+        return;
+    }
+
     // 2. 找前视点+前进方向：根据最近点和前视距离，寻找前视点及其参数 tLookahead
-    lookaheadPt = FindLookaheadPoint(path_line_.get_bezier_curve(), tNearest, tLookahead);
-    lookaheadTangent = path_line_.get_bezier_curve().Get_Tangent_Vector(tLookahead);
+    lookaheadPt = FindLookaheadPoint(curve, tNearest, tLookahead);
+    lookaheadTangent = curve.Get_Tangent_Vector(tLookahead);
     // 3. 计算横向偏差：计算机器人当前位置到路径切线的垂直距离
-    lateralError = CalculateLateralError(path_line_.get_bezier_curve(), robot_pos_, nearestPt, tLookahead);
+    lateralError = CalculateLateralError(curve, robot_pos_, nearestPt, tLookahead);
     // 4. 横向偏差PID控制：计算横向纠偏速度大小
     correctspeed = pid_track.pid_calc(0.0f, lateralError);
     Vector2D corrDir(-lookaheadTangent.y, lookaheadTangent.x); // 纠偏方向（垂直前进方向，左右纠偏）
     corrVelocity = corrDir * correctspeed;                     // 合成纠偏速度（方向+大小）
-    // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-    planspeed = path_line_.plan(robot_pos_);
+
     // baseVelocity = lookaheadTangent * planspeed.magnitude();
     speed = planspeed + corrVelocity; // 最终速度 = 规划的前进速度 + 横向纠偏速度
 }
@@ -539,6 +590,16 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.plan_reset();
     path_line_.Reset();
     path_line_.Add_Start_Point(Vector2D{robot_pos_.x, robot_pos_.y}, path_param_);
-    path_line_.Add_Point(Vector2D{1.9f, 0.8f});
-    path_line_.Add_End_Point(Vector2D{1.94f, 0.12f});
+    path_line_.Add_Point(Vector2D{1.7f, 0.7f});
+    path_line_.Add_End_Point(Vector2D{1.98f, 0.19f});
+
+    //    target_yaw_ = 0.0f;
+    //    path_line_.plan_reset();
+    //    path_line_.Reset();
+    //    path_line_.Add_Start_Point(Vector2D{robot_pos_.x, robot_pos_.y}, path_param_);
+    //    path_line_.Add_End_Point(Vector2D{1.7f, 0.7f});
+    //
+    //
+    //    path_line1_.Add_Start_Point(Vector2D{1.7f, 0.7f} , path_param_);
+    //    path_line1_.Add_End_Point(Vector2D{1.98f, 0.19f});
 }

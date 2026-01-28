@@ -278,13 +278,14 @@ void SpeedPlanner_Demo::init()
 //    path1.Add_Point(Vector2D{0, 1}, 0.5f);
 //    path1.Add_Point(Vector2D{0, 0}, 0.5f);
 //    path1.Add_End_Point(Vector2D{1, 1}, 0);
+pid_track.set_params(track_pid_params, 0.0f);
 
 ////////////////////////////////////////////////////////////
 #endif
 #if Path_s
 
 #endif
-    pid_track.set_params(track_pid_params, 0.0f);
+    
     start(osPriorityNormal, 256);
 }
 

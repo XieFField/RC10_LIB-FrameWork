@@ -74,6 +74,7 @@ public:
     #if debug_ladar
             this->setThreeWheelSolver(false);
     #endif
+        pid_track.set_params(track_pid_params, 0.0f);
 
         this->start(osPriorityHigh, 512);
         setTargetKFS(11);
@@ -95,6 +96,7 @@ public:
 private:
     int flag = 0;
     int flag_run = 0;
+    int flag_1=0;
     int path_flag=0;
 
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
@@ -104,6 +106,7 @@ private:
 
     //Path path_;
     Path_line path_line_;
+    Path_line path_line1_;
 
     Vector2D original_point_={-0.48f,-0.48f};
 
@@ -137,7 +140,7 @@ private:
 
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
     
-    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 30.0f, .maxJerk = 30.0f, .maxSpeed = 1.5f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 30.0f, .maxJerk = 100.0f, .maxSpeed = 1.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
     MF_AutoCtrler::PathNode_S KFS_result_ = {0, 0, 0, 0, 0, 26};
     /**
      * @brief 获取路径上距离机器人最近的点
