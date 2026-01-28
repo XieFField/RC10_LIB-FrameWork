@@ -54,7 +54,7 @@ void Robot_WeaponSage_Setup::loop()
 }
 int CNT=0;
 float traverse_rate=0.002;
-float weapon_launch_rate=0.002;
+float weapon_launch_rate=0.0002;
 float Kp_traverse=0.2;
 
 

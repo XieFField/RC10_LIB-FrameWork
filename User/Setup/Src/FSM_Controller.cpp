@@ -156,7 +156,7 @@ void FSM_Controller::auto_ctrl()
             //暂时不把路径规划部分纳入
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
 
-            arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            arm_setup_->setArmStatus(ARM_IDLE);
             break;
         }
 
@@ -165,6 +165,7 @@ void FSM_Controller::auto_ctrl()
         {
             //weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
+            arm_setup_->setArmStatus(ARM_IDLE);
             break;
         }
     }
