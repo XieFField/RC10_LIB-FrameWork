@@ -52,7 +52,7 @@ extern "C" {
 三轮： 
         |1
 
-    3 /    \ 2   对应的底盘电机编号
+    2 /    \ 3   对应的底盘电机编号
 
 四轮:     2 /     \  3 对应的底盘电机编号
                          
@@ -62,9 +62,33 @@ extern "C" {
 template <std::size_t WheelCount>
 class Chassis_Omni : public Chassis_Base<WheelCount> {
 public:
+    struct wheel_init_config
+    {
+        float theta; // （单位：度）
+        float x;     // （单位：米）
+        float y;     // （单位：米）
+    };
+
+    struct init_config
+    {
+        float wheel_radius; // 轮子半径 (m)
+        float max_wheel_rpm; // 轮子最大RPM
+        wheel_init_config wheels[WheelCount]; // 轮子配置
+    };
+
+private:
+    struct wheel_calculate_config
+    {
+        float cos_theta;
+        float sin_theta;
+        float radius; // 等效半径 (m)
+    };
+    
+public:
     Chassis_Omni(float wheel_radius, float max_wheel_rpm, float chassis_radius);
     // 等腰三角形参数构造（仅三轮）：base=底边长度，side=腰长
     Chassis_Omni(float wheel_radius, float max_wheel_rpm, float base_length, float side_length, bool three_wheel);
+    Chassis_Omni(init_config& config);
 
     void updateKinematics() override; // 更新运动学，调用逆解和正解
 
@@ -82,6 +106,8 @@ private:
 
     // 三轮解算器选择标志（只在 WheelCount==3 时有效）
     bool use_three_solver_ = true;
+    wheel_init_config wheel_config_[WheelCount]; // 轮子配置
+    wheel_calculate_config wheel_calculate_config_[WheelCount]; // 轮子计算配置
 };
 
 

@@ -9,7 +9,7 @@
 /*
 
   Reposition_SendData函数用于重定位，id为1则仅重定位X,Y坐标；id2可以
-  额外重定位yaw, id3可将imu断电重启
+  额外重定位yaw, id3可将HWT101CT断电重启
   
 */
 #include "Module_Position.h"
@@ -52,7 +52,8 @@ Position* Position::GetInstance(UART_HandleTypeDef *uart_handle)
 // 初始化UART
 void Position::InitUART() 
 {
-    if (uart_initialized_) {
+    if (uart_initialized_) 
+	{
         return; // 已经初始化过
     }
     UART_HandleTypeDef *uart_handle=Position::UART_::GetUartHandle();
@@ -67,7 +68,7 @@ void Position::InitUART()
 
 void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
 {
-  uint8_t count = 0;
+  	uint8_t count = 0;
 	uint8_t i = 0;
 	uint8_t CRC_check[2];//CRC校验位，此文件未启用
 	
@@ -229,11 +230,11 @@ void Position::Update_RawPosition(float value[5])
 	RawPosData.Speed_Y = value[4];
 
    //世界坐标
-	RealPosData.world_yaw = RawPosData.angle_Z;
+	RealPosData.world_yaw = -RawPosData.angle_Z;
   RealPosData.world_x   =  RawPosData.Pos_X + RealPosData.dx;
 	RealPosData.world_y   =  RawPosData.Pos_Y + RealPosData.dy;
 
-	RealPosData.dyaw = RawPosData.Speed_Yaw;
+	RealPosData.dyaw = -RawPosData.Speed_Yaw;
 
 }
 

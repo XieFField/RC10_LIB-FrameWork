@@ -43,6 +43,8 @@ extern "C" {
 #include "Module_Air_joy.h"
 #include "Module_Position.h"
 #include "Locate_Setup.h"
+#include "SystemDetect_Task.h"
+#include "Module_HWT.h"
 
 /*==============Controller===============*/
 #include "FSM_Controller.h"

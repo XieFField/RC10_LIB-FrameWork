@@ -43,6 +43,14 @@
  *   2. 在拾取第一个KFS的state_return阶段，机械臂会前往第二个KFS的初始位置(0/180度)，并且升高到安全高度(0.2m)
  *   3. 然后进入第二个KFS的拾取流程
  *   4. 第二个KFS的拾取流程和第一个类似，拾取完成后state_return到初始位置(0度)，结束。
+ * 
+ *  @version 8.0    
+ *    对auto模式下面的auot_onlyOne进行策略修改
+ *    删去carrying阶段，改为aim_ext执行完，即吸取到KFS后，直接return回初始位置
+ *    但为了云台旋转不会打到KFS，所以在auto_onlyone中，return阶段在云台旋转回初始位置的同时，升到最高高度
+ *    (同样需要遵守安全高度下的安全角度限制)
+ *    且return到的位置不固定为0度，而是和起始位置相反，若起始是0，则return到180度，若起始是180度，则return到0度
+ *    (本质是和行进方向相反)，而且在return阶段的云台旋转策略跟随sign_align阶段的旋转策略。
  */
 
 #ifndef __ARM_SETUP_H
@@ -91,6 +99,12 @@ typedef struct{
     bool changeTarget_state = false; //切换目标状态标志
     float last_right_x = 0.0f; //上次右摇杆横向数据
     float last_right_y = 0.0f; //上次右摇杆纵向数据
+
+    int8_t last_manual_extend = 0; //上次手动伸展状态
+    int8_t last_manual_sucker = 0; //上次手动吸盘状态
+
+    int8_t extend_switch_offset = 0; // 伸展开关偏移绑定
+    int8_t sucker_switch_offset = 0; // 吸盘开关偏移绑定
 }arm_ctrl_status_S;
 
 typedef enum{
@@ -120,6 +134,7 @@ typedef struct{
     const float stretch_time_s = 0.613f; //伸展时间，单位秒
 
     float gimbal_max_rad = 0.0f; //云台最大旋转角速度，单位弧度每秒
+    float rotateSpeedRate_ = 0.8f; //云台旋转速度比例
 }arm_timeset_S;
 
 typedef struct{
@@ -213,7 +228,15 @@ public:
     ArmSetup(Arm_InitData_S init_Data)
         : Robot_Arm(init_Data), RtosTask("ArmSetup", 1) 
     {
-        auto_ctrl_.time_set.gimbal_max_rad = (400.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f); //云台最大角速度(rad/s)
+        auto_ctrl_.time_set.gimbal_max_rad = (120.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f); //云台最大角速度(rad/s)
+    }
+
+    bool isArmcalibrated() const
+    {
+        if(arm_ctrlStatus.is_calibrating)
+            return true;
+        else
+            return false;
     }
 
     void init(M3508 *motor_ArmLaunch, M2006 *motor_ArmStretch, 
@@ -290,7 +313,7 @@ public:
 
         MF_AutoCtrler::PathNode_S temp = MF_AutoCtrler::PathNodeResult_calc(auto_ctrl_.now_armPosition,
                                        auto_ctrl_.targetKFS[0], 
-                                        auto_ctrl_.targetKFS[1]);
+                                        auto_ctrl_.targetKFS[1],26);
                                         
         auto_ctrl_.path.bestB1 = temp.bestB1;
         auto_ctrl_.path.bestBMF1 = temp.bestBMF1;
@@ -304,10 +327,11 @@ public:
         auto_ctrl_.pathPos.entranceMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.entranceMap);
         auto_ctrl_.pathPos.exitMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.exitMap);
 
+#if ARM_AUTO_DEBUG_NOCHASSIS
         auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
 
         auto_ctrl_.now_ChassisPosition.y -= 2.0f; //假设已经到达前一桩正前方0.5米处
-
+#endif
         return true;
     }
 private:
@@ -469,10 +493,14 @@ protected:
 
         #else
 
+            // Locate_Setup *locate_ptr = Locate_Setup::getInstance();
+
+            // return locate_ptr->get_FK_ChassisSpeed_inWorld();
             Locate_Setup *locate_ptr = Locate_Setup::getInstance();
-
-            return locate_ptr->get_FK_ChassisSpeed_inWorld();
-
+            Point2D speed = {0};
+            speed.x = locate_ptr->get_FK_ChassisSpeed_inWorld().x;
+            speed.y = locate_ptr->get_FK_ChassisSpeed_inWorld().y;
+            return speed;
         #endif
     }
 
@@ -631,6 +659,7 @@ protected:
             }
         }
     }
+    
     
 };
 

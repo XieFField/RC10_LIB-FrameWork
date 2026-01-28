@@ -50,7 +50,7 @@ typedef struct {
 
     float stretch_Ratio_; // 伸展比率，伸展电机转一圈，伸展多少米   0.0942米(94.2mm)
     float launch_Ratio_; // 升降比率，升降电机转一圈，升降多少米    0.01099米(109.9mm)
-    float rotate_gearRatio_; // 旋转减速比，旋转电机转一圈，机械臂转多少度 144.878度()
+    float rotate_gearRatio_; // 旋转减速比，旋转电机转一圈，机械臂转多少度 144.878度()   电机转222.289627度，机械臂转90度。  新矫正145.755789度
     float pitch_gearRatio_; // 俯仰减速比，俯仰电机转一圈，末端关节转多少度 360度，直驱
 
     float min_rotate_angle_; // 最小旋转角度

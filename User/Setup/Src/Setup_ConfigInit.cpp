@@ -13,6 +13,9 @@ DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8号M3508/M2006电机
 
 DJI_Group DJIGroupCAN2_Low(send_idLow(), CAN2_Bus); // 1~4号M3508/M2006电机
 
+Point2D lader_install_offset = {0.0f, 0.0f}; // 激光雷达安装偏移，单位米
+Point2D arm_install_offset = {0.480f, 0.02f};   // 机械臂安装偏移，单位米
+
 
 /*==============Controller Instances===========*/
 uint8_t laser_rx_buffer[20];
@@ -26,7 +29,26 @@ LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
 
-OmniChassis_Setup ChassisOmni(0.442f/2.f,420, 0.74f, 0.8363f, true); // 轮子半径，最大轮子转速，底盘 底 腰
+Chassis_Omni<3>::init_config chassis_initData = {
+    .wheel_radius = 0.442f/2.f,
+    .max_wheel_rpm = 420,
+    .wheels[0] = {
+        .x = 0.0f,
+        .y = 0.375f,
+        .theta = 0.0f  // 单位：度
+    },
+    .wheels[1] = {
+        .x = -0.37f,
+        .y = -0.375f,
+        .theta = -63.741f + 180.0f  // 单位：度
+    },
+    .wheels[2] = {
+        .x = 0.37f,
+        .y = -0.375f,
+        .theta = 63.741f + 180.0f  // 单位：度
+    }
+};
+OmniChassis_Setup ChassisOmni(chassis_initData); // 轮子半径，最大轮子转速，底盘 底 腰
 
 
 
@@ -163,6 +185,9 @@ void debug_init()
 #if DEBUG
 laserpos.Init();//锟斤拷锟斤拷锟斤拷
 #endif
+
+
+	SystemDetectTaskHandle = osThreadNew(StartSystemDetectTask, NULL, &SystemDetectTask_attributes);
 }
 
 void CAN_Motor_Init(void);
@@ -172,10 +197,13 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 void ALL_Setup_ConfigInit(void)
 {
     test_task.init();
-   Position* pos = Position::GetInstance(&huart1);
-   pos->InitUART();
+   // Position* pos = Position::GetInstance(&huart1);
+   // pos->InitUART();
+
+   HWT101CT* imu = HWT101CT::GetInstance(&huart1);
+   imu->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
-   debug_init();
+   //debug_init();
 	
    CAN_Motor_Init();
 
@@ -213,7 +241,7 @@ void ALL_Setup_ConfigInit(void)
 	 instance_man.InstanceManager_Init();
 //激光重定位解析数据初始化
 	 
-     set1->init(&instance_man,&usb_1);	
+     set1->init(&instance_man,&usb_1,lader_install_offset ,arm_install_offset);	
      set1->laser_initData_.d=0.5;
      set1->locate_setup_init();
      set1->set_startToLRL(true);

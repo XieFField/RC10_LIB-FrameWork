@@ -40,27 +40,30 @@ UART_* InstanceManager::GetInstanceByUartHandle(UART_HandleTypeDef *huart) {
 // UART_ ???????
 UART_::UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle)
 {
-				this->rx_buffer= rx_buffer;
-				this->rx_buffer_size=rx_buffer_size;
-        this->uarthandle_ = uart_handle;
-        if(this->uarthandle_ == NULL)
-				{
-            Error_Handler();
-				}
-				else
-				{
-				InstanceManager::RegisterInstance(this,NULL);
-				// ????????
-				}
+	this->rx_buffer= rx_buffer;
+	this->rx_buffer_size=rx_buffer_size;
+	this->uarthandle_ = uart_handle;
+	if(this->uarthandle_ == NULL)
+	{
+		Error_Handler();
+	}
+	else
+	{
+		InstanceManager::RegisterInstance(this,NULL);
+	// ????????
+	}
 }
 
 void UART_::UART_Init()
 {
-				if(uarthandle_ == NULL){
-									Error_Handler();}
-       else {
-            HAL_UARTEx_ReceiveToIdle_DMA(uarthandle_, rx_buffer, rx_buffer_size);
-        } 
+	if(uarthandle_ == NULL)
+	{
+		Error_Handler();
+	}
+    else 
+	{
+        HAL_UARTEx_ReceiveToIdle_DMA(uarthandle_, rx_buffer, rx_buffer_size);
+    } 
 }
 
 
@@ -88,8 +91,10 @@ USB_CDC_::USB_CDC_(USBD_HandleTypeDef *usb_handle)
 				InstanceManager::RegisterInstance(NULL,this);
 				}
 }
-void UART_::Callback_Fuc(uint8_t *buf, uint16_t len){
-    if (this->RxCallback_Fuc != nullptr) {
+void UART_::Callback_Fuc(uint8_t *buf, uint16_t len)
+{
+    if (this->RxCallback_Fuc != nullptr) 
+	{
         RxCallback_Fuc(buf, len);
     }
 }
@@ -219,9 +224,9 @@ extern "C" {
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
     if (instance != nullptr) {
-       // ??? HAL ???? Size ?????????????????????
+       // ??? HAL ????? Size ?????????????????????
         instance->Callback_Fuc(huart->pRxBuffPtr, Size);
-        // ???????????MA?
+        // ???????????MA??
         HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
     }
 }
@@ -231,7 +236,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 	// ??????????????????????
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_PE))
     {
-        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_PEF);// ???????????????????
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_PEF);// ????????????????????
     }
     
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_FE))
@@ -246,12 +251,12 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_ORE))
     {
-        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_OREF);// ?????????????????
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_OREF);// ??????????????????
     }
 	
 	if (__HAL_UART_GET_FLAG(huart, UART_FLAG_LBDF))
     {
-        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_LBDF);// LIN???????????????
+        __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_LBDF);// LIN????????????????
     }
 	
 	HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);

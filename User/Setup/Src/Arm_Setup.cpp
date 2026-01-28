@@ -5,7 +5,7 @@ static bool s_has_recorded_strategy = false; //记录是否已经记录过策略
 /**
  * @brief 寻主循环
  */
-
+// int numnum = 1;
 void ArmSetup::loop()
 {
     if(!arm_ctrlStatus.init_flag)
@@ -19,7 +19,7 @@ void ArmSetup::loop()
 
 
     //目前使用虚拟坐标进行自控逻辑验证
-    if(arm_status_ == ARM_AUTO_CONTROL)
+    if(arm_status_ == ARM_AUTO_CONTROL&&arm_ctrlStatus.auto_debug_start == 1)
     {
         auto_ctrl_.now_chassis_speed = get_nowChassisSpeed();
         auto_ctrl_.now_armPosition = get_nowArmPosition();
@@ -34,8 +34,10 @@ void ArmSetup::loop()
         if(ifFirst)
         {
             if(arm_ctrlStatus.auto_debug_start == 1)
+            {
                 this->start_toAutoCtrl(true);
-            ifFirst = false;
+                ifFirst = false;
+            }
         }
     }
 
@@ -87,15 +89,10 @@ void ArmSetup::loop()
         default:
             break;
     }
-    // print_cout++;
-    // if(print_cout >= 10)
-    // {
-    //     debug_uart.Printf_Ladar(auto_ctrl_.now_armPosition.x, auto_ctrl_.now_armPosition.y); 
-    //     print_cout = 0;
-    // }
-
-    debug_uart.printf_DMA("%f,%f\n\r",this->get_currentJointStatus().rotateJoint_angle_,
-                                target_joint_status_.rotateJoint_angle_);
+    // if(numnum==1)
+    //     debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getTotalAngle());
+    // else if(numnum == 2)
+    //     debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getRPM());
 
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
@@ -103,7 +100,7 @@ void ArmSetup::loop()
 
 uint8_t test_signal = 0;
 float test_current = 0.0f;
-float rotate_rate = 1.0f;
+float rotate_rate = 1.2f;
 float launch_rate = 0.012f;
 int cnt = 0;
 /**
@@ -120,6 +117,26 @@ void ArmSetup::manualControl()
         /*串联臂*/
         last_joint_status_ = this->get_currentJointStatus();
         target_joint_status_ = last_joint_status_;
+
+        // 绑定伸展状态
+        // 判定当前是伸还是缩
+        // 假设阈值为 max_stretchLength / 2 或者 0.05m
+        float current_stretch = this->get_currentJointStatus().stretchJoint_Length_;
+        int8_t current_extend_logical = (current_stretch > 0.01f) ? 1 : 0;
+        
+        // 记录状态
+        arm_ctrlStatus.last_manual_extend = current_extend_logical;
+        
+        // 计算偏移: offset = switch ^ state
+        // 假设 switch只有0和1
+        arm_ctrlStatus.extend_switch_offset = (airjoy_data_.SWA & 0x01) ^ current_extend_logical;
+
+
+        // 绑定吸盘状态
+        int8_t current_sucker_logical = (this->getSuckerStatus() == Sucker_Status_E::SUCK) ? 1 : 0;
+        arm_ctrlStatus.last_manual_sucker = current_sucker_logical;
+        
+        arm_ctrlStatus.sucker_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_sucker_logical;
 
         last_arm_status_ = ARM_MANUAL_CONTROL;
     }
@@ -188,51 +205,6 @@ void ArmSetup::manualControl()
         target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
         cnt = 0;
     }
-    // if(_tool_Abs(airjoy_data_.right_x) < 0.1)
-    // {
-    //     auto_ctrl_.manual_ctrlForgrip_.changeTarget_state = false;
-    // }
-    // else if(airjoy_data_.right_x > 0.5f)
-    // {
-    //     if(!auto_ctrl_.manual_ctrlForgrip_.changeTarget_state)
-    //     {
-    //         target_joint_status_.rotateJoint_angle_ += 90.0f;
-    //         auto_ctrl_.manual_ctrlForgrip_.changeTarget_state = true;
-    //     }
-    // }
-    // else if(airjoy_data_.right_x < -0.5f)
-    // {
-    //     if(!auto_ctrl_.manual_ctrlForgrip_.changeTarget_state)
-    //     {
-    //         target_joint_status_.rotateJoint_angle_ -= 90.0f;
-    //         auto_ctrl_.manual_ctrlForgrip_.changeTarget_state = true;
-    //     }
-    // }
-
-    // 云台高度低于safe_height的时候，云台角度限制在90~180度之间
-    // if(this->get_currentJointStatus().launchJoint_Height_ < auto_ctrl_.flag.safe_height)
-    // {
-    //     float current_angle = target_joint_status_.rotateJoint_angle_;
-    //     float norm_angle = fmodf(current_angle, 360.0f);
-    //     if(norm_angle < 0.0f) norm_angle += 360.0f;
-
-    //     // 检查是否在90~180之间
-    //     // 如果不在，强制拉回最近的边界
-    //     if(norm_angle < 90.0f)
-    //     {
-    //         // 比如是 80度，拉回90度
-    //         // 比如是 0度，拉回90度
-    //         // 比如是 350度 (-10)，拉回90度? 不，应该看离谁近，但这里要求限制在90~180
-    //         // 简单处理：直接覆盖为90
-    //          target_joint_status_.rotateJoint_angle_ = 90.0f;
-    //     }
-    //     else if(norm_angle > 182.0f)
-    //     {
-    //         // 比如 190度，拉回180
-    //          target_joint_status_.rotateJoint_angle_ = 180.0f;
-    //     }
-    // }
-
 
     //pitch 开关
     if(airjoy_data_.scroll_wheel == 0x00)
@@ -241,13 +213,24 @@ void ArmSetup::manualControl()
         target_joint_status_.suckerJoint_angle_ = 95.0f; // 末端关节开
 
     //stretch 开关
-    if(airjoy_data_.SWA == 0x00)
+    // 计算当前应当的逻辑状态 logic = switch ^ offset
+    int8_t target_extend_logical = (airjoy_data_.SWA & 0x01) ^ arm_ctrlStatus.extend_switch_offset;
+    
+    // 更新记忆
+    arm_ctrlStatus.last_manual_extend = target_extend_logical;
+
+    if(target_extend_logical == 0)
         target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位置
-    else if(airjoy_data_.SWA == 0x01)
+    else
         target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
 
     //吸盘开关
-    if(airjoy_data_.SWD == 0x01) 
+    int8_t target_sucker_logical = (airjoy_data_.SWD & 0x01) ^ arm_ctrlStatus.sucker_switch_offset;
+
+    // 更新记忆
+    arm_ctrlStatus.last_manual_sucker = target_sucker_logical;
+
+    if(target_sucker_logical == 1) 
         this->setSuckerStatus(Sucker_Status_E::SUCK);
     else
         this->setSuckerStatus(Sucker_Status_E::STOP);
@@ -286,7 +269,7 @@ void ArmSetup::autoControl()
      */
     
     if(auto_ctrl_.targetKFS[0] == 0)
-        return; //没有目标KFS，直接返回
+        return; //没有目标KFS，直接返回 
 
     switch(auto_ctrl_.kfs_num)
     {
@@ -496,7 +479,7 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
 
         //步进预测循环
         float T_rot = _tool_Abs(diff) * (PI / 180.0f) / 
-                    (auto_ctrl_.time_set.gimbal_max_rad * 0.3); //云台旋转所需时间(s)
+                    (auto_ctrl_.time_set.gimbal_max_rad * auto_ctrl_.time_set.rotateSpeedRate_); //云台旋转所需时间(s)
 
         bool safe = true;
 
@@ -948,7 +931,7 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
 
     //time calc
     float T_rot = _tool_Abs(diff) * (PI / 180.0f) / 
-                (auto_ctrl_.time_set.gimbal_max_rad * 0.32f); //云台旋转所需时间(s)
+                (auto_ctrl_.time_set.gimbal_max_rad * auto_ctrl_.time_set.rotateSpeedRate_); //云台旋转所需时间(s)
 
     diff_read = diff;
 
@@ -963,11 +946,11 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
         float step_deg = 0.0f;
         if(diff > 0 )
             step_deg = 1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
-                    * 0.32f * 180.0f / PI) * t; //每步旋转
+                    * auto_ctrl_.time_set.rotateSpeedRate_ * 180.0f / PI) * t; //每步旋转
 
         else
             step_deg = -1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
-                    * 0.32f * 180.0f / PI) * t; //每步旋转
+                    * auto_ctrl_.time_set.rotateSpeedRate_ * 180.0f / PI) * t; //每步旋转
         //theta(t)
         if(_tool_Abs(step_deg) > _tool_Abs(diff))
             step_deg = diff; //最后一步直接到达目标角度
@@ -1143,62 +1126,103 @@ bool ArmSetup::state_return(int next_targetKFS)
     float angel = 0.0f;
     bool has_next = (next_targetKFS == 0 || next_targetKFS == 1);
 
-	if(has_next)
-	{
-		int TargetMap;
-		int Target_KFS=auto_ctrl_.targetKFS[next_targetKFS];
-		if(next_targetKFS==0)
-		    TargetMap=auto_ctrl_.path.bestB1;
-		if(next_targetKFS==1)
-		    TargetMap=auto_ctrl_.path.bestB2;
-		
-		angel = MF_AutoCtrler::Get_ArmBaseTargetAngle(TargetMap,auto_ctrl_.KFS_Movedirection[next_targetKFS]);
+    if (has_next)
+    {
+        int TargetMap;
+        int Target_KFS = auto_ctrl_.targetKFS[next_targetKFS];
+        if (next_targetKFS == 0)
+            TargetMap = auto_ctrl_.path.bestB1;
+        if (next_targetKFS == 1)
+            TargetMap = auto_ctrl_.path.bestB2;
+
+        angel = MF_AutoCtrler::Get_ArmBaseTargetAngle(TargetMap, auto_ctrl_.KFS_Movedirection[next_targetKFS]);
     }
     else
     {
-        angel = 0.0f; // 默认返回0度
-    }
-
-//    float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
-    float diff = angel - fmodf(current_angle, 360.0f);
-
-    // 简单的归一化处理，确保 diff 在 -180 ~ 180
-    if(diff > 180.0f) diff -= 360.0f;
-    else if(diff < -180.0f) diff += 360.0f;
-
-    if(_tool_Abs(diff) < 2.0f)
-    {
-        auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST; // 误差极小时，锁定最短路径
-    }
-    else if(has_next)
-    {
-        if(angel == 0)
-            auto_ctrl_.current_strategy=ROTATE_PATH_POSITIVE;
-        else if(angel==180)
-            auto_ctrl_.current_strategy=ROTATE_PATH_NEGATIVE;
-        else
-            auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
-    }
-    else
-    {
-        auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
-    }
-
-    // [单圈模式] 策略修正
-    if(!rotate_multiTurn_)
-    {
-        if(s_has_recorded_strategy)
+        // [Version 8.0] auto_onlyOne return logic
+        if (auto_ctrl_.kfs_num == ONLY_ONE)
         {
-            // [Fix] 有记录：强制反向，严格执行单圈策略 (如 270->180->90->0)
-            if(recorded_carrying_strategy_ == ROTATE_PATH_POSITIVE)
-                auto_ctrl_.current_strategy = ROTATE_PATH_NEGATIVE;
-            else if(recorded_carrying_strategy_ == ROTATE_PATH_NEGATIVE)
-                auto_ctrl_.current_strategy = ROTATE_PATH_POSITIVE;
+            // 获取起始点的地图节点编号
+            int TargetMap = auto_ctrl_.path.bestB1;
+
+            // 获取起始点的朝向 (0度 或 180度)
+            float base_angle = MF_AutoCtrler::Get_ArmBaseTargetAngle(TargetMap, 
+                                    auto_ctrl_.KFS_Movedirection[0]);
+                                
+            // 选择与base_angle相反角度
+            if(_tool_Abs(base_angle - 180.0f) < 0.1f)
+                angel = 0.0f;
+            else if(_tool_Abs(base_angle - 0.0f) < 0.1f)
+                angel = 180.0f;
+            else
+                angel = 0.0f; // Fallback
+
         }
         else
         {
-            // [Fix] 无记录（首次重定位后）：强制最短路径
+            angel = 0.0f; // 默认返回0度
+        }
+    }
+
+    //    float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
+    float diff = angel - fmodf(current_angle, 360.0f);
+
+    // 简单的归一化处理，确保 diff 在 -180 ~ 180
+    if (diff > 180.0f)
+        diff -= 360.0f;
+    else if (diff < -180.0f)
+        diff += 360.0f;
+
+    if (_tool_Abs(diff) < 2.0f)
+    {
+        auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST; // 误差极小时，锁定最短路径
+    }
+    else if (has_next)
+    {
+        if (angel == 0)
+            auto_ctrl_.current_strategy = ROTATE_PATH_POSITIVE;
+        else if (angel == 180)
+            auto_ctrl_.current_strategy = ROTATE_PATH_NEGATIVE;
+        else
             auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
+    }
+    else
+    {
+        if (auto_ctrl_.kfs_num == ONLY_ONE)
+            auto_ctrl_.current_strategy = recorded_align_strategy_;
+        else
+            auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
+    }
+
+    // [单圈模式] 策略修正
+    if (!rotate_multiTurn_)
+    {
+        if (auto_ctrl_.kfs_num == ONLY_ONE)
+        {
+            // [Version 8.0] 单圈模式下，OnlyOne模式强制跟随Align阶段的旋转方向
+            if(s_has_recorded_strategy)
+                auto_ctrl_.current_strategy = recorded_align_strategy_;
+            else
+            {
+                // [Fix] 无记录（首次重定位后）：强制最短路径
+                auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
+            }
+        }
+        else
+        {
+            if (s_has_recorded_strategy)
+            {
+                // [Fix] 有记录：强制反向，严格执行单圈策略 (如 270->180->90->0)
+                if (recorded_carrying_strategy_ == ROTATE_PATH_POSITIVE)
+                    auto_ctrl_.current_strategy = ROTATE_PATH_NEGATIVE;
+                else if (recorded_carrying_strategy_ == ROTATE_PATH_NEGATIVE)
+                    auto_ctrl_.current_strategy = ROTATE_PATH_POSITIVE;
+            }
+            else
+            {
+                // [Fix] 无记录（首次重定位后）：强制最短路径
+                auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
+            }
         }
     }
 
@@ -1215,6 +1239,8 @@ bool ArmSetup::state_return(int next_targetKFS)
 /**
  * @brief 寻自动单个
  */
+
+ float test_target = 180.0f;
 void ArmSetup::auto_onlyOne()
 {
     /**
@@ -1246,9 +1272,11 @@ void ArmSetup::auto_onlyOne()
                 bool return_done = false;
 
                 return_done = state_return(0); //头一个KFS，传入0
-
                 if(return_done)
                     auto_ctrl_.now_state = STATE_TO_TARGET_HIGHT;
+
+                // this->set_RotateAngle(test_target);
+
             }
             else
             {
@@ -1298,22 +1326,22 @@ void ArmSetup::auto_onlyOne()
             auto_ctrl_.flag.ext_done = state_aimExt(auto_ctrl_.targetKFS[0]);
             if(auto_ctrl_.flag.ext_done)
             {
-                auto_ctrl_.now_state = STATE_CARRYING;
-            }
-            break;
-        }
-
-        case STATE_CARRYING:
-        {
-            // static bool carrying_done = false;
-            state_carrying(auto_ctrl_.targetKFS[0], auto_ctrl_.flag.carry_done);
-            //判断是否放置完毕
-            if(auto_ctrl_.flag.carry_done)
-            {
                 auto_ctrl_.now_state = STATE_RETURN;
             }
             break;
         }
+
+        // case STATE_CARRYING:
+        // {
+        //     // static bool carrying_done = false;
+        //     state_carrying(auto_ctrl_.targetKFS[0], auto_ctrl_.flag.carry_done);
+        //     //判断是否放置完毕
+        //     if(auto_ctrl_.flag.carry_done)
+        //     {
+        //         auto_ctrl_.now_state = STATE_RETURN;
+        //     }
+        //     break;
+        // }
 
         case STATE_RETURN:
         {
@@ -1560,8 +1588,8 @@ void ArmSetup::calibrateMotor()
     {
         //relocate
         this->motor_stretch_->relocate_totalAngle(0.0f);
-        this->motor_pitch_->relocate_totalAngle(180.0f);
-        this->motor_rotate_->relocate_totalAngle(447.272888f);
+        this->motor_pitch_->relocate_totalAngle(179.9f); // 使用179.9f避免180度浮点临界值导致归一化为-180度
+        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(179.9f));
         this->motor_launch_->relocate_totalAngle(0.0f);
 
         //set current to 0
@@ -1597,7 +1625,7 @@ void ArmSetup::idle()
     this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
     this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
 
-    this->setSuckerStatus(Sucker_Status_E::STOP);
+    // this->setSuckerStatus(Sucker_Status_E::STOP); // 保持上一刻状态，不强制关闭
 }
 
 float stretch_starttime = 0;
@@ -1680,17 +1708,18 @@ void ArmSetup::debug()
 
 Arm_InitData_S arm_initData = {
    .max_launchHeight_ = 0.29f,
-   .max_stretchLength_ = 0.120f,
+   .max_stretchLength_ = 0.105f,
    .arm_length_ = 0.6f,
    .end_link_length_ = 0.08f,
 
    .stretch_Ratio_ = 0.08417f,
    .launch_Ratio_ = 0.07221f,
-   .rotate_gearRatio_ = 144.878f,
+//    .rotate_gearRatio_ = 144.878f,  //旧的
+   .rotate_gearRatio_ = 145.755789f,
    .pitch_gearRatio_ = 360.0f,
 
    .min_rotate_angle_ = 0.0f,
-   .max_rotate_angle_ = 359.999f,
+   .max_rotate_angle_ = 359.99999f,
 
    .Sucker_GPIO_Port = SUCKER_GPIO_Port,
     .Sucker_GPIO_Pin = SUCKER_Pin,

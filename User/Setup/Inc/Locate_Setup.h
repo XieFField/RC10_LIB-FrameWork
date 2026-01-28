@@ -30,6 +30,8 @@ extern "C" {
 #include "usbd_cdc_if.h"
 #include "gpio.h"
 
+#include "Module_HWT.h"
+
 #define PI		3.14159265358979323846f			// 定义圆周率常量PI
 #define MAX_SEND_BUF_SIZE 128// 发送缓冲区大小
 
@@ -111,8 +113,7 @@ public:
     {
         this->Laser_pos_instance = Laser_pos_instance;
     }
-    void Get_Rader_Data();
-		void USB_SendData();
+
     /**
      * @brief 设置是否启动激光重定位
      */
@@ -124,9 +125,11 @@ public:
     Point2D get_ArmPos_inWorld(){return arm_pose_inWorld_;}
 
     Point3D get_RobotPos_inWorld(){return robot_pose_inWorld_;}
+    Point3D get_RobotSpeed_inWorld(){return robot_speed_inworld_;}
+//    Point3D get_LidarPos_inWorld(){return lidar_pose_inWorld_;}
+	
 
-    Point3D get_LidarPos_inWorld(){return lidar_pose_inWorld_;}
-		
+
     Point2D get_FK_ChassisSpeed_inWorld(){return fk_chassisSpeed_inWorld_;}
 
 	void locate_setup_init(){this->start(osPriorityNormal, 256);}
@@ -145,14 +148,15 @@ public:
     bool ifSwitch2On(){return swtich2_isOn;}
 
 private:
-	
+    void Get_Rader_Data();
+    void USB_SendData();
 	Locate_Setup():RtosTask("Locate_Setup", 1), Laser_pos_instance(nullptr) {}
 	  
     Laser_InstanceManager* Laser_pos_instance;
 
-	  Lader_Data Lad_Data={0};
-	  USB_CDC_ *usb_handle;
-	  LASER_MODE laser_mode=LEFT;//默认起始位置在左
+    Lader_Data Lad_Data={0};
+    USB_CDC_ *usb_handle;
+    LASER_MODE laser_mode=LEFT;//默认起始位置在左
     bool is_startToLRL_ = false; // 是否启动激光重定位
     void update(); //更新
 
@@ -162,14 +166,21 @@ private:
      * @brief 雷达坐标变换计算->robot_in_world, arm_in_world
      */
     void lader_transform_caculate(); //雷达坐标变换计算
-    void update_Lidar_data(); //更新雷达数据
+    void update_Lidar_data();        //更新雷达数据
 
     Point2D lidar_install_pose_ = {0}; // 雷达安装相对底盘中心
     Point2D arm_install_pose_ = {0};   // 机械臂安装相对底盘中心
 
     Point3D robot_pose_inWorld_ = {0}; // 机器人在世界坐标系位置
+    Point3D robot_speed_inworld_ = {0}; // 机器人在世界坐标系速度
+
+
+
     Point2D arm_pose_inWorld_ = {0};   // 机械臂底座在世界坐标系位置
-    Point3D lidar_pose_inWorld_ = {0}; // 雷达在世界坐标系位置
+
+
+    // Point3D lidar_pose_inWorld_ = {0}; // 雷达在世界坐标系位置
+    
 
     Point2D fk_chassisSpeed_inWorld_ = {0}; // 正解底盘速度 世界坐标系
 
@@ -185,22 +196,15 @@ private:
 
     bool swtich1_isOn = false;
     bool swtich2_isOn = false;
+
+    struct {
+        float x_offset = 0.48f;
+        float y_offset = 0.48f;
+    }coordoffset;
 protected:
     void loop() override;
 };
 uint8_t xor_check(const uint8_t *data, uint32_t length);
-//    }
-
-
-//    ~LaerRelocate_Manager() = default;
-
-
-//    Point2D get_RobotPos_inWorld(){}
-
-//private:
-//    LaserPosition* laser_position_module_[3];
-
-//}
 
 
 #endif

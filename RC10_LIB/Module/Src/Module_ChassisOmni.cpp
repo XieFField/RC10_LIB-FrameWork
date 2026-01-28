@@ -4,38 +4,9 @@
 template <std::size_t WheelCount>
 void Chassis_Omni<WheelCount>::inverseKinematics(const Robot_Twist& twist)
 {
-    // 修正：由于电机或轮子安装方向导致平动反向，在此处对vx, vy取反。yaw_rate保持现状
-    // float vx = -twist.vx;
-    // float vy = -twist.vy;
-    // float yaw_rate = twist.yaw_rate;
-
-    if constexpr (WheelCount == 3)
+    for (uint8_t i = 0; i < WheelCount; ++i)
     {
-        if (use_three_solver_==true)
-        {
-           // 算法 A（默认）：原有实现，顶点使用 chassis_radius_，底边使用 chassis_radius_bottom_
-            this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(twist.vx - twist.yaw_rate * chassis_radius_);
-            this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(twist.vy * COS_31_87 - twist.vx * SIN_31_87 - twist.yaw_rate * chassis_radius_bottom_);
-            this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vy * COS_31_87 - twist.vx * SIN_31_87 - twist.yaw_rate * chassis_radius_bottom_);
-        }
-        else
-        {
-            this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(twist.vx - twist.yaw_rate * chassis_radius_);
-            this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(twist.vy * COS_30 - twist.vx * SIN_30 - twist.yaw_rate * chassis_radius_);
-            this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vy * COS_30 - twist.vx * SIN_30 - twist.yaw_rate * chassis_radius_);
-        }
-    }
-    else if constexpr (WheelCount == 4)
-    {
-        this->wheel_target_rpm_[0] = this->wheelSpeedToMotorRPM(twist.vx * COS_45 - twist.vy * SIN_45 + twist.yaw_rate * chassis_radius_);
-        this->wheel_target_rpm_[1] = this->wheelSpeedToMotorRPM(-twist.vx * COS_45 - twist.vy * SIN_45 + twist.yaw_rate * chassis_radius_);
-        this->wheel_target_rpm_[2] = this->wheelSpeedToMotorRPM(-twist.vx * COS_45 + twist.vy * SIN_45 + twist.yaw_rate * chassis_radius_);
-        this->wheel_target_rpm_[3] = this->wheelSpeedToMotorRPM(twist.vx * COS_45 + twist.vy * SIN_45 + twist.yaw_rate * chassis_radius_);
-    }
-    else
-    {
-        // 其他轮数的全向轮底盘暂不支持
-        return;
+        this->wheel_target_rpm_[i] = this->wheelSpeedToMotorRPM(twist.vx * wheel_calculate_config_[i].cos_theta + twist.vy * wheel_calculate_config_[i].sin_theta + twist.yaw_rate * wheel_calculate_config_[i].radius);
     }
 }
 
@@ -81,18 +52,34 @@ Chassis_Omni<3>::Chassis_Omni(float wheel_radius, float max_wheel_rpm, float bas
 }
 
 template <std::size_t WheelCount>
+Chassis_Omni<WheelCount>::Chassis_Omni(Chassis_Omni<WheelCount>::init_config& config)
+    : Chassis_Base<WheelCount>(config.wheel_radius, config.max_wheel_rpm)
+{
+    for (uint8_t i = 0; i < WheelCount; ++i)
+    {
+        wheel_config_[i] = config.wheels[i];
+        wheel_calculate_config_[i].cos_theta = cosf(config.wheels[i].theta * PI / 180.0f);
+        wheel_calculate_config_[i].sin_theta = sinf(config.wheels[i].theta * PI / 180.0f);
+        wheel_calculate_config_[i].radius = config.wheels[i].x * wheel_calculate_config_[i].sin_theta - config.wheels[i].y * wheel_calculate_config_[i].cos_theta;
+    }
+}
+
+template <std::size_t WheelCount>
 void Chassis_Omni<WheelCount>::computeIsoscelesRadii(float base_length, float side_length, float& top_radius, float& bottom_radius)
 {
     // 等腰三角形：底边 base，腰 side。高度 h = sqrt(side^2 - (base/2)^2)
-    // 取旋转中心为三角形重心：顶点到重心距离 = 2/3 h，底边顶点到重心距离 = sqrt((base/2)^2 + (h/3)^2)
+    // 旋转中心改为三角形内心（角平分线交点）。对于等腰三角形，内心坐标在 x=0，
+    // y = (base * h) / (base + 2*side)。顶点到内心距离 = h - y = 2*side*h/(base + 2*side)
     if (base_length <= 0.f || side_length <= 0.f) { top_radius = 0.f; bottom_radius = 0.f; return; }
     float half_b = 0.5f * base_length;
     float h_sq = side_length * side_length - half_b * half_b;
     if (h_sq <= 0.f) { top_radius = 0.f; bottom_radius = half_b; return; }
     float h = sqrtf(h_sq);
-    top_radius = (2.0f/3.0f) * h;
-    float one_third_h = h / 3.0f;
-    bottom_radius = sqrtf(half_b * half_b + one_third_h * one_third_h);
+    float denom = base_length + 2.0f * side_length;
+    if (denom <= 0.f) { top_radius = 0.f; bottom_radius = half_b; return; }
+    float incenter_y = (base_length * h) / denom; // 从基线到内心的垂直距离
+    top_radius = h - incenter_y; // 顶点到内心距离
+    bottom_radius = sqrtf(half_b * half_b + incenter_y * incenter_y); // 底边端点到内心距离
 }
 
 template<std::size_t WheelCount>
@@ -106,23 +93,40 @@ void Chassis_Omni<WheelCount>::forwardKinematics()
     {
         if(use_three_solver_==true)
         {
-            this->robot_twist_forward.vy = (wheel_speeds[1] - wheel_speeds[2]) / (2.0f*COS_31_87);
-            this->robot_twist_forward.yaw_rate = -(wheel_speeds[1]/2 + wheel_speeds[2]/2 + wheel_speeds[0]*SIN_31_87) / (SIN_31_87 * chassis_radius_+chassis_radius_bottom_);
-            this->robot_twist_forward.vx = -this->robot_twist_forward.yaw_rate * chassis_radius_ - wheel_speeds[0];
+            // inverse uses: w1 = vy*COS - vx*SIN - y*Rb; w2 = -vy*COS - vx*SIN - y*Rb
+            // therefore forward (invert): vy = (w1 - w2) / (2*COS)
+            this->robot_twist_forward.vy = (wheel_speeds[1] - wheel_speeds[2]) / (2.0f * COS_31_87);
+
+            // derive yaw_rate from combination:
+            // 0.5*(w1+w2) = -vx*SIN - y*Rb ; w0 = vx - y*Rt
+            // solving gives: y = -(w0*SIN + 0.5*(w1+w2)) / (Rt*SIN + Rb)
+            float num = wheel_speeds[0] * SIN_31_87 + 0.5f * (wheel_speeds[1] + wheel_speeds[2]);
+            float den = chassis_radius_ * SIN_31_87 + chassis_radius_bottom_;
+            this->robot_twist_forward.yaw_rate = - num / den;
+
+            // vx = w0 + omega * Rt
+            this->robot_twist_forward.vx = wheel_speeds[0] + this->robot_twist_forward.yaw_rate * chassis_radius_;
         }
         else
         {
-            this->robot_twist_forward.vy = (wheel_speeds[1] - wheel_speeds[2]) / (2.0f*COS_30);
-            this->robot_twist_forward.yaw_rate = -(wheel_speeds[0]+wheel_speeds[1]+ wheel_speeds[2]) / (chassis_radius_*3.0f);
-            this->robot_twist_forward.vx = -this->robot_twist_forward.yaw_rate * chassis_radius_ - wheel_speeds[0];
+            this->robot_twist_forward.vy = (wheel_speeds[1] - wheel_speeds[2]) / (2.0f * COS_30);
+
+            float num = wheel_speeds[0] * SIN_30 + 0.5f * (wheel_speeds[1] + wheel_speeds[2]);
+            float den = chassis_radius_ * SIN_30 + chassis_radius_;
+            this->robot_twist_forward.yaw_rate = - num / den;
+
+            this->robot_twist_forward.vx = wheel_speeds[0] + this->robot_twist_forward.yaw_rate * chassis_radius_;
         }
     } 
     else if constexpr (WheelCount == 4) 
     {
         // 四轮全向底盘的前向运动学计算
+        // Inverse uses vx/C, vy/C. Forward needs factor C/4. (Divide by 4/C = 4*sqrt(2) = 5.656)
         this->robot_twist_forward.yaw_rate = (wheel_speeds[0] + wheel_speeds[1] + wheel_speeds[2] + wheel_speeds[3]) / (4.0f * chassis_radius_);
-        this->robot_twist_forward.vy = (-wheel_speeds[0] - wheel_speeds[1] + wheel_speeds[2]+ wheel_speeds[3]) / (2.0f*1.41421356f);
-        this->robot_twist_forward.vx = (wheel_speeds[0] - wheel_speeds[1] - wheel_speeds[2] + wheel_speeds[3]) / (2.0f*1.41421356f);
+        
+        // 4.0f * 1.414... = 5.6568
+        this->robot_twist_forward.vy = (-wheel_speeds[0] - wheel_speeds[1] + wheel_speeds[2]+ wheel_speeds[3]) / (4.0f*1.41421356f);
+        this->robot_twist_forward.vx = (wheel_speeds[0] - wheel_speeds[1] - wheel_speeds[2] + wheel_speeds[3]) / (4.0f*1.41421356f);
     }
 
     //this->world_twist_forward   

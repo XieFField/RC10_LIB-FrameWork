@@ -97,17 +97,37 @@ void Robot_WeaponSage_Setup::calibrate()
 void Robot_WeaponSage_Setup::manualControl()
 {
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+
+    // 进入Manual模式时的状态绑定逻辑
+    if(last_weaponSage_status_ != WEAPONSAGE_MANUAL_CONTROL)
+    {
+        // 获取当前爪子实际位置，判定逻辑状态
+        float current_claw_theta = this->getClawPos().theta;
+        int8_t current_claw_logical = (current_claw_theta > initData_.max_clawAngle_ * 0.5f) ? 1 : 0;
+        
+        // 记录状态
+        ctrl_status_.last_manual_claw_state = current_claw_logical;
+        
+        // 计算偏移: offset = switch ^ state
+        ctrl_status_.claw_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_claw_logical;
+
+        last_weaponSage_status_ = WEAPONSAGE_MANUAL_CONTROL;
+    }
+
     switch(airjoy_data_.SWA)
     {
         case 0x00:
         {
             //夹取武器
-            if(airjoy_data_.SWD == 0x00)
+            // 计算当前应当的逻辑状态 logic = switch ^ offset
+            int8_t target_claw_logical = (airjoy_data_.SWD & 0x01) ^ ctrl_status_.claw_switch_offset;
+            
+            ctrl_status_.last_manual_claw_state = target_claw_logical;
+
+            if(target_claw_logical == 0)
                 target_pos_.claw_pos_ = 0.0f; //开爪子
-            else if(airjoy_data_.SWD == 0x01)
-                target_pos_.claw_pos_ = initData_.max_clawAngle_; //紧爪子
             else
-                target_pos_.claw_pos_ = 0.0f;
+                target_pos_.claw_pos_ = initData_.max_clawAngle_; //紧爪子
 
             //夹爪位置
 

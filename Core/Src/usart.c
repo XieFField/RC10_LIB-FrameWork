@@ -98,7 +98,7 @@ void MX_UART8_Init(void)
 
   /* USER CODE END UART8_Init 1 */
   huart8.Instance = UART8;
-  huart8.Init.BaudRate = 115200;
+  huart8.Init.BaudRate = 1000000;
   huart8.Init.WordLength = UART_WORDLENGTH_8B;
   huart8.Init.StopBits = UART_STOPBITS_1;
   huart8.Init.Parity = UART_PARITY_NONE;
@@ -143,7 +143,7 @@ void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 234000;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;

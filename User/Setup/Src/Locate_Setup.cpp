@@ -8,7 +8,6 @@ void Locate_Setup::loop()
 //    usb_handle->CDC_Send_(0x04,&a,0x01);
 	Get_Rader_Data();
     this->update();
-	  	
 }
 
 void Locate_Setup::update()
@@ -29,9 +28,27 @@ void Locate_Setup::update()
 
 	lader_transform_caculate();
 
-    yaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().world_yaw;
-	dyaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().dyaw;
-	robot_pose_inWorld_ = lidar_pose_inWorld_;
+    // yaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().world_yaw;
+	// dyaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().dyaw;
+
+
+    yaw_from_position_ = HWT101CT::GetInstance(&huart1)->get_yaw_rad();
+	dyaw_from_position_ = HWT101CT::GetInstance(&huart1)->get_yaw_speed_rad();
+
+    float ladpos_x = Lad_Data.x * cos(deg_to_rad(-90)) - Lad_Data.y * sin(deg_to_rad(-90));
+    float ladpos_y = Lad_Data.x * sin(deg_to_rad(-90)) + Lad_Data.y * cos(deg_to_rad(-90));
+	robot_pose_inWorld_.x = ladpos_x + coordoffset.x_offset;
+    robot_pose_inWorld_.y = ladpos_y + coordoffset.y_offset;
+    robot_pose_inWorld_.z = Lad_Data.z;
+    robot_pose_inWorld_.yaw = yaw_from_position_;
+
+    float ladvel_x = Lad_Data.line_x * cos(deg_to_rad(-90)) - Lad_Data.line_y * sin(deg_to_rad(-90));
+    float ladvel_y = Lad_Data.line_x * sin(deg_to_rad(-90)) + Lad_Data.line_y * cos(deg_to_rad(-90));
+    robot_speed_inworld_.x = ladvel_x;
+    robot_speed_inworld_.y = ladvel_y;
+    robot_speed_inworld_.z = Lad_Data.line_z;
+
+    robot_speed_inworld_.yaw = dyaw_from_position_;
 
     if(HAL_GPIO_ReadPin(SWITCH1_GPIO_Port, SWITCH1_Pin) == GPIO_PIN_SET)
     {
@@ -131,29 +148,29 @@ void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_in
 	if(laser_mode==LEFT)
     {
         delta=fabs(laser_initData_.y1-laser_initData_.y2);
-        robot_pose_inWorld_.theta=atan(delta/laser_initData_.d);
-        robot_pose_inWorld_.x=laser_initData_.x1*cos(robot_pose_inWorld_.theta);
-        robot_pose_inWorld_.y=0.5*(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.theta);
-        robot_pose_inWorld_.theta=robot_pose_inWorld_.theta*180/PI;
+        robot_pose_inWorld_.yaw=atan(delta/laser_initData_.d);
+        robot_pose_inWorld_.x=laser_initData_.x1*cos(robot_pose_inWorld_.yaw);
+        robot_pose_inWorld_.y=0.5*(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.yaw);
+        robot_pose_inWorld_.yaw=robot_pose_inWorld_.yaw*180/PI;
 	
         if(laser_initData_.y1>laser_initData_.y2)
         {
-            robot_pose_inWorld_.theta=360-robot_pose_inWorld_.theta;
-            aaa=robot_pose_inWorld_.theta;
+            robot_pose_inWorld_.yaw=360-robot_pose_inWorld_.yaw;
+            aaa=robot_pose_inWorld_.yaw;
         }
     }
 	else if(laser_mode==RIGHT)
 	{
         delta=fabs(laser_initData_.y1-laser_initData_.y2);
-        robot_pose_inWorld_.theta=atan(delta/laser_initData_.d);
-        robot_pose_inWorld_.y=laser_initData_.x1*cos(robot_pose_inWorld_.theta);
-        robot_pose_inWorld_.x=0.5*(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.theta);
-        robot_pose_inWorld_.theta=robot_pose_inWorld_.theta*180/PI;
+        robot_pose_inWorld_.yaw=atan(delta/laser_initData_.d);
+        robot_pose_inWorld_.y=laser_initData_.x1*cos(robot_pose_inWorld_.yaw);
+        robot_pose_inWorld_.x=0.5*(laser_initData_.y1+laser_initData_.y2)*cos(robot_pose_inWorld_.yaw);
+        robot_pose_inWorld_.yaw=robot_pose_inWorld_.yaw*180/PI;
 	
         if(laser_initData_.y1>laser_initData_.y2)
         {
-            robot_pose_inWorld_.theta=360-robot_pose_inWorld_.theta;
-            aaa=robot_pose_inWorld_.theta;
+            robot_pose_inWorld_.yaw=360-robot_pose_inWorld_.yaw;
+            aaa=robot_pose_inWorld_.yaw;
         }
     }
 	
@@ -176,4 +193,9 @@ void Locate_Setup::USB_SendData()
     Lad_Data.line_x= usb_handle->Data_.data1[6];
     Lad_Data.line_y= usb_handle->Data_.data1[7];
     Lad_Data.line_z= usb_handle->Data_.data1[8];
+
+    
+
+
+
  }

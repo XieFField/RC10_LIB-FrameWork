@@ -39,6 +39,9 @@ namespace WeaponSage_Setup
         bool is_calibrating = false;
 
         int target_poleIndex = 0; //0~3ºÅË÷ÒýµÄÃ¬¸Ë
+
+        int8_t last_manual_claw_state = 0; // 0: open, 1: close
+        int8_t claw_switch_offset = 0;
     }ctrl_status_S;
 
     typedef enum{
@@ -121,6 +124,13 @@ public:
         
     }
 
+    bool isWeaponSageCalibrated() const
+    {
+        if(ctrl_status_.is_calibrating)
+            return true;
+        else
+            return false;
+    }
 
     void setWeaponSageControlStatus(WeaponSage_Status_E status)
     {
@@ -143,6 +153,7 @@ public:
     {
         weaponSage_status_ = status;
     }
+
 
 protected:
     void loop() override;

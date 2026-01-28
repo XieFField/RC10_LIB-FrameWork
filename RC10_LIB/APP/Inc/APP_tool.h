@@ -116,9 +116,8 @@ typedef struct  {
 // 3D点结构体
 typedef struct {
     float x = 0, y = 0, z = 0;
-	float theta;
+    float theta = 0;
     float roll = 0, pitch = 0, yaw = 0; // 欧拉角，单位弧度
-
 }Point3D;
 
 typedef struct {
