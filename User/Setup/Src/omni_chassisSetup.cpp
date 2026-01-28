@@ -8,11 +8,15 @@ int last_cout_ladar_data = -1;
 
 #endif
 
+uint32_t chassisstackHighWaterMark = 0;
+
 void OmniChassis_Setup::loop()
 {
     if (!init_flag)
         return;
 
+//	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+	
     float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
@@ -121,6 +125,7 @@ void OmniChassis_Setup::loop()
             if (path_flag == 0)
             {
                 Clamping_Bar_Selection_Planning();
+				WeaponSage_Start=1;
             }
             else
             {
@@ -156,6 +161,7 @@ void OmniChassis_Setup::loop()
                     Path_correction();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
+					WeaponSage_END=1;
                 }
                 else
                 {
@@ -169,6 +175,7 @@ void OmniChassis_Setup::loop()
                     Path_correction();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
+					WeaponSage_END=1;
                 }
             }
         }
@@ -592,6 +599,6 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.plan_reset();
     path_line_.Reset();
     path_line_.Add_Start_Point(Vector2D{robot_pos_.x, robot_pos_.y}, path_param_1);
-    path_line_.Add_Point(Vector2D{1.7f, 0.7f});
+    path_line_.Add_Point(Vector2D{1.7f, 0.6f});
     path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
 }

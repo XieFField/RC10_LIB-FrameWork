@@ -76,7 +76,7 @@ public:
     #endif
         pid_track.set_params(track_pid_params, 0.0f);
 
-        this->start(osPriorityHigh, 512);
+        this->start(osPriorityHigh, 1024);
         setTargetKFS(11);
         init_flag = true;
     }
@@ -93,7 +93,17 @@ public:
     {
         KFS = targetKFS;
     }
+	
+	bool GetReach_flag()
+	{
+		return WeaponSage_END; 
+	}
+	
 private:
+	
+	int WeaponSage_Start=0;
+	bool WeaponSage_END=0;
+
     int flag = 0;
     int flag_run = 0;
     int flag_1=0;
@@ -109,10 +119,10 @@ private:
     //Path_line path_line1_;
     
     Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 20.0f, .maxJerk = 100.0f, .maxSpeed = 3.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
-    Speedplanner_1D_Param_Config path_param_1={.maxAcc = 30.0f, .maxDec = 10.0f, .maxJerk = 100.0f, .maxSpeed = 1.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+    Speedplanner_1D_Param_Config path_param_1={.maxAcc = 30.0f, .maxDec = 10.0f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
  
     Vector2D original_point_={-0.48f,-0.48f};
-    Vector2D Clamping_Bar_Selection_pos_ = {1.96f, 0.21f};
+    Vector2D Clamping_Bar_Selection_pos_ = {1.935f, 0.19f};
     
     Point3D ladar_data_;
     Vector2D robot_pos_ = {0.0f, 0.0f};
