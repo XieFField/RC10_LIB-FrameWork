@@ -271,12 +271,16 @@ public:
      */
     BezierCurve &get_bezier_curve(void)
     {
+        if (index_ >= bezier_curve_num && bezier_curve_num > 0)
+        {
+            return bezier_curve_list[bezier_curve_num - 1];
+        }
         return bezier_curve_list[index_];
     }
 
 protected:
     BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // 储存各路段曲线
-    SShapedPlanner1D sp_; // 一维 S 型速度规划器
+    SShapedPlanner1D sp_;                         // 一维 S 型速度规划器
     float total_len = 0;                          // 路线总长度
 
     int index_ = 0;
@@ -287,9 +291,9 @@ protected:
     Vector2D v_tangent_ = Vector2D(0.0f, 0.0f);  // 切线向量
     Vector2D point_last_ = Vector2D(0.0f, 0.0f); // 上一个点
     SPhase m_phase = S_FINISHED_PHASE;
-    Speedplanner_1D_Param_Config params_; 
-    uint8_t bezier_curve_num = 0;                 // 总曲线数量
-    
+    Speedplanner_1D_Param_Config params_;
+    uint8_t bezier_curve_num = 0; // 总曲线数量
+
     /**
      * @brief 计算各路段的结束速度
      */
@@ -354,7 +358,7 @@ public:
         return true;
     }
 
-    bool Add_Start_Point(Vector2D point_,Speedplanner_1D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.00001f})
+    bool Add_Start_Point(Vector2D point_, Speedplanner_1D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.00001f})
     {
         params.initialSpeed = abs(params.initialSpeed) + 0.001f; // 设置初始速度
         params_ = params;
@@ -406,7 +410,7 @@ public:
             if (t_ >= 0.9880f || m_phase == S_FINISHED_PHASE)
             {
                 index_++; // 切换到下一段曲线
-                t_ =0.0f;
+                t_ = 0.0f;
                 if (index_ >= bezier_curve_num)
                 {
                     is_end = false; // 结束运行
@@ -487,14 +491,19 @@ public:
      */
     BezierCurve &get_bezier_curve(void)
     {
+        if (index_ >= bezier_curve_num && bezier_curve_num > 0)
+        {
+            return bezier_curve_list[bezier_curve_num - 1];
+        }
         return bezier_curve_list[index_];
     }
 
+    int index_ = 0;
+
 protected:
     BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // 储存各路段曲线
-    SShapedPlanner1D sp_; // 一维 S 型速度规划器
+    SShapedPlanner1D sp_;                         // 一维 S 型速度规划器
 
-    int index_ = 0;
     float distance_ = 0.0f;
     float t_ = 0.0f;                             // 贝塞尔曲线参数 t
     float v_resultant_ = 0.0f;                   // 当前速度
@@ -502,7 +511,7 @@ protected:
     Vector2D point_last_ = Vector2D(0.0f, 0.0f); // 上一个点
     SPhase m_phase = S_FINISHED_PHASE;
     Speedplanner_1D_Param_Config params_;
-    uint8_t bezier_curve_num = 0;                 // 总曲线数量
+    uint8_t bezier_curve_num = 0; // 总曲线数量
 
     /*------------------------------过程变量-----------------------------------*/
     float currnet_target_angle = 0; // 当前目标角度

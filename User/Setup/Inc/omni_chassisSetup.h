@@ -74,6 +74,7 @@ public:
     #if debug_ladar
             this->setThreeWheelSolver(false);
     #endif
+        pid_track.set_params(track_pid_params, 0.0f);
 
         this->start(osPriorityHigh, 512);
         setTargetKFS(11);
@@ -95,16 +96,24 @@ public:
 private:
     int flag = 0;
     int flag_run = 0;
+    int flag_1=0;
+    int path_flag=0;
+
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
+    
+    float yaw=0.0f;
+    float target_yaw_ = 0.0f;
 
     //Path path_;
     Path_line path_line_;
-
-    float a=2.0f;
-    float b=0.5f;
-    Vector2D original_point_={-0.50f,-0.52f};
+    //Path_line path_line1_;
     
-    float yaw=0.0f;
+    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 20.0f, .maxJerk = 100.0f, .maxSpeed = 3.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+    Speedplanner_1D_Param_Config path_param_1={.maxAcc = 30.0f, .maxDec = 10.0f, .maxJerk = 100.0f, .maxSpeed = 1.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+ 
+    Vector2D original_point_={-0.48f,-0.48f};
+    Vector2D Clamping_Bar_Selection_pos_ = {1.96f, 0.21f};
+    
     Point3D ladar_data_;
     Vector2D robot_pos_ = {0.0f, 0.0f};
     
@@ -117,8 +126,7 @@ private:
     int8_t path_point_[20];
     int8_t path_key_point_[10];
     int8_t KFS=0;
-
-    float target_yaw_ = 0.0f;
+    
     uint8_t yaw_pid_period_ = 3;
     uint8_t yaw_pid_period_count_ = 0;
     PID_Position yaw_pid_;
@@ -136,8 +144,7 @@ private:
 
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
     
-    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 30.0f, .maxJerk = 30.0f, .maxSpeed = 2.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
-    MF_AutoCtrler::PathNode_S KFS_result_ = {0, 0, 0, 0, 0, 26};
+     MF_AutoCtrler::PathNode_S KFS_result_ = {0, 0, 0, 0, 0, 26};
     /**
      * @brief 获取路径上距离机器人最近的点
      * @param path_ 贝塞尔曲线对象
@@ -165,7 +172,13 @@ private:
      * @return float 横向误差值 (带符号，表示偏左或偏右)
      */
     float CalculateLateralError(BezierCurve &path_, const Vector2D &robotPos, const Vector2D &nearestPt, float tLookahead);
-
+    
+    void KFS_Selection_Planning(void);
+    
+    void Path_correction(void);
+    
+    void Clamping_Bar_Selection_Planning(void);
+        
     int num = 0;
     float tNearest = 0.0f;                // 最近点在贝塞尔曲线上的参数t (0~1)
     float tLookahead = 0.0f;              // 前视点在贝塞尔曲线上的参数t (0~1)
