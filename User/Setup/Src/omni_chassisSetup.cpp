@@ -382,7 +382,7 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
     }
     else
     {
-        cho = 2;
+        //cho = 2;
     }
 
     if (cho == 1)
@@ -398,6 +398,8 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
                 index++;
             }
         }
+        int KFS_next_index=index;
+        
         point_sum = MF_AutoCtrler::BFS_GetPath(KFS_result_.bestBMF1, KFS_result_.exitMap, path_point_, 20);
 
         for (int i = 0; i < point_sum; i++)
@@ -410,7 +412,7 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
         }
 
         // 修改车子朝向
-        if (abs(path_key_point_[0] - KFS_result_.bestBMF1) < 5.0f)
+        if (abs(path_key_point_[KFS_next_index] - KFS_result_.bestBMF1) < 5.0f)
         {
             if (KFS_result_.bestBMF1 < 10.0f)
             {
@@ -589,17 +591,7 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     target_yaw_ = 0.0f;
     path_line_.plan_reset();
     path_line_.Reset();
-    path_line_.Add_Start_Point(Vector2D{robot_pos_.x, robot_pos_.y}, path_param_);
+    path_line_.Add_Start_Point(Vector2D{robot_pos_.x, robot_pos_.y}, path_param_1);
     path_line_.Add_Point(Vector2D{1.7f, 0.7f});
-    path_line_.Add_End_Point(Vector2D{1.98f, 0.19f});
-
-    //    target_yaw_ = 0.0f;
-    //    path_line_.plan_reset();
-    //    path_line_.Reset();
-    //    path_line_.Add_Start_Point(Vector2D{robot_pos_.x, robot_pos_.y}, path_param_);
-    //    path_line_.Add_End_Point(Vector2D{1.7f, 0.7f});
-    //
-    //
-    //    path_line1_.Add_Start_Point(Vector2D{1.7f, 0.7f} , path_param_);
-    //    path_line1_.Add_End_Point(Vector2D{1.98f, 0.19f});
+    path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
 }

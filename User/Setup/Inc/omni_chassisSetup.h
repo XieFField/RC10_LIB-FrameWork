@@ -106,10 +106,14 @@ private:
 
     //Path path_;
     Path_line path_line_;
-    Path_line path_line1_;
-
+    //Path_line path_line1_;
+    
+    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 20.0f, .maxJerk = 100.0f, .maxSpeed = 3.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+    Speedplanner_1D_Param_Config path_param_1={.maxAcc = 30.0f, .maxDec = 10.0f, .maxJerk = 100.0f, .maxSpeed = 1.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+ 
     Vector2D original_point_={-0.48f,-0.48f};
-
+    Vector2D Clamping_Bar_Selection_pos_ = {1.96f, 0.21f};
+    
     Point3D ladar_data_;
     Vector2D robot_pos_ = {0.0f, 0.0f};
     
@@ -140,8 +144,7 @@ private:
 
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
     
-    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 30.0f, .maxJerk = 100.0f, .maxSpeed = 1.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
-    MF_AutoCtrler::PathNode_S KFS_result_ = {0, 0, 0, 0, 0, 26};
+     MF_AutoCtrler::PathNode_S KFS_result_ = {0, 0, 0, 0, 0, 26};
     /**
      * @brief 获取路径上距离机器人最近的点
      * @param path_ 贝塞尔曲线对象
