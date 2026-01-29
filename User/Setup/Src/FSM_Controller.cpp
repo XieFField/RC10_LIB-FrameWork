@@ -4,6 +4,7 @@
 
 void FSM_Controller::loop()
 {
+	
     if(!init_flag_)
         return;
 
@@ -163,7 +164,8 @@ void FSM_Controller::auto_ctrl()
         //weaponSage进入自动模式
         case 0x02:
         {
-            //weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
+			weaponSage_setup_->Set_End_Flag(chassis_setup_->GetReach_flag());
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
             arm_setup_->setArmStatus(ARM_IDLE);
             break;

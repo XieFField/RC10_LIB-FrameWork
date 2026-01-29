@@ -11,7 +11,7 @@
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
       <pArmCC>6230000::V6.23::ARMCLANG</pArmCC>
-      <pCCUsed>6230000::V6.23::ARMCLANG</pCCUsed>
+      <pCCUsed>6240000::V6.24::ARMCLANG</pCCUsed>
       <uAC6>1</uAC6>
       <TargetOption>
         <TargetCommonOption>
@@ -330,7 +330,7 @@
             <uC99>1</uC99>
             <uGnu>1</uGnu>
             <useXO>0</useXO>
-            <v6Lang>5</v6Lang>
+            <v6Lang>3</v6Lang>
             <v6LangP>8</v6LangP>
             <vShortEn>1</vShortEn>
             <vShortWch>1</vShortWch>
@@ -926,9 +926,19 @@
               <FilePath>..\RC10_LIB\APP\Src\APP_CoordConvert.cpp</FilePath>
             </File>
             <File>
+              <FileName>APP_Speedplanner.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\APP\Inc\APP_Speedplanner.h</FilePath>
+            </File>
+            <File>
               <FileName>APP_Vector2D.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\APP\Inc\APP_Vector2D.h</FilePath>
+            </File>
+            <File>
+              <FileName>APP_Speedplanner.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_Speedplanner.cpp</FilePath>
             </File>
             <File>
               <FileName>APP_Vector2D.cpp</FileName>
@@ -936,14 +946,14 @@
               <FilePath>..\RC10_LIB\APP\Src\APP_Vector2D.cpp</FilePath>
             </File>
             <File>
+              <FileName>APP_Path.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_Path.cpp</FilePath>
+            </File>
+            <File>
               <FileName>APP_Bezier_Curve.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\APP\Inc\APP_Bezier_Curve.h</FilePath>
-            </File>
-            <File>
-              <FileName>APP_Bezier_Curve.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_Bezier_Curve.cpp</FilePath>
             </File>
             <File>
               <FileName>APP_debugTool.h</FileName>
@@ -955,30 +965,15 @@
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\APP\Inc\APP_Path.h</FilePath>
             </File>
-            <File>
-              <FileName>APP_Path.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_Path.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>APP_Speedplanner.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\APP\Inc\APP_Speedplanner.h</FilePath>
-            </File>
-            <File>
-              <FileName>APP_Speedplanner.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_Speedplanner.cpp</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
           <GroupName>RC10_LIB/Module</GroupName>
           <Files>
             <File>
-              <FileName>Module_ChassisBase.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisBase.h</FilePath>
+              <FileName>Module_Encoder.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_Encoder.cpp</FilePath>
             </File>
             <File>
               <FileName>Module_ChassisBase.cpp</FileName>
@@ -986,14 +981,14 @@
               <FilePath>..\RC10_LIB\Module\Src\Module_ChassisBase.cpp</FilePath>
             </File>
             <File>
+              <FileName>Module_ChassisBase.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisBase.h</FilePath>
+            </File>
+            <File>
               <FileName>Module_Encoder.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Module\Inc\Module_Encoder.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_Encoder.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_Encoder.cpp</FilePath>
             </File>
             <File>
               <FileName>Module_Air_joy.h</FileName>
@@ -1006,14 +1001,14 @@
               <FilePath>..\RC10_LIB\Module\Src\Module_Air_joy.cpp</FilePath>
             </File>
             <File>
-              <FileName>Module_ChassisOmni.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisOmni.h</FilePath>
-            </File>
-            <File>
               <FileName>Module_ChassisOmni.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_ChassisOmni.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_ChassisOmni.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisOmni.h</FilePath>
             </File>
             <File>
               <FileName>Module_GPIO.h</FileName>
@@ -1034,36 +1029,6 @@
               <FileName>Module_Position.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_Position.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Module_LaserPosition.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_LaserPosition.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_LaserPosition.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_LaserPosition.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Module_CrsfReceiver.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_CrsfReceiver.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Module_CrsfReceiver.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_CrsfReceiver.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_HWT.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_HWT.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_HWT.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_HWT.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -1158,6 +1123,46 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>User/debug</GroupName>
+          <Files>
+            <File>
+              <FileName>frame_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\frame_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>frame_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\frame_demo.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>arm_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\arm_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>arm_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\arm_demo.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>debug_setup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\debug_setup.h</FilePath>
+            </File>
+            <File>
+              <FileName>speedplanner_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\speedplanner_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>speedplanner_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\speedplanner_demo.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>User/Control</GroupName>
           <Files>
             <File>
@@ -1200,16 +1205,6 @@
               <FileType>8</FileType>
               <FilePath>..\User\Control\Src\AutoCtrler.cpp</FilePath>
             </File>
-            <File>
-              <FileName>WeaponSage.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Control\Inc\WeaponSage.h</FilePath>
-            </File>
-            <File>
-              <FileName>WeaponSage.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Control\Src\WeaponSage.cpp</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -1251,54 +1246,14 @@
               <FilePath>..\User\Setup\Inc\FSMstauts_enum.h</FilePath>
             </File>
             <File>
-              <FileName>omni_chassisSetup.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\omni_chassisSetup.cpp</FilePath>
-            </File>
-            <File>
               <FileName>omni_chassisSetup.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Setup\Inc\omni_chassisSetup.h</FilePath>
             </File>
             <File>
-              <FileName>Locate_Setup.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\Locate_Setup.h</FilePath>
-            </File>
-            <File>
-              <FileName>Locate_Setup.cpp</FileName>
+              <FileName>omni_chassisSetup.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\Locate_Setup.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>RTOS_QueueSetup.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\RTOS_QueueSetup.h</FilePath>
-            </File>
-            <File>
-              <FileName>RTOS_QueueSetup.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\RTOS_QueueSetup.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>WeaponSage_Setup.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\WeaponSage_Setup.h</FilePath>
-            </File>
-            <File>
-              <FileName>WeaponSage_Setup.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\WeaponSage_Setup.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>SystemDetect_Task.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\debug\Inc\SystemDetect_Task.h</FilePath>
-            </File>
-            <File>
-              <FileName>SystemDetect_Task.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\debug\Src\SystemDetect_Task.cpp</FilePath>
+              <FilePath>..\User\Setup\Src\omni_chassisSetup.cpp</FilePath>
             </File>
           </Files>
         </Group>

@@ -81,10 +81,10 @@ namespace WeaponSage_Setup
             bool lift_done = false;
         }flag;
         bool auto_ctrl1 = true;
-        int pole_num = 0;
+        int pole_num = 1;
     }auto_ctrl_S;
 
-     extern float weapon_pos[2];//武器位置数组
+     extern float weapon_pos[4];//武器位置数组
 
 }
 
@@ -114,7 +114,7 @@ public:
             return;
         }
 
-        start(osPriorityNormal, 256);
+        start(osPriorityNormal, 512);
 
         ctrl_status_.init_flag = true;
     }
@@ -153,12 +153,20 @@ public:
     {
         weaponSage_status_ = status;
     }
+	
+	void Set_End_Flag(bool flag)
+    {
+        omni_flag = flag;
+    }
 
-
+	
 protected:
     void loop() override;
 
 private:
+	
+	bool omni_flag;
+
     WeaponSage_Setup::ctrl_status_S ctrl_status_;
     Debug_Printf debug_uart = Debug_Printf(&huart1);
 

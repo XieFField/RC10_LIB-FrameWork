@@ -6,11 +6,14 @@ static bool s_has_recorded_strategy = false; //记录是否已经记录过策略
  * @brief 寻主循环
  */
 // int numnum = 1;
+uint32_t ArmstackHighWaterMark = 0;
 void ArmSetup::loop()
 {
     if(!arm_ctrlStatus.init_flag)
         return;
 
+	
+//	ArmstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
     if(!arm_ctrlStatus.is_calibrating)
     {
         calibrateMotor();

@@ -251,7 +251,7 @@ public:
         this->setStretchReversed(false); //伸展电机不反向
         this->setRotateReversed(false);
         this->setLaunchReversed(true); //升降电机反向
-        start(osPriorityNormal, 512);
+        start(osPriorityHigh-1, 512);
         setRotateMultiTurn(false); //单圈模式
         arm_ctrlStatus.init_flag = true;
     }
