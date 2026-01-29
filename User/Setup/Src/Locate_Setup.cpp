@@ -193,9 +193,4 @@ void Locate_Setup::USB_SendData()
     Lad_Data.line_x= usb_handle->Data_.data1[6];
     Lad_Data.line_y= usb_handle->Data_.data1[7];
     Lad_Data.line_z= usb_handle->Data_.data1[8];
-
-    
-
-
-
  }
