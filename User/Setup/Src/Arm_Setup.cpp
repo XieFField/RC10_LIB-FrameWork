@@ -6,7 +6,7 @@ static bool s_has_recorded_strategy = false; //记录是否已经记录过策略
  * @brief 寻主循环
  */
 // int numnum = 1;
-uint32_t ArmstackHighWaterMark = 0;
+// uint32_t ArmstackHighWaterMark = 0;
 void ArmSetup::loop()
 {
     if(!arm_ctrlStatus.init_flag)
@@ -42,7 +42,7 @@ void ArmSetup::loop()
                 ifFirst = false;
             }
         }
-    }
+    } 
 
 
     switch(arm_status_)
@@ -92,6 +92,7 @@ void ArmSetup::loop()
         default:
             break;
     }
+
     // if(numnum==1)
     //     debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getTotalAngle());
     // else if(numnum == 2)
@@ -101,11 +102,6 @@ void ArmSetup::loop()
     last_arm_status_ = arm_status_;
 }
 
-uint8_t test_signal = 0;
-float test_current = 0.0f;
-float rotate_rate = 1.2f;
-float launch_rate = 0.012f;
-int cnt = 0;
 /**
  * @brief 寻手操
  */
@@ -146,7 +142,7 @@ void ArmSetup::manualControl()
 
 
     //升降操控
-    if(_tool_Abs(airjoy_data_.right_y) > 0.1)
+    if(_tool_Abs(airjoy_data_.right_y) > 0.1f)
     {
         // float next_height = target_joint_status_.launchJoint_Height_ 
         //     + airjoy_data_.right_y * launch_rate * airjoy_data_.right_y;
@@ -158,10 +154,10 @@ void ArmSetup::manualControl()
         // else
         //     target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_ ;
            
-        if(airjoy_data_.right_y > 0.3)
-            next_height += launch_rate;
-        else if(airjoy_data_.right_y < -0.3)
-            next_height -= launch_rate;
+        if(airjoy_data_.right_y > 0.3f)
+            next_height += manual_control.launch_rate;
+        else if(airjoy_data_.right_y < -0.3f)
+            next_height -= manual_control.launch_rate;
         else
             next_height = this->get_currentJointStatus().launchJoint_Height_ ;
 
@@ -195,18 +191,18 @@ void ArmSetup::manualControl()
     // else
     //     target_joint_status_.rotateJoint_angle_ = target_joint_status_.rotateJoint_angle_; // 保持不变
 
-    cnt++;
-    if(cnt > 10)
+    manual_control.cnt++;
+    if(manual_control.cnt > 10)
     {
-        if(airjoy_data_.right_x > 0.5)
-            target_joint_status_.rotateJoint_angle_ += rotate_rate;
-        else if(airjoy_data_.right_x < -0.5)
-            target_joint_status_.rotateJoint_angle_ -= rotate_rate;
+        if(airjoy_data_.right_x > 0.5f)
+            target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
+        else if(airjoy_data_.right_x < -0.5f)
+            target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
         else
             target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_; // 保持不变
 
         target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
-        cnt = 0;
+        manual_control.cnt = 0;
     }
 
     //pitch 开关
@@ -367,7 +363,7 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
      * @details 依旧屎山堆积
      */
     MF_AutoCtrler::Direction_E move_direction;
-    Point2D target_pos = {0, 0 ,0};
+    Point2D target_pos = {0.0f, 0.0f ,0.0f};
     if(targetKFS == auto_ctrl_.targetKFS[0])
     {
         move_direction = auto_ctrl_.KFS_Movedirection[0];
@@ -546,10 +542,10 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
         auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
     }
 
-    else if(diff  > 0)
+    else if(diff  > 0.0f)
         auto_ctrl_.current_strategy = ROTATE_PATH_POSITIVE;
     
-    else if (diff < 0)
+    else if (diff < 0.0f)
         /* code */
         auto_ctrl_.current_strategy = ROTATE_PATH_NEGATIVE;
     
@@ -647,7 +643,7 @@ bool ArmSetup::state_aimExt(int targetKFS)
 		float t_stretch = auto_ctrl_.time_set.stretch_time_s;
 		//RawPos nowRaw=Position::GetInstance(&huart1)->getRawPosData();
 
-        Point2D target_pos = {0, 0 ,0};
+        Point2D target_pos = {0.0f, 0.0f ,0.0f};
 
         MF_AutoCtrler::Direction_E move_direction;
 
@@ -710,7 +706,7 @@ bool ArmSetup::state_aimExt(int targetKFS)
         //或许delta_t < 0.02s会错过伸展窗口(计算频率)
         //给足提前量容忍，或许会更好，避免过严格的等式触发
 
-        const float delta_t = auto_ctrl_.time_set.stretch_time_s / 6; //提前量容忍
+        const float delta_t = auto_ctrl_.time_set.stretch_time_s / 6.0f; //提前量容忍
 
         if(!auto_ctrl_.flag.ext_started)
         {
@@ -758,7 +754,7 @@ bool ArmSetup::state_aimExt(int targetKFS)
 /**
  * @brief 寻自动搬运
  */
-float diff_read=- 0.0f;
+// float diff_read=- 0.0f;
 void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
 {
     /**
@@ -936,7 +932,7 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
     float T_rot = _tool_Abs(diff) * (PI / 180.0f) / 
                 (auto_ctrl_.time_set.gimbal_max_rad * auto_ctrl_.time_set.rotateSpeedRate_); //云台旋转所需时间(s)
 
-    diff_read = diff;
+    // diff_read = diff;
 
     for(float t = 0.0f; t <= T_rot; t+= 0.05f)
     {
@@ -947,7 +943,7 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
         };
 
         float step_deg = 0.0f;
-        if(diff > 0 )
+        if(diff > 0.0f )
             step_deg = 1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
                     * auto_ctrl_.time_set.rotateSpeedRate_ * 180.0f / PI) * t; //每步旋转
 
@@ -1182,9 +1178,9 @@ bool ArmSetup::state_return(int next_targetKFS)
     }
     else if (has_next)
     {
-        if (angel == 0)
+        if (angel == 0.0f)
             auto_ctrl_.current_strategy = ROTATE_PATH_POSITIVE;
-        else if (angel == 180)
+        else if (angel == 180.0f)
             auto_ctrl_.current_strategy = ROTATE_PATH_NEGATIVE;
         else
             auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
@@ -1630,82 +1626,75 @@ void ArmSetup::idle()
 
     // this->setSuckerStatus(Sucker_Status_E::STOP); // 保持上一刻状态，不强制关闭
 }
+// /*====================== 测试调试部分 ======================*/
 
-float stretch_starttime = 0;
-bool stretch_flag = false;
-float pitch_starttime = 0;
-bool pitch_flag = false;
-float stretch_usetime = 0;
-float pitch_usetime = 0;
+// float test_rotate_angle = 0.2f;
 
-
-float test_rotate_angle = 0.2f;
-
-float test_launch_height = 0.01f;
-volatile float launch_see = 0.0f;
+// float test_launch_height = 0.01f;
+// volatile float launch_see = 0.0f;
 /**
  * @brief 寻调试
  */
 void ArmSetup::debug()
 {
-    //测试
-    if(test_signal == 0) //所有电机电流强制为0；检查电机转动方向是否需要置反
-    {
-        this->set_controlMode(CURRENT_CONTROL_MODE);
-        this->motor_launch_->setTargetCurrent(0.0f);
-        this->motor_stretch_->setTargetCurrent(0.0f);
-        this->motor_rotate_->setTargetCurrent(0.0f);
-        this->motor_pitch_->setTargetCurrent(0.0f);
-    }
+    // //测试
+    // if(test_signal == 0) //所有电机电流强制为0；检查电机转动方向是否需要置反
+    // {
+    //     this->set_controlMode(CURRENT_CONTROL_MODE);
+    //     this->motor_launch_->setTargetCurrent(0.0f);
+    //     this->motor_stretch_->setTargetCurrent(0.0f);
+    //     this->motor_rotate_->setTargetCurrent(0.0f);
+    //     this->motor_pitch_->setTargetCurrent(0.0f);
+    // }
 
-    //1~4 signal test用于测试电机电流方向和电机转动方向是否同相
-    else if(test_signal == 1)
-        this->motor_launch_->setTargetCurrent(test_current);
+    // //1~4 signal test用于测试电机电流方向和电机转动方向是否同相
+    // else if(test_signal == 1)
+    //     this->motor_launch_->setTargetCurrent(test_current);
 
-    else if(test_signal == 2)
-        this->motor_stretch_->setTargetCurrent(test_current);
+    // else if(test_signal == 2)
+    //     this->motor_stretch_->setTargetCurrent(test_current);
 
-    else if(test_signal == 3)
-        this->motor_rotate_->setTargetCurrent(test_current);
+    // else if(test_signal == 3)
+    //     this->motor_rotate_->setTargetCurrent(test_current);
         
-    else if(test_signal == 4)
-        this->motor_pitch_->setTargetCurrent(test_current);
+    // else if(test_signal == 4)
+    //     this->motor_pitch_->setTargetCurrent(test_current);
 
-    //航模遥控操纵测试
-    else if(test_signal == 5)
-    {
-        this->manualControl();
-    }
+    // //航模遥控操纵测试
+    // else if(test_signal == 5)
+    // {
+    //     this->manualControl();
+    // }
 
-    else if(test_signal == 6) //测试stop功能
-    {
-        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-        this->stop();
-    }
+    // else if(test_signal == 6) //测试stop功能
+    // {
+    //     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    //     this->stop();
+    // }
 
-    else if(test_signal == 7) //测试idle功能
-    {
-        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-        this->idle();
-    }
-    else if(test_signal == 8)
-    {
-        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-        this->set_LaunchHeight(test_launch_height);
-    } 
-    else if(test_signal == 9)
-    {
-        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-        this->set_RotateAngle(test_rotate_angle);
-    }
-    else //empty
-    {
-        this->set_controlMode(CURRENT_CONTROL_MODE);
-        this->set_LaunchHeight(0.0f);
-        this->set_StretchLength(0.0f);
-        this->set_RotateAngle(0.0f);
-        this->set_PitchAngle(0.0f);
-    }
+    // else if(test_signal == 7) //测试idle功能
+    // {
+    //     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    //     this->idle();
+    // }
+    // else if(test_signal == 8)
+    // {
+    //     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    //     this->set_LaunchHeight(test_launch_height);
+    // } 
+    // else if(test_signal == 9)
+    // {
+    //     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    //     this->set_RotateAngle(test_rotate_angle);
+    // }
+    // else //empty
+    // {
+    //     this->set_controlMode(CURRENT_CONTROL_MODE);
+    //     this->set_LaunchHeight(0.0f);
+    //     this->set_StretchLength(0.0f);
+    //     this->set_RotateAngle(0.0f);
+    //     this->set_PitchAngle(0.0f);
+    // }
     
 }
 

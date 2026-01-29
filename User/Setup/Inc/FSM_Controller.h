@@ -58,8 +58,8 @@ public:
             init_flag_ = false;
         
         this->arm_setup_->set_TargetKFS(3,0); //设置目标梅花桩编号
-
-        this->start(osPriorityHigh, 512);
+        this->chassis_setup_->setTargetKFS(3); //设置目标梅花桩编号
+        this->start(osPriorityHigh+1, 256);
         init_flag_ = true;
     }
 

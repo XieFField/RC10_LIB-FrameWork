@@ -1,6 +1,6 @@
 /**
  * @file omni_chassisSetup.h
- * @brief 鍏ㄩ敓鏂ゆ嫹閿熸枻鎷风偔閿熸枻鎷烽敓锟?
+ * @brief 底盘应用类
  */
 #ifndef __OMNI_CHASSISSETUP_H
 #define __OMNI_CHASSISSETUP_H

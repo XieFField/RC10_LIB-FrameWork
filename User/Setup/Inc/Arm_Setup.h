@@ -80,7 +80,7 @@ extern "C" {
 
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS 1  //無底盤下，用虛擬坐標進行驗證自動邏輯
+#define ARM_AUTO_DEBUG_NOCHASSIS 0  //無底盤下，用虛擬坐標進行驗證自動邏輯
 
 
 
@@ -547,6 +547,9 @@ protected:
         .is_calibrating = false,
     };
 
+
+
+
     ARM_Status_E arm_status_ = ARM_MANUAL_CONTROL;
     ARM_Status_E last_arm_status_ = ARM_MANUAL_CONTROL;
 
@@ -561,11 +564,18 @@ protected:
     Rotate_Strategy_E recorded_align_strategy_ = ROTATE_PATH_SHORTEST;
     Rotate_Strategy_E recorded_carrying_strategy_ = ROTATE_PATH_SHORTEST;
 
+    struct {
+        
+        float rotate_rate = 1.2f;
+        float launch_rate = 0.012f;
+        int cnt = 0;
+    }manual_control;
+
     /**
      * @brief 这里的输入是已经初始化的targetKFS的index (0 或 1)
      * @return 云台旋转时候末端需要避障的PA PB点 
      * 
-     * @details [修复] 使用基于方向的几何判定，修复了直线路径下PA点计算为(0,0)的BUG
+     * 
      */
     void get_GimbalMF_PAPB(int target_KFSIndex, Point2D& PA, Point2D& PB)
     {   
