@@ -194,7 +194,7 @@ int DJI_Group::calcSlot(uint32_t mid, DJI_MotorType type)const
 
 std::size_t DJI_Group::packCommand(CanFrame outFrames[], std::size_t maxFrames)
 {
-    if(maxFrames <1 || motor_count_ == 0)
+	if(maxFrames <1 || motor_count_ == 0)
         return 0; // 无法打包
     // 初始化帧
     CanFrame &f = outFrames[0];

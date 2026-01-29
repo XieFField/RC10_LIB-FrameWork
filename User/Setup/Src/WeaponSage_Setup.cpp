@@ -1,7 +1,7 @@
 #include "WeaponSage_Setup.h"
 
 namespace WeaponSage_Setup {
-    float weapon_pos[2] = {0.1217993396579f,0.3224356578564f};
+  	float weapon_pos[4]={0.00748124998,0.13226898,0.28226898,0.341148913};
 }
 
 Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
@@ -9,7 +9,7 @@ Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
 {
     
 }
-
+uint32_t WeaponSagestackHighWaterMark = 0;
 void Robot_WeaponSage_Setup::loop()
 {	
 	ctrl_status_.now_times=TimeStamp::getInstance().getSeconds();
@@ -19,6 +19,9 @@ void Robot_WeaponSage_Setup::loop()
 		calibrate();
 		weaponSage_status_=WEAPONSAGE_CALIBRATE;
 	}
+	
+//	WeaponSagestackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+//	
     switch(weaponSage_status_)
     {
         case WEAPONSAGE_MANUAL_CONTROL:
@@ -54,7 +57,8 @@ void Robot_WeaponSage_Setup::loop()
     }
 	
     this->update();
-	auto_ctrl_.auto_state_bool_S.is_matching=Locate_Setup::getInstance()->ifSwitch1On();
+//	auto_ctrl_.auto_state_bool_S.is_matching=Locate_Setup::getInstance()->ifSwitch1On();
+	auto_ctrl_.auto_state_bool_S.is_matching= omni_flag;
 }
 int CNT=0;
 float traverse_rate=0.002;
@@ -75,18 +79,24 @@ void Robot_WeaponSage_Setup::calibrate()
         }
 	
         this->setCtrlMode(WeaponSage::CURRENT_CONTROL);
+		this->setTarget(-900.0f, WeaponSage::Traverse_Motor);
         this->setTarget(500.0f, WeaponSage::Claw_Motor);
         if(!auto_ctrl_.auto_state_bool_S.wrist_enable)
         {
             Weapon_wrist_enable();
+			auto_ctrl_.auto_state_bool_S.wrist_enable=true;
         }
-        if(ctrl_status_.now_times - ctrl_status_.calibrate_startTime > 1.5f)
+        if(ctrl_status_.now_times - ctrl_status_.calibrate_startTime > 2.0f)
         {
             //relocate
             this->claw_Motor_->relocate_totalAngle(0.0f);
             this->traverse_Motor_->relocate_totalAngle(0.0f);
             this->launch_Motor_->relocate_totalAngle(0.0f);
             
+			if(auto_ctrl_.auto_state_bool_S.wrist_enable)
+			{	
+				this->Weapon_wrist_setzero();
+            }
             this->setTarget(0.0f, WeaponSage::Claw_Motor);
             this->setTarget(0.0f, WeaponSage::Traverse_Motor);
 		
@@ -166,7 +176,7 @@ void Robot_WeaponSage_Setup::manualControl()
                 target_pos_.launch_pos_ = target_pos_.launch_pos_;
 			if(auto_ctrl_.auto_state_bool_S.wrist_enable)
 			{
-            target_pos_.wrist_pos_ = 0.0f;
+            target_pos_.wrist_pos_ = -90.0f;
 			}
 			manual_ctrlForgrip_.last_right_stick_x = airjoy_data_.right_x;
             manual_ctrlForgrip_.last_right_stick_y = airjoy_data_.right_y;
@@ -217,7 +227,7 @@ void Robot_WeaponSage_Setup::manualControl()
 					target_pos_.launch_pos_ = target_pos_.launch_pos_;
 				if(auto_ctrl_.auto_state_bool_S.wrist_enable)
 				{
-				target_pos_.wrist_pos_ = 90.0f;
+				target_pos_.wrist_pos_ = 0.0f;
 				}
 				manual_ctrlForgrip_.last_right_stick_x = airjoy_data_.right_x;
 				manual_ctrlForgrip_.last_right_stick_y = airjoy_data_.right_y;
@@ -289,6 +299,7 @@ void Robot_WeaponSage_Setup::autoControl()
                 now_state_ = WeaponSage_Setup::STATE_AIM_POSITION;
 				
 				this->setTarget(0.8*initData_.max_launchHeight_, WeaponSage::Launch_Motor);
+				this->setTarget(-90.0f, WeaponSage::Wrist_Motor);
             }
             else
             {
@@ -382,7 +393,7 @@ void Robot_WeaponSage_Setup::State_LowerClaw()
 	 if(auto_ctrl_.auto_state_bool_S.is_matching)
     {
 		this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-		auto_ctrl_.tarch_height =0.2* initData_.max_launchHeight_;
+		auto_ctrl_.tarch_height= 0.0193959419;
 		this->setTarget(auto_ctrl_.tarch_height, WeaponSage::Launch_Motor);
 	}
 }
@@ -417,13 +428,11 @@ bool Robot_WeaponSage_Setup::State_GrabClaw()
 
 bool Robot_WeaponSage_Setup::State_Lift()
 {
-    if(!auto_ctrl_.auto_state_bool_S.is_matching)
     
-    {
         this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-        auto_ctrl_.up_height = 0.7f * initData_.max_launchHeight_;
+        auto_ctrl_.up_height =   initData_.max_launchHeight_;
         this->setTarget(auto_ctrl_.up_height, WeaponSage::Launch_Motor);
-    }
+    
 
     Point2D current_pos = getClawPos();
     
@@ -438,9 +447,10 @@ bool Robot_WeaponSage_Setup::State_Lift()
     }
 }
 
+
 WeaponSage_InitData_S initData_=
 {
-    .max_launchHeight_ =0.420f,
+    .max_launchHeight_ =0.300f,
     .max_clawAngle_ = 65.0f,
     .max_traverseLength_ = 0.450f,
 
