@@ -34,7 +34,7 @@ namespace WeaponSage_Setup
 
         float debug_start = 1; //���Կ�ʼ��־ == 1 ��ʼ����
 		float now_times=0.0f;
-        float calibrate_startTime = 0;
+        float calibrate_startTime = 0.0f;
         bool calibrate_start = false;
         bool is_calibrating = false;
 

@@ -1,7 +1,7 @@
 #include "WeaponSage_Setup.h"
 
 namespace WeaponSage_Setup {
-  	float weapon_pos[4]={0.00748124998,0.13226898,0.28226898,0.341148913};
+  	float weapon_pos[4]={0.00748124998f,0.13226898f,0.28226898f,0.341148913f};
 }
 
 Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
@@ -61,9 +61,9 @@ void Robot_WeaponSage_Setup::loop()
 	auto_ctrl_.auto_state_bool_S.is_matching= omni_flag;
 }
 int CNT=0;
-float traverse_rate=0.002;
-float weapon_launch_rate=0.0002;
-float Kp_traverse=0.2;
+float traverse_rate=0.002f;
+float weapon_launch_rate=0.0002f;
+float Kp_traverse=0.2f;
 
 
 
@@ -196,11 +196,11 @@ void Robot_WeaponSage_Setup::manualControl()
 				else if(airjoy_data_.right_x > 0.5f)
 				{
 					manual_ctrlForgrip_.changeTarget_state = true;
-					if(current_pos_.traverse_pos_>0.2*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
+					if(current_pos_.traverse_pos_>0.2f*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
 					{
 						target_pos_.traverse_pos_+=traverse_rate;
 					}
-					if(current_pos_.traverse_pos_<=0.2*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
+					if(current_pos_.traverse_pos_<=0.2f*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
 					{
 						target_pos_.traverse_pos_+=traverse_rate*Kp_traverse;
 					}
@@ -208,11 +208,11 @@ void Robot_WeaponSage_Setup::manualControl()
 				else if(airjoy_data_.right_x < -0.5f)
 				{
 					manual_ctrlForgrip_.changeTarget_state = true;
-					if(current_pos_.traverse_pos_>0.2*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
+					if(current_pos_.traverse_pos_>0.2f*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
 					{
 						target_pos_.traverse_pos_-=traverse_rate;
 					}
-					if(current_pos_.traverse_pos_<=0.2*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
+					if(current_pos_.traverse_pos_<=0.2f*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
 					{
 						target_pos_.traverse_pos_-=traverse_rate*Kp_traverse;
 					}
@@ -298,7 +298,7 @@ void Robot_WeaponSage_Setup::autoControl()
             
                 now_state_ = WeaponSage_Setup::STATE_AIM_POSITION;
 				
-				this->setTarget(0.8*initData_.max_launchHeight_, WeaponSage::Launch_Motor);
+				this->setTarget(0.8f*initData_.max_launchHeight_, WeaponSage::Launch_Motor);
 				this->setTarget(-90.0f, WeaponSage::Wrist_Motor);
             }
             else
@@ -393,7 +393,7 @@ void Robot_WeaponSage_Setup::State_LowerClaw()
 	 if(auto_ctrl_.auto_state_bool_S.is_matching)
     {
 		this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-		auto_ctrl_.tarch_height= 0.0193959419;
+		auto_ctrl_.tarch_height= 0.0193959419f;
 		this->setTarget(auto_ctrl_.tarch_height, WeaponSage::Launch_Motor);
 	}
 }
