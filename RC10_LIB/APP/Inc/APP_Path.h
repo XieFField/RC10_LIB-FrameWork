@@ -542,7 +542,6 @@ public:
     Path_line()
     {
         bezier_curve_num = 0;
-        generate_status = GENERATE_WAIT_FIRST_POINT;
         is_init = false;
     }
     bool Add_Point(Vector2D point_)
@@ -635,18 +634,7 @@ public:
 
         bezier_curve_num = 0; // 重置曲线数量
 
-        generate_status = GENERATE_WAIT_FIRST_POINT; // 重置生成状态
-
-        currnet_target_angle = 0; // 重置当前目标角度
-
-        current_bezier_curve_dx = 0; // 重置当前曲线索引
-        current_t = 0;               // 重置当前曲线参数 t
-
-        current_finished_len = 0; // 重置已完成的曲线长度
-        current_curve_len = 0;    // 重置当前曲线的长度
-
         is_end = false;   // 重置路径结束标志
-        is_start = false; // 重置路径开始标志
     }
 
     /**
@@ -710,26 +698,11 @@ protected:
     Speedplanner_1D_Param_Config params_;
     uint8_t bezier_curve_num = 0; // 总曲线数量
 
-    /*------------------------------过程变量-----------------------------------*/
-    float currnet_target_angle = 0; // 当前目标角度
-
-    uint8_t current_bezier_curve_dx = 0; // 当前路段对应曲线的索引
-
-    float current_t = 0; // 当前坐标对应当前路段的t值
-
-    float current_finished_len = 0; // 已完成的曲线的总长度
-
-    float current_curve_len = 0; // 当前曲线走过的长度
-
 private:
     /*---------------------------------状态-------------------------------------*/
     bool is_end = false;   // 是否开始
-    bool is_start = false; // 是否结束
 
     bool is_init = false; // 是否初始化
-
-    /*----------------------------生成路径的临时变量-------------------------------------*/
-    Generate_Curve_Status generate_status = GENERATE_WAIT_FIRST_POINT; // 生成曲线的状态
 };
 #endif
 

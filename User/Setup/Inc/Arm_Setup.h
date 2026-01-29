@@ -131,7 +131,7 @@ typedef struct{
 }autopathPos_S;
 
 typedef struct{
-    const float stretch_time_s = 0.613f; //伸展时间，单位秒
+    const float stretch_time_s = 0.29f; //伸展时间，单位秒
 
     float gimbal_max_rad = 0.0f; //云台最大旋转角速度，单位弧度每秒
     float rotateSpeedRate_ = 0.8f; //云台旋转速度比例
@@ -251,7 +251,7 @@ public:
         this->setStretchReversed(false); //伸展电机不反向
         this->setRotateReversed(false);
         this->setLaunchReversed(true); //升降电机反向
-        start(osPriorityHigh-1, 512);
+        start(osPriorityHigh-1, 512); // 【再次修复】栈空间加倍到 8KB，彻底排除栈溢出
         setRotateMultiTurn(false); //单圈模式
         arm_ctrlStatus.init_flag = true;
     }
@@ -302,8 +302,8 @@ public:
         else
             auto_ctrl_.kfs_num = ONLY_ONE;
 
-        auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0] - 1)];
-        auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[1] - 1)];
+        auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0])];
+        auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[1])];
         
         MF_AutoCtrler::get_MoveDiretion(auto_ctrl_.now_armPosition,
                                         auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1],
@@ -498,8 +498,8 @@ protected:
             // return locate_ptr->get_FK_ChassisSpeed_inWorld();
             Locate_Setup *locate_ptr = Locate_Setup::getInstance();
             Point2D speed = {0};
-            speed.x = locate_ptr->get_FK_ChassisSpeed_inWorld().x;
-            speed.y = locate_ptr->get_FK_ChassisSpeed_inWorld().y;
+            speed.x = locate_ptr->get_RobotSpeed_inWorld().x/rate_forspeed;
+            speed.y = locate_ptr->get_RobotSpeed_inWorld().y/rate_forspeed;
             return speed;
         #endif
     }
@@ -520,7 +520,7 @@ protected:
         pose.x += speed.x * get_dt();
                 
         pose.y += speed.y * get_dt();
-                
+                    
 
         return pose;
 
@@ -670,7 +670,7 @@ protected:
         }
     }
     
-    
+    float rate_forspeed =1.0f;
 };
 
 

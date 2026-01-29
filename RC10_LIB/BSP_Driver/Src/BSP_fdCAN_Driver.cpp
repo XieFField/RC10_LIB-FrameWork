@@ -413,7 +413,7 @@ fdCANbus* fdCANbus::getInstance(FDCAN_HandleTypeDef* hfdcan)
 
 fdCANbus::fdCANbus(FDCAN_HandleTypeDef* hfdcan)
     : hfdcan_(hfdcan),
-      rxQueue_(256), // [Fix] 增加队列深度，空载高转速下防止丢帧导致相位混叠
+      rxQueue_(512), // [Fix] 增加队列深度，空载高转速下防止丢帧导致相位混叠
       rxTask_(this),
       schedulerTask_(this)
 {

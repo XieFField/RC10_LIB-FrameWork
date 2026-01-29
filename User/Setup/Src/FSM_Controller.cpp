@@ -167,7 +167,7 @@ void FSM_Controller::auto_ctrl()
         case 0x02:
         {
 			weaponSage_setup_->Set_End_Flag(chassis_setup_->GetReach_flag());
-            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
             arm_setup_->setArmStatus(ARM_IDLE);
             break;

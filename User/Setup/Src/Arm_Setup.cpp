@@ -309,9 +309,9 @@ void ArmSetup::state_toTargetHight(int targetKFS)
 
     if(kfs_height - 0.2f < auto_ctrl_.flag.safe_height)
         this->set_LaunchHeight(auto_ctrl_.flag.safe_height); //安全高度
-    else if(kfs_height = 0.4f)
+    else if(kfs_height == 0.4f)
         this->set_LaunchHeight(auto_ctrl_.flag.safe_height); //目标高度-吸盘高度(0.2m)
-    else if(kfs_height = 0.6f)
+    else if(kfs_height == 0.6f)
         this->set_LaunchHeight(init_data_.max_launchHeight_); //目标高度-吸盘高度(0.2m)
 
     
@@ -581,12 +581,14 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
         if(norm_angle < 0.0f) norm_angle += 360.0f;
 
         // 检查当前角度是否允许处于低高度 (即在 [30, 135] 范围内)
-        if(norm_angle >= 30.0f && norm_angle <= 135.0f)
+//        if(norm_angle >= 30.0f && norm_angle <= 135.0f)
+//        {
+            float kfs_height = MF_high[targetKFS -1];
+//             // 如果目标高度低于安全高度，则降低
+//            //  if(kfs_height - 0.2f < auto_ctrl_.flag.safe_height)
+//            //     this->set_LaunchHeight(kfs_height - 0.2f);
+        if(_tool_Abs(norm_angle-90.0f) < 20.0f)
         {
-             float kfs_height = MF_high[targetKFS -1];
-             // 如果目标高度低于安全高度，则降低
-            //  if(kfs_height - 0.2f < auto_ctrl_.flag.safe_height)
-            //     this->set_LaunchHeight(kfs_height - 0.2f);
                 if(kfs_height == 0.2f)
                     this->set_LaunchHeight(0.0f); //降到最低点
                 else if(kfs_height == 0.4f)
@@ -594,6 +596,7 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
                 else if(kfs_height == 0.6f)
                     this->set_LaunchHeight(init_data_.max_launchHeight_); //降到最高点
         }
+//        }
 
         if(_tool_Abs(diff) < 2.0f)
         {
@@ -624,6 +627,7 @@ float angle = 0.0f;
 /**
  * @brief 寻自动伸展
  */
+float t_needread = 0.0f;
 bool ArmSetup::state_aimExt(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
@@ -661,52 +665,54 @@ bool ArmSetup::state_aimExt(int targetKFS)
             return false;
 		
         //计算t_need
-        switch(move_direction)
+        if(!auto_ctrl_.flag.ext_started)
         {
-            case MF_AutoCtrler::Positive_X:
+            switch(move_direction)
             {
-                if(_tool_Abs(auto_ctrl_.now_chassis_speed.x) < 0.1f)
-                    return false; //速度为0，无法伸展
-                t_need = _tool_Abs((target_pos.x - auto_ctrl_.now_armPosition.x) 
-                        / auto_ctrl_.now_chassis_speed.x);
-                break;
-            }
-            case MF_AutoCtrler::Negative_X:
-            {
-                if(_tool_Abs(auto_ctrl_.now_chassis_speed.x) < 0.1f)
-                    return false; //速度为0，无法伸展
+                case MF_AutoCtrler::Positive_X:
+                {
+                    if(_tool_Abs(auto_ctrl_.now_chassis_speed.x) < 0.1f)
+                        return false; //速度为0，无法伸展
+                    t_need = _tool_Abs((target_pos.x - auto_ctrl_.now_armPosition.x) 
+                            / auto_ctrl_.now_chassis_speed.x);
+                    break;
+                }
+                case MF_AutoCtrler::Negative_X:
+                {
+                    if(_tool_Abs(auto_ctrl_.now_chassis_speed.x) < 0.1f)
+                        return false; //速度为0，无法伸展
 
-                t_need = _tool_Abs((auto_ctrl_.now_armPosition.x - target_pos.x) 
-                        / auto_ctrl_.now_chassis_speed.x);
-                break;
-            }
+                    t_need = _tool_Abs((auto_ctrl_.now_armPosition.x - target_pos.x) 
+                            / auto_ctrl_.now_chassis_speed.x);
+                    break;
+                }
 
-            case MF_AutoCtrler::Positive_Y:
-            {
-                if(_tool_Abs(auto_ctrl_.now_chassis_speed.y) < 0.1f)
-                    return false; //速度为0，无法伸展
+                case MF_AutoCtrler::Positive_Y:
+                {
+                    if(_tool_Abs(auto_ctrl_.now_chassis_speed.y) < 0.1f)
+                        return false; //速度为0，无法伸展
 
-                t_need = _tool_Abs((target_pos.y - auto_ctrl_.now_armPosition.y) 
-                        / auto_ctrl_.now_chassis_speed.y);
-                break;
+                    t_need = _tool_Abs((target_pos.y - auto_ctrl_.now_armPosition.y) 
+                            / auto_ctrl_.now_chassis_speed.y);
+                    break;
+                }
+                case MF_AutoCtrler::Negative_Y:
+                {
+                    if(_tool_Abs(auto_ctrl_.now_chassis_speed.y) < 0.1f)
+                        return false; //速度为0，无法伸展
+                    t_needread = t_need;
+                    t_need = _tool_Abs((auto_ctrl_.now_armPosition.y - target_pos.y) 
+                            / auto_ctrl_.now_chassis_speed.y);
+                    break;
+                }
+                default:
+                    break;
             }
-            case MF_AutoCtrler::Negative_Y:
-            {
-                if(_tool_Abs(auto_ctrl_.now_chassis_speed.y) < 0.1f)
-                    return false; //速度为0，无法伸展
-
-                t_need = _tool_Abs((auto_ctrl_.now_armPosition.y - target_pos.y) 
-                        / auto_ctrl_.now_chassis_speed.y);
-                break;
-            }
-            default:
-                break;
         }
-
         //或许delta_t < 0.02s会错过伸展窗口(计算频率)
         //给足提前量容忍，或许会更好，避免过严格的等式触发
 
-        const float delta_t = auto_ctrl_.time_set.stretch_time_s / 6.0f; //提前量容忍
+        const float delta_t = 0.04f; //提前量容忍
 
         if(!auto_ctrl_.flag.ext_started)
         {
@@ -735,12 +741,10 @@ bool ArmSetup::state_aimExt(int targetKFS)
 		if(auto_ctrl_.flag.is_reachingTarget && (now_time_s_-auto_ctrl_.flag.reach_finishTime) >= 0.3f)
 		{
 			this->set_StretchLength(0.0f);
-            auto_ctrl_.flag.ext_started = false; //重置伸展开始标志
+           // auto_ctrl_.flag.ext_started = false; //重置伸展开始标志
 
             if(this->get_currentJointStatus().stretchJoint_Length_ < 0.005f)
-            {
-                
-                   
+            { 
 			    return true;
             }
             return false;
@@ -1716,6 +1720,3 @@ Arm_InitData_S arm_initData = {
    .Sucker_GPIO_Port = SUCKER_GPIO_Port,
     .Sucker_GPIO_Pin = SUCKER_Pin,
 };
-
-
-

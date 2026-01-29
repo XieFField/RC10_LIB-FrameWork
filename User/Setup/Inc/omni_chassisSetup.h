@@ -77,7 +77,7 @@ public:
         pid_track.set_params(track_pid_params, 0.0f);
 
         this->start(osPriorityHigh, 1024);
-        setTargetKFS(11);
+//        setTargetKFS(3);
         init_flag = true;
     }
 
@@ -118,7 +118,7 @@ private:
     Path_line path_line_;
     //Path_line path_line1_;
     
-    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 20.0f, .maxJerk = 100.0f, .maxSpeed = 3.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 20.0f, .maxJerk = 100.0f, .maxSpeed = 2.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
     Speedplanner_1D_Param_Config path_param_1={.maxAcc = 30.0f, .maxDec = 10.0f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
  
     Vector2D original_point_={-0.48f,-0.48f};

@@ -62,12 +62,12 @@ void OmniChassis_Setup::loop()
     {
         this->set_ControlMode(WORLD_SPEED_MODE);
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+            target_chassis_twist_.vx = airjoy_data_.left_x * 1 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vx = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
+            target_chassis_twist_.vy = airjoy_data_.left_y * 1 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vy = 0.0f;
 
@@ -399,7 +399,7 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
         int index = 0;
         for (int i = 0; i < point_sum; i++)
         {
-            if (path_point_[i] == 1 || path_point_[i] == 5 || path_point_[i] == 30 || path_point_[i] == 26 || path_point_[i] == KFS_result_.bestBMF1)
+            if (path_point_[i] == 1 || path_point_[i] == 5 || path_point_[i] == 30 || path_point_[i] == 26 )
             {
                 path_key_point_[index] = path_point_[i];
                 index++;
