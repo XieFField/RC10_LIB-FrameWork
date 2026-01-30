@@ -31,6 +31,15 @@ extern "C" {
 #include "WeaponSage_Setup.h"
 #include "Setup_ConfigInit.h"
 
+
+typedef enum{
+    RELOCATE,
+    SET_KFS,
+    SET_SPEAR,
+    NONE,
+}set_e;
+
+
 class FSM_Controller:public RtosTask {
 public:
     FSM_Controller() : RtosTask("FSM_Controller\0", 1) {}
@@ -80,7 +89,7 @@ private:
 
     void debug();
     
-
+    void stop_modeswitch();
     FSM_Status_E robot_status_ = ALL_STOP; FSM_Status_E last_robot_status_;
 
     float airjoy_deadzone_ = 50.0f; bool airjoy_connected_ = false;
@@ -96,10 +105,34 @@ private:
     bool chassis_setup_registered_ = false; 
     bool init_flag_ = false; //所有需要注册的机构都已经注册完成
     uint8_t debug_flag_ = 0;
+		
+		
+
+    struct{
+        
+        TargetSet_t rsf_send_data={0};
+        uint16_t count = 0;
+        uint8_t now_setKFSindex = 0;
+        uint8_t sroll_wheel_last = 0;
+        bool isread_srollWheelKFS = false;
+        bool kfs_setDone = false;
+        bool spear_setDone = false;
+        // bool issetFirstKFS = false;
+
+        bool isread_srollWheelSpear = false;
+    }crsf_send_s;
+
+    set_e Stop_set_stauts = NONE;
+
+    int8_t target_KFS[2] = {0}, target_spear = -1;
 };
 
 #endif
 
+/*
+STOP 模式下的状态机
+有三种状态
+*/
 
 
 

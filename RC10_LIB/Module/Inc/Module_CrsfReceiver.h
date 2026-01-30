@@ -211,8 +211,7 @@ public:
     void send_uint16(uint8_t sub_type, uint16_t value);
 		void send_float(uint8_t sub_type, float value);
 		void send_robot(float x, float y, float yaw);
-		void send_kfs(float x, float y);
-		void send_Spear(float data);
+		void send_kfsandSpear(int8_t kfs1, int8_t kfs2, int8_t Spear);
 		void send_controlmode(float mode);
     static CrsfReceiver* GetInstance(UART_HandleTypeDef *huart);
     CrsfReceiver(const CrsfReceiver&) = delete;
@@ -266,6 +265,7 @@ public:
 		void Callback_Fuc(uint8_t *buf, uint16_t len) override;
 private:
 
+		
     // ??????
     CrsfReceiver(UART_HandleTypeDef *huart);
     ~CrsfReceiver() = default;
@@ -355,7 +355,15 @@ public:
     void reset_trigger_flag() { }
     void set_trigger_flag_busy() { }
 };
-
+typedef struct {
+    uint8_t kfs1 = 0;
+    uint8_t kfs2 = 0;
+    int8_t Spear = 0;  
+    uint8_t mode = 0;
+    float x = 0.0f;
+    float y = 0.0f;
+    float yaw = 0.0f;
+} TargetSet_t;
 #endif // __cplusplus
 
 #endif // Module_CRSF_RECEIVER_H
