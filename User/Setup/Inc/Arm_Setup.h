@@ -228,7 +228,7 @@ public:
     ArmSetup(Arm_InitData_S init_Data)
         : Robot_Arm(init_Data), RtosTask("ArmSetup", 1) 
     {
-        auto_ctrl_.time_set.gimbal_max_rad = (120.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f); //云台最大角速度(rad/s)
+        auto_ctrl_.time_set.gimbal_max_rad = (100.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f)*0.9; //云台最大角速度(rad/s)
     }
 
     bool isArmcalibrated() const
@@ -566,7 +566,7 @@ protected:
 
     struct {
         
-        float rotate_rate = 1.2f;
+        float rotate_rate = 3.0f;
         float launch_rate = 0.03f;
         int cnt = 0;
     }manual_control;

@@ -54,6 +54,7 @@ typedef enum{
     CHASSIS_TESTFOR_ARM, //底盘测试模式，为串联臂提供稳定平台
 
     CHASSIS_AUTO_CONTROL, //底盘自动控制模式
+    
 
     CHASSIS_STOP,
 }CHASSIS_Status_E;
