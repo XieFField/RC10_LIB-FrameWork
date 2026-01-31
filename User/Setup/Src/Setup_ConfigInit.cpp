@@ -232,7 +232,6 @@ void ALL_Setup_ConfigInit(void)
    crsf_rc->init();
 
 
-
    
 
 	 instance_man.RegisterInstance(&laserpos);

@@ -1213,6 +1213,11 @@
               <FilePath>..\RC10_LIB\BSP_Driver\Inc\BSP_USB_UART_Driver.h</FilePath>
             </File>
             <File>
+              <FileName>Motor_DJI.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Motor\Src\Motor_DJI.cpp</FilePath>
+            </File>
+            <File>
               <FileName>BSP_USB_UART_Driver.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\BSP_Driver\Src\BSP_USB_UART_Driver.cpp</FilePath>
@@ -1231,11 +1236,6 @@
               <FileName>Motor_DJI.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Motor\Inc\Motor_DJI.h</FilePath>
-            </File>
-            <File>
-              <FileName>Motor_DJI.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Motor\Src\Motor_DJI.cpp</FilePath>
             </File>
             <File>
               <FileName>Motor_VESC.h</FileName>

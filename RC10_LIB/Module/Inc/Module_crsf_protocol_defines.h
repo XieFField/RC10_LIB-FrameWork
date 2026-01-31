@@ -6,12 +6,14 @@
 // CRSF Protocol Defines
 #define CRSF_BAUDRATE 420000                            // ??????
 #define CRSF_NUM_CHANNELS 16                            // ?????
-#define CRSF_CHANNEL_VALUE_MIN 172                      // ?????§³?????
-#define CRSF_CHANNEL_VALUE_MID 992                      // ?????¦Ë??
+#define CRSF_CHANNEL_VALUE_MIN 172                      // ?????ï¿½ï¿½?????
+#define CRSF_CHANNEL_VALUE_MID 992                      // ?????ï¿½ï¿½??
 #define CRSF_CHANNEL_VALUE_MAX 1811                     // ???????????
-#define CRSF_MAX_PACKET_SIZE 64                         // ??????????§³
+#define CRSF_MAX_PACKET_SIZE 64                         // ??????????ï¿½ï¿½
 #define CRSF_MAX_PAYLOAD_LEN (CRSF_MAX_PACKET_SIZE - 4) // Max size of payload in [dest] [len] [type] [payload] [crc8]
 #define CRSF_CRC_POLY 0xD5
+
+
 
 enum
 {
@@ -52,6 +54,7 @@ typedef enum
     CRSF_FRAMETYPE_MSP_REQ = 0x7A,
     CRSF_FRAMETYPE_MSP_RESP = 0x7B,
     CRSF_FRAMETYPE_MSP_WRITE = 0x7C,
+    CRSF_FRAMETYPE_CUSTOM_TELEMETRY = 0x0C
 } crsf_frame_type_e;
 
 typedef enum
