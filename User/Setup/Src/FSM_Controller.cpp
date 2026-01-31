@@ -103,6 +103,9 @@ void FSM_Controller::all_stop()
         weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
        
     chassis_setup_->setChassisStatus(CHASSIS_STOP);
+
+
+    airjoy_setTarget();
 }
 
 void FSM_Controller::manual_ctrl()
@@ -183,4 +186,3 @@ void FSM_Controller::debug()
 
     // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
 }
-

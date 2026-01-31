@@ -30,7 +30,7 @@ LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
 
 Chassis_Omni<3>::init_config chassis_initData = {
-    .wheel_radius = 0.442f/2.f,
+    .wheel_radius = 0.15f/2.f,
     .max_wheel_rpm = 420,
     .wheels[0] = {
         .x = 0.0f,
@@ -305,7 +305,7 @@ void CAN_Motor_Init(void)
    
    PID_Param_Config arm_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
    PID_Param_Config arm_3508_anglePID = m3508_angle_pid_params;
-   arm_3508_anglePID.output_limit = 200.0f;
+   arm_3508_anglePID.output_limit = 350.0f;
    // arm_3508_speedPID.output_limit = 420.0f; // 根据机械臂要求调整输出限幅
    
    arm_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);

@@ -567,7 +567,7 @@ protected:
     struct {
         
         float rotate_rate = 1.2f;
-        float launch_rate = 0.012f;
+        float launch_rate = 0.03f;
         int cnt = 0;
     }manual_control;
 
