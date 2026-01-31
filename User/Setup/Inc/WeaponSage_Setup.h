@@ -132,6 +132,11 @@ public:
             return false;
     }
 
+    void setTargetIndex(int8_t index)
+    {
+        ctrl_status_.target_poleIndex = index;
+    }
+
     void setWeaponSageControlStatus(WeaponSage_Status_E status)
     {
         weaponSage_status_ = status;

@@ -40,6 +40,15 @@ typedef enum{
 }set_e;
 
 
+typedef struct KSTarget_t {
+    uint8_t KFS[2];
+    int8_t Spear;
+
+    bool operator!=(const KSTarget_t& other) const {
+         return KFS[0] != other.KFS[0] || KFS[1] != other.KFS[1] || Spear != other.Spear;
+    }
+};
+
 class FSM_Controller:public RtosTask {
 public:
     FSM_Controller() : RtosTask("FSM_Controller\0", 1) {}
@@ -67,8 +76,8 @@ public:
         if(!arm_setup_registered_ || !chassis_setup_registered_ || !weaponSage_setup_registered_)
             init_flag_ = false;
         
-        this->arm_setup_->set_TargetKFS(4,0); //设置目标梅花桩编号
-        this->chassis_setup_->setTargetKFS(4); //设置目标梅花桩编号
+        this->arm_setup_->set_TargetKFS(0,0); //设置目标梅花桩编号
+        this->chassis_setup_->setTargetKFS(0); //设置目标梅花桩编号
         this->start(osPriorityHigh+1, 256);
         init_flag_ = true;
     }
@@ -122,7 +131,8 @@ private:
 
     set_e Stop_set_stauts = NONE;
 
-    int8_t target_KFS[2] = {0}, target_spear = -1;
+    KSTarget_t KStarget = {0};
+    KSTarget_t last_KStarget = {0};
 };
 
 #endif

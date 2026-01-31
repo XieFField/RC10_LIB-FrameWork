@@ -31,9 +31,8 @@ void FSM_Controller::loop()
                 }
             }
             else
-            {
                 Stop_set_stauts = NONE;
-            }
+            
             break;
 
         case 0x01:
@@ -57,16 +56,16 @@ void FSM_Controller::loop()
         break;
 
     case MANUAL_CONTROL:
-        // �ֶ������߼�ʵ��
+        // �ֲ�ģʽ
         manual_ctrl();
         break;
 
     case AUTO_CONTROL:
-        // �Զ������߼�ʵ��
+        // �Զ�ģʽ
         auto_ctrl();
         break;
     case DEBUG_MODE:
-        // ����ģʽ�߼�ʵ��
+        // ����ģʽ
         debug();
         break;
 
@@ -74,95 +73,14 @@ void FSM_Controller::loop()
         break;
    }
 
+  if(KStarget != last_KStarget)
+  {
+      chassis_setup_->setTargetKFS(KStarget.KFS[0]);
+      arm_setup_->set_TargetKFS(KStarget.KFS[0], 0);
+      weaponSage_setup_->setTargetIndex(KStarget.Spear-1);
+  }
 
-
-//    if(airjoy_data_.SWA ==0x01 && airjoy_data_.SWC==0x00)
-//    {
-// 	   static uint8_t iiii = 0;
-	   
-//         // if(airjoy_data_.SWA == 0x01)
-//         // { 
-//             //�ض�λ
-//         if(airjoy_data_.botton_click ==1 && iiii == 0)
-//         {
-//             Locate_Setup::getInstance()->Relocte_ToLader();
-            
-//             iiii++;
-//         }
-            
-//         else
-//         {
-//             Locate_Setup::getInstance()->set_startToLRL(false);
-// 			iiii = 0;
-//         }
-//     }
-//     else
-//     {
-//         Locate_Setup::getInstance()->set_startToLRL(false);
-//     }
-
-// 	if(airjoy_data_.SWA ==0x01 && airjoy_data_.SWC!=0x00)
-// 	{
-// 		if(airjoy_data_.SWC==0x01) 	
-// 				state123 = 1;	
-	
-// 		if(state123 == 1)
-// 		{			
-		
-// 		if(airjoy_data_.right_x>0.5)
-// 		{
-// 				count123++;
-// 				if(count123>=500)
-// 				{target.kfs1++;	
-// 					count123=0;
-// 				}
-// 		}
-// 		else if(airjoy_data_.right_x<-0.5)
-// 		{
-// 			count123++;
-// 			if(count123>=500)
-// 			{
-// 				target.kfs1--;	
-// 				count123=0;
-// 			}
-// 		}
-// 		else
-// 				count123 = 0;
-// 			if(airjoy_data_.scroll_wheel==1)
-// 			{
-// 				target.kfs1=target.kfs2=0;
-// 			}
-// 			if(airjoy_data_.botton_click ==1&&state123==1) 
-// 					state123=2;
-// 		}
-// 		if(state123==2)
-// 		{
-// 			if(airjoy_data_.right_x>0.5)
-// 		{
-// 			count123++;
-// 			if(count123>=500)target.kfs2++;	
-// 		}
-// 		if(airjoy_data_.right_x<-0.5)
-// 		{
-// 			count123++;
-// 			if(count123>=500)target.kfs2--;
-// 		}
-// 		if(airjoy_data_.scroll_wheel==1)
-// 		{
-// 			CrsfReceiver::GetInstance(&huart7)->send_kfsandSpear(0,0,target.Spear);
-// 			state123 =1;
-// 		}
-// 		}
-// 		if(airjoy_data_.botton_click ==1&&state123==2)
-// 		{
-// 			target.kfs1=target.kfs2=0;
-// 			state123=0;
-// 		}
-// 		if(airjoy_data_.SWC==0x02)
-// 		{
-				
-// 		}
-//     }
+   last_KStarget = KStarget;
 }
 
 
@@ -285,11 +203,11 @@ void FSM_Controller::stop_modeswitch()
                         switch(crsf_send_s.now_setKFSindex)
                         {
                             case 0:
-                                target_KFS[0] = crsf_send_s.rsf_send_data.kfs1;
+                                KStarget.KFS[0] = crsf_send_s.rsf_send_data.kfs1;
                                 crsf_send_s.now_setKFSindex = 1;
                                 break;
                             case 1:
-                                target_KFS[1] = crsf_send_s.rsf_send_data.kfs2;
+                                KStarget.KFS[1] = crsf_send_s.rsf_send_data.kfs2;
                                 crsf_send_s.now_setKFSindex = 2;
                                 crsf_send_s.kfs_setDone = true;
                                 break;
@@ -349,7 +267,7 @@ void FSM_Controller::stop_modeswitch()
                     static uint8_t is_click = 0;
                     if(airjoy_data_.botton_click == 1 && is_click == 0)
                     {
-                        target_spear = crsf_send_s.rsf_send_data.Spear;
+                        KStarget.Spear = crsf_send_s.rsf_send_data.Spear;
                         crsf_send_s.spear_setDone = true;
                         is_click = 1;
                     }
