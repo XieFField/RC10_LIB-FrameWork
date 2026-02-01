@@ -90,7 +90,7 @@ typedef struct{
     
     uint8_t debug_start = 0; //调试开始标志 == 1 开始调试
 
-    uint8_t auto_debug_start = 0; //自动调试开始标志 == 1 开始自动调试
+    uint8_t auto_start = 0; //自动调试开始标志 == 1 开始自动调试
 
     float calibrate_startTime = 0; 
     bool calibrate_start = false;
@@ -228,7 +228,7 @@ public:
     ArmSetup(Arm_InitData_S init_Data)
         : Robot_Arm(init_Data), RtosTask("ArmSetup", 1) 
     {
-        auto_ctrl_.time_set.gimbal_max_rad = (100.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f)*0.9; //云台最大角速度(rad/s)
+        auto_ctrl_.time_set.gimbal_max_rad = (100.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f) * 0.9; //云台最大角速度(rad/s)
     }
 
     bool isArmcalibrated() const
@@ -251,7 +251,7 @@ public:
         this->setStretchReversed(false); //伸展电机不反向
         this->setRotateReversed(false);
         this->setLaunchReversed(true); //升降电机反向
-        start(osPriorityHigh-1, 512); // 【再次修复】栈空间加倍到 8KB，彻底排除栈溢出
+        start(osPriorityHigh-1, 512); 
         setRotateMultiTurn(false); //单圈模式
         arm_ctrlStatus.init_flag = true;
     }
@@ -271,14 +271,7 @@ public:
         rotate_multiTurn_ = isMulti;
     }
 
-    void start_toAutoCtrl(bool start)
-    {
-        if(start)
-            auto_ctrl_.start_to_autoctrl = true;
 
-        else
-            auto_ctrl_.start_to_autoctrl = false;
-    }
 
     /**
      * @brief 设置目标抓取梅花桩编号
@@ -334,7 +327,24 @@ public:
 #endif
         return true;
     }
+
+    void set_Arm_autoStart(uint8_t start)
+    {
+        if(start == 1)
+            arm_ctrlStatus.auto_start = 1;
+        else    
+            arm_ctrlStatus.auto_start = 0;
+    }
 private:
+
+    void start_toAutoCtrl(bool start)
+    {
+        if(start)
+            auto_ctrl_.start_to_autoctrl = true;
+
+        else
+            auto_ctrl_.start_to_autoctrl = false;
+    }
 
     RmPocketData_t airjoy_data_; //摇杆值为 -1 ~ 1
 

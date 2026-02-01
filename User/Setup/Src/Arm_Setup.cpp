@@ -5,7 +5,6 @@ static bool s_has_recorded_strategy = false; //记录是否已经记录过策略
 /**
  * @brief 寻主循环
  */
-// int numnum = 1;
 // uint32_t ArmstackHighWaterMark = 0;
 void ArmSetup::loop()
 {
@@ -20,28 +19,39 @@ void ArmSetup::loop()
         arm_status_ = ARM_CALIBRATE;
     }
 
-
+#if ARM_AUTO_DEBUG_NOCHASSIS
     //目前使用虚拟坐标进行自控逻辑验证
-    if(arm_status_ == ARM_AUTO_CONTROL&&arm_ctrlStatus.auto_debug_start == 1)
+    if(arm_status_ == ARM_AUTO_CONTROL&&arm_ctrlStatus.auto_start == 1)
     {
         auto_ctrl_.now_chassis_speed = get_nowChassisSpeed();
         auto_ctrl_.now_armPosition = get_nowArmPosition();
         auto_ctrl_.now_ChassisPosition = get_nowChassisPose();
     }
-    
+#else
+    auto_ctrl_.now_chassis_speed = get_nowChassisSpeed();
+    auto_ctrl_.now_armPosition = get_nowArmPosition();
+    auto_ctrl_.now_ChassisPosition = get_nowChassisPose();
+#endif
+
+
+
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 
     if( arm_status_ == ARM_AUTO_CONTROL)
     {
-        static bool ifFirst = true;
-        if(ifFirst)
-        {
-            if(arm_ctrlStatus.auto_debug_start == 1)
+        // static bool ifFirst = true;
+        // if(ifFirst)
+        // {
+            if(arm_ctrlStatus.auto_start == 1)
             {
                 this->start_toAutoCtrl(true);
-                ifFirst = false;
+                // ifFirst = false;
             }
-        }
+            else
+            {
+                this->start_toAutoCtrl(false);
+            }
+        // }
     } 
 
 
@@ -55,8 +65,10 @@ void ArmSetup::loop()
 
         case ARM_AUTO_CONTROL:
             {
-                if(arm_ctrlStatus.auto_debug_start == 1)
+                if(arm_ctrlStatus.auto_start == 1)
                     autoControl();
+                else 
+                    idle();
             }   
             break;
 
@@ -93,10 +105,6 @@ void ArmSetup::loop()
             break;
     }
 
-    // if(numnum==1)
-    //     debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getTotalAngle());
-    // else if(numnum == 2)
-    //     debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getRPM());
 
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
@@ -335,7 +343,6 @@ bool ArmSetup::check_Arm_collision(float px, float py,
         0.0f
     };
 
-    // [修正] 正确的坐标变换：将世界坐标投影到机械臂局部坐标系
     // Local X: 沿机械臂轴向 (点乘方向向量 (c, s))
     // Local Y: 垂直机械臂轴向 (点乘法向量 (-s, c))
     Point2D local = {
@@ -622,8 +629,6 @@ Point2D pos_start_kfs = {0.0f, 0.0f, 0.0f};
  * @brief 伸展到目标KFS位置 条件预判
  */
 
-    bool back = false;
-float angle = 0.0f;
 /**
  * @brief 寻自动伸展
  */
@@ -1277,9 +1282,6 @@ void ArmSetup::auto_onlyOne()
                 return_done = state_return(0); //头一个KFS，传入0
                 if(return_done)
                     auto_ctrl_.now_state = STATE_TO_TARGET_HIGHT;
-
-                // this->set_RotateAngle(test_target);
-
             }
             else
             {
@@ -1334,18 +1336,6 @@ void ArmSetup::auto_onlyOne()
             break;
         }
 
-        // case STATE_CARRYING:
-        // {
-        //     // static bool carrying_done = false;
-        //     state_carrying(auto_ctrl_.targetKFS[0], auto_ctrl_.flag.carry_done);
-        //     //判断是否放置完毕
-        //     if(auto_ctrl_.flag.carry_done)
-        //     {
-        //         auto_ctrl_.now_state = STATE_RETURN;
-        //     }
-        //     break;
-        // }
-
         case STATE_RETURN:
         {
             // static bool return_done = false;
@@ -1353,7 +1343,9 @@ void ArmSetup::auto_onlyOne()
             if(auto_ctrl_.flag.return_done)
             {
                 auto_ctrl_.now_state = STATE_DONE;
-                auto_ctrl_.start_to_autoctrl = false; //自动流程结束
+                //auto_ctrl_.start_to_autoctrl = false; //自动流程结束
+                arm_ctrlStatus.auto_start = 0; //自动流程结束
+                auto_ctrl_.start_to_autoctrl = false;
             }
             break;
         }
@@ -1363,6 +1355,7 @@ void ArmSetup::auto_onlyOne()
     }
 }
 
+//下学期再根据实际需求修缮了
 void ArmSetup::auto_two()
 {
     /**

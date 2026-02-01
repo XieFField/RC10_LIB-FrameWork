@@ -1,6 +1,7 @@
 /**
  * @file omni_chassisSetup.h
  * @brief 底盘应用类
+ * @author @XieFField @naoganlin @GaGiaa
  */
 #ifndef __OMNI_CHASSISSETUP_H
 #define __OMNI_CHASSISSETUP_H
@@ -88,6 +89,25 @@ public:
         else
             this->is_chassis_reverse_ = -1.0f;
     }
+
+    /**
+     * @brief 设置路径自动开始标志
+     * @param start 1表示开始，0表示停止
+     * @param path_flagIndex 路径标志索引，0或1
+     */
+    void setPathAutoStart(uint8_t start, uint8_t path_flagIndex)
+    {
+        if(start == 1)
+            flag = 1;
+        else
+            flag = 0;
+
+        if(path_flagIndex == 0 || path_flagIndex == 1)
+            path_flag = path_flagIndex;
+        else
+            path_flag = 0;
+    }
+
 
     void setTargetKFS(int targetKFS)
     {

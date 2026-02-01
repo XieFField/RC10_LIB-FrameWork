@@ -1,268 +1,270 @@
-#ifndef VECTOR2D_H
-#define VECTOR2D_H
+#include "omni_chassisSetup.h"
+// Path_line path_line_;
+// Speedplanner_1D_Param_Config path_param({.maxAcc = 3.0f, .maxDec = 3.0f, .maxJerk = 4.0f, .maxSpeed = 0.5f, .initialSpeed = 0.05f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f});
+// Path_line path_line_(path_param);
+#if debug_ladar
 
-#include <arm_math.h> // 包含 DSP 库，用于数�?计算
+int last_cout_ladar_data = -1;
 
-#ifdef __cplusplus
-extern "C"
-{
 #endif
 
-#ifdef __cplusplus
-}
-#endif
+uint32_t chassisstackHighWaterMark = 0;
 
-#ifdef __cplusplus
-
-// 定义队列的最大�?�?
-#define QUEUE_CAPACITY 3
-
-/**
- * @class Vector2D
- * @brief 表示二维向量的类
- *
- * 提供了向量的基本操作，包�?��法、减法、点乘、叉�?�?
- * 标量乘法、单位化、投影等�?
- */
-class Vector2D
+void OmniChassis_Setup::loop()
 {
-public:
-    float32_t x; ///< 向量�? x 分量
-    float32_t y; ///< 向量�? y 分量
+    if (!init_flag)
+        return;
 
-    /**
-     * @brief 默�?构造函�?
-     * 初�?化向量的 x �? y 分量�? 0
-     */
-    Vector2D();
+//	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+	
+    float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
+    yaw = Locate_Setup::getInstance()->get_yaw_from_position();
+    CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+    ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
+    robot_pos_.x = ladar_data_.x;
+    robot_pos_.y = ladar_data_.y;
+    robot_pos_.x += original_point_.x;
+    robot_pos_.y += original_point_.y;
 
-    /**
-     * @brief 带参数构造函�?
-     * @param x_ 向量�? x 分量
-     * @param y_ 向量�? y 分量
-     */
-    Vector2D(float32_t x_, float32_t y_);
+    Angle_Twist angle_twist = {0};
+    angle_twist.yaw_rate = dyaw;
+    angle_twist.yaw_angle = yaw;
+    this->updateAngleData(angle_twist);
 
-    /**
-     * @brief 重载赋值运算�?
-     * @param other 另一�? Vector2D 对象
-     * @return Vector2D& 当前对象的引�?
-     */
-    Vector2D &operator=(const Vector2D &other);
-
-    /**
-     * @brief 向量加法
-     * @param other 另一�? Vector2D 对象
-     * @return Vector2D 加法结果
-     */
-    Vector2D operator+(const Vector2D &other) const;
-
-    /**
-     * @brief 向量减法
-     * @param other 另一�? Vector2D 对象
-     * @return Vector2D 减法结果
-     */
-    Vector2D operator-(const Vector2D &other) const;
-
-    /**
-     * @brief 重载负号运算�?
-     * @return Vector2D 取反后的向量
-     */
-    Vector2D operator-() const;
-
-    /**
-     * @brief 向量点乘
-     * @param other 另一�? Vector2D 对象
-     * @return float32_t 点乘结果
-     */
-    float32_t operator*(const Vector2D &other) const;
-
-    /**
-     * @brief 计算向量的叉�?
-     * @param other 另一�? Vector2D 对象
-     * @return float 叉积的标量结�?
-     */
-    float cross(const Vector2D &other) const;
-
-    /**
-     * @brief 向量乘以标量
-     * @param scalar 标量�?
-     * @return Vector2D 乘法结果
-     */
-    Vector2D operator*(float32_t scalar) const;
-
-    /**
-     * @brief 标量乘以向量（标量在左侧�?
-     * @param scalar 标量�?
-     * @param vec 向量对象
-     * @return Vector2D 乘法结果
-     */
-    friend Vector2D operator*(float32_t scalar, const Vector2D &vec);
-
-    /**
-     * @brief 计算向量的模（长度）
-     * @return float32_t 向量的模
-     */
-    float32_t magnitude() const;
-
-    /**
-     * @brief 单位化向�?
-     * @return Vector2D 单位向量
-     */
-    Vector2D normalize() const;
-
-    /**
-     * @brief 向量投影
-     * @param other 投影到的向量
-     * @return Vector2D 投影结果
-     */
-    Vector2D project_onto(const Vector2D &other) const;
-
-    /**
-     * @brief 计算两点之间的距离平�?
-     * @param a �?���?��
-     * @param b �?���?��
-     * @return float 两点之间的距离平�?
-     */
-    static float distanceSquared(const Vector2D &a, const Vector2D &b);
-
-    /**
-     * @brief 线性插�?
-     * @param a 起�?向量
-     * @param b 结束向量
-     * @param t 插值参数，范围 [0, 1]
-     * @return Vector2D 插值结�?
-     */
-    static Vector2D lerp(const Vector2D &a, const Vector2D &b, float t);
-
-    /**
-     * @brief 通过三个点�?算曲�?
-     * @param p0 �?���?��
-     * @param p1 �?���?��
-     * @param p2 �?���?��
-     * @return float 曲率�?
-     */
-    static float curvatureFromThreePoints(const Vector2D &p0, const Vector2D &p1, const Vector2D &p2);
-
-    /**
-     * @brief 获取垂直法向量（逆时�?90度）
-     * @return Vector2D 垂直法向�?
-     */
-    Vector2D perpendicular() const;
-
-private:
-    /**
-     * @brief 辅助函数：�?查标量是否接近零
-     * @param scalar 标量�?
-     * @return true 如果标量接近�?
-     * @return false 如果标量不接近零
-     */
-    static bool isZero(float scalar)
+    switch (chassis_status_)
     {
-        return (scalar < 0 ? -scalar : scalar) < 1e-6f;
+    case CHASSIS_MANUAL_CONTROL_A:
+    {
+        this->set_ControlMode(WORLD_SPEED_MODE);
+        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+        else
+            target_chassis_twist_.vx = 0.0f;
+
+        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
+        else
+            target_chassis_twist_.vy = 0.0f;
+
+        if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
+            target_chassis_twist_.yaw_rate = airjoy_data_.right_x * 6;
+        else
+            target_chassis_twist_.yaw_rate = 0.0f;
+
+        target_yaw_ = yaw;
+
+        this->set_Target(target_chassis_twist_);
+
+        break;
     }
-};
 
-/**
- * @class Vector2DQueue
- * @brief 表示一�?��定�?量的 Vector2D 队列
- *
- * 提供了队列的基本操作，包�?��队、出队、查看队首元素等�?
- */
-class Vector2DQueue
-{
-private:
-    Vector2D data[QUEUE_CAPACITY]; ///< 用于存储队列元素的数�?
-    int front;                     ///< 队�?索引
-    int rear;                      ///< 队尾索引
-    int size;                      ///< 当前队列大小
+    case CHASSIS_MANUAL_CONTROL_B:
+    {
+        this->set_ControlMode(WORLD_SPEED_MODE);
+        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+            target_chassis_twist_.vx = airjoy_data_.left_x * 1 * this->is_chassis_reverse_;
+        else
+            target_chassis_twist_.vx = 0.0f;
 
-public:
-    /**
-     * @brief 默�?构造函�?
-     * 初�?化队列为�?
-     */
-    Vector2DQueue();
+        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+            target_chassis_twist_.vy = airjoy_data_.left_y * 1 * this->is_chassis_reverse_;
+        else
+            target_chassis_twist_.vy = 0.0f;
 
-    /**
-     * @brief 检查队列是否为�?
-     * @return true 队列为空
-     * @return false 队列不为�?
-     */
-    bool isEmpty() const;
+        // ��ȡ��ǰ�Ƕ�
+        float yaw_real_angle = yaw;
 
-    /**
-     * @brief 检查队列是否已�?
-     * @return true 队列已满
-     * @return false 队列�?��
-     */
-    bool isFull() const;
+        yaw_pid_period_count_++;
+        if (yaw_pid_period_count_ >= yaw_pid_period_)
+        {
+            yaw_pid_period_count_ = 0;
+            target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
+        }
 
-    /**
-     * @brief 返回队列�?��元素数量
-     * @return int 队列�?��元素数量
-     */
-    int queueSize() const;
+        // this->setWorldSpeed(target_chassis_twist_);
+        this->set_Target(target_chassis_twist_);
+        // this->update();
+        break;
+    }
 
-    /**
-     * @brief 入队操作
-     * @param vec 要入队的 Vector2D 对象
-     * @return true 入队成功
-     * @return false 入队失败（队列已满）
-     */
-    bool enqueue(const Vector2D &vec);
+    case CHASSIS_LOCK_FORWEAPON:
+    {
+        this->set_ControlMode(WORLD_SPEED_MODE);
+        float target_yaw_angle = 90.0f;
 
-    /**
-     * @brief 强制入队操作
-     * @param vec 要入队的 Vector2D 对象
-     * 如果队列已满，将覆盖队尾元素�?
-     */
-    void forceEnqueue(const Vector2D &vec);
+        float yaw_real_angle = yaw;
 
-    /**
-     * @brief 出队操作
-     * @param vec 用于存储出队�? Vector2D 对象
-     * @return true 出队成功
-     * @return false 出队失败（队列为空）
-     */
-    bool dequeue(Vector2D &vec);
+        yaw_pid_period_count_++;
+        if (yaw_pid_period_count_ >= yaw_pid_period_)
+        {
+            yaw_pid_period_count_ = 0;
+            target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_angle, yaw_real_angle);
+        }
 
-    /**
-     * @brief 查看队�?元素
-     * @return Vector2D 队�?元素
-     */
-    Vector2D peek() const;
+        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+        else
+            target_chassis_twist_.vx = 0.0f;
 
-    /**
-     * @brief 将一�?��组压入队�?
-     * @param arr 要压入的 Vector2D 数组
-     * @param length 数组长度
-     * @return true 压入成功
-     * @return false 压入失败
-     */
-    bool enqueueArray(const Vector2D arr[], int length);
+        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
+        else
+            target_chassis_twist_.vy = 0.0f;
 
-    /**
-     * @brief 强制将一�?��组压入队�?
-     * @param arr 要压入的 Vector2D 数组
-     * @param length 数组长度
-     */
-    void forceEnqueueArray(const Vector2D arr[], int length);
+        // this->setWorldSpeed(target_chassis_twist_);
+        this->set_Target(target_chassis_twist_);
+        break;
+    }
 
-    /**
-     * @brief 清空队列
-     */
-    void clear();
+    case CHASSIS_AUTO_CONTROL:
+    {
+        if (flag == 1)
+        {
+            flag = 0;
+            flag_run = 1;
+            if (path_flag == 0)
+            {
+                Clamping_Bar_Selection_Planning();
+				WeaponSage_Start=1;
+            }
+            else
+            {
+                KFS_Selection_Planning();
+            }
+        }
 
-    /**
-     * @brief 计算队列�?��有元素的总距�?
-     * @return float 总距�?
-     */
-    float totalDistance() const;
-};
+        if (flag_run == 1)
+        {
+            if (path_line_.Is_End() == true)
+            {
+                num++;
 
-#endif // VECTOR2D_H
+                target_chassis_twist_.vx = speed.x;
+                target_chassis_twist_.vy = speed.y;
+                // 5. �滮�ٶ�+���Ӿ�ƫ�ٶȣ�����·���滮��ǰ���ٶȣ������ٶȣ�
+                planspeed = path_line_.plan(robot_pos_);
+                Path_correction();
+
+                //                if (num > 2)
+                //                {
+                //                    debug_uart.printf_DMA("%f,%f,%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), speed.x, speed.y, corrVelocity.magnitude());
+                //                    num = 0;
+                //                }
+            }
+            else
+            {
+                if (flag_1 == 0)
+                {
+                    flag = 0;
+                    planspeed.x = 0.0f;
+                    planspeed.y = 0.0f;
+                    Path_correction();
+                    target_chassis_twist_.vx = speed.x;
+                    target_chassis_twist_.vy = speed.y;
+					WeaponSage_END=1;
+                }
+                else
+                {
+                    flag = 0;
+                    flag_run = 1;
+                    path_line_.plan_reset();
+                    path_line_.Reset();
+                    planspeed.x = 0.0f;
+                    planspeed.y = 0.0f;
+                    chassis_status_ = CHASSIS_STOP;
+                    Path_correction();
+                    target_chassis_twist_.vx = speed.x;
+                    target_chassis_twist_.vy = speed.y;
+					WeaponSage_END=1;
+                }
+            }
+        }
+        else
+        {
+            target_chassis_twist_.vx = 0.0f;
+            target_chassis_twist_.vy = 0.0f;
+        }
+        if (path_line_.index_ == 1)
+        {
+            if (path_flag == 0)
+            {
+        
+                target_yaw_ = -90.0f;
+//                if (abs(target_yaw_ - yaw) > 1.0f)
+//                {
+//                    target_chassis_twist_.vx = 0.0f;
+//                    target_chassis_twist_.vy = 0.0f;
+//                }
+            }
+        }
+        // ��ȡ��ǰ�Ƕ�
+        float yaw_real_angle = yaw;
+        // float yaw_real_angle = ladar_data_.yaw;
+        yaw_pid_period_count_++;
+        if (yaw_pid_period_count_ >= yaw_pid_period_)
+        {
+            yaw_pid_period_count_ = 0;
+            target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
+        }
+        // this->set_ControlMode(CURRENT_ZERO_MODE);
+        this->set_Target(target_chassis_twist_);
+        break;
+    }
+    case CHASSIS_STOP:
+    {
+
+        // this->wheels_[0]->setTargetCurrent(0);
+        // this->wheels_[1]->setTargetCurrent(0);
+        // this->wheels_[2]->setTargetCurrent(0);
+        this->set_ControlMode(CURRENT_ZERO_MODE);
+        this->set_Target({0, 0, 0});
+        break;
+    }
+
+    case CHASSIS_MANUAL_CONTROL_C:
+    {
+        this->set_ControlMode(WORLD_SPEED_MODE);
+        target_chassis_twist_.yaw_rate = 0.0f;
+
+        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+        else
+            target_chassis_twist_.vx = 0.0f;
+
+        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
+        else
+            target_chassis_twist_.vy = 0.0f;
+
+        this->set_Target(target_chassis_twist_);
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
+
+    // ����һ���״����ݴ�ӡһ��
+
+#if debug_ladar
+
+    if (Lader_position::GetInstance(&hUsbDeviceHS)->return_coutlar_data() > last_cout_ladar_data)
+    {
+        debug_uart.Printf_Ladar(ladar_data_.x, ladar_data_.y);
+        last_cout_ladar_data = Lader_position::GetInstance(&hUsbDeviceHS)->return_coutlar_data();
+    }
+
 #endif
+    // debug_uart.Printf_Ladar(ladar_data_.x, ladar_data_.y);
+
+    // debug_uart.printf_DMA("%f,%f,%f,%f\r\n",
+    //                       target_yaw_,yaw,target_chassis_twist_.yaw_rate,dyaw);
+
+    this->update();
+
+    Point2D fk_speed;
+    fk_speed.x = this->getWorldSpeed().vx;
     fk_speed.y = this->getWorldSpeed().vy;
 
     SpeedFK_Queue.send(fk_speed);
