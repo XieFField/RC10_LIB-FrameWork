@@ -45,7 +45,7 @@ void TimeStamp::overflowCallback()
 // 获取微秒
 uint64_t TimeStamp::getMicroseconds() const 
 {
-    if (!s_htim_) return 0;
+    if (!s_htim_) return 0.0f;
 
     uint64_t overflow_val;
     uint32_t counter_val;
@@ -58,13 +58,10 @@ uint64_t TimeStamp::getMicroseconds() const
     overflow_val = s_overflow_count_;
     counter_val = s_htim_->Instance->CNT;
 
-    // 检查在读取CNT后，是否刚好发生了溢出中断（标志位被硬件置位）
-    // 这是为了处理在读取CNT的瞬间，溢出中断即将发生但还未被处理的情况
     if (__HAL_TIM_GET_FLAG(s_htim_, TIM_FLAG_UPDATE) != RESET)
     {
         // 如果标志位为1，说明CNT已经翻转，但overflow_val还没来得及+1
         //之前就是因为这里64位溢出而导致会出现随机的无穷大
-        // 所以我们再次读取一次，确保拿到最新的值
         overflow_val = s_overflow_count_ + 1;
     }
 
@@ -81,7 +78,7 @@ uint64_t TimeStamp::getMicroseconds() const
 // 获取毫秒
 uint64_t TimeStamp::getMilliseconds() const 
 {
-    return getMicroseconds() / 1000;
+    return getMicroseconds() / 1000.0f;
 }
 
 // 获取秒

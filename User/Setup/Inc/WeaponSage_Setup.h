@@ -34,7 +34,7 @@ namespace WeaponSage_Setup
 
         float debug_start = 1; //ï¿½ï¿½ï¿½Ô¿ï¿½Ê¼ï¿½ï¿½Ö¾ == 1 ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
 		float now_times=0.0f;
-        float calibrate_startTime = 0;
+        float calibrate_startTime = 0.0f;
         bool calibrate_start = false;
         bool is_calibrating = false;
 
@@ -81,10 +81,10 @@ namespace WeaponSage_Setup
             bool lift_done = false;
         }flag;
         bool auto_ctrl1 = true;
-        int pole_num = 0;
+        int pole_num = 1;
     }auto_ctrl_S;
 
-     extern float weapon_pos[2];//ÎäÆ÷Î»ÖÃÊý×é
+     extern float weapon_pos[4];//ÎäÆ÷Î»ÖÃÊý×é
 
 }
 
@@ -114,7 +114,7 @@ public:
             return;
         }
 
-        start(osPriorityNormal, 256);
+        start(osPriorityNormal, 512);
 
         ctrl_status_.init_flag = true;
     }
@@ -130,6 +130,11 @@ public:
             return true;
         else
             return false;
+    }
+
+    void setTargetIndex(int8_t index)
+    {
+        ctrl_status_.target_poleIndex = index;
     }
 
     void setWeaponSageControlStatus(WeaponSage_Status_E status)
@@ -153,12 +158,20 @@ public:
     {
         weaponSage_status_ = status;
     }
+	
+	void Set_End_Flag(bool flag)
+    {
+        omni_flag = flag;
+    }
 
-
+	
 protected:
     void loop() override;
 
 private:
+	
+	bool omni_flag;
+
     WeaponSage_Setup::ctrl_status_S ctrl_status_;
     Debug_Printf debug_uart = Debug_Printf(&huart1);
 

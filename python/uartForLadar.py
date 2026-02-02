@@ -9,19 +9,18 @@ import threading
 import re
 import time
 
-# [新增] 配置 Matplotlib 中文字体支持 (Windows下推荐 SimHei 或 Microsoft YaHei)
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False    # 用来正常显示负号
 
 # -------------------------- 全局配置 --------------------------
-# 串口参数（根据下位机实际配置修改）
-SERIAL_PORT = "COM6"  # Windows：COMx；Linux/Mac：/dev/ttyUSB0 或 /dev/ttyACM0
+# 串口参数（
+SERIAL_PORT = "COM6"
 BAUDRATE = 115200     # 波特率，需与下位机一致
 TIMEOUT = 0.1         # 串口超时时间
 
 # 绘图参数
-PLOT_X_RANGE = [-1, 8]  # X轴范围（单位：米，根据雷达量程调整）
-PLOT_Y_RANGE = [-1, 12]  # Y轴范围
+PLOT_X_RANGE = [-0.5, 8]  # X轴范围（单位：米，根据雷达量程调整）
+PLOT_Y_RANGE = [-0.5, 12]  # Y轴范围
 UPDATE_INTERVAL = 10    # 绘图刷新间隔（毫秒）
 
 # 全局变量（线程安全）
@@ -104,8 +103,8 @@ def init_plot():
     ax.set_title("Ladar XY Position")
     ax.grid(True, linestyle='--', alpha=0.7)
     # 初始化轨迹线（空数据）
-    # [修改] 将 'b-' (实线) 改为 'b.' (散点)，实现只打点不连线
-    line, = ax.plot([], [], 'b.', markersize=2, label="历史点")
+    # b-为连线，b.为散点
+    line, = ax.plot([], [], 'b-', markersize=2, label="历史点")
     scatter, = ax.plot([], [], 'r.', markersize=4, label="最新点")
     ax.legend()
     return fig, ax, line, scatter

@@ -29,6 +29,25 @@ extern "C" {
 #include "omni_chassisSetup.h"
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
+#include "Setup_ConfigInit.h"
+
+
+typedef enum{
+    RELOCATE,
+    SET_KFS,
+    SET_SPEAR,
+    NONE,
+}set_e;
+
+
+typedef struct KSTarget_t {
+    uint8_t KFS[2];
+    int8_t Spear;
+
+    bool operator!=(const KSTarget_t& other) const {
+         return KFS[0] != other.KFS[0] || KFS[1] != other.KFS[1] || Spear != other.Spear;
+    }
+};
 
 class FSM_Controller:public RtosTask {
 public:
@@ -57,9 +76,9 @@ public:
         if(!arm_setup_registered_ || !chassis_setup_registered_ || !weaponSage_setup_registered_)
             init_flag_ = false;
         
-        this->arm_setup_->set_TargetKFS(3,0); //设置目标梅花桩编号
-
-        this->start(osPriorityHigh, 512);
+        this->arm_setup_->set_TargetKFS(0,0); //设置目标梅花桩编号
+        this->chassis_setup_->setTargetKFS(0); //设置目标梅花桩编号
+        this->start(osPriorityHigh+1, 256);
         init_flag_ = true;
     }
 
@@ -79,7 +98,7 @@ private:
 
     void debug();
     
-
+    void stop_modeswitch();
     FSM_Status_E robot_status_ = ALL_STOP; FSM_Status_E last_robot_status_;
 
     float airjoy_deadzone_ = 50.0f; bool airjoy_connected_ = false;
@@ -95,10 +114,33 @@ private:
     bool chassis_setup_registered_ = false; 
     bool init_flag_ = false; //所有需要注册的机构都已经注册完成
     uint8_t debug_flag_ = 0;
+
+    struct{
+        
+        TargetSet_t rsf_send_data={0};
+        uint16_t count = 0;
+        uint8_t now_setKFSindex = 0;
+        uint8_t sroll_wheel_last = 0;
+        bool isread_srollWheelKFS = false;
+        bool kfs_setDone = false;
+        bool spear_setDone = false;
+        // bool issetFirstKFS = false;
+
+        bool isread_srollWheelSpear = false;
+    }crsf_send_s;
+
+    set_e Stop_set_stauts = NONE;
+
+    KSTarget_t KStarget = {0};
+    KSTarget_t last_KStarget = {0};
 };
 
 #endif
 
+/*
+STOP 模式下的状态机
+有三种状态
+*/
 
 
 
