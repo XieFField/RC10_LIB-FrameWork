@@ -50,6 +50,7 @@ void ArmSetup::loop()
             else
             {
                 this->start_toAutoCtrl(false);
+                this->auto_ctrl_.now_state = STATE_DONE;
             }
         // }
     } 
@@ -352,7 +353,7 @@ bool ArmSetup::check_Arm_collision(float px, float py,
     };
     
     // 矩形碰撞判断: x in [0, L], y in [-W/2, W/2]
-    if(local.x >= 0.0f && local.x <= L_arm && _tool_Abs(local.y) <= (W_arm / 2.0f))
+    if(local.x >= 0.0f && local.x <= (L_arm ) && _tool_Abs(local.y) <= ((W_arm + 0.02f) / 2.0f))
         return true; //碰撞
     else
         return false; //未碰撞
@@ -361,6 +362,7 @@ bool ArmSetup::check_Arm_collision(float px, float py,
 /**
  * @brief 寻自动对齐
  */
+Point2D toosee = {0};
 void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
@@ -432,8 +434,10 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
 
     //开始计算
     auto_ctrl_.gimbal_calcCount = 0;
-    get_GimbalMF_PAPB(targetKFS, auto_ctrl_.PointPAB[index].PA, 
+    get_GimbalMF_PAPB(index, auto_ctrl_.PointPAB[index].PA, 
             auto_ctrl_.PointPAB[index].PB);
+
+
     Point2D PA = auto_ctrl_.PointPAB[index].PA;
     Point2D PB = auto_ctrl_.PointPAB[index].PB;
 
@@ -587,25 +591,63 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
         float norm_angle = fmodf(current_deg, 360.0f);
         if(norm_angle < 0.0f) norm_angle += 360.0f;
 
-        // 检查当前角度是否允许处于低高度 (即在 [30, 135] 范围内)
-//        if(norm_angle >= 30.0f && norm_angle <= 135.0f)
-//        {
             float kfs_height = MF_high[targetKFS -1];
-//             // 如果目标高度低于安全高度，则降低
-//            //  if(kfs_height - 0.2f < auto_ctrl_.flag.safe_height)
-//            //     this->set_LaunchHeight(kfs_height - 0.2f);
-        if(_tool_Abs(norm_angle-90.0f) < 20.0f)
+        if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_-90.0f) < 10.0f )
         {
+           
+           switch(move_direction)
+           {
+               case MF_AutoCtrler::Positive_X:
+               {
+                   if(auto_ctrl_.now_armPosition.x > PA.x)
+                       auto_ctrl_.flag.issafetoLower = true;
+                   else
+                       auto_ctrl_.flag.issafetoLower = false;
+                   break;
+               }
+
+               case MF_AutoCtrler::Negative_X:
+               {
+                   if(auto_ctrl_.now_armPosition.x < PA.x)
+                       auto_ctrl_.flag.issafetoLower = true;
+                   else
+                       auto_ctrl_.flag.issafetoLower = false;
+                   break;
+               }
+
+               case MF_AutoCtrler::Positive_Y:
+               {
+                   if (auto_ctrl_.now_armPosition.y > PA.y)
+                       auto_ctrl_.flag.issafetoLower = true;
+                   else
+                       auto_ctrl_.flag.issafetoLower = false;
+                   
+                   break;
+               }
+
+               case MF_AutoCtrler::Negative_Y:
+               {
+                   if(auto_ctrl_.now_armPosition.y < PA.y)
+                       auto_ctrl_.flag.issafetoLower = true;
+                   else
+                       auto_ctrl_.flag.issafetoLower = false;
+                   break;
+               }
+
+           }
+
+           if(auto_ctrl_.flag.issafetoLower)
+           {
                 if(kfs_height == 0.2f)
                     this->set_LaunchHeight(0.0f); //降到最低点
                 else if(kfs_height == 0.4f)
                     this->set_LaunchHeight(auto_ctrl_.flag.safe_height); //降到safe
                 else if(kfs_height == 0.6f)
                     this->set_LaunchHeight(init_data_.max_launchHeight_); //降到最高点
+           }
         }
-//        }
 
-        if(_tool_Abs(diff) < 2.0f)
+        if(_tool_Abs(diff) < 2.0f && auto_ctrl_.flag.issafetoLower)
         {
             //到达目标角度后，打开吸盘
             this->setSuckerStatus(Sucker_Status_E::SUCK);
@@ -737,13 +779,13 @@ bool ArmSetup::state_aimExt(int targetKFS)
 
 		current_armLength = get_currentJointStatus().stretchJoint_Length_;
 
-		if(_tool_Abs(current_armLength-arm_initData.max_stretchLength_) < 0.005f && !auto_ctrl_.flag.is_reachingTarget)
+		if(_tool_Abs(current_armLength-arm_initData.max_stretchLength_) < 0.006f && !auto_ctrl_.flag.is_reachingTarget)
 		{
 			auto_ctrl_.flag.is_reachingTarget = true;
             pos_tar_kfs = auto_ctrl_.now_armPosition; //记录伸展到达位置
 			auto_ctrl_.flag.reach_finishTime = TimeStamp::getInstance().getSeconds();
 		}
-		if(auto_ctrl_.flag.is_reachingTarget && (now_time_s_-auto_ctrl_.flag.reach_finishTime) >= 0.3f)
+		if(auto_ctrl_.flag.is_reachingTarget && (now_time_s_-auto_ctrl_.flag.reach_finishTime) >= 0.15f)
 		{
 			this->set_StretchLength(0.0f);
            // auto_ctrl_.flag.ext_started = false; //重置伸展开始标志
@@ -757,7 +799,6 @@ bool ArmSetup::state_aimExt(int targetKFS)
 
         else
 			return false;
-			
 }
 
 /**
@@ -1265,12 +1306,13 @@ void ArmSetup::auto_onlyOne()
         case STATE_DONE:
         {
             if(auto_ctrl_.start_to_autoctrl)
-            {
+            {   
+                auto_ctrl_.flag.issafetoLower = false;
                 auto_ctrl_.flag.align_done = false;
                 auto_ctrl_.flag.ext_done = false;
                 auto_ctrl_.flag.carry_done = false;
                 auto_ctrl_.flag.return_done = false;
-
+                auto_ctrl_.flag.ext_started = false;
                 auto_ctrl_.flag.is_reachingTarget = false;
                 auto_ctrl_.flag.reach_finishTime = 0.0f;
                 

@@ -80,7 +80,7 @@ extern "C" {
 
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS 0  //無底盤下，用虛擬坐標進行驗證自動邏輯
+#define ARM_AUTO_DEBUG_NOCHASSIS  0 //無底盤下，用虛擬坐標進行驗證自動邏輯
 
 
 
@@ -131,7 +131,7 @@ typedef struct{
 }autopathPos_S;
 
 typedef struct{
-    const float stretch_time_s = 0.29f; //伸展时间，单位秒
+    const float stretch_time_s = 0.3f; //伸展时间，单位秒
 
     float gimbal_max_rad = 0.0f; //云台最大旋转角速度，单位弧度每秒
     float rotateSpeedRate_ = 0.8f; //云台旋转速度比例
@@ -197,7 +197,7 @@ typedef struct{
         bool return_done = false; //返回完成标志
 
         bool ext_started = false; //伸展开始标志
-
+        bool issafetoLower = false;
         bool is_reachingTarget = false; //是否到达目标位置
 
         float reach_finishTime = 0.0f; //到达目标位置的时间戳
@@ -228,7 +228,7 @@ public:
     ArmSetup(Arm_InitData_S init_Data)
         : Robot_Arm(init_Data), RtosTask("ArmSetup", 1) 
     {
-        auto_ctrl_.time_set.gimbal_max_rad = (100.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f) * 0.9; //云台最大角速度(rad/s)
+        auto_ctrl_.time_set.gimbal_max_rad = (100.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f) ; //云台最大角速度(rad/s)
     }
 
     bool isArmcalibrated() const
@@ -319,6 +319,8 @@ public:
         auto_ctrl_.pathPos.bestBMF2 = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.bestBMF2);
         auto_ctrl_.pathPos.entranceMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.entranceMap);
         auto_ctrl_.pathPos.exitMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.exitMap);
+
+
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
         auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
@@ -494,7 +496,7 @@ protected:
         #if ARM_AUTO_DEBUG_NOCHASSIS
 
         Point2D speed = {0.0f, 0.0f, 0.0f};
-        if(arm_ctrlStatus.auto_debug_start == 1)
+        if(arm_ctrlStatus.auto_start == 1)
            speed = {0.0f, 0.9f, 0.0f};
 
         else

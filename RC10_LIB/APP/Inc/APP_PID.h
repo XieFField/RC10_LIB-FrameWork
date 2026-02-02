@@ -235,6 +235,7 @@ extern PID_Param_Config track_pid_params;
 
 extern PID_Param_Config m3508Rotate_speed_pid_params;
 extern PID_Param_Config m3508Rotate_angle_pid_params;
+extern PID_Param_Config path_lock_end;
 #endif
 
 #endif

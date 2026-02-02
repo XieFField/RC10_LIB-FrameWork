@@ -37,12 +37,12 @@ void OmniChassis_Setup::loop()
     {
         this->set_ControlMode(WORLD_SPEED_MODE);
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+            target_chassis_twist_.vx = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vx = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
+            target_chassis_twist_.vy = airjoy_data_.left_y * 3 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vy = 0.0f;
 
@@ -62,12 +62,12 @@ void OmniChassis_Setup::loop()
     {
         this->set_ControlMode(WORLD_SPEED_MODE);
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target_chassis_twist_.vx = airjoy_data_.left_x * 1 * this->is_chassis_reverse_;
+            target_chassis_twist_.vx = airjoy_data_.left_x * 0.6 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vx = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target_chassis_twist_.vy = airjoy_data_.left_y * 1 * this->is_chassis_reverse_;
+            target_chassis_twist_.vy = airjoy_data_.left_y * 0.6 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vy = 0.0f;
 
@@ -102,12 +102,12 @@ void OmniChassis_Setup::loop()
         }
 
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+            target_chassis_twist_.vx = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vx = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
+            target_chassis_twist_.vy = airjoy_data_.left_y * 3 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vy = 0.0f;
 
@@ -143,8 +143,13 @@ void OmniChassis_Setup::loop()
                 target_chassis_twist_.vy = speed.y;
                 // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
                 planspeed = path_line_.plan(robot_pos_);
-                Path_correction();
-
+                if(path_line_.get_pid_end_flag()==0)
+                {
+                    Path_correction();
+                    speed = planspeed + corrVelocity;// 最终速度 = 规划的前进速度 + 横向纠偏速度
+                }
+                else
+                    speed = planspeed; 
                 //                if (num > 2)
                 //                {
                 //                    debug_uart.printf_DMA("%f,%f,%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), speed.x, speed.y, corrVelocity.magnitude());
@@ -159,6 +164,7 @@ void OmniChassis_Setup::loop()
                     planspeed.x = 0.0f;
                     planspeed.y = 0.0f;
                     Path_correction();
+                    speed = planspeed + corrVelocity;
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
 					WeaponSage_END=1;
@@ -166,13 +172,14 @@ void OmniChassis_Setup::loop()
                 else
                 {
                     flag = 0;
-                    flag_run = 1;
+                    flag_run = 0;
+                    speed.x = 0.0f;
+                    speed.y = 0.0f;
                     path_line_.plan_reset();
                     path_line_.Reset();
                     planspeed.x = 0.0f;
                     planspeed.y = 0.0f;
                     chassis_status_ = CHASSIS_STOP;
-                    Path_correction();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
 					WeaponSage_END=1;
@@ -181,8 +188,11 @@ void OmniChassis_Setup::loop()
         }
         else
         {
+            target_yaw_ = yaw;
             target_chassis_twist_.vx = 0.0f;
             target_chassis_twist_.vy = 0.0f;
+            speed.x = 0.0f;
+            speed.y = 0.0f;
         }
         if (path_line_.index_ == 1)
         {
@@ -574,7 +584,7 @@ void OmniChassis_Setup::Path_correction(void)
             corrVelocity = corrVelocity.normalize() * max_corr;
         }
 
-        speed = planspeed + corrVelocity; // 叠加到规划速度上
+//        speed = planspeed + corrVelocity; // 叠加到规划速度上
         return;
     }
 
@@ -589,7 +599,7 @@ void OmniChassis_Setup::Path_correction(void)
     corrVelocity = corrDir * correctspeed;                     // 合成纠偏速度（方向+大小）
 
     // baseVelocity = lookaheadTangent * planspeed.magnitude();
-    speed = planspeed + corrVelocity; // 最终速度 = 规划的前进速度 + 横向纠偏速度
+    
 }
 
 void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
@@ -598,6 +608,7 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.plan_reset();
     path_line_.Reset();
     path_line_.Add_Start_Point(Vector2D{robot_pos_.x, robot_pos_.y}, path_param_1);
-    path_line_.Add_Point(Vector2D{1.7f, 0.6f});
-    path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
+   path_line_.Add_Point(Vector2D{1.8f, 0.8f});
+   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
+    // path_line_.Add_End_Point(Vector2D{3.92f, 1.38f});
 }
