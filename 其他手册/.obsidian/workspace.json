@@ -39,12 +39,14 @@
             "id": "e3474309c3550445",
             "type": "leaf",
             "state": {
-              "type": "excalidraw",
+              "type": "markdown",
               "state": {
-                "file": "Excalidraw/期末考核，自动状态机流程图.md"
+                "file": "贝塞尔曲线中轨迹修正方案.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "excalidraw-icon",
-              "title": "期末考核，自动状态机流程图"
+              "icon": "lucide-file",
+              "title": "贝塞尔曲线中轨迹修正方案"
             }
           }
         ],
@@ -199,20 +201,20 @@
   },
   "active": "e3474309c3550445",
   "lastOpenFiles": [
-    "Excalidraw/期末考核，自动状态机流程图.md",
     "自动模式方案书.md",
+    "串联臂自动逻辑.md",
+    "串联刚体臂吸盘解算.md",
+    "贝塞尔曲线中轨迹修正方案.md",
+    "Excalidraw/期末考核，自动状态机流程图.md",
     "Excalidraw",
     "未命名.md",
-    "贝塞尔曲线中轨迹修正方案.md",
     "3. 电机上手流程(三)-MIT模式说明.pdf",
     "二代状态机.md",
-    "串联臂自动逻辑.md",
     "初代状态机.md",
     "Untitled.base",
     "Untitled.md",
     "初代状态机.pdf",
     "串联臂自动逻辑.pdf",
-    "串联刚体臂吸盘解算.md",
     "ROS在全国机器人大赛中的应用.pdf",
     "自动模式方案书_tmp.html",
     "自动模式方案书.pdf",

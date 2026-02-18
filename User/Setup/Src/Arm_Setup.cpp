@@ -387,6 +387,16 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
         return;
 
     
+    if(targetKFS == 1 || targetKFS ==2 || targetKFS == 3)
+    {
+        if(auto_ctrl_.now_armPosition.y < auto_ctrl_.pathPos.bestB1.y - 0.3f)
+            return; //未到达目标位置，直接返回
+    }
+    else if(targetKFS == 10 || targetKFS ==11 || targetKFS ==12)
+    {
+        if(auto_ctrl_.now_armPosition.y < auto_ctrl_.pathPos.bestB1.y - 1.0f)
+            return; //未到达目标位置，直接返回
+    }
 
     //开始预判计算部分
     switch(move_direction) //还未到目标位置，不进入计算
@@ -718,16 +728,16 @@ bool ArmSetup::state_aimExt(int targetKFS)
             {
                 case MF_AutoCtrler::Positive_X:
                 {
-                    if(_tool_Abs(auto_ctrl_.now_chassis_speed.x) < 0.1f)
-                        return false; //速度为0，无法伸展
+//                    if(_tool_Abs(auto_ctrl_.now_chassis_speed.x) < 0.1f)
+//                        return false; //速度为0，无法伸展
                     t_need = _tool_Abs((target_pos.x - auto_ctrl_.now_armPosition.x) 
                             / auto_ctrl_.now_chassis_speed.x);
                     break;
                 }
                 case MF_AutoCtrler::Negative_X:
                 {
-                    if(_tool_Abs(auto_ctrl_.now_chassis_speed.x) < 0.1f)
-                        return false; //速度为0，无法伸展
+//                    if(_tool_Abs(auto_ctrl_.now_chassis_speed.x) < 0.1f)
+//                        return false; //速度为0，无法伸展
 
                     t_need = _tool_Abs((auto_ctrl_.now_armPosition.x - target_pos.x) 
                             / auto_ctrl_.now_chassis_speed.x);
@@ -1307,6 +1317,11 @@ void ArmSetup::auto_onlyOne()
         {
             if(auto_ctrl_.start_to_autoctrl)
             {   
+                if(!auto_ctrl_.flag.isrecalcPath)
+                {
+                    this->set_TargetKFS(auto_ctrl_.targetKFS[0], 0); //重置计算PathNode
+                    auto_ctrl_.flag.isrecalcPath = true;
+                }
                 auto_ctrl_.flag.issafetoLower = false;
                 auto_ctrl_.flag.align_done = false;
                 auto_ctrl_.flag.ext_done = false;
@@ -1388,6 +1403,7 @@ void ArmSetup::auto_onlyOne()
                 //auto_ctrl_.start_to_autoctrl = false; //自动流程结束
                 arm_ctrlStatus.auto_start = 0; //自动流程结束
                 auto_ctrl_.start_to_autoctrl = false;
+                auto_ctrl_.flag.isrecalcPath = false; //重置路径计算标志
             }
             break;
         }
