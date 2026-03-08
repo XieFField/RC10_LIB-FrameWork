@@ -48,9 +48,33 @@
               "icon": "lucide-file",
               "title": "贝塞尔曲线中轨迹修正方案"
             }
+          },
+          {
+            "id": "8ff058ebc2f229ff",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.11.5"
+              },
+              "icon": "lucide-book-up",
+              "title": "版本说明 1.11.5"
+            }
+          },
+          {
+            "id": "01b1d0eed8210afa",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.12.4"
+              },
+              "icon": "lucide-book-up",
+              "title": "版本说明 1.12.4"
+            }
           }
         ],
-        "currentTab": 2
+        "currentTab": 4
       }
     ],
     "direction": "vertical"
@@ -189,17 +213,17 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "bases:新建数据库": false,
       "switcher:打开快速切换": false,
       "graph:查看关系图谱": false,
       "canvas:新建白板": false,
       "daily-notes:打开/创建今天的日记": false,
       "templates:插入模板": false,
       "command-palette:打开命令面板": false,
-      "obsidian-excalidraw-plugin:新建绘图文件": false
+      "bases:新建数据库": false,
+      "obsidian-excalidraw-plugin:New drawing": false
     }
   },
-  "active": "e3474309c3550445",
+  "active": "01b1d0eed8210afa",
   "lastOpenFiles": [
     "自动模式方案书.md",
     "串联臂自动逻辑.md",

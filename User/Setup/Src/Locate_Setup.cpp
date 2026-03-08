@@ -3,7 +3,6 @@
 float aaa;
 void Locate_Setup::loop()
 {
-    // �ڴ˴����Ӷ�λ��ص��������������
 //	uint8_t a =0x11;
 //    usb_handle->CDC_Send_(0x04,&a,0x01);
 	Get_Rader_Data();
