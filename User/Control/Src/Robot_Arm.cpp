@@ -20,17 +20,16 @@ void Robot_Arm::update()
         time_initialized_ = true;
         // 首次对齐，后续基于“目标”积分
         target_joint_angle_ = joint_angle_;
-        
-        if (motor_rotate_ != nullptr)
-        {
-            ramped_rotateMotorAngle_ = motor_rotate_->getTotalAngle();
-        }
         return;
     }
 
     dt_ = now_time_s_ - last_time_s_;
     last_time_s_ = now_time_s_;
 
+    if (motor_rotate_ != nullptr)
+    {
+        ramped_rotateMotorAngle_ = motor_rotate_->getTotalAngle();
+    }
     
     if(motor_rotate_ != nullptr)
     {
@@ -92,6 +91,7 @@ void Robot_Arm::update()
         float target_arm_mod = normalize_deg_0_360(target_joint_angle_.rotateJoint_angle_);
 
         // 3. 计算 k 值 (Round to nearest integer)
+        // 增加 0.5f 偏移确保 round 行为在正负数一致 (虽然 roundf 已处理)
         float diff = current_arm_total - target_arm_mod;
         float k = roundf(diff / 360.0f);
         
@@ -101,13 +101,9 @@ void Robot_Arm::update()
         // 5.极端情况保护：如果电机转速极快导致一次 update 跨越 180 度，
         // 防止 k 值跳变引发回回头。但在 100Hz 控制频率下很难发生。
         
-        target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
-
-        // 斜坡缓启动
         ramp(target_rotateMotorAngle, ramped_rotateMotorAngle_, rpm_to_degPerSec(120.0f), dt_);
 
         motor_rotate_->setTargetTotalAngle(ramped_rotateMotorAngle_);
-
     }
 
     target_stretchMotorAngle = stretchLength_to_MotorTotalAngle(target_joint_angle_.stretchJoint_Length_);

@@ -25,7 +25,7 @@ Type _tool_Abs(Type x)
     return ((x > 0) ? x : -x);
 }
 
-
+float rpm_to_degPerSec(float rpm);
 /**
  * @brief  将矩阵设置为单位矩阵
  * @param[in,out] M   指向矩阵实例
@@ -93,8 +93,6 @@ static inline T mm_to_m(T value_mm)
 //斜坡函数
 void ramp(float target, float& current, float max_change_rate, float dt);
 
-// RPM 转 角度每秒
-float rpm_to_degPerSec(float rpm);
 //弧度转换为角度函数
 float rad_to_deg(float rad);
 
