@@ -25,7 +25,10 @@ int binarySearch(const uint32_t arr[], uint8_t count, uint32_t key)
     }
     return -1;
 }
-
+float rpm_to_degPerSec(float rpm)
+{
+    return rpm * 360.0f / 60.0f;
+}
 /**
  * @brief  将矩阵设置为单位矩阵
  * @param[in,out] M   指向矩阵实例

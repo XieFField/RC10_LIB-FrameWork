@@ -341,7 +341,7 @@ protected:
 private:
     MotorReversed_S sign_reversed_  = {1.0f, 1.0f, 1.0f, 1.0f};
     float last_rotate_cmd_ = 0.0f;
-
+    float ramped_rotateMotorAngle_ = 0.0f;
 };
 
 
