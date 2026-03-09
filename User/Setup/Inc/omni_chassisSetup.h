@@ -90,28 +90,28 @@ public:
             this->is_chassis_reverse_ = -1.0f;
     }
 
-    /**
-     * @brief 设置路径自动开始标志
-     * @param start 1表示开始，0表示停止
-     * @param path_flagIndex 路径标志索引，0或1
-     */
-    void setPathAutoStart(uint8_t start, uint8_t path_flagIndex)
-    {
-        if(start == 1)
-            flag = 1;
-        else
-            flag = 0;
+//    /**
+//     * @brief 设置路径自动开始标志
+//     * @param start 1表示开始，0表示停止
+//     * @param path_flagIndex 路径标志索引，0或1
+//     */
+//    void setPathAutoStart(uint8_t start, uint8_t path_flagIndex)
+//    {
+//        if(start == 1)
+//            flag = 1;
+//        else
+//            flag = 0;
 
-        if(path_flagIndex == 0 || path_flagIndex == 1)
-            path_flag = path_flagIndex;
-        else
-            path_flag = 0;
-        
-        if(start == 0)
-        {
-            flag_run = 0;
-        }
-    }
+//        if(path_flagIndex == 0 || path_flagIndex == 1)
+//            path_flag = path_flagIndex;
+//        else
+//            path_flag = 0;
+//        
+//        if(start == 0)
+//        {
+//            flag_run = 0;
+//        }
+//    }
 
 
     void setTargetKFS(int targetKFS)
@@ -131,8 +131,7 @@ private:
 
     int flag = 0;
     int flag_run = 0;
-    int flag_1=1;
-    int path_flag=0;
+
 
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
     
