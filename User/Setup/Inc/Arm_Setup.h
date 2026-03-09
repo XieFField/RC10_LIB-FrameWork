@@ -80,7 +80,7 @@ extern "C" {
 
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS 1  //無底盤下，用虛擬坐標進行驗證自動邏輯
+#define ARM_AUTO_DEBUG_NOCHASSIS  0 //無底盤下，用虛擬坐標進行驗證自動邏輯
 
 
 
@@ -90,7 +90,7 @@ typedef struct{
     
     uint8_t debug_start = 0; //调试开始标志 == 1 开始调试
 
-    uint8_t auto_debug_start = 0; //自动调试开始标志 == 1 开始自动调试
+    uint8_t auto_start = 0; //自动调试开始标志 == 1 开始自动调试
 
     float calibrate_startTime = 0; 
     bool calibrate_start = false;
@@ -131,7 +131,7 @@ typedef struct{
 }autopathPos_S;
 
 typedef struct{
-    const float stretch_time_s = 0.613f; //伸展时间，单位秒
+    const float stretch_time_s = 0.3f; //伸展时间，单位秒
 
     float gimbal_max_rad = 0.0f; //云台最大旋转角速度，单位弧度每秒
     float rotateSpeedRate_ = 0.8f; //云台旋转速度比例
@@ -144,9 +144,9 @@ typedef struct{
     ARM_AUTO_E now_state = STATE_DONE;
     bool start_to_autoctrl = false;
 
-    Point2D now_armPosition = {0.0f, 0.0f, 0.0f}; //机械臂当前位置
+    Point2D now_armPosition = {5.0f, 8.60f, 0.0f}; //机械臂当前位置
 
-    Point2D now_ChassisPosition = {0.0f, 0.0f, 0.0f}; //底盘当前位置
+    Point2D now_ChassisPosition = {5.0f, 8.60f, 0.0f}; //底盘当前位置
 
     Point2D now_chassis_speed = {0.0f, 0.0f, 0.0f}; //当前底盘速度，单位米每秒
 
@@ -197,13 +197,14 @@ typedef struct{
         bool return_done = false; //返回完成标志
 
         bool ext_started = false; //伸展开始标志
-
+        bool issafetoLower = false;
         bool is_reachingTarget = false; //是否到达目标位置
 
         float reach_finishTime = 0.0f; //到达目标位置的时间戳
 
         bool gimbal_ok =false;
         const float safe_height = 0.14f; //安全高度，单位米  待定
+        bool isrecalcPath = false; //是否重新计算路径
     }flag;
 
     struct{
@@ -228,7 +229,7 @@ public:
     ArmSetup(Arm_InitData_S init_Data)
         : Robot_Arm(init_Data), RtosTask("ArmSetup", 1) 
     {
-        auto_ctrl_.time_set.gimbal_max_rad = (120.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f); //云台最大角速度(rad/s)
+        auto_ctrl_.time_set.gimbal_max_rad = (100.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f) ; //云台最大角速度(rad/s)
     }
 
     bool isArmcalibrated() const
@@ -251,7 +252,7 @@ public:
         this->setStretchReversed(false); //伸展电机不反向
         this->setRotateReversed(false);
         this->setLaunchReversed(true); //升降电机反向
-        start(osPriorityHigh-1, 512);
+        start(osPriorityHigh-1, 512); 
         setRotateMultiTurn(false); //单圈模式
         arm_ctrlStatus.init_flag = true;
     }
@@ -271,14 +272,7 @@ public:
         rotate_multiTurn_ = isMulti;
     }
 
-    void start_toAutoCtrl(bool start)
-    {
-        if(start)
-            auto_ctrl_.start_to_autoctrl = true;
 
-        else
-            auto_ctrl_.start_to_autoctrl = false;
-    }
 
     /**
      * @brief 设置目标抓取梅花桩编号
@@ -302,8 +296,8 @@ public:
         else
             auto_ctrl_.kfs_num = ONLY_ONE;
 
-        auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0] - 1)];
-        auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[1] - 1)];
+        auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0])-1];
+        auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[1])-1];
         
         MF_AutoCtrler::get_MoveDiretion(auto_ctrl_.now_armPosition,
                                         auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1],
@@ -327,14 +321,33 @@ public:
         auto_ctrl_.pathPos.entranceMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.entranceMap);
         auto_ctrl_.pathPos.exitMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.exitMap);
 
-#if ARM_AUTO_DEBUG_NOCHASSIS
-        auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
 
-        auto_ctrl_.now_ChassisPosition.y -= 2.0f; //假设已经到达前一桩正前方0.5米处
+
+#if ARM_AUTO_DEBUG_NOCHASSIS
+        //auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
+        auto_ctrl_.now_ChassisPosition.y = 8.60f;
+        auto_ctrl_.now_ChassisPosition.x = 5.0f; //假设已经到达前一桩正前方0.5米处
 #endif
         return true;
     }
+
+    void set_Arm_autoStart(uint8_t start)
+    {
+        if(start == 1)
+            arm_ctrlStatus.auto_start = 1;
+        else    
+            arm_ctrlStatus.auto_start = 0;
+    }
 private:
+
+    void start_toAutoCtrl(bool start)
+    {
+        if(start)
+            auto_ctrl_.start_to_autoctrl = true;
+
+        else
+            auto_ctrl_.start_to_autoctrl = false;
+    }
 
     RmPocketData_t airjoy_data_; //摇杆值为 -1 ~ 1
 
@@ -484,8 +497,8 @@ protected:
         #if ARM_AUTO_DEBUG_NOCHASSIS
 
         Point2D speed = {0.0f, 0.0f, 0.0f};
-        if(arm_ctrlStatus.auto_debug_start == 1)
-           speed = {0.0f, 0.9f, 0.0f};
+        if(arm_ctrlStatus.auto_start == 1)
+           speed = {-0.6f, 0.0f, 0.0f};
 
         else
              speed = {0.0f, 0.0f, 0.0f};
@@ -498,8 +511,8 @@ protected:
             // return locate_ptr->get_FK_ChassisSpeed_inWorld();
             Locate_Setup *locate_ptr = Locate_Setup::getInstance();
             Point2D speed = {0};
-            speed.x = locate_ptr->get_FK_ChassisSpeed_inWorld().x;
-            speed.y = locate_ptr->get_FK_ChassisSpeed_inWorld().y;
+            speed.x = locate_ptr->get_RobotSpeed_inWorld().x/rate_forspeed;
+            speed.y = locate_ptr->get_RobotSpeed_inWorld().y/rate_forspeed;
             return speed;
         #endif
     }
@@ -520,7 +533,7 @@ protected:
         pose.x += speed.x * get_dt();
                 
         pose.y += speed.y * get_dt();
-                
+                    
 
         return pose;
 
@@ -547,6 +560,9 @@ protected:
         .is_calibrating = false,
     };
 
+
+
+
     ARM_Status_E arm_status_ = ARM_MANUAL_CONTROL;
     ARM_Status_E last_arm_status_ = ARM_MANUAL_CONTROL;
 
@@ -561,11 +577,18 @@ protected:
     Rotate_Strategy_E recorded_align_strategy_ = ROTATE_PATH_SHORTEST;
     Rotate_Strategy_E recorded_carrying_strategy_ = ROTATE_PATH_SHORTEST;
 
+    struct {
+        
+        float rotate_rate = 3.0f;
+        float launch_rate = 0.03f;
+        int cnt = 0;
+    }manual_control;
+
     /**
      * @brief 这里的输入是已经初始化的targetKFS的index (0 或 1)
      * @return 云台旋转时候末端需要避障的PA PB点 
      * 
-     * @details [修复] 使用基于方向的几何判定，修复了直线路径下PA点计算为(0,0)的BUG
+     * 
      */
     void get_GimbalMF_PAPB(int target_KFSIndex, Point2D& PA, Point2D& PB)
     {   
@@ -660,7 +683,7 @@ protected:
         }
     }
     
-    
+    float rate_forspeed =1.0f;
 };
 
 

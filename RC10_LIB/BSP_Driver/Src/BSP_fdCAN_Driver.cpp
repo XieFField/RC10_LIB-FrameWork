@@ -159,25 +159,6 @@ bool fdCANbus::pushRxFromISR(const CanFrame& cf, BaseType_t* pxHigherPriorityTas
 }
 
 
-void fdCANbus::rxTaskbody() 
-{
-    CanFrame cf;
-    for (;;) 
-    {
-        if (rxQueue_.recv(cf, portMAX_DELAY)) 
-        {
-
-            for (std::size_t i = 0; i < MAX_MOTORS; ++i) 
-            {
-                Motor_Base* m = motorList_[i];
-
-                if (m && m->bus() == this && m->matchesFrame(cf)) 
-                   m->updateFeedback(cf);
-            }
-
-        }
-    }
-}
 
 
 void fdCANbus::schedulerTaskbody() 
@@ -305,6 +286,26 @@ extern "C" void fdcan_global_rx_isr(FDCAN_HandleTypeDef* hfdcan)
     portYIELD_FROM_ISR(higher_priority_task_woken);
 }
 
+
+void fdCANbus::rxTaskbody() 
+{
+    CanFrame cf;
+    for (;;) 
+    {
+        if (rxQueue_.recv(cf, portMAX_DELAY)) 
+        {
+
+            for (std::size_t i = 0; i < MAX_MOTORS; ++i) 
+            {
+                Motor_Base* m = motorList_[i];
+
+                if (m && m->bus() == this && m->matchesFrame(cf)) 
+                   m->updateFeedback(cf);
+            }
+
+        }
+    }
+}
 /**
  * @brief 全局的调度器Tick中断处理函数
  */
@@ -413,7 +414,7 @@ fdCANbus* fdCANbus::getInstance(FDCAN_HandleTypeDef* hfdcan)
 
 fdCANbus::fdCANbus(FDCAN_HandleTypeDef* hfdcan)
     : hfdcan_(hfdcan),
-      rxQueue_(256), // [Fix] 增加队列深度，空载高转速下防止丢帧导致相位混叠
+      rxQueue_(512), // [Fix] 增加队列深度，空载高转速下防止丢帧导致相位混叠
       rxTask_(this),
       schedulerTask_(this)
 {

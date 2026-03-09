@@ -41,20 +41,20 @@ extern "C" {
  * @brief 一切单位都是米和度
  */
 typedef struct {
-    float max_launchHeight_; // 升降最大行程，单位米 0
-    float max_stretchLength_; // 伸展最大行程，单位米
-    float arm_length_; // 机械臂长度
-    float end_link_length_; // 末端连杆长度，吸盘到机械臂连接点的距离，单位米
+    float max_launchHeight_ = 0.0f; // 升降最大行程，单位米 0
+    float max_stretchLength_ = 0.0f; // 伸展最大行程，单位米
+    float arm_length_ = 0.0f; // 机械臂长度
+    float end_link_length_ = 0.0f; // 末端连杆长度，吸盘到机械臂连接点的距离，单位米
 
     
 
-    float stretch_Ratio_; // 伸展比率，伸展电机转一圈，伸展多少米   0.0942米(94.2mm)
-    float launch_Ratio_; // 升降比率，升降电机转一圈，升降多少米    0.01099米(109.9mm)
-    float rotate_gearRatio_; // 旋转减速比，旋转电机转一圈，机械臂转多少度 144.878度()   电机转222.289627度，机械臂转90度。  新矫正145.755789度
-    float pitch_gearRatio_; // 俯仰减速比，俯仰电机转一圈，末端关节转多少度 360度，直驱
+    float stretch_Ratio_ = 0.0f; // 伸展比率，伸展电机转一圈，伸展多少米   0.0942米(94.2mm)
+    float launch_Ratio_ = 0.0f; // 升降比率，升降电机转一圈，升降多少米    0.01099米(109.9mm)
+    float rotate_gearRatio_ = 0.0f; // 旋转减速比，旋转电机转一圈，机械臂转多少度 144.878度()   电机转222.289627度，机械臂转90度。  新矫正145.755789度
+    float pitch_gearRatio_ = 0.0f; // 俯仰减速比，俯仰电机转一圈，末端关节转多少度 360度，直驱
 
-    float min_rotate_angle_; // 最小旋转角度
-    float max_rotate_angle_; // 最大旋转角度
+    float min_rotate_angle_ = 0.0f; // 最小旋转角度
+    float max_rotate_angle_ = 0.0f; // 最大旋转角度
 
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘控制GPIO端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘控制GPIO引脚
@@ -132,7 +132,7 @@ typedef struct{
 class Robot_Arm {
 
 protected:
-    float now_time_s_ = 0; 
+    float now_time_s_ = 0.0f; 
     Arm_InitData_S init_data_;
     DJI_Motor* motor_launch_ = nullptr; // 升降电机
     DJI_Motor* motor_stretch_ = nullptr; // 伸展电机
@@ -341,6 +341,7 @@ protected:
 private:
     MotorReversed_S sign_reversed_  = {1.0f, 1.0f, 1.0f, 1.0f};
     float last_rotate_cmd_ = 0.0f;
+    float ramped_rotateMotorAngle_ = 0.0f;
 
 };
 

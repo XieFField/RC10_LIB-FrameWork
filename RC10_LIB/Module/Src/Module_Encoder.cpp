@@ -13,10 +13,13 @@ void Encoder::update(uint16_t raw_value)
         last_angle_  = current_angle;
         
         round_cnt_        = 0;
-        precision_offset_ = 0.0f;
+        // precision_offset_ = 0.0f; // [Fix] 不要清零可能早已设置的 relocate 偏移量
         
-        total_angle_ = 0.0f;
-        angle_       = normalize_deg_0_360(current_angle - start_angle_); // 显示角归零
+        // 初始化时，Total = (0 + Current - Start) + Offset = Offset
+        // total_angle_ = 0.0f;
+        total_angle_ = precision_offset_;
+
+        angle_       = normalize_deg_0_360(total_angle_); // 显示角必须跟随 total
         is_init_     = true;
         return;
     }

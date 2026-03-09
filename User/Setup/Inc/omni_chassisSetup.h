@@ -1,6 +1,7 @@
 /**
  * @file omni_chassisSetup.h
- * @brief 鍏ㄩ敓鏂ゆ嫹閿熸枻鎷风偔閿熸枻鎷烽敓锟?
+ * @brief 底盘应用类
+ * @author @XieFField @naoganlin @GaGiaa
  */
 #ifndef __OMNI_CHASSISSETUP_H
 #define __OMNI_CHASSISSETUP_H
@@ -77,7 +78,7 @@ public:
         pid_track.set_params(track_pid_params, 0.0f);
 
         this->start(osPriorityHigh, 1024);
-        setTargetKFS(11);
+//        setTargetKFS(3);
         init_flag = true;
     }
 
@@ -88,6 +89,30 @@ public:
         else
             this->is_chassis_reverse_ = -1.0f;
     }
+
+    /**
+     * @brief 设置路径自动开始标志
+     * @param start 1表示开始，0表示停止
+     * @param path_flagIndex 路径标志索引，0或1
+     */
+    void setPathAutoStart(uint8_t start, uint8_t path_flagIndex)
+    {
+        if(start == 1)
+            flag = 1;
+        else
+            flag = 0;
+
+        if(path_flagIndex == 0 || path_flagIndex == 1)
+            path_flag = path_flagIndex;
+        else
+            path_flag = 0;
+        
+        if(start == 0)
+        {
+            flag_run = 0;
+        }
+    }
+
 
     void setTargetKFS(int targetKFS)
     {
@@ -106,7 +131,7 @@ private:
 
     int flag = 0;
     int flag_run = 0;
-    int flag_1=0;
+    int flag_1=1;
     int path_flag=0;
 
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
@@ -118,11 +143,11 @@ private:
     Path_line path_line_;
     //Path_line path_line1_;
     
-    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 20.0f, .maxJerk = 100.0f, .maxSpeed = 3.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
-    Speedplanner_1D_Param_Config path_param_1={.maxAcc = 30.0f, .maxDec = 10.0f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+    Speedplanner_1D_Param_Config path_param_1={.maxAcc = 50.0f, .maxDec = 40.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
  
-    Vector2D original_point_={-0.48f,-0.48f};
-    Vector2D Clamping_Bar_Selection_pos_ = {1.935f, 0.19f};
+    Vector2D original_point_={-0.48f,-0.50f};
+    Vector2D Clamping_Bar_Selection_pos_ = {1.925f, 0.19f};
     
     Point3D ladar_data_;
     Vector2D robot_pos_ = {0.0f, 0.0f};
@@ -192,7 +217,7 @@ private:
     int num = 0;
     float tNearest = 0.0f;                // 最近点在贝塞尔曲线上的参数t (0~1)
     float tLookahead = 0.0f;              // 前视点在贝塞尔曲线上的参数t (0~1)
-    float m_lookaheadDist = 0.4f;         // 前视距离 (单位: 米)
+    float m_lookaheadDist = 0.1f;         // 前视距离 (单位: 米)
     float lateralError = 0.0f;            // 横向误差 (机器人偏离路径的距离)
     float correctspeed = 0.0f;            // 计算出的横向纠偏速度大小
     Vector2D nearestPt;                   // 路径上距离机器人最近的点

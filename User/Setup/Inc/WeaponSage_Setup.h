@@ -34,7 +34,7 @@ namespace WeaponSage_Setup
 
         float debug_start = 1; //���Կ�ʼ��־ == 1 ��ʼ����
 		float now_times=0.0f;
-        float calibrate_startTime = 0;
+        float calibrate_startTime = 0.0f;
         bool calibrate_start = false;
         bool is_calibrating = false;
 
@@ -130,6 +130,14 @@ public:
             return true;
         else
             return false;
+    }
+
+    void setTargetIndex(int8_t index)
+    {
+        if(index < 0)
+            index = 0;
+        ctrl_status_.target_poleIndex = index;
+        
     }
 
     void setWeaponSageControlStatus(WeaponSage_Status_E status)

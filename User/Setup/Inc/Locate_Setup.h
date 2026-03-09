@@ -199,7 +199,7 @@ private:
 
     struct {
         float x_offset = 0.48f;
-        float y_offset = 0.48f;
+        float y_offset = 0.50f;
     }coordoffset;
 protected:
     void loop() override;

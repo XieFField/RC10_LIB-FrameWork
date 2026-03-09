@@ -6,8 +6,8 @@ Robot_Arm::Robot_Arm(Arm_InitData_S init_Data)
     : init_data_(init_Data)
 {
 }
-float testangle =179.0f;
-int a = 1;
+// float testangle =179.0f;
+// int a = 1;
 
 void Robot_Arm::update()
 {
@@ -20,6 +20,11 @@ void Robot_Arm::update()
         time_initialized_ = true;
         // 首次对齐，后续基于“目标”积分
         target_joint_angle_ = joint_angle_;
+        
+        if (motor_rotate_ != nullptr)
+        {
+            ramped_rotateMotorAngle_ = motor_rotate_->getTotalAngle();
+        }
         return;
     }
 
@@ -87,7 +92,6 @@ void Robot_Arm::update()
         float target_arm_mod = normalize_deg_0_360(target_joint_angle_.rotateJoint_angle_);
 
         // 3. 计算 k 值 (Round to nearest integer)
-        // 增加 0.5f 偏移确保 round 行为在正负数一致 (虽然 roundf 已处理)
         float diff = current_arm_total - target_arm_mod;
         float k = roundf(diff / 360.0f);
         
@@ -98,13 +102,12 @@ void Robot_Arm::update()
         // 防止 k 值跳变引发回回头。但在 100Hz 控制频率下很难发生。
         
         target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
-    //    if(a == 1)
-    //         motor_rotate_->setTargetTotalAngle(testangle);
 
-    //    if(a == 0)
-    //         motor_rotate_->setTargetTotalAngle(rotateAngle_to_MotorTotalAngle(testangle));
+        // 斜坡缓启动
+        ramp(target_rotateMotorAngle, ramped_rotateMotorAngle_, rpm_to_degPerSec(120.0f), dt_);
 
-        motor_rotate_->setTargetTotalAngle(target_rotateMotorAngle);
+        motor_rotate_->setTargetTotalAngle(ramped_rotateMotorAngle_);
+
     }
 
     target_stretchMotorAngle = stretchLength_to_MotorTotalAngle(target_joint_angle_.stretchJoint_Length_);
@@ -179,94 +182,94 @@ bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
 
 void Robot_Arm::jacobianMatrix()
 {
+    // 不需要用到，先注释了
+    // if(dt_ <= 1e-6f || dt_ > 0.1f) 
+    //     return;
 
-    if(dt_ <= 1e-6f || dt_ > 0.1f) 
-        return;
+    // // 末端速度限幅
+    // float vx = manual_v_.vx, vy = manual_v_.vy, vz = manual_v_.vz;
+    //     float vxy_2 = vx*vx + vy*vy, vmax_xy_2 = jac_init_data_.vmax_xy_ * jac_init_data_.vmax_xy_;
+    // if(vxy_2 > vmax_xy_2)
+    // {
+    //     float norm = 0.0f;
+    //     arm_sqrt_f32(vxy_2, &norm);
+    //     float scale = jac_init_data_.vmax_xy_ /(norm + 1e-6f);
+    //     vx *= scale; 
+    //     vy *= scale;
+    // }
+    // vz = constrain(vz, -jac_init_data_.vmax_z_, jac_init_data_.vmax_z_);
 
-    // 末端速度限幅
-    float vx = manual_v_.vx, vy = manual_v_.vy, vz = manual_v_.vz;
-        float vxy_2 = vx*vx + vy*vy, vmax_xy_2 = jac_init_data_.vmax_xy_ * jac_init_data_.vmax_xy_;
-    if(vxy_2 > vmax_xy_2)
-    {
-        float norm = 0.0f;
-        arm_sqrt_f32(vxy_2, &norm);
-        float scale = jac_init_data_.vmax_xy_ /(norm + 1e-6f);
-        vx *= scale; 
-        vy *= scale;
-    }
-    vz = constrain(vz, -jac_init_data_.vmax_z_, jac_init_data_.vmax_z_);
+    // // 1 用反馈姿态计算雅可比
+    // const float h_fb = joint_angle_.launchJoint_Height_;
+    // const float d_fb = joint_angle_.stretchJoint_Length_;
+    // const float theta_rad_fb = deg_to_rad(joint_angle_.rotateJoint_angle_);
 
-    // 1 用反馈姿态计算雅可比
-    const float h_fb = joint_angle_.launchJoint_Height_;
-    const float d_fb = joint_angle_.stretchJoint_Length_;
-    const float theta_rad_fb = deg_to_rad(joint_angle_.rotateJoint_angle_);
+    // float c = arm_cos_f32(theta_rad_fb);
+    // float s = arm_sin_f32(theta_rad_fb);
+    // const float L = init_data_.arm_length_ + d_fb;
 
-    float c = arm_cos_f32(theta_rad_fb);
-    float s = arm_sin_f32(theta_rad_fb);
-    const float L = init_data_.arm_length_ + d_fb;
+    // float Jv_data[9] = {
+    //     0.0f,   c, -L*s,
+    //     0.0f,   s,  L*c,
+    //     1.0f, 0.0f, 0.0f
+    // };
 
-    float Jv_data[9] = {
-        0.0f,   c, -L*s,
-        0.0f,   s,  L*c,
-        1.0f, 0.0f, 0.0f
-    };
+    // //阻尼最小二乘 qdot = J^T (J J^T + λ^2 I)^-1 v
+    // arm_matrix_instance_f32 Jv, JT, S, Sl, Sl_inv, vec_v, vec_tmp, vec_qdot;
 
-    //阻尼最小二乘 qdot = J^T (J J^T + λ^2 I)^-1 v
-    arm_matrix_instance_f32 Jv, JT, S, Sl, Sl_inv, vec_v, vec_tmp, vec_qdot;
+    // float JT_data[9], S_data[9], Sl_data[9], Sl_inv_data[9];
+    // float v_data[3] = {vx, vy, vz};
+    // float tmp_data[3]={0,0,0}, qdot_data[3]={0,0,0};
 
-    float JT_data[9], S_data[9], Sl_data[9], Sl_inv_data[9];
-    float v_data[3] = {vx, vy, vz};
-    float tmp_data[3]={0,0,0}, qdot_data[3]={0,0,0};
-
-    arm_mat_init_f32(&Jv, 3, 3, Jv_data);
-    arm_mat_init_f32(&JT, 3, 3, JT_data);
-    arm_mat_init_f32(&S, 3, 3, S_data);
-    arm_mat_init_f32(&Sl, 3, 3, Sl_data);
-    arm_mat_init_f32(&Sl_inv, 3, 3, Sl_inv_data);
-    arm_mat_init_f32(&vec_v, 3, 1, v_data);
-    arm_mat_init_f32(&vec_tmp, 3, 1, tmp_data);
-    arm_mat_init_f32(&vec_qdot, 3, 1, qdot_data);
+    // arm_mat_init_f32(&Jv, 3, 3, Jv_data);
+    // arm_mat_init_f32(&JT, 3, 3, JT_data);
+    // arm_mat_init_f32(&S, 3, 3, S_data);
+    // arm_mat_init_f32(&Sl, 3, 3, Sl_data);
+    // arm_mat_init_f32(&Sl_inv, 3, 3, Sl_inv_data);
+    // arm_mat_init_f32(&vec_v, 3, 1, v_data);
+    // arm_mat_init_f32(&vec_tmp, 3, 1, tmp_data);
+    // arm_mat_init_f32(&vec_qdot, 3, 1, qdot_data);
 
 
-    // JT = Jv^T
-    if(arm_mat_trans_f32(&Jv, &JT) != ARM_MATH_SUCCESS)
-        return;
+    // // JT = Jv^T
+    // if(arm_mat_trans_f32(&Jv, &JT) != ARM_MATH_SUCCESS)
+    //     return;
 
-    // S = Jv * JT
-    if(arm_mat_mult_f32(&Jv, &JT, &S) != ARM_MATH_SUCCESS)
-        return;
+    // // S = Jv * JT
+    // if(arm_mat_mult_f32(&Jv, &JT, &S) != ARM_MATH_SUCCESS)
+    //     return;
 
-    //Sl = S + λ^2 I
-    const float lambda_2 = jac_init_data_.jac_lambda_ * jac_init_data_.jac_lambda_;
-    for(uint32_t r=0; r < 3; ++r)
-    {
-        for(uint32_t c_idx = 0; c_idx < 3; ++c_idx)
-            Sl_data[r*3 + c_idx] = S_data[r*3 + c_idx];
+    // //Sl = S + λ^2 I
+    // const float lambda_2 = jac_init_data_.jac_lambda_ * jac_init_data_.jac_lambda_;
+    // for(uint32_t r=0; r < 3; ++r)
+    // {
+    //     for(uint32_t c_idx = 0; c_idx < 3; ++c_idx)
+    //         Sl_data[r*3 + c_idx] = S_data[r*3 + c_idx];
 
-        Sl_data[r*3 + r] += lambda_2;
-    }
+    //     Sl_data[r*3 + r] += lambda_2;
+    // }
 
-    if(arm_mat_inverse_f32(&Sl, &Sl_inv) != ARM_MATH_SUCCESS) return;
-    if(arm_mat_mult_f32(&Sl_inv, &vec_v, &vec_tmp) != ARM_MATH_SUCCESS) return;
-    if(arm_mat_mult_f32(&JT, &vec_tmp, &vec_qdot) != ARM_MATH_SUCCESS) return;
+    // if(arm_mat_inverse_f32(&Sl, &Sl_inv) != ARM_MATH_SUCCESS) return;
+    // if(arm_mat_mult_f32(&Sl_inv, &vec_v, &vec_tmp) != ARM_MATH_SUCCESS) return;
+    // if(arm_mat_mult_f32(&JT, &vec_tmp, &vec_qdot) != ARM_MATH_SUCCESS) return;
 
-    float hdot = constrain(qdot_data[0], -jac_init_data_.hdot_max_, jac_init_data_.hdot_max_);                 // m/s
-    float ddot = constrain(qdot_data[1], -jac_init_data_.ddot_max_, jac_init_data_.ddot_max_);                 // m/s
-    float thetadot_deg = constrain(rad_to_deg(qdot_data[2]), -jac_init_data_.thetadot_deg_max_, jac_init_data_.thetadot_deg_max_); // deg/s
+    // float hdot = constrain(qdot_data[0], -jac_init_data_.hdot_max_, jac_init_data_.hdot_max_);                 // m/s
+    // float ddot = constrain(qdot_data[1], -jac_init_data_.ddot_max_, jac_init_data_.ddot_max_);                 // m/s
+    // float thetadot_deg = constrain(rad_to_deg(qdot_data[2]), -jac_init_data_.thetadot_deg_max_, jac_init_data_.thetadot_deg_max_); // deg/s
 
-    //  积分到目标位置
-    float h_cmd     = target_joint_angle_.launchJoint_Height_;
-    float d_cmd     = target_joint_angle_.stretchJoint_Length_;
-    float theta_cmd = target_joint_angle_.rotateJoint_angle_; // deg，保持连续角
+    // //  积分到目标位置
+    // float h_cmd     = target_joint_angle_.launchJoint_Height_;
+    // float d_cmd     = target_joint_angle_.stretchJoint_Length_;
+    // float theta_cmd = target_joint_angle_.rotateJoint_angle_; // deg，保持连续角
 
-    h_cmd     = h_cmd     + hdot        * dt_;
-    d_cmd     = d_cmd     + ddot        * dt_;
-    theta_cmd = theta_cmd + thetadot_deg* dt_;
+    // h_cmd     = h_cmd     + hdot        * dt_;
+    // d_cmd     = d_cmd     + ddot        * dt_;
+    // theta_cmd = theta_cmd + thetadot_deg* dt_;
 
-    //  位置限幅（不限制旋转角，保持多圈连续；显示时再做 0..360 归一化）
-    target_joint_angle_.launchJoint_Height_  = constrain(h_cmd, 0.0f, init_data_.max_launchHeight_);
-    target_joint_angle_.stretchJoint_Length_ = constrain(d_cmd, 0.0f, init_data_.max_stretchLength_);
-    target_joint_angle_.rotateJoint_angle_  = theta_cmd;
+    // //  位置限幅（不限制旋转角，保持多圈连续；显示时再做 0..360 归一化）
+    // target_joint_angle_.launchJoint_Height_  = constrain(h_cmd, 0.0f, init_data_.max_launchHeight_);
+    // target_joint_angle_.stretchJoint_Length_ = constrain(d_cmd, 0.0f, init_data_.max_stretchLength_);
+    // target_joint_angle_.rotateJoint_angle_  = theta_cmd;
 }
 
 float Robot_Arm::calc_rotate_targetByStrategy(float current_cont_angle, float target_raw_0_360)

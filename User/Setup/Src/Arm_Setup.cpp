@@ -5,8 +5,7 @@ static bool s_has_recorded_strategy = false; //记录是否已经记录过策略
 /**
  * @brief 寻主循环
  */
-// int numnum = 1;
-uint32_t ArmstackHighWaterMark = 0;
+// uint32_t ArmstackHighWaterMark = 0;
 void ArmSetup::loop()
 {
     if(!arm_ctrlStatus.init_flag)
@@ -20,29 +19,41 @@ void ArmSetup::loop()
         arm_status_ = ARM_CALIBRATE;
     }
 
-
+#if ARM_AUTO_DEBUG_NOCHASSIS
     //目前使用虚拟坐标进行自控逻辑验证
-    if(arm_status_ == ARM_AUTO_CONTROL&&arm_ctrlStatus.auto_debug_start == 1)
+    if(arm_status_ == ARM_AUTO_CONTROL&&arm_ctrlStatus.auto_start == 1)
     {
         auto_ctrl_.now_chassis_speed = get_nowChassisSpeed();
         auto_ctrl_.now_armPosition = get_nowArmPosition();
         auto_ctrl_.now_ChassisPosition = get_nowChassisPose();
     }
-    
+#else
+    auto_ctrl_.now_chassis_speed = get_nowChassisSpeed();
+    auto_ctrl_.now_armPosition = get_nowArmPosition();
+    auto_ctrl_.now_ChassisPosition = get_nowChassisPose();
+#endif
+
+
+
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 
     if( arm_status_ == ARM_AUTO_CONTROL)
     {
-        static bool ifFirst = true;
-        if(ifFirst)
-        {
-            if(arm_ctrlStatus.auto_debug_start == 1)
+        // static bool ifFirst = true;
+        // if(ifFirst)
+        // {
+            if(arm_ctrlStatus.auto_start == 1)
             {
                 this->start_toAutoCtrl(true);
-                ifFirst = false;
+                // ifFirst = false;
             }
-        }
-    }
+            else
+            {
+                this->start_toAutoCtrl(false);
+                this->auto_ctrl_.now_state = STATE_DONE;
+            }
+        // }
+    } 
 
 
     switch(arm_status_)
@@ -55,8 +66,10 @@ void ArmSetup::loop()
 
         case ARM_AUTO_CONTROL:
             {
-                if(arm_ctrlStatus.auto_debug_start == 1)
+                if(arm_ctrlStatus.auto_start == 1)
                     autoControl();
+                else 
+                    idle();
             }   
             break;
 
@@ -92,20 +105,12 @@ void ArmSetup::loop()
         default:
             break;
     }
-    // if(numnum==1)
-    //     debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getTotalAngle());
-    // else if(numnum == 2)
-    //     debug_uart.printf_DMA("%f\n\r",this->motor_rotate_->getRPM());
+
 
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
 }
 
-uint8_t test_signal = 0;
-float test_current = 0.0f;
-float rotate_rate = 1.2f;
-float launch_rate = 0.012f;
-int cnt = 0;
 /**
  * @brief 寻手操
  */
@@ -146,7 +151,7 @@ void ArmSetup::manualControl()
 
 
     //升降操控
-    if(_tool_Abs(airjoy_data_.right_y) > 0.1)
+    if(_tool_Abs(airjoy_data_.right_y) > 0.1f)
     {
         // float next_height = target_joint_status_.launchJoint_Height_ 
         //     + airjoy_data_.right_y * launch_rate * airjoy_data_.right_y;
@@ -158,10 +163,10 @@ void ArmSetup::manualControl()
         // else
         //     target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_ ;
            
-        if(airjoy_data_.right_y > 0.3)
-            next_height += launch_rate;
-        else if(airjoy_data_.right_y < -0.3)
-            next_height -= launch_rate;
+        if(airjoy_data_.right_y > 0.3f)
+            next_height += manual_control.launch_rate;
+        else if(airjoy_data_.right_y < -0.3f)
+            next_height -= manual_control.launch_rate;
         else
             next_height = this->get_currentJointStatus().launchJoint_Height_ ;
 
@@ -195,18 +200,18 @@ void ArmSetup::manualControl()
     // else
     //     target_joint_status_.rotateJoint_angle_ = target_joint_status_.rotateJoint_angle_; // 保持不变
 
-    cnt++;
-    if(cnt > 10)
+    manual_control.cnt++;
+    if(manual_control.cnt > 10)
     {
-        if(airjoy_data_.right_x > 0.5)
-            target_joint_status_.rotateJoint_angle_ += rotate_rate;
-        else if(airjoy_data_.right_x < -0.5)
-            target_joint_status_.rotateJoint_angle_ -= rotate_rate;
+        if(airjoy_data_.right_x > 0.5f)
+            target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
+        else if(airjoy_data_.right_x < -0.5f)
+            target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
         else
             target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_; // 保持不变
 
         target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
-        cnt = 0;
+        manual_control.cnt = 0;
     }
 
     //pitch 开关
@@ -313,9 +318,9 @@ void ArmSetup::state_toTargetHight(int targetKFS)
 
     if(kfs_height - 0.2f < auto_ctrl_.flag.safe_height)
         this->set_LaunchHeight(auto_ctrl_.flag.safe_height); //安全高度
-    else if(kfs_height = 0.4f)
+    else if(kfs_height == 0.4f)
         this->set_LaunchHeight(auto_ctrl_.flag.safe_height); //目标高度-吸盘高度(0.2m)
-    else if(kfs_height = 0.6f)
+    else if(kfs_height == 0.6f)
         this->set_LaunchHeight(init_data_.max_launchHeight_); //目标高度-吸盘高度(0.2m)
 
     
@@ -339,7 +344,6 @@ bool ArmSetup::check_Arm_collision(float px, float py,
         0.0f
     };
 
-    // [修正] 正确的坐标变换：将世界坐标投影到机械臂局部坐标系
     // Local X: 沿机械臂轴向 (点乘方向向量 (c, s))
     // Local Y: 垂直机械臂轴向 (点乘法向量 (-s, c))
     Point2D local = {
@@ -349,7 +353,7 @@ bool ArmSetup::check_Arm_collision(float px, float py,
     };
     
     // 矩形碰撞判断: x in [0, L], y in [-W/2, W/2]
-    if(local.x >= 0.0f && local.x <= L_arm && _tool_Abs(local.y) <= (W_arm / 2.0f))
+    if(local.x >= 0.0f && local.x <= (L_arm ) && _tool_Abs(local.y) <= ((W_arm + 0.02f) / 2.0f))
         return true; //碰撞
     else
         return false; //未碰撞
@@ -358,6 +362,7 @@ bool ArmSetup::check_Arm_collision(float px, float py,
 /**
  * @brief 寻自动对齐
  */
+Point2D toosee = {0};
 void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
@@ -367,7 +372,7 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
      * @details 依旧屎山堆积
      */
     MF_AutoCtrler::Direction_E move_direction;
-    Point2D target_pos = {0, 0 ,0};
+    Point2D target_pos = {0.0f, 0.0f ,0.0f};
     if(targetKFS == auto_ctrl_.targetKFS[0])
     {
         move_direction = auto_ctrl_.KFS_Movedirection[0];
@@ -382,6 +387,16 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
         return;
 
     
+    if(targetKFS == 1 || targetKFS ==2 || targetKFS == 3)
+    {
+        if(auto_ctrl_.now_armPosition.y < auto_ctrl_.pathPos.bestB1.y - 0.3f)
+            return; //未到达目标位置，直接返回
+    }
+    else if(targetKFS == 10 || targetKFS ==11 || targetKFS ==12)
+    {
+        if(auto_ctrl_.now_armPosition.y < auto_ctrl_.pathPos.bestB1.y - 1.0f)
+            return; //未到达目标位置，直接返回
+    }
 
     //开始预判计算部分
     switch(move_direction) //还未到目标位置，不进入计算
@@ -429,8 +444,10 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
 
     //开始计算
     auto_ctrl_.gimbal_calcCount = 0;
-    get_GimbalMF_PAPB(targetKFS, auto_ctrl_.PointPAB[index].PA, 
+    get_GimbalMF_PAPB(index, auto_ctrl_.PointPAB[index].PA, 
             auto_ctrl_.PointPAB[index].PB);
+
+
     Point2D PA = auto_ctrl_.PointPAB[index].PA;
     Point2D PB = auto_ctrl_.PointPAB[index].PB;
 
@@ -546,10 +563,10 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
         auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
     }
 
-    else if(diff  > 0)
+    else if(diff  > 0.0f)
         auto_ctrl_.current_strategy = ROTATE_PATH_POSITIVE;
     
-    else if (diff < 0)
+    else if (diff < 0.0f)
         /* code */
         auto_ctrl_.current_strategy = ROTATE_PATH_NEGATIVE;
     
@@ -584,22 +601,63 @@ void ArmSetup::state_signAlign(int targetKFS, bool &align_done)
         float norm_angle = fmodf(current_deg, 360.0f);
         if(norm_angle < 0.0f) norm_angle += 360.0f;
 
-        // 检查当前角度是否允许处于低高度 (即在 [30, 135] 范围内)
-        if(norm_angle >= 30.0f && norm_angle <= 135.0f)
+            float kfs_height = MF_high[targetKFS -1];
+        if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_-90.0f) < 10.0f )
         {
-             float kfs_height = MF_high[targetKFS -1];
-             // 如果目标高度低于安全高度，则降低
-            //  if(kfs_height - 0.2f < auto_ctrl_.flag.safe_height)
-            //     this->set_LaunchHeight(kfs_height - 0.2f);
+           
+           switch(move_direction)
+           {
+               case MF_AutoCtrler::Positive_X:
+               {
+                   if(auto_ctrl_.now_armPosition.x > PA.x)
+                       auto_ctrl_.flag.issafetoLower = true;
+                   else
+                       auto_ctrl_.flag.issafetoLower = false;
+                   break;
+               }
+
+               case MF_AutoCtrler::Negative_X:
+               {
+                   if(auto_ctrl_.now_armPosition.x < PA.x)
+                       auto_ctrl_.flag.issafetoLower = true;
+                   else
+                       auto_ctrl_.flag.issafetoLower = false;
+                   break;
+               }
+
+               case MF_AutoCtrler::Positive_Y:
+               {
+                   if (auto_ctrl_.now_armPosition.y > PA.y)
+                       auto_ctrl_.flag.issafetoLower = true;
+                   else
+                       auto_ctrl_.flag.issafetoLower = false;
+                   
+                   break;
+               }
+
+               case MF_AutoCtrler::Negative_Y:
+               {
+                   if(auto_ctrl_.now_armPosition.y < PA.y)
+                       auto_ctrl_.flag.issafetoLower = true;
+                   else
+                       auto_ctrl_.flag.issafetoLower = false;
+                   break;
+               }
+
+           }
+
+           if(auto_ctrl_.flag.issafetoLower)
+           {
                 if(kfs_height == 0.2f)
                     this->set_LaunchHeight(0.0f); //降到最低点
                 else if(kfs_height == 0.4f)
                     this->set_LaunchHeight(auto_ctrl_.flag.safe_height); //降到safe
                 else if(kfs_height == 0.6f)
                     this->set_LaunchHeight(init_data_.max_launchHeight_); //降到最高点
+           }
         }
 
-        if(_tool_Abs(diff) < 2.0f)
+        if(_tool_Abs(diff) < 2.0f && auto_ctrl_.flag.issafetoLower)
         {
             //到达目标角度后，打开吸盘
             this->setSuckerStatus(Sucker_Status_E::SUCK);
@@ -623,11 +681,10 @@ Point2D pos_start_kfs = {0.0f, 0.0f, 0.0f};
  * @brief 伸展到目标KFS位置 条件预判
  */
 
-    bool back = false;
-float angle = 0.0f;
 /**
  * @brief 寻自动伸展
  */
+float t_needread = 0.0f;
 bool ArmSetup::state_aimExt(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
@@ -647,7 +704,7 @@ bool ArmSetup::state_aimExt(int targetKFS)
 		float t_stretch = auto_ctrl_.time_set.stretch_time_s;
 		//RawPos nowRaw=Position::GetInstance(&huart1)->getRawPosData();
 
-        Point2D target_pos = {0, 0 ,0};
+        Point2D target_pos = {0.0f, 0.0f ,0.0f};
 
         MF_AutoCtrler::Direction_E move_direction;
 
@@ -665,52 +722,54 @@ bool ArmSetup::state_aimExt(int targetKFS)
             return false;
 		
         //计算t_need
-        switch(move_direction)
+        if(!auto_ctrl_.flag.ext_started)
         {
-            case MF_AutoCtrler::Positive_X:
+            switch(move_direction)
             {
-                if(_tool_Abs(auto_ctrl_.now_chassis_speed.x) < 0.1f)
-                    return false; //速度为0，无法伸展
-                t_need = _tool_Abs((target_pos.x - auto_ctrl_.now_armPosition.x) 
-                        / auto_ctrl_.now_chassis_speed.x);
-                break;
-            }
-            case MF_AutoCtrler::Negative_X:
-            {
-                if(_tool_Abs(auto_ctrl_.now_chassis_speed.x) < 0.1f)
-                    return false; //速度为0，无法伸展
+                case MF_AutoCtrler::Positive_X:
+                {
+//                    if(_tool_Abs(auto_ctrl_.now_chassis_speed.x) < 0.1f)
+//                        return false; //速度为0，无法伸展
+                    t_need = _tool_Abs((target_pos.x - auto_ctrl_.now_armPosition.x) 
+                            / auto_ctrl_.now_chassis_speed.x);
+                    break;
+                }
+                case MF_AutoCtrler::Negative_X:
+                {
+//                    if(_tool_Abs(auto_ctrl_.now_chassis_speed.x) < 0.1f)
+//                        return false; //速度为0，无法伸展
 
-                t_need = _tool_Abs((auto_ctrl_.now_armPosition.x - target_pos.x) 
-                        / auto_ctrl_.now_chassis_speed.x);
-                break;
-            }
+                    t_need = _tool_Abs((auto_ctrl_.now_armPosition.x - target_pos.x) 
+                            / auto_ctrl_.now_chassis_speed.x);
+                    break;
+                }
 
-            case MF_AutoCtrler::Positive_Y:
-            {
-                if(_tool_Abs(auto_ctrl_.now_chassis_speed.y) < 0.1f)
-                    return false; //速度为0，无法伸展
+                case MF_AutoCtrler::Positive_Y:
+                {
+                    if(_tool_Abs(auto_ctrl_.now_chassis_speed.y) < 0.1f)
+                        return false; //速度为0，无法伸展
 
-                t_need = _tool_Abs((target_pos.y - auto_ctrl_.now_armPosition.y) 
-                        / auto_ctrl_.now_chassis_speed.y);
-                break;
+                    t_need = _tool_Abs((target_pos.y - auto_ctrl_.now_armPosition.y) 
+                            / auto_ctrl_.now_chassis_speed.y);
+                    break;
+                }
+                case MF_AutoCtrler::Negative_Y:
+                {
+                    if(_tool_Abs(auto_ctrl_.now_chassis_speed.y) < 0.1f)
+                        return false; //速度为0，无法伸展
+                    t_needread = t_need;
+                    t_need = _tool_Abs((auto_ctrl_.now_armPosition.y - target_pos.y) 
+                            / auto_ctrl_.now_chassis_speed.y);
+                    break;
+                }
+                default:
+                    break;
             }
-            case MF_AutoCtrler::Negative_Y:
-            {
-                if(_tool_Abs(auto_ctrl_.now_chassis_speed.y) < 0.1f)
-                    return false; //速度为0，无法伸展
-
-                t_need = _tool_Abs((auto_ctrl_.now_armPosition.y - target_pos.y) 
-                        / auto_ctrl_.now_chassis_speed.y);
-                break;
-            }
-            default:
-                break;
         }
-
         //或许delta_t < 0.02s会错过伸展窗口(计算频率)
         //给足提前量容忍，或许会更好，避免过严格的等式触发
 
-        const float delta_t = auto_ctrl_.time_set.stretch_time_s / 6; //提前量容忍
+        const float delta_t = 0.04f; //提前量容忍
 
         if(!auto_ctrl_.flag.ext_started)
         {
@@ -730,21 +789,19 @@ bool ArmSetup::state_aimExt(int targetKFS)
 
 		current_armLength = get_currentJointStatus().stretchJoint_Length_;
 
-		if(_tool_Abs(current_armLength-arm_initData.max_stretchLength_) < 0.005f && !auto_ctrl_.flag.is_reachingTarget)
+		if(_tool_Abs(current_armLength-arm_initData.max_stretchLength_) < 0.006f && !auto_ctrl_.flag.is_reachingTarget)
 		{
 			auto_ctrl_.flag.is_reachingTarget = true;
             pos_tar_kfs = auto_ctrl_.now_armPosition; //记录伸展到达位置
 			auto_ctrl_.flag.reach_finishTime = TimeStamp::getInstance().getSeconds();
 		}
-		if(auto_ctrl_.flag.is_reachingTarget && (now_time_s_-auto_ctrl_.flag.reach_finishTime) >= 0.3f)
+		if(auto_ctrl_.flag.is_reachingTarget && (now_time_s_-auto_ctrl_.flag.reach_finishTime) >= 0.15f)
 		{
 			this->set_StretchLength(0.0f);
-            auto_ctrl_.flag.ext_started = false; //重置伸展开始标志
+           // auto_ctrl_.flag.ext_started = false; //重置伸展开始标志
 
             if(this->get_currentJointStatus().stretchJoint_Length_ < 0.005f)
-            {
-                
-                   
+            { 
 			    return true;
             }
             return false;
@@ -752,13 +809,12 @@ bool ArmSetup::state_aimExt(int targetKFS)
 
         else
 			return false;
-			
 }
 
 /**
  * @brief 寻自动搬运
  */
-float diff_read=- 0.0f;
+// float diff_read=- 0.0f;
 void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
 {
     /**
@@ -936,7 +992,7 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
     float T_rot = _tool_Abs(diff) * (PI / 180.0f) / 
                 (auto_ctrl_.time_set.gimbal_max_rad * auto_ctrl_.time_set.rotateSpeedRate_); //云台旋转所需时间(s)
 
-    diff_read = diff;
+    // diff_read = diff;
 
     for(float t = 0.0f; t <= T_rot; t+= 0.05f)
     {
@@ -947,7 +1003,7 @@ void ArmSetup::state_carrying(int targetKFS ,bool &carrying_done)
         };
 
         float step_deg = 0.0f;
-        if(diff > 0 )
+        if(diff > 0.0f )
             step_deg = 1.0f * (auto_ctrl_.time_set.gimbal_max_rad 
                     * auto_ctrl_.time_set.rotateSpeedRate_ * 180.0f / PI) * t; //每步旋转
 
@@ -1182,9 +1238,9 @@ bool ArmSetup::state_return(int next_targetKFS)
     }
     else if (has_next)
     {
-        if (angel == 0)
+        if (angel == 0.0f)
             auto_ctrl_.current_strategy = ROTATE_PATH_POSITIVE;
-        else if (angel == 180)
+        else if (angel == 180.0f)
             auto_ctrl_.current_strategy = ROTATE_PATH_NEGATIVE;
         else
             auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
@@ -1260,12 +1316,18 @@ void ArmSetup::auto_onlyOne()
         case STATE_DONE:
         {
             if(auto_ctrl_.start_to_autoctrl)
-            {
+            {   
+                if(!auto_ctrl_.flag.isrecalcPath)
+                {
+                    this->set_TargetKFS(auto_ctrl_.targetKFS[0], 0); //重置计算PathNode
+                    auto_ctrl_.flag.isrecalcPath = true;
+                }
+                auto_ctrl_.flag.issafetoLower = false;
                 auto_ctrl_.flag.align_done = false;
                 auto_ctrl_.flag.ext_done = false;
                 auto_ctrl_.flag.carry_done = false;
                 auto_ctrl_.flag.return_done = false;
-
+                auto_ctrl_.flag.ext_started = false;
                 auto_ctrl_.flag.is_reachingTarget = false;
                 auto_ctrl_.flag.reach_finishTime = 0.0f;
                 
@@ -1277,9 +1339,6 @@ void ArmSetup::auto_onlyOne()
                 return_done = state_return(0); //头一个KFS，传入0
                 if(return_done)
                     auto_ctrl_.now_state = STATE_TO_TARGET_HIGHT;
-
-                // this->set_RotateAngle(test_target);
-
             }
             else
             {
@@ -1334,18 +1393,6 @@ void ArmSetup::auto_onlyOne()
             break;
         }
 
-        // case STATE_CARRYING:
-        // {
-        //     // static bool carrying_done = false;
-        //     state_carrying(auto_ctrl_.targetKFS[0], auto_ctrl_.flag.carry_done);
-        //     //判断是否放置完毕
-        //     if(auto_ctrl_.flag.carry_done)
-        //     {
-        //         auto_ctrl_.now_state = STATE_RETURN;
-        //     }
-        //     break;
-        // }
-
         case STATE_RETURN:
         {
             // static bool return_done = false;
@@ -1353,7 +1400,10 @@ void ArmSetup::auto_onlyOne()
             if(auto_ctrl_.flag.return_done)
             {
                 auto_ctrl_.now_state = STATE_DONE;
-                auto_ctrl_.start_to_autoctrl = false; //自动流程结束
+                //auto_ctrl_.start_to_autoctrl = false; //自动流程结束
+                arm_ctrlStatus.auto_start = 0; //自动流程结束
+                auto_ctrl_.start_to_autoctrl = false;
+                auto_ctrl_.flag.isrecalcPath = false; //重置路径计算标志
             }
             break;
         }
@@ -1363,6 +1413,7 @@ void ArmSetup::auto_onlyOne()
     }
 }
 
+//下学期再根据实际需求修缮了
 void ArmSetup::auto_two()
 {
     /**
@@ -1630,82 +1681,75 @@ void ArmSetup::idle()
 
     // this->setSuckerStatus(Sucker_Status_E::STOP); // 保持上一刻状态，不强制关闭
 }
+// /*====================== 测试调试部分 ======================*/
 
-float stretch_starttime = 0;
-bool stretch_flag = false;
-float pitch_starttime = 0;
-bool pitch_flag = false;
-float stretch_usetime = 0;
-float pitch_usetime = 0;
+// float test_rotate_angle = 0.2f;
 
-
-float test_rotate_angle = 0.2f;
-
-float test_launch_height = 0.01f;
-volatile float launch_see = 0.0f;
+// float test_launch_height = 0.01f;
+// volatile float launch_see = 0.0f;
 /**
  * @brief 寻调试
  */
 void ArmSetup::debug()
 {
-    //测试
-    if(test_signal == 0) //所有电机电流强制为0；检查电机转动方向是否需要置反
-    {
-        this->set_controlMode(CURRENT_CONTROL_MODE);
-        this->motor_launch_->setTargetCurrent(0.0f);
-        this->motor_stretch_->setTargetCurrent(0.0f);
-        this->motor_rotate_->setTargetCurrent(0.0f);
-        this->motor_pitch_->setTargetCurrent(0.0f);
-    }
+    // //测试
+    // if(test_signal == 0) //所有电机电流强制为0；检查电机转动方向是否需要置反
+    // {
+    //     this->set_controlMode(CURRENT_CONTROL_MODE);
+    //     this->motor_launch_->setTargetCurrent(0.0f);
+    //     this->motor_stretch_->setTargetCurrent(0.0f);
+    //     this->motor_rotate_->setTargetCurrent(0.0f);
+    //     this->motor_pitch_->setTargetCurrent(0.0f);
+    // }
 
-    //1~4 signal test用于测试电机电流方向和电机转动方向是否同相
-    else if(test_signal == 1)
-        this->motor_launch_->setTargetCurrent(test_current);
+    // //1~4 signal test用于测试电机电流方向和电机转动方向是否同相
+    // else if(test_signal == 1)
+    //     this->motor_launch_->setTargetCurrent(test_current);
 
-    else if(test_signal == 2)
-        this->motor_stretch_->setTargetCurrent(test_current);
+    // else if(test_signal == 2)
+    //     this->motor_stretch_->setTargetCurrent(test_current);
 
-    else if(test_signal == 3)
-        this->motor_rotate_->setTargetCurrent(test_current);
+    // else if(test_signal == 3)
+    //     this->motor_rotate_->setTargetCurrent(test_current);
         
-    else if(test_signal == 4)
-        this->motor_pitch_->setTargetCurrent(test_current);
+    // else if(test_signal == 4)
+    //     this->motor_pitch_->setTargetCurrent(test_current);
 
-    //航模遥控操纵测试
-    else if(test_signal == 5)
-    {
-        this->manualControl();
-    }
+    // //航模遥控操纵测试
+    // else if(test_signal == 5)
+    // {
+    //     this->manualControl();
+    // }
 
-    else if(test_signal == 6) //测试stop功能
-    {
-        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-        this->stop();
-    }
+    // else if(test_signal == 6) //测试stop功能
+    // {
+    //     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    //     this->stop();
+    // }
 
-    else if(test_signal == 7) //测试idle功能
-    {
-        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-        this->idle();
-    }
-    else if(test_signal == 8)
-    {
-        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-        this->set_LaunchHeight(test_launch_height);
-    } 
-    else if(test_signal == 9)
-    {
-        this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-        this->set_RotateAngle(test_rotate_angle);
-    }
-    else //empty
-    {
-        this->set_controlMode(CURRENT_CONTROL_MODE);
-        this->set_LaunchHeight(0.0f);
-        this->set_StretchLength(0.0f);
-        this->set_RotateAngle(0.0f);
-        this->set_PitchAngle(0.0f);
-    }
+    // else if(test_signal == 7) //测试idle功能
+    // {
+    //     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    //     this->idle();
+    // }
+    // else if(test_signal == 8)
+    // {
+    //     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    //     this->set_LaunchHeight(test_launch_height);
+    // } 
+    // else if(test_signal == 9)
+    // {
+    //     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    //     this->set_RotateAngle(test_rotate_angle);
+    // }
+    // else //empty
+    // {
+    //     this->set_controlMode(CURRENT_CONTROL_MODE);
+    //     this->set_LaunchHeight(0.0f);
+    //     this->set_StretchLength(0.0f);
+    //     this->set_RotateAngle(0.0f);
+    //     this->set_PitchAngle(0.0f);
+    // }
     
 }
 
@@ -1727,6 +1771,3 @@ Arm_InitData_S arm_initData = {
    .Sucker_GPIO_Port = SUCKER_GPIO_Port,
     .Sucker_GPIO_Pin = SUCKER_Pin,
 };
-
-
-
