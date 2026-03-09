@@ -1,11 +1,18 @@
 #include "FSM_Controller.h"
 
+
+uint8_t cout;
 void FSM_Controller::loop()
 {
     if(!init_flag_) 
         return;
-    CrsfReceiver::GetInstance(&huart7)->send_kfsandSpear(crsf_send_s.rsf_send_data.kfs1, crsf_send_s.rsf_send_data.kfs2, 
+        cout++;
+        if(cout>100)   //阻塞式发送,100ms发送一次
+        {
+            cout = 0;
+            CrsfReceiver::GetInstance(&huart7)->send_kfsandSpear(crsf_send_s.rsf_send_data.kfs1, crsf_send_s.rsf_send_data.kfs2, 
 																	crsf_send_s.rsf_send_data.Spear);
+        }
     CrsfReceiver::GetInstance(&huart7)->process();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     

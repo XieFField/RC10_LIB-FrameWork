@@ -1,4 +1,4 @@
-//这一版是非阻塞发送,开dubug模式会导致DMA关闭,接收不到数据
+//这一版是阻塞式发送,100ms发送一次
 #include "Module_CrsfReceiver.h"
 #include <cstring>
 #include <cmath>
@@ -382,47 +382,27 @@ void CrsfReceiver::send_float(uint8_t sub_type, float value)
 
 void CrsfReceiver::send_robot(float x, float y, float yaw)
 {
-    if (!tx_done) return;
-
+    // 阻塞式发送
     uint16_t yaw_val = (uint16_t)(yaw * 100.0f);
     uint16_t x_val = (uint16_t)(x * 100.0f);
     uint16_t y_val = (uint16_t)(y * 100.0f);
 
-    // 使用类的 tx_buffer_（已在头文件声明并做了对齐）
     uint8_t* buf = tx_buffer_;
-    // 帧头
-    buf[0] = 0xEA;      // 地址: Radio Transmitter
-    buf[1] = 17;        // 长度: payload(15) + 2
-    buf[2] = 0x02;      // 类型: GPS
+    buf[0] = 0xEA;
+    buf[1] = 17;
+    buf[2] = 0x02;
 
-    // Latitude (占位，填写小端 int32)
-    buf[3] = 0x01;
-    buf[4] = 0x00;
-    buf[5] = 0x01;
-    buf[6] = 0x00;
+    buf[3] = 0x01; buf[4] = 0x00; buf[5] = 0x01; buf[6] = 0x00;
+    buf[7] = 0x01; buf[8] = 0x00; buf[9] = 0x00; buf[10] = 0x00;
 
-    // Longitude (占位，填写小端 int32)
-    buf[7] = 0x01;
-    buf[8] = 0x00;
-    buf[9] = 0x00;
-    buf[10] = 0x00;
-
-    // Ground Speed (uint16, 小端)
-    buf[11] = x_val & 0xFF;      // LSB
-    buf[12] = (x_val >> 8) & 0xFF; // MSB
-
-    // Ground Course (uint16, 小端)
-    buf[13] = yaw_val & 0xFF;    // LSB
-    buf[14] = (yaw_val >> 8) & 0xFF; // MSB
-
-    // Altitude (uint16, 小端)
-    buf[15] = y_val & 0xFF;      // LSB
-    buf[16] = (y_val >> 8) & 0xFF; // MSB
-
-    // Satellites / mode
+    buf[11] = x_val & 0xFF;
+    buf[12] = (x_val >> 8) & 0xFF;
+    buf[13] = yaw_val & 0xFF;
+    buf[14] = (yaw_val >> 8) & 0xFF;
+    buf[15] = y_val & 0xFF;
+    buf[16] = (y_val >> 8) & 0xFF;
     buf[17] = 3;
 
-    // CRC 从 buf[2] 到 buf[17]
     uint8_t crc = 0;
     for (uint8_t i = 2; i <= 17; ++i) {
         crc ^= buf[i];
@@ -431,56 +411,35 @@ void CrsfReceiver::send_robot(float x, float y, float yaw)
     }
     buf[18] = crc;
 
-    // 通过 DMA 发送：清理 D-Cache，设置 tx_done，触发 DMA 发送
-    dcache_clean_range(tx_buffer_, 19);
-    tx_done = false;
-    HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 19);
+    HAL_UART_Transmit(&huart7, tx_buffer_, 19, 100);
 }
 
 void CrsfReceiver::send_kfsandSpear(int8_t kfs1, int8_t kfs2, int8_t Spear)
 {
 
-    if(!tx_done) return;
+    uint8_t* p = tx_buffer_;
     
-    static uint32_t last_send = 0;
-    if(HAL_GetTick() - last_send > 20) {
-        last_send = HAL_GetTick();
-        
-        static uint16_t volt = 1000;
-        volt += 10;
-        if(volt > 2500) volt = 1000;
-        
-        
-        uint8_t* p = tx_buffer_;
-        
-        p[0] = 0xEA;
-        p[1] = 10;
-        p[2] = 0x08;
-        p[3] = volt & 0xFF;
-        p[4] = (volt >> 8) & 0xFF;
-        p[5] = 0; 
-        p[6] = Spear * 10;        // Current
-        p[7] = 0; 
-        p[8] = 0; 
-        p[9] = kfs1;              // Capacity低字节
-        p[10] = kfs2;             // Remaining
-        
-        // CRC计算
-        uint8_t crc = 0;
-        for(uint8_t i = 2; i <= 10; i++) {
-            crc ^= p[i];
-            for(uint8_t j = 0; j < 8; j++) 
-                crc = (crc & 0x80) ? ((crc << 1) ^ 0xD5) : (crc << 1);
-        }
-        p[11] = crc;
-        
-
-        dcache_clean_range(tx_buffer_, 12);
-        
-
-        tx_done = false;
-        HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 12);
+    p[0] = 0xEA;
+    p[1] = 10;
+    p[2] = 0x08;
+    p[3] = 0;           // volt 低字节
+    p[4] = 0;           // volt 高字节
+    p[5] = 0; 
+    p[6] = Spear * 10;
+    p[7] = 0; 
+    p[8] = 0; 
+    p[9] = kfs1;
+    p[10] = kfs2;
+    
+    uint8_t crc = 0;
+    for(uint8_t i = 2; i <= 10; i++) {
+        crc ^= p[i];
+        for(uint8_t j = 0; j < 8; j++) 
+            crc = (crc & 0x80) ? ((crc << 1) ^ 0xD5) : (crc << 1);
     }
+    p[11] = crc;
+
+    HAL_UART_Transmit(&huart7, tx_buffer_, 12, 100);
 }
 
 
