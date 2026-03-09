@@ -1,7 +1,9 @@
 #include "omni_chassisSetup.h"
+
 // Path_line path_line_;
 // Speedplanner_1D_Param_Config path_param({.maxAcc = 3.0f, .maxDec = 3.0f, .maxJerk = 4.0f, .maxSpeed = 0.5f, .initialSpeed = 0.05f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f});
 // Path_line path_line_(path_param);
+
 #if debug_ladar
 
 int last_cout_ladar_data = -1;
@@ -25,6 +27,8 @@ void OmniChassis_Setup::loop()
     robot_pos_.y = ladar_data_.y;
     robot_pos_.x += original_point_.x;
     robot_pos_.y += original_point_.y;
+    
+    Acc_target_yaw_ = Acc_yaw_.plan(target_yaw_);
 
     Angle_Twist angle_twist = {0};
     angle_twist.yaw_rate = dyaw;
@@ -170,8 +174,6 @@ void OmniChassis_Setup::loop()
         }
         if (path_line_.index_ == 1)
         {
-
-        
                 target_yaw_ = -90.0f;
 //                if (abs(target_yaw_ - yaw) > 1.0f)
 //                {
@@ -187,7 +189,7 @@ void OmniChassis_Setup::loop()
         if (yaw_pid_period_count_ >= yaw_pid_period_)
         {
             yaw_pid_period_count_ = 0;
-            target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
+            target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(Acc_target_yaw_, yaw_real_angle);
         }
         // this->set_ControlMode(CURRENT_ZERO_MODE);
         this->set_Target(target_chassis_twist_);
@@ -254,7 +256,7 @@ void OmniChassis_Setup::loop()
         if (yaw_pid_period_count_ >= yaw_pid_period_)
         {
             yaw_pid_period_count_ = 0;
-            target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
+            target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(Acc_target_yaw_, yaw_real_angle);
         }
         // this->set_ControlMode(CURRENT_ZERO_MODE);
         this->set_Target(target_chassis_twist_);
