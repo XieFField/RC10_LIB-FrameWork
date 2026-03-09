@@ -69,6 +69,11 @@ float deg_to_rad(float deg)
     return deg / 180.0f * PI;
  }
 
+float rpm_to_degPerSec(float rpm)
+{
+    return rpm * 360.0f / 60.0f;
+}
+
 
 //归一化角度到[0,360)区间
 float normalize_deg_0_360(float a)

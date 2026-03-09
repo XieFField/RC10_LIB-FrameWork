@@ -93,6 +93,8 @@ static inline T mm_to_m(T value_mm)
 //斜坡函数
 void ramp(float target, float& current, float max_change_rate, float dt);
 
+// RPM 转 角度每秒
+float rpm_to_degPerSec(float rpm);
 //弧度转换为角度函数
 float rad_to_deg(float rad);
 
