@@ -1,34 +1,35 @@
+  -- lua½Å±¾×îºó¾ö¶¨ÓÃÕâ°æ
 local function run(event)
     lcd.clear()
     
-    -- è¯»å–æ•°æ®
+    -- ¶ÁÈ¡Êı¾İ
     local spear_val = getValue("Curr") or 0    -- Battery Current
     local kfs1_val = getValue("Capa") or 0     -- Battery Capacity  
-    local kfs2_val = getValue("Bat%") or 0     -- Battery Remaining (æ³¨æ„ä½ å†™çš„æ˜¯Bat%ï¼Œé€šå¸¸æ˜¯Rema)
+    local kfs2_val = getValue("Bat%") or 0     -- Battery Remaining (×¢ÒâÄãĞ´µÄÊÇBat%£¬Í¨³£ÊÇRema)
     local gspd = getValue("GSpd") or 0         -- GPS Speed (X)
     local hdg = getValue("Hdg") or 0           -- GPS Course (Yaw)
     local galt = getValue("Alt") or 0         -- GPS Alt (Y)
     
-    -- è½¬æ¢è®¡ç®—
+    -- ×ª»»¼ÆËã
     local x = gspd / 10.0
     local y = (galt + 1000) / 100.0
     local yaw = hdg
     
-      -- ========== Robot ä½å§¿ï¼ˆX å’Œ Y åˆ†å¼€æ˜¾ç¤ºï¼Œé—´éš”åŠ å¤§ï¼‰==========
-    -- X åæ ‡ï¼ˆå·¦ä¾§ï¼‰
+      -- ========== Robot ×ËÌ¬==========
+    -- X ×ø±ê£¨×ó²à£©
     lcd.drawText(0, 13, "X:" .. string.format("%.2f", x), SMLSIZE)
-    -- Y åæ ‡ï¼ˆå³ä¾§ï¼ŒX=70ï¼Œé—´éš”åŠ å¤§ï¼‰
+    -- Y ×ø±ê£¨ÓÒ²à£©
     lcd.drawText(70, 13, "Y:" .. string.format("%.2f", y), SMLSIZE)
     
-    -- Yaw è§’åº¦ï¼ˆå•ç‹¬ä¸€è¡Œï¼‰
-    lcd.drawText(0, 26, "Yaw:" .. string.format("%.1f", yaw) .. "Â°", SMLSIZE)
+    -- Yaw ½Ç¶È
+    lcd.drawText(0, 26, "Yaw:" .. string.format("%.1f", yaw) .. "¡ã", SMLSIZE)
 
-  -- KFS1ï¼ˆå·¦ä¾§ï¼Œæ˜¾ç¤ºä¸ºæ•´æ•°ï¼‰
+  -- KFS1£¨×ó²à£¬ÏÔÊ¾ÎªÕûÊı£©
     lcd.drawText(0, 39, "KFS1:" .. string.format("%d", kfs1_val), SMLSIZE)
-    -- KFS2ï¼ˆå³ä¾§ï¼ŒX=70ï¼Œé—´éš”åŠ å¤§ï¼Œæ˜¾ç¤ºä¸ºæ•´æ•°ï¼‰
+    -- KFS2£¨ÓÒ²à£¬ÏÔÊ¾ÎªÕûÊı£©
     lcd.drawText(70, 39, "KFS2:" .. string.format("%d", kfs2_val), SMLSIZE)
 
-    -- Spear çŠ¶æ€ï¼ˆåº•éƒ¨ï¼Œæ˜¾ç¤ºä¸ºæ•´æ•°ï¼‰
+    -- Spear ×´Ì¬£¨µ×²¿£¬ÏÔÊ¾ÎªÕûÊı£©
     lcd.drawText(0, 52, "Spear:" .. string.format("%d", spear_val), SMLSIZE)
     
     return 0
