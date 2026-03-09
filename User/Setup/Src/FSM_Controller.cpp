@@ -40,7 +40,7 @@ void FSM_Controller::loop()
             break;  
 
         case 0x02:
-            robot_status_ = AUTO_CONTROL;
+            robot_status_ = DEBUG_MODE;
             break;
     }
 
@@ -87,8 +87,7 @@ void FSM_Controller::loop()
 void FSM_Controller::all_stop()
 {
    // 停止模式+目标设置模式
-    chassis_setup_->setPathAutoStart(0, 0); //路径自动开始标志清零
-    arm_setup_->set_Arm_autoStart(0); //自动流程标志清零
+
     if(arm_setup_->isArmcalibrated() == true)
         arm_setup_->setArmStatus(ARM_STOP);
     else
@@ -104,6 +103,7 @@ void FSM_Controller::all_stop()
 }
 
 void FSM_Controller::stop_modeswitch()
+
 {
     switch(Stop_set_stauts)
     {
@@ -286,9 +286,6 @@ void FSM_Controller::stop_modeswitch()
 
 void FSM_Controller::manual_ctrl()
 {
-    chassis_setup_->setPathAutoStart(0, 0); //路径自动开始标志清零
-    arm_setup_->set_Arm_autoStart(0); //自动流程标志清零
-
     switch(airjoy_data_.SWC)
     {
         case 0x00:
@@ -331,9 +328,6 @@ void FSM_Controller::auto_ctrl()
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
             arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-
-            chassis_setup_->setPathAutoStart(0, 0); //路径自动开始标志清零
-            arm_setup_->set_Arm_autoStart(0); //自动流程标志清零
             break;
         }
 
@@ -342,25 +336,9 @@ void FSM_Controller::auto_ctrl()
         {
             //暂时不把路径规划部分纳入
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
-            //chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-            
+
             arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-            // arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-
-            static uint8_t is_click = 0;
-
-            if(airjoy_data_.botton_click == 1 && is_click == 0)
-            {
-                arm_setup_->set_Arm_autoStart(1); //开始自动流程
-                chassis_setup_->setPathAutoStart(1, 1); //路径自动开始标志
-                is_click = 1;
-            }   
-            else if(airjoy_data_.botton_click == 0)
-            {
-                is_click = 0;
-            }
-
             break;
         }
 
@@ -368,21 +346,9 @@ void FSM_Controller::auto_ctrl()
         case 0x02:
         {
 			weaponSage_setup_->Set_End_Flag(chassis_setup_->GetReach_flag());
-            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
-//            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
             arm_setup_->setArmStatus(ARM_IDLE);
-            
-
-            static uint8_t is_click = 0;
-            if(airjoy_data_.botton_click ==1 && is_click == 0)
-            {
-                chassis_setup_->setPathAutoStart(1, 0); //路径自动开始标志
-            }
-            else if(airjoy_data_.botton_click ==0)
-            {
-                is_click = 0;
-            }
             break;
         }
     }
@@ -393,6 +359,7 @@ void FSM_Controller::auto_ctrl()
 void FSM_Controller::debug()
 {
    // 调试
-
-    // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            chassis_setup_->setChassisStatus(CHASSIS_CAMERA_DEBUG);
+            arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 }

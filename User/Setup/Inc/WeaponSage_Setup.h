@@ -134,10 +134,7 @@ public:
 
     void setTargetIndex(int8_t index)
     {
-        if(index < 0)
-            index = 0;
         ctrl_status_.target_poleIndex = index;
-        
     }
 
     void setWeaponSageControlStatus(WeaponSage_Status_E status)

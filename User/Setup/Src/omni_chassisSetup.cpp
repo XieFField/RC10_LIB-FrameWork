@@ -37,12 +37,12 @@ void OmniChassis_Setup::loop()
     {
         this->set_ControlMode(WORLD_SPEED_MODE);
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target_chassis_twist_.vx = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
+            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vx = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target_chassis_twist_.vy = airjoy_data_.left_y * 3 * this->is_chassis_reverse_;
+            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vy = 0.0f;
 
@@ -62,12 +62,12 @@ void OmniChassis_Setup::loop()
     {
         this->set_ControlMode(WORLD_SPEED_MODE);
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target_chassis_twist_.vx = airjoy_data_.left_x * 0.6 * this->is_chassis_reverse_;
+            target_chassis_twist_.vx = airjoy_data_.left_x * 1 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vx = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target_chassis_twist_.vy = airjoy_data_.left_y * 0.6 * this->is_chassis_reverse_;
+            target_chassis_twist_.vy = airjoy_data_.left_y * 1 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vy = 0.0f;
 
@@ -102,12 +102,12 @@ void OmniChassis_Setup::loop()
         }
 
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target_chassis_twist_.vx = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
+            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vx = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target_chassis_twist_.vy = airjoy_data_.left_y * 3 * this->is_chassis_reverse_;
+            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vy = 0.0f;
 
@@ -143,13 +143,8 @@ void OmniChassis_Setup::loop()
                 target_chassis_twist_.vy = speed.y;
                 // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
                 planspeed = path_line_.plan(robot_pos_);
-                if(path_line_.get_pid_end_flag()==0)
-                {
-                    Path_correction();
-                    speed = planspeed + corrVelocity;// 最终速度 = 规划的前进速度 + 横向纠偏速度
-                }
-                else
-                    speed = planspeed; 
+                Path_correction();
+
                 //                if (num > 2)
                 //                {
                 //                    debug_uart.printf_DMA("%f,%f,%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), speed.x, speed.y, corrVelocity.magnitude());
@@ -164,7 +159,6 @@ void OmniChassis_Setup::loop()
                     planspeed.x = 0.0f;
                     planspeed.y = 0.0f;
                     Path_correction();
-                    speed = planspeed + corrVelocity;
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
 					WeaponSage_END=1;
@@ -172,14 +166,13 @@ void OmniChassis_Setup::loop()
                 else
                 {
                     flag = 0;
-                    flag_run = 0;
-                    speed.x = 0.0f;
-                    speed.y = 0.0f;
+                    flag_run = 1;
                     path_line_.plan_reset();
                     path_line_.Reset();
                     planspeed.x = 0.0f;
                     planspeed.y = 0.0f;
                     chassis_status_ = CHASSIS_STOP;
+                    Path_correction();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
 					WeaponSage_END=1;
@@ -188,11 +181,8 @@ void OmniChassis_Setup::loop()
         }
         else
         {
-            target_yaw_ = yaw;
             target_chassis_twist_.vx = 0.0f;
             target_chassis_twist_.vy = 0.0f;
-            speed.x = 0.0f;
-            speed.y = 0.0f;
         }
         if (path_line_.index_ == 1)
         {
@@ -245,6 +235,125 @@ void OmniChassis_Setup::loop()
             target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
         else
             target_chassis_twist_.vy = 0.0f;
+
+        // this->setWorldSpeed(target_chassis_twist_);
+        this->set_Target(target_chassis_twist_);
+        break;
+    }
+    case CHASSIS_CAMERA_DEBUG:
+    {
+        this->set_ControlMode(ROBOT_SPEED_MODE);
+
+        // 1. 获取视觉数据
+        Module_Camera* camera = Module_Camera::GetInstance(&huart6); 
+        if (camera != nullptr && camera->IsConnected())
+        {
+            Camera_Data_t cam_temp = camera->GetCameraData(); 
+            vision_data_.x = cam_temp.x;
+            vision_data_.y = cam_temp.y;
+            vision_data_.z = cam_temp.yaw;
+        }
+
+        // 2. 机体坐标系速度规划
+        // 定义：x为左右偏差（对应底盘横移），y为前后距离（对应底盘前进），z为目标角度
+        
+        float v_body_forward = 0.0f; // 机体前进速度
+        float v_body_lateral = 0.0f; // 机体横移速度
+        
+        // [Y轴] 手动控制前后（当前关闭，改为视觉闭环）
+//        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+//        {
+//            v_body_forward = airjoy_data_.left_y * 2.0f * this->is_chassis_reverse_;
+//        }
+
+        // [X轴] PID锁死左右 -> 目标偏差为0
+        // 注意：pid_calc(target, measure)
+        // v_body_lateral = pid_vision_x.pid_calc(0.0f, vision_data_.x);
+
+        // [Yaw轴] PID锁死角度 -> 目标偏差为0
+        // float v_body_yaw = pid_vision_yaw.pid_calc(0.0f, vision_data_.z);
+
+        // 新逻辑：分阶段锁定（先粗锁X -> 再锁视觉Yaw -> 最后IMU保Yaw+向量逼近目标点）
+        float v_body_yaw = 0.0f;
+        
+        switch (vision_lock_state_)
+        {
+        case 0: // 阶段1：粗锁横向偏差
+            v_body_lateral = pid_vision_x.pid_calc(0.0f, vision_data_.x);
+            v_body_yaw = 0.0f; // 初始阶段不锁偏航
+            
+            if (_tool_Abs(vision_data_.x) < 0.01f) {
+                vision_lock_state_ = 1;
+            }
+            break;
+            
+        case 1: // 阶段2：锁定视觉角度
+            {
+//                v_body_lateral = pid_vision_x.pid_calc(0.0f, vision_data_.x);
+                
+                // 1) 目标视觉角度设为180度，计算原始角误差
+                float raw_err = 180.0f - vision_data_.z;
+                // 2) 角误差归一化到[-180, 180]
+                if (raw_err > 180.0f) raw_err -= 360.0f;
+                else if (raw_err < -180.0f) raw_err += 360.0f;
+                
+                // 3) 用角误差做PID，得到机体偏航角速度
+                v_body_yaw = -pid_vision_yaw.pid_calc(raw_err, 0.0f);
+                
+                if (_tool_Abs(raw_err) < 0.2f) { // 角度阈值（度）
+                    vision_lock_state_ = 2;
+                    lock_imu_yaw_target_ = yaw; // 记录当前IMU角度，进入保角阶段
+                }
+            }
+            break;
+            
+        case 2: // 阶段3：IMU保角 + 基于目标点的向量式速度解算
+            {
+                v_body_yaw = yaw_pid_.pid_calc(lock_imu_yaw_target_, yaw);
+
+                // 目标点（在视觉坐标系中）：x=0（居中），y=45（期望距离）
+                const float target_x = 0.0f;
+                const float target_y = 45.0f;
+
+                // 当前坐标可等价视作(vision_data_.x, vision_data_.y)，目标-当前得到误差向量
+                float err_x = target_x - vision_data_.x;
+                float err_y = target_y - vision_data_.y;
+
+                // 关键：x是毫米级控制需求，直接按几何分解会因err_x很小导致横移速度过小。
+                // 通过“误差加权”先放大x分量，再做atan2分解，避免x/y速度耦合打架。
+                const float x_error_weight = 25.0f;
+                const float y_error_weight = 1.0f;
+                float weighted_x = err_x * x_error_weight;
+                float weighted_y = err_y * y_error_weight;
+
+                // 加权距离作为单一闭环量，统一决定速度模长
+                float weighted_dist = sqrtf(weighted_x * weighted_x + weighted_y * weighted_y);
+                float move_angle = atan2f(weighted_x, weighted_y); // 相对前进轴(y轴)的偏转角
+
+                // 速度模长：远离目标时增大，接近目标时减小
+                float v_body_mag = pid_vision_y.pid_calc(0.0f, -weighted_dist);
+
+                // 向量分解：同一模长按角度拆成前进/横移，避免双PID互相“打架”
+                v_body_forward = v_body_mag * cosf(move_angle);
+                v_body_lateral = v_body_mag * sinf(move_angle);
+                
+                // 安全回退：IMU保角偏差过大则退回阶段2重新校角
+                if (_tool_Abs(yaw - lock_imu_yaw_target_) > 10.0f) {
+                    vision_lock_state_ = 1;
+                }
+            }
+            break;
+            
+        default:
+            vision_lock_state_ = 0;
+            break;
+        }
+
+        // 3. 直接输出速度（无需坐标转换）
+        // 映射关系：Vx对应横移分量，Vy对应前进分量
+        target_chassis_twist_.vx = -v_body_lateral; 
+        target_chassis_twist_.vy = 0.15*v_body_forward;
+        target_chassis_twist_.yaw_rate = v_body_yaw;
 
         this->set_Target(target_chassis_twist_);
         break;
@@ -584,7 +693,7 @@ void OmniChassis_Setup::Path_correction(void)
             corrVelocity = corrVelocity.normalize() * max_corr;
         }
 
-//        speed = planspeed + corrVelocity; // 叠加到规划速度上
+        speed = planspeed + corrVelocity; // 叠加到规划速度上
         return;
     }
 
@@ -599,7 +708,7 @@ void OmniChassis_Setup::Path_correction(void)
     corrVelocity = corrDir * correctspeed;                     // 合成纠偏速度（方向+大小）
 
     // baseVelocity = lookaheadTangent * planspeed.magnitude();
-    
+    speed = planspeed + corrVelocity; // 最终速度 = 规划的前进速度 + 横向纠偏速度
 }
 
 void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
@@ -608,7 +717,6 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.plan_reset();
     path_line_.Reset();
     path_line_.Add_Start_Point(Vector2D{robot_pos_.x, robot_pos_.y}, path_param_1);
-   path_line_.Add_Point(Vector2D{1.8f, 0.8f});
-   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
-    // path_line_.Add_End_Point(Vector2D{3.92f, 1.38f});
+    path_line_.Add_Point(Vector2D{1.7f, 0.6f});
+    path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
 }

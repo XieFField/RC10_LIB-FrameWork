@@ -3,6 +3,7 @@
 float aaa;
 void Locate_Setup::loop()
 {
+    // ï¿½Ú´Ë´ï¿½ï¿½ï¿½ï¿½Ó¶ï¿½Î»ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //	uint8_t a =0x11;
 //    usb_handle->CDC_Send_(0x04,&a,0x01);
 	Get_Rader_Data();
@@ -25,7 +26,7 @@ void Locate_Setup::update()
 
 	update_Lidar_data();
 
-	// lader_transform_caculate(); // [Fix] ÒÆ¶¯µ½ robot_pose ¸üÐÂÖ®ºó
+	lader_transform_caculate();
 
     // yaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().world_yaw;
 	// dyaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().dyaw;
@@ -48,26 +49,6 @@ void Locate_Setup::update()
     robot_speed_inworld_.z = Lad_Data.line_z;
 
     robot_speed_inworld_.yaw = dyaw_from_position_;
-
-    // [Fix] 2D ¾ØÕó×ø±ê±ä»»: World = Robot + R * Install
-    float theta_rad = deg_to_rad(robot_pose_inWorld_.yaw);
-    float c_theta = cosf(theta_rad);
-    float s_theta = sinf(theta_rad);
-
-    // Pos_arm_world = Pos_robot_world + Rotation_matrix * Pos_arm_install
-    arm_pose_inWorld_.x = robot_pose_inWorld_.x + (arm_install_pose_.x * c_theta - arm_install_pose_.y * s_theta);
-    arm_pose_inWorld_.y = robot_pose_inWorld_.y + (arm_install_pose_.x * s_theta + arm_install_pose_.y * c_theta);
-    // ¼ÙÉè arm_install_pose_.theta Îª»¡¶È£¬×ªÎª¶ÈÊýµþ¼Ó (World yaw Îª¶ÈÊý)
-    arm_pose_inWorld_.theta = robot_pose_inWorld_.yaw + (arm_install_pose_.theta * 180.0f / PI);
-
-//    arm_pose_inWorld_.x = robot_pose_inWorld_.x;
-//    arm_pose_inWorld_.y = robot_pose_inWorld_.y;
-
-    // arm_pose_inWorld_.x = robot_pose_inWorld_.x - arm_install_pose_.x;
-    // arm_pose_inWorld_.y = robot_pose_inWorld_.y - arm_install_pose_.y;
-    // arm_pose_inWorld_.theta = robot_pose_inWorld_.yaw;
-
-    // lader_transform_caculate();
 
     if(HAL_GPIO_ReadPin(SWITCH1_GPIO_Port, SWITCH1_Pin) == GPIO_PIN_SET)
     {

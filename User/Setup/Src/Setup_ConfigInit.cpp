@@ -1,4 +1,5 @@
 #include "Setup_ConfigInit.h"
+
  // 外部声明USB高速设备句柄
 extern "C" 
 {
@@ -14,7 +15,7 @@ DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8号M3508/M2006电机
 DJI_Group DJIGroupCAN2_Low(send_idLow(), CAN2_Bus); // 1~4号M3508/M2006电机
 
 Point2D lader_install_offset = {0.0f, 0.0f}; // 激光雷达安装偏移，单位米
-Point2D arm_install_offset = {-0.480f, -0.02f};   // 机械臂安装偏移，单位米
+Point2D arm_install_offset = {0.480f, 0.02f};   // 机械臂安装偏移，单位米
 
 
 /*==============Controller Instances===========*/
@@ -25,7 +26,7 @@ uint8_t laser_rx_buffer2[20];
 //USB_CDC_ cdc(&hUsbDeviceHS);
 USB_CDC_ usb_1(&hUsbDeviceHS);
 LaserPosition laserpos(15,laser_rx_buffer,&huart3);
-LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
+//LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
 
@@ -196,6 +197,8 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 
 void ALL_Setup_ConfigInit(void)
 {
+    // 初始化串口6的相机模块
+    Module_Camera::GetInstance(&huart6)->InitUART();
     test_task.init();
    // Position* pos = Position::GetInstance(&huart1);
    // pos->InitUART();
@@ -235,7 +238,7 @@ void ALL_Setup_ConfigInit(void)
    
 
 	 instance_man.RegisterInstance(&laserpos);
-	 instance_man.RegisterInstance(&laserpos1);
+	 //instance_man.RegisterInstance(&laserpos1);
 	 instance_man.RegisterInstance(&laserpos2);
 	 instance_man.InstanceManager_Init();
 //激光重定位解析数据初始化
