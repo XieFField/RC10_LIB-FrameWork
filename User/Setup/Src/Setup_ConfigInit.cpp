@@ -14,7 +14,7 @@ DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8号M3508/M2006电机
 DJI_Group DJIGroupCAN2_Low(send_idLow(), CAN2_Bus); // 1~4号M3508/M2006电机
 
 Point2D lader_install_offset = {0.0f, 0.0f}; // 激光雷达安装偏移，单位米
-Point2D arm_install_offset = {0.480f, 0.02f};   // 机械臂安装偏移，单位米
+Point2D arm_install_offset = {-0.480f, -0.02f};   // 机械臂安装偏移，单位米
 
 
 /*==============Controller Instances===========*/
