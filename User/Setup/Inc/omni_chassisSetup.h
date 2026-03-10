@@ -137,9 +137,9 @@ private:
     
     float yaw=0.0f;
     float target_yaw_ = 0.0f;
-    float Acc_target_yaw_ = 0.0f;
+    //float Acc_target_yaw_ = 0.0f;
 
-    ConstantAcc Acc_yaw_{0.1f,0.0f}; // 注意代码运行系统的周期
+    //ConstantAcc Acc_yaw_{0.1f,0.0f}; // 注意代码运行系统的周期
     //Path path_;
     Path_line path_line_;
     //Path_line path_line1_;
