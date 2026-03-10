@@ -315,7 +315,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>2</Optim>
+            <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -1004,7 +1004,7 @@
                 <FileArmAds>
                   <Cads>
                     <interw>2</interw>
-                    <Optim>3</Optim>
+                    <Optim>2</Optim>
                     <oTime>2</oTime>
                     <SplitLS>2</SplitLS>
                     <OneElfS>2</OneElfS>
@@ -1263,6 +1263,11 @@
           <GroupName>User/Control</GroupName>
           <Files>
             <File>
+              <FileName>Robot_Arm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Control\Inc\Robot_Arm.h</FilePath>
+            </File>
+            <File>
               <FileName>Robot_Arm.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Control\Src\Robot_Arm.cpp</FilePath>
@@ -1276,11 +1281,6 @@
               <FileName>AutoCtrler.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Control\Src\AutoCtrler.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Robot_Arm.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Control\Inc\Robot_Arm.h</FilePath>
             </File>
             <File>
               <FileName>WeaponSage.h</FileName>
@@ -1346,7 +1346,7 @@
                 <FileArmAds>
                   <Cads>
                     <interw>2</interw>
-                    <Optim>1</Optim>
+                    <Optim>3</Optim>
                     <oTime>2</oTime>
                     <SplitLS>2</SplitLS>
                     <OneElfS>2</OneElfS>
