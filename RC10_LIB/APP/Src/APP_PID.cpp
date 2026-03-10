@@ -10,26 +10,26 @@ float PID_Position::pid_calc(float target, float feedback)
     if (isFirst_)
     {
         isFirst_ = false;
-        // ÔÚµÚÒ»´Î¼ÆËãÊ±£¬dt ¿ÉÄÜ·Ç³£´ó»ò²»È·¶¨£¬Ê¹ÓÃÄ¬ÈÏÖµ
+        // ï¿½Úµï¿½Ò»ï¿½Î¼ï¿½ï¿½ï¿½Ê±ï¿½ï¿½dt ï¿½ï¿½ï¿½Ü·Ç³ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½Ä¬ï¿½ï¿½Öµ
         dt_ = dt_error_; 
-        error_last_ = target - feedback; // ³õÊ¼»¯ÉÏ´ÎÎó²î
+        error_last_ = target - feedback; // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½Ï´ï¿½ï¿½ï¿½ï¿½
         feedback_last_ = feedback;
     }
 
-    // ¶Ôdt½øÐÐÒì³£Öµ´¦Àí
-    if (dt_ <= 0.0f || dt_ > 0.1f) // Èç¹ûdtÐ¡ÓÚµÈÓÚ0»ò´óÓÚ100ms£¬ÔòÈÏÎªÒì³£
+    // ï¿½ï¿½dtï¿½ï¿½ï¿½ï¿½ï¿½ì³£Öµï¿½ï¿½ï¿½ï¿½
+    if (dt_ <= 0.0f || dt_ > 0.1f) // ï¿½ï¿½ï¿½dtÐ¡ï¿½Úµï¿½ï¿½ï¿½0ï¿½ï¿½ï¿½ï¿½ï¿½100msï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ì³£
     {
         dt_ = dt_error_;
     }
 
     // calc error
-    // ¼ÆËãÔ­Ê¼Îó²î
+    // ï¿½ï¿½ï¿½ï¿½Ô­Ê¼ï¿½ï¿½ï¿½
     error_ = target - feedback;
 
     if (is_circular_)
     {
-        // »·ÐÎÄ£Ê½£ºÑ°ÕÒ×î¶ÌÂ·¾¶£¬½«Îó²îÏÞÖÆÔÚ [-180, 180]
-        // ÕâÑù¿ÉÒÔ¼æÈÝ (-180~180) ºÍ (0~360) Á½ÖÖ¸ñÊ½
+        // ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½Ñ°ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ [-180, 180]
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ (-180~180) ï¿½ï¿½ (0~360) ï¿½ï¿½ï¿½Ö¸ï¿½Ê½
         while (error_ > 180.0f)
             error_ -= 360.0f;
         while (error_ < -180.0f)
@@ -44,7 +44,7 @@ float PID_Position::pid_calc(float target, float feedback)
     // calc P
     P_Term = params_.kp * error_;
 
-    // calc I (ÌÝÐÎ»ý·Ö)
+    // calc I (ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½)
     if(fabsf(error_) < I_SeparaThreshold_ && I_SeparaThreshold_ > 0)
     {
         I_Term += params_.ki * (error_ + error_last_) * dt_ / 2.0f;
@@ -56,13 +56,13 @@ float PID_Position::pid_calc(float target, float feedback)
         I_Term = 0;
     }
 
-    // calc D (Î¢·ÖÏÈÐÐ)
+    // calc D (Î¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
     if (dt_ > 0.0f)
     {
         float diff_feedback = feedback - feedback_last_;
         if (is_circular_)
         {
-            // ´¦Àí»·ÐÎ
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             if (diff_feedback > 180.0f)
                 diff_feedback -= 360.0f;
             else if (diff_feedback < -180.0f)
@@ -79,7 +79,15 @@ float PID_Position::pid_calc(float target, float feedback)
     feedback_last_ = feedback;
     last_time_s_ = current_time_s;
 
+    // PID output (without feedforward). Clamped first so the pure PID
+    // contribution stays within the limit before the FF term is overlaid.
     float output = P_Term + I_Term - D_Term;
+    output = constrain(output, -params_.output_limit, params_.output_limit);
+
+    // Add feedforward: kf * target. Applied after the PID clamp so the
+    // integrator (I_Term) is not inflated by the FF contribution.
+    FF_Term = params_.kf * target;
+    output += FF_Term;
     output = constrain(output, -params_.output_limit, params_.output_limit);
 
     output_ = output;
@@ -96,11 +104,11 @@ void PID_Position::set_params(const PID_Param_Config& params, float I_SeparaThre
 
 /* =================================================================================== */
 
-//ÔöÁ¿Ê½
+//ï¿½ï¿½ï¿½ï¿½Ê½
 
 void PID_Incremental::calc_track_D(float expect, float dt)
 {
-    //¶þ½×¸ú×ÙÎ¢·Ö
+    //ï¿½ï¿½ï¿½×¸ï¿½ï¿½ï¿½Î¢ï¿½ï¿½
     float fh = -td_ratio_ * td_ratio_ *(td_v1_ - expect) - 2.0f * td_v2_ * td_ratio_;
 
     td_v1_ += td_v2_ * dt;
@@ -118,13 +126,13 @@ float PID_Incremental::pid_calc(float target, float feedback)
     float current_time_s = TimeStamp::getInstance().getSeconds();
     dt_ = current_time_s - last_time_s_;
 
-    // ¶Ôdt½øÐÐÒì³£Öµ´¦Àí
+    // ï¿½ï¿½dtï¿½ï¿½ï¿½ï¿½ï¿½ì³£Öµï¿½ï¿½ï¿½ï¿½
     if (dt_ <= 0.0f)
     {
         dt_ = 0.001f;
     }
 
-    // 1. Èç¹ûÆôÓÃtd
+    // 1. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½td
     float current_target = target;
     if(td_ratio_ > 0.0f)
     {
@@ -132,7 +140,7 @@ float PID_Incremental::pid_calc(float target, float feedback)
         current_target = td_v1_;
     }
 
-    // 2. ¼ÆËãÎó²î
+    // 2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     error_ = current_target - feedback;
     if(fabs(error_) < params_.deadband)
         error_ = 0.0f;
@@ -146,15 +154,15 @@ float PID_Incremental::pid_calc(float target, float feedback)
     }
     else
     {
-        // 3. ¼ÆËãPIDÔöÁ¿
-        // PÏîÔöÁ¿
+        // 3. ï¿½ï¿½ï¿½ï¿½PIDï¿½ï¿½ï¿½ï¿½
+        // Pï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         P_Term = params_.kp * (error_ - error_last_);
 
-        // IÏîÔöÁ¿
+        // Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         I_Term = params_.ki * error_;
         I_Term = constrain(I_Term, -params_.I_Outlimit, params_.I_Outlimit);
         
-        // DÏîÔöÁ¿
+        // Dï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (dt_ > 0.0f)
         {
             D_Term = params_.kd * (error_ - 2.0f * error_last_ + error_earlier_);
@@ -164,23 +172,30 @@ float PID_Incremental::pid_calc(float target, float feedback)
             D_Term = 0.0f;
         }
 
-        // ¼ÆËãµ±Ç°×ÜÊä³ö = ÉÏ´Î×ÜÊä³ö + ±¾´Î×ÜÔöÁ¿
+        // ï¿½ï¿½ï¿½ãµ±Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ = ï¿½Ï´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ + ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         output_ = output_last_ + (P_Term + I_Term + D_Term);
     }
 
-    // Êä³öÏÞ·ù
+    // ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
     output_ = constrain(output_, -params_.output_limit, params_.output_limit);
 
-    // ¸üÐÂÀúÊ·Öµ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê·Öµ
     error_earlier_ = error_last_;
     error_last_ = error_;
-    output_last_ = output_; // ±£´æµ±Ç°×ÜÊä³ö£¬×÷ÎªÏÂ´Î¼ÆËãµÄ¡°ÉÏ´Î×ÜÊä³ö¡±
+    output_last_ = output_; // ï¿½ï¿½ï¿½æµ±Ç°PIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½Â´Î¼ï¿½ï¿½ï¿½Ä¡ï¿½ï¿½Ï´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     last_time_s_ = current_time_s;
+
+    // Ç°ï¿½ï¿½ï¿½: kf * Ä¿ï¿½ï¿½Öµï¿½ï¿½
+    // Ê·ï¿½ï¿½ï¿½Â¼(output_last_)Ö»ï¿½ï¿½ï¿½ï¿½ï¿½PIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½Ã²ï¿½ï¿½Ö£ï¿½ï¿½Ó¶ï¿½
+    // Ê¹incrementalÎ°ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½Ð¬ï¿½ï¿½ï¿½Û¼Æ¡ï¿½
+    FF_Term = params_.kf * current_target;
+    output_ += FF_Term;
+    output_ = constrain(output_, -params_.output_limit, params_.output_limit);
 
     return output_;
 }
 
-//Ä¿Ç°3508²»´íµÄ²ÎÊý 
+//Ä¿Ç°3508ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½ 
 PID_Param_Config m3508_speed_pid_params = {
     .kp = 32.0f,
     .ki = 0.085f,
