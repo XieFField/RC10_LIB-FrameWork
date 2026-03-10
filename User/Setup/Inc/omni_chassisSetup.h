@@ -92,28 +92,23 @@ public:
             this->is_chassis_reverse_ = -1.0f;
     }
 
-//    /**
-//     * @brief 设置路径自动开始标志
-//     * @param start 1表示开始，0表示停止
-//     * @param path_flagIndex 路径标志索引，0或1
-//     */
-//    void setPathAutoStart(uint8_t start, uint8_t path_flagIndex)
-//    {
-//        if(start == 1)
-//            flag = 1;
-//        else
-//            flag = 0;
+    /**
+     * @brief 设置路径自动开始标志
+     * @param start 1表示开始，0表示停止
+     * @param path_flagIndex 路径标志索引，0或1
+     */
+    void setPathAutoStart(uint8_t start)
+    {
+        if(start == 1)
+            flag = 1;
+        else
+            flag = 0;
 
-//        if(path_flagIndex == 0 || path_flagIndex == 1)
-//            path_flag = path_flagIndex;
-//        else
-//            path_flag = 0;
-//        
-//        if(start == 0)
-//        {
-//            flag_run = 0;
-//        }
-//    }
+        if(start == 0)
+        {
+            flag_run = 0;
+        }
+    }
 
 
     void setTargetKFS(int targetKFS)
@@ -157,7 +152,10 @@ private:
     Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}; 
     Vector2D planspeed;
-    Vector2D speed;    
+    Vector2D speed; 
+    Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
+    PID_Position pid_pos_x;               // x轴绝对位置PID控制器
+    PID_Position pid_pos_y;               // y轴绝对位置PID控制器    
     
     int8_t point_map=0;
     int8_t path_point_[20];
@@ -214,9 +212,7 @@ private:
     Vector2D lookaheadPt;                 // 路径上的前视点
     Vector2D lookaheadTangent;            // 前视点处的切线方向向量
     Vector2D pathEnd;                     // 路径终点坐标
-    Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
-    PID_Position pid_pos_x;               // x轴绝对位置PID控制器
-    PID_Position pid_pos_y;               // y轴绝对位置PID控制器
+
 };
 #endif // __cplusplus
 
