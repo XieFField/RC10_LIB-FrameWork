@@ -162,6 +162,8 @@ public:
 	 * @return float 最大速度
 	 */
 	float Get_Max_Vel(float t);
+    
+    
 
 protected:
 	float len = 0.0f;												 // 曲线总长度

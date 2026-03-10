@@ -323,6 +323,7 @@ void OmniChassis_Setup::loop()
     SpeedFK_Queue.send(fk_speed);
 }
 
+
 /////////////////////////////////    路径纠偏代码   //////////////////////////////////////////////
 
 /**
@@ -391,38 +392,6 @@ Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNeares
     return lastPt;
 }
 
-/**
- * @brief 计算横向偏差（带方向：正=偏左，负=偏右，单位：m）
- * @param robotPos 机器人当前位置（主函数的m_robotPos）
- * @param nearestPt 曲线最近点（主函数的nearestPt，即P(t')）
- * @param tLookahead 前视点t值（主函数的tLookahead，用于获取稳定切向量）
- * @return float 纯横向偏差（无前后干扰，直接给PID用）
- */
-float OmniChassis_Setup::CalculateLateralError(BezierCurve &path_, const Vector2D &robotPos, const Vector2D &nearestPt, float tLookahead)
-{
-    // 步骤1：计算原始偏差向量 Δp = 机器人位置 - 最近点（你的定义：Δp = p - p(t')）
-    Vector2D delta_p = robotPos - nearestPt;
-
-    // 步骤2：获取前视点的切向量（和主函数一致，确保前进方向基准统一）
-    // 主函数里已经调用过一次，但这里再调用一次，保证偏差计算和前进方向完全同步
-    lookaheadTangent = path_.Get_Tangent_Vector(tLookahead);
-
-    // 步骤4：定义“横向方向”：垂直于前视点切向量（左转90度，和主函数corrDir方向一致）
-    // 主函数纠偏方向是 corrDir = (-lookaheadTangent.y, lookaheadTangent.x)，这里横向方向和它保持一致
-    Vector2D lateral_dir = Vector2D(-lookaheadTangent.y, lookaheadTangent.x);
-    // 横向方向也归一化：确保点积计算的偏差单位是“米”（无缩放干扰）
-    lateral_dir.normalize();
-
-    // 步骤5：核心：计算原始偏差Δp在“横向方向”的投影 → 纯横向偏差
-    // 点积公式：delta_p · lateral_dir = |delta_p| * cosθ（θ是Δp和横向方向的夹角）
-    // 作用：过滤前后方向干扰（前后方向与横向垂直，cos90°=0），只留左右偏差
-    float lateral_err = delta_p * lateral_dir;
-
-    // （可选）调试用：如果发现纠偏方向反了，把偏差乘-1即可
-    // lateral_err *= -1;
-
-    return lateral_err;
-}
 void OmniChassis_Setup::KFS_Selection_Planning(void)
 {
     int cho = 0;
@@ -598,27 +567,29 @@ void OmniChassis_Setup::Path_correction(void)
     // 获取曲线（带保护）
     BezierCurve &curve = path_line_.get_bezier_curve();
 
-    pathEnd = curve.Get_Point(1.0f);
+    //pathEnd = curve.Get_Point(1.0f);空语句，不知为什么有
+    
     // 1. 找最近点+t值：获取路径上距离当前位置最近的点及其参数 tNearest
     nearestPt = GetPathNearestPoint(curve, robot_pos_, tNearest);
 
-    // 终点纠偏补丁：如果非常接近终点，直接使用终点位置吸附
-    // tNearest > 0.99 表示基本到了终点，或者 Is_End()==false 表示规划已结束
+    // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
     if (tNearest > 0.99f || path_line_.Is_End() == false)
     {
         Vector2D endPt = curve.Get_End_point();
         // 如果曲线未初始化（例如空曲线），不进行操作
-        if (endPt.magnitude() < 0.0001f && curve.Get_Start_point().magnitude() < 0.0001f)
+//        if (endPt.magnitude() < 0.0001f && curve.Get_Start_point().magnitude() < 0.0001f)
+//        {
+//            speed = planspeed; // 保持原有速度
+//            return;
+//        }
+        if (curve.Get_len()<0.0001f)
         {
-            speed = planspeed; // 保持原有速度（通常是0）
+            speed = planspeed; // 保持原有速度
             return;
         }
 
-        Vector2D errorVec = endPt - robot_pos_;
-
-        // 终点吸附增益，可以根据需要调整，相当于位置环 P 参数
-        float final_kp = 2.0f;
-        corrVelocity = errorVec * final_kp;
+        corrVelocity.x = pid_pos_x.pid_calc(endPt.x, robot_pos_.x);
+        corrVelocity.y = pid_pos_y.pid_calc(endPt.y, robot_pos_.y);
 
         // 限制最大纠偏速度，防止终点抖动
         float max_corr = 0.5f;
@@ -626,23 +597,26 @@ void OmniChassis_Setup::Path_correction(void)
         {
             corrVelocity = corrVelocity.normalize() * max_corr;
         }
-
-//        speed = planspeed + corrVelocity; // 叠加到规划速度上
         return;
     }
 
-    // 2. 找前视点+前进方向：根据最近点和前视距离，寻找前视点及其参数 tLookahead
+    // ======== 动态兔子追踪 (2D Cartesian PID) ========
+    // 2. 寻找前视点作为我们追踪的“虚拟兔子”
     lookaheadPt = FindLookaheadPoint(curve, tNearest, tLookahead);
-    lookaheadTangent = curve.Get_Tangent_Vector(tLookahead);
-    // 3. 计算横向偏差：计算机器人当前位置到路径切线的垂直距离
-    lateralError = CalculateLateralError(curve, robot_pos_, nearestPt, tLookahead);
-    // 4. 横向偏差PID控制：计算横向纠偏速度大小
-    correctspeed = pid_track.pid_calc(0.0f, lateralError);
-    Vector2D corrDir(-lookaheadTangent.y, lookaheadTangent.x); // 纠偏方向（垂直前进方向，左右纠偏）
-    corrVelocity = corrDir * correctspeed;                     // 合成纠偏速度（方向+大小）
-
-    // baseVelocity = lookaheadTangent * planspeed.magnitude();
     
+    //lookaheadTangent = curve.Get_Tangent_Vector(tLookahead); // 留作状态观测前视点的切线方向
+
+    // 3. 在绝对世界坐标系下，独立计算X轴和Y轴的纠偏向速度
+    // 将不再计算切法向，直接基于XY差值PID
+    corrVelocity.x = pid_pos_x.pid_calc(lookaheadPt.x, robot_pos_.x);
+    corrVelocity.y = pid_pos_y.pid_calc(lookaheadPt.y, robot_pos_.y);
+
+    // 4. (可选) 限制最大动态纠偏速度
+    float dynamic_max_corr = 0.8f;
+    if (corrVelocity.magnitude() > dynamic_max_corr)
+    {
+        corrVelocity = corrVelocity.normalize() * dynamic_max_corr;
+    }
 }
 
 void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)

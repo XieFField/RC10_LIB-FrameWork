@@ -597,37 +597,38 @@ public:
         }
         if (Is_End() == true)
         {
-//            bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距离
-//            distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
-//    
-//            v_resultant_ = sp_.plan(distance_); // 速度规划器计算当前目标速度
-//            m_phase = sp_.getPhase();           // 获取当前速度规划阶段
-//    
-//            v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
+            bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距离
+            distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
+    
+            v_resultant_ = sp_.plan(distance_); // 速度规划器计算当前目标速度
+            m_phase = sp_.getPhase();           // 获取当前速度规划阶段
+    
+            v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
             
             
              err_end=_tool_Abs((point-bezier_curve_list[index_].Get_End_point()).magnitude());
-            if(err_end>pid_dead)
-            {
-                pid_end_flag=0;
-                bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距离
-                distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
-    
-                v_resultant_ = sp_.plan(distance_); // 速度规划器计算当前目标速度
-                m_phase = sp_.getPhase();           // 获取当前速度规划阶段
-    
-                v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
-            }
-            else
-            {
-                pid_end_flag=1;
-                v_resultant_ = pid_lock_point.pid_calc(0, err_end);
-                v_tangent_ = (bezier_curve_list[index_].Get_End_point()-point).normalize(); // 计算切线向量（单位向量）
-            }
+            
+//            if(err_end>pid_dead)
+//            {
+//                pid_end_flag=0;
+//                bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距离
+//                distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
+//    
+//                v_resultant_ = sp_.plan(distance_); // 速度规划器计算当前目标速度
+//                m_phase = sp_.getPhase();           // 获取当前速度规划阶段
+//    
+//                v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
+//            }
+//            else
+//            {
+//                pid_end_flag=1;
+//                v_resultant_ = pid_lock_point.pid_calc(0, err_end);
+//                v_tangent_ = (bezier_curve_list[index_].Get_End_point()-point).normalize(); // 计算切线向量（单位向量）
+//            }
             
 
             // 如果当前曲线段走完（t接近1）或者规划完成
-            if (_tool_Abs(err_end) <= 0.02f )//|| m_phase == FINISHED_PHASE)
+            if (_tool_Abs(err_end) <= 0.02f || m_phase == FINISHED_PHASE)
             {
                 index_++; // 切换到下一段曲线
                 t_ = 0.0f;

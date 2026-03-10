@@ -75,7 +75,9 @@ public:
     #if debug_ladar
             this->setThreeWheelSolver(false);
     #endif
-        pid_track.set_params(track_pid_params, 0.0f);
+        pid_pos_x.set_params(track_pid_params, 0.0f);
+        pid_pos_y.set_params(track_pid_params, 0.0f);
+
 
         this->start(osPriorityHigh, 1024);
 //        setTargetKFS(3);
@@ -125,7 +127,6 @@ public:
 	}
 	
 private:
-	
 	int WeaponSage_Start=0;
 	bool WeaponSage_END=0;
 
@@ -145,7 +146,7 @@ private:
     //Path_line path_line1_;
     
     Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
-    Speedplanner_1D_Param_Config path_param_1={.maxAcc = 50.0f, .maxDec = 40.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+    Speedplanner_1D_Param_Config path_param_1={.maxAcc = 5.0f, .maxDec = 5.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
  
     Vector2D original_point_={-0.48f,-0.50f};
     Vector2D Clamping_Bar_Selection_pos_ = {1.925f, 0.19f};
@@ -180,7 +181,7 @@ private:
 
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
     
-     MF_AutoCtrler::PathNode_S KFS_result_ = {0, 0, 0, 0, 0, 26};
+    MF_AutoCtrler::PathNode_S KFS_result_ = {0, 0, 0, 0, 0, 26};
     /**
      * @brief 获取路径上距离机器人最近的点
      * @param path_ 贝塞尔曲线对象
@@ -199,34 +200,23 @@ private:
      */
     Vector2D FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead);
 
-    /**
-     * @brief 计算横向误差
-     * @param path_ 贝塞尔曲线对象
-     * @param robotPos 机器人当前位置
-     * @param nearestPt 最近点坐标
-     * @param tLookahead 前视点的t值
-     * @return float 横向误差值 (带符号，表示偏左或偏右)
-     */
-    float CalculateLateralError(BezierCurve &path_, const Vector2D &robotPos, const Vector2D &nearestPt, float tLookahead);
-    
     void KFS_Selection_Planning(void);
-    
+
     void Path_correction(void);
-    
+
     void Clamping_Bar_Selection_Planning(void);
-        
+
     int num = 0;
     float tNearest = 0.0f;                // 最近点在贝塞尔曲线上的参数t (0~1)
     float tLookahead = 0.0f;              // 前视点在贝塞尔曲线上的参数t (0~1)
     float m_lookaheadDist = 0.1f;         // 前视距离 (单位: 米)
-    float lateralError = 0.0f;            // 横向误差 (机器人偏离路径的距离)
-    float correctspeed = 0.0f;            // 计算出的横向纠偏速度大小
     Vector2D nearestPt;                   // 路径上距离机器人最近的点
     Vector2D lookaheadPt;                 // 路径上的前视点
     Vector2D lookaheadTangent;            // 前视点处的切线方向向量
     Vector2D pathEnd;                     // 路径终点坐标
     Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
-    PID_Position pid_track;               // 循迹横向误差PID控制器
+    PID_Position pid_pos_x;               // x轴绝对位置PID控制器
+    PID_Position pid_pos_y;               // y轴绝对位置PID控制器
 };
 #endif // __cplusplus
 
