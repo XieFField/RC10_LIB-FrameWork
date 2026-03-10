@@ -138,13 +138,15 @@ void OmniChassis_Setup::loop()
                 target_chassis_twist_.vy = speed.y;
                 // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
                 planspeed = path_line_.plan(robot_pos_);
-                if(path_line_.get_pid_end_flag()==0)
-                {
-                    Path_correction();
-                    speed = planspeed + corrVelocity;// 最终速度 = 规划的前进速度 + 横向纠偏速度
-                }
-                else
-                    speed = planspeed; 
+                Path_correction();
+                speed = planspeed*feedforward_coefficient + corrVelocity;// 最终速度 = 规划的前进速度 + 纠偏速度
+//                if(path_line_.get_pid_end_flag()==0)
+//                {
+//                    Path_correction();
+//                    speed = planspeed + corrVelocity;// 最终速度 = 规划的前进速度 + 横向纠偏速度
+//                }
+//                else
+//                    speed = planspeed; 
             }
             else
             {
@@ -214,13 +216,15 @@ void OmniChassis_Setup::loop()
                 target_chassis_twist_.vy = speed.y;
                 // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
                 planspeed = path_line_.plan(robot_pos_);
-                if(path_line_.get_pid_end_flag()==0)
-                {
-                    Path_correction();
-                    speed = planspeed + corrVelocity;// 最终速度 = 规划的前进速度 + 横向纠偏速度
-                }
-                else
-                    speed = planspeed; 
+                Path_correction();
+                speed = planspeed + corrVelocity;// 最终速度 = 规划的前进速度 + 纠偏速度
+//                if(path_line_.get_pid_end_flag()==0)
+//                {
+//                    Path_correction();
+//                    speed = planspeed + corrVelocity;// 最终速度 = 规划的前进速度 + 横向纠偏速度
+//                }
+//                else
+//                    speed = planspeed; 
             }
             else
             {
@@ -565,7 +569,7 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
 void OmniChassis_Setup::Path_correction(void)
 {
     // 获取曲线（带保护）
-    BezierCurve &curve = path_line_.get_bezier_curve();
+    curve = path_line_.get_bezier_curve();
 
     //pathEnd = curve.Get_Point(1.0f);空语句，不知为什么有
     
@@ -625,7 +629,7 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.plan_reset();
     path_line_.Reset();
     path_line_.Add_Start_Point(Vector2D{robot_pos_.x, robot_pos_.y}, path_param_1);
-   path_line_.Add_Point(Vector2D{1.8f, 0.8f});
-   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
-    // path_line_.Add_End_Point(Vector2D{3.92f, 1.38f});
+//   path_line_.Add_Point(Vector2D{1.8f, 0.8f});
+//   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
+     path_line_.Add_End_Point(Vector2D{3.92f, 1.38f});
 }

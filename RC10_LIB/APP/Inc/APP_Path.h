@@ -545,7 +545,7 @@ public:
         bezier_curve_num = 0;
         is_init = false;
         
-        pid_lock_point.set_params(path_lock_end,0);
+        //pid_lock_point.set_params(path_lock_end,0);
     }
     bool Add_Point(Vector2D point_)
     {
@@ -707,7 +707,7 @@ public:
         }
         return bezier_curve_list[index_];
     }
-    int get_pid_end_flag()  { return pid_end_flag; }
+    //int get_pid_end_flag()  { return pid_end_flag; }
 
     int index_ = 0;
 
@@ -724,12 +724,12 @@ protected:
     Phase m_phase = FINISHED_PHASE;
     Speedplanner_1D_Param_Config params_;
     uint8_t bezier_curve_num = 0; // 总曲线数量
-    int pid_end_flag=1;
+    //int pid_end_flag=1;
 
 private:
     /*---------------------------------状态-------------------------------------*/
      float err_end = 0.0f; 
-    PID_Position pid_lock_point;
+    //PID_Position pid_lock_point;
 
     bool is_end = false;   // 是否开始
 

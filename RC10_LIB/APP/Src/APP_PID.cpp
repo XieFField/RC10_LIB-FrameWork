@@ -244,7 +244,7 @@ PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
 };
 
 PID_Param_Config track_pid_params = {
-    .kp = 10.0f/3.0f,
+    .kp = 10.0f,//3.0f,
     .ki = 0.0f,
     .kd = 0.0f,
     .I_Outlimit = 0.0f, 
@@ -254,22 +254,22 @@ PID_Param_Config track_pid_params = {
 };
 
 PID_Param_Config lock_angle_pid_params = {
- .kp = 0.175f /3.0f,
+ .kp = 0.075f,
  .ki = 0.0f,
  .kd = 0.010f,
  .I_Outlimit = 0.0f, 
  .isIOutlimit = true, 
- .output_limit = 2.0f, 
+ .output_limit = 3.0f, 
  .deadband = 0.1f 
 };
 
-PID_Param_Config path_lock_end = {
-    
-    .kp = -0.7f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 1.0f,   
-    .deadband = 0.0009f 
-};
+//PID_Param_Config path_lock_end = {
+//    
+//    .kp = -0.7f,
+//    .ki = 0.0f,
+//    .kd = 0.0f,
+//    .I_Outlimit = 0.0f, 
+//    .isIOutlimit = true, 
+//    .output_limit = 1.0f,   
+//    .deadband = 0.0009f 
+//};

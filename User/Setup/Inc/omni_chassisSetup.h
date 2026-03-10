@@ -154,6 +154,7 @@ private:
     Vector2D planspeed;
     Vector2D speed; 
     Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
+    float feedforward_coefficient=0.8;
     PID_Position pid_pos_x;               // x轴绝对位置PID控制器
     PID_Position pid_pos_y;               // y轴绝对位置PID控制器    
     
@@ -212,7 +213,8 @@ private:
     Vector2D lookaheadPt;                 // 路径上的前视点
     Vector2D lookaheadTangent;            // 前视点处的切线方向向量
     Vector2D pathEnd;                     // 路径终点坐标
-
+    
+    BezierCurve curve;
 };
 #endif // __cplusplus
 
