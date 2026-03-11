@@ -27,7 +27,7 @@ void OmniChassis_Setup::ResetAutoControlStates(void)
 Vector2D OmniChassis_Setup::ComputeLookaheadDiffFeedforward(bool near_end)
 {
     // 使用 RTOS tick 估计离散 dt（单位秒）；该方法在嵌入式任务循环中稳定且开销小。
-    uint32_t now_tick_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+    //uint32_t now_tick_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
     Vector2D v_ff_raw = {0.0f, 0.0f};
 
     // 首次进入或状态复位后，不做差分，先对齐历史参考点。
@@ -35,13 +35,13 @@ Vector2D OmniChassis_Setup::ComputeLookaheadDiffFeedforward(bool near_end)
     {
         ff_diff_inited_ = true;
         ff_ref_point_last_ = ff_ref_point_;
-        ff_last_tick_ms_ = now_tick_ms;
+        //ff_last_tick_ms_ = now_tick_ms;
         ff_velocity_lpf_ = {0.0f, 0.0f};
         return ff_velocity_lpf_;
     }
 
     // 计算 dt，防止 0 或过小导致差分放大。
-    float dt_s = (float)(now_tick_ms - ff_last_tick_ms_) / 1000.0f;
+    float dt_s = getdt();
     if (dt_s <= 0.0f)
     {
         dt_s = control_period_s_;
@@ -78,7 +78,7 @@ Vector2D OmniChassis_Setup::ComputeLookaheadDiffFeedforward(bool near_end)
 
     // 更新历史量，供下一周期差分。
     ff_ref_point_last_ = ff_ref_point_;
-    ff_last_tick_ms_ = now_tick_ms;
+    //ff_last_tick_ms_ = now_tick_ms;
 
     return v_ff;
 }
@@ -684,7 +684,7 @@ void OmniChassis_Setup::Path_correction(void)
     nearestPt = GetPathNearestPoint(curve, robot_pos_, tNearest);
 
     // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
-    if (tNearest > 0.99f || path_line_.Is_End() == false)
+    if (tNearest > 0.95f || path_line_.Is_End() == false)
     {
         Vector2D endPt = curve.Get_End_point();
         // 终点段把前馈参考点切换为终点坐标，差分会自然收敛到 0。
