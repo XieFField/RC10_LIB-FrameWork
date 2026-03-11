@@ -170,12 +170,8 @@ private:
     float kff_la_ = 0.22f;
     // 一阶低通系数，范围(0,1]：越小越平滑，越大越灵敏。
     float ff_lpf_alpha_ = 0.30f;
-    // 控制任务周期（当前系统 1ms 调度）。
-    float control_period_s_ = 0.001f;
     // 差分最小时间，避免 dt 太小导致数值爆发。
-    float ff_dt_min_s_ = 0.001f;
-    // 差分最大时间，避免任务异常延迟后一次性放大速度脉冲。
-    float ff_dt_max_s_ = 0.010f;
+    float ff_dt_min_s_ = 0.005f;
     // 前馈限幅（m/s），用于约束尖峰。
     float max_ff_speed_ = 0.65f;
     Vector2D v_robot_last_cmd_ = {0.0f, 0.0f};

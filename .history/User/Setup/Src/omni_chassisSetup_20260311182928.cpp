@@ -12,95 +12,25 @@ int last_cout_ladar_data = -1;
 
 uint32_t chassisstackHighWaterMark = 0;
 
-void OmniChassis_Setup::ResetAutoControlStates(void)
-{
-    // 1) 阻尼项使用上一时刻 v_robot，退出自动流程后必须清零，避免“历史速度”带入下一次任务。
-    v_robot_last_cmd_ = {0.0f, 0.0f};
-
-    // 2) 前馈差分状态一并复位，避免参考点跳变时出现首帧尖峰。
-    ff_diff_inited_ = false;
-    ff_ref_point_last_ = {0.0f, 0.0f};
-    ff_velocity_lpf_ = {0.0f, 0.0f};
-    ff_last_tick_ms_ = 0;
-}
-
-Vector2D OmniChassis_Setup::ComputeLookaheadDiffFeedforward(bool near_end)
-{
-    // 使用 RTOS tick 估计离散 dt（单位秒）；该方法在嵌入式任务循环中稳定且开销小。
-    uint32_t now_tick_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    Vector2D v_ff_raw = {0.0f, 0.0f};
-
-    // 首次进入或状态复位后，不做差分，先对齐历史参考点。
-    if (!ff_diff_inited_)
-    {
-        ff_diff_inited_ = true;
-        ff_ref_point_last_ = ff_ref_point_;
-        ff_last_tick_ms_ = now_tick_ms;
-        ff_velocity_lpf_ = {0.0f, 0.0f};
-        return ff_velocity_lpf_;
-    }
-
-    // 计算 dt，防止 0 或过小导致差分放大。
-    float dt_s = (float)(now_tick_ms - ff_last_tick_ms_) / 1000.0f;
-    if (dt_s <= 0.0f)
-    {
-        dt_s = control_period_s_;
-    }
-    if (dt_s < ff_dt_min_s_)
-    {
-        dt_s = ff_dt_min_s_;
-    }
-    if (dt_s > ff_dt_max_s_)
-    {
-        dt_s = ff_dt_max_s_;
-    }
-
-    // 参考点差分前馈：
-    // p_ref 由 Path_correction 更新，常规阶段为 lookaheadPt，终点阶段为 endPt。
-    // 这样可在不依赖 planspeed 的前提下，给 PID 额外“提前量”。
-    v_ff_raw = (ff_ref_point_ - ff_ref_point_last_) * (kff_la_ / dt_s);
-
-    // 一阶低通：抑制前视点参数 t 跳变引起的速度尖峰。
-    ff_velocity_lpf_ = ff_velocity_lpf_ * (1.0f - ff_lpf_alpha_) + v_ff_raw * ff_lpf_alpha_;
-
-    // 限幅：前馈只是加速辅助，不能反客为主压过 PID 闭环。
-    if (ff_velocity_lpf_.magnitude() > max_ff_speed_)
-    {
-        ff_velocity_lpf_ = ff_velocity_lpf_.normalize() * max_ff_speed_;
-    }
-
-    // 终点段衰减：减少“冲终点”风险，把控制权更多交给 PID 位置吸附。
-    Vector2D v_ff = ff_velocity_lpf_;
-    if (near_end)
-    {
-        v_ff = v_ff * end_ff_scale_;
-    }
-
-    // 更新历史量，供下一周期差分。
-    ff_ref_point_last_ = ff_ref_point_;
-    ff_last_tick_ms_ = now_tick_ms;
-
-    return v_ff;
-}
-
 Vector2D OmniChassis_Setup::ComposeRobotVelocity(const Vector2D &v_pid, const Vector2D &v_ff_ref, bool near_end)
 {
+    float ff_scale = kff_ref_;
     float pid_scale = 1.0f;
     float max_speed = max_robot_speed_;
 
     if (near_end)
     {
+        ff_scale *= end_ff_scale_;
         pid_scale = end_pid_scale_;
         max_speed = max_robot_speed_end_;
     }
 
     Vector2D v_pid_out = v_pid * pid_scale;
-    // v_ff_ref 已经在 ComputeLookaheadDiffFeedforward 中完成了增益、滤波、限幅和终点衰减。
-    Vector2D v_ff = v_ff_ref;
+    Vector2D v_ff = v_ff_ref * ff_scale;
 
-    Vector2D v_damp = v_robot_last_cmd_ * (-k_damp_);
+    Vector2D v_meas = {this->getWorldSpeed().vx, this->getWorldSpeed().vy};
+    Vector2D v_damp = v_meas * (-k_damp_);
 
-    // 最终速度合成：闭环主导 + 前馈提速 + 历史速度阻尼。
     Vector2D v_robot = v_pid_out + v_ff + v_damp;
     if (v_robot.magnitude() > max_speed)
     {
@@ -237,8 +167,7 @@ void OmniChassis_Setup::loop()
                 planspeed = path_line_.plan(robot_pos_);
                 Path_correction();
                 bool near_end = (tNearest > 0.95f);
-                Vector2D v_ff = ComputeLookaheadDiffFeedforward(near_end);
-                speed = ComposeRobotVelocity(corrVelocity, v_ff, near_end);
+                speed = ComposeRobotVelocity(corrVelocity, planspeed, near_end);
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
 //                if(path_line_.get_pid_end_flag()==0)
@@ -260,7 +189,7 @@ void OmniChassis_Setup::loop()
                     path_line_.Reset();
                     planspeed.x = 0.0f;
                     planspeed.y = 0.0f;
-                    ResetAutoControlStates();
+                    v_robot_last_cmd_ = {0.0f, 0.0f};
                     chassis_status_ = CHASSIS_STOP;
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
@@ -275,7 +204,7 @@ void OmniChassis_Setup::loop()
             target_chassis_twist_.vy = 0.0f;
             speed.x = 0.0f;
             speed.y = 0.0f;
-            ResetAutoControlStates();
+            v_robot_last_cmd_ = {0.0f, 0.0f};
         }
         if (path_line_.index_ == 1)
         {
@@ -318,8 +247,7 @@ void OmniChassis_Setup::loop()
                 planspeed = path_line_.plan(robot_pos_);
                 Path_correction();
                 bool near_end = (tNearest > 0.95f);
-                Vector2D v_ff = ComputeLookaheadDiffFeedforward(near_end);
-                speed = ComposeRobotVelocity(corrVelocity, v_ff, near_end);
+                speed = ComposeRobotVelocity(corrVelocity, planspeed, near_end);
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
 //                if(path_line_.get_pid_end_flag()==0)
@@ -341,7 +269,7 @@ void OmniChassis_Setup::loop()
                     path_line_.Reset();
                     planspeed.x = 0.0f;
                     planspeed.y = 0.0f;
-                    ResetAutoControlStates();
+                    v_robot_last_cmd_ = {0.0f, 0.0f};
                     chassis_status_ = CHASSIS_STOP;
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
@@ -356,7 +284,7 @@ void OmniChassis_Setup::loop()
             target_chassis_twist_.vy = 0.0f;
             speed.x = 0.0f;
             speed.y = 0.0f;
-            ResetAutoControlStates();
+            v_robot_last_cmd_ = {0.0f, 0.0f};
         }
 
         // 获取当前角度
@@ -381,7 +309,7 @@ void OmniChassis_Setup::loop()
         // this->wheels_[2]->setTargetCurrent(0);
         this->set_ControlMode(CURRENT_ZERO_MODE);
         this->set_Target({0, 0, 0});
-        ResetAutoControlStates();
+        v_robot_last_cmd_ = {0.0f, 0.0f};
         break;
     }
 
@@ -687,8 +615,6 @@ void OmniChassis_Setup::Path_correction(void)
     if (tNearest > 0.99f || path_line_.Is_End() == false)
     {
         Vector2D endPt = curve.Get_End_point();
-        // 终点段把前馈参考点切换为终点坐标，差分会自然收敛到 0。
-        ff_ref_point_ = endPt;
         // 如果曲线未初始化（例如空曲线），不进行操作
 //        if (endPt.magnitude() < 0.0001f && curve.Get_Start_point().magnitude() < 0.0001f)
 //        {
@@ -716,8 +642,6 @@ void OmniChassis_Setup::Path_correction(void)
     // ======== 动态兔子追踪 (2D Cartesian PID) ========
     // 2. 寻找前视点作为我们追踪的“虚拟兔子”
     lookaheadPt = FindLookaheadPoint(curve, tNearest, tLookahead);
-    // 非终点阶段前馈参考点使用前视点。
-    ff_ref_point_ = lookaheadPt;
     
     //lookaheadTangent = curve.Get_Tangent_Vector(tLookahead); // 留作状态观测前视点的切线方向
 

@@ -154,30 +154,6 @@ private:
     Vector2D planspeed;
     Vector2D speed; 
     Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
-    // 用于前视点差分前馈的“参考点”：
-    // 正常跟踪阶段等于 lookaheadPt，终点阶段等于 endPt。
-    Vector2D ff_ref_point_ = {0.0f, 0.0f};
-    // 保存上一周期参考点，做离散差分 (p[k]-p[k-1]) / dt。
-    Vector2D ff_ref_point_last_ = {0.0f, 0.0f};
-    // 低通后的前馈速度，抑制 t 跳变和离散噪声导致的尖峰。
-    Vector2D ff_velocity_lpf_ = {0.0f, 0.0f};
-    // 前馈差分初始化标志，避免首周期使用无效差分。
-    bool ff_diff_inited_ = false;
-    // 记录前馈差分计算时刻（ms tick）。
-    uint32_t ff_last_tick_ms_ = 0;
-
-    // 前视点差分前馈增益（越大越“冲”，也更容易抖）。
-    float kff_la_ = 0.22f;
-    // 一阶低通系数，范围(0,1]：越小越平滑，越大越灵敏。
-    float ff_lpf_alpha_ = 0.30f;
-    // 控制任务周期（当前系统 1ms 调度）。
-    float control_period_s_ = 0.001f;
-    // 差分最小时间，避免 dt 太小导致数值爆发。
-    float ff_dt_min_s_ = 0.001f;
-    // 差分最大时间，避免任务异常延迟后一次性放大速度脉冲。
-    float ff_dt_max_s_ = 0.010f;
-    // 前馈限幅（m/s），用于约束尖峰。
-    float max_ff_speed_ = 0.65f;
     Vector2D v_robot_last_cmd_ = {0.0f, 0.0f};
     float kff_ref_ = 0.8f;
     float k_damp_ = 0.25f;
@@ -232,14 +208,6 @@ private:
     void KFS_Selection_Planning(void);
 
     void Path_correction(void);
-
-    // 基于“前视参考点差分”的前馈计算：
-    // v_ff_raw = kff_la_ * (p_ref[k]-p_ref[k-1]) / dt
-    // 并叠加低通、限幅和终点段衰减。
-    Vector2D ComputeLookaheadDiffFeedforward(bool near_end);
-
-    // 统一清空自动控制相关内部状态（速度命令记忆与前馈差分状态）。
-    void ResetAutoControlStates(void);
 
     Vector2D ComposeRobotVelocity(const Vector2D &v_pid, const Vector2D &v_ff_ref, bool near_end);
 

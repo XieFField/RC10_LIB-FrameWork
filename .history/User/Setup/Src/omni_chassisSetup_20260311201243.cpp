@@ -42,17 +42,9 @@ Vector2D OmniChassis_Setup::ComputeLookaheadDiffFeedforward(bool near_end)
 
     // 计算 dt，防止 0 或过小导致差分放大。
     float dt_s = (float)(now_tick_ms - ff_last_tick_ms_) / 1000.0f;
-    if (dt_s <= 0.0f)
-    {
-        dt_s = control_period_s_;
-    }
     if (dt_s < ff_dt_min_s_)
     {
         dt_s = ff_dt_min_s_;
-    }
-    if (dt_s > ff_dt_max_s_)
-    {
-        dt_s = ff_dt_max_s_;
     }
 
     // 参考点差分前馈：
