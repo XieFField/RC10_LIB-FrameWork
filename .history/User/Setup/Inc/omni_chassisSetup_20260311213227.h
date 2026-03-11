@@ -66,7 +66,10 @@ public:
     {
         if (this->wheels_[0] == nullptr || this->wheels_[1] == nullptr ||
             this->wheels_[2] == nullptr || this->wheels_[3] == nullptr)
+        {
             init_flag = false;
+            return;
+        }
 
         yaw_pid_.set_params(lock_angle_pid_params, 10000.0f);
 
