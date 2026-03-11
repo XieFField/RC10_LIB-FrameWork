@@ -97,13 +97,13 @@ void Robot_Arm::update()
         
         // 4. 重构目标 TotalAngle
         float target_arm_total = target_arm_mod + k * 360.0f;
-        target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
-        
-        
-        // ramp(target_rotateMotorAngle, ramped_rotateMotorAngle_, rpm_to_degPerSec(120.0f), dt_);
 
-        // motor_rotate_->setTargetTotalAngle(ramped_rotateMotorAngle_);
-        motor_rotate_->setTargetTotalAngle(target_rotateMotorAngle);
+        // 5.极端情况保护：如果电机转速极快导致一次 update 跨越 180 度，
+        // 防止 k 值跳变引发回回头。但在 100Hz 控制频率下很难发生。
+        
+        ramp(target_rotateMotorAngle, ramped_rotateMotorAngle_, rpm_to_degPerSec(120.0f), dt_);
+
+        motor_rotate_->setTargetTotalAngle(ramped_rotateMotorAngle_);
     }
 
     target_stretchMotorAngle = stretchLength_to_MotorTotalAngle(target_joint_angle_.stretchJoint_Length_);

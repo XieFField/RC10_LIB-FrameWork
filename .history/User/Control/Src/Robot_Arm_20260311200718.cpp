@@ -97,13 +97,12 @@ void Robot_Arm::update()
         
         // 4. 重构目标 TotalAngle
         float target_arm_total = target_arm_mod + k * 360.0f;
-        target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
+
         
         
         // ramp(target_rotateMotorAngle, ramped_rotateMotorAngle_, rpm_to_degPerSec(120.0f), dt_);
 
         // motor_rotate_->setTargetTotalAngle(ramped_rotateMotorAngle_);
-        motor_rotate_->setTargetTotalAngle(target_rotateMotorAngle);
     }
 
     target_stretchMotorAngle = stretchLength_to_MotorTotalAngle(target_joint_angle_.stretchJoint_Length_);

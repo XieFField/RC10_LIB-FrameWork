@@ -1692,7 +1692,65 @@ void ArmSetup::idle()
  */
 void ArmSetup::debug()
 {
+    
+    // //测试
+    // if(test_signal == 0) //所有电机电流强制为0；检查电机转动方向是否需要置反
+    // {
+    //     this->set_controlMode(CURRENT_CONTROL_MODE);
+    //     this->motor_launch_->setTargetCurrent(0.0f);
+    //     this->motor_stretch_->setTargetCurrent(0.0f);
+    //     this->motor_rotate_->setTargetCurrent(0.0f);
+    //     this->motor_pitch_->setTargetCurrent(0.0f);
+    // }
 
+    // //1~4 signal test用于测试电机电流方向和电机转动方向是否同相
+    // else if(test_signal == 1)
+    //     this->motor_launch_->setTargetCurrent(test_current);
+
+    // else if(test_signal == 2)
+    //     this->motor_stretch_->setTargetCurrent(test_current);
+
+    // else if(test_signal == 3)
+    //     this->motor_rotate_->setTargetCurrent(test_current);
+        
+    // else if(test_signal == 4)
+    //     this->motor_pitch_->setTargetCurrent(test_current);
+
+    // //航模遥控操纵测试
+    // else if(test_signal == 5)
+    // {
+    //     this->manualControl();
+    // }
+
+    // else if(test_signal == 6) //测试stop功能
+    // {
+    //     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    //     this->stop();
+    // }
+
+    // else if(test_signal == 7) //测试idle功能
+    // {
+    //     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    //     this->idle();
+    // }
+    // else if(test_signal == 8)
+    // {
+    //     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    //     this->set_LaunchHeight(test_launch_height);
+    // } 
+    // else if(test_signal == 9)
+    // {
+    //     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    //     this->set_RotateAngle(test_rotate_angle);
+    // }
+    // else //empty
+    // {
+    //     this->set_controlMode(CURRENT_CONTROL_MODE);
+    //     this->set_LaunchHeight(0.0f);
+    //     this->set_StretchLength(0.0f);
+    //     this->set_RotateAngle(0.0f);
+    //     this->set_PitchAngle(0.0f);
+    // }
     
 }
 
