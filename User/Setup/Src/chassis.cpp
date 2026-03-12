@@ -81,7 +81,7 @@ namespace jia
 
             float vx = airjoy_data_.left_y * vx_1;
             float vy = airjoy_data_.left_x * vy_1;
-            float wz = airjoy_data_.right_x * wz_1;
+            float wz = airjoy_data_.right_x * wz_deg_1 * kPi / 180.0f;
 
             TargetBodySpeedModeData target_data_;
             target_data_.vx = vx;

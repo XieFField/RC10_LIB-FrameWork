@@ -12,11 +12,11 @@ namespace jia
     public:
         f32 period_ms = 1.0f;     // 控制周期，单位：毫秒
         f32 max_v_acc = 2.0f;     // 最大线加速度，单位：m/s^2
-        f32 max_w_acc_deg = 1.0f; // 最大角速度，单位：deg/s^2
+        f32 max_w_acc_deg = 360.0f; // 最大角加速度，单位：deg/s^2
 
-        f32 vx_1 = 10.0f;
-        f32 vy_1 = 10.0f;
-        f32 wz_1 = 1100.0f;
+        f32 vx_1 = 1.0f;
+        f32 vy_1 = 1.0f;
+        f32 wz_deg_1 = 360.0f;
 
     public:
         struct init_config
@@ -90,5 +90,7 @@ namespace jia
         Data current_data_;
     };
 }
+
+using jia::Chassis;
 
 #endif // CHASSIS_H_
