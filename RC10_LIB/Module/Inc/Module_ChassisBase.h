@@ -64,19 +64,19 @@ public:
         {
             case CURRENT_ZERO_MODE:
                 /* code */
-                this->wheels_[0]->setTargetCurrent(0);
-                this->wheels_[1]->setTargetCurrent(0);
-                this->wheels_[2]->setTargetCurrent(0);
-                if(WheelCount ==4)
-                    this->wheels_[3]->setTargetCurrent(0);
+                // this->wheels_[0]->setTargetCurrent(0);
+                // this->wheels_[1]->setTargetCurrent(0);
+                // this->wheels_[2]->setTargetCurrent(0);
+                // if(WheelCount ==4)
+                //     this->wheels_[3]->setTargetCurrent(0);
                 break;
             
             case SPEED_ZERO_MODE:
-                this->wheels_[0]->setTargetRPM(0);
-                this->wheels_[1]->setTargetRPM(0);
-                this->wheels_[2]->setTargetRPM(0);
-                if(WheelCount ==4)
-                    this->wheels_[3]->setTargetRPM(0);
+                // this->wheels_[0]->setTargetRPM(0);
+                // this->wheels_[1]->setTargetRPM(0);
+                // this->wheels_[2]->setTargetRPM(0);
+                // if(WheelCount ==4)
+                //     this->wheels_[3]->setTargetRPM(0);
                 break;
 
             case ROBOT_SPEED_MODE:
