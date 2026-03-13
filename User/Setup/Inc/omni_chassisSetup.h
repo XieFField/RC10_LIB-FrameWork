@@ -168,25 +168,26 @@ private:
     bool ff_diff_inited_ = false;
     // 记录前馈差分计算时刻（ms tick）。
     //uint32_t ff_last_tick_ms_ = 0;
-
+    
+    float m_lookaheadDist = 0.3f;         // 前视距离 (单位: 米)
     // 前视点差分前馈增益（越大越“冲”，也更容易抖）。
-    float kff_la_ = 0.22f;
+    float kff_la_ = 0.1f;
     // 一阶低通系数，范围(0,1]：越小越平滑，越大越灵敏。
-    float ff_lpf_alpha_ = 0.30f;
+    float ff_lpf_alpha_ = 0.20f;
     // 控制任务周期（当前系统 1ms 调度）。
     float control_period_s_ = 0.001f;
     // 差分最小时间，避免 dt 太小导致数值爆发。
-    float ff_dt_min_s_ = 0.001f;
+    float ff_dt_min_s_ = 0.0009f;
     // 差分最大时间，避免任务异常延迟后一次性放大速度脉冲。
     float ff_dt_max_s_ = 0.010f;
     // 前馈限幅（m/s），用于约束尖峰。
-    float max_ff_speed_ = 0.65f;
+    float max_ff_speed_ = 1.0f;
     Vector2D v_robot_last_cmd_ = {0.0f, 0.0f};
-    float kff_ref_ = 0.8f;
-    float k_damp_ = 0.25f;
+    //float kff_ref_ = 0.8f;
+    float k_damp_ = 0.0f;
     float end_ff_scale_ = 0.35f;
     float end_pid_scale_ = 0.7f;
-    float max_robot_speed_ = 1.1f;
+    float max_robot_speed_ = 1.5f;
     float max_robot_speed_end_ = 0.45f;
   
     
@@ -250,7 +251,7 @@ private:
     int num = 0;
     float tNearest = 0.0f;                // 最近点在贝塞尔曲线上的参数t (0~1)
     float tLookahead = 0.0f;              // 前视点在贝塞尔曲线上的参数t (0~1)
-    float m_lookaheadDist = 0.1f;         // 前视距离 (单位: 米)
+
     Vector2D nearestPt;                   // 路径上距离机器人最近的点
     Vector2D lookaheadPt;                 // 路径上的前视点
     Vector2D lookaheadTangent;            // 前视点处的切线方向向量

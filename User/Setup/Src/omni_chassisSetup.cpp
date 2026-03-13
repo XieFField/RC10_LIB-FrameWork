@@ -21,7 +21,7 @@ void OmniChassis_Setup::ResetAutoControlStates(void)
     ff_diff_inited_ = false;
     ff_ref_point_last_ = {0.0f, 0.0f};
     ff_velocity_lpf_ = {0.0f, 0.0f};
-    ff_last_tick_ms_ = 0;
+    //ff_last_tick_ms_ = 0;
 }
 
 Vector2D OmniChassis_Setup::ComputeLookaheadDiffFeedforward(bool near_end)
