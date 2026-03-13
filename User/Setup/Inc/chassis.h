@@ -10,13 +10,23 @@ namespace jia
     class Chassis
     {
     public:
-        f32 period_ms = 1.0f;     // 控制周期，单位：毫秒
-        f32 max_v_acc = 2.0f;     // 最大线加速度，单位：m/s^2
+        u8 period_ms = 1;           // 控制周期，单位：毫秒
+        f32 max_v_acc = 2.0f;       // 最大线加速度，单位：m/s^2
         f32 max_w_acc_deg = 360.0f; // 最大角加速度，单位：deg/s^2
 
-        f32 vx_1 = 1.0f;
-        f32 vy_1 = 1.0f;
-        f32 wz_deg_1 = 360.0f;
+        f32 max_set_vx = 1.0f;       // 最大设定目标x轴速度，单位：米/秒
+        f32 max_set_vy = 1.0f;       // 最大设定目标y轴速度，单位：米/秒
+        f32 max_set_wz_deg = 360.0f; // 最大设定目标z轴角速度，单位：deg/s
+
+        f32 max_wheel_rpm = 100.0f; // 最大轮子转速，单位：rpm
+        u8 vx_radio = 30;           // x轴速度比例系数，单位：%
+        u8 vy_radio = 30;           // y轴速度比例系数，单位：%
+        u8 wz_radio = 40;           // z轴角速度比例系数，单位：%
+
+        // 自动计算量
+        f32 max_vx = 0.0f; // 最大x轴速度，单位：米/秒
+        f32 max_vy = 0.0f; // 最大y轴速度，单位：米/秒
+        f32 max_wz = 0.0f; // 最大z轴角速度，单位：rad/s
 
     public:
         struct init_config
@@ -68,8 +78,8 @@ namespace jia
             f32 theta_deg; // （单位：度）
             f32 radius;    // （单位：米）
             Motor_Base *motor_handle = nullptr;
-            f32 equivalent_sin_theta;
-            f32 equivalent_cos_theta;
+            f32 sin_theta;
+            f32 cos_theta;
             f32 equivalent_radius; // （单位：米）
         };
 
