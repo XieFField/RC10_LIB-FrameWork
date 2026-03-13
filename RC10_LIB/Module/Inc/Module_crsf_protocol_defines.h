@@ -4,13 +4,13 @@
 #include <stdint.h>
 
 // CRSF Protocol Defines
-#define CRSF_BAUDRATE 420000                            // CRSF标准波特率
-#define CRSF_NUM_CHANNELS 16                            // 通道数量
-#define CRSF_CHANNEL_VALUE_MIN 172                      // 通道最小值（1000us）
-#define CRSF_CHANNEL_VALUE_MID 992                      // 通道中点值（1500us）
-#define CRSF_CHANNEL_VALUE_MAX 1811                     // 通道最大值（2000us）
-#define CRSF_MAX_PACKET_SIZE 64                         // 最大帧大小（字节）
-#define CRSF_MAX_PAYLOAD_LEN (CRSF_MAX_PACKET_SIZE - 4) // 有效载荷最大长度：[目标地址] [长度] [类型] [载荷] [CRC8]
+#define CRSF_BAUDRATE 420000                            // ??????
+#define CRSF_NUM_CHANNELS 16                            // ?????
+#define CRSF_CHANNEL_VALUE_MIN 172                      // ?????锟斤拷?????
+#define CRSF_CHANNEL_VALUE_MID 992                      // ?????锟斤拷??
+#define CRSF_CHANNEL_VALUE_MAX 1811                     // ???????????
+#define CRSF_MAX_PACKET_SIZE 64                         // ??????????锟斤拷
+#define CRSF_MAX_PAYLOAD_LEN (CRSF_MAX_PACKET_SIZE - 4) // Max size of payload in [dest] [len] [type] [payload] [crc8]
 #define CRSF_CRC_POLY 0xD5
 
 
@@ -31,7 +31,7 @@ enum
     CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
     CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
     CRSF_FRAME_LINK_STATISTICS_PAYLOAD_SIZE = 10,
-    CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE = 22, // 每通道11位 * 16通道 = 22字节
+    CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE = 22, // 11 bits per channel * 16 channels = 22 bytes.
     CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
 };
 
@@ -74,15 +74,15 @@ typedef enum
     CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE,
 } crsf_addr_e;
 
-// 使用 __attribute__((packed)) 确保结构体紧凑排列，无填充字节
+// ??? __attribute__((packed)) ????????????
 #define PACKED __attribute__((packed))
 
 typedef struct
 {
-    uint8_t device_addr; // 设备地址（来自 crsf_addr_e 枚举）
-    uint8_t frame_size;  // 帧大小（从此字节后开始计数，应为载荷大小 + 2，即类型和CRC）
-    uint8_t type;        // 帧类型（来自 crsf_frame_type_e 枚举）
-    // 实际字节流中，数据载荷紧跟在此头部之后
+    uint8_t device_addr; // from crsf_addr_e
+    uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 2 (type and crc)
+    uint8_t type;        // from crsf_frame_type_e
+    // Data payload follows this header in the actual byte stream
 } PACKED Crsf_Header_t;
 
 typedef struct

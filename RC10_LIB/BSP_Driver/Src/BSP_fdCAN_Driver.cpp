@@ -159,6 +159,25 @@ bool fdCANbus::pushRxFromISR(const CanFrame& cf, BaseType_t* pxHigherPriorityTas
 }
 
 
+void fdCANbus::rxTaskbody() 
+{
+    CanFrame cf;
+    for (;;) 
+    {
+        if (rxQueue_.recv(cf, portMAX_DELAY)) 
+        {
+
+            for (std::size_t i = 0; i < MAX_MOTORS; ++i) 
+            {
+                Motor_Base* m = motorList_[i];
+
+                if (m && m->bus() == this && m->matchesFrame(cf)) 
+                   m->updateFeedback(cf);
+            }
+
+        }
+    }
+}
 
 
 void fdCANbus::schedulerTaskbody() 
@@ -286,26 +305,6 @@ extern "C" void fdcan_global_rx_isr(FDCAN_HandleTypeDef* hfdcan)
     portYIELD_FROM_ISR(higher_priority_task_woken);
 }
 
-
-void fdCANbus::rxTaskbody() 
-{
-    CanFrame cf;
-    for (;;) 
-    {
-        if (rxQueue_.recv(cf, portMAX_DELAY)) 
-        {
-
-            for (std::size_t i = 0; i < MAX_MOTORS; ++i) 
-            {
-                Motor_Base* m = motorList_[i];
-
-                if (m && m->bus() == this && m->matchesFrame(cf)) 
-                   m->updateFeedback(cf);
-            }
-
-        }
-    }
-}
 /**
  * @brief 全局的调度器Tick中断处理函数
  */

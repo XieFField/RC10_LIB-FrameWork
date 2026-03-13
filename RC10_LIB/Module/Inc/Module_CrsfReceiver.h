@@ -1,55 +1,57 @@
 /**
  * @file Module_CrsfReceiver.h
- * @brief RadioMaster POCKET CRSF½ÓÊÕÆ÷Çı¶¯
+ * @brief RadioMaster POCKET CRSF?????
  * @author Zhan Hong li
- * @details Ó²¼şÁ¬½ÓËµÃ÷
+ * @details ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç±ï¿½ï¿½ï¿½
  *
- * Ó²¼şÁ¬½ÓĞèÒª4¸ùÏß£º
- * POCKET JR½ÓÊÕ»ú ½Ó STM32 UART
- * GND ½Ó GND, 5V ½Ó VCC, TX ½Ó RX, RX ½Ó TX
+ *????????4?????
+ * POCKET JR??? ?? STM32 UART
+ * GND ?? GND, 5V ?? VCC, TX ?? RX, RX ?? TX
  * 
- * CubeMXÅäÖÃĞèÒª3¸ö²½Öè£º
- * 1. UART: ²¨ÌØÂÊ=420000, 8N1
- * 2. DMA: ¿ªÆôUSART_RXµÄCircularÄ£Ê½
- * 3. NVIC: ¿ªÆôUARTºÍDMAÖĞ¶Ï
+ * CubeMX?????3????
+ * 1. UART: ??????=420000, 8N1
+ * 2. DMA: ????USART_RX??Circular????
+ * 3. NVIC: ???UART??DMA?ï¿½ï¿½?
  * 
- * Ê¹ÓÃ·½·¨·Ö3¸ö²½Öè£º
- * // 1. ÔÚÎÄ¼ş¶¥²¿£¨È«¾Ö±äÁ¿Çø£¬mainº¯ÊıÍâ£©¶¨ÒåÊµÀı
- * static CrsfReceiver radio(&huart1); // ¸ù¾İÊµ¼ÊÊ¹ÓÃµÄUARTĞŞ¸Ä
- * // 2. ÔÚmainº¯ÊıÄÚ³õÊ¼»¯
- * // CrsfReceiver radio(&huart1); // ²»ÒªÕâÑùĞ´
- * radio.process();                               // ´¦Àí½ÓÊÕµ½µÄÊı¾İ
- * radio.getControlData(&ctrl);                   // »ñÈ¡¿ØÖÆÊı¾İ
+ * ???????3?ï¿½ï¿½?
+ * // ??????????????????????????????????????????
+ * static CrsfReceiver radio(&huart1); // ???????????????
+ * // ??????main?ï¿½ï¿½??ï¿½ï¿½
+ * // CrsfReceiver radio(&huart1); // ????ï¿½ï¿½??
+ * radio.process();                               // ?????????
+ * radio.getControlData(&ctrl);                   // ???????
  * 
- * Êı¾İ½á¹¹ËµÃ÷£ºRmPocketData_t°üº¬
- * Ò¡¸Ë: throttle(ÓÍÃÅ), steering(×ªÏò), auxiliary1/2(¸¨ÖúÍ¨µÀ)
- * °´Å¥: SWD/botton_click(µã¶¯°´Å¥), SWA/SWB/SWC(Èıµµ¿ª¹Ø)
- * ÆäËû: scroll_wheel/l2/r1/r2/menu/enter
- * °²È«: emergency_stop½ô¼±Í£Ö¹±êÖ¾£¨ÈÎºÎ¿ª¹Ø¿É´¥·¢£©
+ * ???????????RmPocketData_t??
+ * ???: throttle(???), steering(???), auxiliary1/2(????)
+ * ????: SWD/botton_click(????), SWA/SWB/SWC(????)
+ * ???: scroll_wheel/l2/r1/r2/menu/enter
+ * ???: emergency_stop????????????
  * 
- * Ò£²âÊı¾İ£ºÍ¨¹ısendTelemetryData()·¢ËÍ»ØÒ£¿ØÆ÷
- * ¿ÉÔÚÒ£¿ØÆ÷ÉÏÏÔÊ¾/ÓïÒô²¥±¨µç³ØµçÑ¹/µçÁ÷/Ê£ÓàµçÁ¿
- * ¾àÀë¡¢ËÙ¶È¡¢ÎÂ¶ÈµÈÔËĞĞÊı¾İÔÚÒ£¿ØÆ÷ÆÁÄ»ÏÔÊ¾
+ * ???????????????????
+ * ??????????/????/?????
+ * ??????????????????/??????
  * 
- * Ê¾Àı1£º·¢ËÍµç³ØÊı¾İ£¨¸²¸ÇÏÖÓĞ×Ö¶Î£©
- *   telem.battery_current = motor_temperature; // ½«µçÁ÷×Ö¶ÎÓÃÓÚ·¢ËÍÎÂ¶È
+ * ????1????????ï¿½ï¿½????
+ *   telem.battery_current = motor_temperature; // ??????ï¿½ï¿½?????
  *   radio->sendTelemetryData(&telem);
  * 
- * Ê¾Àı2£º·¢ËÍ×Ô¶¨ÒåÊı¾İ£¨ĞèÒªĞŞ¸Ä½á¹¹Ìå£©
- *   // 1. ÔÚRmPocketData_t½á¹¹ÌåÖĞÌí¼Ó×Ö¶Î
- *   float motor_temp;        // µç»úÎÂ¶È
- *   uint16_t obstacle_dist;  // ÕÏ°­Îï¾àÀë£¨ºÁÃ×£©
+ * ????2??????????ï¿½ï¿½??????
+ *   // 1. ??RmPocketData_t?????????
+ *   float motor_temp;        // ??????
+ *   uint16_t obstacle_dist;  // ????????
  *   
- *   // 2. ĞŞ¸ÄsendTelemetryData()º¯ÊıÒÔ°üº¬ĞÂ×Ö¶Î
- *   // 3. ÔÚmainÑ­»·ÖĞ¸üĞÂ²¢·¢ËÍ
+ *   // 2. ??sendTelemetryData()????????????????
+ *   // 3. main??????????
  *   telem.motor_temp = ReadTemperature();
  *   telem.obstacle_dist = sonar_read();
- *   radio->sendTelemetryData(&telem); // ·¢ËÍÒ£²âÊı¾İ
+ *   radio->sendTelemetryData(&telem); // ???????
  
- * radio->setStickDeadzone(0.05f);    // ÉèÖÃÒ¡¸ËËÀÇø
- * radio->setThrottleCurve(1.2f);     // ÉèÖÃÓÍÃÅÇúÏß
- * radio->isEmergencyStop();          // ¼ì²é½ô¼±Í£Ö¹
- * radio->getRawChannel(1);           // »ñÈ¡Ô­Ê¼Í¨µÀÖµ
+ 
+ * ???ï¿½ï¿½???
+ * radio->setStickDeadzone(0.05f);    // ????????
+ * radio->setThrottleCurve(1.2f);     // ????????
+ * radio->isEmergencyStop();          // ??ï¿½ï¿½?
+ * radio->getRawChannel(1);           // ?????????
  */
 
 
@@ -73,77 +75,77 @@ extern "C"
 
 #ifdef __cplusplus
 
-// RadioMaster-POCKET Í¨µÀÖµ·¶Î§¶¨Òå
-#define RM_POCKET_CHANNEL_MIN 172      // ×îĞ¡Öµ
-#define RM_POCKET_CHANNEL_MID 992      // ÖĞµãÖµ
-#define RM_POCKET_CHANNEL_MAX 1811     // ×î´óÖµ
+// RadioMaster-POCKET ????????
+#define RM_POCKET_CHANNEL_MIN 172      // ??ï¿½ï¿½?
+#define RM_POCKET_CHANNEL_MID 992      // ?ï¿½ï¿½??
+#define RM_POCKET_CHANNEL_MAX 1811     // ????
 
-// °´Å¥ÅĞ¶¨ãĞÖµ£¨¸ù¾İRadioMaster-POCKETÊµ¼ÊÊä³öĞ£×¼£©
-#define RM_BTN_OFF 191                 // °´Å¥ÊÍ·Å×´Ì¬
-#define RM_BTN_ON 1792                 // °´Å¥°´ÏÂ×´Ì¬
+// ????????????RadioMaster-POCKET??????
+#define RM_BTN_OFF 191                 // ??????
+#define RM_BTN_ON 1792                 // ???????
 
-// RadioMaster-POCKET Èıµµ¿ª¹ØÅĞ¶¨ãĞÖµ£¨µÍ/ÖĞ/¸ß£©
-#define RM_SWITCH_LOW 191              // µÍµµÎ»ÖÃ
-#define RM_SWITCH_MID 1004             // ÖĞµµÎ»ÖÃ
-#define RM_SWITCH_HIGH 1792            // ¸ßµµÎ»ÖÃ
+// RadioMaster-POCKET ???????????????ï¿½ï¿½????
+#define RM_SWITCH_LOW 191              // ??ï¿½ï¿½??
+#define RM_SWITCH_MID 1004             // ??ï¿½ï¿½??
+#define RM_SWITCH_HIGH 1792            // ??ï¿½ï¿½??
 
 #define crclen 256
 
-// Ò£¿ØÆ÷Êı¾İ½á¹¹Ìå¶¨Òå
+// ???ï¿½ï¿½??????????
 typedef struct
 {
-    // === Ò¡¸ËÊı¾İ£ºRadioMaster-POCKETÊä³öÖµÓ³Éäµ½¸¡µãÊı ===
-    // ËùÓĞÒ¡¸ËÖµÒÑ¹éÒ»»¯µ½-1.0µ½1.0·¶Î§£¬ÖĞµãÎª0
-    float left_y;            //left_y       // ×óÒ¡¸ËYÖá/ÓÍÃÅ¿ØÖÆ (-1.0×îĞ¡Öµ ~ 1.0×î´óÖµ) - Í¨³£ÓÃÓÚÇ°½øºóÍË¿ØÖÆ
-    float left_x;            //left_x       // ×óÒ¡¸ËXÖá/×ªÏò¿ØÖÆ (-1.0×óÂú ~ 1.0ÓÒÂú) - Í¨³£ÓÃÓÚ×óÓÒ×ªÏò¿ØÖÆ
+    // === ??????RadioMaster-POCKET???????????? ===
+    // ???????????-1.0??1.0??ï¿½ï¿½??
+    float left_y;            //left_y       // ????/??????? (-1.0???? ~ 1.0???) - ???ï¿½???????
+    float left_x;            //left_x       // ??? (-1.0??? ~ 1.0???) - ???ï¿½???????
     
-    float right_x;                 // ÓÒÒ¡¸ËXÖá/¸¨ÖúÍ¨µÀ1 - Í¨³£ÓÃÓÚÔÆÌ¨Ë®Æ½Ğı×ª»òÆäËû¹¦ÄÜ
-    float right_y;                 // ÓÒÒ¡¸ËYÖá/¸¨ÖúÍ¨µÀ2 - Í¨³£ÓÃÓÚÔÆÌ¨¸©Ñö»òÆäËû¹¦ÄÜ
+    float right_x;                 // ????????1 - ???ï¿½?????????????????
+    float right_y;                 // ????????2 - ???ï¿½?????????????????
     
-    // RadioMaster-POCKET µã¶¯°´Å¥
-    uint8_t SWD;                  // ÓÒ²à3µµ¿ª¹ØÎ»ÖÃ£º0=µÍµµ, 1=ÖĞµµ, 2=¸ßµµ£¨Ó³ÉäÎªµã¶¯°´Å¥¹¦ÄÜ£©
-    uint8_t botton_click;                 // ×ó²à3µµ¿ª¹ØÎ»ÖÃ£º0=µÍµµ, 1=ÖĞµµ, 2=¸ßµµ£¨Ó³ÉäÎªµã¶¯°´Å¥¹¦ÄÜ£©
-    uint8_t SWA;                    // SA¿ª¹Ø×´Ì¬£º0=µÍµµ, 1=ÖĞµµ, 2=¸ßµµ£¨Èıµµ¿ª¹Ø£©
-    uint8_t SWB;                    // SB¿ª¹Ø×´Ì¬£º0=µÍµµ, 1=ÖĞµµ, 2=¸ßµµ£¨Èıµµ¿ª¹Ø£©
-    uint8_t SWC;                    // SC¿ª¹Ø×´Ì¬£º0=µÍµµ, 1=ÖĞµµ, 2=¸ßµµ£¨Èıµµ¿ª¹Ø£©
+    // RadioMaster-POCKET ??????
+    uint8_t SWD;                  // ??3?ï¿½ï¿½????0=??, 1=??, 2=???????????????
+    uint8_t botton_click;                 // ??3?ï¿½ï¿½????0=??, 1=??, 2=??????????????ï¿½ï¿½??
+    uint8_t SWA;                    // SA?????0=??, 1=???2?ï¿½ï¿½????
+    uint8_t SWB;                    // SB?????0=??, 1=???2?ï¿½ï¿½????
+    uint8_t SWC;                    // SC?????0=??, 1=???2?ï¿½ï¿½????
     
-    // ÆäËû°´Å¥£ºRadioMaster-POCKETÃæ°åÉÏ6¸ö¶îÍâ¹¦ÄÜ°´Å¥
-    uint8_t scroll_wheel;                   // L1¹öÂÖ/ĞıÅ¥£¨Í¨³£ÓÃÓÚ²Ëµ¥µ¼º½£©
-    uint8_t btn_l2;                   // L2°´Å¥£¨Í¨³£ÓÃÓÚ¹¦ÄÜÇĞ»»£©
-    uint8_t btn_r1;                   // R1°´Å¥£¨Í¨³£ÓÃÓÚÈ·ÈÏ/Ñ¡Ôñ£©
-    uint8_t btn_r2;                   // R2°´Å¥£¨Í¨³£ÓÃÓÚ·µ»Ø/È¡Ïû£©
-    uint8_t btn_menu;                 // ²Ëµ¥°´Å¥
-    uint8_t btn_enter;                // È·ÈÏ/»Ø³µ°´Å¥
+    // ???????RadioMaster-POCKET?????6??????????
+    uint8_t scroll_wheel;                   // L1????????????
+    uint8_t btn_l2;                   // L2????????ï¿½ï¿½???
+    uint8_t btn_r1;                   // R1????????????
+    uint8_t btn_r2;                   // R2????????ï¿½ï¿½???
+    uint8_t btn_menu;                 // ??????
+    uint8_t btn_enter;                // ?????
     
-    // °²È«¿ØÖÆ±êÖ¾
-    uint8_t emergency_stop;           // ½ô¼±Í£Ö¹±êÖ¾£¨ÈÎºÎ¿ª¹Ø´¥·¢¶¼»áÉèÖÃ´Ë±êÖ¾£©
-    uint8_t trigger_flag;             // ´¥·¢±êÖ¾£¨ÓÃÓÚÊÂ¼ş´¥·¢£©
+    // ??????
+    uint8_t emergency_stop;           // ?????????????????????????
+    uint8_t trigger_flag;             // ???????
     
-    // === Ò£²âÊı¾İ£º´Ó»úÆ÷ÈË·¢»ØRadioMaster-POCKETÏÔÊ¾µÄÊı¾İ ===
-    // ÕâĞ©Êı¾İÍ¨¹ısendTelemetryData()º¯Êı·¢ËÍ
-    float battery_voltage;            // µç³ØµçÑ¹(V)
-    float battery_current;            // µç³ØµçÁ÷(A)
-    uint8_t battery_percent;          // µç³ØÊ£Óà°Ù·Ö±È(%)
-    uint32_t battery_capacity;        // µç³ØÒÑÏûºÄÈİÁ¿(mAh)
+    // === ??????????RadioMaster-POCKET????????? ===
+    // ???????????????????????
+    float battery_voltage;            // ?????(V)
+    float battery_current;            // ??????(A)
+    uint8_t battery_percent;          // ??????(%)
+    uint32_t battery_capacity;        // ???????(mAh)
     
-    // ÔËĞĞÊı¾İ
-    float speed_kmh;                  // µ±Ç°ËÙ¶È(km/h)
-    float distance_km;                // ÀÛ¼ÆÔËĞĞ¾àÀë(km)
-    uint16_t run_time_minutes;        // ÀÛ¼ÆÔËĞĞÊ±¼ä(·ÖÖÓ)
+    // ï¿½ï¿½????
+    float speed_kmh;                  // ??????(km/h)
+    float distance_km;                // ???????(km)
+    uint16_t run_time_minutes;        // ???????(????)
     
-    // ÏµÍ³×´Ì¬
-    float temperature;                // ÏµÍ³ÎÂ¶È(ÉãÊÏ¶È)
-    uint8_t signal_strength;          // ĞÅºÅÇ¿¶È(%)
+    // ??????????
+    float temperature;                // ???(??C)
+    uint8_t signal_strength;          // ??????(%)
     
-//    // GPSÊı¾İ£¨Èç¹ûĞèÒª¿ÉÈ¡Ïû×¢ÊÍ²¢ÅäÖÃGPSÄ£¿é£©
-//    double gps_latitude;              // Î³¶È
-//    double gps_longitude;             // ¾­¶È
-//    float gps_speed;                  // GPSËÙ¶È(km/h)
-//    uint8_t gps_satellites;           // ÎÀĞÇÊıÁ¿
+//    // GPS????????ï¿½ï¿½????GPS??
+//    double gps_latitude;              // ï¿½ï¿½??
+//    double gps_longitude;             // ????
+//    float gps_speed;                  // GPS???(km/h)
+//    uint8_t gps_satellites;           // ????????
 //    
 } RmPocketData_t;
 
-// ±ê×¼CRSFÍ¨µÀÊı¾İÖ¡½á¹¹£¨ÓÃÓÚ½âÎöÒ£¿ØÆ÷·¢ËÍµÄÍ¨µÀÊı¾İ£©
+// ??CRSF?????????????ï¿½ï¿½??????
 typedef struct
 {
     uint8_t device_addr;
@@ -186,7 +188,7 @@ typedef struct
     uint8_t crc;
 } PACKED CrsfBatteryFrame_t;
 
-// CRC8Ğ£Ñé¼ÆËãÀà
+// CRC8??????
 class GENERIC_CRC8
 {
 private:
@@ -200,7 +202,7 @@ public:
 
 };
 
-// RadioMaster-POCKET CRSF½ÓÊÕÆ÷Ö÷Àà
+// RadioMaster-POCKET CRSF????????
 class CrsfReceiver:public UART_
 {
 public:
@@ -215,56 +217,60 @@ public:
     CrsfReceiver(const CrsfReceiver&) = delete;
     CrsfReceiver& operator=(const CrsfReceiver&) = delete;
 
-    // ========== Êı¾İ»ñÈ¡½Ó¿Ú ==========
+    // ========== ????????? ==========
     
-    // »ñÈ¡RadioMaster-POCKETÒ£¿ØÆ÷½âÎöºóµÄ¿ØÖÆÊı¾İ
+    // ???RadioMaster-POCKET??????????????
     void getControlData(RmPocketData_t *data);
     void init(void){    this->UART_Init();}
-    // ·¢ËÍÒ£²âÊı¾İ»ØRadioMaster-POCKETÒ£¿ØÆ÷ÏÔÊ¾
+    // ????????????RadioMaster-POCKET???????
     void sendTelemetryData(const RmPocketData_t *data);
     
-    // ¼ì²éÊÇ·ñÓĞĞÂÊı¾İµ½´ï
+    // ?????????????????
     bool hasNewData() const { return new_data_available_; }
     void clearNewDataFlag() { new_data_available_ = false; }
     
-    // ½ô¼±Í£Ö¹×´Ì¬¼ì²é
+    // ?????????
     bool isEmergencyStop() const { return emergency_stop_triggered_; }
     void resetEmergencyStop() { emergency_stop_triggered_ = false; }
     
-    // »ñÈ¡Ô­Ê¼Í¨µÀÖµ£¨ÓÃÓÚµ÷ÊÔ»ò×Ô¶¨ÒåÓ³Éä£©
+    // ???????????????????
     int getRawChannel(uint8_t ch) const;
     const int* getAllRawChannels() const { return channels_; }
     
-    // ========== ²ÎÊıÅäÖÃ½Ó¿Ú ==========
+    // ========== ?????? ==========
     
-    // ÉèÖÃÒ¡¸ËËÀÇø£¨·ÀÖ¹Ò¡¸ËÔÚÖĞµã¸½½üµÄ¶¶¶¯£©
+    // ????????????????????????????
     void setStickDeadzone(float deadzone) { stick_deadzone_ = deadzone; }
     
-    // ÉèÖÃÓÍÃÅÇúÏß£¨´óÓÚ1.0Ôö¼ÓÁéÃô¶È£¬Ğ¡ÓÚ1.0½µµÍÁéÃô¶È£©
+    // ???????????????????????????????
     void setThrottleCurve(float curve_factor) { throttle_curve_ = curve_factor; }
     
-    // ÉèÖÃ×ªÏòÇúÏß
+    // ???????????
     void setSteeringCurve(float curve_factor) { steering_curve_ = curve_factor; }
     
-    // ÉèÖÃÒ£²âÊı¾İ·¢ËÍËÙÂÊ
+    // ???ï¿½ï¿½??????
     void setTelemetryRate(uint32_t battery_ms, uint32_t gps_ms) {
         telemetry_battery_interval_ = battery_ms;
         telemetry_gps_interval_ = gps_ms;
     }
     
-    // Ö÷´¦Àíº¯Êı£ºĞèÒªÔÚÖ÷Ñ­»·ÖĞ³ÖĞøµ÷ÓÃÒÔ´¦Àí½ÓÊÕÊı¾İ
+    // ??????ï¿½ï¿½?????????????ï¿½ï¿½????
     void process();
-    // ²âÊÔ¹¦ÄÜ£ºÁÙÊ±½ûÓÃ/ÆôÓÃ D-Cache£¬ÓÃÓÚµ÷ÊÔÑéÖ¤
+    // ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½ D-Cacheï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¿ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½
     void setDisableDCacheForTest(bool disable);
     bool isDCacheTestDisabled() const { return dcache_test_disabled_; }
-    // ÑéÖ¤ UART/DMA ÅäÖÃÊÇ·ñÕıÈ·£¨¼ì²é DMA ÊÇ·ñÒÑÆô¶¯£©
+    // ï¿½ï¿½Ö¤ UART/DMA ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ DMA ï¿½Ñ·ï¿½ï¿½ï¿½
     bool isDmaConfiguredCorrectly() const { return dma_config_ok_; }
 		UART_HandleTypeDef *uart_handle;
 		void Callback_Fuc(uint8_t *buf, uint16_t len) override;
 private:
 
 		
-    // Í¨µÀÊı¾İ´æ´¢
+    // ??????
+    CrsfReceiver(UART_HandleTypeDef *huart);
+    ~CrsfReceiver() = default;
+
+    // ???????
     int channels_[CRSF_NUM_CHANNELS];
     uint8_t channels_payload_[CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE];
     uint8_t packet_byte_index_;
@@ -272,9 +278,9 @@ private:
     volatile bool new_data_available_;
     bool emergency_stop_triggered_;
     
-    // UARTÇı¶¯
-    // ¿ÉÑ¡: ½« DMA »º³åÇø·Åµ½ÌØ¶¨ÄÚ´æ¶Î (Èç D2) ÒÔ±ÜÃâ D-Cache ÎÊÌâ¡£
-    // Èç¹ûÒÑ¶¨Òå CRSF_DMA_SECTION_NAME Îª×Ö·û´®£¬ÀıÈç: "\.dma_buffer"
+    // UART???
+    // ï¿½ï¿½Ñ¡: ï¿½ï¿½ DMA ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åµï¿½ï¿½Ç»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú´ï¿½ (ï¿½ï¿½ï¿½ï¿½ D2) ï¿½Ô±ï¿½ï¿½ï¿½ D-Cache ï¿½ï¿½ï¿½â¡£
+    // ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½Ğ¶ï¿½ï¿½ï¿½ CRSF_DMA_SECTION_NAME Îªï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: "\.dma_buffer"
 #ifdef CRSF_DMA_SECTION_NAME
 #define CRSF_DMA_ATTR __attribute__((section(CRSF_DMA_SECTION_NAME), aligned(32)))
 #else
@@ -284,27 +290,27 @@ private:
     //UART_ uart_driver_;
     uint8_t tx_buffer_[CRSF_MAX_PACKET_SIZE] CRSF_DMA_ATTR;
 
-    // »·ĞÎ»º³åÇø£ºÓÃÓÚ»º´æISR½ÓÊÕµÄÊı¾İ£¬ÔÚprocess()ÖĞ´¦Àí
+    // ???ï¿½ï¿½??ï¿½ï¿½??UART?????ISR???????????ï¿½ï¿½???????????process()??????
     static const uint16_t RX_RING_SIZE = 512;
     uint8_t rx_ring_[RX_RING_SIZE] CRSF_DMA_ATTR;
-    volatile uint16_t rx_ring_head_ = 0; // Ğ´ÈëÖ¸Õë£¬ÓÉISR¸üĞÂ
-    volatile uint16_t rx_ring_tail_ = 0; // ¶ÁÈ¡Ö¸Õë£¬ÓÉprocess()¸üĞÂ
+    volatile uint16_t rx_ring_head_ = 0; // ï¿½ï¿½?????ISR?????
+    volatile uint16_t rx_ring_tail_ = 0; // ?????????????????
     
-    // CRCĞ£ÑéÆ÷
+    // CRC
     GENERIC_CRC8 crc_;
     
-    // ²ÎÊıÅäÖÃ
-    float stick_deadzone_ = 0.05f;           // 5%ËÀÇø
-    float throttle_curve_ = 1.0f;            // 1.0=ÏßĞÔ
-    float steering_curve_ = 1.0f;            // 1.0=ÏßĞÔ
+    // ???ï¿½ï¿½???
+    float stick_deadzone_ = 0.05f;           // 5%????
+    float throttle_curve_ = 1.0f;            // 1.0=????
+    float steering_curve_ = 1.0f;            // 1.0=????
     
-    // Ò£²â·¢ËÍ¶¨Ê±
-    uint32_t telemetry_battery_interval_ = 1000;  // µç³ØÊı¾İ·¢ËÍ¼ä¸ô(ms)
-    uint32_t telemetry_gps_interval_ = 2000;      // GPSÊı¾İ·¢ËÍ¼ä¸ô(ms)
+    // ???????
+    uint32_t telemetry_battery_interval_ = 1000;  // ????????????(ms)
+    uint32_t telemetry_gps_interval_ = 2000;      // GPS?????????(ms)
     uint32_t last_battery_send_ = 0;
     uint32_t last_gps_send_ = 0;
     
-    // ½ÓÊÕ×´Ì¬»ú
+    // ????????
     enum RxState {
         STATE_WAIT_ADDR,
         STATE_WAIT_SIZE,
@@ -314,38 +320,38 @@ private:
         STATE_PACKET_COMPLETE
     } rx_state_;
     
-    // ÄÚ²¿´¦Àí·½·¨
+    // ???????????
     void processBatchData(uint8_t *buf, uint16_t len);
     void handleByte(uint8_t byte);
     void processRcChannels();
     void unpackChannels(const uint8_t *payload, int channels[CRSF_NUM_CHANNELS]);
     void computeMappedValues();
     void updateSwitchesAndButtons();
-    // ISR-friendly append£¨ÔÚÖĞ¶Ï·şÎñ³ÌĞòÖĞ¿ìËÙ»º´æÊı¾İ£©
+    // ISR-friendly append (?????????????????????)
     void appendFromISR(const uint8_t *buf, uint16_t len);
 
     void consumeRingBuffer();
-    // ÄÚ²¿ÅäÖÃ¼ì²é
+    // ï¿½Ú²ï¿½ï¿½ï¿½ï¿½Ã¼ï¿½ï¿½
     void checkDmaConfig();
     
-    // µ¥ÀıÄ£Ê½
+    // ??????
     static CrsfReceiver* instance_;
     static void StaticUartCallback(uint8_t *buf, uint16_t len);
 
     RmPocketData_t telemetry_data_;
     
-    // ¸¨Öú±äÁ¿
+    // ??????
     uint8_t last_emergency_btn_ = 0;
     bool dma_config_ok_ = false;
     bool dcache_test_disabled_ = false;
 
 public:
-    // µ÷ÊÔÓÃ¹«¹²±äÁ¿
+    // ??????????????
     float debug_throttle = 0.0f;
     float debug_steering = 0.0f;
     uint8_t debug_mode = 0;
     
-    // ´¥·¢±êÖ¾¿ØÖÆ£¨ÓÃÓÚÍâ²¿ÊÂ¼ş´¥·¢£©
+    // ????????????????????
     void reset_trigger_flag() { }
     void set_trigger_flag_busy() { }
 };
