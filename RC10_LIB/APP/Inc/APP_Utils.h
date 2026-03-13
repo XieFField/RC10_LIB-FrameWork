@@ -44,6 +44,14 @@ namespace jia
     template <typename T>
     constexpr T clampValue(const T &val, const T &min_val, const T &max_val);
 
+    // 转速和角速度转换（单位：rad/s）
+    constexpr f32 rpmToRadsF32(f32 rpm);
+    constexpr f32 RadsToRpmF32(f32 omega);
+
+    // 角速度和线速度转换
+    constexpr f32 omegaToVelF32(f32 omega, f32 radius);
+    constexpr f32 velToOmegaF32(f32 vel, f32 radius);
+
     inline f32 sinDegF32(f32 deg)
     {
         f32 sinf_result = sinf(deg * (kPi / 180.0f));
@@ -102,6 +110,26 @@ namespace jia
         if (val > max_val)
             return max_val;
         return val;
+    }
+
+    constexpr inline f32 rpmToRadsF32(f32 rpm)
+    {
+        return rpm * (2.0f * kPi) / 60.0f;
+    }
+
+    constexpr inline f32 RadsToRpmF32(f32 omega)
+    {
+        return omega * 60.0f / (2.0f * kPi);
+    }
+
+    constexpr inline f32 omegaToVelF32(f32 omega, f32 radius)
+    {
+        return omega * radius;
+    }
+
+    constexpr inline f32 velToOmegaF32(f32 vel, f32 radius)
+    {
+        return vel / radius;
     }
 
 } // namespace jia

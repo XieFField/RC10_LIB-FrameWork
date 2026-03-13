@@ -111,6 +111,9 @@
     "initializer_list": "cpp",
     "new": "cpp",
     "stdexcept": "cpp",
-    "cinttypes": "cpp"
+    "cinttypes": "cpp",
+    "ios": "cpp",
+    "queue": "cpp",
+    "cstdbool": "cpp"
 }
 }
