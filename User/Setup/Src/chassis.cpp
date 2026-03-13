@@ -154,45 +154,9 @@ namespace jia
         mode_ = Mode::kBodySpeedMode;
 
         // 对目标速度进行限幅
-        // vx
-        if (target.vx > max_vx)
-        {
-            target_data_.vx = max_vx;
-        }
-        else if (target.vx < -max_vx)
-        {
-            target_data_.vx = -max_vx;
-        }
-        else
-        {
-            target_data_.vx = target.vx;
-        }
-        // vy
-        if (target.vy > max_vy)
-        {
-            target_data_.vy = max_vy;
-        }
-        else if (target.vy < -max_vy)
-        {
-            target_data_.vy = -max_vy;
-        }
-        else
-        {
-            target_data_.vy = target.vy;
-        }
-        // wz
-        if (target.wz > max_wz)
-        {
-            target_data_.wz = max_wz;
-        }
-        else if (target.wz < -max_wz)
-        {
-            target_data_.wz = -max_wz;
-        }
-        else
-        {
-            target_data_.wz = target.wz;
-        }
+        target_data_.vx = clampValue(target.vx, -max_vx, max_vx);
+        target_data_.vy = clampValue(target.vy, -max_vy, max_vy);
+        target_data_.wz = clampValue(target.wz, -max_wz, max_wz);
 
         return Result::kOk;
     }
