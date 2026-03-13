@@ -11,22 +11,22 @@ namespace jia
     {
     public:
         u8 period_ms = 1;           // 控制周期，单位：毫秒
-        f32 max_v_acc = 2.0f;       // 最大线加速度，单位：m/s^2
-        f32 max_w_acc_deg = 360.0f; // 最大角加速度，单位：deg/s^2
+        f32 max_acc = 2.0f;         // 最大线加速度，单位：m/s^2
+        f32 max_alpha_deg = 360.0f; // 最大角加速度，单位：deg/s^2
 
-        f32 max_set_vx = 1.0f;       // 最大设定目标x轴速度，单位：米/秒
-        f32 max_set_vy = 1.0f;       // 最大设定目标y轴速度，单位：米/秒
-        f32 max_set_wz_deg = 360.0f; // 最大设定目标z轴角速度，单位：deg/s
+        f32 max_set_vel_x = 1.0f;         // 最大设定目标x轴速度，单位：米/秒
+        f32 max_set_vel_y = 1.0f;         // 最大设定目标y轴速度，单位：米/秒
+        f32 max_set_omega_z_deg = 360.0f; // 最大设定目标z轴角速度，单位：deg/s
 
         f32 max_wheel_rpm = 100.0f; // 最大轮子转速，单位：rpm
-        u8 vx_radio = 30;           // x轴速度比例系数，单位：%
-        u8 vy_radio = 30;           // y轴速度比例系数，单位：%
-        u8 wz_radio = 40;           // z轴角速度比例系数，单位：%
+        u8 vel_x_radio = 30;        // x轴速度比例系数，单位：%
+        u8 vel_y_radio = 30;        // y轴速度比例系数，单位：%
+        u8 omega_z_radio = 40;      // z轴角速度比例系数，单位：%
 
         // 自动计算量
-        f32 max_vx = 0.0f; // 最大x轴速度，单位：米/秒
-        f32 max_vy = 0.0f; // 最大y轴速度，单位：米/秒
-        f32 max_wz = 0.0f; // 最大z轴角速度，单位：rad/s
+        f32 max_vel_x = 0.0f;   // 最大x轴速度，单位：米/秒
+        f32 max_vel_y = 0.0f;   // 最大y轴速度，单位：米/秒
+        f32 max_omega_z = 0.0f; // 最大z轴角速度，单位：rad/s
 
     public:
         struct init_config
@@ -46,19 +46,19 @@ namespace jia
 
         struct TargetBodySpeedModeData
         {
-            f32 vx;
-            f32 vy;
-            f32 wz;
+            f32 vel_x;
+            f32 vel_y;
+            f32 omega_z;
         };
 
         struct Data
         {
-            f32 vx;     // x轴速度（单位：米/秒）
-            f32 vy;     // y轴速度（单位：米/秒）
-            f32 wz;     // z轴角速度（单位：rad/s）
-            f32 w1_rpm; // 轮子1的转速（单位：rpm）
-            f32 w2_rpm; // 轮子2的转速（单位：rpm）
-            f32 w3_rpm; // 轮子3的转速（单位：rpm）
+            f32 vel_x;   // x轴速度（单位：米/秒）
+            f32 vel_y;   // y轴速度（单位：米/秒）
+            f32 omega_z; // z轴角速度（单位：rad/s）
+            f32 w1_rpm;  // 轮子1的转速（单位：rpm）
+            f32 w2_rpm;  // 轮子2的转速（单位：rpm）
+            f32 w3_rpm;  // 轮子3的转速（单位：rpm）
         };
 
         // 默认构造和析构函数
@@ -73,14 +73,15 @@ namespace jia
     private:
         struct wheel_config
         {
-            f32 x;         // （单位：米）
-            f32 y;         // （单位：米）
-            f32 theta_deg; // （单位：度）
-            f32 radius;    // （单位：米）
+            f32 pos_x;   // （单位：米）
+            f32 pos_y;   // （单位：米）
+            f32 yaw_deg; // （单位：度）
+            f32 radius;  // （单位：米）
             Motor_Base *motor_handle = nullptr;
-            f32 sin_theta;
-            f32 cos_theta;
+            f32 sin_yaw;
+            f32 cos_yaw;
             f32 equivalent_radius; // （单位：米）
+            f32 &eq_radius = equivalent_radius;
         };
 
         // 创建线程
