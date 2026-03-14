@@ -106,7 +106,7 @@ namespace jia
 
             TargetBodySpeedModeData target_data;
             target_data.vel_x = airjoy_data_.left_y * max_set_vel_x;
-            target_data.vel_y = airjoy_data_.left_x * max_set_vel_y;
+            target_data.vel_y = -airjoy_data_.left_x * max_set_vel_y;
             target_data.omega_z = airjoy_data_.right_x * max_set_omega_z_deg * kPi / 180.0f;
 
             this->setTargetBodySpeedMode(target_data);
@@ -159,6 +159,8 @@ namespace jia
                 break;
             }
             }
+
+            // debug_uart.printf_DMA("123");
 
             osDelay(1);
         }

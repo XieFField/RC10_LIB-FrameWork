@@ -108,9 +108,9 @@ namespace jia
 
         f32 wheel_radius = 0.075f;        // 轮子半径（单位：米）
         f32 max_wheel_omega_rpm = 100.0f; // 最大轮子转速，单位：rpm
-        f32 vel_x_radio = 0.3f;           // x轴速度比例系数
-        f32 vel_y_radio = 0.3f;           // y轴速度比例系数
-        f32 omega_z_radio = 0.4f;         // z轴角速度比例系数
+        f32 vel_x_radio = 0.4f;           // x轴速度比例系数
+        f32 vel_y_radio = 0.4f;           // y轴速度比例系数
+        f32 omega_z_radio = 0.2f;         // z轴角速度比例系数
 
         f32 &wr = wheel_radius;
 
