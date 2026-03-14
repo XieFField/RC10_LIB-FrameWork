@@ -52,6 +52,16 @@ namespace jia
     constexpr f32 omegaToVelF32(f32 omega, f32 radius);
     constexpr f32 velToOmegaF32(f32 vel, f32 radius);
 
+    /**
+     * @brief 生成正弦波信号（float类型输出）
+     * @param t 输入时间（单位：秒，float类型）
+     * @param amplitude 振幅（默认1.0f，输出范围[-amplitude, amplitude]）
+     * @param frequency 频率（默认1.0Hz，每秒振荡次数）
+     * @param phase 相位偏移（默认0.0f，单位：弧度）
+     * @return float 正弦波当前时刻的幅值
+     */
+    f32 sineWaveGeneratorF32(f32 time, f32 amplitude = 1.0f, f32 frequency = 1.0f, f32 phase = 0.0f);
+
     inline f32 sinDegF32(f32 deg)
     {
         f32 sinf_result = sinf(deg * (kPi / 180.0f));
@@ -130,6 +140,11 @@ namespace jia
     constexpr inline f32 velToOmegaF32(f32 vel, f32 radius)
     {
         return vel / radius;
+    }
+
+    inline f32 sineWaveGeneratorF32(f32 time, f32 amplitude, f32 frequency, f32 phase)
+    {
+        return amplitude * sinf(2.0f * kPi * frequency * time + phase);
     }
 
 } // namespace jia

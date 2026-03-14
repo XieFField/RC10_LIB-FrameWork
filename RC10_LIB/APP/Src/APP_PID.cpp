@@ -249,7 +249,7 @@ PID_Param_Config m3508_speed_pid_paramsForChassisMotor = {
     .kd = 0.0f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 0.0f,   
+    .output_limit = 15000.0f,  
     .deadband = 0.1f 
 };
 

@@ -125,7 +125,14 @@ namespace jia
         Data input_target_data; // 输入目标数据
 
         Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
-        RmPocketData_t airjoy_data;
+        RmPocketData_t airjoy_data_input;
+
+        private:
+        f32 wheel_speed_radio = 300.0f;
+        f32 wheel_speed_input;
+
+        f32 sine_amplitude = 100.0f;
+        f32 sine_frequency = 0.1f;
     };
 
 }

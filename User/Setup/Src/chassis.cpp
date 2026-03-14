@@ -4,6 +4,8 @@
 
 #include "cmsis_os2.h"
 
+#include "BSP_TimeStamp.h"
+
 #include "RC10_LIB/APP/Inc/APP_Utils.h"
 
 namespace jia
@@ -96,18 +98,34 @@ namespace jia
     void Chassis::runThread(void *arg)
     {
         static CrsfReceiver *receiver = CrsfReceiver::GetInstance(&huart7);
-        
 
         for (;;)
         {
-            receiver->getControlData(&airjoy_data);
+            receiver->getControlData(&airjoy_data_input);
 
             TargetBodySpeedModeData target_data;
-            target_data.vel_x = airjoy_data.left_y * max_set_vel_x;
-            target_data.vel_y = -airjoy_data.left_x * max_set_vel_y;
-            target_data.omega_z = airjoy_data.right_x * max_set_omega_z_deg * kPi / 180.0f;
-
+            target_data.vel_x = airjoy_data_input.left_y * max_set_vel_x;
+            target_data.vel_y = -airjoy_data_input.left_x * max_set_vel_y;
+            target_data.omega_z = airjoy_data_input.right_x * max_set_omega_z_deg * kPi / 180.0f;
             this->setTargetBodySpeedMode(target_data);
+
+            // 调试轮子
+            //
+            // wheel_speed_input = airjoy_data_input.left_x * wheel_speed_input_radio;
+            f32 wheel_speed_input = sineWaveGeneratorF32(TimeStamp::getInstance().getSeconds(), sine_amplitude, sine_frequency, 0.0f);
+            auto &wheel_handle = wheel_config_[0].motor_handle;
+            wheel_handle->setTargetRPMWithChassis(wheel_speed_input);
+
+            f32 pid_error = wheel_handle->speed_chassis_pid_.error_;
+            f32 pid_error_last = wheel_handle->speed_chassis_pid_.error_last_;
+            f32 pid_error_earlier_ = wheel_handle->speed_chassis_pid_.error_earlier_;
+            f32 pid_p = wheel_handle->speed_chassis_pid_.P_Term;
+            f32 pid_i = wheel_handle->speed_chassis_pid_.I_Term;
+            f32 pid_d = wheel_handle->speed_chassis_pid_.D_Term;
+            f32 pid_output = wheel_handle->speed_chassis_pid_.output_;
+
+            debug_uart.printf_DMA("%f,%f,%f,%f,%f,%f,%f\r\n", wheel_speed_input,pid_error,pid_p,pid_i,pid_d,pid_output,wheel_handle->getRPM());
+            //
 
             // 处理不同模式的逻辑
             switch (mode_)
@@ -145,9 +163,9 @@ namespace jia
                 p.w2_omega = ((p.vel_x * wheel_config_[1].c + p.vel_y * wheel_config_[1].s + p.omega_z * wheel_config_[1].eqr) / wr);
                 p.w3_omega = ((p.vel_x * wheel_config_[2].c + p.vel_y * wheel_config_[2].s + p.omega_z * wheel_config_[2].eqr) / wr);
                 // 发送指令到电机
-                wheel_config_[0].motor_handle->setTargetRPMWithChassis(RadsToRpmF32(p.w1_omega));
-                wheel_config_[1].motor_handle->setTargetRPMWithChassis(RadsToRpmF32(p.w2_omega));
-                wheel_config_[2].motor_handle->setTargetRPMWithChassis(RadsToRpmF32(p.w3_omega));
+                // wheel_config_[0].motor_handle->setTargetRPMWithChassis(RadsToRpmF32(p.w1_omega));
+                // wheel_config_[1].motor_handle->setTargetRPMWithChassis(RadsToRpmF32(p.w2_omega));
+                // wheel_config_[2].motor_handle->setTargetRPMWithChassis(RadsToRpmF32(p.w3_omega));
 
                 break;
             }

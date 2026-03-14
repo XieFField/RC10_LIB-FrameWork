@@ -200,7 +200,7 @@ public:
 
         float get_dt() const { return dt_; }
         
-private:
+public:
     void calc_track_D(float expect, float dt); //微分跟踪器
     bool isFirst_ = true; // 是否为第一次计算
 

@@ -242,7 +242,7 @@ public:
     void reset_GearRatio(float reset_value){GEAR_RATIO = reset_value;}
 
     float get_GearRatio() const override { return GEAR_RATIO; }
-private:
+public:
     
     ControlMode mode_ = CURRENT_CONTROL;
     float GEAR_RATIO = 19.2032f; // ¼õËÙ±È

@@ -343,7 +343,7 @@ void M3508::update()
 
         case SPEED_CHASSIS_CONTROL:
         {
-            target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
+            target_current_ = speed_chassis_pid_.pid_calc(target_rpm_, this->rpm_);
             break;
         }
 
