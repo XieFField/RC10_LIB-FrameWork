@@ -10,31 +10,6 @@ namespace jia
     class Chassis
     {
     public:
-        // 设定量
-        constexpr static float period = 0.001f; // 控制周期，单位：秒
-        f32 max_acc = 2.0f;                     // 最大线加速度，单位：m/s^2
-        f32 max_alpha_deg = 360.0f;             // 最大角加速度，单位：deg/s^2
-
-        f32 max_set_vel_x = 1.0f;         // 最大设定目标x轴速度，单位：米/秒
-        f32 max_set_vel_y = 1.0f;         // 最大设定目标y轴速度，单位：米/秒
-        f32 max_set_omega_z_deg = 360.0f; // 最大设定目标z轴角速度，单位：deg/s
-
-        f32 wheel_radius = 0.075f;        // 轮子半径（单位：米）
-        f32 max_wheel_omega_rpm = 100.0f; // 最大轮子转速，单位：rpm
-        f32 vel_x_radio = 0.3f;           // x轴速度比例系数
-        f32 vel_y_radio = 0.3f;           // y轴速度比例系数
-        f32 omega_z_radio = 0.4f;         // z轴角速度比例系数
-
-        f32 &wr = wheel_radius;
-
-        // 自动计算量
-        f32 max_vel_x = 0.0f;   // 最大x轴速度，单位：米/秒
-        f32 max_vel_y = 0.0f;   // 最大y轴速度，单位：米/秒
-        f32 max_omega_z = 0.0f; // 最大z轴角速度，单位：rad/s
-
-        f32 max_wheel_vel = 0.0f; // 最大轮子线速度，单位：米/秒
-
-    public:
         struct init_config
         {
             Motor_Base *motor_handle[3];
@@ -115,13 +90,40 @@ namespace jia
         Mode mode_ = Mode::kBodySpeedMode;
         // 目标数据
         Data target_data_;
-        // 目标数据2
-        Data target_data_2_;
         // 规划数据
         Data planned_data_;
         // 当前数据
         Data current_data_;
+
+    private:
+        // 设定量
+        constexpr static float period = 0.001f; // 控制周期，单位：秒
+        f32 max_acc = 2.0f;                     // 最大线加速度，单位：m/s^2
+        f32 max_alpha_deg = 360.0f;             // 最大角加速度，单位：deg/s^2
+
+        f32 max_set_vel_x = 1.0f;         // 最大设定目标x轴速度，单位：米/秒
+        f32 max_set_vel_y = 1.0f;         // 最大设定目标y轴速度，单位：米/秒
+        f32 max_set_omega_z_deg = 360.0f; // 最大设定目标z轴角速度，单位：deg/s
+
+        f32 wheel_radius = 0.075f;        // 轮子半径（单位：米）
+        f32 max_wheel_omega_rpm = 100.0f; // 最大轮子转速，单位：rpm
+        f32 vel_x_radio = 0.3f;           // x轴速度比例系数
+        f32 vel_y_radio = 0.3f;           // y轴速度比例系数
+        f32 omega_z_radio = 0.4f;         // z轴角速度比例系数
+
+        f32 &wr = wheel_radius;
+
+        // 自动计算量
+        f32 max_vel_x = 0.0f;   // 最大x轴速度，单位：米/秒
+        f32 max_vel_y = 0.0f;   // 最大y轴速度，单位：米/秒
+        f32 max_omega_z = 0.0f; // 最大z轴角速度，单位：rad/s
+
+        f32 max_wheel_vel = 0.0f; // 最大轮子线速度，单位：米/秒
+
+        // 输入目标数据
+        Data input_target_data;
     };
+
 }
 
 using jia::Chassis;

@@ -118,8 +118,8 @@ namespace jia
             {
                 // 逆运动学解算
                 // 引用别名
-                auto &t = target_data_;
-                auto &t2 = target_data_2_;
+                auto &t = input_target_data;
+                auto &t2 = target_data_;
                 auto &p = planned_data_;
                 // 计算底盘最大速度
                 t2.vel_x = clampValue(t.vel_x, -max_vel_x, max_vel_x);
@@ -169,9 +169,9 @@ namespace jia
         mode_ = Mode::kBodySpeedMode;
 
         // 对目标速度进行限幅
-        target_data_.vel_x = target.vel_x;
-        target_data_.vel_y = target.vel_y;
-        target_data_.omega_z = target.omega_z;
+        input_target_data.vel_x = target.vel_x;
+        input_target_data.vel_y = target.vel_y;
+        input_target_data.omega_z = target.omega_z;
 
         return Result::kOk;
     }
