@@ -263,3 +263,14 @@ PID_Param_Config lock_angle_pid_params = {
  .deadband = 0.05f 
 };
 
+
+PID_Param_Config path_lock_end = {
+    
+    .kp = -0.7f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 1.0f,   
+    .deadband = 0.0009f 
+};
