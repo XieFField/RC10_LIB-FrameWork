@@ -64,6 +64,15 @@ namespace MF_AutoCtrler
         int8_t exitMap = 26; // 固定出口
     } PathNode_S;            // 值为0就意味着没有这个节点
 
+
+    typedef struct //新一版的路径生成
+    {
+        int8_t entranceMap; //允许和MF1的MFroad重合
+        int8_t MFroad[2] = {0};
+        int8_t mustPastMap[12] = {0};// 最多12个必经点，0表示无效，只包含地图边角点和MF点以及出入口
+        const int8_t exitMap = 26; // 固定出口
+    }PathInformation_S;
+
     // 求解梅花桩所有前一通道结果
     RoadResult_S MFNum_ToRoadResult(int8_t MFNum);
     static bool IsWalkable(int8_t map);
@@ -72,13 +81,6 @@ namespace MF_AutoCtrler
     
     Vector2D MapNum_ToMatrixPos(int8_t MapNum);
     Vector2D MapCenterWorld_Vector2D(int8_t map);
-
-    // // 计算最优入口点
-    // int8_t BestEntrance_calc(Point2D robotPos,
-    //                          const RoadResult_S* B1,
-    //                          const RoadResult_S* B2,
-    //                          int8_t* outBestB1,
-    //                          int8_t* outBestB2);
     // 行列转地图编号
     int8_t CR_ToMap(int8_t c, int8_t r);
     // 地图编号转行列
@@ -92,6 +94,8 @@ namespace MF_AutoCtrler
 
     // 计算路径节点结果
     PathNode_S PathNodeResult_calc(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t EXIT = 26);
+
+    PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2);
 
     RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum); // 求解拾取KFS时候所处通道 最多两解
 

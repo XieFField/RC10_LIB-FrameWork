@@ -1,14 +1,14 @@
 /**
  * @file APP_Path.h
  * @author naoganlin
- * @brief 局部路径规划
- * 1.基于贝塞尔曲线和S型速度规划
- * 2.支持一阶和二阶贝塞尔曲线路径规划
- * 3.速度规划参数得给一定的初速度否则跑的时候不稳定
- * path类：
- * 两种用法：
- * 1.控制点给值设为1 （当然也可以设为0到1之间的数，但是会取控制点前后两点之间的十分位点作为贝塞尔曲线的起点和终点）
- * 2.全部点都设为0.5除了起点和终点，但是会取控制点前后两点之间的中点作为贝塞尔曲线的起点和终点（当然也可以取别的值效果同理，但是千万不能取大于0.5的值在此用法下）
+ * @brief ???·???滮
+ * 1.??????????????S?????滮
+ * 2.???????????????????·???滮
+ * 3.???滮????????????????????????????
+ * path??
+ * ?????÷???
+ * 1.??????????1 ?????????????0??1?????????????????????????????????λ???????????????????????
+ * 2.????????0.5??????????????????????????????????е???????????????????????????????????Ч?????????????????????0.5???????÷????
  * @version 3.0
  * @date 2025-12-14
  */
@@ -23,120 +23,120 @@
 extern "C"
 {
 }
-#include "APP_Bezier_Curve.h" // 包含贝塞尔曲线相关的头文件
-#include "APP_Speedplanner.h" // 包含速度规划器相关的头文件
+#include "APP_Bezier_Curve.h" // ??????????????????????
+#include "APP_Speedplanner.h" // ???????滮??????????
 #include "APP_tool.h"
 #include "APP_PID.h"
 /**
  * @class Path_Bezier
- * @brief 基于贝塞尔曲线的路径规划类
+ * @brief ??????????????·???滮??
  *
- * 该类实现了路径规划功能，包括路径点的计算、
- * 路径重置以及路径更新。
+ * ?????????·???滮?????????·????????
+ * ·?????????·???????
  */
 class Path_Bezier
 {
 public:
     /**
-     * @brief 默认构造函数
+     * @brief ????????
      */
     Path_Bezier();
 
     /**
-     * @brief 一阶贝塞尔曲线构造函数
-     * @param start_point 起点
-     * @param end_point 终点
-     * @param params 速度规划参数
+     * @brief ?????????????????
+     * @param start_point ???
+     * @param end_point ???
+     * @param params ???滮????
      */
     Path_Bezier(Vector2D start_point, Vector2D end_point, Speedplanner_1D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.00001f}) : bc_(start_point, end_point)
     {
         initial_setting(params);
-        end_point_ = end_point;    // 设置终点
-        point_last_ = start_point; // 设置上一个点为起点
-        point_last_ = start_point; // 设置上一个点为起点
+        end_point_ = end_point;    // ???????
+        point_last_ = start_point; // ???????????????
+        point_last_ = start_point; // ???????????????
     }
 
     /**
-     * @brief 二阶贝塞尔曲线构造函数
-     * @param start_point 起点
-     * @param control_point 控制点
-     * @param end_point 终点
-     * @param params 速度规划参数
+     * @brief ??????????????????
+     * @param start_point ???
+     * @param control_point ?????
+     * @param end_point ???
+     * @param params ???滮????
      */
     Path_Bezier(Vector2D start_point, Vector2D control_point, Vector2D end_point, Speedplanner_1D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.00001f}) : bc_(start_point, control_point, end_point)
     {
         initial_setting(params);
-        end_point_ = end_point;    // 设置终点
-        point_last_ = start_point; // 设置上一个点为起点
-        point_last_ = start_point; // 设置上一个点为起点
+        end_point_ = end_point;    // ???????
+        point_last_ = start_point; // ???????????????
+        point_last_ = start_point; // ???????????????
     }
 
     /**
-     * @brief 规划路径点
-     * @param point 当前点
-     * @return Vector2D 返回规划后的速度向量
+     * @brief ?滮·????
+     * @param point ?????
+     * @return Vector2D ????滮??????????
      */
     Vector2D plan(Vector2D point)
     {
-        bc_.Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距离
+        bc_.Get_Nearest_Distance(point, &t_); // ?????????????????
         distance_ = bc_.Get_Current_Len(t_);
-        v_resultant_ = sp_.plan(distance_); // 计算当前速度
-        m_phase = sp_.getPhase();           // 获取当前阶段
+        v_resultant_ = sp_.plan(distance_); // ????????
+        m_phase = sp_.getPhase();           // ?????????
 
-        v_tangent_ = (bc_.Get_Tangent_Vector(t_)).normalize(); // 计算切线向量
-        point_last_ = point;                                   // 更新上一个点
-        return (v_tangent_ * v_resultant_);                    // 返回速度向量
+        v_tangent_ = (bc_.Get_Tangent_Vector(t_)).normalize(); // ????????????
+        point_last_ = point;                                   // ???????????
+        return (v_tangent_ * v_resultant_);                    // ???????????
     }
 
     /**
-     * @brief 重置路径规划器
+     * @brief ????·???滮??
      */
     void reset(void)
     {
-        m_phase = S_ACCEL_JERK_UP_PHASE;     // 重置阶段为加速阶段
-        point_last_ = bc_.Get_Start_point(); // 重置上一个点为起点
-        distance_ = 0.0f;                    // 重置距离
-        t_ = 0.0f;                           // 重置参数 t
-        v_resultant_ = 0.0f;                 // 重置速度
+        m_phase = S_ACCEL_JERK_UP_PHASE;     // ?????????????
+        point_last_ = bc_.Get_Start_point(); // ???????????????
+        distance_ = 0.0f;                    // ???????
+        t_ = 0.0f;                           // ???ò??? t
+        v_resultant_ = 0.0f;                 // ???????
     }
 
     /**
-     * @brief 更新一阶贝塞尔曲线
-     * @param start_point 起点
-     * @param end_point 终点
+     * @brief ????????????????
+     * @param start_point ???
+     * @param end_point ???
      */
     void update(Vector2D start_point, Vector2D end_point, Speedplanner_1D_Param_Config params)
     {
         initial_setting(params);
-        end_point_ = end_point;                    // 设置终点
-        point_last_ = start_point;                 // 设置上一个点为起点
-        bc_.Bezier_Update(start_point, end_point); // 更新贝塞尔曲线
+        end_point_ = end_point;                    // ???????
+        point_last_ = start_point;                 // ???????????????
+        bc_.Bezier_Update(start_point, end_point); // ???±?????????
     }
 
     /**
-     * @brief 更新二阶贝塞尔曲线
-     * @param start_point 起点
-     * @param control_point 控制点
-     * @param end_point 终点
+     * @brief ????????????????
+     * @param start_point ???
+     * @param control_point ?????
+     * @param end_point ???
      */
     void update(Vector2D start_point, Vector2D control_point, Vector2D end_point, Speedplanner_1D_Param_Config params)
     {
         initial_setting(params);
-        end_point_ = end_point;                                   // 设置终点
-        point_last_ = start_point;                                // 设置上一个点为起点
-        bc_.Bezier_Update(start_point, control_point, end_point); // 更新贝塞尔曲线
+        end_point_ = end_point;                                   // ???????
+        point_last_ = start_point;                                // ???????????????
+        bc_.Bezier_Update(start_point, control_point, end_point); // ???±?????????
     }
 
     /**
-     * @brief 判断路径规划是否完成
-     * @return true 如果完成
-     * @return false 如果未完成
+     * @brief ?ж?·???滮??????
+     * @return true ??????
+     * @return false ???δ???
      */
     bool isFinished() { return m_phase == S_FINISHED_PHASE; }
 
     /**
-     * @brief 获取贝塞尔曲线对象
-     * @return BezierCurve& 返回贝塞尔曲线的引用
+     * @brief ????????????????
+     * @return BezierCurve& ??????????????????
      */
     BezierCurve &get_bezier_curve(void)
     {
@@ -146,21 +146,21 @@ public:
 private:
     void initial_setting(Speedplanner_1D_Param_Config params)
     {
-        m_phase = S_ACCEL_JERK_UP_PHASE;                         // 初始化阶段为加速阶段
-        params.initialSpeed = abs(params.initialSpeed) + 0.001f; // 设置初始速度
-        params.startPos = 0.0f;                                  // 设置起始位置
-        params.targetPos = bc_.Get_len();                        // 设置目标位置为曲线长度
-        sp_.param_reset(params);                                 // 重置速度规划参数
+        m_phase = S_ACCEL_JERK_UP_PHASE;                         // ???????????????
+        params.initialSpeed = abs(params.initialSpeed) + 0.001f; // ???ó?????
+        params.startPos = 0.0f;                                  // ???????λ??
+        params.targetPos = bc_.Get_len();                        // ???????λ??????????
+        sp_.param_reset(params);                                 // ???????滮????
     }
-    SPhase m_phase = S_FINISHED_PHASE;           // 当前规划所处的阶段
-    BezierCurve bc_;                             // 贝塞尔曲线对象
-    SShapedPlanner1D sp_;                        // 一维 S 型速度规划器
-    float t_ = 0.0f;                             // 贝塞尔曲线参数 t
-    float v_resultant_ = 0.0f;                   // 当前速度
-    float distance_ = 0.0001f;                   // 当前距离
-    Vector2D v_tangent_ = Vector2D(0.0f, 0.0f);  // 切线向量
-    Vector2D point_last_ = Vector2D(0.0f, 0.0f); // 上一个点
-    Vector2D end_point_ = Vector2D(0.0f, 0.0f);  // 终点
+    SPhase m_phase = S_FINISHED_PHASE;           // ????滮????????
+    BezierCurve bc_;                             // ?????????????
+    SShapedPlanner1D sp_;                        // ?? S ?????滮??
+    float t_ = 0.0f;                             // ????????????? t
+    float v_resultant_ = 0.0f;                   // ??????
+    float distance_ = 0.0001f;                   // ???????
+    Vector2D v_tangent_ = Vector2D(0.0f, 0.0f);  // ????????
+    Vector2D point_last_ = Vector2D(0.0f, 0.0f); // ???????
+    Vector2D end_point_ = Vector2D(0.0f, 0.0f);  // ???
 };
 
 typedef enum Generate_Curve_Status
@@ -170,56 +170,56 @@ typedef enum Generate_Curve_Status
     GENERATE_WAIT_LAST_CURVE_POINT
 } Generate_Curve_Status;
 
-#define MAX_CURVE_NUM 20 // 最大曲线数
-#define MAX_PATH_NUM 20  // 最大路径数
-// 路径（从静止启动到静止）
+#define MAX_CURVE_NUM 20 // ?????????
+#define MAX_PATH_NUM 20  // ???·????
+// ·???????????????????
 class Path
 {
 public:
     /**
-     * @brief 默认构造函数
+     * @brief ????????
      */
     Path();
     /**
-     * @brief 添加途径点
-     * @param point_ 途径点坐标
-     * @param smoothness_ 平滑度参数，范围[0, 0.5]
-     * @return true 如果添加成功
-     * @return false 如果添加失败
+     * @brief ?????????
+     * @param point_ ?????????
+     * @param smoothness_ ????????????Χ[0, 0.5]
+     * @return true ?????????
+     * @return false ??????????
      */
     bool Add_Point(Vector2D point_, float smoothness_); // smoothness_ 0~0.5
 
     /**
-     * @brief 添加起始点
-     * @param point_ 起始点坐标
-     * @param have_start_angle_ 是否有起始角度
-     * @param start_angle_ 起始角度值
-     * @return true 如果添加成功
-     * @return false 如果添加失败
+     * @brief ?????????
+     * @param point_ ?????????
+     * @param have_start_angle_ ???????????
+     * @param start_angle_ ???????
+     * @return true ?????????
+     * @return false ??????????
      */
     bool Add_Start_Point(Vector2D point_, bool have_start_angle_, float start_angle_, Speedplanner_1D_Param_Config params);
 
     /**
-     * @brief 添加结束点
-     * @param point_ 结束点坐标
-     * @param end_angle_ 结束角度值
-     * @return true 如果添加成功
-     * @return false 如果添加失败
+     * @brief ?????????
+     * @param point_ ??????????
+     * @param end_angle_ ????????
+     * @return true ?????????
+     * @return false ??????????
      */
     bool Add_End_Point(Vector2D point_, float end_angle_);
 
     /**
-     * @brief 获取路径误差和向量
-     * @param location_ 当前坐标
-     * @param yaw 当前航向角
-     * @param target_yaw 输出目标航向角
-     * @param normal_error 输出法向误差
-     * @param tangent_error 输出切向误差
-     * @param normal_vector 输出法向量
-     * @param tangent_vector 输出切向量
-     * @param max_vel 输出最大速度限制
-     * @return true 如果获取成功
-     * @return false 如果获取失败
+     * @brief ???·??????????
+     * @param location_ ???????
+     * @param yaw ????????
+     * @param target_yaw ?????????
+     * @param normal_error ??????????
+     * @param tangent_error ??????????
+     * @param normal_vector ?????????
+     * @param tangent_vector ?????????
+     * @param max_vel ?????????????
+     * @return true ?????????
+     * @return false ?????????
      */
     bool Get_Error_And_Vector(
         Vector2D location_,
@@ -232,43 +232,43 @@ public:
         float *max_vel);
 
     /**
-     * @brief 路径规划计算
-     * @param point 当前位置点
-     * @return Vector2D 返回期望的速度向量
+     * @brief ·???滮????
+     * @param point ???λ???
+     * @return Vector2D ?????????????????
      */
     Vector2D plan(Vector2D point);
 
     /**
-     * @brief 重置规划状态
+     * @brief ???ù滮??
      */
     void plan_reset();
     /**
-     * @brief 获取路径是否结束
-     * @return true 如果路径结束
-     * @return false 如果路径未结束
+     * @brief ???·????????
+     * @return true ???·??????
+     * @return false ???·??δ????
      */
     bool Is_End() { return is_end; }
 
     /**
-     * @brief 重置路径
+     * @brief ????·??
      */
     void Reset();
 
     /**
-     * @brief 获取当前阶段
-     * @return 当前阶段
+     * @brief ?????????
+     * @return ??????
      */
     SPhase getPhase() const { return m_phase; }
 
     /**
-     * @brief 判断规划是否已完成
-     * @return 如果规划已完成则返回 true，否则返回 false
+     * @brief ?ж?滮????????
+     * @return ????滮???????? true??????? false
      */
     bool isFinished() { return m_phase == S_FINISHED_PHASE; }
 
     /**
-     * @brief 获取当前贝塞尔曲线对象
-     * @return BezierCurve& 返回当前贝塞尔曲线的引用
+     * @brief ???????????????????
+     * @return BezierCurve& ?????????????????????
      */
     BezierCurve &get_bezier_curve(void)
     {
@@ -280,64 +280,64 @@ public:
     }
 
 protected:
-    BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // 储存各路段曲线
-    SShapedPlanner1D sp_;                         // 一维 S 型速度规划器
-    float total_len = 0;                          // 路线总长度
+    BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // ?????·??????
+    SShapedPlanner1D sp_;                         // ?? S ?????滮??
+    float total_len = 0;                          // ·???????
 
     int index_ = 0;
     float total_ = 0.0f;
     float distance_ = 0.0f;
-    float t_ = 0.0f;                             // 贝塞尔曲线参数 t
-    float v_resultant_ = 0.0f;                   // 当前速度
-    Vector2D v_tangent_ = Vector2D(0.0f, 0.0f);  // 切线向量
-    Vector2D point_last_ = Vector2D(0.0f, 0.0f); // 上一个点
+    float t_ = 0.0f;                             // ????????????? t
+    float v_resultant_ = 0.0f;                   // ??????
+    Vector2D v_tangent_ = Vector2D(0.0f, 0.0f);  // ????????
+    Vector2D point_last_ = Vector2D(0.0f, 0.0f); // ???????
     SPhase m_phase = S_FINISHED_PHASE;
     Speedplanner_1D_Param_Config params_;
-    uint8_t bezier_curve_num = 0; // 总曲线数量
+    uint8_t bezier_curve_num = 0; // ??????????
 
     /**
-     * @brief 计算各路段的结束速度
+     * @brief ?????·?ε???????
      */
     void Calc_End_Vel();
 
     /**
-     * @brief 生成各路段的曲线
-     * @param point_ 当前点坐标
-     * @param smoothness_ 平滑度参数
-     * @return true 如果生成成功
-     * @return false 如果生成失败
+     * @brief ?????·?ε?????
+     * @param point_ ?????????
+     * @param smoothness_ ????????
+     * @return true ?????????
+     * @return false ??????????
      */
     bool Generate_Curve(Vector2D point_, float smoothness_);
 
-    /*------------------------------路径参数-----------------------------------*/
-    bool have_start_angle = 0; // 是否要求达到起始角度后再启动
-    float start_angle = 0;     // 起始角度
-    float end_angle = 0;       // 结束角度
+    /*------------------------------·??????-----------------------------------*/
+    bool have_start_angle = 0; // ????????????????????
+    float start_angle = 0;     // ??????
+    float end_angle = 0;       // ???????
 
-    /*------------------------------过程变量-----------------------------------*/
-    float currnet_target_angle = 0; // 当前目标角度
+    /*------------------------------???????-----------------------------------*/
+    float currnet_target_angle = 0; // ????????
 
-    uint8_t current_bezier_curve_dx = 0; // 当前路段对应曲线的索引
+    uint8_t current_bezier_curve_dx = 0; // ???·?ζ???????????
 
-    float current_t = 0; // 当前坐标对应当前路段的t值
+    float current_t = 0; // ????????????·?ε?t?
 
-    float current_finished_len = 0; // 已完成的曲线的总长度
+    float current_finished_len = 0; // ????????????????
 
-    float current_curve_len = 0; // 当前曲线走过的长度
+    float current_curve_len = 0; // ???????????????
 
 private:
-    /*---------------------------------状态-------------------------------------*/
-    bool is_end = false;   // 是否开始
-    bool is_start = false; // 是否结束
+    /*---------------------------------??-------------------------------------*/
+    bool is_end = false;   // ????
+    bool is_start = false; // ??????
 
-    bool is_init = false; // 是否初始化
+    bool is_init = false; // ???????
 
-    /*----------------------------生成路径的临时变量-------------------------------------*/
-    Generate_Curve_Status generate_status = GENERATE_WAIT_FIRST_POINT; // 生成曲线的状态
+    /*----------------------------????·???????????-------------------------------------*/
+    Generate_Curve_Status generate_status = GENERATE_WAIT_FIRST_POINT; // ???????????
 
-    Vector2D point_list[3]; // 生成曲线时临时存放点坐标
+    Vector2D point_list[3]; // ????????????????????
 
-    float last_smoothness; // 生成曲线时临时存放上一个点的平滑程度
+    float last_smoothness; // ?????????????????????????????
 };
 
 //class Path_line
@@ -361,7 +361,7 @@ private:
 
 //    bool Add_Start_Point(Vector2D point_, Speedplanner_1D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.00001f})
 //    {
-//        params.initialSpeed = abs(params.initialSpeed) + 0.001f; // 设置初始速度
+//        params.initialSpeed = abs(params.initialSpeed) + 0.001f; // ???ó?????
 //        params_ = params;
 //        if (is_init == true)
 //            return false;
@@ -380,16 +380,16 @@ private:
 //        bezier_curve_num++;
 //        index_ = 0;
 //        params_.targetPos = (bezier_curve_list[index_].Get_len() - params_.startPos);
-//        params_.startPos = 0.0f; // 设置起始位置
+//        params_.startPos = 0.0f; // ???????λ??
 //        sp_.param_reset(params_);
-//        m_phase = S_ACCEL_JERK_UP_PHASE; // 初始化阶段为加速阶段
+//        m_phase = S_ACCEL_JERK_UP_PHASE; // ???????????????
 //        return true;
 //    }
 
 //    /**
-//     * @brief 路径规划计算
-//     * @param point 当前位置点
-//     * @return Vector2D 返回期望的速度向量
+//     * @brief ·???滮????
+//     * @param point ???λ???
+//     * @return Vector2D ?????????????????
 //     */
 //    Vector2D plan(Vector2D point)
 //    {
@@ -399,30 +399,30 @@ private:
 //        }
 //        if (Is_End() == true)
 //        {
-//            bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距离
+//            bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // ?????????????????
 //            distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
 
-//            v_resultant_ = sp_.plan(distance_); // 速度规划器计算当前目标速度
-//            m_phase = sp_.getPhase();           // 获取当前速度规划阶段
+//            v_resultant_ = sp_.plan(distance_); // ???滮?????????????
+//            m_phase = sp_.getPhase();           // ?????????滮???
 
-//            v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
+//            v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // ????????????????λ??????
 
-//            // 如果当前曲线段走完（t接近1）或者规划完成
+//            // ???????????????t???1??????滮???
 //            if (t_ >= 0.9880f || m_phase == S_FINISHED_PHASE)
 //            {
-//                index_++; // 切换到下一段曲线
+//                index_++; // ?л????????????
 //                t_ = 0.0f;
 //                if (index_ >= bezier_curve_num)
 //                {
-//                    is_end = false; // 结束运行
+//                    is_end = false; // ????????
 //                    m_phase = S_FINISHED_PHASE;
 //                }
-//                params_.startPos = 0.0f; // 设置起始位置
+//                params_.startPos = 0.0f; // ???????λ??
 //                params_.targetPos = (bezier_curve_list[index_].Get_len() - params_.startPos);
 //                sp_.param_reset(params_);
 //            }
 
-//            return (v_tangent_ * v_resultant_); // 返回 速度向量 = 切向方向 * 目标速率
+//            return (v_tangent_ * v_resultant_); // ???? ??????? = ?????? * ???????
 //        }
 //        else
 //        {
@@ -431,64 +431,64 @@ private:
 //    }
 
 //    /**
-//     * @brief 重置规划状态
+//     * @brief ???ù滮??
 //     */
 //    void plan_reset()
 //    {
-//        is_init = false; // 重置初始化标志
+//        is_init = false; // ???ó???????
 
-//        bezier_curve_num = 0; // 重置曲线数量
+//        bezier_curve_num = 0; // ????????????
 
-//        generate_status = GENERATE_WAIT_FIRST_POINT; // 重置生成状态
+//        generate_status = GENERATE_WAIT_FIRST_POINT; // ??????????
 
-//        currnet_target_angle = 0; // 重置当前目标角度
+//        currnet_target_angle = 0; // ???????????
 
-//        current_bezier_curve_dx = 0; // 重置当前曲线索引
-//        current_t = 0;               // 重置当前曲线参数 t
+//        current_bezier_curve_dx = 0; // ??????????????
+//        current_t = 0;               // ????????????? t
 
-//        current_finished_len = 0; // 重置已完成的曲线长度
-//        current_curve_len = 0;    // 重置当前曲线的长度
+//        current_finished_len = 0; // ?????????????????
+//        current_curve_len = 0;    // ??????????????
 
-//        is_end = false;   // 重置路径结束标志
-//        is_start = false; // 重置路径开始标志
+//        is_end = false;   // ????·?????????
+//        is_start = false; // ????·????????
 //    }
 
 //    /**
-//     * @brief 获取路径是否结束
-//     * @return true 如果路径结束
-//     * @return false 如果路径未结束
+//     * @brief ???·????????
+//     * @return true ???·??????
+//     * @return false ???·??δ????
 //     */
 //    bool Is_End() { return is_end; }
 
 //    /**
-//     * @brief 重置路径
+//     * @brief ????·??
 //     */
 //    void Reset()
 //    {
 //        index_ = 0;
-//        point_last_ = bezier_curve_list[index_].Get_Start_point(); // 重置上一个点为起点
+//        point_last_ = bezier_curve_list[index_].Get_Start_point(); // ???????????????
 //        m_phase = S_ACCEL_JERK_UP_PHASE;
-//        distance_ = 0.0f;    // 重置距离
-//        t_ = 0.0f;           // 重置参数 t
-//        v_resultant_ = 0.0f; // 重置速度
+//        distance_ = 0.0f;    // ???????
+//        t_ = 0.0f;           // ???ò??? t
+//        v_resultant_ = 0.0f; // ???????
 //        is_end = true;
 //    }
 
 //    /**
-//     * @brief 获取当前阶段
-//     * @return 当前阶段
+//     * @brief ?????????
+//     * @return ??????
 //     */
 //    SPhase getPhase() const { return m_phase; }
 
 //    /**
-//     * @brief 判断规划是否已完成
-//     * @return 如果规划已完成则返回 true，否则返回 false
+//     * @brief ?ж?滮????????
+//     * @return ????滮???????? true??????? false
 //     */
 //    bool isFinished() { return m_phase == S_FINISHED_PHASE; }
 
 //    /**
-//     * @brief 获取当前贝塞尔曲线对象
-//     * @return BezierCurve& 返回当前贝塞尔曲线的引用
+//     * @brief ???????????????????
+//     * @return BezierCurve& ?????????????????????
 //     */
 //    BezierCurve &get_bezier_curve(void)
 //    {
@@ -502,38 +502,38 @@ private:
 //    int index_ = 0;
 
 //protected:
-//    BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // 储存各路段曲线
-//    SShapedPlanner1D sp_;                         // 一维 S 型速度规划器
+//    BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // ?????·??????
+//    SShapedPlanner1D sp_;                         // ?? S ?????滮??
 
 //    float distance_ = 0.0f;
-//    float t_ = 0.0f;                             // 贝塞尔曲线参数 t
-//    float v_resultant_ = 0.0f;                   // 当前速度
-//    Vector2D v_tangent_ = Vector2D(0.0f, 0.0f);  // 切线向量
-//    Vector2D point_last_ = Vector2D(0.0f, 0.0f); // 上一个点
+//    float t_ = 0.0f;                             // ????????????? t
+//    float v_resultant_ = 0.0f;                   // ??????
+//    Vector2D v_tangent_ = Vector2D(0.0f, 0.0f);  // ????????
+//    Vector2D point_last_ = Vector2D(0.0f, 0.0f); // ???????
 //    SPhase m_phase = S_FINISHED_PHASE;
 //    Speedplanner_1D_Param_Config params_;
-//    uint8_t bezier_curve_num = 0; // 总曲线数量
+//    uint8_t bezier_curve_num = 0; // ??????????
 
-//    /*------------------------------过程变量-----------------------------------*/
-//    float currnet_target_angle = 0; // 当前目标角度
+//    /*------------------------------???????-----------------------------------*/
+//    float currnet_target_angle = 0; // ????????
 
-//    uint8_t current_bezier_curve_dx = 0; // 当前路段对应曲线的索引
+//    uint8_t current_bezier_curve_dx = 0; // ???·?ζ???????????
 
-//    float current_t = 0; // 当前坐标对应当前路段的t值
+//    float current_t = 0; // ????????????·?ε?t?
 
-//    float current_finished_len = 0; // 已完成的曲线的总长度
+//    float current_finished_len = 0; // ????????????????
 
-//    float current_curve_len = 0; // 当前曲线走过的长度
+//    float current_curve_len = 0; // ???????????????
 
 //private:
-//    /*---------------------------------状态-------------------------------------*/
-//    bool is_end = false;   // 是否开始
-//    bool is_start = false; // 是否结束
+//    /*---------------------------------??-------------------------------------*/
+//    bool is_end = false;   // ????
+//    bool is_start = false; // ??????
 
-//    bool is_init = false; // 是否初始化
+//    bool is_init = false; // ???????
 
-//    /*----------------------------生成路径的临时变量-------------------------------------*/
-//    Generate_Curve_Status generate_status = GENERATE_WAIT_FIRST_POINT; // 生成曲线的状态
+//    /*----------------------------????·???????????-------------------------------------*/
+//    Generate_Curve_Status generate_status = GENERATE_WAIT_FIRST_POINT; // ???????????
 //};
 
 
@@ -545,7 +545,7 @@ public:
         bezier_curve_num = 0;
         is_init = false;
         
-        //pid_lock_point.set_params(path_lock_end,0);
+        pid_lock_point.set_params(path_lock_end,0);
     }
     bool Add_Point(Vector2D point_)
     {
@@ -559,7 +559,7 @@ public:
 
     bool Add_Start_Point(Vector2D point_, Speedplanner_1D_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.00001f})
     {
-        params.initialSpeed = abs(params.initialSpeed) + 0.001f; // 设置初始速度
+        params.initialSpeed = abs(params.initialSpeed) + 0.001f; // ???ó?????
         params_ = params;
         if (is_init == true)
             return false;
@@ -578,16 +578,16 @@ public:
         bezier_curve_num++;
         index_ = 0;
         params_.targetPos = (bezier_curve_list[index_].Get_len() - params_.startPos);
-        params_.startPos = 0.0f; // 设置起始位置
+        params_.startPos = 0.0f; // ???????λ??
         sp_.param_reset(params_);
-        m_phase = ACCEL_PHASE; // 初始化阶段为加速阶段
+        m_phase = ACCEL_PHASE; // ???????????????
         return true;
     }
 
     /**
-     * @brief 路径规划计算
-     * @param point 当前位置点
-     * @return Vector2D 返回期望的速度向量
+     * @brief ·???滮????
+     * @param point ???λ???
+     * @return Vector2D ?????????????????
      */
     Vector2D plan(Vector2D point)
     {
@@ -597,52 +597,51 @@ public:
         }
         if (Is_End() == true)
         {
-            bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距离
-            distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
-    
-            v_resultant_ = sp_.plan(distance_); // 速度规划器计算当前目标速度
-            m_phase = sp_.getPhase();           // 获取当前速度规划阶段
-    
-            v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
+//            bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // ?????????????????
+//            distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
+//    
+//            v_resultant_ = sp_.plan(distance_); // ???滮?????????????
+//            m_phase = sp_.getPhase();           // ?????????滮???
+//    
+//            v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // ????????????????λ??????
             
             
              err_end=_tool_Abs((point-bezier_curve_list[index_].Get_End_point()).magnitude());
-            
-//            if(err_end>pid_dead)
-//            {
-//                pid_end_flag=0;
-//                bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距离
-//                distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
-//    
-//                v_resultant_ = sp_.plan(distance_); // 速度规划器计算当前目标速度
-//                m_phase = sp_.getPhase();           // 获取当前速度规划阶段
-//    
-//                v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
-//            }
-//            else
-//            {
-//                pid_end_flag=1;
-//                v_resultant_ = pid_lock_point.pid_calc(0, err_end);
-//                v_tangent_ = (bezier_curve_list[index_].Get_End_point()-point).normalize(); // 计算切线向量（单位向量）
-//            }
+            if(err_end>pid_dead)
+            {
+                pid_end_flag=0;
+                bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // ?????????????????
+                distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
+    
+                v_resultant_ = sp_.plan(distance_); // ???滮?????????????
+                m_phase = sp_.getPhase();           // ?????????滮???
+    
+                v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // ????????????????λ??????
+            }
+            else
+            {
+                pid_end_flag=1;
+                v_resultant_ = pid_lock_point.pid_calc(0, err_end);
+                v_tangent_ = (bezier_curve_list[index_].Get_End_point()-point).normalize(); // ????????????????λ??????
+            }
             
 
-            // 如果当前曲线段走完（t接近1）或者规划完成
-            if (_tool_Abs(err_end) <= 0.02f || m_phase == FINISHED_PHASE)
+            // ???????????????t???1??????滮???
+            if (_tool_Abs(err_end) <= 0.02f )//|| m_phase == FINISHED_PHASE)
             {
-                index_++; // 切换到下一段曲线
+                index_++; // ?л????????????
                 t_ = 0.0f;
                 if (index_ >= bezier_curve_num)
                 {
-                    is_end = false; // 结束运行
+                    is_end = false; // ????????
                     m_phase = FINISHED_PHASE;
                 }
-                params_.startPos = 0.0f; // 设置起始位置
+                params_.startPos = 0.0f; // ???????λ??
                 params_.targetPos = (bezier_curve_list[index_].Get_len() - params_.startPos);
                 sp_.param_reset(params_);
             }
             v_output_ = (v_tangent_ * v_resultant_);
-            return v_output_; // 返回 速度向量 = 切向方向 * 目标速率
+            return v_output_; // ???? ??????? = ?????? * ???????
         }
         else
         {
@@ -651,53 +650,53 @@ public:
     }
 
     /**
-     * @brief 重置规划状态
+     * @brief ???ù滮??
      */
     void plan_reset()
     {
-        is_init = false; // 重置初始化标志
+        is_init = false; // ???ó???????
 
-        bezier_curve_num = 0; // 重置曲线数量
+        bezier_curve_num = 0; // ????????????
 
-        is_end = false;   // 重置路径结束标志
+        is_end = false;   // ????·?????????
     }
 
     /**
-     * @brief 获取路径是否结束
-     * @return true 如果路径结束
-     * @return false 如果路径未结束
+     * @brief ???·????????
+     * @return true ???·??????
+     * @return false ???·??δ????
      */
     bool Is_End() { return is_end; }
 
     /**
-     * @brief 重置路径
+     * @brief ????·??
      */
     void Reset()
     {
         index_ = 0;
-        point_last_ = bezier_curve_list[index_].Get_Start_point(); // 重置上一个点为起点
+        point_last_ = bezier_curve_list[index_].Get_Start_point(); // ???????????????
         m_phase = ACCEL_PHASE;
-        distance_ = 0.0f;    // 重置距离
-        t_ = 0.0f;           // 重置参数 t
-        v_resultant_ = 0.0f; // 重置速度
+        distance_ = 0.0f;    // ???????
+        t_ = 0.0f;           // ???ò??? t
+        v_resultant_ = 0.0f; // ???????
         is_end = false;
     }
 
     /**
-     * @brief 获取当前阶段
-     * @return 当前阶段
+     * @brief ?????????
+     * @return ??????
      */
     Phase getPhase() const { return m_phase; }
 
     /**
-     * @brief 判断规划是否已完成
-     * @return 如果规划已完成则返回 true，否则返回 false
+     * @brief ?ж?滮????????
+     * @return ????滮???????? true??????? false
      */
     bool isFinished() { return m_phase == S_FINISHED_PHASE; }
 
     /**
-     * @brief 获取当前贝塞尔曲线对象
-     * @return BezierCurve& 返回当前贝塞尔曲线的引用
+     * @brief ???????????????????
+     * @return BezierCurve& ?????????????????????
      */
     BezierCurve &get_bezier_curve(void)
     {
@@ -707,33 +706,33 @@ public:
         }
         return bezier_curve_list[index_];
     }
-    //int get_pid_end_flag()  { return pid_end_flag; }
+    int get_pid_end_flag()  { return pid_end_flag; }
 
     int index_ = 0;
 
 protected:
-    BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // 储存各路段曲线
-    TrapePlanner1D sp_;                         // 一维 S 型速度规划器
+    BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // ?????·??????
+    TrapePlanner1D sp_;                         // ?? S ?????滮??
     float pid_dead=0.15f;
     float distance_ = 0.0f;
-    float t_ = 0.0f;                             // 贝塞尔曲线参数 t
-    float v_resultant_ = 0.0f;                   // 当前速度
-    Vector2D v_tangent_ = Vector2D(0.0f, 0.0f);  // 切线向量
-    Vector2D point_last_ = Vector2D(0.0f, 0.0f); // 上一个点
+    float t_ = 0.0f;                             // ????????????? t
+    float v_resultant_ = 0.0f;                   // ??????
+    Vector2D v_tangent_ = Vector2D(0.0f, 0.0f);  // ????????
+    Vector2D point_last_ = Vector2D(0.0f, 0.0f); // ???????
     Vector2D v_output_= Vector2D(0.0f, 0.0f);
     Phase m_phase = FINISHED_PHASE;
     Speedplanner_1D_Param_Config params_;
-    uint8_t bezier_curve_num = 0; // 总曲线数量
-    //int pid_end_flag=1;
+    uint8_t bezier_curve_num = 0; // ??????????
+    int pid_end_flag=1;
 
 private:
-    /*---------------------------------状态-------------------------------------*/
+    /*---------------------------------??-------------------------------------*/
      float err_end = 0.0f; 
-    //PID_Position pid_lock_point;
+    PID_Position pid_lock_point;
 
-    bool is_end = false;   // 是否开始
+    bool is_end = false;   // ????
 
-    bool is_init = false; // 是否初始化
+    bool is_init = false; // ???????
 };
 #endif
 

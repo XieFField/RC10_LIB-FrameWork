@@ -405,7 +405,7 @@ private:
     bool state_extStillness(int targetKFS);
     bool state_launchStillness(int targetKFS);
     bool state_backStillness(int targetKFS);
-    bool state_doneStillness(int targetKFS);
+    // bool state_doneStillness(int targetKFS);
 
     //=======================
     /**
