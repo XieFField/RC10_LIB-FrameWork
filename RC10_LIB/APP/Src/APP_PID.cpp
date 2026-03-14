@@ -254,12 +254,12 @@ PID_Param_Config track_pid_params = {
 };
 
 PID_Param_Config lock_angle_pid_params = {
- .kp = 0.175f,
+ .kp = 0.075f,
  .ki = 0.0f,
  .kd = 0.010f,
  .I_Outlimit = 0.0f, 
  .isIOutlimit = true, 
- .output_limit = 0.1f, 
- .deadband = 0.2f 
+ .output_limit = 3.0f, 
+ .deadband = 0.05f 
 };
 

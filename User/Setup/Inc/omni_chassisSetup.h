@@ -94,6 +94,25 @@ public:
             this->is_chassis_reverse_ = -1.0f;
     }
 
+    /**
+     * @brief ÉèÖÃÂ·¾¶×Ô¶¯¿ªÊ¼±êÖ¾
+     * @param start 1±íÊ¾¿ªÊ¼£¬0±íÊ¾Í£Ö¹
+     * @param path_flagIndex Â·¾¶±êÖ¾Ë÷Òý£¬0»ò1
+     */
+    void setPathAutoStart(uint8_t start)
+    {
+        if(start == 1)
+            flag = 1;
+        else
+            flag = 0;
+        
+        if(start == 0)
+        {
+            flag_run = 0;
+        }
+    }
+
+
     void setTargetKFS(int targetKFS)
     {
         KFS = targetKFS;
@@ -114,23 +133,23 @@ private:
 
     int flag = 0;
     int flag_run = 0;
-    int flag_1=0;
-    int path_flag=0;
 
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
     
     float yaw=0.0f;
     float target_yaw_ = 0.0f;
+    //float Acc_target_yaw_ = 0.0f;
 
+    //ConstantAcc Acc_yaw_{0.1f,0.0f}; // ×¢Òâ´úÂëÔËÐÐÏµÍ³µÄÖÜÆÚ
     //Path path_;
     Path_line path_line_;
     //Path_line path_line1_;
     
-    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 20.0f, .maxJerk = 100.0f, .maxSpeed = 2.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
-    Speedplanner_1D_Param_Config path_param_1={.maxAcc = 30.0f, .maxDec = 10.0f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+    Speedplanner_1D_Param_Config path_param_1={.maxAcc = 4.0f, .maxDec = 4.0f, .maxJerk = 0.0f, .maxSpeed = 0.5f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
  
-    Vector2D original_point_={-0.48f,-0.48f};
-    Vector2D Clamping_Bar_Selection_pos_ = {1.935f, 0.19f};
+    Vector2D original_point_={-0.48f,-0.50f};
+    Vector2D Clamping_Bar_Selection_pos_ = {1.915f, 0.205f};
     
     Point3D ladar_data_;
     Vector2D robot_pos_ = {0.0f, 0.0f};
@@ -177,7 +196,7 @@ private:
      * @param path_ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¶ï¿½ï¿½ï¿½
      * @param tNearest ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½tÖµ
      * @param tLookahead ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½Óµï¿½ï¿½tÖµ
-     * @return Vector2D Ç°ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     * @return Vector2D Ç°ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
      */
     Vector2D FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead);
 
@@ -185,9 +204,9 @@ private:
      * @brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
      * @param path_ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¶ï¿½ï¿½ï¿½
      * @param robotPos ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½Ç°Î»ï¿½ï¿½
-     * @param nearestPt ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     * @param nearestPt ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
      * @param tLookahead Ç°ï¿½Óµï¿½ï¿½tÖµ
-     * @return float ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ (ï¿½ï¿½ï¿½ï¿½ï¿½Å£ï¿½ï¿½ï¿½Ê¾Æ«ï¿½ï¿½ï¿½Æ«ï¿½ï¿½)
+     * @return float ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö? (ï¿½ï¿½ï¿½ï¿½ï¿½Å£ï¿½ï¿½ï¿½Ê¾Æ«ï¿½ï¿½ï¿½Æ?¿½ï¿?)
      */
     float CalculateLateralError(BezierCurve &path_, const Vector2D &robotPos, const Vector2D &nearestPt, float tLookahead);
     
@@ -201,7 +220,7 @@ private:
     float tNearest = 0.0f;                // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÏµÄ²ï¿½ï¿½ï¿½t (0~1)
     float tLookahead = 0.0f;              // Ç°ï¿½Óµï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÏµÄ²ï¿½ï¿½ï¿½t (0~1)
     float m_lookaheadDist = 0.4f;         // Ç°ï¿½Ó¾ï¿½ï¿½ï¿½ (ï¿½ï¿½Î»: ï¿½ï¿½)
-    float lateralError = 0.0f;            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ«ï¿½ï¿½Â·ï¿½ï¿½ï¿½Ä¾ï¿½ï¿½ï¿½)
+    float lateralError = 0.0f;            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿? (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ«ï¿½ï¿½Â·ï¿½ï¿½ï¿½Ä¾ï¿½ï¿½ï¿½)
     float correctspeed = 0.0f;            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äºï¿½ï¿½ï¿½ï¿½Æ«ï¿½Ù¶È´ï¿½Ð¡
     Vector2D nearestPt;                   // Â·ï¿½ï¿½ï¿½Ï¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½
     Vector2D lookaheadPt;                 // Â·ï¿½ï¿½ï¿½Ïµï¿½Ç°ï¿½Óµï¿½
@@ -214,7 +233,7 @@ private:
     PID_Position pid_vision_x;
     PID_Position pid_vision_y;
     PID_Position pid_vision_yaw;
-    Point3D vision_data_ = {0.0f, 0.0f, 0.0f}; // ï¿½ï¿½ï¿½Ú½ï¿½ï¿½Õµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    Point3D vision_data_ = {0.0f, 0.0f, 0.0f}; // ï¿½ï¿½ï¿½Ú½ï¿½ï¿½Õµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
 
 public:
     void UpdateVisionData(Point3D data) { vision_data_ = data; } // ï¿½ï¿½ï¿½ï¿½ï¿½Ú»Øµï¿½ï¿½ï¿½ï¿½ï¿½

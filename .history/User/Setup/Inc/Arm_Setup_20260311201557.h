@@ -144,9 +144,9 @@ typedef struct{
     ARM_AUTO_E now_state = STATE_DONE;
     bool start_to_autoctrl = false;
 
-    Point2D now_armPosition = {0.0f, 0.0f, 0.0f}; //机械臂当前位置
+    Point2D now_armPosition = {5.0f, 8.60f, 0.0f}; //机械臂当前位置
 
-    Point2D now_ChassisPosition = {0.0f, 0.0f, 0.0f}; //底盘当前位置
+    Point2D now_ChassisPosition = {5.0f, 8.60f, 0.0f}; //底盘当前位置
 
     Point2D now_chassis_speed = {0.0f, 0.0f, 0.0f}; //当前底盘速度，单位米每秒
 
@@ -204,6 +204,7 @@ typedef struct{
 
         bool gimbal_ok =false;
         const float safe_height = 0.14f; //安全高度，单位米  待定
+        bool isrecalcPath = false; //是否重新计算路径
     }flag;
 
     struct{
@@ -295,8 +296,8 @@ public:
         else
             auto_ctrl_.kfs_num = ONLY_ONE;
 
-        auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0])];
-        auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[1])];
+        auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0])-1];
+        auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[1])-1];
         
         MF_AutoCtrler::get_MoveDiretion(auto_ctrl_.now_armPosition,
                                         auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1],
@@ -323,9 +324,9 @@ public:
 
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
-        auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
-
-        auto_ctrl_.now_ChassisPosition.y -= 2.0f; //假设已经到达前一桩正前方0.5米处
+        //auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
+        auto_ctrl_.now_ChassisPosition.y = 8.60f;
+        auto_ctrl_.now_ChassisPosition.x = 5.0f; //假设已经到达前一桩正前方0.5米处
 #endif
         return true;
     }
@@ -497,7 +498,7 @@ protected:
 
         Point2D speed = {0.0f, 0.0f, 0.0f};
         if(arm_ctrlStatus.auto_start == 1)
-           speed = {0.0f, 0.9f, 0.0f};
+           speed = {-0.6f, 0.0f, 0.0f};
 
         else
              speed = {0.0f, 0.0f, 0.0f};
@@ -692,4 +693,3 @@ extern Arm_InitData_S arm_initData;
 
 
 #endif // __ARM_SETUP_H
-
