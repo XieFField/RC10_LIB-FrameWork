@@ -4,8 +4,6 @@
 
 #include "cmsis_os2.h"
 
-#include "Module_CrsfReceiver.h"
-
 #include "RC10_LIB/APP/Inc/APP_Utils.h"
 
 namespace jia
@@ -98,16 +96,16 @@ namespace jia
     void Chassis::runThread(void *arg)
     {
         static CrsfReceiver *receiver = CrsfReceiver::GetInstance(&huart7);
-        static RmPocketData_t airjoy_data_;
+        
 
         for (;;)
         {
-            receiver->getControlData(&airjoy_data_);
+            receiver->getControlData(&airjoy_data);
 
             TargetBodySpeedModeData target_data;
-            target_data.vel_x = airjoy_data_.left_y * max_set_vel_x;
-            target_data.vel_y = -airjoy_data_.left_x * max_set_vel_y;
-            target_data.omega_z = airjoy_data_.right_x * max_set_omega_z_deg * kPi / 180.0f;
+            target_data.vel_x = airjoy_data.left_y * max_set_vel_x;
+            target_data.vel_y = -airjoy_data.left_x * max_set_vel_y;
+            target_data.omega_z = airjoy_data.right_x * max_set_omega_z_deg * kPi / 180.0f;
 
             this->setTargetBodySpeedMode(target_data);
 

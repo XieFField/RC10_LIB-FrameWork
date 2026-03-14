@@ -4,6 +4,7 @@
 #include "RC10_LIB/APP/Inc/APP_Utils.h"
 
 #include "Motor_DJI.h"
+#include "Module_CrsfReceiver.h"
 #include "APP_debugTool.h"
 
 namespace jia
@@ -114,8 +115,6 @@ namespace jia
 
         f32 &wr = wheel_radius;
 
-        Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
-
         // 自动计算量
         f32 max_vel_x = 0.0f;   // 最大x轴速度，单位：米/秒
         f32 max_vel_y = 0.0f;   // 最大y轴速度，单位：米/秒
@@ -123,8 +122,10 @@ namespace jia
 
         f32 max_wheel_vel = 0.0f; // 最大轮子线速度，单位：米/秒
 
-        // 输入目标数据
-        Data input_target_data;
+        Data input_target_data; // 输入目标数据
+
+        Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
+        RmPocketData_t airjoy_data;
     };
 
 }
