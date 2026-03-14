@@ -212,6 +212,7 @@ private:
 typedef enum {
     CURRENT_CONTROL, // 开环电流控制
     SPEED_CONTROL,   // 速度闭环控制
+    SPEED_CHASSIS_CONTROL, // 速度闭环控制，底盘电机适配
     ANGLE_CONTROL,    // 角度闭环控制
     TOTAL_ANGLE_CONTROL // 总角度闭环控制
 } ControlMode;
@@ -222,12 +223,14 @@ public:
     ~M3508() {};
 
     void pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa);
+    void pid_chassis_init(const PID_Param_Config& speed_chassis_params, float speed_chassis_tdRatio);
 
     // 控制接口
     void setTargetCurrent(float current_set) override;
     void setTargetRPM(float rpm_set) override;
     void setTargetAngle(float angle_set) override;
     void setTargetTotalAngle(float totalAngle_set) override;
+    void setTargetRPMWithChassis(float rpm_set);
 
     void update() override; //周期性更新
 
@@ -245,6 +248,7 @@ private:
     float GEAR_RATIO = 19.2032f; // 减速比
 
     PID_Incremental speed_pid_;
+    PID_Incremental speed_chassis_pid_;
     PID_Position angle_pid_;
 };
 

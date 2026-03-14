@@ -3,7 +3,8 @@
 
 #include "RC10_LIB/APP/Inc/APP_Utils.h"
 
-#include "Motor_Base.h"
+#include "Motor_DJI.h"
+#include "APP_debugTool.h"
 
 namespace jia
 {
@@ -12,7 +13,7 @@ namespace jia
     public:
         struct init_config
         {
-            Motor_Base *motor_handle[3];
+            M3508 *motor_handle[3];
         };
 
         enum class Result
@@ -63,7 +64,7 @@ namespace jia
             f32 pos_x;   // （单位：米）
             f32 pos_y;   // （单位：米）
             f32 yaw_deg; // （单位：度）
-            Motor_Base *motor_handle = nullptr;
+            M3508 *motor_handle = nullptr;
             f32 sin_yaw;
             f32 cos_yaw;
             f32 eq_radius;     // 等效半径，equivalent radius，可以是负值（单位：米）
@@ -112,6 +113,8 @@ namespace jia
         f32 omega_z_radio = 0.4f;         // z轴角速度比例系数
 
         f32 &wr = wheel_radius;
+
+        Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
 
         // 自动计算量
         f32 max_vel_x = 0.0f;   // 最大x轴速度，单位：米/秒

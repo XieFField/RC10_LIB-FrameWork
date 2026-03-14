@@ -247,6 +247,11 @@ void M3508::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, 
     angle_pid_.set_params(angle_params, angle_I_Separa);
 }
 
+void M3508::pid_chassis_init(const PID_Param_Config& speed_chassis_params, float speed_chassis_tdRatio)
+{
+    speed_chassis_pid_.set_params(speed_chassis_params, speed_chassis_tdRatio);
+}
+
 void M3508::setTargetCurrent(float current_set)
 {
     mode_ = CURRENT_CONTROL;
@@ -273,6 +278,13 @@ void M3508::setTargetAngle(float angle_set)
     target_totalAngle_ = 0.0f;
 }
 
+void M3508::setTargetRPMWithChassis(float rpm_set)
+{
+    mode_ = SPEED_CHASSIS_CONTROL;
+    target_rpm_ = rpm_set;
+    target_angle_ = 0.0f;
+    target_totalAngle_ = 0.0f;
+}
 
 void M3508::setTargetTotalAngle(float totalAngle_set)
 {
@@ -326,6 +338,12 @@ void M3508::update()
         case CURRENT_CONTROL:
         {
             // 直接使用 target_current_
+            break;
+        }
+
+        case SPEED_CHASSIS_CONTROL:
+        {
+            target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
             break;
         }
 

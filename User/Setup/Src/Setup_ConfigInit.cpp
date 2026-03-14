@@ -306,6 +306,10 @@ void CAN_Motor_Init(void)
    omni_wheel1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    omni_wheel2.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    omni_wheel3.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
+   omni_wheel1.pid_chassis_init(m3508_speed_pid_paramsForChassisMotor, 0.0f);
+   omni_wheel2.pid_chassis_init(m3508_speed_pid_paramsForChassisMotor, 0.0f);
+   omni_wheel3.pid_chassis_init(m3508_speed_pid_paramsForChassisMotor, 0.0f);
+
    // omni_wheel4.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
 
    // 机械臂电机PID参数初始化

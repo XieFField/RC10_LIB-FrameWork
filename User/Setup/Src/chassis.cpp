@@ -147,9 +147,9 @@ namespace jia
                 p.w2_omega = ((p.vel_x * wheel_config_[1].c + p.vel_y * wheel_config_[1].s + p.omega_z * wheel_config_[1].eqr) / wr);
                 p.w3_omega = ((p.vel_x * wheel_config_[2].c + p.vel_y * wheel_config_[2].s + p.omega_z * wheel_config_[2].eqr) / wr);
                 // 发送指令到电机
-                wheel_config_[0].motor_handle->setTargetRPM(RadsToRpmF32(p.w1_omega));
-                wheel_config_[1].motor_handle->setTargetRPM(RadsToRpmF32(p.w2_omega));
-                wheel_config_[2].motor_handle->setTargetRPM(RadsToRpmF32(p.w3_omega));
+                wheel_config_[0].motor_handle->setTargetRPMWithChassis(RadsToRpmF32(p.w1_omega));
+                wheel_config_[1].motor_handle->setTargetRPMWithChassis(RadsToRpmF32(p.w2_omega));
+                wheel_config_[2].motor_handle->setTargetRPMWithChassis(RadsToRpmF32(p.w3_omega));
 
                 break;
             }
