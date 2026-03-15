@@ -46,7 +46,7 @@ namespace jia
 
     // 转速和角速度转换（单位：rad/s）
     constexpr f32 rpmToRadsF32(f32 rpm);
-    constexpr f32 RadsToRpmF32(f32 omega);
+    constexpr f32 radsToRpmF32(f32 omega);
 
     // 角速度和线速度转换
     constexpr f32 omegaToVelF32(f32 omega, f32 radius);
@@ -66,14 +66,14 @@ namespace jia
     {
         f32 sinf_result = sinf(deg * (kPi / 180.0f));
 
-        if (sinf_result > 1.0f)
-        {
-            sinf_result = 1.0f;
-        }
-        else if (sinf_result < -1.0f)
-        {
-            sinf_result = -1.0f;
-        }
+        // if (sinf_result > 1.0f)
+        // {
+        //     sinf_result = 1.0f;
+        // }
+        // else if (sinf_result < -1.0f)
+        // {
+        //     sinf_result = -1.0f;
+        // }
 
         return sinf_result;
     }
@@ -82,14 +82,14 @@ namespace jia
     {
         f32 cosf_result = cosf(deg * (kPi / 180.0f));
 
-        if (cosf_result > 1.0f)
-        {
-            cosf_result = 1.0f;
-        }
-        else if (cosf_result < -1.0f)
-        {
-            cosf_result = -1.0f;
-        }
+        // if (cosf_result > 1.0f)
+        // {
+        //     cosf_result = 1.0f;
+        // }
+        // else if (cosf_result < -1.0f)
+        // {
+        //     cosf_result = -1.0f;
+        // }
 
         return cosf_result;
     }
@@ -127,7 +127,7 @@ namespace jia
         return rpm * (2.0f * kPi) / 60.0f;
     }
 
-    constexpr inline f32 RadsToRpmF32(f32 omega)
+    constexpr inline f32 radsToRpmF32(f32 omega)
     {
         return omega * 60.0f / (2.0f * kPi);
     }

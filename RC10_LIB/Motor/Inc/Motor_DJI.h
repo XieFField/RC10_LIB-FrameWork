@@ -212,7 +212,6 @@ private:
 typedef enum {
     CURRENT_CONTROL, // 开环电流控制
     SPEED_CONTROL,   // 速度闭环控制
-    SPEED_CHASSIS_CONTROL, // 速度闭环控制，底盘电机适配
     ANGLE_CONTROL,    // 角度闭环控制
     TOTAL_ANGLE_CONTROL // 总角度闭环控制
 } ControlMode;
@@ -230,7 +229,6 @@ public:
     void setTargetRPM(float rpm_set) override;
     void setTargetAngle(float angle_set) override;
     void setTargetTotalAngle(float totalAngle_set) override;
-    void setTargetRPMWithChassis(float rpm_set);
 
     void update() override; //周期性更新
 

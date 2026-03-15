@@ -278,14 +278,6 @@ void M3508::setTargetAngle(float angle_set)
     target_totalAngle_ = 0.0f;
 }
 
-void M3508::setTargetRPMWithChassis(float rpm_set)
-{
-    mode_ = SPEED_CHASSIS_CONTROL;
-    target_rpm_ = rpm_set;
-    target_angle_ = 0.0f;
-    target_totalAngle_ = 0.0f;
-}
-
 void M3508::setTargetTotalAngle(float totalAngle_set)
 {
     mode_ = TOTAL_ANGLE_CONTROL;
@@ -338,12 +330,6 @@ void M3508::update()
         case CURRENT_CONTROL:
         {
             // 直接使用 target_current_
-            break;
-        }
-
-        case SPEED_CHASSIS_CONTROL:
-        {
-            target_current_ = speed_chassis_pid_.pid_calc(target_rpm_, this->rpm_);
             break;
         }
 
