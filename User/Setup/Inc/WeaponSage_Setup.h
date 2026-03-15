@@ -32,7 +32,7 @@ namespace WeaponSage_Setup
     typedef struct{
         bool init_flag = false;
 
-        float debug_start = 1; //ï¿½ï¿½ï¿½Ô¿ï¿½Ê¼ï¿½ï¿½Ö¾ == 1 ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
+        float debug_start = 1; //debug_start = 1±íÊ¾¿ªÊ¼µ÷ÊÔ
 		float now_times=0.0f;
         float calibrate_startTime = 0.0f;
         bool calibrate_start = false;
@@ -64,7 +64,7 @@ namespace WeaponSage_Setup
     typedef struct{
 
         struct{
-			bool is_matching = false;
+			bool is_matching = false;  
             bool grab_start = false;
             float grab_startTime = 0.0f;
             bool is_moving = false;  

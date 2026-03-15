@@ -1,7 +1,7 @@
 /**
  * @file WeaponSage.h
  * @author XieFField
- * @brief 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷峰笀閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷?
+ * @brief 武器架控制实现
  * @version 1.0
  */
 #ifndef WEAPONSAGE_H
@@ -25,20 +25,20 @@ extern "C" {
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 
-//涓�閿熸枻鎷疯浆閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹鏃堕敓鏂ゆ嫹涓洪敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹
+// 武器架初始化数据结构体
 typedef struct 
 {
     /* data */
-    float max_launchHeight_; // 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹璋愯箣閿熸枻鎷烽敓杞夸紮鎷烽敓锟?
-    float max_clawAngle_; // 鎶撳彇閿熸枻鎷烽敓瑙掑害锝忔嫹閿熸枻鎷蜂綅閿熸枻鎷?
-    float max_traverseLength_; // 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹璋愯箣閿熸枻鎷烽敓杞夸紮鎷烽敓锟?
+    float max_launchHeight_; // 武器杆最大上升高度
+    float max_clawAngle_; // 武器夹爪最大开合角度
+    float max_traverseLength_; // 武器架最大横向移动距离
 
-    float wrist_gearRatio_; // 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷蜂喀榫嬮敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹閿熼樁顎辫潡锔兼嫹閿熸枻鎷烽敓鏂ゆ嫹閿熼樁顏庢嫹閿熸枻鎷蜂浚閿燂拷(360閿熸枻鎷烽敓鏂ゆ嫹鍛抽敓鏂ゆ嫹鐩撮敓鏂ゆ嫹)
-    float launch_Ratio_; // 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓缁烇綇鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹閿熼樁顎辫潡锔兼嫹閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓锟?
-    float claw_gearRatio_; // 鎶撳彇閿熸枻鎷烽敓鍔?姣旓綇鎷锋姄鍙栭敓鏂ゆ嫹閿熼樁顎辫潡锔兼嫹閿熼樁銉堚槄鎷烽敓鏂ゆ嫹淇ｉ敓锟?
-    float traverse_Ratio_; // 閿熸枻鎷烽敓鐙℃唻鎷烽敓缁烇綇鎷烽敓鏂ゆ嫹閿熺嫛纰夋嫹閿熼樁顎辫潡锔兼嫹閿熸枻鎷烽敓鏂ゆ嫹璐?閿熸枻鎷烽敓鏂ゆ嫹閿燂拷
+    float wrist_gearRatio_; // 手腕电机齿轮比(360度电机转一圈对应的实际转动角度)
+    float launch_Ratio_; // 升降电机的减速比(360度电机转一圈对应的实际升降高度)
+    float claw_gearRatio_; // 夹爪电机齿轮比(360度电机转一圈对应的实际张开角度)
+    float traverse_Ratio_; // 横向电机的减速比(360度电机转一圈对应的实际横移距离)
 
-    float max_wristMotorRPM_; // 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹閿熼樁顏庢嫹浼查敓鏂ゆ嫹閿熻娇绫朠M
+    float max_wristMotorRPM_; //   手腕电机最大转速(RPM)
 
 }WeaponSage_InitData_S;
 
@@ -63,9 +63,9 @@ namespace WeaponSage
     enum WeaponSage_CtrlMode_S 
     {
         /* data */
-        CURRENT_CONTROL, // 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹妯″紡
-        Join_POSITION_CONTROL, // 閿熸埅鏂ゆ嫹浣嶉敓鐭?鍖℃嫹閿熸枻鎷锋ā寮?
-        TOTAL_ANGLE_CONTROL,   // 閿熸枻鎷烽敓鏂ゆ嫹鑺欏祵鐡ら敓鏂ゆ嫹閿熶茎锛?锟?
+        CURRENT_CONTROL, // 电流控制模式
+        Join_POSITION_CONTROL, // 关节角度控制模式
+        TOTAL_ANGLE_CONTROL,   // 总角度控制模式
     };
     
     typedef struct
@@ -106,9 +106,9 @@ public:
 	
 	
     /**
-     * @brief 閿熸枻鎷烽敓鐭?纰夋嫹閿熸枻鎷烽敓鏂ゆ嫹閿燂拷
-     * @param reversed 閿熻?掑嚖鎷烽敓鏂ゆ嫹 true閿熸枻鎷烽敓娲侊紝false閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷?(榛橀敓杈冭?ф嫹閿熸枻鎷烽敓鏂ゆ嫹)
-     * @param motor_type 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓锟?
+     * @brief 设置电机反转状态
+     * @param reversed 是否反转 true表示反转，false表示不反转(相对于初始化时的方向)
+     * @param motor_type 电机类型
      */
 
     bool setMotorReversed(bool reversed, WeaponSage::Motor_Type_E motor_type);
@@ -144,20 +144,19 @@ private:
 
 protected:
 
-    M3508 *launch_Motor_ = nullptr; // 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓锟?
-    M2006 *claw_Motor_ = nullptr; // 鎶撳彇閿熸枻鎷烽敓锟?
-    M2006 *traverse_Motor_ = nullptr; // 閿熸枻鎷烽敓鐙＄?夋嫹閿燂拷
-    DM_Motor *wrist_Motor_ = nullptr; // 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷?
-
+    M3508 *launch_Motor_ = nullptr; // 升降电机
+    M2006 *claw_Motor_ = nullptr; // 夹爪电机
+    M2006 *traverse_Motor_ = nullptr; // 横向电机
+    DM_Motor *wrist_Motor_ = nullptr; // 手腕电机
 
     WeaponSage::WeaponSage_Pos_S target_pos_;
     WeaponSage::WeaponSage_Pos_S current_pos_;
 	WeaponSage::WeaponSage_Pos_S last_pos_;
 
     /**
-     * @brief 閿熸枻鎷峰疄浣嶉敓鏂ゆ嫹杞?閿熸枻鎷蜂负閿熸枻鎷烽敓鏂ゆ嫹鑺欏祵閿燂拷
-     * @param real_pos 閿熸枻鎷峰疄浣嶉敓鐭?锝忔嫹閿熸枻鎷蜂綅閿熼樁浼欐嫹榫嬮敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹initData_璇撮敓鏂ゆ嫹
-     * @param motor_type 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓锟?
+     * @brief 设置电机反转状态
+     * @param real_pos 实际位置(相对于初始化时的位置)
+     * @param motor_type 电机类型
      */
     float Realpos_to_MotorTotalAngle(float real_pos, WeaponSage::Motor_Type_E motor_type);
 

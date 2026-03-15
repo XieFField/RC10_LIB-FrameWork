@@ -374,6 +374,11 @@ void Robot_WeaponSage_Setup::stop()
     this->setTarget(0.0f, WeaponSage::Wrist_Motor);
 }
 
+ /**
+     * @brief 对准位置状态
+     *  1.根据传入的杆号，设置对应的爪子位置
+     *  2.判断当前爪子位置是否到达目标位置，返回
+     */
 bool Robot_WeaponSage_Setup::State_AimPosition(int pole_num)
 {
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
@@ -388,6 +393,13 @@ bool Robot_WeaponSage_Setup::State_AimPosition(int pole_num)
         return false;
     }
 }
+ /**
+     * @brief 下降电机状态
+     *  1.设置下降目标位置
+     *  2.判断当前爪子位置是否到达目标位置
+     *  无返回值
+     * 
+     */
 void Robot_WeaponSage_Setup::State_LowerClaw()
 {
 	 if(auto_ctrl_.auto_state_bool_S.is_matching)
@@ -398,6 +410,11 @@ void Robot_WeaponSage_Setup::State_LowerClaw()
 	}
 }
 
+    /**
+         * @brief 抓取状态
+         *  1.设置抓取目标位置
+         *  2.判断当前爪子位置是否到达目标位置，返回
+         */
 bool Robot_WeaponSage_Setup::State_GrabClaw()
 {
    
@@ -424,7 +441,11 @@ bool Robot_WeaponSage_Setup::State_GrabClaw()
         }
 }
 	
-
+ /**
+     * @brief 抬起状态
+     *  1.设置抬起目标位置
+     *  2.判断当前爪子位置是否到达目标位置，返回
+     */
 
 bool Robot_WeaponSage_Setup::State_Lift()
 {
