@@ -971,8 +971,8 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
      * 
      */
     PathInformation_S result;
-    RoadResult_S MF1Road = MFNum_ToRoadResult(MF1);
-    RoadResult_S MF2Road = MFNum_ToRoadResult(MF2);
+    RoadResult_S MF1Road = MFNum_ToCatchRoadResult(MF1);
+    RoadResult_S MF2Road = MFNum_ToCatchRoadResult(MF2);
 
     int cornerMap[4] = {1, 5, 26, 30}; // 四个角落的地图编号
 
@@ -990,6 +990,10 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
     result.MFroad[0] = 0;
     result.MFroad[1] = 0;
 
+    // 林外上方时，禁止路径规划
+    if (robotPos.y > MapNum_RealPos[29].y)
+        return result;
+
     // 入口集合
     int8_t entrances[30] = {0};
     uint8_t entranceCount = 0;
@@ -999,11 +1003,8 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
 
     if (isRobotInsideMap)
     {
-        for (int8_t m = 1; m <= 30; ++m)
-        {
-            if (IsWalkable(m))
-                entrances[entranceCount++] = m;
-        }
+        // 林内起点直接取当前所在通道，避免出现与真实起点不一致的入口
+        entrances[entranceCount++] = robotMap;
     }
     else
     {
@@ -1148,6 +1149,15 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
 
     PushMustPastNode(result.mustPastMap, 12, mustLen, result.exitMap);
 
+    // 记录MFroad在mustPastMap中的索引
+    for (int i = 0; i < mustLen; ++i)
+    {
+        if (result.mustPastMap[i] == result.MFroad[0])
+            result.Index_MFroad[0] = i;
+        if (result.mustPastMap[i] == result.MFroad[1])
+            result.Index_MFroad[1] = i;
+    }
+
     return result;
 }
 
@@ -1247,12 +1257,11 @@ int BFS_GetPath(int8_t startMap, int8_t goalMap, int8_t *outPath, int maxLen)
  */
 int8_t GetMapNumFromPos(Point2D pos)
 {
-    // 1. 定义原点偏移和网格尺寸
-    // 注意：Row 1 的中心是 y=2.6，说明 Row 1 的 y 起始边是 2.6 - 0.6 = 2.0
+    //定义原点偏移和网格尺寸
     const float GRID_SIZE = 1.2f;      // 网格边长
     const float Y_OFFSET_START = 2.0f; // Y轴起始坐标
 
-    // 2. 简单的范围检查 (可选)
+    // 范围检查
     if (pos.x < 0 || pos.x > (5 * GRID_SIZE) ||
         pos.y < Y_OFFSET_START || pos.y > (Y_OFFSET_START + 6 * GRID_SIZE))
     {
@@ -1273,8 +1282,35 @@ int8_t GetMapNumFromPos(Point2D pos)
         return 0;
     }
 
-    // 5. 转换为地图编号
     return MF_AutoCtrler::CR_ToMap(c, r);
+}
+
+float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
+{
+    if(startmapNum < 1 || startmapNum >30 || next_mapNum < 1 || next_mapNum >30)
+    {
+        return -1.0f; // 无效输入
+    }
+    
+    bool isinMFstart = IsWalkable(startmapNum);
+    bool isinMFnext = IsWalkable(next_mapNum);
+
+
+    if(isinMFstart && isinMFnext)
+    {
+        // 两个都不在梅花桩内，直接计算方向
+        Point2D startPos = MapCenterWorld(startmapNum);
+        Point2D nextPos = MapCenterWorld(next_mapNum);
+        float dx = nextPos.x - startPos.x;
+        float dy = nextPos.y - startPos.y;
+        float deg = rad_to_deg(atan2f(dy, dx));
+        deg = normalize_deg_0_360(deg);
+        return deg;
+    }
+    else
+    {
+        return -1.0f; //无效
+    }
 }
 
 } // namespace MF_AutoCtrler

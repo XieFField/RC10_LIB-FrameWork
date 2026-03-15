@@ -167,11 +167,9 @@ typedef struct{
         Point2D PB;
     }PointPAB[2];
 
-    MF_AutoCtrler::Direction_E KFS_Movedirection[2] = {MF_AutoCtrler::NONE, MF_AutoCtrler::NONE}; //目标KFS方向
+   
 
-    MF_AutoCtrler::PathNode_S path;
 
-    autopathPos_S pathPos;
     /**
      * @brief 旋转路径策略 正方向表示角度正增，负方向表示角度负增；
      *                    正增为逆时针旋转，负增为顺时针旋转
@@ -179,6 +177,10 @@ typedef struct{
     Rotate_Strategy_E current_strategy = ROTATE_PATH_SHORTEST; 
     
 #if ARM_AUTOMOVE
+    MF_AutoCtrler::Direction_E KFS_Movedirection[2] = {MF_AutoCtrler::NONE, MF_AutoCtrler::NONE}; //目标KFS方向
+    MF_AutoCtrler::PathNode_S path;
+
+    autopathPos_S pathPos;
     ARM_AUTO_E now_state = STATE_DONE;
     int gimbal_calcCount = 0; //云台预判计算计数
 
@@ -205,7 +207,7 @@ typedef struct{
     arm_timeset_S time_set;
 #else
     ARM_AUTO_STILLNESS_E now_state = STATE_DONE;
-
+    MF_AutoCtrler::PathInformation_S pathInfo; 
     struct{
         bool isrecalcPath = false; //是否重新计算路径
         bool canExtend = false; //是否可以伸展
@@ -213,6 +215,7 @@ typedef struct{
         bool isExtReach = false;
         bool canChassisStart = false; //是否可以开始底盘移动
     }flag;
+
 
 #endif
 }ARM_AUTO_S;
@@ -304,7 +307,7 @@ public:
 
         auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0])-1];
         auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[1])-1];
-        
+#if ARM_AUTOMOVE
         MF_AutoCtrler::get_MoveDiretion(auto_ctrl_.now_armPosition,
                                         auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1],
                                         auto_ctrl_.KFS_Movedirection);
@@ -326,6 +329,22 @@ public:
         auto_ctrl_.pathPos.bestBMF2 = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.bestBMF2);
         auto_ctrl_.pathPos.entranceMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.entranceMap);
         auto_ctrl_.pathPos.exitMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.exitMap);
+#else
+        MF_AutoCtrler::PathInformation_S temp = MF_AutoCtrler::PathInformation_calc(auto_ctrl_.now_ChassisPosition,
+                                       auto_ctrl_.targetKFS[0], 
+                                        auto_ctrl_.targetKFS[1]);
+        auto_ctrl_.pathInfo.entranceMap = temp.entranceMap;
+        
+        for(int i=0; i<2; i++)
+        {
+            auto_ctrl_.pathInfo.MFroad[i] = temp.MFroad[i];
+        }
+
+        for(int i=0; i<12; i++)
+        {
+            auto_ctrl_.pathInfo.mustPastMap[i] = temp.mustPastMap[i];
+        }
+#endif
 
 
 
@@ -626,6 +645,7 @@ protected:
      */
     void get_GimbalMF_PAPB(int target_KFSIndex, Point2D& PA, Point2D& PB)
     {   
+        #if ARM_AUTOMOVE
         if(target_KFSIndex != 0 && target_KFSIndex != 1) 
             return;
 
@@ -715,6 +735,7 @@ protected:
                 }
             }
         }
+        #endif
     }
     
     float rate_forspeed =1.0f;

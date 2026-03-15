@@ -406,29 +406,6 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
     // float kfs_height = MF_high[targetKFS -1]; //获取目标KFS高度
 
     float target_height = 0.0f;
-    // if(kfs_height == 0.2f)
-    //     target_height = this->init_data_.safe_height; //安全高度
-    // else if(kfs_height == 0.4f)
-    //     target_height = this->init_data_.safe_height; //目标高度-吸盘高度(0.2m)
-    // else if(kfs_height == 0.6f)
-    //     target_height = this->init_data_.max_launchHeight_; //目标高度-吸盘高度(0.2m)
-    // else
-    //     target_height = this->init_data_.max_launchHeight_; //默认安全高度
-    
-    // //防止撞到60cm高的梅花桩
-    // if(targetKFS == 9 || targetKFS == 3)
-    // {
-    //     if(auto_ctrl_.KFS_Movedirection[auto_ctrl_.now_targetIndex]
-    //         == MF_AutoCtrler::Direction_E::Positive_Y && targetKFS == 9)
-    //     {
-    //         target_height = this->init_data_.max_launchHeight_;
-    //     }
-    //     else if(auto_ctrl_.KFS_Movedirection[auto_ctrl_.now_targetIndex]
-    //         == MF_AutoCtrler::Direction_E::Negative_Y && targetKFS == 3)
-    //     {
-    //         target_height = this->init_data_.max_launchHeight_;
-    //     }
-    // }
 
     target_height = this->init_data_.max_launchHeight_; //直接抬升到最高，等待行进间旋转对齐后再放低
     if(isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_))
@@ -449,27 +426,6 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
 bool ArmSetup::state_alignStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    // //待底盘行驶至B1位置时候，云台开始旋转对齐KFS侧面法向
-    // bool can_rotate = false;
-
-    // int target_map = 0;
-    // if(auto_ctrl_.now_targetIndex == 0)
-    //     target_map = auto_ctrl_.path.bestB1;
-    // else if(auto_ctrl_.now_targetIndex == 1)
-    //     target_map = auto_ctrl_.path.bestB2;
-    // else
-    //     target_map = 0;
-
-    // can_rotate = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition, 
-    //         target_map, 0.3f);
-
-    // if(!can_rotate)
-    //     return false; //未到达目标位置，继续等待
-    // else
-    // {
-    //     this->set_RotateAngle(90.0f); //对齐KFS侧面法向
-    //     return true;
-    // }
     
     //改为云台升到最高之后就旋转
     this->set_RotateAngle(90.0f); //对齐KFS侧面法向
@@ -481,7 +437,7 @@ bool ArmSetup::state_alignStillness(int targetKFS)
 
 bool ArmSetup::state_lowerStillness(int targetKFS)
 {
-    //判定越过PA点之后，放低机械臂
+    //判定到达目标的MF_road后，放低机械臂
 
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
@@ -493,53 +449,20 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
     else if(MF_high[targetKFS - 1] == 0.6f)
         targetLowerHeight = this->init_data_.max_launchHeight_;
     else
-        targetLowerHeight = this->init_data_.safe_height;
+        targetLowerHeight = this->init_data_.max_launchHeight_;
 
-    int target_map = 0;
-    if(auto_ctrl_.now_targetIndex == 0)
-        target_map = auto_ctrl_.path.bestBMF1;
-    else if(auto_ctrl_.now_targetIndex == 1)
-        target_map = auto_ctrl_.path.bestBMF2;
-    else
-        target_map = 0;
-
-
-    if(MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
-            target_map, 1.0f) != true)
-        return false; //未到达目标位置，继续等待
-    
-    Point2D TargetPA = auto_ctrl_.PointPAB[auto_ctrl_.now_targetIndex].PA;
-    switch(auto_ctrl_.KFS_Movedirection[auto_ctrl_.now_targetIndex])
+    bool canLower = false;
+    canLower = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
+                                            auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
+                                            0.45f); //进入目标KFS所在的MFroad中心且距离小于0.45m就放低
+    if(canLower)
     {
-        case MF_AutoCtrler::Positive_X:
-        {
-            if(auto_ctrl_.now_armPosition.x > TargetPA.x)
-                this->set_LaunchHeight(targetLowerHeight); //放低机械臂
-            break;
-        }
-
-        case MF_AutoCtrler::Negative_X:
-        {
-            if(auto_ctrl_.now_armPosition.x < TargetPA.x)
-                this->set_LaunchHeight(targetLowerHeight); //放低机械臂
-            break;
-        }
-
-        case MF_AutoCtrler::Positive_Y:
-        {
-            if(auto_ctrl_.now_armPosition.y > TargetPA.y)
-                this->set_LaunchHeight(targetLowerHeight); //放低机械臂
-            break;
-        }
-
-        case MF_AutoCtrler::Negative_Y:
-        {
-            if(auto_ctrl_.now_armPosition.y < TargetPA.y)
-                this->set_LaunchHeight(targetLowerHeight); //放低机械臂
-            break;
-        }
+        this->set_LaunchHeight(targetLowerHeight); //放低到目标高度
+        this->setSuckerStatus(Sucker_Status_E::SUCK); //下降时打开吸盘
     }
-
+    else
+        return false;
+        
     if(_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - targetLowerHeight) < 0.02f)
         return true;
     else
@@ -549,7 +472,7 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
 bool ArmSetup::state_extStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    this->setSuckerStatus(Sucker_Status_E::SUCK); //伸出时打开吸盘
+    
     this->set_StretchLength(this->init_data_.max_stretchLength_); //伸展到最大长度
 
     if(_tool_Abs(this->get_currentJointStatus().stretchJoint_Length_ - 
@@ -581,7 +504,7 @@ bool ArmSetup::state_launchStillness(int targetKFS)
 
     this->set_LaunchHeight(this->init_data_.max_launchHeight_); //升到最高点，准备移动
 
-    if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight)
+    if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.08f)
     {
         auto_ctrl_.flag.canChassisStart = true; //机械臂已经升到可以移动的高度了
         return true;
@@ -593,28 +516,51 @@ bool ArmSetup::state_backStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     float targetBackAngle = 0.0f; //根据车移动方向来，机械臂朝向底盘移动反方向
-    int target_map = 0;
-    if(auto_ctrl_.now_targetIndex == 0)
-        target_map = auto_ctrl_.path.bestB1;
-    else if(auto_ctrl_.now_targetIndex == 1)
-        target_map = auto_ctrl_.path.bestB2;
-    else
-        target_map = 0;
+    // int target_map = 0;
+    // if(auto_ctrl_.now_targetIndex == 0)
+    //     target_map = auto_ctrl_.path.bestB1;
+    // else if(auto_ctrl_.now_targetIndex == 1)
+    //     target_map = auto_ctrl_.path.bestB2;
+    // else
+    //     target_map = 0;
+    
 
-    float temp_angle = MF_AutoCtrler::Get_ArmBaseTargetAngle(static_cast<int8_t>(target_map), 
-            auto_ctrl_.KFS_Movedirection[auto_ctrl_.now_targetIndex]);
+    // float temp_angle = MF_AutoCtrler::Get_ArmBaseTargetAngle(static_cast<int8_t>(target_map), 
+    //         auto_ctrl_.KFS_Movedirection[auto_ctrl_.now_targetIndex]);
 
-    if(temp_angle == 0.0f)
+    float chassisDir = MF_AutoCtrler::chassisMoveDir(auto_ctrl_.pathInfo.mustPastMap[auto_ctrl_.pathInfo.Index_MFroad[auto_ctrl_.now_targetIndex]]
+                                        , auto_ctrl_.pathInfo.mustPastMap[auto_ctrl_.pathInfo.Index_MFroad[auto_ctrl_.now_targetIndex] + 1]);
+    int8_t c = 0,r = 0;
+    MF_AutoCtrler::Map_ToCR(auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], c, r);
+
+    if(_tool_Abs(chassisDir - 0.0f) < 5.0f) //底盘向右走
     {
-        targetBackAngle = 180.0f; //如果目标位置在正前方，机械臂朝向正后方
+        if(r == 1)//下侧
+            targetBackAngle = 180.0f;
+        
+        else if(r == 6)//上侧
+            targetBackAngle = 0.0f;
     }
-    else if(temp_angle == 180.0f)
+    else if(_tool_Abs(chassisDir - 180.0f) < 5.0f)//底盘向左
     {
-        targetBackAngle = 0.0f; //如果目标位置在正后方，机械臂朝向正前方
+        if (r == 1) // 下侧
+            targetBackAngle = 0.0f;
+        else if (r == 6) // 上侧
+            targetBackAngle = 180.0f;
     }
-    else
+    else if(_tool_Abs(chassisDir - 90.0f) < 5.0f)//底盘向前
     {
-        targetBackAngle = 180.0f;
+        if (c == 1) // 左侧
+            targetBackAngle = 0.0f;
+        else if (c == 6) // 右侧
+            targetBackAngle = 180.0f;
+    }
+    else if(_tool_Abs(chassisDir - 270.0f) < 5.0f)//底盘向后
+    {
+        if (c == 1) // 左侧
+            targetBackAngle = 180.0f;
+        else if (c == 6) // 右侧
+            targetBackAngle = 0.0f;
     }
 
     this->set_RotateAngle(targetBackAngle); //旋转到目标位置

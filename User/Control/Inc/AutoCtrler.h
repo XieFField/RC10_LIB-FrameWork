@@ -69,7 +69,10 @@ namespace MF_AutoCtrler
     {
         int8_t entranceMap; //允许和MF1的MFroad重合
         int8_t MFroad[2] = {0};
-        int8_t mustPastMap[12] = {0};// 最多12个必经点，0表示无效，只包含地图边角点和MF点以及出入口
+        int8_t mustPastMap[12] = {0};// 必经点[索引即路径顺序]，0表示无效，只包含地图边角点和MF点以及出入口
+
+        int8_t Index_MFroad[2] = {0,0}; //记录MFroad中MF1和MF2在mustPastMap中的索引位置，方便后续路径跟踪
+
         const int8_t exitMap = 26; // 固定出口
     }PathInformation_S;
 
@@ -105,6 +108,15 @@ namespace MF_AutoCtrler
 
     // 根据当前所在的地图格(bestB1)和行进方向计算出
     float Get_ArmBaseTargetAngle(int8_t mapNum, Direction_E dir);
+
+    /**
+     * @brief 计算底盘行进方向 
+     * @param startmapNum 起点所在的地图格编号
+     * @param next_mapNum 下一个地图格编号
+     * @return 返回底盘速度方向，以角度代替矢量，0度对应X轴正方向，逆时针为正，单位度
+     *         取值范围[0, 360)，如果输入无效返回-1]
+     */
+    float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum);
 
     /**
      * @brief 计算机械臂在世界坐标系下的绝对角度
