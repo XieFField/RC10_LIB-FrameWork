@@ -415,7 +415,7 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
         this->set_LaunchHeight(this->get_currentJointStatus().launchJoint_Height_); //保持当前高度不变
         float sanitized_angle = sanitizeRotateAngle(this->get_currentJointStatus().rotateJoint_angle_);
         this->set_RotateAngle(sanitized_angle); //旋转到安全区域
-    }
+    }                                                                                                                                                               
 
     if(_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - target_height) < 0.01f)
         return true;
@@ -2046,9 +2046,9 @@ Arm_InitData_S arm_initData = {
 
    .min_rotate_angle_ = 0.0f,
    .max_rotate_angle_ = 359.99999f,
-
+    .safe_height = 0.14f,
    .Sucker_GPIO_Port = SUCKER_GPIO_Port,
     .Sucker_GPIO_Pin = SUCKER_Pin,
 
-    .safe_height = 0.14f,
+    
 };

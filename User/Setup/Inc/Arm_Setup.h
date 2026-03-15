@@ -373,6 +373,10 @@ public:
         auto_ctrl_.flag.canExtend = canExtend;
     }
 
+    /**
+     * @brief 在停下拾取自动模式下，由主状态机调用，
+     *       返回是否可以进入底盘移动阶段
+     */
     bool isAutoChassisCanStart()
     {
         return auto_ctrl_.flag.canChassisStart;
