@@ -247,11 +247,6 @@ void M3508::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, 
     angle_pid_.set_params(angle_params, angle_I_Separa);
 }
 
-void M3508::pid_chassis_init(const PID_Param_Config& speed_chassis_params, float speed_chassis_tdRatio)
-{
-    speed_chassis_pid_.set_params(speed_chassis_params, speed_chassis_tdRatio);
-}
-
 void M3508::setTargetCurrent(float current_set)
 {
     mode_ = CURRENT_CONTROL;

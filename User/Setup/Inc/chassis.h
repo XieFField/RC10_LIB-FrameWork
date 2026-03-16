@@ -63,7 +63,7 @@ namespace jia
         Result setTargetBodySpeedMode(const TargetBodySpeedModeData &target);
 
     private:
-        void inverseKinematicsOmega(Data &data);
+        void inverseKinematicsVel(Data &data);
 
     private:
         struct wheel_config
@@ -137,10 +137,10 @@ namespace jia
         Data input_target_data; // 输入目标数据
 
         Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
-        RmPocketData_t airjoy_data_input;
+        RmPocketData_t input_airjoy_data;
 
     private:
-        f32 wheel_speed_radio = 300.0f;
+        f32 wheel_input_speed_radio = 300.0f;
         f32 wheel_speed_input;
 
         f32 sine_amplitude = 100.0f;

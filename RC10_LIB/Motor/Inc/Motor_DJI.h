@@ -246,7 +246,6 @@ public:
     float GEAR_RATIO = 19.2032f; // ¼õËÙ±È
 
     PID_Incremental speed_pid_;
-    PID_Incremental speed_chassis_pid_;
     PID_Position angle_pid_;
 };
 
