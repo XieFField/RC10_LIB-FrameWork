@@ -111,12 +111,12 @@ namespace jia
     private:
         // 设定量
         f32 period = 0.001f;         // 控制周期，单位：秒
-        f32 max_acc = 2.0f;          // 最大线加速度，单位：m/s^2
-        f32 max_alpha_deg = 1440.0f; // 最大角加速度，单位：deg/s^2
+        f32 max_acc = 20.0f;          // 最大线加速度，单位：m/s^2
+        f32 max_alpha_deg = 14400.0f; // 最大角加速度，单位：deg/s^2
 
-        f32 max_set_vel_x = 1.0f;        // 最大设定目标x轴速度，单位：米/秒
-        f32 max_set_vel_y = 1.0f;        // 最大设定目标y轴速度，单位：米/秒
-        f32 max_set_omega_z_deg = 90.0f; // 最大设定目标z轴角速度，单位：deg/s
+        f32 max_set_vel_x = 10.0f;        // 最大设定目标x轴速度，单位：米/秒
+        f32 max_set_vel_y = 10.0f;        // 最大设定目标y轴速度，单位：米/秒
+        f32 max_set_omega_z_deg = 900.0f; // 最大设定目标z轴角速度，单位：deg/s
 
         f32 wheel_radius = 0.075f;        // 轮子半径（单位：米）
         f32 max_wheel_omega_rpm = 350.0f; // 最大轮子转速，单位：rpm

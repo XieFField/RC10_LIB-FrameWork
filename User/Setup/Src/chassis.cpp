@@ -108,21 +108,21 @@ namespace jia
             receiver->getControlData(&input_airjoy_data);
 
             TargetBodySpeedModeData target_data;
-            target_data.vel_x = input_airjoy_data.left_y * max_set_vel_x;
+            // target_data.vel_x = input_airjoy_data.left_y * max_set_vel_x;
             target_data.vel_y = -input_airjoy_data.left_x * max_set_vel_y;
 
-            // if(input_airjoy_data.right_x > 0.1f)
-            // {
-            //     target_data.omega_z = max_set_omega_z_deg * kPi / 180.0f;
-            // }
-            // else if(input_airjoy_data.right_x < -0.1f)
-            // {
-            //     target_data.omega_z = -max_set_omega_z_deg * kPi / 180.0f;
-            // }
-            // else
-            // {
-            //     target_data.omega_z = 0.0f;
-            // }
+            if(input_airjoy_data.left_y > 0.1f)
+            {
+                target_data.vel_x = max_set_vel_x;
+            }
+            else if(input_airjoy_data.left_y < -0.1f)
+            {
+                target_data.vel_x = -max_set_vel_x;
+            }
+            else
+            {
+                target_data.vel_x = 0.0f;
+            }
 
             target_data.omega_z = input_airjoy_data.right_x * max_set_omega_z_deg * kPi / 180.0f;
 
@@ -191,7 +191,9 @@ namespace jia
                 // 保存当前数据为上一次数据
                 lp = p;
 
-                debug_uart.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms, t.w3_omega, p.w3_omega, p.w3_alpha, c.w3_omega);
+                // debug_uart.printf_DMA("%lu,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, t.w2_omega, t.w3_omega, p.w1_omega, p.w2_omega, p.w3_omega, c.w1_omega, c.w2_omega, c.w3_omega);
+                // debug_uart.printf_DMA("%lu\r\n", time_ms);
+                debug_uart.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms,t.w1_omega,p.w1_omega,std::abs(c.w1_omega_rpm),std::abs(c.w2_omega_rpm));
 
                 break;
             }
