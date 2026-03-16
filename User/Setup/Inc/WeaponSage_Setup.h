@@ -32,7 +32,6 @@ namespace WeaponSage_Setup
     typedef struct{
         bool init_flag = false;
 
-        float debug_start = 1; //���Կ�ʼ��־ == 1 ��ʼ����
 		float now_times=0.0f;
         float calibrate_startTime = 0.0f;
         bool calibrate_start = false;
@@ -140,6 +139,16 @@ public:
     void setWeaponSageControlStatus(WeaponSage_Status_E status)
     {
         weaponSage_status_ = status;
+        if(status != WEAPONSAGE_DEBUG)
+        {
+            debug_launch_target_valid_ = false;
+        }
+    }
+
+    void setDebugLaunchTarget(float launch_target)
+    {
+        debug_launch_target_ = launch_target;
+        debug_launch_target_valid_ = true;
     }
 
     Point2D getClawPos()
@@ -195,6 +204,9 @@ private:
     WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
 	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_IDLE;
 	WeaponSage_Setup::auto_GRABstate_S now_state_=WeaponSage_Setup::STATE_DONE;
+
+    bool debug_launch_target_valid_ = false;
+    float debug_launch_target_ = 0.0f;
 	
     RmPocketData_t airjoy_data_; 
 

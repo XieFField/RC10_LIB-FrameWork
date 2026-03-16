@@ -21,7 +21,8 @@ extern "C" {
 struct Camera_Data_t {
     float x;    // [0-3]
     float y;    // [4-7]
-    float yaw;  // [8-11]
+    float z;    // [8-11]
+    float yaw;  // [12-15]
 };
 #pragma pack()
 
@@ -68,7 +69,7 @@ private:
     static const uint8_t FRAME_HEAD_1 = 0xBB;
     static const uint8_t FRAME_TAIL_0 = 0xCC;
     static const uint8_t FRAME_TAIL_1 = 0xDD;
-    static const uint8_t DATA_LEN = 12; // 3个float
+    static const uint8_t DATA_LEN = 16; // 4个float: x,y,z,yaw
 
     // 解析状态机
     enum RxState {
@@ -84,10 +85,10 @@ private:
     bool uart_initialized_;
     
     RxState rx_state = WAITING_FOR_HEAD_0;
-    uint8_t data_buffer[12]; // 暂存数据
+    uint8_t data_buffer[16]; // 暂存数据
     uint8_t data_index = 0;
 
-    Camera_Data_t current_data_ = {0.0f, 0.0f, 0.0f};
+    Camera_Data_t current_data_ = {0.0f, 0.0f, 0.0f, 0.0f};
     bool is_data_valid = false;
     uint32_t last_update_time_ = 0;
 };

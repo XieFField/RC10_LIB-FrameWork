@@ -268,7 +268,31 @@ void Robot_WeaponSage_Setup::idle()
 
 void Robot_WeaponSage_Setup::debug()
 {
-    //待实现
+    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+
+    // 首次进入DEBUG: 锁定当前姿态，后续只执行外部下发的launch目标。
+    if(last_weaponSage_status_ != WEAPONSAGE_DEBUG)
+    {
+        this->last_pos_ = this->get_CurrentPos();
+        this->target_pos_ = this->last_pos_;
+        last_weaponSage_status_ = WEAPONSAGE_DEBUG;
+    }
+
+    if(debug_launch_target_valid_)
+    {
+        float launch_target = debug_launch_target_;
+        if(launch_target < 0.0f)
+            launch_target = 0.0f;
+        else if(launch_target > initData_.max_launchHeight_)
+            launch_target = initData_.max_launchHeight_;
+
+        target_pos_.launch_pos_ = launch_target;
+    }
+
+    this->setTarget(target_pos_.launch_pos_, WeaponSage::Launch_Motor);
+    this->setTarget(target_pos_.claw_pos_, WeaponSage::Claw_Motor);
+    this->setTarget(target_pos_.traverse_pos_, WeaponSage::Traverse_Motor);
+    this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);
 }
 
 void Robot_WeaponSage_Setup::autoControl()

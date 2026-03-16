@@ -10,6 +10,54 @@ int last_cout_ladar_data = -1;
 
 uint32_t chassisstackHighWaterMark = 0;
 
+void OmniChassis_Setup::bridgeCameraZToDebugLaunch(float camera_relative_z)
+{
+    const float z_stable_threshold = 0.005f;
+    const uint16_t stable_cycles_required = 20;
+
+    bool z_stable = false;
+    if(!debug_last_camera_z_valid_)
+    {
+        debug_last_camera_z_ = camera_relative_z;
+        debug_last_camera_z_valid_ = true;
+    }
+    else
+    {
+        z_stable = (_tool_Abs(camera_relative_z - debug_last_camera_z_) < z_stable_threshold);
+        debug_last_camera_z_ = camera_relative_z;
+    }
+
+    // 仅在视觉姿态阶段稳定后，才允许将z桥接为launch锁定目标。
+    const bool vision_ready = (vision_lock_state_ >= 2) && (_tool_Abs(vision_data_.x) < 0.01f) && (_tool_Abs(vision_data_.y - 45.0f) < 1.0f);
+
+    switch(debug_launch_state_)
+    {
+        case -1:
+            // case -1: 先等待视觉到位 + z稳定，满足连续计数后再一次性锁定。
+            if(vision_ready && z_stable)
+            {
+                debug_launch_lock_stable_count_++;
+            }
+            else
+            {
+                debug_launch_lock_stable_count_ = 0;
+            }
+
+            if(debug_launch_lock_stable_count_ >= stable_cycles_required)
+            {
+                debug_launch_target_ = debug_current_launch_pos_ + camera_relative_z;
+                debug_launch_locked_ = true;
+                debug_launch_state_ = 0;
+            }
+            break;
+
+        case 0:
+        default:
+            // case 0: 目标保持不变，不再继续跟随相机。
+            break;
+    }
+}
+
 void OmniChassis_Setup::loop()
 {
     if (!init_flag)
@@ -295,7 +343,11 @@ case CHASSIS_AUTO_CONTROL_CB:
             Camera_Data_t cam_temp = camera->GetCameraData(); 
             vision_data_.x = cam_temp.x;
             vision_data_.y = cam_temp.y;
-            vision_data_.z = cam_temp.yaw;
+            vision_data_.z = cam_temp.z;
+            vision_yaw_ = cam_temp.yaw;
+
+            // 统一在相机总传参口桥接z到launch锁定状态机。
+            bridgeCameraZToDebugLaunch(cam_temp.z);
         }
 
         // 2. 机体坐标系速度规划
@@ -336,7 +388,7 @@ case CHASSIS_AUTO_CONTROL_CB:
 //                v_body_lateral = pid_vision_x.pid_calc(0.0f, vision_data_.x);
                 
                 // 1) 目标视觉角度设为180度，计算原始角误差
-                float raw_err = 180.0f - vision_data_.z;
+                float raw_err = 180.0f - vision_yaw_;
                 // 2) 角误差归一化到[-180, 180]
                 if (raw_err > 180.0f) raw_err -= 360.0f;
                 else if (raw_err < -180.0f) raw_err += 360.0f;

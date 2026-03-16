@@ -58,8 +58,26 @@ public:
 
     void setChassisStatus(CHASSIS_Status_E status)
     {
+        if(status != CHASSIS_CAMERA_DEBUG)
+        {
+            // 退出视觉调试时，重置高度锁定状态，便于下次重新执行case -1。
+            debug_launch_state_ = -1;
+            debug_launch_target_ = 0.0f;
+            debug_launch_locked_ = false;
+            debug_launch_lock_stable_count_ = 0;
+            debug_last_camera_z_valid_ = false;
+        }
         chassis_status_ = status;
     }
+
+    void updateDebugLaunchLockFromCamera(float current_launch_pos)
+    {
+        // 由FSM层传入当前launch位置；相机z在CHASSIS_CAMERA_DEBUG分支桥接到launch锁定状态机。
+        debug_current_launch_pos_ = current_launch_pos;
+    }
+
+    bool isDebugLaunchLocked() const { return debug_launch_locked_; }
+    float getDebugLaunchTarget() const { return debug_launch_target_; }
 
     void init()
     {
@@ -124,6 +142,16 @@ public:
 	}
 	
 private:
+    void bridgeCameraZToDebugLaunch(float camera_relative_z);
+
+    int8_t debug_launch_state_ = -1; // -1: 读取并锁定一次, 0: 持续保持
+    float debug_launch_target_ = 0.0f;
+    bool debug_launch_locked_ = false;
+    float debug_current_launch_pos_ = 0.0f;
+    uint16_t debug_launch_lock_stable_count_ = 0;
+    bool debug_last_camera_z_valid_ = false;
+    float debug_last_camera_z_ = 0.0f;
+
     // Vision Staged Locking variables
     int vision_lock_state_ = 0; // 0: Coarse Lateral, 1: Yaw Lock, 2: Fine Lateral (IMU)
     float lock_imu_yaw_target_ = 0.0f;
@@ -234,6 +262,7 @@ private:
     PID_Position pid_vision_y;
     PID_Position pid_vision_yaw;
     Point3D vision_data_ = {0.0f, 0.0f, 0.0f}; // 锟斤拷锟节斤拷锟秸碉拷锟斤拷锟斤拷锟斤拷锟?
+    float vision_yaw_ = 0.0f;
 
 public:
     void UpdateVisionData(Point3D data) { vision_data_ = data; } // 锟斤拷锟斤拷锟节回碉拷锟斤拷锟斤拷
