@@ -125,6 +125,11 @@ public:
 	{
 		return Arm_Start; 
 	}
+    
+    void Receive_Arm_End_flag(bool arm_end)
+	{
+		Arm_Start=arm_end; 
+	}
 private:
     //-----------------------------------通讯标志位-----------------------------------------//
 
