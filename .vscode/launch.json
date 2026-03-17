@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "f:/MyProjectFlies/STM32H7/Frame_T-noMove/z_cpp_demo/MF_demo",
-      "program": "f:/MyProjectFlies/STM32H7/Frame_T-noMove/z_cpp_demo/MF_demo/build/Debug/outDebug",
+      "cwd": "f:/MyProjectFlies/STM32H7/Frame_T-noMove/User/Setup/Src",
+      "program": "f:/MyProjectFlies/STM32H7/Frame_T-noMove/User/Setup/Src/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

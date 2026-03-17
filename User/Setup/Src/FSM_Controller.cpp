@@ -361,6 +361,20 @@ void FSM_Controller::auto_ctrl()
                 is_click = 0;
             }
 
+            if(arm_setup_->isArmAutoStart())
+            {
+                //判断是否可以进入伸展阶段
+                if(chassis_setup_->Get_Arm_Start_flag())
+                {
+                    arm_setup_->setAutocanExtend(true);
+                }
+
+                if(arm_setup_->isAutoChassisCanStart())
+                {
+                    chassis_setup_->Receive_Arm_End_flag(false); //上层已经完成拾取，通知底盘可以开始移动了
+                }
+            }
+
             break;
         }
 

@@ -364,6 +364,11 @@ public:
             arm_ctrlStatus.auto_start = 0;
     }
 
+    bool isArmAutoStart() const
+    {
+        return auto_ctrl_.start_to_autoctrl;
+    }
+
     /**
      * @brief 在停下拾取自动模式下，由主状态机调用，
      *        设置是否可以进入伸展阶段
