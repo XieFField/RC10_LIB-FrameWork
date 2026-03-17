@@ -67,24 +67,25 @@ namespace jia
 
         // 计算底盘最大速度
         // 参数检查
-        // if (vel_x_radio + vel_y_radio + omega_z_radio != 1.0f)
+        // if (max_vel_x_radio + max_vel_y_radio + max_omega_z_radio != 1.0f)
         // {
         //     Error_Handler();
         // }
         // 参数计算
-        max_wheel_vel = omegaToVelF32(rpmToRadsF32(max_wheel_omega_rpm), wr);
+        max_wheel_omega = rpmToRadsF32(max_wheel_omega_rpm);
+        max_wheel_vel = omegaToVelF32(max_wheel_omega, wr);
         // 1号轮子
-        f32 wheel_1_max_vel_x = max_wheel_vel * vel_x_radio / wheel_1.ac;
-        f32 wheel_1_max_vel_y = max_wheel_vel * vel_y_radio / wheel_1.as;
-        f32 wheel_1_max_omega_z = max_wheel_vel * omega_z_radio / wheel_1.aeqr;
+        f32 wheel_1_max_vel_x = max_wheel_vel * max_vel_x_radio / wheel_1.ac;
+        f32 wheel_1_max_vel_y = max_wheel_vel * max_vel_y_radio / wheel_1.as;
+        f32 wheel_1_max_omega_z = max_wheel_vel * max_omega_z_radio / wheel_1.aeqr;
         // 2号轮子
-        f32 wheel_2_max_vel_x = max_wheel_vel * vel_x_radio / wheel_2.ac;
-        f32 wheel_2_max_vel_y = max_wheel_vel * vel_y_radio / wheel_2.as;
-        f32 wheel_2_max_omega_z = max_wheel_vel * omega_z_radio / wheel_2.aeqr;
+        f32 wheel_2_max_vel_x = max_wheel_vel * max_vel_x_radio / wheel_2.ac;
+        f32 wheel_2_max_vel_y = max_wheel_vel * max_vel_y_radio / wheel_2.as;
+        f32 wheel_2_max_omega_z = max_wheel_vel * max_omega_z_radio / wheel_2.aeqr;
         // 3号轮子
-        f32 wheel_3_max_vel_x = max_wheel_vel * vel_x_radio / wheel_3.ac;
-        f32 wheel_3_max_vel_y = max_wheel_vel * vel_y_radio / wheel_3.as;
-        f32 wheel_3_max_omega_z = max_wheel_vel * omega_z_radio / wheel_3.aeqr;
+        f32 wheel_3_max_vel_x = max_wheel_vel * max_vel_x_radio / wheel_3.ac;
+        f32 wheel_3_max_vel_y = max_wheel_vel * max_vel_y_radio / wheel_3.as;
+        f32 wheel_3_max_omega_z = max_wheel_vel * max_omega_z_radio / wheel_3.aeqr;
         // 计算底盘最大速度
         max_vel_x = minOfThree(wheel_1_max_vel_x, wheel_2_max_vel_x, wheel_3_max_vel_x);
         max_vel_y = minOfThree(wheel_1_max_vel_y, wheel_2_max_vel_y, wheel_3_max_vel_y);
@@ -108,23 +109,23 @@ namespace jia
             receiver->getControlData(&input_airjoy_data);
 
             TargetBodySpeedModeData target_data;
-            // target_data.vel_x = input_airjoy_data.left_y * max_set_vel_x;
-            target_data.vel_y = -input_airjoy_data.left_x * max_set_vel_y;
+            // target_data.vel_x = input_airjoy_data.left_y * max_input_set_vel_x;
+            target_data.vel_y = -input_airjoy_data.left_x * max_input_set_vel_y;
 
-            if(input_airjoy_data.left_y > 0.1f)
+            if (input_airjoy_data.left_y > 0.1f)
             {
-                target_data.vel_x = max_set_vel_x;
+                target_data.vel_x = max_input_set_vel_x;
             }
-            else if(input_airjoy_data.left_y < -0.1f)
+            else if (input_airjoy_data.left_y < -0.1f)
             {
-                target_data.vel_x = -max_set_vel_x;
+                target_data.vel_x = -max_input_set_vel_x;
             }
             else
             {
                 target_data.vel_x = 0.0f;
             }
 
-            target_data.omega_z = input_airjoy_data.right_x * max_set_omega_z_deg * kPi / 180.0f;
+            target_data.omega_z = input_airjoy_data.right_x * max_input_set_omega_z_deg * kPi / 180.0f;
 
             this->setTargetBodySpeedMode(target_data);
 
@@ -158,29 +159,40 @@ namespace jia
                 auto &p = planned_data_;
                 auto &lp = last_planned_data_;
                 auto &c = current_data_;
-                // 计算底盘最大速度
+                // 限制车端的目标速度
                 t.vel_x = clampValue(it.vel_x, -max_vel_x, max_vel_x);
                 t.vel_y = clampValue(it.vel_y, -max_vel_y, max_vel_y);
                 t.omega_z = clampValue(it.omega_z, -max_omega_z, max_omega_z);
-                // 计算三个电机的目标角速度
-                inverseKinematicsVel(t);
-                // 计算底盘加速度
-                p.vel_x = limit1DSignalRateByTimeF32(t.vel_x, p.vel_x, period, max_acc);
-                p.vel_y = limit1DSignalRateByTimeF32(t.vel_y, p.vel_y, period, max_acc);
+                // 计算轮端的目标角速度
+                inverseKinematics(t.vel_x, t.vel_y, t.omega_z, t.w1_omega, t.w2_omega, t.w3_omega);
+                // 限制轮端的目标角速度
+                scaleThreeValuesToMaxF32(t.w1_omega, t.w2_omega, t.w3_omega,
+                                         max_wheel_omega, max_wheel_omega, max_wheel_omega,
+                                         t.w1_omega, t.w2_omega, t.w3_omega);
+                // 计算车端的目标速度
+
+                // 限制车端的规划速度
+                p.vel_x = limit1DSignalRateByTimeSeparateF32(t.vel_x, p.vel_x, period, max_pos_acc, max_neg_acc);
+                p.vel_y = limit1DSignalRateByTimeSeparateF32(t.vel_y, p.vel_y, period, max_pos_acc, max_neg_acc);
                 p.omega_z = limit1DSignalRateByTimeF32(t.omega_z, p.omega_z, period, max_alpha_deg * kPi / 180.0f);
-                // 计算三个电机的规划角速度
-                inverseKinematicsVel(p);
-                // 发送指令到电机
-                w1_.h->setTargetRPM(radsToRpmF32(p.w1_omega));
-                w2_.h->setTargetRPM(radsToRpmF32(p.w2_omega));
-                w3_.h->setTargetRPM(radsToRpmF32(p.w3_omega));
-                // 计算三个电机的规划角加速度
+
+                // 计算轮端的规划角速度
+                inverseKinematics(p.vel_x, p.vel_y, p.omega_z, p.w1_omega, p.w2_omega, p.w3_omega);
+                // 计算轮端的规划角加速度
                 p.w1_alpha = (p.w1_omega - lp.w1_omega) / period;
                 p.w2_alpha = (p.w2_omega - lp.w2_omega) / period;
                 p.w3_alpha = (p.w3_omega - lp.w3_omega) / period;
+                // 限制轮端的规划角速度
+
+                // 计算车端的规划角速度
+
+                // 发送转速指令
+                w1_.h->setTargetRPM(radsToRpmF32(p.w1_omega));
+                w2_.h->setTargetRPM(radsToRpmF32(p.w2_omega));
+                w3_.h->setTargetRPM(radsToRpmF32(p.w3_omega));
 
                 // 正运动学解算
-                // 读取电机反馈
+                // 读取三个电机的反馈
                 c.w1_omega_rpm = w1_.h->getRPM();
                 c.w2_omega_rpm = w2_.h->getRPM();
                 c.w3_omega_rpm = w3_.h->getRPM();
@@ -193,7 +205,7 @@ namespace jia
 
                 // debug_uart.printf_DMA("%lu,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, t.w2_omega, t.w3_omega, p.w1_omega, p.w2_omega, p.w3_omega, c.w1_omega, c.w2_omega, c.w3_omega);
                 // debug_uart.printf_DMA("%lu\r\n", time_ms);
-                debug_uart.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms,t.w1_omega,p.w1_omega,std::abs(c.w1_omega_rpm),std::abs(c.w2_omega_rpm));
+                debug_uart.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, p.w1_omega, std::abs(c.w1_omega_rpm), std::abs(c.w2_omega_rpm));
 
                 break;
             }
@@ -222,10 +234,10 @@ namespace jia
         return Result::kOk;
     }
 
-    void Chassis::inverseKinematicsVel(Data &data)
+    void Chassis::inverseKinematics(f32 in_x, f32 in_y, f32 in_z, f32 out_w1, f32 out_w2, f32 out_w3)
     {
-        data.w1_omega = ((data.vel_x * w1_.c + data.vel_y * w1_.s + data.omega_z * w1_.eqr) / wr);
-        data.w2_omega = ((data.vel_x * w2_.c + data.vel_y * w2_.s + data.omega_z * w2_.eqr) / wr);
-        data.w3_omega = ((data.vel_x * w3_.c + data.vel_y * w3_.s + data.omega_z * w3_.eqr) / wr);
+        out_w1 = ((in_x * w1_.c + in_y * w1_.s + in_z * w1_.eqr) / wr);
+        out_w2 = ((in_x * w2_.c + in_y * w2_.s + in_z * w2_.eqr) / wr);
+        out_w3 = ((in_x * w3_.c + in_y * w3_.s + in_z * w3_.eqr) / wr);
     }
 }

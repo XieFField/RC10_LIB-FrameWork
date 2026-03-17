@@ -34,7 +34,18 @@ namespace jia
      * @param maxRate      最大速率（单位/秒）
      * @return             限幅后的下一时刻值
      */
-    f32 limit1DSignalRateByTimeF32(f32 target, f32 current, f32 dt, f32 maxRate);
+    f32 limit1DSignalRateByTimeF32(f32 target, f32 current, f32 dt, f32 max_rate);
+
+    /**
+     * @brief 基于时间的一维信号速率限幅函数（分离方向）
+     * @param target       目标值
+     * @param current      当前值
+     * @param dt           时间步长（秒）
+     * @param max_pos_rate 最大正速率（单位/秒）
+     * @param max_neg_rate 最大负速率（单位/秒）
+     * @return             限幅后的下一时刻值
+     */
+    f32 limit1DSignalRateByTimeSeparateF32(f32 target, f32 current, f32 dt, f32 max_pos_rate, f32 max_neg_rate);
 
     // 三值取小
     template <typename T>
@@ -94,14 +105,27 @@ namespace jia
         return cosf_result;
     }
 
-    inline f32 limit1DSignalRateByTimeF32(f32 target, f32 current, f32 dt, f32 maxRate)
+    inline f32 limit1DSignalRateByTimeF32(f32 target, f32 current, f32 dt, f32 max_rate)
     {
         f32 diff = target - current;
-        f32 maxStep = maxRate * dt;
+        f32 maxStep = max_rate * dt;
         if (diff > maxStep)
             return current + maxStep;
         else if (diff < -maxStep)
             return current - maxStep;
+        else
+            return target;
+    }
+
+    inline f32 limit1DSignalRateByTimeSeparateF32(f32 target, f32 current, f32 dt, f32 max_pos_rate, f32 max_neg_rate)
+    {
+        f32 diff = target - current;
+        f32 maxPosStep = max_pos_rate * dt;
+        f32 maxNegStep = max_neg_rate * dt;
+        if (diff > maxPosStep)
+            return current + maxPosStep;
+        else if (diff < -maxNegStep)
+            return current - maxNegStep;
         else
             return target;
     }
@@ -145,6 +169,55 @@ namespace jia
     inline f32 sineWaveGeneratorF32(f32 time, f32 amplitude, f32 frequency, f32 phase)
     {
         return amplitude * sinf(2.0f * kPi * frequency * time + phase);
+    }
+
+    /**
+     * @brief 按比例缩放三个数值，确保其绝对值不超过各自的最大值限制
+     * @param val1 第一个输入值（可正可负）
+     * @param val2 第二个输入值（可正可负）
+     * @param val3 第三个输入值（可正可负）
+     * @param max1 第一个值的最大绝对值限制（必须为正数）
+     * @param max2 第二个值的最大绝对值限制（必须为正数）
+     * @param max3 第三个值的最大绝对值限制（必须为正数）
+     * @param out1 输出：处理后的第一个值
+     * @param out2 输出：处理后的第二个值
+     * @param out3 输出：处理后的第三个值
+     * @return true 输入值均符合限制（或无超限制）
+     * @return false 若任一值超限制（最大值为0或负数）
+     * @note 1. 若所有值的绝对值都≤对应最大值，直接返回原值（保留符号）
+     *       2. 若任一值超限制，所有值按**统一缩放比例**等比例缩小，直到全部符合限制
+     *       3. 缩放比例取所有超限值的"超限倍数"的倒数（保证缩放后刚好有一个值触达最大值）
+     */
+    inline bool scaleThreeValuesToMaxF32(f32 val1, f32 val2, f32 val3,
+                                     f32 max1, f32 max2, f32 max3,
+                                     f32 &out1, f32 &out2, f32 &out3)
+    {
+        // 安全校验：最大值必须为正数（避免除以0或负数导致逻辑错误）
+        if (max1 <= 0.0f || max2 <= 0.0f || max3 <= 0.0f)
+        {
+            return false;
+        }
+
+        // 计算每个值的"超限倍数"（当前值绝对值 / 对应最大值）
+        // 倍数>1表示超限，倍数≤1表示合规
+        f32 ratio1 = fabsf(val1) / max1;
+        f32 ratio2 = fabsf(val2) / max2;
+        f32 ratio3 = fabsf(val3) / max3;
+
+        // 找到最大的超限倍数
+        f32 maxRatio = ratio1;
+        if (ratio2 > maxRatio)
+            maxRatio = ratio2;
+        if (ratio3 > maxRatio)
+            maxRatio = ratio3;
+
+        // 确定缩放比例：若最大倍数≤1，缩放比例为1（不缩放）；否则为1/maxRatio
+        f32 scaleFactor = (maxRatio > 1.0f) ? (1.0f / maxRatio) : 1.0f;
+
+        // 按比例缩放并保留符号
+        out1 = val1 * scaleFactor;
+        out2 = val2 * scaleFactor;
+        out3 = val3 * scaleFactor;
     }
 
 } // namespace jia
