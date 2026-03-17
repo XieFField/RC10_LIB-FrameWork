@@ -49,6 +49,9 @@ namespace jia
             f32 vel_x;    // x轴速度，单位：米/秒
             f32 vel_y;    // y轴速度，单位：米/秒
             f32 omega_z;  // z轴角速度，单位：rad/s
+            f32 acc_x;    // x轴加速度，单位：米/秒^2
+            f32 acc_y;    // y轴加速度，单位：米/秒^2
+            f32 alpha_z;  // z轴角加速度，单位：rad/s^2
             f32 w1_alpha; // 轮子1的角加速度，单位：rad/s^2
             f32 w2_alpha; // 轮子2的角加速度，单位：rad/s^2
             f32 w3_alpha; // 轮子3的角加速度，单位：rad/s^2
@@ -59,12 +62,9 @@ namespace jia
 
         struct CurrentData
         {
-            f32 w1_omega;     // 轮子1的角速度，单位：rad/s
-            f32 w1_omega_rpm; // 轮子1的角速度，单位：rpm
-            f32 w2_omega;     // 轮子2的角速度，单位：rad/s
-            f32 w2_omega_rpm; // 轮子2的角速度，单位：rpm
-            f32 w3_omega;     // 轮子3的角速度，单位：rad/s
-            f32 w3_omega_rpm; // 轮子3的角速度，单位：rpm
+            f32 w1_omega; // 轮子1的角速度，单位：rad/s
+            f32 w2_omega; // 轮子2的角速度，单位：rad/s
+            f32 w3_omega; // 轮子3的角速度，单位：rad/s
         };
 
         // 默认构造和析构函数
@@ -77,7 +77,7 @@ namespace jia
         Result setTargetBodySpeedMode(const TargetBodySpeedModeData &target);
 
     private:
-        void inverseKinematics(f32 in_x, f32 in_y, f32 in_z, f32 out_w1, f32 out_w2, f32 out_w3);
+        void inverseKinematics(f32 in_x, f32 in_y, f32 in_z, f32 &out_w1, f32 &out_w2, f32 &out_w3);
 
     private:
         struct wheel_config
@@ -127,30 +127,37 @@ namespace jia
         constexpr static f32 period = 0.001f;       // 控制周期，单位：秒
         constexpr static f32 wheel_radius = 0.075f; // 轮子半径（单位：米）
 
-        f32 max_input_set_vel_x = 10.0f;        // 最大设定目标x轴速度，单位：米/秒
-        f32 max_input_set_vel_y = 10.0f;        // 最大设定目标y轴速度，单位：米/秒
-        f32 max_input_set_omega_z_deg = 900.0f; // 最大设定目标z轴角速度，单位：deg/s
+        bool is_wheel_omega_limit = true;           // 是否进行轮端角速度限制
+        f32 max_wheel_omega = rpmToRadsF32(350.0f); // 最大轮子角速度，单位：rad/s
+        f32 max_wheel_vel = 0.0f;                   // 最大轮子线速度，单位：米/秒
 
-        f32 max_wheel_omega = 0.0f;     // 最大轮子角速度，单位：rad/s
-        f32 max_wheel_omega_rpm = 350.0f; // 最大轮子转速，单位：rpm
-        f32 max_wheel_vel = 0.0f;         // 最大轮子线速度，单位：米/秒
-
+        // 车端速度限制参数
         f32 max_vel_x_radio = 1.0f;   // x轴速度比例系数
         f32 max_vel_y_radio = 1.0f;   // y轴速度比例系数
         f32 max_omega_z_radio = 1.0f; // z轴角速度比例系数
 
-        f32 max_vel_x = 0.0f;       // 最大x轴速度，单位：米/秒
-        f32 max_vel_y = 0.0f;       // 最大y轴速度，单位：米/秒
-        f32 max_omega_z = 0.0f;     // 最大z轴角速度，单位：rad/s
-        f32 max_omega_deg_z = 0.0f; // 最大z轴角速度，单位：deg/s
+        f32 max_vel_x = 0.0f;   // 最大x轴速度，单位：米/秒
+        f32 max_vel_y = 0.0f;   // 最大y轴速度，单位：米/秒
+        f32 max_omega_z = 0.0f; // 最大z轴角速度，单位：rad/s
 
-        f32 max_pos_acc = 20.0f;      // 最大正向线加速度，单位：m/s^2
-        f32 max_neg_acc = 20.0f;      // 最大负向线加速度，单位：m/s^2
-        f32 max_alpha_deg = 14400.0f; // 最大角加速度，单位：deg/s^2
+        bool is_chassis_acc_limit = false; // 是否进行车端加速度限制
+        f32 max_xy_acc_acc = 2.0f;         // 最大XY轴线加速度，单位：m/s^2
+        f32 max_xy_dec_acc = 20.0f;         // 最大XY轴线减速度，单位：m/s^2
+        f32 max_z_alpha = 1.0f * kPi;      // 最大z轴角加速度，单位：rad/s^2
+
+        bool is_wheel_alpha_limit = true; // 是否进行轮端角加速度限制
+        f32 max_wheel_alpha = 2.0f * kPi; // 最大轮子角加速度，单位：rad/s^2
 
         const f32 &wr = wheel_radius;
 
-        TargetData input_target_data; // 输入目标数据
+        struct InputTargetData
+        {
+            f32 vel_x;   // 目标x轴速度，单位：米/秒
+            f32 vel_y;   // 目标y轴速度，单位：米/秒
+            f32 omega_z; // 目标z轴角速度，单位：rad/s
+        };
+
+        InputTargetData input_target_data; // 输入目标数据
 
         Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
         RmPocketData_t input_airjoy_data;

@@ -45,7 +45,7 @@ namespace jia
      * @param max_neg_rate 最大负速率（单位/秒）
      * @return             限幅后的下一时刻值
      */
-    f32 limit1DSignalRateByTimeSeparateF32(f32 target, f32 current, f32 dt, f32 max_pos_rate, f32 max_neg_rate);
+    f32 limit1DSignalRateByTimeSeparateIncAndDecF32(f32 target, f32 current, f32 dt, f32 max_pos_rate, f32 max_neg_rate);
 
     // 三值取小
     template <typename T>
@@ -117,17 +117,44 @@ namespace jia
             return target;
     }
 
-    inline f32 limit1DSignalRateByTimeSeparateF32(f32 target, f32 current, f32 dt, f32 max_pos_rate, f32 max_neg_rate)
+    inline f32 limit1DSignalRateByTimeSeparateIncAndDecF32(f32 target, f32 current, f32 dt, f32 max_pos_rate, f32 max_neg_rate)
     {
         f32 diff = target - current;
-        f32 maxPosStep = max_pos_rate * dt;
-        f32 maxNegStep = max_neg_rate * dt;
-        if (diff > maxPosStep)
-            return current + maxPosStep;
-        else if (diff < -maxNegStep)
-            return current - maxNegStep;
+        f32 max_pos_step = max_pos_rate * dt;
+        f32 max_neg_step = max_neg_rate * dt;
+        if (diff > max_pos_step)
+            return current + max_pos_step;
+        else if (diff < -max_neg_step)
+            return current - max_neg_step;
         else
             return target;
+    }
+
+    inline f32 limitAccByTimeSeparateAccAndDecF32(f32 target, f32 current, f32 dt, f32 max_acc_rate, f32 max_dec_rate)
+    {
+        f32 diff = target - current;
+        if (diff > 0.0f && current > 0.0f || diff < 0.0f && current < 0.0f || current == 0.0f)
+        {
+            f32 max_acc_step = max_acc_rate * dt;
+            if (diff > max_acc_step)
+                return current + max_acc_step;
+            else if (diff < -max_acc_step)
+                return current - max_acc_step;
+            else
+                return target;
+        }
+        else if (diff < 0.0f && current > 0.0f || diff > 0.0f && current < 0.0f)
+        {
+            f32 max_dec_step = max_dec_rate * dt;
+            if (diff < -max_dec_step)
+                return current - max_dec_step;
+            else if (diff > max_dec_step)
+                return current + max_dec_step;
+            else
+                return target;
+        }
+
+        return 0.0f;
     }
 
     template <typename T>
@@ -182,20 +209,28 @@ namespace jia
      * @param out1 输出：处理后的第一个值
      * @param out2 输出：处理后的第二个值
      * @param out3 输出：处理后的第三个值
-     * @return true 输入值均符合限制（或无超限制）
-     * @return false 若任一值超限制（最大值为0或负数）
-     * @note 1. 若所有值的绝对值都≤对应最大值，直接返回原值（保留符号）
-     *       2. 若任一值超限制，所有值按**统一缩放比例**等比例缩小，直到全部符合限制
-     *       3. 缩放比例取所有超限值的"超限倍数"的倒数（保证缩放后刚好有一个值触达最大值）
+     * @return f32 缩放比例：
+     *         - 若所有值都符合限制，返回1.0f
+     *         - 若最大值为负数，返回-1.0f
+     *         - 若有一个或多个值超限制，返回缩放比例（确保所有值绝对值均≤各自的最大值）
      */
-    inline bool scaleThreeValuesToMaxF32(f32 val1, f32 val2, f32 val3,
-                                     f32 max1, f32 max2, f32 max3,
-                                     f32 &out1, f32 &out2, f32 &out3)
+    inline f32 scaleThreeValuesToMaxF32(f32 val1, f32 val2, f32 val3,
+                                        f32 max1, f32 max2, f32 max3,
+                                        f32 &out1, f32 &out2, f32 &out3)
     {
-        // 安全校验：最大值必须为正数（避免除以0或负数导致逻辑错误）
-        if (max1 <= 0.0f || max2 <= 0.0f || max3 <= 0.0f)
+        // 安全校验：最大值必须为非负数
+        if (max1 < 0.0f || max2 < 0.0f || max3 < 0.0f)
         {
-            return false;
+            return -1.0f;
+        }
+
+        // 特殊情况：若存在最大值为0，直接全部返回0（避免除以0）
+        if (max1 == 0.0f && max2 == 0.0f && max3 == 0.0f)
+        {
+            out1 = 0.0f;
+            out2 = 0.0f;
+            out3 = 0.0f;
+            return 0.0f;
         }
 
         // 计算每个值的"超限倍数"（当前值绝对值 / 对应最大值）
@@ -218,6 +253,8 @@ namespace jia
         out1 = val1 * scaleFactor;
         out2 = val2 * scaleFactor;
         out3 = val3 * scaleFactor;
+
+        return scaleFactor;
     }
 
 } // namespace jia
