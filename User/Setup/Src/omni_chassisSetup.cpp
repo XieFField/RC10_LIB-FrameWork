@@ -21,13 +21,13 @@ void OmniChassis_Setup::ResetAutoControlStates(void)
     ff_diff_inited_ = false;
     ff_ref_point_last_ = {0.0f, 0.0f};
     ff_velocity_lpf_ = {0.0f, 0.0f};
-    ff_last_tick_ms_ = 0;
+    //ff_last_tick_ms_ = 0;
 }
 
 Vector2D OmniChassis_Setup::ComputeLookaheadDiffFeedforward(bool near_end)
 {
     // 使用 RTOS tick 估计离散 dt（单位秒）；该方法在嵌入式任务循环中稳定且开销小。
-    uint32_t now_tick_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+    //uint32_t now_tick_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
     Vector2D v_ff_raw = {0.0f, 0.0f};
 
     // 首次进入或状态复位后，不做差分，先对齐历史参考点。
@@ -35,13 +35,13 @@ Vector2D OmniChassis_Setup::ComputeLookaheadDiffFeedforward(bool near_end)
     {
         ff_diff_inited_ = true;
         ff_ref_point_last_ = ff_ref_point_;
-        ff_last_tick_ms_ = now_tick_ms;
+        //ff_last_tick_ms_ = now_tick_ms;
         ff_velocity_lpf_ = {0.0f, 0.0f};
         return ff_velocity_lpf_;
     }
 
     // 计算 dt，防止 0 或过小导致差分放大。
-    float dt_s = (float)(now_tick_ms - ff_last_tick_ms_) / 1000.0f;
+    float dt_s = getdt();
     if (dt_s <= 0.0f)
     {
         dt_s = control_period_s_;
@@ -78,7 +78,7 @@ Vector2D OmniChassis_Setup::ComputeLookaheadDiffFeedforward(bool near_end)
 
     // 更新历史量，供下一周期差分。
     ff_ref_point_last_ = ff_ref_point_;
-    ff_last_tick_ms_ = now_tick_ms;
+    //ff_last_tick_ms_ = now_tick_ms;
 
     return v_ff;
 }
@@ -124,8 +124,8 @@ void OmniChassis_Setup::loop()
     ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
     robot_pos_.x = ladar_data_.x;
     robot_pos_.y = ladar_data_.y;
-    robot_pos_.x += original_point_.x;
-    robot_pos_.y += original_point_.y;
+    //robot_pos_.x += original_point_.x;
+    //robot_pos_.y += original_point_.y;
     
     //Acc_target_yaw_ = Acc_yaw_.plan(target_yaw_);
 
@@ -221,6 +221,9 @@ void OmniChassis_Setup::loop()
 
     case CHASSIS_AUTO_CONTROL_CB:
     {
+        
+        
+        this->set_ControlMode(WORLD_SPEED_MODE);
         if (flag == 1)
         {
             flag = 0;
@@ -232,7 +235,9 @@ void OmniChassis_Setup::loop()
         {
             if (path_line_.Is_End() == true)
             {
-                num++;
+                // 获取曲线（带保护）
+                curve = path_line_.get_bezier_curve();
+
                 // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
                 planspeed = path_line_.plan(robot_pos_);
                 Path_correction();
@@ -251,7 +256,6 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-
                     flag = 0;
                     flag_run = 0;
                     speed.x = 0.0f;
@@ -265,7 +269,6 @@ void OmniChassis_Setup::loop()
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
 					WeaponSage_END=1;
-
             }
         }
         else
@@ -280,12 +283,6 @@ void OmniChassis_Setup::loop()
         if (path_line_.index_ == 1)
         {
                 target_yaw_ = -90.0f;
-//                if (abs(target_yaw_ - yaw) > 1.0f)
-//                {
-//                    target_chassis_twist_.vx = 0.0f;
-//                    target_chassis_twist_.vy = 0.0f;
-//                }
-
         }
         // 获取当前角度
         float yaw_real_angle = yaw;
@@ -303,6 +300,7 @@ void OmniChassis_Setup::loop()
     
     case CHASSIS_AUTO_CONTROL_KFS:
     {
+        this->set_ControlMode(WORLD_SPEED_MODE);
         if (flag == 1)
         {
             flag = 0;
@@ -311,24 +309,57 @@ void OmniChassis_Setup::loop()
         }
         if (flag_run == 1)
         {
+            // 获取曲线（带保护）
+            curve = path_line_.get_bezier_curve();
+            
             if (path_line_.Is_End() == true)
             {
-                num++;
-                // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-                planspeed = path_line_.plan(robot_pos_);
-                Path_correction();
-                bool near_end = (tNearest > 0.95f);
-                Vector2D v_ff = ComputeLookaheadDiffFeedforward(near_end);
-                speed = ComposeRobotVelocity(corrVelocity, v_ff, near_end);
-                target_chassis_twist_.vx = speed.x;
-                target_chassis_twist_.vy = speed.y;
-//                if(path_line_.get_pid_end_flag()==0)
-//                {
-//                    Path_correction();
-//                    speed = planspeed + corrVelocity;// 最终速度 = 规划的前进速度 + 横向纠偏速度
-//                }
-//                else
-//                    speed = planspeed; 
+                //上方停止点旋转
+                if(spin_up_flag==true)
+                {
+                    
+                }
+                else if(spin_down_flag==true)
+                {
+                    
+                }
+                
+                if(MF1_pos_.x==curve.Get_End_point().x && MF1_pos_.y==curve.Get_End_point().y)
+                {
+                    MF1_flag=true;
+                }
+                else if(MF2_pos_.x==curve.Get_End_point().x && MF2_pos_.y==curve.Get_End_point().y)
+                {
+                    MF2_flag=true;
+                }
+                else if(MF1_flag==true||MF2_flag==true);
+                {
+                    MF1_flag=false;
+                    MF2_flag=false;
+                    Arm_Start=true;
+                }
+                
+                if(Arm_Start==false)
+                {
+                    // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
+                    planspeed = path_line_.plan(robot_pos_);
+                    
+                    Path_correction();
+                    
+                    bool near_end = (tNearest > 0.93f);
+                    Vector2D v_ff = ComputeLookaheadDiffFeedforward(near_end);
+                    speed = ComposeRobotVelocity(corrVelocity, v_ff, near_end);
+                    
+                    target_chassis_twist_.vx = speed.x;
+                    target_chassis_twist_.vy = speed.y;
+                    
+                }
+                else
+                {
+                    target_chassis_twist_.vx = 0.0f;
+                    target_chassis_twist_.vy = 0.0f;
+                }
+                
             }
             else
             {
@@ -505,178 +536,196 @@ Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNeares
 
 void OmniChassis_Setup::KFS_Selection_Planning(void)
 {
-    int cho = 0;
-
-    Point2D temp;
-    temp.x = robot_pos_.x;
-    temp.y = robot_pos_.y;
-    if (robot_pos_.x < -0.5f || robot_pos_.x > 5.2f || robot_pos_.y < -0.5f || robot_pos_.y > 8.3f)
+    //单位转换
+    robot_point_.x=robot_pos_.x;
+    robot_point_.y=robot_pos_.y;
+    //计算理想的KFS路径
+    KFS_KeyPoint_ = MF_AutoCtrler::PathInformation_calc(robot_point_, MF1, MF2);
+    //判断MF1的车子朝向
+    MF1_Point_=KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[0]];
+    MF2_Point_=KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1]];
+    
+    if (abs(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[0]+1] - MF1_Point_) < 5.0f)
     {
-        flag_run = 0;
-        cho = 0;
-    }
-    else if (robot_pos_.y < 2.0f)
-    {
-        cho = 1;
+        if (MF1_Point_ < 10.0f)
+        {
+            target_yaw_ = 90.0f;
+        }
+        else
+        {
+            target_yaw_ = -90.0f;
+        }
     }
     else
     {
-        //cho = 2;
-    }
-
-    if (cho == 1)
-    {
-        KFS_result_ = MF_AutoCtrler::PathNodeResult_calc(temp, KFS, 0, 26);
-        int point_sum = MF_AutoCtrler::BFS_GetPath(KFS_result_.entranceMap, KFS_result_.bestBMF1, path_point_, 20);
-        int index = 0;
-        for (int i = 0; i < point_sum; i++)
+        if (MF1_Point_ == 21 || MF1_Point_ == 16 || MF1_Point_ == 11 || MF1_Point_ == 6)
         {
-            if (path_point_[i] == 1 || path_point_[i] == 5 || path_point_[i] == 30 || path_point_[i] == 26 )
+            target_yaw_ = 180.0f;
+        }
+        else if(MF1_Point_ == 25 || MF1_Point_ == 20 || MF1_Point_ == 15 || MF1_Point_ == 10)
+        {
+            target_yaw_ = 0.0f;
+        }
+    }
+    
+    //判断MF2的车子朝向
+    if (abs(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1]+1] - MF2_Point_) < 5.0f)
+    {
+        if (MF2_Point_ < 10.0f)
+        {
+            MF2_target_yaw_ = 90.0f;
+        }
+        else
+        {
+            MF2_target_yaw_ = -90.0f;
+        }
+    }
+    else
+    {
+        if (MF1_Point_ == 21 || MF1_Point_ == 16 || MF1_Point_ == 11 || MF1_Point_ == 6)
+        {
+            MF2_target_yaw_ = 180.0f;
+        }
+        else if(MF1_Point_ == 25 || MF1_Point_ == 20 || MF1_Point_ == 15 || MF1_Point_ == 10)
+        {
+            MF2_target_yaw_ = 0.0f;
+        }
+    }
+    
+    //判断是否需要转向
+    if(target_yaw_==MF2_target_yaw_)
+    {
+        spin_flag=false;
+    }
+    else
+    {
+        spin_flag=true;
+    }
+    
+    //计算出口索引
+    int index_exit=0;
+    while(KFS_KeyPoint_.Index_MFroad[index_exit]!=0)
+    {
+        index_exit++;
+    }
+    
+    //写入路径点坐标
+    path_line_.plan_reset();
+    path_line_.Reset();
+    path_line_.Add_Start_Point(robot_pos_, path_param_KFS_);
+    
+    MF1_pos_=MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[0]]);
+    MF2_pos_=MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1]]);
+
+    if(spin_flag==false)
+    {
+        for (int i = 0; i < index_exit; i++)
+        {
+            if (i == (index_exit - 1))
             {
-                path_key_point_[index] = path_point_[i];
-                index++;
+                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                path_line_.Add_End_Point(temp_vector);
+            }
+            else
+            {
+                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                path_line_.Add_Point(temp_vector);
             }
         }
-        int KFS_next_index=index;
+    }
+    else if(spin_flag==true)
+    {
+        if(target_yaw_ == 90.0f)        //下
+        {
+            for (int i = 0; i < index_exit; i++)
+        {
+            if (i == (index_exit - 1))
+            {
+                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                path_line_.Add_End_Point(temp_vector);
+            }
+            else if(i==(KFS_KeyPoint_.Index_MFroad[0]+1))
+            {
+                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                temp_vector.y=temp_vector.y+spin_skew_;
+                path_line_.Add_Point(temp_vector); 
+                spin_down_flag=true;                  
+            }
+            else
+            {
+                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                path_line_.Add_Point(temp_vector);
+            }
+        }
         
-        point_sum = MF_AutoCtrler::BFS_GetPath(KFS_result_.bestBMF1, KFS_result_.exitMap, path_point_, 20);
-
-        for (int i = 0; i < point_sum; i++)
-        {
-            if (path_point_[i] == 1 || path_point_[i] == 5 || path_point_[i] == 30 || path_point_[i] == 26 || path_point_[i] == KFS_result_.exitMap)
-            {
-                path_key_point_[index] = path_point_[i];
-                index++;
-            }
         }
-
-        // 修改车子朝向
-        if (abs(path_key_point_[KFS_next_index] - KFS_result_.bestBMF1) < 5.0f)
+        else if(target_yaw_ == -90.0f)        //上
         {
-            if (KFS_result_.bestBMF1 < 10.0f)
+        for (int i = 0; i < index_exit; i++)
+        {
+            if (i == (index_exit - 1))
             {
-                target_yaw_ = 90.0f;
+                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                path_line_.Add_End_Point(temp_vector);
+            }
+            else if(i==(KFS_KeyPoint_.Index_MFroad[0]+1))
+            {
+                path_line_.Add_Point(spin_point_);
+                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                path_line_.Add_Point(temp_vector);
+                spin_up_flag=true;                
             }
             else
             {
-                target_yaw_ = -90.0f;
+                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                path_line_.Add_Point(temp_vector);
             }
         }
-        else
+        }
+        else        //两边
         {
-            if (KFS_result_.bestBMF1 == 21 || KFS_result_.bestBMF1 == 16 || KFS_result_.bestBMF1 == 11 || KFS_result_.bestBMF1 == 6)
+            for (int i = 0; i < index_exit; i++)
+        {
+            if (i == (index_exit - 1))
             {
-                target_yaw_ = 180.0f;
+                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                path_line_.Add_End_Point(temp_vector);
+            }
+            else if(i==(KFS_KeyPoint_.Index_MFroad[0]+1))
+            {
+                if(KFS_KeyPoint_.mustPastMap[i]==26||KFS_KeyPoint_.mustPastMap[i]==30)  //上
+                {
+                    path_line_.Add_Point(spin_point_);
+                    Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                    path_line_.Add_Point(temp_vector); 
+                    spin_up_flag=true;                    
+                }
+                else if(KFS_KeyPoint_.mustPastMap[i]==1||KFS_KeyPoint_.mustPastMap[i]==5)  //下
+                {
+                    Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                    temp_vector.y=temp_vector.y+spin_skew_;
+                    path_line_.Add_Point(temp_vector);
+                    spin_down_flag=true;  
+                }   
             }
             else
             {
-                target_yaw_ = 0.0f;
+                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                path_line_.Add_Point(temp_vector);
             }
         }
-
-        path_line_.plan_reset();
-        path_line_.Reset();
-        path_line_.Add_Start_Point(Vector2D{robot_pos_.x, robot_pos_.y}, path_param_);
-        for (int i = 0; i < index; i++)
-        {
-            if (i == (index - 1))
-            {
-                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(path_key_point_[i]);
-                path_line_.Add_End_Point(Vector2D{temp_vector.x - 0.5f, temp_vector.y - 0.5f});
-            }
-            else
-            {
-                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(path_key_point_[i]);
-                path_line_.Add_Point(Vector2D{temp_vector.x - 0.5f, temp_vector.y - 0.5f});
-            }
+            
+        
         }
+         
+    
     }
-    else if (cho == 2)
-    {
-
-        KFS_result_ = MF_AutoCtrler::PathNodeResult_calc(Point2D{temp.x, 1.2f, 0.0f}, KFS, 0, 26);
-        temp.x += 0.5f;
-        temp.y += 0.5f;
-        point_map = MF_AutoCtrler::GetMapNumFromPos(temp);
-        // 将车子开到空旷地带的路口
-        int point_sum = MF_AutoCtrler::BFS_GetPath(point_map, KFS_result_.bestBMF1, path_point_, 20);
-        int index = 0;
-        for (int i = 0; i < point_sum; i++)
-        {
-            if (path_point_[i] == 1 || path_point_[i] == 5 || path_point_[i] == 30 || path_point_[i] == 26 || path_point_[i] == KFS_result_.bestBMF1)
-            {
-                path_key_point_[index] = path_point_[i];
-                index++;
-            }
-        }
-        // 将车子开到kfs前
-        //        point_sum = MF_AutoCtrler::BFS_GetPath(point_map, KFS_result_.bestBMF1, path_point_, 20);
-        //        for (int i = 0; i < point_sum; i++)
-        //        {
-        //            if (path_point_[i] == 1 || path_point_[i] == 5 || path_point_[i] == 30 || path_point_[i] == 26 || path_point_[i] == KFS_result_.bestBMF1)
-        //            {
-        //                path_key_point_[index] = path_point_[i];
-        //                index++;
-        //            }
-        //        }
-        // 将车子开到斜坡前
-        point_sum = MF_AutoCtrler::BFS_GetPath(KFS_result_.bestBMF1, KFS_result_.exitMap, path_point_, 20);
-        for (int i = 0; i < point_sum; i++)
-        {
-            if (path_point_[i] == 1 || path_point_[i] == 5 || path_point_[i] == 30 || path_point_[i] == 26 || path_point_[i] == KFS_result_.exitMap)
-            {
-                path_key_point_[index] = path_point_[i];
-                index++;
-            }
-        }
-
-        // 修改车子朝向
-        if (abs(path_key_point_[0] - KFS_result_.bestBMF1) < 5.0f)
-        {
-            if (KFS_result_.bestBMF1 < 10.0f)
-            {
-                target_yaw_ = 90.0f;
-            }
-            else
-            {
-                target_yaw_ = -90.0f;
-            }
-        }
-        else
-        {
-            if (KFS_result_.bestBMF1 == 21 || KFS_result_.bestBMF1 == 16 || KFS_result_.bestBMF1 == 11 || KFS_result_.bestBMF1 == 6)
-            {
-                target_yaw_ = 180.0f;
-            }
-            else
-            {
-                target_yaw_ = 0.0f;
-            }
-        }
-
-        path_line_.plan_reset();
-        path_line_.Reset();
-        path_line_.Add_Start_Point(Vector2D{robot_pos_.x, robot_pos_.y}, path_param_);
-        for (int i = 0; i < index; i++)
-        {
-            if (i == (index - 1))
-            {
-                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(path_key_point_[i]);
-                path_line_.Add_End_Point(Vector2D{temp_vector.x - 0.5f, temp_vector.y - 0.5f});
-            }
-            else
-            {
-                Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(path_key_point_[i]);
-                path_line_.Add_Point(Vector2D{temp_vector.x - 0.5f, temp_vector.y - 0.5f});
-            }
-        }
-    }
+    
 }
 
 void OmniChassis_Setup::Path_correction(void)
 {
-    // 获取曲线（带保护）
-    curve = path_line_.get_bezier_curve();
+    
 
     //pathEnd = curve.Get_Point(1.0f);空语句，不知为什么有
     
@@ -684,7 +733,7 @@ void OmniChassis_Setup::Path_correction(void)
     nearestPt = GetPathNearestPoint(curve, robot_pos_, tNearest);
 
     // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
-    if (tNearest > 0.99f || path_line_.Is_End() == false)
+    if (tNearest > 0.93f || path_line_.Is_End() == false)
     {
         Vector2D endPt = curve.Get_End_point();
         // 终点段把前馈参考点切换为终点坐标，差分会自然收敛到 0。
@@ -739,8 +788,8 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     target_yaw_ = 0.0f;
     path_line_.plan_reset();
     path_line_.Reset();
-    path_line_.Add_Start_Point(Vector2D{robot_pos_.x, robot_pos_.y}, path_param_1);
+    path_line_.Add_Start_Point(robot_pos_, path_param_CB_);
 //   path_line_.Add_Point(Vector2D{1.8f, 0.8f});
 //   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
-     path_line_.Add_End_Point(Vector2D{3.92f, 1.38f});
+     path_line_.Add_End_Point(Vector2D{4.31f, 1.88f});
 }

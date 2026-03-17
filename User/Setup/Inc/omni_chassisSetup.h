@@ -120,40 +120,55 @@ public:
 	{
 		return WeaponSage_END; 
 	}
-	
+    
+    bool Get_Arm_Start_flag()
+	{
+		return Arm_Start; 
+	}
 private:
+    //-----------------------------------通讯标志位-----------------------------------------//
+
 	int WeaponSage_Start=0;
 	bool WeaponSage_END=0;
+    
+    bool Arm_Start=false;
+    //-----------------------------------速度规划参数-----------------------------------------//
 
     int flag = 0;
     int flag_run = 0;
 
 
-    CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
-    
-    float yaw=0.0f;
-    float target_yaw_ = 0.0f;
-    //float Acc_target_yaw_ = 0.0f;
 
-    //ConstantAcc Acc_yaw_{0.1f,0.0f}; // 注意代码运行系统的周期
-    //Path path_;
+    CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
+
     Path_line path_line_;
-    //Path_line path_line1_;
+    Vector2D Clamping_Bar_Selection_pos_ = {1.925f+0.48f, 0.19f+0.50f};
     
-    Speedplanner_1D_Param_Config path_param_={.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
-    Speedplanner_1D_Param_Config path_param_1={.maxAcc = 5.0f, .maxDec = 5.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
- 
-    Vector2D original_point_={-0.48f,-0.50f};
-    Vector2D Clamping_Bar_Selection_pos_ = {1.925f, 0.19f};
+    Speedplanner_1D_Param_Config path_param_KFS_={.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
+    Speedplanner_1D_Param_Config path_param_CB_={.maxAcc = 5.0f, .maxDec = 5.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; 
     
+    //float Acc_target_yaw_ = 0.0f;
+    //ConstantAcc Acc_yaw_{0.1f,0.0f}; // 注意代码运行系统的周期
+    //Vector2D original_point_={-0.48f,-0.50f};
+    
+    //-----------------------------------接口监视参数-----------------------------------------//
+        
     Point3D ladar_data_;
     Vector2D robot_pos_ = {0.0f, 0.0f};
+    Point2D robot_point_= {0.0f, 0.0f};
     
-    Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}; 
     Vector2D planspeed;
     Vector2D speed; 
     Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
+    
+    PID_Position pid_pos_x;               // x轴绝对位置PID控制器
+    PID_Position pid_pos_y;               // y轴绝对位置PID控制器
+    
+    Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}; 
+    
+    //-----------------------------------前馈参数-----------------------------------------//
+   
     // 用于前视点差分前馈的“参考点”：
     // 正常跟踪阶段等于 lookaheadPt，终点阶段等于 endPt。
     Vector2D ff_ref_point_ = {0.0f, 0.0f};
@@ -163,54 +178,86 @@ private:
     Vector2D ff_velocity_lpf_ = {0.0f, 0.0f};
     // 前馈差分初始化标志，避免首周期使用无效差分。
     bool ff_diff_inited_ = false;
-    // 记录前馈差分计算时刻（ms tick）。
-    uint32_t ff_last_tick_ms_ = 0;
-
+    
+    float m_lookaheadDist = 0.3f;         // 前视距离 (单位: 米)
     // 前视点差分前馈增益（越大越“冲”，也更容易抖）。
-    float kff_la_ = 0.22f;
+    float kff_la_ = 0.1f;
     // 一阶低通系数，范围(0,1]：越小越平滑，越大越灵敏。
-    float ff_lpf_alpha_ = 0.30f;
+    float ff_lpf_alpha_ = 0.20f;
     // 控制任务周期（当前系统 1ms 调度）。
     float control_period_s_ = 0.001f;
     // 差分最小时间，避免 dt 太小导致数值爆发。
-    float ff_dt_min_s_ = 0.001f;
+    float ff_dt_min_s_ = 0.0009f;
     // 差分最大时间，避免任务异常延迟后一次性放大速度脉冲。
     float ff_dt_max_s_ = 0.010f;
     // 前馈限幅（m/s），用于约束尖峰。
-    float max_ff_speed_ = 0.65f;
+    float max_ff_speed_ = 1.0f;
     Vector2D v_robot_last_cmd_ = {0.0f, 0.0f};
-    float kff_ref_ = 0.8f;
-    float k_damp_ = 0.25f;
+    //float kff_ref_ = 0.8f;
+    float k_damp_ = 0.0f;
     float end_ff_scale_ = 0.35f;
     float end_pid_scale_ = 0.7f;
-    float max_robot_speed_ = 1.1f;
+    float max_robot_speed_ = 1.5f;
     float max_robot_speed_end_ = 0.45f;
-    PID_Position pid_pos_x;               // x轴绝对位置PID控制器
-    PID_Position pid_pos_y;               // y轴绝对位置PID控制器    
     
-    int8_t point_map=0;
-    int8_t path_point_[20];
-    int8_t path_key_point_[10];
-    int8_t KFS=0;
+    //-----------------------------------前视pid参数-----------------------------------------//
+    
+    float tNearest = 0.0f;                // 最近点在贝塞尔曲线上的参数t (0~1)
+    float tLookahead = 0.0f;              // 前视点在贝塞尔曲线上的参数t (0~1)
+
+    Vector2D nearestPt;                   // 路径上距离机器人最近的点
+    Vector2D lookaheadPt;                 // 路径上的前视点
+    Vector2D lookaheadTangent;            // 前视点处的切线方向向量
+    Vector2D pathEnd;                     // 路径终点坐标
+    
+    BezierCurve curve;
+    
+    //-----------------------------------梅林规划参数-----------------------------------------//
+    int KFS=0;
+
+    MF_AutoCtrler::PathInformation_S KFS_KeyPoint_;
+   
+    int8_t MF1=0;
+    int8_t MF2=0;
+    int8_t MF1_Point_=0;
+    int8_t MF2_Point_=0;
+    
+    Vector2D MF1_pos_= {0.0f, 0.0f};
+    Vector2D MF2_pos_= {0.0f, 0.0f};
+    
+    float MF2_target_yaw_=0.0f;
+    bool spin_flag=false;
+    
+    bool spin_up_flag=false;
+    bool spin_down_flag=false;
+    
+    bool MF1_flag=false;
+    bool MF2_flag=false;
+    
+    Vector2D spin_point_= {0.0f, 0.0f};       //上方旋转点
+    float spin_skew_=-0.04f;     //下方旋转位置y轴偏移量
+    //-----------------------------------yaw角控制参数-----------------------------------------//
+    
+    float yaw=0.0f;
+    float target_yaw_ = 0.0f;
     
     uint8_t yaw_pid_period_ = 3;
     uint8_t yaw_pid_period_count_ = 0;
     PID_Position yaw_pid_;
     
-    void loop() override;
-    bool init_flag = false;
-
-    // Robot_Twist chassis_maxSpeed_ = {0};
     const float LINESPEED_LIMIT = 10 / 500.f; // 线速度限制
     const float YAWSPEED_LIMIT = 1 / 500.f;   // yaw速度限制
 
     float is_chassis_reverse_ = 1.0f;
     
+    //-----------------------------------其他参数-----------------------------------------//
+    
     RmPocketData_t airjoy_data_; // 遥控器数据，范围 -1 ~ 1
 
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
     
-    MF_AutoCtrler::PathNode_S KFS_result_ = {0, 0, 0, 0, 0, 26};
+    //-----------------------------------内部控制函数-----------------------------------------//
+    
     /**
      * @brief 获取路径上距离机器人最近的点
      * @param path_ 贝塞尔曲线对象
@@ -245,16 +292,10 @@ private:
 
     void Clamping_Bar_Selection_Planning(void);
 
-    int num = 0;
-    float tNearest = 0.0f;                // 最近点在贝塞尔曲线上的参数t (0~1)
-    float tLookahead = 0.0f;              // 前视点在贝塞尔曲线上的参数t (0~1)
-    float m_lookaheadDist = 0.1f;         // 前视距离 (单位: 米)
-    Vector2D nearestPt;                   // 路径上距离机器人最近的点
-    Vector2D lookaheadPt;                 // 路径上的前视点
-    Vector2D lookaheadTangent;            // 前视点处的切线方向向量
-    Vector2D pathEnd;                     // 路径终点坐标
     
-    BezierCurve curve;
+    
+    void loop() override;
+    bool init_flag = false;
 };
 #endif // __cplusplus
 

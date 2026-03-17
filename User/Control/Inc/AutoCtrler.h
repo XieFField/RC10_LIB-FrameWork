@@ -67,13 +67,13 @@ namespace MF_AutoCtrler
 
     typedef struct //新一版的路径生成
     {
-        int8_t entranceMap; //允许和MF1的MFroad重合
+        int8_t entranceMap= 0; //允许和MF1的MFroad重合
         int8_t MFroad[2] = {0};
         int8_t mustPastMap[12] = {0};// 必经点[索引即路径顺序]，0表示无效，只包含地图边角点和MF点以及出入口
 
         int8_t Index_MFroad[2] = {0,0}; //记录MFroad中MF1和MF2在mustPastMap中的索引位置，方便后续路径跟踪
 
-        const int8_t exitMap = 26; // 固定出口
+        int8_t exitMap = 26; // 固定出口
     }PathInformation_S;
 
     // 求解梅花桩所有前一通道结果
@@ -97,6 +97,8 @@ namespace MF_AutoCtrler
 
     // 计算路径节点结果
     PathNode_S PathNodeResult_calc(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t EXIT = 26);
+    
+    
 
     PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2);
 
@@ -143,8 +145,13 @@ float Get_ArmWorldAngle(float chassis_yaw_deg, float gimbal_angle_deg);
  */
 float Get_ChassisYawForArmAlign(int8_t targetKFS, int8_t B1, int8_t BMF1);
 
+
+
     // 获取BFS最短路径序列 (返回路径长度, -1表示缓冲区不足, 0表示不可达)
     int BFS_GetPath(int8_t startMap, int8_t goalMap, int8_t *outPath, int maxLen);
+    
+    
+    
     /**
      * @brief 根据世界坐标判断所在的地图网格编号
      * @param pos 世界坐标点 (x, y)
