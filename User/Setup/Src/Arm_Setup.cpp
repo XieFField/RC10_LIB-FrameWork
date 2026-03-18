@@ -175,7 +175,7 @@ void ArmSetup::manualControl()
              if(this->get_currentJointStatus().launchJoint_Height_ < 0.03f)
              {
                  // 目标区域限制是 30~135，所以必须在此范围内才能抬升
-                 if(norm_angle < 30.0f || norm_angle > 135.0f)
+                 if(norm_angle < 60.0f || norm_angle > 185.0f)
                  {
                      next_height = target_joint_status_.launchJoint_Height_; // 保持不变
                  }
