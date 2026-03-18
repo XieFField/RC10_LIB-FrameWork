@@ -628,7 +628,7 @@ public:
             
 
             // 如果当前曲线段走完（t接近1）或者规划完成
-            if (_tool_Abs(err_end) <= 0.01f || m_phase == FINISHED_PHASE)
+            if (_tool_Abs(err_end) <= 0.02f || m_phase == FINISHED_PHASE)
             {
                 index_++; // 切换到下一段曲线
                 t_ = 0.0f;

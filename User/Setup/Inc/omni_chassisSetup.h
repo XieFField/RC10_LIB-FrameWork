@@ -186,7 +186,7 @@ private:
     
     float m_lookaheadDist = 0.3f;         // 前视距离 (单位: 米)
     // 前视点差分前馈增益（越大越“冲”，也更容易抖）。
-    float kff_la_ = 0.1f;
+    float kff_la_ = 0.0f;
     // 一阶低通系数，范围(0,1]：越小越平滑，越大越灵敏。
     float ff_lpf_alpha_ = 0.20f;
     // 控制任务周期（当前系统 1ms 调度）。
@@ -202,14 +202,18 @@ private:
     float k_damp_ = 0.0f;
     float end_ff_scale_ = 0.35f;
     float end_pid_scale_ = 0.7f;
-    float max_robot_speed_ = 1.5f;
-    float max_robot_speed_end_ = 0.45f;
+    
     
     //-----------------------------------前视pid参数-----------------------------------------//
     
     float tNearest = 0.0f;                // 最近点在贝塞尔曲线上的参数t (0~1)
     float tLookahead = 0.0f;              // 前视点在贝塞尔曲线上的参数t (0~1)
-
+    
+    float max_robot_speed_ = 1.5f;
+    float max_robot_speed_end_ = 0.4f;
+    float t_deadzone=0.93f;
+    float max_corr_end_ = 0.5f;
+    
     Vector2D nearestPt;                   // 路径上距离机器人最近的点
     Vector2D lookaheadPt;                 // 路径上的前视点
     Vector2D lookaheadTangent;            // 前视点处的切线方向向量

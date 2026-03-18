@@ -332,11 +332,16 @@ void OmniChassis_Setup::loop()
                 {
                     MF2_flag=true;
                 }
-                else if(MF1_flag==true||MF2_flag==true);
+                else if(MF1_flag==true||MF2_flag==true)
                 {
                     MF1_flag=false;
                     MF2_flag=false;
                     Arm_Start=true;
+                }
+                else
+                {
+                    MF1_flag=false;
+                    MF2_flag=false;
                 }
                 
                 if(Arm_Start==false)
@@ -346,7 +351,7 @@ void OmniChassis_Setup::loop()
                     
                     Path_correction();
                     
-                    bool near_end = (tNearest > 0.93f);
+                    bool near_end = (tNearest > t_deadzone);
                     Vector2D v_ff = ComputeLookaheadDiffFeedforward(near_end);
                     speed = ComposeRobotVelocity(corrVelocity, v_ff, near_end);
                     
@@ -733,7 +738,7 @@ void OmniChassis_Setup::Path_correction(void)
     nearestPt = GetPathNearestPoint(curve, robot_pos_, tNearest);
 
     // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
-    if (tNearest > 0.93f || path_line_.Is_End() == false)
+    if (tNearest > t_deadzone || path_line_.Is_End() == false)
     {
         Vector2D endPt = curve.Get_End_point();
         // 终点段把前馈参考点切换为终点坐标，差分会自然收敛到 0。
@@ -754,10 +759,10 @@ void OmniChassis_Setup::Path_correction(void)
         corrVelocity.y = pid_pos_y.pid_calc(endPt.y, robot_pos_.y);
 
         // 限制最大纠偏速度，防止终点抖动
-        float max_corr = 0.5f;
-        if (corrVelocity.magnitude() > max_corr)
+        
+        if (corrVelocity.magnitude() > max_corr_end_)
         {
-            corrVelocity = corrVelocity.normalize() * max_corr;
+            corrVelocity = corrVelocity.normalize() * max_corr_end_;
         }
         return;
     }
@@ -776,11 +781,8 @@ void OmniChassis_Setup::Path_correction(void)
     corrVelocity.y = pid_pos_y.pid_calc(lookaheadPt.y, robot_pos_.y);
 
     // 4. (可选) 限制最大动态纠偏速度
-    float dynamic_max_corr = 0.8f;
-    if (corrVelocity.magnitude() > dynamic_max_corr)
-    {
-        corrVelocity = corrVelocity.normalize() * dynamic_max_corr;
-    }
+    corrVelocity = corrVelocity.normalize();
+
 }
 
 void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)

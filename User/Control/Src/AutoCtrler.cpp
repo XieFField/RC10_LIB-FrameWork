@@ -1138,10 +1138,34 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
     int mustLen = 0;
     PushMustPastNode(result.mustPastMap, 12, mustLen, result.entranceMap);
 
+    bool pushedRoad1 = (result.entranceMap == bestRoad1);
+    bool pushedRoad2 = (bestRoad2 != 0 && result.entranceMap == bestRoad2);
+
     for (int i = 0; i < fullLen; ++i)
     {
         int8_t node = fullPath[i];
-        if (node == bestRoad1 || node == bestRoad2 || node == result.exitMap || IsCornerMapByList(node, cornerMap, 4))
+
+        if (node == bestRoad1)
+        {
+            if (!pushedRoad1)
+            {
+                PushMustPastNode(result.mustPastMap, 12, mustLen, node);
+                pushedRoad1 = true;
+            }
+            continue;
+        }
+
+        if (bestRoad2 != 0 && node == bestRoad2)
+        {
+            if (!pushedRoad2)
+            {
+                PushMustPastNode(result.mustPastMap, 12, mustLen, node);
+                pushedRoad2 = true;
+            }
+            continue;
+        }
+
+        if (node == result.exitMap || IsCornerMapByList(node, cornerMap, 4))
         {
             PushMustPastNode(result.mustPastMap, 12, mustLen, node);
         }

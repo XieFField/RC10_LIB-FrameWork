@@ -80,7 +80,7 @@ extern "C" {
 
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS  0 //無底盤下，用虛擬坐標進行驗證自動邏輯
+#define ARM_AUTO_DEBUG_NOCHASSIS  1 //無底盤下，用虛擬坐標進行驗證自動邏輯
 #define ARM_AUTOMOVE 0 //0:停下拾取KFS，1:行进间拾取KFS
 
 
@@ -350,8 +350,8 @@ public:
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
         //auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
-        auto_ctrl_.now_ChassisPosition.y = 8.60f;
-        auto_ctrl_.now_ChassisPosition.x = 5.0f; //假设已经到达前一桩正前方0.5米处
+        auto_ctrl_.now_ChassisPosition.x = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0] - 1].x;
+        auto_ctrl_.now_ChassisPosition.y = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0] - 1].y;
 #endif
         return true;
     }
@@ -560,7 +560,7 @@ protected:
 
         Point2D speed = {0.0f, 0.0f, 0.0f};
         if(arm_ctrlStatus.auto_start == 1)
-           speed = {-0.6f, 0.0f, 0.0f};
+           speed = {0.0f, 1.0f, 0.0f};
 
         else
              speed = {0.0f, 0.0f, 0.0f};

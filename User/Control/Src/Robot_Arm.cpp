@@ -101,9 +101,14 @@ void Robot_Arm::update()
         // 5.极端情况保护：如果电机转速极快导致一次 update 跨越 180 度，
         // 防止 k 值跳变引发回回头。但在 100Hz 控制频率下很难发生。
         
-        ramp(target_rotateMotorAngle, ramped_rotateMotorAngle_, rpm_to_degPerSec(120.0f), dt_);
+        target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
+    //    if(a == 1)
+    //         motor_rotate_->setTargetTotalAngle(testangle);
 
-        motor_rotate_->setTargetTotalAngle(ramped_rotateMotorAngle_);
+    //    if(a == 0)
+    //         motor_rotate_->setTargetTotalAngle(rotateAngle_to_MotorTotalAngle(testangle));
+
+        motor_rotate_->setTargetTotalAngle(target_rotateMotorAngle);
     }
 
     target_stretchMotorAngle = stretchLength_to_MotorTotalAngle(target_joint_angle_.stretchJoint_Length_);

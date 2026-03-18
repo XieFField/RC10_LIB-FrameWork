@@ -357,6 +357,9 @@ void ArmSetup::auto_stillnessOne()
             if(state_lowerStillness(auto_ctrl_.targetKFS[0]))
             {
                 auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
+                #if ARM_AUTO_DEBUG_NOCHASSIS
+                auto_ctrl_.flag.canExtend = true; //放行进入伸展阶段
+                #endif
             }
             break;
         }
