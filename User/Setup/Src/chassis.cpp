@@ -178,9 +178,9 @@ namespace jia
                 // 是否限制车端的规划加速度
                 if (is_chassis_acc_limit)
                 {
-                    p.vel_x = limitAccByTimeSeparateAccAndDecF32(t.vel_x, p.vel_x, period, max_xy_acc_acc, max_xy_dec_acc);
-                    p.vel_y = limitAccByTimeSeparateAccAndDecF32(t.vel_y, p.vel_y, period, max_xy_acc_acc, max_xy_dec_acc);
-                    p.omega_z = limit1DSignalRateByTimeF32(t.omega_z, p.omega_z, period, max_z_alpha);
+                    p.vel_x = limit1DSignalRateByTimeSeparateApproachAndRetreatF32(t.vel_x, p.vel_x, period, max_xy_acc_acc, max_xy_dec_acc);
+                    p.vel_y = limit1DSignalRateByTimeSeparateApproachAndRetreatF32(t.vel_y, p.vel_y, period, max_xy_acc_acc, max_xy_dec_acc);
+                    p.omega_z = limit1DSignalRateByTimeSeparateApproachAndRetreatF32(t.omega_z, p.omega_z, period, max_z_acc_alpha, max_z_dec_alpha);
                 }
                 else
                 {
@@ -251,7 +251,6 @@ namespace jia
     {
         mode_ = Mode::kBodySpeedMode;
 
-        // 对目标速度进行限幅
         input_target_data.vel_x = target.vel_x;
         input_target_data.vel_y = target.vel_y;
         input_target_data.omega_z = target.omega_z;

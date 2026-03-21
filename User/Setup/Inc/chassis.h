@@ -140,24 +140,18 @@ namespace jia
         f32 max_vel_y = 0.0f;   // 最大y轴速度，单位：米/秒
         f32 max_omega_z = 0.0f; // 最大z轴角速度，单位：rad/s
 
-        bool is_chassis_acc_limit = false; // 是否进行车端加速度限制
+        bool is_chassis_acc_limit = true; // 是否进行车端加速度限制
         f32 max_xy_acc_acc = 2.0f;         // 最大XY轴线加速度，单位：m/s^2
         f32 max_xy_dec_acc = 20.0f;         // 最大XY轴线减速度，单位：m/s^2
-        f32 max_z_alpha = 1.0f * kPi;      // 最大z轴角加速度，单位：rad/s^2
+        f32 max_z_acc_alpha = 4.0f;      // 最大z轴角加速度，单位：rad/s^2
+        f32 max_z_dec_alpha = 6.0f;      // 最大z轴角减速度，单位：rad/s^2
 
-        bool is_wheel_alpha_limit = true; // 是否进行轮端角加速度限制
+        bool is_wheel_alpha_limit = false; // 是否进行轮端角加速度限制
         f32 max_wheel_alpha = 2.0f * kPi; // 最大轮子角加速度，单位：rad/s^2
 
         const f32 &wr = wheel_radius;
 
-        struct InputTargetData
-        {
-            f32 vel_x;   // 目标x轴速度，单位：米/秒
-            f32 vel_y;   // 目标y轴速度，单位：米/秒
-            f32 omega_z; // 目标z轴角速度，单位：rad/s
-        };
-
-        InputTargetData input_target_data; // 输入目标数据
+        TargetBodySpeedModeData input_target_data; // 输入目标数据
 
         Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
         RmPocketData_t input_airjoy_data;

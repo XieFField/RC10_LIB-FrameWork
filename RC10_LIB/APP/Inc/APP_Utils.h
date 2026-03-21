@@ -55,7 +55,7 @@ namespace jia
     template <typename T>
     constexpr T clampValue(const T &val, const T &min_val, const T &max_val);
 
-    // 转速和角速度转换（单位：rad/s）
+    // 转速和角速度转换
     constexpr f32 rpmToRadsF32(f32 rpm);
     constexpr f32 radsToRpmF32(f32 omega);
 
@@ -130,31 +130,42 @@ namespace jia
             return target;
     }
 
-    inline f32 limitAccByTimeSeparateAccAndDecF32(f32 target, f32 current, f32 dt, f32 max_acc_rate, f32 max_dec_rate)
+    /**
+     * @brief 基于时间的一维信号速率限幅函数（分离方向）
+     * @param target       目标值
+     * @param current      当前值
+     * @param dt           时间步长（秒）
+     * @param max_retreat_rate 最大退避速率（单位/秒）
+     * @param max_approach_rate 最大接近速率（单位/秒）
+     * @return             限幅后的下一时刻值
+     */
+    inline f32 limit1DSignalRateByTimeSeparateApproachAndRetreatF32(f32 target, f32 current, f32 dt, f32 max_retreat_rate, f32 max_approach_rate)
     {
         f32 diff = target - current;
         if (diff > 0.0f && current > 0.0f || diff < 0.0f && current < 0.0f || current == 0.0f)
         {
-            f32 max_acc_step = max_acc_rate * dt;
-            if (diff > max_acc_step)
-                return current + max_acc_step;
-            else if (diff < -max_acc_step)
-                return current - max_acc_step;
+            f32 max_retreat_step = max_retreat_rate * dt;
+            if (diff > max_retreat_step)
+                return current + max_retreat_step;
+            else if (diff < -max_retreat_step)
+                return current - max_retreat_step;
             else
                 return target;
         }
         else if (diff < 0.0f && current > 0.0f || diff > 0.0f && current < 0.0f)
         {
-            f32 max_dec_step = max_dec_rate * dt;
-            if (diff < -max_dec_step)
-                return current - max_dec_step;
-            else if (diff > max_dec_step)
-                return current + max_dec_step;
+            f32 max_approach_step = max_approach_rate * dt;
+            if (diff < -max_approach_step)
+                return current - max_approach_step;
+            else if (diff > max_approach_step)
+                return current + max_approach_step;
             else
                 return target;
         }
-
-        return 0.0f;
+        else
+        {
+            return target;
+        }
     }
 
     template <typename T>
