@@ -565,7 +565,15 @@ protected:
         else
              speed = {0.0f, 0.0f, 0.0f};
         return speed;
-
+        
+//        if(MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
+//                                            auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
+//                                            0.03f))
+//        {
+//            
+//        }
+             
+             
         #else
 
             // Locate_Setup *locate_ptr = Locate_Setup::getInstance();
@@ -594,8 +602,7 @@ protected:
 
         pose.x += speed.x * get_dt();
                 
-        pose.y += speed.y * get_dt();
-                    
+        pose.y += speed.y * get_dt();                    
 
         return pose;
 
