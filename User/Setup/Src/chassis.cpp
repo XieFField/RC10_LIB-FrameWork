@@ -7,6 +7,9 @@
 #include "task.h"
 
 #include "BSP_TimeStamp.h"
+#include "Module_CrsfReceiver.h"
+#include "Module_HWT.h"
+#include "APP_PID.h"
 
 #include "RC10_LIB/APP/Inc/APP_Utils.h"
 
@@ -32,10 +35,10 @@ namespace jia
         wheel_config &wheel_1 = wheel_config_[0];
         wheel_1.pos_x = 0.375f,
         wheel_1.pos_y = -0.37f,
-        wheel_1.yaw_deg = 31.87f + 180.0f,
+        wheel_1.rot_z_deg = 31.87f + 180.0f,
         wheel_1.motor_handle = config.motor_handle[0],
-        wheel_1.s = sinDegF32(wheel_1.yaw_deg);
-        wheel_1.c = cosDegF32(wheel_1.yaw_deg);
+        wheel_1.s = sinDegF32(wheel_1.rot_z_deg);
+        wheel_1.c = cosDegF32(wheel_1.rot_z_deg);
         wheel_1.eqr = wheel_1.pos_x * wheel_1.s - wheel_1.pos_y * wheel_1.c;
         wheel_1.as = std::abs(wheel_1.s);
         wheel_1.ac = std::abs(wheel_1.c);
@@ -44,10 +47,10 @@ namespace jia
         wheel_config &wheel_2 = wheel_config_[1];
         wheel_2.pos_x = 0.375f,
         wheel_2.pos_y = 0.37f,
-        wheel_2.yaw_deg = -31.87f + 180.0f + 180.0f,
+        wheel_2.rot_z_deg = -31.87f + 180.0f + 180.0f,
         wheel_2.motor_handle = config.motor_handle[1],
-        wheel_2.s = sinDegF32(wheel_2.yaw_deg);
-        wheel_2.c = cosDegF32(wheel_2.yaw_deg);
+        wheel_2.s = sinDegF32(wheel_2.rot_z_deg);
+        wheel_2.c = cosDegF32(wheel_2.rot_z_deg);
         wheel_2.eqr = wheel_2.pos_x * wheel_2.s - wheel_2.pos_y * wheel_2.c;
         wheel_2.as = std::abs(wheel_2.s);
         wheel_2.ac = std::abs(wheel_2.c);
@@ -56,10 +59,10 @@ namespace jia
         wheel_config &wheel_3 = wheel_config_[2];
         wheel_3.pos_x = -0.375f,
         wheel_3.pos_y = 0.0f,
-        wheel_3.yaw_deg = -90.0f + 180.0f,
+        wheel_3.rot_z_deg = -90.0f + 180.0f,
         wheel_3.motor_handle = config.motor_handle[2],
-        wheel_3.s = sinDegF32(wheel_3.yaw_deg);
-        wheel_3.c = cosDegF32(wheel_3.yaw_deg);
+        wheel_3.s = sinDegF32(wheel_3.rot_z_deg);
+        wheel_3.c = cosDegF32(wheel_3.rot_z_deg);
         wheel_3.eqr = wheel_3.pos_x * wheel_3.s - wheel_3.pos_y * wheel_3.c;
         wheel_3.as = std::abs(wheel_3.s);
         wheel_3.ac = std::abs(wheel_3.c);
@@ -89,6 +92,9 @@ namespace jia
         max_vel_x = minOfThree(wheel_1_max_vel_x, wheel_2_max_vel_x, wheel_3_max_vel_x);
         max_vel_y = minOfThree(wheel_1_max_vel_y, wheel_2_max_vel_y, wheel_3_max_vel_y);
         max_omega_z = minOfThree(wheel_1_max_omega_z, wheel_2_max_omega_z, wheel_3_max_omega_z);
+
+        // 初始化yaw轴的速度环和位置环的PID参数
+        omega_z_pid.set_params(omega_z_pid_init_config, 0.0f);
     }
 
     void Chassis::createThread(void *arg)
@@ -100,30 +106,34 @@ namespace jia
     void Chassis::runThread(void *arg)
     {
         CrsfReceiver *receiver = CrsfReceiver::GetInstance(&huart7);
+        HWT101CT *hwt = HWT101CT::GetInstance(&huart8);
         TickType_t time_ms = xTaskGetTickCount();
 
         for (;;)
         {
+            input_hwt_rot_z = hwt->get_yaw_rad();
+            input_hwt_omega_z = hwt->get_yaw_speed_rad();
+
             receiver->getControlData(&input_airjoy_data);
 
             TargetBodySpeedModeData target_data;
-            // target_data.vel_x = input_airjoy_data.left_y * max_input_set_vel_x;
+            target_data.vel_x = input_airjoy_data.left_y * max_vel_x;
             target_data.vel_y = -input_airjoy_data.left_x * max_vel_y;
 
-            if (input_airjoy_data.left_y > 0.1f)
+            if (input_airjoy_data.right_x > 0.1f)
             {
-                target_data.vel_x = max_vel_x;
+                target_data.omega_z = max_omega_z;
             }
-            else if (input_airjoy_data.left_y < -0.1f)
+            else if (input_airjoy_data.right_x < -0.1f)
             {
-                target_data.vel_x = -max_vel_x;
+                target_data.omega_z = -max_omega_z;
             }
             else
             {
-                target_data.vel_x = 0.0f;
+                target_data.omega_z = 0.0f;
             }
 
-            target_data.omega_z = input_airjoy_data.right_x * max_omega_z;
+            // target_data.omega_z = input_airjoy_data.right_x * max_omega_z;
 
             this->setTargetBodySpeedMode(target_data);
 
@@ -161,6 +171,11 @@ namespace jia
                 t.vel_x = clampValue(it.vel_x, -max_vel_x, max_vel_x);
                 t.vel_y = clampValue(it.vel_y, -max_vel_y, max_vel_y);
                 t.omega_z = clampValue(it.omega_z, -max_omega_z, max_omega_z);
+                // 是否开启车端的omega_z闭环控制
+                if (is_omega_z_close_loop)
+                {
+                    t.omega_z = omega_z_pid.pid_calc(t.omega_z, input_hwt_omega_z);
+                }
                 // 计算轮端的目标角速度
                 inverseKinematics(t.vel_x, t.vel_y, t.omega_z, t.w1_omega, t.w2_omega, t.w3_omega);
                 // 是否限制轮端的目标角速度
@@ -178,9 +193,9 @@ namespace jia
                 // 是否限制车端的规划加速度
                 if (is_chassis_acc_limit)
                 {
-                    p.vel_x = limit1DSignalRateByTimeSeparateApproachAndRetreatF32(t.vel_x, p.vel_x, period, max_xy_acc_acc, max_xy_dec_acc);
-                    p.vel_y = limit1DSignalRateByTimeSeparateApproachAndRetreatF32(t.vel_y, p.vel_y, period, max_xy_acc_acc, max_xy_dec_acc);
-                    p.omega_z = limit1DSignalRateByTimeSeparateApproachAndRetreatF32(t.omega_z, p.omega_z, period, max_z_acc_alpha, max_z_dec_alpha);
+                    p.vel_x = limit1DSignalRateByTimeSeparateApproachAndRetreatF32(t.vel_x, p.vel_x, period, max_acc_xy_acc, max_acc_xy_dec);
+                    p.vel_y = limit1DSignalRateByTimeSeparateApproachAndRetreatF32(t.vel_y, p.vel_y, period, max_acc_xy_acc, max_acc_xy_dec);
+                    p.omega_z = limit1DSignalRateByTimeSeparateApproachAndRetreatF32(t.omega_z, p.omega_z, period, max_alpha_z_acc, max_alpha_z_dec);
                 }
                 else
                 {
@@ -230,7 +245,9 @@ namespace jia
 
                 // debug_uart.printf_DMA("%lu,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, t.w2_omega, t.w3_omega, p.w1_omega, p.w2_omega, p.w3_omega, c.w1_omega, c.w2_omega, c.w3_omega);
                 // debug_uart.printf_DMA("%lu\r\n", time_ms);
-                debug_uart.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, p.w1_omega, std::abs(c.w1_omega), std::abs(c.w2_omega));
+                // debug_uart.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, p.w1_omega, std::abs(c.w1_omega), std::abs(c.w2_omega));
+                // debug_uart.printf_DMA("%f,%f,%f\r\n", input_hwt_omega_z, input_hwt_rot_z, t.omega_z);
+                debug_uart.printf_DMA("%f,%f,%f\r\n", it.omega_z,input_hwt_omega_z, t.omega_z);
 
                 break;
             }

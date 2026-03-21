@@ -268,6 +268,16 @@ namespace jia
         return scaleFactor;
     }
 
+    constexpr inline f32 radToDegF32(f32 rad)
+    {
+        return rad * 360.0f / (2.0f * kPi);
+    }
+
+    constexpr inline f32 degToRadF32(f32 deg)
+    {
+        return deg * (2.0f * kPi) / 360.0f;
+    }
+
 } // namespace jia
 
 #endif

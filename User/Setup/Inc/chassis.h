@@ -6,6 +6,7 @@
 #include "Motor_DJI.h"
 #include "Module_CrsfReceiver.h"
 #include "APP_debugTool.h"
+#include "APP_PID.h"
 
 namespace jia
 {
@@ -84,21 +85,21 @@ namespace jia
         {
             f32 pos_x;                     // 单位：米
             f32 pos_y;                     // 单位：米
-            f32 yaw_deg;                   // 单位：度
+            f32 rot_z_deg;                 // 单位：度
             M3508 *motor_handle = nullptr; // 电机句柄
-            f32 sin_yaw;
-            f32 cos_yaw;
+            f32 sin_rot_z;
+            f32 cos_rot_z;
             f32 eq_radius;     // 等效半径，equivalent radius，可以是负值，单位：米
-            f32 abs_sin_yaw;   // 正弦值的绝对值
-            f32 abs_cos_yaw;   // 余弦值的绝对值
+            f32 abs_sin_rot_z; // 正弦值的绝对值
+            f32 abs_cos_rot_z; // 余弦值的绝对值
             f32 abs_eq_radius; // 等效半径的绝对值，单位：米
 
             M3508 *&h = motor_handle;
-            f32 &s = sin_yaw;
-            f32 &c = cos_yaw;
+            f32 &s = sin_rot_z;
+            f32 &c = cos_rot_z;
             f32 &eqr = eq_radius;
-            f32 &as = abs_sin_yaw;
-            f32 &ac = abs_cos_yaw;
+            f32 &as = abs_sin_rot_z;
+            f32 &ac = abs_cos_rot_z;
             f32 &aeqr = abs_eq_radius;
         };
 
@@ -140,14 +141,14 @@ namespace jia
         f32 max_vel_y = 0.0f;   // 最大y轴速度，单位：米/秒
         f32 max_omega_z = 0.0f; // 最大z轴角速度，单位：rad/s
 
-        bool is_chassis_acc_limit = true; // 是否进行车端加速度限制
-        f32 max_xy_acc_acc = 2.0f;         // 最大XY轴线加速度，单位：m/s^2
-        f32 max_xy_dec_acc = 20.0f;         // 最大XY轴线减速度，单位：m/s^2
-        f32 max_z_acc_alpha = 4.0f;      // 最大z轴角加速度，单位：rad/s^2
-        f32 max_z_dec_alpha = 6.0f;      // 最大z轴角减速度，单位：rad/s^2
+        bool is_chassis_acc_limit = false; // 是否进行车端加速度限制
+        f32 max_acc_xy_acc = 2.0f;        // 最大XY轴线加速度，单位：m/s^2
+        f32 max_acc_xy_dec = 20.0f;       // 最大XY轴线减速度，单位：m/s^2
+        f32 max_alpha_z_acc = 4.0f;       // 最大z轴角加速度，单位：rad/s^2
+        f32 max_alpha_z_dec = 6.0f;       // 最大z轴角减速度，单位：rad/s^2
 
         bool is_wheel_alpha_limit = false; // 是否进行轮端角加速度限制
-        f32 max_wheel_alpha = 2.0f * kPi; // 最大轮子角加速度，单位：rad/s^2
+        f32 max_wheel_alpha = 2.0f * kPi;  // 最大轮子角加速度，单位：rad/s^2
 
         const f32 &wr = wheel_radius;
 
@@ -162,8 +163,16 @@ namespace jia
 
         f32 sine_amplitude = 100.0f;
         f32 sine_frequency = 0.1f;
-    };
 
+    private:
+        f32 input_hwt_rot_z;
+        f32 input_hwt_omega_z;
+
+        PID_Position omega_z_pid;
+        bool is_omega_z_close_loop = true;
+        
+        // PID_Position rot_z_pid;
+    };
 }
 
 using jia::Chassis;

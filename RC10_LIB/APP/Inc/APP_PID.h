@@ -229,13 +229,15 @@ extern PID_Param_Config m3508_angle_pid_params;
 
 extern PID_Param_Config m2006_speed_pid_params;
 extern PID_Param_Config m2006_angle_pid_params;
-extern PID_Param_Config m3508_speed_pid_paramsForSpeedMotor;
 extern PID_Param_Config lock_angle_pid_params;
 extern PID_Param_Config track_pid_params;
 
 extern PID_Param_Config m3508Rotate_speed_pid_params;
 extern PID_Param_Config m3508Rotate_angle_pid_params;
 extern PID_Param_Config path_lock_end;
+
+extern PID_Param_Config m3508_speed_pid_paramsForSpeedMotor;
+extern PID_Param_Config omega_z_pid_init_config;
 #endif
 
 #endif
