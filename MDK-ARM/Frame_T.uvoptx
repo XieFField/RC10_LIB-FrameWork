@@ -210,7 +210,7 @@
         <Ww>
           <count>0</count>
           <WinNumber>2</WinNumber>
-          <ItemText>ChassisOmni</ItemText>
+          <ItemText>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\chassis.omega_z_pid</ItemText>
         </Ww>
       </WatchWindow2>
       <MemoryWindow1>

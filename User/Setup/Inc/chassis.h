@@ -125,8 +125,9 @@ namespace jia
 
     private:
         // 设定量
-        constexpr static f32 period = 0.001f;       // 控制周期，单位：秒
-        constexpr static f32 wheel_radius = 0.075f; // 轮子半径（单位：米）
+        constexpr static uint8_t period_ms = 1;
+        constexpr static f32 period = period_ms / 1000.0f; // 控制周期，单位：秒
+        constexpr static f32 wheel_radius = 0.075f;        // 轮子半径（单位：米）
 
         bool is_wheel_omega_limit = true;           // 是否进行轮端角速度限制
         f32 max_wheel_omega = rpmToRadsF32(350.0f); // 最大轮子角速度，单位：rad/s
@@ -142,10 +143,10 @@ namespace jia
         f32 max_omega_z = 0.0f; // 最大z轴角速度，单位：rad/s
 
         bool is_chassis_acc_limit = false; // 是否进行车端加速度限制
-        f32 max_acc_xy_acc = 2.0f;        // 最大XY轴线加速度，单位：m/s^2
-        f32 max_acc_xy_dec = 20.0f;       // 最大XY轴线减速度，单位：m/s^2
-        f32 max_alpha_z_acc = 4.0f;       // 最大z轴角加速度，单位：rad/s^2
-        f32 max_alpha_z_dec = 6.0f;       // 最大z轴角减速度，单位：rad/s^2
+        f32 max_acc_xy_acc = 2.0f;         // 最大XY轴线加速度，单位：m/s^2
+        f32 max_acc_xy_dec = 20.0f;        // 最大XY轴线减速度，单位：m/s^2
+        f32 max_alpha_z_acc = 4.0f;        // 最大z轴角加速度，单位：rad/s^2
+        f32 max_alpha_z_dec = 6.0f;        // 最大z轴角减速度，单位：rad/s^2
 
         bool is_wheel_alpha_limit = false; // 是否进行轮端角加速度限制
         f32 max_wheel_alpha = 2.0f * kPi;  // 最大轮子角加速度，单位：rad/s^2
@@ -168,9 +169,13 @@ namespace jia
         f32 input_hwt_rot_z;
         f32 input_hwt_omega_z;
 
-        PID_Position omega_z_pid;
+        TargetData target_pid_data_;
+
+        PID_Incremental omega_z_pid;
+        uint8_t omega_z_pid_period = 1;
+        uint8_t omega_z_pid_count = 0;
         bool is_omega_z_close_loop = true;
-        
+
         // PID_Position rot_z_pid;
     };
 }

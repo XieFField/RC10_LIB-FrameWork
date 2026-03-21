@@ -164,6 +164,7 @@ namespace jia
                 // 引用别名
                 auto &it = input_target_data;
                 auto &t = target_data_;
+                auto &tpid = target_pid_data_;
                 auto &p = planned_data_;
                 auto &lp = last_planned_data_;
                 auto &c = current_data_;
@@ -174,10 +175,19 @@ namespace jia
                 // 是否开启车端的omega_z闭环控制
                 if (is_omega_z_close_loop)
                 {
-                    t.omega_z = omega_z_pid.pid_calc(t.omega_z, input_hwt_omega_z);
+                    omega_z_pid_count++;
+                    if (omega_z_pid_count >= omega_z_pid_period)
+                    {
+                        omega_z_pid_count = 0;
+                        tpid.omega_z = omega_z_pid.pid_calc(t.omega_z, input_hwt_omega_z);
+                    }
+                }
+                else
+                {
+                    tpid.omega_z = t.omega_z;
                 }
                 // 计算轮端的目标角速度
-                inverseKinematics(t.vel_x, t.vel_y, t.omega_z, t.w1_omega, t.w2_omega, t.w3_omega);
+                inverseKinematics(t.vel_x, t.vel_y, tpid.omega_z, t.w1_omega, t.w2_omega, t.w3_omega);
                 // 是否限制轮端的目标角速度
                 if (is_wheel_omega_limit)
                 {
@@ -188,20 +198,20 @@ namespace jia
                     // 计算车端的目标速度
                     t.vel_x *= vel_scale_ratio;
                     t.vel_y *= vel_scale_ratio;
-                    t.omega_z *= vel_scale_ratio;
+                    tpid.omega_z *= vel_scale_ratio;
                 }
                 // 是否限制车端的规划加速度
                 if (is_chassis_acc_limit)
                 {
-                    p.vel_x = limit1DSignalRateByTimeSeparateApproachAndRetreatF32(t.vel_x, p.vel_x, period, max_acc_xy_acc, max_acc_xy_dec);
-                    p.vel_y = limit1DSignalRateByTimeSeparateApproachAndRetreatF32(t.vel_y, p.vel_y, period, max_acc_xy_acc, max_acc_xy_dec);
-                    p.omega_z = limit1DSignalRateByTimeSeparateApproachAndRetreatF32(t.omega_z, p.omega_z, period, max_alpha_z_acc, max_alpha_z_dec);
+                    p.vel_x = limit1DSignalRateByTimeSeparateIncAndDecF32(t.vel_x, p.vel_x, period, max_acc_xy_acc, max_acc_xy_dec);
+                    p.vel_y = limit1DSignalRateByTimeSeparateIncAndDecF32(t.vel_y, p.vel_y, period, max_acc_xy_acc, max_acc_xy_dec);
+                    p.omega_z = limit1DSignalRateByTimeSeparateIncAndDecF32(tpid.omega_z, p.omega_z, period, max_alpha_z_acc, max_alpha_z_dec);
                 }
                 else
                 {
                     p.vel_x = t.vel_x;
                     p.vel_y = t.vel_y;
-                    p.omega_z = t.omega_z;
+                    p.omega_z = tpid.omega_z;
                 }
                 // 计算车端的规划加速度
                 p.acc_x = (p.vel_x - lp.vel_x) / period;
@@ -246,8 +256,8 @@ namespace jia
                 // debug_uart.printf_DMA("%lu,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, t.w2_omega, t.w3_omega, p.w1_omega, p.w2_omega, p.w3_omega, c.w1_omega, c.w2_omega, c.w3_omega);
                 // debug_uart.printf_DMA("%lu\r\n", time_ms);
                 // debug_uart.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, p.w1_omega, std::abs(c.w1_omega), std::abs(c.w2_omega));
-                // debug_uart.printf_DMA("%f,%f,%f\r\n", input_hwt_omega_z, input_hwt_rot_z, t.omega_z);
-                debug_uart.printf_DMA("%f,%f,%f\r\n", it.omega_z,input_hwt_omega_z, t.omega_z);
+                // debug_uart.printf_DMA("%f,%f,%f\r\n", input_hwt_omega_z, input_hwt_rot_z, tpid.omega_z);
+                debug_uart.printf_DMA("%f,%f,%f,%f\r\n", it.omega_z,input_hwt_omega_z, tpid.omega_z,c.w3_omega);
 
                 break;
             }
@@ -260,7 +270,7 @@ namespace jia
 
             // debug_uart.printf_DMA("123");
 
-            vTaskDelayUntil(&time_ms, 1);
+            vTaskDelayUntil(&time_ms, period_ms);
         }
     }
 
