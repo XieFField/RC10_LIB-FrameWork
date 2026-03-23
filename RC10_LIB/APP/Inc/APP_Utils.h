@@ -41,11 +41,11 @@ namespace jia
      * @param target       目标值
      * @param current      当前值
      * @param dt           时间步长（秒）
-     * @param max_pos_rate 最大正速率（单位/秒）
-     * @param max_neg_rate 最大负速率（单位/秒）
+     * @param max_inc_rate 最大正速率（单位/秒）
+     * @param max_dec_rate 最大负速率（单位/秒）
      * @return             限幅后的下一时刻值
      */
-    f32 limit1DSignalRateByTimeSeparatePosAndNegF32(f32 target, f32 current, f32 dt, f32 max_pos_rate, f32 max_neg_rate);
+    f32 limit1DSignalRateByTimeSeparateIncAndDecF32(f32 target, f32 current, f32 dt, f32 max_inc_rate, f32 max_dec_rate);
 
     // 三值取小
     template <typename T>
@@ -71,7 +71,7 @@ namespace jia
      * @param phase 相位偏移（默认0.0f，单位：弧度）
      * @return float 正弦波当前时刻的幅值
      */
-    f32 sineWaveGeneratorF32(f32 time, f32 amplitude = 1.0f, f32 frequency = 1.0f, f32 phase = 0.0f);
+    f32 sineWaveGeneratorF32(f32 time, f32 amplitude = 1.0f, f32 frequency = 1.0f, f32 phase = 0.0f, f32 offset = 0.0f);
 
     inline f32 sinDegF32(f32 deg)
     {
@@ -117,15 +117,15 @@ namespace jia
             return target;
     }
 
-    inline f32 limit1DSignalRateByTimeSeparatePosAndNegF32(f32 target, f32 current, f32 dt, f32 max_pos_rate, f32 max_neg_rate)
+    inline f32 limit1DSignalRateByTimeSeparateIncAndDecF32(f32 target, f32 current, f32 dt, f32 max_inc_rate, f32 max_dec_rate)
     {
         f32 diff = target - current;
-        f32 max_pos_step = max_pos_rate * dt;
-        f32 max_neg_step = max_neg_rate * dt;
-        if (diff > max_pos_step)
-            return current + max_pos_step;
-        else if (diff < -max_neg_step)
-            return current - max_neg_step;
+        f32 max_inc_step = max_inc_rate * dt;
+        f32 max_dec_step = max_dec_rate * dt;
+        if (diff > max_inc_step)
+            return current + max_inc_step;
+        else if (diff < -max_dec_step)
+            return current - max_dec_step;
         else
             return target;
     }
@@ -139,7 +139,7 @@ namespace jia
      * @param max_dec_rate 最大减少速率（单位/秒）
      * @return             限幅后的下一时刻值
      */
-    inline f32 limit1DSignalRateByTimeSeparateIncAndDecF32(f32 target, f32 current, f32 dt, f32 max_inc_rate, f32 max_dec_rate)
+    inline f32 limit1DSignalRateByTimeSeparateAbsIncAndDecF32(f32 target, f32 current, f32 dt, f32 max_inc_rate, f32 max_dec_rate)
     {
         f32 diff = target - current;
         if (diff > 0.0f && current > 0.0f || diff < 0.0f && current < 0.0f || current == 0.0f)
@@ -204,9 +204,9 @@ namespace jia
         return vel / radius;
     }
 
-    inline f32 sineWaveGeneratorF32(f32 time, f32 amplitude, f32 frequency, f32 phase)
+    inline f32 sineWaveGeneratorF32(f32 time, f32 amplitude, f32 frequency, f32 phase, f32 offset)
     {
-        return amplitude * sinf(2.0f * kPi * frequency * time + phase);
+        return amplitude * sinf(2.0f * kPi * frequency * time + phase) + offset;
     }
 
     /**

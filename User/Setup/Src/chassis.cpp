@@ -120,26 +120,46 @@ namespace jia
             target_data.vel_x = input_airjoy_data.left_y * max_vel_x;
             target_data.vel_y = -input_airjoy_data.left_x * max_vel_y;
 
-            if (input_airjoy_data.right_x > 0.1f)
+            // if (input_airjoy_data.right_x > 0.1f)
+            // {
+            //     target_data.omega_z = max_omega_z;
+            // }
+            // else if (input_airjoy_data.right_x < -0.1f)
+            // {
+            //     target_data.omega_z = -max_omega_z;
+            // }
+            // else
+            // {
+            //     target_data.omega_z = 0.0f;
+            // }
+
+            // target_data.omega_z = input_airjoy_data.right_x * max_omega_z;
+
+            if (is_sine)
             {
-                target_data.omega_z = max_omega_z;
-            }
-            else if (input_airjoy_data.right_x < -0.1f)
-            {
-                target_data.omega_z = -max_omega_z;
+                target_data.omega_z = sineWaveGeneratorF32(time_ms / 1000.0f, sine_amplitude, sine_frequency, 0.0f, sine_offset);
             }
             else
             {
-                target_data.omega_z = 0.0f;
+                if (input_airjoy_data.right_x > 0.1f)
+                {
+                    target_data.omega_z = max_omega_z;
+                }
+                else if (input_airjoy_data.right_x < -0.1f)
+                {
+                    target_data.omega_z = -max_omega_z;
+                }
+                else
+                {
+                    target_data.omega_z = 0.0f;
+                }
             }
-
-            // target_data.omega_z = input_airjoy_data.right_x * max_omega_z;
 
             this->setTargetBodySpeedMode(target_data);
 
             // 调试轮子
             //
-            // wheel_speed_input = input_airjoy_data.left_x * wheel_input_speed_radio;
+            // f32 wheel_speed_input = input_airjoy_data.left_x * wheel_input_speed_radio;
             // // wheel_speed_input = sineWaveGeneratorF32(time_ms / 1000.0f, sine_amplitude, sine_frequency, 0.0f);
             // auto &wheel_handle = wheel_config_[2].motor_handle;
             // wheel_handle->setTargetRPM(wheel_speed_input);
@@ -203,9 +223,9 @@ namespace jia
                 // 是否限制车端的规划加速度
                 if (is_chassis_acc_limit)
                 {
-                    p.vel_x = limit1DSignalRateByTimeSeparateIncAndDecF32(t.vel_x, p.vel_x, period, max_acc_xy_acc, max_acc_xy_dec);
-                    p.vel_y = limit1DSignalRateByTimeSeparateIncAndDecF32(t.vel_y, p.vel_y, period, max_acc_xy_acc, max_acc_xy_dec);
-                    p.omega_z = limit1DSignalRateByTimeSeparateIncAndDecF32(tpid.omega_z, p.omega_z, period, max_alpha_z_acc, max_alpha_z_dec);
+                    p.vel_x = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(t.vel_x, p.vel_x, period, max_acc_xy_acc, max_acc_xy_dec);
+                    p.vel_y = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(t.vel_y, p.vel_y, period, max_acc_xy_acc, max_acc_xy_dec);
+                    p.omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tpid.omega_z, p.omega_z, period, max_alpha_z_acc, max_alpha_z_dec);
                 }
                 else
                 {
@@ -257,7 +277,13 @@ namespace jia
                 // debug_uart.printf_DMA("%lu\r\n", time_ms);
                 // debug_uart.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, p.w1_omega, std::abs(c.w1_omega), std::abs(c.w2_omega));
                 // debug_uart.printf_DMA("%f,%f,%f\r\n", input_hwt_omega_z, input_hwt_rot_z, tpid.omega_z);
-                debug_uart.printf_DMA("%f,%f,%f,%f\r\n", it.omega_z,input_hwt_omega_z, tpid.omega_z,c.w3_omega);
+
+                printf_period_count++;
+                if (printf_period_count >= printf_period_ms)
+                {
+                    printf_period_count = 0;
+                    debug_uart.printf_DMA("%f,%f,%f,%f,%f\r\n", it.omega_z, input_hwt_omega_z, tpid.omega_z, t.w3_omega, c.w3_omega);
+                }
 
                 break;
             }

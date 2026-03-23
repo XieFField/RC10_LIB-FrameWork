@@ -45,6 +45,11 @@ namespace jia
             f32 w3_omega; // 轮子3的角速度，单位：rad/s
         };
 
+        struct TargetPidData
+        {
+            f32 omega_z; // z轴角速度，单位：rad/s
+        };
+
         struct PlannedData
         {
             f32 vel_x;    // x轴速度，单位：米/秒
@@ -125,7 +130,7 @@ namespace jia
 
     private:
         // 设定量
-        constexpr static uint8_t period_ms = 1;
+        constexpr static u8 period_ms = 1;                 // 控制周期，单位：毫秒
         constexpr static f32 period = period_ms / 1000.0f; // 控制周期，单位：秒
         constexpr static f32 wheel_radius = 0.075f;        // 轮子半径（单位：米）
 
@@ -156,25 +161,29 @@ namespace jia
         TargetBodySpeedModeData input_target_data; // 输入目标数据
 
         Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
+        u8 printf_period_ms = 4;                         // 串口调试打印周期，单位：毫秒
+        u8 printf_period_count = 0;                      // 串口调试打印周期计数器
+
         RmPocketData_t input_airjoy_data;
 
     private:
         f32 wheel_input_speed_radio = 300.0f;
-        f32 wheel_speed_input;
 
-        f32 sine_amplitude = 100.0f;
+        bool is_sine = false;
+        f32 sine_amplitude = 0.0f;
         f32 sine_frequency = 0.1f;
+        f32 sine_offset = 0.0f;
 
     private:
         f32 input_hwt_rot_z;
         f32 input_hwt_omega_z;
 
-        TargetData target_pid_data_;
+        TargetPidData target_pid_data_;
 
         PID_Incremental omega_z_pid;
         uint8_t omega_z_pid_period = 1;
         uint8_t omega_z_pid_count = 0;
-        bool is_omega_z_close_loop = true;
+        bool is_omega_z_close_loop = false;
 
         // PID_Position rot_z_pid;
     };
