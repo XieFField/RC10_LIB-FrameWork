@@ -709,9 +709,8 @@ public:
     }
     //int get_pid_end_flag()  { return pid_end_flag; }
 
-    int index_ = 0;
-
 protected:
+    int index_ = 0;
     BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // 储存各路段曲线
     TrapePlanner1D sp_;                         // 一维 S 型速度规划器
     float pid_dead=0.15f;
@@ -725,7 +724,6 @@ protected:
     Speedplanner_1D_Param_Config params_;
     uint8_t bezier_curve_num = 0; // 总曲线数量
     //int pid_end_flag=1;
-
 private:
     /*---------------------------------状态-------------------------------------*/
      float err_end = 0.0f; 

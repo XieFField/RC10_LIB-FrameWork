@@ -132,19 +132,17 @@ public:
 	}
 private:
     //-----------------------------------通讯标志位-----------------------------------------//
-
-	int WeaponSage_Start=0;
 	bool WeaponSage_END=0;
-    
+
+    bool init_flag = false;
+
     bool Arm_Start=false;
+
+    CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
     //-----------------------------------速度规划参数-----------------------------------------//
 
     int flag = 0;
     int flag_run = 0;
-
-
-
-    CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
 
     Path_line path_line_;
     Vector2D Clamping_Bar_Selection_pos_ = {1.925f+0.48f, 0.19f+0.50f};
@@ -242,9 +240,12 @@ private:
     
     bool MF1_flag=false;
     bool MF2_flag=false;
+    bool MF1_finish=false;
     
-    Vector2D spin_point_= {0.0f, 0.0f};       //上方旋转点
-    float spin_skew_=-0.04f;     //下方旋转位置y轴偏移量
+    Vector2D spin_point_= {3.6f, 8.72f};       //上方旋转点
+    float spin_skew_=-0.1f;     //下方旋转位置y轴偏移量
+    bool get_spin_flag=false;
+    bool Spin_Start=false;
     //-----------------------------------yaw角控制参数-----------------------------------------//
     
     float yaw=0.0f;
@@ -300,11 +301,11 @@ private:
     Vector2D ComposeRobotVelocity(const Vector2D &v_pid, const Vector2D &v_ff_ref, bool near_end);
 
     void Clamping_Bar_Selection_Planning(void);
-
     
-    
+    void flag_reset(void);
+        
     void loop() override;
-    bool init_flag = false;
+    
 };
 #endif // __cplusplus
 

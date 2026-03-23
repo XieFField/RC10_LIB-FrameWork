@@ -229,7 +229,6 @@ void OmniChassis_Setup::loop()
             flag = 0;
             flag_run = 1;
             Clamping_Bar_Selection_Planning();
-			WeaponSage_Start=1;
         }
         if (flag_run == 1)
         {
@@ -237,7 +236,11 @@ void OmniChassis_Setup::loop()
             {
                 // 获取曲线（带保护）
                 curve = path_line_.get_bezier_curve();
-
+                
+                if(Clamping_Bar_Selection_pos_.x==curve.Get_End_point().x && Clamping_Bar_Selection_pos_.y==curve.Get_End_point().y)
+                {
+                    target_yaw_ = -90.0f;
+                }
                 // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
                 planspeed = path_line_.plan(robot_pos_);
                 Path_correction();
@@ -246,13 +249,6 @@ void OmniChassis_Setup::loop()
                 speed = ComposeRobotVelocity(corrVelocity, v_ff, near_end);
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
-//                if(path_line_.get_pid_end_flag()==0)
-//                {
-//                    Path_correction();
-//                    speed = planspeed + corrVelocity;// 最终速度 = 规划的前进速度 + 横向纠偏速度
-//                }
-//                else
-//                    speed = planspeed; 
             }
             else
             {
@@ -260,15 +256,15 @@ void OmniChassis_Setup::loop()
                     flag_run = 0;
                     speed.x = 0.0f;
                     speed.y = 0.0f;
-                    path_line_.plan_reset();
-                    path_line_.Reset();
                     planspeed.x = 0.0f;
                     planspeed.y = 0.0f;
+                    path_line_.plan_reset();
+                    path_line_.Reset();
                     ResetAutoControlStates();
-                    chassis_status_ = CHASSIS_STOP;
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
 					WeaponSage_END=1;
+                    flag_reset();
             }
         }
         else
@@ -276,14 +272,9 @@ void OmniChassis_Setup::loop()
             target_yaw_ = yaw;
             target_chassis_twist_.vx = 0.0f;
             target_chassis_twist_.vy = 0.0f;
-            speed.x = 0.0f;
-            speed.y = 0.0f;
             ResetAutoControlStates();
         }
-        if (path_line_.index_ == 1)
-        {
-                target_yaw_ = -90.0f;
-        }
+
         // 获取当前角度
         float yaw_real_angle = yaw;
         // float yaw_real_angle = ladar_data_.yaw;
@@ -317,11 +308,46 @@ void OmniChassis_Setup::loop()
                 //上方停止点旋转
                 if(spin_up_flag==true)
                 {
-                    
+                    if(spin_point_.x==curve.Get_End_point().x && spin_point_.y==curve.Get_End_point().y)
+                    {
+                        get_spin_flag=true;
+                    }
+                    else if(get_spin_flag==true)
+                    {
+                        get_spin_flag=false;
+                        //target_yaw_=MF2_target_yaw_;
+                        Spin_Start=true;
+                    }
+                    else if(Spin_Start==true)
+                    {
+                        if(_tool_Abs(yaw-target_yaw_)<2.0f)
+                        {
+                            Spin_Start=false;
+                            spin_up_flag=false;
+                        }
+                    }
                 }
                 else if(spin_down_flag==true)
                 {
-                    
+                    if(MF1_finish==true)
+                    {
+                        if(target_yaw_ == 90.0f)
+                        {
+                            target_yaw_=MF2_target_yaw_;
+                            spin_down_flag=false;
+                        }
+                        else if(MF1_pos_.x==curve.Get_Start_point().x && MF1_pos_.y==curve.Get_Start_point().y)
+                        {
+                             get_spin_flag=true;
+                        }
+                        else if(get_spin_flag==true)
+                        {
+                            target_yaw_=MF2_target_yaw_;
+                            spin_down_flag=false;
+                            get_spin_flag=false;
+                        }
+                        
+                    }
                 }
                 
                 if(MF1_pos_.x==curve.Get_End_point().x && MF1_pos_.y==curve.Get_End_point().y)
@@ -337,14 +363,11 @@ void OmniChassis_Setup::loop()
                     MF1_flag=false;
                     MF2_flag=false;
                     Arm_Start=true;
+                    MF1_finish=true;
                 }
-                else
-                {
-                    MF1_flag=false;
-                    MF2_flag=false;
-                }
+
                 
-                if(Arm_Start==false)
+                if(Arm_Start==false && Spin_Start==false)
                 {
                     // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
                     planspeed = path_line_.plan(robot_pos_);
@@ -368,20 +391,18 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-
                     flag = 0;
                     flag_run = 0;
                     speed.x = 0.0f;
                     speed.y = 0.0f;
-                    path_line_.plan_reset();
-                    path_line_.Reset();
                     planspeed.x = 0.0f;
                     planspeed.y = 0.0f;
+                    path_line_.plan_reset();
+                    path_line_.Reset();
                     ResetAutoControlStates();
-                    chassis_status_ = CHASSIS_STOP;
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
-					WeaponSage_END=1;
+                    flag_reset();
 
             }
         }
@@ -390,8 +411,6 @@ void OmniChassis_Setup::loop()
             target_yaw_ = yaw;
             target_chassis_twist_.vx = 0.0f;
             target_chassis_twist_.vy = 0.0f;
-            speed.x = 0.0f;
-            speed.y = 0.0f;
             ResetAutoControlStates();
         }
 
@@ -794,4 +813,16 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
 //   path_line_.Add_Point(Vector2D{1.8f, 0.8f});
 //   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
      path_line_.Add_End_Point(Vector2D{4.31f, 1.88f});
+}
+void OmniChassis_Setup::flag_reset(void)
+{
+    MF1_flag=false;
+    MF2_flag=false;
+    spin_flag=false;
+    spin_up_flag=false;
+    spin_down_flag=false;
+    MF1_finish=false;
+    get_spin_flag=false;
+    Spin_Start=false;
+
 }
