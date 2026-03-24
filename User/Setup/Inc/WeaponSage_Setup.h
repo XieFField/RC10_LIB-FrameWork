@@ -132,6 +132,14 @@ public:
             return false;
     }
 
+    void setTargetIndex(int8_t index)
+    {
+        if(index < 0)
+            index = 0;
+        ctrl_status_.target_poleIndex = index;
+        
+    }
+
     void setWeaponSageControlStatus(WeaponSage_Status_E status)
     {
         weaponSage_status_ = status;
@@ -165,7 +173,7 @@ protected:
 
 private:
 	
-	bool omni_flag;
+	bool omni_flag = false;
 
     WeaponSage_Setup::ctrl_status_S ctrl_status_;
     Debug_Printf debug_uart = Debug_Printf(&huart1);

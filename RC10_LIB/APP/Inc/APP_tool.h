@@ -25,7 +25,7 @@ Type _tool_Abs(Type x)
     return ((x > 0) ? x : -x);
 }
 
-
+float rpm_to_degPerSec(float rpm);
 /**
  * @brief  将矩阵设置为单位矩阵
  * @param[in,out] M   指向矩阵实例
@@ -109,37 +109,36 @@ float wrap_to_nearest_0_360(float ref_deg_0_360, float val_deg_any);
 float wrap_to_nearest_cont(float ref_deg_cont, float val_deg_any);
 // 2D点结构体
 typedef struct  {
-    float x = 0, y = 0;
-    float theta = 0; // 旋转角度，单位弧度
+    float x = 0.0f, y = 0.0f;
+    float theta = 0.0f; // 旋转角度，单位弧度
 } Point2D;
 
 // 3D点结构体
 typedef struct {
-    float x = 0, y = 0, z = 0;
-    float theta = 0;
-    float roll = 0, pitch = 0, yaw = 0; // 欧拉角，单位弧度
+    float x = 0.0f, y = 0.0f, z = 0.0f;
+    float theta = 0.0f;
+    float roll = 0.0f, pitch = 0.0f, yaw = 0.0f; // 欧拉角，单位弧度
 }Point3D;
 
 typedef struct {
-    float vx;
-    float vy;
-    float vz;
+    float vx = 0.0f;
+    float vy = 0.0f;
+    float vz = 0.0f;
 
-    float yaw_rate;
-    float pitch_rate;
-    float roll_rate;
-
+    float yaw_rate = 0.0f;
+    float pitch_rate = 0.0f;
+    float roll_rate = 0.0f;
     
 }Robot_Twist;
 
 typedef struct {
-    float yaw_rate;
-    float pitch_rate;
-    float roll_rate;
+    float yaw_rate = 0.0f;
+    float pitch_rate = 0.0f;
+    float roll_rate = 0.0f;
 
-    float yaw_angle;
-    float pitch_angle;
-    float roll_angle;
+    float yaw_angle = 0.0f;
+    float pitch_angle = 0.0f;
+    float roll_angle = 0.0f;
     
 }Angle_Twist;
 

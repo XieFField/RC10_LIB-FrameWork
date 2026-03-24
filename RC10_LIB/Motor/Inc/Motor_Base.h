@@ -1,7 +1,7 @@
 /**
  * @file Motor_Base.h
  * @author XieFField
- * @brief 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷峰柦顭掓嫹閿燂拷
+ * @brief ������࣬�����˵���Ļ����ӿں�����
  * @version 1.0
  * @date 2025-09-16
  */
@@ -15,9 +15,9 @@
 #include "BSP_CanFrame.h"
 #include <cstdint>
 #include <cstddef>
-class fdCANbus; // 鍓嶉敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹
+class fdCANbus; // ǰ������
 
-//閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽€氶敓鐭帴鍖℃嫹
+
 class Motor_Base {
 public:
     Motor_Base(uint32_t id, bool isExt, fdCANbus* bus)
@@ -28,16 +28,16 @@ public:
     };
     virtual ~Motor_Base(){};
 
-    // 鐩敓鏂ゆ嫹閿熷€熷畾
+    // ���ƽӿ�
     virtual void setTargetRPM(float rpm_set){};
     virtual void setTargetCurrent(float current_set){};
     virtual void setTargetAngle(float angle_set){};
     virtual void setTargetTotalAngle(float totalAngle_set){};
 
-    // 閿熸枻鎷烽敓鏂ゆ嫹閿熺殕闈╂嫹閿熼摪鐚存嫹閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹鎵ч敓鍙尅鎷烽敓鏂ゆ嫹閿熺纭锋嫹閿熸枻鎷烽敓鑺傜鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓浠婅浼欐嫹閿熺獤锝忔嫹閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹鎵ч敓鍙槄鎷�
+    // ���µ��״̬
     virtual void update(){};
     
-    // 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷峰彇
+    // ��ȡ��������
     virtual float getRPM() const { return 0.0f; }   
     virtual float getCurrent() const { return 0.0f; }
     virtual float getAngle() const { return 0.0f; }
@@ -45,22 +45,23 @@ public:
 
     
     /**
-     * @brief 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷风洰閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓绱篈N甯�
-     * @param outFrames 閿熸枻鎷烽敓鑺傝揪鎷风朝閿熸枻鎷烽敓鏂ゆ嫹CAN甯ч敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹
-     * @param maxFrames 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹
-     * @return 瀹為敓缁炶揪鎷烽敓鏂ゆ嫹閿熺春AN甯ч敓鏂ゆ嫹閿熸枻鎷�
+     * @brief �����������ΪCAN֡��Ĭ�ϲ�������ɾ��������͸���ʵ��
+     * @param outFrames �����CAN֡���飬�����߸�������ڴ�
+     * @param maxFrames     ��������֡�����������ṩ�������С
+     * @return ʵ�ʴ����֡����0��ʾδ���
+     * @attention �ɾ��������͸���ʵ�֣�Ĭ�ϲ����
      */
     virtual std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) = 0;
 
     
     /**
-     * @brief 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹閿熺殕纰夋嫹閿熸枻鎷峰閿熸枻鎷烽敓绱篈N甯�
+     * @brief ���·������ݣ�Ĭ�ϲ��������ɾ��������͸���ʵ�ַ���֡����
      */
     virtual void updateFeedback(const CanFrame& cf) = 0;
 
     /**
-     * @brief 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹CAN甯ч敓瑙掑嚖鎷烽敓鏂ゆ嫹閿熻妭姝ょ鎷烽敓锟�
-     * @return 閿熸枻鎷烽敓鐙°儻鎷烽敓鏂ゆ嫹铓嶇シ閿熺但rue閿熸枻鎷烽敓鏂ゆ嫹閿熸触杩斾紮鎷穎alse
+     * @brief �ж�CAN֡�Ƿ�ƥ�䵱ǰ�����Ĭ�ϲ�ƥ�䣬�ɾ��������͸���ʵ��
+     * @return true��ʾƥ�䣬false��ʾ��ƥ��
      */
     virtual bool matchesFrame(const CanFrame& cf) const
     {
@@ -83,18 +84,18 @@ protected:
     bool isExtended_;
     fdCANbus* bus_;
 
-    // 鐩敓鏂ゆ嫹/鐘舵€侀敓鏂ゆ嫹
-    float target_rpm_ = 0.0f; //杞敓鏂ゆ嫹
-    float target_current_= 0.0f; //閿熸枻鎷烽敓鏂ゆ嫹
-    float target_angle_ = 0.0f; //閿熻璁规嫹
-    float target_totalAngle_ = 0.0f; //閿熸澃瑙掕鎷�
+    // ����Ŀ��
+    float target_rpm_ = 0.0f; 
+    float target_current_= 0.0f; 
+    float target_angle_ = 0.0f; 
+    float target_totalAngle_ = 0.0f; 
     
-    float GEAR_RATIO = 1.0f; // 閿熸枻鎷烽敓鍔瘮锝忔嫹榛橀敓鏂ゆ嫹涓�1
+    float GEAR_RATIO = 1.0f; // ���ٱȣ�Ĭ��Ϊ1.0f
     float rpm_ = 0.0f;
     float current_ = 0.0f;
     float angle_ = 0.0f;
     float totalAngle_ = 0.0f;
-    float temperature_ = 0.0f; //閿熼摪璁规嫹
+    float temperature_ = 0.0f; // �¶ȣ���λ���϶�
 
 };
 

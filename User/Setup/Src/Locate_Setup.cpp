@@ -26,7 +26,7 @@ void Locate_Setup::update()
 
 	update_Lidar_data();
 
-	lader_transform_caculate();
+	// lader_transform_caculate(); // [Fix] 移动到 robot_pose 更新之后
 
     // yaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().world_yaw;
 	// dyaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().dyaw;
@@ -49,6 +49,26 @@ void Locate_Setup::update()
     robot_speed_inworld_.z = Lad_Data.line_z;
 
     robot_speed_inworld_.yaw = dyaw_from_position_;
+
+    // [Fix] 2D 矩阵坐标变换: World = Robot + R * Install
+    float theta_rad = deg_to_rad(robot_pose_inWorld_.yaw);
+    float c_theta = cosf(theta_rad);
+    float s_theta = sinf(theta_rad);
+
+    // Pos_arm_world = Pos_robot_world + Rotation_matrix * Pos_arm_install
+    arm_pose_inWorld_.x = robot_pose_inWorld_.x + (arm_install_pose_.x * c_theta - arm_install_pose_.y * s_theta);
+    arm_pose_inWorld_.y = robot_pose_inWorld_.y + (arm_install_pose_.x * s_theta + arm_install_pose_.y * c_theta);
+    // 假设 arm_install_pose_.theta 为弧度，转为度数叠加 (World yaw 为度数)
+    arm_pose_inWorld_.theta = robot_pose_inWorld_.yaw + (arm_install_pose_.theta * 180.0f / PI);
+
+//    arm_pose_inWorld_.x = robot_pose_inWorld_.x;
+//    arm_pose_inWorld_.y = robot_pose_inWorld_.y;
+
+    // arm_pose_inWorld_.x = robot_pose_inWorld_.x - arm_install_pose_.x;
+    // arm_pose_inWorld_.y = robot_pose_inWorld_.y - arm_install_pose_.y;
+    // arm_pose_inWorld_.theta = robot_pose_inWorld_.yaw;
+
+    // lader_transform_caculate();
 
     if(HAL_GPIO_ReadPin(SWITCH1_GPIO_Port, SWITCH1_Pin) == GPIO_PIN_SET)
     {
@@ -193,9 +213,4 @@ void Locate_Setup::USB_SendData()
     Lad_Data.line_x= usb_handle->Data_.data1[6];
     Lad_Data.line_y= usb_handle->Data_.data1[7];
     Lad_Data.line_z= usb_handle->Data_.data1[8];
-
-    
-
-
-
  }

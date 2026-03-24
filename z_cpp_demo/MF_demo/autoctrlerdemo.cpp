@@ -36,6 +36,50 @@ const float MF_high[12] =
     20.0f, 40.0f, 20.0f
 };
 
+float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
+{
+    if(startmapNum < 1 || startmapNum >30 || next_mapNum < 1 || next_mapNum >30)
+    {
+        if(startmapNum < 1 || startmapNum >30)
+            cout << "Start mapNum " << (int)startmapNum << " is out of range." << endl;
+
+        if(next_mapNum < 1 || next_mapNum >30)
+            cout << "Next mapNum " << (int)next_mapNum << " is out of range." << endl;
+
+        return -1.0f; // 无效输入
+    }
+    
+    bool isinMFstart = IsWalkable(startmapNum);
+    bool isinMFnext = IsWalkable(next_mapNum);
+
+    if(isinMFstart == false)
+    {
+        cout << "Start map " << (int)startmapNum << " is in MF." << endl;
+    }
+    if(isinMFnext == false)
+    {
+        cout << "Next map " << (int)next_mapNum << " is in MF." << endl;
+    }
+
+     
+
+    if(isinMFstart && isinMFnext)
+    {
+        // 两个都不在梅花桩内，直接计算方向
+        Point2D startPos = MapCenterWorld(startmapNum);
+        Point2D nextPos = MapCenterWorld(next_mapNum);
+        float dx = nextPos.x - startPos.x;
+        float dy = nextPos.y - startPos.y;
+        float deg = rad_to_deg(atan2f(dy, dx));
+        deg = normalize_deg_0_360(deg);
+        return deg;
+    }
+    else
+    {
+        return -1.0f; //无效
+    }
+}
+
 // 模拟 ArmSetup 类
 class MockArmSetup {
 public:
@@ -662,95 +706,199 @@ public:
 // 4. 主函数
 // ==================================================================================
 
-int main(void)
+static float CalcPathInfoCost(Point2D robotPos, const PathInformation_S &path)
 {
-    // 设定测试目标：MF3
-    int8_t MF1 = 3; 
+    if (path.entranceMap == 0 || path.MFroad[0] == 0)
+        return 1.0e9f;
 
-    // 创建 Mock 对象
-    MockArmSetup arm;
+    int sE1 = BFS_Steps(path.entranceMap, path.MFroad[0]);
+    if (sE1 >= BFS_INF)
+        return 1.0e9f;
 
-    // 初始化仿真
-    arm.init_simulation(MF1);
+    float dRobotToE = euclid(robotPos, MapCenterWorld(path.entranceMap));
 
-    // 执行测试
-    Point2D PA, PB;
-    cout<<"机器人初始坐标是("<<arm.auto_ctrl_.now_armPosition.x<<","<<arm.auto_ctrl_.now_armPosition.y<<")"<<endl;
-
-    // [新增] 打印地图编号
-    cout << "MF1 Map Index: " << (int)MFNum_TransforMapNum(MF1) << endl;
-    cout << "BestB1 Map Index: " << (int)arm.auto_ctrl_.path.bestB1 << endl;
-    cout << "BestBMF1 Map Index: " << (int)arm.auto_ctrl_.path.bestBMF1 << endl;
-
-    cout<<"MF1的坐标是("<<arm.auto_ctrl_.targetKFS_pos[0].x<<","<<arm.auto_ctrl_.targetKFS_pos[0].y<<")"<<endl;
-    cout<<"bsetB1坐标是("<<arm.auto_ctrl_.pathPos.bestB1.x<<","<<arm.auto_ctrl_.pathPos.bestB1.y<<")"<<endl;
-    cout<<"bestBMF1坐标是("<<arm.auto_ctrl_.pathPos.bestBMF1.x<<","<<arm.auto_ctrl_.pathPos.bestBMF1.y<<")"<<endl;
-    
-    arm.get_GimbalMF_PAPB(MF1, PA, PB);
-    cout << "Calculated PA: (" << PA.x << ", " << PA.y << ")" << endl;
-    cout << "Calculated PB: (" << PB.x << ", " << PB.y << ")" << endl;
-
-    // 模拟循环
-    float dt = 0.01f; // 10ms
-    float total_time = 0.0f;
-    float max_time = 10.0f; // 增加仿真时间以容纳 carrying 阶段
-    
-    cout << "\n=== Simulation Start ===" << endl;
-    
-    bool sign_align_done = false;
-    float carrying_start_time = 0.0f;
-    
-    while(total_time < max_time) 
+    if (path.MFroad[1] == 0)
     {
-        
-        // 1. 模拟底盘移动
-        if (!sign_align_done) 
+        int s1X = BFS_Steps(path.MFroad[0], path.exitMap);
+        if (s1X >= BFS_INF)
+            return 1.0e9f;
+        return dRobotToE + CELL_M * (float)(sE1 + s1X);
+    }
+
+    int s12 = BFS_Steps(path.MFroad[0], path.MFroad[1]);
+    int s2X = BFS_Steps(path.MFroad[1], path.exitMap);
+    if (s12 >= BFS_INF || s2X >= BFS_INF)
+        return 1.0e9f;
+
+    return dRobotToE + CELL_M * (float)(sE1 + s12 + s2X);
+}
+
+static float BruteForceBestCost(Point2D robotPos, int8_t MF1, int8_t MF2)
+{
+    if (robotPos.y > MapNum_RealPos[29].y)
+        return 1.0e9f;
+
+    RoadResult_S MF1Road = MFNum_ToCatchRoadResult(MF1);
+    RoadResult_S MF2Road = MFNum_ToCatchRoadResult(MF2);
+    int8_t roadMF1[2] = {MF1Road.result1, MF1Road.result2};
+    int8_t roadMF2[2] = {MF2Road.result1, MF2Road.result2};
+
+    int8_t entrances[30] = {0};
+    uint8_t entranceCount = 0;
+    int8_t robotMap = GetMapNumFromPos(robotPos);
+    bool isRobotInsideMap = (robotMap >= 1 && robotMap <= 30 && IsWalkable(robotMap));
+
+    if (isRobotInsideMap)
+    {
+        entrances[entranceCount++] = robotMap;
+    }
+    else
+    {
+        for (int8_t m = 1; m <= 5; ++m)
         {
-            // 接近阶段
-            switch(arm.auto_ctrl_.KFS_Movedirection[0]) 
-            {
-                case Positive_X: arm.auto_ctrl_.now_armPosition.x += arm.auto_ctrl_.now_chassis_speed * dt; break;
-                case Negative_X: arm.auto_ctrl_.now_armPosition.x -= arm.auto_ctrl_.now_chassis_speed * dt; break;
-                case Positive_Y: arm.auto_ctrl_.now_armPosition.y += arm.auto_ctrl_.now_chassis_speed * dt; break;
-                case Negative_Y: arm.auto_ctrl_.now_armPosition.y -= arm.auto_ctrl_.now_chassis_speed * dt; break;
-                default: break;
-            }
-            
-            // 调用 signAlign
-            arm.state_signAlign(MF1, total_time);
-            
-            // 检查是否完成 (吸盘打开)
-            if (arm.sucker_is_open) 
-            {
-                // 3. signAlign完成時刻
-                arm.print_event("SignAlign Done", total_time);
-                sign_align_done = true;
-                carrying_start_time = total_time + 0.5f; // 模拟伸展取货耗时 0.5s
-            }
-        } 
-        else 
+            if (IsWalkable(m))
+                entrances[entranceCount++] = m;
+        }
+        for (int8_t m = 26; m <= 30; ++m)
         {
-            // Carrying 阶段
-            if (total_time > carrying_start_time) 
+            if (IsWalkable(m))
+                entrances[entranceCount++] = m;
+        }
+    }
+
+    bool hasMF2 = (MF2 != 0 && (roadMF2[0] != 0 || roadMF2[1] != 0));
+    float bestCost = 1.0e9f;
+
+    for (uint8_t ie = 0; ie < entranceCount; ++ie)
+    {
+        int8_t E = entrances[ie];
+        float dRobotToE = euclid(robotPos, MapCenterWorld(E));
+
+        for (int i1 = 0; i1 < 2; ++i1)
+        {
+            int8_t R1 = roadMF1[i1];
+            if (R1 == 0)
+                continue;
+
+            int sE1 = BFS_Steps(E, R1);
+            if (sE1 >= BFS_INF)
+                continue;
+
+            if (!hasMF2)
             {
-                // 模拟底盘继续移动 (离开)
-                switch(arm.auto_ctrl_.KFS_Movedirection[0]) 
+                int s1X = BFS_Steps(R1, 26);
+                if (s1X >= BFS_INF)
+                    continue;
+
+                float J = dRobotToE + CELL_M * (float)(sE1 + s1X);
+                if (J < bestCost)
+                    bestCost = J;
+            }
+            else
+            {
+                for (int i2 = 0; i2 < 2; ++i2)
                 {
-                    case Positive_X: arm.auto_ctrl_.now_armPosition.x += arm.auto_ctrl_.now_chassis_speed * dt; break;
-                    case Negative_X: arm.auto_ctrl_.now_armPosition.x -= arm.auto_ctrl_.now_chassis_speed * dt; break;
-                    case Positive_Y: arm.auto_ctrl_.now_armPosition.y += arm.auto_ctrl_.now_chassis_speed * dt; break;
-                    case Negative_Y: arm.auto_ctrl_.now_armPosition.y -= arm.auto_ctrl_.now_chassis_speed * dt; break;
-                    default: break;
+                    int8_t R2 = roadMF2[i2];
+                    if (R2 == 0)
+                        continue;
+
+                    int s12 = BFS_Steps(R1, R2);
+                    int s2X = BFS_Steps(R2, 26);
+                    if (s12 >= BFS_INF || s2X >= BFS_INF)
+                        continue;
+
+                    float J = dRobotToE + CELL_M * (float)(sE1 + s12 + s2X);
+                    if (J < bestCost)
+                        bestCost = J;
                 }
-                
-                // 调用 carrying
-                arm.state_carrying(MF1, total_time);
             }
         }
-
-        total_time += dt;
     }
-    
-    cout << "\n=== Simulation End ===" << endl;
-    return 0;
+
+    return bestCost;
+}
+
+static void PrintMustPast(const PathInformation_S &path)
+{
+    cout << "  mustPastMap: ";
+    for (int i = 0; i < 12; ++i)
+    {
+        if (path.mustPastMap[i] == 0)
+            break;
+        cout << (int)path.mustPastMap[i] << " ";
+    }
+    cout << endl;
+}
+
+int main(void)
+{
+    struct TestCase
+    {
+        const char *name;
+        Point2D robotPos;
+        int8_t MF1;
+        int8_t MF2;
+    };
+
+    TestCase tests[] = {
+        {"Case-1 单目标 林外下方", {0.2f, 0.8f, 0.0f}, 3, 0},
+        {"Case-2 单目标 林外上方", {5.5f, 9.6f, 0.0f}, 10, 0},
+        {"Case-3 双目标 林外下方", {1.0f, 0.5f, 0.0f}, 4, 9},
+        {"Case-4 双目标 林内通道", {0.6f, 5.0f, 0.0f}, 6, 11}};
+
+    bool allPass = true;
+
+    cout << "=== PathInformation 最优性测试开始 ===" << endl;
+
+    int testCount = (int)(sizeof(tests) / sizeof(tests[0]));
+    for (int i = 0; i < testCount; ++i)
+    {
+        TestCase &tc = tests[i];
+        PathInformation_S info = PathInformation_calc(tc.robotPos, tc.MF1, tc.MF2);
+        float calcCost = CalcPathInfoCost(tc.robotPos, info);
+        float bruteCost = BruteForceBestCost(tc.robotPos, tc.MF1, tc.MF2);
+
+        float err = calcCost - bruteCost;
+        if (err < 0.0f)
+            err = -err;
+
+        bool planningForbidden = (tc.robotPos.y > MapNum_RealPos[29].y);
+        bool pass = false;
+        if (planningForbidden)
+        {
+            pass = (info.entranceMap == 0 && info.MFroad[0] == 0 && info.MFroad[1] == 0);
+        }
+        else
+        {
+            pass = (err < 1.0e-4f);
+        }
+        if (!pass)
+            allPass = false;
+
+        cout << "\n[" << tc.name << "]" << endl;
+        cout << "  robotPos=(" << tc.robotPos.x << ", " << tc.robotPos.y << "), MF1=" << (int)tc.MF1 << ", MF2=" << (int)tc.MF2 << endl;
+        cout << "  entranceMap=" << (int)info.entranceMap << ", MFroad1=" << (int)info.MFroad[0] << ", MFroad2=" << (int)info.MFroad[1] << ", exitMap=" << (int)info.exitMap << endl;
+        cout << "  calcCost=" << calcCost << ", bruteBestCost=" << bruteCost << ", absErr=" << err << endl;
+        cout << "MFroad1's index is " << (int)info.Index_MFroad[0] << endl;
+        if(info.MFroad[1] != 0)
+            cout << "MFroad2's index is " << (int)info.Index_MFroad[1] << endl;
+        cout << "  result=" << (pass ? "PASS" : "FAIL") << endl;
+        PrintMustPast(info);
+    }
+
+    cout << "\n=== PathInformation 最优性测试结束: " << (allPass ? "全部PASS" : "存在FAIL") << " ===" << endl;
+
+    int testDir[4][2] =
+    {
+        {2,5}, {15,30}, {6,26}, {30,26}
+    };
+
+    float testDirresult[4];
+    for(int i = 0; i < 4; i ++)
+    {
+        testDirresult[i] = chassisMoveDir(testDir[i][0], testDir[i][1]);
+        cout << "\n[Direction Test " << (i+1) << "] From Map " << testDir[i][0] << " to Map " << testDir[i][1] << ": Direction = " << testDirresult[i] << endl;
+    }
+
+    return allPass ? 0 : 1;
 }

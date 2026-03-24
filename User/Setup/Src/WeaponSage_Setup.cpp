@@ -1,7 +1,7 @@
 #include "WeaponSage_Setup.h"
 
 namespace WeaponSage_Setup {
-  	float weapon_pos[4]={0.00748124998f,0.13226898f,0.28226898f,0.341148913f};
+  	float weapon_pos[4]={0.0074f,0.1322f,0.2822f,0.3411f}; //四个矛杆对应的爪子高度
 }
 
 Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
@@ -21,7 +21,7 @@ void Robot_WeaponSage_Setup::loop()
 	}
 	
 //	WeaponSagestackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-//	
+
     switch(weaponSage_status_)
     {
         case WEAPONSAGE_MANUAL_CONTROL:

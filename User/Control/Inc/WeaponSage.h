@@ -1,7 +1,7 @@
 /**
  * @file WeaponSage.h
  * @author XieFField
- * @brief 武器架控制实现
+ * @brief weaponsage控制驱动类
  * @version 1.0
  */
 #ifndef WEAPONSAGE_H
@@ -25,20 +25,20 @@ extern "C" {
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 
-// 武器架初始化数据结构体
+//初始化数据结构体
 typedef struct 
 {
     /* data */
-    float max_launchHeight_; // 武器杆最大上升高度
-    float max_clawAngle_; // 武器夹爪最大开合角度
-    float max_traverseLength_; // 武器架最大横向移动距离
+    float max_launchHeight_; //最大升降高度
+    float max_clawAngle_; // 最大夹爪角度
+    float max_traverseLength_; // 最大平移长度
 
-    float wrist_gearRatio_; // 手腕电机齿轮比(360度电机转一圈对应的实际转动角度)
-    float launch_Ratio_; // 升降电机的减速比(360度电机转一圈对应的实际升降高度)
-    float claw_gearRatio_; // 夹爪电机齿轮比(360度电机转一圈对应的实际张开角度)
-    float traverse_Ratio_; // 横向电机的减速比(360度电机转一圈对应的实际横移距离)
+    float wrist_gearRatio_; // 手腕关节减速比
+    float launch_Ratio_; // 升降关节减速比
+    float claw_gearRatio_; // 夹爪关节减速比
+    float traverse_Ratio_; // 平移关节减速比
 
-    float max_wristMotorRPM_; //   手腕电机最大转速(RPM)
+    float max_wristMotorRPM_; // 手腕电机最大转速
 
 }WeaponSage_InitData_S;
 
@@ -90,25 +90,47 @@ public:
     ~Robot_WeaponSage(){}
 
     bool register_launch_Motor(M3508* motor)
-    { launch_Motor_ = motor; if(launch_Motor_ != nullptr)return true; }
+    { 
+        launch_Motor_ = motor; 
+        if(launch_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
     
     bool register_claw_Motor(M2006* motor)
-    { claw_Motor_ = motor; if(claw_Motor_ != nullptr)return true; }
+    { 
+        claw_Motor_ = motor; 
+        if(claw_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
 
     bool register_traverse_Motor(M2006* motor)
-    { traverse_Motor_ = motor; if(traverse_Motor_ != nullptr)return true; }
+    { 
+        traverse_Motor_ = motor; 
+        if(traverse_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
 
     bool register_wrist_Motor(DM_Motor* motor)
-    { wrist_Motor_ = motor; if(wrist_Motor_ != nullptr)return true; }
+    { 
+        wrist_Motor_ = motor; 
+        if(wrist_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
+
+    void update();
     
-	
-	void update();
-	
-	
     /**
-     * @brief 设置电机反转状态
-     * @param reversed 是否反转 true表示反转，false表示不反转(相对于初始化时的方向)
-     * @param motor_type 电机类型
+     * @brief 设置电机反转，反转后控制命令会取反，正向转动时输出正值，反向转动时输出负值
+     * @param reversed 需要反转时设置为true，不反转时设置为false
+     * @param motor_type 需要设置反转的电机类型
      */
 
     bool setMotorReversed(bool reversed, WeaponSage::Motor_Type_E motor_type);
@@ -146,16 +168,15 @@ protected:
 
     M3508 *launch_Motor_ = nullptr; // 升降电机
     M2006 *claw_Motor_ = nullptr; // 夹爪电机
-    M2006 *traverse_Motor_ = nullptr; // 横向电机
+    M2006 *traverse_Motor_ = nullptr; // 平移电机
     DM_Motor *wrist_Motor_ = nullptr; // 手腕电机
-
     WeaponSage::WeaponSage_Pos_S target_pos_;
     WeaponSage::WeaponSage_Pos_S current_pos_;
 	WeaponSage::WeaponSage_Pos_S last_pos_;
 
     /**
-     * @brief 设置电机反转状态
-     * @param real_pos 实际位置(相对于初始化时的位置)
+     * @brief 将实际位置转换为电机总角度
+     * @param real_pos 实际位置值
      * @param motor_type 电机类型
      */
     float Realpos_to_MotorTotalAngle(float real_pos, WeaponSage::Motor_Type_E motor_type);
