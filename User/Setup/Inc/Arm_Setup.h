@@ -130,6 +130,7 @@ typedef enum{
 typedef enum{
     ONLY_ONE,
     TWO,
+    NONE_KFS,
 }KFS_NUM_E;
 
 typedef struct{
@@ -305,8 +306,20 @@ public:
         else
             auto_ctrl_.kfs_num = ONLY_ONE;
 
-        auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0])-1];
-        auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[1])-1];
+        if(KFS1 == 0 && KFS2 == 0)
+            return false; //没有目标KFS，设置失败
+        else
+        {
+            auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0])-1];
+            if(KFS2 != 0)
+            {
+                auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[1])-1];
+            }
+            else
+            {
+                auto_ctrl_.targetKFS_pos[1] = {0.0f, 0.0f, 0.0f};
+            }
+        }
 #if ARM_AUTOMOVE
         MF_AutoCtrler::get_MoveDiretion(auto_ctrl_.now_armPosition,
                                         auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1],
@@ -344,14 +357,18 @@ public:
         {
             auto_ctrl_.pathInfo.mustPastMap[i] = temp.mustPastMap[i];
         }
+
+        for(int i=0; i<2; i++)
+        {
+            auto_ctrl_.pathInfo.Index_MFroad[i] = temp.Index_MFroad[i];
+        }
 #endif
 
 
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
-        //auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
         auto_ctrl_.now_ChassisPosition.x = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0] - 1].x;
-        auto_ctrl_.now_ChassisPosition.y = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0] - 1].y;
+        auto_ctrl_.now_ChassisPosition.y = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0] - 1].y - 2.0f;
 #endif
         return true;
     }
@@ -566,12 +583,12 @@ protected:
              speed = {0.0f, 0.0f, 0.0f};
         return speed;
         
-//        if(MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
-//                                            auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
-//                                            0.03f))
-//        {
-//            
-//        }
+       if(MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
+                                           auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
+                                           0.03f))
+       {
+           speed = {0.0f, 0.0f, 0.0f};
+       }
              
              
         #else
@@ -581,8 +598,8 @@ protected:
             // return locate_ptr->get_FK_ChassisSpeed_inWorld();
             Locate_Setup *locate_ptr = Locate_Setup::getInstance();
             Point2D speed = {0};
-            speed.x = locate_ptr->get_RobotSpeed_inWorld().x/rate_forspeed;
-            speed.y = locate_ptr->get_RobotSpeed_inWorld().y/rate_forspeed;
+            speed.x = locate_ptr->get_RobotSpeed_inWorld().x;
+            speed.y = locate_ptr->get_RobotSpeed_inWorld().y;
             return speed;
         #endif
     }
@@ -753,8 +770,6 @@ protected:
         }
         #endif
     }
-    
-    float rate_forspeed =1.0f;
 };
 
 

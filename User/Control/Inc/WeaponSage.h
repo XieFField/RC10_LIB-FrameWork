@@ -90,21 +90,43 @@ public:
     ~Robot_WeaponSage(){}
 
     bool register_launch_Motor(M3508* motor)
-    { launch_Motor_ = motor; if(launch_Motor_ != nullptr)return true; }
+    { 
+        launch_Motor_ = motor; 
+        if(launch_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
     
     bool register_claw_Motor(M2006* motor)
-    { claw_Motor_ = motor; if(claw_Motor_ != nullptr)return true; }
+    { 
+        claw_Motor_ = motor; 
+        if(claw_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
 
     bool register_traverse_Motor(M2006* motor)
-    { traverse_Motor_ = motor; if(traverse_Motor_ != nullptr)return true; }
+    { 
+        traverse_Motor_ = motor; 
+        if(traverse_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
 
     bool register_wrist_Motor(DM_Motor* motor)
-    { wrist_Motor_ = motor; if(wrist_Motor_ != nullptr)return true; }
+    { 
+        wrist_Motor_ = motor; 
+        if(wrist_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
+
+    void update();
     
-	
-	void update();
-	
-	
     /**
      * @brief 设置电机反转，反转后控制命令会取反，正向转动时输出正值，反向转动时输出负值
      * @param reversed 需要反转时设置为true，不反转时设置为false

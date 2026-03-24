@@ -20,8 +20,13 @@ const Point2D MapNum_RealPos[30] = {
  * @param targetMap 目标方格编号 (1-30)
  * @param tolerance 容差范围，单位米
  */
+
 bool isInTargetMap(Point2D robotPos, int targetMap, float tolerance)
 {
+    if(targetMap < 1 || targetMap > 30)
+    {
+        return false; // 无效的目标方格编号
+    }
     Point2D map_center = MapNum_RealPos[targetMap - 1];
     
     if (robotPos.x >= map_center.x - tolerance && robotPos.x <= map_center.x + tolerance &&
@@ -895,8 +900,8 @@ int BFS_Steps(int8_t startMap, int8_t goalMap) // BFS 最少步数
     if (!IsWalkable(startMap) || !IsWalkable(goalMap))
         return BFS_INF;
 
-    static int16_t dist[31];
-    static uint8_t vis[31];
+     int16_t dist[31];
+     uint8_t vis[31];
     for (int i = 1; i <= 30; ++i)
     {
         dist[i] = (int16_t)BFS_INF;
@@ -904,7 +909,7 @@ int BFS_Steps(int8_t startMap, int8_t goalMap) // BFS 最少步数
     }
 
     // 简易环形队列（容量32）
-    static int8_t q[32];
+     int8_t q[32];
     uint8_t h = 0, t = 0;
     auto qpush = [&](int8_t v)
     { q[t++ & 31] = v; };

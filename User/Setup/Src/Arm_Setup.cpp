@@ -265,7 +265,7 @@ void ArmSetup::autoControl()
     if(auto_ctrl_.targetKFS[0] == 0)
         return; //没有目标KFS，直接返回 
 
-#if ARM_AUTOMOVE 
+#if ARM_AUTOMOVE  //移动间拾取KFS
     switch(auto_ctrl_.kfs_num)
     {
         case ONLY_ONE:
@@ -347,7 +347,7 @@ void ArmSetup::auto_stillnessOne()
         {
             if(state_alignStillness(auto_ctrl_.targetKFS[0]))
             {
-                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;
             }
             break;
         }
@@ -358,7 +358,7 @@ void ArmSetup::auto_stillnessOne()
             {
                 auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
                 #if ARM_AUTO_DEBUG_NOCHASSIS
-                auto_ctrl_.flag.canExtend = true; //放行进入伸展阶段
+                // auto_ctrl_.flag.canExtend = true; //放行进入伸展阶段
                 #endif
             }
             break;
@@ -390,6 +390,7 @@ void ArmSetup::auto_stillnessOne()
             if(state_backStillness(auto_ctrl_.targetKFS[0]))
             {
                 auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE;
+                arm_ctrlStatus.auto_start = 0;
                 auto_ctrl_.start_to_autoctrl = false; //完成一次流程后，重置自动控制启动条件
                 auto_ctrl_.flag.isrecalcPath = false; //重置路径重计算标志
             }
@@ -481,15 +482,22 @@ bool ArmSetup::state_extStillness(int targetKFS)
     if(_tool_Abs(this->get_currentJointStatus().stretchJoint_Length_ - 
             this->init_data_.max_stretchLength_) < 0.01f)//伸展完成判定
     {
-        auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //记录到达目标位置的时间戳
-        auto_ctrl_.flag.isExtReach = true;
+        if(!auto_ctrl_.flag.isExtReach)
+        {
+            auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //记录首次到达目标位置的时间戳
+            auto_ctrl_.flag.isExtReach = true;
+        }
     }
     
-    if(auto_ctrl_.flag.isExtReach && (this->now_time_s_ - auto_ctrl_.flag.reach_finishTimeStore) >= 0.15f)
+    const float now_s = TimeStamp::getInstance().getSeconds();
+    if(auto_ctrl_.flag.isExtReach && (now_s - auto_ctrl_.flag.reach_finishTimeStore) >= 0.2f)
     {
         this->set_StretchLength(0.0f); //停留0.15s后缩回
         return true;
     }
+
+    return false;
+
 }
 
 bool ArmSetup::state_launchStillness(int targetKFS)
@@ -507,11 +515,13 @@ bool ArmSetup::state_launchStillness(int targetKFS)
 
     this->set_LaunchHeight(this->init_data_.max_launchHeight_); //升到最高点，准备移动
 
-    if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.08f)
+    if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.03f)
     {
         auto_ctrl_.flag.canChassisStart = true; //机械臂已经升到可以移动的高度了
         return true;
     }
+    else
+        return false;
     // return true;
 }
 
@@ -531,8 +541,12 @@ bool ArmSetup::state_backStillness(int targetKFS)
     // float temp_angle = MF_AutoCtrler::Get_ArmBaseTargetAngle(static_cast<int8_t>(target_map), 
     //         auto_ctrl_.KFS_Movedirection[auto_ctrl_.now_targetIndex]);
 
-    float chassisDir = MF_AutoCtrler::chassisMoveDir(auto_ctrl_.pathInfo.mustPastMap[auto_ctrl_.pathInfo.Index_MFroad[auto_ctrl_.now_targetIndex]]
-                                        , auto_ctrl_.pathInfo.mustPastMap[auto_ctrl_.pathInfo.Index_MFroad[auto_ctrl_.now_targetIndex] + 1]);
+    const int8_t idx_mfroad = auto_ctrl_.pathInfo.Index_MFroad[auto_ctrl_.now_targetIndex];
+    if(idx_mfroad < 0 || idx_mfroad >= 11)
+        return false;
+
+    float chassisDir = MF_AutoCtrler::chassisMoveDir(auto_ctrl_.pathInfo.mustPastMap[idx_mfroad]
+                                        , auto_ctrl_.pathInfo.mustPastMap[idx_mfroad + 1]);
     int8_t c = 0,r = 0;
     MF_AutoCtrler::Map_ToCR(auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], c, r);
 
@@ -567,6 +581,11 @@ bool ArmSetup::state_backStillness(int targetKFS)
     }
 
     this->set_RotateAngle(targetBackAngle); //旋转到目标位置
+
+    if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - targetBackAngle) < 5.0f)
+        return true;
+    else
+        return false;
 }
 
 
