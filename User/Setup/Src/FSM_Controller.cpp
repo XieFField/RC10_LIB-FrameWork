@@ -1,5 +1,7 @@
 #include "FSM_Controller.h"
 
+int text_index = 0;
+
 void FSM_Controller::loop()
 {
     if(!init_flag_) 
@@ -9,7 +11,39 @@ void FSM_Controller::loop()
     CrsfReceiver::GetInstance(&huart7)->process();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     
-   
+	switch(text_index)
+	{
+		case 0://xiumian
+		{
+			HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_RESET);
+			break;
+		}
+		case 1://zhenxgiang
+		{
+            HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_RESET);
+			break;
+		}
+		case 2://fanxiang
+		{
+
+            HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_SET);
+			break;
+		}
+		case 3://sss
+		{
+
+            HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_SET);
+			break;
+		}
+		default:
+			break;
+	}
+	
+	
     switch(airjoy_data_.SWB)
     {
         case 0x00:
