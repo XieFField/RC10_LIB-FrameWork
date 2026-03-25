@@ -330,7 +330,10 @@ void ArmSetup::auto_stillnessOne()
                 auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT;
             }
             else
+            {
                 idle();
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //保持在完成状态
+            }
             break;
         }
 

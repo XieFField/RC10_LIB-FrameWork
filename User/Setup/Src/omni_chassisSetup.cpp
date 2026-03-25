@@ -225,6 +225,7 @@ void OmniChassis_Setup::loop()
         this->set_ControlMode(WORLD_SPEED_MODE);
         if (flag == 1)
         {
+            flag_reset();
             flag = 0;
             flag_run = 1;
             Clamping_Bar_Selection_Planning();
@@ -294,6 +295,7 @@ void OmniChassis_Setup::loop()
         this->set_ControlMode(WORLD_SPEED_MODE);
         if (flag == 1)
         {
+            flag_reset();
             flag = 0;
             flag_run = 1;
             KFS_Selection_Planning();
@@ -567,11 +569,11 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         if (MF1_Point_ < 10.0f)
         {
-            target_yaw_ = 90.0f;
+            target_yaw_ = -90.0f;
         }
         else
         {
-            target_yaw_ = -90.0f;
+            target_yaw_ = 90.0f;
         }
     }
     else
@@ -591,27 +593,27 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         if (MF2_Point_ < 10.0f)
         {
-            MF2_target_yaw_ = 90.0f;
+            MF2_target_yaw_ = -90.0f;
         }
         else
         {
-            MF2_target_yaw_ = -90.0f;
+            MF2_target_yaw_ = 90.0f;
         }
     }
     else
     {
-        if (MF1_Point_ == 21 || MF1_Point_ == 16 || MF1_Point_ == 11 || MF1_Point_ == 6)
+        if (MF2_Point_ == 21 || MF2_Point_ == 16 || MF2_Point_ == 11 || MF2_Point_ == 6)
         {
             MF2_target_yaw_ = 180.0f;
         }
-        else if (MF1_Point_ == 25 || MF1_Point_ == 20 || MF1_Point_ == 15 || MF1_Point_ == 10)
+        else if (MF2_Point_ == 25 || MF2_Point_ == 20 || MF2_Point_ == 15 || MF2_Point_ == 10)
         {
             MF2_target_yaw_ = 0.0f;
         }
     }
 
     // 判断是否需要转向
-    if (target_yaw_ == MF2_target_yaw_)
+    if (target_yaw_ == MF2_target_yaw_ || MF2==0.0f)
     {
         spin_flag = false;
     }
@@ -621,11 +623,24 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
     }
 
     // 计算出口索引
-    int index_exit = 0;
-    while (KFS_KeyPoint_.Index_MFroad[index_exit] != 0)
+    index_exit = 0;
+    while (index_exit < 12 && KFS_KeyPoint_.mustPastMap[index_exit] != 0)
     {
         index_exit++;
     }
+
+    // // 在“经过 MF1 后的下一个路点”尝试插入转向过渡点。
+    // int mf1_route_idx = -1;
+    // for (int i = 0; i < index_exit; i++)
+    // {
+    //     int map_idx = KFS_KeyPoint_.Index_MFroad[i];
+    //     if (KFS_KeyPoint_.mustPastMap[map_idx] == MF1_Point_)
+    //     {
+    //         mf1_route_idx = i;
+    //         break;
+    //     }
+    // }
+    // const int spin_insert_route_idx = (mf1_route_idx >= 0) ? (mf1_route_idx + 1) : -1;
 
     // 写入路径点坐标
     path_line_.plan_reset();

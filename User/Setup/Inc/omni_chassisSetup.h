@@ -126,6 +126,12 @@ public:
         Arm_Start = arm_end;
     }
 
+    void set_KFS(int8_t KFS1, int8_t KFS2)
+    {
+        MF1 = KFS1;
+        MF2 = KFS2;
+    }
+
 private:
     //-----------------------------------通讯标志位-----------------------------------------//
     bool WeaponSage_END = 0;
@@ -166,6 +172,67 @@ private:
     Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
+    //-----------------------------------前视pid参数-----------------------------------------//
+
+    float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
+    float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
+
+    float max_robot_speed_ = 1.5f;
+    float max_robot_speed_end_ = 0.4f;
+    float t_deadzone = 0.93f;
+    float max_corr_end_ = 0.5f;
+
+    Vector2D nearestPt;        // 路径上距离机器人最近的点
+    Vector2D lookaheadPt;      // 路径上的前视点
+    Vector2D lookaheadTangent; // 前视点处的切线方向向量
+    Vector2D pathEnd;          // 路径终点坐标
+
+    BezierCurve curve;
+
+    //-----------------------------------梅林规划参数-----------------------------------------//
+    int KFS = 0;
+
+    MF_AutoCtrler::PathInformation_S KFS_KeyPoint_;
+
+    int8_t MF1 = 0;
+    int8_t MF2 = 0;
+    int8_t MF1_Point_ = 0;
+    int8_t MF2_Point_ = 0;
+
+    Vector2D MF1_pos_ = {0.0f, 0.0f};
+    Vector2D MF2_pos_ = {0.0f, 0.0f};
+    
+    int index_exit = 0;
+    
+    float MF2_target_yaw_ = 0.0f;
+    bool spin_flag = false;
+
+    bool spin_up_flag = false;
+    bool spin_down_flag = false;
+
+    bool MF1_flag = false;
+    bool MF2_flag = false;
+    bool MF1_finish = false;
+
+    Vector2D spin_point_ = {3.6f, 8.72f}; // 上方旋转点
+    float spin_skew_ = -0.1f;             // 下方旋转位置y轴偏移量
+    bool get_spin_flag = false;
+    bool Spin_Start = false;
+    //-----------------------------------yaw角控制参数-----------------------------------------//
+
+    float yaw = 0.0f;
+    float target_yaw_ = 0.0f;
+
+    uint8_t yaw_pid_period_ = 3;
+    uint8_t yaw_pid_period_count_ = 0;
+    PID_Position yaw_pid_;
+
+    const float LINESPEED_LIMIT = 10 / 500.f; // 线速度限制
+    const float YAWSPEED_LIMIT = 1 / 500.f;   // yaw速度限制
+
+    float is_chassis_reverse_ = 1.0f;
+    
+    
     //-----------------------------------前馈参数-----------------------------------------//
 
     // 用于前视点差分前馈的“参考点”：
@@ -196,65 +263,7 @@ private:
     float k_damp_ = 0.0f;
     float end_ff_scale_ = 0.35f;
     float end_pid_scale_ = 0.7f;
-
-    //-----------------------------------前视pid参数-----------------------------------------//
-
-    float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
-    float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
-
-    float max_robot_speed_ = 1.5f;
-    float max_robot_speed_end_ = 0.4f;
-    float t_deadzone = 0.93f;
-    float max_corr_end_ = 0.5f;
-
-    Vector2D nearestPt;        // 路径上距离机器人最近的点
-    Vector2D lookaheadPt;      // 路径上的前视点
-    Vector2D lookaheadTangent; // 前视点处的切线方向向量
-    Vector2D pathEnd;          // 路径终点坐标
-
-    BezierCurve curve;
-
-    //-----------------------------------梅林规划参数-----------------------------------------//
-    int KFS = 0;
-
-    MF_AutoCtrler::PathInformation_S KFS_KeyPoint_;
-
-    int8_t MF1 = 0;
-    int8_t MF2 = 0;
-    int8_t MF1_Point_ = 0;
-    int8_t MF2_Point_ = 0;
-
-    Vector2D MF1_pos_ = {0.0f, 0.0f};
-    Vector2D MF2_pos_ = {0.0f, 0.0f};
-
-    float MF2_target_yaw_ = 0.0f;
-    bool spin_flag = false;
-
-    bool spin_up_flag = false;
-    bool spin_down_flag = false;
-
-    bool MF1_flag = false;
-    bool MF2_flag = false;
-    bool MF1_finish = false;
-
-    Vector2D spin_point_ = {3.6f, 8.72f}; // 上方旋转点
-    float spin_skew_ = -0.1f;             // 下方旋转位置y轴偏移量
-    bool get_spin_flag = false;
-    bool Spin_Start = false;
-    //-----------------------------------yaw角控制参数-----------------------------------------//
-
-    float yaw = 0.0f;
-    float target_yaw_ = 0.0f;
-
-    uint8_t yaw_pid_period_ = 3;
-    uint8_t yaw_pid_period_count_ = 0;
-    PID_Position yaw_pid_;
-
-    const float LINESPEED_LIMIT = 10 / 500.f; // 线速度限制
-    const float YAWSPEED_LIMIT = 1 / 500.f;   // yaw速度限制
-
-    float is_chassis_reverse_ = 1.0f;
-
+    
     //-----------------------------------其他参数-----------------------------------------//
 
     RmPocketData_t airjoy_data_; // 遥控器数据，范围 -1 ~ 1

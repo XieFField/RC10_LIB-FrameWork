@@ -343,6 +343,31 @@ private:
     MotorReversed_S sign_reversed_  = {1.0f, 1.0f, 1.0f, 1.0f};
     float last_rotate_cmd_ = 0.0f;
     float ramped_rotateMotorAngle_ = 0.0f;
+    
+//bool  time_initialized_ = false;+
+    
+    float ramp_rotate_maxspeed_ = 0.0f;
+    float ramp_rotate_maxstep_ = 0.0f;
+    float ramp_rotate_target_ = 0.0f; // ??????????¡À???
+    
+    void setRampRotateMaxSpeed(float maxspeed) { ramp_rotate_maxspeed_ = maxspeed; }
+    float caculate_rotate_target(float current, float target)
+    {
+        ramp_rotate_maxstep_ = ramp_rotate_maxspeed_ * dt_;
+        float diff = target - current;
+        if(diff > ramp_rotate_maxstep_)
+        {
+            diff = ramp_rotate_maxstep_;
+            return current + diff;
+        }
+        else if(diff < -ramp_rotate_maxstep_)
+        {
+            diff = -ramp_rotate_maxstep_;
+            return current + diff;
+        }
+        else
+            return target;
+    }
 };
 
 

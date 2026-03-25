@@ -590,10 +590,10 @@ public:
      */
     Vector2D plan(Vector2D point)
     {
-        if (m_phase == FINISHED_PHASE)
-        {
-            return Vector2D{0, 0};
-        }
+//        if (m_phase == FINISHED_PHASE)
+//        {
+//            return Vector2D{0, 0};
+//        }
         if (Is_End() == true)
         {
             bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距离
@@ -624,8 +624,9 @@ public:
             //                v_tangent_ = (bezier_curve_list[index_].Get_End_point()-point).normalize(); // 计算切线向量（单位向量）
             //            }
 
-            // 如果当前曲线段走完（t接近1）或者规划完成
-            if (_tool_Abs(err_end) <= 0.02f || m_phase == FINISHED_PHASE)
+            // 段切换条件：优先使用空间到点误差，避免仅靠速度规划阶段导致提前切段
+            const bool reach_segment_end = (_tool_Abs(err_end) <= 0.02f) || (t_ >= 0.995f && m_phase == FINISHED_PHASE);
+            if (reach_segment_end)
             {
                 index_++; // 切换到下一段曲线
                 t_ = 0.0f;
@@ -634,9 +635,12 @@ public:
                     is_end = false; // 结束运行
                     m_phase = FINISHED_PHASE;
                 }
-                params_.startPos = 0.0f; // 设置起始位置
-                params_.targetPos = (bezier_curve_list[index_].Get_len() - params_.startPos);
-                sp_.param_reset(params_);
+                else
+                {
+                    params_.startPos = 0.0f; // 设置起始位置
+                    params_.targetPos = (bezier_curve_list[index_].Get_len() - params_.startPos);
+                    sp_.param_reset(params_);
+                }
             }
             v_output_ = (v_tangent_ * v_resultant_);
             return v_output_; // 返回 速度向量 = 切向方向 * 目标速率
