@@ -213,21 +213,21 @@ void ALL_Setup_ConfigInit(void)
    Weapon_Controller.init(&Weapon_launchMotor, &Weapon_clawMotor,&Weapon_traverseMotor, &Weapon_wristMotor);
    Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
 
-//    ChassisOmni.registerWheelMotor(0, &omni_wheel1);
-//    ChassisOmni.registerWheelMotor(1, &omni_wheel2);
-//    ChassisOmni.registerWheelMotor(2, &omni_wheel3);
-   // ChassisOmni.registerWheelMotor(3, &omni_wheel4);
-//    ChassisOmni.init();
+   ChassisOmni.registerWheelMotor(0, &omni_wheel1);
+   ChassisOmni.registerWheelMotor(1, &omni_wheel2);
+   ChassisOmni.registerWheelMotor(2, &omni_wheel3);
+   ChassisOmni.registerWheelMotor(3, &omni_wheel4);
+   ChassisOmni.init();
 
    ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
-   Chassis::init_config chassis_init_config = 
-   {
-        .motor_handle[0] = &omni_wheel2,
-        .motor_handle[1] = &omni_wheel3,
-        .motor_handle[2] = &omni_wheel1
-   };
-   chassis.init(chassis_init_config);
+//    Chassis::init_config chassis_init_config = 
+//    {
+//         .motor_handle[0] = &omni_wheel1,
+//         .motor_handle[1] = &omni_wheel2,
+//         .motor_handle[2] = &omni_wheel3
+//    };
+//    chassis.init(chassis_init_config);
 
    Finite_StateMachine.registerArmSetup(&ARM_Controller);
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);

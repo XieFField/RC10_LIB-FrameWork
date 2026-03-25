@@ -23,16 +23,105 @@ namespace jia
             kOk,
             kError,
         };
+
         enum class Mode
         {
+            kWheelTorqueFreeMode,
             kBodySpeedMode,
+            kBodySpeedLockNowRotZMode,
+            kBodySpeedLockToRotZMode,
+            kWorldSpeedMode,
+            kWorldSpeedLockNowRotZMode,
+            kWorldSpeedLockToRotZMode,
         };
 
-        struct TargetBodySpeedModeData
+        struct TargetSpeedModeData
         {
             f32 vel_x;
             f32 vel_y;
             f32 omega_z;
+        };
+
+        struct TargetSpeedLockNowRotZModeData
+        {
+            f32 vel_x;
+            f32 vel_y;
+        };
+
+        struct TargetSpeedLockToRotZModeData
+        {
+            f32 vel_x;
+            f32 vel_y;
+            f32 rot_z;
+        };
+
+        // 默认构造和析构函数
+        Chassis() = default;
+        ~Chassis() = default;
+
+        // 初始化
+        void init(init_config &config);
+        // 设置轮子扭矩自由模式
+        Result setWheelTorqueFreeMode();
+        // 设置目标速度模式
+        //  // 自身坐标系
+        //  //  // 速度
+        Result setTargetBodySpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
+        Result setTargetBodySpeedMode(const TargetSpeedModeData &target);
+        //  //  // 固定当前rot_z
+        Result setTargetBodySpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
+        Result setTargetBodySpeedLockNowRotZMode(const TargetSpeedLockNowRotZModeData &target);
+        //  //  // 固定到rot_z
+        Result setTargetBodySpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
+        Result setTargetBodySpeedLockToRotZMode(const TargetSpeedLockToRotZModeData &target);
+        //  // 世界坐标系
+        //  //  // 速度
+        Result setTargetWorldSpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
+        Result setTargetWorldSpeedMode(const TargetSpeedModeData &target);
+        //  //  // 固定当前rot_z
+        Result setTargetWorldSpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
+        Result setTargetWorldSpeedLockNowRotZMode(const TargetSpeedLockNowRotZModeData &target);
+        //  //  // 固定到rot_z
+        Result setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
+        Result setTargetWorldSpeedLockToRotZMode(const TargetSpeedLockToRotZModeData &target);
+        // 读取目标速度
+        f32 getTargetWorldVelX() const;
+        f32 getTargetWorldVelY() const;
+        f32 getTargetOmegaZ() const;
+        // 读取当前速度
+        f32 getCurrentWorldVelX() const;
+        f32 getCurrentWorldVelY() const;
+        f32 getCurrentOmegaZ() const;
+
+    private:
+        struct wheel_config
+        {
+            f32 pos_x;                     // 单位：米
+            f32 pos_y;                     // 单位：米
+            f32 rot_z_deg;                 // 单位：度
+            M3508 *motor_handle = nullptr; // 电机句柄
+            f32 sin_rot_z;
+            f32 cos_rot_z;
+            f32 eq_radius;     // 等效半径，equivalent radius，可以是负值，单位：米
+            f32 abs_sin_rot_z; // 正弦值的绝对值
+            f32 abs_cos_rot_z; // 余弦值的绝对值
+            f32 abs_eq_radius; // 等效半径的绝对值，单位：米
+
+            M3508 *&h = motor_handle;
+            f32 &s = sin_rot_z;
+            f32 &c = cos_rot_z;
+            f32 &eqr = eq_radius;
+            f32 &as = abs_sin_rot_z;
+            f32 &ac = abs_cos_rot_z;
+            f32 &aeqr = abs_eq_radius;
+        };
+
+        struct InputTargetData
+        {
+            f32 vel_x;
+            f32 vel_y;
+            f32 omega_z;
+            f32 rot_z;
         };
 
         struct TargetData
@@ -73,41 +162,6 @@ namespace jia
             f32 w3_omega; // 轮子3的角速度，单位：rad/s
         };
 
-        // 默认构造和析构函数
-        Chassis() = default;
-        ~Chassis() = default;
-
-        // 初始化
-        void init(init_config &config);
-        // 设置目标速度模式
-        Result setTargetBodySpeedMode(const TargetBodySpeedModeData &target);
-
-    private:
-        void inverseKinematics(f32 in_x, f32 in_y, f32 in_z, f32 &out_w1, f32 &out_w2, f32 &out_w3);
-
-    private:
-        struct wheel_config
-        {
-            f32 pos_x;                     // 单位：米
-            f32 pos_y;                     // 单位：米
-            f32 rot_z_deg;                 // 单位：度
-            M3508 *motor_handle = nullptr; // 电机句柄
-            f32 sin_rot_z;
-            f32 cos_rot_z;
-            f32 eq_radius;     // 等效半径，equivalent radius，可以是负值，单位：米
-            f32 abs_sin_rot_z; // 正弦值的绝对值
-            f32 abs_cos_rot_z; // 余弦值的绝对值
-            f32 abs_eq_radius; // 等效半径的绝对值，单位：米
-
-            M3508 *&h = motor_handle;
-            f32 &s = sin_rot_z;
-            f32 &c = cos_rot_z;
-            f32 &eqr = eq_radius;
-            f32 &as = abs_sin_rot_z;
-            f32 &ac = abs_cos_rot_z;
-            f32 &aeqr = abs_eq_radius;
-        };
-
         // 创建线程
         static void createThread(void *arg);
         // 运行线程函数
@@ -127,6 +181,9 @@ namespace jia
         PlannedData last_planned_data_; // 上一次规划数据
         // 当前数据
         CurrentData current_data_;
+
+    private:
+        void inverseKinematics(f32 in_x, f32 in_y, f32 in_z, f32 &out_w1, f32 &out_w2, f32 &out_w3);
 
     private:
         // 设定量
@@ -158,13 +215,13 @@ namespace jia
 
         const f32 &wr = wheel_radius;
 
-        TargetBodySpeedModeData input_target_data; // 输入目标数据
+        InputTargetData input_target_data; // 输入目标数据
 
         Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
         u8 printf_period_ms = 4;                         // 串口调试打印周期，单位：毫秒
         u8 printf_period_count = 0;                      // 串口调试打印周期计数器
 
-        RmPocketData_t input_airjoy_data;
+        RmPocketData_t airjoy_data;
 
     private:
         f32 wheel_input_speed_radio = 300.0f;
@@ -186,6 +243,9 @@ namespace jia
         bool is_omega_z_close_loop = false;
 
         // PID_Position rot_z_pid;
+
+    private:
+        bool is_debug = false;
     };
 }
 
