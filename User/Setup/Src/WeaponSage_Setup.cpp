@@ -187,9 +187,10 @@ void Robot_WeaponSage_Setup::manualControl()
         case 0x01:
         {
             //½ø¹¥Ä£Ê½
-			CNT++;
-            if(CNT>10)
-			{
+            
+			// CNT++;
+            // if(CNT>10)
+			// {
 				if(_tool_Abs(airjoy_data_.right_x) < 0.1)
                 manual_ctrlForgrip_.changeTarget_state = false;
 
@@ -233,7 +234,7 @@ void Robot_WeaponSage_Setup::manualControl()
 				manual_ctrlForgrip_.last_right_stick_y = airjoy_data_.right_y;
 				CNT=0;
 
-			}
+			// }
             break; 
         }
 

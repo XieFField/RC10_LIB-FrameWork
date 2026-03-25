@@ -341,11 +341,11 @@ void FSM_Controller::auto_ctrl()
         case 0x01:
         {
             //暂时不把路径规划部分纳入
-            //chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_KFS);
-            chassis_setup_->setChassisStatus(CHASSIS_STOP);
+            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_KFS);
+            // chassis_setup_->setChassisStatus(CHASSIS_STOP);
             
-            arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-            //arm_setup_->setArmStatus(ARM_IDLE);
+            //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
             static uint8_t is_click = 0;

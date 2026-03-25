@@ -505,7 +505,7 @@ bool ArmSetup::state_launchStillness(int targetKFS)
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     float canMoveHeight = 0.0f;//云台升到此高度即可移动
     if(MF_high[targetKFS - 1] == 0.2f)
-        canMoveHeight = this->init_data_.safe_height;
+        canMoveHeight = this->init_data_.max_launchHeight_;
     else if(MF_high[targetKFS - 1] == 0.4f)
         canMoveHeight = this->init_data_.max_launchHeight_; 
     else if(MF_high[targetKFS - 1] == 0.6f)

@@ -228,6 +228,7 @@ void OmniChassis_Setup::loop()
             flag = 0;
             flag_run = 1;
             Clamping_Bar_Selection_Planning();
+            WeaponSage_END =0;
         }
         if (flag_run == 1)
         {
