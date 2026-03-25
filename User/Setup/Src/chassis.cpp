@@ -93,8 +93,12 @@ namespace jia
         max_vel_y = minOfThree(wheel_1_max_vel_y, wheel_2_max_vel_y, wheel_3_max_vel_y);
         max_omega_z = minOfThree(wheel_1_max_omega_z, wheel_2_max_omega_z, wheel_3_max_omega_z);
 
-        // 初始化yaw轴的速度环和位置环的PID参数
+        // 初始化omega_z_pid
         omega_z_pid.set_params(omega_z_pid_init_config, 0.0f);
+
+        // 初始化rot_z_pid
+        rot_z_pid.set_params(rot_z_pid_init_config, 0.0f);
+        rot_z_pid.set_as_circular();
     }
 
     void Chassis::createThread(void *arg)
@@ -105,6 +109,14 @@ namespace jia
 
     void Chassis::runThread(void *arg)
     {
+        // 引用别名
+        auto &it = input_target_data;
+        auto &t = target_data_;
+        auto &tpid = target_pid_data_;
+        auto &p = planned_data_;
+        auto &lp = last_planned_data_;
+        auto &c = current_data_;
+
         CrsfReceiver *receiver = CrsfReceiver::GetInstance(&huart7);
         HWT101CT *hwt = HWT101CT::GetInstance(&huart8);
         TickType_t time_ms = xTaskGetTickCount();
@@ -135,13 +147,13 @@ namespace jia
                 //     target_data.omega_z = 0.0f;
                 // }
 
-                // target_data.omega_z = airjoy_data.right_x * max_omega_z;
+                target_data.omega_z = airjoy_data.right_x * max_omega_z;
 
                 if (is_sine)
                 {
                     target_data.omega_z = sineWaveGeneratorF32(time_ms / 1000.0f, sine_amplitude, sine_frequency, 0.0f, sine_offset);
                 }
-                else
+                else if (is_phase_step)
                 {
                     if (airjoy_data.right_x > 0.3f)
                     {
@@ -157,7 +169,44 @@ namespace jia
                     }
                 }
 
-                this->setTargetBodySpeedMode(target_data);
+                switch (debug_mode)
+                {
+                case 0:
+                {
+                    setTargetBodySpeedMode(target_data);
+                    break;
+                }
+                case 1:
+                {
+                    setTargetWorldSpeedMode(target_data);
+                    break;
+                }
+                case 2:
+                {
+                    setTargetBodySpeedLockNowRotZMode(target_data.vel_x, target_data.vel_y);
+                    break;
+                }
+                case 3:
+                {
+                    setTargetWorldSpeedLockNowRotZMode(target_data.vel_x, target_data.vel_y);
+                    break;
+                }
+                case 4:
+                {
+                    setTargetBodySpeedLockToRotZMode(target_data.vel_x, target_data.vel_y, debug_lock_rot_z);
+                    break;
+                }
+                case 5:
+                {
+                    setTargetWorldSpeedLockToRotZMode(target_data.vel_x, target_data.vel_y, debug_lock_rot_z);
+                    break;
+                }
+                default:
+                {
+                    setWheelTorqueFreeMode();
+                    break;
+                }
+                }
 
                 // 调试轮子
                 //
@@ -181,118 +230,166 @@ namespace jia
             switch (mode_)
             {
             case Mode::kWheelTorqueFreeMode:
+                break;
+            case Mode::kBodySpeedMode:
+                is_world_speed_mode = false;
+                is_lock_rot_z = false;
+                break;
+            case Mode::kBodySpeedLockNowRotZMode:
+                is_world_speed_mode = false;
+                is_lock_rot_z = true;
+                break;
+            case Mode::kBodySpeedLockToRotZMode:
+                is_world_speed_mode = false;
+                is_lock_rot_z = true;
+                break;
+            case Mode::kWorldSpeedMode:
+                is_world_speed_mode = true;
+                is_lock_rot_z = false;
+                break;
+            case Mode::kWorldSpeedLockNowRotZMode:
+                is_world_speed_mode = true;
+                is_lock_rot_z = true;
+                break;
+            case Mode::kWorldSpeedLockToRotZMode:
+                is_lock_rot_z = true;
+                is_world_speed_mode = true;
+                break;
+            default:
+
+                break;
+            }
+
+            if (is_world_speed_mode)
+            {
+                rotateAroundZAxis(it.vel_x, it.vel_y, input_hwt_rot_z, t.vel_x, t.vel_y);
+            }
+            else
+            {
+                t.vel_x = it.vel_x;
+                t.vel_y = it.vel_y;
+            }
+
+            if (is_lock_rot_z)
+            {
+                rot_z_pid_count++;
+                if (rot_z_pid_count >= rot_z_pid_period)
+                {
+                    rot_z_pid_count = 0;
+                    t.omega_z = rot_z_pid.pid_calc(it.rot_z, input_hwt_rot_z);
+                }
+            }
+            else
+            {
+                t.omega_z = it.omega_z;
+            }
+
+            // 逆运动学解算
+            //  // 限制车端的目标速度
+            t.vel_x = clampValue(t.vel_x, -max_vel_x, max_vel_x);
+            t.vel_y = clampValue(t.vel_y, -max_vel_y, max_vel_y);
+            t.omega_z = clampValue(t.omega_z, -max_omega_z, max_omega_z);
+            //  // 是否开启车端的omega_z闭环控制
+            if (is_omega_z_close_loop)
+            {
+                omega_z_pid_count++;
+                if (omega_z_pid_count >= omega_z_pid_period)
+                {
+                    omega_z_pid_count = 0;
+                    tpid.omega_z = omega_z_pid.pid_calc(t.omega_z, input_hwt_omega_z);
+                }
+            }
+            else
+            {
+                tpid.omega_z = t.omega_z;
+            }
+            //  // 计算轮端的目标角速度
+            inverseKinematics(t.vel_x, t.vel_y, tpid.omega_z, t.w1_omega, t.w2_omega, t.w3_omega);
+            //  // 是否限制轮端的目标角速度
+            if (is_wheel_omega_limit)
+            {
+                // 限制轮端的目标角速度
+                f32 vel_scale_ratio = scaleThreeValuesToMaxF32(t.w1_omega, t.w2_omega, t.w3_omega,
+                                                               max_wheel_omega, max_wheel_omega, max_wheel_omega,
+                                                               t.w1_omega, t.w2_omega, t.w3_omega);
+                // 计算车端的目标速度
+                t.vel_x *= vel_scale_ratio;
+                t.vel_y *= vel_scale_ratio;
+                tpid.omega_z *= vel_scale_ratio;
+            }
+            //  // 是否限制车端的规划加速度
+            if (is_chassis_acc_limit)
+            {
+                p.vel_x = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(t.vel_x, p.vel_x, period, max_acc_xy_acc, max_acc_xy_dec);
+                p.vel_y = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(t.vel_y, p.vel_y, period, max_acc_xy_acc, max_acc_xy_dec);
+                p.omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tpid.omega_z, p.omega_z, period, max_alpha_z_acc, max_alpha_z_dec);
+            }
+            else
+            {
+                p.vel_x = t.vel_x;
+                p.vel_y = t.vel_y;
+                p.omega_z = tpid.omega_z;
+            }
+            //  // 计算车端的规划加速度
+            p.acc_x = (p.vel_x - lp.vel_x) / period;
+            p.acc_y = (p.vel_y - lp.vel_y) / period;
+            p.alpha_z = (p.omega_z - lp.omega_z) / period;
+            //  // 计算轮端的规划角速度
+            inverseKinematics(p.vel_x, p.vel_y, p.omega_z, p.w1_omega, p.w2_omega, p.w3_omega);
+            //  // 计算轮端的规划角加速度
+            p.w1_alpha = (p.w1_omega - lp.w1_omega) / period;
+            p.w2_alpha = (p.w2_omega - lp.w2_omega) / period;
+            p.w3_alpha = (p.w3_omega - lp.w3_omega) / period;
+            //  // 是否限制轮端的规划角加速度
+            if (is_wheel_alpha_limit)
+            {
+                // 限制轮端的规划角速度
+                f32 acc_scale_ratio = scaleThreeValuesToMaxF32(p.w1_alpha, p.w2_alpha, p.w3_alpha,
+                                                               max_wheel_alpha, max_wheel_alpha, max_wheel_alpha,
+                                                               p.w1_alpha, p.w2_alpha, p.w3_alpha);
+                // 计算车端的规划角速度
+                p.acc_x *= acc_scale_ratio;
+                p.acc_y *= acc_scale_ratio;
+                p.alpha_z *= acc_scale_ratio;
+                // 计算轮端的规划角速度
+                p.w1_omega = acc_scale_ratio * (p.w1_omega - lp.w1_omega) + lp.w1_omega;
+                p.w2_omega = acc_scale_ratio * (p.w2_omega - lp.w2_omega) + lp.w2_omega;
+                p.w3_omega = acc_scale_ratio * (p.w3_omega - lp.w3_omega) + lp.w3_omega;
+            }
+            //  // 发送转速指令
+            if (mode_ == Mode::kWheelTorqueFreeMode)
+            {
                 w1_.h->setTargetCurrent(0.0f);
                 w2_.h->setTargetCurrent(0.0f);
                 w3_.h->setTargetCurrent(0.0f);
-
-                break;
-            default:
-                // 逆运动学解算
-                //  // 引用别名
-                auto &it = input_target_data;
-                auto &t = target_data_;
-                auto &tpid = target_pid_data_;
-                auto &p = planned_data_;
-                auto &lp = last_planned_data_;
-                auto &c = current_data_;
-                //  // 限制车端的目标速度
-                t.vel_x = clampValue(it.vel_x, -max_vel_x, max_vel_x);
-                t.vel_y = clampValue(it.vel_y, -max_vel_y, max_vel_y);
-                t.omega_z = clampValue(it.omega_z, -max_omega_z, max_omega_z);
-                //  // 是否开启车端的omega_z闭环控制
-                if (is_omega_z_close_loop)
-                {
-                    omega_z_pid_count++;
-                    if (omega_z_pid_count >= omega_z_pid_period)
-                    {
-                        omega_z_pid_count = 0;
-                        tpid.omega_z = omega_z_pid.pid_calc(t.omega_z, input_hwt_omega_z);
-                    }
-                }
-                else
-                {
-                    tpid.omega_z = t.omega_z;
-                }
-                //  // 计算轮端的目标角速度
-                inverseKinematics(t.vel_x, t.vel_y, tpid.omega_z, t.w1_omega, t.w2_omega, t.w3_omega);
-                //  // 是否限制轮端的目标角速度
-                if (is_wheel_omega_limit)
-                {
-                    // 限制轮端的目标角速度
-                    f32 vel_scale_ratio = scaleThreeValuesToMaxF32(t.w1_omega, t.w2_omega, t.w3_omega,
-                                                                   max_wheel_omega, max_wheel_omega, max_wheel_omega,
-                                                                   t.w1_omega, t.w2_omega, t.w3_omega);
-                    // 计算车端的目标速度
-                    t.vel_x *= vel_scale_ratio;
-                    t.vel_y *= vel_scale_ratio;
-                    tpid.omega_z *= vel_scale_ratio;
-                }
-                //  // 是否限制车端的规划加速度
-                if (is_chassis_acc_limit)
-                {
-                    p.vel_x = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(t.vel_x, p.vel_x, period, max_acc_xy_acc, max_acc_xy_dec);
-                    p.vel_y = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(t.vel_y, p.vel_y, period, max_acc_xy_acc, max_acc_xy_dec);
-                    p.omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tpid.omega_z, p.omega_z, period, max_alpha_z_acc, max_alpha_z_dec);
-                }
-                else
-                {
-                    p.vel_x = t.vel_x;
-                    p.vel_y = t.vel_y;
-                    p.omega_z = tpid.omega_z;
-                }
-                //  // 计算车端的规划加速度
-                p.acc_x = (p.vel_x - lp.vel_x) / period;
-                p.acc_y = (p.vel_y - lp.vel_y) / period;
-                p.alpha_z = (p.omega_z - lp.omega_z) / period;
-                //  // 计算轮端的规划角速度
-                inverseKinematics(p.vel_x, p.vel_y, p.omega_z, p.w1_omega, p.w2_omega, p.w3_omega);
-                //  // 计算轮端的规划角加速度
-                p.w1_alpha = (p.w1_omega - lp.w1_omega) / period;
-                p.w2_alpha = (p.w2_omega - lp.w2_omega) / period;
-                p.w3_alpha = (p.w3_omega - lp.w3_omega) / period;
-                //  // 是否限制轮端的规划角加速度
-                if (is_wheel_alpha_limit)
-                {
-                    // 限制轮端的规划角速度
-                    f32 acc_scale_ratio = scaleThreeValuesToMaxF32(p.w1_alpha, p.w2_alpha, p.w3_alpha,
-                                                                   max_wheel_alpha, max_wheel_alpha, max_wheel_alpha,
-                                                                   p.w1_alpha, p.w2_alpha, p.w3_alpha);
-                    // 计算车端的规划角速度
-                    p.acc_x *= acc_scale_ratio;
-                    p.acc_y *= acc_scale_ratio;
-                    p.alpha_z *= acc_scale_ratio;
-                    // 计算轮端的规划角速度
-                    p.w1_omega = acc_scale_ratio * (p.w1_omega - lp.w1_omega) + lp.w1_omega;
-                    p.w2_omega = acc_scale_ratio * (p.w2_omega - lp.w2_omega) + lp.w2_omega;
-                    p.w3_omega = acc_scale_ratio * (p.w3_omega - lp.w3_omega) + lp.w3_omega;
-                }
-                //  // 发送转速指令
+            }
+            else
+            {
                 w1_.h->setTargetRPM(radsToRpmF32(p.w1_omega));
                 w2_.h->setTargetRPM(radsToRpmF32(p.w2_omega));
                 w3_.h->setTargetRPM(radsToRpmF32(p.w3_omega));
+            }
 
-                // 正运动学解算
-                //  // 读取三个电机的反馈
-                c.w1_omega = rpmToRadsF32(w1_.h->getRPM());
-                c.w2_omega = rpmToRadsF32(w2_.h->getRPM());
-                c.w3_omega = rpmToRadsF32(w3_.h->getRPM());
+            // 正运动学解算
+            //  // 读取三个电机的反馈
+            c.w1_omega = rpmToRadsF32(w1_.h->getRPM());
+            c.w2_omega = rpmToRadsF32(w2_.h->getRPM());
+            c.w3_omega = rpmToRadsF32(w3_.h->getRPM());
 
-                // 保存当前数据为上一次数据
-                lp = p;
+            // 保存当前数据为上一次数据
+            lp = p;
 
-                // debug_uart.printf_DMA("%lu,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, t.w2_omega, t.w3_omega, p.w1_omega, p.w2_omega, p.w3_omega, c.w1_omega, c.w2_omega, c.w3_omega);
-                // debug_uart.printf_DMA("%lu\r\n", time_ms);
-                // debug_uart.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, p.w1_omega, std::abs(c.w1_omega), std::abs(c.w2_omega));
-                // debug_uart.printf_DMA("%f,%f,%f\r\n", input_hwt_omega_z, input_hwt_rot_z, tpid.omega_z);
+            // debug_uart.printf_DMA("%lu,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, t.w2_omega, t.w3_omega, p.w1_omega, p.w2_omega, p.w3_omega, c.w1_omega, c.w2_omega, c.w3_omega);
+            // debug_uart.printf_DMA("%lu\r\n", time_ms);
+            // debug_uart.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, p.w1_omega, std::abs(c.w1_omega), std::abs(c.w2_omega));
+            // debug_uart.printf_DMA("%f,%f,%f\r\n", input_hwt_omega_z, input_hwt_rot_z, tpid.omega_z);
 
-                printf_period_count++;
-                if (printf_period_count >= printf_period_ms)
-                {
-                    printf_period_count = 0;
-                    debug_uart.printf_DMA("%f,%f,%f,%f,%f\r\n", it.omega_z, input_hwt_omega_z, tpid.omega_z, t.w3_omega, c.w3_omega);
-                }
-
-                break;
+            printf_period_count++;
+            if (printf_period_count >= printf_period_ms)
+            {
+                printf_period_count = 0;
+                // debug_uart.printf_DMA("%f,%f,%f,%f,%f\r\n", it.omega_z, input_hwt_omega_z, tpid.omega_z, t.w3_omega, c.w3_omega);
+                debug_uart.printf_DMA("%f,%f,%f,%f\r\n", it.rot_z, input_hwt_rot_z, t.omega_z, input_hwt_omega_z);
             }
 
             vTaskDelayUntil(&time_ms, period_ms);
@@ -345,6 +442,13 @@ namespace jia
         mode_ = Mode::kBodySpeedLockNowRotZMode;
         input_target_data.vel_x = target.vel_x;
         input_target_data.vel_y = target.vel_y;
+        if (is_lock_rot_z)
+        {
+        }
+        else
+        {
+            input_target_data.rot_z = input_hwt_rot_z;
+        }
         return Result::kOk;
     }
 
@@ -397,6 +501,13 @@ namespace jia
         mode_ = Mode::kWorldSpeedLockNowRotZMode;
         input_target_data.vel_x = target.vel_x;
         input_target_data.vel_y = target.vel_y;
+        if (is_lock_rot_z)
+        {
+        }
+        else
+        {
+            input_target_data.rot_z = input_hwt_rot_z;
+        }
         return Result::kOk;
     }
 
@@ -411,31 +522,34 @@ namespace jia
 
     f32 Chassis::getTargetWorldVelX() const
     {
-        return 0.0f;
+        return planned_data_.vel_x;
     }
 
     f32 Chassis::getTargetWorldVelY() const
     {
-        return 0.0f;
+        return planned_data_.vel_y;
     }
 
     f32 Chassis::getTargetOmegaZ() const
     {
-        return 0.0f;
+        return planned_data_.omega_z;
     }
 
     f32 Chassis::getCurrentWorldVelX() const
     {
+        // TODO
         return 0.0f;
     }
 
     f32 Chassis::getCurrentWorldVelY() const
     {
+        // TODO
         return 0.0f;
     }
 
     f32 Chassis::getCurrentOmegaZ() const
     {
+        // TODO
         return 0.0f;
     }
 

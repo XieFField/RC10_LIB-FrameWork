@@ -37,6 +37,7 @@ extern "C"
 #include "APP_Speedplanner.h"
 #include "APP_Bezier_Curve.h"
 #include "AutoCtrler.h"
+#include "chassis.h"
 
 #define debug_ladar 0
 class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>

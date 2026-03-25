@@ -182,6 +182,9 @@ namespace jia
         // 当前数据
         CurrentData current_data_;
 
+        bool is_world_speed_mode; // 是否为世界速度模式
+        bool is_lock_rot_z;       // 是否固定到rot_z
+
     private:
         void inverseKinematics(f32 in_x, f32 in_y, f32 in_z, f32 &out_w1, f32 &out_w2, f32 &out_w3);
 
@@ -231,6 +234,8 @@ namespace jia
         f32 sine_frequency = 0.1f;
         f32 sine_offset = 0.0f;
 
+        bool is_phase_step = false;
+
     private:
         f32 input_hwt_rot_z;
         f32 input_hwt_omega_z;
@@ -242,10 +247,15 @@ namespace jia
         uint8_t omega_z_pid_count = 0;
         bool is_omega_z_close_loop = false;
 
-        // PID_Position rot_z_pid;
+        PID_Position rot_z_pid;
+        uint8_t rot_z_pid_period = 1;
+        uint8_t rot_z_pid_count = 0;
 
     private:
-        bool is_debug = false;
+        bool is_debug = true;
+        
+        u8 debug_mode = 0;
+        f32 debug_lock_rot_z = 0.0f;
     };
 }
 

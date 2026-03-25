@@ -278,6 +278,22 @@ namespace jia
         return deg * (2.0f * kPi) / 360.0f;
     }
 
-} // namespace jia
+    /**
+     * @brief 右手坐标系 · 绕 Z 轴旋转坐标
+     * @param x,y 输入坐标
+     * @param theta 旋转弧度（逆时针为正）
+     * @param x_out,y_out 输出旋转后坐标
+     */
+    constexpr inline void rotateAroundZAxis(float x, float y, float theta,
+                                            float &x_out, float &y_out)
+    {
+        float cos_theta = cosf(theta);
+        float sin_theta = sinf(theta);
+
+        x_out = x * cos_theta + y * sin_theta;
+        y_out = -x * sin_theta + y * cos_theta;
+
+    } // namespace jia
+}
 
 #endif
