@@ -130,42 +130,45 @@ namespace jia
             {
                 receiver->getControlData(&airjoy_data);
 
-                TargetSpeedModeData target_data;
-                target_data.vel_x = airjoy_data.left_x * max_vel_x;
-                target_data.vel_y = airjoy_data.left_y * max_vel_y;
+                f32 target_vel_x = 0.0f;
+                f32 target_vel_y = 0.0f;
+                f32 target_omega_z = 0.0f;
+
+                target_vel_x = airjoy_data.left_x * max_vel_x;
+                target_vel_y = airjoy_data.left_y * max_vel_y;
 
                 // if (airjoy_data.right_x > 0.1f)
                 // {
-                //     target_data.omega_z = max_omega_z;
+                //     target_omega_z = max_omega_z;
                 // }
                 // else if (airjoy_data.right_x < -0.1f)
                 // {
-                //     target_data.omega_z = -max_omega_z;
+                //     target_omega_z = -max_omega_z;
                 // }
                 // else
                 // {
-                //     target_data.omega_z = 0.0f;
+                //     target_omega_z = 0.0f;
                 // }
 
-                target_data.omega_z = airjoy_data.right_x * max_omega_z;
+                target_omega_z = airjoy_data.right_x * max_omega_z;
 
                 if (is_sine)
                 {
-                    target_data.omega_z = sineWaveGeneratorF32(time_ms / 1000.0f, sine_amplitude, sine_frequency, 0.0f, sine_offset);
+                    target_omega_z = sineWaveGeneratorF32(time_ms / 1000.0f, sine_amplitude, sine_frequency, 0.0f, sine_offset);
                 }
                 else if (is_phase_step)
                 {
                     if (airjoy_data.right_x > 0.3f)
                     {
-                        target_data.omega_z = max_omega_z;
+                        target_omega_z = max_omega_z;
                     }
                     else if (airjoy_data.right_x < -0.3f)
                     {
-                        target_data.omega_z = -max_omega_z;
+                        target_omega_z = -max_omega_z;
                     }
                     else
                     {
-                        target_data.omega_z = 0.0f;
+                        target_omega_z = 0.0f;
                     }
                 }
 
@@ -173,32 +176,42 @@ namespace jia
                 {
                 case 0:
                 {
-                    setTargetBodySpeedMode(target_data);
+                    setTargetBodySpeedMode(target_vel_x, target_vel_y, target_omega_z);
                     break;
                 }
                 case 1:
                 {
-                    setTargetWorldSpeedMode(target_data);
+                    setTargetWorldSpeedMode(target_vel_x, target_vel_y, target_omega_z);
                     break;
                 }
                 case 2:
                 {
-                    setTargetBodySpeedLockNowRotZMode(target_data.vel_x, target_data.vel_y);
+                    setTargetBodySpeedLockNowRotZMode(target_vel_x, target_vel_y);
                     break;
                 }
                 case 3:
                 {
-                    setTargetWorldSpeedLockNowRotZMode(target_data.vel_x, target_data.vel_y);
+                    setTargetWorldSpeedLockNowRotZMode(target_vel_x, target_vel_y);
                     break;
                 }
                 case 4:
                 {
-                    setTargetBodySpeedLockToRotZMode(target_data.vel_x, target_data.vel_y, debug_lock_rot_z);
+                    setTargetBodySpeedLockToRotZMode(target_vel_x, target_vel_y, debug_lock_rot_z);
                     break;
                 }
                 case 5:
                 {
-                    setTargetWorldSpeedLockToRotZMode(target_data.vel_x, target_data.vel_y, debug_lock_rot_z);
+                    setTargetWorldSpeedLockToRotZMode(target_vel_x, target_vel_y, debug_lock_rot_z);
+                    break;
+                }
+                case 6:
+                {
+                    setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
+                    break;
+                }
+                case 7:
+                {
+                    setTargetBodySpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
                     break;
                 }
                 default:
@@ -234,26 +247,42 @@ namespace jia
             case Mode::kBodySpeedMode:
                 is_world_speed_mode = false;
                 is_lock_rot_z = false;
+                is_lock_rot_z_with_no_omega_z = false;
                 break;
             case Mode::kBodySpeedLockNowRotZMode:
                 is_world_speed_mode = false;
                 is_lock_rot_z = true;
+                is_lock_rot_z_with_no_omega_z = false;
                 break;
             case Mode::kBodySpeedLockToRotZMode:
                 is_world_speed_mode = false;
                 is_lock_rot_z = true;
+                is_lock_rot_z_with_no_omega_z = false;
                 break;
             case Mode::kWorldSpeedMode:
                 is_world_speed_mode = true;
                 is_lock_rot_z = false;
+                is_lock_rot_z_with_no_omega_z = false;
                 break;
             case Mode::kWorldSpeedLockNowRotZMode:
                 is_world_speed_mode = true;
                 is_lock_rot_z = true;
+                is_lock_rot_z_with_no_omega_z = false;
                 break;
             case Mode::kWorldSpeedLockToRotZMode:
                 is_lock_rot_z = true;
                 is_world_speed_mode = true;
+                is_lock_rot_z_with_no_omega_z = false;
+                break;
+            case Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode:
+                is_lock_rot_z = true;
+                is_world_speed_mode = true;
+                is_lock_rot_z_with_no_omega_z = true;
+                break;
+            case Mode::kBodySpeedLockNowRotZWithNoOmegaZMode:
+                is_lock_rot_z = true;
+                is_world_speed_mode = false;
+                is_lock_rot_z_with_no_omega_z = true;
                 break;
             default:
 
@@ -270,7 +299,23 @@ namespace jia
                 t.vel_y = it.vel_y;
             }
 
-            if (is_lock_rot_z)
+            if (is_lock_rot_z_with_no_omega_z)
+            {
+                if (it.omega_z == 0.0f)
+                {
+                    rot_z_pid_count++;
+                    if (rot_z_pid_count >= rot_z_pid_period)
+                    {
+                        rot_z_pid_count = 0;
+                        t.omega_z = rot_z_pid.pid_calc(it.rot_z, input_hwt_rot_z);
+                    }
+                }
+                else
+                {
+                    t.omega_z = it.omega_z;
+                }
+            }
+            else if (is_lock_rot_z)
             {
                 rot_z_pid_count++;
                 if (rot_z_pid_count >= rot_z_pid_period)
@@ -404,44 +449,18 @@ namespace jia
 
     Chassis::Result Chassis::setTargetBodySpeedMode(f32 vel_x, f32 vel_y, f32 omega_z)
     {
-        TargetSpeedModeData target;
-        target.vel_x = vel_x;
-        target.vel_y = vel_y;
-        target.omega_z = omega_z;
-        return setTargetBodySpeedMode(target);
+        mode_ = Mode::kBodySpeedMode;
+        input_target_data.vel_x = vel_x;
+        input_target_data.vel_y = vel_y;
+        input_target_data.omega_z = omega_z;
+        return Result::kOk;
     }
 
     Chassis::Result Chassis::setTargetBodySpeedLockNowRotZMode(f32 vel_x, f32 vel_y)
     {
-        TargetSpeedLockNowRotZModeData target;
-        target.vel_x = vel_x;
-        target.vel_y = vel_y;
-        return setTargetBodySpeedLockNowRotZMode(target);
-    }
-
-    Chassis::Result Chassis::setTargetBodySpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z)
-    {
-        TargetSpeedLockToRotZModeData target;
-        target.vel_x = vel_x;
-        target.vel_y = vel_y;
-        target.rot_z = rot_z;
-        return setTargetBodySpeedLockToRotZMode(target);
-    }
-
-    Chassis::Result Chassis::setTargetBodySpeedMode(const TargetSpeedModeData &target)
-    {
-        mode_ = Mode::kBodySpeedMode;
-        input_target_data.vel_x = target.vel_x;
-        input_target_data.vel_y = target.vel_y;
-        input_target_data.omega_z = target.omega_z;
-        return Result::kOk;
-    }
-
-    Chassis::Result Chassis::setTargetBodySpeedLockNowRotZMode(const TargetSpeedLockNowRotZModeData &target)
-    {
         mode_ = Mode::kBodySpeedLockNowRotZMode;
-        input_target_data.vel_x = target.vel_x;
-        input_target_data.vel_y = target.vel_y;
+        input_target_data.vel_x = vel_x;
+        input_target_data.vel_y = vel_y;
         if (is_lock_rot_z)
         {
         }
@@ -452,55 +471,29 @@ namespace jia
         return Result::kOk;
     }
 
-    Chassis::Result Chassis::setTargetBodySpeedLockToRotZMode(const TargetSpeedLockToRotZModeData &target)
+    Chassis::Result Chassis::setTargetBodySpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z)
     {
         mode_ = Mode::kBodySpeedLockToRotZMode;
-        input_target_data.vel_x = target.vel_x;
-        input_target_data.vel_y = target.vel_y;
-        input_target_data.rot_z = target.rot_z;
+        input_target_data.vel_x = vel_x;
+        input_target_data.vel_y = vel_y;
+        input_target_data.rot_z = rot_z;
         return Result::kOk;
     }
 
     Chassis::Result Chassis::setTargetWorldSpeedMode(f32 vel_x, f32 vel_y, f32 omega_z)
     {
-        TargetSpeedModeData target;
-        target.vel_x = vel_x;
-        target.vel_y = vel_y;
-        target.omega_z = omega_z;
-        return setTargetWorldSpeedMode(target);
+        mode_ = Mode::kWorldSpeedMode;
+        input_target_data.vel_x = vel_x;
+        input_target_data.vel_y = vel_y;
+        input_target_data.omega_z = omega_z;
+        return Result::kOk;
     }
 
     Chassis::Result Chassis::setTargetWorldSpeedLockNowRotZMode(f32 vel_x, f32 vel_y)
     {
-        TargetSpeedLockNowRotZModeData target;
-        target.vel_x = vel_x;
-        target.vel_y = vel_y;
-        return setTargetWorldSpeedLockNowRotZMode(target);
-    }
-
-    Chassis::Result Chassis::setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z)
-    {
-        TargetSpeedLockToRotZModeData target;
-        target.vel_x = vel_x;
-        target.vel_y = vel_y;
-        target.rot_z = rot_z;
-        return setTargetWorldSpeedLockToRotZMode(target);
-    }
-
-    Chassis::Result Chassis::setTargetWorldSpeedMode(const TargetSpeedModeData &target)
-    {
-        mode_ = Mode::kWorldSpeedMode;
-        input_target_data.vel_x = target.vel_x;
-        input_target_data.vel_y = target.vel_y;
-        input_target_data.omega_z = target.omega_z;
-        return Result::kOk;
-    }
-
-    Chassis::Result Chassis::setTargetWorldSpeedLockNowRotZMode(const TargetSpeedLockNowRotZModeData &target)
-    {
         mode_ = Mode::kWorldSpeedLockNowRotZMode;
-        input_target_data.vel_x = target.vel_x;
-        input_target_data.vel_y = target.vel_y;
+        input_target_data.vel_x = vel_x;
+        input_target_data.vel_y = vel_y;
         if (is_lock_rot_z)
         {
         }
@@ -511,12 +504,62 @@ namespace jia
         return Result::kOk;
     }
 
-    Chassis::Result Chassis::setTargetWorldSpeedLockToRotZMode(const TargetSpeedLockToRotZModeData &target)
+    Chassis::Result Chassis::setTargetBodySpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z)
+    {
+        mode_ = Mode::kBodySpeedLockNowRotZWithNoOmegaZMode;
+        input_target_data.vel_x = vel_x;
+        input_target_data.vel_y = vel_y;
+        input_target_data.omega_z = omega_z;
+
+        if (omega_z == 0.0f)
+        {
+            if (is_lock_rot_z)
+            {
+            }
+            else
+            {
+                input_target_data.rot_z = input_hwt_rot_z;
+            }
+        }
+        else
+        {
+            input_target_data.rot_z = input_hwt_rot_z;
+        }
+
+        return Result::kOk;
+    }
+
+    Chassis::Result Chassis::setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z)
+    {
+        mode_ = Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode;
+        input_target_data.vel_x = vel_x;
+        input_target_data.vel_y = vel_y;
+        input_target_data.omega_z = omega_z;
+
+        if (omega_z == 0.0f)
+        {
+            if (is_lock_rot_z)
+            {
+            }
+            else
+            {
+                input_target_data.rot_z = input_hwt_rot_z;
+            }
+        }
+        else
+        {
+            input_target_data.rot_z = input_hwt_rot_z;
+        }
+
+        return Result::kOk;
+    }
+
+    Chassis::Result Chassis::setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z)
     {
         mode_ = Mode::kWorldSpeedLockToRotZMode;
-        input_target_data.vel_x = target.vel_x;
-        input_target_data.vel_y = target.vel_y;
-        input_target_data.rot_z = target.rot_z;
+        input_target_data.vel_x = vel_x;
+        input_target_data.vel_y = vel_y;
+        input_target_data.rot_z = rot_z;
         return Result::kOk;
     }
 
