@@ -173,7 +173,7 @@ protected:
 
 private:
 	
-	bool omni_flag;
+	bool omni_flag = false;
 
     WeaponSage_Setup::ctrl_status_S ctrl_status_;
     Debug_Printf debug_uart = Debug_Printf(&huart1);
