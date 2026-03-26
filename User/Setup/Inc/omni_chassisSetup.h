@@ -137,7 +137,7 @@ private:
     //-----------------------------------通讯标志位-----------------------------------------//
     bool WeaponSage_END = 0;
 
-    bool init_flag = false;
+//    bool init_flag = false;
 
     bool Arm_Start = false;
 
@@ -311,7 +311,7 @@ private:
 
     void flag_reset(void);
 
-    void loop() override;
+
 };
 #endif // __cplusplus
 

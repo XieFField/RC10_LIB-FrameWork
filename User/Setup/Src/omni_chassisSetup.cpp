@@ -446,11 +446,11 @@ void OmniChassis_Setup::loop()
 #endif
 
 
-    Point2D fk_speed;
-    fk_speed.x = chassis.getTargetWorldVelX();
-    fk_speed.y = chassis.getTargetWorldVelY();
+    // Point2D fk_speed;
+    // fk_speed.x = chassis.getTargetWorldVelX();
+    // fk_speed.y = chassis.getTargetWorldVelY();
 
-    SpeedFK_Queue.send(fk_speed);
+    // SpeedFK_Queue.send(fk_speed);
 }
 
 /////////////////////////////////    Â·¾¶¾ÀÆ«´úÂë   //////////////////////////////////////////////
