@@ -1013,15 +1013,22 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
     }
     else
     {
-        for (int8_t m = 1; m <= 5; ++m)
+        bool isBelow = (robotPos.y < MapNum_RealPos[0].y);  // 梅花林下 ,flase则为在梅林上方
+        if (isBelow)
         {
-            if (IsWalkable(m))
-                entrances[entranceCount++] = m;
+            for (int8_t m = 1; m <= 5; ++m)
+            {
+                if (IsWalkable(m))
+                    entrances[entranceCount++] = m;
+            }
         }
-        for (int8_t m = 26; m <= 30; ++m)
+        else
         {
-            if (IsWalkable(m))
-                entrances[entranceCount++] = m;
+            for (int8_t m = 26; m <= 30; ++m)
+            {
+                if (IsWalkable(m))
+                    entrances[entranceCount++] = m;
+            }
         }
     }
 

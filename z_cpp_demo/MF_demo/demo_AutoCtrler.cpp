@@ -662,8 +662,8 @@ static void PushMustPastNode(int8_t *mustPastMap, int cap, int &len, int8_t node
 
 PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
 {
-    /**
-     *
+     /**
+     * 
      */
     PathInformation_S result;
     RoadResult_S MF1Road = MFNum_ToCatchRoadResult(MF1);
@@ -703,15 +703,22 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
     }
     else
     {
-        for (int8_t m = 1; m <= 5; ++m)
+        bool isBelow = (robotPos.y < MapNum_RealPos[0].y);  // 梅花林下 ,flase则为在梅林上方
+        if (isBelow)
         {
-            if (IsWalkable(m))
-                entrances[entranceCount++] = m;
+            for (int8_t m = 1; m <= 5; ++m)
+            {
+                if (IsWalkable(m))
+                    entrances[entranceCount++] = m;
+            }
         }
-        for (int8_t m = 26; m <= 30; ++m)
+        else
         {
-            if (IsWalkable(m))
-                entrances[entranceCount++] = m;
+            for (int8_t m = 26; m <= 30; ++m)
+            {
+                if (IsWalkable(m))
+                    entrances[entranceCount++] = m;
+            }
         }
     }
 
@@ -833,16 +840,41 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
     int mustLen = 0;
     PushMustPastNode(result.mustPastMap, 12, mustLen, result.entranceMap);
 
+    bool pushedRoad1 = (result.entranceMap == bestRoad1);
+    bool pushedRoad2 = (bestRoad2 != 0 && result.entranceMap == bestRoad2);
+
     for (int i = 0; i < fullLen; ++i)
     {
         int8_t node = fullPath[i];
-        if (node == bestRoad1 || node == bestRoad2 || node == result.exitMap || IsCornerMapByList(node, cornerMap, 4))
+
+        if (node == bestRoad1)
+        {
+            if (!pushedRoad1)
+            {
+                PushMustPastNode(result.mustPastMap, 12, mustLen, node);
+                pushedRoad1 = true;
+            }
+            continue;
+        }
+
+        if (bestRoad2 != 0 && node == bestRoad2)
+        {
+            if (!pushedRoad2)
+            {
+                PushMustPastNode(result.mustPastMap, 12, mustLen, node);
+                pushedRoad2 = true;
+            }
+            continue;
+        }
+
+        if (node == result.exitMap || IsCornerMapByList(node, cornerMap, 4))
         {
             PushMustPastNode(result.mustPastMap, 12, mustLen, node);
         }
     }
 
     PushMustPastNode(result.mustPastMap, 12, mustLen, result.exitMap);
+
     // 记录MFroad在mustPastMap中的索引
     for (int i = 0; i < mustLen; ++i)
     {
@@ -851,6 +883,7 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
         if (result.mustPastMap[i] == result.MFroad[1])
             result.Index_MFroad[1] = i;
     }
+
     return result;
 }
 

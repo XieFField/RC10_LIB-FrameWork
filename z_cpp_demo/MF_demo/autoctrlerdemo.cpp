@@ -735,9 +735,6 @@ static float CalcPathInfoCost(Point2D robotPos, const PathInformation_S &path)
 
 static float BruteForceBestCost(Point2D robotPos, int8_t MF1, int8_t MF2)
 {
-    if (robotPos.y > MapNum_RealPos[29].y)
-        return 1.0e9f;
-
     RoadResult_S MF1Road = MFNum_ToCatchRoadResult(MF1);
     RoadResult_S MF2Road = MFNum_ToCatchRoadResult(MF2);
     int8_t roadMF1[2] = {MF1Road.result1, MF1Road.result2};
@@ -754,17 +751,27 @@ static float BruteForceBestCost(Point2D robotPos, int8_t MF1, int8_t MF2)
     }
     else
     {
-        for (int8_t m = 1; m <= 5; ++m)
+        bool isBelow = (robotPos.y < MapNum_RealPos[0].y);
+        if (isBelow)
         {
-            if (IsWalkable(m))
-                entrances[entranceCount++] = m;
+            for (int8_t m = 1; m <= 5; ++m)
+            {
+                if (IsWalkable(m))
+                    entrances[entranceCount++] = m;
+            }
         }
-        for (int8_t m = 26; m <= 30; ++m)
+        else
         {
-            if (IsWalkable(m))
-                entrances[entranceCount++] = m;
+            for (int8_t m = 26; m <= 30; ++m)
+            {
+                if (IsWalkable(m))
+                    entrances[entranceCount++] = m;
+            }
         }
     }
+
+    if (entranceCount == 0)
+        return 1.0e9f;
 
     bool hasMF2 = (MF2 != 0 && (roadMF2[0] != 0 || roadMF2[1] != 0));
     float bestCost = 1.0e9f;
@@ -841,7 +848,7 @@ int main(void)
     };
 
     TestCase tests[] = {
-        {"Case-1 单目标 林外下方", {0.2f, 0.8f, 0.0f}, 3, 0},
+        {"Case-1 单目标 林外下方", {0.2f, 0.8f, 0.0f}, 11, 0},
         {"Case-2 单目标 林外上方", {5.5f, 9.6f, 0.0f}, 10, 0},
         {"Case-3 双目标 林外下方", {1.0f, 0.5f, 0.0f}, 4, 9},
         {"Case-4 双目标 林内通道", {0.6f, 5.0f, 0.0f}, 6, 11}};
@@ -862,16 +869,16 @@ int main(void)
         if (err < 0.0f)
             err = -err;
 
-        bool planningForbidden = (tc.robotPos.y > MapNum_RealPos[29].y);
+        bool calcHasPath = (info.entranceMap != 0 && info.MFroad[0] != 0);
+        bool bruteHasPath = (bruteCost < 1.0e8f);
         bool pass = false;
-        if (planningForbidden)
-        {
-            pass = (info.entranceMap == 0 && info.MFroad[0] == 0 && info.MFroad[1] == 0);
-        }
-        else
-        {
+
+        if (!calcHasPath && !bruteHasPath)
+            pass = true;
+        else if (calcHasPath && bruteHasPath)
             pass = (err < 1.0e-4f);
-        }
+        else
+            pass = false;
         if (!pass)
             allPass = false;
 
