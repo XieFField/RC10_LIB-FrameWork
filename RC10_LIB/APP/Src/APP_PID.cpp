@@ -273,3 +273,24 @@ PID_Param_Config path_lock_end = {
     .output_limit = 1.0f,   
     .deadband = 0.0009f 
 };
+
+PID_Param_Config omega_z_pid_init_config =
+{
+    .kp = 0.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f,
+    .isIOutlimit = false,
+    .output_limit = 0.0f,
+    .deadband = 0.0f,
+};
+
+PID_Param_Config rot_z_pid_init_config = {
+    .kp = 4.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f,
+    .isIOutlimit = false,
+    .output_limit = 4.0f,
+    .deadband = 0.0f
+};

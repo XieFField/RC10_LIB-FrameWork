@@ -70,7 +70,6 @@ public:
       void process_data();
       void imu_rst();
       void imu_reset_heading(float reheading);
-      uint32_t get_update_time();
       
 private:
 	   HWT101CT_Frame_t frame;
@@ -83,11 +82,11 @@ private:
      uint8_t reserved_index=0;
      uint8_t calculated_checksum=0, init_count = 0;
      float orin_yaw = 0.0f, init_yaw = 0.0f, delta_angle = 0.0f, real_yaw = 0.0f, yaw_rad = 0.0f;
+     float orin_yawz = 0.0f;
      float calculateYaw(uint8_t YawH, uint8_t YawL);
      uint8_t calculateChecksum();
      void yaw_tf(float nowyaw);
      bool if_init = true;
-     uint32_t last_update_time = 0, now_time = 0;
      float delta_time = 0.0f, yaw_speed_rad = 0.0f, last_yaw = 0.0f;
 };
 

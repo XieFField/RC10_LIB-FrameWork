@@ -37,6 +37,7 @@ extern "C"
 #include "APP_Speedplanner.h"
 #include "APP_Bezier_Curve.h"
 #include "AutoCtrler.h"
+#include "chassis.h"
 
 #define debug_ladar 0
 class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>
@@ -165,13 +166,11 @@ private:
     uint8_t yaw_pid_period_ = 3;
     uint8_t yaw_pid_period_count_ = 0;
     PID_Position yaw_pid_;
-    
+
     void loop() override;
+
     bool init_flag = false;
 
-    // Robot_Twist chassis_maxSpeed_ = {0};
-    const float LINESPEED_LIMIT = 10 / 500.f; // 线速度限制
-    const float YAWSPEED_LIMIT = 1 / 500.f;   // yaw速度限制
 
     float is_chassis_reverse_ = 1.0f;
     
