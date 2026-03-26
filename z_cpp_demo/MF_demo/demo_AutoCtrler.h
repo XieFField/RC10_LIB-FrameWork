@@ -55,6 +55,15 @@ typedef struct{
     int8_t exitMap = 30;    // 移除 const，允许赋值
 }PathNode_S;
 
+typedef struct
+{
+    int8_t entranceMap = 0;
+    int8_t MFroad[2] = {0};
+    int8_t mustPastMap[12] = {0};
+    int8_t Index_MFroad[2] = {0,0}; //记录MFroad中MF1和MF2在mustPastMap中的索引位置，方便后续路径跟踪
+    int8_t exitMap = 26;
+} PathInformation_S;
+
 RoadResult_S MFNum_ToRoadResult(int8_t MFNum);
 
 // 移除 static
@@ -71,7 +80,13 @@ Point2D MapCenterWorld(int8_t map);
 
 PathNode_S PathNodeResult_calc(Point2D robotPos, int8_t MF1, int8_t MF2);
 
+PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2);
+
 RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum);
+
+int BFS_GetPath(int8_t startMap, int8_t goalMap, int8_t *outPath, int maxLen);
+
+int8_t GetMapNumFromPos(Point2D pos);
 
 void get_MoveDiretion(Point2D robotPos, int8_t MF1, int8_t MF2, Direction_E Diresult[]);
 
