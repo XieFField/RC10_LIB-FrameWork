@@ -49,7 +49,7 @@ Chassis_Omni<3>::init_config chassis_initData = {
     }
 };
 OmniChassis_Setup ChassisOmni(chassis_initData); // 轮子半径，最大轮子转速，底盘 底 腰
-
+Chassis chassis;
 
 
 FSM_Controller Finite_StateMachine;
@@ -187,7 +187,7 @@ laserpos.Init();//锟斤拷锟斤拷锟斤拷
 #endif
 
 
-	SystemDetectTaskHandle = osThreadNew(StartSystemDetectTask, NULL, &SystemDetectTask_attributes);
+	// system_detect_task_handle = osThreadNew(startSystemDetectTask, NULL, &system_detect_task_attributes);
 }
 
 void CAN_Motor_Init(void);
@@ -203,7 +203,7 @@ void ALL_Setup_ConfigInit(void)
    HWT101CT* imu = HWT101CT::GetInstance(&huart1);
    imu->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
-   //debug_init();
+   // debug_init();
 	
    CAN_Motor_Init();
 
@@ -213,13 +213,21 @@ void ALL_Setup_ConfigInit(void)
    Weapon_Controller.init(&Weapon_launchMotor, &Weapon_clawMotor,&Weapon_traverseMotor, &Weapon_wristMotor);
    Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
 
-   ChassisOmni.registerWheelMotor(0, &omni_wheel1);
-   ChassisOmni.registerWheelMotor(1, &omni_wheel2);
-   ChassisOmni.registerWheelMotor(2, &omni_wheel3);
-   // ChassisOmni.registerWheelMotor(3, &omni_wheel4);
+//    ChassisOmni.registerWheelMotor(0, &omni_wheel1);
+//    ChassisOmni.registerWheelMotor(1, &omni_wheel2);
+//    ChassisOmni.registerWheelMotor(2, &omni_wheel3);
+//    ChassisOmni.registerWheelMotor(3, &omni_wheel4);
    ChassisOmni.init();
 
    ChassisOmni.setChassisStatus(CHASSIS_STOP);
+
+   Chassis::init_config chassis_init_config = 
+   {
+        .motor_handle[0] = &omni_wheel1,
+        .motor_handle[1] = &omni_wheel2,
+        .motor_handle[2] = &omni_wheel3
+   };
+   chassis.init(chassis_init_config);
 
    Finite_StateMachine.registerArmSetup(&ARM_Controller);
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
@@ -298,6 +306,7 @@ void CAN_Motor_Init(void)
    omni_wheel1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    omni_wheel2.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    omni_wheel3.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
+
    // omni_wheel4.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
 
    // 机械臂电机PID参数初始化

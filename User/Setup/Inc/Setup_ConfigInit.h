@@ -39,11 +39,12 @@ extern "C" {
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 #include "APP_PID.h"
+#include "APP_Utils.h"
 #include "debug_setup.h"
 #include "Module_Air_joy.h"
 #include "Module_Position.h"
 #include "Locate_Setup.h"
-#include "SystemDetect_Task.h"
+#include "system_detect_task.h"
 #include "Module_HWT.h"
 
 /*==============Controller===============*/
@@ -52,6 +53,7 @@ extern "C" {
 #include "omni_chassisSetup.h"
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
+#include "chassis.h"
 #if SPEEDPLANNER_DEMO_DEBUG
     #include "speedplanner_demo.h"
 #endif
