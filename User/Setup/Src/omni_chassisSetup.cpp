@@ -31,43 +31,46 @@ void OmniChassis_Setup::loop()
     {
     case CHASSIS_MANUAL_CONTROL_A:
     {
-        Chassis::TargetSpeedModeData target;
+        float target_vel_x = 0.0f;
+        float target_vel_y = 0.0f;
+        float target_omega_z = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target.vel_x = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
+            target_vel_x = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
         else
-            target.vel_x = 0.0f;
+            target_vel_x = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target.vel_y = airjoy_data_.left_y * 3 * this->is_chassis_reverse_;
+            target_vel_y = airjoy_data_.left_y * 3 * this->is_chassis_reverse_;
         else
-            target.vel_y = 0.0f;
+            target_vel_y = 0.0f;
 
         if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
-            target.omega_z = airjoy_data_.right_x * 6;
+            target_omega_z = airjoy_data_.right_x * 6;
         else
-            target.omega_z = 0.0f;
+            target_omega_z = 0.0f;
 
-        chassis.setTargetWorldSpeedMode(target);
+        chassis.setTargetWorldSpeedMode(target_vel_x, target_vel_y, target_omega_z);
 
         break;
     }
 
     case CHASSIS_MANUAL_CONTROL_B:
     {
-        Chassis::TargetSpeedLockNowRotZModeData target;
+        float target_vel_x = 0.0f;
+        float target_vel_y = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target.vel_x = airjoy_data_.left_x * 0.6 * this->is_chassis_reverse_;
+            target_vel_x = airjoy_data_.left_x * 0.6 * this->is_chassis_reverse_;
         else
-            target.vel_x = 0.0f;
+            target_vel_x = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target.vel_y = airjoy_data_.left_y * 0.6 * this->is_chassis_reverse_;
+            target_vel_y = airjoy_data_.left_y * 0.6 * this->is_chassis_reverse_;
         else
-            target.vel_y = 0.0f;
+            target_vel_y = 0.0f;
 
-        chassis.setTargetWorldSpeedLockNowRotZMode(target);
+        chassis.setTargetWorldSpeedLockNowRotZMode(target_vel_x, target_vel_y);
 
         break;
     }
@@ -77,21 +80,23 @@ void OmniChassis_Setup::loop()
         const float target_yaw_angle = 90.0f;
         const float target_yaw_rad = 90.0f * PI / 180.0f;
 
-        Chassis::TargetSpeedLockToRotZModeData target;
+        float target_vel_x = 0.0f;
+        float target_vel_y = 0.0f;
+        float target_omega_z = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target.vel_x = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
+            target_vel_x = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
         else
-            target.vel_x = 0.0f;
+            target_vel_x = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target.vel_y = airjoy_data_.left_y * 3 * this->is_chassis_reverse_;
+            target_vel_y = airjoy_data_.left_y * 3 * this->is_chassis_reverse_;
         else
-            target.vel_y = 0.0f;
+            target_vel_y = 0.0f;
 
-        target.rot_z = target_yaw_rad;
+        target_omega_z = target_yaw_rad;
 
-        chassis.setTargetWorldSpeedLockToRotZMode(target);
+        chassis.setTargetWorldSpeedLockToRotZMode(target_vel_x, target_vel_y, target_omega_z);
 
         break;
     }

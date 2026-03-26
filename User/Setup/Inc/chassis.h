@@ -24,37 +24,6 @@ namespace jia
             kError,
         };
 
-        enum class Mode
-        {
-            kWheelTorqueFreeMode,
-            kBodySpeedMode,
-            kBodySpeedLockNowRotZMode,
-            kBodySpeedLockToRotZMode,
-            kWorldSpeedMode,
-            kWorldSpeedLockNowRotZMode,
-            kWorldSpeedLockToRotZMode,
-        };
-
-        struct TargetSpeedModeData
-        {
-            f32 vel_x;
-            f32 vel_y;
-            f32 omega_z;
-        };
-
-        struct TargetSpeedLockNowRotZModeData
-        {
-            f32 vel_x;
-            f32 vel_y;
-        };
-
-        struct TargetSpeedLockToRotZModeData
-        {
-            f32 vel_x;
-            f32 vel_y;
-            f32 rot_z;
-        };
-
         // 默认构造和析构函数
         Chassis() = default;
         ~Chassis() = default;
@@ -67,23 +36,21 @@ namespace jia
         //  // 自身坐标系
         //  //  // 速度
         Result setTargetBodySpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
-        Result setTargetBodySpeedMode(const TargetSpeedModeData &target);
         //  //  // 固定当前rot_z
         Result setTargetBodySpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
-        Result setTargetBodySpeedLockNowRotZMode(const TargetSpeedLockNowRotZModeData &target);
+        //  //  // 无输入omega_z时固定当前rot_z
+        Result setTargetBodySpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z);
         //  //  // 固定到rot_z
         Result setTargetBodySpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
-        Result setTargetBodySpeedLockToRotZMode(const TargetSpeedLockToRotZModeData &target);
         //  // 世界坐标系
         //  //  // 速度
         Result setTargetWorldSpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
-        Result setTargetWorldSpeedMode(const TargetSpeedModeData &target);
         //  //  // 固定当前rot_z
         Result setTargetWorldSpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
-        Result setTargetWorldSpeedLockNowRotZMode(const TargetSpeedLockNowRotZModeData &target);
+        //  //  // 无输入omega_z时固定当前rot_z
+        Result setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z);
         //  //  // 固定到rot_z
         Result setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
-        Result setTargetWorldSpeedLockToRotZMode(const TargetSpeedLockToRotZModeData &target);
         // 读取目标速度
         f32 getTargetWorldVelX() const;
         f32 getTargetWorldVelY() const;
@@ -114,6 +81,19 @@ namespace jia
             f32 &as = abs_sin_rot_z;
             f32 &ac = abs_cos_rot_z;
             f32 &aeqr = abs_eq_radius;
+        };
+
+        enum class Mode
+        {
+            kWheelTorqueFreeMode,
+            kBodySpeedMode,
+            kBodySpeedLockNowRotZMode,
+            kBodySpeedLockToRotZMode,
+            kWorldSpeedMode,
+            kWorldSpeedLockNowRotZMode,
+            kWorldSpeedLockToRotZMode,
+            kWorldSpeedLockNowRotZWithNoOmegaZMode,
+            kBodySpeedLockNowRotZWithNoOmegaZMode,
         };
 
         struct InputTargetData
@@ -182,8 +162,9 @@ namespace jia
         // 当前数据
         CurrentData current_data_;
 
-        bool is_world_speed_mode; // 是否为世界速度模式
-        bool is_lock_rot_z;       // 是否固定到rot_z
+        bool is_world_speed_mode;           // 是否为世界速度模式
+        bool is_lock_rot_z;                 // 是否固定到rot_z
+        bool is_lock_rot_z_with_no_omega_z; // 是否固定到rot_z，且不固定omega_z
 
     private:
         void inverseKinematics(f32 in_x, f32 in_y, f32 in_z, f32 &out_w1, f32 &out_w2, f32 &out_w3);
