@@ -162,12 +162,10 @@ public:
 	 * @return float 最大速度
 	 */
 	float Get_Max_Vel(float t);
-    
-    
 
 protected:
-	float len = 0.0f;												 // 曲线总长度
-	float distance_list[BEZIER_SAMPLE_NUM];							 // 储存采样点的累计长度
+	float len = 0.0f;										   // 曲线总长度
+	float distance_list[BEZIER_SAMPLE_NUM];					   // 储存采样点的累计长度
 	float bezier_sample_step = 1.f / (float)BEZIER_SAMPLE_NUM; // 采样步长
 
 	BezierOrder order; // 贝塞尔曲线的阶数

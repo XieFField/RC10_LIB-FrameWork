@@ -72,12 +72,12 @@ void parse_uart_data(uint8_t data);
 #define SUCKER_error_GPIO_Port GPIOG
 #define SUCKERERROR2_Pin GPIO_PIN_4
 #define SUCKERERROR2_GPIO_Port GPIOG
-#define SUCKERERROR3_Pin GPIO_PIN_5
-#define SUCKERERROR3_GPIO_Port GPIOG
-#define SUCKERERROR4_Pin GPIO_PIN_6
-#define SUCKERERROR4_GPIO_Port GPIOG
-#define SUCKER_Pin GPIO_PIN_7
+#define SUCKER_Pin GPIO_PIN_5
 #define SUCKER_GPIO_Port GPIOG
+#define SUCKER_P1_Pin GPIO_PIN_5
+#define SUCKER_P1_GPIO_Port GPIOD
+#define SUCKER_P2_Pin GPIO_PIN_6
+#define SUCKER_P2_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 

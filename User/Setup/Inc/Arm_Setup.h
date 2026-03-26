@@ -81,13 +81,12 @@ extern "C" {
 // #include "usart.h"
 
 #define ARM_AUTO_DEBUG_NOCHASSIS  0 //無底盤下，用虛擬坐標進行驗證自動邏輯
+#define ARM_AUTOMOVE 0 //0:停下拾取KFS，1:行进间拾取KFS
 
 
 
 typedef struct{
     bool init_flag = false;
-
-    
     uint8_t debug_start = 0; //调试开始标志 == 1 开始调试
 
     uint8_t auto_start = 0; //自动调试开始标志 == 1 开始自动调试
@@ -96,7 +95,6 @@ typedef struct{
     bool calibrate_start = false;
     bool is_calibrating = false;
 
-    bool changeTarget_state = false; //切换目标状态标志
     float last_right_x = 0.0f; //上次右摇杆横向数据
     float last_right_y = 0.0f; //上次右摇杆纵向数据
 
@@ -107,6 +105,7 @@ typedef struct{
     int8_t sucker_switch_offset = 0; // 吸盘开关偏移绑定
 }arm_ctrl_status_S;
 
+#if ARM_AUTOMOVE
 typedef enum{
     STATE_TO_TARGET_HIGHT, //阶段1：升高到对应高度
     STATE_SIGN_ALIGN,            //阶段2：旋转对齐，打开吸盘
@@ -115,10 +114,23 @@ typedef enum{
     STATE_RETURN,          //阶段5：返回初始位置
     STATE_DONE,            //待机，还未进入梅花林
 }ARM_AUTO_E;
+#endif
+
+
+typedef enum{
+    STATE_TO_WAIT,
+    STATE_ALIGN,
+    STATE_LOWER,
+    STATE_EXT,
+    STATE_LAUNCH,
+    STATE_BACK,
+    STATE_DONE
+}ARM_AUTO_STILLNESS_E;
 
 typedef enum{
     ONLY_ONE,
     TWO,
+    NONE_KFS,
 }KFS_NUM_E;
 
 typedef struct{
@@ -141,7 +153,6 @@ typedef struct{
     int targetKFS[2] = {0,0};
     int now_targetIndex = 0;
     KFS_NUM_E kfs_num = ONLY_ONE;
-    ARM_AUTO_E now_state = STATE_DONE;
     bool start_to_autoctrl = false;
 
     Point2D now_armPosition = {5.0f, 8.60f, 0.0f}; //机械臂当前位置
@@ -152,29 +163,12 @@ typedef struct{
 
     Point2D targetKFS_pos[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //目标KFS位置
 
-    //Point2D point_PAB[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //PA PB
     struct {
         Point2D PA;
         Point2D PB;
     }PointPAB[2];
 
-    MF_AutoCtrler::Direction_E KFS_Movedirection[2] = {MF_AutoCtrler::NONE, MF_AutoCtrler::NONE}; //目标KFS方向
-
-    MF_AutoCtrler::PathNode_S path;
-
-    autopathPos_S pathPos;
-
-    int gimbal_calcCount = 0; //云台预判计算计数
-
-    // float dt = 0.01f; //控制周期，单位秒
-
-    
-
-    const float arm_width = 0.12f; //机械臂宽度，单位米
-
-    int gimbal_calcHz = 100; //云台预判计算频率
-
-    arm_timeset_S time_set;
+   
 
 
     /**
@@ -182,14 +176,20 @@ typedef struct{
      *                    正增为逆时针旋转，负增为顺时针旋转
      */
     Rotate_Strategy_E current_strategy = ROTATE_PATH_SHORTEST; 
+    
+#if ARM_AUTOMOVE
+    MF_AutoCtrler::Direction_E KFS_Movedirection[2] = {MF_AutoCtrler::NONE, MF_AutoCtrler::NONE}; //目标KFS方向
+    MF_AutoCtrler::PathNode_S path;
 
+    autopathPos_S pathPos;
+    ARM_AUTO_E now_state = STATE_DONE;
+    int gimbal_calcCount = 0; //云台预判计算计数
+
+    ARM_AUTO_E state = STATE_DONE;
     struct{
-        
-        const float store_height = 0.14f; //存储机构高度，单位米 待定
 
         bool is_toPlace = false; //是否到达可放置状态
     }store[2];
-
     struct{
         bool align_done = false; //对齐完成标志
         bool ext_done = false;   //伸展完成标志
@@ -201,16 +201,24 @@ typedef struct{
         bool is_reachingTarget = false; //是否到达目标位置
 
         float reach_finishTime = 0.0f; //到达目标位置的时间戳
-
-        bool gimbal_ok =false;
         const float safe_height = 0.14f; //安全高度，单位米  待定
         bool isrecalcPath = false; //是否重新计算路径
     }flag;
 
+    arm_timeset_S time_set;
+#else
+    ARM_AUTO_STILLNESS_E now_state = STATE_DONE;
+    MF_AutoCtrler::PathInformation_S pathInfo; 
     struct{
-        bool changeTarget_state = false; //变更目标状态标志位
-    }manual_ctrlForgrip_;
+        bool isrecalcPath = false; //是否重新计算路径
+        bool canExtend = false; //是否可以伸展
+        float reach_finishTimeStore = 0.0f; //存储到达目标位置的时间戳
+        bool isExtReach = false;
+        bool canChassisStart = false; //是否可以开始底盘移动
+    }flag;
 
+
+#endif
 }ARM_AUTO_S;
 
 
@@ -229,7 +237,9 @@ public:
     ArmSetup(Arm_InitData_S init_Data)
         : Robot_Arm(init_Data), RtosTask("ArmSetup", 1) 
     {
+        #if ARM_AUTOMOVE
         auto_ctrl_.time_set.gimbal_max_rad = (100.0f * init_Data.rotate_gearRatio_ * PI)/(180.0f * 60.0f) ; //云台最大角速度(rad/s)
+        #endif
     }
 
     bool isArmcalibrated() const
@@ -296,9 +306,21 @@ public:
         else
             auto_ctrl_.kfs_num = ONLY_ONE;
 
-        auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0])-1];
-        auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[1])-1];
-        
+        if(KFS1 == 0 && KFS2 == 0)
+            return false; //没有目标KFS，设置失败
+        else
+        {
+            auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0])-1];
+            if(KFS2 != 0)
+            {
+                auto_ctrl_.targetKFS_pos[1] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[1])-1];
+            }
+            else
+            {
+                auto_ctrl_.targetKFS_pos[1] = {0.0f, 0.0f, 0.0f};
+            }
+        }
+#if ARM_AUTOMOVE
         MF_AutoCtrler::get_MoveDiretion(auto_ctrl_.now_armPosition,
                                         auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1],
                                         auto_ctrl_.KFS_Movedirection);
@@ -320,13 +342,33 @@ public:
         auto_ctrl_.pathPos.bestBMF2 = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.bestBMF2);
         auto_ctrl_.pathPos.entranceMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.entranceMap);
         auto_ctrl_.pathPos.exitMap = MF_AutoCtrler::MapCenterWorld(auto_ctrl_.path.exitMap);
+#else
+        MF_AutoCtrler::PathInformation_S temp = MF_AutoCtrler::PathInformation_calc(auto_ctrl_.now_ChassisPosition,
+                                       auto_ctrl_.targetKFS[0], 
+                                        auto_ctrl_.targetKFS[1]);
+        auto_ctrl_.pathInfo.entranceMap = temp.entranceMap;
+        
+        for(int i=0; i<2; i++)
+        {
+            auto_ctrl_.pathInfo.MFroad[i] = temp.MFroad[i];
+        }
+
+        for(int i=0; i<12; i++)
+        {
+            auto_ctrl_.pathInfo.mustPastMap[i] = temp.mustPastMap[i];
+        }
+
+        for(int i=0; i<2; i++)
+        {
+            auto_ctrl_.pathInfo.Index_MFroad[i] = temp.Index_MFroad[i];
+        }
+#endif
 
 
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
-        //auto_ctrl_.now_ChassisPosition = auto_ctrl_.pathPos.bestB1 ; //初始化底盘位置为前一桩位置
-        auto_ctrl_.now_ChassisPosition.y = 8.60f;
-        auto_ctrl_.now_ChassisPosition.x = 5.0f; //假设已经到达前一桩正前方0.5米处
+        auto_ctrl_.now_ChassisPosition.x = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0] - 1].x;
+        auto_ctrl_.now_ChassisPosition.y = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0] - 1].y - 2.0f;
 #endif
         return true;
     }
@@ -337,6 +379,29 @@ public:
             arm_ctrlStatus.auto_start = 1;
         else    
             arm_ctrlStatus.auto_start = 0;
+    }
+
+    bool isArmAutoStart() const
+    {
+        return auto_ctrl_.start_to_autoctrl;
+    }
+
+    /**
+     * @brief 在停下拾取自动模式下，由主状态机调用，
+     *        设置是否可以进入伸展阶段
+     */
+    void setAutocanExtend(bool canExtend)
+    {
+        auto_ctrl_.flag.canExtend = canExtend;
+    }
+
+    /**
+     * @brief 在停下拾取自动模式下，由主状态机调用，
+     *       返回是否可以进入底盘移动阶段
+     */
+    bool isAutoChassisCanStart()
+    {
+        return auto_ctrl_.flag.canChassisStart;
     }
 private:
 
@@ -363,7 +428,7 @@ private:
     //上电校准M2006电机位置
     void calibrateMotor();
 
-    //自动控制流程私密函数
+    //自动控制流程私密函数[行进间拾取]
 
     void state_toTargetHight(int targetKFS);
     void state_signAlign(int targetKFS ,bool &align_done);
@@ -373,19 +438,33 @@ private:
 
     void auto_onlyOne();
     void auto_two();
+    //=======================
+    //自动停下拾取私密函数[停下拾取]
 
+    void auto_stillnessOne();
+    void auto_stillnessTwo();
+
+    bool state_to_waitStillness(int targetKFS);
+    bool state_alignStillness(int targetKFS);
+    bool state_lowerStillness(int targetKFS);
+    bool state_extStillness(int targetKFS);
+    bool state_launchStillness(int targetKFS);
+    bool state_backStillness(int targetKFS);
+    // bool state_doneStillness(int targetKFS);
+
+    //=======================
     /**
      * @brief 安全禁区通用接口：根据当前云台高度约束旋转角度
      * 规则：
-     * 1. H < 0.03m: [60°, 180°] (重定位/极低高度区间)
-     * 2. 0.03m <= H < Safe_H: [60°, 135°] (机械限位干涉区间)
+     * 1. H < 0.03m: [60°, 185°] (重定位/极低高度区间)
+     * 2. 0.03m <= H < Safe_H: [60°, 185°] (机械限位干涉区间)
      * 3. H >= Safe_H: [0°, 360°] (安全高度)
      * 说明：传入/返回的角度均为 rotate_angle（云台角度，非电机角度）
      */
     bool isRotateAllowed(float rotate_angle_deg) const
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
-        const float safe_h = auto_ctrl_.flag.safe_height;
+        const float safe_h = init_data_.safe_height;
         
         // 归一化到 0-360
         float norm_deg = fmodf(rotate_angle_deg, 360.0f);
@@ -393,19 +472,19 @@ private:
 
         if(h < 0.03f)
         {
-            return (norm_deg >= 60.0f && norm_deg <= 180.0f);
+            return (norm_deg >= 60.0f && norm_deg <= 185.0f);
         }
         else if(h < safe_h - 0.01f)
         {
-            return (norm_deg >= 60.0f && norm_deg <= 135.0f);
+            return (norm_deg >= 60.0f && norm_deg <= 185.0f);
         }
         return true;
     }
 
     /**
      * @brief 返回符合安全禁区的角度：
-     * - H < 0.03m: 钳制到 [60°, 180°]
-     * - 0.03m <= H < Safe_H: 钳制到 [60°, 135°]
+     * - H < 0.03m: 钳制到 [60°, 185°]
+     * - 0.03m <= H < Safe_H: 钳制到 [60°, 185°]
      * - H >= Safe_H: 保持原角度
      * @param desired_deg 期望的旋转角度（云台角度，非电机角度）
      * @return 符合安全禁区的旋转角度
@@ -413,7 +492,7 @@ private:
     float sanitizeRotateAngle(float desired_deg) const
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
-        const float safe_h = auto_ctrl_.flag.safe_height;
+        const float safe_h = init_data_.safe_height;
         
         if(h < safe_h - 0.01f)
         {
@@ -423,15 +502,15 @@ private:
 
             if(h < 0.03f)
             {
-                if(norm_deg < 60.0f) return 60.0f;
-                if(norm_deg > 180.0f && norm_deg < 270.0f) return 180.0f;
+                if(norm_deg < 60.0f ) return 60.0f;
+                if(norm_deg > 185.0f && norm_deg < 270.0f) return 180.0f;
                 if(norm_deg >= 270.0f) return 60.0f;
                 return norm_deg;
             }
             else
             {
                 if(norm_deg < 60.0f) return 60.0f;
-                if(norm_deg > 135.0f && norm_deg < 270.0f) return 135.0f; // 135~270区间钳制到135
+                if(norm_deg > 185.0f && norm_deg < 270.0f) return 180.0f; // 185~270区间钳制到180
                 if(norm_deg >= 270.0f) return 60.0f; // 270~360(即-90~0)区间钳制到60
                 return norm_deg;
             }
@@ -498,12 +577,20 @@ protected:
 
         Point2D speed = {0.0f, 0.0f, 0.0f};
         if(arm_ctrlStatus.auto_start == 1)
-           speed = {-0.6f, 0.0f, 0.0f};
+           speed = {0.0f, 1.0f, 0.0f};
 
         else
              speed = {0.0f, 0.0f, 0.0f};
         return speed;
-
+        
+       if(MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
+                                           auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
+                                           0.03f))
+       {
+           speed = {0.0f, 0.0f, 0.0f};
+       }
+             
+             
         #else
 
             // Locate_Setup *locate_ptr = Locate_Setup::getInstance();
@@ -511,8 +598,8 @@ protected:
             // return locate_ptr->get_FK_ChassisSpeed_inWorld();
             Locate_Setup *locate_ptr = Locate_Setup::getInstance();
             Point2D speed = {0};
-            speed.x = locate_ptr->get_RobotSpeed_inWorld().x/rate_forspeed;
-            speed.y = locate_ptr->get_RobotSpeed_inWorld().y/rate_forspeed;
+            speed.x = locate_ptr->get_RobotSpeed_inWorld().x;
+            speed.y = locate_ptr->get_RobotSpeed_inWorld().y;
             return speed;
         #endif
     }
@@ -532,8 +619,7 @@ protected:
 
         pose.x += speed.x * get_dt();
                 
-        pose.y += speed.y * get_dt();
-                    
+        pose.y += speed.y * get_dt();                    
 
         return pose;
 
@@ -592,6 +678,7 @@ protected:
      */
     void get_GimbalMF_PAPB(int target_KFSIndex, Point2D& PA, Point2D& PB)
     {   
+        #if ARM_AUTOMOVE
         if(target_KFSIndex != 0 && target_KFSIndex != 1) 
             return;
 
@@ -681,9 +768,8 @@ protected:
                 }
             }
         }
+        #endif
     }
-    
-    float rate_forspeed =1.0f;
 };
 
 

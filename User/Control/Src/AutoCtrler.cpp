@@ -7,12 +7,39 @@ namespace MF_AutoCtrler
 {
 
 const Point2D MapNum_RealPos[30] = {
-    {0.6, 2.6, 0}, {1.8, 2.6, 0}, {3.0, 2.6, 0}, {4.2, 2.6, 0}, {5.4, 2.6, 0}, 
+{0.6, 2.6, 0}, {1.8, 2.6, 0}, {3.0, 2.6, 0}, {4.2, 2.6, 0}, {5.4, 2.6, 0}, 
 {0.6, 3.8, 0}, {1.8, 3.8, 0}, {3.0, 3.8, 0}, {4.2, 3.8, 0}, {5.4, 3.8, 0}, 
 {0.6, 5.0, 0}, {1.8, 5.0, 0}, {3.0, 5.0, 0}, {4.2, 5.0, 0}, {5.4, 5.0, 0}, 
 {0.6, 6.2, 0}, {1.8, 6.2, 0}, {3.0, 6.2, 0}, {4.2, 6.2, 0}, {5.4, 6.2, 0}, 
 {0.6, 7.4, 0}, {1.8, 7.4, 0}, {3.0, 7.4, 0}, {4.2, 7.4, 0}, {5.4, 7.4, 0}, 
 {0.6, 8.6, 0}, {1.8, 8.6, 0}, {3.0, 8.6, 0}, {4.2, 8.6, 0}, {5.4, 8.6, 0}};
+
+/**
+ * @brief 判断当前坐标是否处于目标方格中心范围内
+ * @param robotPos 机器人当前坐标
+ * @param targetMap 目标方格编号 (1-30)
+ * @param tolerance 容差范围，单位米
+ */
+
+bool isInTargetMap(Point2D robotPos, int targetMap, float tolerance)
+{
+    if(targetMap < 1 || targetMap > 30)
+    {
+        return false; // 无效的目标方格编号
+    }
+    Point2D map_center = MapNum_RealPos[targetMap - 1];
+    
+    if (robotPos.x >= map_center.x - tolerance && robotPos.x <= map_center.x + tolerance &&
+        robotPos.y >= map_center.y - tolerance && robotPos.y <= map_center.y + tolerance)
+    {
+        return true; // 在目标格内
+    }
+    else
+        return false; // 不在目标格内
+}
+
+
+
 
 void get_MoveDiretion(Point2D robotPos,
                         int8_t MF1, int8_t MF2,
@@ -873,8 +900,8 @@ int BFS_Steps(int8_t startMap, int8_t goalMap) // BFS 最少步数
     if (!IsWalkable(startMap) || !IsWalkable(goalMap))
         return BFS_INF;
 
-    static int16_t dist[31];
-    static uint8_t vis[31];
+     int16_t dist[31];
+     uint8_t vis[31];
     for (int i = 1; i <= 30; ++i)
     {
         dist[i] = (int16_t)BFS_INF;
@@ -882,7 +909,7 @@ int BFS_Steps(int8_t startMap, int8_t goalMap) // BFS 最少步数
     }
 
     // 简易环形队列（容量32）
-    static int8_t q[32];
+     int8_t q[32];
     uint8_t h = 0, t = 0;
     auto qpush = [&](int8_t v)
     { q[t++ & 31] = v; };
@@ -921,6 +948,253 @@ int BFS_Steps(int8_t startMap, int8_t goalMap) // BFS 最少步数
     }
 
     return (int)dist[goalMap];
+}
+
+static bool IsCornerMapByList(int8_t map, const int *cornerMap, int cornerCount)
+{
+    for (int i = 0; i < cornerCount; ++i)
+    {
+        if ((int8_t)cornerMap[i] == map)
+            return true;
+    }
+    return false;
+}
+
+static void PushMustPastNode(int8_t *mustPastMap, int cap, int &len, int8_t node)
+{
+    if (node <= 0)
+        return;
+    if (len > 0 && mustPastMap[len - 1] == node)
+        return;
+    if (len < cap)
+        mustPastMap[len++] = node;
+}
+
+PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
+{
+    /**
+     * 
+     */
+    PathInformation_S result;
+    RoadResult_S MF1Road = MFNum_ToCatchRoadResult(MF1);
+    RoadResult_S MF2Road = MFNum_ToCatchRoadResult(MF2);
+
+    int cornerMap[4] = {1, 5, 26, 30}; // 四个角落的地图编号
+
+    //解出目标梅花桩相邻的通道
+    int roadMF1[2] = {MF1Road.result1, MF1Road.result2}; //集合，后续取出最优，result为0表示无效
+    int roadMF2[2] = {MF2Road.result1, MF2Road.result2};
+
+    //根据当前机器人距离第一个MF1相邻通道的距离，生成最优路径的第一段路径
+    //如果机器人不在梅花林内，则entranceMap只能是1~5以及26~30的范围内，同时允许entranceMap和roadMF1的通道重合
+    //如果机器人在梅花林内，则entranceMap就是去roadMF1的路径上离机器人最近的一个通道，同时允许entranceMap和roadMF1的通道重合
+    //生成路径时候要包含转角，如果路径上包含转角，则需要在路径中添加转角点（cornerMap）作为路径节点
+    //PathInformation_S当中的mustPastMap就是路径上的必经点，包含entranceMap、roadMF1、转角点（如果有的话）以及roadMF2（如果有的话）
+    //且数组的顺序要按照路径顺序来，允许折返(如果需要的话)
+    result.entranceMap = 0;
+    result.MFroad[0] = 0;
+    result.MFroad[1] = 0;
+
+    // 林外上方时，禁止路径规划
+    if (robotPos.y > MapNum_RealPos[29].y)
+        return result;
+
+    // 入口集合
+    int8_t entrances[30] = {0};
+    uint8_t entranceCount = 0;
+
+    int8_t robotMap = GetMapNumFromPos(robotPos);
+    bool isRobotInsideMap = (robotMap >= 1 && robotMap <= 30 && IsWalkable(robotMap));
+
+    if (isRobotInsideMap)
+    {
+        // 林内起点直接取当前所在通道，避免出现与真实起点不一致的入口
+        entrances[entranceCount++] = robotMap;
+    }
+    else
+    {
+        bool isBelow = (robotPos.y < MapNum_RealPos[0].y);  // 梅花林下 ,flase则为在梅林上方
+        if (isBelow)
+        {
+            for (int8_t m = 1; m <= 5; ++m)
+            {
+                if (IsWalkable(m))
+                    entrances[entranceCount++] = m;
+            }
+        }
+        else
+        {
+            for (int8_t m = 26; m <= 30; ++m)
+            {
+                if (IsWalkable(m))
+                    entrances[entranceCount++] = m;
+            }
+        }
+    }
+
+    if (entranceCount == 0)
+        return result;
+
+    int8_t bestEntrance = 0;
+    int8_t bestRoad1 = 0;
+    int8_t bestRoad2 = 0;
+    float bestCost = 1.0e9f;
+
+    bool hasMF2 = (MF2 != 0 && (roadMF2[0] != 0 || roadMF2[1] != 0));
+
+    for (uint8_t ie = 0; ie < entranceCount; ++ie)
+    {
+        int8_t E = entrances[ie];
+        float dRobotToE = euclid(robotPos, MapCenterWorld(E));
+
+        for (int i1 = 0; i1 < 2; ++i1)
+        {
+            int8_t R1 = roadMF1[i1];
+            if (R1 == 0)
+                continue;
+
+            int sE1 = BFS_Steps(E, R1);
+            if (sE1 >= BFS_INF)
+                continue;
+
+            if (!hasMF2)
+            {
+                int s1X = BFS_Steps(R1, result.exitMap);
+                if (s1X >= BFS_INF)
+                    continue;
+
+                float J = dRobotToE + CELL_M * (float)(sE1 + s1X);
+                if (J < bestCost)
+                {
+                    bestCost = J;
+                    bestEntrance = E;
+                    bestRoad1 = R1;
+                    bestRoad2 = 0;
+                }
+            }
+            else
+            {
+                for (int i2 = 0; i2 < 2; ++i2)
+                {
+                    int8_t R2 = roadMF2[i2];
+                    if (R2 == 0)
+                        continue;
+
+                    int s12 = BFS_Steps(R1, R2);
+                    if (s12 >= BFS_INF)
+                        continue;
+
+                    int s2X = BFS_Steps(R2, result.exitMap);
+                    if (s2X >= BFS_INF)
+                        continue;
+
+                    float J = dRobotToE + CELL_M * (float)(sE1 + s12 + s2X);
+                    if (J < bestCost)
+                    {
+                        bestCost = J;
+                        bestEntrance = E;
+                        bestRoad1 = R1;
+                        bestRoad2 = R2;
+                    }
+                }
+            }
+        }
+    }
+
+    if (bestEntrance == 0 || bestRoad1 == 0)
+        return result;
+
+    result.entranceMap = bestEntrance;
+    result.MFroad[0] = bestRoad1;
+    result.MFroad[1] = bestRoad2;
+
+    int8_t seg1[32] = {0}, seg2[32] = {0}, seg3[32] = {0};
+    int len1 = BFS_GetPath(bestEntrance, bestRoad1, seg1, 32);
+    if (len1 <= 0)
+        return result;
+
+    int len2 = 0;
+    int len3 = 0;
+    if (bestRoad2 != 0)
+    {
+        len2 = BFS_GetPath(bestRoad1, bestRoad2, seg2, 32);
+        if (len2 <= 0)
+            return result;
+
+        len3 = BFS_GetPath(bestRoad2, result.exitMap, seg3, 32);
+        if (len3 <= 0)
+            return result;
+    }
+    else
+    {
+        len3 = BFS_GetPath(bestRoad1, result.exitMap, seg3, 32);
+        if (len3 <= 0)
+            return result;
+    }
+
+    int8_t fullPath[96] = {0};
+    int fullLen = 0;
+
+    for (int i = 0; i < len1 && fullLen < 96; ++i)
+        fullPath[fullLen++] = seg1[i];
+
+    if (bestRoad2 != 0)
+    {
+        for (int i = 1; i < len2 && fullLen < 96; ++i)
+            fullPath[fullLen++] = seg2[i];
+    }
+
+    for (int i = 1; i < len3 && fullLen < 96; ++i)
+        fullPath[fullLen++] = seg3[i];
+
+    int mustLen = 0;
+    PushMustPastNode(result.mustPastMap, 12, mustLen, result.entranceMap);
+
+    bool pushedRoad1 = (result.entranceMap == bestRoad1);
+    bool pushedRoad2 = (bestRoad2 != 0 && result.entranceMap == bestRoad2);
+
+    for (int i = 0; i < fullLen; ++i)
+    {
+        int8_t node = fullPath[i];
+
+        if (node == bestRoad1)
+        {
+            if (!pushedRoad1)
+            {
+                PushMustPastNode(result.mustPastMap, 12, mustLen, node);
+                pushedRoad1 = true;
+            }
+            continue;
+        }
+
+        if (bestRoad2 != 0 && node == bestRoad2)
+        {
+            if (!pushedRoad2)
+            {
+                PushMustPastNode(result.mustPastMap, 12, mustLen, node);
+                pushedRoad2 = true;
+            }
+            continue;
+        }
+
+        if (node == result.exitMap || IsCornerMapByList(node, cornerMap, 4))
+        {
+            PushMustPastNode(result.mustPastMap, 12, mustLen, node);
+        }
+    }
+
+    PushMustPastNode(result.mustPastMap, 12, mustLen, result.exitMap);
+
+    // 记录MFroad在mustPastMap中的索引
+    for (int i = 0; i < mustLen; ++i)
+    {
+        if (result.mustPastMap[i] == result.MFroad[0])
+            result.Index_MFroad[0] = i;
+        if (result.mustPastMap[i] == result.MFroad[1])
+            result.Index_MFroad[1] = i;
+    }
+
+    return result;
 }
 
 int BFS_GetPath(int8_t startMap, int8_t goalMap, int8_t *outPath, int maxLen)
@@ -1019,12 +1293,11 @@ int BFS_GetPath(int8_t startMap, int8_t goalMap, int8_t *outPath, int maxLen)
  */
 int8_t GetMapNumFromPos(Point2D pos)
 {
-    // 1. 定义原点偏移和网格尺寸
-    // 注意：Row 1 的中心是 y=2.6，说明 Row 1 的 y 起始边是 2.6 - 0.6 = 2.0
+    //定义原点偏移和网格尺寸
     const float GRID_SIZE = 1.2f;      // 网格边长
     const float Y_OFFSET_START = 2.0f; // Y轴起始坐标
 
-    // 2. 简单的范围检查 (可选)
+    // 范围检查
     if (pos.x < 0 || pos.x > (5 * GRID_SIZE) ||
         pos.y < Y_OFFSET_START || pos.y > (Y_OFFSET_START + 6 * GRID_SIZE))
     {
@@ -1045,8 +1318,35 @@ int8_t GetMapNumFromPos(Point2D pos)
         return 0;
     }
 
-    // 5. 转换为地图编号
     return MF_AutoCtrler::CR_ToMap(c, r);
+}
+
+float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
+{
+    if(startmapNum < 1 || startmapNum >30 || next_mapNum < 1 || next_mapNum >30)
+    {
+        return -1.0f; // 无效输入
+    }
+    
+    bool isinMFstart = IsWalkable(startmapNum);
+    bool isinMFnext = IsWalkable(next_mapNum);
+
+
+    if(isinMFstart && isinMFnext)
+    {
+        // 两个都不在梅花桩内，直接计算方向
+        Point2D startPos = MapCenterWorld(startmapNum);
+        Point2D nextPos = MapCenterWorld(next_mapNum);
+        float dx = nextPos.x - startPos.x;
+        float dy = nextPos.y - startPos.y;
+        float deg = rad_to_deg(atan2f(dy, dx));
+        deg = normalize_deg_0_360(deg);
+        return deg;
+    }
+    else
+    {
+        return -1.0f; //无效
+    }
 }
 
 } // namespace MF_AutoCtrler

@@ -55,6 +55,7 @@ typedef struct {
 
     float min_rotate_angle_ = 0.0f; // 最小旋转角度
     float max_rotate_angle_ = 0.0f; // 最大旋转角度
+    float safe_height = 0.0f; // 安全高度，单位米，低于这个高度，机械臂云台旋转受限
 
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘控制GPIO端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘控制GPIO引脚
@@ -342,6 +343,31 @@ private:
     MotorReversed_S sign_reversed_  = {1.0f, 1.0f, 1.0f, 1.0f};
     float last_rotate_cmd_ = 0.0f;
     float ramped_rotateMotorAngle_ = 0.0f;
+    
+//bool  time_initialized_ = false;+
+    
+    float ramp_rotate_maxspeed_ = 0.0f;
+    float ramp_rotate_maxstep_ = 0.0f;
+    float ramp_rotate_target_ = 0.0f; // ??????????±???
+    
+    void setRampRotateMaxSpeed(float maxspeed) { ramp_rotate_maxspeed_ = maxspeed; }
+    float caculate_rotate_target(float current, float target)
+    {
+        ramp_rotate_maxstep_ = ramp_rotate_maxspeed_ * dt_;
+        float diff = target - current;
+        if(diff > ramp_rotate_maxstep_)
+        {
+            diff = ramp_rotate_maxstep_;
+            return current + diff;
+        }
+        else if(diff < -ramp_rotate_maxstep_)
+        {
+            diff = -ramp_rotate_maxstep_;
+            return current + diff;
+        }
+        else
+            return target;
+    }
 };
 
 

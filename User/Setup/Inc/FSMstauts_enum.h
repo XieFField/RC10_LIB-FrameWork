@@ -55,7 +55,7 @@ typedef enum{
 
     CHASSIS_AUTO_CONTROL_CB, //底盘自动控制模式
     CHASSIS_AUTO_CONTROL_KFS, //底盘自动控制模式梅林内
-    
+    CHASSIS_CAMERA_DEBUG, // 视觉调试模式
 
     CHASSIS_STOP,
 }CHASSIS_Status_E;
