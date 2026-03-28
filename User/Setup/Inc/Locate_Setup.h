@@ -197,9 +197,13 @@ private:
     bool swtich1_isOn = false;
     bool swtich2_isOn = false;
 
+    // struct {
+    //     float x_offset = 0.48f;
+    //     float y_offset = 0.50f;
+    // }coordoffset;
     struct {
-        float x_offset = 0.48f;
-        float y_offset = 0.48f;
+        float x_offset = 0.0f;
+        float y_offset = 0.0f;
     }coordoffset;
 protected:
     void loop() override;

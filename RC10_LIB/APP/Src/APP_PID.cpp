@@ -207,7 +207,7 @@ PID_Param_Config m3508Rotate_angle_pid_params = {
     .kd = 0.00f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 100.0f,   
+    .output_limit = 80.0f,   
     .deadband = 0.03f // 
 };
 
@@ -230,7 +230,7 @@ PID_Param_Config m2006_angle_pid_params = {
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
     .output_limit = 450.0f,   
-    .deadband = 0.01f 
+    .deadband = 0.03f 
 };
 
 PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
@@ -244,13 +244,13 @@ PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
 };
 
 PID_Param_Config track_pid_params = {
-    .kp = 1.0f,
+    .kp = 6.0f,
     .ki = 0.0f,
-    .kd = 0.050f,
+    .kd = 0.0f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 0.1f,   
-    .deadband = 0.002f 
+    .output_limit = 1.5f,   
+    .deadband = 0.0009f 
 };
 
 PID_Param_Config lock_angle_pid_params = {
@@ -260,9 +260,8 @@ PID_Param_Config lock_angle_pid_params = {
  .I_Outlimit = 0.0f, 
  .isIOutlimit = true, 
  .output_limit = 3.0f, 
- .deadband = 0.05f 
+ .deadband = 0.1f 
 };
-
 
 PID_Param_Config path_lock_end = {
     
@@ -273,4 +272,25 @@ PID_Param_Config path_lock_end = {
     .isIOutlimit = true, 
     .output_limit = 1.0f,   
     .deadband = 0.0009f 
+};
+
+PID_Param_Config omega_z_pid_init_config =
+{
+    .kp = 0.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f,
+    .isIOutlimit = false,
+    .output_limit = 0.0f,
+    .deadband = 0.0f,
+};
+
+PID_Param_Config rot_z_pid_init_config = {
+    .kp = 4.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f,
+    .isIOutlimit = false,
+    .output_limit = 4.0f,
+    .deadband = 0.0f
 };

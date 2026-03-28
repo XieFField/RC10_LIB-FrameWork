@@ -1,5 +1,7 @@
 #include "Module_HWT.h"
 
+#include "APP_Utils.h"
+
 HWT101CT::HWT101CT(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle) 
     :UART_(rx_buffer_size,rx_buffer,uart_handle),
 		uart_instance_(nullptr)
@@ -46,92 +48,53 @@ uint8_t HWT101CT::calculateChecksum()
 
 void HWT101CT::Callback_Fuc(uint8_t *buf, uint16_t len)
 {
-	uint8_t i = 0;
-	uint8_t CRC_check[2];//CRC校验位，此文件未启用
-	uint8_t break_flag = 1;
-	while(i < len && break_flag == 1)
-	{
-	    switch (rx_state)
+    // 检验数据包的长度是否正确
+    if(len != 0x16)
     {
-    case WAITING_FOR_HEADER_1:
-        if (buf[i] == FRAME_HEADER_1)
-        {
-            rx_state = WAITING_FOR_HEADER_2;
-        }
-				i++;
-        break;
-
-    case WAITING_FOR_HEADER_2:
-        if (buf[i] == FRAME_HEADER_2)
-        {
-            rx_state = WAITING_FOR_RESERVED_1;
-            reserved_index = 0;
-        }
-        else
-        {
-            rx_state = WAITING_FOR_HEADER_1;
-        }
-				i++;
-        break;
-
-    case WAITING_FOR_RESERVED_1:
-    case WAITING_FOR_RESERVED_2:
-    case WAITING_FOR_RESERVED_3:
-    case WAITING_FOR_RESERVED_4:
-        frame.reserved[reserved_index++] = buf[i];
-        if (reserved_index >= 4)
-        {
-            rx_state = WAITING_FOR_YAWL;
-        }
-        else
-        {
-            rx_state = static_cast<RxState>(rx_state + 1);
-        }
-				i++;
-        break;
-
-    case WAITING_FOR_YAWL:
-        frame.YawL = buf[i];
-        rx_state = WAITING_FOR_YAWH;
-		    i++;
-        break;
-
-    case WAITING_FOR_YAWH:
-        frame.YawH = buf[i];
-        rx_state = WAITING_FOR_VL;
-				i++;
-        break;
-
-    case WAITING_FOR_VL:
-        frame.VL = buf[i];
-        rx_state = WAITING_FOR_VH;
-				i++;
-        break;
-
-    case WAITING_FOR_VH:
-        frame.VH = buf[i];
-        rx_state = WAITING_FOR_CHECKSUM;
-				i++;
-        break;
-
-    case WAITING_FOR_CHECKSUM:
-        frame.checksum = buf[i];
-        calculated_checksum = calculateChecksum();
-
-        if (calculated_checksum == frame.checksum)
-        {
-            orin_yaw = -calculateYaw(frame.YawH, frame.YawL);
-            processDecodedData(orin_yaw);       
-        }
-				break_flag = 0;
-        rx_state = WAITING_FOR_HEADER_1;
-        break;
-
-    default:
-        rx_state = WAITING_FOR_HEADER_1;
-        break;
+        return;
     }
-	}
+    // 检验数据包的两份数据的包头是否正确
+    if(buf[0] != 0x55)
+    {
+        return;
+    }
+    if(buf[11] != 0x55)
+    {
+        return;
+    }
+    // 检验数据包的两份数据的id是否正确
+    if(buf[1] != 0x52)
+    {
+        return;
+    }
+    if(buf[12] != 0x53)
+    {
+        return;
+    }
+    // 检验数据包的两份数据的SUM是否正确
+    uint8_t sum = 0;
+    for(uint8_t j = 0; j < 10; j++)
+    {
+        sum += buf[j];
+    }
+    if(sum != buf[10])
+    {
+        return;
+    }
+    sum = 0;
+    for(uint8_t j = 11; j < 21; j++)
+    {
+        sum += buf[j];
+    }
+    if(sum != buf[21])
+    {
+        return;
+    }
+
+    orin_yawz = (int16_t)((buf[5] << 8 | buf[4]) + 2) / 32768.0f * 2000.0f; // 单位：deg/s
+    orin_yaw = (int16_t)(buf[18] << 8 | buf[17]) / 32768.0f * 180.0f; // 单位：deg
+
+    processDecodedData(orin_yaw);       
 }
 
 void HWT101CT::processDecodedData(float yaw)
@@ -153,8 +116,6 @@ void HWT101CT::processDecodedData(float yaw)
 }
 void HWT101CT::yaw_tf(float nowyaw)
 {
-    now_time = HAL_GetTick();
-
     delta_angle = nowyaw - init_yaw;
     if (delta_angle >= 180.0f)
     {
@@ -165,28 +126,15 @@ void HWT101CT::yaw_tf(float nowyaw)
         delta_angle += 360.0f;
     }
     real_yaw = delta_angle;
-    yaw_rad = real_yaw * 0.0174533f;
-    if (last_update_time != 0)
-    {
-        delta_time = (float)(now_time - last_update_time) / 1000.0f;
-        if (delta_time != 0.0f && last_yaw != 0.0f)
-        {
-            yaw_speed_rad = (yaw_rad - last_yaw) / delta_time;
-        }
-    }
-    last_yaw = yaw_rad;
 
-    last_update_time = now_time;
+    yaw_rad = jia::degToRadF32(real_yaw);
+
+    yaw_speed_rad = jia::degToRadF32(orin_yawz);
 }
 
 float HWT101CT::get_yaw_speed_rad()
 {
     return yaw_speed_rad;
-}
-
-uint32_t HWT101CT::get_update_time()
-{
-    return last_update_time;
 }
 
 float HWT101CT::get_heading()

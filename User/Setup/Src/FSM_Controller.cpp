@@ -1,5 +1,7 @@
 #include "FSM_Controller.h"
 
+int text_index = 0;
+
 void FSM_Controller::loop()
 {
     if(!init_flag_) 
@@ -9,7 +11,39 @@ void FSM_Controller::loop()
     CrsfReceiver::GetInstance(&huart7)->process();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     
-   
+	switch(text_index)
+	{
+		case 0://xiumian
+		{
+			HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_RESET);
+			break;
+		}
+		case 1://zhenxgiang
+		{
+            HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_RESET);
+			break;
+		}
+		case 2://fanxiang
+		{
+
+            HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_SET);
+			break;
+		}
+		case 3://sss
+		{
+
+            HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_SET);
+			break;
+		}
+		default:
+			break;
+	}
+	
+	
     switch(airjoy_data_.SWB)
     {
         case 0x00:
@@ -40,7 +74,7 @@ void FSM_Controller::loop()
             break;  
 
         case 0x02:
-            robot_status_ = DEBUG_MODE;
+            robot_status_ = AUTO_CONTROL;
             break;
     }
 
@@ -75,7 +109,7 @@ void FSM_Controller::loop()
 
   if(KStarget != last_KStarget)
   {
-      chassis_setup_->setTargetKFS(KStarget.KFS[0]);
+      chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1]);
       arm_setup_->set_TargetKFS(KStarget.KFS[0], 0);
       weaponSage_setup_->setTargetIndex(KStarget.Spear-1);
   }
@@ -104,7 +138,6 @@ void FSM_Controller::all_stop()
 }
 
 void FSM_Controller::stop_modeswitch()
-
 {
     switch(Stop_set_stauts)
     {
@@ -343,9 +376,10 @@ void FSM_Controller::auto_ctrl()
         {
             //暂时不把路径规划部分纳入
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_KFS);
-            //chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            // chassis_setup_->setChassisStatus(CHASSIS_STOP);
             
             arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            //arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
             static uint8_t is_click = 0;
@@ -359,6 +393,20 @@ void FSM_Controller::auto_ctrl()
             else if(airjoy_data_.botton_click == 0)
             {
                 is_click = 0;
+            }
+
+            if(arm_setup_->isArmAutoStart())
+            {
+                //判断是否可以进入伸展阶段
+                if(chassis_setup_->Get_Arm_Start_flag())
+                {
+                    arm_setup_->setAutocanExtend(true);
+                }
+
+                if(arm_setup_->isAutoChassisCanStart())
+                {
+                    chassis_setup_->Receive_Arm_End_flag(false); //上层已经完成拾取，通知底盘可以开始移动了
+                }
             }
 
             break;
@@ -378,6 +426,7 @@ void FSM_Controller::auto_ctrl()
             if(airjoy_data_.botton_click ==1 && is_click == 0)
             {
                 chassis_setup_->setPathAutoStart(1); //路径自动开始标志
+                is_click = 1;
             }
             else if(airjoy_data_.botton_click ==0)
             {
@@ -392,15 +441,7 @@ void FSM_Controller::auto_ctrl()
 
 void FSM_Controller::debug()
 {
-    // 调试模式下，将底盘切换到视觉调试控制状态。
-    chassis_setup_->setChassisStatus(CHASSIS_CAMERA_DEBUG);
+   // 调试
 
-    // 调试模式: 由底盘模块管理相机z锁定状态机，并向武器执行层下发目标。
-    chassis_setup_->updateDebugLaunchLockFromCamera(weaponSage_setup_->getClawPos().y);
-    weaponSage_setup_->setDebugLaunchTarget(chassis_setup_->getDebugLaunchTarget());
-
-    // 调试模式下，机械臂保持空闲，避免与调试流程冲突。
-    arm_setup_->setArmStatus(ARM_IDLE);
-    // 调试模式下，武器机构进入调试状态。
-    weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_DEBUG);
+    // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
 }

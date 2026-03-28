@@ -12,14 +12,14 @@ void Locate_Setup::loop()
 
 void Locate_Setup::update()
 {
-    Point2D fk_speed;
-    if(SpeedFK_Queue.recv(fk_speed, 0))
-    {
-        // 底盘正解算速度fk_speed
-		fk_chassisSpeed_inWorld_.x = fk_speed.x;
-		fk_chassisSpeed_inWorld_.y = fk_speed.y;
-		fk_chassisSpeed_inWorld_.theta = fk_speed.theta;
-    }
+    // Point2D fk_speed;
+    // if(SpeedFK_Queue.recv(fk_speed, 0))
+    // {
+    //     // 底盘正解算速度fk_speed
+	// 	fk_chassisSpeed_inWorld_.x = fk_speed.x;
+	// 	fk_chassisSpeed_inWorld_.y = fk_speed.y;
+	// 	fk_chassisSpeed_inWorld_.theta = fk_speed.theta;
+    // }
 
 	if(is_startToLRL_)
    		RobotPos_inWorld_caculate(this->Laser_pos_instance);
