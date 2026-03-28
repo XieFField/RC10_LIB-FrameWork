@@ -307,7 +307,7 @@ namespace jia
                     if (rot_z_pid_count >= rot_z_pid_period)
                     {
                         rot_z_pid_count = 0;
-                        t.omega_z = rot_z_pid.pid_calc(it.rot_z, input_hwt_rot_z);
+                        t.omega_z = rot_z_pid.pid_calc(radToDegF32(it.rot_z),  radToDegF32(input_hwt_rot_z));
                     }
                 }
                 else
@@ -321,7 +321,7 @@ namespace jia
                 if (rot_z_pid_count >= rot_z_pid_period)
                 {
                     rot_z_pid_count = 0;
-                    t.omega_z = rot_z_pid.pid_calc(it.rot_z, input_hwt_rot_z);
+                    t.omega_z = rot_z_pid.pid_calc(radToDegF32(it.rot_z),  radToDegF32(input_hwt_rot_z));
                 }
             }
             else

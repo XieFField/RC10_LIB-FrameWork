@@ -90,21 +90,43 @@ public:
     ~Robot_WeaponSage(){}
 
     bool register_launch_Motor(M3508* motor)
-    { launch_Motor_ = motor; if(launch_Motor_ != nullptr)return true; }
+    { 
+        launch_Motor_ = motor; 
+        if(launch_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
     
     bool register_claw_Motor(M2006* motor)
-    { claw_Motor_ = motor; if(claw_Motor_ != nullptr)return true; }
+    { 
+        claw_Motor_ = motor; 
+        if(claw_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
 
     bool register_traverse_Motor(M2006* motor)
-    { traverse_Motor_ = motor; if(traverse_Motor_ != nullptr)return true; }
+    { 
+        traverse_Motor_ = motor; 
+        if(traverse_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
 
     bool register_wrist_Motor(DM_Motor* motor)
-    { wrist_Motor_ = motor; if(wrist_Motor_ != nullptr)return true; }
+    { 
+        wrist_Motor_ = motor; 
+        if(wrist_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
+
+    void update();
     
-	
-	void update();
-	
-	
     /**
      * @brief 锟斤拷锟�?碉拷锟斤拷锟斤拷锟�
      * @param reversed 锟�?�凤拷锟斤拷 true锟斤拷锟洁，false锟斤拷锟斤拷锟斤�?(默锟较�?�拷锟斤拷锟斤拷)

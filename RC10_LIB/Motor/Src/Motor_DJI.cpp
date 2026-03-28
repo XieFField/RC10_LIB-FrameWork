@@ -273,6 +273,7 @@ void M3508::setTargetAngle(float angle_set)
     target_totalAngle_ = 0.0f;
 }
 
+
 void M3508::setTargetTotalAngle(float totalAngle_set)
 {
     mode_ = TOTAL_ANGLE_CONTROL;

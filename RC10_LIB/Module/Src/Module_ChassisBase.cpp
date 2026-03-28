@@ -70,10 +70,8 @@ void Chassis_Base<WheelCount>::update()
     {
         constrain(wheel_target_rpm_[i], -max_wheel_rpm_, max_wheel_rpm_); //оч╥Ы
         if(wheels_[i] != nullptr)
-		{
-            // wheels_[i]->setTargetRPM(wheel_target_rpm_[i]);
-		}
-	}
+            wheels_[i]->setTargetRPM(wheel_target_rpm_[i]);
+    }
 }
 
 template<std::size_t WheelCount>

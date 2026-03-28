@@ -1,5 +1,7 @@
 #include "FSM_Controller.h"
 
+int text_index = 0;
+
 void FSM_Controller::loop()
 {
     if(!init_flag_) 
@@ -9,7 +11,39 @@ void FSM_Controller::loop()
     CrsfReceiver::GetInstance(&huart7)->process();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     
-   
+	switch(text_index)
+	{
+		case 0://xiumian
+		{
+			HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_RESET);
+			break;
+		}
+		case 1://zhenxgiang
+		{
+            HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_RESET);
+			break;
+		}
+		case 2://fanxiang
+		{
+
+            HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_SET);
+			break;
+		}
+		case 3://sss
+		{
+
+            HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_SET);
+			break;
+		}
+		default:
+			break;
+	}
+	
+	
     switch(airjoy_data_.SWB)
     {
         case 0x00:
@@ -75,7 +109,7 @@ void FSM_Controller::loop()
 
   if(KStarget != last_KStarget)
   {
-      chassis_setup_->setTargetKFS(KStarget.KFS[0]);
+      chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1]);
       arm_setup_->set_TargetKFS(KStarget.KFS[0], 0);
       weaponSage_setup_->setTargetIndex(KStarget.Spear-1);
   }
@@ -87,7 +121,7 @@ void FSM_Controller::loop()
 void FSM_Controller::all_stop()
 {
    // 停止模式+目标设置模式
-    chassis_setup_->setPathAutoStart(0, 0); //路径自动开始标志清零
+    chassis_setup_->setPathAutoStart(0); //路径自动开始标志清零
     arm_setup_->set_Arm_autoStart(0); //自动流程标志清零
     if(arm_setup_->isArmcalibrated() == true)
         arm_setup_->setArmStatus(ARM_STOP);
@@ -286,7 +320,7 @@ void FSM_Controller::stop_modeswitch()
 
 void FSM_Controller::manual_ctrl()
 {
-    chassis_setup_->setPathAutoStart(0, 0); //路径自动开始标志清零
+    chassis_setup_->setPathAutoStart(0); //路径自动开始标志清零
     arm_setup_->set_Arm_autoStart(0); //自动流程标志清零
 
     switch(airjoy_data_.SWC)
@@ -332,7 +366,7 @@ void FSM_Controller::auto_ctrl()
             arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
-            chassis_setup_->setPathAutoStart(0, 0); //路径自动开始标志清零
+            chassis_setup_->setPathAutoStart(0); //路径自动开始标志清零
             arm_setup_->set_Arm_autoStart(0); //自动流程标志清零
             break;
         }
@@ -341,11 +375,11 @@ void FSM_Controller::auto_ctrl()
         case 0x01:
         {
             //暂时不把路径规划部分纳入
-            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
-            //chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_KFS);
+            // chassis_setup_->setChassisStatus(CHASSIS_STOP);
             
             arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-            // arm_setup_->setArmStatus(ARM_IDLE);
+            //arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
             static uint8_t is_click = 0;
@@ -353,12 +387,26 @@ void FSM_Controller::auto_ctrl()
             if(airjoy_data_.botton_click == 1 && is_click == 0)
             {
                 arm_setup_->set_Arm_autoStart(1); //开始自动流程
-                chassis_setup_->setPathAutoStart(1, 1); //路径自动开始标志
+                chassis_setup_->setPathAutoStart(1); //路径自动开始标志
                 is_click = 1;
             }   
             else if(airjoy_data_.botton_click == 0)
             {
                 is_click = 0;
+            }
+
+            if(arm_setup_->isArmAutoStart())
+            {
+                //判断是否可以进入伸展阶段
+                if(chassis_setup_->Get_Arm_Start_flag())
+                {
+                    arm_setup_->setAutocanExtend(true);
+                }
+
+                if(arm_setup_->isAutoChassisCanStart())
+                {
+                    chassis_setup_->Receive_Arm_End_flag(false); //上层已经完成拾取，通知底盘可以开始移动了
+                }
             }
 
             break;
@@ -370,14 +418,15 @@ void FSM_Controller::auto_ctrl()
 			weaponSage_setup_->Set_End_Flag(chassis_setup_->GetReach_flag());
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
 //            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
+            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
             arm_setup_->setArmStatus(ARM_IDLE);
             
 
             static uint8_t is_click = 0;
             if(airjoy_data_.botton_click ==1 && is_click == 0)
             {
-                chassis_setup_->setPathAutoStart(1, 0); //路径自动开始标志
+                chassis_setup_->setPathAutoStart(1); //路径自动开始标志
+                is_click = 1;
             }
             else if(airjoy_data_.botton_click ==0)
             {
