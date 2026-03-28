@@ -97,7 +97,7 @@ namespace jia
         omega_z_pid.set_params(omega_z_pid_init_config, 0.0f);
 
         // ≥ı ºªØrot_z_pid
-        rot_z_pid.set_params(rot_z_pid_init_config, 0.0f);
+        rot_z_pid.set_params(lock_angle_pid_params, 0.0f);
         rot_z_pid.set_as_circular();
     }
 
