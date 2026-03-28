@@ -33,7 +33,7 @@ Vector2D OmniChassis_Setup::ComputeLookaheadDiffFeedforward(bool near_end)
 
     // 首次进入或状态复位后，不做差分，先对齐历史参考点。
     if (!ff_diff_inited_)
-    { 
+    {
         ff_diff_inited_ = true;
         ff_ref_point_last_ = ff_ref_point_;
         // ff_last_tick_ms_ = now_tick_ms;
