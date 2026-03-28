@@ -291,7 +291,7 @@ namespace jia
 
             if (is_world_speed_mode)
             {
-                rotateAroundZAxis(it.vel_x, it.vel_y, input_hwt_rot_z, t.vel_x, t.vel_y);
+                rotateAroundZAxisF32(it.vel_x, it.vel_y, input_hwt_rot_z, t.vel_x, t.vel_y);
             }
             else
             {
