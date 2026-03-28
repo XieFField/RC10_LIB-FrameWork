@@ -397,10 +397,7 @@ void FSM_Controller::debug()
 
     // 调试模式: 由底盘模块管理相机z锁定状态机，并向武器执行层下发目标。
     chassis_setup_->updateDebugLaunchLockFromCamera(weaponSage_setup_->getClawPos().y);
-    if(chassis_setup_->isDebugLaunchLocked())
-    {
-        weaponSage_setup_->setDebugLaunchTarget(chassis_setup_->getDebugLaunchTarget());
-    }
+    weaponSage_setup_->setDebugLaunchTarget(chassis_setup_->getDebugLaunchTarget());
 
     // 调试模式下，机械臂保持空闲，避免与调试流程冲突。
     arm_setup_->setArmStatus(ARM_IDLE);

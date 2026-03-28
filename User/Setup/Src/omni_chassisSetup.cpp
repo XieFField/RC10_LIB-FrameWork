@@ -12,29 +12,20 @@ uint32_t chassisstackHighWaterMark = 0;
 
 void OmniChassis_Setup::bridgeCameraZToDebugLaunch(float camera_relative_z)
 {
-    const float z_stable_threshold = 0.005f;
     const uint16_t stable_cycles_required = 20;
 
-    bool z_stable = false;
-    if(!debug_last_camera_z_valid_)
-    {
-        debug_last_camera_z_ = camera_relative_z;
-        debug_last_camera_z_valid_ = true;
-    }
-    else
-    {
-        z_stable = (_tool_Abs(camera_relative_z - debug_last_camera_z_) < z_stable_threshold);
-        debug_last_camera_z_ = camera_relative_z;
-    }
-
-    // 仅在视觉姿态阶段稳定后，才允许将z桥接为launch锁定目标。
-    const bool vision_ready = (vision_lock_state_ >= 2) && (_tool_Abs(vision_data_.x) < 0.01f) && (_tool_Abs(vision_data_.y - 45.0f) < 1.0f);
+    // 仅在视觉锁定阶段稳定后，才允许将z桥接为launch锁定目标。
+    // 不再强依赖y=45阈值，避免因单位差异导致目标长期无法锁定。
+    const bool vision_ready = true;  // 这里可以根据实际情况调整，比如改为camera_relative_z < 50.0f等更宽松的条件
 
     switch(debug_launch_state_)
     {
         case -1:
-            // case -1: 先等待视觉到位 + z稳定，满足连续计数后再一次性锁定。
-            if(vision_ready && z_stable)
+            // 未锁定前先给出临时目标，避免上层长期拿到默认0。
+            debug_launch_target_ = debug_current_launch_pos_ + camera_relative_z;
+
+            // case -1: 仅等待视觉到位，满足连续计数后再一次性锁定。
+            if(vision_ready)
             {
                 debug_launch_lock_stable_count_++;
             }
@@ -344,7 +335,7 @@ case CHASSIS_AUTO_CONTROL_CB:
             vision_data_.x = cam_temp.x;
             vision_data_.y = cam_temp.y;
             vision_data_.z = cam_temp.z;
-            vision_yaw_ = cam_temp.yaw;
+            vision_data_.yaw = cam_temp.yaw;
 
             // 统一在相机总传参口桥接z到launch锁定状态机。
             bridgeCameraZToDebugLaunch(cam_temp.z);
@@ -388,7 +379,7 @@ case CHASSIS_AUTO_CONTROL_CB:
 //                v_body_lateral = pid_vision_x.pid_calc(0.0f, vision_data_.x);
                 
                 // 1) 目标视觉角度设为180度，计算原始角误差
-                float raw_err = 180.0f - vision_yaw_;
+                float raw_err = 180.0f - vision_data_.yaw;
                 // 2) 角误差归一化到[-180, 180]
                 if (raw_err > 180.0f) raw_err -= 360.0f;
                 else if (raw_err < -180.0f) raw_err += 360.0f;
@@ -447,10 +438,9 @@ case CHASSIS_AUTO_CONTROL_CB:
 
         // 3. 直接输出速度（无需坐标转换）
         // 映射关系：Vx对应横移分量，Vy对应前进分量
-        target_chassis_twist_.vx = -v_body_lateral; 
-        target_chassis_twist_.vy = 0.15*v_body_forward;
-        target_chassis_twist_.yaw_rate = v_body_yaw;
-
+    target_chassis_twist_.vx = -v_body_lateral*0;
+    target_chassis_twist_.vy = 0.15f * v_body_forward*0;
+    target_chassis_twist_.yaw_rate = v_body_yaw*0;
         this->set_Target(target_chassis_twist_);
         break;
     }

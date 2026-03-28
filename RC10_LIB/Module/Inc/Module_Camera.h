@@ -69,7 +69,7 @@ private:
     static const uint8_t FRAME_HEAD_1 = 0xBB;
     static const uint8_t FRAME_TAIL_0 = 0xCC;
     static const uint8_t FRAME_TAIL_1 = 0xDD;
-    static const uint8_t DATA_LEN = 16; // 4个float: x,y,z,yaw
+    static const int DATA_LEN = 16; // 4个float: x,y,z,yaw
 
     // 解析状态机
     enum RxState {
