@@ -153,7 +153,7 @@ void OmniChassis_Setup::loop()
         else
             target_omega_z = 0.0f;
 
-        chassis.setTargetWorldSpeedMode(target_vel_x, target_vel_y, target_omega_z);
+        chassis.setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
 
         break;
     }
