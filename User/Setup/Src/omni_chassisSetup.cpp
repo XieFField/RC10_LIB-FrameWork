@@ -117,9 +117,8 @@ void OmniChassis_Setup::loop()
     if (!init_flag)
         return;
 
-    //	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-
-    float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
+//	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+	
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
@@ -259,7 +258,9 @@ void OmniChassis_Setup::loop()
             ResetAutoControlStates();
         }
 
-        chassis.setTargetWorldSpeedLockToRotZMode(target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_);
+        float target_yaw_rad = target_yaw_ * PI / 180.0f;
+        chassis.setTargetWorldSpeedLockToRotZMode(target_chassis_twist_.vx,target_chassis_twist_.vy,target_yaw_rad);
+
         break;
     }
 
@@ -433,11 +434,11 @@ void OmniChassis_Setup::loop()
 #endif
 
 
-    Point2D fk_speed;
-    fk_speed.x = chassis.getTargetWorldVelX();
-    fk_speed.y = chassis.getTargetWorldVelY();
+    // Point2D fk_speed;
+    // fk_speed.x = chassis.getTargetWorldVelX();
+    // fk_speed.y = chassis.getTargetWorldVelY();
 
-    SpeedFK_Queue.send(fk_speed);
+    // SpeedFK_Queue.send(fk_speed);
 }
 
 /////////////////////////////////    Â·¾¶¾ÀÆ«´úÂë   //////////////////////////////////////////////
