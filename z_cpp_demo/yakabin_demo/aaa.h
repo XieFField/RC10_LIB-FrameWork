@@ -1,6 +1,6 @@
 /**
  * @file Arm_setup.h
- * @author XieFField  
+ * @author XieFField  70er66
  * @brief 串联臂运动控制实现
  *        KFS索引采用1 ~ 12 使用时候 index = KFSNum -1
  * @version 1.0
