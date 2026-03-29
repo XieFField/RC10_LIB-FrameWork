@@ -185,81 +185,81 @@ namespace jia
         // 当前数据
         CurrentData current_data_;
 
-        bool is_world_speed_mode;           // 是否为世界速度模式
-        bool is_lock_rot_z;                 // 是否固定到rot_z
-        bool is_lock_rot_z_with_no_omega_z; // 是否固定到rot_z，且不固定omega_z
+        bool is_world_speed_mode_;           // 是否为世界速度模式
+        bool is_lock_rot_z_;                 // 是否固定到rot_z
+        bool is_lock_rot_z_with_no_omega_z_; // 是否固定到rot_z，且不固定omega_z
 
     private:
         void inverseKinematics(f32 in_x, f32 in_y, f32 in_z, f32 &out_w1, f32 &out_w2, f32 &out_w3);
 
     private:
         // 设定量
-        constexpr static u8 period_ms = 1;                 // 控制周期，单位：毫秒
-        constexpr static f32 period = period_ms / 1000.0f; // 控制周期，单位：秒
-        constexpr static f32 wheel_radius = 0.075f;        // 轮子半径（单位：米）
+        constexpr static u8 period_ms_ = 1;                 // 控制周期，单位：毫秒
+        constexpr static f32 period_ = period_ms_ / 1000.0f; // 控制周期，单位：秒
+        constexpr static f32 wheel_radius_ = 0.075f;        // 轮子半径（单位：米）
 
-        bool is_wheel_omega_limit = true;           // 是否进行轮端角速度限制
-        f32 max_wheel_omega = rpmToRadsF32(350.0f); // 最大轮子角速度，单位：rad/s
-        f32 max_wheel_vel = 0.0f;                   // 最大轮子线速度，单位：米/秒
+        bool is_wheel_omega_limit_ = true;           // 是否进行轮端角速度限制
+        f32 max_wheel_omega_ = rpmToRadsF32(350.0f); // 最大轮子角速度，单位：rad/s
+        f32 max_wheel_vel_ = 0.0f;                   // 最大轮子线速度，单位：米/秒
 
         // 车端速度限制参数
-        f32 max_vel_x_radio = 1.0f;   // x轴速度比例系数
-        f32 max_vel_y_radio = 1.0f;   // y轴速度比例系数
-        f32 max_omega_z_radio = 1.0f; // z轴角速度比例系数
+        f32 max_vel_x_radio_ = 1.0f;   // x轴速度比例系数
+        f32 max_vel_y_radio_ = 1.0f;   // y轴速度比例系数
+        f32 max_omega_z_radio_ = 1.0f; // z轴角速度比例系数
 
-        f32 max_vel_x = 0.0f;   // 最大x轴速度，单位：米/秒
-        f32 max_vel_y = 0.0f;   // 最大y轴速度，单位：米/秒
-        f32 max_omega_z = 0.0f; // 最大z轴角速度，单位：rad/s
+        f32 max_vel_x_ = 0.0f;   // 最大x轴速度，单位：米/秒
+        f32 max_vel_y_ = 0.0f;   // 最大y轴速度，单位：米/秒
+        f32 max_omega_z_ = 0.0f; // 最大z轴角速度，单位：rad/s
 
-        bool is_chassis_acc_limit = false; // 是否进行车端加速度限制
-        f32 max_acc_xy_acc = 2.0f;         // 最大XY轴线加速度，单位：m/s^2
-        f32 max_acc_xy_dec = 20.0f;        // 最大XY轴线减速度，单位：m/s^2
-        f32 max_alpha_z_acc = 4.0f;        // 最大z轴角加速度，单位：rad/s^2
-        f32 max_alpha_z_dec = 6.0f;        // 最大z轴角减速度，单位：rad/s^2
+        bool is_chassis_acc_limit_ = false; // 是否进行车端加速度限制
+        f32 max_acc_xy_acc_ = 2.0f;         // 最大XY轴线加速度，单位：m/s^2
+        f32 max_acc_xy_dec_ = 20.0f;        // 最大XY轴线减速度，单位：m/s^2
+        f32 max_alpha_z_acc_ = 4.0f;        // 最大z轴角加速度，单位：rad/s^2
+        f32 max_alpha_z_dec_ = 6.0f;        // 最大z轴角减速度，单位：rad/s^2
 
-        bool is_wheel_alpha_limit = false; // 是否进行轮端角加速度限制
-        f32 max_wheel_alpha = 2.0f * kPi;  // 最大轮子角加速度，单位：rad/s^2
+        bool is_wheel_alpha_limit_ = false; // 是否进行轮端角加速度限制
+        f32 max_wheel_alpha_ = 2.0f * kPi;  // 最大轮子角加速度，单位：rad/s^2
 
-        const f32 &wr = wheel_radius;
+        const f32 &wr_ = wheel_radius_;
 
-        InputTargetData input_target_data; // 输入目标数据
+        InputTargetData input_target_data_; // 输入目标数据
 
-        Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
-        u8 printf_period_ms = 4;                         // 串口调试打印周期，单位：毫秒
-        u8 printf_period_count = 0;                      // 串口调试打印周期计数器
+        Debug_Printf debug_uart_ = Debug_Printf(&huart8); // 调试串口
+        u8 printf_period_ms_ = 4;                         // 串口调试打印周期，单位：毫秒
+        u8 printf_period_count_ = 0;                      // 串口调试打印周期计数器
 
-        RmPocketData_t airjoy_data;
-
-    private:
-        f32 wheel_input_speed_radio = 300.0f;
-
-        bool is_sine = false;
-        f32 sine_amplitude = 0.0f;
-        f32 sine_frequency = 0.1f;
-        f32 sine_offset = 0.0f;
-
-        bool is_phase_step = false;
+        RmPocketData_t airjoy_data_;
 
     private:
-        f32 input_hwt_rot_z;
-        f32 input_hwt_omega_z;
+        f32 wheel_input_speed_radio_ = 300.0f;
+
+        bool is_sine_ = false;
+        f32 sine_amplitude_ = 0.0f;
+        f32 sine_frequency_ = 0.1f;
+        f32 sine_offset_ = 0.0f;
+
+        bool is_phase_step_ = false;
+
+    private:
+        f32 input_hwt_rot_z_;
+        f32 input_hwt_omega_z_;
 
         TargetPidData target_pid_data_;
 
-        PID_Incremental omega_z_pid;
-        uint8_t omega_z_pid_period = 1;
-        uint8_t omega_z_pid_count = 0;
-        bool is_omega_z_close_loop = false;
+        PID_Incremental omega_z_pid_;
+        uint8_t omega_z_pid_period_ = 1;
+        uint8_t omega_z_pid_count_ = 0;
+        bool is_omega_z_close_loop_ = false;
 
-        PID_Position rot_z_pid;
-        uint8_t rot_z_pid_period = 1;
-        uint8_t rot_z_pid_count = 0;
+        PID_Position rot_z_pid_;
+        uint8_t rot_z_pid_period_ = 1;
+        uint8_t rot_z_pid_count_ = 0;
 
     private:
-        bool is_debug = true;
+        bool is_debug_ = true;
 
-        u8 debug_mode = 0;
-        f32 debug_lock_rot_z = 0.0f;
+        u8 debug_mode_ = 0;
+        f32 debug_lock_rot_z_ = 0.0f;
     };
 
     inline Chassis::Result Chassis::setZeroCurrent()
