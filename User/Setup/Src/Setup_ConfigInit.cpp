@@ -221,7 +221,7 @@ void ALL_Setup_ConfigInit(void)
 
    ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
-   Chassis::init_config chassis_init_config = 
+   Chassis::InitConfig chassis_init_config = 
    {
         .motor_handle[0] = &omni_wheel1,
         .motor_handle[1] = &omni_wheel2,

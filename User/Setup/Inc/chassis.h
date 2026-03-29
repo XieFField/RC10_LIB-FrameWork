@@ -13,15 +13,33 @@ namespace jia
     class Chassis
     {
     public:
-        struct init_config
-        {
-            M3508 *motor_handle[3];
-        };
-
+        /* ----------------------------------------------------------------- */
+        // 对外控制接口
+        //  // 枚举类型定义
         enum class Result
         {
             kOk,
             kError,
+        };
+        enum class Coordinate
+        {
+            kBody,
+            kWorld,
+        };
+        //  // 设置电流为0
+        Result setZeroCurrent();
+        //  // 设置速度
+        Result setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z);
+        Result setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
+        Result setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z);
+        //  // 读取速度
+        Robot_Twist getBodySpeed() const;
+        Robot_Twist getWorldSpeed() const;
+        /* ----------------------------------------------------------------- */
+
+        struct InitConfig
+        {
+            M3508 *motor_handle[3];
         };
 
         // 默认构造和析构函数
@@ -29,7 +47,8 @@ namespace jia
         ~Chassis() = default;
 
         // 初始化
-        void init(init_config &config);
+        void init(InitConfig &config);
+
         // 设置轮子扭矩自由模式
         Result setWheelTorqueFreeMode();
         // 设置目标速度模式
@@ -39,7 +58,7 @@ namespace jia
         //  //  // 固定当前rot_z
         Result setTargetBodySpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
         //  //  // 无输入omega_z时固定当前rot_z
-        Result setTargetBodySpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z);
+        Result setTargetBodySpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
         //  //  // 固定到rot_z
         Result setTargetBodySpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
         //  // 世界坐标系
@@ -48,14 +67,18 @@ namespace jia
         //  //  // 固定当前rot_z
         Result setTargetWorldSpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
         //  //  // 无输入omega_z时固定当前rot_z
-        Result setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z);
+        Result setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
         //  //  // 固定到rot_z
         Result setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
         // 读取目标速度
+        f32 getTargetBodyVelX() const;
+        f32 getTargetBodyVelY() const;
         f32 getTargetWorldVelX() const;
         f32 getTargetWorldVelY() const;
         f32 getTargetOmegaZ() const;
         // 读取当前速度
+        f32 getCurrentBodyVelX() const;
+        f32 getCurrentBodyVelY() const;
         f32 getCurrentWorldVelX() const;
         f32 getCurrentWorldVelY() const;
         f32 getCurrentOmegaZ() const;
@@ -238,6 +261,65 @@ namespace jia
         u8 debug_mode = 0;
         f32 debug_lock_rot_z = 0.0f;
     };
+
+    inline Chassis::Result Chassis::setZeroCurrent()
+    {
+        return setWheelTorqueFreeMode();
+    }
+
+    inline Chassis::Result Chassis::setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
+    {
+        if (coord == Coordinate::kBody)
+        {
+            return setTargetBodySpeedMode(vel_x, vel_y, omega_z);
+        }
+        else
+        {
+            return setTargetWorldSpeedMode(vel_x, vel_y, omega_z);
+        }
+    }
+
+    inline Chassis::Result Chassis::setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
+    {
+        if (coord == Coordinate::kBody)
+        {
+            return setTargetBodySpeedLockNowRotZWithNoOmegaZMode(vel_x, vel_y, omega_z);
+        }
+        else
+        {
+            return setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(vel_x, vel_y, omega_z);
+        }
+    }
+
+    inline Chassis::Result Chassis::setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z)
+    {
+        if (coord == Coordinate::kBody)
+        {
+            return setTargetBodySpeedLockToRotZMode(vel_x, vel_y, rot_z);
+        }
+        else
+        {
+            return setTargetWorldSpeedLockToRotZMode(vel_x, vel_y, rot_z);
+        }
+    }
+
+    inline Robot_Twist Chassis::getBodySpeed() const
+    {
+        Robot_Twist body_speed;
+        body_speed.vx = getTargetBodyVelX();
+        body_speed.vy = getTargetBodyVelY();
+        body_speed.vz = getTargetOmegaZ();
+        return body_speed;
+    }
+
+    inline Robot_Twist Chassis::getWorldSpeed() const
+    {
+        Robot_Twist world_speed;
+        world_speed.vx = getTargetWorldVelX();
+        world_speed.vy = getTargetWorldVelY();
+        world_speed.vz = getTargetOmegaZ();
+        return world_speed;
+    }
 }
 
 using jia::Chassis;

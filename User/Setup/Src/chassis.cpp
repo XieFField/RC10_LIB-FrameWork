@@ -15,7 +15,7 @@
 
 namespace jia
 {
-    void Chassis::init(init_config &config)
+    void Chassis::init(InitConfig &config)
     {
         const osThreadAttr_t thread_attributes = {
             .name = "chassis_thread",
@@ -307,7 +307,7 @@ namespace jia
                     if (rot_z_pid_count >= rot_z_pid_period)
                     {
                         rot_z_pid_count = 0;
-                        t.omega_z = rot_z_pid.pid_calc(radToDegF32(it.rot_z),  radToDegF32(input_hwt_rot_z));
+                        t.omega_z = rot_z_pid.pid_calc(radToDegF32(it.rot_z), radToDegF32(input_hwt_rot_z));
                     }
                 }
                 else
@@ -321,7 +321,7 @@ namespace jia
                 if (rot_z_pid_count >= rot_z_pid_period)
                 {
                     rot_z_pid_count = 0;
-                    t.omega_z = rot_z_pid.pid_calc(radToDegF32(it.rot_z),  radToDegF32(input_hwt_rot_z));
+                    t.omega_z = rot_z_pid.pid_calc(radToDegF32(it.rot_z), radToDegF32(input_hwt_rot_z));
                 }
             }
             else
@@ -563,19 +563,43 @@ namespace jia
         return Result::kOk;
     }
 
-    f32 Chassis::getTargetWorldVelX() const
+    f32 Chassis::getTargetBodyVelX() const
     {
         return planned_data_.vel_x;
     }
 
-    f32 Chassis::getTargetWorldVelY() const
+    f32 Chassis::getTargetBodyVelY() const
     {
         return planned_data_.vel_y;
+    }
+
+    f32 Chassis::getTargetWorldVelX() const
+    {
+        // TODO
+        return 0.0f;
+    }
+
+    f32 Chassis::getTargetWorldVelY() const
+    {
+        // TODO
+        return 0.0f;
     }
 
     f32 Chassis::getTargetOmegaZ() const
     {
         return planned_data_.omega_z;
+    }
+
+    f32 Chassis::getCurrentBodyVelX() const
+    {
+        // TODO
+        return 0.0f;
+    }
+
+    f32 Chassis::getCurrentBodyVelY() const
+    {
+        // TODO
+        return 0.0f;
     }
 
     f32 Chassis::getCurrentWorldVelX() const

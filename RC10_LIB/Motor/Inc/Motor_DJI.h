@@ -222,7 +222,6 @@ public:
     ~M3508() {};
 
     void pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa);
-    void pid_chassis_init(const PID_Param_Config& speed_chassis_params, float speed_chassis_tdRatio);
 
     // ¿ØÖÆ½Ó¿Ú
     void setTargetCurrent(float current_set) override;
