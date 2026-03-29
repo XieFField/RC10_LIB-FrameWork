@@ -405,6 +405,120 @@ void ArmSetup::auto_stillnessOne()
     }
 }
 
+void ArmSetup::auto_stillnessTwo()
+{
+    //大体执行流程和stillnessOne一样,
+    //但目前没有做存储机构，所以第一个KFS就在back阶段直接放下。
+    switch(auto_ctrl_.now_state)
+    {
+        case ARM_AUTO_STILLNESS_E::STATE_DONE:
+        {
+            if(auto_ctrl_.start_to_autoctrl)
+            {
+                if(!auto_ctrl_.flag.isrecalcPath)
+                {
+                    this->set_TargetKFS(auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1]);
+                    auto_ctrl_.now_targetIndex = 0;
+
+                    auto_ctrl_.flag.isrecalcPath = true;//重置路径重计算标志，确保路径只在流程开始时计算一次
+                    auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放行
+                    auto_ctrl_.flag.canChassisStart = false; //重置底盘移动许可
+                    auto_ctrl_.flag.isExtReach = false;
+                    auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
+                }
+
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT;
+            }
+            else
+            {
+                idle();
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //保持在完成状态
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_TO_WAIT:
+        {
+            if(state_to_waitStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            {
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_ALIGN;
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_ALIGN:
+        {
+            if(state_alignStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            {
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_LOWER:
+        {
+            if(state_lowerStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            {
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
+                #if ARM_AUTO_DEBUG_NOCHASSIS
+                // auto_ctrl_.flag.canExtend = true; //放行进入伸展阶段
+                #endif
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_EXT:
+        {
+            if(auto_ctrl_.flag.canExtend)
+            {
+                if(state_extStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+                }
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_LAUNCH:
+        {
+            if(state_launchStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            {
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_BACK;
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_BACK:
+        {
+            if(state_backStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            {
+                auto_ctrl_.now_targetIndex++; //切换到下一个目标KFS
+                if(auto_ctrl_.now_targetIndex > 1)
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE;
+                    arm_ctrlStatus.auto_start = 0;
+                   
+                    auto_ctrl_.start_to_autoctrl = false; //完成一次流程后，重置自动控制启动条件
+                    auto_ctrl_.flag.isrecalcPath = false; //重置路径重计算标志
+                    auto_ctrl_.now_targetIndex = 1; //防止越界
+                }
+                else
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT; //继续下一个KFS的流程   
+                    auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放行
+                    auto_ctrl_.flag.canChassisStart = false; //重置底盘移动许可
+                    auto_ctrl_.flag.isExtReach = false;
+                    auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
+                }
+            }
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
 //流程函数 行进间拾取==============
 bool ArmSetup::state_to_waitStillness(int targetKFS)
 {
@@ -532,17 +646,6 @@ bool ArmSetup::state_backStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     float targetBackAngle = 0.0f; //根据车移动方向来，机械臂朝向底盘移动反方向
-    // int target_map = 0;
-    // if(auto_ctrl_.now_targetIndex == 0)
-    //     target_map = auto_ctrl_.path.bestB1;
-    // else if(auto_ctrl_.now_targetIndex == 1)
-    //     target_map = auto_ctrl_.path.bestB2;
-    // else
-    //     target_map = 0;
-    
-
-    // float temp_angle = MF_AutoCtrler::Get_ArmBaseTargetAngle(static_cast<int8_t>(target_map), 
-    //         auto_ctrl_.KFS_Movedirection[auto_ctrl_.now_targetIndex]);
 
     const int8_t idx_mfroad = auto_ctrl_.pathInfo.Index_MFroad[auto_ctrl_.now_targetIndex];
     if(idx_mfroad < 0 || idx_mfroad >= 11)
