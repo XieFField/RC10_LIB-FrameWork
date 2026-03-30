@@ -103,10 +103,10 @@ void Robot_Arm::update()
         
         target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
 
-		setRampRotateMaxSpeed(ramp_rate); // 可调参数，按需设置
+				setRampRotateMaxSpeed(ramp_rate); // 可调参数，按需设置
         ramp_rotate_target_ = caculate_rotate_target(motor_rotate_->getTotalAngle(),target_rotateMotorAngle);
    
-		motor_rotate_->setTargetTotalAngle(ramp_rotate_target_);
+				motor_rotate_->setTargetTotalAngle(ramp_rotate_target_);
 			
     }
 
