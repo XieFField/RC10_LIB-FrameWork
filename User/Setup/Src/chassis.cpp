@@ -12,6 +12,7 @@
 #include "APP_PID.h"
 
 #include "RC10_LIB/APP/Inc/APP_Utils.h"
+#include "chassis.h"
 
 namespace jia
 {
@@ -117,217 +118,21 @@ namespace jia
         auto &lp = last_planned_data_;
         auto &c = current_data_;
 
-        CrsfReceiver *receiver = CrsfReceiver::GetInstance(&huart7);
         HWT101CT *hwt = HWT101CT::GetInstance(&huart8);
-        TickType_t time_ms = xTaskGetTickCount();
+        time_ms_ = xTaskGetTickCount();
 
         for (;;)
         {
             input_hwt_rot_z_ = hwt->get_yaw_rad();
             input_hwt_omega_z_ = hwt->get_yaw_speed_rad();
 
-            if (is_debug_)
-            {
-                receiver->getControlData(&airjoy_data_);
+            isDebugMode();
 
-                f32 target_vel_x = 0.0f;
-                f32 target_vel_y = 0.0f;
-                f32 target_omega_z = 0.0f;
+            setModeFlag();
 
-                target_vel_x = airjoy_data_.left_x * max_vel_x_;
-                target_vel_y = airjoy_data_.left_y * max_vel_y_;
+            isTransSpeedBodyToWorld(is_world_speed_mode_, it.vel_x, it.vel_y, t.vel_x, t.vel_y);
 
-                // if (airjoy_data_.right_x > 0.1f)
-                // {
-                //     target_omega_z = max_omega_z_;
-                // }
-                // else if (airjoy_data_.right_x < -0.1f)
-                // {
-                //     target_omega_z = -max_omega_z_;
-                // }
-                // else
-                // {
-                //     target_omega_z = 0.0f;
-                // }
-
-                target_omega_z = airjoy_data_.right_x * max_omega_z_;
-
-                if (is_sine_)
-                {
-                    target_omega_z = sineWaveGeneratorF32(time_ms / 1000.0f, sine_amplitude_, sine_frequency_, 0.0f, sine_offset_);
-                }
-                else if (is_phase_step_)
-                {
-                    if (airjoy_data_.right_x > 0.3f)
-                    {
-                        target_omega_z = max_omega_z_;
-                    }
-                    else if (airjoy_data_.right_x < -0.3f)
-                    {
-                        target_omega_z = -max_omega_z_;
-                    }
-                    else
-                    {
-                        target_omega_z = 0.0f;
-                    }
-                }
-
-                switch (debug_mode_)
-                {
-                case 0:
-                {
-                    setTargetBodySpeedMode(target_vel_x, target_vel_y, target_omega_z);
-                    break;
-                }
-                case 1:
-                {
-                    setTargetWorldSpeedMode(target_vel_x, target_vel_y, target_omega_z);
-                    break;
-                }
-                case 2:
-                {
-                    setTargetBodySpeedLockNowRotZMode(target_vel_x, target_vel_y);
-                    break;
-                }
-                case 3:
-                {
-                    setTargetWorldSpeedLockNowRotZMode(target_vel_x, target_vel_y);
-                    break;
-                }
-                case 4:
-                {
-                    setTargetBodySpeedLockToRotZMode(target_vel_x, target_vel_y, debug_lock_rot_z_);
-                    break;
-                }
-                case 5:
-                {
-                    setTargetWorldSpeedLockToRotZMode(target_vel_x, target_vel_y, debug_lock_rot_z_);
-                    break;
-                }
-                case 6:
-                {
-                    setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
-                    break;
-                }
-                case 7:
-                {
-                    setTargetBodySpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
-                    break;
-                }
-                default:
-                {
-                    setWheelTorqueFreeMode();
-                    break;
-                }
-                }
-
-                // 调试轮子
-                //
-                // f32 wheel_speed_input = airjoy_data_.left_x * wheel_input_speed_radio_;
-                // // wheel_speed_input = sineWaveGeneratorF32(time_ms / 1000.0f, sine_amplitude_, sine_frequency_, 0.0f);
-                // auto &wheel_handle = wheel_config_[2].motor_handle;
-                // wheel_handle->setTargetRPM(wheel_speed_input);
-
-                // f32 pid_error = wheel_handle->speed_chassis_pid_.error_;
-                // // f32 pid_error_last = wheel_handle->speed_chassis_pid_.error_last_;
-                // // f32 pid_error_earlier_ = wheel_handle->speed_chassis_pid_.error_earlier_;
-                // f32 pid_p = wheel_handle->speed_chassis_pid_.P_Term;
-                // f32 pid_i = wheel_handle->speed_chassis_pid_.I_Term;
-                // f32 pid_d = wheel_handle->speed_chassis_pid_.D_Term;
-                // f32 pid_output = wheel_handle->speed_chassis_pid_.output_;
-
-                // debug_uart_.printf_DMA("lu\r\n", time_ms);
-                //
-            }
-
-            switch (mode_)
-            {
-            case Mode::kWheelTorqueFreeMode:
-                break;
-            case Mode::kBodySpeedMode:
-                is_world_speed_mode_ = false;
-                is_lock_rot_z_ = false;
-                is_lock_rot_z_with_no_omega_z_ = false;
-                break;
-            case Mode::kBodySpeedLockNowRotZMode:
-                is_world_speed_mode_ = false;
-                is_lock_rot_z_ = true;
-                is_lock_rot_z_with_no_omega_z_ = false;
-                break;
-            case Mode::kBodySpeedLockToRotZMode:
-                is_world_speed_mode_ = false;
-                is_lock_rot_z_ = true;
-                is_lock_rot_z_with_no_omega_z_ = false;
-                break;
-            case Mode::kWorldSpeedMode:
-                is_world_speed_mode_ = true;
-                is_lock_rot_z_ = false;
-                is_lock_rot_z_with_no_omega_z_ = false;
-                break;
-            case Mode::kWorldSpeedLockNowRotZMode:
-                is_world_speed_mode_ = true;
-                is_lock_rot_z_ = true;
-                is_lock_rot_z_with_no_omega_z_ = false;
-                break;
-            case Mode::kWorldSpeedLockToRotZMode:
-                is_lock_rot_z_ = true;
-                is_world_speed_mode_ = true;
-                is_lock_rot_z_with_no_omega_z_ = false;
-                break;
-            case Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode:
-                is_lock_rot_z_ = true;
-                is_world_speed_mode_ = true;
-                is_lock_rot_z_with_no_omega_z_ = true;
-                break;
-            case Mode::kBodySpeedLockNowRotZWithNoOmegaZMode:
-                is_lock_rot_z_ = true;
-                is_world_speed_mode_ = false;
-                is_lock_rot_z_with_no_omega_z_ = true;
-                break;
-            default:
-
-                break;
-            }
-
-            if (is_world_speed_mode_)
-            {
-                rotateAroundZAxisF32(it.vel_x, it.vel_y, input_hwt_rot_z_, t.vel_x, t.vel_y);
-            }
-            else
-            {
-                t.vel_x = it.vel_x;
-                t.vel_y = it.vel_y;
-            }
-
-            if (is_lock_rot_z_with_no_omega_z_)
-            {
-                if (it.omega_z == 0.0f)
-                {
-                    rot_z_pid_count_++;
-                    if (rot_z_pid_count_ >= rot_z_pid_period_)
-                    {
-                        rot_z_pid_count_ = 0;
-                        t.omega_z = rot_z_pid_.pid_calc(radToDegF32(it.rot_z), radToDegF32(input_hwt_rot_z_));
-                    }
-                }
-                else
-                {
-                    t.omega_z = it.omega_z;
-                }
-            }
-            else if (is_lock_rot_z_)
-            {
-                rot_z_pid_count_++;
-                if (rot_z_pid_count_ >= rot_z_pid_period_)
-                {
-                    rot_z_pid_count_ = 0;
-                    t.omega_z = rot_z_pid_.pid_calc(radToDegF32(it.rot_z), radToDegF32(input_hwt_rot_z_));
-                }
-            }
-            else
-            {
-                t.omega_z = it.omega_z;
-            }
+            isLockRotZ(is_lock_rot_z_, it.rot_z, it.omega_z, t.omega_z);
 
             // 逆运动学解算
             //  // 限制车端的目标速度
@@ -337,12 +142,8 @@ namespace jia
             //  // 是否开启车端的omega_z闭环控制
             if (is_omega_z_close_loop_)
             {
-                omega_z_pid_count_++;
-                if (omega_z_pid_count_ >= omega_z_pid_period_)
-                {
-                    omega_z_pid_count_ = 0;
-                    tpid.omega_z = omega_z_pid_.pid_calc(t.omega_z, input_hwt_omega_z_);
-                }
+                calculatePid(omega_z_pid_, omega_z_pid_count_, omega_z_pid_period_,
+                             t.omega_z, input_hwt_omega_z_, tpid.omega_z);
             }
             else
             {
@@ -424,9 +225,9 @@ namespace jia
             // 保存当前数据为上一次数据
             lp = p;
 
-            // debug_uart_.printf_DMA("%lu,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, t.w2_omega, t.w3_omega, p.w1_omega, p.w2_omega, p.w3_omega, c.w1_omega, c.w2_omega, c.w3_omega);
-            // debug_uart_.printf_DMA("%lu\r\n", time_ms);
-            // debug_uart_.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms, t.w1_omega, p.w1_omega, std::abs(c.w1_omega), std::abs(c.w2_omega));
+            // debug_uart_.printf_DMA("%lu,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", time_ms_, t.w1_omega, t.w2_omega, t.w3_omega, p.w1_omega, p.w2_omega, p.w3_omega, c.w1_omega, c.w2_omega, c.w3_omega);
+            // debug_uart_.printf_DMA("%lu\r\n", time_ms_);
+            // debug_uart_.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms_, t.w1_omega, p.w1_omega, std::abs(c.w1_omega), std::abs(c.w2_omega));
             // debug_uart_.printf_DMA("%f,%f,%f\r\n", input_hwt_omega_z_, input_hwt_rot_z_, tpid.omega_z);
 
             printf_period_count_++;
@@ -437,7 +238,224 @@ namespace jia
                 debug_uart_.printf_DMA("%f,%f,%f,%f\r\n", it.rot_z, input_hwt_rot_z_, t.omega_z, input_hwt_omega_z_);
             }
 
-            vTaskDelayUntil(&time_ms, period_ms_);
+            vTaskDelayUntil(&time_ms_, period_ms_);
+        }
+    }
+
+    void Chassis::isTransSpeedBodyToWorld(bool isTrans, f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y)
+    {
+        if (isTrans)
+        {
+            transSpeedBodyToWorld(vel_x, vel_y, out_vel_x, out_vel_y);
+        }
+        else
+        {
+            out_vel_x = vel_x;
+            out_vel_y = vel_y;
+        }
+    }
+
+    void Chassis::isTransSpeedWorldToBody(bool isTrans, f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y)
+    {
+        if (isTrans)
+        {
+            transSpeedWorldToBody(vel_x, vel_y, out_vel_x, out_vel_y);
+        }
+        else
+        {
+            out_vel_x = vel_x;
+            out_vel_y = vel_y;
+        }
+    }
+
+    void Chassis::calculatePid(PID_Incremental &pid, u8 &count, u8 period, f32 target, f32 feedback, f32 &output)
+    {
+        if (count >= period)
+        {
+            count = 0;
+            output = pid.pid_calc(target, feedback);
+        }
+        count++;
+    }
+
+    void Chassis::calculatePid(PID_Position &pid, u8 &count, u8 period, f32 target, f32 feedback, f32 &output)
+    {
+        if (count >= period)
+        {
+            count = 0;
+            output = pid.pid_calc(target, feedback);
+        }
+        count++;
+    }
+
+    void Chassis::setModeFlag()
+    {
+        switch (mode_)
+        {
+        case Mode::kWheelTorqueFreeMode:
+            break;
+        case Mode::kBodySpeedMode:
+            is_world_speed_mode_ = false;
+            is_lock_rot_z_ = false;
+            is_lock_rot_z_with_no_omega_z_ = false;
+            break;
+        case Mode::kBodySpeedLockNowRotZMode:
+            is_world_speed_mode_ = false;
+            is_lock_rot_z_ = true;
+            is_lock_rot_z_with_no_omega_z_ = false;
+            break;
+        case Mode::kBodySpeedLockToRotZMode:
+            is_world_speed_mode_ = false;
+            is_lock_rot_z_ = true;
+            is_lock_rot_z_with_no_omega_z_ = false;
+            break;
+        case Mode::kWorldSpeedMode:
+            is_world_speed_mode_ = true;
+            is_lock_rot_z_ = false;
+            is_lock_rot_z_with_no_omega_z_ = false;
+            break;
+        case Mode::kWorldSpeedLockNowRotZMode:
+            is_world_speed_mode_ = true;
+            is_lock_rot_z_ = true;
+            is_lock_rot_z_with_no_omega_z_ = false;
+            break;
+        case Mode::kWorldSpeedLockToRotZMode:
+            is_lock_rot_z_ = true;
+            is_world_speed_mode_ = true;
+            is_lock_rot_z_with_no_omega_z_ = false;
+            break;
+        case Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode:
+            is_lock_rot_z_ = true;
+            is_world_speed_mode_ = true;
+            is_lock_rot_z_with_no_omega_z_ = true;
+            break;
+        case Mode::kBodySpeedLockNowRotZWithNoOmegaZMode:
+            is_lock_rot_z_ = true;
+            is_world_speed_mode_ = false;
+            is_lock_rot_z_with_no_omega_z_ = true;
+            break;
+        default:
+
+            break;
+        }
+    }
+
+    void Chassis::isDebugMode()
+    {
+        if (is_debug_)
+        {
+            CrsfReceiver *receiver = CrsfReceiver::GetInstance(&huart7);
+
+            receiver->getControlData(&airjoy_data_);
+
+            f32 target_vel_x = 0.0f;
+            f32 target_vel_y = 0.0f;
+            f32 target_omega_z = 0.0f;
+
+            target_vel_x = airjoy_data_.left_x * max_vel_x_;
+            target_vel_y = airjoy_data_.left_y * max_vel_y_;
+
+            // if (airjoy_data_.right_x > 0.1f)
+            // {
+            //     target_omega_z = max_omega_z_;
+            // }
+            // else if (airjoy_data_.right_x < -0.1f)
+            // {
+            //     target_omega_z = -max_omega_z_;
+            // }
+            // else
+            // {
+            //     target_omega_z = 0.0f;
+            // }
+
+            target_omega_z = airjoy_data_.right_x * max_omega_z_;
+
+            if (is_sine_)
+            {
+                target_omega_z = sineWaveGeneratorF32(time_ms_ / 1000.0f, sine_amplitude_, sine_frequency_, 0.0f, sine_offset_);
+            }
+            else if (is_phase_step_)
+            {
+                if (airjoy_data_.right_x > 0.3f)
+                {
+                    target_omega_z = max_omega_z_;
+                }
+                else if (airjoy_data_.right_x < -0.3f)
+                {
+                    target_omega_z = -max_omega_z_;
+                }
+                else
+                {
+                    target_omega_z = 0.0f;
+                }
+            }
+
+            switch (debug_mode_)
+            {
+            case 0:
+            {
+                setTargetBodySpeedMode(target_vel_x, target_vel_y, target_omega_z);
+                break;
+            }
+            case 1:
+            {
+                setTargetWorldSpeedMode(target_vel_x, target_vel_y, target_omega_z);
+                break;
+            }
+            case 2:
+            {
+                setTargetBodySpeedLockNowRotZMode(target_vel_x, target_vel_y);
+                break;
+            }
+            case 3:
+            {
+                setTargetWorldSpeedLockNowRotZMode(target_vel_x, target_vel_y);
+                break;
+            }
+            case 4:
+            {
+                setTargetBodySpeedLockToRotZMode(target_vel_x, target_vel_y, debug_lock_rot_z_);
+                break;
+            }
+            case 5:
+            {
+                setTargetWorldSpeedLockToRotZMode(target_vel_x, target_vel_y, debug_lock_rot_z_);
+                break;
+            }
+            case 6:
+            {
+                setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
+                break;
+            }
+            case 7:
+            {
+                setTargetBodySpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
+                break;
+            }
+            default:
+            {
+                setWheelTorqueFreeMode();
+                break;
+            }
+            }
+
+            // 调试轮子
+            //
+            // f32 wheel_speed_input = airjoy_data_.left_x * wheel_input_speed_radio_;
+            // // wheel_speed_input = sineWaveGeneratorF32(time_ms_ / 1000.0f, sine_amplitude_, sine_frequency_, 0.0f);
+            // auto &wheel_handle = wheel_config_[2].motor_handle;
+            // wheel_handle->setTargetRPM(wheel_speed_input);
+
+            // f32 pid_error = wheel_handle->speed_chassis_pid_.error_;
+            // // f32 pid_error_last = wheel_handle->speed_chassis_pid_.error_last_;
+            // // f32 pid_error_earlier_ = wheel_handle->speed_chassis_pid_.error_earlier_;
+            // f32 pid_p = wheel_handle->speed_chassis_pid_.P_Term;
+            // f32 pid_i = wheel_handle->speed_chassis_pid_.I_Term;
+            // f32 pid_d = wheel_handle->speed_chassis_pid_.D_Term;
+            // f32 pid_output = wheel_handle->speed_chassis_pid_.output_;
+
+            // debug_uart_.printf_DMA("lu\r\n", time_ms_);
+            //
         }
     }
 
@@ -625,5 +643,40 @@ namespace jia
         out_w1 = ((in_x * w1_.c + in_y * w1_.s + in_z * w1_.eqr) / wr_);
         out_w2 = ((in_x * w2_.c + in_y * w2_.s + in_z * w2_.eqr) / wr_);
         out_w3 = ((in_x * w3_.c + in_y * w3_.s + in_z * w3_.eqr) / wr_);
+    }
+
+    void Chassis::transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y)
+    {
+        f32 cos_theta = cosf(input_hwt_rot_z_);
+        f32 sin_theta = sinf(input_hwt_rot_z_);
+
+        out_vel_x = vel_x * cos_theta + vel_y * sin_theta;
+        out_vel_y = -vel_x * sin_theta + vel_y * cos_theta;
+    }
+
+    void Chassis::transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y)
+    {
+        f32 cos_theta = cosf(-input_hwt_rot_z_);
+        f32 sin_theta = sinf(-input_hwt_rot_z_);
+
+        out_vel_x = vel_x * cos_theta + vel_y * sin_theta;
+        out_vel_y = -vel_x * sin_theta + vel_y * cos_theta;
+    }
+
+    void Chassis::isLockRotZ(bool isLock, f32 rot_z, f32 omega_z, f32 &out_omega_z)
+    {
+        if (isLock)
+        {
+            if (omega_z == 0.0f)
+            {
+                calculatePid(rot_z_pid_, rot_z_pid_count_, rot_z_pid_period_,
+                             radToDegF32(rot_z), radToDegF32(input_hwt_rot_z_),
+                             out_omega_z);
+            }
+        }
+        else
+        {
+            out_omega_z = omega_z;
+        }
     }
 }

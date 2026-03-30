@@ -3,6 +3,8 @@
 
 #include "RC10_LIB/APP/Inc/APP_Utils.h"
 
+#include "FreeRTOS.h"
+
 #include "Motor_DJI.h"
 #include "Module_CrsfReceiver.h"
 #include "APP_debugTool.h"
@@ -190,13 +192,30 @@ namespace jia
         bool is_lock_rot_z_with_no_omega_z_; // 是否固定到rot_z，且不固定omega_z
 
     private:
+        void isDebugMode();
+        void setModeFlag();
+
+    private:
         void inverseKinematics(f32 in_x, f32 in_y, f32 in_z, f32 &out_w1, f32 &out_w2, f32 &out_w3);
 
     private:
+        void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
+        void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
+
+        void isLockRotZ(bool isLock, f32 rot_z, f32 omega_z, f32 &out_omega_z);
+
+        void isTransSpeedBodyToWorld(bool isTrans, f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
+        void isTransSpeedWorldToBody(bool isTrans, f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
+
+        void calculatePid(PID_Incremental &pid, u8 &count, u8 period, f32 target, f32 feedback, f32 &output);
+        void calculatePid(PID_Position &pid, u8 &count, u8 period, f32 target, f32 feedback, f32 &output);
+
+    private:
         // 设定量
-        constexpr static u8 period_ms_ = 1;                 // 控制周期，单位：毫秒
+        constexpr static u8 period_ms_ = 1;                  // 控制周期，单位：毫秒
+        TickType_t time_ms_;                                 // 当前时间，单位：毫秒
         constexpr static f32 period_ = period_ms_ / 1000.0f; // 控制周期，单位：秒
-        constexpr static f32 wheel_radius_ = 0.075f;        // 轮子半径（单位：米）
+        constexpr static f32 wheel_radius_ = 0.075f;         // 轮子半径（单位：米）
 
         bool is_wheel_omega_limit_ = true;           // 是否进行轮端角速度限制
         f32 max_wheel_omega_ = rpmToRadsF32(350.0f); // 最大轮子角速度，单位：rad/s

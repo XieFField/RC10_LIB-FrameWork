@@ -322,7 +322,6 @@ namespace jia
 
         x_out = x * cos_theta + y * sin_theta;
         y_out = -x * sin_theta + y * cos_theta;
-
     } // namespace jia
 }
 
