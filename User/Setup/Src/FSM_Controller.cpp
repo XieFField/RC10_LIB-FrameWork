@@ -74,6 +74,9 @@ void FSM_Controller::loop()
             break;  
 
         case 0x02:
+            if(airjoy_data_.SWA == 0x01)
+                robot_status_ = DEBUG_MODE;
+            else
             robot_status_ = AUTO_CONTROL;
             break;
     }
@@ -441,7 +444,24 @@ void FSM_Controller::auto_ctrl()
 
 void FSM_Controller::debug()
 {
-   // 调试
+    arm_setup_->setArmStatus(ARM_IDLE);// 调试模式下固定让机械臂空闲，避免与视觉对接流程抢控制。
 
-    // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+    // 设置相机对接 y 轴目标点为 0.8m（相机坐标系前向为正）。
+    chassis_setup_->set_camera_y_ref(0.90f);
+    
+    chassis_setup_->setChassisStatus(CHASSIS_CAMERA);// 调试模式下切入底盘相机闭环状态机。
+
+    weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_CAMERA);// 调试模式下切入武器相机协同状态机。
+
+    // 将底盘下发的武器预对接请求透传给武器模块。
+    weaponSage_setup_->set_camera_req(
+        chassis_setup_->get_weapon_req(),
+        chassis_setup_->get_z_req(),
+        chassis_setup_->get_z_ref());
+
+    // 将武器返回的预对接完成位回传给底盘状态机。
+    chassis_setup_->set_weapon_done(weaponSage_setup_->get_weapon_done());
+
+    // 将武器返回的 z 轴完成位回传给底盘状态机。
+    chassis_setup_->set_z_done(weaponSage_setup_->get_z_done());
 }

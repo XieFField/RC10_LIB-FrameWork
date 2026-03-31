@@ -58,7 +58,7 @@ extern "C" {
     #include "speedplanner_demo.h"
 #endif
 
-
+#include "Module_Camera.h"
 #include "Module_Position.h"
 #include "Module_LaserPosition.h"
 #if ARM_DEMO_DEBUG
