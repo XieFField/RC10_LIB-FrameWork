@@ -33,6 +33,7 @@ namespace WeaponSage_Setup
     typedef struct{
         bool init_flag = false;
 
+        float debug_start = 1; //debug_start = 1表示开始调试
 		float now_times=0.0f;
         float calibrate_startTime = 0.0f;
         bool calibrate_start = false;
@@ -64,7 +65,7 @@ namespace WeaponSage_Setup
     typedef struct{
 
         struct{
-			bool is_matching = false;
+			bool is_matching = false;  
             bool grab_start = false;
             float grab_startTime = 0.0f;
             bool is_moving = false;  
@@ -189,6 +190,11 @@ public:
 	void Set_End_Flag(bool flag)
     {
         omni_flag = flag;
+    }
+
+    void setCBauto(bool flag)
+    {
+        auto_ctrl.auto_ctrl1 = flag;
     }
 
     void setWeapon_CameraStart(bool start)

@@ -30,6 +30,7 @@ LaserPosition laserpos(15,laser_rx_buffer,&huart3);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
 
+JY61_IMU IMU(JY61_ADDR,&hi2c5);
 Chassis_Omni<3>::init_config chassis_initData = {
     .wheel_radius = 0.15f/2.f,
     .max_wheel_rpm = 420,
@@ -57,6 +58,11 @@ FSM_Controller Finite_StateMachine;
 ArmSetup ARM_Controller(arm_initData);
 Robot_WeaponSage_Setup Weapon_Controller(initData_);
 test test_task;
+IMU_test imu_test;
+
+
+
+
 /*==============Controller Instances===========*/
 
 /*=============================================*/
@@ -200,6 +206,7 @@ void ALL_Setup_ConfigInit(void)
     // 初始化串口6的相机模块
     Module_Camera::GetInstance(&huart6)->InitUART();
     test_task.init();
+	imu_test.init();
    // Position* pos = Position::GetInstance(&huart1);
    // pos->InitUART();
 

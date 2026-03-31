@@ -97,7 +97,7 @@ public:
 	
 	float uint_to_float(int x_int, float x_min, float x_max, int bits);
 	int float_to_uint(float x,float x_min, float x_max, int bits);
-
+	uint8_t getErrorNum(){return Error_num;}
 
 
 private:
