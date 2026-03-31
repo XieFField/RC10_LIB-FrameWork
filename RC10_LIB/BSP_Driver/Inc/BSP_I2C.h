@@ -19,17 +19,17 @@ extern "C" {
 
 class I2C_User 
 {
-	
-	
 	public:
 	I2C_User(uint16_t addr,I2C_HandleTypeDef* i2c_handle);
 	~I2C_User()=default;
-	 HAL_StatusTypeDef I2C_ReadReg(uint8_t devaddr,uint8_t* pdata,uint8_t size);   // 读取寄存器
-	 HAL_StatusTypeDef I2C_WriteReg(uint8_t devaddr,uint8_t* pdata,uint8_t size);  // 写入寄存器
+	HAL_StatusTypeDef I2C_ReadReg(uint8_t devaddr,uint8_t* pdata,uint8_t size);   // 读取寄存器
+	HAL_StatusTypeDef I2C_WriteReg(uint8_t devaddr,uint8_t* pdata,uint8_t size);  // 写入寄存器
 	
-	 HAL_StatusTypeDef readData(uint8_t *pdata,uint8_t size);      // 纯对数据
-	 HAL_StatusTypeDef writeData();      // 纯写数据
-	void setTimeout(uint32_t timeout) { timeout_ = timeout; }
+	HAL_StatusTypeDef readData(uint8_t *pdata,uint8_t size);      // 纯对数据(阻塞式)
+	HAL_StatusTypeDef writeData(uint8_t *pdata,uint8_t size);      // 纯写数据(阻塞式)
+	void setTimeout(uint32_t timeout) { timeout_ = timeout;}        // 设置超时时间(阻塞式使用)
+	
+	void Scanf_addr();
 	
 	
 	private:
@@ -37,7 +37,7 @@ class I2C_User
 	uint16_t addr_;
 	I2C_HandleTypeDef* i2c_handle_;
 	uint32_t timeout_=20;
-	
+	HAL_StatusTypeDef addr_statusm[128];  
 };
 
 

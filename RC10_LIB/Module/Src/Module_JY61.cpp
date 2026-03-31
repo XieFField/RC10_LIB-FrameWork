@@ -60,17 +60,17 @@ void IMU_test:: loop()
   
 
 
-//  ok1=imu.jy61ReadAngles(imu_data);
-//  ok2=imu.jy61ReadAccGyro(imu_data);
-//  if (!ok1 || !ok2)
-//  {
-//    errorcode=hi2c5.ErrorCode;
-//    ok3 = HAL_I2C_Master_Transmit(&hi2c5, (JY61_ADDR << 1), &reg, 1, 10);
-//  }
-//  for(uint8_t i = 1; i < 127; i++)
-//    {
-//      statusm[i] = HAL_I2C_IsDeviceReady(&hi2c5, i << 1, 1, 10); 
-//  }
+  ok1=imu.jy61ReadAngles(imu_data);
+  ok2=imu.jy61ReadAccGyro(imu_data);
+  if (!ok1 || !ok2)
+  {
+    errorcode=hi2c5.ErrorCode;
+    ok3 = HAL_I2C_Master_Transmit(&hi2c5, (JY61_ADDR << 1), &reg, 1, 10);
+  }
+  for(uint8_t i = 1; i < 127; i++)
+    {
+      statusm[i] = HAL_I2C_IsDeviceReady(&hi2c5, i << 1, 1, 10); 
+  }
 }
 	
 	
