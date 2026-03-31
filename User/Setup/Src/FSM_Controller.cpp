@@ -74,10 +74,10 @@ void FSM_Controller::loop()
             break;  
 
         case 0x02:
-            if(airjoy_data_.SWA == 0x01)
-                robot_status_ = DEBUG_MODE;
-            else
-            robot_status_ = AUTO_CONTROL;
+            // if(airjoy_data_.SWA == 0x01)
+            //     robot_status_ = DEBUG_MODE;
+            // else
+                robot_status_ = AUTO_CONTROL;
             break;
     }
 
