@@ -432,6 +432,7 @@ void FSM_Controller::auto_ctrl()
                 if(airjoy_data_.botton_click ==1 && is_click == 0)
                 {
                     chassis_setup_->setPathAutoStart(1); //路径自动开始标志
+                    weaponSage_setup_->setCBauto(true);
                     is_click = 1;
                 }
                 else if(airjoy_data_.botton_click ==0)

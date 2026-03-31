@@ -194,7 +194,7 @@ public:
 
     void setCBauto(bool flag)
     {
-        auto_ctrl.auto_ctrl1 = flag;
+        auto_ctrl_.auto_ctrl1 = flag;
     }
 
     void setWeapon_CameraStart(bool start)
