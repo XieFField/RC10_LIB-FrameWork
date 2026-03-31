@@ -96,12 +96,12 @@ void Robot_WeaponSage_Setup::calibrate()
         }
 	
         this->setCtrlMode(WeaponSage::CURRENT_CONTROL);
-				this->setTarget(-900.0f, WeaponSage::Traverse_Motor);
+		this->setTarget(-900.0f, WeaponSage::Traverse_Motor);
         this->setTarget(500.0f, WeaponSage::Claw_Motor);
         if(!auto_ctrl_.auto_state_bool_S.wrist_enable)
         {
             Weapon_wrist_enable();
-						auto_ctrl_.auto_state_bool_S.wrist_enable=true;
+			auto_ctrl_.auto_state_bool_S.wrist_enable=true;
         }
         if(ctrl_status_.now_times - ctrl_status_.calibrate_startTime > 2.0f)
         {
@@ -113,7 +113,7 @@ void Robot_WeaponSage_Setup::calibrate()
 			if(auto_ctrl_.auto_state_bool_S.wrist_enable)
 			{	
 				this->Weapon_wrist_setzero();
-      }
+            }
             this->setTarget(0.0f, WeaponSage::Claw_Motor);
             this->setTarget(0.0f, WeaponSage::Traverse_Motor);
 		
@@ -315,7 +315,7 @@ void Robot_WeaponSage_Setup::debug()
 
 void Robot_WeaponSage_Setup::camera_mode()
 {
-    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);// 默认使用关节位置控制
+    this->setCtrlMode(WeaponSage::CAMERA_MIX_CONTROL);// 相机模式下 launch 始终走 RPM 混合控制
 
     // 首次进入相机模式时锁定当前姿态基准。
     if(last_weaponSage_status_ != WEAPONSAGE_CAMERA)
@@ -375,45 +375,28 @@ void Robot_WeaponSage_Setup::camera_mode()
         cam_z_run_ = true;
     }
 
-    // z 过程运行中持续执行。
-    if(cam_z_run_)
-    {
-        this->setCtrlMode(WeaponSage::CAMERA_MIX_CONTROL);// z 运行中改为混合控制
+    // launch 在相机模式下始终按缓存目标做 RPM 闭环保持。
+    float z_ref = constrain(cam_z_hold_, 0.0f, initData_.max_launchHeight_);
+    target_pos_.launch_pos_ = z_ref;
 
-        // 目标做边界限制。
-        float z_ref = constrain(cam_z_hold_, 0.0f, initData_.max_launchHeight_);
-        target_pos_.launch_pos_ = z_ref;
+    // 同步位置环目标角，确保目标缓存与当前参考一致。
+    this->setTarget(target_pos_.launch_pos_, WeaponSage::Launch_Motor);
 
-        // 电机 rpm 转线速度（m/s）。
-        float z_vel = launch_Motor_->getRPM() * initData_.launch_Ratio_ / 60.0f;
+    // launch 线速度（已含正方向约定）。
+    float z_vel = this->get_launchVel();
 
-        // 仅在样本变化时执行一次融合。
-        bool cam_new = is_new_z(camera_z_ref_);
+    // 仅在样本变化时执行一次融合。
+    bool cam_new = is_new_z(camera_z_ref_);
 
-        // 外环输出目标 rpm。
-        float rpm_cmd = cam_z_ctrl_.run_step(z_ref, camera_z_ref_, cam_new, z_vel);
-        cam_z_rpm_ = rpm_cmd;
+    // 外环输出目标 rpm。
+    float rpm_cmd = cam_z_ctrl_.run_step(z_ref, camera_z_ref_, cam_new, z_vel);
+    cam_z_rpm_ = rpm_cmd;
 
-        // 下发 launch 速度命令。
-        this->set_launchMotorSpeed(rpm_cmd);
+    // 下发 launch 速度命令。
+    this->set_launchMotorSpeed(rpm_cmd);
 
-        // 控制器判稳后结束本轮流程。
-        camera_z_done_ = cam_z_ctrl_.is_done();
-
-        if(camera_z_done_)
-        {
-            cam_z_run_ = false;
-        }
-    }
-    else
-    {
-        this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);// z 空闲时恢复常规位置控制
-
-        // 空闲时清速度命令并清完成位。
-        cam_z_rpm_ = 0.0f;
-        this->set_launchMotorSpeed(0.0f);
-        camera_z_done_ = false;
-    }
+    // 仅在有 z 请求时回传完成位；无请求时清零。
+    camera_z_done_ = camera_z_req_ ? cam_z_ctrl_.is_done() : false;
 
     // 持续保持当前四轴目标，避免状态切换时跳变。
     this->setTarget(target_pos_.claw_pos_, WeaponSage::Claw_Motor);
@@ -604,12 +587,12 @@ bool Robot_WeaponSage_Setup::State_Lift()
 
 WeaponSage_InitData_S initData_=
 {
-    .max_launchHeight_ =0.300f,
+    .max_launchHeight_ =0.329f,
     .max_clawAngle_ = 65.0f,
     .max_traverseLength_ = 0.450f,
 
     .wrist_gearRatio_ = 360.0f,
-    .launch_Ratio_ = 0.1013056956038f,
+    .launch_Ratio_ = 0.098482549317147f,
     .claw_gearRatio_  =360.0f ,
     .traverse_Ratio_  = 0.0785210947199f,
     .max_wristMotorRPM_   =45.0f,

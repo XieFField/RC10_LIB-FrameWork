@@ -1,7 +1,7 @@
 #include "omni_chassisSetup.h"
 
 #ifndef CAMERA_FAKE
-#define CAMERA_FAKE 1
+#define CAMERA_FAKE 0
 #endif
 
 // Path_line path_line_;
@@ -215,20 +215,20 @@ void OmniChassis_Setup::camera_ctrl(void)
         yaw_lock_ = yaw;// 保存当前世界航向角（度）。
     }
 
-    Camera_Data_t cam_data = {0.0f, 0.0f, 0.0f, 0.0f};
+    cam_data_dbg_ = {0.0f, 0.0f, 0.0f, 0.0f};
 
 #if CAMERA_FAKE
     // 测试模式使用成员变量，便于在调试器中实时观察和修改。
-    cam_data.x = fake_x;
+    cam_data_dbg_.x = fake_x;
 
     // 测试模式使用成员变量，便于在调试器中实时观察和修改。
-    cam_data.y = fake_y;
+    cam_data_dbg_.y = fake_y;
 
     // 测试模式使用成员变量，便于在调试器中实时观察和修改。
-    cam_data.z = fake_z;
+    cam_data_dbg_.z = fake_z;
 
     // 测试模式使用成员变量，便于在调试器中实时观察和修改。
-    cam_data.yaw = fake_yaw;
+    cam_data_dbg_.yaw = fake_yaw;
 #else
     // 首次使用时初始化相机串口模块。
     if (!camera_init_)
@@ -240,16 +240,16 @@ void OmniChassis_Setup::camera_ctrl(void)
         camera_init_ = true;// 标记初始化完成。
     }
 
-    cam_data = camera_->GetCameraData();// 读取最新一帧相机数据。
+    cam_data_dbg_ = camera_->GetCameraData();// 读取最新一帧相机数据。
 #endif
 
-    float x_err = cam_data.x - camera_x_ref_;// 提取相对 x 目标值的误差（右为正，单位米）。
+    float x_err = cam_data_dbg_.x - camera_x_ref_;// 提取相对 x 目标值的误差（右为正，单位米）。
 
-    float y_err = cam_data.y - camera_y_ref_;// 提取相对 y 目标值的误差（前为正，单位米）。
+    float y_err = cam_data_dbg_.y - camera_y_ref_;// 提取相对 y 目标值的误差（前为正，单位米）。
 
-    float z_err = avg_z(cam_data.z);// 提取并滤波 z 轴误差（20 次均值，单位米）。
+    float z_err = avg_z(cam_data_dbg_.z);// 提取并滤波 z 轴误差（20 次均值，单位米）。
 
-    float yaw_err = cam_data.yaw;// 提取 yaw 误差（角度，顺时针为正）。
+    float yaw_err = cam_data_dbg_.yaw;// 提取 yaw 误差（角度，顺时针为正）。
 
     float vel_x = 0.0f;// 默认输出清零，避免跨阶段残留速度
 
@@ -276,13 +276,9 @@ void OmniChassis_Setup::camera_ctrl(void)
 
             camera_state_ = CAMERA_Z_ROUGH;// 切换到 z 粗调状态。
 
-            z_count_ = 0;// 清零 z 判稳计数。
+            z_done_ = false;// 清空上次 z 完成位，避免新阶段误触发。
 
-            z_rough_ref_sent_ = false;// 进入 z 粗调时，清空一次性参考值下发标志。
-
-            z_rough_sample_count_ = 0;// 清空 z 粗调采样计数。
-
-            z_rough_sample_sum_ = 0.0f;// 清空 z 粗调采样累计和。
+            z_rough_count_ = 0;// 清零 z 粗调判稳计数。
         }
 
         break;
@@ -290,38 +286,20 @@ void OmniChassis_Setup::camera_ctrl(void)
 
     case CAMERA_Z_ROUGH:
     {
-        // 先采样 20 次，再一次性下发 z 参考值，抑制图传延迟引起的来回改指令。
-        if (!z_rough_ref_sent_)
-        {
-            z_rough_sample_sum_ += cam_data.z;
-            z_rough_sample_count_++;
+        // z 粗调改为持续闭环：每拍刷新参考并保持请求位。
+        z_ref_ = z_err;
+        z_req_ = true;
 
-            if (z_rough_sample_count_ >= z_ref_sample_num_)
-            {
-                z_ref_ = (z_rough_sample_sum_ / static_cast<float>(z_rough_sample_count_));
-                z_req_ = true;// 仅在采样完成后触发本次 z 粗调请求。
-                z_rough_ref_sent_ = true;// 本阶段后续不再更新 z_ref_。
-            }
-            else
-            {
-                z_req_ = false;// 采样未完成前，不向武器下发参考值。
-            }
+        // z_done 与 z 误差同时满足判稳后，才切到 x 粗调。
+        if (z_done_ && check_stable(z_err, 0.002f, z_rough_count_))
+        {
+            z_req_ = false;
+            camera_state_ = CAMERA_X_ROUGH;
+            x_count_ = 0;
         }
-        else
+        else if (!z_done_)
         {
-            z_req_ = true;// 参考值已下发后保持请求，等待武器执行并反馈完成。
-
-            // 按需求忽略 z 检查，仅保留极短发送保持时间，确保请求被武器侧接收。
-            z_count_++;
-
-            if (z_count_ >= 2)
-            {
-                z_req_ = false;// 发送保持完成后关闭 z 请求位。
-
-                camera_state_ = CAMERA_X_ROUGH;// 直接进入 x 粗调。
-
-                x_count_ = 0;// 清零 x 判稳计数。
-            }
+            z_rough_count_ = 0;// z 未到位时清零判稳计数，防止跨段累积。
         }
 
         // 底盘保持静止并锁航向。
@@ -348,13 +326,9 @@ void OmniChassis_Setup::camera_ctrl(void)
         {
             camera_state_ = CAMERA_Z_FINE;// 切换到 z 精锁阶段。
 
-            zf_count_ = 0;// 清零 z 精锁判稳计数。
+            z_done_ = false;// 清空上次 z 完成位，避免新阶段误触发。
 
-            z_fine_ref_sent_ = false;// 进入 z 精锁时，清空一次性参考值下发标志。
-
-            z_fine_sample_count_ = 0;// 清空 z 精锁采样计数。
-
-            z_fine_sample_sum_ = 0.0f;// 清空 z 精锁采样累计和。
+            z_fine_count_ = 0;// 清零 z 精锁判稳计数。
         }
 
         break;
@@ -362,38 +336,20 @@ void OmniChassis_Setup::camera_ctrl(void)
 
     case CAMERA_Z_FINE:
     {
-        // z 精锁同样采用 20 次采样后一次性下发，避免闭环相互追逐。
-        if (!z_fine_ref_sent_)
-        {
-            z_fine_sample_sum_ += cam_data.z;
-            z_fine_sample_count_++;
+        // z 精锁改为持续闭环：每拍刷新参考并保持请求位。
+        z_ref_ = z_err;
+        z_req_ = true;
 
-            if (z_fine_sample_count_ >= z_ref_sample_num_)
-            {
-                z_ref_ = (z_fine_sample_sum_ / static_cast<float>(z_fine_sample_count_));
-                z_req_ = true;// 仅在采样完成后触发本次 z 精锁请求。
-                z_fine_ref_sent_ = true;// 本阶段后续不再更新 z_ref_。
-            }
-            else
-            {
-                z_req_ = false;// 采样未完成前，不向武器下发参考值。
-            }
+        // z_done 与 z 误差同时满足判稳后，才切到 yaw 阶段。
+        if (z_done_ && check_stable(z_err, 0.002f, z_fine_count_))
+        {
+            z_req_ = false;
+            camera_state_ = CAMERA_YAW;
+            yaw_count_ = 0;
         }
-        else
+        else if (!z_done_)
         {
-            z_req_ = true;// 参考值已下发后保持请求，等待武器执行并反馈完成。
-
-            // 按需求忽略 z 检查，仅保留极短发送保持时间，确保请求被武器侧接收。
-            zf_count_++;
-
-            if (zf_count_ >= 2)
-            {
-                z_req_ = false;// 发送保持完成后关闭 z 请求位。
-
-                camera_state_ = CAMERA_YAW;// 直接进入 yaw 调整阶段。
-
-                yaw_count_ = 0;// 清零 yaw 判稳计数。
-            }
+            z_fine_count_ = 0;// z 未到位时清零判稳计数，防止跨段累积。
         }
 
         // 底盘保持静止并锁航向，专注做 z 精锁。

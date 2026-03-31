@@ -64,12 +64,6 @@ public:
             z_sum_ = 0.0f;
             z_idx_ = 0;
             z_num_ = 0;
-            z_rough_ref_sent_ = false;
-            z_fine_ref_sent_ = false;
-            z_rough_sample_count_ = 0;
-            z_fine_sample_count_ = 0;
-            z_rough_sample_sum_ = 0.0f;
-            z_fine_sample_sum_ = 0.0f;
             for (uint8_t i = 0; i < 20; i++)
             {
                 z_buf_[i] = 0.0f;
@@ -83,15 +77,10 @@ public:
             z_req_ = false;
             z_ref_ = 0.0f;
             camera_state_ = CAMERA_WEAPON;
-            z_count_ = 0;
+            z_rough_count_ = 0;
             x_count_ = 0;
+            z_fine_count_ = 0;
             yaw_count_ = 0;
-            z_rough_ref_sent_ = false;
-            z_fine_ref_sent_ = false;
-            z_rough_sample_count_ = 0;
-            z_fine_sample_count_ = 0;
-            z_rough_sample_sum_ = 0.0f;
-            z_fine_sample_sum_ = 0.0f;
             z_sum_ = 0.0f;
             z_idx_ = 0;
             z_num_ = 0;
@@ -394,6 +383,7 @@ private:
     //-----------------------------------其他参数-----------------------------------------//
 
     RmPocketData_t airjoy_data_; // 遥控器数据，范围 -1 ~ 1
+    Camera_Data_t cam_data_dbg_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 调试用相机数据缓存
 
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
 
@@ -490,11 +480,11 @@ private:
 
     float yaw_scale_ = 1.0f; // 航向环输出缩放系数。
 
-    uint8_t z_count_ = 0; // z 粗调判稳计数。
+    uint8_t z_rough_count_ = 0; // z 粗调判稳计数。
 
     uint8_t x_count_ = 0; // x 粗调判稳计数。
 
-    uint8_t zf_count_ = 0; // z 精锁判稳计数。
+    uint8_t z_fine_count_ = 0; // z 精锁判稳计数。
 
     uint8_t yaw_count_ = 0; // yaw 判稳计数。
 
@@ -506,23 +496,9 @@ private:
 
     uint8_t z_num_ = 0; // z 缓冲区当前有效样本数。
 
-    uint8_t z_ref_sample_num_ = 20; // z 参考值一次性采样点数。
-
-    bool z_rough_ref_sent_ = false; // z 粗调阶段参考值是否已下发。
-
-    bool z_fine_ref_sent_ = false; // z 精锁阶段参考值是否已下发。
-
-    uint8_t z_rough_sample_count_ = 0; // z 粗调阶段已采样点数。
-
-    uint8_t z_fine_sample_count_ = 0; // z 精锁阶段已采样点数。
-
-    float z_rough_sample_sum_ = 0.0f; // z 粗调阶段采样累计和。
-
-    float z_fine_sample_sum_ = 0.0f; // z 精锁阶段采样累计和。
-
     float fake_x = 0.0f; // 调试假数据：x 误差输入（米）。
 
-    float fake_y = 0.0f; // 调试假数据：y 误差输入（米）。
+    float fake_y = 0.9f; // 调试假数据：y 误差输入（米）。
 
     float fake_z = 0.08f; // 调试假数据：z 误差输入（米）。
 

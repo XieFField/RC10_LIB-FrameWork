@@ -156,6 +156,12 @@ public:
 	
 	void Weapon_wrist_setzero(){wrist_Motor_->motorSetZero();}
 	void Weapon_wrist_enable(){wrist_Motor_->motorEnable();}
+    float get_launchVel()
+    {
+        if(launch_Motor_ == nullptr)
+            return 0.0f;
+        return motor_reversed_.launch_reversed_ * launch_Motor_->getRPM() * initData_.launch_Ratio_ / 60.0f;
+    }
 private:
 
     WeaponSage::WeaponSage_CtrlMode_S ctrl_mode_ = WeaponSage::Join_POSITION_CONTROL;
@@ -189,7 +195,7 @@ protected:
     bool setMotorTargetTotalAngle(float total_angle, WeaponSage::Motor_Type_E motor_type);
 		void set_launchMotorSpeed(float target)
 		{
-            launch_target_rpm_ = target;
+            launch_target_rpm_ = motor_reversed_.launch_reversed_ * target;
 		}
     float launch_target_rpm_ = 0.0f;
 	WeaponSage_InitData_S initData_;
