@@ -1233,6 +1233,16 @@
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_JY61.cpp</FilePath>
             </File>
+            <File>
+              <FileName>Module_Camera.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_Camera.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_Camera.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_Camera.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1600,6 +1610,16 @@
                   </Cads>
                 </FileArmAds>
               </FileOption>
+            </File>
+            <File>
+              <FileName>chassis.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\chassis.h</FilePath>
+            </File>
+            <File>
+              <FileName>chassis.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\chassis.cpp</FilePath>
             </File>
           </Files>
         </Group>
