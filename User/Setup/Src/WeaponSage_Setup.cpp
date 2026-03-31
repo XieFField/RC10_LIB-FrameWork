@@ -315,6 +315,13 @@ void Robot_WeaponSage_Setup::debug()
 
 void Robot_WeaponSage_Setup::camera_mode()
 {
+    if(!weapon_CameraStart) //主状态机没有给武器架相机模式触发信号，保持当前姿态不变，并锁定航向。
+    {
+        this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+        idle();
+        return;
+    }
+
     this->setCtrlMode(WeaponSage::CAMERA_MIX_CONTROL);// 相机模式下 launch 始终走 RPM 混合控制
 
     // 首次进入相机模式时锁定当前姿态基准。
@@ -406,6 +413,9 @@ void Robot_WeaponSage_Setup::camera_mode()
 
     // 持续保持当前四轴目标，避免状态切换时跳变。
     this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);
+
+    if(camera_weapon_done_)
+        weapon_CameraStart = false;// 预对接完成后复位主状态机触发位，准备下一次对接流程。
 }
 
 void Robot_WeaponSage_Setup::autoControl()

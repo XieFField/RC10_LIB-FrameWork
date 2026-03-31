@@ -238,6 +238,12 @@ public:
         return z_ref_; // 读取透传给武器层的 z 参考值。
     }
 
+    //由主状态机调用，设置开启武器对接流程
+    void setWeaponStart(bool isstart)
+    {
+        weapon_cameraStart = isstart;
+    }
+
 private:
     //-----------------------------------通讯标志位-----------------------------------------//
     bool WeaponSage_END = 0;
@@ -446,11 +452,16 @@ private:
         CAMERA_DONE, // 流程结束阶段。
     };
 
+
+
     Camera_State_E camera_state_ = CAMERA_WEAPON; // 相机流程当前阶段。
 
     Module_Camera *camera_ = nullptr; // 相机模块实例指针。
 
     UART_HandleTypeDef *camera_uart_ = &huart6; // 相机串口句柄（默认 huart6）。
+
+    bool weapon_cameraStart = false; // 主状态机触发相机流程的标志位。
+
 
     bool camera_init_ = false; // 相机串口初始化完成标志。
 

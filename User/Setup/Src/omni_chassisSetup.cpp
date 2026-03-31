@@ -209,6 +209,14 @@ Vector2D OmniChassis_Setup::calc_vector(float x_err, float y_err, float max_vel)
 
 void OmniChassis_Setup::camera_ctrl(void)
 {
+
+    if (!weapon_cameraStart)
+    {
+        // 主状态机未触发相机流程，保持静止并锁航向。
+        chassis.setTargetWorldSpeedLockNowRotZMode(0.0f, 0.0f);
+        return;
+    }
+
     // 首次进入时按当前航向上锁，避免流程中航向漂移。
     if (camera_state_ == CAMERA_WEAPON && !weapon_req_ && !z_req_)
     {
@@ -260,169 +268,169 @@ void OmniChassis_Setup::camera_ctrl(void)
     // 根据相机流程阶段执行对应控制。
     switch (camera_state_)
     {
-    case CAMERA_WEAPON:
-    {
-        weapon_req_ = true;// 请求武器执行夹爪/导轨/腕部预对接姿态。
-
-        z_req_ = false;// 此阶段不请求 z 调整。
-
-        // 保持底盘静止并锁定当前航向。
-        chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
-
-        // 武器到位后进入 z 轴粗调阶段。
-        if (weapon_done_)
+        case CAMERA_WEAPON:
         {
-            weapon_req_ = false;// 关闭武器准备请求位。
+            weapon_req_ = true;// 请求武器执行夹爪/导轨/腕部预对接姿态。
 
-            camera_state_ = CAMERA_Z_ROUGH;// 切换到 z 粗调状态。
+            z_req_ = false;// 此阶段不请求 z 调整。
 
-            z_done_ = false;// 清空上次 z 完成位，避免新阶段误触发。
+            // 保持底盘静止并锁定当前航向。
+            chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
 
-            z_rough_count_ = 0;// 清零 z 粗调判稳计数。
+            // 武器到位后进入 z 轴粗调阶段。
+            if (weapon_done_)
+            {
+                weapon_req_ = false;// 关闭武器准备请求位。
+
+                camera_state_ = CAMERA_Z_ROUGH;// 切换到 z 粗调状态。
+
+                z_done_ = false;// 清空上次 z 完成位，避免新阶段误触发。
+
+                z_rough_count_ = 0;// 清零 z 粗调判稳计数。
+            }
+
+            break;
         }
 
-        break;
-    }
-
-    case CAMERA_Z_ROUGH:
-    {
-        // z 粗调改为持续闭环：每拍刷新参考并保持请求位。
-        z_ref_ = z_err;
-        z_req_ = true;
-
-        // z_done 与 z 误差同时满足判稳后，才切到 x 粗调。
-        if (z_done_ && check_stable(z_err, 0.002f, z_rough_count_))
+        case CAMERA_Z_ROUGH:
         {
+            // z 粗调改为持续闭环：每拍刷新参考并保持请求位。
+            z_ref_ = z_err;
+            z_req_ = true;
+
+            // z_done 与 z 误差同时满足判稳后，才切到 x 粗调。
+            if (z_done_ && check_stable(z_err, 0.002f, z_rough_count_))
+            {
+                z_req_ = false;
+                camera_state_ = CAMERA_X_ROUGH;
+                x_count_ = 0;
+            }
+            else if (!z_done_)
+            {
+                z_rough_count_ = 0;// z 未到位时清零判稳计数，防止跨段累积。
+            }
+
+            // 底盘保持静止并锁航向。
+            chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
+
+            // 结束本阶段处理。
+            break;
+        }
+
+        case CAMERA_X_ROUGH:
+        {
+            
+            vel_x = camera_pid_x_.pid_calc(0.0f, x_err) * pos_scale_;// 使用相机模式专用 x 位置环做粗调速度。
+
+            vel_x = clamp_value(vel_x, -speed_max_, speed_max_);// 限制 x 方向最大速度。
+
+            vel_y = 0.0f;// y 方向保持零，避免阶段耦合。
+
+            // 世界系锁角执行 x 粗调。
+            chassis.setTargetWorldSpeedLockToRotZMode(vel_x, vel_y, yaw_lock_ * PI / 180.0f);
+
+            // x 误差连续 5 次小于 0.05m 即完成粗调。
+            if (check_stable(x_err, 0.05f, x_count_))
+            {
+                camera_state_ = CAMERA_Z_FINE;// 切换到 z 精锁阶段。
+
+                z_done_ = false;// 清空上次 z 完成位，避免新阶段误触发。
+
+                z_fine_count_ = 0;// 清零 z 精锁判稳计数。
+            }
+
+            break;
+        }
+
+        case CAMERA_Z_FINE:
+        {
+            // z 精锁改为持续闭环：每拍刷新参考并保持请求位。
+            z_ref_ = z_err;
+            z_req_ = true;
+
+            // z_done 与 z 误差同时满足判稳后，才切到 yaw 阶段。
+            if (z_done_ && check_stable(z_err, 0.002f, z_fine_count_))
+            {
+                z_req_ = false;
+                camera_state_ = CAMERA_YAW;
+                yaw_count_ = 0;
+            }
+            else if (!z_done_)
+            {
+                z_fine_count_ = 0;// z 未到位时清零判稳计数，防止跨段累积。
+            }
+
+            // 底盘保持静止并锁航向，专注做 z 精锁。
+            chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
+
+            break;
+        }
+
+        case CAMERA_YAW:
+        {
+            vel_w = camera_pid_yaw_.pid_calc(0.0f, yaw_err) * yaw_scale_;// 使用相机模式专用 yaw 位置环做角度闭环。
+
+            vel_w = clamp_value(vel_w, -omega_max_, omega_max_);// 限制最大角速度为 1rad/s。
+            
+            chassis.setTargetWorldSpeedMode(0.0f, 0.0f, vel_w);// 平移保持零，只做航向收敛。
+
+            // yaw 连续 5 次小于 0.2deg 进入对接阶段。
+            if (check_stable(yaw_err, 0.02f, yaw_count_))
+            {
+                // 进入对接前，将锁角目标更新为当前航向，避免回拉到流程初始航向。
+                yaw_lock_ = yaw;
+
+                camera_state_ = CAMERA_DOCK;// 切换到对接阶段。
+            }
+
+            break;
+        }
+
+        case CAMERA_DOCK:
+        {
+            // 改为 x/y 独立 PID，分别输出两个方向速度。
+            vel_x = camera_pid_x_.pid_calc(0.0f, x_err) * pos_scale_;
+            vel_y = camera_pid_y_.pid_calc(0.0f, y_err) * pos_scale_;
+
+
+            // 锁定当前底盘航向（与底盘内部角度源一致），避免跨角度源导致的固定偏转。
+            chassis.setTargetBodySpeedLockNowRotZMode(vel_x, vel_y);
+
+            // 外部置位 dock_done 后结束对接流程。
+            if (dock_done_)
+            {
+                camera_state_ = CAMERA_DONE;// 切换到完成态。
+            }
+
+            // 结束本阶段处理。
+            break;
+        }
+
+        case CAMERA_DONE:
+        {
+            // 对接完成后保持静止并锁当前航向。
+            chassis.setTargetBodySpeedLockNowRotZMode(0.0f, 0.0f);
+            this->weapon_cameraStart = false;// 复位主状态机触发位，准备下一次对接流程。
+            break;
+        }
+
+        default:
+        {
+            // 非法状态时回到武器准备阶段。
+            camera_state_ = CAMERA_WEAPON;
+
+            // 清空请求位。
+            weapon_req_ = false;
+            this->weapon_cameraStart = false;
+            // 清空请求位。
             z_req_ = false;
-            camera_state_ = CAMERA_X_ROUGH;
-            x_count_ = 0;
+
+            // 停车保护。
+            chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
+
+            // 结束默认分支处理。
+            break;
         }
-        else if (!z_done_)
-        {
-            z_rough_count_ = 0;// z 未到位时清零判稳计数，防止跨段累积。
-        }
-
-        // 底盘保持静止并锁航向。
-        chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
-
-        // 结束本阶段处理。
-        break;
-    }
-
-    case CAMERA_X_ROUGH:
-    {
-        
-        vel_x = camera_pid_x_.pid_calc(0.0f, x_err) * pos_scale_;// 使用相机模式专用 x 位置环做粗调速度。
-
-        vel_x = clamp_value(vel_x, -speed_max_, speed_max_);// 限制 x 方向最大速度。
-
-        vel_y = 0.0f;// y 方向保持零，避免阶段耦合。
-
-        // 世界系锁角执行 x 粗调。
-        chassis.setTargetWorldSpeedLockToRotZMode(vel_x, vel_y, yaw_lock_ * PI / 180.0f);
-
-        // x 误差连续 5 次小于 0.05m 即完成粗调。
-        if (check_stable(x_err, 0.05f, x_count_))
-        {
-            camera_state_ = CAMERA_Z_FINE;// 切换到 z 精锁阶段。
-
-            z_done_ = false;// 清空上次 z 完成位，避免新阶段误触发。
-
-            z_fine_count_ = 0;// 清零 z 精锁判稳计数。
-        }
-
-        break;
-    }
-
-    case CAMERA_Z_FINE:
-    {
-        // z 精锁改为持续闭环：每拍刷新参考并保持请求位。
-        z_ref_ = z_err;
-        z_req_ = true;
-
-        // z_done 与 z 误差同时满足判稳后，才切到 yaw 阶段。
-        if (z_done_ && check_stable(z_err, 0.002f, z_fine_count_))
-        {
-            z_req_ = false;
-            camera_state_ = CAMERA_YAW;
-            yaw_count_ = 0;
-        }
-        else if (!z_done_)
-        {
-            z_fine_count_ = 0;// z 未到位时清零判稳计数，防止跨段累积。
-        }
-
-        // 底盘保持静止并锁航向，专注做 z 精锁。
-        chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
-
-        break;
-    }
-
-    case CAMERA_YAW:
-    {
-        vel_w = camera_pid_yaw_.pid_calc(0.0f, yaw_err) * yaw_scale_;// 使用相机模式专用 yaw 位置环做角度闭环。
-
-        vel_w = clamp_value(vel_w, -omega_max_, omega_max_);// 限制最大角速度为 1rad/s。
-        
-        chassis.setTargetWorldSpeedMode(0.0f, 0.0f, vel_w);// 平移保持零，只做航向收敛。
-
-        // yaw 连续 5 次小于 0.2deg 进入对接阶段。
-        if (check_stable(yaw_err, 0.02f, yaw_count_))
-        {
-            // 进入对接前，将锁角目标更新为当前航向，避免回拉到流程初始航向。
-            yaw_lock_ = yaw;
-
-            camera_state_ = CAMERA_DOCK;// 切换到对接阶段。
-        }
-
-        break;
-    }
-
-    case CAMERA_DOCK:
-    {
-        // 改为 x/y 独立 PID，分别输出两个方向速度。
-        vel_x = camera_pid_x_.pid_calc(0.0f, x_err) * pos_scale_;
-        vel_y = camera_pid_y_.pid_calc(0.0f, y_err) * pos_scale_;
-
-
-        // 锁定当前底盘航向（与底盘内部角度源一致），避免跨角度源导致的固定偏转。
-        chassis.setTargetBodySpeedLockNowRotZMode(vel_x, vel_y);
-
-        // 外部置位 dock_done 后结束对接流程。
-        if (dock_done_)
-        {
-            camera_state_ = CAMERA_DONE;// 切换到完成态。
-        }
-
-        // 结束本阶段处理。
-        break;
-    }
-
-    case CAMERA_DONE:
-    {
-        // 对接完成后保持静止并锁当前航向。
-        chassis.setTargetBodySpeedLockNowRotZMode(0.0f, 0.0f);
-
-        break;
-    }
-
-    default:
-    {
-        // 非法状态时回到武器准备阶段。
-        camera_state_ = CAMERA_WEAPON;
-
-        // 清空请求位。
-        weapon_req_ = false;
-
-        // 清空请求位。
-        z_req_ = false;
-
-        // 停车保护。
-        chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
-
-        // 结束默认分支处理。
-        break;
-    }
     }
 }
 
