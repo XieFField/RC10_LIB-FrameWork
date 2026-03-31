@@ -78,7 +78,7 @@ void Robot_WeaponSage_Setup::loop()
 int CNT=0;
 float traverse_rate=0.0002f;
 float weapon_launch_rate=0.0002f;
-float Kp_traverse=0.2f;
+float Kp_traverse=0.5f;
 
 bool Robot_WeaponSage_Setup::is_new_z(float z_now)
 {
@@ -666,7 +666,7 @@ WeaponSage_InitData_S initData_=
 {
     .max_launchHeight_ =0.329f,
     .max_clawAngle_ = 65.0f,
-    .max_traverseLength_ = 0.450f,
+    .max_traverseLength_ = 0.380f,
 
     .wrist_gearRatio_ = 360.0f,
     .launch_Ratio_ = 0.098482549317147f,
