@@ -476,6 +476,7 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
         return false;
 }
 
+
 bool ArmSetup::state_extStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
