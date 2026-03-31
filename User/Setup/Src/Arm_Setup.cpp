@@ -501,14 +501,26 @@ void ArmSetup::auto_stillnessTwo()
                     auto_ctrl_.start_to_autoctrl = false; //完成一次流程后，重置自动控制启动条件
                     auto_ctrl_.flag.isrecalcPath = false; //重置路径重计算标志
                     auto_ctrl_.now_targetIndex = 1; //防止越界
+                    auto_ctrl_.flag.back_time = 0.0f; //重置返回时间
+                    auto_ctrl_.flag.isbackdone = false; //重置返回完成标志
                 }
                 else
                 {
-                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT; //继续下一个KFS的流程   
-                    auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放行
-                    auto_ctrl_.flag.canChassisStart = false; //重置底盘移动许可
-                    auto_ctrl_.flag.isExtReach = false;
-                    auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
+                    if(!auto_ctrl_.flag.isbackdone)
+                    {
+                        auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds(); //记录返回开始的时间戳
+                        auto_ctrl_.flag.isbackdone = true;
+                    }
+
+                    if(auto_ctrl_.flag.isbackdone && (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time) >= 0.45f)
+                    {
+                        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT; //继续下一个KFS的流程  
+
+                        auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放行
+                        auto_ctrl_.flag.canChassisStart = false; //重置底盘移动许可
+                        auto_ctrl_.flag.isExtReach = false;
+                        auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
+                    }
                 }
             }
             break;

@@ -215,6 +215,9 @@ typedef struct{
         float reach_finishTimeStore = 0.0f; //存储到达目标位置的时间戳
         bool isExtReach = false;
         bool canChassisStart = false; //是否可以开始底盘移动
+
+        bool isbackdone = false; //返回完成标志
+        float back_time = 0.0f; //返回时间
     }flag;
 
 
