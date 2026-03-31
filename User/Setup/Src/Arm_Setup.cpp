@@ -514,6 +514,7 @@ void ArmSetup::auto_stillnessTwo()
 
                     if(auto_ctrl_.flag.isbackdone && (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time) >= 0.45f)
                     {
+                        this->setSuckerStatus(Sucker_Status_E::STOP); //放下第一个KFS后关闭吸盘
                         auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT; //继续下一个KFS的流程  
 
                         auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放行
