@@ -449,8 +449,6 @@ void OmniChassis_Setup::loop()
     // robot_pos_.x += original_point_.x;
     // robot_pos_.y += original_point_.y;
 
-    // Acc_target_yaw_ = Acc_yaw_.plan(target_yaw_);
-
 
     switch (chassis_status_)
     {
@@ -529,7 +527,6 @@ void OmniChassis_Setup::loop()
     case CHASSIS_AUTO_CONTROL_CB:
     {
 
-        this->set_ControlMode(WORLD_SPEED_MODE);
         if (flag == 1)
         {
             flag_reset();
@@ -591,7 +588,6 @@ void OmniChassis_Setup::loop()
 
     case CHASSIS_AUTO_CONTROL_KFS:
     {
-        this->set_ControlMode(WORLD_SPEED_MODE);
         if (flag == 1)
         {
             flag_reset();
@@ -710,17 +706,9 @@ void OmniChassis_Setup::loop()
             ResetAutoControlStates();
         }
 
-        // 获取当前角度
-        float yaw_real_angle = yaw;
-        // float yaw_real_angle = ladar_data_.yaw;
-        yaw_pid_period_count_++;
-        if (yaw_pid_period_count_ >= yaw_pid_period_)
-        {
-            yaw_pid_period_count_ = 0;
-            target_chassis_twist_.yaw_rate = yaw_pid_.pid_calc(target_yaw_, yaw_real_angle);
-        }
-        // this->set_ControlMode(CURRENT_ZERO_MODE);
-        this->set_Target(target_chassis_twist_);
+        float target_yaw_rad = target_yaw_ * PI / 180.0f;
+        chassis.setTargetWorldSpeedLockToRotZMode(target_chassis_twist_.vx,target_chassis_twist_.vy,target_yaw_rad);
+
         break;
     }
 

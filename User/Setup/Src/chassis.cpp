@@ -97,7 +97,7 @@ namespace jia
         omega_z_pid.set_params(omega_z_pid_init_config, 0.0f);
 
         // ³õÊ¼»¯rot_z_pid
-        rot_z_pid.set_params(rot_z_pid_init_config, 0.0f);
+        rot_z_pid.set_params(lock_angle_pid_params, 0.0f);
         rot_z_pid.set_as_circular();
     }
 
@@ -307,7 +307,7 @@ namespace jia
                     if (rot_z_pid_count >= rot_z_pid_period)
                     {
                         rot_z_pid_count = 0;
-                        t.omega_z = rot_z_pid.pid_calc(it.rot_z, input_hwt_rot_z);
+                        t.omega_z = rot_z_pid.pid_calc(radToDegF32(it.rot_z),  radToDegF32(input_hwt_rot_z));
                     }
                 }
                 else
@@ -321,7 +321,7 @@ namespace jia
                 if (rot_z_pid_count >= rot_z_pid_period)
                 {
                     rot_z_pid_count = 0;
-                    t.omega_z = rot_z_pid.pid_calc(it.rot_z, input_hwt_rot_z);
+                    t.omega_z = rot_z_pid.pid_calc(radToDegF32(it.rot_z),  radToDegF32(input_hwt_rot_z));
                 }
             }
             else
@@ -434,7 +434,7 @@ namespace jia
             {
                 printf_period_count = 0;
                 // debug_uart.printf_DMA("%f,%f,%f,%f,%f\r\n", it.omega_z, input_hwt_omega_z, tpid.omega_z, t.w3_omega, c.w3_omega);
-                debug_uart.printf_DMA("%f,%f,%f,%f\r\n", it.rot_z, input_hwt_rot_z, t.omega_z, input_hwt_omega_z);
+                // debug_uart.printf_DMA("%f,%f,%f,%f\r\n", it.rot_z, input_hwt_rot_z, t.omega_z, input_hwt_omega_z);
             }
 
             vTaskDelayUntil(&time_ms, period_ms);
