@@ -45,16 +45,13 @@ class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>
 {
 public:
     OmniChassis_Setup(float wheel_radius, float max_wheel_rpm, float base_length, float side_length, bool three_wheel)
-        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(wheel_radius, max_wheel_rpm, base_length, side_length, three_wheel)
-        ,debug_uart(&huart8)
+        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(wheel_radius, max_wheel_rpm, base_length, side_length, three_wheel), debug_uart(&huart8)
     {
         yaw_pid_.set_as_circular();
     }
 
-
-    OmniChassis_Setup(Chassis_Omni<3>::init_config& config)
-        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(config)
-        ,debug_uart(&huart8)
+    OmniChassis_Setup(Chassis_Omni<3>::init_config &config)
+        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(config), debug_uart(&huart8)
     {
         yaw_pid_.set_as_circular();
     }
@@ -112,6 +109,7 @@ public:
 #endif
         pid_pos_x.set_params(track_pid_params, 0.0f);
         pid_pos_y.set_params(track_pid_params, 0.0f);
+        path_lock_end.set_params(::path_lock_end, 0.0f);
 
         // 相机模式独立 PID，参数使用 APP_PID 中独立配置对象。
         camera_pid_x_.set_params(camera_x_pid_params, 0.0f);
@@ -179,7 +177,7 @@ public:
 
     void set_camera_uart(UART_HandleTypeDef *uart)
     {
-        camera_uart_ = uart; // 设置相机串口句柄。
+        camera_uart_ = uart;  // 设置相机串口句柄。
         camera_init_ = false; // 强制下次进入相机模式时重新初始化串口。
     }
 
@@ -241,7 +239,7 @@ public:
         return z_ref_; // 读取透传给武器层的 z 参考值。
     }
 
-    //由主状态机调用，设置开启武器对接流程
+    // 由主状态机调用，设置开启武器对接流程
     void setWeaponStart(bool isstart)
     {
         weapon_cameraStart = isstart;
@@ -251,7 +249,7 @@ private:
     //-----------------------------------通讯标志位-----------------------------------------//
     bool WeaponSage_END = 0;
 
-//    bool init_flag = false;
+    //    bool init_flag = false;
 
     bool Arm_Start = false;
 
@@ -281,8 +279,9 @@ private:
     Vector2D speed;
     Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
 
-    PID_Position pid_pos_x; // x轴绝对位置PID控制器
-    PID_Position pid_pos_y; // y轴绝对位置PID控制器
+    PID_Position pid_pos_x;     // x轴绝对位置PID控制器
+    PID_Position pid_pos_y;     // y轴绝对位置PID控制器
+    PID_Position path_lock_end; // 停止锁点
 
     PID_Position camera_pid_x_; // 相机模式专用 x 轴位置环。
 
@@ -324,9 +323,9 @@ private:
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
-    
+
     int index_exit = 0;
-    
+
     float MF2_target_yaw_ = 0.0f;
     bool spin_flag = false;
 
@@ -354,10 +353,8 @@ private:
 
     bool init_flag = false;
 
-
     float is_chassis_reverse_ = 1.0f;
-    
-    
+
     //-----------------------------------前馈参数-----------------------------------------//
 
     // 用于前视点差分前馈的“参考点”：
@@ -388,10 +385,10 @@ private:
     float k_damp_ = 0.0f;
     float end_ff_scale_ = 0.35f;
     float end_pid_scale_ = 0.7f;
-    
+
     //-----------------------------------其他参数-----------------------------------------//
 
-    RmPocketData_t airjoy_data_; // 遥控器数据，范围 -1 ~ 1
+    RmPocketData_t airjoy_data_;                            // 遥控器数据，范围 -1 ~ 1
     Camera_Data_t cam_data_dbg_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 调试用相机数据缓存
 
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
@@ -446,16 +443,14 @@ private:
 
     enum Camera_State_E
     {
-        CAMERA_WEAPON, // 流程一：武器预对接姿态阶段。
+        CAMERA_WEAPON,  // 流程一：武器预对接姿态阶段。
         CAMERA_Z_ROUGH, // 流程二：z 粗调阶段。
         CAMERA_X_ROUGH, // 流程三：x 粗调阶段。
-        CAMERA_Z_FINE, // 流程三补充：z 精锁阶段。
-        CAMERA_YAW, // 流程四：yaw 锁定阶段。
-        CAMERA_DOCK, // 流程五：锁角有头对接阶段。
-        CAMERA_DONE, // 流程结束阶段。
+        CAMERA_Z_FINE,  // 流程三补充：z 精锁阶段。
+        CAMERA_YAW,     // 流程四：yaw 锁定阶段。
+        CAMERA_DOCK,    // 流程五：锁角有头对接阶段。
+        CAMERA_DONE,    // 流程结束阶段。
     };
-
-
 
     Camera_State_E camera_state_ = CAMERA_WEAPON; // 相机流程当前阶段。
 
@@ -464,7 +459,6 @@ private:
     UART_HandleTypeDef *camera_uart_ = &huart6; // 相机串口句柄（默认 huart6）。
 
     bool weapon_cameraStart = false; // 主状态机触发相机流程的标志位。
-
 
     bool camera_init_ = false; // 相机串口初始化完成标志。
 
@@ -517,8 +511,6 @@ private:
     float fake_z = 0.08f; // 调试假数据：z 误差输入（米）。
 
     float fake_yaw = 0.0f; // 调试假数据：yaw 误差输入（度）。
-
-
 };
 #endif // __cplusplus
 

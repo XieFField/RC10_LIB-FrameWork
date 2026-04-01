@@ -17,105 +17,6 @@ int last_cout_ladar_data = -1;
 uint32_t chassisstackHighWaterMark = 0;
 extern Chassis chassis;
 
-void OmniChassis_Setup::ResetAutoControlStates(void)
-{
-    // 1) 阻尼项使用上一时刻 v_robot，退出自动流程后必须清零，避免“历史速度”带入下一次任务。
-    v_robot_last_cmd_ = {0.0f, 0.0f};
-
-    // 2) 前馈差分状态一并复位，避免参考点跳变时出现首帧尖峰。
-    ff_diff_inited_ = false;
-    ff_ref_point_last_ = {0.0f, 0.0f};
-    ff_velocity_lpf_ = {0.0f, 0.0f};
-    // ff_last_tick_ms_ = 0;
-}
-
-Vector2D OmniChassis_Setup::ComputeLookaheadDiffFeedforward(bool near_end)
-{
-    // 使用 RTOS tick 估计离散 dt（单位秒）；该方法在嵌入式任务循环中稳定且开销小。
-    // uint32_t now_tick_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    Vector2D v_ff_raw = {0.0f, 0.0f};
-
-    // 首次进入或状态复位后，不做差分，先对齐历史参考点。
-    if (!ff_diff_inited_)
-    {
-        ff_diff_inited_ = true;
-        ff_ref_point_last_ = ff_ref_point_;
-        // ff_last_tick_ms_ = now_tick_ms;
-        ff_velocity_lpf_ = {0.0f, 0.0f};
-        return ff_velocity_lpf_;
-    }
-
-    // 计算 dt，防止 0 或过小导致差分放大。
-    float dt_s = getdt();
-    if (dt_s <= 0.0f)
-    {
-        dt_s = control_period_s_;
-    }
-    if (dt_s < ff_dt_min_s_)
-    {
-        dt_s = ff_dt_min_s_;
-    }
-    if (dt_s > ff_dt_max_s_)
-    {
-        dt_s = ff_dt_max_s_;
-    }
-
-    // 参考点差分前馈：
-    // p_ref 由 Path_correction 更新，常规阶段为 lookaheadPt，终点阶段为 endPt。
-    // 这样可在不依赖 planspeed 的前提下，给 PID 额外“提前量”。
-    v_ff_raw = (ff_ref_point_ - ff_ref_point_last_) * (kff_la_ / dt_s);
-
-    // 一阶低通：抑制前视点参数 t 跳变引起的速度尖峰。
-    ff_velocity_lpf_ = ff_velocity_lpf_ * (1.0f - ff_lpf_alpha_) + v_ff_raw * ff_lpf_alpha_;
-
-    // 限幅：前馈只是加速辅助，不能反客为主压过 PID 闭环。
-    if (ff_velocity_lpf_.magnitude() > max_ff_speed_)
-    {
-        ff_velocity_lpf_ = ff_velocity_lpf_.normalize() * max_ff_speed_;
-    }
-
-    // 终点段衰减：减少“冲终点”风险，把控制权更多交给 PID 位置吸附。
-    Vector2D v_ff = ff_velocity_lpf_;
-    if (near_end)
-    {
-        v_ff = v_ff * end_ff_scale_;
-    }
-
-    // 更新历史量，供下一周期差分。
-    ff_ref_point_last_ = ff_ref_point_;
-    // ff_last_tick_ms_ = now_tick_ms;
-
-    return v_ff;
-}
-
-Vector2D OmniChassis_Setup::ComposeRobotVelocity(const Vector2D &v_pid, const Vector2D &v_ff_ref, bool near_end)
-{
-    float pid_scale = 1.0f;
-    float max_speed = max_robot_speed_;
-
-    if (near_end)
-    {
-        pid_scale = end_pid_scale_;
-        max_speed = max_robot_speed_end_;
-    }
-
-    Vector2D v_pid_out = v_pid * pid_scale;
-    // v_ff_ref 已经在 ComputeLookaheadDiffFeedforward 中完成了增益、滤波、限幅和终点衰减。
-    Vector2D v_ff = v_ff_ref;
-
-    Vector2D v_damp = v_robot_last_cmd_ * (-k_damp_);
-
-    // 最终速度合成：闭环主导 + 前馈提速 + 历史速度阻尼。
-    Vector2D v_robot = v_pid_out + v_ff + v_damp;
-    if (v_robot.magnitude() > max_speed)
-    {
-        v_robot = v_robot.normalize() * max_speed;
-    }
-
-    v_robot_last_cmd_ = v_robot;
-    return v_robot;
-}
-
 float OmniChassis_Setup::clamp_value(float value, float low, float high)
 {
     // 限制标量上下界，避免命令超范围。
@@ -138,11 +39,11 @@ float OmniChassis_Setup::clamp_value(float value, float low, float high)
 
 float OmniChassis_Setup::avg_z(float z_now)
 {
-    z_sum_ -= z_buf_[z_idx_];// 从累计和中移除当前槽位旧值。
+    z_sum_ -= z_buf_[z_idx_]; // 从累计和中移除当前槽位旧值。
 
-    z_buf_[z_idx_] = z_now;// 写入当前 z 新样本。
+    z_buf_[z_idx_] = z_now; // 写入当前 z 新样本。
 
-    z_sum_ += z_now;// 把新值加入累计和。
+    z_sum_ += z_now; // 把新值加入累计和。
 
     // 环形下标前进到下一个槽位。
     z_idx_++;
@@ -162,8 +63,8 @@ float OmniChassis_Setup::avg_z(float z_now)
     {
         return z_now;
     }
-    
-    return z_sum_ / static_cast<float>(z_num_);// 返回 20 点滑动平均（前 20 次为有效样本均值）。
+
+    return z_sum_ / static_cast<float>(z_num_); // 返回 20 点滑动平均（前 20 次为有效样本均值）。
 }
 
 bool OmniChassis_Setup::check_stable(float error, float limit, uint8_t &count)
@@ -186,23 +87,23 @@ bool OmniChassis_Setup::check_stable(float error, float limit, uint8_t &count)
 
 Vector2D OmniChassis_Setup::calc_vector(float x_err, float y_err, float max_vel)
 {
-    Vector2D err_vec = {x_err, y_err};// 组合二维误差向量，统一做向量闭环。
+    Vector2D err_vec = {x_err, y_err}; // 组合二维误差向量，统一做向量闭环。
 
-    float err_len = err_vec.magnitude();// 计算误差模长，作为标量闭环输入。
+    float err_len = err_vec.magnitude(); // 计算误差模长，作为标量闭环输入。
 
     // 误差极小时直接输出零速度。
     if (err_len < 1e-6f)
     {
-         return {0.0f, 0.0f};// 返回零向量防止归一化数值问题。
+        return {0.0f, 0.0f}; // 返回零向量防止归一化数值问题。
     }
 
-    float vel_len = camera_pid_vec_.pid_calc(0.0f, err_len) * pos_scale_;// 用相机模式专用位置环计算速度模量。
+    float vel_len = camera_pid_vec_.pid_calc(0.0f, err_len) * pos_scale_; // 用相机模式专用位置环计算速度模量。
 
-    vel_len = _tool_Abs(vel_len);// 速度模量取绝对值后再做上限约束。
+    vel_len = _tool_Abs(vel_len); // 速度模量取绝对值后再做上限约束。
 
-    vel_len = clamp_value(vel_len, 0.0f, max_vel);// 限制最大速度模量。
+    vel_len = clamp_value(vel_len, 0.0f, max_vel); // 限制最大速度模量。
 
-    Vector2D vel_vec = err_vec.normalize() * (-vel_len);// 误差方向取反，得到朝目标收敛的速度方向。
+    Vector2D vel_vec = err_vec.normalize() * (-vel_len); // 误差方向取反，得到朝目标收敛的速度方向。
 
     return vel_vec;
 }
@@ -220,7 +121,7 @@ void OmniChassis_Setup::camera_ctrl(void)
     // 首次进入时按当前航向上锁，避免流程中航向漂移。
     if (camera_state_ == CAMERA_WEAPON && !weapon_req_ && !z_req_)
     {
-        yaw_lock_ = yaw;// 保存当前世界航向角（度）。
+        yaw_lock_ = yaw; // 保存当前世界航向角（度）。
     }
 
     cam_data_dbg_ = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -241,196 +142,195 @@ void OmniChassis_Setup::camera_ctrl(void)
     // 首次使用时初始化相机串口模块。
     if (!camera_init_)
     {
-        camera_ = Module_Camera::GetInstance(camera_uart_);// 获取相机单例对象。
+        camera_ = Module_Camera::GetInstance(camera_uart_); // 获取相机单例对象。
 
-        camera_->InitUART();// 初始化相机串口接收。
+        camera_->InitUART(); // 初始化相机串口接收。
 
-        camera_init_ = true;// 标记初始化完成。
+        camera_init_ = true; // 标记初始化完成。
     }
 
-    cam_data_dbg_ = camera_->GetCameraData();// 读取最新一帧相机数据。
+    cam_data_dbg_ = camera_->GetCameraData(); // 读取最新一帧相机数据。
 #endif
 
-    float x_err = cam_data_dbg_.x - camera_x_ref_;// 提取相对 x 目标值的误差（右为正，单位米）。
+    float x_err = cam_data_dbg_.x - camera_x_ref_; // 提取相对 x 目标值的误差（右为正，单位米）。
 
-    float y_err = cam_data_dbg_.y - camera_y_ref_;// 提取相对 y 目标值的误差（前为正，单位米）。
+    float y_err = cam_data_dbg_.y - camera_y_ref_; // 提取相对 y 目标值的误差（前为正，单位米）。
 
-    float z_err = avg_z(cam_data_dbg_.z);// 提取并滤波 z 轴误差（20 次均值，单位米）。
+    float z_err = avg_z(cam_data_dbg_.z); // 提取并滤波 z 轴误差（20 次均值，单位米）。
 
-    float yaw_err = cam_data_dbg_.yaw;// 提取 yaw 误差（角度，顺时针为正）。
+    float yaw_err = cam_data_dbg_.yaw; // 提取 yaw 误差（角度，顺时针为正）。
 
-    float vel_x = 0.0f;// 默认输出清零，避免跨阶段残留速度
+    float vel_x = 0.0f; // 默认输出清零，避免跨阶段残留速度
 
     float vel_y = 0.0f; // 默认输出清零，避免跨阶段残留速度。
 
-    float vel_w = 0.0f;// 默认输出清零，避免跨阶段残留角速度。
+    float vel_w = 0.0f; // 默认输出清零，避免跨阶段残留角速度。
 
     // 根据相机流程阶段执行对应控制。
     switch (camera_state_)
     {
-        case CAMERA_WEAPON:
+    case CAMERA_WEAPON:
+    {
+        weapon_req_ = true; // 请求武器执行夹爪/导轨/腕部预对接姿态。
+
+        z_req_ = false; // 此阶段不请求 z 调整。
+
+        // 保持底盘静止并锁定当前航向。
+        chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
+
+        // 武器到位后进入 z 轴粗调阶段。
+        if (weapon_done_)
         {
-            weapon_req_ = true;// 请求武器执行夹爪/导轨/腕部预对接姿态。
+            weapon_req_ = false; // 关闭武器准备请求位。
 
-            z_req_ = false;// 此阶段不请求 z 调整。
+            camera_state_ = CAMERA_Z_ROUGH; // 切换到 z 粗调状态。
 
-            // 保持底盘静止并锁定当前航向。
-            chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
+            z_done_ = false; // 清空上次 z 完成位，避免新阶段误触发。
 
-            // 武器到位后进入 z 轴粗调阶段。
-            if (weapon_done_)
-            {
-                weapon_req_ = false;// 关闭武器准备请求位。
-
-                camera_state_ = CAMERA_Z_ROUGH;// 切换到 z 粗调状态。
-
-                z_done_ = false;// 清空上次 z 完成位，避免新阶段误触发。
-
-                z_rough_count_ = 0;// 清零 z 粗调判稳计数。
-            }
-
-            break;
+            z_rough_count_ = 0; // 清零 z 粗调判稳计数。
         }
 
-        case CAMERA_Z_ROUGH:
+        break;
+    }
+
+    case CAMERA_Z_ROUGH:
+    {
+        // z 粗调改为持续闭环：每拍刷新参考并保持请求位。
+        z_ref_ = z_err;
+        z_req_ = true;
+
+        // z_done 与 z 误差同时满足判稳后，才切到 x 粗调。
+        if (z_done_ && check_stable(z_err, 0.002f, z_rough_count_))
         {
-            // z 粗调改为持续闭环：每拍刷新参考并保持请求位。
-            z_ref_ = z_err;
-            z_req_ = true;
-
-            // z_done 与 z 误差同时满足判稳后，才切到 x 粗调。
-            if (z_done_ && check_stable(z_err, 0.002f, z_rough_count_))
-            {
-                z_req_ = false;
-                camera_state_ = CAMERA_X_ROUGH;
-                x_count_ = 0;
-            }
-            else if (!z_done_)
-            {
-                z_rough_count_ = 0;// z 未到位时清零判稳计数，防止跨段累积。
-            }
-
-            // 底盘保持静止并锁航向。
-            chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
-
-            // 结束本阶段处理。
-            break;
-        }
-
-        case CAMERA_X_ROUGH:
-        {
-            
-            vel_x = camera_pid_x_.pid_calc(0.0f, x_err) * pos_scale_;// 使用相机模式专用 x 位置环做粗调速度。
-
-            vel_x = clamp_value(vel_x, -speed_max_, speed_max_);// 限制 x 方向最大速度。
-
-            vel_y = 0.0f;// y 方向保持零，避免阶段耦合。
-
-            // 世界系锁角执行 x 粗调。
-            chassis.setTargetWorldSpeedLockToRotZMode(vel_x, vel_y, yaw_lock_ * PI / 180.0f);
-
-            // x 误差连续 5 次小于 0.05m 即完成粗调。
-            if (check_stable(x_err, 0.05f, x_count_))
-            {
-                camera_state_ = CAMERA_Z_FINE;// 切换到 z 精锁阶段。
-
-                z_done_ = false;// 清空上次 z 完成位，避免新阶段误触发。
-
-                z_fine_count_ = 0;// 清零 z 精锁判稳计数。
-            }
-
-            break;
-        }
-
-        case CAMERA_Z_FINE:
-        {
-            // z 精锁改为持续闭环：每拍刷新参考并保持请求位。
-            z_ref_ = z_err;
-            z_req_ = true;
-
-            // z_done 与 z 误差同时满足判稳后，才切到 yaw 阶段。
-            if (z_done_ && check_stable(z_err, 0.002f, z_fine_count_))
-            {
-                z_req_ = false;
-                camera_state_ = CAMERA_YAW;
-                yaw_count_ = 0;
-            }
-            else if (!z_done_)
-            {
-                z_fine_count_ = 0;// z 未到位时清零判稳计数，防止跨段累积。
-            }
-
-            // 底盘保持静止并锁航向，专注做 z 精锁。
-            chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
-
-            break;
-        }
-
-        case CAMERA_YAW:
-        {
-            vel_w = camera_pid_yaw_.pid_calc(0.0f, yaw_err) * yaw_scale_;// 使用相机模式专用 yaw 位置环做角度闭环。
-
-            vel_w = clamp_value(vel_w, -omega_max_, omega_max_);// 限制最大角速度为 1rad/s。
-            
-            chassis.setTargetWorldSpeedMode(0.0f, 0.0f, vel_w);// 平移保持零，只做航向收敛。
-
-            // yaw 连续 5 次小于 0.2deg 进入对接阶段。
-            if (check_stable(yaw_err, 0.02f, yaw_count_))
-            {
-                // 进入对接前，将锁角目标更新为当前航向，避免回拉到流程初始航向。
-                yaw_lock_ = yaw;
-
-                camera_state_ = CAMERA_DOCK;// 切换到对接阶段。
-            }
-
-            break;
-        }
-
-        case CAMERA_DOCK:
-        {
-            // 改为 x/y 独立 PID，分别输出两个方向速度。
-            vel_x = camera_pid_x_.pid_calc(0.0f, x_err) * pos_scale_;
-            vel_y = camera_pid_y_.pid_calc(0.0f, y_err) * pos_scale_;
-
-
-            // 锁定当前底盘航向（与底盘内部角度源一致），避免跨角度源导致的固定偏转。
-            chassis.setTargetBodySpeedLockNowRotZMode(vel_x, vel_y);
-
-            // 外部置位 dock_done 后结束对接流程。
-            if (dock_done_)
-            {
-                camera_state_ = CAMERA_DONE;// 切换到完成态。
-            }
-
-            // 结束本阶段处理。
-            break;
-        }
-
-        case CAMERA_DONE:
-        {
-            // 对接完成后保持静止并锁当前航向。
-            chassis.setTargetBodySpeedLockNowRotZMode(0.0f, 0.0f);
-            this->weapon_cameraStart = false;// 复位主状态机触发位，准备下一次对接流程。
-            break;
-        }
-
-        default:
-        {
-            // 非法状态时回到武器准备阶段。
-            camera_state_ = CAMERA_WEAPON;
-
-            // 清空请求位。
-            weapon_req_ = false;
-            this->weapon_cameraStart = false;
-            // 清空请求位。
             z_req_ = false;
-
-            // 停车保护。
-            chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
-
-            // 结束默认分支处理。
-            break;
+            camera_state_ = CAMERA_X_ROUGH;
+            x_count_ = 0;
         }
+        else if (!z_done_)
+        {
+            z_rough_count_ = 0; // z 未到位时清零判稳计数，防止跨段累积。
+        }
+
+        // 底盘保持静止并锁航向。
+        chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
+
+        // 结束本阶段处理。
+        break;
+    }
+
+    case CAMERA_X_ROUGH:
+    {
+
+        vel_x = camera_pid_x_.pid_calc(0.0f, x_err) * pos_scale_; // 使用相机模式专用 x 位置环做粗调速度。
+
+        vel_x = clamp_value(vel_x, -speed_max_, speed_max_); // 限制 x 方向最大速度。
+
+        vel_y = 0.0f; // y 方向保持零，避免阶段耦合。
+
+        // 世界系锁角执行 x 粗调。
+        chassis.setTargetWorldSpeedLockToRotZMode(vel_x, vel_y, yaw_lock_ * PI / 180.0f);
+
+        // x 误差连续 5 次小于 0.05m 即完成粗调。
+        if (check_stable(x_err, 0.05f, x_count_))
+        {
+            camera_state_ = CAMERA_Z_FINE; // 切换到 z 精锁阶段。
+
+            z_done_ = false; // 清空上次 z 完成位，避免新阶段误触发。
+
+            z_fine_count_ = 0; // 清零 z 精锁判稳计数。
+        }
+
+        break;
+    }
+
+    case CAMERA_Z_FINE:
+    {
+        // z 精锁改为持续闭环：每拍刷新参考并保持请求位。
+        z_ref_ = z_err;
+        z_req_ = true;
+
+        // z_done 与 z 误差同时满足判稳后，才切到 yaw 阶段。
+        if (z_done_ && check_stable(z_err, 0.002f, z_fine_count_))
+        {
+            z_req_ = false;
+            camera_state_ = CAMERA_YAW;
+            yaw_count_ = 0;
+        }
+        else if (!z_done_)
+        {
+            z_fine_count_ = 0; // z 未到位时清零判稳计数，防止跨段累积。
+        }
+
+        // 底盘保持静止并锁航向，专注做 z 精锁。
+        chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
+
+        break;
+    }
+
+    case CAMERA_YAW:
+    {
+        vel_w = camera_pid_yaw_.pid_calc(0.0f, yaw_err) * yaw_scale_; // 使用相机模式专用 yaw 位置环做角度闭环。
+
+        vel_w = clamp_value(vel_w, -omega_max_, omega_max_); // 限制最大角速度为 1rad/s。
+
+        chassis.setTargetWorldSpeedMode(0.0f, 0.0f, vel_w); // 平移保持零，只做航向收敛。
+
+        // yaw 连续 5 次小于 0.2deg 进入对接阶段。
+        if (check_stable(yaw_err, 0.02f, yaw_count_))
+        {
+            // 进入对接前，将锁角目标更新为当前航向，避免回拉到流程初始航向。
+            yaw_lock_ = yaw;
+
+            camera_state_ = CAMERA_DOCK; // 切换到对接阶段。
+        }
+
+        break;
+    }
+
+    case CAMERA_DOCK:
+    {
+        // 改为 x/y 独立 PID，分别输出两个方向速度。
+        vel_x = camera_pid_x_.pid_calc(0.0f, x_err) * pos_scale_;
+        vel_y = camera_pid_y_.pid_calc(0.0f, y_err) * pos_scale_;
+
+        // 锁定当前底盘航向（与底盘内部角度源一致），避免跨角度源导致的固定偏转。
+        chassis.setTargetBodySpeedLockNowRotZMode(vel_x, vel_y);
+
+        // 外部置位 dock_done 后结束对接流程。
+        if (dock_done_)
+        {
+            camera_state_ = CAMERA_DONE; // 切换到完成态。
+        }
+
+        // 结束本阶段处理。
+        break;
+    }
+
+    case CAMERA_DONE:
+    {
+        // 对接完成后保持静止并锁当前航向。
+        chassis.setTargetBodySpeedLockNowRotZMode(0.0f, 0.0f);
+        this->weapon_cameraStart = false; // 复位主状态机触发位，准备下一次对接流程。
+        break;
+    }
+
+    default:
+    {
+        // 非法状态时回到武器准备阶段。
+        camera_state_ = CAMERA_WEAPON;
+
+        // 清空请求位。
+        weapon_req_ = false;
+        this->weapon_cameraStart = false;
+        // 清空请求位。
+        z_req_ = false;
+
+        // 停车保护。
+        chassis.setTargetWorldSpeedLockToRotZMode(0.0f, 0.0f, yaw_lock_ * PI / 180.0f);
+
+        // 结束默认分支处理。
+        break;
+    }
     }
 }
 
@@ -439,8 +339,8 @@ void OmniChassis_Setup::loop()
     if (!init_flag)
         return;
 
-//	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-	
+    //	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
@@ -448,7 +348,6 @@ void OmniChassis_Setup::loop()
     robot_pos_.y = ladar_data_.y;
     // robot_pos_.x += original_point_.x;
     // robot_pos_.y += original_point_.y;
-
 
     switch (chassis_status_)
     {
@@ -533,7 +432,7 @@ void OmniChassis_Setup::loop()
             flag = 0;
             flag_run = 1;
             Clamping_Bar_Selection_Planning();
-            WeaponSage_END =0;
+            WeaponSage_END = 0;
         }
         if (flag_run == 1)
         {
@@ -581,7 +480,7 @@ void OmniChassis_Setup::loop()
         }
 
         float target_yaw_rad = target_yaw_ * PI / 180.0f;
-        chassis.setTargetWorldSpeedLockToRotZMode(target_chassis_twist_.vx,target_chassis_twist_.vy,target_yaw_rad);
+        chassis.setTargetWorldSpeedLockToRotZMode(target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
 
         break;
     }
@@ -615,7 +514,7 @@ void OmniChassis_Setup::loop()
                         // target_yaw_=MF2_target_yaw_;
                         Spin_Start = true;
                     }
-                    else if (Spin_Start == true)
+                    else if (Spin_Start == true) // 判断退出
                     {
                         if (_tool_Abs(yaw - target_yaw_) < 2.0f)
                         {
@@ -630,8 +529,11 @@ void OmniChassis_Setup::loop()
                     {
                         if (target_yaw_ == 90.0f)
                         {
-                            target_yaw_ = MF2_target_yaw_;
-                            spin_down_flag = false;
+                            if (robot_pos_.y <= 2.55f) // 延迟旋转
+                            {
+                                target_yaw_ = MF2_target_yaw_;
+                                spin_down_flag = false;
+                            }
                         }
                         else if (MF1_pos_.x == curve.Get_Start_point().x && MF1_pos_.y == curve.Get_Start_point().y)
                         {
@@ -678,8 +580,11 @@ void OmniChassis_Setup::loop()
                 }
                 else
                 {
-                    target_chassis_twist_.vx = 0.0f;
-                    target_chassis_twist_.vy = 0.0f;
+                    Vector2D lock_point = curve.Get_Start_point();
+                    float lock_err = (robot_pos_ - lock_point).magnitude();
+                    speed = path_lock_end.pid_calc(lock_err, 0.0f) * (robot_pos_ - lock_point).normalize();
+                    target_chassis_twist_.vx = speed.x;
+                    target_chassis_twist_.vy = speed.y;
                 }
             }
             else
@@ -707,7 +612,7 @@ void OmniChassis_Setup::loop()
         }
 
         float target_yaw_rad = target_yaw_ * PI / 180.0f;
-        chassis.setTargetWorldSpeedLockToRotZMode(target_chassis_twist_.vx,target_chassis_twist_.vy,target_yaw_rad);
+        chassis.setTargetWorldSpeedLockToRotZMode(target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
 
         break;
     }
@@ -715,7 +620,7 @@ void OmniChassis_Setup::loop()
     case CHASSIS_STOP:
     {
         chassis.setWheelTorqueFreeMode();
-        
+
         break;
     }
 
@@ -733,7 +638,7 @@ void OmniChassis_Setup::loop()
         else
             target_chassis_twist_.vy = 0.0f;
 
-        chassis.setTargetWorldSpeedMode(target_chassis_twist_.vx,target_chassis_twist_.vy,target_chassis_twist_.yaw_rate);
+        chassis.setTargetWorldSpeedMode(target_chassis_twist_.vx, target_chassis_twist_.vy, target_chassis_twist_.yaw_rate);
 
         break;
     }
@@ -764,7 +669,6 @@ void OmniChassis_Setup::loop()
     }
 
 #endif
-
 
     // Point2D fk_speed;
     // fk_speed.x = chassis.getTargetWorldVelX();
@@ -900,7 +804,7 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
     }
 
     // 判断是否需要转向
-    if (target_yaw_ == MF2_target_yaw_ || MF2==0.0f)
+    if (target_yaw_ == MF2_target_yaw_ || MF2 == 0.0f)
     {
         spin_flag = false;
     }
@@ -1112,6 +1016,105 @@ void OmniChassis_Setup::flag_reset(void)
     MF1_finish = false;
     get_spin_flag = false;
     Spin_Start = false;
+}
+
+void OmniChassis_Setup::ResetAutoControlStates(void)
+{
+    // 1) 阻尼项使用上一时刻 v_robot，退出自动流程后必须清零，避免“历史速度”带入下一次任务。
+    v_robot_last_cmd_ = {0.0f, 0.0f};
+
+    // 2) 前馈差分状态一并复位，避免参考点跳变时出现首帧尖峰。
+    ff_diff_inited_ = false;
+    ff_ref_point_last_ = {0.0f, 0.0f};
+    ff_velocity_lpf_ = {0.0f, 0.0f};
+    // ff_last_tick_ms_ = 0;
+}
+
+Vector2D OmniChassis_Setup::ComputeLookaheadDiffFeedforward(bool near_end)
+{
+    // 使用 RTOS tick 估计离散 dt（单位秒）；该方法在嵌入式任务循环中稳定且开销小。
+    // uint32_t now_tick_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+    Vector2D v_ff_raw = {0.0f, 0.0f};
+
+    // 首次进入或状态复位后，不做差分，先对齐历史参考点。
+    if (!ff_diff_inited_)
+    {
+        ff_diff_inited_ = true;
+        ff_ref_point_last_ = ff_ref_point_;
+        // ff_last_tick_ms_ = now_tick_ms;
+        ff_velocity_lpf_ = {0.0f, 0.0f};
+        return ff_velocity_lpf_;
+    }
+
+    // 计算 dt，防止 0 或过小导致差分放大。
+    float dt_s = getdt();
+    if (dt_s <= 0.0f)
+    {
+        dt_s = control_period_s_;
+    }
+    if (dt_s < ff_dt_min_s_)
+    {
+        dt_s = ff_dt_min_s_;
+    }
+    if (dt_s > ff_dt_max_s_)
+    {
+        dt_s = ff_dt_max_s_;
+    }
+
+    // 参考点差分前馈：
+    // p_ref 由 Path_correction 更新，常规阶段为 lookaheadPt，终点阶段为 endPt。
+    // 这样可在不依赖 planspeed 的前提下，给 PID 额外“提前量”。
+    v_ff_raw = (ff_ref_point_ - ff_ref_point_last_) * (kff_la_ / dt_s);
+
+    // 一阶低通：抑制前视点参数 t 跳变引起的速度尖峰。
+    ff_velocity_lpf_ = ff_velocity_lpf_ * (1.0f - ff_lpf_alpha_) + v_ff_raw * ff_lpf_alpha_;
+
+    // 限幅：前馈只是加速辅助，不能反客为主压过 PID 闭环。
+    if (ff_velocity_lpf_.magnitude() > max_ff_speed_)
+    {
+        ff_velocity_lpf_ = ff_velocity_lpf_.normalize() * max_ff_speed_;
+    }
+
+    // 终点段衰减：减少“冲终点”风险，把控制权更多交给 PID 位置吸附。
+    Vector2D v_ff = ff_velocity_lpf_;
+    if (near_end)
+    {
+        v_ff = v_ff * end_ff_scale_;
+    }
+
+    // 更新历史量，供下一周期差分。
+    ff_ref_point_last_ = ff_ref_point_;
+    // ff_last_tick_ms_ = now_tick_ms;
+
+    return v_ff;
+}
+
+Vector2D OmniChassis_Setup::ComposeRobotVelocity(const Vector2D &v_pid, const Vector2D &v_ff_ref, bool near_end)
+{
+    float pid_scale = 1.0f;
+    float max_speed = max_robot_speed_;
+
+    if (near_end)
+    {
+        pid_scale = end_pid_scale_;
+        max_speed = max_robot_speed_end_;
+    }
+
+    Vector2D v_pid_out = v_pid * pid_scale;
+    // v_ff_ref 已经在 ComputeLookaheadDiffFeedforward 中完成了增益、滤波、限幅和终点衰减。
+    Vector2D v_ff = v_ff_ref;
+
+    Vector2D v_damp = v_robot_last_cmd_ * (-k_damp_);
+
+    // 最终速度合成：闭环主导 + 前馈提速 + 历史速度阻尼。
+    Vector2D v_robot = v_pid_out + v_ff + v_damp;
+    if (v_robot.magnitude() > max_speed)
+    {
+        v_robot = v_robot.normalize() * max_speed;
+    }
+
+    v_robot_last_cmd_ = v_robot;
+    return v_robot;
 }
 
 //=========================================================================================
