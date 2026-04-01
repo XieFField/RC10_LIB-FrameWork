@@ -1,6 +1,6 @@
 /**
  * @file Arm_setup.h
- * @author XieFField  70er66
+ * @author XieFField  
  * @brief 串联臂运动控制实现
  *        KFS索引采用1 ~ 12 使用时候 index = KFSNum -1
  * @version 1.0
@@ -215,6 +215,9 @@ typedef struct{
         float reach_finishTimeStore = 0.0f; //存储到达目标位置的时间戳
         bool isExtReach = false;
         bool canChassisStart = false; //是否可以开始底盘移动
+
+        bool isbackdone = false; //返回完成标志
+        float back_time = 0.0f; //返回时间
     }flag;
 
 

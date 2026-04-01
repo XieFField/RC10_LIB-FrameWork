@@ -39,12 +39,14 @@ extern "C" {
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 #include "APP_PID.h"
+#include "APP_Utils.h"
 #include "debug_setup.h"
 #include "Module_Air_joy.h"
 #include "Module_Position.h"
 #include "Locate_Setup.h"
-#include "SystemDetect_Task.h"
+#include "system_detect_task.h"
 #include "Module_HWT.h"
+#include "Module_JY61.h"
 
 /*==============Controller===============*/
 #include "FSM_Controller.h"
@@ -52,11 +54,12 @@ extern "C" {
 #include "omni_chassisSetup.h"
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
+#include "chassis.h"
 #if SPEEDPLANNER_DEMO_DEBUG
     #include "speedplanner_demo.h"
 #endif
 
-
+#include "Module_Camera.h"
 #include "Module_Position.h"
 #include "Module_LaserPosition.h"
 #if ARM_DEMO_DEBUG
@@ -78,15 +81,28 @@ public:
     {
         for(;;)
         {
-            a++;
-            osDelay(1000);
+            osDelay(50);
         }
     }
 
 int a = 0;
+	
 };
 
-
+//class IMU_test :public RtosTask
+//{
+//	public:
+//		IMU_test():RtosTask("IMU_test\0",50){}
+//	void init()
+//	{
+//	this->start(osPriorityHigh, 512);
+//	}
+//	private:
+//	void loop() override
+//	{
+//		int a=0;
+//	}
+//};
 
 
 

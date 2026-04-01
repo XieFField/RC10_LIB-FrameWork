@@ -1,7 +1,7 @@
 /**
  * @file AutoCtrler.h
  * @author XieFField
- * @brief 自动控制相关
+ * @brief 梅林自动控制相关
  * @version 1.0
  *          优化MF_AutoCtrler，规范入口位置。
  *          采用右手系，Y轴为基准0度，逆时针旋转正方向

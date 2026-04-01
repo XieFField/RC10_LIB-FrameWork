@@ -28,6 +28,7 @@ extern "C"
 #include "APP_debugTool.h"
 #include "usart.h"
 #include "Module_Position.h"
+#include "Module_Camera.h"
 #include "APP_PID.h"
 #include "Locate_Setup.h"
 #include "BSP_USB_UART_Driver.h"
@@ -37,25 +38,62 @@ extern "C"
 #include "APP_Speedplanner.h"
 #include "APP_Bezier_Curve.h"
 #include "AutoCtrler.h"
+#include "chassis.h"
 
 #define debug_ladar 0
 class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>
 {
 public:
     OmniChassis_Setup(float wheel_radius, float max_wheel_rpm, float base_length, float side_length, bool three_wheel)
-        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(wheel_radius, max_wheel_rpm, base_length, side_length, three_wheel), debug_uart(&huart8)
+        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(wheel_radius, max_wheel_rpm, base_length, side_length, three_wheel)
+        ,debug_uart(&huart8)
     {
         yaw_pid_.set_as_circular();
     }
 
-    OmniChassis_Setup(Chassis_Omni<3>::init_config &config)
-        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(config), debug_uart(&huart8)
+
+    OmniChassis_Setup(Chassis_Omni<3>::init_config& config)
+        : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(config)
+        ,debug_uart(&huart8)
     {
         yaw_pid_.set_as_circular();
     }
 
     void setChassisStatus(CHASSIS_Status_E status)
     {
+        // 进入相机模式时，重置 z 均值滤波器，避免历史样本影响首段控制。
+        if (status == CHASSIS_CAMERA && chassis_status_ != CHASSIS_CAMERA)
+        {
+            z_sum_ = 0.0f;
+            z_idx_ = 0;
+            z_num_ = 0;
+            for (uint8_t i = 0; i < 20; i++)
+            {
+                z_buf_[i] = 0.0f;
+            }
+        }
+
+        // 退出相机模式时，清空握手位、阶段状态与滤波状态，防止下次重入残留。
+        if (status != CHASSIS_CAMERA)
+        {
+            weapon_req_ = false;
+            z_req_ = false;
+            z_ref_ = 0.0f;
+            camera_state_ = CAMERA_WEAPON;
+            z_rough_count_ = 0;
+            x_count_ = 0;
+            z_fine_count_ = 0;
+            yaw_count_ = 0;
+            z_sum_ = 0.0f;
+            z_idx_ = 0;
+            z_num_ = 0;
+            for (uint8_t i = 0; i < 20; i++)
+            {
+                z_buf_[i] = 0.0f;
+            }
+        }
+
+        // 最后写入底盘总状态。
         chassis_status_ = status;
     }
 
@@ -74,6 +112,13 @@ public:
 #endif
         pid_pos_x.set_params(track_pid_params, 0.0f);
         pid_pos_y.set_params(track_pid_params, 0.0f);
+
+        // 相机模式独立 PID，参数使用 APP_PID 中独立配置对象。
+        camera_pid_x_.set_params(camera_x_pid_params, 0.0f);
+        camera_pid_y_.set_params(camera_y_pid_params, 0.0f);
+        camera_pid_vec_.set_params(camera_vec_pid_params, 0.0f);
+        camera_pid_yaw_.set_params(camera_yaw_pid_params, 10000.0f);
+        camera_pid_yaw_.set_as_circular();
 
         this->start(osPriorityHigh, 1024);
         //        setTargetKFS(3);
@@ -132,11 +177,81 @@ public:
         MF2 = KFS2;
     }
 
+    void set_camera_uart(UART_HandleTypeDef *uart)
+    {
+        camera_uart_ = uart; // 设置相机串口句柄。
+        camera_init_ = false; // 强制下次进入相机模式时重新初始化串口。
+    }
+
+    void set_camera_limit(float speed_max, float omega_max)
+    {
+        speed_max_ = speed_max; // 设置相机模式平移速度上限（m/s）。
+        omega_max_ = omega_max; // 设置相机模式角速度上限（rad/s）。
+    }
+
+    void set_camera_scale(float pos_scale, float yaw_scale)
+    {
+        pos_scale_ = pos_scale; // 设置相机模式位置环输出缩放系数。
+        yaw_scale_ = yaw_scale; // 设置相机模式航向环输出缩放系数。
+    }
+
+    void set_camera_xy_ref(float x_ref, float y_ref)
+    {
+        camera_x_ref_ = x_ref; // 设置相机模式 x 轴目标值（米）。
+        camera_y_ref_ = y_ref; // 设置相机模式 y 轴目标值（米）。
+    }
+
+    void set_camera_y_ref(float y_ref)
+    {
+        camera_y_ref_ = y_ref; // 设置相机模式 y 轴目标值（米）。
+    }
+
+    float get_camera_y_ref() const
+    {
+        return camera_y_ref_; // 读取相机模式 y 轴目标值（米）。
+    }
+
+    void set_weapon_done(bool done)
+    {
+        weapon_done_ = done; // 写入武器预对接完成反馈位。
+    }
+
+    void set_z_done(bool done)
+    {
+        z_done_ = done; // 写入武器 z 调整完成反馈位。
+    }
+
+    void set_dock_done(bool done)
+    {
+        dock_done_ = done; // 写入外部对接完成标志位。
+    }
+
+    bool get_weapon_req() const
+    {
+        return weapon_req_; // 读取武器预对接请求位。
+    }
+
+    bool get_z_req() const
+    {
+        return z_req_; // 读取武器 z 调整请求位。
+    }
+
+    float get_z_ref() const
+    {
+        return z_ref_; // 读取透传给武器层的 z 参考值。
+    }
+
+    //由主状态机调用，设置开启武器对接流程
+    void setWeaponStart(bool isstart)
+    {
+        weapon_cameraStart = isstart;
+    }
+
 private:
     //-----------------------------------通讯标志位-----------------------------------------//
     bool WeaponSage_END = 0;
 
-    bool init_flag = false;
+//    bool init_flag = false;
 
     bool Arm_Start = false;
 
@@ -168,6 +283,14 @@ private:
 
     PID_Position pid_pos_x; // x轴绝对位置PID控制器
     PID_Position pid_pos_y; // y轴绝对位置PID控制器
+
+    PID_Position camera_pid_x_; // 相机模式专用 x 轴位置环。
+
+    PID_Position camera_pid_y_; // 相机模式专用 y 轴位置环（预留）。
+
+    PID_Position camera_pid_vec_; // 相机模式专用向量模长位置环。
+
+    PID_Position camera_pid_yaw_; // 相机模式专用 yaw 位置环。
 
     Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
@@ -227,8 +350,10 @@ private:
     uint8_t yaw_pid_period_count_ = 0;
     PID_Position yaw_pid_;
 
-    const float LINESPEED_LIMIT = 10 / 500.f; // 线速度限制
-    const float YAWSPEED_LIMIT = 1 / 500.f;   // yaw速度限制
+    void loop() override;
+
+    bool init_flag = false;
+
 
     float is_chassis_reverse_ = 1.0f;
     
@@ -267,6 +392,7 @@ private:
     //-----------------------------------其他参数-----------------------------------------//
 
     RmPocketData_t airjoy_data_; // 遥控器数据，范围 -1 ~ 1
+    Camera_Data_t cam_data_dbg_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 调试用相机数据缓存
 
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
 
@@ -308,7 +434,91 @@ private:
 
     void flag_reset(void);
 
-    void loop() override;
+    void camera_ctrl(void); // 相机闭环主流程状态机。
+
+    bool check_stable(float error, float limit, uint8_t &count); // 连续计数判稳函数。
+
+    Vector2D calc_vector(float x_err, float y_err, float max_vel); // x/y 误差向量合成速度指令。
+
+    float clamp_value(float value, float low, float high); // 标量限幅工具函数。
+
+    float avg_z(float z_now); // z 轴 20 点滑动平均滤波。
+
+    enum Camera_State_E
+    {
+        CAMERA_WEAPON, // 流程一：武器预对接姿态阶段。
+        CAMERA_Z_ROUGH, // 流程二：z 粗调阶段。
+        CAMERA_X_ROUGH, // 流程三：x 粗调阶段。
+        CAMERA_Z_FINE, // 流程三补充：z 精锁阶段。
+        CAMERA_YAW, // 流程四：yaw 锁定阶段。
+        CAMERA_DOCK, // 流程五：锁角有头对接阶段。
+        CAMERA_DONE, // 流程结束阶段。
+    };
+
+
+
+    Camera_State_E camera_state_ = CAMERA_WEAPON; // 相机流程当前阶段。
+
+    Module_Camera *camera_ = nullptr; // 相机模块实例指针。
+
+    UART_HandleTypeDef *camera_uart_ = &huart6; // 相机串口句柄（默认 huart6）。
+
+    bool weapon_cameraStart = false; // 主状态机触发相机流程的标志位。
+
+
+    bool camera_init_ = false; // 相机串口初始化完成标志。
+
+    bool weapon_req_ = false; // 底盘到武器：预对接动作请求位。
+
+    bool z_req_ = false; // 底盘到武器：z 调整请求位。
+
+    bool weapon_done_ = false; // 武器到地盘：预对接完成反馈位。
+
+    bool z_done_ = false; // 武器到底盘：z 调整完成反馈位。
+
+    bool dock_done_ = false; // 外部到底盘：对接完成反馈位。
+
+    float z_ref_ = 0.0f; // 底盘透传给武器的 z 参考值。
+
+    float camera_x_ref_ = 0.0f; // 相机流程 x 轴目标值（米）。
+
+    float camera_y_ref_ = 0.90f; // 相机流程 y 轴目标值（米）。
+
+    float yaw_lock_ = 0.0f; // 相机流程期间的航向锁定目标（度）。
+
+    float speed_max_ = 0.5f; // 相机流程平移最大模长（m/s）。
+
+    float omega_max_ = 0.25f; // 相机流程角速度最大值（rad/s）。
+
+    float pos_scale_ = 1.0f; // 位置环输出缩放系数。
+
+    float yaw_scale_ = 1.0f; // 航向环输出缩放系数。
+
+    uint8_t z_rough_count_ = 0; // z 粗调判稳计数。
+
+    uint8_t x_count_ = 0; // x 粗调判稳计数。
+
+    uint8_t z_fine_count_ = 0; // z 精锁判稳计数。
+
+    uint8_t yaw_count_ = 0; // yaw 判稳计数。
+
+    float z_buf_[20] = {0.0f}; // z 轴滑动平均环形缓冲区。
+
+    float z_sum_ = 0.0f; // z 轴滑动平均累计和。
+
+    uint8_t z_idx_ = 0; // z 缓冲区当前写入下标。
+
+    uint8_t z_num_ = 0; // z 缓冲区当前有效样本数。
+
+    float fake_x = 0.0f; // 调试假数据：x 误差输入（米）。
+
+    float fake_y = 0.9f; // 调试假数据：y 误差输入（米）。
+
+    float fake_z = 0.08f; // 调试假数据：z 误差输入（米）。
+
+    float fake_yaw = 0.0f; // 调试假数据：yaw 误差输入（度）。
+
+
 };
 #endif // __cplusplus
 

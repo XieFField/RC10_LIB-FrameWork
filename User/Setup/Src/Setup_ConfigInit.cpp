@@ -1,4 +1,5 @@
 #include "Setup_ConfigInit.h"
+
  // 外部声明USB高速设备句柄
 extern "C" 
 {
@@ -14,7 +15,7 @@ DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8号M3508/M2006电机
 DJI_Group DJIGroupCAN2_Low(send_idLow(), CAN2_Bus); // 1~4号M3508/M2006电机
 
 Point2D lader_install_offset = {0.0f, 0.0f}; // 激光雷达安装偏移，单位米
-Point2D arm_install_offset = {-0.480f, -0.02f};   // 机械臂安装偏移，单位米
+Point2D arm_install_offset = {0.480f, 0.02f};   // 机械臂安装偏移，单位米
 
 
 /*==============Controller Instances===========*/
@@ -25,10 +26,11 @@ uint8_t laser_rx_buffer2[20];
 //USB_CDC_ cdc(&hUsbDeviceHS);
 USB_CDC_ usb_1(&hUsbDeviceHS);
 LaserPosition laserpos(15,laser_rx_buffer,&huart3);
-LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
+//LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
 
+JY61_IMU IMU(JY61_ADDR,&hi2c5);
 Chassis_Omni<3>::init_config chassis_initData = {
     .wheel_radius = 0.15f/2.f,
     .max_wheel_rpm = 420,
@@ -49,13 +51,18 @@ Chassis_Omni<3>::init_config chassis_initData = {
     }
 };
 OmniChassis_Setup ChassisOmni(chassis_initData); // 轮子半径，最大轮子转速，底盘 底 腰
-
+Chassis chassis;
 
 
 FSM_Controller Finite_StateMachine;
 ArmSetup ARM_Controller(arm_initData);
 Robot_WeaponSage_Setup Weapon_Controller(initData_);
 test test_task;
+IMU_test imu_test;
+
+
+
+
 /*==============Controller Instances===========*/
 
 /*=============================================*/
@@ -187,7 +194,7 @@ laserpos.Init();//锟斤拷锟斤拷锟斤拷
 #endif
 
 
-	SystemDetectTaskHandle = osThreadNew(StartSystemDetectTask, NULL, &SystemDetectTask_attributes);
+	// system_detect_task_handle = osThreadNew(startSystemDetectTask, NULL, &system_detect_task_attributes);
 }
 
 void CAN_Motor_Init(void);
@@ -196,14 +203,17 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 
 void ALL_Setup_ConfigInit(void)
 {
+    // 初始化串口6的相机模块
+    Module_Camera::GetInstance(&huart6)->InitUART();
     test_task.init();
+	imu_test.init();
    // Position* pos = Position::GetInstance(&huart1);
    // pos->InitUART();
 
    HWT101CT* imu = HWT101CT::GetInstance(&huart1);
    imu->InitUART();
    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
-   //debug_init();
+   // debug_init();
 	
    CAN_Motor_Init();
 
@@ -213,13 +223,21 @@ void ALL_Setup_ConfigInit(void)
    Weapon_Controller.init(&Weapon_launchMotor, &Weapon_clawMotor,&Weapon_traverseMotor, &Weapon_wristMotor);
    Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
 
-   ChassisOmni.registerWheelMotor(0, &omni_wheel1);
-   ChassisOmni.registerWheelMotor(1, &omni_wheel2);
-   ChassisOmni.registerWheelMotor(2, &omni_wheel3);
-   // ChassisOmni.registerWheelMotor(3, &omni_wheel4);
+//    ChassisOmni.registerWheelMotor(0, &omni_wheel1);
+//    ChassisOmni.registerWheelMotor(1, &omni_wheel2);
+//    ChassisOmni.registerWheelMotor(2, &omni_wheel3);
+//    ChassisOmni.registerWheelMotor(3, &omni_wheel4);
    ChassisOmni.init();
 
    ChassisOmni.setChassisStatus(CHASSIS_STOP);
+
+   Chassis::init_config chassis_init_config = 
+   {
+        .motor_handle[0] = &omni_wheel1,
+        .motor_handle[1] = &omni_wheel2,
+        .motor_handle[2] = &omni_wheel3
+   };
+   chassis.init(chassis_init_config);
 
    Finite_StateMachine.registerArmSetup(&ARM_Controller);
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
@@ -235,7 +253,7 @@ void ALL_Setup_ConfigInit(void)
    
 
 	 instance_man.RegisterInstance(&laserpos);
-	 instance_man.RegisterInstance(&laserpos1);
+	 //instance_man.RegisterInstance(&laserpos1);
 	 instance_man.RegisterInstance(&laserpos2);
 	 instance_man.InstanceManager_Init();
 //激光重定位解析数据初始化
@@ -298,6 +316,7 @@ void CAN_Motor_Init(void)
    omni_wheel1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    omni_wheel2.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    omni_wheel3.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
+
    // omni_wheel4.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
 
    // 机械臂电机PID参数初始化

@@ -16,7 +16,7 @@ extern "C" {
 
 #ifdef __cplusplus
 
-// ï¿½ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ PnPData ï¿½Ú´æ²¼ï¿½ï¿½Ò»ï¿½ï¿½)
+// ÉãÏñÍ·Êý¾Ý½á¹¹Ìå (±£³ÖÓëÉÏÎ»»ú PnPData ÄÚ´æ²¼¾ÖÒ»ÖÂ)
 #pragma pack(1)
 struct Camera_Data_t {
     float x;    // [0-3]
@@ -29,49 +29,49 @@ struct Camera_Data_t {
 class Module_Camera : public UART_ {
 public:
     /**
-     * @brief ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
-     * @param uart_handle ï¿½ï¿½ï¿½Ú¾ï¿½ï¿? (ï¿½ï¿½ &huart6)
+     * @brief »ñÈ¡µ¥ÀýÊµÀý
+     * @param uart_handle ´®¿Ú¾ä±ú (Èç &huart6)
      * @return Module_Camera* 
      */
     static Module_Camera* GetInstance(UART_HandleTypeDef *uart_handle);
 
     /**
-     * @brief ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     * @brief ³õÊ¼»¯´®¿Ú
      */
     void InitUART();
 
     /**
-     * @brief ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶Ï»Øµï¿½ï¿½ï¿½ï¿½ï¿½ (×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
+     * @brief ´®¿ÚÖÐ¶Ï»Øµ÷º¯Êý (×´Ì¬»ú½âÎö)
      */
     void Callback_Fuc(uint8_t *buf, uint16_t len) override;
 
     /**
-     * @brief ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½ï¿½
+     * @brief »ñÈ¡×îÐÂÉãÏñÍ·Êý¾Ý
      */
     Camera_Data_t GetCameraData();
 
     /**
-     * @brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿?
-     * @return true ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿?500msï¿½ï¿½ï¿½Õµï¿½ï¿½Ï·ï¿½ï¿½ï¿½ï¿½ï¿½)
+     * @brief ¼ì²éÉãÏñÍ·ÊÇ·ñÔÚÏß
+     * @return true ÔÚÏß (×î½ü500msÓÐÊÕµ½ºÏ·¨Êý¾Ý)
      */
     bool IsConnected();
 
 private:
-    // Ë½ï¿½Ð¹ï¿½ï¿½ìº¯ï¿½ï¿½ï¿½ï¿½Êµï¿½Öµï¿½ï¿½ï¿½Ä£ï¿½ï¿½
+    // Ë½ÓÐ¹¹Ôìº¯Êý£¬ÊµÏÖµ¥ÀýÄ£°æ
     Module_Camera(uint16_t rx_buffer_size, uint8_t *rx_buffer, UART_HandleTypeDef *uart_handle);
     
-    // ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½
+    // ½ûÓÃ¿½±´
     Module_Camera(const Module_Camera&) = delete;
     Module_Camera& operator=(const Module_Camera&) = delete;
 
-    // Ð­ï¿½é³£ï¿½ï¿½
+    // Ð­Òé³£Á¿
     static const uint8_t FRAME_HEAD_0 = 0xAA;
     static const uint8_t FRAME_HEAD_1 = 0xBB;
     static const uint8_t FRAME_TAIL_0 = 0xCC;
     static const uint8_t FRAME_TAIL_1 = 0xDD;
-    static const uint8_t DATA_LEN = 16; // 4ï¿½ï¿½float: x/y/z/yaw
+    static const int DATA_LEN = 16; // 4¸öfloat: x,y,z,yaw
 
-    // ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½
+    // ½âÎö×´Ì¬»ú
     enum RxState {
         WAITING_FOR_HEAD_0,
         WAITING_FOR_HEAD_1,
@@ -80,12 +80,12 @@ private:
         WAITING_FOR_TAIL_1
     };
 
-    // Ä£ï¿½ï¿½ Module_Position: Ê¹ï¿½ï¿½ UART_* ï¿½ï¿½ï¿½ï¿½
+    // Ä£·Â Module_Position: Ê¹ÓÃ UART_* ÀàÐÍ
     UART_* uart_instance_;
     bool uart_initialized_;
     
     RxState rx_state = WAITING_FOR_HEAD_0;
-    uint8_t data_buffer[16]; // ï¿½Ý´ï¿½ï¿½ï¿½ï¿½ï¿½
+    uint8_t data_buffer[16]; // ÔÝ´æÊý¾Ý
     uint8_t data_index = 0;
 
     Camera_Data_t current_data_ = {0.0f, 0.0f, 0.0f, 0.0f};

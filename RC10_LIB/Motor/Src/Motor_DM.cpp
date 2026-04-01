@@ -81,7 +81,7 @@ std::size_t DM_Motor:: packCommand(CanFrame outFrames[], std::size_t maxFrames)
 		case MOTOR_MIT_MODE:
 		{
 			
-			 if(1)
+			 if(Error_num==0x01)
             {
 				
 				int16_t pos=0,vel=0,kp=0,kd=0,t_ff=0;
@@ -106,6 +106,8 @@ std::size_t DM_Motor:: packCommand(CanFrame outFrames[], std::size_t maxFrames)
 
 		case MOTOR_POSVEL_MODE:
 		{
+			if(Error_num=0x01)
+			{
 			uint8_t *vbuf,*pbuf;
 			vbuf=  (uint8_t *)&this->V_des;
 			pbuf = (uint8_t *)&this->P_des;
@@ -118,12 +120,13 @@ std::size_t DM_Motor:: packCommand(CanFrame outFrames[], std::size_t maxFrames)
 			{
 				cf.data[i]=*(vbuf+i-4);
 			}
-			
+			}
 			break;
 		}
 		case MOTOR_VEL_MODE:
 		{
-			
+			if(Error_num=0x01)
+			{
 			cf.ID = 0x200|DM_Id;
 			cf.DLC = 8;
 			uint8_t *vbuf;
@@ -132,6 +135,7 @@ std::size_t DM_Motor:: packCommand(CanFrame outFrames[], std::size_t maxFrames)
 			for (int i=0;i<4;i++)
 			{
 				cf.data[i]=*(vbuf+i);
+			}
 			}
 			break;
 		}
