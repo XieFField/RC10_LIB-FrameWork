@@ -415,17 +415,6 @@ PID_Param_Config camera_yaw_pid_params = {
  .deadband = 0.1f
 };
 
-PID_Param_Config path_lock_end = {
-    
-    .kp = -0.7f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 1.0f,   
-    .deadband = 0.0009f 
-};
-
 PID_Param_Config omega_z_pid_init_config =
 {
     .kp = 0.0f,
@@ -462,4 +451,16 @@ CamZ_Param camera_z_ctrl_params = {
     .done_err = 0.003f,
     .done_vel = 0.004f,
     .done_time = 0.12f,
+};
+
+
+PID_Param_Config path_lock_end = {
+    
+    .kp = 0.7f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 0.3f,   
+    .deadband = 0.0009f 
 };
