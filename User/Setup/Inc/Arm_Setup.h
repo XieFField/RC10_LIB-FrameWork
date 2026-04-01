@@ -80,7 +80,7 @@ extern "C" {
 
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS  0 //無底盤下，用虛擬坐標進行驗證自動邏輯
+#define ARM_AUTO_DEBUG_NOCHASSIS  1 //無底盤下，用虛擬坐標進行驗證自動邏輯
 #define ARM_AUTOMOVE 0 //0:停下拾取KFS，1:行进间拾取KFS
 
 
@@ -124,7 +124,8 @@ typedef enum{
     STATE_EXT,
     STATE_LAUNCH,
     STATE_BACK,
-    STATE_DONE
+    STATE_DONE,
+    STATE_OVER,
 }ARM_AUTO_STILLNESS_E;
 
 typedef enum{
@@ -150,7 +151,7 @@ typedef struct{
 }arm_timeset_S;
 
 typedef struct{
-    int targetKFS[2] = {0,0};
+    int targetKFS[3] = {0,0,0};
     int now_targetIndex = 0;
     KFS_NUM_E kfs_num = ONLY_ONE;
     bool start_to_autoctrl = false;
@@ -590,7 +591,10 @@ protected:
                                            auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
                                            0.03f))
        {
-           speed = {0.0f, 0.0f, 0.0f};
+            if(auto_ctrl_.flag.canChassisStart == 1)
+                speed = {0.0f, 1.0f, 0.0f};
+            else
+                speed = {0.0f, 0.0f, 0.0f};
        }
              
              

@@ -113,7 +113,7 @@ void FSM_Controller::loop()
   if(KStarget != last_KStarget)
   {
       chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1]);
-      arm_setup_->set_TargetKFS(KStarget.KFS[0], 0);
+      arm_setup_->set_TargetKFS(KStarget.KFS[0], KStarget.KFS[1]);
       weaponSage_setup_->setTargetIndex(KStarget.Spear-1);
   }
 
@@ -378,8 +378,12 @@ void FSM_Controller::auto_ctrl()
         case 0x01:
         {
             //暂时不把路径规划部分纳入
+            #if !ARM_AUTO_DEBUG_NOCHASSIS
+            
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_KFS);
-            // chassis_setup_->setChassisStatus(CHASSIS_STOP);
+            #else
+             chassis_setup_->setChassisStatus(CHASSIS_STOP);
+            #endif
             
             arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
             //arm_setup_->setArmStatus(ARM_IDLE);
@@ -390,7 +394,9 @@ void FSM_Controller::auto_ctrl()
             if(airjoy_data_.botton_click == 1 && is_click == 0)
             {
                 arm_setup_->set_Arm_autoStart(1); //开始自动流程
+                #if !ARM_AUTO_DEBUG_NOCHASSIS
                 chassis_setup_->setPathAutoStart(1); //路径自动开始标志
+                #endif
                 is_click = 1;
             }   
             else if(airjoy_data_.botton_click == 0)
@@ -398,6 +404,7 @@ void FSM_Controller::auto_ctrl()
                 is_click = 0;
             }
 
+            #if !ARM_AUTO_DEBUG_NOCHASSIS
             if(arm_setup_->isArmAutoStart())
             {
                 //判断是否可以进入伸展阶段
@@ -411,7 +418,8 @@ void FSM_Controller::auto_ctrl()
                     chassis_setup_->Receive_Arm_End_flag(false); //上层已经完成拾取，通知底盘可以开始移动了
                 }
             }
-
+            #endif
+            
             break;
         }
 
