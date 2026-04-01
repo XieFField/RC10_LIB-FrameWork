@@ -448,7 +448,7 @@ void OmniChassis_Setup::loop()
                 // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
                 planspeed = path_line_.plan(robot_pos_);
                 Path_correction();
-                bool near_end = (tNearest > 0.95f);
+                bool near_end = (_tool_Abs((curve.Get_End_point()-robot_pos_).magnitude())<deadzone_max_end_);
                 Vector2D v_ff = ComputeLookaheadDiffFeedforward(near_end);
                 speed = ComposeRobotVelocity(corrVelocity, v_ff, near_end);
                 target_chassis_twist_.vx = speed.x;
@@ -571,7 +571,7 @@ void OmniChassis_Setup::loop()
 
                     Path_correction();
 
-                    bool near_end = (tNearest > t_deadzone);
+                    bool near_end = (_tool_Abs((curve.Get_End_point()-robot_pos_).magnitude())<deadzone_max_end_);
                     Vector2D v_ff = ComputeLookaheadDiffFeedforward(near_end);
                     speed = ComposeRobotVelocity(corrVelocity, v_ff, near_end);
 
@@ -582,7 +582,7 @@ void OmniChassis_Setup::loop()
                 {
                     Vector2D lock_point = curve.Get_Start_point();
                     float lock_err = (robot_pos_ - lock_point).magnitude();
-                    speed = path_lock_end.pid_calc(lock_err, 0.0f) * (robot_pos_ - lock_point).normalize();
+                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
                 }
@@ -950,7 +950,7 @@ void OmniChassis_Setup::Path_correction(void)
     nearestPt = GetPathNearestPoint(curve, robot_pos_, tNearest);
 
     // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
-    if (tNearest > t_deadzone || path_line_.Is_End() == false)
+    if (_tool_Abs((curve.Get_End_point()-robot_pos_).magnitude())<deadzone_corr_end_ || path_line_.Is_End() == false)
     {
         Vector2D endPt = curve.Get_End_point();
         // 终点段把前馈参考点切换为终点坐标，差分会自然收敛到 0。

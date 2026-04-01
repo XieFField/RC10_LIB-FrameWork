@@ -80,7 +80,7 @@ extern "C" {
 
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS  1 //無底盤下，用虛擬坐標進行驗證自動邏輯
+#define ARM_AUTO_DEBUG_NOCHASSIS  0 //無底盤下，用虛擬坐標進行驗證自動邏輯
 #define ARM_AUTOMOVE 0 //0:停下拾取KFS，1:行进间拾取KFS
 
 

@@ -109,7 +109,7 @@ public:
 #endif
         pid_pos_x.set_params(track_pid_params, 0.0f);
         pid_pos_y.set_params(track_pid_params, 0.0f);
-        path_lock_end.set_params(::path_lock_end, 0.0f);
+        path_lock.set_params(path_lock_end, 0.0f);
 
         // 相机模式独立 PID，参数使用 APP_PID 中独立配置对象。
         camera_pid_x_.set_params(camera_x_pid_params, 0.0f);
@@ -273,36 +273,25 @@ private:
 
     Point3D ladar_data_;
     Vector2D robot_pos_ = {0.0f, 0.0f};
-    Point2D robot_point_ = {0.0f, 0.0f};
-
+    
     Vector2D planspeed;
     Vector2D speed;
     Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
 
     PID_Position pid_pos_x;     // x轴绝对位置PID控制器
     PID_Position pid_pos_y;     // y轴绝对位置PID控制器
-    PID_Position path_lock_end; // 停止锁点
+    PID_Position path_lock; // 停止锁点
 
-    PID_Position camera_pid_x_; // 相机模式专用 x 轴位置环。
-
-    PID_Position camera_pid_y_; // 相机模式专用 y 轴位置环（预留）。
-
-    PID_Position camera_pid_vec_; // 相机模式专用向量模长位置环。
-
-    PID_Position camera_pid_yaw_; // 相机模式专用 yaw 位置环。
-
-    Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    
 
     //-----------------------------------前视pid参数-----------------------------------------//
-
-    float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
-    float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
-
+    
     float max_robot_speed_ = 1.5f;
-    float max_robot_speed_end_ = 0.4f;
-    float t_deadzone = 0.93f;
-    float max_corr_end_ = 0.5f;
+    float max_robot_speed_end_ = 0.35f;
+    float max_corr_end_ = 0.7f;
+    float deadzone_corr_end_ = 0.4f;
+    float deadzone_max_end_ = 0.2f;
+    
 
     Vector2D nearestPt;        // 路径上距离机器人最近的点
     Vector2D lookaheadPt;      // 路径上的前视点
@@ -337,7 +326,7 @@ private:
     bool MF1_finish = false;
 
     Vector2D spin_point_ = {3.6f, 8.72f}; // 上方旋转点
-    float spin_skew_ = -0.1f;             // 下方旋转位置y轴偏移量
+    float spin_skew_ = -0.15f;             // 下方旋转位置y轴偏移量
     bool get_spin_flag = false;
     bool Spin_Start = false;
     //-----------------------------------yaw角控制参数-----------------------------------------//
@@ -387,12 +376,25 @@ private:
     float end_pid_scale_ = 0.7f;
 
     //-----------------------------------其他参数-----------------------------------------//
+    Point2D robot_point_ = {0.0f, 0.0f};
+    float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
+    float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
 
     RmPocketData_t airjoy_data_;                            // 遥控器数据，范围 -1 ~ 1
     Camera_Data_t cam_data_dbg_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 调试用相机数据缓存
 
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
+    
+    PID_Position camera_pid_x_; // 相机模式专用 x 轴位置环。
 
+    PID_Position camera_pid_y_; // 相机模式专用 y 轴位置环（预留）。
+
+    PID_Position camera_pid_vec_; // 相机模式专用向量模长位置环。
+
+    PID_Position camera_pid_yaw_; // 相机模式专用 yaw 位置环。
+    
+    Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     //-----------------------------------内部控制函数-----------------------------------------//
 
     /**
