@@ -89,7 +89,6 @@ typedef struct{
 typedef enum{
     TARGET_POSITION_MODE, // 目标位置模式
     MANUAL_MOTOR_POSITION_MODE, // 手动电机位置模式
-    MANUAL_JOINT_SPEED_MODE, // 手动关节速度模式
     CURRENT_CONTROL_MODE // 电流控制模式 依旧使用Joint_Status_S存储目标电流值
 }Arm_Control_mode_E;
 
@@ -192,24 +191,7 @@ public:
     Rotate_Strategy_E getRotateStrategy() const { return rotate_strategy_; }
 
     float calc_rotate_targetByStrategy(float current_cont_angle, float target_raw_0_360);
-    
 
-    /** 
-     * @brief 设置手动末端速度速度
-     */
-    void setManualSpeed(float vx, float vy, float vz) 
-    {
-        manual_v_.vx = vx; manual_v_.vy = vy; manual_v_.vz = vz;
-    }
-
-
-
-    void setJacobianInitData(Jacobian_InitData_S jac_init_data)
-    {
-        jac_init_data_ = jac_init_data;
-    }
-
-    
     /**
      * @brief 手动设置每个自由度的目标位置，单位：m或度
      */
@@ -281,14 +263,6 @@ private:
 
 
 
-    // Jacobian 速度控制用目标末端速度（m/s）
-    Robot_Twist manual_v_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-
-    void jacobianMatrix(); // 雅可比矩阵计算
-
-    Jacobian_InitData_S jac_init_data_;
-
-
     // 时间戳（秒）
     float last_time_s_ = 0.0f;
     float dt_ = 0.0f;
@@ -344,11 +318,11 @@ private:
     float last_rotate_cmd_ = 0.0f;
     float ramped_rotateMotorAngle_ = 0.0f;
     
-//bool  time_initialized_ = false;+
+//bool  time_initialized_ = false;
     
     float ramp_rotate_maxspeed_ = 0.0f;
     float ramp_rotate_maxstep_ = 0.0f;
-    float ramp_rotate_target_ = 0.0f; // ??????????±???
+    float ramp_rotate_target_ = 0.0f; 
     
     void setRampRotateMaxSpeed(float maxspeed) { ramp_rotate_maxspeed_ = maxspeed; }
     float caculate_rotate_target(float current, float target)
