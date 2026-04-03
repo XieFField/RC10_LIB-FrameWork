@@ -221,6 +221,35 @@ public:
 
     float dt_ = 0.001f;             // 采样时间，单位秒
     float last_time_s_ = 0.0f;      // 上次调用的时间，单位秒
+
+    bool is_d_first = false; // 是否开启微分先行计算
+    float feedback_last_ = 0.0f; // 上次反馈值
+    float feedback_earlier_ = 0.0f; // 上上次反馈值
+
+    float last_target_ = 0.0f; // 上次目标值
+
+    bool is_forward_ = false; // 是否开启前馈
+
+    float speed_forward_deadband_ = 1.0f; // 速度前向死区
+    // float speed_forward_ratio_ = 0.7098f; // 速度前向因子
+    float speed_forward_ratio_ = 0.0f; // 速度前向因子
+    // float speed_forward_offset_ = 371.9226f; // 速度前向偏移量
+    float speed_forward_offset_ = 0.0f; // 速度前向偏移量
+    float speed_forward_ = 0.0f; // 速度前向输出
+
+    float acc_forward_deadband_ = 0.0f; // 加速度前向死区
+    float acc_forward_ratio_ = 2646.1308f; // 加速度前向因子
+    // float acc_forward_offset_ = 488.5379f; // 加速度前向偏移量
+    float acc_forward_offset_ = 0.0f; // 加速度前向偏移量
+    float acc_forward_ = 0.0f; // 加速度前向输出
+
+    float forward_output_ = 0.0f; // 前馈输出值
+
+    uint8_t power_off_protection_count_ = 0; // 电源关闭保护计数
+    uint8_t power_off_protection_threshold_ = 20; // 电源关闭保护阈值
+    bool is_power_off_protection_ = false; // 是否开启电源关闭保护
+    uint16_t is_power_off_protection_count_ = 0; // 是否开启电源关闭保护
+    uint16_t is_power_off_protection_count_max_ = 10; // 电源关闭保护最大计数
 };
 
 

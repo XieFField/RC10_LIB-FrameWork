@@ -1,6 +1,6 @@
 #include "APP_PID.h"
 
-
+#include "RC10_LIB/APP/Inc/APP_Utils.h"
 
 float PID_Position::pid_calc(float target, float feedback)
 {
@@ -158,6 +158,8 @@ float PID_Incremental::pid_calc(float target, float feedback)
         if (dt_ > 0.0f)
         {
             D_Term = params_.kd * (error_ - 2.0f * error_last_ + error_earlier_);
+            if(is_d_first)
+                D_Term = params_.kd * (feedback - 2.0f * feedback_last_ + feedback_earlier_);
         }
         else
         {
@@ -168,14 +170,81 @@ float PID_Incremental::pid_calc(float target, float feedback)
         output_ = output_last_ + (P_Term + I_Term + D_Term);
     }
 
+    output_last_ = output_; // 保存当前总输出，作为下次计算的“上次总输出”
+
+    if(is_forward_)
+    {
+        if(jia::deadZoneToZero(feedback, speed_forward_deadband_) > 0)
+        {
+            speed_forward_ = speed_forward_ratio_ * feedback + speed_forward_offset_;
+        }
+        else if(jia::deadZoneToZero(feedback, speed_forward_deadband_) < 0)
+        {
+            speed_forward_ = speed_forward_ratio_ * feedback - speed_forward_offset_;
+        }
+        else
+        {
+            speed_forward_ = 0.0f;
+        }
+
+        float acc = current_target - last_target_;
+        if(jia::deadZoneToZero(acc, acc_forward_deadband_) > 0)
+        {
+            acc_forward_ = acc_forward_ratio_ * acc + acc_forward_offset_;
+        }
+        else if(jia::deadZoneToZero(acc, acc_forward_deadband_) < 0)
+        {
+            acc_forward_ = acc_forward_ratio_ * acc - acc_forward_offset_;
+        }
+        else
+        {
+            acc_forward_ = 0.0f;
+        }
+
+        forward_output_ = speed_forward_ + acc_forward_;
+        output_ += forward_output_;
+
+        // if(feedback == feedback_last_ && is_power_off_protection_count_ == 0)
+        // {
+        //     power_off_protection_count_++;
+        // }
+        // else
+        // {
+        //     power_off_protection_count_ = 0;
+        //     if(is_power_off_protection_ == true)
+        //     {
+        //         is_power_off_protection_count_ = is_power_off_protection_count_max_;
+        //         is_power_off_protection_ = false;
+        //     }
+        // }
+
+        // if(power_off_protection_count_ >= power_off_protection_threshold_)
+        // {
+        //     power_off_protection_count_ = power_off_protection_threshold_;
+        //     output_ = 0.0f;
+        //     output_last_ = 0.0f;
+        //     is_power_off_protection_ = true;
+        // }
+
+        // if(is_power_off_protection_count_ > 0)
+        // {
+        //     is_power_off_protection_count_--;
+        //     output_ = 0.0f;
+        //     output_last_ = 0.0f;
+        // }
+    }
+
     // 输出限幅
     output_ = constrain(output_, -params_.output_limit, params_.output_limit);
 
     // 更新历史值
     error_earlier_ = error_last_;
     error_last_ = error_;
-    output_last_ = output_; // 保存当前总输出，作为下次计算的“上次总输出”
+    
     last_time_s_ = current_time_s;
+    feedback_earlier_ = feedback_last_;
+    feedback_last_ = feedback;
+    last_target_ = current_target;
 
     return output_;
 }
@@ -233,14 +302,24 @@ PID_Param_Config m2006_angle_pid_params = {
     .deadband = 0.03f 
 };
 
+// PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
+//     .kp =  250.0f,
+//     .ki = 12.0f,
+//     .kd = 0.0f,
+//     .I_Outlimit = 8000.0f, 
+//     .isIOutlimit = true, 
+//     .output_limit = 15000.0f,   
+//     .deadband = 0.1f 
+// };
+
 PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
-    .kp =  250.0f,
-    .ki = 12.0f,
+    .kp =  50.0f,
+    .ki = 1.0f,
     .kd = 0.0f,
-    .I_Outlimit = 8000.0f, 
+    .I_Outlimit = 1000000.0f, 
     .isIOutlimit = true, 
-    .output_limit = 15000.0f,   
-    .deadband = 0.1f 
+    .output_limit = 20000.0f,   
+    .deadband = 0.0f 
 };
 
 PID_Param_Config track_pid_params = {

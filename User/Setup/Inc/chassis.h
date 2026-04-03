@@ -244,13 +244,13 @@ namespace jia
         InputTargetData input_target_data_; // 输入目标数据
 
         Debug_Printf debug_uart_ = Debug_Printf(&huart8); // 调试串口
-        u8 printf_period_ms_ = 4;                         // 串口调试打印周期，单位：毫秒
+        u8 printf_period_ms_ = 5;                         // 串口调试打印周期，单位：毫秒
         u8 printf_period_count_ = 0;                      // 串口调试打印周期计数器
 
         RmPocketData_t airjoy_data_;
 
     private:
-        f32 wheel_input_speed_radio_ = 300.0f;
+        f32 wheel_input_radio_ = 90.0f;
 
         bool is_sine_ = false;
         f32 sine_amplitude_ = 0.0f;
@@ -258,6 +258,11 @@ namespace jia
         f32 sine_offset_ = 0.0f;
 
         bool is_phase_step_ = false;
+
+        bool is_wheel_speed_mode_ = false;
+        bool is_wheel_current_mode_ = false;
+
+        u8 debug_wheel_index_ = 2;
 
     private:
         f32 input_hwt_rot_z_;

@@ -100,6 +100,10 @@ namespace jia
         // 初始化rot_z_pid
         rot_z_pid_.set_params(lock_angle_pid_params, 0.0f);
         rot_z_pid_.set_as_circular();
+
+        wheel_config_[0].motor_handle->speed_pid_.is_forward_ = true;
+        wheel_config_[1].motor_handle->speed_pid_.is_forward_ = true;
+        wheel_config_[2].motor_handle->speed_pid_.is_forward_ = true;
     }
 
     void Chassis::createThread(void *arg)
@@ -202,7 +206,7 @@ namespace jia
                 p.w2_omega = acc_scale_ratio * (p.w2_omega - lp.w2_omega) + lp.w2_omega;
                 p.w3_omega = acc_scale_ratio * (p.w3_omega - lp.w3_omega) + lp.w3_omega;
             }
-            //  // 发送转速指令
+            // 发送转速指令
             if (mode_ == Mode::kWheelTorqueFreeMode)
             {
                 w1_.h->setTargetCurrent(0.0f);
@@ -230,12 +234,19 @@ namespace jia
             // debug_uart_.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms_, t.w1_omega, p.w1_omega, std::abs(c.w1_omega), std::abs(c.w2_omega));
             // debug_uart_.printf_DMA("%f,%f,%f\r\n", input_hwt_omega_z_, input_hwt_rot_z_, tpid.omega_z);
 
+            f32 t_current = wheel_config_[2].motor_handle->getTargetCurrent();
+            f32 c_current = wheel_config_[2].motor_handle->current_;
+
             printf_period_count_++;
             if (printf_period_count_ >= printf_period_ms_)
             {
                 printf_period_count_ = 0;
                 // debug_uart_.printf_DMA("%f,%f,%f,%f,%f\r\n", it.omega_z, input_hwt_omega_z_, tpid.omega_z, t.w3_omega, c.w3_omega);
-                debug_uart_.printf_DMA("%f,%f,%f,%f\r\n", it.rot_z, input_hwt_rot_z_, t.omega_z, input_hwt_omega_z_);
+                // debug_uart_.printf_DMA("%f,%f,%f,%f,%f,%f\r\n",
+                //                        radsToRpmF32(t.w1_omega), radsToRpmF32(t.w2_omega), radsToRpmF32(t.w3_omega),
+                //                        radsToRpmF32(c.w1_omega), radsToRpmF32(c.w2_omega), radsToRpmF32(c.w3_omega));
+                // debug_uart_.printf_DMA("%f,%f,%f,%f\r\n", radsToRpmF32(t.w3_omega), radsToRpmF32(c.w3_omega), t_current, c_current);
+                debug_uart_.printf_DMA("%f,%f,%f,%f,%f\r\n", radsToRpmF32(t.w3_omega), radsToRpmF32(c.w3_omega), t.omega_z, tpid.omega_z,input_hwt_omega_z_);
             }
 
             vTaskDelayUntil(&time_ms_, period_ms_);
@@ -439,23 +450,67 @@ namespace jia
             }
             }
 
-            // 调试轮子
-            //
-            // f32 wheel_speed_input = airjoy_data_.left_x * wheel_input_speed_radio_;
-            // // wheel_speed_input = sineWaveGeneratorF32(time_ms_ / 1000.0f, sine_amplitude_, sine_frequency_, 0.0f);
-            // auto &wheel_handle = wheel_config_[2].motor_handle;
-            // wheel_handle->setTargetRPM(wheel_speed_input);
+            // // 调试轮子
+            // auto &wheel_handle = wheel_config_[debug_wheel_index_].motor_handle;
 
-            // f32 pid_error = wheel_handle->speed_chassis_pid_.error_;
-            // // f32 pid_error_last = wheel_handle->speed_chassis_pid_.error_last_;
-            // // f32 pid_error_earlier_ = wheel_handle->speed_chassis_pid_.error_earlier_;
-            // f32 pid_p = wheel_handle->speed_chassis_pid_.P_Term;
-            // f32 pid_i = wheel_handle->speed_chassis_pid_.I_Term;
-            // f32 pid_d = wheel_handle->speed_chassis_pid_.D_Term;
-            // f32 pid_output = wheel_handle->speed_chassis_pid_.output_;
+            // f32 t_rpm = 0.0f;
 
-            // debug_uart_.printf_DMA("lu\r\n", time_ms_);
-            //
+            // if (is_sine_)
+            // {
+            //     t_rpm = sineWaveGeneratorF32(time_ms_ / 1000.0f, sine_amplitude_, sine_frequency_, 0.0f, sine_offset_);
+            // }
+            // else if (is_phase_step_)
+            // {
+            //     if (airjoy_data_.left_x > 0.3f)
+            //     {
+            //         t_rpm = wheel_input_radio_;
+            //     }
+            //     else if (airjoy_data_.left_x < -0.3f)
+            //     {
+            //         t_rpm = -wheel_input_radio_;
+            //     }
+            //     else
+            //     {
+            //         t_rpm = 0.0f;
+            //     }
+            // }
+            // else
+            // {
+            //     t_rpm = airjoy_data_.left_x * wheel_input_radio_;
+            // }
+
+            // if (is_wheel_speed_mode_)
+            // {
+            //     wheel_handle->setTargetRPM(t_rpm);
+            // }
+            // else if (is_wheel_current_mode_)
+            // {
+            //     wheel_handle->setTargetCurrent(t_rpm);
+            // }
+            // else
+            // {
+            //     wheel_handle->setTargetCurrent(0.0f);
+            // }
+
+            // f32 pid_error = wheel_handle->speed_pid_.error_;
+            // // f32 pid_error_last = wheel_handle->speed_pid_.error_last_;
+            // // f32 pid_error_earlier_ = wheel_handle->speed_pid_.error_earlier_;
+            // f32 pid_p = wheel_handle->speed_pid_.P_Term;
+            // f32 pid_i = wheel_handle->speed_pid_.I_Term;
+            // f32 pid_d = wheel_handle->speed_pid_.D_Term;
+            // f32 pid_output = wheel_handle->speed_pid_.output_;
+
+            // f32 t_current = wheel_handle->getTargetCurrent();
+
+            // f32 c_current = wheel_handle->current_;
+            // f32 c_rpm = wheel_handle->getRPM();
+
+            // printf_period_count_++;
+            // if (printf_period_count_ >= printf_period_ms_)
+            // {
+            //     printf_period_count_ = 0;
+            //     debug_uart_.printf_DMA("%f,%f,%f,%f\r\n", t_rpm, c_rpm, t_current, c_current);
+            // }
         }
     }
 

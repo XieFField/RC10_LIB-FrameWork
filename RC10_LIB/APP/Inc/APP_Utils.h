@@ -5,6 +5,8 @@
 
 #include <algorithm>
 
+#include "arm_math.h"
+
 namespace jia
 {
     using u8 = uint8_t;
@@ -322,7 +324,115 @@ namespace jia
 
         x_out = x * cos_theta + y * sin_theta;
         y_out = -x * sin_theta + y * cos_theta;
-    } // namespace jia
-}
+    }
+
+    /**
+     * @brief 死区处理，将数值在死区范围内映射为0
+     * @param value 输入值
+     * @param dead_band 死区范围（必须为正数）
+     * @return T 处理后的值
+     */
+    template <typename T>
+    constexpr inline T deadZoneToZero(const T &value, const T &dead_band)
+    {
+        return (value >= dead_band || value <= -dead_band) ? value : 0;
+    }
+
+    /**
+     * @brief 死区处理，将数值在死区范围内映射为死区中心
+     * @param value 输入值
+     * @param deadband_center 死区中心（可正可负）
+     * @param deadband_radius 死区半径（必须为正数）
+     * @return T 处理后的值
+     */
+    template <typename T>
+    constexpr inline T deadZoneToCenter(const T &value, const T &dead_band_center, const T &dead_band_radius)
+    {
+        if (value > (dead_band_center + dead_band_radius) || value < (dead_band_center - dead_band_radius))
+        {
+            return value;
+        }
+        else
+        {
+            return dead_band_center; // 死区内返回中心点（核心逻辑）
+        }
+    }
+
+    /**
+     * @brief 角度归一化，将角度转换为[0,360)度范围内
+     * @param angle 输入角度（单位：度）
+     * @return T 归一化后的角度（单位：度）
+     */
+    template <typename T>
+    constexpr inline typename std::enable_if<std::is_same<T, f32>::value, T>::type
+    normalizeAngleTo360(T angle)
+    {
+        constexpr T full_circle = 360.0f;
+        T normalized = fmodf(angle, full_circle);
+        if (normalized < 0.0f)
+        {
+            normalized += full_circle;
+        }
+        return normalized;
+    }
+    template <typename T>
+    constexpr inline typename std::enable_if<std::is_integral<T>::value, T>::type
+    normalizeAngleTo360(T angle)
+    {
+        constexpr T full_circle = static_cast<T>(360);
+        T remainder = angle % full_circle;
+        return (remainder < 0) ? (remainder + full_circle) : remainder;
+    }
+
+    /**
+     * @brief 角度归一化，将角度转换为[-180,180)度范围内
+     * @param angle 输入角度（单位：度）
+     * @return T 归一化后的角度（单位：度）
+     */
+    template <typename T>
+    constexpr inline T normalizeAngleTo180(T angle)
+    {
+        constexpr T full_circle = static_cast<T>(360);
+        constexpr T half_circle = static_cast<T>(180);
+        // 先归一化到 [0, 360)
+        T normalized = normalizeAngleTo360(angle);
+        // 等于和大于180°的部分转换为负数
+        if (normalized >= half_circle)
+        {
+            normalized -= full_circle;
+        }
+        return normalized;
+    }
+
+    /**
+     * @brief 基于角度的正弦函数（单位：度），快速版本
+     * @param angle 输入角度（单位：度）
+     * @return 对应角度的正弦值
+     */
+    constexpr inline f32 sinDegF32F(f32 angle)
+    {
+        f32 normalized_deg = normalizeAngleTo360(angle);
+        f32 rad = degToRadF32(normalized_deg);
+
+        f32 sin_result = arm_sin_f32(rad);
+
+        return sin_result;
+    }
+
+    /**
+     * @brief 基于角度的余弦函数（单位：度），快速版本
+     * @param angle 输入角度（单位：度）
+     * @return 对应角度的余弦值
+     */
+    constexpr inline f32 cosDegF32F(f32 angle)
+    {
+        f32 normalized_deg = normalizeAngleTo360(angle);
+        f32 rad = degToRadF32(normalized_deg);
+
+        f32 cos_result = arm_cos_f32(rad);
+
+        return cos_result;
+    }
+} // namespace jia
 
 #endif

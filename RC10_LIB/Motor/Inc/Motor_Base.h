@@ -78,7 +78,7 @@ public:
 
     fdCANbus* bus() const { return bus_; }
     uint32_t getID() const { return motor_id_; }
-protected:
+public:
     uint32_t motor_id_;
     bool isExtended_;
     fdCANbus* bus_;
