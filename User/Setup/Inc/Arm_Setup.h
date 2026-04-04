@@ -124,7 +124,8 @@ typedef enum{
     STATE_EXT,
     STATE_LAUNCH,
     STATE_BACK,
-    STATE_DONE
+    STATE_DONE,
+    STATE_OVER,
 }ARM_AUTO_STILLNESS_E;
 
 typedef enum{
@@ -150,7 +151,7 @@ typedef struct{
 }arm_timeset_S;
 
 typedef struct{
-    int targetKFS[2] = {0,0};
+    int targetKFS[3] = {0,0,0};
     int now_targetIndex = 0;
     KFS_NUM_E kfs_num = ONLY_ONE;
     bool start_to_autoctrl = false;
@@ -215,6 +216,9 @@ typedef struct{
         float reach_finishTimeStore = 0.0f; //存储到达目标位置的时间戳
         bool isExtReach = false;
         bool canChassisStart = false; //是否可以开始底盘移动
+
+        bool isbackdone = false; //返回完成标志
+        float back_time = 0.0f; //返回时间
     }flag;
 
 
@@ -587,7 +591,10 @@ protected:
                                            auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
                                            0.03f))
        {
-           speed = {0.0f, 0.0f, 0.0f};
+            if(auto_ctrl_.flag.canChassisStart == 1)
+                speed = {0.0f, 1.0f, 0.0f};
+            else
+                speed = {0.0f, 0.0f, 0.0f};
        }
              
              

@@ -58,6 +58,15 @@ void Robot_WeaponSage::update()
             wrist_Motor_->setTargetTotalAngle(initData_.max_wristMotorRPM_, target_pos_.wrist_TotalAngle_);
             break;
         }
+
+        case WeaponSage::CAMERA_MIX_CONTROL:
+        {
+            launch_Motor_->setTargetRPM(launch_target_rpm_);
+            claw_Motor_->setTargetTotalAngle(target_pos_.claw_TotalAngle_);
+            traverse_Motor_->setTargetTotalAngle(target_pos_.traverse_TotalAngle_);
+            wrist_Motor_->setTargetTotalAngle(initData_.max_wristMotorRPM_, target_pos_.wrist_TotalAngle_);
+            break;
+        }
             
         default:
             break;
@@ -109,6 +118,7 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
         }
 
         case WeaponSage::Join_POSITION_CONTROL:
+        case WeaponSage::CAMERA_MIX_CONTROL:
         {
             if(motor_type == WeaponSage::Launch_Motor)
             {

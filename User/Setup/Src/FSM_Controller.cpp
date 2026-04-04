@@ -74,7 +74,10 @@ void FSM_Controller::loop()
             break;  
 
         case 0x02:
-            robot_status_ = AUTO_CONTROL;
+            // if(airjoy_data_.SWA == 0x01)
+            //     robot_status_ = DEBUG_MODE;
+            // else
+                robot_status_ = AUTO_CONTROL;
             break;
     }
 
@@ -110,7 +113,7 @@ void FSM_Controller::loop()
   if(KStarget != last_KStarget)
   {
       chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1]);
-      arm_setup_->set_TargetKFS(KStarget.KFS[0], 0);
+      arm_setup_->set_TargetKFS(KStarget.KFS[0], KStarget.KFS[1]);
       weaponSage_setup_->setTargetIndex(KStarget.Spear-1);
   }
 
@@ -375,11 +378,15 @@ void FSM_Controller::auto_ctrl()
         case 0x01:
         {
             //暂时不把路径规划部分纳入
-            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_KFS);
-            // chassis_setup_->setChassisStatus(CHASSIS_STOP);
+            #if !ARM_AUTO_DEBUG_NOCHASSIS
             
-            arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-            //arm_setup_->setArmStatus(ARM_IDLE);
+            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_KFS);
+            #else
+             chassis_setup_->setChassisStatus(CHASSIS_STOP);
+            #endif
+            
+            //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
             static uint8_t is_click = 0;
@@ -387,7 +394,9 @@ void FSM_Controller::auto_ctrl()
             if(airjoy_data_.botton_click == 1 && is_click == 0)
             {
                 arm_setup_->set_Arm_autoStart(1); //开始自动流程
+                #if !ARM_AUTO_DEBUG_NOCHASSIS
                 chassis_setup_->setPathAutoStart(1); //路径自动开始标志
+                #endif
                 is_click = 1;
             }   
             else if(airjoy_data_.botton_click == 0)
@@ -395,6 +404,7 @@ void FSM_Controller::auto_ctrl()
                 is_click = 0;
             }
 
+            #if !ARM_AUTO_DEBUG_NOCHASSIS
             if(arm_setup_->isArmAutoStart())
             {
                 //判断是否可以进入伸展阶段
@@ -408,31 +418,77 @@ void FSM_Controller::auto_ctrl()
                     chassis_setup_->Receive_Arm_End_flag(false); //上层已经完成拾取，通知底盘可以开始移动了
                 }
             }
-
+            #endif
+            
             break;
         }
 
         //weaponSage自动模式
         case 0x02:
         {
-			weaponSage_setup_->Set_End_Flag(chassis_setup_->GetReach_flag());
-            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
-//            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
-            arm_setup_->setArmStatus(ARM_IDLE);
-            
 
-            static uint8_t is_click = 0;
-            if(airjoy_data_.botton_click ==1 && is_click == 0)
+            if(airjoy_data_.SWA == 0x00)
             {
-                chassis_setup_->setPathAutoStart(1); //路径自动开始标志
-                is_click = 1;
+                weaponSage_setup_->Set_End_Flag(chassis_setup_->GetReach_flag());
+                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
+    //            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+                chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
+                arm_setup_->setArmStatus(ARM_IDLE);
+                
+
+                static uint8_t is_click = 0;
+                if(airjoy_data_.botton_click ==1 && is_click == 0)
+                {
+                    chassis_setup_->setPathAutoStart(1); //路径自动开始标志
+                    weaponSage_setup_->setCBauto(true);
+                    is_click = 1;
+                }
+                else if(airjoy_data_.botton_click ==0)
+                {
+                    is_click = 0;
+                }
             }
-            else if(airjoy_data_.botton_click ==0)
+            else if(airjoy_data_.SWA == 0x01)
             {
-                is_click = 0;
+                arm_setup_->setArmStatus(ARM_IDLE);
+
+                // 设置相机对接 y 轴目标点为 0.8m（相机坐标系前向为正）。
+                chassis_setup_->set_camera_y_ref(0.90f);
+                
+                chassis_setup_->setChassisStatus(CHASSIS_CAMERA);// 调试模式下切入底盘相机闭环状态机。
+
+                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_CAMERA);// 调试模式下切入武器相机协同状态机。
+
+                // 将底盘下发的武器预对接请求透传给武器模块。
+                weaponSage_setup_->set_camera_req(
+                    chassis_setup_->get_weapon_req(),
+                    chassis_setup_->get_z_req(),
+                    chassis_setup_->get_z_ref());
+
+                // 将武器返回的预对接完成位回传给底盘状态机。
+                chassis_setup_->set_weapon_done(weaponSage_setup_->get_weapon_done());
+
+                // 将武器返回的 z 轴完成位回传给底盘状态机。
+                chassis_setup_->set_z_done(weaponSage_setup_->get_z_done());
+
+                static uint8_t is_click = 0;
+                if(airjoy_data_.botton_click ==1 && is_click == 0)
+                {
+                    chassis_setup_->setWeaponStart(true);// 触发武器对接流程
+                    weaponSage_setup_->setWeapon_CameraStart(true);// 触发武器相机流程
+                    is_click = 1;
+                }
+                else
+                    is_click = 0;
+
             }
-            break;
+            else
+            {
+                chassis_setup_->setChassisStatus(CHASSIS_STOP);
+                arm_setup_->setArmStatus(ARM_IDLE);
+                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            }
+                break;
         }
     }
     //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
@@ -441,7 +497,24 @@ void FSM_Controller::auto_ctrl()
 
 void FSM_Controller::debug()
 {
-   // 调试
+    arm_setup_->setArmStatus(ARM_IDLE);// 调试模式下固定让机械臂空闲，避免与视觉对接流程抢控制。
 
-    // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+    // 设置相机对接 y 轴目标点为 0.8m（相机坐标系前向为正）。
+    chassis_setup_->set_camera_y_ref(0.90f);
+    
+    chassis_setup_->setChassisStatus(CHASSIS_CAMERA);// 调试模式下切入底盘相机闭环状态机。
+
+    weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_CAMERA);// 调试模式下切入武器相机协同状态机。
+
+    // 将底盘下发的武器预对接请求透传给武器模块。
+    weaponSage_setup_->set_camera_req(
+        chassis_setup_->get_weapon_req(),
+        chassis_setup_->get_z_req(),
+        chassis_setup_->get_z_ref());
+
+    // 将武器返回的预对接完成位回传给底盘状态机。
+    chassis_setup_->set_weapon_done(weaponSage_setup_->get_weapon_done());
+
+    // 将武器返回的 z 轴完成位回传给底盘状态机。
+    chassis_setup_->set_z_done(weaponSage_setup_->get_z_done());
 }

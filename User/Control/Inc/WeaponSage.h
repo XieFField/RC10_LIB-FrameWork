@@ -56,7 +56,7 @@ namespace WeaponSage
     {
         float launch_reversed_ = -1.0f;
         float claw_reversed_ = -1.0f;
-        float traverse_reversed_ = 1.0f;
+        float traverse_reversed_ = -1.0f;
         float wrist_reversed_ = 1.0f;
     }MotorReversed_S;
 
@@ -66,6 +66,7 @@ namespace WeaponSage
         CURRENT_CONTROL, // 閿熸枻鎷烽敓鏂ゆ嫹閿熸枻鎷烽敓鏂ゆ嫹妯″紡
         Join_POSITION_CONTROL, // 閿熸埅鏂ゆ嫹浣嶉敓鐭?鍖℃嫹閿熸枻鎷锋ā寮?
         TOTAL_ANGLE_CONTROL,   // 閿熸枻鎷烽敓鏂ゆ嫹鑺欏祵鐡ら敓鏂ゆ嫹閿熶茎锛?锟?
+        CAMERA_MIX_CONTROL, // 相机模式: launch 速度环 + 其余关节位置环
     };
     
     typedef struct
@@ -155,6 +156,12 @@ public:
 	
 	void Weapon_wrist_setzero(){wrist_Motor_->motorSetZero();}
 	void Weapon_wrist_enable(){wrist_Motor_->motorEnable();}
+    float get_launchVel()
+    {
+        if(launch_Motor_ == nullptr)
+            return 0.0f;
+        return motor_reversed_.launch_reversed_ * launch_Motor_->getRPM() * initData_.launch_Ratio_ / 60.0f;
+    }
 private:
 
     WeaponSage::WeaponSage_CtrlMode_S ctrl_mode_ = WeaponSage::Join_POSITION_CONTROL;
@@ -186,6 +193,11 @@ protected:
     float MotorTotalAngle_to_Realpos(float motor_angle, WeaponSage::Motor_Type_E motor_type);
 
     bool setMotorTargetTotalAngle(float total_angle, WeaponSage::Motor_Type_E motor_type);
+		void set_launchMotorSpeed(float target)
+		{
+            launch_target_rpm_ = motor_reversed_.launch_reversed_ * target;
+		}
+    float launch_target_rpm_ = 0.0f;
 	WeaponSage_InitData_S initData_;
 };
 

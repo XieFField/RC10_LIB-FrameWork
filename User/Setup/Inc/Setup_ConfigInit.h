@@ -46,6 +46,7 @@ extern "C" {
 #include "Locate_Setup.h"
 #include "system_detect_task.h"
 #include "Module_HWT.h"
+#include "Module_JY61.h"
 
 /*==============Controller===============*/
 #include "FSM_Controller.h"
@@ -58,7 +59,7 @@ extern "C" {
     #include "speedplanner_demo.h"
 #endif
 
-
+#include "Module_Camera.h"
 #include "Module_Position.h"
 #include "Module_LaserPosition.h"
 #if ARM_DEMO_DEBUG
@@ -80,15 +81,28 @@ public:
     {
         for(;;)
         {
-            a++;
-            osDelay(1000);
+            osDelay(50);
         }
     }
 
 int a = 0;
+	
 };
 
-
+//class IMU_test :public RtosTask
+//{
+//	public:
+//		IMU_test():RtosTask("IMU_test\0",50){}
+//	void init()
+//	{
+//	this->start(osPriorityHigh, 512);
+//	}
+//	private:
+//	void loop() override
+//	{
+//		int a=0;
+//	}
+//};
 
 
 

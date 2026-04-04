@@ -223,6 +223,56 @@ private:
     float last_time_s_ = 0.0f;      // 上次调用的时间，单位秒
 };
 
+typedef struct {
+    float kp;
+    float ki;
+    float kv;
+    float out_lim;
+    float i_lim;
+    float i_err;
+    float ref_rate;
+    float cam_gain;
+    float cam_db;
+    float cam_gate;
+    float cam_delay;
+    float done_err;
+    float done_vel;
+    float done_time;
+} CamZ_Param;
+
+class CamZ_Ctrl {
+public:
+    CamZ_Ctrl(CamZ_Param param = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}) : param_(param) { reset(0.0f); } // ctor
+
+    void set_param(const CamZ_Param& param) { param_ = param; } // set param
+    void reset(float z_now); // reset state
+    float run_step(float z_ref, float z_cam, bool cam_new, float z_vel); // one step
+
+    bool is_done() const { return done_; } // done flag
+    float get_est() const { return z_est_; } // estimated z
+    float get_ref() const { return z_ref_; } // smooth ref
+    float get_err() const { return z_err_; } // control err
+
+private:
+    void step_ref(float z_ref, float dt); // ref slew
+    void fuse_cam(float z_cam, float z_vel); // delayed cam fuse
+    void step_done(float z_vel, float dt); // done check
+
+    CamZ_Param param_;
+
+    float z_est_ = 0.0f;
+    float z_ref_ = 0.0f;
+    float z_err_ = 0.0f;
+    float i_sum_ = 0.0f;
+
+    float dt_ = 0.01f;
+    float last_t_ = 0.0f;
+    bool first_ = true;
+
+    bool done_ = false;
+    float done_t_ = 0.0f;
+};
+
 
 extern PID_Param_Config m3508_speed_pid_params;
 extern PID_Param_Config m3508_angle_pid_params;
@@ -232,14 +282,22 @@ extern PID_Param_Config m2006_angle_pid_params;
 extern PID_Param_Config lock_angle_pid_params;
 extern PID_Param_Config track_pid_params;
 
+extern PID_Param_Config camera_x_pid_params;
+extern PID_Param_Config camera_y_pid_params;
+extern PID_Param_Config camera_vec_pid_params;
+extern PID_Param_Config camera_yaw_pid_params;
+
 extern PID_Param_Config m3508Rotate_speed_pid_params;
 extern PID_Param_Config m3508Rotate_angle_pid_params;
+
 extern PID_Param_Config path_lock_end;
 
 extern PID_Param_Config m3508_speed_pid_paramsForSpeedMotor;
 
 extern PID_Param_Config omega_z_pid_init_config;
 extern PID_Param_Config rot_z_pid_init_config;
+
+extern CamZ_Param camera_z_ctrl_params;
 #endif
 
 #endif
