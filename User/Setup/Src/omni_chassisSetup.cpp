@@ -378,7 +378,7 @@ void OmniChassis_Setup::loop()
         else
             target_omega_z = 0.0f;
 
-        chassis.setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
+        chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, target_omega_z);
 
         break;
     }
@@ -398,7 +398,7 @@ void OmniChassis_Setup::loop()
         else
             target_vel_y = 0.0f;
 
-        chassis.setTargetWorldSpeedLockNowRotZMode(target_vel_x, target_vel_y);
+        chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y);
 
         break;
     }
@@ -410,7 +410,7 @@ void OmniChassis_Setup::loop()
 
         float target_vel_x = 0.0f;
         float target_vel_y = 0.0f;
-        float target_omega_z = 0.0f;
+        float target_rot_z = 0.0f;
 
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
             target_vel_x = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
@@ -422,9 +422,9 @@ void OmniChassis_Setup::loop()
         else
             target_vel_y = 0.0f;
 
-        target_omega_z = target_yaw_rad;
+        target_rot_z = target_yaw_rad;
 
-        chassis.setTargetWorldSpeedLockToRotZMode(target_vel_x, target_vel_y, target_omega_z);
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, target_rot_z);
 
         break;
     }
@@ -486,7 +486,7 @@ void OmniChassis_Setup::loop()
         }
 
         float target_yaw_rad = target_yaw_ * PI / 180.0f;
-        chassis.setTargetWorldSpeedLockToRotZMode(target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx,target_chassis_twist_.vy,target_yaw_rad);
 
         break;
     }
@@ -618,15 +618,15 @@ void OmniChassis_Setup::loop()
         }
 
         float target_yaw_rad = target_yaw_ * PI / 180.0f;
-        chassis.setTargetWorldSpeedLockToRotZMode(target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx,target_chassis_twist_.vy,target_yaw_rad);
 
         break;
     }
 
     case CHASSIS_STOP:
     {
-        chassis.setWheelTorqueFreeMode();
-
+        chassis.setZeroCurrent();
+        
         break;
     }
 
@@ -644,15 +644,7 @@ void OmniChassis_Setup::loop()
         else
             target_chassis_twist_.vy = 0.0f;
 
-        chassis.setTargetWorldSpeedMode(target_chassis_twist_.vx, target_chassis_twist_.vy, target_chassis_twist_.yaw_rate);
-
-        break;
-    }
-
-    case CHASSIS_CAMERA:
-    {
-        // 相机闭环对接主流程。
-        camera_ctrl();
+        chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx,target_chassis_twist_.vy, target_chassis_twist_.yaw_rate);
 
         // 结束相机模式处理。
         break;
