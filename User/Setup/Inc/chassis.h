@@ -280,7 +280,7 @@ namespace jia
         uint8_t rot_z_pid_count_ = 0;
 
     private:
-        bool is_debug_ = true;
+        bool is_debug_ = false;
 
         u8 debug_mode_ = 0;
         f32 debug_lock_rot_z_ = 0.0f;

@@ -100,10 +100,6 @@ namespace jia
         // ³õÊ¼»¯rot_z_pid
         rot_z_pid_.set_params(lock_angle_pid_params, 0.0f);
         rot_z_pid_.set_as_circular();
-
-        wheel_config_[0].motor_handle->speed_pid_.is_forward_ = true;
-        wheel_config_[1].motor_handle->speed_pid_.is_forward_ = true;
-        wheel_config_[2].motor_handle->speed_pid_.is_forward_ = true;
     }
 
     void Chassis::createThread(void *arg)
@@ -234,8 +230,7 @@ namespace jia
             // debug_uart_.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms_, t.w1_omega, p.w1_omega, std::abs(c.w1_omega), std::abs(c.w2_omega));
             // debug_uart_.printf_DMA("%f,%f,%f\r\n", input_hwt_omega_z_, input_hwt_rot_z_, tpid.omega_z);
 
-            f32 t_current = wheel_config_[2].motor_handle->getTargetCurrent();
-            f32 c_current = wheel_config_[2].motor_handle->current_;
+
 
             printf_period_count_++;
             if (printf_period_count_ >= printf_period_ms_)

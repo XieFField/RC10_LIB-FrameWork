@@ -339,14 +339,11 @@ void OmniChassis_Setup::loop()
     if (!init_flag)
         return;
 
-<<<<<<<<< Temporary merge branch 1
-    //	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-
     float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
-=========
+
 //	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
 	
->>>>>>>>> Temporary merge branch 2
+
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();

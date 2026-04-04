@@ -405,8 +405,16 @@ PID_Param_Config lock_angle_pid_params = {
  .deadband = 0.1f 
 };
 
-<<<<<<<<< Temporary merge branch 1
-=========
+PID_Param_Config camera_yaw_pid_params = {
+ .kp = 0.075f,
+ .ki = 0.0f,
+ .kd = 0.010f,
+ .I_Outlimit = 0.0f,
+ .isIOutlimit = true,
+ .output_limit = 0.05f,
+ .deadband = 0.1f
+};
+
 PID_Param_Config path_lock_end = {
     
     .kp = -0.7f,
@@ -438,7 +446,24 @@ PID_Param_Config rot_z_pid_init_config = {
     .output_limit = 0.0f,
     .deadband = 0.0f
 };
-<<<<<<<<< Temporary merge branch 1
+
+CamZ_Param camera_z_ctrl_params = {
+    .kp = 1800.0f,
+    .ki = 80.0f,
+    .kv = 40.0f,
+    .out_lim = 4500.0f,
+    .i_lim = 3.0f,
+    .i_err = 0.004f,
+    .ref_rate = 0.03f,
+    .cam_gain = 0.1f,
+    .cam_db = 0.0015f,
+    .cam_gate = 0.008f,
+    .cam_delay = 0.06f,
+    .done_err = 0.003f,
+    .done_vel = 0.004f,
+    .done_time = 0.12f,
+};
+
 //PID_Param_Config path_lock_end = {
 //    
 //    .kp = -0.7f,
@@ -449,5 +474,4 @@ PID_Param_Config rot_z_pid_init_config = {
 //    .output_limit = 1.0f,   
 //    .deadband = 0.0009f 
 //};
-=========
->>>>>>>>> Temporary merge branch 2
+

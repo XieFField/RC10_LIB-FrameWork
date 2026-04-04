@@ -342,8 +342,6 @@ private:
 
     bool init_flag = false;
 
->>>>>>>>> Temporary merge branch 2
-
     float is_chassis_reverse_ = 1.0f;
 
     //-----------------------------------Ç°À¡²ÎÊý-----------------------------------------//
