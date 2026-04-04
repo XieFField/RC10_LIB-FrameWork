@@ -271,13 +271,13 @@ namespace jia
         TargetPidData target_pid_data_;
 
         PID_Incremental omega_z_pid_;
-        uint8_t omega_z_pid_period_ = 1;
-        uint8_t omega_z_pid_count_ = 0;
+        u8 omega_z_pid_period_ = 1;
+        u8 omega_z_pid_count_ = 0;
         bool is_omega_z_close_loop_ = false;
 
         PID_Position rot_z_pid_;
-        uint8_t rot_z_pid_period_ = 1;
-        uint8_t rot_z_pid_count_ = 0;
+        u8 rot_z_pid_period_ = 1;
+        u8 rot_z_pid_count_ = 0;
 
     private:
         bool is_debug_ = true;
