@@ -246,7 +246,8 @@ namespace jia
                 //                        radsToRpmF32(t.w1_omega), radsToRpmF32(t.w2_omega), radsToRpmF32(t.w3_omega),
                 //                        radsToRpmF32(c.w1_omega), radsToRpmF32(c.w2_omega), radsToRpmF32(c.w3_omega));
                 // debug_uart_.printf_DMA("%f,%f,%f,%f\r\n", radsToRpmF32(t.w3_omega), radsToRpmF32(c.w3_omega), t_current, c_current);
-                debug_uart_.printf_DMA("%f,%f,%f,%f,%f\r\n", radsToRpmF32(t.w3_omega), radsToRpmF32(c.w3_omega), t.omega_z, tpid.omega_z,input_hwt_omega_z_);
+                // debug_uart_.printf_DMA("%f,%f,%f,%f,%f\r\n", radsToRpmF32(t.w3_omega), radsToRpmF32(c.w3_omega), t.omega_z, tpid.omega_z,input_hwt_omega_z_);
+                // debug_uart_.printf_DMA("%f,%f,%f\r\n", it.rot_z, input_hwt_rot_z_, t.omega_z);
             }
 
             vTaskDelayUntil(&time_ms_, period_ms_);
@@ -727,6 +728,10 @@ namespace jia
                 calculatePid(rot_z_pid_, rot_z_pid_count_, rot_z_pid_period_,
                              radToDegF32(rot_z), radToDegF32(input_hwt_rot_z_),
                              out_omega_z);
+            }
+            else
+            {
+                out_omega_z = omega_z;
             }
         }
         else
