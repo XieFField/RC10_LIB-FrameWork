@@ -127,44 +127,29 @@ namespace jia
             f32 vel_y;
             f32 omega_z;
             f32 rot_z;
+
+            Mode mode;
         };
 
-        struct TargetData
+        struct Data
         {
-            f32 vel_x;    // x轴速度，单位：米/秒
-            f32 vel_y;    // y轴速度，单位：米/秒
-            f32 omega_z;  // z轴角速度，单位：rad/s
+            f32 vel_x;   // x轴速度，单位：米/秒
+            f32 vel_y;   // y轴速度，单位：米/秒
+            f32 omega_z; // z轴角速度，单位：rad/s
+
+            f32 acc_x;   // x轴加速度，单位：米/秒^2
+            f32 acc_y;   // y轴加速度，单位：米/秒^2
+            f32 alpha_z; // z轴角加速度，单位：rad/s^2
+
+            f32 rot_z;
+
             f32 w1_omega; // 轮子1的角速度，单位：rad/s
             f32 w2_omega; // 轮子2的角速度，单位：rad/s
             f32 w3_omega; // 轮子3的角速度，单位：rad/s
-        };
 
-        struct TargetPidData
-        {
-            f32 omega_z; // z轴角速度，单位：rad/s
-        };
-
-        struct PlannedData
-        {
-            f32 vel_x;    // x轴速度，单位：米/秒
-            f32 vel_y;    // y轴速度，单位：米/秒
-            f32 omega_z;  // z轴角速度，单位：rad/s
-            f32 acc_x;    // x轴加速度，单位：米/秒^2
-            f32 acc_y;    // y轴加速度，单位：米/秒^2
-            f32 alpha_z;  // z轴角加速度，单位：rad/s^2
             f32 w1_alpha; // 轮子1的角加速度，单位：rad/s^2
             f32 w2_alpha; // 轮子2的角加速度，单位：rad/s^2
             f32 w3_alpha; // 轮子3的角加速度，单位：rad/s^2
-            f32 w1_omega; // 轮子1的角速度，单位：rad/s
-            f32 w2_omega; // 轮子2的角速度，单位：rad/s
-            f32 w3_omega; // 轮子3的角速度，单位：rad/s
-        };
-
-        struct CurrentData
-        {
-            f32 w1_omega; // 轮子1的角速度，单位：rad/s
-            f32 w2_omega; // 轮子2的角速度，单位：rad/s
-            f32 w3_omega; // 轮子3的角速度，单位：rad/s
         };
 
         // 创建线程
@@ -177,38 +162,56 @@ namespace jia
         wheel_config &w1_ = wheel_config_[0];
         wheel_config &w2_ = wheel_config_[1];
         wheel_config &w3_ = wheel_config_[2];
-        // 当前运行模式
-        Mode mode_ = Mode::kBodySpeedMode;
-        // 目标数据
-        TargetData target_data_;
-        // 规划数据
-        PlannedData planned_data_;      // 规划数据
-        PlannedData last_planned_data_; // 上一次规划数据
-        // 当前数据
-        CurrentData current_data_;
 
-        bool is_world_speed_mode_;           // 是否为世界速度模式
-        bool is_lock_rot_z_;                 // 是否固定到rot_z
-        bool is_lock_rot_z_with_no_omega_z_; // 是否固定到rot_z，且不固定omega_z
+        // 输入目标数据
+        InputTargetData input_target_data_;
+
+        // rot_z速度/位置环pid输出的omega_z
+        f32 target_pid_omega_z;
+
+        // 目标数据
+        Data target_data_;
+        // 规划数据
+        Data planned_data_;      // 规划数据
+        Data last_planned_data_; // 上一次规划数据
+        // 当前数据
+        Data current_data_;
+
+        bool is_world_speed_mode_; // 是否为世界速度模式
+        bool is_lock_now_rot_z_;   // 是否固定当前rot_z
+        bool is_lock_to_rot_z_;    // 是否固定到rot_z
 
     private:
         void isDebugMode();
         void setModeFlag();
 
+        void clearInputTargetData();
+
     private:
         void inverseKinematics(f32 in_x, f32 in_y, f32 in_z, f32 &out_w1, f32 &out_w2, f32 &out_w3);
 
-    private:
         void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
         void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
 
-        void isLockRotZ(bool isLock, f32 rot_z, f32 omega_z, f32 &out_omega_z);
+        void isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z);
+        void isLockToRotZ(bool is_lock, f32 tar_rot_z, f32 pla_rot_z, f32 &out_rot_z, f32 omega_z, f32 &out_omega_z);
 
-        void isTransSpeedBodyToWorld(bool isTrans, f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
-        void isTransSpeedWorldToBody(bool isTrans, f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
+        void isTransSpeedBodyToWorld(bool is_trans, f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
+        void isTransSpeedWorldToBody(bool is_trans, f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
 
         void calculatePid(PID_Incremental &pid, u8 &count, u8 period, f32 target, f32 feedback, f32 &output);
         void calculatePid(PID_Position &pid, u8 &count, u8 period, f32 target, f32 feedback, f32 &output);
+
+        void initWheelConfig(wheel_config &wheel, f32 pos_x, f32 pos_y, f32 rot_z_deg, M3508 *motor_handle = nullptr);
+
+        void clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z);
+
+        void isLimitAccInChassis(bool is_limit,
+                                 f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z,
+                                 f32 cur_vel_x, f32 cur_vel_y, f32 cur_omega_z,
+                                 f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z);
+
+        void clearData(Data &data);
 
     private:
         // 设定量
@@ -241,8 +244,6 @@ namespace jia
 
         const f32 &wr_ = wheel_radius_;
 
-        InputTargetData input_target_data_; // 输入目标数据
-
         Debug_Printf debug_uart_ = Debug_Printf(&huart8); // 调试串口
         u8 printf_period_ms_ = 5;                         // 串口调试打印周期，单位：毫秒
         u8 printf_period_count_ = 0;                      // 串口调试打印周期计数器
@@ -268,8 +269,6 @@ namespace jia
         f32 input_hwt_rot_z_;
         f32 input_hwt_omega_z_;
 
-        TargetPidData target_pid_data_;
-
         PID_Incremental omega_z_pid_;
         u8 omega_z_pid_period_ = 1;
         u8 omega_z_pid_count_ = 0;
@@ -279,8 +278,10 @@ namespace jia
         u8 rot_z_pid_period_ = 1;
         u8 rot_z_pid_count_ = 0;
 
+        u16 max_lock_to_rot_z_radio_ = rpmToRadsF32(0.25f); // 最大固定到rot_z转动系数，单位：rad/s
+
     private:
-        bool is_debug_ = true;
+        bool is_debug_ = false;
 
         u8 debug_mode_ = 0;
         f32 debug_lock_rot_z_ = 0.0f;
