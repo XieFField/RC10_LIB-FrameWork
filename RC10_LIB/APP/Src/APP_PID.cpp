@@ -289,6 +289,8 @@ float PID_Incremental::pid_calc(float target, float feedback)
     output_last_ = output_; // 保存当前总输出，作为下次计算的“上次总输出”
     last_time_s_ = current_time_s;
 
+    output_last_ = output_; // 保存当前总输出，作为下次计算的“上次总输出”
+
     return output_;
 }
 
