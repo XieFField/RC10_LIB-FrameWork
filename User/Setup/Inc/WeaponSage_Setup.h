@@ -71,10 +71,12 @@ namespace WeaponSage_Setup
             bool is_moving = false;  
 			bool wrist_enable=false;
         }auto_state_bool_S; //局部状态结构体
-		  float claw_close_pos = 32.36f;
+
+        float claw_close_pos = 32.36f;
         float claw_open_pos = 49.58f;
         float tarch_height = 0.0f; 
         float up_height = 0.0f;
+        
         struct{
             bool aimposition_done = false;
             bool lowerclaw_done = false;
