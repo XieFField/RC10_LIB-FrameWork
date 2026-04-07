@@ -170,8 +170,6 @@ float PID_Incremental::pid_calc(float target, float feedback)
         output_ = output_last_ + (P_Term + I_Term + D_Term);
     }
 
-    output_last_ = output_; // 保存当前总输出，作为下次计算的“上次总输出”
-
     if(is_forward_)
     {
         if(jia::deadZoneToZero(feedback, speed_forward_deadband_) > 0)
@@ -222,7 +220,6 @@ float PID_Incremental::pid_calc(float target, float feedback)
         // {
         //     power_off_protection_count_ = power_off_protection_threshold_;
         //     output_ = 0.0f;
-        //     output_last_ = 0.0f;
         //     is_power_off_protection_ = true;
         // }
 
@@ -230,7 +227,6 @@ float PID_Incremental::pid_calc(float target, float feedback)
         // {
         //     is_power_off_protection_count_--;
         //     output_ = 0.0f;
-        //     output_last_ = 0.0f;
         // }
     }
 
@@ -245,6 +241,8 @@ float PID_Incremental::pid_calc(float target, float feedback)
     feedback_earlier_ = feedback_last_;
     feedback_last_ = feedback;
     last_target_ = current_target;
+
+    output_last_ = output_; // 保存当前总输出，作为下次计算的“上次总输出”
 
     return output_;
 }
@@ -302,25 +300,25 @@ PID_Param_Config m2006_angle_pid_params = {
     .deadband = 0.03f 
 };
 
-// PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
-//     .kp =  250.0f,
-//     .ki = 12.0f,
-//     .kd = 0.0f,
-//     .I_Outlimit = 8000.0f, 
-//     .isIOutlimit = true, 
-//     .output_limit = 15000.0f,   
-//     .deadband = 0.1f 
-// };
-
 PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
-    .kp =  50.0f,
-    .ki = 1.0f,
+    .kp =  250.0f,
+    .ki = 12.0f,
     .kd = 0.0f,
-    .I_Outlimit = 1000000.0f, 
+    .I_Outlimit = 8000.0f, 
     .isIOutlimit = true, 
-    .output_limit = 20000.0f,   
-    .deadband = 0.0f 
+    .output_limit = 15000.0f,   
+    .deadband = 0.1f 
 };
+
+// PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
+//     .kp =  50.0f,
+//     .ki = 1.0f,
+//     .kd = 0.0f,
+//     .I_Outlimit = 1000000.0f, 
+//     .isIOutlimit = true, 
+//     .output_limit = 20000.0f,   
+//     .deadband = 0.0f 
+// };
 
 PID_Param_Config track_pid_params = {
     .kp = 6.0f,
@@ -335,7 +333,7 @@ PID_Param_Config track_pid_params = {
 PID_Param_Config lock_angle_pid_params = {
  .kp = 0.075f,
  .ki = 0.0f,
- .kd = 0.010f,
+ .kd = 0.0f,
  .I_Outlimit = 0.0f, 
  .isIOutlimit = true, 
  .output_limit = 3.0f, 
