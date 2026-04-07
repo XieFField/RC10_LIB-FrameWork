@@ -193,13 +193,18 @@ void OmniChassis_Setup::loop()
                 {
                     MF1_flag = true;
                 }
-                else if (MF2_pos_.x == curve.Get_End_point().x && MF2_pos_.y == curve.Get_End_point().y)
+                else if (MF1_flag == true )
+                {
+                    MF1_flag = false;
+                    Arm_Start = true;
+                    MF1_finish = true;
+                }
+                if (MF2_pos_.x == curve.Get_End_point().x && MF2_pos_.y == curve.Get_End_point().y)
                 {
                     MF2_flag = true;
                 }
-                else if (MF1_flag == true || MF2_flag == true)
+                else if ( MF2_flag == true)
                 {
-                    MF1_flag = false;
                     MF2_flag = false;
                     Arm_Start = true;
                     MF1_finish = true;
@@ -239,18 +244,20 @@ void OmniChassis_Setup::loop()
                 path_line_.Reset();
                 ResetAutoControlStates();
             }
+            float target_yaw_rad = target_yaw_ * PI / 180.0f;
+            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx,target_chassis_twist_.vy,target_yaw_rad);
         }
         else
         {
             // 未运行时保持原地锁角并清理自动控制历史量。
-            target_yaw_ = yaw;
+//            target_yaw_ = yaw;
+            chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx,target_chassis_twist_.vy);
             target_chassis_twist_.vx = 0.0f;
             target_chassis_twist_.vy = 0.0f;
             ResetAutoControlStates();
         }
 
-        float target_yaw_rad = target_yaw_ * PI / 180.0f;
-        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx,target_chassis_twist_.vy,target_yaw_rad);
+        
 
         break;
     }
@@ -668,13 +675,13 @@ void OmniChassis_Setup::Path_correction(void)
         corrVelocity.y = pid_pos_y.pid_calc(endPt.y, robot_pos_.y);
 
         // 限制最大纠偏速度，防止终点抖动
-        if (obj_dis < gradient_end_)
+        if (obj_dis <= gradient_end_)
         {
             corrVelocity = corrVelocity * min_gradient_;
         }
         else
         {
-            float gradient = _tool_Abs(obj_dis - gradient_end_) / _tool_Abs(gradient_start_ - gradient_end_);
+            float gradient = min_gradient_-(1-_tool_Abs(obj_dis - gradient_end_) / _tool_Abs(gradient_start_ - gradient_end_))* (1-min_gradient_);
             corrVelocity = corrVelocity * gradient;
         }
         return;

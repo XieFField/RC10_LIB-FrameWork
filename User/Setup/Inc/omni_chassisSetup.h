@@ -169,14 +169,14 @@ private:
 
     //---------------------------接口调试参数（需要修改时复制过来）---------------------------------------------//
 
-    float max_robot_speed_ = 1.5f; // 常规段底盘最大速度限制。
+    float max_robot_speed_ = 1.0f; // 常规段底盘最大速度限制。
 
-    float gradient_start_ = 0.4f; // 终点梯度衰减起始距离。
-    float gradient_end_ = 0.4f;   // 终点梯度衰减结束距离。
-    float min_gradient_ = 0.7f;   // 终点最小速度缩放比例。
+    float gradient_start_ = 1.2f; // 终点梯度衰减起始距离。
+    float gradient_end_ = 0.2f;   // 终点梯度衰减结束距离。
+    float min_gradient_ = 0.8f;   // 终点最小速度缩放比例。
 
-    float max_robot_speed_end_ = 0.35f; // 终点段最大速度限制。
-    float deadzone_max_end_ = 0.2f;     // 判定“近终点”阈值。
+    float max_robot_speed_end_ = 0.3f; // 终点段最大速度限制。
+    float deadzone_max_end_ = 0.1f;     // 判定“近终点”阈值。
 
     //-----------------------------------速度规划参数----------------------------------------------------//
 
@@ -220,7 +220,7 @@ private:
     bool MF1_finish = false; // MF1 阶段已完成标志。
 
     Vector2D spin_point_ = {3.6f, 8.72f}; // 上方旋转点
-    float spin_skew_ = -0.15f;            // 下方旋转位置y轴偏移量
+    float spin_skew_ = -0.1f;            // 下方旋转位置y轴偏移量
     bool get_spin_flag = false; // 旋转触发过渡标志。
     bool Spin_Start = false;    // 当前正在执行旋转。
 

@@ -682,7 +682,7 @@ bool ArmSetup::state_launchStillness(int targetKFS)
 
     this->set_LaunchHeight(this->init_data_.max_launchHeight_); //升到最高点，准备移动
 
-    if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.03f)
+    if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.02f)
     {
         auto_ctrl_.flag.canChassisStart = true; //机械臂已经升到可以移动的高度了
         return true;

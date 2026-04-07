@@ -232,7 +232,7 @@ namespace jia
             PID_Position rot_z_pid_;
             u8 rot_z_pid_period_ = 1;
             u8 rot_z_pid_count_ = 0;
-            f32 max_lock_to_rot_z_radio_ = rpmToRadsF32(30.0f); // 最大固定到rot_z转动系数，单位：rad/s
+            f32 max_lock_to_rot_z_radio_ = 1.79999995; // 最大固定到rot_z转动系数，单位：rad/s
 
             // 调试参数
             bool is_debug_ = false; // 是否开启调试模式
