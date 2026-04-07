@@ -232,7 +232,7 @@ namespace jia
             PID_Position rot_z_pid_;
             u8 rot_z_pid_period_ = 1;
             u8 rot_z_pid_count_ = 0;
-            f32 max_lock_to_rot_z_radio_ = rpmToRadsF32(0.5f); // 最大固定到rot_z转动系数，单位：rad/s
+            f32 max_lock_to_rot_z_radio_ = rpmToRadsF32(30.0f); // 最大固定到rot_z转动系数，单位：rad/s
 
             // 调试参数
             bool is_debug_ = false; // 是否开启调试模式
@@ -283,8 +283,6 @@ namespace jia
 
             void clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z);
 
-    private:
-        bool is_debug_ = false;
             void isLimitAccInChassis(bool is_limit,
                                      f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z,
                                      f32 cur_vel_x, f32 cur_vel_y, f32 cur_omega_z,
