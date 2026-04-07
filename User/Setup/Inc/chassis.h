@@ -123,6 +123,15 @@ namespace jia
                 kWorldSpeedLockNowRotZWithNoOmegaZMode,
             };
 
+            struct ModeFlag
+            {
+                bool is_wheel_torque_free; // 是否为轮子扭矩自由模式
+                // Coordinate coord = Coordinate::kBody; // 速度坐标系
+                bool is_world_speed_mode; // 是否为世界坐标系速度模式
+                bool is_lock_now_rot_z;   // 是否固定当前rot_z
+                bool is_lock_to_rot_z;    // 是否固定到rot_z
+            };
+
             struct InputTargetData
             {
                 f32 vel_x;
@@ -176,9 +185,12 @@ namespace jia
             f32 input_hwt_omega_z_;
 
             // 模式标志位
-            bool is_world_speed_mode_; // 是否为世界速度模式
-            bool is_lock_now_rot_z_;   // 是否固定当前rot_z
-            bool is_lock_to_rot_z_;    // 是否固定到rot_z
+            //  // 当前模式标志位
+            ModeFlag current_mode_flag_;
+            ModeFlag &cmf_ = current_mode_flag_;
+            //  // 上一时刻模式标志位
+            // ModeFlag last_mode_flag_;
+            // ModeFlag &lmf_ = last_mode_flag_;
 
             // 系统参数
             constexpr static u8 period_ms_ = 1;                  // 控制周期，单位：毫秒
@@ -198,7 +210,7 @@ namespace jia
             // 速度限制参数
             //  // 轮端速度
             bool is_wheel_omega_limit_ = true;           // 是否进行轮端角速度限制
-            f32 max_wheel_omega_ = rpmToRadsF32(350.0f); // 最大轮子角速度，单位：rad/s
+            f32 max_wheel_omega_ = rpmToRadsF32(400.0f); // 最大轮子角速度，单位：rad/s
             f32 max_wheel_vel_ = 0.0f;                   // 最大轮子线速度，单位：米/秒
 
             //  // 车端速度
@@ -232,14 +244,16 @@ namespace jia
             PID_Position rot_z_pid_;
             u8 rot_z_pid_period_ = 1;
             u8 rot_z_pid_count_ = 0;
-            f32 max_lock_to_rot_z_radio_ = rpmToRadsF32(0.5f); // 最大固定到rot_z转动系数，单位：rad/s
+            f32 max_lock_to_rot_z_radio_ = 1.0f;      // 最大固定到rot_z转动系数，单位：rad/s
+            u32 lock_now_rot_z_shift_count_ = 0.;     // 固定当前rot_z计数器
+            u32 lock_now_rot_z_shift_time_ms_ = 1000; // 固定当前rot_z缓冲时间，单位：毫秒
 
             // 调试参数
             bool is_debug_ = false; // 是否开启调试模式
-            u8 debug_mode_ = 0;        // 调试模式
+            u8 debug_mode_ = 0;     // 调试模式
 
-            u8 debug_wheel_index_ = 2; // 调试轮子索引
-            f32 debug_input_ = 90.0f; // 调试输入
+            u8 debug_wheel_index_ = 2;    // 调试轮子索引
+            f32 debug_input_ = 90.0f;     // 调试输入
             f32 debug_lock_rot_z_ = 0.0f; // 调试固定rot_z
 
             bool is_step_signal_ = false; // 是否使用阶跃信号
@@ -470,11 +484,10 @@ namespace jia
 
             struct ModeFlag
             {
-                bool is_clear_ = true;                 // 是否清除数据
-                bool is_wheel_torque_free_ = false;    // 是否为轮子扭矩自由模式
-                Coordinate coord_ = Coordinate::kBody; // 速度坐标系
-                bool is_lock_now_rot_z_;               // 是否固定当前rot_z
-                bool is_lock_to_rot_z_;                // 是否固定到rot_z
+                bool is_wheel_torque_free = false;    // 是否为轮子扭矩自由模式
+                Coordinate coord = Coordinate::kBody; // 速度坐标系
+                bool is_lock_now_rot_z;               // 是否固定当前rot_z
+                bool is_lock_to_rot_z;                // 是否固定到rot_z
             };
 
             struct InputTargetData
@@ -521,7 +534,8 @@ namespace jia
             Data &cd_ = current_data_;
 
             // 模式标志位
-            ModeFlag mode_flag;
+            ModeFlag current_mode_flag_;
+            ModeFlag &cmf_ = current_mode_flag_;
 
             // IMU数据
             f32 input_hwt_rot_z_;

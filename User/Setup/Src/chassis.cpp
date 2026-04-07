@@ -108,12 +108,12 @@ namespace jia
 
                 setModeFlag();
 
-                isTransSpeedBodyToWorld(is_world_speed_mode_, it.vel_x, it.vel_y, t.vel_x, t.vel_y);
+                isTransSpeedBodyToWorld(cmf_.is_world_speed_mode, it.vel_x, it.vel_y, t.vel_x, t.vel_y);
 
-                if (is_lock_now_rot_z_)
-                    isLockNowRotZ(is_lock_now_rot_z_, t.rot_z, it.omega_z, t.rot_z, t.omega_z);
-                if (is_lock_to_rot_z_)
-                    isLockToRotZ(is_lock_to_rot_z_, it.rot_z, t.rot_z, t.rot_z, it.omega_z, t.omega_z);
+                if (cmf_.is_lock_now_rot_z)
+                    isLockNowRotZ(cmf_.is_lock_now_rot_z, t.rot_z, it.omega_z, t.rot_z, t.omega_z);
+                if (cmf_.is_lock_to_rot_z)
+                    isLockToRotZ(cmf_.is_lock_to_rot_z, it.rot_z, t.rot_z, t.rot_z, it.omega_z, t.omega_z);
 
                 // 逆运动学解算
                 //  // 限制车端的目标速度
@@ -195,6 +195,7 @@ namespace jia
 
                 // 保存当前数据为上一次数据
                 lp = p;
+                // lmf_ = cmf_;
 
                 // debug_uart_.printf_DMA("%lu,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", time_ms_, t.w1_omega, t.w2_omega, t.w3_omega, p.w1_omega, p.w2_omega, p.w3_omega, c.w1_omega, c.w2_omega, c.w3_omega);
                 // debug_uart_.printf_DMA("%lu\r\n", time_ms_);
@@ -272,49 +273,49 @@ namespace jia
             switch (input_target_data_.mode)
             {
             case Mode::kWheelTorqueFreeMode:
-                is_world_speed_mode_ = false;
-                is_lock_now_rot_z_ = false;
-                is_lock_to_rot_z_ = false;
+                cmf_.is_world_speed_mode = false;
+                cmf_.is_lock_now_rot_z = false;
+                cmf_.is_lock_to_rot_z = false;
                 break;
             case Mode::kBodySpeedMode:
-                is_world_speed_mode_ = false;
-                is_lock_now_rot_z_ = false;
-                is_lock_to_rot_z_ = false;
+                cmf_.is_world_speed_mode = false;
+                cmf_.is_lock_now_rot_z = false;
+                cmf_.is_lock_to_rot_z = false;
                 break;
             case Mode::kBodySpeedLockNowRotZMode:
-                is_world_speed_mode_ = false;
-                is_lock_now_rot_z_ = true;
-                is_lock_to_rot_z_ = false;
+                cmf_.is_world_speed_mode = false;
+                cmf_.is_lock_now_rot_z = true;
+                cmf_.is_lock_to_rot_z = false;
                 break;
             case Mode::kBodySpeedLockToRotZMode:
-                is_world_speed_mode_ = false;
-                is_lock_now_rot_z_ = false;
-                is_lock_to_rot_z_ = true;
+                cmf_.is_world_speed_mode = false;
+                cmf_.is_lock_now_rot_z = false;
+                cmf_.is_lock_to_rot_z = true;
                 break;
             case Mode::kWorldSpeedMode:
-                is_world_speed_mode_ = true;
-                is_lock_now_rot_z_ = false;
-                is_lock_to_rot_z_ = false;
+                cmf_.is_world_speed_mode = true;
+                cmf_.is_lock_now_rot_z = false;
+                cmf_.is_lock_to_rot_z = false;
                 break;
             case Mode::kWorldSpeedLockNowRotZMode:
-                is_world_speed_mode_ = true;
-                is_lock_now_rot_z_ = true;
-                is_lock_to_rot_z_ = false;
+                cmf_.is_world_speed_mode = true;
+                cmf_.is_lock_now_rot_z = true;
+                cmf_.is_lock_to_rot_z = false;
                 break;
             case Mode::kWorldSpeedLockToRotZMode:
-                is_world_speed_mode_ = true;
-                is_lock_now_rot_z_ = false;
-                is_lock_to_rot_z_ = true;
+                cmf_.is_world_speed_mode = true;
+                cmf_.is_lock_now_rot_z = false;
+                cmf_.is_lock_to_rot_z = true;
                 break;
             case Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode:
-                is_world_speed_mode_ = true;
-                is_lock_now_rot_z_ = true;
-                is_lock_to_rot_z_ = false;
+                cmf_.is_world_speed_mode = true;
+                cmf_.is_lock_now_rot_z = true;
+                cmf_.is_lock_to_rot_z = false;
                 break;
             case Mode::kBodySpeedLockNowRotZWithNoOmegaZMode:
-                is_world_speed_mode_ = false;
-                is_lock_now_rot_z_ = true;
-                is_lock_to_rot_z_ = false;
+                cmf_.is_world_speed_mode = false;
+                cmf_.is_lock_now_rot_z = true;
+                cmf_.is_lock_to_rot_z = false;
                 break;
             default:
                 break;
@@ -658,14 +659,25 @@ namespace jia
             {
                 if (omega_z == 0.0f)
                 {
-                    calculatePid(rot_z_pid_, rot_z_pid_count_, rot_z_pid_period_,
-                                 radToDegF32(rot_z), radToDegF32(input_hwt_rot_z_),
-                                 out_omega_z);
+                    if (lock_now_rot_z_shift_count_ > 0)
+                    {
+                        lock_now_rot_z_shift_count_--;
+                        out_rot_z = input_hwt_rot_z_;
+                        out_omega_z = omega_z;
+                    }
+                    else
+                    {
+                        calculatePid(rot_z_pid_, rot_z_pid_count_, rot_z_pid_period_,
+                                     radToDegF32(rot_z), radToDegF32(input_hwt_rot_z_),
+                                     out_omega_z);
+                    }
                 }
                 else
                 {
                     out_omega_z = omega_z;
                     out_rot_z = input_hwt_rot_z_;
+
+                    lock_now_rot_z_shift_count_ = lock_now_rot_z_shift_time_ms_;
                 }
             }
             else
@@ -729,11 +741,11 @@ namespace jia
             memset(&data, 0, sizeof(Data));
         }
 
-        void Chassis::isLockToRotZ(bool is_lock, f32 tar_rot_z, f32 pla_rot_z, f32 &out_rot_z, f32 omega_z, f32 &out_omega_z)
+        void Chassis::isLockToRotZ(bool is_lock, f32 tar_rot_z, f32 cur_rot_z, f32 &out_rot_z, f32 omega_z, f32 &out_omega_z)
         {
             if (is_lock)
             {
-                out_rot_z = limit1DSignalRateByTimeF32(tar_rot_z, pla_rot_z, period_, max_lock_to_rot_z_radio_);
+                out_rot_z = limit1DPiAngleRateByTimeF32(tar_rot_z, cur_rot_z, period_, max_lock_to_rot_z_radio_);
 
                 calculatePid(rot_z_pid_, rot_z_pid_count_, rot_z_pid_period_,
                              radToDegF32(out_rot_z), radToDegF32(input_hwt_rot_z_),

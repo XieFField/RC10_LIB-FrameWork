@@ -25,6 +25,43 @@ namespace jia
     constexpr f32 kPi = 3.14159265358979323846f;
 
     /**
+     * @brief 数值范围限制
+     * @param val 输入值
+     * @param min_val 最小值
+     * @param max_val 最大值
+     * @return T 限制后的值
+     */
+    template <typename T>
+    constexpr inline T clampValue(const T &val, const T &min_val, const T &max_val)
+    {
+        if (val < min_val)
+            return min_val;
+        if (val > max_val)
+            return max_val;
+        return val;
+    }
+
+    /**
+     * @brief 弧度转换为度
+     * @param rad 弧度（单位：弧度）
+     * @return f32 度（单位：度）
+     */
+    constexpr inline f32 radToDegF32(f32 rad)
+    {
+        return rad * 360.0f / (2.0f * kPi);
+    }
+
+    /**
+     * @brief 度转换为弧度
+     * @param deg 度（单位：度）
+     * @return f32 弧度（单位：弧度）
+     */
+    constexpr inline f32 degToRadF32(f32 deg)
+    {
+        return deg * (2.0f * kPi) / 360.0f;
+    }
+
+    /**
      * @brief 计算正弦值（角度制）
      * @param deg 角度（度）
      * @return f32 正弦值（-1.0f ~ 1.0f）
@@ -77,11 +114,11 @@ namespace jia
     inline f32 limit1DSignalRateByTimeF32(f32 target, f32 current, f32 dt, f32 max_rate)
     {
         f32 diff = target - current;
-        f32 maxStep = max_rate * dt;
-        if (diff > maxStep)
-            return current + maxStep;
-        else if (diff < -maxStep)
-            return current - maxStep;
+        f32 max_step = max_rate * dt;
+        if (diff > max_step)
+            return current + max_step;
+        else if (diff < -max_step)
+            return current - max_step;
         else
             return target;
     }
@@ -109,6 +146,56 @@ namespace jia
     }
 
     /**
+     * @brief 限制角度变化率（考虑角度环绕）
+     * @param target 目标角度[-180°, 180°)
+     * @param current_angle 当前角度[-180°, 180°)
+     * @param period 时间周期（秒）
+     * @param max_rate 最大角度变化率（度/秒）
+     * @return 限制后的角度值[-180°, 180°)
+     */
+    inline f32 limit1D180AngleRateByTimeF32(f32 target, f32 current, f32 period, f32 max_rate)
+    {
+        // 计算角度差，考虑环绕情况
+        f32 angle_diff = target - current;
+
+        // 调整角度差到 [-180°, 180°] 范围内，找到最短路径
+        if (angle_diff > 180.0f)
+        {
+            angle_diff -= 360.0f;
+        }
+        else if (angle_diff < -180.0f)
+        {
+            angle_diff += 360.0f;
+        }
+
+        // 计算最大允许的角度变化
+        float max_angle_change = max_rate * period;
+
+        // 限制角度变化
+        clampValue(angle_diff, -max_angle_change, max_angle_change);
+
+        // 计算新的角度
+        f32 new_angle = current + angle_diff;
+
+        // 确保新角度在 [-180°, 180°] 范围内
+        if (new_angle > 180.0f)
+        {
+            new_angle -= 360.0f;
+        }
+        else if (new_angle < -180.0f)
+        {
+            new_angle += 360.0f;
+        }
+
+        return new_angle;
+    }
+
+    inline f32 limit1DPiAngleRateByTimeF32(f32 target, f32 current, f32 period, f32 max_rate)
+    {
+        return degToRadF32(limit1D180AngleRateByTimeF32(radToDegF32(target), radToDegF32(current), period, radToDegF32(max_rate)));
+    }
+
+    /**
      * @brief 三值取小
      * @param a 第一个值
      * @param b 第二个值
@@ -119,23 +206,6 @@ namespace jia
     constexpr inline T minOfThree(const T &a, const T &b, const T &c)
     {
         return std::min(std::min(a, b), c);
-    }
-
-    /**
-     * @brief 数值范围限制
-     * @param val 输入值
-     * @param min_val 最小值
-     * @param max_val 最大值
-     * @return T 限制后的值
-     */
-    template <typename T>
-    constexpr inline T clampValue(const T &val, const T &min_val, const T &max_val)
-    {
-        if (val < min_val)
-            return min_val;
-        if (val > max_val)
-            return max_val;
-        return val;
     }
 
     /**
@@ -291,26 +361,6 @@ namespace jia
     }
 
     /**
-     * @brief 弧度转换为度
-     * @param rad 弧度（单位：弧度）
-     * @return f32 度（单位：度）
-     */
-    constexpr inline f32 radToDegF32(f32 rad)
-    {
-        return rad * 360.0f / (2.0f * kPi);
-    }
-
-    /**
-     * @brief 度转换为弧度
-     * @param deg 度（单位：度）
-     * @return f32 弧度（单位：弧度）
-     */
-    constexpr inline f32 degToRadF32(f32 deg)
-    {
-        return deg * (2.0f * kPi) / 360.0f;
-    }
-
-    /**
      * @brief 右手坐标系 · 绕 Z 轴旋转坐标
      * @param x,y 输入坐标
      * @param theta 旋转弧度（逆时针为正）
@@ -400,6 +450,24 @@ namespace jia
         if (normalized >= half_circle)
         {
             normalized -= full_circle;
+        }
+        return normalized;
+    }
+
+    /**
+     * @brief 角度归一化，将角度转换为[-π,π)弧度范围内
+     * @param angle 输入角度（单位：弧度）
+     * @return T 归一化后的角度（单位：弧度）
+     */
+    template <typename T>
+    constexpr inline typename std::enable_if<std::is_same<T, f32>::value, T>::type
+    normalizeAngleToPi(T angle)
+    {
+        constexpr T full_circle = 2.0f * kPi;
+        T normalized = fmodf(angle, full_circle);
+        if (normalized < 0.0f)
+        {
+            normalized += full_circle;
         }
         return normalized;
     }
