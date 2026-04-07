@@ -17,6 +17,16 @@ void Encoder::update(uint16_t raw_value)
         
         total_angle_ = 0.0f;
         angle_       = normalize_deg_0_360(current_angle - start_angle_); // 显示角归零
+
+        // 若重定位在首帧前发生，则在初始化完成当拍应用，避免被首帧清零
+        if (has_pending_relocate_)
+        {
+            precision_offset_ = pending_relocate_total_angle_;
+            total_angle_ = pending_relocate_total_angle_;
+            angle_ = normalize_deg_0_360(total_angle_);
+            has_pending_relocate_ = false;
+        }
+
         is_init_     = true;
         return;
     }
@@ -76,6 +86,16 @@ void Encoder::update(uint16_t raw_value)
 
 void Encoder::relocate_totalAngle(float now_totalAngle)
 {
+    if (!is_init_)
+    {
+        // 尚未收到首帧反馈时，先缓存目标，待初始化后立即应用
+        has_pending_relocate_ = true;
+        pending_relocate_total_angle_ = now_totalAngle;
+        total_angle_ = now_totalAngle;
+        angle_ = normalize_deg_0_360(total_angle_);
+        return;
+    }
+
     // 重定位核心：改变 "坐标原点" 使得计算出的 total_angle_ 等于目标值
     // Formula: Total = (Round*360 + Curr - Start) + Off
     // 我们保持 Round, Curr, Start 不变 (因为这些是物理事实)，只调整 Off

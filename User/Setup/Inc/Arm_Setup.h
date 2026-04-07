@@ -273,6 +273,10 @@ public:
 
     void setArmStatus(ARM_Status_E status)
     {
+        // 未完成校准时，只允许保持在校准态，避免被上层状态机提前切到手操/空闲
+        if(status != ARM_CALIBRATE && !isArmcalibrated())
+            return;
+
         arm_status_ = status;
     }
 

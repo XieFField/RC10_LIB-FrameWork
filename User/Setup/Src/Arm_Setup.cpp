@@ -17,6 +17,10 @@ void ArmSetup::loop()
     {
         calibrateMotor();
         arm_status_ = ARM_CALIBRATE;
+        // 本拍仅执行校准，不进入其他状态分支，避免与上层状态机抢写 arm_status_
+        this->update();
+        last_arm_status_ = arm_status_;
+        return;
     }
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
