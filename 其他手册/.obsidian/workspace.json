@@ -4,53 +4,22 @@
     "type": "split",
     "children": [
       {
-        "id": "be517bb137866a98",
+        "id": "9fc654534b0348af",
         "type": "tabs",
         "children": [
           {
-            "id": "727b45ad564964da",
+            "id": "4f8c736a50b1bbf6",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "excalidraw",
               "state": {
-                "file": "贝塞尔曲线中轨迹修正方案.md",
-                "mode": "source",
-                "source": false
+                "file": "Excalidraw/孙元气遥控.md"
               },
-              "icon": "lucide-file",
-              "title": "贝塞尔曲线中轨迹修正方案"
-            }
-          },
-          {
-            "id": "4c1d92abdb2dbc77",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "自动模式方案书.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "自动模式方案书"
-            }
-          },
-          {
-            "id": "e3474309c3550445",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "停下拾取KFS方案书.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "停下拾取KFS方案书"
+              "icon": "excalidraw-icon",
+              "title": "孙元气遥控"
             }
           }
-        ],
-        "currentTab": 2
+        ]
       }
     ],
     "direction": "vertical"
@@ -189,6 +158,7 @@
   },
   "left-ribbon": {
     "hiddenItems": {
+      "obsidian-excalidraw-plugin:New drawing": false,
       "bases:新建数据库": false,
       "switcher:打开快速切换": false,
       "graph:查看关系图谱": false,
@@ -198,20 +168,23 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "e3474309c3550445",
+  "active": "4f8c736a50b1bbf6",
   "lastOpenFiles": [
-    "3. 电机上手流程(三)-MIT模式说明.pdf",
-    "停下拾取KFS方案书.md",
-    "自动模式方案书.md",
-    "串联刚体臂吸盘解算.md",
+    "Q.遥控器.md",
     "贝塞尔曲线中轨迹修正方案.md",
+    "自动模式方案书.md",
+    "Excalidraw/孙元气遥控.md",
+    "Excalidraw/期末考核，自动状态机流程图.md",
+    "Pasted Image 20260406222452_679.png",
+    "停下拾取KFS方案书.md",
+    "3. 电机上手流程(三)-MIT模式说明.pdf",
+    "串联刚体臂吸盘解算.md",
     "初代状态机.md",
     "串联臂自动逻辑.md",
     "R1自动夹取武器杆的状态机.md",
     "自动模式方案书.pdf",
     "路径规划方案AI炼丹.md",
     "二代状态机.md",
-    "Excalidraw/期末考核，自动状态机流程图.md",
     "Excalidraw",
     "Untitled.base",
     "Untitled.md",

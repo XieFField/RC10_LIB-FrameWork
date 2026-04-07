@@ -11,6 +11,7 @@ void FSM_Controller::loop()
     CrsfReceiver::GetInstance(&huart7)->process();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     
+
 	switch(text_index)
 	{
 		case 0://xiumian
