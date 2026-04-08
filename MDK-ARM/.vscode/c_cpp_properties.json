@@ -24,7 +24,6 @@
                 "d:\\zy-for-R1\\USB_DEVICE\\Target",
                 "d:\\zy-for-R1\\Middlewares\\ST\\STM32_USB_Device_Library\\Core\\Inc",
                 "d:\\zy-for-R1\\Middlewares\\ST\\STM32_USB_Device_Library\\Class\\CDC\\Inc",
-                "d:\\RC10_LIB-FrameWork",
                 "d:\\zy-for-R1\\MDK-ARM",
                 "d:\\zy-for-R1\\Core\\Src",
                 "d:\\zy-for-R1\\Drivers\\STM32H7xx_HAL_Driver\\Src",
@@ -36,7 +35,6 @@
                 "d:\\zy-for-R1\\RC10_LIB\\Motor\\Src",
                 "d:\\zy-for-R1\\User\\Control\\Src",
                 "d:\\zy-for-R1\\User\\Setup\\Src",
-                "d:\\zy-for-R1\\User\\debug\\Src",
                 "d:\\zy-for-R1\\Drivers\\CMSIS\\DSP\\Lib\\ARM",
                 "d:\\zy-for-R1\\Middlewares\\ST\\STM32_USB_Device_Library\\Core\\Src",
                 "d:\\zy-for-R1\\Middlewares\\ST\\STM32_USB_Device_Library\\Class\\CDC\\Src"
