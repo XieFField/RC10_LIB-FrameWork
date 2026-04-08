@@ -64,6 +64,8 @@ void parse_uart_data(uint8_t data);
 #define AirJoy_EXTI_IRQn EXTI9_5_IRQn
 #define PPM_Pin GPIO_PIN_9
 #define PPM_GPIO_Port GPIOF
+#define kTEST_PHOTOGATE_Pin GPIO_PIN_1
+#define kTEST_PHOTOGATE_GPIO_Port GPIOG
 #define SWITCH1_Pin GPIO_PIN_14
 #define SWITCH1_GPIO_Port GPIOD
 #define SWTICH2_Pin GPIO_PIN_15
@@ -72,7 +74,11 @@ void parse_uart_data(uint8_t data);
 #define SUCKER_error_GPIO_Port GPIOG
 #define SUCKERERROR2_Pin GPIO_PIN_4
 #define SUCKERERROR2_GPIO_Port GPIOG
-#define SUCKER_Pin GPIO_PIN_5
+#define SUCKERERROR3_Pin GPIO_PIN_5
+#define SUCKERERROR3_GPIO_Port GPIOG
+#define SUCKERERROR4_Pin GPIO_PIN_6
+#define SUCKERERROR4_GPIO_Port GPIOG
+#define SUCKER_Pin GPIO_PIN_7
 #define SUCKER_GPIO_Port GPIOG
 #define SUCKER_P1_Pin GPIO_PIN_5
 #define SUCKER_P1_GPIO_Port GPIOD

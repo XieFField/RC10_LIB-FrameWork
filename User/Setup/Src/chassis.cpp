@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "main.h"
 #include "cmsis_os2.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -776,6 +777,15 @@ namespace jia
                 Error_Handler();
             }
 
+            // 初始化轮子配置
+            for (int i = 0; i < 4; i++)
+            {
+                wheel_config_[i].steer_motor_h = config.steer_motor_h[i];
+                wheel_config_[i].drive_motor_h = config.drive_motor_h[i];
+            }
+
+            wheel_config_[0].steer_motor_h->reset_GearRatio(8.0f);
+
             // 计算底盘最大速度
             max_wheel_vel_ = omegaToVelF32(max_wheel_omega_, swr_);
         }
@@ -793,6 +803,11 @@ namespace jia
 
             for (;;)
             {
+                ihrz_ = hwt->get_yaw_rad();
+                ihoz_ = hwt->get_yaw_speed_rad();
+
+                isDebugMode();
+
                 // printf_period_count_++;
                 // if (printf_period_count_ >= printf_period_ms_)
                 // {
@@ -800,6 +815,230 @@ namespace jia
                 // }
 
                 vTaskDelayUntil(&time_ms_, period_ms_);
+            }
+        }
+
+        void Chassis::isDebugMode()
+        {
+            if (is_debug_)
+            {
+                CrsfReceiver *receiver = CrsfReceiver::GetInstance(&huart7);
+
+                receiver->getControlData(&airjoy_data_);
+
+                f32 target_vel_x = 0.0f;
+                f32 target_vel_y = 0.0f;
+                f32 target_omega_z = 0.0f;
+
+                target_vel_x = airjoy_data_.left_x * max_vel_x_;
+                target_vel_y = airjoy_data_.left_y * max_vel_y_;
+
+                // if (airjoy_data_.right_x > 0.1f)
+                // {
+                //     target_omega_z = max_omega_z_;
+                // }
+                // else if (airjoy_data_.right_x < -0.1f)
+                // {
+                //     target_omega_z = -max_omega_z_;
+                // }
+                // else
+                // {
+                //     target_omega_z = 0.0f;
+                // }
+
+                target_omega_z = airjoy_data_.right_x * max_omega_z_;
+
+                if (is_sine_)
+                {
+                    target_omega_z = sineWaveGeneratorF32(time_ms_ / 1000.0f, sine_amplitude_, sine_frequency_, 0.0f, sine_offset_);
+                }
+                else if (is_step_signal_)
+                {
+                    if (airjoy_data_.right_x > 0.3f)
+                    {
+                        target_omega_z = max_omega_z_;
+                    }
+                    else if (airjoy_data_.right_x < -0.3f)
+                    {
+                        target_omega_z = -max_omega_z_;
+                    }
+                    else
+                    {
+                        target_omega_z = 0.0f;
+                    }
+                }
+
+                switch (debug_mode_)
+                {
+                default:
+                case 0:
+                {
+                    setWheelTorqueFreeMode();
+                    break;
+                }
+                case 1:
+                {
+                    setTargetBodySpeedMode(target_vel_x, target_vel_y, target_omega_z);
+                    break;
+                }
+                case 2:
+                {
+                    setTargetWorldSpeedMode(target_vel_x, target_vel_y, target_omega_z);
+                    break;
+                }
+                case 3:
+                {
+                    setTargetBodySpeedLockNowRotZMode(target_vel_x, target_vel_y);
+                    break;
+                }
+                case 4:
+                {
+                    setTargetWorldSpeedLockNowRotZMode(target_vel_x, target_vel_y);
+                    break;
+                }
+                case 5:
+                {
+                    setTargetBodySpeedLockToRotZMode(target_vel_x, target_vel_y, debug_lock_rot_z_);
+                    break;
+                }
+                case 6:
+                {
+                    setTargetWorldSpeedLockToRotZMode(target_vel_x, target_vel_y, debug_lock_rot_z_);
+                    break;
+                }
+                case 7:
+                {
+                    setTargetBodySpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
+                    break;
+                }
+                case 8:
+                {
+                    setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
+                    break;
+                }
+                }
+
+                // // 调试轮子
+                auto &wheel_handle = wheel_config_[debug_wheel_index_].steer_motor_h;
+
+                f32 t_rpm = 0.0f;
+
+                if (is_sine_)
+                {
+                    t_rpm = sineWaveGeneratorF32(time_ms_ / 1000.0f, sine_amplitude_, sine_frequency_, 0.0f, sine_offset_);
+                }
+                else if (is_step_signal_)
+                {
+                    if (airjoy_data_.left_x > 0.3f)
+                    {
+                        t_rpm = debug_input_;
+                    }
+                    else if (airjoy_data_.left_x < -0.3f)
+                    {
+                        t_rpm = -debug_input_;
+                    }
+                    else
+                    {
+                        t_rpm = 0.0f;
+                    }
+                }
+                else if (is_hand_input_)
+                {
+                    t_rpm = hand_input_;
+                }
+                else
+                {
+                    t_rpm = airjoy_data_.left_x * debug_input_;
+                }
+
+                if (is_wheel_speed_mode_)
+                {
+                    wheel_handle->setTargetRPM(t_rpm);
+                }
+                else if (is_wheel_current_mode_)
+                {
+                    wheel_handle->setTargetCurrent(t_rpm);
+                }
+                else if (is_wheel_single_position_mode_)
+                {
+                    if (is_use_cailbration_angle_)
+                    {
+                        t_rpm += cailbration_angle_deg_;
+                    }
+                    wheel_handle->setTargetAngle(t_rpm);
+                }
+                else if (is_wheel_plural_position_mode_)
+                {
+                    if (is_use_cailbration_angle_)
+                    {
+                        t_rpm += cailbration_angle_deg_;
+                    }
+                    wheel_handle->setTargetTotalAngle(t_rpm);
+                }
+                else
+                {
+                    wheel_handle->setTargetCurrent(0.0f);
+                }
+
+                // f32 pid_error = wheel_handle->speed_pid_.error_;
+                // // f32 pid_error_last = wheel_handle->speed_pid_.error_last_;
+                // // f32 pid_error_earlier_ = wheel_handle->speed_pid_.error_earlier_;
+                // f32 pid_p = wheel_handle->speed_pid_.P_Term;
+                // f32 pid_i = wheel_handle->speed_pid_.I_Term;
+                // f32 pid_d = wheel_handle->speed_pid_.D_Term;
+                // f32 pid_output = wheel_handle->speed_pid_.output_;
+
+                // f32 t_current = wheel_handle->getTargetCurrent();
+
+                // f32 c_current = wheel_handle->current_;
+                // f32 c_rpm = wheel_handle->getRPM();
+
+                photogate_signal_ = HAL_GPIO_ReadPin(kTEST_PHOTOGATE_GPIO_Port, kTEST_PHOTOGATE_Pin);
+
+                if (is_power_on_cailbration_)
+                {
+                    is_doing_cailbration_ = true;
+                    is_power_on_cailbration_ = false;
+
+                    last_photogate_signal_ = photogate_signal_;
+                }
+
+                if (is_doing_cailbration_)
+                {
+                    wheel_handle->setTargetRPM(cailbration_rpm_);
+
+                    if (photogate_signal_ == last_photogate_signal_)
+                    {
+                    }
+                    else
+                    {
+                        wheel_handle->setTargetRPM(0.0f);
+                        is_doing_cailbration_ = false;
+
+                        cailbration_angle_deg_ = wheel_handle->getAngle();
+
+                        if (photogate_signal_ == true)
+                        {
+                            cailbration_angle_deg_ += 180.0f;
+                        }
+                        else
+                        {
+                        }
+
+                        cailbration_angle_deg_ = normalizeAngleTo180(cailbration_angle_deg_);
+                    }
+                }
+
+                f32 t_angle_deg = normalizeAngleTo180(wheel_handle->getTargetAngle() - cailbration_angle_deg_);
+                f32 c_angle_deg = normalizeAngleTo180(wheel_handle->getAngle() - cailbration_angle_deg_);
+
+                printf_period_count_++;
+                if (printf_period_count_ >= printf_period_ms_)
+                {
+                    printf_period_count_ = 0;
+                    // debug_uart_.printf_DMA("%f,%f,%f,%f\r\n", t_rpm, c_rpm, t_current, c_current);
+                    debug_uart_.printf_DMA("%f,%f,%f,%f\r\n", (f32)photogate_signal_, cailbration_angle_deg_, t_angle_deg, c_angle_deg);
+                }
             }
         }
     }

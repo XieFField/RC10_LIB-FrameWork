@@ -435,7 +435,7 @@ namespace jia
         public:
             struct InitConfig
             {
-                Motor_Base *steer_motor_h[4] = {nullptr};
+                M3508 *steer_motor_h[4] = {nullptr};
                 Motor_Base *drive_motor_h[4] = {nullptr};
             };
 
@@ -448,7 +448,7 @@ namespace jia
                 f32 pos_x;                           // 单位：米
                 f32 pos_y;                           // 单位：米
                 f32 rot_z_deg;                       // 单位：度
-                Motor_Base *steer_motor_h = nullptr; // 舵向电机句柄
+                M3508 *steer_motor_h = nullptr; // 舵向电机句柄
                 Motor_Base *drive_motor_h = nullptr; // 轮向电机句柄
 
                 f32 sin_rot_z;
@@ -459,7 +459,7 @@ namespace jia
                 f32 abs_cos_rot_z; // 余弦值的绝对值
                 f32 abs_eq_radius; // 等效半径的绝对值，单位：米
 
-                Motor_Base *&smh = steer_motor_h;
+                M3508 *&smh = steer_motor_h;
                 Motor_Base *&dmh = drive_motor_h;
                 f32 &s = sin_rot_z;
                 f32 &c = cos_rot_z;
@@ -511,6 +511,16 @@ namespace jia
                 f32 alpha_z; // z轴角加速度，单位：rad/s^2
 
                 f32 rot_z; // z轴朝向角度，单位：rad
+
+                f32 w1_steer_angle; // 舵向轮子1角度，单位：rad
+                f32 w2_steer_angle; // 舵向轮子2角度，单位：rad
+                f32 w3_steer_angle; // 舵向轮子3角度，单位：rad
+                f32 w4_steer_angle; // 舵向轮子4角度，单位：rad
+
+                f32 w1_drive_omega; // 航向轮子1角速度，单位：rad/s
+                f32 w2_drive_omega; // 航向轮子2角速度，单位：rad/s
+                f32 w3_drive_omega; // 航向轮子3角速度，单位：rad/s
+                f32 w4_drive_omega; // 航向轮子4角速度，单位：rad/s
             };
 
             // 创建线程
@@ -554,10 +564,10 @@ namespace jia
             const f32 &swr_ = steer_wheel_radius_;
             //  // 轮子配置
             WheelConfig wheel_config_[4];
-            WheelConfig &w1_ = wheel_config_[0];
-            WheelConfig &w2_ = wheel_config_[1];
-            WheelConfig &w3_ = wheel_config_[2];
-            WheelConfig &w4_ = wheel_config_[3];
+            WheelConfig &w0_ = wheel_config_[0];
+            WheelConfig &w1_ = wheel_config_[1];
+            WheelConfig &w2_ = wheel_config_[2];
+            WheelConfig &w3_ = wheel_config_[3];
 
             // 速度限制参数
             //  // 车端速度限制参数
@@ -578,7 +588,7 @@ namespace jia
             f32 max_alpha_z_dec_ = 100.0f;     // 最大z轴角减速度，单位：rad/s^2
 
             // 调试参数
-            bool is_debug_ = false; // 是否开启调试模式
+            bool is_debug_ = true; // 是否开启调试模式
             u8 debug_mode_ = 0;     // 调试模式
 
             u8 debug_wheel_index_ = 0; // 调试轮子索引
@@ -590,8 +600,14 @@ namespace jia
             f32 sine_frequency_ = 0.1f;
             f32 sine_offset_ = 0.0f;
 
-            f32 debug_input_ = 90.0f; // 调试输入
+            bool is_hand_input_ = false; // 是否使用手动输入信号
+            f32 hand_input_ = 0.0f; // 手动输入信号
 
+            f32 debug_input_ = 90.0f;     // 调试输入
+            f32 debug_lock_rot_z_ = 0.0f; // 调试固定rot_z
+
+            bool is_wheel_single_position_mode_ = false; // 是否为轮子单圈位置模式
+            bool is_wheel_plural_position_mode_ = false; // 是否为轮子多圈位置模式
             bool is_wheel_speed_mode_ = false;   // 是否为轮子速度模式
             bool is_wheel_current_mode_ = false; // 是否为轮子电流模式
 
@@ -602,7 +618,20 @@ namespace jia
             RmPocketData_t airjoy_data_; // 从AirJoy接收的数据
 
         private:
+            void isDebugMode();
+
             void clearInputTargetData();
+
+        private:
+            bool photogate_signal_ = false;
+            bool last_photogate_signal_ = false;
+
+            bool is_use_cailbration_angle_ = false; // 是否使用校准角度
+
+            bool is_power_on_cailbration_ = false; // 是否开启校准
+            bool is_doing_cailbration_ = false; // 是否正在校准中
+            f32 cailbration_rpm_ = 0.0f; // 校准rpm，单位：rpm/s
+            f32 cailbration_angle_deg_ = 0.0f; // 校准角度，单位：rad
         };
 
         using Result = jia::FourSteerChassis::Chassis::Result;
@@ -814,6 +843,7 @@ namespace jia
     }
 }
 
-using jia::TriOmniChassis::Chassis;
+// using jia::TriOmniChassis::Chassis;
+using jia::FourSteerChassis::Chassis;
 
 #endif // CHASSIS_H_

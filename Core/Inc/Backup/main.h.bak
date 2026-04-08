@@ -64,6 +64,8 @@ void parse_uart_data(uint8_t data);
 #define AirJoy_EXTI_IRQn EXTI9_5_IRQn
 #define PPM_Pin GPIO_PIN_9
 #define PPM_GPIO_Port GPIOF
+#define test_photogate_Pin GPIO_PIN_1
+#define test_photogate_GPIO_Port GPIOG
 #define SWITCH1_Pin GPIO_PIN_14
 #define SWITCH1_GPIO_Port GPIOD
 #define SWTICH2_Pin GPIO_PIN_15
@@ -78,6 +80,10 @@ void parse_uart_data(uint8_t data);
 #define SUCKERERROR4_GPIO_Port GPIOG
 #define SUCKER_Pin GPIO_PIN_7
 #define SUCKER_GPIO_Port GPIOG
+#define SUCKER_P1_Pin GPIO_PIN_5
+#define SUCKER_P1_GPIO_Port GPIOD
+#define SUCKER_P2_Pin GPIO_PIN_6
+#define SUCKER_P2_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 
