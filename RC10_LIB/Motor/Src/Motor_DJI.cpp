@@ -32,7 +32,7 @@ void DJI_Motor::updateFeedback(const CanFrame &cf)
     encoder_.update(encoder_raw);
     //静态类型转化
     this->rpm_ = static_cast<float>(rpm_raw) /  get_GearRatio();
-    this->current_ = static_cast<float>(current_raw);
+    this->current_ = static_cast<float>(virtualCurrent_to_realCurrent(current_raw));
     this->temperature_ = static_cast<float>(temperature_raw);
 
     this->totalAngle_ = encoder_.getTotalAngle() / get_GearRatio();

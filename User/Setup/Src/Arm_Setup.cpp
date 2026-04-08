@@ -17,6 +17,10 @@ void ArmSetup::loop()
     {
         calibrateMotor();
         arm_status_ = ARM_CALIBRATE;
+        // 本拍仅执行校准，不进入其他状态分支，避免与上层状态机抢写 arm_status_
+        this->update();
+        last_arm_status_ = arm_status_;
+        return;
     }
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
@@ -45,7 +49,7 @@ void ArmSetup::loop()
             if(arm_ctrlStatus.auto_start == 1)
             {
                 this->start_toAutoCtrl(true);
-                // ifFirst = false;
+                
             }
             else
             {
@@ -69,10 +73,7 @@ void ArmSetup::loop()
 
         case ARM_AUTO_CONTROL:
             {
-                if(arm_ctrlStatus.auto_start == 1)
                     autoControl();
-                else 
-                    idle();
             }   
             break;
 
@@ -253,6 +254,22 @@ void ArmSetup::autoControl()
     // 自动控制函数
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
+//    if(auto_ctrl_.start_to_autoctrl != 1)
+//    {
+//        idle();
+//        return; //未进入自动控制流程，保持空闲状态
+//    }
+
+
+    if(last_arm_status_ != ARM_AUTO_CONTROL || auto_ctrl_.start_to_autoctrl != 1)//若首次非此模式，需初始化一些状态
+    {
+        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //自动流程状态机回到初始状态
+        
+            auto_ctrl_.flag.isrecalcPath = false; //路径重计算标志
+        auto_ctrl_.now_targetIndex = 0; //当前目标KFS索引重置
+        last_arm_status_ = ARM_AUTO_CONTROL;
+    }
+
     /**
      * 整体流程：
      * 1. 升降到目标高度,吸盘pitch90度
@@ -295,9 +312,9 @@ void ArmSetup::autoControl()
             break;
         }
         
-        case TWO: //没做
+        case TWO: //做
         {
-            idle();
+            auto_stillnessTwo();
             break;
         }
     }
@@ -415,6 +432,15 @@ void ArmSetup::auto_stillnessTwo()
         {
             if(auto_ctrl_.start_to_autoctrl)
             {
+
+                // if(auto_ctrl_.now_targetIndex > 1)
+                // {
+                //     auto_ctrl_.start_to_autoctrl = false; //防止越界访问
+                //     idle();
+                //     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //保持在完成状态
+                //     return;
+                // }
+
                 if(!auto_ctrl_.flag.isrecalcPath)
                 {
                     this->set_TargetKFS(auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1]);
@@ -492,19 +518,9 @@ void ArmSetup::auto_stillnessTwo()
         {
             if(state_backStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
             {
-                auto_ctrl_.now_targetIndex++; //切换到下一个目标KFS
-                if(auto_ctrl_.now_targetIndex > 1)
-                {
-                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE;
-                    arm_ctrlStatus.auto_start = 0;
-                   
-                    auto_ctrl_.start_to_autoctrl = false; //完成一次流程后，重置自动控制启动条件
-                    auto_ctrl_.flag.isrecalcPath = false; //重置路径重计算标志
-                    auto_ctrl_.now_targetIndex = 1; //防止越界
-                    auto_ctrl_.flag.back_time = 0.0f; //重置返回时间
-                    auto_ctrl_.flag.isbackdone = false; //重置返回完成标志
-                }
-                else
+                
+                
+                if(auto_ctrl_.now_targetIndex == 0)
                 {
                     if(!auto_ctrl_.flag.isbackdone)
                     {
@@ -512,10 +528,11 @@ void ArmSetup::auto_stillnessTwo()
                         auto_ctrl_.flag.isbackdone = true;
                     }
 
-                    if(auto_ctrl_.flag.isbackdone && (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time) >= 0.45f)
+                    if(auto_ctrl_.flag.isbackdone && (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time) >= 1.2f)
                     {
                         this->setSuckerStatus(Sucker_Status_E::STOP); //放下第一个KFS后关闭吸盘
                         auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT; //继续下一个KFS的流程  
+                        auto_ctrl_.now_targetIndex ++; //切换到下一个目标KFS
 
                         auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放行
                         auto_ctrl_.flag.canChassisStart = false; //重置底盘移动许可
@@ -523,7 +540,26 @@ void ArmSetup::auto_stillnessTwo()
                         auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
                     }
                 }
+                else if(auto_ctrl_.now_targetIndex > 1)
+                {
+                    
+                    arm_ctrlStatus.auto_start = 0;
+                   
+                    auto_ctrl_.start_to_autoctrl = false; //完成一次流程后，重置自动控制启动条件
+                    auto_ctrl_.flag.isrecalcPath = false; //重置路径重计算标志
+//                    auto_ctrl_.now_targetIndex = 1; //防止越界
+                    auto_ctrl_.flag.back_time = 0.0f; //重置返回时间
+                    auto_ctrl_.flag.isbackdone = false; //重置返回完成标志
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_OVER;
+                }
             }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_OVER:
+        {
+            //流程完成，保持在完成状态
+            idle();
             break;
         }
 
@@ -646,7 +682,7 @@ bool ArmSetup::state_launchStillness(int targetKFS)
 
     this->set_LaunchHeight(this->init_data_.max_launchHeight_); //升到最高点，准备移动
 
-    if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.03f)
+    if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.02f)
     {
         auto_ctrl_.flag.canChassisStart = true; //机械臂已经升到可以移动的高度了
         return true;
@@ -672,38 +708,88 @@ bool ArmSetup::state_backStillness(int targetKFS)
 
     if(_tool_Abs(chassisDir - 0.0f) < 5.0f) //底盘向右走
     {
-        if(r == 1)//下侧
-            targetBackAngle = 180.0f;
-        
-        else if(r == 6)//上侧
-            targetBackAngle = 0.0f;
+        if(auto_ctrl_.kfs_num == ONLY_ONE 
+                || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1)) 
+        {
+            if(r == 1)//下侧
+                targetBackAngle = 180.0f;
+            
+            else if(r == 6)//上侧
+                targetBackAngle = 0.0f;
+        }
+        else
+        {
+            if(r == 1)//下侧
+                targetBackAngle = 200.0f;
+            
+            else if(r == 6)//上侧
+                targetBackAngle = 340.0f;
+        }
+
     }
     else if(_tool_Abs(chassisDir - 180.0f) < 5.0f)//底盘向左
     {
-        if (r == 1) // 下侧
-            targetBackAngle = 0.0f;
-        else if (r == 6) // 上侧
-            targetBackAngle = 180.0f;
+        if(auto_ctrl_.kfs_num == ONLY_ONE 
+            || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1)) 
+        {
+             if(r == 1) // 下侧
+                targetBackAngle = 0.0f;
+            else if(r == 6) // 上侧
+                targetBackAngle = 180.0f;
+        }
+        else
+        {
+            if (r == 1) // 下侧
+                targetBackAngle = 340.0f;
+            else if (r == 6) // 上侧
+                targetBackAngle = 200.0f;
+        }
     }
     else if(_tool_Abs(chassisDir - 90.0f) < 5.0f)//底盘向前
     {
-        if (c == 1) // 左侧
-            targetBackAngle = 0.0f;
-        else if (c == 6) // 右侧
-            targetBackAngle = 180.0f;
+        if(auto_ctrl_.kfs_num == ONLY_ONE 
+            || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1))
+        {
+             if(c == 1) // 左侧
+                targetBackAngle = 0.0f;
+            else if(c == 6) // 右侧
+                targetBackAngle = 180.0f;
+        }
+        else
+        {
+            if (c == 1) // 左侧
+                targetBackAngle = 340.0f;
+            else if (c == 6) // 右侧
+                targetBackAngle = 200.0f;
+        }
+
     }
     else if(_tool_Abs(chassisDir - 270.0f) < 5.0f)//底盘向后
     {
-        if (c == 1) // 左侧
-            targetBackAngle = 180.0f;
-        else if (c == 6) // 右侧
-            targetBackAngle = 0.0f;
+        if(auto_ctrl_.kfs_num == ONLY_ONE
+            || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1))
+        {
+             if(c == 1) // 左侧
+                targetBackAngle = 180.0f;
+            else if(c == 6) // 右侧
+                targetBackAngle = 0.0f;
+        }
+        else
+        {
+             if (c == 1) // 左侧
+                targetBackAngle = 200.0f;
+            else if (c == 6) // 右侧
+                targetBackAngle = 340.0f;
+        }
+        
     }
 
     this->set_RotateAngle(targetBackAngle); //旋转到目标位置
 
     if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - targetBackAngle) < 5.0f)
+    {
         return true;
+    }
     else
         return false;
 }
@@ -2173,8 +2259,8 @@ Arm_InitData_S arm_initData = {
    .min_rotate_angle_ = 0.0f,
    .max_rotate_angle_ = 359.99999f,
     .safe_height = 0.14f,
-   .Sucker_GPIO_Port = SUCKER_GPIO_Port,
-    .Sucker_GPIO_Pin = SUCKER_Pin,
+   .Sucker_GPIO_Port = SUCKER_error_GPIO_Port,
+    .Sucker_GPIO_Pin =  SUCKER_error_Pin,
 
     
 };

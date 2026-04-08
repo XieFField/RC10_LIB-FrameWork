@@ -124,7 +124,8 @@ typedef enum{
     STATE_EXT,
     STATE_LAUNCH,
     STATE_BACK,
-    STATE_DONE
+    STATE_DONE,
+    STATE_OVER,
 }ARM_AUTO_STILLNESS_E;
 
 typedef enum{
@@ -150,7 +151,7 @@ typedef struct{
 }arm_timeset_S;
 
 typedef struct{
-    int targetKFS[2] = {0,0};
+    int targetKFS[3] = {0,0,0};
     int now_targetIndex = 0;
     KFS_NUM_E kfs_num = ONLY_ONE;
     bool start_to_autoctrl = false;
@@ -272,6 +273,10 @@ public:
 
     void setArmStatus(ARM_Status_E status)
     {
+        // 未完成校准时，只允许保持在校准态，避免被上层状态机提前切到手操/空闲
+        if(status != ARM_CALIBRATE && !isArmcalibrated())
+            return;
+
         arm_status_ = status;
     }
 
@@ -590,7 +595,10 @@ protected:
                                            auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
                                            0.03f))
        {
-           speed = {0.0f, 0.0f, 0.0f};
+            if(auto_ctrl_.flag.canChassisStart == 1)
+                speed = {0.0f, 1.0f, 0.0f};
+            else
+                speed = {0.0f, 0.0f, 0.0f};
        }
              
              

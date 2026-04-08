@@ -1,7 +1,7 @@
 /**
  * @file Motor_Base.h
  * @author XieFField
- * @brief 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹峰嘲鏌﹂…鎺撳?闁跨噦鎷?
+ * @brief 电机基类声明
  * @version 1.0
  * @date 2025-09-16
  */
@@ -15,9 +15,9 @@
 #include "BSP_CanFrame.h"
 #include <cstdint>
 #include <cstddef>
-class fdCANbus; // 閸撳秹鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚?
+class fdCANbus; // 前置声明
 
-//闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑解偓姘舵晸閻?偅甯撮崠鈩冨?
+//电机基类
 class Motor_Base {
 public:
     Motor_Base(uint32_t id, bool isExt, fdCANbus* bus)
@@ -28,16 +28,16 @@ public:
     };
     virtual ~Motor_Base(){};
 
-    // 閻╊噣鏁撻弬銈嗗?闁跨喎鈧?喎鐣?
+    // =
     virtual void setTargetRPM(float rpm_set){};
     virtual void setTargetCurrent(float current_set){};
     virtual void setTargetAngle(float angle_set){};
     virtual void setTargetTotalAngle(float totalAngle_set){};
 
-    // 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔烘畷闂堚晜瀚归柨鐔兼應閻氬瓨瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归幍褔鏁撻崣顐㈠皡閹风兘鏁撻弬銈嗗?闁跨喓顏?涵閿嬪?闁跨喐鏋婚幏鐑芥晸閼哄倻顣?幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撴禒濠咁潶娴兼瑦瀚归柨鐔虹崵閿濆繑瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归幍褔鏁撻崣顐熸?閹凤拷
+    // 更新接口，子类必须实现以更新电机状态
     virtual void update(){};
     
-    // 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹峰嘲褰?
+    // 反馈接口，子类可选择性实现以提供特定的反馈数据访问
     virtual float getRPM() const { return 0.0f; }   
     virtual float getCurrent() const { return 0.0f; }
     virtual float getAngle() const { return 0.0f; }
@@ -45,22 +45,23 @@ public:
 
     
     /**
-     * @brief 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹烽?娲伴柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撶槐绡圢鐢?拷
-     * @param outFrames 闁跨喐鏋婚幏鐑芥晸閼哄倽鎻?幏椋庢湞闁跨喐鏋婚幏鐑芥晸閺傘倖瀚笴AN鐢?囨晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?
-     * @param maxFrames 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚?
-     * @return 鐎圭偤鏁撶紒鐐舵彧閹风兘鏁撻弬銈嗗?闁跨喓鏄?N鐢?囨晸閺傘倖瀚归柨鐔告灮閹凤拷
+     * @brief 打包发送的CAN帧接口，子类必须实现以提供特定的控制命令帧
+     * @param outFrames 用于存放打包后CAN帧的数组，调用者提供内存，子类负责填充内容。数组大小由 maxFrames 参数指定。
+     * @param maxFrames 用于指定 outFrames 数组的大小
+     * @return 实际填充的CAN帧数量
      */
     virtual std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) = 0;
 
     
     /**
-     * @brief 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔烘畷绾板?瀚归柨鐔告灮閹峰嘲顫嬮柨鐔告灮閹风兘鏁撶槐绡圢鐢?拷
+     * @brief CAN报文解析接口，子类必须实现以处理特定的反馈帧
      */
     virtual void updateFeedback(const CanFrame& cf) = 0;
 
     /**
-     * @brief 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?CAN鐢?囨晸鐟欐帒鍤栭幏鐑芥晸閺傘倖瀚归柨鐔诲Ν濮濄倗顣?幏鐑芥晸閿燂拷
-     * @return 闁跨喐鏋婚幏鐑芥晸閻櫬板劵閹风兘鏁撻弬銈嗗?閾撳秶銈烽柨鐔轰絾rue闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔歌Е鏉╂柧绱?幏绌巃lse
+     * @brief CAN帧匹配函数，默认实现为严格ID和扩展帧标志匹配，子类可 override 以实现更复杂的匹配逻辑（如模糊ID匹配）
+     * @param cf 要匹配的CAN帧
+     * @return 如果帧匹配当前电机实例，则返回true；否则返回false。默认实现为严格ID和扩展帧标志匹配。
      */
     virtual bool matchesFrame(const CanFrame& cf) const
     {
@@ -83,18 +84,18 @@ protected:
     bool isExtended_;
     fdCANbus* bus_;
 
-    // 閻╊噣鏁撻弬銈嗗?/閻樿埖鈧?線鏁撻弬銈嗗?
-    float target_rpm_ = 0.0f; //鏉烆剟鏁撻弬銈嗗?
-    float target_current_= 0.0f; //闁跨喐鏋婚幏鐑芥晸閺傘倖瀚?
-    float target_angle_ = 0.0f; //闁跨喕顫楃拋瑙勫?
-    float target_totalAngle_ = 0.0f; //闁跨喐婢冪憴鎺曨啇閹凤拷
+    //目标值（由控制器设置，电机类或子类可选择性使用）
+    float target_rpm_ = 0.0f; //目标转速 rpm
+    float target_current_= 0.0f; //目标电流 ma
+    float target_angle_ = 0.0f; //目标角度 deg
+    float target_totalAngle_ = 0.0f; //目标总角度 deg
     
-    float GEAR_RATIO = 1.0f; // 闁跨喐鏋婚幏鐑芥晸閸旑偅鐦?敐蹇斿?姒涙﹢鏁撻弬銈嗗?娑擄拷1
+    float GEAR_RATIO = 1.0f; // 减速比
     float rpm_ = 0.0f;
     float current_ = 0.0f;
     float angle_ = 0.0f;
     float totalAngle_ = 0.0f;
-    float temperature_ = 0.0f; //闁跨喖鎽?拋瑙勫?
+    float temperature_ = 0.0f; //电机温度
 
 };
 

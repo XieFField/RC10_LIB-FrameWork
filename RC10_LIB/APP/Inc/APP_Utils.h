@@ -5,6 +5,8 @@
 
 #include <algorithm>
 
+#include "arm_math.h"
+
 namespace jia
 {
     using u8 = uint8_t;
@@ -22,57 +24,11 @@ namespace jia
 
     constexpr f32 kPi = 3.14159265358979323846f;
 
-    // 计算三角函数（角度制）
-    f32 sinDegF32(f32 deg);
-    f32 cosDegF32(f32 deg);
-
     /**
-     * @brief 基于时间的一维信号速率限幅函数
-     * @param target       目标值
-     * @param current      当前值
-     * @param dt           时间步长（秒）
-     * @param maxRate      最大速率（单位/秒）
-     * @return             限幅后的下一时刻值
+     * @brief 计算正弦值（角度制）
+     * @param deg 角度（度）
+     * @return f32 正弦值（-1.0f ~ 1.0f）
      */
-    f32 limit1DSignalRateByTimeF32(f32 target, f32 current, f32 dt, f32 max_rate);
-
-    /**
-     * @brief 基于时间的一维信号速率限幅函数（分离方向）
-     * @param target       目标值
-     * @param current      当前值
-     * @param dt           时间步长（秒）
-     * @param max_inc_rate 最大正速率（单位/秒）
-     * @param max_dec_rate 最大负速率（单位/秒）
-     * @return             限幅后的下一时刻值
-     */
-    f32 limit1DSignalRateByTimeSeparateIncAndDecF32(f32 target, f32 current, f32 dt, f32 max_inc_rate, f32 max_dec_rate);
-
-    // 三值取小
-    template <typename T>
-    constexpr T minOfThree(const T &a, const T &b, const T &c);
-
-    // 数值范围限制
-    template <typename T>
-    constexpr T clampValue(const T &val, const T &min_val, const T &max_val);
-
-    // 转速和角速度转换
-    constexpr f32 rpmToRadsF32(f32 rpm);
-    constexpr f32 radsToRpmF32(f32 omega);
-
-    // 角速度和线速度转换
-    constexpr f32 omegaToVelF32(f32 omega, f32 radius);
-    constexpr f32 velToOmegaF32(f32 vel, f32 radius);
-
-    /**
-     * @brief 生成正弦波信号（float类型输出）
-     * @param t 输入时间（单位：秒，float类型）
-     * @param amplitude 振幅（默认1.0f，输出范围[-amplitude, amplitude]）
-     * @param frequency 频率（默认1.0Hz，每秒振荡次数）
-     * @param phase 相位偏移（默认0.0f，单位：弧度）
-     * @return float 正弦波当前时刻的幅值
-     */
-    f32 sineWaveGeneratorF32(f32 time, f32 amplitude = 1.0f, f32 frequency = 1.0f, f32 phase = 0.0f, f32 offset = 0.0f);
-
     inline f32 sinDegF32(f32 deg)
     {
         f32 sinf_result = sinf(deg * (kPi / 180.0f));
@@ -89,6 +45,11 @@ namespace jia
         return sinf_result;
     }
 
+    /**
+     * @brief 计算余弦值（角度制）
+     * @param deg 角度（度）
+     * @return f32 余弦值（-1.0f ~ 1.0f）
+     */
     inline f32 cosDegF32(f32 deg)
     {
         f32 cosf_result = cosf(deg * (kPi / 180.0f));
@@ -105,6 +66,14 @@ namespace jia
         return cosf_result;
     }
 
+    /**
+     * @brief 基于时间的一维信号速率限幅函数
+     * @param target       目标值
+     * @param current      当前值
+     * @param dt           时间步长（秒）
+     * @param maxRate      最大速率（单位/秒）
+     * @return             限幅后的下一时刻值
+     */
     inline f32 limit1DSignalRateByTimeF32(f32 target, f32 current, f32 dt, f32 max_rate)
     {
         f32 diff = target - current;
@@ -117,6 +86,15 @@ namespace jia
             return target;
     }
 
+    /**
+     * @brief 基于时间的一维信号速率限幅函数（分离方向）
+     * @param target       目标值
+     * @param current      当前值
+     * @param dt           时间步长（秒）
+     * @param max_inc_rate 最大正速率（单位/秒）
+     * @param max_dec_rate 最大负速率（单位/秒）
+     * @return             限幅后的下一时刻值
+     */
     inline f32 limit1DSignalRateByTimeSeparateIncAndDecF32(f32 target, f32 current, f32 dt, f32 max_inc_rate, f32 max_dec_rate)
     {
         f32 diff = target - current;
@@ -128,6 +106,91 @@ namespace jia
             return current - max_dec_step;
         else
             return target;
+    }
+
+    /**
+     * @brief 三值取小
+     * @param a 第一个值
+     * @param b 第二个值
+     * @param c 第三个值
+     * @return T 三值中的最小值
+     */
+    template <typename T>
+    constexpr inline T minOfThree(const T &a, const T &b, const T &c)
+    {
+        return std::min(std::min(a, b), c);
+    }
+
+    /**
+     * @brief 数值范围限制
+     * @param val 输入值
+     * @param min_val 最小值
+     * @param max_val 最大值
+     * @return T 限制后的值
+     */
+    template <typename T>
+    constexpr inline T clampValue(const T &val, const T &min_val, const T &max_val)
+    {
+        if (val < min_val)
+            return min_val;
+        if (val > max_val)
+            return max_val;
+        return val;
+    }
+
+    /**
+     * @brief 转速转换为角速度（单位：弧度/秒）
+     * @param rpm 转速（单位：转/分）
+     * @return f32 角速度（单位：弧度/秒）
+     */
+    constexpr inline f32 rpmToRadsF32(f32 rpm)
+    {
+        return rpm * (2.0f * kPi) / 60.0f;
+    }
+
+    /**
+     * @brief 角速度转换为转速（单位：转/分）
+     * @param omega 角速度（单位：弧度/秒）
+     * @return f32 转速（单位：转/分）
+     */
+    constexpr inline f32 radsToRpmF32(f32 omega)
+    {
+        return omega * 60.0f / (2.0f * kPi);
+    }
+
+    /**
+     * @brief 角速度转换为线速度
+     * @param omega 角速度（单位：弧度/秒）
+     * @param radius 轮子半径（单位：米）
+     * @return f32 线速度（单位：米/秒）
+     */
+    constexpr inline f32 omegaToVelF32(f32 omega, f32 radius)
+    {
+        return omega * radius;
+    }
+
+    /**
+     * @brief 线速度转换为角速度
+     * @param vel 线速度（单位：米/秒）
+     * @param radius 轮子半径（单位：米）
+     * @return f32 角速度（单位：弧度/秒）
+     */
+    constexpr inline f32 velToOmegaF32(f32 vel, f32 radius)
+    {
+        return vel / radius;
+    }
+
+    /**
+     * @brief 生成正弦波信号（float类型输出）
+     * @param t 输入时间（单位：秒，float类型）
+     * @param amplitude 振幅（默认1.0f，输出范围[-amplitude, amplitude]）
+     * @param frequency 频率（默认1.0Hz，每秒振荡次数）
+     * @param phase 相位偏移（默认0.0f，单位：弧度）
+     * @return float 正弦波当前时刻的幅值
+     */
+    inline f32 sineWaveGeneratorF32(f32 time, f32 amplitude = 1.0f, f32 frequency = 1.0f, f32 phase = 0.0f, f32 offset = 0.0f)
+    {
+        return amplitude * sinf(2.0f * kPi * frequency * time + phase) + offset;
     }
 
     /**
@@ -166,47 +229,6 @@ namespace jia
         {
             return target;
         }
-    }
-
-    template <typename T>
-    constexpr inline T minOfThree(const T &a, const T &b, const T &c)
-    {
-        return std::min(std::min(a, b), c);
-    }
-
-    template <typename T>
-    constexpr inline T clampValue(const T &val, const T &min_val, const T &max_val)
-    {
-        if (val < min_val)
-            return min_val;
-        if (val > max_val)
-            return max_val;
-        return val;
-    }
-
-    constexpr inline f32 rpmToRadsF32(f32 rpm)
-    {
-        return rpm * (2.0f * kPi) / 60.0f;
-    }
-
-    constexpr inline f32 radsToRpmF32(f32 omega)
-    {
-        return omega * 60.0f / (2.0f * kPi);
-    }
-
-    constexpr inline f32 omegaToVelF32(f32 omega, f32 radius)
-    {
-        return omega * radius;
-    }
-
-    constexpr inline f32 velToOmegaF32(f32 vel, f32 radius)
-    {
-        return vel / radius;
-    }
-
-    inline f32 sineWaveGeneratorF32(f32 time, f32 amplitude, f32 frequency, f32 phase, f32 offset)
-    {
-        return amplitude * sinf(2.0f * kPi * frequency * time + phase) + offset;
     }
 
     /**
@@ -268,11 +290,21 @@ namespace jia
         return scaleFactor;
     }
 
+    /**
+     * @brief 弧度转换为度
+     * @param rad 弧度（单位：弧度）
+     * @return f32 度（单位：度）
+     */
     constexpr inline f32 radToDegF32(f32 rad)
     {
         return rad * 360.0f / (2.0f * kPi);
     }
 
+    /**
+     * @brief 度转换为弧度
+     * @param deg 度（单位：度）
+     * @return f32 弧度（单位：弧度）
+     */
     constexpr inline f32 degToRadF32(f32 deg)
     {
         return deg * (2.0f * kPi) / 360.0f;
@@ -284,16 +316,123 @@ namespace jia
      * @param theta 旋转弧度（逆时针为正）
      * @param x_out,y_out 输出旋转后坐标
      */
-    constexpr inline void rotateAroundZAxis(float x, float y, float theta,
-                                            float &x_out, float &y_out)
+    constexpr inline void rotateAroundZAxisF32(f32 x, f32 y, f32 theta,
+                                               f32 &x_out, f32 &y_out)
     {
-        float cos_theta = cosf(theta);
-        float sin_theta = sinf(theta);
+        f32 cos_theta = cosf(theta);
+        f32 sin_theta = sinf(theta);
 
         x_out = x * cos_theta + y * sin_theta;
         y_out = -x * sin_theta + y * cos_theta;
+    }
 
-    } // namespace jia
-}
+    /**
+     * @brief 死区处理，将数值在死区范围内映射为0
+     * @param value 输入值
+     * @param dead_band 死区范围（必须为正数）
+     * @return T 处理后的值
+     */
+    template <typename T>
+    constexpr inline T deadZoneToZero(const T &value, const T &dead_band)
+    {
+        return (value >= dead_band || value <= -dead_band) ? value : 0;
+    }
+
+    /**
+     * @brief 死区处理，将数值在死区范围内映射为死区中心
+     * @param value 输入值
+     * @param deadband_center 死区中心（可正可负）
+     * @param deadband_radius 死区半径（必须为正数）
+     * @return T 处理后的值
+     */
+    template <typename T>
+    constexpr inline T deadZoneToCenter(const T &value, const T &dead_band_center, const T &dead_band_radius)
+    {
+        if (value > (dead_band_center + dead_band_radius) || value < (dead_band_center - dead_band_radius))
+        {
+            return value;
+        }
+        else
+        {
+            return dead_band_center; // 死区内返回中心点（核心逻辑）
+        }
+    }
+
+    /**
+     * @brief 角度归一化，将角度转换为[0,360)度范围内
+     * @param angle 输入角度（单位：度）
+     * @return T 归一化后的角度（单位：度）
+     */
+    template <typename T>
+    constexpr inline typename std::enable_if<std::is_same<T, f32>::value, T>::type
+    normalizeAngleTo360(T angle)
+    {
+        constexpr T full_circle = 360.0f;
+        T normalized = fmodf(angle, full_circle);
+        if (normalized < 0.0f)
+        {
+            normalized += full_circle;
+        }
+        return normalized;
+    }
+    template <typename T>
+    constexpr inline typename std::enable_if<std::is_integral<T>::value, T>::type
+    normalizeAngleTo360(T angle)
+    {
+        constexpr T full_circle = static_cast<T>(360);
+        T remainder = angle % full_circle;
+        return (remainder < 0) ? (remainder + full_circle) : remainder;
+    }
+
+    /**
+     * @brief 角度归一化，将角度转换为[-180,180)度范围内
+     * @param angle 输入角度（单位：度）
+     * @return T 归一化后的角度（单位：度）
+     */
+    template <typename T>
+    constexpr inline T normalizeAngleTo180(T angle)
+    {
+        constexpr T full_circle = static_cast<T>(360);
+        constexpr T half_circle = static_cast<T>(180);
+        // 先归一化到 [0, 360)
+        T normalized = normalizeAngleTo360(angle);
+        // 等于和大于180°的部分转换为负数
+        if (normalized >= half_circle)
+        {
+            normalized -= full_circle;
+        }
+        return normalized;
+    }
+
+    /**
+     * @brief 基于角度的正弦函数（单位：度），快速版本
+     * @param angle 输入角度（单位：度）
+     * @return 对应角度的正弦值
+     */
+    constexpr inline f32 sinDegF32F(f32 angle)
+    {
+        f32 normalized_deg = normalizeAngleTo360(angle);
+        f32 rad = degToRadF32(normalized_deg);
+
+        f32 sin_result = arm_sin_f32(rad);
+
+        return sin_result;
+    }
+
+    /**
+     * @brief 基于角度的余弦函数（单位：度），快速版本
+     * @param angle 输入角度（单位：度）
+     * @return 对应角度的余弦值
+     */
+    constexpr inline f32 cosDegF32F(f32 angle)
+    {
+        f32 normalized_deg = normalizeAngleTo360(angle);
+        f32 rad = degToRadF32(normalized_deg);
+
+        f32 cos_result = arm_cos_f32(rad);
+
+        return cos_result;
+    }
+} // namespace jia
 
 #endif
