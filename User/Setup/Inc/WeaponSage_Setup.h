@@ -253,6 +253,7 @@ private:
 
     CamZ_Ctrl cam_z_ctrl_; // 相机 z 控制器。
     bool cam_z_run_ = false; // z 过程运行位。
+    bool cam_z_req_last_ = false; // z 请求上升沿检测位。
     float cam_z_hold_ = 0.0f; // z 过程目标缓存。
     float cam_z_last_ = 0.0f; // 最近一次 z 样本。
     float cam_z_rpm_ = 0.0f; // 相机 z 速度指令缓存。

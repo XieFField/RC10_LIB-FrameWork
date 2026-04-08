@@ -398,9 +398,9 @@ PID_Param_Config camera_vec_pid_params = {
 };
 
 PID_Param_Config lock_angle_pid_params = {
- .kp = 0.075f,
+ .kp = 0.035f,
  .ki = 0.0f,
- .kd = 0.0f,
+ .kd = 0.00f,
  .I_Outlimit = 0.0f, 
  .isIOutlimit = true, 
  .output_limit = 3.0f, 
