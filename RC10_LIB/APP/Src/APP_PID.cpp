@@ -289,6 +289,8 @@ float PID_Incremental::pid_calc(float target, float feedback)
     output_last_ = output_; // 保存当前总输出，作为下次计算的“上次总输出”
     last_time_s_ = current_time_s;
 
+    output_last_ = output_; // 保存当前总输出，作为下次计算的“上次总输出”
+
     return output_;
 }
 
@@ -398,7 +400,7 @@ PID_Param_Config camera_vec_pid_params = {
 PID_Param_Config lock_angle_pid_params = {
  .kp = 0.075f,
  .ki = 0.0f,
- .kd = 0.01f,
+ .kd = 0.0f,
  .I_Outlimit = 0.0f, 
  .isIOutlimit = true, 
  .output_limit = 3.0f, 
@@ -414,6 +416,7 @@ PID_Param_Config camera_yaw_pid_params = {
  .output_limit = 0.05f,
  .deadband = 0.1f
 };
+
 
 PID_Param_Config omega_z_pid_init_config =
 {
@@ -432,7 +435,7 @@ PID_Param_Config rot_z_pid_init_config = {
     .kd = 0.0f,
     .I_Outlimit = 0.0f,
     .isIOutlimit = false,
-    .output_limit = 1.0f,
+    .output_limit = 0.0f,
     .deadband = 0.0f
 };
 
@@ -453,7 +456,6 @@ CamZ_Param camera_z_ctrl_params = {
     .done_time = 0.12f,
 };
 
-
 PID_Param_Config path_lock_end = {
     
     .kp = 0.6f,
@@ -464,3 +466,4 @@ PID_Param_Config path_lock_end = {
     .output_limit = 0.2f,   
     .deadband = 0.005f 
 };
+

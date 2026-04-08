@@ -44,18 +44,23 @@ extern "C"
 class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>
 {
 public:
+    // 通过轮系几何参数构造底盘任务对象。
     OmniChassis_Setup(float wheel_radius, float max_wheel_rpm, float base_length, float side_length, bool three_wheel)
         : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(wheel_radius, max_wheel_rpm, base_length, side_length, three_wheel), debug_uart(&huart8)
     {
+        // yaw 环使用角度循环误差（跨 ±180 度连续）。
         yaw_pid_.set_as_circular();
     }
 
+    // 通过配置结构体构造底盘任务对象。
     OmniChassis_Setup(Chassis_Omni<3>::init_config &config)
         : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(config), debug_uart(&huart8)
     {
+        // yaw 环使用角度循环误差（跨 ±180 度连续）。
         yaw_pid_.set_as_circular();
     }
 
+    // 统一切换底盘状态，并在相机流程切入/切出时清理相关内部状态。
     void setChassisStatus(CHASSIS_Status_E status)
     {
         // 进入相机模式时，重置 z 均值滤波器，避免历史样本影响首段控制。
@@ -94,6 +99,7 @@ public:
         chassis_status_ = status;
     }
 
+    // 初始化底盘控制器参数并启动 RTOS 任务。
     void init()
     {
         if (this->wheels_[0] == nullptr || this->wheels_[1] == nullptr ||
@@ -123,6 +129,7 @@ public:
         init_flag = true;
     }
 
+    // 设置底盘正反向映射系数（用于手动控制方向翻转）。
     void setChassisReverse(bool isReverse)
     {
         if (!isReverse)
@@ -131,221 +138,117 @@ public:
             this->is_chassis_reverse_ = -1.0f;
     }
 
-    /**
-     * @brief 设置路径自动开始标志
-     * @param start 1表示开始，0表示停止
-     * @param path_flagIndex 路径标志索引，0或1
-     */
-    void setPathAutoStart(uint8_t start)
-    {
-        if (start == 1)
-            flag = 1;
-        else
-            flag = 0;
-
-        if (start == 0)
-        {
-            flag_run = 0;
-        }
-    }
-
-    void setTargetKFS(int targetKFS)
-    {
-        KFS = targetKFS;
-    }
-
-    bool GetReach_flag()
-    {
-        return WeaponSage_END;
-    }
-
-    bool Get_Arm_Start_flag()
-    {
-        return Arm_Start;
-    }
-
-    void Receive_Arm_End_flag(bool arm_end)
-    {
-        Arm_Start = arm_end;
-    }
-
-    void set_KFS(int8_t KFS1, int8_t KFS2)
-    {
-        MF1 = KFS1;
-        MF2 = KFS2;
-    }
-
-    void set_camera_uart(UART_HandleTypeDef *uart)
-    {
-        camera_uart_ = uart;  // 设置相机串口句柄。
-        camera_init_ = false; // 强制下次进入相机模式时重新初始化串口。
-    }
-
-    void set_camera_limit(float speed_max, float omega_max)
-    {
-        speed_max_ = speed_max; // 设置相机模式平移速度上限（m/s）。
-        omega_max_ = omega_max; // 设置相机模式角速度上限（rad/s）。
-    }
-
-    void set_camera_scale(float pos_scale, float yaw_scale)
-    {
-        pos_scale_ = pos_scale; // 设置相机模式位置环输出缩放系数。
-        yaw_scale_ = yaw_scale; // 设置相机模式航向环输出缩放系数。
-    }
-
-    void set_camera_xy_ref(float x_ref, float y_ref)
-    {
-        camera_x_ref_ = x_ref; // 设置相机模式 x 轴目标值（米）。
-        camera_y_ref_ = y_ref; // 设置相机模式 y 轴目标值（米）。
-    }
-
-    void set_camera_y_ref(float y_ref)
-    {
-        camera_y_ref_ = y_ref; // 设置相机模式 y 轴目标值（米）。
-    }
-
-    float get_camera_y_ref() const
-    {
-        return camera_y_ref_; // 读取相机模式 y 轴目标值（米）。
-    }
-
-    void set_weapon_done(bool done)
-    {
-        weapon_done_ = done; // 写入武器预对接完成反馈位。
-    }
-
-    void set_z_done(bool done)
-    {
-        z_done_ = done; // 写入武器 z 调整完成反馈位。
-    }
-
-    void set_dock_done(bool done)
-    {
-        dock_done_ = done; // 写入外部对接完成标志位。
-    }
-
-    bool get_weapon_req() const
-    {
-        return weapon_req_; // 读取武器预对接请求位。
-    }
-
-    bool get_z_req() const
-    {
-        return z_req_; // 读取武器 z 调整请求位。
-    }
-
-    float get_z_ref() const
-    {
-        return z_ref_; // 读取透传给武器层的 z 参考值。
-    }
-
-    // 由主状态机调用，设置开启武器对接流程
-    void setWeaponStart(bool isstart)
-    {
-        weapon_cameraStart = isstart;
-    }
-
 private:
     //-----------------------------------通讯标志位-----------------------------------------//
-    bool WeaponSage_END = 0;
+    CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
 
-    //    bool init_flag = false;
+    bool WeaponSage_END = false; // 夹杆流程完成标志。
 
-    bool Arm_Start = false;
-
-    CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
-    //-----------------------------------速度规划参数-----------------------------------------//
-
-    int flag = 0;
-    int flag_run = 0;
-
-    Path_line path_line_;
-    Vector2D Clamping_Bar_Selection_pos_ = {1.925f + 0.48f, 0.19f + 0.50f};
-
-    Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};
-    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 5.0f, .maxDec = 5.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};
-
-    // float Acc_target_yaw_ = 0.0f;
-    // ConstantAcc Acc_yaw_{0.1f,0.0f}; // 注意代码运行系统的周期
-    // Vector2D original_point_={-0.48f,-0.50f};
+    bool Arm_Start = false; // 机械臂动作触发标志。
 
     //-----------------------------------接口监视参数-----------------------------------------//
+    int flag = 0;     // 自动流程起始触发位（边沿触发）。
+    int flag_run = 0; // 自动流程运行中标志位。
 
-    Point3D ladar_data_;
-    Vector2D robot_pos_ = {0.0f, 0.0f};
-    
-    Vector2D planspeed;
-    Vector2D speed;
+    int8_t MF1 = 0; // 目标点 1 编号。
+    int8_t MF2 = 0; // 目标点 2 编号。
+
+    Vector2D planspeed = {0.0f, 0.0f};              // 路径规划输出的参考速度。
     Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
+    Vector2D speed = {0.0f, 0.0f};                   // 合成后的底盘平移速度。
 
-    PID_Position pid_pos_x;     // x轴绝对位置PID控制器
-    PID_Position pid_pos_y;     // y轴绝对位置PID控制器
+    Vector2D robot_pos_ = {0.0f, 0.0f}; // 当前机器人世界坐标。
+    float yaw = 0.0f;                   // 当前机器人航向角（度）。
+    Point3D ladar_data_;                // 定位系统输出的原始位姿数据。
+
+    PID_Position pid_pos_x; // x轴绝对位置PID控制器
+    PID_Position pid_pos_y; // y轴绝对位置PID控制器
     PID_Position path_lock; // 停止锁点
 
-    
+    BezierCurve curve; // 当前路径曲线缓存。
+
+    //---------------------------接口调试参数（需要修改时复制过来）---------------------------------------------//
+
+    float max_robot_speed_ = 1.0f; // 常规段底盘最大速度限制。
+
+    float gradient_start_ = 1.2f; // 终点梯度衰减起始距离。
+    float gradient_end_ = 0.2f;   // 终点梯度衰减结束距离。
+    float min_gradient_ = 0.8f;   // 终点最小速度缩放比例。
+
+    float max_robot_speed_end_ = 0.3f; // 终点段最大速度限制。
+    float deadzone_max_end_ = 0.1f;     // 判定“近终点”阈值。
+
+    //-----------------------------------速度规划参数----------------------------------------------------//
+
+    Path_line path_line_; // 路径规划器对象。
+
+    Vector2D Clamping_Bar_Selection_pos_ = {1.925f + 0.48f, 0.19f + 0.50f}; // 夹杆流程默认目标点。
+
+    Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 5.0f, .maxDec = 5.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};  // 夹杆流程速度规划参数。
 
     //-----------------------------------前视pid参数-----------------------------------------//
-    
-    float max_robot_speed_ = 1.5f;
-    float max_robot_speed_end_ = 0.35f;
-    float max_corr_end_ = 0.7f;
-    float deadzone_corr_end_ = 0.4f;
-    float deadzone_max_end_ = 0.2f;
-    
+    float m_lookaheadDist = 0.3f; // 前视距离 (单位: 米)
+    float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
+    float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
 
     Vector2D nearestPt;        // 路径上距离机器人最近的点
     Vector2D lookaheadPt;      // 路径上的前视点
     Vector2D lookaheadTangent; // 前视点处的切线方向向量
     Vector2D pathEnd;          // 路径终点坐标
 
-    BezierCurve curve;
-
     //-----------------------------------梅林规划参数-----------------------------------------//
-    int KFS = 0;
 
-    MF_AutoCtrler::PathInformation_S KFS_KeyPoint_;
+    MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
 
-    int8_t MF1 = 0;
-    int8_t MF2 = 0;
-    int8_t MF1_Point_ = 0;
-    int8_t MF2_Point_ = 0;
+    int8_t MF1_Point_ = 0; // MF1 对应地图点编号。
+    int8_t MF2_Point_ = 0; // MF2 对应地图点编号。
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
 
-    int index_exit = 0;
+    int index_exit = 0; // 当前路径出口索引（有效路径点长度）。
 
-    float MF2_target_yaw_ = 0.0f;
-    bool spin_flag = false;
+    float MF2_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
+    bool spin_flag = false;       // 是否需要执行中途转向。
 
-    bool spin_up_flag = false;
-    bool spin_down_flag = false;
+    bool spin_up_flag = false;   // 上路段旋转流程使能。
+    bool spin_down_flag = false; // 下路段旋转流程使能。
 
-    bool MF1_flag = false;
-    bool MF2_flag = false;
-    bool MF1_finish = false;
+    bool MF1_flag = false;   // 进入 MF1 目标点标志。
+    bool MF2_flag = false;   // 进入 MF2 目标点标志。
+    bool MF1_finish = false; // MF1 阶段已完成标志。
 
     Vector2D spin_point_ = {3.6f, 8.72f}; // 上方旋转点
-    float spin_skew_ = -0.15f;             // 下方旋转位置y轴偏移量
-    bool get_spin_flag = false;
-    bool Spin_Start = false;
+    float spin_skew_ = -0.1f;            // 下方旋转位置y轴偏移量
+    bool get_spin_flag = false; // 旋转触发过渡标志。
+    bool Spin_Start = false;    // 当前正在执行旋转。
+
     //-----------------------------------yaw角控制参数-----------------------------------------//
 
-    float yaw = 0.0f;
-    float target_yaw_ = 0.0f;
+    float target_yaw_ = 0.0f; // 底盘锁角目标（度）。
 
-    uint8_t yaw_pid_period_ = 3;
-    uint8_t yaw_pid_period_count_ = 0;
-    PID_Position yaw_pid_;
+    uint8_t yaw_pid_period_ = 3;       // yaw 环下采样周期（预留）。
+    uint8_t yaw_pid_period_count_ = 0; // yaw 环下采样计数（预留）。
+    PID_Position yaw_pid_;             // yaw 角度环控制器。
 
-    void loop() override;
-
-    bool init_flag = false;
-
-    float is_chassis_reverse_ = 1.0f;
+    float is_chassis_reverse_ = 1.0f; // 手动控制正反向系数。
 
     //-----------------------------------前馈参数-----------------------------------------//
 
+    float k_damp_ = 0.0f; // 历史速度阻尼系数。
+    // 前视点差分前馈增益（越大越“冲”，也更容易抖）。
+    float kff_la_ = 0.0f;
+     // 前馈限幅（m/s），用于约束尖峰。
+    float max_ff_speed_ = 1.0f;
+    // 一阶低通系数，范围(0,1]：越小越平滑，越大越灵敏。
+    float ff_lpf_alpha_ = 0.20f;
+    
+    float end_ff_scale_ = 0.35f; // 终点段前馈缩放系数。
+    float end_pid_scale_ = 0.7f; // 终点段 PID 缩放系数。
+    
+    
+    
     // 用于前视点差分前馈的“参考点”：
     // 正常跟踪阶段等于 lookaheadPt，终点阶段等于 endPt。
     Vector2D ff_ref_point_ = {0.0f, 0.0f};
@@ -355,36 +258,28 @@ private:
     Vector2D ff_velocity_lpf_ = {0.0f, 0.0f};
     // 前馈差分初始化标志，避免首周期使用无效差分。
     bool ff_diff_inited_ = false;
-
-    float m_lookaheadDist = 0.3f; // 前视距离 (单位: 米)
-    // 前视点差分前馈增益（越大越“冲”，也更容易抖）。
-    float kff_la_ = 0.0f;
-    // 一阶低通系数，范围(0,1]：越小越平滑，越大越灵敏。
-    float ff_lpf_alpha_ = 0.20f;
+    
     // 控制任务周期（当前系统 1ms 调度）。
     float control_period_s_ = 0.001f;
     // 差分最小时间，避免 dt 太小导致数值爆发。
     float ff_dt_min_s_ = 0.0009f;
     // 差分最大时间，避免任务异常延迟后一次性放大速度脉冲。
     float ff_dt_max_s_ = 0.010f;
-    // 前馈限幅（m/s），用于约束尖峰。
-    float max_ff_speed_ = 1.0f;
-    Vector2D v_robot_last_cmd_ = {0.0f, 0.0f};
-    // float kff_ref_ = 0.8f;
-    float k_damp_ = 0.0f;
-    float end_ff_scale_ = 0.35f;
-    float end_pid_scale_ = 0.7f;
+   
+    Vector2D v_robot_last_cmd_ = {0.0f, 0.0f}; // 上一周期底盘速度命令。
 
     //-----------------------------------其他参数-----------------------------------------//
-    Point2D robot_point_ = {0.0f, 0.0f};
-    float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
-    float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
+    void loop() override; // RTOS 主循环。
+
+    bool init_flag = false; // 初始化完成标志。
+
+    Point2D robot_point_ = {0.0f, 0.0f}; // 自动规划接口使用的位置缓存。
 
     RmPocketData_t airjoy_data_;                            // 遥控器数据，范围 -1 ~ 1
     Camera_Data_t cam_data_dbg_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 调试用相机数据缓存
 
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
-    
+
     PID_Position camera_pid_x_; // 相机模式专用 x 轴位置环。
 
     PID_Position camera_pid_y_; // 相机模式专用 y 轴位置环（预留）。
@@ -392,9 +287,9 @@ private:
     PID_Position camera_pid_vec_; // 相机模式专用向量模长位置环。
 
     PID_Position camera_pid_yaw_; // 相机模式专用 yaw 位置环。
-    
-    Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+
+    Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};   // 上一周期底盘目标姿态（预留）。
+    Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}; // 当前周期底盘目标姿态。
     //-----------------------------------内部控制函数-----------------------------------------//
 
     /**
@@ -415,23 +310,22 @@ private:
      */
     Vector2D FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead);
 
-    void KFS_Selection_Planning(void);
+    void KFS_Selection_Planning(void); // 生成 KFS 自动路径。
 
-    void Path_correction(void);
+    void Path_correction(void); // 基于当前位置执行路径纠偏。
 
-    // 基于“前视参考点差分”的前馈计算：
-    // v_ff_raw = kff_la_ * (p_ref[k]-p_ref[k-1]) / dt
-    // 并叠加低通、限幅和终点段衰减。
-    Vector2D ComputeLookaheadDiffFeedforward(bool near_end);
+    void Path_spin_check(void); // 检查并执行路径中旋转逻辑。
 
     // 统一清空自动控制相关内部状态（速度命令记忆与前馈差分状态）。
     void ResetAutoControlStates(void);
 
-    Vector2D ComposeRobotVelocity(const Vector2D &v_pid, const Vector2D &v_ff_ref, bool near_end);
+    Vector2D ComposeRobotVelocity(const Vector2D &v_pid); // 合成 PID、前馈、阻尼后的速度命令。
 
-    void Clamping_Bar_Selection_Planning(void);
+    // ———————————————————       相机接口函数        —————————————————————————————//
 
-    void flag_reset(void);
+    void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
+
+    void flag_reset(void); // 复位自动流程相关标志位。
 
     void camera_ctrl(void); // 相机闭环主流程状态机。
 
@@ -513,6 +407,121 @@ private:
     float fake_z = 0.08f; // 调试假数据：z 误差输入（米）。
 
     float fake_yaw = 0.0f; // 调试假数据：yaw 误差输入（度）。
+
+    // 外部接口函数
+public:
+    /**
+     * @brief 设置路径自动开始标志
+     * @param start 1表示开始，0表示停止
+     * @param path_flagIndex 路径标志索引，0或1
+     */
+    void setPathAutoStart(uint8_t start)
+    {
+        if (start == 1)
+            flag = 1;
+        else
+            flag = 0;
+
+        if (start == 0)
+        {
+            flag_run = 0;
+        }
+    }
+
+    bool GetReach_flag()
+    {
+        // 读取夹杆流程完成标志。
+        return WeaponSage_END;
+    }
+
+    bool Get_Arm_Start_flag()
+    {
+        // 读取机械臂触发标志。
+        return Arm_Start;
+    }
+
+    void Receive_Arm_End_flag(bool arm_end)
+    {
+        // 写入机械臂流程反馈标志。
+        Arm_Start = arm_end;
+    }
+
+    void set_KFS(int8_t KFS1, int8_t KFS2)
+    {
+        // 更新自动规划目标点编号。
+        MF1 = KFS1;
+        MF2 = KFS2;
+    }
+
+    void set_camera_uart(UART_HandleTypeDef *uart)
+    {
+        camera_uart_ = uart;  // 设置相机串口句柄。
+        camera_init_ = false; // 强制下次进入相机模式时重新初始化串口。
+    }
+
+    void set_camera_limit(float speed_max, float omega_max)
+    {
+        speed_max_ = speed_max; // 设置相机模式平移速度上限（m/s）。
+        omega_max_ = omega_max; // 设置相机模式角速度上限（rad/s）。
+    }
+
+    void set_camera_scale(float pos_scale, float yaw_scale)
+    {
+        pos_scale_ = pos_scale; // 设置相机模式位置环输出缩放系数。
+        yaw_scale_ = yaw_scale; // 设置相机模式航向环输出缩放系数。
+    }
+
+    void set_camera_xy_ref(float x_ref, float y_ref)
+    {
+        camera_x_ref_ = x_ref; // 设置相机模式 x 轴目标值（米）。
+        camera_y_ref_ = y_ref; // 设置相机模式 y 轴目标值（米）。
+    }
+
+    void set_camera_y_ref(float y_ref)
+    {
+        camera_y_ref_ = y_ref; // 设置相机模式 y 轴目标值（米）。
+    }
+
+    float get_camera_y_ref() const
+    {
+        return camera_y_ref_; // 读取相机模式 y 轴目标值（米）。
+    }
+
+    void set_weapon_done(bool done)
+    {
+        weapon_done_ = done; // 写入武器预对接完成反馈位。
+    }
+
+    void set_z_done(bool done)
+    {
+        z_done_ = done; // 写入武器 z 调整完成反馈位。
+    }
+
+    void set_dock_done(bool done)
+    {
+        dock_done_ = done; // 写入外部对接完成标志位。
+    }
+
+    bool get_weapon_req() const
+    {
+        return weapon_req_; // 读取武器预对接请求位。
+    }
+
+    bool get_z_req() const
+    {
+        return z_req_; // 读取武器 z 调整请求位。
+    }
+
+    float get_z_ref() const
+    {
+        return z_ref_; // 读取透传给武器层的 z 参考值。
+    }
+
+    // 由主状态机调用，设置开启武器对接流程
+    void setWeaponStart(bool isstart)
+    {
+        weapon_cameraStart = isstart;
+    }
 };
 #endif // __cplusplus
 
