@@ -176,22 +176,22 @@
           <ItemText>Finite_StateMachine,0x0A</ItemText>
         </Ww>
         <Ww>
-          <count>1</count>
+          <count>5</count>
           <WinNumber>1</WinNumber>
           <ItemText>chassis</ItemText>
         </Ww>
         <Ww>
-          <count>2</count>
+          <count>6</count>
           <WinNumber>1</WinNumber>
           <ItemText>cam_data_dbg_</ItemText>
         </Ww>
         <Ww>
-          <count>3</count>
+          <count>7</count>
           <WinNumber>1</WinNumber>
           <ItemText>ChassisOmni</ItemText>
         </Ww>
         <Ww>
-          <count>4</count>
+          <count>8</count>
           <WinNumber>1</WinNumber>
           <ItemText>camera_setup_</ItemText>
         </Ww>
