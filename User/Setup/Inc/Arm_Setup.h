@@ -101,6 +101,9 @@ typedef struct{
     int8_t last_manual_extend = 0; //上次手动伸展状态
     int8_t last_manual_sucker = 0; //上次手动吸盘状态
 
+    int8_t last_manual_pitch = 0; //上次手动俯仰状态
+
+    int8_t pitch_switch_offset = 0; //俯仰开关偏移绑定
     int8_t extend_switch_offset = 0; // 伸展开关偏移绑定
     int8_t sucker_switch_offset = 0; // 吸盘开关偏移绑定
 }arm_ctrl_status_S;
@@ -158,6 +161,7 @@ typedef struct{
 
         bool isbackdone = false; //返回完成标志
         float back_time = 0.0f; //返回时间
+        int8_t pitch_state[2] = {0,0}; //记录目标KFS的pitch状态，0代表侧吸，1代表顶吸
     }flag;
 }ARM_AUTO_S;
 
@@ -281,6 +285,17 @@ public:
         {
             auto_ctrl_.pathInfo.Index_MFroad[i] = temp.Index_MFroad[i];
         }
+
+        if(MF_high[auto_ctrl_.targetKFS[0]-1] == 0.6f)
+            auto_ctrl_.flag.pitch_state[0] = 0; //高的KFS保持吸盘水平，侧吸
+        else
+            auto_ctrl_.flag.pitch_state[0] = 1; //低的KFS吸盘竖直向下，顶吸
+
+        if(MF_high[auto_ctrl_.targetKFS[1]-1] == 0.6f)
+            auto_ctrl_.flag.pitch_state[1] = 0; //高的KFS保持吸盘水平，侧吸
+        else
+            
+            auto_ctrl_.flag.pitch_state[1] = 1; //低的KFS吸盘竖直向下，顶吸
 
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
