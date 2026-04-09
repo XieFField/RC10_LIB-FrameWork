@@ -320,6 +320,7 @@ void ArmSetup::auto_stillnessOne()
                     auto_ctrl_.flag.canChassisStart = false; //重置底盘移动许可
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
+
                     this->set_PitchAngle(0.0f);
                 }
 
@@ -460,6 +461,8 @@ void ArmSetup::auto_stillnessTwo()
                     auto_ctrl_.flag.canChassisStart = false; //重置底盘移动许可
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
+
+                    this->set_PitchAngle(0.0f);
                 }
 
                 auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT;
@@ -483,34 +486,78 @@ void ArmSetup::auto_stillnessTwo()
 
         case ARM_AUTO_STILLNESS_E::STATE_ALIGN:
         {
-            if(state_alignStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            // if(state_alignStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            // {
+            //     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;
+            // }
+
+            if(state_alignStillness(auto_ctrl_.targetKFS[0]))
             {
-                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;
+
+                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //顶吸
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
+                }
+                else                    
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;   //侧吸  
             }
+
             break;
         }
 
         case ARM_AUTO_STILLNESS_E::STATE_LOWER:
         {
-            if(state_lowerStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            // if(state_lowerStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            // {
+            //     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
+            //     #if ARM_AUTO_DEBUG_NOCHASSIS
+            //     // auto_ctrl_.flag.canExtend = true; //放行进入伸展阶段
+            //     #endif
+            // }
+
+            if(state_lowerStillness(auto_ctrl_.targetKFS[0]))
             {
-                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
-                #if ARM_AUTO_DEBUG_NOCHASSIS
-                // auto_ctrl_.flag.canExtend = true; //放行进入伸展阶段
-                #endif
-            }
+                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//顶吸
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+                    //(Lower阶段降到临界高度后停下，等待canExtend放行再下降到目标位置)
+                }
+                else
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;   //侧吸  
+                }
+            }   
             break;
         }
 
         case ARM_AUTO_STILLNESS_E::STATE_EXT:
         {
-            if(auto_ctrl_.flag.canExtend)
+            // if(auto_ctrl_.flag.canExtend)
+            // {
+            //     if(state_extStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            //     {
+            //         auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+            //     }
+            // }
+
+            if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//顶吸
             {
-                if(state_extStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+                if(state_extStillness(auto_ctrl_.targetKFS[0]))
                 {
-                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;
                 }
             }
+            else   //侧吸
+            {
+                if(auto_ctrl_.flag.canExtend)
+                {
+                    if(state_extStillness(auto_ctrl_.targetKFS[0]))
+                    {
+                        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+                    }
+                }
+            }
+
             break;
         }
 
@@ -658,6 +705,8 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
         else
             targetLowerHeight = this->init_data_.max_launchHeight_;
     }
+
+
     bool canLower = false;
     canLower = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
                                             auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
@@ -761,6 +810,8 @@ bool ArmSetup::state_extStillness(int targetKFS)
         }
         return false;
     }
+
+    return false;
 
 }
 

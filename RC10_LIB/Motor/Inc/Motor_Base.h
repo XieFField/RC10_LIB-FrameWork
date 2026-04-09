@@ -1,7 +1,7 @@
 /**
  * @file Motor_Base.h
  * @author XieFField
- * @brief µç»ú»ùÀàÉùÃ÷
+ * @brief ç”µæœºåŸºç±»å£°æ˜
  * @version 1.0
  * @date 2025-09-16
  */
@@ -15,9 +15,9 @@
 #include "BSP_CanFrame.h"
 #include <cstdint>
 #include <cstddef>
-class fdCANbus; // Ç°ÖÃÉùÃ÷
+class fdCANbus; // å‰ç½®å£°æ˜
 
-//µç»ú»ùÀà
+//ç”µæœºåŸºç±»
 class Motor_Base {
 public:
     Motor_Base(uint32_t id, bool isExt, fdCANbus* bus)
@@ -34,10 +34,10 @@ public:
     virtual void setTargetAngle(float angle_set){};
     virtual void setTargetTotalAngle(float totalAngle_set){};
 
-    // ¸üĞÂ½Ó¿Ú£¬×ÓÀà±ØĞëÊµÏÖÒÔ¸üĞÂµç»ú×´Ì¬
+    // æ›´æ–°æ¥å£ï¼Œå­ç±»å¿…é¡»å®ç°ä»¥æ›´æ–°ç”µæœºçŠ¶æ€
     virtual void update(){};
     
-    // ·´À¡½Ó¿Ú£¬×ÓÀà¿ÉÑ¡ÔñĞÔÊµÏÖÒÔÌá¹©ÌØ¶¨µÄ·´À¡Êı¾İ·ÃÎÊ
+    // åé¦ˆæ¥å£ï¼Œå­ç±»å¯é€‰æ‹©æ€§å®ç°ä»¥æä¾›ç‰¹å®šçš„åé¦ˆæ•°æ®è®¿é—®
     virtual float getRPM() const { return 0.0f; }   
     virtual float getCurrent() const { return 0.0f; }
     virtual float getAngle() const { return 0.0f; }
@@ -45,23 +45,23 @@ public:
 
     
     /**
-     * @brief ´ò°ü·¢ËÍµÄCANÖ¡½Ó¿Ú£¬×ÓÀà±ØĞëÊµÏÖÒÔÌá¹©ÌØ¶¨µÄ¿ØÖÆÃüÁîÖ¡
-     * @param outFrames ÓÃÓÚ´æ·Å´ò°üºóCANÖ¡µÄÊı×é£¬µ÷ÓÃÕßÌá¹©ÄÚ´æ£¬×ÓÀà¸ºÔğÌî³äÄÚÈİ¡£Êı×é´óĞ¡ÓÉ maxFrames ²ÎÊıÖ¸¶¨¡£
-     * @param maxFrames ÓÃÓÚÖ¸¶¨ outFrames Êı×éµÄ´óĞ¡
-     * @return Êµ¼ÊÌî³äµÄCANÖ¡ÊıÁ¿
+     * @brief æ‰“åŒ…å‘é€çš„CANå¸§æ¥å£ï¼Œå­ç±»å¿…é¡»å®ç°ä»¥æä¾›ç‰¹å®šçš„æ§åˆ¶å‘½ä»¤å¸§
+     * @param outFrames ç”¨äºå­˜æ”¾æ‰“åŒ…åCANå¸§çš„æ•°ç»„ï¼Œè°ƒç”¨è€…æä¾›å†…å­˜ï¼Œå­ç±»è´Ÿè´£å¡«å……å†…å®¹ã€‚æ•°ç»„å¤§å°ç”± maxFrames å‚æ•°æŒ‡å®šã€‚
+     * @param maxFrames ç”¨äºæŒ‡å®š outFrames æ•°ç»„çš„å¤§å°
+     * @return å®é™…å¡«å……çš„CANå¸§æ•°é‡
      */
     virtual std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) = 0;
 
     
     /**
-     * @brief CAN±¨ÎÄ½âÎö½Ó¿Ú£¬×ÓÀà±ØĞëÊµÏÖÒÔ´¦ÀíÌØ¶¨µÄ·´À¡Ö¡
+     * @brief CANæŠ¥æ–‡è§£ææ¥å£ï¼Œå­ç±»å¿…é¡»å®ç°ä»¥å¤„ç†ç‰¹å®šçš„åé¦ˆå¸§
      */
     virtual void updateFeedback(const CanFrame& cf) = 0;
 
     /**
-     * @brief CANÖ¡Æ¥Åäº¯Êı£¬Ä¬ÈÏÊµÏÖÎªÑÏ¸ñIDºÍÀ©Õ¹Ö¡±êÖ¾Æ¥Åä£¬×ÓÀà¿É override ÒÔÊµÏÖ¸ü¸´ÔÓµÄÆ¥ÅäÂß¼­£¨ÈçÄ£ºıIDÆ¥Åä£©
-     * @param cf ÒªÆ¥ÅäµÄCANÖ¡
-     * @return Èç¹ûÖ¡Æ¥Åäµ±Ç°µç»úÊµÀı£¬Ôò·µ»Øtrue£»·ñÔò·µ»Øfalse¡£Ä¬ÈÏÊµÏÖÎªÑÏ¸ñIDºÍÀ©Õ¹Ö¡±êÖ¾Æ¥Åä¡£
+     * @brief CANå¸§åŒ¹é…å‡½æ•°ï¼Œé»˜è®¤å®ç°ä¸ºä¸¥æ ¼IDå’Œæ‰©å±•å¸§æ ‡å¿—åŒ¹é…ï¼Œå­ç±»å¯ override ä»¥å®ç°æ›´å¤æ‚çš„åŒ¹é…é€»è¾‘ï¼ˆå¦‚æ¨¡ç³ŠIDåŒ¹é…ï¼‰
+     * @param cf è¦åŒ¹é…çš„CANå¸§
+     * @return å¦‚æœå¸§åŒ¹é…å½“å‰ç”µæœºå®ä¾‹ï¼Œåˆ™è¿”å›trueï¼›å¦åˆ™è¿”å›falseã€‚é»˜è®¤å®ç°ä¸ºä¸¥æ ¼IDå’Œæ‰©å±•å¸§æ ‡å¿—åŒ¹é…ã€‚
      */
     virtual bool matchesFrame(const CanFrame& cf) const
     {
@@ -84,18 +84,18 @@ protected:
     bool isExtended_;
     fdCANbus* bus_;
 
-    //Ä¿±êÖµ£¨ÓÉ¿ØÖÆÆ÷ÉèÖÃ£¬µç»úÀà»ò×ÓÀà¿ÉÑ¡ÔñĞÔÊ¹ÓÃ£©
-    float target_rpm_ = 0.0f; //Ä¿±ê×ªËÙ rpm
-    float target_current_= 0.0f; //Ä¿±êµçÁ÷ ma
-    float target_angle_ = 0.0f; //Ä¿±ê½Ç¶È deg
-    float target_totalAngle_ = 0.0f; //Ä¿±ê×Ü½Ç¶È deg
+    //ç›®æ ‡å€¼ï¼ˆç”±æ§åˆ¶å™¨è®¾ç½®ï¼Œç”µæœºç±»æˆ–å­ç±»å¯é€‰æ‹©æ€§ä½¿ç”¨ï¼‰
+    float target_rpm_ = 0.0f; //ç›®æ ‡è½¬é€Ÿ rpm
+    float target_current_= 0.0f; //ç›®æ ‡ç”µæµ ma
+    float target_angle_ = 0.0f; //ç›®æ ‡è§’åº¦ deg
+    float target_totalAngle_ = 0.0f; //ç›®æ ‡æ€»è§’åº¦ deg
     
-    float GEAR_RATIO = 1.0f; // ¼õËÙ±È
+    float GEAR_RATIO = 1.0f; // å‡é€Ÿæ¯”
     float rpm_ = 0.0f;
     float current_ = 0.0f;
     float angle_ = 0.0f;
     float totalAngle_ = 0.0f;
-    float temperature_ = 0.0f; //µç»úÎÂ¶È
+    float temperature_ = 0.0f; //ç”µæœºæ¸©åº¦
 
 };
 
