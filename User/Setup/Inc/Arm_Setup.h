@@ -192,14 +192,14 @@ public:
     }
 
     void init(M3508 *motor_ArmLaunch, M2006 *motor_ArmStretch, 
-        M3508 *motor_ArmRotate, M2006 *motor_ArmPitch)
+        M3508 *motor_ArmRotate, DM_Motor *motor_ArmPitch)
     {
         this->registerMotor_Launch(motor_ArmLaunch);
         this->registerMotor_Stretch(motor_ArmStretch);
         this->registerMotor_Rotate(motor_ArmRotate);
         this->registerMotor_Pitch(motor_ArmPitch);
 
-        this->setPitchReversed(true); //俯仰电机反向
+        // this->setPitchReversed(true); //俯仰电机反向
         this->setStretchReversed(false); //伸展电机不反向
         this->setRotateReversed(false);
         this->setLaunchReversed(true); //升降电机反向

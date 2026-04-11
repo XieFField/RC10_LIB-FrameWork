@@ -2,6 +2,8 @@
 
 int text_index = 0;
 
+#define XIPAN_DEBUG 1 // 给张国掉测试的
+
 void FSM_Controller::loop()
 {
     if(!init_flag_) 
@@ -11,6 +13,22 @@ void FSM_Controller::loop()
     CrsfReceiver::GetInstance(&huart7)->process();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     
+    #if XIPAN_DEBUG
+
+    if(airjoy_data_.SWC == 0x00)
+    {
+        text_index =0;
+    }
+    else if(airjoy_data_.SWC == 0x01)
+    {
+        text_index =1;
+    }
+    else if(airjoy_data_.SWC == 0x02)
+    {
+        text_index =2;
+    }
+
+    #endif 
 
 	switch(text_index)
 	{
@@ -44,7 +62,12 @@ void FSM_Controller::loop()
 			break;
 	}
 	
-	
+    #if XIPAN_DEBUG
+
+    return;
+
+    #endif 
+
     switch(airjoy_data_.SWB)
     {
         case 0x00:

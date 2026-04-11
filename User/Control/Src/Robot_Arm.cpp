@@ -106,7 +106,7 @@ void Robot_Arm::update()
         motor_launch_->setTargetTotalAngle(target_launchMotorAngle);
 
     if(motor_pitch_ != nullptr)
-        motor_pitch_->setTargetTotalAngle(target_pitchMotorAngle);
+        motor_pitch_->setTargetTotalAngle(init_data_.max_pitchRPM_, target_pitchMotorAngle);
 
     if(sucker_status_ == SUCK)
         HAL_GPIO_WritePin(init_data_.Sucker_GPIO_Port, init_data_.Sucker_GPIO_Pin, GPIO_PIN_SET);

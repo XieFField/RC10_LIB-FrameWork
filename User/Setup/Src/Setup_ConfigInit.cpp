@@ -75,7 +75,10 @@ M3508 omni_wheel3(3, CAN1_Bus); M3508 omni_wheel4(4, CAN1_Bus);
 
                            /* ´®Áª±Û */      
 M3508 arm_launchMotor(5, CAN1_Bus); M2006 arm_stretchMotor(8, CAN1_Bus);
-M3508 arm_rotateMotor(7, CAN1_Bus); M2006 arm_pitchMotor(6, CAN1_Bus);
+M3508 arm_rotateMotor(7, CAN1_Bus); DM_Motor arm_pitchMotor(J4310_Type, 0x10, 0x10, CAN1_Bus);
+
+
+
 
 M3508 Weapon_launchMotor(1, CAN2_Bus); M2006 Weapon_clawMotor(2, CAN2_Bus);
 M2006 Weapon_traverseMotor(3, CAN2_Bus); DM_Motor Weapon_wristMotor(J4310_Type, 0x05,0x05, CAN2_Bus);
@@ -278,7 +281,6 @@ void CAN_Motor_Init(void)
    DJIGroupCAN1_High.addMotor(&arm_launchMotor);
    DJIGroupCAN1_High.addMotor(&arm_stretchMotor);
    DJIGroupCAN1_High.addMotor(&arm_rotateMotor);
-   DJIGroupCAN1_High.addMotor(&arm_pitchMotor);
 
    CAN1_Bus->registerMotor(&DJIGroupCAN1_Low);
    CAN1_Bus->registerMotor(&DJIGroupCAN1_High);
@@ -333,7 +335,6 @@ void CAN_Motor_Init(void)
    m2006_speed_pid_params.output_limit = 4500.0f;
    arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
    arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508Rotate_angle_pid_params, 0.0f);
-   arm_pitchMotor.pid_init(m2006_speed_pid_params, 0.0f, m2006_angle_pid_params, 0.0f);
 	
 	PID_Param_Config weapon_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
    PID_Param_Config weapon_3508_anglePID = m3508_angle_pid_params;

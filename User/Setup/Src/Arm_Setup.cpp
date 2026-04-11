@@ -11,6 +11,13 @@ void ArmSetup::loop()
     if(!arm_ctrlStatus.init_flag)
         return;
 
+
+    if(motor_pitch_->getErrorNum() == 0x00 || !this->is_pitchEnable_)
+    {
+        motor_pitch_->motorEnable();
+        this->is_pitchEnable_ = true;
+    }
+
 	
 //	ArmstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
     if(!arm_ctrlStatus.is_calibrating)
@@ -65,7 +72,7 @@ void ArmSetup::loop()
 
         case ARM_AUTO_CONTROL:
             {
-                    autoControl();
+                autoControl();
             }   
             break;
 
@@ -652,9 +659,9 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
     if(_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - target_height) < 0.01f)
     {   
         if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 0)
-            this->set_PitchAngle(0.0f); //高的KFS保持吸盘水平，侧吸
+            this->set_PitchAngle(90.0f); //高的KFS保持吸盘水平，侧吸
         else
-            this->set_PitchAngle(90.0f); //低的KFS吸盘竖直向下，顶吸
+            this->set_PitchAngle(0.0f); //低的KFS吸盘竖直向下，顶吸
         
         return true;
     }
@@ -982,21 +989,27 @@ void ArmSetup::calibrateMotor()
         arm_ctrlStatus.calibrate_start = true;
     }
     this->motor_stretch_->setTargetCurrent(-700.0f); // 给予一个小电流顶住限位
-    this->motor_pitch_->setTargetCurrent(-1000.0f); // 给予一个小电流顶住限位
+    this->motor_launch_->setTargetCurrent(700.0f); // 给予一个小电流顶住限位
+
     //this->motor_rotate_->setTargetCurrent(1000.0f);
     if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.5f)
     {
         //relocate
         this->motor_stretch_->relocate_totalAngle(0.0f);
-        this->motor_pitch_->relocate_totalAngle(179.9f); // 使用179.9f避免180度浮点临界值导致归一化为-180度
-        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(179.9f));
+        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(179.99f));
         this->motor_launch_->relocate_totalAngle(0.0f);
+
+        if(this->is_pitchEnable_)
+        {
+            this->motor_pitch_->motorSetZero();
+        }
+
+
 
         //set current to 0
         this->motor_stretch_->setTargetCurrent(0.0f);
-        this->motor_pitch_->setTargetCurrent(0.0f);
         this->motor_rotate_->setTargetCurrent(0.0f);
-        // this->motor_launch_->setTargetCurrent(0.0f);
+        this->motor_launch_->setTargetCurrent(0.0f);
 
         arm_ctrlStatus.is_calibrating = true;
     }
@@ -1038,22 +1051,22 @@ void ArmSetup::debug()
 }
 
 Arm_InitData_S arm_initData = {
-   .max_launchHeight_ = 0.29f,
-   .max_stretchLength_ = 0.160f,
-   .arm_length_ = 0.6f,
-   .end_link_length_ = 0.08f,
+    .max_launchHeight_ = 0.29f,
+    .max_stretchLength_ = 0.160f,
+    .arm_length_ = 0.6f,
+    .end_link_length_ = 0.08f,
 
-   .stretch_Ratio_ = 0.08417f,
-   .launch_Ratio_ = 0.07221f,
-//    .rotate_gearRatio_ = 144.878f,  //旧的
-   .rotate_gearRatio_ = 145.755789f,
-   .pitch_gearRatio_ = 360.0f,
+    .stretch_Ratio_ = 0.08417f,
+    .launch_Ratio_ = 0.07221f,
+    //    .rotate_gearRatio_ = 144.878f,  //旧的
+    .rotate_gearRatio_ = 145.755789f,
+    .pitch_gearRatio_ = 360.0f,
 
-   .min_rotate_angle_ = 0.0f,
-   .max_rotate_angle_ = 359.99999f,
+    .min_rotate_angle_ = 0.0f,
+    .max_rotate_angle_ = 359.99999f,
     .safe_height = 0.14f,
-   .Sucker_GPIO_Port = SUCKER_error_GPIO_Port,
+    .Sucker_GPIO_Port = SUCKER_error_GPIO_Port,
     .Sucker_GPIO_Pin =  SUCKER_error_Pin,
-
+    .max_pitchRPM_ = 45.0f,
     
 };
