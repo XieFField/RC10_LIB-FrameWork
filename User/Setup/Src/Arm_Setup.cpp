@@ -367,13 +367,6 @@ void ArmSetup::auto_stillnessOne()
 
         case ARM_AUTO_STILLNESS_E::STATE_LOWER:
         {
-            // if(state_lowerStillness(auto_ctrl_.targetKFS[0]))
-            // {
-            //     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
-            //     #if ARM_AUTO_DEBUG_NOCHASSIS
-            //     // auto_ctrl_.flag.canExtend = true; //放行进入伸展阶段
-            //     #endif
-            // }
             if(state_lowerStillness(auto_ctrl_.targetKFS[0]))
             {
                 if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//顶吸
@@ -840,6 +833,10 @@ bool ArmSetup::state_launchStillness(int targetKFS)
     if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.02f)
     {
         auto_ctrl_.flag.canChassisStart = true; //机械臂已经升到可以移动的高度了
+        if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //顶吸
+        {
+            this->set_StretchLength(0.0f); //顶吸伸展到位后直接缩回，准备返回
+        }
         return true;
     }
     else
@@ -988,7 +985,7 @@ void ArmSetup::calibrateMotor()
         arm_ctrlStatus.calibrate_startTime = TimeStamp::getInstance().getSeconds();
         arm_ctrlStatus.calibrate_start = true;
     }
-    this->motor_stretch_->setTargetCurrent(-700.0f); // 给予一个小电流顶住限位
+    this->motor_stretch_->setTargetCurrent(700.0f); // 给予一个小电流顶住限位
     this->motor_launch_->setTargetCurrent(700.0f); // 给予一个小电流顶住限位
 
     //this->motor_rotate_->setTargetCurrent(1000.0f);
@@ -1056,7 +1053,7 @@ Arm_InitData_S arm_initData = {
     .arm_length_ = 0.6f,
     .end_link_length_ = 0.08f,
 
-    .stretch_Ratio_ = 0.08417f,
+    .stretch_Ratio_ = 0.11421f,
     .launch_Ratio_ = 0.07221f,
     //    .rotate_gearRatio_ = 144.878f,  //旧的
     .rotate_gearRatio_ = 145.755789f,
@@ -1067,6 +1064,6 @@ Arm_InitData_S arm_initData = {
     .safe_height = 0.14f,
     .Sucker_GPIO_Port = SUCKER_error_GPIO_Port,
     .Sucker_GPIO_Pin =  SUCKER_error_Pin,
-    .max_pitchRPM_ = 45.0f,
+    .max_pitchRPM_ = 45.0f
     
 };

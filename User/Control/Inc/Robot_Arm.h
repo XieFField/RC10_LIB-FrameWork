@@ -296,7 +296,7 @@ protected:
     {
         return sign_reversed_.sign_pitch_ * angle / init_data_.pitch_gearRatio_ * 360.0f;
     }
-
+    
 /*=================================================================*/
     /*电机总角度->关节角度*/
     float MotorTotalAngle_to_launchHeight(float motor_angle)

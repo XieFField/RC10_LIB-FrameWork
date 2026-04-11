@@ -200,7 +200,7 @@ public:
         this->registerMotor_Pitch(motor_ArmPitch);
 
         // this->setPitchReversed(true); //俯仰电机反向
-        this->setStretchReversed(false); //伸展电机不反向
+        this->setStretchReversed(true); //伸展电机反向
         this->setRotateReversed(false);
         this->setLaunchReversed(true); //升降电机反向
         start(osPriorityHigh-1, 512); 
