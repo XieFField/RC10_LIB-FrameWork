@@ -12,7 +12,7 @@ void ArmSetup::loop()
         return;
 
 
-    if(motor_pitch_->getErrorNum() == 0x00 || !this->is_pitchEnable_)
+    if((motor_pitch_->getErrorNum() == 0x00 || !this->is_pitchEnable_) && (!arm_ctrlStatus.is_calibrating))
     {
         motor_pitch_->motorEnable();
         this->is_pitchEnable_ = true;
@@ -28,6 +28,18 @@ void ArmSetup::loop()
         this->update();
         last_arm_status_ = arm_status_;
         return;
+    }
+    else
+    {
+        if(arm_status_ == ARM_STOP)
+        {
+            this->motor_pitch_->motorDisable();
+        }
+        else
+        {
+            if(this->motor_pitch_->getErrorNum() == 0x00)
+                this->motor_pitch_->motorEnable();
+        }
     }
 
 #if ARM_AUTO_DEBUG_NOCHASSIS

@@ -17,7 +17,7 @@ void Robot_WeaponSage_Setup::loop()
 	
 	
 	
-	if(wrist_Motor_->getErrorNum()==0x00||!auto_ctrl_.auto_state_bool_S.wrist_enable)
+	if((wrist_Motor_->getErrorNum()==0x00||!auto_ctrl_.auto_state_bool_S.wrist_enable) && !ctrl_status_.is_calibrating)
 	{	               
             Weapon_wrist_enable();
 			auto_ctrl_.auto_state_bool_S.wrist_enable=true;
@@ -29,6 +29,18 @@ void Robot_WeaponSage_Setup::loop()
 		calibrate();
 		weaponSage_status_=WEAPONSAGE_CALIBRATE;
 	}
+    else
+    {
+        if(weaponSage_status_ == WEAPONSAGE_STOP)
+        {
+            this->wrist_Motor_->motorDisable();
+        }
+        else
+        {
+            if(this->wrist_Motor_->getErrorNum() == 0x00)
+                this->wrist_Motor_->motorEnable();
+        }
+    }
 	
 //	WeaponSagestackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
 
