@@ -1,7 +1,7 @@
 /**
  * @file Motor_Base.h
  * @author XieFField
- * @brief ç”µæœºåŸºç±»å£°æ˜
+ * @brief µç»ú»ùÀàÉùÃ÷
  * @version 1.0
  * @date 2025-09-16
  */
@@ -15,9 +15,8 @@
 #include "BSP_CanFrame.h"
 #include <cstdint>
 #include <cstddef>
-class fdCANbus; // å‰ç½®å£°æ˜
+class fdCANbus; // Ç°ÖÃÉùÃ÷
 
-//ç”µæœºåŸºç±»
 class Motor_Base {
 public:
     Motor_Base(uint32_t id, bool isExt, fdCANbus* bus)
@@ -34,10 +33,10 @@ public:
     virtual void setTargetAngle(float angle_set){};
     virtual void setTargetTotalAngle(float totalAngle_set){};
 
-    // æ›´æ–°æ¥å£ï¼Œå­ç±»å¿…é¡»å®ç°ä»¥æ›´æ–°ç”µæœºçŠ¶æ€
+    // ¸üĞÂº¯Êı£¬¸ºÔğ¸ù¾İ×îĞÂµÄ·´À¡Êı¾İ¼ÆËã¿ØÖÆÊä³ö
     virtual void update(){};
     
-    // åé¦ˆæ¥å£ï¼Œå­ç±»å¯é€‰æ‹©æ€§å®ç°ä»¥æä¾›ç‰¹å®šçš„åé¦ˆæ•°æ®è®¿é—®
+    // »ñÈ¡Êä³öÖá×´Ì¬
     virtual float getRPM() const { return 0.0f; }   
     virtual float getCurrent() const { return 0.0f; }
     virtual float getAngle() const { return 0.0f; }
@@ -45,23 +44,24 @@ public:
 
     
     /**
-     * @brief æ‰“åŒ…å‘é€çš„CANå¸§æ¥å£ï¼Œå­ç±»å¿…é¡»å®ç°ä»¥æä¾›ç‰¹å®šçš„æ§åˆ¶å‘½ä»¤å¸§
-     * @param outFrames ç”¨äºå­˜æ”¾æ‰“åŒ…åCANå¸§çš„æ•°ç»„ï¼Œè°ƒç”¨è€…æä¾›å†…å­˜ï¼Œå­ç±»è´Ÿè´£å¡«å……å†…å®¹ã€‚æ•°ç»„å¤§å°ç”± maxFrames å‚æ•°æŒ‡å®šã€‚
-     * @param maxFrames ç”¨äºæŒ‡å®š outFrames æ•°ç»„çš„å¤§å°
-     * @return å®é™…å¡«å……çš„CANå¸§æ•°é‡
+     * @brief ´ò°üÒª·¢ËÍµÄCANÖ¡£¬×ÓÀà±ØĞëÊµÏÖÒÔ´ËÌá¹©ÌØ¶¨µÄ¿ØÖÆÃüÁîÖ¡
+     * @param outFrames ÓÃÓÚ´æ´¢´ò°üµÄCANÖ¡µÄÊı×é£¬µ÷ÓÃÕßÌá¹©ÄÚ´æ£¬×ÓÀà¸ºÔğÌî³äÄÚÈİ¡£Êı×é´óĞ¡ÓÉ maxFrames ²ÎÊıÖ¸¶¨¡£
+     * @param maxFrames ÓÃÓÚÖ¸¶¨ outFrames Êı×éµÄ´óĞ¡
+     * @return Êµ¼ÊÌî³äµÄCANÖ¡ÊıÁ¿£¬Èç¹û³¬¹ı maxFrames ÔòÖ»Ìî³ä maxFrames ¸ö
+     * @attention ¸Ãº¯ÊıÓÉ fdCANbus µÄµ÷¶ÈÆ÷ÈÎÎñÖÜÆÚĞÔµ÷ÓÃ£¬ÒÔÊµÏÖ¶¨Ê±·¢ËÍ¿ØÖÆÃüÁî
      */
     virtual std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) = 0;
 
     
     /**
-     * @brief CANæŠ¥æ–‡è§£ææ¥å£ï¼Œå­ç±»å¿…é¡»å®ç°ä»¥å¤„ç†ç‰¹å®šçš„åé¦ˆå¸§
+     * @brief CANÖ¡½âÎö½Ó¿Ú£¬×ÓÀà±ØĞëÊµÏÖÒÔ´Ë´¦ÀíÌØ¶¨µÄ·´À¡Êı¾İ
      */
     virtual void updateFeedback(const CanFrame& cf) = 0;
 
     /**
-     * @brief CANå¸§åŒ¹é…å‡½æ•°ï¼Œé»˜è®¤å®ç°ä¸ºä¸¥æ ¼IDå’Œæ‰©å±•å¸§æ ‡å¿—åŒ¹é…ï¼Œå­ç±»å¯ override ä»¥å®ç°æ›´å¤æ‚çš„åŒ¹é…é€»è¾‘ï¼ˆå¦‚æ¨¡ç³ŠIDåŒ¹é…ï¼‰
-     * @param cf è¦åŒ¹é…çš„CANå¸§
-     * @return å¦‚æœå¸§åŒ¹é…å½“å‰ç”µæœºå®ä¾‹ï¼Œåˆ™è¿”å›trueï¼›å¦åˆ™è¿”å›falseã€‚é»˜è®¤å®ç°ä¸ºä¸¥æ ¼IDå’Œæ‰©å±•å¸§æ ‡å¿—åŒ¹é…ã€‚
+     * @brief CANÖ¡Æ¥Åäº¯Êı£¬Ä¬ÈÏÊµÏÖÎªIDºÍÖ¡ÀàĞÍÆ¥Åä£¬×ÓÀà¿É override ÒÔÊµÏÖ¸ü¸´ÔÓµÄÆ¥ÅäÂß¼­£¨ÈçĞ­ÒéIDÆ¥Åä£©
+     * @param cf ĞèÒªÆ¥ÅäµÄCANÖ¡
+     * @return Èç¹ûÖ¡Æ¥Åäµ±Ç°µç»úÊµÀı£¬Ôò·µ»Øtrue£¬·ñÔò·µ»Øfalse¡£Ä¬ÈÏÊµÏÖÎª¼òµ¥µÄIDºÍÖ¡ÀàĞÍÆ¥Åä
      */
     virtual bool matchesFrame(const CanFrame& cf) const
     {
@@ -79,23 +79,42 @@ public:
 
     fdCANbus* bus() const { return bus_; }
     uint32_t getID() const { return motor_id_; }
+
+
+    void reset_controlFrequency(uint16_t newFreq) 
+    { 
+        if(newFreq > 0 && newFreq % 100 == 0 && newFreq <= 1000) // ¿ØÖÆÆµÂÊ±ØĞëÊÇ100µÄÕûÊı±¶
+            control_Frequency_ = newFreq; 
+        else
+            control_Frequency_ = 1000; // »Ö¸´Ä¬ÈÏÖµ
+    }
+    uint16_t get_controlFrequency() const { return control_Frequency_; }
+
+    uint16_t get_controlCnt() const { return control_cnt; }
+    void reset_controlCnt() { control_cnt = 0; }
+    void increment_controlCnt() { control_cnt++; }
+
 protected:
     uint32_t motor_id_;
     bool isExtended_;
     fdCANbus* bus_;
 
-    //ç›®æ ‡å€¼ï¼ˆç”±æ§åˆ¶å™¨è®¾ç½®ï¼Œç”µæœºç±»æˆ–å­ç±»å¯é€‰æ‹©æ€§ä½¿ç”¨ï¼‰
-    float target_rpm_ = 0.0f; //ç›®æ ‡è½¬é€Ÿ rpm
-    float target_current_= 0.0f; //ç›®æ ‡ç”µæµ ma
-    float target_angle_ = 0.0f; //ç›®æ ‡è§’åº¦ deg
-    float target_totalAngle_ = 0.0f; //ç›®æ ‡æ€»è§’åº¦ deg
-    
-    float GEAR_RATIO = 1.0f; // å‡é€Ÿæ¯”
+    // Ä¿±êÖµ
+    float target_rpm_ = 0.0f; // Ä¿±ê×ªËÙ rpm
+    float target_current_= 0.0f; // Ä¿±êµçÁ÷ ma
+    float target_angle_ = 0.0f; // Ä¿±ê½Ç¶È deg
+    float target_totalAngle_ = 0.0f; // Ä¿±ê×Ü½Ç¶È deg
+
+    float GEAR_RATIO = 1.0f; // ¼õËÙ±È
     float rpm_ = 0.0f;
     float current_ = 0.0f;
     float angle_ = 0.0f;
     float totalAngle_ = 0.0f;
-    float temperature_ = 0.0f; //ç”µæœºæ¸©åº¦
+    float temperature_ = 0.0f; // µç»úÎÂ¶È
+
+    uint16_t control_cnt = 0; // ¿ØÖÆÖÜÆÚ¼ÆÊıÆ÷£¬ÓÃÓÚÊµÏÖ²»Í¬ÆµÂÊµÄ¿ØÖÆÂß¼­
+private:
+    uint16_t control_Frequency_ = 1000; // Ä¬ÈÏ¿ØÖÆÆµÂÊ Hz£¬ÖØÉèµÄ¿ØÖÆÆµÂÊ±ØĞëÊÇ100µÄÕûÊı±¶
 
 };
 

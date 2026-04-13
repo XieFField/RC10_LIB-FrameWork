@@ -21,8 +21,8 @@ void Locate_Setup::update()
 	// 	fk_chassisSpeed_inWorld_.theta = fk_speed.theta;
     // }
 
-	if(is_startToLRL_)
-   		RobotPos_inWorld_caculate(this->Laser_pos_instance);
+	// if(is_startToLRL_)
+   	// 	RobotPos_inWorld_caculate(this->Laser_pos_instance);
 
 	update_Lidar_data();
 
@@ -119,7 +119,7 @@ void Locate_Setup::update_Lidar_data()
 
 void Locate_Setup::Relocte_ToLader()
 {
-	Locate_Setup::USB_SendData();
+	Locate_Setup::USB_SendData(); 
 }
 
 

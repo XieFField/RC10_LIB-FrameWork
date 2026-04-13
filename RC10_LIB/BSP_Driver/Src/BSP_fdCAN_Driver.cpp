@@ -199,7 +199,7 @@ void fdCANbus::schedulerTaskbody()
         for (std::size_t i = 0; i < MAX_MOTORS; ++i)
         {
             Motor_Base* m = motorList_[i];
-            if (m) 
+            if (m && (m->get_controlCnt() +1u >= static_cast<uint16_t>(1000 / m->get_controlFrequency()))) //防止重设控制频率导致pid计算错配
                 m->update();
             
         }
@@ -212,7 +212,22 @@ void fdCANbus::schedulerTaskbody()
             if (!m) 
                 continue;
                 
-            frameCnt += m->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt);
+            bool due = true;
+            if(m->get_controlFrequency() != 1000) // 如果不是默认频率，则进行分频判断
+            {
+                const uint16_t divider = static_cast<uint16_t>(1000 / m->get_controlFrequency()); // 计算分频器
+                due = (m->get_controlCnt() + 1u >= divider); // 判断是否触发控制周期
+            }
+
+            if(!due)
+            {
+                m->increment_controlCnt();
+                continue; // 不到控制周期，不打包
+            }
+
+
+            frameCnt += m->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt);  
+            m->reset_controlCnt(); // 重置计数器，准备下一个控制周期
 
             if (frameCnt >= (sizeof(frames_to_send)/sizeof(frames_to_send[0]))) 
                 break;
