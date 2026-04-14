@@ -109,7 +109,7 @@ namespace jia
 
                 setModeFlag();
 
-                isTransSpeedBodyToWorld(cmf_.is_world_speed_mode, it.vel_x, it.vel_y, t.vel_x, t.vel_y);
+                isTransSpeedWorldToBody(cmf_.is_world_speed_mode, it.vel_x, it.vel_y, t.vel_x, t.vel_y);
 
                 if (cmf_.is_lock_now_rot_z)
                     isLockNowRotZ(cmf_.is_lock_now_rot_z, t.rot_z, it.omega_z, t.rot_z, t.omega_z);
@@ -641,14 +641,14 @@ namespace jia
             f32 cos_theta = cosf(input_hwt_rot_z_);
             f32 sin_theta = sinf(input_hwt_rot_z_);
 
-            out_vel_x = vel_x * cos_theta + vel_y * sin_theta;
-            out_vel_y = -vel_x * sin_theta + vel_y * cos_theta;
+            out_vel_x = vel_x * cos_theta - vel_y * sin_theta;
+            out_vel_y = vel_x * sin_theta + vel_y * cos_theta;
         }
 
         void Chassis::transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y)
         {
-            f32 cos_theta = cosf(-input_hwt_rot_z_);
-            f32 sin_theta = sinf(-input_hwt_rot_z_);
+            f32 cos_theta = cosf(input_hwt_rot_z_);
+            f32 sin_theta = sinf(input_hwt_rot_z_);
 
             out_vel_x = vel_x * cos_theta + vel_y * sin_theta;
             out_vel_y = -vel_x * sin_theta + vel_y * cos_theta;
