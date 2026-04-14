@@ -172,7 +172,7 @@ namespace jia
         float max_angle_change = max_rate * period;
 
         // 限制角度变化
-        clampValue(angle_diff, -max_angle_change, max_angle_change);
+        angle_diff = clampValue(angle_diff, -max_angle_change, max_angle_change);
 
         // 计算新的角度
         f32 new_angle = current + angle_diff;
