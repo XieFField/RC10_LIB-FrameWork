@@ -41,6 +41,9 @@ extern "C"
 #include "chassis.h"
 
 #define debug_ladar 0
+
+#define FF_V 0
+
 class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>
 {
 public:
@@ -170,44 +173,39 @@ private:
     //---------------------------接口调试参数（需要修改时复制过来）---------------------------------------------//
 
     float max_robot_speed_ = 1.0f; // 常规段底盘最大速度限制。
+    float min_robot_speed_ = 0.4f; // 常规段底盘最大速度限制。
 
     float gradient_start_ = 1.2f; // 终点梯度衰减起始距离。
     float gradient_end_ = 0.2f;   // 终点梯度衰减结束距离。
     float min_gradient_ = 0.8f;   // 终点最小速度缩放比例。
 
-    float max_robot_speed_end_ = 0.3f; // 终点段最大速度限制。
+    float robot_speed_end_ = 0.3f; // 终点段最大速度限制。
     float deadzone_max_end_ = 0.1f;     // 判定“近终点”阈值。
-
+    
+    float m_lookaheadDist = 0.3f; // 前视距离 (单位: 米)
     //-----------------------------------速度规划参数----------------------------------------------------//
 
     Path_line path_line_; // 路径规划器对象。
 
-    Vector2D Clamping_Bar_Selection_pos_ = {1.925f + 0.48f, 0.19f + 0.50f}; // 夹杆流程默认目标点。
+    Vector2D Clamping_Bar_Selection_pos_ = {2.405f , 0.69f}; // 夹杆流程默认目标点。
 
     Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; // KFS 速度规划参数。
     Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 5.0f, .maxDec = 5.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};  // 夹杆流程速度规划参数。
 
     //-----------------------------------前视pid参数-----------------------------------------//
-    float m_lookaheadDist = 0.3f; // 前视距离 (单位: 米)
+
     float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
     float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
 
-    Vector2D nearestPt;        // 路径上距离机器人最近的点
-    Vector2D lookaheadPt;      // 路径上的前视点
-    Vector2D lookaheadTangent; // 前视点处的切线方向向量
-    Vector2D pathEnd;          // 路径终点坐标
+    //Vector2D lookaheadTangent; // 前视点处的切线方向向量
+    //Vector2D pathEnd;          // 路径终点坐标
 
     //-----------------------------------梅林规划参数-----------------------------------------//
-
+    
     MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
-
-    int8_t MF1_Point_ = 0; // MF1 对应地图点编号。
-    int8_t MF2_Point_ = 0; // MF2 对应地图点编号。
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
-
-    int index_exit = 0; // 当前路径出口索引（有效路径点长度）。
 
     float MF2_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
     bool spin_flag = false;       // 是否需要执行中途转向。
@@ -235,7 +233,7 @@ private:
     float is_chassis_reverse_ = 1.0f; // 手动控制正反向系数。
 
     //-----------------------------------前馈参数-----------------------------------------//
-
+    #if FF_V
     float k_damp_ = 0.0f; // 历史速度阻尼系数。
     // 前视点差分前馈增益（越大越“冲”，也更容易抖）。
     float kff_la_ = 0.0f;
@@ -267,13 +265,11 @@ private:
     float ff_dt_max_s_ = 0.010f;
    
     Vector2D v_robot_last_cmd_ = {0.0f, 0.0f}; // 上一周期底盘速度命令。
-
+    #endif
     //-----------------------------------其他参数-----------------------------------------//
     void loop() override; // RTOS 主循环。
 
     bool init_flag = false; // 初始化完成标志。
-
-    Point2D robot_point_ = {0.0f, 0.0f}; // 自动规划接口使用的位置缓存。
 
     RmPocketData_t airjoy_data_;                            // 遥控器数据，范围 -1 ~ 1
     Camera_Data_t cam_data_dbg_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 调试用相机数据缓存
@@ -315,11 +311,15 @@ private:
     void Path_correction(void); // 基于当前位置执行路径纠偏。
 
     void Path_spin_check(void); // 检查并执行路径中旋转逻辑。
-
+    #if FF_V
     // 统一清空自动控制相关内部状态（速度命令记忆与前馈差分状态）。
     void ResetAutoControlStates(void);
 
     Vector2D ComposeRobotVelocity(const Vector2D &v_pid); // 合成 PID、前馈、阻尼后的速度命令。
+
+    #endif
+
+    Vector2D v_limit(Vector2D &v);
 
     // ———————————————————       相机接口函数        —————————————————————————————//
 
