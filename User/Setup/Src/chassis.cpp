@@ -177,22 +177,22 @@ namespace jia
                 // 发送转速指令
                 if (it.mode == Mode::kWheelTorqueFreeMode)
                 {
-                    w1_.h->setTargetCurrent(0.0f);
-                    w2_.h->setTargetCurrent(0.0f);
-                    w3_.h->setTargetCurrent(0.0f);
+                    setWheelTargetCurrent(w1_, 0.0f);
+                    setWheelTargetCurrent(w2_, 0.0f);
+                    setWheelTargetCurrent(w3_, 0.0f);
                 }
                 else
                 {
-                    w1_.h->setTargetRPM(radsToRpmF32(p.w1_omega));
-                    w2_.h->setTargetRPM(radsToRpmF32(p.w2_omega));
-                    w3_.h->setTargetRPM(radsToRpmF32(p.w3_omega));
+                    setWheelTargetOmega(w1_, p.w1_omega);
+                    setWheelTargetOmega(w2_, p.w2_omega);
+                    setWheelTargetOmega(w3_, p.w3_omega);
                 }
 
                 // 正运动学解算
                 //  // 读取三个电机的反馈
-                c.w1_omega = rpmToRadsF32(w1_.h->getRPM());
-                c.w2_omega = rpmToRadsF32(w2_.h->getRPM());
-                c.w3_omega = rpmToRadsF32(w3_.h->getRPM());
+                c.w1_omega = getWheelCurrentOmega(w1_);
+                c.w2_omega = getWheelCurrentOmega(w2_);
+                c.w3_omega = getWheelCurrentOmega(w3_);
 
                 // 保存当前数据为上一次数据
                 lp = p;
@@ -203,8 +203,8 @@ namespace jia
                 // debug_uart_.printf_DMA("%lu,%f,%f,%f,%f\r\n", time_ms_, t.w1_omega, p.w1_omega, std::abs(c.w1_omega), std::abs(c.w2_omega));
                 // debug_uart_.printf_DMA("%f,%f,%f\r\n", input_hwt_omega_z_, input_hwt_rot_z_, tpid.omega_z);
 
-                // f32 t_current = wheel_config_[2].motor_handle->getTargetCurrent();
-                // f32 c_current = wheel_config_[2].motor_handle->current_;
+                // f32 t_current = getWheelTargetCurrent(w3_);
+                // f32 c_current = getWheelCurrentCurrent(w3_);
 
                 // printf_period_count_++;
                 // if (printf_period_count_ >= printf_period_ms_)
@@ -424,7 +424,7 @@ namespace jia
                 }
 
                 // // 调试轮子
-                // auto &wheel_handle = wheel_config_[debug_wheel_index_].motor_handle;
+                // auto &wheel = wheel_config_[debug_wheel_index_];
 
                 // f32 t_rpm = 0.0f;
 
@@ -454,15 +454,15 @@ namespace jia
 
                 // if (is_wheel_speed_mode_)
                 // {
-                //     wheel_handle->setTargetRPM(t_rpm);
+                //     setWheelTargetOmega(wheel, rpmToRadsF32(t_rpm));
                 // }
                 // else if (is_wheel_current_mode_)
                 // {
-                //     wheel_handle->setTargetCurrent(t_rpm);
+                //     setWheelTargetCurrent(wheel, t_rpm);
                 // }
                 // else
                 // {
-                //     wheel_handle->setTargetCurrent(0.0f);
+                //     setWheelTargetCurrent(wheel, 0.0f);
                 // }
 
                 // f32 pid_error = wheel_handle->speed_pid_.error_;
@@ -473,10 +473,10 @@ namespace jia
                 // f32 pid_d = wheel_handle->speed_pid_.D_Term;
                 // f32 pid_output = wheel_handle->speed_pid_.output_;
 
-                // f32 t_current = wheel_handle->getTargetCurrent();
+                // f32 t_current = getWheelTargetCurrent(wheel);
 
-                // f32 c_current = wheel_handle->current_;
-                // f32 c_rpm = wheel_handle->getRPM();
+                // f32 c_current = getWheeCurrentCurrent(wheel);
+                // f32 c_rpm = getWheelCurrentRpm(wheel);
 
                 // printf_period_count_++;
                 // if (printf_period_count_ >= printf_period_ms_)
@@ -702,6 +702,36 @@ namespace jia
             wheel.aeqr = std::abs(wheel.eqr);
         }
 
+        void Chassis::setWheelTargetCurrent(WheelConfig &wheel, f32 current)
+        {
+            wheel.h->setTargetCurrent(current * 1000.0f);
+        }
+
+        void Chassis::setWheelTargetOmega(WheelConfig &wheel, f32 omega)
+        {
+            wheel.h->setTargetRPM(radsToRpmF32(omega));
+        }
+
+        f32 Chassis::getWheelCurrentOmega(const WheelConfig &wheel) const
+        {
+            return rpmToRadsF32(wheel.h->getRPM());
+        }
+
+        f32 Chassis::getWheelTargetCurrent(const WheelConfig &wheel) const
+        {
+            return wheel.h->getTargetCurrent();
+        }
+
+        f32 Chassis::getWheeCurrentCurrent(const WheelConfig &wheel) const
+        {
+            return wheel.h->current_;
+        }
+
+        f32 Chassis::getWheelCurrentRpm(const WheelConfig &wheel) const
+        {
+            return wheel.h->getRPM();
+        }
+
         void Chassis::clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z)
         {
             out_vel_x = clampValue(vel_x, -max_vel_x_, max_vel_x_);
@@ -794,6 +824,51 @@ namespace jia
         {
             Chassis *chassis = static_cast<Chassis *>(arg);
             chassis->runThread(NULL);
+        }
+
+        void Chassis::setSteerWheelTargetRpm(WheelConfig &wheel, f32 rpm)
+        {
+            wheel.smh->setTargetRPM(rpm);
+        }
+
+        void Chassis::setSteerWheelTargetCurrent(WheelConfig &wheel, f32 current)
+        {
+            wheel.smh->setTargetCurrent(current);
+        }
+
+        void Chassis::setSteerWheelTargetAngleDeg(WheelConfig &wheel, f32 angle_deg)
+        {
+            wheel.smh->setTargetAngle(angle_deg);
+        }
+
+        void Chassis::setSteerWheelTargetTotalAngleDeg(WheelConfig &wheel, f32 total_angle_deg)
+        {
+            wheel.smh->setTargetTotalAngle(total_angle_deg);
+        }
+
+        f32 Chassis::getSteerWheelCurrentAngleDeg(const WheelConfig &wheel) const
+        {
+            return wheel.smh->getAngle();
+        }
+
+        f32 Chassis::getSteerWheelTargetAngleDeg(const WheelConfig &wheel) const
+        {
+            return wheel.smh->getTargetAngle();
+        }
+
+        f32 Chassis::getSteerWheelCurrentRPM(const WheelConfig &wheel) const
+        {
+            return wheel.smh->getRPM();
+        }
+
+        f32 Chassis::getSteerWheelCurrentCurrent(const WheelConfig &wheel) const
+        {
+            return wheel.smh->current_;
+        }
+
+        f32 Chassis::getSteerWheelTargetCurrent(const WheelConfig &wheel) const
+        {
+            return wheel.smh->getTargetCurrent();
         }
 
         void Chassis::runThread(void *arg)
@@ -919,7 +994,7 @@ namespace jia
                 }
 
                 // // 调试轮子
-                auto &wheel_handle = wheel_config_[debug_wheel_index_].steer_motor_h;
+                auto &wheel = wheel_config_[debug_wheel_index_];
 
                 f32 t_rpm = 0.0f;
 
@@ -953,11 +1028,11 @@ namespace jia
 
                 if (is_wheel_speed_mode_)
                 {
-                    wheel_handle->setTargetRPM(t_rpm);
+                    setSteerWheelTargetRpm(wheel, t_rpm);
                 }
                 else if (is_wheel_current_mode_)
                 {
-                    wheel_handle->setTargetCurrent(t_rpm);
+                    setSteerWheelTargetCurrent(wheel, t_rpm);
                 }
                 else if (is_wheel_single_position_mode_)
                 {
@@ -965,19 +1040,19 @@ namespace jia
                     {
                         t_rpm += cailbration_angle_deg_;
                     }
-                    wheel_handle->setTargetAngle(t_rpm);
+                    setSteerWheelTargetAngleDeg(wheel, t_rpm);
                 }
-                else if (is_wheel_plural_position_mode_)
+                else if (is_wheel_total_position_mode_)
                 {
                     if (is_use_cailbration_angle_)
                     {
                         t_rpm += cailbration_angle_deg_;
                     }
-                    wheel_handle->setTargetTotalAngle(t_rpm);
+                    setSteerWheelTargetTotalAngleDeg(wheel, t_rpm);
                 }
                 else
                 {
-                    wheel_handle->setTargetCurrent(0.0f);
+                    setSteerWheelTargetCurrent(wheel, 0.0f);
                 }
 
                 // f32 pid_error = wheel_handle->speed_pid_.error_;
@@ -988,10 +1063,10 @@ namespace jia
                 // f32 pid_d = wheel_handle->speed_pid_.D_Term;
                 // f32 pid_output = wheel_handle->speed_pid_.output_;
 
-                // f32 t_current = wheel_handle->getTargetCurrent();
+                // f32 t_current = getSteerWheelTargetCurrent(wheel);
 
-                // f32 c_current = wheel_handle->current_;
-                // f32 c_rpm = wheel_handle->getRPM();
+                // f32 c_current = getSteerWheelCurrentCurrent(wheel);
+                // f32 c_rpm = getSteerWheelCurrentRPM(wheel);
 
                 photogate_signal_ = HAL_GPIO_ReadPin(kTEST_PHOTOGATE_GPIO_Port, kTEST_PHOTOGATE_Pin);
 
@@ -1005,17 +1080,17 @@ namespace jia
 
                 if (is_doing_cailbration_)
                 {
-                    wheel_handle->setTargetRPM(cailbration_rpm_);
+                    setSteerWheelTargetRpm(wheel, cailbration_rpm_);
 
                     if (photogate_signal_ == last_photogate_signal_)
                     {
                     }
                     else
                     {
-                        wheel_handle->setTargetRPM(0.0f);
+                        setSteerWheelTargetRpm(wheel, 0.0f);
                         is_doing_cailbration_ = false;
 
-                        cailbration_angle_deg_ = wheel_handle->getAngle();
+                        cailbration_angle_deg_ = getSteerWheelCurrentAngleDeg(wheel);
 
                         if (photogate_signal_ == true)
                         {
@@ -1029,8 +1104,8 @@ namespace jia
                     }
                 }
 
-                f32 t_angle_deg = normalizeAngleTo180(wheel_handle->getTargetAngle() - cailbration_angle_deg_);
-                f32 c_angle_deg = normalizeAngleTo180(wheel_handle->getAngle() - cailbration_angle_deg_);
+                f32 t_angle_deg = normalizeAngleTo180(getSteerWheelTargetAngleDeg(wheel) - cailbration_angle_deg_);
+                f32 c_angle_deg = normalizeAngleTo180(getSteerWheelCurrentAngleDeg(wheel) - cailbration_angle_deg_);
 
                 printf_period_count_++;
                 if (printf_period_count_ >= printf_period_ms_)

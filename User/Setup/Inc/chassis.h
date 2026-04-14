@@ -295,6 +295,13 @@ namespace jia
 
             void initWheelConfig(WheelConfig &wheel, f32 pos_x, f32 pos_y, f32 rot_z_deg, M3508 *motor_handle = nullptr);
 
+            void setWheelTargetCurrent(WheelConfig &wheel, f32 current);
+            void setWheelTargetOmega(WheelConfig &wheel, f32 omega);
+            f32 getWheelCurrentOmega(const WheelConfig &wheel) const;
+            f32 getWheelTargetCurrent(const WheelConfig &wheel) const;
+            f32 getWheeCurrentCurrent(const WheelConfig &wheel) const;
+            f32 getWheelCurrentRpm(const WheelConfig &wheel) const;
+
             void clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z);
 
             void isLimitAccInChassis(bool is_limit,
@@ -448,7 +455,7 @@ namespace jia
                 f32 pos_x;                           // 单位：米
                 f32 pos_y;                           // 单位：米
                 f32 rot_z_deg;                       // 单位：度
-                M3508 *steer_motor_h = nullptr; // 舵向电机句柄
+                M3508 *steer_motor_h = nullptr;      // 舵向电机句柄
                 Motor_Base *drive_motor_h = nullptr; // 轮向电机句柄
 
                 f32 sin_rot_z;
@@ -589,7 +596,7 @@ namespace jia
 
             // 调试参数
             bool is_debug_ = true; // 是否开启调试模式
-            u8 debug_mode_ = 0;     // 调试模式
+            u8 debug_mode_ = 0;    // 调试模式
 
             u8 debug_wheel_index_ = 0; // 调试轮子索引
 
@@ -601,15 +608,15 @@ namespace jia
             f32 sine_offset_ = 0.0f;
 
             bool is_hand_input_ = false; // 是否使用手动输入信号
-            f32 hand_input_ = 0.0f; // 手动输入信号
+            f32 hand_input_ = 0.0f;      // 手动输入信号
 
             f32 debug_input_ = 90.0f;     // 调试输入
             f32 debug_lock_rot_z_ = 0.0f; // 调试固定rot_z
 
             bool is_wheel_single_position_mode_ = false; // 是否为轮子单圈位置模式
-            bool is_wheel_plural_position_mode_ = false; // 是否为轮子多圈位置模式
-            bool is_wheel_speed_mode_ = false;   // 是否为轮子速度模式
-            bool is_wheel_current_mode_ = false; // 是否为轮子电流模式
+            bool is_wheel_total_position_mode_ = false; // 是否为轮子多圈位置模式
+            bool is_wheel_speed_mode_ = false;           // 是否为轮子速度模式
+            bool is_wheel_current_mode_ = false;         // 是否为轮子电流模式
 
             Debug_Printf debug_uart_ = Debug_Printf(&huart8); // 调试串口
             u8 printf_period_ms_ = 5;                         // 串口调试打印周期，单位：毫秒
@@ -622,6 +629,16 @@ namespace jia
 
             void clearInputTargetData();
 
+            void setSteerWheelTargetRpm(WheelConfig &wheel, f32 rpm);
+            void setSteerWheelTargetCurrent(WheelConfig &wheel, f32 current);
+            void setSteerWheelTargetAngleDeg(WheelConfig &wheel, f32 angle_deg);
+            void setSteerWheelTargetTotalAngleDeg(WheelConfig &wheel, f32 total_angle_deg);
+            f32 getSteerWheelTargetAngleDeg(const WheelConfig &wheel) const;
+            f32 getSteerWheelTargetCurrent(const WheelConfig &wheel) const;
+            f32 getSteerWheelCurrentAngleDeg(const WheelConfig &wheel) const;
+            f32 getSteerWheelCurrentRPM(const WheelConfig &wheel) const;
+            f32 getSteerWheelCurrentCurrent(const WheelConfig &wheel) const;
+
         private:
             bool photogate_signal_ = false;
             bool last_photogate_signal_ = false;
@@ -629,9 +646,9 @@ namespace jia
             bool is_use_cailbration_angle_ = false; // 是否使用校准角度
 
             bool is_power_on_cailbration_ = false; // 是否开启校准
-            bool is_doing_cailbration_ = false; // 是否正在校准中
-            f32 cailbration_rpm_ = 0.0f; // 校准rpm，单位：rpm/s
-            f32 cailbration_angle_deg_ = 0.0f; // 校准角度，单位：rad
+            bool is_doing_cailbration_ = false;    // 是否正在校准中
+            f32 cailbration_rpm_ = 0.0f;           // 校准rpm，单位：rpm/s
+            f32 cailbration_angle_deg_ = 0.0f;     // 校准角度，单位：rad
         };
 
         using Result = jia::FourSteerChassis::Chassis::Result;
@@ -843,7 +860,15 @@ namespace jia
     }
 }
 
-// using jia::TriOmniChassis::Chassis;
+#define JIA_USE_TRIO_CHASSIS 1
+#define JIA_USE_FOUR_STEER_CHASSIS 0
+
+#if JIA_USE_TRIO_CHASSIS
+using jia::TriOmniChassis::Chassis;
+#endif
+
+#if JIA_USE_FOUR_STEER_CHASSIS
 using jia::FourSteerChassis::Chassis;
+#endif
 
 #endif // CHASSIS_H_

@@ -216,14 +216,17 @@ void ALL_Setup_ConfigInit(void)
 
     ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
-    //    Chassis::InitConfig chassis_init_config =
-    //    {
-    //         .motor_handle[0] = &omni_wheel1,
-    //         .motor_handle[1] = &omni_wheel2,
-    //         .motor_handle[2] = &omni_wheel3
-    //    };
-    //    chassis.init(chassis_init_config);
+#if JIA_USE_TRIO_CHASSIS
+    Chassis::InitConfig chassis_init_config =
+    {
+         .motor_handle[0] = &omni_wheel1,
+         .motor_handle[1] = &omni_wheel2,
+         .motor_handle[2] = &omni_wheel3
+    };
+    chassis.init(chassis_init_config);
+#endif
 
+#if JIA_USE_FOUR_STEER_CHASSIS
     Chassis::InitConfig chassis_init_config =
         {
             .steer_motor_h[0] = &omni_wheel1,
@@ -237,6 +240,7 @@ void ALL_Setup_ConfigInit(void)
             .drive_motor_h[3] = nullptr,
         };
     chassis.init(chassis_init_config);
+#endif
 
     Finite_StateMachine.registerArmSetup(&ARM_Controller);
     Finite_StateMachine.registerChassisSetup(&ChassisOmni);
