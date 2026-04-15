@@ -860,8 +860,8 @@ namespace jia
     }
 }
 
-#define JIA_USE_TRIO_CHASSIS 1
-#define JIA_USE_FOUR_STEER_CHASSIS 0
+#define JIA_USE_TRIO_CHASSIS 0
+#define JIA_USE_FOUR_STEER_CHASSIS 1
 
 #if JIA_USE_TRIO_CHASSIS
 using jia::TriOmniChassis::Chassis;

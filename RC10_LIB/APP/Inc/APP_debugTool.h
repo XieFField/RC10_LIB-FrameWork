@@ -34,6 +34,24 @@ public:
     Debug_Printf(UART_HandleTypeDef *huart) : huart_(huart) {}
     ~Debug_Printf() {}
 
+    void printf_DMA_JustFloat(const float *data, uint16_t data_size)
+    {
+        if (data == NULL || data_size == 0)
+            return;
+
+        static const uint8_t justfloat_tail[4] = {0x00, 0x00, 0x80, 0x7F};
+        const uint16_t payload_size = (uint16_t)(sizeof(float) * data_size);
+        const uint16_t total_size = payload_size + sizeof(justfloat_tail);
+
+        if (total_size > SEND_BUF_SIZE)
+            return;
+
+        memcpy(Sendbuf, data, payload_size);
+        memcpy(Sendbuf + payload_size, justfloat_tail, sizeof(justfloat_tail));
+
+        HAL_UART_Transmit_DMA(huart_, Sendbuf, total_size);
+    }
+
     void printf_DMA(char *fmt, ...)
     {
         memset(Sendbuf, 0, SEND_BUF_SIZE);  // Çå¿Õ·¢ËÍ»º³åÇø

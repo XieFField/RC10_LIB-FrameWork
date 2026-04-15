@@ -1112,7 +1112,8 @@ namespace jia
                 {
                     printf_period_count_ = 0;
                     // debug_uart_.printf_DMA("%f,%f,%f,%f\r\n", t_rpm, c_rpm, t_current, c_current);
-                    debug_uart_.printf_DMA("%f,%f,%f,%f\r\n", (f32)photogate_signal_, cailbration_angle_deg_, t_angle_deg, c_angle_deg);
+                    f32 debug_frame[4] = {(f32)photogate_signal_, cailbration_angle_deg_, t_angle_deg, c_angle_deg};
+                    debug_uart_.printf_DMA_JustFloat(debug_frame, 4);
                 }
             }
         }
