@@ -477,7 +477,7 @@ namespace jia
      * @param angle 输入角度（单位：度）
      * @return 对应角度的正弦值
      */
-    constexpr inline f32 sinDegF32F(f32 angle)
+    constexpr inline f32 sinDegF32Fast(f32 angle)
     {
         f32 normalized_deg = normalizeAngleTo360(angle);
         f32 rad = degToRadF32(normalized_deg);
@@ -492,7 +492,7 @@ namespace jia
      * @param angle 输入角度（单位：度）
      * @return 对应角度的余弦值
      */
-    constexpr inline f32 cosDegF32F(f32 angle)
+    constexpr inline f32 cosDegF32Fast(f32 angle)
     {
         f32 normalized_deg = normalizeAngleTo360(angle);
         f32 rad = degToRadF32(normalized_deg);
