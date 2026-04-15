@@ -12,15 +12,16 @@
 extern "C"
 {
 #endif
-#include "BSP_USB_UART_Driver.h"
-#include "APP_Vector2D.h"
 #include "usart.h"
-#include "APP_Utils.h"
 #include <stdint.h>
 #include "math.h"
 #ifdef __cplusplus
 }
 #endif
+
+#include "BSP_USB_UART_Driver.h"
+#include "APP_Vector2D.h"
+#include "APP_Utils.h"
 
 #ifdef __cplusplus
 #define FRAME_HEADER_1 0x55

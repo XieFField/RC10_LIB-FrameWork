@@ -51,6 +51,20 @@
  *    (同样需要遵守安全高度下的安全角度限制)
  *    且return到的位置不固定为0度，而是和起始位置相反，若起始是0，则return到180度，若起始是180度，则return到0度
  *    (本质是和行进方向相反)，而且在return阶段的云台旋转策略跟随sign_align阶段的旋转策略。
+ * 
+ *  @version 9.0  或许放弃的一版
+ *  新版机械臂的流程  和老版流程有不少不同，需要重写
+    (1)若是顶吸： 
+        执行state_to_waitStillness抬到最高，并将pitch设置为90度
+        接着执行state_alignStillness对齐 接近之后执行state_extStillness伸长到目标KFS位置
+        然后执行state_lowerStillness降低到目标KFS位置，并打开吸盘。(Lower阶段降到临界高度后停下，等待canExtend放行再下降到目标位置)
+        之后执行state_launchStillness抬升到安全高度，最后执行state_backStillness返回初始位置。
+
+
+    (2)若是侧吸：
+        执行state_to_waitStillness抬到最高，并将pitch设置为0度
+        接着执行state_alignStillness对齐 接近之后执行state_lowerStillness降低到目标KFS位置，并打开吸盘。
+        之后执行state_extStillness伸长到安全位置，最后执行state_backStillness返回初始位置。
  */
 
 #ifndef __ARM_SETUP_H
