@@ -17,7 +17,7 @@ void Robot_WeaponSage_Setup::loop()
 	
 	
 	
-	if((wrist_Motor_->getErrorNum()==0x00||!auto_ctrl_.auto_state_bool_S.wrist_enable) && (weaponSage_status_ != WEAPONSAGE_STOP))
+	if((wrist_Motor_->getErrorNum()==0x00||!auto_ctrl_.auto_state_bool_S.wrist_enable))
 	{	               
             Weapon_wrist_enable();
 			auto_ctrl_.auto_state_bool_S.wrist_enable=true;

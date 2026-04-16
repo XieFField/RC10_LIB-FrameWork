@@ -106,10 +106,10 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
 
             else if(motor_type == WeaponSage::Wrist_Motor)
             {
-                if(wrist_Motor_ != nullptr)
-                    wrist_Motor_->motorDisable(); //手腕电机在相机模式下只使能位置控制，电流控制不使能
-                else
-                    return false;
+//                if(wrist_Motor_ != nullptr)
+//                   // wrist_Motor_->motorDisable(); //手腕电机在相机模式下只使能位置控制，电流控制不使能
+//                else
+//                    return false;
             }
         
             else 
