@@ -46,7 +46,7 @@ void Robot_WeaponSage::update()
             launch_Motor_->setTargetTotalAngle(target_pos_.launch_TotalAngle_);
             claw_Motor_->setTargetTotalAngle(target_pos_.claw_TotalAngle_);
             traverse_Motor_->setTargetTotalAngle(target_pos_.traverse_TotalAngle_);
-            wrist_Motor_->setTargetTotalAngle(initData_.max_wristMotorRPM_, target_pos_.wrist_TotalAngle_);
+            wrist_Motor_->setTargetTotalAngle(motor_reversed_.wrist_reversed_ * initData_.max_wristMotorRPM_, target_pos_.wrist_TotalAngle_);
             break;
         }
             
@@ -55,7 +55,7 @@ void Robot_WeaponSage::update()
             launch_Motor_->setTargetTotalAngle(target_pos_.launch_TotalAngle_);
             claw_Motor_->setTargetTotalAngle(target_pos_.claw_TotalAngle_);
             traverse_Motor_->setTargetTotalAngle(target_pos_.traverse_TotalAngle_);
-            wrist_Motor_->setTargetTotalAngle(initData_.max_wristMotorRPM_, target_pos_.wrist_TotalAngle_);
+            wrist_Motor_->setTargetTotalAngle(motor_reversed_.wrist_reversed_* initData_.max_wristMotorRPM_, target_pos_.wrist_TotalAngle_);
             break;
         }
 
@@ -64,7 +64,7 @@ void Robot_WeaponSage::update()
             launch_Motor_->setTargetRPM(launch_target_rpm_);
             claw_Motor_->setTargetTotalAngle(target_pos_.claw_TotalAngle_);
             traverse_Motor_->setTargetTotalAngle(target_pos_.traverse_TotalAngle_);
-            wrist_Motor_->setTargetTotalAngle(initData_.max_wristMotorRPM_, target_pos_.wrist_TotalAngle_);
+            wrist_Motor_->setTargetTotalAngle(motor_reversed_.wrist_reversed_ * initData_.max_wristMotorRPM_, target_pos_.wrist_TotalAngle_);
             break;
         }
             
@@ -103,15 +103,15 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
                 else
                     return false;
             }
-            /* 没有
+
             else if(motor_type == WeaponSage::Wrist_Motor)
             {
                 if(wrist_Motor_ != nullptr)
-                    wrist_Motor_->setTargetCurrent(targetValue);
+                    wrist_Motor_->motorDisable(); //手腕电机在相机模式下只使能位置控制，电流控制不使能
                 else
                     return false;
             }
-            */
+        
             else 
                 return false;
             break;

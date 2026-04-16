@@ -43,6 +43,11 @@ namespace WeaponSage_Setup
 
         int8_t last_manual_claw_state = 0; // 0: open, 1: close
         int8_t claw_switch_offset = 0;
+        int8_t last_scroll_state = 0;
+        int8_t scroll_offset = 0;
+
+        int8_t isClaw_tight = 1; // 0 : open, 1: tight
+        int8_t last_isClaw_tight = 1;
     }ctrl_status_S;
 
     typedef enum{

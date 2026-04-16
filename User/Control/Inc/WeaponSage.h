@@ -55,7 +55,7 @@ namespace WeaponSage
     {
         float launch_reversed_ = -1.0f;
         float claw_reversed_ = -1.0f;
-        float traverse_reversed_ = -1.0f;
+        float traverse_reversed_ = 1.0f;
         float wrist_reversed_ = 1.0f;
     }MotorReversed_S;
 
