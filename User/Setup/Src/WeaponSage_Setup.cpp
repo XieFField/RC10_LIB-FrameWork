@@ -349,6 +349,7 @@ void Robot_WeaponSage_Setup::camera_mode()
     if(!weapon_CameraStart) //主状态机没有给武器架相机模式触发信号，保持当前姿态不变，并锁定航向。
     {
         this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+        cam_z_req_last_ = false;// 退出流程时复位上升沿检测状态。
         idle();
         return;
     }
@@ -367,6 +368,8 @@ void Robot_WeaponSage_Setup::camera_mode()
         camera_z_done_ = false;// 清空相机流程完成标志。
 
         cam_z_run_ = false;// 清空 z 过程运行位。
+
+        cam_z_req_last_ = false;// 清空 z 请求上升沿检测状态。
 
         cam_z_hold_ = this->last_pos_.launch_pos_;// 对齐 z 目标缓存。
 
@@ -406,11 +409,19 @@ void Robot_WeaponSage_Setup::camera_mode()
         camera_weapon_done_ = false;// 未请求武器预对接时清除完成位。
     }
 
-    // 新请求触发时锁存当前目标。
-    if(camera_z_req_)
+    // z 请求采用上升沿触发：底盘下发的 z_ref 视作“增量”而非绝对高度。
+    bool z_req_rise = (camera_z_req_ && !cam_z_req_last_);
+    cam_z_req_last_ = camera_z_req_;
+
+    if(z_req_rise)
     {
-        cam_z_hold_ = camera_z_ref_;
+        WeaponSage::WeaponSage_Pos_S now_pos = this->get_CurrentPos();
+        cam_z_hold_ = now_pos.launch_pos_ + camera_z_ref_;
         cam_z_run_ = true;
+    }
+    else if(!camera_z_req_)
+    {
+        cam_z_run_ = false;
     }
 
     // launch 在相机模式下始终按缓存目标做 RPM 闭环保持。
@@ -423,11 +434,11 @@ void Robot_WeaponSage_Setup::camera_mode()
     // launch 线速度（已含正方向约定）。
     float z_vel = this->get_launchVel();
 
-    // 仅在样本变化时执行一次融合。
-    bool cam_new = is_new_z(camera_z_ref_);
+    // 当前链路中 camera_z_ref_ 表示增量请求，不作为观测融合输入。
+    bool cam_new = false;
 
     // 外环输出目标 rpm。
-    float rpm_cmd = cam_z_ctrl_.run_step(z_ref, camera_z_ref_, cam_new, z_vel);
+    float rpm_cmd = cam_z_ctrl_.run_step(z_ref, z_ref, cam_new, z_vel);
     cam_z_rpm_ = rpm_cmd;
 
     // 下发 launch 速度命令。
