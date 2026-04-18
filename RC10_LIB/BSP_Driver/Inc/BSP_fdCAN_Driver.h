@@ -102,7 +102,7 @@ public:
 
     // 最大电机数（每路）
     static constexpr size_t MAX_MOTORS = 10; //本来应该是8，但是如果是挂的DJI，那会有两个group，那就变成8+2了
-
+    std::size_t kMaxFrames = MAX_MOTORS * 2;
     
     void init();
 
@@ -134,6 +134,7 @@ protected:
     static bool matchesFrameDefault(const CanFrame& cf, uint32_t targetId, bool isExt);
 
     Motor_Base * motorList_[MAX_MOTORS];// 电机列表
+    
 
     RtosQueue<CanFrame> rxQueue_;
 

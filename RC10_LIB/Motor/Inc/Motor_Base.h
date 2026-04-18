@@ -19,7 +19,10 @@ class fdCANbus; // 前置声明
 
 class Motor_Base {
 public:
-    Motor_Base(uint32_t id, bool isExt, fdCANbus* bus)
+    Motor_Base(uint32_t id, bool isExt, fdCANbus* bus, 
+        bool calcTotalAngle = true, bool calcAngle = true)
+        : is_calcangle(calcAngle),
+          is_calcTotalAngle(calcTotalAngle)
     {
         motor_id_ = id;
         isExtended_ = isExt;
@@ -69,8 +72,8 @@ public:
         return false;
     }
 
-    virtual float get_GearRatio() const { return GEAR_RATIO; }
-
+    float get_GearRatio() const { return GEAR_RATIO; }
+    float get_inv_GearRatio() const { return inv_GEAR_RATIO_; }
     float getTargetRPM() const { return target_rpm_; }
     float getTargetCurrent() const { return target_current_; }
     float getTargetAngle() const { return target_angle_; }
@@ -88,13 +91,18 @@ public:
         else
             control_Frequency_ = 1000; // 恢复默认值
     }
-    uint16_t get_controlFrequency() const { return control_Frequency_; }
 
+
+    uint16_t get_controlFrequency() const { return control_Frequency_; }
     uint16_t get_controlCnt() const { return control_cnt; }
     void reset_controlCnt() { control_cnt = 0; }
     void increment_controlCnt() { control_cnt++; }
 
+
+
 protected:
+    bool is_calcangle = true; //仅仅在is_calcTotalAngle为true时，is_calcangle才生效
+    bool is_calcTotalAngle = true;
     uint32_t motor_id_;
     bool isExtended_;
     fdCANbus* bus_;
@@ -106,6 +114,7 @@ protected:
     float target_totalAngle_ = 0.0f; // 目标总角度 deg
 
     float GEAR_RATIO = 1.0f; // 减速比
+    float inv_GEAR_RATIO_ = 1.0f; // 反减速比，预计算以提高效率
     float rpm_ = 0.0f;
     float current_ = 0.0f;
     float angle_ = 0.0f;

@@ -76,14 +76,14 @@ void Robot_Arm::update()
     {
         float current_arm_total = MotorTotalAngle_to_rotateAngle(motor_rotate_->getTotalAngle());
         
-        float target_arm_mod = normalize_deg_0_360(target_joint_angle_.rotateJoint_angle_);
+        // float target_arm_mod = normalize_deg_0_360(target_joint_angle_.rotateJoint_angle_);
 
         // 计算 k 值 (Round to nearest integer)
         // 增加 0.5f 偏移确保 round 行为在正负数一致 (虽然 roundf 已处理)
-        float diff = current_arm_total - target_arm_mod;
+        float diff = current_arm_total - target_joint_angle_.rotateJoint_angle_;
         float k = roundf(diff / 360.0f);
 
-        float target_arm_total = target_arm_mod + k * 360.0f;
+        float target_arm_total = target_joint_angle_.rotateJoint_angle_ + k * 360.0f;
         
         target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
 

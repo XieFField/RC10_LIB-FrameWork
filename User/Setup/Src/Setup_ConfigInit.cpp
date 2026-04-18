@@ -77,19 +77,20 @@ IMU_test imu_test;
 
 /*================Motor Instances==============*/
 
-                           /* 锟斤拷锟斤拷 */
-M3508 omni_wheel1(1, CAN1_Bus); M3508 omni_wheel2(2, CAN1_Bus); 
-M3508 omni_wheel3(3, CAN1_Bus); M3508 omni_wheel4(4, CAN1_Bus);
+                           /* 底盘全向轮电机 */
+                           //不需要角度信息，因此不计算角度和总路程，减少计算量
+M3508 omni_wheel1(1, CAN1_Bus, false, false); M3508 omni_wheel2(2, CAN1_Bus, false, false); 
+M3508 omni_wheel3(3, CAN1_Bus, false, false); M3508 omni_wheel4(4, CAN1_Bus, false, false);
 
                            /* 串联臂 */      
-M3508 arm_launchMotor(5, CAN1_Bus); M2006 arm_stretchMotor(8, CAN1_Bus);
-M3508 arm_rotateMotor(7, CAN1_Bus); DM_Motor arm_pitchMotor(J4310_Type, 0x10, 0x10, CAN1_Bus);
+M3508 arm_launchMotor(5, CAN1_Bus, true, false); M2006 arm_stretchMotor(8, CAN1_Bus, true, false);
+M3508 arm_rotateMotor(7, CAN1_Bus, true, false); DM_Motor arm_pitchMotor(J4310_Type, 0x10, 0x10, CAN1_Bus);
 
 
 
 
-M3508 Weapon_launchMotor(1, CAN2_Bus); M2006 Weapon_clawMotor(2, CAN2_Bus);
-M2006 Weapon_traverseMotor(3, CAN2_Bus); DM_Motor Weapon_wristMotor(J4310_Type, 0x05,0x05, CAN2_Bus);
+M3508 Weapon_launchMotor(1, CAN2_Bus, true, false); M2006 Weapon_clawMotor(2, CAN2_Bus, true, false);
+M2006 Weapon_traverseMotor(3, CAN2_Bus, true, false); DM_Motor Weapon_wristMotor(J4310_Type, 0x05,0x05, CAN2_Bus);
 /*================Motor Instances==============*/
 
 

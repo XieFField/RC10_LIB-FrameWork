@@ -47,7 +47,7 @@ typedef struct {
     float max_stretchLength_ = 0.0f; // 伸展最大行程，单位米
     float arm_length_ = 0.0f; // 机械臂长度
     float end_link_length_ = 0.0f; // 末端连杆长度，吸盘到机械臂连接点的距离，单位米
-    float max_pitchRPM_ = 45.0f; // 末端关节最大转速，单位RPM   
+    float max_pitchRPM_ = 50.0f; // 末端关节最大转速，单位RPM   
     
 
     float stretch_Ratio_ = 0.0f; // 伸展比率，伸展电机转一圈，伸展多少米   0.0942米(94.2mm)
@@ -58,8 +58,6 @@ typedef struct {
     float min_rotate_angle_ = 0.0f; // 最小旋转角度
     float max_rotate_angle_ = 0.0f; // 最大旋转角度
     float safe_height = 0.0f; // 安全高度，单位米，低于这个高度，机械臂云台旋转受限
-
-
 
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘控制GPIO端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘控制GPIO引脚
@@ -219,7 +217,7 @@ public:
      */
     void set_RotateAngle(float angle)
     {
-        target_joint_angle_.rotateJoint_angle_ = angle;
+        target_joint_angle_.rotateJoint_angle_ = normalize_deg_0_360(angle);
     }
 
     /**

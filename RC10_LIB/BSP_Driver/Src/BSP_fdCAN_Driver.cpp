@@ -182,7 +182,7 @@ void fdCANbus::rxTaskbody()
 
 void fdCANbus::schedulerTaskbody() 
 {
-    CanFrame frames_to_send[MAX_MOTORS * 2];
+    CanFrame frames_to_send[kMaxFrames];
     for (;;) 
     {
         xSemaphoreTake(schedSem_, portMAX_DELAY);
@@ -235,7 +235,7 @@ void fdCANbus::schedulerTaskbody()
     
 #if FD_CAN_DEBUG
         debug_last_frame_count_ = frameCnt;
-        for(std::size_t k=0; k<frameCnt && k< (MAX_MOTORS*2); ++k)
+        for(std::size_t k=0; k<frameCnt && k< (kMaxFrames); ++k)
             debug_last_frames_[k] = frames_to_send[k];
         
 #endif

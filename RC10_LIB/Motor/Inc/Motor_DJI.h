@@ -62,7 +62,8 @@ public:
      *            而M3508/M2006在上片上。因为M3508/M2006的ID范围是0x201到0x208, 
      *            而GM6020的ID范围是0x205到0x211
      */
-    DJI_Motor(DJI_MotorType type, uint32_t id, fdCANbus *bus);
+    DJI_Motor(DJI_MotorType type, uint32_t id, fdCANbus *bus,
+            bool calcTotalAngle = true, bool calcAngle = true);
     ~DJI_Motor(){};
 
     bool matchesFrame(const CanFrame& cf) const override
@@ -133,7 +134,7 @@ public:
     {
         // [Fix] 修正重定位逻辑，输入为输出轴角度，需转换为转子角度设置编码器
         encoder_.relocate_totalAngle(now_totalAngle * get_GearRatio());
-        totalAngle_ = encoder_.getTotalAngle() / get_GearRatio();
+        totalAngle_ = encoder_.getTotalAngle() * get_inv_GearRatio();
 
         this->angle_ = fmodf(this->totalAngle_, 360.0f);
         if(this->angle_ < 0) 
@@ -218,7 +219,7 @@ typedef enum {
 
 class M3508 : public DJI_Motor {
 public:
-    M3508(uint32_t motor_id, fdCANbus* bus);
+    M3508(uint32_t motor_id, fdCANbus* bus, bool calcTotalAngle = true, bool calcAngle = true);
     ~M3508() {};
 
     void pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa);
@@ -236,14 +237,17 @@ public:
     float getAngle() const override;
     float getTotalAngle() const override;
 
-    void reset_GearRatio(float reset_value){GEAR_RATIO = reset_value;}
+    void reset_GearRatio(float reset_value)
+    {
+        GEAR_RATIO = reset_value;
+        inv_GEAR_RATIO_ = 1.0f / reset_value; // 同步更新反减速比
+    }
 
-    float get_GearRatio() const override { return GEAR_RATIO; }
 private:
     
     ControlMode mode_ = CURRENT_CONTROL;
     float GEAR_RATIO = 19.2032f; // 减速比
-
+    float inv_GEAR_RATIO_ = 1.0f / GEAR_RATIO; // 预计算反减速比
     PID_Incremental speed_pid_;
     PID_Position angle_pid_;
 };
@@ -251,7 +255,7 @@ private:
 #define M2006_DECRATION 36.0f //减速比
 class M2006 : public DJI_Motor {
 public:
-    M2006(uint32_t motor_id, fdCANbus* bus);
+    M2006(uint32_t motor_id, fdCANbus* bus, bool calcTotalAngle = true, bool calcAngle = true);
     ~M2006() {};
 
     void pid_init(const PID_Param_Config& speed_params, float speed_I_Separa, const PID_Param_Config& angle_params, float angle_I_Separa);
@@ -268,13 +272,16 @@ public:
     float getRPM() const override;
     float getAngle() const override;
     float getTotalAngle() const override;
-    float get_GearRatio() const override { return GEAR_RATIO; }
-    void reset_GearRatio(float reset_value){GEAR_RATIO = reset_value;}
-
+    void reset_GearRatio(float reset_value)
+    {
+        GEAR_RATIO = reset_value;
+        inv_GEAR_RATIO_ = 1.0f / reset_value;
+    }
 
 private:
     ControlMode mode_ = CURRENT_CONTROL;
     float GEAR_RATIO = 36.0f;
+    float inv_GEAR_RATIO_ = 1.0f / GEAR_RATIO; // 预计算反减速比
 
     PID_Incremental speed_pid_;
     PID_Position angle_pid_;
@@ -282,7 +289,7 @@ private:
 
 class GM6020 : public DJI_Motor {
 public:
-    GM6020(uint32_t motor_id, fdCANbus* bus);
+    GM6020(uint32_t motor_id, fdCANbus* bus, bool calcTotalAngle = true, bool calcAngle = true);
     ~GM6020() {};
 
     void pid_init(const PID_Param_Config& speed_params, float speed_I_Separa, const PID_Param_Config& angle_params, float angle_I_Separa);

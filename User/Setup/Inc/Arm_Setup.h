@@ -401,19 +401,12 @@ private:
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
         const float safe_h = init_data_.safe_height;
-        
-        // 归一化到 0-360
-        float norm_deg = fmodf(rotate_angle_deg, 360.0f);
-        if(norm_deg < 0.0f) norm_deg += 360.0f;
 
-        if(h < 0.03f)
-        {
-            return (norm_deg >= 60.0f && norm_deg <= 185.0f);
-        }
-        else if(h < safe_h - 0.01f)
-        {
-            return (norm_deg >= 60.0f && norm_deg <= 185.0f);
-        }
+        // 不重复处理归一化
+        const float norm_deg = rotate_angle_deg;
+
+        if(h < 0.03f) return (norm_deg >= 60.0f && norm_deg <= 185.0f);
+        if(h < safe_h - 0.01f) return (norm_deg >= 60.0f && norm_deg <= 185.0f);
         return true;
     }
 
@@ -429,29 +422,16 @@ private:
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
         const float safe_h = init_data_.safe_height;
-        
-        if(h < safe_h - 0.01f)
-        {
-            // 归一化到 0-360
-            float norm_deg = fmodf(desired_deg, 360.0f);
-            if(norm_deg < 0.0f) norm_deg += 360.0f;
 
-            if(h < 0.03f)
-            {
-                if(norm_deg < 60.0f ) return 60.0f;
-                if(norm_deg > 185.0f && norm_deg < 270.0f) return 180.0f;
-                if(norm_deg >= 270.0f) return 60.0f;
-                return norm_deg;
-            }
-            else
-            {
-                if(norm_deg < 60.0f) return 60.0f;
-                if(norm_deg > 185.0f && norm_deg < 270.0f) return 180.0f; // 185~270区间钳制到180
-                if(norm_deg >= 270.0f) return 60.0f; // 270~360(即-90~0)区间钳制到60
-                return norm_deg;
-            }
-        }
-        return desired_deg;
+        if(h >= safe_h - 0.01f) return desired_deg;
+
+        // 不重复处理归一化
+        const float norm_deg = desired_deg;
+
+        if(norm_deg < 60.0f) return 60.0f;
+        if(norm_deg > 185.0f && norm_deg < 270.0f) return 180.0f;
+        if(norm_deg >= 270.0f) return 60.0f;
+        return norm_deg;
     }
 
     /**

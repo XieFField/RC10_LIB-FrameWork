@@ -34,7 +34,7 @@ extern "C" {
 
 #define PI		3.14159265358979323846f			// 定义圆周率常量PI
 #define MAX_SEND_BUF_SIZE 128// 发送缓冲区大小
-
+#define AUTO_FUNCTION 1 //0 表示采用侧吸方案的机械臂，1表示采用顶吸方案的机械臂
 #define MAX_RECEIVE_BUF_SIZE 512// 接收缓冲区大小
 
 #define MAX_RECEIVE_ID 10// 最大id
@@ -150,7 +150,7 @@ public:
 private:
     void Get_Rader_Data();
     void USB_SendData();
-	Locate_Setup():RtosTask("Locate_Setup", 1), Laser_pos_instance(nullptr) {}
+	Locate_Setup():RtosTask("Locate_Setup", 2), Laser_pos_instance(nullptr) {}
 	  
     Laser_InstanceManager* Laser_pos_instance;
 
