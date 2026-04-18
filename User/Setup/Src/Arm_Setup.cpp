@@ -716,7 +716,6 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
             targetLowerHeight = this->init_data_.max_launchHeight_;
     }
 
-
     bool canLower = false;
     canLower = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
                                             auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
