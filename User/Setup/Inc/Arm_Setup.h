@@ -100,9 +100,12 @@ typedef struct{
 
     int8_t last_manual_extend = 0; //上次手动伸展状态
     int8_t last_manual_sucker = 0; //上次手动吸盘状态
+    int8_t last_manual_pitch = 0; //上次手动俯仰状态
+
 
     int8_t extend_switch_offset = 0; // 伸展开关偏移绑定
     int8_t sucker_switch_offset = 0; // 吸盘开关偏移绑定
+    int8_t pitch_switch_offset = 0; //俯仰开关偏移绑定
 }arm_ctrl_status_S;
 
 
@@ -210,7 +213,7 @@ public:
     }
 
     void init(M3508 *motor_ArmLaunch, M2006 *motor_ArmStretch, 
-        M3508 *motor_ArmRotate, M2006 *motor_ArmPitch)
+        M3508 *motor_ArmRotate, DM_Motor *motor_ArmPitch)
     {
         this->registerMotor_Launch(motor_ArmLaunch);
         this->registerMotor_Stretch(motor_ArmStretch);

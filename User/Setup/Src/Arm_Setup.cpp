@@ -150,6 +150,13 @@ void ArmSetup::manualControl()
         
         arm_ctrlStatus.sucker_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_sucker_logical;
 
+
+        int8_t current_pitch_logical = (_tool_Abs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 1.0f) ? 1: 0;
+        //上次是否在90度附近，认为是开状态，反之认为是关状态
+        arm_ctrlStatus.last_manual_pitch = current_pitch_logical;
+        arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.scroll_wheel & 0x01) ^ current_pitch_logical;
+
+
         last_arm_status_ = ARM_MANUAL_CONTROL;
     }
 
@@ -202,10 +209,11 @@ void ArmSetup::manualControl()
     }
 
     //pitch 开关
-    if(airjoy_data_.scroll_wheel == 0x00)
-        target_joint_status_.suckerJoint_angle_ = 0.0f; // 末端关节收
-    else if(airjoy_data_.scroll_wheel == 0x01)
-        target_joint_status_.suckerJoint_angle_ = 95.0f; // 末端关节开
+    int8_t target_pitch_logical = (airjoy_data_.scroll_wheel & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
+    if(target_pitch_logical == 1)
+        target_joint_status_.suckerJoint_angle_ = 90.0f; // 吸盘关节打开到90度
+    else
+        target_joint_status_.suckerJoint_angle_ = 0.0f; // 吸盘关节关闭到0度
 
     //stretch 开关
     // 计算当前应当的逻辑状态 logic = switch ^ offset
@@ -253,14 +261,6 @@ void ArmSetup::autoControl()
 {
     // 自动控制函数
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-
-//    if(auto_ctrl_.start_to_autoctrl != 1)
-//    {
-//        idle();
-//        return; //未进入自动控制流程，保持空闲状态
-//    }
-
-
     if(last_arm_status_ != ARM_AUTO_CONTROL || auto_ctrl_.start_to_autoctrl != 1)//若首次非此模式，需初始化一些状态
     {
         auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //自动流程状态机回到初始状态
@@ -785,7 +785,7 @@ void ArmSetup::stop()
     this->motor_launch_->setTargetCurrent(0.0f);
     this->motor_stretch_->setTargetCurrent(0.0f);
     this->motor_rotate_->setTargetCurrent(0.0f);
-    this->motor_pitch_->setTargetCurrent(0.0f);
+    // this->motor_pitch_->setTargetCurrent(0.0f);
     this->setSuckerStatus(Sucker_Status_E::STOP);
 }
 
@@ -818,13 +818,13 @@ void ArmSetup::calibrateMotor()
     {
         //relocate
         this->motor_stretch_->relocate_totalAngle(0.0f);
-        this->motor_pitch_->relocate_totalAngle(179.9f); // 使用179.9f避免180度浮点临界值导致归一化为-180度
+        this->motor_pitch_->motorSetZero();
         this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(179.9f));
         this->motor_launch_->relocate_totalAngle(0.0f);
 
         //set current to 0
         this->motor_stretch_->setTargetCurrent(0.0f);
-        this->motor_pitch_->setTargetCurrent(0.0f);
+        // this->motor_pitch_->setTargetCurrent(0.0f);
         this->motor_rotate_->setTargetCurrent(0.0f);
         // this->motor_launch_->setTargetCurrent(0.0f);
 
@@ -872,22 +872,22 @@ void ArmSetup::debug()
 }
 
 Arm_InitData_S arm_initData = {
-   .max_launchHeight_ = 0.29f,
-   .max_stretchLength_ = 0.105f,
-   .arm_length_ = 0.6f,
-   .end_link_length_ = 0.08f,
+    .max_launchHeight_ = 0.29f,
+    .max_stretchLength_ = 0.105f,
+    .arm_length_ = 0.6f,
+    .end_link_length_ = 0.08f,
 
-   .stretch_Ratio_ = 0.08417f,
-   .launch_Ratio_ = 0.07221f,
+    .stretch_Ratio_ = 0.08417f,
+    .launch_Ratio_ = 0.07221f,
 //    .rotate_gearRatio_ = 144.878f,  //旧的
-   .rotate_gearRatio_ = 145.755789f,
-   .pitch_gearRatio_ = 360.0f,
+    .rotate_gearRatio_ = 145.755789f,
+    .pitch_gearRatio_ = 360.0f,
 
-   .min_rotate_angle_ = 0.0f,
-   .max_rotate_angle_ = 359.99999f,
+    .min_rotate_angle_ = 0.0f,
+    .max_rotate_angle_ = 359.99999f,
     .safe_height = 0.14f,
-   .Sucker_GPIO_Port = SUCKER_error_GPIO_Port,
+    .Sucker_GPIO_Port = SUCKER_error_GPIO_Port,
     .Sucker_GPIO_Pin =  SUCKER_error_Pin,
-
+    .max_pitchRPM_ = 50.0f,
     
 };
