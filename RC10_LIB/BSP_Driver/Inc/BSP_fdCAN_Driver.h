@@ -49,6 +49,37 @@ extern "C"
 extern fdCANbus* g_fdcan_bus_map_dbg[3];
 #endif
 
+// 运行时诊断快照：用于定位FDCAN时钟链路/位时序/总线状态问题
+struct FdcanDiagSnapshot {
+    uint32_t snapshot_count;
+    uint32_t error_status_cb_count;
+    uint32_t rx_fifo0_cb_count;
+    uint32_t bus_off_count;
+
+    uint32_t last_error_status_its;
+    uint32_t last_hal_error;
+
+    uint32_t ir;
+    uint32_t ie;
+    uint32_t psr;
+    uint32_t ecr;
+    uint32_t cccr;
+    uint32_t nbtp;
+    uint32_t dbtp;
+    uint32_t rxf0s;
+    uint32_t rxf1s;
+
+    uint32_t lec;
+    uint32_t dlec;
+    uint32_t rec;
+    uint32_t tec;
+
+    uint32_t fdcan_clk_hz;
+    uint32_t fdcan_clk_source;
+};
+
+extern volatile FdcanDiagSnapshot g_fdcan_diag[3];
+
 /** 
   * fdCANbus：管理一条fdCAN总线
   * - 每一路CAN生成一个实例

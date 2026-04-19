@@ -240,7 +240,8 @@ M3508::M3508(uint32_t motor_id, fdCANbus* bus,
     bool calcTotalAngle, bool calcAngle)
     : DJI_Motor(M3508_Type, motor_id, bus, calcTotalAngle, calcAngle) 
 {
-    
+    Motor_Base::GEAR_RATIO = GEAR_RATIO;
+    Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_;
 }
 
 float M3508::getAngle() const
@@ -359,6 +360,8 @@ M2006::M2006(uint32_t motor_id, fdCANbus* bus,
     bool calcTotalAngle, bool calcAngle)
     : DJI_Motor(M2006_Type, motor_id, bus, calcTotalAngle, calcAngle)
 {
+    Motor_Base::GEAR_RATIO = GEAR_RATIO;
+    Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_;
 }
 
 float M2006::getAngle() const
@@ -472,6 +475,8 @@ void M2006::update()
 GM6020::GM6020(uint32_t motor_id, fdCANbus* bus, bool calcTotalAngle, bool calcAngle)
     : DJI_Motor(GM6020_Type, motor_id, bus, calcTotalAngle, calcAngle)
 {
+    Motor_Base::GEAR_RATIO = GEAR_RATIO;
+    Motor_Base::inv_GEAR_RATIO_ = 1.0f;
 }
 
 void GM6020::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa)

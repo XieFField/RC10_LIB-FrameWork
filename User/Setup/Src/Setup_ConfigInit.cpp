@@ -65,8 +65,8 @@ Chassis chassis;
 FSM_Controller Finite_StateMachine;
 ArmSetup ARM_Controller(arm_initData);
 Robot_WeaponSage_Setup Weapon_Controller(initData_);
-test test_task;
-IMU_test imu_test;
+//test test_task;
+//IMU_test imu_test;
 
 
 
@@ -217,8 +217,8 @@ void ALL_Setup_ConfigInit(void)
 {
     // 初始化串口6的相机模块
     Module_Camera::GetInstance(&huart6)->InitUART();
-    test_task.init();
-	imu_test.init();
+    //test_task.init();
+	//imu_test.init();
    // Position* pos = Position::GetInstance(&huart1);
    // pos->InitUART();
 

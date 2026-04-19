@@ -240,7 +240,9 @@ public:
     void reset_GearRatio(float reset_value)
     {
         GEAR_RATIO = reset_value;
-        inv_GEAR_RATIO_ = 1.0f / reset_value; // 同步更新反减速比
+        inv_GEAR_RATIO_ = 1.0f / reset_value; // 子类缓存
+        Motor_Base::GEAR_RATIO = GEAR_RATIO;
+        Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_; // 同步到基类，供 updateFeedback 使用
     }
 
 private:
@@ -276,6 +278,8 @@ public:
     {
         GEAR_RATIO = reset_value;
         inv_GEAR_RATIO_ = 1.0f / reset_value;
+        Motor_Base::GEAR_RATIO = GEAR_RATIO;
+        Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_; // 同步到基类，供 updateFeedback 使用
     }
 
 private:
