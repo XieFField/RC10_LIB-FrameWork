@@ -1,9 +1,9 @@
 #include "Arm_setup.h"
 
-static bool s_has_recorded_strategy = false; //¼ÇÂ¼ÊÇ·ñÒÑ¾­¼ÇÂ¼¹ı²ßÂÔ
+static bool s_has_recorded_strategy = false; //è®°å½•æ˜¯å¦å·²ç»è®°å½•è¿‡ç­–ç•¥
 
 /**
- * @brief Ñ°Ö÷Ñ­»·
+ * @brief å¯»ä¸»å¾ªç¯
  */
 // uint32_t ArmstackHighWaterMark = 0;
 void ArmSetup::loop()
@@ -24,7 +24,7 @@ void ArmSetup::loop()
     {
         calibrateMotor();
         arm_status_ = ARM_CALIBRATE;
-        // ±¾ÅÄ½öÖ´ĞĞĞ£×¼£¬²»½øÈëÆäËû×´Ì¬·ÖÖ§£¬±ÜÃâÓëÉÏ²ã×´Ì¬»úÇÀĞ´ arm_status_
+        // æœ¬æ‹ä»…æ‰§è¡Œæ ¡å‡†ï¼Œä¸è¿›å…¥å…¶ä»–çŠ¶æ€åˆ†æ”¯ï¼Œé¿å…ä¸ä¸Šå±‚çŠ¶æ€æœºæŠ¢å†™ arm_status_
         this->update();
         last_arm_status_ = arm_status_;
         return;
@@ -43,7 +43,7 @@ void ArmSetup::loop()
     }
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
-    //Ä¿Ç°Ê¹ÓÃĞéÄâ×ø±ê½øĞĞ×Ô¿ØÂß¼­ÑéÖ¤
+    //ç›®å‰ä½¿ç”¨è™šæ‹Ÿåæ ‡è¿›è¡Œè‡ªæ§é€»è¾‘éªŒè¯
     if(arm_status_ == ARM_AUTO_CONTROL&&arm_ctrlStatus.auto_start == 1)
     {
         auto_ctrl_.now_chassis_speed = get_nowChassisSpeed();
@@ -90,20 +90,20 @@ void ArmSetup::loop()
 
         case ARM_STOP: 
             {
-                // Í£Ö¹×´Ì¬, ½«¸÷¸ö¹Ø½Ú»Ø¹é³õÊ¼Î»ÖÃºó£¬½«µçÁ÷ÖÃÁã
+                // åœæ­¢çŠ¶æ€, å°†å„ä¸ªå…³èŠ‚å›å½’åˆå§‹ä½ç½®åï¼Œå°†ç”µæµç½®é›¶
                 stop();
             }
             break;
         case ARM_IDLE:
             {
-                // ¿ÕÏĞ×´Ì¬£¬Î¬³Öµ±Ç°×´Ì¬
+                // ç©ºé—²çŠ¶æ€ï¼Œç»´æŒå½“å‰çŠ¶æ€
                 idle();
                 break;
             }
 
         case ARM_DEBUG:
             {
-                // µ÷ÊÔ×´Ì¬
+                // è°ƒè¯•çŠ¶æ€
                 if(arm_ctrlStatus.debug_start == 1)
                     debug();
 
@@ -113,8 +113,8 @@ void ArmSetup::loop()
 
         case ARM_CALIBRATE:
             {
-                // Ğ£×¼×´Ì¬
-                // ÉÏµçĞ£×¼M2006µç»úÎ»ÖÃ
+                // æ ¡å‡†çŠ¶æ€
+                // ä¸Šç”µæ ¡å‡†M2006ç”µæœºä½ç½®
                 break;
             }
         default:
@@ -122,47 +122,47 @@ void ArmSetup::loop()
     }
 
 
-    this->update(); //½«¿ØÖÆĞÅÏ¢·¢ËÍ¸øµç»ú
+    this->update(); //å°†æ§åˆ¶ä¿¡æ¯å‘é€ç»™ç”µæœº
     last_arm_status_ = arm_status_;
 }
 
 /**
- * @brief Ñ°ÊÖ²Ù
+ * @brief å¯»æ‰‹æ“
  */
 void ArmSetup::manualControl()
 {
     this->setRotateStrategy(ROTATE_PATH_SHORTEST);
-    // ÊÖ¶¯¿ØÖÆº¯Êı
+    // æ‰‹åŠ¨æ§åˆ¶å‡½æ•°
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
-    if(last_arm_status_ != ARM_MANUAL_CONTROL)//ÈôÊ×´Î·Ç´ËÄ£Ê½£¬Ğè¸´ÖÆÒ»ÏÂÉÏ´Î×´Ì¬£¬ÃâµÃÌø±ä
+    if(last_arm_status_ != ARM_MANUAL_CONTROL)//è‹¥é¦–æ¬¡éæ­¤æ¨¡å¼ï¼Œéœ€å¤åˆ¶ä¸€ä¸‹ä¸Šæ¬¡çŠ¶æ€ï¼Œå…å¾—è·³å˜
     {
-        /*´®Áª±Û*/
+        /*ä¸²è”è‡‚*/
         last_joint_status_ = this->get_currentJointStatus();
         target_joint_status_ = last_joint_status_;
 
-        // °ó¶¨ÉìÕ¹×´Ì¬
-        // ÅĞ¶¨µ±Ç°ÊÇÉì»¹ÊÇËõ
-        // ¼ÙÉèãĞÖµÎª max_stretchLength / 2 »òÕß 0.05m
+        // ç»‘å®šä¼¸å±•çŠ¶æ€
+        // åˆ¤å®šå½“å‰æ˜¯ä¼¸è¿˜æ˜¯ç¼©
+        // å‡è®¾é˜ˆå€¼ä¸º max_stretchLength / 2 æˆ–è€… 0.05m
         float current_stretch = this->get_currentJointStatus().stretchJoint_Length_;
         int8_t current_extend_logical = (current_stretch > 0.01f) ? 1 : 0;
         
-        // ¼ÇÂ¼×´Ì¬
+        // è®°å½•çŠ¶æ€
         arm_ctrlStatus.last_manual_extend = current_extend_logical;
         
-        // ¼ÆËãÆ«ÒÆ: offset = switch ^ state
-        // ¼ÙÉè switchÖ»ÓĞ0ºÍ1
+        // è®¡ç®—åç§»: offset = switch ^ state
+        // å‡è®¾ switchåªæœ‰0å’Œ1
         arm_ctrlStatus.extend_switch_offset = (airjoy_data_.SWA & 0x01) ^ current_extend_logical;
 
 
-        // °ó¶¨ÎüÅÌ×´Ì¬
+        // ç»‘å®šå¸ç›˜çŠ¶æ€
         int8_t current_sucker_logical = (this->getSuckerStatus() == Sucker_Status_E::SUCK) ? 1 : 0;
         arm_ctrlStatus.last_manual_sucker = current_sucker_logical;     
         arm_ctrlStatus.sucker_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_sucker_logical;
 
         
         int8_t current_pitch_logical = (_tool_Abs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 1.0f) ? 1: 0;
-        //ÉÏ´ÎÊÇ·ñÔÚ90¶È¸½½ü£¬ÈÏÎªÊÇ¿ª×´Ì¬£¬·´Ö®ÈÏÎªÊÇ¹Ø×´Ì¬
+        //ä¸Šæ¬¡æ˜¯å¦åœ¨90åº¦é™„è¿‘ï¼Œè®¤ä¸ºæ˜¯å¼€çŠ¶æ€ï¼Œåä¹‹è®¤ä¸ºæ˜¯å…³çŠ¶æ€
         arm_ctrlStatus.last_manual_pitch = current_pitch_logical;
         arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.scroll_wheel & 0x01) ^ current_pitch_logical;
 
@@ -171,7 +171,7 @@ void ArmSetup::manualControl()
     }
 
 
-    //Éı½µ²Ù¿Ø
+    //å‡é™æ“æ§
     if(_tool_Abs(airjoy_data_.right_y) > 0.1f)
     {
 
@@ -183,24 +183,24 @@ void ArmSetup::manualControl()
         else
             next_height = this->get_currentJointStatus().launchJoint_Height_ ;
 
-        //Ì§ÉıÏŞÖÆ¼ì²é£ºÈç¹û²»ÔÚ30~135¶ÈµÄÇø¼äÊ±ºò£¬ÔÆÌ¨½ûÖ¹ÍùÉÏÌ§Éı (´Ó¼«µÍ¸ß¶ÈÇø½øÈë¸ÉÉæÇø)
-        if(next_height > target_joint_status_.launchJoint_Height_) // ÕıÔÚÌ§Éı
+        //æŠ¬å‡é™åˆ¶æ£€æŸ¥ï¼šå¦‚æœä¸åœ¨30~135åº¦çš„åŒºé—´æ—¶å€™ï¼Œäº‘å°ç¦æ­¢å¾€ä¸ŠæŠ¬å‡ (ä»æä½é«˜åº¦åŒºè¿›å…¥å¹²æ¶‰åŒº)
+        if(next_height > target_joint_status_.launchJoint_Height_) // æ­£åœ¨æŠ¬å‡
         {
              float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
 
              if(this->get_currentJointStatus().launchJoint_Height_ < 0.03f)
              {
-                 // Ä¿±êÇøÓòÏŞÖÆÊÇ 30~135£¬ËùÒÔ±ØĞëÔÚ´Ë·¶Î§ÄÚ²ÅÄÜÌ§Éı
+                 // ç›®æ ‡åŒºåŸŸé™åˆ¶æ˜¯ 30~135ï¼Œæ‰€ä»¥å¿…é¡»åœ¨æ­¤èŒƒå›´å†…æ‰èƒ½æŠ¬å‡
                  if(current_angle < 60.0f || current_angle > 185.0f)
                  {
-                     next_height = target_joint_status_.launchJoint_Height_; // ±£³Ö²»±ä
+                     next_height = target_joint_status_.launchJoint_Height_; // ä¿æŒä¸å˜
                  }
              }
         }
         target_joint_status_.launchJoint_Height_ = next_height;
     }
     else
-        target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // ±£³Ö²»±ä
+        target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // ä¿æŒä¸å˜
 
     manual_control.cnt++;
     if(manual_control.cnt > 10)
@@ -210,35 +210,35 @@ void ArmSetup::manualControl()
         else if(airjoy_data_.right_x < -0.5f)
             target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
         else
-            target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_; // ±£³Ö²»±ä
+            target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_; // ä¿æŒä¸å˜
 
         target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
         manual_control.cnt = 0;
     }
 
-    //pitch ¿ª¹Ø
+    //pitch å¼€å…³
     int8_t target_pitch_logical = (airjoy_data_.scroll_wheel & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
     if(target_pitch_logical == 1)
-        target_joint_status_.suckerJoint_angle_ = 90.0f; // ÎüÅÌ¹Ø½Ú´ò¿ªµ½90¶È
+        target_joint_status_.suckerJoint_angle_ = 90.0f; // å¸ç›˜å…³èŠ‚æ‰“å¼€åˆ°90åº¦
     else
-        target_joint_status_.suckerJoint_angle_ = 0.0f; // ÎüÅÌ¹Ø½Ú¹Ø±Õµ½0¶È
+        target_joint_status_.suckerJoint_angle_ = 0.0f; // å¸ç›˜å…³èŠ‚å…³é—­åˆ°0åº¦
 
-    //stretch ¿ª¹Ø
-    // ¼ÆËãµ±Ç°Ó¦µ±µÄÂß¼­×´Ì¬ logic = switch ^ offset
+    //stretch å¼€å…³
+    // è®¡ç®—å½“å‰åº”å½“çš„é€»è¾‘çŠ¶æ€ logic = switch ^ offset
     int8_t target_extend_logical = (airjoy_data_.SWA & 0x01) ^ arm_ctrlStatus.extend_switch_offset;
     
-    // ¸üĞÂ¼ÇÒä
+    // æ›´æ–°è®°å¿†
     arm_ctrlStatus.last_manual_extend = target_extend_logical;
 
     if(target_extend_logical == 0)
-        target_joint_status_.stretchJoint_Length_ = 0.0f; // ÉìÕ¹¹Ø½ÚÊÕ»Øµ½×îĞ¡Î»ÖÃ
+        target_joint_status_.stretchJoint_Length_ = 0.0f; // ä¼¸å±•å…³èŠ‚æ”¶å›åˆ°æœ€å°ä½ç½®
     else
-        target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // ÉìÕ¹¹Ø½ÚÉì³öµ½×î´óÎ»ÖÃ
+        target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // ä¼¸å±•å…³èŠ‚ä¼¸å‡ºåˆ°æœ€å¤§ä½ç½®
 
-    //ÎüÅÌ¿ª¹Ø
+    //å¸ç›˜å¼€å…³
     int8_t target_sucker_logical = (airjoy_data_.SWD & 0x01) ^ arm_ctrlStatus.sucker_switch_offset;
 
-    // ¸üĞÂ¼ÇÒä
+    // æ›´æ–°è®°å¿†
     arm_ctrlStatus.last_manual_sucker = target_sucker_logical;
 
     if(target_sucker_logical == 1) 
@@ -257,34 +257,34 @@ void ArmSetup::manualControl()
 /*=======================================================*/
 
 /**
- * @brief Èç¹ûÓĞÁ½¸öÄ¿±êKFS£¬ÔòµÚÒ»¸öKFSÊ°È¡Íêºó·Åµ½´æ´¢»ú¹¹
- *        µÚ¶ş¸öKFSÊ°È¡ÍêºóÁôÔÚÎüÅÌÉÏ
- *        Èç¹ûÃ»ÓĞµÚ¶ş¸ö£¬¾ÍÎüÔÚÎüÅÌÉÏ£¬²»±Ø·Åµ½´æ´¢»ú¹¹
+ * @brief å¦‚æœæœ‰ä¸¤ä¸ªç›®æ ‡KFSï¼Œåˆ™ç¬¬ä¸€ä¸ªKFSæ‹¾å–å®Œåæ”¾åˆ°å­˜å‚¨æœºæ„
+ *        ç¬¬äºŒä¸ªKFSæ‹¾å–å®Œåç•™åœ¨å¸ç›˜ä¸Š
+ *        å¦‚æœæ²¡æœ‰ç¬¬äºŒä¸ªï¼Œå°±å¸åœ¨å¸ç›˜ä¸Šï¼Œä¸å¿…æ”¾åˆ°å­˜å‚¨æœºæ„
  * 
- *        Ñ°×Ô¶¯
+ *        å¯»è‡ªåŠ¨
  * 
- * ×Ô¶¯¼ÆËãÂß¼­×ñ´Ó´®Áª±Û×Ô¶¯Âß¼­Ä©Î²µÄÊıÑ§¹«Ê½
+ * è‡ªåŠ¨è®¡ç®—é€»è¾‘éµä»ä¸²è”è‡‚è‡ªåŠ¨é€»è¾‘æœ«å°¾çš„æ•°å­¦å…¬å¼
  */
 void ArmSetup::autoControl()
 {
-    // ×Ô¶¯¿ØÖÆº¯Êı
+    // è‡ªåŠ¨æ§åˆ¶å‡½æ•°
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
 
-    if(last_arm_status_ != ARM_AUTO_CONTROL || auto_ctrl_.start_to_autoctrl != 1)//ÈôÊ×´Î·Ç´ËÄ£Ê½£¬Ğè³õÊ¼»¯Ò»Ğ©×´Ì¬
+    if(last_arm_status_ != ARM_AUTO_CONTROL || auto_ctrl_.start_to_autoctrl != 1)//è‹¥é¦–æ¬¡éæ­¤æ¨¡å¼ï¼Œéœ€åˆå§‹åŒ–ä¸€äº›çŠ¶æ€
     {
-        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //×Ô¶¯Á÷³Ì×´Ì¬»ú»Øµ½³õÊ¼×´Ì¬
+        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //è‡ªåŠ¨æµç¨‹çŠ¶æ€æœºå›åˆ°åˆå§‹çŠ¶æ€
         
-            auto_ctrl_.flag.isrecalcPath = false; //Â·¾¶ÖØ¼ÆËã±êÖ¾
-            auto_ctrl_.now_targetIndex = 0; //µ±Ç°Ä¿±êKFSË÷ÒıÖØÖÃ
+            auto_ctrl_.flag.isrecalcPath = false; //è·¯å¾„é‡è®¡ç®—æ ‡å¿—
+            auto_ctrl_.now_targetIndex = 0; //å½“å‰ç›®æ ‡KFSç´¢å¼•é‡ç½®
             auto_ctrl_.flag.back_time = 0.0f;
             last_arm_status_ = ARM_AUTO_CONTROL;
     }
     
     if(auto_ctrl_.targetKFS[0] == 0)
-        return; //Ã»ÓĞÄ¿±êKFS£¬Ö±½Ó·µ»Ø 
+        return; //æ²¡æœ‰ç›®æ ‡KFSï¼Œç›´æ¥è¿”å› 
 
-    //ĞĞ½ø¼äÊ°È¡
+    //è¡Œè¿›é—´æ‹¾å–
     switch(auto_ctrl_.kfs_num)
     {
         case ONLY_ONE:
@@ -293,7 +293,7 @@ void ArmSetup::autoControl()
             break;
         }
         
-        case TWO: //×ö
+        case TWO: //åš
         {
             auto_stillnessTwo();
             break;
@@ -303,21 +303,21 @@ void ArmSetup::autoControl()
 }
 
 /*
-    ĞÂ°æ»úĞµ±ÛµÄÁ÷³Ì  ºÍÀÏ°æÁ÷³ÌÓĞ²»ÉÙ²»Í¬£¬ĞèÒªÖØĞ´
-    (1)ÈôÊÇ¶¥Îü£º 
-        Ö´ĞĞstate_to_waitStillnessÌ§µ½×î¸ß£¬²¢½«pitchÉèÖÃÎª90¶È
-        ½Ó×ÅÖ´ĞĞstate_alignStillness¶ÔÆë ½Ó½üÖ®ºóÖ´ĞĞstate_extStillnessÉì³¤µ½Ä¿±êKFSÎ»ÖÃ
-        È»ºóÖ´ĞĞstate_lowerStillness½µµÍµ½Ä¿±êKFSÎ»ÖÃ£¬²¢´ò¿ªÎüÅÌ¡£(Lower½×¶Î½µµ½ÁÙ½ç¸ß¶ÈºóÍ£ÏÂ£¬µÈ´ıcanExtend·ÅĞĞÔÙÏÂ½µµ½Ä¿±êÎ»ÖÃ)
-        Ö®ºóÖ´ĞĞstate_launchStillnessÌ§Éıµ½°²È«¸ß¶È£¬×îºóÖ´ĞĞstate_backStillness·µ»Ø³õÊ¼Î»ÖÃ¡£
+    æ–°ç‰ˆæœºæ¢°è‡‚çš„æµç¨‹  å’Œè€ç‰ˆæµç¨‹æœ‰ä¸å°‘ä¸åŒï¼Œéœ€è¦é‡å†™
+    (1)è‹¥æ˜¯é¡¶å¸ï¼š 
+        æ‰§è¡Œstate_to_waitStillnessæŠ¬åˆ°æœ€é«˜ï¼Œå¹¶å°†pitchè®¾ç½®ä¸º90åº¦
+        æ¥ç€æ‰§è¡Œstate_alignStillnesså¯¹é½ æ¥è¿‘ä¹‹åæ‰§è¡Œstate_extStillnessä¼¸é•¿åˆ°ç›®æ ‡KFSä½ç½®
+        ç„¶åæ‰§è¡Œstate_lowerStillnessé™ä½åˆ°ç›®æ ‡KFSä½ç½®ï¼Œå¹¶æ‰“å¼€å¸ç›˜ã€‚(Loweré˜¶æ®µé™åˆ°ä¸´ç•Œé«˜åº¦ååœä¸‹ï¼Œç­‰å¾…canExtendæ”¾è¡Œå†ä¸‹é™åˆ°ç›®æ ‡ä½ç½®)
+        ä¹‹åæ‰§è¡Œstate_launchStillnessæŠ¬å‡åˆ°å®‰å…¨é«˜åº¦ï¼Œæœ€åæ‰§è¡Œstate_backStillnessè¿”å›åˆå§‹ä½ç½®ã€‚
 
 
-    (2)ÈôÊÇ²àÎü£º
-        Ö´ĞĞstate_to_waitStillnessÌ§µ½×î¸ß£¬²¢½«pitchÉèÖÃÎª0¶È
-        ½Ó×ÅÖ´ĞĞstate_alignStillness¶ÔÆë ½Ó½üÖ®ºóÖ´ĞĞstate_lowerStillness½µµÍµ½Ä¿±êKFSÎ»ÖÃ£¬²¢´ò¿ªÎüÅÌ¡£
-        Ö®ºóÖ´ĞĞstate_extStillnessÉì³¤µ½°²È«Î»ÖÃ£¬×îºóÖ´ĞĞstate_backStillness·µ»Ø³õÊ¼Î»ÖÃ¡£
+    (2)è‹¥æ˜¯ä¾§å¸ï¼š
+        æ‰§è¡Œstate_to_waitStillnessæŠ¬åˆ°æœ€é«˜ï¼Œå¹¶å°†pitchè®¾ç½®ä¸º0åº¦
+        æ¥ç€æ‰§è¡Œstate_alignStillnesså¯¹é½ æ¥è¿‘ä¹‹åæ‰§è¡Œstate_lowerStillnessé™ä½åˆ°ç›®æ ‡KFSä½ç½®ï¼Œå¹¶æ‰“å¼€å¸ç›˜ã€‚
+        ä¹‹åæ‰§è¡Œstate_extStillnessä¼¸é•¿åˆ°å®‰å…¨ä½ç½®ï¼Œæœ€åæ‰§è¡Œstate_backStillnessè¿”å›åˆå§‹ä½ç½®ã€‚
 */
 
-// Á÷³Ìº¯Êı Í£ÏÂÊ°È¡==============
+// æµç¨‹å‡½æ•° åœä¸‹æ‹¾å–==============
 
 
 #if ARM_VERSION == 1
@@ -336,9 +336,9 @@ void ArmSetup::auto_stillnessOne()
                     auto_ctrl_.now_targetIndex = 0;
 
 
-                    auto_ctrl_.flag.isrecalcPath = true;//ÖØÖÃÂ·¾¶ÖØ¼ÆËã±êÖ¾£¬È·±£Â·¾¶Ö»ÔÚÁ÷³Ì¿ªÊ¼Ê±¼ÆËãÒ»´Î
-                    auto_ctrl_.flag.canExtend = false; //ÖØÖÃÉìÕ¹Ğí¿É£¬µÈ´ı×Ô¶¯¿ØÖÆÁ÷³Ì·ÅĞĞ
-                    auto_ctrl_.flag.canChassisStart = false; //ÖØÖÃµ×ÅÌÒÆ¶¯Ğí¿É
+                    auto_ctrl_.flag.isrecalcPath = true;//é‡ç½®è·¯å¾„é‡è®¡ç®—æ ‡å¿—ï¼Œç¡®ä¿è·¯å¾„åªåœ¨æµç¨‹å¼€å§‹æ—¶è®¡ç®—ä¸€æ¬¡
+                    auto_ctrl_.flag.canExtend = false; //é‡ç½®ä¼¸å±•è®¸å¯ï¼Œç­‰å¾…è‡ªåŠ¨æ§åˆ¶æµç¨‹æ”¾è¡Œ
+                    auto_ctrl_.flag.canChassisStart = false; //é‡ç½®åº•ç›˜ç§»åŠ¨è®¸å¯
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
 
@@ -350,7 +350,7 @@ void ArmSetup::auto_stillnessOne()
             else
             {
                 idle();
-                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //±£³ÖÔÚÍê³É×´Ì¬
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //ä¿æŒåœ¨å®ŒæˆçŠ¶æ€
             }
             break;
         }
@@ -369,12 +369,12 @@ void ArmSetup::auto_stillnessOne()
             if(state_alignStillness(auto_ctrl_.targetKFS[0]))
             {
 
-                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //¶¥Îü
+                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //é¡¶å¸
                 {
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
                 }
                 else                    
-                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;   //²àÎü  
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;   //ä¾§å¸  
             }
             break;
         }
@@ -383,14 +383,14 @@ void ArmSetup::auto_stillnessOne()
         {
             if(state_lowerStillness(auto_ctrl_.targetKFS[0]))
             {
-                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//¶¥Îü
+                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//é¡¶å¸
                 {
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
-                    //(Lower½×¶Î½µµ½ÁÙ½ç¸ß¶ÈºóÍ£ÏÂ£¬µÈ´ıcanExtend·ÅĞĞÔÙÏÂ½µµ½Ä¿±êÎ»ÖÃ)
+                    //(Loweré˜¶æ®µé™åˆ°ä¸´ç•Œé«˜åº¦ååœä¸‹ï¼Œç­‰å¾…canExtendæ”¾è¡Œå†ä¸‹é™åˆ°ç›®æ ‡ä½ç½®)
                 }
                 else
                 {
-                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;   //²àÎü  
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;   //ä¾§å¸  
                 }
             }   
             break;
@@ -406,14 +406,14 @@ void ArmSetup::auto_stillnessOne()
             //     }
             // }
 
-            if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//¶¥Îü
+            if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//é¡¶å¸
             {
                 if(state_extStillness(auto_ctrl_.targetKFS[0]))
                 {
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;
                 }
             }
-            else   //²àÎü
+            else   //ä¾§å¸
             {
                 if(auto_ctrl_.flag.canExtend)
                 {
@@ -443,8 +443,8 @@ void ArmSetup::auto_stillnessOne()
             {
                 auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE;
                 arm_ctrlStatus.auto_start = 0;
-                auto_ctrl_.start_to_autoctrl = false; //Íê³ÉÒ»´ÎÁ÷³Ìºó£¬ÖØÖÃ×Ô¶¯¿ØÖÆÆô¶¯Ìõ¼ş
-                auto_ctrl_.flag.isrecalcPath = false; //ÖØÖÃÂ·¾¶ÖØ¼ÆËã±êÖ¾
+                auto_ctrl_.start_to_autoctrl = false; //å®Œæˆä¸€æ¬¡æµç¨‹åï¼Œé‡ç½®è‡ªåŠ¨æ§åˆ¶å¯åŠ¨æ¡ä»¶
+                auto_ctrl_.flag.isrecalcPath = false; //é‡ç½®è·¯å¾„é‡è®¡ç®—æ ‡å¿—
             }
             break;
         }
@@ -456,8 +456,8 @@ void ArmSetup::auto_stillnessOne()
 
 void ArmSetup::auto_stillnessTwo()
 {
-    //´óÌåÖ´ĞĞÁ÷³ÌºÍstillnessOneÒ»Ñù,
-    //µ«Ä¿Ç°Ã»ÓĞ×ö´æ´¢»ú¹¹£¬ËùÒÔµÚÒ»¸öKFS¾ÍÔÚback½×¶ÎÖ±½Ó·ÅÏÂ¡£
+    //å¤§ä½“æ‰§è¡Œæµç¨‹å’ŒstillnessOneä¸€æ ·,
+    //ä½†ç›®å‰æ²¡æœ‰åšå­˜å‚¨æœºæ„ï¼Œæ‰€ä»¥ç¬¬ä¸€ä¸ªKFSå°±åœ¨backé˜¶æ®µç›´æ¥æ”¾ä¸‹ã€‚
     switch(auto_ctrl_.now_state)
     {
         case ARM_AUTO_STILLNESS_E::STATE_DONE:
@@ -470,9 +470,9 @@ void ArmSetup::auto_stillnessTwo()
                     this->set_TargetKFS(auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1]);
                     auto_ctrl_.now_targetIndex = 0;
                     auto_ctrl_.flag.back_time = 0.0f;
-                    auto_ctrl_.flag.isrecalcPath = true;//ÖØÖÃÂ·¾¶ÖØ¼ÆËã±êÖ¾£¬È·±£Â·¾¶Ö»ÔÚÁ÷³Ì¿ªÊ¼Ê±¼ÆËãÒ»´Î
-                    auto_ctrl_.flag.canExtend = false; //ÖØÖÃÉìÕ¹Ğí¿É£¬µÈ´ı×Ô¶¯¿ØÖÆÁ÷³Ì·ÅĞĞ
-                    auto_ctrl_.flag.canChassisStart = false; //ÖØÖÃµ×ÅÌÒÆ¶¯Ğí¿É
+                    auto_ctrl_.flag.isrecalcPath = true;//é‡ç½®è·¯å¾„é‡è®¡ç®—æ ‡å¿—ï¼Œç¡®ä¿è·¯å¾„åªåœ¨æµç¨‹å¼€å§‹æ—¶è®¡ç®—ä¸€æ¬¡
+                    auto_ctrl_.flag.canExtend = false; //é‡ç½®ä¼¸å±•è®¸å¯ï¼Œç­‰å¾…è‡ªåŠ¨æ§åˆ¶æµç¨‹æ”¾è¡Œ
+                    auto_ctrl_.flag.canChassisStart = false; //é‡ç½®åº•ç›˜ç§»åŠ¨è®¸å¯
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
 
@@ -484,7 +484,7 @@ void ArmSetup::auto_stillnessTwo()
             else
             {
                 idle();
-                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //±£³ÖÔÚÍê³É×´Ì¬
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //ä¿æŒåœ¨å®ŒæˆçŠ¶æ€
             }
             break;
         }
@@ -508,12 +508,12 @@ void ArmSetup::auto_stillnessTwo()
             if(state_alignStillness(auto_ctrl_.targetKFS[0]))
             {
 
-                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //¶¥Îü
+                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //é¡¶å¸
                 {
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
                 }
                 else                    
-                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;   //²àÎü  
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;   //ä¾§å¸  
             }
 
             break;
@@ -525,20 +525,20 @@ void ArmSetup::auto_stillnessTwo()
             // {
             //     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
             //     #if ARM_AUTO_DEBUG_NOCHASSIS
-            //     // auto_ctrl_.flag.canExtend = true; //·ÅĞĞ½øÈëÉìÕ¹½×¶Î
+            //     // auto_ctrl_.flag.canExtend = true; //æ”¾è¡Œè¿›å…¥ä¼¸å±•é˜¶æ®µ
             //     #endif
             // }
 
             if(state_lowerStillness(auto_ctrl_.targetKFS[0]))
             {
-                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//¶¥Îü
+                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//é¡¶å¸
                 {
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
-                    //(Lower½×¶Î½µµ½ÁÙ½ç¸ß¶ÈºóÍ£ÏÂ£¬µÈ´ıcanExtend·ÅĞĞÔÙÏÂ½µµ½Ä¿±êÎ»ÖÃ)
+                    //(Loweré˜¶æ®µé™åˆ°ä¸´ç•Œé«˜åº¦ååœä¸‹ï¼Œç­‰å¾…canExtendæ”¾è¡Œå†ä¸‹é™åˆ°ç›®æ ‡ä½ç½®)
                 }
                 else
                 {
-                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;   //²àÎü  
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;   //ä¾§å¸  
                 }
             }   
             break;
@@ -554,14 +554,14 @@ void ArmSetup::auto_stillnessTwo()
             //     }
             // }
 
-            if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//¶¥Îü
+            if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//é¡¶å¸
             {
                 if(state_extStillness(auto_ctrl_.targetKFS[0]))
                 {
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;
                 }
             }
-            else   //²àÎü
+            else   //ä¾§å¸
             {
                 if(auto_ctrl_.flag.canExtend)
                 {
@@ -594,18 +594,18 @@ void ArmSetup::auto_stillnessTwo()
                 {
                     if(!auto_ctrl_.flag.isbackdone)
                     {
-                        auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds(); //¼ÇÂ¼·µ»Ø¿ªÊ¼µÄÊ±¼ä´Á
+                        auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds(); //è®°å½•è¿”å›å¼€å§‹çš„æ—¶é—´æˆ³
                         auto_ctrl_.flag.isbackdone = true;
                     }
 
                     if(auto_ctrl_.flag.isbackdone && (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time) >= 1.2f)
                     {
-                        this->setSuckerStatus(Sucker_Status_E::STOP); //·ÅÏÂµÚÒ»¸öKFSºó¹Ø±ÕÎüÅÌ
-                        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT; //¼ÌĞøÏÂÒ»¸öKFSµÄÁ÷³Ì  
-                        auto_ctrl_.now_targetIndex ++; //ÇĞ»»µ½ÏÂÒ»¸öÄ¿±êKFS
+                        this->setSuckerStatus(Sucker_Status_E::STOP); //æ”¾ä¸‹ç¬¬ä¸€ä¸ªKFSåå…³é—­å¸ç›˜
+                        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT; //ç»§ç»­ä¸‹ä¸€ä¸ªKFSçš„æµç¨‹  
+                        auto_ctrl_.now_targetIndex ++; //åˆ‡æ¢åˆ°ä¸‹ä¸€ä¸ªç›®æ ‡KFS
 
-                        auto_ctrl_.flag.canExtend = false; //ÖØÖÃÉìÕ¹Ğí¿É£¬µÈ´ı×Ô¶¯¿ØÖÆÁ÷³Ì·ÅĞĞ
-                        auto_ctrl_.flag.canChassisStart = false; //ÖØÖÃµ×ÅÌÒÆ¶¯Ğí¿É
+                        auto_ctrl_.flag.canExtend = false; //é‡ç½®ä¼¸å±•è®¸å¯ï¼Œç­‰å¾…è‡ªåŠ¨æ§åˆ¶æµç¨‹æ”¾è¡Œ
+                        auto_ctrl_.flag.canChassisStart = false; //é‡ç½®åº•ç›˜ç§»åŠ¨è®¸å¯
                         auto_ctrl_.flag.isExtReach = false;
                         auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
                     }
@@ -615,12 +615,12 @@ void ArmSetup::auto_stillnessTwo()
                     
                     arm_ctrlStatus.auto_start = 0;
                    
-                    auto_ctrl_.start_to_autoctrl = false; //Íê³ÉÒ»´ÎÁ÷³Ìºó£¬ÖØÖÃ×Ô¶¯¿ØÖÆÆô¶¯Ìõ¼ş
+                    auto_ctrl_.start_to_autoctrl = false; //å®Œæˆä¸€æ¬¡æµç¨‹åï¼Œé‡ç½®è‡ªåŠ¨æ§åˆ¶å¯åŠ¨æ¡ä»¶
 
-                    auto_ctrl_.flag.isrecalcPath = false; //ÖØÖÃÂ·¾¶ÖØ¼ÆËã±êÖ¾
-                    auto_ctrl_.flag.back_time = 0.0f; //ÖØÖÃ·µ»ØÊ±¼ä
-                    auto_ctrl_.flag.isbackdone = false; //ÖØÖÃ·µ»ØÍê³É±êÖ¾
-                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //±£³ÖÔÚÍê³É×´Ì¬
+                    auto_ctrl_.flag.isrecalcPath = false; //é‡ç½®è·¯å¾„é‡è®¡ç®—æ ‡å¿—
+                    auto_ctrl_.flag.back_time = 0.0f; //é‡ç½®è¿”å›æ—¶é—´
+                    auto_ctrl_.flag.isbackdone = false; //é‡ç½®è¿”å›å®Œæˆæ ‡å¿—
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //ä¿æŒåœ¨å®ŒæˆçŠ¶æ€
                 }
             }
             break;
@@ -628,7 +628,7 @@ void ArmSetup::auto_stillnessTwo()
 
         case ARM_AUTO_STILLNESS_E::STATE_OVER:
         {
-            //Á÷³ÌÍê³É£¬±£³ÖÔÚÍê³É×´Ì¬
+            //æµç¨‹å®Œæˆï¼Œä¿æŒåœ¨å®ŒæˆçŠ¶æ€
             idle();
             break;
         }
@@ -638,23 +638,23 @@ void ArmSetup::auto_stillnessTwo()
     }
 }
 
-//Á÷³Ìº¯Êı ĞĞ½ø¼äÊ°È¡==============
+//æµç¨‹å‡½æ•° è¡Œè¿›é—´æ‹¾å–==============
 bool ArmSetup::state_to_waitStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    // float kfs_height = MF_high[targetKFS -1]; //»ñÈ¡Ä¿±êKFS¸ß¶È
+    // float kfs_height = MF_high[targetKFS -1]; //è·å–ç›®æ ‡KFSé«˜åº¦
 
     float target_height = 0.0f;
 
-    target_height = this->init_data_.max_launchHeight_; //Ö±½ÓÌ§Éıµ½×î¸ß£¬µÈ´ıĞĞ½ø¼äĞı×ª¶ÔÆëºóÔÙ·ÅµÍ
+    target_height = this->init_data_.max_launchHeight_; //ç›´æ¥æŠ¬å‡åˆ°æœ€é«˜ï¼Œç­‰å¾…è¡Œè¿›é—´æ—‹è½¬å¯¹é½åå†æ”¾ä½
     if(isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_))
-        this->set_LaunchHeight(target_height); //Ì§Éıµ½Ä¿±ê¸ß¶È
+        this->set_LaunchHeight(target_height); //æŠ¬å‡åˆ°ç›®æ ‡é«˜åº¦
     else
     {
-        this->set_LaunchHeight(this->get_currentJointStatus().launchJoint_Height_); //±£³Öµ±Ç°¸ß¶È²»±ä
+        this->set_LaunchHeight(this->get_currentJointStatus().launchJoint_Height_); //ä¿æŒå½“å‰é«˜åº¦ä¸å˜
         float sanitized_angle = sanitizeRotateAngle(this->get_currentJointStatus().rotateJoint_angle_);
-        this->set_RotateAngle(sanitized_angle); //Ğı×ªµ½°²È«ÇøÓò
+        this->set_RotateAngle(sanitized_angle); //æ—‹è½¬åˆ°å®‰å…¨åŒºåŸŸ
     }                                                                                                                                                               
 
     int8_t pitch_state = 0;
@@ -666,9 +666,9 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
     if(_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - target_height) < 0.01f)
     {   
         if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 0)
-            this->set_PitchAngle(90.0f); //¸ßµÄKFS±£³ÖÎüÅÌË®Æ½£¬²àÎü
+            this->set_PitchAngle(90.0f); //é«˜çš„KFSä¿æŒå¸ç›˜æ°´å¹³ï¼Œä¾§å¸
         else
-            this->set_PitchAngle(0.0f); //µÍµÄKFSÎüÅÌÊúÖ±ÏòÏÂ£¬¶¥Îü
+            this->set_PitchAngle(0.0f); //ä½çš„KFSå¸ç›˜ç«–ç›´å‘ä¸‹ï¼Œé¡¶å¸
         
         return true;
     }
@@ -680,8 +680,8 @@ bool ArmSetup::state_alignStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
-    //¸ÄÎªÔÆÌ¨Éıµ½×î¸ßÖ®ºó¾ÍĞı×ª
-    this->set_RotateAngle(90.0f); //¶ÔÆëKFS²àÃæ·¨Ïò
+    //æ”¹ä¸ºäº‘å°å‡åˆ°æœ€é«˜ä¹‹åå°±æ—‹è½¬
+    this->set_RotateAngle(90.0f); //å¯¹é½KFSä¾§é¢æ³•å‘
     if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 2.0f)
         return true;
     else
@@ -690,14 +690,14 @@ bool ArmSetup::state_alignStillness(int targetKFS)
 
 bool ArmSetup::state_lowerStillness(int targetKFS)
 {
-    //ÅĞ¶¨µ½´ïÄ¿±êµÄMF_roadºó£¬·ÅµÍ»úĞµ±Û
+    //åˆ¤å®šåˆ°è¾¾ç›®æ ‡çš„MF_roadåï¼Œæ”¾ä½æœºæ¢°è‡‚
 
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    float targetLowerHeight = 0.0f; //KFSËùÔÚ¸ß¶ÈµÄÔÆÌ¨ÏÂ·Å¸ß¶È£¬µ¥Î»Ã×
+    float targetLowerHeight = 0.0f; //KFSæ‰€åœ¨é«˜åº¦çš„äº‘å°ä¸‹æ”¾é«˜åº¦ï¼Œå•ä½ç±³
 
 
-    if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //¶¥Îü
+    if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //é¡¶å¸
     {
         if(MF_high[targetKFS - 1] == 0.2f)
             targetLowerHeight = 0.10f;
@@ -708,7 +708,7 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
         else
             targetLowerHeight = this->init_data_.max_launchHeight_;
     }
-    else //²àÎü
+    else //ä¾§å¸
     {
         if(MF_high[targetKFS - 1] == 0.2f)
             targetLowerHeight = 0.0f;
@@ -723,17 +723,17 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
     bool canLower = false;
     canLower = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
                                             auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
-                                            0.55f); //½øÈëÄ¿±êKFSËùÔÚµÄMFroadÖĞĞÄÇÒ¾àÀëĞ¡ÓÚ0.55m¾Í·ÅµÍ
+                                            0.55f); //è¿›å…¥ç›®æ ‡KFSæ‰€åœ¨çš„MFroadä¸­å¿ƒä¸”è·ç¦»å°äº0.55må°±æ”¾ä½
     
-    if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //¶¥Îü
+    if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //é¡¶å¸
     {
         if(canLower)
         {
-            this->setSuckerStatus(Sucker_Status_E::SUCK); //ÏÂ½µÊ±´ò¿ªÎüÅÌ
-            this->set_LaunchHeight(targetLowerHeight + 0.05f); //·ÅµÍµ½Ä¿±ê¸ß¶È + 5cm
+            this->setSuckerStatus(Sucker_Status_E::SUCK); //ä¸‹é™æ—¶æ‰“å¼€å¸ç›˜
+            this->set_LaunchHeight(targetLowerHeight + 0.05f); //æ”¾ä½åˆ°ç›®æ ‡é«˜åº¦ + 5cm
             if(auto_ctrl_.flag.canExtend)
             {
-                this->set_LaunchHeight(targetLowerHeight); //·ÅµÍµ½Ä¿±ê¸ß¶È
+                this->set_LaunchHeight(targetLowerHeight); //æ”¾ä½åˆ°ç›®æ ‡é«˜åº¦
             }
         }
         else
@@ -743,7 +743,7 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
         {
             if(!auto_ctrl_.flag.isExtReach)
             {
-                auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //¼ÇÂ¼Ê×´Îµ½´ïÄ¿±êÎ»ÖÃµÄÊ±¼ä´Á
+                auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //è®°å½•é¦–æ¬¡åˆ°è¾¾ç›®æ ‡ä½ç½®çš„æ—¶é—´æˆ³
                 auto_ctrl_.flag.isExtReach = true;
             }
         } 
@@ -755,12 +755,12 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
             return true;
         }
     }
-    else //²àÎü
+    else //ä¾§å¸
     {
         if(canLower)
         {
-            this->set_LaunchHeight(targetLowerHeight); //·ÅµÍµ½Ä¿±ê¸ß¶È
-            this->setSuckerStatus(Sucker_Status_E::SUCK); //ÏÂ½µÊ±´ò¿ªÎüÅÌ
+            this->set_LaunchHeight(targetLowerHeight); //æ”¾ä½åˆ°ç›®æ ‡é«˜åº¦
+            this->setSuckerStatus(Sucker_Status_E::SUCK); //ä¸‹é™æ—¶æ‰“å¼€å¸ç›˜
         }
         else
             return false;
@@ -784,24 +784,24 @@ bool ArmSetup::state_extStillness(int targetKFS)
     {
         if(MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
                                             auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
-                                            0.6f)) //½øÈëÄ¿±êKFSËùÔÚµÄMFroadÖĞĞÄÇÒ¾àÀëĞ¡ÓÚ0.6m¾ÍÉìÕ¹
+                                            0.6f)) //è¿›å…¥ç›®æ ‡KFSæ‰€åœ¨çš„MFroadä¸­å¿ƒä¸”è·ç¦»å°äº0.6må°±ä¼¸å±•
         {
-            this->set_StretchLength(this->init_data_.max_stretchLength_); //ÉìÕ¹µ½×î´ó³¤¶È
-            return true; //¶¥ÎüÉìÕ¹µ½Î»ºóÖ±½Ó½øÈëÏÂÒ»¸öÁ÷³Ì£¬×¼±¸ÏÂ½µ
+            this->set_StretchLength(this->init_data_.max_stretchLength_); //ä¼¸å±•åˆ°æœ€å¤§é•¿åº¦
+            return true; //é¡¶å¸ä¼¸å±•åˆ°ä½åç›´æ¥è¿›å…¥ä¸‹ä¸€ä¸ªæµç¨‹ï¼Œå‡†å¤‡ä¸‹é™
         }
         else
             return false;
     }
     else
     {
-        this->set_StretchLength(this->init_data_.max_stretchLength_); //ÉìÕ¹µ½×î´ó³¤¶È
+        this->set_StretchLength(this->init_data_.max_stretchLength_); //ä¼¸å±•åˆ°æœ€å¤§é•¿åº¦
 
         if(_tool_Abs(this->get_currentJointStatus().stretchJoint_Length_ - 
-                this->init_data_.max_stretchLength_) < 0.01f)//ÉìÕ¹Íê³ÉÅĞ¶¨
+                this->init_data_.max_stretchLength_) < 0.01f)//ä¼¸å±•å®Œæˆåˆ¤å®š
         {
             if(!auto_ctrl_.flag.isExtReach)
             {
-                auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //¼ÇÂ¼Ê×´Îµ½´ïÄ¿±êÎ»ÖÃµÄÊ±¼ä´Á
+                auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //è®°å½•é¦–æ¬¡åˆ°è¾¾ç›®æ ‡ä½ç½®çš„æ—¶é—´æˆ³
                 auto_ctrl_.flag.isExtReach = true;
             }
         }
@@ -811,13 +811,13 @@ bool ArmSetup::state_extStillness(int targetKFS)
 
         if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)
         {
-            return true; //¶¥Îüµ½Î»ºóÍ£ÔÚÉìÕ¹Î»ÖÃµÈ´ıÌ§Éı£¬²»±ØËõ»Ø
+            return true; //é¡¶å¸åˆ°ä½ååœåœ¨ä¼¸å±•ä½ç½®ç­‰å¾…æŠ¬å‡ï¼Œä¸å¿…ç¼©å›
         }
-        else //²àÎüÖ»Ğè¶ÌÔİÍ£Áô£¬È·ÈÏ²»¸ÉÉæ¾ÍËõ»Ø
+        else //ä¾§å¸åªéœ€çŸ­æš‚åœç•™ï¼Œç¡®è®¤ä¸å¹²æ¶‰å°±ç¼©å›
         {
             if(auto_ctrl_.flag.isExtReach && (now_s - auto_ctrl_.flag.reach_finishTimeStore) >= 0.2f)
             {
-                this->set_StretchLength(0.0f); //Í£Áô0.15sºóËõ»Ø
+                this->set_StretchLength(0.0f); //åœç•™0.15såç¼©å›
                 return true;
             }
         }
@@ -831,7 +831,7 @@ bool ArmSetup::state_extStillness(int targetKFS)
 bool ArmSetup::state_launchStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    float canMoveHeight = 0.0f;//ÔÆÌ¨Éıµ½´Ë¸ß¶È¼´¿ÉÒÆ¶¯
+    float canMoveHeight = 0.0f;//äº‘å°å‡åˆ°æ­¤é«˜åº¦å³å¯ç§»åŠ¨
     if(MF_high[targetKFS - 1] == 0.2f)
         canMoveHeight = this->init_data_.safe_height;
     else if(MF_high[targetKFS - 1] == 0.4f)
@@ -841,14 +841,14 @@ bool ArmSetup::state_launchStillness(int targetKFS)
     else
         canMoveHeight = this->init_data_.max_launchHeight_;
 
-    this->set_LaunchHeight(this->init_data_.max_launchHeight_); //Éıµ½×î¸ßµã£¬×¼±¸ÒÆ¶¯
+    this->set_LaunchHeight(this->init_data_.max_launchHeight_); //å‡åˆ°æœ€é«˜ç‚¹ï¼Œå‡†å¤‡ç§»åŠ¨
 
     if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.02f)
     {
-        auto_ctrl_.flag.canChassisStart = true; //»úĞµ±ÛÒÑ¾­Éıµ½¿ÉÒÔÒÆ¶¯µÄ¸ß¶ÈÁË
-        if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //¶¥Îü
+        auto_ctrl_.flag.canChassisStart = true; //æœºæ¢°è‡‚å·²ç»å‡åˆ°å¯ä»¥ç§»åŠ¨çš„é«˜åº¦äº†
+        if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //é¡¶å¸
         {
-            this->set_StretchLength(0.0f); //¶¥ÎüÉìÕ¹µ½Î»ºóÖ±½ÓËõ»Ø£¬×¼±¸·µ»Ø
+            this->set_StretchLength(0.0f); //é¡¶å¸ä¼¸å±•åˆ°ä½åç›´æ¥ç¼©å›ï¼Œå‡†å¤‡è¿”å›
         }
         return true;
     }
@@ -860,7 +860,7 @@ bool ArmSetup::state_launchStillness(int targetKFS)
 bool ArmSetup::state_backStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    float targetBackAngle = 0.0f; //¸ù¾İ³µÒÆ¶¯·½ÏòÀ´£¬»úĞµ±Û³¯Ïòµ×ÅÌÒÆ¶¯·´·½Ïò
+    float targetBackAngle = 0.0f; //æ ¹æ®è½¦ç§»åŠ¨æ–¹å‘æ¥ï¼Œæœºæ¢°è‡‚æœå‘åº•ç›˜ç§»åŠ¨åæ–¹å‘
 
     const int8_t idx_mfroad = auto_ctrl_.pathInfo.Index_MFroad[auto_ctrl_.now_targetIndex];
     if(idx_mfroad < 0 || idx_mfroad >= 11)
@@ -871,85 +871,85 @@ bool ArmSetup::state_backStillness(int targetKFS)
     int8_t c = 0,r = 0;
     MF_AutoCtrler::Map_ToCR(auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], c, r);
 
-    if(_tool_Abs(chassisDir - 0.0f) < 5.0f) //µ×ÅÌÏòÓÒ×ß
+    if(_tool_Abs(chassisDir - 0.0f) < 5.0f) //åº•ç›˜å‘å³èµ°
     {
         if(auto_ctrl_.kfs_num == ONLY_ONE 
                 || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1)) 
         {
-            if(r == 1)//ÏÂ²à
+            if(r == 1)//ä¸‹ä¾§
                 targetBackAngle = 180.0f;
             
-            else if(r == 6)//ÉÏ²à
+            else if(r == 6)//ä¸Šä¾§
                 targetBackAngle = 0.0f;
         }
         else
         {
-            if(r == 1)//ÏÂ²à
+            if(r == 1)//ä¸‹ä¾§
                 targetBackAngle = 200.0f;
             
-            else if(r == 6)//ÉÏ²à
+            else if(r == 6)//ä¸Šä¾§
                 targetBackAngle = 340.0f;
         }
 
     }
-    else if(_tool_Abs(chassisDir - 180.0f) < 5.0f)//µ×ÅÌÏò×ó
+    else if(_tool_Abs(chassisDir - 180.0f) < 5.0f)//åº•ç›˜å‘å·¦
     {
         if(auto_ctrl_.kfs_num == ONLY_ONE 
             || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1)) 
         {
-             if(r == 1) // ÏÂ²à
+             if(r == 1) // ä¸‹ä¾§
                 targetBackAngle = 0.0f;
-            else if(r == 6) // ÉÏ²à
+            else if(r == 6) // ä¸Šä¾§
                 targetBackAngle = 180.0f;
         }
         else
         {
-            if (r == 1) // ÏÂ²à
+            if (r == 1) // ä¸‹ä¾§
                 targetBackAngle = 340.0f;
-            else if (r == 6) // ÉÏ²à
+            else if (r == 6) // ä¸Šä¾§
                 targetBackAngle = 200.0f;
         }
     }
-    else if(_tool_Abs(chassisDir - 90.0f) < 5.0f)//µ×ÅÌÏòÇ°
+    else if(_tool_Abs(chassisDir - 90.0f) < 5.0f)//åº•ç›˜å‘å‰
     {
         if(auto_ctrl_.kfs_num == ONLY_ONE 
             || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1))
         {
-             if(c == 1) // ×ó²à
+             if(c == 1) // å·¦ä¾§
                 targetBackAngle = 0.0f;
-            else if(c == 6) // ÓÒ²à
+            else if(c == 6) // å³ä¾§
                 targetBackAngle = 180.0f;
         }
         else
         {
-            if (c == 1) // ×ó²à
+            if (c == 1) // å·¦ä¾§
                 targetBackAngle = 340.0f;
-            else if (c == 6) // ÓÒ²à
+            else if (c == 6) // å³ä¾§
                 targetBackAngle = 200.0f;
         }
 
     }
-    else if(_tool_Abs(chassisDir - 270.0f) < 5.0f)//µ×ÅÌÏòºó
+    else if(_tool_Abs(chassisDir - 270.0f) < 5.0f)//åº•ç›˜å‘å
     {
         if(auto_ctrl_.kfs_num == ONLY_ONE
             || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1))
         {
-             if(c == 1) // ×ó²à
+             if(c == 1) // å·¦ä¾§
                 targetBackAngle = 180.0f;
-            else if(c == 6) // ÓÒ²à
+            else if(c == 6) // å³ä¾§
                 targetBackAngle = 0.0f;
         }
         else
         {
-             if (c == 1) // ×ó²à
+             if (c == 1) // å·¦ä¾§
                 targetBackAngle = 200.0f;
-            else if (c == 6) // ÓÒ²à
+            else if (c == 6) // å³ä¾§
                 targetBackAngle = 340.0f;
         }
         
     }
 
-    this->set_RotateAngle(targetBackAngle); //Ğı×ªµ½Ä¿±êÎ»ÖÃ
+    this->set_RotateAngle(targetBackAngle); //æ—‹è½¬åˆ°ç›®æ ‡ä½ç½®
 
     if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - targetBackAngle) < 5.0f)
     {
@@ -959,8 +959,8 @@ bool ArmSetup::state_backStillness(int targetKFS)
         return false;
 }
 #else
-// VERSION 0 µÄ ´¿²àÎü°æ±¾
-// Á÷³Ìº¯Êı Í£ÏÂÊ°È¡==============
+// VERSION 0 çš„ çº¯ä¾§å¸ç‰ˆæœ¬
+// æµç¨‹å‡½æ•° åœä¸‹æ‹¾å–==============
 void ArmSetup::auto_stillnessOne()
 {
     switch(auto_ctrl_.now_state)
@@ -975,9 +975,9 @@ void ArmSetup::auto_stillnessOne()
                     auto_ctrl_.now_targetIndex = 0;
 
 
-                    auto_ctrl_.flag.isrecalcPath = true;//ÖØÖÃÂ·¾¶ÖØ¼ÆËã±êÖ¾£¬È·±£Â·¾¶Ö»ÔÚÁ÷³Ì¿ªÊ¼Ê±¼ÆËãÒ»´Î
-                    auto_ctrl_.flag.canExtend = false; //ÖØÖÃÉìÕ¹Ğí¿É£¬µÈ´ı×Ô¶¯¿ØÖÆÁ÷³Ì·ÅĞĞ
-                    auto_ctrl_.flag.canChassisStart = false; //ÖØÖÃµ×ÅÌÒÆ¶¯Ğí¿É
+                    auto_ctrl_.flag.isrecalcPath = true;//é‡ç½®è·¯å¾„é‡è®¡ç®—æ ‡å¿—ï¼Œç¡®ä¿è·¯å¾„åªåœ¨æµç¨‹å¼€å§‹æ—¶è®¡ç®—ä¸€æ¬¡
+                    auto_ctrl_.flag.canExtend = false; //é‡ç½®ä¼¸å±•è®¸å¯ï¼Œç­‰å¾…è‡ªåŠ¨æ§åˆ¶æµç¨‹æ”¾è¡Œ
+                    auto_ctrl_.flag.canChassisStart = false; //é‡ç½®åº•ç›˜ç§»åŠ¨è®¸å¯
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
                 }
@@ -987,7 +987,7 @@ void ArmSetup::auto_stillnessOne()
             else
             {
                 idle();
-                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //±£³ÖÔÚÍê³É×´Ì¬
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //ä¿æŒåœ¨å®ŒæˆçŠ¶æ€
             }
             break;
         }
@@ -1016,7 +1016,7 @@ void ArmSetup::auto_stillnessOne()
             {
                 auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
                 #if ARM_AUTO_DEBUG_NOCHASSIS
-                // auto_ctrl_.flag.canExtend = true; //·ÅĞĞ½øÈëÉìÕ¹½×¶Î
+                // auto_ctrl_.flag.canExtend = true; //æ”¾è¡Œè¿›å…¥ä¼¸å±•é˜¶æ®µ
                 #endif
             }
             break;
@@ -1049,8 +1049,8 @@ void ArmSetup::auto_stillnessOne()
             {
                 auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE;
                 arm_ctrlStatus.auto_start = 0;
-                auto_ctrl_.start_to_autoctrl = false; //Íê³ÉÒ»´ÎÁ÷³Ìºó£¬ÖØÖÃ×Ô¶¯¿ØÖÆÆô¶¯Ìõ¼ş
-                auto_ctrl_.flag.isrecalcPath = false; //ÖØÖÃÂ·¾¶ÖØ¼ÆËã±êÖ¾
+                auto_ctrl_.start_to_autoctrl = false; //å®Œæˆä¸€æ¬¡æµç¨‹åï¼Œé‡ç½®è‡ªåŠ¨æ§åˆ¶å¯åŠ¨æ¡ä»¶
+                auto_ctrl_.flag.isrecalcPath = false; //é‡ç½®è·¯å¾„é‡è®¡ç®—æ ‡å¿—
             }
             break;
         }
@@ -1062,8 +1062,8 @@ void ArmSetup::auto_stillnessOne()
 
 void ArmSetup::auto_stillnessTwo()
 {
-    //´óÌåÖ´ĞĞÁ÷³ÌºÍstillnessOneÒ»Ñù,
-    //µ«Ä¿Ç°Ã»ÓĞ×ö´æ´¢»ú¹¹£¬ËùÒÔµÚÒ»¸öKFS¾ÍÔÚback½×¶ÎÖ±½Ó·ÅÏÂ¡£
+    //å¤§ä½“æ‰§è¡Œæµç¨‹å’ŒstillnessOneä¸€æ ·,
+    //ä½†ç›®å‰æ²¡æœ‰åšå­˜å‚¨æœºæ„ï¼Œæ‰€ä»¥ç¬¬ä¸€ä¸ªKFSå°±åœ¨backé˜¶æ®µç›´æ¥æ”¾ä¸‹ã€‚
     switch(auto_ctrl_.now_state)
     {
         case ARM_AUTO_STILLNESS_E::STATE_DONE:
@@ -1073,9 +1073,9 @@ void ArmSetup::auto_stillnessTwo()
 
                 // if(auto_ctrl_.now_targetIndex > 1)
                 // {
-                //     auto_ctrl_.start_to_autoctrl = false; //·ÀÖ¹Ô½½ç·ÃÎÊ
+                //     auto_ctrl_.start_to_autoctrl = false; //é˜²æ­¢è¶Šç•Œè®¿é—®
                 //     idle();
-                //     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //±£³ÖÔÚÍê³É×´Ì¬
+                //     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //ä¿æŒåœ¨å®ŒæˆçŠ¶æ€
                 //     return;
                 // }
 
@@ -1084,9 +1084,9 @@ void ArmSetup::auto_stillnessTwo()
                     this->set_TargetKFS(auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1]);
                     auto_ctrl_.now_targetIndex = 0;
 
-                    auto_ctrl_.flag.isrecalcPath = true;//ÖØÖÃÂ·¾¶ÖØ¼ÆËã±êÖ¾£¬È·±£Â·¾¶Ö»ÔÚÁ÷³Ì¿ªÊ¼Ê±¼ÆËãÒ»´Î
-                    auto_ctrl_.flag.canExtend = false; //ÖØÖÃÉìÕ¹Ğí¿É£¬µÈ´ı×Ô¶¯¿ØÖÆÁ÷³Ì·ÅĞĞ
-                    auto_ctrl_.flag.canChassisStart = false; //ÖØÖÃµ×ÅÌÒÆ¶¯Ğí¿É
+                    auto_ctrl_.flag.isrecalcPath = true;//é‡ç½®è·¯å¾„é‡è®¡ç®—æ ‡å¿—ï¼Œç¡®ä¿è·¯å¾„åªåœ¨æµç¨‹å¼€å§‹æ—¶è®¡ç®—ä¸€æ¬¡
+                    auto_ctrl_.flag.canExtend = false; //é‡ç½®ä¼¸å±•è®¸å¯ï¼Œç­‰å¾…è‡ªåŠ¨æ§åˆ¶æµç¨‹æ”¾è¡Œ
+                    auto_ctrl_.flag.canChassisStart = false; //é‡ç½®åº•ç›˜ç§»åŠ¨è®¸å¯
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
                 }
@@ -1096,7 +1096,7 @@ void ArmSetup::auto_stillnessTwo()
             else
             {
                 idle();
-                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //±£³ÖÔÚÍê³É×´Ì¬
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //ä¿æŒåœ¨å®ŒæˆçŠ¶æ€
             }
             break;
         }
@@ -1125,7 +1125,7 @@ void ArmSetup::auto_stillnessTwo()
             {
                 auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
                 #if ARM_AUTO_DEBUG_NOCHASSIS
-                // auto_ctrl_.flag.canExtend = true; //·ÅĞĞ½øÈëÉìÕ¹½×¶Î
+                // auto_ctrl_.flag.canExtend = true; //æ”¾è¡Œè¿›å…¥ä¼¸å±•é˜¶æ®µ
                 #endif
             }
             break;
@@ -1162,18 +1162,18 @@ void ArmSetup::auto_stillnessTwo()
                 {
                     if(!auto_ctrl_.flag.isbackdone)
                     {
-                        auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds(); //¼ÇÂ¼·µ»Ø¿ªÊ¼µÄÊ±¼ä´Á
+                        auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds(); //è®°å½•è¿”å›å¼€å§‹çš„æ—¶é—´æˆ³
                         auto_ctrl_.flag.isbackdone = true;
                     }
 
                     if(auto_ctrl_.flag.isbackdone && (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time) >= 1.2f)
                     {
-                        this->setSuckerStatus(Sucker_Status_E::STOP); //·ÅÏÂµÚÒ»¸öKFSºó¹Ø±ÕÎüÅÌ
-                        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT; //¼ÌĞøÏÂÒ»¸öKFSµÄÁ÷³Ì  
-                        auto_ctrl_.now_targetIndex ++; //ÇĞ»»µ½ÏÂÒ»¸öÄ¿±êKFS
+                        this->setSuckerStatus(Sucker_Status_E::STOP); //æ”¾ä¸‹ç¬¬ä¸€ä¸ªKFSåå…³é—­å¸ç›˜
+                        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT; //ç»§ç»­ä¸‹ä¸€ä¸ªKFSçš„æµç¨‹  
+                        auto_ctrl_.now_targetIndex ++; //åˆ‡æ¢åˆ°ä¸‹ä¸€ä¸ªç›®æ ‡KFS
 
-                        auto_ctrl_.flag.canExtend = false; //ÖØÖÃÉìÕ¹Ğí¿É£¬µÈ´ı×Ô¶¯¿ØÖÆÁ÷³Ì·ÅĞĞ
-                        auto_ctrl_.flag.canChassisStart = false; //ÖØÖÃµ×ÅÌÒÆ¶¯Ğí¿É
+                        auto_ctrl_.flag.canExtend = false; //é‡ç½®ä¼¸å±•è®¸å¯ï¼Œç­‰å¾…è‡ªåŠ¨æ§åˆ¶æµç¨‹æ”¾è¡Œ
+                        auto_ctrl_.flag.canChassisStart = false; //é‡ç½®åº•ç›˜ç§»åŠ¨è®¸å¯
                         auto_ctrl_.flag.isExtReach = false;
                         auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
                     }
@@ -1183,11 +1183,11 @@ void ArmSetup::auto_stillnessTwo()
                     
                     arm_ctrlStatus.auto_start = 0;
                    
-                    auto_ctrl_.start_to_autoctrl = false; //Íê³ÉÒ»´ÎÁ÷³Ìºó£¬ÖØÖÃ×Ô¶¯¿ØÖÆÆô¶¯Ìõ¼ş
-                    auto_ctrl_.flag.isrecalcPath = false; //ÖØÖÃÂ·¾¶ÖØ¼ÆËã±êÖ¾
-//                    auto_ctrl_.now_targetIndex = 1; //·ÀÖ¹Ô½½ç
-                    auto_ctrl_.flag.back_time = 0.0f; //ÖØÖÃ·µ»ØÊ±¼ä
-                    auto_ctrl_.flag.isbackdone = false; //ÖØÖÃ·µ»ØÍê³É±êÖ¾
+                    auto_ctrl_.start_to_autoctrl = false; //å®Œæˆä¸€æ¬¡æµç¨‹åï¼Œé‡ç½®è‡ªåŠ¨æ§åˆ¶å¯åŠ¨æ¡ä»¶
+                    auto_ctrl_.flag.isrecalcPath = false; //é‡ç½®è·¯å¾„é‡è®¡ç®—æ ‡å¿—
+//                    auto_ctrl_.now_targetIndex = 1; //é˜²æ­¢è¶Šç•Œ
+                    auto_ctrl_.flag.back_time = 0.0f; //é‡ç½®è¿”å›æ—¶é—´
+                    auto_ctrl_.flag.isbackdone = false; //é‡ç½®è¿”å›å®Œæˆæ ‡å¿—
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_OVER;
                 }
             }
@@ -1196,7 +1196,7 @@ void ArmSetup::auto_stillnessTwo()
 
         case ARM_AUTO_STILLNESS_E::STATE_OVER:
         {
-            //Á÷³ÌÍê³É£¬±£³ÖÔÚÍê³É×´Ì¬
+            //æµç¨‹å®Œæˆï¼Œä¿æŒåœ¨å®ŒæˆçŠ¶æ€
             idle();
             break;
         }
@@ -1206,23 +1206,23 @@ void ArmSetup::auto_stillnessTwo()
     }
 }
 
-//Á÷³Ìº¯Êı ĞĞ½ø¼äÊ°È¡==============
+//æµç¨‹å‡½æ•° è¡Œè¿›é—´æ‹¾å–==============
 bool ArmSetup::state_to_waitStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    // float kfs_height = MF_high[targetKFS -1]; //»ñÈ¡Ä¿±êKFS¸ß¶È
+    // float kfs_height = MF_high[targetKFS -1]; //è·å–ç›®æ ‡KFSé«˜åº¦
 
     float target_height = 0.0f;
 
-    target_height = this->init_data_.max_launchHeight_; //Ö±½ÓÌ§Éıµ½×î¸ß£¬µÈ´ıĞĞ½ø¼äĞı×ª¶ÔÆëºóÔÙ·ÅµÍ
+    target_height = this->init_data_.max_launchHeight_; //ç›´æ¥æŠ¬å‡åˆ°æœ€é«˜ï¼Œç­‰å¾…è¡Œè¿›é—´æ—‹è½¬å¯¹é½åå†æ”¾ä½
     if(isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_))
-        this->set_LaunchHeight(target_height); //Ì§Éıµ½Ä¿±ê¸ß¶È
+        this->set_LaunchHeight(target_height); //æŠ¬å‡åˆ°ç›®æ ‡é«˜åº¦
     else
     {
-        this->set_LaunchHeight(this->get_currentJointStatus().launchJoint_Height_); //±£³Öµ±Ç°¸ß¶È²»±ä
+        this->set_LaunchHeight(this->get_currentJointStatus().launchJoint_Height_); //ä¿æŒå½“å‰é«˜åº¦ä¸å˜
         float sanitized_angle = sanitizeRotateAngle(this->get_currentJointStatus().rotateJoint_angle_);
-        this->set_RotateAngle(sanitized_angle); //Ğı×ªµ½°²È«ÇøÓò
+        this->set_RotateAngle(sanitized_angle); //æ—‹è½¬åˆ°å®‰å…¨åŒºåŸŸ
     }                                                                                                                                                               
 
     if(_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - target_height) < 0.01f)
@@ -1235,8 +1235,8 @@ bool ArmSetup::state_alignStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
-    //¸ÄÎªÔÆÌ¨Éıµ½×î¸ßÖ®ºó¾ÍĞı×ª
-    this->set_RotateAngle(90.0f); //¶ÔÆëKFS²àÃæ·¨Ïò
+    //æ”¹ä¸ºäº‘å°å‡åˆ°æœ€é«˜ä¹‹åå°±æ—‹è½¬
+    this->set_RotateAngle(90.0f); //å¯¹é½KFSä¾§é¢æ³•å‘
     if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 2.0f)
         return true;
     else
@@ -1245,11 +1245,11 @@ bool ArmSetup::state_alignStillness(int targetKFS)
 
 bool ArmSetup::state_lowerStillness(int targetKFS)
 {
-    //ÅĞ¶¨µ½´ïÄ¿±êµÄMF_roadºó£¬·ÅµÍ»úĞµ±Û
+    //åˆ¤å®šåˆ°è¾¾ç›®æ ‡çš„MF_roadåï¼Œæ”¾ä½æœºæ¢°è‡‚
 
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    float targetLowerHeight = 0.0f; //KFSËùÔÚ¸ß¶ÈµÄÔÆÌ¨ÏÂ·Å¸ß¶È£¬µ¥Î»Ã×
+    float targetLowerHeight = 0.0f; //KFSæ‰€åœ¨é«˜åº¦çš„äº‘å°ä¸‹æ”¾é«˜åº¦ï¼Œå•ä½ç±³
     if(MF_high[targetKFS - 1] == 0.2f)
         targetLowerHeight = 0.0f;
     else if(MF_high[targetKFS - 1] == 0.4f)
@@ -1262,11 +1262,11 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
     bool canLower = false;
     canLower = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
                                             auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
-                                            0.45f); //½øÈëÄ¿±êKFSËùÔÚµÄMFroadÖĞĞÄÇÒ¾àÀëĞ¡ÓÚ0.45m¾Í·ÅµÍ
+                                            0.45f); //è¿›å…¥ç›®æ ‡KFSæ‰€åœ¨çš„MFroadä¸­å¿ƒä¸”è·ç¦»å°äº0.45må°±æ”¾ä½
     if(canLower)
     {
-        this->set_LaunchHeight(targetLowerHeight); //·ÅµÍµ½Ä¿±ê¸ß¶È
-        this->setSuckerStatus(Sucker_Status_E::SUCK); //ÏÂ½µÊ±´ò¿ªÎüÅÌ
+        this->set_LaunchHeight(targetLowerHeight); //æ”¾ä½åˆ°ç›®æ ‡é«˜åº¦
+        this->setSuckerStatus(Sucker_Status_E::SUCK); //ä¸‹é™æ—¶æ‰“å¼€å¸ç›˜
     }
     else
         return false;
@@ -1282,14 +1282,14 @@ bool ArmSetup::state_extStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
-    this->set_StretchLength(this->init_data_.max_stretchLength_); //ÉìÕ¹µ½×î´ó³¤¶È
+    this->set_StretchLength(this->init_data_.max_stretchLength_); //ä¼¸å±•åˆ°æœ€å¤§é•¿åº¦
 
     if(_tool_Abs(this->get_currentJointStatus().stretchJoint_Length_ - 
-            this->init_data_.max_stretchLength_) < 0.01f)//ÉìÕ¹Íê³ÉÅĞ¶¨
+            this->init_data_.max_stretchLength_) < 0.01f)//ä¼¸å±•å®Œæˆåˆ¤å®š
     {
         if(!auto_ctrl_.flag.isExtReach)
         {
-            auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //¼ÇÂ¼Ê×´Îµ½´ïÄ¿±êÎ»ÖÃµÄÊ±¼ä´Á
+            auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //è®°å½•é¦–æ¬¡åˆ°è¾¾ç›®æ ‡ä½ç½®çš„æ—¶é—´æˆ³
             auto_ctrl_.flag.isExtReach = true;
         }
     }
@@ -1297,7 +1297,7 @@ bool ArmSetup::state_extStillness(int targetKFS)
     const float now_s = TimeStamp::getInstance().getSeconds();
     if(auto_ctrl_.flag.isExtReach && (now_s - auto_ctrl_.flag.reach_finishTimeStore) >= 0.2f)
     {
-        this->set_StretchLength(0.0f); //Í£Áô0.15sºóËõ»Ø
+        this->set_StretchLength(0.0f); //åœç•™0.15såç¼©å›
         return true;
     }
 
@@ -1308,7 +1308,7 @@ bool ArmSetup::state_extStillness(int targetKFS)
 bool ArmSetup::state_launchStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    float canMoveHeight = 0.0f;//ÔÆÌ¨Éıµ½´Ë¸ß¶È¼´¿ÉÒÆ¶¯
+    float canMoveHeight = 0.0f;//äº‘å°å‡åˆ°æ­¤é«˜åº¦å³å¯ç§»åŠ¨
     if(MF_high[targetKFS - 1] == 0.2f)
         canMoveHeight = this->init_data_.max_launchHeight_;
     else if(MF_high[targetKFS - 1] == 0.4f)
@@ -1318,11 +1318,11 @@ bool ArmSetup::state_launchStillness(int targetKFS)
     else
         canMoveHeight = this->init_data_.max_launchHeight_;
 
-    this->set_LaunchHeight(this->init_data_.max_launchHeight_); //Éıµ½×î¸ßµã£¬×¼±¸ÒÆ¶¯
+    this->set_LaunchHeight(this->init_data_.max_launchHeight_); //å‡åˆ°æœ€é«˜ç‚¹ï¼Œå‡†å¤‡ç§»åŠ¨
 
     if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.02f)
     {
-        auto_ctrl_.flag.canChassisStart = true; //»úĞµ±ÛÒÑ¾­Éıµ½¿ÉÒÔÒÆ¶¯µÄ¸ß¶ÈÁË
+        auto_ctrl_.flag.canChassisStart = true; //æœºæ¢°è‡‚å·²ç»å‡åˆ°å¯ä»¥ç§»åŠ¨çš„é«˜åº¦äº†
         return true;
     }
     else
@@ -1333,7 +1333,7 @@ bool ArmSetup::state_launchStillness(int targetKFS)
 bool ArmSetup::state_backStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    float targetBackAngle = 0.0f; //¸ù¾İ³µÒÆ¶¯·½ÏòÀ´£¬»úĞµ±Û³¯Ïòµ×ÅÌÒÆ¶¯·´·½Ïò
+    float targetBackAngle = 0.0f; //æ ¹æ®è½¦ç§»åŠ¨æ–¹å‘æ¥ï¼Œæœºæ¢°è‡‚æœå‘åº•ç›˜ç§»åŠ¨åæ–¹å‘
 
     const int8_t idx_mfroad = auto_ctrl_.pathInfo.Index_MFroad[auto_ctrl_.now_targetIndex];
     if(idx_mfroad < 0 || idx_mfroad >= 11)
@@ -1344,85 +1344,85 @@ bool ArmSetup::state_backStillness(int targetKFS)
     int8_t c = 0,r = 0;
     MF_AutoCtrler::Map_ToCR(auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], c, r);
 
-    if(_tool_Abs(chassisDir - 0.0f) < 5.0f) //µ×ÅÌÏòÓÒ×ß
+    if(_tool_Abs(chassisDir - 0.0f) < 5.0f) //åº•ç›˜å‘å³èµ°
     {
         if(auto_ctrl_.kfs_num == ONLY_ONE 
                 || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1)) 
         {
-            if(r == 1)//ÏÂ²à
+            if(r == 1)//ä¸‹ä¾§
                 targetBackAngle = 180.0f;
             
-            else if(r == 6)//ÉÏ²à
+            else if(r == 6)//ä¸Šä¾§
                 targetBackAngle = 0.0f;
         }
         else
         {
-            if(r == 1)//ÏÂ²à
+            if(r == 1)//ä¸‹ä¾§
                 targetBackAngle = 200.0f;
             
-            else if(r == 6)//ÉÏ²à
+            else if(r == 6)//ä¸Šä¾§
                 targetBackAngle = 340.0f;
         }
 
     }
-    else if(_tool_Abs(chassisDir - 180.0f) < 5.0f)//µ×ÅÌÏò×ó
+    else if(_tool_Abs(chassisDir - 180.0f) < 5.0f)//åº•ç›˜å‘å·¦
     {
         if(auto_ctrl_.kfs_num == ONLY_ONE 
             || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1)) 
         {
-             if(r == 1) // ÏÂ²à
+             if(r == 1) // ä¸‹ä¾§
                 targetBackAngle = 0.0f;
-            else if(r == 6) // ÉÏ²à
+            else if(r == 6) // ä¸Šä¾§
                 targetBackAngle = 180.0f;
         }
         else
         {
-            if (r == 1) // ÏÂ²à
+            if (r == 1) // ä¸‹ä¾§
                 targetBackAngle = 340.0f;
-            else if (r == 6) // ÉÏ²à
+            else if (r == 6) // ä¸Šä¾§
                 targetBackAngle = 200.0f;
         }
     }
-    else if(_tool_Abs(chassisDir - 90.0f) < 5.0f)//µ×ÅÌÏòÇ°
+    else if(_tool_Abs(chassisDir - 90.0f) < 5.0f)//åº•ç›˜å‘å‰
     {
         if(auto_ctrl_.kfs_num == ONLY_ONE 
             || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1))
         {
-             if(c == 1) // ×ó²à
+             if(c == 1) // å·¦ä¾§
                 targetBackAngle = 0.0f;
-            else if(c == 6) // ÓÒ²à
+            else if(c == 6) // å³ä¾§
                 targetBackAngle = 180.0f;
         }
         else
         {
-            if (c == 1) // ×ó²à
+            if (c == 1) // å·¦ä¾§
                 targetBackAngle = 340.0f;
-            else if (c == 6) // ÓÒ²à
+            else if (c == 6) // å³ä¾§
                 targetBackAngle = 200.0f;
         }
 
     }
-    else if(_tool_Abs(chassisDir - 270.0f) < 5.0f)//µ×ÅÌÏòºó
+    else if(_tool_Abs(chassisDir - 270.0f) < 5.0f)//åº•ç›˜å‘å
     {
         if(auto_ctrl_.kfs_num == ONLY_ONE
             || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1))
         {
-             if(c == 1) // ×ó²à
+             if(c == 1) // å·¦ä¾§
                 targetBackAngle = 180.0f;
-            else if(c == 6) // ÓÒ²à
+            else if(c == 6) // å³ä¾§
                 targetBackAngle = 0.0f;
         }
         else
         {
-             if (c == 1) // ×ó²à
+             if (c == 1) // å·¦ä¾§
                 targetBackAngle = 200.0f;
-            else if (c == 6) // ÓÒ²à
+            else if (c == 6) // å³ä¾§
                 targetBackAngle = 340.0f;
         }
         
     }
 
-    this->set_RotateAngle(targetBackAngle); //Ğı×ªµ½Ä¿±êÎ»ÖÃ
+    this->set_RotateAngle(targetBackAngle); //æ—‹è½¬åˆ°ç›®æ ‡ä½ç½®
 
     if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - targetBackAngle) < 5.0f)
     {
@@ -1439,7 +1439,7 @@ bool ArmSetup::state_backStillness(int targetKFS)
 /*=================================================================*/
 
 /**
- * @brief Ñ°Í£Ö¹
+ * @brief å¯»åœæ­¢
  */
 void ArmSetup::stop()
 {
@@ -1452,29 +1452,29 @@ void ArmSetup::stop()
 }
 
 /**
- * @brief Ñ°Ğ£×¼
+ * @brief å¯»æ ¡å‡†
  * 
  * 
- * @brief ÉÏµçĞ£×¼µÄÖØĞÂÉè¼Æ
- *        1. ÉÏµçºó£¬½øÈëĞ£×¼Ä£Ê½
- *        2. ÉìÕ¹µç»úÉè¼Æ²»±ä£¬ÒÀÈ»ÊÇËõµ½×î¶Ì
- *        3. pitchµç»ú¸ÄÎª·´ÏòÌ§µ½180¶È½øĞĞĞ£Õı
- *        4. ÔÆÌ¨µÄ»°£¬ºóĞø»úĞµ»á¸Ä³ÉµÖ×¡ÂÁ¹ÜÏŞÎ»£¬ÏŞÎ»ÖØ¶¨Î»Îª180¶È¡£
- *        5. Ì§Éıµç»úÎªÔÚ×îµÍ´¦£¬ÏŞÎ»ÖØ¶¨Î»Îª0Ã×
+ * @brief ä¸Šç”µæ ¡å‡†çš„é‡æ–°è®¾è®¡
+ *        1. ä¸Šç”µåï¼Œè¿›å…¥æ ¡å‡†æ¨¡å¼
+ *        2. ä¼¸å±•ç”µæœºè®¾è®¡ä¸å˜ï¼Œä¾ç„¶æ˜¯ç¼©åˆ°æœ€çŸ­
+ *        3. pitchç”µæœºæ”¹ä¸ºåå‘æŠ¬åˆ°180åº¦è¿›è¡Œæ ¡æ­£
+ *        4. äº‘å°çš„è¯ï¼Œåç»­æœºæ¢°ä¼šæ”¹æˆæŠµä½é“ç®¡é™ä½ï¼Œé™ä½é‡å®šä½ä¸º180åº¦ã€‚
+ *        5. æŠ¬å‡ç”µæœºä¸ºåœ¨æœ€ä½å¤„ï¼Œé™ä½é‡å®šä½ä¸º0ç±³
  */
 
 void ArmSetup::calibrateMotor()
 {
     this->set_controlMode(CURRENT_CONTROL_MODE); 
-    // ÉÏµçĞ£×¼M2006µç»úÎ»ÖÃ
-    // ¸øÓèM2006Ò»¸öĞ¡µçÁ÷¶¥×¡ÏŞÎ»£¬È»ºó¼ÆÊ±1s£¬½«µ±Ç°Î»ÖÃÖØ¶¨Î»Îª0¶È
+    // ä¸Šç”µæ ¡å‡†M2006ç”µæœºä½ç½®
+    // ç»™äºˆM2006ä¸€ä¸ªå°ç”µæµé¡¶ä½é™ä½ï¼Œç„¶åè®¡æ—¶1sï¼Œå°†å½“å‰ä½ç½®é‡å®šä½ä¸º0åº¦
     if(!arm_ctrlStatus.calibrate_start)
     {
         arm_ctrlStatus.calibrate_startTime = TimeStamp::getInstance().getSeconds();
         arm_ctrlStatus.calibrate_start = true;
     }
-    this->motor_stretch_->setTargetCurrent(700.0f); // ¸øÓèÒ»¸öĞ¡µçÁ÷¶¥×¡ÏŞÎ»
-    this->motor_launch_->setTargetCurrent(700.0f); // ¸øÓèÒ»¸öĞ¡µçÁ÷¶¥×¡ÏŞÎ»
+    this->motor_stretch_->setTargetCurrent(700.0f); // ç»™äºˆä¸€ä¸ªå°ç”µæµé¡¶ä½é™ä½
+    this->motor_launch_->setTargetCurrent(700.0f); // ç»™äºˆä¸€ä¸ªå°ç”µæµé¡¶ä½é™ä½
 
     //this->motor_rotate_->setTargetCurrent(1000.0f);
     if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.5f)
@@ -1501,11 +1501,11 @@ void ArmSetup::calibrateMotor()
 }
 
 /**
- * @brief Ñ°¿ÕÏĞ
+ * @brief å¯»ç©ºé—²
  */
 void ArmSetup::idle()
 {
-    // ¿ÕÏĞ¿ØÖÆº¯Êı£¬ÈôÉÏÒ»Ê±¿Ì·Ç´ËÄ£Ê½£¬Ôò¼ÇÒäÉÏÒ»Ê±¿ÌÎ»ÖÃ£¬²¢Î¬³Ö²»±ä
+    // ç©ºé—²æ§åˆ¶å‡½æ•°ï¼Œè‹¥ä¸Šä¸€æ—¶åˆ»éæ­¤æ¨¡å¼ï¼Œåˆ™è®°å¿†ä¸Šä¸€æ—¶åˆ»ä½ç½®ï¼Œå¹¶ç»´æŒä¸å˜
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
     this->setRotateStrategy(ROTATE_PATH_SHORTEST);
@@ -1523,11 +1523,11 @@ void ArmSetup::idle()
     this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
     this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
 
-    // this->setSuckerStatus(Sucker_Status_E::STOP); // ±£³ÖÉÏÒ»¿Ì×´Ì¬£¬²»Ç¿ÖÆ¹Ø±Õ
+    // this->setSuckerStatus(Sucker_Status_E::STOP); // ä¿æŒä¸Šä¸€åˆ»çŠ¶æ€ï¼Œä¸å¼ºåˆ¶å…³é—­
 }
 
 /**
- * @brief Ñ°µ÷ÊÔ
+ * @brief å¯»è°ƒè¯•
  */
 void ArmSetup::debug()
 {
@@ -1543,7 +1543,7 @@ Arm_InitData_S arm_initData = {
 
     .stretch_Ratio_ = 0.11421f,
     .launch_Ratio_ = 0.07221f,
-    //    .rotate_gearRatio_ = 144.878f,  //¾ÉµÄ
+    //    .rotate_gearRatio_ = 144.878f,  //æ—§çš„
     .rotate_gearRatio_ = 145.755789f,
     .pitch_gearRatio_ = 360.0f,
 
