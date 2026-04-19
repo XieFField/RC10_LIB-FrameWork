@@ -44,7 +44,7 @@ void FSM_Controller::loop()
 			break;
 	}
 	
-	
+
     switch(airjoy_data_.SWB)
     {
         case 0x00:

@@ -217,7 +217,7 @@ public:
      */
     void set_RotateAngle(float angle)
     {
-        target_joint_angle_.rotateJoint_angle_ = angle;
+        target_joint_angle_.rotateJoint_angle_ = normalize_deg_0_360(angle);
     }
 
     /**

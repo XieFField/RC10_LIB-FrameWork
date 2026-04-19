@@ -11,6 +11,13 @@ void ArmSetup::loop()
     if(!arm_ctrlStatus.init_flag)
         return;
 
+
+    if((motor_pitch_->getErrorNum() == 0x00 || !this->is_pitchEnable_) && (!arm_ctrlStatus.is_calibrating))
+    {
+        motor_pitch_->motorEnable();
+        this->is_pitchEnable_ = true;
+    }
+
 	
 //	ArmstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
     if(!arm_ctrlStatus.is_calibrating)
@@ -21,6 +28,18 @@ void ArmSetup::loop()
         this->update();
         last_arm_status_ = arm_status_;
         return;
+    }
+    else
+    {
+        if(arm_status_ == ARM_STOP)
+        {
+            this->motor_pitch_->motorDisable();
+        }
+        else
+        {
+            if(this->motor_pitch_->getErrorNum() == 0x00)
+                this->motor_pitch_->motorEnable();
+        }
     }
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
@@ -43,9 +62,6 @@ void ArmSetup::loop()
 
     if( arm_status_ == ARM_AUTO_CONTROL)
     {
-        // static bool ifFirst = true;
-        // if(ifFirst)
-        // {
             if(arm_ctrlStatus.auto_start == 1)
             {
                 this->start_toAutoCtrl(true);
@@ -54,12 +70,7 @@ void ArmSetup::loop()
             else
             {
                 this->start_toAutoCtrl(false);
-
-                #if ARM_AUTOMOVE
-                this->auto_ctrl_.now_state = ARM_AUTO_E::STATE_DONE;
-                #endif
             }
-        // }
     } 
 
 
@@ -73,7 +84,7 @@ void ArmSetup::loop()
 
         case ARM_AUTO_CONTROL:
             {
-                    autoControl();
+                autoControl();
             }   
             break;
 
@@ -146,11 +157,10 @@ void ArmSetup::manualControl()
 
         // 绑定吸盘状态
         int8_t current_sucker_logical = (this->getSuckerStatus() == Sucker_Status_E::SUCK) ? 1 : 0;
-        arm_ctrlStatus.last_manual_sucker = current_sucker_logical;
-        
+        arm_ctrlStatus.last_manual_sucker = current_sucker_logical;     
         arm_ctrlStatus.sucker_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_sucker_logical;
 
-
+        
         int8_t current_pitch_logical = (_tool_Abs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 1.0f) ? 1: 0;
         //上次是否在90度附近，认为是开状态，反之认为是关状态
         arm_ctrlStatus.last_manual_pitch = current_pitch_logical;
@@ -177,13 +187,11 @@ void ArmSetup::manualControl()
         if(next_height > target_joint_status_.launchJoint_Height_) // 正在抬升
         {
              float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
-             float norm_angle = fmodf(current_angle, 360.0f);
-             if(norm_angle < 0.0f) norm_angle += 360.0f;
 
              if(this->get_currentJointStatus().launchJoint_Height_ < 0.03f)
              {
                  // 目标区域限制是 30~135，所以必须在此范围内才能抬升
-                 if(norm_angle < 60.0f || norm_angle > 185.0f)
+                 if(current_angle < 60.0f || current_angle > 185.0f)
                  {
                      next_height = target_joint_status_.launchJoint_Height_; // 保持不变
                  }
@@ -261,27 +269,20 @@ void ArmSetup::autoControl()
 {
     // 自动控制函数
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+
+
     if(last_arm_status_ != ARM_AUTO_CONTROL || auto_ctrl_.start_to_autoctrl != 1)//若首次非此模式，需初始化一些状态
     {
         auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //自动流程状态机回到初始状态
         
             auto_ctrl_.flag.isrecalcPath = false; //路径重计算标志
-        auto_ctrl_.now_targetIndex = 0; //当前目标KFS索引重置
-        last_arm_status_ = ARM_AUTO_CONTROL;
+            auto_ctrl_.now_targetIndex = 0; //当前目标KFS索引重置
+            auto_ctrl_.flag.back_time = 0.0f;
+            last_arm_status_ = ARM_AUTO_CONTROL;
     }
-
-    /**
-     * 整体流程：
-     * 1. 升降到目标高度,吸盘pitch90度
-     * 2. 锁住云台，等待移动到目标前一桩，云台开始预判旋转时机
-     * 3. 旋转执行后，机械臂末端已经对住KFS侧法平面，预判并伸展到KFS位置
-     * 4. 云台对准时候就打开吸盘，伸展到底后，停留延迟x(0.3)s，后缩回
-     * 5. 缩回后，云台旋转回目标位置(初始or存储机构位置)
-     */
     
     if(auto_ctrl_.targetKFS[0] == 0)
         return; //没有目标KFS，直接返回 
-
 
     //行进间拾取
     switch(auto_ctrl_.kfs_num)
@@ -298,8 +299,667 @@ void ArmSetup::autoControl()
             break;
         }
     }
+
 }
 
+/*
+    新版机械臂的流程  和老版流程有不少不同，需要重写
+    (1)若是顶吸： 
+        执行state_to_waitStillness抬到最高，并将pitch设置为90度
+        接着执行state_alignStillness对齐 接近之后执行state_extStillness伸长到目标KFS位置
+        然后执行state_lowerStillness降低到目标KFS位置，并打开吸盘。(Lower阶段降到临界高度后停下，等待canExtend放行再下降到目标位置)
+        之后执行state_launchStillness抬升到安全高度，最后执行state_backStillness返回初始位置。
+
+
+    (2)若是侧吸：
+        执行state_to_waitStillness抬到最高，并将pitch设置为0度
+        接着执行state_alignStillness对齐 接近之后执行state_lowerStillness降低到目标KFS位置，并打开吸盘。
+        之后执行state_extStillness伸长到安全位置，最后执行state_backStillness返回初始位置。
+*/
+
+// 流程函数 停下拾取==============
+
+
+#if ARM_VERSION == 1
+
+void ArmSetup::auto_stillnessOne()
+{
+    switch(auto_ctrl_.now_state)
+    {
+        case ARM_AUTO_STILLNESS_E::STATE_DONE:
+        {
+            if(auto_ctrl_.start_to_autoctrl)
+            {
+                if(!auto_ctrl_.flag.isrecalcPath)
+                {
+                    this->set_TargetKFS(auto_ctrl_.targetKFS[0], 0);
+                    auto_ctrl_.now_targetIndex = 0;
+
+
+                    auto_ctrl_.flag.isrecalcPath = true;//重置路径重计算标志，确保路径只在流程开始时计算一次
+                    auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放行
+                    auto_ctrl_.flag.canChassisStart = false; //重置底盘移动许可
+                    auto_ctrl_.flag.isExtReach = false;
+                    auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
+
+                    this->set_PitchAngle(0.0f);
+                }
+
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT;
+            }
+            else
+            {
+                idle();
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //保持在完成状态
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_TO_WAIT:
+        {
+            if(state_to_waitStillness(auto_ctrl_.targetKFS[0]))
+            {
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_ALIGN;
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_ALIGN:
+        {
+            if(state_alignStillness(auto_ctrl_.targetKFS[0]))
+            {
+
+                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //顶吸
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
+                }
+                else                    
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;   //侧吸  
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_LOWER:
+        {
+            if(state_lowerStillness(auto_ctrl_.targetKFS[0]))
+            {
+                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//顶吸
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+                    //(Lower阶段降到临界高度后停下，等待canExtend放行再下降到目标位置)
+                }
+                else
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;   //侧吸  
+                }
+            }   
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_EXT:
+        {
+            // if(auto_ctrl_.flag.canExtend)
+            // {
+            //     if(state_extStillness(auto_ctrl_.targetKFS[0]))
+            //     {
+            //         auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+            //     }
+            // }
+
+            if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//顶吸
+            {
+                if(state_extStillness(auto_ctrl_.targetKFS[0]))
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;
+                }
+            }
+            else   //侧吸
+            {
+                if(auto_ctrl_.flag.canExtend)
+                {
+                    if(state_extStillness(auto_ctrl_.targetKFS[0]))
+                    {
+                        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+                    }
+                }
+
+            }
+
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_LAUNCH:
+        {
+            if(state_launchStillness(auto_ctrl_.targetKFS[0]))
+            {
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_BACK;
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_BACK:
+        {
+            if(state_backStillness(auto_ctrl_.targetKFS[0]))
+            {
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE;
+                arm_ctrlStatus.auto_start = 0;
+                auto_ctrl_.start_to_autoctrl = false; //完成一次流程后，重置自动控制启动条件
+                auto_ctrl_.flag.isrecalcPath = false; //重置路径重计算标志
+            }
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
+void ArmSetup::auto_stillnessTwo()
+{
+    //大体执行流程和stillnessOne一样,
+    //但目前没有做存储机构，所以第一个KFS就在back阶段直接放下。
+    switch(auto_ctrl_.now_state)
+    {
+        case ARM_AUTO_STILLNESS_E::STATE_DONE:
+        {
+            if(auto_ctrl_.start_to_autoctrl && auto_ctrl_.now_targetIndex <= 1)
+            {
+
+                if(!auto_ctrl_.flag.isrecalcPath)
+                {
+                    this->set_TargetKFS(auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1]);
+                    auto_ctrl_.now_targetIndex = 0;
+                    auto_ctrl_.flag.back_time = 0.0f;
+                    auto_ctrl_.flag.isrecalcPath = true;//重置路径重计算标志，确保路径只在流程开始时计算一次
+                    auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放行
+                    auto_ctrl_.flag.canChassisStart = false; //重置底盘移动许可
+                    auto_ctrl_.flag.isExtReach = false;
+                    auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
+
+                    this->set_PitchAngle(0.0f);
+                }
+
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT;
+            }
+            else
+            {
+                idle();
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //保持在完成状态
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_TO_WAIT:
+        {
+            if(state_to_waitStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            {
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_ALIGN;
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_ALIGN:
+        {
+            // if(state_alignStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            // {
+            //     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;
+            // }
+
+            if(state_alignStillness(auto_ctrl_.targetKFS[0]))
+            {
+
+                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //顶吸
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
+                }
+                else                    
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;   //侧吸  
+            }
+
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_LOWER:
+        {
+            // if(state_lowerStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            // {
+            //     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;
+            //     #if ARM_AUTO_DEBUG_NOCHASSIS
+            //     // auto_ctrl_.flag.canExtend = true; //放行进入伸展阶段
+            //     #endif
+            // }
+
+            if(state_lowerStillness(auto_ctrl_.targetKFS[0]))
+            {
+                if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//顶吸
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+                    //(Lower阶段降到临界高度后停下，等待canExtend放行再下降到目标位置)
+                }
+                else
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_EXT;   //侧吸  
+                }
+            }   
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_EXT:
+        {
+            // if(auto_ctrl_.flag.canExtend)
+            // {
+            //     if(state_extStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            //     {
+            //         auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+            //     }
+            // }
+
+            if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)//顶吸
+            {
+                if(state_extStillness(auto_ctrl_.targetKFS[0]))
+                {
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LOWER;
+                }
+            }
+            else   //侧吸
+            {
+                if(auto_ctrl_.flag.canExtend)
+                {
+                    if(state_extStillness(auto_ctrl_.targetKFS[0]))
+                    {
+                        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+                    }
+                }
+            }
+
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_LAUNCH:
+        {
+            if(state_launchStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            {
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_BACK;
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_BACK:
+        {
+            if(state_backStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
+            {
+                
+                
+                if(auto_ctrl_.now_targetIndex == 0)
+                {
+                    if(!auto_ctrl_.flag.isbackdone)
+                    {
+                        auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds(); //记录返回开始的时间戳
+                        auto_ctrl_.flag.isbackdone = true;
+                    }
+
+                    if(auto_ctrl_.flag.isbackdone && (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time) >= 1.2f)
+                    {
+                        this->setSuckerStatus(Sucker_Status_E::STOP); //放下第一个KFS后关闭吸盘
+                        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT; //继续下一个KFS的流程  
+                        auto_ctrl_.now_targetIndex ++; //切换到下一个目标KFS
+
+                        auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放行
+                        auto_ctrl_.flag.canChassisStart = false; //重置底盘移动许可
+                        auto_ctrl_.flag.isExtReach = false;
+                        auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
+                    }
+                }
+                else if(auto_ctrl_.now_targetIndex > 1)
+                {
+                    
+                    arm_ctrlStatus.auto_start = 0;
+                   
+                    auto_ctrl_.start_to_autoctrl = false; //完成一次流程后，重置自动控制启动条件
+
+                    auto_ctrl_.flag.isrecalcPath = false; //重置路径重计算标志
+                    auto_ctrl_.flag.back_time = 0.0f; //重置返回时间
+                    auto_ctrl_.flag.isbackdone = false; //重置返回完成标志
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //保持在完成状态
+                }
+            }
+            break;
+        }
+
+        case ARM_AUTO_STILLNESS_E::STATE_OVER:
+        {
+            //流程完成，保持在完成状态
+            idle();
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
+//流程函数 行进间拾取==============
+bool ArmSetup::state_to_waitStillness(int targetKFS)
+{
+    this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+
+    // float kfs_height = MF_high[targetKFS -1]; //获取目标KFS高度
+
+    float target_height = 0.0f;
+
+    target_height = this->init_data_.max_launchHeight_; //直接抬升到最高，等待行进间旋转对齐后再放低
+    if(isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_))
+        this->set_LaunchHeight(target_height); //抬升到目标高度
+    else
+    {
+        this->set_LaunchHeight(this->get_currentJointStatus().launchJoint_Height_); //保持当前高度不变
+        float sanitized_angle = sanitizeRotateAngle(this->get_currentJointStatus().rotateJoint_angle_);
+        this->set_RotateAngle(sanitized_angle); //旋转到安全区域
+    }                                                                                                                                                               
+
+    int8_t pitch_state = 0;
+    if(MF_high[targetKFS -1] == 0.6f)
+        pitch_state = 0;
+    else
+        pitch_state = 1;
+
+    if(_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - target_height) < 0.01f)
+    {   
+        if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 0)
+            this->set_PitchAngle(90.0f); //高的KFS保持吸盘水平，侧吸
+        else
+            this->set_PitchAngle(0.0f); //低的KFS吸盘竖直向下，顶吸
+        
+        return true;
+    }
+    else
+        return false;
+}
+
+bool ArmSetup::state_alignStillness(int targetKFS)
+{
+    this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    
+    //改为云台升到最高之后就旋转
+    this->set_RotateAngle(90.0f); //对齐KFS侧面法向
+    if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 2.0f)
+        return true;
+    else
+        return false;
+}
+
+bool ArmSetup::state_lowerStillness(int targetKFS)
+{
+    //判定到达目标的MF_road后，放低机械臂
+
+    this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+
+    float targetLowerHeight = 0.0f; //KFS所在高度的云台下放高度，单位米
+
+
+    if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //顶吸
+    {
+        if(MF_high[targetKFS - 1] == 0.2f)
+            targetLowerHeight = 0.10f;
+        else if(MF_high[targetKFS - 1] == 0.4f)
+            targetLowerHeight = this->init_data_.safe_height; 
+        else if(MF_high[targetKFS - 1] == 0.6f)
+            targetLowerHeight = this->init_data_.max_launchHeight_;
+        else
+            targetLowerHeight = this->init_data_.max_launchHeight_;
+    }
+    else //侧吸
+    {
+        if(MF_high[targetKFS - 1] == 0.2f)
+            targetLowerHeight = 0.0f;
+        else if(MF_high[targetKFS - 1] == 0.4f)
+            targetLowerHeight = this->init_data_.safe_height; 
+        else if(MF_high[targetKFS - 1] == 0.6f)
+            targetLowerHeight = this->init_data_.max_launchHeight_;
+        else
+            targetLowerHeight = this->init_data_.max_launchHeight_;
+    }
+
+    bool canLower = false;
+    canLower = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
+                                            auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
+                                            0.55f); //进入目标KFS所在的MFroad中心且距离小于0.55m就放低
+    
+    if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //顶吸
+    {
+        if(canLower)
+        {
+            this->setSuckerStatus(Sucker_Status_E::SUCK); //下降时打开吸盘
+            this->set_LaunchHeight(targetLowerHeight + 0.05f); //放低到目标高度 + 5cm
+            if(auto_ctrl_.flag.canExtend)
+            {
+                this->set_LaunchHeight(targetLowerHeight); //放低到目标高度
+            }
+        }
+        else
+            return false;
+
+        if(_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - targetLowerHeight) < 0.01f)
+        {
+            if(!auto_ctrl_.flag.isExtReach)
+            {
+                auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //记录首次到达目标位置的时间戳
+                auto_ctrl_.flag.isExtReach = true;
+            }
+        } 
+        else
+            return false;
+
+        if(auto_ctrl_.flag.isExtReach && (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.reach_finishTimeStore) >= 0.2f)
+        {
+            return true;
+        }
+    }
+    else //侧吸
+    {
+        if(canLower)
+        {
+            this->set_LaunchHeight(targetLowerHeight); //放低到目标高度
+            this->setSuckerStatus(Sucker_Status_E::SUCK); //下降时打开吸盘
+        }
+        else
+            return false;
+            
+        if(_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - targetLowerHeight) < 0.02f)
+            return true;
+        else
+            return false;
+    }
+
+    return false;
+}
+
+
+bool ArmSetup::state_extStillness(int targetKFS)
+{
+    this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    
+
+    if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)
+    {
+        if(MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
+                                            auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
+                                            0.6f)) //进入目标KFS所在的MFroad中心且距离小于0.6m就伸展
+        {
+            this->set_StretchLength(this->init_data_.max_stretchLength_); //伸展到最大长度
+            return true; //顶吸伸展到位后直接进入下一个流程，准备下降
+        }
+        else
+            return false;
+    }
+    else
+    {
+        this->set_StretchLength(this->init_data_.max_stretchLength_); //伸展到最大长度
+
+        if(_tool_Abs(this->get_currentJointStatus().stretchJoint_Length_ - 
+                this->init_data_.max_stretchLength_) < 0.01f)//伸展完成判定
+        {
+            if(!auto_ctrl_.flag.isExtReach)
+            {
+                auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //记录首次到达目标位置的时间戳
+                auto_ctrl_.flag.isExtReach = true;
+            }
+        }
+        
+        const float now_s = TimeStamp::getInstance().getSeconds();
+
+
+        if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1)
+        {
+            return true; //顶吸到位后停在伸展位置等待抬升，不必缩回
+        }
+        else //侧吸只需短暂停留，确认不干涉就缩回
+        {
+            if(auto_ctrl_.flag.isExtReach && (now_s - auto_ctrl_.flag.reach_finishTimeStore) >= 0.2f)
+            {
+                this->set_StretchLength(0.0f); //停留0.15s后缩回
+                return true;
+            }
+        }
+        return false;
+    }
+
+    return false;
+
+}
+
+bool ArmSetup::state_launchStillness(int targetKFS)
+{
+    this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    float canMoveHeight = 0.0f;//云台升到此高度即可移动
+    if(MF_high[targetKFS - 1] == 0.2f)
+        canMoveHeight = this->init_data_.safe_height;
+    else if(MF_high[targetKFS - 1] == 0.4f)
+        canMoveHeight = this->init_data_.max_launchHeight_; 
+    else if(MF_high[targetKFS - 1] == 0.6f)
+        canMoveHeight = this->init_data_.max_launchHeight_;
+    else
+        canMoveHeight = this->init_data_.max_launchHeight_;
+
+    this->set_LaunchHeight(this->init_data_.max_launchHeight_); //升到最高点，准备移动
+
+    if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.02f)
+    {
+        auto_ctrl_.flag.canChassisStart = true; //机械臂已经升到可以移动的高度了
+        if(auto_ctrl_.flag.pitch_state[auto_ctrl_.now_targetIndex] == 1) //顶吸
+        {
+            this->set_StretchLength(0.0f); //顶吸伸展到位后直接缩回，准备返回
+        }
+        return true;
+    }
+    else
+        return false;
+    // return true;
+}
+
+bool ArmSetup::state_backStillness(int targetKFS)
+{
+    this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    float targetBackAngle = 0.0f; //根据车移动方向来，机械臂朝向底盘移动反方向
+
+    const int8_t idx_mfroad = auto_ctrl_.pathInfo.Index_MFroad[auto_ctrl_.now_targetIndex];
+    if(idx_mfroad < 0 || idx_mfroad >= 11)
+        return false;
+
+    float chassisDir = MF_AutoCtrler::chassisMoveDir(auto_ctrl_.pathInfo.mustPastMap[idx_mfroad]
+                                        , auto_ctrl_.pathInfo.mustPastMap[idx_mfroad + 1]);
+    int8_t c = 0,r = 0;
+    MF_AutoCtrler::Map_ToCR(auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], c, r);
+
+    if(_tool_Abs(chassisDir - 0.0f) < 5.0f) //底盘向右走
+    {
+        if(auto_ctrl_.kfs_num == ONLY_ONE 
+                || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1)) 
+        {
+            if(r == 1)//下侧
+                targetBackAngle = 180.0f;
+            
+            else if(r == 6)//上侧
+                targetBackAngle = 0.0f;
+        }
+        else
+        {
+            if(r == 1)//下侧
+                targetBackAngle = 200.0f;
+            
+            else if(r == 6)//上侧
+                targetBackAngle = 340.0f;
+        }
+
+    }
+    else if(_tool_Abs(chassisDir - 180.0f) < 5.0f)//底盘向左
+    {
+        if(auto_ctrl_.kfs_num == ONLY_ONE 
+            || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1)) 
+        {
+             if(r == 1) // 下侧
+                targetBackAngle = 0.0f;
+            else if(r == 6) // 上侧
+                targetBackAngle = 180.0f;
+        }
+        else
+        {
+            if (r == 1) // 下侧
+                targetBackAngle = 340.0f;
+            else if (r == 6) // 上侧
+                targetBackAngle = 200.0f;
+        }
+    }
+    else if(_tool_Abs(chassisDir - 90.0f) < 5.0f)//底盘向前
+    {
+        if(auto_ctrl_.kfs_num == ONLY_ONE 
+            || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1))
+        {
+             if(c == 1) // 左侧
+                targetBackAngle = 0.0f;
+            else if(c == 6) // 右侧
+                targetBackAngle = 180.0f;
+        }
+        else
+        {
+            if (c == 1) // 左侧
+                targetBackAngle = 340.0f;
+            else if (c == 6) // 右侧
+                targetBackAngle = 200.0f;
+        }
+
+    }
+    else if(_tool_Abs(chassisDir - 270.0f) < 5.0f)//底盘向后
+    {
+        if(auto_ctrl_.kfs_num == ONLY_ONE
+            || (auto_ctrl_.kfs_num == TWO && auto_ctrl_.now_targetIndex == 1))
+        {
+             if(c == 1) // 左侧
+                targetBackAngle = 180.0f;
+            else if(c == 6) // 右侧
+                targetBackAngle = 0.0f;
+        }
+        else
+        {
+             if (c == 1) // 左侧
+                targetBackAngle = 200.0f;
+            else if (c == 6) // 右侧
+                targetBackAngle = 340.0f;
+        }
+        
+    }
+
+    this->set_RotateAngle(targetBackAngle); //旋转到目标位置
+
+    if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - targetBackAngle) < 5.0f)
+    {
+        return true;
+    }
+    else
+        return false;
+}
+#else
+// VERSION 0 的 纯侧吸版本
 // 流程函数 停下拾取==============
 void ArmSetup::auto_stillnessOne()
 {
@@ -773,6 +1433,8 @@ bool ArmSetup::state_backStillness(int targetKFS)
 }
 
 
+#endif
+
 
 /*=================================================================*/
 
@@ -785,7 +1447,7 @@ void ArmSetup::stop()
     this->motor_launch_->setTargetCurrent(0.0f);
     this->motor_stretch_->setTargetCurrent(0.0f);
     this->motor_rotate_->setTargetCurrent(0.0f);
-    // this->motor_pitch_->setTargetCurrent(0.0f);
+    this->motor_pitch_->setTargetCurrent(0.0f);
     this->setSuckerStatus(Sucker_Status_E::STOP);
 }
 
@@ -811,22 +1473,28 @@ void ArmSetup::calibrateMotor()
         arm_ctrlStatus.calibrate_startTime = TimeStamp::getInstance().getSeconds();
         arm_ctrlStatus.calibrate_start = true;
     }
-    this->motor_stretch_->setTargetCurrent(-700.0f); // 给予一个小电流顶住限位
-    this->motor_pitch_->setTargetCurrent(-1000.0f); // 给予一个小电流顶住限位
+    this->motor_stretch_->setTargetCurrent(700.0f); // 给予一个小电流顶住限位
+    this->motor_launch_->setTargetCurrent(700.0f); // 给予一个小电流顶住限位
+
     //this->motor_rotate_->setTargetCurrent(1000.0f);
     if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.5f)
     {
         //relocate
         this->motor_stretch_->relocate_totalAngle(0.0f);
-        this->motor_pitch_->motorSetZero();
-        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(179.9f));
+        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(179.99f));
         this->motor_launch_->relocate_totalAngle(0.0f);
+
+        if(this->is_pitchEnable_)
+        {
+            this->motor_pitch_->motorSetZero();
+        }
+
+
 
         //set current to 0
         this->motor_stretch_->setTargetCurrent(0.0f);
-        // this->motor_pitch_->setTargetCurrent(0.0f);
         this->motor_rotate_->setTargetCurrent(0.0f);
-        // this->motor_launch_->setTargetCurrent(0.0f);
+        this->motor_launch_->setTargetCurrent(0.0f);
 
         arm_ctrlStatus.is_calibrating = true;
     }
@@ -857,29 +1525,25 @@ void ArmSetup::idle()
 
     // this->setSuckerStatus(Sucker_Status_E::STOP); // 保持上一刻状态，不强制关闭
 }
-// /*====================== 测试调试部分 ======================*/
 
-// float test_rotate_angle = 0.2f;
-
-// float test_launch_height = 0.01f;
-// volatile float launch_see = 0.0f;
 /**
  * @brief 寻调试
  */
 void ArmSetup::debug()
 {
-    return; 
+
+    
 }
 
 Arm_InitData_S arm_initData = {
     .max_launchHeight_ = 0.29f,
-    .max_stretchLength_ = 0.105f,
+    .max_stretchLength_ = 0.160f,
     .arm_length_ = 0.6f,
     .end_link_length_ = 0.08f,
 
-    .stretch_Ratio_ = 0.08417f,
+    .stretch_Ratio_ = 0.11421f,
     .launch_Ratio_ = 0.07221f,
-//    .rotate_gearRatio_ = 144.878f,  //旧的
+    //    .rotate_gearRatio_ = 144.878f,  //旧的
     .rotate_gearRatio_ = 145.755789f,
     .pitch_gearRatio_ = 360.0f,
 
@@ -888,6 +1552,5 @@ Arm_InitData_S arm_initData = {
     .safe_height = 0.14f,
     .Sucker_GPIO_Port = SUCKER_error_GPIO_Port,
     .Sucker_GPIO_Pin =  SUCKER_error_Pin,
-    .max_pitchRPM_ = 50.0f,
-    
+    .max_pitchRPM_ = 45.0f,
 };

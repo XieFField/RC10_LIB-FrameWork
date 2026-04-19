@@ -1,5 +1,13 @@
 #include "Setup_ConfigInit.h"
 
+/**
+ * 后续总计电机数量：底盘 4*航向U8(拓展帧，预计500Hz控制,100Hz反馈) 4*舵向M3508(1000Hz控制和回传) 
+ *                  机械臂 2*M3508 3*M2006
+ *                  武器 1*M3508 2*M2006  1*DM4310
+ */
+
+
+
  // 外部声明USB高速设备句柄
 extern "C" 
 {
@@ -57,8 +65,8 @@ Chassis chassis;
 FSM_Controller Finite_StateMachine;
 ArmSetup ARM_Controller(arm_initData);
 Robot_WeaponSage_Setup Weapon_Controller(initData_);
-test test_task;
-IMU_test imu_test;
+//test test_task;
+//IMU_test imu_test;
 
 
 
@@ -69,16 +77,20 @@ IMU_test imu_test;
 
 /*================Motor Instances==============*/
 
-                           /* 锟斤拷锟斤拷 */
-M3508 omni_wheel1(1, CAN1_Bus); M3508 omni_wheel2(2, CAN1_Bus); 
-M3508 omni_wheel3(3, CAN1_Bus); M3508 omni_wheel4(4, CAN1_Bus);
+                           /* 底盘全向轮电机 */
+                           //不需要角度信息，因此不计算角度和总路程，减少计算量
+M3508 omni_wheel1(1, CAN1_Bus, false, false); M3508 omni_wheel2(2, CAN1_Bus, false, false); 
+M3508 omni_wheel3(3, CAN1_Bus, false, false); M3508 omni_wheel4(4, CAN1_Bus, false, false);
 
                            /* 串联臂 */      
-M3508 arm_launchMotor(5, CAN1_Bus); M2006 arm_stretchMotor(8, CAN1_Bus);
-M3508 arm_rotateMotor(7, CAN1_Bus); DM_Motor arm_pitchMotor(J4310_Type, 0x0A,0x0A, CAN1_Bus);
+M3508 arm_launchMotor(5, CAN1_Bus, true, false); M2006 arm_stretchMotor(8, CAN1_Bus, true, false);
+M3508 arm_rotateMotor(7, CAN1_Bus, true, false); DM_Motor arm_pitchMotor(J4310_Type, 0x10, 0x10, CAN1_Bus);
 
-M3508 Weapon_launchMotor(1, CAN2_Bus); M2006 Weapon_clawMotor(2, CAN2_Bus);
-M2006 Weapon_traverseMotor(3, CAN2_Bus); DM_Motor Weapon_wristMotor(J4310_Type, 0x05,0x05, CAN2_Bus);
+
+
+
+M3508 Weapon_launchMotor(1, CAN2_Bus, true, false); M2006 Weapon_clawMotor(2, CAN2_Bus, true, false);
+M2006 Weapon_traverseMotor(3, CAN2_Bus, true, false); DM_Motor Weapon_wristMotor(J4310_Type, 0x05,0x05, CAN2_Bus);
 /*================Motor Instances==============*/
 
 
@@ -205,8 +217,8 @@ void ALL_Setup_ConfigInit(void)
 {
     // 初始化串口6的相机模块
     Module_Camera::GetInstance(&huart6)->InitUART();
-    test_task.init();
-	imu_test.init();
+    //test_task.init();
+	//imu_test.init();
    // Position* pos = Position::GetInstance(&huart1);
    // pos->InitUART();
 
@@ -278,7 +290,6 @@ void CAN_Motor_Init(void)
    DJIGroupCAN1_High.addMotor(&arm_launchMotor);
    DJIGroupCAN1_High.addMotor(&arm_stretchMotor);
    DJIGroupCAN1_High.addMotor(&arm_rotateMotor);
-   // DJIGroupCAN1_High.addMotor(&arm_pitchMotor);
 
    CAN1_Bus->registerMotor(&DJIGroupCAN1_Low);
    CAN1_Bus->registerMotor(&DJIGroupCAN1_High);
@@ -323,7 +334,7 @@ void CAN_Motor_Init(void)
    
    PID_Param_Config arm_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
    PID_Param_Config arm_3508_anglePID = m3508_angle_pid_params;
-   arm_3508_anglePID.output_limit = 420.0f;
+   arm_3508_anglePID.output_limit = 350.0f;
    // arm_3508_speedPID.output_limit = 420.0f; // 根据机械臂要求调整输出限幅
    
    arm_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);

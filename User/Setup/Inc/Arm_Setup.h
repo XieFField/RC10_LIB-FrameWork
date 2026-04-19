@@ -51,6 +51,20 @@
  *    (同样需要遵守安全高度下的安全角度限制)
  *    且return到的位置不固定为0度，而是和起始位置相反，若起始是0，则return到180度，若起始是180度，则return到0度
  *    (本质是和行进方向相反)，而且在return阶段的云台旋转策略跟随sign_align阶段的旋转策略。
+ * 
+ *  @version 9.0  或许放弃的一版
+ *  新版机械臂的流程  和老版流程有不少不同，需要重写
+    (1)若是顶吸： 
+        执行state_to_waitStillness抬到最高，并将pitch设置为90度
+        接着执行state_alignStillness对齐 接近之后执行state_extStillness伸长到目标KFS位置
+        然后执行state_lowerStillness降低到目标KFS位置，并打开吸盘。(Lower阶段降到临界高度后停下，等待canExtend放行再下降到目标位置)
+        之后执行state_launchStillness抬升到安全高度，最后执行state_backStillness返回初始位置。
+
+
+    (2)若是侧吸：
+        执行state_to_waitStillness抬到最高，并将pitch设置为0度
+        接着执行state_alignStillness对齐 接近之后执行state_lowerStillness降低到目标KFS位置，并打开吸盘。
+        之后执行state_extStillness伸长到安全位置，最后执行state_backStillness返回初始位置。
  */
 
 #ifndef __ARM_SETUP_H
@@ -81,8 +95,7 @@ extern "C" {
 // #include "usart.h"
 
 #define ARM_AUTO_DEBUG_NOCHASSIS  0 //無底盤下，用虛擬坐標進行驗證自動邏輯
-#define ARM_AUTOMOVE 0 //0:停下拾取KFS，1:行进间拾取KFS
-
+#define ARM_VERSION 1 //版本号， 若是1则意味着是顶吸侧吸融合版本 如果是0则是纯侧吸版本
 
 
 typedef struct{
@@ -100,12 +113,12 @@ typedef struct{
 
     int8_t last_manual_extend = 0; //上次手动伸展状态
     int8_t last_manual_sucker = 0; //上次手动吸盘状态
+
     int8_t last_manual_pitch = 0; //上次手动俯仰状态
 
-
+    int8_t pitch_switch_offset = 0; //俯仰开关偏移绑定
     int8_t extend_switch_offset = 0; // 伸展开关偏移绑定
     int8_t sucker_switch_offset = 0; // 吸盘开关偏移绑定
-    int8_t pitch_switch_offset = 0; //俯仰开关偏移绑定
 }arm_ctrl_status_S;
 
 
@@ -127,22 +140,6 @@ typedef enum{
 }KFS_NUM_E;
 
 typedef struct{
-    Point2D entranceMap;
-    Point2D bestB1;     //前一桩
-    Point2D bestBMF1;   //正对桩
-    Point2D bestB2;
-    Point2D bestBMF2;
-    Point2D exitMap;
-}autopathPos_S;
-
-typedef struct{
-    const float stretch_time_s = 0.3f; //伸展时间，单位秒
-
-    float gimbal_max_rad = 0.0f; //云台最大旋转角速度，单位弧度每秒
-    float rotateSpeedRate_ = 0.8f; //云台旋转速度比例
-}arm_timeset_S;
-
-typedef struct{
     int targetKFS[3] = {0,0,0};
     int now_targetIndex = 0;
     KFS_NUM_E kfs_num = ONLY_ONE;
@@ -161,15 +158,11 @@ typedef struct{
         Point2D PB;
     }PointPAB[2];
 
-   
-
-
     /**
      * @brief 旋转路径策略 正方向表示角度正增，负方向表示角度负增；
      *                    正增为逆时针旋转，负增为顺时针旋转
      */
     Rotate_Strategy_E current_strategy = ROTATE_PATH_SHORTEST; 
-    
     ARM_AUTO_STILLNESS_E now_state = STATE_DONE;
     MF_AutoCtrler::PathInformation_S pathInfo; 
     struct{
@@ -181,8 +174,8 @@ typedef struct{
 
         bool isbackdone = false; //返回完成标志
         float back_time = 0.0f; //返回时间
+        int8_t pitch_state[2] = {0,0}; //记录目标KFS的pitch状态，0代表侧吸，1代表顶吸
     }flag;
-
 }ARM_AUTO_S;
 
 
@@ -201,7 +194,6 @@ public:
     ArmSetup(Arm_InitData_S init_Data)
         : Robot_Arm(init_Data), RtosTask("ArmSetup", 1) 
     {
-
     }
 
     bool isArmcalibrated() const
@@ -220,8 +212,8 @@ public:
         this->registerMotor_Rotate(motor_ArmRotate);
         this->registerMotor_Pitch(motor_ArmPitch);
 
-        this->setPitchReversed(true); //俯仰电机反向
-        this->setStretchReversed(false); //伸展电机不反向
+        // this->setPitchReversed(true); //俯仰电机反向
+        this->setStretchReversed(true); //伸展电机反向
         this->setRotateReversed(false);
         this->setLaunchReversed(true); //升降电机反向
         start(osPriorityHigh-1, 512); 
@@ -307,6 +299,16 @@ public:
             auto_ctrl_.pathInfo.Index_MFroad[i] = temp.Index_MFroad[i];
         }
 
+        if(MF_high[auto_ctrl_.targetKFS[0]-1] == 0.6f)
+            auto_ctrl_.flag.pitch_state[0] = 0; //高的KFS保持吸盘水平，侧吸
+        else
+            auto_ctrl_.flag.pitch_state[0] = 1; //低的KFS吸盘竖直向下，顶吸
+
+        if(MF_high[auto_ctrl_.targetKFS[1]-1] == 0.6f)
+            auto_ctrl_.flag.pitch_state[1] = 0; //高的KFS保持吸盘水平，侧吸
+        else
+            
+            auto_ctrl_.flag.pitch_state[1] = 1; //低的KFS吸盘竖直向下，顶吸
 
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
@@ -398,19 +400,12 @@ private:
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
         const float safe_h = init_data_.safe_height;
-        
-        // 归一化到 0-360
-        float norm_deg = fmodf(rotate_angle_deg, 360.0f);
-        if(norm_deg < 0.0f) norm_deg += 360.0f;
 
-        if(h < 0.03f)
-        {
-            return (norm_deg >= 60.0f && norm_deg <= 185.0f);
-        }
-        else if(h < safe_h - 0.01f)
-        {
-            return (norm_deg >= 60.0f && norm_deg <= 185.0f);
-        }
+        // 不重复处理归一化
+        const float norm_deg = rotate_angle_deg;
+
+        if(h < 0.03f) return (norm_deg >= 60.0f && norm_deg <= 185.0f);
+        if(h < safe_h - 0.01f) return (norm_deg >= 60.0f && norm_deg <= 185.0f);
         return true;
     }
 
@@ -426,29 +421,16 @@ private:
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
         const float safe_h = init_data_.safe_height;
-        
-        if(h < safe_h - 0.01f)
-        {
-            // 归一化到 0-360
-            float norm_deg = fmodf(desired_deg, 360.0f);
-            if(norm_deg < 0.0f) norm_deg += 360.0f;
 
-            if(h < 0.03f)
-            {
-                if(norm_deg < 60.0f ) return 60.0f;
-                if(norm_deg > 185.0f && norm_deg < 270.0f) return 180.0f;
-                if(norm_deg >= 270.0f) return 60.0f;
-                return norm_deg;
-            }
-            else
-            {
-                if(norm_deg < 60.0f) return 60.0f;
-                if(norm_deg > 185.0f && norm_deg < 270.0f) return 180.0f; // 185~270区间钳制到180
-                if(norm_deg >= 270.0f) return 60.0f; // 270~360(即-90~0)区间钳制到60
-                return norm_deg;
-            }
-        }
-        return desired_deg;
+        if(h >= safe_h - 0.01f) return desired_deg;
+
+        // 不重复处理归一化
+        const float norm_deg = desired_deg;
+
+        if(norm_deg < 60.0f) return 60.0f;
+        if(norm_deg > 185.0f && norm_deg < 270.0f) return 180.0f;
+        if(norm_deg >= 270.0f) return 60.0f;
+        return norm_deg;
     }
 
     /**
@@ -588,7 +570,6 @@ protected:
         float launch_rate = 0.03f;
         int cnt = 0;
     }manual_control;
-
 };
 
 

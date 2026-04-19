@@ -64,8 +64,8 @@ uint8_t ab[4];
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void PeriphCommonClock_Config(void);
 static void MPU_Config(void);
-
 /* USER CODE BEGIN PFP */
 #ifdef __cplusplus
 extern "C"
@@ -90,7 +90,6 @@ extern "C"
 int main(void)
 {
 
-  /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
 
@@ -108,7 +107,7 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
-
+    PeriphCommonClock_Config();
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
@@ -128,16 +127,14 @@ int main(void)
   MX_USART10_UART_Init();
   MX_UART7_Init();
   MX_UART8_Init();
-   MX_I2C5_Init();
+  MX_I2C5_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim6); // 启动定时器不然CAN任务不会跑的
   ALL_Setup_ConfigInit();
-  // HAL_UART_Transmit_DMA(&huart3,rx_buffer,RX_BUFFER_SIZE);
-
   /* USER CODE END 2 */
-                                                      
+
   /* Init scheduler */
-  osKernelInitialize(); /* Call init function for freertos objects (in cmsis_os2.c) */
+  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
   MX_FREERTOS_Init();
 
   /* Start scheduler */
@@ -210,6 +207,32 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+ * @brief Peripherals Common Clock Configuration
+ * @retval None
+ */
+void PeriphCommonClock_Config(void)
+{
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
+
+  /* FDCAN kernel clock = PLL2Q = 120MHz (based on current parameters) */
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_FDCAN;
+  PeriphClkInitStruct.PLL2.PLL2M = 5;
+  PeriphClkInitStruct.PLL2.PLL2N = 96;
+  PeriphClkInitStruct.PLL2.PLL2P = 2;
+  PeriphClkInitStruct.PLL2.PLL2Q = 4;
+  PeriphClkInitStruct.PLL2.PLL2R = 2;
+  PeriphClkInitStruct.PLL2.PLL2RGE = RCC_PLL2VCIRANGE_2;
+  PeriphClkInitStruct.PLL2.PLL2VCOSEL = RCC_PLL2VCOWIDE;
+  PeriphClkInitStruct.PLL2.PLL2FRACN = 0;
+  PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_PLL2;
+
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
   {
     Error_Handler();
   }
