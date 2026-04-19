@@ -43,6 +43,11 @@ namespace WeaponSage_Setup
 
         int8_t last_manual_claw_state = 0; // 0: open, 1: close
         int8_t claw_switch_offset = 0;
+        int8_t last_scroll_state = 0;
+        int8_t scroll_offset = 0;
+
+        int8_t isClaw_tight = 1; // 0 : open, 1: tight
+        int8_t last_isClaw_tight = 1;
     }ctrl_status_S;
 
     typedef enum{
@@ -71,12 +76,10 @@ namespace WeaponSage_Setup
             bool is_moving = false;  
 			bool wrist_enable=false;
         }auto_state_bool_S; //局部状态结构体
-
-        float claw_close_pos = 32.36f;
+		  float claw_close_pos = 32.36f;
         float claw_open_pos = 49.58f;
         float tarch_height = 0.0f; 
         float up_height = 0.0f;
-        
         struct{
             bool aimposition_done = false;
             bool lowerclaw_done = false;
@@ -255,6 +258,7 @@ private:
 
     CamZ_Ctrl cam_z_ctrl_; // 相机 z 控制器。
     bool cam_z_run_ = false; // z 过程运行位。
+    bool cam_z_req_last_ = false; // z 请求上升沿检测位。
     float cam_z_hold_ = 0.0f; // z 过程目标缓存。
     float cam_z_last_ = 0.0f; // 最近一次 z 样本。
     float cam_z_rpm_ = 0.0f; // 相机 z 速度指令缓存。
