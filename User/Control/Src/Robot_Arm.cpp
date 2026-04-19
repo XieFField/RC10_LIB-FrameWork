@@ -9,14 +9,14 @@ Robot_Arm::Robot_Arm(Arm_InitData_S init_Data)
 float ramp_rate = 15000;
 void Robot_Arm::update()
 {
-    /*µç»úµ±Ç°µÄ½Ç¶È×ª»»³É¹Ø½Úµ±Ç°µÄ½Ç¶È */
+    /*ç”µæœºå½“å‰çš„è§’åº¦è½¬æ¢æˆå…³èŠ‚å½“å‰çš„è§’åº¦ */
     now_time_s_ = TimeStamp::getInstance().getSeconds();
 
     if(!time_initialized_)
     {
         last_time_s_ = now_time_s_;
         time_initialized_ = true;
-        // Ê×´Î¶ÔÆë£¬ºóĞø»ùÓÚ¡°Ä¿±ê¡±»ı·Ö
+        // é¦–æ¬¡å¯¹é½ï¼Œåç»­åŸºäºâ€œç›®æ ‡â€ç§¯åˆ†
         target_joint_angle_ = joint_angle_;
         return;
     }
@@ -31,7 +31,7 @@ void Robot_Arm::update()
     
     if(motor_rotate_ != nullptr)
     {
-        // Ö±½Ó¶ÁÈ¡µç»ú×Ü½Ç¶È£¬Ó³Éä»Ø»úĞµ±ÛµÄ 0-360 ¶È
+        // ç›´æ¥è¯»å–ç”µæœºæ€»è§’åº¦ï¼Œæ˜ å°„å›æœºæ¢°è‡‚çš„ 0-360 åº¦
         float raw_angle = MotorTotalAngle_to_rotateAngle(motor_rotate_->getTotalAngle());
         joint_angle_.rotateJoint_angle_ = normalize_deg_0_360(raw_angle);
     }
@@ -50,7 +50,7 @@ void Robot_Arm::update()
 
     else if(control_mode_ == MANUAL_MOTOR_POSITION_MODE)
     {
-        // ÊÖ¶¯µç»úÎ»ÖÃÄ£Ê½ÏÂµÄ´¦Àí
+        // æ‰‹åŠ¨ç”µæœºä½ç½®æ¨¡å¼ä¸‹çš„å¤„ç†
         target_joint_angle_.launchJoint_Height_  = constrain(target_joint_angle_.launchJoint_Height_,  0.0f, init_data_.max_launchHeight_);
         target_joint_angle_.stretchJoint_Length_ = constrain(target_joint_angle_.stretchJoint_Length_, 0.0f, init_data_.max_stretchLength_);
        
@@ -60,34 +60,34 @@ void Robot_Arm::update()
         );
     }
     else if(control_mode_ == CURRENT_CONTROL_MODE)
-        // µçÁ÷¿ØÖÆÄ£Ê½ÏÂµÄ´¦Àí
-        return; // Ö±½Ó·µ»Ø£¬²»½øĞĞÎ»ÖÃ¸üĞÂ
+        // ç”µæµæ§åˆ¶æ¨¡å¼ä¸‹çš„å¤„ç†
+        return; // ç›´æ¥è¿”å›ï¼Œä¸è¿›è¡Œä½ç½®æ›´æ–°
     
 
   
-    // »úĞµ±ÛÎ»ÖÃ¸üĞÂ
+    // æœºæ¢°è‡‚ä½ç½®æ›´æ–°
     float target_rotateMotorAngle = 0.0f;
     float target_stretchMotorAngle = 0.0f;
     float target_launchMotorAngle = 0.0f;
     float target_pitchMotorAngle = 0.0f;
 
-    // ¶ÔĞı×ªÍ¨µÀ£º¼ÆËã»ùÓÚ×î½üÈ¦ÊıµÄ¾ø¶ÔÄ¿±ê
+    // å¯¹æ—‹è½¬é€šé“ï¼šè®¡ç®—åŸºäºæœ€è¿‘åœˆæ•°çš„ç»å¯¹ç›®æ ‡
     if (motor_rotate_ != nullptr)
     {
         float current_arm_total = MotorTotalAngle_to_rotateAngle(motor_rotate_->getTotalAngle());
         
-        float target_arm_mod = normalize_deg_0_360(target_joint_angle_.rotateJoint_angle_);
+        // float target_arm_mod = normalize_deg_0_360(target_joint_angle_.rotateJoint_angle_);
 
-        // ¼ÆËã k Öµ (Round to nearest integer)
-        // Ôö¼Ó 0.5f Æ«ÒÆÈ·±£ round ĞĞÎªÔÚÕı¸ºÊıÒ»ÖÂ (ËäÈ» roundf ÒÑ´¦Àí)
-        float diff = current_arm_total - target_arm_mod;
+        // è®¡ç®— k å€¼ (Round to nearest integer)
+        // å¢åŠ  0.5f åç§»ç¡®ä¿ round è¡Œä¸ºåœ¨æ­£è´Ÿæ•°ä¸€è‡´ (è™½ç„¶ roundf å·²å¤„ç†)
+        float diff = current_arm_total - target_joint_angle_.rotateJoint_angle_;
         float k = roundf(diff / 360.0f);
 
-        float target_arm_total = target_arm_mod + k * 360.0f;
+        float target_arm_total = target_joint_angle_.rotateJoint_angle_ + k * 360.0f;
         
         target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
 
-		setRampRotateMaxSpeed(ramp_rate); // ¿Éµ÷²ÎÊı£¬°´ĞèÉèÖÃ
+		setRampRotateMaxSpeed(ramp_rate); // å¯è°ƒå‚æ•°ï¼ŒæŒ‰éœ€è®¾ç½®
         ramp_rotate_target_ = caculate_rotate_target(motor_rotate_->getTotalAngle(),target_rotateMotorAngle);
    
 		motor_rotate_->setTargetTotalAngle(ramp_rotate_target_);
@@ -97,7 +97,7 @@ void Robot_Arm::update()
     target_stretchMotorAngle = stretchLength_to_MotorTotalAngle(target_joint_angle_.stretchJoint_Length_);
     target_launchMotorAngle = launchHeight_to_MotorTotalAngle(target_joint_angle_.launchJoint_Height_);
     target_pitchMotorAngle = pitchAngle_to_MotorTotalAngle(target_joint_angle_.suckerJoint_angle_);
-    /*ÔİÊ±²»×öĞ±ÆÂ´¦Àí*/
+    /*æš‚æ—¶ä¸åšæ–œå¡å¤„ç†*/
 
     if(motor_stretch_ != nullptr)
         motor_stretch_->setTargetTotalAngle(target_stretchMotorAngle);
@@ -118,14 +118,14 @@ void Robot_Arm::update()
 
 void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
 {
-    // Ğı×ª½Ç£¨¶È£©
+    // æ—‹è½¬è§’ï¼ˆåº¦ï¼‰
     float raw_deg;
     if (std::abs(target_point.x) < 1e-6f && std::abs(target_point.y) < 1e-6f)
-        raw_deg = joint_angle_.rotateJoint_angle_;  // ÆæÒìµã£º±£³Öµ±Ç°½Ç
+        raw_deg = joint_angle_.rotateJoint_angle_;  // å¥‡å¼‚ç‚¹ï¼šä¿æŒå½“å‰è§’
     else
         raw_deg = atan2f(target_point.y, target_point.x) * 180.0f / PI;
 
-    // ¾Í½ü°ü¹ü£¬±£Ö¤Ä¿±êÒ²ÊÇ 0-360
+    // å°±è¿‘åŒ…è£¹ï¼Œä¿è¯ç›®æ ‡ä¹Ÿæ˜¯ 0-360
     target_joint_angle_.rotateJoint_angle_ = normalize_deg_0_360(raw_deg);
 
     target_joint_angle_.launchJoint_Height_ = target_point.z;
@@ -133,7 +133,7 @@ void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
 
 
 
-    /*½Ç¶ÈÖÆ */
+    /*è§’åº¦åˆ¶ */
    
     target_joint_angle_.suckerJoint_angle_ = target_point.suckerJoint_status_;
 
@@ -148,7 +148,7 @@ void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
 
 bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
 {
-    /*Ä©¶Ë¹Ø½ÚÎ»ÖÃ*/
+    /*æœ«ç«¯å…³èŠ‚ä½ç½®*/
     float theta = joint_angle_.rotateJoint_angle_ * 3.1415926f / 180.0f;
     float Ltot  = init_data_.arm_length_ + joint_angle_.stretchJoint_Length_;
 
@@ -162,20 +162,20 @@ bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
 
 float Robot_Arm::calc_rotate_targetByStrategy(float current_cont_angle, float target_raw_0_360)
 {
-    //Á¬Ğø½Ç¶È¹éÒ»»¯ÖÁ0~360
+    //è¿ç»­è§’åº¦å½’ä¸€åŒ–è‡³0~360
     
     float current_mod = fmodf(current_cont_angle, 360.0f);
     if(current_mod < 0)
         current_mod += 360.0f;
 
-    //¹éÒ»»¯Ä¿±ê½Ç¶È£¬·ÀÖ¹Ô½½ç
+    //å½’ä¸€åŒ–ç›®æ ‡è§’åº¦ï¼Œé˜²æ­¢è¶Šç•Œ
     float target_mod = fmodf(target_raw_0_360, 360.0f);
     if(target_mod < 0)
         target_mod += 360.0f;
 
     float diff = target_mod - current_mod;
 
-    // µ±½Ó½üÄ¿±ê½ÇÊ±£¬Ç¿ÖÆÇĞ»»µ½×î¶ÌÂ·¾¶£¬±ÜÃâ¹ı³åºó³ÖĞøµ¥ÏòÈÆÈ¦ÎŞ·¨ÊÕÁ²
+    // å½“æ¥è¿‘ç›®æ ‡è§’æ—¶ï¼Œå¼ºåˆ¶åˆ‡æ¢åˆ°æœ€çŸ­è·¯å¾„ï¼Œé¿å…è¿‡å†²åæŒç»­å•å‘ç»•åœˆæ— æ³•æ”¶æ•›
     float shortest_diff = diff;
     if (shortest_diff > 180.0f)
         shortest_diff -= 360.0f;
@@ -188,7 +188,7 @@ float Robot_Arm::calc_rotate_targetByStrategy(float current_cont_angle, float ta
     switch(rotate_strategy_)
     {
         case ROTATE_PATH_SHORTEST:
-            // ×î¶ÌÂ·¾¶£º²îÖµÏŞÖÆÔÚ -180 µ½ +180 Ö®¼ä
+            // æœ€çŸ­è·¯å¾„ï¼šå·®å€¼é™åˆ¶åœ¨ -180 åˆ° +180 ä¹‹é—´
             if (diff > 180.0f)       
                 diff -= 360.0f;
             else if (diff < -180.0f) 
@@ -196,13 +196,13 @@ float Robot_Arm::calc_rotate_targetByStrategy(float current_cont_angle, float ta
             break;
 
         case ROTATE_PATH_POSITIVE:
-            // Õı·½Ïò£º¹Ø½Ú½Ç¶È±ØĞëÔö¼Ó£¬¼´ diff ±ØĞë > 0
+            // æ­£æ–¹å‘ï¼šå…³èŠ‚è§’åº¦å¿…é¡»å¢åŠ ï¼Œå³ diff å¿…é¡» > 0
             if (diff < 0.0f) 
                 diff += 360.0f;
             break;
 
         case ROTATE_PATH_NEGATIVE:
-            // ¸º·½Ïò£º¹Ø½Ú½Ç¶È±ØĞë¼õĞ¡£¬¼´ diff ±ØĞë < 0
+            // è´Ÿæ–¹å‘ï¼šå…³èŠ‚è§’åº¦å¿…é¡»å‡å°ï¼Œå³ diff å¿…é¡» < 0
             if (diff > 0.0f) 
                 diff -= 360.0f;
             break;
@@ -243,44 +243,44 @@ float Robot_Arm::calc_rotate_targetByStrategy(float current_cont_angle, float ta
 
 void test()
 {
-    // 1. ³õÊ¼»¯»úĞµ±Û²ÎÊı
+    // 1. åˆå§‹åŒ–æœºæ¢°è‡‚å‚æ•°
     Arm_InitData_S arm_params;
-    arm_params.max_launchHeight_ = 1.0f;    // ×î´óÉı½µ¸ß¶È 1Ã×
-    arm_params.max_stretchLength_ = 2.0f;   // ×î´óÉìÕ¹³¤¶È 2Ã×
-    arm_params.arm_length_ = 0.5f;          // »úĞµ±Û»ù´¡³¤¶È 0.5Ã×
+    arm_params.max_launchHeight_ = 1.0f;    // æœ€å¤§å‡é™é«˜åº¦ 1ç±³
+    arm_params.max_stretchLength_ = 2.0f;   // æœ€å¤§ä¼¸å±•é•¿åº¦ 2ç±³
+    arm_params.arm_length_ = 0.5f;          // æœºæ¢°è‡‚åŸºç¡€é•¿åº¦ 0.5ç±³
     
-    arm_params.stretch_Ratio_ = 0.01f;      // ÉìÕ¹µç»ú×ªÒ»È¦ÉìÕ¹0.01Ã×
-    arm_params.launch_Ratio_ = 0.005f;      // Éı½µµç»ú×ªÒ»È¦Éı½µ0.005Ã×  
-    arm_params.rotate_gearRatio_ = 1.0f;    // Ğı×ªµç»ú×ªÒ»È¦»úĞµ±Û×ª1¶È
-    arm_params.pitch_gearRatio_ = 1.0f;     // ¸©Ñöµç»ú×ªÒ»È¦Ä©¶Ë×ª1¶È
+    arm_params.stretch_Ratio_ = 0.01f;      // ä¼¸å±•ç”µæœºè½¬ä¸€åœˆä¼¸å±•0.01ç±³
+    arm_params.launch_Ratio_ = 0.005f;      // å‡é™ç”µæœºè½¬ä¸€åœˆå‡é™0.005ç±³  
+    arm_params.rotate_gearRatio_ = 1.0f;    // æ—‹è½¬ç”µæœºè½¬ä¸€åœˆæœºæ¢°è‡‚è½¬1åº¦
+    arm_params.pitch_gearRatio_ = 1.0f;     // ä¿¯ä»°ç”µæœºè½¬ä¸€åœˆæœ«ç«¯è½¬1åº¦
 
-    // 2. ´´½¨»úĞµ±Û¶ÔÏó
+    // 2. åˆ›å»ºæœºæ¢°è‡‚å¯¹è±¡
     Robot_Arm my_arm(arm_params);
     
-    // 3. ÉèÖÃÄ©¶ËÁ¬¸Ë³¤¶È£¨Èç¹ûÓĞµÄ»°£©
-    my_arm.setEndLinkLength(0.2f);  // ÎüÅÌ±Û³¤0.2Ã×
+    // 3. è®¾ç½®æœ«ç«¯è¿æ†é•¿åº¦ï¼ˆå¦‚æœæœ‰çš„è¯ï¼‰
+    my_arm.setEndLinkLength(0.2f);  // å¸ç›˜è‡‚é•¿0.2ç±³
 
-    // 4. ÉèÖÃÄ¿±ê¹Ø½Ú½Ç¶È£¨·½Ê½Ò»£ºÍ¨¹ıÉèÖÃÄ¿±êÎ»ÖÃ£¬Äæ½â»á×Ô¶¯¼ÆËã¹Ø½Ú½Ç¶È£©
+    // 4. è®¾ç½®ç›®æ ‡å…³èŠ‚è§’åº¦ï¼ˆæ–¹å¼ä¸€ï¼šé€šè¿‡è®¾ç½®ç›®æ ‡ä½ç½®ï¼Œé€†è§£ä¼šè‡ªåŠ¨è®¡ç®—å…³èŠ‚è§’åº¦ï¼‰
     Arm_Point_S target;
-    target.x = 1.2f;                // Ä¿±êx×ø±ê 1.2Ã×
-    target.y = 0.8f;                // Ä¿±êy×ø±ê 0.8Ã×  
-    target.z = 0.5f;                // Ä¿±êz×ø±ê 0.5Ã×
-    target.suckerJoint_status_ = 30.0f;  // Ä©¶Ë¹Ø½Ú30¶È
+    target.x = 1.2f;                // ç›®æ ‡xåæ ‡ 1.2ç±³
+    target.y = 0.8f;                // ç›®æ ‡yåæ ‡ 0.8ç±³  
+    target.z = 0.5f;                // ç›®æ ‡zåæ ‡ 0.5ç±³
+    target.suckerJoint_status_ = 30.0f;  // æœ«ç«¯å…³èŠ‚30åº¦
     
     my_arm.setArmTarget(target);
     
-    // 5. ¸üĞÂ»úĞµ±Û×´Ì¬£¨Õâ»á´¥·¢ÄæÔË¶¯Ñ§¼ÆËã£©
+    // 5. æ›´æ–°æœºæ¢°è‡‚çŠ¶æ€ï¼ˆè¿™ä¼šè§¦å‘é€†è¿åŠ¨å­¦è®¡ç®—ï¼‰
     my_arm.update();
 
-    // 6. ¼ÆËãÕıÔË¶¯Ñ§ÑéÖ¤Î»ÖÃ
+    // 6. è®¡ç®—æ­£è¿åŠ¨å­¦éªŒè¯ä½ç½®
     Arm_Point_S calculated_position;
     if (my_arm.forwardKinematics(calculated_position)) 
     {
-        std::cout << "ÕıÔË¶¯Ñ§¼ÆËã½á¹û:" << std::endl;
-        std::cout << "X: " << calculated_position.x << " Ã×" << std::endl;
-        std::cout << "Y: " << calculated_position.y << " Ã×" << std::endl; 
-        std::cout << "Z: " << calculated_position.z << " Ã×" << std::endl;
-        std::cout << "Ä©¶Ë¹Ø½Ú½Ç¶È: " << calculated_position.suckerJoint_status_ << " ¶È" << std::endl;
+        std::cout << "æ­£è¿åŠ¨å­¦è®¡ç®—ç»“æœ:" << std::endl;
+        std::cout << "X: " << calculated_position.x << " ç±³" << std::endl;
+        std::cout << "Y: " << calculated_position.y << " ç±³" << std::endl; 
+        std::cout << "Z: " << calculated_position.z << " ç±³" << std::endl;
+        std::cout << "æœ«ç«¯å…³èŠ‚è§’åº¦: " << calculated_position.suckerJoint_status_ << " åº¦" << std::endl;
     }
 }
     */

@@ -103,8 +103,6 @@ public:
         return packet_type == CAN_PACKET_STATUS_1; // 当前只解析STATUS_1
     }
 
-    float get_GearRatio() const override { return GEAR_RATIO; }
-
     void reset_GearRatio(float reset_value){GEAR_RATIO = reset_value;}
 
     int32_t RPM_to_eRPM(float rpm) const

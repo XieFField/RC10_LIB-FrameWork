@@ -25,7 +25,7 @@ static inline void dcache_invalidate_range(void* addr, uint32_t len)
     SCB_InvalidateDCache_by_Addr((uint32_t*)start, (int32_t)(end - start));
 }
 
-/* -------------  �ⲿ���  ------------- */
+/* -------------  �ⲿ���?  ------------- */
 extern UART_HandleTypeDef huart7;          
 
 // CrsfReceiver* instance_ = nullptr;
@@ -106,7 +106,7 @@ void CrsfReceiver::Callback_Fuc(uint8_t *buf, uint16_t len)
 //    }
 //}
 
-// ��ʼ��ʱ��� UART/DMA �����Ƿ���ȷ��RX DMA ������Ϊѭ��ģʽ��
+// ��ʼ��ʱ���? UART/DMA �����Ƿ���ȷ��RX DMA ������Ϊѭ��ģʽ��
 //void CrsfReceiver::checkDmaConfig()
 //{
 //    UART_HandleTypeDef* h = uart_driver_.GetUartHandle();
@@ -173,7 +173,7 @@ void CrsfReceiver::handleByte(uint8_t byte)
     }
 }
 
-/* ----------------  ��� + ӳ�� + ����  ---------------- */
+/* ----------------  ���? + ӳ�� + ����  ---------------- */
 void CrsfReceiver::unpackChannels(const uint8_t* payload, int channels[CRSF_NUM_CHANNELS])
 {
     for (int i = 0; i < CRSF_NUM_CHANNELS; ++i) {
@@ -314,7 +314,7 @@ void CrsfReceiver::sendTelemetryData(const RmPocketData_t* data)
 }
 void CrsfReceiver::send_uint8(uint8_t sub_type, uint8_t value)
 {
-    if (!tx_done) return;  // �ȴ��ϴη������
+    if (!tx_done) return;  // �ȴ��ϴη������?
     
     uint8_t* p = tx_buffer_;
     
@@ -358,20 +358,20 @@ void CrsfReceiver::send_float(uint8_t sub_type, float value)
 {
     if (!tx_done) return;
     
-    // 限制范围，防止溢出（int16范围：-32768 ~ 32767）
+    // 限制范围，防止溢出（int16范围�?-32768 ~ 32767�?
     if (value > 327.67f) value = 327.67f;
     if (value < -327.68f) value = -327.68f;
     
-    // 放大100倍，保留2位小数（12.34 → 1234）
+    // 放大100倍，保留2位小数（12.34 �? 1234�?
     int16_t fixed_val = (int16_t)(value * 100.0f);
     
     uint8_t* p = tx_buffer_;
     p[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;  // 0xEA
     p[1] = 5;                               // 长度
     p[2] = CRSF_FRAMETYPE_CUSTOM_TELEMETRY; // 0x0C
-    p[3] = sub_type;                        // 子类型
-    p[4] = fixed_val & 0xFF;                // 低字节
-    p[5] = (fixed_val >> 8) & 0xFF;         // 高字节
+    p[3] = sub_type;                        // 子类�?
+    p[4] = fixed_val & 0xFF;                // 低字�?
+    p[5] = (fixed_val >> 8) & 0xFF;         // 高字�?
     p[6] = crc_.calc(&p[2], 4);             // CRC
     
     tx_done = false;
@@ -387,41 +387,41 @@ void CrsfReceiver::send_robot(float x, float y, float yaw)
     uint16_t x_val = (uint16_t)(x * 100.0f);
     uint16_t y_val = (uint16_t)(y * 100.0f);
 
-    // 使用类的 tx_buffer_（已在头文件声明并做了对齐）
+    // 使用类的 tx_buffer_（已在头文件声明并做了�?齐）
     uint8_t* buf = tx_buffer_;
     // 帧头
     buf[0] = 0xEA;      // 地址: Radio Transmitter
     buf[1] = 17;        // 长度: payload(15) + 2
     buf[2] = 0x02;      // 类型: GPS
 
-    // Latitude (占位，填写小端 int32)
+    // Latitude (占位，填写小�? int32)
     buf[3] = 0x01;
     buf[4] = 0x00;
     buf[5] = 0x01;
     buf[6] = 0x00;
 
-    // Longitude (占位，填写小端 int32)
+    // Longitude (占位，填写小�? int32)
     buf[7] = 0x01;
     buf[8] = 0x00;
     buf[9] = 0x00;
     buf[10] = 0x00;
 
-    // Ground Speed (uint16, 小端)
+    // Ground Speed (uint16, 小�?)
     buf[11] = x_val & 0xFF;      // LSB
     buf[12] = (x_val >> 8) & 0xFF; // MSB
 
-    // Ground Course (uint16, 小端)
+    // Ground Course (uint16, 小�?)
     buf[13] = yaw_val & 0xFF;    // LSB
     buf[14] = (yaw_val >> 8) & 0xFF; // MSB
 
-    // Altitude (uint16, 小端)
+    // Altitude (uint16, 小�?)
     buf[15] = y_val & 0xFF;      // LSB
     buf[16] = (y_val >> 8) & 0xFF; // MSB
 
     // Satellites / mode
     buf[17] = 3;
 
-    // CRC 从 buf[2] 到 buf[17]
+    // CRC �? buf[2] �? buf[17]
     uint8_t crc = 0;
     for (uint8_t i = 2; i <= 17; ++i) {
         crc ^= buf[i];
@@ -430,7 +430,7 @@ void CrsfReceiver::send_robot(float x, float y, float yaw)
     }
     buf[18] = crc;
 
-    // 通过 DMA 发送：清理 D-Cache，设置 tx_done，触发 DMA 发送
+    // 通过 DMA 发送：清理 D-Cache，�?�? tx_done，触�? DMA 发�?
     dcache_clean_range(tx_buffer_, 19);
     tx_done = false;
     HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 19);
@@ -454,14 +454,14 @@ void CrsfReceiver::send_kfsandSpear(int8_t kfs1, int8_t kfs2, int8_t Spear)
         
         p[0] = 0xEA;
         p[1] = 10;
-        p[2] = 0x08;
+        p[2] = 0x08;              
         p[3] = volt & 0xFF;
         p[4] = (volt >> 8) & 0xFF;
         p[5] = 0; 
         p[6] = Spear * 10;        // Current
         p[7] = 0; 
         p[8] = 0; 
-        p[9] = kfs1;              // Capacity低字节
+        p[9] = kfs1;              // Capacity低字�?
         p[10] = kfs2;             // Remaining
         
         // CRC计算
@@ -501,7 +501,7 @@ void CrsfReceiver::appendFromISR(const uint8_t *buf, uint16_t len)
     uint16_t to_copy = (len <= free_space) ? len : free_space;
     uint16_t chunk = RX_RING_SIZE - head;
     if (chunk > to_copy) chunk = to_copy;
-    // ȷ�� CPU ��ȡ buf ǰʧЧ DCache������ memcpy ���õ� DMA д�������
+    // ȷ�� CPU ��ȡ buf ǰʧЧ DCache������ memcpy ���õ� DMA д�������?
     dcache_invalidate_range((void*)buf, to_copy);
     memcpy(&rx_ring_[head], buf, chunk);
     head = (head + chunk) % RX_RING_SIZE;
