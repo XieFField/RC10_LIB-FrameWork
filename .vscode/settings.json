@@ -60,5 +60,7 @@
   "C_Cpp.errorSquiggles": "enabled",
   "[markdown]": {
     "files.encoding": "utf8"
+    
   },
+  "files.autoGuessEncoding": false,
 }
