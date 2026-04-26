@@ -95,7 +95,7 @@ extern "C" {
 // #include "usart.h"
 
 #define ARM_AUTO_DEBUG_NOCHASSIS  0 //無底盤下，用虛擬坐標進行驗證自動邏輯
-#define ARM_VERSION 1 //版本号， 若是1则意味着是顶吸侧吸融合版本 如果是0则是纯侧吸版本
+#define ARM_VERSION 0 //版本号， 若是1则意味着是顶吸侧吸融合版本 如果是0则是纯侧吸版本
 
 
 typedef struct{
@@ -119,6 +119,9 @@ typedef struct{
     int8_t pitch_switch_offset = 0; //俯仰开关偏移绑定
     int8_t extend_switch_offset = 0; // 伸展开关偏移绑定
     int8_t sucker_switch_offset = 0; // 吸盘开关偏移绑定
+
+    uint8_t button_click_state = 0;
+    bool is_store_acting = false; //正在执行存储动作的标志位
 }arm_ctrl_status_S;
 
 
@@ -365,6 +368,8 @@ private:
 
     //控制函数
     void manualControl();
+    bool manual_store();
+
     void autoControl();
     void stop();
     void idle();
@@ -545,6 +550,7 @@ protected:
         .calibrate_startTime = 0,
         .calibrate_start = false,
         .is_calibrating = false,
+
     };
 
 
@@ -570,6 +576,8 @@ protected:
         float launch_rate = 0.03f;
         int cnt = 0;
     }manual_control;
+
+    ButtonDetector button_detector_1 = ButtonDetector(350.0f); //按钮1的单双击检测器，350ms双击判定时间
 };
 
 

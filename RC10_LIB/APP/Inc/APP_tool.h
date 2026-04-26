@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <cmath>
 
+#include "BSP_TimeStamp.h"
+
 #ifdef __cplusplus
 extern "C" {
     #include "arm_math.h"
@@ -144,6 +146,91 @@ typedef struct {
 
 
 #ifdef __cplusplus
+
+//按钮检测器，目前支持检测单击双击  
+class ButtonDetector
+{
+public:
+    /**
+     * @param double_click_time 双击判定时间 默认350ms
+     * 单位毫秒
+     */
+    ButtonDetector(float double_click_time = 0.350f) : DOUBLE_CLICK_INTERVAL(double_click_time)
+    {
+
+    }
+
+    enum class State{
+        Idle, //空闲
+        WaitRealse, //等待松开
+        WaitSecondClick, //等待第二次按下
+    };
+
+    /**
+     * @param is_press 是否按下 0 没按 1按下
+     * @return 事件类型 0 无事件 1 单击 2 双击
+     */
+    uint8_t update(uint8_t is_press)
+    {
+        uint8_t event = 0;
+        float nowtime = TimeStamp::getInstance().getSeconds();
+
+        switch (this->state)
+        {
+            case State::Idle:
+            {
+                if(is_press)
+                {
+                    this->state = State::WaitRealse;
+                    last_action_time = TimeStamp::getInstance().getSeconds(); //第一次按下时间
+                }
+                /* code */
+                break;
+            }
+            
+            case State::WaitRealse:
+            {
+                if(!is_press)
+                {
+                    last_action_time = TimeStamp::getInstance().getSeconds(); //第一次松开时间
+                    this->state = State::WaitSecondClick;
+                }
+
+                break;  
+            }
+            
+            case State::WaitSecondClick:
+            {
+                bool timeout = (TimeStamp::getInstance().getSeconds() - last_action_time) > DOUBLE_CLICK_INTERVAL;
+
+                if(timeout)
+                {
+                    event = 1; //单击事件
+                    this->state = State::Idle;
+                }
+                else if(is_press)
+                {
+                    event = 2; //双击事件
+                    this->state = State::Idle; 
+                    last_action_time = TimeStamp::getInstance().getSeconds(); //第二次按下时间
+                }
+
+                break;
+            }
+
+
+            default:
+                break;
+        }
+        return event;
+    }
+
+private:
+    float DOUBLE_CLICK_INTERVAL = 0.350f; //双击判定时间，单位毫秒  
+    State state = State::Idle;
+    uint8_t click_count = 0;
+    float last_action_time = 0;
+};
 
 
 #endif
