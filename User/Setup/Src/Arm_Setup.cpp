@@ -29,18 +29,6 @@ void ArmSetup::loop()
         last_arm_status_ = arm_status_;
         return;
     }
-    else
-    {
-        if(arm_status_ == ARM_STOP)
-        {
-            this->motor_pitch_->motorDisable();
-        }
-        else
-        {
-            if(this->motor_pitch_->getErrorNum() == 0x00)
-                this->motor_pitch_->motorEnable();
-        }
-    }
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
     //目前使用虚拟坐标进行自控逻辑验证
@@ -1447,7 +1435,7 @@ void ArmSetup::stop()
     this->motor_launch_->setTargetCurrent(0.0f);
     this->motor_stretch_->setTargetCurrent(0.0f);
     this->motor_rotate_->setTargetCurrent(0.0f);
-    this->motor_pitch_->setTargetCurrent(0.0f);
+    // this->motor_pitch_->setTargetCurrent(0.0f);
     this->setSuckerStatus(Sucker_Status_E::STOP);
 }
 
