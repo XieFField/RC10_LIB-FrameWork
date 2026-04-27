@@ -36,6 +36,7 @@ extern "C" {
 #include "BSP_fdCAN_Driver.h"
 #include "Motor_DJI.h"
 #include "Motor_DM.h"
+#include "Motor_VESC.h"
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 #include "APP_PID.h"

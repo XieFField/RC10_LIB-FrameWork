@@ -530,6 +530,14 @@ namespace jia
                 f32 w4_drive_omega; // 航向轮子4角速度，单位：rad/s
             };
 
+            enum class DebugSignalMode : u8
+            {
+                kJoystick = 0,
+                kStep = 1,
+                kSine = 2,
+                kHandInput = 3,
+            };
+
             // 创建线程
             static void createThread(void *arg);
             // 运行线程函数
@@ -610,7 +618,14 @@ namespace jia
             bool is_hand_input_ = false; // 是否使用手动输入信号
             f32 hand_input_ = 0.0f;      // 手动输入信号
 
-            f32 debug_input_ = 90.0f;     // 调试输入
+            DebugSignalMode steer_signal_mode_ = DebugSignalMode::kJoystick; // 0摇杆 1阶跃 2正弦 3手输
+            DebugSignalMode drive_signal_mode_ = DebugSignalMode::kJoystick; // 0摇杆 1阶跃 2正弦 3手输
+            f32 steer_hand_input_ = 0.0f; // 舵向手动输入
+            f32 drive_hand_input_ = 0.0f; // 轮向手动输入
+            f32 debug_step_threshold_ = 0.3f; // 阶跃触发阈值
+
+            f32 debug_input_ = 180.0f;      // 舵向调试输入
+            f32 drive_debug_input_ = 1000.0f; // 轮向调试输入，单位：rpm
             f32 debug_lock_rot_z_ = 0.0f; // 调试固定rot_z
 
             bool is_wheel_single_position_mode_ = false; // 是否为轮子单圈位置模式
@@ -619,13 +634,14 @@ namespace jia
             bool is_wheel_current_mode_ = false;         // 是否为轮子电流模式
 
             Debug_Printf debug_uart_ = Debug_Printf(&huart8); // 调试串口
-            u8 printf_period_ms_ = 5;                         // 串口调试打印周期，单位：毫秒
+            u8 printf_period_ms_ = 1;                         // 串口调试打印周期，单位：毫秒
             u8 printf_period_count_ = 0;                      // 串口调试打印周期计数器
 
             RmPocketData_t airjoy_data_; // 从AirJoy接收的数据
 
         private:
             void isDebugMode();
+            f32 buildDebugSetpoint(DebugSignalMode mode, f32 axis, f32 amplitude, f32 hand_input) const;
 
             void clearInputTargetData();
 
@@ -636,8 +652,15 @@ namespace jia
             f32 getSteerWheelTargetAngleDeg(const WheelConfig &wheel) const;
             f32 getSteerWheelTargetCurrent(const WheelConfig &wheel) const;
             f32 getSteerWheelCurrentAngleDeg(const WheelConfig &wheel) const;
+            f32 getSteerWheelCurrentAngleDegCalibrated(const WheelConfig &wheel) const;
             f32 getSteerWheelCurrentRPM(const WheelConfig &wheel) const;
             f32 getSteerWheelCurrentCurrent(const WheelConfig &wheel) const;
+            f32 getSteerWheelCurrentTotalAngleDegCalibrated(const WheelConfig &wheel) const;
+            void setDriveWheelTargetRpm(WheelConfig &wheel, f32 rpm);
+            void setDriveWheelTargetCurrent(WheelConfig &wheel, f32 current);
+            f32 getDriveWheelTargetRPM(const WheelConfig &wheel) const;
+            f32 getDriveWheelCurrentRPM(const WheelConfig &wheel) const;
+            f32 getDriveWheelCurrentCurrent(const WheelConfig &wheel) const;
 
         private:
             bool photogate_signal_ = false;
@@ -647,8 +670,8 @@ namespace jia
 
             bool is_power_on_cailbration_ = false; // 是否开启校准
             bool is_doing_cailbration_ = false;    // 是否正在校准中
-            f32 cailbration_rpm_ = 0.0f;           // 校准rpm，单位：rpm/s
-            f32 cailbration_angle_deg_ = 0.0f;     // 校准角度，单位：rad
+            f32 cailbration_rpm_ = 20.0f;           // 校准rpm，单位：rpm/s
+            f32 cailbration_angle_deg_ = 0.0f;     // 校准参考姿态角度，单位：deg
         };
 
         using Result = jia::FourSteerChassis::Chassis::Result;

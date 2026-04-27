@@ -1,4 +1,5 @@
 #include "Setup_ConfigInit.h"
+
 // 外部声明USB高速设备句柄
 extern "C"
 {
@@ -73,6 +74,7 @@ M3508 Weapon_launchMotor(1, CAN2_Bus);
 M2006 Weapon_clawMotor(2, CAN2_Bus);
 M2006 Weapon_traverseMotor(3, CAN2_Bus);
 DM_Motor Weapon_wristMotor(J4310_Type, 0x05, 0x05, CAN2_Bus);
+VESC_Motor vesc_drive_101(101, CAN2_Bus, 21.0f);
 
 // M3508 test_steer_motor(4, CAN2_Bus);
 /*================Motor Instances==============*/
@@ -234,7 +236,7 @@ void ALL_Setup_ConfigInit(void)
             .steer_motor_h[2] = nullptr,
             .steer_motor_h[3] = nullptr,
 
-            .drive_motor_h[0] = nullptr,
+            .drive_motor_h[0] = &vesc_drive_101,
             .drive_motor_h[1] = nullptr,
             .drive_motor_h[2] = nullptr,
             .drive_motor_h[3] = nullptr,
@@ -290,20 +292,17 @@ void CAN_Motor_Init(void)
     CAN1_Bus->registerMotor(&arm_rotateMotor);
     CAN1_Bus->registerMotor(&arm_pitchMotor);
 
-    DJIGroupCAN2_Low.addMotor(&Weapon_launchMotor);
-    DJIGroupCAN2_Low.addMotor(&Weapon_clawMotor);
-    DJIGroupCAN2_Low.addMotor(&Weapon_traverseMotor);
-    // DJIGroupCAN2_Low.addMotor(&test_steer_motor);
+    // Temporary single-wheel debug: keep CAN2 dedicated to the VESC drive motor.
+    // DJIGroupCAN2_Low.addMotor(&Weapon_launchMotor);
+    // DJIGroupCAN2_Low.addMotor(&Weapon_clawMotor);
+    // DJIGroupCAN2_Low.addMotor(&Weapon_traverseMotor);
+    // CAN2_Bus->registerMotor(&DJIGroupCAN2_Low);
+    // CAN2_Bus->registerMotor(&Weapon_launchMotor);
+    // CAN2_Bus->registerMotor(&Weapon_clawMotor);
+    // CAN2_Bus->registerMotor(&Weapon_traverseMotor);
+    // CAN2_Bus->registerMotor(&Weapon_wristMotor);
 
-    CAN2_Bus->registerMotor(&DJIGroupCAN2_Low);
-
-    CAN2_Bus->registerMotor(&Weapon_launchMotor);
-    CAN2_Bus->registerMotor(&Weapon_clawMotor);
-    CAN2_Bus->registerMotor(&Weapon_traverseMotor);
-
-    CAN2_Bus->registerMotor(&Weapon_wristMotor);
-
-    // CAN2_Bus->registerMotor(&test_steer_motor);
+    CAN2_Bus->registerMotor(&vesc_drive_101);
 
     CAN1_Bus->init();
     CAN2_Bus->init();

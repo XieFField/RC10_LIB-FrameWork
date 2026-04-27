@@ -851,6 +851,11 @@ namespace jia
             return wheel.smh->getAngle();
         }
 
+        f32 Chassis::getSteerWheelCurrentAngleDegCalibrated(const WheelConfig &wheel) const
+        {
+            return normalizeAngleTo180(wheel.smh->getAngle());
+        }
+
         f32 Chassis::getSteerWheelTargetAngleDeg(const WheelConfig &wheel) const
         {
             return wheel.smh->getTargetAngle();
@@ -866,9 +871,63 @@ namespace jia
             return wheel.smh->current_;
         }
 
+        f32 Chassis::getSteerWheelCurrentTotalAngleDegCalibrated(const WheelConfig &wheel) const
+        {
+            return wheel.smh->getTotalAngle();
+        }
+
         f32 Chassis::getSteerWheelTargetCurrent(const WheelConfig &wheel) const
         {
             return wheel.smh->getTargetCurrent();
+        }
+
+        void Chassis::setDriveWheelTargetRpm(WheelConfig &wheel, f32 rpm)
+        {
+            wheel.dmh->setTargetRPM(rpm);
+        }
+
+        void Chassis::setDriveWheelTargetCurrent(WheelConfig &wheel, f32 current)
+        {
+            wheel.dmh->setTargetCurrent(current);
+        }
+
+        f32 Chassis::getDriveWheelTargetRPM(const WheelConfig &wheel) const
+        {
+            return wheel.dmh->getTargetRPM();
+        }
+
+        f32 Chassis::getDriveWheelCurrentRPM(const WheelConfig &wheel) const
+        {
+            return wheel.dmh->rpm_;
+        }
+
+        f32 Chassis::getDriveWheelCurrentCurrent(const WheelConfig &wheel) const
+        {
+            return wheel.dmh->current_;
+        }
+
+        f32 Chassis::buildDebugSetpoint(DebugSignalMode mode, f32 axis, f32 amplitude, f32 hand_input) const
+        {
+            switch (mode)
+            {
+            case DebugSignalMode::kStep:
+                if (axis > debug_step_threshold_)
+                {
+                    return amplitude;
+                }
+                if (axis < -debug_step_threshold_)
+                {
+                    return -amplitude;
+                }
+                return 0.0f;
+            case DebugSignalMode::kSine:
+                return sineWaveGeneratorF32(time_ms_ / 1000.0f, amplitude, sine_frequency_, 0.0f, sine_offset_);
+            case DebugSignalMode::kHandInput:
+                return hand_input;
+            case DebugSignalMode::kJoystick:
+            default:
+                return axis * amplitude;
+            }
         }
 
         void Chassis::runThread(void *arg)
@@ -993,80 +1052,34 @@ namespace jia
                 }
                 }
 
-                // // 调试轮子
+                // 调试单个舵轮
                 auto &wheel = wheel_config_[debug_wheel_index_];
 
-                f32 t_rpm = 0.0f;
-
-                if (is_sine_)
-                {
-                    t_rpm = sineWaveGeneratorF32(time_ms_ / 1000.0f, sine_amplitude_, sine_frequency_, 0.0f, sine_offset_);
-                }
-                else if (is_step_signal_)
-                {
-                    if (airjoy_data_.left_x > 0.3f)
-                    {
-                        t_rpm = debug_input_;
-                    }
-                    else if (airjoy_data_.left_x < -0.3f)
-                    {
-                        t_rpm = -debug_input_;
-                    }
-                    else
-                    {
-                        t_rpm = 0.0f;
-                    }
-                }
-                else if (is_hand_input_)
-                {
-                    t_rpm = hand_input_;
-                }
-                else
-                {
-                    t_rpm = airjoy_data_.left_x * debug_input_;
-                }
+                const f32 rc_right_x = airjoy_data_.right_x;
+                const f32 rc_left_y = airjoy_data_.left_y;
+                f32 steer_target = buildDebugSetpoint(steer_signal_mode_, rc_right_x, debug_input_, steer_hand_input_);
+                f32 drive_target_rpm = buildDebugSetpoint(drive_signal_mode_, rc_left_y, drive_debug_input_, drive_hand_input_);
 
                 if (is_wheel_speed_mode_)
                 {
-                    setSteerWheelTargetRpm(wheel, t_rpm);
+                    setSteerWheelTargetRpm(wheel, steer_target);
                 }
                 else if (is_wheel_current_mode_)
                 {
-                    setSteerWheelTargetCurrent(wheel, t_rpm);
+                    setSteerWheelTargetCurrent(wheel, steer_target);
                 }
                 else if (is_wheel_single_position_mode_)
                 {
-                    if (is_use_cailbration_angle_)
-                    {
-                        t_rpm += cailbration_angle_deg_;
-                    }
-                    setSteerWheelTargetAngleDeg(wheel, t_rpm);
+                    setSteerWheelTargetAngleDeg(wheel, steer_target);
                 }
                 else if (is_wheel_total_position_mode_)
                 {
-                    if (is_use_cailbration_angle_)
-                    {
-                        t_rpm += cailbration_angle_deg_;
-                    }
-                    setSteerWheelTargetTotalAngleDeg(wheel, t_rpm);
+                    setSteerWheelTargetTotalAngleDeg(wheel, steer_target);
                 }
                 else
                 {
                     setSteerWheelTargetCurrent(wheel, 0.0f);
                 }
-
-                // f32 pid_error = wheel_handle->speed_pid_.error_;
-                // // f32 pid_error_last = wheel_handle->speed_pid_.error_last_;
-                // // f32 pid_error_earlier_ = wheel_handle->speed_pid_.error_earlier_;
-                // f32 pid_p = wheel_handle->speed_pid_.P_Term;
-                // f32 pid_i = wheel_handle->speed_pid_.I_Term;
-                // f32 pid_d = wheel_handle->speed_pid_.D_Term;
-                // f32 pid_output = wheel_handle->speed_pid_.output_;
-
-                // f32 t_current = getSteerWheelTargetCurrent(wheel);
-
-                // f32 c_current = getSteerWheelCurrentCurrent(wheel);
-                // f32 c_rpm = getSteerWheelCurrentRPM(wheel);
 
                 photogate_signal_ = HAL_GPIO_ReadPin(kTEST_PHOTOGATE_GPIO_Port, kTEST_PHOTOGATE_Pin);
 
@@ -1080,40 +1093,70 @@ namespace jia
 
                 if (is_doing_cailbration_)
                 {
+                    drive_target_rpm = 0.0f;
                     setSteerWheelTargetRpm(wheel, cailbration_rpm_);
 
-                    if (photogate_signal_ == last_photogate_signal_)
-                    {
-                    }
-                    else
+                    if (photogate_signal_ != last_photogate_signal_)
                     {
                         setSteerWheelTargetRpm(wheel, 0.0f);
                         is_doing_cailbration_ = false;
 
-                        cailbration_angle_deg_ = getSteerWheelCurrentAngleDeg(wheel);
-
-                        if (photogate_signal_ == true)
-                        {
-                            cailbration_angle_deg_ += 180.0f;
-                        }
-                        else
-                        {
-                        }
-
-                        cailbration_angle_deg_ = normalizeAngleTo180(cailbration_angle_deg_);
+                        const f32 calibrated_reference_deg = photogate_signal_ ? -180.0f : 0.0f;
+                        wheel.smh->relocate_totalAngle(calibrated_reference_deg);
+                        cailbration_angle_deg_ = calibrated_reference_deg;
                     }
                 }
 
-                f32 t_angle_deg = normalizeAngleTo180(getSteerWheelTargetAngleDeg(wheel) - cailbration_angle_deg_);
-                f32 c_angle_deg = normalizeAngleTo180(getSteerWheelCurrentAngleDeg(wheel) - cailbration_angle_deg_);
+                setDriveWheelTargetRpm(wheel, drive_target_rpm);
+
+                f32 t_angle_deg = normalizeAngleTo180(getSteerWheelTargetAngleDeg(wheel));
+                f32 c_angle_deg = getSteerWheelCurrentAngleDegCalibrated(wheel);
 
                 printf_period_count_++;
                 if (printf_period_count_ >= printf_period_ms_)
                 {
                     printf_period_count_ = 0;
-                    // debug_uart_.printf_DMA("%f,%f,%f,%f\r\n", t_rpm, c_rpm, t_current, c_current);
-                    f32 debug_frame[4] = {(f32)photogate_signal_, cailbration_angle_deg_, t_angle_deg, c_angle_deg};
-                    debug_uart_.printf_DMA_JustFloat(debug_frame, 4);
+
+                    const f32 steer_target_current = getSteerWheelTargetCurrent(wheel);
+                    const f32 steer_feedback_current = getSteerWheelCurrentCurrent(wheel);
+                    const f32 steer_target_rpm = wheel.smh->getTargetRPM();
+                    const f32 steer_feedback_rpm = getSteerWheelCurrentRPM(wheel);
+                    const f32 steer_target_angle_deg = t_angle_deg;
+                    const f32 steer_feedback_angle_deg = c_angle_deg;
+                    const f32 steer_target_total_angle_deg = wheel.smh->getTargetTotalAngle();
+                    const f32 steer_feedback_total_angle_deg = getSteerWheelCurrentTotalAngleDegCalibrated(wheel);
+
+                    const f32 drive_target_current = wheel.dmh->getTargetCurrent();
+                    const f32 drive_feedback_current = getDriveWheelCurrentCurrent(wheel);
+                    const f32 drive_target_rpm = getDriveWheelTargetRPM(wheel);
+                    const f32 drive_feedback_rpm = getDriveWheelCurrentRPM(wheel);
+                    const f32 drive_target_angle_deg = wheel.dmh->getTargetAngle();
+                    const f32 drive_feedback_angle_deg = wheel.dmh->getAngle();
+                    const f32 drive_target_total_angle_deg = wheel.dmh->getTargetTotalAngle();
+                    const f32 drive_feedback_total_angle_deg = wheel.dmh->getTotalAngle();
+
+                    // VOFA通道顺序：光电、校准角、舵向电流/速度/单圈角/多圈角、轮向电流/速度/单圈角/多圈角。
+                    // 每组内部顺序统一为：目标值在前，反馈值在后，便于直接对照阶跃/跟随情况。
+                    f32 debug_frame[18] = {
+                        (f32)photogate_signal_,
+                        cailbration_angle_deg_,
+                        steer_target_current,
+                        steer_feedback_current,
+                        steer_target_rpm,
+                        steer_feedback_rpm,
+                        steer_target_angle_deg,
+                        steer_feedback_angle_deg,
+                        steer_target_total_angle_deg,
+                        steer_feedback_total_angle_deg,
+                        drive_target_current,
+                        drive_feedback_current,
+                        drive_target_rpm,
+                        drive_feedback_rpm,
+                        drive_target_angle_deg,
+                        drive_feedback_angle_deg,
+                        drive_target_total_angle_deg,
+                        drive_feedback_total_angle_deg};
+                    debug_uart_.printf_DMA_JustFloat(debug_frame, 18);
                 }
             }
         }
