@@ -627,7 +627,11 @@ namespace jia
             f32 debug_input_ = 180.0f;      // 舵向调试输入
             f32 drive_debug_input_ = 1000.0f; // 轮向调试输入，单位：rpm
             f32 debug_lock_rot_z_ = 0.0f; // 调试固定rot_z
-
+            bool is_drive_force_brake_enabled_ = false; // 是否强制轮向刹车
+            bool is_drive_zero_rpm_brake_enabled_ = true; // 目标rpm接近0时是否自动刹车
+            f32 drive_force_brake_current_ = 70000.0f; // 强制刹车电流，单位：mA
+            f32 drive_zero_rpm_brake_current_ = 70000.0f; // 零速自动刹车电流，单位：mA
+            f32 drive_zero_rpm_threshold_rpm_ = 30.0f; // 自动刹车阈值，单位：rpm
             bool is_wheel_single_position_mode_ = false; // 是否为轮子单圈位置模式
             bool is_wheel_total_position_mode_ = false; // 是否为轮子多圈位置模式
             bool is_wheel_speed_mode_ = false;           // 是否为轮子速度模式
@@ -656,8 +660,10 @@ namespace jia
             f32 getSteerWheelCurrentRPM(const WheelConfig &wheel) const;
             f32 getSteerWheelCurrentCurrent(const WheelConfig &wheel) const;
             f32 getSteerWheelCurrentTotalAngleDegCalibrated(const WheelConfig &wheel) const;
+            void setDriveWheelBrake(WheelConfig &wheel, f32 brake_current);
             void setDriveWheelTargetRpm(WheelConfig &wheel, f32 rpm);
             void setDriveWheelTargetCurrent(WheelConfig &wheel, f32 current);
+            void applyDriveWheelDebugCommand(WheelConfig &wheel, f32 drive_target_rpm);
             f32 getDriveWheelTargetRPM(const WheelConfig &wheel) const;
             f32 getDriveWheelCurrentRPM(const WheelConfig &wheel) const;
             f32 getDriveWheelCurrentCurrent(const WheelConfig &wheel) const;

@@ -33,6 +33,10 @@ public:
     virtual void setTargetCurrent(float current_set){};
     virtual void setTargetAngle(float angle_set){};
     virtual void setTargetTotalAngle(float totalAngle_set){};
+    virtual void setBrake(float brake_current)
+    {
+        (void)brake_current;
+    };
 
     // 閿熸枻鎷烽敓鏂ゆ嫹閿熺殕闈╂嫹閿熼摪鐚存嫹閿熸枻鎷烽敓鏂ゆ�?閿熸枻鎷烽敓鏂ゆ嫹鎵ч敓鍙尅鎷烽敓鏂ゆ�?閿熺�?��锋�?閿熸枻鎷烽敓鑺傜�?��烽敓鏂ゆ嫹閿熸枻鎷烽敓浠婅浼欐嫹閿熺獤锝忔嫹閿熸枻鎷烽敓鏂ゆ�?閿熸枻鎷烽敓鏂ゆ嫹鎵ч敓鍙�?鎷�
     virtual void update(){};

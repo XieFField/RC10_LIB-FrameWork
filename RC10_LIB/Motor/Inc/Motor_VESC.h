@@ -85,7 +85,7 @@ public:
     void setTargetAngle(float angle_set) override{};
     void setTargetTotalAngle(float totalAngle_set) override;
 
-    void setBrake(float brake_current);
+    void setBrake(float brake_current) override;
 
     void setDuty(float duty);
 
@@ -129,24 +129,24 @@ public:
                 target_totalAngle_ = 0.0f;
                 target_current_ = 0.0f;
                 target_rpm_ = 0.0f;
-                target_brake_current_ = 0;
+                target_brake_current_ = 0.0f;
                 break;
             case SET_eRPM:
                 target_duty_ = 0.0f;
-                target_brake_current_ = 0;
+                target_brake_current_ = 0.0f;
                 target_current_ = 0.0f;
                 target_totalAngle_ = 0.0f;
 
                 break;
             case SET_CURRENT:
                 target_duty_ = 0.0f;
-                target_brake_current_ = 0;
+                target_brake_current_ = 0.0f;
                 target_rpm_ = 0.0f;
                 target_totalAngle_ = 0.0f;
                 break;
             case SET_POS:
                 target_duty_ = 0.0f;
-                target_brake_current_ = 0;
+                target_brake_current_ = 0.0f;
                 target_current_ = 0.0f;
                 target_rpm_ = 0.0f;
                 break;
@@ -168,7 +168,7 @@ private:
     float target_duty_ = 0.0f; //占空比  -1.0~1.0
     float duty_ = 0.0f; //当前占空比
     int32_t eRPM_ = 0; 
-    int16_t target_brake_current_ = 0; //刹车电流
+    float target_brake_current_ = 0.0f; // brake current in mA
     uint8_t id_check_; //回传id，用于给用户分辨motor_id_和电调id是否一致
 };
 

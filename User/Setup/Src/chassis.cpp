@@ -885,10 +885,28 @@ namespace jia
         {
             wheel.dmh->setTargetRPM(rpm);
         }
-
+        void Chassis::setDriveWheelBrake(WheelConfig &wheel, f32 brake_current)
+        {
+            wheel.dmh->setBrake(brake_current);
+        }
         void Chassis::setDriveWheelTargetCurrent(WheelConfig &wheel, f32 current)
         {
             wheel.dmh->setTargetCurrent(current);
+        }
+        void Chassis::applyDriveWheelDebugCommand(WheelConfig &wheel, f32 drive_target_rpm)
+        {
+            if (is_drive_force_brake_enabled_)
+            {
+                setDriveWheelBrake(wheel, drive_force_brake_current_);
+                return;
+            }
+            if (is_drive_zero_rpm_brake_enabled_ &&
+                std::abs(drive_target_rpm) <= drive_zero_rpm_threshold_rpm_)
+            {
+                setDriveWheelBrake(wheel, drive_zero_rpm_brake_current_);
+                return;
+            }
+            setDriveWheelTargetRpm(wheel, drive_target_rpm);
         }
 
         f32 Chassis::getDriveWheelTargetRPM(const WheelConfig &wheel) const
@@ -1107,8 +1125,7 @@ namespace jia
                     }
                 }
 
-                setDriveWheelTargetRpm(wheel, drive_target_rpm);
-
+                applyDriveWheelDebugCommand(wheel, drive_target_rpm);
                 f32 t_angle_deg = normalizeAngleTo180(getSteerWheelTargetAngleDeg(wheel));
                 f32 c_angle_deg = getSteerWheelCurrentAngleDegCalibrated(wheel);
 
