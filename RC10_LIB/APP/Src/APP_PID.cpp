@@ -316,12 +316,12 @@ PID_Param_Config m3508_angle_pid_params = {
 };
 
 PID_Param_Config m3508Rotate_angle_pid_params = {
-    .kp = 3.5f,
+    .kp = 5.0f,
     .ki = 0.0f,
-    .kd = 0.00f,
+    .kd = 0.05f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 80.0f,   
+    .output_limit = 150.0f,   
     .deadband = 0.03f // 
 };
 

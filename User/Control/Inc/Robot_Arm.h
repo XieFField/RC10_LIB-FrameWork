@@ -127,6 +127,8 @@ typedef struct{
     float sign_pitch_ = 1.0f;
 }MotorReversed_S;
 
+typedef 
+
 /** 
  * @brief 又变成四自由度了，好，那么好。
  * @note 这里的坐标或者行程单位都是米，角度单位是度，角度制。
@@ -346,6 +348,8 @@ private:
         else
             return target;
     }
+
+
 };
 
 

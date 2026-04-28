@@ -6,7 +6,7 @@ Robot_Arm::Robot_Arm(Arm_InitData_S init_Data)
 {
 }
 
-float ramp_rate = 15000;
+float ramp_rate = 18000;
 void Robot_Arm::update()
 {
     /*电机当前的角度转换成关节当前的角度 */
@@ -78,8 +78,6 @@ void Robot_Arm::update()
         
         // float target_arm_mod = normalize_deg_0_360(target_joint_angle_.rotateJoint_angle_);
 
-        // 计算 k 值 (Round to nearest integer)
-        // 增加 0.5f 偏移确保 round 行为在正负数一致 (虽然 roundf 已处理)
         float diff = current_arm_total - target_joint_angle_.rotateJoint_angle_;
         float k = roundf(diff / 360.0f);
 
@@ -87,10 +85,10 @@ void Robot_Arm::update()
         
         target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
 
-				setRampRotateMaxSpeed(ramp_rate); // 可调参数，按需设置
+        setRampRotateMaxSpeed(ramp_rate); // 可调参数，按需设置
         ramp_rotate_target_ = caculate_rotate_target(motor_rotate_->getTotalAngle(),target_rotateMotorAngle);
    
-				motor_rotate_->setTargetTotalAngle(ramp_rotate_target_);
+        motor_rotate_->setTargetTotalAngle(ramp_rotate_target_);
 			
     }
 

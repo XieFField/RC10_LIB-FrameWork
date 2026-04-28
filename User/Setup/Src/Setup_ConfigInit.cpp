@@ -87,8 +87,6 @@ M3508 arm_launchMotor(5, CAN1_Bus, true, false); M2006 arm_stretchMotor(8, CAN1_
 M3508 arm_rotateMotor(7, CAN1_Bus, true, false); DM_Motor arm_pitchMotor(J4310_Type, 0x10, 0x10, CAN1_Bus);
 
 
-
-
 M3508 Weapon_launchMotor(1, CAN2_Bus, true, false); M2006 Weapon_clawMotor(2, CAN2_Bus, true, false);
 M2006 Weapon_traverseMotor(3, CAN2_Bus, true, false); DM_Motor Weapon_wristMotor(J4310_Type, 0x05,0x05, CAN2_Bus);
 /*================Motor Instances==============*/

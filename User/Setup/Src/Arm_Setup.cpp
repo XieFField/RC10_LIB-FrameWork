@@ -55,7 +55,6 @@ void ArmSetup::loop()
         if(arm_ctrlStatus.auto_start == 1)
         {
             this->start_toAutoCtrl(true);
-            
         }
         else
         {
@@ -68,27 +67,37 @@ void ArmSetup::loop()
     {
         case ARM_MANUAL_CONTROL:
         {
-            if(!arm_ctrlStatus.is_store_acting)
+            if(arm_ctrlStatus.is_store_acting == 0) //非存储动作状态，正常手操
             {
                 manualControl();
 
-                if(arm_ctrlStatus.button_click_state == 2) //双击
+                if(arm_ctrlStatus.button_click_state == 2 ) //双击
                 {
-                    arm_ctrlStatus.is_store_acting = true;
+                    arm_ctrlStatus.is_store_acting = 2;
                 }
+                else if(arm_ctrlStatus.button_click_state == 1) //单击
+                {
+                    arm_ctrlStatus.is_store_acting = 1;
+                }
+                arm_ctrlStatus.last_manual_store = 0;
             }
-            else
+            else if(arm_ctrlStatus.is_store_acting == 2) //正在执行存储动作，等待完成
             {
                 if(manual_store())
-                {
-                    arm_ctrlStatus.is_store_acting = false;
+                { 
+                    arm_ctrlStatus.is_store_acting = 0;
+                    
                 }
+                arm_ctrlStatus.last_manual_store = 2;
             }
-
-            this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
-            this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
-            this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
-            this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
+            else if(arm_ctrlStatus.is_store_acting == 1) //取出
+            {
+                if(manual_takeout())
+                {
+                    arm_ctrlStatus.is_store_acting = 0;
+                }
+                arm_ctrlStatus.last_manual_store = 1;
+            }
         
             break;
         }
@@ -147,7 +156,7 @@ void ArmSetup::manualControl()
     // 手动控制函数
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
-    if(last_arm_status_ != ARM_MANUAL_CONTROL)//若首次非此模式，需复制一下上次状态，免得跳变
+    if(last_arm_status_ != ARM_MANUAL_CONTROL && arm_ctrlStatus.last_manual_store != 0)//若首次非此模式，需复制一下上次状态，免得跳变
     {
         /*串联臂*/
         last_joint_status_ = this->get_currentJointStatus();
@@ -215,7 +224,7 @@ void ArmSetup::manualControl()
         target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // 保持不变
 
     manual_control.cnt++;
-    if(manual_control.cnt > 10)
+    if(manual_control.cnt > 5)
     {
         if(airjoy_data_.right_x > 0.5f)
             target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
@@ -225,6 +234,7 @@ void ArmSetup::manualControl()
             target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_; // 保持不变
 
         target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
+        target_joint_status_.rotateJoint_angle_ = manual_roate_clamp(target_joint_status_.rotateJoint_angle_);
         manual_control.cnt = 0;
     }
 
@@ -257,12 +267,86 @@ void ArmSetup::manualControl()
         this->setSuckerStatus(Sucker_Status_E::SUCK);
     else
         this->setSuckerStatus(Sucker_Status_E::STOP);
+    
+    this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
+    this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
+    this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
+    this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
 }
 
 bool ArmSetup::manual_store()
-{
+{ 
+    switch(this->store_state_)
+    {
+        case store_state::idle:
+        {
+            if(arm_ctrlStatus.last_manual_store != 2)
+            {
+                this->store_state_ = store_state::laucnh_state;
+                this->setSuckerStatus(Sucker_Status_E::SUCK);
+            }
+            else
+            {
+                idle();
+            }
+            break;
+        }
+
+        case store_state::laucnh_state:
+        {
+            this->set_LaunchHeight(this->init_data_.max_launchHeight_);
+            this->set_PitchAngle(180.0f); //朝上
+            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.02f)
+            {
+                this->store_state_ = store_state::rotate_state;
+            }
+            break;
+        }
+
+        case store_state::rotate_state:
+        {
+            float target_rotate = 269.9f; //旋转到90度位置
+            Rotate_Strategy_E rotate_strategy;
+            float final_angle = 0.0f;
+            safe_rotate_to(target_rotate, &final_angle, &rotate_strategy);
+
+            this->setRotateStrategy(rotate_strategy);
+            this->set_RotateAngle(final_angle);
+            this->store_state_ = store_state::lower_state;
+            break;
+        }
+
+        case store_state::lower_state:
+        {
+            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 269.9f) < 1.0f)
+            {
+                this->set_LaunchHeight(this->init_data_.safe_height);
+            }
+
+            if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.safe_height) < 0.01f)
+            {
+                this->store_state_ = store_state::idle;
+            }
+
+            return true;
+            break;
+        }
+    }
+
     return false;
 }
+
+float test_angle_for = 270.0f;
+
+bool ArmSetup::manual_takeout()
+{
+    float final_angle = 0.0f;
+    Rotate_Strategy_E rotate_strategy;
+    safe_rotate_to(test_angle_for, &final_angle, &rotate_strategy);
+    this->setRotateStrategy(rotate_strategy);
+    this->set_RotateAngle(final_angle);
+}
+
 
 /*=======================================================*/
 
@@ -862,13 +946,12 @@ void ArmSetup::calibrateMotor()
         {
             this->motor_pitch_->motorSetZero();
         }
-
-
-
         //set current to 0
         this->motor_stretch_->setTargetCurrent(0.0f);
         this->motor_rotate_->setTargetCurrent(0.0f);
         this->motor_launch_->setTargetCurrent(0.0f);
+
+        this->rotate_accum_initial_motor_total_ = this->motor_rotate_->getTotalAngle();
 
         arm_ctrlStatus.is_calibrating = true;
     }
@@ -918,7 +1001,8 @@ Arm_InitData_S arm_initData = {
     .stretch_Ratio_ = 0.11421f,
     .launch_Ratio_ = 0.07221f,
     //    .rotate_gearRatio_ = 144.878f,  //旧的
-    .rotate_gearRatio_ = 145.755789f,
+    // .rotate_gearRatio_ = 145.755789f,
+    .rotate_gearRatio_ = 112.5f,
     .pitch_gearRatio_ = 360.0f,
 
     .min_rotate_angle_ = 0.0f,
