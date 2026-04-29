@@ -536,12 +536,12 @@ protected:
 
     struct {
         
-        float rotate_rate = 1.5f;
+        float rotate_rate = 0.1f;
         float launch_rate = 0.03f;
         int cnt = 0;
     }manual_control;
 
-    ButtonDetector button_detector_1 = ButtonDetector(200.0f); //按钮1的单双击检测器，350ms双击判定时间
+    ButtonDetector button_detector_1 = ButtonDetector(0.200f); //按钮1的单双击检测器，350ms双击判定时间
     float rotate_accum_initial_motor_total_ = 0.0f;
 
     enum class store_state{

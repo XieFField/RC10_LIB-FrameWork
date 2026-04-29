@@ -163,12 +163,12 @@ public:
     enum class State{
         Idle, //空闲
         WaitRealse, //等待松开
-        WaitSecondClick, //等待第二次按下
+        WaitNextClick, //等待下一次按下
     };
 
     /**
      * @param is_press 是否按下 0 没按 1按下
-     * @return 事件类型 0 无事件 1 单击 2 双击
+     * @return 事件类型 0 无事件 1 单击 2 双击 3 三击 4 四击...
      */
     uint8_t update(uint8_t is_press)
     {
@@ -182,9 +182,9 @@ public:
                 if(is_press)
                 {
                     this->state = State::WaitRealse;
-                    last_action_time = TimeStamp::getInstance().getSeconds(); //第一次按下时间
+                    last_action_time = nowtime; //第一次按下时间
+                    click_count = 1;
                 }
-                /* code */
                 break;
             }
             
@@ -192,32 +192,30 @@ public:
             {
                 if(!is_press)
                 {
-                    last_action_time = TimeStamp::getInstance().getSeconds(); //第一次松开时间
-                    this->state = State::WaitSecondClick;
+                    last_action_time = nowtime; //松开时间
+                    this->state = State::WaitNextClick;
                 }
-
                 break;  
             }
             
-            case State::WaitSecondClick:
+            case State::WaitNextClick:
             {
-                bool timeout = (TimeStamp::getInstance().getSeconds() - last_action_time) > DOUBLE_CLICK_INTERVAL;
+                bool timeout = (nowtime - last_action_time) > DOUBLE_CLICK_INTERVAL;
 
                 if(timeout)
                 {
-                    event = 1; //单击事件
+                    event = click_count; //达到超时时间，结算按键次数
                     this->state = State::Idle;
+                    click_count = 0;
                 }
                 else if(is_press)
                 {
-                    event = 2; //双击事件
-                    this->state = State::Idle; 
-                    last_action_time = TimeStamp::getInstance().getSeconds(); //第二次按下时间
+                    click_count++;
+                    this->state = State::WaitRealse; 
+                    last_action_time = nowtime; //再次按下时间
                 }
-
                 break;
             }
-
 
             default:
                 break;
@@ -226,7 +224,7 @@ public:
     }
 
 private:
-    float DOUBLE_CLICK_INTERVAL = 0.350f; //双击判定时间，单位毫秒  
+    float DOUBLE_CLICK_INTERVAL = 0.350f; //连击判定时间，单位秒
     State state = State::Idle;
     uint8_t click_count = 0;
     float last_action_time = 0;

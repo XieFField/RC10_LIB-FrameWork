@@ -319,6 +319,9 @@ protected:
         return sign_reversed_.sign_pitch_ * motor_angle * init_data_.pitch_gearRatio_ / 360.0f;
     }
 
+    void setRotateFilterK(float k) { rotate_filter_k_ = k; }
+    void setRampRotateMaxSpeed(float maxspeed) { ramp_rotate_maxspeed_ = maxspeed; }
+
 private:
     MotorReversed_S sign_reversed_  = {1.0f, 1.0f, 1.0f, 1.0f};
     float last_rotate_cmd_ = 0.0f;
@@ -326,30 +329,48 @@ private:
     
 //bool  time_initialized_ = false;
     
-    float ramp_rotate_maxspeed_ = 0.0f;
-    float ramp_rotate_maxstep_ = 0.0f;
+    float ramp_rotate_maxspeed_ = 36000.0f;
+    float rotate_max_accel_ = 80000.0f; // 新增加速度限制 (Motor Angle deg/s^2)，值越小起步/刹车越平滑
+    float rotate_current_velocity_ = 0.0f; // 记录当前速度
     float ramp_rotate_target_ = 0.0f; 
     
-    void setRampRotateMaxSpeed(float maxspeed) { ramp_rotate_maxspeed_ = maxspeed; }
+    float rotate_filter_k_ = 200.0f; // 滤波(平滑)系数，值越大到达目标越快，越小刹车越平滑
+    
+
+    
     float caculate_rotate_target(float current, float target)
     {
-        ramp_rotate_maxstep_ = ramp_rotate_maxspeed_ * dt_;
         float diff = target - current;
-        if(diff > ramp_rotate_maxstep_)
-        {
-            diff = ramp_rotate_maxstep_;
-            return current + diff;
+        
+        // 期望目标速度 (一次平滑 P控制)
+        float target_vel = diff * rotate_filter_k_;
+
+        // 速度限幅
+        if (target_vel > ramp_rotate_maxspeed_) target_vel = ramp_rotate_maxspeed_;
+        if (target_vel < -ramp_rotate_maxspeed_) target_vel = -ramp_rotate_maxspeed_;
+
+        // 加速度限幅
+        float max_dv = rotate_max_accel_ * dt_;
+        if (target_vel > rotate_current_velocity_ + max_dv) {
+            rotate_current_velocity_ += max_dv;
+        } else if (target_vel < rotate_current_velocity_ - max_dv) {
+            rotate_current_velocity_ -= max_dv;
+        } else {
+            rotate_current_velocity_ = target_vel;
         }
-        else if(diff < -ramp_rotate_maxstep_)
+
+        // 计算步长
+        float step = rotate_current_velocity_ * dt_;
+
+        // 如果距离和速度都极小，直接赋值防止浮点数计算震荡
+        if(std::abs(diff) < 0.01f && std::abs(rotate_current_velocity_) < 0.1f) 
         {
-            diff = -ramp_rotate_maxstep_;
-            return current + diff;
-        }
-        else
+            rotate_current_velocity_ = 0.0f; // 完全停稳后清零速度
             return target;
+        }
+
+        return current + step;
     }
-
-
 };
 
 

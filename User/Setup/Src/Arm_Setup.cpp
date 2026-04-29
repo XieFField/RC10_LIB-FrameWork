@@ -12,7 +12,7 @@ void ArmSetup::loop()
         return;
 
 
-    if((motor_pitch_->getErrorNum() == 0x00 || !this->is_pitchEnable_) && (!arm_ctrlStatus.is_calibrating))
+    if((motor_pitch_->getErrorNum() == 0x00 || !this->is_pitchEnable_))
     {
         motor_pitch_->motorEnable();
         this->is_pitchEnable_ = true;
@@ -44,8 +44,6 @@ void ArmSetup::loop()
     auto_ctrl_.now_ChassisPosition = get_nowChassisPose();
 #endif
 
-
-
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 
     arm_ctrlStatus.button_click_state =  button_detector_1.update(airjoy_data_.botton_click);
@@ -62,6 +60,14 @@ void ArmSetup::loop()
         }
     } 
 
+    if(arm_status_ == ARM_MANUAL_CONTROL && arm_ctrlStatus.last_manual_store == 0)
+    {
+        this->setRotateFilterK(270.0f); //手操时提高旋转响应速度
+    }
+    else
+    {
+        this->setRotateFilterK(180.0f); //非手操时降低旋转响应速度，避免干扰自动控制
+    }
 
     switch(arm_status_)
     {
@@ -71,17 +77,17 @@ void ArmSetup::loop()
             {
                 manualControl();
 
-                if(arm_ctrlStatus.button_click_state == 2 ) //双击
+                if(arm_ctrlStatus.button_click_state == 2) //双击
                 {
                     arm_ctrlStatus.is_store_acting = 2;
                 }
-                else if(arm_ctrlStatus.button_click_state == 1) //单击
+                else if(arm_ctrlStatus.button_click_state == 3) //三击
                 {
                     arm_ctrlStatus.is_store_acting = 1;
                 }
                 arm_ctrlStatus.last_manual_store = 0;
             }
-            else if(arm_ctrlStatus.is_store_acting == 2) //正在执行存储动作，等待完成
+            else if(arm_ctrlStatus.is_store_acting == 2 && this->getSuckerStatus() == Sucker_Status_E::SUCK) //正在执行存储动作，等待完成
             {
                 if(manual_store())
                 { 
@@ -97,6 +103,10 @@ void ArmSetup::loop()
                     arm_ctrlStatus.is_store_acting = 0;
                 }
                 arm_ctrlStatus.last_manual_store = 1;
+            }
+            else
+            {
+                arm_ctrlStatus.is_store_acting = 0;
             }
         
             break;
@@ -145,6 +155,7 @@ void ArmSetup::loop()
 
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
+    debug_uart.printf_DMA("%f\n", motor_rotate_->getTotalAngle());
 }
 
 /**
@@ -156,7 +167,8 @@ void ArmSetup::manualControl()
     // 手动控制函数
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
-    if(last_arm_status_ != ARM_MANUAL_CONTROL && arm_ctrlStatus.last_manual_store != 0)//若首次非此模式，需复制一下上次状态，免得跳变
+   
+    if(last_arm_status_ != ARM_MANUAL_CONTROL || arm_ctrlStatus.last_manual_store != 0)//若首次非此模式，需复制一下上次状态，免得跳变
     {
         /*串联臂*/
         last_joint_status_ = this->get_currentJointStatus();
@@ -223,20 +235,17 @@ void ArmSetup::manualControl()
     else
         target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // 保持不变
 
-    manual_control.cnt++;
-    if(manual_control.cnt > 5)
-    {
+
         if(airjoy_data_.right_x > 0.5f)
             target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
         else if(airjoy_data_.right_x < -0.5f)
             target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
-        else
-            target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_; // 保持不变
+        // else
+        //     target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_; // 保持不变
 
         target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
         target_joint_status_.rotateJoint_angle_ = manual_roate_clamp(target_joint_status_.rotateJoint_angle_);
-        manual_control.cnt = 0;
-    }
+
 
     //pitch 开关
     int8_t target_pitch_logical = (airjoy_data_.scroll_wheel & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
@@ -283,7 +292,6 @@ bool ArmSetup::manual_store()
             if(arm_ctrlStatus.last_manual_store != 2)
             {
                 this->store_state_ = store_state::laucnh_state;
-                this->setSuckerStatus(Sucker_Status_E::SUCK);
             }
             else
             {
@@ -318,9 +326,14 @@ bool ArmSetup::manual_store()
 
         case store_state::lower_state:
         {
-            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 269.9f) < 1.0f)
+            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 269.9f) < 1.0f )
             {
-                this->set_LaunchHeight(this->init_data_.safe_height);
+                this->set_PitchAngle(0.0f); //朝下
+            }
+
+            if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 1.0f)
+            {
+                this->set_LaunchHeight(this->init_data_.safe_height); //降低到安全高度
             }
 
             if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.safe_height) < 0.01f)
@@ -340,11 +353,21 @@ float test_angle_for = 270.0f;
 
 bool ArmSetup::manual_takeout()
 {
+    if(this->get_currentJointStatus().launchJoint_Height_ < this->init_data_.safe_height )
+    {
+        return true; //如果还在安全高度以下，就先保持不动，等它升起来了再旋转
+    }
     float final_angle = 0.0f;
     Rotate_Strategy_E rotate_strategy;
     safe_rotate_to(test_angle_for, &final_angle, &rotate_strategy);
     this->setRotateStrategy(rotate_strategy);
     this->set_RotateAngle(final_angle);
+    
+    if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - final_angle) < 1.0f)
+    {
+        return true;
+    }
+    return false;
 }
 
 
@@ -993,7 +1016,7 @@ void ArmSetup::debug()
 }
 
 Arm_InitData_S arm_initData = {
-    .max_launchHeight_ = 0.29f,
+    .max_launchHeight_ = 0.26f,
     .max_stretchLength_ = 0.160f,
     .arm_length_ = 0.6f,
     .end_link_length_ = 0.08f,
@@ -1010,5 +1033,5 @@ Arm_InitData_S arm_initData = {
     .safe_height = 0.14f,
     .Sucker_GPIO_Port = SUCKER_error_GPIO_Port,
     .Sucker_GPIO_Pin =  SUCKER_error_Pin,
-    .max_pitchRPM_ = 45.0f,
+    .max_pitchRPM_ = 120.0f,
 };
