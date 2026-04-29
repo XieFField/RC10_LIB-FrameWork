@@ -388,7 +388,7 @@ private:
     bool isRotateAllowed(float rotate_angle_deg) const
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
-        const float safe_h = init_data_.safe_height;
+        const float safe_h = init_data_.safe_height_;
 
         // 不重复处理归一化
         const float norm_deg = rotate_angle_deg;
@@ -409,7 +409,7 @@ private:
     float sanitizeRotateAngle(float desired_deg) const
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
-        const float safe_h = init_data_.safe_height;
+        const float safe_h = init_data_.safe_height_;
 
         if(h >= safe_h - 0.01f) return desired_deg;
 
@@ -549,6 +549,8 @@ protected:
         laucnh_state,
         rotate_state,
         lower_state,
+        outstate1, //取出专用
+        outstate2,
     };
 
     store_state store_state_ = store_state::idle; //存储或取出的状态机；

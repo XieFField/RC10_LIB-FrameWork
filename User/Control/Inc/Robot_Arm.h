@@ -57,8 +57,8 @@ typedef struct {
 
     float min_rotate_angle_ = 0.0f; // 最小旋转角度
     float max_rotate_angle_ = 0.0f; // 最大旋转角度
-    float safe_height = 0.0f; // 安全高度，单位米，低于这个高度，机械臂云台旋转受限
-
+    float safe_height_ = 0.0f; // 安全高度，单位米，低于这个高度，机械臂云台旋转受限
+    float store_height_ = 0.0f; // 存储高度，单位米，机械臂在这个高度进行存储和取出操作
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘控制GPIO端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘控制GPIO引脚
 }Arm_InitData_S;

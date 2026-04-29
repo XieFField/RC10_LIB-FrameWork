@@ -86,13 +86,13 @@ void ArmSetup::loop()
                     arm_ctrlStatus.is_store_acting = 1;
                 }
                 arm_ctrlStatus.last_manual_store = 0;
+                store_state_ = store_state::idle;
             }
             else if(arm_ctrlStatus.is_store_acting == 2 && this->getSuckerStatus() == Sucker_Status_E::SUCK) //正在执行存储动作，等待完成
             {
                 if(manual_store())
                 { 
                     arm_ctrlStatus.is_store_acting = 0;
-                    
                 }
                 arm_ctrlStatus.last_manual_store = 2;
             }
@@ -292,6 +292,7 @@ bool ArmSetup::manual_store()
             if(arm_ctrlStatus.last_manual_store != 2)
             {
                 this->store_state_ = store_state::laucnh_state;
+                this->setSuckerStatus(Sucker_Status_E::SUCK); 
             }
             else
             {
@@ -304,7 +305,75 @@ bool ArmSetup::manual_store()
         {
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
             this->set_PitchAngle(180.0f); //朝上
-            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.02f)
+            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.04f)
+            {
+                this->store_state_ = store_state::rotate_state;
+            }
+            break;
+        }
+
+        case store_state::rotate_state:
+        {
+            float target_rotate = 269.9f; //旋转到90度位置
+            Rotate_Strategy_E rotate_strategy;
+            float final_angle = 0.0f;
+            safe_rotate_to(target_rotate, &final_angle, &rotate_strategy);
+            this->setRotateStrategy(rotate_strategy);
+            this->set_RotateAngle(final_angle);
+            this->store_state_ = store_state::lower_state;
+            break;
+        }
+
+        case store_state::lower_state:
+        {
+            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 1.0f )
+            {
+                this->set_PitchAngle(0.0f); //朝下
+            }
+
+            if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 5.0f)
+            {
+                this->set_LaunchHeight(this->init_data_.store_height_); //降低到安全高度
+            }
+
+            if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.store_height_) < 0.01f)
+            {
+                this->setSuckerStatus(Sucker_Status_E::STOP); //放开
+                this->store_state_ = store_state::idle;
+                return true;
+            }
+            return false;
+            break;
+        }
+    }
+
+    return false;
+}
+
+float test_angle_for = 270.0f;
+
+bool ArmSetup::manual_takeout()
+{
+    switch(this->store_state_)
+    {
+        case store_state::idle:
+        {
+            if(arm_ctrlStatus.last_manual_store != 2)
+            {
+                this->store_state_ = store_state::laucnh_state;
+            }
+            else
+            {
+                idle();
+            }
+            break;
+        }
+        case store_state::laucnh_state:
+        {
+            this->setSuckerStatus(Sucker_Status_E::STOP);
+            this->set_LaunchHeight(this->init_data_.max_launchHeight_);
+            this->set_PitchAngle(0.0f); //朝下
+            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.04f)
             {
                 this->store_state_ = store_state::rotate_state;
             }
@@ -326,48 +395,57 @@ bool ArmSetup::manual_store()
 
         case store_state::lower_state:
         {
-            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 269.9f) < 1.0f )
+            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 270.0f) < 5.0f)
+            {
+                this->setSuckerStatus(Sucker_Status_E::SUCK); 
+                this->set_LaunchHeight(this->init_data_.store_height_); 
+            }
+            this->store_state_ = store_state::outstate1;
+            break;
+        }
+
+        case store_state::outstate1:
+        {
+            static float catch_time = 0.0f; //碰到目标后开始计时
+            if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.store_height_) < 0.005f)
+            {
+                catch_time = TimeStamp::getInstance().getSeconds(); //记录碰到目标的时间
+            }
+
+            if(TimeStamp::getInstance().getSeconds() - catch_time > 0.3f && std::fabs(catch_time - 0.0f) > 1e-6) //如果已经碰到目标超过0.3秒，认为已经吸附
+            {
+                this->set_LaunchHeight(this->init_data_.max_launchHeight_); //抬升到安全高度
+            }
+
+            if(this->get_currentJointStatus().launchJoint_Height_ > this->init_data_.max_launchHeight_ - 0.04f)
+            {
+                this->set_PitchAngle(180.0f); //朝上
+                this->store_state_ = store_state::outstate2;
+            }
+
+            break;
+        }
+
+        case store_state::outstate2:
+        {
+            float target_rotate = 180.0f; //旋转到180度位置
+            Rotate_Strategy_E rotate_strategy;
+            float final_angle = 0.0f;
+            safe_rotate_to(target_rotate, &final_angle, &rotate_strategy);
+
+            this->setRotateStrategy(rotate_strategy);
+            this->set_RotateAngle(final_angle);
+
+            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f)
             {
                 this->set_PitchAngle(0.0f); //朝下
-            }
-
-            if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 1.0f)
-            {
-                this->set_LaunchHeight(this->init_data_.safe_height); //降低到安全高度
-            }
-
-            if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.safe_height) < 0.01f)
-            {
                 this->store_state_ = store_state::idle;
+                return true;
             }
 
-            return true;
             break;
         }
     }
-
-    return false;
-}
-
-float test_angle_for = 270.0f;
-
-bool ArmSetup::manual_takeout()
-{
-    if(this->get_currentJointStatus().launchJoint_Height_ < this->init_data_.safe_height )
-    {
-        return true; //如果还在安全高度以下，就先保持不动，等它升起来了再旋转
-    }
-    float final_angle = 0.0f;
-    Rotate_Strategy_E rotate_strategy;
-    safe_rotate_to(test_angle_for, &final_angle, &rotate_strategy);
-    this->setRotateStrategy(rotate_strategy);
-    this->set_RotateAngle(final_angle);
-    
-    if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - final_angle) < 1.0f)
-    {
-        return true;
-    }
-    return false;
 }
 
 
@@ -734,7 +812,7 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
     if(MF_high[targetKFS - 1] == 0.2f)
         targetLowerHeight = 0.0f;
     else if(MF_high[targetKFS - 1] == 0.4f)
-        targetLowerHeight = this->init_data_.safe_height; 
+        targetLowerHeight = this->init_data_.safe_height_; 
     else if(MF_high[targetKFS - 1] == 0.6f)
         targetLowerHeight = this->init_data_.max_launchHeight_;
     else
@@ -1030,7 +1108,8 @@ Arm_InitData_S arm_initData = {
 
     .min_rotate_angle_ = 0.0f,
     .max_rotate_angle_ = 359.99999f,
-    .safe_height = 0.14f,
+    .safe_height_ = 0.14f,
+    .store_height_ = 0.12f,
     .Sucker_GPIO_Port = SUCKER_error_GPIO_Port,
     .Sucker_GPIO_Pin =  SUCKER_error_Pin,
     .max_pitchRPM_ = 120.0f,
