@@ -33,11 +33,6 @@ uint8_t laser_rx_buffer2[20];
 //激光测距
 //USB_CDC_ cdc(&hUsbDeviceHS);
 USB_CDC_ usb_1(&hUsbDeviceHS);
-LaserPosition laserpos(15,laser_rx_buffer,&huart3);
-//LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
-LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
-Laser_InstanceManager instance_man;
-
 JY61_IMU IMU(JY61_ADDR,&hi2c5);
 Chassis_Omni<3>::init_config chassis_initData = {
     .wheel_radius = 0.15f/2.f,
@@ -65,9 +60,6 @@ Chassis chassis;
 FSM_Controller Finite_StateMachine;
 ArmSetup ARM_Controller(arm_initData);
 Robot_WeaponSage_Setup Weapon_Controller(initData_);
-//test test_task;
-//IMU_test imu_test;
-
 
 
 
@@ -84,9 +76,7 @@ M3508 omni_wheel3(3, CAN1_Bus, false, false); M3508 omni_wheel4(4, CAN1_Bus, fal
 
                            /* 串联臂 */      
 M3508 arm_launchMotor(5, CAN1_Bus, true, false); M2006 arm_stretchMotor(8, CAN1_Bus, true, false);
-M3508 arm_rotateMotor(7, CAN1_Bus, true, false); DM_Motor arm_pitchMotor(J4310_Type, 0x10, 0x10, CAN1_Bus);
-
-
+M3508 arm_rotateMotor(7, CAN1_Bus, true, false); DM_Motor arm_pitchMotor(J4310_Type, 0x05, 0x05, CAN1_Bus);
 
 
 M3508 Weapon_launchMotor(1, CAN2_Bus, true, false); M2006 Weapon_clawMotor(2, CAN2_Bus, true, false);
@@ -217,10 +207,6 @@ void ALL_Setup_ConfigInit(void)
 {
     // 初始化串口6的相机模块
     Module_Camera::GetInstance(&huart6)->InitUART();
-    //test_task.init();
-	//imu_test.init();
-   // Position* pos = Position::GetInstance(&huart1);
-   // pos->InitUART();
 
    HWT101CT* imu = HWT101CT::GetInstance(&huart1);
    imu->InitUART();
@@ -260,22 +246,10 @@ void ALL_Setup_ConfigInit(void)
 
    CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
    crsf_rc->init();
-
-
-   
-
-	 instance_man.RegisterInstance(&laserpos);
-	 //instance_man.RegisterInstance(&laserpos1);
-	 instance_man.RegisterInstance(&laserpos2);
-	 instance_man.InstanceManager_Init();
-//激光重定位解析数据初始化
-	 
-     set1->init(&instance_man,&usb_1,lader_install_offset ,arm_install_offset);	
-     set1->laser_initData_.d=0.5;
-     set1->locate_setup_init();
-     set1->set_startToLRL(true);
-//雷达定位实例化
-	//  Lader_position*ladar=Lader_position::GetInstance(&hUsbDeviceHS);
+	
+   set1->laser_initData_.d=0.5;
+   set1->locate_setup_init();
+   set1->set_startToLRL(true);
    
 }
 

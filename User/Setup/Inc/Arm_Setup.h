@@ -95,7 +95,7 @@ extern "C" {
 // #include "usart.h"
 
 #define ARM_AUTO_DEBUG_NOCHASSIS  0 //無底盤下，用虛擬坐標進行驗證自動邏輯
-#define ARM_VERSION 1 //版本号， 若是1则意味着是顶吸侧吸融合版本 如果是0则是纯侧吸版本
+#define ARM_VERSION 0 //版本号， 若是1则意味着是顶吸侧吸融合版本 如果是0则是纯侧吸版本
 
 
 typedef struct{
@@ -119,6 +119,12 @@ typedef struct{
     int8_t pitch_switch_offset = 0; //俯仰开关偏移绑定
     int8_t extend_switch_offset = 0; // 伸展开关偏移绑定
     int8_t sucker_switch_offset = 0; // 吸盘开关偏移绑定
+
+    uint8_t button_click_state = 0;
+    uint8_t is_store_acting = 0; //正在执行存储动作的标志位
+
+    
+    uint8_t last_manual_store = 0; //用于手操和存储切换的判定
 }arm_ctrl_status_S;
 
 
@@ -153,11 +159,6 @@ typedef struct{
 
     Point2D targetKFS_pos[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //目标KFS位置
 
-    struct {
-        Point2D PA;
-        Point2D PB;
-    }PointPAB[2];
-
     /**
      * @brief 旋转路径策略 正方向表示角度正增，负方向表示角度负增；
      *                    正增为逆时针旋转，负增为顺时针旋转
@@ -177,8 +178,6 @@ typedef struct{
         int8_t pitch_state[2] = {0,0}; //记录目标KFS的pitch状态，0代表侧吸，1代表顶吸
     }flag;
 }ARM_AUTO_S;
-
-
 
 
 const float MF_high[12] = 
@@ -215,9 +214,8 @@ public:
         // this->setPitchReversed(true); //俯仰电机反向
         this->setStretchReversed(true); //伸展电机反向
         this->setRotateReversed(false);
-        this->setLaunchReversed(true); //升降电机反向
+        this->setLaunchReversed(false); //升降电机反向
         start(osPriorityHigh-1, 512); 
-        setRotateMultiTurn(false); //单圈模式
         arm_ctrlStatus.init_flag = true;
     }
 
@@ -229,18 +227,6 @@ public:
 
         arm_status_ = status;
     }
-
-    /**
-     * @brief 设置云台多圈/单圈模式
-     *        默认单圈模式，即rotate_multiTurn_ = false
-     *        单圈模式意味着云台禁止多圈旋转，旋转3/4圈后需要转回来，(防止电机电线缠绕云台底座)
-     */
-    void setRotateMultiTurn(bool isMulti)
-    {
-        rotate_multiTurn_ = isMulti;
-    }
-
-
 
     /**
      * @brief 设置目标抓取梅花桩编号
@@ -365,6 +351,9 @@ private:
 
     //控制函数
     void manualControl();
+    bool manual_store();
+    bool manual_takeout();
+
     void autoControl();
     void stop();
     void idle();
@@ -399,7 +388,7 @@ private:
     bool isRotateAllowed(float rotate_angle_deg) const
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
-        const float safe_h = init_data_.safe_height;
+        const float safe_h = init_data_.safe_height_;
 
         // 不重复处理归一化
         const float norm_deg = rotate_angle_deg;
@@ -420,7 +409,7 @@ private:
     float sanitizeRotateAngle(float desired_deg) const
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
-        const float safe_h = init_data_.safe_height;
+        const float safe_h = init_data_.safe_height_;
 
         if(h >= safe_h - 0.01f) return desired_deg;
 
@@ -428,21 +417,9 @@ private:
         const float norm_deg = desired_deg;
 
         if(norm_deg < 60.0f) return 60.0f;
-        if(norm_deg > 185.0f && norm_deg < 270.0f) return 180.0f;
+        if(norm_deg > 179.9f && norm_deg < 270.0f) return 180.0f;
         if(norm_deg >= 270.0f) return 60.0f;
         return norm_deg;
-    }
-
-    /**
-     * @brief 执行安全门：在任何位置控制前调用，返回是否允许并输出安全角度
-     * @param desired_deg 期望的旋转角度（云台角度，非电机角度）
-     * @param safe_out_deg 输出的安全旋转角度
-     */
-    bool safetyGate_ForRotate(float desired_deg, float& safe_out_deg) const
-    {
-        bool ok = isRotateAllowed(desired_deg);
-        safe_out_deg = sanitizeRotateAngle(desired_deg);
-        return ok;
     }
 
 protected:
@@ -545,9 +522,8 @@ protected:
         .calibrate_startTime = 0,
         .calibrate_start = false,
         .is_calibrating = false,
+
     };
-
-
 
 
     ARM_Status_E arm_status_ = ARM_MANUAL_CONTROL;
@@ -556,20 +532,118 @@ protected:
     Joint_Status_S last_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
     Joint_Status_S target_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
 
-    bool rotate_multiTurn_ = false; //云台多圈模式标志，默认单圈模式
-
     ARM_AUTO_S auto_ctrl_;
-
-    // 单圈模式相关变量
-    Rotate_Strategy_E recorded_align_strategy_ = ROTATE_PATH_SHORTEST;
-    Rotate_Strategy_E recorded_carrying_strategy_ = ROTATE_PATH_SHORTEST;
 
     struct {
         
-        float rotate_rate = 3.0f;
+        float rotate_rate = 0.1f;
         float launch_rate = 0.03f;
         int cnt = 0;
     }manual_control;
+
+    ButtonDetector button_detector_1 = ButtonDetector(0.200f); //按钮1的单双击检测器，350ms双击判定时间
+    float rotate_accum_initial_motor_total_ = 0.0f;
+
+    enum class store_state{
+        idle,
+        laucnh_state,
+        rotate_state,
+        lower_state,
+        outstate1, //取出专用
+        outstate2,
+    };
+
+    store_state store_state_ = store_state::idle; //存储或取出的状态机；
+    /**
+     * @brief 获取当前累计旋转角度
+     */
+    float get_accuum_roatate_angle()
+    {
+        if(!arm_ctrlStatus.is_calibrating)
+            return 0.0f;
+        
+        float delta = motor_rotate_->getTotalAngle() - this->rotate_accum_initial_motor_total_;
+        return this->MotorTotalAngle_to_rotateAngle(delta);
+    }
+
+    /**
+     * @brief 手操当中，旋转角度限制，防止多圈绕线
+     */
+    float manual_roate_clamp(float desired_deg)
+    {
+        constexpr float MAX_ROTATE_ANGLE = 270.0f; //最大旋转角度，单位度
+
+        //最短路径
+        float diff = desired_deg - this->get_currentJointStatus().rotateJoint_angle_;
+        if (diff > 180.0f)       diff -= 360.0f;
+        else if (diff < -180.0f) diff += 360.0f;
+
+        float new_accum = this->get_accuum_roatate_angle() + diff;
+
+        if(new_accum > MAX_ROTATE_ANGLE)
+        {
+            diff = MAX_ROTATE_ANGLE - this->get_accuum_roatate_angle();
+        }
+        else if(new_accum < -MAX_ROTATE_ANGLE)
+        {
+            diff = -MAX_ROTATE_ANGLE - this->get_accuum_roatate_angle();
+        }
+
+        float clamped_deg = this->get_currentJointStatus().rotateJoint_angle_ + diff;
+        return normalize_deg_0_360(clamped_deg);
+    }  
+
+    /**
+     * @brief 自动模式下安全旋转到目标角度
+     * @param target_deg 期望的云台归一化角度（0~360）
+     * @note 内部自动选择不会超过累计 ±270° 的旋转策略，并直接设置电机目标
+     * @param final_deg 输出实际设置的安全旋转角度（云台角度，非电机角度）
+      * @param strategy_used 输出实际使用的旋转策略
+     */
+    void safe_rotate_to(float target_deg, float *final_deg, Rotate_Strategy_E *strategy_used)
+    { 
+        struct Option{
+            Rotate_Strategy_E strategy;
+            float diff;
+            bool vaild;
+        };
+
+        float diff_short = target_deg - this->get_currentJointStatus().rotateJoint_angle_;
+        if (diff_short > 180.0f)       diff_short -= 360.0f;
+        else if (diff_short < -180.0f) diff_short += 360.0f;
+
+        //正增diff
+        float diff_pos = target_deg - this->get_currentJointStatus().rotateJoint_angle_;
+        if(diff_pos < 0 ) diff_pos += 360.0f;
+        //负增diff
+        float diff_neg = target_deg - this->get_currentJointStatus().rotateJoint_angle_;
+        if(diff_neg > 0 ) diff_neg -= 360.0f;
+
+        float accum = get_accuum_roatate_angle();
+
+        constexpr float LIMIT = 270.0f;
+
+        Option options[3] = {
+            {ROTATE_PATH_SHORTEST, diff_short, (accum + diff_short >= -LIMIT - 0.01f && accum + diff_short <= LIMIT + 0.01f)},
+            {ROTATE_PATH_POSITIVE, diff_pos,   (accum + diff_pos   >= -LIMIT - 0.01f && accum + diff_pos   <= LIMIT + 0.01f)},
+            {ROTATE_PATH_NEGATIVE, diff_neg,   (accum + diff_neg   >= -LIMIT - 0.01f && accum + diff_neg   <= LIMIT + 0.01f)}
+        };
+
+        Option* best_option = nullptr;
+        float min_abs = 1e9f;
+
+        for(auto&opt: options)
+        {
+            if(opt.vaild && std::fabs(opt.diff) < min_abs)
+            {
+                best_option = &opt;
+                min_abs = _tool_Abs(opt.diff);
+            }
+        }
+
+        *strategy_used = best_option->strategy;
+        *final_deg = normalize_deg_0_360(this->get_currentJointStatus().rotateJoint_angle_ + best_option->diff);
+    }
 };
 
 

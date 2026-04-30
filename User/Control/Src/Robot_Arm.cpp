@@ -6,7 +6,7 @@ Robot_Arm::Robot_Arm(Arm_InitData_S init_Data)
 {
 }
 
-float ramp_rate = 15000;
+float ramp_rate = 18000;
 void Robot_Arm::update()
 {
     /*电机当前的角度转换成关节当前的角度 */
@@ -76,22 +76,18 @@ void Robot_Arm::update()
     {
         float current_arm_total = MotorTotalAngle_to_rotateAngle(motor_rotate_->getTotalAngle());
         
-        // float target_arm_mod = normalize_deg_0_360(target_joint_angle_.rotateJoint_angle_);
-
-        // 计算 k 值 (Round to nearest integer)
-        // 增加 0.5f 偏移确保 round 行为在正负数一致 (虽然 roundf 已处理)
-        float diff = current_arm_total - target_joint_angle_.rotateJoint_angle_;
+        // 算出经过手动模式、自动模式设定的目标角度
+        float target_arm = target_joint_angle_.rotateJoint_angle_;
+        
+        // 计算当前机械臂总角度和目标的差值，找到它离当前圈数最近的那个目标绝对角度
+        float diff = current_arm_total - target_arm;
         float k = roundf(diff / 360.0f);
 
-        float target_arm_total = target_joint_angle_.rotateJoint_angle_ + k * 360.0f;
-        
+        float target_arm_total = target_arm + k * 360.0f;
         target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
 
-				setRampRotateMaxSpeed(ramp_rate); // 可调参数，按需设置
-        ramp_rotate_target_ = caculate_rotate_target(motor_rotate_->getTotalAngle(),target_rotateMotorAngle);
-   
-				motor_rotate_->setTargetTotalAngle(ramp_rotate_target_);
-			
+        ramp_rotate_target_ = caculate_rotate_target(motor_rotate_->getTotalAngle(), target_rotateMotorAngle);
+        motor_rotate_->setTargetTotalAngle(ramp_rotate_target_);
     }
 
     target_stretchMotorAngle = stretchLength_to_MotorTotalAngle(target_joint_angle_.stretchJoint_Length_);
@@ -210,6 +206,7 @@ float Robot_Arm::calc_rotate_targetByStrategy(float current_cont_angle, float ta
 
     return current_cont_angle + diff;
 }
+
 
 
 
