@@ -29,7 +29,7 @@ extern "C" {
 #include "frame_demo.h"
 #endif
 
-
+#include "Motor_VESC.h"
 #include <cstdint>
 #include "BSP_CANFrame.h"
 #include "BSP_RTOS.h"

@@ -102,18 +102,18 @@ class Robot_WeaponSage_Setup : public RtosTask, public Robot_WeaponSage {
 public:
     Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data);
     
-    void init(M3508* launch_Motor, M2006* claw_Motor,
-        M2006* traverse_Motor, DM_Motor* wrist_Motor)
+    /**
+     * @brief 必须在注册完所有电机后调用一次 init() 来启动任务和完成必要的初始化，否则武器架将无法正常工作
+     */
+    void init()
     {
-        this->register_launch_Motor(launch_Motor);
-        this->register_claw_Motor(claw_Motor);
-        this->register_traverse_Motor(traverse_Motor);
-        this->register_wrist_Motor(wrist_Motor);
-
-        if(this->launch_Motor_ == nullptr ||
-           this->claw_Motor_ == nullptr ||
-           this->traverse_Motor_ == nullptr ||
-           this->wrist_Motor_ == nullptr
+        if( this->launch_Motor_1_master == nullptr ||
+            this->launch_Motor_1_slave == nullptr ||
+            this->launch_Motor_2_master == nullptr ||
+            this->launch_Motor_2_slave == nullptr ||
+            this->claw_Motor_ == nullptr ||
+            this->traverse_Motor_ == nullptr ||
+            this->wrist_Motor_ == nullptr
         )
         {
             ctrl_status_.init_flag = false;

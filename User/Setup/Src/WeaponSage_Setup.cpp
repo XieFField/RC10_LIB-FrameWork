@@ -108,17 +108,16 @@ void Robot_WeaponSage_Setup::calibrate()
         this->setCtrlMode(WeaponSage::CURRENT_CONTROL);
 		this->setTarget(-900.0f, WeaponSage::Traverse_Motor);
         this->setTarget(500.0f, WeaponSage::Claw_Motor);
-//        if(!auto_ctrl_.auto_state_bool_S.wrist_enable)
-//        {
-//            Weapon_wrist_enable();
-//			auto_ctrl_.auto_state_bool_S.wrist_enable=true;
-//        }
+
         if(ctrl_status_.now_times - ctrl_status_.calibrate_startTime > 2.0f)
         {
             //relocate
             this->claw_Motor_->relocate_totalAngle(0.0f);
             this->traverse_Motor_->relocate_totalAngle(0.0f);
-            this->launch_Motor_->relocate_totalAngle(0.0f);
+            this->launch_Motor_1_master->relocate_totalAngle(0.0f);
+            this->launch_Motor_1_slave->relocate_totalAngle(0.0f);
+            this->launch_Motor_2_master->relocate_totalAngle(0.0f);
+            this->launch_Motor_2_slave->relocate_totalAngle(0.0f);
             
 			if(auto_ctrl_.auto_state_bool_S.wrist_enable)
 			{	
