@@ -113,7 +113,7 @@ int main(void)
   MX_UART8_Init();
   MX_I2C5_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim6); // 启动定时器不然CAN任务不会跑的
+  HAL_TIM_Base_Start_IT(&htim6); // 锟斤拷锟斤拷锟斤拷时锟斤拷锟斤拷然CAN锟斤拷锟今不伙拷锟杰碉拷
   ALL_Setup_ConfigInit();
   /* USER CODE END 2 */
 

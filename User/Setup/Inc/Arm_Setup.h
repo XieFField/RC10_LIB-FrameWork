@@ -1,70 +1,70 @@
 /**
  * @file Arm_setup.h
  * @author XieFField  
- * @brief 串联臂运动控制实现
- *        KFS索引采用1 ~ 12 使用时候 index = KFSNum -1
+ * @brief 锟斤拷锟斤拷锟斤拷锟剿讹拷锟斤拷锟斤拷实锟斤拷
+ *        KFS锟斤拷锟斤拷锟斤拷锟斤拷1 ~ 12 使锟斤拷时锟斤拷 index = KFSNum -1
  * @version 1.0
- *  测试基础的串联臂运动控制
+ *  锟斤拷锟皆伙拷锟斤拷锟侥达拷锟斤拷锟斤拷锟剿讹拷锟斤拷锟斤拷
  * @version 2.0
- *  开始写自动拾取相关
- *      依旧屎山堆叠 O(∩_∩)O 经典梦到哪句写哪句 
- *      酣畅淋漓的。。。屎山堆积，以后多用数组以及、、、硬编码:>
+ *  锟斤拷始写锟皆讹拷拾取锟斤拷锟?
+ *      锟斤拷锟斤拷屎山锟窖碉拷 O(锟斤拷_锟斤拷)O 锟斤拷锟斤拷锟轿碉拷锟侥撅拷写锟侥撅拷 
+ *      锟斤拷锟斤拷锟斤拷锟斤拷摹锟斤拷锟斤拷锟绞荷斤拷鸦锟斤拷锟斤拷院锟斤拷锟斤拷锟斤拷锟斤拷锟皆硷拷锟斤拷锟斤拷锟斤拷硬锟斤拷锟斤拷:>
  * 
  * @version 3.0
- *   基本完善了云台部分的自动控制，等罗麒麟完善后面部分
+ *   锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷台锟斤拷锟街碉拷锟皆讹拷锟斤拷锟狡ｏ拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟狡猴拷锟芥部锟斤拷
  * 
  * @version 4.0
- *   写完了自动控制部分，目前把发现的Bug都修复了
+ *   写锟斤拷锟斤拷锟皆讹拷锟斤拷锟狡诧拷锟街ｏ拷目前锟窖凤拷锟街碉拷Bug锟斤拷锟睫革拷锟斤拷
  * 
  * @version 5.0
- *   重新设计了上电校准逻辑，以及后续的机械臂云台禁区位置。
- *   将会修改为，机械臂云台常驻safe高度为0.20米；
- *              如果机械臂云台在safe高度以下，则机械臂云台的活动范围仅为60度~135度(rotate_angle, 不是motor_angle)
+ *   锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷系锟叫Ｗ硷拷呒锟斤拷锟斤拷约锟斤拷锟斤拷锟斤拷幕锟叫碉拷锟斤拷锟教?锟斤拷锟斤拷位锟矫★拷
+ *   锟斤拷锟斤拷锟睫革拷为锟斤拷锟斤拷械锟斤拷锟斤拷台锟斤拷驻safe锟竭讹拷为0.20锟阶ｏ拷
+ *              锟斤拷锟斤拷锟叫碉拷锟斤拷锟教?锟斤拷safe锟竭讹拷锟斤拷锟铰ｏ拷锟斤拷锟叫碉拷锟斤拷锟教?锟侥活动锟斤拷围锟斤拷为60锟斤拷~135锟斤拷(rotate_angle, 锟斤拷锟斤拷motor_angle)
  *              
- *              包括在自动模式下，state_toTargetHight阶段也会遵守该规则，即便拾取高度低于0.20米
- *              也要等到云台转到禁区外再下降
+ *              锟斤拷锟斤拷锟斤拷锟皆讹拷模式锟铰ｏ拷state_toTargetHight锟阶讹拷也锟斤拷锟斤拷锟截该癸拷锟津，硷拷锟斤拷拾取锟竭度碉拷锟斤拷0.20锟斤拷
+ *              也要锟饺碉拷锟斤拷台转锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟铰斤拷
  * 
- * @version 6.0 更新单圈模式的策划方案
- *   构造planB[单圈模式]的自动拾取，即不多圈旋转；执行过程中的最大rotate角度为270度(abs(起点-终点) <= 270)，意味着云台禁止多圈旋转，旋转3/4圈后
- *   需要转回来，(防止电机电线缠绕云台底座)，累计走过角度位移[含正负计算，从起点(一般是重定位的位置)开始]，也应当应用在手操当中。
- *   若起点是0度，则是0->90(state_Align)[最短路径]->270(carrying)[继承state_Align旋转方向]->[0/180 云台需要走和state_carrying相反的方向)(state_return)
+ * @version 6.0 锟斤拷锟铰碉拷圈模式锟侥策伙拷锟斤拷锟斤拷
+ *   锟斤拷锟斤拷planB[锟斤拷圈模式]锟斤拷锟皆讹拷拾取锟斤拷锟斤拷锟斤拷锟斤拷圈锟斤拷转锟斤拷执锟叫癸拷锟斤拷锟叫碉拷锟斤拷锟絩otate锟角讹拷为270锟斤拷(abs(锟斤拷锟?-锟秸碉拷) <= 270)锟斤拷锟斤拷味锟斤拷锟斤拷台锟斤拷止锟斤拷圈锟斤拷转锟斤拷锟斤拷转3/4圈锟斤拷
+ *   锟斤拷要转锟斤拷锟斤拷锟斤拷(锟斤拷止锟斤拷锟斤拷锟斤拷卟锟斤拷锟斤拷锟教?锟斤拷锟斤拷)锟斤拷锟桔硷拷锟竭癸拷锟角讹拷位锟斤拷[锟斤拷锟斤拷锟斤拷锟斤拷锟姐，锟斤拷锟斤拷锟?(一锟斤拷锟斤拷锟截讹拷位锟斤拷位锟斤拷)锟斤拷始]锟斤拷也应锟斤拷应锟斤拷锟斤拷锟街操碉拷锟叫★拷
+ *   锟斤拷锟斤拷锟斤拷锟?0锟饺ｏ拷锟斤拷锟斤拷0->90(state_Align)[锟斤拷锟铰凤拷锟絔->270(carrying)[锟教筹拷state_Align锟斤拷转锟斤拷锟斤拷]->[0/180 锟斤拷台锟斤拷要锟竭猴拷state_carrying锟洁反锟侥凤拷锟斤拷)(state_return)
  * 
- *   若起点是180度，则是180->90(state_Align)[最短路径]->270(carrying)[继承state_Align旋转方向]->[0/180 云台需要走和state_carring相反的方向]
- *   且在state_return阶段，需要将云台升高到最高高度（0.4m）【和云台旋转到目标位置同时进行】
- *   在思考这个能不能做成通用接口。
+ *   锟斤拷锟斤拷锟斤拷锟?180锟饺ｏ拷锟斤拷锟斤拷180->90(state_Align)[锟斤拷锟铰凤拷锟絔->270(carrying)[锟教筹拷state_Align锟斤拷转锟斤拷锟斤拷]->[0/180 锟斤拷台锟斤拷要锟竭猴拷state_carring锟洁反锟侥凤拷锟斤拷]
+ *   锟斤拷锟斤拷state_return锟阶段ｏ拷锟斤拷要锟斤拷锟斤拷台锟斤拷锟竭碉拷锟斤拷吒叨龋锟?0.4m锟斤拷锟斤拷锟斤拷锟斤拷台锟斤拷转锟斤拷目锟斤拷位锟斤拷同时锟斤拷锟叫★拷
+ *   锟斤拷思锟斤拷锟斤拷锟斤拷懿锟斤拷锟斤拷锟斤拷锟酵?锟矫接口★拷
  *   
- *   使用模式设置void setRotateMultiTurn(bool isMulti)，设定云台多圈以及单圈模式
- *   一旦设置云台的单圈和多圈，全局适用
+ *   使锟斤拷模式锟斤拷锟斤拷void setRotateMultiTurn(bool isMulti)锟斤拷锟借定锟斤拷台锟斤拷圈锟皆硷拷锟斤拷圈模式
+ *   一锟斤拷锟斤拷锟斤拷锟斤拷台锟侥碉拷圈锟酵讹拷圈锟斤拷全锟斤拷锟斤拷锟斤拷
  * 
  * @version 7.0
- *   就version 6.0的基础上，从原本的only_one模式，扩展到two模式
- *   在two模式下，机械臂会依次拾取两个KFS
- *   1. 执行和only_one模式一样的流程，拾取第一个KFS
- *   2. 在拾取第一个KFS的state_return阶段，机械臂会前往第二个KFS的初始位置(0/180度)，并且升高到安全高度(0.2m)
- *   3. 然后进入第二个KFS的拾取流程
- *   4. 第二个KFS的拾取流程和第一个类似，拾取完成后state_return到初始位置(0度)，结束。
+ *   锟斤拷version 6.0锟侥伙拷锟斤拷锟较ｏ拷锟斤拷原锟斤拷锟斤拷only_one模式锟斤拷锟斤拷展锟斤拷two模式
+ *   锟斤拷two模式锟铰ｏ拷锟斤拷械锟桔伙拷锟斤拷锟斤拷拾取锟斤拷锟斤拷KFS
+ *   1. 执锟叫猴拷only_one模式一锟斤拷锟斤拷锟斤拷锟教ｏ拷拾取锟斤拷一锟斤拷KFS
+ *   2. 锟斤拷拾取锟斤拷一锟斤拷KFS锟斤拷state_return锟阶段ｏ拷锟斤拷械锟桔伙拷前锟斤拷锟节讹拷锟斤拷KFS锟侥筹拷始位锟斤拷(0/180锟斤拷)锟斤拷锟斤拷锟斤拷锟斤拷锟竭碉拷锟斤拷全锟竭讹拷(0.2m)
+ *   3. 然锟斤拷锟斤拷锟节讹拷锟斤拷KFS锟斤拷拾取锟斤拷锟斤拷
+ *   4. 锟节讹拷锟斤拷KFS锟斤拷拾取锟斤拷锟教和碉拷一锟斤拷锟斤拷锟狡ｏ拷拾取锟斤拷珊锟絪tate_return锟斤拷锟斤拷始位锟斤拷(0锟斤拷)锟斤拷锟斤拷锟斤拷锟斤拷
  * 
  *  @version 8.0    
- *    对auto模式下面的auot_onlyOne进行策略修改
- *    删去carrying阶段，改为aim_ext执行完，即吸取到KFS后，直接return回初始位置
- *    但为了云台旋转不会打到KFS，所以在auto_onlyone中，return阶段在云台旋转回初始位置的同时，升到最高高度
- *    (同样需要遵守安全高度下的安全角度限制)
- *    且return到的位置不固定为0度，而是和起始位置相反，若起始是0，则return到180度，若起始是180度，则return到0度
- *    (本质是和行进方向相反)，而且在return阶段的云台旋转策略跟随sign_align阶段的旋转策略。
+ *    锟斤拷auto模式锟斤拷锟斤拷锟絘uot_onlyOne锟斤拷锟叫诧拷锟斤拷锟睫革拷
+ *    删去carrying锟阶段ｏ拷锟斤拷为aim_ext执锟斤拷锟疥，锟斤拷锟斤拷取锟斤拷KFS锟斤拷直锟斤拷return锟截筹拷始位锟斤拷
+ *    锟斤拷为锟斤拷锟斤拷台锟斤拷转锟斤拷锟斤拷锟終FS锟斤拷锟斤拷锟斤拷锟斤拷auto_onlyone锟叫ｏ拷return锟阶讹拷锟斤拷锟斤拷台锟斤拷转锟截筹拷始位锟矫碉拷同时锟斤拷锟斤拷锟斤拷锟斤拷吒叨锟?
+ *    (同锟斤拷锟斤拷要锟斤拷锟截帮拷全锟竭讹拷锟铰的帮拷全锟角讹拷锟斤拷锟斤拷)
+ *    锟斤拷return锟斤拷锟斤拷位锟矫诧拷锟教讹拷为0锟饺ｏ拷锟斤拷锟角猴拷锟斤拷始位锟斤拷锟洁反锟斤拷锟斤拷锟斤拷始锟斤拷0锟斤拷锟斤拷return锟斤拷180锟饺ｏ拷锟斤拷锟斤拷始锟斤拷180锟饺ｏ拷锟斤拷return锟斤拷0锟斤拷
+ *    (锟斤拷锟斤拷锟角猴拷锟叫斤拷锟斤拷锟斤拷锟洁反)锟斤拷锟斤拷锟斤拷锟斤拷return锟阶段碉拷锟斤拷台锟斤拷转锟斤拷锟皆革拷锟斤拷sign_align锟阶段碉拷锟斤拷转锟斤拷锟皆★拷
  * 
- *  @version 9.0  或许放弃的一版
- *  新版机械臂的流程  和老版流程有不少不同，需要重写
-    (1)若是顶吸： 
-        执行state_to_waitStillness抬到最高，并将pitch设置为90度
-        接着执行state_alignStillness对齐 接近之后执行state_extStillness伸长到目标KFS位置
-        然后执行state_lowerStillness降低到目标KFS位置，并打开吸盘。(Lower阶段降到临界高度后停下，等待canExtend放行再下降到目标位置)
-        之后执行state_launchStillness抬升到安全高度，最后执行state_backStillness返回初始位置。
+ *  @version 9.0  锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷一锟斤拷
+ *  锟铰帮拷锟叫碉拷鄣锟斤拷锟斤拷锟?  锟斤拷锟较帮拷锟斤拷锟斤拷锟叫诧拷锟劫诧拷同锟斤拷锟斤拷要锟斤拷写
+    (1)锟斤拷锟角讹拷锟斤拷锟斤拷 
+        执锟斤拷state_to_waitStillness抬锟斤拷锟斤拷撸锟斤拷锟斤拷锟絧itch锟斤拷锟斤拷为90锟斤拷
+        锟斤拷锟斤拷执锟斤拷state_alignStillness锟斤拷锟斤拷 锟接斤拷之锟斤拷执锟斤拷state_extStillness锟届长锟斤拷目锟斤拷KFS位锟斤拷
+        然锟斤拷执锟斤拷state_lowerStillness锟斤拷锟酵碉拷目锟斤拷KFS位锟矫ｏ拷锟斤拷锟斤拷锟斤拷锟教★拷(Lower锟阶段斤拷锟斤拷锟劫斤拷叨群锟酵ｏ拷拢锟斤拷却锟絚anExtend锟斤拷锟斤拷锟斤拷锟铰斤拷锟斤拷目锟斤拷位锟斤拷)
+        之锟斤拷执锟斤拷state_launchStillness抬锟斤拷锟斤拷锟斤拷全锟竭度ｏ拷锟斤拷锟街达拷锟絪tate_backStillness锟斤拷锟截筹拷始位锟矫★拷
 
 
-    (2)若是侧吸：
-        执行state_to_waitStillness抬到最高，并将pitch设置为0度
-        接着执行state_alignStillness对齐 接近之后执行state_lowerStillness降低到目标KFS位置，并打开吸盘。
-        之后执行state_extStillness伸长到安全位置，最后执行state_backStillness返回初始位置。
+    (2)锟斤拷锟角诧拷锟斤拷锟斤拷
+        执锟斤拷state_to_waitStillness抬锟斤拷锟斤拷撸锟斤拷锟斤拷锟絧itch锟斤拷锟斤拷为0锟斤拷
+        锟斤拷锟斤拷执锟斤拷state_alignStillness锟斤拷锟斤拷 锟接斤拷之锟斤拷执锟斤拷state_lowerStillness锟斤拷锟酵碉拷目锟斤拷KFS位锟矫ｏ拷锟斤拷锟斤拷锟斤拷锟教★拷
+        之锟斤拷执锟斤拷state_extStillness锟届长锟斤拷锟斤拷全位锟矫ｏ拷锟斤拷锟街达拷锟絪tate_backStillness锟斤拷锟截筹拷始位锟矫★拷
  */
 
 #ifndef __ARM_SETUP_H
@@ -94,37 +94,37 @@ extern "C" {
 
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS  0 //無底盤下，用虛擬坐標進行驗證自動邏輯
-#define ARM_VERSION 0 //版本号， 若是1则意味着是顶吸侧吸融合版本 如果是0则是纯侧吸版本
+#define ARM_AUTO_DEBUG_NOCHASSIS  0 //锟給锟阶盤锟铰ｏ拷锟斤拷虛锟組锟斤拷锟斤拷锟組锟斤拷锟斤拷C锟皆勶拷邏輯
+#define ARM_VERSION 0 //锟芥本锟脚ｏ拷 锟斤拷锟斤拷1锟斤拷锟斤拷味锟斤拷锟角讹拷锟斤拷锟斤拷锟斤拷锟节合版本 锟斤拷锟斤拷锟?0锟斤拷锟角达拷锟斤拷锟斤拷锟芥本
 
 
 typedef struct{
     bool init_flag = false;
-    uint8_t debug_start = 0; //调试开始标志 == 1 开始调试
+    uint8_t debug_start = 0; //锟斤拷锟皆匡拷始锟斤拷志 == 1 锟斤拷始锟斤拷锟斤拷
 
-    uint8_t auto_start = 0; //自动调试开始标志 == 1 开始自动调试
+    uint8_t auto_start = 0; //锟皆讹拷锟斤拷锟皆匡拷始锟斤拷志 == 1 锟斤拷始锟皆讹拷锟斤拷锟斤拷
 
     float calibrate_startTime = 0; 
     bool calibrate_start = false;
     bool is_calibrating = false;
 
-    float last_right_x = 0.0f; //上次右摇杆横向数据
-    float last_right_y = 0.0f; //上次右摇杆纵向数据
+    float last_right_x = 0.0f; //锟较达拷锟斤拷摇锟剿猴拷锟斤拷锟斤拷锟斤拷
+    float last_right_y = 0.0f; //锟较达拷锟斤拷摇锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
 
-    int8_t last_manual_extend = 0; //上次手动伸展状态
-    int8_t last_manual_sucker = 0; //上次手动吸盘状态
+    int8_t last_manual_extend = 0; //锟较达拷锟街讹拷锟斤拷展状态
+    int8_t last_manual_sucker = 0; //锟较达拷锟街讹拷锟斤拷锟斤拷状态
 
-    int8_t last_manual_pitch = 0; //上次手动俯仰状态
+    int8_t last_manual_pitch = 0; //锟较达拷锟街讹拷锟斤拷锟斤拷状态
 
-    int8_t pitch_switch_offset = 0; //俯仰开关偏移绑定
-    int8_t extend_switch_offset = 0; // 伸展开关偏移绑定
-    int8_t sucker_switch_offset = 0; // 吸盘开关偏移绑定
+    int8_t pitch_switch_offset = 0; //锟斤拷锟斤拷锟斤拷锟斤拷偏锟狡帮拷
+    int8_t extend_switch_offset = 0; // 锟斤拷展锟斤拷锟斤拷偏锟狡帮拷
+    int8_t sucker_switch_offset = 0; // 锟斤拷锟教匡拷锟斤拷偏锟狡帮拷
 
     uint8_t button_click_state = 0;
-    uint8_t is_store_acting = 0; //正在执行存储动作的标志位
+    uint8_t is_store_acting = 0; //锟斤拷锟斤拷执锟叫存储锟斤拷锟斤拷锟侥憋拷志位
 
     
-    uint8_t last_manual_store = 0; //用于手操和存储切换的判定
+    uint8_t last_manual_store = 0; //锟斤拷锟斤拷锟街操和存储锟叫伙拷锟斤拷锟叫讹拷
 }arm_ctrl_status_S;
 
 
@@ -135,6 +135,7 @@ typedef enum{
     STATE_EXT,
     STATE_LAUNCH,
     STATE_BACK,
+    STATE_STORE,
     STATE_DONE,
     STATE_OVER,
 }ARM_AUTO_STILLNESS_E;
@@ -151,31 +152,31 @@ typedef struct{
     KFS_NUM_E kfs_num = ONLY_ONE;
     bool start_to_autoctrl = false;
 
-    Point2D now_armPosition = {5.0f, 8.60f, 0.0f}; //机械臂当前位置
+    Point2D now_armPosition = {5.0f, 8.60f, 0.0f}; //锟斤拷械锟桔碉拷前位锟斤拷
 
-    Point2D now_ChassisPosition = {5.0f, 8.60f, 0.0f}; //底盘当前位置
+    Point2D now_ChassisPosition = {5.0f, 8.60f, 0.0f}; //锟斤拷锟教碉拷前位锟斤拷
 
-    Point2D now_chassis_speed = {0.0f, 0.0f, 0.0f}; //当前底盘速度，单位米每秒
+    Point2D now_chassis_speed = {0.0f, 0.0f, 0.0f}; //锟斤拷前锟斤拷锟斤拷锟劫度ｏ拷锟斤拷位锟斤拷每锟斤拷
 
-    Point2D targetKFS_pos[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //目标KFS位置
+    Point2D targetKFS_pos[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //目锟斤拷KFS位锟斤拷
 
     /**
-     * @brief 旋转路径策略 正方向表示角度正增，负方向表示角度负增；
-     *                    正增为逆时针旋转，负增为顺时针旋转
+     * @brief 锟斤拷转路锟斤拷锟斤拷锟斤拷 锟斤拷锟斤拷锟斤拷锟绞撅拷嵌锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷示锟角度革拷锟斤拷锟斤拷
+     *                    锟斤拷锟斤拷为锟斤拷时锟斤拷锟斤拷转锟斤拷锟斤拷锟斤拷为顺时锟斤拷锟斤拷转
      */
     Rotate_Strategy_E current_strategy = ROTATE_PATH_SHORTEST; 
     ARM_AUTO_STILLNESS_E now_state = STATE_DONE;
     MF_AutoCtrler::PathInformation_S pathInfo; 
     struct{
-        bool isrecalcPath = false; //是否重新计算路径
-        bool canExtend = false; //是否可以伸展
-        float reach_finishTimeStore = 0.0f; //存储到达目标位置的时间戳
+        bool isrecalcPath = false; //锟角凤拷锟斤拷锟铰硷拷锟斤拷路锟斤拷
+        bool canExtend = false; //锟角凤拷锟斤拷锟斤拷锟秸?
+        float reach_finishTimeStore = 0.0f; //锟芥储锟斤拷锟斤拷目锟斤拷位锟矫碉拷时锟斤拷锟?
         bool isExtReach = false;
-        bool canChassisStart = false; //是否可以开始底盘移动
+        bool canChassisStart = false; //锟角凤拷锟斤拷钥锟绞硷拷锟斤拷锟斤拷贫锟?
 
-        bool isbackdone = false; //返回完成标志
-        float back_time = 0.0f; //返回时间
-        int8_t pitch_state[2] = {0,0}; //记录目标KFS的pitch状态，0代表侧吸，1代表顶吸
+        bool isbackdone = false; //锟斤拷锟斤拷锟斤拷杀锟街?
+        float back_time = 0.0f; //锟斤拷锟斤拷时锟斤拷
+        int8_t pitch_state[2] = {0,0}; //锟斤拷录目锟斤拷KFS锟斤拷pitch状态锟斤拷0锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷1锟斤拷锟斤拷锟斤拷锟斤拷
     }flag;
 }ARM_AUTO_S;
 
@@ -211,17 +212,17 @@ public:
         this->registerMotor_Rotate(motor_ArmRotate);
         this->registerMotor_Pitch(motor_ArmPitch);
 
-        // this->setPitchReversed(true); //俯仰电机反向
-        this->setStretchReversed(true); //伸展电机反向
+         this->setPitchReversed(false); //锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟?
+        this->setStretchReversed(true); //锟斤拷展锟斤拷锟斤拷锟斤拷锟?
         this->setRotateReversed(false);
-        this->setLaunchReversed(false); //升降电机反向
+        this->setLaunchReversed(true); //锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟?
         start(osPriorityHigh-1, 512); 
         arm_ctrlStatus.init_flag = true;
     }
 
     void setArmStatus(ARM_Status_E status)
     {
-        // 未完成校准时，只允许保持在校准态，避免被上层状态机提前切到手操/空闲
+        // 未锟斤拷锟叫Ｗ际憋拷锟街伙拷锟斤拷锟斤拷锟斤拷锟斤拷锟叫Ｗ继?锟斤拷锟斤拷锟解被锟较诧拷状态锟斤拷锟斤拷前锟叫碉拷锟街诧拷/锟斤拷锟斤拷
         if(status != ARM_CALIBRATE && !isArmcalibrated())
             return;
 
@@ -229,10 +230,10 @@ public:
     }
 
     /**
-     * @brief 设置目标抓取梅花桩编号
-     * @param KFS1 第一个KFS，范围0~12
-     * @param KFS2 第二个KFS，范围0~12
-     * @brief 0代表没有要拾取的
+     * @brief 锟斤拷锟斤拷目锟斤拷抓取梅锟斤拷桩锟斤拷锟?
+     * @param KFS1 锟斤拷一锟斤拷KFS锟斤拷锟斤拷围0~12
+     * @param KFS2 锟节讹拷锟斤拷KFS锟斤拷锟斤拷围0~12
+     * @brief 0锟斤拷锟斤拷没锟斤拷要拾取锟斤拷
      */
     bool set_TargetKFS(int KFS1, int KFS2)
     {
@@ -251,7 +252,7 @@ public:
             auto_ctrl_.kfs_num = ONLY_ONE;
 
         if(KFS1 == 0 && KFS2 == 0)
-            return false; //没有目标KFS，设置失败
+            return false; //没锟斤拷目锟斤拷KFS锟斤拷锟斤拷锟斤拷失锟斤拷
         else
         {
             auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0])-1];
@@ -286,20 +287,20 @@ public:
         }
 
         if(MF_high[auto_ctrl_.targetKFS[0]-1] == 0.6f)
-            auto_ctrl_.flag.pitch_state[0] = 0; //高的KFS保持吸盘水平，侧吸
+            auto_ctrl_.flag.pitch_state[0] = 0; //锟竭碉拷KFS锟斤拷锟斤拷锟斤拷锟斤拷水平锟斤拷锟斤拷锟斤拷
         else
-            auto_ctrl_.flag.pitch_state[0] = 1; //低的KFS吸盘竖直向下，顶吸
+            auto_ctrl_.flag.pitch_state[0] = 1; //锟酵碉拷KFS锟斤拷锟斤拷锟斤拷直锟斤拷锟铰ｏ拷锟斤拷锟斤拷
 
         if(MF_high[auto_ctrl_.targetKFS[1]-1] == 0.6f)
-            auto_ctrl_.flag.pitch_state[1] = 0; //高的KFS保持吸盘水平，侧吸
+            auto_ctrl_.flag.pitch_state[1] = 0; //锟竭碉拷KFS锟斤拷锟斤拷锟斤拷锟斤拷水平锟斤拷锟斤拷锟斤拷
         else
             
-            auto_ctrl_.flag.pitch_state[1] = 1; //低的KFS吸盘竖直向下，顶吸
+            auto_ctrl_.flag.pitch_state[1] = 1; //锟酵碉拷KFS锟斤拷锟斤拷锟斤拷直锟斤拷锟铰ｏ拷锟斤拷锟斤拷
 
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
-        auto_ctrl_.now_ChassisPosition.x = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0] - 1].x;
-        auto_ctrl_.now_ChassisPosition.y = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0] - 1].y - 2.0f;
+        auto_ctrl_.now_ChassisPosition.x = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0]-1].x;
+        auto_ctrl_.now_ChassisPosition.y = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0]-1].y - 3.0f;
 #endif
         return true;
     }
@@ -318,8 +319,8 @@ public:
     }
 
     /**
-     * @brief 在停下拾取自动模式下，由主状态机调用，
-     *        设置是否可以进入伸展阶段
+     * @brief 锟斤拷停锟斤拷拾取锟皆讹拷模式锟铰ｏ拷锟斤拷锟斤拷状态锟斤拷锟斤拷锟矫ｏ拷
+     *        锟斤拷锟斤拷锟角凤拷锟斤拷越锟斤拷锟斤拷锟秸癸拷锥锟?
      */
     void setAutocanExtend(bool canExtend)
     {
@@ -327,13 +328,23 @@ public:
     }
 
     /**
-     * @brief 在停下拾取自动模式下，由主状态机调用，
-     *       返回是否可以进入底盘移动阶段
+     * @brief 锟斤拷停锟斤拷拾取锟皆讹拷模式锟铰ｏ拷锟斤拷锟斤拷状态锟斤拷锟斤拷锟矫ｏ拷
+     *       锟斤拷锟斤拷锟角凤拷锟斤拷越锟斤拷锟斤拷锟斤拷锟狡讹拷锟阶讹拷
      */
     bool isAutoChassisCanStart()
     {
         return auto_ctrl_.flag.canChassisStart;
     }
+
+    
+    enum class store_state{
+        idle,
+        laucnh_state,
+        rotate_state,
+        lower_state,
+        outstate1, //取锟斤拷专锟斤拷
+        outstate2,
+    };
 private:
 
     void start_toAutoCtrl(bool start)
@@ -345,11 +356,11 @@ private:
             auto_ctrl_.start_to_autoctrl = false;
     }
 
-    RmPocketData_t airjoy_data_; //摇杆值为 -1 ~ 1
+    RmPocketData_t airjoy_data_; //摇锟斤拷值为 -1 ~ 1
 
     Debug_Printf debug_uart = Debug_Printf(&huart8);
 
-    //控制函数
+    //锟斤拷锟狡猴拷锟斤拷
     void manualControl();
     bool manual_store();
     bool manual_takeout();
@@ -359,11 +370,11 @@ private:
     void idle();
     void debug();
 
-    //上电校准M2006电机位置
+    //锟较碉拷校准M2006锟斤拷锟轿伙拷锟?
     void calibrateMotor();
 
     //=======================
-    //自动停下拾取私密函数[停下拾取]
+    //锟皆讹拷停锟斤拷拾取私锟杰猴拷锟斤拷[停锟斤拷拾取]
 
     void auto_stillnessOne();
     void auto_stillnessTwo();
@@ -374,23 +385,22 @@ private:
     bool state_extStillness(int targetKFS);
     bool state_launchStillness(int targetKFS);
     bool state_backStillness(int targetKFS);
-    // bool state_doneStillness(int targetKFS);
 
     //=======================
     /**
-     * @brief 安全禁区通用接口：根据当前云台高度约束旋转角度
-     * 规则：
-     * 1. H < 0.03m: [60°, 185°] (重定位/极低高度区间)
-     * 2. 0.03m <= H < Safe_H: [60°, 185°] (机械限位干涉区间)
-     * 3. H >= Safe_H: [0°, 360°] (安全高度)
-     * 说明：传入/返回的角度均为 rotate_angle（云台角度，非电机角度）
+     * @brief 锟斤拷全锟斤拷锟斤拷通锟矫接口ｏ拷锟斤拷锟捷碉拷前锟斤拷台锟竭讹拷约锟斤拷锟斤拷转锟角讹拷
+     * 锟斤拷锟斤拷
+     * 1. H < 0.03m: [60锟斤拷, 185锟斤拷] (锟截讹拷位/锟斤拷锟酵高讹拷锟斤拷锟斤拷)
+     * 2. 0.03m <= H < Safe_H: [60锟斤拷, 185锟斤拷] (锟斤拷械锟斤拷位锟斤拷锟斤拷锟斤拷锟斤拷)
+     * 3. H >= Safe_H: [0锟斤拷, 360锟斤拷] (锟斤拷全锟竭讹拷)
+     * 说锟斤拷锟斤拷锟斤拷锟斤拷/锟斤拷锟截的角度撅拷为 rotate_angle锟斤拷锟斤拷台锟角度ｏ拷锟角碉拷锟斤拷嵌龋锟?
      */
     bool isRotateAllowed(float rotate_angle_deg) const
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
         const float safe_h = init_data_.safe_height_;
 
-        // 不重复处理归一化
+        // 锟斤拷锟截革拷锟斤拷锟斤拷锟斤拷一锟斤拷
         const float norm_deg = rotate_angle_deg;
 
         if(h < 0.03f) return (norm_deg >= 60.0f && norm_deg <= 185.0f);
@@ -399,12 +409,12 @@ private:
     }
 
     /**
-     * @brief 返回符合安全禁区的角度：
-     * - H < 0.03m: 钳制到 [60°, 185°]
-     * - 0.03m <= H < Safe_H: 钳制到 [60°, 185°]
-     * - H >= Safe_H: 保持原角度
-     * @param desired_deg 期望的旋转角度（云台角度，非电机角度）
-     * @return 符合安全禁区的旋转角度
+     * @brief 锟斤拷锟截凤拷锟较帮拷全锟斤拷锟斤拷锟侥角度ｏ拷
+     * - H < 0.03m: 钳锟狡碉拷 [60锟斤拷, 185锟斤拷]
+     * - 0.03m <= H < Safe_H: 钳锟狡碉拷 [60锟斤拷, 185锟斤拷]
+     * - H >= Safe_H: 锟斤拷锟斤拷原锟角讹拷
+     * @param desired_deg 锟斤拷锟斤拷锟斤拷锟斤拷转锟角度ｏ拷锟斤拷台锟角度ｏ拷锟角碉拷锟斤拷嵌龋锟?
+     * @return 锟斤拷锟较帮拷全锟斤拷锟斤拷锟斤拷锟斤拷转锟角讹拷
      */
     float sanitizeRotateAngle(float desired_deg) const
     {
@@ -413,7 +423,7 @@ private:
 
         if(h >= safe_h - 0.01f) return desired_deg;
 
-        // 不重复处理归一化
+        // 锟斤拷锟截革拷锟斤拷锟斤拷锟斤拷一锟斤拷
         const float norm_deg = desired_deg;
 
         if(norm_deg < 60.0f) return 60.0f;
@@ -422,13 +432,13 @@ private:
         return norm_deg;
     }
 
-protected:
 
     
+protected:
 
     /**
-     * @brief 获得机械臂底座原点位置(也为云天中心位置)
-     * @details 待实现，现在留一个空接口，方便先完成自动逻辑的实现 
+     * @brief 锟斤拷没锟叫碉拷鄣锟斤拷锟皆?锟斤拷位锟斤拷(也为锟斤拷锟斤拷锟斤拷锟斤拷位锟斤拷)
+     * @details 锟斤拷实锟街ｏ拷锟斤拷锟斤拷锟斤拷一锟斤拷锟秸接口ｏ拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷远锟斤拷呒锟斤拷锟绞碉拷锟? 
      */
     Point2D get_nowArmPosition()
     {
@@ -443,7 +453,7 @@ protected:
         #endif
     }
     /**
-     * @brief 预留接口后续补全，获得当前底盘速度
+     * @brief 预锟斤拷锟接口猴拷锟斤拷锟斤拷全锟斤拷锟斤拷玫锟角帮拷锟斤拷锟斤拷俣锟?
      * @return 
      */
     Point2D get_nowChassisSpeed()
@@ -452,21 +462,21 @@ protected:
 
         Point2D speed = {0.0f, 0.0f, 0.0f};
         if(arm_ctrlStatus.auto_start == 1)
-           speed = {0.0f, 1.0f, 0.0f};
+        {
+            bool inTargetMap = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
+                                                auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
+                                                0.1f);
+            if(inTargetMap)
+            {
+                auto_ctrl_.flag.canExtend = true;
+            }
 
-        else
-             speed = {0.0f, 0.0f, 0.0f};
-        return speed;
-        
-       if(MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
-                                           auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
-                                           0.03f))
-       {
-            if(auto_ctrl_.flag.canChassisStart == 1)
+            if(auto_ctrl_.flag.canChassisStart || !inTargetMap)
                 speed = {0.0f, 1.0f, 0.0f};
             else
                 speed = {0.0f, 0.0f, 0.0f};
-       }
+        }
+        return speed;
              
              
         #else
@@ -483,7 +493,7 @@ protected:
     }
 
     /**
-     * @brief 获得底盘位姿
+     * @brief 锟斤拷玫锟斤拷锟轿伙拷锟?
      */
 
     Point2D get_nowChassisPose()
@@ -541,21 +551,13 @@ protected:
         int cnt = 0;
     }manual_control;
 
-    ButtonDetector button_detector_1 = ButtonDetector(0.200f); //按钮1的单双击检测器，350ms双击判定时间
+    ButtonDetector button_detector_1 = ButtonDetector(0.200f); //锟斤拷钮1锟侥碉拷双锟斤拷锟斤拷锟斤拷锟斤拷锟?350ms双锟斤拷锟叫讹拷时锟斤拷
     float rotate_accum_initial_motor_total_ = 0.0f;
 
-    enum class store_state{
-        idle,
-        laucnh_state,
-        rotate_state,
-        lower_state,
-        outstate1, //取出专用
-        outstate2,
-    };
 
-    store_state store_state_ = store_state::idle; //存储或取出的状态机；
+    store_state store_state_ = store_state::idle; //锟芥储锟斤拷取锟斤拷锟斤拷状态锟斤拷锟斤拷
     /**
-     * @brief 获取当前累计旋转角度
+     * @brief 锟斤拷取锟斤拷前锟桔硷拷锟斤拷转锟角讹拷
      */
     float get_accuum_roatate_angle()
     {
@@ -567,13 +569,13 @@ protected:
     }
 
     /**
-     * @brief 手操当中，旋转角度限制，防止多圈绕线
+     * @brief 锟街操碉拷锟叫ｏ拷锟斤拷转锟角讹拷锟斤拷锟狡ｏ拷锟斤拷止锟斤拷圈锟斤拷锟斤拷
      */
     float manual_roate_clamp(float desired_deg)
     {
-        constexpr float MAX_ROTATE_ANGLE = 270.0f; //最大旋转角度，单位度
+        constexpr float MAX_ROTATE_ANGLE = 270.0f; //锟斤拷锟斤拷锟阶?锟角度ｏ拷锟斤拷位锟斤拷
 
-        //最短路径
+        //锟斤拷锟铰凤拷锟?
         float diff = desired_deg - this->get_currentJointStatus().rotateJoint_angle_;
         if (diff > 180.0f)       diff -= 360.0f;
         else if (diff < -180.0f) diff += 360.0f;
@@ -594,13 +596,13 @@ protected:
     }  
 
     /**
-     * @brief 自动模式下安全旋转到目标角度
-     * @param target_deg 期望的云台归一化角度（0~360）
-     * @note 内部自动选择不会超过累计 ±270° 的旋转策略，并直接设置电机目标
-     * @param final_deg 输出实际设置的安全旋转角度（云台角度，非电机角度）
-      * @param strategy_used 输出实际使用的旋转策略
+     * @brief 锟皆讹拷模式锟铰帮拷全锟斤拷转锟斤拷目锟斤拷嵌锟?
+     * @param target_deg 锟斤拷锟斤拷锟斤拷锟斤拷台锟斤拷一锟斤拷锟角度ｏ拷0~360锟斤拷
+     * @note 锟节诧拷锟皆讹拷选锟今不会超锟斤拷锟桔硷拷 锟斤拷270锟斤拷 锟斤拷锟斤拷转锟斤拷锟皆ｏ拷锟斤拷直锟斤拷锟斤拷锟矫碉拷锟侥匡拷锟?
+     * @param final_deg 锟斤拷锟绞碉拷锟斤拷锟斤拷玫陌锟饺?锟斤拷转锟角度ｏ拷锟斤拷台锟角度ｏ拷锟角碉拷锟斤拷嵌龋锟?
+      * @param strategy_used 锟斤拷锟绞碉拷锟绞癸拷玫锟斤拷锟阶?锟斤拷锟斤拷
      */
-    void safe_rotate_to(float target_deg, float *final_deg, Rotate_Strategy_E *strategy_used)
+    void safe_rotate_to(float target_deg)
     { 
         struct Option{
             Rotate_Strategy_E strategy;
@@ -612,10 +614,10 @@ protected:
         if (diff_short > 180.0f)       diff_short -= 360.0f;
         else if (diff_short < -180.0f) diff_short += 360.0f;
 
-        //正增diff
+        //锟斤拷锟斤拷diff
         float diff_pos = target_deg - this->get_currentJointStatus().rotateJoint_angle_;
         if(diff_pos < 0 ) diff_pos += 360.0f;
-        //负增diff
+        //锟斤拷锟斤拷diff
         float diff_neg = target_deg - this->get_currentJointStatus().rotateJoint_angle_;
         if(diff_neg > 0 ) diff_neg -= 360.0f;
 
@@ -641,8 +643,9 @@ protected:
             }
         }
 
-        *strategy_used = best_option->strategy;
-        *final_deg = normalize_deg_0_360(this->get_currentJointStatus().rotateJoint_angle_ + best_option->diff);
+        this->setRotateStrategy(best_option->strategy);
+        float final_deg = normalize_deg_0_360(this->get_currentJointStatus().rotateJoint_angle_ + best_option->diff);
+        this->set_RotateAngle(final_deg);
     }
 };
 
