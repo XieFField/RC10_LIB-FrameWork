@@ -353,7 +353,6 @@ void Robot_WeaponSage_Setup::camera_mode()
         return;
     }
 
-    this->setCtrlMode(WeaponSage::CAMERA_MIX_CONTROL);// 相机模式下 launch 始终走 RPM 混合控制
 
     // 首次进入相机模式时锁定当前姿态基准。
     if(last_weaponSage_status_ != WEAPONSAGE_CAMERA)

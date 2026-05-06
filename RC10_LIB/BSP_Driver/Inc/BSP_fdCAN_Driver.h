@@ -103,11 +103,8 @@ private:
 
     ~fdCANbus() = default;
 
-
     fdCANbus(const fdCANbus&) = delete;
     fdCANbus& operator=(const fdCANbus&) = delete;
-
-
 
 public:
 
