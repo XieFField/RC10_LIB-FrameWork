@@ -212,7 +212,7 @@ public:
         this->registerMotor_Rotate(motor_ArmRotate);
         this->registerMotor_Pitch(motor_ArmPitch);
 
-        // this->setPitchReversed(true); //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
+         this->setPitchReversed(false); //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
         this->setStretchReversed(true); //ï¿½ï¿½Õ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
         this->setRotateReversed(false);
         this->setLaunchReversed(true); //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?

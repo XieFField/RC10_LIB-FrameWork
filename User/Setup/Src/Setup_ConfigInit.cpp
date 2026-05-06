@@ -224,9 +224,9 @@ laserpos.Init();//锟斤拷锟斤拷锟斤拷
 }
 
 void CAN_Motor_Init(void);
-
+Point2D lader_install_offset = {0.0f, 0.0f}; // 激光雷达安装偏移，单位米
 Locate_Setup* set1 = Locate_Setup::getInstance();
-
+Laser_InstanceManager instance_man;
 void ALL_Setup_ConfigInit(void)
 {
     // 初始化串口6的相机模块
@@ -276,7 +276,7 @@ void ALL_Setup_ConfigInit(void)
 
    CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
    crsf_rc->init();
-	
+	set1->init(&instance_man,&usb_1,lader_install_offset ,arm_install_offset);
    set1->laser_initData_.d=0.5;
    set1->locate_setup_init();
    set1->set_startToLRL(true);

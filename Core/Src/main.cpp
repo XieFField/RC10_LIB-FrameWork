@@ -97,7 +97,7 @@ int main(void)
   MPU_Config();
 
   /* MCU Configuration--------------------------------------------------------*/
-  SCB_DisableDCache();
+//  SCB_DisableDCache();
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
@@ -108,7 +108,7 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
   /* USER CODE BEGIN SysInit */
-
+     PeriphCommonClock_Config();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */

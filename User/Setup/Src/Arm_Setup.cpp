@@ -713,6 +713,7 @@ void ArmSetup::auto_stillnessTwo()
 
         case ARM_AUTO_STILLNESS_E::STATE_BACK:
         {
+            auto_ctrl_.flag.canChassisStart = false;
             if(this->auto_ctrl_.now_targetIndex == 0)
             {
                 if(!auto_ctrl_.flag.isbackdone)
@@ -721,6 +722,7 @@ void ArmSetup::auto_stillnessTwo()
                     {
                         auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds();
                         auto_ctrl_.flag.isbackdone = true;
+                        
                     }
                 }
                 else if(TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time >= 0.3f)

@@ -38,7 +38,7 @@ void MX_I2C5_Init(void)
 
   /* USER CODE END I2C5_Init 1 */
   hi2c5.Instance = I2C5;
-  hi2c5.Init.Timing = 0x60404E72;
+  hi2c5.Init.Timing = 0x307075B1;
   hi2c5.Init.OwnAddress1 = 0;
   hi2c5.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c5.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
