@@ -135,6 +135,7 @@ typedef enum{
     STATE_EXT,
     STATE_LAUNCH,
     STATE_BACK,
+    STATE_STORE,
     STATE_DONE,
     STATE_OVER,
 }ARM_AUTO_STILLNESS_E;
@@ -334,6 +335,16 @@ public:
     {
         return auto_ctrl_.flag.canChassisStart;
     }
+
+    
+    enum class store_state{
+        idle,
+        laucnh_state,
+        rotate_state,
+        lower_state,
+        outstate1, //取出专用
+        outstate2,
+    };
 private:
 
     void start_toAutoCtrl(bool start)
@@ -374,7 +385,6 @@ private:
     bool state_extStillness(int targetKFS);
     bool state_launchStillness(int targetKFS);
     bool state_backStillness(int targetKFS);
-    // bool state_doneStillness(int targetKFS);
 
     //=======================
     /**
@@ -422,9 +432,9 @@ private:
         return norm_deg;
     }
 
-protected:
 
     
+protected:
 
     /**
      * @brief 获得机械臂底座原点位置(也为云天中心位置)
@@ -544,14 +554,6 @@ protected:
     ButtonDetector button_detector_1 = ButtonDetector(0.200f); //按钮1的单双击检测器，350ms双击判定时间
     float rotate_accum_initial_motor_total_ = 0.0f;
 
-    enum class store_state{
-        idle,
-        laucnh_state,
-        rotate_state,
-        lower_state,
-        outstate1, //取出专用
-        outstate2,
-    };
 
     store_state store_state_ = store_state::idle; //存储或取出的状态机；
     /**
@@ -600,7 +602,7 @@ protected:
      * @param final_deg 输出实际设置的安全旋转角度（云台角度，非电机角度）
       * @param strategy_used 输出实际使用的旋转策略
      */
-    void safe_rotate_to(float target_deg, float *final_deg, Rotate_Strategy_E *strategy_used)
+    void safe_rotate_to(float target_deg)
     { 
         struct Option{
             Rotate_Strategy_E strategy;
@@ -641,8 +643,9 @@ protected:
             }
         }
 
-        *strategy_used = best_option->strategy;
-        *final_deg = normalize_deg_0_360(this->get_currentJointStatus().rotateJoint_angle_ + best_option->diff);
+        this->setRotateStrategy(best_option->strategy);
+        float final_deg = normalize_deg_0_360(this->get_currentJointStatus().rotateJoint_angle_ + best_option->diff);
+        this->set_RotateAngle(final_deg);
     }
 };
 
