@@ -43,6 +43,11 @@ namespace WeaponSage_Setup
 
         int8_t last_manual_claw_state = 0; // 0: open, 1: close
         int8_t claw_switch_offset = 0;
+        int8_t last_scroll_state = 0;
+        int8_t scroll_offset = 0;
+
+        int8_t isClaw_tight = 1; // 0 : open, 1: tight
+        int8_t last_isClaw_tight = 1;
     }ctrl_status_S;
 
     typedef enum{
@@ -97,18 +102,18 @@ class Robot_WeaponSage_Setup : public RtosTask, public Robot_WeaponSage {
 public:
     Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data);
     
-    void init(M3508* launch_Motor, M2006* claw_Motor,
-        M2006* traverse_Motor, DM_Motor* wrist_Motor)
+    /**
+     * @brief 必须在注册完所有电机后调用一次 init() 来启动任务和完成必要的初始化，否则武器架将无法正常工作
+     */
+    void init()
     {
-        this->register_launch_Motor(launch_Motor);
-        this->register_claw_Motor(claw_Motor);
-        this->register_traverse_Motor(traverse_Motor);
-        this->register_wrist_Motor(wrist_Motor);
-
-        if(this->launch_Motor_ == nullptr ||
-           this->claw_Motor_ == nullptr ||
-           this->traverse_Motor_ == nullptr ||
-           this->wrist_Motor_ == nullptr
+        if( this->launch_Motor_1_master == nullptr ||
+            this->launch_Motor_1_slave == nullptr ||
+            this->launch_Motor_2_master == nullptr ||
+            this->launch_Motor_2_slave == nullptr ||
+            this->claw_Motor_ == nullptr ||
+            this->traverse_Motor_ == nullptr ||
+            this->wrist_Motor_ == nullptr
         )
         {
             ctrl_status_.init_flag = false;
@@ -253,6 +258,7 @@ private:
 
     CamZ_Ctrl cam_z_ctrl_; // 相机 z 控制器。
     bool cam_z_run_ = false; // z 过程运行位。
+    bool cam_z_req_last_ = false; // z 请求上升沿检测位。
     float cam_z_hold_ = 0.0f; // z 过程目标缓存。
     float cam_z_last_ = 0.0f; // 最近一次 z 样本。
     float cam_z_rpm_ = 0.0f; // 相机 z 速度指令缓存。

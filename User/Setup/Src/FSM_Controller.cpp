@@ -10,41 +10,8 @@ void FSM_Controller::loop()
 																	crsf_send_s.rsf_send_data.Spear);
     CrsfReceiver::GetInstance(&huart7)->process();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
-    
 
-	switch(text_index)
-	{
-		case 0://xiumian
-		{
-			HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_RESET);
-			break;
-		}
-		case 1://zhenxgiang
-		{
-            HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_SET);
-            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_RESET);
-			break;
-		}
-		case 2://fanxiang
-		{
 
-            HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_SET);
-			break;
-		}
-		case 3://sss
-		{
-
-            HAL_GPIO_WritePin(SUCKER_P1_GPIO_Port, SUCKER_P1_Pin, GPIO_PIN_SET);
-            HAL_GPIO_WritePin(SUCKER_P2_GPIO_Port, SUCKER_P2_Pin, GPIO_PIN_SET);
-			break;
-		}
-		default:
-			break;
-	}
-	
-	
     switch(airjoy_data_.SWB)
     {
         case 0x00:
@@ -449,40 +416,7 @@ void FSM_Controller::auto_ctrl()
                     is_click = 0;
                 }
             }
-            else if(airjoy_data_.SWA == 0x01)
-            {
-                arm_setup_->setArmStatus(ARM_IDLE);
 
-                // 设置相机对接 y 轴目标点为 0.8m（相机坐标系前向为正）。
-                chassis_setup_->set_camera_y_ref(0.90f);
-                
-                chassis_setup_->setChassisStatus(CHASSIS_CAMERA);// 调试模式下切入底盘相机闭环状态机。
-
-                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_CAMERA);// 调试模式下切入武器相机协同状态机。
-
-                // 将底盘下发的武器预对接请求透传给武器模块。
-                weaponSage_setup_->set_camera_req(
-                    chassis_setup_->get_weapon_req(),
-                    chassis_setup_->get_z_req(),
-                    chassis_setup_->get_z_ref());
-
-                // 将武器返回的预对接完成位回传给底盘状态机。
-                chassis_setup_->set_weapon_done(weaponSage_setup_->get_weapon_done());
-
-                // 将武器返回的 z 轴完成位回传给底盘状态机。
-                chassis_setup_->set_z_done(weaponSage_setup_->get_z_done());
-
-                static uint8_t is_click = 0;
-                if(airjoy_data_.botton_click ==1 && is_click == 0)
-                {
-                    chassis_setup_->setWeaponStart(true);// 触发武器对接流程
-                    weaponSage_setup_->setWeapon_CameraStart(true);// 触发武器相机流程
-                    is_click = 1;
-                }
-                else
-                    is_click = 0;
-
-            }
             else
             {
                 chassis_setup_->setChassisStatus(CHASSIS_STOP);
@@ -498,24 +432,5 @@ void FSM_Controller::auto_ctrl()
 
 void FSM_Controller::debug()
 {
-    arm_setup_->setArmStatus(ARM_IDLE);// 调试模式下固定让机械臂空闲，避免与视觉对接流程抢控制。
 
-    // 设置相机对接 y 轴目标点为 0.8m（相机坐标系前向为正）。
-    chassis_setup_->set_camera_y_ref(0.90f);
-    
-    chassis_setup_->setChassisStatus(CHASSIS_CAMERA);// 调试模式下切入底盘相机闭环状态机。
-
-    weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_CAMERA);// 调试模式下切入武器相机协同状态机。
-
-    // 将底盘下发的武器预对接请求透传给武器模块。
-    weaponSage_setup_->set_camera_req(
-        chassis_setup_->get_weapon_req(),
-        chassis_setup_->get_z_req(),
-        chassis_setup_->get_z_ref());
-
-    // 将武器返回的预对接完成位回传给底盘状态机。
-    chassis_setup_->set_weapon_done(weaponSage_setup_->get_weapon_done());
-
-    // 将武器返回的 z 轴完成位回传给底盘状态机。
-    chassis_setup_->set_z_done(weaponSage_setup_->get_z_done());
 }

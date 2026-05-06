@@ -156,13 +156,7 @@ void ArmSetup::manualControl()
         // float next_height = target_joint_status_.launchJoint_Height_ 
         //     + airjoy_data_.right_y * launch_rate * airjoy_data_.right_y;
         float next_height = this->get_currentJointStatus().launchJoint_Height_ ;
-        // if(airjoy_data_.right_y > 0.3)
-        //     target_joint_status_.launchJoint_Height_ += launch_rate;
-        // else if(airjoy_data_.right_y < -0.3)
-        //     target_joint_status_.launchJoint_Height_ -= launch_rate;
-        // else
-        //     target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_ ;
-           
+
         if(airjoy_data_.right_y > 0.3f)
             next_height += manual_control.launch_rate;
         else if(airjoy_data_.right_y < -0.3f)

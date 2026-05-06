@@ -66,39 +66,9 @@ public:
     // 统一切换底盘状态，并在相机流程切入/切出时清理相关内部状态。
     void setChassisStatus(CHASSIS_Status_E status)
     {
-        // 进入相机模式时，重置 z 均值滤波器，避免历史样本影响首段控制。
-        if (status == CHASSIS_CAMERA && chassis_status_ != CHASSIS_CAMERA)
-        {
-            z_sum_ = 0.0f;
-            z_idx_ = 0;
-            z_num_ = 0;
-            for (uint8_t i = 0; i < 20; i++)
-            {
-                z_buf_[i] = 0.0f;
-            }
-        }
+        
 
-        // 退出相机模式时，清空握手位、阶段状态与滤波状态，防止下次重入残留。
-        if (status != CHASSIS_CAMERA)
-        {
-            weapon_req_ = false;
-            z_req_ = false;
-            z_ref_ = 0.0f;
-            camera_state_ = CAMERA_WEAPON;
-            z_rough_count_ = 0;
-            x_count_ = 0;
-            z_fine_count_ = 0;
-            yaw_count_ = 0;
-            z_sum_ = 0.0f;
-            z_idx_ = 0;
-            z_num_ = 0;
-            for (uint8_t i = 0; i < 20; i++)
-            {
-                z_buf_[i] = 0.0f;
-            }
-        }
-
-        // 最后写入底盘总状态。
+       // 最后写入底盘总状态。
         chassis_status_ = status;
     }
 
@@ -320,12 +290,18 @@ private:
     #endif
 
     Vector2D v_limit(Vector2D &v);
+<<<<<<< HEAD
 
+=======
+    
+    void flag_reset(void); // 复位自动流程相关标志位。
+    void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
+    /*
+>>>>>>> main
     // ———————————————————       相机接口函数        —————————————————————————————//
 
-    void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
 
-    void flag_reset(void); // 复位自动流程相关标志位。
+
 
     void camera_ctrl(void); // 相机闭环主流程状态机。
 
@@ -409,12 +385,14 @@ private:
     float fake_yaw = 0.0f; // 调试假数据：yaw 误差输入（度）。
 
     // 外部接口函数
+    */
 public:
     /**
      * @brief 设置路径自动开始标志
      * @param start 1表示开始，0表示停止
      * @param path_flagIndex 路径标志索引，0或1
      */
+    
     void setPathAutoStart(uint8_t start)
     {
         if (start == 1)
@@ -452,7 +430,7 @@ public:
         MF1 = KFS1;
         MF2 = KFS2;
     }
-
+    /*
     void set_camera_uart(UART_HandleTypeDef *uart)
     {
         camera_uart_ = uart;  // 设置相机串口句柄。
@@ -522,6 +500,7 @@ public:
     {
         weapon_cameraStart = isstart;
     }
+    */
 };
 #endif // __cplusplus
 

@@ -49,6 +49,37 @@ extern "C"
 extern fdCANbus* g_fdcan_bus_map_dbg[3];
 #endif
 
+// 运行时诊断快照：用于定位FDCAN时钟链路/位时序/总线状态问题
+struct FdcanDiagSnapshot {
+    uint32_t snapshot_count;
+    uint32_t error_status_cb_count;
+    uint32_t rx_fifo0_cb_count;
+    uint32_t bus_off_count;
+
+    uint32_t last_error_status_its;
+    uint32_t last_hal_error;
+
+    uint32_t ir;
+    uint32_t ie;
+    uint32_t psr;
+    uint32_t ecr;
+    uint32_t cccr;
+    uint32_t nbtp;
+    uint32_t dbtp;
+    uint32_t rxf0s;
+    uint32_t rxf1s;
+
+    uint32_t lec;
+    uint32_t dlec;
+    uint32_t rec;
+    uint32_t tec;
+
+    uint32_t fdcan_clk_hz;
+    uint32_t fdcan_clk_source;
+};
+
+extern volatile FdcanDiagSnapshot g_fdcan_diag[3];
+
 /** 
   * fdCANbus：管理一条fdCAN总线
   * - 每一路CAN生成一个实例
@@ -72,11 +103,8 @@ private:
 
     ~fdCANbus() = default;
 
-
     fdCANbus(const fdCANbus&) = delete;
     fdCANbus& operator=(const fdCANbus&) = delete;
-
-
 
 public:
 
@@ -102,7 +130,7 @@ public:
 
     // 最大电机数（每路）
     static constexpr size_t MAX_MOTORS = 10; //本来应该是8，但是如果是挂的DJI，那会有两个group，那就变成8+2了
-
+    std::size_t kMaxFrames = MAX_MOTORS * 2;
     
     void init();
 
@@ -134,6 +162,7 @@ protected:
     static bool matchesFrameDefault(const CanFrame& cf, uint32_t targetId, bool isExt);
 
     Motor_Base * motorList_[MAX_MOTORS];// 电机列表
+    
 
     RtosQueue<CanFrame> rxQueue_;
 

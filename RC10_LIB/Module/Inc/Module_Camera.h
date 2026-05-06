@@ -51,6 +51,11 @@ public:
     Camera_Data_t GetCameraData();
 
     /**
+     * @brief 获取已解析到的有效帧序号（每收到一帧合法数据自增）
+     */
+    uint32_t GetFrameSeq() const;
+
+    /**
      * @brief 检查摄像头是否在线
      * @return true 在线 (最近500ms有收到合法数据)
      */
@@ -91,6 +96,7 @@ private:
     Camera_Data_t current_data_ = {0.0f, 0.0f, 0.0f, 0.0f};
     bool is_data_valid = false;
     uint32_t last_update_time_ = 0;
+    volatile uint32_t frame_seq_ = 0;
 };
 
 #endif // __cplusplus

@@ -74,6 +74,7 @@ void Module_Camera::Callback_Fuc(uint8_t *buf, uint16_t len)
                     memcpy(&current_data_, data_buffer, sizeof(Camera_Data_t));
                     last_update_time_ = HAL_GetTick();
                     is_data_valid = true;
+                    frame_seq_++;
                     rx_state = WAITING_FOR_HEAD_0;
                 } else {
                     rx_state = WAITING_FOR_HEAD_0;
@@ -89,6 +90,10 @@ void Module_Camera::Callback_Fuc(uint8_t *buf, uint16_t len)
 
 Camera_Data_t Module_Camera::GetCameraData() {
     return current_data_;
+}
+
+uint32_t Module_Camera::GetFrameSeq() const {
+    return frame_seq_;
 }
 
 bool Module_Camera::IsConnected() {

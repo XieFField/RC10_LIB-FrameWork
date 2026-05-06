@@ -57,5 +57,9 @@
   "C_Cpp_Runner.useLinkTimeOptimization": false,
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "files.encoding": "gb2312",
-  "C_Cpp.errorSquiggles": "enabled"
+  "C_Cpp.errorSquiggles": "enabled",
+  "[markdown]": {
+    "files.encoding": "utf8"
+  },
+  "files.autoGuessEncoding": false
 }

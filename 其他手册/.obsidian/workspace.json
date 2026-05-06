@@ -18,8 +18,21 @@
               "icon": "excalidraw-icon",
               "title": "孙元气遥控"
             }
+          },
+          {
+            "id": "6ec54cd1227ac4b5",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "Excalidraw/遥控界面.md"
+              },
+              "icon": "excalidraw-icon",
+              "title": "遥控界面"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -168,13 +181,15 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "4f8c736a50b1bbf6",
+  "active": "6ec54cd1227ac4b5",
   "lastOpenFiles": [
+    "Pasted Image 20260424162542_967.png",
+    "Excalidraw/期末考核，自动状态机流程图.md",
+    "Excalidraw/孙元气遥控.md",
+    "Excalidraw/遥控界面.md",
     "Q.遥控器.md",
     "贝塞尔曲线中轨迹修正方案.md",
     "自动模式方案书.md",
-    "Excalidraw/孙元气遥控.md",
-    "Excalidraw/期末考核，自动状态机流程图.md",
     "Pasted Image 20260406222452_679.png",
     "停下拾取KFS方案书.md",
     "3. 电机上手流程(三)-MIT模式说明.pdf",

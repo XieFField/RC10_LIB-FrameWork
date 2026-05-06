@@ -33,7 +33,11 @@ typedef enum{
 typedef enum{
     ARM_MANUAL_CONTROL, //串联臂手动控制模式
 
+
+
     ARM_AUTO_CONTROL, //串联臂自动控制模式
+
+
 
     ARM_IDLE, //串联臂空闲状态，维持当前状态
 
@@ -42,6 +46,8 @@ typedef enum{
     ARM_DEBUG,
 
     ARM_CALIBRATE, //串联臂校准模式
+
+
 }ARM_Status_E;
 
 
