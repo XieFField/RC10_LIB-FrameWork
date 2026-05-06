@@ -46,7 +46,7 @@ extern "C" {
 #include "SystemDetect_Task.h"
 #include "Module_HWT.h"
 #include "Module_JY61.h"
-
+#include "Module_HBridge.h"
 /*==============Controller===============*/
 #include "FSM_Controller.h"
 #include "Arm_Setup.h"

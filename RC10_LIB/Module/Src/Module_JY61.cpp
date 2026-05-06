@@ -71,6 +71,8 @@ void IMU_test:: loop()
     {
       statusm[i] = HAL_I2C_IsDeviceReady(&hi2c5, i << 1, 1, 10); 
   }
+	
+  debug_uart.printf_DMA("channels:%f,%f,\n",imu_data.yaw, Locate_Setup::getInstance()->get_yaw_from_position());
 }
 	
 	

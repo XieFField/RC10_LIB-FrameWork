@@ -22,8 +22,7 @@ void Robot_WeaponSage_Setup::loop()
             Weapon_wrist_enable();
 			auto_ctrl_.auto_state_bool_S.wrist_enable=true;
 	}
-	
-	
+
 	if(!ctrl_status_.is_calibrating)
 	{
 		calibrate();
@@ -410,15 +409,23 @@ void Robot_WeaponSage_Setup::autoControl()
             break;
     }
 }
-
+float pos=0.0f;
+float vel=0.0f;
+float kp=0.0f;
+float kd=0.0f;
+float t_ff=0.0f;
 void Robot_WeaponSage_Setup::stop()
 {
     //停止，电机不动
-    this->setCtrlMode(WeaponSage::CURRENT_CONTROL);
-    this->setTarget(0.0f, WeaponSage::Launch_Motor);
-    this->setTarget(0.0f, WeaponSage::Claw_Motor);
-    this->setTarget(0.0f, WeaponSage::Traverse_Motor);
-    this->setTarget(0.0f, WeaponSage::Wrist_Motor);
+//		this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+//	target_pos_.wrist_pos_=90;
+//	 this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);
+      wrist_Motor_->setMIT(pos,vel,kp,kd,t_ff);
+//    this->setCtrlMode(WeaponSage::CURRENT_CONTROL);
+//    this->setTarget(0.0f, WeaponSage::Launch_Motor);
+//    this->setTarget(0.0f, WeaponSage::Claw_Motor);
+//    this->setTarget(0.0f, WeaponSage::Traverse_Motor);
+//    this->setTarget(0.0f, WeaponSage::Wrist_Motor);
 }
 
  /**

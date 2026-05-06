@@ -16,8 +16,8 @@ extern "C"
 #include "BSP_I2C.h"
 #include "BSP_RTOS.h"
 #include "i2c.h"
-
-
+#include "APP_debugTool.h"
+#include "Locate_setup.h"
 #ifdef __cplusplus
 #define ACCEL_RANGE  16.0f * 9.80665f
 #define GYRO_RANGE  2000.0f
@@ -73,7 +73,7 @@ private:
 	uint8_t buf[6];
 	HAL_StatusTypeDef statusm[128];
 
-		
+	Debug_Printf debug_uart = Debug_Printf(&huart8);
 	
 };
 

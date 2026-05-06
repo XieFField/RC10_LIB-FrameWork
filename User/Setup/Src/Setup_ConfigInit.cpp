@@ -29,7 +29,6 @@ LaserPosition laserpos1(15,laser_rx_buffer1,&huart6);
 LaserPosition laserpos2(15,laser_rx_buffer2,&huart10);
 Laser_InstanceManager instance_man;
 
-JY61_IMU IMU(JY61_ADDR,&hi2c5);
 Chassis_Omni<3>::init_config chassis_initData = {
     .wheel_radius = 0.15f/2.f,
     .max_wheel_rpm = 420,
@@ -58,7 +57,7 @@ ArmSetup ARM_Controller(arm_initData);
 Robot_WeaponSage_Setup Weapon_Controller(initData_);
 test test_task;
 IMU_test imu_test;
-
+H_Bridge_test h_bridge_test;
 
 
 
@@ -204,6 +203,9 @@ void ALL_Setup_ConfigInit(void)
 {
     test_task.init();
 	imu_test.init();
+	
+	h_bridge_test.init();
+	
    // Position* pos = Position::GetInstance(&huart1);
    // pos->InitUART();
 

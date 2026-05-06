@@ -2069,8 +2069,8 @@ Arm_InitData_S arm_initData = {
    .min_rotate_angle_ = 0.0f,
    .max_rotate_angle_ = 359.99999f,
     .safe_height = 0.14f,
-   .Sucker_GPIO_Port = SUCKER_GPIO_Port,
-    .Sucker_GPIO_Pin = SUCKER_Pin,
+//   .Sucker_GPIO_Port = SUCKER_GPIO_Port,
+//    .Sucker_GPIO_Pin = SUCKER_Pin,
 
     
 };
