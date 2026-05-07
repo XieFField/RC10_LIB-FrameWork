@@ -7,8 +7,6 @@
  *                 can3: vesc*4 DM4310*2  留有1个DJI电机余量
  */ 
 
-
-
  // 外部声明USB高速设备句柄
 extern "C" 
 {
@@ -88,13 +86,13 @@ M3508 rudder3(3, CAN1_Bus, true, false); M3508 rudder4(4, CAN1_Bus, true, false)
 VESC_Motor motor_vesc1(101, CAN3_Bus, 21.0f); VESC_Motor motor_vesc2(102, CAN3_Bus, 21.0f); 
 VESC_Motor motor_vesc3(103, CAN3_Bus, 21.0f); VESC_Motor motor_vesc4(104, CAN3_Bus, 21.0f);
 
-                           /* 串联臂 */      
-M3508 arm_launchMotor(5, CAN1_Bus, true, false); M3508 arm_rotateMotor(7, CAN1_Bus, true, false);
+//                            /* 串联臂 */      
+// M3508 arm_launchMotor(5, CAN1_Bus, true, false); M3508 arm_rotateMotor(7, CAN1_Bus, true, false);
 
-M2006 arm_stretchMotor(8, CAN3_Bus, true, false);  
-DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
+// M2006 arm_stretchMotor(8, CAN3_Bus, true, false);  
+// DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
 
-                           /* 武器系统 */
+//                            /* 武器系统 */
 M3508 Weapon_launchMotor_1_master(1, CAN2_Bus, true, false); M3508 Weapon_launchMotor_1_slave(2, CAN2_Bus, true, false); 
 M3508 Weapon_launchMotor_2_master(3, CAN2_Bus, true, false); M3508 Weapon_launchMotor_2_slave(4, CAN2_Bus, true, false);
 M2006 Weapon_traverseMotor(5, CAN2_Bus, true, false); M2006 Weapon_clawMotor(6, CAN2_Bus, true, false);
@@ -102,7 +100,10 @@ M2006 Weapon_traverseMotor(5, CAN2_Bus, true, false); M2006 Weapon_clawMotor(6, 
 DM_Motor Weapon_wristMotor(J4310_Type, 0x05,0x05, CAN3_Bus);
 
 
+M3508 arm_launchMotor(5, CAN1_Bus, true, false); M3508 arm_rotateMotor(7, CAN1_Bus, true, false);
 
+M2006 arm_stretchMotor(8, CAN1_Bus, true, false);  
+DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN1_Bus);
 
 /*================Motor Instances==============*/
 
@@ -223,9 +224,9 @@ laserpos.Init();//锟斤拷锟斤拷锟斤拷
 }
 
 void CAN_Motor_Init(void);
-
+Point2D lader_install_offset = {0.0f, 0.0f}; // 激光雷达安装偏移，单位米
 Locate_Setup* set1 = Locate_Setup::getInstance();
-
+Laser_InstanceManager instance_man;
 void ALL_Setup_ConfigInit(void)
 {
     // 初始化串口6的相机模块
@@ -275,7 +276,7 @@ void ALL_Setup_ConfigInit(void)
 
    CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
    crsf_rc->init();
-	
+	set1->init(&instance_man,&usb_1,lader_install_offset ,arm_install_offset);
    set1->laser_initData_.d=0.5;
    set1->locate_setup_init();
    set1->set_startToLRL(true);
@@ -285,36 +286,27 @@ void ALL_Setup_ConfigInit(void)
 
 void CAN_Motor_Init(void)
 {
-   DJIGroupCAN1_Low.addMotor(&rudder1);DJIGroupCAN1_Low.addMotor(&rudder2);
-   DJIGroupCAN1_Low.addMotor(&rudder3);DJIGroupCAN1_Low.addMotor(&rudder4);
-   
+   DJIGroupCAN1_Low.addMotor(&rudder1); 
+   DJIGroupCAN1_Low.addMotor(&rudder2);
+   DJIGroupCAN1_Low.addMotor(&rudder3);
+   DJIGroupCAN1_Low.addMotor(&rudder4);
+
    DJIGroupCAN1_High.addMotor(&arm_launchMotor);
    DJIGroupCAN1_High.addMotor(&arm_rotateMotor);
-
-   DJIGroupCAN2_Low.addMotor(&Weapon_launchMotor_1_master);DJIGroupCAN2_Low.addMotor(&Weapon_launchMotor_1_slave);
-   DJIGroupCAN2_Low.addMotor(&Weapon_launchMotor_2_master);DJIGroupCAN2_Low.addMotor(&Weapon_launchMotor_2_slave);
-
-   DJIGroupCAN2_High.addMotor(&Weapon_traverseMotor);
-   DJIGroupCAN2_High.addMotor(&Weapon_clawMotor);
-
-   DJIGroupCAN3_High.addMotor(&arm_stretchMotor);
-
-   CAN1_Bus->registerMotor(&DJIGroupCAN1_Low); CAN1_Bus->registerMotor(&DJIGroupCAN1_High);
-   CAN1_Bus->registerMotor(&rudder1);CAN1_Bus->registerMotor(&rudder2);
-   CAN1_Bus->registerMotor(&rudder3);CAN1_Bus->registerMotor(&rudder4);
-   CAN1_Bus->registerMotor(&arm_launchMotor);CAN1_Bus->registerMotor(&arm_rotateMotor);
-
-   CAN2_Bus->registerMotor(&DJIGroupCAN2_Low); CAN2_Bus->registerMotor(&DJIGroupCAN2_High);
-   CAN2_Bus->registerMotor(&Weapon_launchMotor_1_master);CAN2_Bus->registerMotor(&Weapon_launchMotor_1_slave);
-   CAN2_Bus->registerMotor(&Weapon_launchMotor_2_master);CAN2_Bus->registerMotor(&Weapon_launchMotor_2_slave);
-   CAN2_Bus->registerMotor(&Weapon_traverseMotor);CAN2_Bus->registerMotor(&Weapon_clawMotor);
-
-   CAN3_Bus->registerMotor(&DJIGroupCAN3_High);
-   CAN3_Bus->registerMotor(&arm_stretchMotor);
-   CAN3_Bus->registerMotor(&arm_pitchMotor); CAN3_Bus->registerMotor(&Weapon_wristMotor);
-   CAN3_Bus->registerMotor(&motor_vesc1); CAN3_Bus->registerMotor(&motor_vesc2); 
-   CAN3_Bus->registerMotor(&motor_vesc3); CAN3_Bus->registerMotor(&motor_vesc4);
+   DJIGroupCAN1_High.addMotor(&arm_stretchMotor);
    
+   CAN1_Bus->registerMotor(&DJIGroupCAN1_Low);
+   CAN1_Bus->registerMotor(&DJIGroupCAN1_High);
+   CAN1_Bus->registerMotor(&arm_pitchMotor);
+   CAN1_Bus->registerMotor(&rudder1);
+   CAN1_Bus->registerMotor(&rudder2);
+   CAN1_Bus->registerMotor(&rudder3);
+   CAN1_Bus->registerMotor(&rudder4);
+
+   CAN1_Bus->registerMotor(&arm_launchMotor);
+   CAN1_Bus->registerMotor(&arm_rotateMotor);
+   CAN1_Bus->registerMotor(&arm_stretchMotor);
+
    CAN1_Bus->init();
    CAN2_Bus->init();
 	CAN3_Bus->init();
@@ -327,10 +319,8 @@ void CAN_Motor_Init(void)
 
    // 机械臂电机PID参数初始化
    
-   PID_Param_Config arm_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
    PID_Param_Config arm_3508_anglePID = m3508_angle_pid_params;
-   arm_3508_anglePID.output_limit = 350.0f;
-   // arm_3508_speedPID.output_limit = 420.0f; // 根据机械臂要求调整输出限幅
+   arm_3508_anglePID.output_limit = 450.0f;
    
    arm_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
 

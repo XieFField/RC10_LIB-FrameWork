@@ -51,6 +51,7 @@ namespace WeaponSage
         Launch_Motor, // Ì§Éýµç»ú
 
         Claw_Motor,
+
         Traverse_Motor,
         Wrist_Motor
     };
@@ -222,10 +223,10 @@ protected:
     float MotorTotalAngle_to_Realpos(float motor_angle, WeaponSage::Motor_Type_E motor_type);
 
     bool setMotorTargetTotalAngle(float total_angle, WeaponSage::Motor_Type_E motor_type);
-		void set_launchMotorSpeed(float target)
-		{
-            launch_target_rpm_ = motor_reversed_.launch_reversed_ * target;
-		}
+    void set_launchMotorSpeed(float target)
+    {
+        launch_target_rpm_ = motor_reversed_.launch_1_master_reversed_ * target;
+    }
     float launch_target_rpm_ = 0.0f;
 	WeaponSage_InitData_S initData_;
 };
