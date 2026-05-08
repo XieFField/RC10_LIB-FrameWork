@@ -41,14 +41,14 @@ void Locate_Setup::update()
         swtich1_isOn = false;
     }
 
-//    if(HAL_GPIO_ReadPin(SWTICH2_GPIO_Port, SWTICH2_Pin) == GPIO_PIN_SET)
-//    {
-//        swtich2_isOn = true;
-//    }
-//    else
-//    {
-//        swtich2_isOn = false;
-//    }
+    if(HAL_GPIO_ReadPin(SWTICH2_GPIO_Port, SWTICH2_Pin) == GPIO_PIN_SET)
+    {
+        swtich2_isOn = true;
+    }
+    else
+    {
+        swtich2_isOn = false;
+    }
 
 }
 

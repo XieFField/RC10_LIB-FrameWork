@@ -44,8 +44,8 @@ public:
     virtual void update(){};
     
     // »ñÈ¡Êä³öÖá×´Ì¬
-    virtual float getRPM() const { return 0.0f; }   
-    virtual float getCurrent() const { return 0.0f; }
+    virtual float getRPM() const { return rpm_; }   
+    virtual float getCurrent() const { return current_; }
     virtual float getAngle() const { return 0.0f; }
     virtual float getTotalAngle() const { return 0.0f; }
 

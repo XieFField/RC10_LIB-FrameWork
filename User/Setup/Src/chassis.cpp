@@ -724,7 +724,7 @@ namespace jia
 
         f32 Chassis::getWheeCurrentCurrent(const WheelConfig &wheel) const
         {
-            return wheel.h->current_;
+            return wheel.h->getCurrent();
         }
 
         f32 Chassis::getWheelCurrentRpm(const WheelConfig &wheel) const
@@ -868,7 +868,7 @@ namespace jia
 
         f32 Chassis::getSteerWheelCurrentCurrent(const WheelConfig &wheel) const
         {
-            return wheel.smh->current_;
+            return wheel.smh->getCurrent();
         }
 
         f32 Chassis::getSteerWheelCurrentTotalAngleDegCalibrated(const WheelConfig &wheel) const
@@ -916,12 +916,12 @@ namespace jia
 
         f32 Chassis::getDriveWheelCurrentRPM(const WheelConfig &wheel) const
         {
-            return wheel.dmh->rpm_;
+            return wheel.dmh->getRPM();
         }
 
         f32 Chassis::getDriveWheelCurrentCurrent(const WheelConfig &wheel) const
         {
-            return wheel.dmh->current_;
+            return wheel.dmh->getCurrent();
         }
 
         f32 Chassis::buildDebugSetpoint(DebugSignalMode mode, f32 axis, f32 amplitude, f32 hand_input) const
@@ -1099,7 +1099,7 @@ namespace jia
                     setSteerWheelTargetCurrent(wheel, 0.0f);
                 }
 
-                photogate_signal_ = HAL_GPIO_ReadPin(kTEST_PHOTOGATE_GPIO_Port, kTEST_PHOTOGATE_Pin);
+                // photogate_signal_ = HAL_GPIO_ReadPin(kTEST_PHOTOGATE_GPIO_Port, kTEST_PHOTOGATE_Pin);
 
                 if (is_power_on_cailbration_)
                 {
