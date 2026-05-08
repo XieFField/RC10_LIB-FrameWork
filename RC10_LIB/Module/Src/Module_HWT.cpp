@@ -1,6 +1,5 @@
 #include "Module_HWT.h"
 
-#include "RC10_LIB/APP/Inc/APP_Utils.h"
 
 HWT101CT::HWT101CT(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle) 
     :UART_(rx_buffer_size,rx_buffer,uart_handle),

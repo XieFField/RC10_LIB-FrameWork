@@ -1,6 +1,6 @@
 #include "APP_PID.h"
 
-#include "RC10_LIB/APP/Inc/APP_Utils.h"
+
 
 float PID_Position::pid_calc(float target, float feedback)
 {
@@ -113,6 +113,118 @@ void PID_Incremental::set_params(const PID_Param_Config& params, float td_ratio)
     td_ratio_ = td_ratio;
 }
 
+void CamZ_Ctrl::reset(float z_now)
+{
+    z_est_ = z_now; // 估计值对齐当前高度。
+    z_ref_ = z_now; // 平滑参考对齐当前高度。
+    z_err_ = 0.0f; // 清误差。
+    i_sum_ = 0.0f; // 清积分。
+
+    dt_ = 0.01f; // 重置默认周期。
+    last_t_ = TimeStamp::getInstance().getSeconds(); // 记录当前时间。
+    first_ = true; // 标记下一次为首帧。
+
+    done_ = false; // 清完成位。
+    done_t_ = 0.0f; // 清完成累计时间。
+}
+
+void CamZ_Ctrl::step_ref(float z_ref, float dt)
+{
+    float max_step = param_.ref_rate * dt; // 本周期参考最大变化量。
+    float delta = z_ref - z_ref_; // 目标与平滑参考的差值。
+
+    if (delta > max_step)
+    {
+        z_ref_ += max_step; // 正向限速跟踪。
+    }
+    else if (delta < -max_step)
+    {
+        z_ref_ -= max_step; // 反向限速跟踪。
+    }
+    else
+    {
+        z_ref_ = z_ref; // 差值在限速内直接对齐。
+    }
+}
+
+void CamZ_Ctrl::fuse_cam(float z_cam, float z_vel)
+{
+    float z_now = z_cam + z_vel * param_.cam_delay; // 用速度将延迟样本外推到当前。
+    float dz = z_now - z_est_; // 创新量: 相机与估计的差。
+
+    if (fabsf(dz) < param_.cam_db)
+    {
+        return; // 小于死区视为噪声不融合。
+    }
+
+    if (fabsf(dz) > param_.cam_gate)
+    {
+        return; // 大于门限视为异常值不融合。
+    }
+
+    z_est_ += param_.cam_gain * dz; // 小权重纠偏避免跳变。
+}
+
+void CamZ_Ctrl::step_done(float z_vel, float dt)
+{
+    if (fabsf(z_err_) < param_.done_err && fabsf(z_vel) < param_.done_vel)
+    {
+        done_t_ += dt; // 误差和速度都满足时累计稳定时间。
+    }
+    else
+    {
+        done_t_ = 0.0f; // 条件破坏则重新计时。
+    }
+
+    done_ = (done_t_ >= param_.done_time); // 达到最小持续时间才判定完成。
+}
+
+float CamZ_Ctrl::run_step(float z_ref, float z_cam, bool cam_new, float z_vel)
+{
+    float now_t = TimeStamp::getInstance().getSeconds(); // 读取当前时间。
+    dt_ = now_t - last_t_; // 计算离散周期。
+
+    if (first_)
+    {
+        first_ = false; // 仅首次进入执行。
+        dt_ = 0.01f; // 首帧强制默认周期防突变。
+    }
+
+    if (dt_ <= 0.0f || dt_ > 0.1f)
+    {
+        dt_ = 0.01f; // 周期异常回退默认值。
+    }
+
+    last_t_ = now_t; // 更新时间戳。
+
+    z_est_ += z_vel * dt_; // 编码器速度积分做高频预测。
+
+    step_ref(z_ref, dt_); // 目标先做斜坡限速。
+
+    if (cam_new)
+    {
+        fuse_cam(z_cam, z_vel); // 新相机样本到达时再融合。
+    }
+
+    z_err_ = z_ref_ - z_est_; // 位置误差。
+    if (fabsf(z_err_) < param_.i_err && param_.i_err > 0.0f)
+    {
+        i_sum_ += z_err_ * dt_; // 小误差区积分消静差。
+    }
+
+    if (param_.i_lim > 0.0f)
+    {
+        i_sum_ = constrain(i_sum_, -param_.i_lim, param_.i_lim); // 积分限幅防风up。
+    }
+
+    float out = param_.kp * z_err_ + param_.ki * i_sum_ - param_.kv * z_vel; // PI加速度阻尼项。
+    out = constrain(out, -param_.out_lim, param_.out_lim); // 输出限幅为目标rpm。
+
+    step_done(z_vel, dt_); // 更新到位判定。
+
+    return out; // 返回 launch rpm 指令。
+}
+
 float PID_Incremental::pid_calc(float target, float feedback)
 {
     float current_time_s = TimeStamp::getInstance().getSeconds();
@@ -158,8 +270,6 @@ float PID_Incremental::pid_calc(float target, float feedback)
         if (dt_ > 0.0f)
         {
             D_Term = params_.kd * (error_ - 2.0f * error_last_ + error_earlier_);
-            if(is_d_first)
-                D_Term = params_.kd * (feedback - 2.0f * feedback_last_ + feedback_earlier_);
         }
         else
         {
@@ -170,77 +280,14 @@ float PID_Incremental::pid_calc(float target, float feedback)
         output_ = output_last_ + (P_Term + I_Term + D_Term);
     }
 
-    if(is_forward_)
-    {
-        if(jia::deadZoneToZero(feedback, speed_forward_deadband_) > 0)
-        {
-            speed_forward_ = speed_forward_ratio_ * feedback + speed_forward_offset_;
-        }
-        else if(jia::deadZoneToZero(feedback, speed_forward_deadband_) < 0)
-        {
-            speed_forward_ = speed_forward_ratio_ * feedback - speed_forward_offset_;
-        }
-        else
-        {
-            speed_forward_ = 0.0f;
-        }
-
-        float acc = current_target - last_target_;
-        if(jia::deadZoneToZero(acc, acc_forward_deadband_) > 0)
-        {
-            acc_forward_ = acc_forward_ratio_ * acc + acc_forward_offset_;
-        }
-        else if(jia::deadZoneToZero(acc, acc_forward_deadband_) < 0)
-        {
-            acc_forward_ = acc_forward_ratio_ * acc - acc_forward_offset_;
-        }
-        else
-        {
-            acc_forward_ = 0.0f;
-        }
-
-        forward_output_ = speed_forward_ + acc_forward_;
-        output_ += forward_output_;
-
-        // if(feedback == feedback_last_ && is_power_off_protection_count_ == 0)
-        // {
-        //     power_off_protection_count_++;
-        // }
-        // else
-        // {
-        //     power_off_protection_count_ = 0;
-        //     if(is_power_off_protection_ == true)
-        //     {
-        //         is_power_off_protection_count_ = is_power_off_protection_count_max_;
-        //         is_power_off_protection_ = false;
-        //     }
-        // }
-
-        // if(power_off_protection_count_ >= power_off_protection_threshold_)
-        // {
-        //     power_off_protection_count_ = power_off_protection_threshold_;
-        //     output_ = 0.0f;
-        //     is_power_off_protection_ = true;
-        // }
-
-        // if(is_power_off_protection_count_ > 0)
-        // {
-        //     is_power_off_protection_count_--;
-        //     output_ = 0.0f;
-        // }
-    }
-
     // 输出限幅
     output_ = constrain(output_, -params_.output_limit, params_.output_limit);
 
     // 更新历史值
     error_earlier_ = error_last_;
     error_last_ = error_;
-    
+    output_last_ = output_; // 保存当前总输出，作为下次计算的“上次总输出”
     last_time_s_ = current_time_s;
-    feedback_earlier_ = feedback_last_;
-    feedback_last_ = feedback;
-    last_target_ = current_target;
 
     output_last_ = output_; // 保存当前总输出，作为下次计算的“上次总输出”
 
@@ -269,12 +316,12 @@ PID_Param_Config m3508_angle_pid_params = {
 };
 
 PID_Param_Config m3508Rotate_angle_pid_params = {
-    .kp = 3.5f,
+    .kp = 5.0f,
     .ki = 0.0f,
-    .kd = 0.00f,
+    .kd = 0.05f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 80.0f,   
+    .output_limit = 150.0f,   
     .deadband = 0.03f // 
 };
 
@@ -310,16 +357,6 @@ PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
     .deadband = 0.1f 
 };
 
-// PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
-//     .kp =  50.0f,
-//     .ki = 1.0f,
-//     .kd = 0.0f,
-//     .I_Outlimit = 1000000.0f, 
-//     .isIOutlimit = true, 
-//     .output_limit = 20000.0f,   
-//     .deadband = 0.0f 
-// };
-
 PID_Param_Config track_pid_params = {
     .kp = 6.0f,
     .ki = 0.0f,
@@ -330,26 +367,56 @@ PID_Param_Config track_pid_params = {
     .deadband = 0.0009f 
 };
 
+PID_Param_Config camera_x_pid_params = {
+    .kp = 6.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f,
+    .isIOutlimit = true,
+    .output_limit = 0.05f,
+    .deadband = 0.002f
+};
+
+PID_Param_Config camera_y_pid_params = {
+    .kp = 6.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f,
+    .isIOutlimit = true,
+    .output_limit = 0.05f,
+    .deadband = 0.01f
+};
+
+PID_Param_Config camera_vec_pid_params = {
+    .kp = 6.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f,
+    .isIOutlimit = true,
+    .output_limit = 0.1f,
+    .deadband = 0.003f
+};
+
 PID_Param_Config lock_angle_pid_params = {
- .kp = 0.075f,
+ .kp = 0.035f,
  .ki = 0.0f,
- .kd = 0.0f,
+ .kd = 0.00f,
  .I_Outlimit = 0.0f, 
  .isIOutlimit = true, 
  .output_limit = 3.0f, 
  .deadband = 0.1f 
 };
 
-PID_Param_Config path_lock_end = {
-    
-    .kp = -0.7f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 1.0f,   
-    .deadband = 0.0009f 
+PID_Param_Config camera_yaw_pid_params = {
+ .kp = 0.075f,
+ .ki = 0.0f,
+ .kd = 0.010f,
+ .I_Outlimit = 0.0f,
+ .isIOutlimit = true,
+ .output_limit = 0.05f,
+ .deadband = 0.1f
 };
+
 
 PID_Param_Config omega_z_pid_init_config =
 {
@@ -371,3 +438,32 @@ PID_Param_Config rot_z_pid_init_config = {
     .output_limit = 0.0f,
     .deadband = 0.0f
 };
+
+CamZ_Param camera_z_ctrl_params = {
+    .kp = 1800.0f,
+    .ki = 80.0f,
+    .kv = 40.0f,
+    .out_lim = 4500.0f,
+    .i_lim = 3.0f,
+    .i_err = 0.004f,
+    .ref_rate = 0.03f,
+    .cam_gain = 0.1f,
+    .cam_db = 0.0015f,
+    .cam_gate = 0.008f,
+    .cam_delay = 0.06f,
+    .done_err = 0.003f,
+    .done_vel = 0.004f,
+    .done_time = 0.12f,
+};
+
+PID_Param_Config path_lock_end = {
+    
+    .kp = 0.6f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 0.2f,   
+    .deadband = 0.005f 
+};
+

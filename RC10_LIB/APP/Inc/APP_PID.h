@@ -200,7 +200,7 @@ public:
 
         float get_dt() const { return dt_; }
         
-public:
+private:
     void calc_track_D(float expect, float dt); //微分跟踪器
     bool isFirst_ = true; // 是否为第一次计算
 
@@ -221,35 +221,56 @@ public:
 
     float dt_ = 0.001f;             // 采样时间，单位秒
     float last_time_s_ = 0.0f;      // 上次调用的时间，单位秒
+};
 
-    bool is_d_first = false; // 是否开启微分先行计算
-    float feedback_last_ = 0.0f; // 上次反馈值
-    float feedback_earlier_ = 0.0f; // 上上次反馈值
+typedef struct {
+    float kp;
+    float ki;
+    float kv;
+    float out_lim;
+    float i_lim;
+    float i_err;
+    float ref_rate;
+    float cam_gain;
+    float cam_db;
+    float cam_gate;
+    float cam_delay;
+    float done_err;
+    float done_vel;
+    float done_time;
+} CamZ_Param;
 
-    float last_target_ = 0.0f; // 上次目标值
+class CamZ_Ctrl {
+public:
+    CamZ_Ctrl(CamZ_Param param = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}) : param_(param) { reset(0.0f); } // ctor
 
-    bool is_forward_ = false; // 是否开启前馈
+    void set_param(const CamZ_Param& param) { param_ = param; } // set param
+    void reset(float z_now); // reset state
+    float run_step(float z_ref, float z_cam, bool cam_new, float z_vel); // one step
 
-    float speed_forward_deadband_ = 1.0f; // 速度前向死区
-    // float speed_forward_ratio_ = 0.7098f; // 速度前向因子
-    float speed_forward_ratio_ = 0.0f; // 速度前向因子
-    // float speed_forward_offset_ = 371.9226f; // 速度前向偏移量
-    float speed_forward_offset_ = 0.0f; // 速度前向偏移量
-    float speed_forward_ = 0.0f; // 速度前向输出
+    bool is_done() const { return done_; } // done flag
+    float get_est() const { return z_est_; } // estimated z
+    float get_ref() const { return z_ref_; } // smooth ref
+    float get_err() const { return z_err_; } // control err
 
-    float acc_forward_deadband_ = 0.0f; // 加速度前向死区
-    float acc_forward_ratio_ = 2646.1308f; // 加速度前向因子
-    // float acc_forward_offset_ = 488.5379f; // 加速度前向偏移量
-    float acc_forward_offset_ = 0.0f; // 加速度前向偏移量
-    float acc_forward_ = 0.0f; // 加速度前向输出
+private:
+    void step_ref(float z_ref, float dt); // ref slew
+    void fuse_cam(float z_cam, float z_vel); // delayed cam fuse
+    void step_done(float z_vel, float dt); // done check
 
-    float forward_output_ = 0.0f; // 前馈输出值
+    CamZ_Param param_;
 
-    uint8_t power_off_protection_count_ = 0; // 电源关闭保护计数
-    uint8_t power_off_protection_threshold_ = 20; // 电源关闭保护阈值
-    bool is_power_off_protection_ = false; // 是否开启电源关闭保护
-    uint16_t is_power_off_protection_count_ = 0; // 是否开启电源关闭保护
-    uint16_t is_power_off_protection_count_max_ = 10; // 电源关闭保护最大计数
+    float z_est_ = 0.0f;
+    float z_ref_ = 0.0f;
+    float z_err_ = 0.0f;
+    float i_sum_ = 0.0f;
+
+    float dt_ = 0.01f;
+    float last_t_ = 0.0f;
+    bool first_ = true;
+
+    bool done_ = false;
+    float done_t_ = 0.0f;
 };
 
 
@@ -261,14 +282,22 @@ extern PID_Param_Config m2006_angle_pid_params;
 extern PID_Param_Config lock_angle_pid_params;
 extern PID_Param_Config track_pid_params;
 
+extern PID_Param_Config camera_x_pid_params;
+extern PID_Param_Config camera_y_pid_params;
+extern PID_Param_Config camera_vec_pid_params;
+extern PID_Param_Config camera_yaw_pid_params;
+
 extern PID_Param_Config m3508Rotate_speed_pid_params;
 extern PID_Param_Config m3508Rotate_angle_pid_params;
+
 extern PID_Param_Config path_lock_end;
 
 extern PID_Param_Config m3508_speed_pid_paramsForSpeedMotor;
 
 extern PID_Param_Config omega_z_pid_init_config;
 extern PID_Param_Config rot_z_pid_init_config;
+
+extern CamZ_Param camera_z_ctrl_params;
 #endif
 
 #endif

@@ -1,14 +1,12 @@
 #include "Robot_Arm.h"
 #include <iostream>
-#include "APP_tool.h"
 
 Robot_Arm::Robot_Arm(Arm_InitData_S init_Data)
     : init_data_(init_Data)
 {
 }
-// float testangle =179.0f;
-// int a = 1;
-float ramp_rate = 15000;
+
+float ramp_rate = 18000;
 void Robot_Arm::update()
 {
     /*电机当前的角度转换成关节当前的角度 */
@@ -34,7 +32,6 @@ void Robot_Arm::update()
     if(motor_rotate_ != nullptr)
     {
         // 直接读取电机总角度，映射回机械臂的 0-360 度
-        // 不再维护 rot_cont 连续角，避免累积误差
         float raw_angle = MotorTotalAngle_to_rotateAngle(motor_rotate_->getTotalAngle());
         joint_angle_.rotateJoint_angle_ = normalize_deg_0_360(raw_angle);
     }
@@ -48,22 +45,15 @@ void Robot_Arm::update()
 
     forwardKinematics(arm_forward_);
 
-
     if(control_mode_ == TARGET_POSITION_MODE)
         inverseKinematics(arm_target_);
-    else if(control_mode_ == MANUAL_JOINT_SPEED_MODE)
-    {
-        // 手动关节速度模式下的处理
-        jacobianMatrix();
-    }
+
     else if(control_mode_ == MANUAL_MOTOR_POSITION_MODE)
     {
         // 手动电机位置模式下的处理
         target_joint_angle_.launchJoint_Height_  = constrain(target_joint_angle_.launchJoint_Height_,  0.0f, init_data_.max_launchHeight_);
         target_joint_angle_.stretchJoint_Length_ = constrain(target_joint_angle_.stretchJoint_Length_, 0.0f, init_data_.max_stretchLength_);
-        // // 与当前角就近等效映射，保持多圈连续，避免 0/360 跳变
-        // target_joint_angle_.rotateJoint_angle_   = wrap_to_nearest_cont(joint_angle_.rotateJoint_angle_, target_joint_angle_.rotateJoint_angle_);
-
+       
         target_joint_angle_.rotateJoint_angle_ = calc_rotate_targetByStrategy(
             joint_angle_.rotateJoint_angle_,
             target_joint_angle_.rotateJoint_angle_
@@ -84,40 +74,26 @@ void Robot_Arm::update()
     // 对旋转通道：计算基于最近圈数的绝对目标
     if (motor_rotate_ != nullptr)
     {
-        // 1. 获取当前连续电机角度 (Arm Domain)
         float current_arm_total = MotorTotalAngle_to_rotateAngle(motor_rotate_->getTotalAngle());
         
-        // 2. 获取目标单圈角度 (0~360)
-        float target_arm_mod = normalize_deg_0_360(target_joint_angle_.rotateJoint_angle_);
-
-        // 3. 计算 k 值 (Round to nearest integer)
-        // 增加 0.5f 偏移确保 round 行为在正负数一致 (虽然 roundf 已处理)
-        float diff = current_arm_total - target_arm_mod;
+        // 算出经过手动模式、自动模式设定的目标角度
+        float target_arm = target_joint_angle_.rotateJoint_angle_;
+        
+        // 计算当前机械臂总角度和目标的差值，找到它离当前圈数最近的那个目标绝对角度
+        float diff = current_arm_total - target_arm;
         float k = roundf(diff / 360.0f);
-        
-        // 4. 重构目标 TotalAngle
-        float target_arm_total = target_arm_mod + k * 360.0f;
-    
-        // 5.极端情况保护：如果电机转速极快导致一次 update 跨越 180 度，
-        // 防止 k 值跳变引发回回头。但在 100Hz 控制频率下很难发生。
-        
+
+        float target_arm_total = target_arm + k * 360.0f;
         target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
 
-		setRampRotateMaxSpeed(ramp_rate); // 可调参数，按需设置
-        ramp_rotate_target_ = caculate_rotate_target(motor_rotate_->getTotalAngle(),target_rotateMotorAngle);
-   
-		motor_rotate_->setTargetTotalAngle(ramp_rotate_target_);
-			
+        ramp_rotate_target_ = caculate_rotate_target(motor_rotate_->getTotalAngle(), target_rotateMotorAngle);
+        motor_rotate_->setTargetTotalAngle(ramp_rotate_target_);
     }
 
     target_stretchMotorAngle = stretchLength_to_MotorTotalAngle(target_joint_angle_.stretchJoint_Length_);
     target_launchMotorAngle = launchHeight_to_MotorTotalAngle(target_joint_angle_.launchJoint_Height_);
     target_pitchMotorAngle = pitchAngle_to_MotorTotalAngle(target_joint_angle_.suckerJoint_angle_);
     /*暂时不做斜坡处理*/
-
-    // rotate 已经在上面处理了
-    // if(motor_rotate_ != nullptr)
-    //    motor_rotate_->setTargetTotalAngle(target_rotateMotorAngle);
 
     if(motor_stretch_ != nullptr)
         motor_stretch_->setTargetTotalAngle(target_stretchMotorAngle);
@@ -126,7 +102,7 @@ void Robot_Arm::update()
         motor_launch_->setTargetTotalAngle(target_launchMotorAngle);
 
     if(motor_pitch_ != nullptr)
-        motor_pitch_->setTargetTotalAngle(target_pitchMotorAngle);
+        motor_pitch_->setTargetTotalAngle(init_data_.max_pitchRPM_, target_pitchMotorAngle);
 
     if(sucker_status_ == SUCK)
         HAL_GPIO_WritePin(init_data_.Sucker_GPIO_Port, init_data_.Sucker_GPIO_Pin, GPIO_PIN_SET);
@@ -180,98 +156,6 @@ bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
     return true;
 }
 
-void Robot_Arm::jacobianMatrix()
-{
-    // 不需要用到，先注释了
-    // if(dt_ <= 1e-6f || dt_ > 0.1f) 
-    //     return;
-
-    // // 末端速度限幅
-    // float vx = manual_v_.vx, vy = manual_v_.vy, vz = manual_v_.vz;
-    //     float vxy_2 = vx*vx + vy*vy, vmax_xy_2 = jac_init_data_.vmax_xy_ * jac_init_data_.vmax_xy_;
-    // if(vxy_2 > vmax_xy_2)
-    // {
-    //     float norm = 0.0f;
-    //     arm_sqrt_f32(vxy_2, &norm);
-    //     float scale = jac_init_data_.vmax_xy_ /(norm + 1e-6f);
-    //     vx *= scale; 
-    //     vy *= scale;
-    // }
-    // vz = constrain(vz, -jac_init_data_.vmax_z_, jac_init_data_.vmax_z_);
-
-    // // 1 用反馈姿态计算雅可比
-    // const float h_fb = joint_angle_.launchJoint_Height_;
-    // const float d_fb = joint_angle_.stretchJoint_Length_;
-    // const float theta_rad_fb = deg_to_rad(joint_angle_.rotateJoint_angle_);
-
-    // float c = arm_cos_f32(theta_rad_fb);
-    // float s = arm_sin_f32(theta_rad_fb);
-    // const float L = init_data_.arm_length_ + d_fb;
-
-    // float Jv_data[9] = {
-    //     0.0f,   c, -L*s,
-    //     0.0f,   s,  L*c,
-    //     1.0f, 0.0f, 0.0f
-    // };
-
-    // //阻尼最小二乘 qdot = J^T (J J^T + λ^2 I)^-1 v
-    // arm_matrix_instance_f32 Jv, JT, S, Sl, Sl_inv, vec_v, vec_tmp, vec_qdot;
-
-    // float JT_data[9], S_data[9], Sl_data[9], Sl_inv_data[9];
-    // float v_data[3] = {vx, vy, vz};
-    // float tmp_data[3]={0,0,0}, qdot_data[3]={0,0,0};
-
-    // arm_mat_init_f32(&Jv, 3, 3, Jv_data);
-    // arm_mat_init_f32(&JT, 3, 3, JT_data);
-    // arm_mat_init_f32(&S, 3, 3, S_data);
-    // arm_mat_init_f32(&Sl, 3, 3, Sl_data);
-    // arm_mat_init_f32(&Sl_inv, 3, 3, Sl_inv_data);
-    // arm_mat_init_f32(&vec_v, 3, 1, v_data);
-    // arm_mat_init_f32(&vec_tmp, 3, 1, tmp_data);
-    // arm_mat_init_f32(&vec_qdot, 3, 1, qdot_data);
-
-
-    // // JT = Jv^T
-    // if(arm_mat_trans_f32(&Jv, &JT) != ARM_MATH_SUCCESS)
-    //     return;
-
-    // // S = Jv * JT
-    // if(arm_mat_mult_f32(&Jv, &JT, &S) != ARM_MATH_SUCCESS)
-    //     return;
-
-    // //Sl = S + λ^2 I
-    // const float lambda_2 = jac_init_data_.jac_lambda_ * jac_init_data_.jac_lambda_;
-    // for(uint32_t r=0; r < 3; ++r)
-    // {
-    //     for(uint32_t c_idx = 0; c_idx < 3; ++c_idx)
-    //         Sl_data[r*3 + c_idx] = S_data[r*3 + c_idx];
-
-    //     Sl_data[r*3 + r] += lambda_2;
-    // }
-
-    // if(arm_mat_inverse_f32(&Sl, &Sl_inv) != ARM_MATH_SUCCESS) return;
-    // if(arm_mat_mult_f32(&Sl_inv, &vec_v, &vec_tmp) != ARM_MATH_SUCCESS) return;
-    // if(arm_mat_mult_f32(&JT, &vec_tmp, &vec_qdot) != ARM_MATH_SUCCESS) return;
-
-    // float hdot = constrain(qdot_data[0], -jac_init_data_.hdot_max_, jac_init_data_.hdot_max_);                 // m/s
-    // float ddot = constrain(qdot_data[1], -jac_init_data_.ddot_max_, jac_init_data_.ddot_max_);                 // m/s
-    // float thetadot_deg = constrain(rad_to_deg(qdot_data[2]), -jac_init_data_.thetadot_deg_max_, jac_init_data_.thetadot_deg_max_); // deg/s
-
-    // //  积分到目标位置
-    // float h_cmd     = target_joint_angle_.launchJoint_Height_;
-    // float d_cmd     = target_joint_angle_.stretchJoint_Length_;
-    // float theta_cmd = target_joint_angle_.rotateJoint_angle_; // deg，保持连续角
-
-    // h_cmd     = h_cmd     + hdot        * dt_;
-    // d_cmd     = d_cmd     + ddot        * dt_;
-    // theta_cmd = theta_cmd + thetadot_deg* dt_;
-
-    // //  位置限幅（不限制旋转角，保持多圈连续；显示时再做 0..360 归一化）
-    // target_joint_angle_.launchJoint_Height_  = constrain(h_cmd, 0.0f, init_data_.max_launchHeight_);
-    // target_joint_angle_.stretchJoint_Length_ = constrain(d_cmd, 0.0f, init_data_.max_stretchLength_);
-    // target_joint_angle_.rotateJoint_angle_  = theta_cmd;
-}
-
 float Robot_Arm::calc_rotate_targetByStrategy(float current_cont_angle, float target_raw_0_360)
 {
     //连续角度归一化至0~360
@@ -286,6 +170,16 @@ float Robot_Arm::calc_rotate_targetByStrategy(float current_cont_angle, float ta
         target_mod += 360.0f;
 
     float diff = target_mod - current_mod;
+
+    // 当接近目标角时，强制切换到最短路径，避免过冲后持续单向绕圈无法收敛
+    float shortest_diff = diff;
+    if (shortest_diff > 180.0f)
+        shortest_diff -= 360.0f;
+    else if (shortest_diff < -180.0f)
+        shortest_diff += 360.0f;
+
+    if (_tool_Abs(shortest_diff) < 10.0f)
+        return current_cont_angle + shortest_diff;
 
     switch(rotate_strategy_)
     {
@@ -312,6 +206,7 @@ float Robot_Arm::calc_rotate_targetByStrategy(float current_cont_angle, float ta
 
     return current_cont_angle + diff;
 }
+
 
 
 

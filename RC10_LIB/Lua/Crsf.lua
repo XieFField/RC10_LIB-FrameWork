@@ -1,19 +1,19 @@
--- 状态记忆变量（用于边沿检测）
+-- 鐘舵€佽?蹇嗗彉閲忥紙鐢ㄤ簬杈规部妫€娴嬶級
 Last_control_mode = 0
 Last_spear = 0
 
 local function my_init()
-    -- init 在模型加载时调用一次
+    -- init 鍦ㄦā鍨嬪姞杞芥椂璋冪敤涓€娆?
 end
 
 local function my_background()
-    -- background 周期性调用
+    -- background 鍛ㄦ湡鎬ц皟鐢?
 end
 
 local function my_run(event)
     lcd.clear()
 
-    -- 获取原始数据（定点数，放大100倍）
+    -- 鑾峰彇鍘熷?鏁版嵁锛堝畾鐐规暟锛屾斁澶?100鍊嶏級
     local x_raw = getValue("0C10") or 0       -- Robot X
     local y_raw = getValue("0C11") or 0       -- Robot Y  
     local yaw_raw = getValue("0C12") or 0     -- Robot Yaw
@@ -21,8 +21,8 @@ local function my_run(event)
     local kfs_y_raw = getValue("0C21") or 0   -- KFS Y
     local spear_raw = getValue("0C30") or 0   -- Spear
     local mode_raw = getValue("0C40") or 0    -- Control Mode
-
-    -- 有符号转换（int16 范围：-32768~32767）
+ 
+    -- 鏈夌?鍙疯浆鎹?紙int16 鑼冨洿锛?-32768~32767锛?
     if x_raw > 32767 then x_raw = x_raw - 65536 end
     if y_raw > 32767 then y_raw = y_raw - 65536 end
     if yaw_raw > 32767 then yaw_raw = yaw_raw - 65536 end
@@ -31,7 +31,7 @@ local function my_run(event)
     if spear_raw > 32767 then spear_raw = spear_raw - 65536 end
     if mode_raw > 32767 then mode_raw = mode_raw - 65536 end
 
-    -- 还原为 float（除以100，保留2位小数）
+    -- 杩樺師涓? float锛堥櫎浠?100锛屼繚鐣?2浣嶅皬鏁帮級
     local x = x_raw / 100.0
     local y = y_raw / 100.0
     local yaw = yaw_raw / 100.0
@@ -40,7 +40,7 @@ local function my_run(event)
     local spear = spear_raw / 100.0
     local mode = mode_raw / 100.0
 
-    -- 顶部显示控制模式（Y=0）
+    -- 椤堕儴鏄剧ず鎺у埗妯″紡锛圷=0锛?
     local mode_int = math.floor(mode + 0.5)
     if mode_int == 1 then
         lcd.drawText(0, 0, "Mode1", MIDSIZE)
@@ -58,25 +58,26 @@ local function my_run(event)
         lcd.drawText(10, 0, "GDUT Robocon2026", MIDSIZE)
     end
 
-    -- ========== Robot 位姿（X 和 Y 分开显示，间隔加大）==========
-    -- X 坐标（左侧）
+
+    -- ========== Robot 浣嶅Э锛圶 鍜? Y 鍒嗗紑鏄剧ず锛岄棿闅斿姞澶э級==========
+    -- X 鍧愭爣锛堝乏渚э級
     lcd.drawText(0, 13, "X:" .. string.format("%.2f", x), SMLSIZE)
-    -- Y 坐标（右侧，X=70，间隔加大）
+    -- Y 鍧愭爣锛堝彸渚э紝X=70锛岄棿闅斿姞澶э級
     lcd.drawText(70, 13, "Y:" .. string.format("%.2f", y), SMLSIZE)
     
-    -- Yaw 角度（单独一行）
+    -- Yaw 瑙掑害锛堝崟鐙?竴琛岋級
     lcd.drawText(0, 26, "Yaw:" .. string.format("%.2f", yaw), SMLSIZE)
 
-    -- ========== KFS 数据（X 和 Y 分开显示，间隔加大）==========
-    -- KFS_X（左侧）
+    -- ========== KFS 鏁版嵁锛圶 鍜? Y 鍒嗗紑鏄剧ず锛岄棿闅斿姞澶э級==========
+    -- KFS_X锛堝乏渚э級
     lcd.drawText(0, 39, "KFS_X:" .. string.format("%.2f", kfs_x), SMLSIZE)
-    -- KFS_Y（右侧，X=70，间隔加大）
+    -- KFS_Y锛堝彸渚э紝X=70锛岄棿闅斿姞澶э級
     lcd.drawText(70, 39, "KFS_Y:" .. string.format("%.2f", kfs_y), SMLSIZE)
 
-    -- Spear 状态（底部）
+    -- Spear 鐘舵€侊紙搴曢儴锛?
     lcd.drawText(0, 52, "Spear:" .. string.format("%.2f", spear), SMLSIZE)
 
-    -- 更新记忆变量（用于边沿检测）
+    -- 鏇存柊璁板繂鍙橀噺锛堢敤浜庤竟娌挎?娴嬶級
     Last_control_mode = mode_int
     Last_spear = spear_raw
 

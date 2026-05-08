@@ -9,18 +9,18 @@ local function run(event)
     local hdg = getValue("Hdg") or 0           -- GPS Course (Yaw)
     local galt = getValue("Alt") or 0         -- GPS Alt (Y)
     
-    -- 转换计算
+    -- �?��计算
     local x = gspd / 10.0
     local y = (galt + 1000) / 100.0
     local yaw = hdg
     
-      -- ========== Robot 位姿（X 和 Y 分开显示，间隔加大）==========
+      -- ========== Robot 位姿（X �? Y 分开显示，间隔加大）==========
     -- X 坐标（左侧）
     lcd.drawText(0, 13, "X:" .. string.format("%.2f", x), SMLSIZE)
     -- Y 坐标（右侧，X=70，间隔加大）
     lcd.drawText(70, 13, "Y:" .. string.format("%.2f", y), SMLSIZE)
     
-    -- Yaw 角度（单独一行）
+    -- Yaw 角度（单�?��行）
     lcd.drawText(0, 26, "Yaw:" .. string.format("%.1f", yaw) .. "°", SMLSIZE)
 
   -- KFS1（左侧，显示为整数）
@@ -28,7 +28,7 @@ local function run(event)
     -- KFS2（右侧，X=70，间隔加大，显示为整数）
     lcd.drawText(70, 39, "KFS2:" .. string.format("%d", kfs2_val), SMLSIZE)
 
-    -- Spear 状态（底部，显示为整数）
+    -- Spear 状态（底部，显示为整数�?
     lcd.drawText(0, 52, "Spear:" .. string.format("%d", spear_val), SMLSIZE)
     
     return 0

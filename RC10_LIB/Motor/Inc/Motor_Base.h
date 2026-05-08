@@ -1,7 +1,7 @@
 /**
  * @file Motor_Base.h
  * @author XieFField
- * @brief 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹峰嘲鏌﹂…鎺撳?闁跨噦鎷?
+ * @brief 电机基类声明
  * @version 1.0
  * @date 2025-09-16
  */
@@ -15,12 +15,14 @@
 #include "BSP_CanFrame.h"
 #include <cstdint>
 #include <cstddef>
-class fdCANbus; // 閸撳秹鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚?
+class fdCANbus; // 前置声明
 
-//闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑解偓姘舵晸閻?偅甯撮崠鈩冨?
 class Motor_Base {
 public:
-    Motor_Base(uint32_t id, bool isExt, fdCANbus* bus)
+    Motor_Base(uint32_t id, bool isExt, fdCANbus* bus, 
+        bool calcTotalAngle = true, bool calcAngle = true)
+        : is_calcangle(calcAngle),
+          is_calcTotalAngle(calcTotalAngle)
     {
         motor_id_ = id;
         isExtended_ = isExt;
@@ -28,7 +30,7 @@ public:
     };
     virtual ~Motor_Base(){};
 
-    // 閻╊噣鏁撻弬銈嗗?闁跨喎鈧?喎鐣?
+    // =
     virtual void setTargetRPM(float rpm_set){};
     virtual void setTargetCurrent(float current_set){};
     virtual void setTargetAngle(float angle_set){};
@@ -38,10 +40,10 @@ public:
         (void)brake_current;
     };
 
-    // 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔烘畷闂堚晜瀚归柨鐔兼應閻氬瓨瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归幍褔鏁撻崣顐㈠皡閹风兘鏁撻弬銈嗗?闁跨喓顏?涵閿嬪?闁跨喐鏋婚幏鐑芥晸閼哄倻顣?幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撴禒濠咁潶娴兼瑦瀚归柨鐔虹崵閿濆繑瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归幍褔鏁撻崣顐熸?閹凤拷
+    // 更新函数，负责根据最新的反馈数据计算控制输出
     virtual void update(){};
     
-    // 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹峰嘲褰?
+    // 获取输出轴状态
     virtual float getRPM() const { return 0.0f; }   
     virtual float getCurrent() const { return 0.0f; }
     virtual float getAngle() const { return 0.0f; }
@@ -49,22 +51,24 @@ public:
 
     
     /**
-     * @brief 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹烽?娲伴柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撶槐绡圢鐢?拷
-     * @param outFrames 闁跨喐鏋婚幏鐑芥晸閼哄倽鎻?幏椋庢湞闁跨喐鏋婚幏鐑芥晸閺傘倖瀚笴AN鐢?囨晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?
-     * @param maxFrames 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚?
-     * @return 鐎圭偤鏁撶紒鐐舵彧閹风兘鏁撻弬銈嗗?闁跨喓鏄?N鐢?囨晸閺傘倖瀚归柨鐔告灮閹凤拷
+     * @brief 打包要发送的CAN帧，子类必须实现以此提供特定的控制命令帧
+     * @param outFrames 用于存储打包的CAN帧的数组，调用者提供内存，子类负责填充内容。数组大小由 maxFrames 参数指定。
+     * @param maxFrames 用于指定 outFrames 数组的大小
+     * @return 实际填充的CAN帧数量，如果超过 maxFrames 则只填充 maxFrames 个
+     * @attention 该函数由 fdCANbus 的调度器任务周期性调用，以实现定时发送控制命令
      */
     virtual std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) = 0;
 
     
     /**
-     * @brief 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔烘畷绾板?瀚归柨鐔告灮閹峰嘲顫嬮柨鐔告灮閹风兘鏁撶槐绡圢鐢?拷
+     * @brief CAN帧解析接口，子类必须实现以此处理特定的反馈数据
      */
     virtual void updateFeedback(const CanFrame& cf) = 0;
 
     /**
-     * @brief 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?CAN鐢?囨晸鐟欐帒鍤栭幏鐑芥晸閺傘倖瀚归柨鐔诲Ν濮濄倗顣?幏鐑芥晸閿燂拷
-     * @return 闁跨喐鏋婚幏鐑芥晸閻櫬板劵閹风兘鏁撻弬銈嗗?閾撳秶銈烽柨鐔轰絾rue闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔歌Е鏉╂柧绱?幏绌巃lse
+     * @brief CAN帧匹配函数，默认实现为ID和帧类型匹配，子类可 override 以实现更复杂的匹配逻辑（如协议ID匹配）
+     * @param cf 需要匹配的CAN帧
+     * @return 如果帧匹配当前电机实例，则返回true，否则返回false。默认实现为简单的ID和帧类型匹配
      */
     virtual bool matchesFrame(const CanFrame& cf) const
     {
@@ -72,8 +76,8 @@ public:
         return false;
     }
 
-    virtual float get_GearRatio() const { return GEAR_RATIO; }
-
+    float get_GearRatio() const { return GEAR_RATIO; }
+    float get_inv_GearRatio() const { return inv_GEAR_RATIO_; }
     float getTargetRPM() const { return target_rpm_; }
     float getTargetCurrent() const { return target_current_; }
     float getTargetAngle() const { return target_angle_; }
@@ -82,23 +86,48 @@ public:
 
     fdCANbus* bus() const { return bus_; }
     uint32_t getID() const { return motor_id_; }
-public:
+
+
+    void reset_controlFrequency(uint16_t newFreq) 
+    { 
+        if(newFreq > 0 && newFreq % 100 == 0 && newFreq <= 1000) // 控制频率必须是100的整数倍
+            control_Frequency_ = newFreq; 
+        else
+            control_Frequency_ = 1000; // 恢复默认值
+    }
+
+
+    uint16_t get_controlFrequency() const { return control_Frequency_; }
+    uint16_t get_controlCnt() const { return control_cnt; }
+    void reset_controlCnt() { control_cnt = 0; }
+    void increment_controlCnt() { control_cnt++; }
+
+
+
+protected:
+    bool is_calcangle = true; //仅仅在is_calcTotalAngle为true时，is_calcangle才生效
+    bool is_calcTotalAngle = true;
     uint32_t motor_id_;
     bool isExtended_;
     fdCANbus* bus_;
 
-    // 閻╊噣鏁撻弬銈嗗?/閻樿埖鈧?線鏁撻弬銈嗗?
-    float target_rpm_ = 0.0f; //鏉烆剟鏁撻弬銈嗗?
-    float target_current_= 0.0f; //闁跨喐鏋婚幏鐑芥晸閺傘倖瀚?
-    float target_angle_ = 0.0f; //闁跨喕顫楃拋瑙勫?
-    float target_totalAngle_ = 0.0f; //闁跨喐婢冪憴鎺曨啇閹凤拷
-    
-    float GEAR_RATIO = 1.0f; // 闁跨喐鏋婚幏鐑芥晸閸旑偅鐦?敐蹇斿?姒涙﹢鏁撻弬銈嗗?娑擄拷1
+    // 目标值
+    float target_rpm_ = 0.0f; // 目标转速 rpm
+    float target_current_= 0.0f; // 目标电流 ma
+    float target_angle_ = 0.0f; // 目标角度 deg
+    float target_totalAngle_ = 0.0f; // 目标总角度 deg
+
+    float GEAR_RATIO = 1.0f; // 减速比
+    float inv_GEAR_RATIO_ = 1.0f; // 反减速比，预计算以提高效率
     float rpm_ = 0.0f;
     float current_ = 0.0f;
     float angle_ = 0.0f;
     float totalAngle_ = 0.0f;
-    float temperature_ = 0.0f; //闁跨喖鎽?拋瑙勫?
+    float temperature_ = 0.0f; // 电机温度
+
+    uint16_t control_cnt = 0; // 控制周期计数器，用于实现不同频率的控制逻辑
+private:
+    uint16_t control_Frequency_ = 1000; // 默认控制频率 Hz，重设的控制频率必须是100的整数倍
 
 };
 

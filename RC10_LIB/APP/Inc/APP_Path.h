@@ -590,10 +590,10 @@ public:
      */
     Vector2D plan(Vector2D point)
     {
-//        if (m_phase == FINISHED_PHASE)
-//        {
-//            return Vector2D{0, 0};
-//        }
+        //        if (m_phase == FINISHED_PHASE)
+        //        {
+        //            return Vector2D{0, 0};
+        //        }
         if (Is_End() == true)
         {
             bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距离
@@ -624,8 +624,11 @@ public:
             //                v_tangent_ = (bezier_curve_list[index_].Get_End_point()-point).normalize(); // 计算切线向量（单位向量）
             //            }
 
-            // 段切换条件：优先使用空间到点误差，避免仅靠速度规划阶段导致提前切段
-            const bool reach_segment_end = (_tool_Abs(err_end) <= 0.02f) || (t_ >= 0.995f && m_phase == FINISHED_PHASE);
+            // 段切换条件：
+            // 1) 近端误差达到阈值可直接切段；
+            // 2) t 接近 1 仅作为辅助条件，必须同时离终点不远，避免“投影到段末端但车体仍较远”时误切段。
+            const float t_reach_guard = 0.20f;
+            bool reach_segment_end = (_tool_Abs(err_end) <= dead) || (t_ >= 0.995f && _tool_Abs(err_end) <= t_reach_guard);
             if (reach_segment_end)
             {
                 index_++; // 切换到下一段曲线
@@ -724,11 +727,10 @@ protected:
     Phase m_phase = FINISHED_PHASE;
     Speedplanner_1D_Param_Config params_;
     uint8_t bezier_curve_num = 0; // 总曲线数量
-    // int pid_end_flag=1;
+    float dead=0.04f;
 private:
     /*---------------------------------状态-------------------------------------*/
     float err_end = 0.0f;
-    // PID_Position pid_lock_point;
 
     bool is_end = false; // 是否开始
 

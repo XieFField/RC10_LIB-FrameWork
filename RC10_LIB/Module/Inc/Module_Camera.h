@@ -16,7 +16,7 @@ extern "C" {
 
 #ifdef __cplusplus
 
-// 锟斤拷锟斤拷头锟斤拷锟捷结构锟斤拷 (锟斤拷锟斤拷锟斤拷锟斤拷位锟斤拷 PnPData 锟节存布锟斤拷一锟斤拷)
+// 摄像头数据结构体 (保持与上位机 PnPData 内存布局一致)
 #pragma pack(1)
 struct Camera_Data_t {
     float x;    // [0-3]
@@ -29,49 +29,54 @@ struct Camera_Data_t {
 class Module_Camera : public UART_ {
 public:
     /**
-     * @brief 锟斤拷取锟斤拷锟斤拷实锟斤拷
-     * @param uart_handle 锟斤拷锟节撅拷锟? (锟斤拷 &huart6)
+     * @brief 获取单例实例
+     * @param uart_handle 串口句柄 (如 &huart6)
      * @return Module_Camera* 
      */
     static Module_Camera* GetInstance(UART_HandleTypeDef *uart_handle);
 
     /**
-     * @brief 锟斤拷始锟斤拷锟斤拷锟斤拷
+     * @brief 初始化串口
      */
     void InitUART();
 
     /**
-     * @brief 锟斤拷锟斤拷锟叫断回碉拷锟斤拷锟斤拷 (状态锟斤拷锟斤拷锟斤拷)
+     * @brief 串口中断回调函数 (状态机解析)
      */
     void Callback_Fuc(uint8_t *buf, uint16_t len) override;
 
     /**
-     * @brief 锟斤拷取锟斤拷锟斤拷锟斤拷锟斤拷头锟斤拷锟斤拷
+     * @brief 获取最新摄像头数据
      */
     Camera_Data_t GetCameraData();
 
     /**
-     * @brief 锟斤拷锟斤拷锟斤拷锟酵凤拷欠锟斤拷锟斤拷锟?
-     * @return true 锟斤拷锟斤拷 (锟斤拷锟?500ms锟斤拷锟秸碉拷锟较凤拷锟斤拷锟斤拷)
+     * @brief 获取已解析到的有效帧序号（每收到一帧合法数据自增）
+     */
+    uint32_t GetFrameSeq() const;
+
+    /**
+     * @brief 检查摄像头是否在线
+     * @return true 在线 (最近500ms有收到合法数据)
      */
     bool IsConnected();
 
 private:
-    // 私锟叫癸拷锟届函锟斤拷锟斤拷实锟街碉拷锟斤拷模锟斤拷
+    // 私有构造函数，实现单例模版
     Module_Camera(uint16_t rx_buffer_size, uint8_t *rx_buffer, UART_HandleTypeDef *uart_handle);
     
-    // 锟斤拷锟矫匡拷锟斤拷
+    // 禁用拷贝
     Module_Camera(const Module_Camera&) = delete;
     Module_Camera& operator=(const Module_Camera&) = delete;
 
-    // 协锟介常锟斤拷
+    // 协议常量
     static const uint8_t FRAME_HEAD_0 = 0xAA;
     static const uint8_t FRAME_HEAD_1 = 0xBB;
     static const uint8_t FRAME_TAIL_0 = 0xCC;
     static const uint8_t FRAME_TAIL_1 = 0xDD;
-    static const uint8_t DATA_LEN = 16; // 4锟斤拷float: x/y/z/yaw
+    static const int DATA_LEN = 16; // 4个float: x,y,z,yaw
 
-    // 锟斤拷锟斤拷状态锟斤拷
+    // 解析状态机
     enum RxState {
         WAITING_FOR_HEAD_0,
         WAITING_FOR_HEAD_1,
@@ -80,17 +85,18 @@ private:
         WAITING_FOR_TAIL_1
     };
 
-    // 模锟斤拷 Module_Position: 使锟斤拷 UART_* 锟斤拷锟斤拷
+    // 模仿 Module_Position: 使用 UART_* 类型
     UART_* uart_instance_;
     bool uart_initialized_;
     
     RxState rx_state = WAITING_FOR_HEAD_0;
-    uint8_t data_buffer[16]; // 锟捷达拷锟斤拷锟斤拷
+    uint8_t data_buffer[16]; // 暂存数据
     uint8_t data_index = 0;
 
     Camera_Data_t current_data_ = {0.0f, 0.0f, 0.0f, 0.0f};
     bool is_data_valid = false;
     uint32_t last_update_time_ = 0;
+    volatile uint32_t frame_seq_ = 0;
 };
 
 #endif // __cplusplus

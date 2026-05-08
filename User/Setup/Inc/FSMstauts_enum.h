@@ -33,7 +33,11 @@ typedef enum{
 typedef enum{
     ARM_MANUAL_CONTROL, //串联臂手动控制模式
 
+
+
     ARM_AUTO_CONTROL, //串联臂自动控制模式
+
+
 
     ARM_IDLE, //串联臂空闲状态，维持当前状态
 
@@ -42,6 +46,8 @@ typedef enum{
     ARM_DEBUG,
 
     ARM_CALIBRATE, //串联臂校准模式
+
+
 }ARM_Status_E;
 
 
@@ -53,9 +59,11 @@ typedef enum{
 
     CHASSIS_TESTFOR_ARM, //底盘测试模式，为串联臂提供稳定平台
 
+
+    CHASSIS_CAMERA_DEBUG, // 视觉调试模式
+    CHASSIS_CAMERA, // 相机闭环模式
     CHASSIS_AUTO_CONTROL_CB, //底盘自动控制模式
     CHASSIS_AUTO_CONTROL_KFS, //底盘自动控制模式梅林内
-    CHASSIS_CAMERA_DEBUG, // 视觉调试模式
 
     CHASSIS_STOP,
 }CHASSIS_Status_E;
@@ -65,6 +73,7 @@ typedef enum{
     WEAPONSAGE_AUTO_CONTROL, //自动控制模式
     WEAPONSAGE_STOP,        //停止
     WEAPONSAGE_DEBUG,       //调试模式  
+    WEAPONSAGE_CAMERA,      //相机协同模式
     WEAPONSAGE_IDLE,    //空闲状态，维持当前状态
     WEAPONSAGE_CALIBRATE, //校准模式
 }WeaponSage_Status_E;

@@ -3,81 +3,43 @@
 float aaa;
 void Locate_Setup::loop()
 {
-    // 锟节此达拷锟斤拷锟接讹拷位锟斤拷氐锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
-//	uint8_t a =0x11;
-//    usb_handle->CDC_Send_(0x04,&a,0x01);
 	Get_Rader_Data();
     this->update();
 }
-
+float cos_neg90 = cos(deg_to_rad(-90));
+float sin_neg90 = sin(deg_to_rad(-90));
 void Locate_Setup::update()
 {
-    // Point2D fk_speed;
-    // if(SpeedFK_Queue.recv(fk_speed, 0))
-    // {
-    //     // 底盘正解算速度fk_speed
-	// 	fk_chassisSpeed_inWorld_.x = fk_speed.x;
-	// 	fk_chassisSpeed_inWorld_.y = fk_speed.y;
-	// 	fk_chassisSpeed_inWorld_.theta = fk_speed.theta;
-    // }
-
-	if(is_startToLRL_)
-   		RobotPos_inWorld_caculate(this->Laser_pos_instance);
-
 	update_Lidar_data();
 
-	// lader_transform_caculate(); // [Fix] 移动到 robot_pose 更新之后
-
-    // yaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().world_yaw;
-	// dyaw_from_position_ = Position::GetInstance(&huart1)->getRealPosData().dyaw;
-
+	lader_transform_caculate();
 
     yaw_from_position_ = -HWT101CT::GetInstance(&huart1)->get_yaw_rad() / PI * 180.0f;
 	dyaw_from_position_ = HWT101CT::GetInstance(&huart1)->get_yaw_speed_rad();
 
-    float ladpos_x = Lad_Data.x * cos(deg_to_rad(-90)) - Lad_Data.y * sin(deg_to_rad(-90));
-    float ladpos_y = Lad_Data.x * sin(deg_to_rad(-90)) + Lad_Data.y * cos(deg_to_rad(-90));
+    float ladpos_x = Lad_Data.x * cos_neg90 - Lad_Data.y * sin_neg90;
+    float ladpos_y = Lad_Data.x * sin_neg90 + Lad_Data.y * cos_neg90;
 	robot_pose_inWorld_.x = -ladpos_x + coordoffset.x_offset;
     robot_pose_inWorld_.y = -ladpos_y + coordoffset.y_offset;
     robot_pose_inWorld_.z = Lad_Data.z;
     robot_pose_inWorld_.yaw = yaw_from_position_;
 
-    float ladvel_x = Lad_Data.line_x * cos(deg_to_rad(-90)) - Lad_Data.line_y * sin(deg_to_rad(-90));
-    float ladvel_y = Lad_Data.line_x * sin(deg_to_rad(-90)) + Lad_Data.line_y * cos(deg_to_rad(-90));
+    float ladvel_x = Lad_Data.line_x * cos_neg90 - Lad_Data.line_y * sin_neg90;
+    float ladvel_y = Lad_Data.line_x * sin_neg90 + Lad_Data.line_y * cos_neg90;
     robot_speed_inworld_.x = ladvel_x;
     robot_speed_inworld_.y = ladvel_y;
     robot_speed_inworld_.z = Lad_Data.line_z;
 
     robot_speed_inworld_.yaw = dyaw_from_position_;
 
-    // [Fix] 2D 矩阵坐标变换: World = Robot + R * Install
-    float theta_rad = deg_to_rad(robot_pose_inWorld_.yaw);
-    float c_theta = cosf(theta_rad);
-    float s_theta = sinf(theta_rad);
-
-    // Pos_arm_world = Pos_robot_world + Rotation_matrix * Pos_arm_install
-    arm_pose_inWorld_.x = robot_pose_inWorld_.x + (arm_install_pose_.x * c_theta - arm_install_pose_.y * s_theta);
-    arm_pose_inWorld_.y = robot_pose_inWorld_.y + (arm_install_pose_.x * s_theta + arm_install_pose_.y * c_theta);
-    // 假设 arm_install_pose_.theta 为弧度，转为度数叠加 (World yaw 为度数)
-    arm_pose_inWorld_.theta = robot_pose_inWorld_.yaw + (arm_install_pose_.theta * 180.0f / PI);
-
-//    arm_pose_inWorld_.x = robot_pose_inWorld_.x;
-//    arm_pose_inWorld_.y = robot_pose_inWorld_.y;
-
-    // arm_pose_inWorld_.x = robot_pose_inWorld_.x - arm_install_pose_.x;
-    // arm_pose_inWorld_.y = robot_pose_inWorld_.y - arm_install_pose_.y;
-    // arm_pose_inWorld_.theta = robot_pose_inWorld_.yaw;
-
-    // lader_transform_caculate();
-
-//    if(HAL_GPIO_ReadPin(SWITCH1_GPIO_Port, SWITCH1_Pin) == GPIO_PIN_SET)
-//    {
-//        swtich1_isOn = true;
-//    }
-//    else
-//    {
-//        swtich1_isOn = false;
-//    }
+    if(HAL_GPIO_ReadPin(SWITCH1_GPIO_Port, SWITCH1_Pin) == GPIO_PIN_SET)
+    {
+        swtich1_isOn = true;
+    }
+    else
+    {
+        swtich1_isOn = false;
+    }
 
 //    if(HAL_GPIO_ReadPin(SWTICH2_GPIO_Port, SWTICH2_Pin) == GPIO_PIN_SET)
 //    {
@@ -139,7 +101,7 @@ void Locate_Setup::update_Lidar_data()
 
 void Locate_Setup::Relocte_ToLader()
 {
-	Locate_Setup::USB_SendData();
+	Locate_Setup::USB_SendData(); 
 }
 
 

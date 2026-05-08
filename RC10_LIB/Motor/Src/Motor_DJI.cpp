@@ -8,16 +8,13 @@
      uint32_t send_idLow6020() {return 0x1FE;}
      uint32_t send_idHigh6020() {return 0x2FE;}
 
-DJI_Motor::DJI_Motor(DJI_MotorType type, uint32_t id, fdCANbus *bus)
-    : Motor_Base(id, false, bus), type_(type)//, motor_id_(id)
+DJI_Motor::DJI_Motor(DJI_MotorType type, uint32_t id, fdCANbus *bus,
+            bool calcTotalAngle, bool calcAngle)
+    : Motor_Base(id, false, bus, calcTotalAngle, calcAngle), type_(type)
     {}
 
 void DJI_Motor::updateFeedback(const CanFrame &cf)
 {
-    // 解析反馈帧
-//    if(cf.DLC != 8)   //实测，大疆的CAN包我没收到DLC。。。
-//        return; // 非法帧长
-
     const uint8_t* data = cf.data;
     // 解析通用部分
     
@@ -27,46 +24,69 @@ void DJI_Motor::updateFeedback(const CanFrame &cf)
     int8_t temperature_raw = data[6];
     int8_t null = data[7]; // 保留字节，未使用
 
-    this->encoder_raw_ = encoder_raw;
-    // this->angle_ = Encoder_to_angle(encoder_raw);
-    encoder_.update(encoder_raw);
+
     //静态类型转化
-    this->rpm_ = static_cast<float>(rpm_raw) /  get_GearRatio();
-    this->current_ = virtualCurrent_to_realCurrent(current_raw);
+    this->rpm_ = static_cast<float>(rpm_raw) * get_inv_GearRatio();
+    this->current_ = static_cast<float>(virtualCurrent_to_realCurrent(current_raw));
     this->temperature_ = static_cast<float>(temperature_raw);
 
-    this->totalAngle_ = encoder_.getTotalAngle() / get_GearRatio();
-    this->angle_ = fmodf(this->totalAngle_, 360.0f);
-    if(this->angle_ < 0) 
-        this->angle_ += 360.0f;
-    
+    if(this->is_calcTotalAngle)
+    {
+        this->encoder_raw_ = encoder_raw;
+        encoder_.update(encoder_raw);
+        this->totalAngle_ = encoder_.getTotalAngle() * get_inv_GearRatio();
+        // this->angle_ = fmodf(this->totalAngle_, 360.0f);
+
+        if(this->is_calcangle)
+        {
+            //直接调用fmod 开销有点大
+            if (this->totalAngle_ > -1800.0f && this->totalAngle_ < 1800.0f)
+            {
+                this->angle_ = this->totalAngle_;
+
+                while (this->angle_ >= 360.0f) this->angle_ -= 360.0f;
+                while (this->angle_ < 0.0f)    this->angle_ += 360.0f;
+            }
+            else
+            {
+                // 兜底路径，超出范围再用 fmodf
+                this->angle_ = fmodf(this->totalAngle_, 360.0f);
+                if (this->angle_ < 0.0f) this->angle_ += 360.0f;
+            }
+        }
+    }
 }
 
+constexpr float kM3508 = 20000.0f / 16384.0f;
+constexpr float kGM6020 = 3000.0f / 16384.0f;
 float DJI_Motor::virtualCurrent_to_realCurrent(int16_t virtualCurrent)
 {
     switch(type_)
     {
         case M3508_Type:
-            return static_cast<float>(virtualCurrent) / 16384.0f * 20000.0f; // 20000mA满量程
+            return static_cast<float>(virtualCurrent) * kM3508 ; // 20000mA满量程
         case M2006_Type:
-            return static_cast<float>(virtualCurrent) / 10000.0f * 10000.0f; // 10000mA满量程
+            return static_cast<float>(virtualCurrent); // 10000mA满量程
         case GM6020_Type:
-            return static_cast<float>(virtualCurrent) / 16384.0f * 3000.0f;  //3000mA满量程
+            return static_cast<float>(virtualCurrent) * kGM6020;  //3000mA满量程
         default:
             return 0.0f;
     }
 }
+
+constexpr float inv_virM3508 = 16384.0f / 20000.0f;
+constexpr float inv_virGM6020 = 16384.0f / 3000.0f;
 
 int16_t DJI_Motor::realCurrent_to_virtualCurrent(float realCurrent)
 {
     switch(type_)
     {
         case M3508_Type:
-            return static_cast<int16_t>(realCurrent / 20000.0f * 16384.0f); // 20A满量程
+            return static_cast<int16_t>(realCurrent * inv_virM3508); // 20A满量程
         case M2006_Type:
-            return static_cast<int16_t>(realCurrent / 10000.0f * 10000.0f); // 10A满量程
+            return static_cast<int16_t>(realCurrent ); // 10A满量程
         case GM6020_Type:
-            return static_cast<int16_t>(realCurrent / 3000.0f * 16384.0f);  //3A满量程
+            return static_cast<int16_t>(realCurrent * inv_virGM6020);  //3A满量程
         default:
             return 0;
     }
@@ -91,10 +111,6 @@ bool DJI_Group::addMotor(DJI_Motor* motor)
 
     if(motor->getID() < 1 || motor->getID() > 8)
         return false; // 不合法ID范围
-
-    // // [Fix] 防止跨总线注册：Group的总线必须与Motor的总线一致
-    // if(motor->bus() != this->bus())
-    //     return false;
 
     DJI_MotorType type = motor->getType();
     uint32_t mid = motor->getID();
@@ -220,10 +236,12 @@ std::size_t DJI_Group::packCommand(CanFrame outFrames[], std::size_t maxFrames)
 }
 /*======================= M3508 =======================*/
 
-M3508::M3508(uint32_t motor_id, fdCANbus* bus)
-    : DJI_Motor(M3508_Type, motor_id, bus) 
+M3508::M3508(uint32_t motor_id, fdCANbus* bus, 
+    bool calcTotalAngle, bool calcAngle)
+    : DJI_Motor(M3508_Type, motor_id, bus, calcTotalAngle, calcAngle) 
 {
-    
+    Motor_Base::GEAR_RATIO = GEAR_RATIO;
+    Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_;
 }
 
 float M3508::getAngle() const
@@ -338,9 +356,12 @@ void M3508::update()
 
 /*------------ M2006 ------------*/
 
-M2006::M2006(uint32_t motor_id, fdCANbus* bus)
-    : DJI_Motor(M2006_Type, motor_id, bus)
+M2006::M2006(uint32_t motor_id, fdCANbus* bus, 
+    bool calcTotalAngle, bool calcAngle)
+    : DJI_Motor(M2006_Type, motor_id, bus, calcTotalAngle, calcAngle)
 {
+    Motor_Base::GEAR_RATIO = GEAR_RATIO;
+    Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_;
 }
 
 float M2006::getAngle() const
@@ -451,9 +472,11 @@ void M2006::update()
 
 /*------------GM6020------------*/
 
-GM6020::GM6020(uint32_t motor_id, fdCANbus* bus)
-    : DJI_Motor(GM6020_Type, motor_id, bus)
+GM6020::GM6020(uint32_t motor_id, fdCANbus* bus, bool calcTotalAngle, bool calcAngle)
+    : DJI_Motor(GM6020_Type, motor_id, bus, calcTotalAngle, calcAngle)
 {
+    Motor_Base::GEAR_RATIO = GEAR_RATIO;
+    Motor_Base::inv_GEAR_RATIO_ = 1.0f;
 }
 
 void GM6020::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa)
