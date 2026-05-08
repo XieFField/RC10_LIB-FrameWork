@@ -1,6 +1,6 @@
 /**
  * @file omni_chassisSetup.h
- * @brief µ×ÅÌÓ¦ÓÃÀà
+ * @brief åº•ç›˜åº”ç”¨ç±»
  * @author @XieFField @naoganlin @GaGiaa
  */
 #ifndef __OMNI_CHASSISSETUP_H
@@ -40,6 +40,7 @@ extern "C"
 #include "chassis.h"
 
 #define debug_ladar 0
+
 class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>
 {
 public:
@@ -49,7 +50,6 @@ public:
     {
         yaw_pid_.set_as_circular();
     }
-
 
     OmniChassis_Setup(Chassis_Omni<3>::init_config& config)
         : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(config)
@@ -65,9 +65,12 @@ public:
 
     void init()
     {
-        if (this->wheels_[0] == nullptr || this->wheels_[1] == nullptr ||
-            this->wheels_[2] == nullptr || this->wheels_[3] == nullptr)
-            init_flag = false;
+        init_flag = false;
+        for (uint8_t i = 0; i < 3; ++i)
+        {
+            if (this->wheels_[i] == nullptr)
+                return;
+        }
 
         yaw_pid_.set_params(lock_angle_pid_params, 10000.0f);
 
@@ -80,7 +83,6 @@ public:
         pid_pos_y.set_params(track_pid_params, 0.0f);
 
         this->start(osPriorityHigh, 1024);
-        //        setTargetKFS(3);
         init_flag = true;
     }
 
@@ -92,11 +94,6 @@ public:
             this->is_chassis_reverse_ = -1.0f;
     }
 
-    /**
-     * @brief ÉèÖÃÂ·¾¶×Ô¶¯¿ªÊ¼±êÖ¾
-     * @param start 1±íÊ¾¿ªÊ¼£¬0±íÊ¾Í£Ö¹
-     * @param path_flagIndex Â·¾¶±êÖ¾Ë÷Òı£¬0»ò1
-     */
     void setPathAutoStart(uint8_t start)
     {
         if (start == 1)
@@ -137,15 +134,9 @@ public:
     }
 
 private:
-    //-----------------------------------Í¨Ñ¶±êÖ¾Î»-----------------------------------------//
     bool WeaponSage_END = 0;
-
-//    bool init_flag = false;
-
     bool Arm_Start = false;
-
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;
-    //-----------------------------------ËÙ¶È¹æ»®²ÎÊı-----------------------------------------//
 
     int flag = 0;
     int flag_run = 0;
@@ -156,46 +147,36 @@ private:
     Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};
     Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 5.0f, .maxDec = 5.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};
 
-    // float Acc_target_yaw_ = 0.0f;
-    // ConstantAcc Acc_yaw_{0.1f,0.0f}; // ×¢Òâ´úÂëÔËĞĞÏµÍ³µÄÖÜÆÚ
-    // Vector2D original_point_={-0.48f,-0.50f};
-
-    //-----------------------------------½Ó¿Ú¼àÊÓ²ÎÊı-----------------------------------------//
-
     Point3D ladar_data_;
     Vector2D robot_pos_ = {0.0f, 0.0f};
     Point2D robot_point_ = {0.0f, 0.0f};
 
     Vector2D planspeed;
     Vector2D speed;
-    Vector2D corrVelocity = {0.0f, 0.0f}; // ¼ÆËã³öµÄºáÏò¾ÀÆ«ËÙ¶ÈÏòÁ¿
+    Vector2D corrVelocity = {0.0f, 0.0f};
 
-    PID_Position pid_pos_x; // xÖá¾ø¶ÔÎ»ÖÃPID¿ØÖÆÆ÷
-    PID_Position pid_pos_y; // yÖá¾ø¶ÔÎ»ÖÃPID¿ØÖÆÆ÷
+    PID_Position pid_pos_x;
+    PID_Position pid_pos_y;
 
     Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
-    //-----------------------------------Ç°ÊÓpid²ÎÊı-----------------------------------------//
-
-    float tNearest = 0.0f;   // ×î½üµãÔÚ±´Èû¶ûÇúÏßÉÏµÄ²ÎÊıt (0~1)
-    float tLookahead = 0.0f; // Ç°ÊÓµãÔÚ±´Èû¶ûÇúÏßÉÏµÄ²ÎÊıt (0~1)
+    float tNearest = 0.0f;
+    float tLookahead = 0.0f;
 
     float max_robot_speed_ = 1.5f;
     float max_robot_speed_end_ = 0.4f;
     float t_deadzone = 0.93f;
     float max_corr_end_ = 0.5f;
 
-    Vector2D nearestPt;        // Â·¾¶ÉÏ¾àÀë»úÆ÷ÈË×î½üµÄµã
-    Vector2D lookaheadPt;      // Â·¾¶ÉÏµÄÇ°ÊÓµã
-    Vector2D lookaheadTangent; // Ç°ÊÓµã´¦µÄÇĞÏß·½ÏòÏòÁ¿
-    Vector2D pathEnd;          // Â·¾¶ÖÕµã×ø±ê
+    Vector2D nearestPt;
+    Vector2D lookaheadPt;
+    Vector2D lookaheadTangent;
+    Vector2D pathEnd;
 
     BezierCurve curve;
 
-    //-----------------------------------Ã·ÁÖ¹æ»®²ÎÊı-----------------------------------------//
     int KFS = 0;
-
     MF_AutoCtrler::PathInformation_S KFS_KeyPoint_;
 
     int8_t MF1 = 0;
@@ -205,24 +186,21 @@ private:
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
-    
+
     int index_exit = 0;
-    
+
     float MF2_target_yaw_ = 0.0f;
     bool spin_flag = false;
-
     bool spin_up_flag = false;
     bool spin_down_flag = false;
-
     bool MF1_flag = false;
     bool MF2_flag = false;
     bool MF1_finish = false;
 
-    Vector2D spin_point_ = {3.6f, 8.72f}; // ÉÏ·½Ğı×ªµã
-    float spin_skew_ = -0.1f;             // ÏÂ·½Ğı×ªÎ»ÖÃyÖáÆ«ÒÆÁ¿
+    Vector2D spin_point_ = {3.6f, 8.72f};
+    float spin_skew_ = -0.1f;
     bool get_spin_flag = false;
     bool Spin_Start = false;
-    //-----------------------------------yaw½Ç¿ØÖÆ²ÎÊı-----------------------------------------//
 
     float yaw = 0.0f;
     float target_yaw_ = 0.0f;
@@ -234,88 +212,39 @@ private:
     void loop() override;
 
     bool init_flag = false;
-
-
     float is_chassis_reverse_ = 1.0f;
-    
-    
-    //-----------------------------------Ç°À¡²ÎÊı-----------------------------------------//
 
-    // ÓÃÓÚÇ°ÊÓµã²î·ÖÇ°À¡µÄ¡°²Î¿¼µã¡±£º
-    // Õı³£¸ú×Ù½×¶ÎµÈÓÚ lookaheadPt£¬ÖÕµã½×¶ÎµÈÓÚ endPt¡£
     Vector2D ff_ref_point_ = {0.0f, 0.0f};
-    // ±£´æÉÏÒ»ÖÜÆÚ²Î¿¼µã£¬×öÀëÉ¢²î·Ö (p[k]-p[k-1]) / dt¡£
     Vector2D ff_ref_point_last_ = {0.0f, 0.0f};
-    // µÍÍ¨ºóµÄÇ°À¡ËÙ¶È£¬ÒÖÖÆ t Ìø±äºÍÀëÉ¢ÔëÉùµ¼ÖÂµÄ¼â·å¡£
     Vector2D ff_velocity_lpf_ = {0.0f, 0.0f};
-    // Ç°À¡²î·Ö³õÊ¼»¯±êÖ¾£¬±ÜÃâÊ×ÖÜÆÚÊ¹ÓÃÎŞĞ§²î·Ö¡£
     bool ff_diff_inited_ = false;
 
-    float m_lookaheadDist = 0.3f; // Ç°ÊÓ¾àÀë (µ¥Î»: Ã×)
-    // Ç°ÊÓµã²î·ÖÇ°À¡ÔöÒæ£¨Ô½´óÔ½¡°³å¡±£¬Ò²¸üÈİÒ×¶¶£©¡£
+    float m_lookaheadDist = 0.3f;
     float kff_la_ = 0.0f;
-    // Ò»½×µÍÍ¨ÏµÊı£¬·¶Î§(0,1]£ºÔ½Ğ¡Ô½Æ½»¬£¬Ô½´óÔ½ÁéÃô¡£
     float ff_lpf_alpha_ = 0.20f;
-    // ¿ØÖÆÈÎÎñÖÜÆÚ£¨µ±Ç°ÏµÍ³ 1ms µ÷¶È£©¡£
     float control_period_s_ = 0.001f;
-    // ²î·Ö×îĞ¡Ê±¼ä£¬±ÜÃâ dt Ì«Ğ¡µ¼ÖÂÊıÖµ±¬·¢¡£
     float ff_dt_min_s_ = 0.0009f;
-    // ²î·Ö×î´óÊ±¼ä£¬±ÜÃâÈÎÎñÒì³£ÑÓ³ÙºóÒ»´ÎĞÔ·Å´óËÙ¶ÈÂö³å¡£
     float ff_dt_max_s_ = 0.010f;
-    // Ç°À¡ÏŞ·ù£¨m/s£©£¬ÓÃÓÚÔ¼Êø¼â·å¡£
     float max_ff_speed_ = 1.0f;
     Vector2D v_robot_last_cmd_ = {0.0f, 0.0f};
-    // float kff_ref_ = 0.8f;
     float k_damp_ = 0.0f;
     float end_ff_scale_ = 0.35f;
     float end_pid_scale_ = 0.7f;
-    
-    //-----------------------------------ÆäËû²ÎÊı-----------------------------------------//
 
-    RmPocketData_t airjoy_data_; // Ò£¿ØÆ÷Êı¾İ£¬·¶Î§ -1 ~ 1
+    RmPocketData_t airjoy_data_;
+    Debug_Printf debug_uart = Debug_Printf(&huart8);
 
-    Debug_Printf debug_uart = Debug_Printf(&huart8); // µ÷ÊÔ´®¿Ú
-
-    //-----------------------------------ÄÚ²¿¿ØÖÆº¯Êı-----------------------------------------//
-
-    /**
-     * @brief »ñÈ¡Â·¾¶ÉÏ¾àÀë»úÆ÷ÈË×î½üµÄµã
-     * @param path_ ±´Èû¶ûÇúÏß¶ÔÏó
-     * @param robotPos »úÆ÷ÈËµ±Ç°Î»ÖÃ
-     * @param tNearest Êä³ö²ÎÊı£¬·µ»Ø×î½üµãµÄtÖµ
-     * @return Vector2D ×î½üµãµÄ×ø±ê
-     */
     Vector2D GetPathNearestPoint(BezierCurve &path_, const Vector2D &robotPos, float &tNearest);
-
-    /**
-     * @brief Ñ°ÕÒÇ°ÊÓµã
-     * @param path_ ±´Èû¶ûÇúÏß¶ÔÏó
-     * @param tNearest ×î½üµãµÄtÖµ
-     * @param tLookahead Êä³ö²ÎÊı£¬·µ»ØÇ°ÊÓµãµÄtÖµ
-     * @return Vector2D Ç°ÊÓµãµÄ×ø±ê
-     */
     Vector2D FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead);
-
-    void KFS_Selection_Planning(void);
-
     void Path_correction(void);
-
-    // »ùÓÚ¡°Ç°ÊÓ²Î¿¼µã²î·Ö¡±µÄÇ°À¡¼ÆËã£º
-    // v_ff_raw = kff_la_ * (p_ref[k]-p_ref[k-1]) / dt
-    // ²¢µş¼ÓµÍÍ¨¡¢ÏŞ·ùºÍÖÕµã¶ÎË¥¼õ¡£
     Vector2D ComputeLookaheadDiffFeedforward(bool near_end);
-
-    // Í³Ò»Çå¿Õ×Ô¶¯¿ØÖÆÏà¹ØÄÚ²¿×´Ì¬£¨ËÙ¶ÈÃüÁî¼ÇÒäÓëÇ°À¡²î·Ö×´Ì¬£©¡£
     void ResetAutoControlStates(void);
-
     Vector2D ComposeRobotVelocity(const Vector2D &v_pid, const Vector2D &v_ff_ref, bool near_end);
-
+    void KFS_Selection_Planning(void);
     void Clamping_Bar_Selection_Planning(void);
-
     void flag_reset(void);
-
-
 };
+
 #endif // __cplusplus
 
 #endif // __OMNI_CHASSISSETUP_H

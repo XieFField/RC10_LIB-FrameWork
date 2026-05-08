@@ -1509,6 +1509,16 @@
               <FilePath>..\RC10_LIB\Module\Src\Module_ChassisOmni.cpp</FilePath>
             </File>
             <File>
+              <FileName>Module_ChassisSwerve.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_ChassisSwerve.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_ChassisSwerve.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_ChassisSwerve.cpp</FilePath>
+            </File>
+            <File>
               <FileName>Module_GPIO.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Module\Inc\Module_GPIO.h</FilePath>
@@ -1661,6 +1671,26 @@
               <FileName>BSP_TimeStamp.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\BSP_Driver\Src\BSP_TimeStamp.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>BSP_TimeDwt.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\BSP_Driver\Inc\BSP_TimeDwt.h</FilePath>
+            </File>
+            <File>
+              <FileName>BSP_TimeDwt.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\BSP_Driver\Src\BSP_TimeDwt.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>BSP_TimeUs64.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\BSP_Driver\Inc\BSP_TimeUs64.h</FilePath>
+            </File>
+            <File>
+              <FileName>BSP_TimeUs64.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\BSP_Driver\Src\BSP_TimeUs64.cpp</FilePath>
             </File>
             <File>
               <FileName>retarget_io.cpp</FileName>

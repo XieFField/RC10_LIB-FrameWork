@@ -1,7 +1,7 @@
 /**
  * @file Motor_Base.h
  * @author XieFField
- * @brief 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹峰嘲鏌﹂…鎺撳?闁跨噦鎷?
+ * @brief 电机控制基类
  * @version 1.0
  * @date 2025-09-16
  */
@@ -9,15 +9,15 @@
 #define MOTOR_BASE_H
 
 #pragma once
-#ifdef __cplusplus
 
-#endif // __cplusplus
 #include "BSP_CanFrame.h"
 #include <cstdint>
 #include <cstddef>
-class fdCANbus; // 閸撳秹鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚?
 
-//闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑解偓姘舵晸閻?偅甯撮崠鈩冨?
+class fdCANbus; // 前向声明
+
+// 电机控制基类，提供通用的电机控制接口。
+// 具体电机类型（DJI、VESC等）通过继承实现各自的通信协议。
 class Motor_Base {
 public:
     Motor_Base(uint32_t id, bool isExt, fdCANbus* bus)
@@ -25,46 +25,47 @@ public:
         motor_id_ = id;
         isExtended_ = isExt;
         bus_ = bus;
-    };
+    }
     virtual ~Motor_Base(){};
 
-    // 閻╊噣鏁撻弬銈嗗?闁跨喎鈧?喎鐣?
+    // 目标值设定接口
     virtual void setTargetRPM(float rpm_set){};
     virtual void setTargetCurrent(float current_set){};
     virtual void setTargetAngle(float angle_set){};
     virtual void setTargetTotalAngle(float totalAngle_set){};
+    // 刹车设定接口，brake_current 为刹车电流（单位：mA）
     virtual void setBrake(float brake_current)
     {
         (void)brake_current;
     };
 
-    // 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔烘畷闂堚晜瀚归柨鐔兼應閻氬瓨瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归幍褔鏁撻崣顐㈠皡閹风兘鏁撻弬銈嗗?闁跨喓顏?涵閿嬪?闁跨喐鏋婚幏鐑芥晸閼哄倻顣?幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撴禒濠咁潶娴兼瑦瀚归柨鐔虹崵閿濆繑瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归幍褔鏁撻崣顐熸?閹凤拷
+    // 电机状态更新（由派生类实现，在CAN收发循环中调用）
     virtual void update(){};
-    
-    // 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹峰嘲褰?
-    virtual float getRPM() const { return 0.0f; }   
-    virtual float getCurrent() const { return 0.0f; }
-    virtual float getAngle() const { return 0.0f; }
-    virtual float getTotalAngle() const { return 0.0f; }
 
-    
+    // 反馈值读取接口（返回内部缓存值）
+    virtual float getRPM() const { return rpm_; }
+    virtual float getCurrent() const { return current_; }
+    virtual float getAngle() const { return angle_; }
+    virtual float getTotalAngle() const { return totalAngle_; }
+
     /**
-     * @brief 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹烽?娲伴柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撶槐绡圢鐢?拷
-     * @param outFrames 闁跨喐鏋婚幏鐑芥晸閼哄倽鎻?幏椋庢湞闁跨喐鏋婚幏鐑芥晸閺傘倖瀚笴AN鐢?囨晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?
-     * @param maxFrames 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚?
-     * @return 鐎圭偤鏁撶紒鐐舵彧閹风兘鏁撻弬銈嗗?闁跨喓鏄?N鐢?囨晸閺傘倖瀚归柨鐔告灮閹凤拷
+     * @brief 将电机目标值打包为CAN帧
+     * @param outFrames 输出的CAN帧数组
+     * @param maxFrames 最大帧数
+     * @return 实际打包的帧数
      */
     virtual std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) = 0;
 
-    
     /**
-     * @brief 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔烘畷绾板?瀚归柨鐔告灮閹峰嘲顫嬮柨鐔告灮閹风兘鏁撶槐绡圢鐢?拷
+     * @brief 从CAN帧解析电机反馈数据
+     * @param cf 输入的CAN帧
      */
     virtual void updateFeedback(const CanFrame& cf) = 0;
 
     /**
-     * @brief 闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔告灮閹风兘鏁撻弬銈嗗?CAN鐢?囨晸鐟欐帒鍤栭幏鐑芥晸閺傘倖瀚归柨鐔诲Ν濮濄倗顣?幏鐑芥晸閿燂拷
-     * @return 闁跨喐鏋婚幏鐑芥晸閻櫬板劵閹风兘鏁撻弬銈嗗?閾撳秶銈烽柨鐔轰絾rue闁跨喐鏋婚幏鐑芥晸閺傘倖瀚归柨鐔歌Е鏉╂柧绱?幏绌巃lse
+     * @brief 检查CAN帧是否匹配此电机（用于CAN接收分发）
+     * @param cf 待检查的CAN帧
+     * @return true 匹配此电机，false 不匹配
      */
     virtual bool matchesFrame(const CanFrame& cf) const
     {
@@ -72,37 +73,37 @@ public:
         return false;
     }
 
+    // 获取电机减速比
     virtual float get_GearRatio() const { return GEAR_RATIO; }
 
+    // 目标值读取接口（非virtual，直接返回缓存值）
     float getTargetRPM() const { return target_rpm_; }
     float getTargetCurrent() const { return target_current_; }
     float getTargetAngle() const { return target_angle_; }
     float getTargetTotalAngle() const { return target_totalAngle_; }
-    
 
+    // CAN总线访问接口
     fdCANbus* bus() const { return bus_; }
     uint32_t getID() const { return motor_id_; }
-public:
+
+protected:
+    // 电机标识信息
     uint32_t motor_id_;
     bool isExtended_;
     fdCANbus* bus_;
 
-    // 閻╊噣鏁撻弬銈嗗?/閻樿埖鈧?線鏁撻弬銈嗗?
-    float target_rpm_ = 0.0f; //鏉烆剟鏁撻弬銈嗗?
-    float target_current_= 0.0f; //闁跨喐鏋婚幏鐑芥晸閺傘倖瀚?
-    float target_angle_ = 0.0f; //闁跨喕顫楃拋瑙勫?
-    float target_totalAngle_ = 0.0f; //闁跨喐婢冪憴鎺曨啇閹凤拷
-    
-    float GEAR_RATIO = 1.0f; // 闁跨喐鏋婚幏鐑芥晸閸旑偅鐦?敐蹇斿?姒涙﹢鏁撻弬銈嗗?娑擄拷1
-    float rpm_ = 0.0f;
-    float current_ = 0.0f;
-    float angle_ = 0.0f;
-    float totalAngle_ = 0.0f;
-    float temperature_ = 0.0f; //闁跨喖鎽?拋瑙勫?
+    // 目标值 / 状态缓存
+    float target_rpm_ = 0.0f;         // 目标转速（单位：RPM）
+    float target_current_ = 0.0f;     // 目标电流（单位：mA）
+    float target_angle_ = 0.0f;       // 目标单圈角度（单位：度）
+    float target_totalAngle_ = 0.0f;  // 目标多圈总角度（单位：度）
 
+    float GEAR_RATIO = 1.0f;  // 减速比，默认1
+    float rpm_ = 0.0f;        // 当前实际转速（单位：RPM）
+    float current_ = 0.0f;    // 当前实际电流（单位：mA）
+    float angle_ = 0.0f;      // 当前实际单圈角度（单位：度）
+    float totalAngle_ = 0.0f; // 当前实际多圈总角度（单位：度）
+    float temperature_ = 0.0f; // 当前温度（单位：摄氏度）
 };
-
-
-
 
 #endif // MOTOR_BASE_H

@@ -3,8 +3,7 @@
 template<std::size_t WheelCount>
 Chassis_Base<WheelCount>::Chassis_Base(float wheel_radius, float max_wheel_rpm)
              : wheel_radius_(wheel_radius),
-               max_wheel_rpm_(max_wheel_rpm),
-               max_wheel_speed_(wheel_radius * 2.0f * PI * (max_wheel_rpm / 60.0f))
+               max_wheel_rpm_(max_wheel_rpm)
 {
     last_update_time_s_ = TimeStamp::getInstance().getSeconds();
 }

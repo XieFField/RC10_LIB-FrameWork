@@ -1,6 +1,8 @@
 #ifndef CHASSIS_H_
 #define CHASSIS_H_
 
+#include <stdint.h>
+
 #include "RC10_LIB/APP/Inc/APP_Utils.h"
 
 #include "FreeRTOS.h"
@@ -9,6 +11,71 @@
 #include "Module_CrsfReceiver.h"
 #include "APP_debugTool.h"
 #include "APP_PID.h"
+#include "Module_ChassisSwerve.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct JiaChassisDebugWatch
+{
+    uint32_t active_chassis_type; // 0=none, 3=tri-omni, 4=four-swerve
+    uint32_t loop_count;
+    uint32_t last_tick_ms;
+    uint32_t dwt_last_cycles;
+    uint32_t dwt_last_us;
+    uint32_t dwt_min_us;
+    uint32_t dwt_max_us;
+    uint64_t us64_last_us;
+    uint64_t us64_min_us;
+    uint64_t us64_max_us;
+
+    uint32_t mode;
+    uint32_t debug_mode;
+    uint32_t is_debug;
+    uint32_t is_world_speed_mode;
+    uint32_t is_lock_now_rot_z;
+    uint32_t is_lock_to_rot_z;
+
+    float tri_target_vx_m_s;
+    float tri_target_vy_m_s;
+    float tri_target_wz_rad_s;
+    float tri_planned_vx_m_s;
+    float tri_planned_vy_m_s;
+    float tri_planned_wz_rad_s;
+    float tri_wheel_target_omega_rad_s[3];
+    float tri_wheel_feedback_omega_rad_s[3];
+
+    uint32_t four_debug_wheel_index;
+    uint32_t four_photogate_signal;
+    uint32_t four_is_calibrating;
+    float four_calibration_angle_deg;
+    float four_steer_target_deg;
+    float four_steer_feedback_deg;
+    float four_steer_target_rpm;
+    float four_steer_feedback_rpm;
+    float four_drive_command_rpm;
+    float four_drive_target_rpm;
+    float four_drive_feedback_rpm;
+    float four_drive_target_current;
+    float four_drive_feedback_current;
+    uint32_t four_drive_brake_mode; // 0=rpm, 1=zero-rpm brake, 2=force brake
+    uint32_t four_drive_force_brake_enabled;
+    uint32_t four_drive_zero_rpm_brake_enabled;
+    float four_drive_applied_brake_current;
+    float four_drive_zero_rpm_threshold_rpm;
+    // 四轮 Swerve 正常模式观测
+    uint32_t four_swerve_used_controller_step;
+    float four_swerve_body_vx_m_s;
+    float four_swerve_body_vy_m_s;
+    float four_swerve_body_wz_rad_s;
+} JiaChassisDebugWatch;
+
+extern volatile JiaChassisDebugWatch g_jia_chassis_debug_watch;
+
+#ifdef __cplusplus
+}
+#endif
 
 namespace jia
 {
@@ -279,35 +346,27 @@ namespace jia
             void clearInputTargetData();
 
         private:
+            // 三全向轮逆运动学
             void inverseKinematics(f32 in_x, f32 in_y, f32 in_z, f32 &out_w1, f32 &out_w2, f32 &out_w3);
 
-            void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
-            void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
-
+            // 锁定旋转逻辑（依赖成员变量，暂保留为私有方法）
             void isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z);
             void isLockToRotZ(bool is_lock, f32 tar_rot_z, f32 pla_rot_z, f32 &out_rot_z, f32 omega_z, f32 &out_omega_z);
 
-            void isTransSpeedBodyToWorld(bool is_trans, f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
-            void isTransSpeedWorldToBody(bool is_trans, f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y);
-
+            // PID 周期计算
             void calculatePid(PID_Incremental &pid, u8 &count, u8 period, f32 target, f32 feedback, f32 &output);
             void calculatePid(PID_Position &pid, u8 &count, u8 period, f32 target, f32 feedback, f32 &output);
 
+            // 轮子配置初始化
             void initWheelConfig(WheelConfig &wheel, f32 pos_x, f32 pos_y, f32 rot_z_deg, M3508 *motor_handle = nullptr);
 
+            // 轮子控制封装（薄封装，直接代理 Motor_Base 接口）
             void setWheelTargetCurrent(WheelConfig &wheel, f32 current);
             void setWheelTargetOmega(WheelConfig &wheel, f32 omega);
             f32 getWheelCurrentOmega(const WheelConfig &wheel) const;
             f32 getWheelTargetCurrent(const WheelConfig &wheel) const;
             f32 getWheeCurrentCurrent(const WheelConfig &wheel) const;
             f32 getWheelCurrentRpm(const WheelConfig &wheel) const;
-
-            void clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z);
-
-            void isLimitAccInChassis(bool is_limit,
-                                     f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z,
-                                     f32 cur_vel_x, f32 cur_vel_y, f32 cur_omega_z,
-                                     f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z);
 
             void clearData(Data &data);
         };
@@ -538,6 +597,16 @@ namespace jia
                 kHandInput = 3,
             };
 
+            struct RuntimeSwerveDebugSnapshot
+            {
+                bool config_ready = false;
+                bool output_valid = false;
+                bool used_controller_step = false;
+                jia::swerve::ChassisCommand command = {};
+                jia::swerve::ModuleFeedback feedback[jia::swerve::kModuleCount] = {};
+                jia::swerve::ModuleCommand output[jia::swerve::kModuleCount] = {};
+            };
+
             // 创建线程
             static void createThread(void *arg);
             // 运行线程函数
@@ -583,6 +652,9 @@ namespace jia
             WheelConfig &w1_ = wheel_config_[1];
             WheelConfig &w2_ = wheel_config_[2];
             WheelConfig &w3_ = wheel_config_[3];
+            jia::swerve::SwerveConfig swerve_config_ = {};
+            jia::swerve::SwerveController swerve_controller_{swerve_config_};
+            RuntimeSwerveDebugSnapshot swerve_runtime_debug_ = {};
 
             // 速度限制参数
             //  // 车端速度限制参数
@@ -646,6 +718,12 @@ namespace jia
         private:
             void isDebugMode();
             f32 buildDebugSetpoint(DebugSignalMode mode, f32 axis, f32 amplitude, f32 hand_input) const;
+            void initWheelConfig(WheelConfig &wheel, f32 pos_x, f32 pos_y, f32 rot_z_deg, M3508 *steer_motor_h, Motor_Base *drive_motor_h);
+            void configureDefaultSwerve();
+            bool buildRuntimeSwerveMotion(jia::swerve::ChassisCommand &out_command);
+            void captureRuntimeSwerveFeedback(jia::swerve::ModuleFeedback out_feedback[jia::swerve::kModuleCount]) const;
+            void applyRuntimeSwerveCommands(const jia::swerve::ModuleCommand commands[jia::swerve::kModuleCount]);
+            void runRuntimeSwerveControl();
 
             void clearInputTargetData();
 
@@ -829,62 +907,52 @@ namespace jia
 
         inline f32 Chassis::getTargetBodyVelX() const
         {
-            // TODO
-            return 0.0f;
+            return pd_.vel_x;
         }
 
         inline f32 Chassis::getTargetBodyVelY() const
         {
-            // TODO
-            return 0.0f;
+            return pd_.vel_y;
         }
 
         inline f32 Chassis::getTargetWorldVelX() const
         {
-            // TODO
-            return 0.0f;
+            return td_.vel_x;
         }
 
         inline f32 Chassis::getTargetWorldVelY() const
         {
-            // TODO
-            return 0.0f;
+            return td_.vel_y;
         }
 
         inline f32 Chassis::getTargetOmegaZ() const
         {
-            // TODO
-            return 0.0f;
+            return pd_.omega_z;
         }
 
         inline f32 Chassis::getCurrentBodyVelX() const
         {
-            // TODO
-            return 0.0f;
+            return cd_.vel_x;
         }
 
         inline f32 Chassis::getCurrentBodyVelY() const
         {
-            // TODO
-            return 0.0f;
+            return cd_.vel_y;
         }
 
         inline f32 Chassis::getCurrentWorldVelX() const
         {
-            // TODO
-            return 0.0f;
+            return td_.vel_x;
         }
 
         inline f32 Chassis::getCurrentWorldVelY() const
         {
-            // TODO
-            return 0.0f;
+            return td_.vel_y;
         }
 
         inline f32 Chassis::getCurrentOmegaZ() const
         {
-            // TODO
-            return 0.0f;
+            return cd_.omega_z;
         }
     }
 }
