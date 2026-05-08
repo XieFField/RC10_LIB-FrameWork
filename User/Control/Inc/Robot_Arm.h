@@ -11,6 +11,8 @@
  * 
  * @attention 云台旋转路径，在逼近目标值的时候，手动切换为最短路径策略，避免大幅度超调
  *            反正写和用的人都是我自己，怎么方便怎么来，懒得封装了
+ * 
+ * @attention 上方提到的已解决
  */
 
 #ifndef __ROBOT_ARM_H
@@ -35,7 +37,7 @@ extern "C" {
 #include "BSP_TimeStamp.h"
 #include "Module_GPIO.h"
 #include "Module_GPIO.h"
-
+#include "Motor_DM.h"
 
 /**
  * @brief 一切单位都是米和度
@@ -45,7 +47,7 @@ typedef struct {
     float max_stretchLength_ = 0.0f; // 伸展最大行程，单位米
     float arm_length_ = 0.0f; // 机械臂长度
     float end_link_length_ = 0.0f; // 末端连杆长度，吸盘到机械臂连接点的距离，单位米
-
+    float max_pitchRPM_ = 50.0f; // 末端关节最大转速，单位RPM   
     
 
     float stretch_Ratio_ = 0.0f; // 伸展比率，伸展电机转一圈，伸展多少米   0.0942米(94.2mm)
@@ -55,8 +57,8 @@ typedef struct {
 
     float min_rotate_angle_ = 0.0f; // 最小旋转角度
     float max_rotate_angle_ = 0.0f; // 最大旋转角度
-    float safe_height = 0.0f; // 安全高度，单位米，低于这个高度，机械臂云台旋转受限
-
+    float safe_height_ = 0.0f; // 安全高度，单位米，低于这个高度，机械臂云台旋转受限
+    float store_height_ = 0.0f; // 存储高度，单位米，机械臂在这个高度进行存储和取出操作
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘控制GPIO端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘控制GPIO引脚
 }Arm_InitData_S;
@@ -83,13 +85,12 @@ typedef struct{
     float launchJoint_Height_; // 升降关节状态
     float stretchJoint_Length_; // 伸展关节状态
     float rotateJoint_angle_; // 旋转关节状态
-    float suckerJoint_angle_; // 末端关节状态
+    float suckerJoint_angle_; // 末端关节状态 朝下为0度
 }Joint_Status_S;
 
 typedef enum{
     TARGET_POSITION_MODE, // 目标位置模式
     MANUAL_MOTOR_POSITION_MODE, // 手动电机位置模式
-    MANUAL_JOINT_SPEED_MODE, // 手动关节速度模式
     CURRENT_CONTROL_MODE // 电流控制模式 依旧使用Joint_Status_S存储目标电流值
 }Arm_Control_mode_E;
 
@@ -126,6 +127,8 @@ typedef struct{
     float sign_pitch_ = 1.0f;
 }MotorReversed_S;
 
+typedef 
+
 /** 
  * @brief 又变成四自由度了，好，那么好。
  * @note 这里的坐标或者行程单位都是米，角度单位是度，角度制。
@@ -139,7 +142,8 @@ protected:
     DJI_Motor* motor_stretch_ = nullptr; // 伸展电机
     DJI_Motor* motor_rotate_ = nullptr; // 旋转电机
 
-    DJI_Motor* motor_pitch_ = nullptr; // 末端关节俯仰电机
+    DM_Motor* motor_pitch_ = nullptr; // 末端关节俯仰电机
+    bool is_pitchEnable_ = false; //是否使能电机
 
 public:
     
@@ -173,7 +177,7 @@ public:
     void registerMotor_Launch(DJI_Motor* motor){ motor_launch_ = motor; }
     void registerMotor_Stretch(DJI_Motor* motor){ motor_stretch_ = motor; }
     void registerMotor_Rotate(DJI_Motor* motor){ motor_rotate_ = motor; }
-    void registerMotor_Pitch(DJI_Motor* motor){ motor_pitch_ = motor; }
+    void registerMotor_Pitch(DM_Motor* motor){ motor_pitch_ = motor; }
 
     // 设置目标位置
     void setArmTarget(Arm_Point_S target){ arm_target_ = target; }
@@ -192,24 +196,7 @@ public:
     Rotate_Strategy_E getRotateStrategy() const { return rotate_strategy_; }
 
     float calc_rotate_targetByStrategy(float current_cont_angle, float target_raw_0_360);
-    
 
-    /** 
-     * @brief 设置手动末端速度速度
-     */
-    void setManualSpeed(float vx, float vy, float vz) 
-    {
-        manual_v_.vx = vx; manual_v_.vy = vy; manual_v_.vz = vz;
-    }
-
-
-
-    void setJacobianInitData(Jacobian_InitData_S jac_init_data)
-    {
-        jac_init_data_ = jac_init_data;
-    }
-
-    
     /**
      * @brief 手动设置每个自由度的目标位置，单位：m或度
      */
@@ -232,7 +219,7 @@ public:
      */
     void set_RotateAngle(float angle)
     {
-        target_joint_angle_.rotateJoint_angle_ = angle;
+        target_joint_angle_.rotateJoint_angle_ = normalize_deg_0_360(angle);
     }
 
     /**
@@ -255,6 +242,7 @@ public:
     Joint_Status_S get_targetJointStatus() const { return target_joint_angle_; }
 
 private:    
+    
     Rotate_Strategy_E rotate_strategy_ = ROTATE_PATH_SHORTEST; // 旋转路径策略，默认最短路径
     Joint_Status_S joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; 
 
@@ -279,14 +267,6 @@ private:
 
 
 
-
-
-    // Jacobian 速度控制用目标末端速度（m/s）
-    Robot_Twist manual_v_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-
-    void jacobianMatrix(); // 雅可比矩阵计算
-
-    Jacobian_InitData_S jac_init_data_;
 
 
     // 时间戳（秒）
@@ -316,7 +296,7 @@ protected:
     {
         return sign_reversed_.sign_pitch_ * angle / init_data_.pitch_gearRatio_ * 360.0f;
     }
-
+    
 /*=================================================================*/
     /*电机总角度->关节角度*/
     float MotorTotalAngle_to_launchHeight(float motor_angle)
@@ -339,34 +319,57 @@ protected:
         return sign_reversed_.sign_pitch_ * motor_angle * init_data_.pitch_gearRatio_ / 360.0f;
     }
 
+    void setRotateFilterK(float k) { rotate_filter_k_ = k; }
+    void setRampRotateMaxSpeed(float maxspeed) { ramp_rotate_maxspeed_ = maxspeed; }
+
 private:
     MotorReversed_S sign_reversed_  = {1.0f, 1.0f, 1.0f, 1.0f};
     float last_rotate_cmd_ = 0.0f;
     float ramped_rotateMotorAngle_ = 0.0f;
     
-//bool  time_initialized_ = false;+
+//bool  time_initialized_ = false;
     
-    float ramp_rotate_maxspeed_ = 0.0f;
-    float ramp_rotate_maxstep_ = 0.0f;
-    float ramp_rotate_target_ = 0.0f; // ??????????±???
+    float ramp_rotate_maxspeed_ = 36000.0f;
+    float rotate_max_accel_ = 80000.0f; // 新增加速度限制 (Motor Angle deg/s^2)，值越小起步/刹车越平滑
+    float rotate_current_velocity_ = 0.0f; // 记录当前速度
+    float ramp_rotate_target_ = 0.0f; 
     
-    void setRampRotateMaxSpeed(float maxspeed) { ramp_rotate_maxspeed_ = maxspeed; }
+    float rotate_filter_k_ = 200.0f; // 滤波(平滑)系数，值越大到达目标越快，越小刹车越平滑
+    
+
+    
     float caculate_rotate_target(float current, float target)
     {
-        ramp_rotate_maxstep_ = ramp_rotate_maxspeed_ * dt_;
         float diff = target - current;
-        if(diff > ramp_rotate_maxstep_)
-        {
-            diff = ramp_rotate_maxstep_;
-            return current + diff;
+        
+        // 期望目标速度 (一次平滑 P控制)
+        float target_vel = diff * rotate_filter_k_;
+
+        // 速度限幅
+        if (target_vel > ramp_rotate_maxspeed_) target_vel = ramp_rotate_maxspeed_;
+        if (target_vel < -ramp_rotate_maxspeed_) target_vel = -ramp_rotate_maxspeed_;
+
+        // 加速度限幅
+        float max_dv = rotate_max_accel_ * dt_;
+        if (target_vel > rotate_current_velocity_ + max_dv) {
+            rotate_current_velocity_ += max_dv;
+        } else if (target_vel < rotate_current_velocity_ - max_dv) {
+            rotate_current_velocity_ -= max_dv;
+        } else {
+            rotate_current_velocity_ = target_vel;
         }
-        else if(diff < -ramp_rotate_maxstep_)
+
+        // 计算步长
+        float step = rotate_current_velocity_ * dt_;
+
+        // 如果距离和速度都极小，直接赋值防止浮点数计算震荡
+        if(std::abs(diff) < 0.01f && std::abs(rotate_current_velocity_) < 0.1f) 
         {
-            diff = -ramp_rotate_maxstep_;
-            return current + diff;
-        }
-        else
+            rotate_current_velocity_ = 0.0f; // 完全停稳后清零速度
             return target;
+        }
+
+        return current + step;
     }
 };
 

@@ -58,6 +58,10 @@ private:
     // 大数精度保护
     float precision_offset_ = 0.0f; // 因重置圈数而产生的累积偏置
     uint16_t range_;
+
+    // 若在首帧反馈前调用 relocate，则延迟到首帧初始化时再应用
+    bool has_pending_relocate_ = false;
+    float pending_relocate_total_angle_ = 0.0f;
 };
 
 #endif

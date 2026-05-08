@@ -1,405 +1,83 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file    fdcan.c
-  * @brief   This file provides code for the configuration
-  *          of the FDCAN instances.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-/* Includes ------------------------------------------------------------------*/
-#include "fdcan.h"
+## RC10_LIB-FrameWork GDUT-R1-代码框架/仓库
+GDUT 2026ROBOCON R1仓库 本项目基于STM32H723ZGT6开发
 
-/* USER CODE BEGIN 0 */
+RC10_LIB-FrameWork是一个基于Robocon 2026比赛建立的通用电控软件架构，此架构基于GDUT Robocon2025和 Robocon2024框架改进而来。
 
-/* USER CODE END 0 */
+## 项目介绍
+这份代码框架采用了分层以及面向对象设计，其中RC10_LIB是通用库，而User是应用层，将通信、执行、机构与任务调度链路分层。
 
-FDCAN_HandleTypeDef hfdcan1;
-FDCAN_HandleTypeDef hfdcan2;
-FDCAN_HandleTypeDef hfdcan3;
+---
 
-/* FDCAN1 init function */
-void MX_FDCAN1_Init(void)
-{
+### 这份框架所要解决的问题
+在项目中常见痛点是：
+- 电机型号一换，上层逻辑就需要跟着重写
+- 更换了主控板类型，代码需要很大程度的重写
+- 让机构逻辑可拓展或灵活更改
+- 任务策略可灵活替换
 
-  /* USER CODE BEGIN FDCAN1_Init 0 */
+---
 
-  /* USER CODE END FDCAN1_Init 0 */
+## 分层设计
 
-  /* USER CODE BEGIN FDCAN1_Init 1 */
+### RC10_LIB：通用库层
 
-  /* USER CODE END FDCAN1_Init 1 */
-  hfdcan1.Instance = FDCAN1;
-  hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
-  hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
-  hfdcan1.Init.AutoRetransmission = DISABLE;
-  hfdcan1.Init.TransmitPause = DISABLE;
-  hfdcan1.Init.ProtocolException = ENABLE;
-  hfdcan1.Init.NominalPrescaler = 3;
-  hfdcan1.Init.NominalSyncJumpWidth = 10;
-  hfdcan1.Init.NominalTimeSeg1 = 29;
-  hfdcan1.Init.NominalTimeSeg2 = 10;
-  hfdcan1.Init.DataPrescaler = 3;
-  hfdcan1.Init.DataSyncJumpWidth = 10;
-  hfdcan1.Init.DataTimeSeg1 = 29;
-  hfdcan1.Init.DataTimeSeg2 = 10;
-  hfdcan1.Init.MessageRAMOffset = 0;
-  hfdcan1.Init.StdFiltersNbr = 1;
-  hfdcan1.Init.ExtFiltersNbr = 0;
-  hfdcan1.Init.RxFifo0ElmtsNbr = 32;
-  hfdcan1.Init.RxFifo0ElmtSize = FDCAN_DATA_BYTES_8;
-  hfdcan1.Init.RxFifo1ElmtsNbr = 0;
-  hfdcan1.Init.RxFifo1ElmtSize = FDCAN_DATA_BYTES_8;
-  hfdcan1.Init.RxBuffersNbr = 0;
-  hfdcan1.Init.RxBufferSize = FDCAN_DATA_BYTES_8;
-  hfdcan1.Init.TxEventsNbr = 0;
-  hfdcan1.Init.TxBuffersNbr = 0;
-  hfdcan1.Init.TxFifoQueueElmtsNbr = 16;
-  hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
-  hfdcan1.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
-  if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN FDCAN1_Init 2 */
-//  if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
-//  {
-//    Error_Handler(); // ����ʧ��ֱ�ӽ�������
-//  }
+包含：
+- BSP_Driver：硬件抽象层（例如fdCAN，RTOS，时间戳等）
+- Motor：电机抽象基类以及具体电机实现
+- Module：可复用的模块（接收机、常见传感器）
+- APP：工具类与算法
+  
+### User：应用层
 
-//  // ����FIFO0����Ϣ�ж�
-//  if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK) {
-//    Error_Handler(); // �����ж�ʧ��ֱ�ӽ�������
-//  }
-  /* USER CODE END FDCAN1_Init 2 */
+包含：
+- Control: 机构父类和策略实现
+- Setup: 具体的任务实现以及控制流程
+- debug：调试和功能验证demo
+  
+---
 
-}
-/* FDCAN2 init function */
-void MX_FDCAN2_Init(void)
-{
+## 面向对象封装的意义
 
-  /* USER CODE BEGIN FDCAN2_Init 0 */
+以控制电机为例：
+- 电机闭环控制和报文解析已经被封装在Motor_Base子类内部
+- CAN报文发送已经被封装到fdCANbus内部
 
-  /* USER CODE END FDCAN2_Init 0 */
+写机构代码时，开发者只需要关注目标是什么，而不需要关心底层怎么跑。例如控制电机位置只需要调用`setTargetTotalAngle`的接口，而无需关心闭环在哪实现，CAN帧在哪里被发送；这样也能让不同背景成员可以在统一接口下更高效并行开发。
 
-  /* USER CODE BEGIN FDCAN2_Init 1 */
+这就是此框架希望实现的开发体验：
+- 不必先精通底层，仍可以进行高效开发
+- 聚焦于控制逻辑实现，至于底层业务，会调用接口就能完成控制目标
 
-  /* USER CODE END FDCAN2_Init 1 */
-  hfdcan2.Instance = FDCAN2;
-  hfdcan2.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
-  hfdcan2.Init.Mode = FDCAN_MODE_NORMAL;
-  hfdcan2.Init.AutoRetransmission = DISABLE;
-  hfdcan2.Init.TransmitPause = DISABLE;
-  hfdcan2.Init.ProtocolException = ENABLE;
-  hfdcan2.Init.NominalPrescaler = 3;
-  hfdcan2.Init.NominalSyncJumpWidth = 10;
-  hfdcan2.Init.NominalTimeSeg1 = 29;
-  hfdcan2.Init.NominalTimeSeg2 = 10;
-  hfdcan2.Init.DataPrescaler = 3;
-  hfdcan2.Init.DataSyncJumpWidth = 10;
-  hfdcan2.Init.DataTimeSeg1 = 29;
-  hfdcan2.Init.DataTimeSeg2 = 10;
-  hfdcan2.Init.MessageRAMOffset = 512;
-  hfdcan2.Init.StdFiltersNbr = 1;
-  hfdcan2.Init.ExtFiltersNbr = 0;
-  hfdcan2.Init.RxFifo0ElmtsNbr = 32;
-  hfdcan2.Init.RxFifo0ElmtSize = FDCAN_DATA_BYTES_8;
-  hfdcan2.Init.RxFifo1ElmtsNbr = 0;
-  hfdcan2.Init.RxFifo1ElmtSize = FDCAN_DATA_BYTES_8;
-  hfdcan2.Init.RxBuffersNbr = 0;
-  hfdcan2.Init.RxBufferSize = FDCAN_DATA_BYTES_8;
-  hfdcan2.Init.TxEventsNbr = 0;
-  hfdcan2.Init.TxBuffersNbr = 0;
-  hfdcan2.Init.TxFifoQueueElmtsNbr = 16;
-  hfdcan2.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
-  hfdcan2.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
-  if (HAL_FDCAN_Init(&hfdcan2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN FDCAN2_Init 2 */
-//  if (HAL_FDCAN_Start(&hfdcan2) != HAL_OK)
-//  {
-//    Error_Handler(); // ����ʧ��ֱ�ӽ�������
-//  }
+---
 
-//  // ����FIFO0����Ϣ�ж�
-//  if (HAL_FDCAN_ActivateNotification(&hfdcan2, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK) {
-//    Error_Handler(); // �����ж�ʧ��ֱ�ӽ�������
-//  }
-  /* USER CODE END FDCAN2_Init 2 */
+## 机构控制链路
 
-}
-/* FDCAN3 init function */
-void MX_FDCAN3_Init(void)
-{
+Setup 任务层-> Control父类 -> Motor_Base子类 -> fdCANbus
 
-  /* USER CODE BEGIN FDCAN3_Init 0 */
+职责上：
+- Setup：组织任务周期与状态机
+- Control：表达机构控制语义
+- Motor：执行器抽象与闭环能力承载
+- fdCANbus：总线通信与收发调度
 
-  /* USER CODE END FDCAN3_Init 0 */
+该链路的意义是：
+- 每层只做本层职责
+- 上层尽量不感知下层实现细节
+- 新成员可以更快在 User 层产出功能
+  
+---
 
-  /* USER CODE BEGIN FDCAN3_Init 1 */
+## 给新成员的上手方式
 
-  /* USER CODE END FDCAN3_Init 1 */
-  hfdcan3.Instance = FDCAN3;
-  hfdcan3.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
-  hfdcan3.Init.Mode = FDCAN_MODE_NORMAL;
-  hfdcan3.Init.AutoRetransmission = DISABLE;
-  hfdcan3.Init.TransmitPause = DISABLE;
-  hfdcan3.Init.ProtocolException = ENABLE;
-  hfdcan3.Init.NominalPrescaler = 3;
-  hfdcan3.Init.NominalSyncJumpWidth = 10;
-  hfdcan3.Init.NominalTimeSeg1 = 29;
-  hfdcan3.Init.NominalTimeSeg2 = 10;
-  hfdcan3.Init.DataPrescaler = 3;
-  hfdcan3.Init.DataSyncJumpWidth = 10;
-  hfdcan3.Init.DataTimeSeg1 = 29;
-  hfdcan3.Init.DataTimeSeg2 = 10;
-  hfdcan3.Init.MessageRAMOffset = 0;
-  hfdcan3.Init.StdFiltersNbr = 1;
-  hfdcan3.Init.ExtFiltersNbr = 0;
-  hfdcan3.Init.RxFifo0ElmtsNbr = 32;
-  hfdcan3.Init.RxFifo0ElmtSize = FDCAN_DATA_BYTES_8;
-  hfdcan3.Init.RxFifo1ElmtsNbr = 0;
-  hfdcan3.Init.RxFifo1ElmtSize = FDCAN_DATA_BYTES_8;
-  hfdcan3.Init.RxBuffersNbr = 0;
-  hfdcan3.Init.RxBufferSize = FDCAN_DATA_BYTES_8;
-  hfdcan3.Init.TxEventsNbr = 0;
-  hfdcan3.Init.TxBuffersNbr = 0;
-  hfdcan3.Init.TxFifoQueueElmtsNbr = 16;
-  hfdcan3.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
-  hfdcan3.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
-  if (HAL_FDCAN_Init(&hfdcan3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN FDCAN3_Init 2 */
-//  if (HAL_FDCAN_Start(&hfdcan3) != HAL_OK)
-//  {
-//    Error_Handler(); // ����ʧ��ֱ�ӽ�������
-//  }
+在User/debug中有可快速上手的demo：frame_demo
 
-//  // ����FIFO0����Ϣ�ж�
-//  if (HAL_FDCAN_ActivateNotification(&hfdcan3, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK) {
-//    Error_Handler(); // �����ж�ʧ��ֱ�ӽ�������
-//  }
-  /* USER CODE END FDCAN3_Init 2 */
+建议按以下方式快速进入开发：
+1. 先读 User/Setup，理解任务入口与控制流程
+2. 再读 User/Control，理解机构接口与控制语义
+3. 需要时再下钻到 RC10_LIB/Motor 与 BSP_Driver
 
-}
+这条路径能保证：
+- 先能写功能，再逐步理解底层
+- 项目协作效率更高
 
-static uint32_t HAL_RCC_FDCAN_CLK_ENABLED=0;
-
-void HAL_FDCAN_MspInit(FDCAN_HandleTypeDef* fdcanHandle)
-{
-
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
-  if(fdcanHandle->Instance==FDCAN1)
-  {
-  /* USER CODE BEGIN FDCAN1_MspInit 0 */
-
-  /* USER CODE END FDCAN1_MspInit 0 */
-
-  /** Initializes the peripherals clock
-  */
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_FDCAN;
-    PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_PLL;
-    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
-    /* FDCAN1 clock enable */
-    HAL_RCC_FDCAN_CLK_ENABLED++;
-    if(HAL_RCC_FDCAN_CLK_ENABLED==1){
-      __HAL_RCC_FDCAN_CLK_ENABLE();
-    }
-
-    __HAL_RCC_GPIOD_CLK_ENABLE();
-    /**FDCAN1 GPIO Configuration
-    PD0     ------> FDCAN1_RX
-    PD1     ------> FDCAN1_TX
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate = GPIO_AF9_FDCAN1;
-    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
-    /* FDCAN1 interrupt Init */
-    HAL_NVIC_SetPriority(FDCAN1_IT0_IRQn, 6, 0);
-    HAL_NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
-  /* USER CODE BEGIN FDCAN1_MspInit 1 */
-
-  /* USER CODE END FDCAN1_MspInit 1 */
-  }
-  else if(fdcanHandle->Instance==FDCAN2)
-  {
-  /* USER CODE BEGIN FDCAN2_MspInit 0 */
-
-  /* USER CODE END FDCAN2_MspInit 0 */
-
-  /** Initializes the peripherals clock
-  */
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_FDCAN;
-    PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_PLL;
-    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
-    /* FDCAN2 clock enable */
-    HAL_RCC_FDCAN_CLK_ENABLED++;
-    if(HAL_RCC_FDCAN_CLK_ENABLED==1){
-      __HAL_RCC_FDCAN_CLK_ENABLE();
-    }
-
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    /**FDCAN2 GPIO Configuration
-    PB12     ------> FDCAN2_RX
-    PB13     ------> FDCAN2_TX
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate = GPIO_AF9_FDCAN2;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-    /* FDCAN2 interrupt Init */
-    HAL_NVIC_SetPriority(FDCAN2_IT0_IRQn, 7, 0);
-    HAL_NVIC_EnableIRQ(FDCAN2_IT0_IRQn);
-  /* USER CODE BEGIN FDCAN2_MspInit 1 */
-
-  /* USER CODE END FDCAN2_MspInit 1 */
-  }
-  else if(fdcanHandle->Instance==FDCAN3)
-  {
-  /* USER CODE BEGIN FDCAN3_MspInit 0 */
-
-  /* USER CODE END FDCAN3_MspInit 0 */
-
-  /** Initializes the peripherals clock
-  */
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_FDCAN;
-    PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_PLL;
-    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
-    /* FDCAN3 clock enable */
-    HAL_RCC_FDCAN_CLK_ENABLED++;
-    if(HAL_RCC_FDCAN_CLK_ENABLED==1){
-      __HAL_RCC_FDCAN_CLK_ENABLE();
-    }
-
-    __HAL_RCC_GPIOF_CLK_ENABLE();
-    /**FDCAN3 GPIO Configuration
-    PF6     ------> FDCAN3_RX
-    PF7     ------> FDCAN3_TX
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate = GPIO_AF2_FDCAN3;
-    HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
-
-    /* FDCAN3 interrupt Init */
-    HAL_NVIC_SetPriority(FDCAN3_IT0_IRQn, 8, 0);
-    HAL_NVIC_EnableIRQ(FDCAN3_IT0_IRQn);
-  /* USER CODE BEGIN FDCAN3_MspInit 1 */
-
-  /* USER CODE END FDCAN3_MspInit 1 */
-  }
-}
-
-void HAL_FDCAN_MspDeInit(FDCAN_HandleTypeDef* fdcanHandle)
-{
-
-  if(fdcanHandle->Instance==FDCAN1)
-  {
-  /* USER CODE BEGIN FDCAN1_MspDeInit 0 */
-
-  /* USER CODE END FDCAN1_MspDeInit 0 */
-    /* Peripheral clock disable */
-    HAL_RCC_FDCAN_CLK_ENABLED--;
-    if(HAL_RCC_FDCAN_CLK_ENABLED==0){
-      __HAL_RCC_FDCAN_CLK_DISABLE();
-    }
-
-    /**FDCAN1 GPIO Configuration
-    PD0     ------> FDCAN1_RX
-    PD1     ------> FDCAN1_TX
-    */
-    HAL_GPIO_DeInit(GPIOD, GPIO_PIN_0|GPIO_PIN_1);
-
-    /* FDCAN1 interrupt Deinit */
-    HAL_NVIC_DisableIRQ(FDCAN1_IT0_IRQn);
-  /* USER CODE BEGIN FDCAN1_MspDeInit 1 */
-
-  /* USER CODE END FDCAN1_MspDeInit 1 */
-  }
-  else if(fdcanHandle->Instance==FDCAN2)
-  {
-  /* USER CODE BEGIN FDCAN2_MspDeInit 0 */
-
-  /* USER CODE END FDCAN2_MspDeInit 0 */
-    /* Peripheral clock disable */
-    HAL_RCC_FDCAN_CLK_ENABLED--;
-    if(HAL_RCC_FDCAN_CLK_ENABLED==0){
-      __HAL_RCC_FDCAN_CLK_DISABLE();
-    }
-
-    /**FDCAN2 GPIO Configuration
-    PB12     ------> FDCAN2_RX
-    PB13     ------> FDCAN2_TX
-    */
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_12|GPIO_PIN_13);
-
-    /* FDCAN2 interrupt Deinit */
-    HAL_NVIC_DisableIRQ(FDCAN2_IT0_IRQn);
-  /* USER CODE BEGIN FDCAN2_MspDeInit 1 */
-
-  /* USER CODE END FDCAN2_MspDeInit 1 */
-  }
-  else if(fdcanHandle->Instance==FDCAN3)
-  {
-  /* USER CODE BEGIN FDCAN3_MspDeInit 0 */
-
-  /* USER CODE END FDCAN3_MspDeInit 0 */
-    /* Peripheral clock disable */
-    HAL_RCC_FDCAN_CLK_ENABLED--;
-    if(HAL_RCC_FDCAN_CLK_ENABLED==0){
-      __HAL_RCC_FDCAN_CLK_DISABLE();
-    }
-
-    /**FDCAN3 GPIO Configuration
-    PF6     ------> FDCAN3_RX
-    PF7     ------> FDCAN3_TX
-    */
-    HAL_GPIO_DeInit(GPIOF, GPIO_PIN_6|GPIO_PIN_7);
-
-    /* FDCAN3 interrupt Deinit */
-    HAL_NVIC_DisableIRQ(FDCAN3_IT0_IRQn);
-  /* USER CODE BEGIN FDCAN3_MspDeInit 1 */
-
-  /* USER CODE END FDCAN3_MspDeInit 1 */
-  }
-}
-
-/* USER CODE BEGIN 1 */
-
-/* USER CODE END 1 */
+---

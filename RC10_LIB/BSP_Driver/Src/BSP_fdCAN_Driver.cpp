@@ -14,6 +14,51 @@
 fdCANbus* g_fdcan_bus_map_dbg[3] = {nullptr, nullptr, nullptr}; // 全局可见别名
 #endif
 
+volatile FdcanDiagSnapshot g_fdcan_diag[3] = {};
+
+static int fdcan_diag_bus_index(FDCAN_HandleTypeDef* hfdcan)
+{
+    if (hfdcan == &hfdcan1)
+        return 0;
+    if (hfdcan == &hfdcan2)
+        return 1;
+    if (hfdcan == &hfdcan3)
+        return 2;
+    return -1;
+}
+
+static void fdcan_diag_capture(FDCAN_HandleTypeDef* hfdcan, uint32_t errorStatusITs)
+{
+    int idx = fdcan_diag_bus_index(hfdcan);
+    if (idx < 0)
+        return;
+
+    volatile FdcanDiagSnapshot& s = g_fdcan_diag[idx];
+    s.snapshot_count++;
+    s.last_error_status_its = errorStatusITs;
+    s.last_hal_error = HAL_FDCAN_GetError(hfdcan);
+
+    s.ir = hfdcan->Instance->IR;
+    s.ie = hfdcan->Instance->IE;
+    s.psr = hfdcan->Instance->PSR;
+    s.ecr = hfdcan->Instance->ECR;
+    s.cccr = hfdcan->Instance->CCCR;
+    s.nbtp = hfdcan->Instance->NBTP;
+    s.dbtp = hfdcan->Instance->DBTP;
+    s.rxf0s = hfdcan->Instance->RXF0S;
+    s.rxf1s = hfdcan->Instance->RXF1S;
+
+    s.lec = s.psr & FDCAN_PSR_LEC;
+    s.dlec = (s.psr & FDCAN_PSR_DLEC) >> FDCAN_PSR_DLEC_Pos;
+    s.rec = (s.ecr & FDCAN_ECR_REC) >> FDCAN_ECR_REC_Pos;
+    s.tec = (s.ecr & FDCAN_ECR_TEC) >> FDCAN_ECR_TEC_Pos;
+
+    RCC_PeriphCLKInitTypeDef periphClk = {0};
+    HAL_RCCEx_GetPeriphCLKConfig(&periphClk);
+    s.fdcan_clk_source = periphClk.FdcanClockSelection;
+    s.fdcan_clk_hz = HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_FDCAN);
+}
+
 /**
  * @brief 注册一个fdCANbus实例以进行全局中断路由
  * @param bus 指向fdCANbus实例的指针
@@ -89,6 +134,9 @@ void fdCANbus::init()
 
     // 注册自身到全局映射表
     register_fdcan_bus_for_isr(this);
+
+    // 记录初始化后首帧诊断快照（用于核对FDCAN时钟/时序寄存器）
+    fdcan_diag_capture(hfdcan_, 0u);
 
     rxTask_.start(tskIDLE_PRIORITY + 3, 512);
     schedulerTask_.start(tskIDLE_PRIORITY + 4, 512);
@@ -182,7 +230,7 @@ void fdCANbus::rxTaskbody()
 
 void fdCANbus::schedulerTaskbody() 
 {
-    CanFrame frames_to_send[MAX_MOTORS * 2];
+    CanFrame frames_to_send[kMaxFrames];
     for (;;) 
     {
         xSemaphoreTake(schedSem_, portMAX_DELAY);
@@ -199,7 +247,7 @@ void fdCANbus::schedulerTaskbody()
         for (std::size_t i = 0; i < MAX_MOTORS; ++i)
         {
             Motor_Base* m = motorList_[i];
-            if (m) 
+            if (m && (m->get_controlCnt() +1u >= static_cast<uint16_t>(1000 / m->get_controlFrequency()))) //防止重设控制频率导致pid计算错配
                 m->update();
             
         }
@@ -212,7 +260,22 @@ void fdCANbus::schedulerTaskbody()
             if (!m) 
                 continue;
                 
-            frameCnt += m->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt);
+            bool due = true;
+            if(m->get_controlFrequency() != 1000) // 如果不是默认频率，则进行分频判断
+            {
+                const uint16_t divider = static_cast<uint16_t>(1000 / m->get_controlFrequency()); // 计算分频器
+                due = (m->get_controlCnt() + 1u >= divider); // 判断是否触发控制周期
+            }
+
+            if(!due)
+            {
+                m->increment_controlCnt();
+                continue; // 不到控制周期，不打包
+            }
+
+
+            frameCnt += m->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt);  
+            m->reset_controlCnt(); // 重置计数器，准备下一个控制周期
 
             if (frameCnt >= (sizeof(frames_to_send)/sizeof(frames_to_send[0]))) 
                 break;
@@ -220,7 +283,7 @@ void fdCANbus::schedulerTaskbody()
     
 #if FD_CAN_DEBUG
         debug_last_frame_count_ = frameCnt;
-        for(std::size_t k=0; k<frameCnt && k< (MAX_MOTORS*2); ++k)
+        for(std::size_t k=0; k<frameCnt && k< (kMaxFrames); ++k)
             debug_last_frames_[k] = frames_to_send[k];
         
 #endif
@@ -330,8 +393,18 @@ extern "C" void fdcan_global_scheduler_tick_isr()
  */
 extern "C" void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t ErrorStatusITs)
 {
+    int idx = fdcan_diag_bus_index(hfdcan);
+    if (idx >= 0)
+    {
+        g_fdcan_diag[idx].error_status_cb_count++;
+        fdcan_diag_capture(hfdcan, ErrorStatusITs);
+    }
+
     if ((ErrorStatusITs & FDCAN_IT_BUS_OFF) != 0)
     {
+        if (idx >= 0)
+            g_fdcan_diag[idx].bus_off_count++;
+
         // Bus Off detected, set flag and wake up task to recover
         for (int i = 0; i < 3; ++i) 
         {
@@ -356,6 +429,13 @@ extern "C" void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint3
  */
 extern "C" void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
+    int idx = fdcan_diag_bus_index(hfdcan);
+    if (idx >= 0)
+    {
+        g_fdcan_diag[idx].rx_fifo0_cb_count++;
+        fdcan_diag_capture(hfdcan, 0u);
+    }
+
   if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
   {
     // 直接调用全局中断处理函数

@@ -15,6 +15,10 @@
  * @version 1.0
  * @brief freeRTOS任务调度父类
  * @attention hpp文件只允许被C++文件引用
+ * 
+ * 
+ * @version 2.0 2026/419
+ *  增加任务运行统计功能，包括单次执行时间、历史最大/最小执行时间、超时计数等
  */
 //111
 
@@ -31,14 +35,18 @@
 
 extern "C" 
 {
+    #include <stdint.h>
     #include "stm32h7xx_hal.h"
     #include "cmsis_os.h"
     #include "FreeRTOS.h"
     #include "task.h"
     #include "queue.h"
     #include "semphr.h"
-    #include <cstdint>
 }
+
+#ifndef BSP_RTOS_CPU_FREQ_HZ
+    #define BSP_RTOS_CPU_FREQ_HZ (SystemCoreClock)
+#endif
 
 enum class TaskPrio {
     LOW = tskIDLE_PRIORITY+1,
@@ -54,6 +62,15 @@ enum class TaskPrio {
 
 class RtosTask{
 public:
+    struct PerfStat {
+        uint32_t overrun_count;         // 本任务单次执行超过 period 的次数
+        uint32_t overrun_sample_count;  // 按N次超时聚合计数（每到N次+1）
+        uint32_t deadline_miss_count;   // 本任务执行结束时已跨过下一调度点的次数，即被其他任务抢占导致错过节点
+        uint32_t last_us;               // 上一次 loop() 执行耗时 (us)
+        uint32_t max_us;                // 历史最大 loop() 执行耗时 (us)
+        uint32_t min_us;                // 历史最小 loop() 执行耗时 (us)
+    };
+
     /**
      * @brief 构造函数
      * @param name 任务名
@@ -61,8 +78,9 @@ public:
      *               - period > 0 (默认 = 1): 创建一个周期性任务，用户需实现 loop()。
      *               - period = 0           : 创建一个事件驱动任务，用户需重写 run()。
      */
-    explicit RtosTask(const char* name, TickType_t period = 1) 
-        : name_(name), handle_(nullptr), period_(period) {}
+    explicit RtosTask(const char* name, TickType_t period = 1, bool is_cntRuntime = true) 
+        : name_(name), handle_(nullptr), period_(period), is_cntRuntime_(is_cntRuntime),
+                    taskPerf_{0, 0, 0, 0, 0, 0xFFFFFFFFu}, overrunSampleInterval_(1), overrunCallbackEnabled_(false) {}
 
     virtual ~RtosTask() 
     {
@@ -95,6 +113,49 @@ public:
      */
     TaskHandle_t handle() const { return handle_; }
 
+    /**
+     * @brief 获取该任务的运行统计
+     * @return 统计结构体只读引用
+     */
+    const PerfStat& getPerfStat() const { return taskPerf_; }
+
+    /**
+     * @brief 获取该任务超时次数（loop耗时 > period）
+     */
+    uint32_t getOverrunCount() const { return taskPerf_.overrun_count; }
+
+    /**
+     * @brief 清零该任务统计数据
+     */
+    void resetPerfStat() { taskPerf_ = {0, 0, 0, 0, 0, 0xFFFFFFFFu}; }
+
+    /**
+     * @brief 配置“每超N次触发一次采样回调”
+     * @param interval N值。最小为1，表示每超N次进行一次聚合计数。
+     */
+    void setOverrunSampleInterval(uint32_t interval)
+    {
+        if (interval == 0u)
+            overrunSampleInterval_ = 1u;
+        else
+            overrunSampleInterval_ = interval;
+    }
+
+    /**
+     * @brief 获取当前超时采样间隔
+     */
+    uint32_t getOverrunSampleInterval() const { return overrunSampleInterval_; }
+
+    /**
+     * @brief 获取按N次超时聚合后的计数值
+     */
+    uint32_t getOverrunSampleCount() const { return taskPerf_.overrun_sample_count; }
+
+    /**
+     * @brief 是否启用超时采样回调（默认关闭）
+     */
+    void setOverrunCallbackEnabled(bool enabled) { overrunCallbackEnabled_ = enabled; }
+
 protected:
     
     /**
@@ -120,7 +181,21 @@ protected:
         // 提供一个默认的空实现
     }
 
+    /**
+     * @brief 超时采样回调
+     *        当 overrun_count 达到 N 的倍数时调用（N由 setOverrunSampleInterval 设置）。
+     *        可在子类中重写，用于输出详细日志或上报。
+     */
+    virtual void onOverrunSample(const PerfStat& stat, uint32_t execUs)
+    {
+        (void)stat;
+        (void)execUs;
+    }
+
 private:
+
+
+
 
     /**
      * @brief 任务入口函数
@@ -130,11 +205,65 @@ private:
         RtosTask* self = static_cast<RtosTask*>(pvParameters);
         if (self->period_ > 0) 
         {
-            // 周期性任务模式
+            ensureDWTReady();
+
+            // 把tick转换成us
+            uint64_t period_us_64 = (uint64_t)self->period_ * 1000000ULL;
+            period_us_64 /= (uint64_t)configTICK_RATE_HZ;
+            uint32_t period_us = (uint32_t)period_us_64;
+
+            TickType_t lastWakeTime = xTaskGetTickCount();
             for (;;) 
             {
+                // DWT计时起点
+                uint32_t startCycle = DWT->CYCCNT;
+
                 self->loop();
-                osDelay(self->period_);
+                
+                // DWT计时终点
+                uint32_t endCycle = DWT->CYCCNT;
+
+                // Tick时间仍保留用于deadline miss判断
+                TickType_t endTick = xTaskGetTickCount();
+
+
+                if (self->is_cntRuntime_)
+                {
+
+
+                    uint32_t execCycles = endCycle - startCycle; 
+                    uint32_t execUs = cyclesToUs(execCycles);
+                    self->taskPerf_.last_us = execUs;
+
+                    if (execUs > self->taskPerf_.max_us)
+                        self->taskPerf_.max_us = execUs;
+
+                    if (execUs < self->taskPerf_.min_us)
+                        self->taskPerf_.min_us = execUs;
+
+
+                    // 超时判定
+                    if (execUs > period_us)
+                    {
+                        self->taskPerf_.overrun_count++;
+
+                        // 每超N次，聚合计数+1；可选触发回调
+                        if ((self->taskPerf_.overrun_count % self->overrunSampleInterval_) == 0)
+                        {
+                            self->taskPerf_.overrun_sample_count++;
+
+                            if (self->overrunCallbackEnabled_)
+                                self->onOverrunSample(self->taskPerf_, execUs);
+                        }
+                    }
+
+                    // deadline miss 
+                    if ((endTick - lastWakeTime) > self->period_)
+                        self->taskPerf_.deadline_miss_count++;
+                }
+
+                // 从osDelay换成固定周期唤醒，提升时间准确性
+                vTaskDelayUntil(&lastWakeTime, self->period_);
             }
         } 
         else  // 事件驱动/一次性任务模式
@@ -143,9 +272,38 @@ private:
         vTaskDelete(nullptr);
     }
 
+    static void ensureDWTReady()
+    {
+        static bool dwtInitialized = false;
+        if (dwtInitialized)
+            return;
+
+        CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+        DWT->CYCCNT = 0;
+        DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+        dwtInitialized = true;
+    }
+
+    static uint32_t cyclesToUs(uint32_t cycles)
+    {
+        uint32_t cpuHz = (uint32_t)BSP_RTOS_CPU_FREQ_HZ;
+        if (cpuHz == 0u)
+            return 0u;
+
+        uint64_t us = ((uint64_t)cycles * 1000000ULL) / (uint64_t)cpuHz;
+        return (uint32_t)us;
+    }
+
     const char* name_;
     TaskHandle_t handle_;
     TickType_t period_;
+    bool is_cntRuntime_;
+
+    PerfStat taskPerf_;
+    uint32_t overrunSampleInterval_; // N值：每超N次计1次 overrun_sample_count
+    bool overrunCallbackEnabled_;    // 回调默认关闭，只保留计数
+
+
 };
 
 /**
