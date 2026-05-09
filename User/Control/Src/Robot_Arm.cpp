@@ -86,8 +86,9 @@ void Robot_Arm::update()
         float target_arm_total = target_arm + k * 360.0f;
         target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
 
-        ramp_rotate_target_ = caculate_rotate_target(motor_rotate_->getTotalAngle(), target_rotateMotorAngle);
-        motor_rotate_->setTargetTotalAngle(ramp_rotate_target_);
+        rotate_fliter_ramp_.ramp_target_ = caculate_ramp_target(motor_rotate_->getTotalAngle(), 
+            target_rotateMotorAngle, rotate_fliter_ramp_);
+        motor_rotate_->setTargetTotalAngle(rotate_fliter_ramp_.ramp_target_);
     }
 
     target_stretchMotorAngle = stretchLength_to_MotorTotalAngle(target_joint_angle_.stretchJoint_Length_);
@@ -96,7 +97,11 @@ void Robot_Arm::update()
     /*暂时不做斜坡处理*/
 
     if(motor_stretch_ != nullptr)
-        motor_stretch_->setTargetTotalAngle(target_stretchMotorAngle);
+    {
+        strech_fliter_ramp_.ramp_target_ = caculate_ramp_target(motor_stretch_->getTotalAngle(), 
+            target_stretchMotorAngle, strech_fliter_ramp_);
+        motor_stretch_->setTargetTotalAngle(strech_fliter_ramp_.ramp_target_);
+    }
 
     if(motor_launch_ != nullptr)
         motor_launch_->setTargetTotalAngle(target_launchMotorAngle);

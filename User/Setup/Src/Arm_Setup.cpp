@@ -1009,7 +1009,7 @@ void ArmSetup::debug()
 
 Arm_InitData_S arm_initData = {
     .max_launchHeight_ = 0.26f,
-    .max_stretchLength_ = 0.128f,
+    .max_stretchLength_ = 0.1358f,
     .arm_length_ = 0.6f,
     .end_link_length_ = 0.08f,
 
