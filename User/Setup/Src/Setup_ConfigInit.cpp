@@ -325,8 +325,8 @@ void CAN_Motor_Init(void)
    arm_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
 
    PID_Param_Config arm_strech_anglePID = m2006_angle_pid_params;
-   arm_strech_anglePID.output_limit = 400.0f;
-   m2006_speed_pid_params.output_limit = 4500.0f;
+   arm_strech_anglePID.output_limit = 500.0f;
+   m2006_speed_pid_params.output_limit = 8000.0f;
    arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
    arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508Rotate_angle_pid_params, 0.0f);
    arm_pitchMotor.reset_controlFrequency(100); // 俯仰电机降低控制频率到100Hz，减轻总线负担
