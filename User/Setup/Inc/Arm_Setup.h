@@ -290,6 +290,7 @@ private:
     void manualControl();
     bool manual_store();
     bool manual_takeout();
+    bool test();
 
     void autoControl();
     void stop();

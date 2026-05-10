@@ -354,6 +354,14 @@ private:
         .filter_k_ = 450.0f // 伸展滤波(平滑)系数，值越大到达目标越快，越小刹车越平滑
     };
 
+    Fliter_Ramp_S launch_fliter_ramp_ = {
+        .ramp__maxspeed_ = 600000.0f,
+        .max_accel_ = 1000000.0f, // 升降加速度限制 (Motor Angle deg/s^2)
+        .current_velocity_ = 0.0f, // 记录当前升降速度
+        .ramp_target_ = 0.0f, 
+        .filter_k_ = 450.0f // 升降滤波(平滑)系数，值越大到达目标越快，越小刹车越平滑
+    };
+
     
     float caculate_ramp_target(float current, float target, Fliter_Ramp_S &ramp)
     {

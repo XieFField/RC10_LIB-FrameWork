@@ -104,8 +104,11 @@ void Robot_Arm::update()
     }
 
     if(motor_launch_ != nullptr)
-        motor_launch_->setTargetTotalAngle(target_launchMotorAngle);
-
+    {
+        launch_fliter_ramp_.ramp_target_ = caculate_ramp_target(motor_launch_->getTotalAngle(), 
+            target_launchMotorAngle, launch_fliter_ramp_);
+        motor_launch_->setTargetTotalAngle(launch_fliter_ramp_.ramp_target_);
+    }
     if(motor_pitch_ != nullptr)
         motor_pitch_->setTargetTotalAngle(init_data_.max_pitchRPM_, target_pitchMotorAngle);
 
