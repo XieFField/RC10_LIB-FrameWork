@@ -102,7 +102,7 @@ void ArmSetup::loop()
             }
             else if(arm_ctrlStatus.is_store_acting == 2 && this->getSuckerStatus() == Sucker_Status_E::SUCK) //正在执行存储动作，等待完成
             {
-                if(manual_store())
+                if(test())
                 { 
                     arm_ctrlStatus.is_store_acting = 0;
                 }
@@ -169,6 +169,8 @@ void ArmSetup::loop()
     last_arm_status_ = arm_status_;
     debug_uart.printf_DMA("%f\n", motor_rotate_->getTotalAngle());
 }
+bool test_num = 0;
+
 
 /**
  * @brief 寻手操
@@ -262,7 +264,12 @@ void ArmSetup::manualControl()
     //pitch 开关
     int8_t target_pitch_logical = (airjoy_data_.scroll_wheel & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
     if(target_pitch_logical == 1)
-        target_joint_status_.suckerJoint_angle_ = 90.0f; // 吸盘关节打开到90度
+    {
+        if(test_num == 0)
+            target_joint_status_.suckerJoint_angle_ = 90.0f; // 吸盘关节打开到90度
+        else
+            target_joint_status_.suckerJoint_angle_ = 180.0f; // 吸盘关节打开到180度
+    }
     else
         target_joint_status_.suckerJoint_angle_ = 0.0f; // 吸盘关节关闭到0度
 
@@ -294,6 +301,30 @@ void ArmSetup::manualControl()
     this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
     this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
 }
+
+bool ArmSetup::test()
+{
+    // this->set_PitchAngle(180.0f);
+    // if(this->get_currentJointStatus().suckerJoint_angle_ > 170.0f)
+    // {
+    //     return true;
+    // }
+    // else
+    //     return false;
+
+
+    if(test_num == 0)
+    {
+        test_num = 1;
+    }
+    else
+    {
+        test_num = 0;
+    }
+
+    return true;
+}
+
 
 bool ArmSetup::manual_store()
 { 
@@ -360,6 +391,8 @@ bool ArmSetup::manual_store()
 
     return false;
 }
+
+
 
 float test_angle_for = 270.0f;
 
@@ -1009,7 +1042,7 @@ void ArmSetup::debug()
 
 Arm_InitData_S arm_initData = {
     .max_launchHeight_ = 0.26f,
-    .max_stretchLength_ = 0.128f,
+    .max_stretchLength_ = 0.1358f,
     .arm_length_ = 0.6f,
     .end_link_length_ = 0.08f,
 
@@ -1017,14 +1050,14 @@ Arm_InitData_S arm_initData = {
     .launch_Ratio_ = 0.07221f,
     //    .rotate_gearRatio_ = 144.878f,  //旧的
     // .rotate_gearRatio_ = 145.755789f,
-    .rotate_gearRatio_ = 112.5f,
+    .rotate_gearRatio_ = 106.348f,
     .pitch_gearRatio_ = 360.0f,
 
     .min_rotate_angle_ = 0.0f,
     .max_rotate_angle_ = 359.99999f,
     .safe_height_ = 0.08f,
     .store_height_ = 0.12f,
-    .Sucker_GPIO_Port = SUCKER_error_GPIO_Port,
-    .Sucker_GPIO_Pin =  SUCKER_error_Pin,
-    .max_pitchRPM_ = 120.0f,
+    .Sucker_GPIO_Port = SUCKER_6_GPIO_Port,
+    .Sucker_GPIO_Pin =  SUCKER_6_Pin,
+    .max_pitchRPM_ = 150.0f,
 };

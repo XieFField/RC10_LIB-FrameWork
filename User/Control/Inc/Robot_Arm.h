@@ -127,7 +127,13 @@ typedef struct{
     float sign_pitch_ = 1.0f;
 }MotorReversed_S;
 
-typedef 
+typedef struct{
+    float ramp__maxspeed_ = 0.0f;
+    float max_accel_ = 0.0f; // 加速度限制 (Motor Angle deg/s^2)，值越小起步/刹车越平滑
+    float current_velocity_ = 0.0f; // 记录当前速度
+    float ramp_target_ = 0.0f; 
+    float filter_k_ = 0.0f; 
+}Fliter_Ramp_S;
 
 /** 
  * @brief 又变成四自由度了，好，那么好。
@@ -319,8 +325,11 @@ protected:
         return sign_reversed_.sign_pitch_ * motor_angle * init_data_.pitch_gearRatio_ / 360.0f;
     }
 
-    void setRotateFilterK(float k) { rotate_filter_k_ = k; }
-    void setRampRotateMaxSpeed(float maxspeed) { ramp_rotate_maxspeed_ = maxspeed; }
+    void setRotateFilterK(float k) { rotate_fliter_ramp_.filter_k_ = k; }
+    void setRampRotateMaxSpeed(float maxspeed) { rotate_fliter_ramp_.ramp__maxspeed_ = maxspeed; }
+
+    void setStrechFilterK(float k) { strech_fliter_ramp_.filter_k_ = k; }
+    void setRampStrechMaxSpeed(float maxspeed) { strech_fliter_ramp_.ramp__maxspeed_ = maxspeed; }
 
 private:
     MotorReversed_S sign_reversed_  = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -329,43 +338,59 @@ private:
     
 //bool  time_initialized_ = false;
     
-    float ramp_rotate_maxspeed_ = 36000.0f;
-    float rotate_max_accel_ = 80000.0f; // 新增加速度限制 (Motor Angle deg/s^2)，值越小起步/刹车越平滑
-    float rotate_current_velocity_ = 0.0f; // 记录当前速度
-    float ramp_rotate_target_ = 0.0f; 
+    Fliter_Ramp_S rotate_fliter_ramp_ = {
+        .ramp__maxspeed_ = 36000.0f,
+        .max_accel_ = 80000.0f, // 加速度限制 (Motor Angle deg/s^2)，值越小起步/刹车越平滑
+        .current_velocity_ = 0.0f, // 记录当前速度
+        .ramp_target_ = 0.0f, 
+        .filter_k_ = 200.0f // 滤波(平滑)系数，值越大到达目标越快，越小刹车越平滑
+    };
     
-    float rotate_filter_k_ = 200.0f; // 滤波(平滑)系数，值越大到达目标越快，越小刹车越平滑
-    
+    Fliter_Ramp_S strech_fliter_ramp_ = {
+        .ramp__maxspeed_ = 600000.0f,
+        .max_accel_ = 1000000.0f, // 伸展加速度限制 (Motor Angle deg/s^2)
+        .current_velocity_ = 0.0f, // 记录当前伸展速度
+        .ramp_target_ = 0.0f, 
+        .filter_k_ = 450.0f // 伸展滤波(平滑)系数，值越大到达目标越快，越小刹车越平滑
+    };
+
+    Fliter_Ramp_S launch_fliter_ramp_ = {
+        .ramp__maxspeed_ = 1200000.0f,
+        .max_accel_ = 3000000.0f, // 升降加速度限制 (Motor Angle deg/s^2)
+        .current_velocity_ = 0.0f, // 记录当前升降速度
+        .ramp_target_ = 0.0f, 
+        .filter_k_ = 850.0f // 升降滤波(平滑)系数，值越大到达目标越快，越小刹车越平滑
+    };
 
     
-    float caculate_rotate_target(float current, float target)
+    float caculate_ramp_target(float current, float target, Fliter_Ramp_S &ramp)
     {
         float diff = target - current;
         
         // 期望目标速度 (一次平滑 P控制)
-        float target_vel = diff * rotate_filter_k_;
+        float target_vel = diff * ramp.filter_k_;
 
         // 速度限幅
-        if (target_vel > ramp_rotate_maxspeed_) target_vel = ramp_rotate_maxspeed_;
-        if (target_vel < -ramp_rotate_maxspeed_) target_vel = -ramp_rotate_maxspeed_;
+        if (target_vel > ramp.ramp__maxspeed_) target_vel = ramp.ramp__maxspeed_;
+        if (target_vel < -ramp.ramp__maxspeed_) target_vel = -ramp.ramp__maxspeed_;
 
         // 加速度限幅
-        float max_dv = rotate_max_accel_ * dt_;
-        if (target_vel > rotate_current_velocity_ + max_dv) {
-            rotate_current_velocity_ += max_dv;
-        } else if (target_vel < rotate_current_velocity_ - max_dv) {
-            rotate_current_velocity_ -= max_dv;
+        float max_dv = ramp.max_accel_ * dt_;
+        if (target_vel > ramp.current_velocity_ + max_dv) {
+            ramp.current_velocity_ += max_dv;
+        } else if (target_vel < ramp.current_velocity_ - max_dv) {
+            ramp.current_velocity_ -= max_dv;
         } else {
-            rotate_current_velocity_ = target_vel;
+            ramp.current_velocity_ = target_vel;
         }
 
         // 计算步长
-        float step = rotate_current_velocity_ * dt_;
+        float step = ramp.current_velocity_ * dt_;
 
         // 如果距离和速度都极小，直接赋值防止浮点数计算震荡
-        if(std::abs(diff) < 0.01f && std::abs(rotate_current_velocity_) < 0.1f) 
+        if(std::abs(diff) < 0.01f && std::abs(ramp.current_velocity_) < 0.1f) 
         {
-            rotate_current_velocity_ = 0.0f; // 完全停稳后清零速度
+            ramp.current_velocity_ = 0.0f; // 完全停稳后清零速度
             return target;
         }
 
