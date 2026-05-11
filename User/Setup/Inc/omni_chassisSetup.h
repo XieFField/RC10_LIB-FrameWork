@@ -290,9 +290,6 @@ private:
     #endif
 
     Vector2D v_limit(Vector2D &v);
-<<<<<<< HEAD
-
-=======
     
     void flag_reset(void); // 复位自动流程相关标志位。
     void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
