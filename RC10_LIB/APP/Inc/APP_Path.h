@@ -596,6 +596,7 @@ public:
 
         is_init = true;
         is_end = true;
+        params_[bezier_curve_num] = params;
         bezier_curve_list[bezier_curve_num].Bezier_Update(point_last_, point_);
         bezier_curve_num++;
         index_ = 0;
@@ -631,7 +632,8 @@ public:
             // 1) 近端误差达到阈值可直接切段；
             // 2) t 接近 1 仅作为辅助条件，必须同时离终点不远，避免“投影到段末端但车体仍较远”时误切段。
             const float t_reach_guard = 0.20f;
-            bool reach_segment_end = (_tool_Abs(err_end) <= dead) || (t_ >= 0.995f && _tool_Abs(err_end) <= t_reach_guard);
+            //bool reach_segment_end = (_tool_Abs(err_end) <= dead) || (t_ >= 0.995f && _tool_Abs(err_end) <= t_reach_guard);
+            bool reach_segment_end = (t_ >= 0.995f);
             if (reach_segment_end)
             {
                 index_++; // 切换到下一段曲线
@@ -687,7 +689,7 @@ public:
         distance_ = 0.0f;    // 重置距离
         t_ = 0.0f;           // 重置参数 t
         v_resultant_ = 0.0f; // 重置速度
-        is_end = false;
+        is_end = true;
     }
 
     /**

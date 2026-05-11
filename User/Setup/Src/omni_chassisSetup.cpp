@@ -21,8 +21,7 @@ void OmniChassis_Setup::loop()
 
     float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
 
-//	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-	
+    //	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
 
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
@@ -133,11 +132,11 @@ void OmniChassis_Setup::loop()
                 // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
                 planspeed = path_line_.plan(robot_pos_);
                 Path_correction();
-                #if FF_V
+#if FF_V
                 speed = ComposeRobotVelocity(corrVelocity);
-                #else
-                speed=corrVelocity;
-                #endif
+#else
+                speed = corrVelocity;
+#endif
                 speed = v_limit(speed);
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
@@ -156,9 +155,9 @@ void OmniChassis_Setup::loop()
 
                 path_line_.plan_reset();
                 path_line_.Reset();
-                #if FF_V
+#if FF_V
                 ResetAutoControlStates();
-                #endif
+#endif
             }
         }
         else
@@ -166,13 +165,13 @@ void OmniChassis_Setup::loop()
             // 未运行时保持原地锁角并清理自动控制历史量。
             target_yaw_ = yaw;
             target_chassis_twist_ = {0.0f, 0.0f};
-            #if FF_V
+#if FF_V
             ResetAutoControlStates();
-            #endif
+#endif
         }
 
         float target_yaw_rad = target_yaw_ * PI / 180.0f;
-        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx,target_chassis_twist_.vy,target_yaw_rad);
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
 
         break;
     }
@@ -202,7 +201,7 @@ void OmniChassis_Setup::loop()
                 {
                     MF1_flag = true;
                 }
-                else if (MF1_flag == true )
+                else if (MF1_flag == true)
                 {
                     MF1_flag = false;
                     Arm_Start = true;
@@ -212,7 +211,7 @@ void OmniChassis_Setup::loop()
                 {
                     MF2_flag = true;
                 }
-                else if ( MF2_flag == true)
+                else if (MF2_flag == true)
                 {
                     MF2_flag = false;
                     Arm_Start = true;
@@ -225,11 +224,11 @@ void OmniChassis_Setup::loop()
                     planspeed = path_line_.plan(robot_pos_);
 
                     Path_correction();
-                    #if FF_V
+#if FF_V
                     speed = ComposeRobotVelocity(corrVelocity);
-                    #else
-                    speed=corrVelocity;
-                    #endif
+#else
+                    speed = corrVelocity;
+#endif
                     speed = v_limit(speed);
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
@@ -256,24 +255,23 @@ void OmniChassis_Setup::loop()
 
                 path_line_.plan_reset();
                 path_line_.Reset();
-                 #if FF_V
+#if FF_V
                 ResetAutoControlStates();
-                #endif
+#endif
             }
             float target_yaw_rad = target_yaw_ * PI / 180.0f;
-            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx,target_chassis_twist_.vy,target_yaw_rad);
+            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
         }
         else
         {
             // 未运行时保持原地锁角并清理自动控制历史量。
-//            target_yaw_ = yaw;
-            chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx,target_chassis_twist_.vy);
+            //            target_yaw_ = yaw;
+            chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
             target_chassis_twist_.vx = 0.0f;
             target_chassis_twist_.vy = 0.0f;
-            #if FF_V
+#if FF_V
             ResetAutoControlStates();
-            #endif
-            
+#endif
         }
 
         break;
@@ -281,8 +279,27 @@ void OmniChassis_Setup::loop()
 
     case CHASSIS_STOP:
     {
+        num++;
+        if (path_test_.Is_End() == true)
+        {
+            speed = path_test_.plan(test_pos_);
+            test_pos_ = test_pos_ + speed * 0.001f; // 返回速度向量
+        }
+        else
+        {
+            path_test_.Reset();
+            speed = {0.0f, 0.0f};
+            test_pos_ = Vector2D{2.2, 0};
+        }
+        if (num > 4)
+        {
+            // debug_uart.printf_DMA("%f,%f\n", point.x, point.y);
+            debug_uart.printf_DMA("%f,%f,%f\n", test_pos_.x, test_pos_.y, speed.magnitude());
+            num = 0;
+        }
+
         chassis.setZeroCurrent();
-        
+
         break;
     }
 
@@ -301,7 +318,7 @@ void OmniChassis_Setup::loop()
         else
             target_chassis_twist_.vy = 0.0f;
 
-        chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx,target_chassis_twist_.vy, target_chassis_twist_.yaw_rate);
+        chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_chassis_twist_.yaw_rate);
 
         // 结束相机模式处理。
         break;
@@ -325,7 +342,6 @@ void OmniChassis_Setup::loop()
     }
 
 #endif
-
 }
 void OmniChassis_Setup::Path_spin_check(void)
 {
@@ -403,10 +419,10 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
 {
     int8_t MF1_Point_ = 0; // MF1 对应地图点编号。
     int8_t MF2_Point_ = 0; // MF2 对应地图点编号。
-    
+
     // 基于当前位置和目标点编号计算整条必经路径。
     // 自动规划接口转换
-    Point2D robot_point_ = {robot_pos_.x, robot_pos_.y}; 
+    Point2D robot_point_ = {robot_pos_.x, robot_pos_.y};
     // 计算理想的KFS路径
     KFS_KeyPoint_ = MF_AutoCtrler::PathInformation_calc(robot_point_, MF1, MF2);
     // 判断MF1的车子朝向
@@ -600,7 +616,6 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
 
 /////////////////////////////////    路径纠偏代码   //////////////////////////////////////////////
 
-
 // 函数作用：输入最近点的编号tNearest，输出前视点坐标和它的编号tLookahead
 Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead)
 {
@@ -651,8 +666,7 @@ Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNeares
 void OmniChassis_Setup::Path_correction(void)
 {
     // 1. 找最近点+t值：获取路径上距离当前位置最近的点及其参数 tNearest
-    
-    
+
     // 第一步：调用你的Get_Nearest_Distance，拿到tNearest（最近点对应的t值）
     // 重点：第二个参数传 &tNearest（tNearest的地址），因为你的函数是“输出参数”（通过指针赋值）
     curve.Get_Nearest_Distance(robot_pos_, &tNearest);
@@ -665,10 +679,10 @@ void OmniChassis_Setup::Path_correction(void)
     if (obj_dis < gradient_start_ || path_line_.Is_End() == false)
     {
         Vector2D endPt = curve.Get_End_point();
-        #if FF_V
+#if FF_V
         // 终点段把前馈参考点切换为终点坐标，差分会自然收敛到 0。
         ff_ref_point_ = endPt;
-        #endif
+#endif
 
         if (curve.Get_len() < 0.0001f)
         {
@@ -686,7 +700,7 @@ void OmniChassis_Setup::Path_correction(void)
         }
         else
         {
-            float gradient = min_gradient_-(1-_tool_Abs(obj_dis - gradient_end_) / _tool_Abs(gradient_start_ - gradient_end_))* (1-min_gradient_);
+            float gradient = min_gradient_ - (1 - _tool_Abs(obj_dis - gradient_end_) / _tool_Abs(gradient_start_ - gradient_end_)) * (1 - min_gradient_);
             corrVelocity = corrVelocity * gradient;
         }
         return;
@@ -694,12 +708,12 @@ void OmniChassis_Setup::Path_correction(void)
 
     // ======== 动态兔子追踪 (2D Cartesian PID) ========
     // 2. 寻找前视点作为我们追踪的“虚拟兔子”
-    Vector2D lookaheadPt;      // 路径上的前视点
+    Vector2D lookaheadPt; // 路径上的前视点
     lookaheadPt = FindLookaheadPoint(curve, tNearest, tLookahead);
-    #if FF_V
+#if FF_V
     // 非终点阶段前馈参考点使用前视点。
     ff_ref_point_ = lookaheadPt;
-    #endif
+#endif
 
     // lookaheadTangent = curve.Get_Tangent_Vector(tLookahead); // 留作状态观测前视点的切线方向
 
@@ -795,14 +809,12 @@ Vector2D OmniChassis_Setup::ComposeRobotVelocity(const Vector2D &v_pid)
 
     float pid_scale = 1.0f;
 
-
     Vector2D v_pid_out = v_pid * pid_scale;
 
     Vector2D v_damp = v_robot_last_cmd_ * (-k_damp_);
 
     // 最终速度合成：闭环主导 + 前馈提速 + 历史速度阻尼。
     Vector2D v_robot = v_pid_out + v_ff + v_damp;
-
 
     v_robot_last_cmd_ = v_robot;
     return v_robot;
@@ -821,12 +833,11 @@ Vector2D OmniChassis_Setup::v_limit(Vector2D &v)
     {
         v = v.normalize() * max_robot_speed_;
     }
-    if(v.magnitude() < min_robot_speed_)
+    if (v.magnitude() < min_robot_speed_)
     {
-        v = v.normalize() * min_robot_speed_; 
+        v = v.normalize() * min_robot_speed_;
     }
     return v;
 }
 
 //=======================================              相机接口函数         =====================================================//
-
