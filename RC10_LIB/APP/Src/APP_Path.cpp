@@ -406,46 +406,25 @@ void Path::Reset()
 
 Vector2D Path::plan(Vector2D point)
 {
+	if (m_phase == S_FINISHED_PHASE)
+	{
+		return Vector2D{0, 0};
+	}
 	if (Is_End() == true)
 	{
 		bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距离
 		distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
-		
-		//distance_ = total_ + distance_; // 计算当前总距离
+		distance_ = total_ + distance_; // 计算当前总距离
 
 		v_resultant_ = sp_.plan(distance_); // 速度规划器计算当前目标速度
 		m_phase = sp_.getPhase();			// 获取当前速度规划阶段
 
-		//bezier_curve_list[index_].Get_Nearest_Distance(point, &t_);					 // 获取点到曲线的最近距离
+		bezier_curve_list[index_].Get_Nearest_Distance(point, &t_);					 // 获取点到曲线的最近距离
 		v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
 
-		//point_last_ = point; // 更新上一个点
-		err_end = _tool_Abs((point - bezier_curve_list[index_].Get_End_point()).magnitude());
+		point_last_ = point; // 更新上一个点
 
-		const float t_reach_guard = 0.20f;
-            bool reach_segment_end = (_tool_Abs(err_end) <= dead) || (t_ >= 0.995f && _tool_Abs(err_end) <= t_reach_guard);
-            if (reach_segment_end)
-            {
-                index_++; // 切换到下一段曲线
-                t_ = 0.0f;
-                if (index_ >= bezier_curve_num)
-                {
-                    is_end = false; // 结束运行
-					m_phase = S_FINISHED_PHASE;
-				}
-                else
-                {
-                    params_.startPos = 0.0f; // 设置起始位置
-                    params_.targetPos = (bezier_curve_list[index_].Get_len() - params_.startPos);
-                    sp_.param_reset(params_);
-                }
-            }
-            v_output_ = (v_tangent_ * v_resultant_);
-            return v_output_; // 返回 速度向量 = 切向方向 * 目标速率
-		
-		
-		
-		/* // 如果当前曲线段走完（t接近1）或者规划完成
+		// 如果当前曲线段走完（t接近1）或者规划完成
 		if (t_ >= 0.999f || m_phase == S_FINISHED_PHASE)
 		{
 			total_ += bezier_curve_list[index_].Get_len(); // 累加已完成路程
@@ -457,7 +436,7 @@ Vector2D Path::plan(Vector2D point)
 			}
 		}
 
-		return (v_tangent_ * v_resultant_); // 返回 速度向量 = 切向方向 * 目标速率 */
+		return (v_tangent_ * v_resultant_); // 返回 速度向量 = 切向方向 * 目标速率
 	}
 	else
 	{

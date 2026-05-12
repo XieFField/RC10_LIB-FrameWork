@@ -74,17 +74,7 @@ public:
     // 初始化底盘控制器参数并启动 RTOS 任务。
     void init()
     {
-        
-        path_test_.Add_Start_Point(Vector2D{2.2, 0});
-        path_test_.Add_Point(Vector2D{1.2, 0}, path_param_start_);
-        path_test_.Add_Point(Vector2D{0, 1.2}, Vector2D{0, 0}, path_param_curve_);
-        path_test_.Add_Point(Vector2D{0, 6}, path_param_line_);
-        path_test_.Add_Point(Vector2D{1.2, 7.2}, Vector2D{0, 7.2}, path_param_curve_);
-        path_test_.Add_Point(Vector2D{4.8, 7.2}, path_param_line_);
-        path_test_.Add_Point(Vector2D{6, 6}, Vector2D{6, 7.2}, path_param_curve_);
-        path_test_.Add_Point(Vector2D{6, 1.2}, path_param_line_);
-        path_test_.Add_Point(Vector2D{4.8, 0}, Vector2D{6, 0}, path_param_curve_);
-        path_test_.Add_End_Point(Vector2D{3.2, 0}, path_param_end_);
+
 
         if (this->wheels_[0] == nullptr || this->wheels_[1] == nullptr ||
             this->wheels_[2] == nullptr || this->wheels_[3] == nullptr)
@@ -123,7 +113,7 @@ public:
     }
 
 private:
-    int num=0;
+    int num = 0;
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
 
@@ -144,8 +134,8 @@ private:
 
     Vector2D robot_pos_ = {0.0f, 0.0f}; // 当前机器人世界坐标。
     Vector2D test_pos_ = Vector2D{2.2, 0};
-    float yaw = 0.0f;                   // 当前机器人航向角（度）。
-    Point3D ladar_data_;                // 定位系统输出的原始位姿数据。
+    float yaw = 0.0f;    // 当前机器人航向角（度）。
+    Point3D ladar_data_; // 定位系统输出的原始位姿数据。
 
     PID_Position pid_pos_x; // x轴绝对位置PID控制器
     PID_Position pid_pos_y; // y轴绝对位置PID控制器
@@ -165,12 +155,12 @@ private:
     float robot_speed_end_ = 0.3f;  // 终点段最大速度限制。
     float deadzone_max_end_ = 0.1f; // 判定“近终点”阈值。
 
-    float m_lookaheadDist = 0.3f; // 前视距离 (单位: 米)
+    float m_lookaheadDist = 0.3f;        // 前视距离 (单位: 米)
+    float m_lookaheadDist_line = 0.3f;   // 前视距离 (单位: 米)
+    float m_lookaheadDist_curve = 0.05f; // 前视距离 (单位: 米)
     //-----------------------------------速度规划参数----------------------------------------------------//
 
     Path_line path_line_; // 路径规划器对象。
-
-    Path_line1 path_test_; // 路径规划器对象。
 
     Vector2D Clamping_Bar_Selection_pos_ = {2.405f, 0.69f}; // 夹杆流程默认目标点。
 
@@ -178,9 +168,9 @@ private:
     Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 5.0f, .maxDec = 5.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};     // 夹杆流程速度规划参数。
 
     Speedplanner_1D_Param_Config path_param_start_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.01f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_line_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};  // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_curve_ = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.5f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};     // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_end_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};   // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_line_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};   // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_curve_ = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.5f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};  // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_end_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};    // KFS 速度规划参数。
 
     //-----------------------------------前视pid参数-----------------------------------------//
 

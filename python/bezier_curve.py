@@ -27,7 +27,7 @@ def recursive_bezier(pts, t):
 
 
 if __name__ == '__main__':
-    control_points = np.array([(1, 0), (-6, 16), (26, 20)])
+    control_points = np.array([(1.0, 0.5), (0.0, 2.0), (3.9, 1.9)])
     recursive_bezier_line = []
 
     for t in np.arange(0, 1.01, 0.01):
