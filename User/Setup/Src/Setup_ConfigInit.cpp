@@ -1,37 +1,37 @@
-#include "Setup_ConfigInit.h"
+ï»¿#include "Setup_ConfigInit.h"
 
 /**
- * @brief  »úĞµ±ÛºÍµ×ÅÌµÄÅäÖÃ³õÊ¼»¯
- *   2´úr1µç»ú·ÖÅä can1:M3508*2 + M3508*4 ÁôÓĞ1¸öDJIµç»úÓàÁ¿
- *                 can2:M3508*4 + M2006*2 ÁôÓĞ1¸öDJIµç»úÓàÁ¿
- *                 can3: vesc*4 DM4310*2  ÁôÓĞ1¸öDJIµç»úÓàÁ¿
+ * @brief  æœºæ¢°è‡‚å’Œåº•ç›˜çš„é…ç½®åˆå§‹åŒ–
+ *   2ä»£r1ç”µæœºåˆ†é… can1:M3508*2 + M3508*4 ç•™æœ‰1ä¸ªDJIç”µæœºä½™é‡
+ *                 can2:M3508*4 + M2006*2 ç•™æœ‰1ä¸ªDJIç”µæœºä½™é‡
+ *                 can3: vesc*4 DM4310*2  ç•™æœ‰1ä¸ªDJIç”µæœºä½™é‡
  */ 
 
- // Íâ²¿ÉùÃ÷USB¸ßËÙÉè±¸¾ä±ú
+ // å¤–éƒ¨å£°æ˜USBé«˜é€Ÿè®¾å¤‡å¥æŸ„
 extern "C" 
 {
     extern USBD_HandleTypeDef hUsbDeviceHS;
 }
-fdCANbus *const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // »ñÈ¡FDCAN1µÄÎ¨Ò»ÊµÀı
-fdCANbus *const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // »ñÈ¡FDCAN2µÄÎ¨Ò»ÊµÀı
+fdCANbus *const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // è·å–FDCAN1çš„å”¯ä¸€å®ä¾‹
+fdCANbus *const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // è·å–FDCAN2çš„å”¯ä¸€å®ä¾‹
 fdCANbus *const CAN3_Bus = fdCANbus::getInstance(&hfdcan3);
 
-DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus);   // 1~4ºÅM3508/M2006µç»ú
-DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8ºÅM3508/M2006µç»ú
+DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus);   // 1~4å·M3508/M2006ç”µæœº
+DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8å·M3508/M2006ç”µæœº
 
-DJI_Group DJIGroupCAN2_Low(send_idLow(), CAN2_Bus); // 1~4ºÅM3508/M2006µç»ú
-DJI_Group DJIGroupCAN2_High(send_idHigh(), CAN2_Bus); // 5~8ºÅM3508/M2006µç»ú
+DJI_Group DJIGroupCAN2_Low(send_idLow(), CAN2_Bus); // 1~4å·M3508/M2006ç”µæœº
+DJI_Group DJIGroupCAN2_High(send_idHigh(), CAN2_Bus); // 5~8å·M3508/M2006ç”µæœº
 
-DJI_Group DJIGroupCAN3_High(send_idHigh(), CAN3_Bus); // 5~8ºÅM3508/M2006µç»ú
+DJI_Group DJIGroupCAN3_High(send_idHigh(), CAN3_Bus); // 5~8å·M3508/M2006ç”µæœº
 
-Point2D arm_install_offset = {0.480f, 0.02f};   // »úĞµ±Û°²×°Æ«ÒÆ£¬µ¥Î»Ã×
+Point2D arm_install_offset = {0.480f, 0.02f};   // æœºæ¢°è‡‚å®‰è£…åç§»ï¼Œå•ä½ç±³
 
 
 /*==============Controller Instances===========*/
 uint8_t laser_rx_buffer[20];
 uint8_t laser_rx_buffer1[20];
 uint8_t laser_rx_buffer2[20];
-// ¼¤¹â²â¾à
+// æ¿€å…‰æµ‹è·
 // USB_CDC_ cdc(&hUsbDeviceHS);
 USB_CDC_ usb_1(&hUsbDeviceHS);
 JY61_IMU IMU(JY61_ADDR,&hi2c5);
@@ -41,17 +41,17 @@ Chassis_Omni<3>::init_config chassis_initData = {
     .wheels[0] = {
         .x = 0.0f,
         .y = 0.375f,
-        .theta = 0.0f // µ¥Î»£º¶È
+        .theta = 0.0f // å•ä½ï¼šåº¦
     },
     .wheels[1] = {
         .x = -0.37f, .y = -0.375f,
-        .theta = -63.741f + 180.0f // µ¥Î»£º¶È
+        .theta = -63.741f + 180.0f // å•ä½ï¼šåº¦
     },
     .wheels[2] = {
         .x = 0.37f, .y = -0.375f,
-        .theta = 63.741f + 180.0f // µ¥Î»£º¶È
+        .theta = 63.741f + 180.0f // å•ä½ï¼šåº¦
     }};
-OmniChassis_Setup ChassisOmni(chassis_initData); // ÂÖ×Ó°ë¾¶£¬×î´óÂÖ×Ó×ªËÙ£¬µ×ÅÌ µ× Ñü
+OmniChassis_Setup ChassisOmni(chassis_initData); // è½®å­åŠå¾„ï¼Œæœ€å¤§è½®å­è½¬é€Ÿï¼Œåº•ç›˜ åº• è…°
 Chassis chassis;
 
 FSM_Controller Finite_StateMachine;
@@ -68,27 +68,27 @@ Robot_WeaponSage_Setup Weapon_Controller(initData_);
 
 
 /**
- * @brief  »úĞµ±ÛºÍµ×ÅÌµÄÅäÖÃ³õÊ¼»¯
- *   2´úr1µç»ú·ÖÅä can1:M3508*2(»úĞµ±ÛÔÆÌ¨ºÍÉı½µ) + M3508*4(¶æÏò) ÁôÓĞ1¸öDJIµç»úÓàÁ¿
- *                 can2:M3508*4(ÁúÃÅ¼Ü) + M2006*2(¼Ğ¸Ë) ÁôÓĞ1¸öDJIµç»úÓàÁ¿
- *                 can3: vesc*4 DM4310*2 M2006*1(»úĞµ±ÛÉìËõ) ÁôÓĞ1¸öDJIµç»úÓàÁ¿
+ * @brief  æœºæ¢°è‡‚å’Œåº•ç›˜çš„é…ç½®åˆå§‹åŒ–
+ *   2ä»£r1ç”µæœºåˆ†é… can1:M3508*2(æœºæ¢°è‡‚äº‘å°å’Œå‡é™) + M3508*4(èˆµå‘) ç•™æœ‰1ä¸ªDJIç”µæœºä½™é‡
+ *                 can2:M3508*4(é¾™é—¨æ¶) + M2006*2(å¤¹æ†) ç•™æœ‰1ä¸ªDJIç”µæœºä½™é‡
+ *                 can3: vesc*4 DM4310*2 M2006*1(æœºæ¢°è‡‚ä¼¸ç¼©) ç•™æœ‰1ä¸ªDJIç”µæœºä½™é‡
  */ 
 
 
-                           /* µ×ÅÌµç»ú */
+                           /* åº•ç›˜ç”µæœº */
 M3508 rudder1(1, CAN1_Bus, true, false); M3508 rudder2(2, CAN1_Bus, true, false); 
 M3508 rudder3(3, CAN1_Bus, true, false); M3508 rudder4(4, CAN1_Bus, true, false);
 
 VESC_Motor motor_vesc1(101, CAN3_Bus, 21.0f); VESC_Motor motor_vesc2(102, CAN3_Bus, 21.0f); 
 VESC_Motor motor_vesc3(103, CAN3_Bus, 21.0f); VESC_Motor motor_vesc4(104, CAN3_Bus, 21.0f);
 
-//                            /* ´®Áª±Û */      
+//                            /* ä¸²è”è‡‚ */      
 // M3508 arm_launchMotor(5, CAN1_Bus, true, false); M3508 arm_rotateMotor(7, CAN1_Bus, true, false);
 
 // M2006 arm_stretchMotor(8, CAN3_Bus, true, false);  
 // DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
 
-//                            /* ÎäÆ÷ÏµÍ³ */
+//                            /* æ­¦å™¨ç³»ç»Ÿ */
 M3508 Weapon_launchMotor_1_master(1, CAN2_Bus, true, false); M3508 Weapon_launchMotor_1_slave(2, CAN2_Bus, true, false); 
 M3508 Weapon_launchMotor_2_master(3, CAN2_Bus, true, false); M3508 Weapon_launchMotor_2_slave(4, CAN2_Bus, true, false);
 M2006 Weapon_traverseMotor(5, CAN2_Bus, true, false); M2006 Weapon_clawMotor(6, CAN2_Bus, true, false);
@@ -132,7 +132,7 @@ void dji_motor_Init()
 
 /*============================== debug  DJI_Motor ===============================*/
 
-/*================================ debug  ï¿½ï¿½Ğµï¿½ï¿½ï¿½ï¿½ =============================*/
+/*================================ debug  æœºæ¢°è‡‚ =============================*/
 
 #if ARM_DEMO_DEBUG
 
@@ -153,7 +153,7 @@ Arm_InitData_S arm_demoInit_data = {
 };
 
 Robot_ArmDemo arm_demo(arm_demoInit_data);
-// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+// æ¿€å…‰æµ‹è·
 LaserPosition laserpos(&huart3, &huart6);
 
 void arm_motorInit()
@@ -179,50 +179,44 @@ void arm_motorInit()
 }
 #endif
 
-/*============================== debug  ï¿½ï¿½Ğµï¿½ï¿½ï¿½ï¿½ ===============================*/
-
 void debug_init()
 {
-    /*============================= debug  ï¿½ï¿½Ğµï¿½ï¿½ï¿½ï¿½ ================================*/
+/*============================= debug  æœºæ¢°è‡‚ ================================*/
 #if ARM_DEMO_DEBUG
     arm_motorInit();
     arm_demo.armInit(&m3508_ArmLaunch, &m2006_ArmStretch, &m3508_ArmRotate, &m2006_ArmPitch);
 #endif
-/*============================== debug  ï¿½ï¿½Ğµï¿½ï¿½ï¿½ï¿½ ===============================*/
 
 /*============================== debug  DJI_Motor ===============================*/
 #if DEBUG_DJI_Motor
-    dji_motor_Init();
-    dji_motor_demo.init(&m2006_1);
+dji_motor_Init();
+dji_motor_demo.init(&m2006_1);
 #endif
-/*============================== debug  M2006 ===============================*/
 
 /*============================== debug   speedplanner ===============================*/
 #if SPEEDPLANNER_DEMO_DEBUG
-
     speedplanner_demo.init();
 #endif
-/*============================== debug   speedplanner ===============================*/
-/*============================== debug  DJI_Motor ===============================*/
+
 #if DEBUG
-    laserpos.Init(); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    laserpos.Init(); // æ¿€å…‰æµ‹è·
 #endif
 
     // system_detect_task_handle = osThreadNew(startSystemDetectTask, NULL, &system_detect_task_attributes);
 }
 
 void CAN_Motor_Init(void);
-Point2D lader_install_offset = {0.0f, 0.0f}; // ¼¤¹âÀ×´ï°²×°Æ«ÒÆ£¬µ¥Î»Ã×
+Point2D lader_install_offset = {0.0f, 0.0f}; // æ¿€å…‰é›·è¾¾å®‰è£…åç§»ï¼Œå•ä½ç±³
 Locate_Setup* set1 = Locate_Setup::getInstance();
 Laser_InstanceManager instance_man;
 void ALL_Setup_ConfigInit(void)
 {
-    // ³õÊ¼»¯´®¿Ú6µÄÏà»úÄ£¿é
+    // åˆå§‹åŒ–ä¸²å£6çš„ç›¸æœºæ¨¡å—
     Module_Camera::GetInstance(&huart6)->InitUART();
 
     HWT101CT *imu = HWT101CT::GetInstance(&huart1);
     imu->InitUART();
-    TimeStamp::getInstance().init(&htim4); // ÆôÓÃÊ±¼ä´Á·şÎñ
+    TimeStamp::getInstance().init(&htim4); // å¯ç”¨æ—¶é—´æˆ³æœåŠ¡
     // debug_init();
 
     CAN_Motor_Init();
@@ -247,7 +241,7 @@ void ALL_Setup_ConfigInit(void)
 
     ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
-#if JIA_USE_TRIO_CHASSIS
+#if JIA_USE_THREE_OMNI_CHASSIS
     Chassis::InitConfig chassis_init_config =
     {
          .motor_handle[0] = &rudder1,
@@ -269,6 +263,79 @@ void ALL_Setup_ConfigInit(void)
             .drive_motor_h[1] = &motor_vesc2,
             .drive_motor_h[2] = &motor_vesc3,
             .drive_motor_h[3] = &motor_vesc4,
+
+            .wheel_radius_m = 0.075f,
+            .max_vel_x_m_s = 4.0f,
+            .max_vel_y_m_s = 4.0f,
+            .max_omega_z_rad_s = 8.0f,
+            .max_acc_xy_acc_m_s2 = 4.0f,
+            .max_acc_xy_dec_m_s2 = 8.0f,
+            .max_alpha_z_acc_rad_s2 = 6.0f,
+            .max_alpha_z_dec_rad_s2 = 10.0f,
+            .max_drive_omega_rad_s = jia::rpmToRadsF32(35.0f),
+            .max_drive_alpha_rad_s2 = 90.0f,
+            .max_steer_rate_rad_s = 7.0f,
+            .max_steer_alpha_rad_s2 = 40.0f,
+            .stationary_speed_epsilon_m_s = 0.01f,
+            .enable_cosine_compensation = true,
+            .idle_posture_mode = Chassis::IdlePostureMode::kHoldLast,
+
+            .wheels[0] = {
+                .pos_x_m = 0.25f,
+                .pos_y_m = 0.25f,
+                .theta_oa_to_owi_deg = 0.0f,
+                .steer_motor_sign = 1.0f,
+                .drive_motor_sign = 1.0f,
+                .homing_enabled = false,
+                .homing_sensor_active_high = true,
+                .homing_gpio_port = nullptr,
+                .homing_gpio_pin = 0,
+                .homing_search_rpm = 10.0f,
+                .homing_zero_offset_deg = 0.0f,
+                .homing_timeout_s = 5.0f,
+            },
+            .wheels[1] = {
+                .pos_x_m = 0.25f,
+                .pos_y_m = -0.25f,
+                .theta_oa_to_owi_deg = 0.0f,
+                .steer_motor_sign = 1.0f,
+                .drive_motor_sign = 1.0f,
+                .homing_enabled = false,
+                .homing_sensor_active_high = true,
+                .homing_gpio_port = nullptr,
+                .homing_gpio_pin = 0,
+                .homing_search_rpm = 10.0f,
+                .homing_zero_offset_deg = 0.0f,
+                .homing_timeout_s = 5.0f,
+            },
+            .wheels[2] = {
+                .pos_x_m = -0.25f,
+                .pos_y_m = 0.25f,
+                .theta_oa_to_owi_deg = 0.0f,
+                .steer_motor_sign = 1.0f,
+                .drive_motor_sign = 1.0f,
+                .homing_enabled = false,
+                .homing_sensor_active_high = true,
+                .homing_gpio_port = nullptr,
+                .homing_gpio_pin = 0,
+                .homing_search_rpm = 10.0f,
+                .homing_zero_offset_deg = 0.0f,
+                .homing_timeout_s = 5.0f,
+            },
+            .wheels[3] = {
+                .pos_x_m = -0.25f,
+                .pos_y_m = -0.25f,
+                .theta_oa_to_owi_deg = 0.0f,
+                .steer_motor_sign = 1.0f,
+                .drive_motor_sign = 1.0f,
+                .homing_enabled = false,
+                .homing_sensor_active_high = true,
+                .homing_gpio_port = nullptr,
+                .homing_gpio_pin = 0,
+                .homing_search_rpm = 10.0f,
+                .homing_zero_offset_deg = 0.0f,
+                .homing_timeout_s = 5.0f,
+            },
         };
     chassis.init(chassis_init_config);
 #endif
@@ -316,13 +383,13 @@ void CAN_Motor_Init(void)
    CAN2_Bus->init();
 	CAN3_Bus->init();
 
-   // µ×ÅÌÂÖ×Óµç»úPID²ÎÊı³õÊ¼»¯
+   // åº•ç›˜è½®å­ç”µæœºPIDå‚æ•°åˆå§‹åŒ–
    rudder1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    rudder2.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    rudder3.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    rudder4.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
 
-   // »úĞµ±Ûµç»úPID²ÎÊı³õÊ¼»¯
+   // æœºæ¢°è‡‚ç”µæœºPIDå‚æ•°åˆå§‹åŒ–
    
    PID_Param_Config arm_3508_anglePID = m3508_angle_pid_params;
    arm_3508_anglePID.output_limit = 450.0f;
@@ -334,7 +401,7 @@ void CAN_Motor_Init(void)
    m2006_speed_pid_params.output_limit = 4500.0f;
    arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
    arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508Rotate_angle_pid_params, 0.0f);
-   arm_pitchMotor.reset_controlFrequency(100); // ¸©Ñöµç»ú½µµÍ¿ØÖÆÆµÂÊµ½100Hz£¬¼õÇá×ÜÏß¸ºµ£
+   arm_pitchMotor.reset_controlFrequency(100); // ä¿¯ä»°ç”µæœºé™ä½æ§åˆ¶é¢‘ç‡åˆ°100Hzï¼Œå‡è½»æ€»çº¿è´Ÿæ‹…
 
 
 	PID_Param_Config weapon_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;

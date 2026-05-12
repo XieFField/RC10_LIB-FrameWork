@@ -1,4 +1,4 @@
-#ifndef CHASSIS_H_
+ï»¿#ifndef CHASSIS_H_
 #define CHASSIS_H_
 
 #include "APP_Utils.h"
@@ -12,14 +12,14 @@
 
 namespace jia
 {
-    namespace TriOmniChassis
+    namespace ThreeOmniChassis
     {
         class Chassis
         {
         public:
             /* ----------------------------------------------------------------- */
-            // ¶ÔÍâ¿ØÖÆ½Ó¿Ú
-            //  // Ã¶¾ÙÀàĞÍ¶¨Òå
+            // å¯¹å¤–æ§åˆ¶æ¥å£
+            //  // æšä¸¾ç±»å‹å®šä¹‰
             enum class Result
             {
                 kOk,
@@ -30,13 +30,13 @@ namespace jia
                 kBody,
                 kWorld,
             };
-            //  // ÉèÖÃµçÁ÷Îª0
+            //  // è®¾ç½®ç”µæµä¸º0
             Result setZeroCurrent();
-            //  // ÉèÖÃËÙ¶È
+            //  // è®¾ç½®é€Ÿåº¦
             Result setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z);
             Result setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
             Result setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z);
-            //  // ¶ÁÈ¡ËÙ¶È
+            //  // è¯»å–é€Ÿåº¦
             Robot_Twist getBodySpeed() const;
             Robot_Twist getWorldSpeed() const;
             /* ----------------------------------------------------------------- */
@@ -46,41 +46,41 @@ namespace jia
                 M3508 *motor_handle[3];
             };
 
-            // Ä¬ÈÏ¹¹ÔìºÍÎö¹¹º¯Êı
+            // é»˜è®¤æ„é€ å’Œææ„å‡½æ•°
             Chassis() = default;
             ~Chassis() = default;
 
-            // ³õÊ¼»¯
+            // åˆå§‹åŒ–
             void init(InitConfig &config);
 
-            // ÉèÖÃÂÖ×ÓÅ¤¾Ø×ÔÓÉÄ£Ê½
+            // è®¾ç½®è½®å­æ‰­çŸ©è‡ªç”±æ¨¡å¼
             Result setWheelTorqueFreeMode();
-            // ÉèÖÃÄ¿±êËÙ¶ÈÄ£Ê½
-            //  // ×ÔÉí×ø±êÏµ
-            //  //  // ËÙ¶È
+            // è®¾ç½®ç›®æ ‡é€Ÿåº¦æ¨¡å¼
+            //  // è‡ªèº«åæ ‡ç³»
+            //  //  // é€Ÿåº¦
             Result setTargetBodySpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
-            //  //  // ¹Ì¶¨µ±Ç°rot_z
+            //  //  // å›ºå®šå½“å‰rot_z
             Result setTargetBodySpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
-            //  //  // ÎŞÊäÈëomega_zÊ±¹Ì¶¨µ±Ç°rot_z
+            //  //  // æ— è¾“å…¥omega_zæ—¶å›ºå®šå½“å‰rot_z
             Result setTargetBodySpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
-            //  //  // ¹Ì¶¨µ½rot_z
+            //  //  // å›ºå®šåˆ°rot_z
             Result setTargetBodySpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
-            //  // ÊÀ½ç×ø±êÏµ
-            //  //  // ËÙ¶È
+            //  // ä¸–ç•Œåæ ‡ç³»
+            //  //  // é€Ÿåº¦
             Result setTargetWorldSpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
-            //  //  // ¹Ì¶¨µ±Ç°rot_z
+            //  //  // å›ºå®šå½“å‰rot_z
             Result setTargetWorldSpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
-            //  //  // ÎŞÊäÈëomega_zÊ±¹Ì¶¨µ±Ç°rot_z
+            //  //  // æ— è¾“å…¥omega_zæ—¶å›ºå®šå½“å‰rot_z
             Result setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
-            //  //  // ¹Ì¶¨µ½rot_z
+            //  //  // å›ºå®šåˆ°rot_z
             Result setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
-            // ¶ÁÈ¡Ä¿±êËÙ¶È
+            // è¯»å–ç›®æ ‡é€Ÿåº¦
             f32 getTargetBodyVelX() const;
             f32 getTargetBodyVelY() const;
             f32 getTargetWorldVelX() const;
             f32 getTargetWorldVelY() const;
             f32 getTargetOmegaZ() const;
-            // ¶ÁÈ¡µ±Ç°ËÙ¶È
+            // è¯»å–å½“å‰é€Ÿåº¦
             f32 getCurrentBodyVelX() const;
             f32 getCurrentBodyVelY() const;
             f32 getCurrentWorldVelX() const;
@@ -90,16 +90,16 @@ namespace jia
         private:
             struct WheelConfig
             {
-                f32 pos_x;                     // µ¥Î»£ºÃ×
-                f32 pos_y;                     // µ¥Î»£ºÃ×
-                f32 rot_z_deg;                 // µ¥Î»£º¶È
-                M3508 *motor_handle = nullptr; // µç»ú¾ä±ú
+                f32 pos_x;                     // å•ä½ï¼šç±³
+                f32 pos_y;                     // å•ä½ï¼šç±³
+                f32 rot_z_deg;                 // å•ä½ï¼šåº¦
+                M3508 *motor_handle = nullptr; // ç”µæœºå¥æŸ„
                 f32 sin_rot_z;
                 f32 cos_rot_z;
-                f32 eq_radius;     // µÈĞ§°ë¾¶£¬equivalent radius£¬¿ÉÒÔÊÇ¸ºÖµ£¬µ¥Î»£ºÃ×
-                f32 abs_sin_rot_z; // ÕıÏÒÖµµÄ¾ø¶ÔÖµ
-                f32 abs_cos_rot_z; // ÓàÏÒÖµµÄ¾ø¶ÔÖµ
-                f32 abs_eq_radius; // µÈĞ§°ë¾¶µÄ¾ø¶ÔÖµ£¬µ¥Î»£ºÃ×
+                f32 eq_radius;     // ç­‰æ•ˆåŠå¾„ï¼Œequivalent radiusï¼Œå¯ä»¥æ˜¯è´Ÿå€¼ï¼Œå•ä½ï¼šç±³
+                f32 abs_sin_rot_z; // æ­£å¼¦å€¼çš„ç»å¯¹å€¼
+                f32 abs_cos_rot_z; // ä½™å¼¦å€¼çš„ç»å¯¹å€¼
+                f32 abs_eq_radius; // ç­‰æ•ˆåŠå¾„çš„ç»å¯¹å€¼ï¼Œå•ä½ï¼šç±³
 
                 M3508 *&h = motor_handle;
                 f32 &s = sin_rot_z;
@@ -125,11 +125,11 @@ namespace jia
 
             struct ModeFlag
             {
-                bool is_wheel_torque_free; // ÊÇ·ñÎªÂÖ×ÓÅ¤¾Ø×ÔÓÉÄ£Ê½
-                // Coordinate coord = Coordinate::kBody; // ËÙ¶È×ø±êÏµ
-                bool is_world_speed_mode; // ÊÇ·ñÎªÊÀ½ç×ø±êÏµËÙ¶ÈÄ£Ê½
-                bool is_lock_now_rot_z;   // ÊÇ·ñ¹Ì¶¨µ±Ç°rot_z
-                bool is_lock_to_rot_z;    // ÊÇ·ñ¹Ì¶¨µ½rot_z
+                bool is_wheel_torque_free; // æ˜¯å¦ä¸ºè½®å­æ‰­çŸ©è‡ªç”±æ¨¡å¼
+                // Coordinate coord = Coordinate::kBody; // é€Ÿåº¦åæ ‡ç³»
+                bool is_world_speed_mode; // æ˜¯å¦ä¸ºä¸–ç•Œåæ ‡ç³»é€Ÿåº¦æ¨¡å¼
+                bool is_lock_now_rot_z;   // æ˜¯å¦å›ºå®šå½“å‰rot_z
+                bool is_lock_to_rot_z;    // æ˜¯å¦å›ºå®šåˆ°rot_z
             };
 
             struct InputTargetData
@@ -144,131 +144,131 @@ namespace jia
 
             struct Data
             {
-                f32 vel_x;   // xÖáËÙ¶È£¬µ¥Î»£ºÃ×/Ãë
-                f32 vel_y;   // yÖáËÙ¶È£¬µ¥Î»£ºÃ×/Ãë
-                f32 omega_z; // zÖá½ÇËÙ¶È£¬µ¥Î»£ºrad/s
+                f32 vel_x;   // xè½´é€Ÿåº¦ï¼Œå•ä½ï¼šç±³/ç§’
+                f32 vel_y;   // yè½´é€Ÿåº¦ï¼Œå•ä½ï¼šç±³/ç§’
+                f32 omega_z; // zè½´è§’é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s
 
-                f32 acc_x;   // xÖá¼ÓËÙ¶È£¬µ¥Î»£ºÃ×/Ãë^2
-                f32 acc_y;   // yÖá¼ÓËÙ¶È£¬µ¥Î»£ºÃ×/Ãë^2
-                f32 alpha_z; // zÖá½Ç¼ÓËÙ¶È£¬µ¥Î»£ºrad/s^2
+                f32 acc_x;   // xè½´åŠ é€Ÿåº¦ï¼Œå•ä½ï¼šç±³/ç§’^2
+                f32 acc_y;   // yè½´åŠ é€Ÿåº¦ï¼Œå•ä½ï¼šç±³/ç§’^2
+                f32 alpha_z; // zè½´è§’åŠ é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s^2
 
                 f32 rot_z;
 
-                f32 w1_omega; // ÂÖ×Ó1µÄ½ÇËÙ¶È£¬µ¥Î»£ºrad/s
-                f32 w2_omega; // ÂÖ×Ó2µÄ½ÇËÙ¶È£¬µ¥Î»£ºrad/s
-                f32 w3_omega; // ÂÖ×Ó3µÄ½ÇËÙ¶È£¬µ¥Î»£ºrad/s
+                f32 w1_omega; // è½®å­1çš„è§’é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s
+                f32 w2_omega; // è½®å­2çš„è§’é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s
+                f32 w3_omega; // è½®å­3çš„è§’é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s
 
-                f32 w1_alpha; // ÂÖ×Ó1µÄ½Ç¼ÓËÙ¶È£¬µ¥Î»£ºrad/s^2
-                f32 w2_alpha; // ÂÖ×Ó2µÄ½Ç¼ÓËÙ¶È£¬µ¥Î»£ºrad/s^2
-                f32 w3_alpha; // ÂÖ×Ó3µÄ½Ç¼ÓËÙ¶È£¬µ¥Î»£ºrad/s^2
+                f32 w1_alpha; // è½®å­1çš„è§’åŠ é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s^2
+                f32 w2_alpha; // è½®å­2çš„è§’åŠ é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s^2
+                f32 w3_alpha; // è½®å­3çš„è§’åŠ é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s^2
             };
 
-            // ´´½¨Ïß³Ì
+            // åˆ›å»ºçº¿ç¨‹
             static void createThread(void *arg);
-            // ÔËĞĞÏß³Ìº¯Êı
+            // è¿è¡Œçº¿ç¨‹å‡½æ•°
             void runThread(void *arg);
 
-            // ÊäÈëÄ¿±êÊı¾İ
+            // è¾“å…¥ç›®æ ‡æ•°æ®
             InputTargetData input_target_data_;
-            // rot_zËÙ¶È/Î»ÖÃ»·pidÊä³öµÄomega_z
+            // rot_zé€Ÿåº¦/ä½ç½®ç¯pidè¾“å‡ºçš„omega_z
             f32 target_pid_omega_z;
-            // Ä¿±êÊı¾İ
+            // ç›®æ ‡æ•°æ®
             Data target_data_;
-            // ¹æ»®Êı¾İ
-            Data planned_data_;      // ¹æ»®Êı¾İ
-            Data last_planned_data_; // ÉÏÒ»´Î¹æ»®Êı¾İ
-            // µ±Ç°Êı¾İ
+            // è§„åˆ’æ•°æ®
+            Data planned_data_;      // è§„åˆ’æ•°æ®
+            Data last_planned_data_; // ä¸Šä¸€æ¬¡è§„åˆ’æ•°æ®
+            // å½“å‰æ•°æ®
             Data current_data_;
 
-            // IMUÊı¾İ
+            // IMUæ•°æ®
             f32 input_hwt_rot_z_;
             f32 input_hwt_omega_z_;
 
-            // Ä£Ê½±êÖ¾Î»
-            //  // µ±Ç°Ä£Ê½±êÖ¾Î»
+            // æ¨¡å¼æ ‡å¿—ä½
+            //  // å½“å‰æ¨¡å¼æ ‡å¿—ä½
             ModeFlag current_mode_flag_;
             ModeFlag &cmf_ = current_mode_flag_;
-            //  // ÉÏÒ»Ê±¿ÌÄ£Ê½±êÖ¾Î»
+            //  // ä¸Šä¸€æ—¶åˆ»æ¨¡å¼æ ‡å¿—ä½
             // ModeFlag last_mode_flag_;
             // ModeFlag &lmf_ = last_mode_flag_;
 
-            // ÏµÍ³²ÎÊı
-            constexpr static u8 period_ms_ = 1;                  // ¿ØÖÆÖÜÆÚ£¬µ¥Î»£ººÁÃë
-            TickType_t time_ms_;                                 // µ±Ç°Ê±¼ä£¬µ¥Î»£ººÁÃë
-            constexpr static f32 period_ = period_ms_ / 1000.0f; // ¿ØÖÆÖÜÆÚ£¬µ¥Î»£ºÃë
+            // ç³»ç»Ÿå‚æ•°
+            constexpr static u8 period_ms_ = 1;                  // æ§åˆ¶å‘¨æœŸï¼Œå•ä½ï¼šæ¯«ç§’
+            TickType_t time_ms_;                                 // å½“å‰æ—¶é—´ï¼Œå•ä½ï¼šæ¯«ç§’
+            constexpr static f32 period_ = period_ms_ / 1000.0f; // æ§åˆ¶å‘¨æœŸï¼Œå•ä½ï¼šç§’
 
-            // µ×ÅÌ²ÎÊı
-            //  // ÂÖ×Ó°ë¾¶
-            constexpr static f32 wheel_radius_ = 0.075f; // ÂÖ×Ó°ë¾¶£¨µ¥Î»£ºÃ×£©
+            // åº•ç›˜å‚æ•°
+            //  // è½®å­åŠå¾„
+            constexpr static f32 wheel_radius_ = 0.075f; // è½®å­åŠå¾„ï¼ˆå•ä½ï¼šç±³ï¼‰
             const f32 &wr_ = wheel_radius_;
-            //  // ÂÖ×ÓÅäÖÃ
+            //  // è½®å­é…ç½®
             WheelConfig wheel_config_[3];
             WheelConfig &w1_ = wheel_config_[0];
             WheelConfig &w2_ = wheel_config_[1];
             WheelConfig &w3_ = wheel_config_[2];
 
-            // ËÙ¶ÈÏŞÖÆ²ÎÊı
-            //  // ÂÖ¶ËËÙ¶È
-            bool is_wheel_omega_limit_ = true;           // ÊÇ·ñ½øĞĞÂÖ¶Ë½ÇËÙ¶ÈÏŞÖÆ
-            f32 max_wheel_omega_ = rpmToRadsF32(400.0f); // ×î´óÂÖ×Ó½ÇËÙ¶È£¬µ¥Î»£ºrad/s
-            f32 max_wheel_vel_ = 0.0f;                   // ×î´óÂÖ×ÓÏßËÙ¶È£¬µ¥Î»£ºÃ×/Ãë
+            // é€Ÿåº¦é™åˆ¶å‚æ•°
+            //  // è½®ç«¯é€Ÿåº¦
+            bool is_wheel_omega_limit_ = true;           // æ˜¯å¦è¿›è¡Œè½®ç«¯è§’é€Ÿåº¦é™åˆ¶
+            f32 max_wheel_omega_ = rpmToRadsF32(400.0f); // æœ€å¤§è½®å­è§’é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s
+            f32 max_wheel_vel_ = 0.0f;                   // æœ€å¤§è½®å­çº¿é€Ÿåº¦ï¼Œå•ä½ï¼šç±³/ç§’
 
-            //  // ³µ¶ËËÙ¶È
-            //  //  // ËÙ¶È±ÈÀıÏµÊı
-            f32 max_vel_x_radio_ = 1.0f;   // xÖáËÙ¶È±ÈÀıÏµÊı
-            f32 max_vel_y_radio_ = 1.0f;   // yÖáËÙ¶È±ÈÀıÏµÊı
-            f32 max_omega_z_radio_ = 1.0f; // zÖá½ÇËÙ¶È±ÈÀıÏµÊı
-            //  //  // ×î´óËÙ¶È
-            f32 max_vel_x_ = 0.0f;   // ×î´óxÖáËÙ¶È£¬µ¥Î»£ºÃ×/Ãë
-            f32 max_vel_y_ = 0.0f;   // ×î´óyÖáËÙ¶È£¬µ¥Î»£ºÃ×/Ãë
-            f32 max_omega_z_ = 0.0f; // ×î´ózÖá½ÇËÙ¶È£¬µ¥Î»£ºrad/s
+            //  // è½¦ç«¯é€Ÿåº¦
+            //  //  // é€Ÿåº¦æ¯”ä¾‹ç³»æ•°
+            f32 max_vel_x_radio_ = 1.0f;   // xè½´é€Ÿåº¦æ¯”ä¾‹ç³»æ•°
+            f32 max_vel_y_radio_ = 1.0f;   // yè½´é€Ÿåº¦æ¯”ä¾‹ç³»æ•°
+            f32 max_omega_z_radio_ = 1.0f; // zè½´è§’é€Ÿåº¦æ¯”ä¾‹ç³»æ•°
+            //  //  // æœ€å¤§é€Ÿåº¦
+            f32 max_vel_x_ = 0.0f;   // æœ€å¤§xè½´é€Ÿåº¦ï¼Œå•ä½ï¼šç±³/ç§’
+            f32 max_vel_y_ = 0.0f;   // æœ€å¤§yè½´é€Ÿåº¦ï¼Œå•ä½ï¼šç±³/ç§’
+            f32 max_omega_z_ = 0.0f; // æœ€å¤§zè½´è§’é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s
 
-            // ¼ÓËÙ¶ÈÏŞÖÆ²ÎÊı
-            //  // ³µ¶Ë¼ÓËÙ¶È
-            bool is_chassis_acc_limit_ = true; // ÊÇ·ñ½øĞĞ³µ¶Ë¼ÓËÙ¶ÈÏŞÖÆ
-            f32 max_acc_xy_acc_ = 2.0f;        // ×î´óXYÖáÏß¼ÓËÙ¶È£¬µ¥Î»£ºm/s^2
-            f32 max_acc_xy_dec_ = 10.0f;       // ×î´óXYÖáÏß¼õËÙ¶È£¬µ¥Î»£ºm/s^2
-            f32 max_alpha_z_acc_ = 4.0f;       // ×î´ózÖá½Ç¼ÓËÙ¶È£¬µ¥Î»£ºrad/s^2
-            f32 max_alpha_z_dec_ = 6.0f;       // ×î´ózÖá½Ç¼õËÙ¶È£¬µ¥Î»£ºrad/s^2
-            //  // ÂÖ¶Ë½Ç¼ÓËÙ¶È
-            bool is_wheel_alpha_limit_ = false; // ÊÇ·ñ½øĞĞÂÖ¶Ë½Ç¼ÓËÙ¶ÈÏŞÖÆ
-            f32 max_wheel_alpha_ = 2.0f * kPi;  // ×î´óÂÖ×Ó½Ç¼ÓËÙ¶È£¬µ¥Î»£ºrad/s^2
+            // åŠ é€Ÿåº¦é™åˆ¶å‚æ•°
+            //  // è½¦ç«¯åŠ é€Ÿåº¦
+            bool is_chassis_acc_limit_ = true; // æ˜¯å¦è¿›è¡Œè½¦ç«¯åŠ é€Ÿåº¦é™åˆ¶
+            f32 max_acc_xy_acc_ = 2.0f;        // æœ€å¤§XYè½´çº¿åŠ é€Ÿåº¦ï¼Œå•ä½ï¼šm/s^2
+            f32 max_acc_xy_dec_ = 10.0f;       // æœ€å¤§XYè½´çº¿å‡é€Ÿåº¦ï¼Œå•ä½ï¼šm/s^2
+            f32 max_alpha_z_acc_ = 4.0f;       // æœ€å¤§zè½´è§’åŠ é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s^2
+            f32 max_alpha_z_dec_ = 6.0f;       // æœ€å¤§zè½´è§’å‡é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s^2
+            //  // è½®ç«¯è§’åŠ é€Ÿåº¦
+            bool is_wheel_alpha_limit_ = false; // æ˜¯å¦è¿›è¡Œè½®ç«¯è§’åŠ é€Ÿåº¦é™åˆ¶
+            f32 max_wheel_alpha_ = 2.0f * kPi;  // æœ€å¤§è½®å­è§’åŠ é€Ÿåº¦ï¼Œå•ä½ï¼šrad/s^2
 
-            // rot_zÖáPID²ÎÊı
-            //   // ËÙ¶È»·PID
+            // rot_zè½´PIDå‚æ•°
+            //   // é€Ÿåº¦ç¯PID
             bool is_omega_z_close_loop_ = false;
             PID_Incremental omega_z_pid_;
             u8 omega_z_pid_period_ = 1;
             u8 omega_z_pid_count_ = 0;
-            //   // Î»ÖÃ»·PID
+            //   // ä½ç½®ç¯PID
             PID_Position rot_z_pid_;
             u8 rot_z_pid_period_ = 1;
             u8 rot_z_pid_count_ = 0;
-            f32 max_lock_to_rot_z_radio_ = 1.0f;      // ×î´ó¹Ì¶¨µ½rot_z×ª¶¯ÏµÊı£¬µ¥Î»£ºrad/s
-            u32 lock_now_rot_z_shift_count_ = 0.;     // ¹Ì¶¨µ±Ç°rot_z¼ÆÊıÆ÷
-            u32 lock_now_rot_z_shift_time_ms_ = 1000; // ¹Ì¶¨µ±Ç°rot_z»º³åÊ±¼ä£¬µ¥Î»£ººÁÃë
+            f32 max_lock_to_rot_z_radio_ = 1.0f;      // æœ€å¤§å›ºå®šåˆ°rot_zè½¬åŠ¨ç³»æ•°ï¼Œå•ä½ï¼šrad/s
+            u32 lock_now_rot_z_shift_count_ = 0.;     // å›ºå®šå½“å‰rot_zè®¡æ•°å™¨
+            u32 lock_now_rot_z_shift_time_ms_ = 1000; // å›ºå®šå½“å‰rot_zç¼“å†²æ—¶é—´ï¼Œå•ä½ï¼šæ¯«ç§’
 
-            // µ÷ÊÔ²ÎÊı
-            bool is_debug_ = false; // ÊÇ·ñ¿ªÆôµ÷ÊÔÄ£Ê½
-            u8 debug_mode_ = 0;     // µ÷ÊÔÄ£Ê½
+            // è°ƒè¯•å‚æ•°
+            bool is_debug_ = false; // æ˜¯å¦å¼€å¯è°ƒè¯•æ¨¡å¼
+            u8 debug_mode_ = 0;     // è°ƒè¯•æ¨¡å¼
 
-            u8 debug_wheel_index_ = 2;    // µ÷ÊÔÂÖ×ÓË÷Òı
-            f32 debug_input_ = 90.0f;     // µ÷ÊÔÊäÈë
-            f32 debug_lock_rot_z_ = 0.0f; // µ÷ÊÔ¹Ì¶¨rot_z
+            u8 debug_wheel_index_ = 2;    // è°ƒè¯•è½®å­ç´¢å¼•
+            f32 debug_input_ = 90.0f;     // è°ƒè¯•è¾“å…¥
+            f32 debug_lock_rot_z_ = 0.0f; // è°ƒè¯•å›ºå®šrot_z
 
-            bool is_step_signal_ = false; // ÊÇ·ñÊ¹ÓÃ½×Ô¾ĞÅºÅ
+            bool is_step_signal_ = false; // æ˜¯å¦ä½¿ç”¨é˜¶è·ƒä¿¡å·
 
-            bool is_sine_ = false; // ÊÇ·ñÊ¹ÓÃÕıÏÒĞÅºÅ
+            bool is_sine_ = false; // æ˜¯å¦ä½¿ç”¨æ­£å¼¦ä¿¡å·
             f32 sine_amplitude_ = 0.0f;
             f32 sine_frequency_ = 0.1f;
             f32 sine_offset_ = 0.0f;
 
-            bool is_wheel_speed_mode_ = false;   // ÊÇ·ñÎªÂÖ×ÓËÙ¶ÈÄ£Ê½
-            bool is_wheel_current_mode_ = false; // ÊÇ·ñÎªÂÖ×ÓµçÁ÷Ä£Ê½
+            bool is_wheel_speed_mode_ = false;   // æ˜¯å¦ä¸ºè½®å­é€Ÿåº¦æ¨¡å¼
+            bool is_wheel_current_mode_ = false; // æ˜¯å¦ä¸ºè½®å­ç”µæµæ¨¡å¼
 
-            Debug_Printf debug_uart_ = Debug_Printf(&huart8); // µ÷ÊÔ´®¿Ú
-            u8 printf_period_ms_ = 5;                         // ´®¿Úµ÷ÊÔ´òÓ¡ÖÜÆÚ£¬µ¥Î»£ººÁÃë
-            u8 printf_period_count_ = 0;                      // ´®¿Úµ÷ÊÔ´òÓ¡ÖÜÆÚ¼ÆÊıÆ÷
+            Debug_Printf debug_uart_ = Debug_Printf(&huart8); // è°ƒè¯•ä¸²å£
+            u8 printf_period_ms_ = 5;                         // ä¸²å£è°ƒè¯•æ‰“å°å‘¨æœŸï¼Œå•ä½ï¼šæ¯«ç§’
+            u8 printf_period_count_ = 0;                      // ä¸²å£è°ƒè¯•æ‰“å°å‘¨æœŸè®¡æ•°å™¨
 
             RmPocketData_t airjoy_data_;
 
@@ -378,61 +378,80 @@ namespace jia
         {
         public:
             /* ----------------------------------------------------------------- */
-            // ¶ÔÍâ¿ØÖÆ½Ó¿Ú
-            //  // Ã¶¾ÙÀàĞÍ¶¨Òå
+            // å¯¹å¤–æ§åˆ¶æ¥å£
+            //  // æšä¸¾ç±»å‹å®šä¹‰
             enum class Result
             {
                 kOk,
                 kError,
             };
+
             enum class Coordinate
             {
                 kBody,
                 kWorld,
             };
-            //  // ÉèÖÃµçÁ÷Îª0
+
+            enum class IdlePostureMode
+            {
+                kHoldLast,
+                kXPark,
+            };
+
+            enum class HomingState : u8
+            {
+                kIdle,
+                kSearch,
+                kEdgeDetected,
+                kOffsetApply,
+                kContinuousAngleReady,
+                kReady,
+                kFault,
+            };
+
+            //  // è®¾ç½®ç”µæµä¸º0
             Result setZeroCurrent();
-            //  // ÉèÖÃËÙ¶È
+            //  // è®¾ç½®é€Ÿåº¦
             Result setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z);
             Result setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
             Result setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z);
-            //  // ¶ÁÈ¡ËÙ¶È
+            //  // è¯»å–é€Ÿåº¦
             Robot_Twist getBodySpeed() const;
             Robot_Twist getWorldSpeed() const;
             /* ----------------------------------------------------------------- */
 
-            // Ä¬ÈÏ¹¹ÔìºÍÎö¹¹º¯Êı
+            // é»˜è®¤æ„é€ å’Œææ„å‡½æ•°
             Chassis() = default;
             ~Chassis() = default;
 
-            // ÉèÖÃÂÖ×ÓÅ¤¾Ø×ÔÓÉÄ£Ê½
+            // è®¾ç½®è½®å­æ‰­çŸ©è‡ªç”±æ¨¡å¼
             Result setWheelTorqueFreeMode();
-            // ÉèÖÃÄ¿±êËÙ¶ÈÄ£Ê½
-            //  // ×ÔÉí×ø±êÏµ
-            //  //  // ËÙ¶È
+            // è®¾ç½®ç›®æ ‡é€Ÿåº¦æ¨¡å¼
+            //  // è‡ªèº«åæ ‡ç³»
+            //  //  // é€Ÿåº¦
             Result setTargetBodySpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
-            //  //  // ¹Ì¶¨µ±Ç°rot_z
+            //  //  // å›ºå®šå½“å‰rot_z
             Result setTargetBodySpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
-            //  //  // ÎŞÊäÈëomega_zÊ±¹Ì¶¨µ±Ç°rot_z
+            //  //  // æ— è¾“å…¥omega_zæ—¶å›ºå®šå½“å‰rot_z
             Result setTargetBodySpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
-            //  //  // ¹Ì¶¨µ½rot_z
+            //  //  // å›ºå®šåˆ°rot_z
             Result setTargetBodySpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
-            //  // ÊÀ½ç×ø±êÏµ
-            //  //  // ËÙ¶È
+            //  // ä¸–ç•Œåæ ‡ç³»
+            //  //  // é€Ÿåº¦
             Result setTargetWorldSpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
-            //  //  // ¹Ì¶¨µ±Ç°rot_z
+            //  //  // å›ºå®šå½“å‰rot_z
             Result setTargetWorldSpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
-            //  //  // ÎŞÊäÈëomega_zÊ±¹Ì¶¨µ±Ç°rot_z
+            //  //  // æ— è¾“å…¥omega_zæ—¶å›ºå®šå½“å‰rot_z
             Result setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
-            //  //  // ¹Ì¶¨µ½rot_z
+            //  //  // å›ºå®šåˆ°rot_z
             Result setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
-            // ¶ÁÈ¡Ä¿±êËÙ¶È
+            // è¯»å–ç›®æ ‡é€Ÿåº¦
             f32 getTargetBodyVelX() const;
             f32 getTargetBodyVelY() const;
             f32 getTargetWorldVelX() const;
             f32 getTargetWorldVelY() const;
             f32 getTargetOmegaZ() const;
-            // ¶ÁÈ¡µ±Ç°ËÙ¶È
+            // è¯»å–å½“å‰é€Ÿåº¦
             f32 getCurrentBodyVelX() const;
             f32 getCurrentBodyVelY() const;
             f32 getCurrentWorldVelX() const;
@@ -440,40 +459,80 @@ namespace jia
             f32 getCurrentOmegaZ() const;
 
         public:
-            struct InitConfig
+            struct WheelInitConfig
             {
-                M3508 *steer_motor_h[4] = {nullptr};
-                Motor_Base *drive_motor_h[4] = {nullptr};
+                f32 pos_x_m = 0.0f;
+                f32 pos_y_m = 0.0f;
+                f32 theta_oa_to_owi_deg = 0.0f;
+                f32 steer_motor_sign = 1.0f;
+                f32 drive_motor_sign = 1.0f;
+                bool homing_enabled = false;
+                bool homing_sensor_active_high = true;
+                void *homing_gpio_port = nullptr;
+                u16 homing_gpio_pin = 0;
+                f32 homing_search_rpm = 10.0f;
+                f32 homing_zero_offset_deg = 0.0f;
+                f32 homing_timeout_s = 5.0f;
             };
 
-            // ³õÊ¼»¯
+            struct InitConfig
+            {
+                Motor_Base *steer_motor_h[4] = {nullptr};
+                Motor_Base *drive_motor_h[4] = {nullptr};
+                f32 wheel_radius_m = 0.075f;
+                f32 max_vel_x_m_s = 4.0f;
+                f32 max_vel_y_m_s = 4.0f;
+                f32 max_omega_z_rad_s = 8.0f;
+                f32 max_acc_xy_acc_m_s2 = 4.0f;
+                f32 max_acc_xy_dec_m_s2 = 8.0f;
+                f32 max_alpha_z_acc_rad_s2 = 6.0f;
+                f32 max_alpha_z_dec_rad_s2 = 10.0f;
+                f32 max_drive_omega_rad_s = rpmToRadsF32(800.0f);
+                f32 max_drive_alpha_rad_s2 = 120.0f;
+                f32 max_steer_rate_rad_s = 8.0f;
+                f32 max_steer_alpha_rad_s2 = 60.0f;
+                f32 stationary_speed_epsilon_m_s = 0.01f;
+                bool enable_cosine_compensation = true;
+                f32 max_lock_to_rot_z_rad_s = 4.0f;
+                u32 lock_now_rot_z_shift_time_ms = 1000;
+                IdlePostureMode idle_posture_mode = IdlePostureMode::kHoldLast;
+                WheelInitConfig wheels[4];
+            };
+
+            // åˆå§‹åŒ–
             void init(InitConfig &config);
+            Result startHoming();
+            bool isHomingDone() const;
+            void setIdlePostureMode(IdlePostureMode mode);
 
         private:
             struct WheelConfig
             {
-                f32 pos_x;                           // µ¥Î»£ºÃ×
-                f32 pos_y;                           // µ¥Î»£ºÃ×
-                f32 rot_z_deg;                       // µ¥Î»£º¶È
-                M3508 *steer_motor_h = nullptr;      // ¶æÏòµç»ú¾ä±ú
-                Motor_Base *drive_motor_h = nullptr; // ÂÖÏòµç»ú¾ä±ú
-
-                f32 sin_rot_z;
-                f32 cos_rot_z;
-                f32 eq_radius; // µÈĞ§°ë¾¶£¬equivalent radius£¬¿ÉÒÔÊÇ¸ºÖµ£¬µ¥Î»£ºÃ×
-
-                f32 abs_sin_rot_z; // ÕıÏÒÖµµÄ¾ø¶ÔÖµ
-                f32 abs_cos_rot_z; // ÓàÏÒÖµµÄ¾ø¶ÔÖµ
-                f32 abs_eq_radius; // µÈĞ§°ë¾¶µÄ¾ø¶ÔÖµ£¬µ¥Î»£ºÃ×
-
-                M3508 *&smh = steer_motor_h;
-                Motor_Base *&dmh = drive_motor_h;
-                f32 &s = sin_rot_z;
-                f32 &c = cos_rot_z;
-                f32 &eqr = eq_radius;
-                f32 &as = abs_sin_rot_z;
-                f32 &ac = abs_cos_rot_z;
-                f32 &aeqr = abs_eq_radius;
+                f32 pos_x_m = 0.0f;
+                f32 pos_y_m = 0.0f;
+                f32 theta_oa_to_owi_rad = 0.0f;
+                f32 steer_motor_sign = 1.0f;
+                f32 drive_motor_sign = 1.0f;
+                Motor_Base *steer_motor_h = nullptr;
+                Motor_Base *drive_motor_h = nullptr;
+                bool homing_enabled = false;
+                bool homing_sensor_active_high = true;
+                void *homing_gpio_port = nullptr;
+                u16 homing_gpio_pin = 0;
+                f32 homing_search_rpm = 10.0f;
+                f32 homing_zero_offset_rad = 0.0f;
+                f32 homing_timeout_s = 5.0f;
+                HomingState homing_state = HomingState::kIdle;
+                bool homing_last_sensor_active = false;
+                bool homing_zero_valid = false;
+                f32 homing_elapsed_s = 0.0f;
+                f32 homing_runtime_zero_offset_rad = 0.0f;
+                f32 corrected_steer_motor_total_angle_rad = 0.0f;
+                f32 corrected_drive_omega_rad_s = 0.0f;
+                f32 target_steer_motor_total_angle_rad = 0.0f;
+                f32 target_drive_omega_rad_s = 0.0f;
+                f32 steer_target_velocity_rad_s = 0.0f;
+                bool flipped_drive_direction = false;
             };
 
             enum class Mode
@@ -491,193 +550,116 @@ namespace jia
 
             struct ModeFlag
             {
-                bool is_wheel_torque_free = false;    // ÊÇ·ñÎªÂÖ×ÓÅ¤¾Ø×ÔÓÉÄ£Ê½
-                Coordinate coord = Coordinate::kBody; // ËÙ¶È×ø±êÏµ
-                bool is_lock_now_rot_z;               // ÊÇ·ñ¹Ì¶¨µ±Ç°rot_z
-                bool is_lock_to_rot_z;                // ÊÇ·ñ¹Ì¶¨µ½rot_z
+                bool is_wheel_torque_free = false; // æ˜¯å¦ä¸ºè½®å­æ‰­çŸ©è‡ªç”±æ¨¡å¼
+                bool is_world_speed_mode = false;  // æ˜¯å¦ä¸ºä¸–ç•Œåæ ‡ç³»é€Ÿåº¦æ¨¡å¼
+                bool is_lock_now_rot_z = false;    // æ˜¯å¦å›ºå®šå½“å‰rot_z
+                bool is_lock_to_rot_z = false;     // æ˜¯å¦å›ºå®šåˆ°rot_z
             };
 
             struct InputTargetData
             {
-                f32 vel_x;
-                f32 vel_y;
-                f32 omega_z;
-                f32 rot_z;
-
-                Mode mode;
+                f32 vel_x = 0.0f;
+                f32 vel_y = 0.0f;
+                f32 omega_z = 0.0f;
+                f32 rot_z = 0.0f;
+                Mode mode = Mode::kWheelTorqueFreeMode;
             };
 
             struct Data
             {
-                f32 vel_x;   // xÖáËÙ¶È£¬µ¥Î»£ºÃ×/Ãë
-                f32 vel_y;   // yÖáËÙ¶È£¬µ¥Î»£ºÃ×/Ãë
-                f32 omega_z; // zÖá½ÇËÙ¶È£¬µ¥Î»£ºrad/s
-
-                f32 acc_x;   // xÖá¼ÓËÙ¶È£¬µ¥Î»£ºÃ×/Ãë^2
-                f32 acc_y;   // yÖá¼ÓËÙ¶È£¬µ¥Î»£ºÃ×/Ãë^2
-                f32 alpha_z; // zÖá½Ç¼ÓËÙ¶È£¬µ¥Î»£ºrad/s^2
-
-                f32 rot_z; // zÖá³¯Ïò½Ç¶È£¬µ¥Î»£ºrad
-
-                f32 w1_steer_angle; // ¶æÏòÂÖ×Ó1½Ç¶È£¬µ¥Î»£ºrad
-                f32 w2_steer_angle; // ¶æÏòÂÖ×Ó2½Ç¶È£¬µ¥Î»£ºrad
-                f32 w3_steer_angle; // ¶æÏòÂÖ×Ó3½Ç¶È£¬µ¥Î»£ºrad
-                f32 w4_steer_angle; // ¶æÏòÂÖ×Ó4½Ç¶È£¬µ¥Î»£ºrad
-
-                f32 w1_drive_omega; // º½ÏòÂÖ×Ó1½ÇËÙ¶È£¬µ¥Î»£ºrad/s
-                f32 w2_drive_omega; // º½ÏòÂÖ×Ó2½ÇËÙ¶È£¬µ¥Î»£ºrad/s
-                f32 w3_drive_omega; // º½ÏòÂÖ×Ó3½ÇËÙ¶È£¬µ¥Î»£ºrad/s
-                f32 w4_drive_omega; // º½ÏòÂÖ×Ó4½ÇËÙ¶È£¬µ¥Î»£ºrad/s
+                f32 vel_x = 0.0f;
+                f32 vel_y = 0.0f;
+                f32 omega_z = 0.0f;
+                f32 acc_x = 0.0f;
+                f32 acc_y = 0.0f;
+                f32 alpha_z = 0.0f;
+                f32 rot_z = 0.0f;
+                f32 steer_angle_oa_rad[4] = {0.0f};
+                f32 drive_omega_rad_s[4] = {0.0f};
             };
 
-            enum class DebugSignalMode : u8
-            {
-                kJoystick = 0,
-                kStep = 1,
-                kSine = 2,
-                kHandInput = 3,
-            };
-
-            // ´´½¨Ïß³Ì
+            // åˆ›å»ºçº¿ç¨‹
             static void createThread(void *arg);
-            // ÔËĞĞÏß³Ìº¯Êı
+            // è¿è¡Œçº¿ç¨‹å‡½æ•°
             void runThread(void *arg);
 
-            // ÊäÈëÄ¿±êÊı¾İ
-            InputTargetData input_target_data_;
-            InputTargetData &itd_ = input_target_data_;
-            // Ä¿±êÊı¾İ
-            Data target_data_;
-            Data &td_ = target_data_;
-            // ¹æ»®Êı¾İ
-            Data planned_data_; // ¹æ»®Êı¾İ
-            Data &pd_ = planned_data_;
-            Data last_planned_data_; // ÉÏÒ»´Î¹æ»®Êı¾İ
-            Data &lpd_ = last_planned_data_;
-            // µ±Ç°Êı¾İ
-            Data current_data_;
-            Data &cd_ = current_data_;
-
-            // Ä£Ê½±êÖ¾Î»
-            ModeFlag current_mode_flag_;
-            ModeFlag &cmf_ = current_mode_flag_;
-
-            // IMUÊı¾İ
-            f32 input_hwt_rot_z_;
-            f32 &ihrz_ = input_hwt_rot_z_;
-            f32 input_hwt_omega_z_;
-            f32 &ihoz_ = input_hwt_omega_z_;
-
-            // ÏµÍ³²ÎÊı
-            constexpr static u8 period_ms_ = 1;                  // ¿ØÖÆÖÜÆÚ£¬µ¥Î»£ººÁÃë
-            TickType_t time_ms_;                                 // µ±Ç°Ê±¼ä£¬µ¥Î»£ººÁÃë
-            constexpr static f32 period_ = period_ms_ / 1000.0f; // ¿ØÖÆÖÜÆÚ£¬µ¥Î»£ºÃë
-
-            // µ×ÅÌ²ÎÊı
-            //  // ÂÖ×Ó°ë¾¶
-            constexpr static f32 steer_wheel_radius_ = 0.075f; // ¶æÏòÂÖ×Ó°ë¾¶£¨µ¥Î»£ºÃ×£©
-            const f32 &swr_ = steer_wheel_radius_;
-            //  // ÂÖ×ÓÅäÖÃ
-            WheelConfig wheel_config_[4];
-            WheelConfig &w0_ = wheel_config_[0];
-            WheelConfig &w1_ = wheel_config_[1];
-            WheelConfig &w2_ = wheel_config_[2];
-            WheelConfig &w3_ = wheel_config_[3];
-
-            // ËÙ¶ÈÏŞÖÆ²ÎÊı
-            //  // ³µ¶ËËÙ¶ÈÏŞÖÆ²ÎÊı
-            f32 max_vel_x_ = 1000.0f;   // ×î´óxÖáËÙ¶È£¬µ¥Î»£ºÃ×/Ãë
-            f32 max_vel_y_ = 1000.0f;   // ×î´óyÖáËÙ¶È£¬µ¥Î»£ºÃ×/Ãë
-            f32 max_omega_z_ = 1000.0f; // ×î´ózÖá½ÇËÙ¶È£¬µ¥Î»£ºrad/s
-            //  // ÂÖ¶ËËÙ¶ÈÏŞÖÆ²ÎÊı
-            bool is_wheel_omega_limit_ = true;            // ÊÇ·ñ½øĞĞÂÖ¶Ë½ÇËÙ¶ÈÏŞÖÆ
-            f32 max_wheel_omega_ = rpmToRadsF32(1000.0f); // ×î´óÂÖ×Ó½ÇËÙ¶È£¬µ¥Î»£ºrad/s
-            f32 max_wheel_vel_ = 0.0f;                    // ×î´óÂÖ×ÓÏßËÙ¶È£¬µ¥Î»£ºÃ×/Ãë
-
-            // ¼ÓËÙ¶ÈÏŞÖÆ²ÎÊı
-            //  // ³µ¶Ë¼ÓËÙ¶ÈÏŞÖÆ²ÎÊı
-            bool is_chassis_acc_limit_ = true; // ÊÇ·ñ½øĞĞ³µ¶Ë¼ÓËÙ¶ÈÏŞÖÆ
-            f32 max_acc_xy_acc_ = 100.0f;      // ×î´óXYÖáÏß¼ÓËÙ¶È£¬µ¥Î»£ºm/s^2
-            f32 max_acc_xy_dec_ = 100.0f;      // ×î´óXYÖáÏß¼õËÙ¶È£¬µ¥Î»£ºm/s^2
-            f32 max_alpha_z_acc_ = 100.0f;     // ×î´ózÖá½Ç¼ÓËÙ¶È£¬µ¥Î»£ºrad/s^2
-            f32 max_alpha_z_dec_ = 100.0f;     // ×î´ózÖá½Ç¼õËÙ¶È£¬µ¥Î»£ºrad/s^2
-
-            // µ÷ÊÔ²ÎÊı
-            bool is_debug_ = true; // ÊÇ·ñ¿ªÆôµ÷ÊÔÄ£Ê½
-            u8 debug_mode_ = 0;    // µ÷ÊÔÄ£Ê½
-
-            u8 debug_wheel_index_ = 0; // µ÷ÊÔÂÖ×ÓË÷Òı
-
-            bool is_step_signal_ = false; // ÊÇ·ñÊ¹ÓÃ½×Ô¾ĞÅºÅ
-
-            bool is_sine_ = false; // ÊÇ·ñÊ¹ÓÃÕıÏÒ²¨
-            f32 sine_amplitude_ = 0.0f;
-            f32 sine_frequency_ = 0.1f;
-            f32 sine_offset_ = 0.0f;
-
-            bool is_hand_input_ = false; // ÊÇ·ñÊ¹ÓÃÊÖ¶¯ÊäÈëĞÅºÅ
-            f32 hand_input_ = 0.0f;      // ÊÖ¶¯ÊäÈëĞÅºÅ
-
-            DebugSignalMode steer_signal_mode_ = DebugSignalMode::kJoystick; // 0Ò¡¸Ë 1½×Ô¾ 2ÕıÏÒ 3ÊÖÊä
-            DebugSignalMode drive_signal_mode_ = DebugSignalMode::kJoystick; // 0Ò¡¸Ë 1½×Ô¾ 2ÕıÏÒ 3ÊÖÊä
-            f32 steer_hand_input_ = 0.0f; // ¶æÏòÊÖ¶¯ÊäÈë
-            f32 drive_hand_input_ = 0.0f; // ÂÖÏòÊÖ¶¯ÊäÈë
-            f32 debug_step_threshold_ = 0.3f; // ½×Ô¾´¥·¢ãĞÖµ
-
-            f32 debug_input_ = 180.0f;      // ¶æÏòµ÷ÊÔÊäÈë
-            f32 drive_debug_input_ = 1000.0f; // ÂÖÏòµ÷ÊÔÊäÈë£¬µ¥Î»£ºrpm
-            f32 debug_lock_rot_z_ = 0.0f; // µ÷ÊÔ¹Ì¶¨rot_z
-            bool is_drive_force_brake_enabled_ = false; // ÊÇ·ñÇ¿ÖÆÂÖÏòÉ²³µ
-            bool is_drive_zero_rpm_brake_enabled_ = true; // Ä¿±êrpm½Ó½ü0Ê±ÊÇ·ñ×Ô¶¯É²³µ
-            f32 drive_force_brake_current_ = 70000.0f; // Ç¿ÖÆÉ²³µµçÁ÷£¬µ¥Î»£ºmA
-            f32 drive_zero_rpm_brake_current_ = 70000.0f; // ÁãËÙ×Ô¶¯É²³µµçÁ÷£¬µ¥Î»£ºmA
-            f32 drive_zero_rpm_threshold_rpm_ = 30.0f; // ×Ô¶¯É²³µãĞÖµ£¬µ¥Î»£ºrpm
-            bool is_wheel_single_position_mode_ = false; // ÊÇ·ñÎªÂÖ×Óµ¥È¦Î»ÖÃÄ£Ê½
-            bool is_wheel_total_position_mode_ = false; // ÊÇ·ñÎªÂÖ×Ó¶àÈ¦Î»ÖÃÄ£Ê½
-            bool is_wheel_speed_mode_ = false;           // ÊÇ·ñÎªÂÖ×ÓËÙ¶ÈÄ£Ê½
-            bool is_wheel_current_mode_ = false;         // ÊÇ·ñÎªÂÖ×ÓµçÁ÷Ä£Ê½
-
-            Debug_Printf debug_uart_ = Debug_Printf(&huart8); // µ÷ÊÔ´®¿Ú
-            u8 printf_period_ms_ = 1;                         // ´®¿Úµ÷ÊÔ´òÓ¡ÖÜÆÚ£¬µ¥Î»£ººÁÃë
-            u8 printf_period_count_ = 0;                      // ´®¿Úµ÷ÊÔ´òÓ¡ÖÜÆÚ¼ÆÊıÆ÷
-
-            RmPocketData_t airjoy_data_; // ´ÓAirJoy½ÓÊÕµÄÊı¾İ
-
-        private:
-            void isDebugMode();
-            f32 buildDebugSetpoint(DebugSignalMode mode, f32 axis, f32 amplitude, f32 hand_input) const;
-
+            // è¾“å…¥ç›®æ ‡æ•°æ®
             void clearInputTargetData();
+            void setModeFlag();
+            void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
+            void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
+            void isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z);
+            void isLockToRotZ(bool is_lock, f32 tar_rot_z, f32 cur_rot_z, f32 &out_rot_z, f32 omega_z, f32 &out_omega_z);
+            void clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
+            void limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z);
+            void updateWheelFeedback();
+            bool updateHomingState(WheelConfig &wheel);
+            bool readHomingSensor(const WheelConfig &wheel) const;
+            f32 readSteerMotorRawTotalAngleRad(const WheelConfig &wheel) const;
+            f32 readDriveMotorOmegaRadS(const WheelConfig &wheel) const;
+            f32 readCorrectedSteerMotorTotalAngleRad(const WheelConfig &wheel) const;
+            void setSteerMotorTargetCurrent(WheelConfig &wheel, f32 current);
+            void setSteerMotorTargetRPM(WheelConfig &wheel, f32 rpm);
+            void setSteerMotorTargetTotalAngleRad(WheelConfig &wheel, f32 corrected_local_total_angle_rad);
+            void setDriveMotorTargetOmegaRadS(WheelConfig &wheel, f32 drive_omega_rad_s);
+            f32 limitPositionSecondOrder(f32 current_value, f32 current_rate, f32 target_value, f32 max_rate, f32 max_accel, f32 dt_s, f32 &next_rate) const;
+            f32 limitValueWithAcceleration(f32 current_value, f32 target_value, f32 max_accel, f32 dt_s) const;
+            f32 wrapToPi(f32 angle_rad) const;
+            f32 wrapTo2Pi(f32 angle_rad) const;
+            f32 shortestAngularDistance(f32 from_rad, f32 to_rad) const;
+            f32 nearestEquivalentAngle(f32 current_rad, f32 target_mod_rad) const;
+            f32 magnitude2D(f32 x, f32 y) const;
+            f32 getXParkAngle(const WheelConfig &wheel) const;
+            void computeModuleCommands(const Data &command_data);
+            void applyModuleCommands(bool all_homed);
+            void updateCurrentData(bool all_homed);
+            bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
+            bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
 
-            void setSteerWheelTargetRpm(WheelConfig &wheel, f32 rpm);
-            void setSteerWheelTargetCurrent(WheelConfig &wheel, f32 current);
-            void setSteerWheelTargetAngleDeg(WheelConfig &wheel, f32 angle_deg);
-            void setSteerWheelTargetTotalAngleDeg(WheelConfig &wheel, f32 total_angle_deg);
-            f32 getSteerWheelTargetAngleDeg(const WheelConfig &wheel) const;
-            f32 getSteerWheelTargetCurrent(const WheelConfig &wheel) const;
-            f32 getSteerWheelCurrentAngleDeg(const WheelConfig &wheel) const;
-            f32 getSteerWheelCurrentAngleDegCalibrated(const WheelConfig &wheel) const;
-            f32 getSteerWheelCurrentRPM(const WheelConfig &wheel) const;
-            f32 getSteerWheelCurrentCurrent(const WheelConfig &wheel) const;
-            f32 getSteerWheelCurrentTotalAngleDegCalibrated(const WheelConfig &wheel) const;
-            void setDriveWheelBrake(WheelConfig &wheel, f32 brake_current);
-            void setDriveWheelTargetRpm(WheelConfig &wheel, f32 rpm);
-            void setDriveWheelTargetCurrent(WheelConfig &wheel, f32 current);
-            void applyDriveWheelDebugCommand(WheelConfig &wheel, f32 drive_target_rpm);
-            f32 getDriveWheelTargetRPM(const WheelConfig &wheel) const;
-            f32 getDriveWheelCurrentRPM(const WheelConfig &wheel) const;
-            f32 getDriveWheelCurrentCurrent(const WheelConfig &wheel) const;
+            InputTargetData input_target_data_;
+            Data target_data_;
+            Data planned_data_;
+            Data last_planned_data_;
+            Data current_data_;
 
-        private:
-            bool photogate_signal_ = false;
-            bool last_photogate_signal_ = false;
+            // æ¨¡å¼æ ‡å¿—ä½
+            ModeFlag current_mode_flag_;
 
-            bool is_use_cailbration_angle_ = false; // ÊÇ·ñÊ¹ÓÃĞ£×¼½Ç¶È
+            // IMUæ•°æ®
+            f32 input_hwt_rot_z_ = 0.0f;
+            f32 input_hwt_omega_z_ = 0.0f;
 
-            bool is_power_on_cailbration_ = false; // ÊÇ·ñ¿ªÆôĞ£×¼
-            bool is_doing_cailbration_ = false;    // ÊÇ·ñÕıÔÚĞ£×¼ÖĞ
-            f32 cailbration_rpm_ = 20.0f;           // Ğ£×¼rpm£¬µ¥Î»£ºrpm/s
-            f32 cailbration_angle_deg_ = 0.0f;     // Ğ£×¼²Î¿¼×ËÌ¬½Ç¶È£¬µ¥Î»£ºdeg
+            // ç³»ç»Ÿå‚æ•°
+            constexpr static u8 period_ms_ = 1;                  // æ§åˆ¶å‘¨æœŸï¼Œå•ä½ï¼šæ¯«ç§’
+            TickType_t time_ms_ = 0;                             // å½“å‰æ—¶é—´ï¼Œå•ä½ï¼šæ¯«ç§’
+            constexpr static f32 period_ = period_ms_ / 1000.0f; // æ§åˆ¶å‘¨æœŸï¼Œå•ä½ï¼šç§’
+
+            // åº•ç›˜å‚æ•°
+            f32 wheel_radius_m_ = 0.075f;
+            f32 max_vel_x_ = 4.0f;
+            f32 max_vel_y_ = 4.0f;
+            f32 max_omega_z_ = 8.0f;
+            f32 max_acc_xy_acc_ = 4.0f;
+            f32 max_acc_xy_dec_ = 8.0f;
+            f32 max_alpha_z_acc_ = 6.0f;
+            f32 max_alpha_z_dec_ = 10.0f;
+            f32 max_drive_omega_rad_s_ = rpmToRadsF32(800.0f);
+            f32 max_drive_alpha_rad_s2_ = 120.0f;
+            f32 max_steer_rate_rad_s_ = 8.0f;
+            f32 max_steer_alpha_rad_s2_ = 60.0f;
+            f32 stationary_speed_epsilon_m_s_ = 0.01f;
+            bool enable_cosine_compensation_ = true;
+            IdlePostureMode idle_posture_mode_ = IdlePostureMode::kHoldLast;
+            bool homing_start_request_ = false;
+            WheelConfig wheel_config_[4];
+            f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};
+            f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};
+            PID_Position rot_z_pid_;
+            u8 rot_z_pid_period_ = 1;
+            u8 rot_z_pid_count_ = 0;
+            f32 max_lock_to_rot_z_rad_s_ = 4.0f;
+            u32 lock_now_rot_z_shift_count_ = 0;
+            u32 lock_now_rot_z_shift_time_ms_ = 1000;
         };
 
         using Result = jia::FourSteerChassis::Chassis::Result;
@@ -689,38 +671,20 @@ namespace jia
 
         inline Result Chassis::setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
         {
-            if (coord == Coordinate::kBody)
-            {
-                return setTargetBodySpeedMode(vel_x, vel_y, omega_z);
-            }
-            else
-            {
-                return setTargetWorldSpeedMode(vel_x, vel_y, omega_z);
-            }
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedMode(vel_x, vel_y, omega_z)
+                                                : setTargetWorldSpeedMode(vel_x, vel_y, omega_z);
         }
 
         inline Result Chassis::setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
         {
-            if (coord == Coordinate::kBody)
-            {
-                return setTargetBodySpeedLockNowRotZWithNoOmegaZMode(vel_x, vel_y, omega_z);
-            }
-            else
-            {
-                return setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(vel_x, vel_y, omega_z);
-            }
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockNowRotZWithNoOmegaZMode(vel_x, vel_y, omega_z)
+                                                : setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(vel_x, vel_y, omega_z);
         }
 
         inline Result Chassis::setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z)
         {
-            if (coord == Coordinate::kBody)
-            {
-                return setTargetBodySpeedLockToRotZMode(vel_x, vel_y, rot_z);
-            }
-            else
-            {
-                return setTargetWorldSpeedLockToRotZMode(vel_x, vel_y, rot_z);
-            }
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockToRotZMode(vel_x, vel_y, rot_z)
+                                                : setTargetWorldSpeedLockToRotZMode(vel_x, vel_y, rot_z);
         }
 
         inline Robot_Twist Chassis::getBodySpeed() const
@@ -740,160 +704,14 @@ namespace jia
             world_speed.vz = getTargetOmegaZ();
             return world_speed;
         }
-
-        inline void Chassis::clearInputTargetData()
-        {
-            itd_.mode = Mode::kWheelTorqueFreeMode;
-            itd_.vel_x = 0.0f;
-            itd_.vel_y = 0.0f;
-            itd_.omega_z = 0.0f;
-            itd_.rot_z = 0.0f;
-        }
-
-        inline Result Chassis::setWheelTorqueFreeMode()
-        {
-            clearInputTargetData();
-            itd_.mode = Mode::kWheelTorqueFreeMode;
-            return Result::kOk;
-        }
-
-        inline Result Chassis::setTargetBodySpeedMode(f32 vel_x, f32 vel_y, f32 omega_z)
-        {
-            itd_.mode = Mode::kBodySpeedMode;
-            itd_.vel_x = vel_x;
-            itd_.vel_y = vel_y;
-            itd_.omega_z = omega_z;
-            return Result::kOk;
-        }
-
-        inline Result Chassis::setTargetBodySpeedLockNowRotZMode(f32 vel_x, f32 vel_y)
-        {
-            itd_.mode = Mode::kBodySpeedLockNowRotZMode;
-            itd_.vel_x = vel_x;
-            itd_.vel_y = vel_y;
-            return Result::kOk;
-        }
-
-        inline Result Chassis::setTargetBodySpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z)
-        {
-            itd_.mode = Mode::kBodySpeedLockNowRotZWithNoOmegaZMode;
-            itd_.vel_x = vel_x;
-            itd_.vel_y = vel_y;
-            itd_.omega_z = omega_z;
-            return Result::kOk;
-        }
-
-        inline Result Chassis::setTargetBodySpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z)
-        {
-            itd_.mode = Mode::kBodySpeedLockToRotZMode;
-            itd_.vel_x = vel_x;
-            itd_.vel_y = vel_y;
-            itd_.rot_z = rot_z;
-            return Result::kOk;
-        }
-
-        inline Result Chassis::setTargetWorldSpeedMode(f32 vel_x, f32 vel_y, f32 omega_z)
-        {
-            itd_.mode = Mode::kWorldSpeedMode;
-            itd_.vel_x = vel_x;
-            itd_.vel_y = vel_y;
-            itd_.omega_z = omega_z;
-            return Result::kOk;
-        }
-
-        inline Result Chassis::setTargetWorldSpeedLockNowRotZMode(f32 vel_x, f32 vel_y)
-        {
-            itd_.mode = Mode::kWorldSpeedLockNowRotZMode;
-            itd_.vel_x = vel_x;
-            itd_.vel_y = vel_y;
-            return Result::kOk;
-        }
-
-        inline Result Chassis::setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z)
-        {
-            itd_.mode = Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode;
-            itd_.vel_x = vel_x;
-            itd_.vel_y = vel_y;
-            itd_.omega_z = omega_z;
-            return Result::kOk;
-        }
-
-        inline Result Chassis::setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z)
-        {
-            itd_.mode = Mode::kWorldSpeedLockToRotZMode;
-            itd_.vel_x = vel_x;
-            itd_.vel_y = vel_y;
-            itd_.rot_z = rot_z;
-            return Result::kOk;
-        }
-
-        inline f32 Chassis::getTargetBodyVelX() const
-        {
-            // TODO
-            return 0.0f;
-        }
-
-        inline f32 Chassis::getTargetBodyVelY() const
-        {
-            // TODO
-            return 0.0f;
-        }
-
-        inline f32 Chassis::getTargetWorldVelX() const
-        {
-            // TODO
-            return 0.0f;
-        }
-
-        inline f32 Chassis::getTargetWorldVelY() const
-        {
-            // TODO
-            return 0.0f;
-        }
-
-        inline f32 Chassis::getTargetOmegaZ() const
-        {
-            // TODO
-            return 0.0f;
-        }
-
-        inline f32 Chassis::getCurrentBodyVelX() const
-        {
-            // TODO
-            return 0.0f;
-        }
-
-        inline f32 Chassis::getCurrentBodyVelY() const
-        {
-            // TODO
-            return 0.0f;
-        }
-
-        inline f32 Chassis::getCurrentWorldVelX() const
-        {
-            // TODO
-            return 0.0f;
-        }
-
-        inline f32 Chassis::getCurrentWorldVelY() const
-        {
-            // TODO
-            return 0.0f;
-        }
-
-        inline f32 Chassis::getCurrentOmegaZ() const
-        {
-            // TODO
-            return 0.0f;
-        }
     }
 }
 
-#define JIA_USE_TRIO_CHASSIS 1
-#define JIA_USE_FOUR_STEER_CHASSIS 0
+#define JIA_USE_THREE_OMNI_CHASSIS 0
+#define JIA_USE_FOUR_STEER_CHASSIS 1
 
-#if JIA_USE_TRIO_CHASSIS
-using jia::TriOmniChassis::Chassis;
+#if JIA_USE_THREE_OMNI_CHASSIS
+using jia::ThreeOmniChassis::Chassis;
 #endif
 
 #if JIA_USE_FOUR_STEER_CHASSIS
