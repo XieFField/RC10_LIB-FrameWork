@@ -74,8 +74,6 @@ public:
     // 初始化底盘控制器参数并启动 RTOS 任务。
     void init()
     {
-
-
         if (this->wheels_[0] == nullptr || this->wheels_[1] == nullptr ||
             this->wheels_[2] == nullptr || this->wheels_[3] == nullptr)
             init_flag = false;
@@ -113,6 +111,8 @@ public:
     }
 
 private:
+    Vector2D control_point = {0.0f, 2.5f};
+    float err_curve=0.0f;
     int num = 0;
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
@@ -133,7 +133,6 @@ private:
     Vector2D speed = {0.0f, 0.0f};        // 合成后的底盘平移速度。
 
     Vector2D robot_pos_ = {0.0f, 0.0f}; // 当前机器人世界坐标。
-    Vector2D test_pos_ = Vector2D{2.2, 0};
     float yaw = 0.0f;    // 当前机器人航向角（度）。
     Point3D ladar_data_; // 定位系统输出的原始位姿数据。
 
@@ -157,7 +156,7 @@ private:
 
     float m_lookaheadDist = 0.3f;        // 前视距离 (单位: 米)
     float m_lookaheadDist_line = 0.3f;   // 前视距离 (单位: 米)
-    float m_lookaheadDist_curve = 0.05f; // 前视距离 (单位: 米)
+    float m_lookaheadDist_curve = 0.07f; // 前视距离 (单位: 米)
     //-----------------------------------速度规划参数----------------------------------------------------//
 
     Path_line path_line_; // 路径规划器对象。

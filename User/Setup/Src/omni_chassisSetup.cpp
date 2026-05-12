@@ -108,8 +108,13 @@ void OmniChassis_Setup::loop()
 
     case CHASSIS_AUTO_CONTROL_CB:
     {
+        num++;
+        if(num>3)
+        {
+            debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(),err_curve);
+            num=0;
+        }
         // 夹杆自动流程：触发后执行路径规划、纠偏和速度合成。
-
         if (flag == 1)
         {
             flag_reset();
@@ -391,8 +396,8 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.plan_reset();
     path_line_.Reset();
     path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_Point(Vector2D{1.0f, 0.5f}, path_param_start_);
-    path_line_.Add_Point(Vector2D{3.9f, 1.9f}, Vector2D{0.0f, 2.0f}, path_param_curve_);
+    path_line_.Add_Point(Vector2D{1.0f, 0.7f}, path_param_start_);
+    path_line_.Add_Point(Vector2D{3.3f, 1.0f}, control_point, path_param_curve_);
     //   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
     path_line_.Add_End_Point(Vector2D{4.31f, 1.88f}, path_param_end_);
 }
@@ -635,6 +640,8 @@ void OmniChassis_Setup::Path_correction(void)
 
     // 第二步：用第一步拿到的tNearest，调用你的Get_Point，拿到最近点坐标
     Vector2D nearestPt = curve.Get_Point(tNearest);
+    
+    err_curve=(nearestPt-robot_pos_).magnitude();
 
     float obj_dis = _tool_Abs((curve.Get_End_point() - robot_pos_).magnitude());
     
