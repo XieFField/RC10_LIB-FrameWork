@@ -948,6 +948,8 @@ namespace jia
 
         Chassis::Result Chassis::startHoming()
         {
+            // 回零请求只负责“拉起状态机”和清空本轮回零参考，不直接驱动电机；
+            // 真正的搜索、沿边沿捕获零位、偏置生效和完成判定都在 runThread 中按周期推进。
             homing_start_request_ = true;
             for (u8 i = 0; i < 4; ++i)
             {
@@ -1034,6 +1036,8 @@ namespace jia
 
         void Chassis::setModeFlag()
         {
+            // 将外部模式压缩成线程内使用的少量布尔标志，后续执行顺序只看这些标志，
+            // 这样可以把“世界系/车体系”“定向锁角/跟随当前角”“空转模式”解耦开。
             current_mode_flag_.is_world_speed_mode = false;
             current_mode_flag_.is_lock_now_rot_z = false;
             current_mode_flag_.is_lock_to_rot_z = false;
@@ -1095,6 +1099,8 @@ namespace jia
                 return;
             }
 
+            // “锁当前航向”不是简单地把 rot_z 固定住，而是先在用户开始施加角速度时
+            // 抓取当前机体朝向，再在后续由 PID 产生角速度闭环，让机器人保持当下姿态。
             if (omega_z == 0.0f)
             {
                 if (lock_now_rot_z_shift_count_ > 0)
@@ -1135,6 +1141,8 @@ namespace jia
                 return;
             }
 
+            // “锁到指定航向”会先限制目标角速度变化率，再用姿态 PID 生成维持/逼近该目标角度所需的 omega_z。
+            // 这样外层给出的目标角不会瞬间跳变，底盘转向更平滑。
             out_rot_z = limit1DPiAngleRateByTimeF32(tar_rot_z, cur_rot_z, period_, max_lock_to_rot_z_rad_s_);
             if (rot_z_pid_count_ >= rot_z_pid_period_)
             {
@@ -1157,6 +1165,8 @@ namespace jia
 
         void Chassis::limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z)
         {
+            // 规划层限速使用“对称加减速”约束：目标值不变，但每周期只允许按加/减速度上限逼近，
+            // 这是比简单 clamp 更平滑的速度整形，避免规划速度台阶过大。
             out_vel_x = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_x, last_planned_data_.vel_x, period_, max_acc_xy_acc_, max_acc_xy_dec_);
             out_vel_y = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_y, last_planned_data_.vel_y, period_, max_acc_xy_acc_, max_acc_xy_dec_);
             out_omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_omega_z, last_planned_data_.omega_z, period_, max_alpha_z_acc_, max_alpha_z_dec_);
@@ -1208,6 +1218,9 @@ namespace jia
 
         bool Chassis::updateHomingState(WheelConfig &wheel)
         {
+            // 四舵轮回零状态机的职责是：在每个周期读取限位/零位传感器，
+            // 依次完成 Idle -> Search -> EdgeDetected -> OffsetApply -> ContinuousAngleReady -> Ready。
+            // 这里不直接“判定一次就完成”，而是通过多周期状态推进来吸收传感器抖动和机械延迟。
             if (!wheel.homing_enabled || wheel.homing_gpio_port == nullptr)
             {
                 wheel.homing_state = HomingState::kReady;
@@ -1223,6 +1236,7 @@ namespace jia
             {
                 if (homing_start_request_)
                 {
+                    // 收到回零请求后才进入搜索态，避免初始化阶段或无请求时误触发回零动作。
                     wheel.homing_state = HomingState::kSearch;
                     wheel.homing_elapsed_s = 0.0f;
                 }
@@ -1232,6 +1246,8 @@ namespace jia
 
             if (wheel.homing_state == HomingState::kSearch)
             {
+                // 搜索态只负责等待“传感器边沿”或“启动瞬间已处于有效态”的情况；
+                // 一旦捕获到边沿，就把当前原始编码器角度换算成运行时零偏移。
                 wheel.homing_elapsed_s += period_;
                 const bool is_edge = (sensor_active != wheel.homing_last_sensor_active);
                 const bool is_initial_active = sensor_active && (wheel.homing_elapsed_s <= period_ + 1.0e-6f);
@@ -1251,16 +1267,19 @@ namespace jia
 
             if (wheel.homing_state == HomingState::kEdgeDetected)
             {
+                // 边沿已抓到后，先走一个过渡态，确保零偏已经写入后再进入连续角度就绪态。
                 wheel.homing_state = HomingState::kOffsetApply;
                 return false;
             }
             if (wheel.homing_state == HomingState::kOffsetApply)
             {
+                // 这一拍只做“应用偏置”的状态切换，不再改零偏，保持状态机步骤清晰可追踪。
                 wheel.homing_state = HomingState::kContinuousAngleReady;
                 return false;
             }
             if (wheel.homing_state == HomingState::kContinuousAngleReady)
             {
+                // 连续角度已经可用，后续底盘可以把该轮纳入正常闭环控制。
                 wheel.homing_state = HomingState::kReady;
                 return true;
             }
@@ -1351,6 +1370,9 @@ namespace jia
 
         void Chassis::computeModuleCommands(const Data &command_data)
         {
+            // 这一段是四舵轮模块命令生成的核心：
+            // 先把底盘速度分解到每个轮模块的安装坐标系，再决定舵角是“正向到位”还是“反向转 180° 后驱动反转”，
+            // 最后分别对舵角和驱动速度做速度/加速度约束，避免命令突变。
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
@@ -1366,6 +1388,8 @@ namespace jia
 
                 if (wheel_speed_m_s <= stationary_speed_epsilon_m_s_)
                 {
+                    // 近似静止时不强迫舵轮寻找某个“数学最优朝向”，而是优先保持当前位置或进入 X-Park 姿态，
+                    // 这样可以减少原地抖动和不必要的舵角来回搜索。
                     raw_target_oa_mod_rad = (idle_posture_mode_ == IdlePostureMode::kXPark)
                                                 ? wrapTo2Pi(getXParkAngle(wheel))
                                                 : wrapTo2Pi(current_oa_total_rad);
@@ -1373,10 +1397,13 @@ namespace jia
                 }
                 else
                 {
+                    // 有平面速度时，轮子速度方向由 atan2 决定，驱动轮线速度由合速度大小换算而来。
                     raw_target_oa_mod_rad = wrapTo2Pi(atan2f(wheel_velocity_oa_y, wheel_velocity_oa_x));
                     target_drive_omega_rad_s = wheel_speed_m_s / wheel_radius_m_;
                 }
 
+                // 舵轮存在“朝向等价类”：目标角加 π 后，只要驱动轮反向即可得到同样的底盘效果。
+                // 因此这里比较两种等价姿态谁更接近当前角度，优先选转角更小的一侧。
                 const f32 alt_target_oa_mod_rad = wrapTo2Pi(raw_target_oa_mod_rad + kPi);
                 const f32 candidate_a_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, raw_target_oa_mod_rad);
                 const f32 candidate_b_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, alt_target_oa_mod_rad);
@@ -1393,6 +1420,8 @@ namespace jia
                 f32 cosine_scale = 1.0f;
                 if (enable_cosine_compensation_)
                 {
+                    // 舵角偏离目标越多，驱动轮对底盘速度的有效贡献越小；
+                    // 余弦补偿把这种几何损失显式折算进驱动轮目标速度中。
                     cosine_scale = cosf(fabsf(shortestAngularDistance(current_oa_total_rad, selected_oa_total_rad)));
                     if (cosine_scale < 0.0f)
                     {
@@ -1492,6 +1521,8 @@ namespace jia
 
         bool Chassis::solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const
         {
+            // 这里用的是带主元选取的高斯消元，目标是稳定求解 3x3 线性方程组；
+            // 输入是增广矩阵，输出是三项未知量，失败通常意味着矩阵接近奇异。
             for (u8 pivot = 0; pivot < 3; ++pivot)
             {
                 u8 best_row = pivot;
@@ -1555,6 +1586,9 @@ namespace jia
 
         bool Chassis::estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const
         {
+            // 由四个模块的“当前舵角 + 当前驱动速度”反推底盘速度。
+            // 这里不是直接解单个方程，而是把每个轮子的两个投影约束累积成最小二乘正规方程，
+            // 再求解 3 个底盘自由度 [vx, vy, omega_z]。
             f32 normal[3][3] = {};
             f32 rhs[3] = {};
 
@@ -1609,6 +1643,13 @@ namespace jia
 
             for (;;)
             {
+                // 主线程每个周期的执行顺序是固定的：
+                // 1) 读取 IMU 航向/角速度
+                // 2) 解析模式并做坐标系转换
+                // 3) 处理锁航向逻辑与速度限幅
+                // 4) 更新轮反馈与回零状态机
+                // 5) 生成模块命令、下发电机目标
+                // 6) 回写当前估计值并等待下一周期
                 input_hwt_rot_z_ = hwt->get_yaw_rad();
                 input_hwt_omega_z_ = hwt->get_yaw_speed_rad();
 
@@ -1626,6 +1667,8 @@ namespace jia
                 }
                 target_data_.omega_z = input_target_data_.omega_z;
 
+                // 锁当前航向 / 锁到指定航向都在这里对目标 rot_z 和 omega_z 做二次整形，
+                // 之后再统一进入速度限幅和规划层限速。
                 if (current_mode_flag_.is_lock_now_rot_z)
                 {
                     isLockNowRotZ(true, target_data_.rot_z, target_data_.omega_z, target_data_.rot_z, target_data_.omega_z);
@@ -1658,6 +1701,8 @@ namespace jia
                 }
                 homing_start_request_ = false;
 
+                // 回零和正常控制共用同一套命令生成流程，但最终下发前会根据 all_homed 选择：
+                // 未回零时只保留安全动作，已回零时才输出完整舵角/驱动目标。
                 computeModuleCommands(planned_data_);
                 applyModuleCommands(all_homed);
                 updateCurrentData(all_homed);

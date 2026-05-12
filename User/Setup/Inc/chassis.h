@@ -19,6 +19,9 @@ namespace jia
         public:
             /* ----------------------------------------------------------------- */
             // 对外控制接口
+            // 注意：当前四舵轮 chassis 在本文件内已经有独立初始化/控制分支；
+            // 但工程上层 FSM 仍然绑定 ChassisOmni。这里的接口只是“头文件已支持四舵轮”，
+            // 不代表整条接线或状态机切换已经完成。
             //  // 枚举类型定义
             enum class Result
             {
@@ -392,12 +395,16 @@ namespace jia
                 kWorld,
             };
 
+            // 空闲姿态：定义底盘失能或无输入时，四个舵轮应保持的姿态策略。
+            // kHoldLast 适合保持最后姿态，kXPark 适合进入 X 停靠姿态以减小外力拖拽干涉。
             enum class IdlePostureMode
             {
                 kHoldLast,
                 kXPark,
             };
 
+            // 回零状态机：描述单个舵轮执行 homing 的内部过程。
+            // 这些状态只服务于四舵轮底盘内部寻零流程，不代表上层 FSM 状态。
             enum class HomingState : u8
             {
                 kIdle,
@@ -412,10 +419,14 @@ namespace jia
             //  // 设置电流为0
             Result setZeroCurrent();
             //  // 设置速度
+            // 这些接口是上层最常用的调用入口：先按坐标系分流，再进入对应的控制模式。
             Result setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z);
+            // LockNowYaw：锁住“当前 yaw/rot_z”，只改变平移目标；omega_z 参数保留给调用侧兼容使用。
             Result setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
+            // LockToYaw：锁到显式给定的目标 yaw/rot_z，常用于对准固定航向。
             Result setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z);
             //  // 读取速度
+            // 返回的是“当前目标速度视图”，不是电机实时反馈；适合上层查看最近一次下发意图。
             Robot_Twist getBodySpeed() const;
             Robot_Twist getWorldSpeed() const;
             /* ----------------------------------------------------------------- */
@@ -459,6 +470,8 @@ namespace jia
             f32 getCurrentOmegaZ() const;
 
         public:
+            // WheelInitConfig 是“单轮初始化描述”，用于填写每个轮组的几何位置、安装朝向、
+            // 电机极性，以及是否启用和如何执行回零。
             struct WheelInitConfig
             {
                 f32 pos_x_m = 0.0f;
@@ -475,6 +488,8 @@ namespace jia
                 f32 homing_timeout_s = 5.0f;
             };
 
+            // InitConfig 是整车级初始化输入：一次性提供 4 个轮子的电机句柄、底盘限幅、
+            // 锁 yaw 参数、空闲姿态策略以及每个轮子的初始化配置。
             struct InitConfig
             {
                 Motor_Base *steer_motor_h[4] = {nullptr};
@@ -500,12 +515,16 @@ namespace jia
             };
 
             // 初始化
+            // 这里只负责四舵轮 chassis 对象内部参数装配与状态准备，不意味着上层 FSM 已切到四舵轮链路。
             void init(InitConfig &config);
             Result startHoming();
             bool isHomingDone() const;
+            // 运行时切换空闲/失能时的舵轮停靠姿态。
             void setIdlePostureMode(IdlePostureMode mode);
 
         private:
+            // WheelConfig 是运行时轮组状态快照：既保存静态几何和硬件句柄，也保存回零状态、
+            // 补偿结果与最近一次规划输出，供控制线程在每个周期更新。
             struct WheelConfig
             {
                 f32 pos_x_m = 0.0f;
@@ -535,6 +554,9 @@ namespace jia
                 bool flipped_drive_direction = false;
             };
 
+            // Mode 表示四舵轮底盘当前采用的控制语义。
+            // 可理解为扭矩自由、车体系/世界系速度控制，以及“锁当前 yaw / 锁目标 yaw”
+            // 的不同组合展开。
             enum class Mode
             {
                 kWheelTorqueFreeMode,
@@ -548,6 +570,8 @@ namespace jia
                 kBodySpeedLockNowRotZWithNoOmegaZMode,
             };
 
+            // ModeFlag 是从 Mode 派生出的布尔型分支标记，用来减少线程内重复比对枚举。
+            // 它只描述当前控制意图，不表示轮子是否已经回零成功。
             struct ModeFlag
             {
                 bool is_wheel_torque_free = false; // 是否为轮子扭矩自由模式
@@ -556,6 +580,9 @@ namespace jia
                 bool is_lock_to_rot_z = false;     // 是否固定到rot_z
             };
 
+            // InputTargetData 保存上层最近一次输入的目标意图：
+            // vel_x / vel_y / omega_z / rot_z 分别对应平移、偏航角速度和目标偏航角，
+            // mode 则决定这些输入要走哪条控制路径。
             struct InputTargetData
             {
                 f32 vel_x = 0.0f;
