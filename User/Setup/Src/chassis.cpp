@@ -1346,14 +1346,28 @@ namespace jia
             }
         }
 
+        // 这是一个“位置目标 + 速度上限 + 加速度上限”的二阶限幅器。
+        // 输入是当前位置 current_value、当前速度 current_rate 和目标位置 target_value，
+        // 输出是“下一拍允许走到的位置”，并通过 next_rate 回传这一拍实际采用的速度。
+        // 在四舵轮里它主要用于转向角规划：既不允许舵角变化过快，也不允许舵角速度突变过猛。
         f32 Chassis::limitPositionSecondOrder(f32 current_value, f32 current_rate, f32 target_value, f32 max_rate, f32 max_accel, f32 dt_s, f32 &next_rate) const
         {
+            // 防止 dt 过小导致除零或数值放大；在异常小周期下退回一个保守的 1ms 步长。
             const f32 safe_dt = (dt_s <= 1.0e-6f) ? 1.0e-3f : dt_s;
+
+            // delta_value 是这一拍距离目标位置还差多少；
+            // desired_rate 是“如果想在一拍内尽量逼近目标，希望使用的速度”，
+            // 但它先受 max_rate 限制，避免直接给出不可能达到的目标速度。
             const f32 delta_value = target_value - current_value;
             const f32 desired_rate = clampValue(delta_value / safe_dt, -max_rate, max_rate);
+
+            // rate_delta_limit 是“这一拍速度最多允许变化多少”，由最大加速度决定。
             const f32 rate_delta_limit = max_accel * safe_dt;
 
             next_rate = current_rate;
+
+            // 先做速度变化率限制：如果期望速度离当前速度太远，
+            // 这一拍只允许按 max_accel 推进一步，而不是瞬间跳到 desired_rate。
             if (desired_rate > current_rate + rate_delta_limit)
             {
                 next_rate = current_rate + rate_delta_limit;
@@ -1367,13 +1381,21 @@ namespace jia
                 next_rate = desired_rate;
             }
 
+            // 再做一次绝对速度限幅，保证最终速度不超过 max_rate。
             next_rate = clampValue(next_rate, -max_rate, max_rate);
+
+            // 按这一拍最终允许的速度积分出位置步进量。
             f32 step_value = next_rate * safe_dt;
+
+            // 如果这一拍已经足够到达目标，则直接截断到目标位置，
+            // 避免积分后跨过 target_value 造成过冲。
             if (fabsf(step_value) > fabsf(delta_value))
             {
                 step_value = delta_value;
                 next_rate = step_value / safe_dt;
             }
+
+            // 返回下一拍允许到达的位置；调用侧会把它当作新的舵角目标。
             return current_value + step_value;
         }
 
