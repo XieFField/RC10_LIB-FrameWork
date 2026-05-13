@@ -1090,8 +1090,13 @@ namespace jia
             out_vel_y = -vel_x * sin_theta + vel_y * cos_theta;
         }
 
+        // “锁当前航向”模式的核心语义是：
+        // 只要用户还在主动给 omega_z，就继续按手动旋转执行；一旦用户松开旋转输入，
+        // 就把最近一次真实机体朝向当作要维持的 rot_z，再由姿态 PID 生成 out_omega_z 来稳住该朝向。
+        // 因此它不是“始终锁某个固定角”，而是“手动旋转”和“松手后自动锁住当前角”之间的平滑切换器。
         void Chassis::isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z)
         {
+            // 未启用锁当前航向时，rot_z / omega_z 不做任何二次整形，直接透传给后续统一规划层。
             if (!is_lock)
             {
                 out_rot_z = rot_z;
@@ -1103,6 +1108,11 @@ namespace jia
             // 抓取当前机体朝向，再在后续由 PID 产生角速度闭环，让机器人保持当下姿态。
             if (omega_z == 0.0f)
             {
+                // 这里表示“用户当前没有继续施加旋转输入”。
+                // 但在刚松开摇杆的最初一小段时间内，不立即让 PID 介入，而是先进入过渡缓冲：
+                // 1. out_rot_z 直接跟随 IMU 当前朝向 input_hwt_rot_z_，把目标角锁在此刻真实姿态上；
+                // 2. out_omega_z 先给 0，避免手动旋转刚结束时立即出现一拍突兀的 PID 修正；
+                // 3. lock_now_rot_z_shift_count_ 作为缓冲计数器，倒数结束后才真正进入锁角闭环。
                 if (lock_now_rot_z_shift_count_ > 0)
                 {
                     lock_now_rot_z_shift_count_--;
@@ -1111,6 +1121,9 @@ namespace jia
                 }
                 else
                 {
+                    // 过渡缓冲结束后，rot_z 就是当前要维持的目标航向，
+                    // 后续由 rot_z_pid_ 根据“目标朝向 rot_z”和“当前真实朝向 input_hwt_rot_z_”
+                    // 的误差生成维持姿态所需的 out_omega_z。
                     out_rot_z = rot_z;
                     if (rot_z_pid_count_ >= rot_z_pid_period_)
                     {
@@ -1119,13 +1132,21 @@ namespace jia
                     }
                     else
                     {
+                        // PID 不是每个控制周期都重算；在未到刷新周期时，
+                        // 暂时沿用上一规划周期的 planned_data_.omega_z，减少输出抖动并维持角速度连续性。
                         out_omega_z = planned_data_.omega_z;
                     }
+                    // rot_z_pid_count_ / rot_z_pid_period_ 共同控制姿态 PID 的实际计算节拍。
                     rot_z_pid_count_++;
                 }
             }
             else
             {
+                // 这里表示“用户仍在主动要求旋转”：
+                // 1. 不进入锁角闭环，直接执行当前手动 omega_z；
+                // 2. 同时把 out_rot_z 刷新成当前 IMU 朝向 input_hwt_rot_z_，
+                //    相当于不断更新“等会儿松手后要锁住的那个角”；
+                // 3. 每次有手动旋转输入都重置缓冲计数器，为后续从手动旋转切回自动锁角预留平滑过渡窗口。
                 out_rot_z = input_hwt_rot_z_;
                 out_omega_z = omega_z;
                 lock_now_rot_z_shift_count_ = lock_now_rot_z_shift_time_ms_;
