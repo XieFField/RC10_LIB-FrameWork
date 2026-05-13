@@ -565,7 +565,15 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
     path_line_.Add_Start_Point(robot_pos_);
 
     MF1_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[0]]);
-    MF2_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1]]);
+    if(MF2 != 0)
+    {
+        MF2_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1]]);
+    }
+    else
+    {
+        MF2_pos_={0.0f,0.0f};
+    }
+    
 
     if (spin_flag == false)
     {

@@ -633,6 +633,7 @@ void ArmSetup::auto_stillnessOne()
                 if(state_extStillness(auto_ctrl_.targetKFS[0]))
                 {
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+                    this->set_PitchAngle(180.0f);
                 }
             }
             break;
