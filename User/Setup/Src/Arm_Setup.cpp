@@ -348,7 +348,7 @@ bool ArmSetup::manual_store()
         {
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
             this->set_PitchAngle(180.0f); //³¯ÉÏ
-            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.01f && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 180.0f) < 5.0f)
+            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.01f && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 180.0f) < 30.0f)
             {
                 this->store_state_ = store_state::rotate_state;
             }
@@ -730,6 +730,7 @@ void ArmSetup::auto_stillnessTwo()
                 if(state_extStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
                 {
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
+                    this->set_PitchAngle(180.0f);
                 }
             }
             break;
@@ -1050,7 +1051,7 @@ Arm_InitData_S arm_initData = {
     .launch_Ratio_ = 0.07221f,
     //    .rotate_gearRatio_ = 144.878f,  //¾ÉµÄ
     // .rotate_gearRatio_ = 145.755789f,
-    .rotate_gearRatio_ = 106.348f,
+    .rotate_gearRatio_ = 115.179f,
     .pitch_gearRatio_ = 360.0f,
 
     .min_rotate_angle_ = 0.0f,

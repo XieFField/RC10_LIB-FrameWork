@@ -355,7 +355,7 @@ private:
     };
 
     Fliter_Ramp_S launch_fliter_ramp_ = {
-        .ramp__maxspeed_ = 1200000.0f,
+        .ramp__maxspeed_ = 1500000.0f,
         .max_accel_ = 3000000.0f, // 升降加速度限制 (Motor Angle deg/s^2)
         .current_velocity_ = 0.0f, // 记录当前升降速度
         .ramp_target_ = 0.0f, 

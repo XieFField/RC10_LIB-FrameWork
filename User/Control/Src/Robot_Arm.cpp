@@ -117,7 +117,6 @@ void Robot_Arm::update()
     
     else
         HAL_GPIO_WritePin(init_data_.Sucker_GPIO_Port, init_data_.Sucker_GPIO_Pin, GPIO_PIN_RESET);
-    
 }
 
 void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
