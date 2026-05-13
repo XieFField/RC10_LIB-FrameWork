@@ -403,6 +403,49 @@ namespace jia
                 kXPark,
             };
 
+            // 转向解选择策略：kAlwaysForward 永远不走 180 度翻转解；
+            // kShortestPath 允许翻转并优先最小转角方案。
+            enum class SteeringStrategyMode : u8
+            {
+                kAlwaysForward = 0,
+                kShortestPath = 1,
+            };
+
+            // 驱动抑制策略：用于在舵角误差较大时降低驱动轮放行比例。
+            enum class DriveGateStrategy : u8
+            {
+                kHardGate = 0,
+                kSoftGate = 1,
+                kContinuousCurve = 2,
+                kAdaptiveGate = 3,
+            };
+
+            // 驱动抑制作用域：整车统一缩放或按轮单独缩放。
+            enum class DriveGateScope : u8
+            {
+                kGlobal = 0,
+                kPerWheel = 1,
+            };
+
+            // 停车转向保护策略：用于“指令静止但驱动残速未消失”时抑制舵角突变。
+            enum class StopSteerGuardStrategy : u8
+            {
+                kHardHold = 0,
+                kSoftBlend = 1,
+                kContinuousBlend = 2,
+            };
+
+            // AdaptiveGate 运行相位状态，主要用于调试与运行态观测。
+            enum class AdaptiveGatePhase : u8
+            {
+                kIdle = 0,
+                kStartHold = 1,
+                kTransition = 2,
+                kContinuous = 3,
+                kLegacy = 4,
+                kDisabled = 5,
+            };
+
             // 回零状态机：描述单个舵轮执行 homing 的内部过程。
             // 这些状态只服务于四舵轮底盘内部寻零流程，不代表上层 FSM 状态。
             enum class HomingState : u8
@@ -517,6 +560,27 @@ namespace jia
                 f32 max_lock_to_rot_z_rad_s = 4.0f;       // 锁到目标 yaw 时允许的最大角速度，单位 rad/s；限制 rot_z 追踪收敛速度
                 u32 lock_now_rot_z_shift_time_ms = 1000;  // 从普通速度模式切到“无 omega_z 时锁当前 yaw”模式后的过渡保持时间，单位 ms
                 IdlePostureMode idle_posture_mode = IdlePostureMode::kHoldLast; // 近静止时的模块姿态策略：保持最后朝向，或切到 X 停车姿态
+                SteeringStrategyMode steering_strategy_mode = SteeringStrategyMode::kShortestPath; // 转向解策略：默认允许翻转并优先最短转角
+                f32 flip_enter_angle_deg = 100.0f;        // 进入/保持 flipped 解的角误差阈值（大于该值更倾向 flipped）
+                f32 flip_exit_angle_deg = 80.0f;          // 从非 flipped 切入 flipped 的阈值，配合 enter 阈值构成滞回
+                bool enable_drive_gate = false;           // 是否启用独立驱动抑制（DriveGate）
+                DriveGateStrategy drive_gate_strategy = DriveGateStrategy::kHardGate; // DriveGate 策略类型
+                DriveGateScope drive_gate_scope = DriveGateScope::kGlobal; // DriveGate 作用域：全局/按轮
+                f32 drive_gate_close_angle_deg = 30.0f;   // Gate 关闭角阈值（Hard/Soft 模式使用）
+                f32 drive_gate_min_scale = 0.0f;          // Gate 最小放行比例
+                f32 drive_gate_curve_exponent = 2.0f;     // 连续曲线策略指数
+                f32 drive_gate_curve_half_angle_deg = 20.0f; // 连续曲线半幅角阈值
+                f32 drive_gate_curve_min_scale = 0.05f;   // 连续曲线最小比例
+                f32 drive_gate_transition_linear_speed_m_s = 0.30f; // AdaptiveGate 线速度过渡阈值
+                f32 drive_gate_transition_angular_speed_rad_s = 1.00f; // AdaptiveGate 角速度过渡阈值
+                f32 drive_gate_scale_ramp_up_s = 0.10f;   // AdaptiveGate 放开斜坡时间
+                f32 drive_gate_scale_ramp_down_s = 0.06f; // AdaptiveGate 收紧斜坡时间
+                bool enable_stop_steer_guard = true;      // 是否启用停车转向保护
+                StopSteerGuardStrategy stop_steer_guard_strategy = StopSteerGuardStrategy::kHardHold; // 停车转向保护策略
+                f32 stop_guard_release_speed_m_s = 0.01f; // 残速低于该阈值后解除停车转向保护
+                f32 stop_guard_blend_start_speed_m_s = 0.20f; // SoftBlend 策略开始混合阈值
+                f32 stop_guard_curve_half_speed_m_s = 0.08f;  // ContinuousBlend 半幅速度阈值
+                f32 stop_guard_curve_exponent = 2.0f;     // ContinuousBlend 曲线指数
                 WheelInitConfig wheels[4];                // 4 个舵轮模块各自的安装/回零配置，顺序需与电机句柄数组一致
             };
 
@@ -527,6 +591,16 @@ namespace jia
             bool isHomingDone() const;
             // 运行时切换空闲/失能时的舵轮停靠姿态。
             void setIdlePostureMode(IdlePostureMode mode);
+            // 运行时策略切换：优先级高于 InitConfig 默认值，可在比赛中动态调整。
+            void setSteeringStrategyMode(SteeringStrategyMode mode);
+            void setSteeringFlipHysteresisDeg(f32 enter_angle_deg, f32 exit_angle_deg);
+            void setDriveGateEnabled(bool enabled);
+            void setDriveGateConfig(DriveGateStrategy strategy, DriveGateScope scope, f32 close_angle_deg, f32 min_scale);
+            void setDriveGateCurveParams(f32 curve_half_angle_deg, f32 curve_exponent, f32 curve_min_scale);
+            void setDriveGateAdaptiveParams(f32 transition_linear_speed_m_s, f32 transition_angular_speed_rad_s, f32 ramp_up_s, f32 ramp_down_s);
+            void setStopSteerGuardEnabled(bool enabled);
+            void setStopSteerGuardConfig(StopSteerGuardStrategy strategy, f32 release_speed_m_s, f32 blend_start_speed_m_s, f32 curve_half_speed_m_s, f32 curve_exponent);
+            void resetRuntimeStrategyToInitConfig();
 
         private:
             // WheelConfig 是运行时轮组状态快照：既保存静态几何和硬件句柄，也保存回零状态、
@@ -643,6 +717,9 @@ namespace jia
             f32 nearestEquivalentAngle(f32 current_rad, f32 target_mod_rad) const;
             f32 magnitude2D(f32 x, f32 y) const;
             f32 getXParkAngle(const WheelConfig &wheel) const;
+            f32 computeDriveGateScale(f32 abs_error_rad) const;
+            void computeDriveGateScales(const f32 steering_errors_rad[4], const Data &command_data, f32 out_scales[4]);
+            f32 stopSteerGuardBlend(f32 residual_speed_m_s) const;
             void computeModuleCommands(const Data &command_data);
             void applyModuleCommands(bool all_homed);
             void updateCurrentData(bool all_homed);
@@ -683,10 +760,40 @@ namespace jia
             f32 stationary_speed_epsilon_m_s_ = 0.01f;
             bool enable_cosine_compensation_ = true;
             IdlePostureMode idle_posture_mode_ = IdlePostureMode::kHoldLast;
+            struct StrategyConfig
+            {
+                SteeringStrategyMode steering_strategy_mode = SteeringStrategyMode::kShortestPath;
+                f32 flip_enter_angle_deg = 100.0f;
+                f32 flip_exit_angle_deg = 80.0f;
+                bool enable_drive_gate = false;
+                DriveGateStrategy drive_gate_strategy = DriveGateStrategy::kHardGate;
+                DriveGateScope drive_gate_scope = DriveGateScope::kGlobal;
+                f32 drive_gate_close_angle_deg = 30.0f;
+                f32 drive_gate_min_scale = 0.0f;
+                f32 drive_gate_curve_exponent = 2.0f;
+                f32 drive_gate_curve_half_angle_deg = 20.0f;
+                f32 drive_gate_curve_min_scale = 0.05f;
+                f32 drive_gate_transition_linear_speed_m_s = 0.30f;
+                f32 drive_gate_transition_angular_speed_rad_s = 1.00f;
+                f32 drive_gate_scale_ramp_up_s = 0.10f;
+                f32 drive_gate_scale_ramp_down_s = 0.06f;
+                bool enable_stop_steer_guard = true;
+                StopSteerGuardStrategy stop_steer_guard_strategy = StopSteerGuardStrategy::kHardHold;
+                f32 stop_guard_release_speed_m_s = 0.01f;
+                f32 stop_guard_blend_start_speed_m_s = 0.20f;
+                f32 stop_guard_curve_half_speed_m_s = 0.08f;
+                f32 stop_guard_curve_exponent = 2.0f;
+            };
+            StrategyConfig default_strategy_cfg_;
+            StrategyConfig runtime_strategy_cfg_;
             bool homing_start_request_ = false;
             WheelConfig wheel_config_[4];
             f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};
             f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};
+            bool selected_flipped_solution_[4] = {false};
+            f32 drive_gate_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+            f32 adaptive_gate_scale_ = 1.0f;
+            AdaptiveGatePhase adaptive_gate_phase_ = AdaptiveGatePhase::kIdle;
             PID_Position rot_z_pid_;
             u8 rot_z_pid_period_ = 1;
             u8 rot_z_pid_count_ = 0;

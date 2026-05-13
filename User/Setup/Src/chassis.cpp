@@ -812,6 +812,28 @@ namespace jia
             max_lock_to_rot_z_rad_s_ = config.max_lock_to_rot_z_rad_s;
             lock_now_rot_z_shift_time_ms_ = config.lock_now_rot_z_shift_time_ms;
             idle_posture_mode_ = config.idle_posture_mode;
+            default_strategy_cfg_.steering_strategy_mode = config.steering_strategy_mode;
+            default_strategy_cfg_.flip_enter_angle_deg = config.flip_enter_angle_deg;
+            default_strategy_cfg_.flip_exit_angle_deg = config.flip_exit_angle_deg;
+            default_strategy_cfg_.enable_drive_gate = config.enable_drive_gate;
+            default_strategy_cfg_.drive_gate_strategy = config.drive_gate_strategy;
+            default_strategy_cfg_.drive_gate_scope = config.drive_gate_scope;
+            default_strategy_cfg_.drive_gate_close_angle_deg = config.drive_gate_close_angle_deg;
+            default_strategy_cfg_.drive_gate_min_scale = config.drive_gate_min_scale;
+            default_strategy_cfg_.drive_gate_curve_exponent = config.drive_gate_curve_exponent;
+            default_strategy_cfg_.drive_gate_curve_half_angle_deg = config.drive_gate_curve_half_angle_deg;
+            default_strategy_cfg_.drive_gate_curve_min_scale = config.drive_gate_curve_min_scale;
+            default_strategy_cfg_.drive_gate_transition_linear_speed_m_s = config.drive_gate_transition_linear_speed_m_s;
+            default_strategy_cfg_.drive_gate_transition_angular_speed_rad_s = config.drive_gate_transition_angular_speed_rad_s;
+            default_strategy_cfg_.drive_gate_scale_ramp_up_s = config.drive_gate_scale_ramp_up_s;
+            default_strategy_cfg_.drive_gate_scale_ramp_down_s = config.drive_gate_scale_ramp_down_s;
+            default_strategy_cfg_.enable_stop_steer_guard = config.enable_stop_steer_guard;
+            default_strategy_cfg_.stop_steer_guard_strategy = config.stop_steer_guard_strategy;
+            default_strategy_cfg_.stop_guard_release_speed_m_s = config.stop_guard_release_speed_m_s;
+            default_strategy_cfg_.stop_guard_blend_start_speed_m_s = config.stop_guard_blend_start_speed_m_s;
+            default_strategy_cfg_.stop_guard_curve_half_speed_m_s = config.stop_guard_curve_half_speed_m_s;
+            default_strategy_cfg_.stop_guard_curve_exponent = config.stop_guard_curve_exponent;
+            runtime_strategy_cfg_ = default_strategy_cfg_;
 
             for (u8 i = 0; i < 4; ++i)
             {
@@ -833,7 +855,12 @@ namespace jia
                 wheel.homing_state = wheel.homing_enabled ? HomingState::kIdle : HomingState::kReady;
                 wheel.homing_zero_valid = !wheel.homing_enabled;
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
+                selected_flipped_solution_[i] = false;
+                drive_gate_scale_[i] = 1.0f;
             }
+
+            adaptive_gate_scale_ = 1.0f;
+            adaptive_gate_phase_ = AdaptiveGatePhase::kIdle;
 
             rot_z_pid_.set_params(lock_angle_pid_params, 0.0f);
             rot_z_pid_.set_as_circular();
@@ -866,6 +893,7 @@ namespace jia
             input_target_data_.vel_y = 0.0f;
             input_target_data_.omega_z = 0.0f;
             input_target_data_.rot_z = 0.0f;
+            lock_now_rot_z_target_ = 0.0f;
         }
 
         Chassis::Result Chassis::setWheelTorqueFreeMode()
@@ -989,6 +1017,71 @@ namespace jia
             idle_posture_mode_ = mode;
         }
 
+        void Chassis::setSteeringStrategyMode(SteeringStrategyMode mode)
+        {
+            runtime_strategy_cfg_.steering_strategy_mode = mode;
+        }
+
+        void Chassis::setSteeringFlipHysteresisDeg(f32 enter_angle_deg, f32 exit_angle_deg)
+        {
+            runtime_strategy_cfg_.flip_enter_angle_deg = (enter_angle_deg > 0.0f) ? enter_angle_deg : 100.0f;
+            runtime_strategy_cfg_.flip_exit_angle_deg = (exit_angle_deg > 0.0f) ? exit_angle_deg : 80.0f;
+        }
+
+        void Chassis::setDriveGateEnabled(bool enabled)
+        {
+            runtime_strategy_cfg_.enable_drive_gate = enabled;
+            if (!enabled)
+            {
+                adaptive_gate_scale_ = 1.0f;
+                adaptive_gate_phase_ = AdaptiveGatePhase::kDisabled;
+            }
+        }
+
+        void Chassis::setDriveGateConfig(DriveGateStrategy strategy, DriveGateScope scope, f32 close_angle_deg, f32 min_scale)
+        {
+            runtime_strategy_cfg_.drive_gate_strategy = strategy;
+            runtime_strategy_cfg_.drive_gate_scope = scope;
+            runtime_strategy_cfg_.drive_gate_close_angle_deg = (close_angle_deg > 0.0f) ? close_angle_deg : 30.0f;
+            runtime_strategy_cfg_.drive_gate_min_scale = clampValue(min_scale, 0.0f, 1.0f);
+        }
+
+        void Chassis::setDriveGateCurveParams(f32 curve_half_angle_deg, f32 curve_exponent, f32 curve_min_scale)
+        {
+            runtime_strategy_cfg_.drive_gate_curve_half_angle_deg = (curve_half_angle_deg > 0.1f) ? curve_half_angle_deg : 20.0f;
+            runtime_strategy_cfg_.drive_gate_curve_exponent = (curve_exponent > 0.1f) ? curve_exponent : 2.0f;
+            runtime_strategy_cfg_.drive_gate_curve_min_scale = clampValue(curve_min_scale, 0.0f, 1.0f);
+        }
+
+        void Chassis::setDriveGateAdaptiveParams(f32 transition_linear_speed_m_s, f32 transition_angular_speed_rad_s, f32 ramp_up_s, f32 ramp_down_s)
+        {
+            runtime_strategy_cfg_.drive_gate_transition_linear_speed_m_s = (transition_linear_speed_m_s >= 0.0f) ? transition_linear_speed_m_s : 0.30f;
+            runtime_strategy_cfg_.drive_gate_transition_angular_speed_rad_s = (transition_angular_speed_rad_s >= 0.0f) ? transition_angular_speed_rad_s : 1.00f;
+            runtime_strategy_cfg_.drive_gate_scale_ramp_up_s = (ramp_up_s > 1.0e-4f) ? ramp_up_s : 0.10f;
+            runtime_strategy_cfg_.drive_gate_scale_ramp_down_s = (ramp_down_s > 1.0e-4f) ? ramp_down_s : 0.06f;
+        }
+
+        void Chassis::setStopSteerGuardEnabled(bool enabled)
+        {
+            runtime_strategy_cfg_.enable_stop_steer_guard = enabled;
+        }
+
+        void Chassis::setStopSteerGuardConfig(StopSteerGuardStrategy strategy, f32 release_speed_m_s, f32 blend_start_speed_m_s, f32 curve_half_speed_m_s, f32 curve_exponent)
+        {
+            runtime_strategy_cfg_.stop_steer_guard_strategy = strategy;
+            runtime_strategy_cfg_.stop_guard_release_speed_m_s = (release_speed_m_s >= 0.0f) ? release_speed_m_s : 0.01f;
+            runtime_strategy_cfg_.stop_guard_blend_start_speed_m_s = (blend_start_speed_m_s >= 0.0f) ? blend_start_speed_m_s : 0.20f;
+            runtime_strategy_cfg_.stop_guard_curve_half_speed_m_s = (curve_half_speed_m_s > 1.0e-4f) ? curve_half_speed_m_s : 0.08f;
+            runtime_strategy_cfg_.stop_guard_curve_exponent = (curve_exponent > 0.1f) ? curve_exponent : 2.0f;
+        }
+
+        void Chassis::resetRuntimeStrategyToInitConfig()
+        {
+            runtime_strategy_cfg_ = default_strategy_cfg_;
+            adaptive_gate_scale_ = 1.0f;
+            adaptive_gate_phase_ = AdaptiveGatePhase::kIdle;
+        }
+
         f32 Chassis::wrapToPi(f32 angle_rad) const
         {
             while (angle_rad >= kPi)
@@ -1033,6 +1126,152 @@ namespace jia
         f32 Chassis::getXParkAngle(const WheelConfig &wheel) const
         {
             return atan2f(wheel.pos_y_m, wheel.pos_x_m);
+        }
+
+        f32 Chassis::computeDriveGateScale(f32 abs_error_rad) const
+        {
+            const f32 close_rad = degToRadF32(runtime_strategy_cfg_.drive_gate_close_angle_deg);
+            const f32 min_scale = clampValue(runtime_strategy_cfg_.drive_gate_min_scale, 0.0f, 1.0f);
+
+            switch (runtime_strategy_cfg_.drive_gate_strategy)
+            {
+            case DriveGateStrategy::kHardGate:
+                return (abs_error_rad >= close_rad) ? min_scale : 1.0f;
+            case DriveGateStrategy::kSoftGate:
+            {
+                if (close_rad <= 1.0e-6f)
+                {
+                    return min_scale;
+                }
+                const f32 ratio = clampValue(abs_error_rad / close_rad, 0.0f, 1.0f);
+                return 1.0f - (1.0f - min_scale) * ratio;
+            }
+            case DriveGateStrategy::kContinuousCurve:
+            {
+                const f32 half_rad = degToRadF32(runtime_strategy_cfg_.drive_gate_curve_half_angle_deg);
+                const f32 exponent = (runtime_strategy_cfg_.drive_gate_curve_exponent > 0.1f) ? runtime_strategy_cfg_.drive_gate_curve_exponent : 2.0f;
+                const f32 curve_min = clampValue(runtime_strategy_cfg_.drive_gate_curve_min_scale, 0.0f, 1.0f);
+                if (half_rad <= 1.0e-6f)
+                {
+                    return curve_min;
+                }
+                const f32 norm = abs_error_rad / half_rad;
+                const f32 scale = 1.0f / (1.0f + powf(norm, exponent));
+                return clampValue(curve_min + (1.0f - curve_min) * scale, curve_min, 1.0f);
+            }
+            case DriveGateStrategy::kAdaptiveGate:
+            default:
+                return (abs_error_rad >= close_rad) ? min_scale : 1.0f;
+            }
+        }
+
+        void Chassis::computeDriveGateScales(const f32 steering_errors_rad[4], const Data &command_data, f32 out_scales[4])
+        {
+            for (u8 i = 0; i < 4; ++i)
+            {
+                out_scales[i] = 1.0f;
+            }
+
+            if (!runtime_strategy_cfg_.enable_drive_gate)
+            {
+                adaptive_gate_scale_ = 1.0f;
+                adaptive_gate_phase_ = AdaptiveGatePhase::kDisabled;
+                return;
+            }
+
+            if (runtime_strategy_cfg_.drive_gate_strategy == DriveGateStrategy::kAdaptiveGate)
+            {
+                const f32 linear_speed = magnitude2D(command_data.vel_x, command_data.vel_y);
+                const f32 angular_speed = fabsf(command_data.omega_z);
+                const bool in_transition = (linear_speed >= runtime_strategy_cfg_.drive_gate_transition_linear_speed_m_s) ||
+                                           (angular_speed >= runtime_strategy_cfg_.drive_gate_transition_angular_speed_rad_s);
+                const f32 ramp_up = (runtime_strategy_cfg_.drive_gate_scale_ramp_up_s > 1.0e-6f) ? runtime_strategy_cfg_.drive_gate_scale_ramp_up_s : 0.10f;
+                const f32 ramp_down = (runtime_strategy_cfg_.drive_gate_scale_ramp_down_s > 1.0e-6f) ? runtime_strategy_cfg_.drive_gate_scale_ramp_down_s : 0.06f;
+                const f32 delta = period_ / (in_transition ? ramp_up : ramp_down);
+                if (in_transition)
+                {
+                    adaptive_gate_scale_ = clampValue(adaptive_gate_scale_ + delta, 0.0f, 1.0f);
+                    adaptive_gate_phase_ = AdaptiveGatePhase::kTransition;
+                }
+                else
+                {
+                    adaptive_gate_scale_ = clampValue(adaptive_gate_scale_ - delta, 0.0f, 1.0f);
+                    adaptive_gate_phase_ = AdaptiveGatePhase::kStartHold;
+                }
+            }
+            else
+            {
+                adaptive_gate_scale_ = 1.0f;
+                adaptive_gate_phase_ = AdaptiveGatePhase::kLegacy;
+            }
+
+            if (runtime_strategy_cfg_.drive_gate_scope == DriveGateScope::kGlobal)
+            {
+                f32 max_abs = 0.0f;
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    if (steering_errors_rad[i] > max_abs)
+                    {
+                        max_abs = steering_errors_rad[i];
+                    }
+                }
+                f32 scale = computeDriveGateScale(max_abs);
+                if (runtime_strategy_cfg_.drive_gate_strategy == DriveGateStrategy::kAdaptiveGate)
+                {
+                    scale *= adaptive_gate_scale_;
+                }
+                scale = clampValue(scale, 0.0f, 1.0f);
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    out_scales[i] = scale;
+                }
+                return;
+            }
+
+            for (u8 i = 0; i < 4; ++i)
+            {
+                f32 scale = computeDriveGateScale(steering_errors_rad[i]);
+                if (runtime_strategy_cfg_.drive_gate_strategy == DriveGateStrategy::kAdaptiveGate)
+                {
+                    scale *= adaptive_gate_scale_;
+                }
+                out_scales[i] = clampValue(scale, 0.0f, 1.0f);
+            }
+        }
+
+        f32 Chassis::stopSteerGuardBlend(f32 residual_speed_m_s) const
+        {
+            const f32 release_speed = (runtime_strategy_cfg_.stop_guard_release_speed_m_s >= 0.0f) ? runtime_strategy_cfg_.stop_guard_release_speed_m_s : 0.01f;
+            if (residual_speed_m_s <= release_speed)
+            {
+                return 1.0f;
+            }
+
+            switch (runtime_strategy_cfg_.stop_steer_guard_strategy)
+            {
+            case StopSteerGuardStrategy::kHardHold:
+                return 0.0f;
+            case StopSteerGuardStrategy::kSoftBlend:
+            {
+                const f32 start_speed = (runtime_strategy_cfg_.stop_guard_blend_start_speed_m_s > release_speed)
+                                            ? runtime_strategy_cfg_.stop_guard_blend_start_speed_m_s
+                                            : (release_speed + 1.0e-3f);
+                const f32 norm = clampValue((residual_speed_m_s - release_speed) / (start_speed - release_speed), 0.0f, 1.0f);
+                return 1.0f - norm;
+            }
+            case StopSteerGuardStrategy::kContinuousBlend:
+            default:
+            {
+                const f32 half_speed = (runtime_strategy_cfg_.stop_guard_curve_half_speed_m_s > 1.0e-6f)
+                                           ? runtime_strategy_cfg_.stop_guard_curve_half_speed_m_s
+                                           : 0.08f;
+                const f32 exponent = (runtime_strategy_cfg_.stop_guard_curve_exponent > 0.1f)
+                                         ? runtime_strategy_cfg_.stop_guard_curve_exponent
+                                         : 2.0f;
+                const f32 norm = residual_speed_m_s / half_speed;
+                return 1.0f / (1.0f + powf(norm, exponent));
+            }
+            }
         }
 
         void Chassis::setModeFlag()
@@ -1417,111 +1656,156 @@ namespace jia
 
         void Chassis::computeModuleCommands(const Data &command_data)
         {
-            // 这一段是四舵轮模块命令生成的核心：
-            // 先把底盘速度分解到每个轮模块的安装坐标系，再决定舵角是“正向到位”还是“反向转 180° 后驱动反转”，
-            // 最后分别对舵角和驱动速度做速度/加速度约束，避免命令突变。
+            f32 current_oa_total_rad[4] = {0.0f};
+            f32 target_drive_raw_rad_s[4] = {0.0f};
+            f32 selected_oa_total_rad[4] = {0.0f};
+            f32 steering_errors_rad[4] = {0.0f};
+
+            f32 max_command_wheel_speed_m_s = 0.0f;
+            f32 max_residual_speed_m_s = 0.0f;
+
+            // 第一阶段：计算每轮原始目标、翻转候选与误差。
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
+                const f32 current_local_total = wheel.corrected_steer_motor_total_angle_rad;
+                current_oa_total_rad[i] = current_local_total + wheel.theta_oa_to_owi_rad;
 
-                // current_local_total_rad 是转向电机本地机械角参考系下、已经做过回零补偿后的当前连续角；
-                // current_oa_total_rad 则进一步换算成底盘运动学真正关心的“舵轮实际朝向（OA 朝向）”。
-                const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
-                const f32 current_oa_total_rad = current_local_total_rad + wheel.theta_oa_to_owi_rad;
+                const f32 wheel_vx = command_data.vel_x - command_data.omega_z * wheel.pos_y_m;
+                const f32 wheel_vy = command_data.vel_y + command_data.omega_z * wheel.pos_x_m;
+                const f32 wheel_speed_m_s = magnitude2D(wheel_vx, wheel_vy);
+                max_command_wheel_speed_m_s = (wheel_speed_m_s > max_command_wheel_speed_m_s) ? wheel_speed_m_s : max_command_wheel_speed_m_s;
 
-                // 先把整车的平移速度和绕 z 轴角速度分解到当前轮模块的位置上，
-                // 得到“这个轮接触地点此刻应当朝哪个方向运动、速度多大”。
-                // 这一步还是在底盘平面坐标系里描述轮模块的期望速度向量。
-                const f32 wheel_velocity_oa_x = command_data.vel_x - command_data.omega_z * wheel.pos_y_m;
-                const f32 wheel_velocity_oa_y = command_data.vel_y + command_data.omega_z * wheel.pos_x_m;
-                const f32 wheel_speed_m_s = magnitude2D(wheel_velocity_oa_x, wheel_velocity_oa_y);
+                const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * wheel_radius_m_;
+                max_residual_speed_m_s = (residual_speed_m_s > max_residual_speed_m_s) ? residual_speed_m_s : max_residual_speed_m_s;
 
-                // raw_target_oa_mod_rad 表示“从运动学直接算出的目标舵轮朝向（模 2π）”；
-                // target_drive_omega_rad_s 表示与该朝向匹配的驱动轮目标角速度。
+                const bool is_stationary = wheel_speed_m_s <= stationary_speed_epsilon_m_s_;
                 f32 raw_target_oa_mod_rad = 0.0f;
-                f32 target_drive_omega_rad_s = 0.0f;
+                f32 drive_omega = 0.0f;
 
-                if (wheel_speed_m_s <= stationary_speed_epsilon_m_s_)
+                if (is_stationary)
                 {
-                    // 近似静止时不强迫舵轮寻找某个“数学最优朝向”，而是优先保持当前位置或进入 X-Park 姿态，
-                    // 这样可以减少原地抖动和不必要的舵角来回搜索。
                     raw_target_oa_mod_rad = (idle_posture_mode_ == IdlePostureMode::kXPark)
                                                 ? wrapTo2Pi(getXParkAngle(wheel))
-                                                : wrapTo2Pi(current_oa_total_rad);
-                    target_drive_omega_rad_s = 0.0f;
+                                                : wrapTo2Pi(current_oa_total_rad[i]);
+                    drive_omega = 0.0f;
                 }
                 else
                 {
-                    // 有平面速度时，轮子速度方向由 atan2 决定，驱动轮线速度由合速度大小换算而来。
-                    raw_target_oa_mod_rad = wrapTo2Pi(atan2f(wheel_velocity_oa_y, wheel_velocity_oa_x));
-                    target_drive_omega_rad_s = wheel_speed_m_s / wheel_radius_m_;
+                    raw_target_oa_mod_rad = wrapTo2Pi(atan2f(wheel_vy, wheel_vx));
+                    drive_omega = wheel_speed_m_s / wheel_radius_m_;
                 }
 
-                // 舵轮存在“朝向等价类”：目标角加 π 后，只要驱动轮反向即可得到同样的底盘效果。
-                // 因此这里比较两种等价姿态谁更接近当前角度，优先选转角更小的一侧。
-                // candidate_a 表示“直接去目标朝向”；
-                // candidate_b 表示“舵角翻 180°，同时驱动轮反向”；
-                // nearestEquivalentAngle() 会把这两个模角展开成最接近当前连续角的那一支，便于比较真实转动代价。
                 const f32 alt_target_oa_mod_rad = wrapTo2Pi(raw_target_oa_mod_rad + kPi);
-                const f32 candidate_a_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, raw_target_oa_mod_rad);
-                const f32 candidate_b_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, alt_target_oa_mod_rad);
+                const f32 candidate_a = nearestEquivalentAngle(current_oa_total_rad[i], raw_target_oa_mod_rad);
+                const f32 candidate_b = nearestEquivalentAngle(current_oa_total_rad[i], alt_target_oa_mod_rad);
 
-                f32 selected_oa_total_rad = candidate_a_oa_total_rad;
-                bool flipped_drive = false;
-
-                // 如果“翻 180° 再反转驱动”的方案转角更小，就选它；
-                // 这样可以显著减少舵轮大角度掉头的时间。
-                if (fabsf(candidate_b_oa_total_rad - current_oa_total_rad) < fabsf(candidate_a_oa_total_rad - current_oa_total_rad))
+                f32 selected = candidate_a;
+                bool flipped = false;
+                if (!is_stationary)
                 {
-                    selected_oa_total_rad = candidate_b_oa_total_rad;
-                    target_drive_omega_rad_s = -target_drive_omega_rad_s;
-                    flipped_drive = true;
-                }
-
-                f32 cosine_scale = 1.0f;
-                if (enable_cosine_compensation_)
-                {
-                    // 舵角偏离目标越多，驱动轮对底盘速度的有效贡献越小；
-                    // 余弦补偿把这种几何损失显式折算进驱动轮目标速度中。
-                    cosine_scale = cosf(fabsf(shortestAngularDistance(current_oa_total_rad, selected_oa_total_rad)));
-                    if (cosine_scale < 0.0f)
+                    if (runtime_strategy_cfg_.steering_strategy_mode == SteeringStrategyMode::kAlwaysForward)
                     {
-                        cosine_scale = 0.0f;
+                        flipped = false;
+                    }
+                    else
+                    {
+                        const f32 base_abs_deg = radToDegF32(fabsf(candidate_a - current_oa_total_rad[i]));
+                        const f32 flip_abs_deg = radToDegF32(fabsf(candidate_b - current_oa_total_rad[i]));
+                        if (selected_flipped_solution_[i])
+                        {
+                            flipped = flip_abs_deg <= runtime_strategy_cfg_.flip_enter_angle_deg;
+                        }
+                        else
+                        {
+                            flipped = (base_abs_deg > runtime_strategy_cfg_.flip_exit_angle_deg) && (flip_abs_deg < base_abs_deg);
+                        }
                     }
                 }
 
-                // 驱动速度先乘余弦补偿，再做绝对速度限幅；
-                // 这样在舵角尚未对准时，会主动降低驱动输出，避免轮子“侧着硬推”底盘。
-                target_drive_omega_rad_s *= cosine_scale;
-                target_drive_omega_rad_s = clampValue(target_drive_omega_rad_s, -max_drive_omega_rad_s_, max_drive_omega_rad_s_);
+                if (flipped)
+                {
+                    selected = candidate_b;
+                    drive_omega = -drive_omega;
+                }
+
+                selected_oa_total_rad[i] = selected;
+                selected_flipped_solution_[i] = flipped;
+                steering_errors_rad[i] = fabsf(shortestAngularDistance(current_oa_total_rad[i], selected));
+                target_drive_raw_rad_s[i] = drive_omega;
+            }
+
+            // 第二阶段：停车抑制（指令静止但残速未消失时，先保舵角）。
+            const bool command_is_stationary = max_command_wheel_speed_m_s <= stationary_speed_epsilon_m_s_;
+            const bool residual_drive_is_moving = max_residual_speed_m_s > runtime_strategy_cfg_.stop_guard_release_speed_m_s;
+            if (runtime_strategy_cfg_.enable_stop_steer_guard && command_is_stationary && residual_drive_is_moving)
+            {
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    const f32 residual_speed_m_s = fabsf(wheel_config_[i].corrected_drive_omega_rad_s) * wheel_radius_m_;
+                    const f32 blend = stopSteerGuardBlend(residual_speed_m_s);
+                    if (blend >= 1.0f)
+                    {
+                        continue;
+                    }
+
+                    const f32 current = current_oa_total_rad[i];
+                    const f32 protected_target = wrapTo2Pi(
+                        current + shortestAngularDistance(current, selected_oa_total_rad[i]) * blend);
+                    selected_oa_total_rad[i] = protected_target;
+                    steering_errors_rad[i] = fabsf(shortestAngularDistance(current, protected_target));
+                    selected_flipped_solution_[i] = false;
+                }
+            }
+
+            // 第三阶段：驱动抑制比例（DriveGate 或余弦补偿）。
+            f32 gate_scales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+            computeDriveGateScales(steering_errors_rad, command_data, gate_scales);
+
+            // 第四阶段：下发前限幅与缓存。
+            for (u8 i = 0; i < 4; ++i)
+            {
+                WheelConfig &wheel = wheel_config_[i];
+                const f32 current_local_total = wheel.corrected_steer_motor_total_angle_rad;
+
+                f32 drive_scale = 1.0f;
+                if (runtime_strategy_cfg_.enable_drive_gate)
+                {
+                    drive_scale = gate_scales[i];
+                }
+                else if (enable_cosine_compensation_)
+                {
+                    drive_scale = cosf(steering_errors_rad[i]);
+                    if (drive_scale < 0.0f)
+                    {
+                        drive_scale = 0.0f;
+                    }
+                }
+
+                f32 target_drive_omega = target_drive_raw_rad_s[i] * drive_scale;
+                target_drive_omega = clampValue(target_drive_omega, -max_drive_omega_rad_s_, max_drive_omega_rad_s_);
+                drive_gate_scale_[i] = clampValue(drive_scale, 0.0f, 1.0f);
 
                 f32 next_steer_rate_rad_s = 0.0f;
-
-                // 选中的 OA 朝向还要换回电机本地机械角参考系，才能真正下发给转向电机。
-                // 转向角使用二阶限幅器：同时约束角速度和角加速度；
-                // 驱动角速度使用一阶加速度限幅，再做最终速度钳制。
-                const f32 selected_local_total_rad = selected_oa_total_rad - wheel.theta_oa_to_owi_rad;
+                const f32 selected_local_total = selected_oa_total_rad[i] - wheel.theta_oa_to_owi_rad;
                 wheel.target_steer_motor_total_angle_rad = limitPositionSecondOrder(
-                    current_local_total_rad,
+                    current_local_total,
                     last_steer_rate_cmd_rad_s_[i],
-                    selected_local_total_rad,
+                    selected_local_total,
                     max_steer_rate_rad_s_,
                     max_steer_alpha_rad_s2_,
                     period_,
                     next_steer_rate_rad_s);
                 wheel.target_drive_omega_rad_s = clampValue(
-                    limitValueWithAcceleration(last_drive_omega_cmd_rad_s_[i], target_drive_omega_rad_s, max_drive_alpha_rad_s2_, period_),
+                    limitValueWithAcceleration(last_drive_omega_cmd_rad_s_[i], target_drive_omega, max_drive_alpha_rad_s2_, period_),
                     -max_drive_omega_rad_s_,
                     max_drive_omega_rad_s_);
 
-                // 把这一拍最终选出的控制结果缓存下来，后续既用于真正下发电机，
-                // 也用于 planned_data_ 回写和下一拍的限幅“以上一拍命令”为基准继续推进。
                 wheel.steer_target_velocity_rad_s = next_steer_rate_rad_s;
-                wheel.flipped_drive_direction = flipped_drive;
+                wheel.flipped_drive_direction = selected_flipped_solution_[i];
 
                 last_steer_rate_cmd_rad_s_[i] = next_steer_rate_rad_s;
                 last_drive_omega_cmd_rad_s_[i] = wheel.target_drive_omega_rad_s;
-
                 planned_data_.steer_angle_oa_rad[i] = wheel.target_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
                 planned_data_.drive_omega_rad_s[i] = wheel.target_drive_omega_rad_s;
             }
