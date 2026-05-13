@@ -1,4 +1,4 @@
-#ifndef APP_UTILS_H_
+ï»¿#ifndef APP_UTILS_H_
 #define APP_UTILS_H_
 
 #include <stdint.h>
@@ -25,11 +25,11 @@ namespace jia
     constexpr f32 kPi = 3.14159265358979323846f;
 
     /**
-     * @brief ÊıÖµ·¶Î§ÏŞÖÆ
-     * @param val ÊäÈëÖµ
-     * @param min_val ×îĞ¡Öµ
-     * @param max_val ×î´óÖµ
-     * @return T ÏŞÖÆºóµÄÖµ
+     * @brief æ•°å€¼èŒƒå›´é™åˆ¶
+     * @param val è¾“å…¥å€¼
+     * @param min_val æœ€å°å€¼
+     * @param max_val æœ€å¤§å€¼
+     * @return T é™åˆ¶åçš„å€¼
      */
     template <typename T>
     constexpr inline T clampValue(const T &val, const T &min_val, const T &max_val)
@@ -42,9 +42,9 @@ namespace jia
     }
 
     /**
-     * @brief »¡¶È×ª»»Îª¶È
-     * @param rad »¡¶È£¨µ¥Î»£º»¡¶È£©
-     * @return f32 ¶È£¨µ¥Î»£º¶È£©
+     * @brief å¼§åº¦è½¬æ¢ä¸ºåº¦
+     * @param rad å¼§åº¦ï¼ˆå•ä½ï¼šå¼§åº¦ï¼‰
+     * @return f32 åº¦ï¼ˆå•ä½ï¼šåº¦ï¼‰
      */
     constexpr inline f32 radToDegF32(f32 rad)
     {
@@ -52,9 +52,9 @@ namespace jia
     }
 
     /**
-     * @brief ¶È×ª»»Îª»¡¶È
-     * @param deg ¶È£¨µ¥Î»£º¶È£©
-     * @return f32 »¡¶È£¨µ¥Î»£º»¡¶È£©
+     * @brief åº¦è½¬æ¢ä¸ºå¼§åº¦
+     * @param deg åº¦ï¼ˆå•ä½ï¼šåº¦ï¼‰
+     * @return f32 å¼§åº¦ï¼ˆå•ä½ï¼šå¼§åº¦ï¼‰
      */
     constexpr inline f32 degToRadF32(f32 deg)
     {
@@ -62,9 +62,9 @@ namespace jia
     }
 
     /**
-     * @brief ¼ÆËãÕıÏÒÖµ£¨½Ç¶ÈÖÆ£©
-     * @param deg ½Ç¶È£¨¶È£©
-     * @return f32 ÕıÏÒÖµ£¨-1.0f ~ 1.0f£©
+     * @brief è®¡ç®—æ­£å¼¦å€¼ï¼ˆè§’åº¦åˆ¶ï¼‰
+     * @param deg è§’åº¦ï¼ˆåº¦ï¼‰
+     * @return f32 æ­£å¼¦å€¼ï¼ˆ-1.0f ~ 1.0fï¼‰
      */
     inline f32 sinDegF32(f32 deg)
     {
@@ -83,9 +83,9 @@ namespace jia
     }
 
     /**
-     * @brief ¼ÆËãÓàÏÒÖµ£¨½Ç¶ÈÖÆ£©
-     * @param deg ½Ç¶È£¨¶È£©
-     * @return f32 ÓàÏÒÖµ£¨-1.0f ~ 1.0f£©
+     * @brief è®¡ç®—ä½™å¼¦å€¼ï¼ˆè§’åº¦åˆ¶ï¼‰
+     * @param deg è§’åº¦ï¼ˆåº¦ï¼‰
+     * @return f32 ä½™å¼¦å€¼ï¼ˆ-1.0f ~ 1.0fï¼‰
      */
     inline f32 cosDegF32(f32 deg)
     {
@@ -104,12 +104,12 @@ namespace jia
     }
 
     /**
-     * @brief »ùÓÚÊ±¼äµÄÒ»Î¬ĞÅºÅËÙÂÊÏŞ·ùº¯Êı
-     * @param target       Ä¿±êÖµ
-     * @param current      µ±Ç°Öµ
-     * @param dt           Ê±¼ä²½³¤£¨Ãë£©
-     * @param maxRate      ×î´óËÙÂÊ£¨µ¥Î»/Ãë£©
-     * @return             ÏŞ·ùºóµÄÏÂÒ»Ê±¿ÌÖµ
+     * @brief åŸºäºæ—¶é—´çš„ä¸€ç»´ä¿¡å·é€Ÿç‡é™å¹…å‡½æ•°
+     * @param target       ç›®æ ‡å€¼
+     * @param current      å½“å‰å€¼
+     * @param dt           æ—¶é—´æ­¥é•¿ï¼ˆç§’ï¼‰
+     * @param maxRate      æœ€å¤§é€Ÿç‡ï¼ˆå•ä½/ç§’ï¼‰
+     * @return             é™å¹…åçš„ä¸‹ä¸€æ—¶åˆ»å€¼
      */
     inline f32 limit1DSignalRateByTimeF32(f32 target, f32 current, f32 dt, f32 max_rate)
     {
@@ -124,13 +124,13 @@ namespace jia
     }
 
     /**
-     * @brief »ùÓÚÊ±¼äµÄÒ»Î¬ĞÅºÅËÙÂÊÏŞ·ùº¯Êı£¨·ÖÀë·½Ïò£©
-     * @param target       Ä¿±êÖµ
-     * @param current      µ±Ç°Öµ
-     * @param dt           Ê±¼ä²½³¤£¨Ãë£©
-     * @param max_inc_rate ×î´óÕıËÙÂÊ£¨µ¥Î»/Ãë£©
-     * @param max_dec_rate ×î´ó¸ºËÙÂÊ£¨µ¥Î»/Ãë£©
-     * @return             ÏŞ·ùºóµÄÏÂÒ»Ê±¿ÌÖµ
+     * @brief åŸºäºæ—¶é—´çš„ä¸€ç»´ä¿¡å·é€Ÿç‡é™å¹…å‡½æ•°ï¼ˆåˆ†ç¦»æ–¹å‘ï¼‰
+     * @param target       ç›®æ ‡å€¼
+     * @param current      å½“å‰å€¼
+     * @param dt           æ—¶é—´æ­¥é•¿ï¼ˆç§’ï¼‰
+     * @param max_inc_rate æœ€å¤§æ­£é€Ÿç‡ï¼ˆå•ä½/ç§’ï¼‰
+     * @param max_dec_rate æœ€å¤§è´Ÿé€Ÿç‡ï¼ˆå•ä½/ç§’ï¼‰
+     * @return             é™å¹…åçš„ä¸‹ä¸€æ—¶åˆ»å€¼
      */
     inline f32 limit1DSignalRateByTimeSeparateIncAndDecF32(f32 target, f32 current, f32 dt, f32 max_inc_rate, f32 max_dec_rate)
     {
@@ -146,19 +146,19 @@ namespace jia
     }
 
     /**
-     * @brief ÏŞÖÆ½Ç¶È±ä»¯ÂÊ£¨¿¼ÂÇ½Ç¶È»·ÈÆ£©
-     * @param target Ä¿±ê½Ç¶È[-180¡ã, 180¡ã)
-     * @param current_angle µ±Ç°½Ç¶È[-180¡ã, 180¡ã)
-     * @param period Ê±¼äÖÜÆÚ£¨Ãë£©
-     * @param max_rate ×î´ó½Ç¶È±ä»¯ÂÊ£¨¶È/Ãë£©
-     * @return ÏŞÖÆºóµÄ½Ç¶ÈÖµ[-180¡ã, 180¡ã)
+     * @brief é™åˆ¶è§’åº¦å˜åŒ–ç‡ï¼ˆè€ƒè™‘è§’åº¦ç¯ç»•ï¼‰
+     * @param target ç›®æ ‡è§’åº¦[-180Â°, 180Â°)
+     * @param current_angle å½“å‰è§’åº¦[-180Â°, 180Â°)
+     * @param period æ—¶é—´å‘¨æœŸï¼ˆç§’ï¼‰
+     * @param max_rate æœ€å¤§è§’åº¦å˜åŒ–ç‡ï¼ˆåº¦/ç§’ï¼‰
+     * @return é™åˆ¶åçš„è§’åº¦å€¼[-180Â°, 180Â°)
      */
     inline f32 limit1D180AngleRateByTimeF32(f32 target, f32 current, f32 period, f32 max_rate)
     {
-        // ¼ÆËã½Ç¶È²î£¬¿¼ÂÇ»·ÈÆÇé¿ö
+        // è®¡ç®—è§’åº¦å·®ï¼Œè€ƒè™‘ç¯ç»•æƒ…å†µ
         f32 angle_diff = target - current;
 
-        // µ÷Õû½Ç¶È²îµ½ [-180¡ã, 180¡ã] ·¶Î§ÄÚ£¬ÕÒµ½×î¶ÌÂ·¾¶
+        // è°ƒæ•´è§’åº¦å·®åˆ° [-180Â°, 180Â°] èŒƒå›´å†…ï¼Œæ‰¾åˆ°æœ€çŸ­è·¯å¾„
         if (angle_diff > 180.0f)
         {
             angle_diff -= 360.0f;
@@ -168,16 +168,16 @@ namespace jia
             angle_diff += 360.0f;
         }
 
-        // ¼ÆËã×î´óÔÊĞíµÄ½Ç¶È±ä»¯
+        // è®¡ç®—æœ€å¤§å…è®¸çš„è§’åº¦å˜åŒ–
         float max_angle_change = max_rate * period;
 
-        // ÏŞÖÆ½Ç¶È±ä»¯
+        // é™åˆ¶è§’åº¦å˜åŒ–
         angle_diff = clampValue(angle_diff, -max_angle_change, max_angle_change);
 
-        // ¼ÆËãĞÂµÄ½Ç¶È
+        // è®¡ç®—æ–°çš„è§’åº¦
         f32 new_angle = current + angle_diff;
 
-        // È·±£ĞÂ½Ç¶ÈÔÚ [-180¡ã, 180¡ã] ·¶Î§ÄÚ
+        // ç¡®ä¿æ–°è§’åº¦åœ¨ [-180Â°, 180Â°] èŒƒå›´å†…
         if (new_angle > 180.0f)
         {
             new_angle -= 360.0f;
@@ -196,11 +196,11 @@ namespace jia
     }
 
     /**
-     * @brief ÈıÖµÈ¡Ğ¡
-     * @param a µÚÒ»¸öÖµ
-     * @param b µÚ¶ş¸öÖµ
-     * @param c µÚÈı¸öÖµ
-     * @return T ÈıÖµÖĞµÄ×îĞ¡Öµ
+     * @brief ä¸‰å€¼å–å°
+     * @param a ç¬¬ä¸€ä¸ªå€¼
+     * @param b ç¬¬äºŒä¸ªå€¼
+     * @param c ç¬¬ä¸‰ä¸ªå€¼
+     * @return T ä¸‰å€¼ä¸­çš„æœ€å°å€¼
      */
     template <typename T>
     constexpr inline T minOfThree(const T &a, const T &b, const T &c)
@@ -209,9 +209,9 @@ namespace jia
     }
 
     /**
-     * @brief ×ªËÙ×ª»»Îª½ÇËÙ¶È£¨µ¥Î»£º»¡¶È/Ãë£©
-     * @param rpm ×ªËÙ£¨µ¥Î»£º×ª/·Ö£©
-     * @return f32 ½ÇËÙ¶È£¨µ¥Î»£º»¡¶È/Ãë£©
+     * @brief è½¬é€Ÿè½¬æ¢ä¸ºè§’é€Ÿåº¦ï¼ˆå•ä½ï¼šå¼§åº¦/ç§’ï¼‰
+     * @param rpm è½¬é€Ÿï¼ˆå•ä½ï¼šè½¬/åˆ†ï¼‰
+     * @return f32 è§’é€Ÿåº¦ï¼ˆå•ä½ï¼šå¼§åº¦/ç§’ï¼‰
      */
     constexpr inline f32 rpmToRadsF32(f32 rpm)
     {
@@ -219,9 +219,9 @@ namespace jia
     }
 
     /**
-     * @brief ½ÇËÙ¶È×ª»»Îª×ªËÙ£¨µ¥Î»£º×ª/·Ö£©
-     * @param omega ½ÇËÙ¶È£¨µ¥Î»£º»¡¶È/Ãë£©
-     * @return f32 ×ªËÙ£¨µ¥Î»£º×ª/·Ö£©
+     * @brief è§’é€Ÿåº¦è½¬æ¢ä¸ºè½¬é€Ÿï¼ˆå•ä½ï¼šè½¬/åˆ†ï¼‰
+     * @param omega è§’é€Ÿåº¦ï¼ˆå•ä½ï¼šå¼§åº¦/ç§’ï¼‰
+     * @return f32 è½¬é€Ÿï¼ˆå•ä½ï¼šè½¬/åˆ†ï¼‰
      */
     constexpr inline f32 radsToRpmF32(f32 omega)
     {
@@ -229,10 +229,10 @@ namespace jia
     }
 
     /**
-     * @brief ½ÇËÙ¶È×ª»»ÎªÏßËÙ¶È
-     * @param omega ½ÇËÙ¶È£¨µ¥Î»£º»¡¶È/Ãë£©
-     * @param radius ÂÖ×Ó°ë¾¶£¨µ¥Î»£ºÃ×£©
-     * @return f32 ÏßËÙ¶È£¨µ¥Î»£ºÃ×/Ãë£©
+     * @brief è§’é€Ÿåº¦è½¬æ¢ä¸ºçº¿é€Ÿåº¦
+     * @param omega è§’é€Ÿåº¦ï¼ˆå•ä½ï¼šå¼§åº¦/ç§’ï¼‰
+     * @param radius è½®å­åŠå¾„ï¼ˆå•ä½ï¼šç±³ï¼‰
+     * @return f32 çº¿é€Ÿåº¦ï¼ˆå•ä½ï¼šç±³/ç§’ï¼‰
      */
     constexpr inline f32 omegaToVelF32(f32 omega, f32 radius)
     {
@@ -240,10 +240,10 @@ namespace jia
     }
 
     /**
-     * @brief ÏßËÙ¶È×ª»»Îª½ÇËÙ¶È
-     * @param vel ÏßËÙ¶È£¨µ¥Î»£ºÃ×/Ãë£©
-     * @param radius ÂÖ×Ó°ë¾¶£¨µ¥Î»£ºÃ×£©
-     * @return f32 ½ÇËÙ¶È£¨µ¥Î»£º»¡¶È/Ãë£©
+     * @brief çº¿é€Ÿåº¦è½¬æ¢ä¸ºè§’é€Ÿåº¦
+     * @param vel çº¿é€Ÿåº¦ï¼ˆå•ä½ï¼šç±³/ç§’ï¼‰
+     * @param radius è½®å­åŠå¾„ï¼ˆå•ä½ï¼šç±³ï¼‰
+     * @return f32 è§’é€Ÿåº¦ï¼ˆå•ä½ï¼šå¼§åº¦/ç§’ï¼‰
      */
     constexpr inline f32 velToOmegaF32(f32 vel, f32 radius)
     {
@@ -251,12 +251,12 @@ namespace jia
     }
 
     /**
-     * @brief Éú³ÉÕıÏÒ²¨ĞÅºÅ£¨floatÀàĞÍÊä³ö£©
-     * @param t ÊäÈëÊ±¼ä£¨µ¥Î»£ºÃë£¬floatÀàĞÍ£©
-     * @param amplitude Õñ·ù£¨Ä¬ÈÏ1.0f£¬Êä³ö·¶Î§[-amplitude, amplitude]£©
-     * @param frequency ÆµÂÊ£¨Ä¬ÈÏ1.0Hz£¬Ã¿ÃëÕñµ´´ÎÊı£©
-     * @param phase ÏàÎ»Æ«ÒÆ£¨Ä¬ÈÏ0.0f£¬µ¥Î»£º»¡¶È£©
-     * @return float ÕıÏÒ²¨µ±Ç°Ê±¿ÌµÄ·ùÖµ
+     * @brief ç”Ÿæˆæ­£å¼¦æ³¢ä¿¡å·ï¼ˆfloatç±»å‹è¾“å‡ºï¼‰
+     * @param t è¾“å…¥æ—¶é—´ï¼ˆå•ä½ï¼šç§’ï¼Œfloatç±»å‹ï¼‰
+     * @param amplitude æŒ¯å¹…ï¼ˆé»˜è®¤1.0fï¼Œè¾“å‡ºèŒƒå›´[-amplitude, amplitude]ï¼‰
+     * @param frequency é¢‘ç‡ï¼ˆé»˜è®¤1.0Hzï¼Œæ¯ç§’æŒ¯è¡æ¬¡æ•°ï¼‰
+     * @param phase ç›¸ä½åç§»ï¼ˆé»˜è®¤0.0fï¼Œå•ä½ï¼šå¼§åº¦ï¼‰
+     * @return float æ­£å¼¦æ³¢å½“å‰æ—¶åˆ»çš„å¹…å€¼
      */
     inline f32 sineWaveGeneratorF32(f32 time, f32 amplitude = 1.0f, f32 frequency = 1.0f, f32 phase = 0.0f, f32 offset = 0.0f)
     {
@@ -264,13 +264,13 @@ namespace jia
     }
 
     /**
-     * @brief »ùÓÚÊ±¼äµÄÒ»Î¬ĞÅºÅËÙÂÊÏŞ·ùº¯Êı£¨·ÖÀë·½Ïò£©
-     * @param target       Ä¿±êÖµ
-     * @param current      µ±Ç°Öµ
-     * @param dt           Ê±¼ä²½³¤£¨Ãë£©
-     * @param max_inc_rate ×î´óÔö¼ÓËÙÂÊ£¨µ¥Î»/Ãë£©
-     * @param max_dec_rate ×î´ó¼õÉÙËÙÂÊ£¨µ¥Î»/Ãë£©
-     * @return             ÏŞ·ùºóµÄÏÂÒ»Ê±¿ÌÖµ
+     * @brief åŸºäºæ—¶é—´çš„ä¸€ç»´ä¿¡å·é€Ÿç‡é™å¹…å‡½æ•°ï¼ˆåˆ†ç¦»æ–¹å‘ï¼‰
+     * @param target       ç›®æ ‡å€¼
+     * @param current      å½“å‰å€¼
+     * @param dt           æ—¶é—´æ­¥é•¿ï¼ˆç§’ï¼‰
+     * @param max_inc_rate æœ€å¤§å¢åŠ é€Ÿç‡ï¼ˆå•ä½/ç§’ï¼‰
+     * @param max_dec_rate æœ€å¤§å‡å°‘é€Ÿç‡ï¼ˆå•ä½/ç§’ï¼‰
+     * @return             é™å¹…åçš„ä¸‹ä¸€æ—¶åˆ»å€¼
      */
     inline f32 limit1DSignalRateByTimeSeparateAbsIncAndDecF32(f32 target, f32 current, f32 dt, f32 max_inc_rate, f32 max_dec_rate)
     {
@@ -302,32 +302,32 @@ namespace jia
     }
 
     /**
-     * @brief °´±ÈÀıËõ·ÅÈı¸öÊıÖµ£¬È·±£Æä¾ø¶ÔÖµ²»³¬¹ı¸÷×ÔµÄ×î´óÖµÏŞÖÆ
-     * @param val1 µÚÒ»¸öÊäÈëÖµ£¨¿ÉÕı¿É¸º£©
-     * @param val2 µÚ¶ş¸öÊäÈëÖµ£¨¿ÉÕı¿É¸º£©
-     * @param val3 µÚÈı¸öÊäÈëÖµ£¨¿ÉÕı¿É¸º£©
-     * @param max1 µÚÒ»¸öÖµµÄ×î´ó¾ø¶ÔÖµÏŞÖÆ£¨±ØĞëÎªÕıÊı£©
-     * @param max2 µÚ¶ş¸öÖµµÄ×î´ó¾ø¶ÔÖµÏŞÖÆ£¨±ØĞëÎªÕıÊı£©
-     * @param max3 µÚÈı¸öÖµµÄ×î´ó¾ø¶ÔÖµÏŞÖÆ£¨±ØĞëÎªÕıÊı£©
-     * @param out1 Êä³ö£º´¦ÀíºóµÄµÚÒ»¸öÖµ
-     * @param out2 Êä³ö£º´¦ÀíºóµÄµÚ¶ş¸öÖµ
-     * @param out3 Êä³ö£º´¦ÀíºóµÄµÚÈı¸öÖµ
-     * @return f32 Ëõ·Å±ÈÀı£º
-     *         - ÈôËùÓĞÖµ¶¼·ûºÏÏŞÖÆ£¬·µ»Ø1.0f
-     *         - Èô×î´óÖµÎª¸ºÊı£¬·µ»Ø-1.0f
-     *         - ÈôÓĞÒ»¸ö»ò¶à¸öÖµ³¬ÏŞÖÆ£¬·µ»ØËõ·Å±ÈÀı£¨È·±£ËùÓĞÖµ¾ø¶ÔÖµ¾ù¡Ü¸÷×ÔµÄ×î´óÖµ£©
+     * @brief æŒ‰æ¯”ä¾‹ç¼©æ”¾ä¸‰ä¸ªæ•°å€¼ï¼Œç¡®ä¿å…¶ç»å¯¹å€¼ä¸è¶…è¿‡å„è‡ªçš„æœ€å¤§å€¼é™åˆ¶
+     * @param val1 ç¬¬ä¸€ä¸ªè¾“å…¥å€¼ï¼ˆå¯æ­£å¯è´Ÿï¼‰
+     * @param val2 ç¬¬äºŒä¸ªè¾“å…¥å€¼ï¼ˆå¯æ­£å¯è´Ÿï¼‰
+     * @param val3 ç¬¬ä¸‰ä¸ªè¾“å…¥å€¼ï¼ˆå¯æ­£å¯è´Ÿï¼‰
+     * @param max1 ç¬¬ä¸€ä¸ªå€¼çš„æœ€å¤§ç»å¯¹å€¼é™åˆ¶ï¼ˆå¿…é¡»ä¸ºæ­£æ•°ï¼‰
+     * @param max2 ç¬¬äºŒä¸ªå€¼çš„æœ€å¤§ç»å¯¹å€¼é™åˆ¶ï¼ˆå¿…é¡»ä¸ºæ­£æ•°ï¼‰
+     * @param max3 ç¬¬ä¸‰ä¸ªå€¼çš„æœ€å¤§ç»å¯¹å€¼é™åˆ¶ï¼ˆå¿…é¡»ä¸ºæ­£æ•°ï¼‰
+     * @param out1 è¾“å‡ºï¼šå¤„ç†åçš„ç¬¬ä¸€ä¸ªå€¼
+     * @param out2 è¾“å‡ºï¼šå¤„ç†åçš„ç¬¬äºŒä¸ªå€¼
+     * @param out3 è¾“å‡ºï¼šå¤„ç†åçš„ç¬¬ä¸‰ä¸ªå€¼
+     * @return f32 ç¼©æ”¾æ¯”ä¾‹ï¼š
+     *         - è‹¥æ‰€æœ‰å€¼éƒ½ç¬¦åˆé™åˆ¶ï¼Œè¿”å›1.0f
+     *         - è‹¥æœ€å¤§å€¼ä¸ºè´Ÿæ•°ï¼Œè¿”å›-1.0f
+     *         - è‹¥æœ‰ä¸€ä¸ªæˆ–å¤šä¸ªå€¼è¶…é™åˆ¶ï¼Œè¿”å›ç¼©æ”¾æ¯”ä¾‹ï¼ˆç¡®ä¿æ‰€æœ‰å€¼ç»å¯¹å€¼å‡â‰¤å„è‡ªçš„æœ€å¤§å€¼ï¼‰
      */
     inline f32 scaleThreeValuesToMaxF32(f32 val1, f32 val2, f32 val3,
                                         f32 max1, f32 max2, f32 max3,
                                         f32 &out1, f32 &out2, f32 &out3)
     {
-        // °²È«Ğ£Ñé£º×î´óÖµ±ØĞëÎª·Ç¸ºÊı
+        // å®‰å…¨æ ¡éªŒï¼šæœ€å¤§å€¼å¿…é¡»ä¸ºéè´Ÿæ•°
         if (max1 < 0.0f || max2 < 0.0f || max3 < 0.0f)
         {
             return -1.0f;
         }
 
-        // ÌØÊâÇé¿ö£ºÈô´æÔÚ×î´óÖµÎª0£¬Ö±½ÓÈ«²¿·µ»Ø0£¨±ÜÃâ³ıÒÔ0£©
+        // ç‰¹æ®Šæƒ…å†µï¼šè‹¥å­˜åœ¨æœ€å¤§å€¼ä¸º0ï¼Œç›´æ¥å…¨éƒ¨è¿”å›0ï¼ˆé¿å…é™¤ä»¥0ï¼‰
         if (max1 == 0.0f && max2 == 0.0f && max3 == 0.0f)
         {
             out1 = 0.0f;
@@ -336,23 +336,23 @@ namespace jia
             return 0.0f;
         }
 
-        // ¼ÆËãÃ¿¸öÖµµÄ"³¬ÏŞ±¶Êı"£¨µ±Ç°Öµ¾ø¶ÔÖµ / ¶ÔÓ¦×î´óÖµ£©
-        // ±¶Êı>1±íÊ¾³¬ÏŞ£¬±¶Êı¡Ü1±íÊ¾ºÏ¹æ
+        // è®¡ç®—æ¯ä¸ªå€¼çš„"è¶…é™å€æ•°"ï¼ˆå½“å‰å€¼ç»å¯¹å€¼ / å¯¹åº”æœ€å¤§å€¼ï¼‰
+        // å€æ•°>1è¡¨ç¤ºè¶…é™ï¼Œå€æ•°â‰¤1è¡¨ç¤ºåˆè§„
         f32 ratio1 = fabsf(val1) / max1;
         f32 ratio2 = fabsf(val2) / max2;
         f32 ratio3 = fabsf(val3) / max3;
 
-        // ÕÒµ½×î´óµÄ³¬ÏŞ±¶Êı
+        // æ‰¾åˆ°æœ€å¤§çš„è¶…é™å€æ•°
         f32 maxRatio = ratio1;
         if (ratio2 > maxRatio)
             maxRatio = ratio2;
         if (ratio3 > maxRatio)
             maxRatio = ratio3;
 
-        // È·¶¨Ëõ·Å±ÈÀı£ºÈô×î´ó±¶Êı¡Ü1£¬Ëõ·Å±ÈÀıÎª1£¨²»Ëõ·Å£©£»·ñÔòÎª1/maxRatio
+        // ç¡®å®šç¼©æ”¾æ¯”ä¾‹ï¼šè‹¥æœ€å¤§å€æ•°â‰¤1ï¼Œç¼©æ”¾æ¯”ä¾‹ä¸º1ï¼ˆä¸ç¼©æ”¾ï¼‰ï¼›å¦åˆ™ä¸º1/maxRatio
         f32 scaleFactor = (maxRatio > 1.0f) ? (1.0f / maxRatio) : 1.0f;
 
-        // °´±ÈÀıËõ·Å²¢±£Áô·ûºÅ
+        // æŒ‰æ¯”ä¾‹ç¼©æ”¾å¹¶ä¿ç•™ç¬¦å·
         out1 = val1 * scaleFactor;
         out2 = val2 * scaleFactor;
         out3 = val3 * scaleFactor;
@@ -361,10 +361,10 @@ namespace jia
     }
 
     /**
-     * @brief ÓÒÊÖ×ø±êÏµ ¡¤ ÈÆ Z ÖáĞı×ª×ø±ê
-     * @param x,y ÊäÈë×ø±ê
-     * @param theta Ğı×ª»¡¶È£¨ÄæÊ±ÕëÎªÕı£©
-     * @param x_out,y_out Êä³öĞı×ªºó×ø±ê
+     * @brief å³æ‰‹åæ ‡ç³» Â· ç»• Z è½´æ—‹è½¬åæ ‡
+     * @param x,y è¾“å…¥åæ ‡
+     * @param theta æ—‹è½¬å¼§åº¦ï¼ˆé€†æ—¶é’ˆä¸ºæ­£ï¼‰
+     * @param x_out,y_out è¾“å‡ºæ—‹è½¬ååæ ‡
      */
     constexpr inline void rotateAroundZAxisF32(f32 x, f32 y, f32 theta,
                                                f32 &x_out, f32 &y_out)
@@ -377,10 +377,10 @@ namespace jia
     }
 
     /**
-     * @brief ËÀÇø´¦Àí£¬½«ÊıÖµÔÚËÀÇø·¶Î§ÄÚÓ³ÉäÎª0
-     * @param value ÊäÈëÖµ
-     * @param dead_band ËÀÇø·¶Î§£¨±ØĞëÎªÕıÊı£©
-     * @return T ´¦ÀíºóµÄÖµ
+     * @brief æ­»åŒºå¤„ç†ï¼Œå°†æ•°å€¼åœ¨æ­»åŒºèŒƒå›´å†…æ˜ å°„ä¸º0
+     * @param value è¾“å…¥å€¼
+     * @param dead_band æ­»åŒºèŒƒå›´ï¼ˆå¿…é¡»ä¸ºæ­£æ•°ï¼‰
+     * @return T å¤„ç†åçš„å€¼
      */
     template <typename T>
     constexpr inline T deadZoneToZero(const T &value, const T &dead_band)
@@ -389,11 +389,11 @@ namespace jia
     }
 
     /**
-     * @brief ËÀÇø´¦Àí£¬½«ÊıÖµÔÚËÀÇø·¶Î§ÄÚÓ³ÉäÎªËÀÇøÖĞĞÄ
-     * @param value ÊäÈëÖµ
-     * @param deadband_center ËÀÇøÖĞĞÄ£¨¿ÉÕı¿É¸º£©
-     * @param deadband_radius ËÀÇø°ë¾¶£¨±ØĞëÎªÕıÊı£©
-     * @return T ´¦ÀíºóµÄÖµ
+     * @brief æ­»åŒºå¤„ç†ï¼Œå°†æ•°å€¼åœ¨æ­»åŒºèŒƒå›´å†…æ˜ å°„ä¸ºæ­»åŒºä¸­å¿ƒ
+     * @param value è¾“å…¥å€¼
+     * @param deadband_center æ­»åŒºä¸­å¿ƒï¼ˆå¯æ­£å¯è´Ÿï¼‰
+     * @param deadband_radius æ­»åŒºåŠå¾„ï¼ˆå¿…é¡»ä¸ºæ­£æ•°ï¼‰
+     * @return T å¤„ç†åçš„å€¼
      */
     template <typename T>
     constexpr inline T deadZoneToCenter(const T &value, const T &dead_band_center, const T &dead_band_radius)
@@ -404,14 +404,14 @@ namespace jia
         }
         else
         {
-            return dead_band_center; // ËÀÇøÄÚ·µ»ØÖĞĞÄµã£¨ºËĞÄÂß¼­£©
+            return dead_band_center; // æ­»åŒºå†…è¿”å›ä¸­å¿ƒç‚¹ï¼ˆæ ¸å¿ƒé€»è¾‘ï¼‰
         }
     }
 
     /**
-     * @brief ½Ç¶È¹éÒ»»¯£¬½«½Ç¶È×ª»»Îª[0,360)¶È·¶Î§ÄÚ
-     * @param angle ÊäÈë½Ç¶È£¨µ¥Î»£º¶È£©
-     * @return T ¹éÒ»»¯ºóµÄ½Ç¶È£¨µ¥Î»£º¶È£©
+     * @brief è§’åº¦å½’ä¸€åŒ–ï¼Œå°†è§’åº¦è½¬æ¢ä¸º[0,360)åº¦èŒƒå›´å†…
+     * @param angle è¾“å…¥è§’åº¦ï¼ˆå•ä½ï¼šåº¦ï¼‰
+     * @return T å½’ä¸€åŒ–åçš„è§’åº¦ï¼ˆå•ä½ï¼šåº¦ï¼‰
      */
     template <typename T>
     constexpr inline typename std::enable_if<std::is_same<T, f32>::value, T>::type
@@ -435,18 +435,18 @@ namespace jia
     }
 
     /**
-     * @brief ½Ç¶È¹éÒ»»¯£¬½«½Ç¶È×ª»»Îª[-180,180)¶È·¶Î§ÄÚ
-     * @param angle ÊäÈë½Ç¶È£¨µ¥Î»£º¶È£©
-     * @return T ¹éÒ»»¯ºóµÄ½Ç¶È£¨µ¥Î»£º¶È£©
+     * @brief è§’åº¦å½’ä¸€åŒ–ï¼Œå°†è§’åº¦è½¬æ¢ä¸º[-180,180)åº¦èŒƒå›´å†…
+     * @param angle è¾“å…¥è§’åº¦ï¼ˆå•ä½ï¼šåº¦ï¼‰
+     * @return T å½’ä¸€åŒ–åçš„è§’åº¦ï¼ˆå•ä½ï¼šåº¦ï¼‰
      */
     template <typename T>
     constexpr inline T normalizeAngleTo180(T angle)
     {
         constexpr T full_circle = static_cast<T>(360);
         constexpr T half_circle = static_cast<T>(180);
-        // ÏÈ¹éÒ»»¯µ½ [0, 360)
+        // å…ˆå½’ä¸€åŒ–åˆ° [0, 360)
         T normalized = normalizeAngleTo360(angle);
-        // µÈÓÚºÍ´óÓÚ180¡ãµÄ²¿·Ö×ª»»Îª¸ºÊı
+        // ç­‰äºå’Œå¤§äº180Â°çš„éƒ¨åˆ†è½¬æ¢ä¸ºè´Ÿæ•°
         if (normalized >= half_circle)
         {
             normalized -= full_circle;
@@ -455,9 +455,9 @@ namespace jia
     }
 
     /**
-     * @brief ½Ç¶È¹éÒ»»¯£¬½«½Ç¶È×ª»»Îª[-¦Ğ,¦Ğ)»¡¶È·¶Î§ÄÚ
-     * @param angle ÊäÈë½Ç¶È£¨µ¥Î»£º»¡¶È£©
-     * @return T ¹éÒ»»¯ºóµÄ½Ç¶È£¨µ¥Î»£º»¡¶È£©
+     * @brief è§’åº¦å½’ä¸€åŒ–ï¼Œå°†è§’åº¦è½¬æ¢ä¸º[-Ï€,Ï€)å¼§åº¦èŒƒå›´å†…
+     * @param angle è¾“å…¥è§’åº¦ï¼ˆå•ä½ï¼šå¼§åº¦ï¼‰
+     * @return T å½’ä¸€åŒ–åçš„è§’åº¦ï¼ˆå•ä½ï¼šå¼§åº¦ï¼‰
      */
     template <typename T>
     constexpr inline typename std::enable_if<std::is_same<T, f32>::value, T>::type
@@ -473,9 +473,9 @@ namespace jia
     }
 
     /**
-     * @brief »ùÓÚ½Ç¶ÈµÄÕıÏÒº¯Êı£¨µ¥Î»£º¶È£©£¬¿ìËÙ°æ±¾
-     * @param angle ÊäÈë½Ç¶È£¨µ¥Î»£º¶È£©
-     * @return ¶ÔÓ¦½Ç¶ÈµÄÕıÏÒÖµ
+     * @brief åŸºäºè§’åº¦çš„æ­£å¼¦å‡½æ•°ï¼ˆå•ä½ï¼šåº¦ï¼‰ï¼Œå¿«é€Ÿç‰ˆæœ¬
+     * @param angle è¾“å…¥è§’åº¦ï¼ˆå•ä½ï¼šåº¦ï¼‰
+     * @return å¯¹åº”è§’åº¦çš„æ­£å¼¦å€¼
      */
     constexpr inline f32 sinDegF32Fast(f32 angle)
     {
@@ -488,9 +488,9 @@ namespace jia
     }
 
     /**
-     * @brief »ùÓÚ½Ç¶ÈµÄÓàÏÒº¯Êı£¨µ¥Î»£º¶È£©£¬¿ìËÙ°æ±¾
-     * @param angle ÊäÈë½Ç¶È£¨µ¥Î»£º¶È£©
-     * @return ¶ÔÓ¦½Ç¶ÈµÄÓàÏÒÖµ
+     * @brief åŸºäºè§’åº¦çš„ä½™å¼¦å‡½æ•°ï¼ˆå•ä½ï¼šåº¦ï¼‰ï¼Œå¿«é€Ÿç‰ˆæœ¬
+     * @param angle è¾“å…¥è§’åº¦ï¼ˆå•ä½ï¼šåº¦ï¼‰
+     * @return å¯¹åº”è§’åº¦çš„ä½™å¼¦å€¼
      */
     constexpr inline f32 cosDegF32Fast(f32 angle)
     {
