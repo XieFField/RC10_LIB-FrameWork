@@ -533,31 +533,31 @@ namespace jia
             // 补偿结果与最近一次规划输出，供控制线程在每个周期更新。
             struct WheelConfig
             {
-                f32 pos_x_m = 0.0f;
-                f32 pos_y_m = 0.0f;
-                f32 theta_oa_to_owi_rad = 0.0f;
-                f32 steer_motor_sign = 1.0f;
-                f32 drive_motor_sign = 1.0f;
-                Motor_Base *steer_motor_h = nullptr;
-                Motor_Base *drive_motor_h = nullptr;
-                bool homing_enabled = false;
-                bool homing_sensor_active_high = true;
-                void *homing_gpio_port = nullptr;
-                u16 homing_gpio_pin = 0;
-                f32 homing_search_rpm = 10.0f;
-                f32 homing_zero_offset_rad = 0.0f;
-                f32 homing_timeout_s = 5.0f;
-                HomingState homing_state = HomingState::kIdle;
-                bool homing_last_sensor_active = false;
-                bool homing_zero_valid = false;
-                f32 homing_elapsed_s = 0.0f;
-                f32 homing_runtime_zero_offset_rad = 0.0f;
-                f32 corrected_steer_motor_total_angle_rad = 0.0f;
-                f32 corrected_drive_omega_rad_s = 0.0f;
-                f32 target_steer_motor_total_angle_rad = 0.0f;
-                f32 target_drive_omega_rad_s = 0.0f;
-                f32 steer_target_velocity_rad_s = 0.0f;
-                bool flipped_drive_direction = false;
+                f32 pos_x_m = 0.0f;                         // 该舵轮模块在车体坐标系中的 x 安装位置，单位米
+                f32 pos_y_m = 0.0f;                         // 该舵轮模块在车体坐标系中的 y 安装位置，单位米
+                f32 theta_oa_to_owi_rad = 0.0f;             // 安装几何偏移：把舵轮在底盘平面内实际指向/滚动的方向（OA 朝向）换算到转向电机本地机械角参考系（OWI）；它用于坐标变换，不是回零补偿
+                f32 steer_motor_sign = 1.0f;                // 转向电机方向符号：1 表示不取反，-1 表示转向反馈和目标指令都按相反方向解释
+                f32 drive_motor_sign = 1.0f;                // 驱动电机方向符号：1 表示不取反，-1 表示驱动反馈和目标指令都按相反方向解释
+                Motor_Base *steer_motor_h = nullptr;        // 该模块绑定的转向电机句柄
+                Motor_Base *drive_motor_h = nullptr;        // 该模块绑定的驱动电机句柄
+                bool homing_enabled = false;                // 是否对该轮启用回零流程；false 时默认认为零位已可用
+                bool homing_sensor_active_high = true;      // 回零传感器触发极性：true 表示高电平有效，false 表示低电平有效
+                void *homing_gpio_port = nullptr;           // 回零传感器 GPIO 端口运行时副本；读取零位输入时直接使用
+                u16 homing_gpio_pin = 0;                    // 回零传感器 GPIO 引脚运行时副本；与端口配合读取真实输入
+                f32 homing_search_rpm = 10.0f;              // 回零搜索阶段给转向电机的转速指令，单位 rpm
+                f32 homing_zero_offset_rad = 0.0f;          // 标定得到的零位补偿角：传感器触发点到期望机械零位的固定偏差
+                f32 homing_timeout_s = 5.0f;                // 单轮回零允许持续的最长时间，超时后进入故障态，单位秒
+                HomingState homing_state = HomingState::kIdle; // 当前轮回零状态机所处阶段
+                bool homing_last_sensor_active = false;     // 上一控制周期的传感器触发状态；用于检测回零边沿
+                bool homing_zero_valid = false;             // 当前轮是否已经建立可用于闭环控制的零位
+                f32 homing_elapsed_s = 0.0f;                // 本次回零已运行时间，单位秒；用于超时判定
+                f32 homing_runtime_zero_offset_rad = 0.0f;  // 本次上电运行实际采用的零位补偿；回零成功后会把“当前触发位置”修正成运行时零点
+                f32 corrected_steer_motor_total_angle_rad = 0.0f; // 已乘方向符号并叠加运行时零位补偿后的转向电机连续总角度反馈
+                f32 corrected_drive_omega_rad_s = 0.0f;     // 已乘方向符号后的驱动轮角速度反馈，单位 rad/s
+                f32 target_steer_motor_total_angle_rad = 0.0f; // 当前周期解算后要发给转向电机的本地连续目标角
+                f32 target_drive_omega_rad_s = 0.0f;        // 当前周期解算后要发给驱动电机的目标角速度，单位 rad/s
+                f32 steer_target_velocity_rad_s = 0.0f;     // 转向二阶限幅后得到的目标角速度，便于平滑舵向变化
+                bool flipped_drive_direction = false;       // 本周期是否采用“舵角翻转 180 度、驱动反向”策略来走更短转角路径
             };
 
             // Mode 表示四舵轮底盘当前采用的控制语义。
