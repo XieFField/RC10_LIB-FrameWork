@@ -167,7 +167,7 @@ void ArmSetup::loop()
 
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
-    debug_uart.printf_DMA("%f\n", motor_rotate_->getTotalAngle());
+    //debug_uart.printf_DMA("%f\n", motor_rotate_->getTotalAngle());
 }
 bool test_num = 0;
 
