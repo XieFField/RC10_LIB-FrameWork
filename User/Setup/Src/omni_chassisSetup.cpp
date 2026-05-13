@@ -146,6 +146,14 @@ void OmniChassis_Setup::loop()
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
             }
+//            else
+//            {
+//                float lock_err = (robot_pos_ - Clamping_Bar_Selection_pos_).magnitude();
+//                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Clamping_Bar_Selection_pos_).normalize();
+//                target_chassis_twist_.vx = speed.x;
+//                target_chassis_twist_.vy = speed.y;
+//                WeaponSage_END = true;
+//            }
             else
             {
                 // 路径结束：复位状态并清空速度命令。
@@ -185,6 +193,8 @@ void OmniChassis_Setup::loop()
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
         if (flag == 1)
         {
+            path_line_.plan_reset();
+            path_line_.Reset();
             flag_reset();
             flag = 0;
             flag_run = 1;
@@ -199,9 +209,6 @@ void OmniChassis_Setup::loop()
             {
                 // 旋转点位判断以及KFS的拾取判断
                 Path_spin_check();
-
-                
-
                 if (Arm_Start == false && Spin_Start == false)
                 {
                     // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
@@ -475,10 +482,10 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.plan_reset();
     path_line_.Reset();
     path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_Point(Vector2D{1.0f, 0.7f}, path_param_start_);
-    path_line_.Add_Point(Vector2D{3.3f, 1.0f}, control_point, path_param_curve_);
+    path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f, robot_pos_.y}, path_param_curve_);
+    path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f}, Vector2D{robot_pos_.x-0.5f-0.85f, robot_pos_.y-0.22f}, path_param_curve_);
     //   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
-    path_line_.Add_End_Point(Vector2D{4.31f, 1.88f}, path_param_end_);
+    path_line_.Add_End_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f+0.2f}, path_param_end_);
 }
 
 void OmniChassis_Setup::KFS_Selection_Planning(void)
@@ -565,8 +572,15 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
     path_line_.Add_Start_Point(robot_pos_);
 
     MF1_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[0]]);
-    MF2_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1]]);
-
+    if(MF2!=0)
+    {
+        MF2_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1]]);
+    }
+    else
+    {
+        MF2_pos_ = {0.0f,0.0f};
+    }
+    
     if (spin_flag == false)
     {
         for (int i = 0; i < index_exit; i++)
@@ -709,6 +723,38 @@ Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNeares
     return lastPt;
 }
 
+Vector2D OmniChassis_Setup::v_limit(Vector2D &v)
+{
+    // 判定是否进入终点段，用于控制参数切换。
+    /* bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
+    if (near_end)
+    {
+        v = v.normalize() * robot_speed_end_;
+        return v;
+    }
+    if (v.magnitude() > max_robot_speed_)
+    {
+        v = v.normalize() * max_robot_speed_;
+    } */
+    bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
+    if(MF2_flag == true ||MF1_flag == true)
+    {
+        if(near_end)
+        {
+            v = v.normalize() * robot_speed_end_;
+            return v;
+        }
+    }
+    if (v.magnitude() >  planspeed.magnitude())
+    {
+        v = v.normalize() * planspeed.magnitude();
+    }
+    if (v.magnitude() < min_robot_speed_)
+    {
+        v = v.normalize() * min_robot_speed_;
+    }
+    return v;
+}
 
 void OmniChassis_Setup::flag_reset(void)
 {
@@ -807,29 +853,6 @@ Vector2D OmniChassis_Setup::ComposeRobotVelocity(const Vector2D &v_pid)
     return v_robot;
 }
 #endif
-Vector2D OmniChassis_Setup::v_limit(Vector2D &v)
-{
-    // 判定是否进入终点段，用于控制参数切换。
-    /* bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
-    if (near_end)
-    {
-        v = v.normalize() * robot_speed_end_;
-        return v;
-    }
-    if (v.magnitude() > max_robot_speed_)
-    {
-        v = v.normalize() * max_robot_speed_;
-    } */
-    
-    if (v.magnitude() >  planspeed.magnitude())
-    {
-        v = v.normalize() * planspeed.magnitude();
-    }
-    if (v.magnitude() < min_robot_speed_)
-    {
-        v = v.normalize() * min_robot_speed_;
-    }
-    return v;
-}
+
 
 //=======================================              相机接口函数         =====================================================//

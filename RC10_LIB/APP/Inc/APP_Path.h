@@ -428,7 +428,7 @@ public:
             // 2) t 接近 1 仅作为辅助条件，必须同时离终点不远，避免“投影到段末端但车体仍较远”时误切段。
             const float t_reach_guard = 0.20f;
             bool reach_segment_end = (_tool_Abs(err_end) <= dead) || (t_ >= 0.995f && _tool_Abs(err_end) <= t_reach_guard);
-            //bool reach_segment_end = (t_ >= 0.995f);
+            // bool reach_segment_end = (t_ >= 0.995f);
             if (reach_segment_end)
             {
                 index_++; // 切换到下一段曲线
@@ -523,7 +523,7 @@ protected:
     BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // 储存各路段曲线
 
     Speedplanner_1D_Param_Config params_[MAX_CURVE_NUM]; // 每条曲线对应的速度规划参数
-    TrapePlanner1D sp_;                           // 一维 S 型速度规划器
+    TrapePlanner1D sp_;                                  // 一维 S 型速度规划器
 
     float distance_ = 0.0f;
     float t_ = 0.0f;                             // 贝塞尔曲线参数 t
@@ -532,13 +532,13 @@ protected:
     Vector2D point_last_ = Vector2D(0.0f, 0.0f); // 上一个点
     Vector2D v_output_ = Vector2D(0.0f, 0.0f);
     Phase m_phase = FINISHED_PHASE;
-    
-    uint8_t bezier_curve_num = 0;                        // 总曲线数量
-    
+
+    uint8_t bezier_curve_num = 0; // 总曲线数量
+
 private:
     /*---------------------------------状态-------------------------------------*/
     float err_end = 0.0f;
-    bool is_end = false; // 是否开始
+    bool is_end = false;  // 是否开始
     bool is_init = false; // 是否初始化
 };
 

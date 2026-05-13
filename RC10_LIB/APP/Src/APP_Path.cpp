@@ -15,7 +15,6 @@ Path::Path()
 	total_len = 0;
 	is_init = false;
 	last_smoothness = 0;
-	
 }
 
 /**
@@ -41,15 +40,15 @@ bool Path::Add_Point(Vector2D point_, float smoothness_) // 0~0.5)
  * @return true 如果添加成功
  * @return false 如果添加失败
  */
-bool Path::Add_Start_Point(Vector2D point_, bool have_start_angle_, float start_angle_,Speedplanner_1D_Param_Config params)
+bool Path::Add_Start_Point(Vector2D point_, bool have_start_angle_, float start_angle_, Speedplanner_1D_Param_Config params)
 {
 	if (is_init == true)
 		return false;
 
 	have_start_angle = have_start_angle_;
 	start_angle = start_angle_;
-    
-    params.initialSpeed = abs(params.initialSpeed) + 0.001f; // 设置初始速度
+
+	params.initialSpeed = abs(params.initialSpeed) + 0.001f; // 设置初始速度
 	params_ = params;
 
 	return Generate_Curve(point_, 0);
@@ -163,7 +162,7 @@ bool Path::Generate_Curve(Vector2D point_, float smoothness_)
 					bezier_curve_num++;
 				}
 
-				point_list[0] = point_; // 更新点
+				point_list[0] = point_;						  // 更新点
 				generate_status = GENERATE_FINISHED_STRAIGHT; // 状态变更为完成直线
 			}
 			else
@@ -428,7 +427,7 @@ Vector2D Path::plan(Vector2D point)
 		if (t_ >= 0.999f || m_phase == S_FINISHED_PHASE)
 		{
 			total_ += bezier_curve_list[index_].Get_len(); // 累加已完成路程
-			index_++; // 切换到下一段曲线
+			index_++;									   // 切换到下一段曲线
 			if (index_ >= bezier_curve_num || m_phase == S_FINISHED_PHASE)
 			{
 				is_end = false; // 结束运行

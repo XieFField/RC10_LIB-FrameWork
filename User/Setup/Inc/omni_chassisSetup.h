@@ -151,8 +151,9 @@ private:
     //float gradient_start_ = 1.2f; // 终点梯度衰减起始距离。
     //float gradient_end_ = 0.2f;   // 终点梯度衰减结束距离。
     //float min_gradient_ = 0.8f;   // 终点最小速度缩放比例。
-
-    //float robot_speed_end_ = 0.3f;  // 终点段最大速度限制。
+    
+    //夹取kfs前的速度限制，用来控制变量
+    float robot_speed_end_ = 0.3f;  // 终点段最大速度限制。
     float deadzone_max_end_ = 0.1f; // 判定“近终点”阈值。
 
     float m_lookaheadDist = 0.3f;        // 前视距离 (单位: 米)
@@ -209,38 +210,7 @@ private:
 
     float is_chassis_reverse_ = 1.0f; // 手动控制正反向系数。
 
-//-----------------------------------前馈参数-----------------------------------------//
-#if FF_V
-    float k_damp_ = 0.0f; // 历史速度阻尼系数。
-    // 前视点差分前馈增益（越大越“冲”，也更容易抖）。
-    float kff_la_ = 0.0f;
-    // 前馈限幅（m/s），用于约束尖峰。
-    float max_ff_speed_ = 1.0f;
-    // 一阶低通系数，范围(0,1]：越小越平滑，越大越灵敏。
-    float ff_lpf_alpha_ = 0.20f;
 
-    float end_ff_scale_ = 0.35f; // 终点段前馈缩放系数。
-    float end_pid_scale_ = 0.7f; // 终点段 PID 缩放系数。
-
-    // 用于前视点差分前馈的“参考点”：
-    // 正常跟踪阶段等于 lookaheadPt，终点阶段等于 endPt。
-    Vector2D ff_ref_point_ = {0.0f, 0.0f};
-    // 保存上一周期参考点，做离散差分 (p[k]-p[k-1]) / dt。
-    Vector2D ff_ref_point_last_ = {0.0f, 0.0f};
-    // 低通后的前馈速度，抑制 t 跳变和离散噪声导致的尖峰。
-    Vector2D ff_velocity_lpf_ = {0.0f, 0.0f};
-    // 前馈差分初始化标志，避免首周期使用无效差分。
-    bool ff_diff_inited_ = false;
-
-    // 控制任务周期（当前系统 1ms 调度）。
-    float control_period_s_ = 0.001f;
-    // 差分最小时间，避免 dt 太小导致数值爆发。
-    float ff_dt_min_s_ = 0.0009f;
-    // 差分最大时间，避免任务异常延迟后一次性放大速度脉冲。
-    float ff_dt_max_s_ = 0.010f;
-
-    Vector2D v_robot_last_cmd_ = {0.0f, 0.0f}; // 上一周期底盘速度命令。
-#endif
     //-----------------------------------其他参数-----------------------------------------//
     void loop() override; // RTOS 主循环。
 
@@ -286,6 +256,13 @@ private:
     void Path_correction(void); // 基于当前位置执行路径纠偏。
 
     void Path_spin_check(void); // 检查并执行路径中旋转逻辑。
+    
+    Vector2D v_limit(Vector2D &v);
+
+    void flag_reset(void);                      // 复位自动流程相关标志位。
+    
+    void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
+    
 #if FF_V
     // 统一清空自动控制相关内部状态（速度命令记忆与前馈差分状态）。
     void ResetAutoControlStates(void);
@@ -293,11 +270,38 @@ private:
     Vector2D ComposeRobotVelocity(const Vector2D &v_pid); // 合成 PID、前馈、阻尼后的速度命令。
 
 #endif
+//-----------------------------------前馈参数-----------------------------------------//
+#if FF_V
+    float k_damp_ = 0.0f; // 历史速度阻尼系数。
+    // 前视点差分前馈增益（越大越“冲”，也更容易抖）。
+    float kff_la_ = 0.0f;
+    // 前馈限幅（m/s），用于约束尖峰。
+    float max_ff_speed_ = 1.0f;
+    // 一阶低通系数，范围(0,1]：越小越平滑，越大越灵敏。
+    float ff_lpf_alpha_ = 0.20f;
 
-    Vector2D v_limit(Vector2D &v);
+    float end_ff_scale_ = 0.35f; // 终点段前馈缩放系数。
+    float end_pid_scale_ = 0.7f; // 终点段 PID 缩放系数。
 
-    void flag_reset(void);                      // 复位自动流程相关标志位。
-    void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
+    // 用于前视点差分前馈的“参考点”：
+    // 正常跟踪阶段等于 lookaheadPt，终点阶段等于 endPt。
+    Vector2D ff_ref_point_ = {0.0f, 0.0f};
+    // 保存上一周期参考点，做离散差分 (p[k]-p[k-1]) / dt。
+    Vector2D ff_ref_point_last_ = {0.0f, 0.0f};
+    // 低通后的前馈速度，抑制 t 跳变和离散噪声导致的尖峰。
+    Vector2D ff_velocity_lpf_ = {0.0f, 0.0f};
+    // 前馈差分初始化标志，避免首周期使用无效差分。
+    bool ff_diff_inited_ = false;
+
+    // 控制任务周期（当前系统 1ms 调度）。
+    float control_period_s_ = 0.001f;
+    // 差分最小时间，避免 dt 太小导致数值爆发。
+    float ff_dt_min_s_ = 0.0009f;
+    // 差分最大时间，避免任务异常延迟后一次性放大速度脉冲。
+    float ff_dt_max_s_ = 0.010f;
+
+    Vector2D v_robot_last_cmd_ = {0.0f, 0.0f}; // 上一周期底盘速度命令。
+#endif
     /*
 >>>>>>> main
     // ———————————————————       相机接口函数        —————————————————————————————//
