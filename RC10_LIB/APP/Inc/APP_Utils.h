@@ -501,6 +501,13 @@ namespace jia
 
         return cos_result;
     }
+
+    // 供底盘/舵轮算法复用的运行时数学工具（非模板实现位于 APP_Utils.cpp）
+    f32 wrapToPiRuntimeF32(f32 angle_rad);
+    f32 wrapTo2PiRuntimeF32(f32 angle_rad);
+    f32 shortestAngularDistanceRuntimeF32(f32 from_rad, f32 to_rad);
+    f32 nearestEquivalentAngleRuntimeF32(f32 current_rad, f32 target_mod_rad);
+    f32 magnitude2DRuntimeF32(f32 x, f32 y);
 } // namespace jia
 
 #endif

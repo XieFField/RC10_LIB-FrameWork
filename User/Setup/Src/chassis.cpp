@@ -1084,43 +1084,27 @@ namespace jia
 
         f32 Chassis::wrapToPi(f32 angle_rad) const
         {
-            while (angle_rad >= kPi)
-            {
-                angle_rad -= 2.0f * kPi;
-            }
-            while (angle_rad < -kPi)
-            {
-                angle_rad += 2.0f * kPi;
-            }
-            return angle_rad;
+            return wrapToPiRuntimeF32(angle_rad);
         }
 
         f32 Chassis::wrapTo2Pi(f32 angle_rad) const
         {
-            while (angle_rad >= 2.0f * kPi)
-            {
-                angle_rad -= 2.0f * kPi;
-            }
-            while (angle_rad < 0.0f)
-            {
-                angle_rad += 2.0f * kPi;
-            }
-            return angle_rad;
+            return wrapTo2PiRuntimeF32(angle_rad);
         }
 
         f32 Chassis::shortestAngularDistance(f32 from_rad, f32 to_rad) const
         {
-            return wrapToPi(to_rad - from_rad);
+            return shortestAngularDistanceRuntimeF32(from_rad, to_rad);
         }
 
         f32 Chassis::nearestEquivalentAngle(f32 current_rad, f32 target_mod_rad) const
         {
-            return current_rad + shortestAngularDistance(current_rad, target_mod_rad);
+            return nearestEquivalentAngleRuntimeF32(current_rad, target_mod_rad);
         }
 
         f32 Chassis::magnitude2D(f32 x, f32 y) const
         {
-            return sqrtf(x * x + y * y);
+            return magnitude2DRuntimeF32(x, y);
         }
 
         f32 Chassis::getXParkAngle(const WheelConfig &wheel) const
