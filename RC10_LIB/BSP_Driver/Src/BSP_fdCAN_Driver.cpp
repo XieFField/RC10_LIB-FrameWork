@@ -240,7 +240,7 @@ void fdCANbus::schedulerTaskbody()
             // Handle Bus Off Recovery
             HAL_FDCAN_Stop(hfdcan_);
             HAL_FDCAN_Start(hfdcan_);
-            // HAL_FDCAN_ActivateNotification(hfdcan_, FDCAN_IT_RX_FIFO0_NEW_MESSAGE | FDCAN_IT_BUS_OFF, 0);
+            HAL_FDCAN_ActivateNotification(hfdcan_, FDCAN_IT_RX_FIFO0_NEW_MESSAGE | FDCAN_IT_BUS_OFF, 0);
             bus_off_flag_ = false;
         }
 
