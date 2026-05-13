@@ -36,3 +36,11 @@ MDK-ARM/Frame_T/system_stm32h7xx.o
 /MDK-ARM/.vs
 /MDK-ARM/Frame_T.uvguix.86130
 
+# local backup snapshots
+/Core/Inc/Backup/
+/Core/Src/Backup/
+*.bak
+
+# local git worktree metadata folder in main workspace
+/.worktrees/
+

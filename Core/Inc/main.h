@@ -59,15 +59,14 @@ void parse_uart_data(uint8_t data);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define AirJoy_Pin GPIO_PIN_8
-#define AirJoy_GPIO_Port GPIOF
-#define AirJoy_EXTI_IRQn EXTI9_5_IRQn
-#define PPM_Pin GPIO_PIN_9
-#define PPM_GPIO_Port GPIOF
-#define SWITCH1_Pin GPIO_PIN_14
-#define SWITCH1_GPIO_Port GPIOD
-#define SWTICH2_Pin GPIO_PIN_15
-#define SWTICH2_GPIO_Port GPIOD
+#define kPHOTOGATE_4_Pin GPIO_PIN_8
+#define kPHOTOGATE_4_GPIO_Port GPIOF
+#define kPHOTOGATE_3_Pin GPIO_PIN_9
+#define kPHOTOGATE_3_GPIO_Port GPIOF
+#define kPHOTOGATE_1_Pin GPIO_PIN_14
+#define kPHOTOGATE_1_GPIO_Port GPIOD
+#define kPHOTOGATE_2_Pin GPIO_PIN_15
+#define kPHOTOGATE_2_GPIO_Port GPIOD
 #define SUCKER_error_Pin GPIO_PIN_3
 #define SUCKER_error_GPIO_Port GPIOG
 #define SUCKERERROR2_Pin GPIO_PIN_4

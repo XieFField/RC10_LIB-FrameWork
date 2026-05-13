@@ -32,23 +32,23 @@ void Locate_Setup::update()
 
     robot_speed_inworld_.yaw = dyaw_from_position_;
 
-    if(HAL_GPIO_ReadPin(SWITCH1_GPIO_Port, SWITCH1_Pin) == GPIO_PIN_SET)
-    {
-        swtich1_isOn = true;
-    }
-    else
-    {
-        swtich1_isOn = false;
-    }
+//    if(HAL_GPIO_ReadPin(SWITCH1_GPIO_Port, SWITCH1_Pin) == GPIO_PIN_SET)
+//    {
+//        swtich1_isOn = true;
+//    }
+//    else
+//    {
+//        swtich1_isOn = false;
+//    }
 
-    if(HAL_GPIO_ReadPin(SWTICH2_GPIO_Port, SWTICH2_Pin) == GPIO_PIN_SET)
-    {
-        swtich2_isOn = true;
-    }
-    else
-    {
-        swtich2_isOn = false;
-    }
+//    if(HAL_GPIO_ReadPin(SWTICH2_GPIO_Port, SWTICH2_Pin) == GPIO_PIN_SET)
+//    {
+//        swtich2_isOn = true;
+//    }
+//    else
+//    {
+//        swtich2_isOn = false;
+//    }
 
 }
 
