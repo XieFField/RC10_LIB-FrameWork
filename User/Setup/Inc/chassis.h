@@ -407,13 +407,13 @@ namespace jia
             // 这些状态只服务于四舵轮底盘内部寻零流程，不代表上层 FSM 状态。
             enum class HomingState : u8
             {
-                kIdle,
-                kSearch,
-                kEdgeDetected,
-                kOffsetApply,
-                kContinuousAngleReady,
-                kReady,
-                kFault,
+                kIdle,                 // 空闲态：等待 startHoming() 发起回零请求
+                kSearch,               // 搜索态：驱动舵轮寻找零位传感器边沿
+                kEdgeDetected,         // 已检测到零位边沿，准备锁存当前位置
+                kOffsetApply,          // 应用零位偏移，将原始角度对齐到运行时零点
+                kContinuousAngleReady, // 连续角度已可用，准备切入正常闭环控制
+                kReady,                // 回零完成，允许该轮参与正常控制
+                kFault,                // 回零失败/超时，当前轮未完成零位建立
             };
 
             //  // 设置电流为0
