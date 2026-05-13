@@ -128,12 +128,13 @@ private:
     int8_t MF1 = 0; // 目标点 1 编号。
     int8_t MF2 = 0; // 目标点 2 编号。
 
-    Vector2D planspeed = {0.0f, 0.0f};    // 路径规划输出的参考速度。
+    Vector2D planspeed = {0.0f, 0.0f};    // 路径规划输出的最大速度。
     Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
     Vector2D speed = {0.0f, 0.0f};        // 合成后的底盘平移速度。
 
     Vector2D robot_pos_ = {0.0f, 0.0f}; // 当前机器人世界坐标。
     float yaw = 0.0f;    // 当前机器人航向角（度）。
+    
     Point3D ladar_data_; // 定位系统输出的原始位姿数据。
 
     PID_Position pid_pos_x; // x轴绝对位置PID控制器
@@ -144,14 +145,14 @@ private:
 
     //---------------------------接口调试参数（需要修改时复制过来）---------------------------------------------//
 
-    float max_robot_speed_ = 1.0f; // 常规段底盘最大速度限制。
+    //float max_robot_speed_ = 1.0f; // 常规段底盘最大速度限制。
     float min_robot_speed_ = 0.4f; // 常规段底盘最大速度限制。
 
-    float gradient_start_ = 1.2f; // 终点梯度衰减起始距离。
-    float gradient_end_ = 0.2f;   // 终点梯度衰减结束距离。
-    float min_gradient_ = 0.8f;   // 终点最小速度缩放比例。
+    //float gradient_start_ = 1.2f; // 终点梯度衰减起始距离。
+    //float gradient_end_ = 0.2f;   // 终点梯度衰减结束距离。
+    //float min_gradient_ = 0.8f;   // 终点最小速度缩放比例。
 
-    float robot_speed_end_ = 0.3f;  // 终点段最大速度限制。
+    //float robot_speed_end_ = 0.3f;  // 终点段最大速度限制。
     float deadzone_max_end_ = 0.1f; // 判定“近终点”阈值。
 
     float m_lookaheadDist = 0.3f;        // 前视距离 (单位: 米)
@@ -175,9 +176,6 @@ private:
 
     float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
     float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
-
-    // Vector2D lookaheadTangent; // 前视点处的切线方向向量
-    // Vector2D pathEnd;          // 路径终点坐标
 
     //-----------------------------------梅林规划参数-----------------------------------------//
 

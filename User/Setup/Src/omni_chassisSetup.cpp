@@ -197,30 +197,10 @@ void OmniChassis_Setup::loop()
 
             if (path_line_.Is_End() == true)
             {
-                // 旋转点位判断
+                // 旋转点位判断以及KFS的拾取判断
                 Path_spin_check();
 
-                // KFS拾取判断
-                if (MF1_pos_.x == curve.Get_End_point().x && MF1_pos_.y == curve.Get_End_point().y)
-                {
-                    MF1_flag = true;
-                }
-                else if (MF1_flag == true)
-                {
-                    MF1_flag = false;
-                    Arm_Start = true;
-                    MF1_finish = true;
-                }
-                if (MF2_pos_.x == curve.Get_End_point().x && MF2_pos_.y == curve.Get_End_point().y)
-                {
-                    MF2_flag = true;
-                }
-                else if (MF2_flag == true)
-                {
-                    MF2_flag = false;
-                    Arm_Start = true;
-                    MF1_finish = true;
-                }
+                
 
                 if (Arm_Start == false && Spin_Start == false)
                 {
@@ -329,8 +309,107 @@ void OmniChassis_Setup::loop()
 
 #endif
 }
+
+
+
+
+//////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
+
+void OmniChassis_Setup::Path_correction(void)
+{
+    // 1. 找最近点+t值：获取路径上距离当前位置最近的点及其参数 tNearest
+
+    // 第一步：调用你的Get_Nearest_Distance，拿到tNearest（最近点对应的t值）
+    // 重点：第二个参数传 &tNearest（tNearest的地址），因为你的函数是“输出参数”（通过指针赋值）
+    curve.Get_Nearest_Distance(robot_pos_, &tNearest);
+
+    // 第二步：用第一步拿到的tNearest，调用你的Get_Point，拿到最近点坐标
+    Vector2D nearestPt = curve.Get_Point(tNearest);
+    
+    err_curve=(nearestPt-robot_pos_).magnitude();
+
+    float obj_dis = _tool_Abs((curve.Get_End_point() - robot_pos_).magnitude());
+    
+    
+    /*
+    // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
+    if (obj_dis < gradient_start_ || path_line_.Is_End() == false)
+    {
+        Vector2D endPt = curve.Get_End_point();
+#if FF_V
+        // 终点段把前馈参考点切换为终点坐标，差分会自然收敛到 0。
+        ff_ref_point_ = endPt;
+#endif
+
+        if (curve.Get_len() < 0.0001f)
+        {
+            corrVelocity = {0.0f, 0.0f};
+            return;
+        }
+
+        corrVelocity.x = pid_pos_x.pid_calc(endPt.x, robot_pos_.x);
+        corrVelocity.y = pid_pos_y.pid_calc(endPt.y, robot_pos_.y);
+        
+        if (obj_dis <= gradient_end_)
+        {
+            corrVelocity = corrVelocity * min_gradient_;
+        }
+        else
+        {
+            float gradient = min_gradient_ - (1 - _tool_Abs(obj_dis - gradient_end_) / _tool_Abs(gradient_start_ - gradient_end_)) * (1 - min_gradient_);
+            corrVelocity = corrVelocity * gradient;
+        }
+        
+        return;
+    }
+    */
+    // ======== 动态兔子追踪 (2D Cartesian PID) ========
+    // 2. 寻找前视点作为我们追踪的“虚拟兔子”
+    Vector2D lookaheadPt; // 路径上的前视点
+    if (curve.Get_Bezier_Order() == FIRST_ORDER_BEZIER)
+    {
+        m_lookaheadDist = m_lookaheadDist_line;
+    }
+    else
+    {
+        m_lookaheadDist = m_lookaheadDist_curve;
+    }
+    lookaheadPt = FindLookaheadPoint(curve, tNearest, tLookahead);
+#if FF_V
+    // 非终点阶段前馈参考点使用前视点。
+    ff_ref_point_ = lookaheadPt;
+#endif
+    // 3. 在绝对世界坐标系下，独立计算X轴和Y轴的纠偏向速度
+    // 将不再计算切法向，直接基于XY差值PID
+    corrVelocity.x = pid_pos_x.pid_calc(lookaheadPt.x, robot_pos_.x);
+    corrVelocity.y = pid_pos_y.pid_calc(lookaheadPt.y, robot_pos_.y);
+    
+    //corrVelocity=path_line_.Get_Tangent_Vector()*corrVelocity.magnitude();
+}
+
 void OmniChassis_Setup::Path_spin_check(void)
 {
+    // KFS拾取判断
+    if (MF1_pos_.x == curve.Get_End_point().x && MF1_pos_.y == curve.Get_End_point().y)
+    {
+        MF1_flag = true;
+    }
+    else if (MF1_flag == true)
+    {
+        MF1_flag = false;
+        Arm_Start = true;
+        MF1_finish = true;
+    }
+    if (MF2_pos_.x == curve.Get_End_point().x && MF2_pos_.y == curve.Get_End_point().y)
+    {
+        MF2_flag = true;
+    }
+    else if (MF2_flag == true)
+    {
+        MF2_flag = false;
+        Arm_Start = true;
+        MF1_finish = true;
+    }
     // 根据路径节点关系，处理上/下两种旋转过渡逻辑。
     // 上方停止点旋转
     if (spin_up_flag == true)
@@ -630,77 +709,6 @@ Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNeares
     return lastPt;
 }
 
-void OmniChassis_Setup::Path_correction(void)
-{
-    // 1. 找最近点+t值：获取路径上距离当前位置最近的点及其参数 tNearest
-
-    // 第一步：调用你的Get_Nearest_Distance，拿到tNearest（最近点对应的t值）
-    // 重点：第二个参数传 &tNearest（tNearest的地址），因为你的函数是“输出参数”（通过指针赋值）
-    curve.Get_Nearest_Distance(robot_pos_, &tNearest);
-
-    // 第二步：用第一步拿到的tNearest，调用你的Get_Point，拿到最近点坐标
-    Vector2D nearestPt = curve.Get_Point(tNearest);
-    
-    err_curve=(nearestPt-robot_pos_).magnitude();
-
-    float obj_dis = _tool_Abs((curve.Get_End_point() - robot_pos_).magnitude());
-    
-    
-    /*
-    // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
-    if (obj_dis < gradient_start_ || path_line_.Is_End() == false)
-    {
-        Vector2D endPt = curve.Get_End_point();
-#if FF_V
-        // 终点段把前馈参考点切换为终点坐标，差分会自然收敛到 0。
-        ff_ref_point_ = endPt;
-#endif
-
-        if (curve.Get_len() < 0.0001f)
-        {
-            corrVelocity = {0.0f, 0.0f};
-            return;
-        }
-
-        corrVelocity.x = pid_pos_x.pid_calc(endPt.x, robot_pos_.x);
-        corrVelocity.y = pid_pos_y.pid_calc(endPt.y, robot_pos_.y);
-        
-        if (obj_dis <= gradient_end_)
-        {
-            corrVelocity = corrVelocity * min_gradient_;
-        }
-        else
-        {
-            float gradient = min_gradient_ - (1 - _tool_Abs(obj_dis - gradient_end_) / _tool_Abs(gradient_start_ - gradient_end_)) * (1 - min_gradient_);
-            corrVelocity = corrVelocity * gradient;
-        }
-        
-        return;
-    }
-    */
-    // ======== 动态兔子追踪 (2D Cartesian PID) ========
-    // 2. 寻找前视点作为我们追踪的“虚拟兔子”
-    Vector2D lookaheadPt; // 路径上的前视点
-    if (curve.Get_Bezier_Order() == FIRST_ORDER_BEZIER)
-    {
-        m_lookaheadDist = m_lookaheadDist_line;
-    }
-    else
-    {
-        m_lookaheadDist = m_lookaheadDist_curve;
-    }
-    lookaheadPt = FindLookaheadPoint(curve, tNearest, tLookahead);
-#if FF_V
-    // 非终点阶段前馈参考点使用前视点。
-    ff_ref_point_ = lookaheadPt;
-#endif
-    // 3. 在绝对世界坐标系下，独立计算X轴和Y轴的纠偏向速度
-    // 将不再计算切法向，直接基于XY差值PID
-    corrVelocity.x = pid_pos_x.pid_calc(lookaheadPt.x, robot_pos_.x);
-    corrVelocity.y = pid_pos_y.pid_calc(lookaheadPt.y, robot_pos_.y);
-    
-    //corrVelocity=path_line_.Get_Tangent_Vector()*corrVelocity.magnitude();
-}
 
 void OmniChassis_Setup::flag_reset(void)
 {
