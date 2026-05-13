@@ -498,26 +498,26 @@ namespace jia
             // 锁 yaw 参数、空闲姿态策略以及每个轮子的初始化配置。
             struct InitConfig
             {
-                Motor_Base *steer_motor_h[4] = {nullptr};
-                Motor_Base *drive_motor_h[4] = {nullptr};
-                f32 wheel_radius_m = 0.075f;
-                f32 max_vel_x_m_s = 4.0f;
-                f32 max_vel_y_m_s = 4.0f;
-                f32 max_omega_z_rad_s = 8.0f;
-                f32 max_acc_xy_acc_m_s2 = 4.0f;
-                f32 max_acc_xy_dec_m_s2 = 8.0f;
-                f32 max_alpha_z_acc_rad_s2 = 6.0f;
-                f32 max_alpha_z_dec_rad_s2 = 10.0f;
-                f32 max_drive_omega_rad_s = rpmToRadsF32(800.0f);
-                f32 max_drive_alpha_rad_s2 = 120.0f;
-                f32 max_steer_rate_rad_s = 8.0f;
-                f32 max_steer_alpha_rad_s2 = 60.0f;
-                f32 stationary_speed_epsilon_m_s = 0.01f;
-                bool enable_cosine_compensation = true;
-                f32 max_lock_to_rot_z_rad_s = 4.0f;
-                u32 lock_now_rot_z_shift_time_ms = 1000;
-                IdlePostureMode idle_posture_mode = IdlePostureMode::kHoldLast;
-                WheelInitConfig wheels[4];
+                Motor_Base *steer_motor_h[4] = {nullptr}; // 4 个转向电机句柄，顺序需与 wheels[4] 的轮位定义保持一致
+                Motor_Base *drive_motor_h[4] = {nullptr}; // 4 个驱动电机句柄，顺序需与对应转向模块一一匹配
+                f32 wheel_radius_m = 0.075f;             // 轮半径，单位米；用于把驱动轮角速度与底盘线速度互相换算
+                f32 max_vel_x_m_s = 4.0f;                // 底盘在自身 x 方向允许的最大规划速度，单位 m/s
+                f32 max_vel_y_m_s = 4.0f;                // 底盘在自身 y 方向允许的最大规划速度，单位 m/s
+                f32 max_omega_z_rad_s = 8.0f;            // 底盘绕 z 轴允许的最大规划角速度，单位 rad/s
+                f32 max_acc_xy_acc_m_s2 = 4.0f;          // 平移速度上升时的最大加速度限幅，单位 m/s^2；用于“加速”阶段
+                f32 max_acc_xy_dec_m_s2 = 8.0f;          // 平移速度下降时的最大减速度限幅，单位 m/s^2；用于“减速/刹车”阶段
+                f32 max_alpha_z_acc_rad_s2 = 6.0f;       // z 轴角速度上升时的最大角加速度限幅，单位 rad/s^2
+                f32 max_alpha_z_dec_rad_s2 = 10.0f;      // z 轴角速度下降时的最大角减速度限幅，单位 rad/s^2
+                f32 max_drive_omega_rad_s = rpmToRadsF32(800.0f); // 单轮驱动角速度指令上限，单位 rad/s；模块解算后会再被夹紧到这里
+                f32 max_drive_alpha_rad_s2 = 120.0f;     // 单轮驱动角加速度限幅，单位 rad/s^2；防止驱动指令突变过猛
+                f32 max_steer_rate_rad_s = 8.0f;         // 单轮转向角速度上限，单位 rad/s；用于限制舵向变化速度
+                f32 max_steer_alpha_rad_s2 = 60.0f;      // 单轮转向角加速度上限，单位 rad/s^2；用于限制舵向变化陡峭度
+                f32 stationary_speed_epsilon_m_s = 0.01f; // 静止判定阈值，单位 m/s；模块目标速度低于它时会走“近静止/停车姿态”逻辑
+                bool enable_cosine_compensation = true;   // 是否启用余弦补偿：转向角误差较大时衰减驱动输出，减少舵向未对准时的横向硬推
+                f32 max_lock_to_rot_z_rad_s = 4.0f;       // 锁到目标 yaw 时允许的最大角速度，单位 rad/s；限制 rot_z 追踪收敛速度
+                u32 lock_now_rot_z_shift_time_ms = 1000;  // 从普通速度模式切到“无 omega_z 时锁当前 yaw”模式后的过渡保持时间，单位 ms
+                IdlePostureMode idle_posture_mode = IdlePostureMode::kHoldLast; // 近静止时的模块姿态策略：保持最后朝向，或切到 X 停车姿态
+                WheelInitConfig wheels[4];                // 4 个舵轮模块各自的安装/回零配置，顺序需与电机句柄数组一致
             };
 
             // 初始化
