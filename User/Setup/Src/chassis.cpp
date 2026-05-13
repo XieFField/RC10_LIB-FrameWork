@@ -1529,19 +1529,28 @@ namespace jia
 
         void Chassis::applyModuleCommands(bool all_homed)
         {
+            // 这里是“四舵轮目标命令”真正落到电机接口前的最后一道门控：
+            // computeModuleCommands() 虽然已经为每个轮子算好了目标舵角和驱动速度，
+            // 但是否允许按这些目标下发，还要看当前是否全部完成回零，以及是否处于扭矩自由模式。
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
 
                 if (!all_homed)
                 {
+                    // 只要还有任意一个轮子没有完成回零，就先禁止所有驱动轮输出，
+                    // 避免底盘在零位未建立完成时带着错误朝向强行跑动。
                     setDriveMotorTargetOmegaRadS(wheel, 0.0f);
                     if (wheel.homing_state == HomingState::kSearch)
                     {
+                        // 正在搜索零位的轮子，允许转向电机按固定搜索转速慢慢转，
+                        // 目的是继续寻找传感器边沿；此时不走位置闭环。
                         setSteerMotorTargetRPM(wheel, wheel.homing_search_rpm);
                     }
                     else
                     {
+                        // 不在搜索态的轮子，不再给转向动作，直接把转向电机电流打零，
+                        // 让状态机以“静止等待”的方式完成后续过渡。
                         setSteerMotorTargetCurrent(wheel, 0.0f);
                     }
                     continue;
@@ -1549,6 +1558,8 @@ namespace jia
 
                 if (current_mode_flag_.is_wheel_torque_free)
                 {
+                    // 扭矩自由模式下，不执行任何舵角或驱动速度闭环，
+                    // 而是把转向和驱动都打成“零电流/零扭矩”状态，方便人工推动或安全释放。
                     setSteerMotorTargetCurrent(wheel, 0.0f);
                     if (wheel.drive_motor_h != nullptr)
                     {
@@ -1557,6 +1568,8 @@ namespace jia
                     continue;
                 }
 
+                // 只有“全部回零完成”且“不是扭矩自由模式”时，
+                // 才真正把上一阶段规划出的目标舵角和驱动角速度下发给电机闭环。
                 setSteerMotorTargetTotalAngleRad(wheel, wheel.target_steer_motor_total_angle_rad);
                 setDriveMotorTargetOmegaRadS(wheel, wheel.target_drive_omega_rad_s);
             }
