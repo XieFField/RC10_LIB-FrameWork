@@ -744,63 +744,70 @@ namespace jia
             TickType_t time_ms_ = 0;                             // 当前时间，单位：毫秒
             constexpr static f32 period_ = period_ms_ / 1000.0f; // 控制周期，单位：秒
 
-            // 底盘参数
-            f32 wheel_radius_m_ = 0.075f;
-            f32 max_vel_x_ = 4.0f;
-            f32 max_vel_y_ = 4.0f;
-            f32 max_omega_z_ = 8.0f;
-            f32 max_acc_xy_acc_ = 4.0f;
-            f32 max_acc_xy_dec_ = 8.0f;
-            f32 max_alpha_z_acc_ = 6.0f;
-            f32 max_alpha_z_dec_ = 10.0f;
-            f32 max_drive_omega_rad_s_ = rpmToRadsF32(800.0f);
-            f32 max_drive_alpha_rad_s2_ = 120.0f;
-            f32 max_steer_rate_rad_s_ = 8.0f;
-            f32 max_steer_alpha_rad_s2_ = 60.0f;
-            f32 stationary_speed_epsilon_m_s_ = 0.01f;
-            bool enable_cosine_compensation_ = true;
-            IdlePostureMode idle_posture_mode_ = IdlePostureMode::kHoldLast;
+            // 底盘参数（从 InitConfig 下发到运行态，用于统一限幅与策略判定）
+            f32 wheel_radius_m_ = 0.075f;                     // 轮半径，线速度与驱动角速度换算基准
+            f32 max_vel_x_ = 4.0f;                            // 车体 X 方向最大线速度（m/s）
+            f32 max_vel_y_ = 4.0f;                            // 车体 Y 方向最大线速度（m/s）
+            f32 max_omega_z_ = 8.0f;                          // 车体 Z 轴最大角速度（rad/s）
+            f32 max_acc_xy_acc_ = 4.0f;                       // 平面线速度“加速段”最大加速度（m/s^2）
+            f32 max_acc_xy_dec_ = 8.0f;                       // 平面线速度“减速段”最大减速度（m/s^2）
+            f32 max_alpha_z_acc_ = 6.0f;                      // 车体角速度“加速段”最大角加速度（rad/s^2）
+            f32 max_alpha_z_dec_ = 10.0f;                     // 车体角速度“减速段”最大角减速度（rad/s^2）
+            f32 max_drive_omega_rad_s_ = rpmToRadsF32(800.0f); // 单轮驱动电机目标角速度上限（rad/s）
+            f32 max_drive_alpha_rad_s2_ = 120.0f;             // 单轮驱动角速度变化率上限（rad/s^2）
+            f32 max_steer_rate_rad_s_ = 8.0f;                 // 单轮转向目标角速度上限（rad/s）
+            f32 max_steer_alpha_rad_s2_ = 60.0f;              // 单轮转向目标角加速度上限（rad/s^2）
+            f32 stationary_speed_epsilon_m_s_ = 0.01f;        // 近似静止阈值；低于该值可进入保持/驻车姿态逻辑
+            bool enable_cosine_compensation_ = true;          // 是否启用舵角偏差余弦补偿（减小偏角期驱动贡献）
+            IdlePostureMode idle_posture_mode_ = IdlePostureMode::kHoldLast; // 静止时姿态策略（保持当前或 X-Park）
             struct StrategyConfig
             {
+                // 舵角解算策略：最短路径、带滞回翻转等选择入口
                 SteeringStrategyMode steering_strategy_mode = SteeringStrategyMode::kShortestPath;
-                f32 flip_enter_angle_deg = 100.0f;
-                f32 flip_exit_angle_deg = 80.0f;
+                f32 flip_enter_angle_deg = 100.0f; // 翻转进入阈值：角差大于该值时允许“舵角+180°并反转驱动”
+                f32 flip_exit_angle_deg = 80.0f;   // 翻转退出阈值：形成滞回，避免在临界角附近反复抖动
+
+                // 驱动抑制（Drive Gate）：舵角未对准时按策略压低驱动输出，减小横滑/冲击
                 bool enable_drive_gate = false;
-                DriveGateStrategy drive_gate_strategy = DriveGateStrategy::kHardGate;
-                DriveGateScope drive_gate_scope = DriveGateScope::kGlobal;
-                f32 drive_gate_close_angle_deg = 30.0f;
-                f32 drive_gate_min_scale = 0.0f;
-                f32 drive_gate_curve_exponent = 2.0f;
-                f32 drive_gate_curve_half_angle_deg = 20.0f;
-                f32 drive_gate_curve_min_scale = 0.05f;
-                f32 drive_gate_transition_linear_speed_m_s = 0.30f;
-                f32 drive_gate_transition_angular_speed_rad_s = 1.00f;
-                f32 drive_gate_scale_ramp_up_s = 0.10f;
-                f32 drive_gate_scale_ramp_down_s = 0.06f;
+                DriveGateStrategy drive_gate_strategy = DriveGateStrategy::kHardGate; // 硬门控或曲线门控
+                DriveGateScope drive_gate_scope = DriveGateScope::kGlobal;             // 全局门控或按轮门控
+                f32 drive_gate_close_angle_deg = 30.0f;                                 // 超过该角差可触发强抑制
+                f32 drive_gate_min_scale = 0.0f;                                        // 硬门控最小缩放（0=可完全关断）
+                f32 drive_gate_curve_exponent = 2.0f;                                   // 曲线门控指数（越大越“硬”）
+                f32 drive_gate_curve_half_angle_deg = 20.0f;                            // 曲线门控半效角
+                f32 drive_gate_curve_min_scale = 0.05f;                                 // 曲线门控最小保底缩放
+                f32 drive_gate_transition_linear_speed_m_s = 0.30f;                     // 平移速度过渡阈值（低速更易收紧门控）
+                f32 drive_gate_transition_angular_speed_rad_s = 1.00f;                  // 自转速度过渡阈值
+                f32 drive_gate_scale_ramp_up_s = 0.10f;                                  // 门控放开时间常数（s）
+                f32 drive_gate_scale_ramp_down_s = 0.06f;                                // 门控收紧时间常数（s）
+
+                // 停车转向保护：低速/静止时抑制不必要舵角摆动，避免来回找角
                 bool enable_stop_steer_guard = true;
                 StopSteerGuardStrategy stop_steer_guard_strategy = StopSteerGuardStrategy::kHardHold;
-                f32 stop_guard_release_speed_m_s = 0.01f;
-                f32 stop_guard_blend_start_speed_m_s = 0.20f;
-                f32 stop_guard_curve_half_speed_m_s = 0.08f;
-                f32 stop_guard_curve_exponent = 2.0f;
+                f32 stop_guard_release_speed_m_s = 0.01f;      // 低于该速度可认为进入“停车保护区”
+                f32 stop_guard_blend_start_speed_m_s = 0.20f;  // 从该速度开始由正常控制向停车保护混合
+                f32 stop_guard_curve_half_speed_m_s = 0.08f;   // 曲线混合半效速度
+                f32 stop_guard_curve_exponent = 2.0f;          // 混合曲线指数
             };
-            StrategyConfig default_strategy_cfg_;
-            StrategyConfig runtime_strategy_cfg_;
-            bool homing_start_request_ = false;
-            WheelConfig wheel_config_[4];
-            f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};
-            f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};
-            bool selected_flipped_solution_[4] = {false};
-            f32 drive_gate_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-            f32 adaptive_gate_scale_ = 1.0f;
-            AdaptiveGatePhase adaptive_gate_phase_ = AdaptiveGatePhase::kIdle;
-            PID_Position rot_z_pid_;
-            u8 rot_z_pid_period_ = 1;
-            u8 rot_z_pid_count_ = 0;
-            f32 max_lock_to_rot_z_rad_s_ = 4.0f;
+            StrategyConfig default_strategy_cfg_; // 初始化默认策略（可作为“恢复默认”基线）
+            StrategyConfig runtime_strategy_cfg_; // 当前运行时策略（可动态切换）
+            bool homing_start_request_ = false;   // 回零启动请求锁存位（由外部触发，在线程内消费）
+            WheelConfig wheel_config_[4];         // 四个模块的运行态快照
+            f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};  // 上周期转向速度命令（用于二阶限幅）
+            f32 last_drive_omega_cmd_rad_s_[4] = {0.0f}; // 上周期驱动角速度命令（用于加速度限幅）
+            bool selected_flipped_solution_[4] = {false}; // 每个模块当前是否选中“翻转驱动”解
+            f32 drive_gate_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // 每轮驱动门控缩放系数
+            f32 adaptive_gate_scale_ = 1.0f; // 全局自适应门控缩放（用于平滑过渡）
+            AdaptiveGatePhase adaptive_gate_phase_ = AdaptiveGatePhase::kIdle; // 自适应门控状态机阶段
+
+            // 航向控制相关（LockNow/LockTo 共享的姿态 PID）
+            PID_Position rot_z_pid_;        // 航向位置环 PID（输入/输出按角度语义换算）
+            u8 rot_z_pid_period_ = 1;       // PID 更新周期分频：每 N 个控制周期更新一次
+            u8 rot_z_pid_count_ = 0;        // PID 分频计数器
+            f32 max_lock_to_rot_z_rad_s_ = 4.0f; // LockToYaw 模式下航向环输出角速度上限
             f32 lock_now_rot_z_target_ = 0.0f; // LockNow 模式真正维持的航向目标；在手动旋转和松手缓冲阶段由当前 IMU 朝向刷新
-            u32 lock_now_rot_z_shift_count_ = 0;
-            u32 lock_now_rot_z_shift_time_ms_ = 1000;
+            u32 lock_now_rot_z_shift_count_ = 0; // LockNow 松手缓冲倒计时（防止手动->锁角瞬间突变）
+            u32 lock_now_rot_z_shift_time_ms_ = 1000; // LockNow 松手缓冲时长（ms）
         };
 
         using Result = jia::FourSteerChassis::Chassis::Result;
