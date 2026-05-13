@@ -482,15 +482,15 @@ namespace jia
             {
                 f32 pos_x_m = 0.0f;                 // 轮模块相对底盘中心的 X 坐标，单位米
                 f32 pos_y_m = 0.0f;                 // 轮模块相对底盘中心的 Y 坐标，单位米
-                f32 theta_oa_to_owi_deg = 0.0f;     // 轮模块安装角偏移：OA 朝向到轮组机械零位的角度，单位度
-                f32 steer_motor_sign = 1.0f;        // 转向电机方向符号，决定编码器/目标角正方向是否取反
-                f32 drive_motor_sign = 1.0f;        // 驱动电机方向符号，决定转速反馈与目标转速正方向是否取反
+                f32 theta_oa_to_owi_deg = 0.0f;     // 安装几何偏移：把 OA 朝向换算到转向电机机械零位；它用于坐标变换，不是回零补偿
+                f32 steer_motor_sign = 1.0f;        // 转向电机方向符号：1.0f 表示不取反，-1.0f 表示取反，0.0f 在初始化时会被当作 1.0f
+                f32 drive_motor_sign = 1.0f;        // 驱动电机方向符号：1.0f 表示不取反，-1.0f 表示取反，0.0f 在初始化时会被当作 1.0f
                 bool homing_enabled = false;        // 是否启用该轮回零流程；没有装光电/霍尔零位开关时保持 false
-                bool homing_sensor_active_high = true; // 回零传感器高电平是否表示“触发有效”
-                void *homing_gpio_port = nullptr;   // 回零传感器 GPIO 端口，填写如 GPIOA/GPIOB 或 *_GPIO_Port 宏
-                u16 homing_gpio_pin = 0;            // 回零传感器 GPIO 引脚编号，填写如 GPIO_PIN_3 或 *_Pin 宏
+                bool homing_sensor_active_high = true; // 传感器原始 GPIO 输入高电平时若视为“触发有效”就填 true，否则填 false
+                void *homing_gpio_port = nullptr;   // 真实光电接入后填 STM32 HAL 的 GPIOA/GPIOB 等端口，或 CubeMX 生成的 *_GPIO_Port 宏
+                u16 homing_gpio_pin = 0;            // 真实光电接入后填 GPIO_PIN_x，或 CubeMX 生成的 *_Pin 宏；未接时保持 0
                 f32 homing_search_rpm = 10.0f;      // 回零搜索时给转向电机的转速指令，单位 rpm
-                f32 homing_zero_offset_deg = 0.0f;  // 传感器触发点到期望机械零位的补偿角，单位度
+                f32 homing_zero_offset_deg = 0.0f;  // 回零补偿角：传感器触发点到期望机械零位的偏差；它在建立零点时生效，不是安装角偏移
                 f32 homing_timeout_s = 5.0f;        // 单轮回零超时时间，超时后进入故障态，单位秒
             };
 
