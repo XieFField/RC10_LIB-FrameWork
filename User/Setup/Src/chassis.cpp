@@ -765,6 +765,7 @@ namespace jia
             input_target_data_.vel_y = 0.0f;
             input_target_data_.omega_z = 0.0f;
             input_target_data_.rot_z = 0.0f;
+            lock_now_rot_z_target_ = 0.0f;
         }
 
         void Chassis::clearData(Data &data)
@@ -1116,19 +1117,21 @@ namespace jia
                 if (lock_now_rot_z_shift_count_ > 0)
                 {
                     lock_now_rot_z_shift_count_--;
-                    out_rot_z = input_hwt_rot_z_;
+                    lock_now_rot_z_target_ = input_hwt_rot_z_;
+                    out_rot_z = lock_now_rot_z_target_;
                     out_omega_z = 0.0f;
                 }
                 else
                 {
-                    // 过渡缓冲结束后，rot_z 就是当前要维持的目标航向，
-                    // 后续由 rot_z_pid_ 根据“目标朝向 rot_z”和“当前真实朝向 input_hwt_rot_z_”
+                    // 过渡缓冲结束后，真正用于锁角的目标已经不是外部传入的 rot_z，
+                    // 而是前面已经抓取并保存下来的 lock_now_rot_z_target_。
+                    // 后续由 rot_z_pid_ 根据“目标朝向 lock_now_rot_z_target_”和“当前真实朝向 input_hwt_rot_z_”
                     // 的误差生成维持姿态所需的 out_omega_z。
-                    out_rot_z = rot_z;
+                    out_rot_z = lock_now_rot_z_target_;
                     if (rot_z_pid_count_ >= rot_z_pid_period_)
                     {
                         rot_z_pid_count_ = 0;
-                        out_omega_z = rot_z_pid_.pid_calc(radToDegF32(rot_z), radToDegF32(input_hwt_rot_z_));
+                        out_omega_z = rot_z_pid_.pid_calc(radToDegF32(lock_now_rot_z_target_), radToDegF32(input_hwt_rot_z_));
                     }
                     else
                     {
@@ -1147,7 +1150,8 @@ namespace jia
                 // 2. 同时把 out_rot_z 刷新成当前 IMU 朝向 input_hwt_rot_z_，
                 //    相当于不断更新“等会儿松手后要锁住的那个角”；
                 // 3. 每次有手动旋转输入都重置缓冲计数器，为后续从手动旋转切回自动锁角预留平滑过渡窗口。
-                out_rot_z = input_hwt_rot_z_;
+                lock_now_rot_z_target_ = input_hwt_rot_z_;
+                out_rot_z = lock_now_rot_z_target_;
                 out_omega_z = omega_z;
                 lock_now_rot_z_shift_count_ = lock_now_rot_z_shift_time_ms_;
             }

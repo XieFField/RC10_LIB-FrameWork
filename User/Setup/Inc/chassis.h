@@ -691,6 +691,7 @@ namespace jia
             u8 rot_z_pid_period_ = 1;
             u8 rot_z_pid_count_ = 0;
             f32 max_lock_to_rot_z_rad_s_ = 4.0f;
+            f32 lock_now_rot_z_target_ = 0.0f; // LockNow 模式真正维持的航向目标；在手动旋转和松手缓冲阶段由当前 IMU 朝向刷新
             u32 lock_now_rot_z_shift_count_ = 0;
             u32 lock_now_rot_z_shift_time_ms_ = 1000;
         };
