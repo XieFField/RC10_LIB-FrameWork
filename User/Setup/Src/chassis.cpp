@@ -1423,13 +1423,21 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
+
+                // current_local_total_rad 是转向电机本地机械角参考系下、已经做过回零补偿后的当前连续角；
+                // current_oa_total_rad 则进一步换算成底盘运动学真正关心的“舵轮实际朝向（OA 朝向）”。
                 const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
                 const f32 current_oa_total_rad = current_local_total_rad + wheel.theta_oa_to_owi_rad;
 
+                // 先把整车的平移速度和绕 z 轴角速度分解到当前轮模块的位置上，
+                // 得到“这个轮接触地点此刻应当朝哪个方向运动、速度多大”。
+                // 这一步还是在底盘平面坐标系里描述轮模块的期望速度向量。
                 const f32 wheel_velocity_oa_x = command_data.vel_x - command_data.omega_z * wheel.pos_y_m;
                 const f32 wheel_velocity_oa_y = command_data.vel_y + command_data.omega_z * wheel.pos_x_m;
                 const f32 wheel_speed_m_s = magnitude2D(wheel_velocity_oa_x, wheel_velocity_oa_y);
 
+                // raw_target_oa_mod_rad 表示“从运动学直接算出的目标舵轮朝向（模 2π）”；
+                // target_drive_omega_rad_s 表示与该朝向匹配的驱动轮目标角速度。
                 f32 raw_target_oa_mod_rad = 0.0f;
                 f32 target_drive_omega_rad_s = 0.0f;
 
@@ -1451,12 +1459,18 @@ namespace jia
 
                 // 舵轮存在“朝向等价类”：目标角加 π 后，只要驱动轮反向即可得到同样的底盘效果。
                 // 因此这里比较两种等价姿态谁更接近当前角度，优先选转角更小的一侧。
+                // candidate_a 表示“直接去目标朝向”；
+                // candidate_b 表示“舵角翻 180°，同时驱动轮反向”；
+                // nearestEquivalentAngle() 会把这两个模角展开成最接近当前连续角的那一支，便于比较真实转动代价。
                 const f32 alt_target_oa_mod_rad = wrapTo2Pi(raw_target_oa_mod_rad + kPi);
                 const f32 candidate_a_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, raw_target_oa_mod_rad);
                 const f32 candidate_b_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, alt_target_oa_mod_rad);
 
                 f32 selected_oa_total_rad = candidate_a_oa_total_rad;
                 bool flipped_drive = false;
+
+                // 如果“翻 180° 再反转驱动”的方案转角更小，就选它；
+                // 这样可以显著减少舵轮大角度掉头的时间。
                 if (fabsf(candidate_b_oa_total_rad - current_oa_total_rad) < fabsf(candidate_a_oa_total_rad - current_oa_total_rad))
                 {
                     selected_oa_total_rad = candidate_b_oa_total_rad;
@@ -1475,10 +1489,17 @@ namespace jia
                         cosine_scale = 0.0f;
                     }
                 }
+
+                // 驱动速度先乘余弦补偿，再做绝对速度限幅；
+                // 这样在舵角尚未对准时，会主动降低驱动输出，避免轮子“侧着硬推”底盘。
                 target_drive_omega_rad_s *= cosine_scale;
                 target_drive_omega_rad_s = clampValue(target_drive_omega_rad_s, -max_drive_omega_rad_s_, max_drive_omega_rad_s_);
 
                 f32 next_steer_rate_rad_s = 0.0f;
+
+                // 选中的 OA 朝向还要换回电机本地机械角参考系，才能真正下发给转向电机。
+                // 转向角使用二阶限幅器：同时约束角速度和角加速度；
+                // 驱动角速度使用一阶加速度限幅，再做最终速度钳制。
                 const f32 selected_local_total_rad = selected_oa_total_rad - wheel.theta_oa_to_owi_rad;
                 wheel.target_steer_motor_total_angle_rad = limitPositionSecondOrder(
                     current_local_total_rad,
@@ -1492,6 +1513,9 @@ namespace jia
                     limitValueWithAcceleration(last_drive_omega_cmd_rad_s_[i], target_drive_omega_rad_s, max_drive_alpha_rad_s2_, period_),
                     -max_drive_omega_rad_s_,
                     max_drive_omega_rad_s_);
+
+                // 把这一拍最终选出的控制结果缓存下来，后续既用于真正下发电机，
+                // 也用于 planned_data_ 回写和下一拍的限幅“以上一拍命令”为基准继续推进。
                 wheel.steer_target_velocity_rad_s = next_steer_rate_rad_s;
                 wheel.flipped_drive_direction = flipped_drive;
 
