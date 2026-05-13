@@ -765,7 +765,6 @@ namespace jia
             input_target_data_.vel_y = 0.0f;
             input_target_data_.omega_z = 0.0f;
             input_target_data_.rot_z = 0.0f;
-            lock_now_rot_z_target_ = 0.0f;
         }
 
         void Chassis::clearData(Data &data)
