@@ -1986,7 +1986,7 @@ namespace jia
 
         void Chassis::emitDebugUart8Log(bool all_homed)
         {
-            if (!debug_uart8_log_enable_)
+            if (debug_uart8_output_mode_ != 1U || !debug_uart8_log_enable_)
             {
                 return;
             }
@@ -2034,6 +2034,39 @@ namespace jia
                                        debug_selected_wheel_drive_released_ ? 1U : 0U,
                                        debug_selected_wheel_steer_error_deg_);
             }
+        }
+
+        void Chassis::emitUart8VofaJustFloatPidTrace()
+        {
+            if (debug_uart8_output_mode_ != 2U || !debug_uart8_justfloat_enable_)
+            {
+                return;
+            }
+
+            const u32 period_ms = (debug_uart8_justfloat_period_ms_ > 0U) ? debug_uart8_justfloat_period_ms_ : 10U;
+            if ((time_ms_ - debug_uart8_justfloat_last_ms_) < period_ms)
+            {
+                return;
+            }
+
+            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
+            {
+                return;
+            }
+
+            debug_uart8_justfloat_last_ms_ = time_ms_;
+            float payload[25] = {0.0f};
+            payload[0] = (f32)time_ms_ * 0.001f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                payload[1 + i] = debug_target_oa_deg_[i];
+                payload[5 + i] = debug_current_oa_deg_[i];
+                payload[9 + i] = radToDegF32(shortestAngularDistance(degToRadF32(debug_current_oa_deg_[i]), degToRadF32(debug_target_oa_deg_[i])));
+                payload[13 + i] = debug_target_drive_rpm_[i];
+                payload[17 + i] = debug_current_drive_rpm_[i];
+                payload[21 + i] = (f32)debug_homing_state_[i];
+            }
+            debug_uart_.printf_DMA_JustFloat(payload, 25);
         }
 
         bool Chassis::solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const
@@ -2304,7 +2337,7 @@ namespace jia
                         debug_selected_wheel_steer_error_deg_ = steer_error_deg;
                         debug_selected_wheel_drive_released_ = drive_released;
 #if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-                        if (debug_uart8_log_level_ >= 1U && (time_ms_ - debug_wheel_uart_log_last_ms_) >= 50)
+                        if (debug_uart8_output_mode_ == 1U && debug_uart8_log_level_ >= 1U && (time_ms_ - debug_wheel_uart_log_last_ms_) >= 50)
                         {
                             debug_wheel_uart_log_last_ms_ = time_ms_;
                             debug_uart_.printf_DMA((char *)"SW20,%lu,%u,%u,%u,%.3f,%.3f,%.3f,%u,%u\r\n",
@@ -2391,6 +2424,7 @@ namespace jia
                     updateCurrentData(all_homed);
                     refreshDebugMirror(all_homed);
                     emitDebugUart8Log(all_homed);
+                    emitUart8VofaJustFloatPidTrace();
                     last_planned_data_ = planned_data_;
                     vTaskDelayUntil(&time_ms_, period_ms_);
                     continue;
@@ -2403,6 +2437,7 @@ namespace jia
                 updateCurrentData(all_homed);
                 refreshDebugMirror(all_homed);
                 emitDebugUart8Log(all_homed);
+                emitUart8VofaJustFloatPidTrace();
 
                 last_planned_data_ = planned_data_;
                 vTaskDelayUntil(&time_ms_, period_ms_);

@@ -736,6 +736,7 @@ namespace jia
             void updateCurrentData(bool all_homed);
             void refreshDebugMirror(bool all_homed);
             void emitDebugUart8Log(bool all_homed);
+            void emitUart8VofaJustFloatPidTrace();
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
 
@@ -851,10 +852,14 @@ namespace jia
             f32 debug_direct_drive_rpm_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 30模式每轮驱动目标转速（rpm）
             f32 debug_direct_drive_rpm_limit_ = 300.0f; // 30模式驱动转速限幅（rpm）
             Debug_Printf debug_uart_ = Debug_Printf(&huart8); // FourSteer 调试串口（UART8）
+            u8 debug_uart8_output_mode_ = 1; // UART8输出模式：0=关闭，1=文本日志(FS/FSW/SW20)，2=VOFA justfloat PID诊断
             bool debug_uart8_log_enable_ = true; // UART8 常驻日志总开关：true=输出 FourSteer 心跳日志
             u32 debug_uart8_log_period_ms_ = 500; // UART8 常驻日志输出周期（ms），默认 500ms 即 2Hz
             u8 debug_uart8_log_level_ = 0; // UART8 日志级别：0=心跳摘要，1=附带单轮细节与 SW20 专项行
             TickType_t debug_uart8_log_last_ms_ = 0; // UART8 常驻日志节流时间戳
+            bool debug_uart8_justfloat_enable_ = true; // UART8 justfloat 总开关
+            u32 debug_uart8_justfloat_period_ms_ = 10; // UART8 justfloat 发送周期（ms），默认100Hz
+            TickType_t debug_uart8_justfloat_last_ms_ = 0; // UART8 justfloat 节流时间戳
 
             // 调试镜像量：给调试器直接看，统一换成更直观的单位，避免联调时反复手算弧度。
             bool debug_all_homed_ = false;                   // 当前周期是否全轮已回零完成

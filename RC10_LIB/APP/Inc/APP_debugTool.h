@@ -25,7 +25,7 @@ extern "C" {
 
 #include <cstdint>
 #include <cstdio>
-#define SEND_BUF_SIZE 100
+#define SEND_BUF_SIZE 128
 /**
  * @brief 串口打印调试助手
  */
