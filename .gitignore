@@ -41,6 +41,8 @@ MDK-ARM/Frame_T/system_stm32h7xx.o
 /Core/Src/Backup/
 *.bak
 
-# local git worktree metadata folder in main workspace
-/.worktrees/
+# AI agent workspace policy
+# keep docs/tests/history trackable, ignore volatile artifacts by default
+/.ai_agent_workspace/artifacts/
+!/.ai_agent_workspace/artifacts/.gitkeep
 
