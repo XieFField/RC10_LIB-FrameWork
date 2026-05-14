@@ -74,8 +74,8 @@ Robot_WeaponSage_Setup Weapon_Controller(initData_);
 
 /**
  * CAN1:  底盘舵向M3508 * 4 (1~4id) + VESC * 4 (101~104id)
- * CAN2:  武器M2006*3+M3508*1(M2006 id 1~3 M3508 id 4) + GO * 1 DM4310() * 1
- * CAN3:  机械臂M3508*2(id) + M2006*1 + DM4310*1
+ * CAN2:  武器M2006*3+M3508*1(M2006 id 1~3 M3508 id 4) + DM4310() * 1 + 绝对值编码器
+ * CAN3:  机械臂M3508*2(id) + M2006*2(id6给weaponwrist id8给arm_stretch) + DM4310*1
  */
 
                            /* 底盘电机 */
@@ -86,7 +86,7 @@ VESC_Motor U8_3(103, CAN1_Bus, 21); VESC_Motor U8_4(104, CAN1_Bus, 21);
                             /* 武器架电机 */
 M2006 Weapon_Claw1(1, CAN2_Bus); M2006 Weapon_Claw2(2, CAN2_Bus); M2006 Weapon_Claw3(3, CAN2_Bus); 
 M3508 Weapon_Launch(4, CAN2_Bus);
-GO_Motor Weapon_Elbow(1, CAN2_Bus); DM_Motor Weapon_Wrist(J4310_Type, 0x05, 0x05, CAN2_Bus);
+DM_Motor Weapon_Elbow(J4310_Type, 0x06, 0x06, CAN2_Bus); M2006 Weapon_Wrist(6, CAN3_Bus);
 
                             /* 机械臂电机 */
 M3508 arm_launchMotor(5, CAN3_Bus, true, false); M3508 arm_rotateMotor(7, CAN3_Bus, true, false);
@@ -287,16 +287,25 @@ void CAN_Motor_Init(void)
    CAN2_Bus->registerMotor(&Weapon_Claw1); CAN2_Bus->registerMotor(&Weapon_Claw2);
    CAN2_Bus->registerMotor(&Weapon_Claw3); CAN2_Bus->registerMotor(&Weapon_Launch);
 
-   CAN2_Bus->registerMotor(&Weapon_Elbow); CAN2_Bus->registerMotor(&Weapon_Wrist);
+   CAN2_Bus->registerMotor(&Weapon_Elbow); 
 
    CAN2_Bus->init();
 
    //CAN3总线初始化，注册机械臂电机
    DJIGroupCAN3_High.addMotor(&arm_launchMotor); DJIGroupCAN3_High.addMotor(&arm_rotateMotor);
    DJIGroupCAN3_High.addMotor(&arm_stretchMotor); 
+
+   DJIGroupCAN3_High.addMotor(&Weapon_Wrist);
+
    CAN3_Bus->registerMotor(&DJIGroupCAN3_High);
    CAN3_Bus->registerMotor(&arm_launchMotor); CAN3_Bus->registerMotor(&arm_rotateMotor);
-   CAN3_Bus->registerMotor(&arm_stretchMotor); CAN3_Bus->registerMotor(&arm_pitchMotor);
+   CAN3_Bus->registerMotor(&arm_stretchMotor); 
+   
+   CAN3_Bus->registerMotor(&Weapon_Wrist);
+   CAN3_Bus->registerMotor(&arm_pitchMotor);
+
+   
+
 	CAN3_Bus->init();
 
    // 底盘轮子电机PID参数初始化
