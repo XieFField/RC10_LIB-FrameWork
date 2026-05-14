@@ -529,9 +529,11 @@ namespace jia
                 f32 steer_motor_sign = 1.0f;        // 转向电机方向符号：1.0f 表示不取反，-1.0f 表示取反，0.0f 在初始化时会被当作 1.0f
                 f32 drive_motor_sign = 1.0f;        // 驱动电机方向符号：1.0f 表示不取反，-1.0f 表示取反，0.0f 在初始化时会被当作 1.0f
                 bool homing_enabled = false;        // 是否启用该轮回零流程；没有装光电/霍尔零位开关时保持 false
-                bool homing_sensor_active_high = true; // 传感器原始 GPIO 输入高电平时若视为“触发有效”就填 true，否则填 false
+                bool homing_sensor_active_high = true; // 传感器原始 GPIO 输入高电平时若视为“触发有效”就填 true，否则填 false；它只影响“逻辑 active”理解，不决定 H/L 边沿对应的机械角
                 void *homing_gpio_port = nullptr;   // 真实光电接入后填 STM32 HAL 的 GPIOA/GPIOB 等端口，或 CubeMX 生成的 *_GPIO_Port 宏
                 u16 homing_gpio_pin = 0;            // 真实光电接入后填 GPIO_PIN_x，或 CubeMX 生成的 *_Pin 宏；未接时保持 0
+                f32 homing_falling_edge_mech_deg = 60.0f; // 原始 GPIO 从高到低（H->L）那个边沿对应的机械 OA 角，单位 deg；默认是 +60°
+                f32 homing_rising_edge_mech_deg = -120.0f; // 原始 GPIO 从低到高（L->H）那个边沿对应的机械 OA 角，单位 deg；默认是 -120°
                 f32 homing_search_rpm = 10.0f;      // 回零搜索时给转向电机的转速指令，单位 rpm
                 f32 homing_zero_offset_deg = 0.0f;  // 回零补偿角：传感器触发点到期望机械零位的偏差；它在建立零点时生效，不是安装角偏移
                 f32 homing_timeout_s = 5.0f;        // 单轮回零超时时间，超时后进入故障态，单位秒
@@ -615,14 +617,17 @@ namespace jia
                 Motor_Base *steer_motor_h = nullptr;        // 该模块绑定的转向电机句柄
                 Motor_Base *drive_motor_h = nullptr;        // 该模块绑定的驱动电机句柄
                 bool homing_enabled = false;                // 是否对该轮启用回零流程；false 时默认认为零位已可用
-                bool homing_sensor_active_high = true;      // 回零传感器触发极性：true 表示高电平有效，false 表示低电平有效
+                bool homing_sensor_active_high = true;      // 回零传感器逻辑 active 极性：true 表示高电平视为有效，false 表示低电平视为有效；不决定 H/L 边沿的机械角语义
                 void *homing_gpio_port = nullptr;           // 回零传感器 GPIO 端口运行时副本；读取零位输入时直接使用
                 u16 homing_gpio_pin = 0;                    // 回零传感器 GPIO 引脚运行时副本；与端口配合读取真实输入
+                f32 homing_falling_edge_mech_rad = 0.0f;    // 原始 GPIO H->L 边沿对应的机械 OA 角（rad）
+                f32 homing_rising_edge_mech_rad = 0.0f;     // 原始 GPIO L->H 边沿对应的机械 OA 角（rad）
                 f32 homing_search_rpm = 10.0f;              // 回零搜索阶段给转向电机的转速指令，单位 rpm
                 f32 homing_zero_offset_rad = 0.0f;          // 标定得到的零位补偿角：传感器触发点到期望机械零位的固定偏差
                 f32 homing_timeout_s = 5.0f;                // 单轮回零允许持续的最长时间，超时后进入故障态，单位秒
                 HomingState homing_state = HomingState::kIdle; // 当前轮回零状态机所处阶段
-                bool homing_last_sensor_active = false;     // 上一控制周期的传感器触发状态；用于检测回零边沿
+                bool homing_last_sensor_active = false;     // 上一控制周期的原始 GPIO 高低电平；用于检测 H/L 边沿
+                bool homing_last_edge_is_falling = false;   // 最近一次抓到的边沿方向：true=H->L，false=L->H；方便调试极性和触发角
                 bool homing_zero_valid = false;             // 当前轮是否已经建立可用于闭环控制的零位
                 f32 homing_elapsed_s = 0.0f;                // 本次回零已运行时间，单位秒；用于超时判定
                 f32 homing_runtime_zero_offset_rad = 0.0f;  // 本次上电运行实际采用的零位补偿；回零成功后会把“当前触发位置”修正成运行时零点
@@ -691,6 +696,7 @@ namespace jia
             void runThread(void *arg);
 
             // 输入目标数据
+            void isDebugMode();
             void clearInputTargetData();
             void setModeFlag();
             void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
@@ -702,6 +708,7 @@ namespace jia
             void updateWheelFeedback();
             bool updateHomingState(WheelConfig &wheel);
             bool readHomingSensor(const WheelConfig &wheel) const;
+            bool readHomingSensorRawHigh(const WheelConfig &wheel) const;
             f32 readSteerMotorRawTotalAngleRad(const WheelConfig &wheel) const;
             f32 readDriveMotorOmegaRadS(const WheelConfig &wheel) const;
             f32 readCorrectedSteerMotorTotalAngleRad(const WheelConfig &wheel) const;
@@ -723,6 +730,7 @@ namespace jia
             void computeModuleCommands(const Data &command_data);
             void applyModuleCommands(bool all_homed);
             void updateCurrentData(bool all_homed);
+            void refreshDebugMirror(bool all_homed);
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
 
@@ -808,6 +816,44 @@ namespace jia
             f32 lock_now_rot_z_target_ = 0.0f; // LockNow 模式真正维持的航向目标；在手动旋转和松手缓冲阶段由当前 IMU 朝向刷新
             u32 lock_now_rot_z_shift_count_ = 0; // LockNow 松手缓冲倒计时（防止手动->锁角瞬间突变）
             u32 lock_now_rot_z_shift_time_ms_ = 1000; // LockNow 松手缓冲时长（ms）
+
+            // 调试参数（通过全局 chassis 对象在调试器内直接改值）
+            bool is_debug_ = false;         // 调试总开关：true 时 isDebugMode() 每周期接管目标输入
+            u8 debug_mode_ = 0;             // 调试模式号：0~8 对齐 ThreeOmni；20=单轮直控，21=四轮朝前零点检查，22=纯回零观察
+            u8 debug_wheel_index_ = 0;      // 单轮调试目标索引（0~3）
+            f32 debug_input_ = 90.0f;       // 通用调试输入保留位（兼容 ThreeOmni 习惯）
+            f32 debug_lock_rot_z_ = 0.0f;   // LockTo 模式调试目标角（rad）
+            bool is_step_signal_ = false;   // 是否启用阶跃注入（用于 omega_z 调试）
+            bool is_sine_ = false;          // 是否启用正弦注入（用于 omega_z 调试）
+            f32 sine_amplitude_ = 0.0f;     // 正弦注入幅值
+            f32 sine_frequency_ = 0.1f;     // 正弦注入频率（Hz）
+            f32 sine_offset_ = 0.0f;        // 正弦注入偏置
+            bool is_wheel_speed_mode_ = true; // 单轮直控时是否下发驱动转速；false 时驱动置零
+            bool debug_wheel_soft_steer_enable_ = false; // 单轮直控舵角是否启用软到位；false=硬切目标角，true=走速率/加速度限幅
+            bool debug_wheel_use_custom_steer_limit_ = false; // 软到位时是否使用下面这组单独限幅；false 时复用整车 steer 限幅
+            f32 debug_wheel_steer_rate_limit_deg_s_ = 120.0f; // 单轮软到位自定义转向角速度上限（deg/s）
+            f32 debug_wheel_steer_accel_limit_deg_s2_ = 600.0f; // 单轮软到位自定义转向角加速度上限（deg/s^2）
+            bool debug_wheel_drive_release_gate_enable_ = false; // 单轮直控驱动释放门：true 时必须先把舵角误差压到阈值内才允许驱动输出
+            f32 debug_wheel_drive_release_error_deg_ = 5.0f; // 单轮直控驱动放行阈值（deg）；仅当目标 OA 误差小于等于该值时允许放驱动
+            f32 debug_wheel_target_steer_deg_ = 0.0f; // 单轮直控舵向目标（OA角，deg；0=车头前方）
+            f32 debug_wheel_target_drive_rpm_ = 0.0f; // 单轮直控驱动目标（rpm）
+            RmPocketData_t airjoy_data_{}; // 遥控器数据缓存（调试模式下每周期刷新）
+
+            // 调试镜像量：给调试器直接看，统一换成更直观的单位，避免联调时反复手算弧度。
+            bool debug_all_homed_ = false;                   // 当前周期是否全轮已回零完成
+            f32 debug_current_oa_deg_[4] = {0.0f};          // 当前 OA 朝向（deg）
+            f32 debug_target_oa_deg_[4] = {0.0f};           // 当前目标 OA 朝向（deg）
+            f32 debug_current_drive_rpm_[4] = {0.0f};       // 当前驱动反馈（rpm）
+            f32 debug_target_drive_rpm_[4] = {0.0f};        // 当前驱动目标（rpm）
+            u8 debug_homing_state_[4] = {0, 0, 0, 0};       // 当前回零状态枚举值
+            bool debug_homing_sensor_raw_high_[4] = {false, false, false, false}; // 当前原始光电门电平
+            bool debug_homing_sensor_active_[4] = {false, false, false, false}; // 当前按 active_high 极性换算后的逻辑触发态
+            bool debug_homing_last_edge_is_falling_[4] = {false, false, false, false}; // 最近一次边沿方向
+            f32 debug_homing_runtime_zero_offset_deg_[4] = {0.0f}; // 当前运行时零偏（deg）
+            bool debug_flipped_drive_[4] = {false, false, false, false}; // 当前是否采用翻转驱动解
+            f32 debug_drive_gate_scale_dbg_[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // 当前驱动抑制比例
+            f32 debug_selected_wheel_steer_error_deg_ = 0.0f; // 单轮直控当前选中轮的 OA 目标误差（deg）
+            bool debug_selected_wheel_drive_released_ = false; // 单轮直控当前选中轮是否已满足驱动放行条件
         };
 
         using Result = jia::FourSteerChassis::Chassis::Result;

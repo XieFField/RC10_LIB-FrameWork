@@ -1026,6 +1026,11 @@
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\APP\Src\APP_Speedplanner.cpp</FilePath>
             </File>
+            <File>
+              <FileName>APP_Utils.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\APP\Src\APP_Utils.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

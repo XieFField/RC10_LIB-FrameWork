@@ -252,18 +252,25 @@ void ALL_Setup_ConfigInit(void)
 #endif
 
 #if JIA_USE_FOUR_STEER_CHASSIS
+    // 四舵轮底盘初始化配置：
+    // 1) 先绑定 4 个转向电机 + 4 个驱动电机
+    // 2) 再设置整车级运动学/动力学限幅参数
+    // 3) 最后配置每个轮组的安装几何、方向符号与回零参数
     Chassis::InitConfig chassis_init_config =
         {
+            // 转向电机句柄（按轮序 0~3 对应）
             .steer_motor_h[0] = &rudder1,
             .steer_motor_h[1] = &rudder2,
             .steer_motor_h[2] = &rudder3,
             .steer_motor_h[3] = &rudder4,
 
+            // 驱动电机句柄（按轮序 0~3 对应）
             .drive_motor_h[0] = &motor_vesc1,
             .drive_motor_h[1] = &motor_vesc2,
             .drive_motor_h[2] = &motor_vesc3,
             .drive_motor_h[3] = &motor_vesc4,
 
+            // 整车参数与限幅（用于主控制线程速度规划和模块命令限幅）
             .wheel_radius_m = 0.075f,
             .max_vel_x_m_s = 4.0f,
             .max_vel_y_m_s = 4.0f,
@@ -280,63 +287,80 @@ void ALL_Setup_ConfigInit(void)
             .enable_cosine_compensation = true,
             .idle_posture_mode = Chassis::IdlePostureMode::kHoldLast,
 
+            // 轮序按实车定义：
+            // 1号=左后(rudder1/motor_vesc1)、2号=右后、3号=右前、4号=左前。
+            // 车体坐标系采用 x前 y左（右手系），整车尺寸：x向780mm、y向800mm。
+            // 所以四轮相对底盘中心坐标分别为：x=±0.39m，y=±0.40m。
+            // wheels[0]：1号左后轮（x<0, y>0）
             .wheels[0] = {
-                .pos_x_m = 0.25f,
-                .pos_y_m = 0.25f,
-                .theta_oa_to_owi_deg = 0.0f,
-                .steer_motor_sign = 1.0f,
-                .drive_motor_sign = 1.0f,
-                .homing_enabled = false,
+                .pos_x_m = -0.39f,
+                .pos_y_m = 0.40f,
+                .theta_oa_to_owi_deg = -90.0f,    // 1号轮机械安装朝向“向右”
+                .steer_motor_sign = 1.0f,         // 转向方向符号：1 不取反，-1 取反
+                .drive_motor_sign = 1.0f,         // 驱动方向符号：1 不取反，-1 取反
+                .homing_enabled = true,           // 实车接入光电门后启用回零
                 .homing_sensor_active_high = true,
-                .homing_gpio_port = nullptr,
-                .homing_gpio_pin = 0,
-                .homing_search_rpm = 10.0f,
-                .homing_zero_offset_deg = 0.0f,
-                .homing_timeout_s = 5.0f,
+                .homing_gpio_port = kPHOTOGATE_1_GPIO_Port,
+                .homing_gpio_pin = kPHOTOGATE_1_Pin,
+                .homing_falling_edge_mech_deg = 60.0f,  // 原始 GPIO 高->低边沿对应机械 +60°
+                .homing_rising_edge_mech_deg = -120.0f, // 原始 GPIO 低->高边沿对应机械 -120°
+                .homing_search_rpm = 10.0f,       // 回零搜索阶段转向电机转速（rpm）
+                .homing_zero_offset_deg = 0.0f,   // 逻辑零点统一指向车头前方；细调偏差后续再回填
+                .homing_timeout_s = 5.0f,         // 单轮回零超时时间（s）
             },
+            // wheels[1]：2号右后轮（x<0, y<0）
             .wheels[1] = {
-                .pos_x_m = 0.25f,
-                .pos_y_m = -0.25f,
-                .theta_oa_to_owi_deg = 0.0f,
+                .pos_x_m = -0.39f,
+                .pos_y_m = -0.40f,
+                .theta_oa_to_owi_deg = 0.0f,      // 2号轮机械安装朝向“向前”
                 .steer_motor_sign = 1.0f,
                 .drive_motor_sign = 1.0f,
-                .homing_enabled = false,
+                .homing_enabled = true,
                 .homing_sensor_active_high = true,
-                .homing_gpio_port = nullptr,
-                .homing_gpio_pin = 0,
+                .homing_gpio_port = kPHOTOGATE_2_GPIO_Port,
+                .homing_gpio_pin = kPHOTOGATE_2_Pin,
+                .homing_falling_edge_mech_deg = 60.0f,
+                .homing_rising_edge_mech_deg = -120.0f,
                 .homing_search_rpm = 10.0f,
                 .homing_zero_offset_deg = 0.0f,
                 .homing_timeout_s = 5.0f,
             },
+            // wheels[2]：3号右前轮（x>0, y<0）
             .wheels[2] = {
-                .pos_x_m = -0.25f,
-                .pos_y_m = 0.25f,
-                .theta_oa_to_owi_deg = 0.0f,
+                .pos_x_m = 0.39f,
+                .pos_y_m = -0.40f,
+                .theta_oa_to_owi_deg = 90.0f,     // 3号轮机械安装朝向“向左”
                 .steer_motor_sign = 1.0f,
                 .drive_motor_sign = 1.0f,
-                .homing_enabled = false,
+                .homing_enabled = true,
                 .homing_sensor_active_high = true,
-                .homing_gpio_port = nullptr,
-                .homing_gpio_pin = 0,
+                .homing_gpio_port = kPHOTOGATE_3_GPIO_Port,
+                .homing_gpio_pin = kPHOTOGATE_3_Pin,
+                .homing_falling_edge_mech_deg = 60.0f,
+                .homing_rising_edge_mech_deg = -120.0f,
                 .homing_search_rpm = 10.0f,
                 .homing_zero_offset_deg = 0.0f,
                 .homing_timeout_s = 5.0f,
             },
+            // wheels[3]：4号左前轮（x>0, y>0）
             .wheels[3] = {
-                .pos_x_m = -0.25f,
-                .pos_y_m = -0.25f,
-                .theta_oa_to_owi_deg = 0.0f,
+                .pos_x_m = 0.39f,
+                .pos_y_m = 0.40f,
+                .theta_oa_to_owi_deg = 180.0f,    // 4号轮机械安装朝向“向后”
                 .steer_motor_sign = 1.0f,
                 .drive_motor_sign = 1.0f,
-                .homing_enabled = false,
+                .homing_enabled = true,
                 .homing_sensor_active_high = true,
-                .homing_gpio_port = nullptr,
-                .homing_gpio_pin = 0,
+                .homing_gpio_port = kPHOTOGATE_4_GPIO_Port,
+                .homing_gpio_pin = kPHOTOGATE_4_Pin,
+                .homing_falling_edge_mech_deg = 60.0f,
+                .homing_rising_edge_mech_deg = -120.0f,
                 .homing_search_rpm = 10.0f,
                 .homing_zero_offset_deg = 0.0f,
                 .homing_timeout_s = 5.0f,
             },
         };
+    // 将上述配置写入四舵轮 chassis 运行态（仅初始化数据，不改变 FSM 绑定对象）
     chassis.init(chassis_init_config);
 #endif
 

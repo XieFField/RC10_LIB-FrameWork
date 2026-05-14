@@ -848,10 +848,13 @@ namespace jia
                 wheel.homing_sensor_active_high = config.wheels[i].homing_sensor_active_high;
                 wheel.homing_gpio_port = config.wheels[i].homing_gpio_port;
                 wheel.homing_gpio_pin = config.wheels[i].homing_gpio_pin;
+                wheel.homing_falling_edge_mech_rad = degToRadF32(config.wheels[i].homing_falling_edge_mech_deg);
+                wheel.homing_rising_edge_mech_rad = degToRadF32(config.wheels[i].homing_rising_edge_mech_deg);
                 wheel.homing_search_rpm = config.wheels[i].homing_search_rpm;
                 wheel.homing_zero_offset_rad = degToRadF32(config.wheels[i].homing_zero_offset_deg);
                 wheel.homing_timeout_s = config.wheels[i].homing_timeout_s;
                 wheel.homing_state = wheel.homing_enabled ? HomingState::kIdle : HomingState::kReady;
+                wheel.homing_last_edge_is_falling = false;
                 wheel.homing_zero_valid = !wheel.homing_enabled;
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
                 selected_flipped_solution_[i] = false;
@@ -1297,6 +1300,80 @@ namespace jia
             }
         }
 
+        void Chassis::isDebugMode()
+        {
+            if (!is_debug_)
+            {
+                return;
+            }
+
+            CrsfReceiver *receiver = CrsfReceiver::GetInstance(&huart7);
+            receiver->getControlData(&airjoy_data_);
+
+            f32 target_vel_x = airjoy_data_.left_x * max_vel_x_;
+            f32 target_vel_y = airjoy_data_.left_y * max_vel_y_;
+            f32 target_omega_z = airjoy_data_.right_x * max_omega_z_;
+
+            if (is_sine_)
+            {
+                target_omega_z = sineWaveGeneratorF32(time_ms_ / 1000.0f, sine_amplitude_, sine_frequency_, 0.0f, sine_offset_);
+            }
+            else if (is_step_signal_)
+            {
+                if (airjoy_data_.right_x > 0.3f)
+                {
+                    target_omega_z = max_omega_z_;
+                }
+                else if (airjoy_data_.right_x < -0.3f)
+                {
+                    target_omega_z = -max_omega_z_;
+                }
+                else
+                {
+                    target_omega_z = 0.0f;
+                }
+            }
+
+            switch (debug_mode_)
+            {
+            default:
+            case 0:
+                setWheelTorqueFreeMode();
+                break;
+            case 1:
+                setTargetBodySpeedMode(target_vel_x, target_vel_y, target_omega_z);
+                break;
+            case 2:
+                setTargetWorldSpeedMode(target_vel_x, target_vel_y, target_omega_z);
+                break;
+            case 3:
+                setTargetBodySpeedLockNowRotZMode(target_vel_x, target_vel_y);
+                break;
+            case 4:
+                setTargetWorldSpeedLockNowRotZMode(target_vel_x, target_vel_y);
+                break;
+            case 5:
+                setTargetBodySpeedLockToRotZMode(target_vel_x, target_vel_y, debug_lock_rot_z_);
+                break;
+            case 6:
+                setTargetWorldSpeedLockToRotZMode(target_vel_x, target_vel_y, debug_lock_rot_z_);
+                break;
+            case 7:
+                setTargetBodySpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
+                break;
+            case 8:
+                setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
+                break;
+            case 20:
+            case 21:
+            case 22:
+                // 20/21/22 都在 runThread() 内走专门调试分支：
+                // 不复用“扭矩自由模式”，避免 applyModuleCommands() 再把目标清零。
+                setTargetBodySpeedMode(0.0f, 0.0f, 0.0f);
+                break;
+            }
+        }
+
         void Chassis::transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const
         {
             f32 cos_theta = cosf(input_hwt_rot_z_);
@@ -1425,9 +1502,18 @@ namespace jia
             {
                 return false;
             }
-            GPIO_TypeDef *port = reinterpret_cast<GPIO_TypeDef *>(wheel.homing_gpio_port);
-            const bool raw_active = HAL_GPIO_ReadPin(port, wheel.homing_gpio_pin) != GPIO_PIN_RESET;
+            const bool raw_active = readHomingSensorRawHigh(wheel);
             return wheel.homing_sensor_active_high ? raw_active : !raw_active;
+        }
+
+        bool Chassis::readHomingSensorRawHigh(const WheelConfig &wheel) const
+        {
+            if (!wheel.homing_enabled || wheel.homing_gpio_port == nullptr)
+            {
+                return false;
+            }
+            GPIO_TypeDef *port = reinterpret_cast<GPIO_TypeDef *>(wheel.homing_gpio_port);
+            return HAL_GPIO_ReadPin(port, wheel.homing_gpio_pin) != GPIO_PIN_RESET;
         }
 
         f32 Chassis::readSteerMotorRawTotalAngleRad(const WheelConfig &wheel) const
@@ -1473,10 +1559,11 @@ namespace jia
                 wheel.homing_state = HomingState::kReady;
                 wheel.homing_zero_valid = true;
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
+                wheel.homing_last_edge_is_falling = false;
                 return true;
             }
 
-            const bool sensor_active = readHomingSensor(wheel);
+            const bool sensor_raw_high = readHomingSensorRawHigh(wheel);
             const f32 raw_total_angle_rad = readSteerMotorRawTotalAngleRad(wheel);
 
             if (wheel.homing_state == HomingState::kIdle)
@@ -1487,28 +1574,35 @@ namespace jia
                     wheel.homing_state = HomingState::kSearch;
                     wheel.homing_elapsed_s = 0.0f;
                 }
-                wheel.homing_last_sensor_active = sensor_active;
+                wheel.homing_last_sensor_active = sensor_raw_high;
                 return false;
             }
 
             if (wheel.homing_state == HomingState::kSearch)
             {
-                // 搜索态只负责等待“传感器边沿”或“启动瞬间已处于有效态”的情况；
-                // 一旦捕获到边沿，就把当前原始编码器角度换算成运行时零偏移。
+                // 搜索态严格等待“传感器边沿”，不再使用“初始有效电平直接通过”的捷径。
+                // 双边沿语义（按你给的实车标定）：
+                //   H->L: 触发角是机械 +60°
+                //   L->H: 触发角是机械 -120°
+                // 两个触发角相差 180°，保证任意起始状态半圈内都能抓到一个有效边沿。
                 wheel.homing_elapsed_s += period_;
-                const bool is_edge = (sensor_active != wheel.homing_last_sensor_active);
-                const bool is_initial_active = sensor_active && (wheel.homing_elapsed_s <= period_ + 1.0e-6f);
-                if (is_edge || is_initial_active)
+                const bool is_edge = (sensor_raw_high != wheel.homing_last_sensor_active);
+                if (is_edge)
                 {
+                    const bool is_falling_edge = wheel.homing_last_sensor_active && !sensor_raw_high;
+                    const f32 edge_mech_oa_rad = is_falling_edge ? wheel.homing_falling_edge_mech_rad : wheel.homing_rising_edge_mech_rad;
+                    const f32 edge_local_corrected_rad = edge_mech_oa_rad - wheel.theta_oa_to_owi_rad;
+
                     wheel.homing_state = HomingState::kEdgeDetected;
-                    wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad - raw_total_angle_rad;
+                    wheel.homing_last_edge_is_falling = is_falling_edge;
+                    wheel.homing_runtime_zero_offset_rad = edge_local_corrected_rad + wheel.homing_zero_offset_rad - raw_total_angle_rad;
                     wheel.homing_zero_valid = true;
                 }
                 else if (wheel.homing_elapsed_s > wheel.homing_timeout_s)
                 {
                     wheel.homing_state = HomingState::kFault;
                 }
-                wheel.homing_last_sensor_active = sensor_active;
+                wheel.homing_last_sensor_active = sensor_raw_high;
                 return false;
             }
 
@@ -1870,6 +1964,28 @@ namespace jia
             }
         }
 
+        void Chassis::refreshDebugMirror(bool all_homed)
+        {
+            debug_all_homed_ = all_homed;
+            debug_selected_wheel_steer_error_deg_ = 0.0f;
+            debug_selected_wheel_drive_released_ = false;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                const WheelConfig &wheel = wheel_config_[i];
+                debug_current_oa_deg_[i] = radToDegF32(wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad);
+                debug_target_oa_deg_[i] = radToDegF32(wheel.target_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad);
+                debug_current_drive_rpm_[i] = radsToRpmF32(wheel.corrected_drive_omega_rad_s);
+                debug_target_drive_rpm_[i] = radsToRpmF32(wheel.target_drive_omega_rad_s);
+                debug_homing_state_[i] = static_cast<u8>(wheel.homing_state);
+                debug_homing_sensor_raw_high_[i] = readHomingSensorRawHigh(wheel);
+                debug_homing_sensor_active_[i] = readHomingSensor(wheel);
+                debug_homing_last_edge_is_falling_[i] = wheel.homing_last_edge_is_falling;
+                debug_homing_runtime_zero_offset_deg_[i] = radToDegF32(wheel.homing_runtime_zero_offset_rad);
+                debug_flipped_drive_[i] = wheel.flipped_drive_direction;
+                debug_drive_gate_scale_dbg_[i] = drive_gate_scale_[i];
+            }
+        }
+
         bool Chassis::solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const
         {
             // 这里用的是带主元选取的高斯消元，目标是稳定求解 3x3 线性方程组；
@@ -2004,6 +2120,7 @@ namespace jia
                 input_hwt_rot_z_ = hwt->get_yaw_rad();
                 input_hwt_omega_z_ = hwt->get_yaw_speed_rad();
 
+                isDebugMode();
                 setModeFlag();
                 target_data_.rot_z = input_target_data_.rot_z;
 
@@ -2052,11 +2169,119 @@ namespace jia
                 }
                 homing_start_request_ = false;
 
+                if (is_debug_ && (debug_mode_ == 20 || debug_mode_ == 21 || debug_mode_ == 22))
+                {
+                    // 调试专用分支：不走底盘速度分解，直接改写模块目标缓存。
+                    // 20=单轮直控，21=四轮朝前，22=纯回零观察。
+                    // 三者都仍然走 applyModuleCommands(all_homed) 的安全门控，因此未回零前驱动不会放开。
+                    const u8 wheel_idx = (debug_wheel_index_ < 4) ? debug_wheel_index_ : 0;
+                    const bool use_soft_steer = (debug_mode_ == 20) && debug_wheel_soft_steer_enable_;
+                    for (u8 i = 0; i < 4; ++i)
+                    {
+                        WheelConfig &wheel = wheel_config_[i];
+                        wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
+                        wheel.target_drive_omega_rad_s = 0.0f;
+                        wheel.steer_target_velocity_rad_s = 0.0f;
+                        wheel.flipped_drive_direction = false;
+                        planned_data_.steer_angle_oa_rad[i] = wheel.target_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                        planned_data_.drive_omega_rad_s[i] = 0.0f;
+                        if (!(use_soft_steer && i == wheel_idx))
+                        {
+                            last_steer_rate_cmd_rad_s_[i] = 0.0f;
+                        }
+                        last_drive_omega_cmd_rad_s_[i] = 0.0f;
+                    }
+
+                    if (debug_mode_ == 20)
+                    {
+                        WheelConfig &debug_wheel = wheel_config_[wheel_idx];
+                        // 单轮直控也复用“最近等效角”思路：同一个 OA 模角可对应多圈连续角，
+                        // 这里优先选离当前 OA 最近的那一圈，避免调试器从 350° 到 10° 时绕远路转一整圈。
+                        const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(debug_wheel_target_steer_deg_));
+                        const f32 current_oa_total_rad = debug_wheel.corrected_steer_motor_total_angle_rad + debug_wheel.theta_oa_to_owi_rad;
+                        const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, target_oa_mod_rad);
+                        const f32 selected_local_total_rad = target_oa_total_rad - debug_wheel.theta_oa_to_owi_rad;
+                        const f32 steer_error_deg = radToDegF32(fabsf(shortestAngularDistance(current_oa_total_rad, target_oa_total_rad)));
+                        const f32 drive_release_error_deg = (debug_wheel_drive_release_error_deg_ >= 0.0f) ? debug_wheel_drive_release_error_deg_ : 0.0f;
+                        const bool drive_released = !debug_wheel_drive_release_gate_enable_ || (steer_error_deg <= drive_release_error_deg);
+
+                        if (debug_wheel_soft_steer_enable_)
+                        {
+                            // 软到位模式下复用正常控制链的二阶限幅器，让单轮调试也能观察“有限速/有限加速度”的真实到位过程。
+                            f32 steer_limit_rate_rad_s = max_steer_rate_rad_s_;
+                            f32 steer_limit_accel_rad_s2 = max_steer_alpha_rad_s2_;
+                            if (debug_wheel_use_custom_steer_limit_)
+                            {
+                                steer_limit_rate_rad_s = degToRadF32(debug_wheel_steer_rate_limit_deg_s_);
+                                steer_limit_accel_rad_s2 = degToRadF32(debug_wheel_steer_accel_limit_deg_s2_);
+                            }
+                            if (steer_limit_rate_rad_s <= 1.0e-6f)
+                            {
+                                steer_limit_rate_rad_s = max_steer_rate_rad_s_;
+                            }
+                            if (steer_limit_accel_rad_s2 <= 1.0e-6f)
+                            {
+                                steer_limit_accel_rad_s2 = max_steer_alpha_rad_s2_;
+                            }
+
+                            f32 next_steer_rate_rad_s = 0.0f;
+                            debug_wheel.target_steer_motor_total_angle_rad = limitPositionSecondOrder(
+                                debug_wheel.corrected_steer_motor_total_angle_rad,
+                                last_steer_rate_cmd_rad_s_[wheel_idx],
+                                selected_local_total_rad,
+                                steer_limit_rate_rad_s,
+                                steer_limit_accel_rad_s2,
+                                period_,
+                                next_steer_rate_rad_s);
+                            debug_wheel.steer_target_velocity_rad_s = next_steer_rate_rad_s;
+                            last_steer_rate_cmd_rad_s_[wheel_idx] = next_steer_rate_rad_s;
+                        }
+                        else
+                        {
+                            debug_wheel.target_steer_motor_total_angle_rad = selected_local_total_rad;
+                            debug_wheel.steer_target_velocity_rad_s = 0.0f;
+                            last_steer_rate_cmd_rad_s_[wheel_idx] = 0.0f;
+                        }
+
+                        debug_wheel.target_drive_omega_rad_s = (is_wheel_speed_mode_ && drive_released) ? rpmToRadsF32(debug_wheel_target_drive_rpm_) : 0.0f;
+                        planned_data_.steer_angle_oa_rad[wheel_idx] = debug_wheel.target_steer_motor_total_angle_rad + debug_wheel.theta_oa_to_owi_rad;
+                        planned_data_.drive_omega_rad_s[wheel_idx] = debug_wheel.target_drive_omega_rad_s;
+                        last_drive_omega_cmd_rad_s_[wheel_idx] = debug_wheel.target_drive_omega_rad_s;
+                        debug_selected_wheel_steer_error_deg_ = steer_error_deg;
+                        debug_selected_wheel_drive_released_ = drive_released;
+                    }
+                    else if (debug_mode_ == 21)
+                    {
+                        for (u8 i = 0; i < 4; ++i)
+                        {
+                            WheelConfig &wheel = wheel_config_[i];
+                            wheel.target_steer_motor_total_angle_rad = -wheel.theta_oa_to_owi_rad;
+                            planned_data_.steer_angle_oa_rad[i] = 0.0f;
+                        }
+                    }
+
+                    planned_data_.vel_x = 0.0f;
+                    planned_data_.vel_y = 0.0f;
+                    planned_data_.omega_z = 0.0f;
+                    planned_data_.acc_x = 0.0f;
+                    planned_data_.acc_y = 0.0f;
+                    planned_data_.alpha_z = 0.0f;
+                    planned_data_.rot_z = input_hwt_rot_z_;
+
+                    applyModuleCommands(all_homed);
+                    updateCurrentData(all_homed);
+                    refreshDebugMirror(all_homed);
+                    last_planned_data_ = planned_data_;
+                    vTaskDelayUntil(&time_ms_, period_ms_);
+                    continue;
+                }
+
                 // 回零和正常控制共用同一套命令生成流程，但最终下发前会根据 all_homed 选择：
                 // 未回零时只保留安全动作，已回零时才输出完整舵角/驱动目标。
                 computeModuleCommands(planned_data_);
                 applyModuleCommands(all_homed);
                 updateCurrentData(all_homed);
+                refreshDebugMirror(all_homed);
 
                 last_planned_data_ = planned_data_;
                 vTaskDelayUntil(&time_ms_, period_ms_);
