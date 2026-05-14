@@ -293,6 +293,8 @@ extern PID_Param_Config m3508Rotate_angle_pid_params;
 extern PID_Param_Config path_lock_end;
 
 extern PID_Param_Config m3508_speed_pid_paramsForSpeedMotor;
+extern PID_Param_Config foursteer_steer_speed_pid_params;
+extern PID_Param_Config foursteer_steer_angle_pid_params;
 
 extern PID_Param_Config omega_z_pid_init_config;
 extern PID_Param_Config rot_z_pid_init_config;
