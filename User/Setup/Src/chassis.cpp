@@ -2120,6 +2120,10 @@ namespace jia
                 input_hwt_rot_z_ = hwt->get_yaw_rad();
                 input_hwt_omega_z_ = hwt->get_yaw_speed_rad();
 
+                // 常态同步手柄缓存：即使 is_debug_ 关闭，也保持 airjoy_data_ 实时更新，
+                // 便于通过调试器直接观察摇杆输入；不改变任何控制模式接管逻辑。
+                CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+
                 isDebugMode();
                 setModeFlag();
                 target_data_.rot_z = input_target_data_.rot_z;
