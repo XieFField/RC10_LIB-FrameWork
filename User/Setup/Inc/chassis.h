@@ -854,10 +854,26 @@ namespace jia
             f32 debug_direct_steer_oa_deg_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 30模式每轮OA目标角（deg）
             f32 debug_direct_steer_rpm_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 30模式每轮舵向速度环直控目标（rpm）
             f32 debug_direct_drive_rpm_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 30模式每轮驱动目标转速（rpm）
-            f32 debug_direct_drive_rpm_limit_ = 300.0f; // 30模式驱动转速限幅（rpm）
+            f32 debug_direct_drive_rpm_limit_ = 500.0f; // 30模式驱动转速限幅（rpm）
             f32 debug_direct_steer_rpm_limit_ = 300.0f; // 30模式舵向速度环直控限幅（rpm）
+            // 30模式多输入扩展：输入源与控制量类型由调试器变量切换，默认只作用 debug_wheel_index_ 轮。
+            // input_source: 0=调试器直接给值, 1=遥控器左摇杆映射, 2=右摇杆阈值阶跃
+            u8 debug_direct_input_source_ = 0;
+            // control_type: 0=舵向电流, 1=舵向速度, 2=舵向单圈角, 3=舵向多圈角
+            u8 debug_direct_steer_control_type_ = 1;
+            f32 debug_direct_steer_current_mA_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 30模式每轮舵向电流直控目标（mA）
+            f32 debug_direct_steer_single_turn_deg_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 30模式每轮舵向单圈角目标（deg）
+            f32 debug_direct_steer_multi_turn_deg_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 30模式每轮舵向多圈角目标（deg）
+            f32 debug_direct_steer_current_limit_mA_ = 12000.0f; // 30模式舵向电流直控限幅（mA）
+            f32 debug_direct_steer_single_turn_limit_deg_ = 180.0f; // 30模式单圈角输入幅值限幅（deg）
+            f32 debug_direct_steer_multi_turn_limit_deg_ = 1080.0f; // 30模式多圈角输入幅值限幅（deg）
+            f32 debug_direct_step_threshold_ = 0.3f; // 30模式阶跃触发阈值（右摇杆绝对值）
+            f32 debug_direct_step_steer_current_mA_ = 2000.0f; // 30模式阶跃幅值：舵向电流（mA）
+            f32 debug_direct_step_steer_rpm_ = 100.0f; // 30模式阶跃幅值：舵向速度（rpm）
+            f32 debug_direct_step_steer_single_turn_deg_ = 90.0f; // 30模式阶跃幅值：舵向单圈角（deg）
+            f32 debug_direct_step_steer_multi_turn_deg_ = 180.0f; // 30模式阶跃幅值：舵向多圈角（deg）
             Debug_Printf debug_uart_ = Debug_Printf(&huart8); // FourSteer 调试串口（UART8）
-            u8 debug_uart8_output_mode_ = 1; // UART8输出模式：0=全关，1=仅文本，2=仅四轮总览justfloat，3=仅单轮1kHz justfloat
+            u8 debug_uart8_output_mode_ = 0; // UART8输出模式：0=全关，1=仅文本，2=仅四轮总览justfloat，3=仅单轮1kHz justfloat
             bool debug_uart8_output_enable_ = true; // UART8 输出总开关；具体输出类型由 output_mode_ 唯一裁决
             u32 debug_uart8_log_period_ms_ = 500; // UART8 常驻日志输出周期（ms），默认 500ms 即 2Hz
             u8 debug_uart8_log_level_ = 0; // UART8 日志级别：0=心跳摘要，1=附带单轮细节与 SW20 专项行
@@ -904,6 +920,7 @@ namespace jia
             f32 debug_selected_wheel_steer_error_deg_ = 0.0f; // 单轮直控当前选中轮的 OA 目标误差（deg）
             bool debug_selected_wheel_drive_released_ = false; // 单轮直控当前选中轮是否已满足驱动放行条件
             TickType_t debug_wheel_uart_log_last_ms_ = 0; // 单轮调试日志节流时间戳（20Hz）
+            TickType_t debug_direct_uart_log_last_ms_ = 0; // 30模式诊断日志节流时间戳
             f32 debug_steer_angle_pid_p_term_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 四轮转向角度环P配置快照（用于1kHz诊断包）
             f32 debug_steer_angle_pid_i_term_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 四轮转向角度环I配置快照（用于1kHz诊断包）
             f32 debug_steer_angle_pid_d_term_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 四轮转向角度环D配置快照（用于1kHz诊断包）

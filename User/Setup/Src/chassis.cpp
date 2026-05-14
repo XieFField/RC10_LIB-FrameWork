@@ -2477,6 +2477,88 @@ namespace jia
                     {
                         const f32 rpm_limit = (debug_direct_drive_rpm_limit_ > 0.0f) ? debug_direct_drive_rpm_limit_ : 300.0f;
                         const f32 steer_rpm_limit = (debug_direct_steer_rpm_limit_ > 0.0f) ? debug_direct_steer_rpm_limit_ : 300.0f;
+                        const f32 steer_current_limit_mA = (debug_direct_steer_current_limit_mA_ > 0.0f) ? debug_direct_steer_current_limit_mA_ : 12000.0f;
+                        const f32 steer_single_turn_limit_deg = (debug_direct_steer_single_turn_limit_deg_ > 0.0f) ? debug_direct_steer_single_turn_limit_deg_ : 180.0f;
+                        const f32 steer_multi_turn_limit_deg = (debug_direct_steer_multi_turn_limit_deg_ > 0.0f) ? debug_direct_steer_multi_turn_limit_deg_ : 1080.0f;
+                        const f32 step_threshold = (debug_direct_step_threshold_ > 0.01f) ? debug_direct_step_threshold_ : 0.3f;
+                        f32 steer_current_cmd_mA = debug_direct_steer_current_mA_[wheel_idx];
+                        f32 steer_rpm_cmd = debug_direct_steer_rpm_[wheel_idx];
+                        f32 steer_single_turn_deg_cmd = debug_direct_steer_single_turn_deg_[wheel_idx];
+                        f32 steer_multi_turn_deg_cmd = debug_direct_steer_multi_turn_deg_[wheel_idx];
+                        f32 applied_steer_cmd = 0.0f;
+
+                        // 30模式多输入层：输入源先产生命令值，再由 control_type 决定下发到电流/速度/位置链路。
+                        if (debug_direct_input_source_ == 1U)
+                        {
+                            const f32 stick = clampValue(airjoy_data_.left_x, -1.0f, 1.0f);
+                            switch (debug_direct_steer_control_type_)
+                            {
+                            case 0U:
+                                steer_current_cmd_mA = stick * steer_current_limit_mA;
+                                break;
+                            case 1U:
+                                steer_rpm_cmd = stick * steer_rpm_limit;
+                                break;
+                            case 2U:
+                                steer_single_turn_deg_cmd = stick * steer_single_turn_limit_deg;
+                                break;
+                            case 3U:
+                            default:
+                                steer_multi_turn_deg_cmd = stick * steer_multi_turn_limit_deg;
+                                break;
+                            }
+                        }
+                        else if (debug_direct_input_source_ == 2U)
+                        {
+                            f32 step_sign = 0.0f;
+                            if (airjoy_data_.right_x > step_threshold)
+                            {
+                                step_sign = 1.0f;
+                            }
+                            else if (airjoy_data_.right_x < -step_threshold)
+                            {
+                                step_sign = -1.0f;
+                            }
+                            switch (debug_direct_steer_control_type_)
+                            {
+                            case 0U:
+                                steer_current_cmd_mA = step_sign * fabsf(debug_direct_step_steer_current_mA_);
+                                break;
+                            case 1U:
+                                steer_rpm_cmd = step_sign * fabsf(debug_direct_step_steer_rpm_);
+                                break;
+                            case 2U:
+                                steer_single_turn_deg_cmd = step_sign * fabsf(debug_direct_step_steer_single_turn_deg_);
+                                break;
+                            case 3U:
+                            default:
+                                steer_multi_turn_deg_cmd = step_sign * fabsf(debug_direct_step_steer_multi_turn_deg_);
+                                break;
+                            }
+                        }
+
+                        // 镜像回调试变量，便于调试器实时看“输入源层”最终产出的目标值。
+                        debug_direct_steer_current_mA_[wheel_idx] = steer_current_cmd_mA;
+                        debug_direct_steer_rpm_[wheel_idx] = steer_rpm_cmd;
+                        debug_direct_steer_single_turn_deg_[wheel_idx] = steer_single_turn_deg_cmd;
+                        debug_direct_steer_multi_turn_deg_[wheel_idx] = steer_multi_turn_deg_cmd;
+                        switch (debug_direct_steer_control_type_)
+                        {
+                        case 0U:
+                            applied_steer_cmd = clampValue(steer_current_cmd_mA, -steer_current_limit_mA, steer_current_limit_mA);
+                            break;
+                        case 1U:
+                            applied_steer_cmd = clampValue(steer_rpm_cmd, -steer_rpm_limit, steer_rpm_limit);
+                            break;
+                        case 2U:
+                            applied_steer_cmd = clampValue(steer_single_turn_deg_cmd, -steer_single_turn_limit_deg, steer_single_turn_limit_deg);
+                            break;
+                        case 3U:
+                        default:
+                            applied_steer_cmd = clampValue(steer_multi_turn_deg_cmd, -steer_multi_turn_limit_deg, steer_multi_turn_limit_deg);
+                            break;
+                        }
+
                         for (u8 i = 0; i < 4; ++i)
                         {
                             WheelConfig &wheel = wheel_config_[i];
@@ -2489,21 +2571,47 @@ namespace jia
                                 continue;
                             }
 
+                            // 多输入联调默认仅作用于选中轮，其余轮保持安全关断，降低联调耦合干扰。
+                            if (i != wheel_idx)
+                            {
+                                setSteerMotorTargetCurrent(wheel, 0.0f);
+                                wheel.target_drive_omega_rad_s = 0.0f;
+                                planned_data_.drive_omega_rad_s[i] = 0.0f;
+                                setDriveMotorTargetOmegaRadS(wheel, 0.0f);
+                                continue;
+                            }
+
                             if (debug_direct_enable_steer_[i])
                             {
-                                if (debug_direct_steer_use_rpm_mode_[i])
+                                const u8 steer_control_type = debug_direct_steer_control_type_;
+                                if (steer_control_type == 0U)
+                                {
+                                    const f32 target_current_mA = clampValue(steer_current_cmd_mA, -steer_current_limit_mA, steer_current_limit_mA);
+                                    wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
+                                    planned_data_.steer_angle_oa_rad[i] = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                                    setSteerMotorTargetCurrent(wheel, target_current_mA);
+                                }
+                                else if (steer_control_type == 1U)
                                 {
                                     // 纯速度环调试：舵向电机直接下发RPM，不经过角度环。
-                                    const f32 target_steer_rpm = clampValue(debug_direct_steer_rpm_[i], -steer_rpm_limit, steer_rpm_limit);
+                                    const f32 target_steer_rpm = clampValue(steer_rpm_cmd, -steer_rpm_limit, steer_rpm_limit);
                                     wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
                                     planned_data_.steer_angle_oa_rad[i] = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
                                     setSteerMotorTargetRPM(wheel, target_steer_rpm);
                                 }
-                                else
+                                else if (steer_control_type == 2U)
                                 {
-                                    const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(debug_direct_steer_oa_deg_[i]));
+                                    const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(clampValue(steer_single_turn_deg_cmd, -steer_single_turn_limit_deg, steer_single_turn_limit_deg)));
                                     const f32 current_oa_total_rad = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
                                     const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, target_oa_mod_rad);
+                                    const f32 target_local_total_rad = target_oa_total_rad - wheel.theta_oa_to_owi_rad;
+                                    wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
+                                    planned_data_.steer_angle_oa_rad[i] = target_oa_total_rad;
+                                    setSteerMotorTargetTotalAngleRad(wheel, target_local_total_rad);
+                                }
+                                else
+                                {
+                                    const f32 target_oa_total_rad = degToRadF32(clampValue(steer_multi_turn_deg_cmd, -steer_multi_turn_limit_deg, steer_multi_turn_limit_deg));
                                     const f32 target_local_total_rad = target_oa_total_rad - wheel.theta_oa_to_owi_rad;
                                     wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
                                     planned_data_.steer_angle_oa_rad[i] = target_oa_total_rad;
@@ -2530,6 +2638,34 @@ namespace jia
                                 setDriveMotorTargetOmegaRadS(wheel, 0.0f);
                             }
                         }
+
+#if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
+                        if (debug_uart8_output_mode_ == 1U && debug_uart8_log_level_ >= 1U && (time_ms_ - debug_direct_uart_log_last_ms_) >= 100U)
+                        {
+                            debug_direct_uart_log_last_ms_ = time_ms_;
+                            WheelConfig &dbg_wheel = wheel_config_[wheel_idx];
+                            const Motor_Base *steer_motor = dbg_wheel.steer_motor_h;
+                            if (steer_motor != nullptr)
+                            {
+                                debug_uart_.printf_DMA((char *)"SW30,t=%lu,w=%u,src=%u,type=%u,cmd=%.3f,tarI=%.1f,curI=%.1f,tarRPM=%.2f,curRPM=%.2f,tarAng=%.2f,curAng=%.2f,tarTot=%.2f,curTot=%.2f,en=%u,estop=%u\r\n",
+                                                       (u32)time_ms_,
+                                                       (u32)wheel_idx,
+                                                       (u32)debug_direct_input_source_,
+                                                       (u32)debug_direct_steer_control_type_,
+                                                       applied_steer_cmd,
+                                                       steer_motor->getTargetCurrent(),
+                                                       steer_motor->getCurrent(),
+                                                       steer_motor->getTargetRPM(),
+                                                       steer_motor->getRPM(),
+                                                       steer_motor->getTargetAngle(),
+                                                       steer_motor->getAngle(),
+                                                       steer_motor->getTargetTotalAngle(),
+                                                       steer_motor->getTotalAngle(),
+                                                       debug_direct_enable_steer_[wheel_idx] ? 1U : 0U,
+                                                       debug_direct_estop_ ? 1U : 0U);
+                            }
+                        }
+#endif
                     }
 
                     planned_data_.vel_x = 0.0f;
