@@ -1399,6 +1399,16 @@
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Motor\Src\Motor_DM.cpp</FilePath>
             </File>
+            <File>
+              <FileName>Motor_GO.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\..\Frame_T\RC10_LIB\Motor\Inc\Motor_GO.h</FilePath>
+            </File>
+            <File>
+              <FileName>Motor_GO.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\..\Frame_T\RC10_LIB\Motor\Src\Motor_GO.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
