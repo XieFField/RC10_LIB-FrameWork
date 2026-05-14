@@ -737,6 +737,8 @@ namespace jia
             void refreshDebugMirror(bool all_homed);
             void emitDebugUart8Log(bool all_homed);
             void emitUart8VofaJustFloatPidTrace();
+            void applyDebugSteerPidRuntimeTuning();
+            void emitUart8VofaPid1kHzTrace();
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
 
@@ -827,7 +829,7 @@ namespace jia
 
             // 调试参数（通过全局 chassis 对象在调试器内直接改值）
             bool is_debug_ = false;         // 调试总开关：true 时 isDebugMode() 每周期接管目标输入
-            u8 debug_mode_ = 0;             // 调试模式号：0~8 对齐 ThreeOmni；20=单轮直控，21=四轮朝前零点检查，22=纯回零观察，30=四轮电机直控(绕过回零门控)
+            u8 debug_mode_ = 0;             // 调试模式号：0~8 对齐 ThreeOmni；20=单轮直控，21=四轮朝前零点检查，22=纯回零观察，30=四轮电机直控(绕过回零门控，支持舵向角度/舵向RPM两种直控)
             u8 debug_wheel_index_ = 0;      // 单轮调试目标索引（0~3）
             f32 debug_input_ = 90.0f;       // 通用调试输入保留位（兼容 ThreeOmni 习惯）
             f32 debug_lock_rot_z_ = 0.0f;   // LockTo 模式调试目标角（rad）
@@ -848,18 +850,43 @@ namespace jia
             bool debug_direct_estop_ = true; // 30模式总急停：true 时四轮舵向/驱动全部打零
             bool debug_direct_enable_steer_[4] = {false, false, false, false}; // 30模式每轮舵向使能
             bool debug_direct_enable_drive_[4] = {false, false, false, false}; // 30模式每轮驱动使能
+            bool debug_direct_steer_use_rpm_mode_[4] = {false, false, false, false}; // 30模式每轮舵向控制方式：false=角度环，true=速度环直控
             f32 debug_direct_steer_oa_deg_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 30模式每轮OA目标角（deg）
+            f32 debug_direct_steer_rpm_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 30模式每轮舵向速度环直控目标（rpm）
             f32 debug_direct_drive_rpm_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 30模式每轮驱动目标转速（rpm）
             f32 debug_direct_drive_rpm_limit_ = 300.0f; // 30模式驱动转速限幅（rpm）
+            f32 debug_direct_steer_rpm_limit_ = 300.0f; // 30模式舵向速度环直控限幅（rpm）
             Debug_Printf debug_uart_ = Debug_Printf(&huart8); // FourSteer 调试串口（UART8）
-            u8 debug_uart8_output_mode_ = 1; // UART8输出模式：0=关闭，1=文本日志(FS/FSW/SW20)，2=VOFA justfloat PID诊断
-            bool debug_uart8_log_enable_ = true; // UART8 常驻日志总开关：true=输出 FourSteer 心跳日志
+            u8 debug_uart8_output_mode_ = 1; // UART8输出模式：0=全关，1=仅文本，2=仅四轮总览justfloat，3=仅单轮1kHz justfloat
+            bool debug_uart8_output_enable_ = true; // UART8 输出总开关；具体输出类型由 output_mode_ 唯一裁决
             u32 debug_uart8_log_period_ms_ = 500; // UART8 常驻日志输出周期（ms），默认 500ms 即 2Hz
             u8 debug_uart8_log_level_ = 0; // UART8 日志级别：0=心跳摘要，1=附带单轮细节与 SW20 专项行
             TickType_t debug_uart8_log_last_ms_ = 0; // UART8 常驻日志节流时间戳
-            bool debug_uart8_justfloat_enable_ = true; // UART8 justfloat 总开关
-            u32 debug_uart8_justfloat_period_ms_ = 10; // UART8 justfloat 发送周期（ms），默认100Hz
+            u32 debug_uart8_justfloat_period_ms_ = 5; // mode=2 四轮总览 justfloat 周期（ms），默认 5ms=200Hz
             TickType_t debug_uart8_justfloat_last_ms_ = 0; // UART8 justfloat 节流时间戳
+            u8 debug_pid_1khz_wheel_index_ = 0; // 1kHz PID诊断轮索引（0~3）
+            u32 debug_pid_1khz_period_ms_ = 1; // 1kHz PID诊断发送周期（ms）
+            TickType_t debug_pid_1khz_last_ms_ = 0; // 1kHz PID诊断节流时间戳
+
+            // 在线 PID 调参入口：通过调试器改参数 + 自增 stamp 触发下发，避免每周期重复写 PID。
+            PID_Param_Config debug_steer_speed_pid_cfg_[4] = {
+                {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f},
+                {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f},
+                {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f},
+                {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f},
+            };
+            PID_Param_Config debug_steer_angle_pid_cfg_[4] = {
+                {.kp = 3.5f, .ki = 0.0f, .kd = 0.05f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 500.0f, .deadband = 0.03f},
+                {.kp = 3.5f, .ki = 0.0f, .kd = 0.05f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 500.0f, .deadband = 0.03f},
+                {.kp = 3.5f, .ki = 0.0f, .kd = 0.05f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 500.0f, .deadband = 0.03f},
+                {.kp = 3.5f, .ki = 0.0f, .kd = 0.05f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 500.0f, .deadband = 0.03f},
+            };
+            f32 debug_steer_speed_pid_td_ratio_[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            f32 debug_steer_angle_pid_i_separa_[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            u32 debug_steer_speed_pid_apply_stamp_[4] = {0U, 0U, 0U, 0U};
+            u32 debug_steer_angle_pid_apply_stamp_[4] = {0U, 0U, 0U, 0U};
+            u32 debug_steer_speed_pid_applied_stamp_[4] = {0U, 0U, 0U, 0U};
+            u32 debug_steer_angle_pid_applied_stamp_[4] = {0U, 0U, 0U, 0U};
 
             // 调试镜像量：给调试器直接看，统一换成更直观的单位，避免联调时反复手算弧度。
             bool debug_all_homed_ = false;                   // 当前周期是否全轮已回零完成
@@ -877,6 +904,10 @@ namespace jia
             f32 debug_selected_wheel_steer_error_deg_ = 0.0f; // 单轮直控当前选中轮的 OA 目标误差（deg）
             bool debug_selected_wheel_drive_released_ = false; // 单轮直控当前选中轮是否已满足驱动放行条件
             TickType_t debug_wheel_uart_log_last_ms_ = 0; // 单轮调试日志节流时间戳（20Hz）
+            f32 debug_steer_angle_pid_p_term_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 四轮转向角度环P配置快照（用于1kHz诊断包）
+            f32 debug_steer_angle_pid_i_term_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 四轮转向角度环I配置快照（用于1kHz诊断包）
+            f32 debug_steer_angle_pid_d_term_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 四轮转向角度环D配置快照（用于1kHz诊断包）
+            f32 debug_steer_angle_pid_output_rpm_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 四轮转向角度环输出（期望rpm）
         };
 
         using Result = jia::FourSteerChassis::Chassis::Result;

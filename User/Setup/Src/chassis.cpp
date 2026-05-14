@@ -1981,12 +1981,57 @@ namespace jia
                 debug_homing_runtime_zero_offset_deg_[i] = radToDegF32(wheel.homing_runtime_zero_offset_rad);
                 debug_flipped_drive_[i] = wheel.flipped_drive_direction;
                 debug_drive_gate_scale_dbg_[i] = drive_gate_scale_[i];
+
+                // FourSteer 的 steer 电机当前统一使用 M3508；输出目标可直接读取目标 rpm。
+                M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
+                if (steer_m3508 != nullptr)
+                {
+                    debug_steer_angle_pid_p_term_[i] = debug_steer_angle_pid_cfg_[i].kp;
+                    debug_steer_angle_pid_i_term_[i] = debug_steer_angle_pid_cfg_[i].ki;
+                    debug_steer_angle_pid_d_term_[i] = debug_steer_angle_pid_cfg_[i].kd;
+                    debug_steer_angle_pid_output_rpm_[i] = steer_m3508->getTargetRPM();
+                }
+                else
+                {
+                    debug_steer_angle_pid_p_term_[i] = 0.0f;
+                    debug_steer_angle_pid_i_term_[i] = 0.0f;
+                    debug_steer_angle_pid_d_term_[i] = 0.0f;
+                    debug_steer_angle_pid_output_rpm_[i] = 0.0f;
+                }
+            }
+        }
+
+        void Chassis::applyDebugSteerPidRuntimeTuning()
+        {
+            for (u8 i = 0; i < 4; ++i)
+            {
+                WheelConfig &wheel = wheel_config_[i];
+                M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
+                if (steer_m3508 == nullptr)
+                {
+                    continue;
+                }
+
+                if (debug_steer_speed_pid_applied_stamp_[i] != debug_steer_speed_pid_apply_stamp_[i])
+                {
+                    steer_m3508->pid_init(debug_steer_speed_pid_cfg_[i], debug_steer_speed_pid_td_ratio_[i],
+                                          debug_steer_angle_pid_cfg_[i], debug_steer_angle_pid_i_separa_[i]);
+                    debug_steer_speed_pid_applied_stamp_[i] = debug_steer_speed_pid_apply_stamp_[i];
+                    debug_steer_angle_pid_applied_stamp_[i] = debug_steer_angle_pid_apply_stamp_[i];
+                }
+                if (debug_steer_angle_pid_applied_stamp_[i] != debug_steer_angle_pid_apply_stamp_[i])
+                {
+                    steer_m3508->pid_init(debug_steer_speed_pid_cfg_[i], debug_steer_speed_pid_td_ratio_[i],
+                                          debug_steer_angle_pid_cfg_[i], debug_steer_angle_pid_i_separa_[i]);
+                    debug_steer_angle_pid_applied_stamp_[i] = debug_steer_angle_pid_apply_stamp_[i];
+                    debug_steer_speed_pid_applied_stamp_[i] = debug_steer_speed_pid_apply_stamp_[i];
+                }
             }
         }
 
         void Chassis::emitDebugUart8Log(bool all_homed)
         {
-            if (debug_uart8_output_mode_ != 1U || !debug_uart8_log_enable_)
+            if (!debug_uart8_output_enable_ || debug_uart8_output_mode_ != 1U)
             {
                 return;
             }
@@ -2038,7 +2083,7 @@ namespace jia
 
         void Chassis::emitUart8VofaJustFloatPidTrace()
         {
-            if (debug_uart8_output_mode_ != 2U || !debug_uart8_justfloat_enable_)
+            if (!debug_uart8_output_enable_ || debug_uart8_output_mode_ != 2U)
             {
                 return;
             }
@@ -2055,18 +2100,83 @@ namespace jia
             }
 
             debug_uart8_justfloat_last_ms_ = time_ms_;
-            float payload[25] = {0.0f};
+            float payload[33] = {0.0f};
             payload[0] = (f32)time_ms_ * 0.001f;
             for (u8 i = 0; i < 4; ++i)
             {
-                payload[1 + i] = debug_target_oa_deg_[i];
-                payload[5 + i] = debug_current_oa_deg_[i];
-                payload[9 + i] = radToDegF32(shortestAngularDistance(degToRadF32(debug_current_oa_deg_[i]), degToRadF32(debug_target_oa_deg_[i])));
-                payload[13 + i] = debug_target_drive_rpm_[i];
-                payload[17 + i] = debug_current_drive_rpm_[i];
-                payload[21 + i] = (f32)debug_homing_state_[i];
+                const WheelConfig &wheel = wheel_config_[i];
+                const Motor_Base *steer_motor = wheel.steer_motor_h;
+                if (steer_motor == nullptr)
+                {
+                    continue;
+                }
+
+                const f32 target_multi_turn_deg = steer_motor->getTargetTotalAngle();
+                const f32 current_multi_turn_deg = steer_motor->getTotalAngle();
+                f32 target_single_turn_deg = fmodf(target_multi_turn_deg, 360.0f);
+                if (target_single_turn_deg < 0.0f)
+                {
+                    target_single_turn_deg += 360.0f;
+                }
+
+                const u8 base = 1U + i * 8U;
+                payload[base + 0U] = steer_motor->getTargetCurrent(); // mA
+                payload[base + 1U] = steer_motor->getCurrent();       // mA
+                payload[base + 2U] = steer_motor->getTargetRPM();
+                payload[base + 3U] = steer_motor->getRPM();
+                payload[base + 4U] = target_single_turn_deg;
+                payload[base + 5U] = steer_motor->getAngle();
+                payload[base + 6U] = target_multi_turn_deg;
+                payload[base + 7U] = current_multi_turn_deg;
             }
-            debug_uart_.printf_DMA_JustFloat(payload, 25);
+            debug_uart_.printf_DMA_JustFloat(payload, 33);
+        }
+
+        void Chassis::emitUart8VofaPid1kHzTrace()
+        {
+            if (!debug_uart8_output_enable_ || debug_uart8_output_mode_ != 3U)
+            {
+                return;
+            }
+
+            const u32 period_ms = (debug_pid_1khz_period_ms_ > 0U) ? debug_pid_1khz_period_ms_ : 1U;
+            if ((time_ms_ - debug_pid_1khz_last_ms_) < period_ms)
+            {
+                return;
+            }
+
+            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
+            {
+                return;
+            }
+
+            debug_pid_1khz_last_ms_ = time_ms_;
+            const u8 wheel_idx = (debug_pid_1khz_wheel_index_ < 4U) ? debug_pid_1khz_wheel_index_ : 0U;
+            const WheelConfig &wheel = wheel_config_[wheel_idx];
+            const Motor_Base *steer_motor = wheel.steer_motor_h;
+            if (steer_motor == nullptr)
+            {
+                return;
+            }
+
+            const f32 target_multi_turn_deg = steer_motor->getTargetTotalAngle();
+            f32 target_single_turn_deg = fmodf(target_multi_turn_deg, 360.0f);
+            if (target_single_turn_deg < 0.0f)
+            {
+                target_single_turn_deg += 360.0f;
+            }
+
+            float payload[9] = {0.0f};
+            payload[0] = (f32)time_ms_ * 0.001f;
+            payload[1] = steer_motor->getTargetCurrent(); // mA
+            payload[2] = steer_motor->getCurrent();       // mA
+            payload[3] = steer_motor->getTargetRPM();
+            payload[4] = steer_motor->getRPM();
+            payload[5] = target_single_turn_deg;
+            payload[6] = steer_motor->getAngle();
+            payload[7] = target_multi_turn_deg;
+            payload[8] = steer_motor->getTotalAngle();
+            debug_uart_.printf_DMA_JustFloat(payload, 9);
         }
 
         bool Chassis::solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const
@@ -2245,6 +2355,7 @@ namespace jia
                 planned_data_.rot_z = target_data_.rot_z;
 
                 updateWheelFeedback();
+                applyDebugSteerPidRuntimeTuning();
 
                 bool all_homed = true;
                 for (u8 i = 0; i < 4; ++i)
@@ -2365,6 +2476,7 @@ namespace jia
                     else if (debug_mode_ == 30)
                     {
                         const f32 rpm_limit = (debug_direct_drive_rpm_limit_ > 0.0f) ? debug_direct_drive_rpm_limit_ : 300.0f;
+                        const f32 steer_rpm_limit = (debug_direct_steer_rpm_limit_ > 0.0f) ? debug_direct_steer_rpm_limit_ : 300.0f;
                         for (u8 i = 0; i < 4; ++i)
                         {
                             WheelConfig &wheel = wheel_config_[i];
@@ -2379,13 +2491,24 @@ namespace jia
 
                             if (debug_direct_enable_steer_[i])
                             {
-                                const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(debug_direct_steer_oa_deg_[i]));
-                                const f32 current_oa_total_rad = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
-                                const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, target_oa_mod_rad);
-                                const f32 target_local_total_rad = target_oa_total_rad - wheel.theta_oa_to_owi_rad;
-                                wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
-                                planned_data_.steer_angle_oa_rad[i] = target_oa_total_rad;
-                                setSteerMotorTargetTotalAngleRad(wheel, target_local_total_rad);
+                                if (debug_direct_steer_use_rpm_mode_[i])
+                                {
+                                    // 纯速度环调试：舵向电机直接下发RPM，不经过角度环。
+                                    const f32 target_steer_rpm = clampValue(debug_direct_steer_rpm_[i], -steer_rpm_limit, steer_rpm_limit);
+                                    wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
+                                    planned_data_.steer_angle_oa_rad[i] = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                                    setSteerMotorTargetRPM(wheel, target_steer_rpm);
+                                }
+                                else
+                                {
+                                    const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(debug_direct_steer_oa_deg_[i]));
+                                    const f32 current_oa_total_rad = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                                    const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, target_oa_mod_rad);
+                                    const f32 target_local_total_rad = target_oa_total_rad - wheel.theta_oa_to_owi_rad;
+                                    wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
+                                    planned_data_.steer_angle_oa_rad[i] = target_oa_total_rad;
+                                    setSteerMotorTargetTotalAngleRad(wheel, target_local_total_rad);
+                                }
                             }
                             else
                             {
@@ -2425,6 +2548,7 @@ namespace jia
                     refreshDebugMirror(all_homed);
                     emitDebugUart8Log(all_homed);
                     emitUart8VofaJustFloatPidTrace();
+                    emitUart8VofaPid1kHzTrace();
                     last_planned_data_ = planned_data_;
                     vTaskDelayUntil(&time_ms_, period_ms_);
                     continue;
@@ -2438,6 +2562,7 @@ namespace jia
                 refreshDebugMirror(all_homed);
                 emitDebugUart8Log(all_homed);
                 emitUart8VofaJustFloatPidTrace();
+                emitUart8VofaPid1kHzTrace();
 
                 last_planned_data_ = planned_data_;
                 vTaskDelayUntil(&time_ms_, period_ms_);
