@@ -460,6 +460,7 @@ namespace jia
                 kOffsetApply,          // 应用零位偏移，将原始角度对齐到运行时零点
                 kContinuousAngleReady, // 连续角度已可用，准备切入正常闭环控制
                 kReady,                // 回零完成，允许该轮参与正常控制
+                kAlignToZero,          // 归位态：按已建立零偏转到软件零点（OA=0）后再标记完成
                 kFault,                // 回零失败/超时，当前轮未完成零位建立
             };
 
@@ -810,6 +811,7 @@ namespace jia
             StrategyConfig default_strategy_cfg_; // 初始化默认策略（可作为“恢复默认”基线）
             StrategyConfig runtime_strategy_cfg_; // 当前运行时策略（可动态切换）
             bool homing_start_request_ = false;   // 回零启动请求锁存位（由外部触发，在线程内消费）
+            f32 homing_align_to_zero_tolerance_deg_ = 2.0f; // 回零归位判稳阈值（deg）：误差小于该值后进入 Ready
             WheelConfig wheel_config_[4];         // 四个模块的运行态快照
             f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};  // 上周期转向速度命令（用于二阶限幅）
             f32 last_drive_omega_cmd_rad_s_[4] = {0.0f}; // 上周期驱动角速度命令（用于加速度限幅）
@@ -873,11 +875,12 @@ namespace jia
             f32 debug_direct_step_steer_single_turn_deg_ = 90.0f; // 30模式阶跃幅值：舵向单圈角（deg）
             f32 debug_direct_step_steer_multi_turn_deg_ = 180.0f; // 30模式阶跃幅值：舵向多圈角（deg）
             Debug_Printf debug_uart_ = Debug_Printf(&huart8); // FourSteer 调试串口（UART8）
-            u8 debug_uart8_output_mode_ = 0; // UART8输出模式：0=全关，1=仅文本，2=仅四轮总览justfloat，3=仅单轮1kHz justfloat
+            u8 debug_uart8_output_mode_ = 1; // UART8输出模式：0=全关，1=仅文本日志，2=仅四轮总览justfloat，3=仅单轮1kHz justfloat
             bool debug_uart8_output_enable_ = true; // UART8 输出总开关；具体输出类型由 output_mode_ 唯一裁决
             u32 debug_uart8_log_period_ms_ = 500; // UART8 常驻日志输出周期（ms），默认 500ms 即 2Hz
-            u8 debug_uart8_log_level_ = 0; // UART8 日志级别：0=心跳摘要，1=附带单轮细节与 SW20 专项行
+            u8 debug_uart8_log_level_ = 1; // UART8 日志级别：0=心跳摘要，1=附带单轮细节与 SW20 专项行
             TickType_t debug_uart8_log_last_ms_ = 0; // UART8 常驻日志节流时间戳
+            u8 debug_uart8_log_phase_ = 0; // 文本日志分相发送：0=FS, 1=FSW, 2=FSH
             u32 debug_uart8_justfloat_period_ms_ = 5; // mode=2 四轮总览 justfloat 周期（ms），默认 5ms=200Hz
             TickType_t debug_uart8_justfloat_last_ms_ = 0; // UART8 justfloat 节流时间戳
             u8 debug_pid_1khz_wheel_index_ = 0; // 1kHz PID诊断轮索引（0~3）

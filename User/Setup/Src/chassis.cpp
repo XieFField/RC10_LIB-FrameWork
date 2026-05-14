@@ -1550,7 +1550,7 @@ namespace jia
         bool Chassis::updateHomingState(WheelConfig &wheel)
         {
             // 四舵轮回零状态机的职责是：在每个周期读取限位/零位传感器，
-            // 依次完成 Idle -> Search -> EdgeDetected -> OffsetApply -> ContinuousAngleReady -> Ready。
+            // 依次完成 Idle -> Search -> EdgeDetected -> OffsetApply -> ContinuousAngleReady -> AlignToZero -> Ready。
             // 这里不直接“判定一次就完成”，而是通过多周期状态推进来吸收传感器抖动和机械延迟。
             if (!wheel.homing_enabled || wheel.homing_gpio_port == nullptr)
             {
@@ -1618,9 +1618,27 @@ namespace jia
             }
             if (wheel.homing_state == HomingState::kContinuousAngleReady)
             {
-                // 连续角度已经可用，后续底盘可以把该轮纳入正常闭环控制。
-                wheel.homing_state = HomingState::kReady;
-                return true;
+                // 连续角度已可用后，先进入“归位到软件零点”阶段：
+                // 让 OA 角自动走到 0°（车头前方）再判定该轮回零完成。
+                wheel.homing_state = HomingState::kAlignToZero;
+                return false;
+            }
+
+            if (wheel.homing_state == HomingState::kAlignToZero)
+            {
+                const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
+                const f32 current_oa_total_rad = current_local_total_rad + wheel.theta_oa_to_owi_rad;
+                const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
+                const f32 target_local_total_rad = target_oa_total_rad - wheel.theta_oa_to_owi_rad;
+                const f32 oa_error_abs_rad = fabsf(shortestAngularDistance(current_oa_total_rad, target_oa_total_rad));
+
+                wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
+                if (oa_error_abs_rad <= degToRadF32(homing_align_to_zero_tolerance_deg_))
+                {
+                    wheel.homing_state = HomingState::kReady;
+                    return true;
+                }
+                return false;
             }
 
             return wheel.homing_state == HomingState::kReady;
@@ -1906,6 +1924,17 @@ namespace jia
                         // 目的是继续寻找传感器边沿；此时不走位置闭环。
                         setSteerMotorTargetRPM(wheel, wheel.homing_search_rpm);
                     }
+                    else if (wheel.homing_state == HomingState::kAlignToZero)
+                    {
+                        // 零偏建立后允许转向电机继续走位置闭环，把 OA 自动归到软件零点。
+                        // 注意：这里每拍都根据当前反馈重算“离 OA=0 最近的等效角”，
+                        // 避免被上游常规模块解算写回“保持当前角”后导致归位停滞。
+                        const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
+                        const f32 current_oa_total_rad = current_local_total_rad + wheel.theta_oa_to_owi_rad;
+                        const f32 align_target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
+                        wheel.target_steer_motor_total_angle_rad = align_target_oa_total_rad - wheel.theta_oa_to_owi_rad;
+                        setSteerMotorTargetTotalAngleRad(wheel, wheel.target_steer_motor_total_angle_rad);
+                    }
                     else
                     {
                         // 不在搜索态的轮子，不再给转向动作，直接把转向电机电流打零，
@@ -2048,23 +2077,43 @@ namespace jia
             }
 
             debug_uart8_log_last_ms_ = time_ms_;
-            debug_uart_.printf_DMA((char *)"FS t=%lu home=%u mode=%u dbg=%u hs=%u/%u/%u/%u oa0=%.1f->%.1f rpm0=%.1f->%.1f\r\n",
-                                   (u32)time_ms_,
-                                   all_homed ? 1U : 0U,
-                                   (u32)input_target_data_.mode,
-                                   is_debug_ ? 1U : 0U,
-                                   (u32)debug_homing_state_[0],
-                                   (u32)debug_homing_state_[1],
-                                   (u32)debug_homing_state_[2],
-                                   (u32)debug_homing_state_[3],
-                                   debug_current_oa_deg_[0],
-                                   debug_target_oa_deg_[0],
-                                   debug_current_drive_rpm_[0],
-                                   debug_target_drive_rpm_[0]);
-
-            if (debug_uart8_log_level_ >= 1U && HAL_UART_GetState(&huart8) == HAL_UART_STATE_READY)
+            if (debug_uart8_log_level_ == 0U)
             {
-                const u8 wheel_idx = (debug_wheel_index_ < 4) ? debug_wheel_index_ : 0;
+                debug_uart_.printf_DMA((char *)"FS t=%lu home=%u mode=%u dbg=%u hs=%u/%u/%u/%u oa0=%.1f->%.1f rpm0=%.1f->%.1f\r\n",
+                                       (u32)time_ms_,
+                                       all_homed ? 1U : 0U,
+                                       (u32)input_target_data_.mode,
+                                       is_debug_ ? 1U : 0U,
+                                       (u32)debug_homing_state_[0],
+                                       (u32)debug_homing_state_[1],
+                                       (u32)debug_homing_state_[2],
+                                       (u32)debug_homing_state_[3],
+                                       debug_current_oa_deg_[0],
+                                       debug_target_oa_deg_[0],
+                                       debug_current_drive_rpm_[0],
+                                       debug_target_drive_rpm_[0]);
+                return;
+            }
+
+            const u8 wheel_idx = (debug_wheel_index_ < 4) ? debug_wheel_index_ : 0;
+            if (debug_uart8_log_phase_ == 0U)
+            {
+                debug_uart_.printf_DMA((char *)"FS t=%lu home=%u mode=%u dbg=%u hs=%u/%u/%u/%u oa0=%.1f->%.1f rpm0=%.1f->%.1f\r\n",
+                                       (u32)time_ms_,
+                                       all_homed ? 1U : 0U,
+                                       (u32)input_target_data_.mode,
+                                       is_debug_ ? 1U : 0U,
+                                       (u32)debug_homing_state_[0],
+                                       (u32)debug_homing_state_[1],
+                                       (u32)debug_homing_state_[2],
+                                       (u32)debug_homing_state_[3],
+                                       debug_current_oa_deg_[0],
+                                       debug_target_oa_deg_[0],
+                                       debug_current_drive_rpm_[0],
+                                       debug_target_drive_rpm_[0]);
+            }
+            else if (debug_uart8_log_phase_ == 1U)
+            {
                 debug_uart_.printf_DMA((char *)"FSW i=%u hs=%u oa=%.1f->%.1f rpm=%.1f->%.1f gate=%.2f flip=%u sensor=%u edge=%u rel=%u err=%.2f\r\n",
                                        (u32)wheel_idx,
                                        (u32)debug_homing_state_[wheel_idx],
@@ -2079,6 +2128,41 @@ namespace jia
                                        debug_selected_wheel_drive_released_ ? 1U : 0U,
                                        debug_selected_wheel_steer_error_deg_);
             }
+            else
+            {
+                f32 align_err_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    const WheelConfig &wheel = wheel_config_[i];
+                    const f32 current_oa_total_rad = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                    const f32 align_target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
+                    align_err_deg[i] = radToDegF32(shortestAngularDistance(current_oa_total_rad, align_target_oa_total_rad));
+                }
+
+                debug_uart_.printf_DMA((char *)"FSH hs=%u/%u/%u/%u curOA=%.1f/%.1f/%.1f/%.1f tarOA=%.1f/%.1f/%.1f/%.1f err0=%.1f/%.1f/%.1f/%.1f zoff=%.1f/%.1f/%.1f/%.1f\r\n",
+                                       (u32)debug_homing_state_[0],
+                                       (u32)debug_homing_state_[1],
+                                       (u32)debug_homing_state_[2],
+                                       (u32)debug_homing_state_[3],
+                                       debug_current_oa_deg_[0],
+                                       debug_current_oa_deg_[1],
+                                       debug_current_oa_deg_[2],
+                                       debug_current_oa_deg_[3],
+                                       debug_target_oa_deg_[0],
+                                       debug_target_oa_deg_[1],
+                                       debug_target_oa_deg_[2],
+                                       debug_target_oa_deg_[3],
+                                       align_err_deg[0],
+                                       align_err_deg[1],
+                                       align_err_deg[2],
+                                       align_err_deg[3],
+                                       debug_homing_runtime_zero_offset_deg_[0],
+                                       debug_homing_runtime_zero_offset_deg_[1],
+                                       debug_homing_runtime_zero_offset_deg_[2],
+                                       debug_homing_runtime_zero_offset_deg_[3]);
+            }
+
+            debug_uart8_log_phase_ = (u8)((debug_uart8_log_phase_ + 1U) % 3U);
         }
 
         void Chassis::emitUart8VofaJustFloatPidTrace()

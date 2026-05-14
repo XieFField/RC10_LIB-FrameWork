@@ -286,10 +286,10 @@ void ALL_Setup_ConfigInit(void)
                 .homing_sensor_active_high = true,
                 .homing_gpio_port = kPHOTOGATE_1_GPIO_Port,
                 .homing_gpio_pin = kPHOTOGATE_1_Pin,
-                .homing_falling_edge_mech_deg = 60.0f,  // 原始 GPIO 高->低边沿对应机械 +60°
-                .homing_rising_edge_mech_deg = -120.0f, // 原始 GPIO 低->高边沿对应机械 -120°
+                .homing_falling_edge_mech_deg = -30.0f,  // 原始 GPIO 高->低边沿对应的全车 OA 绝对角（相对安装基准 y- 的 +60°）
+                .homing_rising_edge_mech_deg = 150.0f,   // 原始 GPIO 低->高边沿对应的全车 OA 绝对角（相对安装基准 y- 的 -120°）
                 .homing_search_rpm = 10.0f,       // 回零搜索阶段转向电机转速（rpm）
-                .homing_zero_offset_deg = 0.0f,   // 逻辑零点统一指向车头前方；细调偏差后续再回填
+                .homing_zero_offset_deg = -30.0f, // 全局偏置验证值（临时）：用于验证“整体偏 +30°”假设
                 .homing_timeout_s = 5.0f,         // 单轮回零超时时间（s）
             },
             // wheels[1]：2号右后轮（x<0, y<0）
@@ -303,10 +303,10 @@ void ALL_Setup_ConfigInit(void)
                 .homing_sensor_active_high = true,
                 .homing_gpio_port = kPHOTOGATE_2_GPIO_Port,
                 .homing_gpio_pin = kPHOTOGATE_2_Pin,
-                .homing_falling_edge_mech_deg = 60.0f,
-                .homing_rising_edge_mech_deg = -120.0f,
+                .homing_falling_edge_mech_deg = 60.0f,   // 相对安装基准 x+ 的 +60°
+                .homing_rising_edge_mech_deg = -120.0f,  // 相对安装基准 x+ 的 -120°
                 .homing_search_rpm = 10.0f,
-                .homing_zero_offset_deg = 0.0f,
+                .homing_zero_offset_deg = -30.0f, // 全局偏置验证值（临时）
                 .homing_timeout_s = 5.0f,
             },
             // wheels[2]：3号右前轮（x>0, y<0）
@@ -320,10 +320,10 @@ void ALL_Setup_ConfigInit(void)
                 .homing_sensor_active_high = true,
                 .homing_gpio_port = kPHOTOGATE_3_GPIO_Port,
                 .homing_gpio_pin = kPHOTOGATE_3_Pin,
-                .homing_falling_edge_mech_deg = 60.0f,
-                .homing_rising_edge_mech_deg = -120.0f,
+                .homing_falling_edge_mech_deg = 150.0f,  // 原始 GPIO 高->低边沿对应的全车 OA 绝对角（相对安装基准 y+ 的 +60°）
+                .homing_rising_edge_mech_deg = -30.0f,   // 原始 GPIO 低->高边沿对应的全车 OA 绝对角（相对安装基准 y+ 的 -120°）
                 .homing_search_rpm = 10.0f,
-                .homing_zero_offset_deg = 0.0f,
+                .homing_zero_offset_deg = -30.0f, // 全局偏置验证值（临时）
                 .homing_timeout_s = 5.0f,
             },
             // wheels[3]：4号左前轮（x>0, y>0）
@@ -337,10 +337,10 @@ void ALL_Setup_ConfigInit(void)
                 .homing_sensor_active_high = true,
                 .homing_gpio_port = kPHOTOGATE_4_GPIO_Port,
                 .homing_gpio_pin = kPHOTOGATE_4_Pin,
-                .homing_falling_edge_mech_deg = 60.0f,
-                .homing_rising_edge_mech_deg = -120.0f,
+                .homing_falling_edge_mech_deg = -120.0f, // 原始 GPIO 高->低边沿对应的全车 OA 绝对角（相对安装基准 x- 的 +60°）
+                .homing_rising_edge_mech_deg = 60.0f,    // 原始 GPIO 低->高边沿对应的全车 OA 绝对角（相对安装基准 x- 的 -120°）
                 .homing_search_rpm = 10.0f,
-                .homing_zero_offset_deg = 0.0f,
+                .homing_zero_offset_deg = -30.0f, // 全局偏置验证值（临时）
                 .homing_timeout_s = 5.0f,
             },
         };
