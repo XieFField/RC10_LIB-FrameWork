@@ -36,6 +36,7 @@ extern "C"
 #include "APP_tool.h"
 #include "BSP_RTOS.h"
 #include "Motor_Base.h" 
+#include "Module_OIDEncoder.h"
 #include <cstring>
 #include<cstdint>
 
@@ -162,7 +163,9 @@ protected:
     static bool matchesFrameDefault(const CanFrame& cf, uint32_t targetId, bool isExt);
 
     Motor_Base * motorList_[MAX_MOTORS];// 电机列表
-    
+    OIDEncoder oid_enocer_[3]; //打个补丁，没想过还有非电机的设备搭载在CAN总线上，
+    //后面再给CAN设备独立一个基类，将updateFeedback和matchesFrame等接口放到基类里，
+    //电机类继承自设备类，这样就能支持非电机设备了
 
     RtosQueue<CanFrame> rxQueue_;
 
