@@ -1307,9 +1307,6 @@ namespace jia
                 return;
             }
 
-            CrsfReceiver *receiver = CrsfReceiver::GetInstance(&huart7);
-            receiver->getControlData(&airjoy_data_);
-
             f32 target_vel_x = airjoy_data_.left_x * max_vel_x_;
             f32 target_vel_y = airjoy_data_.left_y * max_vel_y_;
             f32 target_omega_z = airjoy_data_.right_x * max_omega_z_;

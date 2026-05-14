@@ -746,6 +746,8 @@ namespace jia
             // IMU数据
             f32 input_hwt_rot_z_ = 0.0f;
             f32 input_hwt_omega_z_ = 0.0f;
+            // 遥控器数据缓存：由 runThread() 每周期统一采样刷新，调试/非调试共用同一份输入快照
+            RmPocketData_t airjoy_data_{};
 
             // 系统参数
             constexpr static u8 period_ms_ = 1;                  // 控制周期，单位：毫秒
@@ -837,7 +839,6 @@ namespace jia
             f32 debug_wheel_drive_release_error_deg_ = 5.0f; // 单轮直控驱动放行阈值（deg）；仅当目标 OA 误差小于等于该值时允许放驱动
             f32 debug_wheel_target_steer_deg_ = 0.0f; // 单轮直控舵向目标（OA角，deg；0=车头前方）
             f32 debug_wheel_target_drive_rpm_ = 0.0f; // 单轮直控驱动目标（rpm）
-            RmPocketData_t airjoy_data_{}; // 遥控器数据缓存（调试模式下每周期刷新）
 
             // 调试镜像量：给调试器直接看，统一换成更直观的单位，避免联调时反复手算弧度。
             bool debug_all_homed_ = false;                   // 当前周期是否全轮已回零完成
