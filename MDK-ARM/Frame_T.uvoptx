@@ -245,6 +245,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>arm_pitchMotor,0x0A</ItemText>
         </Ww>
+        <Ww>
+          <count>18</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>U8_1</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

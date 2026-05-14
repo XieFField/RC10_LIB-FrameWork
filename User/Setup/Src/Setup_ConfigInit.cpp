@@ -405,6 +405,12 @@ void CAN_Motor_Init(void)
 
 	CAN3_Bus->init();
 
+   // 仅四舵轮舵向电机采用 8:1 减速比，其他 M3508（机械臂/发射等）保持原配置。
+   steer1.reset_GearRatio(8.0f);
+   steer2.reset_GearRatio(8.0f);
+   steer3.reset_GearRatio(8.0f);
+   steer4.reset_GearRatio(8.0f);
+
    // 底盘转向电机 PID 参数初始化
    steer1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    steer2.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);

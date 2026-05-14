@@ -1364,6 +1364,7 @@ namespace jia
             case 20:
             case 21:
             case 22:
+            case 30:
                 // 20/21/22 都在 runThread() 内走专门调试分支：
                 // 不复用“扭矩自由模式”，避免 applyModuleCommands() 再把目标清零。
                 setTargetBodySpeedMode(0.0f, 0.0f, 0.0f);
@@ -1983,6 +1984,58 @@ namespace jia
             }
         }
 
+        void Chassis::emitDebugUart8Log(bool all_homed)
+        {
+            if (!debug_uart8_log_enable_)
+            {
+                return;
+            }
+
+            const u32 period_ms = (debug_uart8_log_period_ms_ > 0U) ? debug_uart8_log_period_ms_ : 500U;
+            if ((time_ms_ - debug_uart8_log_last_ms_) < period_ms)
+            {
+                return;
+            }
+
+            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
+            {
+                return;
+            }
+
+            debug_uart8_log_last_ms_ = time_ms_;
+            debug_uart_.printf_DMA((char *)"FS t=%lu home=%u mode=%u dbg=%u hs=%u/%u/%u/%u oa0=%.1f->%.1f rpm0=%.1f->%.1f\r\n",
+                                   (u32)time_ms_,
+                                   all_homed ? 1U : 0U,
+                                   (u32)input_target_data_.mode,
+                                   is_debug_ ? 1U : 0U,
+                                   (u32)debug_homing_state_[0],
+                                   (u32)debug_homing_state_[1],
+                                   (u32)debug_homing_state_[2],
+                                   (u32)debug_homing_state_[3],
+                                   debug_current_oa_deg_[0],
+                                   debug_target_oa_deg_[0],
+                                   debug_current_drive_rpm_[0],
+                                   debug_target_drive_rpm_[0]);
+
+            if (debug_uart8_log_level_ >= 1U && HAL_UART_GetState(&huart8) == HAL_UART_STATE_READY)
+            {
+                const u8 wheel_idx = (debug_wheel_index_ < 4) ? debug_wheel_index_ : 0;
+                debug_uart_.printf_DMA((char *)"FSW i=%u hs=%u oa=%.1f->%.1f rpm=%.1f->%.1f gate=%.2f flip=%u sensor=%u edge=%u rel=%u err=%.2f\r\n",
+                                       (u32)wheel_idx,
+                                       (u32)debug_homing_state_[wheel_idx],
+                                       debug_current_oa_deg_[wheel_idx],
+                                       debug_target_oa_deg_[wheel_idx],
+                                       debug_current_drive_rpm_[wheel_idx],
+                                       debug_target_drive_rpm_[wheel_idx],
+                                       debug_drive_gate_scale_dbg_[wheel_idx],
+                                       debug_flipped_drive_[wheel_idx] ? 1U : 0U,
+                                       debug_homing_sensor_active_[wheel_idx] ? 1U : 0U,
+                                       debug_homing_last_edge_is_falling_[wheel_idx] ? 1U : 0U,
+                                       debug_selected_wheel_drive_released_ ? 1U : 0U,
+                                       debug_selected_wheel_steer_error_deg_);
+            }
+        }
+
         bool Chassis::solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const
         {
             // 这里用的是带主元选取的高斯消元，目标是稳定求解 3x3 线性方程组；
@@ -2170,7 +2223,7 @@ namespace jia
                 }
                 homing_start_request_ = false;
 
-                if (is_debug_ && (debug_mode_ == 20 || debug_mode_ == 21 || debug_mode_ == 22))
+                if (is_debug_ && (debug_mode_ == 20 || debug_mode_ == 21 || debug_mode_ == 22 || debug_mode_ == 30))
                 {
                     // 调试专用分支：不走底盘速度分解，直接改写模块目标缓存。
                     // 20=单轮直控，21=四轮朝前，22=纯回零观察。
@@ -2250,6 +2303,22 @@ namespace jia
                         last_drive_omega_cmd_rad_s_[wheel_idx] = debug_wheel.target_drive_omega_rad_s;
                         debug_selected_wheel_steer_error_deg_ = steer_error_deg;
                         debug_selected_wheel_drive_released_ = drive_released;
+#if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
+                        if (debug_uart8_log_level_ >= 1U && (time_ms_ - debug_wheel_uart_log_last_ms_) >= 50)
+                        {
+                            debug_wheel_uart_log_last_ms_ = time_ms_;
+                            debug_uart_.printf_DMA((char *)"SW20,%lu,%u,%u,%u,%.3f,%.3f,%.3f,%u,%u\r\n",
+                                                   (u32)time_ms_,
+                                                   (u32)wheel_idx,
+                                                   all_homed ? 1U : 0U,
+                                                   (u32)input_target_data_.mode,
+                                                   radToDegF32(target_oa_total_rad),
+                                                   radToDegF32(current_oa_total_rad),
+                                                   steer_error_deg,
+                                                   (u32)debug_wheel.homing_state,
+                                                   drive_released ? 1U : 0U);
+                        }
+#endif
                     }
                     else if (debug_mode_ == 21)
                     {
@@ -2258,6 +2327,52 @@ namespace jia
                             WheelConfig &wheel = wheel_config_[i];
                             wheel.target_steer_motor_total_angle_rad = -wheel.theta_oa_to_owi_rad;
                             planned_data_.steer_angle_oa_rad[i] = 0.0f;
+                        }
+                    }
+                    else if (debug_mode_ == 30)
+                    {
+                        const f32 rpm_limit = (debug_direct_drive_rpm_limit_ > 0.0f) ? debug_direct_drive_rpm_limit_ : 300.0f;
+                        for (u8 i = 0; i < 4; ++i)
+                        {
+                            WheelConfig &wheel = wheel_config_[i];
+                            if (debug_direct_estop_)
+                            {
+                                setSteerMotorTargetCurrent(wheel, 0.0f);
+                                setDriveMotorTargetOmegaRadS(wheel, 0.0f);
+                                wheel.target_drive_omega_rad_s = 0.0f;
+                                planned_data_.drive_omega_rad_s[i] = 0.0f;
+                                continue;
+                            }
+
+                            if (debug_direct_enable_steer_[i])
+                            {
+                                const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(debug_direct_steer_oa_deg_[i]));
+                                const f32 current_oa_total_rad = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                                const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, target_oa_mod_rad);
+                                const f32 target_local_total_rad = target_oa_total_rad - wheel.theta_oa_to_owi_rad;
+                                wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
+                                planned_data_.steer_angle_oa_rad[i] = target_oa_total_rad;
+                                setSteerMotorTargetTotalAngleRad(wheel, target_local_total_rad);
+                            }
+                            else
+                            {
+                                setSteerMotorTargetCurrent(wheel, 0.0f);
+                            }
+
+                            if (debug_direct_enable_drive_[i])
+                            {
+                                const f32 target_rpm = clampValue(debug_direct_drive_rpm_[i], -rpm_limit, rpm_limit);
+                                const f32 target_omega_rad_s = rpmToRadsF32(target_rpm);
+                                wheel.target_drive_omega_rad_s = target_omega_rad_s;
+                                planned_data_.drive_omega_rad_s[i] = target_omega_rad_s;
+                                setDriveMotorTargetOmegaRadS(wheel, target_omega_rad_s);
+                            }
+                            else
+                            {
+                                wheel.target_drive_omega_rad_s = 0.0f;
+                                planned_data_.drive_omega_rad_s[i] = 0.0f;
+                                setDriveMotorTargetOmegaRadS(wheel, 0.0f);
+                            }
                         }
                     }
 
@@ -2269,9 +2384,13 @@ namespace jia
                     planned_data_.alpha_z = 0.0f;
                     planned_data_.rot_z = input_hwt_rot_z_;
 
-                    applyModuleCommands(all_homed);
+                    if (debug_mode_ != 30)
+                    {
+                        applyModuleCommands(all_homed);
+                    }
                     updateCurrentData(all_homed);
                     refreshDebugMirror(all_homed);
+                    emitDebugUart8Log(all_homed);
                     last_planned_data_ = planned_data_;
                     vTaskDelayUntil(&time_ms_, period_ms_);
                     continue;
@@ -2283,6 +2402,7 @@ namespace jia
                 applyModuleCommands(all_homed);
                 updateCurrentData(all_homed);
                 refreshDebugMirror(all_homed);
+                emitDebugUart8Log(all_homed);
 
                 last_planned_data_ = planned_data_;
                 vTaskDelayUntil(&time_ms_, period_ms_);

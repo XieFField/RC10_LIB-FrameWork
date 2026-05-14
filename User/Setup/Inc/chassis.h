@@ -10,6 +10,10 @@
 #include "APP_debugTool.h"
 #include "APP_PID.h"
 
+#ifndef FOURSTEER_SINGLE_WHEEL_TRACE_UART8
+#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 1
+#endif
+
 namespace jia
 {
     namespace ThreeOmniChassis
@@ -731,6 +735,7 @@ namespace jia
             void applyModuleCommands(bool all_homed);
             void updateCurrentData(bool all_homed);
             void refreshDebugMirror(bool all_homed);
+            void emitDebugUart8Log(bool all_homed);
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
 
@@ -821,7 +826,7 @@ namespace jia
 
             // 调试参数（通过全局 chassis 对象在调试器内直接改值）
             bool is_debug_ = false;         // 调试总开关：true 时 isDebugMode() 每周期接管目标输入
-            u8 debug_mode_ = 0;             // 调试模式号：0~8 对齐 ThreeOmni；20=单轮直控，21=四轮朝前零点检查，22=纯回零观察
+            u8 debug_mode_ = 0;             // 调试模式号：0~8 对齐 ThreeOmni；20=单轮直控，21=四轮朝前零点检查，22=纯回零观察，30=四轮电机直控(绕过回零门控)
             u8 debug_wheel_index_ = 0;      // 单轮调试目标索引（0~3）
             f32 debug_input_ = 90.0f;       // 通用调试输入保留位（兼容 ThreeOmni 习惯）
             f32 debug_lock_rot_z_ = 0.0f;   // LockTo 模式调试目标角（rad）
@@ -839,6 +844,17 @@ namespace jia
             f32 debug_wheel_drive_release_error_deg_ = 5.0f; // 单轮直控驱动放行阈值（deg）；仅当目标 OA 误差小于等于该值时允许放驱动
             f32 debug_wheel_target_steer_deg_ = 0.0f; // 单轮直控舵向目标（OA角，deg；0=车头前方）
             f32 debug_wheel_target_drive_rpm_ = 0.0f; // 单轮直控驱动目标（rpm）
+            bool debug_direct_estop_ = true; // 30模式总急停：true 时四轮舵向/驱动全部打零
+            bool debug_direct_enable_steer_[4] = {false, false, false, false}; // 30模式每轮舵向使能
+            bool debug_direct_enable_drive_[4] = {false, false, false, false}; // 30模式每轮驱动使能
+            f32 debug_direct_steer_oa_deg_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 30模式每轮OA目标角（deg）
+            f32 debug_direct_drive_rpm_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // 30模式每轮驱动目标转速（rpm）
+            f32 debug_direct_drive_rpm_limit_ = 300.0f; // 30模式驱动转速限幅（rpm）
+            Debug_Printf debug_uart_ = Debug_Printf(&huart8); // FourSteer 调试串口（UART8）
+            bool debug_uart8_log_enable_ = true; // UART8 常驻日志总开关：true=输出 FourSteer 心跳日志
+            u32 debug_uart8_log_period_ms_ = 500; // UART8 常驻日志输出周期（ms），默认 500ms 即 2Hz
+            u8 debug_uart8_log_level_ = 0; // UART8 日志级别：0=心跳摘要，1=附带单轮细节与 SW20 专项行
+            TickType_t debug_uart8_log_last_ms_ = 0; // UART8 常驻日志节流时间戳
 
             // 调试镜像量：给调试器直接看，统一换成更直观的单位，避免联调时反复手算弧度。
             bool debug_all_homed_ = false;                   // 当前周期是否全轮已回零完成
@@ -855,6 +871,7 @@ namespace jia
             f32 debug_drive_gate_scale_dbg_[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // 当前驱动抑制比例
             f32 debug_selected_wheel_steer_error_deg_ = 0.0f; // 单轮直控当前选中轮的 OA 目标误差（deg）
             bool debug_selected_wheel_drive_released_ = false; // 单轮直控当前选中轮是否已满足驱动放行条件
+            TickType_t debug_wheel_uart_log_last_ms_ = 0; // 单轮调试日志节流时间戳（20Hz）
         };
 
         using Result = jia::FourSteerChassis::Chassis::Result;
