@@ -1,38 +1,38 @@
 ﻿#include "Setup_ConfigInit.h"
 
 /**
- * @brief  ��е�ۺ͵��̵����ó�ʼ��
- *   2��r1������� can1:M3508*2 + M3508*4 ����1��DJI�������
- *                 can2:M3508*4 + M2006*2 ����1��DJI�������
- *                 can3: vesc*4 DM4310*2  ����1��DJI�������
+ * @brief  机械臂与底盘配置初始化
+ *   2代 R1 电机分配：CAN1: M3508*2 + M3508*4（预留 1 个 DJI 电机）
+ *                    CAN2: M3508*4 + M2006*2（预留 1 个 DJI 电机）
+ *                    CAN3: VESC*4 + DM4310*2（预留 1 个 DJI 电机）
  */ 
 
- // �ⲿ����USB�����豸���
+// 外部声明 USB 高速设备句柄
 extern "C" 
 {
     extern USBD_HandleTypeDef hUsbDeviceHS;
 }
-fdCANbus *const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // ��ȡFDCAN1��Ψһʵ��
-fdCANbus *const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // ��ȡFDCAN2��Ψһʵ��
+fdCANbus *const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取 FDCAN1 唯一实例
+fdCANbus *const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // 获取 FDCAN2 唯一实例
 fdCANbus *const CAN3_Bus = fdCANbus::getInstance(&hfdcan3);
 
-DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus);   // 1~4��M3508/M2006���
-DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8��M3508/M2006���
+DJI_Group DJIGroupCAN1_Low(send_idLow(), CAN1_Bus);   // 1~4号 M3508/M2006 电机组
+DJI_Group DJIGroupCAN1_High(send_idHigh(), CAN1_Bus); // 5~8号 M3508/M2006 电机组
 
-DJI_Group DJIGroupCAN2_Low(send_idLow(), CAN2_Bus); // 1~4��M3508/M2006���
-DJI_Group DJIGroupCAN2_High(send_idHigh(), CAN2_Bus); // 5~8��M3508/M2006���
+DJI_Group DJIGroupCAN2_Low(send_idLow(), CAN2_Bus);   // 1~4号 M3508/M2006 电机组
+DJI_Group DJIGroupCAN2_High(send_idHigh(), CAN2_Bus); // 5~8号 M3508/M2006 电机组
 
-DJI_Group DJIGroupCAN3_High(send_idHigh(), CAN3_Bus); // 5~8��M3508/M2006���
-DJI_Group DJIGroupCAN3_Low(send_idLow(), CAN3_Bus); // 1~4��M3508/M2006���
+DJI_Group DJIGroupCAN3_High(send_idHigh(), CAN3_Bus); // 5~8号 M3508/M2006 电机组
+DJI_Group DJIGroupCAN3_Low(send_idLow(), CAN3_Bus);   // 1~4号 M3508/M2006 电机组
 
-Point2D arm_install_offset = {0.480f, 0.02f};   // ��е�۰�װƫ�ƣ���λ��
+Point2D arm_install_offset = {0.480f, 0.02f}; // 机械臂安装偏移，单位 m
 
 
 /*==============Controller Instances===========*/
 uint8_t laser_rx_buffer[20];
 uint8_t laser_rx_buffer1[20];
 uint8_t laser_rx_buffer2[20];
-// ������
+// 激光测距
 // USB_CDC_ cdc(&hUsbDeviceHS);
 USB_CDC_ usb_1(&hUsbDeviceHS);
 JY61_IMU IMU(JY61_ADDR,&hi2c5);
@@ -42,17 +42,17 @@ Chassis_Omni<3>::init_config chassis_initData = {
     .wheels[0] = {
         .x = 0.0f,
         .y = 0.375f,
-        .theta = 0.0f // ��λ����
+        .theta = 0.0f // 单位：度
     },
     .wheels[1] = {
         .x = -0.37f, .y = -0.375f,
-        .theta = -63.741f + 180.0f // ��λ����
+        .theta = -63.741f + 180.0f // 单位：度
     },
     .wheels[2] = {
         .x = 0.37f, .y = -0.375f,
-        .theta = 63.741f + 180.0f // ��λ����
+        .theta = 63.741f + 180.0f // 单位：度
     }};
-OmniChassis_Setup ChassisOmni(chassis_initData); // ���Ӱ뾶���������ת�٣����� �� ��
+OmniChassis_Setup ChassisOmni(chassis_initData); // 底盘半径、最大轮速、轮位安装参数
 Chassis chassis;
 
 FSM_Controller Finite_StateMachine;
@@ -69,22 +69,22 @@ Robot_WeaponSage_Setup Weapon_Controller(initData_);
 
 
 /**
- * CAN1:  ���̶���M3508 * 4 (1~4id) + VESC * 4 (101~104id)
- * CAN2:  ����M2006*3+M3508*1(M2006 id 1~3 M3508 id 4) + DM4310() * 1 + ����ֵ������
- * CAN3:  ��е��M3508*2(id) + M2006*2(id6��weaponwrist id8��arm_stretch) + DM4310*1
+ * CAN1: 底盘转向 M3508*4（1~4 id）+ VESC*4（101~104 id）
+ * CAN2: 武器 M2006*3 + M3508*1（M2006:1~3, M3508:4）+ DM4310*1
+ * CAN3: 机械臂 M3508*2 + M2006*2（id6:weapon_wrist, id8:arm_stretch）+ DM4310*1
  */
 
-                           /* ���̵�� */
+                           /* 底盘电机 */
 M3508 steer1(1, CAN1_Bus); M3508 steer2(2, CAN1_Bus); M3508 steer3(3, CAN1_Bus); M3508 steer4(4, CAN1_Bus);
 VESC_Motor U8_1(101, CAN1_Bus, 21); VESC_Motor U8_2(102, CAN1_Bus, 21); 
 VESC_Motor U8_3(103, CAN1_Bus, 21); VESC_Motor U8_4(104, CAN1_Bus, 21);
 
-                            /* �����ܵ�� */
+                            /* 武器系统电机 */
 M2006 Weapon_Claw1(1, CAN2_Bus); M2006 Weapon_Claw2(2, CAN2_Bus); M2006 Weapon_Claw3(3, CAN2_Bus); 
 M3508 Weapon_Launch(4, CAN2_Bus);
 DM_Motor Weapon_Elbow(J4310_Type, 0x06, 0x06, CAN2_Bus); M2006 Weapon_Wrist(6, CAN3_Bus);
 
-                            /* ��е�۵�� */
+                            /* 机械臂电机 */
 M3508 arm_launchMotor(5, CAN3_Bus, true, false); M3508 arm_rotateMotor(7, CAN3_Bus, true, false);
 M2006 arm_stretchMotor(8, CAN3_Bus, true, false);  
 DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
@@ -116,7 +116,7 @@ void dji_motor_Init()
 
 /*============================== debug  DJI_Motor ===============================*/
 
-/*================================ debug  ��е�� =============================*/
+/*================================ debug 机械臂 =============================*/
 
 #if ARM_DEMO_DEBUG
 
@@ -137,7 +137,7 @@ Arm_InitData_S arm_demoInit_data = {
 };
 
 Robot_ArmDemo arm_demo(arm_demoInit_data);
-// ������
+// 激光测距
 LaserPosition laserpos(&huart3, &huart6);
 
 void arm_motorInit()
@@ -165,7 +165,7 @@ void arm_motorInit()
 
 void debug_init()
 {
-/*============================= debug  ��е�� ================================*/
+/*============================= debug 机械臂 ================================*/
 #if ARM_DEMO_DEBUG
     arm_motorInit();
     arm_demo.armInit(&m3508_ArmLaunch, &m2006_ArmStretch, &m3508_ArmRotate, &m2006_ArmPitch);
@@ -183,24 +183,24 @@ dji_motor_demo.init(&m2006_1);
 #endif
 
 #if DEBUG
-    laserpos.Init(); // ������
+    laserpos.Init(); // 激光测距
 #endif
 
     // system_detect_task_handle = osThreadNew(startSystemDetectTask, NULL, &system_detect_task_attributes);
 }
 
 void CAN_Motor_Init(void);
-Point2D lader_install_offset = {0.0f, 0.0f}; // �����״ﰲװƫ�ƣ���λ��
+Point2D lader_install_offset = {0.0f, 0.0f}; // 激光雷达安装偏移，单位 m
 Locate_Setup* set1 = Locate_Setup::getInstance();
 Laser_InstanceManager instance_man;
 void ALL_Setup_ConfigInit(void)
 {
-    // ��ʼ������6�����ģ��
+    // 初始化串口6相机模块
     Module_Camera::GetInstance(&huart6)->InitUART();
 
     HWT101CT *imu = HWT101CT::GetInstance(&huart1);
     imu->InitUART();
-    TimeStamp::getInstance().init(&htim4); // ����ʱ�������
+    TimeStamp::getInstance().init(&htim4); // 启用时间戳服务
     // debug_init();
 
     CAN_Motor_Init();
@@ -228,9 +228,9 @@ void ALL_Setup_ConfigInit(void)
 #if JIA_USE_THREE_OMNI_CHASSIS
     Chassis::InitConfig chassis_init_config =
     {
-         .motor_handle[0] = &rudder1,
-         .motor_handle[1] = &rudder2,
-         .motor_handle[2] = &rudder3
+         .motor_handle[0] = &steer1,
+         .motor_handle[1] = &steer2,
+         .motor_handle[2] = &steer3
     };
     chassis.init(chassis_init_config);
 #endif
@@ -243,16 +243,16 @@ void ALL_Setup_ConfigInit(void)
     Chassis::InitConfig chassis_init_config =
         {
             // 转向电机句柄（按轮序 0~3 对应）
-            .steer_motor_h[0] = &rudder1,
-            .steer_motor_h[1] = &rudder2,
-            .steer_motor_h[2] = &rudder3,
-            .steer_motor_h[3] = &rudder4,
+            .steer_motor_h[0] = &steer1,
+            .steer_motor_h[1] = &steer2,
+            .steer_motor_h[2] = &steer3,
+            .steer_motor_h[3] = &steer4,
 
             // 驱动电机句柄（按轮序 0~3 对应）
-            .drive_motor_h[0] = &motor_vesc1,
-            .drive_motor_h[1] = &motor_vesc2,
-            .drive_motor_h[2] = &motor_vesc3,
-            .drive_motor_h[3] = &motor_vesc4,
+            .drive_motor_h[0] = &U8_1,
+            .drive_motor_h[1] = &U8_2,
+            .drive_motor_h[2] = &U8_3,
+            .drive_motor_h[3] = &U8_4,
 
             // 整车参数与限幅（用于主控制线程速度规划和模块命令限幅）
             .wheel_radius_m = 0.075f,
@@ -272,7 +272,7 @@ void ALL_Setup_ConfigInit(void)
             .idle_posture_mode = Chassis::IdlePostureMode::kHoldLast,
 
             // 轮序按实车定义：
-            // 1号=左后(rudder1/motor_vesc1)、2号=右后、3号=右前、4号=左前。
+            // 1号=左后(steer1/U8_1)、2号=右后、3号=右前、4号=左前。
             // 车体坐标系采用 x前 y左（右手系），整车尺寸：x向780mm、y向800mm。
             // 所以四轮相对底盘中心坐标分别为：x=±0.39m，y=±0.40m。
             // wheels[0]：1号左后轮（x<0, y>0）
@@ -366,7 +366,7 @@ void ALL_Setup_ConfigInit(void)
 
 void CAN_Motor_Init(void)
 {
-   //CAN1���߳�ʼ����ע����̵��
+   // CAN1 总线初始化：注册底盘电机
    DJIGroupCAN1_Low.addMotor(&steer1); DJIGroupCAN1_Low.addMotor(&steer2);
    DJIGroupCAN1_Low.addMotor(&steer3); DJIGroupCAN1_Low.addMotor(&steer4);
    CAN1_Bus->registerMotor(&DJIGroupCAN1_Low);
@@ -377,7 +377,7 @@ void CAN_Motor_Init(void)
 
    CAN1_Bus->init();
 
-   //CAN2���߳�ʼ����ע���������
+   // CAN2 总线初始化：注册武器系统电机
    DJIGroupCAN2_Low.addMotor(&Weapon_Claw1); DJIGroupCAN2_Low.addMotor(&Weapon_Claw2);
    DJIGroupCAN2_Low.addMotor(&Weapon_Claw3); DJIGroupCAN2_Low.addMotor(&Weapon_Launch);
    CAN2_Bus->registerMotor(&DJIGroupCAN2_Low);
@@ -388,7 +388,7 @@ void CAN_Motor_Init(void)
 
    CAN2_Bus->init();
 
-   //CAN3���߳�ʼ����ע���е�۵��
+   // CAN3 总线初始化：注册机械臂电机
    DJIGroupCAN3_High.addMotor(&arm_launchMotor); DJIGroupCAN3_High.addMotor(&arm_rotateMotor);
    DJIGroupCAN3_High.addMotor(&arm_stretchMotor); 
 
@@ -405,7 +405,7 @@ void CAN_Motor_Init(void)
 
 	CAN3_Bus->init();
 
-   // �������ӵ��PID������ʼ��
+   // 底盘转向电机 PID 参数初始化
    steer1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    steer2.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    steer3.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
@@ -415,7 +415,7 @@ void CAN_Motor_Init(void)
    U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
 
 
-   // ��е�۵��PID������ʼ��
+   // 机械臂电机 PID 参数初始化
    
    PID_Param_Config arm_3508_anglePID = m3508_angle_pid_params;
    arm_3508_anglePID.output_limit = 450.0f;
@@ -425,10 +425,10 @@ void CAN_Motor_Init(void)
    m2006_speed_pid_params.output_limit = 8000.0f;
    arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
    arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508Rotate_angle_pid_params, 0.0f);
-   arm_pitchMotor.reset_controlFrequency(100); // ����������Ϳ���Ƶ�ʵ�100Hz���������߸���
+   arm_pitchMotor.reset_controlFrequency(100); // 俯仰电机降到 100Hz，减轻总线负载
 
 
-// ========�������PID������ʼ��========
+// ======== 武器系统 PID 参数初始化 ========
 
 
 	// PID_Param_Config weapon_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
