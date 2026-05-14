@@ -93,11 +93,9 @@ VESC_Motor motor_vesc3(103, CAN3_Bus, 21.0f); VESC_Motor motor_vesc4(104, CAN3_B
 // DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
 
 //                            /* ÎäÆ÷ÏµÍ³ */
-M3508 Weapon_launchMotor_1_master(1, CAN2_Bus, true, false); M3508 Weapon_launchMotor_1_slave(2, CAN2_Bus, true, false); 
-M3508 Weapon_launchMotor_2_master(3, CAN2_Bus, true, false); M3508 Weapon_launchMotor_2_slave(4, CAN2_Bus, true, false);
-M2006 Weapon_traverseMotor(5, CAN2_Bus, true, false); M2006 Weapon_clawMotor(6, CAN2_Bus, true, false);
-
-DM_Motor Weapon_wristMotor(J4310_Type, 0x05,0x05, CAN3_Bus);
+M3508 Weapon_launchMotor(1, CAN2_Bus, true, false);M2006 Weapon_claw_1_Motor(2, CAN2_Bus, true, false);
+M2006 Weapon_claw_2_Motor(3, CAN2_Bus, true, false); M2006 Weapon_claw_3_Motor(4, CAN2_Bus, true, false);
+DM_Motor Weapon_armMotor(J4310_Type,0x05,0x05,CAN2_Bus);M2006 Weapon_wristMotor(6,CAN2_Bus,true, false);
 
 
 M3508 arm_launchMotor(5, CAN1_Bus, true, false); M3508 arm_rotateMotor(7, CAN1_Bus, true, false);
@@ -242,11 +240,12 @@ void ALL_Setup_ConfigInit(void)
    ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
    ARM_Controller.setArmStatus(ARM_IDLE);
    
-   Weapon_Controller.register_launch_Motor_1(&Weapon_launchMotor_1_master, &Weapon_launchMotor_1_slave);
-   Weapon_Controller.register_launch_Motor_2(&Weapon_launchMotor_2_master, &Weapon_launchMotor_2_slave);
-   Weapon_Controller.register_claw_Motor(&Weapon_clawMotor);
-   Weapon_Controller.register_traverse_Motor(&Weapon_traverseMotor);
+   Weapon_Controller.register_launch_Motor(&Weapon_launchMotor);
+   Weapon_Controller.register_claw_1_Motor(&Weapon_claw_1_Motor);
+   Weapon_Controller.register_claw_2_Motor(&Weapon_claw_2_Motor);
+   Weapon_Controller.register_claw_3_Motor(&Weapon_claw_3_Motor);
    Weapon_Controller.register_wrist_Motor(&Weapon_wristMotor);
+	Weapon_Controller.register_arm_Motor(&Weapon_armMotor);
 
    Weapon_Controller.init();
    Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
@@ -343,11 +342,11 @@ void CAN_Motor_Init(void)
    weapon_2006_speedPID.output_limit=4500;
    weapon_2006_anglePID.output_limit=500;
    
-   Weapon_launchMotor_1_master.pid_init(weapon_3508_speedPID, 0.0f,weapon_3508_anglePID, 0.0f);
-   Weapon_launchMotor_2_master.pid_init(weapon_3508_speedPID, 0.0f, weapon_3508_anglePID, 0.0f);
-   
-   Weapon_clawMotor.pid_init(weapon_2006_speedPID, 0.0f,  weapon_2006_anglePID, 0.0f);
-   Weapon_traverseMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
+//   Weapon_launchMotor_1_master.pid_init(weapon_3508_speedPID, 0.0f,weapon_3508_anglePID, 0.0f);
+//   Weapon_launchMotor_2_master.pid_init(weapon_3508_speedPID, 0.0f, weapon_3508_anglePID, 0.0f);
+//   
+//   Weapon_clawMotor.pid_init(weapon_2006_speedPID, 0.0f,  weapon_2006_anglePID, 0.0f);
+//   Weapon_traverseMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
    Weapon_wristMotor.reset_controlFrequency(100);
 }
 
