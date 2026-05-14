@@ -362,20 +362,20 @@ PID_Param_Config foursteer_steer_speed_pid_params = {
     .kp = 150.0f,
     .ki = 0.8f,
     .kd = 0.0f,
-    .I_Outlimit = 18000.0f,
+    .I_Outlimit = 8000.0f,
     .isIOutlimit = true,
-    .output_limit = 18000.0f,
+    .output_limit = 8000.0f,
     .deadband = 0.0f
 };
 
 PID_Param_Config foursteer_steer_angle_pid_params = {
-    .kp = 7.0f,
+    .kp = 5.0f,
     .ki = 0.0f,
     .kd = 0.0f,
     .I_Outlimit = 0.0f,
     .isIOutlimit = true,
     .output_limit = 200.0f,
-    .deadband = 0.0f
+    .deadband = 0.1f
 };
 
 PID_Param_Config track_pid_params = {

@@ -830,8 +830,8 @@ namespace jia
             u32 lock_now_rot_z_shift_time_ms_ = 1000; // LockNow 松手缓冲时长（ms）
 
             // 调试参数（通过全局 chassis 对象在调试器内直接改值）
-            bool is_debug_ = false;         // 调试总开关：true 时 isDebugMode() 每周期接管目标输入
-            u8 debug_mode_ = 0;             // 调试模式号：0~8 对齐 ThreeOmni；20=单轮直控，21=四轮朝前零点检查，22=纯回零观察，30=四轮电机直控(绕过回零门控，支持舵向角度/舵向RPM两种直控)
+            bool is_debug_ = 1;         // 调试总开关：true 时 isDebugMode() 每周期接管目标输入
+            u8 debug_mode_ = 2;             // 调试模式号：0~8 对齐 ThreeOmni；20=单轮直控，21=四轮朝前零点检查，22=纯回零观察，30=四轮电机直控(绕过回零门控，支持舵向角度/舵向RPM两种直控)
             u8 debug_wheel_index_ = 0;      // 单轮调试目标索引（0~3）
             f32 debug_input_ = 90.0f;       // 通用调试输入保留位（兼容 ThreeOmni 习惯）
             f32 debug_lock_rot_z_ = 0.0f;   // LockTo 模式调试目标角（rad）
