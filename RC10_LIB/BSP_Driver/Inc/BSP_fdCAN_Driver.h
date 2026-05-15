@@ -36,6 +36,7 @@ extern "C"
 #include "APP_tool.h"
 #include "BSP_RTOS.h"
 #include "Motor_Base.h" 
+#include "Module_OIDEncoder.h"
 #include <cstring>
 #include<cstdint>
 
@@ -138,6 +139,22 @@ public:
 
     bool sendFrame(const CanFrame& cf);
 
+    bool registerOIDEncoder(OIDEncoder* o)
+    {
+        if(o->bus() != this)
+            return false; // 只能注册到对应总线的OIDEncoder
+        for (std::size_t i = 0; i < 3; ++i) 
+        {
+            if (oid_encoder_[i] == nullptr) 
+            {
+                oid_encoder_[i] = o;
+                return true;
+            }
+        }
+        return false; // 没有空位了
+    }
+
+
     /**
      * @brief 从ISR中接收数据并推入接收队列
      * @param cf 要接收的帧
@@ -162,7 +179,9 @@ protected:
     static bool matchesFrameDefault(const CanFrame& cf, uint32_t targetId, bool isExt);
 
     Motor_Base * motorList_[MAX_MOTORS];// 电机列表
-    
+    OIDEncoder * oid_encoder_[3] = {nullptr, nullptr, nullptr}; //打个补丁，没想过还有非电机的设备搭载在CAN总线上，
+    //后面再给CAN设备独立一个基类，将updateFeedback和matchesFrame等接口放到基类里，
+    //电机类继承自设备类，这样就能支持非电机设备了
 
     RtosQueue<CanFrame> rxQueue_;
 
