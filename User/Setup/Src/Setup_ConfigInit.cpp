@@ -236,10 +236,6 @@ void ALL_Setup_ConfigInit(void)
 #endif
 
 #if JIA_USE_FOUR_STEER_CHASSIS
-    // 四舵轮底盘初始化配置：
-    // 1) 先绑定 4 个转向电机 + 4 个驱动电机
-    // 2) 再设置整车级运动学/动力学限幅参数
-    // 3) 最后配置每个轮组的安装几何、方向符号与回零参数
     Chassis::InitConfig chassis_init_config =
         {
             // 转向电机句柄（按轮序 0~3 对应）
@@ -253,122 +249,7 @@ void ALL_Setup_ConfigInit(void)
             .drive_motor_h[1] = &U8_2,
             .drive_motor_h[2] = &U8_3,
             .drive_motor_h[3] = &U8_4,
-
-            // 四舵轮参数唯一维护入口：
-            // 后续调参请只改此处（InitConfig 实际赋值）。
-            // chassis.h 里的 InitConfig 默认值与私有成员默认值仅作构造/兜底，不作为日常调参入口。
-            // 整车参数与限幅（用于主控制线程速度规划和模块命令限幅）
-            .wheel_radius_m = 0.052f,
-            .max_vel_x_m_s = 999.0f,
-            .max_vel_y_m_s = 999.0f,
-            .max_omega_z_rad_s = 999.0f,
-            .max_acc_xy_acc_m_s2 = 9999.0f,
-            .max_acc_xy_dec_m_s2 = 9999.0f,
-            .max_alpha_z_acc_rad_s2 = 9999.0f,
-            .max_alpha_z_dec_rad_s2 = 9999.0f,
-            .max_drive_omega_rad_s = 25.0f,
-            .max_drive_alpha_rad_s2 = 50.0f,
-            .max_steer_rate_rad_s = 40000.0f,
-            .max_steer_alpha_rad_s2 = 25000.0f,
-            .stationary_speed_epsilon_m_s = 0.01f,
-            .enable_cosine_compensation = true,
-            .idle_posture_mode = Chassis::IdlePostureMode::kXPark,
-            .steering_strategy_mode = Chassis::SteeringStrategyMode::kShortestPath,
-            .flip_enter_angle_deg = 100.0f,
-            .flip_exit_angle_deg = 80.0f,
-            .enable_drive_gate = true,
-            .drive_gate_strategy = Chassis::DriveGateStrategy::kHardGate,
-            .drive_gate_scope = Chassis::DriveGateScope::kGlobal,
-            .drive_gate_close_angle_deg = 1.0f,
-            .drive_gate_min_scale = 0.5f,
-            .drive_gate_curve_exponent = 3.0f,
-            .drive_gate_curve_half_angle_deg = 3.0f,
-            .drive_gate_curve_min_scale = 0.0f,
-            .drive_gate_transition_linear_speed_m_s = 0.1f,
-            .drive_gate_transition_angular_speed_rad_s = 0.1f,
-            .drive_gate_scale_ramp_up_s = 0.1f,
-            .drive_gate_scale_ramp_down_s = 0.5f,
-            .enable_stop_steer_guard = true,
-            .stop_steer_guard_strategy = Chassis::StopSteerGuardStrategy::kHardHold,
-            .stop_guard_release_speed_m_s = 0.01f,
-            .stop_guard_blend_start_speed_m_s = 0.2f,
-            .stop_guard_curve_half_speed_m_s = 0.08f,
-            .stop_guard_curve_exponent = 2.0f,
-
-            // 轮序按实车定义：
-            // 1号=左后(steer1/U8_1)、2号=右后、3号=右前、4号=左前。
-            // 车体坐标系采用 x前 y左（右手系），整车尺寸：x向780mm、y向800mm。
-            // 所以四轮相对底盘中心坐标分别为：x=±0.39m，y=±0.40m。
-            // wheels[0]：1号左后轮（x<0, y>0）
-            .wheels[0] = {
-                .pos_x_m = -0.39f,
-                .pos_y_m = 0.40f,
-                .theta_oa_to_owi_deg = -90.0f,    // 1号轮机械安装朝向“向右”
-                .steer_motor_sign = 1.0f,         // 转向方向符号：1 不取反，-1 取反
-                .drive_motor_sign = 1.0f,         // 驱动方向符号：1 不取反，-1 取反
-                .homing_enabled = true,           // 实车接入光电门后启用回零
-                .homing_sensor_active_high = true,
-                .homing_gpio_port = kPHOTOGATE_1_GPIO_Port,
-                .homing_gpio_pin = kPHOTOGATE_1_Pin,
-                .homing_falling_edge_mech_deg = -30.0f,  // 原始 GPIO 高->低边沿对应的全车 OA 绝对角（相对安装基准 y- 的 +60°）
-                .homing_rising_edge_mech_deg = 150.0f,   // 原始 GPIO 低->高边沿对应的全车 OA 绝对角（相对安装基准 y- 的 -120°）
-                .homing_search_rpm = 10.0f,       // 回零搜索阶段转向电机转速（rpm）
-                .homing_zero_offset_deg = -30.0f, // 全局偏置验证值（临时）：用于验证“整体偏 +30°”假设
-                .homing_timeout_s = 5.0f,         // 单轮回零超时时间（s）
-            },
-            // wheels[1]：2号右后轮（x<0, y<0）
-            .wheels[1] = {
-                .pos_x_m = -0.39f,
-                .pos_y_m = -0.40f,
-                .theta_oa_to_owi_deg = 0.0f,      // 2号轮机械安装朝向“向前”
-                .steer_motor_sign = 1.0f,
-                .drive_motor_sign = 1.0f,
-                .homing_enabled = true,
-                .homing_sensor_active_high = true,
-                .homing_gpio_port = kPHOTOGATE_2_GPIO_Port,
-                .homing_gpio_pin = kPHOTOGATE_2_Pin,
-                .homing_falling_edge_mech_deg = 60.0f,   // 相对安装基准 x+ 的 +60°
-                .homing_rising_edge_mech_deg = -120.0f,  // 相对安装基准 x+ 的 -120°
-                .homing_search_rpm = 10.0f,
-                .homing_zero_offset_deg = -30.0f, // 全局偏置验证值（临时）
-                .homing_timeout_s = 5.0f,
-            },
-            // wheels[2]：3号右前轮（x>0, y<0）
-            .wheels[2] = {
-                .pos_x_m = 0.39f,
-                .pos_y_m = -0.40f,
-                .theta_oa_to_owi_deg = 90.0f,     // 3号轮机械安装朝向“向左”
-                .steer_motor_sign = 1.0f,
-                .drive_motor_sign = 1.0f,
-                .homing_enabled = true,
-                .homing_sensor_active_high = true,
-                .homing_gpio_port = kPHOTOGATE_3_GPIO_Port,
-                .homing_gpio_pin = kPHOTOGATE_3_Pin,
-                .homing_falling_edge_mech_deg = 150.0f,  // 原始 GPIO 高->低边沿对应的全车 OA 绝对角（相对安装基准 y+ 的 +60°）
-                .homing_rising_edge_mech_deg = -30.0f,   // 原始 GPIO 低->高边沿对应的全车 OA 绝对角（相对安装基准 y+ 的 -120°）
-                .homing_search_rpm = 10.0f,
-                .homing_zero_offset_deg = -30.0f, // 全局偏置验证值（临时）
-                .homing_timeout_s = 5.0f,
-            },
-            // wheels[3]：4号左前轮（x>0, y>0）
-            .wheels[3] = {
-                .pos_x_m = 0.39f,
-                .pos_y_m = 0.40f,
-                .theta_oa_to_owi_deg = 180.0f,    // 4号轮机械安装朝向“向后”
-                .steer_motor_sign = 1.0f,         // 4号轮舵向角闭环恢复正向，避免舵角目标解释翻转
-                .drive_motor_sign = -1.0f,        // 4号轮自转方向修正：驱动方向取反
-                .homing_enabled = true,
-                .homing_sensor_active_high = true,
-                .homing_gpio_port = kPHOTOGATE_4_GPIO_Port,
-                .homing_gpio_pin = kPHOTOGATE_4_Pin,
-                .homing_falling_edge_mech_deg = -120.0f, // 原始 GPIO 高->低边沿对应的全车 OA 绝对角（相对安装基准 x- 的 +60°）
-                .homing_rising_edge_mech_deg = 60.0f,    // 原始 GPIO 低->高边沿对应的全车 OA 绝对角（相对安装基准 x- 的 -120°）
-                .homing_search_rpm = 10.0f,
-                .homing_zero_offset_deg = -30.0f, // 全局偏置验证值（临时）
-                .homing_timeout_s = 5.0f,
-            },
         };
-    // 将上述配置写入四舵轮 chassis 运行态（仅初始化数据，不改变 FSM 绑定对象）
     chassis.init(chassis_init_config);
 #endif
 

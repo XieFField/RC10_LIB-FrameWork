@@ -544,51 +544,11 @@ namespace jia
                 f32 homing_timeout_s = 5.0f;        // 单轮回零超时时间，超时后进入故障态，单位秒
             };
 
-            // InitConfig 是整车级初始化输入：一次性提供 4 个轮子的电机句柄、底盘限幅、
-            // 锁 yaw 参数、空闲姿态策略以及每个轮子的初始化配置。
+            // InitConfig 只负责硬件句柄绑定，运行参数/标定参数使用 FourSteer 类内默认值。
             struct InitConfig
             {
                 Motor_Base *steer_motor_h[4] = {nullptr}; // 4 个转向电机句柄，顺序需与 wheels[4] 的轮位定义保持一致
                 Motor_Base *drive_motor_h[4] = {nullptr}; // 4 个驱动电机句柄，顺序需与对应转向模块一一匹配
-                f32 wheel_radius_m = 0.075f;             // 轮半径，单位米；用于把驱动轮角速度与底盘线速度互相换算
-                f32 max_vel_x_m_s = 4.0f;                // 底盘在自身 x 方向允许的最大规划速度，单位 m/s
-                f32 max_vel_y_m_s = 4.0f;                // 底盘在自身 y 方向允许的最大规划速度，单位 m/s
-                f32 max_omega_z_rad_s = 8.0f;            // 底盘绕 z 轴允许的最大规划角速度，单位 rad/s
-                f32 max_acc_xy_acc_m_s2 = 4.0f;          // 平移速度上升时的最大加速度限幅，单位 m/s^2；用于“加速”阶段
-                f32 max_acc_xy_dec_m_s2 = 8.0f;          // 平移速度下降时的最大减速度限幅，单位 m/s^2；用于“减速/刹车”阶段
-                f32 max_alpha_z_acc_rad_s2 = 6.0f;       // z 轴角速度上升时的最大角加速度限幅，单位 rad/s^2
-                f32 max_alpha_z_dec_rad_s2 = 10.0f;      // z 轴角速度下降时的最大角减速度限幅，单位 rad/s^2
-                f32 max_drive_omega_rad_s = 150.0f;      // 单轮驱动角速度指令上限，单位 rad/s；模块解算后会再被夹紧到这里
-                f32 max_drive_alpha_rad_s2 = 50.0f;      // 单轮驱动角加速度限幅，单位 rad/s^2；防止驱动指令突变过猛
-                f32 max_steer_rate_rad_s = 200.0f;       // 单轮转向角速度上限，单位 rad/s；用于限制舵向变化速度
-                f32 max_steer_alpha_rad_s2 = 2500.0f;    // 单轮转向角加速度上限，单位 rad/s^2；用于限制舵向变化陡峭度
-                f32 stationary_speed_epsilon_m_s = 0.01f; // 静止判定阈值，单位 m/s；模块目标速度低于它时会走“近静止/停车姿态”逻辑
-                bool enable_cosine_compensation = true;   // 是否启用余弦补偿：转向角误差较大时衰减驱动输出，减少舵向未对准时的横向硬推
-                f32 max_lock_to_rot_z_rad_s = 4.0f;       // 锁到目标 yaw 时允许的最大角速度，单位 rad/s；限制 rot_z 追踪收敛速度
-                u32 lock_now_rot_z_shift_time_ms = 1000;  // 从普通速度模式切到“无 omega_z 时锁当前 yaw”模式后的过渡保持时间，单位 ms
-                IdlePostureMode idle_posture_mode = IdlePostureMode::kXPark; // 近静止时的模块姿态策略：保持最后朝向，或切到 X 停车姿态
-                SteeringStrategyMode steering_strategy_mode = SteeringStrategyMode::kShortestPath; // 转向解策略：默认允许翻转并优先最短转角
-                f32 flip_enter_angle_deg = 100.0f;        // 进入/保持 flipped 解的角误差阈值（大于该值更倾向 flipped）
-                f32 flip_exit_angle_deg = 80.0f;          // 从非 flipped 切入 flipped 的阈值，配合 enter 阈值构成滞回
-                bool enable_drive_gate = true;            // 是否启用独立驱动抑制（DriveGate）
-                DriveGateStrategy drive_gate_strategy = DriveGateStrategy::kHardGate; // DriveGate 策略类型
-                DriveGateScope drive_gate_scope = DriveGateScope::kGlobal; // DriveGate 作用域：全局/按轮
-                f32 drive_gate_close_angle_deg = 1.0f;    // Gate 关闭角阈值（Hard/Soft 模式使用）
-                f32 drive_gate_min_scale = 0.5f;          // Gate 最小放行比例
-                f32 drive_gate_curve_exponent = 3.0f;     // 连续曲线策略指数
-                f32 drive_gate_curve_half_angle_deg = 3.0f; // 连续曲线半幅角阈值
-                f32 drive_gate_curve_min_scale = 0.0f;    // 连续曲线最小比例
-                f32 drive_gate_transition_linear_speed_m_s = 0.10f; // AdaptiveGate 线速度过渡阈值
-                f32 drive_gate_transition_angular_speed_rad_s = 0.10f; // AdaptiveGate 角速度过渡阈值
-                f32 drive_gate_scale_ramp_up_s = 0.10f;   // AdaptiveGate 放开斜坡时间
-                f32 drive_gate_scale_ramp_down_s = 0.50f; // AdaptiveGate 收紧斜坡时间
-                bool enable_stop_steer_guard = true;      // 是否启用停车转向保护
-                StopSteerGuardStrategy stop_steer_guard_strategy = StopSteerGuardStrategy::kHardHold; // 停车转向保护策略
-                f32 stop_guard_release_speed_m_s = 0.01f; // 残速低于该阈值后解除停车转向保护
-                f32 stop_guard_blend_start_speed_m_s = 0.20f; // SoftBlend 策略开始混合阈值
-                f32 stop_guard_curve_half_speed_m_s = 0.08f;  // ContinuousBlend 半幅速度阈值
-                f32 stop_guard_curve_exponent = 2.0f;     // ContinuousBlend 曲线指数
-                WheelInitConfig wheels[4];                // 4 个舵轮模块各自的安装/回零配置，顺序需与电机句柄数组一致
             };
 
             // 初始化
@@ -776,18 +736,19 @@ namespace jia
             TickType_t time_ms_ = 0;                             // [RO] 当前系统时刻（ms）
 
             // 底盘参数（运行时可调）[RW]
-            f32 wheel_radius_m_ = 0.075f;                     // [RW, 慎改] 轮半径，线速度与驱动角速度换算基准
-            f32 max_vel_x_ = 4.0f;                            // [RW] 车体 X 方向最大线速度（m/s）
-            f32 max_vel_y_ = 4.0f;                            // [RW] 车体 Y 方向最大线速度（m/s）
-            f32 max_omega_z_ = 8.0f;                          // [RW] 车体 Z 轴最大角速度（rad/s）
-            f32 max_acc_xy_acc_ = 4.0f;                       // [RW] 平面线速度加速段最大加速度（m/s^2）
-            f32 max_acc_xy_dec_ = 8.0f;                       // [RW] 平面线速度减速段最大减速度（m/s^2）
-            f32 max_alpha_z_acc_ = 6.0f;                      // [RW] 角速度加速段最大角加速度（rad/s^2）
-            f32 max_alpha_z_dec_ = 10.0f;                     // [RW] 角速度减速段最大角减速度（rad/s^2）
-            f32 max_drive_omega_rad_s_ = 150.0f;              // [RW] 驱动目标角速度上限（rad/s）
+            // 说明：FourSteer 初始化后默认读取此处，后续推荐仅通过运行时接口动态调整。
+            f32 wheel_radius_m_ = 0.052f;                     // [RW, 慎改] 轮半径，线速度与驱动角速度换算基准
+            f32 max_vel_x_ = 999.0f;                          // [RW] 车体 X 方向最大线速度（m/s）
+            f32 max_vel_y_ = 999.0f;                          // [RW] 车体 Y 方向最大线速度（m/s）
+            f32 max_omega_z_ = 999.0f;                        // [RW] 车体 Z 轴最大角速度（rad/s）
+            f32 max_acc_xy_acc_ = 9999.0f;                    // [RW] 平面线速度加速段最大加速度（m/s^2）
+            f32 max_acc_xy_dec_ = 9999.0f;                    // [RW] 平面线速度减速段最大减速度（m/s^2）
+            f32 max_alpha_z_acc_ = 9999.0f;                   // [RW] 角速度加速段最大角加速度（rad/s^2）
+            f32 max_alpha_z_dec_ = 9999.0f;                   // [RW] 角速度减速段最大角减速度（rad/s^2）
+            f32 max_drive_omega_rad_s_ = 25.0f;               // [RW] 驱动目标角速度上限（rad/s）
             f32 max_drive_alpha_rad_s2_ = 50.0f;              // [RW] 驱动角速度变化率上限（rad/s^2）
-            f32 max_steer_rate_rad_s_ = 200.0f;               // [RW] 转向目标角速度上限（rad/s）
-            f32 max_steer_alpha_rad_s2_ = 2500.0f;            // [RW] 转向目标角加速度上限（rad/s^2）
+            f32 max_steer_rate_rad_s_ = 40000.0f;             // [RW] 转向目标角速度上限（rad/s）
+            f32 max_steer_alpha_rad_s2_ = 25000.0f;           // [RW] 转向目标角加速度上限（rad/s^2）
             f32 stationary_speed_epsilon_m_s_ = 0.01f;        // [RW] 近似静止阈值
             bool enable_cosine_compensation_ = true;          // [RW] 是否启用舵角余弦补偿
             IdlePostureMode idle_posture_mode_ = IdlePostureMode::kXPark; // [RW] 静止姿态策略（保持当前或 X-Park）

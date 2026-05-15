@@ -794,69 +794,47 @@ namespace jia
     {
         void Chassis::init(InitConfig &config)
         {
-            wheel_radius_m_ = (config.wheel_radius_m > 1.0e-6f) ? config.wheel_radius_m : 0.075f;
-            max_vel_x_ = config.max_vel_x_m_s;
-            max_vel_y_ = config.max_vel_y_m_s;
-            max_omega_z_ = config.max_omega_z_rad_s;
-            max_acc_xy_acc_ = config.max_acc_xy_acc_m_s2;
-            max_acc_xy_dec_ = config.max_acc_xy_dec_m_s2;
-            max_alpha_z_acc_ = config.max_alpha_z_acc_rad_s2;
-            max_alpha_z_dec_ = config.max_alpha_z_dec_rad_s2;
-            max_drive_omega_rad_s_ = config.max_drive_omega_rad_s;
-            max_drive_alpha_rad_s2_ = config.max_drive_alpha_rad_s2;
-            max_steer_rate_rad_s_ = config.max_steer_rate_rad_s;
-            max_steer_alpha_rad_s2_ = config.max_steer_alpha_rad_s2;
-            stationary_speed_epsilon_m_s_ = config.stationary_speed_epsilon_m_s;
-            enable_cosine_compensation_ = config.enable_cosine_compensation;
-            max_lock_to_rot_z_rad_s_ = config.max_lock_to_rot_z_rad_s;
-            lock_now_rot_z_shift_time_ms_ = config.lock_now_rot_z_shift_time_ms;
-            idle_posture_mode_ = config.idle_posture_mode;
-            default_strategy_cfg_.steering_strategy_mode = config.steering_strategy_mode;
-            default_strategy_cfg_.flip_enter_angle_deg = config.flip_enter_angle_deg;
-            default_strategy_cfg_.flip_exit_angle_deg = config.flip_exit_angle_deg;
-            default_strategy_cfg_.enable_drive_gate = config.enable_drive_gate;
-            default_strategy_cfg_.drive_gate_strategy = config.drive_gate_strategy;
-            default_strategy_cfg_.drive_gate_scope = config.drive_gate_scope;
-            default_strategy_cfg_.drive_gate_close_angle_deg = config.drive_gate_close_angle_deg;
-            default_strategy_cfg_.drive_gate_min_scale = config.drive_gate_min_scale;
-            default_strategy_cfg_.drive_gate_curve_exponent = config.drive_gate_curve_exponent;
-            default_strategy_cfg_.drive_gate_curve_half_angle_deg = config.drive_gate_curve_half_angle_deg;
-            default_strategy_cfg_.drive_gate_curve_min_scale = config.drive_gate_curve_min_scale;
-            default_strategy_cfg_.drive_gate_transition_linear_speed_m_s = config.drive_gate_transition_linear_speed_m_s;
-            default_strategy_cfg_.drive_gate_transition_angular_speed_rad_s = config.drive_gate_transition_angular_speed_rad_s;
-            default_strategy_cfg_.drive_gate_scale_ramp_up_s = config.drive_gate_scale_ramp_up_s;
-            default_strategy_cfg_.drive_gate_scale_ramp_down_s = config.drive_gate_scale_ramp_down_s;
-            default_strategy_cfg_.enable_stop_steer_guard = config.enable_stop_steer_guard;
-            default_strategy_cfg_.stop_steer_guard_strategy = config.stop_steer_guard_strategy;
-            default_strategy_cfg_.stop_guard_release_speed_m_s = config.stop_guard_release_speed_m_s;
-            default_strategy_cfg_.stop_guard_blend_start_speed_m_s = config.stop_guard_blend_start_speed_m_s;
-            default_strategy_cfg_.stop_guard_curve_half_speed_m_s = config.stop_guard_curve_half_speed_m_s;
-            default_strategy_cfg_.stop_guard_curve_exponent = config.stop_guard_curve_exponent;
             runtime_strategy_cfg_ = default_strategy_cfg_;
+
+            static const WheelInitConfig kDefaultWheelInit[4] = {
+                {.pos_x_m = -0.39f, .pos_y_m = 0.40f, .theta_oa_to_owi_deg = -90.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = 1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_1_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_1_Pin, .homing_falling_edge_mech_deg = -30.0f, .homing_rising_edge_mech_deg = 150.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
+                {.pos_x_m = -0.39f, .pos_y_m = -0.40f, .theta_oa_to_owi_deg = 0.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = 1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_2_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_2_Pin, .homing_falling_edge_mech_deg = 60.0f, .homing_rising_edge_mech_deg = -120.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
+                {.pos_x_m = 0.39f, .pos_y_m = -0.40f, .theta_oa_to_owi_deg = 90.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = 1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_3_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_3_Pin, .homing_falling_edge_mech_deg = 150.0f, .homing_rising_edge_mech_deg = -30.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
+                {.pos_x_m = 0.39f, .pos_y_m = 0.40f, .theta_oa_to_owi_deg = 180.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = -1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_4_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_4_Pin, .homing_falling_edge_mech_deg = -120.0f, .homing_rising_edge_mech_deg = 60.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
+            };
 
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
+                const WheelInitConfig &wheel_init = kDefaultWheelInit[i];
                 wheel.steer_motor_h = config.steer_motor_h[i];
                 wheel.drive_motor_h = config.drive_motor_h[i];
-                wheel.pos_x_m = config.wheels[i].pos_x_m;
-                wheel.pos_y_m = config.wheels[i].pos_y_m;
-                wheel.theta_oa_to_owi_rad = degToRadF32(config.wheels[i].theta_oa_to_owi_deg);
-                wheel.steer_motor_sign = (config.wheels[i].steer_motor_sign == 0.0f) ? 1.0f : config.wheels[i].steer_motor_sign;
-                wheel.drive_motor_sign = (config.wheels[i].drive_motor_sign == 0.0f) ? 1.0f : config.wheels[i].drive_motor_sign;
-                wheel.homing_enabled = config.wheels[i].homing_enabled;
-                wheel.homing_sensor_active_high = config.wheels[i].homing_sensor_active_high;
-                wheel.homing_gpio_port = config.wheels[i].homing_gpio_port;
-                wheel.homing_gpio_pin = config.wheels[i].homing_gpio_pin;
-                wheel.homing_falling_edge_mech_rad = degToRadF32(config.wheels[i].homing_falling_edge_mech_deg);
-                wheel.homing_rising_edge_mech_rad = degToRadF32(config.wheels[i].homing_rising_edge_mech_deg);
-                wheel.homing_search_rpm = config.wheels[i].homing_search_rpm;
-                wheel.homing_zero_offset_rad = degToRadF32(config.wheels[i].homing_zero_offset_deg);
-                wheel.homing_timeout_s = config.wheels[i].homing_timeout_s;
+                wheel.pos_x_m = wheel_init.pos_x_m;
+                wheel.pos_y_m = wheel_init.pos_y_m;
+                wheel.theta_oa_to_owi_rad = degToRadF32(wheel_init.theta_oa_to_owi_deg);
+                wheel.steer_motor_sign = (wheel_init.steer_motor_sign == 0.0f) ? 1.0f : wheel_init.steer_motor_sign;
+                wheel.drive_motor_sign = (wheel_init.drive_motor_sign == 0.0f) ? 1.0f : wheel_init.drive_motor_sign;
+                wheel.homing_enabled = wheel_init.homing_enabled;
+                wheel.homing_sensor_active_high = wheel_init.homing_sensor_active_high;
+                wheel.homing_gpio_port = wheel_init.homing_gpio_port;
+                wheel.homing_gpio_pin = wheel_init.homing_gpio_pin;
+                wheel.homing_falling_edge_mech_rad = degToRadF32(wheel_init.homing_falling_edge_mech_deg);
+                wheel.homing_rising_edge_mech_rad = degToRadF32(wheel_init.homing_rising_edge_mech_deg);
+                wheel.homing_search_rpm = wheel_init.homing_search_rpm;
+                wheel.homing_zero_offset_rad = degToRadF32(wheel_init.homing_zero_offset_deg);
+                wheel.homing_timeout_s = wheel_init.homing_timeout_s;
                 wheel.homing_state = wheel.homing_enabled ? HomingState::kIdle : HomingState::kReady;
+                wheel.homing_last_sensor_active = false;
                 wheel.homing_last_edge_is_falling = false;
                 wheel.homing_zero_valid = !wheel.homing_enabled;
+                wheel.homing_elapsed_s = 0.0f;
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
+                wheel.corrected_steer_motor_total_angle_rad = 0.0f;
+                wheel.corrected_drive_omega_rad_s = 0.0f;
+                wheel.target_steer_motor_total_angle_rad = 0.0f;
+                wheel.target_drive_omega_rad_s = 0.0f;
+                wheel.steer_target_velocity_rad_s = 0.0f;
+                wheel.flipped_drive_direction = false;
                 selected_flipped_solution_[i] = false;
                 drive_gate_scale_[i] = 1.0f;
             }
