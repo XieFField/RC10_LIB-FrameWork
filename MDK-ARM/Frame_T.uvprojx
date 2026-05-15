@@ -1234,16 +1234,6 @@
               <FilePath>..\RC10_LIB\Module\Src\Module_JY61.cpp</FilePath>
             </File>
             <File>
-              <FileName>Module_Camera.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_Camera.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_Camera.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_Camera.cpp</FilePath>
-            </File>
-            <File>
               <FileName>Module_OIDEncoder.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Module\Inc\Module_OIDEncoder.h</FilePath>
@@ -1794,15 +1784,20 @@
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\chassis.cpp</FilePath>
             </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>User/test</GroupName>
+          <Files>
             <File>
-              <FileName>Camera_Setup.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\Camera_Setup.cpp</FilePath>
+              <FileName>m3508_steer_debug.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\m3508_steer_debug.h</FilePath>
             </File>
             <File>
-              <FileName>Camera_Setup.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\Camera_Setup.h</FilePath>
+              <FileName>m3508_steer_debug.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\m3508_steer_debug.cpp</FilePath>
             </File>
           </Files>
         </Group>

@@ -416,14 +416,7 @@ void FSM_Controller::auto_ctrl()
                     is_click = 0;
                 }
             }
-
-            else
-            {
-                chassis_setup_->setChassisStatus(CHASSIS_STOP);
-                arm_setup_->setArmStatus(ARM_IDLE);
-                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-            }
-                break;
+            break;
         }
     }
     //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);

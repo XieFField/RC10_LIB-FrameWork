@@ -143,38 +143,6 @@ public:
         ctrl_status_.target_poleIndex = index;
     }
 
-    void setWeaponSageControlStatus(WeaponSage_Status_E status)
-    {
-        weaponSage_status_ = status;
-        if(status != WEAPONSAGE_DEBUG)
-        {
-            debug_launch_target_valid_ = false;
-        }
-    }
-
-    void set_camera_req(bool weapon_req, bool z_req, float z_ref)
-    {
-        camera_weapon_req_ = weapon_req; // 底盘下发：武器预对接动作请求位。
-        camera_z_req_ = z_req; // 底盘下发：z 调整请求位。
-        camera_z_ref_ = z_ref; // 底盘下发：z 调整参考值。
-    }
-
-    bool get_weapon_done() const
-    {
-        return camera_weapon_done_; // 武器回传：预对接动作完成位。
-    }
-
-    bool get_z_done() const
-    {
-        return camera_z_done_; // 武器回传：z 调整完成位。
-    }
-
-    void setDebugLaunchTarget(float launch_target)
-    {
-        debug_launch_target_ = launch_target;
-        debug_launch_target_valid_ = true;
-    }
-
     Point2D getClawPos()
     {   
 		
@@ -202,10 +170,11 @@ public:
         auto_ctrl_.auto_ctrl1 = flag;
     }
 
-    void setWeapon_CameraStart(bool start)
+    void setWeaponSageControlStatus(WeaponSage_Status_E status)
     {
-        weapon_CameraStart = start;
+        weaponSage_status_ = status;
     }
+    
 	
 protected:
     void loop() override;
@@ -241,27 +210,6 @@ private:
 	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_IDLE;
 	WeaponSage_Setup::auto_GRABstate_S now_state_=WeaponSage_Setup::STATE_DONE;
 
-
-    bool weapon_CameraStart = false; // 主状态机触发相机流程的标志位。
-    bool debug_launch_target_valid_ = false;
-    float debug_launch_target_ = 0.0f;
-
-    bool camera_weapon_req_ = false; // 底盘到武器：预对接动作请求位。
-
-    bool camera_z_req_ = false; // 底盘到武器：z 调整请求位。
-
-    float camera_z_ref_ = 0.0f; // 底盘到武器：z 调整参考值。
-
-    bool camera_weapon_done_ = false; // 武器到底盘：预对接动作完成位。
-
-    bool camera_z_done_ = false; // 武器到底盘：z 调整完成位。
-
-    CamZ_Ctrl cam_z_ctrl_; // 相机 z 控制器。
-    bool cam_z_run_ = false; // z 过程运行位。
-    bool cam_z_req_last_ = false; // z 请求上升沿检测位。
-    float cam_z_hold_ = 0.0f; // z 过程目标缓存。
-    float cam_z_last_ = 0.0f; // 最近一次 z 样本。
-    float cam_z_rpm_ = 0.0f; // 相机 z 速度指令缓存。
 	
     RmPocketData_t airjoy_data_; 
 

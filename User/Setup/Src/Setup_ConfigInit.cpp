@@ -29,9 +29,6 @@ Point2D arm_install_offset = {0.480f, 0.02f};   // »úĞµ±Û°²×°Æ«ÒÆ£¬µ¥Î»Ã×
 
 
 /*==============Controller Instances===========*/
-uint8_t laser_rx_buffer[20];
-uint8_t laser_rx_buffer1[20];
-uint8_t laser_rx_buffer2[20];
 //¼¤¹â²â¾à
 //USB_CDC_ cdc(&hUsbDeviceHS);
 USB_CDC_ usb_1(&hUsbDeviceHS);
@@ -123,59 +120,6 @@ void dji_motor_Init()
 /*============================== debug  DJI_Motor ===============================*/
 
 
-/*================================ debug  ï¿½ï¿½Ğµï¿½ï¿½ï¿½ï¿½ =============================*/
-
-#if ARM_DEMO_DEBUG
-
-
-M3508 m3508_ArmLaunch(1, CAN1_Bus);
-M2006 m2006_ArmStretch(2, CAN1_Bus);
-M3508 m3508_ArmRotate(3, CAN1_Bus);
-M2006 m2006_ArmPitch(4, CAN1_Bus);
-
-Arm_InitData_S arm_demoInit_data={
-   .max_launchHeight_ = 0.8f,
-   .max_stretchLength_ = 0.130f,
-   .arm_length_ = 0.3f,
-
-   .stretch_Ratio_ = 0.03098f,
-   .launch_Ratio_ = 0.1f,
-   .rotate_gearRatio_ = 10.0f,
-   .pitch_gearRatio_ = 10.0f,
-};
-
-Robot_ArmDemo arm_demo(arm_demoInit_data);
-//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-LaserPosition laserpos(&huart3,&huart6);
-
-
-void arm_motorInit()
-{
-   DJIGroupCAN1_Low.addMotor(&m3508_ArmLaunch);
-   DJIGroupCAN1_Low.addMotor(&m2006_ArmStretch);
-   DJIGroupCAN1_Low.addMotor(&m3508_ArmRotate);
-   DJIGroupCAN1_Low.addMotor(&m2006_ArmPitch);
-
-   CAN1_Bus->registerMotor(&DJIGroupCAN1_Low);
-
-   CAN1_Bus->registerMotor(&m3508_ArmLaunch);
-   CAN1_Bus->registerMotor(&m2006_ArmStretch);
-   CAN1_Bus->registerMotor(&m3508_ArmRotate);
-   CAN1_Bus->registerMotor(&m2006_ArmPitch);
-
-   CAN1_Bus->init();
-
-   m3508_ArmLaunch.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   m2006_ArmStretch.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   m3508_ArmRotate.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-   m2006_ArmPitch.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
-
-}
-#endif
-
-/*============================== debug  ï¿½ï¿½Ğµï¿½ï¿½ï¿½ï¿½ ===============================*/
-
-
 void debug_init()
 {
    /*============================= debug  ï¿½ï¿½Ğµï¿½ï¿½ï¿½ï¿½ ================================*/
@@ -211,16 +155,16 @@ laserpos.Init();//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 void CAN_Motor_Init(void);
 Point2D lader_install_offset = {0.0f, 0.0f}; // ¼¤¹âÀ×´ï°²×°Æ«ÒÆ£¬µ¥Î»Ã×
 Locate_Setup* set1 = Locate_Setup::getInstance();
-Laser_InstanceManager instance_man;
+
+
+
+
 void ALL_Setup_ConfigInit(void)
 {
-    // ³õÊ¼»¯´®¿Ú6µÄÏà»úÄ£¿é
-    Module_Camera::GetInstance(&huart6)->InitUART();
 
    HWT101CT* imu = HWT101CT::GetInstance(&huart1);
    imu->InitUART();
    TimeStamp::getInstance().init(&htim4); // ÆôÓÃÊ±¼ä´Á·şÎñ
-   // debug_init();
 	
    CAN_Motor_Init();
 
@@ -236,21 +180,18 @@ void ALL_Setup_ConfigInit(void)
    Weapon_Controller.init();
    Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
 
-//    ChassisOmni.registerWheelMotor(0, &rudder11);
-//    ChassisOmni.registerWheelMotor(1, &rudder2);
-//    ChassisOmni.registerWheelMotor(2, &rudder3);
-//    ChassisOmni.registerWheelMotor(3, &rudder4);
    ChassisOmni.init();
 
    ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
-   Chassis::InitConfig chassis_init_config = 
-   {
-        .motor_handle[0] = &steer1,
-        .motor_handle[1] = &steer2,
-        .motor_handle[2] = &steer3
-   };
-   chassis.init(chassis_init_config);
+   // Chassis::InitConfig chassis_init_config = 
+   // {
+   //      .motor_handle[0] = &steer1,
+   //      .motor_handle[1] = &steer2,
+   //      .motor_handle[2] = &steer3
+   // };
+   // chassis.init(chassis_init_config);
+
 
    Finite_StateMachine.registerArmSetup(&ARM_Controller);
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
@@ -258,16 +199,15 @@ void ALL_Setup_ConfigInit(void)
 
    Finite_StateMachine.init();
 
-   oid_encoder.init_test_task(); // Æô¶¯¾ø¶ÔÖµ±àÂëÆ÷²âÊÔÈÎÎñ
+   // oid_encoder.init_test_task(); // Æô¶¯¾ø¶ÔÖµ±àÂëÆ÷²âÊÔÈÎÎñ
    oid_encoder.init();
 
    CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
    crsf_rc->init();
-   set1->init(&instance_man,&usb_1,lader_install_offset ,arm_install_offset);
-   set1->laser_initData_.d=0.5;
+
+   set1->init(&usb_1,lader_install_offset ,arm_install_offset);
    set1->locate_setup_init();
    set1->set_startToLRL(true);
-   
 }
 
 
@@ -314,11 +254,15 @@ void CAN_Motor_Init(void)
 
 	CAN3_Bus->init();
 
+   steer1.reset_GearRatio(8.0f); steer2.reset_GearRatio(8.0f); 
+   steer3.reset_GearRatio(8.0f); steer4.reset_GearRatio(8.0f);
+
    // µ×ÅÌÂÖ×Óµç»úPID²ÎÊı³õÊ¼»¯
    steer1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    steer2.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    steer3.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
    steer4.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
+
 
    U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
    U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);

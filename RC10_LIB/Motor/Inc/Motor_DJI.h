@@ -136,8 +136,7 @@ public:
         encoder_.relocate_totalAngle(now_totalAngle * get_GearRatio());
         totalAngle_ = encoder_.getTotalAngle() * get_inv_GearRatio();
 
-        this->angle_ = fmodf(this->totalAngle_, 360.0f);
-        if(this->angle_ < 0) 
+        this->angle_ = fmodf(this->totalAngle_, 360.0f); 
             this->angle_ += 360.0f;
     }
 
