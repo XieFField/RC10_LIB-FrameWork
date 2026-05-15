@@ -1243,6 +1243,16 @@
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_Camera.cpp</FilePath>
             </File>
+            <File>
+              <FileName>Module_OIDEncoder.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_OIDEncoder.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_OIDEncoder.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_OIDEncoder.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

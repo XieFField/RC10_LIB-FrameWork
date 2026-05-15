@@ -93,6 +93,8 @@ M3508 arm_launchMotor(5, CAN3_Bus, true, false); M3508 arm_rotateMotor(7, CAN3_B
 M2006 arm_stretchMotor(8, CAN3_Bus, true, false);  
 DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
 
+OIDEncoder oid_encoder(91, CAN2_Bus, 4096, 200);
+
 #if DEBUG_DJI_Motor
 
 #if SPEEDPLANNER_DEMO_DEBUG
@@ -256,10 +258,12 @@ void ALL_Setup_ConfigInit(void)
 
    Finite_StateMachine.init();
 
+   oid_encoder.init_test_task(); // Æô¶¯¾ø¶ÔÖµ±àÂëÆ÷²âÊÔÈÎÎñ
+   oid_encoder.init();
 
    CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
    crsf_rc->init();
-	set1->init(&instance_man,&usb_1,lader_install_offset ,arm_install_offset);
+   set1->init(&instance_man,&usb_1,lader_install_offset ,arm_install_offset);
    set1->laser_initData_.d=0.5;
    set1->locate_setup_init();
    set1->set_startToLRL(true);
@@ -288,6 +292,8 @@ void CAN_Motor_Init(void)
    CAN2_Bus->registerMotor(&Weapon_Claw3); CAN2_Bus->registerMotor(&Weapon_Launch);
 
    CAN2_Bus->registerMotor(&Weapon_Elbow); 
+
+   CAN2_Bus->registerOIDEncoder(&oid_encoder); // ×¢²á¾ø¶ÔÖµ±àÂëÆ÷
 
    CAN2_Bus->init();
 
