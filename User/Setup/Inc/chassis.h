@@ -731,6 +731,7 @@ namespace jia
             void emitUart8VofaPid1kHzTrace();
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
+            void updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us);
 
             // 系统时基 [RO]
             constexpr static u8 period_ms_ = 1;                  // [RO] 控制周期（ms）
@@ -924,6 +925,32 @@ namespace jia
                 f32 selected_wheel_steer_error_deg = 0.0f; // [RO] 选中轮舵向误差（deg）
                 bool selected_wheel_drive_released = false; // [RO] 选中轮驱动是否已释放
             } debug_mirror_;
+
+            // 线程执行耗时统计（调试器只读观察）[RO]
+            struct TaskPerfStat
+            {
+                struct WindowState
+                {
+                    u16 samples_us[500] = {0U}; // [RO] 短窗样本环形缓冲（内部状态）
+                    u16 index = 0U;             // [RO] 下一次写入位置
+                    u16 count = 0U;             // [RO] 当前有效样本数（<=500）
+                    u32 sum_us = 0U;            // [RO] 当前窗口样本和（用于 O(1) 平均）
+                    u64 clamp_count = 0ULL;     // [RO] 样本被 u16 饱和截断次数（内部累计）
+                } window;
+
+                u64 last_exec_us = 0ULL;   // [RO] 最近一次循环执行耗时（不含 delay）
+                u64 min_exec_us = 0ULL;    // [RO] 历史最小执行耗时
+                u64 max_exec_us = 0ULL;    // [RO] 历史最大执行耗时
+                u64 avg_exec_us = 0ULL;    // [RO] 最近窗口平均执行耗时（短窗）
+                u64 loop_count = 0ULL;     // [RO] 已统计循环次数
+                u64 overrun_count = 0ULL;  // [RO] 超预算次数（exec_us > budget_us）
+                u64 last_start_us = 0ULL;  // [RO] 最近一次循环开始时间戳
+                u64 last_end_us = 0ULL;    // [RO] 最近一次循环结束时间戳
+                u32 budget_us = 1000U;     // [RO] 单周期预算（us，当前 period_ms_=1）
+                u16 window_size = 500U;    // [RO] 短窗长度（循环次数）
+                u16 window_count = 0U;     // [RO] 当前窗口有效样本数（<=window_size）
+                u64 window_clamp_count = 0ULL; // [RO] 样本被 u16 饱和截断次数
+            } task_perf_stat_;
 
             // 调试串口对象（一般不在调试器改动）[RO]
             Debug_Printf debug_uart_ = Debug_Printf(&huart8); // [RO]

@@ -42,7 +42,5 @@ MDK-ARM/Frame_T/system_stm32h7xx.o
 *.bak
 
 # AI agent workspace policy
-# keep docs/tests/history trackable, ignore volatile artifacts by default
-/.ai_agent_workspace/artifacts/
-!/.ai_agent_workspace/artifacts/.gitkeep
+# keep docs/tests/history/artifacts all trackable in current branch
 

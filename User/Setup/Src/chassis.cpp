@@ -8,6 +8,7 @@
 #include "task.h"
 
 #include "BSP_TimeStamp.h"
+#include "BSP_RtosTimeStampUs64.h"
 #include "Module_CrsfReceiver.h"
 #include "Module_HWT.h"
 #include "APP_PID.h"
@@ -2780,6 +2781,8 @@ namespace jia
 
             for (;;)
             {
+                const u64 loop_start_us = RtosTimeStampUs64::getTimeUs();
+
                 // 主线程每个周期的执行顺序是固定的：
                 // 1) 读取 IMU 航向/角速度
                 // 2) 解析模式并做坐标系转换
@@ -2846,6 +2849,7 @@ namespace jia
 
                 if (applyDebugModuleOverride(all_homed))
                 {
+                    updateTaskPerfStat(loop_start_us, RtosTimeStampUs64::getTimeUs());
                     vTaskDelayUntil(&time_ms_, period_ms_);
                     continue;
                 }
@@ -2859,8 +2863,89 @@ namespace jia
                 emitDebugOutputByMode(all_homed);
 
                 last_planned_data_ = planned_data_;
+                updateTaskPerfStat(loop_start_us, RtosTimeStampUs64::getTimeUs());
                 vTaskDelayUntil(&time_ms_, period_ms_);
             }
+        }
+
+        void Chassis::updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us)
+        {
+            if (loop_start_us == 0ULL || loop_end_us == 0ULL || loop_end_us < loop_start_us)
+            {
+                return;
+            }
+
+            TaskPerfStat &perf = task_perf_stat_;
+            const u64 exec_cost_us = loop_end_us - loop_start_us;
+            perf.budget_us = static_cast<u32>(period_ms_) * 1000U;
+
+            perf.last_start_us = loop_start_us;
+            perf.last_end_us = loop_end_us;
+            perf.last_exec_us = exec_cost_us;
+
+            if (perf.loop_count == 0ULL)
+            {
+                perf.min_exec_us = exec_cost_us;
+                perf.max_exec_us = exec_cost_us;
+                perf.loop_count = 1ULL;
+            }
+            else
+            {
+                if (exec_cost_us < perf.min_exec_us)
+                {
+                    perf.min_exec_us = exec_cost_us;
+                }
+                if (exec_cost_us > perf.max_exec_us)
+                {
+                    perf.max_exec_us = exec_cost_us;
+                }
+
+                perf.loop_count += 1ULL;
+            }
+
+            if (exec_cost_us > static_cast<u64>(perf.budget_us))
+            {
+                perf.overrun_count += 1ULL;
+            }
+
+            u16 sample_us = 0xFFFFU;
+            if (exec_cost_us > 0xFFFFULL)
+            {
+                perf.window.clamp_count += 1ULL;
+            }
+            else
+            {
+                sample_us = static_cast<u16>(exec_cost_us);
+            }
+
+            if (perf.window.count < 500U)
+            {
+                perf.window.samples_us[perf.window.index] = sample_us;
+                perf.window.sum_us += sample_us;
+                perf.window.count = static_cast<u16>(perf.window.count + 1U);
+            }
+            else
+            {
+                const u16 old_sample = perf.window.samples_us[perf.window.index];
+                perf.window.sum_us -= old_sample;
+                perf.window.samples_us[perf.window.index] = sample_us;
+                perf.window.sum_us += sample_us;
+            }
+
+            perf.window.index = static_cast<u16>((perf.window.index + 1U) % 500U);
+
+            if (perf.window.count > 0U)
+            {
+                perf.avg_exec_us = static_cast<u64>(perf.window.sum_us / perf.window.count);
+            }
+            else
+            {
+                perf.avg_exec_us = 0ULL;
+            }
+
+            perf.window_size = 500U;
+            perf.window_count = perf.window.count;
+            perf.window_clamp_count = perf.window.clamp_count;
         }
 
         f32 Chassis::getTargetBodyVelX() const
