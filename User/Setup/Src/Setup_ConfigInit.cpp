@@ -254,19 +254,22 @@ void ALL_Setup_ConfigInit(void)
             .drive_motor_h[2] = &U8_3,
             .drive_motor_h[3] = &U8_4,
 
+            // 四舵轮参数唯一维护入口：
+            // 后续调参请只改此处（InitConfig 实际赋值）。
+            // chassis.h 里的 InitConfig 默认值与私有成员默认值仅作构造/兜底，不作为日常调参入口。
             // 整车参数与限幅（用于主控制线程速度规划和模块命令限幅）
-            .wheel_radius_m = 0.075f,
-            .max_vel_x_m_s = 4.0f,
-            .max_vel_y_m_s = 4.0f,
-            .max_omega_z_rad_s = 8.0f,
-            .max_acc_xy_acc_m_s2 = 4.0f,
-            .max_acc_xy_dec_m_s2 = 8.0f,
-            .max_alpha_z_acc_rad_s2 = 6.0f,
-            .max_alpha_z_dec_rad_s2 = 10.0f,
-            .max_drive_omega_rad_s = 150.0f,
+            .wheel_radius_m = 0.052f,
+            .max_vel_x_m_s = 999.0f,
+            .max_vel_y_m_s = 999.0f,
+            .max_omega_z_rad_s = 999.0f,
+            .max_acc_xy_acc_m_s2 = 9999.0f,
+            .max_acc_xy_dec_m_s2 = 9999.0f,
+            .max_alpha_z_acc_rad_s2 = 9999.0f,
+            .max_alpha_z_dec_rad_s2 = 9999.0f,
+            .max_drive_omega_rad_s = 25.0f,
             .max_drive_alpha_rad_s2 = 50.0f,
-            .max_steer_rate_rad_s = 200.0f,
-            .max_steer_alpha_rad_s2 = 2500.0f,
+            .max_steer_rate_rad_s = 40000.0f,
+            .max_steer_alpha_rad_s2 = 25000.0f,
             .stationary_speed_epsilon_m_s = 0.01f,
             .enable_cosine_compensation = true,
             .idle_posture_mode = Chassis::IdlePostureMode::kXPark,
@@ -437,6 +440,11 @@ void CAN_Motor_Init(void)
    steer2.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
    steer3.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
    steer4.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
+
+    steer1.set_anglepid_circular(true);
+    steer2.set_anglepid_circular(true);
+    steer3.set_anglepid_circular(true);
+    steer4.set_anglepid_circular(true);
 
    U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
    U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);

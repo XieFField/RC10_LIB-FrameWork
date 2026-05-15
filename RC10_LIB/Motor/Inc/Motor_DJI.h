@@ -231,7 +231,13 @@ public:
     void setTargetTotalAngle(float totalAngle_set) override;
 
     void update() override; //周期性更新
-
+    void set_anglepid_circular(bool circular)
+    {
+        if(circular)
+            angle_pid_.set_as_circular();
+        else
+            angle_pid_.set_as_linear();
+    }
     // 获取输出轴状态
     float getRPM() const override;
     float getAngle() const override;
