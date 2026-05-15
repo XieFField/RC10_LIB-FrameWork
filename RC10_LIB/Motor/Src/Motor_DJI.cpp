@@ -265,6 +265,26 @@ void M3508::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, 
     angle_pid_.set_params(angle_params, angle_I_Separa);
 }
 
+PID_Param_Config M3508::get_speed_pid_params() const
+{
+    return speed_pid_.get_params();
+}
+
+PID_Param_Config M3508::get_angle_pid_params() const
+{
+    return angle_pid_.get_params();
+}
+
+float M3508::get_speed_pid_td_ratio() const
+{
+    return speed_pid_.get_td_ratio();
+}
+
+float M3508::get_angle_pid_i_separa_threshold() const
+{
+    return angle_pid_.get_i_separa_threshold();
+}
+
 void M3508::setTargetCurrent(float current_set)
 {
     mode_ = CURRENT_CONTROL;

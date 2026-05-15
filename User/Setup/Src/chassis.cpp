@@ -1384,6 +1384,7 @@ namespace jia
 
         void Chassis::isDebugMode()
         {
+            syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
             if (!debug_control_.enable)
             {
                 debug_control_.mode_resolved_raw = static_cast<u8>(DebugMode::kTorqueFree);
@@ -2029,6 +2030,51 @@ namespace jia
                 debug_mirror_.homing_runtime_zero_offset_deg[i] = radToDegF32(wheel.homing_runtime_zero_offset_rad);
                 debug_mirror_.flipped_drive[i] = wheel.flipped_drive_direction;
                 debug_mirror_.drive_gate_scale_dbg[i] = drive_gate_scale_[i];
+            }
+        }
+
+        void Chassis::syncDebugSteerPidTuneFromRuntimeOnEnableEdge()
+        {
+            const bool enable_now = debug_control_.enable;
+            if (!enable_now)
+            {
+                debug_pid_tune_.synced_on_enable_edge = false;
+                debug_enable_last_cycle_ = false;
+                return;
+            }
+
+            if (!debug_enable_last_cycle_)
+            {
+                // 调试使能上升沿：从电机运行态回读 PID 到调参缓存，形成“先读后改”基线。
+                syncDebugSteerPidTuneFromRuntime();
+                debug_pid_tune_.synced_on_enable_edge = true;
+            }
+            debug_enable_last_cycle_ = true;
+        }
+
+        void Chassis::syncDebugSteerPidTuneFromRuntime()
+        {
+            for (u8 i = 0; i < 4; ++i)
+            {
+                const bool speed_dirty = (debug_pid_tune_.steer_speed_pid_applied_stamp[i] != debug_pid_tune_.steer_speed_pid_apply_stamp[i]);
+                const bool angle_dirty = (debug_pid_tune_.steer_angle_pid_applied_stamp[i] != debug_pid_tune_.steer_angle_pid_apply_stamp[i]);
+                if (speed_dirty || angle_dirty)
+                {
+                    // 保护未 apply 的手工改动：该轮缓存跳过同步，避免覆盖调试器刚写入的值。
+                    continue;
+                }
+
+                WheelConfig &wheel = wheel_config_[i];
+                M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
+                if (steer_m3508 == nullptr)
+                {
+                    continue;
+                }
+
+                debug_pid_tune_.steer_speed_pid_cfg[i] = steer_m3508->get_speed_pid_params();
+                debug_pid_tune_.steer_angle_pid_cfg[i] = steer_m3508->get_angle_pid_params();
+                debug_pid_tune_.steer_speed_pid_td_ratio[i] = steer_m3508->get_speed_pid_td_ratio();
+                debug_pid_tune_.steer_angle_pid_i_separa[i] = steer_m3508->get_angle_pid_i_separa_threshold();
             }
         }
 

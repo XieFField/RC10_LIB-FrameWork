@@ -243,6 +243,12 @@ public:
     float getAngle() const override;
     float getTotalAngle() const override;
 
+    // 获取PID参数
+    PID_Param_Config get_speed_pid_params() const;
+    PID_Param_Config get_angle_pid_params() const;
+    float get_speed_pid_td_ratio() const;
+    float get_angle_pid_i_separa_threshold() const;
+
     void reset_GearRatio(float reset_value)
     {
         GEAR_RATIO = reset_value;

@@ -725,6 +725,8 @@ namespace jia
             void refreshDebugMirror(bool all_homed);
             void emitDebugUart8Log(bool all_homed);
             void emitUart8VofaJustFloatPidTrace();
+            void syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
+            void syncDebugSteerPidTuneFromRuntime();
             void applyDebugSteerPidRuntimeTuning();
             void emitUart8VofaPid1kHzTrace();
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
@@ -836,6 +838,7 @@ namespace jia
                 f32 direct_step_steer_single_turn_deg = 90.0f; // [RW] 阶跃幅值（单圈角，deg）
                 f32 direct_step_steer_multi_turn_deg = 180.0f; // [RW] 阶跃幅值（多圈角，deg）
             } debug_control_;
+            bool debug_enable_last_cycle_ = false; // [RO] 调试使能上周期状态（用于上升沿同步 PID 调参基线）
 
             struct DebugOutput
             {
@@ -874,6 +877,7 @@ namespace jia
                 u32 steer_angle_pid_apply_stamp[4] = {0U, 0U, 0U, 0U}; // [RW] 角度环参数申请生效戳
                 u32 steer_speed_pid_applied_stamp[4] = {0U, 0U, 0U, 0U}; // [RO] 速度环已生效戳
                 u32 steer_angle_pid_applied_stamp[4] = {0U, 0U, 0U, 0U}; // [RO] 角度环已生效戳
+                bool synced_on_enable_edge = false; // [RO] 本次调试使能上升沿是否已完成运行态参数同步
             } debug_pid_tune_;
 
             // 回零与模块运行态（主要观察）[RO]
