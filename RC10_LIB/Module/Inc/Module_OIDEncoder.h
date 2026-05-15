@@ -162,6 +162,11 @@ public:
     {
         return real_encoder_angle_;
     }
+
+    uint32_t get_encoder_raw()const
+    {
+        return encoder_raw_;
+    }
     
     float get_rpm()const
     {
