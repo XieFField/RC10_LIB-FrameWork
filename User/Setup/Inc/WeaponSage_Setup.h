@@ -194,9 +194,6 @@ private:
     void debug();
     void autoControl();
 
-
-    bool is_new_z(float z_now); // detect new z sample
-
     void calibrate();
 
 
