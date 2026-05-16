@@ -528,20 +528,20 @@ namespace jia
             // .homing_zero_offset_deg = 0.0f,      // 先填 0 跑通，再按实物零位偏差回填补偿角
             struct WheelInitConfig
             {
-                f32 pos_x_m = 0.0f;                 // 轮模块相对底盘中心的 X 坐标，单位米
-                f32 pos_y_m = 0.0f;                 // 轮模块相对底盘中心的 Y 坐标，单位米
-                f32 theta_oa_to_owi_deg = 0.0f;     // 安装几何偏移：把 OA 朝向换算到转向电机机械零位；它用于坐标变换，不是回零补偿
-                f32 steer_motor_sign = 1.0f;        // 转向电机方向符号：1.0f 表示不取反，-1.0f 表示取反，0.0f 在初始化时会被当作 1.0f
-                f32 drive_motor_sign = 1.0f;        // 驱动电机方向符号：1.0f 表示不取反，-1.0f 表示取反，0.0f 在初始化时会被当作 1.0f
-                bool homing_enabled = false;        // 是否启用该轮回零流程；没有装光电/霍尔零位开关时保持 false
-                bool homing_sensor_active_high = true; // 传感器原始 GPIO 输入高电平时若视为“触发有效”就填 true，否则填 false；它只影响“逻辑 active”理解，不决定 H/L 边沿对应的机械角
-                void *homing_gpio_port = nullptr;   // 真实光电接入后填 STM32 HAL 的 GPIOA/GPIOB 等端口，或 CubeMX 生成的 *_GPIO_Port 宏
-                u16 homing_gpio_pin = 0;            // 真实光电接入后填 GPIO_PIN_x，或 CubeMX 生成的 *_Pin 宏；未接时保持 0
-                f32 homing_falling_edge_mech_deg = 60.0f; // 原始 GPIO 从高到低（H->L）那个边沿对应的机械 OA 角，单位 deg；默认是 +60°
+                f32 pos_x_m = 0.0f;                        // 轮模块相对底盘中心的 X 坐标，单位米
+                f32 pos_y_m = 0.0f;                        // 轮模块相对底盘中心的 Y 坐标，单位米
+                f32 theta_oa_to_owi_deg = 0.0f;            // 安装几何偏移：把 OA 朝向换算到转向电机机械零位；它用于坐标变换，不是回零补偿
+                f32 steer_motor_sign = 1.0f;               // 转向电机方向符号：1.0f 表示不取反，-1.0f 表示取反，0.0f 在初始化时会被当作 1.0f
+                f32 drive_motor_sign = 1.0f;               // 驱动电机方向符号：1.0f 表示不取反，-1.0f 表示取反，0.0f 在初始化时会被当作 1.0f
+                bool homing_enabled = false;               // 是否启用该轮回零流程；没有装光电/霍尔零位开关时保持 false
+                bool homing_sensor_active_high = true;     // 传感器原始 GPIO 输入高电平时若视为“触发有效”就填 true，否则填 false；它只影响“逻辑 active”理解，不决定 H/L 边沿对应的机械角
+                void *homing_gpio_port = nullptr;          // 真实光电接入后填 STM32 HAL 的 GPIOA/GPIOB 等端口，或 CubeMX 生成的 *_GPIO_Port 宏
+                u16 homing_gpio_pin = 0;                   // 真实光电接入后填 GPIO_PIN_x，或 CubeMX 生成的 *_Pin 宏；未接时保持 0
+                f32 homing_falling_edge_mech_deg = 60.0f;  // 原始 GPIO 从高到低（H->L）那个边沿对应的机械 OA 角，单位 deg；默认是 +60°
                 f32 homing_rising_edge_mech_deg = -120.0f; // 原始 GPIO 从低到高（L->H）那个边沿对应的机械 OA 角，单位 deg；默认是 -120°
-                f32 homing_search_rpm = 10.0f;      // 回零搜索时给转向电机的转速指令，单位 rpm
-                f32 homing_zero_offset_deg = 0.0f;  // 回零补偿角：传感器触发点到期望机械零位的偏差；它在建立零点时生效，不是安装角偏移
-                f32 homing_timeout_s = 5.0f;        // 单轮回零超时时间，超时后进入故障态，单位秒
+                f32 homing_search_rpm = 10.0f;             // 回零搜索时给转向电机的转速指令，单位 rpm
+                f32 homing_zero_offset_deg = 0.0f;         // 回零补偿角：传感器触发点到期望机械零位的偏差；它在建立零点时生效，不是安装角偏移
+                f32 homing_timeout_s = 5.0f;               // 单轮回零超时时间，超时后进入故障态，单位秒
             };
 
             // InitConfig 只负责硬件句柄绑定，运行参数/标定参数使用 FourSteer 类内默认值。
@@ -574,34 +574,34 @@ namespace jia
             // 补偿结果与最近一次规划输出，供控制线程在每个周期更新。
             struct WheelConfig
             {
-                f32 pos_x_m = 0.0f;                         // 该舵轮模块在车体坐标系中的 x 安装位置，单位米
-                f32 pos_y_m = 0.0f;                         // 该舵轮模块在车体坐标系中的 y 安装位置，单位米
-                f32 theta_oa_to_owi_rad = 0.0f;             // 安装几何偏移：把舵轮在底盘平面内实际指向/滚动的方向（OA 朝向）换算到转向电机本地机械角参考系（OWI）；它用于坐标变换，不是回零补偿
-                f32 steer_motor_sign = 1.0f;                // 转向电机方向符号：1 表示不取反，-1 表示转向反馈和目标指令都按相反方向解释
-                f32 drive_motor_sign = 1.0f;                // 驱动电机方向符号：1 表示不取反，-1 表示驱动反馈和目标指令都按相反方向解释
-                Motor_Base *steer_motor_h = nullptr;        // 该模块绑定的转向电机句柄
-                Motor_Base *drive_motor_h = nullptr;        // 该模块绑定的驱动电机句柄
-                bool homing_enabled = false;                // 是否对该轮启用回零流程；false 时默认认为零位已可用
-                bool homing_sensor_active_high = true;      // 回零传感器逻辑 active 极性：true 表示高电平视为有效，false 表示低电平视为有效；不决定 H/L 边沿的机械角语义
-                void *homing_gpio_port = nullptr;           // 回零传感器 GPIO 端口运行时副本；读取零位输入时直接使用
-                u16 homing_gpio_pin = 0;                    // 回零传感器 GPIO 引脚运行时副本；与端口配合读取真实输入
-                f32 homing_falling_edge_mech_rad = 0.0f;    // 原始 GPIO H->L 边沿对应的机械 OA 角（rad）
-                f32 homing_rising_edge_mech_rad = 0.0f;     // 原始 GPIO L->H 边沿对应的机械 OA 角（rad）
-                f32 homing_search_rpm = 10.0f;              // 回零搜索阶段给转向电机的转速指令，单位 rpm
-                f32 homing_zero_offset_rad = 0.0f;          // 标定得到的零位补偿角：传感器触发点到期望机械零位的固定偏差
-                f32 homing_timeout_s = 5.0f;                // 单轮回零允许持续的最长时间，超时后进入故障态，单位秒
-                HomingState homing_state = HomingState::kIdle; // 当前轮回零状态机所处阶段
-                bool homing_last_sensor_active = false;     // 上一控制周期的原始 GPIO 高低电平；用于检测 H/L 边沿
-                bool homing_last_edge_is_falling = false;   // 最近一次抓到的边沿方向：true=H->L，false=L->H；方便调试极性和触发角
-                bool homing_zero_valid = false;             // 当前轮是否已经建立可用于闭环控制的零位
-                f32 homing_elapsed_s = 0.0f;                // 本次回零已运行时间，单位秒；用于超时判定
-                f32 homing_runtime_zero_offset_rad = 0.0f;  // 本次上电运行实际采用的零位补偿；回零成功后会把“当前触发位置”修正成运行时零点
+                f32 pos_x_m = 0.0f;                               // 该舵轮模块在车体坐标系中的 x 安装位置，单位米
+                f32 pos_y_m = 0.0f;                               // 该舵轮模块在车体坐标系中的 y 安装位置，单位米
+                f32 theta_oa_to_owi_rad = 0.0f;                   // 安装几何偏移：把舵轮在底盘平面内实际指向/滚动的方向（OA 朝向）换算到转向电机本地机械角参考系（OWI）；它用于坐标变换，不是回零补偿
+                f32 steer_motor_sign = 1.0f;                      // 转向电机方向符号：1 表示不取反，-1 表示转向反馈和目标指令都按相反方向解释
+                f32 drive_motor_sign = 1.0f;                      // 驱动电机方向符号：1 表示不取反，-1 表示驱动反馈和目标指令都按相反方向解释
+                Motor_Base *steer_motor_h = nullptr;              // 该模块绑定的转向电机句柄
+                Motor_Base *drive_motor_h = nullptr;              // 该模块绑定的驱动电机句柄
+                bool homing_enabled = false;                      // 是否对该轮启用回零流程；false 时默认认为零位已可用
+                bool homing_sensor_active_high = true;            // 回零传感器逻辑 active 极性：true 表示高电平视为有效，false 表示低电平视为有效；不决定 H/L 边沿的机械角语义
+                void *homing_gpio_port = nullptr;                 // 回零传感器 GPIO 端口运行时副本；读取零位输入时直接使用
+                u16 homing_gpio_pin = 0;                          // 回零传感器 GPIO 引脚运行时副本；与端口配合读取真实输入
+                f32 homing_falling_edge_mech_rad = 0.0f;          // 原始 GPIO H->L 边沿对应的机械 OA 角（rad）
+                f32 homing_rising_edge_mech_rad = 0.0f;           // 原始 GPIO L->H 边沿对应的机械 OA 角（rad）
+                f32 homing_search_rpm = 10.0f;                    // 回零搜索阶段给转向电机的转速指令，单位 rpm
+                f32 homing_zero_offset_rad = 0.0f;                // 标定得到的零位补偿角：传感器触发点到期望机械零位的固定偏差
+                f32 homing_timeout_s = 5.0f;                      // 单轮回零允许持续的最长时间，超时后进入故障态，单位秒
+                HomingState homing_state = HomingState::kIdle;    // 当前轮回零状态机所处阶段
+                bool homing_last_sensor_active = false;           // 上一控制周期的原始 GPIO 高低电平；用于检测 H/L 边沿
+                bool homing_last_edge_is_falling = false;         // 最近一次抓到的边沿方向：true=H->L，false=L->H；方便调试极性和触发角
+                bool homing_zero_valid = false;                   // 当前轮是否已经建立可用于闭环控制的零位
+                f32 homing_elapsed_s = 0.0f;                      // 本次回零已运行时间，单位秒；用于超时判定
+                f32 homing_runtime_zero_offset_rad = 0.0f;        // 本次上电运行实际采用的零位补偿；回零成功后会把“当前触发位置”修正成运行时零点
                 f32 corrected_steer_motor_total_angle_rad = 0.0f; // 已乘方向符号并叠加运行时零位补偿后的转向电机连续总角度反馈
-                f32 corrected_drive_omega_rad_s = 0.0f;     // 已乘方向符号后的驱动轮角速度反馈，单位 rad/s
-                f32 target_steer_motor_total_angle_rad = 0.0f; // 当前周期解算后要发给转向电机的本地连续目标角
-                f32 target_drive_omega_rad_s = 0.0f;        // 当前周期解算后要发给驱动电机的目标角速度，单位 rad/s
-                f32 steer_target_velocity_rad_s = 0.0f;     // 转向二阶限幅后得到的目标角速度，便于平滑舵向变化
-                bool flipped_drive_direction = false;       // 本周期是否采用“舵角翻转 180 度、驱动反向”策略来走更短转角路径
+                f32 corrected_drive_omega_rad_s = 0.0f;           // 已乘方向符号后的驱动轮角速度反馈，单位 rad/s
+                f32 target_steer_motor_total_angle_rad = 0.0f;    // 当前周期解算后要发给转向电机的本地连续目标角
+                f32 target_drive_omega_rad_s = 0.0f;              // 当前周期解算后要发给驱动电机的目标角速度，单位 rad/s
+                f32 steer_target_velocity_rad_s = 0.0f;           // 转向二阶限幅后得到的目标角速度，便于平滑舵向变化
+                bool flipped_drive_direction = false;             // 本周期是否采用“舵角翻转 180 度、驱动反向”策略来走更短转角路径
             };
 
             // Mode 表示四舵轮底盘当前采用的控制语义。
@@ -684,6 +684,7 @@ namespace jia
                 kText = 1,
                 kOverviewJustFloat = 2,
                 kSingleWheelJustFloat = 3,
+                kSingleWheelDualMotorJustFloat = 4,
             };
             DebugMode resolveDebugMode(u8 raw_mode) const;
             void applyDebugTargetOverride();
@@ -729,6 +730,7 @@ namespace jia
             void syncDebugSteerPidTuneFromRuntime();
             void applyDebugSteerPidRuntimeTuning();
             void emitUart8VofaPid1kHzTrace();
+            void emitUart8VofaDualMotor1kHzTrace();
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us);
@@ -747,20 +749,20 @@ namespace jia
             // 说明：FourSteer 初始化后会把这里作为默认基线读取。
             // 这一组决定“车能跑多快、加减速有多柔和、停下来时保持什么姿态”。
             // =====================================================================
-            f32 wheel_radius_m_ = 0.052f;                     // [RW, 慎改] 轮半径。决定线速度与驱动角速度的换算比例，改错会直接导致速度尺度和里程计比例偏差。
-            f32 max_vel_x_ = 999.0f;                          // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
-            f32 max_vel_y_ = 999.0f;                          // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
-            f32 max_omega_z_ = 999.0f;                        // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
-            f32 max_acc_xy_acc_ = 9999.0f;                    // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
-            f32 max_acc_xy_dec_ = 9999.0f;                    // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
-            f32 max_alpha_z_acc_ = 9999.0f;                   // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
-            f32 max_alpha_z_dec_ = 9999.0f;                   // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
-            f32 max_drive_omega_rad_s_ = 25.0f;               // [RW] 驱动目标角速度上限（rad/s）。最终下发给驱动电机前会做限幅，防止超速命令。
-            f32 max_drive_alpha_rad_s2_ = 50.0f;              // [RW] 驱动角速度变化率上限（rad/s^2）。越小越像“缓启动/缓刹车”。
-            f32 max_steer_rate_rad_s_ = 40000.0f;             // [RW] 转向目标角速度上限（rad/s）。越大转向越快，但过大容易让舵角命令太激进。
-            f32 max_steer_alpha_rad_s2_ = 25000.0f;           // [RW] 转向目标角加速度上限（rad/s^2）。用于限制舵角变化的“突然性”。
-            f32 stationary_speed_epsilon_m_s_ = 0.01f;        // [RW] 近似静止阈值（m/s）。低于该速度时可认为底盘处于停车/低速保护区。
-            bool enable_cosine_compensation_ = false;          // [RW] 是否启用舵角余弦补偿。开启后，舵角偏离时会折算驱动分量，减小横滑和无效驱动。
+            f32 wheel_radius_m_ = 0.052f;                                    // [RW, 慎改] 轮半径。决定线速度与驱动角速度的换算比例，改错会直接导致速度尺度和里程计比例偏差。
+            f32 max_vel_x_ = 2.0f;                                         // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
+            f32 max_vel_y_ = 2.0f;                                         // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
+            f32 max_omega_z_ = 2.0f;                                       // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
+            f32 max_acc_xy_acc_ = 10.0f;                                   // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
+            f32 max_acc_xy_dec_ = 10.0f;                                   // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
+            f32 max_alpha_z_acc_ = 10.0f;                                  // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
+            f32 max_alpha_z_dec_ = 10.0f;                                  // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
+            f32 max_drive_omega_rad_s_ = 25.0f;                              // [RW] 驱动目标角速度上限（rad/s）。最终下发给驱动电机前会做限幅，防止超速命令。
+            f32 max_drive_alpha_rad_s2_ = 50.0f;                             // [RW] 驱动角速度变化率上限（rad/s^2）。越小越像“缓启动/缓刹车”。
+            f32 max_steer_rate_rad_s_ = 40000.0f;                            // [RW] 转向目标角速度上限（rad/s）。越大转向越快，但过大容易让舵角命令太激进。
+            f32 max_steer_alpha_rad_s2_ = 25000.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。用于限制舵角变化的“突然性”。
+            f32 stationary_speed_epsilon_m_s_ = 0.01f;                       // [RW] 近似静止阈值（m/s）。低于该速度时可认为底盘处于停车/低速保护区。
+            bool enable_cosine_compensation_ = false;                        // [RW] 是否启用舵角余弦补偿。开启后，舵角偏离时会折算驱动分量，减小横滑和无效驱动。
             IdlePostureMode idle_posture_mode_ = IdlePostureMode::kHoldLast; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。
 
             // =====================================================================
@@ -772,35 +774,35 @@ namespace jia
                 // ---- 舵角解算 ----------------------------------------------------
                 // 决定每个模块在“直接转过去”与“翻转 180° 再配合驱动反向”之间如何选择。
                 // 这个选择直接影响转向路径长度、驱动方向是否反转，以及模块在大角度切换时是否抖动。
-                SteeringStrategyMode steering_strategy_mode = SteeringStrategyMode::kShortestPath;
-                f32 flip_enter_angle_deg = 100.0f; // [RW] 翻转进入阈值（deg）。角差大于该值时，策略才允许“舵角+180°并反转驱动”。
-                f32 flip_exit_angle_deg = 80.0f;   // [RW] 翻转退出阈值（deg）。必须小于进入阈值，用于形成滞回，避免临界角附近来回翻转。
+                SteeringStrategyMode steering_strategy_mode = SteeringStrategyMode::kAlwaysForward; // [RW] 舵角解算策略。不同策略在转向路径和稳定性上有不同权衡。
+                f32 flip_enter_angle_deg = 100.0f;                                                  // [RW] 翻转进入阈值（deg）。角差大于该值时，策略才允许“舵角+180°并反转驱动”。
+                f32 flip_exit_angle_deg = 80.0f;                                                    // [RW] 翻转退出阈值（deg）。必须小于进入阈值，用于形成滞回，避免临界角附近来回翻转。
 
                 // ---- 驱动抑制（Drive Gate） -------------------------------------
                 // 当舵角还没对准时，按策略压低驱动输出，减少横滑、打滑和轮子“边转边拖”的冲击。
                 // 适合大角度转向、起步前对轮、低速细调等场景。
-                bool enable_drive_gate = true; // [RW] 是否启用驱动门控。关闭后驱动不再因舵角误差被额外压低。
+                bool enable_drive_gate = false;                                       // [RW] 是否启用驱动门控。关闭后驱动不再因舵角误差被额外压低。
                 DriveGateStrategy drive_gate_strategy = DriveGateStrategy::kHardGate; // [RW] 门控形状：硬门控更直接，曲线门控更平滑。
-                DriveGateScope drive_gate_scope = DriveGateScope::kGlobal;             // [RW] 门控作用范围：全局统一收紧，或按单轮分别计算。
-                f32 drive_gate_close_angle_deg = 1.0f;                                  // [RW] 关闭区角差阈值（deg）。超过该误差后会进入更强的驱动抑制。
-                f32 drive_gate_min_scale = 0.5f;                                        // [RW] 硬门控最小缩放。0 表示可完全关断驱动，1 表示完全不压。
-                f32 drive_gate_curve_exponent = 3.0f;                                   // [RW] 曲线门控指数。越大曲线越“硬”，越接近临界开关。
-                f32 drive_gate_curve_half_angle_deg = 3.0f;                             // [RW] 曲线门控半效角（deg）。大致决定从“明显抑制”到“基本放开”的过渡宽度。
-                f32 drive_gate_curve_min_scale = 0.0f;                                  // [RW] 曲线门控保底缩放。即使误差很大，也至少保留多少驱动比例。
-                f32 drive_gate_transition_linear_speed_m_s = 0.10f;                     // [RW] 线速度过渡阈值（m/s）。速度越低，门控越容易收紧，减少静止附近的横向冲击。
-                f32 drive_gate_transition_angular_speed_rad_s = 0.10f;                  // [RW] 角速度过渡阈值（rad/s）。自转越慢，门控越偏向保守。
-                f32 drive_gate_scale_ramp_up_s = 0.10f;                                  // [RW] 门控放开时间常数（s）。越小表示释放越快，越大表示更平滑。
-                f32 drive_gate_scale_ramp_down_s = 0.50f;                                // [RW] 门控收紧时间常数（s）。越大表示收紧更慢，更不容易突然“掐断”驱动。
+                DriveGateScope drive_gate_scope = DriveGateScope::kGlobal;            // [RW] 门控作用范围：全局统一收紧，或按单轮分别计算。
+                f32 drive_gate_close_angle_deg = 1.0f;                                // [RW] 关闭区角差阈值（deg）。超过该误差后会进入更强的驱动抑制。
+                f32 drive_gate_min_scale = 0.5f;                                      // [RW] 硬门控最小缩放。0 表示可完全关断驱动，1 表示完全不压。
+                f32 drive_gate_curve_exponent = 3.0f;                                 // [RW] 曲线门控指数。越大曲线越“硬”，越接近临界开关。
+                f32 drive_gate_curve_half_angle_deg = 3.0f;                           // [RW] 曲线门控半效角（deg）。大致决定从“明显抑制”到“基本放开”的过渡宽度。
+                f32 drive_gate_curve_min_scale = 0.0f;                                // [RW] 曲线门控保底缩放。即使误差很大，也至少保留多少驱动比例。
+                f32 drive_gate_transition_linear_speed_m_s = 0.10f;                   // [RW] 线速度过渡阈值（m/s）。速度越低，门控越容易收紧，减少静止附近的横向冲击。
+                f32 drive_gate_transition_angular_speed_rad_s = 0.10f;                // [RW] 角速度过渡阈值（rad/s）。自转越慢，门控越偏向保守。
+                f32 drive_gate_scale_ramp_up_s = 0.10f;                               // [RW] 门控放开时间常数（s）。越小表示释放越快，越大表示更平滑。
+                f32 drive_gate_scale_ramp_down_s = 0.50f;                             // [RW] 门控收紧时间常数（s）。越大表示收紧更慢，更不容易突然“掐断”驱动。
 
                 // ---- 停车转向保护 ------------------------------------------------
                 // 在低速或静止时抑制不必要的舵角摆动，避免轮子在接近停住时反复“找角”。
                 // 它主要解决停车抖动、低速微调来回打舵、以及静止姿态不稳定的问题。
-                bool enable_stop_steer_guard = true; // [RW] 是否启用停车转向保护。关闭后低速区的舵角跟踪会更直接，但也更容易抖动。
+                bool enable_stop_steer_guard = false;                                                 // [RW] 是否启用停车转向保护。关闭后低速区的舵角跟踪会更直接，但也更容易抖动。
                 StopSteerGuardStrategy stop_steer_guard_strategy = StopSteerGuardStrategy::kHardHold; // [RW] 停车保护形状：硬保持更稳，曲线混合更柔和。
-                f32 stop_guard_release_speed_m_s = 0.01f;      // [RW] 释放阈值（m/s）。低于该速度时，可视为进入停车保护区。
-                f32 stop_guard_blend_start_speed_m_s = 0.20f;  // [RW] 混合起点速度（m/s）。从正常舵角控制逐步过渡到停车保护的起始点。
-                f32 stop_guard_curve_half_speed_m_s = 0.08f;   // [RW] 曲线混合半效速度（m/s）。决定混合函数中“过半”的速度位置。
-                f32 stop_guard_curve_exponent = 2.0f;          // [RW] 曲线混合指数。越大过渡越陡，越小过渡越平缓。
+                f32 stop_guard_release_speed_m_s = 0.01f;                                             // [RW] 释放阈值（m/s）。低于该速度时，可视为进入停车保护区。
+                f32 stop_guard_blend_start_speed_m_s = 0.20f;                                         // [RW] 混合起点速度（m/s）。从正常舵角控制逐步过渡到停车保护的起始点。
+                f32 stop_guard_curve_half_speed_m_s = 0.08f;                                          // [RW] 曲线混合半效速度（m/s）。决定混合函数中“过半”的速度位置。
+                f32 stop_guard_curve_exponent = 2.0f;                                                 // [RW] 曲线混合指数。越大过渡越陡，越小过渡越平缓。
             };
             StrategyConfig default_strategy_cfg_; // [RW, 慎改] 默认策略基线。用于初始化和“恢复默认值”，不要把它当作实时状态。
             StrategyConfig runtime_strategy_cfg_; // [RW] 当前生效的运行时策略。可被外部接口动态切换，控制链路实际读取它。
@@ -809,9 +811,9 @@ namespace jia
             // 航向控制参数（运行时可调）[RW]
             // 说明：这组参数只影响航向锁定/锁角逻辑，不影响平移速度规划。
             // =====================================================================
-            PID_Position rot_z_pid_;              // [RW, 慎改] 航向位置环 PID。用于 LockToYaw / 相关锁角模式的角度误差闭环。
-            u8 rot_z_pid_period_ = 1;             // [RW] PID 更新周期分频。1 表示每个控制周期都更新，数值越大频率越低、负载越小但响应更慢。
-            f32 max_lock_to_rot_z_rad_s_ = 4.0f;  // [RW] LockToYaw 模式下的角速度上限（rad/s）。用于限制“往目标角赶”的最快速度。
+            PID_Position rot_z_pid_;                  // [RW, 慎改] 航向位置环 PID。用于 LockToYaw / 相关锁角模式的角度误差闭环。
+            u8 rot_z_pid_period_ = 1;                 // [RW] PID 更新周期分频。1 表示每个控制周期都更新，数值越大频率越低、负载越小但响应更慢。
+            f32 max_lock_to_rot_z_rad_s_ = 4.0f;      // [RW] LockToYaw 模式下的角速度上限（rad/s）。用于限制“往目标角赶”的最快速度。
             u32 lock_now_rot_z_shift_time_ms_ = 1000; // [RW] LockNow 松手缓冲时长（ms）。松开后短时间内继续维持目标，避免姿态突然跳变。
 
             // =====================================================================
@@ -822,51 +824,51 @@ namespace jia
             struct DebugControl
             {
                 // ---- 调试总开关与模式入口 ---------------------------------------
-                bool enable = true; // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
-                u8 mode_raw = 0;    // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
+                bool enable = true;                                             // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
+                u8 mode_raw = 0;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
                 u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。用于观察 mode_raw 经过归一化后的结果。
-                u8 wheel_index = 0; // [RW] 选中轮号（0~3）。用于单轮调试、单轮追踪日志和执行层直控的目标轮选择。
+                u8 wheel_index = 0;                                             // [RW] 主选中轮号（0~3）。默认作为单轮调试与单轮输出追踪的统一轮号来源。
 
                 // ---- 航向 / 激励注入 ---------------------------------------------
-                f32 lock_rot_z = 0.0f; // [RW] LockTo 调试目标角（rad）。只在航向锁定相关调试中有意义。
-                bool inject_step = false; // [RW] 是否注入阶跃信号。用于调试响应、阶跃跟踪或观察动态性能。
-                bool inject_sine = false; // [RW] 是否注入正弦信号。用于频响、跟踪误差和相位滞后观察。
+                f32 lock_rot_z = 0.0f;     // [RW] LockTo 调试目标角（rad）。只在航向锁定相关调试中有意义。
+                bool inject_step = false;  // [RW] 是否注入阶跃信号。用于调试响应、阶跃跟踪或观察动态性能。
+                bool inject_sine = false;  // [RW] 是否注入正弦信号。用于频响、跟踪误差和相位滞后观察。
                 f32 sine_amplitude = 0.0f; // [RW] 正弦幅值。与注入开关配合使用，表示激励强度。
                 f32 sine_frequency = 0.1f; // [RW] 正弦频率（Hz）。越高越能看出响应速度，越低越适合慢速观察。
-                f32 sine_offset = 0.0f; // [RW] 正弦偏置。把激励整体平移到某个基线附近使用。
+                f32 sine_offset = 0.0f;    // [RW] 正弦偏置。把激励整体平移到某个基线附近使用。
 
                 // ---- mode20：单轮调试 -------------------------------------------
-                bool single_wheel_drive_enable = true; // [RW] mode20 下是否允许驱动输出。关闭时只看舵向，不下发驱动。
-                bool single_wheel_soft_steer_enable = false; // [RW] mode20 下是否启用舵向软限幅轨迹。开启后不会一步跳到目标，而是按限速/限加速度渐进到位。
-                bool single_wheel_use_custom_steer_limit = false; // [RW] mode20 是否使用自定义舵向限速参数。关闭时用默认舵向约束。
-                f32 single_wheel_steer_rate_limit_deg_s = 120.0f; // [RW] mode20 舵向角速度上限（deg/s）。只在软舵向或限速轨迹下发挥作用。
-                f32 single_wheel_steer_accel_limit_deg_s2 = 600.0f; // [RW] mode20 舵向角加速度上限（deg/s^2）。限制舵向变化“猛不猛”。
+                bool single_wheel_drive_enable = true;               // [RW] mode20 下是否允许驱动输出。关闭时只看舵向，不下发驱动。
+                bool single_wheel_soft_steer_enable = false;         // [RW] mode20 下是否启用舵向软限幅轨迹。开启后不会一步跳到目标，而是按限速/限加速度渐进到位。
+                bool single_wheel_use_custom_steer_limit = false;    // [RW] mode20 是否使用自定义舵向限速参数。关闭时用默认舵向约束。
+                f32 single_wheel_steer_rate_limit_deg_s = 120.0f;    // [RW] mode20 舵向角速度上限（deg/s）。只在软舵向或限速轨迹下发挥作用。
+                f32 single_wheel_steer_accel_limit_deg_s2 = 600.0f;  // [RW] mode20 舵向角加速度上限（deg/s^2）。限制舵向变化“猛不猛”。
                 bool single_wheel_drive_release_gate_enable = false; // [RW] mode20 驱动释放门控。开启后，舵角没对准前会先压住驱动。
-                f32 single_wheel_drive_release_error_deg = 5.0f; // [RW] mode20 驱动释放角差阈值（deg）。舵角误差小于该值时才允许更积极地释放驱动。
-                f32 single_wheel_target_steer_deg = 0.0f; // [RW] mode20 单轮舵向目标 OA（deg）。单轮调试时直接给舵角目标。
-                f32 single_wheel_target_drive_rpm = 0.0f; // [RW] mode20 单轮驱动目标（rpm）。单轮调试时直接给驱动速度目标。
+                f32 single_wheel_drive_release_error_deg = 5.0f;     // [RW] mode20 驱动释放角差阈值（deg）。舵角误差小于该值时才允许更积极地释放驱动。
+                f32 single_wheel_target_steer_deg = 0.0f;            // [RW] mode20 单轮舵向目标 OA（deg）。单轮调试时直接给舵角目标。
+                f32 single_wheel_target_drive_rpm = 0.0f;            // [RW] mode20 单轮驱动目标（rpm）。单轮调试时直接给驱动速度目标。
 
                 // ---- mode30：执行层直控 -----------------------------------------
-                bool direct_estop = true; // [RW] mode30 急停闸门。true 时禁止所有执行层输出，适合调试前的“安全锁”。
-                bool direct_enable_steer[4] = {false, false, false, false}; // [RW] mode30 每轮舵向执行使能。单独放开某一轮的舵向下发。
-                bool direct_enable_drive[4] = {false, false, false, false}; // [RW] mode30 每轮驱动执行使能。单独放开某一轮的驱动下发。
-                u8 direct_input_source = 0; // [RW] mode30 输入来源：0=调试器缓存值，1=左摇杆，2=右摇杆阶跃。
-                u8 direct_steer_control_type = 1; // [RW] mode30 舵向控制方式：0=电流，1=速度，2=单圈角，3=多圈角。
-                f32 direct_steer_current_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] mode30 舵向电流目标缓存。作为直控输入的“待下发值”。
-                f32 direct_steer_rpm[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] mode30 舵向速度目标缓存。作为直控输入的“待下发值”。
+                bool direct_estop = true;                                       // [RW] mode30 急停闸门。true 时禁止所有执行层输出，适合调试前的“安全锁”。
+                bool direct_enable_steer[4] = {false, false, false, false};     // [RW] mode30 每轮舵向执行使能。单独放开某一轮的舵向下发。
+                bool direct_enable_drive[4] = {false, false, false, false};     // [RW] mode30 每轮驱动执行使能。单独放开某一轮的驱动下发。
+                u8 direct_input_source = 0;                                     // [RW] mode30 输入来源：0=调试器缓存值，1=左摇杆，2=右摇杆阶跃。
+                u8 direct_steer_control_type = 1;                               // [RW] mode30 舵向控制方式：0=电流，1=速度，2=单圈角，3=多圈角。
+                f32 direct_steer_current_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};      // [RW] mode30 舵向电流目标缓存。作为直控输入的“待下发值”。
+                f32 direct_steer_rpm[4] = {0.0f, 0.0f, 0.0f, 0.0f};             // [RW] mode30 舵向速度目标缓存。作为直控输入的“待下发值”。
                 f32 direct_steer_single_turn_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] mode30 舵向单圈角目标缓存。作为直控输入的“待下发值”。
-                f32 direct_steer_multi_turn_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] mode30 舵向多圈角目标缓存。作为直控输入的“待下发值”。
-                f32 direct_drive_rpm[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] mode30 驱动速度目标缓存。作为直控输入的“待下发值”。
-                f32 direct_drive_rpm_limit = 500.0f; // [RW] mode30 驱动目标限幅（rpm）。下发前的安全上限。
-                f32 direct_steer_rpm_limit = 300.0f; // [RW] mode30 舵向速度限幅（rpm）。避免舵向指令过快。
-                f32 direct_steer_current_limit_mA = 12000.0f; // [RW] mode30 舵向电流限幅（mA）。避免当前环指令过大。
-                f32 direct_steer_single_turn_limit_deg = 180.0f; // [RW] mode30 单圈角限幅（deg）。适合做单圈范围内的安全测试。
-                f32 direct_steer_multi_turn_limit_deg = 1080.0f; // [RW] mode30 多圈角限幅（deg）。限制多圈试验时的总角度范围。
-                f32 direct_step_threshold = 0.3f; // [RW] 右摇杆阶跃触发阈值。超过该幅值才认为用户想发出阶跃动作。
-                f32 direct_step_steer_current_mA = 2000.0f; // [RW] 阶跃幅值（电流，mA）。右摇杆触发后用于给舵向电流一个固定跃迁量。
-                f32 direct_step_steer_rpm = 100.0f; // [RW] 阶跃幅值（速度，rpm）。右摇杆触发后用于给舵向速度一个固定跃迁量。
-                f32 direct_step_steer_single_turn_deg = 90.0f; // [RW] 阶跃幅值（单圈角，deg）。右摇杆触发后用于给单圈角一个固定跃迁量。
-                f32 direct_step_steer_multi_turn_deg = 180.0f; // [RW] 阶跃幅值（多圈角，deg）。右摇杆触发后用于给多圈角一个固定跃迁量。
+                f32 direct_steer_multi_turn_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};  // [RW] mode30 舵向多圈角目标缓存。作为直控输入的“待下发值”。
+                f32 direct_drive_rpm[4] = {0.0f, 0.0f, 0.0f, 0.0f};             // [RW] mode30 驱动速度目标缓存。作为直控输入的“待下发值”。
+                f32 direct_drive_rpm_limit = 500.0f;                            // [RW] mode30 驱动目标限幅（rpm）。下发前的安全上限。
+                f32 direct_steer_rpm_limit = 300.0f;                            // [RW] mode30 舵向速度限幅（rpm）。避免舵向指令过快。
+                f32 direct_steer_current_limit_mA = 12000.0f;                   // [RW] mode30 舵向电流限幅（mA）。避免当前环指令过大。
+                f32 direct_steer_single_turn_limit_deg = 180.0f;                // [RW] mode30 单圈角限幅（deg）。适合做单圈范围内的安全测试。
+                f32 direct_steer_multi_turn_limit_deg = 1080.0f;                // [RW] mode30 多圈角限幅（deg）。限制多圈试验时的总角度范围。
+                f32 direct_step_threshold = 0.3f;                               // [RW] 右摇杆阶跃触发阈值。超过该幅值才认为用户想发出阶跃动作。
+                f32 direct_step_steer_current_mA = 2000.0f;                     // [RW] 阶跃幅值（电流，mA）。右摇杆触发后用于给舵向电流一个固定跃迁量。
+                f32 direct_step_steer_rpm = 100.0f;                             // [RW] 阶跃幅值（速度，rpm）。右摇杆触发后用于给舵向速度一个固定跃迁量。
+                f32 direct_step_steer_single_turn_deg = 90.0f;                  // [RW] 阶跃幅值（单圈角，deg）。右摇杆触发后用于给单圈角一个固定跃迁量。
+                f32 direct_step_steer_multi_turn_deg = 180.0f;                  // [RW] 阶跃幅值（多圈角，deg）。右摇杆触发后用于给多圈角一个固定跃迁量。
             } debug_control_;
             bool debug_enable_last_cycle_ = false; // [RO] 调试使能上周期状态。常用于检测 enable 上升沿，并在那一刻同步调试参数基线。
 
@@ -878,25 +880,33 @@ namespace jia
             struct DebugOutput
             {
                 // ---- 输出总开关与模式选择 ---------------------------------------
-                bool output_enable = true; // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
+                bool output_enable = true;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
                 u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kText); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat。
-                u32 text_period_ms = 500; // [RW] 文本日志周期（ms）。只在 mode1 下使用，控制文本总刷新频率。
-                u8 text_log_level = 1; // [RW] 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
-                TickType_t text_last_ms = 0; // [RO] 文本日志节流时间戳。记录上一次发文本的时间，防止串口刷屏。
-                u8 text_log_phase = 0; // [RO] 文本分相输出索引。0=FS 总览，1=FSW 单轮细节，2=FSH 回零/对位细节。
+                u32 text_period_ms = 500;                                     // [RW] 文本日志周期（ms）。只在 mode1 下使用，控制文本总刷新频率。
+                u8 text_log_level = 1;                                        // [RW] 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
+                TickType_t text_last_ms = 0;                                  // [RO] 文本日志节流时间戳。记录上一次发文本的时间，防止串口刷屏。
+                u8 text_log_phase = 0;                                        // [RO] 文本分相输出索引。0=FS 总览，1=FSW 单轮细节，2=FSH 回零/对位细节。
 
                 // ---- mode2：四轮总览 justfloat ---------------------------------
-                u32 overview_justfloat_period_ms = 5; // [RW] mode2 四轮总览 justfloat 周期（ms）。控制每次发送完整四轮电机数据的频率。
+                u32 overview_justfloat_period_ms = 5;      // [RW] mode2 四轮总览 justfloat 周期（ms）。控制每次发送完整四轮电机数据的频率。
                 TickType_t overview_justfloat_last_ms = 0; // [RO] mode2 发送节流时间戳。防止总览数据过于频繁。
 
                 // ---- mode3：单轮高速 justfloat ---------------------------------
-                u8 single_wheel_1khz_index = 0; // [RW] mode3 高速输出轮号。指定哪一轮作为 1kHz 高速追踪对象。
-                u32 single_wheel_1khz_period_ms = 1; // [RW] mode3 目标周期（ms）。一般设为 1ms，表示尽可能按控制周期输出。
+                bool single_wheel_1khz_use_override_index = false; // [RW] mode3 是否使用私有轮号覆盖。false=跟随 DebugControl::wheel_index，true=使用 single_wheel_1khz_index。
+                u8 single_wheel_1khz_index = 0;           // [RW] mode3 私有轮号（覆盖值）。仅当 single_wheel_1khz_use_override_index=true 时生效。
+                u32 single_wheel_1khz_period_ms = 1;      // [RW] mode3 目标周期（ms）。一般设为 1ms，表示尽可能按控制周期输出。
                 TickType_t single_wheel_1khz_last_ms = 0; // [RO] mode3 发送节流时间戳。记录高速输出最近一次发送时刻。
+
+                // ---- mode4：单轮双电机高速 justfloat ----------------------------
+                // 约定：这里把 drive_motor_h 作为“航向电机”源，并和 steer_motor_h 同帧输出。
+                bool single_wheel_dual_motor_use_override_index = false; // [RW] mode4 是否使用私有轮号覆盖。false=跟随 DebugControl::wheel_index，true=使用 single_wheel_dual_motor_index。
+                u8 single_wheel_dual_motor_index = 0;           // [RW] mode4 私有轮号（覆盖值）。仅当 single_wheel_dual_motor_use_override_index=true 时生效。
+                u32 single_wheel_dual_motor_period_ms = 2;      // [RW] mode4 目标周期（ms）。默认 2ms，兼顾分辨率与串口稳定性。
+                TickType_t single_wheel_dual_motor_last_ms = 0; // [RO] mode4 发送节流时间戳。记录双电机高速输出最近一次发送时刻。
 
                 // ---- mode1：文本追踪节流 ----------------------------------------
                 TickType_t single_wheel_trace_last_ms = 0; // [RO] 单轮文本跟踪节流时间戳。用于 mode1 下的单轮细节日志限频。
-                TickType_t direct_trace_last_ms = 0; // [RO] 执行层文本跟踪节流时间戳。用于 mode1 下的直控调试日志限频。
+                TickType_t direct_trace_last_ms = 0;       // [RO] 执行层文本跟踪节流时间戳。用于 mode1 下的直控调试日志限频。
             } debug_output_;
 
             // =====================================================================
@@ -906,13 +916,15 @@ namespace jia
             // =====================================================================
             struct DebugPidTune
             {
-                PID_Param_Config steer_speed_pid_cfg[4] = { // [RW] 四轮舵向速度环参数缓存。这里只是待同步配置，不会立刻改动正在运行的 PID。
+                PID_Param_Config steer_speed_pid_cfg[4] = {
+                    // [RW] 四轮舵向速度环参数缓存。这里只是待同步配置，不会立刻改动正在运行的 PID。
                     {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f},
                     {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f},
                     {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f},
                     {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f},
                 };
-                PID_Param_Config steer_angle_pid_cfg[4] = { // [RW] 四轮舵向角度环参数缓存。修改后同样要经过同步流程才会进入运行态。
+                PID_Param_Config steer_angle_pid_cfg[4] = {
+                    // [RW] 四轮舵向角度环参数缓存。修改后同样要经过同步流程才会进入运行态。
                     {.kp = 3.5f, .ki = 0.0f, .kd = 0.05f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 500.0f, .deadband = 0.03f},
                     {.kp = 3.5f, .ki = 0.0f, .kd = 0.05f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 500.0f, .deadband = 0.03f},
                     {.kp = 3.5f, .ki = 0.0f, .kd = 0.05f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 500.0f, .deadband = 0.03f},
@@ -920,26 +932,26 @@ namespace jia
                 };
                 f32 steer_speed_pid_td_ratio[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] 速度环 TD 比例参数。属于扩展调参项，通常和速度环整定一起看。
                 f32 steer_angle_pid_i_separa[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] 角度环积分分离参数。用于决定误差多大时才允许积分参与。
-                u32 steer_speed_pid_apply_stamp[4] = {0U, 0U, 0U, 0U}; // [RW] 速度环参数申请生效戳。外部写入后，通过同步流程消费。
-                u32 steer_angle_pid_apply_stamp[4] = {0U, 0U, 0U, 0U}; // [RW] 角度环参数申请生效戳。外部写入后，通过同步流程消费。
-                u32 steer_speed_pid_applied_stamp[4] = {0U, 0U, 0U, 0U}; // [RO] 速度环已生效戳。表示运行态已经真正接收到这组参数。
-                u32 steer_angle_pid_applied_stamp[4] = {0U, 0U, 0U, 0U}; // [RO] 角度环已生效戳。表示运行态已经真正接收到这组参数。
-                bool synced_on_enable_edge = false; // [RO] 本次调试使能上升沿是否已完成同步。避免重复把缓存参数刷入运行态。
+                u32 steer_speed_pid_apply_stamp[4] = {0U, 0U, 0U, 0U};      // [RW] 速度环参数申请生效戳。外部写入后，通过同步流程消费。
+                u32 steer_angle_pid_apply_stamp[4] = {0U, 0U, 0U, 0U};      // [RW] 角度环参数申请生效戳。外部写入后，通过同步流程消费。
+                u32 steer_speed_pid_applied_stamp[4] = {0U, 0U, 0U, 0U};    // [RO] 速度环已生效戳。表示运行态已经真正接收到这组参数。
+                u32 steer_angle_pid_applied_stamp[4] = {0U, 0U, 0U, 0U};    // [RO] 角度环已生效戳。表示运行态已经真正接收到这组参数。
+                bool synced_on_enable_edge = false;                         // [RO] 本次调试使能上升沿是否已完成同步。避免重复把缓存参数刷入运行态。
             } debug_pid_tune_;
 
             // 回零与模块运行态（主要观察）[RO]
-            bool homing_start_request_ = false;   // [RW] 回零启动请求锁存位（由外部触发，在线程内消费）
-            f32 homing_align_to_zero_tolerance_deg_ = 2.0f; // [RW] 回零归位判稳阈值（deg）
-            WheelConfig wheel_config_[4]; // [RO] 四个模块运行态快照
-            f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};  // [RO] 上周期转向速度命令
-            f32 last_drive_omega_cmd_rad_s_[4] = {0.0f}; // [RO] 上周期驱动角速度命令
-            bool selected_flipped_solution_[4] = {false}; // [RO] 每个模块是否选中翻转解
-            f32 drive_gate_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // [RO] 每轮驱动门控缩放
-            f32 adaptive_gate_scale_ = 1.0f; // [RO] 全局自适应门控缩放
+            bool homing_start_request_ = false;                                // [RW] 回零启动请求锁存位（由外部触发，在线程内消费）
+            f32 homing_align_to_zero_tolerance_deg_ = 2.0f;                    // [RW] 回零归位判稳阈值（deg）
+            WheelConfig wheel_config_[4];                                      // [RO] 四个模块运行态快照
+            f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};                        // [RO] 上周期转向速度命令
+            f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};                       // [RO] 上周期驱动角速度命令
+            bool selected_flipped_solution_[4] = {false};                      // [RO] 每个模块是否选中翻转解
+            f32 drive_gate_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f};               // [RO] 每轮驱动门控缩放
+            f32 adaptive_gate_scale_ = 1.0f;                                   // [RO] 全局自适应门控缩放
             AdaptiveGatePhase adaptive_gate_phase_ = AdaptiveGatePhase::kIdle; // [RO] 自适应门控阶段
-            u8 rot_z_pid_count_ = 0; // [RO] 航向 PID 分频计数器
-            f32 lock_now_rot_z_target_ = 0.0f; // [RO] LockNow 真正维持的航向目标
-            u32 lock_now_rot_z_shift_count_ = 0; // [RO] LockNow 松手缓冲倒计时
+            u8 rot_z_pid_count_ = 0;                                           // [RO] 航向 PID 分频计数器
+            f32 lock_now_rot_z_target_ = 0.0f;                                 // [RO] LockNow 真正维持的航向目标
+            u32 lock_now_rot_z_shift_count_ = 0;                               // [RO] LockNow 松手缓冲倒计时
 
             // 控制链路缓存（观察）[RO]
             InputTargetData input_target_data_; // [RO] 输入目标快照（模式与期望速度/角度）
@@ -950,26 +962,26 @@ namespace jia
             ModeFlag current_mode_flag_;        // [RO] 当前控制模式标志位
 
             // 传感器与输入缓存（观察）[RO]
-            f32 input_hwt_rot_z_ = 0.0f; // [RO] IMU yaw
+            f32 input_hwt_rot_z_ = 0.0f;   // [RO] IMU yaw
             f32 input_hwt_omega_z_ = 0.0f; // [RO] IMU yaw speed
             RmPocketData_t airjoy_data_{}; // [RO] 遥控器输入快照
 
             // 调试镜像（只读观察）[RO]
             struct DebugMirror
             {
-                bool all_homed = false; // [RO] 四轮是否全部回零完成
-                f32 current_oa_deg[4] = {0.0f}; // [RO] 各轮当前 OA 角（deg）
-                f32 target_oa_deg[4] = {0.0f}; // [RO] 各轮目标 OA 角（deg）
-                f32 current_drive_rpm[4] = {0.0f}; // [RO] 各轮当前驱动速度（rpm）
-                f32 target_drive_rpm[4] = {0.0f}; // [RO] 各轮目标驱动速度（rpm）
-                u8 homing_state[4] = {0, 0, 0, 0}; // [RO] 各轮回零状态机状态
-                bool homing_sensor_active[4] = {false, false, false, false}; // [RO] 各轮光电门有效状态
+                bool all_homed = false;                                             // [RO] 四轮是否全部回零完成
+                f32 current_oa_deg[4] = {0.0f};                                     // [RO] 各轮当前 OA 角（deg）
+                f32 target_oa_deg[4] = {0.0f};                                      // [RO] 各轮目标 OA 角（deg）
+                f32 current_drive_rpm[4] = {0.0f};                                  // [RO] 各轮当前驱动速度（rpm）
+                f32 target_drive_rpm[4] = {0.0f};                                   // [RO] 各轮目标驱动速度（rpm）
+                u8 homing_state[4] = {0, 0, 0, 0};                                  // [RO] 各轮回零状态机状态
+                bool homing_sensor_active[4] = {false, false, false, false};        // [RO] 各轮光电门有效状态
                 bool homing_last_edge_is_falling[4] = {false, false, false, false}; // [RO] 各轮最近边沿是否下降沿
-                f32 homing_runtime_zero_offset_deg[4] = {0.0f}; // [RO] 各轮运行时零偏（deg）
-                bool flipped_drive[4] = {false, false, false, false}; // [RO] 各轮是否采用翻转驱动解
-                f32 drive_gate_scale_dbg[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // [RO] 各轮门控缩放系数
-                f32 selected_wheel_steer_error_deg = 0.0f; // [RO] 选中轮舵向误差（deg）
-                bool selected_wheel_drive_released = false; // [RO] 选中轮驱动是否已释放
+                f32 homing_runtime_zero_offset_deg[4] = {0.0f};                     // [RO] 各轮运行时零偏（deg）
+                bool flipped_drive[4] = {false, false, false, false};               // [RO] 各轮是否采用翻转驱动解
+                f32 drive_gate_scale_dbg[4] = {1.0f, 1.0f, 1.0f, 1.0f};             // [RO] 各轮门控缩放系数
+                f32 selected_wheel_steer_error_deg = 0.0f;                          // [RO] 选中轮舵向误差（deg）
+                bool selected_wheel_drive_released = false;                         // [RO] 选中轮驱动是否已释放
             } debug_mirror_;
 
             // 线程执行耗时统计（调试器只读观察）[RO]
@@ -984,17 +996,17 @@ namespace jia
                     u64 clamp_count = 0ULL;     // [RO] 样本被 u16 饱和截断次数（内部累计）
                 } window;
 
-                u64 last_exec_us = 0ULL;   // [RO] 最近一次循环执行耗时（不含 delay）
-                u64 min_exec_us = 0ULL;    // [RO] 历史最小执行耗时
-                u64 max_exec_us = 0ULL;    // [RO] 历史最大执行耗时
-                u64 avg_exec_us = 0ULL;    // [RO] 最近窗口平均执行耗时（短窗）
-                u64 loop_count = 0ULL;     // [RO] 已统计循环次数
-                u64 overrun_count = 0ULL;  // [RO] 超预算次数（exec_us > budget_us）
-                u64 last_start_us = 0ULL;  // [RO] 最近一次循环开始时间戳
-                u64 last_end_us = 0ULL;    // [RO] 最近一次循环结束时间戳
-                u32 budget_us = 1000U;     // [RO] 单周期预算（us，当前 period_ms_=1）
-                u16 window_size = 500U;    // [RO] 短窗长度（循环次数）
-                u16 window_count = 0U;     // [RO] 当前窗口有效样本数（<=window_size）
+                u64 last_exec_us = 0ULL;       // [RO] 最近一次循环执行耗时（不含 delay）
+                u64 min_exec_us = 0ULL;        // [RO] 历史最小执行耗时
+                u64 max_exec_us = 0ULL;        // [RO] 历史最大执行耗时
+                u64 avg_exec_us = 0ULL;        // [RO] 最近窗口平均执行耗时（短窗）
+                u64 loop_count = 0ULL;         // [RO] 已统计循环次数
+                u64 overrun_count = 0ULL;      // [RO] 超预算次数（exec_us > budget_us）
+                u64 last_start_us = 0ULL;      // [RO] 最近一次循环开始时间戳
+                u64 last_end_us = 0ULL;        // [RO] 最近一次循环结束时间戳
+                u32 budget_us = 1000U;         // [RO] 单周期预算（us，当前 period_ms_=1）
+                u16 window_size = 500U;        // [RO] 短窗长度（循环次数）
+                u16 window_count = 0U;         // [RO] 当前窗口有效样本数（<=window_size）
                 u64 window_clamp_count = 0ULL; // [RO] 样本被 u16 饱和截断次数
             } task_perf_stat_;
 

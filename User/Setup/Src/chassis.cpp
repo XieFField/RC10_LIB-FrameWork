@@ -2284,8 +2284,10 @@ namespace jia
             }
 
             debug_output_.single_wheel_1khz_last_ms = time_ms_;
-            const u8 wheel_idx = (debug_output_.single_wheel_1khz_index < 4U) ? debug_output_.single_wheel_1khz_index : 0U;
-            const WheelConfig &wheel = wheel_config_[wheel_idx];
+            const u8 master_wheel_idx = (debug_control_.wheel_index < 4U) ? debug_control_.wheel_index : 0U;
+            const u8 override_wheel_idx = (debug_output_.single_wheel_1khz_index < 4U) ? debug_output_.single_wheel_1khz_index : 0U;
+            const u8 active_wheel_idx = debug_output_.single_wheel_1khz_use_override_index ? override_wheel_idx : master_wheel_idx;
+            const WheelConfig &wheel = wheel_config_[active_wheel_idx];
             const Motor_Base *steer_motor = wheel.steer_motor_h;
             if (steer_motor == nullptr)
             {
@@ -2312,6 +2314,77 @@ namespace jia
             debug_uart_.printf_DMA_JustFloat(payload, 9);
         }
 
+        void Chassis::emitUart8VofaDualMotor1kHzTrace()
+        {
+            if (!debug_output_.output_enable || debug_output_.output_mode_raw != 4U)
+            {
+                return;
+            }
+
+            const u32 period_ms = (debug_output_.single_wheel_dual_motor_period_ms > 0U) ? debug_output_.single_wheel_dual_motor_period_ms : 2U;
+            if ((time_ms_ - debug_output_.single_wheel_dual_motor_last_ms) < period_ms)
+            {
+                return;
+            }
+
+            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
+            {
+                return;
+            }
+
+            const u8 master_wheel_idx = (debug_control_.wheel_index < 4U) ? debug_control_.wheel_index : 0U;
+            const u8 override_wheel_idx = (debug_output_.single_wheel_dual_motor_index < 4U) ? debug_output_.single_wheel_dual_motor_index : 0U;
+            const u8 active_wheel_idx = debug_output_.single_wheel_dual_motor_use_override_index ? override_wheel_idx : master_wheel_idx;
+            const WheelConfig &wheel = wheel_config_[active_wheel_idx];
+            const Motor_Base *steer_motor = wheel.steer_motor_h;
+            const Motor_Base *drive_motor = wheel.drive_motor_h;
+            if (steer_motor == nullptr || drive_motor == nullptr)
+            {
+                return;
+            }
+
+            debug_output_.single_wheel_dual_motor_last_ms = time_ms_;
+
+            const f32 steer_target_multi_turn_deg = steer_motor->getTargetTotalAngle();
+            f32 steer_target_single_turn_deg = fmodf(steer_target_multi_turn_deg, 360.0f);
+            if (steer_target_single_turn_deg < 0.0f)
+            {
+                steer_target_single_turn_deg += 360.0f;
+            }
+
+            const f32 drive_target_multi_turn_deg = drive_motor->getTargetTotalAngle();
+            f32 drive_target_single_turn_deg = fmodf(drive_target_multi_turn_deg, 360.0f);
+            if (drive_target_single_turn_deg < 0.0f)
+            {
+                drive_target_single_turn_deg += 360.0f;
+            }
+
+            float payload[17] = {0.0f};
+            payload[0] = (f32)time_ms_ * 0.001f;
+
+            // steer motor: tarI curI tarRPM curRPM tarAng curAng tarTot curTot
+            payload[1] = steer_motor->getTargetCurrent();
+            payload[2] = steer_motor->getCurrent();
+            payload[3] = steer_motor->getTargetRPM();
+            payload[4] = steer_motor->getRPM();
+            payload[5] = steer_target_single_turn_deg;
+            payload[6] = steer_motor->getAngle();
+            payload[7] = steer_target_multi_turn_deg;
+            payload[8] = steer_motor->getTotalAngle();
+
+            // drive(heading) motor: tarI curI tarRPM curRPM tarAng curAng tarTot curTot
+            payload[9] = drive_motor->getTargetCurrent();
+            payload[10] = drive_motor->getCurrent();
+            payload[11] = drive_motor->getTargetRPM();
+            payload[12] = drive_motor->getRPM();
+            payload[13] = drive_target_single_turn_deg;
+            payload[14] = drive_motor->getAngle();
+            payload[15] = drive_target_multi_turn_deg;
+            payload[16] = drive_motor->getTotalAngle();
+
+            debug_uart_.printf_DMA_JustFloat(payload, 17);
+        }
+
         void Chassis::emitDebugOutputByMode(bool all_homed)
         {
             if (!debug_output_.output_enable)
@@ -2328,6 +2401,9 @@ namespace jia
                 break;
             case DebugOutputMode::kSingleWheelJustFloat:
                 emitUart8VofaPid1kHzTrace();
+                break;
+            case DebugOutputMode::kSingleWheelDualMotorJustFloat:
+                emitUart8VofaDualMotor1kHzTrace();
                 break;
             case DebugOutputMode::kOff:
             default:
