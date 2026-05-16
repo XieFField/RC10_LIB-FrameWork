@@ -62,14 +62,13 @@ extern "C" {
     #include "speedplanner_demo.h"
 #endif
 
-#include "Module_Camera.h"
-#include "Module_Position.h"
-#include "Module_LaserPosition.h"
 #if ARM_DEMO_DEBUG
 
         #include "arm_demo.h"
 #endif
 
+
+#include "m3508_steer_debug.h"
 
 
 class test:public RtosTask {

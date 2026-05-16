@@ -84,24 +84,13 @@ public:
     /**
      * @brief 无输入则默认在底盘中心
      */
-    void init(Laser_InstanceManager* instance_man,USB_CDC_ *usb_handle, Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0}, 
-              Laser_initData_S laser_initData = {0}
-            )
+    void init(USB_CDC_ *usb_handle, Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0})
     {   
-        this->Laser_pos_instance = instance_man;
 		this->usb_handle=usb_handle;
         if(install_pose_init_)
             return;
         lidar_install_pose_ = lidar_install_pose;
         arm_install_pose_ = arm_install_pose;
-
-
-        laser_initData_ = laser_initData;
-				
-				laser_initData_.d=0.5;
-				laser_initData.delta_x1=0.3;
-
-        laser_initData_ = laser_initData;
 
         install_pose_init_ = true;
     }

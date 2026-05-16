@@ -223,6 +223,14 @@ void fdCANbus::rxTaskbody()
                    m->updateFeedback(cf);
             }
 
+            for (std::size_t j = 0; j < 3; j++)
+            {
+                if(oid_encoder_[j] != nullptr && oid_encoder_[j]->matchesFrame(cf) && oid_encoder_[j]->bus() == this)
+                {
+                    oid_encoder_[j]->updateFeedback(cf);
+                }
+            }
+
         }
     }
 }
@@ -252,31 +260,98 @@ void fdCANbus::schedulerTaskbody()
             
         }
 
-
         std::size_t frameCnt = 0; //计数值，记录打包了多少帧
         for (std::size_t i = 0; i < MAX_MOTORS; ++i) 
         {
             Motor_Base* m = motorList_[i];
-            if (!m) 
+            OIDEncoder* o = nullptr;
+            if(i < 3)
+                o = oid_encoder_[i];
+            if (!m && !o) 
                 continue;
                 
-            bool due = true;
-            if(m->get_controlFrequency() != 1000) // 如果不是默认频率，则进行分频判断
+            // bool due = true;
+            // if(m && m->get_controlFrequency() != 1000) // 如果不是默认频率，则进行分频判断
+            // {
+            //     const uint16_t divider = static_cast<uint16_t>(1000 / m->get_controlFrequency()); // 计算分频器
+            //     due = (m->get_controlCnt() + 1u >= divider); // 判断是否触发控制周期
+            // }
+
+            // if(!due && m)
+            // {
+            //     m->increment_controlCnt();
+            //     continue; // 不到控制周期，不打包
+            // }
+
+            // bool o_due = true;
+            // if(o && o->get_controlFrequency() != 1000) // 如果不是默认频率，则进行分频判断
+            // {
+            //     const uint16_t divider = static_cast<uint16_t>(1000 / o->get_controlFrequency()); // 计算分频器
+            //     o_due = (o->get_controlCnt() + 1u >= divider); // 判断是否触发控制周期
+            // }
+
+            // if(!o_due && o)
+            // {
+            //     o->increment_controlCnt();
+            //     continue; // 不到控制周期，不打包
+            // }
+
+            // if(m)
+            // {
+            //     frameCnt += m->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt);
+            //     m->reset_controlCnt(); // 重置计数器，准备下一个控制周期
+            // }
+
+            // if(o)
+            // {
+            //     frameCnt += o->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt);
+            //     o->reset_controlCnt();
+            // }
+
+            bool m_send = false, o_send = false;
+            if (m) 
             {
-                const uint16_t divider = static_cast<uint16_t>(1000 / m->get_controlFrequency()); // 计算分频器
-                due = (m->get_controlCnt() + 1u >= divider); // 判断是否触发控制周期
+                if (m->get_controlFrequency() != 1000) 
+                {
+                    uint16_t div = 1000 / m->get_controlFrequency();
+                    if (m->get_controlCnt() + 1u >= div)
+                        m_send = true;
+                    else
+                        m->increment_controlCnt();
+                } 
+                else 
+                {
+                    m_send = true;
+                }
             }
 
-            if(!due)
+            // o 频控（独立）
+            if (o) 
             {
-                m->increment_controlCnt();
-                continue; // 不到控制周期，不打包
+                if (o->get_controlFrequency() != 1000) 
+                {
+                    uint16_t div = 1000 / o->get_controlFrequency();
+                    if (o->get_controlCnt() + 1u >= div)
+                        o_send = true;
+                    else
+                        o->increment_controlCnt();
+                } 
+                else 
+                {
+                    o_send = true;
+                }
             }
 
-
-            frameCnt += m->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt);  
-            m->reset_controlCnt(); // 重置计数器，准备下一个控制周期
-
+            if (m_send) 
+            { 
+                frameCnt += m->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt); 
+                m->reset_controlCnt(); 
+            }
+            if (o_send) 
+            { 
+                frameCnt += o->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt); 
+                o->reset_controlCnt(); 
+            }
             if (frameCnt >= (sizeof(frames_to_send)/sizeof(frames_to_send[0]))) 
                 break;
         }

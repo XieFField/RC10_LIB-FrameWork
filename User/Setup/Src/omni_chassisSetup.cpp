@@ -303,7 +303,6 @@ void OmniChassis_Setup::loop()
 
         chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx,target_chassis_twist_.vy, target_chassis_twist_.yaw_rate);
 
-        // 结束相机模式处理。
         break;
     }
 
