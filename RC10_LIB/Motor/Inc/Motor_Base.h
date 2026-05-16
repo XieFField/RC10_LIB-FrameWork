@@ -35,13 +35,17 @@ public:
     virtual void setTargetCurrent(float current_set){};
     virtual void setTargetAngle(float angle_set){};
     virtual void setTargetTotalAngle(float totalAngle_set){};
+    virtual void setBrake(float brake_current)
+    {
+        (void)brake_current;
+    };
 
     // 更新函数，负责根据最新的反馈数据计算控制输出
     virtual void update(){};
     
     // 获取输出轴状态
-    virtual float getRPM() const { return 0.0f; }   
-    virtual float getCurrent() const { return 0.0f; }
+    virtual float getRPM() const { return rpm_; }   
+    virtual float getCurrent() const { return current_; }
     virtual float getAngle() const { return 0.0f; }
     virtual float getTotalAngle() const { return 0.0f; }
 

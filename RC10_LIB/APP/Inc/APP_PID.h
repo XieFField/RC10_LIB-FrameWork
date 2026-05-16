@@ -102,6 +102,7 @@ public:
     void set_params(const PID_Param_Config& params, float I_SeparaThreshold);
 
     PID_Param_Config get_params() const { return params_; }
+    float get_i_separa_threshold() const { return I_SeparaThreshold_; }
     /**
      * @brief 将PID设定为循环模式
      * @param range 循环范围，例如360度
@@ -197,6 +198,7 @@ public:
         void set_params(const PID_Param_Config& params, float td_ratio);
 
         PID_Param_Config get_params() const { return params_; }
+        float get_td_ratio() const { return td_ratio_; }
 
         float get_dt() const { return dt_; }
         
@@ -293,6 +295,8 @@ extern PID_Param_Config m3508Rotate_angle_pid_params;
 extern PID_Param_Config path_lock_end;
 
 extern PID_Param_Config m3508_speed_pid_paramsForSpeedMotor;
+extern PID_Param_Config foursteer_steer_speed_pid_params;
+extern PID_Param_Config foursteer_steer_angle_pid_params;
 
 extern PID_Param_Config omega_z_pid_init_config;
 extern PID_Param_Config rot_z_pid_init_config;

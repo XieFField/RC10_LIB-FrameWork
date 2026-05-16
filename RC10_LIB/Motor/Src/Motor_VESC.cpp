@@ -83,26 +83,14 @@ std::size_t VESC_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
 
         case SET_eRPM:
         {
-            if(target_eRPM_ !=0)
-            {
-                cf.ID = (CAN_CMD_SET_ERPM << 8) | (motor_id_ & 0xFF);
-                sendMsgs = static_cast<int32_t>(target_eRPM_);
-                cf.data[0] = (sendMsgs >> 24) & 0xFF;
-                cf.data[1] = (sendMsgs >> 16) & 0xFF;
-                cf.data[2] = (sendMsgs >> 8) & 0xFF;
-                cf.data[3] = sendMsgs & 0xFF;
-            }
-            else
-            {
-                cf.ID = (CAN_CMD_SET_CURRENT_BRAKE << 8) | (motor_id_ & 0xFF);
-                sendMsgs = 70000; //É²³µµçÁ÷
-                cf.data[0] = (sendMsgs >> 24) & 0xFF;
-                cf.data[1] = (sendMsgs >> 16) & 0xFF;
-                cf.data[2] = (sendMsgs >> 8) & 0xFF;
-                cf.data[3] = sendMsgs & 0xFF;
-            }
+            cf.ID = (CAN_CMD_SET_ERPM << 8) | (motor_id_ & 0xFF);
+            sendMsgs = static_cast<int32_t>(target_eRPM_);
+            cf.data[0] = (sendMsgs >> 24) & 0xFF;
+            cf.data[1] = (sendMsgs >> 16) & 0xFF;
+            cf.data[2] = (sendMsgs >> 8) & 0xFF;
+            cf.data[3] = sendMsgs & 0xFF;
             break;
-        }    
+        }
 
         case SET_CURRENT:
         {

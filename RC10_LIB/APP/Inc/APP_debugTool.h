@@ -1,8 +1,8 @@
 /**
  * @file    APP_debugTool.h
  * @author  XieFField
- * @brief   ÓÃÓÚÁÙÊ±µ÷ÊÔÓÃµÄ UART printf ·â×°
- *          Ö®ºóÆäËûdebug¹¤¾ßÒ²¿ÉÒÔ·Å½øÕâÀïÃæ     
+ * @brief   ç”¨äºä¸´æ—¶è°ƒè¯•ç”¨çš„ UART printf å°è£…
+ *          ä¹‹åå…¶ä»–debugå·¥å…·ä¹Ÿå¯ä»¥æ”¾è¿›è¿™é‡Œé¢     
  * @version 1.0
  */
 
@@ -25,58 +25,76 @@ extern "C" {
 
 #include <cstdint>
 #include <cstdio>
-#define SEND_BUF_SIZE 100
+#define SEND_BUF_SIZE 192
 /**
- * @brief ´®¿Ú´òÓ¡µ÷ÊÔÖúÊÖ
+ * @brief ä¸²å£æ‰“å°è°ƒè¯•åŠ©æ‰‹
  */
 class Debug_Printf {
 public:
     Debug_Printf(UART_HandleTypeDef *huart) : huart_(huart) {}
     ~Debug_Printf() {}
 
+    void printf_DMA_JustFloat(const float *data, uint16_t data_size)
+    {
+        if (data == NULL || data_size == 0)
+            return;
+
+        static const uint8_t justfloat_tail[4] = {0x00, 0x00, 0x80, 0x7F};
+        const uint16_t payload_size = (uint16_t)(sizeof(float) * data_size);
+        const uint16_t total_size = payload_size + sizeof(justfloat_tail);
+
+        if (total_size > SEND_BUF_SIZE)
+            return;
+
+        memcpy(Sendbuf, data, payload_size);
+        memcpy(Sendbuf + payload_size, justfloat_tail, sizeof(justfloat_tail));
+
+        HAL_UART_Transmit_DMA(huart_, Sendbuf, total_size);
+    }
+
     void printf_DMA(char *fmt, ...)
     {
-        memset(Sendbuf, 0, SEND_BUF_SIZE);  // Çå¿Õ·¢ËÍ»º³åÇø
+        memset(Sendbuf, 0, SEND_BUF_SIZE);  // æ¸…ç©ºå‘é€ç¼“å†²åŒº
         
         va_list arg;
         va_start(arg, fmt);
-        vsnprintf((char*)Sendbuf, SEND_BUF_SIZE, fmt, arg);  // °²È«µÄ¸ñÊ½»¯Êä³ö£¬·ÀÖ¹»º³åÇøÒç³ö
+        vsnprintf((char*)Sendbuf, SEND_BUF_SIZE, fmt, arg);  // å®‰å…¨çš„æ ¼å¼åŒ–è¾“å‡ºï¼Œé˜²æ­¢ç¼“å†²åŒºæº¢å‡º
         va_end(arg);
         
-        uint8_t len = strlen((char*)Sendbuf);  // ¼ÆËãÊµ¼Ê×Ö·û´®³¤¶È
+        uint8_t len = strlen((char*)Sendbuf);  // è®¡ç®—å®é™…å­—ç¬¦ä¸²é•¿åº¦
         if(len > 0)
         {
-            HAL_UART_Transmit_DMA(huart_, Sendbuf, len);  // Í¨¹ı·¢ËÍ×Ö·û´®
+            HAL_UART_Transmit_DMA(huart_, Sendbuf, len);  // é€šè¿‡å‘é€å­—ç¬¦ä¸²
         }
     }
 
     void printf_UART(char *fmt, ...) 
-    {  // º¯ÊıÃûĞŞ¸ÄÒÔÇø·Ö·ÇDMA°æ±¾
+    {  // å‡½æ•°åä¿®æ”¹ä»¥åŒºåˆ†éDMAç‰ˆæœ¬
         if (fmt == NULL) 
-            return;  // ·ÀÖ¹¿ÕÖ¸Õë±ÀÀ£
+            return;  // é˜²æ­¢ç©ºæŒ‡é’ˆå´©æºƒ
         
         va_list arg;
         va_start(arg, fmt);
         
-        // 1. Ìî³ä»º³åÇø²¢»ñÈ¡Êµ¼ÊĞèÒªµÄ³¤¶È£¨²»º¬ÖÕÖ¹·û£©
+        // 1. å¡«å……ç¼“å†²åŒºå¹¶è·å–å®é™…éœ€è¦çš„é•¿åº¦ï¼ˆä¸å«ç»ˆæ­¢ç¬¦ï¼‰
         int ret = vsnprintf((char*)Sendbuf, SEND_BUF_SIZE, fmt, arg);
         va_end(arg);
         
-        // 2. Ğ£ÑéÌî³ä½á¹û£¬¹ıÂËÎŞĞ§Çé¿ö
+        // 2. æ ¡éªŒå¡«å……ç»“æœï¼Œè¿‡æ»¤æ— æ•ˆæƒ…å†µ
         if (ret <= 0 || ret >= SEND_BUF_SIZE) 
-            return;  // Ìî³äÊ§°Ü»òÄÚÈİ³¬³¤
+            return;  // å¡«å……å¤±è´¥æˆ–å†…å®¹è¶…é•¿
         
-        uint16_t send_len = (uint16_t)ret;  // ÓĞĞ§·¢ËÍ³¤¶È
+        uint16_t send_len = (uint16_t)ret;  // æœ‰æ•ˆå‘é€é•¿åº¦
         
-        // 3. ¼ì²éUART×´Ì¬£¬È·±£¾ÍĞ÷
+        // 3. æ£€æŸ¥UARTçŠ¶æ€ï¼Œç¡®ä¿å°±ç»ª
         if (HAL_UART_GetState(huart_) != HAL_UART_STATE_READY) 
-            // ×èÈûÊ½·¢ËÍÎŞĞèµÈ´ıDMA£¬Ö±½Ó³¢ÊÔÖØÖÃUART
+            // é˜»å¡å¼å‘é€æ— éœ€ç­‰å¾…DMAï¼Œç›´æ¥å°è¯•é‡ç½®UART
             HAL_UART_Abort(huart_);
         
         
-        // 4. ×èÈûÊ½·¢ËÍ£¨µÈ´ı·¢ËÍÍê³É£©
+        // 4. é˜»å¡å¼å‘é€ï¼ˆç­‰å¾…å‘é€å®Œæˆï¼‰
         if (send_len > 0) 
-            // Ê¹ÓÃHAL_UART_Transmit£¨×èÈûÊ½£©£¬³¬Ê±Ê±¼äÉèÎª100ms
+            // ä½¿ç”¨HAL_UART_Transmitï¼ˆé˜»å¡å¼ï¼‰ï¼Œè¶…æ—¶æ—¶é—´è®¾ä¸º100ms
             HAL_UART_Transmit(huart_, Sendbuf, send_len, time_out);
     }
 
@@ -86,8 +104,8 @@ public:
     }
 
     /**
-     * @brief ´òÓ¡À×´ï×ø±êÊı¾İ£¬¹©ÉÏÎ»»ú»æÍ¼
-     *        ¸ñÊ½: X:1.23,Y:4.56
+     * @brief æ‰“å°é›·è¾¾åæ ‡æ•°æ®ï¼Œä¾›ä¸Šä½æœºç»˜å›¾
+     *        æ ¼å¼: X:1.23,Y:4.56
      */
     void Printf_Ladar(float x, float y)
     {

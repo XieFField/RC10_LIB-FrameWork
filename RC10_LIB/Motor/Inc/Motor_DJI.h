@@ -230,11 +230,23 @@ public:
     void setTargetTotalAngle(float totalAngle_set) override;
 
     void update() override; //周期性更新
-
+    void set_anglepid_circular(bool circular)
+    {
+        if(circular)
+            angle_pid_.set_as_circular();
+        else
+            angle_pid_.set_as_linear();
+    }
     // 获取输出轴状态
     float getRPM() const override;
     float getAngle() const override;
     float getTotalAngle() const override;
+
+    // 获取PID参数
+    PID_Param_Config get_speed_pid_params() const;
+    PID_Param_Config get_angle_pid_params() const;
+    float get_speed_pid_td_ratio() const;
+    float get_angle_pid_i_separa_threshold() const;
 
     void reset_GearRatio(float reset_value)
     {
