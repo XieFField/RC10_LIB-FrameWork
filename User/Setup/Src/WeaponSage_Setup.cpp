@@ -87,6 +87,7 @@ float test_angle = 20.0f;
 
 void Robot_WeaponSage_Setup::manualControl()
 {
+
 //    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
 
 //    // 进入Manual模式时的状态绑定逻辑

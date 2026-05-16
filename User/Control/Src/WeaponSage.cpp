@@ -54,7 +54,7 @@ void Robot_WeaponSage::update()
             claw_2_Motor_->setTargetTotalAngle(target_pos_.claw_2_TotalAngle_);
             claw_3_Motor_->setTargetTotalAngle(target_pos_.claw_3_TotalAngle_);
             wrist_Motor_->setTargetTotalAngle( target_pos_.wrist_TotalAngle_);
-            arm_Motor_->setTargetTotalAngle( initData_.max_arm_rate_,target_pos_.arm_TotalAngle_);
+            arm_Motor_->setTargetTotalAngle(initData_.max_arm_rate_,target_pos_.arm_TotalAngle_);
             break;
         }
             
@@ -106,7 +106,7 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
                     claw_2_Motor_->setTargetCurrent(targetValue);
                 else
                     return false;
-                }
+            }
             else if(motor_type == WeaponSage::Claw_3_Motor)
             {
                 if(claw_3_Motor_ != nullptr)
@@ -124,10 +124,13 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
             }
             else if(motor_type == WeaponSage::Arm_Motor)
             {
-                if(arm_Motor_ != nullptr)
-                    arm_Motor_->setTargetCurrent(targetValue);
-                else
-                    return false;
+                // if(arm_Motor_ != nullptr)
+                //     arm_Motor_->setTargetCurrent(targetValue);
+                // else
+                //     return false;
+
+                //DM电机不支持电流控制，直接返回 false
+                return false;
             }
             else 
                 return false;
@@ -215,7 +218,7 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
                     target_pos_.launch_pos_ = MotorTotalAngle_to_Realpos(target_pos_.launch_TotalAngle_, motor_type);
                 }
                 else
-                return false;
+                    return false;
             } 
             else if(motor_type == WeaponSage::Claw_1_Motor)
             {
