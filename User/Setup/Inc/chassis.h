@@ -753,15 +753,15 @@ namespace jia
             f32 max_vel_x_ = 2.0f;                                         // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
             f32 max_vel_y_ = 2.0f;                                         // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
             f32 max_omega_z_ = 2.0f;                                       // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
-            f32 max_acc_xy_acc_ = 10.0f;                                   // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
+            f32 max_acc_xy_acc_ = 5.0f;                                   // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
             f32 max_acc_xy_dec_ = 10.0f;                                   // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
-            f32 max_alpha_z_acc_ = 10.0f;                                  // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
+            f32 max_alpha_z_acc_ = 5.0f;                                  // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
             f32 max_alpha_z_dec_ = 10.0f;                                  // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
-            f32 max_drive_omega_rad_s_ = 25.0f;                              // [RW] 驱动目标角速度上限（rad/s）。最终下发给驱动电机前会做限幅，防止超速命令。
-            f32 max_drive_alpha_rad_s2_ = 50.0f;                             // [RW] 驱动角速度变化率上限（rad/s^2）。越小越像“缓启动/缓刹车”。
-            f32 max_steer_rate_rad_s_ = 40000.0f;                            // [RW] 转向目标角速度上限（rad/s）。越大转向越快，但过大容易让舵角命令太激进。
-            f32 max_steer_alpha_rad_s2_ = 25000.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。用于限制舵角变化的“突然性”。
-            f32 stationary_speed_epsilon_m_s_ = 0.01f;                       // [RW] 近似静止阈值（m/s）。低于该速度时可认为底盘处于停车/低速保护区。
+            f32 max_drive_omega_rad_s_ = 9999.0f;                              // [RW] 驱动目标角速度上限（rad/s）。最终下发给驱动电机前会做限幅，防止超速命令。
+            f32 max_drive_alpha_rad_s2_ = 9999.0f;                             // [RW] 驱动角速度变化率上限（rad/s^2）。越小越像“缓启动/缓刹车”。
+            f32 max_steer_rate_rad_s_ = 9999.0f;                            // [RW] 转向目标角速度上限（rad/s）。越大转向越快，但过大容易让舵角命令太激进。
+            f32 max_steer_alpha_rad_s2_ = 999999.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。用于限制舵角变化的“突然性”。
+            f32 stationary_speed_epsilon_m_s_ = 0.1f;                       // [RW] 近似静止阈值（m/s）。低于该速度时可认为底盘处于停车/低速保护区。
             bool enable_cosine_compensation_ = false;                        // [RW] 是否启用舵角余弦补偿。开启后，舵角偏离时会折算驱动分量，减小横滑和无效驱动。
             IdlePostureMode idle_posture_mode_ = IdlePostureMode::kHoldLast; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。
 
@@ -774,7 +774,7 @@ namespace jia
                 // ---- 舵角解算 ----------------------------------------------------
                 // 决定每个模块在“直接转过去”与“翻转 180° 再配合驱动反向”之间如何选择。
                 // 这个选择直接影响转向路径长度、驱动方向是否反转，以及模块在大角度切换时是否抖动。
-                SteeringStrategyMode steering_strategy_mode = SteeringStrategyMode::kAlwaysForward; // [RW] 舵角解算策略。不同策略在转向路径和稳定性上有不同权衡。
+                SteeringStrategyMode steering_strategy_mode = SteeringStrategyMode::kShortestPath; // [RW] 舵角解算策略。不同策略在转向路径和稳定性上有不同权衡。
                 f32 flip_enter_angle_deg = 100.0f;                                                  // [RW] 翻转进入阈值（deg）。角差大于该值时，策略才允许“舵角+180°并反转驱动”。
                 f32 flip_exit_angle_deg = 80.0f;                                                    // [RW] 翻转退出阈值（deg）。必须小于进入阈值，用于形成滞回，避免临界角附近来回翻转。
 
@@ -799,7 +799,7 @@ namespace jia
                 // 它主要解决停车抖动、低速微调来回打舵、以及静止姿态不稳定的问题。
                 bool enable_stop_steer_guard = false;                                                 // [RW] 是否启用停车转向保护。关闭后低速区的舵角跟踪会更直接，但也更容易抖动。
                 StopSteerGuardStrategy stop_steer_guard_strategy = StopSteerGuardStrategy::kHardHold; // [RW] 停车保护形状：硬保持更稳，曲线混合更柔和。
-                f32 stop_guard_release_speed_m_s = 0.01f;                                             // [RW] 释放阈值（m/s）。低于该速度时，可视为进入停车保护区。
+                f32 stop_guard_release_speed_m_s = 0.1f;                                             // [RW] 释放阈值（m/s）。低于该速度时，可视为进入停车保护区。
                 f32 stop_guard_blend_start_speed_m_s = 0.20f;                                         // [RW] 混合起点速度（m/s）。从正常舵角控制逐步过渡到停车保护的起始点。
                 f32 stop_guard_curve_half_speed_m_s = 0.08f;                                          // [RW] 曲线混合半效速度（m/s）。决定混合函数中“过半”的速度位置。
                 f32 stop_guard_curve_exponent = 2.0f;                                                 // [RW] 曲线混合指数。越大过渡越陡，越小过渡越平缓。
@@ -820,14 +820,15 @@ namespace jia
             // 调试参数（通过全局 chassis 对象在调试器内直接改值）[RW]
             // 说明：这组参数只影响调试链路。正常控制不读取它们，只有切到相应 debug mode 时才会生效。
             // 速查：0~8 = 底盘输入接管/信号注入类模式；20 = 单轮调试；21 = 四轮朝前；22 = 回零观察；30 = 执行层直控。
+            // 手柄平移坐标约定（底盘层）：前推前进、左推左移（-left_y -> vel_x，left_x -> vel_y）。
             // =====================================================================
             struct DebugControl
             {
                 // ---- 调试总开关与模式入口 ---------------------------------------
                 bool enable = true;                                             // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
-                u8 mode_raw = 0;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
+                u8 mode_raw = 1;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
                 u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。用于观察 mode_raw 经过归一化后的结果。
-                u8 wheel_index = 0;                                             // [RW] 主选中轮号（0~3）。默认作为单轮调试与单轮输出追踪的统一轮号来源。
+                u8 wheel_index = 1;                                             // [RW] 主选中轮号（0~3）。默认作为单轮调试与单轮输出追踪的统一轮号来源。
 
                 // ---- 航向 / 激励注入 ---------------------------------------------
                 f32 lock_rot_z = 0.0f;     // [RW] LockTo 调试目标角（rad）。只在航向锁定相关调试中有意义。
@@ -849,26 +850,35 @@ namespace jia
                 f32 single_wheel_target_drive_rpm = 0.0f;            // [RW] mode20 单轮驱动目标（rpm）。单轮调试时直接给驱动速度目标。
 
                 // ---- mode30：执行层直控 -----------------------------------------
-                bool direct_estop = true;                                       // [RW] mode30 急停闸门。true 时禁止所有执行层输出，适合调试前的“安全锁”。
-                bool direct_enable_steer[4] = {false, false, false, false};     // [RW] mode30 每轮舵向执行使能。单独放开某一轮的舵向下发。
-                bool direct_enable_drive[4] = {false, false, false, false};     // [RW] mode30 每轮驱动执行使能。单独放开某一轮的驱动下发。
-                u8 direct_input_source = 0;                                     // [RW] mode30 输入来源：0=调试器缓存值，1=左摇杆，2=右摇杆阶跃。
+                bool direct_estop = false;                                       // [RW] mode30 急停闸门。true 时禁止所有执行层输出，适合调试前的“安全锁”。
+                bool direct_enable_steer[4] = {true, true, true, true};    // [RW] mode30 每轮舵向执行使能。单独放开某一轮的舵向下发。
+                bool direct_enable_drive[4] = {true, true, true, true};    // [RW] mode30 每轮驱动执行使能。单独放开某一轮的驱动下发。
+                u8 direct_input_source = 1;                                     // [RW] mode30 输入来源：0=调试器缓存值，1=遥控连续输入（左舵向/右航向），2=遥控阶跃输入（左舵向/右航向）。
                 u8 direct_steer_control_type = 1;                               // [RW] mode30 舵向控制方式：0=电流，1=速度，2=单圈角，3=多圈角。
-                f32 direct_steer_current_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};      // [RW] mode30 舵向电流目标缓存。作为直控输入的“待下发值”。
-                f32 direct_steer_rpm[4] = {0.0f, 0.0f, 0.0f, 0.0f};             // [RW] mode30 舵向速度目标缓存。作为直控输入的“待下发值”。
+                u8 direct_drive_control_type = 0;                               // [RW] mode30 航向控制方式：0=速度，1=电流，2=刹车。默认 0=RPM。
+                f32 direct_steer_current_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};     // [RW] mode30 舵向电流目标缓存。作为直控输入的“待下发值”。
+                f32 direct_steer_rpm[4] = {0.0f, 0.0f, 0.0f, 0.0f};            // [RW] mode30 舵向速度目标缓存。作为直控输入的“待下发值”。
                 f32 direct_steer_single_turn_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] mode30 舵向单圈角目标缓存。作为直控输入的“待下发值”。
-                f32 direct_steer_multi_turn_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};  // [RW] mode30 舵向多圈角目标缓存。作为直控输入的“待下发值”。
-                f32 direct_drive_rpm[4] = {0.0f, 0.0f, 0.0f, 0.0f};             // [RW] mode30 驱动速度目标缓存。作为直控输入的“待下发值”。
-                f32 direct_drive_rpm_limit = 500.0f;                            // [RW] mode30 驱动目标限幅（rpm）。下发前的安全上限。
-                f32 direct_steer_rpm_limit = 300.0f;                            // [RW] mode30 舵向速度限幅（rpm）。避免舵向指令过快。
+                f32 direct_steer_multi_turn_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] mode30 舵向多圈角目标缓存。作为直控输入的“待下发值”。
+                f32 direct_drive_rpm[4] = {0.0f, 0.0f, 0.0f, 0.0f};            // [RW] mode30 航向速度目标缓存。作为直控输入的“待下发值”。
+                f32 direct_drive_current_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};     // [RW] mode30 航向电流目标缓存。作为直控输入的“待下发值”。
+                f32 direct_drive_brake_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};       // [RW] mode30 航向刹车目标缓存。作为直控输入的“待下发值”。
+                f32 direct_drive_rpm_limit = 1000.0f;                            // [RW] mode30 航向速度限幅（rpm）。下发前的安全上限。
+                f32 direct_drive_current_limit_mA = 12000.0f;                   // [RW] mode30 航向电流限幅（mA）。避免当前环指令过大。
+                f32 direct_drive_brake_limit_mA = 12000.0f;                     // [RW] mode30 航向刹车限幅（mA）。避免刹车指令过大。
+                f32 direct_steer_rpm_limit = 250.0f;                            // [RW] mode30 舵向速度限幅（rpm）。避免舵向指令过快。
                 f32 direct_steer_current_limit_mA = 12000.0f;                   // [RW] mode30 舵向电流限幅（mA）。避免当前环指令过大。
                 f32 direct_steer_single_turn_limit_deg = 180.0f;                // [RW] mode30 单圈角限幅（deg）。适合做单圈范围内的安全测试。
                 f32 direct_steer_multi_turn_limit_deg = 1080.0f;                // [RW] mode30 多圈角限幅（deg）。限制多圈试验时的总角度范围。
-                f32 direct_step_threshold = 0.3f;                               // [RW] 右摇杆阶跃触发阈值。超过该幅值才认为用户想发出阶跃动作。
-                f32 direct_step_steer_current_mA = 2000.0f;                     // [RW] 阶跃幅值（电流，mA）。右摇杆触发后用于给舵向电流一个固定跃迁量。
-                f32 direct_step_steer_rpm = 100.0f;                             // [RW] 阶跃幅值（速度，rpm）。右摇杆触发后用于给舵向速度一个固定跃迁量。
-                f32 direct_step_steer_single_turn_deg = 90.0f;                  // [RW] 阶跃幅值（单圈角，deg）。右摇杆触发后用于给单圈角一个固定跃迁量。
-                f32 direct_step_steer_multi_turn_deg = 180.0f;                  // [RW] 阶跃幅值（多圈角，deg）。右摇杆触发后用于给多圈角一个固定跃迁量。
+                f32 direct_step_threshold = 0.3f;                               // [RW] 左摇杆舵向阶跃触发阈值。超过该幅值才认为用户想发出舵向阶跃动作。
+                f32 direct_step_drive_threshold = 0.3f;                         // [RW] 右摇杆航向阶跃触发阈值。超过该幅值才认为用户想发出航向阶跃动作。
+                f32 direct_step_steer_current_mA = 2000.0f;                     // [RW] 舵向阶跃幅值（电流，mA）。左摇杆触发后用于给舵向电流固定跃迁量。
+                f32 direct_step_steer_rpm = 200.0f;                             // [RW] 舵向阶跃幅值（速度，rpm）。左摇杆触发后用于给舵向速度固定跃迁量。
+                f32 direct_step_steer_single_turn_deg = 90.0f;                  // [RW] 舵向阶跃幅值（单圈角，deg）。左摇杆触发后用于给单圈角固定跃迁量。
+                f32 direct_step_steer_multi_turn_deg = 180.0f;                  // [RW] 舵向阶跃幅值（多圈角，deg）。左摇杆触发后用于给多圈角固定跃迁量。
+                f32 direct_step_drive_rpm = 200.0f;                             // [RW] 航向阶跃幅值（速度，rpm）。右摇杆触发后用于给航向速度固定跃迁量。
+                f32 direct_step_drive_current_mA = 2000.0f;                     // [RW] 航向阶跃幅值（电流，mA）。右摇杆触发后用于给航向电流固定跃迁量。
+                f32 direct_step_drive_brake_mA = 1500.0f;                       // [RW] 航向阶跃幅值（刹车，mA）。右摇杆触发后用于给航向刹车固定跃迁量。
             } debug_control_;
             bool debug_enable_last_cycle_ = false; // [RO] 调试使能上周期状态。常用于检测 enable 上升沿，并在那一刻同步调试参数基线。
 
@@ -881,7 +891,7 @@ namespace jia
             {
                 // ---- 输出总开关与模式选择 ---------------------------------------
                 bool output_enable = true;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
-                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kText); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat。
+                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kSingleWheelDualMotorJustFloat); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat。
                 u32 text_period_ms = 500;                                     // [RW] 文本日志周期（ms）。只在 mode1 下使用，控制文本总刷新频率。
                 u8 text_log_level = 1;                                        // [RW] 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
                 TickType_t text_last_ms = 0;                                  // [RO] 文本日志节流时间戳。记录上一次发文本的时间，防止串口刷屏。
