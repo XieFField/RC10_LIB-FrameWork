@@ -156,8 +156,6 @@ void CAN_Motor_Init(void);
 Point2D lader_install_offset = {0.0f, 0.0f}; // 激光雷达安装偏移，单位米
 Locate_Setup* set1 = Locate_Setup::getInstance();
 
-M3508_Steer_Debug steer_debug;   
-
 
 void ALL_Setup_ConfigInit(void)
 {
@@ -192,7 +190,6 @@ void ALL_Setup_ConfigInit(void)
    // };
    // chassis.init(chassis_init_config);
 
-   steer_debug.init(&steer1, &steer2, &steer3, &steer4);
    Finite_StateMachine.registerArmSetup(&ARM_Controller);
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
    Finite_StateMachine.registerWeaponSageSetup(&Weapon_Controller);
