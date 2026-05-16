@@ -156,7 +156,7 @@ void CAN_Motor_Init(void);
 Point2D lader_install_offset = {0.0f, 0.0f}; // 激光雷达安装偏移，单位米
 Locate_Setup* set1 = Locate_Setup::getInstance();
 
-
+M3508_Steer_Debug steer_debug;   
 
 
 void ALL_Setup_ConfigInit(void)
@@ -180,9 +180,9 @@ void ALL_Setup_ConfigInit(void)
    Weapon_Controller.init();
    Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
 
-   ChassisOmni.init();
+   // ChassisOmni.init();
 
-   ChassisOmni.setChassisStatus(CHASSIS_STOP);
+   // ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
    // Chassis::InitConfig chassis_init_config = 
    // {
@@ -192,7 +192,7 @@ void ALL_Setup_ConfigInit(void)
    // };
    // chassis.init(chassis_init_config);
 
-
+   steer_debug.init(&steer1, &steer2, &steer3, &steer4);
    Finite_StateMachine.registerArmSetup(&ARM_Controller);
    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
    Finite_StateMachine.registerWeaponSageSetup(&Weapon_Controller);
@@ -257,12 +257,25 @@ void CAN_Motor_Init(void)
    steer1.reset_GearRatio(8.0f); steer2.reset_GearRatio(8.0f); 
    steer3.reset_GearRatio(8.0f); steer4.reset_GearRatio(8.0f);
 
-   // 底盘轮子电机PID参数初始化
-   steer1.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
-   steer2.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
-   steer3.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
-   steer4.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508_angle_pid_params, 0.0f);
+   steer1.set_angle_pid_circular(true); steer2.set_angle_pid_circular(true);
+   steer3.set_angle_pid_circular(true); steer4.set_angle_pid_circular(true);
 
+   PID_Param_Config steer_speed_pid_param = m3508_speed_pid_paramsForSpeedMotor;
+   steer_speed_pid_param.kp = m3508_speed_pid_paramsForSpeedMotor.kp / M3508_DECRATION * 8.0f;
+   steer_speed_pid_param.ki = m3508_speed_pid_paramsForSpeedMotor.ki / M3508_DECRATION * 8.0f;
+   steer_speed_pid_param.deadband = m3508_speed_pid_paramsForSpeedMotor.deadband * M3508_DECRATION / 8.0f;
+
+   PID_Param_Config steer_angle_pid_param = m3508_angle_pid_params;
+   steer_angle_pid_param.kp = m3508_angle_pid_params.kp / M3508_DECRATION * 8.0f;
+   steer_angle_pid_param.kd = m3508_angle_pid_params.kd / M3508_DECRATION * 8.0f;
+   steer_angle_pid_param.deadband= m3508_angle_pid_params.deadband * M3508_DECRATION / 8.0f;
+   steer_angle_pid_param.output_limit = 1050.0f;
+
+   // 底盘轮子电机PID参数初始化
+   steer1.pid_init(steer_speed_pid_param, 0.0f, steer_angle_pid_param, 0.0f);
+   steer2.pid_init(steer_speed_pid_param, 0.0f, steer_angle_pid_param, 0.0f);
+   steer3.pid_init(steer_speed_pid_param, 0.0f, steer_angle_pid_param, 0.0f);
+   steer4.pid_init(steer_speed_pid_param, 0.0f, steer_angle_pid_param, 0.0f);
 
    U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
    U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);

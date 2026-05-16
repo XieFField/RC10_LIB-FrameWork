@@ -244,6 +244,14 @@ public:
         Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_; // 同步到基类，供 updateFeedback 使用
     }
 
+    void set_angle_pid_circular(bool circular)
+    {
+        if(circular)
+            angle_pid_.set_as_circular();
+        else
+            angle_pid_.set_as_linear();
+    }
+
 private:
     
     ControlMode mode_ = CURRENT_CONTROL;

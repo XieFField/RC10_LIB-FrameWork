@@ -263,7 +263,12 @@
         <Ww>
           <count>22</count>
           <WinNumber>1</WinNumber>
-          <ItemText>test_steer</ItemText>
+          <ItemText>steer_debug</ItemText>
+        </Ww>
+        <Ww>
+          <count>23</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>target_angle</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>

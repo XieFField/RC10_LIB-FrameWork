@@ -1,11 +1,20 @@
 #include "M3508_Steer_Debug.h"
 
+float target_angle = 0.0f;
+
 void M3508_Steer_Debug::loop()
 {
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 
     if(airjoy_data_.SWB != 0x01)
+    {
+        for(int i = 0; i < 4; i++)
+        {
+            steer[i]->setTargetCurrent(0.0f);
+        }
         return;
+    }
+        
 
     
     switch(test_index)
@@ -16,6 +25,7 @@ void M3508_Steer_Debug::loop()
             {
                 steer[i]->setTargetCurrent(0.0f);
             }
+            break;
         }
 
         case 1:
@@ -39,20 +49,59 @@ void M3508_Steer_Debug::loop()
             {
                 steer[i]->setTargetRPM(target_rpm[i]);
             }
+            break;
         }
 
         case 3:
         {
             for(int i = 0; i < 4; i++)
             {
-                if(std::fabs(airjoy_data_.left_x) > 0.15f && std::fabs(test_target_angle[i]) < 900.0f) // 死区
-                    test_target_angle[i] += airjoy_data_.left_x * 5.0f; // 每次调整5度
+                test_target_angle[i] = target_angle;
+
+                steer[i]->setTargetAngle(test_target_angle[i]);
+            }
+            break;
+        }
+
+        case 4: 
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                if(std::fabs(airjoy_data_.left_x) > 0.15f) // 死区
+                    test_target_angle[i] = (airjoy_data_.left_x) * 180.0f;
+                else
+                    test_target_angle[i] = 0.0f;
+
+                steer[i]->setTargetAngle(test_target_angle[i]);
+            }
+            break;
+        }
+
+        case 5:
+        {
+            for(int i = 0; i < 4; i++)
+            {
+                test_target_angle[i] = target_angle;
 
                 steer[i]->setTargetTotalAngle(test_target_angle[i]);
             }
             break;
         }
 
+        case 6:
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                if(std::fabs(airjoy_data_.left_x) > 0.15f) // 死区
+                    test_target_angle[i] = (airjoy_data_.left_x) * 180.0f;
+                else
+                    test_target_angle[i] = 0.0f;
+
+                steer[i]->setTargetTotalAngle(test_target_angle[i]);
+            }
+            break;
+        }
+        
         default:
            break;
     }
