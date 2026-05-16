@@ -31,9 +31,9 @@
                 "${workspaceFolder}/Middlewares/ST/ARM/DSP/Inc",
                 "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
                 "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F",
-                "${workspaceFolder}"
+                "${workspaceFolder}",
+                "${workspaceFolder}/User/Setup/Inc"
             ]
         }
-       
     ]
 }

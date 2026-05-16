@@ -17,7 +17,6 @@ void ArmSetup::loop()
         motor_pitch_->motorEnable();
         this->is_pitchEnable_ = true;
     }
-
 	
 //	ArmstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
     if(!arm_ctrlStatus.is_calibrating)
@@ -93,7 +92,7 @@ void ArmSetup::loop()
                     if(this->getSuckerStatus() == Sucker_Status_E::SUCK)
                     {
                         arm_ctrlStatus.is_store_acting = 2; //如果当前吸附状态，执行取出
-            }
+                    }
                     else
                         arm_ctrlStatus.is_store_acting = 1;
                 }
@@ -213,7 +212,6 @@ void ArmSetup::manualControl()
         arm_ctrlStatus.last_manual_pitch = current_pitch_logical;
         arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.scroll_wheel & 0x01) ^ current_pitch_logical;
 
-
         last_arm_status_ = ARM_MANUAL_CONTROL;
     }
 
@@ -249,16 +247,15 @@ void ArmSetup::manualControl()
     else
         target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // 保持不变
 
+    if(airjoy_data_.right_x > 0.5f)
+        target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
+    else if(airjoy_data_.right_x < -0.5f)
+        target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
+    // else
+    //     target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_; // 保持不变
 
-        if(airjoy_data_.right_x > 0.5f)
-            target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
-        else if(airjoy_data_.right_x < -0.5f)
-            target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
-        // else
-        //     target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_; // 保持不变
-
-        target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
-        target_joint_status_.rotateJoint_angle_ = manual_roate_clamp(target_joint_status_.rotateJoint_angle_);
+    target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
+    target_joint_status_.rotateJoint_angle_ = manual_roate_clamp(target_joint_status_.rotateJoint_angle_);
 
 
     //pitch 开关
