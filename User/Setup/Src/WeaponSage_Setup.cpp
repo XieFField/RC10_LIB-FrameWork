@@ -76,7 +76,16 @@ float Kp_traverse=0.5f;
 
 
 
-
+/**
+ * @brief 武器架校准流程
+ * 3个夹爪的校准： 和上一版一样，往外张开方向的电流顶住限位后计时，计时完成后重定位
+ * arm电机的校准： 和先前一样，上电会有机械限位，以上电位置为0度就行。
+ *                 arm电机有两个目标位置，一个水平一个垂直，上电位置的0度不是任何其中的一个位置
+ *                 在离开校准模式后，如果首次进入非校准和STOP外的模式(即status第一次为非calibrate和stop时候)，抬到竖直位置。
+ * wrist电机校准： 上电先读取OID_Encoder，如果encoder的get_encoder_raw()返回0，说明还没收到第一帧数据，继续等待
+ *                 如果返回的不为0了，调用get_angle()，为重定位角度，可能不是0~360的范围，你自己进行归一化处理
+ * launch电机校准： 施加小的反向电流，计时后完成重定位
+ */
 void Robot_WeaponSage_Setup::calibrate()
 {
 
@@ -85,6 +94,17 @@ void Robot_WeaponSage_Setup::calibrate()
 
 float test_angle = 20.0f;
 
+
+//这版手操逻辑：（暂时）
+/**
+ *  大体和之前的差不多，一些地方有变化
+ *  还是右摇杆的y控制升降
+ *  SWD控制夹爪开合，手操先设定为三个夹爪都一起控制
+ *  右摇杆x轴，往左往右打一次，代表手腕逆顺时针方向转90度，，每执行一次转90度需要遥控回中后才能执行下一次转动。
+ *  SWA控制arm的竖直和水平。两档
+ *  
+ *  SWA和SWD的状态切换和之前一样，使用异或方式，防止状态的跳变
+ */
 void Robot_WeaponSage_Setup::manualControl()
 {
 
@@ -284,19 +304,39 @@ void Robot_WeaponSage_Setup::debug()
 
 
 
-void Robot_WeaponSage_Setup::autoControl()
+void Robot_WeaponSage_Setup::autoControl_catch()
 {
 	
-    //待实现
     /**
-     * @brief 自动控制逻辑
-     *  1.对于4个待取矛杆，硬编码四个位置
-     *  2.当底盘靠位完成后，总状态机发来下降指令，执行下降
-     *  3.当下降完成后，且底盘与武器架底部接触，则执行抓取
-     *  4.当底盘后退到能将矛杆抬起的位置后，执行抬起
+     * @brief 抓取流程
+     *        新版抓取杆时候不需要抬高，需降到最低，贴近后等待底盘停稳信号
+     *        底盘停稳信号到达后夹取目标杆
+     *        夹取完成后抬高到安全高度，完流程
      */
 	
-	
+}
+
+/**
+ * @brief 虽然放在auto里面，但其实这部分应该算是一串动作链，没有和其他机构的交互
+ *        但这部分你还是需要设计一个小状态机。
+ * 
+ *        收到开始执行动作的信号时候
+ *        1. 先保证目前arm处于水平。
+ *        2. 半松爪子，不让杆子能掉出去，但也没有抓住杆的状态 
+ *        3. 根据 @param target_dock_ 的值，调整爪子到对应的高度
+ *        4. 紧爪子抓住杆。
+ *        5. 根据 @param target_dock_ 的值，如果非MID则旋转手腕180度。
+ *        6. 旋转完成后，将arm抬到竖直位置。
+ *        7. 完成后升降到预定位置(先定为中间位置，用于对接)
+ *        8. 完成进入idle状态
+ * 
+ *        在进入idle状态后，如果SWD状态被切换了(同manual里的逻辑)
+ *        则切换arm的状态，如果当前竖直就变水平，反之亦然。
+ *        
+ */
+void Robot_WeaponSage_Setup::autoControl_dock()
+{
+
 }
 
 void Robot_WeaponSage_Setup::stop()
