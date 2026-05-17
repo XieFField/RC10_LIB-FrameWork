@@ -844,6 +844,12 @@ namespace jia
 
             adaptive_gate_scale_ = 1.0f;
             adaptive_gate_phase_ = AdaptiveGatePhase::kIdle;
+            trans_dir_freeze_active_ = false;
+            trans_dir_ref_valid_ = false;
+            trans_dir_ref_rad_ = 0.0f;
+            trans_dir_tar_mag_m_s_ = 0.0f;
+            trans_dir_out_mag_m_s_ = 0.0f;
+            trans_dir_freeze_reason_ = 0U;
 
             rot_z_pid_.set_params(lock_angle_pid_params, 0.0f);
             rot_z_pid_.set_as_circular();
@@ -877,6 +883,12 @@ namespace jia
             input_target_data_.omega_z = 0.0f;
             input_target_data_.rot_z = 0.0f;
             lock_now_rot_z_target_ = 0.0f;
+            trans_dir_freeze_active_ = false;
+            trans_dir_ref_valid_ = false;
+            trans_dir_ref_rad_ = 0.0f;
+            trans_dir_tar_mag_m_s_ = 0.0f;
+            trans_dir_out_mag_m_s_ = 0.0f;
+            trans_dir_freeze_reason_ = 0U;
         }
 
         Chassis::Result Chassis::setWheelTorqueFreeMode()
@@ -1065,6 +1077,12 @@ namespace jia
             adaptive_gate_phase_ = AdaptiveGatePhase::kIdle;
             xpark_gate_active_ = false;
             xpark_stationary_hold_ms_ = 0U;
+            trans_dir_freeze_active_ = false;
+            trans_dir_ref_valid_ = false;
+            trans_dir_ref_rad_ = 0.0f;
+            trans_dir_tar_mag_m_s_ = 0.0f;
+            trans_dir_out_mag_m_s_ = 0.0f;
+            trans_dir_freeze_reason_ = 0U;
         }
 
         f32 Chassis::wrapToPi(f32 angle_rad) const
@@ -1515,11 +1533,85 @@ namespace jia
 
         void Chassis::limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z)
         {
-            // 规划层限速使用“对称加减速”约束：目标值不变，但每周期只允许按加/减速度上限逼近，
-            // 这是比简单 clamp 更平滑的速度整形，避免规划速度台阶过大。
+            // 第一阶段：先按 x/y 分量分别做加减速限幅，保证速度台阶被平滑化。
             out_vel_x = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_x, last_planned_data_.vel_x, period_, max_acc_xy_acc_, max_acc_xy_dec_);
             out_vel_y = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_y, last_planned_data_.vel_y, period_, max_acc_xy_acc_, max_acc_xy_dec_);
             out_omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_omega_z, last_planned_data_.omega_z, period_, max_alpha_z_acc_, max_alpha_z_dec_);
+
+            // 第二阶段：平移矢量方向限幅（低速滞回冻结 + 方向角速度限幅）。
+            const f32 tar_mag = magnitude2D(tar_vel_x, tar_vel_y);
+            const f32 out_mag = magnitude2D(out_vel_x, out_vel_y);
+            const f32 enter_speed = (trans_dir_freeze_enter_speed_m_s_ >= 0.0f) ? trans_dir_freeze_enter_speed_m_s_ : 0.0f;
+            const f32 exit_speed_raw = (trans_dir_freeze_exit_speed_m_s_ >= 0.0f) ? trans_dir_freeze_exit_speed_m_s_ : 0.0f;
+            const f32 exit_speed = (exit_speed_raw > enter_speed) ? exit_speed_raw : (enter_speed + 1.0e-3f);
+            const f32 dir_rate_limit_rad_s = degToRadF32((trans_dir_rate_limit_deg_s_ >= 0.0f) ? trans_dir_rate_limit_deg_s_ : 0.0f);
+            const f32 max_dir_step = dir_rate_limit_rad_s * period_;
+            bool entered_freeze_now = false;
+            trans_dir_tar_mag_m_s_ = tar_mag;
+            trans_dir_out_mag_m_s_ = out_mag;
+            trans_dir_freeze_reason_ = 0U;
+
+            if (!trans_dir_ref_valid_ && out_mag > 1.0e-6f)
+            {
+                trans_dir_ref_rad_ = atan2f(out_vel_y, out_vel_x);
+                trans_dir_ref_valid_ = true;
+            }
+
+            if (trans_dir_freeze_active_)
+            {
+                if ((tar_mag >= exit_speed) || (out_mag >= exit_speed))
+                {
+                    trans_dir_freeze_active_ = false;
+                }
+            }
+            else if ((tar_mag <= enter_speed) && (out_mag <= enter_speed))
+            {
+                trans_dir_freeze_active_ = true;
+                entered_freeze_now = true;
+                trans_dir_freeze_reason_ = 1U;
+            }
+
+            if (out_mag <= 1.0e-6f)
+            {
+                out_vel_x = 0.0f;
+                out_vel_y = 0.0f;
+                trans_dir_ref_valid_ = false;
+                trans_dir_ref_rad_ = 0.0f;
+                return;
+            }
+
+            if (trans_dir_freeze_active_)
+            {
+                if (!entered_freeze_now)
+                {
+                    trans_dir_freeze_reason_ = 2U;
+                }
+                if (trans_dir_ref_valid_)
+                {
+                    out_vel_x = out_mag * cosf(trans_dir_ref_rad_);
+                    out_vel_y = out_mag * sinf(trans_dir_ref_rad_);
+                }
+                return;
+            }
+
+            const f32 target_dir_rad = atan2f(out_vel_y, out_vel_x);
+            if (!trans_dir_ref_valid_)
+            {
+                trans_dir_ref_rad_ = target_dir_rad;
+                trans_dir_ref_valid_ = true;
+            }
+
+            f32 output_dir_rad = target_dir_rad;
+            if (max_dir_step > 1.0e-6f)
+            {
+                const f32 dir_delta = shortestAngularDistance(trans_dir_ref_rad_, target_dir_rad);
+                const f32 clamped_delta = clampValue(dir_delta, -max_dir_step, max_dir_step);
+                output_dir_rad = wrapToPi(trans_dir_ref_rad_ + clamped_delta);
+            }
+
+            trans_dir_ref_rad_ = output_dir_rad;
+            out_vel_x = out_mag * cosf(output_dir_rad);
+            out_vel_y = out_mag * sinf(output_dir_rad);
         }
 
         bool Chassis::readHomingSensor(const WheelConfig &wheel) const
@@ -2072,6 +2164,11 @@ namespace jia
             debug_mirror_.selected_wheel_drive_released = false;
             debug_mirror_.xpark_gate_active = xpark_gate_active_;
             debug_mirror_.xpark_stationary_hold_ms = xpark_stationary_hold_ms_;
+            debug_mirror_.trans_dir_freeze_active = trans_dir_freeze_active_;
+            debug_mirror_.trans_dir_ref_deg = radToDegF32(trans_dir_ref_rad_);
+            debug_mirror_.trans_dir_tar_mag_m_s = trans_dir_tar_mag_m_s_;
+            debug_mirror_.trans_dir_out_mag_m_s = trans_dir_out_mag_m_s_;
+            debug_mirror_.trans_dir_freeze_reason = trans_dir_freeze_reason_;
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];
