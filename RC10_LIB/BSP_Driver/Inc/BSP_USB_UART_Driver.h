@@ -67,44 +67,48 @@ public:
     UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle);
     ~UART_(){}
 			//?????üD??
-		virtual void Callback_Fuc(uint8_t *buf, uint16_t len);
-		void SetCallback(RxCallback callback) {RxCallback_Fuc = callback;}// ??????????
-		void UART_Receive_Callback(uint8_t* Buf, uint32_t Len);
-    UART_HandleTypeDef* GetUartHandle() const { return uarthandle_;}
-		void UART_Init();
-		uint16_t rx_buffer_size;
-		uint8_t *rx_buffer;
+	virtual void Callback_Fuc(uint8_t *buf, uint16_t len);
+	void SetCallback(RxCallback callback) {RxCallback_Fuc = callback;}// ??????????
+	void UART_Receive_Callback(uint8_t* Buf, uint32_t Len);
+	UART_HandleTypeDef* GetUartHandle() const { return uarthandle_;}
+	void UART_Init();
+	uint16_t rx_buffer_size;
+	uint8_t *rx_buffer;
 private:
     RxCallback RxCallback_Fuc;	  
-		UART_HandleTypeDef *uarthandle_;//UART???
+	UART_HandleTypeDef *uarthandle_;//UART???
 };
 
 class USB_CDC_{
-	public:
+public:
     USB_CDC_(USBD_HandleTypeDef *usb_handle);
     ~USB_CDC_(){}
     void Callback_DCD_Fuc(uint8_t *buf, uint16_t len);
     USBD_HandleTypeDef* GetUSBHandle() const { return usbhandle_; }
-		void CDC_Send_(uint8_t id_, uint8_t *data, uint16_t len);
-		uint8_t xor_check(const uint8_t *data, uint32_t length);
-	  RECEIVE_FLAG receive_flag = WAIT_HEAD_1;
-		uint8_t receive_id;
-		uint8_t receive_len;
-		uint8_t receive_check;
-		uint8_t receive_data[MAX_RECEIVE_DATA_LEN] = {0};
-		uint16_t receive_data_dx = 0;
-		USB_Data Data_;
-		uint8_t head_1 = 0xaa;
-		uint8_t head_2 = 0x55;
-		uint8_t tail=0xee;
-	protected:
-		uint8_t send_buf[MAX_SEND_BUF_SIZE];
+	void CDC_Send_(uint8_t id_, uint8_t *data, uint16_t len);
+	uint8_t xor_check(const uint8_t *data, uint32_t length);
+	RECEIVE_FLAG receive_flag = WAIT_HEAD_1;
+	uint8_t receive_id;
+	uint8_t receive_len;
+	uint8_t receive_check;
+	uint8_t receive_data[MAX_RECEIVE_DATA_LEN] = {0};
+	uint16_t receive_data_dx = 0;
+	USB_Data Data_;
+	
+	uint16_t relocate_suceed_cnt = 0;
+
+	uint8_t head_1 = 0xaa;
+	uint8_t head_2 = 0x55;
+	uint8_t tail=0xee;
+
+protected:
+	uint8_t send_buf[MAX_SEND_BUF_SIZE];
 	
 		
 private:
 	  
     RxCallback RxCallback_Fuc;	 
-		USBD_HandleTypeDef *usbhandle_;//USB???
+	USBD_HandleTypeDef *usbhandle_;//USB???
 };
 // ?????????
 class InstanceManager {

@@ -41,12 +41,12 @@ extern "C" {
 
 #define MAX_RECEIVE_DATA_LEN 64
 	
-		typedef enum LASER_MODE 
-	{
+typedef enum LASER_MODE 
+{
     LEFT,
-		RIGHT
-	} LASER_MODE;
-	
+    RIGHT
+} LASER_MODE;
+
 typedef struct 
 {
   /* data */
@@ -149,7 +149,7 @@ private:
     bool is_startToLRL_ = false; // 是否启动激光重定位
     void update(); //更新
 
-
+    uint16_t relocate_imu_cnt = 0;
 
     /**
      * @brief 雷达坐标变换计算->robot_in_world, arm_in_world

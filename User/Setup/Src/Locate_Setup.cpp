@@ -3,7 +3,6 @@
 float aaa;
 void Locate_Setup::loop()
 {
-	Get_Rader_Data();
     this->update();
 }
 float cos_neg90 = cos(deg_to_rad(-90));
@@ -32,24 +31,11 @@ void Locate_Setup::update()
 
     robot_speed_inworld_.yaw = dyaw_from_position_;
 
-//    if(HAL_GPIO_ReadPin(SWITCH1_GPIO_Port, SWITCH1_Pin) == GPIO_PIN_SET)
-//    {
-//        swtich1_isOn = true;
-//    }
-//    else
-//    {
-//        swtich1_isOn = false;
-//    }
-
-//    if(HAL_GPIO_ReadPin(SWTICH2_GPIO_Port, SWTICH2_Pin) == GPIO_PIN_SET)
-//    {
-//        swtich2_isOn = true;
-//    }
-//    else
-//    {
-//        swtich2_isOn = false;
-//    }
-
+    if(relocate_imu_cnt < usb_handle->relocate_suceed_cnt)
+    {
+        HWT101CT::GetInstance(&huart1)->imu_relocate(Lad_Data.yaw);
+        relocate_imu_cnt++;
+    }
 }
 
 
