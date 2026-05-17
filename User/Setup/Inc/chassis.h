@@ -762,7 +762,7 @@ namespace jia
             f32 max_steer_rate_rad_s_ = 999999.0f;                            // [RW] 转向目标角速度上限（rad/s）。越大转向越快，但过大容易让舵角命令太激进。
             f32 max_steer_alpha_rad_s2_ = 999999.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。用于限制舵角变化的“突然性”。
             f32 stationary_speed_epsilon_m_s_ = 0.05f;                       // [RW] 近似静止阈值（m/s）。低于该速度时可认为底盘处于停车/低速保护区。
-            f32 trans_dir_rate_limit_deg_s_ = 90.0f;                        // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
+            f32 trans_dir_rate_limit_deg_s_ = 540.0f;                        // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
             f32 trans_dir_freeze_enter_speed_m_s_ = 0.05f;                    // [RW] 平移方向冻结进入阈值（m/s）。速度低于该值时进入冻结，抑制低速方向抖动。
             f32 trans_dir_freeze_exit_speed_m_s_ = 0.08f;                     // [RW] 平移方向冻结退出阈值（m/s）。高于该值退出冻结；需大于 enter 形成滞回。
             bool enable_cosine_compensation_ = false;                        // [RW] 是否启用舵角余弦补偿。开启后，舵角偏离时会折算驱动分量，减小横滑和无效驱动。
