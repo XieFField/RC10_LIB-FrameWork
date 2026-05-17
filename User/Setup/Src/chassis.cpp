@@ -1052,7 +1052,7 @@ namespace jia
         void Chassis::setStopSteerGuardConfig(StopSteerGuardStrategy strategy, f32 release_speed_m_s, f32 blend_start_speed_m_s, f32 curve_half_speed_m_s, f32 curve_exponent)
         {
             runtime_strategy_cfg_.stop_steer_guard_strategy = strategy;
-            runtime_strategy_cfg_.stop_guard_release_speed_m_s = (release_speed_m_s >= 0.0f) ? release_speed_m_s : 0.01f;
+            runtime_strategy_cfg_.stop_guard_release_speed_m_s = (release_speed_m_s >= 0.0f) ? release_speed_m_s : 0.12f;
             runtime_strategy_cfg_.stop_guard_blend_start_speed_m_s = (blend_start_speed_m_s >= 0.0f) ? blend_start_speed_m_s : 0.20f;
             runtime_strategy_cfg_.stop_guard_curve_half_speed_m_s = (curve_half_speed_m_s > 1.0e-4f) ? curve_half_speed_m_s : 0.08f;
             runtime_strategy_cfg_.stop_guard_curve_exponent = (curve_exponent > 0.1f) ? curve_exponent : 2.0f;
@@ -1063,6 +1063,8 @@ namespace jia
             runtime_strategy_cfg_ = default_strategy_cfg_;
             adaptive_gate_scale_ = 1.0f;
             adaptive_gate_phase_ = AdaptiveGatePhase::kIdle;
+            xpark_gate_active_ = false;
+            xpark_stationary_hold_ms_ = 0U;
         }
 
         f32 Chassis::wrapToPi(f32 angle_rad) const
@@ -1779,11 +1781,15 @@ namespace jia
             f32 target_drive_raw_rad_s[4] = {0.0f};
             f32 selected_oa_total_rad[4] = {0.0f};
             f32 steering_errors_rad[4] = {0.0f};
+            f32 wheel_vx_m_s[4] = {0.0f};
+            f32 wheel_vy_m_s[4] = {0.0f};
+            f32 wheel_speed_m_s_arr[4] = {0.0f};
+            f32 residual_speed_m_s_arr[4] = {0.0f};
 
             f32 max_command_wheel_speed_m_s = 0.0f;
             f32 max_residual_speed_m_s = 0.0f;
 
-            // 第一阶段：计算每轮原始目标、翻转候选与误差。
+            // 第一阶段：采样每轮速度与残速，先建立“驻车进入门控”的判据。
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
@@ -1793,25 +1799,67 @@ namespace jia
                 const f32 wheel_vx = command_data.vel_x - command_data.omega_z * wheel.pos_y_m;
                 const f32 wheel_vy = command_data.vel_y + command_data.omega_z * wheel.pos_x_m;
                 const f32 wheel_speed_m_s = magnitude2D(wheel_vx, wheel_vy);
+                wheel_vx_m_s[i] = wheel_vx;
+                wheel_vy_m_s[i] = wheel_vy;
+                wheel_speed_m_s_arr[i] = wheel_speed_m_s;
                 max_command_wheel_speed_m_s = (wheel_speed_m_s > max_command_wheel_speed_m_s) ? wheel_speed_m_s : max_command_wheel_speed_m_s;
 
                 const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * wheel_radius_m_;
+                residual_speed_m_s_arr[i] = residual_speed_m_s;
                 max_residual_speed_m_s = (residual_speed_m_s > max_residual_speed_m_s) ? residual_speed_m_s : max_residual_speed_m_s;
+            }
 
+            const f32 xpark_enter_speed = (runtime_strategy_cfg_.xpark_stationary_enter_speed_m_s >= 0.0f)
+                                              ? runtime_strategy_cfg_.xpark_stationary_enter_speed_m_s
+                                              : stationary_speed_epsilon_m_s_;
+            const f32 xpark_exit_speed_raw = (runtime_strategy_cfg_.xpark_stationary_exit_speed_m_s >= 0.0f)
+                                                 ? runtime_strategy_cfg_.xpark_stationary_exit_speed_m_s
+                                                 : (xpark_enter_speed + 0.04f);
+            const f32 xpark_exit_speed = (xpark_exit_speed_raw > xpark_enter_speed)
+                                             ? xpark_exit_speed_raw
+                                             : (xpark_enter_speed + 1.0e-3f);
+
+            const bool command_stationary_intent = xpark_gate_active_
+                                                       ? (max_command_wheel_speed_m_s <= xpark_exit_speed)
+                                                       : (max_command_wheel_speed_m_s <= xpark_enter_speed);
+
+            if (command_stationary_intent)
+            {
+                xpark_stationary_hold_ms_ = (xpark_stationary_hold_ms_ > (0xFFFFFFFFU - period_ms_))
+                                                ? 0xFFFFFFFFU
+                                                : (xpark_stationary_hold_ms_ + period_ms_);
+                if (xpark_stationary_hold_ms_ >= runtime_strategy_cfg_.xpark_entry_delay_ms)
+                {
+                    xpark_gate_active_ = true;
+                }
+            }
+            else
+            {
+                xpark_stationary_hold_ms_ = 0U;
+                xpark_gate_active_ = false;
+            }
+
+            const bool allow_xpark_pose = command_stationary_intent && xpark_gate_active_;
+
+            // 第二阶段：计算每轮目标、翻转候选与误差（含 X-Park 延时门控）。
+            for (u8 i = 0; i < 4; ++i)
+            {
+                const WheelConfig &wheel = wheel_config_[i];
+                const f32 wheel_speed_m_s = wheel_speed_m_s_arr[i];
                 const bool is_stationary = wheel_speed_m_s <= stationary_speed_epsilon_m_s_;
                 f32 raw_target_oa_mod_rad = 0.0f;
                 f32 drive_omega = 0.0f;
 
                 if (is_stationary)
                 {
-                    raw_target_oa_mod_rad = (idle_posture_mode_ == IdlePostureMode::kXPark)
+                    raw_target_oa_mod_rad = (allow_xpark_pose && idle_posture_mode_ == IdlePostureMode::kXPark)
                                                 ? wrapTo2Pi(getXParkAngle(wheel))
                                                 : wrapTo2Pi(current_oa_total_rad[i]);
                     drive_omega = 0.0f;
                 }
                 else
                 {
-                    raw_target_oa_mod_rad = wrapTo2Pi(atan2f(wheel_vy, wheel_vx));
+                    raw_target_oa_mod_rad = wrapTo2Pi(atan2f(wheel_vy_m_s[i], wheel_vx_m_s[i]));
                     drive_omega = wheel_speed_m_s / wheel_radius_m_;
                 }
 
@@ -1854,14 +1902,14 @@ namespace jia
                 target_drive_raw_rad_s[i] = drive_omega;
             }
 
-            // 第二阶段：停车抑制（指令静止但残速未消失时，先保舵角）。
-            const bool command_is_stationary = max_command_wheel_speed_m_s <= stationary_speed_epsilon_m_s_;
+            // 第三阶段：停车抑制（指令静止但残速未消失时，先保舵角）。
+            const bool command_is_stationary = command_stationary_intent;
             const bool residual_drive_is_moving = max_residual_speed_m_s > runtime_strategy_cfg_.stop_guard_release_speed_m_s;
             if (runtime_strategy_cfg_.enable_stop_steer_guard && command_is_stationary && residual_drive_is_moving)
             {
                 for (u8 i = 0; i < 4; ++i)
                 {
-                    const f32 residual_speed_m_s = fabsf(wheel_config_[i].corrected_drive_omega_rad_s) * wheel_radius_m_;
+                    const f32 residual_speed_m_s = residual_speed_m_s_arr[i];
                     const f32 blend = stopSteerGuardBlend(residual_speed_m_s);
                     if (blend >= 1.0f)
                     {
@@ -1877,11 +1925,11 @@ namespace jia
                 }
             }
 
-            // 第三阶段：驱动抑制比例（DriveGate 或余弦补偿）。
+            // 第四阶段：驱动抑制比例（DriveGate 或余弦补偿）。
             f32 gate_scales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
             computeDriveGateScales(steering_errors_rad, command_data, gate_scales);
 
-            // 第四阶段：下发前限幅与缓存。
+            // 第五阶段：下发前限幅与缓存。
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
@@ -2022,6 +2070,8 @@ namespace jia
             debug_mirror_.all_homed = all_homed;
             debug_mirror_.selected_wheel_steer_error_deg = 0.0f;
             debug_mirror_.selected_wheel_drive_released = false;
+            debug_mirror_.xpark_gate_active = xpark_gate_active_;
+            debug_mirror_.xpark_stationary_hold_ms = xpark_stationary_hold_ms_;
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];

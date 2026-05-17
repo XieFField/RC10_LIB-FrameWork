@@ -757,13 +757,13 @@ namespace jia
             f32 max_acc_xy_dec_ = 10.0f;                                   // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
             f32 max_alpha_z_acc_ = 5.0f;                                  // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
             f32 max_alpha_z_dec_ = 10.0f;                                  // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
-            f32 max_drive_omega_rad_s_ = 9999.0f;                              // [RW] 驱动目标角速度上限（rad/s）。最终下发给驱动电机前会做限幅，防止超速命令。
-            f32 max_drive_alpha_rad_s2_ = 9999.0f;                             // [RW] 驱动角速度变化率上限（rad/s^2）。越小越像“缓启动/缓刹车”。
-            f32 max_steer_rate_rad_s_ = 9999.0f;                            // [RW] 转向目标角速度上限（rad/s）。越大转向越快，但过大容易让舵角命令太激进。
+            f32 max_drive_omega_rad_s_ = 999999.0f;                              // [RW] 驱动目标角速度上限（rad/s）。最终下发给驱动电机前会做限幅，防止超速命令。
+            f32 max_drive_alpha_rad_s2_ = 999999.0f;                             // [RW] 驱动角速度变化率上限（rad/s^2）。越小越像“缓启动/缓刹车”。
+            f32 max_steer_rate_rad_s_ = 999999.0f;                            // [RW] 转向目标角速度上限（rad/s）。越大转向越快，但过大容易让舵角命令太激进。
             f32 max_steer_alpha_rad_s2_ = 999999.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。用于限制舵角变化的“突然性”。
-            f32 stationary_speed_epsilon_m_s_ = 0.1f;                       // [RW] 近似静止阈值（m/s）。低于该速度时可认为底盘处于停车/低速保护区。
+            f32 stationary_speed_epsilon_m_s_ = 0.05f;                       // [RW] 近似静止阈值（m/s）。低于该速度时可认为底盘处于停车/低速保护区。
             bool enable_cosine_compensation_ = false;                        // [RW] 是否启用舵角余弦补偿。开启后，舵角偏离时会折算驱动分量，减小横滑和无效驱动。
-            IdlePostureMode idle_posture_mode_ = IdlePostureMode::kHoldLast; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。
+            IdlePostureMode idle_posture_mode_ = IdlePostureMode::kXPark; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。
 
             // =====================================================================
             // 策略参数（运行时可调）[RW]
@@ -775,8 +775,8 @@ namespace jia
                 // 决定每个模块在“直接转过去”与“翻转 180° 再配合驱动反向”之间如何选择。
                 // 这个选择直接影响转向路径长度、驱动方向是否反转，以及模块在大角度切换时是否抖动。
                 SteeringStrategyMode steering_strategy_mode = SteeringStrategyMode::kShortestPath; // [RW] 舵角解算策略。不同策略在转向路径和稳定性上有不同权衡。
-                f32 flip_enter_angle_deg = 100.0f;                                                  // [RW] 翻转进入阈值（deg）。角差大于该值时，策略才允许“舵角+180°并反转驱动”。
-                f32 flip_exit_angle_deg = 80.0f;                                                    // [RW] 翻转退出阈值（deg）。必须小于进入阈值，用于形成滞回，避免临界角附近来回翻转。
+                f32 flip_enter_angle_deg = 135.0f; // [RW] 翻转保持/进入上阈值（deg）。用于“已处于翻转解”时的保持判据：当翻转解角差 <= 该阈值时继续保持翻转；超过该阈值才退出翻转。阈值设大一些可减少反向切换时频繁退翻。
+                f32 flip_exit_angle_deg  = 80.0f;  // [RW] 翻转触发下阈值（deg）。用于“当前未翻转”时的切入判据之一：仅当直达解角差足够大（>该值）且翻转解更优时才切入翻转。应小于 flip_enter_angle_deg 以形成滞回，避免临界角抖动。                                                 // [RW] 翻转退出阈值（deg）。必须小于进入阈值，用于形成滞回，避免临界角附近来回翻转。
 
                 // ---- 驱动抑制（Drive Gate） -------------------------------------
                 // 当舵角还没对准时，按策略压低驱动输出，减少横滑、打滑和轮子“边转边拖”的冲击。
@@ -797,12 +797,17 @@ namespace jia
                 // ---- 停车转向保护 ------------------------------------------------
                 // 在低速或静止时抑制不必要的舵角摆动，避免轮子在接近停住时反复“找角”。
                 // 它主要解决停车抖动、低速微调来回打舵、以及静止姿态不稳定的问题。
-                bool enable_stop_steer_guard = false;                                                 // [RW] 是否启用停车转向保护。关闭后低速区的舵角跟踪会更直接，但也更容易抖动。
+                bool enable_stop_steer_guard = false;                                                  // [RW] 是否启用停车转向保护。默认开启以抑制过零与低速区舵角抖动。
                 StopSteerGuardStrategy stop_steer_guard_strategy = StopSteerGuardStrategy::kHardHold; // [RW] 停车保护形状：硬保持更稳，曲线混合更柔和。
-                f32 stop_guard_release_speed_m_s = 0.1f;                                             // [RW] 释放阈值（m/s）。低于该速度时，可视为进入停车保护区。
+                f32 stop_guard_release_speed_m_s = 0.05f;                                            // [RW] 释放阈值（m/s）。低于该速度时，可视为进入停车保护区。
                 f32 stop_guard_blend_start_speed_m_s = 0.20f;                                         // [RW] 混合起点速度（m/s）。从正常舵角控制逐步过渡到停车保护的起始点。
                 f32 stop_guard_curve_half_speed_m_s = 0.08f;                                          // [RW] 曲线混合半效速度（m/s）。决定混合函数中“过半”的速度位置。
                 f32 stop_guard_curve_exponent = 2.0f;                                                 // [RW] 曲线混合指数。越大过渡越陡，越小过渡越平缓。
+
+                // ---- X-Park 进入门控（防止过零瞬时误入驻车） ----------------------
+                u32 xpark_entry_delay_ms = 500U;                // [RW] X-Park 进入最短静止持续时间（ms）。连续静止不足该时长不进入驻车姿态。
+                f32 xpark_stationary_enter_speed_m_s = 0.05f;   // [RW] X-Park 静止判定进入阈值（m/s）。低于该值才累计驻车进入计时。
+                f32 xpark_stationary_exit_speed_m_s = 0.07f;    // [RW] X-Park 静止判定退出阈值（m/s）。高于该值立即退出，形成滞回避免抖动。
             };
             StrategyConfig default_strategy_cfg_; // [RW, 慎改] 默认策略基线。用于初始化和“恢复默认值”，不要把它当作实时状态。
             StrategyConfig runtime_strategy_cfg_; // [RW] 当前生效的运行时策略。可被外部接口动态切换，控制链路实际读取它。
@@ -962,6 +967,8 @@ namespace jia
             u8 rot_z_pid_count_ = 0;                                           // [RO] 航向 PID 分频计数器
             f32 lock_now_rot_z_target_ = 0.0f;                                 // [RO] LockNow 真正维持的航向目标
             u32 lock_now_rot_z_shift_count_ = 0;                               // [RO] LockNow 松手缓冲倒计时
+            bool xpark_gate_active_ = false;                                   // [RO] X-Park 进入门控当前是否放行。true 时允许静止姿态切到 X-Park。
+            u32 xpark_stationary_hold_ms_ = 0U;                                // [RO] 连续静止累计时长（ms）。用于判断是否达到 X-Park 延时门槛。
 
             // 控制链路缓存（观察）[RO]
             InputTargetData input_target_data_; // [RO] 输入目标快照（模式与期望速度/角度）
@@ -992,6 +999,8 @@ namespace jia
                 f32 drive_gate_scale_dbg[4] = {1.0f, 1.0f, 1.0f, 1.0f};             // [RO] 各轮门控缩放系数
                 f32 selected_wheel_steer_error_deg = 0.0f;                          // [RO] 选中轮舵向误差（deg）
                 bool selected_wheel_drive_released = false;                         // [RO] 选中轮驱动是否已释放
+                bool xpark_gate_active = false;                                     // [RO] X-Park 门控当前状态。false 表示仍在延时或未满足进入条件。
+                u32 xpark_stationary_hold_ms = 0U;                                  // [RO] X-Park 静止累计时长（ms）。用于观察是否接近进入门槛。
             } debug_mirror_;
 
             // 线程执行耗时统计（调试器只读观察）[RO]
