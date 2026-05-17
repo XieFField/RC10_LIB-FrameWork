@@ -4,10 +4,10 @@
 #define ARM_SETUP_UART8_PERIODIC_LOG_ENABLE 0
 #endif
 
-static bool s_has_recorded_strategy = false; //记录是否已经记录过策略
+static bool s_has_recorded_strategy = false; //记录�?否已经�?�录过策�?
 
 /**
- * @brief 寻主循环
+ * @brief 寻主�?�?
  */
 // uint32_t ArmstackHighWaterMark = 0;
 void ArmSetup::loop()
@@ -28,14 +28,14 @@ void ArmSetup::loop()
     {
         calibrateMotor();
         arm_status_ = ARM_CALIBRATE;
-        // 本拍仅执行校准，不进入其他状态分支，避免与上层状态机抢写 arm_status_
+        // �?拍仅执�?�校准，不进入其他状态分�?，避免与上层状态机抢写 arm_status_
         this->update();
         last_arm_status_ = arm_status_;
         return;
     }
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
-    //目前使用虚拟坐标进行自控逻辑验证
+    //�?前使用虚拟坐标进行自控逻辑验证
     if(arm_status_ == ARM_AUTO_CONTROL&&arm_ctrlStatus.auto_start == 1)
     {
         auto_ctrl_.now_chassis_speed = get_nowChassisSpeed();
@@ -66,11 +66,11 @@ void ArmSetup::loop()
 
     if(arm_status_ == ARM_MANUAL_CONTROL && arm_ctrlStatus.last_manual_store == 0)
     {
-        this->setRotateFilterK(270.0f); //手操时提高旋转响应速度
+        this->setRotateFilterK(270.0f); //手操时提高旋�?响应速度
     }
     else
     {
-        this->setRotateFilterK(180.0f); //非手操时降低旋转响应速度，避免干扰自动控制
+        this->setRotateFilterK(180.0f); //非手操时降低旋转响应速度，避免干扰自动控�?
     }
 
     switch(arm_status_)
@@ -81,7 +81,7 @@ void ArmSetup::loop()
             {
                 arm_ctrlStatus.last_manual_store = 0; //切换到手操模式，重置存储状态，避免跳变
                 store_state_ = store_state::idle; //切换到手操模式，重置存储状态机
-                arm_ctrlStatus.is_store_acting = 0; //切换到手操模式，重置存储动作状态
+                arm_ctrlStatus.is_store_acting = 0; //切换到手操模式，重置存储动作状�?
             }
 
             if(arm_ctrlStatus.is_store_acting == 0) //非存储动作状态，正常手操
@@ -96,7 +96,7 @@ void ArmSetup::loop()
                 {
                     if(this->getSuckerStatus() == Sucker_Status_E::SUCK)
                     {
-                        arm_ctrlStatus.is_store_acting = 2; //如果当前吸附状态，执行取出
+                        arm_ctrlStatus.is_store_acting = 2; //如果当前吸附状态，执�?�取�?
             }
                     else
                         arm_ctrlStatus.is_store_acting = 1;
@@ -104,7 +104,7 @@ void ArmSetup::loop()
                 arm_ctrlStatus.last_manual_store = 0;
                 store_state_ = store_state::idle;
             }
-            else if(arm_ctrlStatus.is_store_acting == 2 && this->getSuckerStatus() == Sucker_Status_E::SUCK) //正在执行存储动作，等待完成
+            else if(arm_ctrlStatus.is_store_acting == 2 && this->getSuckerStatus() == Sucker_Status_E::SUCK) //正在执�?�存储动作，等待完成
             {
                 if(test())
                 { 
@@ -136,21 +136,21 @@ void ArmSetup::loop()
             
         case ARM_STOP: 
         {
-            // 停止状态, 将各个关节回归初始位置后，将电流置零
+            // 停�?�状�?, 将各�?关节回归初�?�位�?后，将电流置�?
             stop();
             break;
         }
           
         case ARM_IDLE:
         {
-            // 空闲状态，维持当前状态
+            // 空闲状态，维持当前状�?
             idle();
             break;
         }
 
         case ARM_DEBUG:
         {
-            // 调试状态
+            // 调试状�?
             if(arm_ctrlStatus.debug_start == 1)
                 debug();
 
@@ -160,7 +160,7 @@ void ArmSetup::loop()
 
         case ARM_CALIBRATE:
         {
-            // 校准状态
+            // 校准状�?
             // 上电校准M2006电机位置
             break;
         }
@@ -169,7 +169,7 @@ void ArmSetup::loop()
     }
 
 
-    this->update(); //将控制信息发送给电机
+    this->update(); //将控制信�?发送给电机
     last_arm_status_ = arm_status_;
 #if ARM_SETUP_UART8_PERIODIC_LOG_ENABLE
     debug_uart.printf_DMA("%f\n", motor_rotate_->getTotalAngle());
@@ -179,7 +179,7 @@ bool test_num = 0;
 
 
 /**
- * @brief 寻手操
+ * @brief 寻手�?
  */
 void ArmSetup::manualControl()
 {
@@ -188,34 +188,34 @@ void ArmSetup::manualControl()
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
    
-    if(last_arm_status_ != ARM_MANUAL_CONTROL || arm_ctrlStatus.last_manual_store != 0)//若首次非此模式，需复制一下上次状态，免得跳变
+    if(last_arm_status_ != ARM_MANUAL_CONTROL || arm_ctrlStatus.last_manual_store != 0)//若�?��?�非此模式，需复制一下上次状态，免得跳变
     {
-        /*串联臂*/
+        /*串联�?*/
         last_joint_status_ = this->get_currentJointStatus();
         target_joint_status_ = last_joint_status_;
 
-        // 绑定伸展状态
-        // 判定当前是伸还是缩
-        // 假设阈值为 max_stretchLength / 2 或者 0.05m
+        // 绑定伸展状�?
+        // 判定当前�?伸还�?�?
+        // 假�?�阈值为 max_stretchLength / 2 或�? 0.05m
         float current_stretch = this->get_currentJointStatus().stretchJoint_Length_;
         int8_t current_extend_logical = (current_stretch > 0.01f) ? 1 : 0;
         
-        // 记录状态
+        // 记录状�?
         arm_ctrlStatus.last_manual_extend = current_extend_logical;
         
         // 计算偏移: offset = switch ^ state
-        // 假设 switch只有0和1
+        // 假�?? switch�?�?0�?1
         arm_ctrlStatus.extend_switch_offset = (airjoy_data_.SWA & 0x01) ^ current_extend_logical;
 
 
-        // 绑定吸盘状态
+        // 绑定吸盘状�?
         int8_t current_sucker_logical = (this->getSuckerStatus() == Sucker_Status_E::SUCK) ? 1 : 0;
         arm_ctrlStatus.last_manual_sucker = current_sucker_logical;     
         arm_ctrlStatus.sucker_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_sucker_logical;
 
         
         int8_t current_pitch_logical = (_tool_Abs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 1.0f) ? 1: 0;
-        //上次是否在90度附近，认为是开状态，反之认为是关状态
+        //上�?�是否在90度附近，认为�?开状态，反之认为�?关状�?
         arm_ctrlStatus.last_manual_pitch = current_pitch_logical;
         arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.scroll_wheel & 0x01) ^ current_pitch_logical;
 
@@ -236,14 +236,14 @@ void ArmSetup::manualControl()
         else
             next_height = this->get_currentJointStatus().launchJoint_Height_ ;
 
-        //抬升限制检查：如果不在30~135度的区间时候，云台禁止往上抬升 (从极低高度区进入干涉区)
-        if(next_height > target_joint_status_.launchJoint_Height_) // 正在抬升
+        //�?升限制�?�查：如果不在30~135度的区间时候，云台禁�?�往上抬�? (从极低高度区进入干涉�?)
+        if(next_height > target_joint_status_.launchJoint_Height_) // 正在�?�?
         {
              float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
 
              if(this->get_currentJointStatus().launchJoint_Height_ < 0.03f)
              {
-                 // 目标区域限制是 30~135，所以必须在此范围内才能抬升
+                 // �?标区域限制是 30~135，所以必须在此范围内才能�?�?
                  if(current_angle < 60.0f || current_angle > 185.0f)
                  {
                      next_height = target_joint_status_.launchJoint_Height_; // 保持不变
@@ -267,31 +267,31 @@ void ArmSetup::manualControl()
         target_joint_status_.rotateJoint_angle_ = manual_roate_clamp(target_joint_status_.rotateJoint_angle_);
 
 
-    //pitch 开关
+    //pitch 开�?
     int8_t target_pitch_logical = (airjoy_data_.scroll_wheel & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
     if(target_pitch_logical == 1)
     {
         if(test_num == 0)
-            target_joint_status_.suckerJoint_angle_ = 90.0f; // 吸盘关节打开到90度
+            target_joint_status_.suckerJoint_angle_ = 90.0f; // 吸盘关节打开�?90�?
         else
-            target_joint_status_.suckerJoint_angle_ = 180.0f; // 吸盘关节打开到180度
+            target_joint_status_.suckerJoint_angle_ = 180.0f; // 吸盘关节打开�?180�?
     }
     else
-        target_joint_status_.suckerJoint_angle_ = 0.0f; // 吸盘关节关闭到0度
+        target_joint_status_.suckerJoint_angle_ = 0.0f; // 吸盘关节关闭�?0�?
 
-    //stretch 开关
-    // 计算当前应当的逻辑状态 logic = switch ^ offset
+    //stretch 开�?
+    // 计算当前应当的逻辑状�? logic = switch ^ offset
     int8_t target_extend_logical = (airjoy_data_.SWA & 0x01) ^ arm_ctrlStatus.extend_switch_offset;
     
     // 更新记忆
     arm_ctrlStatus.last_manual_extend = target_extend_logical;
 
     if(target_extend_logical == 0)
-        target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位置
+        target_joint_status_.stretchJoint_Length_ = 0.0f; // 伸展关节收回到最小位�?
     else
-        target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位置
+        target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 伸展关节伸出到最大位�?
 
-    //吸盘开关
+    //吸盘开�?
     int8_t target_sucker_logical = (airjoy_data_.SWD & 0x01) ^ arm_ctrlStatus.sucker_switch_offset;
 
     // 更新记忆
@@ -363,7 +363,7 @@ bool ArmSetup::manual_store()
 
         case store_state::rotate_state:
         {
-            float target_rotate = 269.9f; //旋转到90度位置
+            float target_rotate = 269.9f; //旋转�?90度位�?
             safe_rotate_to(target_rotate);
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f)
             {
@@ -381,7 +381,7 @@ bool ArmSetup::manual_store()
 
             if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 5.0f)
             {
-                this->set_LaunchHeight(this->init_data_.store_height_); //降低到安全高度
+                this->set_LaunchHeight(this->init_data_.store_height_); //降低到安全高�?
             }
 
             if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.store_height_) < 0.01f)
@@ -405,7 +405,7 @@ float test_angle_for = 270.0f;
 bool ArmSetup::manual_takeout()
 {
     static bool is_catch = false;
-    static float catch_time = 0.0f; //碰到目标后开始计时
+    static float catch_time = 0.0f; //碰到�?标后开始�?�时
     switch(this->store_state_)
     {
         case store_state::idle:
@@ -436,7 +436,7 @@ bool ArmSetup::manual_takeout()
 
         case store_state::rotate_state:
         {
-            float target_rotate = 269.9f; //旋转到90度位置
+            float target_rotate = 269.9f; //旋转�?90度位�?
 
             safe_rotate_to(target_rotate);
 
@@ -461,14 +461,14 @@ bool ArmSetup::manual_takeout()
 
             if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.store_height_) < 0.005f && !is_catch)
             {
-                catch_time = TimeStamp::getInstance().getSeconds(); //记录碰到目标的时间
+                catch_time = TimeStamp::getInstance().getSeconds(); //记录碰到�?标的时间
                 is_catch = true;
             }
 
-            if(TimeStamp::getInstance().getSeconds() - catch_time > 0.3f && catch_time > 0.1f) //如果已经碰到目标超过0.3秒，认为已经吸附
+            if(TimeStamp::getInstance().getSeconds() - catch_time > 0.3f && catch_time > 0.1f) //如果已经碰到�?标超�?0.3秒，认为已经吸附
             {
                 
-                this->set_LaunchHeight(this->init_data_.max_launchHeight_); //抬升到安全高度
+                this->set_LaunchHeight(this->init_data_.max_launchHeight_); //�?升到安全高度
 
                 if(this->get_currentJointStatus().launchJoint_Height_ > this->init_data_.max_launchHeight_ - 0.01f)
                 {
@@ -482,7 +482,7 @@ bool ArmSetup::manual_takeout()
 
         case store_state::outstate2:
         {
-            float target_rotate = 180.0f; //旋转到180度位置
+            float target_rotate = 180.0f; //旋转�?180度位�?
 
             if(this->get_currentJointStatus().suckerJoint_angle_ > 160.0f)
             {
@@ -506,34 +506,34 @@ bool ArmSetup::manual_takeout()
 /*=======================================================*/
 
 /**
- * @brief 如果有两个目标KFS，则第一个KFS拾取完后放到存储机构
- *        第二个KFS拾取完后留在吸盘上
- *        如果没有第二个，就吸在吸盘上，不必放到存储机构
+ * @brief 如果有两�?�?标KFS，则�?一个KFS拾取完后放到存储机构
+ *        �?二个KFS拾取完后留在吸盘�?
+ *        如果没有�?二个，就吸在吸盘上，不必放到存储机构
  * 
- *        寻自动
+ *        寻自�?
  * 
- * 自动计算逻辑遵从串联臂自动逻辑末尾的数学公式
+ * �?动�?�算逻辑遵从串联臂自动逻辑�?尾的数�?�公�?
  */
 void ArmSetup::autoControl()
 {
-    // 自动控制函数
+    // �?动控制函�?
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
 
-    if(last_arm_status_ != ARM_AUTO_CONTROL || auto_ctrl_.start_to_autoctrl != 1)//若首次非此模式，需初始化一些状态
+    if(last_arm_status_ != ARM_AUTO_CONTROL || auto_ctrl_.start_to_autoctrl != 1)//若�?��?�非此模式，需初�?�化一些状�?
     {
-        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //自动流程状态机回到初始状态
+        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //�?动流程状态机回到初�?�状�?
         
-            auto_ctrl_.flag.isrecalcPath = false; //路径重计算标志
-            auto_ctrl_.now_targetIndex = 0; //当前目标KFS索引重置
+            auto_ctrl_.flag.isrecalcPath = false; //�?径重计算标志
+            auto_ctrl_.now_targetIndex = 0; //当前�?标KFS索引重置
             auto_ctrl_.flag.back_time = 0.0f;
             last_arm_status_ = ARM_AUTO_CONTROL;
     }
     
     if(auto_ctrl_.targetKFS[0] == 0)
-        return; //没有目标KFS，直接返回 
+        return; //没有�?标KFS，直接返�? 
 
-    //行进间拾取
+    //行进间拾�?
     switch(auto_ctrl_.kfs_num)
     {
         case ONLY_ONE:
@@ -542,7 +542,7 @@ void ArmSetup::autoControl()
             break;
         }
         
-        case TWO: //做
+        case TWO: //�?
         {
             auto_stillnessTwo();
             break;
@@ -552,18 +552,18 @@ void ArmSetup::autoControl()
 }
 
 /*
-    新版机械臂的流程  和老版流程有不少不同，需要重写
-    (1)若是顶吸： 
-        执行state_to_waitStillness抬到最高，并将pitch设置为90度
-        接着执行state_alignStillness对齐 接近之后执行state_extStillness伸长到目标KFS位置
-        然后执行state_lowerStillness降低到目标KFS位置，并打开吸盘。(Lower阶段降到临界高度后停下，等待canExtend放行再下降到目标位置)
-        之后执行state_launchStillness抬升到安全高度，最后执行state_backStillness返回初始位置。
+    新版机�?�臂的流�?  和老版流程有不少不同，需要重�?
+    (1)若是顶吸�? 
+        执�?�state_to_waitStillness�?到最高，并将pitch设置�?90�?
+        接着执�?�state_alignStillness对齐 接近之后执�?�state_extStillness伸长到目标KFS位置
+        然后执�?�state_lowerStillness降低到目标KFS位置，并打开吸盘�?(Lower阶�?�降到临界高度后停下，等待canExtend放�?�再下降到目标位�?)
+        之后执�?�state_launchStillness�?升到安全高度，最后执行state_backStillness返回初�?�位�?�?
 
 
-    (2)若是侧吸：
-        执行state_to_waitStillness抬到最高，并将pitch设置为0度
-        接着执行state_alignStillness对齐 接近之后执行state_lowerStillness降低到目标KFS位置，并打开吸盘。
-        之后执行state_extStillness伸长到安全位置，最后执行state_backStillness返回初始位置。
+    (2)若是侧吸�?
+        执�?�state_to_waitStillness�?到最高，并将pitch设置�?0�?
+        接着执�?�state_alignStillness对齐 接近之后执�?�state_lowerStillness降低到目标KFS位置，并打开吸盘�?
+        之后执�?�state_extStillness伸长到安全位�?，最后执行state_backStillness返回初�?�位�?�?
 */
 
 // 流程函数 停下拾取==============
@@ -572,7 +572,7 @@ void ArmSetup::autoControl()
 #if ARM_VERSION == 1
 
 #else
-// VERSION 0 的 纯侧吸版本
+// VERSION 0 �? �?侧吸版本
 // 流程函数 停下拾取==============
 void ArmSetup::auto_stillnessOne()
 {
@@ -588,8 +588,8 @@ void ArmSetup::auto_stillnessOne()
                     auto_ctrl_.now_targetIndex = 0;
 
 
-                    auto_ctrl_.flag.isrecalcPath = true;//重置路径重计算标志，确保路径只在流程开始时计算一次
-                    auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放行
+                    auto_ctrl_.flag.isrecalcPath = true;//重置�?径重计算标志，确保路径只在流程开始时计算一�?
+                    auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放�?
                     auto_ctrl_.flag.canChassisStart = false; //重置底盘移动许可
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
@@ -600,7 +600,7 @@ void ArmSetup::auto_stillnessOne()
             else
             {
                 idle();
-                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //保持在完成状态
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //保持在完成状�?
             }
             break;
         }
@@ -659,8 +659,8 @@ void ArmSetup::auto_stillnessOne()
             {
                 auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE;
                 arm_ctrlStatus.auto_start = 0;
-                auto_ctrl_.start_to_autoctrl = false; //完成一次流程后，重置自动控制启动条件
-                auto_ctrl_.flag.isrecalcPath = false; //重置路径重计算标志
+                auto_ctrl_.start_to_autoctrl = false; //完成一次流程后，重�?�?动控制启动条�?
+                auto_ctrl_.flag.isrecalcPath = false; //重置�?径重计算标志
             }
             break;
         }
@@ -672,8 +672,8 @@ void ArmSetup::auto_stillnessOne()
 
 void ArmSetup::auto_stillnessTwo()
 {
-    //大体执行流程和stillnessOne一样,
-    //但目前没有做存储机构，所以第一个KFS就在back阶段直接放下。
+    //大体执�?�流程和stillnessOne一�?,
+    //但目前没有做存储机构，所以�??一个KFS就在back阶�?�直接放下�?
     switch(auto_ctrl_.now_state)
     {
         case ARM_AUTO_STILLNESS_E::STATE_DONE:
@@ -685,8 +685,8 @@ void ArmSetup::auto_stillnessTwo()
                     this->set_TargetKFS(auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1]);
                     auto_ctrl_.now_targetIndex = 0;
 
-                    auto_ctrl_.flag.isrecalcPath = true;//重置路径重计算标志，确保路径只在流程开始时计算一次
-                    auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放行
+                    auto_ctrl_.flag.isrecalcPath = true;//重置�?径重计算标志，确保路径只在流程开始时计算一�?
+                    auto_ctrl_.flag.canExtend = false; //重置伸展许可，等待自动控制流程放�?
                     auto_ctrl_.flag.canChassisStart = false; //重置底盘移动许可
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
@@ -697,7 +697,7 @@ void ArmSetup::auto_stillnessTwo()
             else
             {
                 idle();
-                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //保持在完成状态
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //保持在完成状�?
             }
             break;
         }
@@ -784,9 +784,9 @@ void ArmSetup::auto_stillnessTwo()
                 if(state_backStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
                 {
                     arm_ctrlStatus.auto_start = 0;
-                    auto_ctrl_.start_to_autoctrl = false; //完成一次流程后，重置自动控制启动条件
-                    auto_ctrl_.flag.isrecalcPath = false; //重置路径重计算标志
-                    auto_ctrl_.now_targetIndex = 1; //防止越界
+                    auto_ctrl_.start_to_autoctrl = false; //完成一次流程后，重�?�?动控制启动条�?
+                    auto_ctrl_.flag.isrecalcPath = false; //重置�?径重计算标志
+                    auto_ctrl_.now_targetIndex = 1; //防�?�越�?
                     auto_ctrl_.flag.back_time = 0.0f; //重置返回时间
                     auto_ctrl_.flag.isbackdone = false; //重置返回完成标志
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_OVER;
@@ -798,7 +798,7 @@ void ArmSetup::auto_stillnessTwo()
 
         case ARM_AUTO_STILLNESS_E::STATE_OVER:
         {
-            //流程完成，保持在完成状态
+            //流程完成，保持在完成状�?
             idle();
             break;
         }
@@ -808,21 +808,21 @@ void ArmSetup::auto_stillnessTwo()
     }
 }
 
-//流程函数 行进间拾取==============
+//流程函数 行进间拾�?==============
 bool ArmSetup::state_to_waitStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
     float target_height = 0.0f;
 
-    target_height = this->init_data_.max_launchHeight_; //直接抬升到最高，等待行进间旋转对齐后再放低
+    target_height = this->init_data_.max_launchHeight_; //直接�?升到最高，等待行进间旋�?对齐后再放低
     if(isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_))
-        this->set_LaunchHeight(target_height); //抬升到目标高度
+        this->set_LaunchHeight(target_height); //�?升到�?标高�?
     else
     {
         this->set_LaunchHeight(this->get_currentJointStatus().launchJoint_Height_); //保持当前高度不变
         float sanitized_angle = sanitizeRotateAngle(this->get_currentJointStatus().rotateJoint_angle_);
-        this->safe_rotate_to(sanitized_angle); //旋转到安全区域
+        this->safe_rotate_to(sanitized_angle); //旋转到安全区�?
     }                                                                                                                                                               
 
     if(_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - target_height) < 0.01f)
@@ -848,7 +848,7 @@ bool ArmSetup::state_alignStillness(int targetKFS)
 
 bool ArmSetup::state_lowerStillness(int targetKFS)
 {
-    //判定到达目标的MF_road后，放低机械臂
+    //判定到达�?标的MF_road后，放低机�?�臂
 
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
@@ -865,10 +865,10 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
     bool canLower = false;
     canLower = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
                                             auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
-                                            0.45f); //进入目标KFS所在的MFroad中心且距离小于0.45m就放低
+                                            0.45f); //进入�?标KFS所在的MFroad�?心且距�?�小�?0.45m就放�?
     if(canLower)
     {
-        this->set_LaunchHeight(targetLowerHeight); //放低到目标高度
+        this->set_LaunchHeight(targetLowerHeight); //放低到目标高�?
         this->setSuckerStatus(Sucker_Status_E::SUCK); //下降时打开吸盘
     }
     else
@@ -885,14 +885,14 @@ bool ArmSetup::state_extStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
-    this->set_StretchLength(this->init_data_.max_stretchLength_); //伸展到最大长度
+    this->set_StretchLength(this->init_data_.max_stretchLength_); //伸展到最大长�?
 
     if(_tool_Abs(this->get_currentJointStatus().stretchJoint_Length_ - 
             this->init_data_.max_stretchLength_) < 0.01f)//伸展完成判定
     {
         if(!auto_ctrl_.flag.isExtReach)
         {
-            auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //记录首次到达目标位置的时间戳
+            auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //记录首�?�到达目标位�?的时间戳
             auto_ctrl_.flag.isExtReach = true;
         }
     }
@@ -900,7 +900,7 @@ bool ArmSetup::state_extStillness(int targetKFS)
     const float now_s = TimeStamp::getInstance().getSeconds();
     if(auto_ctrl_.flag.isExtReach && (now_s - auto_ctrl_.flag.reach_finishTimeStore) >= 0.2f)
     {
-        this->set_StretchLength(0.0f); //停留0.15s后缩回
+        this->set_StretchLength(0.0f); //停留0.15s后缩�?
         return true;
     }
 
@@ -910,7 +910,7 @@ bool ArmSetup::state_extStillness(int targetKFS)
 bool ArmSetup::state_launchStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    float canMoveHeight = 0.0f;//云台升到此高度即可移动
+    float canMoveHeight = 0.0f;//云台升到此高度即�?移动
     if(MF_high[targetKFS - 1] == 0.2f)
         canMoveHeight = this->init_data_.safe_height_;
     else if(MF_high[targetKFS - 1] == 0.4f)
@@ -920,11 +920,11 @@ bool ArmSetup::state_launchStillness(int targetKFS)
     else
         canMoveHeight = this->init_data_.max_launchHeight_;
 
-    this->set_LaunchHeight(this->init_data_.max_launchHeight_); //升到最高点，准备移动
+    this->set_LaunchHeight(this->init_data_.max_launchHeight_); //升到最高点，准备移�?
 
     if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.02f)
     {
-        auto_ctrl_.flag.canChassisStart = true; //机械臂已经升到可以移动的高度了
+        auto_ctrl_.flag.canChassisStart = true; //机�?�臂已经升到�?以移动的高度�?
         return true;
     }
     else
@@ -936,7 +936,7 @@ bool ArmSetup::state_backStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    this->safe_rotate_to(180.0f); //旋转到目标位置
+    this->safe_rotate_to(180.0f); //旋转到目标位�?
 
     if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 180.0f) < 5.0f)
     {
@@ -952,7 +952,7 @@ bool ArmSetup::state_backStillness(int targetKFS)
 /*=================================================================*/
 
 /**
- * @brief 寻停止
+ * @brief 寻停�?
  */
 void ArmSetup::stop()
 {
@@ -965,29 +965,29 @@ void ArmSetup::stop()
 }
 
 /**
- * @brief 寻校准
+ * @brief 寻校�?
  * 
  * 
- * @brief 上电校准的重新设计
+ * @brief 上电校准的重新�?��??
  *        1. 上电后，进入校准模式
- *        2. 伸展电机设计不变，依然是缩到最短
- *        3. pitch电机改为反向抬到180度进行校正
- *        4. 云台的话，后续机械会改成抵住铝管限位，限位重定位为180度。
- *        5. 抬升电机为在最低处，限位重定位为0米
+ *        2. 伸展电机设�?�不变，依然�?缩到最�?
+ *        3. pitch电机改为反向�?�?180度进行校�?
+ *        4. 云台的话，后�?机�?�会改成抵住铝�?�限位，限位重定位为180度�?
+ *        5. �?升电机为在最低�?�，限位重定位为0�?
  */
 
 void ArmSetup::calibrateMotor()
 {
     this->set_controlMode(CURRENT_CONTROL_MODE); 
     // 上电校准M2006电机位置
-    // 给予M2006一个小电流顶住限位，然后计时1s，将当前位置重定位为0度
+    // 给予M2006一�?小电流顶住限位，然后计时1s，将当前位置重定位为0�?
     if(!arm_ctrlStatus.calibrate_start)
     {
         arm_ctrlStatus.calibrate_startTime = TimeStamp::getInstance().getSeconds();
         arm_ctrlStatus.calibrate_start = true;
     }
-    this->motor_stretch_->setTargetCurrent(700.0f); // 给予一个小电流顶住限位
-    this->motor_launch_->setTargetCurrent(700.0f); // 给予一个小电流顶住限位
+    this->motor_stretch_->setTargetCurrent(700.0f); // 给予一�?小电流顶住限�?
+    this->motor_launch_->setTargetCurrent(700.0f); // 给予一�?小电流顶住限�?
 
     //this->motor_rotate_->setTargetCurrent(1000.0f);
     if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.5f)
@@ -1013,11 +1013,11 @@ void ArmSetup::calibrateMotor()
 }
 
 /**
- * @brief 寻空闲
+ * @brief 寻空�?
  */
 void ArmSetup::idle()
 {
-    // 空闲控制函数，若上一时刻非此模式，则记忆上一时刻位置，并维持不变
+    // 空闲控制函数，若上一时刻非�?�模式，则�?�忆上一时刻位置，并维持不变
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
     this->setRotateStrategy(ROTATE_PATH_SHORTEST);
@@ -1035,11 +1035,11 @@ void ArmSetup::idle()
     this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
     this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
 
-    // this->setSuckerStatus(Sucker_Status_E::STOP); // 保持上一刻状态，不强制关闭
+    // this->setSuckerStatus(Sucker_Status_E::STOP); // 保持上一刻状态，不强制关�?
 }
 
 /**
- * @brief 寻调试
+ * @brief 寻调�?
  */
 void ArmSetup::debug()
 {
@@ -1066,5 +1066,15 @@ Arm_InitData_S arm_initData = {
     .store_height_ = 0.12f,
     .Sucker_GPIO_Port = SUCKER_6_GPIO_Port,
     .Sucker_GPIO_Pin =  SUCKER_6_Pin,
+
+    .Store_GPIO_Port = SUCKER_5_GPIO_Port,
+    .Store_GPIO_Pin =  SUCKER_5_Pin,
+
+    .Sucker_Soleniod_GPIO_Port = SUCKER_4_GPIO_Port,
+    .Sucker_Soleniod_GPIO_Pin =  SUCKER_4_Pin,
+
+    .Store_Soleniod_GPIO_Port = SUCKER_3_GPIO_Port,
+    .Store_Soleniod_GPIO_Pin =  SUCKER_3_Pin,
+
     .max_pitchRPM_ = 150.0f,
 };

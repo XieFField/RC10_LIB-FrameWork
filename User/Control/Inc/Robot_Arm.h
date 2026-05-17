@@ -59,8 +59,18 @@ typedef struct {
     float max_rotate_angle_ = 0.0f; // 最大旋转角度
     float safe_height_ = 0.0f; // 安全高度，单位米，低于这个高度，机械臂云台旋转受限
     float store_height_ = 0.0f; // 存储高度，单位米，机械臂在这个高度进行存储和取出操作
+
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘控制GPIO端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘控制GPIO引脚
+
+    GPIO_InitTypeDef* Store_GPIO_Port; // 存储位置吸盘控制GPIO端口
+    uint16_t Store_GPIO_Pin;      // 存储位置吸盘控制GPIO引
+
+    GPIO_InitTypeDef* Sucker_Soleniod_GPIO_Port; // 吸盘电磁阀控制GPIO端口
+    uint16_t Sucker_Soleniod_GPIO_Pin;      // 吸盘电磁阀控制GPIO引脚
+
+    GPIO_InitTypeDef* Store_Soleniod_GPIO_Port; // 存储位置电磁阀控制GPIO端口
+    uint16_t Store_Soleniod_GPIO_Pin;      // 存储位置电磁阀控制GPIO引脚
 }Arm_InitData_S;
 
 typedef enum {
@@ -191,8 +201,11 @@ public:
 
     void setSuckerStatus(Sucker_Status_E status){ sucker_status_ = status; }
 
+    void setStoreSuckerStatus(Sucker_Status_E status){ store_sucker_status_ = status; }
 
     Sucker_Status_E getSuckerStatus() const { return sucker_status_; }
+
+    Sucker_Status_E getStoreSuckerStatus() const { return store_sucker_status_; }
 
     /**
      * @brief 设置旋转路径策略
@@ -266,6 +279,8 @@ private:
     Arm_Point_S arm_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 机械臂关节末端当前位置
 
     Sucker_Status_E sucker_status_ = Sucker_Status_E::STOP; // 吸盘状态
+    Sucker_Status_E store_sucker_status_ = Sucker_Status_E::STOP; // 存储位置吸盘状态
+
 
     Arm_Control_mode_E control_mode_ = TARGET_POSITION_MODE; // 机械臂控制模式
 

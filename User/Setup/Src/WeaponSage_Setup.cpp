@@ -113,7 +113,7 @@ void Robot_WeaponSage_Setup::calibrate()
             ctrl_status_.is_calibrating = true;
         }
 
-    }
+    }    
 	
 }
 
