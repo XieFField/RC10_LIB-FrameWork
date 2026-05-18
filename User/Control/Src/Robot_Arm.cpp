@@ -4,6 +4,8 @@
 Robot_Arm::Robot_Arm(Arm_InitData_S init_Data)
     : init_data_(init_Data)
 {
+    if (init_data_.rotate_end < 250.0f || init_data_.rotate_end > 270.0f)
+        init_data_.rotate_end = 265.0f;
 }
 
 
@@ -54,7 +56,7 @@ void Robot_Arm::update()
         target_joint_angle_.launchJoint_Height_  = constrain(target_joint_angle_.launchJoint_Height_,  0.0f, init_data_.max_launchHeight_);
         target_joint_angle_.stretchJoint_Length_ = constrain(target_joint_angle_.stretchJoint_Length_, 0.0f, init_data_.max_stretchLength_);
        
-        target_joint_angle_.rotateJoint_angle_ = calc_rotate_targetByStrategy(
+        target_joint_angle_.rotateJoint_angle_ = calc_legal_rotate_target(
             joint_angle_.rotateJoint_angle_,
             target_joint_angle_.rotateJoint_angle_
         );
@@ -178,53 +180,37 @@ bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
     return true;
 }
 
-float Robot_Arm::calc_rotate_targetByStrategy(float current_cont_angle, float target_raw_0_360)
+float Robot_Arm::calc_legal_rotate_target(float current_0_360, float target_0_360)
 {
-    //连续角度归一化至0~360
-    
-    float current_mod = fmodf(current_cont_angle, 360.0f);
-    if(current_mod < 0)
-        current_mod += 360.0f;
+    float re = init_data_.rotate_end;
+    if (re < 250.0f || re > 270.0f)
+        re = 265.0f;
 
-    //归一化目标角度，防止越界
-    float target_mod = fmodf(target_raw_0_360, 360.0f);
-    if(target_mod < 0)
-        target_mod += 360.0f;
+    bool target_legal = (target_0_360 >= re && target_0_360 <= 360.0f)
+                     || (target_0_360 >= 0.0f && target_0_360 <= 180.0f);
+    if (!target_legal)
+        return current_0_360;
 
-    float diff = target_mod - current_mod;
+    float diff = target_0_360 - current_0_360;
+    if (diff > 180.0f)
+        diff -= 360.0f;
+    else if (diff <= -180.0f)
+        diff += 360.0f;
 
-    // 当接近目标角时，强制切换到最短路径，避免过冲后持续单向绕圈无法收敛
-    float shortest_diff = diff;
-    if (shortest_diff > 180.0f)
-        shortest_diff -= 360.0f;
-    else if (shortest_diff < -180.0f)
-        shortest_diff += 360.0f;
-
-    if (_tool_Abs(shortest_diff) < 10.0f)
-        return current_cont_angle + shortest_diff;
-
-    switch(rotate_strategy_)
+    bool crosses = false;
+    if (diff > 0.0f)
     {
-        case ROTATE_PATH_SHORTEST:
-            // 最短路径：差值限制在 -180 到 +180 之间
-            if (diff > 180.0f)       
-                diff -= 360.0f;
-            else if (diff < -180.0f) 
-                diff += 360.0f;
-            break;
-
-        case ROTATE_PATH_POSITIVE:
-            // 正方向：关节角度必须增加，即 diff 必须 > 0
-            if (diff < 0.0f) 
-                diff += 360.0f;
-            break;
-
-        case ROTATE_PATH_NEGATIVE:
-            // 负方向：关节角度必须减小，即 diff 必须 < 0
-            if (diff > 0.0f) 
-                diff -= 360.0f;
-            break;
+        if (current_0_360 <= 180.0f && (current_0_360 + diff) >= re)
+            crosses = true;
+    }
+    else if (diff < 0.0f)
+    {
+        if (current_0_360 >= re && (current_0_360 + diff) <= 180.0f)
+            crosses = true;
     }
 
-    return current_cont_angle + diff;
+    if (crosses)
+        diff = (diff > 0.0f) ? diff - 360.0f : diff + 360.0f;
+
+    return current_0_360 + diff;
 }

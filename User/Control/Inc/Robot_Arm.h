@@ -17,7 +17,7 @@
 
 #ifndef __ROBOT_ARM_H
 #define __ROBOT_ARM_H
-/* 南北路多 */
+/* 锟较憋拷路锟斤拷 */
 #pragma once
 
 #ifdef __cplusplus
@@ -40,7 +40,7 @@ extern "C" {
 #include "Motor_DM.h"
 
 /**
- * @brief 一切单位都是米和度
+ * @brief 一锟叫碉拷位锟斤拷锟斤拷锟阶和讹拷
  */
 typedef struct {
     float max_launchHeight_ = 0.0f; // 升降最大行程，单位米 0
@@ -48,63 +48,58 @@ typedef struct {
     float arm_length_ = 0.0f; // 机械臂长度
     float end_link_length_ = 0.0f; // 末端连杆长度，吸盘到机械臂连接点的距离，单位米
     float max_pitchRPM_ = 50.0f; // 末端关节最大转速，单位RPM   
+    float rotate_end = 265.0f;
     
 
     float stretch_Ratio_ = 0.0f; // 伸展比率，伸展电机转一圈，伸展多少米   0.0942米(94.2mm)
     float launch_Ratio_ = 0.0f; // 升降比率，升降电机转一圈，升降多少米    0.01099米(109.9mm)
     float rotate_gearRatio_ = 0.0f; // 旋转减速比，旋转电机转一圈，机械臂转多少度 144.878度()   电机转222.289627度，机械臂转90度。  新矫正145.755789度
     float pitch_gearRatio_ = 0.0f; // 俯仰减速比，俯仰电机转一圈，末端关节转多少度 360度，直驱
-
     float min_rotate_angle_ = 0.0f; // 最小旋转角度
     float max_rotate_angle_ = 0.0f; // 最大旋转角度
-    float safe_height_ = 0.0f; // 安全高度，单位米，低于这个高度，机械臂云台旋转受限
-    float store_height_ = 0.0f; // 存储高度，单位米，机械臂在这个高度进行存储和取出操作
+    float safe_height_ = 0.0f; // 安全高度
+    float store_height_ = 0.0f; // 储存高度
 
-    GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘控制GPIO端口
-    uint16_t Sucker_GPIO_Pin;      // 吸盘控制GPIO引脚
+    GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘GPIO控制端口
+    uint16_t Sucker_GPIO_Pin;      // 吸盘GPIO控制引脚
 
-    GPIO_InitTypeDef* Store_GPIO_Port; // 存储位置吸盘控制GPIO端口
-    uint16_t Store_GPIO_Pin;      // 存储位置吸盘控制GPIO引
+    GPIO_TypeDef* Store_GPIO_Port; // 储存位GPIO控制端口
+    uint16_t Store_GPIO_Pin;      // 储存位GPIO控制引脚
 
-    GPIO_InitTypeDef* Sucker_Soleniod_GPIO_Port; // 吸盘电磁阀控制GPIO端口
-    uint16_t Sucker_Soleniod_GPIO_Pin;      // 吸盘电磁阀控制GPIO引脚
+    GPIO_TypeDef* Sucker_Soleniod_GPIO_Port; // 吸盘电磁阀GPIO控制端口
+    uint16_t Sucker_Soleniod_GPIO_Pin;      // 吸盘电磁阀GPIO控制引脚
 
-    GPIO_InitTypeDef* Store_Soleniod_GPIO_Port; // 存储位置电磁阀控制GPIO端口
-    uint16_t Store_Soleniod_GPIO_Pin;      // 存储位置电磁阀控制GPIO引脚
+    GPIO_TypeDef* Store_Soleniod_GPIO_Port; // 储存位电磁阀GPIO控制端口
+    uint16_t Store_Soleniod_GPIO_Pin;      // 储存位电磁阀GPIO控制引脚
 }Arm_InitData_S;
 
 typedef enum {
-    Flat_Status,//平放
-    Place_Status//侧放
-}SuckerJoint_E;
-
-typedef enum {
-    SUCK, //吸
-    STOP  //停
+    SUCK, // 吸附
+    STOP  // 停止
 }Sucker_Status_E;
 
 typedef struct{
-    float x; //末端关节坐标
+    float x; // 末端关节坐标
     float y;
     float z;
 
-    float suckerJoint_status_ ; // 末端关节状态
+    float suckerJoint_status_ ; // 末锟剿关斤拷状态
 }Arm_Point_S;
 
 typedef struct{
-    float launchJoint_Height_; // 升降关节状态
-    float stretchJoint_Length_; // 伸展关节状态
-    float rotateJoint_angle_; // 旋转关节状态
-    float suckerJoint_angle_; // 末端关节状态 朝下为0度
+    float launchJoint_Height_; // 升降高度 米
+    float stretchJoint_Length_; // 伸展长度 米
+    float rotateJoint_angle_; // 旋转角度 度
+    float suckerJoint_angle_; // 吸盘角度 度
 }Joint_Status_S;
 
 typedef enum{
     TARGET_POSITION_MODE, // 目标位置模式
     MANUAL_MOTOR_POSITION_MODE, // 手动电机位置模式
-    CURRENT_CONTROL_MODE // 电流控制模式 依旧使用Joint_Status_S存储目标电流值
-}Arm_Control_mode_E;
+    CURRENT_CONTROL_MODE // 电流控制模式 用于存储目标位置
+}Arm_control_mode_E;
 
-//rotate 旋转路径枚举
+//rotate 旋转路径策略枚举
 typedef enum {
     ROTATE_PATH_SHORTEST,   // 最短路径
     ROTATE_PATH_POSITIVE,   // 正向路径
@@ -112,22 +107,22 @@ typedef enum {
 }Rotate_Strategy_E;
 
 typedef struct{
-    float launch_current; //升降电机电流
-    float stretch_current; //伸展电机电流
-    float rotate_current; //旋转电机电流
-    float pitch_current; //末端关节电机电流
+    float launch_current; // 升降电流
+    float stretch_current; // 伸展电流
+    float rotate_current; // 旋转电流
+    float pitch_current; // 末锟剿关节电流
 }ARMotor_Current_S;
 
 typedef struct{
-    // 阻尼系数 λ
+    // 雅可比矩阵参数
     float jac_lambda_ = 0.02f;
 
-    // 限幅
-    float vmax_xy_ = 0.60f;  // 末端 XY 平面最大线速 m/s
-    float vmax_z_  = 0.60f;  // 末端 Z 轴最大线速 m/s
-    float hdot_max_ = 0.80f;             // 升降关节最大速度 m/s
-    float ddot_max_ = 0.80f;             // 伸展关节最大速度 m/s
-    float thetadot_deg_max_ = 90.0f;     // 旋转关节最大角速度 deg/s
+    // 速度限制
+    float vmax_xy_ = 0.60f;  // 末锟斤拷 XY 平锟斤拷锟斤拷锟斤拷锟 m/s
+    float vmax_z_  = 0.60f;  // 末锟斤拷 Z 锟斤拷锟斤拷锟斤拷锟斤拷锟 m/s
+    float hdot_max_ = 0.80f;             // 锟斤拷锟斤拷锟截斤拷锟斤拷锟斤拷俣锟 m/s
+    float ddot_max_ = 0.80f;             // 锟斤拷展锟截斤拷锟斤拷锟斤拷俣锟 m/s
+    float thetadot_deg_max_ = 90.0f;     // 锟斤拷转锟截斤拷锟斤拷锟斤拷锟劫讹拷 deg/s
 }Jacobian_InitData_S;
 
 typedef struct{
@@ -139,15 +134,15 @@ typedef struct{
 
 typedef struct{
     float ramp__maxspeed_ = 0.0f;
-    float max_accel_ = 0.0f; // 加速度限制 (Motor Angle deg/s^2)，值越小起步/刹车越平滑
-    float current_velocity_ = 0.0f; // 记录当前速度
+    float max_accel_ = 0.0f; // 最大加速度 (Motor Angle deg/s^2)
+    float current_velocity_ = 0.0f; // 当前速度 (Motor Angle deg/s)
     float ramp_target_ = 0.0f; 
     float filter_k_ = 0.0f; 
 }Fliter_Ramp_S;
 
 /** 
- * @brief 又变成四自由度了，好，那么好。
- * @note 这里的坐标或者行程单位都是米，角度单位是度，角度制。
+ * @brief Robot_Arm类，负责机械臂的运动控制和状态管理
+ * @note 该类负责机械臂的运动控制和状态管理，包括位置控制、速度控制和力控制等功能
  */
 class Robot_Arm {
 
@@ -158,8 +153,8 @@ protected:
     DJI_Motor* motor_stretch_ = nullptr; // 伸展电机
     DJI_Motor* motor_rotate_ = nullptr; // 旋转电机
 
-    DM_Motor* motor_pitch_ = nullptr; // 末端关节俯仰电机
-    bool is_pitchEnable_ = false; //是否使能电机
+    DM_Motor* motor_pitch_ = nullptr; // 末锟剿关节电机
+    bool is_pitchEnable_ = false; // 是否使能俯仰电机
 
 public:
     
@@ -169,9 +164,7 @@ public:
     ~Robot_Arm(){}
 
     /**
-     * @brief 更新目标位置、速度到电机
-     *        更新当前的launch_height_、stretch_length_、
-     *        rotate_angle_，这个主要是用于调试
+     * @brief 控制状态更新
      * 
      */
     void update();
@@ -179,9 +172,9 @@ public:
     float get_dt(){return this->dt_;}
 
     /**
-     * @brief 设置机械臂控制模式
+     * @brief 锟斤拷锟矫伙拷械锟桔匡拷锟斤拷模式
      */
-    void set_controlMode(Arm_Control_mode_E mode)
+    void set_controlMode(Arm_control_mode_E mode)
     {
         if(control_mode_ != mode)
         {
@@ -195,7 +188,7 @@ public:
     void registerMotor_Rotate(DJI_Motor* motor){ motor_rotate_ = motor; }
     void registerMotor_Pitch(DM_Motor* motor){ motor_pitch_ = motor; }
 
-    // 设置目标位置
+    // 锟斤拷锟斤拷目锟斤拷位锟斤拷
     void setArmTarget(Arm_Point_S target){ arm_target_ = target; }
     Arm_Point_S getArmTarget() const { return arm_target_; }
 
@@ -208,16 +201,13 @@ public:
     Sucker_Status_E getStoreSuckerStatus() const { return store_sucker_status_; }
 
     /**
-     * @brief 设置旋转路径策略
+     * @brief 旋转角度合法化，确保旋转角度在合理范围内，避免超出机械限制
+      * @param current_0_360 当前旋转角度，范围0~360度
      */
-    void setRotateStrategy(Rotate_Strategy_E strategy){ rotate_strategy_ = strategy; }
-
-    Rotate_Strategy_E getRotateStrategy() const { return rotate_strategy_; }
-
-    float calc_rotate_targetByStrategy(float current_cont_angle, float target_raw_0_360);
+    float calc_legal_rotate_target(float current_0_360, float target_0_360);
 
     /**
-     * @brief 手动设置每个自由度的目标位置，单位：m或度
+     * @brief 设置目标升降高度
      */
 
     void set_LaunchHeight(float height)
@@ -226,7 +216,7 @@ public:
     }
 
     /**
-     * @brief 手动设置每个自由度的目标位置，单位：m或度
+     * @brief 设置目标伸展长度
      */
     void set_StretchLength(float length)
     {
@@ -234,7 +224,7 @@ public:
     }
 
     /**
-     * @brief 手动设置每个自由度的目标位置，单位：m或度
+     * @brief 设置目标旋转角度
      */
     void set_RotateAngle(float angle)
     {
@@ -242,7 +232,7 @@ public:
     }
 
     /**
-     * @brief 手动设置每个自由度的目标位置，单位：m或度
+     * @brief 设置目标俯仰角度
      */
 
     void set_PitchAngle(float angle)
@@ -251,7 +241,7 @@ public:
     }
 
 
-    //设置电机是否反相 true取反，false不取反
+    //设置反相 true反相 false不反相
     void setLaunchReversed(bool reversed) {sign_reversed_.sign_launch_ = reversed ? -1.0f : 1.0f;}
     void setStretchReversed(bool reversed) {sign_reversed_.sign_stretch_ = reversed ? -1.0f : 1.0f;}
     void setRotateReversed(bool reversed) {sign_reversed_.sign_rotate_  = reversed ? -1.0f : 1.0f;}
@@ -262,42 +252,38 @@ public:
 
 private:    
     
-    Rotate_Strategy_E rotate_strategy_ = ROTATE_PATH_SHORTEST; // 旋转路径策略，默认最短路径
     Joint_Status_S joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; 
 
     Joint_Status_S target_joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; 
     
-    void inverseKinematics(Arm_Point_S arm_target_); // 运动学逆解
+    void inverseKinematics(Arm_Point_S arm_target_); // 逆解算
 
 
 
-    // 正运动学：计算末端位姿（基于当前目标或电机角度）
-    // 返回 true 表示计算成功，结果写入 out
+    // 正解算
     bool forwardKinematics(Arm_Point_S& out) const;
 
-    Arm_Point_S arm_target_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 机械臂末端目标位置
-    Arm_Point_S arm_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 机械臂关节末端当前位置
+    Arm_Point_S arm_target_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 目标点
+    Arm_Point_S arm_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 当前点
 
-    Sucker_Status_E sucker_status_ = Sucker_Status_E::STOP; // 吸盘状态
-    Sucker_Status_E store_sucker_status_ = Sucker_Status_E::STOP; // 存储位置吸盘状态
-
-
-    Arm_Control_mode_E control_mode_ = TARGET_POSITION_MODE; // 机械臂控制模式
-
-    Arm_Point_S arm_forward_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 机械臂正运动学计算位置
+    Sucker_Status_E sucker_status_ = Sucker_Status_E::STOP; // 吸附状态
+    Sucker_Status_E store_sucker_status_ = Sucker_Status_E::STOP; // 储位吸附状态
 
 
+    Arm_control_mode_E control_mode_ = TARGET_POSITION_MODE; // 机械臂控制模式
+
+    Arm_Point_S arm_forward_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 正解算得到的点
 
 
 
-    // 时间戳（秒）
+
     float last_time_s_ = 0.0f;
     float dt_ = 0.0f;
     bool  time_initialized_ = false;
 
 protected:
 /*================================================================*/
-    /*关节角度->电机总角度*/
+    /*关节位置->电机角度*/
     float launchHeight_to_MotorTotalAngle(float height)
     {
         return sign_reversed_.sign_launch_ * height / init_data_.launch_Ratio_ * 360.0f;
@@ -319,7 +305,7 @@ protected:
     }
     
 /*=================================================================*/
-    /*电机总角度->关节角度*/
+    /*电机角度->关节位置*/
     float MotorTotalAngle_to_launchHeight(float motor_angle)
     {
         return sign_reversed_.sign_launch_ * motor_angle * init_data_.launch_Ratio_ / 360.0f;
@@ -355,26 +341,26 @@ private:
     
     Fliter_Ramp_S rotate_fliter_ramp_ = {
         .ramp__maxspeed_ = 36000.0f,
-        .max_accel_ = 80000.0f, // 加速度限制 (Motor Angle deg/s^2)，值越小起步/刹车越平滑
-        .current_velocity_ = 0.0f, // 记录当前速度
+        .max_accel_ = 80000.0f, //  (Motor Angle deg/s^2)
+        .current_velocity_ = 0.0f, // 当前旋转电机速度 (Motor Angle deg/s)
         .ramp_target_ = 0.0f, 
-        .filter_k_ = 200.0f // 滤波(平滑)系数，值越大到达目标越快，越小刹车越平滑
+        .filter_k_ = 200.0f // 越小越平滑 越大越快
     };
     
     Fliter_Ramp_S strech_fliter_ramp_ = {
         .ramp__maxspeed_ = 600000.0f,
-        .max_accel_ = 1000000.0f, // 伸展加速度限制 (Motor Angle deg/s^2)
-        .current_velocity_ = 0.0f, // 记录当前伸展速度
+        .max_accel_ = 1000000.0f, // 展开速度限制 (Motor Angle deg/s^2)
+        .current_velocity_ = 0.0f, // 记录当前展开速度
         .ramp_target_ = 0.0f, 
-        .filter_k_ = 450.0f // 伸展滤波(平滑)系数，值越大到达目标越快，越小刹车越平滑
+        .filter_k_ = 450.0f // 展开滤波器(平滑)系数，值越大响应越快，越小越平滑
     };
 
     Fliter_Ramp_S launch_fliter_ramp_ = {
         .ramp__maxspeed_ = 1500000.0f,
-        .max_accel_ = 3000000.0f, // 升降加速度限制 (Motor Angle deg/s^2)
-        .current_velocity_ = 0.0f, // 记录当前升降速度
+        .max_accel_ = 3000000.0f, //  (Motor Angle deg/s^2)
+        .current_velocity_ = 0.0f, // 记录当前 launch 速度
         .ramp_target_ = 0.0f, 
-        .filter_k_ = 850.0f // 升降滤波(平滑)系数，值越大到达目标越快，越小刹车越平滑
+        .filter_k_ = 850.0f // launch 滤波器(平滑)系数，值越大响应越快，越小越平滑
     };
 
     
@@ -382,14 +368,13 @@ private:
     {
         float diff = target - current;
         
-        // 期望目标速度 (一次平滑 P控制)
         float target_vel = diff * ramp.filter_k_;
 
-        // 速度限幅
+        // 限制目标速度
         if (target_vel > ramp.ramp__maxspeed_) target_vel = ramp.ramp__maxspeed_;
         if (target_vel < -ramp.ramp__maxspeed_) target_vel = -ramp.ramp__maxspeed_;
 
-        // 加速度限幅
+        // 计算最大速度变化量
         float max_dv = ramp.max_accel_ * dt_;
         if (target_vel > ramp.current_velocity_ + max_dv) {
             ramp.current_velocity_ += max_dv;
@@ -402,10 +387,10 @@ private:
         // 计算步长
         float step = ramp.current_velocity_ * dt_;
 
-        // 如果距离和速度都极小，直接赋值防止浮点数计算震荡
+        // 检查是否到达目标位置
         if(std::abs(diff) < 0.01f && std::abs(ramp.current_velocity_) < 0.1f) 
         {
-            ramp.current_velocity_ = 0.0f; // 完全停稳后清零速度
+            ramp.current_velocity_ = 0.0f; // 停止电机
             return target;
         }
 
