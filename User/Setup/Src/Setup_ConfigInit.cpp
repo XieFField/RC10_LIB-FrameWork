@@ -1,11 +1,5 @@
 #include "Setup_ConfigInit.h"
 
-/**
- * @brief  机械臂与底盘配置初始化
- *   2代 R1 电机分配：CAN1: M3508*2 + M3508*4（预留 1 个 DJI 电机）
- *                    CAN2: M3508*4 + M2006*2（预留 1 个 DJI 电机）
- *                    CAN3: VESC*4 + DM4310*2（预留 1 个 DJI 电机）
- */ 
 // 外部声明 USB 高速设备句柄
 extern "C" 
 {
@@ -68,11 +62,13 @@ Robot_WeaponSage_Setup Weapon_Controller(initData_);
  * CAN2: 武器 M2006*3 + M3508*1（M2006:1~3, M3508:4）+ DM4310*1
  * CAN3: 机械臂 M3508*2 + M2006*2（id6:weapon_wrist, id8:arm_stretch）+ DM4310*1
  */
-
+#define TEST_TEMP 0
                            /* 底盘电机 */
+#if !TEST_TEMP
 M3508 steer1(1, CAN1_Bus); M3508 steer2(2, CAN1_Bus); M3508 steer3(3, CAN1_Bus); M3508 steer4(4, CAN1_Bus);
 VESC_Motor U8_1(101, CAN1_Bus, 21); VESC_Motor U8_2(102, CAN1_Bus, 21); 
 VESC_Motor U8_3(103, CAN1_Bus, 21); VESC_Motor U8_4(104, CAN1_Bus, 21);
+#endif
 
                             /* 武器系统电机 */
 M2006 Weapon_Claw1(1, CAN2_Bus); M2006 Weapon_Claw2(2, CAN2_Bus); M2006 Weapon_Claw3(3, CAN2_Bus); 
@@ -80,10 +76,15 @@ M3508 Weapon_Launch(4, CAN2_Bus);
 DM_Motor Weapon_Elbow(J4310_Type, 0x06, 0x06, CAN2_Bus); M2006 Weapon_Wrist(6, CAN3_Bus);
 
                             /* 机械臂电机 */
+#if !TEST_TEMP
 M3508 arm_launchMotor(5, CAN3_Bus, true, false); M3508 arm_rotateMotor(7, CAN3_Bus, true, false);
 M2006 arm_stretchMotor(8, CAN3_Bus, true, false);  
 DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
-
+#else
+M3508 arm_launchMotor(5, CAN1_Bus, true, false); M3508 arm_rotateMotor(7, CAN1_Bus, true, false);
+M2006 arm_stretchMotor(8, CAN1_Bus, true, false);  
+DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN1_Bus);
+#endif
 OIDEncoder oid_encoder(91, CAN2_Bus, 4096, 200);
 
 #if DEBUG_DJI_Motor
@@ -180,7 +181,7 @@ void ALL_Setup_ConfigInit(void)
     chassis.init(chassis_init_config);
 #endif
 
-#if JIA_USE_FOUR_STEER_CHASSIS
+#if JIA_USE_FOUR_STEER_CHASSIS && !TEST_TEMP
     Chassis::InitConfig chassis_init_config =
         {
             // 转向电机句柄（按轮序 0~3 对应）
@@ -217,6 +218,7 @@ void ALL_Setup_ConfigInit(void)
 void CAN_Motor_Init(void)
 {
    // CAN1 总线初始化：注册底盘电机
+#if !TEST_TEMP
    DJIGroupCAN1_Low.addMotor(&steer1); DJIGroupCAN1_Low.addMotor(&steer2);
    DJIGroupCAN1_Low.addMotor(&steer3); DJIGroupCAN1_Low.addMotor(&steer4);
    CAN1_Bus->registerMotor(&DJIGroupCAN1_Low);
@@ -224,6 +226,16 @@ void CAN_Motor_Init(void)
    CAN1_Bus->registerMotor(&steer3); CAN1_Bus->registerMotor(&steer4);
    CAN1_Bus->registerMotor(&U8_1); CAN1_Bus->registerMotor(&U8_2);
    CAN1_Bus->registerMotor(&U8_3); CAN1_Bus->registerMotor(&U8_4);
+#else
+    DJIGroupCAN1_High.addMotor(&arm_launchMotor); DJIGroupCAN1_High.addMotor(&arm_rotateMotor);
+    DJIGroupCAN1_High.addMotor(&arm_stretchMotor); 
+
+    CAN1_Bus->registerMotor(&DJIGroupCAN1_High);
+    CAN1_Bus->registerMotor(&arm_launchMotor); CAN1_Bus->registerMotor(&arm_rotateMotor);
+    CAN1_Bus->registerMotor(&arm_stretchMotor);
+    CAN1_Bus->registerMotor(&arm_pitchMotor);
+
+#endif
 
    CAN1_Bus->init();
 
@@ -240,6 +252,7 @@ void CAN_Motor_Init(void)
 
    CAN2_Bus->init();
 
+#if !TEST_TEMP
    // CAN3 总线初始化：注册机械臂电机
    DJIGroupCAN3_High.addMotor(&arm_launchMotor); DJIGroupCAN3_High.addMotor(&arm_rotateMotor);
    DJIGroupCAN3_High.addMotor(&arm_stretchMotor); 
@@ -276,7 +289,7 @@ void CAN_Motor_Init(void)
 
    U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
    U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
-
+#endif
 
    // 机械臂电机 PID 参数初始化
    

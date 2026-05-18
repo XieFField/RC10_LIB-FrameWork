@@ -49,7 +49,8 @@ void FSM_Controller::loop()
             break;
     }
 
-    if(arm_setup_->isArmcalibrated() == false || weaponSage_setup_->isWeaponSageCalibrated() == false)
+    //if(arm_setup_->isArmcalibrated() == false || weaponSage_setup_->isWeaponSageCalibrated() == false)
+    if(arm_setup_->isArmcalibrated() == false )
     {
         robot_status_ = ALL_STOP;
     }

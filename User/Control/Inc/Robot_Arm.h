@@ -335,7 +335,10 @@ protected:
 private:
     MotorReversed_S sign_reversed_  = {1.0f, 1.0f, 1.0f, 1.0f};
     float last_rotate_cmd_ = 0.0f;
+    Rotate_Strategy_E rotate_strategy_ = ROTATE_PATH_SHORTEST;
+    float prev_rotate_target_ = 0.0f;
     float ramped_rotateMotorAngle_ = 0.0f;
+    float prev_norm_target_ = 0.0f;
     
 //bool  time_initialized_ = false;
     

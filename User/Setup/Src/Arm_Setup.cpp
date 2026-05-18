@@ -216,7 +216,6 @@ void ArmSetup::manualControl()
     // 升降
     if(_tool_Abs(airjoy_data_.right_y) > 0.1f)
     {
-
         float next_height = this->get_currentJointStatus().launchJoint_Height_ ;
         if(airjoy_data_.right_y > 0.3f)
             next_height += manual_control.launch_rate;
@@ -246,16 +245,23 @@ void ArmSetup::manualControl()
 
 
         if(airjoy_data_.right_x > 0.5f)
-            target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
-        else if(airjoy_data_.right_x < -0.5f)
             target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
-        // else
-        //     target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_; // 淇濇寔涓嶅彉
+        else if(airjoy_data_.right_x < -0.5f)
+            target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
 
-        target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
-        target_joint_status_.rotateJoint_angle_ = normalize_deg_0_360(target_joint_status_.rotateJoint_angle_);
+    target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
+    target_joint_status_.rotateJoint_angle_ = normalize_deg_0_360(target_joint_status_.rotateJoint_angle_);
 
 
+    float re = init_data_.rotate_end;
+    if (re < 250.0f || re > 270.0f) re = 265.0f;
+    float t = target_joint_status_.rotateJoint_angle_;
+    if (t > 180.0f && t < re)
+    {
+        float d180 = t - 180.0f;
+        float dre = re - t;
+        target_joint_status_.rotateJoint_angle_ = (d180 < dre) ? 180.0f : re;
+    }
     //pitch 控制
     int8_t target_pitch_logical = (airjoy_data_.scroll_wheel & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
     if(target_pitch_logical == 1)
@@ -472,10 +478,10 @@ bool ArmSetup::manual_takeout()
         {
             float target_rotate = 180.0f; //存储的目标旋转角度
 
-            if(this->get_currentJointStatus().suckerJoint_angle_ > 160.0f)
-            {
+            // if(this->get_currentJointStatus().suckerJoint_angle_ > 160.0f)
+            // {
                 this->set_RotateAngle(target_rotate);
-            }
+            // }
 
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f)
             {
