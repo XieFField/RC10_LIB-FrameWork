@@ -1,13 +1,12 @@
 #include "WeaponSage_Setup.h"
 
 namespace WeaponSage_Setup {
-  	float weapon_pos[4]={0.0074f,0.1322f,0.2822f,0.3411f}; //Àƒ∏ˆ√¨∏À∂‘”¶µƒ◊¶◊”∏ﬂ∂»
+  	float weapon_pos[4]={0.0074f,0.1322f,0.2822f,0.3411f}; //Âõõ‰∏™ÁüõÊùÜÂØπÂ∫îÁöÑÁà™Â≠êÈ´òÂ∫¶
 }
 
 Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
     : Robot_WeaponSage(init_data), RtosTask("WeaponSage_Setup", 1)
 {
-    cam_z_ctrl_.set_param(camera_z_ctrl_params);
 }
 uint32_t WeaponSagestackHighWaterMark = 0;
 void Robot_WeaponSage_Setup::loop()
@@ -17,11 +16,11 @@ void Robot_WeaponSage_Setup::loop()
 	
 	
 	
-	if((wrist_Motor_->getErrorNum()==0x00||!auto_ctrl_.auto_state_bool_S.wrist_enable))
-	{	               
-            Weapon_wrist_enable();
-			auto_ctrl_.auto_state_bool_S.wrist_enable=true;
-	}
+//	if((wrist_Motor_->getErrorNum()==0x00||!auto_ctrl_.auto_state_bool_S.wrist_enable))
+//	{	               
+//            Weapon_wrist_enable();
+//			auto_ctrl_.auto_state_bool_S.wrist_enable=true;
+//	}
     
 	
 	if(!ctrl_status_.is_calibrating)
@@ -39,7 +38,6 @@ void Robot_WeaponSage_Setup::loop()
             break;
         case WEAPONSAGE_IDLE:
             idle();
-
             break;
         case WEAPONSAGE_STOP:
             stop();
@@ -54,11 +52,6 @@ void Robot_WeaponSage_Setup::loop()
 			autoControl();
             break;
 	    }
-        case WEAPONSAGE_CAMERA:
-        {
-            camera_mode();
-            break;
-        }
 		case WEAPONSAGE_CALIBRATE:
 		{
 			//calibrate();
@@ -80,591 +73,301 @@ float traverse_rate=0.0002f;
 float weapon_launch_rate=0.0002f;
 float Kp_traverse=0.5f;
 
-bool Robot_WeaponSage_Setup::is_new_z(float z_now)
-{
-    // ±‰ªØ≥¨π˝ 0.5mm  ”Œ™–¬—˘±æ°£
-    if(_tool_Abs(z_now - cam_z_last_) > 0.0005f)
-    {
-        cam_z_last_ = z_now;
-        return true;
-    }
-
-    return false;
-}
 
 
 
-
+/**
+ * @brief Ê≠¶Âô®Êû∂Ê†°ÂáÜÊµÅÁ®ã
+ * 3‰∏™Â§πÁà™ÁöÑÊ†°ÂáÜÔºö Âíå‰∏ä‰∏ÄÁâà‰∏ÄÊ†∑ÔºåÂæÄÂ§ñÂº†ÂºÄÊñπÂêëÁöÑÁîµÊµÅÈ°∂‰ΩèÈôê‰ΩçÂêéËÆ°Êó∂ÔºåËÆ°Êó∂ÂÆåÊàêÂêéÈáçÂÆö‰Ωç
+ * armÁîµÊú∫ÁöÑÊ†°ÂáÜÔºö ÂíåÂÖàÂâç‰∏ÄÊ†∑Ôºå‰∏äÁîµ‰ºöÊúâÊú∫Ê¢∞Èôê‰ΩçÔºå‰ª•‰∏äÁîµ‰ΩçÁΩÆ‰∏∫0Â∫¶Â∞±Ë°å„ÄÇ
+ *                 armÁîµÊú∫Êúâ‰∏§‰∏™ÁõÆÊ†á‰ΩçÁΩÆÔºå‰∏Ä‰∏™Ê∞¥Âπ≥‰∏Ä‰∏™ÂûÇÁõ¥Ôºå‰∏äÁîµ‰ΩçÁΩÆÁöÑ0Â∫¶‰∏çÊòØ‰ªª‰ΩïÂÖ∂‰∏≠ÁöÑ‰∏Ä‰∏™‰ΩçÁΩÆ
+ *                 Âú®Á¶ªÂºÄÊ†°ÂáÜÊ®°ÂºèÂêéÔºåÂ¶ÇÊûúÈ¶ñÊ¨°ËøõÂÖ•ÈùûÊ†°ÂáÜÂíåSTOPÂ§ñÁöÑÊ®°Âºè(Âç≥statusÁ¨¨‰∏ÄÊ¨°‰∏∫ÈùûcalibrateÂíåstopÊó∂ÂÄô)ÔºåÊä¨Âà∞Á´ñÁõ¥‰ΩçÁΩÆ„ÄÇ
+ * wristÁîµÊú∫Ê†°ÂáÜÔºö ‰∏äÁîµÂÖàËØªÂèñOID_EncoderÔºåÂ¶ÇÊûúencoderÁöÑget_encoder_raw()ËøîÂõû0ÔºåËØ¥ÊòéËøòÊ≤°Êî∂Âà∞Á¨¨‰∏ÄÂ∏ßÊï∞ÊçÆÔºåÁªßÁª≠Á≠âÂæÖ
+ *                 Â¶ÇÊûúËøîÂõûÁöÑ‰∏ç‰∏∫0‰∫ÜÔºåË∞ÉÁî®get_angle()Ôºå‰∏∫ÈáçÂÆö‰ΩçËßíÂ∫¶ÔºåÂèØËÉΩ‰∏çÊòØ0~360ÁöÑËåÉÂõ¥Ôºå‰Ω†Ëá™Â∑±ËøõË°åÂΩí‰∏ÄÂåñÂ§ÑÁêÜ
+ * launchÁîµÊú∫Ê†°ÂáÜÔºö ÊñΩÂä†Â∞èÁöÑÂèçÂêëÁîµÊµÅÔºåËÆ°Êó∂ÂêéÂÆåÊàêÈáçÂÆö‰Ωç
+ */
 void Robot_WeaponSage_Setup::calibrate()
 {
-    if(!ctrl_status_.is_calibrating)
-    {
-        if(!ctrl_status_.calibrate_start)
-        {
-            ctrl_status_.calibrate_startTime = TimeStamp::getInstance().getSeconds();
-            ctrl_status_.calibrate_start = true;       
-        }
-	
-        this->setCtrlMode(WeaponSage::CURRENT_CONTROL);
-		this->setTarget(-900.0f, WeaponSage::Traverse_Motor);
-        this->setTarget(500.0f, WeaponSage::Claw_Motor);
 
-        if(ctrl_status_.now_times - ctrl_status_.calibrate_startTime > 2.0f)
-        {
-            //relocate
-            this->claw_Motor_->relocate_totalAngle(0.0f);
-            this->traverse_Motor_->relocate_totalAngle(0.0f);
-            this->launch_Motor_1_master->relocate_totalAngle(0.0f);
-            this->launch_Motor_1_slave->relocate_totalAngle(0.0f);
-            this->launch_Motor_2_master->relocate_totalAngle(0.0f);
-            this->launch_Motor_2_slave->relocate_totalAngle(0.0f);
-            
-			if(auto_ctrl_.auto_state_bool_S.wrist_enable)
-			{	
-				this->Weapon_wrist_setzero();
-            }
-            this->setTarget(0.0f, WeaponSage::Claw_Motor);
-            this->setTarget(0.0f, WeaponSage::Traverse_Motor);
-		
-			
-		
-//            auto_ctrl_.auto_state_bool_S.wrist_enable=true;
-            ctrl_status_.is_calibrating = true;
-        }
-
-    }
 	
 }
 
 float test_angle = 20.0f;
 
+
+//ËøôÁâàÊâãÊìçÈÄªËæëÔºöÔºàÊöÇÊó∂Ôºâ
+/**
+ *  Â§ß‰ΩìÂíå‰πãÂâçÁöÑÂ∑Æ‰∏çÂ§öÔºå‰∏Ä‰∫õÂú∞ÊñπÊúâÂèòÂåñ
+ *  ËøòÊòØÂè≥ÊëáÊùÜÁöÑyÊéßÂà∂ÂçáÈôç
+ *  SWDÊéßÂà∂Â§πÁà™ÂºÄÂêàÔºåÊâãÊìçÂÖàËÆæÂÆö‰∏∫‰∏â‰∏™Â§πÁà™ÈÉΩ‰∏ÄËµ∑ÊéßÂà∂
+ *  Âè≥ÊëáÊùÜxËΩ¥ÔºåÂæÄÂ∑¶ÂæÄÂè≥Êâì‰∏ÄÊ¨°Ôºå‰ª£Ë°®ÊâãËÖïÈÄÜÈ°∫Êó∂ÈíàÊñπÂêëËΩ¨90Â∫¶ÔºåÔºåÊØèÊâßË°å‰∏ÄÊ¨°ËΩ¨90Â∫¶ÈúÄË¶ÅÈÅ•ÊéßÂõû‰∏≠ÂêéÊâçËÉΩÊâßË°å‰∏ã‰∏ÄÊ¨°ËΩ¨Âä®„ÄÇ
+ *  SWAÊéßÂà∂armÁöÑÁ´ñÁõ¥ÂíåÊ∞¥Âπ≥„ÄÇ‰∏§Ê°£
+ *  
+ *  SWAÂíåSWDÁöÑÁä∂ÊÄÅÂàáÊç¢Âíå‰πãÂâç‰∏ÄÊ†∑Ôºå‰ΩøÁî®ÂºÇÊàñÊñπÂºèÔºåÈò≤Ê≠¢Áä∂ÊÄÅÁöÑË∑≥Âèò
+ */
 void Robot_WeaponSage_Setup::manualControl()
 {
-    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
 
-    // Ω¯»ÎManualƒ£ Ω ±µƒ◊¥Ã¨∞Û∂®¬ﬂº≠
-    if(last_weaponSage_status_ != WEAPONSAGE_MANUAL_CONTROL)
-    {
-        // ªÒ»°µ±«∞◊¶◊” µº Œª÷√£¨≈–∂®¬ﬂº≠◊¥Ã¨
-        float current_claw_theta = this->getClawPos().theta;
-        int8_t current_claw_logical = (current_claw_theta > initData_.max_clawAngle_ * 0.5f) ? 1 : 0;
-        
-        // º«¬º◊¥Ã¨
-        ctrl_status_.last_manual_claw_state = current_claw_logical;
-        
-        // º∆À„∆´“∆: offset = switch ^ state
-        ctrl_status_.claw_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_claw_logical;
+//    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
 
-        last_weaponSage_status_ = WEAPONSAGE_MANUAL_CONTROL;
+//    // ËøõÂÖ•ManualÊ®°ÂºèÊó∂ÁöÑÁä∂ÊÄÅÁªëÂÆöÈÄªËæë
+//    if(last_weaponSage_status_ != WEAPONSAGE_MANUAL_CONTROL)
+//    {
+//        // Ëé∑ÂèñÂΩìÂâçÁà™Â≠êÂÆûÈôÖ‰ΩçÁΩÆÔºåÂà§ÂÆöÈÄªËæëÁä∂ÊÄÅ
+//        float current_claw_theta = this->getClawPos().theta;
+//        int8_t current_claw_logical = (current_claw_theta > initData_.max_clawAngle_ * 0.5f) ? 1 : 0;
+//        
+//        // ËÆ∞ÂΩïÁä∂ÊÄÅ
+//        ctrl_status_.last_manual_claw_state = current_claw_logical;
+//        
+//        // ËÆ°ÁÆóÂÅèÁßª: offset = switch ^ state
+//        ctrl_status_.claw_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_claw_logical;
 
-        ctrl_status_.last_isClaw_tight = ctrl_status_.isClaw_tight;
+//        last_weaponSage_status_ = WEAPONSAGE_MANUAL_CONTROL;
 
-        ctrl_status_.last_scroll_state = airjoy_data_.scroll_wheel;
+//        ctrl_status_.last_isClaw_tight = ctrl_status_.isClaw_tight;
 
-        ctrl_status_.scroll_offset = (airjoy_data_.scroll_wheel & 0x01) ^ ctrl_status_.last_isClaw_tight; // ≥ı º◊¥Ã¨ºŸ…ËŒ™0
-    }
+//        ctrl_status_.last_scroll_state = airjoy_data_.scroll_wheel;
 
-    switch(airjoy_data_.SWA)
-    {
-        case 0x00:
-        {
-            if(_tool_Abs(airjoy_data_.right_x) < 0.1)
-                manual_ctrlForgrip_.changeTarget_state = false;
+//        ctrl_status_.scroll_offset = (airjoy_data_.scroll_wheel & 0x01) ^ ctrl_status_.last_isClaw_tight; // ÂàùÂßãÁä∂ÊÄÅÂÅáËÆæ‰∏∫0
+//    }
 
-            else if(airjoy_data_.right_x > 0.5f)
-            {
-                manual_ctrlForgrip_.changeTarget_state = true;
-                if(current_pos_.traverse_pos_>0.2f*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
-                {
-                    target_pos_.traverse_pos_+=traverse_rate;
-                }
-                if(current_pos_.traverse_pos_<=0.2f*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
-                {
-                    target_pos_.traverse_pos_+=traverse_rate*Kp_traverse;
-                }
-            }
-            else if(airjoy_data_.right_x < -0.5f)
-            {
-                manual_ctrlForgrip_.changeTarget_state = true;
-                if(current_pos_.traverse_pos_>0.2f*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
-                {
-                    target_pos_.traverse_pos_-=traverse_rate;
-                }
-                if(current_pos_.traverse_pos_<=0.2f*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
-                {
-                    target_pos_.traverse_pos_-=traverse_rate*Kp_traverse;
-                }
-            }
+//    switch(airjoy_data_.SWA)
+//    {
+//        case 0x00:
+//        {
+//            if(_tool_Abs(airjoy_data_.right_x) < 0.1)
+//                manual_ctrlForgrip_.changeTarget_state = false;
 
-
-            if(airjoy_data_.right_y > 0.5f)
-                target_pos_.launch_pos_ += weapon_launch_rate;
-            else if(airjoy_data_.right_y < -0.5f)
-                target_pos_.launch_pos_ -= weapon_launch_rate;
-            else
-                target_pos_.launch_pos_ = target_pos_.launch_pos_;
+//            else if(airjoy_data_.right_x > 0.5f)
+//            {
+//                manual_ctrlForgrip_.changeTarget_state = true;
+//                if(current_pos_.traverse_pos_>0.2f*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
+//                {
+//                    target_pos_.traverse_pos_+=traverse_rate;
+//                }
+//                if(current_pos_.traverse_pos_<=0.2f*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
+//                {
+//                    target_pos_.traverse_pos_+=traverse_rate*Kp_traverse;
+//                }
+//            }
+//            else if(airjoy_data_.right_x < -0.5f)
+//            {
+//                manual_ctrlForgrip_.changeTarget_state = true;
+//                if(current_pos_.traverse_pos_>0.2f*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
+//                {
+//                    target_pos_.traverse_pos_-=traverse_rate;
+//                }
+//                if(current_pos_.traverse_pos_<=0.2f*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
+//                {
+//                    target_pos_.traverse_pos_-=traverse_rate*Kp_traverse;
+//                }
+//            }
 
 
-            if(auto_ctrl_.auto_state_bool_S.wrist_enable)
-            {
-                target_pos_.wrist_pos_ = 90.0f;  
-            }
-
-            int8_t target_claw_logical = (airjoy_data_.SWD & 0x01) ^ ctrl_status_.claw_switch_offset;
-            
-            ctrl_status_.last_manual_claw_state = target_claw_logical;
-
-            int8_t target_tight_logical = (airjoy_data_.scroll_wheel & 0x01) ^ ctrl_status_.scroll_offset;
-            ctrl_status_.isClaw_tight = target_tight_logical;
-
-            if(target_claw_logical == 0)
-            {
-                if(ctrl_status_.isClaw_tight)
-                    target_pos_.claw_pos_ = 0.0f; //ø™◊¶◊”
-                else
-                    target_pos_.claw_pos_ = test_angle; //≤ªÃ´ΩÙ◊¶◊”
-            }
-            else
-                target_pos_.claw_pos_ = initData_.max_clawAngle_; //ΩÙ◊¶◊”
+//            if(airjoy_data_.right_y > 0.5f)
+//                target_pos_.launch_pos_ += weapon_launch_rate;
+//            else if(airjoy_data_.right_y < -0.5f)
+//                target_pos_.launch_pos_ -= weapon_launch_rate;
+//            else
+//                target_pos_.launch_pos_ = target_pos_.launch_pos_;
 
 
+//            if(auto_ctrl_.auto_state_bool_S.wrist_enable)
+//            {
+//                target_pos_.wrist_pos_ = 90.0f;  
+//            }
 
-            manual_ctrlForgrip_.last_right_stick_x = airjoy_data_.right_x;
-            manual_ctrlForgrip_.last_right_stick_y = airjoy_data_.right_y;
-            break;
-        }
+//            int8_t target_claw_logical = (airjoy_data_.SWD & 0x01) ^ ctrl_status_.claw_switch_offset;
+//            
+//            ctrl_status_.last_manual_claw_state = target_claw_logical;
 
-        case 0x01:
-        {
-            //Ω¯π•ƒ£ Ω
+//            int8_t target_tight_logical = (airjoy_data_.scroll_wheel & 0x01) ^ ctrl_status_.scroll_offset;
+//            ctrl_status_.isClaw_tight = target_tight_logical;
 
-				if(_tool_Abs(airjoy_data_.right_x) < 0.1)
-                manual_ctrlForgrip_.changeTarget_state = false;
-
-				else if(airjoy_data_.right_x > 0.5f)
-				{
-					manual_ctrlForgrip_.changeTarget_state = true;
-					if(current_pos_.traverse_pos_>0.2f*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
-					{
-						target_pos_.traverse_pos_+=traverse_rate;
-					}
-					if(current_pos_.traverse_pos_<=0.2f*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
-					{
-						target_pos_.traverse_pos_+=traverse_rate*Kp_traverse;
-					}
-				}
-				else if(airjoy_data_.right_x < -0.5f)
-				{
-					manual_ctrlForgrip_.changeTarget_state = true;
-					if(current_pos_.traverse_pos_>0.2f*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
-					{
-						target_pos_.traverse_pos_-=traverse_rate;
-					}
-					if(current_pos_.traverse_pos_<=0.2f*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
-					{
-						target_pos_.traverse_pos_-=traverse_rate*Kp_traverse;
-					}
-				}
+//            if(target_claw_logical == 0)
+//            {
+//                if(ctrl_status_.isClaw_tight)
+//                    target_pos_.claw_pos_ = 0.0f; //ÂºÄÁà™Â≠ê
+//                else
+//                    target_pos_.claw_pos_ = test_angle; //‰∏çÂ§™Á¥ßÁà™Â≠ê
+//            }
+//            else
+//                target_pos_.claw_pos_ = initData_.max_clawAngle_; //Á¥ßÁà™Â≠ê
 
 
-				if(airjoy_data_.right_y > 0.5f)
-					target_pos_.launch_pos_ += weapon_launch_rate;
-				else if(airjoy_data_.right_y < -0.5f)
-					target_pos_.launch_pos_ -= weapon_launch_rate;
-				else
-					target_pos_.launch_pos_ = target_pos_.launch_pos_;
-				if(auto_ctrl_.auto_state_bool_S.wrist_enable)
-				{
-				    target_pos_.wrist_pos_ = 0.0f;
-				}
 
-				manual_ctrlForgrip_.last_right_stick_x = airjoy_data_.right_x;
-				manual_ctrlForgrip_.last_right_stick_y = airjoy_data_.right_y;
+//            manual_ctrlForgrip_.last_right_stick_x = airjoy_data_.right_x;
+//            manual_ctrlForgrip_.last_right_stick_y = airjoy_data_.right_y;
+//            break;
+//        }
+
+//        case 0x01:
+//        {
+//            //ËøõÊîªÊ®°Âºè
+
+//				if(_tool_Abs(airjoy_data_.right_x) < 0.1)
+//                manual_ctrlForgrip_.changeTarget_state = false;
+
+//				else if(airjoy_data_.right_x > 0.5f)
+//				{
+//					manual_ctrlForgrip_.changeTarget_state = true;
+//					if(current_pos_.traverse_pos_>0.2f*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
+//					{
+//						target_pos_.traverse_pos_+=traverse_rate;
+//					}
+//					if(current_pos_.traverse_pos_<=0.2f*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
+//					{
+//						target_pos_.traverse_pos_+=traverse_rate*Kp_traverse;
+//					}
+//				}
+//				else if(airjoy_data_.right_x < -0.5f)
+//				{
+//					manual_ctrlForgrip_.changeTarget_state = true;
+//					if(current_pos_.traverse_pos_>0.2f*initData_.max_traverseLength_&&current_pos_.traverse_pos_<0.8*initData_.max_traverseLength_)
+//					{
+//						target_pos_.traverse_pos_-=traverse_rate;
+//					}
+//					if(current_pos_.traverse_pos_<=0.2f*initData_.max_traverseLength_||current_pos_.traverse_pos_>=0.8*initData_.max_traverseLength_)
+//					{
+//						target_pos_.traverse_pos_-=traverse_rate*Kp_traverse;
+//					}
+//				}
 
 
-            break; 
-        }
+//				if(airjoy_data_.right_y > 0.5f)
+//					target_pos_.launch_pos_ += weapon_launch_rate;
+//				else if(airjoy_data_.right_y < -0.5f)
+//					target_pos_.launch_pos_ -= weapon_launch_rate;
+//				else
+//					target_pos_.launch_pos_ = target_pos_.launch_pos_;
+//				if(auto_ctrl_.auto_state_bool_S.wrist_enable)
+//				{
+//				    target_pos_.wrist_pos_ = 0.0f;
+//				}
 
-        default:
-        {
-            idle();
-            break;
-        }
-    }
+//				manual_ctrlForgrip_.last_right_stick_x = airjoy_data_.right_x;
+//				manual_ctrlForgrip_.last_right_stick_y = airjoy_data_.right_y;
 
-    this->setTarget(target_pos_.launch_pos_, WeaponSage::Launch_Motor);
-    this->setTarget(target_pos_.claw_pos_, WeaponSage::Claw_Motor);
-    this->setTarget(target_pos_.traverse_pos_, WeaponSage::Traverse_Motor);
-    this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);
+
+//            break; 
+//        }
+
+//        default:
+//        {
+//            idle();
+//            break;
+//        }
+//    }
+
+//    this->setTarget(target_pos_.launch_pos_, WeaponSage::Launch_Motor);
+//    this->setTarget(target_pos_.claw_1_pos_, WeaponSage::Claw_1_Motor);
+//    this->setTarget(target_pos_.claw_2_pos_, WeaponSage::Claw_2_Motor);
+//    this->setTarget(target_pos_.claw_3_pos_, WeaponSage::Claw_3_Motor);
+//    this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);
+//    this->setTarget(target_pos_.arm_pos_, WeaponSage::Arm_Motor);
 }
 
 void Robot_WeaponSage_Setup::idle()
 {
-    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-	if(last_weaponSage_status_!=WEAPONSAGE_IDLE)
-	{
-		this->last_pos_ = this->get_CurrentPos();
-		this->target_pos_=this->last_pos_;
-		last_weaponSage_status_=WEAPONSAGE_IDLE;
-
-	}
-	this->setTarget(target_pos_.launch_pos_, WeaponSage::Launch_Motor);
-    this->setTarget(target_pos_.claw_pos_, WeaponSage::Claw_Motor);
-    this->setTarget(target_pos_.traverse_pos_, WeaponSage::Traverse_Motor);
-    this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);
+	
 }
 
 void Robot_WeaponSage_Setup::debug()
 {
-    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+//    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
 
-    //  ◊¥ŒΩ¯»ÎDEBUG: À¯∂®µ±«∞◊ÀÃ¨£¨∫Û–¯÷ª÷¥––Õ‚≤øœ¬∑¢µƒlaunchƒø±Í°£
-    if(last_weaponSage_status_ != WEAPONSAGE_DEBUG)
-    {
-        this->last_pos_ = this->get_CurrentPos();
-        this->target_pos_ = this->last_pos_;
-        last_weaponSage_status_ = WEAPONSAGE_DEBUG;
-    }
+//    // È¶ñÊ¨°ËøõÂÖ•DEBUG: ÈîÅÂÆöÂΩìÂâçÂßøÊÄÅÔºåÂêéÁª≠Âè™ÊâßË°åÂ§ñÈÉ®‰∏ãÂèëÁöÑlaunchÁõÆÊ†á„ÄÇ
+//    if(last_weaponSage_status_ != WEAPONSAGE_DEBUG)
+//    {
+//        this->last_pos_ = this->get_CurrentPos();
+//        this->target_pos_ = this->last_pos_;
+//        last_weaponSage_status_ = WEAPONSAGE_DEBUG;
+//    }
 
-    if(debug_launch_target_valid_)
-    {
-        float launch_target = debug_launch_target_;
-        if(launch_target < 0.0f)
-            launch_target = 0.0f;
-        else if(launch_target > initData_.max_launchHeight_)
-            launch_target = initData_.max_launchHeight_;
+//    if(debug_launch_target_valid_)
+//    {
+//        float launch_target = debug_launch_target_;
+//        if(launch_target < 0.0f)
+//            launch_target = 0.0f;
+//        else if(launch_target > initData_.max_launchHeight_)
+//            launch_target = initData_.max_launchHeight_;
 
-        target_pos_.launch_pos_ = launch_target;
-    }
+//        target_pos_.launch_pos_ = launch_target;
+//    }
 
-    this->setTarget(target_pos_.launch_pos_, WeaponSage::Launch_Motor);
-    this->setTarget(target_pos_.claw_pos_, WeaponSage::Claw_Motor);
-    this->setTarget(target_pos_.traverse_pos_, WeaponSage::Traverse_Motor);
-    this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);
+//    this->setTarget(target_pos_.launch_pos_, WeaponSage::Launch_Motor);
+//    this->setTarget(target_pos_.claw_pos_, WeaponSage::Claw_Motor);
+//    this->setTarget(target_pos_.traverse_pos_, WeaponSage::Traverse_Motor);
+//    this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);
 }
 
-void Robot_WeaponSage_Setup::camera_mode()
-{
-    if(!weapon_CameraStart) //÷˜◊¥Ã¨ª˙√ª”–∏¯Œ‰∆˜º‹œ‡ª˙ƒ£ Ω¥•∑¢–≈∫≈£¨±£≥÷µ±«∞◊ÀÃ¨≤ª±‰£¨≤¢À¯∂®∫ΩœÚ°£
-    {
-        this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-        cam_z_req_last_ = false;// ÕÀ≥ˆ¡˜≥Ã ±∏¥Œª…œ…˝—ÿºÏ≤‚◊¥Ã¨°£
-        idle();
-        return;
-    }
 
 
-    //  ◊¥ŒΩ¯»Îœ‡ª˙ƒ£ Ω ±À¯∂®µ±«∞◊ÀÃ¨ª˘◊º°£
-    if(last_weaponSage_status_ != WEAPONSAGE_CAMERA)
-    {
-        this->last_pos_ = this->get_CurrentPos();// ∂¡»°µ±«∞πÿΩ⁄Œª÷√°£
-
-        this->target_pos_ = this->last_pos_;// ”√µ±«∞πÿΩ⁄Œª÷√≥ı ºªØƒø±ÍŒª÷√°£
-
-        camera_weapon_done_ = false;// «Âø’œ‡ª˙¡˜≥ÃÕÍ≥…±Í÷æ°£
-
-        camera_z_done_ = false;// «Âø’œ‡ª˙¡˜≥ÃÕÍ≥…±Í÷æ°£
-
-        cam_z_run_ = false;// «Âø’ z π˝≥Ã‘À––Œª°£
-
-        cam_z_req_last_ = false;// «Âø’ z «Î«Û…œ…˝—ÿºÏ≤‚◊¥Ã¨°£
-
-        cam_z_hold_ = this->last_pos_.launch_pos_;// ∂‘∆Î z ƒø±Íª∫¥Ê°£
-
-        cam_z_last_ = camera_z_ref_;// ∂‘∆Îœ‡ª˙ z —˘±æ°£
-
-        cam_z_rpm_ = 0.0f;// «Âø’œ‡ª˙ z ÀŸ∂»÷∏¡Ó°£
-
-        cam_z_ctrl_.reset(this->last_pos_.launch_pos_);// ÷ÿ÷√ z øÿ÷∆∆˜◊¥Ã¨°£
-
-        last_weaponSage_status_ = WEAPONSAGE_CAMERA;// ∏¸–¬…œ“ª¥Œ◊¥Ã¨°£
-    }
-
-    // µ±µ◊≈Ã«Î«ÛŒ‰∆˜‘§∂‘Ω”◊ÀÃ¨ ±÷¥––ª˙ππ∂Ø◊˜°£
-    if(camera_weapon_req_)
-    {
-        target_pos_.claw_pos_ = initData_.max_clawAngle_;// º–◊¶º–ΩÙµΩ…œœﬁΩ«°£
-
-        target_pos_.traverse_pos_ = 0;// µºπÏ¥ÚµΩ◊Ó±ﬂ…œ°£
-
-        target_pos_.wrist_pos_ = 0.0f;// ÕÛ≤ø∑≠◊™µΩ”Î∆‰À˚¡˜≥Ã“ª÷¬µƒ◊ÀÃ¨°£
-        
-        this->setTarget(target_pos_.claw_pos_, WeaponSage::Claw_Motor);// œ¬∑¢º–◊¶ƒø±Í°£
-        
-        this->setTarget(target_pos_.traverse_pos_, WeaponSage::Traverse_Motor);// œ¬∑¢µºπÏƒø±Í°£
-
-        this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);// œ¬∑¢ÕÛ≤øƒø±Í°£
-        
-        WeaponSage::WeaponSage_Pos_S now_pos = this->get_CurrentPos();// ∂¡»°µ±«∞◊ÀÃ¨”√”⁄µΩŒª≈–∂®°£
-
-        float wrist_err = _tool_Abs(now_pos.wrist_pos_ - target_pos_.wrist_pos_);// º∆À„ÕÛ≤øŒÛ≤Ó°£
-
-        // µΩŒª ±∑µªÿ weapon_finished°£
-        camera_weapon_done_ = (wrist_err < 5.0f);
-    }
-    else
-    {
-        camera_weapon_done_ = false;// Œ¥«Î«ÛŒ‰∆˜‘§∂‘Ω” ±«Â≥˝ÕÍ≥…Œª°£
-    }
-
-    // z «Î«Û≤…”√…œ…˝—ÿ¥•∑¢£∫µ◊≈Ãœ¬∑¢µƒ z_ref  ”◊˜°∞‘ˆ¡ø°±∂¯∑«æ¯∂‘∏ﬂ∂»°£
-    bool z_req_rise = (camera_z_req_ && !cam_z_req_last_);
-    cam_z_req_last_ = camera_z_req_;
-
-    if(z_req_rise)
-    {
-        WeaponSage::WeaponSage_Pos_S now_pos = this->get_CurrentPos();
-        cam_z_hold_ = now_pos.launch_pos_ + camera_z_ref_;
-        cam_z_run_ = true;
-    }
-    else if(!camera_z_req_)
-    {
-        cam_z_run_ = false;
-    }
-
-    // launch ‘⁄œ‡ª˙ƒ£ Ωœ¬ º÷’∞¥ª∫¥Êƒø±Í◊ˆ RPM ±’ª∑±£≥÷°£
-    float z_ref = constrain(cam_z_hold_, 0.0f, initData_.max_launchHeight_);
-    target_pos_.launch_pos_ = z_ref;
-
-    // Õ¨≤ΩŒª÷√ª∑ƒø±ÍΩ«£¨»∑±£ƒø±Íª∫¥Ê”Îµ±«∞≤Œøº“ª÷¬°£
-    this->setTarget(target_pos_.launch_pos_, WeaponSage::Launch_Motor);
-
-    // launch œﬂÀŸ∂»£®“—∫¨’˝∑ΩœÚ‘º∂®£©°£
-    float z_vel = this->get_launchVel();
-
-    // µ±«∞¡¥¬∑÷– camera_z_ref_ ±Ì æ‘ˆ¡ø«Î«Û£¨≤ª◊˜Œ™π€≤‚»⁄∫œ ‰»Î°£
-    bool cam_new = false;
-
-    // Õ‚ª∑ ‰≥ˆƒø±Í rpm°£
-    float rpm_cmd = cam_z_ctrl_.run_step(z_ref, z_ref, cam_new, z_vel);
-    cam_z_rpm_ = rpm_cmd;
-
-    // œ¬∑¢ launch ÀŸ∂»√¸¡Ó°£
-    this->set_launchMotorSpeed(rpm_cmd);
-
-    // Ωˆ‘⁄”– z «Î«Û ±ªÿ¥´ÕÍ≥…Œª£ªŒﬁ«Î«Û ±«Â¡„°£
-    camera_z_done_ = camera_z_req_ ? cam_z_ctrl_.is_done() : false;
-
-    // ≥÷–¯±£≥÷µ±«∞Àƒ÷·ƒø±Í£¨±‹√‚◊¥Ã¨«–ªª ±Ã¯±‰°£
-    this->setTarget(target_pos_.claw_pos_, WeaponSage::Claw_Motor);
-
-    // ≥÷–¯±£≥÷µ±«∞Àƒ÷·ƒø±Í£¨±‹√‚◊¥Ã¨«–ªª ±Ã¯±‰°£
-    this->setTarget(target_pos_.traverse_pos_, WeaponSage::Traverse_Motor);
-
-    // ≥÷–¯±£≥÷µ±«∞Àƒ÷·ƒø±Í£¨±‹√‚◊¥Ã¨«–ªª ±Ã¯±‰°£
-    this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);
-
-    if(camera_weapon_done_)
-        weapon_CameraStart = false;// ‘§∂‘Ω”ÕÍ≥…∫Û∏¥Œª÷˜◊¥Ã¨ª˙¥•∑¢Œª£¨◊º±∏œ¬“ª¥Œ∂‘Ω”¡˜≥Ã°£
-}
-
-void Robot_WeaponSage_Setup::autoControl()
+void Robot_WeaponSage_Setup::autoControl_catch()
 {
 	
-    //¥˝ µœ÷
     /**
-     * @brief ◊‘∂Øøÿ÷∆¬ﬂº≠
-     *  1.∂‘”⁄4∏ˆ¥˝»°√¨∏À£¨”≤±‡¬ÎÀƒ∏ˆŒª÷√
-     *  2.µ±µ◊≈ÃøøŒªÕÍ≥…∫Û£¨◊‹◊¥Ã¨ª˙∑¢¿¥œ¬Ωµ÷∏¡Ó£¨÷¥––œ¬Ωµ
-     *  3.µ±œ¬ΩµÕÍ≥…∫Û£¨«“µ◊≈Ã”ÎŒ‰∆˜º‹µ◊≤øΩ”¥•£¨‘Ú÷¥––◊•»°
-     *  4.µ±µ◊≈Ã∫ÛÕÀµΩƒ‹Ω´√¨∏ÀÃß∆µƒŒª÷√∫Û£¨÷¥––Ãß∆
+     * @brief ÊäìÂèñÊµÅÁ®ã
+     *        Êñ∞ÁâàÊäìÂèñÊùÜÊó∂ÂÄô‰∏çÈúÄË¶ÅÊä¨È´òÔºåÈúÄÈôçÂà∞ÊúÄ‰ΩéÔºåË¥¥ËøëÂêéÁ≠âÂæÖÂ∫ïÁõòÂÅúÁ®≥‰ø°Âè∑
+     *        Â∫ïÁõòÂÅúÁ®≥‰ø°Âè∑Âà∞ËææÂêéÂ§πÂèñÁõÆÊ†áÊùÜ
+     *        Â§πÂèñÂÆåÊàêÂêéÊä¨È´òÂà∞ÂÆâÂÖ®È´òÂ∫¶ÔºåÂÆåÊµÅÁ®ã
      */
 	
-	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-	switch(now_state_)
+}
 
-    {
-        case WeaponSage_Setup::STATE_DONE:
-        {
-            if(auto_ctrl_.auto_ctrl1)
-            {
-                auto_ctrl_.flag.aimposition_done = false;
-                auto_ctrl_.flag.lowerclaw_done = false;
-                auto_ctrl_.flag.grabclaw_done = false;
-                auto_ctrl_.flag.lift_done = false;
-            
-                now_state_ = WeaponSage_Setup::STATE_AIM_POSITION;
-				
-				this->setTarget(0.8f*initData_.max_launchHeight_, WeaponSage::Launch_Motor);
-				this->setTarget(-90.0f, WeaponSage::Wrist_Motor);
-            }
-            else
-            {
-                this->idle();
-            }
-            break;
-        }
-        case WeaponSage_Setup::STATE_AIM_POSITION:
-        {
-            auto_ctrl_.flag.aimposition_done = State_AimPosition(auto_ctrl_.pole_num);
-            if(auto_ctrl_.flag.aimposition_done)
-            {
-                now_state_ = WeaponSage_Setup::STATE_LOWER_CLAW;
-            }
-            break;
-        }
+/**
+ * @brief ËôΩÁÑ∂ÊîæÂú®autoÈáåÈù¢Ôºå‰ΩÜÂÖ∂ÂÆûËøôÈÉ®ÂàÜÂ∫îËØ•ÁÆóÊòØ‰∏Ä‰∏≤Âä®‰ΩúÈìæÔºåÊ≤°ÊúâÂíåÂÖ∂‰ªñÊú∫ÊûÑÁöÑ‰∫§‰∫í
+ *        ‰ΩÜËøôÈÉ®ÂàÜ‰Ω†ËøòÊòØÈúÄË¶ÅËÆæËÆ°‰∏Ä‰∏™Â∞èÁä∂ÊÄÅÊú∫„ÄÇ
+ * 
+ *        Êî∂Âà∞ÂºÄÂßãÊâßË°åÂä®‰ΩúÁöÑ‰ø°Âè∑Êó∂ÂÄô
+ *        1. ÂÖà‰øùËØÅÁõÆÂâçarmÂ§Ñ‰∫éÊ∞¥Âπ≥„ÄÇ
+ *        2. ÂçäÊùæÁà™Â≠êÔºå‰∏çËÆ©ÊùÜÂ≠êËÉΩÊéâÂá∫ÂéªÔºå‰ΩÜ‰πüÊ≤°ÊúâÊäì‰ΩèÊùÜÁöÑÁä∂ÊÄÅ 
+ *        3. Ê†πÊçÆ @param target_dock_ ÁöÑÂÄºÔºåË∞ÉÊï¥Áà™Â≠êÂà∞ÂØπÂ∫îÁöÑÈ´òÂ∫¶
+ *        4. Á¥ßÁà™Â≠êÊäì‰ΩèÊùÜ„ÄÇ
+ *        5. Ê†πÊçÆ @param target_dock_ ÁöÑÂÄºÔºåÂ¶ÇÊûúÈùûMIDÂàôÊóãËΩ¨ÊâãËÖï180Â∫¶„ÄÇ
+ *        6. ÊóãËΩ¨ÂÆåÊàêÂêéÔºåÂ∞ÜarmÊä¨Âà∞Á´ñÁõ¥‰ΩçÁΩÆ„ÄÇ
+ *        7. ÂÆåÊàêÂêéÂçáÈôçÂà∞È¢ÑÂÆö‰ΩçÁΩÆ(ÂÖàÂÆö‰∏∫‰∏≠Èó¥‰ΩçÁΩÆÔºåÁî®‰∫éÂØπÊé•)
+ *        8. ÂÆåÊàêËøõÂÖ•idleÁä∂ÊÄÅ
+ * 
+ *        Âú®ËøõÂÖ•idleÁä∂ÊÄÅÂêéÔºåÂ¶ÇÊûúSWDÁä∂ÊÄÅË¢´ÂàáÊç¢‰∫Ü(ÂêåmanualÈáåÁöÑÈÄªËæë)
+ *        ÂàôÂàáÊç¢armÁöÑÁä∂ÊÄÅÔºåÂ¶ÇÊûúÂΩìÂâçÁ´ñÁõ¥Â∞±ÂèòÊ∞¥Âπ≥ÔºåÂèç‰πã‰∫¶ÁÑ∂„ÄÇ
+ *        
+ */
+void Robot_WeaponSage_Setup::autoControl_dock()
+{
 
-        case WeaponSage_Setup::STATE_LOWER_CLAW:
-        {
-            State_LowerClaw();
-            Point2D now_claw_pos = this->getClawPos();
-            if(abs(now_claw_pos.y - auto_ctrl_.tarch_height) < 0.001f)
-            {
-                auto_ctrl_.flag.lowerclaw_done = true;
-            }
-			if(auto_ctrl_.flag.lowerclaw_done)
-			{
-				now_state_=WeaponSage_Setup::STATE_GRAB_CLAW;
-			}
-            break;
-        }
-
-        case WeaponSage_Setup::STATE_GRAB_CLAW:
-        {
-            auto_ctrl_.flag.grabclaw_done = State_GrabClaw();
-            if(auto_ctrl_.flag.grabclaw_done)
-            {
-                now_state_ = WeaponSage_Setup::STATE_LIFT_POSITION;
-            }
-            break;
-        }
-
-        case WeaponSage_Setup::STATE_LIFT_POSITION:
-        {
-            State_Lift();
-            Point2D now_claw_pos = this->getClawPos();
-            if(abs(now_claw_pos.y - auto_ctrl_.up_height) < 0.001f)
-            {
-                auto_ctrl_.flag.lift_done = true;    
-            }
-            if(auto_ctrl_.flag.lift_done)
-            {
-                now_state_ = WeaponSage_Setup::STATE_DONE;
-				auto_ctrl_.auto_ctrl1 = false;
-            }
-			
-            break;
-        }
-
-        default:
-            break;
-    }
 }
 
 void Robot_WeaponSage_Setup::stop()
 {
-    //Õ£÷π£¨µÁª˙≤ª∂Ø
+    //ÂÅúÊ≠¢ÔºåÁîµÊú∫‰∏çÂä®
     this->setCtrlMode(WeaponSage::CURRENT_CONTROL);
     this->setTarget(0.0f, WeaponSage::Launch_Motor);
-    this->setTarget(0.0f, WeaponSage::Claw_Motor);
-    this->setTarget(0.0f, WeaponSage::Traverse_Motor);
+    this->setTarget(0.0f, WeaponSage::Claw_1_Motor);
+    this->setTarget(0.0f, WeaponSage::Claw_2_Motor);
+    this->setTarget(0.0f, WeaponSage::Claw_3_Motor);
     this->setTarget(0.0f, WeaponSage::Wrist_Motor);
 }
 
  /**
-     * @brief ∂‘◊ºŒª÷√◊¥Ã¨
-     *  1.∏˘æ›¥´»Îµƒ∏À∫≈£¨…Ë÷√∂‘”¶µƒ◊¶◊”Œª÷√
-     *  2.≈–∂œµ±«∞◊¶◊”Œª÷√ «∑ÒµΩ¥Ôƒø±ÍŒª÷√£¨∑µªÿ
+     * @brief ÂØπÂáÜ‰ΩçÁΩÆÁä∂ÊÄÅ
+     *  1.Ê†πÊçÆ‰º†ÂÖ•ÁöÑÊùÜÂè∑ÔºåËÆæÁΩÆÂØπÂ∫îÁöÑÁà™Â≠ê‰ΩçÁΩÆ
+     *  2.Âà§Êñ≠ÂΩìÂâçÁà™Â≠ê‰ΩçÁΩÆÊòØÂê¶Âà∞ËææÁõÆÊ†á‰ΩçÁΩÆÔºåËøîÂõû
      */
-bool Robot_WeaponSage_Setup::State_AimPosition(int pole_num)
-{
-    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-    this->setTarget( WeaponSage_Setup::weapon_pos[pole_num], WeaponSage::Traverse_Motor);
-    Point2D claw_pos = this->getClawPos();
-    if(fabs(claw_pos.x -  WeaponSage_Setup::weapon_pos[pole_num]) <0.001f)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
- /**
-     * @brief œ¬ΩµµÁª˙◊¥Ã¨
-     *  1.…Ë÷√œ¬Ωµƒø±ÍŒª÷√
-     *  2.≈–∂œµ±«∞◊¶◊”Œª÷√ «∑ÒµΩ¥Ôƒø±ÍŒª÷√
-     *  Œﬁ∑µªÿ÷µ
-     * 
-     */
-void Robot_WeaponSage_Setup::State_LowerClaw()
-{
-	 if(auto_ctrl_.auto_state_bool_S.is_matching)
-    {
-		this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-		auto_ctrl_.tarch_height= 0.0193959419f;
-		this->setTarget(auto_ctrl_.tarch_height, WeaponSage::Launch_Motor);
-	}
-}
-
-    /**
-         * @brief ◊•»°◊¥Ã¨
-         *  1.…Ë÷√◊•»°ƒø±ÍŒª÷√
-         *  2.≈–∂œµ±«∞◊¶◊”Œª÷√ «∑ÒµΩ¥Ôƒø±ÍŒª÷√£¨∑µªÿ
-         */
-bool Robot_WeaponSage_Setup::State_GrabClaw()
-{
-   
-		
-        this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-        
-        this->setTarget(initData_.max_clawAngle_, WeaponSage::Claw_Motor);
-       
-    
-        if(!auto_ctrl_.auto_state_bool_S.grab_start)
-        {
-            auto_ctrl_.auto_state_bool_S.grab_start = true;
-            auto_ctrl_.auto_state_bool_S.grab_startTime = TimeStamp::getInstance().getSeconds();
-        }
-
-    
-        if(ctrl_status_.now_times - auto_ctrl_.auto_state_bool_S.grab_startTime >= 2.0f)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-}
-	
- /**
-     * @brief Ãß∆◊¥Ã¨
-     *  1.…Ë÷√Ãß∆ƒø±ÍŒª÷√
-     *  2.≈–∂œµ±«∞◊¶◊”Œª÷√ «∑ÒµΩ¥Ôƒø±ÍŒª÷√£¨∑µªÿ
-     */
-
-bool Robot_WeaponSage_Setup::State_Lift()
-{
-    
-        this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-        auto_ctrl_.up_height =   initData_.max_launchHeight_;
-        this->setTarget(auto_ctrl_.up_height, WeaponSage::Launch_Motor);
-    
-
-    Point2D current_pos = getClawPos();
-    
-    // ≈–∂œ «∑ÒµΩ¥Ôƒø±Í∏ﬂ∂» (‘ –Ì 1cm µƒŒÛ≤Ó)
-    if(fabs(current_pos.y - auto_ctrl_.up_height) < 0.01f)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
 
 
 WeaponSage_InitData_S initData_=
 {
     .max_launchHeight_ =0.329f,
     .max_clawAngle_ = 65.0f,
-    .max_traverseLength_ = 0.380f,
-
+    .max_arm_angle_ = 135.0f,
+    .max_wrist_angle_ = 360.0f,
+	.max_arm_rate_ =45.0f,
+	
     .wrist_gearRatio_ = 360.0f,
     .launch_Ratio_ = 0.098482549317147f,
     .claw_gearRatio_  =360.0f ,
-    .traverse_Ratio_  = 0.0785210947199f,
-    .max_wristMotorRPM_   =45.0f,
+    .arm_gearRatio_ = 360.0f
+
 };

@@ -1,7 +1,7 @@
 /**
  * @file frame_demo.h
  * @author XieFField
- * @brief ¼Ü¹¹²âÊÔ
+ * @brief æž¶æž„æµ‹è¯•
  */
 
 #ifndef __FRAME_DEMO_H

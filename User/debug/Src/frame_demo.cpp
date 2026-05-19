@@ -26,7 +26,7 @@ GPIODevice elcdoor(GPIOG,GPIO_PIN_8);
 //};
 
 
-// Ê¹ÓÃ volatile ·ÀÖ¹±àÒëÆ÷ÓÅ»¯£¬È·±£ÔÚµ÷ÊÔÊ±¿ÉÒÔ¹Û²ìµ½ÖµµÄ±ä»¯
+// ä½¿ç”¨ volatile é˜²æ­¢ç¼–è¯‘å™¨ä¼˜åŒ–ï¼Œç¡®ä¿åœ¨è°ƒè¯•æ—¶å¯ä»¥è§‚å¯Ÿåˆ°å€¼çš„å˜åŒ–
 volatile int counter = 0;
 volatile uint8_t start_signal = 0;
 volatile float test_rpm=0.0f;
@@ -44,7 +44,7 @@ void FrameDemo::init()
     start(osPriorityNormal, 256);
 }
 
-volatile float delta_time = 0.0f; //Ä¿Ç°Ê¹ÓÃµÄµ¥Î»ÊÇÎ¢Ãë
+volatile float delta_time = 0.0f; //ç›®å‰ä½¿ç”¨çš„å•ä½æ˜¯å¾®ç§’
 volatile uint64_t last_time = 0;
 
 
@@ -56,7 +56,7 @@ void DJI_MotorDemo::loop()
    if(last_time > 0)
    {
        delta_time = static_cast<float>(time_now - last_time); 
-       // ¿ÉÒÔÔÚÕâÀïÊ¹ÓÃ delta_time ½øĞĞÆäËû¼ÆËã
+       // å¯ä»¥åœ¨è¿™é‡Œä½¿ç”¨ delta_time è¿›è¡Œå…¶ä»–è®¡ç®—
    }
    last_time = time_now;
    debug_uart.printf_DMA("%d,%f,%f\r\n",left_x,motor_->getTargetRPM(), motor_->getRPM());
@@ -125,7 +125,7 @@ void DJI_MotorDemo::loop()
 //    if(last_time > 0)
 //    {
 //        delta_time = static_cast<float>(time_now - last_time); 
-//        // ¿ÉÒÔÔÚÕâÀïÊ¹ÓÃ delta_time ½øĞĞÆäËû¼ÆËã
+//        // å¯ä»¥åœ¨è¿™é‡Œä½¿ç”¨ delta_time è¿›è¡Œå…¶ä»–è®¡ç®—
 //    }
 //    last_time = time_now;
 ////    debug_uart.printf_DMA("%f,%f\r\n",m3508_1.getRPM(), m3508_1.getTargetRPM());
@@ -187,7 +187,7 @@ void GPIODemo::loop()
     if(last_time > 0)
     {
         delta_time = static_cast<float>(time_now - last_time); 
-        // ¿ÉÒÔÔÚÕâÀïÊ¹ÓÃ delta_time ½øĞĞÆäËû¼ÆËã
+        // å¯ä»¥åœ¨è¿™é‡Œä½¿ç”¨ delta_time è¿›è¡Œå…¶ä»–è®¡ç®—
     }
     last_time = time_now;
 
@@ -254,8 +254,8 @@ void DJI_MotorDemo::init(DJI_Motor *motor)
 
 //void DM_MotorDemo::init()
 //{
-//	CAN2_Bus.registerMotor(&dm_motor); // ×¢²áµç»ú±¾Éí
-////    CAN1_Bus.registerMotor(&DJI_Group_1); // Í¬Ê±×¢²áGroupÓÃÓÚ·¢ËÍ
+//	CAN2_Bus.registerMotor(&dm_motor); // æ³¨å†Œç”µæœºæœ¬èº«
+////    CAN1_Bus.registerMotor(&DJI_Group_1); // åŒæ—¶æ³¨å†ŒGroupç”¨äºå‘é€
 ////    m3508_1.pid_init(m3508_speed_pid_params, 0.0f, m3508_angle_pid_params, 0.0f);
 //    CAN2_Bus.init();
 //    start(osPriorityNormal, 256);

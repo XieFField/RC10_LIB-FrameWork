@@ -49,7 +49,8 @@ void FSM_Controller::loop()
             break;
     }
 
-    if(arm_setup_->isArmcalibrated() == false || weaponSage_setup_->isWeaponSageCalibrated() == false)
+    //if(arm_setup_->isArmcalibrated() == false || weaponSage_setup_->isWeaponSageCalibrated() == false)
+    if(arm_setup_->isArmcalibrated() == false )
     {
         robot_status_ = ALL_STOP;
     }
@@ -61,16 +62,16 @@ void FSM_Controller::loop()
         break;
 
     case MANUAL_CONTROL:
-        // ÊÖ²ÙÄ£Ê½
+        // æ‰‹æ“æ¨¡å¼
         manual_ctrl();
         break;
 
     case AUTO_CONTROL:
-        // ×Ô¶¯Ä£Ê½
+        // è‡ªåŠ¨æ¨¡å¼
         auto_ctrl();
         break;
     case DEBUG_MODE:
-        // µ÷ÊÔÄ£Ê½
+        // è°ƒè¯•æ¨¡å¼
         debug();
         break;
 
@@ -91,9 +92,9 @@ void FSM_Controller::loop()
 
 void FSM_Controller::all_stop()
 {
-   // Í£Ö¹Ä£Ê½+Ä¿±êÉèÖÃÄ£Ê½
-    chassis_setup_->setPathAutoStart(0); //Â·¾¶×Ô¶¯¿ªÊ¼±êÖ¾ÇåÁã
-    arm_setup_->set_Arm_autoStart(0); //×Ô¶¯Á÷³Ì±êÖ¾ÇåÁã
+   // åœæ­¢æ¨¡å¼+ç›®æ ‡è®¾ç½®æ¨¡å¼
+    chassis_setup_->setPathAutoStart(0); //è·¯å¾„è‡ªåŠ¨å¼€å§‹æ ‡å¿—æ¸…é›¶
+    arm_setup_->set_Arm_autoStart(0); //è‡ªåŠ¨æµç¨‹æ ‡å¿—æ¸…é›¶
     if(arm_setup_->isArmcalibrated() == true)
         arm_setup_->setArmStatus(ARM_STOP);
     else
@@ -291,8 +292,8 @@ void FSM_Controller::stop_modeswitch()
 
 void FSM_Controller::manual_ctrl()
 {
-    chassis_setup_->setPathAutoStart(0); //Â·¾¶×Ô¶¯¿ªÊ¼±êÖ¾ÇåÁã
-    arm_setup_->set_Arm_autoStart(0); //×Ô¶¯Á÷³Ì±êÖ¾ÇåÁã
+    chassis_setup_->setPathAutoStart(0); //è·¯å¾„è‡ªåŠ¨å¼€å§‹æ ‡å¿—æ¸…é›¶
+    arm_setup_->set_Arm_autoStart(0); //è‡ªåŠ¨æµç¨‹æ ‡å¿—æ¸…é›¶
 
     switch(airjoy_data_.SWC)
     {
@@ -324,28 +325,28 @@ void FSM_Controller::manual_ctrl()
 
 void FSM_Controller::auto_ctrl()
 {
-    // ×Ô¶¯Ä£Ê½
+    // è‡ªåŠ¨æ¨¡å¼
     // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
     // chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL);
 
     switch(airjoy_data_.SWC)
     {
-        //µ×ÅÌÊÖ¶¯Ä£Ê½
+        //åº•ç›˜æ‰‹åŠ¨æ¨¡å¼
         case 0x00:
         {
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
             arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
-            chassis_setup_->setPathAutoStart(0); //Â·¾¶×Ô¶¯¿ªÊ¼±êÖ¾ÇåÁã
-            arm_setup_->set_Arm_autoStart(0); //×Ô¶¯Á÷³Ì±êÖ¾ÇåÁã
+            chassis_setup_->setPathAutoStart(0); //è·¯å¾„è‡ªåŠ¨å¼€å§‹æ ‡å¿—æ¸…é›¶
+            arm_setup_->set_Arm_autoStart(0); //è‡ªåŠ¨æµç¨‹æ ‡å¿—æ¸…é›¶
             break;
         }
 
-        //arm×Ô¶¯Ä£Ê½
+        //armè‡ªåŠ¨æ¨¡å¼
         case 0x01:
         {
-            //ÔÝÊ±²»°ÑÂ·¾¶¹æ»®²¿·ÖÄÉÈë
+            //æš‚æ—¶ä¸æŠŠè·¯å¾„è§„åˆ’éƒ¨åˆ†çº³å…¥
             #if !ARM_AUTO_DEBUG_NOCHASSIS
             
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_KFS);
@@ -361,9 +362,9 @@ void FSM_Controller::auto_ctrl()
 
             if(airjoy_data_.botton_click == 1 && is_click == 0)
             {
-                arm_setup_->set_Arm_autoStart(1); //¿ªÊ¼×Ô¶¯Á÷³Ì
+                arm_setup_->set_Arm_autoStart(1); //å¼€å§‹è‡ªåŠ¨æµç¨‹
                 #if !ARM_AUTO_DEBUG_NOCHASSIS
-                chassis_setup_->setPathAutoStart(1); //Â·¾¶×Ô¶¯¿ªÊ¼±êÖ¾
+                chassis_setup_->setPathAutoStart(1); //è·¯å¾„è‡ªåŠ¨å¼€å§‹æ ‡å¿—
                 #endif
                 is_click = 1;
             }   
@@ -375,7 +376,7 @@ void FSM_Controller::auto_ctrl()
             #if !ARM_AUTO_DEBUG_NOCHASSIS
             if(arm_setup_->isArmAutoStart())
             {
-                //ÅÐ¶ÏÊÇ·ñ¿ÉÒÔ½øÈëÉìÕ¹½×¶Î
+                //åˆ¤æ–­æ˜¯å¦å¯ä»¥è¿›å…¥ä¼¸å±•é˜¶æ®µ
                 if(chassis_setup_->Get_Arm_Start_flag())
                 {
                     arm_setup_->setAutocanExtend(true);
@@ -383,7 +384,7 @@ void FSM_Controller::auto_ctrl()
 
                 if(arm_setup_->isAutoChassisCanStart())
                 {
-                    chassis_setup_->Receive_Arm_End_flag(false); //ÉÏ²ãÒÑ¾­Íê³ÉÊ°È¡£¬Í¨Öªµ×ÅÌ¿ÉÒÔ¿ªÊ¼ÒÆ¶¯ÁË
+                    chassis_setup_->Receive_Arm_End_flag(false); //ä¸Šå±‚å·²ç»å®Œæˆæ‹¾å–ï¼Œé€šçŸ¥åº•ç›˜å¯ä»¥å¼€å§‹ç§»åŠ¨äº†
                 }
             }
             #endif
@@ -391,7 +392,7 @@ void FSM_Controller::auto_ctrl()
             break;
         }
 
-        //weaponSage×Ô¶¯Ä£Ê½
+        //weaponSageè‡ªåŠ¨æ¨¡å¼
         case 0x02:
         {
 
@@ -407,7 +408,7 @@ void FSM_Controller::auto_ctrl()
                 static uint8_t is_click = 0;
                 if(airjoy_data_.botton_click ==1 && is_click == 0)
                 {
-                    chassis_setup_->setPathAutoStart(1); //Â·¾¶×Ô¶¯¿ªÊ¼±êÖ¾
+                    chassis_setup_->setPathAutoStart(1); //è·¯å¾„è‡ªåŠ¨å¼€å§‹æ ‡å¿—
                     weaponSage_setup_->setCBauto(true);
                     is_click = 1;
                 }
@@ -416,14 +417,7 @@ void FSM_Controller::auto_ctrl()
                     is_click = 0;
                 }
             }
-
-            else
-            {
-                chassis_setup_->setChassisStatus(CHASSIS_STOP);
-                arm_setup_->setArmStatus(ARM_IDLE);
-                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-            }
-                break;
+            break;
         }
     }
     //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);

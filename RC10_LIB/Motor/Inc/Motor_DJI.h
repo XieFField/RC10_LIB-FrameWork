@@ -1,16 +1,16 @@
 /**
  * @file Motor_DJI.h
  * @author XieFField
- * @brief ´ó½®µç»úÀà
+ * @brief å¤§ç–†ç”µæœºç±»
  * @version 1.0
  * @date 2025-09-19
  * 
- * ´ËÎÄ¼ş°üº¬´ó½® M3508 M2006 GM6020·â×°
+ * æ­¤æ–‡ä»¶åŒ…å«å¤§ç–† M3508 M2006 GM6020å°è£…
  * 
  */
 
 /*
-·â×°Ë¼Â·²Î¿¼ÁË½àÓî¸çµÄ¿ò¼Ü£¬²»¹ıÏÖÔÚÉè¼Æ³ÉÁËÆäËûµç»úºÍDJIµç»ú¿ÉÒÔ»ì´îµÄ×ö·¨
+å°è£…æ€è·¯å‚è€ƒäº†æ´å®‡å“¥çš„æ¡†æ¶ï¼Œä¸è¿‡ç°åœ¨è®¾è®¡æˆäº†å…¶ä»–ç”µæœºå’ŒDJIç”µæœºå¯ä»¥æ··æ­çš„åšæ³•
 */
 
 #ifndef __DJI_MOTOR_H
@@ -49,18 +49,18 @@ typedef enum {
 
 //
 /**
- * @brief     ¸ºÔğ´ò°ü4µç»úºÏÖ¡
- * @attention Èç¹ûÄãÏëÒªÔÚÍ¬Ò»Â·CANÉÏ´îÔØGM6020ºÍM3508/M2006£¬ÇëÈ·±£GM6020ÔÚÏÂÆ¬ÉÏ
- *            ¶øM3508/M2006ÔÚÉÏÆ¬ÉÏ¡£ÒòÎªM3508/M2006µÄID·¶Î§ÊÇ0x201µ½0x208, 
- *            ¶øGM6020µÄID·¶Î§ÊÇ0x205µ½0x211
+ * @brief     è´Ÿè´£æ‰“åŒ…4ç”µæœºåˆå¸§
+ * @attention å¦‚æœä½ æƒ³è¦åœ¨åŒä¸€è·¯CANä¸Šæ­è½½GM6020å’ŒM3508/M2006ï¼Œè¯·ç¡®ä¿GM6020åœ¨ä¸‹ç‰‡ä¸Š
+ *            è€ŒM3508/M2006åœ¨ä¸Šç‰‡ä¸Šã€‚å› ä¸ºM3508/M2006çš„IDèŒƒå›´æ˜¯0x201åˆ°0x208, 
+ *            è€ŒGM6020çš„IDèŒƒå›´æ˜¯0x205åˆ°0x211
  */
 class DJI_Motor : public Motor_Base {
 public:
     /**
-     * @brief     ¸ºÔğ´ò°ü4µç»úºÏÖ¡
-     * @attention Èç¹ûÄãÏëÒªÔÚÍ¬Ò»Â·CANÉÏ´îÔØGM6020ºÍM3508/M2006£¬ÇëÈ·±£GM6020ÔÚÏÂÆ¬ÉÏ
-     *            ¶øM3508/M2006ÔÚÉÏÆ¬ÉÏ¡£ÒòÎªM3508/M2006µÄID·¶Î§ÊÇ0x201µ½0x208, 
-     *            ¶øGM6020µÄID·¶Î§ÊÇ0x205µ½0x211
+     * @brief     è´Ÿè´£æ‰“åŒ…4ç”µæœºåˆå¸§
+     * @attention å¦‚æœä½ æƒ³è¦åœ¨åŒä¸€è·¯CANä¸Šæ­è½½GM6020å’ŒM3508/M2006ï¼Œè¯·ç¡®ä¿GM6020åœ¨ä¸‹ç‰‡ä¸Š
+     *            è€ŒM3508/M2006åœ¨ä¸Šç‰‡ä¸Šã€‚å› ä¸ºM3508/M2006çš„IDèŒƒå›´æ˜¯0x201åˆ°0x208, 
+     *            è€ŒGM6020çš„IDèŒƒå›´æ˜¯0x205åˆ°0x211
      */
     DJI_Motor(DJI_MotorType type, uint32_t id, fdCANbus *bus,
             bool calcTotalAngle = true, bool calcAngle = true);
@@ -69,48 +69,48 @@ public:
     bool matchesFrame(const CanFrame& cf) const override
     {
         if(cf.isextended) 
-            return false; // DJIµç»úÖ»ÓÃ±ê×¼Ö¡
+            return false; // DJIç”µæœºåªç”¨æ ‡å‡†å¸§
 
-        if(type_ == GM6020_Type)//£º0x204+Çı¶¯Æ÷ID
+        if(type_ == GM6020_Type)//ï¼š0x204+é©±åŠ¨å™¨ID
         {
             if(cf.ID < (0x204 + 1) || cf.ID > (0x204 + 7))
-                return false; // ·Ç·¨ID
+                return false; // éæ³•ID
 
             else if(cf.ID >= (0x204 + 1) && cf.ID <= (0x204 + 7))
                 return (cf.ID == (0x204 + motor_id_));
             
             else
-                return false; // ·Ç·¨ID 
+                return false; // éæ³•ID 
         }
-        if(type_ == M3508_Type || type_ == M2006_Type)//£º0x200+Çı¶¯Æ÷ID 1~8
+        if(type_ == M3508_Type || type_ == M2006_Type)//ï¼š0x200+é©±åŠ¨å™¨ID 1~8
         {
             if(cf.ID < (0x200 + 1) || cf.ID > (0x200 + 8))
-                return false; // ·Ç·¨ID
+                return false; // éæ³•ID
 
             else if(cf.ID >= (0x200 + 1) && cf.ID <= (0x200 + 8))
                 return (cf.ID == (0x200 + motor_id_));
 
             else
-                return false; // ·Ç·¨ID
+                return false; // éæ³•ID
         }
         else
-            return false; // Î´ÖªÀàĞÍ
+            return false; // æœªçŸ¥ç±»å‹
     }
 
     /**
-     * @brief ½«ĞéÄâµçÁ÷Öµ×ª»»ÎªÊµ¼ÊµçÁ÷Öµ
+     * @brief å°†è™šæ‹Ÿç”µæµå€¼è½¬æ¢ä¸ºå®é™…ç”µæµå€¼
      */
     float virtualCurrent_to_realCurrent(int16_t virtualCurrent);
 
     /**
-     * @brief ½«Êµ¼ÊµçÁ÷Öµ×ª»»ÎªĞéÄâµçÁ÷Öµ
+     * @brief å°†å®é™…ç”µæµå€¼è½¬æ¢ä¸ºè™šæ‹Ÿç”µæµå€¼
      */
     int16_t realCurrent_to_virtualCurrent(float realCurrent);
 
 
     std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) override
     {
-        return 0; // ÓÉ DJI_Group ¸ºÔğ´ò°ü
+        return 0; // ç”± DJI_Group è´Ÿè´£æ‰“åŒ…
     }
 
     void updateFeedback(const CanFrame& cf) override;
@@ -128,34 +128,33 @@ public:
     }
 
     /**
-     * @brief ½«±àÂëÆ÷µÄ×ÜÂ·³ÌÖØĞÂ¶¨Î»µ½Ö¸¶¨Öµ£¬ÖØ¶¨ÒåÆ«ÒÆÁ¿
+     * @brief å°†ç¼–ç å™¨çš„æ€»è·¯ç¨‹é‡æ–°å®šä½åˆ°æŒ‡å®šå€¼ï¼Œé‡å®šä¹‰åç§»é‡
      */
     void relocate_totalAngle(float now_totalAngle)
     {
-        // [Fix] ĞŞÕıÖØ¶¨Î»Âß¼­£¬ÊäÈëÎªÊä³öÖá½Ç¶È£¬Ğè×ª»»Îª×ª×Ó½Ç¶ÈÉèÖÃ±àÂëÆ÷
+        // [Fix] ä¿®æ­£é‡å®šä½é€»è¾‘ï¼Œè¾“å…¥ä¸ºè¾“å‡ºè½´è§’åº¦ï¼Œéœ€è½¬æ¢ä¸ºè½¬å­è§’åº¦è®¾ç½®ç¼–ç å™¨
         encoder_.relocate_totalAngle(now_totalAngle * get_GearRatio());
         totalAngle_ = encoder_.getTotalAngle() * get_inv_GearRatio();
 
-        this->angle_ = fmodf(this->totalAngle_, 360.0f);
-        if(this->angle_ < 0) 
+        this->angle_ = fmodf(this->totalAngle_, 360.0f); 
             this->angle_ += 360.0f;
     }
 
 protected:
-    int anglePid_timePSC = 10; //½Ç¶ÈÊ±¼ä·ÖÆµ Ä¬ÈÏÎª 10 ¼´¿ØÖÆÆµÂÊÎª100Hz
-    int anglePid_timeCnt = 0; //½Ç¶ÈÊ±¼ä¼ÆÊı
+    int anglePid_timePSC = 10; //è§’åº¦æ—¶é—´åˆ†é¢‘ é»˜è®¤ä¸º 10 å³æ§åˆ¶é¢‘ç‡ä¸º100Hz
+    int anglePid_timeCnt = 0; //è§’åº¦æ—¶é—´è®¡æ•°
 
 private:
      //1~8
     DJI_MotorType type_;
-    int16_t encoder_raw_ = 0; //Ô­Ê¼±àÂëÆ÷Öµ
+    int16_t encoder_raw_ = 0; //åŸå§‹ç¼–ç å™¨å€¼
 
     
 
 //common
     virtual uint32_t recv_id() const{return 0x200;}
 
-    Encoder encoder_; //±àÂëÆ÷ÊµÀı
+    Encoder encoder_; //ç¼–ç å™¨å®ä¾‹
 };
 
 uint32_t send_idLow();
@@ -163,13 +162,13 @@ uint32_t send_idHigh();
 uint32_t send_idLow6020();
 uint32_t send_idHigh6020();
 
-//------- DJI_Group ------- ´ò°üÃüÁî -----------------------------
+//------- DJI_Group ------- æ‰“åŒ…å‘½ä»¤ -----------------------------
 // 
 /**
- * @brief     ¸ºÔğ´ò°ü4µç»úºÏÖ¡
- * @attention Èç¹ûÄãÏëÒªÔÚÍ¬Ò»Â·CANÉÏ´îÔØGM6020ºÍM3508/M2006£¬ÇëÈ·±£GM6020ÔÚÏÂÆ¬ÉÏ
- *            ¶øM3508/M2006ÔÚÉÏÆ¬ÉÏ¡£ÒòÎªM3508/M2006µÄID·¶Î§ÊÇ0x201µ½0x208, 
- *            ¶øGM6020µÄID·¶Î§ÊÇ0x205µ½0x211
+ * @brief     è´Ÿè´£æ‰“åŒ…4ç”µæœºåˆå¸§
+ * @attention å¦‚æœä½ æƒ³è¦åœ¨åŒä¸€è·¯CANä¸Šæ­è½½GM6020å’ŒM3508/M2006ï¼Œè¯·ç¡®ä¿GM6020åœ¨ä¸‹ç‰‡ä¸Š
+ *            è€ŒM3508/M2006åœ¨ä¸Šç‰‡ä¸Šã€‚å› ä¸ºM3508/M2006çš„IDèŒƒå›´æ˜¯0x201åˆ°0x208, 
+ *            è€ŒGM6020çš„IDèŒƒå›´æ˜¯0x205åˆ°0x211
  */
 class DJI_Group : public Motor_Base {
 public:
@@ -179,7 +178,7 @@ public:
     ~DJI_Group() = default;
 
     /**
-     * @brief ×¢²áµç»ú
+     * @brief æ³¨å†Œç”µæœº
      */
     bool addMotor(DJI_Motor* motor);
 
@@ -201,20 +200,20 @@ private:
     DJI_Motor* motors_p[MAX_GROUP_SIZE] = {nullptr, nullptr, nullptr, nullptr};
     uint8_t motor_count_ = 0;
 
-    bool containsGM6020 = false; //ÊÇ·ñ°üº¬GM6020, M3508/M2006²»ºÍGM6020»ìÓÃ
+    bool containsGM6020 = false; //æ˜¯å¦åŒ…å«GM6020, M3508/M2006ä¸å’ŒGM6020æ··ç”¨
 
-    int calcSlot(uint32_t motorID, DJI_MotorType type) const; // ¼ÆËã²ÛÎ»
+    int calcSlot(uint32_t motorID, DJI_MotorType type) const; // è®¡ç®—æ§½ä½
 };
 
-#define M3508_DECRATION (3591.0f/187.0f) //¼õËÙ±È
-#define M3508_KT 0.01562f // 3508µÄÄÚÈ¦×ª¾Ø³£Êı µ¥Î»£ºN.M/A
+#define M3508_DECRATION (3591.0f/187.0f) //å‡é€Ÿæ¯”
+#define M3508_KT 0.01562f // 3508çš„å†…åœˆè½¬çŸ©å¸¸æ•° å•ä½ï¼šN.M/A
 
-// ¿ØÖÆÄ£Ê½Ã¶¾Ù
+// æ§åˆ¶æ¨¡å¼æšä¸¾
 typedef enum {
-    CURRENT_CONTROL, // ¿ª»·µçÁ÷¿ØÖÆ
-    SPEED_CONTROL,   // ËÙ¶È±Õ»·¿ØÖÆ
-    ANGLE_CONTROL,    // ½Ç¶È±Õ»·¿ØÖÆ
-    TOTAL_ANGLE_CONTROL // ×Ü½Ç¶È±Õ»·¿ØÖÆ
+    CURRENT_CONTROL, // å¼€ç¯ç”µæµæ§åˆ¶
+    SPEED_CONTROL,   // é€Ÿåº¦é—­ç¯æ§åˆ¶
+    ANGLE_CONTROL,    // è§’åº¦é—­ç¯æ§åˆ¶
+    TOTAL_ANGLE_CONTROL // æ€»è§’åº¦é—­ç¯æ§åˆ¶
 } ControlMode;
 
 class M3508 : public DJI_Motor {
@@ -224,37 +223,57 @@ public:
 
     void pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa);
 
-    // ¿ØÖÆ½Ó¿Ú
+    // æ§åˆ¶æ¥å£
     void setTargetCurrent(float current_set) override;
     void setTargetRPM(float rpm_set) override;
     void setTargetAngle(float angle_set) override;
     void setTargetTotalAngle(float totalAngle_set) override;
 
-    void update() override; //ÖÜÆÚĞÔ¸üĞÂ
-
-    // »ñÈ¡Êä³öÖá×´Ì¬
+    void update() override; //å‘¨æœŸæ€§æ›´æ–°
+    void set_anglepid_circular(bool circular)
+    {
+        if(circular)
+            angle_pid_.set_as_circular();
+        else
+            angle_pid_.set_as_linear();
+    }
+    // è·å–è¾“å‡ºè½´çŠ¶æ€
     float getRPM() const override;
     float getAngle() const override;
     float getTotalAngle() const override;
 
+    // è·å–PIDå‚æ•°
+    PID_Param_Config get_speed_pid_params() const;
+    PID_Param_Config get_angle_pid_params() const;
+    float get_speed_pid_td_ratio() const;
+    float get_angle_pid_i_separa_threshold() const;
+
     void reset_GearRatio(float reset_value)
     {
         GEAR_RATIO = reset_value;
-        inv_GEAR_RATIO_ = 1.0f / reset_value; // ×ÓÀà»º´æ
+        inv_GEAR_RATIO_ = 1.0f / reset_value; // å­ç±»ç¼“å­˜
         Motor_Base::GEAR_RATIO = GEAR_RATIO;
-        Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_; // Í¬²½µ½»ùÀà£¬¹© updateFeedback Ê¹ÓÃ
+        Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_; // åŒæ­¥åˆ°åŸºç±»ï¼Œä¾› updateFeedback ä½¿ç”¨
+    }
+
+    void set_angle_pid_circular(bool circular)
+    {
+        if(circular)
+            angle_pid_.set_as_circular();
+        else
+            angle_pid_.set_as_linear();
     }
 
 private:
     
     ControlMode mode_ = CURRENT_CONTROL;
-    float GEAR_RATIO = 19.2032f; // ¼õËÙ±È
-    float inv_GEAR_RATIO_ = 1.0f / GEAR_RATIO; // Ô¤¼ÆËã·´¼õËÙ±È
+    float GEAR_RATIO = 19.2032f; // å‡é€Ÿæ¯”
+    float inv_GEAR_RATIO_ = 1.0f / GEAR_RATIO; // é¢„è®¡ç®—åå‡é€Ÿæ¯”
     PID_Incremental speed_pid_;
     PID_Position angle_pid_;
 };
 
-#define M2006_DECRATION 36.0f //¼õËÙ±È
+#define M2006_DECRATION 36.0f //å‡é€Ÿæ¯”
 class M2006 : public DJI_Motor {
 public:
     M2006(uint32_t motor_id, fdCANbus* bus, bool calcTotalAngle = true, bool calcAngle = true);
@@ -262,7 +281,7 @@ public:
 
     void pid_init(const PID_Param_Config& speed_params, float speed_I_Separa, const PID_Param_Config& angle_params, float angle_I_Separa);
 
-    // ¿ØÖÆ½Ó¿Ú
+    // æ§åˆ¶æ¥å£
     void setTargetCurrent(float current_set) override;
     void setTargetRPM(float rpm_set) override;
     void setTargetAngle(float angle_set) override;
@@ -270,7 +289,7 @@ public:
 
     void update() override;
 
-    // »ñÈ¡Êä³öÖá×´Ì¬
+    // è·å–è¾“å‡ºè½´çŠ¶æ€
     float getRPM() const override;
     float getAngle() const override;
     float getTotalAngle() const override;
@@ -279,13 +298,13 @@ public:
         GEAR_RATIO = reset_value;
         inv_GEAR_RATIO_ = 1.0f / reset_value;
         Motor_Base::GEAR_RATIO = GEAR_RATIO;
-        Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_; // Í¬²½µ½»ùÀà£¬¹© updateFeedback Ê¹ÓÃ
+        Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_; // åŒæ­¥åˆ°åŸºç±»ï¼Œä¾› updateFeedback ä½¿ç”¨
     }
 
 private:
     ControlMode mode_ = CURRENT_CONTROL;
     float GEAR_RATIO = 36.0f;
-    float inv_GEAR_RATIO_ = 1.0f / GEAR_RATIO; // Ô¤¼ÆËã·´¼õËÙ±È
+    float inv_GEAR_RATIO_ = 1.0f / GEAR_RATIO; // é¢„è®¡ç®—åå‡é€Ÿæ¯”
 
     PID_Incremental speed_pid_;
     PID_Position angle_pid_;
@@ -298,7 +317,7 @@ public:
 
     void pid_init(const PID_Param_Config& speed_params, float speed_I_Separa, const PID_Param_Config& angle_params, float angle_I_Separa);
 
-    // ¿ØÖÆ½Ó¿Ú
+    // æ§åˆ¶æ¥å£
     void setTargetCurrent(float current_set) override;
     void setTargetRPM(float rpm_set) override;
     void setTargetAngle(float angle_set) override;
@@ -306,7 +325,7 @@ public:
 
     void update() override;
 
-    // »ñÈ¡Êä³öÖá×´Ì¬ (GM6020ÎŞ¼õËÙÆ÷)
+    // è·å–è¾“å‡ºè½´çŠ¶æ€ (GM6020æ— å‡é€Ÿå™¨)
     float getRPM() const override { return rpm_; }
     float getAngle() const override { return angle_; }
     float getTotalAngle() const override { return totalAngle_; }

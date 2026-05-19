@@ -1,6 +1,6 @@
 /**
  * @file Setup_ConfigInit.h
- * @brief Æô¶¯ÎÄ¼ş£¬°üº¬ËùÓĞ¿ØÖÆÆ÷ºÍµç»úµÄÊµÀı»¯ÉùÃ÷
+ * @brief å¯åŠ¨æ–‡ä»¶ï¼ŒåŒ…å«æ‰€æœ‰æ§åˆ¶å™¨å’Œç”µæœºçš„å®ä¾‹åŒ–å£°æ˜
  */
 
 #ifndef SETUP_CONFIGINIT_H
@@ -36,6 +36,7 @@ extern "C" {
 #include "BSP_fdCAN_Driver.h"
 #include "Motor_DJI.h"
 #include "Motor_DM.h"
+#include "Motor_VESC.h"
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 #include "APP_PID.h"
@@ -47,6 +48,7 @@ extern "C" {
 #include "system_detect_task.h"
 #include "Module_HWT.h"
 #include "Module_JY61.h"
+#include "Motor_GO.h"
 
 /*==============Controller===============*/
 #include "FSM_Controller.h"
@@ -59,14 +61,13 @@ extern "C" {
     #include "speedplanner_demo.h"
 #endif
 
-#include "Module_Camera.h"
-#include "Module_Position.h"
-#include "Module_LaserPosition.h"
 #if ARM_DEMO_DEBUG
 
         #include "arm_demo.h"
 #endif
 
+
+#include "m3508_steer_debug.h"
 
 
 class test:public RtosTask {

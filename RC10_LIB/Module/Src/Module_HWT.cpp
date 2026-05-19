@@ -16,18 +16,18 @@ HWT101CT* HWT101CT::GetInstance(UART_HandleTypeDef *uart_handle)
     return &instance;
 }
 
-// ³õÊ¼»¯UART
+// åˆå§‹åŒ–UART
 void HWT101CT::InitUART() 
 {
     if (uart_initialized_) 
 	{
-        return; // ÒÑ¾­³õÊ¼»¯¹ı
+        return; // å·²ç»åˆå§‹åŒ–è¿‡
     }
     UART_HandleTypeDef *uart_handle=HWT101CT::UART_::GetUartHandle();
 
     uart_instance_ = InstanceManager::GetInstanceByUartHandle(uart_handle);
     
-    // ³õÊ¼»¯UART
+    // åˆå§‹åŒ–UART
     uart_instance_->UART_Init();
     
     uart_initialized_ = true;
@@ -47,12 +47,12 @@ uint8_t HWT101CT::calculateChecksum()
 
 void HWT101CT::Callback_Fuc(uint8_t *buf, uint16_t len)
 {
-    // ¼ìÑéÊı¾İ°üµÄ³¤¶ÈÊÇ·ñÕıÈ·
+    // æ£€éªŒæ•°æ®åŒ…çš„é•¿åº¦æ˜¯å¦æ­£ç¡®
     if(len != 0x16)
     {
         return;
     }
-    // ¼ìÑéÊı¾İ°üµÄÁ½·İÊı¾İµÄ°üÍ·ÊÇ·ñÕıÈ·
+    // æ£€éªŒæ•°æ®åŒ…çš„ä¸¤ä»½æ•°æ®çš„åŒ…å¤´æ˜¯å¦æ­£ç¡®
     if(buf[0] != 0x55)
     {
         return;
@@ -61,7 +61,7 @@ void HWT101CT::Callback_Fuc(uint8_t *buf, uint16_t len)
     {
         return;
     }
-    // ¼ìÑéÊı¾İ°üµÄÁ½·İÊı¾İµÄidÊÇ·ñÕıÈ·
+    // æ£€éªŒæ•°æ®åŒ…çš„ä¸¤ä»½æ•°æ®çš„idæ˜¯å¦æ­£ç¡®
     if(buf[1] != 0x52)
     {
         return;
@@ -70,7 +70,7 @@ void HWT101CT::Callback_Fuc(uint8_t *buf, uint16_t len)
     {
         return;
     }
-    // ¼ìÑéÊı¾İ°üµÄÁ½·İÊı¾İµÄSUMÊÇ·ñÕıÈ·
+    // æ£€éªŒæ•°æ®åŒ…çš„ä¸¤ä»½æ•°æ®çš„SUMæ˜¯å¦æ­£ç¡®
     uint8_t sum = 0;
     for(uint8_t j = 0; j < 10; j++)
     {
@@ -90,8 +90,8 @@ void HWT101CT::Callback_Fuc(uint8_t *buf, uint16_t len)
         return;
     }
 
-    orin_yawz = (int16_t)((buf[5] << 8 | buf[4]) + 2) / 32768.0f * 2000.0f; // µ¥Î»£ºdeg/s
-    orin_yaw = (int16_t)(buf[18] << 8 | buf[17]) / 32768.0f * 180.0f; // µ¥Î»£ºdeg
+    orin_yawz = (int16_t)((buf[5] << 8 | buf[4]) + 2) / 32768.0f * 2000.0f; // å•ä½ï¼šdeg/s
+    orin_yaw = (int16_t)(buf[18] << 8 | buf[17]) / 32768.0f * 180.0f; // å•ä½ï¼šdeg
 
     processDecodedData(orin_yaw);       
 }

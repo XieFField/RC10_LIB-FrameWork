@@ -6,7 +6,7 @@
  * @date 2025-9-17
  */
 
- /* |(*^¨Œ^*)/ ²âÊÔÍ¨¹ıß÷ */
+ /* |(*^â–½^*)/ æµ‹è¯•é€šè¿‡å–µ */
 
 #ifndef __BSP_FDCAN_DRIVER_H
 #define __BSP_FDCAN_DRIVER_H
@@ -36,20 +36,21 @@ extern "C"
 #include "APP_tool.h"
 #include "BSP_RTOS.h"
 #include "Motor_Base.h" 
+#include "Module_OIDEncoder.h"
 #include <cstring>
 #include<cstdint>
 
 
 
-    class Motor_Base; // Ç°ÖÃÉùÃ÷
+    class Motor_Base; // å‰ç½®å£°æ˜
 
-#define FD_CAN_DEBUG 1  //ÔÚdebugÖĞ¿ÉÒÔ²é¿´fdcanÊµÀıÄÚ²¿
+#define FD_CAN_DEBUG 1  //åœ¨debugä¸­å¯ä»¥æŸ¥çœ‹fdcanå®ä¾‹å†…éƒ¨
 
 #if FD_CAN_DEBUG
 extern fdCANbus* g_fdcan_bus_map_dbg[3];
 #endif
 
-// ÔËĞĞÊ±Õï¶Ï¿ìÕÕ£ºÓÃÓÚ¶¨Î»FDCANÊ±ÖÓÁ´Â·/Î»Ê±Ğò/×ÜÏß×´Ì¬ÎÊÌâ
+// è¿è¡Œæ—¶è¯Šæ–­å¿«ç…§ï¼šç”¨äºå®šä½FDCANæ—¶é’Ÿé“¾è·¯/ä½æ—¶åº/æ€»çº¿çŠ¶æ€é—®é¢˜
 struct FdcanDiagSnapshot {
     uint32_t snapshot_count;
     uint32_t error_status_cb_count;
@@ -81,15 +82,15 @@ struct FdcanDiagSnapshot {
 extern volatile FdcanDiagSnapshot g_fdcan_diag[3];
 
 /** 
-  * fdCANbus£º¹ÜÀíÒ»ÌõfdCAN×ÜÏß
-  * - Ã¿Ò»Â·CANÉú³ÉÒ»¸öÊµÀı
-  * - ¹ÜÀí¾²Ì¬µÄmotorList ×î´ó8¸ö
-  * - ISR½ÓÊÕÖ»µ¥´¿push Ô­Ê¼µÄ CanFrame µ½ rxQueue_
-  * - rxTask_ ¸ºÔğ´Ó rxQueue_ pop ²¢·Ö·¢¸ø motor -> motor->updateFeedback()
-  * - schedulerTask_ Ã¿ 1ms µ÷¶È motorList£¬ÊÕ¼¯ packCommand() ²¢µ÷ÓÃ sendFrame()£¬´Ó¶øÊµÏÖ1kHzµÄ·¢ËÍÆµÂÊ
-  * - ¹ş»ùÃ×
-  * @attention Äã½«ÎŞ·¨´´½¨fdCANÊµÀı£¬ºóĞø½«Ö»ÄÜÊ¹ÓÃget_InstanceµÄ·½Ê½À´·ÃÎÊfdCANbus
-  * @attention ´ËÀà²»×öÈÎºÎ¾ßÌåµÄ±¨ÎÄ½âÎö£¬È«²¿½»¸øµç»úÀà
+  * fdCANbusï¼šç®¡ç†ä¸€æ¡fdCANæ€»çº¿
+  * - æ¯ä¸€è·¯CANç”Ÿæˆä¸€ä¸ªå®ä¾‹
+  * - ç®¡ç†é™æ€çš„motorList æœ€å¤§8ä¸ª
+  * - ISRæ¥æ”¶åªå•çº¯push åŸå§‹çš„ CanFrame åˆ° rxQueue_
+  * - rxTask_ è´Ÿè´£ä» rxQueue_ pop å¹¶åˆ†å‘ç»™ motor -> motor->updateFeedback()
+  * - schedulerTask_ æ¯ 1ms è°ƒåº¦ motorListï¼Œæ”¶é›† packCommand() å¹¶è°ƒç”¨ sendFrame()ï¼Œä»è€Œå®ç°1kHzçš„å‘é€é¢‘ç‡
+  * - å“ˆåŸºç±³
+  * @attention ä½ å°†æ— æ³•åˆ›å»ºfdCANå®ä¾‹ï¼Œåç»­å°†åªèƒ½ä½¿ç”¨get_Instanceçš„æ–¹å¼æ¥è®¿é—®fdCANbus
+  * @attention æ­¤ç±»ä¸åšä»»ä½•å…·ä½“çš„æŠ¥æ–‡è§£æï¼Œå…¨éƒ¨äº¤ç»™ç”µæœºç±»
  */
 class fdCANbus;
 
@@ -109,27 +110,27 @@ private:
 public:
 
 #if FD_CAN_DEBUG
-    // µ÷ÊÔ½Ó¿ÚÓ¦Îª¡°·Ç static ³ÉÔ±º¯Êı¡±
+    // è°ƒè¯•æ¥å£åº”ä¸ºâ€œé static æˆå‘˜å‡½æ•°â€
     std::size_t debug_getMotorCount() const {
         std::size_t n=0; for(std::size_t i=0;i<MAX_MOTORS;i++) if(motorList_[i]) n++; return n;
     }
     Motor_Base* debug_getMotor(std::size_t i) const { return (i<MAX_MOTORS)? motorList_[i] : nullptr; }
     std::size_t debug_getLastFrameCount() const { return debug_last_frame_count_; }
-    const CanFrame* debug_getLastFrames() const { return debug_last_frames_; } // ÒÆ³ı static£¬±£Áô const
+    const CanFrame* debug_getLastFrames() const { return debug_last_frames_; } // ç§»é™¤ staticï¼Œä¿ç•™ const
 #endif
 
 
     /**
-     * @brief »ñÈ¡»ò´´½¨fdCANbusµÄÎ¨Ò»ÊµÀı
-     * @param hfdcan FDCANÓ²¼ş¾ä±ú£¬Èç &hfdcan1
-     * @return Ö¸Ïò¶ÔÓ¦Ó²¼şµÄfdCANbusÎ¨Ò»ÊµÀıµÄÖ¸Õë
+     * @brief è·å–æˆ–åˆ›å»ºfdCANbusçš„å”¯ä¸€å®ä¾‹
+     * @param hfdcan FDCANç¡¬ä»¶å¥æŸ„ï¼Œå¦‚ &hfdcan1
+     * @return æŒ‡å‘å¯¹åº”ç¡¬ä»¶çš„fdCANbuså”¯ä¸€å®ä¾‹çš„æŒ‡é’ˆ
      */
     static fdCANbus* getInstance(FDCAN_HandleTypeDef* hfdcan);
 
     void setBusOffFlag() { bus_off_flag_ = true; }
 
-    // ×î´óµç»úÊı£¨Ã¿Â·£©
-    static constexpr size_t MAX_MOTORS = 10; //±¾À´Ó¦¸ÃÊÇ8£¬µ«ÊÇÈç¹ûÊÇ¹ÒµÄDJI£¬ÄÇ»áÓĞÁ½¸ögroup£¬ÄÇ¾Í±ä³É8+2ÁË
+    // æœ€å¤§ç”µæœºæ•°ï¼ˆæ¯è·¯ï¼‰
+    static constexpr size_t MAX_MOTORS = 10; //æœ¬æ¥åº”è¯¥æ˜¯8ï¼Œä½†æ˜¯å¦‚æœæ˜¯æŒ‚çš„DJIï¼Œé‚£ä¼šæœ‰ä¸¤ä¸ªgroupï¼Œé‚£å°±å˜æˆ8+2äº†
     std::size_t kMaxFrames = MAX_MOTORS * 2;
     
     void init();
@@ -138,17 +139,33 @@ public:
 
     bool sendFrame(const CanFrame& cf);
 
+    bool registerOIDEncoder(OIDEncoder* o)
+    {
+        if(o->bus() != this)
+            return false; // åªèƒ½æ³¨å†Œåˆ°å¯¹åº”æ€»çº¿çš„OIDEncoder
+        for (std::size_t i = 0; i < 3; ++i) 
+        {
+            if (oid_encoder_[i] == nullptr) 
+            {
+                oid_encoder_[i] = o;
+                return true;
+            }
+        }
+        return false; // æ²¡æœ‰ç©ºä½äº†
+    }
+
+
     /**
-     * @brief ´ÓISRÖĞ½ÓÊÕÊı¾İ²¢ÍÆÈë½ÓÊÕ¶ÓÁĞ
-     * @param cf Òª½ÓÊÕµÄÖ¡
+     * @brief ä»ISRä¸­æ¥æ”¶æ•°æ®å¹¶æ¨å…¥æ¥æ”¶é˜Ÿåˆ—
+     * @param cf è¦æ¥æ”¶çš„å¸§
      */
     bool pushRxFromISR(const CanFrame& cf, BaseType_t* pxHigherPriorityTaskWoken);
 
 
     FDCAN_HandleTypeDef* getFDCANHandle() const { return hfdcan_; }
     
-    SemaphoreHandle_t tx_mutex_; // ·¢ËÍ»¥³âËø
-    SemaphoreHandle_t schedSem_; // µ÷¶ÈÈÎÎñĞÅºÅÁ¿
+    SemaphoreHandle_t tx_mutex_; // å‘é€äº’æ–¥é”
+    SemaphoreHandle_t schedSem_; // è°ƒåº¦ä»»åŠ¡ä¿¡å·é‡
 protected:
     
     FDCAN_HandleTypeDef* hfdcan_; //protected character
@@ -158,16 +175,18 @@ protected:
 
     void schedulerTaskbody();
 
-    // Ä¬ÈÏÆ¥Åäº¯Êı£¨×ÓÀà»ò motor ¿É override motor.matchesFrame£©
+    // é»˜è®¤åŒ¹é…å‡½æ•°ï¼ˆå­ç±»æˆ– motor å¯ override motor.matchesFrameï¼‰
     static bool matchesFrameDefault(const CanFrame& cf, uint32_t targetId, bool isExt);
 
-    Motor_Base * motorList_[MAX_MOTORS];// µç»úÁĞ±í
-    
+    Motor_Base * motorList_[MAX_MOTORS];// ç”µæœºåˆ—è¡¨
+    OIDEncoder * oid_encoder_[3] = {nullptr, nullptr, nullptr}; //æ‰“ä¸ªè¡¥ä¸ï¼Œæ²¡æƒ³è¿‡è¿˜æœ‰éç”µæœºçš„è®¾å¤‡æ­è½½åœ¨CANæ€»çº¿ä¸Šï¼Œ
+    //åé¢å†ç»™CANè®¾å¤‡ç‹¬ç«‹ä¸€ä¸ªåŸºç±»ï¼Œå°†updateFeedbackå’ŒmatchesFrameç­‰æ¥å£æ”¾åˆ°åŸºç±»é‡Œï¼Œ
+    //ç”µæœºç±»ç»§æ‰¿è‡ªè®¾å¤‡ç±»ï¼Œè¿™æ ·å°±èƒ½æ”¯æŒéç”µæœºè®¾å¤‡äº†
 
     RtosQueue<CanFrame> rxQueue_;
 
     /**
-     * @brief ½ÓÊÕÈÎÎñÀà
+     * @brief æ¥æ”¶ä»»åŠ¡ç±»
      */
     class RxTask : public RtosTask{
     public:
@@ -179,7 +198,7 @@ protected:
     };
 
     /**
-     * @brief µ÷¶ÈÆ÷ÈÎÎñÀà
+     * @brief è°ƒåº¦å™¨ä»»åŠ¡ç±»
      */
     class SchedTask : public RtosTask {
     public:
@@ -190,17 +209,17 @@ protected:
         fdCANbus* parent_;
     };
 
-    // ³ÉÔ±ÊµÀı
+    // æˆå‘˜å®ä¾‹
     RxTask rxTask_;
     SchedTask schedulerTask_;
 
-    int HAL_FDCAN_Start_ERROR = 0; // ¼ÇÂ¼ HAL_FDCAN_Start ÊÇ·ñ³É¹¦
+    int HAL_FDCAN_Start_ERROR = 0; // è®°å½• HAL_FDCAN_Start æ˜¯å¦æˆåŠŸ
 
-    int HAL_FDCAN_ActivateNotification_ERROR = 0; // ¼ÇÂ¼ HAL_FDCAN_ActivateNotification ÊÇ·ñ³É¹¦
+    int HAL_FDCAN_ActivateNotification_ERROR = 0; // è®°å½• HAL_FDCAN_ActivateNotification æ˜¯å¦æˆåŠŸ
 
-    bool can_init_done_ = false; // ±ê¼Ç init() ÊÇ·ñÒÑ³É¹¦µ÷ÓÃ
+    bool can_init_done_ = false; // æ ‡è®° init() æ˜¯å¦å·²æˆåŠŸè°ƒç”¨
 
-    volatile bool bus_off_flag_ = false; // Bus Off ±êÖ¾Î»
+    volatile bool bus_off_flag_ = false; // Bus Off æ ‡å¿—ä½
 
 private:
 #if FD_CAN_DEBUG

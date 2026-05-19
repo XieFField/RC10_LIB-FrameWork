@@ -3,8 +3,8 @@
 #include <cmath>
 #include "core_cm7.h"
 
-/* -------------  Cache ά����/����  ------------- */
-// SCB cache ops Ҫ���ַ���С���� cache line ����(32�ֽ�)
+/* -------------  Cache 维锟斤拷锟斤拷/锟斤拷锟斤拷  ------------- */
+// SCB cache ops 要锟斤拷锟街凤拷锟斤拷小锟斤拷锟斤拷 cache line 锟斤拷锟斤拷(32锟街斤拷)
 static inline void dcache_clean_range(void* addr, uint32_t len) 
 {
     if (len == 0 || addr == nullptr) return;
@@ -25,14 +25,14 @@ static inline void dcache_invalidate_range(void* addr, uint32_t len)
     SCB_InvalidateDCache_by_Addr((uint32_t*)start, (int32_t)(end - start));
 }
 
-/* -------------  �ⲿ���?  ------------- */
+/* -------------  锟解部锟斤拷锟?  ------------- */
 extern UART_HandleTypeDef huart7;          
 
 // CrsfReceiver* instance_ = nullptr;
 CrsfReceiver* CrsfReceiver::instance_ = nullptr;
 
 /* ======================================================= 
- *   ����ʵ���� UART7 ��
+ *   锟斤拷锟斤拷实锟斤拷锟斤拷 UART7 锟斤拷
  * ====================================================== */
 
 void CrsfReceiver::StaticUartCallback(uint8_t *buf, uint16_t len)
@@ -41,8 +41,8 @@ void CrsfReceiver::StaticUartCallback(uint8_t *buf, uint16_t len)
 		instance_->appendFromISR(buf, len);
 }
 
-/* ���� / ���� */
-// Module_CrsfReceiver.cpp �еĹ��캯��
+/* 锟斤拷锟斤拷 / 锟斤拷锟斤拷 */
+// Module_CrsfReceiver.cpp 锟叫的癸拷锟届函锟斤拷
 
 CrsfReceiver::CrsfReceiver(UART_HandleTypeDef* huart)
     : packet_byte_index_(0),
@@ -52,7 +52,7 @@ CrsfReceiver::CrsfReceiver(UART_HandleTypeDef* huart)
       crc_(CRSF_CRC_POLY),
       rx_ring_head_(0),
       rx_ring_tail_(0),
-      rx_buffer_{0},  // �� �����㻺����
+      rx_buffer_{0},  // 锟斤拷 锟斤拷锟斤拷锟姐缓锟斤拷锟斤拷
       UART_(256,rx_buffer_,huart)
 {
     instance_ = this;
@@ -90,7 +90,7 @@ void CrsfReceiver::Callback_Fuc(uint8_t *buf, uint16_t len)
 	
 //}
 
-// ���Խӿڣ���ʱ�ر� D-Cache�������ã�
+// 锟斤拷锟皆接口ｏ拷锟斤拷时锟截憋拷 D-Cache锟斤拷锟斤拷锟斤拷锟矫ｏ拷
 //void CrsfReceiver::setDisableDCacheForTest(bool disable)
 //{
 //    if (disable) {
@@ -106,7 +106,7 @@ void CrsfReceiver::Callback_Fuc(uint8_t *buf, uint16_t len)
 //    }
 //}
 
-// ��ʼ��ʱ���? UART/DMA �����Ƿ���ȷ��RX DMA ������Ϊѭ��ģʽ��
+// 锟斤拷始锟斤拷时锟斤拷锟? UART/DMA 锟斤拷锟斤拷锟角凤拷锟斤拷确锟斤拷RX DMA 锟斤拷锟斤拷锟斤拷为循锟斤拷模式锟斤拷
 //void CrsfReceiver::checkDmaConfig()
 //{
 //    UART_HandleTypeDef* h = uart_driver_.GetUartHandle();
@@ -133,7 +133,7 @@ uint8_t GENERIC_CRC8::calc(const uint8_t* data, uint16_t len, uint8_t crc)
     return crc;
 }
 
-/* ----------------  ״̬��  ---------------- */
+/* ----------------  状态锟斤拷  ---------------- */
 void CrsfReceiver::handleByte(uint8_t byte)
 {
     switch (rx_state_) {
@@ -173,7 +173,7 @@ void CrsfReceiver::handleByte(uint8_t byte)
     }
 }
 
-/* ----------------  ���? + ӳ�� + ����  ---------------- */
+/* ----------------  锟斤拷锟? + 映锟斤拷 + 锟斤拷锟斤拷  ---------------- */
 void CrsfReceiver::unpackChannels(const uint8_t* payload, int channels[CRSF_NUM_CHANNELS])
 {
     for (int i = 0; i < CRSF_NUM_CHANNELS; ++i) {
@@ -232,7 +232,7 @@ void CrsfReceiver::updateSwitchesAndButtons()
     telemetry_data_.btn_enter = (channels_[14] > BTN_ON) ? 1 : 0;
 }
 
-/* ----------------  ����ֹͣ  ---------------- */
+/* ----------------  锟斤拷锟斤拷停止  ---------------- */
 void CrsfReceiver::processRcChannels()
 {
     unpackChannels(channels_payload_, channels_);
@@ -249,7 +249,7 @@ void CrsfReceiver::processRcChannels()
     new_data_available_ = true;
 }
 
-/* ----------------  �û��ӿ�  ---------------- */
+/* ----------------  锟矫伙拷锟接匡拷  ---------------- */
 void CrsfReceiver::getControlData(RmPocketData_t* data)
 {
     if (!data) 
@@ -284,7 +284,7 @@ void CrsfReceiver::getControlData(RmPocketData_t* data)
     debug_mode = telemetry_data_.SWD;
 }
 
-/* ----------------  ң�ⷢ��  ---------------- */
+/* ----------------  遥锟解发锟斤拷  ---------------- */
 static volatile bool tx_done = true;
 void CrsfReceiver::sendTelemetryData(const RmPocketData_t* data)
 {
@@ -307,29 +307,29 @@ void CrsfReceiver::sendTelemetryData(const RmPocketData_t* data)
         p[10] = data->battery_percent;
         p[11] = crc_.calc(&p[2], 9);     // CRC
         tx_done = false;
-        dcache_clean_range(tx_buffer_, 13);              // �� ˢ Cache (����)
-        HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 13); // UART7��
+        dcache_clean_range(tx_buffer_, 13);              // 锟斤拷 刷 Cache (锟斤拷锟斤拷)
+        HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 13); // UART7锟斤拷
         last_battery_send_ = now;
     }
 }
 void CrsfReceiver::send_uint8(uint8_t sub_type, uint8_t value)
 {
-    if (!tx_done) return;  // �ȴ��ϴη������?
+    if (!tx_done) return;  // 锟饺达拷锟较次凤拷锟斤拷锟斤拷锟?
     
     uint8_t* p = tx_buffer_;
     
-    // ֡�ṹ��[��ַ][����][����][������][����][CRC]
+    // 帧锟结构锟斤拷[锟斤拷址][锟斤拷锟斤拷][锟斤拷锟斤拷][锟斤拷锟斤拷锟斤拷][锟斤拷锟斤拷][CRC]
     p[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;  // 0xEA
-    p[1] = 4;  // ���� = payload(2) + 2 = 4 (payload=subtype(1)+data(1))
+    p[1] = 4;  // 锟斤拷锟斤拷 = payload(2) + 2 = 4 (payload=subtype(1)+data(1))
     p[2] = CRSF_FRAMETYPE_CUSTOM_TELEMETRY; // 0x0C
-    p[3] = sub_type;    // �����ͣ�0x00-0xFF����ӦLua��0C00-0CFF��
-    p[4] = value;       // �����ֽ�
+    p[3] = sub_type;    // 锟斤拷锟斤拷锟酵ｏ拷0x00-0xFF锟斤拷锟斤拷应Lua锟斤拷0C00-0CFF锟斤拷
+    p[4] = value;       // 锟斤拷锟斤拷锟街斤拷
     
-    // CRC���������ֶ�(p[2])��ʼ����������(1)+������(1)+����(1) = 3�ֽ�
+    // CRC锟斤拷锟斤拷锟斤拷锟斤拷锟街讹拷(p[2])锟斤拷始锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷(1)+锟斤拷锟斤拷锟斤拷(1)+锟斤拷锟斤拷(1) = 3锟街斤拷
 //    p[5] = crc_.calc(&p[2], 3);
      p[5] = 0x00;
     tx_done = false;
-    dcache_clean_range(tx_buffer_, 6);  // 6�ֽ��ܳ���
+    dcache_clean_range(tx_buffer_, 6);  // 6锟街斤拷锟杰筹拷锟斤拷
     HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 6);
 }
 
@@ -339,39 +339,39 @@ void CrsfReceiver::send_uint16(uint8_t sub_type, uint16_t value)
     
     uint8_t* p = tx_buffer_;
     
-    // ֡�ṹ��[��ַ][����][����][������][���ֽ�][���ֽ�][CRC]
+    // 帧锟结构锟斤拷[锟斤拷址][锟斤拷锟斤拷][锟斤拷锟斤拷][锟斤拷锟斤拷锟斤拷][锟斤拷锟街斤拷][锟斤拷锟街斤拷][CRC]
     p[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;  // 0xEA
-    p[1] = 5;  // ���� = payload(3) + 2 = 5 (payload=subtype(1)+data(2))
+    p[1] = 5;  // 锟斤拷锟斤拷 = payload(3) + 2 = 5 (payload=subtype(1)+data(2))
     p[2] = CRSF_FRAMETYPE_CUSTOM_TELEMETRY; // 0x0C
-    p[3] = sub_type;                    // ������
-    p[4] = value & 0xFF;                // ���ֽڣ�С����
-    p[5] = (value >> 8) & 0xFF;         // ���ֽ�
+    p[3] = sub_type;                    // 锟斤拷锟斤拷锟斤拷
+    p[4] = value & 0xFF;                // 锟斤拷锟街节ｏ拷小锟斤拷锟斤拷
+    p[5] = (value >> 8) & 0xFF;         // 锟斤拷锟街斤拷
     
-    // CRC���������ֶο�ʼ����������(1)+������(1)+����(2) = 4�ֽ�
+    // CRC锟斤拷锟斤拷锟斤拷锟斤拷锟街段匡拷始锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷(1)+锟斤拷锟斤拷锟斤拷(1)+锟斤拷锟斤拷(2) = 4锟街斤拷
     p[6] = crc_.calc(&p[2], 4);
     
     tx_done = false;
-    dcache_clean_range(tx_buffer_, 7);  // 7�ֽ��ܳ���
+    dcache_clean_range(tx_buffer_, 7);  // 7锟街斤拷锟杰筹拷锟斤拷
     HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 7);
 }
 void CrsfReceiver::send_float(uint8_t sub_type, float value)
 {
     if (!tx_done) return;
     
-    // 限制范围，防止溢出（int16范围�?-32768 ~ 32767�?
+    // 闄愬埗鑼冨洿锛岄槻姝㈡孩鍑猴紙int16鑼冨洿锛?-32768 ~ 32767锛?
     if (value > 327.67f) value = 327.67f;
     if (value < -327.68f) value = -327.68f;
     
-    // 放大100倍，保留2位小数（12.34 �? 1234�?
+    // 鏀惧ぇ100鍊嶏紝淇濈暀2浣嶅皬鏁帮紙12.34 鈫? 1234锛?
     int16_t fixed_val = (int16_t)(value * 100.0f);
     
     uint8_t* p = tx_buffer_;
     p[0] = CRSF_ADDRESS_RADIO_TRANSMITTER;  // 0xEA
-    p[1] = 5;                               // 长度
+    p[1] = 5;                               // 闀垮害
     p[2] = CRSF_FRAMETYPE_CUSTOM_TELEMETRY; // 0x0C
-    p[3] = sub_type;                        // 子类�?
-    p[4] = fixed_val & 0xFF;                // 低字�?
-    p[5] = (fixed_val >> 8) & 0xFF;         // 高字�?
+    p[3] = sub_type;                        // 瀛愮被鍨?
+    p[4] = fixed_val & 0xFF;                // 浣庡瓧鑺?
+    p[5] = (fixed_val >> 8) & 0xFF;         // 楂樺瓧鑺?
     p[6] = crc_.calc(&p[2], 4);             // CRC
     
     tx_done = false;
@@ -387,41 +387,41 @@ void CrsfReceiver::send_robot(float x, float y, float yaw)
     uint16_t x_val = (uint16_t)(x * 100.0f);
     uint16_t y_val = (uint16_t)(y * 100.0f);
 
-    // 使用类的 tx_buffer_（已在头文件声明并做了�?齐）
+    // 浣跨敤绫荤殑 tx_buffer_锛堝凡鍦ㄥご鏂囦欢澹版槑骞跺仛浜嗗?榻愶級
     uint8_t* buf = tx_buffer_;
-    // 帧头
-    buf[0] = 0xEA;      // 地址: Radio Transmitter
-    buf[1] = 17;        // 长度: payload(15) + 2
-    buf[2] = 0x02;      // 类型: GPS
+    // 甯уご
+    buf[0] = 0xEA;      // 鍦板潃: Radio Transmitter
+    buf[1] = 17;        // 闀垮害: payload(15) + 2
+    buf[2] = 0x02;      // 绫诲瀷: GPS
 
-    // Latitude (占位，填写小�? int32)
+    // Latitude (鍗犱綅锛屽～鍐欏皬绔? int32)
     buf[3] = 0x01;
     buf[4] = 0x00;
     buf[5] = 0x01;
     buf[6] = 0x00;
 
-    // Longitude (占位，填写小�? int32)
+    // Longitude (鍗犱綅锛屽～鍐欏皬绔? int32)
     buf[7] = 0x01;
     buf[8] = 0x00;
     buf[9] = 0x00;
     buf[10] = 0x00;
 
-    // Ground Speed (uint16, 小�?)
+    // Ground Speed (uint16, 灏忕?)
     buf[11] = x_val & 0xFF;      // LSB
     buf[12] = (x_val >> 8) & 0xFF; // MSB
 
-    // Ground Course (uint16, 小�?)
+    // Ground Course (uint16, 灏忕?)
     buf[13] = yaw_val & 0xFF;    // LSB
     buf[14] = (yaw_val >> 8) & 0xFF; // MSB
 
-    // Altitude (uint16, 小�?)
+    // Altitude (uint16, 灏忕?)
     buf[15] = y_val & 0xFF;      // LSB
     buf[16] = (y_val >> 8) & 0xFF; // MSB
 
     // Satellites / mode
     buf[17] = 3;
 
-    // CRC �? buf[2] �? buf[17]
+    // CRC 浠? buf[2] 鍒? buf[17]
     uint8_t crc = 0;
     for (uint8_t i = 2; i <= 17; ++i) {
         crc ^= buf[i];
@@ -430,7 +430,7 @@ void CrsfReceiver::send_robot(float x, float y, float yaw)
     }
     buf[18] = crc;
 
-    // 通过 DMA 发送：清理 D-Cache，�?�? tx_done，触�? DMA 发�?
+    // 閫氳繃 DMA 鍙戦€侊細娓呯悊 D-Cache锛岃?缃? tx_done锛岃Е鍙? DMA 鍙戦€?
     dcache_clean_range(tx_buffer_, 19);
     tx_done = false;
     HAL_UART_Transmit_DMA(&huart7, tx_buffer_, 19);
@@ -461,10 +461,10 @@ void CrsfReceiver::send_kfsandSpear(int8_t kfs1, int8_t kfs2, int8_t Spear)
         p[6] = Spear * 10;        // Current
         p[7] = 0; 
         p[8] = 0; 
-        p[9] = kfs1;              // Capacity低字�?
+        p[9] = kfs1;              // Capacity浣庡瓧鑺?
         p[10] = kfs2;             // Remaining
         
-        // CRC计算
+        // CRC璁＄畻
         uint8_t crc = 0;
         for(uint8_t i = 2; i <= 10; i++) {
             crc ^= p[i];
@@ -483,13 +483,13 @@ void CrsfReceiver::send_kfsandSpear(int8_t kfs1, int8_t kfs2, int8_t Spear)
 }
 
 
-/* ----------------  ��ѭ��  ---------------- */
+/* ----------------  锟斤拷循锟斤拷  ---------------- */
 void CrsfReceiver::process()
 {
     consumeRingBuffer();
 }
 
-/* ----------------  ISR ����  ---------------- */
+/* ----------------  ISR 锟斤拷锟斤拷  ---------------- */
 void CrsfReceiver::appendFromISR(const uint8_t *buf, uint16_t len)
 {
     if (!buf || !len) return;
@@ -501,7 +501,7 @@ void CrsfReceiver::appendFromISR(const uint8_t *buf, uint16_t len)
     uint16_t to_copy = (len <= free_space) ? len : free_space;
     uint16_t chunk = RX_RING_SIZE - head;
     if (chunk > to_copy) chunk = to_copy;
-    // ȷ�� CPU ��ȡ buf ǰʧЧ DCache������ memcpy ���õ� DMA д�������?
+    // 确锟斤拷 CPU 锟斤拷取 buf 前失效 DCache锟斤拷锟斤拷锟斤拷 memcpy 锟斤拷锟矫碉拷 DMA 写锟斤拷锟斤拷锟斤拷锟?
     dcache_invalidate_range((void*)buf, to_copy);
     memcpy(&rx_ring_[head], buf, chunk);
     head = (head + chunk) % RX_RING_SIZE;
@@ -510,7 +510,7 @@ void CrsfReceiver::appendFromISR(const uint8_t *buf, uint16_t len)
         memcpy(&rx_ring_[head], buf + chunk, rem);
         head = (head + rem) % RX_RING_SIZE;
     }
-    // �ڸ��� head ǰȷ�������ڴ����ϣ���������
+    // 锟节革拷锟斤拷 head 前确锟斤拷锟斤拷锟斤拷锟节达拷锟斤拷锟较ｏ拷锟斤拷锟斤拷锟斤拷锟斤拷
     __asm volatile ("dmb 0xB" ::: "memory");
     rx_ring_head_ = head;
 }
@@ -520,10 +520,10 @@ void CrsfReceiver::processBatchData(uint8_t *buf, uint16_t len)
     for (uint16_t i = 0; i < len; ++i) handleByte(buf[i]);
 }
 
-/* ----------------  ���ѻ��λ���  ---------------- */
+/* ----------------  锟斤拷锟窖伙拷锟轿伙拷锟斤拷  ---------------- */
 void CrsfReceiver::consumeRingBuffer()
 {
-    dcache_invalidate_range(rx_ring_, RX_RING_SIZE);   // �� �Ӿ� Cache (����)
+    dcache_invalidate_range(rx_ring_, RX_RING_SIZE);   // 锟斤拷 锟接撅拷 Cache (锟斤拷锟斤拷)
     uint16_t head = rx_ring_head_ % RX_RING_SIZE;
     uint16_t tail = rx_ring_tail_ % RX_RING_SIZE;
     if (head == tail) return;
@@ -542,7 +542,7 @@ void CrsfReceiver::consumeRingBuffer()
     rx_ring_tail_ = tail;
 }
 
-/* ----------------  ȫ�� C ���ӣ�ָ�� UART7  ---------------- */
+/* ----------------  全锟斤拷 C 锟斤拷锟接ｏ拷指锟斤拷 UART7  ---------------- */
 extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
 {
     if (huart == &huart7) tx_done = true;  

@@ -1,7 +1,7 @@
 /**
  * @file Module_ChassisOmni.h
  * @author XieFField
- * @brief È«Ïòµ×ÅÌÄ£¿é
+ * @brief å…¨å‘åº•ç›˜æ¨¡å—
  * @version 1.0
  */
 #ifndef __MODULE_CHASSISOMNI_H
@@ -36,9 +36,9 @@ extern "C" {
 #ifdef __cplusplus
 
 /*
-    ×ø±êÏµ²ÉÓÃÓÒÊÖÏµ£¬½ÇËÙ¶ÈÕı·½Ïò×ñÑ­ÓÒÊÖ¶¨Ôò£¬¼´ÄæÊ±ÕëÎªÕı·½Ïò
+    åæ ‡ç³»é‡‡ç”¨å³æ‰‹ç³»ï¼Œè§’é€Ÿåº¦æ­£æ–¹å‘éµå¾ªå³æ‰‹å®šåˆ™ï¼Œå³é€†æ—¶é’ˆä¸ºæ­£æ–¹å‘
 
-    Ö»°üº¬4/3ÂÖÈ«Ïòµ×ÅÌ£¬Ó¦¸Ã²»»áÓÃµ½ÆäËûÂÖÊıµÄÈ«ÏòÂÖµ×ÅÌ°É
+    åªåŒ…å«4/3è½®å…¨å‘åº•ç›˜ï¼Œåº”è¯¥ä¸ä¼šç”¨åˆ°å…¶ä»–è½®æ•°çš„å…¨å‘è½®åº•ç›˜å§
 */
 
 #define COS_30 0.86602540378f
@@ -49,12 +49,12 @@ extern "C" {
 #define COS_31_87 0.8493846882f
 
 /*
-ÈıÂÖ£º 
+ä¸‰è½®ï¼š 
         |1
 
-    2 /    \ 3   ¶ÔÓ¦µÄµ×ÅÌµç»ú±àºÅ
+    2 /    \ 3   å¯¹åº”çš„åº•ç›˜ç”µæœºç¼–å·
 
-ËÄÂÖ:     2 /     \  3 ¶ÔÓ¦µÄµ×ÅÌµç»ú±àºÅ
+å››è½®:     2 /     \  3 å¯¹åº”çš„åº•ç›˜ç”µæœºç¼–å·
                          
           1 \     / 4
 */
@@ -64,16 +64,16 @@ class Chassis_Omni : public Chassis_Base<WheelCount> {
 public:
     struct wheel_init_config
     {
-        float theta; // £¨µ¥Î»£º¶È£©
-        float x;     // £¨µ¥Î»£ºÃ×£©
-        float y;     // £¨µ¥Î»£ºÃ×£©
+        float theta; // ï¼ˆå•ä½ï¼šåº¦ï¼‰
+        float x;     // ï¼ˆå•ä½ï¼šç±³ï¼‰
+        float y;     // ï¼ˆå•ä½ï¼šç±³ï¼‰
     };
 
     struct init_config
     {
-        float wheel_radius; // ÂÖ×Ó°ë¾¶ (m)
-        float max_wheel_rpm; // ÂÖ×Ó×î´óRPM
-        wheel_init_config wheels[WheelCount]; // ÂÖ×ÓÅäÖÃ
+        float wheel_radius; // è½®å­åŠå¾„ (m)
+        float max_wheel_rpm; // è½®å­æœ€å¤§RPM
+        wheel_init_config wheels[WheelCount]; // è½®å­é…ç½®
     };
 
 private:
@@ -81,33 +81,33 @@ private:
     {
         float cos_theta;
         float sin_theta;
-        float radius; // µÈĞ§°ë¾¶ (m)
+        float radius; // ç­‰æ•ˆåŠå¾„ (m)
     };
     
 public:
     Chassis_Omni(float wheel_radius, float max_wheel_rpm, float chassis_radius);
-    // µÈÑüÈı½ÇĞÎ²ÎÊı¹¹Ôì£¨½öÈıÂÖ£©£ºbase=µ×±ß³¤¶È£¬side=Ñü³¤
+    // ç­‰è…°ä¸‰è§’å½¢å‚æ•°æ„é€ ï¼ˆä»…ä¸‰è½®ï¼‰ï¼šbase=åº•è¾¹é•¿åº¦ï¼Œside=è…°é•¿
     Chassis_Omni(float wheel_radius, float max_wheel_rpm, float base_length, float side_length, bool three_wheel);
     Chassis_Omni(init_config& config);
 
-    void updateKinematics() override; // ¸üĞÂÔË¶¯Ñ§£¬µ÷ÓÃÄæ½âºÍÕı½â
+    void updateKinematics() override; // æ›´æ–°è¿åŠ¨å­¦ï¼Œè°ƒç”¨é€†è§£å’Œæ­£è§£
 
     void setThreeWheelSolver(bool use_three_solver)
     {
         use_three_solver_ = use_three_solver;
     }
 private:
-    void inverseKinematics(const Robot_Twist& twist) override; // Äæ½â£¬¸ù¾İÄ¿±êËÙ¶È¼ÆËãÂÖËÙ
-    float chassis_radius_; // µ×ÅÌ°ë¾¶ (m)
-    float chassis_radius_bottom_; // µ×ÅÌµ×²¿µ½ÖĞĞÄµÄ¾àÀë (m)
+    void inverseKinematics(const Robot_Twist& twist) override; // é€†è§£ï¼Œæ ¹æ®ç›®æ ‡é€Ÿåº¦è®¡ç®—è½®é€Ÿ
+    float chassis_radius_; // åº•ç›˜åŠå¾„ (m)
+    float chassis_radius_bottom_; // åº•ç›˜åº•éƒ¨åˆ°ä¸­å¿ƒçš„è·ç¦» (m)
     void forwardKinematics() override;
-    // ÒÀ¾İµÈÑüÈı½ÇĞÎ¼¸ºÎ¼ÆËãÁ½¸ö°ë¾¶£º¶¥µã°ë¾¶Óëµ×±ß°ë¾¶
+    // ä¾æ®ç­‰è…°ä¸‰è§’å½¢å‡ ä½•è®¡ç®—ä¸¤ä¸ªåŠå¾„ï¼šé¡¶ç‚¹åŠå¾„ä¸åº•è¾¹åŠå¾„
     void computeIsoscelesRadii(float base_length, float side_length, float& top_radius, float& bottom_radius);
 
-    // ÈıÂÖ½âËãÆ÷Ñ¡Ôñ±êÖ¾£¨Ö»ÔÚ WheelCount==3 Ê±ÓĞĞ§£©
+    // ä¸‰è½®è§£ç®—å™¨é€‰æ‹©æ ‡å¿—ï¼ˆåªåœ¨ WheelCount==3 æ—¶æœ‰æ•ˆï¼‰
     bool use_three_solver_ = true;
-    wheel_init_config wheel_config_[WheelCount]; // ÂÖ×ÓÅäÖÃ
-    wheel_calculate_config wheel_calculate_config_[WheelCount]; // ÂÖ×Ó¼ÆËãÅäÖÃ
+    wheel_init_config wheel_config_[WheelCount]; // è½®å­é…ç½®
+    wheel_calculate_config wheel_calculate_config_[WheelCount]; // è½®å­è®¡ç®—é…ç½®
 };
 
 

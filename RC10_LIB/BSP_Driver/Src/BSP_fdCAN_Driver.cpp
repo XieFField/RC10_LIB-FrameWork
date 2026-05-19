@@ -1,17 +1,17 @@
 #include "BSP_fdCAN_Driver.h"
 
-// --- È«¾Ö±äÁ¿Óëº¯Êı ---
-// ×î¶àÖ§³Ö3¸öFDCAN×ÜÏßÊµÀı
+// --- å…¨å±€å˜é‡ä¸å‡½æ•° ---
+// æœ€å¤šæ”¯æŒ3ä¸ªFDCANæ€»çº¿å®ä¾‹
  static fdCANbus* g_fdcan_bus_map[3] = {nullptr, nullptr, nullptr};
 
-// ÎªÀàÄÚ static ³ÉÔ±Ìá¹©¶¨Òå
+// ä¸ºç±»å†… static æˆå‘˜æä¾›å®šä¹‰
 #if FD_CAN_DEBUG
 //CanFrame fdCANbus::debug_last_frames_[fdCANbus::MAX_MOTORS * 2] = {0};
 #endif
 
 
 #if FD_CAN_DEBUG
-fdCANbus* g_fdcan_bus_map_dbg[3] = {nullptr, nullptr, nullptr}; // È«¾Ö¿É¼û±ğÃû
+fdCANbus* g_fdcan_bus_map_dbg[3] = {nullptr, nullptr, nullptr}; // å…¨å±€å¯è§åˆ«å
 #endif
 
 volatile FdcanDiagSnapshot g_fdcan_diag[3] = {};
@@ -60,8 +60,8 @@ static void fdcan_diag_capture(FDCAN_HandleTypeDef* hfdcan, uint32_t errorStatus
 }
 
 /**
- * @brief ×¢²áÒ»¸öfdCANbusÊµÀıÒÔ½øĞĞÈ«¾ÖÖĞ¶ÏÂ·ÓÉ
- * @param bus Ö¸ÏòfdCANbusÊµÀıµÄÖ¸Õë
+ * @brief æ³¨å†Œä¸€ä¸ªfdCANbuså®ä¾‹ä»¥è¿›è¡Œå…¨å±€ä¸­æ–­è·¯ç”±
+ * @param bus æŒ‡å‘fdCANbuså®ä¾‹çš„æŒ‡é’ˆ
  */
 void register_fdcan_bus_for_isr(fdCANbus* bus) 
 {
@@ -102,7 +102,7 @@ void fdCANbus::init()
     FDCAN_FilterTypeDef sFilterConfig = {0};
     sFilterConfig.FilterType = FDCAN_FILTER_MASK;
     sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-    // ÅäÖÃÒ»¸ö½ÓÊÕËùÓĞ±ê×¼Ö¡µÄÂË²¨Æ÷
+    // é…ç½®ä¸€ä¸ªæ¥æ”¶æ‰€æœ‰æ ‡å‡†å¸§çš„æ»¤æ³¢å™¨
     sFilterConfig.IdType = FDCAN_STANDARD_ID;
     sFilterConfig.FilterIndex = 0;
     
@@ -110,32 +110,32 @@ void fdCANbus::init()
     sFilterConfig.FilterID2 = 0x000;
     HAL_FDCAN_ConfigFilter(hfdcan_, &sFilterConfig);
 
-    // ÅäÖÃÒ»¸ö½ÓÊÕËùÓĞÀ©Õ¹Ö¡µÄÂË²¨Æ÷
+    // é…ç½®ä¸€ä¸ªæ¥æ”¶æ‰€æœ‰æ‰©å±•å¸§çš„æ»¤æ³¢å™¨
     sFilterConfig.IdType = FDCAN_EXTENDED_ID;
-    sFilterConfig.FilterIndex = 1; // Ê¹ÓÃ²»Í¬µÄÂË²¨Æ÷Ë÷Òı
+    sFilterConfig.FilterIndex = 1; // ä½¿ç”¨ä¸åŒçš„æ»¤æ³¢å™¨ç´¢å¼•
     sFilterConfig.FilterID1 = 0x00000000;
     sFilterConfig.FilterID2 = 0x00000000;
     HAL_FDCAN_ConfigFilter(hfdcan_, &sFilterConfig);
 
-    // Æô¶¯FDCANÓ²¼ş
+    // å¯åŠ¨FDCANç¡¬ä»¶
     if (HAL_FDCAN_Start(hfdcan_) != HAL_OK) 
     {
-        // ´íÎó´¦Àí
+        // é”™è¯¯å¤„ç†
         HAL_FDCAN_Start_ERROR = 1;
         Error_Handler();
     }
 
-    // ¼¤»îFIFO0ĞÂÏûÏ¢ÖĞ¶Ï ºÍ BusOffÖĞ¶Ï
+    // æ¿€æ´»FIFO0æ–°æ¶ˆæ¯ä¸­æ–­ å’Œ BusOffä¸­æ–­
     if (HAL_FDCAN_ActivateNotification(hfdcan_, FDCAN_IT_RX_FIFO0_NEW_MESSAGE | FDCAN_IT_BUS_OFF, 0) != HAL_OK) {
-        // ´íÎó´¦Àí
+        // é”™è¯¯å¤„ç†
         HAL_FDCAN_ActivateNotification_ERROR = 1;
         Error_Handler();
     }
 
-    // ×¢²á×ÔÉíµ½È«¾ÖÓ³Éä±í
+    // æ³¨å†Œè‡ªèº«åˆ°å…¨å±€æ˜ å°„è¡¨
     register_fdcan_bus_for_isr(this);
 
-    // ¼ÇÂ¼³õÊ¼»¯ºóÊ×Ö¡Õï¶Ï¿ìÕÕ£¨ÓÃÓÚºË¶ÔFDCANÊ±ÖÓ/Ê±Ğò¼Ä´æÆ÷£©
+    // è®°å½•åˆå§‹åŒ–åé¦–å¸§è¯Šæ–­å¿«ç…§ï¼ˆç”¨äºæ ¸å¯¹FDCANæ—¶é’Ÿ/æ—¶åºå¯„å­˜å™¨ï¼‰
     fdcan_diag_capture(hfdcan_, 0u);
 
     rxTask_.start(tskIDLE_PRIORITY + 3, 512);
@@ -177,7 +177,7 @@ bool fdCANbus::sendFrame(const CanFrame& cf)
 
     FDCAN_TxHeaderTypeDef tx_header;
 
-    // È·±£·¢ËÍÊı¾İ 4 ×Ö½Ú¶ÔÆë
+    // ç¡®ä¿å‘é€æ•°æ® 4 å­—èŠ‚å¯¹é½
     alignas(4) uint8_t aligned_buf[8];
     std::memcpy(aligned_buf, cf.data, 8);
 
@@ -185,7 +185,7 @@ bool fdCANbus::sendFrame(const CanFrame& cf)
     tx_header.Identifier = cf.ID;
     tx_header.IdType = (cf.isextended ? FDCAN_EXTENDED_ID : FDCAN_STANDARD_ID);
     tx_header.TxFrameType = FDCAN_DATA_FRAME;
-    tx_header.DataLength = FDCAN_DLC_BYTES_8; // Ñ§ÔºÄ¿Ç°ËùÓĞµç»ú¶¼ÊÇ8×Ö½Ú
+    tx_header.DataLength = FDCAN_DLC_BYTES_8; // å­¦é™¢ç›®å‰æ‰€æœ‰ç”µæœºéƒ½æ˜¯8å­—èŠ‚
     tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
     tx_header.BitRateSwitch = FDCAN_BRS_OFF;
     tx_header.FDFormat = FDCAN_CLASSIC_CAN;
@@ -195,7 +195,7 @@ bool fdCANbus::sendFrame(const CanFrame& cf)
     
     HAL_StatusTypeDef status = HAL_FDCAN_AddMessageToTxFifoQ(hfdcan_, &tx_header, aligned_buf);
     success = status;
-    xSemaphoreGive(tx_mutex_); // ÊÍ·ÅËø
+    xSemaphoreGive(tx_mutex_); // é‡Šæ”¾é”
     
     return status == HAL_OK;
 }
@@ -223,6 +223,14 @@ void fdCANbus::rxTaskbody()
                    m->updateFeedback(cf);
             }
 
+            for (std::size_t j = 0; j < 3; j++)
+            {
+                if(oid_encoder_[j] != nullptr && oid_encoder_[j]->matchesFrame(cf) && oid_encoder_[j]->bus() == this)
+                {
+                    oid_encoder_[j]->updateFeedback(cf);
+                }
+            }
+
         }
     }
 }
@@ -247,36 +255,103 @@ void fdCANbus::schedulerTaskbody()
         for (std::size_t i = 0; i < MAX_MOTORS; ++i)
         {
             Motor_Base* m = motorList_[i];
-            if (m && (m->get_controlCnt() +1u >= static_cast<uint16_t>(1000 / m->get_controlFrequency()))) //·ÀÖ¹ÖØÉè¿ØÖÆÆµÂÊµ¼ÖÂpid¼ÆËã´íÅä
+            if (m && (m->get_controlCnt() +1u >= static_cast<uint16_t>(1000 / m->get_controlFrequency()))) //é˜²æ­¢é‡è®¾æ§åˆ¶é¢‘ç‡å¯¼è‡´pidè®¡ç®—é”™é…
                 m->update();
             
         }
 
-
-        std::size_t frameCnt = 0; //¼ÆÊıÖµ£¬¼ÇÂ¼´ò°üÁË¶àÉÙÖ¡
+        std::size_t frameCnt = 0; //è®¡æ•°å€¼ï¼Œè®°å½•æ‰“åŒ…äº†å¤šå°‘å¸§
         for (std::size_t i = 0; i < MAX_MOTORS; ++i) 
         {
             Motor_Base* m = motorList_[i];
-            if (!m) 
+            OIDEncoder* o = nullptr;
+            if(i < 3)
+                o = oid_encoder_[i];
+            if (!m && !o) 
                 continue;
                 
-            bool due = true;
-            if(m->get_controlFrequency() != 1000) // Èç¹û²»ÊÇÄ¬ÈÏÆµÂÊ£¬Ôò½øĞĞ·ÖÆµÅĞ¶Ï
+            // bool due = true;
+            // if(m && m->get_controlFrequency() != 1000) // å¦‚æœä¸æ˜¯é»˜è®¤é¢‘ç‡ï¼Œåˆ™è¿›è¡Œåˆ†é¢‘åˆ¤æ–­
+            // {
+            //     const uint16_t divider = static_cast<uint16_t>(1000 / m->get_controlFrequency()); // è®¡ç®—åˆ†é¢‘å™¨
+            //     due = (m->get_controlCnt() + 1u >= divider); // åˆ¤æ–­æ˜¯å¦è§¦å‘æ§åˆ¶å‘¨æœŸ
+            // }
+
+            // if(!due && m)
+            // {
+            //     m->increment_controlCnt();
+            //     continue; // ä¸åˆ°æ§åˆ¶å‘¨æœŸï¼Œä¸æ‰“åŒ…
+            // }
+
+            // bool o_due = true;
+            // if(o && o->get_controlFrequency() != 1000) // å¦‚æœä¸æ˜¯é»˜è®¤é¢‘ç‡ï¼Œåˆ™è¿›è¡Œåˆ†é¢‘åˆ¤æ–­
+            // {
+            //     const uint16_t divider = static_cast<uint16_t>(1000 / o->get_controlFrequency()); // è®¡ç®—åˆ†é¢‘å™¨
+            //     o_due = (o->get_controlCnt() + 1u >= divider); // åˆ¤æ–­æ˜¯å¦è§¦å‘æ§åˆ¶å‘¨æœŸ
+            // }
+
+            // if(!o_due && o)
+            // {
+            //     o->increment_controlCnt();
+            //     continue; // ä¸åˆ°æ§åˆ¶å‘¨æœŸï¼Œä¸æ‰“åŒ…
+            // }
+
+            // if(m)
+            // {
+            //     frameCnt += m->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt);
+            //     m->reset_controlCnt(); // é‡ç½®è®¡æ•°å™¨ï¼Œå‡†å¤‡ä¸‹ä¸€ä¸ªæ§åˆ¶å‘¨æœŸ
+            // }
+
+            // if(o)
+            // {
+            //     frameCnt += o->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt);
+            //     o->reset_controlCnt();
+            // }
+
+            bool m_send = false, o_send = false;
+            if (m) 
             {
-                const uint16_t divider = static_cast<uint16_t>(1000 / m->get_controlFrequency()); // ¼ÆËã·ÖÆµÆ÷
-                due = (m->get_controlCnt() + 1u >= divider); // ÅĞ¶ÏÊÇ·ñ´¥·¢¿ØÖÆÖÜÆÚ
+                if (m->get_controlFrequency() != 1000) 
+                {
+                    uint16_t div = 1000 / m->get_controlFrequency();
+                    if (m->get_controlCnt() + 1u >= div)
+                        m_send = true;
+                    else
+                        m->increment_controlCnt();
+                } 
+                else 
+                {
+                    m_send = true;
+                }
             }
 
-            if(!due)
+            // o é¢‘æ§ï¼ˆç‹¬ç«‹ï¼‰
+            if (o) 
             {
-                m->increment_controlCnt();
-                continue; // ²»µ½¿ØÖÆÖÜÆÚ£¬²»´ò°ü
+                if (o->get_controlFrequency() != 1000) 
+                {
+                    uint16_t div = 1000 / o->get_controlFrequency();
+                    if (o->get_controlCnt() + 1u >= div)
+                        o_send = true;
+                    else
+                        o->increment_controlCnt();
+                } 
+                else 
+                {
+                    o_send = true;
+                }
             }
 
-
-            frameCnt += m->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt);  
-            m->reset_controlCnt(); // ÖØÖÃ¼ÆÊıÆ÷£¬×¼±¸ÏÂÒ»¸ö¿ØÖÆÖÜÆÚ
-
+            if (m_send) 
+            { 
+                frameCnt += m->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt); 
+                m->reset_controlCnt(); 
+            }
+            if (o_send) 
+            { 
+                frameCnt += o->packCommand(&frames_to_send[frameCnt], (sizeof(frames_to_send)/sizeof(frames_to_send[0])) - frameCnt); 
+                o->reset_controlCnt(); 
+            }
             if (frameCnt >= (sizeof(frames_to_send)/sizeof(frames_to_send[0]))) 
                 break;
         }
@@ -299,7 +374,7 @@ bool fdCANbus::matchesFrameDefault(const CanFrame& cf, uint32_t targetId, bool i
     return (cf.isextended == isExt) && (cf.ID == targetId);
 }
 
-// --- RxTask / SchedTask ¹¹Ôìº¯Êı ---
+// --- RxTask / SchedTask æ„é€ å‡½æ•° ---
 fdCANbus::RxTask::RxTask(fdCANbus* parent) 
     : RtosTask("CAN_Rx", 0), parent_(parent) {}
 
@@ -320,8 +395,8 @@ void fdCANbus::SchedTask::run()
 //extern "C"
 
 /**
- * @brief È«¾ÖµÄFDCAN½ÓÊÕÖĞ¶Ï´¦Àíº¯Êı
- * @param hfdcan ´¥·¢ÖĞ¶ÏµÄFDCAN¾ä±ú
+ * @brief å…¨å±€çš„FDCANæ¥æ”¶ä¸­æ–­å¤„ç†å‡½æ•°
+ * @param hfdcan è§¦å‘ä¸­æ–­çš„FDCANå¥æŸ„
  */
 extern "C" void fdcan_global_rx_isr(FDCAN_HandleTypeDef* hfdcan) 
 {
@@ -342,7 +417,7 @@ extern "C" void fdcan_global_rx_isr(FDCAN_HandleTypeDef* hfdcan)
     FDCAN_RxHeaderTypeDef rx_header;
     BaseType_t higher_priority_task_woken = pdFALSE;
 
-    // Ñ­»·¶ÁÈ¡Ö±µ½ FIFO Îª¿Õ£¬·ÀÖ¹¸ß¸ºÔØÏÂÊı¾İ»ıÑ¹
+    // å¾ªç¯è¯»å–ç›´åˆ° FIFO ä¸ºç©ºï¼Œé˜²æ­¢é«˜è´Ÿè½½ä¸‹æ•°æ®ç§¯å‹
     while (HAL_FDCAN_GetRxFifoFillLevel(hfdcan, FDCAN_RX_FIFO0) > 0)
     {
         if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_frame.data) == HAL_OK) 
@@ -361,7 +436,7 @@ extern "C" void fdcan_global_rx_isr(FDCAN_HandleTypeDef* hfdcan)
         }
         else
         {
-            break; // ¶ÁÈ¡Ê§°Ü»ò FIFO ¿Õ
+            break; // è¯»å–å¤±è´¥æˆ– FIFO ç©º
         }
     }
 
@@ -369,7 +444,7 @@ extern "C" void fdcan_global_rx_isr(FDCAN_HandleTypeDef* hfdcan)
 }
 
 /**
- * @brief È«¾ÖµÄµ÷¶ÈÆ÷TickÖĞ¶Ï´¦Àíº¯Êı
+ * @brief å…¨å±€çš„è°ƒåº¦å™¨Tickä¸­æ–­å¤„ç†å‡½æ•°
  */
 extern "C" void fdcan_global_scheduler_tick_isr() 
 {
@@ -422,10 +497,10 @@ extern "C" void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint3
 }
 
 /**
- * @brief  ÖØĞ´ HAL_FDCAN_RxFifo0Callback Èõº¯Êı
- * @param  hfdcan FDCAN¾ä±ú
- * @param  RxFifo0ITs FIFO0ÖĞ¶Ï±êÖ¾
- * @note   ´Ëº¯Êı»áÔÚ HAL_FDCAN_IRQHandler ÖĞ±»×Ô¶¯µ÷ÓÃ
+ * @brief  é‡å†™ HAL_FDCAN_RxFifo0Callback å¼±å‡½æ•°
+ * @param  hfdcan FDCANå¥æŸ„
+ * @param  RxFifo0ITs FIFO0ä¸­æ–­æ ‡å¿—
+ * @note   æ­¤å‡½æ•°ä¼šåœ¨ HAL_FDCAN_IRQHandler ä¸­è¢«è‡ªåŠ¨è°ƒç”¨
  */
 extern "C" void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
@@ -438,7 +513,7 @@ extern "C" void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t 
 
   if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
   {
-    // Ö±½Óµ÷ÓÃÈ«¾ÖÖĞ¶Ï´¦Àíº¯Êı
+    // ç›´æ¥è°ƒç”¨å…¨å±€ä¸­æ–­å¤„ç†å‡½æ•°
     fdcan_global_rx_isr(hfdcan);
   }
 }
@@ -493,15 +568,15 @@ fdCANbus* fdCANbus::getInstance(FDCAN_HandleTypeDef* hfdcan)
 
 fdCANbus::fdCANbus(FDCAN_HandleTypeDef* hfdcan)
     : hfdcan_(hfdcan),
-      rxQueue_(512), // [Fix] Ôö¼Ó¶ÓÁĞÉî¶È£¬¿ÕÔØ¸ß×ªËÙÏÂ·ÀÖ¹¶ªÖ¡µ¼ÖÂÏàÎ»»ìµş
+      rxQueue_(512), // [Fix] å¢åŠ é˜Ÿåˆ—æ·±åº¦ï¼Œç©ºè½½é«˜è½¬é€Ÿä¸‹é˜²æ­¢ä¸¢å¸§å¯¼è‡´ç›¸ä½æ··å 
       rxTask_(this),
       schedulerTask_(this)
 {
     for (std::size_t i = 0; i < MAX_MOTORS; ++i) 
             motorList_[i] = nullptr;
 
-        tx_mutex_ = xSemaphoreCreateMutex(); //´´½¨»¥³âËø
-        schedSem_ = xSemaphoreCreateBinary(); //´´½¨¶şÖµĞÅºÅÁ¿
+        tx_mutex_ = xSemaphoreCreateMutex(); //åˆ›å»ºäº’æ–¥é”
+        schedSem_ = xSemaphoreCreateBinary(); //åˆ›å»ºäºŒå€¼ä¿¡å·é‡
 }
 
 

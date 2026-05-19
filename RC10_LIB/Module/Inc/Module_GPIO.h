@@ -1,10 +1,10 @@
 /**
  * @file Module_GPIO.h
  * @author 70er66
- * @brief ´ïÃîµç»úÀà
+ * @brief è¾¾å¦™ç”µæœºç±»
  * @version 1.0
  * 
- * ´ËÎÄ¼þ°üº¬´ïÃîJ4310·â×°
+ * æ­¤æ–‡ä»¶åŒ…å«è¾¾å¦™J4310å°è£…
  */
  
  
@@ -24,10 +24,10 @@ extern "C" {
 #ifdef __cplusplus
 
 //-------------------------------------------------------------------------
-//*GPIO¿ÚµÄÀà·â×°£»
-//*Ê¹ÓÃÇ°ÐèÒªÔÚCubemxÉÏÅäÖÃºÃ¶ÔÓ¦µÄGPIO¿Ú
-//*ÔÚÊµÀý»¯´´½¨¶ÔÏóµÄÊ±ºòÊäÈë¶ÔÓ¦µÄGPIO¿Ú
-//*GPIO¿ÚµÄÖÐ¶Ï¹ÜÀíºóÐøÌí¼Ó£»
+//*GPIOå£çš„ç±»å°è£…ï¼›
+//*ä½¿ç”¨å‰éœ€è¦åœ¨Cubemxä¸Šé…ç½®å¥½å¯¹åº”çš„GPIOå£
+//*åœ¨å®žä¾‹åŒ–åˆ›å»ºå¯¹è±¡çš„æ—¶å€™è¾“å…¥å¯¹åº”çš„GPIOå£
+//*GPIOå£çš„ä¸­æ–­ç®¡ç†åŽç»­æ·»åŠ ï¼›
 class GPIODevice {
 public:
 	GPIODevice(GPIO_TypeDef* port,uint16_t pin);
@@ -39,8 +39,8 @@ bool Read_pin();
 
 
 private:
-    GPIO_TypeDef* port_; // GPIO ¶Ë¿Ú£¬Èç GPIOA¡¢GPIOB µÈ
-    uint16_t pin_;       // GPIO Òý½Å£¬Èç GPIO_PIN_0¡¢GPIO_PIN_1 µÈ
+    GPIO_TypeDef* port_; // GPIO ç«¯å£ï¼Œå¦‚ GPIOAã€GPIOB ç­‰
+    uint16_t pin_;       // GPIO å¼•è„šï¼Œå¦‚ GPIO_PIN_0ã€GPIO_PIN_1 ç­‰
 };
 
 
