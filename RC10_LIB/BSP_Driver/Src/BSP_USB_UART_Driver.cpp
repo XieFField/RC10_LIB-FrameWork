@@ -224,10 +224,8 @@ extern "C" {
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
     if (instance != nullptr) {
-       // ??? HAL ????? Size ?????????????????????
+       // HAL UART 接收完成回调，只派发数据给上层，不重复重启 DMA。
         instance->Callback_Fuc(huart->pRxBuffPtr, Size);
-        // ???????????MA??
-        HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
     }
 }
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)

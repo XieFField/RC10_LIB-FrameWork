@@ -2,7 +2,7 @@
 #include <cstring>
 #include <cmath>
 #include "core_cm7.h"
-
+#include "rc_link.h"
 /* -------------  Cache ά����/����  ------------- */
 // SCB cache ops Ҫ���ַ���С���� cache line ����(32�ֽ�)
 static inline void dcache_clean_range(void* addr, uint32_t len) 

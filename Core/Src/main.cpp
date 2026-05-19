@@ -21,11 +21,11 @@
 #include "cmsis_os.h"
 #include "dma.h"
 #include "fdcan.h"
+#include "i2c.h"
 #include "tim.h"
 #include "usart.h"
 #include "usb_device.h"
 #include "gpio.h"
-#include "i2c.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -127,6 +127,9 @@ int main(void)
   MX_UART7_Init();
   MX_UART8_Init();
   MX_I2C5_Init();
+  MX_TIM3_Init();
+  MX_UART4_Init();
+  MX_UART5_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim6); // 启动定时器不然CAN任务不会跑的
   ALL_Setup_ConfigInit();

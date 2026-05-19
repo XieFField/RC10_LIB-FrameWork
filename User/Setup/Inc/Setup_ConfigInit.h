@@ -47,6 +47,7 @@ extern "C" {
 #include "system_detect_task.h"
 #include "Module_HWT.h"
 #include "Module_JY61.h"
+#include "rc_link.h"
 
 /*==============Controller===============*/
 #include "FSM_Controller.h"

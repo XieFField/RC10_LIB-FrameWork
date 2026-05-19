@@ -1,5 +1,6 @@
 #include "Module_Air_joy.h"
 #include <cstdlib>  // 用于 abs 函数
+#include "rc_link.h"
 
 // 定义静态成员变量
 uint16_t AirJoy::last_valid[8] = {1500,1500,1500,1500,1500,1500,1500,1500};
@@ -86,8 +87,8 @@ void AirJoy::data_update(uint16_t GPIO_Pin, uint16_t GPIO_EXTI_USED_PIN)
 /**
  * @brief GPIO 外部中断回调（保持旧入口不变）
  */
-extern "C" void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-    // 将 GPIO_PIN_8 改为你的实际 PPM EXTI 引脚
-    AirJoy::getinstance().data_update(GPIO_Pin, GPIO_PIN_8);
-}
+// extern "C" void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+// {
+//     // 将 GPIO_PIN_8 改为你的实际 PPM EXTI 引脚
+//     AirJoy::getinstance().data_update(GPIO_Pin, GPIO_PIN_8);
+// }
