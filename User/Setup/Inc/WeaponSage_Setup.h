@@ -132,6 +132,17 @@ public:
         ctrl_status_.init_flag = true;
     }
 
+    void register_motors(M2006* claw1, M2006* claw2, M2006* claw3, M3508* launch, 
+            M2006* wrist, DM_Motor* arm)
+    {
+        this->claw_1_Motor_ = claw1;
+        this->claw_2_Motor_ = claw2;
+        this->claw_3_Motor_ = claw3;
+        this->launch_Motor_ = launch;
+        this->wrist_Motor_ = wrist;
+        this->arm_Motor_ = arm;
+    }
+
     void setLowerClawStart(bool start)
     {
         
