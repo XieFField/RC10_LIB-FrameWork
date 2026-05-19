@@ -170,15 +170,6 @@ void ALL_Setup_ConfigInit(void)
 
     ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
-#if JIA_USE_THREE_OMNI_CHASSIS
-    Chassis::InitConfig chassis_init_config =
-    {
-         .motor_handle[0] = &steer1,
-         .motor_handle[1] = &steer2,
-         .motor_handle[2] = &steer3
-    };
-    chassis.init(chassis_init_config);
-#endif
 
 #if JIA_USE_FOUR_STEER_CHASSIS
     Chassis::InitConfig chassis_init_config =
@@ -322,3 +313,4 @@ void CAN_Motor_Init(void)
 
    Weapon_Wrist.reset_controlFrequency(100);
 }
+
