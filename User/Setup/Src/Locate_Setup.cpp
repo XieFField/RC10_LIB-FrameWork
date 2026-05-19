@@ -41,40 +41,40 @@ void Locate_Setup::update()
 
 void Locate_Setup::lader_transform_caculate()
 {
-    // Èç¹û»¹Ã»³õÊ¼»¯°²×°Î»×ËÔòÖ±½Ó·µ»Ø
+    // å¦‚æœè¿˜æ²¡åˆå§‹åŒ–å®‰è£…ä½å§¿åˆ™ç›´æ¥è¿”å›
     if (!install_pose_init_) 
         return;
 
-    // »úÆ÷ÈËÎ»×Ë£¨robot_pose_inWorld_.yaw Îª½Ç¶È£¬×ª»»Îª»¡¶ÈÓÃÓÚ±ä»»£©
+    // æœºå™¨äººä½å§¿ï¼ˆrobot_pose_inWorld_.yaw ä¸ºè§’åº¦ï¼Œè½¬æ¢ä¸ºå¼§åº¦ç”¨äºå˜æ¢ï¼‰
     Point3D robot_pose_rad = robot_pose_inWorld_;
     robot_pose_rad.yaw = deg_to_rad(robot_pose_inWorld_.yaw);
 
-    // ¹¹Ôì world -> robot µÄ±ä»»£¨ĞèÒª»¡¶È£©
+    // æ„é€  world -> robot çš„å˜æ¢ï¼ˆéœ€è¦å¼§åº¦ï¼‰
     HomogeneousTransform3D T_world_to_robot(robot_pose_rad);
 
-    // ¹¹Ôì robot -> arm µÄ 3D ±ä»»£¨ÓÉ arm_install_pose_ Ìá¹© x,y,theta£©
+    // æ„é€  robot -> arm çš„ 3D å˜æ¢ï¼ˆç”± arm_install_pose_ æä¾› x,y,thetaï¼‰
     Point3D arm_pose3d;
     arm_pose3d.x = arm_install_pose_.x;
     arm_pose3d.y = arm_install_pose_.y;
     arm_pose3d.z = 0.0f;
     arm_pose3d.roll = 0.0f;
     arm_pose3d.pitch = 0.0f;
-    arm_pose3d.yaw = arm_install_pose_.theta; // ¼Ù¶¨ arm_install_pose_.theta Îª»¡¶È
+    arm_pose3d.yaw = arm_install_pose_.theta; // å‡å®š arm_install_pose_.theta ä¸ºå¼§åº¦
 
     T_robot_to_arm_3d.setTransform(arm_pose3d);
 
-    // ×éºÏµÃµ½ world -> arm
+    // ç»„åˆå¾—åˆ° world -> arm
     HomogeneousTransform3D T_world_to_arm = T_world_to_robot.multiply(T_robot_to_arm_3d);
 
-    // ¼ÆËã±Û»ù×ùÔÚÊÀ½çÏµµÄÎ»ÖÃ£¨3D£©
+    // è®¡ç®—è‡‚åŸºåº§åœ¨ä¸–ç•Œç³»çš„ä½ç½®ï¼ˆ3Dï¼‰
     Point3D arm_base_world = T_world_to_arm.apply(Point3D{0,0,0,0,0,0});
 
-    // ¸üĞÂ 2D µÄ±Û»ùÎ»×Ë£¨x,y,theta£©¡£theta ÒÔ»¡¶È´æ´¢
+    // æ›´æ–° 2D çš„è‡‚åŸºä½å§¿ï¼ˆx,y,thetaï¼‰ã€‚theta ä»¥å¼§åº¦å­˜å‚¨
     arm_pose_inWorld_.x = arm_base_world.x;
     arm_pose_inWorld_.y = arm_base_world.y;
     arm_pose_inWorld_.theta = robot_pose_rad.yaw + arm_install_pose_.theta;
 
-    // ¸üĞÂ 2D ±ä»»£¨ÈôĞèÒªÔÚ 2D ÖĞÊ¹ÓÃ£©
+    // æ›´æ–° 2D å˜æ¢ï¼ˆè‹¥éœ€è¦åœ¨ 2D ä¸­ä½¿ç”¨ï¼‰
     T_robot_to_arm_2d.setTransform(arm_install_pose_);
     T_lidar_to_robot_2d.setTransform(lidar_install_pose_);
 }
@@ -91,7 +91,7 @@ void Locate_Setup::Relocte_ToLader()
 }
 
 
-//ï¿½Ø¶ï¿½Î»
+//é”Ÿæˆªè®¹æ‹·ä½
 void Locate_Setup::RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_instance)
 {
 	for(int i=0;i<4;i++)	

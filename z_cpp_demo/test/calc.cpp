@@ -11,9 +11,9 @@ int main()
 float prev_rotate_target_ = 0.0f;
 float prev_norm_target_ = 0.0f;
 typedef enum {
-    ROTATE_PATH_SHORTEST,   // ×î¶ÌÂ·¾¶
-    ROTATE_PATH_POSITIVE,   // ÕıÏòÂ·¾¶
-    ROTATE_PATH_NEGATIVE    // ¸ºÏòÂ·¾¶
+    ROTATE_PATH_SHORTEST,   // æœ€çŸ­è·¯å¾„
+    ROTATE_PATH_POSITIVE,   // æ­£å‘è·¯å¾„
+    ROTATE_PATH_NEGATIVE    // è´Ÿå‘è·¯å¾„
 }Rotate_Strategy_E;
 
 Rotate_Strategy_E rotate_strategy_;

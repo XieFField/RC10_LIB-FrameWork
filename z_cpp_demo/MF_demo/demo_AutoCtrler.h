@@ -1,7 +1,7 @@
 /**
  * @file AutoCtrler.h
  * @author XieFField
- * @brief ×Ô¶¯¿ØÖÆÏà¹Ø
+ * @brief è‡ªåŠ¨æ§åˆ¶ç›¸å…³
  */
 
 
@@ -13,10 +13,10 @@
 
 #include <cstdint>
 #include <cmath>
-#include "demo_tool.h" // È·±£ÄãÓĞÕâ¸öÎÄ¼ş£¬»òÕßÌæ»»Îª Point2D ¶¨Òå
+#include "demo_tool.h" // ç¡®ä¿ä½ æœ‰è¿™ä¸ªæ–‡ä»¶ï¼Œæˆ–è€…æ›¿æ¢ä¸º Point2D å®šä¹‰
 using std::sqrt;
 
-// ¼ÆËã×îÉÙ²½Êı BFS
+// è®¡ç®—æœ€å°‘æ­¥æ•° BFS
 int BFS_Steps(int8_t startMap, int8_t goalMap);
 
 namespace MF_AutoCtrler{
@@ -36,7 +36,7 @@ typedef enum{
     NONE,
 }Direction_E;
 
-// ÒÆ³ı static£¬ÔÊĞíÍâ²¿Á´½Ó
+// ç§»é™¤ staticï¼Œå…è®¸å¤–éƒ¨é“¾æ¥
 int8_t MFNum_TransforMapNum(int8_t MFNum);
 int8_t MapNum_TransforMFNum(int8_t mapNum);
 
@@ -47,12 +47,12 @@ typedef struct{
 }RoadResult_S;
 
 typedef struct{
-    int8_t entranceMap = 0; // ²¹È«È±Ê§³ÉÔ±
+    int8_t entranceMap = 0; // è¡¥å…¨ç¼ºå¤±æˆå‘˜
     int8_t bestB1 = 0;
     int8_t bestBMF1 = 0;
     int8_t bestB2 = 0;
     int8_t bestBMF2 = 0;
-    int8_t exitMap = 30;    // ÒÆ³ı const£¬ÔÊĞí¸³Öµ
+    int8_t exitMap = 30;    // ç§»é™¤ constï¼Œå…è®¸èµ‹å€¼
 }PathNode_S;
 
 typedef struct
@@ -60,20 +60,20 @@ typedef struct
     int8_t entranceMap = 0;
     int8_t MFroad[2] = {0};
     int8_t mustPastMap[12] = {0};
-    int8_t Index_MFroad[2] = {0,0}; //¼ÇÂ¼MFroadÖĞMF1ºÍMF2ÔÚmustPastMapÖĞµÄË÷ÒıÎ»ÖÃ£¬·½±ãºóĞøÂ·¾¶¸ú×Ù
+    int8_t Index_MFroad[2] = {0,0}; //è®°å½•MFroadä¸­MF1å’ŒMF2åœ¨mustPastMapä¸­çš„ç´¢å¼•ä½ç½®ï¼Œæ–¹ä¾¿åç»­è·¯å¾„è·Ÿè¸ª
     int8_t exitMap = 26;
 } PathInformation_S;
 
 RoadResult_S MFNum_ToRoadResult(int8_t MFNum);
 
-// ÒÆ³ı static
+// ç§»é™¤ static
 bool IsWalkable(int8_t map);
 Point2D MapNum_ToMatrixPos(int8_t MapNum);
 
 int8_t CR_ToMap(int8_t c, int8_t r);
 void Map_ToCR(int8_t map, int8_t& c, int8_t& r);
 
-// ÒÆ³ı static
+// ç§»é™¤ static
 float euclid(Point2D a, Point2D b);
 
 Point2D MapCenterWorld(int8_t map);

@@ -1,8 +1,8 @@
 /**
  * @file Arm_setup.h
  * @author XieFField  
- * @brief »úĞµ±ÛÓ¦ÓÃ²ã¿ØÖÆÂß¼­
- *        KFS·¶Î§1 ~ 12  nowindex = KFSNum -1
+ * @brief æœºæ¢°è‡‚åº”ç”¨å±‚æ§åˆ¶é€»è¾‘
+ *        KFSèŒƒå›´1 ~ 12  nowindex = KFSNum -1
  */
 
 #ifndef __ARM_SETUP_H
@@ -32,37 +32,37 @@ extern "C" {
 
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS  0 //ÎŞµ×ÅÌÏÂµÄÄ£Äâµ÷ÊÔ¿ª¹Ø 1¿ªÆô 0¹Ø±Õ
-#define ARM_VERSION 0 //°æ±¾ºÅ ÒÑÎŞÓÃ
+#define ARM_AUTO_DEBUG_NOCHASSIS  0 //æ— åº•ç›˜ä¸‹çš„æ¨¡æ‹Ÿè°ƒè¯•å¼€å…³ 1å¼€å¯ 0å…³é—­
+#define ARM_VERSION 0 //ç‰ˆæœ¬å· å·²æ— ç”¨
 
 
 typedef struct{
     bool init_flag = false;
-    uint8_t debug_start = 0; //µ÷ÊÔ¿ªÊ¼±êÖ¾ == 1 ¿ªÊ¼µ÷ÊÔ
+    uint8_t debug_start = 0; //è°ƒè¯•å¼€å§‹æ ‡å¿— == 1 å¼€å§‹è°ƒè¯•
 
-    uint8_t auto_start = 0; //×Ô¶¯¿ªÊ¼±êÖ¾ == 1 ¿ªÊ¼×Ô¶¯
+    uint8_t auto_start = 0; //è‡ªåŠ¨å¼€å§‹æ ‡å¿— == 1 å¼€å§‹è‡ªåŠ¨
 
     float calibrate_startTime = 0; 
     bool calibrate_start = false;
     bool is_calibrating = false;
 
-    float last_right_x = 0.0f; //ÉÏÒ»´ÎÒ¡¸ËÓÒºáÖáµÄÖµ£¬ÓÃÓÚ¼ì²âÒ¡¸Ë×´Ì¬±ä»¯
-    float last_right_y = 0.0f; //ÉÏÒ»´ÎÒ¡¸ËÓÒ×İÖáµÄÖµ£¬ÓÃÓÚ¼ì²âÒ¡¸Ë×´Ì¬±ä»¯
+    float last_right_x = 0.0f; //ä¸Šä¸€æ¬¡æ‘‡æ†å³æ¨ªè½´çš„å€¼ï¼Œç”¨äºæ£€æµ‹æ‘‡æ†çŠ¶æ€å˜åŒ–
+    float last_right_y = 0.0f; //ä¸Šä¸€æ¬¡æ‘‡æ†å³çºµè½´çš„å€¼ï¼Œç”¨äºæ£€æµ‹æ‘‡æ†çŠ¶æ€å˜åŒ–
 
-    int8_t last_manual_extend = 0; //ÉÏÒ»´ÎÊÖ¶¯Õ¹×´Ì¬
-    int8_t last_manual_sucker = 0; //ÉÏÒ»´ÎÊÖ¶¯ÎüÅÌ×´Ì¬
+    int8_t last_manual_extend = 0; //ä¸Šä¸€æ¬¡æ‰‹åŠ¨å±•çŠ¶æ€
+    int8_t last_manual_sucker = 0; //ä¸Šä¸€æ¬¡æ‰‹åŠ¨å¸ç›˜çŠ¶æ€
 
-    int8_t last_manual_pitch = 0; //ÉÏÒ»´ÎÊÖ¶¯pitch×´Ì¬
+    int8_t last_manual_pitch = 0; //ä¸Šä¸€æ¬¡æ‰‹åŠ¨pitchçŠ¶æ€
 
-    int8_t pitch_switch_offset = 0; //pitch¿ª¹ØÆ«ÒÆ
-    int8_t extend_switch_offset = 0; //Õ¹¿ª¹ØÆ«ÒÆ
-    int8_t sucker_switch_offset = 0; // ÎüÅÌ¿ª¹ØÆ«ÒÆ
+    int8_t pitch_switch_offset = 0; //pitchå¼€å…³åç§»
+    int8_t extend_switch_offset = 0; //å±•å¼€å…³åç§»
+    int8_t sucker_switch_offset = 0; // å¸ç›˜å¼€å…³åç§»
 
     uint8_t button_click_state = 0;
-    uint8_t is_store_acting = 0; //ÊÖ²Ù×÷´æ´¢×´Ì¬ 0ÎŞ¶¯×÷ 1È¡³ö 2´æ´¢
+    uint8_t is_store_acting = 0; //æ‰‹æ“ä½œå­˜å‚¨çŠ¶æ€ 0æ— åŠ¨ä½œ 1å–å‡º 2å­˜å‚¨
 
     
-    uint8_t last_manual_store = 0; //ÉÏÒ»´ÎÊÖ¶¯´æ´¢×´Ì¬
+    uint8_t last_manual_store = 0; //ä¸Šä¸€æ¬¡æ‰‹åŠ¨å­˜å‚¨çŠ¶æ€
 }arm_ctrl_status_S;
 
 
@@ -90,29 +90,29 @@ typedef struct{
     KFS_NUM_E kfs_num = ONLY_ONE;
     bool start_to_autoctrl = false;
 
-    Point2D now_armPosition = {5.0f, 8.60f, 0.0f}; //»úĞµ±Ûµ±Ç°Î»ÖÃ
+    Point2D now_armPosition = {5.0f, 8.60f, 0.0f}; //æœºæ¢°è‡‚å½“å‰ä½ç½®
 
-    Point2D now_ChassisPosition = {5.0f, 8.60f, 0.0f}; //µ×ÅÌµ±Ç°Î»ÖÃ
+    Point2D now_ChassisPosition = {5.0f, 8.60f, 0.0f}; //åº•ç›˜å½“å‰ä½ç½®
 
-    Point2D now_chassis_speed = {0.0f, 0.0f, 0.0f}; //µ±Ç°µ×ÅÌËÙ¶È£¬µ¥Î»£ºÃ×/Ãë
+    Point2D now_chassis_speed = {0.0f, 0.0f, 0.0f}; //å½“å‰åº•ç›˜é€Ÿåº¦ï¼Œå•ä½ï¼šç±³/ç§’
 
-    Point2D targetKFS_pos[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //Ä¿±êKFSÎ»ÖÃ
+    Point2D targetKFS_pos[2] = {{0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f}}; //ç›®æ ‡KFSä½ç½®
 
     /**
-     * @brief Â·¾¶¹æ»® 
+     * @brief è·¯å¾„è§„åˆ’ 
      *                   
      */ 
     ARM_AUTO_STILLNESS_E now_state = STATE_DONE;
     MF_AutoCtrler::PathInformation_S pathInfo; 
     struct{
-        bool isrecalcPath = false; //ÊÇ·ñ¼ÆËã³öÍêÕûÂ·¾¶
-        bool canExtend = false; //ÊÇ·ñ¿ÉÒÔÕ¹¿ª£¬Âú×ãÕ¹¿ªÌõ¼şºóÍâ²¿½Ó¿Ú×Ô¶¯ÖÃtrue
-        float reach_finishTimeStore = 0.0f; //ÎüÈ¡KFSÍê³ÉÊ±¼äµã£¬µ¥Î»Ãë
+        bool isrecalcPath = false; //æ˜¯å¦è®¡ç®—å‡ºå®Œæ•´è·¯å¾„
+        bool canExtend = false; //æ˜¯å¦å¯ä»¥å±•å¼€ï¼Œæ»¡è¶³å±•å¼€æ¡ä»¶åå¤–éƒ¨æ¥å£è‡ªåŠ¨ç½®true
+        float reach_finishTimeStore = 0.0f; //å¸å–KFSå®Œæˆæ—¶é—´ç‚¹ï¼Œå•ä½ç§’
         bool isExtReach = false;
-        bool canChassisStart = false; //ÊÇ·ñ¿ÉÒÔÆô¶¯µ×ÅÌ
+        bool canChassisStart = false; //æ˜¯å¦å¯ä»¥å¯åŠ¨åº•ç›˜
 
-        bool isbackdone = false; //ÊÇ·ñ·µ»ØÍê³É
-        float back_time = 0.0f; //·µ»ØÊ±³¤
+        bool isbackdone = false; //æ˜¯å¦è¿”å›å®Œæˆ
+        float back_time = 0.0f; //è¿”å›æ—¶é•¿
     }flag;
 }ARM_AUTO_S;
 
@@ -148,17 +148,17 @@ public:
         this->registerMotor_Rotate(motor_ArmRotate);
         this->registerMotor_Pitch(motor_ArmPitch);
 
-         this->setPitchReversed(false); //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
-        this->setStretchReversed(true); //ï¿½ï¿½Õ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
+         this->setPitchReversed(false); //é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿ?
+        this->setStretchReversed(true); //é”Ÿæ–¤æ‹·å±•é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿ?
         this->setRotateReversed(false);
-        this->setLaunchReversed(true); //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
+        this->setLaunchReversed(true); //é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿ?
         start(osPriorityHigh-1, 512); 
         arm_ctrlStatus.init_flag = true;
     }
 
     void setArmStatus(ARM_Status_E status)
     {
-        // Î´ï¿½ï¿½ï¿½Ğ£×¼Ê±ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ£×¼Ì?ï¿½ï¿½ï¿½ï¿½ï¿½â±»ï¿½Ï²ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½Ç°ï¿½Ğµï¿½ï¿½Ö²ï¿½/ï¿½ï¿½ï¿½ï¿½
+        // æœªé”Ÿæ–¤æ‹·é”Ÿå«ï¼·é™…æ†‹æ‹·é”Ÿè¡—ä¼™æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿå«ï¼·ç»§?é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿè§£è¢«é”Ÿè¾ƒè¯§æ‹·çŠ¶æ€é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·å‰é”Ÿå«ç¢‰æ‹·é”Ÿè¡—è¯§æ‹·/é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·
         if(status != ARM_CALIBRATE && !isArmcalibrated())
             return;
 
@@ -166,10 +166,10 @@ public:
     }
 
     /**
-     * @brief ¼ÆËãÄ¿±êKFS¶ÔÓ¦µÄÂ·¾¶
-     * @param KFS1 µÚÒ»¸öKFS±àºÅ£¬·¶Î§0~12
-     * @param KFS2 µÚ¶ş¸öKFS±àºÅ£¬·¶Î§0~12
-     * @brief 0±íÊ¾Ã»ÓĞÒªÊ°È¡µÄKFS£¬Èç¹ûKFS1ºÍKFS2¶¼Îª0£¬Ôò·µ»Øfalse±íÊ¾Ã»ÓĞÓĞĞ§Ä¿±ê£»Èç¹ûÖÁÉÙÓĞÒ»¸öKFS±àºÅÓĞĞ§£¬Ôò¼ÆËãÂ·¾¶²¢·µ»Øtrue
+     * @brief è®¡ç®—ç›®æ ‡KFSå¯¹åº”çš„è·¯å¾„
+     * @param KFS1 ç¬¬ä¸€ä¸ªKFSç¼–å·ï¼ŒèŒƒå›´0~12
+     * @param KFS2 ç¬¬äºŒä¸ªKFSç¼–å·ï¼ŒèŒƒå›´0~12
+     * @brief 0è¡¨ç¤ºæ²¡æœ‰è¦æ‹¾å–çš„KFSï¼Œå¦‚æœKFS1å’ŒKFS2éƒ½ä¸º0ï¼Œåˆ™è¿”å›falseè¡¨ç¤ºæ²¡æœ‰æœ‰æ•ˆç›®æ ‡ï¼›å¦‚æœè‡³å°‘æœ‰ä¸€ä¸ªKFSç¼–å·æœ‰æ•ˆï¼Œåˆ™è®¡ç®—è·¯å¾„å¹¶è¿”å›true
      */
     bool set_TargetKFS(int KFS1, int KFS2)
     {
@@ -188,7 +188,7 @@ public:
             auto_ctrl_.kfs_num = ONLY_ONE;
 
         if(KFS1 == 0 && KFS2 == 0)
-            return false; //Ã»ï¿½ï¿½Ä¿ï¿½ï¿½KFSï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½
+            return false; //æ²¡é”Ÿæ–¤æ‹·ç›®é”Ÿæ–¤æ‹·KFSé”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·å¤±é”Ÿæ–¤æ‹·
         else
         {
             auto_ctrl_.targetKFS_pos[0] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[0])-1];
@@ -244,9 +244,9 @@ public:
     }
 
     /**
-     * @brief ÉèÖÃ×Ô¶¯Õ¹¿ª¹¦ÄÜ
-     * @param canExtend ÊÇ·ñ¿ÉÒÔÕ¹¿ª
-     * @details ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Ô½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¹ï¿½×¶ï¿?
+     * @brief è®¾ç½®è‡ªåŠ¨å±•å¼€åŠŸèƒ½
+     * @param canExtend æ˜¯å¦å¯ä»¥å±•å¼€
+     * @details é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿè§’å‡¤æ‹·é”Ÿæ–¤æ‹·è¶Šé”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿç§¸ç™¸æ‹·é”¥é”Ÿ?
      */
     void setAutocanExtend(bool canExtend)
     {
@@ -254,7 +254,7 @@ public:
     }
 
     /**
-     * @brief ·µ»ØÊÇ·ñµ×ÅÌ¿ÉÒÔÆô¶¯
+     * @brief è¿”å›æ˜¯å¦åº•ç›˜å¯ä»¥å¯åŠ¨
      *       
      */
     bool isAutoChassisCanStart()
@@ -268,7 +268,7 @@ public:
         laucnh_state,
         rotate_state,
         lower_state,
-        outstate1, //È¡ï¿½ï¿½×¨ï¿½ï¿½
+        outstate1, //å–é”Ÿæ–¤æ‹·ä¸“é”Ÿæ–¤æ‹·
         outstate2,
     };
 private:
@@ -286,7 +286,7 @@ private:
 
     Debug_Printf debug_uart = Debug_Printf(&huart8);
 
-    //¿ØÖÆº¯ÊıÏà¹Ø
+    //æ§åˆ¶å‡½æ•°ç›¸å…³
     void manualControl();
     bool manual_store();
     bool manual_takeout();
@@ -297,11 +297,11 @@ private:
     void idle();
     void debug();
 
-    //Ğ£×¼
+    //æ ¡å‡†
     void calibrateMotor();
 
     //=======================
-    //×Ô¶¯¿ØÖÆÏà¹Ø×´Ì¬º¯Êı
+    //è‡ªåŠ¨æ§åˆ¶ç›¸å…³çŠ¶æ€å‡½æ•°
 
     void auto_stillnessOne();
     void auto_stillnessTwo();
@@ -315,21 +315,21 @@ private:
 
     //=======================
     /**
-     * @brief ÅĞ¶ÏĞı×ªÊÇ·ñ±»ÔÊĞí
-     * @param rotate_angle_deg ÆÚÍûµÄĞı×ª½Ç¶È£¨¶È£©
-     * @return Ğı×ªÊÇ·ñ±»ÔÊĞí
-     * @details ¸ù¾İµ±Ç°¹Ø½Ú¸ß¶ÈÅĞ¶ÏĞı×ªÊÇ·ñ°²È«
-     * 1. H < 0.03m: [60¶È, 185¶È] (Ë®Æ½Î»ÖÃ)
-     * 2. 0.03m <= H < Safe_H: [60¶È, 185¶È] (»úĞµ±ÛÎ»ÖÃ)
-     * 3. H >= Safe_H: [0¶È, 360¶È] (°²È«Î»ÖÃ)
-     * ËµÃ÷£º½Ç¶È·¶Î§Îª rotate_angle µÄÓĞĞ§·¶Î§£¬³¬³ö·¶Î§½«±»²Ã¼ô
+     * @brief åˆ¤æ–­æ—‹è½¬æ˜¯å¦è¢«å…è®¸
+     * @param rotate_angle_deg æœŸæœ›çš„æ—‹è½¬è§’åº¦ï¼ˆåº¦ï¼‰
+     * @return æ—‹è½¬æ˜¯å¦è¢«å…è®¸
+     * @details æ ¹æ®å½“å‰å…³èŠ‚é«˜åº¦åˆ¤æ–­æ—‹è½¬æ˜¯å¦å®‰å…¨
+     * 1. H < 0.03m: [60åº¦, 185åº¦] (æ°´å¹³ä½ç½®)
+     * 2. 0.03m <= H < Safe_H: [60åº¦, 185åº¦] (æœºæ¢°è‡‚ä½ç½®)
+     * 3. H >= Safe_H: [0åº¦, 360åº¦] (å®‰å…¨ä½ç½®)
+     * è¯´æ˜ï¼šè§’åº¦èŒƒå›´ä¸º rotate_angle çš„æœ‰æ•ˆèŒƒå›´ï¼Œè¶…å‡ºèŒƒå›´å°†è¢«è£å‰ª
      */
     bool isRotateAllowed(float rotate_angle_deg) const
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
         const float safe_h = init_data_.safe_height_;
 
-        // ï¿½ï¿½ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
+        // é”Ÿæ–¤æ‹·é”Ÿæˆªé©æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·ä¸€é”Ÿæ–¤æ‹·
         const float norm_deg = rotate_angle_deg;
 
         if(h < 0.03f) return (norm_deg >= 60.0f && norm_deg <= 185.0f);
@@ -338,13 +338,13 @@ private:
     }
 
     /**
-     * @brief ·µ»Ø°²È«µÄĞı×ª½Ç¶È
-     * @details ¸ù¾İµ±Ç°¹Ø½Ú¸ß¶È²Ã¼ôĞı×ª½Ç¶È
-     * - H < 0.03m:  [60¶È, 180¶È]
-     * - 0.03m <= H < Safe_H: Ğı×ª·¶Î§ [60¶È, 180¶È]
-     * - H >= Safe_H: ËæÒâ×ª
-     * @param desired_deg ÆÚÍûµÄĞı×ª½Ç¶È£¨¶È£©
-     * @return °²È«µÄĞı×ª½Ç¶È
+     * @brief è¿”å›å®‰å…¨çš„æ—‹è½¬è§’åº¦
+     * @details æ ¹æ®å½“å‰å…³èŠ‚é«˜åº¦è£å‰ªæ—‹è½¬è§’åº¦
+     * - H < 0.03m:  [60åº¦, 180åº¦]
+     * - 0.03m <= H < Safe_H: æ—‹è½¬èŒƒå›´ [60åº¦, 180åº¦]
+     * - H >= Safe_H: éšæ„è½¬
+     * @param desired_deg æœŸæœ›çš„æ—‹è½¬è§’åº¦ï¼ˆåº¦ï¼‰
+     * @return å®‰å…¨çš„æ—‹è½¬è§’åº¦
      */
     float sanitizeRotateAngle(float desired_deg) const
     {
@@ -353,7 +353,7 @@ private:
 
         if(h >= safe_h - 0.01f) return desired_deg;
 
-        // ï¿½ï¿½ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
+        // é”Ÿæ–¤æ‹·é”Ÿæˆªé©æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·ä¸€é”Ÿæ–¤æ‹·
         const float norm_deg = desired_deg;
 
         if(norm_deg < 60.0f) return 60.0f;
@@ -367,9 +367,9 @@ private:
 protected:
 
     /**
-     * @brief »ñÈ¡µ±Ç°»úĞµ±ÛÎ»ÖÃ
-     * @details ÊµÊ±»ñÈ¡»úĞµ±Ûµ±Ç°Î»ÖÃ
-     * @return µ±Ç°»úĞµ±ÛÎ»ÖÃ
+     * @brief è·å–å½“å‰æœºæ¢°è‡‚ä½ç½®
+     * @details å®æ—¶è·å–æœºæ¢°è‡‚å½“å‰ä½ç½®
+     * @return å½“å‰æœºæ¢°è‡‚ä½ç½®
      */
     Point2D get_nowArmPosition()
     {
@@ -384,8 +384,8 @@ protected:
         #endif
     }
     /**
-     * @brief µ×ÅÌËÙ¶È
-     * @return µ×ÅÌËÙ¶È
+     * @brief åº•ç›˜é€Ÿåº¦
+     * @return åº•ç›˜é€Ÿåº¦
      */
     Point2D get_nowChassisSpeed()
     {
@@ -424,7 +424,7 @@ protected:
     }
 
     /**
-     * @brief »ñÈ¡µ±Ç°µ×ÅÌÎ»ÖÃ
+     * @brief è·å–å½“å‰åº•ç›˜ä½ç½®
      */
 
     Point2D get_nowChassisPose()
@@ -482,10 +482,10 @@ protected:
         int cnt = 0;
     }manual_control;
 
-    ButtonDetector button_detector_1 = ButtonDetector(0.200f); //Ë«»÷Èı»÷¼ì²âÆ÷£¬200ms¼ä¸ô
+    ButtonDetector button_detector_1 = ButtonDetector(0.200f); //åŒå‡»ä¸‰å‡»æ£€æµ‹å™¨ï¼Œ200msé—´éš”
 
 
-    store_state store_state_ = store_state::idle; //´æ´¢×´Ì¬»ú×´Ì¬
+    store_state store_state_ = store_state::idle; //å­˜å‚¨çŠ¶æ€æœºçŠ¶æ€
 };
 
 
