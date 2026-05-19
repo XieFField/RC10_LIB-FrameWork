@@ -81,36 +81,9 @@ M3508 arm_launchMotor(5, CAN3_Bus, true, false); M3508 arm_rotateMotor(7, CAN3_B
 M2006 arm_stretchMotor(8, CAN3_Bus, true, false);  
 DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
 #else
-M3508 arm_launchMotor(5, CAN1_Bus, true, false); M3508 arm_rotateMotor(7, CAN1_Bus, true, false);
-M2006 arm_stretchMotor(8, CAN1_Bus, true, false);  
-DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN1_Bus);
+
 #endif
 OIDEncoder oid_encoder(91, CAN2_Bus, 4096, 200);
-
-#if DEBUG_DJI_Motor
-
-#if SPEEDPLANNER_DEMO_DEBUG
-
-SpeedPlanner_Demo speedplanner_demo;
-#endif
-
-M2006 m2006_1(5, CAN1_Bus);
-
-DJI_MotorDemo dji_motor_demo;
-
-void dji_motor_Init()
-{
-    DJIGroupCAN1_High.addMotor(&m2006_1);
-
-    CAN1_Bus->registerMotor(&DJIGroupCAN1_High);
-
-    CAN1_Bus->registerMotor(&m2006_1);
-
-    CAN1_Bus->init();
-
-    m2006_1.pid_init(m2006_speed_pid_params, 0.0f, m2006_angle_pid_params, 0.0f);
-}
-#endif
 
 /*============================== debug  DJI_Motor ===============================*/
 
@@ -149,26 +122,20 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 void ALL_Setup_ConfigInit(void)
 {
 
-   HWT101CT* imu = HWT101CT::GetInstance(&huart1);
-   imu->InitUART();
-   TimeStamp::getInstance().init(&htim4); // ?????????????
-	
-   CAN_Motor_Init();
+    HWT101CT* imu = HWT101CT::GetInstance(&huart1);
+    imu->InitUART();
+    TimeStamp::getInstance().init(&htim4);
+        
+    CAN_Motor_Init();
 
-   ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
-   ARM_Controller.setArmStatus(ARM_IDLE);
-   
-   Weapon_Controller.register_launch_Motor(&Weapon_launchMotor);
-   Weapon_Controller.register_claw_1_Motor(&Weapon_claw_1_Motor);
-   Weapon_Controller.register_claw_2_Motor(&Weapon_claw_2_Motor);
-   Weapon_Controller.register_claw_3_Motor(&Weapon_claw_3_Motor);
-   Weapon_Controller.register_wrist_Motor(&Weapon_wristMotor);
-	Weapon_Controller.register_arm_Motor(&Weapon_armMotor);
+    ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
+    ARM_Controller.setArmStatus(ARM_IDLE);
+    
 
-   Weapon_Controller.init();
-   Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
+    Weapon_Controller.init(&Weapon_Claw1, &Weapon_Claw2, &Weapon_Claw3, &Weapon_Launch, &Weapon_Elbow, &Weapon_Wrist);
+    Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
 
-   // ChassisOmni.init();
+    // ChassisOmni.init();
 
     ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
@@ -200,20 +167,20 @@ void ALL_Setup_ConfigInit(void)
     chassis.init(chassis_init_config);
 #endif
 
-   Finite_StateMachine.registerArmSetup(&ARM_Controller);
-   Finite_StateMachine.registerChassisSetup(&ChassisOmni);
-   Finite_StateMachine.registerWeaponSageSetup(&Weapon_Controller);
+    Finite_StateMachine.registerArmSetup(&ARM_Controller);
+    Finite_StateMachine.registerChassisSetup(&ChassisOmni);
+    Finite_StateMachine.registerWeaponSageSetup(&Weapon_Controller);
 
-   Finite_StateMachine.init();
+    Finite_StateMachine.init();
 
-   oid_encoder.init();
+    oid_encoder.init();
 
-   CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
-   crsf_rc->init();
+    CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
+    crsf_rc->init();
 
-   set1->init(&usb_1,lader_install_offset ,arm_install_offset);
-   set1->locate_setup_init();
-   set1->set_startToLRL(true);
+    set1->init(&usb_1,lader_install_offset ,arm_install_offset);
+    set1->locate_setup_init();
+    set1->set_startToLRL(true);
 }
 
 void CAN_Motor_Init(void)
@@ -228,13 +195,6 @@ void CAN_Motor_Init(void)
    CAN1_Bus->registerMotor(&U8_1); CAN1_Bus->registerMotor(&U8_2);
    CAN1_Bus->registerMotor(&U8_3); CAN1_Bus->registerMotor(&U8_4);
 #else
-    DJIGroupCAN1_High.addMotor(&arm_launchMotor); DJIGroupCAN1_High.addMotor(&arm_rotateMotor);
-    DJIGroupCAN1_High.addMotor(&arm_stretchMotor); 
-
-    CAN1_Bus->registerMotor(&DJIGroupCAN1_High);
-    CAN1_Bus->registerMotor(&arm_launchMotor); CAN1_Bus->registerMotor(&arm_rotateMotor);
-    CAN1_Bus->registerMotor(&arm_stretchMotor);
-    CAN1_Bus->registerMotor(&arm_pitchMotor);
 
 #endif
 
@@ -249,82 +209,83 @@ void CAN_Motor_Init(void)
 
    CAN2_Bus->registerMotor(&Weapon_Elbow); 
 
-   CAN2_Bus->registerOIDEncoder(&oid_encoder); // ??????????????
+   CAN2_Bus->registerOIDEncoder(&oid_encoder); 
 
    CAN2_Bus->init();
 
 #if !TEST_TEMP
-   // CAN3 总线初始化：注册机械臂电机
-   DJIGroupCAN3_High.addMotor(&arm_launchMotor); DJIGroupCAN3_High.addMotor(&arm_rotateMotor);
-   DJIGroupCAN3_High.addMotor(&arm_stretchMotor); 
+    // CAN3 总线初始化：注册机械臂电机
+    DJIGroupCAN3_High.addMotor(&arm_launchMotor); DJIGroupCAN3_High.addMotor(&arm_rotateMotor);
+    DJIGroupCAN3_High.addMotor(&arm_stretchMotor); 
 
-   DJIGroupCAN3_High.addMotor(&Weapon_Wrist);
+    DJIGroupCAN3_High.addMotor(&Weapon_Wrist);
 
-   CAN3_Bus->registerMotor(&DJIGroupCAN3_High);
-   CAN3_Bus->registerMotor(&arm_launchMotor); CAN3_Bus->registerMotor(&arm_rotateMotor);
-   CAN3_Bus->registerMotor(&arm_stretchMotor); 
+    CAN3_Bus->registerMotor(&DJIGroupCAN3_High);
+    CAN3_Bus->registerMotor(&arm_launchMotor); CAN3_Bus->registerMotor(&arm_rotateMotor);
+    CAN3_Bus->registerMotor(&arm_stretchMotor); 
+    
+    CAN3_Bus->registerMotor(&Weapon_Wrist);
+    CAN3_Bus->registerMotor(&arm_pitchMotor);
+
    
-   CAN3_Bus->registerMotor(&Weapon_Wrist);
-   CAN3_Bus->registerMotor(&arm_pitchMotor);
 
-   
+    CAN3_Bus->init();
 
-	CAN3_Bus->init();
+    // 仅四舵轮舵向电机采用 8:1 减速比，其他 M3508（机械臂/发射等）保持原配置。
+    steer1.reset_GearRatio(8.0f);
+    steer2.reset_GearRatio(8.0f);
+    steer3.reset_GearRatio(8.0f);
+    steer4.reset_GearRatio(8.0f);
 
-   // 仅四舵轮舵向电机采用 8:1 减速比，其他 M3508（机械臂/发射等）保持原配置。
-   steer1.reset_GearRatio(8.0f);
-   steer2.reset_GearRatio(8.0f);
-   steer3.reset_GearRatio(8.0f);
-   steer4.reset_GearRatio(8.0f);
+    // 底盘转向电机 PID 参数初始化
+    steer1.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
+    steer2.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
+    steer3.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
+    steer4.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
 
-   // 底盘转向电机 PID 参数初始化
-   steer1.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
-   steer2.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
-   steer3.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
-   steer4.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
+        steer1.set_anglepid_circular(true);
+        steer2.set_anglepid_circular(true);
+        steer3.set_anglepid_circular(true);
+        steer4.set_anglepid_circular(true);
 
-    steer1.set_anglepid_circular(true);
-    steer2.set_anglepid_circular(true);
-    steer3.set_anglepid_circular(true);
-    steer4.set_anglepid_circular(true);
-
-   U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
-   U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
+    U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
+    U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
 #endif
 
-   // 机械臂电机 PID 参数初始化
-   
-   PID_Param_Config arm_3508_anglePID = m3508_angle_pid_params;
-   arm_3508_anglePID.output_limit = 450.0f;
-   
-   arm_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
+    // 机械臂电机 PID 参数初始化
+    
+    PID_Param_Config arm_3508_anglePID = m3508_angle_pid_params;
+    arm_3508_anglePID.output_limit = 450.0f;
+    
+    arm_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
 
-   PID_Param_Config arm_strech_anglePID = m2006_angle_pid_params;
-   arm_strech_anglePID.output_limit = 400.0f;
-   m2006_speed_pid_params.output_limit = 4500.0f;
-   arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
-   arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508Rotate_angle_pid_params, 0.0f);
-   arm_pitchMotor.reset_controlFrequency(100); // 俯仰电机降到 100Hz，减轻总线负载
-
-
-// ======== 武器系统 PID 参数初始化 ========
+    PID_Param_Config arm_strech_anglePID = m2006_angle_pid_params;
+    arm_strech_anglePID.output_limit = 400.0f;
+    m2006_speed_pid_params.output_limit = 4500.0f;
+    arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
+    arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508Rotate_angle_pid_params, 0.0f);
+    arm_pitchMotor.reset_controlFrequency(100); // 俯仰电机降到 100Hz，减轻总线负载
 
 
-	// PID_Param_Config weapon_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
-   // PID_Param_Config weapon_3508_anglePID = m3508_angle_pid_params;
-   
-   PID_Param_Config weapon_2006_speedPID = m2006_speed_pid_params;
-   PID_Param_Config weapon_2006_anglePID =m2006_angle_pid_params;
+    // ======== 武器系统 PID 参数初始化 ========
 
-   weapon_3508_anglePID.output_limit=200.0f;
-   weapon_3508_speedPID.output_limit=15000.0f;
-   weapon_2006_speedPID.output_limit=4500;
-   weapon_2006_anglePID.output_limit=500;
-   
-//   Weapon_launchMotor_1_master.pid_init(weapon_3508_speedPID, 0.0f,weapon_3508_anglePID, 0.0f);
-//   Weapon_launchMotor_2_master.pid_init(weapon_3508_speedPID, 0.0f, weapon_3508_anglePID, 0.0f);
-//   
-//   Weapon_clawMotor.pid_init(weapon_2006_speedPID, 0.0f,  weapon_2006_anglePID, 0.0f);
-//   Weapon_traverseMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
-   Weapon_wristMotor.reset_controlFrequency(100);
+
+    PID_Param_Config weapon_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
+    PID_Param_Config weapon_3508_anglePID = m3508_angle_pid_params;
+    
+    PID_Param_Config weapon_2006_speedPID = m2006_speed_pid_params;
+    PID_Param_Config weapon_2006_anglePID =m2006_angle_pid_params;
+
+    weapon_3508_anglePID.output_limit=200.0f;
+    weapon_3508_speedPID.output_limit=15000.0f;
+    weapon_2006_speedPID.output_limit=4500;
+    weapon_2006_anglePID.output_limit=500;
+    
+    Weapon_Launch.pid_init(weapon_3508_speedPID, 0.0f, weapon_3508_anglePID, 0.0f);
+    Weapon_Claw1.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
+    Weapon_Claw2.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
+    Weapon_Claw3.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
+    Weapon_Wrist.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
+
+    Weapon_Elbow.reset_controlFrequency(100); // 肘部电机降到 100Hz，减轻总线负载
 }

@@ -49,7 +49,7 @@ void Robot_WeaponSage_Setup::loop()
 		}
         case WEAPONSAGE_AUTO_CONTROL:
 		{	
-			autoControl();
+			//autoControl();
             break;
 	    }
 		case WEAPONSAGE_CALIBRATE:
