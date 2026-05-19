@@ -50,11 +50,11 @@ void IMU_test:: loop()
 {
 	  HAL_StatusTypeDef status;
   
-	// ×¢£ºdevAddrĞè×óÒÆ1Î»£¨HAL¿âÒªÇó7Î»µØÖ·<<1£¬Ó²¼ş×Ô¶¯´¦Àí¶ÁĞ´Î»£©
+	// æ³¨ï¼šdevAddréœ€å·¦ç§»1ä½ï¼ˆHALåº“è¦æ±‚7ä½åœ°å€<<1ï¼Œç¡¬ä»¶è‡ªåŠ¨å¤„ç†è¯»å†™ä½ï¼‰
   ok1 = HAL_I2C_Master_Transmit(&hi2c5, (JY61_ADDR << 1), &reg, 1, 100);
 
   osDelay(10);
-  // ²½Öè2£º´ÓJY61¶ÁÈ¡Ö¸¶¨³¤¶ÈµÄÊı¾İ
+  // æ­¥éª¤2ï¼šä»JY61è¯»å–æŒ‡å®šé•¿åº¦çš„æ•°æ®
   ok2 = HAL_I2C_Master_Receive(&hi2c5, (JY61_ADDR << 1), buf,6, 100);
 
   

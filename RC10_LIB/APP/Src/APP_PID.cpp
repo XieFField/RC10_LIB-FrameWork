@@ -10,26 +10,26 @@ float PID_Position::pid_calc(float target, float feedback)
     if (isFirst_)
     {
         isFirst_ = false;
-        // ÔÚµÚÒ»´Î¼ÆËãÊ±£¬dt ¿ÉÄÜ·Ç³£´ó»ò²»È·¶¨£¬Ê¹ÓÃÄ¬ÈÏÖµ
+        // åœ¨ç¬¬ä¸€æ¬¡è®¡ç®—æ—¶ï¼Œdt å¯èƒ½éå¸¸å¤§æˆ–ä¸ç¡®å®šï¼Œä½¿ç”¨é»˜è®¤å€¼
         dt_ = dt_error_; 
-        error_last_ = target - feedback; // ³õÊ¼»¯ÉÏ´ÎÎó²î
+        error_last_ = target - feedback; // åˆå§‹åŒ–ä¸Šæ¬¡è¯¯å·®
         feedback_last_ = feedback;
     }
 
-    // ¶Ôdt½øĞĞÒì³£Öµ´¦Àí
-    if (dt_ <= 0.0f || dt_ > 0.1f) // Èç¹ûdtĞ¡ÓÚµÈÓÚ0»ò´óÓÚ100ms£¬ÔòÈÏÎªÒì³£
+    // å¯¹dtè¿›è¡Œå¼‚å¸¸å€¼å¤„ç†
+    if (dt_ <= 0.0f || dt_ > 0.1f) // å¦‚æœdtå°äºç­‰äº0æˆ–å¤§äº100msï¼Œåˆ™è®¤ä¸ºå¼‚å¸¸
     {
         dt_ = dt_error_;
     }
 
     // calc error
-    // ¼ÆËãÔ­Ê¼Îó²î
+    // è®¡ç®—åŸå§‹è¯¯å·®
     error_ = target - feedback;
 
     if (is_circular_)
     {
-        // »·ĞÎÄ£Ê½£ºÑ°ÕÒ×î¶ÌÂ·¾¶£¬½«Îó²îÏŞÖÆÔÚ [-180, 180]
-        // ÕâÑù¿ÉÒÔ¼æÈİ (-180~180) ºÍ (0~360) Á½ÖÖ¸ñÊ½
+        // ç¯å½¢æ¨¡å¼ï¼šå¯»æ‰¾æœ€çŸ­è·¯å¾„ï¼Œå°†è¯¯å·®é™åˆ¶åœ¨ [-180, 180]
+        // è¿™æ ·å¯ä»¥å…¼å®¹ (-180~180) å’Œ (0~360) ä¸¤ç§æ ¼å¼
         while (error_ > 180.0f)
             error_ -= 360.0f;
         while (error_ < -180.0f)
@@ -44,7 +44,7 @@ float PID_Position::pid_calc(float target, float feedback)
     // calc P
     P_Term = params_.kp * error_;
 
-    // calc I (ÌİĞÎ»ı·Ö)
+    // calc I (æ¢¯å½¢ç§¯åˆ†)
     if(fabsf(error_) < I_SeparaThreshold_ && I_SeparaThreshold_ > 0)
     {
         I_Term += params_.ki * (error_ + error_last_) * dt_ / 2.0f;
@@ -56,13 +56,13 @@ float PID_Position::pid_calc(float target, float feedback)
         I_Term = 0;
     }
 
-    // calc D (Î¢·ÖÏÈĞĞ)
+    // calc D (å¾®åˆ†å…ˆè¡Œ)
     if (dt_ > 0.0f)
     {
         float diff_feedback = feedback - feedback_last_;
         if (is_circular_)
         {
-            // ´¦Àí»·ĞÎ
+            // å¤„ç†ç¯å½¢
             if (diff_feedback > 180.0f)
                 diff_feedback -= 360.0f;
             else if (diff_feedback < -180.0f)
@@ -96,11 +96,11 @@ void PID_Position::set_params(const PID_Param_Config& params, float I_SeparaThre
 
 /* =================================================================================== */
 
-//ÔöÁ¿Ê½
+//å¢é‡å¼
 
 void PID_Incremental::calc_track_D(float expect, float dt)
 {
-    //¶ş½×¸ú×ÙÎ¢·Ö
+    //äºŒé˜¶è·Ÿè¸ªå¾®åˆ†
     float fh = -td_ratio_ * td_ratio_ *(td_v1_ - expect) - 2.0f * td_v2_ * td_ratio_;
 
     td_v1_ += td_v2_ * dt;
@@ -115,114 +115,114 @@ void PID_Incremental::set_params(const PID_Param_Config& params, float td_ratio)
 
 void CamZ_Ctrl::reset(float z_now)
 {
-    z_est_ = z_now; // ¹À¼ÆÖµ¶ÔÆëµ±Ç°¸ß¶È¡£
-    z_ref_ = z_now; // Æ½»¬²Î¿¼¶ÔÆëµ±Ç°¸ß¶È¡£
-    z_err_ = 0.0f; // ÇåÎó²î¡£
-    i_sum_ = 0.0f; // Çå»ı·Ö¡£
+    z_est_ = z_now; // ä¼°è®¡å€¼å¯¹é½å½“å‰é«˜åº¦ã€‚
+    z_ref_ = z_now; // å¹³æ»‘å‚è€ƒå¯¹é½å½“å‰é«˜åº¦ã€‚
+    z_err_ = 0.0f; // æ¸…è¯¯å·®ã€‚
+    i_sum_ = 0.0f; // æ¸…ç§¯åˆ†ã€‚
 
-    dt_ = 0.01f; // ÖØÖÃÄ¬ÈÏÖÜÆÚ¡£
-    last_t_ = TimeStamp::getInstance().getSeconds(); // ¼ÇÂ¼µ±Ç°Ê±¼ä¡£
-    first_ = true; // ±ê¼ÇÏÂÒ»´ÎÎªÊ×Ö¡¡£
+    dt_ = 0.01f; // é‡ç½®é»˜è®¤å‘¨æœŸã€‚
+    last_t_ = TimeStamp::getInstance().getSeconds(); // è®°å½•å½“å‰æ—¶é—´ã€‚
+    first_ = true; // æ ‡è®°ä¸‹ä¸€æ¬¡ä¸ºé¦–å¸§ã€‚
 
-    done_ = false; // ÇåÍê³ÉÎ»¡£
-    done_t_ = 0.0f; // ÇåÍê³ÉÀÛ¼ÆÊ±¼ä¡£
+    done_ = false; // æ¸…å®Œæˆä½ã€‚
+    done_t_ = 0.0f; // æ¸…å®Œæˆç´¯è®¡æ—¶é—´ã€‚
 }
 
 void CamZ_Ctrl::step_ref(float z_ref, float dt)
 {
-    float max_step = param_.ref_rate * dt; // ±¾ÖÜÆÚ²Î¿¼×î´ó±ä»¯Á¿¡£
-    float delta = z_ref - z_ref_; // Ä¿±êÓëÆ½»¬²Î¿¼µÄ²îÖµ¡£
+    float max_step = param_.ref_rate * dt; // æœ¬å‘¨æœŸå‚è€ƒæœ€å¤§å˜åŒ–é‡ã€‚
+    float delta = z_ref - z_ref_; // ç›®æ ‡ä¸å¹³æ»‘å‚è€ƒçš„å·®å€¼ã€‚
 
     if (delta > max_step)
     {
-        z_ref_ += max_step; // ÕıÏòÏŞËÙ¸ú×Ù¡£
+        z_ref_ += max_step; // æ­£å‘é™é€Ÿè·Ÿè¸ªã€‚
     }
     else if (delta < -max_step)
     {
-        z_ref_ -= max_step; // ·´ÏòÏŞËÙ¸ú×Ù¡£
+        z_ref_ -= max_step; // åå‘é™é€Ÿè·Ÿè¸ªã€‚
     }
     else
     {
-        z_ref_ = z_ref; // ²îÖµÔÚÏŞËÙÄÚÖ±½Ó¶ÔÆë¡£
+        z_ref_ = z_ref; // å·®å€¼åœ¨é™é€Ÿå†…ç›´æ¥å¯¹é½ã€‚
     }
 }
 
 void CamZ_Ctrl::fuse_cam(float z_cam, float z_vel)
 {
-    float z_now = z_cam + z_vel * param_.cam_delay; // ÓÃËÙ¶È½«ÑÓ³ÙÑù±¾ÍâÍÆµ½µ±Ç°¡£
-    float dz = z_now - z_est_; // ´´ĞÂÁ¿: Ïà»úÓë¹À¼ÆµÄ²î¡£
+    float z_now = z_cam + z_vel * param_.cam_delay; // ç”¨é€Ÿåº¦å°†å»¶è¿Ÿæ ·æœ¬å¤–æ¨åˆ°å½“å‰ã€‚
+    float dz = z_now - z_est_; // åˆ›æ–°é‡: ç›¸æœºä¸ä¼°è®¡çš„å·®ã€‚
 
     if (fabsf(dz) < param_.cam_db)
     {
-        return; // Ğ¡ÓÚËÀÇøÊÓÎªÔëÉù²»ÈÚºÏ¡£
+        return; // å°äºæ­»åŒºè§†ä¸ºå™ªå£°ä¸èåˆã€‚
     }
 
     if (fabsf(dz) > param_.cam_gate)
     {
-        return; // ´óÓÚÃÅÏŞÊÓÎªÒì³£Öµ²»ÈÚºÏ¡£
+        return; // å¤§äºé—¨é™è§†ä¸ºå¼‚å¸¸å€¼ä¸èåˆã€‚
     }
 
-    z_est_ += param_.cam_gain * dz; // Ğ¡È¨ÖØ¾ÀÆ«±ÜÃâÌø±ä¡£
+    z_est_ += param_.cam_gain * dz; // å°æƒé‡çº åé¿å…è·³å˜ã€‚
 }
 
 void CamZ_Ctrl::step_done(float z_vel, float dt)
 {
     if (fabsf(z_err_) < param_.done_err && fabsf(z_vel) < param_.done_vel)
     {
-        done_t_ += dt; // Îó²îºÍËÙ¶È¶¼Âú×ãÊ±ÀÛ¼ÆÎÈ¶¨Ê±¼ä¡£
+        done_t_ += dt; // è¯¯å·®å’Œé€Ÿåº¦éƒ½æ»¡è¶³æ—¶ç´¯è®¡ç¨³å®šæ—¶é—´ã€‚
     }
     else
     {
-        done_t_ = 0.0f; // Ìõ¼şÆÆ»µÔòÖØĞÂ¼ÆÊ±¡£
+        done_t_ = 0.0f; // æ¡ä»¶ç ´ååˆ™é‡æ–°è®¡æ—¶ã€‚
     }
 
-    done_ = (done_t_ >= param_.done_time); // ´ïµ½×îĞ¡³ÖĞøÊ±¼ä²ÅÅĞ¶¨Íê³É¡£
+    done_ = (done_t_ >= param_.done_time); // è¾¾åˆ°æœ€å°æŒç»­æ—¶é—´æ‰åˆ¤å®šå®Œæˆã€‚
 }
 
 float CamZ_Ctrl::run_step(float z_ref, float z_cam, bool cam_new, float z_vel)
 {
-    float now_t = TimeStamp::getInstance().getSeconds(); // ¶ÁÈ¡µ±Ç°Ê±¼ä¡£
-    dt_ = now_t - last_t_; // ¼ÆËãÀëÉ¢ÖÜÆÚ¡£
+    float now_t = TimeStamp::getInstance().getSeconds(); // è¯»å–å½“å‰æ—¶é—´ã€‚
+    dt_ = now_t - last_t_; // è®¡ç®—ç¦»æ•£å‘¨æœŸã€‚
 
     if (first_)
     {
-        first_ = false; // ½öÊ×´Î½øÈëÖ´ĞĞ¡£
-        dt_ = 0.01f; // Ê×Ö¡Ç¿ÖÆÄ¬ÈÏÖÜÆÚ·ÀÍ»±ä¡£
+        first_ = false; // ä»…é¦–æ¬¡è¿›å…¥æ‰§è¡Œã€‚
+        dt_ = 0.01f; // é¦–å¸§å¼ºåˆ¶é»˜è®¤å‘¨æœŸé˜²çªå˜ã€‚
     }
 
     if (dt_ <= 0.0f || dt_ > 0.1f)
     {
-        dt_ = 0.01f; // ÖÜÆÚÒì³£»ØÍËÄ¬ÈÏÖµ¡£
+        dt_ = 0.01f; // å‘¨æœŸå¼‚å¸¸å›é€€é»˜è®¤å€¼ã€‚
     }
 
-    last_t_ = now_t; // ¸üĞÂÊ±¼ä´Á¡£
+    last_t_ = now_t; // æ›´æ–°æ—¶é—´æˆ³ã€‚
 
-    z_est_ += z_vel * dt_; // ±àÂëÆ÷ËÙ¶È»ı·Ö×ö¸ßÆµÔ¤²â¡£
+    z_est_ += z_vel * dt_; // ç¼–ç å™¨é€Ÿåº¦ç§¯åˆ†åšé«˜é¢‘é¢„æµ‹ã€‚
 
-    step_ref(z_ref, dt_); // Ä¿±êÏÈ×öĞ±ÆÂÏŞËÙ¡£
+    step_ref(z_ref, dt_); // ç›®æ ‡å…ˆåšæ–œå¡é™é€Ÿã€‚
 
     if (cam_new)
     {
-        fuse_cam(z_cam, z_vel); // ĞÂÏà»úÑù±¾µ½´ïÊ±ÔÙÈÚºÏ¡£
+        fuse_cam(z_cam, z_vel); // æ–°ç›¸æœºæ ·æœ¬åˆ°è¾¾æ—¶å†èåˆã€‚
     }
 
-    z_err_ = z_ref_ - z_est_; // Î»ÖÃÎó²î¡£
+    z_err_ = z_ref_ - z_est_; // ä½ç½®è¯¯å·®ã€‚
     if (fabsf(z_err_) < param_.i_err && param_.i_err > 0.0f)
     {
-        i_sum_ += z_err_ * dt_; // Ğ¡Îó²îÇø»ı·ÖÏû¾²²î¡£
+        i_sum_ += z_err_ * dt_; // å°è¯¯å·®åŒºç§¯åˆ†æ¶ˆé™å·®ã€‚
     }
 
     if (param_.i_lim > 0.0f)
     {
-        i_sum_ = constrain(i_sum_, -param_.i_lim, param_.i_lim); // »ı·ÖÏŞ·ù·À·çup¡£
+        i_sum_ = constrain(i_sum_, -param_.i_lim, param_.i_lim); // ç§¯åˆ†é™å¹…é˜²é£upã€‚
     }
 
-    float out = param_.kp * z_err_ + param_.ki * i_sum_ - param_.kv * z_vel; // PI¼ÓËÙ¶È×èÄáÏî¡£
-    out = constrain(out, -param_.out_lim, param_.out_lim); // Êä³öÏŞ·ùÎªÄ¿±êrpm¡£
+    float out = param_.kp * z_err_ + param_.ki * i_sum_ - param_.kv * z_vel; // PIåŠ é€Ÿåº¦é˜»å°¼é¡¹ã€‚
+    out = constrain(out, -param_.out_lim, param_.out_lim); // è¾“å‡ºé™å¹…ä¸ºç›®æ ‡rpmã€‚
 
-    step_done(z_vel, dt_); // ¸üĞÂµ½Î»ÅĞ¶¨¡£
+    step_done(z_vel, dt_); // æ›´æ–°åˆ°ä½åˆ¤å®šã€‚
 
-    return out; // ·µ»Ø launch rpm Ö¸Áî¡£
+    return out; // è¿”å› launch rpm æŒ‡ä»¤ã€‚
 }
 
 float PID_Incremental::pid_calc(float target, float feedback)
@@ -230,13 +230,13 @@ float PID_Incremental::pid_calc(float target, float feedback)
     float current_time_s = TimeStamp::getInstance().getSeconds();
     dt_ = current_time_s - last_time_s_;
 
-    // ¶Ôdt½øĞĞÒì³£Öµ´¦Àí
+    // å¯¹dtè¿›è¡Œå¼‚å¸¸å€¼å¤„ç†
     if (dt_ <= 0.0f)
     {
         dt_ = 0.001f;
     }
 
-    // 1. Èç¹ûÆôÓÃtd
+    // 1. å¦‚æœå¯ç”¨td
     float current_target = target;
     if(td_ratio_ > 0.0f)
     {
@@ -244,7 +244,7 @@ float PID_Incremental::pid_calc(float target, float feedback)
         current_target = td_v1_;
     }
 
-    // 2. ¼ÆËãÎó²î
+    // 2. è®¡ç®—è¯¯å·®
     error_ = current_target - feedback;
     if(fabs(error_) < params_.deadband)
         error_ = 0.0f;
@@ -258,15 +258,15 @@ float PID_Incremental::pid_calc(float target, float feedback)
     }
     else
     {
-        // 3. ¼ÆËãPIDÔöÁ¿
-        // PÏîÔöÁ¿
+        // 3. è®¡ç®—PIDå¢é‡
+        // Pé¡¹å¢é‡
         P_Term = params_.kp * (error_ - error_last_);
 
-        // IÏîÔöÁ¿
+        // Ié¡¹å¢é‡
         I_Term = params_.ki * error_;
         I_Term = constrain(I_Term, -params_.I_Outlimit, params_.I_Outlimit);
         
-        // DÏîÔöÁ¿
+        // Dé¡¹å¢é‡
         if (dt_ > 0.0f)
         {
             D_Term = params_.kd * (error_ - 2.0f * error_last_ + error_earlier_);
@@ -276,20 +276,20 @@ float PID_Incremental::pid_calc(float target, float feedback)
             D_Term = 0.0f;
         }
 
-        // ¼ÆËãµ±Ç°×ÜÊä³ö = ÉÏ´Î×ÜÊä³ö + ±¾´Î×ÜÔöÁ¿
+        // è®¡ç®—å½“å‰æ€»è¾“å‡º = ä¸Šæ¬¡æ€»è¾“å‡º + æœ¬æ¬¡æ€»å¢é‡
         output_ = output_last_ + (P_Term + I_Term + D_Term);
     }
 
-    // Êä³öÏŞ·ù
+    // è¾“å‡ºé™å¹…
     output_ = constrain(output_, -params_.output_limit, params_.output_limit);
 
-    // ¸üĞÂÀúÊ·Öµ
+    // æ›´æ–°å†å²å€¼
     error_earlier_ = error_last_;
     error_last_ = error_;
-    output_last_ = output_; // ±£´æµ±Ç°×ÜÊä³ö£¬×÷ÎªÏÂ´Î¼ÆËãµÄ¡°ÉÏ´Î×ÜÊä³ö¡±
+    output_last_ = output_; // ä¿å­˜å½“å‰æ€»è¾“å‡ºï¼Œä½œä¸ºä¸‹æ¬¡è®¡ç®—çš„â€œä¸Šæ¬¡æ€»è¾“å‡ºâ€
     last_time_s_ = current_time_s;
 
-    output_last_ = output_; // ±£´æµ±Ç°×ÜÊä³ö£¬×÷ÎªÏÂ´Î¼ÆËãµÄ¡°ÉÏ´Î×ÜÊä³ö¡±
+    output_last_ = output_; // ä¿å­˜å½“å‰æ€»è¾“å‡ºï¼Œä½œä¸ºä¸‹æ¬¡è®¡ç®—çš„â€œä¸Šæ¬¡æ€»è¾“å‡ºâ€
 
     return output_;
 }
@@ -347,7 +347,7 @@ PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
     .deadband = 0.1f 
 };
 
-// ËÄ¶æÂÖ¶æÏòµç»ú PID
+// å››èˆµè½®èˆµå‘ç”µæœº PID
 PID_Param_Config foursteer_steer_speed_pid_params = {
     // .kp = 150.0f,
     // .ki = 0.8f,

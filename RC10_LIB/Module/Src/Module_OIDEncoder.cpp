@@ -11,116 +11,116 @@ std::size_t OIDEncoder::packCommand(CanFrame outFrames[], std::size_t maxFrames)
     cf.DLC = 8;
     cf.isextended = isExtended_;
     cf.ID = device_id_;
-    std::memset(cf.data, 0, 8); // Çå¿ÕÊı¾İÇø£¬±ÜÃâ²ĞÁôÊı¾İ¸ÉÈÅ
+    std::memset(cf.data, 0, 8); // æ¸…ç©ºæ•°æ®åŒºï¼Œé¿å…æ®‹ç•™æ•°æ®å¹²æ‰°
     switch(now_cmd_)
     {
-        case OID_CMD::READ_ANGLE: //¶ÁÈ¡±àÂëÆ÷Öµ
+        case OID_CMD::READ_ANGLE: //è¯»å–ç¼–ç å™¨å€¼
         {
             cf.DLC = 8;
-            cf.data[0] = 0x04; //Êı¾İ³¤¶È
-            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //±àÂëÆ÷µØÖ·
-            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //Ö¸ÁîÂë
-            cf.data[3] = 0x00; //Êı¾İ1
+            cf.data[0] = 0x04; //æ•°æ®é•¿åº¦
+            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //ç¼–ç å™¨åœ°å€
+            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //æŒ‡ä»¤ç 
+            cf.data[3] = 0x00; //æ•°æ®1
 
-            now_cmd_ = OID_CMD::NONE_; // ¶ÁÃüÁî·¢ËÍºóÁ¢¼´Çå³ı£¬±ÜÃâÖØ¸´·¢ËÍ
+            now_cmd_ = OID_CMD::NONE_; // è¯»å‘½ä»¤å‘é€åç«‹å³æ¸…é™¤ï¼Œé¿å…é‡å¤å‘é€
             break;
         }
 
-        case OID_CMD::SET_ENCODER_ID: //ÉèÖÃ±àÂëÆ÷µØÖ·
+        case OID_CMD::SET_ENCODER_ID: //è®¾ç½®ç¼–ç å™¨åœ°å€
         {
             cf.DLC = 8;
-            cf.data[0] = 0x04; //Êı¾İ³¤¶È
-            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //±àÂëÆ÷µØÖ·
-            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //Ö¸ÁîÂë
-            cf.data[3] = data_[0]; //Êı¾İ1
+            cf.data[0] = 0x04; //æ•°æ®é•¿åº¦
+            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //ç¼–ç å™¨åœ°å€
+            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //æŒ‡ä»¤ç 
+            cf.data[3] = data_[0]; //æ•°æ®1
 
-            now_cmd_ = OID_CMD::NONE_; // ÉèÖÃÃüÁî·¢ËÍºóÁ¢¼´Çå³ı£¬±ÜÃâÖØ¸´·¢ËÍ
+            now_cmd_ = OID_CMD::NONE_; // è®¾ç½®å‘½ä»¤å‘é€åç«‹å³æ¸…é™¤ï¼Œé¿å…é‡å¤å‘é€
             break;
         }
 
-        case OID_CMD::SET_BOARD_RATE: //ÉèÖÃ²¨ÌØÂÊ
+        case OID_CMD::SET_BOARD_RATE: //è®¾ç½®æ³¢ç‰¹ç‡
         {
             cf.DLC = 8;
-            cf.data[0] = 0x04; //Êı¾İ³¤¶È
-            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //±àÂëÆ÷µØÖ·
-            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //Ö¸ÁîÂë
-            cf.data[3] = data_[0]; //Êı¾İ1
+            cf.data[0] = 0x04; //æ•°æ®é•¿åº¦
+            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //ç¼–ç å™¨åœ°å€
+            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //æŒ‡ä»¤ç 
+            cf.data[3] = data_[0]; //æ•°æ®1
 
-            now_cmd_ = OID_CMD::NONE_; // ÉèÖÃÃüÁî·¢ËÍºóÁ¢¼´Çå³ı£¬±ÜÃâÖØ¸´·¢ËÍ
+            now_cmd_ = OID_CMD::NONE_; // è®¾ç½®å‘½ä»¤å‘é€åç«‹å³æ¸…é™¤ï¼Œé¿å…é‡å¤å‘é€
             break;
         }
 
         case OID_CMD::SET_ENCODER_MODE:
         {
             cf.DLC = 8;
-            cf.data[0] = 0x04; //Êı¾İ³¤¶È
-            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //±àÂëÆ÷µØÖ·
-            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //Ö¸ÁîÂë
-            cf.data[3] = data_[0]; //Êı¾İ1
+            cf.data[0] = 0x04; //æ•°æ®é•¿åº¦
+            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //ç¼–ç å™¨åœ°å€
+            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //æŒ‡ä»¤ç 
+            cf.data[3] = data_[0]; //æ•°æ®1
 
-            now_cmd_ = OID_CMD::NONE_; // ÉèÖÃÃüÁî·¢ËÍºóÁ¢¼´Çå³ı£¬±ÜÃâÖØ¸´·¢ËÍ
+            now_cmd_ = OID_CMD::NONE_; // è®¾ç½®å‘½ä»¤å‘é€åç«‹å³æ¸…é™¤ï¼Œé¿å…é‡å¤å‘é€
             break;
         }
 
         case OID_CMD::SET_FEEDBACK_TIME:
         {
             cf.DLC = 8;
-            cf.data[0] = 0x05; //Êı¾İ³¤¶È
-            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //±àÂëÆ÷µØÖ·
-            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //Ö¸ÁîÂë
-            cf.data[3] = data_[1]; //Êı¾İ1
-            cf.data[4] = data_[0]; //Êı¾İ2
+            cf.data[0] = 0x05; //æ•°æ®é•¿åº¦
+            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //ç¼–ç å™¨åœ°å€
+            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //æŒ‡ä»¤ç 
+            cf.data[3] = data_[1]; //æ•°æ®1
+            cf.data[4] = data_[0]; //æ•°æ®2
 
-            now_cmd_ = OID_CMD::NONE_; // ÉèÖÃÃüÁî·¢ËÍºóÁ¢¼´Çå³ı£¬±ÜÃâÖØ¸´·¢ËÍ
+            now_cmd_ = OID_CMD::NONE_; // è®¾ç½®å‘½ä»¤å‘é€åç«‹å³æ¸…é™¤ï¼Œé¿å…é‡å¤å‘é€
             break;
         }
 
         case OID_CMD::SET_ZERO:
         {
             cf.DLC = 8;
-            cf.data[0] = 0x04; //Êı¾İ³¤¶È
-            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //±àÂëÆ÷µØÖ·
-            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //Ö¸ÁîÂë
-            cf.data[3] = 0x00; //Êı¾İ1
+            cf.data[0] = 0x04; //æ•°æ®é•¿åº¦
+            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //ç¼–ç å™¨åœ°å€
+            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //æŒ‡ä»¤ç 
+            cf.data[3] = 0x00; //æ•°æ®1
 
-            now_cmd_ = OID_CMD::NONE_; // ÉèÖÃÃüÁî·¢ËÍºóÁ¢¼´Çå³ı£¬±ÜÃâÖØ¸´·¢ËÍ
+            now_cmd_ = OID_CMD::NONE_; // è®¾ç½®å‘½ä»¤å‘é€åç«‹å³æ¸…é™¤ï¼Œé¿å…é‡å¤å‘é€
             break;
         }
 
         case OID_CMD::SET_REVERSE:
         {
             cf.DLC = 8;
-            cf.data[0] = 0x04; //Êı¾İ³¤¶È
-            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //±àÂëÆ÷µØÖ·
-            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //Ö¸ÁîÂë
-            cf.data[3] = data_[0]; //Êı¾İ1
+            cf.data[0] = 0x04; //æ•°æ®é•¿åº¦
+            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //ç¼–ç å™¨åœ°å€
+            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //æŒ‡ä»¤ç 
+            cf.data[3] = data_[0]; //æ•°æ®1
 
-            now_cmd_ = OID_CMD::NONE_; // ÉèÖÃÃüÁî·¢ËÍºóÁ¢¼´Çå³ı£¬±ÜÃâÖØ¸´·¢ËÍ
+            now_cmd_ = OID_CMD::NONE_; // è®¾ç½®å‘½ä»¤å‘é€åç«‹å³æ¸…é™¤ï¼Œé¿å…é‡å¤å‘é€
             break;
         }
 
         case OID_CMD::READ_ANGLE_SPEED:
         {
             cf.DLC = 8;
-            cf.data[0] = 0x04; //Êı¾İ³¤¶È
-            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //±àÂëÆ÷µØÖ·
-            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //Ö¸ÁîÂë
-            cf.data[3] = 0x00; //Êı¾İ1
+            cf.data[0] = 0x04; //æ•°æ®é•¿åº¦
+            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //ç¼–ç å™¨åœ°å€
+            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //æŒ‡ä»¤ç 
+            cf.data[3] = 0x00; //æ•°æ®1
 
-            now_cmd_ = OID_CMD::NONE_; // ¶ÁÃüÁî·¢ËÍºóÁ¢¼´Çå³ı£¬±ÜÃâÖØ¸´·¢ËÍ
+            now_cmd_ = OID_CMD::NONE_; // è¯»å‘½ä»¤å‘é€åç«‹å³æ¸…é™¤ï¼Œé¿å…é‡å¤å‘é€
             break;
         }
 
         case OID_CMD::SET_ANGLE_SPEED_HZ:
         {
             cf.DLC = 8;
-            cf.data[0] = 0x05; //Êı¾İ³¤¶È
-            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //±àÂëÆ÷µØÖ·
-            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //Ö¸ÁîÂë
-            cf.data[3] = data_[0]; //Êı¾İ1
-            cf.data[4] = data_[1]; //Êı¾İ2
+            cf.data[0] = 0x05; //æ•°æ®é•¿åº¦
+            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //ç¼–ç å™¨åœ°å€
+            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //æŒ‡ä»¤ç 
+            cf.data[3] = data_[0]; //æ•°æ®1
+            cf.data[4] = data_[1]; //æ•°æ®2
 
-            now_cmd_ = OID_CMD::NONE_; // ÉèÖÃÃüÁî·¢ËÍºóÁ¢¼´Çå³ı£¬±ÜÃâÖØ¸´·¢ËÍ
+            now_cmd_ = OID_CMD::NONE_; // è®¾ç½®å‘½ä»¤å‘é€åç«‹å³æ¸…é™¤ï¼Œé¿å…é‡å¤å‘é€
 
             this->angle_speed_hz_ =1.0f / static_cast<float>(static_cast<int16_t>(data_[0]) << 8 | data_[1]) * 1000.0f; 
             break;
@@ -129,15 +129,15 @@ std::size_t OIDEncoder::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         case OID_CMD::SET_NOW_ANGLE:
         {
             cf.DLC = 8;
-            cf.data[0] = 0x07; //Êı¾İ³¤¶È
-            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //±àÂëÆ÷µØÖ·
-            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //Ö¸ÁîÂë
-            cf.data[3] = data_[0]; //Êı¾İ1
-            cf.data[4] = data_[1]; //Êı¾İ2
-            cf.data[5] = data_[2]; //Êı¾İ3
-            cf.data[6] = data_[3]; //Êı¾İ4
+            cf.data[0] = 0x07; //æ•°æ®é•¿åº¦
+            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //ç¼–ç å™¨åœ°å€
+            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //æŒ‡ä»¤ç 
+            cf.data[3] = data_[0]; //æ•°æ®1
+            cf.data[4] = data_[1]; //æ•°æ®2
+            cf.data[5] = data_[2]; //æ•°æ®3
+            cf.data[6] = data_[3]; //æ•°æ®4
 
-            now_cmd_ = OID_CMD::NONE_; // ÉèÖÃÃüÁî·¢ËÍºóÁ¢¼´Çå³ı£¬±ÜÃâÖØ¸´·¢ËÍ
+            now_cmd_ = OID_CMD::NONE_; // è®¾ç½®å‘½ä»¤å‘é€åç«‹å³æ¸…é™¤ï¼Œé¿å…é‡å¤å‘é€
             break;
         }
 
@@ -145,17 +145,17 @@ std::size_t OIDEncoder::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         {
             cf.DLC = 8;
             cf.data[0] = 0x04;
-            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //±àÂëÆ÷µØÖ·
-            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //Ö¸ÁîÂë
+            cf.data[1] = static_cast<uint8_t>(device_id_) & 0xFF; //ç¼–ç å™¨åœ°å€
+            cf.data[2] = static_cast<uint8_t>(now_cmd_) & 0xFF; //æŒ‡ä»¤ç 
             cf.data[3] = 0x01;
-            now_cmd_ = OID_CMD::NONE_; // ÉèÖÃÃüÁî·¢ËÍºóÁ¢¼´Çå³ı£¬±ÜÃâÖØ¸´·¢ËÍ
+            now_cmd_ = OID_CMD::NONE_; // è®¾ç½®å‘½ä»¤å‘é€åç«‹å³æ¸…é™¤ï¼Œé¿å…é‡å¤å‘é€
             break;
         }
 
         
         case OID_CMD::NONE_:
         {
-            return 0; // ÎŞĞè·¢ËÍ
+            return 0; // æ— éœ€å‘é€
         }
     }
 
@@ -168,38 +168,30 @@ void OIDEncoder::updateFeedback(const CanFrame& cf)
     {
         return;
     }
-    uint8_t recevied_cmd = cf.data[2]; //Ö¸ÁîÂë
+    uint8_t recevied_cmd = cf.data[2]; //æŒ‡ä»¤ç 
 
     switch(recevied_cmd)
     {
-        case 0x01: //OID::READ_ANGLE ·´À¡
+        case 0x01: //OID::READ_ANGLE åé¦ˆ
         {
             for(int i = 0; i < 8; ++i)
                 feedback_data_[i] = cf.data[i];
 
             //encoder_raw_ = (cf.data[3] << 24) | (cf.data[4] << 16) | (cf.data[5] << 8) | cf.data[6];
-            encoder_raw_ = (cf.data[6] << 24) | (cf.data[5] << 16) | (cf.data[4] << 8) | cf.data[3]; //×¢Òâ×Ö½ÚË³Ğò
+            encoder_raw_ = (cf.data[6] << 24) | (cf.data[5] << 16) | (cf.data[4] << 8) | cf.data[3]; //æ³¨æ„å­—èŠ‚é¡ºåº
             real_encoder_angle_ = static_cast<float>(encoder_raw_) * 360.0f / static_cast<float>(range_);
             angle_ = static_cast<float>(static_cast<int32_t>(encoder_raw_) - static_cast<int32_t>(mid_angle_raw_)) * 360.0f / static_cast<float>(range_);
             break;
         }
 
-        case 0x02: //SET_ENCODER_ID ·´À¡
+        case 0x02: //SET_ENCODER_ID åé¦ˆ
         {
             for(int i = 0; i < 8; ++i)
                 feedback_data_[i] = cf.data[i];
             break;
         }
 
-        case 0x03: //SET_BOARD_RATE ·´À¡
-        {
-            for(int i = 0; i < 8; ++i)
-                feedback_data_[i] = cf.data[i];
-
-            break;
-        }
-
-        case 0x04: //SET_ENCODER_MODE ·´À¡
+        case 0x03: //SET_BOARD_RATE åé¦ˆ
         {
             for(int i = 0; i < 8; ++i)
                 feedback_data_[i] = cf.data[i];
@@ -207,7 +199,7 @@ void OIDEncoder::updateFeedback(const CanFrame& cf)
             break;
         }
 
-        case 0x05: //SET_FEEDBACK_TIME ·´À¡
+        case 0x04: //SET_ENCODER_MODE åé¦ˆ
         {
             for(int i = 0; i < 8; ++i)
                 feedback_data_[i] = cf.data[i];
@@ -215,7 +207,7 @@ void OIDEncoder::updateFeedback(const CanFrame& cf)
             break;
         }
 
-        case 0x06: //SET_ZERO ·´À¡
+        case 0x05: //SET_FEEDBACK_TIME åé¦ˆ
         {
             for(int i = 0; i < 8; ++i)
                 feedback_data_[i] = cf.data[i];
@@ -223,7 +215,7 @@ void OIDEncoder::updateFeedback(const CanFrame& cf)
             break;
         }
 
-        case 0x07: //SET_REVERSE ·´À¡
+        case 0x06: //SET_ZERO åé¦ˆ
         {
             for(int i = 0; i < 8; ++i)
                 feedback_data_[i] = cf.data[i];
@@ -231,18 +223,26 @@ void OIDEncoder::updateFeedback(const CanFrame& cf)
             break;
         }
 
-        case 0x0A: //READ_ANGLE_SPEED ·´À¡
+        case 0x07: //SET_REVERSE åé¦ˆ
+        {
+            for(int i = 0; i < 8; ++i)
+                feedback_data_[i] = cf.data[i];
+
+            break;
+        }
+
+        case 0x0A: //READ_ANGLE_SPEED åé¦ˆ
         {
             for(int i = 0; i < 8; ++i)
                 feedback_data_[i] = cf.data[i];
 
             //this->angle_speed_raw_ = (cf.data[3] << 24) | (cf.data[4] << 16) | (cf.data[5] << 8) | cf.data[6];
-            this->angle_speed_raw_ = (cf.data[6] << 24) | (cf.data[5] << 16) | (cf.data[4] << 8) | cf.data[3]; //×¢Òâ×Ö½ÚË³Ğò
-            this->read_rpm_ = this->angle_speed_raw_ / this->range_ / ( 1/ this->angle_speed_hz_)  * 60.0f; // ×ªËÙ = ½ÇËÙ¶È / (1/²ÉÑùÊ±¼ä) * 60
+            this->angle_speed_raw_ = (cf.data[6] << 24) | (cf.data[5] << 16) | (cf.data[4] << 8) | cf.data[3]; //æ³¨æ„å­—èŠ‚é¡ºåº
+            this->read_rpm_ = this->angle_speed_raw_ / this->range_ / ( 1/ this->angle_speed_hz_)  * 60.0f; // è½¬é€Ÿ = è§’é€Ÿåº¦ / (1/é‡‡æ ·æ—¶é—´) * 60
             break;
         }
 
-        case 0x0B: //SET_ANGLE_SPEED_HZ ·´À¡
+        case 0x0B: //SET_ANGLE_SPEED_HZ åé¦ˆ
         {
             for(int i = 0; i < 8; ++i)
                 feedback_data_[i] = cf.data[i];
@@ -250,7 +250,7 @@ void OIDEncoder::updateFeedback(const CanFrame& cf)
             break;
         }
 
-        case 0x0D: //SET_NOW_ANGLE ·´À¡
+        case 0x0D: //SET_NOW_ANGLE åé¦ˆ
         {
             for(int i = 0; i < 8; ++i)
                 feedback_data_[i] = cf.data[i];
@@ -291,7 +291,7 @@ void OIDEncoder::testtask::loop()
 
         case 2:
         {
-            parent_->set_feeedback_time(10000); // 10ms·´À¡Ò»´Î
+            parent_->set_feeedback_time(10000); // 10msåé¦ˆä¸€æ¬¡
             break;
         }
 

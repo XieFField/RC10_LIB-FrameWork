@@ -11,14 +11,14 @@ Robot_Arm::Robot_Arm(Arm_InitData_S init_Data)
 
 void Robot_Arm::update()
 {
-    /*�����ǰ�ĽǶ��?���ɹؽڵ�ǰ�ĽǶ� */
+    /*锟斤拷锟斤拷锟角帮拷慕嵌锟阶?锟斤拷锟缴关节碉拷前锟侥角讹拷 */
     now_time_s_ = TimeStamp::getInstance().getSeconds();
 
     if(!time_initialized_)
     {
         last_time_s_ = now_time_s_;
         time_initialized_ = true;
-        // �״ζ��룬�������ڡ�Ŀ�ꡱ����
+        // 锟阶次讹拷锟诫，锟斤拷锟斤拷锟斤拷锟节★拷目锟疥”锟斤拷锟斤拷
         target_joint_angle_ = joint_angle_;
         return;
     }
@@ -33,7 +33,7 @@ void Robot_Arm::update()
     
     if(motor_rotate_ != nullptr)
     {
-        // ֱ�Ӷ�ȡ����ܽǶȣ�ӳ��ػ�е�۵� 0-360 ��
+        // 直锟接讹拷取锟斤拷锟斤拷芙嵌龋锟接筹拷锟截伙拷械锟桔碉拷 0-360 锟斤拷
         float raw_angle = MotorTotalAngle_to_rotateAngle(motor_rotate_->getTotalAngle());
         joint_angle_.rotateJoint_angle_ = normalize_deg_0_360(raw_angle);
     }
@@ -52,7 +52,7 @@ void Robot_Arm::update()
 
     else if(control_mode_ == MANUAL_MOTOR_POSITION_MODE)
     {
-        // �ֶ����λ��ģʽ�µĴ���?
+        // 锟街讹拷锟斤拷锟轿伙拷锟侥Ｊ斤拷碌拇锟斤拷锟?
         target_joint_angle_.launchJoint_Height_  = constrain(target_joint_angle_.launchJoint_Height_,  0.0f, init_data_.max_launchHeight_);
         target_joint_angle_.stretchJoint_Length_ = constrain(target_joint_angle_.stretchJoint_Length_, 0.0f, init_data_.max_stretchLength_);
        
@@ -62,17 +62,17 @@ void Robot_Arm::update()
         );
     }
     else if(control_mode_ == CURRENT_CONTROL_MODE)
-        // ��������ģʽ�µĴ���
-        return; // ֱ�ӷ��أ�������λ�ø���
+        // 锟斤拷锟斤拷锟斤拷锟斤拷模式锟铰的达拷锟斤拷
+        return; // 直锟接凤拷锟截ｏ拷锟斤拷锟斤拷锟斤拷位锟矫革拷锟斤拷
     
   
-    // ��е��λ�ø���
+    // 锟斤拷械锟斤拷位锟矫革拷锟斤拷
     float target_rotateMotorAngle = 0.0f;
     float target_stretchMotorAngle = 0.0f;
     float target_launchMotorAngle = 0.0f;
     float target_pitchMotorAngle = 0.0f;
 
-    // ����תͨ��������������Ȧ���ľ���Ŀ��
+    // 锟斤拷锟斤拷转通锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷圈锟斤拷锟侥撅拷锟斤拷目锟斤拷
     if (motor_rotate_ != nullptr)
     {
         float current_arm_total = MotorTotalAngle_to_rotateAngle(motor_rotate_->getTotalAngle());
@@ -96,7 +96,7 @@ void Robot_Arm::update()
     target_stretchMotorAngle = stretchLength_to_MotorTotalAngle(target_joint_angle_.stretchJoint_Length_);
     target_launchMotorAngle = launchHeight_to_MotorTotalAngle(target_joint_angle_.launchJoint_Height_);
     target_pitchMotorAngle = pitchAngle_to_MotorTotalAngle(target_joint_angle_.suckerJoint_angle_);
-    /*��ʱ����б�´���*/
+    /*锟斤拷时锟斤拷锟斤拷斜锟铰达拷锟斤拷*/
 
     if(motor_stretch_ != nullptr)
     {
@@ -140,20 +140,20 @@ void Robot_Arm::update()
 
 void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
 {
-    // ��ת�ǣ��ȣ�
+    // 锟斤拷转锟角ｏ拷锟饺ｏ拷
     float raw_deg;
     if (std::abs(target_point.x) < 1e-6f && std::abs(target_point.y) < 1e-6f)
-        raw_deg = joint_angle_.rotateJoint_angle_;  // ����㣺���ֵ�ǰ��?
+        raw_deg = joint_angle_.rotateJoint_angle_;  // 锟斤拷锟斤拷悖猴拷锟斤拷值锟角帮拷锟?
     else
         raw_deg = atan2f(target_point.y, target_point.x) * 180.0f / PI;
 
-    // �ͽ���������֤Ŀ��Ҳ�� 0-360
+    // 锟酵斤拷锟斤拷锟斤拷锟斤拷锟斤拷证目锟斤拷也锟斤拷 0-360
     target_joint_angle_.rotateJoint_angle_ = normalize_deg_0_360(raw_deg);
 
     target_joint_angle_.launchJoint_Height_ = target_point.z;
     target_joint_angle_.stretchJoint_Length_ = sqrt(target_point.x * target_point.x + target_point.y * target_point.y) - init_data_.arm_length_;
 
-    /*�Ƕ��� */
+    /*锟角讹拷锟斤拷 */
    
     target_joint_angle_.suckerJoint_angle_ = target_point.suckerJoint_status_;
 
@@ -168,7 +168,7 @@ void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
 
 bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
 {
-    /*ĩ�˹ؽ�λ��*/
+    /*末锟剿关斤拷位锟斤拷*/
     float theta = joint_angle_.rotateJoint_angle_ * 3.1415926f / 180.0f;
     float Ltot  = init_data_.arm_length_ + joint_angle_.stretchJoint_Length_;
 

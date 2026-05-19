@@ -1,8 +1,8 @@
 /**
  * @file Module_LaserPosition.
  * @author Ha Ji cao ++
- * @brief USB UARTÇı¶¯ÎÄ¼ş
- * @attention ´ËÎÄ¼şÓÃÓÚUSB UART
+ * @brief USB UARTé©±åŠ¨æ–‡ä»¶
+ * @attention æ­¤æ–‡ä»¶ç”¨äºUSB UART
  * @date 2025-12-1
  */
 #include "Module_LaserPosition.h"
@@ -42,13 +42,13 @@ void Laser_InstanceManager::RegisterInstance(LaserPosition* Laser_instance)
 }
 void LaserPosition::Config(LaserModuleDataTypedef* LaserModuleData)
 {
-	LaserModuleData->ConfigurationData.UartHandle = uart_handle;		// ÉèÖÃ¼¤¹â²â¾àÄ£¿é1µÄ´®¿Ú¾ä±ú
+	LaserModuleData->ConfigurationData.UartHandle = uart_handle;		// è®¾ç½®æ¿€å…‰æµ‹è·æ¨¡å—1çš„ä¸²å£å¥æŸ„
 	LaserModuleData->ConfigurationData.Address = LaserModule1Address;
 	LaserModuleData->ConfigurationData.ReadAddress = LaserModule1ReadAddress;
 	LaserModuleData->ConfigurationData.WriteAddress = LaserModule1WriteAddress;
-	LaserModuleData->MeasurementData.Distance = 0;	// ¼¤¹â²â¾àÄ£¿é1¾àÀëÊı¾İ³õÊ¼»¯
-	LaserModuleData->MeasurementData.SignalQuality = 0;	// ¼¤¹â²â¾àÄ£¿é1ĞÅºÅÖÊÁ¿Êı¾İ³õÊ¼»¯
-	LaserModuleData->MeasurementData.State = 0;	// ¼¤¹â²â¾àÄ£¿é1×´Ì¬Êı¾İ³õÊ¼»¯
+	LaserModuleData->MeasurementData.Distance = 0;	// æ¿€å…‰æµ‹è·æ¨¡å—1è·ç¦»æ•°æ®åˆå§‹åŒ–
+	LaserModuleData->MeasurementData.SignalQuality = 0;	// æ¿€å…‰æµ‹è·æ¨¡å—1ä¿¡å·è´¨é‡æ•°æ®åˆå§‹åŒ–
+	LaserModuleData->MeasurementData.State = 0;	// æ¿€å…‰æµ‹è·æ¨¡å—1çŠ¶æ€æ•°æ®åˆå§‹åŒ–
 }
 void LaserPosition::Init() 
 {   
@@ -56,28 +56,28 @@ void LaserPosition::Init()
 	  Config(&(this->LaserModule1));
 }
 
-// ´¦Àí¼¤¹âÄ£¿é1µÄÊı¾İ
+// å¤„ç†æ¿€å…‰æ¨¡å—1çš„æ•°æ®
 void LaserPosition::Callback_Fuc(uint8_t *buf, uint16_t len) {
     uint8_t result = 0;
-    // ÉèÖÃ»Øµ÷Ö´ĞĞ×´Ì¬
+    // è®¾ç½®å›è°ƒæ‰§è¡ŒçŠ¶æ€
     uart_callback_executed = 1;
     uart_callback_result = result;
 }
 
 uint8_t LaserPosition::LaserModuleGroup_Init(LaserModuleDataTypedef* LaserModuleData)
 {
-	uint8_t LaserModuleGroupState = 0;		// ¼¤¹â²â¾àÄ£¿é×´Ì¬±äÁ¿
+	uint8_t LaserModuleGroupState = 0;		// æ¿€å…‰æµ‹è·æ¨¡å—çŠ¶æ€å˜é‡
 	TickType_t Timestamp = 0;
-	vTaskDelayUntil(&Timestamp, pdMS_TO_TICKS(3000));	// È·±£×ÔÉÏµçÒÔÀ´ÒÑ¾­ÑÓÊ±3000ms£¬È·±£¼¤¹â²â¾àÄ£¿éÒÑÍê³ÉÄ£¿éÄÚ²¿³õÊ¼»¯
- // osDelay(100);//16V µç³ØÖ»ÓÃ100
-	LaserModuleGroupState |= LaserModule_StateContinuousAutomaticMeasurement(LaserModuleData);	// ¼¤¹â²â¾àÄ£¿é1Á¬Ğø×Ô¶¯²âÁ¿×´Ì¬ÉèÖÃ
-	return LaserModuleGroupState;			// ·µ»Ø¼¤¹â²â¾àÄ£¿é×´Ì¬
+	vTaskDelayUntil(&Timestamp, pdMS_TO_TICKS(3000));	// ç¡®ä¿è‡ªä¸Šç”µä»¥æ¥å·²ç»å»¶æ—¶3000msï¼Œç¡®ä¿æ¿€å…‰æµ‹è·æ¨¡å—å·²å®Œæˆæ¨¡å—å†…éƒ¨åˆå§‹åŒ–
+ // osDelay(100);//16V ç”µæ± åªç”¨100
+	LaserModuleGroupState |= LaserModule_StateContinuousAutomaticMeasurement(LaserModuleData);	// æ¿€å…‰æµ‹è·æ¨¡å—1è¿ç»­è‡ªåŠ¨æµ‹é‡çŠ¶æ€è®¾ç½®
+	return LaserModuleGroupState;			// è¿”å›æ¿€å…‰æµ‹è·æ¨¡å—çŠ¶æ€
 }
 
 void Laser_InstanceManager::loop() 
 {
-	uint8_t LaserModuleGroupState = 0;	// ¼¤¹â²â¾àÄ£¿é×´Ì¬±äÁ¿
-	uint8_t LaserPositioningState = 0;	// ¼¤¹â¶¨Î»×´Ì¬±äÁ¿
+	uint8_t LaserModuleGroupState = 0;	// æ¿€å…‰æµ‹è·æ¨¡å—çŠ¶æ€å˜é‡
+	uint8_t LaserPositioningState = 0;	// æ¿€å…‰å®šä½çŠ¶æ€å˜é‡
 	static bool initialized = false;
     if (!initialized) {
         for(int i=0;i<4;i++) {
@@ -90,79 +90,79 @@ void Laser_InstanceManager::loop()
 	for(int i=0;i<4;i++)
 	{
 		if(laser_instances[i]!=nullptr){
-		LaserModuleGroupState = 0;	// ¼¤¹â²â¾àÄ£¿é×´Ì¬ÖØÖÃ
-		LaserPositioningState = 0;  // ¼¤¹â¶¨Î»×´Ì¬ÖØÖÃ
-		(laser_instances[i]->LaserModule1).MeasurementData.State = 0;	// ¼¤¹â²â¾àÄ£¿é1×´Ì¬ÖØÖÃ
-		LaserModuleGroupState |= laser_instances[i]->LaserModule_AnalysisModulesMeasurementResults(&(laser_instances[i]->LaserModule1));			// ¼¤¹â²â¾àÄ£¿é×é¶ÁÈ¡²âÁ¿½á¹û
+		LaserModuleGroupState = 0;	// æ¿€å…‰æµ‹è·æ¨¡å—çŠ¶æ€é‡ç½®
+		LaserPositioningState = 0;  // æ¿€å…‰å®šä½çŠ¶æ€é‡ç½®
+		(laser_instances[i]->LaserModule1).MeasurementData.State = 0;	// æ¿€å…‰æµ‹è·æ¨¡å—1çŠ¶æ€é‡ç½®
+		LaserModuleGroupState |= laser_instances[i]->LaserModule_AnalysisModulesMeasurementResults(&(laser_instances[i]->LaserModule1));			// æ¿€å…‰æµ‹è·æ¨¡å—ç»„è¯»å–æµ‹é‡ç»“æœ
     laser_instances[i]->Data = (laser_instances[i]->LaserModule1).MeasurementData.Distance/1000.f;
 		if(laser_instances[i]->Data == 0)
 		{
 			//osDelay(100);
-			laser_instances[i]->LaserModuleGroup_Init(&(laser_instances[i]->LaserModule1));		// ¼¤¹â²â¾àÄ£¿é×é³õÊ¼»¯
+			laser_instances[i]->LaserModuleGroup_Init(&(laser_instances[i]->LaserModule1));		// æ¿€å…‰æµ‹è·æ¨¡å—ç»„åˆå§‹åŒ–
 		//	osDelay(100);
 		}		
 	}
 }
-		vTaskDelayUntil(&LastTimestamp, pdMS_TO_TICKS(100));		// Ã¿40msÖ´ĞĞÒ»´ÎÈÎÎñ
+		vTaskDelayUntil(&LastTimestamp, pdMS_TO_TICKS(100));		// æ¯40msæ‰§è¡Œä¸€æ¬¡ä»»åŠ¡
 }
 
 uint8_t LaserPosition::LaserModule_StateContinuousAutomaticMeasurement(LaserModuleDataTypedef* LaserModuleData)
 {
-	uint8_t LaserModuleState = 0;	// ¼¤¹â²â¾àÄ£¿é×´Ì¬±äÁ¿
+	uint8_t LaserModuleState = 0;	// æ¿€å…‰æµ‹è·æ¨¡å—çŠ¶æ€å˜é‡
 
-	// ÉèÖÃÁ¬Ğø×Ô¶¯²âÁ¿µÄÃüÁî0xAA, 0x00, 0x00, 0x20, 0x00, 0x01, 0x00, 0x04, 0x25
+	// è®¾ç½®è¿ç»­è‡ªåŠ¨æµ‹é‡çš„å‘½ä»¤0xAA, 0x00, 0x00, 0x20, 0x00, 0x01, 0x00, 0x04, 0x25
 	
 	uint8_t CMD[9] = { 0xAA, LaserModuleData->ConfigurationData.WriteAddress, 0x00, 0x20, 0x00, 0x01, 0x00, 0x04, 0x00 };
 	uint8_t CheckValueCalculation = CMD[1] + CMD[2] + CMD[3] + CMD[4] + CMD[5] + CMD[6] + CMD[7];
 	CMD[8] = CheckValueCalculation;
 	LaserModuleState |= HAL_UART_Transmit_DMA(LaserModuleData->ConfigurationData.UartHandle, CMD, sizeof(CMD));	
-	// »Ö¸´µ÷¶ÈÆ÷
+	// æ¢å¤è°ƒåº¦å™¨
 	for(int i=0;i<100000;i++)
 	{}
-	return LaserModuleState;			// ·µ»Ø¼¤¹â²â¾àÄ£¿é×´Ì¬
+	return LaserModuleState;			// è¿”å›æ¿€å…‰æµ‹è·æ¨¡å—çŠ¶æ€
 }
 
 uint8_t LaserPosition::LaserModule_StopContinuousAutomaticMeasurement(LaserModuleDataTypedef* LaserModuleData)
 {
-	uint8_t LaserModuleState = 0;	// ¼¤¹â²â¾àÄ£¿é×´Ì¬±äÁ¿
+	uint8_t LaserModuleState = 0;	// æ¿€å…‰æµ‹è·æ¨¡å—çŠ¶æ€å˜é‡
   uint8_t CMD[1] = { 0x58 };
-	LaserModuleState |= HAL_UART_Transmit_DMA(LaserModuleData->ConfigurationData.UartHandle, CMD, sizeof(CMD));		// ·¢ËÍÉèÖÃÍ£Ö¹Á¬Ğø×Ô¶¯²âÁ¿Ä£¿éµÄÃüÁî
+	LaserModuleState |= HAL_UART_Transmit_DMA(LaserModuleData->ConfigurationData.UartHandle, CMD, sizeof(CMD));		// å‘é€è®¾ç½®åœæ­¢è¿ç»­è‡ªåŠ¨æµ‹é‡æ¨¡å—çš„å‘½ä»¤
 	for(int i=0;i<100000;i++)
 	{}
-	return LaserModuleState;			// ·µ»Ø¼¤¹â²â¾àÄ£¿é×´Ì¬
+	return LaserModuleState;			// è¿”å›æ¿€å…‰æµ‹è·æ¨¡å—çŠ¶æ€
 }
 
 uint8_t LaserPosition::LaserModule_AnalysisModulesMeasurementResults(LaserModuleDataTypedef* LaserModuleData)
 {
-	uint8_t LaserModuleState = 0;		// ¼¤¹â²â¾àÄ£¿é×´Ì¬±äÁ¿
+	uint8_t LaserModuleState = 0;		// æ¿€å…‰æµ‹è·æ¨¡å—çŠ¶æ€å˜é‡
 		uint32_t Distance =
 			(this->rx_buffer[6] << 24) |
 			(this->rx_buffer[7] << 16) |
 			(this->rx_buffer[8] << 8) |
-			(this->rx_buffer[9] << 0);		// ½ÓÊÕ²¢¼ÆËã¾àÀë
+			(this->rx_buffer[9] << 0);		// æ¥æ”¶å¹¶è®¡ç®—è·ç¦»
 	
 		uint16_t SignalQuality =
 			(this->rx_buffer[10] << 8) |
-			(this->rx_buffer[11] << 0);		// ½ÓÊÕ²¢¼ÆËãĞÅºÅÖÊÁ¿
+			(this->rx_buffer[11] << 0);		// æ¥æ”¶å¹¶è®¡ç®—ä¿¡å·è´¨é‡
 	
-		uint8_t CheckValueReceive = this->rx_buffer[12];	// ½ÓÊÕĞ£ÑéÖµ
+		uint8_t CheckValueReceive = this->rx_buffer[12];	// æ¥æ”¶æ ¡éªŒå€¼
 	
 		uint8_t CheckValueCalculation = 0;
 		for (uint8_t i = 1; i < 12; i++)
 		{
-			CheckValueCalculation += this->rx_buffer[i];		// ¼ÆËãĞ£ÑéÖµ
+			CheckValueCalculation += this->rx_buffer[i];		// è®¡ç®—æ ¡éªŒå€¼
 		}
 	
 		if (CheckValueReceive == CheckValueCalculation)
 		{
-			LaserModuleData->MeasurementData.Distance = Distance;				// ¸üĞÂ¼¤¹â²â¾àÄ£¿é1µÄ¾àÀëÊı¾İ
+			LaserModuleData->MeasurementData.Distance = Distance;				// æ›´æ–°æ¿€å…‰æµ‹è·æ¨¡å—1çš„è·ç¦»æ•°æ®
 			LaserModuleData->MeasurementData.SignalQuality = SignalQuality;
 		}
 		else
 		{
-			LaserModuleData->MeasurementData.State |= 0x04;		// ¼¤¹â²â¾àÄ£¿é²âÁ¿´íÎó£¬´íÎóÔ­Òò£¬½ÓÊÕÊı¾İ°üĞ£ÑéÎ»²»Í¨¹ı
-			LaserModuleState |= 0x01;							// ¼¤¹â²â¾àÄ£¿é×´Ì¬Òì³£
+			LaserModuleData->MeasurementData.State |= 0x04;		// æ¿€å…‰æµ‹è·æ¨¡å—æµ‹é‡é”™è¯¯ï¼Œé”™è¯¯åŸå› ï¼Œæ¥æ”¶æ•°æ®åŒ…æ ¡éªŒä½ä¸é€šè¿‡
+			LaserModuleState |= 0x01;							// æ¿€å…‰æµ‹è·æ¨¡å—çŠ¶æ€å¼‚å¸¸
 		}
-	return LaserModuleState;			// ·µ»Ø¼¤¹â²â¾àÄ£¿é×´Ì¬
+	return LaserModuleState;			// è¿”å›æ¿€å…‰æµ‹è·æ¨¡å—çŠ¶æ€
 }
 

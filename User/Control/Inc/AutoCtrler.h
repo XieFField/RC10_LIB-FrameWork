@@ -1,10 +1,10 @@
 /**
  * @file AutoCtrler.h
  * @author XieFField
- * @brief Ã·ÁÖ×Ô¶¯¿ØÖÆÏà¹Ø
+ * @brief æ¢…æ—è‡ªåŠ¨æ§åˆ¶ç›¸å…³
  * @version 1.0
- *          ÓÅ»¯MF_AutoCtrler£¬¹æ·¶Èë¿ÚÎ»ÖÃ¡£
- *          ²ÉÓÃÓÒÊÖÏµ£¬YÖáÎª»ù×¼0¶È£¬ÄæÊ±ÕëĞı×ªÕı·½Ïò
+ *          ä¼˜åŒ–MF_AutoCtrlerï¼Œè§„èŒƒå…¥å£ä½ç½®ã€‚
+ *          é‡‡ç”¨å³æ‰‹ç³»ï¼ŒYè½´ä¸ºåŸºå‡†0åº¦ï¼Œé€†æ—¶é’ˆæ—‹è½¬æ­£æ–¹å‘
  */
 
 #ifndef AUTOCTRLER_H
@@ -21,7 +21,7 @@
 using std::sqrt;
 
 namespace MF_AutoCtrler
-{ // Ã·»¨ÁÖÖĞ±Ø¾­µãÎ»Êä³ö
+{ // æ¢…èŠ±æ—ä¸­å¿…ç»ç‚¹ä½è¾“å‡º
 
     static constexpr int MAP_COLS = 5;
     static constexpr int MAP_ROWS = 6;
@@ -41,10 +41,10 @@ namespace MF_AutoCtrler
         NONE,
     } Direction_E;
 
-    // ½«Ã·»¨×®±àºÅÓ³ÉäÎªÃ·»¨ÁÖ·½¸ñµØÍ¼Ëù¶ÔÓ¦µÄ±àºÅ¡£
+    // å°†æ¢…èŠ±æ¡©ç¼–å·æ˜ å°„ä¸ºæ¢…èŠ±æ—æ–¹æ ¼åœ°å›¾æ‰€å¯¹åº”çš„ç¼–å·ã€‚
     int8_t MFNum_TransforMapNum(int8_t MFNum);
 
-    // ½«Ã·»¨ÁÖ·½¸ñµØÍ¼±àºÅÓ³ÉäÎªÃ·»¨×®±àºÅ¡£
+    // å°†æ¢…èŠ±æ—æ–¹æ ¼åœ°å›¾ç¼–å·æ˜ å°„ä¸ºæ¢…èŠ±æ¡©ç¼–å·ã€‚
     int8_t MapNum_TransforMFNum(int8_t mapNum);
 
     typedef struct
@@ -57,113 +57,113 @@ namespace MF_AutoCtrler
     typedef struct
     {
         int8_t entranceMap;
-        int8_t bestB1;   // Ç°Ò»×®
-        int8_t bestBMF1; // Õı¶Ô×®
+        int8_t bestB1;   // å‰ä¸€æ¡©
+        int8_t bestBMF1; // æ­£å¯¹æ¡©
         int8_t bestB2;
         int8_t bestBMF2;
-        int8_t exitMap = 26; // ¹Ì¶¨³ö¿Ú
-    } PathNode_S;            // ÖµÎª0¾ÍÒâÎ¶×ÅÃ»ÓĞÕâ¸ö½Úµã
+        int8_t exitMap = 26; // å›ºå®šå‡ºå£
+    } PathNode_S;            // å€¼ä¸º0å°±æ„å‘³ç€æ²¡æœ‰è¿™ä¸ªèŠ‚ç‚¹
 
 
-    typedef struct //ĞÂÒ»°æµÄÂ·¾¶Éú³É
+    typedef struct //æ–°ä¸€ç‰ˆçš„è·¯å¾„ç”Ÿæˆ
     {
-        int8_t entranceMap= 0; //ÔÊĞíºÍMF1µÄMFroadÖØºÏ
+        int8_t entranceMap= 0; //å…è®¸å’ŒMF1çš„MFroadé‡åˆ
         int8_t MFroad[2] = {0};
-        int8_t mustPastMap[12] = {0};// ±Ø¾­µã[Ë÷Òı¼´Â·¾¶Ë³Ğò]£¬0±íÊ¾ÎŞĞ§£¬Ö»°üº¬µØÍ¼±ß½ÇµãºÍMFµãÒÔ¼°³öÈë¿Ú
+        int8_t mustPastMap[12] = {0};// å¿…ç»ç‚¹[ç´¢å¼•å³è·¯å¾„é¡ºåº]ï¼Œ0è¡¨ç¤ºæ— æ•ˆï¼ŒåªåŒ…å«åœ°å›¾è¾¹è§’ç‚¹å’ŒMFç‚¹ä»¥åŠå‡ºå…¥å£
 
-        int8_t Index_MFroad[2] = {0,0}; //¼ÇÂ¼MFroadÖĞMF1ºÍMF2ÔÚmustPastMapÖĞµÄË÷ÒıÎ»ÖÃ£¬·½±ãºóĞøÂ·¾¶¸ú×Ù
+        int8_t Index_MFroad[2] = {0,0}; //è®°å½•MFroadä¸­MF1å’ŒMF2åœ¨mustPastMapä¸­çš„ç´¢å¼•ä½ç½®ï¼Œæ–¹ä¾¿åç»­è·¯å¾„è·Ÿè¸ª
 
-        int8_t exitMap = 26; // ¹Ì¶¨³ö¿Ú
+        int8_t exitMap = 26; // å›ºå®šå‡ºå£
     }PathInformation_S;
 
-    // Çó½âÃ·»¨×®ËùÓĞÇ°Ò»Í¨µÀ½á¹û
+    // æ±‚è§£æ¢…èŠ±æ¡©æ‰€æœ‰å‰ä¸€é€šé“ç»“æœ
     RoadResult_S MFNum_ToRoadResult(int8_t MFNum);
     static bool IsWalkable(int8_t map);
-    // Çó½â·½¸ñµÄĞĞÁĞ×ø±ê
+    // æ±‚è§£æ–¹æ ¼çš„è¡Œåˆ—åæ ‡
     static Point2D MapNum_ToMatrixPos_point(int8_t MapNum);
     
     Vector2D MapNum_ToMatrixPos(int8_t MapNum);
     Vector2D MapCenterWorld_Vector2D(int8_t map);
-    // ĞĞÁĞ×ªµØÍ¼±àºÅ
+    // è¡Œåˆ—è½¬åœ°å›¾ç¼–å·
     int8_t CR_ToMap(int8_t c, int8_t r);
-    // µØÍ¼±àºÅ×ªĞĞÁĞ
+    // åœ°å›¾ç¼–å·è½¬è¡Œåˆ—
     void Map_ToCR(int8_t map, int8_t &c, int8_t &r);
 
-    // ¼ÆËãÁ½µãÅ·ÊÏ¾àÀë
+    // è®¡ç®—ä¸¤ç‚¹æ¬§æ°è·ç¦»
     static float euclid(Point2D a, Point2D b);
 
-    // ¼ÆËãµØÍ¼¸ñ×ÓÖĞĞÄµÄÊÀ½ç×ø±ê
+    // è®¡ç®—åœ°å›¾æ ¼å­ä¸­å¿ƒçš„ä¸–ç•Œåæ ‡
     Point2D MapCenterWorld(int8_t map);
 
-    // ¼ÆËãÂ·¾¶½Úµã½á¹û
+    // è®¡ç®—è·¯å¾„èŠ‚ç‚¹ç»“æœ
     PathNode_S PathNodeResult_calc(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t EXIT = 26);
     
     
 
     PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2);
 
-    RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum); // Çó½âÊ°È¡KFSÊ±ºòËù´¦Í¨µÀ ×î¶àÁ½½â
+    RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum); // æ±‚è§£æ‹¾å–KFSæ—¶å€™æ‰€å¤„é€šé“ æœ€å¤šä¸¤è§£
 
     void get_MoveDiretion(Point2D robotPos,
                           int8_t MF1, int8_t MF2,
                           Direction_E Diresult[]);
 
-    // ¸ù¾İµ±Ç°ËùÔÚµÄµØÍ¼¸ñ(bestB1)ºÍĞĞ½ø·½Ïò¼ÆËã³ö
+    // æ ¹æ®å½“å‰æ‰€åœ¨çš„åœ°å›¾æ ¼(bestB1)å’Œè¡Œè¿›æ–¹å‘è®¡ç®—å‡º
     float Get_ArmBaseTargetAngle(int8_t mapNum, Direction_E dir);
 
     /**
-     * @brief ¼ÆËãµ×ÅÌĞĞ½ø·½Ïò 
-     * @param startmapNum ÆğµãËùÔÚµÄµØÍ¼¸ñ±àºÅ
-     * @param next_mapNum ÏÂÒ»¸öµØÍ¼¸ñ±àºÅ
-     * @return ·µ»Øµ×ÅÌËÙ¶È·½Ïò£¬ÒÔ½Ç¶È´úÌæÊ¸Á¿£¬0¶È¶ÔÓ¦XÖáÕı·½Ïò£¬ÄæÊ±ÕëÎªÕı£¬µ¥Î»¶È
-     *         È¡Öµ·¶Î§[0, 360)£¬Èç¹ûÊäÈëÎŞĞ§·µ»Ø-1]
+     * @brief è®¡ç®—åº•ç›˜è¡Œè¿›æ–¹å‘ 
+     * @param startmapNum èµ·ç‚¹æ‰€åœ¨çš„åœ°å›¾æ ¼ç¼–å·
+     * @param next_mapNum ä¸‹ä¸€ä¸ªåœ°å›¾æ ¼ç¼–å·
+     * @return è¿”å›åº•ç›˜é€Ÿåº¦æ–¹å‘ï¼Œä»¥è§’åº¦ä»£æ›¿çŸ¢é‡ï¼Œ0åº¦å¯¹åº”Xè½´æ­£æ–¹å‘ï¼Œé€†æ—¶é’ˆä¸ºæ­£ï¼Œå•ä½åº¦
+     *         å–å€¼èŒƒå›´[0, 360)ï¼Œå¦‚æœè¾“å…¥æ— æ•ˆè¿”å›-1]
      */
     float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum);
 
     /**
-     * @brief ¼ÆËã»úĞµ±ÛÔÚÊÀ½ç×ø±êÏµÏÂµÄ¾ø¶Ô½Ç¶È
-     * @param chassis_yaw_deg µ×ÅÌÔÚÊÀ½çÏµÏÂµÄYaw½Ç (¶È)
-     * @param gimbal_angle_deg »úĞµ±ÛÔÆÌ¨Ïà¶ÔÓÚµ×ÅÌµÄ½Ç¶È (¶È)
-     * @return float »úĞµ±ÛÔÚÊÀ½çÏµÏÂµÄ½Ç¶È (¶È, 0¶È¶ÔÓ¦YÖá, ÄæÊ±ÕëÎªÕı)
+     * @brief è®¡ç®—æœºæ¢°è‡‚åœ¨ä¸–ç•Œåæ ‡ç³»ä¸‹çš„ç»å¯¹è§’åº¦
+     * @param chassis_yaw_deg åº•ç›˜åœ¨ä¸–ç•Œç³»ä¸‹çš„Yawè§’ (åº¦)
+     * @param gimbal_angle_deg æœºæ¢°è‡‚äº‘å°ç›¸å¯¹äºåº•ç›˜çš„è§’åº¦ (åº¦)
+     * @return float æœºæ¢°è‡‚åœ¨ä¸–ç•Œç³»ä¸‹çš„è§’åº¦ (åº¦, 0åº¦å¯¹åº”Yè½´, é€†æ—¶é’ˆä¸ºæ­£)
      */
     float Get_ArmWorldAngle(float chassis_yaw_deg, float gimbal_angle_deg);
 
-    // ¼ÆËã×îÉÙ²½Êı BFS
+    // è®¡ç®—æœ€å°‘æ­¥æ•° BFS
     int BFS_Steps(int8_t startMap, int8_t goalMap);
 
 /**
- * @brief ¼ÆËã»úĞµ±ÛÔÚÊÀ½ç×ø±êÏµÏÂµÄ¾ø¶Ô½Ç¶È
- * @param chassis_yaw_deg µ×ÅÌÔÚÊÀ½çÏµÏÂµÄYaw½Ç (¶È)
- * @param gimbal_angle_deg »úĞµ±ÛÔÆÌ¨Ïà¶ÔÓÚµ×ÅÌµÄ½Ç¶È (¶È)
- * @return float »úĞµ±ÛÔÚÊÀ½çÏµÏÂµÄ½Ç¶È (¶È, 0¶È¶ÔÓ¦YÖá, ÄæÊ±ÕëÎªÕı)
+ * @brief è®¡ç®—æœºæ¢°è‡‚åœ¨ä¸–ç•Œåæ ‡ç³»ä¸‹çš„ç»å¯¹è§’åº¦
+ * @param chassis_yaw_deg åº•ç›˜åœ¨ä¸–ç•Œç³»ä¸‹çš„Yawè§’ (åº¦)
+ * @param gimbal_angle_deg æœºæ¢°è‡‚äº‘å°ç›¸å¯¹äºåº•ç›˜çš„è§’åº¦ (åº¦)
+ * @return float æœºæ¢°è‡‚åœ¨ä¸–ç•Œç³»ä¸‹çš„è§’åº¦ (åº¦, 0åº¦å¯¹åº”Yè½´, é€†æ—¶é’ˆä¸ºæ­£)
  */
 float Get_ArmWorldAngle(float chassis_yaw_deg, float gimbal_angle_deg);
 
 /**
- * @brief ¼ÆËãÃ·»¨ÁÖĞĞ½ø¹ı³ÌÖĞ£¬µ×ÅÌÔÚÁÖµÀµÄyaw½Ç£¬Ê¹µÃ»úĞµ±ÛÒ»¶ËÄÜÌù¿¿Ã·»¨ÁÖ
- *        ÓÉÃ·ÁÖÉÏÏÂ×óÓÒËÄÌõÍ¨µÀ£¬·Ö±ğËÄ¸ö²»Í¬yaw½Ç£¬¿ÉÒÔÍ¨¹ı¼ÈÓĞµÄPathNode¼ÆËãµÃµ½
+ * @brief è®¡ç®—æ¢…èŠ±æ—è¡Œè¿›è¿‡ç¨‹ä¸­ï¼Œåº•ç›˜åœ¨æ—é“çš„yawè§’ï¼Œä½¿å¾—æœºæ¢°è‡‚ä¸€ç«¯èƒ½è´´é æ¢…èŠ±æ—
+ *        ç”±æ¢…æ—ä¸Šä¸‹å·¦å³å››æ¡é€šé“ï¼Œåˆ†åˆ«å››ä¸ªä¸åŒyawè§’ï¼Œå¯ä»¥é€šè¿‡æ—¢æœ‰çš„PathNodeè®¡ç®—å¾—åˆ°
  */
 float Get_ChassisYawForArmAlign(int8_t targetKFS, int8_t B1, int8_t BMF1);
 
 
 
-    // »ñÈ¡BFS×î¶ÌÂ·¾¶ĞòÁĞ (·µ»ØÂ·¾¶³¤¶È, -1±íÊ¾»º³åÇø²»×ã, 0±íÊ¾²»¿É´ï)
+    // è·å–BFSæœ€çŸ­è·¯å¾„åºåˆ— (è¿”å›è·¯å¾„é•¿åº¦, -1è¡¨ç¤ºç¼“å†²åŒºä¸è¶³, 0è¡¨ç¤ºä¸å¯è¾¾)
     int BFS_GetPath(int8_t startMap, int8_t goalMap, int8_t *outPath, int maxLen);
     
     
     
     /**
-     * @brief ¸ù¾İÊÀ½ç×ø±êÅĞ¶ÏËùÔÚµÄµØÍ¼Íø¸ñ±àºÅ
-     * @param pos ÊÀ½ç×ø±êµã (x, y)
-     * @return int8_t µØÍ¼±àºÅ (1-30), Èç¹û³¬³ö·¶Î§·µ»Ø 0
+     * @brief æ ¹æ®ä¸–ç•Œåæ ‡åˆ¤æ–­æ‰€åœ¨çš„åœ°å›¾ç½‘æ ¼ç¼–å·
+     * @param pos ä¸–ç•Œåæ ‡ç‚¹ (x, y)
+     * @return int8_t åœ°å›¾ç¼–å· (1-30), å¦‚æœè¶…å‡ºèŒƒå›´è¿”å› 0
      */
     int8_t GetMapNumFromPos(Point2D pos);
 
     /**
-      * @brief ÅĞ¶Ïµ±Ç°×ø±êÊÇ·ñ´¦ÓÚÄ¿±ê·½¸ñÖĞĞÄ·¶Î§ÄÚ
-      * @param robotPos »úÆ÷ÈËµ±Ç°×ø±ê
-      * @param targetMap Ä¿±ê·½¸ñ±àºÅ (1-30)
-      * @param tolerance Èİ²î·¶Î§£¬µ¥Î»Ã×
+      * @brief åˆ¤æ–­å½“å‰åæ ‡æ˜¯å¦å¤„äºç›®æ ‡æ–¹æ ¼ä¸­å¿ƒèŒƒå›´å†…
+      * @param robotPos æœºå™¨äººå½“å‰åæ ‡
+      * @param targetMap ç›®æ ‡æ–¹æ ¼ç¼–å· (1-30)
+      * @param tolerance å®¹å·®èŒƒå›´ï¼Œå•ä½ç±³
      */
     bool isInTargetMap(Point2D robotPos, int targetMap, float tolerance);
 }

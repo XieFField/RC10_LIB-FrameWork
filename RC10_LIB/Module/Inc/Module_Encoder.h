@@ -1,7 +1,7 @@
 /**
  * @file   Module_Encoder.h
  * @author XieFField
- * @brief  ±àÂëÆ÷»»Ëã×ª×Ó½Ç¶È¡¢×ÜÂ·³Ì
+ * @brief  ç¼–ç å™¨æ¢ç®—è½¬å­è§’åº¦ã€æ€»è·¯ç¨‹
  * @version 1.0
  */
 
@@ -20,14 +20,14 @@ extern "C"{}
 #include <cstddef>
 #include "APP_tool.h"
 
-/*´ËÀàÖ»×ö»úĞµ×ª×Ó½Ç¶È¼ÆËã£¬·Çµç»úÕæÊµ½Ç¶È*/
+/*æ­¤ç±»åªåšæœºæ¢°è½¬å­è§’åº¦è®¡ç®—ï¼Œéç”µæœºçœŸå®è§’åº¦*/
 class Encoder{
 public:
     Encoder(uint16_t range = 8192): range_(range){}
 
     /**
-     * @brief ¸üĞÂ±àÂëÆ÷Ô­Ê¼Öµ£¬¼ÆËãµ±Ç°½Ç¶ÈºÍ×ÜÂ·³Ì
-     * @param raw_value ±àÂëÆ÷Ô­Ê¼Öµ
+     * @brief æ›´æ–°ç¼–ç å™¨åŸå§‹å€¼ï¼Œè®¡ç®—å½“å‰è§’åº¦å’Œæ€»è·¯ç¨‹
+     * @param raw_value ç¼–ç å™¨åŸå§‹å€¼
      */
     void update(uint16_t raw_value);
 
@@ -40,26 +40,26 @@ public:
     float getTotalAngle_redian() const { return total_angle_ * (PI / 180.0f); }
 
     /**
-     * ½«µ±Ç°Ê±¿ÌµÄ×ÜÂ·³ÌÖØĞÂ¶¨Î»µ½Ö¸¶¨Öµ£¬ÖØ¶¨¶¨ÒåÆ«ÒÆÁ¿
+     * å°†å½“å‰æ—¶åˆ»çš„æ€»è·¯ç¨‹é‡æ–°å®šä½åˆ°æŒ‡å®šå€¼ï¼Œé‡å®šå®šä¹‰åç§»é‡
      */
     void relocate_totalAngle(float now_totalAngle);
 
 private:
-    float angle_ = 0.0f;        // µ±Ç°µ¥È¦½Ç¶È(0..360)
-    float total_angle_ = 0.0f;  // ×ÜÁ¬Ğø½Ç¶È
+    float angle_ = 0.0f;        // å½“å‰å•åœˆè§’åº¦(0..360)
+    float total_angle_ = 0.0f;  // æ€»è¿ç»­è§’åº¦
     bool  is_init_ = false;
-    uint16_t offset_ = 0;       // ³õÊ¼RawÖµ£¨ÓÃÓÚ¿Û³ı³õÊ¼ÏàÎ»£©
+    uint16_t offset_ = 0;       // åˆå§‹Rawå€¼ï¼ˆç”¨äºæ‰£é™¤åˆå§‹ç›¸ä½ï¼‰
     
-    // ¾ø¶ÔÈ¦Êı·¨ºËĞÄ±äÁ¿
-    int32_t round_cnt_ = 0;     // Ğı×ªÈ¦Êı¼ÆÊı(ÕûÊı£¬ÎŞ¾«¶ÈËğÊ§)
-    float last_angle_ = 0.0f;   // ÉÏÒ»Ö¡µÄµ¥È¦½Ç¶È(0..360)
-    float start_angle_ = 0.0f;  // ³õÊ¼Ê±¿ÌµÄµ¥È¦½Ç¶È(ÓÃÓÚ¼ÆËãÏà¶Ô×Ü³Ì)
+    // ç»å¯¹åœˆæ•°æ³•æ ¸å¿ƒå˜é‡
+    int32_t round_cnt_ = 0;     // æ—‹è½¬åœˆæ•°è®¡æ•°(æ•´æ•°ï¼Œæ— ç²¾åº¦æŸå¤±)
+    float last_angle_ = 0.0f;   // ä¸Šä¸€å¸§çš„å•åœˆè§’åº¦(0..360)
+    float start_angle_ = 0.0f;  // åˆå§‹æ—¶åˆ»çš„å•åœˆè§’åº¦(ç”¨äºè®¡ç®—ç›¸å¯¹æ€»ç¨‹)
 
-    // ´óÊı¾«¶È±£»¤
-    float precision_offset_ = 0.0f; // ÒòÖØÖÃÈ¦Êı¶ø²úÉúµÄÀÛ»ıÆ«ÖÃ
+    // å¤§æ•°ç²¾åº¦ä¿æŠ¤
+    float precision_offset_ = 0.0f; // å› é‡ç½®åœˆæ•°è€Œäº§ç”Ÿçš„ç´¯ç§¯åç½®
     uint16_t range_;
 
-    // ÈôÔÚÊ×Ö¡·´À¡Ç°µ÷ÓÃ relocate£¬ÔòÑÓ³Ùµ½Ê×Ö¡³õÊ¼»¯Ê±ÔÙÓ¦ÓÃ
+    // è‹¥åœ¨é¦–å¸§åé¦ˆå‰è°ƒç”¨ relocateï¼Œåˆ™å»¶è¿Ÿåˆ°é¦–å¸§åˆå§‹åŒ–æ—¶å†åº”ç”¨
     bool has_pending_relocate_ = false;
     float pending_relocate_total_angle_ = 0.0f;
 };

@@ -1,137 +1,293 @@
 /**
- * @file Motor_Base.h
- * @author XieFField
- * @brief µç»ú»ùÀàÉùÃ÷
- * @version 1.0
- * @date 2025-09-16
+ * @file Module_Position.cpp
+ * @author XieFField HA Ji cao 
+ * @brief positioné©±åŠ¨æ–‡ä»¶
+ * @attention æ­¤æ–‡ä»¶ç”¨äºpositionè€Œéaction
+ * @date 2025-10-22
  */
-#ifndef MOTOR_BASE_H
-#define MOTOR_BASE_H
 
-#pragma once
-#ifdef __cplusplus
+/*
 
-#endif // __cplusplus
-#include "BSP_CanFrame.h"
-#include <cstdint>
-#include <cstddef>
-class fdCANbus; // Ç°ÖÃÉùÃ÷
+  Reposition_SendDataå‡½æ•°ç”¨äºé‡å®šä½ï¼Œidä¸º1åˆ™ä»…é‡å®šä½X,Yåæ ‡ï¼›id2å¯ä»¥
+  é¢å¤–é‡å®šä½yaw, id3å¯å°†HWT101CTæ–­ç”µé‡å¯
+  
+*/
+#include "Module_Position.h"
+// è”åˆä½“ç”¨äºå°†20å­—èŠ‚çš„æµ®ç‚¹æ•°æ¥æ”¶åˆ° float æ•°ç»„ä¸­
+#include <math.h>
+#include "usbd_cdc_if.h"
 
-class Motor_Base {
-public:
-    Motor_Base(uint32_t id, bool isExt, fdCANbus* bus, 
-        bool calcTotalAngle = true, bool calcAngle = true)
-        : is_calcangle(calcAngle),
-          is_calcTotalAngle(calcTotalAngle)
-    {
-        motor_id_ = id;
-        isExtended_ = isExt;
-        bus_ = bus;
-    };
-    virtual ~Motor_Base(){};
 
-    // =
-    virtual void setTargetRPM(float rpm_set){};
-    virtual void setTargetCurrent(float current_set){};
-    virtual void setTargetAngle(float angle_set){};
-    virtual void setTargetTotalAngle(float totalAngle_set){};
-    virtual void setBrake(float brake_current)
-    {
-        (void)brake_current;
-    };
+#define NEW_OR_OLD 1
 
-    // ¸üĞÂº¯Êı£¬¸ºÔğ¸ù¾İ×îĞÂµÄ·´À¡Êı¾İ¼ÆËã¿ØÖÆÊä³ö
-    virtual void update(){};
-    
-    // »ñÈ¡Êä³öÖá×´Ì¬
-    virtual float getRPM() const { return rpm_; }   
-    virtual float getCurrent() const { return current_; }
-    virtual float getAngle() const { return 0.0f; }
-    virtual float getTotalAngle() const { return 0.0f; }
+union
+{
+	uint8_t data[24];
+	float ActVal[6];
+} posture;
 
-    
-    /**
-     * @brief ´ò°üÒª·¢ËÍµÄCANÖ¡£¬×ÓÀà±ØĞëÊµÏÖÒÔ´ËÌá¹©ÌØ¶¨µÄ¿ØÖÆÃüÁîÖ¡
-     * @param outFrames ÓÃÓÚ´æ´¢´ò°üµÄCANÖ¡µÄÊı×é£¬µ÷ÓÃÕßÌá¹©ÄÚ´æ£¬×ÓÀà¸ºÔğÌî³äÄÚÈİ¡£Êı×é´óĞ¡ÓÉ maxFrames ²ÎÊıÖ¸¶¨¡£
-     * @param maxFrames ÓÃÓÚÖ¸¶¨ outFrames Êı×éµÄ´óĞ¡
-     * @return Êµ¼ÊÌî³äµÄCANÖ¡ÊıÁ¿£¬Èç¹û³¬¹ı maxFrames ÔòÖ»Ìî³ä maxFrames ¸ö
-     * @attention ¸Ãº¯ÊıÓÉ fdCANbus µÄµ÷¶ÈÆ÷ÈÎÎñÖÜÆÚĞÔµ÷ÓÃ£¬ÒÔÊµÏÖ¶¨Ê±·¢ËÍ¿ØÖÆÃüÁî
-     */
-    virtual std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) = 0;
+// è·å–å•ä¾‹å®ä¾‹
+//Position* Position::instance_ = nullptr;
 
-    
-    /**
-     * @brief CANÖ¡½âÎö½Ó¿Ú£¬×ÓÀà±ØĞëÊµÏÖÒÔ´Ë´¦ÀíÌØ¶¨µÄ·´À¡Êı¾İ
-     */
-    virtual void updateFeedback(const CanFrame& cf) = 0;
+// è·å–å•ä¾‹å®ä¾‹
 
-    /**
-     * @brief CANÖ¡Æ¥Åäº¯Êı£¬Ä¬ÈÏÊµÏÖÎªIDºÍÖ¡ÀàĞÍÆ¥Åä£¬×ÓÀà¿É override ÒÔÊµÏÖ¸ü¸´ÔÓµÄÆ¥ÅäÂß¼­£¨ÈçĞ­ÒéIDÆ¥Åä£©
-     * @param cf ĞèÒªÆ¥ÅäµÄCANÖ¡
-     * @return Èç¹ûÖ¡Æ¥Åäµ±Ç°µç»úÊµÀı£¬Ôò·µ»Øtrue£¬·ñÔò·µ»Øfalse¡£Ä¬ÈÏÊµÏÖÎª¼òµ¥µÄIDºÍÖ¡ÀàĞÍÆ¥Åä
-     */
-    virtual bool matchesFrame(const CanFrame& cf) const
-    {
-        (void)cf;
-        return false;
+RawPos RawPosData = {0};
+RealPos RealPosData = {0};
+
+Position::Position(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle) 
+    :UART_(rx_buffer_size,rx_buffer,uart_handle),
+		uart_instance_(nullptr)
+    , uart_initialized_(false)
+    , rx_buffer_{0}
+{
+}
+
+Position* Position::GetInstance(UART_HandleTypeDef *uart_handle) 
+{
+	  static uint8_t static_rx_buffer[RX_BUFFER_SIZE] = {0};
+	  static Position instance(RX_BUFFER_SIZE,static_rx_buffer,uart_handle);
+    return &instance;
+}
+
+// åˆå§‹åŒ–UART
+void Position::InitUART() 
+{
+    if (uart_initialized_) 
+	{
+        return; // å·²ç»åˆå§‹åŒ–è¿‡
     }
+    UART_HandleTypeDef *uart_handle=Position::UART_::GetUartHandle();
 
-    float get_GearRatio() const { return GEAR_RATIO; }
-    float get_inv_GearRatio() const { return inv_GEAR_RATIO_; }
-    float getTargetRPM() const { return target_rpm_; }
-    float getTargetCurrent() const { return target_current_; }
-    float getTargetAngle() const { return target_angle_; }
-    float getTargetTotalAngle() const { return target_totalAngle_; }
+    uart_instance_ = InstanceManager::GetInstanceByUartHandle(uart_handle);
     
+    // åˆå§‹åŒ–UART
+    uart_instance_->UART_Init();
+    
+    uart_initialized_ = true;
+}
 
-    fdCANbus* bus() const { return bus_; }
-    uint32_t getID() const { return motor_id_; }
+void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
+{
+  	uint8_t count = 0;
+	uint8_t i = 0;
+	uint8_t CRC_check[2];//CRCæ ¡éªŒä½ï¼Œæ­¤æ–‡ä»¶æœªå¯ç”¨
+	
+	
+	
+	uint8_t break_flag = 1;
+	while(i < len && break_flag == 1)
+	{
+		switch (count)
+		{
+			case 0:
+			{
+				if (buf[i] == FRAME_HEAD_POSITION_0)   //æ¥æ”¶åŒ…å¤´1
+				{
+					count++;
+				}
+				else
+				{
+					count = 0;
+				}
+				i++;
+				break;
+			}
+			case 1:
+			{
+				if (buf[i] == FRAME_HEAD_POSITION_1) //æ¥æ”¶åŒ…å¤´2
+				{
+					count++;
+				}
+				else
+				{
+					count = 0;
+				}
+				i++;
+				break;
+			}
+			case 2://æ¥æ”¶å¸§IDå’Œæ•°æ®é•¿åº¦
+			{
+				if (buf[i] == 0x01) 
+				{
+					count++;
+				}
+				else
+				{
+					count = 0;
+				}
+				i++;
+				break;
+			}
+			case 3:
+			{
+				if (buf[i] == 0x18) //0x0c
+				{
+					count++;
+				}
+				else
+				{
+					count = 0;
+				}
+				i++;
+				break;
+			}
+			case 4://å¼€å§‹æ¥æ”¶æ•°æ®
+			{
+				uint8_t j;
+				
+				#if NEW_OR_OLD
+				if (i > len - 24)
+				{
+					break_flag = 0;
+					break;
+				}
+				
+				for(j = 0; j < 24; j++)
+				{
+					posture.data[j] = buf[i];
+					i++;
+				}
+                
+                #else
+                if (i > len - 24)
+				{
+					break_flag = 0;
+				}
+				
+				for(j = 0; j < 20; j++)
+				{
+					posture.data[j] = buf[i];
+					i++;
+				}
+                
+                #endif
+				count++;
+				break;
+			}
+			
+			//æ¥æ”¶CRCæ ¡éªŒç 
+			case 5:
+			{
+				uint8_t j;
+				
+				for(j = 0; j < 2; j++)
+				{
+					CRC_check[j] = buf[i];
+					i++;
+				}
+				count++;
+				break;
+			}
+			
+			case 6:
+			{
+				if (buf[i] == FRAME_TAIL_POSITION_0)  //æ¥æ”¶åŒ…å°¾1
+				{
+					count++;
+				}
+				else
+				{
+					count = 0;
+				}
+				i++;
+				break;
+			}
+			
+			case 7:
+			{
+				if (buf[i] == FRAME_TAIL_POSITION_1)  //æ¥æ”¶åŒ…å°¾2
+				{	
+					//åœ¨æ¥æ”¶åŒ…å°¾2åæ‰å¼€å§‹å¯åŠ¨å›è°ƒ
+					//UART_IdleCallback(&huart1);
+					Update_RawPosition(posture.ActVal);
+				}
+				count = 0;
+				
+				break_flag = 0;
+				
+				break;
+			}
+			
+			default:
+			{
+				count = 0;
+				break;
+			}
+		}
+		
+	}
+	
+}
 
 
-    void reset_controlFrequency(uint16_t newFreq) 
-    { 
-        if(newFreq > 0 && newFreq % 100 == 0 && newFreq <= 1000) // ¿ØÖÆÆµÂÊ±ØĞëÊÇ100µÄÕûÊı±¶
-            control_Frequency_ = newFreq; 
-        else
-            control_Frequency_ = 1000; // »Ö¸´Ä¬ÈÏÖµ
+// æ•°æ®æ›´æ–°å‡½æ•°ï¼šå°†è§£æåçš„å€¼å­˜å…¥ RawPos å’Œ RealPos
+void Position::Update_RawPosition(float value[5])
+{
+	RawPosData.Pos_X = value[0] / 1000.f; 
+	RawPosData.Pos_Y = value[1] / 1000.f; 
+	RawPosData.angle_Z = value[2];
+	RawPosData.Speed_Yaw = value[3];
+	RawPosData.Speed_Y = value[4];
+
+   //ä¸–ç•Œåæ ‡
+	RealPosData.world_yaw = -RawPosData.angle_Z;
+  RealPosData.world_x   =  RawPosData.Pos_X + RealPosData.dx;
+	RealPosData.world_y   =  RawPosData.Pos_Y + RealPosData.dy;
+
+	RealPosData.dyaw = -RawPosData.Speed_Yaw;
+
+}
+
+
+
+void Position::Reposition_SendData(float X, float Y)
+{
+	uint8_t txBuffer[16] = {0};
+
+	union
+	{
+        float f;
+        uint8_t bytes[4];
+    } floatUnion;
+
+	//åŒ…å¤´
+	txBuffer[0] = FRAME_HEAD_POSITION_0;
+	txBuffer[1] = FRAME_HEAD_POSITION_1;
+    txBuffer[2]=0x01;
+
+	//æ•°æ®é•¿åº¦
+	txBuffer[3] = 0x08;
+
+	//æ•°æ®
+	floatUnion.f = X;
+	txBuffer[4] = floatUnion.bytes[0];
+    txBuffer[5] = floatUnion.bytes[1];
+    txBuffer[6] = floatUnion.bytes[2];
+    txBuffer[7] = floatUnion.bytes[3];
+
+    floatUnion.f = Y;
+    txBuffer[8] = floatUnion.bytes[0];
+    txBuffer[9] = floatUnion.bytes[1];
+    txBuffer[10] = floatUnion.bytes[2];
+    txBuffer[11] = floatUnion.bytes[3];
+
+	//CRC
+	txBuffer[12] = 0;
+	txBuffer[13] = 0;
+	//åŒ…å°¾
+	txBuffer[14] = FRAME_TAIL_POSITION_0;
+	txBuffer[15] = FRAME_TAIL_POSITION_1;
+
+	HAL_UART_Transmit(&huart1, txBuffer, 16, HAL_MAX_DELAY);
+}
+
+
+/*è°ƒè¯•USBç”¨çš„
+void USB_DataReceivedCallback(uint8_t* buf, uint16_t len)
+{
+    // æ¥æ”¶åˆ°æ•°æ®åç«‹å³å›ä¼ ï¼ˆechoåŠŸèƒ½ï¼‰
+    if(len > 0 && len <= RX_BUFFER_SIZE)
+    {
+        CDC_Transmit_HS(buf, len);
     }
-
-
-    uint16_t get_controlFrequency() const { return control_Frequency_; }
-    uint16_t get_controlCnt() const { return control_cnt; }
-    void reset_controlCnt() { control_cnt = 0; }
-    void increment_controlCnt() { control_cnt++; }
-
-
-
-protected:
-    bool is_calcangle = true; //½ö½öÔÚis_calcTotalAngleÎªtrueÊ±£¬is_calcangle²ÅÉúĞ§
-    bool is_calcTotalAngle = true;
-    uint32_t motor_id_;
-    bool isExtended_;
-    fdCANbus* bus_;
-
-    // Ä¿±êÖµ
-    float target_rpm_ = 0.0f; // Ä¿±ê×ªËÙ rpm
-    float target_current_= 0.0f; // Ä¿±êµçÁ÷ ma
-    float target_angle_ = 0.0f; // Ä¿±ê½Ç¶È deg
-    float target_totalAngle_ = 0.0f; // Ä¿±ê×Ü½Ç¶È deg
-
-    float GEAR_RATIO = 1.0f; // ¼õËÙ±È
-    float inv_GEAR_RATIO_ = 1.0f; // ·´¼õËÙ±È£¬Ô¤¼ÆËãÒÔÌá¸ßĞ§ÂÊ
-    float rpm_ = 0.0f;
-    float current_ = 0.0f;
-    float angle_ = 0.0f;
-    float totalAngle_ = 0.0f;
-    float temperature_ = 0.0f; // µç»úÎÂ¶È
-
-    uint16_t control_cnt = 0; // ¿ØÖÆÖÜÆÚ¼ÆÊıÆ÷£¬ÓÃÓÚÊµÏÖ²»Í¬ÆµÂÊµÄ¿ØÖÆÂß¼­
-private:
-    uint16_t control_Frequency_ = 1000; // Ä¬ÈÏ¿ØÖÆÆµÂÊ Hz£¬ÖØÉèµÄ¿ØÖÆÆµÂÊ±ØĞëÊÇ100µÄÕûÊı±¶
-
-};
-
-
-
-
-#endif // MOTOR_BASE_H
+}*/

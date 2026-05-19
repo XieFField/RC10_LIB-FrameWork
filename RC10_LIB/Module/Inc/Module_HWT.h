@@ -1,6 +1,6 @@
 /**
  * @file Locate_Setup.h
- * @brief ¶¨Î» Ö÷ÒªÊÇÀ×´ï½ÓÊÕ Î»×Ë±ä»» ¼¤¹âÖØ¶¨Î»µÈ¹¦ÄÜ
+ * @brief å®šä½ ä¸»è¦æ˜¯é›·è¾¾æ¥æ”¶ ä½å§¿å˜æ¢ æ¿€å…‰é‡å®šä½ç­‰åŠŸèƒ½
  * @author XieFField    HaJiCao
  */
 #ifndef MODULE_HWT_H
@@ -28,7 +28,7 @@ extern "C"
 #define FRAME_HEADER_2 0x53
 typedef struct
 {
-    uint8_t reserved[4]; // Ç°4¸ö±£Áô×Ö½Ú
+    uint8_t reserved[4]; // å‰4ä¸ªä¿ç•™å­—èŠ‚
     uint8_t YawL;
     uint8_t YawH;
     uint8_t VL;
@@ -63,8 +63,8 @@ public:
     HWT101CT(const HWT101CT&) = delete;
     HWT101CT& operator=(const HWT101CT&) = delete;
     float get_heading();
-    float get_yaw_rad();//»ñÈ¡½Ç¶È»¡¶ÈÖÆ
-    float get_yaw_speed_rad();//»ñÈ¡½ÇËÙ¶È
+    float get_yaw_rad();//è·å–è§’åº¦å¼§åº¦åˆ¶
+    float get_yaw_speed_rad();//è·å–è§’é€Ÿåº¦
     void handleReceiveData(uint8_t byte);
     void processDecodedData(float yaw);
     HWT101CT(UART_HandleTypeDef *huart_);
@@ -74,10 +74,10 @@ public:
     void imu_reset_heading(float reheading);
     void imu_relocate(float input_realyaw)
     {
-        // ²»¿¼ÂÇ¹éÒ»»¯Ê±£¬Ö±½Ó°´´úÊı¹ØÏµÖØ¶¨Î»
+        // ä¸è€ƒè™‘å½’ä¸€åŒ–æ—¶ï¼Œç›´æ¥æŒ‰ä»£æ•°å…³ç³»é‡å®šä½
         init_yaw = orin_yaw - input_realyaw;
 
-        // Á¢¼´ÉúĞ§£¨¿ÉÑ¡£©
+        // ç«‹å³ç”Ÿæ•ˆï¼ˆå¯é€‰ï¼‰
         real_yaw = input_realyaw;
         yaw_rad = jia::degToRadF32(real_yaw);
     }
@@ -101,20 +101,5 @@ private:
 };
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #endif

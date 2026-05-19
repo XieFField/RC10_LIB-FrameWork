@@ -15,27 +15,27 @@ const Point2D MapNum_RealPos[30] = {
 {0.6, 8.6, 0}, {1.8, 8.6, 0}, {3.0, 8.6, 0}, {4.2, 8.6, 0}, {5.4, 8.6, 0}};
 
 /**
- * @brief ÅĞ¶Ïµ±Ç°×ø±êÊÇ·ñ´¦ÓÚÄ¿±ê·½¸ñÖĞĞÄ·¶Î§ÄÚ
- * @param robotPos »úÆ÷ÈËµ±Ç°×ø±ê
- * @param targetMap Ä¿±ê·½¸ñ±àºÅ (1-30)
- * @param tolerance Èİ²î·¶Î§£¬µ¥Î»Ã×
+ * @brief åˆ¤æ–­å½“å‰åæ ‡æ˜¯å¦å¤„äºç›®æ ‡æ–¹æ ¼ä¸­å¿ƒèŒƒå›´å†…
+ * @param robotPos æœºå™¨äººå½“å‰åæ ‡
+ * @param targetMap ç›®æ ‡æ–¹æ ¼ç¼–å· (1-30)
+ * @param tolerance å®¹å·®èŒƒå›´ï¼Œå•ä½ç±³
  */
 
 bool isInTargetMap(Point2D robotPos, int targetMap, float tolerance)
 {
     if(targetMap < 1 || targetMap > 30)
     {
-        return false; // ÎŞĞ§µÄÄ¿±ê·½¸ñ±àºÅ
+        return false; // æ— æ•ˆçš„ç›®æ ‡æ–¹æ ¼ç¼–å·
     }
     Point2D map_center = MapNum_RealPos[targetMap - 1];
     
     if (robotPos.x >= map_center.x - tolerance && robotPos.x <= map_center.x + tolerance &&
         robotPos.y >= map_center.y - tolerance && robotPos.y <= map_center.y + tolerance)
     {
-        return true; // ÔÚÄ¿±ê¸ñÄÚ
+        return true; // åœ¨ç›®æ ‡æ ¼å†…
     }
     else
-        return false; // ²»ÔÚÄ¿±ê¸ñÄÚ
+        return false; // ä¸åœ¨ç›®æ ‡æ ¼å†…
 }
 
 
@@ -47,7 +47,7 @@ void get_MoveDiretion(Point2D robotPos,
 {
     PathNode_S path = PathNodeResult_calc(robotPos, MF1, MF2);
 
-    int8_t bestB1_c_, bestB1_r_, // ÁĞ ĞĞ
+    int8_t bestB1_c_, bestB1_r_, // åˆ— è¡Œ
         bestB2_c_, bestB2_r_,
         bestBMF1_c_, bestBMF1_r_,
         bestBMF2_c_, bestBMF2_r_;
@@ -61,14 +61,14 @@ void get_MoveDiretion(Point2D robotPos,
 
     if (MF1 != 0 && MF2 != 0)
     {
-        if (bestB1_c_ == bestBMF1_c_) // Í¬ÁĞ²»Í¬ĞĞ
+        if (bestB1_c_ == bestBMF1_c_) // åŒåˆ—ä¸åŒè¡Œ
         {
             if (bestB1_r_ < bestBMF1_r_)
                 result_[0] = Positive_Y;
             else
                 result_[0] = Negative_Y;
         }
-        else if (bestB1_r_ == bestBMF1_r_) // Í¬ĞĞ²»Í¬ÁĞ
+        else if (bestB1_r_ == bestBMF1_r_) // åŒè¡Œä¸åŒåˆ—
         {
             if (bestB1_c_ < bestBMF1_c_)
                 result_[0] = Positive_X;
@@ -78,14 +78,14 @@ void get_MoveDiretion(Point2D robotPos,
         else
             result_[0] = NONE;
 
-        if (bestB2_c_ == bestBMF2_c_) // Í¬ÁĞ²»Í¬ĞĞ
+        if (bestB2_c_ == bestBMF2_c_) // åŒåˆ—ä¸åŒè¡Œ
         {
             if (bestB2_r_ < bestBMF2_r_)
                 result_[1] = Positive_Y;
             else
                 result_[1] = Negative_Y;
         }
-        else if (bestB2_r_ == bestBMF2_r_) // Í¬ĞĞ²»Í¬ÁĞ
+        else if (bestB2_r_ == bestBMF2_r_) // åŒè¡Œä¸åŒåˆ—
         {
             if (bestB2_c_ < bestBMF2_c_)
                 result_[1] = Positive_X;
@@ -100,14 +100,14 @@ void get_MoveDiretion(Point2D robotPos,
     {
         if (MF1 != 0)
         {
-            if (bestB1_c_ == bestBMF1_c_) // Í¬ĞĞ²»Í¬ÁĞ
+            if (bestB1_c_ == bestBMF1_c_) // åŒè¡Œä¸åŒåˆ—
             {
                 if (bestB1_r_ < bestBMF1_r_)
                     result_[0] = Positive_Y;
                 else
                     result_[0] = Negative_Y;
             }
-            else if (bestB1_r_ == bestBMF1_r_) // Í¬ÁĞ²»Í¬º½
+            else if (bestB1_r_ == bestBMF1_r_) // åŒåˆ—ä¸åŒèˆª
             {
                 if (bestB1_c_ < bestBMF1_c_)
                     result_[0] = Positive_X;
@@ -122,14 +122,14 @@ void get_MoveDiretion(Point2D robotPos,
 
         if (MF2 != 0)
         {
-            if (bestB2_c_ == bestBMF2_c_) // Í¬ĞĞ²»Í¬ÁĞ
+            if (bestB2_c_ == bestBMF2_c_) // åŒè¡Œä¸åŒåˆ—
             {
                 if (bestB2_r_ < bestBMF2_r_)
                     result_[1] = Positive_Y;
                 else
                     result_[1] = Negative_Y;
             }
-            else if (bestB2_r_ == bestBMF2_r_) // Í¬ÁĞ²»Í¬º½
+            else if (bestB2_r_ == bestBMF2_r_) // åŒåˆ—ä¸åŒèˆª
             {
                 if (bestB2_c_ < bestBMF2_c_)
                     result_[1] = Positive_X;
@@ -157,27 +157,27 @@ float Get_ChassisYawForArmAlign(int8_t targetKFS, int8_t B1, int8_t BMF1)
     float target_yaw = 0.0f;
 
     /**
-     * 1. ×ó²à targetyaw = -180,
-     * 2. ÓÒ²à targetyaw = 0
-     * 3. ÉÏ²à targetyaw = 90
-     * 4. ÏÂ²à targetyaw = -90
+     * 1. å·¦ä¾§ targetyaw = -180,
+     * 2. å³ä¾§ targetyaw = 0
+     * 3. ä¸Šä¾§ targetyaw = 90
+     * 4. ä¸‹ä¾§ targetyaw = -90
      */
 
-    //ÉÏÏÂ²àÊ±ºò£¬Í¬ĞĞ²»Í¬ÁĞ ¼´×ßx·½Ïò
+    //ä¸Šä¸‹ä¾§æ—¶å€™ï¼ŒåŒè¡Œä¸åŒåˆ— å³èµ°xæ–¹å‘
     if(r1 == r2)
     {
-        if(r1 == 1 && r2 ==1) //ÏÂ²à
+        if(r1 == 1 && r2 ==1) //ä¸‹ä¾§
             target_yaw = -90.0f;
-        else if (r1 ==6 && r2 ==6) //ÉÏ²à
+        else if (r1 ==6 && r2 ==6) //ä¸Šä¾§
             target_yaw = 90.0f;
     }
 
-    //×óÓÒ²àÊ±ºò£¬ Í¬ÁĞ²»Í¬ĞĞ ¼´×ßy·½Ïò
+    //å·¦å³ä¾§æ—¶å€™ï¼Œ åŒåˆ—ä¸åŒè¡Œ å³èµ°yæ–¹å‘
     if(c1 == c2)
     {
-        if(c1 ==1 && c2 ==1) //×ó²à
+        if(c1 ==1 && c2 ==1) //å·¦ä¾§
             target_yaw = 180.0f;
-        else if (c1 ==5 && c2 ==5) //ÓÒ²à
+        else if (c1 ==5 && c2 ==5) //å³ä¾§
             target_yaw = 0.0f;
     }
     
@@ -186,11 +186,11 @@ float Get_ChassisYawForArmAlign(int8_t targetKFS, int8_t B1, int8_t BMF1)
 
 
 
-//ÒÀ¾ÉÊºÉÏ¶ÑÊº
+//ä¾æ—§å±ä¸Šå †å±
 /**
- * @brief ¸ù¾İµ±Ç°ËùÔÚµÄµØÍ¼¸ñ(bestB1)ºÍĞĞ½ø·½Ïò£¬¼ÆËã»úĞµ±Û³õÊ¼³¯Ïò£»
- * @param mapNum ÊäÈëbestBµÄµØÍ¼±àºÅ
- * @param dir »úĞµ±ÛĞĞ½ø·½Ïò
+ * @brief æ ¹æ®å½“å‰æ‰€åœ¨çš„åœ°å›¾æ ¼(bestB1)å’Œè¡Œè¿›æ–¹å‘ï¼Œè®¡ç®—æœºæ¢°è‡‚åˆå§‹æœå‘ï¼›
+ * @param mapNum è¾“å…¥bestBçš„åœ°å›¾ç¼–å·
+ * @param dir æœºæ¢°è‡‚è¡Œè¿›æ–¹å‘
  */
 float Get_ArmBaseTargetAngle(int8_t mapNum, Direction_E dir)
 {
@@ -203,10 +203,10 @@ float Get_ArmBaseTargetAngle(int8_t mapNum, Direction_E dir)
     {
         case Positive_Y:
         {
-            if (c == 1) // ×ó²à
+            if (c == 1) // å·¦ä¾§
                 tar = 180.0f;
 
-            else if (c == 5) // ÓÒ²à
+            else if (c == 5) // å³ä¾§
                 tar = 0.0f;
 
             break;
@@ -214,10 +214,10 @@ float Get_ArmBaseTargetAngle(int8_t mapNum, Direction_E dir)
 
         case Negative_Y:
         {
-            if (c == 1) // ×ó²à
+            if (c == 1) // å·¦ä¾§
                 tar = 0.0f;
 
-            else if (c == 5) // ÓÒ²à
+            else if (c == 5) // å³ä¾§
                 tar = 180.0f;
 
             break;
@@ -225,9 +225,9 @@ float Get_ArmBaseTargetAngle(int8_t mapNum, Direction_E dir)
 
         case Positive_X:
         {
-            if (r == 1) // ÏÂ²à
+            if (r == 1) // ä¸‹ä¾§
                 tar = 0.0f;
-            else if (r == 6) // ÉÏ²à
+            else if (r == 6) // ä¸Šä¾§
                 tar = 180.0f;
 
             break;
@@ -235,9 +235,9 @@ float Get_ArmBaseTargetAngle(int8_t mapNum, Direction_E dir)
 
         case Negative_X:
         {
-            if (r == 1) // ÏÂ²à
+            if (r == 1) // ä¸‹ä¾§
                 tar = 180.0f;
-            else if (r == 6) // ÉÏ²à
+            else if (r == 6) // ä¸Šä¾§
                 tar = 0.0f;
 
             break;
@@ -250,7 +250,7 @@ float Get_ArmBaseTargetAngle(int8_t mapNum, Direction_E dir)
 float Get_ArmWorldAngle(float chassis_yaw_deg, float gimbal_angle_deg)
 {
     float arm_world_angle = chassis_yaw_deg + gimbal_angle_deg;
-    // ¹éÒ»»¯µ½ [0, 360)
+    // å½’ä¸€åŒ–åˆ° [0, 360)
     while (arm_world_angle > 360.0f)
     {
         arm_world_angle -= 360.0f;
@@ -262,35 +262,35 @@ float Get_ArmWorldAngle(float chassis_yaw_deg, float gimbal_angle_deg)
     return arm_world_angle;
 }
 
-// ĞĞÁĞ×ªµØÍ¼±àºÅ
+// è¡Œåˆ—è½¬åœ°å›¾ç¼–å·
 int8_t CR_ToMap(int8_t c, int8_t r)
 {
     return (int8_t)((r - 1) * MAP_COLS + c);
 }
 
-// ×²Ç½ÅĞ¶Ï(Ã·»¨×®)
+// æ’å¢™åˆ¤æ–­(æ¢…èŠ±æ¡©)
 static bool IsWalkable(int8_t map)
 {
     if (map < 1 || map > 30)
         return false;
     // int8_t mf = MapNum_TransforMFNum(map);
-    // // mf==-1 ¡ú Í¨µÀ£»·ñÔòÎªÃ·»¨×®¸ñ£¨ÕÏ°­£©
+    // // mf==-1 â†’ é€šé“ï¼›å¦åˆ™ä¸ºæ¢…èŠ±æ¡©æ ¼ï¼ˆéšœç¢ï¼‰
     // return (mf == -1);
 
     int8_t c, r;
     Map_ToCR(map, c, r);
-    // ÖĞĞÄÇøÓò c=2..4 ÇÒ r=2..5 Îª²»¿É×ß
+    // ä¸­å¿ƒåŒºåŸŸ c=2..4 ä¸” r=2..5 ä¸ºä¸å¯èµ°
     return !(c >= 2 && c <= 4 && r >= 2 && r <= 5);
 }
 
-// µØÍ¼±àºÅ×ªĞĞÁĞ
+// åœ°å›¾ç¼–å·è½¬è¡Œåˆ—
 void Map_ToCR(int8_t map, int8_t &c, int8_t &r)
 {
     r = (int8_t)((map - 1) / MAP_COLS + 1);
     c = (int8_t)((map - 1) % MAP_COLS + 1);
 }
 
-int8_t MFNum_TransforMapNum(int8_t MFNum) // ½«Ã·»¨×®±àºÅ×ª»»ÎªÃ·»¨ÁÖ·½¸ñµØÍ¼±àºÅ
+int8_t MFNum_TransforMapNum(int8_t MFNum) // å°†æ¢…èŠ±æ¡©ç¼–å·è½¬æ¢ä¸ºæ¢…èŠ±æ—æ–¹æ ¼åœ°å›¾ç¼–å·
 {
     if (MFNum < 1 || MFNum > 12)
         return -1;
@@ -298,7 +298,7 @@ int8_t MFNum_TransforMapNum(int8_t MFNum) // ½«Ã·»¨×®±àºÅ×ª»»ÎªÃ·»¨ÁÖ·½¸ñµØÍ¼±àº
     return MFNum + 6 + 2 * (static_cast<int8_t>((MFNum - 1) / 3.0));
 }
 
-int8_t MapNum_TransforMFNum(int8_t mapNum) // ½«Ã·»¨ÁÖ·½¸ñµØÍ¼±àºÅ×ª»»ÎªÃ·»¨×®±àºÅ
+int8_t MapNum_TransforMFNum(int8_t mapNum) // å°†æ¢…èŠ±æ—æ–¹æ ¼åœ°å›¾ç¼–å·è½¬æ¢ä¸ºæ¢…èŠ±æ¡©ç¼–å·
 {
     int8_t MFNum_ = mapNum - 6 - 2 * ((mapNum - 7) / 3);
     if (MFNum_ < 1 || MFNum_ > 12)
@@ -325,7 +325,7 @@ static bool IsAdjacent4(int8_t a, int8_t b)
     return (dc + dr) == 1;
 }
 
-RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum) // Çó½âÊ°È¡KFSÊ±ºòËù´¦Í¨µÀ ×î¶àÁ½½â
+RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum) // æ±‚è§£æ‹¾å–KFSæ—¶å€™æ‰€å¤„é€šé“ æœ€å¤šä¸¤è§£
 {
     RoadResult_S result_ = {0, 0, 0};
     if (MFNum < 1 || MFNum > 12)
@@ -354,7 +354,7 @@ RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum) // Çó½âÊ°È¡KFSÊ±ºòËù´¦Í¨µÀ ×î
             continue;
         }
 
-        // ¹ıÂË·ÇÍ¨µÀ
+        // è¿‡æ»¤éé€šé“
         if (!IsWalkable(candidate[i]))
         {
             candidate[i] = 0;
@@ -365,7 +365,7 @@ RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum) // Çó½âÊ°È¡KFSÊ±ºòËù´¦Í¨µÀ ×î
     int8_t validResults[3] = {0};
     int validCount = 0;
 
-    // ¹ıÂË0
+    // è¿‡æ»¤0
     for (int i = 0; i < 4 && validCount < 3; i++)
     {
         if (candidate[i] != 0)
@@ -392,7 +392,7 @@ RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum) // Çó½âÊ°È¡KFSÊ±ºòËù´¦Í¨µÀ ×î
     return result_;
 }
 
-RoadResult_S MFNum_ToRoadResult(int8_t MFNum) // Çó½âÃ·»¨×®ËùÓĞÇ°Ò»Í¨µÀ½á¹û(½øÈëÍ¨µÀ¡¢¿ªÆôÔ¤ÅĞ)
+RoadResult_S MFNum_ToRoadResult(int8_t MFNum) // æ±‚è§£æ¢…èŠ±æ¡©æ‰€æœ‰å‰ä¸€é€šé“ç»“æœ(è¿›å…¥é€šé“ã€å¼€å¯é¢„åˆ¤)
 {
     RoadResult_S result = {0, 0, 0};
     if (MFNum < 1 || MFNum > 12)
@@ -437,14 +437,14 @@ RoadResult_S MFNum_ToRoadResult(int8_t MFNum) // Çó½âÃ·»¨×®ËùÓĞÇ°Ò»Í¨µÀ½á¹û(½øÈë
 
     int8_t validResults[3] = {0};
     int validCount = 0;
-    // ¹ıÂË0
+    // è¿‡æ»¤0
     for (int i = 0; i < 4 && validCount < 3; i++)
     {
         if (candidate[i] != 0)
             validResults[validCount++] = candidate[i];
     }
 
-    // ÅÅÁĞ
+    // æ’åˆ—
     for (int i = 0; i < validCount - 1; i++)
     {
         for (int j = 0; j < validCount - 1 - i; j++)
@@ -465,7 +465,7 @@ RoadResult_S MFNum_ToRoadResult(int8_t MFNum) // Çó½âÃ·»¨×®ËùÓĞÇ°Ò»Í¨µÀ½á¹û(½øÈë
     return result;
 }
 
-static Point2D MapNum_ToMatrixPos_point(int8_t MapNum) // Çó½â·½¸ñµÄĞĞÁĞ×ø±ê
+static Point2D MapNum_ToMatrixPos_point(int8_t MapNum) // æ±‚è§£æ–¹æ ¼çš„è¡Œåˆ—åæ ‡
 {
     Point2D result_ = {0, 0, 0};
 
@@ -474,7 +474,7 @@ static Point2D MapNum_ToMatrixPos_point(int8_t MapNum) // Çó½â·½¸ñµÄĞĞÁĞ×ø±ê
     return result_;
 }
 
-Vector2D MapNum_ToMatrixPos(int8_t MapNum) // Çó½â·½¸ñµÄĞĞÁĞ×ø±ê
+Vector2D MapNum_ToMatrixPos(int8_t MapNum) // æ±‚è§£æ–¹æ ¼çš„è¡Œåˆ—åæ ‡
 {
     Vector2D result_ = {0, 0};
 
@@ -490,7 +490,7 @@ static float euclid(Point2D a, Point2D b)
     return sqrtf(dx * dx + dy * dy);
 }
 
-// ½öÓÃÓÚ°Ñ map ºÅ±ä³É¸ñÖĞĞÄÊÀ½ç×ø±ê£¨Ã×£©
+// ä»…ç”¨äºæŠŠ map å·å˜æˆæ ¼ä¸­å¿ƒä¸–ç•Œåæ ‡ï¼ˆç±³ï¼‰
 Point2D MapCenterWorld(int8_t map)
 {
     if (map < 1 || map > 30)
@@ -514,7 +514,7 @@ Vector2D MapCenterWorld_Vector2D(int8_t map)
     return z;
 }
 
-// ¼ÆËã×î¼ÑÈë¿Ú   ÂôµôÁË£¬Ó¦¸ÃÊÇ²»ÓÃÕâ¶Îº¯ÊıÁË
+// è®¡ç®—æœ€ä½³å…¥å£   å–æ‰äº†ï¼Œåº”è¯¥æ˜¯ä¸ç”¨è¿™æ®µå‡½æ•°äº†
 int8_t BestEntrance_calc(Point2D robotPos, RoadResult_S *B1)
 {
     int8_t entrance[30];
@@ -535,7 +535,7 @@ int8_t BestEntrance_calc(Point2D robotPos, RoadResult_S *B1)
     if (B1->result3 != 0)
         B1Count++;
 
-    float bestJ = 1.0e6f; // ÎŞÇî´ó
+    float bestJ = 1.0e6f; // æ— ç©·å¤§
 
     int8_t bestE = -1;
 
@@ -616,7 +616,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
 {
     PathNode_S out{0, 0, 0, 0, 0, 26};
     out.exitMap=EXIT;
-    // ºòÑ¡ B1
+    // å€™é€‰ B1
     RoadResult_S B1_can = MFNum_ToRoadResult(MF1);
     int8_t B1set[3] = {B1_can.result1, B1_can.result2, B1_can.result3};
     uint8_t nB1 = 0;
@@ -630,7 +630,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
     if (nB1 == 0)
         return out;
 
-    // ºòÑ¡ B2
+    // å€™é€‰ B2
     RoadResult_S B2_can = MFNum_ToRoadResult(MF2);
 
     int8_t B2set[3] =
@@ -643,9 +643,9 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
             nB2++;
     }
 
-    // ºòÑ¡bestMF1
+    // å€™é€‰bestMF1
     RoadResult_S bestBMF1_can = MFNum_ToCatchRoadResult(MF1);
-    int8_t bestMF1set[2] = // ×î¶àÁ½½â
+    int8_t bestMF1set[2] = // æœ€å¤šä¸¤è§£
         {bestBMF1_can.result1, bestBMF1_can.result2};
     uint8_t nbestBMF1 = 0;
     for (int i = 0; i < 2; i++)
@@ -657,9 +657,9 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
     if (nbestBMF1 == 0)
         return out;
 
-    // ºòÑ¡bestMF2
+    // å€™é€‰bestMF2
     RoadResult_S bestBMF2_can = MFNum_ToCatchRoadResult(MF2);
-    int8_t bestBMF2set[2] = // ×î¶àÁ½½â
+    int8_t bestBMF2set[2] = // æœ€å¤šä¸¤è§£
         {bestBMF2_can.result1, bestBMF2_can.result2};
 
     uint8_t nbestBMF2 = 0;
@@ -669,13 +669,13 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
             nbestBMF2++;
     }
 
-    // ¿ÉÑ¡Èë¿Ú¼¯ºÏ£¨ÍâÈ¦Í¨µÀ¸ñ£©
+    // å¯é€‰å…¥å£é›†åˆï¼ˆå¤–åœˆé€šé“æ ¼ï¼‰
     int8_t entrances[30];
     uint8_t eCount = 0;
 
-    const bool isBelow = (robotPos.y < MapNum_RealPos[0].y);  // Ã·»¨ÁÖÏÂ
-    const bool isAbove = (robotPos.y > MapNum_RealPos[29].y); // Ã·»¨ÁÖÉÏ
-    const bool isInside = (!isBelow && !isAbove);             // Ã·»¨ÁÖÖĞ
+    const bool isBelow = (robotPos.y < MapNum_RealPos[0].y);  // æ¢…èŠ±æ—ä¸‹
+    const bool isAbove = (robotPos.y > MapNum_RealPos[29].y); // æ¢…èŠ±æ—ä¸Š
+    const bool isInside = (!isBelow && !isAbove);             // æ¢…èŠ±æ—ä¸­
 
     // for(int8_t m=1; m<=30; ++m)
     // {
@@ -700,17 +700,17 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
     }
     else // inside
     {
-        eCount = 0; // ÁÖÄÚÎŞĞèÈë¿Ú£¬ÒÔB1ÎªÆğµã
+        eCount = 0; // æ—å†…æ— éœ€å…¥å£ï¼Œä»¥B1ä¸ºèµ·ç‚¹
     }
 
     float bestCost = 1.0e9f;
-    int8_t bestE = 0, bestB1 = 0, bestB2 = 0, bestBMF1 = 0, bestBMF2 = 0; // ×îÓÅ
+    int8_t bestE = 0, bestB1 = 0, bestB2 = 0, bestBMF1 = 0, bestBMF2 = 0; // æœ€ä¼˜
 
-    // È«×éºÏËÑË÷È«¾Ö×îÓÅ
+    // å…¨ç»„åˆæœç´¢å…¨å±€æœ€ä¼˜
     for (uint8_t ie = 0; ie < eCount; ++ie)
     {
         int8_t E = entrances[ie];
-        float d_out = euclid(robotPos, MapCenterWorld(E)); // robot¡úÈë¿Ú Å·ÊÏ
+        float d_out = euclid(robotPos, MapCenterWorld(E)); // robotâ†’å…¥å£ æ¬§æ°
 
         for (uint8_t i1 = 0; i1 < nB1; i1++)
         {
@@ -722,7 +722,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
             if (sE1 >= BFS_INF)
                 continue;
 
-            // BMF1 ±ØĞëÓë B1 4-ÁÚ½Ó
+            // BMF1 å¿…é¡»ä¸ B1 4-é‚»æ¥
             for (uint8_t m1 = 0; m1 < nbestBMF1; m1++)
             {
                 int8_t BMF1 = bestMF1set[m1];
@@ -737,7 +737,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
 
                 if (nB2 == 0 || nbestBMF2 == 0)
                 {
-                    // ÎŞµÚ¶ş¶Î£ºE¡úB1¡úBMF1¡úExit
+                    // æ— ç¬¬äºŒæ®µï¼šEâ†’B1â†’BMF1â†’Exit
                     int s_m1_X = BFS_Steps(BMF1, out.exitMap);
                     if (s_m1_X >= BFS_INF)
                         continue;
@@ -755,7 +755,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
                     continue;
                 }
 
-                // ÓĞµÚ¶ş¶Î£ºE¡úB1¡úBMF1¡úB2¡úBMF2¡úExit
+                // æœ‰ç¬¬äºŒæ®µï¼šEâ†’B1â†’BMF1â†’B2â†’BMF2â†’Exit
                 for (uint8_t i2 = 0; i2 < nB2; i2++)
                 {
                     int8_t B2 = B2set[i2];
@@ -766,7 +766,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
                     if (s_m1_2 >= BFS_INF)
                         continue;
 
-                    // BMF2 ±ØĞëÓë B2 4-ÁÚ½Ó
+                    // BMF2 å¿…é¡»ä¸ B2 4-é‚»æ¥
                     for (uint8_t m2 = 0; m2 < nbestBMF2; m2++)
                     {
                         int8_t BMF2 = bestBMF2set[m2];
@@ -799,10 +799,10 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
         }
     }
 
-    // »ØÍË²ßÂÔ£ºÈôÃ»ÓĞÈÎºÎ¿É´ïÁ´Â·
+    // å›é€€ç­–ç•¥ï¼šè‹¥æ²¡æœ‰ä»»ä½•å¯è¾¾é“¾è·¯
     if (bestE == 0)
     {
-        // ¼òµ¥»ØÍË£ºÑ¡Àë»úÆ÷ÈË×î½üµÄÈë¿Ú£»ÔÙÑ¡Èë¿Ú¡úB1 ²½Êı×îĞ¡£»ÔÙÑ¡ B1¡úB2 ×îĞ¡
+        // ç®€å•å›é€€ï¼šé€‰ç¦»æœºå™¨äººæœ€è¿‘çš„å…¥å£ï¼›å†é€‰å…¥å£â†’B1 æ­¥æ•°æœ€å°ï¼›å†é€‰ B1â†’B2 æœ€å°
         if (eCount == 0)
             return out;
         float bestD = 1.0e9f;
@@ -842,8 +842,8 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
             }
         }
 
-        // Îª»ØÍË·ÖÖ§²¹³ä BMF1/BMF2£¨¸÷×ÔĞèÓë B1/B2 ËÄÁÚ½Ó£©
-        //  Ñ¡ÔñÊ¹Ê£Óà´ú¼Û×îĞ¡µÄÏàÁÚÍ¨µÀ
+        // ä¸ºå›é€€åˆ†æ”¯è¡¥å…… BMF1/BMF2ï¼ˆå„è‡ªéœ€ä¸ B1/B2 å››é‚»æ¥ï¼‰
+        //  é€‰æ‹©ä½¿å‰©ä½™ä»£ä»·æœ€å°çš„ç›¸é‚»é€šé“
         //  1) BMF1
         int bestCost_m1 = BFS_INF;
         for (uint8_t m1 = 0; m1 < nbestBMF1; ++m1)
@@ -861,7 +861,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
                 bestBMF1 = cand;
             }
         }
-        // 2) BMF2£¨Èô´æÔÚµÚ¶ş¶Î£©
+        // 2) BMF2ï¼ˆè‹¥å­˜åœ¨ç¬¬äºŒæ®µï¼‰
         if (nB2 && bestB2)
         {
             int bestCost_m2 = BFS_INF;
@@ -892,7 +892,7 @@ PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EX
 }
     
     
-int BFS_Steps(int8_t startMap, int8_t goalMap) // BFS ×îÉÙ²½Êı
+int BFS_Steps(int8_t startMap, int8_t goalMap) // BFS æœ€å°‘æ­¥æ•°
 {
     using namespace MF_AutoCtrler;
     if (startMap == goalMap)
@@ -908,7 +908,7 @@ int BFS_Steps(int8_t startMap, int8_t goalMap) // BFS ×îÉÙ²½Êı
         vis[i] = 0;
     }
 
-    // ¼òÒ×»·ĞÎ¶ÓÁĞ£¨ÈİÁ¿32£©
+    // ç®€æ˜“ç¯å½¢é˜Ÿåˆ—ï¼ˆå®¹é‡32ï¼‰
      int8_t q[32];
     uint8_t h = 0, t = 0;
     auto qpush = [&](int8_t v)
@@ -979,27 +979,27 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
     RoadResult_S MF1Road = MFNum_ToCatchRoadResult(MF1);
     RoadResult_S MF2Road = MFNum_ToCatchRoadResult(MF2);
 
-    int cornerMap[4] = {1, 5, 26, 30}; // ËÄ¸ö½ÇÂäµÄµØÍ¼±àºÅ
+    int cornerMap[4] = {1, 5, 26, 30}; // å››ä¸ªè§’è½çš„åœ°å›¾ç¼–å·
 
-    //½â³öÄ¿±êÃ·»¨×®ÏàÁÚµÄÍ¨µÀ
-    int roadMF1[2] = {MF1Road.result1, MF1Road.result2}; //¼¯ºÏ£¬ºóĞøÈ¡³ö×îÓÅ£¬resultÎª0±íÊ¾ÎŞĞ§
+    //è§£å‡ºç›®æ ‡æ¢…èŠ±æ¡©ç›¸é‚»çš„é€šé“
+    int roadMF1[2] = {MF1Road.result1, MF1Road.result2}; //é›†åˆï¼Œåç»­å–å‡ºæœ€ä¼˜ï¼Œresultä¸º0è¡¨ç¤ºæ— æ•ˆ
     int roadMF2[2] = {MF2Road.result1, MF2Road.result2};
 
-    //¸ù¾İµ±Ç°»úÆ÷ÈË¾àÀëµÚÒ»¸öMF1ÏàÁÚÍ¨µÀµÄ¾àÀë£¬Éú³É×îÓÅÂ·¾¶µÄµÚÒ»¶ÎÂ·¾¶
-    //Èç¹û»úÆ÷ÈË²»ÔÚÃ·»¨ÁÖÄÚ£¬ÔòentranceMapÖ»ÄÜÊÇ1~5ÒÔ¼°26~30µÄ·¶Î§ÄÚ£¬Í¬Ê±ÔÊĞíentranceMapºÍroadMF1µÄÍ¨µÀÖØºÏ
-    //Èç¹û»úÆ÷ÈËÔÚÃ·»¨ÁÖÄÚ£¬ÔòentranceMap¾ÍÊÇÈ¥roadMF1µÄÂ·¾¶ÉÏÀë»úÆ÷ÈË×î½üµÄÒ»¸öÍ¨µÀ£¬Í¬Ê±ÔÊĞíentranceMapºÍroadMF1µÄÍ¨µÀÖØºÏ
-    //Éú³ÉÂ·¾¶Ê±ºòÒª°üº¬×ª½Ç£¬Èç¹ûÂ·¾¶ÉÏ°üº¬×ª½Ç£¬ÔòĞèÒªÔÚÂ·¾¶ÖĞÌí¼Ó×ª½Çµã£¨cornerMap£©×÷ÎªÂ·¾¶½Úµã
-    //PathInformation_Sµ±ÖĞµÄmustPastMap¾ÍÊÇÂ·¾¶ÉÏµÄ±Ø¾­µã£¬°üº¬entranceMap¡¢roadMF1¡¢×ª½Çµã£¨Èç¹ûÓĞµÄ»°£©ÒÔ¼°roadMF2£¨Èç¹ûÓĞµÄ»°£©
-    //ÇÒÊı×éµÄË³ĞòÒª°´ÕÕÂ·¾¶Ë³ĞòÀ´£¬ÔÊĞíÕÛ·µ(Èç¹ûĞèÒªµÄ»°)
+    //æ ¹æ®å½“å‰æœºå™¨äººè·ç¦»ç¬¬ä¸€ä¸ªMF1ç›¸é‚»é€šé“çš„è·ç¦»ï¼Œç”Ÿæˆæœ€ä¼˜è·¯å¾„çš„ç¬¬ä¸€æ®µè·¯å¾„
+    //å¦‚æœæœºå™¨äººä¸åœ¨æ¢…èŠ±æ—å†…ï¼Œåˆ™entranceMapåªèƒ½æ˜¯1~5ä»¥åŠ26~30çš„èŒƒå›´å†…ï¼ŒåŒæ—¶å…è®¸entranceMapå’ŒroadMF1çš„é€šé“é‡åˆ
+    //å¦‚æœæœºå™¨äººåœ¨æ¢…èŠ±æ—å†…ï¼Œåˆ™entranceMapå°±æ˜¯å»roadMF1çš„è·¯å¾„ä¸Šç¦»æœºå™¨äººæœ€è¿‘çš„ä¸€ä¸ªé€šé“ï¼ŒåŒæ—¶å…è®¸entranceMapå’ŒroadMF1çš„é€šé“é‡åˆ
+    //ç”Ÿæˆè·¯å¾„æ—¶å€™è¦åŒ…å«è½¬è§’ï¼Œå¦‚æœè·¯å¾„ä¸ŠåŒ…å«è½¬è§’ï¼Œåˆ™éœ€è¦åœ¨è·¯å¾„ä¸­æ·»åŠ è½¬è§’ç‚¹ï¼ˆcornerMapï¼‰ä½œä¸ºè·¯å¾„èŠ‚ç‚¹
+    //PathInformation_Så½“ä¸­çš„mustPastMapå°±æ˜¯è·¯å¾„ä¸Šçš„å¿…ç»ç‚¹ï¼ŒåŒ…å«entranceMapã€roadMF1ã€è½¬è§’ç‚¹ï¼ˆå¦‚æœæœ‰çš„è¯ï¼‰ä»¥åŠroadMF2ï¼ˆå¦‚æœæœ‰çš„è¯ï¼‰
+    //ä¸”æ•°ç»„çš„é¡ºåºè¦æŒ‰ç…§è·¯å¾„é¡ºåºæ¥ï¼Œå…è®¸æŠ˜è¿”(å¦‚æœéœ€è¦çš„è¯)
     result.entranceMap = 0;
     result.MFroad[0] = 0;
     result.MFroad[1] = 0;
 
-    // ÁÖÍâÉÏ·½Ê±£¬½ûÖ¹Â·¾¶¹æ»®
+    // æ—å¤–ä¸Šæ–¹æ—¶ï¼Œç¦æ­¢è·¯å¾„è§„åˆ’
     if (robotPos.y > MapNum_RealPos[29].y)
         return result;
 
-    // Èë¿Ú¼¯ºÏ
+    // å…¥å£é›†åˆ
     int8_t entrances[30] = {0};
     uint8_t entranceCount = 0;
 
@@ -1008,12 +1008,12 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
 
     if (isRobotInsideMap)
     {
-        // ÁÖÄÚÆğµãÖ±½ÓÈ¡µ±Ç°ËùÔÚÍ¨µÀ£¬±ÜÃâ³öÏÖÓëÕæÊµÆğµã²»Ò»ÖÂµÄÈë¿Ú
+        // æ—å†…èµ·ç‚¹ç›´æ¥å–å½“å‰æ‰€åœ¨é€šé“ï¼Œé¿å…å‡ºç°ä¸çœŸå®èµ·ç‚¹ä¸ä¸€è‡´çš„å…¥å£
         entrances[entranceCount++] = robotMap;
     }
     else
     {
-        bool isBelow = (robotPos.y < MapNum_RealPos[0].y);  // Ã·»¨ÁÖÏÂ ,flaseÔòÎªÔÚÃ·ÁÖÉÏ·½
+        bool isBelow = (robotPos.y < MapNum_RealPos[0].y);  // æ¢…èŠ±æ—ä¸‹ ,flaseåˆ™ä¸ºåœ¨æ¢…æ—ä¸Šæ–¹
         if (isBelow)
         {
             for (int8_t m = 1; m <= 5; ++m)
@@ -1185,7 +1185,7 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
 
     PushMustPastNode(result.mustPastMap, 12, mustLen, result.exitMap);
 
-    // ¼ÇÂ¼MFroadÔÚmustPastMapÖĞµÄË÷Òı
+    // è®°å½•MFroadåœ¨mustPastMapä¸­çš„ç´¢å¼•
     for (int i = 0; i < mustLen; ++i)
     {
         if (result.mustPastMap[i] == result.MFroad[0])
@@ -1213,7 +1213,7 @@ int BFS_GetPath(int8_t startMap, int8_t goalMap, int8_t *outPath, int maxLen)
 
     static int16_t dist[31];
     static uint8_t vis[31];
-    static int8_t parent[31]; // ¼ÇÂ¼Â·¾¶»ØËİ
+    static int8_t parent[31]; // è®°å½•è·¯å¾„å›æº¯
     for (int i = 1; i <= 30; ++i)
     {
         dist[i] = (int16_t)BFS_INF;
@@ -1221,7 +1221,7 @@ int BFS_GetPath(int8_t startMap, int8_t goalMap, int8_t *outPath, int maxLen)
         parent[i] = 0;
     }
 
-    // ¼òÒ×»·ĞÎ¶ÓÁĞ
+    // ç®€æ˜“ç¯å½¢é˜Ÿåˆ—
     static int8_t q[32];
     uint8_t h = 0, t = 0;
     auto qpush = [&](int8_t v)
@@ -1261,7 +1261,7 @@ int BFS_GetPath(int8_t startMap, int8_t goalMap, int8_t *outPath, int maxLen)
                 continue;
             vis[v] = 1;
             dist[v] = (int16_t)(dist[u] + 1);
-            parent[v] = u; // ¼ÇÂ¼¸¸½Úµã
+            parent[v] = u; // è®°å½•çˆ¶èŠ‚ç‚¹
             qpush(v);
         }
     }
@@ -1270,12 +1270,12 @@ int BFS_GetPath(int8_t startMap, int8_t goalMap, int8_t *outPath, int maxLen)
         return 0;
 
     int steps = (int)dist[goalMap];
-    int pathLen = steps + 1; // °üº¬Æğµã
+    int pathLen = steps + 1; // åŒ…å«èµ·ç‚¹
 
     if (pathLen > maxLen)
-        return -1; // »º³åÇø²»×ã
+        return -1; // ç¼“å†²åŒºä¸è¶³
 
-    // »ØËİÂ·¾¶
+    // å›æº¯è·¯å¾„
     int8_t curr = goalMap;
     for (int i = pathLen - 1; i >= 0; --i)
     {
@@ -1287,31 +1287,31 @@ int BFS_GetPath(int8_t startMap, int8_t goalMap, int8_t *outPath, int maxLen)
 }
 
 /**
- * @brief ¸ù¾İÊÀ½ç×ø±êÅĞ¶ÏËùÔÚµÄµØÍ¼Íø¸ñ±àºÅ
- * @param pos ÊÀ½ç×ø±êµã (x, y)
- * @return int8_t µØÍ¼±àºÅ (1-30), Èç¹û³¬³ö·¶Î§·µ»Ø 0
+ * @brief æ ¹æ®ä¸–ç•Œåæ ‡åˆ¤æ–­æ‰€åœ¨çš„åœ°å›¾ç½‘æ ¼ç¼–å·
+ * @param pos ä¸–ç•Œåæ ‡ç‚¹ (x, y)
+ * @return int8_t åœ°å›¾ç¼–å· (1-30), å¦‚æœè¶…å‡ºèŒƒå›´è¿”å› 0
  */
 int8_t GetMapNumFromPos(Point2D pos)
 {
-    //¶¨ÒåÔ­µãÆ«ÒÆºÍÍø¸ñ³ß´ç
-    const float GRID_SIZE = 1.2f;      // Íø¸ñ±ß³¤
-    const float Y_OFFSET_START = 2.0f; // YÖáÆğÊ¼×ø±ê
+    //å®šä¹‰åŸç‚¹åç§»å’Œç½‘æ ¼å°ºå¯¸
+    const float GRID_SIZE = 1.2f;      // ç½‘æ ¼è¾¹é•¿
+    const float Y_OFFSET_START = 2.0f; // Yè½´èµ·å§‹åæ ‡
 
-    // ·¶Î§¼ì²é
+    // èŒƒå›´æ£€æŸ¥
     if (pos.x < 0 || pos.x > (5 * GRID_SIZE) ||
         pos.y < Y_OFFSET_START || pos.y > (Y_OFFSET_START + 6 * GRID_SIZE))
     {
-        return 0; // ³¬³öµØÍ¼·¶Î§
+        return 0; // è¶…å‡ºåœ°å›¾èŒƒå›´
     }
 
-    // 3. ¼ÆËãĞĞÁĞ (1-based index)
-    // Col ÓÉ x ¾ö¶¨: 0~1.2 -> 1, 1.2~2.4 -> 2 ...
+    // 3. è®¡ç®—è¡Œåˆ— (1-based index)
+    // Col ç”± x å†³å®š: 0~1.2 -> 1, 1.2~2.4 -> 2 ...
     int8_t c = (int8_t)(pos.x / GRID_SIZE) + 1;
 
-    // Row ÓÉ y ¾ö¶¨: 2.0~3.2 -> 1, 3.2~4.4 -> 2 ...
+    // Row ç”± y å†³å®š: 2.0~3.2 -> 1, 3.2~4.4 -> 2 ...
     int8_t r = (int8_t)((pos.y - Y_OFFSET_START) / GRID_SIZE) + 1;
 
-    // 4. ÔÙ´Î¼ì²éĞĞÁĞÊÇ·ñÔ½½ç
+    // 4. å†æ¬¡æ£€æŸ¥è¡Œåˆ—æ˜¯å¦è¶Šç•Œ
     if (c < 1 || c > MF_AutoCtrler::MAP_COLS ||
         r < 1 || r > MF_AutoCtrler::MAP_ROWS)
     {
@@ -1325,7 +1325,7 @@ float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
 {
     if(startmapNum < 1 || startmapNum >30 || next_mapNum < 1 || next_mapNum >30)
     {
-        return -1.0f; // ÎŞĞ§ÊäÈë
+        return -1.0f; // æ— æ•ˆè¾“å…¥
     }
     
     bool isinMFstart = IsWalkable(startmapNum);
@@ -1334,7 +1334,7 @@ float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
 
     if(isinMFstart && isinMFnext)
     {
-        // Á½¸ö¶¼²»ÔÚÃ·»¨×®ÄÚ£¬Ö±½Ó¼ÆËã·½Ïò
+        // ä¸¤ä¸ªéƒ½ä¸åœ¨æ¢…èŠ±æ¡©å†…ï¼Œç›´æ¥è®¡ç®—æ–¹å‘
         Point2D startPos = MapCenterWorld(startmapNum);
         Point2D nextPos = MapCenterWorld(next_mapNum);
         float dx = nextPos.x - startPos.x;
@@ -1345,7 +1345,7 @@ float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
     }
     else
     {
-        return -1.0f; //ÎŞĞ§
+        return -1.0f; //æ— æ•ˆ
     }
 }
 

@@ -1,10 +1,10 @@
 /**
  * @file    Module_ChassisBase.h
  * @author  XieFField
- * @brief   µ×ÅÌÄ£¿é»ùÀà
- *          ÕâÊÇÒ»¸ö´¿´âµÄÔË¶¯Ñ§Ä£ĞÍ
- *          - ×¢²á¶¯Á¦µç»ú£¬Ó¦ÓÃËÙ¶Èµ½µç»ú
- *          - ×ø±êÏµ£º×ñÑ­ÓÒÊÖ¶¨Ôò£¬yawÄæÊ±ÕëÎªÕı¡£
+ * @brief   åº•ç›˜æ¨¡å—åŸºç±»
+ *          è¿™æ˜¯ä¸€ä¸ªçº¯ç²¹çš„è¿åŠ¨å­¦æ¨¡å‹
+ *          - æ³¨å†ŒåŠ¨åŠ›ç”µæœºï¼Œåº”ç”¨é€Ÿåº¦åˆ°ç”µæœº
+ *          - åæ ‡ç³»ï¼šéµå¾ªå³æ‰‹å®šåˆ™ï¼Œyawé€†æ—¶é’ˆä¸ºæ­£ã€‚
  * @version 1.0
  */
 
@@ -40,16 +40,16 @@ extern "C" {
 
 
 typedef enum{
-    CURRENT_ZERO_MODE, //µçÁ÷ÖÃÁã
-    SPEED_ZERO_MODE,   //ËÙ¶ÈÖÃÁã ×¤³µÄ£Ê½
-    ROBOT_SPEED_MODE,  //»úÆ÷ÈËËÙ¶ÈÄ£Ê½
-    WORLD_SPEED_MODE   //ÊÀ½çËÙ¶ÈÄ£Ê½
+    CURRENT_ZERO_MODE, //ç”µæµç½®é›¶
+    SPEED_ZERO_MODE,   //é€Ÿåº¦ç½®é›¶ é©»è½¦æ¨¡å¼
+    ROBOT_SPEED_MODE,  //æœºå™¨äººé€Ÿåº¦æ¨¡å¼
+    WORLD_SPEED_MODE   //ä¸–ç•Œé€Ÿåº¦æ¨¡å¼
 }CHASSIS_CONTROL_MODE_E;
 
 /**
- * @brief µ×ÅÌÄ£¿é»ùÀà
+ * @brief åº•ç›˜æ¨¡å—åŸºç±»
  * @details
- *          ºóĞøÈÎºÎµ×ÅÌÀà¶¼Ğè¼Ì³Ğ´ËÀà¡£         
+ *          åç»­ä»»ä½•åº•ç›˜ç±»éƒ½éœ€ç»§æ‰¿æ­¤ç±»ã€‚         
  */
 template <std::size_t WheelCount>
 class Chassis_Base{
@@ -57,8 +57,8 @@ public:
     Chassis_Base(float wheel_radius, float max_wheel_rpm);
     ~Chassis_Base();
 
-    void set_ControlMode(CHASSIS_CONTROL_MODE_E mode) { ctrl_mode_ = mode; } // ÉèÖÃµ×ÅÌ¿ØÖÆÄ£Ê½
-    void set_Target(const Robot_Twist& target) // ÉèÖÃµ×ÅÌÄ¿±êËÙ¶È
+    void set_ControlMode(CHASSIS_CONTROL_MODE_E mode) { ctrl_mode_ = mode; } // è®¾ç½®åº•ç›˜æ§åˆ¶æ¨¡å¼
+    void set_Target(const Robot_Twist& target) // è®¾ç½®åº•ç›˜ç›®æ ‡é€Ÿåº¦
     {
         switch (ctrl_mode_)
         {
@@ -94,12 +94,12 @@ public:
 
 
 
-    void update(); // ¸üĞÂÂÖËÙÓ¦ÓÃµ½µç»ú
+    void update(); // æ›´æ–°è½®é€Ÿåº”ç”¨åˆ°ç”µæœº
 
-    virtual void updateKinematics() = 0; // ¸üĞÂÔË¶¯Ñ§£¬µ÷ÓÃÄæ½â
+    virtual void updateKinematics() = 0; // æ›´æ–°è¿åŠ¨å­¦ï¼Œè°ƒç”¨é€†è§£
 
 
-    void updateAngleData(const Angle_Twist& angle_twist) { angle_twist_ = angle_twist; } // ¸üĞÂ½ÇËÙ¶ÈÊı¾İ
+    void updateAngleData(const Angle_Twist& angle_twist) { angle_twist_ = angle_twist; } // æ›´æ–°è§’é€Ÿåº¦æ•°æ®
 
     float getWheelTargetRPM(uint8_t wheel_index) const
     {
@@ -108,11 +108,11 @@ public:
         return wheel_target_rpm_[wheel_index];
     }
 
-    Robot_Twist getRobotSpeed() const { return robot_twist_; } // »ñÈ¡»úÆ÷ÈËËÙ¶È£¨»úÆ÷ÈË×ø±êÏµ£©
-    Robot_Twist getWorldSpeed() const { return world_twist_; } // »ñÈ¡»úÆ÷ÈËËÙ¶È£¨ÊÀ½ç×ø±êÏµ£©
-    float getdt() const { return dt_; } // »ñÈ¡Ê±¼ä²î
+    Robot_Twist getRobotSpeed() const { return robot_twist_; } // è·å–æœºå™¨äººé€Ÿåº¦ï¼ˆæœºå™¨äººåæ ‡ç³»ï¼‰
+    Robot_Twist getWorldSpeed() const { return world_twist_; } // è·å–æœºå™¨äººé€Ÿåº¦ï¼ˆä¸–ç•Œåæ ‡ç³»ï¼‰
+    float getdt() const { return dt_; } // è·å–æ—¶é—´å·®
  
-    bool registerWheelMotor(uint8_t wheel_index, Motor_Base* motor) // ×¢²áÂÖ×Óµç»ú
+    bool registerWheelMotor(uint8_t wheel_index, Motor_Base* motor) // æ³¨å†Œè½®å­ç”µæœº
     {
         if(wheel_index >= WheelCount) 
             return false;
@@ -120,45 +120,45 @@ public:
         return true;
     }
 
-    void reset_AccLimitStatus(bool reset) { accel_Limit_ = reset; } // ÖØÖÃµ×ÅÌÏß¼ÓËÙ¶ÈÏŞ·ùÆ÷
-    void reset_AccValue(float reset) {accel_value_ = reset;}; // ÖØÖÃµ×ÅÌÏß¼ÓËÙ¶ÈÖµ
+    void reset_AccLimitStatus(bool reset) { accel_Limit_ = reset; } // é‡ç½®åº•ç›˜çº¿åŠ é€Ÿåº¦é™å¹…å™¨
+    void reset_AccValue(float reset) {accel_value_ = reset;}; // é‡ç½®åº•ç›˜çº¿åŠ é€Ÿåº¦å€¼
 private:
-    void setRobotSpeed(const Robot_Twist& twist); // ÉèÖÃ»úÆ÷ÈËËÙ¶È£¨»úÆ÷ÈË×ø±êÏµ£©
+    void setRobotSpeed(const Robot_Twist& twist); // è®¾ç½®æœºå™¨äººé€Ÿåº¦ï¼ˆæœºå™¨äººåæ ‡ç³»ï¼‰
 
-    void setWorldSpeed(const Robot_Twist& twist); // ÉèÖÃÊÀ½çËÙ¶È£¨ÊÀ½ç×ø±êÏµ£©
+    void setWorldSpeed(const Robot_Twist& twist); // è®¾ç½®ä¸–ç•Œé€Ÿåº¦ï¼ˆä¸–ç•Œåæ ‡ç³»ï¼‰
 protected:
-    Robot_Twist robot_twist_ = {0}; // »úÆ÷ÈË×ø±êÏµµ±Ç°ËÙ¶È
-    Robot_Twist world_twist_ = {0}; // ÊÀ½ç×ø±êÏµµ±Ç°ËÙ¶È
+    Robot_Twist robot_twist_ = {0}; // æœºå™¨äººåæ ‡ç³»å½“å‰é€Ÿåº¦
+    Robot_Twist world_twist_ = {0}; // ä¸–ç•Œåæ ‡ç³»å½“å‰é€Ÿåº¦
 
-    Robot_Twist robot_twist_forward = {0}; //Õı½âËãµÃµ½µÄ»úÆ÷ÈË×ø±êÏµËÙ¶È
-    Robot_Twist world_twist_forward = {0}; //Õı½âËãµÃµ½µÄÊÀ½ç×ø±êÏµËÙ¶È
+    Robot_Twist robot_twist_forward = {0}; //æ­£è§£ç®—å¾—åˆ°çš„æœºå™¨äººåæ ‡ç³»é€Ÿåº¦
+    Robot_Twist world_twist_forward = {0}; //æ­£è§£ç®—å¾—åˆ°çš„ä¸–ç•Œåæ ‡ç³»é€Ÿåº¦
 
-    Robot_Twist robot_target_twist_ = {0}; // »úÆ÷ÈË×ø±êÏµÄ¿±êËÙ¶È
-    Robot_Twist world_target_twist_ = {0}; // ÊÀ½ç×ø±êÏµÄ¿±êËÙ¶È
+    Robot_Twist robot_target_twist_ = {0}; // æœºå™¨äººåæ ‡ç³»ç›®æ ‡é€Ÿåº¦
+    Robot_Twist world_target_twist_ = {0}; // ä¸–ç•Œåæ ‡ç³»ç›®æ ‡é€Ÿåº¦
 
-    Angle_Twist angle_twist_ = {0}; // ´Ó´«¸ĞÆ÷µÃµ½µÄ½ÇËÙ¶È¡¢½Ç¶ÈÊı¾İ
+    Angle_Twist angle_twist_ = {0}; // ä»ä¼ æ„Ÿå™¨å¾—åˆ°çš„è§’é€Ÿåº¦ã€è§’åº¦æ•°æ®
 
-    virtual void inverseKinematics(const Robot_Twist& twist) = 0; // Äæ½â£¬¸ù¾İÄ¿±êËÙ¶È¼ÆËãÂÖËÙ
+    virtual void inverseKinematics(const Robot_Twist& twist) = 0; // é€†è§£ï¼Œæ ¹æ®ç›®æ ‡é€Ÿåº¦è®¡ç®—è½®é€Ÿ
 
     virtual void forwardKinematics(){};
 
-    bool accel_Limit_ = false; // ÊÇ·ñÆôÓÃ¼ÓËÙ¶ÈÏŞ·ù
-    float accel_value_ = 0.0f; // µ±Ç°Ïß¼ÓËÙ¶ÈÖµ
+    bool accel_Limit_ = false; // æ˜¯å¦å¯ç”¨åŠ é€Ÿåº¦é™å¹…
+    float accel_value_ = 0.0f; // å½“å‰çº¿åŠ é€Ÿåº¦å€¼
 
-    const float wheel_radius_;    // ÂÖ×Ó°ë¾¶ (m)
-    const float max_wheel_rpm_;   // ÂÖ×Ó×î´óRPM
-    const float max_wheel_speed_; // ÂÖ×Ó×î´óÏßËÙ¶È (m/s)
+    const float wheel_radius_;    // è½®å­åŠå¾„ (m)
+    const float max_wheel_rpm_;   // è½®å­æœ€å¤§RPM
+    const float max_wheel_speed_; // è½®å­æœ€å¤§çº¿é€Ÿåº¦ (m/s)
 
-    // Ê±¼ä´Á£¬ÓÃÓÚ¼ÓËÙ¶ÈĞ±ÆÂ
-    float last_update_time_s_ = 0.0f; //µ¥Î»£ºÃë
+    // æ—¶é—´æˆ³ï¼Œç”¨äºåŠ é€Ÿåº¦æ–œå¡
+    float last_update_time_s_ = 0.0f; //å•ä½ï¼šç§’
 
-    float wheel_target_rpm_[WheelCount] = {0}; // ´æ´¢Äæ½âËã³öµÄ¸÷ÂÖÄ¿±êRPM
+    float wheel_target_rpm_[WheelCount] = {0}; // å­˜å‚¨é€†è§£ç®—å‡ºçš„å„è½®ç›®æ ‡RPM
 
-    Motor_Base* wheels_[WheelCount] = {nullptr}; // ÂÖ×Óµç»úÖ¸ÕëÊı×é
-    float dt_ = 0.0f; //¸üĞÂÊ±¼ä²î
+    Motor_Base* wheels_[WheelCount] = {nullptr}; // è½®å­ç”µæœºæŒ‡é’ˆæ•°ç»„
+    float dt_ = 0.0f; //æ›´æ–°æ—¶é—´å·®
 
     /**
-     * @brief °ÑÂÖ×ÓÏßËÙ¶È×ª»»Îªµç»ú×ªÖá×ªËÙ
+     * @brief æŠŠè½®å­çº¿é€Ÿåº¦è½¬æ¢ä¸ºç”µæœºè½¬è½´è½¬é€Ÿ
      */
 
     float wheelSpeedToMotorRPM(float wheel_speed)
@@ -166,7 +166,7 @@ protected:
         return (wheel_speed / (2 * PI * wheel_radius_)) * 60.0f;
     }
 
-    CHASSIS_CONTROL_MODE_E ctrl_mode_ = CURRENT_ZERO_MODE; // µ×ÅÌ¿ØÖÆÄ£Ê½
+    CHASSIS_CONTROL_MODE_E ctrl_mode_ = CURRENT_ZERO_MODE; // åº•ç›˜æ§åˆ¶æ¨¡å¼
 };
 
 #endif // __cplusplus

@@ -10,18 +10,18 @@ void VESC_Motor::updateFeedback(const CanFrame& cf)
 {
     id_check_ = cf.ID & 0xFF;
 
-    // ¸ù¾İVESC±ê×¼Ğ­Òé½âÎö CAN_PACKET_STATUS_1
+    // æ ¹æ®VESCæ ‡å‡†åè®®è§£æ CAN_PACKET_STATUS_1
     // Bytes 0-3: eRPM (int32_t)
-    // Bytes 4-5: µçÁ÷ (int16_t, Êµ¼ÊµçÁ÷ * 10)
-    // Bytes 6-7: Õ¼¿Õ±È (int16_t, Êµ¼ÊÕ¼¿Õ±È * 1000)
+    // Bytes 4-5: ç”µæµ (int16_t, å®é™…ç”µæµ * 10)
+    // Bytes 6-7: å ç©ºæ¯” (int16_t, å®é™…å ç©ºæ¯” * 1000)
     eRPM_ = static_cast<int32_t>((cf.data[0] << 24) | (cf.data[1] << 16) | (cf.data[2] << 8) | cf.data[3]);
     int16_t current_raw = static_cast<int16_t>((cf.data[4] << 8) | cf.data[5]);
     int16_t duty_raw = static_cast<int16_t>((cf.data[6] << 8) | cf.data[7]);
 
-    // ½«½âÎö³öµÄÊı¾İ×ª»»Îª±ê×¼µ¥Î»²¢´æÈë³ÉÔ±±äÁ¿
+    // å°†è§£æå‡ºçš„æ•°æ®è½¬æ¢ä¸ºæ ‡å‡†å•ä½å¹¶å­˜å…¥æˆå‘˜å˜é‡
     rpm_ = eRPM_to_RPM(eRPM_);
-    current_ = static_cast<float>(current_raw) * 100.0f; // ×ª»»Îª mA
-    duty_ = static_cast<float>(duty_raw) * 0.001f;     // ×ª»»Îª -1.0 ~ 1.0
+    current_ = static_cast<float>(current_raw) * 100.0f; // è½¬æ¢ä¸º mA
+    duty_ = static_cast<float>(duty_raw) * 0.001f;     // è½¬æ¢ä¸º -1.0 ~ 1.0
 }
 
 void VESC_Motor::setTargetCurrent(float current_set)
@@ -66,7 +66,7 @@ void VESC_Motor::setDuty(float duty)
 std::size_t VESC_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
 {
     if(maxFrames < 1)
-        return 0; // ÎŞ·¨´ò°ü
+        return 0; // æ— æ³•æ‰“åŒ…
 
     CanFrame &cf = outFrames[0];
     static int32_t sendMsgs = 0;
@@ -95,7 +95,7 @@ std::size_t VESC_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         case SET_CURRENT:
         {
             cf.ID = (CAN_CMD_SET_CURRENT << 8) | (motor_id_ & 0xFF);
-            sendMsgs = static_cast<int32_t>(target_current_); //µ¥Î»mA
+            sendMsgs = static_cast<int32_t>(target_current_); //å•ä½mA
             cf.data[0] = (sendMsgs >> 24) & 0xFF;
             cf.data[1] = (sendMsgs >> 16) & 0xFF;
             cf.data[2] = (sendMsgs >> 8) & 0xFF;
@@ -106,7 +106,7 @@ std::size_t VESC_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         case SET_DUTY:
         {
             cf.ID = (CAN_CMD_SET_DUTY << 8) | (motor_id_ & 0xFF);
-            sendMsgs = static_cast<int32_t>(target_duty_ * 100000.0f); //·Å´ó1e5±¶
+            sendMsgs = static_cast<int32_t>(target_duty_ * 100000.0f); //æ”¾å¤§1e5å€
             cf.data[0] = (sendMsgs >> 24) & 0xFF;
             cf.data[1] = (sendMsgs >> 16) & 0xFF;
             cf.data[2] = (sendMsgs >> 8) & 0xFF;
@@ -117,8 +117,8 @@ std::size_t VESC_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         case SET_POS:
         {
             cf.ID = (CAN_CMD_SET_POS << 8) | (motor_id_ & 0xFF);
-            float eAngle = target_totalAngle_ * poles_; //×ª»»Îªµç»úÖá½Ç¶È
-            sendMsgs = static_cast<int32_t>(eAngle * 1000000.0f); //·Å´ó1e6±¶
+            float eAngle = target_totalAngle_ * poles_; //è½¬æ¢ä¸ºç”µæœºè½´è§’åº¦
+            sendMsgs = static_cast<int32_t>(eAngle * 1000000.0f); //æ”¾å¤§1e6å€
             cf.data[0] = (sendMsgs >> 24) & 0xFF;
             cf.data[1] = (sendMsgs >> 16) & 0xFF;
             cf.data[2] = (sendMsgs >> 8) & 0xFF;
@@ -129,7 +129,7 @@ std::size_t VESC_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         case SET_BRAKE:
         {
             cf.ID = (CAN_CMD_SET_CURRENT_BRAKE << 8) | (motor_id_ & 0xFF);
-            sendMsgs = static_cast<int32_t>(target_brake_current_); //µ¥Î»mA
+            sendMsgs = static_cast<int32_t>(target_brake_current_); //å•ä½mA
             cf.data[0] = (sendMsgs >> 24) & 0xFF;
             cf.data[1] = (sendMsgs >> 16) & 0xFF;
             cf.data[2] = (sendMsgs >> 8) & 0xFF;
