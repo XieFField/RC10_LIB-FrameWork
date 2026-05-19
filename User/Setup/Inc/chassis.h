@@ -23,7 +23,6 @@ namespace jia
         public:
             /* ----------------------------------------------------------------- */
             // 对外控制接口
-            //  // 枚举类型定义
             enum class Result
             {
                 kOk,
@@ -52,7 +51,59 @@ namespace jia
                 kShortestPath = 1,
             };
 
-            // 驱动抑制策略：用于在舵角误差较大时降低驱动轮放行比例。
+            // 生命周期
+            Chassis() = default;
+            ~Chassis() = default;
+
+            // 公开接口
+            Result setZeroCurrent();
+            Result setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z);
+            Result setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
+            Result setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z);
+            Robot_Twist getBodySpeed() const;
+            Robot_Twist getWorldSpeed() const;
+            Result setSteerDegAndDriveSpeed(f32 steer_angle_deg, f32 chassis_speed_m_s);
+
+            // 兼容控制层
+            Result setWheelTorqueFreeMode();
+            Result setTargetBodySpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
+            Result setTargetBodySpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
+            Result setTargetBodySpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
+            Result setTargetBodySpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
+            Result setTargetWorldSpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
+            Result setTargetWorldSpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
+            Result setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
+            Result setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
+            f32 getTargetBodyVelX() const;
+            f32 getTargetBodyVelY() const;
+            f32 getTargetWorldVelX() const;
+            f32 getTargetWorldVelY() const;
+            f32 getTargetOmegaZ() const;
+            f32 getCurrentBodyVelX() const;
+            f32 getCurrentBodyVelY() const;
+            f32 getCurrentWorldVelX() const;
+            f32 getCurrentWorldVelY() const;
+            f32 getCurrentOmegaZ() const;
+
+            // 初始化配置：只做硬件句柄绑定。
+            struct InitConfig
+            {
+                Motor_Base *steer_motor_h[4] = {nullptr}; // 4 个转向电机句柄，顺序需与 wheels[4] 的轮位定义保持一致
+                Motor_Base *drive_motor_h[4] = {nullptr}; // 4 个驱动电机句柄，顺序需与对应转向模块一一匹配
+            };
+
+            // 初始化与运行时策略接口
+            void init(InitConfig &config);
+            void setIdlePostureMode(IdlePostureMode mode);
+            void setSteeringStrategyMode(SteeringStrategyMode mode);
+            
+
+        private:
+            Result startHoming();
+            bool isHomingDone() const;
+            void resetRuntimeStrategyToInitConfig();
+
+            // 内部策略/状态类型：不再作为正式外部 API 暴露
             enum class DriveGateStrategy : u8
             {
                 kHardGate = 0,
@@ -60,23 +111,17 @@ namespace jia
                 kContinuousCurve = 2,
                 kAdaptiveGate = 3,
             };
-
-            // 驱动抑制作用域：整车统一缩放或按轮单独缩放。
             enum class DriveGateScope : u8
             {
                 kGlobal = 0,
                 kPerWheel = 1,
             };
-
-            // 停车转向保护策略：用于“指令静止但驱动残速未消失”时抑制舵角突变。
             enum class StopSteerGuardStrategy : u8
             {
                 kHardHold = 0,
                 kSoftBlend = 1,
                 kContinuousBlend = 2,
             };
-
-            // AdaptiveGate 运行相位状态，主要用于调试与运行态观测。
             enum class AdaptiveGatePhase : u8
             {
                 kIdle = 0,
@@ -86,127 +131,36 @@ namespace jia
                 kLegacy = 4,
                 kDisabled = 5,
             };
-
-            // 回零状态机：描述单个舵轮执行 homing 的内部过程。
-            // 这些状态只服务于四舵轮底盘内部寻零流程，不代表上层 FSM 状态。
             enum class HomingState : u8
             {
-                kIdle,                 // 空闲态：等待 startHoming() 发起回零请求
-                kSearch,               // 搜索态：驱动舵轮寻找零位传感器边沿
-                kEdgeDetected,         // 已检测到零位边沿，准备锁存当前位置
-                kOffsetApply,          // 应用零位偏移，将原始角度对齐到运行时零点
-                kContinuousAngleReady, // 连续角度已可用，准备切入正常闭环控制
-                kReady,                // 回零完成，允许该轮参与正常控制
-                kAlignToZero,          // 归位态：按已建立零偏转到软件零点（OA=0）后再标记完成
-                kFault,                // 回零失败/超时，当前轮未完成零位建立
+                kIdle,
+                kSearch,
+                kEdgeDetected,
+                kOffsetApply,
+                kContinuousAngleReady,
+                kReady,
+                kAlignToZero,
+                kFault,
             };
 
-            //  // 设置电流为0
-            Result setZeroCurrent();
-            //  // 设置速度
-            // 这些接口是上层最常用的调用入口：先按坐标系分流，再进入对应的控制模式。
-            Result setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z);
-            // LockNowYaw：锁住“当前 yaw/rot_z”，只改变平移目标；omega_z 参数保留给调用侧兼容使用。
-            Result setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
-            // LockToYaw：锁到显式给定的目标 yaw/rot_z，常用于对准固定航向。
-            Result setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z);
-            //  // 读取速度
-            // 返回的是“当前目标速度视图”，不是电机实时反馈；适合上层查看最近一次下发意图。
-            Robot_Twist getBodySpeed() const;
-            Robot_Twist getWorldSpeed() const;
-            /* ----------------------------------------------------------------- */
-
-            // 默认构造和析构函数
-            Chassis() = default;
-            ~Chassis() = default;
-
-            // 设置轮子扭矩自由模式
-            Result setWheelTorqueFreeMode();
-            // 设置目标速度模式
-            //  // 自身坐标系
-            //  //  // 速度
-            Result setTargetBodySpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
-            //  //  // 固定当前rot_z
-            Result setTargetBodySpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
-            //  //  // 无输入omega_z时固定当前rot_z
-            Result setTargetBodySpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
-            //  //  // 固定到rot_z
-            Result setTargetBodySpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
-            //  // 世界坐标系
-            //  //  // 速度
-            Result setTargetWorldSpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
-            //  //  // 固定当前rot_z
-            Result setTargetWorldSpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
-            //  //  // 无输入omega_z时固定当前rot_z
-            Result setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
-            //  //  // 固定到rot_z
-            Result setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
-            // 读取目标速度
-            f32 getTargetBodyVelX() const;
-            f32 getTargetBodyVelY() const;
-            f32 getTargetWorldVelX() const;
-            f32 getTargetWorldVelY() const;
-            f32 getTargetOmegaZ() const;
-            // 读取当前速度
-            f32 getCurrentBodyVelX() const;
-            f32 getCurrentBodyVelY() const;
-            f32 getCurrentWorldVelX() const;
-            f32 getCurrentWorldVelY() const;
-            f32 getCurrentOmegaZ() const;
-
-        public:
-            // WheelInitConfig 是“单轮初始化描述”，用于填写每个轮组的几何位置、安装朝向、
-            // 电机极性，以及是否启用和如何执行回零。
-            // 典型回零配置示例：
-            // .homing_enabled = true,
-            // .homing_sensor_active_high = true,   // 传感器触发时如果输出高电平，就填 true；触发时低电平就填 false
-            // .homing_gpio_port = GPIOB,           // 或某个 *_GPIO_Port 宏
-            // .homing_gpio_pin = GPIO_PIN_12,      // 或某个 *_Pin 宏
-            // .homing_zero_offset_deg = 0.0f,      // 先填 0 跑通，再按实物零位偏差回填补偿角
             struct WheelInitConfig
             {
-                f32 pos_x_m = 0.0f;                        // 轮模块相对底盘中心的 X 坐标，单位米
-                f32 pos_y_m = 0.0f;                        // 轮模块相对底盘中心的 Y 坐标，单位米
-                f32 theta_oa_to_owi_deg = 0.0f;            // 安装几何偏移：把 OA 朝向换算到转向电机机械零位；它用于坐标变换，不是回零补偿
-                f32 steer_motor_sign = 1.0f;               // 转向电机方向符号：1.0f 表示不取反，-1.0f 表示取反，0.0f 在初始化时会被当作 1.0f
-                f32 drive_motor_sign = 1.0f;               // 驱动电机方向符号：1.0f 表示不取反，-1.0f 表示取反，0.0f 在初始化时会被当作 1.0f
-                bool homing_enabled = false;               // 是否启用该轮回零流程；没有装光电/霍尔零位开关时保持 false
-                bool homing_sensor_active_high = true;     // 传感器原始 GPIO 输入高电平时若视为“触发有效”就填 true，否则填 false；它只影响“逻辑 active”理解，不决定 H/L 边沿对应的机械角
-                void *homing_gpio_port = nullptr;          // 真实光电接入后填 STM32 HAL 的 GPIOA/GPIOB 等端口，或 CubeMX 生成的 *_GPIO_Port 宏
-                u16 homing_gpio_pin = 0;                   // 真实光电接入后填 GPIO_PIN_x，或 CubeMX 生成的 *_Pin 宏；未接时保持 0
-                f32 homing_falling_edge_mech_deg = 60.0f;  // 原始 GPIO 从高到低（H->L）那个边沿对应的机械 OA 角，单位 deg；默认是 +60°
-                f32 homing_rising_edge_mech_deg = -120.0f; // 原始 GPIO 从低到高（L->H）那个边沿对应的机械 OA 角，单位 deg；默认是 -120°
-                f32 homing_search_rpm = 10.0f;             // 回零搜索时给转向电机的转速指令，单位 rpm
-                f32 homing_zero_offset_deg = 0.0f;         // 回零补偿角：传感器触发点到期望机械零位的偏差；它在建立零点时生效，不是安装角偏移
-                f32 homing_timeout_s = 5.0f;               // 单轮回零超时时间，超时后进入故障态，单位秒
+                f32 pos_x_m = 0.0f;
+                f32 pos_y_m = 0.0f;
+                f32 theta_oa_to_owi_deg = 0.0f;
+                f32 steer_motor_sign = 1.0f;
+                f32 drive_motor_sign = 1.0f;
+                bool homing_enabled = false;
+                bool homing_sensor_active_high = true;
+                void *homing_gpio_port = nullptr;
+                u16 homing_gpio_pin = 0;
+                f32 homing_falling_edge_mech_deg = 60.0f;
+                f32 homing_rising_edge_mech_deg = -120.0f;
+                f32 homing_search_rpm = 10.0f;
+                f32 homing_zero_offset_deg = 0.0f;
+                f32 homing_timeout_s = 5.0f;
             };
 
-            // InitConfig 只负责硬件句柄绑定，运行参数/标定参数使用 FourSteer 类内默认值。
-            struct InitConfig
-            {
-                Motor_Base *steer_motor_h[4] = {nullptr}; // 4 个转向电机句柄，顺序需与 wheels[4] 的轮位定义保持一致
-                Motor_Base *drive_motor_h[4] = {nullptr}; // 4 个驱动电机句柄，顺序需与对应转向模块一一匹配
-            };
-
-            // 初始化
-            // 这里只负责四舵轮 chassis 对象内部参数装配与状态准备，不意味着上层 FSM 已切到四舵轮链路。
-            void init(InitConfig &config);
-            Result startHoming();
-            bool isHomingDone() const;
-            // 运行时切换空闲/失能时的舵轮停靠姿态。
-            void setIdlePostureMode(IdlePostureMode mode);
-            // 运行时策略切换：优先级高于 InitConfig 默认值，可在比赛中动态调整。
-            void setSteeringStrategyMode(SteeringStrategyMode mode);
-            void setSteeringFlipHysteresisDeg(f32 enter_angle_deg, f32 exit_angle_deg);
-            void setDriveGateEnabled(bool enabled);
-            void setDriveGateConfig(DriveGateStrategy strategy, DriveGateScope scope, f32 close_angle_deg, f32 min_scale);
-            void setDriveGateCurveParams(f32 curve_half_angle_deg, f32 curve_exponent, f32 curve_min_scale);
-            void setDriveGateAdaptiveParams(f32 transition_linear_speed_m_s, f32 transition_angular_speed_rad_s, f32 ramp_up_s, f32 ramp_down_s);
-            void setStopSteerGuardEnabled(bool enabled);
-            void setStopSteerGuardConfig(StopSteerGuardStrategy strategy, f32 release_speed_m_s, f32 blend_start_speed_m_s, f32 curve_half_speed_m_s, f32 curve_exponent);
-            void resetRuntimeStrategyToInitConfig();
-
-        private:
             // WheelConfig 是运行时轮组状态快照：既保存静态几何和硬件句柄，也保存回零状态、
             // 补偿结果与最近一次规划输出，供控制线程在每个周期更新。
             struct WheelConfig
@@ -255,6 +209,7 @@ namespace jia
                 kWorldSpeedLockToRotZMode,
                 kWorldSpeedLockNowRotZWithNoOmegaZMode,
                 kBodySpeedLockNowRotZWithNoOmegaZMode,
+                kSteerAngleAndDriveSpeedMode,
             };
 
             // ModeFlag 是从 Mode 派生出的布尔型分支标记，用来减少线程内重复比对枚举。
@@ -276,6 +231,9 @@ namespace jia
                 f32 vel_y = 0.0f;
                 f32 omega_z = 0.0f;
                 f32 rot_z = 0.0f;
+                f32 steer_lock_angle_deg = 0.0f;
+                f32 drive_lock_speed_m_s = 0.0f;
+                bool zero_current_all = false;
                 Mode mode = Mode::kWheelTorqueFreeMode;
             };
 
@@ -436,10 +394,10 @@ namespace jia
             // =====================================================================
             struct ActuatorLimitEnable
             {
-                bool enable_drive_omega_limit = false; // [RW] 是否启用驱动角速度上限。
-                bool enable_drive_alpha_limit = false; // [RW] 是否启用驱动角加速度上限。
-                bool enable_steer_rate_limit = false;  // [RW] 是否启用舵向角速度上限。
-                bool enable_steer_alpha_limit = false; // [RW] 是否启用舵向角加速度上限。
+                bool enable_drive_omega_limit = true; // [RW] 是否启用驱动角速度上限。
+                bool enable_drive_alpha_limit = true; // [RW] 是否启用驱动角加速度上限。
+                bool enable_steer_rate_limit = true;  // [RW] 是否启用舵向角速度上限。
+                bool enable_steer_alpha_limit = true; // [RW] 是否启用舵向角加速度上限。
             } actuator_limit_enable_;
 
             // =====================================================================
@@ -474,7 +432,7 @@ namespace jia
                 // ---- 停车转向保护 ------------------------------------------------
                 // 在低速或静止时抑制不必要的舵角摆动，避免轮子在接近停住时反复“找角”。
                 // 它主要解决停车抖动、低速微调来回打舵、以及静止姿态不稳定的问题。
-                bool enable_stop_steer_guard = false;                                                   // [RW] 是否启用停车转向保护。默认开启以抑制过零与低速区舵角抖动。
+                bool enable_stop_steer_guard = true;                                                    // [RW] 是否启用停车转向保护。默认开启以抑制过零与低速区舵角抖动。
                 StopSteerGuardStrategy stop_steer_guard_strategy = StopSteerGuardStrategy::kHardHold; // [RW] 停车保护形状：硬保持更稳，曲线混合更柔和。
                 f32 stop_guard_blend_start_speed_m_s = 0.20f;                                         // [RW] 混合起点速度（m/s）。从正常舵角控制逐步过渡到停车保护的起始点。
                 f32 stop_guard_curve_half_speed_m_s = 0.08f;                                          // [RW] 曲线混合半效速度（m/s）。决定混合函数中“过半”的速度位置。
@@ -741,7 +699,9 @@ namespace jia
 
         inline Result Chassis::setZeroCurrent()
         {
-            return setWheelTorqueFreeMode();
+            input_target_data_.zero_current_all = true;
+            input_target_data_.mode = Mode::kWheelTorqueFreeMode;
+            return Result::kOk;
         }
 
         inline Result Chassis::setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)

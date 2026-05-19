@@ -117,6 +117,9 @@ namespace jia
             input_target_data_.vel_y = 0.0f;
             input_target_data_.omega_z = 0.0f;
             input_target_data_.rot_z = 0.0f;
+            input_target_data_.steer_lock_angle_deg = 0.0f;
+            input_target_data_.drive_lock_speed_m_s = 0.0f;
+            input_target_data_.zero_current_all = false;
             lock_now_rot_z_target_ = 0.0f;
             trans_dir_freeze_active_ = false;
             trans_dir_ref_valid_ = false;
@@ -130,12 +133,14 @@ namespace jia
         {
             clearInputTargetData();
             input_target_data_.mode = Mode::kWheelTorqueFreeMode;
+            input_target_data_.zero_current_all = false;
             return Result::kOk;
         }
 
         Chassis::Result Chassis::setTargetBodySpeedMode(f32 vel_x, f32 vel_y, f32 omega_z)
         {
             input_target_data_.mode = Mode::kBodySpeedMode;
+            input_target_data_.zero_current_all = false;
             input_target_data_.vel_x = vel_x;
             input_target_data_.vel_y = vel_y;
             input_target_data_.omega_z = omega_z;
@@ -145,6 +150,7 @@ namespace jia
         Chassis::Result Chassis::setTargetBodySpeedLockNowRotZMode(f32 vel_x, f32 vel_y)
         {
             input_target_data_.mode = Mode::kBodySpeedLockNowRotZMode;
+            input_target_data_.zero_current_all = false;
             input_target_data_.vel_x = vel_x;
             input_target_data_.vel_y = vel_y;
             input_target_data_.omega_z = 0.0f;
@@ -154,6 +160,7 @@ namespace jia
         Chassis::Result Chassis::setTargetBodySpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z)
         {
             input_target_data_.mode = Mode::kBodySpeedLockNowRotZWithNoOmegaZMode;
+            input_target_data_.zero_current_all = false;
             input_target_data_.vel_x = vel_x;
             input_target_data_.vel_y = vel_y;
             input_target_data_.omega_z = omega_z;
@@ -163,6 +170,7 @@ namespace jia
         Chassis::Result Chassis::setTargetBodySpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z)
         {
             input_target_data_.mode = Mode::kBodySpeedLockToRotZMode;
+            input_target_data_.zero_current_all = false;
             input_target_data_.vel_x = vel_x;
             input_target_data_.vel_y = vel_y;
             input_target_data_.rot_z = rot_z;
@@ -172,6 +180,7 @@ namespace jia
         Chassis::Result Chassis::setTargetWorldSpeedMode(f32 vel_x, f32 vel_y, f32 omega_z)
         {
             input_target_data_.mode = Mode::kWorldSpeedMode;
+            input_target_data_.zero_current_all = false;
             input_target_data_.vel_x = vel_x;
             input_target_data_.vel_y = vel_y;
             input_target_data_.omega_z = omega_z;
@@ -181,6 +190,7 @@ namespace jia
         Chassis::Result Chassis::setTargetWorldSpeedLockNowRotZMode(f32 vel_x, f32 vel_y)
         {
             input_target_data_.mode = Mode::kWorldSpeedLockNowRotZMode;
+            input_target_data_.zero_current_all = false;
             input_target_data_.vel_x = vel_x;
             input_target_data_.vel_y = vel_y;
             input_target_data_.omega_z = 0.0f;
@@ -190,6 +200,7 @@ namespace jia
         Chassis::Result Chassis::setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z)
         {
             input_target_data_.mode = Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode;
+            input_target_data_.zero_current_all = false;
             input_target_data_.vel_x = vel_x;
             input_target_data_.vel_y = vel_y;
             input_target_data_.omega_z = omega_z;
@@ -199,9 +210,22 @@ namespace jia
         Chassis::Result Chassis::setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z)
         {
             input_target_data_.mode = Mode::kWorldSpeedLockToRotZMode;
+            input_target_data_.zero_current_all = false;
             input_target_data_.vel_x = vel_x;
             input_target_data_.vel_y = vel_y;
             input_target_data_.rot_z = rot_z;
+            return Result::kOk;
+        }
+
+        Chassis::Result Chassis::setSteerDegAndDriveSpeed(f32 steer_angle_deg, f32 chassis_speed_m_s)
+        {
+            input_target_data_.mode = Mode::kSteerAngleAndDriveSpeedMode;
+            input_target_data_.zero_current_all = false;
+            input_target_data_.steer_lock_angle_deg = steer_angle_deg;
+            input_target_data_.drive_lock_speed_m_s = chassis_speed_m_s;
+            input_target_data_.vel_x = 0.0f;
+            input_target_data_.vel_y = 0.0f;
+            input_target_data_.omega_z = 0.0f;
             return Result::kOk;
         }
 
@@ -250,62 +274,6 @@ namespace jia
         void Chassis::setSteeringStrategyMode(SteeringStrategyMode mode)
         {
             runtime_strategy_cfg_.steering_strategy_mode = mode;
-        }
-
-        void Chassis::setSteeringFlipHysteresisDeg(f32 enter_angle_deg, f32 exit_angle_deg)
-        {
-            runtime_strategy_cfg_.flip_enter_angle_deg = (enter_angle_deg > 0.0f) ? enter_angle_deg : 135.0f;
-            runtime_strategy_cfg_.flip_exit_angle_deg = (exit_angle_deg > 0.0f) ? exit_angle_deg : 80.0f;
-        }
-
-        void Chassis::setDriveGateEnabled(bool enabled)
-        {
-            runtime_strategy_cfg_.enable_drive_gate = enabled;
-            if (!enabled)
-            {
-                adaptive_gate_scale_ = 1.0f;
-                adaptive_gate_phase_ = AdaptiveGatePhase::kDisabled;
-            }
-        }
-
-        void Chassis::setDriveGateConfig(DriveGateStrategy strategy, DriveGateScope scope, f32 close_angle_deg, f32 min_scale)
-        {
-            runtime_strategy_cfg_.drive_gate_strategy = strategy;
-            runtime_strategy_cfg_.drive_gate_scope = scope;
-            runtime_strategy_cfg_.drive_gate_close_angle_deg = (close_angle_deg > 0.0f) ? close_angle_deg : 30.0f;
-            runtime_strategy_cfg_.drive_gate_min_scale = clampValue(min_scale, 0.0f, 1.0f);
-        }
-
-        void Chassis::setDriveGateCurveParams(f32 curve_half_angle_deg, f32 curve_exponent, f32 curve_min_scale)
-        {
-            runtime_strategy_cfg_.drive_gate_curve_half_angle_deg = (curve_half_angle_deg > 0.1f) ? curve_half_angle_deg : 20.0f;
-            runtime_strategy_cfg_.drive_gate_curve_exponent = (curve_exponent > 0.1f) ? curve_exponent : 2.0f;
-            runtime_strategy_cfg_.drive_gate_curve_min_scale = clampValue(curve_min_scale, 0.0f, 1.0f);
-        }
-
-        void Chassis::setDriveGateAdaptiveParams(f32 transition_linear_speed_m_s, f32 transition_angular_speed_rad_s, f32 ramp_up_s, f32 ramp_down_s)
-        {
-            runtime_strategy_cfg_.drive_gate_transition_linear_speed_m_s = (transition_linear_speed_m_s >= 0.0f) ? transition_linear_speed_m_s : 0.30f;
-            runtime_strategy_cfg_.drive_gate_transition_angular_speed_rad_s = (transition_angular_speed_rad_s >= 0.0f) ? transition_angular_speed_rad_s : 1.00f;
-            runtime_strategy_cfg_.drive_gate_scale_ramp_up_s = (ramp_up_s > 1.0e-4f) ? ramp_up_s : 0.10f;
-            runtime_strategy_cfg_.drive_gate_scale_ramp_down_s = (ramp_down_s > 1.0e-4f) ? ramp_down_s : 0.06f;
-        }
-
-        void Chassis::setStopSteerGuardEnabled(bool enabled)
-        {
-            runtime_strategy_cfg_.enable_stop_steer_guard = enabled;
-        }
-
-        void Chassis::setStopSteerGuardConfig(StopSteerGuardStrategy strategy, f32 release_speed_m_s, f32 blend_start_speed_m_s, f32 curve_half_speed_m_s, f32 curve_exponent)
-        {
-            runtime_strategy_cfg_.stop_steer_guard_strategy = strategy;
-            runtime_strategy_cfg_.stop_guard_blend_start_speed_m_s = (blend_start_speed_m_s >= 0.0f) ? blend_start_speed_m_s : 0.20f;
-            runtime_strategy_cfg_.stop_guard_curve_half_speed_m_s = (curve_half_speed_m_s > 1.0e-4f) ? curve_half_speed_m_s : 0.08f;
-            runtime_strategy_cfg_.stop_guard_curve_exponent = (curve_exponent > 0.1f) ? curve_exponent : 2.0f;
-            const f32 target_release = (release_speed_m_s >= 0.0f) ? release_speed_m_s : near_zero_cfg_.base_enter_m_s;
-            const f32 safe_base_enter = (near_zero_cfg_.base_enter_m_s > 1.0e-6f) ? near_zero_cfg_.base_enter_m_s : 0.10f;
-            near_zero_cfg_.stop_guard_release_scale = target_release / safe_base_enter;
-            deriveNearZeroThresholds();
         }
 
         void Chassis::deriveNearZeroThresholds()
@@ -668,6 +636,8 @@ namespace jia
             case Mode::kWorldSpeedLockToRotZMode:
                 current_mode_flag_.is_world_speed_mode = true;
                 current_mode_flag_.is_lock_to_rot_z = true;
+                break;
+            case Mode::kSteerAngleAndDriveSpeedMode:
                 break;
             default:
                 break;
@@ -1300,6 +1270,10 @@ namespace jia
             }
 
             const bool allow_xpark_pose = command_stationary_intent && xpark_gate_active_;
+            const bool force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
+            const f32 uniform_steer_oa_mod_rad = wrapTo2Pi(degToRadF32(input_target_data_.steer_lock_angle_deg));
+            const f32 uniform_drive_omega_abs = fabsf(input_target_data_.drive_lock_speed_m_s) / wheel_radius_m_;
+            const f32 uniform_drive_sign = (input_target_data_.drive_lock_speed_m_s >= 0.0f) ? 1.0f : -1.0f;
 
             // 第二阶段：计算每轮目标、翻转候选与误差（含 X-Park 延时门控）。
             for (u8 i = 0; i < 4; ++i)
@@ -1356,6 +1330,18 @@ namespace jia
                     drive_omega = -drive_omega;
                 }
 
+                if (force_uniform_steer_drive)
+                {
+                    const f32 fixed_a = nearestEquivalentAngle(current_oa_total_rad[i], uniform_steer_oa_mod_rad);
+                    const f32 fixed_b = nearestEquivalentAngle(current_oa_total_rad[i], wrapTo2Pi(uniform_steer_oa_mod_rad + kPi));
+                    const bool use_b = fabsf(shortestAngularDistance(current_oa_total_rad[i], fixed_b)) <
+                                       fabsf(shortestAngularDistance(current_oa_total_rad[i], fixed_a));
+                    selected = use_b ? fixed_b : fixed_a;
+                    const f32 selected_sign = use_b ? -1.0f : 1.0f;
+                    drive_omega = uniform_drive_sign * selected_sign * uniform_drive_omega_abs;
+                    flipped = use_b;
+                }
+
                 selected_oa_total_rad[i] = selected;
                 selected_flipped_solution_[i] = flipped;
                 steering_errors_rad[i] = fabsf(shortestAngularDistance(current_oa_total_rad[i], selected));
@@ -1365,7 +1351,10 @@ namespace jia
             // 第三阶段：停车抑制（指令静止但残速未消失时，先保舵角）。
             const bool command_is_stationary = command_stationary_intent;
             const bool residual_drive_is_moving = max_residual_speed_m_s > near_zero_derived_.stop_guard_release_m_s;
-            if (runtime_strategy_cfg_.enable_stop_steer_guard && command_is_stationary && residual_drive_is_moving)
+            if (!force_uniform_steer_drive &&
+                runtime_strategy_cfg_.enable_stop_steer_guard &&
+                command_is_stationary &&
+                residual_drive_is_moving)
             {
                 for (u8 i = 0; i < 4; ++i)
                 {
@@ -1424,7 +1413,10 @@ namespace jia
             }
 
             // 第六阶段：基于“规划舵向角”重算每轮驱动投影，保证过渡期驱动与可实现滚动方向一致。
-            computeProjectedDriveFromPlannedSteer(command_data, planned_oa_total_rad_arr, target_drive_raw_rad_s);
+            if (!force_uniform_steer_drive)
+            {
+                computeProjectedDriveFromPlannedSteer(command_data, planned_oa_total_rad_arr, target_drive_raw_rad_s);
+            }
 
             // 第七阶段：全局矢量一致性门控（方向优先）——根据合成方向误差与最大到角时间统一压放驱动。
             const f32 translational_speed_m_s = magnitude2D(command_data.vel_x, command_data.vel_y);
@@ -1444,14 +1436,25 @@ namespace jia
             }
             vector_eta_max_s_ = eta_max_s;
             vector_dir_err_deg_ = dir_err_deg;
-            const f32 vector_gate_scale = updateVectorConsistencyGate(translational_speed_m_s, eta_max_s, dir_err_deg);
+            const f32 vector_gate_scale = force_uniform_steer_drive
+                                              ? 1.0f
+                                              : updateVectorConsistencyGate(translational_speed_m_s, eta_max_s, dir_err_deg);
+            if (force_uniform_steer_drive)
+            {
+                vector_gate_scale_ = 1.0f;
+                vector_gate_active_ = false;
+            }
 
             // 第八阶段：下发前限幅与缓存（DriveGate/余弦补偿作为终端保护，与全局门控叠乘）。
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
                 f32 gate_or_cos_scale = 1.0f;
-                if (runtime_strategy_cfg_.enable_drive_gate)
+                if (force_uniform_steer_drive)
+                {
+                    gate_or_cos_scale = 1.0f;
+                }
+                else if (runtime_strategy_cfg_.enable_drive_gate)
                 {
                     gate_or_cos_scale = gate_scales[i];
                 }
@@ -1503,6 +1506,17 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
+
+                if (input_target_data_.zero_current_all)
+                {
+                    // 硬零电流模式优先级最高：无论回零状态如何，四轮舵向/驱动都直接下发 0 电流。
+                    setSteerMotorTargetCurrent(wheel, 0.0f);
+                    if (wheel.drive_motor_h != nullptr)
+                    {
+                        wheel.drive_motor_h->setTargetCurrent(0.0f);
+                    }
+                    continue;
+                }
 
                 if (!all_homed)
                 {
@@ -2588,6 +2602,13 @@ namespace jia
                     target_data_.vel_y = input_target_data_.vel_y;
                 }
                 target_data_.omega_z = input_target_data_.omega_z;
+
+                if (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode)
+                {
+                    target_data_.vel_x = 0.0f;
+                    target_data_.vel_y = 0.0f;
+                    target_data_.omega_z = 0.0f;
+                }
 
                 // 锁当前航向 / 锁到指定航向都在这里对目标 rot_z 和 omega_z 做二次整形，
                 // 之后再统一进入速度限幅和规划层限速。
