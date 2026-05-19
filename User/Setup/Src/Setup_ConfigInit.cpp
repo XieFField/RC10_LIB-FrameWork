@@ -139,15 +139,6 @@ void ALL_Setup_ConfigInit(void)
 
     ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
-#if JIA_USE_THREE_OMNI_CHASSIS
-    Chassis::InitConfig chassis_init_config =
-    {
-         .motor_handle[0] = &steer1,
-         .motor_handle[1] = &steer2,
-         .motor_handle[2] = &steer3
-    };
-    chassis.init(chassis_init_config);
-#endif
 
 #if JIA_USE_FOUR_STEER_CHASSIS && !TEST_TEMP
     Chassis::InitConfig chassis_init_config =
@@ -243,14 +234,9 @@ void CAN_Motor_Init(void)
     steer3.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
     steer4.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
 
-        steer1.set_anglepid_circular(true);
-        steer2.set_anglepid_circular(true);
-        steer3.set_anglepid_circular(true);
-        steer4.set_anglepid_circular(true);
+   U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
+   U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
 
-    U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
-    U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
-#endif
 
     // 机械臂电机 PID 参数初始化
     
@@ -289,3 +275,4 @@ void CAN_Motor_Init(void)
 
     Weapon_Elbow.reset_controlFrequency(100); // 肘部电机降到 100Hz，减轻总线负载
 }
+

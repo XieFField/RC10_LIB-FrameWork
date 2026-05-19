@@ -1,4 +1,4 @@
-﻿#ifndef APP_UTILS_H_
+#ifndef APP_UTILS_H_
 #define APP_UTILS_H_
 
 #include <stdint.h>

@@ -379,7 +379,8 @@ PID_Param_Config foursteer_steer_angle_pid_params = {
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
     .output_limit = 1050.0f,   
-    .deadband = 0.03f * (3591.0f/187.0f) / 8.0f
+    // .deadband = 0.03f * (3591.0f/187.0f) / 8.0f
+    .deadband = 0.08f
 };
 
 PID_Param_Config track_pid_params = {
