@@ -394,10 +394,10 @@ namespace jia
             // =====================================================================
             struct ActuatorLimitEnable
             {
-                bool enable_drive_omega_limit = true; // [RW] 是否启用驱动角速度上限。
-                bool enable_drive_alpha_limit = true; // [RW] 是否启用驱动角加速度上限。
-                bool enable_steer_rate_limit = true;  // [RW] 是否启用舵向角速度上限。
-                bool enable_steer_alpha_limit = true; // [RW] 是否启用舵向角加速度上限。
+                bool enable_drive_omega_limit = false; // [RW] 是否启用驱动角速度上限。
+                bool enable_drive_alpha_limit = false; // [RW] 是否启用驱动角加速度上限。
+                bool enable_steer_rate_limit = false;  // [RW] 是否启用舵向角速度上限。
+                bool enable_steer_alpha_limit = false; // [RW] 是否启用舵向角加速度上限。
             } actuator_limit_enable_;
 
             // =====================================================================
@@ -432,7 +432,7 @@ namespace jia
                 // ---- 停车转向保护 ------------------------------------------------
                 // 在低速或静止时抑制不必要的舵角摆动，避免轮子在接近停住时反复“找角”。
                 // 它主要解决停车抖动、低速微调来回打舵、以及静止姿态不稳定的问题。
-                bool enable_stop_steer_guard = true;                                                    // [RW] 是否启用停车转向保护。默认开启以抑制过零与低速区舵角抖动。
+                bool enable_stop_steer_guard = false;                                                    // [RW] 是否启用停车转向保护。默认开启以抑制过零与低速区舵角抖动。
                 StopSteerGuardStrategy stop_steer_guard_strategy = StopSteerGuardStrategy::kHardHold; // [RW] 停车保护形状：硬保持更稳，曲线混合更柔和。
                 f32 stop_guard_blend_start_speed_m_s = 0.20f;                                         // [RW] 混合起点速度（m/s）。从正常舵角控制逐步过渡到停车保护的起始点。
                 f32 stop_guard_curve_half_speed_m_s = 0.08f;                                          // [RW] 曲线混合半效速度（m/s）。决定混合函数中“过半”的速度位置。
