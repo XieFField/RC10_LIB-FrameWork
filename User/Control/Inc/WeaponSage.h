@@ -1,7 +1,7 @@
 /**
  * @file WeaponSage.h
  * @author XieFField
- * @brief ÎäÆ÷´óÊ¦¿ØÖÆÇı¶¯Àà
+ * @brief æ­¦å™¨å¤§å¸ˆæ§åˆ¶é©±åŠ¨ç±»
  * @version 1.0
  */
 #ifndef WEAPONSAGE_H
@@ -23,75 +23,69 @@ extern "C" {
 #include "Motor_DJI.h"
 #include "Motor_DM.h"
 #include "APP_tool.h"
+#include "Motor_GO.h"
 #include "BSP_TimeStamp.h"
 
-//³õÊ¼»¯Êı¾İ½á¹¹Ìå
+//åˆå§‹åŒ–æ•°æ®ç»“æ„ä½“
 typedef struct 
 {
     /* data */
-    float max_launchHeight_; // ×î´óÌ§Éı¸ß¶È
-    float max_clawAngle_; // ×î´ó¼Ğ×¦½Ç¶È
-    float max_traverseLength_; // ×î´ó traverse ³¤¶È
+    float max_launchHeight_; // æœ€å¤§æŠ¬å‡é«˜åº¦
+    float max_clawAngle_; // æœ€å¤§å¤¹çˆªè§’åº¦
+    float max_arm_angle_; // æœ€å¤§æœºæ¢°è‡‚è§’åº¦
+    float max_wrist_angle_;
+    float max_arm_rate_;
 
-    float wrist_gearRatio_; //ÊÖÍó¼õËÙ±È£¬ÊÖÍóµç»ú×ªÒ»È¦£¬Ä©¶Ë¹Ø½Ú×ª¶àÉÙ¶È 360¶È£¬Ö±Çı
-    float launch_Ratio_; // Ì§Éı¼õËÙ±È£¬Ì§Éıµç»ú×ªÒ»È¦£¬Ä©¶Ë¹Ø½ÚÒÆ¶¯¶àÉÙÃ×
-    float claw_gearRatio_; // ¼Ğ×¦¼õËÙ±È£¬¼Ğ×¦µç»ú×ªÒ»È¦£¬Ä©¶Ë¹Ø½ÚÒÆ¶¯¶àÉÙÃ×
-    float traverse_Ratio_; // traverse¼õËÙ±È£¬traverseµç»ú×ªÒ»È¦£¬Ä©¶Ë¹Ø½ÚÒÆ¶¯¶àÉÙÃ×
-    float max_wristMotorRPM_; // ×î´óÊÖÍóµç»ú×ªËÙ
-
+    float wrist_gearRatio_; //æ‰‹è…•å‡é€Ÿæ¯”ï¼Œæ‰‹è…•ç”µæœºè½¬ä¸€åœˆï¼Œæœ«ç«¯å…³èŠ‚è½¬å¤šå°‘åº¦ 360åº¦ï¼Œç›´é©±
+    float launch_Ratio_; // æŠ¬å‡å‡é€Ÿæ¯”ï¼ŒæŠ¬å‡ç”µæœºè½¬ä¸€åœˆï¼Œæœ«ç«¯å…³èŠ‚ç§»åŠ¨å¤šå°‘ç±³
+    float claw_gearRatio_; // å¤¹çˆªå‡é€Ÿæ¯”ï¼Œå¤¹çˆªç”µæœºè½¬ä¸€åœˆï¼Œæœ«ç«¯å…³èŠ‚ç§»åŠ¨å¤šå°‘ç±³
+    float arm_gearRatio_; // æœºæ¢°è‡‚å‡é€Ÿæ¯”ï¼Œæœºæ¢°è‡‚ç”µæœºè½¬ä¸€åœˆï¼Œæœ«ç«¯å…³èŠ‚ç§»åŠ¨å¤šå°‘åº¦
 }WeaponSage_InitData_S;
 
 namespace WeaponSage
 {
     enum Motor_Type_E
     {
-        Launch_1_Motor, //½öÔÚÅäÖÃµç»ú·´ÏàÊ±ºò´«ÈëÓĞÓÃ
-        Launch_2_Motor, //½öÔÚÅäÖÃµç»ú·´ÏàÊ±ºò´«ÈëÓĞÓÃ
-
-        Launch_Motor, // Ì§Éıµç»ú
-
-        Claw_Motor,
-
-        Traverse_Motor,
-        Wrist_Motor
+        Launch_Motor, // æŠ¬å‡ç”µæœº
+        Arm_Motor, // æœºæ¢°è‡‚ç”µæœº
+        Claw_1_Motor,// å¤¹çˆªç”µæœº1
+        Claw_2_Motor,// å¤¹çˆªç”µæœº2
+        Claw_3_Motor,// å¤¹çˆªç”µæœº3
+        Wrist_Motor// æ‰‹è…•ç”µæœº
     };
 
     typedef struct 
     {
-        float launch_1_master_reversed_ = -1.0f;
-        float launch_2_master_reversed_ = -1.0f;
-
-        float launch_1_slave_reversed_ = -1.0f;
-        float launch_2_slave_reversed_ = -1.0f;
-
-        float claw_reversed_ = -1.0f;
-        float traverse_reversed_ = 1.0f;
+        float claw_1_reversed_ = -1.0f;
+        float claw_2_reversed_ = -1.0f;
+        float claw_3_reversed_ = -1.0f;
         float wrist_reversed_ = -1.0f;
+        float launch_reversed_ = -1.0f; 
+        float arm_reversed_ = -1.0f;
     }MotorReversed_S;
 
     enum WeaponSage_CtrlMode_S 
     {
         /* data */
-        CURRENT_CONTROL, // µçÁ÷¿ØÖÆÄ£Ê½£¬Ö±½Ó¿ØÖÆµçÁ÷Êä³ö
-        Join_POSITION_CONTROL, // Î»ÖÃ¿ØÖÆÄ£Ê½£¬¿ØÖÆ¹Ø½ÚÎ»ÖÃ
-        TOTAL_ANGLE_CONTROL,   // ×Ü½Ç¶È¿ØÖÆÄ£Ê½£¬¿ØÖÆ¹Ø½Ú×Ü½Ç¶È
+        CURRENT_CONTROL, // ç”µæµæ§åˆ¶æ¨¡å¼ï¼Œç›´æ¥æ§åˆ¶ç”µæµè¾“å‡º
+        Join_POSITION_CONTROL, // ä½ç½®æ§åˆ¶æ¨¡å¼ï¼Œæ§åˆ¶å…³èŠ‚ä½ç½®
+        TOTAL_ANGLE_CONTROL,   // æ€»è§’åº¦æ§åˆ¶æ¨¡å¼ï¼Œæ§åˆ¶å…³èŠ‚æ€»è§’åº¦
     };
     
     typedef struct
     {
-        float launch_1_pos_; //Ö÷Òª¹©µ÷ÊÔÊ±ºòÊ¹ÓÃ£¬Êµ¼Ê¿ØÖÆÒÔlaunch_TotalAngle_Îª×¼£¬µ¥Î»Ã×
-        float launch_2_pos_;    
-        float launch_pos_; // Ì§ÉıÎ»ÖÃ£¬µ¥Î»Ã×, ¿ØÖÆÊ±ºòÁ½±ßÁ¬Öáµç»ú¹²Ïí£¬Õı½âËãÒÔ1_masterµç»úÎª×¼
-        float claw_pos_;
-        float traverse_pos_;
+        float launch_pos_; //ä¸»è¦ä¾›è°ƒè¯•æ—¶å€™ä½¿ç”¨ï¼Œå®é™…æ§åˆ¶ä»¥launch_TotalAngle_ä¸ºå‡†ï¼Œå•ä½ç±³
+        float claw_1_pos_;
+        float claw_2_pos_;
+        float claw_3_pos_;
         float wrist_pos_;
+        float arm_pos_;
 
         float launch_TotalAngle_;
-        float launch_1_TotalAngle_;
-        float launch_2_TotalAngle_;
-
-        float claw_TotalAngle_;
-        float traverse_TotalAngle_;
+        float claw_1_TotalAngle_;
+        float claw_2_TotalAngle_;
+        float claw_3_TotalAngle_;
+        float arm_TotalAngle_;
         float wrist_TotalAngle_;
     }WeaponSage_Pos_S;
 
@@ -103,45 +97,45 @@ public:
     Robot_WeaponSage(WeaponSage_InitData_S init_data);
     ~Robot_WeaponSage(){}
 
-    bool register_launch_Motor_1(M3508* motor_master, M3508* motor_slave)
+    bool register_launch_Motor(M3508* motor)
     { 
-        launch_Motor_1_master = motor_master; 
-        launch_Motor_1_slave = motor_slave;
-        if(launch_Motor_1_master != nullptr && launch_Motor_1_slave != nullptr)
+        launch_Motor_ = motor; 
+        if(launch_Motor_ != nullptr)
             return true; 
         else
             return false;
     }
 
-    bool register_launch_Motor_2(M3508* motor_master, M3508* motor_slave)
+
+    bool register_claw_1_Motor(M2006* motor)
     { 
-        launch_Motor_2_master = motor_master; 
-        launch_Motor_2_slave = motor_slave;
-        if(launch_Motor_2_master != nullptr && launch_Motor_2_slave != nullptr)
+        claw_1_Motor_ = motor; 
+        if(claw_1_Motor_ != nullptr)
             return true; 
         else
             return false;
     }
 
-    bool register_claw_Motor(M2006* motor)
+    bool register_claw_2_Motor(M2006* motor)
     { 
-        claw_Motor_ = motor; 
-        if(claw_Motor_ != nullptr)
+        claw_2_Motor_ = motor; 
+        if(claw_2_Motor_ != nullptr)
             return true; 
         else
             return false;
     }
 
-    bool register_traverse_Motor(M2006* motor)
+    bool register_claw_3_Motor(M2006* motor)
     { 
-        traverse_Motor_ = motor; 
-        if(traverse_Motor_ != nullptr)
+        claw_3_Motor_ = motor; 
+        if(claw_3_Motor_ != nullptr)
             return true; 
         else
             return false;
     }
 
-    bool register_wrist_Motor(DM_Motor* motor)
+    
+    bool register_wrist_Motor(M2006* motor)
     { 
         wrist_Motor_ = motor; 
         if(wrist_Motor_ != nullptr)
@@ -150,12 +144,21 @@ public:
             return false;
     }
 
+    bool register_arm_Motor(DM_Motor* motor)
+    { 
+        arm_Motor_ = motor; 
+        if(arm_Motor_ != nullptr)
+            return true; 
+        else
+            return false;
+    }
+
     void update();
     
     /**
-     * @brief ÉèÖÃµç»ú·´×ª
-     * @param reversed ĞèÒª·´×ªÊ±´«Èë true£¬·ñÔò´«Èë false
-     * @param motor_type µç»úÀàĞÍ
+     * @brief è®¾ç½®ç”µæœºåè½¬
+     * @param reversed éœ€è¦åè½¬æ—¶ä¼ å…¥ trueï¼Œå¦åˆ™ä¼ å…¥ false
+     * @param motor_type ç”µæœºç±»å‹
      */
 
     bool setMotorReversed(bool reversed, WeaponSage::Motor_Type_E motor_type);
@@ -171,21 +174,15 @@ public:
 	WeaponSage::WeaponSage_Pos_S get_CurrentPos()
 	{
 		WeaponSage::WeaponSage_Pos_S current_pos;
-		current_pos.launch_1_pos_ = MotorTotalAngle_to_Realpos(launch_Motor_1_master->getTotalAngle(), WeaponSage::Launch_1_Motor);
-		current_pos.launch_2_pos_ = MotorTotalAngle_to_Realpos(launch_Motor_2_master->getTotalAngle(), WeaponSage::Launch_2_Motor);
-        current_pos.launch_pos_ = MotorTotalAngle_to_Realpos(launch_Motor_1_master->getTotalAngle(), WeaponSage::Launch_Motor); //ÒÔmasterµç»úÎª×¼
-		current_pos.traverse_pos_ = MotorTotalAngle_to_Realpos(traverse_Motor_->getTotalAngle(),WeaponSage::Traverse_Motor);
-		current_pos.claw_pos_ = MotorTotalAngle_to_Realpos(claw_Motor_->getTotalAngle(),WeaponSage::Claw_Motor);
-		current_pos.wrist_pos_ = MotorTotalAngle_to_Realpos(wrist_Motor_->getTotalAngle(),WeaponSage::Wrist_Motor);
+		current_pos.launch_pos_ = MotorTotalAngle_to_Realpos(launch_Motor_->getTotalAngle(), WeaponSage::Launch_Motor);
+		current_pos.claw_1_pos_ = MotorTotalAngle_to_Realpos(claw_1_Motor_->getTotalAngle(), WeaponSage::Claw_1_Motor);
+		current_pos.claw_2_pos_ = MotorTotalAngle_to_Realpos(claw_2_Motor_->getTotalAngle(), WeaponSage::Claw_2_Motor);
+		current_pos.claw_3_pos_ = MotorTotalAngle_to_Realpos(claw_3_Motor_->getTotalAngle(), WeaponSage::Claw_3_Motor);
+		current_pos.wrist_pos_ = MotorTotalAngle_to_Realpos(wrist_Motor_->getTotalAngle(), WeaponSage::Wrist_Motor);
+        current_pos.arm_pos_ = MotorTotalAngle_to_Realpos(arm_Motor_->getTotalAngle(), WeaponSage::Arm_Motor);
 		return current_pos;
 	}
 	
-	void Weapon_wrist_setzero(){wrist_Motor_->motorSetZero();}
-	void Weapon_wrist_enable(){wrist_Motor_->motorEnable();}
-    float get_launchVel()
-    {
-
-    }
 private:
 
     WeaponSage::WeaponSage_CtrlMode_S ctrl_mode_ = WeaponSage::Join_POSITION_CONTROL;
@@ -197,37 +194,28 @@ private:
 
 protected:
 
-    M3508 *launch_Motor_1_master = nullptr; // Ì§Éıµç»úÖ÷µç»ú1£¬¸ºÔğÎäÆ÷µÄÌ§Éı¶¯×÷
-    M3508 *launch_Motor_1_slave = nullptr; // Ì§Éıµç»ú´Óµç»ú2£¬¸ºÔğÎäÆ÷µÄÌ§Éı¶¯×÷
-
-    M3508 *launch_Motor_2_master = nullptr; // Ì§Éıµç»úÖ÷µç»ú3£¬¸ºÔğÎäÆ÷µÄÌ§Éı¶¯×÷
-    M3508 *launch_Motor_2_slave = nullptr; // Ì§Éıµç»ú´Óµç»ú4£¬¸ºÔğÎäÆ÷µÄÌ§Éı¶¯×÷
-
-
-    M2006 *claw_Motor_ = nullptr; // ¼Ğ×¦µç»ú£¬¸ºÔğÎäÆ÷µÄ¼ĞÈ¡¶¯×÷
-    M2006 *traverse_Motor_ = nullptr; // traverseµç»ú£¬¸ºÔğÎäÆ÷µÄË®Æ½ÒÆ¶¯
-    DM_Motor *wrist_Motor_ = nullptr; // ÊÖÍóµç»ú£¬¸ºÔğÎäÆ÷µÄÊÖÍó¶¯×÷
-
+    M3508 *launch_Motor_ = nullptr; // æŠ¬å‡ç”µæœº1ï¼Œä¸»ç”µæœº
+    M2006 *claw_1_Motor_ = nullptr; // å¤¹çˆªç”µæœº1ï¼Œè´Ÿè´£æ­¦å™¨çš„å¤¹å–åŠ¨ä½œ
+    M2006 *claw_2_Motor_ = nullptr; // å¤¹çˆªç”µæœº2ï¼Œè´Ÿè´£æ­¦å™¨çš„å¤¹å–åŠ¨ä½œ
+    M2006 *claw_3_Motor_ = nullptr; // å¤¹çˆªç”µæœº3ï¼Œè´Ÿè´£æ­¦å™¨çš„å¤¹å–åŠ¨ä½œ
+    M2006 *wrist_Motor_ = nullptr; // æ‰‹è…•ç”µæœºï¼Œè´Ÿè´£æ­¦å™¨çš„æ‰‹è…•åŠ¨ä½œ
+    DM_Motor *arm_Motor_ = nullptr; // æœºæ¢°è‡‚ç”µæœºï¼Œè´Ÿè´£æ­¦å™¨çš„æœºæ¢°è‡‚åŠ¨ä½œ
 
     WeaponSage::WeaponSage_Pos_S target_pos_;
     WeaponSage::WeaponSage_Pos_S current_pos_;
 	WeaponSage::WeaponSage_Pos_S last_pos_;
 
     /**
-     * @brief ½«Êµ¼ÊÎ»ÖÃ×ª»»Îªµç»ú×Ü½Ç¶È
-     * @param real_pos Êµ¼ÊÎ»ÖÃ
-     * @param motor_type µç»úÀàĞÍ
+     * @brief å°†å®é™…ä½ç½®è½¬æ¢ä¸ºç”µæœºæ€»è§’åº¦
+     * @param real_pos å®é™…ä½ç½®
+     * @param motor_type ç”µæœºç±»å‹
      */
     float Realpos_to_MotorTotalAngle(float real_pos, WeaponSage::Motor_Type_E motor_type);
 
     float MotorTotalAngle_to_Realpos(float motor_angle, WeaponSage::Motor_Type_E motor_type);
 
     bool setMotorTargetTotalAngle(float total_angle, WeaponSage::Motor_Type_E motor_type);
-    void set_launchMotorSpeed(float target)
-    {
-        launch_target_rpm_ = motor_reversed_.launch_1_master_reversed_ * target;
-    }
-    float launch_target_rpm_ = 0.0f;
+
 	WeaponSage_InitData_S initData_;
 };
 

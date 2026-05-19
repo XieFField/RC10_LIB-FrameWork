@@ -1,7 +1,7 @@
 /**
  * @file Motor_VESC.h
  * @author XieFField
- * @brief VESCµç»úÀà
+ * @brief VESCç”µæœºç±»
  * @version 1.0
  */
 
@@ -28,7 +28,7 @@ extern "C"{
 #include "BSP_fdCAN_Driver.h"
 #include "BSP_RTOS.h"
 
-// VESC CANÃüÁîÀàĞÍ
+// VESC CANå‘½ä»¤ç±»å‹
 typedef enum {
     CAN_CMD_SET_DUTY = 0,
     CAN_CMD_SET_CURRENT = 1,
@@ -42,7 +42,7 @@ typedef enum {
     CAN_CMD_SET_CURRENT_HANDBRAKE_REL = 9
 } VESC_CAN_CMD;
 
-// VESC CAN·´À¡±¨ÎÄÀàĞÍ
+// VESC CANåé¦ˆæŠ¥æ–‡ç±»å‹
 typedef enum {
     CAN_PACKET_STATUS_1 = 9,
     CAN_PACKET_STATUS_2 = 14,
@@ -53,20 +53,20 @@ typedef enum {
 } VESC_CAN_PACKET_ID;
 
 typedef enum{
-    SET_NULL,   //ÎŞ
-    SET_eRPM,   //µçÆø×ªËÙ±Õ»·Ä£Ê½
-    SET_CURRENT,//µçÁ÷±Õ»·Ä£Ê½
-    SET_DUTY,   //Õ¼¿Õ±ÈÄ£Ê½£¬²»ÍÆ¼öÊ¹ÓÃ
-    SET_POS,    //Î»ÖÃÄ£Ê½£¬²»ÍÆ¼öÊ¹ÓÃ
-    SET_BRAKE,  //É²³µ
+    SET_NULL,   //æ— 
+    SET_eRPM,   //ç”µæ°”è½¬é€Ÿé—­ç¯æ¨¡å¼
+    SET_CURRENT,//ç”µæµé—­ç¯æ¨¡å¼
+    SET_DUTY,   //å ç©ºæ¯”æ¨¡å¼ï¼Œä¸æ¨èä½¿ç”¨
+    SET_POS,    //ä½ç½®æ¨¡å¼ï¼Œä¸æ¨èä½¿ç”¨
+    SET_BRAKE,  //åˆ¹è½¦
 }VESC_MODE;
 
 class VESC_Motor : public Motor_Base {
 public:
     /**
-     * @param id µç»úCAN ID
-     * @param bus Ö¸ÏòfdCANbusÊµÀıµÄÖ¸Õë
-     * @param poles µç»ú¼«¶ÔÊı£¬Ä¬ÈÏ21(u8)
+     * @param id ç”µæœºCAN ID
+     * @param bus æŒ‡å‘fdCANbuså®ä¾‹çš„æŒ‡é’ˆ
+     * @param poles ç”µæœºæå¯¹æ•°ï¼Œé»˜è®¤21(u8)
      */
     VESC_Motor(uint32_t id, fdCANbus* bus, float poles);
     ~VESC_Motor(){};
@@ -79,7 +79,7 @@ public:
     void setTargetCurrent(float current_set) override;
 
     /**
-     * @brief ÉèÖÃÄ¿±ê×ªËÙ£¬µ¥Î»RPM (×¢Òâ²»ÊÇeRPM£¬ÊÇRPM)
+     * @brief è®¾ç½®ç›®æ ‡è½¬é€Ÿï¼Œå•ä½RPM (æ³¨æ„ä¸æ˜¯eRPMï¼Œæ˜¯RPM)
      */
     void setTargetRPM(float rpm_set) override;
     void setTargetAngle(float angle_set) override{};
@@ -100,7 +100,7 @@ public:
             return false;
 
         uint8_t packet_type = (cf.ID >> 8) & 0xFF;
-        return packet_type == CAN_PACKET_STATUS_1; // µ±Ç°Ö»½âÎöSTATUS_1
+        return packet_type == CAN_PACKET_STATUS_1; // å½“å‰åªè§£æSTATUS_1
     }
 
     void reset_GearRatio(float reset_value){GEAR_RATIO = reset_value;}
@@ -116,7 +116,7 @@ public:
     }
 
     /**
-     * @brief ¸ù¾İµ±Ç°¿ØÖÆÄ£Ê½£¬ÖØÖÃÆäËû¿ØÖÆ²ÎÊı£¬±ÜÃâ³åÍ»
+     * @brief æ ¹æ®å½“å‰æ§åˆ¶æ¨¡å¼ï¼Œé‡ç½®å…¶ä»–æ§åˆ¶å‚æ•°ï¼Œé¿å…å†²çª
      */
     void reset_otherParam()
     {
@@ -159,15 +159,15 @@ public:
         }
     }
 private:
-    int32_t target_eRPM_ = 0; //µçÆø×ªËÙ
-    float GEAR_RATIO = 1.0f; // VESCÒ»°ãÎŞ¼õËÙÆ÷
+    int32_t target_eRPM_ = 0; //ç”µæ°”è½¬é€Ÿ
+    float GEAR_RATIO = 1.0f; // VESCä¸€èˆ¬æ— å‡é€Ÿå™¨
     VESC_MODE mode_ = SET_NULL;
-    float poles_; // ¼«¶ÔÊı£¬Ä¬ÈÏ21
-    float target_duty_ = 0.0f; //Õ¼¿Õ±È  -1.0~1.0
-    float duty_ = 0.0f; //µ±Ç°Õ¼¿Õ±È
+    float poles_; // æå¯¹æ•°ï¼Œé»˜è®¤21
+    float target_duty_ = 0.0f; //å ç©ºæ¯”  -1.0~1.0
+    float duty_ = 0.0f; //å½“å‰å ç©ºæ¯”
     int32_t eRPM_ = 0; 
     float target_brake_current_ = 0.0f; // brake current in mA
-    uint8_t id_check_; //»Ø´«id£¬ÓÃÓÚ¸øÓÃ»§·Ö±æmotor_id_ºÍµçµ÷idÊÇ·ñÒ»ÖÂ
+    uint8_t id_check_; //å›ä¼ idï¼Œç”¨äºç»™ç”¨æˆ·åˆ†è¾¨motor_id_å’Œç”µè°ƒidæ˜¯å¦ä¸€è‡´
 };
 
 

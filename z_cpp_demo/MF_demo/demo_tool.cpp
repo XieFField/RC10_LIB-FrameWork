@@ -27,29 +27,29 @@ int binarySearch(const uint32_t arr[], uint8_t count, uint32_t key)
 }
 
 /**
-//  * @brief  ½«¾ØÕóÉèÖÃÎªµ¥Î»¾ØÕó
-//  * @param[in,out] M   Ö¸Ïò¾ØÕóÊµÀı
-//  * @note   ÒªÇó¾ØÕóÊÇ·½Õó (numRows == numCols)
+//  * @brief  å°†çŸ©é˜µè®¾ç½®ä¸ºå•ä½çŸ©é˜µ
+//  * @param[in,out] M   æŒ‡å‘çŸ©é˜µå®ä¾‹
+//  * @note   è¦æ±‚çŸ©é˜µæ˜¯æ–¹é˜µ (numRows == numCols)
 //  */
 // void arm_set_identity_f32(arm_matrix_instance_f32 *M)
 // {
 //     if (M->numRows != M->numCols) 
-//         return; // ²»ÊÇ·½Õó£¬Ö±½Ó·µ»Ø
+//         return; // ä¸æ˜¯æ–¹é˜µï¼Œç›´æ¥è¿”å›
     
 
 //     uint32_t n = M->numRows;
 //     uint32_t size = n * n;
 
-//     // ÏÈÇåÁã uint64_t
+//     // å…ˆæ¸…é›¶ uint64_t
 //     arm_fill_f32(0.0f, M->pData, size);
 
-//     // ÉèÖÃ¶Ô½ÇÏßÎª1
+//     // è®¾ç½®å¯¹è§’çº¿ä¸º1
 //     for (uint32_t i = 0; i < n; i++) 
 //         M->pData[i * n + i] = 1.0f;
     
 // }
 
-//Ğ±ÆÂº¯Êı
+//æ–œå¡å‡½æ•°
 void ramp(float target, float& current, float max_change_rate, float dt)
 {
     float error = target - current;
@@ -57,20 +57,20 @@ void ramp(float target, float& current, float max_change_rate, float dt)
     current += constrain(error, -max_change, max_change);
 }
 
-//»¡¶È×ª»»Îª½Ç¶Èº¯Êı
+//å¼§åº¦è½¬æ¢ä¸ºè§’åº¦å‡½æ•°
 float rad_to_deg(float rad)
 {
     return rad / PI * 180.0f;
 }
 
-//½Ç¶È×ª»»Îª»¡¶Èº¯Êı
+//è§’åº¦è½¬æ¢ä¸ºå¼§åº¦å‡½æ•°
 float deg_to_rad(float deg)
 {
     return deg / 180.0f * PI;
 }
 
 
-//¹éÒ»»¯½Ç¶Èµ½[0,360)Çø¼ä
+//å½’ä¸€åŒ–è§’åº¦åˆ°[0,360)åŒºé—´
 float normalize_deg_0_360(float a)
 {
     float r = fmodf(a, 360.0f);
@@ -78,7 +78,7 @@ float normalize_deg_0_360(float a)
     return r;            // [0,360)
 }
 
-//¹éÒ»»¯½Ç¶Èµ½[-180,180)Çø¼ä
+//å½’ä¸€åŒ–è§’åº¦åˆ°[-180,180)åŒºé—´
 float normalize_deg_pm180(float a)
 {
     float r = fmodf(a + 180.0f, 360.0f);
@@ -86,10 +86,10 @@ float normalize_deg_pm180(float a)
     return r - 180.0f;   // [-180,180)
 }
 
-// ½« val_deg Ó³Éäµ½¡°×î½Ó½ü ref_deg(0..360)¡±µÄµÈ¼Û½Ç£¬²¢·µ»Ø 0..360
+// å°† val_deg æ˜ å°„åˆ°â€œæœ€æ¥è¿‘ ref_deg(0..360)â€çš„ç­‰ä»·è§’ï¼Œå¹¶è¿”å› 0..360
 float wrap_to_nearest_0_360(float ref_deg_0_360, float val_deg_any)
 {
     float ref = normalize_deg_0_360(ref_deg_0_360);
-    float delta = normalize_deg_pm180(val_deg_any - ref);  // ²îÖµÓÃ ¡À180 ¹éÒ»»¯
-    return normalize_deg_0_360(ref + delta);               // ×îÖÕ±£³Ö 0..360
+    float delta = normalize_deg_pm180(val_deg_any - ref);  // å·®å€¼ç”¨ Â±180 å½’ä¸€åŒ–
+    return normalize_deg_0_360(ref + delta);               // æœ€ç»ˆä¿æŒ 0..360
 }

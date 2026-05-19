@@ -2,7 +2,7 @@
  * @file FSM_Controller.h
  * @version 1.0
  * @author XieFField
- * @brief »úÆ÷ÈË×Ü×´Ì¬»ú¿ØÖÆÆ÷
+ * @brief æœºå™¨äººæ€»çŠ¶æ€æœºæ§åˆ¶å™¨
  */
 
 
@@ -76,7 +76,7 @@ public:
         if(!arm_setup_registered_ || !chassis_setup_registered_ || !weaponSage_setup_registered_)
             init_flag_ = false;
         
-        this->arm_setup_->set_TargetKFS(0,0); //ÉèÖÃÄ¿±êÃ·»¨×®±àºÅ
+        this->arm_setup_->set_TargetKFS(0,0); //è®¾ç½®ç›®æ ‡æ¢…èŠ±æ¡©ç¼–å·
         this->start(osPriorityHigh+1, 256);
         init_flag_ = true;
     }
@@ -88,7 +88,7 @@ public:
 private:
     void loop() override;
 
-    //È«²¿Í£ÏÂ
+    //å…¨éƒ¨åœä¸‹
     void all_stop();
 
     void manual_ctrl();
@@ -107,11 +107,11 @@ private:
     
     ArmSetup *arm_setup_ = nullptr;  
     bool arm_setup_registered_ = false; 
-    RmPocketData_t airjoy_data_; //Ò¡¸ËÖµÎª -1 ~ 1
+    RmPocketData_t airjoy_data_; //æ‘‡æ†å€¼ä¸º -1 ~ 1
 
     OmniChassis_Setup *chassis_setup_ = nullptr; 
     bool chassis_setup_registered_ = false; 
-    bool init_flag_ = false; //ËùÓĞĞèÒª×¢²áµÄ»ú¹¹¶¼ÒÑ¾­×¢²áÍê³É
+    bool init_flag_ = false; //æ‰€æœ‰éœ€è¦æ³¨å†Œçš„æœºæ„éƒ½å·²ç»æ³¨å†Œå®Œæˆ
     uint8_t debug_flag_ = 0;
 
     struct{
@@ -137,8 +137,8 @@ private:
 #endif
 
 /*
-STOP Ä£Ê½ÏÂµÄ×´Ì¬»ú
-ÓĞÈıÖÖ×´Ì¬
+STOP æ¨¡å¼ä¸‹çš„çŠ¶æ€æœº
+æœ‰ä¸‰ç§çŠ¶æ€
 */
 
 

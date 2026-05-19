@@ -1,6 +1,6 @@
 /**
  * @file Setup_ConfigInit.h
- * @brief Æô¶¯ÎÄ¼ş£¬°üº¬ËùÓĞ¿ØÖÆÆ÷ºÍµç»úµÄÊµÀı»¯ÉùÃ÷
+ * @brief å¯åŠ¨æ–‡ä»¶ï¼ŒåŒ…å«æ‰€æœ‰æ§åˆ¶å™¨å’Œç”µæœºçš„å®ä¾‹åŒ–å£°æ˜
  */
 
 #ifndef SETUP_CONFIGINIT_H
@@ -48,7 +48,6 @@ extern "C" {
 #include "system_detect_task.h"
 #include "Module_HWT.h"
 #include "Module_JY61.h"
-#include "Motor_VESC.h"
 #include "Motor_GO.h"
 
 /*==============Controller===============*/

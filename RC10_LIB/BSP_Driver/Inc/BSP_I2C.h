@@ -24,11 +24,11 @@ class I2C_User
 	public:
 	I2C_User(uint16_t addr,I2C_HandleTypeDef* i2c_handle);
 	~I2C_User()=default;
-	 HAL_StatusTypeDef I2C_ReadReg(uint8_t devaddr,uint8_t* pdata,uint8_t size);   // ¶ÁÈ¡¼Ä´æÆ÷
-	 HAL_StatusTypeDef I2C_WriteReg(uint8_t devaddr,uint8_t* pdata,uint8_t size);  // Ğ´Èë¼Ä´æÆ÷
+	 HAL_StatusTypeDef I2C_ReadReg(uint8_t devaddr,uint8_t* pdata,uint8_t size);   // è¯»å–å¯„å­˜å™¨
+	 HAL_StatusTypeDef I2C_WriteReg(uint8_t devaddr,uint8_t* pdata,uint8_t size);  // å†™å…¥å¯„å­˜å™¨
 	
-	 HAL_StatusTypeDef readData(uint8_t *pdata,uint8_t size);      // ´¿¶ÔÊı¾İ
-	 HAL_StatusTypeDef writeData();      // ´¿Ğ´Êı¾İ
+	 HAL_StatusTypeDef readData(uint8_t *pdata,uint8_t size);      // çº¯å¯¹æ•°æ®
+	 HAL_StatusTypeDef writeData();      // çº¯å†™æ•°æ®
 	void setTimeout(uint32_t timeout) { timeout_ = timeout; }
 	
 	

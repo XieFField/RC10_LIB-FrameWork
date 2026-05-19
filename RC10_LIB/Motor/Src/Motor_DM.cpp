@@ -12,13 +12,13 @@ void DM_Motor::updateFeedback(const CanFrame& cf)
       
 			DM_Id = (can_rx_data[0]&0x0F);
 			Error_num=((can_rx_data[0]>>4)&0x0F);
-            p_int = (can_rx_data[1] << 8) | can_rx_data[2];         // µç»úÎ»ÖÃÊı¾İ
-            v_int = (can_rx_data[3] << 4) | (can_rx_data[4] >> 4);  // µç»úËÙ¶ÈÊı¾İ
-            i_int = ((can_rx_data[4] & 0xF) << 8) | can_rx_data[5]; // µç»úÅ¤¾ØÊı¾İ
+            p_int = (can_rx_data[1] << 8) | can_rx_data[2];         // ç”µæœºä½ç½®æ•°æ®
+            v_int = (can_rx_data[3] << 4) | (can_rx_data[4] >> 4);  // ç”µæœºé€Ÿåº¦æ•°æ®
+            i_int = ((can_rx_data[4] & 0xF) << 8) | can_rx_data[5]; // ç”µæœºæ‰­çŸ©æ•°æ®
 
-            angle = uint_to_float(p_int, P_MIN, P_MAX, 16); // ×ª×Ó»úĞµ½Ç¶È
-            speed = uint_to_float(v_int, V_MIN, V_MAX, 12); // Êµ¼Ê×ª×Ó×ªËÙ
-            tarque = uint_to_float(i_int, I_MIN, I_MAX, 12);        // Êµ¼Ê×ª¾ØµçÁ÷
+            angle = uint_to_float(p_int, P_MIN, P_MAX, 16); // è½¬å­æœºæ¢°è§’åº¦
+            speed = uint_to_float(v_int, V_MIN, V_MAX, 12); // å®é™…è½¬å­è½¬é€Ÿ
+            tarque = uint_to_float(i_int, I_MIN, I_MAX, 12);        // å®é™…è½¬çŸ©ç”µæµ
 }
 void DM_Motor::setTargetTotalAngle(float v_target ,float totalAngle_set)
 {
@@ -69,7 +69,7 @@ int DM_Motor::float_to_uint(float x,float x_min, float x_max, int bits)
 std::size_t DM_Motor:: packCommand(CanFrame outFrames[], std::size_t maxFrames)
 {
 	if(maxFrames < 1)
-        return 0; // ÎŞ·¨´ò°ü
+        return 0; // æ— æ³•æ‰“åŒ…
 
     CanFrame &cf = outFrames[0];
     static int32_t sendMsgs = 0;
@@ -187,7 +187,7 @@ std::size_t DM_Motor:: packCommand(CanFrame outFrames[], std::size_t maxFrames)
 }
 
 
-//ºóĞø¸üĞÂ£¬¾´ÇëÆÚ´ı£¡(*^¨Œ^*)
+//åç»­æ›´æ–°ï¼Œæ•¬è¯·æœŸå¾…ï¼(*^â–½^*)
 void DM_Motor::update()
 {
 	switch(dm_mode_)

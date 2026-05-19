@@ -4,19 +4,21 @@
 Robot_Arm::Robot_Arm(Arm_InitData_S init_Data)
     : init_data_(init_Data)
 {
+    if (init_data_.rotate_end < 250.0f || init_data_.rotate_end > 270.0f)
+        init_data_.rotate_end = 265.0f;
 }
 
-float ramp_rate = 18000;
+
 void Robot_Arm::update()
 {
-    /*µÁª˙µ±«∞µƒΩ«∂»◊™ªª≥…πÿΩ⁄µ±«∞µƒΩ«∂» */
+    /*ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüËßíÂ∏ÆÊã∑ÊÖïÂµåÈîüÈò∂?ÈîüÊñ§Êã∑ÈîüÁº¥ÂÖ≥ËäÇÁ¢âÊã∑ÂâçÈîü‰æ•ËßíËÆπÊã∑ */
     now_time_s_ = TimeStamp::getInstance().getSeconds();
 
     if(!time_initialized_)
     {
         last_time_s_ = now_time_s_;
         time_initialized_ = true;
-        //  ◊¥Œ∂‘∆Î£¨∫Û–¯ª˘”⁄°∞ƒø±Í°±ª˝∑÷
+        // ÈîüÈò∂Ê¨°ËÆπÊã∑ÈîüËØ´ÔºåÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüËäÇ‚òÖÊã∑ÁõÆÈîüÁñ•‚ÄùÈîüÊñ§Êã∑ÈîüÊñ§Êã∑
         target_joint_angle_ = joint_angle_;
         return;
     }
@@ -31,7 +33,7 @@ void Robot_Arm::update()
     
     if(motor_rotate_ != nullptr)
     {
-        // ÷±Ω”∂¡»°µÁª˙◊‹Ω«∂»£¨”≥…‰ªÿª˙–µ±€µƒ 0-360 ∂»
+        // Áõ¥ÈîüÊé•ËÆπÊã∑ÂèñÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ËäôÂµåÈæãÈîüÊé•Á≠πÊã∑ÈîüÊà™‰ºôÊã∑Ê¢∞ÈîüÊ°îÁ¢âÊã∑ 0-360 ÈîüÊñ§Êã∑
         float raw_angle = MotorTotalAngle_to_rotateAngle(motor_rotate_->getTotalAngle());
         joint_angle_.rotateJoint_angle_ = normalize_deg_0_360(raw_angle);
     }
@@ -50,43 +52,43 @@ void Robot_Arm::update()
 
     else if(control_mode_ == MANUAL_MOTOR_POSITION_MODE)
     {
-        //  ÷∂ØµÁª˙Œª÷√ƒ£ Ωœ¬µƒ¥¶¿Ì
+        // ÈîüË°óËÆπÊã∑ÈîüÊñ§Êã∑ÈîüËΩø‰ºôÊã∑Èîü‰æ•Ôº™Êñ§Êã∑Á¢åÊãáÈîüÊñ§Êã∑Èîü?
         target_joint_angle_.launchJoint_Height_  = constrain(target_joint_angle_.launchJoint_Height_,  0.0f, init_data_.max_launchHeight_);
         target_joint_angle_.stretchJoint_Length_ = constrain(target_joint_angle_.stretchJoint_Length_, 0.0f, init_data_.max_stretchLength_);
        
-        target_joint_angle_.rotateJoint_angle_ = calc_rotate_targetByStrategy(
+        target_joint_angle_.rotateJoint_angle_ = calc_legal_rotate_target(
             joint_angle_.rotateJoint_angle_,
             target_joint_angle_.rotateJoint_angle_
         );
     }
     else if(control_mode_ == CURRENT_CONTROL_MODE)
-        // µÁ¡˜øÿ÷∆ƒ£ Ωœ¬µƒ¥¶¿Ì
-        return; // ÷±Ω”∑µªÿ£¨≤ªΩ¯––Œª÷√∏¸–¬
+        // ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑Ê®°ÂºèÈîüÈì∞ÁöÑËææÊã∑ÈîüÊñ§Êã∑
+        return; // Áõ¥ÈîüÊé•Âá§Êã∑ÈîüÊà™ÔΩèÊã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑‰ΩçÈîüÁü´Èù©Êã∑ÈîüÊñ§Êã∑
     
-
   
-    // ª˙–µ±€Œª÷√∏¸–¬
+    // ÈîüÊñ§Êã∑Ê¢∞ÈîüÊñ§Êã∑‰ΩçÈîüÁü´Èù©Êã∑ÈîüÊñ§Êã∑
     float target_rotateMotorAngle = 0.0f;
     float target_stretchMotorAngle = 0.0f;
     float target_launchMotorAngle = 0.0f;
     float target_pitchMotorAngle = 0.0f;
 
-    // ∂‘–˝◊™Õ®µ¿£∫º∆À„ª˘”⁄◊ÓΩ¸»¶ ˝µƒæ¯∂‘ƒø±Í
+    // ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ËΩ¨ÈÄöÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÂúàÈîüÊñ§Êã∑Èîü‰æ•ÊíÖÊã∑ÈîüÊñ§Êã∑ÁõÆÈîüÊñ§Êã∑
     if (motor_rotate_ != nullptr)
     {
         float current_arm_total = MotorTotalAngle_to_rotateAngle(motor_rotate_->getTotalAngle());
-        
-        // À„≥ˆæ≠π˝ ÷∂Øƒ£ Ω°¢◊‘∂Øƒ£ Ω…Ë∂®µƒƒø±ÍΩ«∂»
         float target_arm = target_joint_angle_.rotateJoint_angle_;
-        
-        // º∆À„µ±«∞ª˙–µ±€◊‹Ω«∂»∫Õƒø±Íµƒ≤Ó÷µ£¨’“µΩÀ¸¿Îµ±«∞»¶ ˝◊ÓΩ¸µƒƒ«∏ˆƒø±Íæ¯∂‘Ω«∂»
         float diff = current_arm_total - target_arm;
-        float k = roundf(diff / 360.0f);
-
+        float k;
+        if (rotate_strategy_ == ROTATE_PATH_POSITIVE)
+            k = ceilf(diff / 360.0f);
+        else if (rotate_strategy_ == ROTATE_PATH_NEGATIVE)
+            k = floorf(diff / 360.0f);
+        else
+            k = roundf(diff / 360.0f);
         float target_arm_total = target_arm + k * 360.0f;
         target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
 
-        rotate_fliter_ramp_.ramp_target_ = caculate_ramp_target(motor_rotate_->getTotalAngle(), 
+        rotate_fliter_ramp_.ramp_target_ = caculate_ramp_target(motor_rotate_->getTotalAngle(),
             target_rotateMotorAngle, rotate_fliter_ramp_);
         motor_rotate_->setTargetTotalAngle(rotate_fliter_ramp_.ramp_target_);
     }
@@ -94,7 +96,7 @@ void Robot_Arm::update()
     target_stretchMotorAngle = stretchLength_to_MotorTotalAngle(target_joint_angle_.stretchJoint_Length_);
     target_launchMotorAngle = launchHeight_to_MotorTotalAngle(target_joint_angle_.launchJoint_Height_);
     target_pitchMotorAngle = pitchAngle_to_MotorTotalAngle(target_joint_angle_.suckerJoint_angle_);
-    /*‘› ±≤ª◊ˆ–±∆¬¥¶¿Ì*/
+    /*ÈîüÊñ§Êã∑Êó∂ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÊñúÈîüÈì∞ËææÊã∑ÈîüÊñ§Êã∑*/
 
     if(motor_stretch_ != nullptr)
     {
@@ -113,30 +115,45 @@ void Robot_Arm::update()
         motor_pitch_->setTargetTotalAngle(init_data_.max_pitchRPM_, target_pitchMotorAngle);
 
     if(sucker_status_ == SUCK)
+    {
         HAL_GPIO_WritePin(init_data_.Sucker_GPIO_Port, init_data_.Sucker_GPIO_Pin, GPIO_PIN_SET);
-    
+        HAL_GPIO_WritePin(init_data_.Sucker_Soleniod_GPIO_Port, init_data_.Sucker_Soleniod_GPIO_Pin, GPIO_PIN_SET);
+    }
     else
+    {
         HAL_GPIO_WritePin(init_data_.Sucker_GPIO_Port, init_data_.Sucker_GPIO_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(init_data_.Sucker_Soleniod_GPIO_Port, init_data_.Sucker_Soleniod_GPIO_Pin, GPIO_PIN_RESET);
+    }
+
+
+    if(store_sucker_status_ == SUCK)
+    {
+        HAL_GPIO_WritePin(init_data_.Store_GPIO_Port, init_data_.Store_GPIO_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(init_data_.Store_Soleniod_GPIO_Port, init_data_.Store_Soleniod_GPIO_Pin, GPIO_PIN_SET);
+    }
+    else
+    {
+        HAL_GPIO_WritePin(init_data_.Store_GPIO_Port, init_data_.Store_GPIO_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(init_data_.Store_Soleniod_GPIO_Port, init_data_.Store_Soleniod_GPIO_Pin, GPIO_PIN_RESET);
+    }
 }
 
 void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
 {
-    // –˝◊™Ω«£®∂»£©
+    // ÈîüÊñ§Êã∑ËΩ¨ÈîüËßíÔΩèÊã∑ÈîüÈ•∫ÔΩèÊã∑
     float raw_deg;
     if (std::abs(target_point.x) < 1e-6f && std::abs(target_point.y) < 1e-6f)
-        raw_deg = joint_angle_.rotateJoint_angle_;  // ∆Ê“Ïµ„£∫±£≥÷µ±«∞Ω«
+        raw_deg = joint_angle_.rotateJoint_angle_;  // ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÊÇñÁå¥Êã∑ÈîüÊñ§Êã∑ÂÄºÈîüËßíÂ∏ÆÊã∑Èîü?
     else
         raw_deg = atan2f(target_point.y, target_point.x) * 180.0f / PI;
 
-    // æÕΩ¸∞¸π¸£¨±£÷§ƒø±Í“≤ « 0-360
+    // ÈîüÈÖµÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ÈîüÊñ§Êã∑ËØÅÁõÆÈîüÊñ§Êã∑‰πüÈîüÊñ§Êã∑ 0-360
     target_joint_angle_.rotateJoint_angle_ = normalize_deg_0_360(raw_deg);
 
     target_joint_angle_.launchJoint_Height_ = target_point.z;
     target_joint_angle_.stretchJoint_Length_ = sqrt(target_point.x * target_point.x + target_point.y * target_point.y) - init_data_.arm_length_;
 
-
-
-    /*Ω«∂»÷∆ */
+    /*ÈîüËßíËÆπÊã∑ÈîüÊñ§Êã∑ */
    
     target_joint_angle_.suckerJoint_angle_ = target_point.suckerJoint_status_;
 
@@ -151,7 +168,7 @@ void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
 
 bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
 {
-    /*ƒ©∂ÀπÿΩ⁄Œª÷√*/
+    /*Êú´ÈîüÂâøÂÖ≥Êñ§Êã∑‰ΩçÈîüÊñ§Êã∑*/
     float theta = joint_angle_.rotateJoint_angle_ * 3.1415926f / 180.0f;
     float Ltot  = init_data_.arm_length_ + joint_angle_.stretchJoint_Length_;
 
@@ -163,128 +180,90 @@ bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
     return true;
 }
 
-float Robot_Arm::calc_rotate_targetByStrategy(float current_cont_angle, float target_raw_0_360)
+float Robot_Arm::calc_legal_rotate_target(float current_0_360, float target_0_360)
 {
-    //¡¨–¯Ω«∂»πÈ“ªªØ÷¡0~360
-    
-    float current_mod = fmodf(current_cont_angle, 360.0f);
-    if(current_mod < 0)
-        current_mod += 360.0f;
+    float re = init_data_.rotate_end;
+    if (re < 250.0f || re > 270.0f)
+        re = 265.0f;
 
-    //πÈ“ªªØƒø±ÍΩ«∂»£¨∑¿÷π‘ΩΩÁ
-    float target_mod = fmodf(target_raw_0_360, 360.0f);
-    if(target_mod < 0)
-        target_mod += 360.0f;
+    target_0_360 = fmodf(target_0_360, 360.0f);
+    if (target_0_360 < 0.0f) target_0_360 += 360.0f;
+    current_0_360 = fmodf(current_0_360, 360.0f);
+    if (current_0_360 < 0.0f) current_0_360 += 360.0f;
 
-    float diff = target_mod - current_mod;
+    if (target_0_360 > 180.0f && target_0_360 < re)
+    {
+        float dist_to_180 = target_0_360 - 180.0f;
+        float dist_to_re = re - target_0_360;
+        target_0_360 = (dist_to_180 < dist_to_re) ? 180.0f : re;
+    }
 
-    // µ±Ω”Ω¸ƒø±ÍΩ« ±£¨«ø÷∆«–ªªµΩ◊Ó∂Ã¬∑æ∂£¨±‹√‚π˝≥Â∫Û≥÷–¯µ•œÚ»∆»¶Œﬁ∑® ’¡≤
+    bool target_changed = (fabsf(target_0_360 - prev_norm_target_) > 0.01f);
+    prev_norm_target_ = target_0_360;
+
+    float diff = target_0_360 - current_0_360;
+
     float shortest_diff = diff;
     if (shortest_diff > 180.0f)
         shortest_diff -= 360.0f;
-    else if (shortest_diff < -180.0f)
+    else if (shortest_diff <= -180.0f)
         shortest_diff += 360.0f;
 
     if (_tool_Abs(shortest_diff) < 10.0f)
-        return current_cont_angle + shortest_diff;
-
-    switch(rotate_strategy_)
     {
-        case ROTATE_PATH_SHORTEST:
-            // ◊Ó∂Ã¬∑æ∂£∫≤Ó÷µœﬁ÷∆‘⁄ -180 µΩ +180 ÷Æº‰
-            if (diff > 180.0f)       
-                diff -= 360.0f;
-            else if (diff < -180.0f) 
-                diff += 360.0f;
-            break;
+        rotate_strategy_ = ROTATE_PATH_SHORTEST;
+    }
+    else
+    {
+        bool crosses = false;
+        if (shortest_diff > 0.0f)
+        {
+            if (current_0_360 < re && (current_0_360 + shortest_diff) > 180.0f)
+                crosses = true;
+        }
+        else if (shortest_diff < 0.0f)
+        {
+            if (current_0_360 > 180.0f && (current_0_360 + shortest_diff) < re)
+                crosses = true;
+        }
 
-        case ROTATE_PATH_POSITIVE:
-            // ’˝∑ΩœÚ£∫πÿΩ⁄Ω«∂»±ÿ–Î‘ˆº”£¨º¥ diff ±ÿ–Î > 0
-            if (diff < 0.0f) 
-                diff += 360.0f;
-            break;
-
-        case ROTATE_PATH_NEGATIVE:
-            // ∏∫∑ΩœÚ£∫πÿΩ⁄Ω«∂»±ÿ–Îºı–°£¨º¥ diff ±ÿ–Î < 0
-            if (diff > 0.0f) 
-                diff -= 360.0f;
-            break;
+        if (crosses)
+            rotate_strategy_ = (shortest_diff > 0.0f) ? ROTATE_PATH_NEGATIVE : ROTATE_PATH_POSITIVE;
+        else
+            rotate_strategy_ = ROTATE_PATH_SHORTEST;
     }
 
-    return current_cont_angle + diff;
-}
+    if (diff > 180.0f)
+        diff -= 360.0f;
+    else if (diff <= -180.0f)
+        diff += 360.0f;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-
-void test()
-{
-    // 1. ≥ı ºªØª˙–µ±€≤Œ ˝
-    Arm_InitData_S arm_params;
-    arm_params.max_launchHeight_ = 1.0f;    // ◊Ó¥Û…˝Ωµ∏ﬂ∂» 1√◊
-    arm_params.max_stretchLength_ = 2.0f;   // ◊Ó¥Û…Ï’π≥§∂» 2√◊
-    arm_params.arm_length_ = 0.5f;          // ª˙–µ±€ª˘¥°≥§∂» 0.5√◊
-    
-    arm_params.stretch_Ratio_ = 0.01f;      // …Ï’πµÁª˙◊™“ª»¶…Ï’π0.01√◊
-    arm_params.launch_Ratio_ = 0.005f;      // …˝ΩµµÁª˙◊™“ª»¶…˝Ωµ0.005√◊  
-    arm_params.rotate_gearRatio_ = 1.0f;    // –˝◊™µÁª˙◊™“ª»¶ª˙–µ±€◊™1∂»
-    arm_params.pitch_gearRatio_ = 1.0f;     // ∏©—ˆµÁª˙◊™“ª»¶ƒ©∂À◊™1∂»
-
-    // 2. ¥¥Ω®ª˙–µ±€∂‘œÛ
-    Robot_Arm my_arm(arm_params);
-    
-    // 3. …Ë÷√ƒ©∂À¡¨∏À≥§∂»£®»Áπ˚”–µƒª∞£©
-    my_arm.setEndLinkLength(0.2f);  // Œ¸≈Ã±€≥§0.2√◊
-
-    // 4. …Ë÷√ƒø±ÍπÿΩ⁄Ω«∂»£®∑Ω Ω“ª£∫Õ®π˝…Ë÷√ƒø±ÍŒª÷√£¨ƒÊΩ‚ª·◊‘∂Øº∆À„πÿΩ⁄Ω«∂»£©
-    Arm_Point_S target;
-    target.x = 1.2f;                // ƒø±Íx◊¯±Í 1.2√◊
-    target.y = 0.8f;                // ƒø±Íy◊¯±Í 0.8√◊  
-    target.z = 0.5f;                // ƒø±Íz◊¯±Í 0.5√◊
-    target.suckerJoint_status_ = 30.0f;  // ƒ©∂ÀπÿΩ⁄30∂»
-    
-    my_arm.setArmTarget(target);
-    
-    // 5. ∏¸–¬ª˙–µ±€◊¥Ã¨£®’‚ª·¥•∑¢ƒÊ‘À∂Ø—ßº∆À„£©
-    my_arm.update();
-
-    // 6. º∆À„’˝‘À∂Ø—ß—È÷§Œª÷√
-    Arm_Point_S calculated_position;
-    if (my_arm.forwardKinematics(calculated_position)) 
+    if (_tool_Abs(diff) >= 10.0f)
     {
-        std::cout << "’˝‘À∂Ø—ßº∆À„Ω·π˚:" << std::endl;
-        std::cout << "X: " << calculated_position.x << " √◊" << std::endl;
-        std::cout << "Y: " << calculated_position.y << " √◊" << std::endl; 
-        std::cout << "Z: " << calculated_position.z << " √◊" << std::endl;
-        std::cout << "ƒ©∂ÀπÿΩ⁄Ω«∂»: " << calculated_position.suckerJoint_status_ << " ∂»" << std::endl;
+        switch (rotate_strategy_)
+        {
+            case ROTATE_PATH_POSITIVE:
+                if (diff < 0.0f) diff += 360.0f;
+                break;
+            case ROTATE_PATH_NEGATIVE:
+                if (diff > 0.0f) diff -= 360.0f;
+                break;
+            default:
+                break;
+        }
     }
+
+    float result = current_0_360 + diff;
+
+    if (!target_changed)
+    {
+        float gap = result - prev_rotate_target_;
+        float k = roundf(gap / 360.0f);
+        result = result - k * 360.0f;
+    }
+    prev_rotate_target_ = result;
+
+    result = fmodf(result, 360.0f);
+    if (result < 0.0f) result += 360.0f;
+    return result;
 }
-    */

@@ -1,4 +1,4 @@
-﻿#ifndef CHASSIS_H_
+#ifndef CHASSIS_H_
 #define CHASSIS_H_
 
 #include "APP_Utils.h"

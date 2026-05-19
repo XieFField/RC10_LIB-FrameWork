@@ -16,16 +16,16 @@ DJI_Motor::DJI_Motor(DJI_MotorType type, uint32_t id, fdCANbus *bus,
 void DJI_Motor::updateFeedback(const CanFrame &cf)
 {
     const uint8_t* data = cf.data;
-    // ½âÎöÍ¨ÓÃ²¿·Ö
+    // è§£æé€šç”¨éƒ¨åˆ†
     
     uint16_t encoder_raw = (data[0] << 8) | data[1];
     int16_t rpm_raw = (data[2] << 8) | data[3];
     int16_t current_raw = (data[4] << 8) | data[5];
     int8_t temperature_raw = data[6];
-    int8_t null = data[7]; // ±£Áô×Ö½Ú£¬Î´Ê¹ÓÃ
+    int8_t null = data[7]; // ä¿ç•™å­—èŠ‚ï¼Œæœªä½¿ç”¨
 
 
-    //¾²Ì¬ÀàĞÍ×ª»¯
+    //é™æ€ç±»å‹è½¬åŒ–
     this->rpm_ = static_cast<float>(rpm_raw) * get_inv_GearRatio();
     this->current_ = static_cast<float>(virtualCurrent_to_realCurrent(current_raw));
     this->temperature_ = static_cast<float>(temperature_raw);
@@ -39,7 +39,7 @@ void DJI_Motor::updateFeedback(const CanFrame &cf)
 
         if(this->is_calcangle)
         {
-            //Ö±½Óµ÷ÓÃfmod ¿ªÏúÓĞµã´ó
+            //ç›´æ¥è°ƒç”¨fmod å¼€é”€æœ‰ç‚¹å¤§
             if (this->totalAngle_ > -1800.0f && this->totalAngle_ < 1800.0f)
             {
                 this->angle_ = this->totalAngle_;
@@ -49,7 +49,7 @@ void DJI_Motor::updateFeedback(const CanFrame &cf)
             }
             else
             {
-                // ¶µµ×Â·¾¶£¬³¬³ö·¶Î§ÔÙÓÃ fmodf
+                // å…œåº•è·¯å¾„ï¼Œè¶…å‡ºèŒƒå›´å†ç”¨ fmodf
                 this->angle_ = fmodf(this->totalAngle_, 360.0f);
                 if (this->angle_ < 0.0f) this->angle_ += 360.0f;
             }
@@ -64,11 +64,11 @@ float DJI_Motor::virtualCurrent_to_realCurrent(int16_t virtualCurrent)
     switch(type_)
     {
         case M3508_Type:
-            return static_cast<float>(virtualCurrent) * kM3508 ; // 20000mAÂúÁ¿³Ì
+            return static_cast<float>(virtualCurrent) * kM3508 ; // 20000mAæ»¡é‡ç¨‹
         case M2006_Type:
-            return static_cast<float>(virtualCurrent); // 10000mAÂúÁ¿³Ì
+            return static_cast<float>(virtualCurrent); // 10000mAæ»¡é‡ç¨‹
         case GM6020_Type:
-            return static_cast<float>(virtualCurrent) * kGM6020;  //3000mAÂúÁ¿³Ì
+            return static_cast<float>(virtualCurrent) * kGM6020;  //3000mAæ»¡é‡ç¨‹
         default:
             return 0.0f;
     }
@@ -82,17 +82,17 @@ int16_t DJI_Motor::realCurrent_to_virtualCurrent(float realCurrent)
     switch(type_)
     {
         case M3508_Type:
-            return static_cast<int16_t>(realCurrent * inv_virM3508); // 20AÂúÁ¿³Ì
+            return static_cast<int16_t>(realCurrent * inv_virM3508); // 20Aæ»¡é‡ç¨‹
         case M2006_Type:
-            return static_cast<int16_t>(realCurrent ); // 10AÂúÁ¿³Ì
+            return static_cast<int16_t>(realCurrent ); // 10Aæ»¡é‡ç¨‹
         case GM6020_Type:
-            return static_cast<int16_t>(realCurrent * inv_virGM6020);  //3AÂúÁ¿³Ì
+            return static_cast<int16_t>(realCurrent * inv_virGM6020);  //3Aæ»¡é‡ç¨‹
         default:
             return 0;
     }
 }
     
-//====DJI_Group ¸ºÔğ´ò°ü4µç»úºÏÖ¡====
+//====DJI_Group è´Ÿè´£æ‰“åŒ…4ç”µæœºåˆå¸§====
 
 DJI_Group::DJI_Group(uint32_t baseTxId, fdCANbus* bus)
     : Motor_Base(baseTxId, false, bus), baseTxID_(baseTxId)
@@ -107,10 +107,10 @@ bool DJI_Group::addMotor(DJI_Motor* motor)
         return false;
 
     if(motor_count_ >= MAX_GROUP_SIZE)
-        return false; // ³¬¹ı×î´óÊıÁ¿
+        return false; // è¶…è¿‡æœ€å¤§æ•°é‡
 
     if(motor->getID() < 1 || motor->getID() > 8)
-        return false; // ²»ºÏ·¨ID·¶Î§
+        return false; // ä¸åˆæ³•IDèŒƒå›´
 
     DJI_MotorType type = motor->getType();
     uint32_t mid = motor->getID();
@@ -123,13 +123,13 @@ bool DJI_Group::addMotor(DJI_Motor* motor)
         if(baseTxID_ == send_idLow6020())
         {
             if(!(mid >= 1 && mid <=4))
-                return false; // µÍÆ¬Ö»ÄÜ¼Ó1~4ºÅµç»ú
+                return false; // ä½ç‰‡åªèƒ½åŠ 1~4å·ç”µæœº
         }
 
         if(baseTxID_ == send_idHigh6020())
         {
             if(!(mid >=5 && mid <=7))
-                return false; // ¸ßÆ¬Ö»ÄÜ¼Ó5~7ºÅµç»ú
+                return false; // é«˜ç‰‡åªèƒ½åŠ 5~7å·ç”µæœº
         }
     }
     else if(type == M3508_Type || type == M2006_Type)
@@ -140,17 +140,17 @@ bool DJI_Group::addMotor(DJI_Motor* motor)
         if(baseTxID_ == send_idLow())
         {
             if(!(mid >= 1 && mid <=4))
-                return false; // µÍÆ¬Ö»ÄÜ¼Ó1~4ºÅµç»ú
+                return false; // ä½ç‰‡åªèƒ½åŠ 1~4å·ç”µæœº
         }
 
         if(baseTxID_ == send_idHigh())
         {
             if(!(mid >=5 && mid <=8))
-                return false; // ¸ßÆ¬Ö»ÄÜ¼Ó5~8ºÅµç»ú
+                return false; // é«˜ç‰‡åªèƒ½åŠ 5~8å·ç”µæœº
         }
     }
     else
-        return false; // ²»Ö§³ÖµÄĞÍºÅ
+        return false; // ä¸æ”¯æŒçš„å‹å·
     
     
     if(motor_count_ == 0)
@@ -163,9 +163,9 @@ bool DJI_Group::addMotor(DJI_Motor* motor)
     else 
     {
         if(type != GM6020_Type && containsGM6020)
-            return false; // ²»ÄÜÔÚÍ¬Ò»Æ¬ÉÏ»ìÓÃGM6020ºÍÆäËûĞÍºÅ
+            return false; // ä¸èƒ½åœ¨åŒä¸€ç‰‡ä¸Šæ··ç”¨GM6020å’Œå…¶ä»–å‹å·
         else if(type == GM6020_Type && !containsGM6020)
-            return false; // ²»ÄÜÔÚÍ¬Ò»Æ¬ÉÏ»ìÓÃGM6020ºÍÆäËûĞÍºÅ
+            return false; // ä¸èƒ½åœ¨åŒä¸€ç‰‡ä¸Šæ··ç”¨GM6020å’Œå…¶ä»–å‹å·
     }
 
     int slot = calcSlot(mid, type);
@@ -173,7 +173,7 @@ bool DJI_Group::addMotor(DJI_Motor* motor)
         return false;
 
     if(motors_p[slot] != nullptr)
-        return false; //±»Õ¼ÓÃ
+        return false; //è¢«å ç”¨
 
     motors_p[slot] = motor;
     motor_count_++;
@@ -189,7 +189,7 @@ int DJI_Group::calcSlot(uint32_t mid, DJI_MotorType type)const
             if(mid >=1 && mid <=4) return static_cast<int>(mid) - 1;
         } 
         else if(baseTxID_ == send_idHigh6020()) 
-        { // 5~7 (Õ¼Ç°3²ÛÎ»)
+        { // 5~7 (å å‰3æ§½ä½)
             if(mid >=5 && mid <=7) return static_cast<int>(mid) - 5;
         }
         return -1;
@@ -211,8 +211,8 @@ int DJI_Group::calcSlot(uint32_t mid, DJI_MotorType type)const
 std::size_t DJI_Group::packCommand(CanFrame outFrames[], std::size_t maxFrames)
 {
 	if(maxFrames <1 || motor_count_ == 0)
-        return 0; // ÎŞ·¨´ò°ü
-    // ³õÊ¼»¯Ö¡
+        return 0; // æ— æ³•æ‰“åŒ…
+    // åˆå§‹åŒ–å¸§
     CanFrame &f = outFrames[0];
     f.ID = baseTxID_;
     f.isextended = false;
@@ -224,7 +224,7 @@ std::size_t DJI_Group::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         if(!m)
             continue;
         
-        // // [Fix] ¶ş´Î¼ì²é£º·ÀÖ¹´ò°üÊ±»ìÈëÆäËû×ÜÏßµÄµç»ú
+        // // [Fix] äºŒæ¬¡æ£€æŸ¥ï¼šé˜²æ­¢æ‰“åŒ…æ—¶æ··å…¥å…¶ä»–æ€»çº¿çš„ç”µæœº
         // if(m->bus() != this->bus())
         // //     continue;
 
@@ -306,7 +306,7 @@ void M3508::setTargetAngle(float angle_set)
 {
     mode_ = ANGLE_CONTROL;
     target_angle_ = angle_set;
-    angle_pid_.set_as_circular(); //×îĞ¡Â·¾¶´¦Àí
+    angle_pid_.set_as_circular(); //æœ€å°è·¯å¾„å¤„ç†
 
     target_totalAngle_ = 0.0f;
 }
@@ -316,7 +316,7 @@ void M3508::setTargetTotalAngle(float totalAngle_set)
 {
     mode_ = TOTAL_ANGLE_CONTROL;
     target_totalAngle_ = totalAngle_set;
-    angle_pid_.set_as_linear(); //ÏßĞÔ´¦Àí
+    angle_pid_.set_as_linear(); //çº¿æ€§å¤„ç†
 
     target_angle_ = 0.0f;
 }
@@ -342,7 +342,7 @@ void M3508::update()
         }
         case SPEED_CONTROL:
         {
-            // Ä¿±êÖµ target_rpm_ ºÍ·´À¡Öµ this->rpm_ ¶¼ÒÑ¾­ÊÇÊä³öÖá×ªËÙ£¬³ß¶ÈÍ³Ò»
+            // ç›®æ ‡å€¼ target_rpm_ å’Œåé¦ˆå€¼ this->rpm_ éƒ½å·²ç»æ˜¯è¾“å‡ºè½´è½¬é€Ÿï¼Œå°ºåº¦ç»Ÿä¸€
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
             //cur = target_current_;
             break;
@@ -363,7 +363,7 @@ void M3508::update()
         
         case CURRENT_CONTROL:
         {
-            // Ö±½ÓÊ¹ÓÃ target_current_
+            // ç›´æ¥ä½¿ç”¨ target_current_
             break;
         }
 
@@ -403,7 +403,7 @@ void M2006::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, 
 {
     speed_pid_.set_params(speed_params, speed_tdRatio);
     angle_pid_.set_params(angle_params, angle_I_Separa);
-    angle_pid_.set_as_circular(); //×îĞ¡Â·¾¶´¦Àí
+    angle_pid_.set_as_circular(); //æœ€å°è·¯å¾„å¤„ç†
 }
 
 void M2006::setTargetCurrent(float current_set)
@@ -427,7 +427,7 @@ void M2006::setTargetAngle(float angle_set)
 {
     mode_ = ANGLE_CONTROL;
     target_angle_ = angle_set;
-    angle_pid_.set_as_circular(); //×îĞ¡Â·¾¶´¦Àí
+    angle_pid_.set_as_circular(); //æœ€å°è·¯å¾„å¤„ç†
 
     target_totalAngle_ = 0.0f;
 }
@@ -436,7 +436,7 @@ void M2006::setTargetTotalAngle(float totalAngle_set)
 {
     mode_ = TOTAL_ANGLE_CONTROL;
     target_totalAngle_ = totalAngle_set;
-    angle_pid_.set_as_linear(); //ÏßĞÔ´¦Àí
+    angle_pid_.set_as_linear(); //çº¿æ€§å¤„ç†
 
     target_angle_ = 0.0f;
 }
@@ -526,7 +526,7 @@ void GM6020::setTargetAngle(float angle_set)
 {
     mode_ = ANGLE_CONTROL;
     target_angle_ = angle_set;
-    angle_pid_.set_as_circular(); //×îĞ¡Â·¾¶´¦Àí
+    angle_pid_.set_as_circular(); //æœ€å°è·¯å¾„å¤„ç†
     target_totalAngle_ = 0.0f;
 }
 
@@ -534,7 +534,7 @@ void GM6020::setTargetTotalAngle(float totalAngle_set)
 {
     mode_ = TOTAL_ANGLE_CONTROL;
     target_totalAngle_ = totalAngle_set;
-    angle_pid_.set_as_linear(); //ÏßĞÔ´¦Àí
+    angle_pid_.set_as_linear(); //çº¿æ€§å¤„ç†
     target_angle_ = 0.0f;
 }
 
@@ -560,7 +560,7 @@ void GM6020::update()
 
         case SPEED_CONTROL:
         {
-            // GM6020Ã»ÓĞ¼õËÙ±È£¬Ö±½ÓÊ¹ÓÃÄ¿±ê×ªËÙ
+            // GM6020æ²¡æœ‰å‡é€Ÿæ¯”ï¼Œç›´æ¥ä½¿ç”¨ç›®æ ‡è½¬é€Ÿ
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
             break;
         }

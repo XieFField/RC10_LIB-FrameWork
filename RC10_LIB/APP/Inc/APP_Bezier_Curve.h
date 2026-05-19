@@ -1,7 +1,7 @@
 /**
  * @file APP_Path.h
  * @author naoganlin
- * @brief ±´Èû¶ûÇúÏß¿â
+ * @brief è´å¡å°”æ›²çº¿åº“
  * @version 1.0
  * @date 2025-10-30
  */
@@ -10,146 +10,146 @@
 #define __APP_BEZIER_CURVE_H
 
 #pragma once
-#include "APP_Vector2D.h" // °üº¬ÏòÁ¿ÀàµÄ¶¨Òå
+#include "APP_Vector2D.h" // åŒ…å«å‘é‡ç±»çš„å®šä¹‰
 
 #ifdef __cplusplus
 
-// ³£Á¿¶¨Òå
-#define FIND_NEAREST_DISTANCE_STEP_COUNT 200  // ²éÕÒ×î½üµãµÄµü´ú´ÎÊı
-#define BEZIER_SAMPLE_NUM 200				  // ±´Èû¶ûÇúÏß²ÉÑùµãÊıÁ¿£¨²»°üº¬Æğµã£©
-#define GOLDEN_RATIO (sqrtf(5.f) - 1.f) / 2.f // »Æ½ğ·Ö¸î±ÈÀı (~0.618)
+// å¸¸é‡å®šä¹‰
+#define FIND_NEAREST_DISTANCE_STEP_COUNT 200  // æŸ¥æ‰¾æœ€è¿‘ç‚¹çš„è¿­ä»£æ¬¡æ•°
+#define BEZIER_SAMPLE_NUM 200				  // è´å¡å°”æ›²çº¿é‡‡æ ·ç‚¹æ•°é‡ï¼ˆä¸åŒ…å«èµ·ç‚¹ï¼‰
+#define GOLDEN_RATIO (sqrtf(5.f) - 1.f) / 2.f // é»„é‡‘åˆ†å‰²æ¯”ä¾‹ (~0.618)
 
 /**
  * @enum BezierOrder
- * @brief ±´Èû¶ûÇúÏßµÄ½×Êı
+ * @brief è´å¡å°”æ›²çº¿çš„é˜¶æ•°
  */
 typedef enum BezierOrder : uint8_t
 {
-	FIRST_ORDER_BEZIER, // Ò»½×±´Èû¶ûÇúÏß£¨Ö±Ïß£©
-	SECOND_ORDER_BEZIER // ¶ş½×±´Èû¶ûÇúÏß
+	FIRST_ORDER_BEZIER, // ä¸€é˜¶è´å¡å°”æ›²çº¿ï¼ˆç›´çº¿ï¼‰
+	SECOND_ORDER_BEZIER // äºŒé˜¶è´å¡å°”æ›²çº¿
 } BezierOrder;
 
 /**
  * @class BezierCurve
- * @brief ±´Èû¶ûÇúÏßÀà
+ * @brief è´å¡å°”æ›²çº¿ç±»
  *
- * ¸ÃÀàÊµÏÖÁË±´Èû¶ûÇúÏßµÄÏà¹Ø¼ÆËã£¬°üÀ¨µã¡¢ÇĞÏòÁ¿¡¢ÇúÂÊµÈ¡£
+ * è¯¥ç±»å®ç°äº†è´å¡å°”æ›²çº¿çš„ç›¸å…³è®¡ç®—ï¼ŒåŒ…æ‹¬ç‚¹ã€åˆ‡å‘é‡ã€æ›²ç‡ç­‰ã€‚
  */
 class BezierCurve
 {
 public:
 	/**
-	 * @brief Ä¬ÈÏ¹¹Ôìº¯Êı
+	 * @brief é»˜è®¤æ„é€ å‡½æ•°
 	 */
 	BezierCurve();
 
 	/**
-	 * @brief Ò»½×±´Èû¶ûÇúÏß¹¹Ôìº¯Êı
-	 * @param start_point_ Æğµã
-	 * @param end_point_ ÖÕµã
+	 * @brief ä¸€é˜¶è´å¡å°”æ›²çº¿æ„é€ å‡½æ•°
+	 * @param start_point_ èµ·ç‚¹
+	 * @param end_point_ ç»ˆç‚¹
 	 */
 	BezierCurve(Vector2D start_point_, Vector2D end_point_);
 
 	/**
-	 * @brief ¶ş½×±´Èû¶ûÇúÏß¹¹Ôìº¯Êı
-	 * @param start_point_ Æğµã
-	 * @param control_point_ ¿ØÖÆµã
-	 * @param end_point_ ÖÕµã
+	 * @brief äºŒé˜¶è´å¡å°”æ›²çº¿æ„é€ å‡½æ•°
+	 * @param start_point_ èµ·ç‚¹
+	 * @param control_point_ æ§åˆ¶ç‚¹
+	 * @param end_point_ ç»ˆç‚¹
 	 */
 	BezierCurve(Vector2D start_point_, Vector2D control_point_, Vector2D end_point_);
 
 	/**
-	 * @brief ¸üĞÂÒ»½×±´Èû¶ûÇúÏß
-	 * @param start_point_ Æğµã
-	 * @param end_point_ ÖÕµã
+	 * @brief æ›´æ–°ä¸€é˜¶è´å¡å°”æ›²çº¿
+	 * @param start_point_ èµ·ç‚¹
+	 * @param end_point_ ç»ˆç‚¹
 	 */
 	void Bezier_Update(Vector2D start_point_, Vector2D end_point_);
 
 	/**
-	 * @brief ¸üĞÂ¶ş½×±´Èû¶ûÇúÏß
-	 * @param start_point_ Æğµã
-	 * @param control_point_ ¿ØÖÆµã
-	 * @param end_point_ ÖÕµã
+	 * @brief æ›´æ–°äºŒé˜¶è´å¡å°”æ›²çº¿
+	 * @param start_point_ èµ·ç‚¹
+	 * @param control_point_ æ§åˆ¶ç‚¹
+	 * @param end_point_ ç»ˆç‚¹
 	 */
 	void Bezier_Update(Vector2D start_point_, Vector2D control_point_, Vector2D end_point_);
 
 	/**
-	 * @brief »ñÈ¡¿ØÖÆµã£¨½öÊÊÓÃÓÚ¶ş½×ÇúÏß£©
-	 * @return Vector2D ¿ØÖÆµã
+	 * @brief è·å–æ§åˆ¶ç‚¹ï¼ˆä»…é€‚ç”¨äºäºŒé˜¶æ›²çº¿ï¼‰
+	 * @return Vector2D æ§åˆ¶ç‚¹
 	 */
 	Vector2D Get_Control_Point() const { return control_point; }
 
 	/**
-	 * @brief »ñÈ¡ÇúÏßÉÏµÄµã
-	 * @param t ÇúÏß²ÎÊı£¬·¶Î§[0, 1]
-	 * @return Vector2D ÇúÏßÉÏµÄµã
+	 * @brief è·å–æ›²çº¿ä¸Šçš„ç‚¹
+	 * @param t æ›²çº¿å‚æ•°ï¼ŒèŒƒå›´[0, 1]
+	 * @return Vector2D æ›²çº¿ä¸Šçš„ç‚¹
 	 */
 	Vector2D Get_Point(float t);
 
 	/**
-	 * @brief »ñÈ¡×î½üµãµÄ¾àÀë²¢Êä³ö¶ÔÓ¦µÄ t Öµ
-	 * @param point Ä¿±êµã
-	 * @param t Êä³ö²ÎÊı£¬¶ÔÓ¦×î½üµãµÄÇúÏß²ÎÊı
-	 * @return float ×î½üµãµÄ¾àÀë
+	 * @brief è·å–æœ€è¿‘ç‚¹çš„è·ç¦»å¹¶è¾“å‡ºå¯¹åº”çš„ t å€¼
+	 * @param point ç›®æ ‡ç‚¹
+	 * @param t è¾“å‡ºå‚æ•°ï¼Œå¯¹åº”æœ€è¿‘ç‚¹çš„æ›²çº¿å‚æ•°
+	 * @return float æœ€è¿‘ç‚¹çš„è·ç¦»
 	 */
 	float Get_Nearest_Distance(Vector2D point, float *t);
 
 	/**
-	 * @brief »ñÈ¡µ±Ç°Î»ÖÃ×ß¹ıµÄ³¤¶È
-	 * @param t ÇúÏß²ÎÊı£¬·¶Î§[0, 1]
-	 * @return float µ±Ç°³¤¶È
+	 * @brief è·å–å½“å‰ä½ç½®èµ°è¿‡çš„é•¿åº¦
+	 * @param t æ›²çº¿å‚æ•°ï¼ŒèŒƒå›´[0, 1]
+	 * @return float å½“å‰é•¿åº¦
 	 */
 	float Get_Current_Len(float t);
 
 	/**
-	 * @brief »ñÈ¡µ¥Î»ÇĞÏòÁ¿
-	 * @param t ÇúÏß²ÎÊı£¬·¶Î§[0, 1]
-	 * @return Vector2D ÇĞÏòÁ¿
+	 * @brief è·å–å•ä½åˆ‡å‘é‡
+	 * @param t æ›²çº¿å‚æ•°ï¼ŒèŒƒå›´[0, 1]
+	 * @return Vector2D åˆ‡å‘é‡
 	 */
 	Vector2D Get_Tangent_Vector(float t);
 
 	/**
-	 * @brief »ñÈ¡·¨ÏòÁ¿
-	 * @param point Ä¿±êµã
-	 * @param t ÇúÏß²ÎÊı£¬·¶Î§[0, 1]
-	 * @return Vector2D ·¨ÏòÁ¿
+	 * @brief è·å–æ³•å‘é‡
+	 * @param point ç›®æ ‡ç‚¹
+	 * @param t æ›²çº¿å‚æ•°ï¼ŒèŒƒå›´[0, 1]
+	 * @return Vector2D æ³•å‘é‡
 	 */
 	Vector2D Get_Normal_Vector(const Vector2D &point, const float t);
 
 	/**
-	 * @brief »ñÈ¡ÆğÊ¼µã
-	 * @return Vector2D ÆğÊ¼µã
+	 * @brief è·å–èµ·å§‹ç‚¹
+	 * @return Vector2D èµ·å§‹ç‚¹
 	 */
 	Vector2D Get_Start_point() { return start_point; }
 
 	/**
-	 * @brief »ñÈ¡½áÊøµã
-	 * @return Vector2D ½áÊøµã
+	 * @brief è·å–ç»“æŸç‚¹
+	 * @return Vector2D ç»“æŸç‚¹
 	 */
 	Vector2D Get_End_point() { return end_point; }
 
 	/**
-	 * @brief »ñÈ¡ÇúÂÊ
-	 * @param t ÇúÏß²ÎÊı£¬·¶Î§[0, 1]
-	 * @return float ÇúÂÊ
+	 * @brief è·å–æ›²ç‡
+	 * @param t æ›²çº¿å‚æ•°ï¼ŒèŒƒå›´[0, 1]
+	 * @return float æ›²ç‡
 	 */
 	float Get_Curvature(float t);
 
 	/**
-	 * @brief »ñÈ¡ÇúÏß×Ü³¤¶È
-	 * @return float ÇúÏß×Ü³¤¶È
+	 * @brief è·å–æ›²çº¿æ€»é•¿åº¦
+	 * @return float æ›²çº¿æ€»é•¿åº¦
 	 */
 	float Get_len() const { return len; }
 
 	/**
-	 * @brief »ñÈ¡±´Èû¶ûÇúÏßµÄ½×Êı
-	 * @return BezierOrder ÇúÏß½×Êı
+	 * @brief è·å–è´å¡å°”æ›²çº¿çš„é˜¶æ•°
+	 * @return BezierOrder æ›²çº¿é˜¶æ•°
 	 */
 	BezierOrder Get_Bezier_Order() { return order; }
 
 	/**
-	 * @brief ÉèÖÃ½áÊøËÙ¶È
-	 * @param end_vel_ ½áÊøËÙ¶È
+	 * @brief è®¾ç½®ç»“æŸé€Ÿåº¦
+	 * @param end_vel_ ç»“æŸé€Ÿåº¦
 	 */
 	void Set_End_Vel(float end_vel_)
 	{
@@ -157,33 +157,33 @@ public:
 	}
 
 	/**
-	 * @brief »ñÈ¡×î´óËÙ¶È
-	 * @param t ÇúÏß²ÎÊı£¬·¶Î§[0, 1]
-	 * @return float ×î´óËÙ¶È
+	 * @brief è·å–æœ€å¤§é€Ÿåº¦
+	 * @param t æ›²çº¿å‚æ•°ï¼ŒèŒƒå›´[0, 1]
+	 * @return float æœ€å¤§é€Ÿåº¦
 	 */
 	float Get_Max_Vel(float t);
 
 protected:
-	float len = 0.0f;										   // ÇúÏß×Ü³¤¶È
-	float distance_list[BEZIER_SAMPLE_NUM];					   // ´¢´æ²ÉÑùµãµÄÀÛ¼Æ³¤¶È
-	float bezier_sample_step = 1.f / (float)BEZIER_SAMPLE_NUM; // ²ÉÑù²½³¤
+	float len = 0.0f;										   // æ›²çº¿æ€»é•¿åº¦
+	float distance_list[BEZIER_SAMPLE_NUM];					   // å‚¨å­˜é‡‡æ ·ç‚¹çš„ç´¯è®¡é•¿åº¦
+	float bezier_sample_step = 1.f / (float)BEZIER_SAMPLE_NUM; // é‡‡æ ·æ­¥é•¿
 
-	BezierOrder order; // ±´Èû¶ûÇúÏßµÄ½×Êı
+	BezierOrder order; // è´å¡å°”æ›²çº¿çš„é˜¶æ•°
 
-	Vector2D start_point, end_point; // ÆğÊ¼µãºÍ½áÊøµã
-	Vector2D control_point;			 // ¿ØÖÆµã£¨½ö¶ş½×ÇúÏßÊ¹ÓÃ£©
+	Vector2D start_point, end_point; // èµ·å§‹ç‚¹å’Œç»“æŸç‚¹
+	Vector2D control_point;			 // æ§åˆ¶ç‚¹ï¼ˆä»…äºŒé˜¶æ›²çº¿ä½¿ç”¨ï¼‰
 
-	Vector2D tangent_vector; // ÇĞÏòÁ¿
-	Vector2D normal_vector;	 // ·¨ÏòÁ¿
+	Vector2D tangent_vector; // åˆ‡å‘é‡
+	Vector2D normal_vector;	 // æ³•å‘é‡
 
 private:
-	float end_vel = 0;						   // ½áÊøËÙ¶È
-	float max_vel_list[BEZIER_SAMPLE_NUM + 1]; // ´¢´æÃ¿¸ö²ÉÑùµãµÄ×î´óËÙ¶È
+	float end_vel = 0;						   // ç»“æŸé€Ÿåº¦
+	float max_vel_list[BEZIER_SAMPLE_NUM + 1]; // å‚¨å­˜æ¯ä¸ªé‡‡æ ·ç‚¹çš„æœ€å¤§é€Ÿåº¦
 
-	float max_curvature_len;	 // ×î´óÇúÂÊ¶ÔÓ¦µÄ³¤¶È
-	float max_curvature_max_vel; // ×î´óÇúÂÊ¶ÔÓ¦µÄ×î´óËÙ¶È
+	float max_curvature_len;	 // æœ€å¤§æ›²ç‡å¯¹åº”çš„é•¿åº¦
+	float max_curvature_max_vel; // æœ€å¤§æ›²ç‡å¯¹åº”çš„æœ€å¤§é€Ÿåº¦
 
-	float current_max_vel; // µ±Ç°×î´óËÙ¶È
+	float current_max_vel; // å½“å‰æœ€å¤§é€Ÿåº¦
 };
 
 #endif

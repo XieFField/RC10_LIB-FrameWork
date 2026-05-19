@@ -1,27 +1,27 @@
 /**
  * @file		Motor_Go.c
- * @brief       ÓîÊ÷GO-M8010-6µç»úÇı¶¯£¬Ö§³ÖÁ¦¾Ø¡¢ËÙ¶ÈºÍ½Ç¶ÈÈıÖÖ¶ÀÁ¢¿ØÖÆÄ£Ê½
+ * @brief       å®‡æ ‘GO-M8010-6ç”µæœºé©±åŠ¨ï¼Œæ”¯æŒåŠ›çŸ©ã€é€Ÿåº¦å’Œè§’åº¦ä¸‰ç§ç‹¬ç«‹æ§åˆ¶æ¨¡å¼
  * @author      ZhangJiaJia (Zhang643328686@163.com)
- * @date        2025-09-28 (´´½¨ÈÕÆÚ)
- * @date        2025-10-14 (×îºóĞŞ¸ÄÈÕÆÚ)
- * @platform	Ñ§ÔºSTM32H723ZGT6ºËĞÄ°å
+ * @date        2025-09-28 (åˆ›å»ºæ—¥æœŸ)
+ * @date        2025-10-14 (æœ€åä¿®æ”¹æ—¥æœŸ)
+ * @platform	å­¦é™¢STM32H723ZGT6æ ¸å¿ƒæ¿
  * @version     0.1.0
- * @details     ÔİÎŞ
- * @todo        1. °ÑKposKspdµÄÉèÖÃºÍ¶ÁÈ¡´Ó³ÌĞòÀïÉ¾µô
- *              2. ´ı½â¾öGOµç»ú±àÂëÆ÷³õÊ¼»¯Ö¸ÁîÒªÈ·ÈÏ´æÔÚÓĞĞ§½ÓÊÕ¶ÔÏóµÄÎÊÌâ
- *              3. ´úÂë±íÊö´ıÓÅ»¯
- * @note        ÔİÎŞ
- * @warning		ÔİÎŞ
+ * @details     æš‚æ— 
+ * @todo        1. æŠŠKposKspdçš„è®¾ç½®å’Œè¯»å–ä»ç¨‹åºé‡Œåˆ æ‰
+ *              2. å¾…è§£å†³GOç”µæœºç¼–ç å™¨åˆå§‹åŒ–æŒ‡ä»¤è¦ç¡®è®¤å­˜åœ¨æœ‰æ•ˆæ¥æ”¶å¯¹è±¡çš„é—®é¢˜
+ *              3. ä»£ç è¡¨è¿°å¾…ä¼˜åŒ–
+ * @note        æš‚æ— 
+ * @warning		æš‚æ— 
  * @license     WTFPL License
  *
- * @par °æ±¾ĞŞ¶©ÀúÊ·
+ * @par ç‰ˆæœ¬ä¿®è®¢å†å²
  * @{
- *  @li °æ±¾ºÅ: 0.1.0
- *      - ĞŞ¶©ÈÕÆÚ: 2025-10-14
- *      - Ö÷Òª±ä¸ü:
- *			- Íê³É»ù±¾¹¦ÄÜ£¬¿ÉÒÔ²¢ÈëÖ÷´úÂë
- *          - Ö§³ÖÁ¦¾Ø¡¢ËÙ¶ÈºÍ½Ç¶ÈÈıÖÖ¶ÀÁ¢¿ØÖÆÄ£Ê½
- *      - ×÷Õß: ZhangJiaJia
+ *  @li ç‰ˆæœ¬å·: 0.1.0
+ *      - ä¿®è®¢æ—¥æœŸ: 2025-10-14
+ *      - ä¸»è¦å˜æ›´:
+ *			- å®ŒæˆåŸºæœ¬åŠŸèƒ½ï¼Œå¯ä»¥å¹¶å…¥ä¸»ä»£ç 
+ *          - æ”¯æŒåŠ›çŸ©ã€é€Ÿåº¦å’Œè§’åº¦ä¸‰ç§ç‹¬ç«‹æ§åˆ¶æ¨¡å¼
+ *      - ä½œè€…: ZhangJiaJia
  */
 
 
@@ -29,63 +29,63 @@
 
 
 /**
- * @brief ¼ì²éCANÖ¡ÊÇ·ñ·ûºÏµç»úµÄ±¨ÎÄ¸ñÊ½
- * @param cf CANÖ¡
- * @return true Æ¥Åä³É¹¦
- * @return false Æ¥ÅäÊ§°Ü
+ * @brief æ£€æŸ¥CANå¸§æ˜¯å¦ç¬¦åˆç”µæœºçš„æŠ¥æ–‡æ ¼å¼
+ * @param cf CANå¸§
+ * @return true åŒ¹é…æˆåŠŸ
+ * @return false åŒ¹é…å¤±è´¥
  */
 bool GO_Motor::matchesFrame(const CanFrame& cf) const
 {
     if(!cf.isextended) 
-        return false; // GOµç»úÊ¹ÓÃÍØÕ¹Ö¡
+        return false; // GOç”µæœºä½¿ç”¨æ‹“å±•å¸§
     if(!(cf.ID >> 27 < 15 && cf.ID >> 27 >= 0))
-        return false; // GOµç»úID·¶Î§Îª0-15
+        return false; // GOç”µæœºIDèŒƒå›´ä¸º0-15
     return true;
 }
 
 /**
- * @brief ´ò°üÃüÁî
- * @param outFrames Êä³öCANÖ¡Êı×é
- * @param maxFrames Êä³öCANÖ¡Êı×é×î´ó³¤¶È
- * @return std::size_t Êµ¼Ê´ò°üµÄCANÖ¡ÊıÁ¿
+ * @brief æ‰“åŒ…å‘½ä»¤
+ * @param outFrames è¾“å‡ºCANå¸§æ•°ç»„
+ * @param maxFrames è¾“å‡ºCANå¸§æ•°ç»„æœ€å¤§é•¿åº¦
+ * @return std::size_t å®é™…æ‰“åŒ…çš„CANå¸§æ•°é‡
  */
 std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
 {
     if(maxFrames < 1)
-        return 0; // ÎŞ·¨´ò°ü
+        return 0; // æ— æ³•æ‰“åŒ…
 
     outFrames[0].isextended = true;
     outFrames[0].DLC = 8;
     memset(outFrames[0].data, 0, 8);
-    int16_t inputTorque = (int16_t)(target_torque_ * 256.0f); // Ã»ÓĞËÄÉáÎåÈë£¬Ö±½Ó½Ø¶Ï
+    int16_t inputTorque = (int16_t)(target_torque_ * 256.0f); // æ²¡æœ‰å››èˆäº”å…¥ï¼Œç›´æ¥æˆªæ–­
     if(!isInit_)
     {
-        motor_control_mode_ = Motor_Control_Mode::MODE_10; // MODE_10 ºÍ MODE_13 ¾ù¿ÉÒÔ
+        motor_control_mode_ = Motor_Control_Mode::MODE_10; // MODE_10 å’Œ MODE_13 å‡å¯ä»¥
         this->setKposAndKspd(0, 0);
     }
     else if(isSetKposKspd_)
     {
-        motor_control_mode_ = Motor_Control_Mode::MODE_11; // ÉèÖÃkposºÍkspd
+        motor_control_mode_ = Motor_Control_Mode::MODE_11; // è®¾ç½®kposå’Œkspd
         isReadKposKspd_ = true;
     }
     else if(isReadKposKspd_)
     {
-        motor_control_mode_ = Motor_Control_Mode::MODE_12; // ¶ÁÈ¡kposºÍkspd
+        motor_control_mode_ = Motor_Control_Mode::MODE_12; // è¯»å–kposå’Œkspd
     }
     else if(isReturnData_)
     {
-        motor_control_mode_ = Motor_Control_Mode::MODE_10; // Ã¿¿ØÖÆÒ»´Îµç»ú¾Í·µ»ØÒ»´ÎÊı¾İ
+        motor_control_mode_ = Motor_Control_Mode::MODE_10; // æ¯æ§åˆ¶ä¸€æ¬¡ç”µæœºå°±è¿”å›ä¸€æ¬¡æ•°æ®
     }
     else if(!isReturnData_)
     {
         motor_control_mode_ = Motor_Control_Mode::MODE_13; 
-        // Ã¿¿ØÖÆÒ»´Îµç»úCAN²»·µ»Øµç»úÊı¾İ
-        // ³ı·Çµç»ú±¨´í£¬±¨´íÊ±»á·µ»Øµç»úÊı¾İ
-        // ÓÃ»§ĞèÒªµç»úÊı¾İÊ±ĞèÒª·¢ËÍÎÊ´ğÃüÁî£¬µç»ú½«·µ»Ø×îºóÒ»´ÎÍ¨Ñ¶Ê±±£ÁôµÄÊı¾İ
+        // æ¯æ§åˆ¶ä¸€æ¬¡ç”µæœºCANä¸è¿”å›ç”µæœºæ•°æ®
+        // é™¤éç”µæœºæŠ¥é”™ï¼ŒæŠ¥é”™æ—¶ä¼šè¿”å›ç”µæœºæ•°æ®
+        // ç”¨æˆ·éœ€è¦ç”µæœºæ•°æ®æ—¶éœ€è¦å‘é€é—®ç­”å‘½ä»¤ï¼Œç”µæœºå°†è¿”å›æœ€åä¸€æ¬¡é€šè®¯æ—¶ä¿ç•™çš„æ•°æ®
     }
     else
     {
-        // ÒâÁÏÖ®ÍâµÄÇé¿ö£¬´ı´¦Àí
+        // æ„æ–™ä¹‹å¤–çš„æƒ…å†µï¼Œå¾…å¤„ç†
     }
     
     if(isSetKposKspd_ || isReadKposKspd_)
@@ -153,8 +153,8 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
 
     if(isSetKposKspd_)
     {
-        uint16_t input_kpos = (uint16_t)(target_kpos_ * 1280.0f); // Ã»ÓĞËÄÉáÎåÈë£¬Ö±½Ó½Ø¶Ï
-        uint16_t input_kspd = (uint16_t)(target_kspd_ * 1280.0f); // Ã»ÓĞËÄÉáÎåÈë£¬Ö±½Ó½Ø¶Ï
+        uint16_t input_kpos = (uint16_t)(target_kpos_ * 1280.0f); // æ²¡æœ‰å››èˆäº”å…¥ï¼Œç›´æ¥æˆªæ–­
+        uint16_t input_kspd = (uint16_t)(target_kspd_ * 1280.0f); // æ²¡æœ‰å››èˆäº”å…¥ï¼Œç›´æ¥æˆªæ–­
 
         data.byte_0 = (uint8_t)(input_kpos);
         data.byte_1 = (uint8_t)(input_kpos >> 8);
@@ -187,19 +187,19 @@ std::size_t GO_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
 }
 
 /**
- * @brief ÉèÖÃÄ¿±êÊä³öÖá×ª¾Ø£¬µ¥Î»N.m
- * @param torque_set Ä¿±êÊä³öÖá×ª¾Ø
+ * @brief è®¾ç½®ç›®æ ‡è¾“å‡ºè½´è½¬çŸ©ï¼Œå•ä½N.m
+ * @param torque_set ç›®æ ‡è¾“å‡ºè½´è½¬çŸ©
  */
 void GO_Motor::setTargetTorque(float torque_set)
 {
     mode_ = Mode::SET_TORQUE;
     resetParam();
-    target_torque_ = torque_set; // Ã»ÓĞÊäÈë¼ì²é
+    target_torque_ = torque_set; // æ²¡æœ‰è¾“å…¥æ£€æŸ¥
 }
 
 /**
- * @brief ÉèÖÃÄ¿±êÊä³öÖá×ªËÙ£¬µ¥Î»RPM
- * @param rpm_set Ä¿±êÊä³öÖá×ªËÙ
+ * @brief è®¾ç½®ç›®æ ‡è¾“å‡ºè½´è½¬é€Ÿï¼Œå•ä½RPM
+ * @param rpm_set ç›®æ ‡è¾“å‡ºè½´è½¬é€Ÿ
  */
 void GO_Motor::setTargetRPM(float rpm_set)
 {
@@ -209,8 +209,8 @@ void GO_Motor::setTargetRPM(float rpm_set)
 }
 
 /**
- * @brief ÉèÖÃÄ¿±êÊä³öÖá½Ç¶È£¬µ¥Î»¶È
- * @param angle_set Ä¿±êÊä³öÖá½Ç¶È
+ * @brief è®¾ç½®ç›®æ ‡è¾“å‡ºè½´è§’åº¦ï¼Œå•ä½åº¦
+ * @param angle_set ç›®æ ‡è¾“å‡ºè½´è§’åº¦
  */
 void GO_Motor::setTargetAngle(float angle_set)
 {
@@ -232,8 +232,8 @@ void GO_Motor::setTargetAngle(float angle_set)
 }
 
 /**
- * @brief ½âÎöµç»ú·µ»ØµÄCAN±¨ÎÄ
- * @param cf µç»ú·µ»ØµÄCAN±¨ÎÄ
+ * @brief è§£æç”µæœºè¿”å›çš„CANæŠ¥æ–‡
+ * @param cf ç”µæœºè¿”å›çš„CANæŠ¥æ–‡
  */
 void GO_Motor::updateFeedback(const CanFrame& cf)
 {
@@ -270,7 +270,7 @@ void GO_Motor::updateFeedback(const CanFrame& cf)
 
         isReadKposKspd_ = false;
 
-        // ÔİÊ±×¢ÊÍ
+        // æš‚æ—¶æ³¨é‡Š
         // if(target_kpos_ != current_kpos_ || target_kspd_ != current_kspd_)
         // {
         //     isSetKposKspd_ = true;
@@ -278,7 +278,7 @@ void GO_Motor::updateFeedback(const CanFrame& cf)
     }
     else if (extended_id.low_1 == -128)
     {
-        // µç»ú±¨´í£¬´ı´¦Àí
+        // ç”µæœºæŠ¥é”™ï¼Œå¾…å¤„ç†
     }
     else if (extended_id.low_1 >= -127 && extended_id.low_1 <= 127)
     {
@@ -313,14 +313,14 @@ void GO_Motor::updateFeedback(const CanFrame& cf)
     }
     else 
     {
-        // ²»Ó¦¸Ã·¢ÉúµÄÇé¿ö£¬´ı´¦Àí
+        // ä¸åº”è¯¥å‘ç”Ÿçš„æƒ…å†µï¼Œå¾…å¤„ç†
     }
 }
 
 /**
- * @brief ÉèÖÃµç»úKposºÍKspd
- * @param kpos µç»ú¸Õ¶ÈÏµÊı/Î»ÖÃÎó²î±ÈÀıÏµÊı
- * @param kspd µç»ú×èÄáÏµÊı/ËÙ¶ÈÎó²î±ÈÀıÏµÊı
+ * @brief è®¾ç½®ç”µæœºKposå’ŒKspd
+ * @param kpos ç”µæœºåˆšåº¦ç³»æ•°/ä½ç½®è¯¯å·®æ¯”ä¾‹ç³»æ•°
+ * @param kspd ç”µæœºé˜»å°¼ç³»æ•°/é€Ÿåº¦è¯¯å·®æ¯”ä¾‹ç³»æ•°
  */
 void GO_Motor::setKposAndKspd(float kpos, float kspd)
 {
@@ -331,7 +331,7 @@ void GO_Motor::setKposAndKspd(float kpos, float kspd)
 }
 
 /**
- * @brief ÖØÖÃµç»ú¿ØÖÆ²ÎÊı£¬·ÀÖ¹¿ØÖÆ²ÎÊı³åÍ»
+ * @brief é‡ç½®ç”µæœºæ§åˆ¶å‚æ•°ï¼Œé˜²æ­¢æ§åˆ¶å‚æ•°å†²çª
  */
 void GO_Motor::resetParam()
 {
@@ -356,14 +356,14 @@ void GO_Motor::resetParam()
         // NONE
         break;
     default:
-        // ²»Ó¦¸Ã³öÏÖÕâÖÖÇé¿ö£¬´ı´¦Àí
+        // ä¸åº”è¯¥å‡ºç°è¿™ç§æƒ…å†µï¼Œå¾…å¤„ç†
         break;
     }
 }
 
 /**
- * @brief ÉèÖÃÄ¿±êÊä³öÖá×Ü½Ç¶È£¬µ¥Î»¶È
- * @param totalAngle_set Ä¿±êÊä³öÖá×Ü½Ç¶È
+ * @brief è®¾ç½®ç›®æ ‡è¾“å‡ºè½´æ€»è§’åº¦ï¼Œå•ä½åº¦
+ * @param totalAngle_set ç›®æ ‡è¾“å‡ºè½´æ€»è§’åº¦
  */
 void GO_Motor::setTargetTotalAngle(float totalAngle_set)
 {
@@ -373,7 +373,7 @@ void GO_Motor::setTargetTotalAngle(float totalAngle_set)
 }
 
 /**
- * @brief ÖÜÆÚĞÔ±»»½ĞÑº¯Êı£¬¿ÉÓÃÓÚ¸üĞÂµç»ú×´Ì¬
+ * @brief å‘¨æœŸæ€§è¢«å”¤é†’å‡½æ•°ï¼Œå¯ç”¨äºæ›´æ–°ç”µæœºçŠ¶æ€
  */
 void GO_Motor::update()
 {
@@ -399,13 +399,13 @@ void GO_Motor::update()
             target_torque_ = speed_pid_.pid_calc(target_rpm_, current_rpm_);
         break;
     default:
-        // ²»Ó¦¸Ã³öÏÖÕâÖÖÇé¿ö£¬´ı´¦Àí
+        // ä¸åº”è¯¥å‡ºç°è¿™ç§æƒ…å†µï¼Œå¾…å¤„ç†
         break;
     }
 }
 
 /**
- * @brief ÖØÖÃÊä³öÖá×Ü½Ç¶ÈÎª0¶È
+ * @brief é‡ç½®è¾“å‡ºè½´æ€»è§’åº¦ä¸º0åº¦
  */
 void GO_Motor::resetTotalAngle()
 {
@@ -413,11 +413,11 @@ void GO_Motor::resetTotalAngle()
 }
 
 /**
- * @brief ³õÊ¼»¯PID²ÎÊı
- * @param speed_params ËÙ¶ÈPID²ÎÊı
- * @param speed_tdRatio ËÙ¶ÈPIDÎ¢·ÖÊ±¼ä±ÈÀı
- * @param angle_params ½Ç¶ÈPID²ÎÊı
- * @param angle_I_Separa ½Ç¶ÈPID»ı·Ö·ÖÀëãĞÖµ
+ * @brief åˆå§‹åŒ–PIDå‚æ•°
+ * @param speed_params é€Ÿåº¦PIDå‚æ•°
+ * @param speed_tdRatio é€Ÿåº¦PIDå¾®åˆ†æ—¶é—´æ¯”ä¾‹
+ * @param angle_params è§’åº¦PIDå‚æ•°
+ * @param angle_I_Separa è§’åº¦PIDç§¯åˆ†åˆ†ç¦»é˜ˆå€¼
  */
 void GO_Motor::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa)
 {
@@ -426,8 +426,8 @@ void GO_Motor::pid_init(const PID_Param_Config& speed_params, float speed_tdRati
 }
 
 /**
- * @brief »ñÈ¡µ±Ç°Êä³öÖá×ªËÙ
- * @return float µ±Ç°Êä³öÖá×ªËÙ
+ * @brief è·å–å½“å‰è¾“å‡ºè½´è½¬é€Ÿ
+ * @return float å½“å‰è¾“å‡ºè½´è½¬é€Ÿ
  */
 float GO_Motor::getRPM() const
 {
@@ -435,8 +435,8 @@ float GO_Motor::getRPM() const
 }
 
 /**
- * @brief »ñÈ¡µ±Ç°Êä³öÖá½Ç¶È
- * @return float µ±Ç°Êä³öÖá½Ç¶È
+ * @brief è·å–å½“å‰è¾“å‡ºè½´è§’åº¦
+ * @return float å½“å‰è¾“å‡ºè½´è§’åº¦
  */
 float GO_Motor::getAngle() const
 {
@@ -444,8 +444,8 @@ float GO_Motor::getAngle() const
 }
 
 /**
- * @brief »ñÈ¡µ±Ç°Êä³öÖá×Ü½Ç¶È
- * @return float µ±Ç°Êä³öÖá×Ü½Ç¶È
+ * @brief è·å–å½“å‰è¾“å‡ºè½´æ€»è§’åº¦
+ * @return float å½“å‰è¾“å‡ºè½´æ€»è§’åº¦
  */
 float GO_Motor::getTotalAngle() const
 {
@@ -453,8 +453,8 @@ float GO_Motor::getTotalAngle() const
 }
 
 /**
- * @brief »ñÈ¡µ±Ç°Ä¿±êÊä³öÖá×ªËÙ
- * @return float µ±Ç°Ä¿±êÊä³öÖá×ªËÙ
+ * @brief è·å–å½“å‰ç›®æ ‡è¾“å‡ºè½´è½¬é€Ÿ
+ * @return float å½“å‰ç›®æ ‡è¾“å‡ºè½´è½¬é€Ÿ
  */
 float GO_Motor::getTargetRPM() const
 {
@@ -462,8 +462,8 @@ float GO_Motor::getTargetRPM() const
 }
 
 /**
- * @brief »ñÈ¡µ±Ç°Ä¿±êÊä³öÖá×Ü½Ç¶È
- * @return float µ±Ç°Ä¿±êÊä³öÖá×Ü½Ç¶È
+ * @brief è·å–å½“å‰ç›®æ ‡è¾“å‡ºè½´æ€»è§’åº¦
+ * @return float å½“å‰ç›®æ ‡è¾“å‡ºè½´æ€»è§’åº¦
  */
 float GO_Motor::getTargetTotalAngle() const
 {
@@ -472,8 +472,8 @@ float GO_Motor::getTargetTotalAngle() const
 
 
 /**
- * @brief »ñÈ¡µ±Ç°Êä³öÖá×ª¾Ø
- * @return float µ±Ç°Êä³öÖá×ª¾Ø
+ * @brief è·å–å½“å‰è¾“å‡ºè½´è½¬çŸ©
+ * @return float å½“å‰è¾“å‡ºè½´è½¬çŸ©
  */
 float GO_Motor::getTorque() const
 {
