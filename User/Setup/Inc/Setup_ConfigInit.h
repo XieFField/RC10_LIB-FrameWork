@@ -48,7 +48,6 @@ extern "C" {
 #include "system_detect_task.h"
 #include "Module_HWT.h"
 #include "Module_JY61.h"
-#include "Motor_VESC.h"
 #include "Motor_GO.h"
 
 /*==============Controller===============*/

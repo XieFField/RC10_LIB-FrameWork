@@ -158,11 +158,12 @@ void ALL_Setup_ConfigInit(void)
    ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
    ARM_Controller.setArmStatus(ARM_IDLE);
    
-   // Weapon_Controller.register_launch_Motor_1(&Weapon_launchMotor_1_master, &Weapon_launchMotor_1_slave);
-   // Weapon_Controller.register_launch_Motor_2(&Weapon_launchMotor_2_master, &Weapon_launchMotor_2_slave);
-   // Weapon_Controller.register_claw_Motor(&Weapon_clawMotor);
-   // Weapon_Controller.register_traverse_Motor(&Weapon_traverseMotor);
-   // Weapon_Controller.register_wrist_Motor(&Weapon_wristMotor);
+   Weapon_Controller.register_launch_Motor(&Weapon_launchMotor);
+   Weapon_Controller.register_claw_1_Motor(&Weapon_claw_1_Motor);
+   Weapon_Controller.register_claw_2_Motor(&Weapon_claw_2_Motor);
+   Weapon_Controller.register_claw_3_Motor(&Weapon_claw_3_Motor);
+   Weapon_Controller.register_wrist_Motor(&Weapon_wristMotor);
+	Weapon_Controller.register_arm_Motor(&Weapon_armMotor);
 
    Weapon_Controller.init();
    Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
@@ -295,10 +296,12 @@ void CAN_Motor_Init(void)
    
    PID_Param_Config arm_3508_anglePID = m3508_angle_pid_params;
    arm_3508_anglePID.output_limit = 450.0f;
+   
    arm_launchMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, arm_3508_anglePID, 0.0f);
+
    PID_Param_Config arm_strech_anglePID = m2006_angle_pid_params;
-   arm_strech_anglePID.output_limit = 500.0f;
-   m2006_speed_pid_params.output_limit = 8000.0f;
+   arm_strech_anglePID.output_limit = 400.0f;
+   m2006_speed_pid_params.output_limit = 4500.0f;
    arm_stretchMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
    arm_rotateMotor.pid_init(m3508_speed_pid_paramsForSpeedMotor, 0.0f, m3508Rotate_angle_pid_params, 0.0f);
    arm_pitchMotor.reset_controlFrequency(100); // 俯仰电机降到 100Hz，减轻总线负载
@@ -310,33 +313,18 @@ void CAN_Motor_Init(void)
 	// PID_Param_Config weapon_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
    // PID_Param_Config weapon_3508_anglePID = m3508_angle_pid_params;
    
-   // PID_Param_Config weapon_2006_speedPID = m2006_speed_pid_params;
-   // PID_Param_Config weapon_2006_anglePID =m2006_angle_pid_params;
+   PID_Param_Config weapon_2006_speedPID = m2006_speed_pid_params;
+   PID_Param_Config weapon_2006_anglePID =m2006_angle_pid_params;
 
-   // weapon_3508_anglePID.output_limit=200.0f;
-   // weapon_3508_speedPID.output_limit=15000.0f;
-   // weapon_2006_speedPID.output_limit=4500;
-   // weapon_2006_anglePID.output_limit=500;
+   weapon_3508_anglePID.output_limit=200.0f;
+   weapon_3508_speedPID.output_limit=15000.0f;
+   weapon_2006_speedPID.output_limit=4500;
+   weapon_2006_anglePID.output_limit=500;
    
-   // Weapon_launchMotor_1_master.pid_init(weapon_3508_speedPID, 0.0f,weapon_3508_anglePID, 0.0f);
-   // Weapon_launchMotor_2_master.pid_init(weapon_3508_speedPID, 0.0f, weapon_3508_anglePID, 0.0f);
-   
-   // Weapon_clawMotor.pid_init(weapon_2006_speedPID, 0.0f,  weapon_2006_anglePID, 0.0f);
-   // Weapon_traverseMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
-
-   PID_Param_Config weapon_launch_anglePID = m3508_angle_pid_params;
-   PID_Param_Config weapon_launch_speedPID = m3508_speed_pid_paramsForSpeedMotor;
-   weapon_launch_anglePID.output_limit = 200.0f;
-   weapon_launch_speedPID.output_limit = 15000.0f;
-   Weapon_Launch.pid_init(weapon_launch_speedPID, 0.0f, weapon_launch_anglePID, 0.0f);
-
-   PID_Param_Config weapon_claw_anglePID = m2006_angle_pid_params;
-   PID_Param_Config weapon_claw_speedPID = m2006_speed_pid_params;
-   weapon_claw_anglePID.output_limit = 500.0f;
-   weapon_claw_speedPID.output_limit = 4500.0f;
-   Weapon_Claw1.pid_init(weapon_claw_speedPID, 0.0f, weapon_claw_anglePID, 0.0f);
-   Weapon_Claw2.pid_init(weapon_claw_speedPID, 0.0f, weapon_claw_anglePID, 0.0f);
-   Weapon_Claw3.pid_init(weapon_claw_speedPID, 0.0f, weapon_claw_anglePID, 0.0f);
-
-   Weapon_Wrist.reset_controlFrequency(100);
+//   Weapon_launchMotor_1_master.pid_init(weapon_3508_speedPID, 0.0f,weapon_3508_anglePID, 0.0f);
+//   Weapon_launchMotor_2_master.pid_init(weapon_3508_speedPID, 0.0f, weapon_3508_anglePID, 0.0f);
+//   
+//   Weapon_clawMotor.pid_init(weapon_2006_speedPID, 0.0f,  weapon_2006_anglePID, 0.0f);
+//   Weapon_traverseMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
+   Weapon_wristMotor.reset_controlFrequency(100);
 }

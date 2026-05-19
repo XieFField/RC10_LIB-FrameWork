@@ -27,6 +27,7 @@ extern "C" {
 #include "APP_PID.h"
 #include "Module_CrsfReceiver.h"
 #include "Locate_Setup.h"
+#include "Module_OIDEncoder.h"
 
 namespace WeaponSage_Setup
 {
@@ -92,6 +93,13 @@ namespace WeaponSage_Setup
 
      extern float weapon_pos[4];//武器位置数组
 
+
+    typedef enum WeaponDock_E
+    {
+        LOW,
+        MID,
+        HIGH
+    };
 }
 
 
@@ -105,16 +113,15 @@ public:
     /**
      * @brief 必须在注册完所有电机后调用一次 init() 来启动任务和完成必要的初始化，否则武器架将无法正常工作
      */
-    void init()
+    void init(OIDEncoder * wrist_encoder)
     {
-        if( this->launch_Motor_1_master == nullptr ||
-            this->launch_Motor_1_slave == nullptr ||
-            this->launch_Motor_2_master == nullptr ||
-            this->launch_Motor_2_slave == nullptr ||
-            this->claw_Motor_ == nullptr ||
-            this->traverse_Motor_ == nullptr ||
-            this->wrist_Motor_ == nullptr
-        )
+        if( this->launch_Motor_ == nullptr ||
+            this->claw_1_Motor_ == nullptr ||
+            this->claw_2_Motor_ == nullptr ||
+			this->claw_3_Motor_ == nullptr ||
+            this->wrist_Motor_ == nullptr  ||
+			this->arm_Motor_==nullptr      
+			)
         {
             ctrl_status_.init_flag = false;
             return;
@@ -143,16 +150,23 @@ public:
         ctrl_status_.target_poleIndex = index;
     }
 
+    void setWeaponSageControlStatus(WeaponSage_Status_E status)
+    {
+        weaponSage_status_ = status;
+        if(status != WEAPONSAGE_DEBUG)
+        {
+            debug_launch_target_valid_ = false;
+        }
+    }
+
+   
+
     Point2D getClawPos()
     {   
-		
+		Point2D pos;
 		this->current_pos_= get_CurrentPos();
 		
-        Point2D pos = {0.0f, 0.0f, 0.0f};
-		pos.x=current_pos_.traverse_pos_;
-		pos.y=current_pos_.launch_pos_;
-		pos.theta=current_pos_.claw_pos_;
-		
+
         return pos;
     }
     void setWeaponSageStatus(WeaponSage_Status_E status)
@@ -170,11 +184,11 @@ public:
         auto_ctrl_.auto_ctrl1 = flag;
     }
 
-    void setWeaponSageControlStatus(WeaponSage_Status_E status)
+    void set_dock(WeaponSage_Setup::WeaponDock_E dock)
     {
-        weaponSage_status_ = status;
+        target_dock_ = dock;
     }
-    
+
 	
 protected:
     void loop() override;
@@ -190,10 +204,8 @@ private:
     void idle();
     void stop();
     void debug();
-    void autoControl();
-
-    void camera_mode(); // 相机协同模式主流程。
-    bool is_new_z(float z_now); // detect new z sample
+    void autoControl_catch();
+    void autoControl_dock();
 
     void calibrate();
 
@@ -210,10 +222,18 @@ private:
 	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_IDLE;
 	WeaponSage_Setup::auto_GRABstate_S now_state_=WeaponSage_Setup::STATE_DONE;
 
+    WeaponSage_Setup::WeaponDock_E target_dock_ = WeaponSage_Setup::MID; // for auto_dock
+
+    bool weapon_CameraStart = false; // 主状态机触发相机流程的标志位。
+    bool debug_launch_target_valid_ = false;
+    float debug_launch_target_ = 0.0f;
+
 	
     RmPocketData_t airjoy_data_; 
 
     WeaponSage_Setup::manual_ctrlForgrip_S manual_ctrlForgrip_;
+
+    OIDEncoder *wrist_encoder_ = nullptr;
 };
 
 extern WeaponSage_InitData_S initData_;
