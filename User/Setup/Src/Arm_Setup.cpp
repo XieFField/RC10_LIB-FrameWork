@@ -1,8 +1,5 @@
 #include "Arm_setup.h"
 
-#ifndef ARM_SETUP_UART8_PERIODIC_LOG_ENABLE
-#define ARM_SETUP_UART8_PERIODIC_LOG_ENABLE 0
-#endif
 
 static bool s_has_recorded_strategy = false; //记录是否已经记录过策略
 
@@ -171,9 +168,8 @@ void ArmSetup::loop()
 
     this->update(); //将控制信息发送给电机
     last_arm_status_ = arm_status_;
-#if ARM_SETUP_UART8_PERIODIC_LOG_ENABLE
+    
     debug_uart.printf_DMA("%f\n", motor_rotate_->getTotalAngle());
-#endif
 }
 bool test_num = 0;
 
