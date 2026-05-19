@@ -3,7 +3,7 @@
 
 Module_Camera* Module_Camera::GetInstance(UART_HandleTypeDef *uart_handle) 
 {
-    // ¶¨Òå¾²Ì¬½ÓÊÕ»º³åÇø
+    // å®šä¹‰é™æ€æ¥æ”¶ç¼“å†²åŒº
     static uint8_t static_rx_buffer[64] = {0};
     static Module_Camera instance(64, static_rx_buffer, uart_handle);
     return &instance;
@@ -20,10 +20,10 @@ void Module_Camera::InitUART()
 {
     if (uart_initialized_) return;
     
-    // Ä£·Â Module_Position: Ê¹ÓÃ×÷ÓÃÓò½âÎö·ûµ÷ÓÃ»ùÀà¾²Ì¬·½·¨
+    // æ¨¡ä»¿ Module_Position: ä½¿ç”¨ä½œç”¨åŸŸè§£æç¬¦è°ƒç”¨åŸºç±»é™æ€æ–¹æ³•
     UART_HandleTypeDef *uart_handle = Module_Camera::UART_::GetUartHandle();
     
-    // Ê¹ÓÃ InstanceManager ¹¤¾ß
+    // ä½¿ç”¨ InstanceManager å·¥å…·
     uart_instance_ = InstanceManager::GetInstanceByUartHandle(uart_handle);
     
     if (uart_instance_ != nullptr) {

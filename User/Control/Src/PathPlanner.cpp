@@ -2,55 +2,55 @@
 #include <math.h>
 #include <string.h>
 
-// 8¸ö·½ÏòµÄÒÆ¶¯ÏòÁ¿ (ÉÏ, ÓÒÉÏ, ÓÒ, ÓÒÏÂ, ÏÂ, ×óÏÂ, ×ó, ×óÉÏ)
-// ÓÃÓÚA*Ëã·¨ÖĞµÄÁÚ¾Ó½ÚµãÀ©Õ¹
+// 8ä¸ªæ–¹å‘çš„ç§»åŠ¨å‘é‡ (ä¸Š, å³ä¸Š, å³, å³ä¸‹, ä¸‹, å·¦ä¸‹, å·¦, å·¦ä¸Š)
+// ç”¨äºA*ç®—æ³•ä¸­çš„é‚»å±…èŠ‚ç‚¹æ‰©å±•
 static const int16_t DIRECTION_X[8] = {0, 1, 1, 1, 0, -1, -1, -1};
 static const int16_t DIRECTION_Y[8] = {-1, -1, 0, 1, 1, 1, 0, -1};
 
-// ¹¹Ôìº¯Êı - ³õÊ¼»¯Â·¾¶¹æ»®Æ÷²¢Ê¹ÓÃÍâ²¿Ìá¹©µÄ»º³åÇø
+// æ„é€ å‡½æ•° - åˆå§‹åŒ–è·¯å¾„è§„åˆ’å™¨å¹¶ä½¿ç”¨å¤–éƒ¨æä¾›çš„ç¼“å†²åŒº
 PathPlanner::PathPlanner(uint8_t* map_buffer, AStarNode* nodes_buffer,
                          AStarNode** open_list_buffer, GridPoint* path_buffer,
                          uint16_t map_width, uint16_t map_height,
                          uint16_t max_open_list_size, uint16_t max_path_length) {
-    // ³õÊ¼»¯ÅäÖÃ²ÎÊı
+    // åˆå§‹åŒ–é…ç½®å‚æ•°
     config_.map_width = map_width;
     config_.map_height = map_height;
     config_.max_path_length = max_path_length;
-    config_.diagonal_cost = 1.414f;  // ¶Ô½ÇÏßÒÆ¶¯´ú¼Û ¡Ì2 ¡Ö 1.414
-    config_.straight_cost = 1.0f;    // Ö±ÏßÒÆ¶¯´ú¼Û
+    config_.diagonal_cost = 1.414f;  // å¯¹è§’çº¿ç§»åŠ¨ä»£ä»· âˆš2 â‰ˆ 1.414
+    config_.straight_cost = 1.0f;    // ç›´çº¿ç§»åŠ¨ä»£ä»·
     
-    // ÉèÖÃÍâ²¿Ìá¹©µÄ»º³åÇø
+    // è®¾ç½®å¤–éƒ¨æä¾›çš„ç¼“å†²åŒº
     map_data_ = map_buffer;
     nodes_ = nodes_buffer;
     open_list_ = open_list_buffer;
     path_ = path_buffer;
     
-    // ³õÊ¼»¯¿ª·ÅÁĞ±í
+    // åˆå§‹åŒ–å¼€æ”¾åˆ—è¡¨
     open_list_capacity_ = max_open_list_size;
     open_list_size_ = 0;
     path_length_ = 0;
     
-    // ³õÊ¼»¯½ÚµãÍø¸ñ×´Ì¬
+    // åˆå§‹åŒ–èŠ‚ç‚¹ç½‘æ ¼çŠ¶æ€
     initNodes();
 }
 
-// ³õÊ¼»¯ËùÓĞ½Úµã×´Ì¬ - ÎªA*ËÑË÷×ö×¼±¸
+// åˆå§‹åŒ–æ‰€æœ‰èŠ‚ç‚¹çŠ¶æ€ - ä¸ºA*æœç´¢åšå‡†å¤‡
 void PathPlanner::initNodes() {
     uint32_t total_nodes = config_.map_width * config_.map_height;
     for (uint32_t i = 0; i < total_nodes; i++) {
-        nodes_[i].x = i % config_.map_width;     // ¼ÆËã½Úµãx×ø±ê
-        nodes_[i].y = i / config_.map_width;     // ¼ÆËã½Úµãy×ø±ê
-        nodes_[i].g_cost = 1e9f;  // ³õÊ¼»¯Îª¼«´óÖµ£¬±íÊ¾ÉĞÎ´·ÃÎÊ
+        nodes_[i].x = i % config_.map_width;     // è®¡ç®—èŠ‚ç‚¹xåæ ‡
+        nodes_[i].y = i / config_.map_width;     // è®¡ç®—èŠ‚ç‚¹yåæ ‡
+        nodes_[i].g_cost = 1e9f;  // åˆå§‹åŒ–ä¸ºæå¤§å€¼ï¼Œè¡¨ç¤ºå°šæœªè®¿é—®
         nodes_[i].h_cost = 0;
         nodes_[i].f_cost = 1e9f;
-        nodes_[i].parent_x = -1;  // ÎŞĞ§¸¸½Úµã×ø±ê
+        nodes_[i].parent_x = -1;  // æ— æ•ˆçˆ¶èŠ‚ç‚¹åæ ‡
         nodes_[i].parent_y = -1;
-        nodes_[i].is_open = false;    // ²»ÔÚ¿ª·ÅÁĞ±íÖĞ
-        nodes_[i].is_closed = false;  // ²»ÔÚ¹Ø±ÕÁĞ±íÖĞ
+        nodes_[i].is_open = false;    // ä¸åœ¨å¼€æ”¾åˆ—è¡¨ä¸­
+        nodes_[i].is_closed = false;  // ä¸åœ¨å…³é—­åˆ—è¡¨ä¸­
     }
 }
 
-// ÖØÖÃ½Úµã×´Ì¬ - ÓÃÓÚĞÂµÄÂ·¾¶ËÑË÷
+// é‡ç½®èŠ‚ç‚¹çŠ¶æ€ - ç”¨äºæ–°çš„è·¯å¾„æœç´¢
 void PathPlanner::resetNodes() {
     uint32_t total_nodes = config_.map_width * config_.map_height;
     for (uint32_t i = 0; i < total_nodes; i++) {
@@ -61,59 +61,59 @@ void PathPlanner::resetNodes() {
         nodes_[i].is_open = false;
         nodes_[i].is_closed = false;
     }
-    open_list_size_ = 0;    // Çå¿Õ¿ª·ÅÁĞ±í
-    path_length_ = 0;       // ÖØÖÃÂ·¾¶³¤¶È
+    open_list_size_ = 0;    // æ¸…ç©ºå¼€æ”¾åˆ—è¡¨
+    path_length_ = 0;       // é‡ç½®è·¯å¾„é•¿åº¦
 }
 
-// ¼ÆËãÆô·¢Ê½´ú¼Û - Ê¹ÓÃ¶Ô½ÇÏß¾àÀë£¨ÊÊºÏ8·½ÏòÒÆ¶¯£©
+// è®¡ç®—å¯å‘å¼ä»£ä»· - ä½¿ç”¨å¯¹è§’çº¿è·ç¦»ï¼ˆé€‚åˆ8æ–¹å‘ç§»åŠ¨ï¼‰
 float PathPlanner::calculateHeuristic(int16_t x1, int16_t y1, int16_t x2, int16_t y2) {
     int16_t dx = abs(x1 - x2);
     int16_t dy = abs(y1 - y2);
-    // ¶Ô½ÇÏß¾àÀë¹«Ê½£ºD*(dx+dy) + (D2-2*D)*min(dx,dy)
-    // ÆäÖĞDÊÇÖ±Ïß´ú¼Û£¬D2ÊÇ¶Ô½ÇÏß´ú¼Û
+    // å¯¹è§’çº¿è·ç¦»å…¬å¼ï¼šD*(dx+dy) + (D2-2*D)*min(dx,dy)
+    // å…¶ä¸­Dæ˜¯ç›´çº¿ä»£ä»·ï¼ŒD2æ˜¯å¯¹è§’çº¿ä»£ä»·
     return config_.straight_cost * (dx + dy) + 
            (config_.diagonal_cost - 2 * config_.straight_cost) * fmin(dx, dy);
 }
 
-// ¼ì²é×ø±êÊÇ·ñÔÚµØÍ¼ÓĞĞ§·¶Î§ÄÚ
+// æ£€æŸ¥åæ ‡æ˜¯å¦åœ¨åœ°å›¾æœ‰æ•ˆèŒƒå›´å†…
 bool PathPlanner::isValidCell(int16_t x, int16_t y) {
     return (x >= 0 && x < config_.map_width && y >= 0 && y < config_.map_height);
 }
 
-// ¼ì²éÖ¸¶¨µ¥Ôª¸ñÊÇ·ñÎªÕÏ°­Îï
+// æ£€æŸ¥æŒ‡å®šå•å…ƒæ ¼æ˜¯å¦ä¸ºéšœç¢ç‰©
 bool PathPlanner::isObstacle(int16_t x, int16_t y) {
-    if (!isValidCell(x, y)) return true;  // µØÍ¼ÍâÊÓÎªÕÏ°­Îï
+    if (!isValidCell(x, y)) return true;  // åœ°å›¾å¤–è§†ä¸ºéšœç¢ç‰©
     uint32_t index = y * config_.map_width + x;
     return (map_data_[index] == CELL_OBSTACLE);
 }
 
-// Ìí¼Ó½Úµãµ½¿ª·ÅÁĞ±í - Ê¹ÓÃ²åÈëÅÅĞò±£³ÖÁĞ±íÓĞĞò£¨°´f_costÉıĞò£©
+// æ·»åŠ èŠ‚ç‚¹åˆ°å¼€æ”¾åˆ—è¡¨ - ä½¿ç”¨æ’å…¥æ’åºä¿æŒåˆ—è¡¨æœ‰åºï¼ˆæŒ‰f_costå‡åºï¼‰
 void PathPlanner::addToOpenList(AStarNode* node) {
-    if (open_list_size_ >= open_list_capacity_) return;  // ¿ª·ÅÁĞ±íÒÑÂú
+    if (open_list_size_ >= open_list_capacity_) return;  // å¼€æ”¾åˆ—è¡¨å·²æ»¡
     
     open_list_[open_list_size_++] = node;
     node->is_open = true;
     
-    // ²åÈëÅÅĞò - ½«ĞÂ½Úµã²åÈëµ½ÕıÈ·Î»ÖÃ
+    // æ’å…¥æ’åº - å°†æ–°èŠ‚ç‚¹æ’å…¥åˆ°æ­£ç¡®ä½ç½®
     for (int i = open_list_size_ - 1; i > 0; i--) {
         if (open_list_[i]->f_cost < open_list_[i-1]->f_cost) {
-            // ½»»»½ÚµãÎ»ÖÃ
+            // äº¤æ¢èŠ‚ç‚¹ä½ç½®
             AStarNode* temp = open_list_[i];
             open_list_[i] = open_list_[i-1];
             open_list_[i-1] = temp;
         } else {
-            break;  // ÁĞ±íÒÑÓĞĞò
+            break;  // åˆ—è¡¨å·²æœ‰åº
         }
     }
 }
 
-// ´Ó¿ª·ÅÁĞ±íÖĞÈ¡³ö´ú¼Û×îĞ¡µÄ½Úµã£¨ÁĞ±íÊ×ÔªËØ£©
+// ä»å¼€æ”¾åˆ—è¡¨ä¸­å–å‡ºä»£ä»·æœ€å°çš„èŠ‚ç‚¹ï¼ˆåˆ—è¡¨é¦–å…ƒç´ ï¼‰
 AStarNode* PathPlanner::popBestFromOpenList() {
     if (open_list_size_ == 0) return nullptr;
     
-    AStarNode* best = open_list_[0];  // ×îĞ¡´ú¼Û½ÚµãÔÚÁĞ±í¿ªÍ·
+    AStarNode* best = open_list_[0];  // æœ€å°ä»£ä»·èŠ‚ç‚¹åœ¨åˆ—è¡¨å¼€å¤´
     
-    // ÒÆ¶¯Ê£ÓàÔªËØÏòÇ°Ìî³ä
+    // ç§»åŠ¨å‰©ä½™å…ƒç´ å‘å‰å¡«å……
     for (uint16_t i = 1; i < open_list_size_; i++) {
         open_list_[i-1] = open_list_[i];
     }
@@ -123,11 +123,11 @@ AStarNode* PathPlanner::popBestFromOpenList() {
     return best;
 }
 
-// ´Ó¿ª·ÅÁĞ±íÖĞÒÆ³ıÖ¸¶¨½Úµã
+// ä»å¼€æ”¾åˆ—è¡¨ä¸­ç§»é™¤æŒ‡å®šèŠ‚ç‚¹
 void PathPlanner::removeFromOpenList(AStarNode* node) {
     for (uint16_t i = 0; i < open_list_size_; i++) {
         if (open_list_[i] == node) {
-            // ÒÆ¶¯ºóĞøÔªËØÏòÇ°Ìî³ä
+            // ç§»åŠ¨åç»­å…ƒç´ å‘å‰å¡«å……
             for (uint16_t j = i + 1; j < open_list_size_; j++) {
                 open_list_[j-1] = open_list_[j];
             }
@@ -138,108 +138,108 @@ void PathPlanner::removeFromOpenList(AStarNode* node) {
     }
 }
 
-// ÉèÖÃµØÍ¼Êı¾İ - ¸´ÖÆÍâ²¿µØÍ¼µ½ÄÚ²¿»º³åÇø
+// è®¾ç½®åœ°å›¾æ•°æ® - å¤åˆ¶å¤–éƒ¨åœ°å›¾åˆ°å†…éƒ¨ç¼“å†²åŒº
 void PathPlanner::setMapData(const uint8_t* map_data) {
     memcpy(map_data_, map_data, config_.map_width * config_.map_height * sizeof(uint8_t));
 }
 
-// ÉèÖÃÒÆ¶¯´ú¼ÛÅäÖÃ
+// è®¾ç½®ç§»åŠ¨ä»£ä»·é…ç½®
 void PathPlanner::setConfig(float diagonal_cost, float straight_cost) {
     config_.diagonal_cost = diagonal_cost;
     config_.straight_cost = straight_cost;
 }
 
-// A*Â·¾¶¹æ»®Ö÷º¯Êı - ÔÚÆğµãºÍÖÕµãÖ®¼äÑ°ÕÒ×îÓÅÂ·¾¶
+// A*è·¯å¾„è§„åˆ’ä¸»å‡½æ•° - åœ¨èµ·ç‚¹å’Œç»ˆç‚¹ä¹‹é—´å¯»æ‰¾æœ€ä¼˜è·¯å¾„
 bool PathPlanner::findPath(int16_t start_x, int16_t start_y, 
                           int16_t goal_x, int16_t goal_y) {
-    // ÖØÖÃ½Úµã×´Ì¬£¬×¼±¸ĞÂµÄËÑË÷
+    // é‡ç½®èŠ‚ç‚¹çŠ¶æ€ï¼Œå‡†å¤‡æ–°çš„æœç´¢
     resetNodes();
     
-    // ¼ì²éÆğµãºÍÖÕµãÊÇ·ñÓĞĞ§
+    // æ£€æŸ¥èµ·ç‚¹å’Œç»ˆç‚¹æ˜¯å¦æœ‰æ•ˆ
     if (!isValidCell(start_x, start_y) || !isValidCell(goal_x, goal_y) ||
         isObstacle(start_x, start_y) || isObstacle(goal_x, goal_y)) {
-        return false;  // ÎŞĞ§µÄÆğµã»òÖÕµã
+        return false;  // æ— æ•ˆçš„èµ·ç‚¹æˆ–ç»ˆç‚¹
     }
     
-    // »ñÈ¡Æğµã½Úµã
+    // è·å–èµ·ç‚¹èŠ‚ç‚¹
     uint32_t start_index = start_y * config_.map_width + start_x;
     AStarNode* start_node = &nodes_[start_index];
     
-    // ³õÊ¼»¯Æğµã½Úµã
-    start_node->g_cost = 0;  // Æğµãµ½ÆğµãµÄ´ú¼ÛÎª0
+    // åˆå§‹åŒ–èµ·ç‚¹èŠ‚ç‚¹
+    start_node->g_cost = 0;  // èµ·ç‚¹åˆ°èµ·ç‚¹çš„ä»£ä»·ä¸º0
     start_node->h_cost = calculateHeuristic(start_x, start_y, goal_x, goal_y);
     start_node->f_cost = start_node->h_cost;  // f = g + h
-    start_node->parent_x = -1;  // ÆğµãÃ»ÓĞ¸¸½Úµã
+    start_node->parent_x = -1;  // èµ·ç‚¹æ²¡æœ‰çˆ¶èŠ‚ç‚¹
     start_node->parent_y = -1;
     
-    addToOpenList(start_node);  // ½«Æğµã¼ÓÈë¿ª·ÅÁĞ±í
+    addToOpenList(start_node);  // å°†èµ·ç‚¹åŠ å…¥å¼€æ”¾åˆ—è¡¨
     
-    // A*Ö÷Ñ­»· - Ö±µ½¿ª·ÅÁĞ±íÎª¿Õ»òÕÒµ½Â·¾¶
+    // A*ä¸»å¾ªç¯ - ç›´åˆ°å¼€æ”¾åˆ—è¡¨ä¸ºç©ºæˆ–æ‰¾åˆ°è·¯å¾„
     while (open_list_size_ > 0) {
-        // »ñÈ¡µ±Ç°´ú¼Û×îĞ¡µÄ½Úµã
+        // è·å–å½“å‰ä»£ä»·æœ€å°çš„èŠ‚ç‚¹
         AStarNode* current = popBestFromOpenList();
         if (current == nullptr) break;
         
-        current->is_closed = true;  // ½«µ±Ç°½Úµã±ê¼ÇÎªÒÑ´¦Àí
+        current->is_closed = true;  // å°†å½“å‰èŠ‚ç‚¹æ ‡è®°ä¸ºå·²å¤„ç†
         
-        // ¼ì²éÊÇ·ñµ½´ïÄ¿±êµã
+        // æ£€æŸ¥æ˜¯å¦åˆ°è¾¾ç›®æ ‡ç‚¹
         if (current->x == goal_x && current->y == goal_y) {
-            reconstructPath(goal_x, goal_y);  // »ØËİÖØ¹¹Â·¾¶
-            return true;  // ³É¹¦ÕÒµ½Â·¾¶
+            reconstructPath(goal_x, goal_y);  // å›æº¯é‡æ„è·¯å¾„
+            return true;  // æˆåŠŸæ‰¾åˆ°è·¯å¾„
         }
         
-        // À©Õ¹µ±Ç°½ÚµãµÄÁÚ¾Ó½Úµã
+        // æ‰©å±•å½“å‰èŠ‚ç‚¹çš„é‚»å±…èŠ‚ç‚¹
         expandNode(current, goal_x, goal_y);
     }
     
-    return false;  // Ã»ÓĞÕÒµ½Â·¾¶
+    return false;  // æ²¡æœ‰æ‰¾åˆ°è·¯å¾„
 }
 
-// À©Õ¹µ±Ç°½ÚµãµÄ8¸öÁÚ¾Ó½Úµã
+// æ‰©å±•å½“å‰èŠ‚ç‚¹çš„8ä¸ªé‚»å±…èŠ‚ç‚¹
 void PathPlanner::expandNode(AStarNode* current, int16_t goal_x, int16_t goal_y) {
     for (int i = 0; i < 8; i++) {
-        // ¼ÆËãÁÚ¾Ó½Úµã×ø±ê
+        // è®¡ç®—é‚»å±…èŠ‚ç‚¹åæ ‡
         int16_t neighbor_x = current->x + DIRECTION_X[i];
         int16_t neighbor_y = current->y + DIRECTION_Y[i];
         
-        // ¼ì²éÁÚ¾ÓÊÇ·ñÓĞĞ§ÇÒ²»ÊÇÕÏ°­Îï
+        // æ£€æŸ¥é‚»å±…æ˜¯å¦æœ‰æ•ˆä¸”ä¸æ˜¯éšœç¢ç‰©
         if (!isValidCell(neighbor_x, neighbor_y) || isObstacle(neighbor_x, neighbor_y)) {
             continue;
         }
         
-        // ¶Ô½ÇÏßÒÆ¶¯µÄÌØÊâ¼ì²é£ºÈ·±£ÏàÁÚµ¥Ôª¸ñ¿ÉÍ¨ĞĞ
+        // å¯¹è§’çº¿ç§»åŠ¨çš„ç‰¹æ®Šæ£€æŸ¥ï¼šç¡®ä¿ç›¸é‚»å•å…ƒæ ¼å¯é€šè¡Œ
         if (DIRECTION_X[i] != 0 && DIRECTION_Y[i] != 0) {
             if (isObstacle(current->x + DIRECTION_X[i], current->y) &&
                 isObstacle(current->x, current->y + DIRECTION_Y[i])) {
-                continue;  // Èç¹ûÁ½¸öÏàÁÚµ¥Ôª¸ñ¶¼ÊÇÕÏ°­Îï£¬½ûÖ¹¶Ô½ÇÏßÒÆ¶¯
+                continue;  // å¦‚æœä¸¤ä¸ªç›¸é‚»å•å…ƒæ ¼éƒ½æ˜¯éšœç¢ç‰©ï¼Œç¦æ­¢å¯¹è§’çº¿ç§»åŠ¨
             }
         }
         
-        // »ñÈ¡ÁÚ¾Ó½Úµã
+        // è·å–é‚»å±…èŠ‚ç‚¹
         uint32_t neighbor_index = neighbor_y * config_.map_width + neighbor_x;
         AStarNode* neighbor = &nodes_[neighbor_index];
         
-        // Ìø¹ıÒÑ¹Ø±ÕµÄ½Úµã
+        // è·³è¿‡å·²å…³é—­çš„èŠ‚ç‚¹
         if (neighbor->is_closed) continue;
         
-        // ¼ÆËãÒÆ¶¯µ½ÁÚ¾Ó½ÚµãµÄ´ú¼Û
+        // è®¡ç®—ç§»åŠ¨åˆ°é‚»å±…èŠ‚ç‚¹çš„ä»£ä»·
         float move_cost = (DIRECTION_X[i] != 0 && DIRECTION_Y[i] != 0) ? 
                          config_.diagonal_cost : config_.straight_cost;
         
-        float tentative_g = current->g_cost + move_cost;  // ¾­¹ıµ±Ç°½Úµãµ½ÁÚ¾ÓµÄ´ú¼Û
+        float tentative_g = current->g_cost + move_cost;  // ç»è¿‡å½“å‰èŠ‚ç‚¹åˆ°é‚»å±…çš„ä»£ä»·
         
-        // Èç¹ûÕÒµ½¸üºÃµÄÂ·¾¶µ½ÁÚ¾Ó½Úµã
+        // å¦‚æœæ‰¾åˆ°æ›´å¥½çš„è·¯å¾„åˆ°é‚»å±…èŠ‚ç‚¹
         if (tentative_g < neighbor->g_cost) {
-            neighbor->parent_x = current->x;  // ¸üĞÂ¸¸½Úµã
+            neighbor->parent_x = current->x;  // æ›´æ–°çˆ¶èŠ‚ç‚¹
             neighbor->parent_y = current->y;
-            neighbor->g_cost = tentative_g;   // ¸üĞÂÊµ¼Ê´ú¼Û
+            neighbor->g_cost = tentative_g;   // æ›´æ–°å®é™…ä»£ä»·
             neighbor->h_cost = calculateHeuristic(neighbor_x, neighbor_y, goal_x, goal_y);
-            neighbor->f_cost = neighbor->g_cost + neighbor->h_cost;  // ¸üĞÂ×Ü´ú¼Û
+            neighbor->f_cost = neighbor->g_cost + neighbor->h_cost;  // æ›´æ–°æ€»ä»£ä»·
             
             if (!neighbor->is_open) {
-                addToOpenList(neighbor);  // Ê×´Î·¢ÏÖ£¬¼ÓÈë¿ª·ÅÁĞ±í
+                addToOpenList(neighbor);  // é¦–æ¬¡å‘ç°ï¼ŒåŠ å…¥å¼€æ”¾åˆ—è¡¨
             } else {
-                // ½ÚµãÒÑÔÚ¿ª·ÅÁĞ±íÖĞ£¬ĞèÒªÖØĞÂÅÅĞò
+                // èŠ‚ç‚¹å·²åœ¨å¼€æ”¾åˆ—è¡¨ä¸­ï¼Œéœ€è¦é‡æ–°æ’åº
                 removeFromOpenList(neighbor);
                 addToOpenList(neighbor);
             }
@@ -247,14 +247,14 @@ void PathPlanner::expandNode(AStarNode* current, int16_t goal_x, int16_t goal_y)
     }
 }
 
-// ´ÓÖÕµã»ØËİÖØ¹¹Â·¾¶
+// ä»ç»ˆç‚¹å›æº¯é‡æ„è·¯å¾„
 void PathPlanner::reconstructPath(int16_t end_x, int16_t end_y) {
-    // µÚÒ»±é±éÀú£º´ÓÖÕµã»ØËİ¼ÆÊıÂ·¾¶³¤¶È
+    // ç¬¬ä¸€ééå†ï¼šä»ç»ˆç‚¹å›æº¯è®¡æ•°è·¯å¾„é•¿åº¦
     uint16_t temp_length = 0;
     int16_t cx = end_x;
     int16_t cy = end_y;
     
-    // »ØËİÖ±µ½Æğµã£¨¸¸½ÚµãÎª-1£©»ò´ïµ½×î´óÂ·¾¶³¤¶È
+    // å›æº¯ç›´åˆ°èµ·ç‚¹ï¼ˆçˆ¶èŠ‚ç‚¹ä¸º-1ï¼‰æˆ–è¾¾åˆ°æœ€å¤§è·¯å¾„é•¿åº¦
     while (cx != -1 && cy != -1 && isValidCell(cx, cy) && temp_length < config_.max_path_length) {
         temp_length++;
         uint32_t idx = cy * config_.map_width + cx;
@@ -265,20 +265,20 @@ void PathPlanner::reconstructPath(int16_t end_x, int16_t end_y) {
 
     if (temp_length == 0) {
         path_length_ = 0;
-        return;  // ¿ÕÂ·¾¶
+        return;  // ç©ºè·¯å¾„
     }
 
-    // µÚ¶ş±é±éÀú£º´ÓÖÕµã»ØËİ£¬½«Â·¾¶µã°´´ÓÆğµãµ½ÖÕµãµÄË³Ğò´æ´¢
+    // ç¬¬äºŒééå†ï¼šä»ç»ˆç‚¹å›æº¯ï¼Œå°†è·¯å¾„ç‚¹æŒ‰ä»èµ·ç‚¹åˆ°ç»ˆç‚¹çš„é¡ºåºå­˜å‚¨
     uint16_t write_pos = (temp_length > 0) ? (temp_length - 1) : 0;
     cx = end_x;
     cy = end_y;
     uint16_t written = 0;
     
     while (cx != -1 && cy != -1 && isValidCell(cx, cy) && written < temp_length) {
-        path_[write_pos].x = cx;  // ´æ´¢Â·¾¶µã×ø±ê
+        path_[write_pos].x = cx;  // å­˜å‚¨è·¯å¾„ç‚¹åæ ‡
         path_[write_pos].y = cy;
         written++;
-        if (write_pos == 0) break; // ·ÀÖ¹ÏÂÒç
+        if (write_pos == 0) break; // é˜²æ­¢ä¸‹æº¢
         write_pos--;
         uint32_t idx = cy * config_.map_width + cx;
         AStarNode* node = &nodes_[idx];
@@ -286,22 +286,22 @@ void PathPlanner::reconstructPath(int16_t end_x, int16_t end_y) {
         cy = node->parent_y;
     }
 
-    path_length_ = written;  // ÉèÖÃ×îÖÕÂ·¾¶³¤¶È
+    path_length_ = written;  // è®¾ç½®æœ€ç»ˆè·¯å¾„é•¿åº¦
 }
 
-// »ñÈ¡µ±Ç°Â·¾¶³¤¶È
+// è·å–å½“å‰è·¯å¾„é•¿åº¦
 uint16_t PathPlanner::getPathLength() const {
     return path_length_;
 }
 
-// »ñÈ¡Â·¾¶µãÊı×é
+// è·å–è·¯å¾„ç‚¹æ•°ç»„
 const GridPoint* PathPlanner::getPath() const {
     return path_;
 }
 
-// ¼ì²éÁ½µãÖ®¼äÊÇ·ñÓĞÖ±ÊÓÂ·¾¶£¨ÎŞÕÏ°­Îï£©
+// æ£€æŸ¥ä¸¤ç‚¹ä¹‹é—´æ˜¯å¦æœ‰ç›´è§†è·¯å¾„ï¼ˆæ— éšœç¢ç‰©ï¼‰
 bool PathPlanner::lineOfSight(int16_t x1, int16_t y1, int16_t x2, int16_t y2) {
-    // BresenhamÖ±ÏßËã·¨±äÖÖ£¬ÓÃÓÚ¼ì²éÖ±ÏßÉÏµÄÕÏ°­Îï
+    // Bresenhamç›´çº¿ç®—æ³•å˜ç§ï¼Œç”¨äºæ£€æŸ¥ç›´çº¿ä¸Šçš„éšœç¢ç‰©
     int16_t dx = abs(x2 - x1);
     int16_t dy = abs(y2 - y1);
     int16_t sx = (x1 < x2) ? 1 : -1;
@@ -311,13 +311,13 @@ bool PathPlanner::lineOfSight(int16_t x1, int16_t y1, int16_t x2, int16_t y2) {
     int16_t current_x = x1;
     int16_t current_y = y1;
     
-    // ±éÀúÖ±ÏßÉÏµÄËùÓĞµã
+    // éå†ç›´çº¿ä¸Šçš„æ‰€æœ‰ç‚¹
     while (current_x != x2 || current_y != y2) {
         if (isObstacle(current_x, current_y)) {
-            return false;  // ·¢ÏÖÕÏ°­Îï£¬Ã»ÓĞÖ±ÊÓÂ·¾¶
+            return false;  // å‘ç°éšœç¢ç‰©ï¼Œæ²¡æœ‰ç›´è§†è·¯å¾„
         }
         
-        // BresenhamËã·¨²½½ø
+        // Bresenhamç®—æ³•æ­¥è¿›
         int16_t e2 = 2 * err;
         if (e2 > -dy) {
             err -= dy;
@@ -329,42 +329,42 @@ bool PathPlanner::lineOfSight(int16_t x1, int16_t y1, int16_t x2, int16_t y2) {
         }
     }
     
-    return true;  // Ã»ÓĞ·¢ÏÖÕÏ°­Îï£¬´æÔÚÖ±ÊÓÂ·¾¶
+    return true;  // æ²¡æœ‰å‘ç°éšœç¢ç‰©ï¼Œå­˜åœ¨ç›´è§†è·¯å¾„
 }
 
-// Â·¾¶¼ò»¯ - Ê¹ÓÃÌ°À·Ëã·¨ÒÆ³ı²»±ØÒªµÄÖĞ¼äµã
+// è·¯å¾„ç®€åŒ– - ä½¿ç”¨è´ªå©ªç®—æ³•ç§»é™¤ä¸å¿…è¦çš„ä¸­é—´ç‚¹
 void PathPlanner::simplifyPath() {
-    if (path_length_ <= 2) return;  // Â·¾¶Ì«¶ÌÎŞĞè¼ò»¯
+    if (path_length_ <= 2) return;  // è·¯å¾„å¤ªçŸ­æ— éœ€ç®€åŒ–
     
-    // Ô­µØÌ°À··¨£º´ÓÆğµã¿ªÊ¼£¬Ã¿´ÎÑ°ÕÒ×îÔ¶µÄ¿ÉÊÓµã×÷ÎªÏÂÒ»¸ö±£Áôµã
+    // åŸåœ°è´ªå©ªæ³•ï¼šä»èµ·ç‚¹å¼€å§‹ï¼Œæ¯æ¬¡å¯»æ‰¾æœ€è¿œçš„å¯è§†ç‚¹ä½œä¸ºä¸‹ä¸€ä¸ªä¿ç•™ç‚¹
     uint16_t write_idx = 0;
     uint16_t read_idx = 0;
     
-    // ±£ÁôÆğµã
+    // ä¿ç•™èµ·ç‚¹
     path_[write_idx++] = path_[0];
 
     while (read_idx < path_length_ - 1) {
-        // Ñ°ÕÒ´Óµ±Ç°µãÄÜÖ±½Ó¿´µ½µÄ×îÔ¶µã
+        // å¯»æ‰¾ä»å½“å‰ç‚¹èƒ½ç›´æ¥çœ‹åˆ°çš„æœ€è¿œç‚¹
         uint16_t farthest = read_idx + 1;
         for (uint16_t j = read_idx + 1; j < path_length_; ++j) {
             if (lineOfSight(path_[read_idx].x, path_[read_idx].y, path_[j].x, path_[j].y)) {
-                farthest = j;  // ¸üĞÂ×îÔ¶¿ÉÊÓµã
+                farthest = j;  // æ›´æ–°æœ€è¿œå¯è§†ç‚¹
             } else {
-                break;  // ·¢ÏÖ²»¿ÉÊÓµã£¬Í£Ö¹ËÑË÷
+                break;  // å‘ç°ä¸å¯è§†ç‚¹ï¼Œåœæ­¢æœç´¢
             }
         }
 
-        // ½«×îÔ¶¿ÉÊÓµã¼ÓÈë¼ò»¯Â·¾¶
+        // å°†æœ€è¿œå¯è§†ç‚¹åŠ å…¥ç®€åŒ–è·¯å¾„
         path_[write_idx++] = path_[farthest];
 
-        if (farthest >= path_length_ - 1) break;  // µ½´ïÖÕµã
-        read_idx = farthest;  // ´ÓĞÂµÄµã¼ÌĞøËÑË÷
+        if (farthest >= path_length_ - 1) break;  // åˆ°è¾¾ç»ˆç‚¹
+        read_idx = farthest;  // ä»æ–°çš„ç‚¹ç»§ç»­æœç´¢
     }
 
-    path_length_ = write_idx;  // ¸üĞÂ¼ò»¯ºóµÄÂ·¾¶³¤¶È
+    path_length_ = write_idx;  // æ›´æ–°ç®€åŒ–åçš„è·¯å¾„é•¿åº¦
 }
 
-// Çå³ıµ±Ç°Â·¾¶
+// æ¸…é™¤å½“å‰è·¯å¾„
 void PathPlanner::clearPath() {
     path_length_ = 0;
 }//11

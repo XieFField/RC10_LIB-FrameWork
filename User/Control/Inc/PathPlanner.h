@@ -1,7 +1,7 @@
 /**
  * @file PathPlanner.h
  * @author Zhang Hongli
- * @brief Íø¸ñÂ·¾¶¹æ»®Æ÷Í·ÎÄ¼ş£¬»ùÓÚA*Ëã·¨ÊµÏÖ
+ * @brief ç½‘æ ¼è·¯å¾„è§„åˆ’å™¨å¤´æ–‡ä»¶ï¼ŒåŸºäºA*ç®—æ³•å®ç°
  * @version 1.0
  */
 
@@ -19,101 +19,101 @@ extern "C" {
 }
 #endif
 
-// µØÍ¼µ¥Ôª¸ñ×´Ì¬ - ÓÃÓÚ±íÊ¾Íø¸ñµØÍ¼ÖĞÃ¿¸öµ¥Ôª¸ñµÄ×´Ì¬
+// åœ°å›¾å•å…ƒæ ¼çŠ¶æ€ - ç”¨äºè¡¨ç¤ºç½‘æ ¼åœ°å›¾ä¸­æ¯ä¸ªå•å…ƒæ ¼çš„çŠ¶æ€
 typedef enum {
-    CELL_FREE = 0,      // ¿ÕÏĞµ¥Ôª¸ñ£¬¿ÉÍ¨ĞĞ
-    CELL_OBSTACLE = 1,  // ÕÏ°­Îïµ¥Ôª¸ñ£¬²»¿ÉÍ¨ĞĞ
-    CELL_START = 2,     // Â·¾¶Æğµã
-    CELL_GOAL = 3,      // Â·¾¶ÖÕµã
-    CELL_PATH = 4       // ¹æ»®³öµÄÂ·¾¶
+    CELL_FREE = 0,      // ç©ºé—²å•å…ƒæ ¼ï¼Œå¯é€šè¡Œ
+    CELL_OBSTACLE = 1,  // éšœç¢ç‰©å•å…ƒæ ¼ï¼Œä¸å¯é€šè¡Œ
+    CELL_START = 2,     // è·¯å¾„èµ·ç‚¹
+    CELL_GOAL = 3,      // è·¯å¾„ç»ˆç‚¹
+    CELL_PATH = 4       // è§„åˆ’å‡ºçš„è·¯å¾„
 } CellState;
 
-// ½Úµã½á¹¹Ìå£¬ÓÃÓÚA*Ëã·¨ - ´æ´¢ËÑË÷¹ı³ÌÖĞµÄ½ÚµãĞÅÏ¢
+// èŠ‚ç‚¹ç»“æ„ä½“ï¼Œç”¨äºA*ç®—æ³• - å­˜å‚¨æœç´¢è¿‡ç¨‹ä¸­çš„èŠ‚ç‚¹ä¿¡æ¯
 typedef struct {
-    int16_t x;          // ½ÚµãÔÚÍø¸ñÖĞµÄx×ø±ê
-    int16_t y;          // ½ÚµãÔÚÍø¸ñÖĞµÄy×ø±ê
-    float g_cost;       // ´ÓÆğµãµ½µ±Ç°½ÚµãµÄÊµ¼Ê´ú¼Û
-    float h_cost;       // ´Óµ±Ç°½Úµãµ½ÖÕµãµÄÆô·¢Ê½´ú¼Û¹À¼Æ
-    float f_cost;       // ×Ü´ú¼Û (g_cost + h_cost)
-    int16_t parent_x;   // ¸¸½Úµã×ø±ê£¬ÓÃÓÚÂ·¾¶»ØËİ
+    int16_t x;          // èŠ‚ç‚¹åœ¨ç½‘æ ¼ä¸­çš„xåæ ‡
+    int16_t y;          // èŠ‚ç‚¹åœ¨ç½‘æ ¼ä¸­çš„yåæ ‡
+    float g_cost;       // ä»èµ·ç‚¹åˆ°å½“å‰èŠ‚ç‚¹çš„å®é™…ä»£ä»·
+    float h_cost;       // ä»å½“å‰èŠ‚ç‚¹åˆ°ç»ˆç‚¹çš„å¯å‘å¼ä»£ä»·ä¼°è®¡
+    float f_cost;       // æ€»ä»£ä»· (g_cost + h_cost)
+    int16_t parent_x;   // çˆ¶èŠ‚ç‚¹åæ ‡ï¼Œç”¨äºè·¯å¾„å›æº¯
     int16_t parent_y;
-    bool is_open;       // ±ê¼Ç½ÚµãÊÇ·ñÔÚ¿ª·ÅÁĞ±íÖĞ
-    bool is_closed;     // ±ê¼Ç½ÚµãÊÇ·ñÔÚ¹Ø±ÕÁĞ±íÖĞ
+    bool is_open;       // æ ‡è®°èŠ‚ç‚¹æ˜¯å¦åœ¨å¼€æ”¾åˆ—è¡¨ä¸­
+    bool is_closed;     // æ ‡è®°èŠ‚ç‚¹æ˜¯å¦åœ¨å…³é—­åˆ—è¡¨ä¸­
 } AStarNode;
 
-// Íø¸ñÂ·¾¶µã - ÓÃÓÚ´æ´¢Íø¸ñ×ø±êÏµÖĞµÄÂ·¾¶µã£¬±ÜÃâÓë¸ú×ÙÄ£¿éµÄ¸¡µãWaypoint³åÍ»
+// ç½‘æ ¼è·¯å¾„ç‚¹ - ç”¨äºå­˜å‚¨ç½‘æ ¼åæ ‡ç³»ä¸­çš„è·¯å¾„ç‚¹ï¼Œé¿å…ä¸è·Ÿè¸ªæ¨¡å—çš„æµ®ç‚¹Waypointå†²çª
 typedef struct {
-    int16_t x;          // Íø¸ñx×ø±ê
-    int16_t y;          // Íø¸ñy×ø±ê
+    int16_t x;          // ç½‘æ ¼xåæ ‡
+    int16_t y;          // ç½‘æ ¼yåæ ‡
 } GridPoint;
 
-// Â·¾¶¹æ»®Æ÷ÅäÖÃ²ÎÊı
+// è·¯å¾„è§„åˆ’å™¨é…ç½®å‚æ•°
 typedef struct {
-    uint16_t map_width;     // µØÍ¼¿í¶È£¨Íø¸ñÊı£©
-    uint16_t map_height;    // µØÍ¼¸ß¶È£¨Íø¸ñÊı£©
-    uint16_t max_path_length; // ×î´óÂ·¾¶³¤¶È
-    float diagonal_cost;    // ¶Ô½ÇÏßÒÆ¶¯´ú¼Û£¨Í¨³£Îª¡Ì2£©
-    float straight_cost;    // Ö±ÏßÒÆ¶¯´ú¼Û£¨Í¨³£Îª1£©
+    uint16_t map_width;     // åœ°å›¾å®½åº¦ï¼ˆç½‘æ ¼æ•°ï¼‰
+    uint16_t map_height;    // åœ°å›¾é«˜åº¦ï¼ˆç½‘æ ¼æ•°ï¼‰
+    uint16_t max_path_length; // æœ€å¤§è·¯å¾„é•¿åº¦
+    float diagonal_cost;    // å¯¹è§’çº¿ç§»åŠ¨ä»£ä»·ï¼ˆé€šå¸¸ä¸ºâˆš2ï¼‰
+    float straight_cost;    // ç›´çº¿ç§»åŠ¨ä»£ä»·ï¼ˆé€šå¸¸ä¸º1ï¼‰
 } PathPlannerConfig;
 
 class PathPlanner {
 private:
-    // µØÍ¼Êı¾İ (0=¿ÕÏĞ, 1=ÕÏ°­Îï) - ´æ´¢Íø¸ñµØÍ¼ĞÅÏ¢
+    // åœ°å›¾æ•°æ® (0=ç©ºé—², 1=éšœç¢ç‰©) - å­˜å‚¨ç½‘æ ¼åœ°å›¾ä¿¡æ¯
     uint8_t* map_data_;
     
-    // A*½ÚµãÍø¸ñ - ´æ´¢ËùÓĞÍø¸ñ½ÚµãµÄËÑË÷×´Ì¬
+    // A*èŠ‚ç‚¹ç½‘æ ¼ - å­˜å‚¨æ‰€æœ‰ç½‘æ ¼èŠ‚ç‚¹çš„æœç´¢çŠ¶æ€
     AStarNode* nodes_;
     
-    // ¿ª·ÅÁĞ±í (ÓÃÓÚ´æ´¢´ı¼ì²é½Úµã) - ÓÅÏÈ¶ÓÁĞµÄ¼ò»¯ÊµÏÖ
+    // å¼€æ”¾åˆ—è¡¨ (ç”¨äºå­˜å‚¨å¾…æ£€æŸ¥èŠ‚ç‚¹) - ä¼˜å…ˆé˜Ÿåˆ—çš„ç®€åŒ–å®ç°
     AStarNode** open_list_;
-    uint16_t open_list_size_;      // µ±Ç°¿ª·ÅÁĞ±í´óĞ¡
-    uint16_t open_list_capacity_;  // ¿ª·ÅÁĞ±í×î´óÈİÁ¿
+    uint16_t open_list_size_;      // å½“å‰å¼€æ”¾åˆ—è¡¨å¤§å°
+    uint16_t open_list_capacity_;  // å¼€æ”¾åˆ—è¡¨æœ€å¤§å®¹é‡
     
-    // ×îÖÕÂ·¾¶ (Íø¸ñµã) - ´æ´¢¹æ»®³öµÄÂ·¾¶µãĞòÁĞ
+    // æœ€ç»ˆè·¯å¾„ (ç½‘æ ¼ç‚¹) - å­˜å‚¨è§„åˆ’å‡ºçš„è·¯å¾„ç‚¹åºåˆ—
     GridPoint* path_;
-    uint16_t path_length_;         // µ±Ç°Â·¾¶³¤¶È
+    uint16_t path_length_;         // å½“å‰è·¯å¾„é•¿åº¦
     
-    // ÅäÖÃ²ÎÊı
+    // é…ç½®å‚æ•°
     PathPlannerConfig config_;
     
-    // Ë½ÓĞ·½·¨
-    void initNodes();      // ³õÊ¼»¯ËùÓĞ½Úµã×´Ì¬
-    void resetNodes();     // ÖØÖÃ½Úµã×´Ì¬ÓÃÓÚĞÂµÄËÑË÷
-    float calculateHeuristic(int16_t x1, int16_t y1, int16_t x2, int16_t y2); // ¼ÆËãÆô·¢Ê½´ú¼Û
-    bool isValidCell(int16_t x, int16_t y);    // ¼ì²é×ø±êÊÇ·ñÔÚµØÍ¼·¶Î§ÄÚ
-    bool isObstacle(int16_t x, int16_t y);     // ¼ì²éµ¥Ôª¸ñÊÇ·ñÎªÕÏ°­Îï
-    void addToOpenList(AStarNode* node);       // Ìí¼Ó½Úµãµ½¿ª·ÅÁĞ±í
-    AStarNode* popBestFromOpenList();          // ´Ó¿ª·ÅÁĞ±íÖĞÈ¡³ö´ú¼Û×îĞ¡µÄ½Úµã
-    void removeFromOpenList(AStarNode* node);  // ´Ó¿ª·ÅÁĞ±íÖĞÒÆ³ıÖ¸¶¨½Úµã
-    void reconstructPath(int16_t end_x, int16_t end_y); // ´ÓÖÕµã»ØËİÖØ¹¹Â·¾¶
-    void expandNode(AStarNode* current, int16_t goal_x, int16_t goal_y); // À©Õ¹µ±Ç°½ÚµãµÄÁÚ¾Ó
+    // ç§æœ‰æ–¹æ³•
+    void initNodes();      // åˆå§‹åŒ–æ‰€æœ‰èŠ‚ç‚¹çŠ¶æ€
+    void resetNodes();     // é‡ç½®èŠ‚ç‚¹çŠ¶æ€ç”¨äºæ–°çš„æœç´¢
+    float calculateHeuristic(int16_t x1, int16_t y1, int16_t x2, int16_t y2); // è®¡ç®—å¯å‘å¼ä»£ä»·
+    bool isValidCell(int16_t x, int16_t y);    // æ£€æŸ¥åæ ‡æ˜¯å¦åœ¨åœ°å›¾èŒƒå›´å†…
+    bool isObstacle(int16_t x, int16_t y);     // æ£€æŸ¥å•å…ƒæ ¼æ˜¯å¦ä¸ºéšœç¢ç‰©
+    void addToOpenList(AStarNode* node);       // æ·»åŠ èŠ‚ç‚¹åˆ°å¼€æ”¾åˆ—è¡¨
+    AStarNode* popBestFromOpenList();          // ä»å¼€æ”¾åˆ—è¡¨ä¸­å–å‡ºä»£ä»·æœ€å°çš„èŠ‚ç‚¹
+    void removeFromOpenList(AStarNode* node);  // ä»å¼€æ”¾åˆ—è¡¨ä¸­ç§»é™¤æŒ‡å®šèŠ‚ç‚¹
+    void reconstructPath(int16_t end_x, int16_t end_y); // ä»ç»ˆç‚¹å›æº¯é‡æ„è·¯å¾„
+    void expandNode(AStarNode* current, int16_t goal_x, int16_t goal_y); // æ‰©å±•å½“å‰èŠ‚ç‚¹çš„é‚»å±…
     
 public:
-    // ¹¹Ôìº¯Êı - Ê¹ÓÃÍâ²¿Ìá¹©µÄ»º³åÇø£¬±ÜÃâ¶¯Ì¬ÄÚ´æ·ÖÅä
+    // æ„é€ å‡½æ•° - ä½¿ç”¨å¤–éƒ¨æä¾›çš„ç¼“å†²åŒºï¼Œé¿å…åŠ¨æ€å†…å­˜åˆ†é…
     PathPlanner(uint8_t* map_buffer, AStarNode* nodes_buffer, 
                 AStarNode** open_list_buffer, GridPoint* path_buffer,
                 uint16_t map_width, uint16_t map_height, 
                 uint16_t max_open_list_size, uint16_t max_path_length);
     
-    // ÉèÖÃµØÍ¼Êı¾İ - ¸´ÖÆÍâ²¿µØÍ¼Êı¾İµ½ÄÚ²¿»º³åÇø
+    // è®¾ç½®åœ°å›¾æ•°æ® - å¤åˆ¶å¤–éƒ¨åœ°å›¾æ•°æ®åˆ°å†…éƒ¨ç¼“å†²åŒº
     void setMapData(const uint8_t* map_data);
     
-    // ÉèÖÃÅäÖÃ²ÎÊı - µ÷ÕûÒÆ¶¯´ú¼ÛÈ¨ÖØ
+    // è®¾ç½®é…ç½®å‚æ•° - è°ƒæ•´ç§»åŠ¨ä»£ä»·æƒé‡
     void setConfig(float diagonal_cost, float straight_cost);
     
-    // A*Â·¾¶¹æ»®Ö÷º¯Êı - ÔÚÆğµãºÍÖÕµãÖ®¼äÑ°ÕÒ×îÓÅÂ·¾¶
+    // A*è·¯å¾„è§„åˆ’ä¸»å‡½æ•° - åœ¨èµ·ç‚¹å’Œç»ˆç‚¹ä¹‹é—´å¯»æ‰¾æœ€ä¼˜è·¯å¾„
     bool findPath(int16_t start_x, int16_t start_y, 
                   int16_t goal_x, int16_t goal_y);
     
-    // »ñÈ¡¹æ»®½á¹û
-    uint16_t getPathLength() const;        // »ñÈ¡Â·¾¶³¤¶È
-    const GridPoint* getPath() const;      // »ñÈ¡Â·¾¶µãÊı×é
+    // è·å–è§„åˆ’ç»“æœ
+    uint16_t getPathLength() const;        // è·å–è·¯å¾„é•¿åº¦
+    const GridPoint* getPath() const;      // è·å–è·¯å¾„ç‚¹æ•°ç»„
     
-    // ¹¤¾ßº¯Êı
-    bool lineOfSight(int16_t x1, int16_t y1, int16_t x2, int16_t y2); // ¼ì²éÁ½µãÖ®¼äÊÇ·ñÓĞÖ±ÊÓÂ·¾¶
-    void simplifyPath();   // Â·¾¶¼ò»¯£¬ÒÆ³ı²»±ØÒªµÄÖĞ¼äµã
+    // å·¥å…·å‡½æ•°
+    bool lineOfSight(int16_t x1, int16_t y1, int16_t x2, int16_t y2); // æ£€æŸ¥ä¸¤ç‚¹ä¹‹é—´æ˜¯å¦æœ‰ç›´è§†è·¯å¾„
+    void simplifyPath();   // è·¯å¾„ç®€åŒ–ï¼Œç§»é™¤ä¸å¿…è¦çš„ä¸­é—´ç‚¹
     
-    // Çå³ı¹æ»®½á¹û - ÖØÖÃÂ·¾¶×´Ì¬
+    // æ¸…é™¤è§„åˆ’ç»“æœ - é‡ç½®è·¯å¾„çŠ¶æ€
     void clearPath();
 };
 

@@ -1,6 +1,6 @@
 /**
  * @file Locate_Setup.h
- * @brief ¶¨Î» Ö÷ÒªÊÇÀ×´ï½ÓÊÕ Î»×Ë±ä»» ¼¤¹âÖØ¶¨Î»µÈ¹¦ÄÜ
+ * @brief å®šä½ ä¸»è¦æ˜¯é›·è¾¾æŽ¥æ”¶ ä½å§¿å˜æ¢ æ¿€å…‰é‡å®šä½ç­‰åŠŸèƒ½
  * @author XieFField    HaJiCao
  */
 #ifndef LOCATE_SETUP_H
@@ -32,25 +32,25 @@ extern "C" {
 
 #include "Module_HWT.h"
 
-#define PI		3.14159265358979323846f			// ¶¨ÒåÔ²ÖÜÂÊ³£Á¿PI
-#define MAX_SEND_BUF_SIZE 128// ·¢ËÍ»º³åÇø´óÐ¡
-#define AUTO_FUNCTION 1 //0 ±íÊ¾²ÉÓÃ²àÎü·½°¸µÄ»úÐµ±Û£¬1±íÊ¾²ÉÓÃ¶¥Îü·½°¸µÄ»úÐµ±Û
-#define MAX_RECEIVE_BUF_SIZE 512// ½ÓÊÕ»º³åÇø´óÐ¡
+#define PI		3.14159265358979323846f			// å®šä¹‰åœ†å‘¨çŽ‡å¸¸é‡PI
+#define MAX_SEND_BUF_SIZE 128// å‘é€ç¼“å†²åŒºå¤§å°
+#define AUTO_FUNCTION 1 //0 è¡¨ç¤ºé‡‡ç”¨ä¾§å¸æ–¹æ¡ˆçš„æœºæ¢°è‡‚ï¼Œ1è¡¨ç¤ºé‡‡ç”¨é¡¶å¸æ–¹æ¡ˆçš„æœºæ¢°è‡‚
+#define MAX_RECEIVE_BUF_SIZE 512// æŽ¥æ”¶ç¼“å†²åŒºå¤§å°
 
-#define MAX_RECEIVE_ID 10// ×î´óid
+#define MAX_RECEIVE_ID 10// æœ€å¤§id
 
 #define MAX_RECEIVE_DATA_LEN 64
 	
-		typedef enum LASER_MODE 
-	{
+typedef enum LASER_MODE 
+{
     LEFT,
-		RIGHT
-	} LASER_MODE;
-	
+    RIGHT
+} LASER_MODE;
+
 typedef struct 
 {
   /* data */
-    float x1;//¹æ¶¨¼¤¹âÊµÀý¹ÜÀíµÄµÚÒ»¸öÎªxµÄÊý¾Ý£¬µÚ¶þÈý¸öÎªyµÄÊý¾Ý
+    float x1;//è§„å®šæ¿€å…‰å®žä¾‹ç®¡ç†çš„ç¬¬ä¸€ä¸ªä¸ºxçš„æ•°æ®ï¼Œç¬¬äºŒä¸‰ä¸ªä¸ºyçš„æ•°æ®
     float y1;
     float y2;
     float d=0.25;
@@ -62,7 +62,7 @@ typedef struct
 typedef struct 
 {
   /* data */
-    float x;//¹æ¶¨¼¤¹âÊµÀý¹ÜÀíµÄµÚÒ»¸öÎªxµÄÊý¾Ý£¬µÚ¶þÈý¸öÎªyµÄÊý¾Ý
+    float x;//è§„å®šæ¿€å…‰å®žä¾‹ç®¡ç†çš„ç¬¬ä¸€ä¸ªä¸ºxçš„æ•°æ®ï¼Œç¬¬äºŒä¸‰ä¸ªä¸ºyçš„æ•°æ®
     float y;
     float z;
     float roll;
@@ -82,7 +82,7 @@ public:
 
     ~Locate_Setup() = default;    
     /**
-     * @brief ÎÞÊäÈëÔòÄ¬ÈÏÔÚµ×ÅÌÖÐÐÄ
+     * @brief æ— è¾“å…¥åˆ™é»˜è®¤åœ¨åº•ç›˜ä¸­å¿ƒ
      */
     void init(USB_CDC_ *usb_handle, Point2D lidar_install_pose = {0}, Point2D arm_install_pose = {0})
     {   
@@ -95,7 +95,7 @@ public:
         install_pose_init_ = true;
     }
 
-    //¼¤¹âÖØ¶¨Î»½ÓËã
+    //æ¿€å…‰é‡å®šä½æŽ¥ç®—
     void RobotPos_inWorld_caculate(Laser_InstanceManager* Laser_pos_instance);
 		
     void register_laserManager(Laser_InstanceManager* Laser_pos_instance)
@@ -104,7 +104,7 @@ public:
     }
 
     /**
-     * @brief ÉèÖÃÊÇ·ñÆô¶¯¼¤¹âÖØ¶¨Î»
+     * @brief è®¾ç½®æ˜¯å¦å¯åŠ¨æ¿€å…‰é‡å®šä½
      */
     void set_startToLRL(bool is_startToLRL)
     {
@@ -131,7 +131,7 @@ public:
     void Relocte_ToLader();
 
     /**
-     * @brief »ñÈ¡µ×ÅÌÎ¢¶¯¿ª¹Ø×´Ì¬
+     * @brief èŽ·å–åº•ç›˜å¾®åŠ¨å¼€å…³çŠ¶æ€
      */
     bool ifSwitch1On(){return swtich1_isOn;}
     bool ifSwitch2On(){return swtich2_isOn;}
@@ -145,41 +145,41 @@ private:
 
     Lader_Data Lad_Data={0};
     USB_CDC_ *usb_handle;
-    LASER_MODE laser_mode=LEFT;//Ä¬ÈÏÆðÊ¼Î»ÖÃÔÚ×ó
-    bool is_startToLRL_ = false; // ÊÇ·ñÆô¶¯¼¤¹âÖØ¶¨Î»
-    void update(); //¸üÐÂ
+    LASER_MODE laser_mode=LEFT;//é»˜è®¤èµ·å§‹ä½ç½®åœ¨å·¦
+    bool is_startToLRL_ = false; // æ˜¯å¦å¯åŠ¨æ¿€å…‰é‡å®šä½
+    void update(); //æ›´æ–°
 
-
+    uint16_t relocate_imu_cnt = 0;
 
     /**
-     * @brief À×´ï×ø±ê±ä»»¼ÆËã->robot_in_world, arm_in_world
+     * @brief é›·è¾¾åæ ‡å˜æ¢è®¡ç®—->robot_in_world, arm_in_world
      */
-    void lader_transform_caculate(); //À×´ï×ø±ê±ä»»¼ÆËã
-    void update_Lidar_data();        //¸üÐÂÀ×´ïÊý¾Ý
+    void lader_transform_caculate(); //é›·è¾¾åæ ‡å˜æ¢è®¡ç®—
+    void update_Lidar_data();        //æ›´æ–°é›·è¾¾æ•°æ®
 
-    Point2D lidar_install_pose_ = {0}; // À×´ï°²×°Ïà¶Ôµ×ÅÌÖÐÐÄ
-    Point2D arm_install_pose_ = {0};   // »úÐµ±Û°²×°Ïà¶Ôµ×ÅÌÖÐÐÄ
+    Point2D lidar_install_pose_ = {0}; // é›·è¾¾å®‰è£…ç›¸å¯¹åº•ç›˜ä¸­å¿ƒ
+    Point2D arm_install_pose_ = {0};   // æœºæ¢°è‡‚å®‰è£…ç›¸å¯¹åº•ç›˜ä¸­å¿ƒ
 
-    Point3D robot_pose_inWorld_ = {0}; // »úÆ÷ÈËÔÚÊÀ½ç×ø±êÏµÎ»ÖÃ
-    Point3D robot_speed_inworld_ = {0}; // »úÆ÷ÈËÔÚÊÀ½ç×ø±êÏµËÙ¶È
-
-
-
-    Point2D arm_pose_inWorld_ = {0};   // »úÐµ±Ûµ××ùÔÚÊÀ½ç×ø±êÏµÎ»ÖÃ
+    Point3D robot_pose_inWorld_ = {0}; // æœºå™¨äººåœ¨ä¸–ç•Œåæ ‡ç³»ä½ç½®
+    Point3D robot_speed_inworld_ = {0}; // æœºå™¨äººåœ¨ä¸–ç•Œåæ ‡ç³»é€Ÿåº¦
 
 
-    // Point3D lidar_pose_inWorld_ = {0}; // À×´ïÔÚÊÀ½ç×ø±êÏµÎ»ÖÃ
+
+    Point2D arm_pose_inWorld_ = {0};   // æœºæ¢°è‡‚åº•åº§åœ¨ä¸–ç•Œåæ ‡ç³»ä½ç½®
+
+
+    // Point3D lidar_pose_inWorld_ = {0}; // é›·è¾¾åœ¨ä¸–ç•Œåæ ‡ç³»ä½ç½®
     
 
-    Point2D fk_chassisSpeed_inWorld_ = {0}; // Õý½âµ×ÅÌËÙ¶È ÊÀ½ç×ø±êÏµ
+    Point2D fk_chassisSpeed_inWorld_ = {0}; // æ­£è§£åº•ç›˜é€Ÿåº¦ ä¸–ç•Œåæ ‡ç³»
 
-    float yaw_from_position_ = 0.0f; // ´ÓÀï³Ì¼Æposition¼ÆËãµÃµ½µÄÆ«º½½Ç
+    float yaw_from_position_ = 0.0f; // ä»Žé‡Œç¨‹è®¡positionè®¡ç®—å¾—åˆ°çš„åèˆªè§’
     float dyaw_from_position_ = 0.0f;
 
-    // 2D/3D ×ø±ê×ª»»¾ØÕó
-    HomogeneousTransform2D T_lidar_to_robot_2d; // À×´ï -> »úÆ÷ÈË (2D)
-    HomogeneousTransform2D T_robot_to_arm_2d;  // »úÆ÷ÈË -> »úÐµ±Û (2D)
-    HomogeneousTransform3D T_robot_to_arm_3d;  // »úÆ÷ÈË -> »úÐµ±Û (3D)
+    // 2D/3D åæ ‡è½¬æ¢çŸ©é˜µ
+    HomogeneousTransform2D T_lidar_to_robot_2d; // é›·è¾¾ -> æœºå™¨äºº (2D)
+    HomogeneousTransform2D T_robot_to_arm_2d;  // æœºå™¨äºº -> æœºæ¢°è‡‚ (2D)
+    HomogeneousTransform3D T_robot_to_arm_3d;  // æœºå™¨äºº -> æœºæ¢°è‡‚ (3D)
 
     bool install_pose_init_ = false;
 

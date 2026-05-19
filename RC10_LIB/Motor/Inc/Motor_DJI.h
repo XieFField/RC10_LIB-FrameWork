@@ -1,16 +1,16 @@
 /**
  * @file Motor_DJI.h
  * @author XieFField
- * @brief �󽮵����
+ * @brief 大疆电机类
  * @version 1.0
  * @date 2025-09-19
  * 
- * ���ļ������� M3508 M2006 GM6020��װ
+ * 此文件包含大疆 M3508 M2006 GM6020封装
  * 
  */
 
 /*
-��װ˼·�ο��˽����Ŀ�ܣ�����������Ƴ������������DJI������Ի�������
+封装思路参考了洁宇哥的框架，不过现在设计成了其他电机和DJI电机可以混搭的做法
 */
 
 #ifndef __DJI_MOTOR_H
@@ -49,18 +49,18 @@ typedef enum {
 
 //
 /**
- * @brief     ������4�����֡
- * @attention �������Ҫ��ͬһ·CAN�ϴ���GM6020��M3508/M2006����ȷ��GM6020����Ƭ��
- *            ��M3508/M2006����Ƭ�ϡ���ΪM3508/M2006��ID��Χ��0x201��0x208, 
- *            ��GM6020��ID��Χ��0x205��0x211
+ * @brief     负责打包4电机合帧
+ * @attention 如果你想要在同一路CAN上搭载GM6020和M3508/M2006，请确保GM6020在下片上
+ *            而M3508/M2006在上片上。因为M3508/M2006的ID范围是0x201到0x208, 
+ *            而GM6020的ID范围是0x205到0x211
  */
 class DJI_Motor : public Motor_Base {
 public:
     /**
-     * @brief     ������4�����֡
-     * @attention �������Ҫ��ͬһ·CAN�ϴ���GM6020��M3508/M2006����ȷ��GM6020����Ƭ��
-     *            ��M3508/M2006����Ƭ�ϡ���ΪM3508/M2006��ID��Χ��0x201��0x208, 
-     *            ��GM6020��ID��Χ��0x205��0x211
+     * @brief     负责打包4电机合帧
+     * @attention 如果你想要在同一路CAN上搭载GM6020和M3508/M2006，请确保GM6020在下片上
+     *            而M3508/M2006在上片上。因为M3508/M2006的ID范围是0x201到0x208, 
+     *            而GM6020的ID范围是0x205到0x211
      */
     DJI_Motor(DJI_MotorType type, uint32_t id, fdCANbus *bus,
             bool calcTotalAngle = true, bool calcAngle = true);
@@ -69,48 +69,48 @@ public:
     bool matchesFrame(const CanFrame& cf) const override
     {
         if(cf.isextended) 
-            return false; // DJI���ֻ�ñ�׼֡
+            return false; // DJI电机只用标准帧
 
-        if(type_ == GM6020_Type)//��0x204+������ID
+        if(type_ == GM6020_Type)//：0x204+驱动器ID
         {
             if(cf.ID < (0x204 + 1) || cf.ID > (0x204 + 7))
-                return false; // �Ƿ�ID
+                return false; // 非法ID
 
             else if(cf.ID >= (0x204 + 1) && cf.ID <= (0x204 + 7))
                 return (cf.ID == (0x204 + motor_id_));
             
             else
-                return false; // �Ƿ�ID 
+                return false; // 非法ID 
         }
-        if(type_ == M3508_Type || type_ == M2006_Type)//��0x200+������ID 1~8
+        if(type_ == M3508_Type || type_ == M2006_Type)//：0x200+驱动器ID 1~8
         {
             if(cf.ID < (0x200 + 1) || cf.ID > (0x200 + 8))
-                return false; // �Ƿ�ID
+                return false; // 非法ID
 
             else if(cf.ID >= (0x200 + 1) && cf.ID <= (0x200 + 8))
                 return (cf.ID == (0x200 + motor_id_));
 
             else
-                return false; // �Ƿ�ID
+                return false; // 非法ID
         }
         else
-            return false; // δ֪����
+            return false; // 未知类型
     }
 
     /**
-     * @brief ���������ֵת��Ϊʵ�ʵ���ֵ
+     * @brief 将虚拟电流值转换为实际电流值
      */
     float virtualCurrent_to_realCurrent(int16_t virtualCurrent);
 
     /**
-     * @brief ��ʵ�ʵ���ֵת��Ϊ�������ֵ
+     * @brief 将实际电流值转换为虚拟电流值
      */
     int16_t realCurrent_to_virtualCurrent(float realCurrent);
 
 
     std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) override
     {
-        return 0; // �� DJI_Group ������
+        return 0; // 由 DJI_Group 负责打包
     }
 
     void updateFeedback(const CanFrame& cf) override;
@@ -128,11 +128,11 @@ public:
     }
 
     /**
-     * @brief ������������·�����¶�λ��ָ��ֵ���ض���ƫ����
+     * @brief 将编码器的总路程重新定位到指定值，重定义偏移量
      */
     void relocate_totalAngle(float now_totalAngle)
     {
-        // [Fix] �����ض�λ�߼�������Ϊ�����Ƕȣ���ת��Ϊת�ӽǶ����ñ�����
+        // [Fix] 修正重定位逻辑，输入为输出轴角度，需转换为转子角度设置编码器
         encoder_.relocate_totalAngle(now_totalAngle * get_GearRatio());
         totalAngle_ = encoder_.getTotalAngle() * get_inv_GearRatio();
 
@@ -141,20 +141,20 @@ public:
     }
 
 protected:
-    int anglePid_timePSC = 10; //�Ƕ�ʱ���Ƶ Ĭ��Ϊ 10 ������Ƶ��Ϊ100Hz
-    int anglePid_timeCnt = 0; //�Ƕ�ʱ�����
+    int anglePid_timePSC = 10; //角度时间分频 默认为 10 即控制频率为100Hz
+    int anglePid_timeCnt = 0; //角度时间计数
 
 private:
      //1~8
     DJI_MotorType type_;
-    int16_t encoder_raw_ = 0; //ԭʼ������ֵ
+    int16_t encoder_raw_ = 0; //原始编码器值
 
     
 
 //common
     virtual uint32_t recv_id() const{return 0x200;}
 
-    Encoder encoder_; //������ʵ��
+    Encoder encoder_; //编码器实例
 };
 
 uint32_t send_idLow();
@@ -162,13 +162,13 @@ uint32_t send_idHigh();
 uint32_t send_idLow6020();
 uint32_t send_idHigh6020();
 
-//------- DJI_Group ------- ������� -----------------------------
+//------- DJI_Group ------- 打包命令 -----------------------------
 // 
 /**
- * @brief     ������4�����֡
- * @attention �������Ҫ��ͬһ·CAN�ϴ���GM6020��M3508/M2006����ȷ��GM6020����Ƭ��
- *            ��M3508/M2006����Ƭ�ϡ���ΪM3508/M2006��ID��Χ��0x201��0x208, 
- *            ��GM6020��ID��Χ��0x205��0x211
+ * @brief     负责打包4电机合帧
+ * @attention 如果你想要在同一路CAN上搭载GM6020和M3508/M2006，请确保GM6020在下片上
+ *            而M3508/M2006在上片上。因为M3508/M2006的ID范围是0x201到0x208, 
+ *            而GM6020的ID范围是0x205到0x211
  */
 class DJI_Group : public Motor_Base {
 public:
@@ -178,7 +178,7 @@ public:
     ~DJI_Group() = default;
 
     /**
-     * @brief ע����
+     * @brief 注册电机
      */
     bool addMotor(DJI_Motor* motor);
 
@@ -200,20 +200,20 @@ private:
     DJI_Motor* motors_p[MAX_GROUP_SIZE] = {nullptr, nullptr, nullptr, nullptr};
     uint8_t motor_count_ = 0;
 
-    bool containsGM6020 = false; //�Ƿ����GM6020, M3508/M2006����GM6020����
+    bool containsGM6020 = false; //是否包含GM6020, M3508/M2006不和GM6020混用
 
-    int calcSlot(uint32_t motorID, DJI_MotorType type) const; // �����λ
+    int calcSlot(uint32_t motorID, DJI_MotorType type) const; // 计算槽位
 };
 
-#define M3508_DECRATION (3591.0f/187.0f) //���ٱ�
-#define M3508_KT 0.01562f // 3508����Ȧת�س��� ��λ��N.M/A
+#define M3508_DECRATION (3591.0f/187.0f) //减速比
+#define M3508_KT 0.01562f // 3508的内圈转矩常数 单位：N.M/A
 
-// ����ģʽö��
+// 控制模式枚举
 typedef enum {
-    CURRENT_CONTROL, // ������������
-    SPEED_CONTROL,   // �ٶȱջ�����
-    ANGLE_CONTROL,    // �Ƕȱջ�����
-    TOTAL_ANGLE_CONTROL // �ܽǶȱջ�����
+    CURRENT_CONTROL, // 开环电流控制
+    SPEED_CONTROL,   // 速度闭环控制
+    ANGLE_CONTROL,    // 角度闭环控制
+    TOTAL_ANGLE_CONTROL // 总角度闭环控制
 } ControlMode;
 
 class M3508 : public DJI_Motor {
@@ -223,13 +223,13 @@ public:
 
     void pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa);
 
-    // ���ƽӿ�
+    // 控制接口
     void setTargetCurrent(float current_set) override;
     void setTargetRPM(float rpm_set) override;
     void setTargetAngle(float angle_set) override;
     void setTargetTotalAngle(float totalAngle_set) override;
 
-    void update() override; //�����Ը���
+    void update() override; //周期性更新
     void set_anglepid_circular(bool circular)
     {
         if(circular)
@@ -237,12 +237,12 @@ public:
         else
             angle_pid_.set_as_linear();
     }
-    // ��ȡ�����״̬
+    // 获取输出轴状态
     float getRPM() const override;
     float getAngle() const override;
     float getTotalAngle() const override;
 
-    // ��ȡPID����
+    // 获取PID参数
     PID_Param_Config get_speed_pid_params() const;
     PID_Param_Config get_angle_pid_params() const;
     float get_speed_pid_td_ratio() const;
@@ -251,9 +251,9 @@ public:
     void reset_GearRatio(float reset_value)
     {
         GEAR_RATIO = reset_value;
-        inv_GEAR_RATIO_ = 1.0f / reset_value; // ���໺��
+        inv_GEAR_RATIO_ = 1.0f / reset_value; // 子类缓存
         Motor_Base::GEAR_RATIO = GEAR_RATIO;
-        Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_; // ͬ�������࣬�� updateFeedback ʹ��
+        Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_; // 同步到基类，供 updateFeedback 使用
     }
 
     void set_angle_pid_circular(bool circular)
@@ -267,13 +267,13 @@ public:
 private:
     
     ControlMode mode_ = CURRENT_CONTROL;
-    float GEAR_RATIO = 19.2032f; // ���ٱ�
-    float inv_GEAR_RATIO_ = 1.0f / GEAR_RATIO; // Ԥ���㷴���ٱ�
+    float GEAR_RATIO = 19.2032f; // 减速比
+    float inv_GEAR_RATIO_ = 1.0f / GEAR_RATIO; // 预计算反减速比
     PID_Incremental speed_pid_;
     PID_Position angle_pid_;
 };
 
-#define M2006_DECRATION 36.0f //���ٱ�
+#define M2006_DECRATION 36.0f //减速比
 class M2006 : public DJI_Motor {
 public:
     M2006(uint32_t motor_id, fdCANbus* bus, bool calcTotalAngle = true, bool calcAngle = true);
@@ -281,7 +281,7 @@ public:
 
     void pid_init(const PID_Param_Config& speed_params, float speed_I_Separa, const PID_Param_Config& angle_params, float angle_I_Separa);
 
-    // ���ƽӿ�
+    // 控制接口
     void setTargetCurrent(float current_set) override;
     void setTargetRPM(float rpm_set) override;
     void setTargetAngle(float angle_set) override;
@@ -289,7 +289,7 @@ public:
 
     void update() override;
 
-    // ��ȡ�����״̬
+    // 获取输出轴状态
     float getRPM() const override;
     float getAngle() const override;
     float getTotalAngle() const override;
@@ -298,13 +298,13 @@ public:
         GEAR_RATIO = reset_value;
         inv_GEAR_RATIO_ = 1.0f / reset_value;
         Motor_Base::GEAR_RATIO = GEAR_RATIO;
-        Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_; // ͬ�������࣬�� updateFeedback ʹ��
+        Motor_Base::inv_GEAR_RATIO_ = inv_GEAR_RATIO_; // 同步到基类，供 updateFeedback 使用
     }
 
 private:
     ControlMode mode_ = CURRENT_CONTROL;
     float GEAR_RATIO = 36.0f;
-    float inv_GEAR_RATIO_ = 1.0f / GEAR_RATIO; // Ԥ���㷴���ٱ�
+    float inv_GEAR_RATIO_ = 1.0f / GEAR_RATIO; // 预计算反减速比
 
     PID_Incremental speed_pid_;
     PID_Position angle_pid_;
@@ -317,7 +317,7 @@ public:
 
     void pid_init(const PID_Param_Config& speed_params, float speed_I_Separa, const PID_Param_Config& angle_params, float angle_I_Separa);
 
-    // ���ƽӿ�
+    // 控制接口
     void setTargetCurrent(float current_set) override;
     void setTargetRPM(float rpm_set) override;
     void setTargetAngle(float angle_set) override;
@@ -325,7 +325,7 @@ public:
 
     void update() override;
 
-    // ��ȡ�����״̬ (GM6020�޼�����)
+    // 获取输出轴状态 (GM6020无减速器)
     float getRPM() const override { return rpm_; }
     float getAngle() const override { return angle_; }
     float getTotalAngle() const override { return totalAngle_; }

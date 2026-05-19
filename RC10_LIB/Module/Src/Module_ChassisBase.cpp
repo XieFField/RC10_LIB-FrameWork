@@ -20,13 +20,13 @@ void Chassis_Base<WheelCount>::setWorldSpeed(const Robot_Twist& twist)
 {
     world_target_twist_ = twist;
 
-    // Ê¹ÓÃyaw½Ç½«ÊÀ½çÏµËÙ¶È×ª»»µ½»úÆ÷ÈË×ø±êÏµ
+    // ä½¿ç”¨yawè§’å°†ä¸–ç•Œç³»é€Ÿåº¦è½¬æ¢åˆ°æœºå™¨äººåæ ‡ç³»
     float cos_yaw = arm_cos_f32(-deg_to_rad(angle_twist_.yaw_angle));
     float sin_yaw = arm_sin_f32(-deg_to_rad(angle_twist_.yaw_angle));
 
     robot_target_twist_.vx = (twist.vx * cos_yaw - twist.vy * sin_yaw);
     robot_target_twist_.vy = (twist.vx * sin_yaw + twist.vy * cos_yaw);
-    robot_target_twist_.yaw_rate = twist.yaw_rate; // ½ÇËÙ¶ÈÔÚ2DÆ½ÃæÉÏ²»±ä
+    robot_target_twist_.yaw_rate = twist.yaw_rate; // è§’é€Ÿåº¦åœ¨2Då¹³é¢ä¸Šä¸å˜
 }
 
 template<std::size_t WheelCount>
@@ -37,14 +37,14 @@ void Chassis_Base<WheelCount>::update()
     float current_time_s = TimeStamp::getInstance().getSeconds();
     dt_ = current_time_s - last_update_time_s_;
     if(dt_ <= 0.0f || dt_ > 0.1f)
-        dt_ = 0.001f; //Òì³£Öµ´¦Àí
+        dt_ = 0.001f; //å¼‚å¸¸å€¼å¤„ç†
 
     last_update_time_s_ = current_time_s;
 
     if(ctrl_mode_ == CURRENT_ZERO_MODE || ctrl_mode_ == SPEED_ZERO_MODE)
     {
         forwardKinematics();
-        return; // ÖÃÁãÄ£Ê½²»¸üĞÂËÙ¶È
+        return; // ç½®é›¶æ¨¡å¼ä¸æ›´æ–°é€Ÿåº¦
     }
 
     if(accel_Limit_)
@@ -52,14 +52,14 @@ void Chassis_Base<WheelCount>::update()
         ramp(robot_target_twist_.vx, robot_twist_.vx, accel_value_, dt_);
         ramp(robot_target_twist_.vy, robot_twist_.vy, accel_value_, dt_);
 
-        robot_twist_.yaw_rate = robot_target_twist_.yaw_rate; // ½ÇËÙ¶È²»×ö¼ÓËÙ¶ÈÏŞÖÆ
+        robot_twist_.yaw_rate = robot_target_twist_.yaw_rate; // è§’é€Ÿåº¦ä¸åšåŠ é€Ÿåº¦é™åˆ¶
     }
     else
         robot_twist_ = robot_target_twist_;
 
-    updateKinematics(); //µ÷ÓÃÄæ½â¸üĞÂ»úÆ÷ÈËËÙ¶È
+    updateKinematics(); //è°ƒç”¨é€†è§£æ›´æ–°æœºå™¨äººé€Ÿåº¦
 
-    // ¸üĞÂÊÀ½ç×ø±êÏµËÙ¶È
+    // æ›´æ–°ä¸–ç•Œåæ ‡ç³»é€Ÿåº¦
     float cos_yaw = arm_cos_f32(deg_to_rad(angle_twist_.yaw_angle));
     float sin_yaw = arm_sin_f32(deg_to_rad(angle_twist_.yaw_angle));
     world_twist_.vx = robot_twist_.vx * cos_yaw - robot_twist_.vy * sin_yaw;
@@ -68,7 +68,7 @@ void Chassis_Base<WheelCount>::update()
 
     for(std::size_t i = 0; i < WheelCount; i++)
     {
-        constrain(wheel_target_rpm_[i], -max_wheel_rpm_, max_wheel_rpm_); //ÏŞ·ù
+        constrain(wheel_target_rpm_[i], -max_wheel_rpm_, max_wheel_rpm_); //é™å¹…
         if(wheels_[i] != nullptr)
             wheels_[i]->setTargetRPM(wheel_target_rpm_[i]);
     }

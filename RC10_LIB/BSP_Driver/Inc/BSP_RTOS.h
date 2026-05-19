@@ -13,12 +13,12 @@
  * @file BSP_RTOS.h
  * @author XieFField
  * @version 1.0
- * @brief freeRTOSÈÎÎñµ÷¶È¸¸Àà
- * @attention hppÎÄ¼şÖ»ÔÊĞí±»C++ÎÄ¼şÒıÓÃ
+ * @brief freeRTOSä»»åŠ¡è°ƒåº¦çˆ¶ç±»
+ * @attention hppæ–‡ä»¶åªå…è®¸è¢«C++æ–‡ä»¶å¼•ç”¨
  * 
  * 
  * @version 2.0 2026/419
- *  Ôö¼ÓÈÎÎñÔËĞĞÍ³¼Æ¹¦ÄÜ£¬°üÀ¨µ¥´ÎÖ´ĞĞÊ±¼ä¡¢ÀúÊ·×î´ó/×îĞ¡Ö´ĞĞÊ±¼ä¡¢³¬Ê±¼ÆÊıµÈ
+ *  å¢åŠ ä»»åŠ¡è¿è¡Œç»Ÿè®¡åŠŸèƒ½ï¼ŒåŒ…æ‹¬å•æ¬¡æ‰§è¡Œæ—¶é—´ã€å†å²æœ€å¤§/æœ€å°æ‰§è¡Œæ—¶é—´ã€è¶…æ—¶è®¡æ•°ç­‰
  */
 //111
 
@@ -55,28 +55,28 @@ enum class TaskPrio {
 };
 
 /**
- * @brief FreeRTOSÈÎÎñ·â×°Àà
- *       ¼Ì³Ğ¸ÃÀà²¢ÊµÏÖ run() ·½·¨£¬¼´¿É´´½¨Ò»¸ö FreeRTOS ÈÎÎñ¡£
- *       ÓÃ»§ÔÚ´´½¨ÍêÈÎÎñ¶ÔÏóºó£¬ĞèÒªÊ¹ÓÃ start() ·½·¨×¢²á²¢Æô¶¯ÈÎÎñ¡£
+ * @brief FreeRTOSä»»åŠ¡å°è£…ç±»
+ *       ç»§æ‰¿è¯¥ç±»å¹¶å®ç° run() æ–¹æ³•ï¼Œå³å¯åˆ›å»ºä¸€ä¸ª FreeRTOS ä»»åŠ¡ã€‚
+ *       ç”¨æˆ·åœ¨åˆ›å»ºå®Œä»»åŠ¡å¯¹è±¡åï¼Œéœ€è¦ä½¿ç”¨ start() æ–¹æ³•æ³¨å†Œå¹¶å¯åŠ¨ä»»åŠ¡ã€‚
 */
 
 class RtosTask{
 public:
     struct PerfStat {
-        uint32_t overrun_count;         // ±¾ÈÎÎñµ¥´ÎÖ´ĞĞ³¬¹ı period µÄ´ÎÊı
-        uint32_t overrun_sample_count;  // °´N´Î³¬Ê±¾ÛºÏ¼ÆÊı£¨Ã¿µ½N´Î+1£©
-        uint32_t deadline_miss_count;   // ±¾ÈÎÎñÖ´ĞĞ½áÊøÊ±ÒÑ¿ç¹ıÏÂÒ»µ÷¶ÈµãµÄ´ÎÊı£¬¼´±»ÆäËûÈÎÎñÇÀÕ¼µ¼ÖÂ´í¹ı½Úµã
-        uint32_t last_us;               // ÉÏÒ»´Î loop() Ö´ĞĞºÄÊ± (us)
-        uint32_t max_us;                // ÀúÊ·×î´ó loop() Ö´ĞĞºÄÊ± (us)
-        uint32_t min_us;                // ÀúÊ·×îĞ¡ loop() Ö´ĞĞºÄÊ± (us)
+        uint32_t overrun_count;         // æœ¬ä»»åŠ¡å•æ¬¡æ‰§è¡Œè¶…è¿‡ period çš„æ¬¡æ•°
+        uint32_t overrun_sample_count;  // æŒ‰Næ¬¡è¶…æ—¶èšåˆè®¡æ•°ï¼ˆæ¯åˆ°Næ¬¡+1ï¼‰
+        uint32_t deadline_miss_count;   // æœ¬ä»»åŠ¡æ‰§è¡Œç»“æŸæ—¶å·²è·¨è¿‡ä¸‹ä¸€è°ƒåº¦ç‚¹çš„æ¬¡æ•°ï¼Œå³è¢«å…¶ä»–ä»»åŠ¡æŠ¢å å¯¼è‡´é”™è¿‡èŠ‚ç‚¹
+        uint32_t last_us;               // ä¸Šä¸€æ¬¡ loop() æ‰§è¡Œè€—æ—¶ (us)
+        uint32_t max_us;                // å†å²æœ€å¤§ loop() æ‰§è¡Œè€—æ—¶ (us)
+        uint32_t min_us;                // å†å²æœ€å° loop() æ‰§è¡Œè€—æ—¶ (us)
     };
 
     /**
-     * @brief ¹¹Ôìº¯Êı
-     * @param name ÈÎÎñÃû
-     * @param period ÈÎÎñÖÜÆÚ (Ticks)¡£
-     *               - period > 0 (Ä¬ÈÏ = 1): ´´½¨Ò»¸öÖÜÆÚĞÔÈÎÎñ£¬ÓÃ»§ĞèÊµÏÖ loop()¡£
-     *               - period = 0           : ´´½¨Ò»¸öÊÂ¼şÇı¶¯ÈÎÎñ£¬ÓÃ»§ĞèÖØĞ´ run()¡£
+     * @brief æ„é€ å‡½æ•°
+     * @param name ä»»åŠ¡å
+     * @param period ä»»åŠ¡å‘¨æœŸ (Ticks)ã€‚
+     *               - period > 0 (é»˜è®¤ = 1): åˆ›å»ºä¸€ä¸ªå‘¨æœŸæ€§ä»»åŠ¡ï¼Œç”¨æˆ·éœ€å®ç° loop()ã€‚
+     *               - period = 0           : åˆ›å»ºä¸€ä¸ªäº‹ä»¶é©±åŠ¨ä»»åŠ¡ï¼Œç”¨æˆ·éœ€é‡å†™ run()ã€‚
      */
     explicit RtosTask(const char* name, TickType_t period = 1, bool is_cntRuntime = true) 
         : name_(name), handle_(nullptr), period_(period), is_cntRuntime_(is_cntRuntime),
@@ -84,17 +84,17 @@ public:
 
     virtual ~RtosTask() 
     {
-        // »¹ÊÇ²»ÔÚ´Ë´¦×öÈÎÎñµÄ×Ô¶¯É¾³ıºÃÁË¡£ÏµÍ³Í£Ö¹»á×Ô¶¯É¾³ı
+        // è¿˜æ˜¯ä¸åœ¨æ­¤å¤„åšä»»åŠ¡çš„è‡ªåŠ¨åˆ é™¤å¥½äº†ã€‚ç³»ç»Ÿåœæ­¢ä¼šè‡ªåŠ¨åˆ é™¤
     }
 
     /**
-     * @brief Æô¶¯ÈÎÎñ£¬ÓÃÓÚ×¢²áÈÎÎñµ½ FreeRTOS
-     * @param priority ÈÎÎñÓÅÏÈ¼¶
-     * @param stackWords ÈÎÎñÕ»´óĞ¡£¬µ¥Î»Îª×Ö£¨4×Ö½Ú£©
-     * @param arg ´«µİ¸øÈÎÎñµÄ²ÎÊı
-     * @return true Æô¶¯³É¹¦£¬false Æô¶¯Ê§°Ü
-     *         ºóĞøÓÃ»§¿ÉÒÔÍ¨¹ıbool·µ»ØÖµÅĞ¶ÏÈÎÎñÊÇ·ñ´´½¨³É¹¦
-     *         Èô´´½¨Ê§°Ü£¬handle_½«±£³ÖÎªnullptr
+     * @brief å¯åŠ¨ä»»åŠ¡ï¼Œç”¨äºæ³¨å†Œä»»åŠ¡åˆ° FreeRTOS
+     * @param priority ä»»åŠ¡ä¼˜å…ˆçº§
+     * @param stackWords ä»»åŠ¡æ ˆå¤§å°ï¼Œå•ä½ä¸ºå­—ï¼ˆ4å­—èŠ‚ï¼‰
+     * @param arg ä¼ é€’ç»™ä»»åŠ¡çš„å‚æ•°
+     * @return true å¯åŠ¨æˆåŠŸï¼Œfalse å¯åŠ¨å¤±è´¥
+     *         åç»­ç”¨æˆ·å¯ä»¥é€šè¿‡boolè¿”å›å€¼åˆ¤æ–­ä»»åŠ¡æ˜¯å¦åˆ›å»ºæˆåŠŸ
+     *         è‹¥åˆ›å»ºå¤±è´¥ï¼Œhandle_å°†ä¿æŒä¸ºnullptr
      */
     bool start(UBaseType_t priority, uint32_t stackWords = 128, void* arg = nullptr) 
     {
@@ -108,30 +108,30 @@ public:
     }
 
     /**
-     * @brief »ñÈ¡ÈÎÎñ¾ä±ú
-     * @return ÈÎÎñ¾ä±ú
+     * @brief è·å–ä»»åŠ¡å¥æŸ„
+     * @return ä»»åŠ¡å¥æŸ„
      */
     TaskHandle_t handle() const { return handle_; }
 
     /**
-     * @brief »ñÈ¡¸ÃÈÎÎñµÄÔËĞĞÍ³¼Æ
-     * @return Í³¼Æ½á¹¹ÌåÖ»¶ÁÒıÓÃ
+     * @brief è·å–è¯¥ä»»åŠ¡çš„è¿è¡Œç»Ÿè®¡
+     * @return ç»Ÿè®¡ç»“æ„ä½“åªè¯»å¼•ç”¨
      */
     const PerfStat& getPerfStat() const { return taskPerf_; }
 
     /**
-     * @brief »ñÈ¡¸ÃÈÎÎñ³¬Ê±´ÎÊı£¨loopºÄÊ± > period£©
+     * @brief è·å–è¯¥ä»»åŠ¡è¶…æ—¶æ¬¡æ•°ï¼ˆloopè€—æ—¶ > periodï¼‰
      */
     uint32_t getOverrunCount() const { return taskPerf_.overrun_count; }
 
     /**
-     * @brief ÇåÁã¸ÃÈÎÎñÍ³¼ÆÊı¾İ
+     * @brief æ¸…é›¶è¯¥ä»»åŠ¡ç»Ÿè®¡æ•°æ®
      */
     void resetPerfStat() { taskPerf_ = {0, 0, 0, 0, 0, 0xFFFFFFFFu}; }
 
     /**
-     * @brief ÅäÖÃ¡°Ã¿³¬N´Î´¥·¢Ò»´Î²ÉÑù»Øµ÷¡±
-     * @param interval NÖµ¡£×îĞ¡Îª1£¬±íÊ¾Ã¿³¬N´Î½øĞĞÒ»´Î¾ÛºÏ¼ÆÊı¡£
+     * @brief é…ç½®â€œæ¯è¶…Næ¬¡è§¦å‘ä¸€æ¬¡é‡‡æ ·å›è°ƒâ€
+     * @param interval Nå€¼ã€‚æœ€å°ä¸º1ï¼Œè¡¨ç¤ºæ¯è¶…Næ¬¡è¿›è¡Œä¸€æ¬¡èšåˆè®¡æ•°ã€‚
      */
     void setOverrunSampleInterval(uint32_t interval)
     {
@@ -142,49 +142,49 @@ public:
     }
 
     /**
-     * @brief »ñÈ¡µ±Ç°³¬Ê±²ÉÑù¼ä¸ô
+     * @brief è·å–å½“å‰è¶…æ—¶é‡‡æ ·é—´éš”
      */
     uint32_t getOverrunSampleInterval() const { return overrunSampleInterval_; }
 
     /**
-     * @brief »ñÈ¡°´N´Î³¬Ê±¾ÛºÏºóµÄ¼ÆÊıÖµ
+     * @brief è·å–æŒ‰Næ¬¡è¶…æ—¶èšåˆåçš„è®¡æ•°å€¼
      */
     uint32_t getOverrunSampleCount() const { return taskPerf_.overrun_sample_count; }
 
     /**
-     * @brief ÊÇ·ñÆôÓÃ³¬Ê±²ÉÑù»Øµ÷£¨Ä¬ÈÏ¹Ø±Õ£©
+     * @brief æ˜¯å¦å¯ç”¨è¶…æ—¶é‡‡æ ·å›è°ƒï¼ˆé»˜è®¤å…³é—­ï¼‰
      */
     void setOverrunCallbackEnabled(bool enabled) { overrunCallbackEnabled_ = enabled; }
 
 protected:
     
     /**
-     * @brief [ÊÂ¼şÇı¶¯ÈÎÎñ] µÄÖ÷º¯Êı¡£
-     *        Èç¹ûÈÎÎñÊÇÊÂ¼şÇı¶¯µÄ (period=0)£¬ÔòÖØĞ´´Ëº¯Êı¡£
-     *        ±ØĞëÔÚÄÚ²¿°üº¬ for(;;) ºÍ×èÈûµ÷ÓÃ¡£
+     * @brief [äº‹ä»¶é©±åŠ¨ä»»åŠ¡] çš„ä¸»å‡½æ•°ã€‚
+     *        å¦‚æœä»»åŠ¡æ˜¯äº‹ä»¶é©±åŠ¨çš„ (period=0)ï¼Œåˆ™é‡å†™æ­¤å‡½æ•°ã€‚
+     *        å¿…é¡»åœ¨å†…éƒ¨åŒ…å« for(;;) å’Œé˜»å¡è°ƒç”¨ã€‚
      */
     virtual void run() 
     { 
-        // Ìá¹©Ò»¸öÄ¬ÈÏµÄ¿ÕÊµÏÖ
+        // æä¾›ä¸€ä¸ªé»˜è®¤çš„ç©ºå®ç°
         for(;;)
         {
-            osDelay(1000); // Ä¬ÈÏÃ¿Ãë×èÈûÒ»´Î£¬·ÀÖ¹¿ÕÑ­»·
+            osDelay(1000); // é»˜è®¤æ¯ç§’é˜»å¡ä¸€æ¬¡ï¼Œé˜²æ­¢ç©ºå¾ªç¯
         }
     }
 
     /**
-     * @brief [ÖÜÆÚĞÔÈÎÎñ] µÄÑ­»·Ìå¡£
-     *        Èç¹ûÈÎÎñÊÇÖÜÆÚĞÔµÄ (period>0)£¬ÔòÖØĞ´´Ëº¯Êı¡£
+     * @brief [å‘¨æœŸæ€§ä»»åŠ¡] çš„å¾ªç¯ä½“ã€‚
+     *        å¦‚æœä»»åŠ¡æ˜¯å‘¨æœŸæ€§çš„ (period>0)ï¼Œåˆ™é‡å†™æ­¤å‡½æ•°ã€‚
      */
     virtual void loop() 
     {
-        // Ìá¹©Ò»¸öÄ¬ÈÏµÄ¿ÕÊµÏÖ
+        // æä¾›ä¸€ä¸ªé»˜è®¤çš„ç©ºå®ç°
     }
 
     /**
-     * @brief ³¬Ê±²ÉÑù»Øµ÷
-     *        µ± overrun_count ´ïµ½ N µÄ±¶ÊıÊ±µ÷ÓÃ£¨NÓÉ setOverrunSampleInterval ÉèÖÃ£©¡£
-     *        ¿ÉÔÚ×ÓÀàÖĞÖØĞ´£¬ÓÃÓÚÊä³öÏêÏ¸ÈÕÖ¾»òÉÏ±¨¡£
+     * @brief è¶…æ—¶é‡‡æ ·å›è°ƒ
+     *        å½“ overrun_count è¾¾åˆ° N çš„å€æ•°æ—¶è°ƒç”¨ï¼ˆNç”± setOverrunSampleInterval è®¾ç½®ï¼‰ã€‚
+     *        å¯åœ¨å­ç±»ä¸­é‡å†™ï¼Œç”¨äºè¾“å‡ºè¯¦ç»†æ—¥å¿—æˆ–ä¸ŠæŠ¥ã€‚
      */
     virtual void onOverrunSample(const PerfStat& stat, uint32_t execUs)
     {
@@ -198,7 +198,7 @@ private:
 
 
     /**
-     * @brief ÈÎÎñÈë¿Úº¯Êı
+     * @brief ä»»åŠ¡å…¥å£å‡½æ•°
      */
     static void taskEntry(void* pvParameters) 
     {
@@ -207,7 +207,7 @@ private:
         {
             ensureDWTReady();
 
-            // °Ñtick×ª»»³Éus
+            // æŠŠtickè½¬æ¢æˆus
             uint64_t period_us_64 = (uint64_t)self->period_ * 1000000ULL;
             period_us_64 /= (uint64_t)configTICK_RATE_HZ;
             uint32_t period_us = (uint32_t)period_us_64;
@@ -215,15 +215,15 @@ private:
             TickType_t lastWakeTime = xTaskGetTickCount();
             for (;;) 
             {
-                // DWT¼ÆÊ±Æğµã
+                // DWTè®¡æ—¶èµ·ç‚¹
                 uint32_t startCycle = DWT->CYCCNT;
 
                 self->loop();
                 
-                // DWT¼ÆÊ±ÖÕµã
+                // DWTè®¡æ—¶ç»ˆç‚¹
                 uint32_t endCycle = DWT->CYCCNT;
 
-                // TickÊ±¼äÈÔ±£ÁôÓÃÓÚdeadline missÅĞ¶Ï
+                // Tickæ—¶é—´ä»ä¿ç•™ç”¨äºdeadline missåˆ¤æ–­
                 TickType_t endTick = xTaskGetTickCount();
 
 
@@ -242,12 +242,12 @@ private:
                         self->taskPerf_.min_us = execUs;
 
 
-                    // ³¬Ê±ÅĞ¶¨
+                    // è¶…æ—¶åˆ¤å®š
                     if (execUs > period_us)
                     {
                         self->taskPerf_.overrun_count++;
 
-                        // Ã¿³¬N´Î£¬¾ÛºÏ¼ÆÊı+1£»¿ÉÑ¡´¥·¢»Øµ÷
+                        // æ¯è¶…Næ¬¡ï¼Œèšåˆè®¡æ•°+1ï¼›å¯é€‰è§¦å‘å›è°ƒ
                         if ((self->taskPerf_.overrun_count % self->overrunSampleInterval_) == 0)
                         {
                             self->taskPerf_.overrun_sample_count++;
@@ -262,13 +262,13 @@ private:
                         self->taskPerf_.deadline_miss_count++;
                 }
 
-                // ´ÓosDelay»»³É¹Ì¶¨ÖÜÆÚ»½ĞÑ£¬ÌáÉıÊ±¼ä×¼È·ĞÔ
+                // ä»osDelayæ¢æˆå›ºå®šå‘¨æœŸå”¤é†’ï¼Œæå‡æ—¶é—´å‡†ç¡®æ€§
                 vTaskDelayUntil(&lastWakeTime, self->period_);
             }
         } 
-        else  // ÊÂ¼şÇı¶¯/Ò»´ÎĞÔÈÎÎñÄ£Ê½
+        else  // äº‹ä»¶é©±åŠ¨/ä¸€æ¬¡æ€§ä»»åŠ¡æ¨¡å¼
             self->run();
-         // Èç¹û run() ·µ»Ø»òÑ­»·ÍË³ö£¬É¾³ıÈÎÎñ
+         // å¦‚æœ run() è¿”å›æˆ–å¾ªç¯é€€å‡ºï¼Œåˆ é™¤ä»»åŠ¡
         vTaskDelete(nullptr);
     }
 
@@ -300,48 +300,48 @@ private:
     bool is_cntRuntime_;
 
     PerfStat taskPerf_;
-    uint32_t overrunSampleInterval_; // NÖµ£ºÃ¿³¬N´Î¼Æ1´Î overrun_sample_count
-    bool overrunCallbackEnabled_;    // »Øµ÷Ä¬ÈÏ¹Ø±Õ£¬Ö»±£Áô¼ÆÊı
+    uint32_t overrunSampleInterval_; // Nå€¼ï¼šæ¯è¶…Næ¬¡è®¡1æ¬¡ overrun_sample_count
+    bool overrunCallbackEnabled_;    // å›è°ƒé»˜è®¤å…³é—­ï¼Œåªä¿ç•™è®¡æ•°
 
 
 };
 
 /**
- * @brief FreeRTOS¶ÓÁĞ·â×°Àà
- *        ÔÚ¹¹Ôìº¯Êı
- * @attention Èç¹ûÒªÔÚÖĞ¶ÏÖĞ·¢ËÍ¶ÓÁĞ£¬ÇëÊ¹ÓÃ sendFromISR() ·½·¨
+ * @brief FreeRTOSé˜Ÿåˆ—å°è£…ç±»
+ *        åœ¨æ„é€ å‡½æ•°
+ * @attention å¦‚æœè¦åœ¨ä¸­æ–­ä¸­å‘é€é˜Ÿåˆ—ï¼Œè¯·ä½¿ç”¨ sendFromISR() æ–¹æ³•
  */
 /*==============================================================
- * RtosQueue: ¶ÓÁĞ·â×°Àà
- * ÓÃ·¨£º(¡¨'¨Œ'¡¨)
- *   RtosQueue<int> queue(8); // ´´½¨Ò»¸ö³¤¶ÈÎª8µÄintÀàĞÍ¶ÓÁĞ
- *   queue.send(123);         // ·¢ËÍÊı¾İ
+ * RtosQueue: é˜Ÿåˆ—å°è£…ç±»
+ * ç”¨æ³•ï¼š(ã€ƒ'â–½'ã€ƒ)
+ *   RtosQueue<int> queue(8); // åˆ›å»ºä¸€ä¸ªé•¿åº¦ä¸º8çš„intç±»å‹é˜Ÿåˆ—
+ *   queue.send(123);         // å‘é€æ•°æ®
  *   int value; 
- *   queue.recv(value); // ½ÓÊÕÊı¾İ
- *      (*^¨Œ^*)
+ *   queue.recv(value); // æ¥æ”¶æ•°æ®
+ *      (*^â–½^*)
 
 */
 template<typename T>
 class RtosQueue{
 public:
     /**
-     * @brief ¹¹Ôìº¯Êı£¬´´½¨Ò»¸ö¶ÓÁĞ
-     * @param len ¶ÓÁĞ³¤¶È£¬Ä¬ÈÏ8
+     * @brief æ„é€ å‡½æ•°ï¼Œåˆ›å»ºä¸€ä¸ªé˜Ÿåˆ—
+     * @param len é˜Ÿåˆ—é•¿åº¦ï¼Œé»˜è®¤8
      */
     explicit RtosQueue(size_t len = 8) {queue_ = xQueueCreate((UBaseType_t)len, sizeof(T));}
 
     ~RtosQueue() 
     {
-        // É¾³ı¶ÓÁĞ
+        // åˆ é™¤é˜Ÿåˆ—
         if (queue_) 
             vQueueDelete(queue_);
     }
 
     /**
-     * @brief ·¢ËÍÊı¾İµ½¶ÓÁĞ
-     * @param item Òª·¢ËÍµÄÊı¾İ
-     * @param ticks µÈ´ıÊ±¼ä£¬Ä¬ÈÏ²»µÈ´ı
-     * @return true ·¢ËÍ³É¹¦£¬false ·¢ËÍÊ§°Ü
+     * @brief å‘é€æ•°æ®åˆ°é˜Ÿåˆ—
+     * @param item è¦å‘é€çš„æ•°æ®
+     * @param ticks ç­‰å¾…æ—¶é—´ï¼Œé»˜è®¤ä¸ç­‰å¾…
+     * @return true å‘é€æˆåŠŸï¼Œfalse å‘é€å¤±è´¥
      */
     bool send(const T& item, TickType_t ticks = 0) 
     {
@@ -351,10 +351,10 @@ public:
     }
 
     /**
-     * @brief ´ÓISRÖĞ·¢ËÍÊı¾İµ½¶ÓÁĞ
-     * @param item Òª·¢ËÍµÄÊı¾İ
-     * @param pxHigherPriorityTaskWoken Èç¹û·¢ËÍÊı¾İºóÓĞ¸ü¸ßÓÅÏÈ¼¶µÄÈÎÎñ±»»½ĞÑ£¬ÖÃÎªpdTRUE
-     * @return true ·¢ËÍ³É¹¦£¬false ·¢ËÍÊ§°Ü
+     * @brief ä»ISRä¸­å‘é€æ•°æ®åˆ°é˜Ÿåˆ—
+     * @param item è¦å‘é€çš„æ•°æ®
+     * @param pxHigherPriorityTaskWoken å¦‚æœå‘é€æ•°æ®åæœ‰æ›´é«˜ä¼˜å…ˆçº§çš„ä»»åŠ¡è¢«å”¤é†’ï¼Œç½®ä¸ºpdTRUE
+     * @return true å‘é€æˆåŠŸï¼Œfalse å‘é€å¤±è´¥
      */
     bool sendFromISR(const T& item, BaseType_t* pxHigherPriorityTaskWoken) 
     {
@@ -364,11 +364,11 @@ public:
     }
 
     /**
-     * @brief ´Ó¶ÓÁĞ½ÓÊÕÊı¾İ
-     * @param out ½ÓÊÕÊı¾İµÄ´æ·ÅÎ»ÖÃ
-     * @param ticks µÈ´ıÊ±¼ä£¬Ä¬ÈÏÎŞÏŞµÈ´ı
-     * @return true ½ÓÊÕ³É¹¦£¬false ½ÓÊÕÊ§°Ü
-     *       Èô¶ÓÁĞÎª¿ÕÇÒµÈ´ıÊ±¼äµ½´ï£¬·µ»Øfalse
+     * @brief ä»é˜Ÿåˆ—æ¥æ”¶æ•°æ®
+     * @param out æ¥æ”¶æ•°æ®çš„å­˜æ”¾ä½ç½®
+     * @param ticks ç­‰å¾…æ—¶é—´ï¼Œé»˜è®¤æ— é™ç­‰å¾…
+     * @return true æ¥æ”¶æˆåŠŸï¼Œfalse æ¥æ”¶å¤±è´¥
+     *       è‹¥é˜Ÿåˆ—ä¸ºç©ºä¸”ç­‰å¾…æ—¶é—´åˆ°è¾¾ï¼Œè¿”å›false
      */
     bool recv(T& out, TickType_t ticks = portMAX_DELAY) 
     {
@@ -378,8 +378,8 @@ public:
     }
 
     /**
-     * @brief »ñÈ¡µ×²ã¶ÓÁĞ¾ä±ú
-     * @return ¶ÓÁĞ¾ä±ú
+     * @brief è·å–åº•å±‚é˜Ÿåˆ—å¥æŸ„
+     * @return é˜Ÿåˆ—å¥æŸ„
      */
     QueueHandle_t raw() const { return queue_; }
 

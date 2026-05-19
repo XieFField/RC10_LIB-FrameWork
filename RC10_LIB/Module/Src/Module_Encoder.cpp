@@ -7,17 +7,17 @@ void Encoder::update(uint16_t raw_value)
 
     if (!is_init_)
     {
-        offset_      = raw_value; // ¼ÇÂ¼³õÊ¼ raw Öµ (¿ÉÑ¡£¬½ö×÷¼ÇÂ¼)
-        start_angle_ = current_angle; // ¼ÇÂ¼³õÊ¼½Ç¶È£¬×÷Îª 0 µã»ù×¼
+        offset_      = raw_value; // è®°å½•åˆå§‹ raw å€¼ (å¯é€‰ï¼Œä»…ä½œè®°å½•)
+        start_angle_ = current_angle; // è®°å½•åˆå§‹è§’åº¦ï¼Œä½œä¸º 0 ç‚¹åŸºå‡†
         last_angle_  = current_angle;
         
         round_cnt_        = 0;
         precision_offset_ = 0.0f;
         
         total_angle_ = 0.0f;
-        angle_       = normalize_deg_0_360(current_angle - start_angle_); // ÏÔÊ¾½Ç¹éÁã
+        angle_       = normalize_deg_0_360(current_angle - start_angle_); // æ˜¾ç¤ºè§’å½’é›¶
 
-        // ÈôÖØ¶¨Î»ÔÚÊ×Ö¡Ç°·¢Éú£¬ÔòÔÚ³õÊ¼»¯Íê³Éµ±ÅÄÓ¦ÓÃ£¬±ÜÃâ±»Ê×Ö¡ÇåÁã
+        // è‹¥é‡å®šä½åœ¨é¦–å¸§å‰å‘ç”Ÿï¼Œåˆ™åœ¨åˆå§‹åŒ–å®Œæˆå½“æ‹åº”ç”¨ï¼Œé¿å…è¢«é¦–å¸§æ¸…é›¶
         if (has_pending_relocate_)
         {
             precision_offset_ = pending_relocate_total_angle_;
@@ -31,8 +31,8 @@ void Encoder::update(uint16_t raw_value)
     }
     float delta = current_angle - last_angle_;
 
-    // ¿çÔ½ 0/360 ±ß½çµÄÂß¼­ÅĞ¶Ï
-    // Èç¹ûÁ½Ö¡Ö®¼äÌø±ä³¬¹ı 180 ¶È£¬ÈÏÎª·¢ÉúÁË¹ıÈ¦
+    // è·¨è¶Š 0/360 è¾¹ç•Œçš„é€»è¾‘åˆ¤æ–­
+    // å¦‚æœä¸¤å¸§ä¹‹é—´è·³å˜è¶…è¿‡ 180 åº¦ï¼Œè®¤ä¸ºå‘ç”Ÿäº†è¿‡åœˆ
     if (delta > 180.0f)
     {
         round_cnt_--;
@@ -42,7 +42,7 @@ void Encoder::update(uint16_t raw_value)
         round_cnt_++;
     }
 
-    // ¸üĞÂÀúÊ·
+    // æ›´æ–°å†å²
     last_angle_ = current_angle;
 
     float abs_total_angle = round_cnt_ * 360.0f + current_angle;
@@ -65,7 +65,7 @@ void Encoder::relocate_totalAngle(float now_totalAngle)
 {
     if (!is_init_)
     {
-        // ÉĞÎ´ÊÕµ½Ê×Ö¡·´À¡Ê±£¬ÏÈ»º´æÄ¿±ê£¬´ı³õÊ¼»¯ºóÁ¢¼´Ó¦ÓÃ
+        // å°šæœªæ”¶åˆ°é¦–å¸§åé¦ˆæ—¶ï¼Œå…ˆç¼“å­˜ç›®æ ‡ï¼Œå¾…åˆå§‹åŒ–åç«‹å³åº”ç”¨
         has_pending_relocate_ = true;
         pending_relocate_total_angle_ = now_totalAngle;
         total_angle_ = now_totalAngle;
@@ -74,7 +74,7 @@ void Encoder::relocate_totalAngle(float now_totalAngle)
     }
 
     
-    // µ±Ç°¼ÆËã³öµÄ²¿·Ö (²»º¬ Offset)
+    // å½“å‰è®¡ç®—å‡ºçš„éƒ¨åˆ† (ä¸å« Offset)
     float current_calc = (round_cnt_ * 360.0f + last_angle_ - start_angle_);
     
     // Reverse solve for Off:

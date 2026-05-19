@@ -1,22 +1,10 @@
 /**
  * @file APP_PID.h
  * @author XieFField
- * @brief PID ¿ØÖÆÆ÷
+ * @brief PID ç±»
  * @version 1.0
  * @date 2025-09-17
  */
-
-/*
-    ´Ë´úÂëÔÚËã·¨ÉÏºÜ´ó³Ì¶È½è¼øÁË½àÓî¸çµÄ´úÂë£¬ÔÚ´Ë±íÊ¾¸ĞĞ»
-    Ö®ËùÒÔÃ»ÓĞÖ±½ÓÊ¹ÓÃ£¬ÊÇÒòÎªÀïÃæµÄÊıÑ§Âß¼­ËäÈ»ºÏÊÊ£¬µ«ÊÇ
-    ´úÂë·ç¸ñºÍ½á¹¹²»ÏñÊÇC++£¬¶øÊÇ°ÑÀàµ±³ÉÁË½á¹¹ÌåÀ´Ê¹ÓÃ£¬
-    ÎÒÈÏÎªÆÆ»µÁË·â×°ĞÔ£¬²»¹»½¡×³
-    =================================================
-    ÀïÃæÔÚËã·¨ÉÏ£¬ÎÒÈÏÎªÓĞĞ©µØ·½¿ÉÒÔ¸Ä½ø£¬Ö÷ÒªÎÊÌâÔÚÓÚ²ÉÑù
-    Ê±¼äµÄ¼ÆËãÉÏ£¬ÒÔ¼°»ı·Ö¿¹±¥ºÍµÄÂß¼­£¬µ±»ı·ÖÏî±¥ºÍÖ±½ÓÇå
-    ³ı»ı·ÖÏî£¬ÓĞµã¹ıÓÚ¼¤½ø£¬¿ÉÄÜÒıÆğÏµÍ³Õğµ´¡£
-    =================================================
-*/
 
 #ifndef __APP_PID_H
 #define __APP_PID_H
@@ -48,19 +36,19 @@ typedef struct {
     float kp;
     float ki;
     float kd;
-    float I_Outlimit; // »ı·ÖÏŞ·ù
-    bool isIOutlimit; // ÊÇ·ñÆôÓÃ»ı·ÖÏŞ·ù
-    float output_limit;   // Êä³öÏŞ·ù
-    float deadband;      // ËÀÇø
+    float I_Outlimit; //  Ié™å¹…
+    bool isIOutlimit; //  Ié™å¹…å¼€å…³
+    float output_limit;   //  è¾“å‡ºé™å¹…
+    float deadband;      //  æ­»åŒº
 } PID_Param_Config;
 
-// Î»ÖÃÊ½ PID ¿ØÖÆÆ÷£¬²ÉÓÃÁËÌİĞÎ»ı·Ö£¬Î¢·ÖÏÈĞĞ£¬»ı·Ö·ÖÀëµÄ¸Ä½øÊ½PID Ä¬ÈÏ¿ØÖÆÆµÂÊ100Hz
+// PID ä½ç½®ç¯ï¼Œé»˜è®¤100Hzæ›´æ–°é¢‘ç‡
 class PID_Position {
 public:
     /**
-     * @brief ¹¹Ôìº¯Êı
-     * @param pid_Param_Config PID ²ÎÊıÅäÖÃ½á¹¹Ìå
-     * @param I_SeparaThreshold »ı·Ö·ÖÀëãĞÖµ£¬µ±Îó²î¾ø¶ÔÖµ´óÓÚ¸ÃÖµÊ±£¬»ı·ÖÏî²»ÀÛ¼Ó
+     * @brief æ„é€ å‡½æ•°
+     * @param pid_Param_Config PID å‚æ•°
+     * @param I_SeparaThreshold Iåˆ†ç¦»é˜ˆå€¼
      */
     PID_Position(PID_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, false, 0.0f, 0.0f}, 
         float I_SeparaThreshold = 0.0f)
@@ -69,21 +57,21 @@ public:
             reset();
         }
 
-    bool max_output = false; //»ı·Ö¿¹±¥ºÍ
+    bool max_output = false; // æ˜¯å¦è¾¾åˆ°è¾“å‡ºé™å¹…
 
     /**
-     * @brief ¼ÆËãPIDÊä³ö
-     * @param target Ä¿±êÖµ
-     * @param feedback µ±Ç°²âÁ¿Öµ
-     * @return PID¿ØÖÆÊä³ö
+     * @brief PID è®¡ç®—
+     * @param target ç›®æ ‡å€¼
+     * @param feedback åé¦ˆå€¼
+     * @return PIDè¾“å‡º
      */
     float pid_calc(float target, float feedback);
     
 
     /**
-     * @brief ÖØÖÃPID¿ØÖÆÆ÷µÄÄÚ²¿×´Ì¬
-     *        Ö÷ÒªÓÃÓÚÖØÖÃ»ı·ÖÏîºÍÀúÊ·Öµ¡£
-     */
+     * @brief é‡ç½®PIDçŠ¶æ€
+        *        éœ€è¦åœ¨ä½¿ç”¨å‰è°ƒç”¨ï¼Œä»¥æ¸…é™¤å†å²å€¼
+        */
     void reset()
     {
         I_Term = 0.0f;
@@ -92,23 +80,24 @@ public:
         output_ = 0.0f;
         error_last_ = 0.0f;
         feedback_last_ = 0.0f;
-        isFirst_ = true; // ÖØÖÃ isFirst_ ±êÖ¾
+        isFirst_ = true; // ï¿½ï¿½ï¿½ï¿½ isFirst_ ï¿½ï¿½Ö¾
     }
 
     /**
-     * @brief ¶¯Ì¬ĞŞ¸ÄPID²ÎÊı
-     * @param params ĞÂµÄPID²ÎÊı
+     * @brief è®¾ç½®PIDå‚æ•°
+     * @param params å‚æ•°ç»“æ„ä½“
+     * @param I_SeparaThreshold Iåˆ†ç¦»é˜ˆå€¼
      */
     void set_params(const PID_Param_Config& params, float I_SeparaThreshold);
 
     PID_Param_Config get_params() const { return params_; }
     float get_i_separa_threshold() const { return I_SeparaThreshold_; }
     /**
-     * @brief ½«PIDÉè¶¨ÎªÑ­»·Ä£Ê½
-     * @param range Ñ­»··¶Î§£¬ÀıÈç360¶È
-     * @brief ÉèÖÃÎªÑ­»·Ä£Ê½µÄÊ±ºò£¬PID»á×Ô¶¯Ñ¡Ôñ×î½üµÄÂ·¾¶£¬±ÈÈç
-     *        350¶Èµ½10¶È£¬»áÕı×Å×ß20¶È£¬¶ø²»ÊÇµ¹×Å×ß340¶È
-     * @param offset Æ«ÒÆÁ¿£¬Ä¬ÈÏÎª0
+     * @brief å°†PIDè®¾ç½®ä¸ºå¾ªç¯æ¨¡å¼
+     * @param range å¾ªç¯èŒƒå›´ï¼Œé€šå¸¸ä¸º360åº¦
+     * @brief è®¾ç½®ä¸ºå¾ªç¯æ¨¡å¼æ—¶ï¼ŒPIDä¼šè‡ªåŠ¨é€‰æ‹©æœ€ä¼˜çš„åå·®è·¯å¾„
+     *        ä¾‹å¦‚ï¼š350åº¦åˆ°10åº¦ï¼Œä¼šé€‰æ‹©ç»è¿‡360åº¦çš„è·¯å¾„
+     * @param offset åç§»é‡ï¼Œé»˜è®¤ä¸º0
      */
     void set_as_circular()
     {
@@ -116,7 +105,7 @@ public:
     }
 
     /**
-     * @brief ½«PIDÉèÖÃÎªµ¥ÏòÄ£Ê½
+     * @brief å°†PIDè®¾ç½®ä¸ºçº¿æ€§æ¨¡å¼
      */
     void set_as_linear()
     {
@@ -133,32 +122,32 @@ public:
         dt_error_ = set;
     }
 private:
-    float I_Term = 0;			/* »ı·ÖÆ÷Êä³ö */
-    float P_Term = 0;			/* ±ÈÀıÆ÷Êä³ö */
-    float D_Term = 0;			/* Î¢·ÖÆ÷Êä³ö */
-    float output_ = 0.0f;     // Êä³öÖµ
+    float I_Term = 0;			/* ç§¯åˆ†é¡¹ */
+    float P_Term = 0;			/* æ¯”ä¾‹é¡¹ */
+    float D_Term = 0;			/* å¾®åˆ†é¡¹ */
+    float output_ = 0.0f;     // è¾“å‡º
     PID_Param_Config params_;
     float I_SeparaThreshold_;
 
-    float error_ = 0.0f;              // µ±Ç°Îó²î
-    float error_last_ = 0.0f;       // ÉÏ´ÎÎó²î
-    float feedback_last_ = 0.0f;    // ÉÏ´Î·´À¡Öµ
+    float error_ = 0.0f;              // å½“å‰è¯¯å·®
+    float error_last_ = 0.0f;       // ä¸Šä¸€æ¬¡è¯¯å·®
+    float feedback_last_ = 0.0f;    // ä¸Šä¸€æ¬¡åé¦ˆå€¼
 
-    float dt_ = 0.01f;             // ²ÉÑùÊ±¼ä£¬µ¥Î»Ãë
-    float last_time_s_ = 0.0f;      // ÉÏ´Îµ÷ÓÃµÄÊ±¼ä£¬µ¥Î»Ãë
-    bool isFirst_ = true; // ÊÇ·ñÎªµÚÒ»´Î¼ÆËã
-    float dt_error_ = 0.01f; //dtÄ¬ÈÏÖµ
-    // Ñ­»·Éè¶¨
+    float dt_ = 0.01f;             // é‡‡æ ·æ—¶é—´ï¼Œå•ä½ç§’
+    float last_time_s_ = 0.0f;      // ä¸Šä¸€æ¬¡é‡‡æ ·æ—¶é—´ï¼Œå•ä½ç§’
+    bool isFirst_ = true; // æ˜¯å¦ä¸ºç¬¬ä¸€æ¬¡
+    float dt_error_ = 0.01f; //dté»˜è®¤å€¼
+    // å¾ªç¯è®¾ç½®
     bool is_circular_ = false;
 };
 
-// ÔöÁ¿Ê½ PID ¿ØÖÆÆ÷ ¼ÓÈëÎ¢·Ö¸ú×ÙÆ÷
+// å¢é‡å¼PID é»˜è®¤1kHzæ›´æ–°é¢‘ç‡
 class PID_Incremental {
 public:
     /** 
-     * @brief ¹¹Ôìº¯Êı
-     * @param params PID ²ÎÊıÅäÖÃ½á¹¹Ìå
-     * @param td_ratio Î¢·Ö¸ú×ÙÆ÷¸ú×ÙÒò×Ó£¬·¶Î§0.0~1.0£¬0±íÊ¾²»ÆôÓÃÎ¢·Ö¸ú×ÙÆ÷.td_ratioÔ½´ó¸ú×ÙÔ½¿ì¡£
+     * @brief æ„é€ å‡½æ•°
+     * @param params PID å‚æ•°ç»“æ„ä½“
+     * @param td_ratio å¾®åˆ†ç³»æ•°æ¯”ä¾‹ï¼ŒèŒƒå›´0.0~1.0ï¼Œ0è¡¨ç¤ºä¸ä½¿ç”¨å¾®åˆ†é¡¹ã€‚td_ratioè¶Šå¤§ï¼Œå¾®åˆ†é¡¹å½±å“è¶Šå¤§
      *
     */
     PID_Incremental(PID_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, false, 0.0f, 0.0f}, float td_ratio = 0.0f)
@@ -168,32 +157,33 @@ public:
     }
 
         /**
-         * @brief ¼ÆËãÔöÁ¿Ê½PIDÊä³ö
-         * @param target Ä¿±êÖµ
-         * @param feedback µ±Ç°²âÁ¿Öµ
-         * @return PID¿ØÖÆÊä³ö
+         * @brief å¢é‡å¼PIDè®¡ç®—
+         * @param target ç›®æ ‡å€¼
+         * @param feedback å½“å‰åé¦ˆå€¼
+         * @return PIDè¾“å‡º
          */
         float pid_calc(float target, float feedback);
 
         /**
-         * @brief ÖØÖÃPID¿ØÖÆÆ÷µÄÄÚ²¿×´Ì¬
-         *        Ö÷ÒªÓÃÓÚÖØÖÃ»ı·ÖÏîºÍÀúÊ·Öµ¡£
+         * @brief é‡ç½®PIDçŠ¶æ€
+         *        éœ€è¦åœ¨ä½¿ç”¨å‰è°ƒç”¨ï¼Œä»¥æ¸…é™¤å†å²å€¼
          */
         void reset()
         {
             error_ = 0.0f;
             error_last_ = 0.0f;
             error_earlier_ = 0.0f;
-            output_ = 0.0f; // ÖØÖÃ output_
+            output_ = 0.0f; // output_
             output_last_ = 0.0f;
             td_v1_ = 0.0f;
             td_v2_ = 0.0f;
-            isFirst_ = true; // ÖØÖÃ isFirst_ ±êÖ¾
+            isFirst_ = true; //  isFirst_
         }
 
         /**
-         * @brief ¶¯Ì¬ĞŞ¸ÄPID²ÎÊı
-         * @param params ĞÂµÄPID²ÎÊı
+         * @brief å¢é‡å¼PIDå‚æ•°è®¾ç½®
+         * @param params PIDå‚æ•°ç»“æ„ä½“
+         * @param td_ratio å¾®åˆ†ç³»æ•°æ¯”ä¾‹
          */
         void set_params(const PID_Param_Config& params, float td_ratio);
 
@@ -203,26 +193,26 @@ public:
         float get_dt() const { return dt_; }
         
 private:
-    void calc_track_D(float expect, float dt); //Î¢·Ö¸ú×ÙÆ÷
-    bool isFirst_ = true; // ÊÇ·ñÎªµÚÒ»´Î¼ÆËã
+    void calc_track_D(float expect, float dt); // è®¡ç®—è·Ÿè¸ªå¾®åˆ†é¡¹
+    bool isFirst_ = true; // æ˜¯å¦ä¸ºç¬¬ä¸€æ¬¡
 
-    float error_ = 0.0f, error_last_ = 0.0f, error_earlier_ = 0.0f; // µ±Ç°Îó²î£¬ÉÏ´ÎÎó²î£¬ÉÏÉÏ´ÎÎó²î
-    float output_ = 0.0f;       // µ±Ç°×ÜÊä³ö
-    float output_last_ = 0.0f;  // ÉÏ´Î×ÜÊä³ö
+    float error_ = 0.0f, error_last_ = 0.0f, error_earlier_ = 0.0f; // å½“å‰è¯¯å·®ã€ä¸Šä¸€æ¬¡è¯¯å·®ã€ä¸Šä¸Šæ¬¡è¯¯å·®
+    float output_ = 0.0f;       // å½“å‰è¾“å‡º
+    float output_last_ = 0.0f;  // ä¸Šä¸€æ¬¡è¾“å‡º
 
     PID_Param_Config params_;
 
-    float I_Term = 0.0f; // »ı·ÖÆ÷Êä³ö
-    float P_Term = 0.0f; // ±ÈÀıÆ÷Êä³ö
-    float D_Term = 0.0f; // Î¢·ÖÆ÷Êä³ö
+    float I_Term = 0.0f; // Ié¡¹
+    float P_Term = 0.0f; // Pé¡¹
+    float D_Term = 0.0f; // Dé¡¹
 
-    float td_ratio_ = 0.0f; // track_D¸ú×ÙÒò×Ó
+    float td_ratio_ = 0.0f; // track_Då å¾®åˆ†é¡¹çš„æ¯”ä¾‹ï¼ŒèŒƒå›´0.0~1.0
 
-    float td_v1_ = 0.0f; //¸ú×ÙµÄÄ¿±êÎ»ÖÃ
-    float td_v2_ = 0.0f; //¸ú×ÙµÄÄ¿±êËÙ¶È
+    float td_v1_ = 0.0f; // è·Ÿè¸ªå¾®åˆ†é¡¹çš„ç¬¬ä¸€éƒ¨åˆ†ï¼Œè®¡ç®—è·Ÿè¸ªè¯¯å·®çš„å¾®åˆ†
+    float td_v2_ = 0.0f; // è·Ÿè¸ªå¾®åˆ†é¡¹çš„ç¬¬äºŒéƒ¨åˆ†ï¼Œè®¡ç®—è·Ÿè¸ªè¯¯å·®çš„äºŒé˜¶å¾®åˆ†
 
-    float dt_ = 0.001f;             // ²ÉÑùÊ±¼ä£¬µ¥Î»Ãë
-    float last_time_s_ = 0.0f;      // ÉÏ´Îµ÷ÓÃµÄÊ±¼ä£¬µ¥Î»Ãë
+    float dt_ = 0.001f;             // é»˜è®¤é‡‡æ ·æ—¶é—´ï¼Œå•ä½ç§’
+    float last_time_s_ = 0.0f;      // ä¸Šä¸€æ¬¡é‡‡æ ·æ—¶é—´ï¼Œå•ä½ç§’
 };
 
 typedef struct {

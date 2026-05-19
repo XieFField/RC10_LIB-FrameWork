@@ -1,6 +1,6 @@
 /**
  * @file   APP_tool.h
- * @brief  Í¨ÓÃ¹¤¾ßº¯ÊıÍ·ÎÄ¼ş
+ * @brief  é€šç”¨å·¥å…·å‡½æ•°å¤´æ–‡ä»¶
  * @author XieFField
  */
 
@@ -27,9 +27,9 @@ Type _tool_Abs(Type x)
 
 
 /**
- * @brief  ½«¾ØÕóÉèÖÃÎªµ¥Î»¾ØÕó
- * @param[in,out] M   Ö¸Ïò¾ØÕóÊµÀı
- * @note   ÒªÇó¾ØÕóÊÇ·½Õó (numRows == numCols)
+ * @brief  å°†çŸ©é˜µè®¾ç½®ä¸ºå•ä½çŸ©é˜µ
+ * @param[in,out] M   æŒ‡å‘çŸ©é˜µå®ä¾‹
+ * @note   è¦æ±‚çŸ©é˜µæ˜¯æ–¹é˜µ (numRows == numCols)
  */
 // void arm_set_identity_f32(arm_matrix_instance_f32 *M);
 
@@ -38,11 +38,11 @@ Type _tool_Abs(Type x)
  */
 int binarySearch(const uint32_t arr[], uint8_t count, uint32_t key);
 
-// Ä£°åº¯Êı£º½«Ò»¸öÖµÏŞÖÆÔÚ×îĞ¡ºÍ×î´óÖµÖ®¼ä
+// æ¨¡æ¿å‡½æ•°ï¼šå°†ä¸€ä¸ªå€¼é™åˆ¶åœ¨æœ€å°å’Œæœ€å¤§å€¼ä¹‹é—´
 /**
- * @param value ÒªÏŞÖÆµÄÖµ
- * @param min ×îĞ¡Öµ
- * @param max ×î´óÖµ
+ * @param value è¦é™åˆ¶çš„å€¼
+ * @param min æœ€å°å€¼
+ * @param max æœ€å¤§å€¼
  */
 template <typename T>
 static inline T constrain(T value, T min, T max) 
@@ -90,30 +90,30 @@ static inline T mm_to_m(T value_mm)
 
 
 
-//Ğ±ÆÂº¯Êı
+//æ–œå¡å‡½æ•°
 void ramp(float target, float& current, float max_change_rate, float dt);
 
-//»¡¶È×ª»»Îª½Ç¶Èº¯Êı
+//å¼§åº¦è½¬æ¢ä¸ºè§’åº¦å‡½æ•°
 float rad_to_deg(float rad);
 
-//½Ç¶È×ª»»Îª»¡¶Èº¯Êı
+//è§’åº¦è½¬æ¢ä¸ºå¼§åº¦å‡½æ•°
 float deg_to_rad(float deg);
 
 float normalize_deg_0_360(float a);
 
 float normalize_deg_pm180(float a);
-// ½« val_deg Ó³Éäµ½¡°×î½Ó½ü ref_deg(0..360)¡±µÄµÈ¼Û½Ç£¬²¢·µ»Ø 0..360
+// å°† val_deg æ˜ å°„åˆ°â€œæœ€æ¥è¿‘ ref_deg(0..360)â€çš„ç­‰ä»·è§’ï¼Œå¹¶è¿”å› 0..360
 float wrap_to_nearest_0_360(float ref_deg_0_360, float val_deg_any);
-// 2Dµã½á¹¹Ìå
+// 2Dç‚¹ç»“æ„ä½“
 typedef struct  {
     float x = 0, y = 0;
-    float theta = 0; // Ğı×ª½Ç¶È£¬µ¥Î»»¡¶È
+    float theta = 0; // æ—‹è½¬è§’åº¦ï¼Œå•ä½å¼§åº¦
 } Point2D;
 
-// 3Dµã½á¹¹Ìå
+// 3Dç‚¹ç»“æ„ä½“
 typedef struct {
     float x = 0, y = 0, z = 0;
-    float roll = 0, pitch = 0, yaw = 0; // Å·À­½Ç£¬µ¥Î»»¡¶È
+    float roll = 0, pitch = 0, yaw = 0; // æ¬§æ‹‰è§’ï¼Œå•ä½å¼§åº¦
 
 }Point3D;
 

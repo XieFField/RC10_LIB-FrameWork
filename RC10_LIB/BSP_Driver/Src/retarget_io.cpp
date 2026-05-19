@@ -1,10 +1,10 @@
 /**
  * @file retarget_io.cpp
- * @brief ÖØ¶¨Ïò C ¿âµÄÊäÈëÊä³öµ½ UART£¨ÊÊÓÃÓÚ Arm Compiler£©
- *        ½â¾ö°ëÖ÷»úÄ£Ê½ÏÂ _sys_open Î´ÊµÏÖµ¼ÖÂµÄ¶ÏµãÎÊÌâ¡£
- *        ÏÈÇ°´ú´aŸo·¨Õı³£ß\ĞĞ£¬csdnÉÏ›]ÕÒµ½Ê²üNÄÜÓÃµÄ·½·¨£¬
- *        »ù±¾¶¼ÊÇÕf´òé_MicroLib£¬µ«ÊÇMicroLib²»Ö§³Öcpp,
- *        ÕÒÁË°ëÌì²ÅÕÒµ½µÄÔ­ÒòºÍ½â›Q·½·¨
+ * @brief é‡å®šå‘ C åº“çš„è¾“å…¥è¾“å‡ºåˆ° UARTï¼ˆé€‚ç”¨äº Arm Compilerï¼‰
+ *        è§£å†³åŠä¸»æœºæ¨¡å¼ä¸‹ _sys_open æœªå®ç°å¯¼è‡´çš„æ–­ç‚¹é—®é¢˜ã€‚
+ *        å…ˆå‰ä»£ç¢¼ç„¡æ³•æ­£å¸¸é‹è¡Œï¼Œcsdnä¸Šæ²’æ‰¾åˆ°ä»€éº¼èƒ½ç”¨çš„æ–¹æ³•ï¼Œ
+ *        åŸºæœ¬éƒ½æ˜¯èªªæ‰“é–‹MicroLibï¼Œä½†æ˜¯MicroLibä¸æ”¯æŒcpp,
+ *        æ‰¾äº†åŠå¤©æ‰æ‰¾åˆ°çš„åŸå› å’Œè§£æ±ºæ–¹æ³•
  * @author XieFField
  * 
  */
@@ -13,9 +13,9 @@
 #include <cstdio>
 #include <cerrno>
 
-// £¡£¡£¡ÖØÒª£¡£¡£¡
-// ½« huart1 ĞŞ¸ÄÎªÄãÊµ¼ÊÓÃÓÚ´òÓ¡µ÷ÊÔĞÅÏ¢µÄ UART ¾ä±ú
-// ¿ÉÒÔÈÎÒâÖ¸¶¨£¬¶øÇÒß@‚€´®¿ÚÒ²²»Ó°í‘ÆäğNµÄÊ¹ÓÃ£»
+// ï¼ï¼ï¼é‡è¦ï¼ï¼ï¼
+// å°† huart1 ä¿®æ”¹ä¸ºä½ å®é™…ç”¨äºæ‰“å°è°ƒè¯•ä¿¡æ¯çš„ UART å¥æŸ„
+// å¯ä»¥ä»»æ„æŒ‡å®šï¼Œè€Œä¸”é€™å€‹ä¸²å£ä¹Ÿä¸å½±éŸ¿å…¶é¤˜çš„ä½¿ç”¨ï¼›
 extern UART_HandleTypeDef huart1;
 
 #if defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
@@ -40,18 +40,18 @@ FILEHANDLE _sys_open(const char *name, int openmode)
 {
     (void)name;
     (void)openmode;
-    return 1; // ·µ»ØÒ»¸öĞéÄâ¾ä±ú
+    return 1; // è¿”å›ä¸€ä¸ªè™šæ‹Ÿå¥æŸ„
 }
-//I/OÖØ¶¨Ïò
+//I/Oé‡å®šå‘
 int _sys_write(FILEHANDLE fh, const unsigned char *buf, unsigned int len, int mode) 
 {
     (void)fh;
     (void)mode;
     if (HAL_UART_Transmit(&huart1, (uint8_t*)buf, len, HAL_MAX_DELAY) == HAL_OK) 
-        return 0; // ·µ»Ø 0 ±íÊ¾³É¹¦
+        return 0; // è¿”å› 0 è¡¨ç¤ºæˆåŠŸ
     
     else 
-        return -1; // ·µ»Ø´íÎó
+        return -1; // è¿”å›é”™è¯¯
     
 }
 
@@ -60,16 +60,16 @@ int _sys_read(FILEHANDLE fh, unsigned char *buf, unsigned int len, int mode)
     (void)fh;
     (void)mode;
     if (HAL_UART_Receive(&huart1, buf, len, HAL_MAX_DELAY) == HAL_OK) 
-        return len; // ·µ»Ø³É¹¦¶ÁÈ¡µÄ×Ö½ÚÊı
+        return len; // è¿”å›æˆåŠŸè¯»å–çš„å­—èŠ‚æ•°
     else 
-        return -1; // ·µ»Ø´íÎó
+        return -1; // è¿”å›é”™è¯¯
     
 }
 
 /**
- * @brief ÖØ¶¨Ïò _ttywrch º¯Êı
- * ÓÃÓÚ´¦ÀíÎŞ»º³åµÄµ¥¸ö×Ö·ûÊä³ö¡£
- * @param ch Òª·¢ËÍµÄ×Ö·û
+ * @brief é‡å®šå‘ _ttywrch å‡½æ•°
+ * ç”¨äºå¤„ç†æ— ç¼“å†²çš„å•ä¸ªå­—ç¬¦è¾“å‡ºã€‚
+ * @param ch è¦å‘é€çš„å­—ç¬¦
  */
 void _ttywrch(int ch) 
 {
@@ -78,7 +78,7 @@ void _ttywrch(int ch)
 }
 
 
-// --- ÆäËû±ØÒªµÄº¯Êı£¬·ÀÖ¹Á´½Ó°ëÖ÷»ú°æ±¾ ---
+// --- å…¶ä»–å¿…è¦çš„å‡½æ•°ï¼Œé˜²æ­¢é“¾æ¥åŠä¸»æœºç‰ˆæœ¬ ---
 
 void _sys_exit(int return_code) 
 {
@@ -115,7 +115,7 @@ long _sys_flen(FILEHANDLE fh)
     return -1;
 }
 
-// C++ ´¿Ğéº¯ÊıºÍÒì³£´¦ÀíÏà¹ØµÄ×®
+// C++ çº¯è™šå‡½æ•°å’Œå¼‚å¸¸å¤„ç†ç›¸å…³çš„æ¡©
 void __cxa_pure_virtual() 
 { 
     while (1)  

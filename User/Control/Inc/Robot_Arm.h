@@ -1,23 +1,23 @@
 /**
  * @file Robot_Arm.h
  * @author XieFField
- * @brief ´®Áª¸ÕÌå±ÛÎüÅÌÔË¶¯½¨Ä£.      
+ * @brief ä¸²è”åˆšä½“è‡‚å¸ç›˜è¿åŠ¨å»ºæ¨¡.      
  * @version 1.0
- * Íê³É»ù±¾¿ØÖÆ¹¦ÄÜ
+ * å®ŒæˆåŸºæœ¬æ§åˆ¶åŠŸèƒ½
  * @version 2.0
- * Ôö¼ÓÑÅ¿É±È¾ØÕó¼ÆËã£¬Ö§³ÖÊÖ¶¯¹Ø½ÚËÙ¶ÈÄ£Ê½
+ * å¢åŠ é›…å¯æ¯”çŸ©é˜µè®¡ç®—ï¼Œæ”¯æŒæ‰‹åŠ¨å…³èŠ‚é€Ÿåº¦æ¨¡å¼
  * @version 3.0
- * Ôö¼ÓĞı×ªÂ·¾¶²ßÂÔÖ§³Ö
+ * å¢åŠ æ—‹è½¬è·¯å¾„ç­–ç•¥æ”¯æŒ
  * 
- * @attention ÔÆÌ¨Ğı×ªÂ·¾¶£¬ÔÚ±Æ½üÄ¿±êÖµµÄÊ±ºò£¬ÊÖ¶¯ÇĞ»»Îª×î¶ÌÂ·¾¶²ßÂÔ£¬±ÜÃâ´ó·ù¶È³¬µ÷
- *            ·´ÕıĞ´ºÍÓÃµÄÈË¶¼ÊÇÎÒ×Ô¼º£¬ÔõÃ´·½±ãÔõÃ´À´£¬ÀÁµÃ·â×°ÁË
+ * @attention äº‘å°æ—‹è½¬è·¯å¾„ï¼Œåœ¨é€¼è¿‘ç›®æ ‡å€¼çš„æ—¶å€™ï¼Œæ‰‹åŠ¨åˆ‡æ¢ä¸ºæœ€çŸ­è·¯å¾„ç­–ç•¥ï¼Œé¿å…å¤§å¹…åº¦è¶…è°ƒ
+ *            åæ­£å†™å’Œç”¨çš„äººéƒ½æ˜¯æˆ‘è‡ªå·±ï¼Œæ€ä¹ˆæ–¹ä¾¿æ€ä¹ˆæ¥ï¼Œæ‡’å¾—å°è£…äº†
  * 
- * @attention ÉÏ·½Ìáµ½µÄÒÑ½â¾ö
+ * @attention ä¸Šæ–¹æåˆ°çš„å·²è§£å†³
  */
 
 #ifndef __ROBOT_ARM_H
 #define __ROBOT_ARM_H
-/* ÄÏ±±Â·¶à */
+/* é”Ÿè¾ƒæ†‹æ‹·è·¯é”Ÿæ–¤æ‹· */
 #pragma once
 
 #ifdef __cplusplus
@@ -40,84 +40,89 @@ extern "C" {
 #include "Motor_DM.h"
 
 /**
- * @brief Ò»ÇĞµ¥Î»¶¼ÊÇÃ×ºÍ¶È
+ * @brief ä¸€é”Ÿå«ç¢‰æ‹·ä½é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿé˜¶å’Œè®¹æ‹·
  */
 typedef struct {
-    float max_launchHeight_ = 0.0f; // Éı½µ×î´óĞĞ³Ì£¬µ¥Î»Ã× 0
-    float max_stretchLength_ = 0.0f; // ÉìÕ¹×î´óĞĞ³Ì£¬µ¥Î»Ã×
-    float arm_length_ = 0.0f; // »úĞµ±Û³¤¶È
-    float end_link_length_ = 0.0f; // Ä©¶ËÁ¬¸Ë³¤¶È£¬ÎüÅÌµ½»úĞµ±ÛÁ¬½ÓµãµÄ¾àÀë£¬µ¥Î»Ã×
-    float max_pitchRPM_ = 50.0f; // Ä©¶Ë¹Ø½Ú×î´ó×ªËÙ£¬µ¥Î»RPM   
+    float max_launchHeight_ = 0.0f; // å‡é™æœ€å¤§è¡Œç¨‹ï¼Œå•ä½ç±³ 0
+    float max_stretchLength_ = 0.0f; // ä¼¸å±•æœ€å¤§è¡Œç¨‹ï¼Œå•ä½ç±³
+    float arm_length_ = 0.0f; // æœºæ¢°è‡‚é•¿åº¦
+    float end_link_length_ = 0.0f; // æœ«ç«¯è¿æ†é•¿åº¦ï¼Œå¸ç›˜åˆ°æœºæ¢°è‡‚è¿æ¥ç‚¹çš„è·ç¦»ï¼Œå•ä½ç±³
+    float max_pitchRPM_ = 50.0f; // æœ«ç«¯å…³èŠ‚æœ€å¤§è½¬é€Ÿï¼Œå•ä½RPM   
+    float rotate_end = 265.0f;
     
 
-    float stretch_Ratio_ = 0.0f; // ÉìÕ¹±ÈÂÊ£¬ÉìÕ¹µç»ú×ªÒ»È¦£¬ÉìÕ¹¶àÉÙÃ×   0.0942Ã×(94.2mm)
-    float launch_Ratio_ = 0.0f; // Éı½µ±ÈÂÊ£¬Éı½µµç»ú×ªÒ»È¦£¬Éı½µ¶àÉÙÃ×    0.01099Ã×(109.9mm)
-    float rotate_gearRatio_ = 0.0f; // Ğı×ª¼õËÙ±È£¬Ğı×ªµç»ú×ªÒ»È¦£¬»úĞµ±Û×ª¶àÉÙ¶È 144.878¶È()   µç»ú×ª222.289627¶È£¬»úĞµ±Û×ª90¶È¡£  ĞÂ½ÃÕı145.755789¶È
-    float pitch_gearRatio_ = 0.0f; // ¸©Ñö¼õËÙ±È£¬¸©Ñöµç»ú×ªÒ»È¦£¬Ä©¶Ë¹Ø½Ú×ª¶àÉÙ¶È 360¶È£¬Ö±Çı
+    float stretch_Ratio_ = 0.0f; // ä¼¸å±•æ¯”ç‡ï¼Œä¼¸å±•ç”µæœºè½¬ä¸€åœˆï¼Œä¼¸å±•å¤šå°‘ç±³   0.0942ç±³(94.2mm)
+    float launch_Ratio_ = 0.0f; // å‡é™æ¯”ç‡ï¼Œå‡é™ç”µæœºè½¬ä¸€åœˆï¼Œå‡é™å¤šå°‘ç±³    0.01099ç±³(109.9mm)
+    float rotate_gearRatio_ = 0.0f; // æ—‹è½¬å‡é€Ÿæ¯”ï¼Œæ—‹è½¬ç”µæœºè½¬ä¸€åœˆï¼Œæœºæ¢°è‡‚è½¬å¤šå°‘åº¦ 144.878åº¦()   ç”µæœºè½¬222.289627åº¦ï¼Œæœºæ¢°è‡‚è½¬90åº¦ã€‚  æ–°çŸ«æ­£145.755789åº¦
+    float pitch_gearRatio_ = 0.0f; // ä¿¯ä»°å‡é€Ÿæ¯”ï¼Œä¿¯ä»°ç”µæœºè½¬ä¸€åœˆï¼Œæœ«ç«¯å…³èŠ‚è½¬å¤šå°‘åº¦ 360åº¦ï¼Œç›´é©±
+    float min_rotate_angle_ = 0.0f; // æœ€å°æ—‹è½¬è§’åº¦
+    float max_rotate_angle_ = 0.0f; // æœ€å¤§æ—‹è½¬è§’åº¦
+    float safe_height_ = 0.0f; // å®‰å…¨é«˜åº¦
+    float store_height_ = 0.0f; // å‚¨å­˜é«˜åº¦
 
-    float min_rotate_angle_ = 0.0f; // ×îĞ¡Ğı×ª½Ç¶È
-    float max_rotate_angle_ = 0.0f; // ×î´óĞı×ª½Ç¶È
-    float safe_height_ = 0.0f; // °²È«¸ß¶È£¬µ¥Î»Ã×£¬µÍÓÚÕâ¸ö¸ß¶È£¬»úĞµ±ÛÔÆÌ¨Ğı×ªÊÜÏŞ
-    float store_height_ = 0.0f; // ´æ´¢¸ß¶È£¬µ¥Î»Ã×£¬»úĞµ±ÛÔÚÕâ¸ö¸ß¶È½øĞĞ´æ´¢ºÍÈ¡³ö²Ù×÷
-    GPIO_TypeDef * Sucker_GPIO_Port; // ÎüÅÌ¿ØÖÆGPIO¶Ë¿Ú
-    uint16_t Sucker_GPIO_Pin;      // ÎüÅÌ¿ØÖÆGPIOÒı½Å
+    GPIO_TypeDef * Sucker_GPIO_Port; // å¸ç›˜GPIOæ§åˆ¶ç«¯å£
+    uint16_t Sucker_GPIO_Pin;      // å¸ç›˜GPIOæ§åˆ¶å¼•è„š
+
+    GPIO_TypeDef* Store_GPIO_Port; // å‚¨å­˜ä½GPIOæ§åˆ¶ç«¯å£
+    uint16_t Store_GPIO_Pin;      // å‚¨å­˜ä½GPIOæ§åˆ¶å¼•è„š
+
+    GPIO_TypeDef* Sucker_Soleniod_GPIO_Port; // å¸ç›˜ç”µç£é˜€GPIOæ§åˆ¶ç«¯å£
+    uint16_t Sucker_Soleniod_GPIO_Pin;      // å¸ç›˜ç”µç£é˜€GPIOæ§åˆ¶å¼•è„š
+
+    GPIO_TypeDef* Store_Soleniod_GPIO_Port; // å‚¨å­˜ä½ç”µç£é˜€GPIOæ§åˆ¶ç«¯å£
+    uint16_t Store_Soleniod_GPIO_Pin;      // å‚¨å­˜ä½ç”µç£é˜€GPIOæ§åˆ¶å¼•è„š
 }Arm_InitData_S;
 
 typedef enum {
-    Flat_Status,//Æ½·Å
-    Place_Status//²à·Å
-}SuckerJoint_E;
-
-typedef enum {
-    SUCK, //Îü
-    STOP  //Í£
+    SUCK, // å¸é™„
+    STOP  // åœæ­¢
 }Sucker_Status_E;
 
 typedef struct{
-    float x; //Ä©¶Ë¹Ø½Ú×ø±ê
+    float x; // æœ«ç«¯å…³èŠ‚åæ ‡
     float y;
     float z;
 
-    float suckerJoint_status_ ; // Ä©¶Ë¹Ø½Ú×´Ì¬
+    float suckerJoint_status_ ; // æœ«é”Ÿå‰¿å…³æ–¤æ‹·çŠ¶æ€
 }Arm_Point_S;
 
 typedef struct{
-    float launchJoint_Height_; // Éı½µ¹Ø½Ú×´Ì¬
-    float stretchJoint_Length_; // ÉìÕ¹¹Ø½Ú×´Ì¬
-    float rotateJoint_angle_; // Ğı×ª¹Ø½Ú×´Ì¬
-    float suckerJoint_angle_; // Ä©¶Ë¹Ø½Ú×´Ì¬ ³¯ÏÂÎª0¶È
+    float launchJoint_Height_; // å‡é™é«˜åº¦ ç±³
+    float stretchJoint_Length_; // ä¼¸å±•é•¿åº¦ ç±³
+    float rotateJoint_angle_; // æ—‹è½¬è§’åº¦ åº¦
+    float suckerJoint_angle_; // å¸ç›˜è§’åº¦ åº¦
 }Joint_Status_S;
 
 typedef enum{
-    TARGET_POSITION_MODE, // Ä¿±êÎ»ÖÃÄ£Ê½
-    MANUAL_MOTOR_POSITION_MODE, // ÊÖ¶¯µç»úÎ»ÖÃÄ£Ê½
-    CURRENT_CONTROL_MODE // µçÁ÷¿ØÖÆÄ£Ê½ ÒÀ¾ÉÊ¹ÓÃJoint_Status_S´æ´¢Ä¿±êµçÁ÷Öµ
-}Arm_Control_mode_E;
+    TARGET_POSITION_MODE, // ç›®æ ‡ä½ç½®æ¨¡å¼
+    MANUAL_MOTOR_POSITION_MODE, // æ‰‹åŠ¨ç”µæœºä½ç½®æ¨¡å¼
+    CURRENT_CONTROL_MODE // ç”µæµæ§åˆ¶æ¨¡å¼ ç”¨äºå­˜å‚¨ç›®æ ‡ä½ç½®
+}Arm_control_mode_E;
 
-//rotate Ğı×ªÂ·¾¶Ã¶¾Ù
+//rotate æ—‹è½¬è·¯å¾„ç­–ç•¥æšä¸¾
 typedef enum {
-    ROTATE_PATH_SHORTEST,   // ×î¶ÌÂ·¾¶
-    ROTATE_PATH_POSITIVE,   // ÕıÏòÂ·¾¶
-    ROTATE_PATH_NEGATIVE    // ¸ºÏòÂ·¾¶
+    ROTATE_PATH_SHORTEST,   // æœ€çŸ­è·¯å¾„
+    ROTATE_PATH_POSITIVE,   // æ­£å‘è·¯å¾„
+    ROTATE_PATH_NEGATIVE    // è´Ÿå‘è·¯å¾„
 }Rotate_Strategy_E;
 
 typedef struct{
-    float launch_current; //Éı½µµç»úµçÁ÷
-    float stretch_current; //ÉìÕ¹µç»úµçÁ÷
-    float rotate_current; //Ğı×ªµç»úµçÁ÷
-    float pitch_current; //Ä©¶Ë¹Ø½Úµç»úµçÁ÷
+    float launch_current; // å‡é™ç”µæµ
+    float stretch_current; // ä¼¸å±•ç”µæµ
+    float rotate_current; // æ—‹è½¬ç”µæµ
+    float pitch_current; // æœ«é”Ÿå‰¿å…³èŠ‚ç”µæµ
 }ARMotor_Current_S;
 
 typedef struct{
-    // ×èÄáÏµÊı ¦Ë
+    // é›…å¯æ¯”çŸ©é˜µå‚æ•°
     float jac_lambda_ = 0.02f;
 
-    // ÏŞ·ù
-    float vmax_xy_ = 0.60f;  // Ä©¶Ë XY Æ½Ãæ×î´óÏßËÙ m/s
-    float vmax_z_  = 0.60f;  // Ä©¶Ë Z Öá×î´óÏßËÙ m/s
-    float hdot_max_ = 0.80f;             // Éı½µ¹Ø½Ú×î´óËÙ¶È m/s
-    float ddot_max_ = 0.80f;             // ÉìÕ¹¹Ø½Ú×î´óËÙ¶È m/s
-    float thetadot_deg_max_ = 90.0f;     // Ğı×ª¹Ø½Ú×î´ó½ÇËÙ¶È deg/s
+    // é€Ÿåº¦é™åˆ¶
+    float vmax_xy_ = 0.60f;  // æœ«é”Ÿæ–¤æ‹· XY å¹³é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿ m/s
+    float vmax_z_  = 0.60f;  // æœ«é”Ÿæ–¤æ‹· Z é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿ m/s
+    float hdot_max_ = 0.80f;             // é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæˆªæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·ä¿£é”Ÿ m/s
+    float ddot_max_ = 0.80f;             // é”Ÿæ–¤æ‹·å±•é”Ÿæˆªæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·ä¿£é”Ÿ m/s
+    float thetadot_deg_max_ = 90.0f;     // é”Ÿæ–¤æ‹·è½¬é”Ÿæˆªæ–¤æ‹·é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·é”ŸåŠ«è®¹æ‹· deg/s
 }Jacobian_InitData_S;
 
 typedef struct{
@@ -129,27 +134,27 @@ typedef struct{
 
 typedef struct{
     float ramp__maxspeed_ = 0.0f;
-    float max_accel_ = 0.0f; // ¼ÓËÙ¶ÈÏŞÖÆ (Motor Angle deg/s^2)£¬ÖµÔ½Ğ¡Æğ²½/É²³µÔ½Æ½»¬
-    float current_velocity_ = 0.0f; // ¼ÇÂ¼µ±Ç°ËÙ¶È
+    float max_accel_ = 0.0f; // æœ€å¤§åŠ é€Ÿåº¦ (Motor Angle deg/s^2)
+    float current_velocity_ = 0.0f; // å½“å‰é€Ÿåº¦ (Motor Angle deg/s)
     float ramp_target_ = 0.0f; 
     float filter_k_ = 0.0f; 
 }Fliter_Ramp_S;
 
 /** 
- * @brief ÓÖ±ä³ÉËÄ×ÔÓÉ¶ÈÁË£¬ºÃ£¬ÄÇÃ´ºÃ¡£
- * @note ÕâÀïµÄ×ø±ê»òÕßĞĞ³Ìµ¥Î»¶¼ÊÇÃ×£¬½Ç¶Èµ¥Î»ÊÇ¶È£¬½Ç¶ÈÖÆ¡£
+ * @brief Robot_Armç±»ï¼Œè´Ÿè´£æœºæ¢°è‡‚çš„è¿åŠ¨æ§åˆ¶å’ŒçŠ¶æ€ç®¡ç†
+ * @note è¯¥ç±»è´Ÿè´£æœºæ¢°è‡‚çš„è¿åŠ¨æ§åˆ¶å’ŒçŠ¶æ€ç®¡ç†ï¼ŒåŒ…æ‹¬ä½ç½®æ§åˆ¶ã€é€Ÿåº¦æ§åˆ¶å’ŒåŠ›æ§åˆ¶ç­‰åŠŸèƒ½
  */
 class Robot_Arm {
 
 protected:
     float now_time_s_ = 0.0f; 
     Arm_InitData_S init_data_;
-    DJI_Motor* motor_launch_ = nullptr; // Éı½µµç»ú
-    DJI_Motor* motor_stretch_ = nullptr; // ÉìÕ¹µç»ú
-    DJI_Motor* motor_rotate_ = nullptr; // Ğı×ªµç»ú
+    DJI_Motor* motor_launch_ = nullptr; // å‡é™ç”µæœº
+    DJI_Motor* motor_stretch_ = nullptr; // ä¼¸å±•ç”µæœº
+    DJI_Motor* motor_rotate_ = nullptr; // æ—‹è½¬ç”µæœº
 
-    DM_Motor* motor_pitch_ = nullptr; // Ä©¶Ë¹Ø½Ú¸©Ñöµç»ú
-    bool is_pitchEnable_ = false; //ÊÇ·ñÊ¹ÄÜµç»ú
+    DM_Motor* motor_pitch_ = nullptr; // æœ«é”Ÿå‰¿å…³èŠ‚ç”µæœº
+    bool is_pitchEnable_ = false; // æ˜¯å¦ä½¿èƒ½ä¿¯ä»°ç”µæœº
 
 public:
     
@@ -159,9 +164,7 @@ public:
     ~Robot_Arm(){}
 
     /**
-     * @brief ¸üĞÂÄ¿±êÎ»ÖÃ¡¢ËÙ¶Èµ½µç»ú
-     *        ¸üĞÂµ±Ç°µÄlaunch_height_¡¢stretch_length_¡¢
-     *        rotate_angle_£¬Õâ¸öÖ÷ÒªÊÇÓÃÓÚµ÷ÊÔ
+     * @brief æ§åˆ¶çŠ¶æ€æ›´æ–°
      * 
      */
     void update();
@@ -169,9 +172,9 @@ public:
     float get_dt(){return this->dt_;}
 
     /**
-     * @brief ÉèÖÃ»úĞµ±Û¿ØÖÆÄ£Ê½
+     * @brief é”Ÿæ–¤æ‹·é”ŸçŸ«ä¼™æ‹·æ¢°é”Ÿæ¡”åŒ¡æ‹·é”Ÿæ–¤æ‹·æ¨¡å¼
      */
-    void set_controlMode(Arm_Control_mode_E mode)
+    void set_controlMode(Arm_control_mode_E mode)
     {
         if(control_mode_ != mode)
         {
@@ -185,26 +188,26 @@ public:
     void registerMotor_Rotate(DJI_Motor* motor){ motor_rotate_ = motor; }
     void registerMotor_Pitch(DM_Motor* motor){ motor_pitch_ = motor; }
 
-    // ÉèÖÃÄ¿±êÎ»ÖÃ
+    // é”Ÿæ–¤æ‹·é”Ÿæ–¤æ‹·ç›®é”Ÿæ–¤æ‹·ä½é”Ÿæ–¤æ‹·
     void setArmTarget(Arm_Point_S target){ arm_target_ = target; }
     Arm_Point_S getArmTarget() const { return arm_target_; }
 
     void setSuckerStatus(Sucker_Status_E status){ sucker_status_ = status; }
 
+    void setStoreSuckerStatus(Sucker_Status_E status){ store_sucker_status_ = status; }
 
     Sucker_Status_E getSuckerStatus() const { return sucker_status_; }
 
+    Sucker_Status_E getStoreSuckerStatus() const { return store_sucker_status_; }
+
     /**
-     * @brief ÉèÖÃĞı×ªÂ·¾¶²ßÂÔ
+     * @brief æ—‹è½¬è§’åº¦åˆæ³•åŒ–ï¼Œç¡®ä¿æ—‹è½¬è§’åº¦åœ¨åˆç†èŒƒå›´å†…ï¼Œé¿å…è¶…å‡ºæœºæ¢°é™åˆ¶
+      * @param current_0_360 å½“å‰æ—‹è½¬è§’åº¦ï¼ŒèŒƒå›´0~360åº¦
      */
-    void setRotateStrategy(Rotate_Strategy_E strategy){ rotate_strategy_ = strategy; }
-
-    Rotate_Strategy_E getRotateStrategy() const { return rotate_strategy_; }
-
-    float calc_rotate_targetByStrategy(float current_cont_angle, float target_raw_0_360);
+    float calc_legal_rotate_target(float current_0_360, float target_0_360);
 
     /**
-     * @brief ÊÖ¶¯ÉèÖÃÃ¿¸ö×ÔÓÉ¶ÈµÄÄ¿±êÎ»ÖÃ£¬µ¥Î»£ºm»ò¶È
+     * @brief è®¾ç½®ç›®æ ‡å‡é™é«˜åº¦
      */
 
     void set_LaunchHeight(float height)
@@ -213,7 +216,7 @@ public:
     }
 
     /**
-     * @brief ÊÖ¶¯ÉèÖÃÃ¿¸ö×ÔÓÉ¶ÈµÄÄ¿±êÎ»ÖÃ£¬µ¥Î»£ºm»ò¶È
+     * @brief è®¾ç½®ç›®æ ‡ä¼¸å±•é•¿åº¦
      */
     void set_StretchLength(float length)
     {
@@ -221,7 +224,7 @@ public:
     }
 
     /**
-     * @brief ÊÖ¶¯ÉèÖÃÃ¿¸ö×ÔÓÉ¶ÈµÄÄ¿±êÎ»ÖÃ£¬µ¥Î»£ºm»ò¶È
+     * @brief è®¾ç½®ç›®æ ‡æ—‹è½¬è§’åº¦
      */
     void set_RotateAngle(float angle)
     {
@@ -229,7 +232,7 @@ public:
     }
 
     /**
-     * @brief ÊÖ¶¯ÉèÖÃÃ¿¸ö×ÔÓÉ¶ÈµÄÄ¿±êÎ»ÖÃ£¬µ¥Î»£ºm»ò¶È
+     * @brief è®¾ç½®ç›®æ ‡ä¿¯ä»°è§’åº¦
      */
 
     void set_PitchAngle(float angle)
@@ -238,7 +241,7 @@ public:
     }
 
 
-    //ÉèÖÃµç»úÊÇ·ñ·´Ïà trueÈ¡·´£¬false²»È¡·´
+    //è®¾ç½®åç›¸ trueåç›¸ falseä¸åç›¸
     void setLaunchReversed(bool reversed) {sign_reversed_.sign_launch_ = reversed ? -1.0f : 1.0f;}
     void setStretchReversed(bool reversed) {sign_reversed_.sign_stretch_ = reversed ? -1.0f : 1.0f;}
     void setRotateReversed(bool reversed) {sign_reversed_.sign_rotate_  = reversed ? -1.0f : 1.0f;}
@@ -249,40 +252,38 @@ public:
 
 private:    
     
-    Rotate_Strategy_E rotate_strategy_ = ROTATE_PATH_SHORTEST; // Ğı×ªÂ·¾¶²ßÂÔ£¬Ä¬ÈÏ×î¶ÌÂ·¾¶
     Joint_Status_S joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; 
 
     Joint_Status_S target_joint_angle_ = {0.0f, 0.0f, 0.0f, 0.0f}; 
     
-    void inverseKinematics(Arm_Point_S arm_target_); // ÔË¶¯Ñ§Äæ½â
+    void inverseKinematics(Arm_Point_S arm_target_); // é€†è§£ç®—
 
 
 
-    // ÕıÔË¶¯Ñ§£º¼ÆËãÄ©¶ËÎ»×Ë£¨»ùÓÚµ±Ç°Ä¿±ê»òµç»ú½Ç¶È£©
-    // ·µ»Ø true ±íÊ¾¼ÆËã³É¹¦£¬½á¹ûĞ´Èë out
+    // æ­£è§£ç®—
     bool forwardKinematics(Arm_Point_S& out) const;
 
-    Arm_Point_S arm_target_ = {0.0f, 0.0f, 0.0f, 0.0f}; // »úĞµ±ÛÄ©¶ËÄ¿±êÎ»ÖÃ
-    Arm_Point_S arm_ = {0.0f, 0.0f, 0.0f, 0.0f}; // »úĞµ±Û¹Ø½ÚÄ©¶Ëµ±Ç°Î»ÖÃ
+    Arm_Point_S arm_target_ = {0.0f, 0.0f, 0.0f, 0.0f}; // ç›®æ ‡ç‚¹
+    Arm_Point_S arm_ = {0.0f, 0.0f, 0.0f, 0.0f}; // å½“å‰ç‚¹
 
-    Sucker_Status_E sucker_status_ = Sucker_Status_E::STOP; // ÎüÅÌ×´Ì¬
-
-    Arm_Control_mode_E control_mode_ = TARGET_POSITION_MODE; // »úĞµ±Û¿ØÖÆÄ£Ê½
-
-    Arm_Point_S arm_forward_ = {0.0f, 0.0f, 0.0f, 0.0f}; // »úĞµ±ÛÕıÔË¶¯Ñ§¼ÆËãÎ»ÖÃ
+    Sucker_Status_E sucker_status_ = Sucker_Status_E::STOP; // å¸é™„çŠ¶æ€
+    Sucker_Status_E store_sucker_status_ = Sucker_Status_E::STOP; // å‚¨ä½å¸é™„çŠ¶æ€
 
 
+    Arm_control_mode_E control_mode_ = TARGET_POSITION_MODE; // æœºæ¢°è‡‚æ§åˆ¶æ¨¡å¼
+
+    Arm_Point_S arm_forward_ = {0.0f, 0.0f, 0.0f, 0.0f}; // æ­£è§£ç®—å¾—åˆ°çš„ç‚¹
 
 
 
-    // Ê±¼ä´Á£¨Ãë£©
+
     float last_time_s_ = 0.0f;
     float dt_ = 0.0f;
     bool  time_initialized_ = false;
 
 protected:
 /*================================================================*/
-    /*¹Ø½Ú½Ç¶È->µç»ú×Ü½Ç¶È*/
+    /*å…³èŠ‚ä½ç½®->ç”µæœºè§’åº¦*/
     float launchHeight_to_MotorTotalAngle(float height)
     {
         return sign_reversed_.sign_launch_ * height / init_data_.launch_Ratio_ * 360.0f;
@@ -304,7 +305,7 @@ protected:
     }
     
 /*=================================================================*/
-    /*µç»ú×Ü½Ç¶È->¹Ø½Ú½Ç¶È*/
+    /*ç”µæœºè§’åº¦->å…³èŠ‚ä½ç½®*/
     float MotorTotalAngle_to_launchHeight(float motor_angle)
     {
         return sign_reversed_.sign_launch_ * motor_angle * init_data_.launch_Ratio_ / 360.0f;
@@ -334,32 +335,35 @@ protected:
 private:
     MotorReversed_S sign_reversed_  = {1.0f, 1.0f, 1.0f, 1.0f};
     float last_rotate_cmd_ = 0.0f;
+    Rotate_Strategy_E rotate_strategy_ = ROTATE_PATH_SHORTEST;
+    float prev_rotate_target_ = 0.0f;
     float ramped_rotateMotorAngle_ = 0.0f;
+    float prev_norm_target_ = 0.0f;
     
 //bool  time_initialized_ = false;
     
     Fliter_Ramp_S rotate_fliter_ramp_ = {
         .ramp__maxspeed_ = 36000.0f,
-        .max_accel_ = 80000.0f, // ¼ÓËÙ¶ÈÏŞÖÆ (Motor Angle deg/s^2)£¬ÖµÔ½Ğ¡Æğ²½/É²³µÔ½Æ½»¬
-        .current_velocity_ = 0.0f, // ¼ÇÂ¼µ±Ç°ËÙ¶È
+        .max_accel_ = 80000.0f, //  (Motor Angle deg/s^2)
+        .current_velocity_ = 0.0f, // å½“å‰æ—‹è½¬ç”µæœºé€Ÿåº¦ (Motor Angle deg/s)
         .ramp_target_ = 0.0f, 
-        .filter_k_ = 200.0f // ÂË²¨(Æ½»¬)ÏµÊı£¬ÖµÔ½´óµ½´ïÄ¿±êÔ½¿ì£¬Ô½Ğ¡É²³µÔ½Æ½»¬
+        .filter_k_ = 200.0f // è¶Šå°è¶Šå¹³æ»‘ è¶Šå¤§è¶Šå¿«
     };
     
     Fliter_Ramp_S strech_fliter_ramp_ = {
         .ramp__maxspeed_ = 600000.0f,
-        .max_accel_ = 1000000.0f, // ÉìÕ¹¼ÓËÙ¶ÈÏŞÖÆ (Motor Angle deg/s^2)
-        .current_velocity_ = 0.0f, // ¼ÇÂ¼µ±Ç°ÉìÕ¹ËÙ¶È
+        .max_accel_ = 1000000.0f, // å±•å¼€é€Ÿåº¦é™åˆ¶ (Motor Angle deg/s^2)
+        .current_velocity_ = 0.0f, // è®°å½•å½“å‰å±•å¼€é€Ÿåº¦
         .ramp_target_ = 0.0f, 
-        .filter_k_ = 450.0f // ÉìÕ¹ÂË²¨(Æ½»¬)ÏµÊı£¬ÖµÔ½´óµ½´ïÄ¿±êÔ½¿ì£¬Ô½Ğ¡É²³µÔ½Æ½»¬
+        .filter_k_ = 450.0f // å±•å¼€æ»¤æ³¢å™¨(å¹³æ»‘)ç³»æ•°ï¼Œå€¼è¶Šå¤§å“åº”è¶Šå¿«ï¼Œè¶Šå°è¶Šå¹³æ»‘
     };
 
     Fliter_Ramp_S launch_fliter_ramp_ = {
         .ramp__maxspeed_ = 1500000.0f,
-        .max_accel_ = 3000000.0f, // Éı½µ¼ÓËÙ¶ÈÏŞÖÆ (Motor Angle deg/s^2)
-        .current_velocity_ = 0.0f, // ¼ÇÂ¼µ±Ç°Éı½µËÙ¶È
+        .max_accel_ = 3000000.0f, //  (Motor Angle deg/s^2)
+        .current_velocity_ = 0.0f, // è®°å½•å½“å‰ launch é€Ÿåº¦
         .ramp_target_ = 0.0f, 
-        .filter_k_ = 850.0f // Éı½µÂË²¨(Æ½»¬)ÏµÊı£¬ÖµÔ½´óµ½´ïÄ¿±êÔ½¿ì£¬Ô½Ğ¡É²³µÔ½Æ½»¬
+        .filter_k_ = 850.0f // launch æ»¤æ³¢å™¨(å¹³æ»‘)ç³»æ•°ï¼Œå€¼è¶Šå¤§å“åº”è¶Šå¿«ï¼Œè¶Šå°è¶Šå¹³æ»‘
     };
 
     
@@ -367,14 +371,13 @@ private:
     {
         float diff = target - current;
         
-        // ÆÚÍûÄ¿±êËÙ¶È (Ò»´ÎÆ½»¬ P¿ØÖÆ)
         float target_vel = diff * ramp.filter_k_;
 
-        // ËÙ¶ÈÏŞ·ù
+        // é™åˆ¶ç›®æ ‡é€Ÿåº¦
         if (target_vel > ramp.ramp__maxspeed_) target_vel = ramp.ramp__maxspeed_;
         if (target_vel < -ramp.ramp__maxspeed_) target_vel = -ramp.ramp__maxspeed_;
 
-        // ¼ÓËÙ¶ÈÏŞ·ù
+        // è®¡ç®—æœ€å¤§é€Ÿåº¦å˜åŒ–é‡
         float max_dv = ramp.max_accel_ * dt_;
         if (target_vel > ramp.current_velocity_ + max_dv) {
             ramp.current_velocity_ += max_dv;
@@ -384,13 +387,13 @@ private:
             ramp.current_velocity_ = target_vel;
         }
 
-        // ¼ÆËã²½³¤
+        // è®¡ç®—æ­¥é•¿
         float step = ramp.current_velocity_ * dt_;
 
-        // Èç¹û¾àÀëºÍËÙ¶È¶¼¼«Ğ¡£¬Ö±½Ó¸³Öµ·ÀÖ¹¸¡µãÊı¼ÆËãÕğµ´
+        // æ£€æŸ¥æ˜¯å¦åˆ°è¾¾ç›®æ ‡ä½ç½®
         if(std::abs(diff) < 0.01f && std::abs(ramp.current_velocity_) < 0.1f) 
         {
-            ramp.current_velocity_ = 0.0f; // ÍêÈ«Í£ÎÈºóÇåÁãËÙ¶È
+            ramp.current_velocity_ = 0.0f; // åœæ­¢ç”µæœº
             return target;
         }
 

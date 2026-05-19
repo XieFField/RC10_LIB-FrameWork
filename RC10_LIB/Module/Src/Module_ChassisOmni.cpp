@@ -1,6 +1,6 @@
 #include "Module_ChassisOmni.h"
 
-//Äæ½âËã
+//é€†è§£ç®—
 template <std::size_t WheelCount>
 void Chassis_Omni<WheelCount>::inverseKinematics(const Robot_Twist& twist)
 {
@@ -15,7 +15,7 @@ template <std::size_t WheelCount>
 void Chassis_Omni<WheelCount>::updateKinematics()
 {
     inverseKinematics(this->robot_twist_);
-    // ÈôÈÎÒâÂÖ³¬³ö×î´ó×ªËÙ£¬ËùÓĞÂÖµÈ±ÈËõĞ¡£¨±£³Ö·½ÏòÓë±ÈÀı£©
+    // è‹¥ä»»æ„è½®è¶…å‡ºæœ€å¤§è½¬é€Ÿï¼Œæ‰€æœ‰è½®ç­‰æ¯”ç¼©å°ï¼ˆä¿æŒæ–¹å‘ä¸æ¯”ä¾‹ï¼‰
     float max_abs = 0.0f;
     for (uint8_t i = 0; i < WheelCount; ++i) 
     {
@@ -38,7 +38,7 @@ Chassis_Omni<WheelCount>::Chassis_Omni(float wheel_radius, float max_wheel_rpm, 
 
 }
 
-// ĞÂÔö£ºÈıÂÖµÈÑüÈı½ÇĞÎ¹¹Ôì£¬´«Èëµ×±ßÓëÑü³¤£¬×Ô¶¯¼ÆËãÁ½¸öĞı×ª°ë¾¶
+// æ–°å¢ï¼šä¸‰è½®ç­‰è…°ä¸‰è§’å½¢æ„é€ ï¼Œä¼ å…¥åº•è¾¹ä¸è…°é•¿ï¼Œè‡ªåŠ¨è®¡ç®—ä¸¤ä¸ªæ—‹è½¬åŠå¾„
 template <>
 Chassis_Omni<3>::Chassis_Omni(float wheel_radius, float max_wheel_rpm, float base_length, float side_length, bool three_wheel)
     : Chassis_Base<3>(wheel_radius, max_wheel_rpm)
@@ -67,9 +67,9 @@ Chassis_Omni<WheelCount>::Chassis_Omni(Chassis_Omni<WheelCount>::init_config& co
 template <std::size_t WheelCount>
 void Chassis_Omni<WheelCount>::computeIsoscelesRadii(float base_length, float side_length, float& top_radius, float& bottom_radius)
 {
-    // µÈÑüÈı½ÇĞÎ£ºµ×±ß base£¬Ñü side¡£¸ß¶È h = sqrt(side^2 - (base/2)^2)
-    // Ğı×ªÖĞĞÄ¸ÄÎªÈı½ÇĞÎÄÚĞÄ£¨½ÇÆ½·ÖÏß½»µã£©¡£¶ÔÓÚµÈÑüÈı½ÇĞÎ£¬ÄÚĞÄ×ø±êÔÚ x=0£¬
-    // y = (base * h) / (base + 2*side)¡£¶¥µãµ½ÄÚĞÄ¾àÀë = h - y = 2*side*h/(base + 2*side)
+    // ç­‰è…°ä¸‰è§’å½¢ï¼šåº•è¾¹ baseï¼Œè…° sideã€‚é«˜åº¦ h = sqrt(side^2 - (base/2)^2)
+    // æ—‹è½¬ä¸­å¿ƒæ”¹ä¸ºä¸‰è§’å½¢å†…å¿ƒï¼ˆè§’å¹³åˆ†çº¿äº¤ç‚¹ï¼‰ã€‚å¯¹äºç­‰è…°ä¸‰è§’å½¢ï¼Œå†…å¿ƒåæ ‡åœ¨ x=0ï¼Œ
+    // y = (base * h) / (base + 2*side)ã€‚é¡¶ç‚¹åˆ°å†…å¿ƒè·ç¦» = h - y = 2*side*h/(base + 2*side)
     if (base_length <= 0.f || side_length <= 0.f) { top_radius = 0.f; bottom_radius = 0.f; return; }
     float half_b = 0.5f * base_length;
     float h_sq = side_length * side_length - half_b * half_b;
@@ -77,9 +77,9 @@ void Chassis_Omni<WheelCount>::computeIsoscelesRadii(float base_length, float si
     float h = sqrtf(h_sq);
     float denom = base_length + 2.0f * side_length;
     if (denom <= 0.f) { top_radius = 0.f; bottom_radius = half_b; return; }
-    float incenter_y = (base_length * h) / denom; // ´Ó»ùÏßµ½ÄÚĞÄµÄ´¹Ö±¾àÀë
-    top_radius = h - incenter_y; // ¶¥µãµ½ÄÚĞÄ¾àÀë
-    bottom_radius = sqrtf(half_b * half_b + incenter_y * incenter_y); // µ×±ß¶Ëµãµ½ÄÚĞÄ¾àÀë
+    float incenter_y = (base_length * h) / denom; // ä»åŸºçº¿åˆ°å†…å¿ƒçš„å‚ç›´è·ç¦»
+    top_radius = h - incenter_y; // é¡¶ç‚¹åˆ°å†…å¿ƒè·ç¦»
+    bottom_radius = sqrtf(half_b * half_b + incenter_y * incenter_y); // åº•è¾¹ç«¯ç‚¹åˆ°å†…å¿ƒè·ç¦»
 }
 
 template<std::size_t WheelCount>
@@ -87,7 +87,7 @@ void Chassis_Omni<WheelCount>::forwardKinematics()
 {
     float wheel_speeds[WheelCount];
     for (uint8_t i = 0; i < WheelCount; ++i) 
-        wheel_speeds[i] = this->getWheelTargetRPM(i)*2.0f*PI/60.0f*this->wheel_radius_; // ×ª»»ÎªÏßËÙ¶È (m/s)
+        wheel_speeds[i] = this->getWheelTargetRPM(i)*2.0f*PI/60.0f*this->wheel_radius_; // è½¬æ¢ä¸ºçº¿é€Ÿåº¦ (m/s)
     
     if constexpr (WheelCount == 3) 
     {
@@ -120,7 +120,7 @@ void Chassis_Omni<WheelCount>::forwardKinematics()
     } 
     else if constexpr (WheelCount == 4) 
     {
-        // ËÄÂÖÈ«Ïòµ×ÅÌµÄÇ°ÏòÔË¶¯Ñ§¼ÆËã
+        // å››è½®å…¨å‘åº•ç›˜çš„å‰å‘è¿åŠ¨å­¦è®¡ç®—
         // Inverse uses vx/C, vy/C. Forward needs factor C/4. (Divide by 4/C = 4*sqrt(2) = 5.656)
         this->robot_twist_forward.yaw_rate = (wheel_speeds[0] + wheel_speeds[1] + wheel_speeds[2] + wheel_speeds[3]) / (4.0f * chassis_radius_);
         

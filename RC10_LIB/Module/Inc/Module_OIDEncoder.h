@@ -1,6 +1,6 @@
 /**
  * @file Module_OIDEncoder.h
- * @brief OID±àÂëÆ÷Ä£¿éÉùÃ÷
+ * @brief OIDç¼–ç å™¨æ¨¡å—å£°æ˜
  * @author XieFField
  * @version 1.0
  */
@@ -24,7 +24,7 @@ extern "C"
 #include <cstring>
 #include "BSP_RTOS.h"
 
-class fdCANbus; // Ç°ÖÃÉùÃ÷
+class fdCANbus; // å‰ç½®å£°æ˜
 
 namespace OID_Encoder
 {
@@ -32,22 +32,22 @@ namespace OID_Encoder
     typedef enum OID_CMD
     {
         READ_ANGLE = 0x01,
-        SET_ENCODER_ID = 0x02, // uint8_t ±àÂëÆ÷µØÖ·£¬·¶Î§0~255
-        SET_BOARD_RATE = 0x03, //É÷ÓÃ 0~4 0x00£º500K£¨Ä¬ÈÏ£©£»0x01:1M 0x02£º250K£»0x03:125K 0x04£º100K
-        SET_ENCODER_MODE = 0x04, //³õÊ¼»¯Ê±ºòÉèÖÃÒ»´Î¼´¿É£¬Êı¾İÂë£º0x00£º 
-                                    //²éÑ¯ 0x02£º×Ô¶¯·µ»Ø±àÂëÆ÷½ÇËÙ¶ÈÖµ 0xAA£º×Ô¶¯·µ»Ø±àÂëÆ÷Öµ
-        SET_FEEDBACK_TIME = 0x05, //ÉèÖÃ×Ô¶¯·µ»ØµÄÊ±¼ä¼ä¸ô£¬µ¥Î»Î¢Ãë£¬ÊıÖµ·¶Î§£º50~65535 uint16 
-                                    // ÏÂ·¢£º[0x05][0x01][0x05][0xE8][0x03]
-                                    // »Ø´«ËÙ¶È¹ı¿ìµÄ»°£¬ÓÃÉÏÎ»»úÈí¼şÉèÖÃÆäËû²ÎÊıºÜÈİÒ×Ê§°Ü£¬½¨Òé100hz¼´¿É
-        SET_ZERO = 0x06, //ÉèÖÃµ±Ç°Î»ÖÃÎªÁãµã
-        SET_REVERSE = 0x07, //ÉèÖÃÕı·´×ª data: 0x00Ë³Ê±ÕëÕı×ª 0x01ÄæÊ±ÕëÕı×ª
+        SET_ENCODER_ID = 0x02, // uint8_t ç¼–ç å™¨åœ°å€ï¼ŒèŒƒå›´0~255
+        SET_BOARD_RATE = 0x03, //æ…ç”¨ 0~4 0x00ï¼š500Kï¼ˆé»˜è®¤ï¼‰ï¼›0x01:1M 0x02ï¼š250Kï¼›0x03:125K 0x04ï¼š100K
+        SET_ENCODER_MODE = 0x04, //åˆå§‹åŒ–æ—¶å€™è®¾ç½®ä¸€æ¬¡å³å¯ï¼Œæ•°æ®ç ï¼š0x00ï¼š 
+                                    //æŸ¥è¯¢ 0x02ï¼šè‡ªåŠ¨è¿”å›ç¼–ç å™¨è§’é€Ÿåº¦å€¼ 0xAAï¼šè‡ªåŠ¨è¿”å›ç¼–ç å™¨å€¼
+        SET_FEEDBACK_TIME = 0x05, //è®¾ç½®è‡ªåŠ¨è¿”å›çš„æ—¶é—´é—´éš”ï¼Œå•ä½å¾®ç§’ï¼Œæ•°å€¼èŒƒå›´ï¼š50~65535 uint16 
+                                    // ä¸‹å‘ï¼š[0x05][0x01][0x05][0xE8][0x03]
+                                    // å›ä¼ é€Ÿåº¦è¿‡å¿«çš„è¯ï¼Œç”¨ä¸Šä½æœºè½¯ä»¶è®¾ç½®å…¶ä»–å‚æ•°å¾ˆå®¹æ˜“å¤±è´¥ï¼Œå»ºè®®100hzå³å¯
+        SET_ZERO = 0x06, //è®¾ç½®å½“å‰ä½ç½®ä¸ºé›¶ç‚¹
+        SET_REVERSE = 0x07, //è®¾ç½®æ­£åè½¬ data: 0x00é¡ºæ—¶é’ˆæ­£è½¬ 0x01é€†æ—¶é’ˆæ­£è½¬
 
-        READ_ANGLE_SPEED = 0x0A, // ¶ÁÈ¡±àÂëÆ÷½ÇËÙ¶ÈÖµ¡£ return int32, 
-        SET_ANGLE_SPEED_HZ = 0x0B, //ÉèÖÃ±àÂëÆ÷½ÇËÙ¶È²ÉÑùÊ±¼ä£º0~65535µ¥Î»ms int16_t 
+        READ_ANGLE_SPEED = 0x0A, // è¯»å–ç¼–ç å™¨è§’é€Ÿåº¦å€¼ã€‚ return int32, 
+        SET_ANGLE_SPEED_HZ = 0x0B, //è®¾ç½®ç¼–ç å™¨è§’é€Ÿåº¦é‡‡æ ·æ—¶é—´ï¼š0~65535å•ä½ms int16_t 
 
-        SET_MID_ANGLE = 0x0C, //ÉèÖÃ±àÂëÆ÷ÖĞÎ»½Ç¶ÈÖµ 
+        SET_MID_ANGLE = 0x0C, //è®¾ç½®ç¼–ç å™¨ä¸­ä½è§’åº¦å€¼ 
 
-        SET_NOW_ANGLE = 0x0D, //ÉèÖÃ±àÂëÆ÷µ±Ç°½Ç¶ÈÖµ£¬Êı¾İ¸ñÊ½£ºint32 ÊıÖµ·¶Î§£º0~X£¨XÎªµ¥È¦·Ö±æÂÊ*È¦Êı£©
+        SET_NOW_ANGLE = 0x0D, //è®¾ç½®ç¼–ç å™¨å½“å‰è§’åº¦å€¼ï¼Œæ•°æ®æ ¼å¼ï¼šint32 æ•°å€¼èŒƒå›´ï¼š0~Xï¼ˆXä¸ºå•åœˆåˆ†è¾¨ç‡*åœˆæ•°ï¼‰
         NONE_ = 0x00,
     };
 
@@ -68,28 +68,28 @@ public:
     uint32_t id() const { return device_id_; }
     fdCANbus* bus() const { return bus_; }
 
-    void init_test_task()// Ö÷ÒªÓÃÓÚÉèÖÃENCODER_ID ºÍ ENCODER_MODE
+    void init_test_task()// ä¸»è¦ç”¨äºè®¾ç½®ENCODER_ID å’Œ ENCODER_MODE
     {
         testTask_.start(osPriorityNormal);
     }
 
     void init()
     {
-        this->mid_angle_raw_ = static_cast<uint32_t>(max_rounds_ * range_ / 2); //Ä¬ÈÏÖĞÎ»½ÇÎª×î´óÖµµÄÒ»°ë
+        this->mid_angle_raw_ = static_cast<uint32_t>(max_rounds_ * range_ / 2); //é»˜è®¤ä¸­ä½è§’ä¸ºæœ€å¤§å€¼çš„ä¸€åŠ
         set_auto_feedback();
-        set_feeedback_time(20000); // 20ms·´À¡Ò»´Î
+        set_feeedback_time(20000); // 20msåé¦ˆä¸€æ¬¡
        is_init_ = true;
     }
 
     /**
-     * ·¢ËÍ£º 0x04£¨Êı¾İ³¤¶È£©+0x01£¨±àÂëÆ÷µØÖ·£©+0x01£¨Ö¸ÁîÂë£©+0x00£¨Êı¾İ1£©
-     * ½ÓÊÕ£º0X07£¨Êı¾İ³¤¶È£©+0X01£¨±àÂëÆ÷µØÖ·£©+0X01£¨Ö¸ÁîÂë£©+0x00012345£¨Êı¾İ£©
+     * å‘é€ï¼š 0x04ï¼ˆæ•°æ®é•¿åº¦ï¼‰+0x01ï¼ˆç¼–ç å™¨åœ°å€ï¼‰+0x01ï¼ˆæŒ‡ä»¤ç ï¼‰+0x00ï¼ˆæ•°æ®1ï¼‰
+     * æ¥æ”¶ï¼š0X07ï¼ˆæ•°æ®é•¿åº¦ï¼‰+0X01ï¼ˆç¼–ç å™¨åœ°å€ï¼‰+0X01ï¼ˆæŒ‡ä»¤ç ï¼‰+0x00012345ï¼ˆæ•°æ®ï¼‰
      */
 
     void updateFeedback(const CanFrame& cf);
     bool matchesFrame(const CanFrame& cf)const
     {
-        // ¼òµ¥Æ¥Åä£ºIDºÍÊÇ·ñÀ©Õ¹Ö¡±ØĞëÆ¥Åä
+        // ç®€å•åŒ¹é…ï¼šIDå’Œæ˜¯å¦æ‰©å±•å¸§å¿…é¡»åŒ¹é…
         return ((cf.ID == device_id_) && (cf.isextended == isExtended_)) 
             || cf.data[1] == static_cast<uint8_t>(device_id_);
     }
@@ -113,7 +113,7 @@ public:
 
     void set_auto_feedback()
     {
-        set_cmd(OID_CMD::SET_ENCODER_MODE, static_cast<uint8_t>(0xAA)); //ÉèÖÃ×Ô¶¯·µ»Ø±àÂëÆ÷Öµ
+        set_cmd(OID_CMD::SET_ENCODER_MODE, static_cast<uint8_t>(0xAA)); //è®¾ç½®è‡ªåŠ¨è¿”å›ç¼–ç å™¨å€¼
     }
 
     void set_feeedback_time(uint16_t time_us)
@@ -129,7 +129,7 @@ public:
     void set_encoder_id(uint8_t id)
     {
         set_cmd(OID_CMD::SET_ENCODER_ID, id);
-        device_id_ = id; // Í¬²½¸üĞÂµ±Ç°ID£¬È·±£ºóĞøÍ¨ĞÅÕı³£
+        device_id_ = id; // åŒæ­¥æ›´æ–°å½“å‰IDï¼Œç¡®ä¿åç»­é€šä¿¡æ­£å¸¸
     }
 
     void set_reverse(uint8_t reverse)
@@ -184,7 +184,7 @@ public:
     void increment_controlCnt() { control_cnt++; }
 private:
     /**
-     * @brief ÎŞĞèÉèÖÃÄ¿±êÖµµÄcmd½Ó¿Ú
+     * @brief æ— éœ€è®¾ç½®ç›®æ ‡å€¼çš„cmdæ¥å£
      */
     void set_cmd(OID_CMD cmd)
     {
@@ -192,7 +192,7 @@ private:
     }
 
     /**
-     * @brief ĞèÒªÉèÖÃÄ¿±êÖµµÄcmd½Ó¿Ú£¬data1µÄ¾ßÌåº¬Òå¸ù¾İcmd²»Í¬¶ø²»Í¬
+     * @brief éœ€è¦è®¾ç½®ç›®æ ‡å€¼çš„cmdæ¥å£ï¼Œdata1çš„å…·ä½“å«ä¹‰æ ¹æ®cmdä¸åŒè€Œä¸åŒ
      * @attention SET_ENCODER_ID SET_BOARD_RATE 
      */
     void set_cmd(OID_CMD cmd, uint8_t data1)
@@ -202,7 +202,7 @@ private:
     }
 
     /**
-     * @brief ĞèÒªÉèÖÃÄ¿±êÖµµÄcmd½Ó¿Ú£¬data1µÄ¾ßÌåº¬Òå¸ù¾İcmd²»Í¬¶ø²»Í¬
+     * @brief éœ€è¦è®¾ç½®ç›®æ ‡å€¼çš„cmdæ¥å£ï¼Œdata1çš„å…·ä½“å«ä¹‰æ ¹æ®cmdä¸åŒè€Œä¸åŒ
      * @attention SET_ANGLE_SPEED_HZ SET_FEEDBACK_TIME
      */
     void set_cmd(OID_CMD cmd, uint16_t data1)
@@ -213,7 +213,7 @@ private:
     }
 
     /**
-     * @brief ĞèÒªÉèÖÃÄ¿±êÖµµÄcmd½Ó¿Ú£¬data1µÄ¾ßÌåº¬Òå¸ù¾İcmd²»Í¬¶ø²»Í¬
+     * @brief éœ€è¦è®¾ç½®ç›®æ ‡å€¼çš„cmdæ¥å£ï¼Œdata1çš„å…·ä½“å«ä¹‰æ ¹æ®cmdä¸åŒè€Œä¸åŒ
      * @attention SET_NOW_ANGLE
      */
     void set_cmd(OID_CMD cmd, uint32_t data1)
@@ -229,29 +229,29 @@ private:
     uint32_t device_id_;
     bool isExtended_;
     fdCANbus* bus_;
-    uint32_t range_; //±àÂëÆ÷Ïß³Ì
-    int16_t max_rounds_; //±àÂëÆ÷×î´óÀÛ¼ÆÈ¦Êı
+    uint32_t range_; //ç¼–ç å™¨çº¿ç¨‹
+    int16_t max_rounds_; //ç¼–ç å™¨æœ€å¤§ç´¯è®¡åœˆæ•°
 
-    uint32_t mid_angle_raw_ = 0; //±àÂëÆ÷ÖĞÎ»½Ç¶È¶ÔÓ¦µÄÔ­Ê¼Öµ
+    uint32_t mid_angle_raw_ = 0; //ç¼–ç å™¨ä¸­ä½è§’åº¦å¯¹åº”çš„åŸå§‹å€¼
 
 
-    uint8_t data_[4] = {0}; //Í¨ÓÃÊı¾İÇø£¬¾ßÌåº¬Òå¸ù¾İcmd²»Í¬¶ø²»Í¬
-    uint8_t feedback_data_[8] = {0}; //Í¨ÓÃ·´À¡Êı¾İÇø£¬¾ßÌåº¬Òå¸ù¾İcmd²»Í¬¶ø²»Í¬
+    uint8_t data_[4] = {0}; //é€šç”¨æ•°æ®åŒºï¼Œå…·ä½“å«ä¹‰æ ¹æ®cmdä¸åŒè€Œä¸åŒ
+    uint8_t feedback_data_[8] = {0}; //é€šç”¨åé¦ˆæ•°æ®åŒºï¼Œå…·ä½“å«ä¹‰æ ¹æ®cmdä¸åŒè€Œä¸åŒ
 
-    float angle_ = 0.0f; //µ±Ç°½Ç¶È£¬µ¥Î»¶È //¼õËÙÇ°µÄ½Ç¶ÈÖµ
+    float angle_ = 0.0f; //å½“å‰è§’åº¦ï¼Œå•ä½åº¦ //å‡é€Ÿå‰çš„è§’åº¦å€¼
     float real_encoder_angle_ = 0.0f;
-    uint32_t encoder_raw_ = 0; //Ô­Ê¼±àÂëÆ÷Öµ
+    uint32_t encoder_raw_ = 0; //åŸå§‹ç¼–ç å™¨å€¼
 
-    uint8_t retrun_id_ = 0; //µ±Ç°Ö¡µÄ·µ»Øid£¬·¶Î§0~255
+    uint8_t retrun_id_ = 0; //å½“å‰å¸§çš„è¿”å›idï¼ŒèŒƒå›´0~255
 
-    int32_t angle_speed_raw_ = 0; //Ô­Ê¼½ÇËÙ¶ÈÖµ int32
-    float read_rpm_ = 0.0f; //µ±Ç°½ÇËÙ¶È
-    float angle_speed_hz_ = 0.0f; //½ÇËÙ¶È²ÉÑùÊ±¼ä£¬µ¥Î»Hz
+    int32_t angle_speed_raw_ = 0; //åŸå§‹è§’é€Ÿåº¦å€¼ int32
+    float read_rpm_ = 0.0f; //å½“å‰è§’é€Ÿåº¦
+    float angle_speed_hz_ = 0.0f; //è§’é€Ÿåº¦é‡‡æ ·æ—¶é—´ï¼Œå•ä½Hz
 
     OID_CMD now_cmd_ = OID_CMD::NONE_;
 
     uint16_t control_cnt = 0;
-    uint16_t control_Frequency_ = 100; // Ä¬ÈÏ¿ØÖÆÆµÂÊ Hz£¬ÖØÉèµÄ¿ØÖÆÆµÂÊ±ØĞëÊÇ100µÄÕûÊı±¶
+    uint16_t control_Frequency_ = 100; // é»˜è®¤æ§åˆ¶é¢‘ç‡ Hzï¼Œé‡è®¾çš„æ§åˆ¶é¢‘ç‡å¿…é¡»æ˜¯100çš„æ•´æ•°å€
 
 protected:    
     class testtask: public RtosTask

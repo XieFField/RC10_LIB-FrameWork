@@ -41,7 +41,7 @@ void M3508_Steer_Debug::loop()
         {
             for(int i = 0; i < 4; i++)
             {
-                if(std::fabs(airjoy_data_.left_x) > 0.15f) // ËÀÇø
+                if(std::fabs(airjoy_data_.left_x) > 0.15f) // æ­»åŒº
                     target_rpm[i] = airjoy_data_.left_x * k;
             }
 
@@ -67,7 +67,7 @@ void M3508_Steer_Debug::loop()
         {
             for (int i = 0; i < 4; i++)
             {
-                if(std::fabs(airjoy_data_.left_x) > 0.15f) // ËÀÇø
+                if(std::fabs(airjoy_data_.left_x) > 0.15f) // æ­»åŒº
                     test_target_angle[i] = (airjoy_data_.left_x) * 180.0f;
                 else
                     test_target_angle[i] = 0.0f;
@@ -92,7 +92,7 @@ void M3508_Steer_Debug::loop()
         {
             for (int i = 0; i < 4; i++)
             {
-                if(std::fabs(airjoy_data_.left_x) > 0.15f) // ËÀÇø
+                if(std::fabs(airjoy_data_.left_x) > 0.15f) // æ­»åŒº
                     test_target_angle[i] = (airjoy_data_.left_x) * 180.0f;
                 else
                     test_target_angle[i] = 0.0f;

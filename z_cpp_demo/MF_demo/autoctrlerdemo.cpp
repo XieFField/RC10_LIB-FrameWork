@@ -1,8 +1,8 @@
 /**
  * @file autoctrlerdemo.cpp
  * @author XieFField
- * @brief Ã·»¨ÁÖ×Ô¶¯²âÊÔ³ÌĞò (°üº¬ get_GimbalMF_PAPB ÒÆÖ²²âÊÔ)
- *        ÀïÃæ²»ÉÙÊÇÓÃ¹ş»ùÃ×3Éú³ÉµÄ£¬°ÑÕıÊ½´úÂëÒÆÖ²µ½demoÊÇÕæºÃÓÃ
+ * @brief æ¢…èŠ±æ—è‡ªåŠ¨æµ‹è¯•ç¨‹åº (åŒ…å« get_GimbalMF_PAPB ç§»æ¤æµ‹è¯•)
+ *        é‡Œé¢ä¸å°‘æ˜¯ç”¨å“ˆåŸºç±³3ç”Ÿæˆçš„ï¼ŒæŠŠæ­£å¼ä»£ç ç§»æ¤åˆ°demoæ˜¯çœŸå¥½ç”¨
  */
 
 #include "demo_AutoCtrler.h"
@@ -13,21 +13,21 @@
 using namespace std;
 using namespace MF_AutoCtrler;
 
-// ¶¨Òå PI
+// å®šä¹‰ PI
 #ifndef PI
 #define PI 3.1415926535f
 #endif
 
-// Ä£Äâ¹¤¾ßº¯Êı
+// æ¨¡æ‹Ÿå·¥å…·å‡½æ•°
 float _tool_Abs(float x) { return std::abs(x); }
 
 typedef enum {
-    ROTATE_PATH_SHORTEST,   // ×î¶ÌÂ·¾¶ (Ä¬ÈÏ)
-    ROTATE_PATH_POSITIVE,    // Ö¸¶¨Õı·½ÏòĞı×ª
-    ROTATE_PATH_NEGATIVE     // Ö¸¶¨¸º·½ÏòĞı×ª
+    ROTATE_PATH_SHORTEST,   // æœ€çŸ­è·¯å¾„ (é»˜è®¤)
+    ROTATE_PATH_POSITIVE,    // æŒ‡å®šæ­£æ–¹å‘æ—‹è½¬
+    ROTATE_PATH_NEGATIVE     // æŒ‡å®šè´Ÿæ–¹å‘æ—‹è½¬
 } Rotate_Strategy_E;
 
-// KFS ¸ß¶È±í (cm)
+// KFS é«˜åº¦è¡¨ (cm)
 const float MF_high[12] = 
 {
     40.0f, 20.0f, 40.0f,
@@ -46,7 +46,7 @@ float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
         if(next_mapNum < 1 || next_mapNum >30)
             cout << "Next mapNum " << (int)next_mapNum << " is out of range." << endl;
 
-        return -1.0f; // ÎŞĞ§ÊäÈë
+        return -1.0f; // æ— æ•ˆè¾“å…¥
     }
     
     bool isinMFstart = IsWalkable(startmapNum);
@@ -65,7 +65,7 @@ float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
 
     if(isinMFstart && isinMFnext)
     {
-        // Á½¸ö¶¼²»ÔÚÃ·»¨×®ÄÚ£¬Ö±½Ó¼ÆËã·½Ïò
+        // ä¸¤ä¸ªéƒ½ä¸åœ¨æ¢…èŠ±æ¡©å†…ï¼Œç›´æ¥è®¡ç®—æ–¹å‘
         Point2D startPos = MapCenterWorld(startmapNum);
         Point2D nextPos = MapCenterWorld(next_mapNum);
         float dx = nextPos.x - startPos.x;
@@ -76,17 +76,17 @@ float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
     }
     else
     {
-        return -1.0f; //ÎŞĞ§
+        return -1.0f; //æ— æ•ˆ
     }
 }
 
-// Ä£Äâ ArmSetup Àà
+// æ¨¡æ‹Ÿ ArmSetup ç±»
 class MockArmSetup {
 public:
-    // Ä£Äâ×´Ì¬±äÁ¿
+    // æ¨¡æ‹ŸçŠ¶æ€å˜é‡
     struct {
-        Point2D now_armPosition; // »úĞµ±Û/µ×ÅÌÎ»ÖÃ
-        Point2D now_ChassisPosition; // µ×ÅÌÎ»ÖÃ (°üº¬theta)
+        Point2D now_armPosition; // æœºæ¢°è‡‚/åº•ç›˜ä½ç½®
+        Point2D now_ChassisPosition; // åº•ç›˜ä½ç½® (åŒ…å«theta)
         float now_chassis_speed = 1.0f;
         
         int targetKFS[2] = {0, 0};
@@ -99,12 +99,12 @@ public:
         int gimbal_calcHz = 100;
         float arm_width = 0.12f;
         
-        // [ĞŞ¸Ä] ĞŞÕıÔÆÌ¨ËÙ¶ÈÎª 90¶È/Ãë (Ô¼1.57 rad/s)£¬Ô­¹«Ê½¼ÆËãÖµ¹ı´ó(Ô¼16 rad/s)
+        // [ä¿®æ”¹] ä¿®æ­£äº‘å°é€Ÿåº¦ä¸º 90åº¦/ç§’ (çº¦1.57 rad/s)ï¼ŒåŸå…¬å¼è®¡ç®—å€¼è¿‡å¤§(çº¦16 rad/s)
         struct { float gimbal_max_rad = 90.0f * (PI / 180.0f); } time_set; 
         
         struct { Point2D PA; Point2D PB; } PointPAB[2]; // PA, PB
 
-        Rotate_Strategy_E current_strategy = ROTATE_PATH_SHORTEST; // [ĞÂÔö] ²ßÂÔ
+        Rotate_Strategy_E current_strategy = ROTATE_PATH_SHORTEST; // [æ–°å¢] ç­–ç•¥
     } auto_ctrl_;
 
     struct {
@@ -122,32 +122,32 @@ public:
         float max_rotate_angle_ = 359.999f;
     } init_data_;
 
-    // Ä£Äâµç»ú×´Ì¬
-    float current_rotate_angle = 0.0f; // µ±Ç°ÔÆÌ¨½Ç¶È
-    float current_launch_height = 0.0f; // µ±Ç°Éı½µ¸ß¶È
-    bool sucker_is_open = false;       // ÎüÅÌ×´Ì¬
+    // æ¨¡æ‹Ÿç”µæœºçŠ¶æ€
+    float current_rotate_angle = 0.0f; // å½“å‰äº‘å°è§’åº¦
+    float current_launch_height = 0.0f; // å½“å‰å‡é™é«˜åº¦
+    bool sucker_is_open = false;       // å¸ç›˜çŠ¶æ€
 
-    // ĞÂÔö±êÖ¾Î»ÓÃÓÚ´òÓ¡
+    // æ–°å¢æ ‡å¿—ä½ç”¨äºæ‰“å°
     bool has_printed_trigger = false;
     bool has_printed_rotate = false;
-    bool has_printed_safe = false;     // ĞÂÔö£ºSafeÊ±¿Ì
-    bool has_printed_finish = false;   // ĞÂÔö£ºÍê³ÉĞı×ªÊ±¿Ì
+    bool has_printed_safe = false;     // æ–°å¢ï¼šSafeæ—¶åˆ»
+    bool has_printed_finish = false;   // æ–°å¢ï¼šå®Œæˆæ—‹è½¬æ—¶åˆ»
 
-    // Carrying ½×¶Î±êÖ¾
+    // Carrying é˜¶æ®µæ ‡å¿—
     bool has_printed_carrying_start = false;
     bool has_printed_carrying_lift = false;
     bool has_printed_carrying_place = false;
     bool has_printed_carrying_done = false;
     
-    // [ĞÂÔö] ¸ü¼ÓÏêÏ¸µÄÊÂ¼ş±êÖ¾Î»
+    // [æ–°å¢] æ›´åŠ è¯¦ç»†çš„äº‹ä»¶æ ‡å¿—ä½
     bool flag_safe_rotate = false;
-    bool flag_rotate_done = false; // [ĞÂÔö] Ğı×ªÍê³É±êÖ¾
+    bool flag_rotate_done = false; // [æ–°å¢] æ—‹è½¬å®Œæˆæ ‡å¿—
     bool flag_pickup = false;
     bool flag_safe_carry = false;
     bool flag_safe_range = false;
     bool flag_storage_done = false;
 
-    // [ĞÂÔö] Í³Ò»´òÓ¡º¯Êı
+    // [æ–°å¢] ç»Ÿä¸€æ‰“å°å‡½æ•°
     void print_event(const char* event_name, float time) {
         printf(">>> [%s] T=%.2f | Pos=(%.3f, %.3f) | Ang=%.1f | H=%.3f | Sucker=%d\n", 
             event_name, 
@@ -156,26 +156,26 @@ public:
             current_rotate_angle, current_launch_height, sucker_is_open);
     }
 
-    // ³õÊ¼»¯·ÂÕæ³¡¾°
+    // åˆå§‹åŒ–ä»¿çœŸåœºæ™¯
     void init_simulation(int targetKFS_Index) 
     {
         auto_ctrl_.targetKFS[0] = targetKFS_Index;
         auto_ctrl_.targetKFS_pos[0] = MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(targetKFS_Index) - 1];
         
-        // ¡¾ĞŞ¸´¹Ø¼üµã¡¿ĞŞ¸Ä¼ÆËãÆµÂÊÒÔÆ¥Åä·ÂÕæ²½³¤(10ms)
+        // ã€ä¿®å¤å…³é”®ç‚¹ã€‘ä¿®æ”¹è®¡ç®—é¢‘ç‡ä»¥åŒ¹é…ä»¿çœŸæ­¥é•¿(10ms)
         auto_ctrl_.gimbal_calcHz = 1000; 
 
-        // ¼ÙÉè»úÆ÷ÈË³õÊ¼Î»ÖÃÔÚ (0,0)£¬¼ÆËãÂ·¾¶
+        // å‡è®¾æœºå™¨äººåˆå§‹ä½ç½®åœ¨ (0,0)ï¼Œè®¡ç®—è·¯å¾„
         Point2D startPos = {0,0,0}; 
         auto_ctrl_.path = PathNodeResult_calc(startPos, static_cast<int8_t>(targetKFS_Index), 0);
         
-        // ÉèÖÃÂ·¾¶µãÊÀ½ç×ø±ê
+        // è®¾ç½®è·¯å¾„ç‚¹ä¸–ç•Œåæ ‡
         auto_ctrl_.pathPos.bestB1 = MapCenterWorld(auto_ctrl_.path.bestB1);
         auto_ctrl_.pathPos.bestBMF1 = MapCenterWorld(auto_ctrl_.path.bestBMF1);
         
-        auto_ctrl_.now_armPosition = auto_ctrl_.pathPos.bestB1; // Ö±½ÓÌøµ½×î¼ÑµãµÄºó1.2m´¦
+        auto_ctrl_.now_armPosition = auto_ctrl_.pathPos.bestB1; // ç›´æ¥è·³åˆ°æœ€ä½³ç‚¹çš„å1.2må¤„
 
-        // »ñÈ¡ÒÆ¶¯·½Ïò
+        // è·å–ç§»åŠ¨æ–¹å‘
         get_MoveDiretion(startPos, static_cast<int8_t>(targetKFS_Index), 0, auto_ctrl_.KFS_Movedirection);
         
         float start_offset = 1.2f;
@@ -187,7 +187,7 @@ public:
             default: break;
         }
         
-        // ÉèÖÃµ×ÅÌYaw (¼ÙÉèÑØÒÆ¶¯·½Ïò)
+        // è®¾ç½®åº•ç›˜Yaw (å‡è®¾æ²¿ç§»åŠ¨æ–¹å‘)
         switch(auto_ctrl_.KFS_Movedirection[0]) {
             case Positive_X: auto_ctrl_.now_ChassisPosition.theta = 270.0f; break; 
             case Negative_X: auto_ctrl_.now_ChassisPosition.theta = 90.0f; break;
@@ -196,15 +196,15 @@ public:
             default: break;
         }
         
-        // ÉèÖÃÔÆÌ¨³õÊ¼½Ç¶È (¼ÙÉè³õÊ¼Îª0¶È)
+        // è®¾ç½®äº‘å°åˆå§‹è§’åº¦ (å‡è®¾åˆå§‹ä¸º0åº¦)
         current_rotate_angle = 0.0f;
         
-        // [ĞÂÔö] ÉèÖÃ³õÊ¼¸ß¶È£ºKFS¸ß¶È - 20cm
+        // [æ–°å¢] è®¾ç½®åˆå§‹é«˜åº¦ï¼šKFSé«˜åº¦ - 20cm
         float kfs_h_cm = MF_high[targetKFS_Index - 1];
-        current_launch_height = (kfs_h_cm - 20.0f) / 100.0f; // ×ª»»ÎªÃ×
+        current_launch_height = (kfs_h_cm - 20.0f) / 100.0f; // è½¬æ¢ä¸ºç±³
         if(current_launch_height < 0) current_launch_height = 0;
 
-        // ÖØÖÃ±êÖ¾Î»
+        // é‡ç½®æ ‡å¿—ä½
         has_printed_trigger = false;
         has_printed_rotate = false;
         has_printed_safe = false;
@@ -216,7 +216,7 @@ public:
         has_printed_carrying_done = false;
 
         flag_safe_rotate = false;
-        flag_rotate_done = false; // [ĞÂÔö] ¸´Î»
+        flag_rotate_done = false; // [æ–°å¢] å¤ä½
         flag_pickup = false;
         flag_safe_carry = false;
         flag_safe_range = false;
@@ -226,19 +226,19 @@ public:
         // cout << "Path: B1(" << auto_ctrl_.pathPos.bestB1.x << "," << auto_ctrl_.pathPos.bestB1.y << ") -> ";
         // cout << "BMF1(" << auto_ctrl_.pathPos.bestBMF1.x << "," << auto_ctrl_.pathPos.bestBMF1.y << ")" << endl;
         // cout << "Direction: " << auto_ctrl_.KFS_Movedirection[0] << endl;
-        // cout << "Gimbal Speed: " << auto_ctrl_.time_set.gimbal_max_rad * 180.0f / PI << " deg/s" << endl; // [ĞÂÔö] ´òÓ¡È·ÈÏËÙ¶È
+        // cout << "Gimbal Speed: " << auto_ctrl_.time_set.gimbal_max_rad * 180.0f / PI << " deg/s" << endl; // [æ–°å¢] æ‰“å°ç¡®è®¤é€Ÿåº¦
         
-        // 1. ¿ªÊ¼·ÂÕæµÄÊ±¿Ì
+        // 1. å¼€å§‹ä»¿çœŸçš„æ—¶åˆ»
         print_event("Simulation Start", 0.0f);
     }
 
-    // Ä£ÄâÓ²¼ş½Ó¿Ú
+    // æ¨¡æ‹Ÿç¡¬ä»¶æ¥å£
     void set_RotateAngle(float angle) {
         float diff = angle - current_rotate_angle;
         while(diff > 180) diff -= 360;
         while(diff < -180) diff += 360;
         
-        float max_step = auto_ctrl_.time_set.gimbal_max_rad * (180.0f/PI) * 0.01f; // 10ms²½³¤
+        float max_step = auto_ctrl_.time_set.gimbal_max_rad * (180.0f/PI) * 0.01f; // 10msæ­¥é•¿
         if(abs(diff) > max_step) {
             current_rotate_angle += (diff > 0 ? 1 : -1) * max_step;
         } else 
@@ -264,12 +264,12 @@ public:
     {
         if(status == 1) 
         {
-            if(!sucker_is_open) cout << endl << ">>> [ACTION] Sucker OPENED (ÎüÅÌ´ò¿ª)! <<<" << endl;
+            if(!sucker_is_open) cout << endl << ">>> [ACTION] Sucker OPENED (å¸ç›˜æ‰“å¼€)! <<<" << endl;
             sucker_is_open = true;
         }
         else if (status == 0)
         {
-            if(sucker_is_open) cout << endl << ">>> [ACTION] Sucker CLOSED (ÎüÅÌ¹Ø±Õ)! <<<" << endl;
+            if(sucker_is_open) cout << endl << ">>> [ACTION] Sucker CLOSED (å¸ç›˜å…³é—­)! <<<" << endl;
             sucker_is_open = false;
         }
     }
@@ -289,7 +289,7 @@ public:
         return {current_rotate_angle, current_launch_height};
     }
 
-    // ºËĞÄÂß¼­£ºÒÆÖ²×Ô Arm_Setup.cpp
+    // æ ¸å¿ƒé€»è¾‘ï¼šç§»æ¤è‡ª Arm_Setup.cpp
     bool check_Arm_collision(float px, float py, float pivot_x, float pivot_y, float arm_world_angle_deg, float L_arm, float W_arm)
     {
         float angle_rad = arm_world_angle_deg * (PI / 180.0f);
@@ -297,36 +297,36 @@ public:
         float s = sinf(angle_rad);
         Point2D d = { px - pivot_x, py - pivot_y, 0.0f };
         
-        // [ĞŞÕı] ÕıÈ·µÄ×ø±ê±ä»»£º½«ÊÀ½ç×ø±êÍ¶Ó°µ½»úĞµ±Û¾Ö²¿×ø±êÏµ
-        // Local X: ÑØ»úĞµ±ÛÖáÏò (µã³Ë·½ÏòÏòÁ¿ (c, s))
-        // Local Y: ´¹Ö±»úĞµ±ÛÖáÏò (µã³Ë·¨ÏòÁ¿ (-s, c))
+        // [ä¿®æ­£] æ­£ç¡®çš„åæ ‡å˜æ¢ï¼šå°†ä¸–ç•Œåæ ‡æŠ•å½±åˆ°æœºæ¢°è‡‚å±€éƒ¨åæ ‡ç³»
+        // Local X: æ²¿æœºæ¢°è‡‚è½´å‘ (ç‚¹ä¹˜æ–¹å‘å‘é‡ (c, s))
+        // Local Y: å‚ç›´æœºæ¢°è‡‚è½´å‘ (ç‚¹ä¹˜æ³•å‘é‡ (-s, c))
         Point2D local = {
              d.x * c + d.y * s, // Local X
             -d.x * s + d.y * c, // Local Y
              0.0f
         };
         
-        // ¾ØĞÎÅö×²ÅĞ¶Ï: x in [0, L], y in [-W/2, W/2]
+        // çŸ©å½¢ç¢°æ’åˆ¤æ–­: x in [0, L], y in [-W/2, W/2]
         if(local.x >= 0.0f && local.x <= L_arm && _tool_Abs(local.y) <= (W_arm / 2.0f))
             return true; 
         return false; 
     }
 
-    // ºËĞÄÂß¼­£ºÒÆÖ²×Ô Arm_Setup.cpp (state_signAlign)
-    // [ĞŞ¸Ä] Ôö¼Ó current_time ²ÎÊıÓÃÓÚ´òÓ¡
+    // æ ¸å¿ƒé€»è¾‘ï¼šç§»æ¤è‡ª Arm_Setup.cpp (state_signAlign)
+    // [ä¿®æ”¹] å¢åŠ  current_time å‚æ•°ç”¨äºæ‰“å°
     void state_signAlign(int targetKFS, float current_time)
     {
         Direction_E move_direction;
-        Point2D target_pos = {0, 0 ,0}; // [ĞÂÔö]
+        Point2D target_pos = {0, 0 ,0}; // [æ–°å¢]
         
         if(targetKFS == auto_ctrl_.targetKFS[0]) {
             move_direction = auto_ctrl_.KFS_Movedirection[0];
-            target_pos = auto_ctrl_.targetKFS_pos[0]; // [ĞÂÔö]
+            target_pos = auto_ctrl_.targetKFS_pos[0]; // [æ–°å¢]
         }
         else return;
 
-        // [ĞÂÔö] ÒÆÖ² Arm_Setup.cpp ÖĞµÄÆô¶¯ÅĞ¶ÏÂß¼­
-        // Ö»ÓĞµ½´ï bestB1 ¸½½ü²Å¿ªÊ¼¼ÆËã£¬·ÀÖ¹¹ıÔçĞı×ª
+        // [æ–°å¢] ç§»æ¤ Arm_Setup.cpp ä¸­çš„å¯åŠ¨åˆ¤æ–­é€»è¾‘
+        // åªæœ‰åˆ°è¾¾ bestB1 é™„è¿‘æ‰å¼€å§‹è®¡ç®—ï¼Œé˜²æ­¢è¿‡æ—©æ—‹è½¬
         switch(move_direction) 
         {
             case Positive_X:
@@ -396,7 +396,7 @@ public:
             }
         }
 
-        // Ñ¡Ôñ²¢Ëø¶¨²ßÂÔ
+        // é€‰æ‹©å¹¶é”å®šç­–ç•¥
         if(diff > 0) auto_ctrl_.current_strategy = ROTATE_PATH_POSITIVE;
         else if (diff < 0) auto_ctrl_.current_strategy = ROTATE_PATH_NEGATIVE;
         else auto_ctrl_.current_strategy = ROTATE_PATH_SHORTEST;
@@ -405,7 +405,7 @@ public:
 
         if(safe)
         {
-            // 2. safe to rotateÊ±¿Ì
+            // 2. safe to rotateæ—¶åˆ»
             if(!flag_safe_rotate) { 
                 print_event("Safe to Rotate", current_time); 
                 flag_safe_rotate = true; 
@@ -413,17 +413,17 @@ public:
             
             this->set_RotateAngle(target_deg);
 
-            // [ĞÂÔö] Íê³ÉrotateÊ±¿Ì
+            // [æ–°å¢] å®Œæˆrotateæ—¶åˆ»
             if(!flag_rotate_done && _tool_Abs(current_rotate_angle - target_deg) < 0.1f) {
                 print_event("Rotate Complete", current_time);
                 flag_rotate_done = true;
             }
             
-            // [ĞŞ¸Ä] ÎüÅÌ´¥·¢Âß¼­£º¼ì²éÄ©¶Ë×ø±êÊÇ·ñÓë KFS ÖĞĞÄÖØºÏ
+            // [ä¿®æ”¹] å¸ç›˜è§¦å‘é€»è¾‘ï¼šæ£€æŸ¥æœ«ç«¯åæ ‡æ˜¯å¦ä¸ KFS ä¸­å¿ƒé‡åˆ
             Point2D kfs_pos = auto_ctrl_.targetKFS_pos[0];
             float dist_err = 0.0f;
             
-            // ¸ù¾İÒÆ¶¯·½ÏòÅĞ¶ÏÖáÏò¾àÀë
+            // æ ¹æ®ç§»åŠ¨æ–¹å‘åˆ¤æ–­è½´å‘è·ç¦»
             switch(move_direction) {
                 case Positive_X: case Negative_X:
                     dist_err = _tool_Abs(auto_ctrl_.now_armPosition.x - kfs_pos.x);
@@ -434,11 +434,11 @@ public:
                 default: break;
             }
             
-            // ËÀÇøÅĞ¶Ï (ÀıÈç 2cm)
+            // æ­»åŒºåˆ¤æ–­ (ä¾‹å¦‚ 2cm)
             if(dist_err < 0.02f) {
                 if(!sucker_is_open) {
                     this->setSuckerStatus(1); // SUCK
-                    // 4. ¶Ô×¼KFSÍê³ÉÊ°È¡µÄÊ±¿Ì
+                    // 4. å¯¹å‡†KFSå®Œæˆæ‹¾å–çš„æ—¶åˆ»
                     if(!flag_pickup) {
                         print_event("Picked Up (Aligned)", current_time);
                         flag_pickup = true;
@@ -452,10 +452,10 @@ public:
         }
     }
 
-    // ºËĞÄÂß¼­£ºÒÆÖ²×Ô Arm_Setup.cpp (state_carrying)
+    // æ ¸å¿ƒé€»è¾‘ï¼šç§»æ¤è‡ª Arm_Setup.cpp (state_carrying)
     void state_carrying(int targetKFS, float current_time)
     {
-        // if(!has_printed_carrying_start) { cout << ">>> [Carrying] Start Carrying Logic (¿ªÊ¼°áÔËÂß¼­)..." << endl; has_printed_carrying_start = true; }
+        // if(!has_printed_carrying_start) { cout << ">>> [Carrying] Start Carrying Logic (å¼€å§‹æ¬è¿é€»è¾‘)..." << endl; has_printed_carrying_start = true; }
 
         Direction_E move_direction;
         if(targetKFS == auto_ctrl_.targetKFS[0]) 
@@ -522,7 +522,7 @@ public:
             else step_deg = -1.0f * (auto_ctrl_.time_set.gimbal_max_rad * 180.0f / PI) * t;
 
             if(_tool_Abs(step_deg) > _tool_Abs(diff)) step_deg = diff;
-            if(_tool_Abs(step_deg) > 90.0f) break; // ÓÅ»¯£º³¬¹ı90¶ÈÊÓÎª°²È«
+            if(_tool_Abs(step_deg) > 90.0f) break; // ä¼˜åŒ–ï¼šè¶…è¿‡90åº¦è§†ä¸ºå®‰å…¨
 
             float gimbal_angle_t  = current_deg + step_deg;
             float world_angle_t = Get_ArmWorldAngle(auto_ctrl_.now_ChassisPosition.theta, gimbal_angle_t);
@@ -537,7 +537,7 @@ public:
 
         if(safe)
         {
-            // 5. safe to carryµÄ•r¿Ì
+            // 5. safe to carryçš„æ™‚åˆ»
             if(!flag_safe_carry) 
             {
                 print_event("Safe to Carry", current_time);
@@ -555,7 +555,7 @@ public:
 
             if(_tool_Abs(diff_from_KFS) > 120.0f)
             {
-                 // 6. µ½ß_°²È«¹ ‡úµÄ•r¿Ì
+                 // 6. åˆ°é”å®‰å…¨ç¯„åœçš„æ™‚åˆ»
                  if(!flag_safe_range) 
                  {
                      if(current_launch_height < safe_height) 
@@ -587,7 +587,7 @@ public:
                     this->set_LaunchHeight(storage_height);
                     wait_start_time = current_time;
                     place_state = 1;
-                    // if(!has_printed_carrying_place) { cout << ">>> [Carrying] Arrived 0 deg. Lowering to storage (µ½´ï0¶È£¬ÏÂ½µÖÁ´æ´¢Î»)..." << endl; has_printed_carrying_place = true; }
+                    // if(!has_printed_carrying_place) { cout << ">>> [Carrying] Arrived 0 deg. Lowering to storage (åˆ°è¾¾0åº¦ï¼Œä¸‹é™è‡³å­˜å‚¨ä½)..." << endl; has_printed_carrying_place = true; }
                 }
                 else if(place_state == 1)
                 {
@@ -601,7 +601,7 @@ public:
                 else if(place_state == 2)
                 {
                     this->set_LaunchHeight(safe_height);
-                    // 7. Íê³Éƒ¦´æµÄ•r¿Ì
+                    // 7. å®Œæˆå„²å­˜çš„æ™‚åˆ»
                     if(!flag_storage_done) {
                         print_event("Storage Complete", current_time);
                         flag_storage_done = true;
@@ -616,32 +616,32 @@ public:
     }
 
 
-    // ¸¨Öúº¯Êı£º¼ÆËã PA PB (¶¯Ì¬¼ÆËã°æ)
+    // è¾…åŠ©å‡½æ•°ï¼šè®¡ç®— PA PB (åŠ¨æ€è®¡ç®—ç‰ˆ)
     void get_GimbalMF_PAPB(int target_KFSIndex, Point2D& PA, Point2D& PB) 
     {
-        // 1. »ñÈ¡ KFS ÖĞĞÄ×ø±ê
-        // [ĞŞ¸Ä] ¹Ø¼üĞŞ¸´£º½« MF±àºÅ ×ª»»Îª Map±àºÅ
+        // 1. è·å– KFS ä¸­å¿ƒåæ ‡
+        // [ä¿®æ”¹] å…³é”®ä¿®å¤ï¼šå°† MFç¼–å· è½¬æ¢ä¸º Mapç¼–å·
         int8_t mapNum = MFNum_TransforMapNum((int8_t)target_KFSIndex);
         Point2D KFS_Pos = MapCenterWorld(mapNum);
         
-        // 2. »ñÈ¡²Î¿¼µã (Â·¾¶Æğµã B1)
+        // 2. è·å–å‚è€ƒç‚¹ (è·¯å¾„èµ·ç‚¹ B1)
         Point2D Robot_Pos = auto_ctrl_.pathPos.bestB1; 
         
-        // 3. µ¥Ôª¸ñ°ë¿í (1.2m / 2 = 0.6m)
+        // 3. å•å…ƒæ ¼åŠå®½ (1.2m / 2 = 0.6m)
         float half_cell = 0.6f; 
         
-        // 4. ¸ù¾İÔË¶¯·½ÏòºÍÏà¶ÔÎ»ÖÃÈ·¶¨ÕÏ°­ÎïÃæ
+        // 4. æ ¹æ®è¿åŠ¨æ–¹å‘å’Œç›¸å¯¹ä½ç½®ç¡®å®šéšœç¢ç‰©é¢
         Direction_E dir = auto_ctrl_.KFS_Movedirection[0];
         
-        // [ĞŞ¸Ä] Âß¼­ĞŞÕı£ºPA ±ØĞëÊÇÔË¶¯·½ÏòÉÏÏÈÓöµ½µÄµã (Near Corner)
+        // [ä¿®æ”¹] é€»è¾‘ä¿®æ­£ï¼šPA å¿…é¡»æ˜¯è¿åŠ¨æ–¹å‘ä¸Šå…ˆé‡åˆ°çš„ç‚¹ (Near Corner)
         if (dir == Positive_X || dir == Negative_X) 
         {
-            // Ë®Æ½ÔË¶¯£¬±È½Ï Y ×ø±ê
+            // æ°´å¹³è¿åŠ¨ï¼Œæ¯”è¾ƒ Y åæ ‡
             if (KFS_Pos.y > Robot_Pos.y) 
             {
-                // KFS ÔÚÉÏ·½ (North)£¬µ×ÅÌÔÚÏÂ·½Í¨¹ı -> ÕÏ°­ÃæÊÇ KFS ÏÂ±íÃæ
-                // PA/PB Y×ø±ê¶¼ÊÇ Bottom (y - half)
-                // X×ø±êÈ¡¾öÓÚÔË¶¯·½Ïò
+                // KFS åœ¨ä¸Šæ–¹ (North)ï¼Œåº•ç›˜åœ¨ä¸‹æ–¹é€šè¿‡ -> éšœç¢é¢æ˜¯ KFS ä¸‹è¡¨é¢
+                // PA/PB Yåæ ‡éƒ½æ˜¯ Bottom (y - half)
+                // Xåæ ‡å–å†³äºè¿åŠ¨æ–¹å‘
                 float common_y = KFS_Pos.y - half_cell;
                 if (dir == Positive_X) 
                 {
@@ -656,7 +656,7 @@ public:
             } 
             else 
             {
-                // KFS ÔÚÏÂ·½ (South) -> ÕÏ°­ÃæÊÇ KFS ÉÏ±íÃæ
+                // KFS åœ¨ä¸‹æ–¹ (South) -> éšœç¢é¢æ˜¯ KFS ä¸Šè¡¨é¢
                 float common_y = KFS_Pos.y + half_cell;
                 if (dir == Positive_X) {
                     PA.x = KFS_Pos.x - half_cell; PA.y = common_y; // Left-Top
@@ -669,11 +669,11 @@ public:
         } 
         else
         {
-            // ´¹Ö±ÔË¶¯£¬±È½Ï X ×ø±ê
+            // å‚ç›´è¿åŠ¨ï¼Œæ¯”è¾ƒ X åæ ‡
             if (KFS_Pos.x > Robot_Pos.x) 
             {
 
-                // KFS ÔÚÓÒ²à (East) -> ÕÏ°­ÃæÊÇ KFS ×ó±íÃæ
+                // KFS åœ¨å³ä¾§ (East) -> éšœç¢é¢æ˜¯ KFS å·¦è¡¨é¢
                 float common_x = KFS_Pos.x - half_cell;
                 if (dir == Positive_Y) {
                     PA.x = common_x; PA.y = KFS_Pos.y - half_cell; // Left-Bottom
@@ -685,7 +685,7 @@ public:
             } 
             else 
             {
-                // KFS ÔÚ×ó²à (West) -> ÕÏ°­ÃæÊÇ KFS ÓÒ±íÃæ
+                // KFS åœ¨å·¦ä¾§ (West) -> éšœç¢é¢æ˜¯ KFS å³è¡¨é¢
                 float common_x = KFS_Pos.x + half_cell;
                 if (dir == Positive_Y) 
                 {
@@ -703,7 +703,7 @@ public:
 };
 
 // ==================================================================================
-// 4. Ö÷º¯Êı
+// 4. ä¸»å‡½æ•°
 // ==================================================================================
 
 static float CalcPathInfoCost(Point2D robotPos, const PathInformation_S &path)
@@ -848,14 +848,14 @@ int main(void)
     };
 
     TestCase tests[] = {
-        {"Case-1 µ¥Ä¿±ê ÁÖÍâÏÂ·½", {0.2f, 0.8f, 0.0f}, 11, 0},
-        {"Case-2 µ¥Ä¿±ê ÁÖÍâÉÏ·½", {5.5f, 9.6f, 0.0f}, 10, 0},
-        {"Case-3 Ë«Ä¿±ê ÁÖÍâÏÂ·½", {1.0f, 0.5f, 0.0f}, 4, 9},
-        {"Case-4 Ë«Ä¿±ê ÁÖÄÚÍ¨µÀ", {0.6f, 5.0f, 0.0f}, 6, 11}};
+        {"Case-1 å•ç›®æ ‡ æ—å¤–ä¸‹æ–¹", {0.2f, 0.8f, 0.0f}, 11, 0},
+        {"Case-2 å•ç›®æ ‡ æ—å¤–ä¸Šæ–¹", {5.5f, 9.6f, 0.0f}, 10, 0},
+        {"Case-3 åŒç›®æ ‡ æ—å¤–ä¸‹æ–¹", {1.0f, 0.5f, 0.0f}, 4, 9},
+        {"Case-4 åŒç›®æ ‡ æ—å†…é€šé“", {0.6f, 5.0f, 0.0f}, 6, 11}};
 
     bool allPass = true;
 
-    cout << "=== PathInformation ×îÓÅĞÔ²âÊÔ¿ªÊ¼ ===" << endl;
+    cout << "=== PathInformation æœ€ä¼˜æ€§æµ‹è¯•å¼€å§‹ ===" << endl;
 
     int testCount = (int)(sizeof(tests) / sizeof(tests[0]));
     for (int i = 0; i < testCount; ++i)
@@ -893,7 +893,7 @@ int main(void)
         PrintMustPast(info);
     }
 
-    cout << "\n=== PathInformation ×îÓÅĞÔ²âÊÔ½áÊø: " << (allPass ? "È«²¿PASS" : "´æÔÚFAIL") << " ===" << endl;
+    cout << "\n=== PathInformation æœ€ä¼˜æ€§æµ‹è¯•ç»“æŸ: " << (allPass ? "å…¨éƒ¨PASS" : "å­˜åœ¨FAIL") << " ===" << endl;
 
     int testDir[4][2] =
     {
