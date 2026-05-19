@@ -1,293 +1,137 @@
 /**
- * @file Module_Position.cpp
- * @author XieFField HA Ji cao 
- * @brief position驱动文件
- * @attention 此文件用于position而非action
- * @date 2025-10-22
+ * @file Motor_Base.h
+ * @author XieFField
+ * @brief 电机基类声明
+ * @version 1.0
+ * @date 2025-09-16
  */
+#ifndef MOTOR_BASE_H
+#define MOTOR_BASE_H
 
-/*
+#pragma once
+#ifdef __cplusplus
 
-  Reposition_SendData函数用于重定位，id为1则仅重定位X,Y坐标；id2可以
-  额外重定位yaw, id3可将HWT101CT断电重启
-  
-*/
-#include "Module_Position.h"
-// 联合体用于将20字节的浮点数接收到 float 数组中
-#include <math.h>
-#include "usbd_cdc_if.h"
+#endif // __cplusplus
+#include "BSP_CanFrame.h"
+#include <cstdint>
+#include <cstddef>
+class fdCANbus; // 前置声明
 
-
-#define NEW_OR_OLD 1
-
-union
-{
-	uint8_t data[24];
-	float ActVal[6];
-} posture;
-
-// 获取单例实例
-//Position* Position::instance_ = nullptr;
-
-// 获取单例实例
-
-RawPos RawPosData = {0};
-RealPos RealPosData = {0};
-
-Position::Position(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle) 
-    :UART_(rx_buffer_size,rx_buffer,uart_handle),
-		uart_instance_(nullptr)
-    , uart_initialized_(false)
-    , rx_buffer_{0}
-{
-}
-
-Position* Position::GetInstance(UART_HandleTypeDef *uart_handle) 
-{
-	  static uint8_t static_rx_buffer[RX_BUFFER_SIZE] = {0};
-	  static Position instance(RX_BUFFER_SIZE,static_rx_buffer,uart_handle);
-    return &instance;
-}
-
-// 初始化UART
-void Position::InitUART() 
-{
-    if (uart_initialized_) 
-	{
-        return; // 已经初始化过
-    }
-    UART_HandleTypeDef *uart_handle=Position::UART_::GetUartHandle();
-
-    uart_instance_ = InstanceManager::GetInstanceByUartHandle(uart_handle);
-    
-    // 初始化UART
-    uart_instance_->UART_Init();
-    
-    uart_initialized_ = true;
-}
-
-void Position::Callback_Fuc(uint8_t *buf, uint16_t len)
-{
-  	uint8_t count = 0;
-	uint8_t i = 0;
-	uint8_t CRC_check[2];//CRC校验位，此文件未启用
-	
-	
-	
-	uint8_t break_flag = 1;
-	while(i < len && break_flag == 1)
-	{
-		switch (count)
-		{
-			case 0:
-			{
-				if (buf[i] == FRAME_HEAD_POSITION_0)   //接收包头1
-				{
-					count++;
-				}
-				else
-				{
-					count = 0;
-				}
-				i++;
-				break;
-			}
-			case 1:
-			{
-				if (buf[i] == FRAME_HEAD_POSITION_1) //接收包头2
-				{
-					count++;
-				}
-				else
-				{
-					count = 0;
-				}
-				i++;
-				break;
-			}
-			case 2://接收帧ID和数据长度
-			{
-				if (buf[i] == 0x01) 
-				{
-					count++;
-				}
-				else
-				{
-					count = 0;
-				}
-				i++;
-				break;
-			}
-			case 3:
-			{
-				if (buf[i] == 0x18) //0x0c
-				{
-					count++;
-				}
-				else
-				{
-					count = 0;
-				}
-				i++;
-				break;
-			}
-			case 4://开始接收数据
-			{
-				uint8_t j;
-				
-				#if NEW_OR_OLD
-				if (i > len - 24)
-				{
-					break_flag = 0;
-					break;
-				}
-				
-				for(j = 0; j < 24; j++)
-				{
-					posture.data[j] = buf[i];
-					i++;
-				}
-                
-                #else
-                if (i > len - 24)
-				{
-					break_flag = 0;
-				}
-				
-				for(j = 0; j < 20; j++)
-				{
-					posture.data[j] = buf[i];
-					i++;
-				}
-                
-                #endif
-				count++;
-				break;
-			}
-			
-			//接收CRC校验码
-			case 5:
-			{
-				uint8_t j;
-				
-				for(j = 0; j < 2; j++)
-				{
-					CRC_check[j] = buf[i];
-					i++;
-				}
-				count++;
-				break;
-			}
-			
-			case 6:
-			{
-				if (buf[i] == FRAME_TAIL_POSITION_0)  //接收包尾1
-				{
-					count++;
-				}
-				else
-				{
-					count = 0;
-				}
-				i++;
-				break;
-			}
-			
-			case 7:
-			{
-				if (buf[i] == FRAME_TAIL_POSITION_1)  //接收包尾2
-				{	
-					//在接收包尾2后才开始启动回调
-					//UART_IdleCallback(&huart1);
-					Update_RawPosition(posture.ActVal);
-				}
-				count = 0;
-				
-				break_flag = 0;
-				
-				break;
-			}
-			
-			default:
-			{
-				count = 0;
-				break;
-			}
-		}
-		
-	}
-	
-}
-
-
-// 数据更新函数：将解析后的值存入 RawPos 和 RealPos
-void Position::Update_RawPosition(float value[5])
-{
-	RawPosData.Pos_X = value[0] / 1000.f; 
-	RawPosData.Pos_Y = value[1] / 1000.f; 
-	RawPosData.angle_Z = value[2];
-	RawPosData.Speed_Yaw = value[3];
-	RawPosData.Speed_Y = value[4];
-
-   //世界坐标
-	RealPosData.world_yaw = -RawPosData.angle_Z;
-  RealPosData.world_x   =  RawPosData.Pos_X + RealPosData.dx;
-	RealPosData.world_y   =  RawPosData.Pos_Y + RealPosData.dy;
-
-	RealPosData.dyaw = -RawPosData.Speed_Yaw;
-
-}
-
-
-
-void Position::Reposition_SendData(float X, float Y)
-{
-	uint8_t txBuffer[16] = {0};
-
-	union
-	{
-        float f;
-        uint8_t bytes[4];
-    } floatUnion;
-
-	//包头
-	txBuffer[0] = FRAME_HEAD_POSITION_0;
-	txBuffer[1] = FRAME_HEAD_POSITION_1;
-    txBuffer[2]=0x01;
-
-	//数据长度
-	txBuffer[3] = 0x08;
-
-	//数据
-	floatUnion.f = X;
-	txBuffer[4] = floatUnion.bytes[0];
-    txBuffer[5] = floatUnion.bytes[1];
-    txBuffer[6] = floatUnion.bytes[2];
-    txBuffer[7] = floatUnion.bytes[3];
-
-    floatUnion.f = Y;
-    txBuffer[8] = floatUnion.bytes[0];
-    txBuffer[9] = floatUnion.bytes[1];
-    txBuffer[10] = floatUnion.bytes[2];
-    txBuffer[11] = floatUnion.bytes[3];
-
-	//CRC
-	txBuffer[12] = 0;
-	txBuffer[13] = 0;
-	//包尾
-	txBuffer[14] = FRAME_TAIL_POSITION_0;
-	txBuffer[15] = FRAME_TAIL_POSITION_1;
-
-	HAL_UART_Transmit(&huart1, txBuffer, 16, HAL_MAX_DELAY);
-}
-
-
-/*调试USB用的
-void USB_DataReceivedCallback(uint8_t* buf, uint16_t len)
-{
-    // 接收到数据后立即回传（echo功能）
-    if(len > 0 && len <= RX_BUFFER_SIZE)
+class Motor_Base {
+public:
+    Motor_Base(uint32_t id, bool isExt, fdCANbus* bus, 
+        bool calcTotalAngle = true, bool calcAngle = true)
+        : is_calcangle(calcAngle),
+          is_calcTotalAngle(calcTotalAngle)
     {
-        CDC_Transmit_HS(buf, len);
+        motor_id_ = id;
+        isExtended_ = isExt;
+        bus_ = bus;
+    };
+    virtual ~Motor_Base(){};
+
+    // =
+    virtual void setTargetRPM(float rpm_set){};
+    virtual void setTargetCurrent(float current_set){};
+    virtual void setTargetAngle(float angle_set){};
+    virtual void setTargetTotalAngle(float totalAngle_set){};
+    virtual void setBrake(float brake_current)
+    {
+        (void)brake_current;
+    };
+
+    // 更新函数，负责根据最新的反馈数据计算控制输出
+    virtual void update(){};
+    
+    // 获取输出轴状态
+    virtual float getRPM() const { return rpm_; }   
+    virtual float getCurrent() const { return current_; }
+    virtual float getAngle() const { return 0.0f; }
+    virtual float getTotalAngle() const { return 0.0f; }
+
+    
+    /**
+     * @brief 打包要发送的CAN帧，子类必须实现以此提供特定的控制命令帧
+     * @param outFrames 用于存储打包的CAN帧的数组，调用者提供内存，子类负责填充内容。数组大小由 maxFrames 参数指定。
+     * @param maxFrames 用于指定 outFrames 数组的大小
+     * @return 实际填充的CAN帧数量，如果超过 maxFrames 则只填充 maxFrames 个
+     * @attention 该函数由 fdCANbus 的调度器任务周期性调用，以实现定时发送控制命令
+     */
+    virtual std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) = 0;
+
+    
+    /**
+     * @brief CAN帧解析接口，子类必须实现以此处理特定的反馈数据
+     */
+    virtual void updateFeedback(const CanFrame& cf) = 0;
+
+    /**
+     * @brief CAN帧匹配函数，默认实现为ID和帧类型匹配，子类可 override 以实现更复杂的匹配逻辑（如协议ID匹配）
+     * @param cf 需要匹配的CAN帧
+     * @return 如果帧匹配当前电机实例，则返回true，否则返回false。默认实现为简单的ID和帧类型匹配
+     */
+    virtual bool matchesFrame(const CanFrame& cf) const
+    {
+        (void)cf;
+        return false;
     }
-}*/
+
+    float get_GearRatio() const { return GEAR_RATIO; }
+    float get_inv_GearRatio() const { return inv_GEAR_RATIO_; }
+    float getTargetRPM() const { return target_rpm_; }
+    float getTargetCurrent() const { return target_current_; }
+    float getTargetAngle() const { return target_angle_; }
+    float getTargetTotalAngle() const { return target_totalAngle_; }
+    
+
+    fdCANbus* bus() const { return bus_; }
+    uint32_t getID() const { return motor_id_; }
+
+
+    void reset_controlFrequency(uint16_t newFreq) 
+    { 
+        if(newFreq > 0 && newFreq % 100 == 0 && newFreq <= 1000) // 控制频率必须是100的整数倍
+            control_Frequency_ = newFreq; 
+        else
+            control_Frequency_ = 1000; // 恢复默认值
+    }
+
+
+    uint16_t get_controlFrequency() const { return control_Frequency_; }
+    uint16_t get_controlCnt() const { return control_cnt; }
+    void reset_controlCnt() { control_cnt = 0; }
+    void increment_controlCnt() { control_cnt++; }
+
+
+
+protected:
+    bool is_calcangle = true; //仅仅在is_calcTotalAngle为true时，is_calcangle才生效
+    bool is_calcTotalAngle = true;
+    uint32_t motor_id_;
+    bool isExtended_;
+    fdCANbus* bus_;
+
+    // 目标值
+    float target_rpm_ = 0.0f; // 目标转速 rpm
+    float target_current_= 0.0f; // 目标电流 ma
+    float target_angle_ = 0.0f; // 目标角度 deg
+    float target_totalAngle_ = 0.0f; // 目标总角度 deg
+
+    float GEAR_RATIO = 1.0f; // 减速比
+    float inv_GEAR_RATIO_ = 1.0f; // 反减速比，预计算以提高效率
+    float rpm_ = 0.0f;
+    float current_ = 0.0f;
+    float angle_ = 0.0f;
+    float totalAngle_ = 0.0f;
+    float temperature_ = 0.0f; // 电机温度
+
+    uint16_t control_cnt = 0; // 控制周期计数器，用于实现不同频率的控制逻辑
+private:
+    uint16_t control_Frequency_ = 1000; // 默认控制频率 Hz，重设的控制频率必须是100的整数倍
+
+};
+
+
+
+
+#endif // MOTOR_BASE_H

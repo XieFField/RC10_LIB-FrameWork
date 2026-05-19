@@ -87,31 +87,6 @@ DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN1_Bus);
 #endif
 OIDEncoder oid_encoder(91, CAN2_Bus, 4096, 200);
 
-#if DEBUG_DJI_Motor
-
-#if SPEEDPLANNER_DEMO_DEBUG
-
-SpeedPlanner_Demo speedplanner_demo;
-#endif
-
-M2006 m2006_1(5, CAN1_Bus);
-
-DJI_MotorDemo dji_motor_demo;
-
-void dji_motor_Init()
-{
-    DJIGroupCAN1_High.addMotor(&m2006_1);
-
-    CAN1_Bus->registerMotor(&DJIGroupCAN1_High);
-
-    CAN1_Bus->registerMotor(&m2006_1);
-
-    CAN1_Bus->init();
-
-    m2006_1.pid_init(m2006_speed_pid_params, 0.0f, m2006_angle_pid_params, 0.0f);
-}
-#endif
-
 /*============================== debug  DJI_Motor ===============================*/
 
 
@@ -151,21 +126,15 @@ void ALL_Setup_ConfigInit(void)
 
    HWT101CT* imu = HWT101CT::GetInstance(&huart1);
    imu->InitUART();
-   TimeStamp::getInstance().init(&htim4); // ?????????????
+   TimeStamp::getInstance().init(&htim4);
 	
    CAN_Motor_Init();
 
    ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
    ARM_Controller.setArmStatus(ARM_IDLE);
    
-   Weapon_Controller.register_launch_Motor(&Weapon_launchMotor);
-   Weapon_Controller.register_claw_1_Motor(&Weapon_claw_1_Motor);
-   Weapon_Controller.register_claw_2_Motor(&Weapon_claw_2_Motor);
-   Weapon_Controller.register_claw_3_Motor(&Weapon_claw_3_Motor);
-   Weapon_Controller.register_wrist_Motor(&Weapon_wristMotor);
-	Weapon_Controller.register_arm_Motor(&Weapon_armMotor);
 
-   Weapon_Controller.init();
+   //Weapon_Controller.init();
    Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
 
    // ChassisOmni.init();
@@ -249,7 +218,7 @@ void CAN_Motor_Init(void)
 
    CAN2_Bus->registerMotor(&Weapon_Elbow); 
 
-   CAN2_Bus->registerOIDEncoder(&oid_encoder); // ??????????????
+   CAN2_Bus->registerOIDEncoder(&oid_encoder); 
 
    CAN2_Bus->init();
 
@@ -310,8 +279,8 @@ void CAN_Motor_Init(void)
 // ======== 武器系统 PID 参数初始化 ========
 
 
-	// PID_Param_Config weapon_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
-   // PID_Param_Config weapon_3508_anglePID = m3508_angle_pid_params;
+   PID_Param_Config weapon_3508_speedPID = m3508_speed_pid_paramsForSpeedMotor;
+   PID_Param_Config weapon_3508_anglePID = m3508_angle_pid_params;
    
    PID_Param_Config weapon_2006_speedPID = m2006_speed_pid_params;
    PID_Param_Config weapon_2006_anglePID =m2006_angle_pid_params;
@@ -326,5 +295,5 @@ void CAN_Motor_Init(void)
 //   
 //   Weapon_clawMotor.pid_init(weapon_2006_speedPID, 0.0f,  weapon_2006_anglePID, 0.0f);
 //   Weapon_traverseMotor.pid_init(m2006_speed_pid_params, 0.0f, arm_strech_anglePID, 0.0f);
-   Weapon_wristMotor.reset_controlFrequency(100);
+   //Weapon_wristMotor.reset_controlFrequency(100);
 }
