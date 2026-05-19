@@ -269,11 +269,6 @@ void CAN_Motor_Init(void)
    steer3.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
    steer4.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
 
-    steer1.set_anglepid_circular(true);
-    steer2.set_anglepid_circular(true);
-    steer3.set_anglepid_circular(true);
-    steer4.set_anglepid_circular(true);
-
    U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
    U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
 
