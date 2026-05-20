@@ -175,6 +175,18 @@ void testTelemetrySnapshotPreservesWheelTargetsWithoutModeDependentReinterpretat
     EXPECT_NEAR(snapshot.wheels[0].target_steer_oa_rad, 0.1f, 1.0e-6f);
     EXPECT_NEAR(snapshot.wheels[3].actual_steer_oa_rad, -0.4f, 1.0e-6f);
 }
+
+void testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry()
+{
+    Chassis::SteerCalibration calibration{};
+    calibration.drive_motor_sign = -1.0f;
+
+    EXPECT_NEAR(Chassis::mapWheelCurrentToDriveMotorCurrent(3000.0f, calibration), -3000.0f, 1.0e-6f);
+    EXPECT_NEAR(Chassis::mapWheelCurrentToDriveMotorCurrent(-1200.0f, calibration), 1200.0f, 1.0e-6f);
+
+    calibration.drive_motor_sign = 1.0f;
+    EXPECT_NEAR(Chassis::mapWheelCurrentToDriveMotorCurrent(3000.0f, calibration), 3000.0f, 1.0e-6f);
+}
 } // namespace
 
 int main()
@@ -185,6 +197,7 @@ int main()
     testRuntimeZeroAndMotorPolarityOnlyAffectMotorLocalConversion();
     testTelemetrySnapshotKeepsTargetAndActualYawSemanticsSeparate();
     testTelemetrySnapshotPreservesWheelTargetsWithoutModeDependentReinterpretation();
+    testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry();
 
     if (g_failures != 0)
     {

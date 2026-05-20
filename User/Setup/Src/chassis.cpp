@@ -2608,7 +2608,7 @@ namespace jia
                             planned_data_.drive_omega_rad_s[i] = 0.0f;
                             if (wheel.drive_motor_h != nullptr)
                             {
-                                wheel.drive_motor_h->setTargetCurrent(target_current_mA / wheel.drive_motor_sign);
+                                wheel.drive_motor_h->setTargetCurrent(mapWheelCurrentToDriveMotorCurrent(target_current_mA, makeSteerCalibration(wheel)));
                             }
                         }
                         else if (drive_control_type == 2U)
@@ -2618,7 +2618,7 @@ namespace jia
                             planned_data_.drive_omega_rad_s[i] = 0.0f;
                             if (wheel.drive_motor_h != nullptr)
                             {
-                                wheel.drive_motor_h->setBrake(target_brake_mA / wheel.drive_motor_sign);
+                                wheel.drive_motor_h->setBrake(mapWheelCurrentToDriveMotorCurrent(target_brake_mA, makeSteerCalibration(wheel)));
                             }
                         }
                         else
