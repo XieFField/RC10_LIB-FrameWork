@@ -182,6 +182,25 @@ public:
         current_pos.arm_pos_ = MotorTotalAngle_to_Realpos(arm_Motor_->getTotalAngle(), WeaponSage::Arm_Motor);
 		return current_pos;
 	}
+
+    void Weapon_arm_enable()
+    {
+        if(arm_Motor_ != nullptr)
+            arm_Motor_->motorEnable();
+    }
+    void Weapon_arm_setZero()
+    {
+        if(arm_Motor_ != nullptr)
+            arm_Motor_->motorSetZero();
+    }
+
+    float NormalizeAngle(float* angle)
+    {
+        float normalized = fmodf(*angle, 360.0f);
+        if (normalized < 0) 
+            normalized += 360.0f;
+        return normalized;
+    }
 	
 private:
 

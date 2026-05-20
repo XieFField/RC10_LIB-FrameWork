@@ -41,7 +41,7 @@ namespace WeaponSage_Setup
         bool is_calibrating = false;
 
         int target_poleIndex = 0; //0~3号索引的矛杆
-
+        
         int8_t last_manual_claw_state = 0; // 0: open, 1: close
         int8_t claw_switch_offset = 0;
         int8_t last_scroll_state = 0;
@@ -49,6 +49,18 @@ namespace WeaponSage_Setup
 
         int8_t isClaw_tight = 1; // 0 : open, 1: tight
         int8_t last_isClaw_tight = 1;
+
+        int8_t arm_switch_offset = 0;
+        int8_t last_arm_switch_state = 0;
+
+        int8_t isArm_Vertical;   //竖直1 水平0
+        int8_t last_isArm_Vertical;
+
+        bool wrist_rotate_enable = false; //手腕转动能标志位
+
+        bool is_claw_1_closed = false; // 夹爪1是否闭合的状态
+        bool is_claw_2_closed = false; // 夹爪2是否闭合的状态 
+        bool is_claw_3_closed = false; // 夹爪3是否闭合的状态
     }ctrl_status_S;
 
     typedef enum{
@@ -66,6 +78,7 @@ namespace WeaponSage_Setup
         float last_right_stick_y = 0.0f;
 
         bool changeTarget_state = false; //变更目标状态标志位
+   
     }manual_ctrlForgrip_S;
 
     typedef struct{
@@ -75,17 +88,15 @@ namespace WeaponSage_Setup
             bool grab_start = false;
             float grab_startTime = 0.0f;
             bool is_moving = false;  
-			bool wrist_enable=false;
+			bool arm_enable=false;
         }auto_state_bool_S; //局部状态结构体
-		  float claw_close_pos = 32.36f;
+		float claw_close_pos = 32.36f;
         float claw_open_pos = 49.58f;
-        float tarch_height = 0.0f; 
-        float up_height = 0.0f;
+        float safe_height = 0.0f; 
+;
         struct{
-            bool aimposition_done = false;
-            bool lowerclaw_done = false;
-            bool grabclaw_done = false;
-            bool lift_done = false;
+            bool is_clawed=false;
+            bool is_catched=false;  //当夹爪到达安全高度视为已经完成抓取
         }flag;
         bool auto_ctrl1 = true;
         int pole_num = 1;
@@ -189,7 +200,15 @@ public:
         target_dock_ = dock;
     }
 
-	
+    void set_claw_flag(bool claw_1, bool claw_2, bool claw_3)
+    {
+        ctrl_status_.is_claw_1_closed = claw_1;
+        ctrl_status_.is_claw_2_closed = claw_2;
+        ctrl_status_.is_claw_3_closed = claw_3;
+    }
+
+    bool Close_TargetClaw();
+
 protected:
     void loop() override;
 

@@ -70,7 +70,8 @@ typedef enum{
 
 typedef enum{
     WEAPONSAGE_MANUAL_CONTROL, //手操
-    WEAPONSAGE_AUTO_CONTROL, //自动控制模式
+    WEAPONSAGE_AUTO_CONTROL_CATCH, //自动控制模式,抓取
+    WEAPONSAGE_AUTO_CONTROL_DOCK, //自动控制模式，对接
     WEAPONSAGE_STOP,        //停止
     WEAPONSAGE_DEBUG,       //调试模式  
     WEAPONSAGE_CAMERA,      //相机协同模式

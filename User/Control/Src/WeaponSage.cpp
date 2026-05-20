@@ -65,7 +65,6 @@ void Robot_WeaponSage::update()
             claw_2_Motor_->setTargetTotalAngle(target_pos_.claw_2_TotalAngle_);
             claw_3_Motor_->setTargetTotalAngle(target_pos_.claw_3_TotalAngle_);
             wrist_Motor_->setTargetTotalAngle( target_pos_.wrist_TotalAngle_);
-            wrist_Motor_->setTargetTotalAngle(target_pos_.wrist_TotalAngle_);
             arm_Motor_->setTargetTotalAngle( initData_.max_arm_rate_,target_pos_.arm_TotalAngle_);
             break;
         }
