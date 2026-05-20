@@ -104,6 +104,77 @@ void testRuntimeZeroAndMotorPolarityOnlyAffectMotorLocalConversion()
     EXPECT_NEAR(drive_rpm, jia::radsToRpmF32(-6.0f), 1.0e-4f);
     EXPECT_NEAR(round_trip_wheel_omega_rad_s, wheel_omega_rad_s, 1.0e-6f);
 }
+
+void testTelemetrySnapshotKeepsTargetAndActualYawSemanticsSeparate()
+{
+    Chassis::TelemetryChassisState target{};
+    target.vel_x = 1.2f;
+    target.vel_y = -0.4f;
+    target.omega_z = 0.5f;
+    target.yaw_rad = 0.25f;
+
+    Chassis::TelemetryChassisState actual{};
+    actual.vel_x = 0.8f;
+    actual.vel_y = 0.3f;
+    actual.omega_z = -0.2f;
+    actual.yaw_rad = -0.75f;
+
+    Chassis::TelemetryWheelPose wheel_pose[4]{};
+    wheel_pose[0].pos_x_m = 0.39f;
+    wheel_pose[0].pos_y_m = 0.40f;
+
+    float target_drive[4] = {5.0f, 0.0f, 0.0f, 0.0f};
+    float actual_drive[4] = {4.0f, 0.0f, 0.0f, 0.0f};
+    float target_steer[4] = {0.3f, 0.0f, 0.0f, 0.0f};
+    float actual_steer[4] = {0.1f, 0.0f, 0.0f, 0.0f};
+
+    const Chassis::TelemetrySnapshot snapshot = Chassis::makeTelemetrySnapshot(
+        true,
+        target,
+        actual,
+        wheel_pose,
+        target_drive,
+        actual_drive,
+        target_steer,
+        actual_steer);
+
+    EXPECT_TRUE(snapshot.homing_all_ready);
+    EXPECT_NEAR(snapshot.target.yaw_rad, 0.25f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.actual.yaw_rad, -0.75f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.wheels[0].target_velocity_x_m_s, 1.2f + 0.5f * 0.40f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.wheels[0].target_velocity_y_m_s, -0.4f - 0.5f * 0.39f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.wheels[0].actual_velocity_x_m_s, 0.8f + (-0.2f) * 0.40f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.wheels[0].actual_velocity_y_m_s, 0.3f - (-0.2f) * 0.39f, 1.0e-6f);
+}
+
+void testTelemetrySnapshotPreservesWheelTargetsWithoutModeDependentReinterpretation()
+{
+    Chassis::TelemetryChassisState target{};
+    Chassis::TelemetryChassisState actual{};
+    Chassis::TelemetryWheelPose wheel_pose[4]{};
+    float target_drive[4] = {1.0f, -2.0f, 3.0f, -4.0f};
+    float actual_drive[4] = {-1.5f, 2.5f, -3.5f, 4.5f};
+    float target_steer[4] = {0.1f, 0.2f, 0.3f, 0.4f};
+    float actual_steer[4] = {-0.1f, -0.2f, -0.3f, -0.4f};
+
+    const Chassis::TelemetrySnapshot snapshot = Chassis::makeTelemetrySnapshot(
+        false,
+        target,
+        actual,
+        wheel_pose,
+        target_drive,
+        actual_drive,
+        target_steer,
+        actual_steer);
+
+    EXPECT_TRUE(!snapshot.homing_all_ready);
+    EXPECT_NEAR(snapshot.wheels[0].target_drive_omega_rad_s, 1.0f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.wheels[1].target_drive_omega_rad_s, -2.0f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.wheels[2].actual_drive_omega_rad_s, -3.5f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.wheels[3].actual_drive_omega_rad_s, 4.5f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.wheels[0].target_steer_oa_rad, 0.1f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.wheels[3].actual_steer_oa_rad, -0.4f, 1.0e-6f);
+}
 } // namespace
 
 int main()
@@ -112,6 +183,8 @@ int main()
     testPlannerAxisNormalizationDoesNotDependOnDebugStyleOmegaFlip();
     testSteerGeometryUsesSignedInstallationAngleOnly();
     testRuntimeZeroAndMotorPolarityOnlyAffectMotorLocalConversion();
+    testTelemetrySnapshotKeepsTargetAndActualYawSemanticsSeparate();
+    testTelemetrySnapshotPreservesWheelTargetsWithoutModeDependentReinterpretation();
 
     if (g_failures != 0)
     {

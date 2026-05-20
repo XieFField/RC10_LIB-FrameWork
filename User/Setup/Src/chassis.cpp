@@ -2155,35 +2155,52 @@ namespace jia
                        packPayloadF32(yaw);
             };
 
-            if (!packChassis4f(planned_data_.vel_x, planned_data_.vel_y, planned_data_.omega_z, planned_data_.rot_z) ||
-                !packChassis4f(current_data_.vel_x, current_data_.vel_y, current_data_.omega_z, input_hwt_rot_z_))
+            TelemetryChassisState target_state{};
+            target_state.vel_x = planned_data_.vel_x;
+            target_state.vel_y = planned_data_.vel_y;
+            target_state.omega_z = planned_data_.omega_z;
+            target_state.yaw_rad = planned_data_.rot_z;
+
+            TelemetryChassisState actual_state{};
+            actual_state.vel_x = current_data_.vel_x;
+            actual_state.vel_y = current_data_.vel_y;
+            actual_state.omega_z = current_data_.omega_z;
+            actual_state.yaw_rad = input_hwt_rot_z_;
+
+            TelemetryWheelPose wheel_pose[kTelemetryWheelCount]{};
+            for (u8 i = 0U; i < kTelemetryWheelCount; ++i)
+            {
+                wheel_pose[i].pos_x_m = wheel_config_[i].pos_x_m;
+                wheel_pose[i].pos_y_m = wheel_config_[i].pos_y_m;
+            }
+
+            const TelemetrySnapshot snapshot = makeTelemetrySnapshot(all_homed,
+                                                                    target_state,
+                                                                    actual_state,
+                                                                    wheel_pose,
+                                                                    planned_data_.drive_omega_rad_s,
+                                                                    current_data_.drive_omega_rad_s,
+                                                                    planned_data_.steer_angle_oa_rad,
+                                                                    current_data_.steer_angle_oa_rad);
+
+            if (!packChassis4f(snapshot.target.vel_x, snapshot.target.vel_y, snapshot.target.omega_z, snapshot.target.yaw_rad) ||
+                !packChassis4f(snapshot.actual.vel_x, snapshot.actual.vel_y, snapshot.actual.omega_z, snapshot.actual.yaw_rad))
             {
                 return;
             }
 
             for (u8 i = 0U; i < kSwerveTelemetryWheelCount; ++i)
             {
-                f32 t_wvx = 0.0f;
-                f32 t_wvy = 0.0f;
-                f32 a_wvx = 0.0f;
-                f32 a_wvy = 0.0f;
-                if (i < 4U)
-                {
-                    const WheelConfig &wheel = wheel_config_[i];
-                    t_wvx = planned_data_.vel_x + planned_data_.omega_z * wheel.pos_y_m;
-                    t_wvy = planned_data_.vel_y - planned_data_.omega_z * wheel.pos_x_m;
-                    a_wvx = current_data_.vel_x + current_data_.omega_z * wheel.pos_y_m;
-                    a_wvy = current_data_.vel_y - current_data_.omega_z * wheel.pos_x_m;
-                }
+                const TelemetryWheelState &wheel = snapshot.wheels[i];
 
-                if (!packPayloadF32(planned_data_.drive_omega_rad_s[i]) ||
-                    !packPayloadF32(current_data_.drive_omega_rad_s[i]) ||
-                    !packPayloadF32(planned_data_.steer_angle_oa_rad[i]) ||
-                    !packPayloadF32(current_data_.steer_angle_oa_rad[i]) ||
-                    !packPayloadF32(t_wvx) ||
-                    !packPayloadF32(t_wvy) ||
-                    !packPayloadF32(a_wvx) ||
-                    !packPayloadF32(a_wvy))
+                if (!packPayloadF32(wheel.target_drive_omega_rad_s) ||
+                    !packPayloadF32(wheel.actual_drive_omega_rad_s) ||
+                    !packPayloadF32(wheel.target_steer_oa_rad) ||
+                    !packPayloadF32(wheel.actual_steer_oa_rad) ||
+                    !packPayloadF32(wheel.target_velocity_x_m_s) ||
+                    !packPayloadF32(wheel.target_velocity_y_m_s) ||
+                    !packPayloadF32(wheel.actual_velocity_x_m_s) ||
+                    !packPayloadF32(wheel.actual_velocity_y_m_s))
                 {
                     return;
                 }
@@ -2752,7 +2769,7 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];
-                const f32 steer_angle_oa_rad = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                const f32 steer_angle_oa_rad = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
                 const f32 cos_theta = cosf(steer_angle_oa_rad);
                 const f32 sin_theta = sinf(steer_angle_oa_rad);
                 const f32 drive_linear_m_s = wheel.corrected_drive_omega_rad_s * wheel_radius_m_;

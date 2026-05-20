@@ -58,6 +58,42 @@ namespace jia
                 f32 drive_motor_sign = 1.0f;
             };
 
+            static constexpr u8 kTelemetryWheelCount = 4U;
+
+            struct TelemetryChassisState
+            {
+                f32 vel_x = 0.0f;
+                f32 vel_y = 0.0f;
+                f32 omega_z = 0.0f;
+                f32 yaw_rad = 0.0f;
+            };
+
+            struct TelemetryWheelPose
+            {
+                f32 pos_x_m = 0.0f;
+                f32 pos_y_m = 0.0f;
+            };
+
+            struct TelemetryWheelState
+            {
+                f32 target_drive_omega_rad_s = 0.0f;
+                f32 actual_drive_omega_rad_s = 0.0f;
+                f32 target_steer_oa_rad = 0.0f;
+                f32 actual_steer_oa_rad = 0.0f;
+                f32 target_velocity_x_m_s = 0.0f;
+                f32 target_velocity_y_m_s = 0.0f;
+                f32 actual_velocity_x_m_s = 0.0f;
+                f32 actual_velocity_y_m_s = 0.0f;
+            };
+
+            struct TelemetrySnapshot
+            {
+                bool homing_all_ready = false;
+                TelemetryChassisState target{};
+                TelemetryChassisState actual{};
+                TelemetryWheelState wheels[kTelemetryWheelCount]{};
+            };
+
             // 空闲姿态：定义底盘失能或无输入时，四个舵轮应保持的姿态策略。
             // kHoldLast 适合保持最后姿态，kXPark 适合进入 X 停靠姿态以减小外力拖拽干涉。
             enum class IdlePostureMode
@@ -117,6 +153,14 @@ namespace jia
             static f32 mapCorrectedLocalTotalToRawSteerMotorTotal(f32 corrected_local_total_rad, const SteerCalibration &calibration);
             static f32 mapDriveMotorRpmToWheelOmega(f32 motor_rpm, const SteerCalibration &calibration);
             static f32 mapWheelOmegaToDriveMotorRpm(f32 wheel_omega_rad_s, const SteerCalibration &calibration);
+            static TelemetrySnapshot makeTelemetrySnapshot(bool homing_all_ready,
+                                                           const TelemetryChassisState &target,
+                                                           const TelemetryChassisState &actual,
+                                                           const TelemetryWheelPose wheel_pose[kTelemetryWheelCount],
+                                                           const f32 target_drive_omega_rad_s[kTelemetryWheelCount],
+                                                           const f32 actual_drive_omega_rad_s[kTelemetryWheelCount],
+                                                           const f32 target_steer_oa_rad[kTelemetryWheelCount],
+                                                           const f32 actual_steer_oa_rad[kTelemetryWheelCount]);
 
             // 初始化配置：只做硬件句柄绑定。
             struct InitConfig
@@ -821,6 +865,36 @@ namespace jia
         {
             const f32 drive_sign = (calibration.drive_motor_sign == 0.0f) ? 1.0f : calibration.drive_motor_sign;
             return radsToRpmF32(wheel_omega_rad_s / drive_sign);
+        }
+
+        inline Chassis::TelemetrySnapshot Chassis::makeTelemetrySnapshot(bool homing_all_ready,
+                                                                         const TelemetryChassisState &target,
+                                                                         const TelemetryChassisState &actual,
+                                                                         const TelemetryWheelPose wheel_pose[kTelemetryWheelCount],
+                                                                         const f32 target_drive_omega_rad_s[kTelemetryWheelCount],
+                                                                         const f32 actual_drive_omega_rad_s[kTelemetryWheelCount],
+                                                                         const f32 target_steer_oa_rad[kTelemetryWheelCount],
+                                                                         const f32 actual_steer_oa_rad[kTelemetryWheelCount])
+        {
+            TelemetrySnapshot snapshot{};
+            snapshot.homing_all_ready = homing_all_ready;
+            snapshot.target = target;
+            snapshot.actual = actual;
+
+            for (u8 i = 0U; i < kTelemetryWheelCount; ++i)
+            {
+                TelemetryWheelState &wheel = snapshot.wheels[i];
+                wheel.target_drive_omega_rad_s = target_drive_omega_rad_s[i];
+                wheel.actual_drive_omega_rad_s = actual_drive_omega_rad_s[i];
+                wheel.target_steer_oa_rad = target_steer_oa_rad[i];
+                wheel.actual_steer_oa_rad = actual_steer_oa_rad[i];
+                wheel.target_velocity_x_m_s = target.vel_x + target.omega_z * wheel_pose[i].pos_y_m;
+                wheel.target_velocity_y_m_s = target.vel_y - target.omega_z * wheel_pose[i].pos_x_m;
+                wheel.actual_velocity_x_m_s = actual.vel_x + actual.omega_z * wheel_pose[i].pos_y_m;
+                wheel.actual_velocity_y_m_s = actual.vel_y - actual.omega_z * wheel_pose[i].pos_x_m;
+            }
+
+            return snapshot;
         }
 
         inline Chassis::SteerCalibration Chassis::makeSteerCalibration(const WheelConfig &wheel)
