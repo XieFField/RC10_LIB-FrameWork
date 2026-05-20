@@ -302,7 +302,7 @@ namespace jia
         Chassis::Result Chassis::startHoming()
         {
             // 回零请求只负责“拉起状态机”和清空本轮回零参考，不直接驱动电机；
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。真。正。的。搜。索。、。沿。边。沿。捕。获。零。位。、。偏。置。生。效。和。完。成。判。定。都。在。 。r。u。n。T。h。r。e。a。d。 。中。按。周。期。推。进。?。
+// 真正的搜索、沿边沿捕获零位、偏置生效和完成判定都在runThread中按周期推进
             homing_start_request_ = true;
             for (u8 i = 0; i < 4; ++i)
             {
@@ -364,7 +364,7 @@ namespace jia
 
         void Chassis::refreshActuatorLimitState()
         {
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。预。留。钩。子。：。当。前。执。行。器。限。幅。开。关。直。接。从。 。a。c。t。u。a。t。o。r。_。l。i。m。i。t。_。e。n。a。b。l。e。_。 。读。取。，。无。需。额。外。派。生。状。态。?。
+// 预留钩子：当前执行器限幅开关直接从actuator_limit_enable_读取，无需额外派生状态
         }
 
         f32 Chassis::mapSingleTurnToNearestTotalAngle(const WheelConfig &wheel, f32 target_oa_single_turn_deg) const
@@ -675,7 +675,7 @@ namespace jia
         void Chassis::setModeFlag()
         {
             // 将外部模式压缩成线程内使用的少量布尔标志，后续执行顺序只看这些标志，
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。这。样。可。以。把。“。世。界。系。/。车。体。系。”。“。定。向。锁。?。跟。随。当。前。角。”。“。空。转。模。式。”。解。耦。开。?。
+// 这样可以把“世界系/车体系”“定向锁跟随当前角”“空转模式”解耦开
             current_mode_flag_.is_world_speed_mode = false;
             current_mode_flag_.is_lock_now_rot_z = false;
             current_mode_flag_.is_lock_to_rot_z = false;
@@ -751,8 +751,8 @@ namespace jia
 
         void Chassis::applyDebugTargetOverride()
         {
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。手。柄。平。移。坐。标。 。-。>。 。车。体。坐。标。约。定。：。前。推。前。进。、。左。推。左。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。为。匹。配。遥。杆。实。际。符。号。：。l。e。f。t。_。y。 。正。向。映。射。?。+。X。；。l。e。f。t。_。x。 。取。反。后。映。射。到。 。+。Y。?。
+            // 手柄平移坐标 -> 车体坐标约定：前推前进、左推左移。
+            // 为匹配遥杆实际符号：left_y 正向映射到 +X；left_x 取反后映射到 +Y。
             f32 target_vel_x = airjoy_data_.left_y * max_vel_x_;
             f32 target_vel_y = -airjoy_data_.left_x * max_vel_y_;
             const f32 right_x_cmd = -airjoy_data_.right_x;
@@ -849,9 +849,9 @@ namespace jia
         }
 
         // “锁当前航向”模式的核心语义是：
-            // 抓取当前机体朝向，再在后续由 PID 产生角速度闭环，让机器人保持当下姿态。
-。 。 。 。 。 。 。 。 。/。/。 。就。把。最。近。一。次。真。实。机。体。朝。向。当。作。要。维。持。?。r。o。t。_。z。，。再。由。姿。?。P。I。D。 。生。成。 。o。u。t。_。o。m。e。g。a。_。z。 。来。稳。住。该。朝。向。?。
-。 。 。 。 。 。 。 。 。/。/。 。因。此。它。不。是。“。始。终。锁。某。个。固。定。角。”。，。而。是。“。手。动。旋。转。”。和。“。松。手。后。自。动。锁。住。当。前。角。”。之。间。的。平。滑。切。换。器。?。
+            // 抓取当前机体朝向，再在后续由 PID 产生角速度闭环，让机器人保持当下姿态
+// 就把最近一次真实机体朝向当作要维持rot_z，再由姿PID生成out_omega_z来稳住该朝向
+// 因此它不是“始终锁某个固定角”，而是“手动旋转”和“松手后自动锁住当前角”之间的平滑切换器
         void Chassis::isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z)
         {
                 // 1. out_rot_z 直接跟随 IMU 当前朝向 input_hwt_rot_z_，把目标角锁在此刻真实姿态上；
@@ -862,15 +862,15 @@ namespace jia
                 return;
             }
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。“。锁。当。前。航。向。”。不。是。简。单。地。?。r。o。t。_。z。 。固。定。住。，。而。是。先。在。用。户。开。始。施。加。角。速。度。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。抓。取。当。前。机。体。朝。向。，。再。在。后。续。由。 。P。I。D。 。产。生。角。速。度。闭。环。，。让。机。器。人。保。持。当。下。姿。态。?。
+// “锁当前航向”不是简单地rot_z固定住，而是先在用户开始施加角速度
+// 抓取当前机体朝向，再在后续由PID产生角速度闭环，让机器人保持当下姿态
             if (omega_z == 0.0f)
             {
                     // 过渡缓冲结束后，真正用于锁角的目标已经不是外部传入的 rot_z，
                 // 但在刚松开摇杆的最初一小段时间内，不立即让 PID 介入，而是先进入过渡缓冲：
                     // 后续由 rot_z_pid_ 根据“目标朝向 lock_now_rot_z_target_”和“当前真实朝向 input_hwt_rot_z_”
-                    // 的误差生成维持姿态所需的 out_omega_z。
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。3。.。 。l。o。c。k。_。n。o。w。_。r。o。t。_。z。_。s。h。i。f。t。_。c。o。u。n。t。_。 。作。为。缓。冲。计。数。器。，。倒。数。结。束。后。才。真。正。进。入。锁。角。闭。环。?。
+                    // 的误差生成维持姿态所需的 out_omega_z
+// 3.lock_now_rot_z_shift_count_作为缓冲计数器，倒数结束后才真正进入锁角闭环
                 if (lock_now_rot_z_shift_count_ > 0)
                 {
                     lock_now_rot_z_shift_count_--;
@@ -880,10 +880,10 @@ namespace jia
                 }
                 else
                 {
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。过。渡。缓。冲。结。束。后。，。真。正。用。于。锁。角。的。目。标。已。经。不。是。外。部。传。入。的。 。r。o。t。_。z。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。而。是。前。面。已。经。抓。取。并。保。存。下。来。的。 。l。o。c。k。_。n。o。w。_。r。o。t。_。z。_。t。a。r。g。e。t。_。?。
-                    // rot_z_pid_count_ / rot_z_pid_period_ 共同控制姿态 PID 的实际计算节拍。
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。的。误。差。生。成。维。持。姿。态。所。需。?。o。u。t。_。o。m。e。g。a。_。z。?。
+// 过渡缓冲结束后，真正用于锁角的目标已经不是外部传入的rot_z
+// 而是前面已经抓取并保存下来的lock_now_rot_z_target_
+                    // rot_z_pid_count_ / rot_z_pid_period_ 共同控制姿态 PID 的实际计算节拍
+// 的误差生成维持姿态所需out_omega_z
                     out_rot_z = lock_now_rot_z_target_;
                     if (rot_z_pid_count_ >= rot_z_pid_period_)
                     {
@@ -892,21 +892,21 @@ namespace jia
                     }
                     else
                     {
-                // 3. 每次有手动旋转输入都重置缓冲计数器，为后续从手动旋转切回自动锁角预留平滑过渡窗口。
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。暂。时。沿。用。上。一。规。划。周。期。?。p。l。a。n。n。e。d。_。d。a。t。a。_。.。o。m。e。g。a。_。z。，。减。少。输。出。抖。动。并。维。持。角。速。度。连。续。性。?。
+                // 3. 每次有手动旋转输入都重置缓冲计数器，为后续从手动旋转切回自动锁角预留平滑过渡窗口
+// 暂时沿用上一规划周期planned_data_.omega_z，减少输出抖动并维持角速度连续性
                         out_omega_z = planned_data_.omega_z;
                     }
-                    // rot_z_pid_count_ / rot_z_pid_period_ 鍏卞悓鎺у埗濮挎€?PID 鐨勫疄闄呰绠楄妭鎷嶃€?
+                    // rot_z_pid_count_ / rot_z_pid_period_ 共同控制姿态 PID 的实际计算节拍。
                     rot_z_pid_count_++;
                 }
             }
             else
             {
                 // 这里表示“用户仍在主动要求旋转”：
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。1。.。 。不。进。入。锁。角。闭。环。，。直。接。执。行。当。前。手。动。 。o。m。e。g。a。_。z。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。2。.。 。同。时。?。o。u。t。_。r。o。t。_。z。 。刷。新。成。当。?。I。M。U。 。朝。向。 。i。n。p。u。t。_。h。w。t。_。r。o。t。_。z。_。?。
+// 1.不进入锁角闭环，直接执行当前手动omega_z
+// 2.同时out_rot_z刷新成当IMU朝向input_hwt_rot_z_
                 //    相当于不断更新“等会儿松手后要锁住的那个角”；
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。3。.。 。每。次。有。手。动。旋。转。输。入。都。重。置。缓。冲。计。数。器。，。为。后。续。从。手。动。旋。转。切。回。自。动。锁。角。预。留。平。滑。过。渡。窗。口。?。
+// 3.每次有手动旋转输入都重置缓冲计数器，为后续从手动旋转切回自动锁角预留平滑过渡窗口
                 lock_now_rot_z_target_ = input_hwt_rot_z_;
                 out_rot_z = lock_now_rot_z_target_;
                 out_omega_z = omega_z;
@@ -923,8 +923,8 @@ namespace jia
                 return;
             }
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。“。锁。到。指。定。航。向。”。会。先。限。制。目。标。角。速。度。变。化。率。，。再。用。姿。?。P。I。D。 。生。成。维。持。/。逼。近。该。目。标。角。度。所。需。?。o。m。e。g。a。_。z。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。这。样。外。层。给。出。的。目。标。角。不。会。瞬。间。跳。变。，。底。盘。转。向。更。平。滑。?。
+// “锁到指定航向”会先限制目标角速度变化率，再用姿PID生成维持/逼近该目标角度所需omega_z
+// 这样外层给出的目标角不会瞬间跳变，底盘转向更平滑
             out_rot_z = limit1DPiAngleRateByTimeF32(tar_rot_z, cur_rot_z, period_, max_lock_to_rot_z_rad_s_);
             if (rot_z_pid_count_ >= rot_z_pid_period_)
             {
@@ -947,12 +947,12 @@ namespace jia
 
         void Chassis::limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z)
         {
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。第。一。阶。段。：。先。?。x。/。y。 。分。量。分。别。做。加。减。速。限。幅。，。保。证。速。度。台。阶。被。平。滑。化。?。
+// 第一阶段：先x/y分量分别做加减速限幅，保证速度台阶被平滑化
             out_vel_x = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_x, last_planned_data_.vel_x, period_, max_acc_xy_acc_, max_acc_xy_dec_);
             out_vel_y = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_y, last_planned_data_.vel_y, period_, max_acc_xy_acc_, max_acc_xy_dec_);
             out_omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_omega_z, last_planned_data_.omega_z, period_, max_alpha_z_acc_, max_alpha_z_dec_);
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。第。二。阶。段。：。平。移。矢。量。方。向。限。幅。（。低。速。滞。回。冻。?。+。 。方。向。角。速。度。限。幅。）。?。
+// 第二阶段：平移矢量方向限幅（低速滞回冻+方向角速度限幅）
             const f32 tar_mag = magnitude2D(tar_vel_x, tar_vel_y);
             const f32 out_mag = magnitude2D(out_vel_x, out_vel_y);
             const f32 enter_speed = near_zero_derived_.freeze_enter_m_s;
@@ -1083,8 +1083,8 @@ namespace jia
         bool Chassis::updateHomingState(WheelConfig &wheel)
         {
             // 四舵轮回零状态机的职责是：在每个周期读取限位/零位传感器，
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。依。次。完。成。 。I。d。l。e。 。-。>。 。S。e。a。r。c。h。 。-。>。 。E。d。g。e。D。e。t。e。c。t。e。d。 。-。>。 。O。f。f。s。e。t。A。p。p。l。y。 。-。>。 。C。o。n。t。i。n。u。o。u。s。A。n。g。l。e。R。e。a。d。y。 。-。>。 。A。l。i。g。n。T。o。Z。e。r。o。 。-。>。 。R。e。a。d。y。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。这。里。不。直。接。“。判。定。一。次。就。完。成。”。，。而。是。通。过。多。周。期。状。态。推。进。来。吸。收。传。感。器。抖。动。和。机。械。延。迟。?。
+            // 依次完成 Idle -> Search -> EdgeDetected -> OffsetApply -> ContinuousAngleReady -> AlignToZero -> Ready。
+            // 这里不直接“判定一次就完成”，而是通过多周期状态推进来吸收传感器抖动和机械延迟。
             if (!wheel.homing_enabled || wheel.homing_gpio_port == nullptr)
             {
                 wheel.homing_state = HomingState::kReady;
@@ -1101,7 +1101,7 @@ namespace jia
             {
                 if (homing_start_request_)
                 {
-                // 两个触发角相差 180°，保证任意起始状态半圈内都能抓到一个有效边沿。
+                // 两个触发角相差 180°，保证任意起始状态半圈内都能抓到一个有效边沿
                     wheel.homing_state = HomingState::kSearch;
                     wheel.homing_elapsed_s = 0.0f;
                 }
@@ -1111,11 +1111,11 @@ namespace jia
 
             if (wheel.homing_state == HomingState::kSearch)
             {
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。搜。索。态。严。格。等。待。“。传。感。器。边。沿。”。，。不。再。使。用。“。初。始。有。效。电。平。直。接。通。过。”。的。捷。径。?。
+                // 搜索态严格等待“传感器边沿”，不再使用“初始有效电平直接通过”的捷径。
                 // 双边沿语义（按你给的实车标定）：
-                //   H->L: 瑙﹀彂瑙掓槸鏈烘 +60掳
-                //   L->H: 瑙﹀彂瑙掓槸鏈烘 -120掳
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。两。个。触。发。角。相。?。1。8。0。°。，。保。证。任。意。起。始。状。态。半。圈。内。都。能。抓。到。一。个。有。效。边。沿。?。
+                //   H->L: 触发角是机械 +60°
+                //   L->H: 触发角是机械 -120°
+                // 两个触发角相差 180°，保证任意起始状态半圈内都能抓到一个有效边沿。
                 wheel.homing_elapsed_s += period_;
                 const bool is_edge = (sensor_raw_high != wheel.homing_last_sensor_active);
                 if (is_edge)
@@ -1139,20 +1139,20 @@ namespace jia
 
             if (wheel.homing_state == HomingState::kEdgeDetected)
             {
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。边。沿。已。抓。到。后。，。先。走。一。个。过。渡。态。，。确。保。零。偏。已。经。写。入。后。再。进。入。连。续。角。度。就。绪。态。?。
+// 边沿已抓到后，先走一个过渡态，确保零偏已经写入后再进入连续角度就绪态
                 wheel.homing_state = HomingState::kOffsetApply;
                 return false;
             }
             if (wheel.homing_state == HomingState::kOffsetApply)
             {
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。这。一。拍。只。做。“。应。用。偏。置。”。的。状。态。切。换。，。不。再。改。零。偏。，。保。持。状。态。机。步。骤。清。晰。可。追。踪。?。
+// 这一拍只做“应用偏置”的状态切换，不再改零偏，保持状态机步骤清晰可追踪
                 wheel.homing_state = HomingState::kContinuousAngleReady;
                 return false;
             }
             if (wheel.homing_state == HomingState::kContinuousAngleReady)
             {
                 // 连续角度已可用后，先进入“归位到软件零点”阶段：
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。?。O。A。 。角。自。动。走。?。0。°。（。车。头。前。方。）。再。判。定。该。轮。回。零。完。成。?。
+// OA角自动走0°（车头前方）再判定该轮回零完成
                 wheel.homing_state = HomingState::kAlignToZero;
                 return false;
             }
@@ -1211,10 +1211,10 @@ namespace jia
             }
         }
 
-。 。 。 。 。 。 。 。 。/。/。 。这。是。一。个。“。位。置。目。?。+。 。速。度。上。限。 。+。 。加。速。度。上。限。”。的。二。阶。限。幅。器。?。
-            // rate_delta_limit 是“这一拍速度最多允许变化多少”，由最大加速度决定。
-。 。 。 。 。 。 。 。 。/。/。 。输。出。是。“。下。一。拍。允。许。走。到。的。位。置。”。，。并。通。过。 。n。e。x。t。_。r。a。t。e。 。回。传。这。一。拍。实。际。采。用。的。速。度。?。
-。 。 。 。 。 。 。 。 。/。/。 。在。四。舵。轮。里。它。主。要。用。于。转。向。角。规。划。：。既。不。允。许。舵。角。变。化。过。快。，。也。不。允。许。舵。角。速。度。突。变。过。猛。?。
+// 这是一个“位置目+速度上限+加速度上限”的二阶限幅器
+            // rate_delta_limit 是“这一拍速度最多允许变化多少”，由最大加速度决定
+// 输出是“下一拍允许走到的位置”，并通过next_rate回传这一拍实际采用的速度
+// 在四舵轮里它主要用于转向角规划：既不允许舵角变化过快，也不允许舵角速度突变过猛
         f32 Chassis::limitPositionSecondOrder(f32 current_value, f32 current_rate, f32 target_value, f32 max_rate, f32 max_accel, f32 dt_s, f32 &next_rate) const
         {
             // 先做速度变化率限制：如果期望速度离当前速度太远，
@@ -1222,17 +1222,17 @@ namespace jia
 
             // delta_value 是这一拍距离目标位置还差多少；
             // desired_rate 是“如果想在一拍内尽量逼近目标，希望使用的速度”，
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。但。它。先。受。 。m。a。x。_。r。a。t。e。 。限。制。，。避。免。直。接。给。出。不。可。能。达。到。的。目。标。速。度。?。
+// 但它先受max_rate限制，避免直接给出不可能达到的目标速度
             const f32 delta_value = target_value - current_value;
             const f32 desired_rate = clampValue(delta_value / safe_dt, -max_rate, max_rate);
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。r。a。t。e。_。d。e。l。t。a。_。l。i。m。i。t。 。是。“。这。一。拍。速。度。最。多。允。许。变。化。多。少。”。，。由。最。大。加。速。度。决。定。?。
+// rate_delta_limit是“这一拍速度最多允许变化多少”，由最大加速度决定
             const f32 rate_delta_limit = max_accel * safe_dt;
 
             next_rate = current_rate;
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。先。做。速。度。变。化。率。限。制。：。如。果。期。望。速。度。离。当。前。速。度。太。远。?。
-            // 再做一次绝对速度限幅，保证最终速度不超过 max_rate。
+// 先做速度变化率限制：如果期望速度离当前速度太远
+            // 再做一次绝对速度限幅，保证最终速度不超过 max_rate
             if (desired_rate > current_rate + rate_delta_limit)
             {
                 next_rate = current_rate + rate_delta_limit;
@@ -1246,21 +1246,21 @@ namespace jia
                 next_rate = desired_rate;
             }
 
-            // 返回下一拍允许到达的位置；调用侧会把它当作新的舵角目标。
+            // 返回下一拍允许到达的位置；调用侧会把它当作新的舵角目标
             next_rate = clampValue(next_rate, -max_rate, max_rate);
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。按。这。一。拍。最。终。允。许。的。速。度。积。分。出。位。置。步。进。量。?。
+// 按这一拍最终允许的速度积分出位置步进量
             f32 step_value = next_rate * safe_dt;
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。如。果。这。一。拍。已。经。足。够。到。达。目。标。，。则。直。接。截。断。到。目。标。位。置。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。避。免。积。分。后。跨。?。t。a。r。g。e。t。_。v。a。l。u。e。 。造。成。过。冲。?。
+// 如果这一拍已经足够到达目标，则直接截断到目标位置
+// 避免积分后跨target_value造成过冲
             if (fabsf(step_value) > fabsf(delta_value))
             {
                 step_value = delta_value;
                 next_rate = step_value / safe_dt;
             }
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。返。回。下。一。拍。允。许。到。达。的。位。置。；。调。用。侧。会。把。它。当。作。新。的。舵。角。目。标。?。
+// 返回下一拍允许到达的位置；调用侧会把它当作新的舵角目标
             return current_value + step_value;
         }
 
@@ -1297,7 +1297,7 @@ namespace jia
             f32 max_command_wheel_speed_m_s = 0.0f;
             f32 max_residual_speed_m_s = 0.0f;
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。第。一。阶。段。：。采。样。每。轮。速。度。与。残。速。，。先。建。立。“。驻。车。进。入。门。控。”。的。判。据。?。
+// 第一阶段：采样每轮速度与残速，先建立“驻车进入门控”的判据
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
@@ -1346,7 +1346,7 @@ namespace jia
             const f32 uniform_drive_omega_abs = fabsf(input_target_data_.drive_lock_speed_m_s) / wheel_radius_m_;
             const f32 uniform_drive_sign = (input_target_data_.drive_lock_speed_m_s >= 0.0f) ? 1.0f : -1.0f;
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。第。二。阶。段。：。计。算。每。轮。目。标。、。翻。转。候。选。与。误。差。（。含。 。X。-。P。a。r。k。 。延。时。门。控。）。?。
+// 第二阶段：计算每轮目标、翻转候选与误差（含X-Park延时门控）
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];
@@ -1419,7 +1419,7 @@ namespace jia
                 target_drive_raw_rad_s[i] = drive_omega;
             }
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。第。三。阶。段。：。停。车。抑。制。（。指。令。静。止。但。残。速。未。消。失。时。，。先。保。舵。角。）。?。
+// 第三阶段：停车抑制（指令静止但残速未消失时，先保舵角）
             const bool command_is_stationary = command_stationary_intent;
             const bool residual_drive_is_moving = max_residual_speed_m_s > near_zero_derived_.stop_guard_release_m_s;
             if (!force_uniform_steer_drive &&
@@ -1445,11 +1445,11 @@ namespace jia
                 }
             }
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。第。四。阶。段。：。驱。动。抑。制。比。例。（。D。r。i。v。e。G。a。t。e。 。或。余。弦。补。偿。）。?。
+// 第四阶段：驱动抑制比例（DriveGate或余弦补偿）
             f32 gate_scales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
             computeDriveGateScales(steering_errors_rad, command_data, gate_scales);
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。第。五。阶。段。：。先。规。划。舵。向。目。标。，。并。统。计。全。局。“。最。大。到。角。时。间。”。?。
+// 第五阶段：先规划舵向目标，并统计全局“最大到角时间”
             const f32 steer_rate_floor = 1.0e-3f;
             f32 eta_max_s = 0.0f;
             const f32 steer_rate_limit_runtime = actuator_limit_enable_.enable_steer_rate_limit ? max_steer_rate_rad_s_ : 1.0e6f;
@@ -1483,13 +1483,13 @@ namespace jia
                 planned_oa_total_rad_arr[i] = planned_local_total_rad_arr[i] + wheel.theta_oa_to_owi_rad;
             }
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。第。六。阶。段。：。基。于。“。规。划。舵。向。角。”。重。算。每。轮。驱。动。投。影。，。保。证。过。渡。期。驱。动。与。可。实。现。滚。动。方。向。一。致。?。
+// 第六阶段：基于“规划舵向角”重算每轮驱动投影，保证过渡期驱动与可实现滚动方向一致
             if (!force_uniform_steer_drive)
             {
                 computeProjectedDriveFromPlannedSteer(command_data, planned_oa_total_rad_arr, target_drive_raw_rad_s);
             }
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。第。七。阶。段。：。全。局。矢。量。一。致。性。门。控。（。方。向。优。先。）。—。—。根。据。合。成。方。向。误。差。与。最。大。到。角。时。间。统。一。压。放。驱。动。?。
+// 第七阶段：全局矢量一致性门控（方向优先）——根据合成方向误差与最大到角时间统一压放驱动
             const f32 translational_speed_m_s = magnitude2D(command_data.vel_x, command_data.vel_y);
             f32 predicted_vel_x = 0.0f;
             f32 predicted_vel_y = 0.0f;
@@ -1516,7 +1516,7 @@ namespace jia
                 vector_gate_active_ = false;
             }
 
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。第。八。阶。段。：。下。发。前。限。幅。与。缓。存。（。D。r。i。v。e。G。a。t。e。/。余。弦。补。偿。作。为。终。端。保。护。，。与。全。局。门。控。叠。乘。）。?。
+// 第八阶段：下发前限幅与缓存（DriveGate/余弦补偿作为终端保护，与全局门控叠乘）
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
@@ -1572,15 +1572,15 @@ namespace jia
         void Chassis::applyModuleCommands(bool all_homed)
         {
             // 这里是“四舵轮目标命令”真正落到电机接口前的最后一道门控：
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。c。o。m。p。u。t。e。M。o。d。u。l。e。C。o。m。m。a。n。d。s。(。)。 。虽。然。已。经。为。每。个。轮。子。算。好。了。目。标。舵。角。和。驱。动。速。度。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。但。是。否。允。许。按。这。些。目。标。下。发。，。还。要。看。当。前。是。否。全。部。完。成。回。零。，。以。及。是。否。处。于。扭。矩。自。由。模。式。?。
+// computeModuleCommands()虽然已经为每个轮子算好了目标舵角和驱动速度
+// 但是否允许按这些目标下发，还要看当前是否全部完成回零，以及是否处于扭矩自由模式
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
 
                 if (input_target_data_.zero_current_all)
                 {
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。硬。零。电。流。模。式。优。先。级。最。高。：。无。论。回。零。状。态。如。何。，。四。轮。舵。向。/。驱。动。都。直。接。下。?。0。 。电。流。?。
+// 硬零电流模式优先级最高：无论回零状态如何，四轮舵向/驱动都直接下0电流
                     setSteerMotorTargetCurrent(wheel, 0.0f);
                     if (wheel.drive_motor_h != nullptr)
                     {
@@ -1591,20 +1591,20 @@ namespace jia
 
                 if (!all_homed)
                 {
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。只。要。还。有。任。意。一。个。轮。子。没。有。完。成。回。零。，。就。先。禁。止。所。有。驱。动。轮。输。出。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。避。免。底。盘。在。零。位。未。建。立。完。成。时。带。着。错。误。朝。向。强。行。跑。动。?。
+// 只要还有任意一个轮子没有完成回零，就先禁止所有驱动轮输出
+// 避免底盘在零位未建立完成时带着错误朝向强行跑动
                     setDriveMotorTargetOmegaRadS(wheel, 0.0f);
                     if (wheel.homing_state == HomingState::kSearch)
                     {
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。正。在。搜。索。零。位。的。轮。子。，。允。许。转。向。电。机。按。固。定。搜。索。转。速。慢。慢。转。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。目。的。是。继。续。寻。找。传。感。器。边。沿。；。此。时。不。走。位。置。闭。环。?。
+// 正在搜索零位的轮子，允许转向电机按固定搜索转速慢慢转
+// 目的是继续寻找传感器边沿；此时不走位置闭环
                         setSteerMotorTargetRPM(wheel, wheel.homing_search_rpm);
                     }
                     else if (wheel.homing_state == HomingState::kAlignToZero)
                     {
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。零。偏。建。立。后。允。许。转。向。电。机。继。续。走。位。置。闭。环。，。把。 。O。A。 。自。动。归。到。软。件。零。点。?。
+// 零偏建立后允许转向电机继续走位置闭环，把OA自动归到软件零点
                         // 注意：这里每拍都根据当前反馈重算“离 OA=0 最近的等效角”，
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。避。免。被。上。游。常。规。模。块。解。算。写。回。“。保。持。当。前。角。”。后。导。致。归。位。停。滞。?。
+// 避免被上游常规模块解算写回“保持当前角”后导致归位停滞
                         const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
                         const f32 current_oa_total_rad = current_local_total_rad + wheel.theta_oa_to_owi_rad;
                         const f32 align_target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
@@ -1613,8 +1613,8 @@ namespace jia
                     }
                     else
                     {
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。不。在。搜。索。态。的。轮。子。，。不。再。给。转。向。动。作。，。直。接。把。转。向。电。机。电。流。打。零。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。让。状。态。机。以。“。静。止。等。待。”。的。方。式。完。成。后。续。过。渡。?。
+// 不在搜索态的轮子，不再给转向动作，直接把转向电机电流打零
+// 让状态机以“静止等待”的方式完成后续过渡
                         setSteerMotorTargetCurrent(wheel, 0.0f);
                     }
                     continue;
@@ -1622,8 +1622,8 @@ namespace jia
 
                 if (current_mode_flag_.is_wheel_torque_free)
                 {
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。扭。矩。自。由。模。式。下。，。不。执。行。任。何。舵。角。或。驱。动。速。度。闭。环。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。而。是。把。转。向。和。驱。动。都。打。成。“。零。电。流。/。零。扭。矩。”。状。态。，。方。便。人。工。推。动。或。安。全。释。放。?。
+// 扭矩自由模式下，不执行任何舵角或驱动速度闭环
+// 而是把转向和驱动都打成“零电流/零扭矩”状态，方便人工推动或安全释放
                     setSteerMotorTargetCurrent(wheel, 0.0f);
                     if (wheel.drive_motor_h != nullptr)
                     {
@@ -1632,8 +1632,8 @@ namespace jia
                     continue;
                 }
 
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。只。有。“。全。部。回。零。完。成。”。且。“。不。是。扭。矩。自。由。模。式。”。时。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。才。真。正。把。上。一。阶。段。规。划。出。的。目。标。舵。角。和。驱。动。角。速。度。下。发。给。电。机。闭。环。?。
+// 只有“全部回零完成”且“不是扭矩自由模式”时
+// 才真正把上一阶段规划出的目标舵角和驱动角速度下发给电机闭环
                 setSteerMotorTargetTotalAngleRad(wheel, wheel.target_steer_motor_total_angle_rad);
                 setDriveMotorTargetOmegaRadS(wheel, wheel.target_drive_omega_rad_s);
             }
@@ -1712,7 +1712,7 @@ namespace jia
 
             if (!debug_enable_last_cycle_)
             {
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。调。试。使。能。上。升。沿。：。从。电。机。运。行。态。回。?。P。I。D。 。到。调。参。缓。存。，。形。成。“。先。读。后。改。”。基。线。?。
+// 调试使能上升沿：从电机运行态回PID到调参缓存，形成“先读后改”基线
                 syncDebugSteerPidTuneFromRuntime();
                 debug_pid_tune_.synced_on_enable_edge = true;
             }
@@ -1727,7 +1727,7 @@ namespace jia
                 const bool angle_dirty = (debug_pid_tune_.steer_angle_pid_applied_stamp[i] != debug_pid_tune_.steer_angle_pid_apply_stamp[i]);
                 if (speed_dirty || angle_dirty)
                 {
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。保。护。?。a。p。p。l。y。 。的。手。工。改。动。：。该。轮。缓。存。跳。过。同。步。，。避。免。覆。盖。调。试。器。刚。写。入。的。值。?。
+// 保护apply的手工改动：该轮缓存跳过同步，避免覆盖调试器刚写入的值
                     continue;
                 }
 
@@ -2628,8 +2628,8 @@ namespace jia
 
         bool Chassis::solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const
         {
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。这。里。用。的。是。带。主。元。选。取。的。高。斯。消。元。，。目。标。是。稳。定。求。?。3。x。3。 。线。性。方。程。组。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。输。入。是。增。广。矩。阵。，。输。出。是。三。项。未。知。量。，。失。败。通。常。意。味。着。矩。阵。接。近。奇。异。?。
+// 这里用的是带主元选取的高斯消元，目标是稳定求3x3线性方程组
+// 输入是增广矩阵，输出是三项未知量，失败通常意味着矩阵接近奇异
             for (u8 pivot = 0; pivot < 3; ++pivot)
             {
                 u8 best_row = pivot;
@@ -2693,9 +2693,9 @@ namespace jia
 
         bool Chassis::estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const
         {
-            // 再求解 3 个底盘自由度 [vx, vy, omega_z]。
+            // 再求解 3 个底盘自由度 [vx, vy, omega_z]
             // 这里不是直接解单个方程，而是把每个轮子的两个投影约束累积成最小二乘正规方程，
-。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。再。求。?。3。 。个。底。盘。自。由。度。 。[。v。x。,。 。v。y。,。 。o。m。e。g。a。_。z。]。?。
+// 再求3个底盘自由度[vx,vy,omega_z]
             f32 normal[3][3] = {};
             f32 rhs[3] = {};
 
@@ -2753,17 +2753,17 @@ namespace jia
                 const u64 loop_start_us = RtosTimeStampUs64::getTimeUs();
 
                 // 2) 解析模式并做坐标系转换
-                // 1) 璇诲彇 IMU 鑸悜/瑙掗€熷害
+                // 1) 读取 IMU 航向/角速度
                 // 4) 更新轮反馈与回零状态机
                 // 3) 处理锁航向逻辑与速度限幅
                 // 4) 更新轮反馈与回零状态机
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。5。)。 。生。成。模。块。命。令。、。下。发。电。机。目。?。
+                // 5) 生成模块命令、下发电机目标
                 // 6) 回写当前估计值并等待下一周期
                 input_hwt_rot_z_ = hwt->get_yaw_rad();
                 input_hwt_omega_z_ = hwt->get_yaw_speed_rad();
 
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。常。态。同。步。手。柄。缓。存。：。即。使。 。d。e。b。u。g。_。c。o。n。t。r。o。l。_。.。e。n。a。b。l。e。 。关。闭。，。也。保。持。 。a。i。r。j。o。y。_。d。a。t。a。_。 。实。时。更。新。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。便。于。通。过。调。试。器。直。接。观。察。摇。杆。输。入。；。不。改。变。任。何。控。制。模。式。接。管。逻。辑。?。
+                // 常态同步手柄缓存：即使 debug_control_.enable 关闭，也保持 airjoy_data_ 实时更新。
+                // 便于通过调试器直接观察摇杆输入；不改变任何控制模式接管逻辑。
                 CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 
                 isDebugMode();
@@ -2796,8 +2796,7 @@ namespace jia
                     target_data_.omega_z = 0.0f;
                 }
 
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。锁。当。前。航。?。/。 。锁。到。指。定。航。向。都。在。这。里。对。目。?。r。o。t。_。z。 。?。o。m。e。g。a。_。z。 。做。二。次。整。形。，。
-                // 运行时允许调试器直接改基准阈值/限幅开关，这里每周期派生一次，确保全链路口径一致。
+                // 锁当前航向/锁到指定航向都在这里对目标 rot_z 和 omega_z 做二次整形。
                 if (current_mode_flag_.is_lock_now_rot_z)
                 {
                     isLockNowRotZ(true, target_data_.rot_z, target_data_.omega_z, target_data_.rot_z, target_data_.omega_z);
@@ -2807,7 +2806,7 @@ namespace jia
                     isLockToRotZ(true, input_target_data_.rot_z, target_data_.rot_z, target_data_.rot_z, target_data_.omega_z, target_data_.omega_z);
                 }
 
-                // 杩愯鏃跺厑璁歌皟璇曞櫒鐩存帴鏀瑰熀鍑嗛槇鍊?闄愬箙寮€鍏筹紝杩欓噷姣忓懆鏈熸淳鐢熶竴娆★紝纭繚鍏ㄩ摼璺彛寰勪竴鑷淬€?
+                // 运行时允许调试器直接改基准阈值/限幅开关，这里每周期派生一次，确保全链路口径一致。
                 deriveNearZeroThresholds();
                 refreshActuatorLimitState();
 
@@ -2842,8 +2841,8 @@ namespace jia
                     continue;
                 }
 
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。回。零。和。正。常。控。制。共。用。同。一。套。命。令。生。成。流。程。，。但。最。终。下。发。前。会。根。?。a。l。l。_。h。o。m。e。d。 。选。择。?。
-。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。 。/。/。 。未。回。零。时。只。保。留。安。全。动。作。，。已。回。零。时。才。输。出。完。整。舵。?。驱。动。目。标。?。
+// 回零和正常控制共用同一套命令生成流程，但最终下发前会根all_homed选择
+// 未回零时只保留安全动作，已回零时才输出完整舵驱动目标
                 computeModuleCommands(planned_data_);
                 applyModuleCommands(all_homed);
                 updateCurrentData(all_homed);
@@ -2999,6 +2998,7 @@ namespace jia
         }
     }
 }
+
 
 
 
