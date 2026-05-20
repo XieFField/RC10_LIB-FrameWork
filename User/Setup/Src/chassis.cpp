@@ -756,7 +756,7 @@ namespace jia
             }
         }
 
-        void Chassis::applyDebugTargetOverride()
+        void Chassis::applyDebugTargetOverride(DebugMode mode)
         {
             // 手柄平移坐标 -> 车体坐标约定：前推前进、左推左移。
             // 为匹配遥杆实际符号：left_y 正向映射到 +X；left_x 取反后映射到 +Y。
@@ -785,7 +785,6 @@ namespace jia
                 }
             }
 
-            const DebugMode mode = resolveDebugMode(debug_control_.mode_raw);
             debug_control_.mode_resolved_raw = static_cast<u8>(mode);
             switch (mode)
             {
@@ -828,15 +827,40 @@ namespace jia
             }
         }
 
+        void Chassis::clearPlannedMotionForModuleOverride()
+        {
+            target_data_.vel_x = 0.0f;
+            target_data_.vel_y = 0.0f;
+            target_data_.omega_z = 0.0f;
+            planned_data_.vel_x = 0.0f;
+            planned_data_.vel_y = 0.0f;
+            planned_data_.omega_z = 0.0f;
+            planned_data_.acc_x = 0.0f;
+            planned_data_.acc_y = 0.0f;
+            planned_data_.alpha_z = 0.0f;
+        }
+
         void Chassis::isDebugMode()
         {
             syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
-            if (!debug_control_.enable)
+            const DebugControlRoute route = classifyDebugControlRoute(debug_control_.enable, debug_control_.mode_raw);
+            if (route == DebugControlRoute::kDisabled)
             {
                 debug_control_.mode_resolved_raw = static_cast<u8>(DebugMode::kTorqueFree);
                 return;
             }
-            applyDebugTargetOverride();
+
+            const DebugMode mode = resolveDebugMode(debug_control_.mode_raw);
+            debug_control_.mode_resolved_raw = static_cast<u8>(mode);
+
+            if (route == DebugControlRoute::kTargetInjection)
+            {
+                applyDebugTargetOverride(mode);
+                return;
+            }
+
+            setTargetBodySpeedMode(0.0f, 0.0f, 0.0f);
+            clearPlannedMotionForModuleOverride();
         }
 
         void Chassis::transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const

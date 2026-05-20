@@ -232,6 +232,15 @@ void testHomingRuntimeZeroOffsetOnlyDependsOnEdgeGeometryAndRawMotorAngle()
 
     EXPECT_NEAR(jia::radToDegF32(runtime_zero_offset_rad), -10.0f, 1.0e-4f);
 }
+
+void testDebugRouteClassificationSeparatesInputInjectionFromModuleOverride()
+{
+    EXPECT_TRUE(Chassis::classifyDebugControlRoute(false, 1) == Chassis::DebugControlRoute::kDisabled);
+    EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 1) == Chassis::DebugControlRoute::kTargetInjection);
+    EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 8) == Chassis::DebugControlRoute::kTargetInjection);
+    EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 20) == Chassis::DebugControlRoute::kModuleOverride);
+    EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 30) == Chassis::DebugControlRoute::kModuleOverride);
+}
 } // namespace
 
 int main()
@@ -245,6 +254,7 @@ int main()
     testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry();
     testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit();
     testHomingRuntimeZeroOffsetOnlyDependsOnEdgeGeometryAndRawMotorAngle();
+    testDebugRouteClassificationSeparatesInputInjectionFromModuleOverride();
 
     if (g_failures != 0)
     {

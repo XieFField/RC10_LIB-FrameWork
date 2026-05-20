@@ -117,6 +117,13 @@ namespace jia
                 PlannerTargetState target{};
             };
 
+            enum class DebugControlRoute : u8
+            {
+                kDisabled = 0,
+                kTargetInjection = 1,
+                kModuleOverride = 2,
+            };
+
             // 空闲姿态：定义底盘失能或无输入时，四个舵轮应保持的姿态策略。
             // kHoldLast 适合保持最后姿态，kXPark 适合进入 X 停靠姿态以减小外力拖拽干涉。
             enum class IdlePostureMode
@@ -182,6 +189,7 @@ namespace jia
                                                       f32 homing_zero_offset_rad,
                                                       const SteerCalibration &calibration);
             static PlannerInputSnapshot makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad);
+            static DebugControlRoute classifyDebugControlRoute(bool debug_enable, u8 raw_mode);
             static TelemetrySnapshot makeTelemetrySnapshot(bool homing_all_ready,
                                                            const TelemetryChassisState &target,
                                                            const TelemetryChassisState &actual,
@@ -389,13 +397,14 @@ namespace jia
                 kSwerveTelemetryV2 = 5,
             };
             DebugMode resolveDebugMode(u8 raw_mode) const;
-            void applyDebugTargetOverride();
+            void applyDebugTargetOverride(DebugMode mode);
             bool applyDebugModuleOverride(bool all_homed);
             void emitDebugOutputByMode(bool all_homed);
             void clearInputTargetData();
             void setModeFlag();
             void resolvePlannerTargetData();
             void updatePlannedMotionData();
+            void clearPlannedMotionForModuleOverride();
             void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z);
@@ -911,6 +920,34 @@ namespace jia
         {
             const f32 edge_local_corrected_rad = mapOaTotalToCorrectedLocalTotal(edge_mech_oa_rad, calibration);
             return edge_local_corrected_rad + homing_zero_offset_rad - raw_motor_total_rad;
+        }
+
+        inline Chassis::DebugControlRoute Chassis::classifyDebugControlRoute(bool debug_enable, u8 raw_mode)
+        {
+            if (!debug_enable)
+            {
+                return DebugControlRoute::kDisabled;
+            }
+
+            switch (raw_mode)
+            {
+            case 20:
+            case 21:
+            case 22:
+            case 30:
+                return DebugControlRoute::kModuleOverride;
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+            default:
+                return DebugControlRoute::kTargetInjection;
+            }
         }
 
         inline Chassis::PlannerInputSnapshot Chassis::makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad)
