@@ -124,6 +124,22 @@ namespace jia
                 bool is_steer_only_mode = false;
             };
 
+            enum class CommandInputSource : u8
+            {
+                kApi = 0,
+                kDebugTarget = 1,
+                kDebugModuleOverride = 2,
+            };
+
+            struct NormalizedBodyCommand
+            {
+                CommandInputSource source = CommandInputSource::kApi;
+                BodyCommand body{};
+                f32 rot_z = 0.0f;
+                bool is_world_speed_mode = false;
+                bool is_steer_only_mode = false;
+            };
+
             struct PlannerTargetState
             {
                 f32 vel_x = 0.0f;
@@ -221,6 +237,9 @@ namespace jia
                                                       f32 raw_motor_total_rad,
                                                       f32 homing_zero_offset_rad,
                                                       const SteerCalibration &calibration);
+            static NormalizedBodyCommand makeNormalizedBodyCommand(const PlannerInputCommand &command,
+                                                                   f32 input_yaw_rad,
+                                                                   CommandInputSource source);
             static PlannerInputSnapshot makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad);
             static DebugControlRoute classifyDebugControlRoute(bool debug_enable, u8 raw_mode);
             static DebugModuleOverrideRoute classifyDebugModuleOverrideRoute(u8 raw_mode);
@@ -404,6 +423,53 @@ namespace jia
                 f32 drive_omega_rad_s[4] = {0.0f};
             };
 
+            struct SwervePlannerInput
+            {
+                Data command{};
+                bool command_stationary_intent = false;
+                bool residual_drive_is_moving = false;
+                bool allow_xpark_pose = false;
+                bool force_uniform_steer_drive = false;
+                f32 uniform_steer_oa_mod_rad = 0.0f;
+                f32 uniform_drive_omega_abs = 0.0f;
+                f32 uniform_drive_sign = 1.0f;
+                f32 current_oa_total_rad[4] = {0.0f};
+                f32 wheel_vx_m_s[4] = {0.0f};
+                f32 wheel_vy_m_s[4] = {0.0f};
+                f32 wheel_speed_m_s[4] = {0.0f};
+                f32 residual_speed_m_s[4] = {0.0f};
+                f32 max_command_wheel_speed_m_s = 0.0f;
+                f32 max_residual_speed_m_s = 0.0f;
+            };
+
+            struct SwervePlannerOutput
+            {
+                f32 ideal_oa_total_rad[4] = {0.0f};
+                f32 ideal_drive_omega_rad_s[4] = {0.0f};
+                f32 selected_oa_total_rad[4] = {0.0f};
+                f32 steering_errors_rad[4] = {0.0f};
+                f32 planned_corrected_local_total_rad[4] = {0.0f};
+                f32 planned_oa_total_rad[4] = {0.0f};
+                f32 planned_steer_rate_rad_s[4] = {0.0f};
+                f32 projected_drive_omega_rad_s[4] = {0.0f};
+                f32 final_drive_omega_rad_s[4] = {0.0f};
+                f32 gate_or_cos_scale[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+                bool flipped_drive_direction[4] = {false, false, false, false};
+                f32 vector_gate_scale = 1.0f;
+                bool vector_gate_active = false;
+                f32 vector_dir_err_deg = 0.0f;
+                f32 vector_eta_max_s = 0.0f;
+            };
+
+            struct ActuatorCommandFrame
+            {
+                f32 steer_corrected_local_total_rad[4] = {0.0f};
+                f32 steer_oa_total_rad[4] = {0.0f};
+                f32 steer_rate_rad_s[4] = {0.0f};
+                f32 drive_omega_rad_s[4] = {0.0f};
+                bool flipped_drive_direction[4] = {false, false, false, false};
+            };
+
             // 创建线程
             static void createThread(void *arg);
             // 运行线程函数
@@ -486,6 +552,11 @@ namespace jia
             void deriveNearZeroThresholds();
             void refreshActuatorLimitState();
             f32 mapSingleTurnToNearestTotalAngle(const WheelConfig &wheel, f32 target_oa_single_turn_deg) const;
+            SwervePlannerInput makeSwervePlannerInput(const Data &command_data);
+            SwervePlannerOutput planSwerveModules(const SwervePlannerInput &planner_input);
+            void buildActuatorCommandFrame(const SwervePlannerOutput &planner_output, ActuatorCommandFrame &out_frame) const;
+            void storePlannedActuatorFrame(const SwervePlannerOutput &planner_output, const ActuatorCommandFrame &command_frame);
+            f32 computeHomingAlignTargetCorrectedLocalTotal(const WheelConfig &wheel) const;
             void computeProjectedDriveFromPlannedSteer(const Data &command_data, const f32 planned_oa_total_rad[4], f32 out_drive_omega_rad_s[4]) const;
             bool estimatePlannedBodyTwist(const f32 planned_oa_total_rad[4], const f32 planned_drive_omega_rad_s[4], f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             f32 updateVectorConsistencyGate(f32 translational_speed_m_s, f32 eta_max_s, f32 dir_err_deg);
@@ -805,10 +876,13 @@ namespace jia
 
             // 控制链路缓存（观察）[RO]
             InputTargetData input_target_data_; // [RO] 输入目标快照（模式与期望速度/角度）
+            NormalizedBodyCommand normalized_body_command_; // [RO] 输入来源与统一车体系语义
             Data target_data_;                  // [RO] 模式映射后的目标数据
             Data planned_data_;                 // [RO] 经限幅/策略处理后的规划数据
             Data last_planned_data_;            // [RO] 上一周期规划数据（用于加速度约束）
             Data current_data_;                 // [RO] 当前状态估计数据
+            SwervePlannerOutput planner_output_cache_; // [RO] 最近一次舵轮规划输出
+            ActuatorCommandFrame actuator_command_frame_; // [RO] 最近一次执行器目标帧
             ModeFlag current_mode_flag_;        // [RO] 当前控制模式标志位
 
             // 传感器与输入缓存（观察）[RO]
@@ -995,6 +1069,36 @@ namespace jia
             return edge_local_signed_rad - mapRawSteerMotorTotalToSignedLocalTotal(raw_motor_total_rad, calibration.steer_motor_sign);
         }
 
+        inline Chassis::NormalizedBodyCommand Chassis::makeNormalizedBodyCommand(const PlannerInputCommand &command,
+                                                                                 f32 input_yaw_rad,
+                                                                                 CommandInputSource source)
+        {
+            NormalizedBodyCommand normalized{};
+            normalized.source = source;
+            normalized.rot_z = command.rot_z;
+            normalized.is_world_speed_mode = command.is_world_speed_mode;
+            normalized.is_steer_only_mode = command.is_steer_only_mode;
+
+            f32 body_vel_x = command.vel_x;
+            f32 body_vel_y = command.vel_y;
+            if (command.is_world_speed_mode)
+            {
+                const f32 cos_theta = cosf(input_yaw_rad);
+                const f32 sin_theta = sinf(input_yaw_rad);
+                body_vel_x = command.vel_x * cos_theta + command.vel_y * sin_theta;
+                body_vel_y = -command.vel_x * sin_theta + command.vel_y * cos_theta;
+            }
+
+            normalized.body = normalizeBodyCommandForPlanner({body_vel_x, body_vel_y, command.omega_z});
+            if (command.is_steer_only_mode)
+            {
+                normalized.body.vel_x = 0.0f;
+                normalized.body.vel_y = 0.0f;
+                normalized.body.omega_z = 0.0f;
+            }
+            return normalized;
+        }
+
         inline Chassis::DebugControlRoute Chassis::classifyDebugControlRoute(bool debug_enable, u8 raw_mode)
         {
             if (!debug_enable)
@@ -1043,29 +1147,11 @@ namespace jia
         inline Chassis::PlannerInputSnapshot Chassis::makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad)
         {
             PlannerInputSnapshot snapshot{};
-
-            f32 body_vel_x = command.vel_x;
-            f32 body_vel_y = command.vel_y;
-            if (command.is_world_speed_mode)
-            {
-                const f32 cos_theta = cosf(input_yaw_rad);
-                const f32 sin_theta = sinf(input_yaw_rad);
-                body_vel_x = command.vel_x * cos_theta + command.vel_y * sin_theta;
-                body_vel_y = -command.vel_x * sin_theta + command.vel_y * cos_theta;
-            }
-
-            const BodyCommand planner_command = normalizeBodyCommandForPlanner({body_vel_x, body_vel_y, command.omega_z});
-            snapshot.target.vel_x = planner_command.vel_x;
-            snapshot.target.vel_y = planner_command.vel_y;
-            snapshot.target.omega_z = planner_command.omega_z;
-            snapshot.target.rot_z = command.rot_z;
-
-            if (command.is_steer_only_mode)
-            {
-                snapshot.target.vel_x = 0.0f;
-                snapshot.target.vel_y = 0.0f;
-                snapshot.target.omega_z = 0.0f;
-            }
+            const NormalizedBodyCommand normalized = makeNormalizedBodyCommand(command, input_yaw_rad, CommandInputSource::kApi);
+            snapshot.target.vel_x = normalized.body.vel_x;
+            snapshot.target.vel_y = normalized.body.vel_y;
+            snapshot.target.omega_z = normalized.body.omega_z;
+            snapshot.target.rot_z = normalized.rot_z;
 
             return snapshot;
         }

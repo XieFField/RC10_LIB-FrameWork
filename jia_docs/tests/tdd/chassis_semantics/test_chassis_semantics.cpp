@@ -262,6 +262,32 @@ void testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit()
     EXPECT_NEAR(steer_only_snapshot.target.rot_z, 1.5f, 1.0e-6f);
 }
 
+void testNormalizedBodyCommandKeepsDebugAndApiRoutesSemanticallyAligned()
+{
+    Chassis::PlannerInputCommand input{};
+    input.vel_x = 1.0f;
+    input.vel_y = -0.4f;
+    input.omega_z = 0.3f;
+    input.rot_z = 0.8f;
+    input.is_world_speed_mode = true;
+
+    const float yaw_rad = jia::degToRadF32(90.0f);
+    const Chassis::NormalizedBodyCommand api_command =
+        Chassis::makeNormalizedBodyCommand(input, yaw_rad, Chassis::CommandInputSource::kApi);
+    const Chassis::NormalizedBodyCommand debug_command =
+        Chassis::makeNormalizedBodyCommand(input, yaw_rad, Chassis::CommandInputSource::kDebugTarget);
+
+    EXPECT_TRUE(api_command.source == Chassis::CommandInputSource::kApi);
+    EXPECT_TRUE(debug_command.source == Chassis::CommandInputSource::kDebugTarget);
+    EXPECT_NEAR(api_command.body.vel_x, debug_command.body.vel_x, 1.0e-6f);
+    EXPECT_NEAR(api_command.body.vel_y, debug_command.body.vel_y, 1.0e-6f);
+    EXPECT_NEAR(api_command.body.omega_z, debug_command.body.omega_z, 1.0e-6f);
+    EXPECT_NEAR(api_command.body.vel_x, 0.4f, 1.0e-5f);
+    EXPECT_NEAR(api_command.body.vel_y, 1.0f, 1.0e-5f);
+    EXPECT_NEAR(api_command.body.omega_z, 0.3f, 1.0e-6f);
+    EXPECT_NEAR(api_command.rot_z, 0.8f, 1.0e-6f);
+}
+
 void testHomingRuntimeZeroOffsetOnlyDependsOnEdgeGeometryAndRawMotorAngle()
 {
     Chassis::SteerCalibration calibration{};
@@ -298,6 +324,93 @@ void testDebugModuleOverrideRouteSeparatesSingleWheelAlignHomingAndDirect()
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(21) == Chassis::DebugModuleOverrideRoute::kAlignForward);
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(22) == Chassis::DebugModuleOverrideRoute::kHomingObserve);
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(30) == Chassis::DebugModuleOverrideRoute::kDirectActuator);
+}
+
+void testProjectedDriveUsesReachableSteerInsteadOfIdealVector()
+{
+    Chassis chassis;
+    chassis.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.enable_drive_gate = false;
+    chassis.enable_cosine_compensation_ = false;
+    chassis.runtime_strategy_cfg_.vector_consistency.enable = false;
+    chassis.actuator_limit_enable_.enable_steer_rate_limit = true;
+    chassis.actuator_limit_enable_.enable_steer_alpha_limit = false;
+    chassis.max_steer_rate_rad_s_ = 1.0f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = jia::degToRadF32(90.0f);
+        chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
+        chassis.last_drive_omega_cmd_rad_s_[i] = 0.0f;
+    }
+
+    Chassis::Data command{};
+    command.vel_x = 1.0f;
+    command.vel_y = 0.0f;
+    command.omega_z = 0.0f;
+
+    const Chassis::SwervePlannerInput planner_input = chassis.makeSwervePlannerInput(command);
+    const Chassis::SwervePlannerOutput planner_output = chassis.planSwerveModules(planner_input);
+
+    EXPECT_NEAR(planner_output.ideal_drive_omega_rad_s[0], 20.0f, 1.0e-4f);
+    EXPECT_TRUE(std::fabs(planner_output.projected_drive_omega_rad_s[0]) < 1.0f);
+    EXPECT_TRUE(std::fabs(planner_output.projected_drive_omega_rad_s[0]) <
+                std::fabs(planner_output.ideal_drive_omega_rad_s[0]));
+    EXPECT_TRUE(std::fabs(planner_output.final_drive_omega_rad_s[0]) <=
+                std::fabs(planner_output.projected_drive_omega_rad_s[0]) + 1.0e-6f);
+}
+
+void testVectorConsistencyGateTightensAndReleasesThroughPlannerOutput()
+{
+    Chassis chassis;
+    chassis.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.enable_drive_gate = false;
+    chassis.enable_cosine_compensation_ = false;
+    chassis.runtime_strategy_cfg_.vector_consistency.enable = true;
+    chassis.runtime_strategy_cfg_.vector_consistency.min_trans_speed_enable_m_s = 0.05f;
+    chassis.runtime_strategy_cfg_.vector_consistency.dir_err_enter_deg = 5.0f;
+    chassis.runtime_strategy_cfg_.vector_consistency.dir_err_exit_deg = 2.0f;
+    chassis.runtime_strategy_cfg_.vector_consistency.eta_lock_s = 0.05f;
+    chassis.runtime_strategy_cfg_.vector_consistency.eta_release_s = 0.01f;
+    chassis.actuator_limit_enable_.enable_steer_rate_limit = true;
+    chassis.actuator_limit_enable_.enable_steer_alpha_limit = false;
+    chassis.max_steer_rate_rad_s_ = 1.0f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = jia::degToRadF32(90.0f);
+        chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
+        chassis.last_drive_omega_cmd_rad_s_[i] = 0.0f;
+    }
+
+    Chassis::Data command{};
+    command.vel_x = 1.0f;
+    command.vel_y = 0.0f;
+    command.omega_z = 0.0f;
+
+    const Chassis::SwervePlannerOutput gated_output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+    EXPECT_TRUE(gated_output.vector_gate_active);
+    EXPECT_TRUE(gated_output.vector_gate_scale < 1.0f);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+        chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
+    }
+
+    const Chassis::SwervePlannerOutput released_output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+    EXPECT_TRUE(!released_output.vector_gate_active);
+    EXPECT_TRUE(released_output.vector_gate_scale > gated_output.vector_gate_scale);
 }
 
 void testDirectActuatorContinuousInputResolvesAxisAndControlTypesConsistently()
@@ -396,9 +509,12 @@ int main()
     testTelemetrySnapshotPreservesWheelTargetsWithoutModeDependentReinterpretation();
     testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry();
     testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit();
+    testNormalizedBodyCommandKeepsDebugAndApiRoutesSemanticallyAligned();
     testHomingRuntimeZeroOffsetOnlyDependsOnEdgeGeometryAndRawMotorAngle();
     testDebugRouteClassificationSeparatesInputInjectionFromModuleOverride();
     testDebugModuleOverrideRouteSeparatesSingleWheelAlignHomingAndDirect();
+    testProjectedDriveUsesReachableSteerInsteadOfIdealVector();
+    testVectorConsistencyGateTightensAndReleasesThroughPlannerOutput();
     testDirectActuatorContinuousInputResolvesAxisAndControlTypesConsistently();
     testDirectActuatorOverrideOnlyAppliesToSelectedWheel();
     testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode();
