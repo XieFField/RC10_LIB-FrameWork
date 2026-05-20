@@ -94,6 +94,29 @@ namespace jia
                 TelemetryWheelState wheels[kTelemetryWheelCount]{};
             };
 
+            struct PlannerInputCommand
+            {
+                f32 vel_x = 0.0f;
+                f32 vel_y = 0.0f;
+                f32 omega_z = 0.0f;
+                f32 rot_z = 0.0f;
+                bool is_world_speed_mode = false;
+                bool is_steer_only_mode = false;
+            };
+
+            struct PlannerTargetState
+            {
+                f32 vel_x = 0.0f;
+                f32 vel_y = 0.0f;
+                f32 omega_z = 0.0f;
+                f32 rot_z = 0.0f;
+            };
+
+            struct PlannerInputSnapshot
+            {
+                PlannerTargetState target{};
+            };
+
             // 空闲姿态：定义底盘失能或无输入时，四个舵轮应保持的姿态策略。
             // kHoldLast 适合保持最后姿态，kXPark 适合进入 X 停靠姿态以减小外力拖拽干涉。
             enum class IdlePostureMode
@@ -154,6 +177,7 @@ namespace jia
             static f32 mapDriveMotorRpmToWheelOmega(f32 motor_rpm, const SteerCalibration &calibration);
             static f32 mapWheelOmegaToDriveMotorRpm(f32 wheel_omega_rad_s, const SteerCalibration &calibration);
             static f32 mapWheelCurrentToDriveMotorCurrent(f32 wheel_current_mA, const SteerCalibration &calibration);
+            static PlannerInputSnapshot makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad);
             static TelemetrySnapshot makeTelemetrySnapshot(bool homing_all_ready,
                                                            const TelemetryChassisState &target,
                                                            const TelemetryChassisState &actual,
@@ -366,6 +390,8 @@ namespace jia
             void emitDebugOutputByMode(bool all_homed);
             void clearInputTargetData();
             void setModeFlag();
+            void resolvePlannerTargetData();
+            void updatePlannedMotionData();
             void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z);
@@ -872,6 +898,36 @@ namespace jia
         {
             const f32 drive_sign = (calibration.drive_motor_sign == 0.0f) ? 1.0f : calibration.drive_motor_sign;
             return wheel_current_mA / drive_sign;
+        }
+
+        inline Chassis::PlannerInputSnapshot Chassis::makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad)
+        {
+            PlannerInputSnapshot snapshot{};
+
+            f32 body_vel_x = command.vel_x;
+            f32 body_vel_y = command.vel_y;
+            if (command.is_world_speed_mode)
+            {
+                const f32 cos_theta = cosf(input_yaw_rad);
+                const f32 sin_theta = sinf(input_yaw_rad);
+                body_vel_x = command.vel_x * cos_theta + command.vel_y * sin_theta;
+                body_vel_y = -command.vel_x * sin_theta + command.vel_y * cos_theta;
+            }
+
+            const BodyCommand planner_command = normalizeBodyCommandForPlanner({body_vel_x, body_vel_y, command.omega_z});
+            snapshot.target.vel_x = planner_command.vel_x;
+            snapshot.target.vel_y = planner_command.vel_y;
+            snapshot.target.omega_z = planner_command.omega_z;
+            snapshot.target.rot_z = command.rot_z;
+
+            if (command.is_steer_only_mode)
+            {
+                snapshot.target.vel_x = 0.0f;
+                snapshot.target.vel_y = 0.0f;
+                snapshot.target.omega_z = 0.0f;
+            }
+
+            return snapshot;
         }
 
         inline Chassis::TelemetrySnapshot Chassis::makeTelemetrySnapshot(bool homing_all_ready,

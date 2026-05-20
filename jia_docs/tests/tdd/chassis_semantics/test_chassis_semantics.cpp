@@ -187,6 +187,31 @@ void testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry()
     calibration.drive_motor_sign = 1.0f;
     EXPECT_NEAR(Chassis::mapWheelCurrentToDriveMotorCurrent(3000.0f, calibration), 3000.0f, 1.0e-6f);
 }
+
+void testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit()
+{
+    Chassis::PlannerInputCommand input{};
+    input.vel_x = 1.0f;
+    input.vel_y = 0.0f;
+    input.omega_z = 0.2f;
+    input.rot_z = 1.5f;
+    input.is_world_speed_mode = true;
+
+    const Chassis::PlannerInputSnapshot snapshot = Chassis::makePlannerInputSnapshot(input, 0.0f);
+
+    EXPECT_NEAR(snapshot.target.vel_x, -1.0f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.target.vel_y, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.target.omega_z, 0.2f, 1.0e-6f);
+    EXPECT_NEAR(snapshot.target.rot_z, 1.5f, 1.0e-6f);
+
+    input.is_steer_only_mode = true;
+    const Chassis::PlannerInputSnapshot steer_only_snapshot = Chassis::makePlannerInputSnapshot(input, 0.0f);
+
+    EXPECT_NEAR(steer_only_snapshot.target.vel_x, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(steer_only_snapshot.target.vel_y, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(steer_only_snapshot.target.omega_z, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(steer_only_snapshot.target.rot_z, 1.5f, 1.0e-6f);
+}
 } // namespace
 
 int main()
@@ -198,6 +223,7 @@ int main()
     testTelemetrySnapshotKeepsTargetAndActualYawSemanticsSeparate();
     testTelemetrySnapshotPreservesWheelTargetsWithoutModeDependentReinterpretation();
     testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry();
+    testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit();
 
     if (g_failures != 0)
     {

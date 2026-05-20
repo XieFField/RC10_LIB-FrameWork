@@ -952,6 +952,47 @@ namespace jia
             out_omega_z = clampValue(omega_z, -max_omega_z_, max_omega_z_);
         }
 
+        void Chassis::resolvePlannerTargetData()
+        {
+            const PlannerInputSnapshot planner_input = makePlannerInputSnapshot(
+                {
+                    input_target_data_.vel_x,
+                    input_target_data_.vel_y,
+                    input_target_data_.omega_z,
+                    input_target_data_.rot_z,
+                    current_mode_flag_.is_world_speed_mode,
+                    input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode,
+                },
+                input_hwt_rot_z_);
+            target_data_.vel_x = planner_input.target.vel_x;
+            target_data_.vel_y = planner_input.target.vel_y;
+            target_data_.omega_z = planner_input.target.omega_z;
+            target_data_.rot_z = planner_input.target.rot_z;
+
+            if (current_mode_flag_.is_lock_now_rot_z)
+            {
+                isLockNowRotZ(true, target_data_.rot_z, target_data_.omega_z, target_data_.rot_z, target_data_.omega_z);
+            }
+            if (current_mode_flag_.is_lock_to_rot_z)
+            {
+                isLockToRotZ(true, input_target_data_.rot_z, target_data_.rot_z, target_data_.rot_z, target_data_.omega_z, target_data_.omega_z);
+            }
+        }
+
+        void Chassis::updatePlannedMotionData()
+        {
+            clampTargetSpeedInChassis(target_data_.vel_x, target_data_.vel_y, target_data_.omega_z,
+                                      target_data_.vel_x, target_data_.vel_y, target_data_.omega_z);
+
+            limitPlannedSpeed(target_data_.vel_x, target_data_.vel_y, target_data_.omega_z,
+                              planned_data_.vel_x, planned_data_.vel_y, planned_data_.omega_z);
+
+            planned_data_.acc_x = (planned_data_.vel_x - last_planned_data_.vel_x) / period_;
+            planned_data_.acc_y = (planned_data_.vel_y - last_planned_data_.vel_y) / period_;
+            planned_data_.alpha_z = (planned_data_.omega_z - last_planned_data_.omega_z) / period_;
+            planned_data_.rot_z = target_data_.rot_z;
+        }
+
         void Chassis::limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z)
         {
 // 第一阶段：先x/y分量分别做加减速限幅，保证速度台阶被平滑化
@@ -2835,55 +2876,13 @@ namespace jia
 
                 isDebugMode();
                 setModeFlag();
-                target_data_.rot_z = input_target_data_.rot_z;
-
-                if (current_mode_flag_.is_world_speed_mode)
-                {
-                    transSpeedWorldToBody(input_target_data_.vel_x, input_target_data_.vel_y, target_data_.vel_x, target_data_.vel_y);
-                }
-                else
-                {
-                    target_data_.vel_x = input_target_data_.vel_x;
-                    target_data_.vel_y = input_target_data_.vel_y;
-                }
-                target_data_.omega_z = input_target_data_.omega_z;
-
-                const BodyCommand planner_command = normalizeBodyCommandForPlanner({target_data_.vel_x, target_data_.vel_y, target_data_.omega_z});
-                target_data_.vel_x = planner_command.vel_x;
-                target_data_.vel_y = planner_command.vel_y;
-                target_data_.omega_z = planner_command.omega_z;
-
-                if (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode)
-                {
-                    target_data_.vel_x = 0.0f;
-                    target_data_.vel_y = 0.0f;
-                    target_data_.omega_z = 0.0f;
-                }
-
-                // 锁当前航向/锁到指定航向都在这里对目标 rot_z 和 omega_z 做二次整形。
-                if (current_mode_flag_.is_lock_now_rot_z)
-                {
-                    isLockNowRotZ(true, target_data_.rot_z, target_data_.omega_z, target_data_.rot_z, target_data_.omega_z);
-                }
-                if (current_mode_flag_.is_lock_to_rot_z)
-                {
-                    isLockToRotZ(true, input_target_data_.rot_z, target_data_.rot_z, target_data_.rot_z, target_data_.omega_z, target_data_.omega_z);
-                }
+                resolvePlannerTargetData();
 
                 // 运行时允许调试器直接改基准阈值/限幅开关，这里每周期派生一次，确保全链路口径一致。
                 deriveNearZeroThresholds();
                 refreshActuatorLimitState();
 
-                clampTargetSpeedInChassis(target_data_.vel_x, target_data_.vel_y, target_data_.omega_z,
-                                          target_data_.vel_x, target_data_.vel_y, target_data_.omega_z);
-
-                limitPlannedSpeed(target_data_.vel_x, target_data_.vel_y, target_data_.omega_z,
-                                  planned_data_.vel_x, planned_data_.vel_y, planned_data_.omega_z);
-
-                planned_data_.acc_x = (planned_data_.vel_x - last_planned_data_.vel_x) / period_;
-                planned_data_.acc_y = (planned_data_.vel_y - last_planned_data_.vel_y) / period_;
-                planned_data_.alpha_z = (planned_data_.omega_z - last_planned_data_.omega_z) / period_;
-                planned_data_.rot_z = target_data_.rot_z;
+                updatePlannedMotionData();
 
                 updateWheelFeedback();
                 applyDebugSteerPidRuntimeTuning();
