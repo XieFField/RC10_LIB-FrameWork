@@ -35,6 +35,29 @@ namespace jia
                 kWorld,
             };
 
+            struct ExternalCommand
+            {
+                Coordinate coord = Coordinate::kBody;
+                f32 vel_x = 0.0f;
+                f32 vel_y = 0.0f;
+                f32 omega_z = 0.0f;
+            };
+
+            struct BodyCommand
+            {
+                f32 vel_x = 0.0f;
+                f32 vel_y = 0.0f;
+                f32 omega_z = 0.0f;
+            };
+
+            struct SteerCalibration
+            {
+                f32 theta_oa_to_owi_rad = 0.0f;
+                f32 homing_runtime_zero_offset_rad = 0.0f;
+                f32 steer_motor_sign = 1.0f;
+                f32 drive_motor_sign = 1.0f;
+            };
+
             // 空闲姿态：定义底盘失能或无输入时，四个舵轮应保持的姿态策略。
             // kHoldLast 适合保持最后姿态，kXPark 适合进入 X 停靠姿态以减小外力拖拽干涉。
             enum class IdlePostureMode
@@ -86,6 +109,14 @@ namespace jia
             f32 getCurrentWorldVelX() const;
             f32 getCurrentWorldVelY() const;
             f32 getCurrentOmegaZ() const;
+            static BodyCommand mapExternalCommandToBody(const ExternalCommand &command);
+            static BodyCommand normalizeBodyCommandForPlanner(const BodyCommand &command);
+            static f32 mapOaTotalToCorrectedLocalTotal(f32 oa_total_rad, const SteerCalibration &calibration);
+            static f32 mapCorrectedLocalTotalToOaTotal(f32 corrected_local_total_rad, const SteerCalibration &calibration);
+            static f32 mapRawSteerMotorTotalToCorrectedLocalTotal(f32 raw_motor_total_rad, const SteerCalibration &calibration);
+            static f32 mapCorrectedLocalTotalToRawSteerMotorTotal(f32 corrected_local_total_rad, const SteerCalibration &calibration);
+            static f32 mapDriveMotorRpmToWheelOmega(f32 motor_rpm, const SteerCalibration &calibration);
+            static f32 mapWheelOmegaToDriveMotorRpm(f32 wheel_omega_rad_s, const SteerCalibration &calibration);
 
             // 初始化配置：只做硬件句柄绑定。
             struct InitConfig
@@ -718,26 +749,75 @@ namespace jia
 
         inline Result Chassis::setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
         {
-            const f32 internal_vel_x = vel_y;
-            const f32 internal_vel_y = -vel_x;
-            return (coord == Coordinate::kBody) ? setTargetBodySpeedMode(internal_vel_x, internal_vel_y, omega_z)
-                                                : setTargetWorldSpeedMode(internal_vel_x, internal_vel_y, omega_z);
+            const BodyCommand body_command = mapExternalCommandToBody({coord, vel_x, vel_y, omega_z});
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedMode(body_command.vel_x, body_command.vel_y, body_command.omega_z)
+                                                : setTargetWorldSpeedMode(body_command.vel_x, body_command.vel_y, body_command.omega_z);
         }
 
         inline Result Chassis::setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
         {
-            const f32 internal_vel_x = vel_y;
-            const f32 internal_vel_y = -vel_x;
-            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockNowRotZWithNoOmegaZMode(internal_vel_x, internal_vel_y, omega_z)
-                                                : setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(internal_vel_x, internal_vel_y, omega_z);
+            const BodyCommand body_command = mapExternalCommandToBody({coord, vel_x, vel_y, omega_z});
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockNowRotZWithNoOmegaZMode(body_command.vel_x, body_command.vel_y, body_command.omega_z)
+                                                : setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(body_command.vel_x, body_command.vel_y, body_command.omega_z);
         }
 
         inline Result Chassis::setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z)
         {
-            const f32 internal_vel_x = vel_y;
-            const f32 internal_vel_y = -vel_x;
-            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockToRotZMode(internal_vel_x, internal_vel_y, rot_z)
-                                                : setTargetWorldSpeedLockToRotZMode(internal_vel_x, internal_vel_y, rot_z);
+            const BodyCommand body_command = mapExternalCommandToBody({coord, vel_x, vel_y, 0.0f});
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockToRotZMode(body_command.vel_x, body_command.vel_y, rot_z)
+                                                : setTargetWorldSpeedLockToRotZMode(body_command.vel_x, body_command.vel_y, rot_z);
+        }
+
+        inline Chassis::BodyCommand Chassis::mapExternalCommandToBody(const ExternalCommand &command)
+        {
+            BodyCommand body_command;
+            body_command.vel_x = command.vel_y;
+            body_command.vel_y = -command.vel_x;
+            body_command.omega_z = command.omega_z;
+            return body_command;
+        }
+
+        inline Chassis::BodyCommand Chassis::normalizeBodyCommandForPlanner(const BodyCommand &command)
+        {
+            BodyCommand planner_command;
+            planner_command.vel_x = -command.vel_x;
+            planner_command.vel_y = -command.vel_y;
+            planner_command.omega_z = command.omega_z;
+            return planner_command;
+        }
+
+        inline f32 Chassis::mapOaTotalToCorrectedLocalTotal(f32 oa_total_rad, const SteerCalibration &calibration)
+        {
+            return oa_total_rad - calibration.theta_oa_to_owi_rad;
+        }
+
+        inline f32 Chassis::mapCorrectedLocalTotalToOaTotal(f32 corrected_local_total_rad, const SteerCalibration &calibration)
+        {
+            return corrected_local_total_rad + calibration.theta_oa_to_owi_rad;
+        }
+
+        inline f32 Chassis::mapRawSteerMotorTotalToCorrectedLocalTotal(f32 raw_motor_total_rad, const SteerCalibration &calibration)
+        {
+            const f32 steer_sign = (calibration.steer_motor_sign == 0.0f) ? 1.0f : calibration.steer_motor_sign;
+            return raw_motor_total_rad * steer_sign + calibration.homing_runtime_zero_offset_rad;
+        }
+
+        inline f32 Chassis::mapCorrectedLocalTotalToRawSteerMotorTotal(f32 corrected_local_total_rad, const SteerCalibration &calibration)
+        {
+            const f32 steer_sign = (calibration.steer_motor_sign == 0.0f) ? 1.0f : calibration.steer_motor_sign;
+            return (corrected_local_total_rad - calibration.homing_runtime_zero_offset_rad) / steer_sign;
+        }
+
+        inline f32 Chassis::mapDriveMotorRpmToWheelOmega(f32 motor_rpm, const SteerCalibration &calibration)
+        {
+            const f32 drive_sign = (calibration.drive_motor_sign == 0.0f) ? 1.0f : calibration.drive_motor_sign;
+            return drive_sign * rpmToRadsF32(motor_rpm);
+        }
+
+        inline f32 Chassis::mapWheelOmegaToDriveMotorRpm(f32 wheel_omega_rad_s, const SteerCalibration &calibration)
+        {
+            const f32 drive_sign = (calibration.drive_motor_sign == 0.0f) ? 1.0f : calibration.drive_motor_sign;
+            return radsToRpmF32(wheel_omega_rad_s / drive_sign);
         }
 
         inline Robot_Twist Chassis::getBodySpeed() const

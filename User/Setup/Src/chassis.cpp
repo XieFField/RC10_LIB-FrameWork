@@ -371,9 +371,15 @@ namespace jia
         f32 Chassis::mapSingleTurnToNearestTotalAngle(const WheelConfig &wheel, f32 target_oa_single_turn_deg) const
         {
             const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(target_oa_single_turn_deg));
-            const f32 current_oa_total_rad = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+            const SteerCalibration calibration{
+                wheel.theta_oa_to_owi_rad,
+                wheel.homing_runtime_zero_offset_rad,
+                wheel.steer_motor_sign,
+                wheel.drive_motor_sign,
+            };
+            const f32 current_oa_total_rad = mapCorrectedLocalTotalToOaTotal(wheel.corrected_steer_motor_total_angle_rad, calibration);
             const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, target_oa_mod_rad);
-            return target_oa_total_rad - wheel.theta_oa_to_owi_rad;
+            return mapOaTotalToCorrectedLocalTotal(target_oa_total_rad, calibration);
         }
 
         void Chassis::computeProjectedDriveFromPlannedSteer(const Data &command_data, const f32 planned_oa_total_rad[4], f32 out_drive_omega_rad_s[4]) const
@@ -1054,7 +1060,8 @@ namespace jia
             {
                 return 0.0f;
             }
-            return wheel.steer_motor_sign * degToRadF32(wheel.steer_motor_h->getTotalAngle());
+            const f32 steer_sign = (wheel.steer_motor_sign == 0.0f) ? 1.0f : wheel.steer_motor_sign;
+            return steer_sign * degToRadF32(wheel.steer_motor_h->getTotalAngle());
         }
 
         f32 Chassis::readDriveMotorOmegaRadS(const WheelConfig &wheel) const
@@ -1063,12 +1070,24 @@ namespace jia
             {
                 return 0.0f;
             }
-            return wheel.drive_motor_sign * rpmToRadsF32(wheel.drive_motor_h->getRPM());
+            const SteerCalibration calibration{
+                wheel.theta_oa_to_owi_rad,
+                wheel.homing_runtime_zero_offset_rad,
+                wheel.steer_motor_sign,
+                wheel.drive_motor_sign,
+            };
+            return mapDriveMotorRpmToWheelOmega(wheel.drive_motor_h->getRPM(), calibration);
         }
 
         f32 Chassis::readCorrectedSteerMotorTotalAngleRad(const WheelConfig &wheel) const
         {
-            return readSteerMotorRawTotalAngleRad(wheel) + wheel.homing_runtime_zero_offset_rad;
+            const SteerCalibration calibration{
+                wheel.theta_oa_to_owi_rad,
+                wheel.homing_runtime_zero_offset_rad,
+                wheel.steer_motor_sign,
+                wheel.drive_motor_sign,
+            };
+            return mapRawSteerMotorTotalToCorrectedLocalTotal((wheel.steer_motor_h == nullptr) ? 0.0f : degToRadF32(wheel.steer_motor_h->getTotalAngle()), calibration);
         }
 
         void Chassis::updateWheelFeedback()
@@ -1190,7 +1209,8 @@ namespace jia
         {
             if (wheel.steer_motor_h != nullptr)
             {
-                wheel.steer_motor_h->setTargetRPM(rpm / wheel.steer_motor_sign);
+                const f32 steer_sign = (wheel.steer_motor_sign == 0.0f) ? 1.0f : wheel.steer_motor_sign;
+                wheel.steer_motor_h->setTargetRPM(rpm / steer_sign);
             }
         }
 
@@ -1200,7 +1220,13 @@ namespace jia
             {
                 return;
             }
-            f32 raw_motor_total_rad = (corrected_local_total_angle_rad - wheel.homing_runtime_zero_offset_rad) / wheel.steer_motor_sign;
+            const SteerCalibration calibration{
+                wheel.theta_oa_to_owi_rad,
+                wheel.homing_runtime_zero_offset_rad,
+                wheel.steer_motor_sign,
+                wheel.drive_motor_sign,
+            };
+            f32 raw_motor_total_rad = mapCorrectedLocalTotalToRawSteerMotorTotal(corrected_local_total_angle_rad, calibration);
             wheel.steer_motor_h->setTargetTotalAngle(radToDegF32(raw_motor_total_rad));
         }
 
@@ -1208,7 +1234,13 @@ namespace jia
         {
             if (wheel.drive_motor_h != nullptr)
             {
-                wheel.drive_motor_h->setTargetRPM(radsToRpmF32(drive_omega_rad_s / wheel.drive_motor_sign));
+                const SteerCalibration calibration{
+                    wheel.theta_oa_to_owi_rad,
+                    wheel.homing_runtime_zero_offset_rad,
+                    wheel.steer_motor_sign,
+                    wheel.drive_motor_sign,
+                };
+                wheel.drive_motor_h->setTargetRPM(mapWheelOmegaToDriveMotorRpm(drive_omega_rad_s, calibration));
             }
         }
 
@@ -2799,19 +2831,10 @@ namespace jia
                 }
                 target_data_.omega_z = input_target_data_.omega_z;
 
-                if (debug_control_.enable)
-                {
-                    // Keep debug-visible vel_x/vel_y semantics intuitive for joystick,
-                    // while adapting to the current chassis internal axis convention.
-                    target_data_.vel_x = -target_data_.vel_x;
-                    target_data_.vel_y = -target_data_.vel_y;
-                }
-                else
-                {
-                    target_data_.vel_x = -target_data_.vel_x;
-                    target_data_.vel_y = -target_data_.vel_y;
-                    target_data_.omega_z = -target_data_.omega_z;
-                }
+                const BodyCommand planner_command = normalizeBodyCommandForPlanner({target_data_.vel_x, target_data_.vel_y, target_data_.omega_z});
+                target_data_.vel_x = planner_command.vel_x;
+                target_data_.vel_y = planner_command.vel_y;
+                target_data_.omega_z = planner_command.omega_z;
 
                 if (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode)
                 {

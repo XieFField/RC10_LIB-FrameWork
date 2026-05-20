@@ -1,0 +1,124 @@
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+
+#include "chassis.h"
+
+namespace
+{
+int g_failures = 0;
+
+void expectTrue(bool condition, const char *expression, int line)
+{
+    if (!condition)
+    {
+        std::printf("FAIL line %d: %s\n", line, expression);
+        ++g_failures;
+    }
+}
+
+void expectNear(float actual, float expected, float tolerance, const char *expression, int line)
+{
+    if (std::fabs(actual - expected) > tolerance)
+    {
+        std::printf("FAIL line %d: %s actual=%f expected=%f tolerance=%f\n",
+                    line,
+                    expression,
+                    static_cast<double>(actual),
+                    static_cast<double>(expected),
+                    static_cast<double>(tolerance));
+        ++g_failures;
+    }
+}
+
+#define EXPECT_TRUE(expr) expectTrue((expr), #expr, __LINE__)
+#define EXPECT_NEAR(actual, expected, tolerance) expectNear((actual), (expected), (tolerance), #actual, __LINE__)
+
+using Chassis = jia::FourSteerChassis::Chassis;
+
+void testExternalCommandMapsToInternalBodyAxesWithoutChangingOmega()
+{
+    Chassis::ExternalCommand command{};
+    command.coord = Chassis::Coordinate::kBody;
+    command.vel_x = 1.25f;
+    command.vel_y = -2.50f;
+    command.omega_z = 0.75f;
+
+    const Chassis::BodyCommand body = Chassis::mapExternalCommandToBody(command);
+
+    EXPECT_NEAR(body.vel_x, -2.50f, 1.0e-6f);
+    EXPECT_NEAR(body.vel_y, -1.25f, 1.0e-6f);
+    EXPECT_NEAR(body.omega_z, 0.75f, 1.0e-6f);
+}
+
+void testPlannerAxisNormalizationDoesNotDependOnDebugStyleOmegaFlip()
+{
+    Chassis::BodyCommand command{};
+    command.vel_x = 0.80f;
+    command.vel_y = -1.10f;
+    command.omega_z = -0.45f;
+
+    const Chassis::BodyCommand planner = Chassis::normalizeBodyCommandForPlanner(command);
+
+    EXPECT_NEAR(planner.vel_x, -0.80f, 1.0e-6f);
+    EXPECT_NEAR(planner.vel_y, 1.10f, 1.0e-6f);
+    EXPECT_NEAR(planner.omega_z, -0.45f, 1.0e-6f);
+}
+
+void testSteerGeometryUsesSignedInstallationAngleOnly()
+{
+    Chassis::SteerCalibration calibration{};
+    calibration.theta_oa_to_owi_rad = jia::degToRadF32(-90.0f);
+    calibration.homing_runtime_zero_offset_rad = jia::degToRadF32(30.0f);
+    calibration.steer_motor_sign = -1.0f;
+    calibration.drive_motor_sign = 1.0f;
+
+    const float target_oa_total_rad = jia::degToRadF32(45.0f);
+    const float corrected_local_total_rad = Chassis::mapOaTotalToCorrectedLocalTotal(target_oa_total_rad, calibration);
+
+    EXPECT_NEAR(jia::radToDegF32(corrected_local_total_rad), 135.0f, 1.0e-4f);
+
+    const float round_trip_oa_total_rad = Chassis::mapCorrectedLocalTotalToOaTotal(corrected_local_total_rad, calibration);
+    EXPECT_NEAR(round_trip_oa_total_rad, target_oa_total_rad, 1.0e-6f);
+}
+
+void testRuntimeZeroAndMotorPolarityOnlyAffectMotorLocalConversion()
+{
+    Chassis::SteerCalibration calibration{};
+    calibration.theta_oa_to_owi_rad = jia::degToRadF32(15.0f);
+    calibration.homing_runtime_zero_offset_rad = jia::degToRadF32(-20.0f);
+    calibration.steer_motor_sign = -1.0f;
+    calibration.drive_motor_sign = -1.0f;
+
+    const float corrected_local_total_rad = jia::degToRadF32(100.0f);
+    const float raw_motor_total_rad = Chassis::mapCorrectedLocalTotalToRawSteerMotorTotal(corrected_local_total_rad, calibration);
+    const float round_trip_corrected_local_rad = Chassis::mapRawSteerMotorTotalToCorrectedLocalTotal(raw_motor_total_rad, calibration);
+
+    EXPECT_NEAR(jia::radToDegF32(raw_motor_total_rad), -120.0f, 1.0e-4f);
+    EXPECT_NEAR(round_trip_corrected_local_rad, corrected_local_total_rad, 1.0e-6f);
+
+    const float wheel_omega_rad_s = 6.0f;
+    const float drive_rpm = Chassis::mapWheelOmegaToDriveMotorRpm(wheel_omega_rad_s, calibration);
+    const float round_trip_wheel_omega_rad_s = Chassis::mapDriveMotorRpmToWheelOmega(drive_rpm, calibration);
+
+    EXPECT_NEAR(drive_rpm, jia::radsToRpmF32(-6.0f), 1.0e-4f);
+    EXPECT_NEAR(round_trip_wheel_omega_rad_s, wheel_omega_rad_s, 1.0e-6f);
+}
+} // namespace
+
+int main()
+{
+    testExternalCommandMapsToInternalBodyAxesWithoutChangingOmega();
+    testPlannerAxisNormalizationDoesNotDependOnDebugStyleOmegaFlip();
+    testSteerGeometryUsesSignedInstallationAngleOnly();
+    testRuntimeZeroAndMotorPolarityOnlyAffectMotorLocalConversion();
+
+    if (g_failures != 0)
+    {
+        std::printf("chassis_semantics test: FAIL failures=%d\n", g_failures);
+        return EXIT_FAILURE;
+    }
+
+    std::puts("chassis_semantics test: PASS");
+    return EXIT_SUCCESS;
+}
