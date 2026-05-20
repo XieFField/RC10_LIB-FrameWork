@@ -350,16 +350,28 @@ private:
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
         const float safe_h = init_data_.safe_height_;
+        const float lock_h = init_data_.lock_height_;
+        const float re = init_data_.rotate_end;
 
-        if(h >= safe_h - 0.01f) return desired_deg;
+        if (h < lock_h)
+            return 180.0f;
 
-        // 锟斤拷锟截革拷锟斤拷锟斤拷锟斤拷一锟斤拷
-        const float norm_deg = desired_deg;
+        if (h < safe_h - 0.01f)
+        {
+            float cur = this->get_currentJointStatus().rotateJoint_angle_;
+            bool in_storage_zone = (cur >= re && cur <= 360.0f)
+                                || (cur >= 0.0f && cur <= 180.0f);
+            if (in_storage_zone)
+                return desired_deg;
 
-        if(norm_deg < 60.0f) return 60.0f;
-        if(norm_deg > 179.9f && norm_deg < 270.0f) return 180.0f;
-        if(norm_deg >= 270.0f) return 60.0f;
-        return norm_deg;
+            const float norm_deg = desired_deg;
+            if (norm_deg < 60.0f)   return 60.0f;
+            if (norm_deg > 179.9f && norm_deg < 270.0f) return 180.0f;
+            if (norm_deg >= 270.0f) return 60.0f;
+            return norm_deg;
+        }
+
+        return desired_deg;
     }
 
 

@@ -59,6 +59,7 @@ typedef struct {
     float max_rotate_angle_ = 0.0f; // 最大旋转角度
     float safe_height_ = 0.0f; // 安全高度
     float store_height_ = 0.0f; // 储存高度
+    float lock_height_ = 0.0f; // 云台锁定高度
 
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘GPIO控制端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘GPIO控制引脚

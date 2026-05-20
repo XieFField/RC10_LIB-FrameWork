@@ -145,7 +145,7 @@ public:
 
     void setLowerClawStart(bool start)
     {
-        
+        // ctrl_status_.calibrate_start = start;
     }
 
     bool isWeaponSageCalibrated() const
