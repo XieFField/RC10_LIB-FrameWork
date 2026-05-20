@@ -212,6 +212,26 @@ void testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit()
     EXPECT_NEAR(steer_only_snapshot.target.omega_z, 0.0f, 1.0e-6f);
     EXPECT_NEAR(steer_only_snapshot.target.rot_z, 1.5f, 1.0e-6f);
 }
+
+void testHomingRuntimeZeroOffsetOnlyDependsOnEdgeGeometryAndRawMotorAngle()
+{
+    Chassis::SteerCalibration calibration{};
+    calibration.theta_oa_to_owi_rad = jia::degToRadF32(90.0f);
+    calibration.homing_runtime_zero_offset_rad = 0.0f;
+    calibration.steer_motor_sign = 1.0f;
+
+    const float edge_mech_oa_rad = jia::degToRadF32(150.0f);
+    const float raw_motor_total_rad = jia::degToRadF32(40.0f);
+    const float homing_zero_offset_rad = jia::degToRadF32(-30.0f);
+
+    const float runtime_zero_offset_rad = Chassis::computeHomingRuntimeZeroOffset(
+        edge_mech_oa_rad,
+        raw_motor_total_rad,
+        homing_zero_offset_rad,
+        calibration);
+
+    EXPECT_NEAR(jia::radToDegF32(runtime_zero_offset_rad), -10.0f, 1.0e-4f);
+}
 } // namespace
 
 int main()
@@ -224,6 +244,7 @@ int main()
     testTelemetrySnapshotPreservesWheelTargetsWithoutModeDependentReinterpretation();
     testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry();
     testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit();
+    testHomingRuntimeZeroOffsetOnlyDependsOnEdgeGeometryAndRawMotorAngle();
 
     if (g_failures != 0)
     {

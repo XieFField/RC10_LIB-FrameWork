@@ -1183,11 +1183,14 @@ namespace jia
                 {
                     const bool is_falling_edge = wheel.homing_last_sensor_active && !sensor_raw_high;
                     const f32 edge_mech_oa_rad = is_falling_edge ? wheel.homing_falling_edge_mech_rad : wheel.homing_rising_edge_mech_rad;
-                    const f32 edge_local_corrected_rad = mapWheelOaTotalToCorrectedLocal(wheel, edge_mech_oa_rad);
+                    const SteerCalibration calibration = makeSteerCalibration(wheel);
 
                     wheel.homing_state = HomingState::kEdgeDetected;
                     wheel.homing_last_edge_is_falling = is_falling_edge;
-                    wheel.homing_runtime_zero_offset_rad = edge_local_corrected_rad + wheel.homing_zero_offset_rad - raw_total_angle_rad;
+                    wheel.homing_runtime_zero_offset_rad = computeHomingRuntimeZeroOffset(edge_mech_oa_rad,
+                                                                                          raw_total_angle_rad,
+                                                                                          wheel.homing_zero_offset_rad,
+                                                                                          calibration);
                     wheel.homing_zero_valid = true;
                 }
                 else if (wheel.homing_elapsed_s > wheel.homing_timeout_s)

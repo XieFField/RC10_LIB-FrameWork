@@ -177,6 +177,10 @@ namespace jia
             static f32 mapDriveMotorRpmToWheelOmega(f32 motor_rpm, const SteerCalibration &calibration);
             static f32 mapWheelOmegaToDriveMotorRpm(f32 wheel_omega_rad_s, const SteerCalibration &calibration);
             static f32 mapWheelCurrentToDriveMotorCurrent(f32 wheel_current_mA, const SteerCalibration &calibration);
+            static f32 computeHomingRuntimeZeroOffset(f32 edge_mech_oa_rad,
+                                                      f32 raw_motor_total_rad,
+                                                      f32 homing_zero_offset_rad,
+                                                      const SteerCalibration &calibration);
             static PlannerInputSnapshot makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad);
             static TelemetrySnapshot makeTelemetrySnapshot(bool homing_all_ready,
                                                            const TelemetryChassisState &target,
@@ -898,6 +902,15 @@ namespace jia
         {
             const f32 drive_sign = (calibration.drive_motor_sign == 0.0f) ? 1.0f : calibration.drive_motor_sign;
             return wheel_current_mA / drive_sign;
+        }
+
+        inline f32 Chassis::computeHomingRuntimeZeroOffset(f32 edge_mech_oa_rad,
+                                                           f32 raw_motor_total_rad,
+                                                           f32 homing_zero_offset_rad,
+                                                           const SteerCalibration &calibration)
+        {
+            const f32 edge_local_corrected_rad = mapOaTotalToCorrectedLocalTotal(edge_mech_oa_rad, calibration);
+            return edge_local_corrected_rad + homing_zero_offset_rad - raw_motor_total_rad;
         }
 
         inline Chassis::PlannerInputSnapshot Chassis::makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad)
