@@ -20,6 +20,63 @@ namespace jia
 {
     namespace FourSteerChassis
     {
+        namespace
+        {
+            constexpr u16 kSwerveTelemetryMagic = 0xA55AU;
+            constexpr u8 kSwerveTelemetryVersion = 2U;
+            constexpr u8 kSwerveTelemetryFlagsCrcPayloadOnly = 1U << 0;
+            constexpr u8 kSwerveTelemetryFlagsAllHomed = 1U << 1;
+
+            inline void packU16LE(u8 *dst, u16 value)
+            {
+                dst[0] = static_cast<u8>(value & 0xFFU);
+                dst[1] = static_cast<u8>((value >> 8) & 0xFFU);
+            }
+
+            inline void packU64LE(u8 *dst, u64 value)
+            {
+                for (u8 i = 0U; i < 8U; ++i)
+                {
+                    dst[i] = static_cast<u8>((value >> (8U * i)) & 0xFFU);
+                }
+            }
+
+            inline void packF32LE(u8 *dst, f32 value)
+            {
+                union
+                {
+                    f32 f;
+                    u32 u;
+                } conv;
+                conv.f = value;
+                dst[0] = static_cast<u8>(conv.u & 0xFFU);
+                dst[1] = static_cast<u8>((conv.u >> 8) & 0xFFU);
+                dst[2] = static_cast<u8>((conv.u >> 16) & 0xFFU);
+                dst[3] = static_cast<u8>((conv.u >> 24) & 0xFFU);
+            }
+
+            u16 crc16CcittFalse(const u8 *data, u16 len)
+            {
+                u16 crc = 0xFFFFU;
+                for (u16 i = 0U; i < len; ++i)
+                {
+                    crc ^= static_cast<u16>(data[i]) << 8;
+                    for (u8 bit = 0U; bit < 8U; ++bit)
+                    {
+                        if ((crc & 0x8000U) != 0U)
+                        {
+                            crc = static_cast<u16>((crc << 1) ^ 0x1021U);
+                        }
+                        else
+                        {
+                            crc = static_cast<u16>(crc << 1);
+                        }
+                    }
+                }
+                return crc;
+            }
+        } // namespace
+
         void Chassis::init(InitConfig &config)
         {
             runtime_strategy_cfg_ = default_strategy_cfg_;
@@ -1984,6 +2041,122 @@ namespace jia
             debug_uart_.printf_DMA_JustFloat(payload, 17);
         }
 
+        void Chassis::emitUart8SwerveTelemetryV2(bool all_homed)
+        {
+            if (!debug_output_.output_enable || debug_output_.output_mode_raw != static_cast<u8>(DebugOutputMode::kSwerveTelemetryV2))
+            {
+                return;
+            }
+
+            const u8 divider = (debug_output_.telemetry_sample_divider == 0U) ? 1U : debug_output_.telemetry_sample_divider;
+            debug_output_.telemetry_cycle_counter = static_cast<u8>(debug_output_.telemetry_cycle_counter + 1U);
+            if (debug_output_.telemetry_cycle_counter < divider)
+            {
+                return;
+            }
+            debug_output_.telemetry_cycle_counter = 0U;
+
+            const u32 period_ms = (debug_output_.telemetry_period_ms > 0U) ? debug_output_.telemetry_period_ms : 8U;
+            if ((time_ms_ - debug_output_.telemetry_last_ms) < period_ms)
+            {
+                return;
+            }
+
+            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
+            {
+                return;
+            }
+
+            u8 *const frame = debug_output_.telemetry_frame_buf;
+            u16 cursor = 0U;
+
+            packU16LE(&frame[cursor], kSwerveTelemetryMagic);
+            cursor += 2U;
+            frame[cursor++] = kSwerveTelemetryVersion;
+            const u8 flags = static_cast<u8>(kSwerveTelemetryFlagsCrcPayloadOnly |
+                                             (all_homed ? kSwerveTelemetryFlagsAllHomed : 0U) |
+                                             ((debug_output_.telemetry_profile_id & 0x0FU) << 4U));
+            frame[cursor++] = flags;
+            packU16LE(&frame[cursor], debug_output_.telemetry_seq);
+            cursor += 2U;
+            packU64LE(&frame[cursor], RtosTimeStampUs64::getTimeUs());
+            cursor += 8U;
+            packU16LE(&frame[cursor], 0x001FU);
+            cursor += 2U;
+            const u16 payload_len_pos = cursor;
+            cursor += 2U;
+
+            const u16 payload_start = cursor;
+
+            const auto packChassis4f = [&](f32 vx, f32 vy, f32 wz, f32 yaw) {
+                packF32LE(&frame[cursor], vx);
+                cursor += 4U;
+                packF32LE(&frame[cursor], vy);
+                cursor += 4U;
+                packF32LE(&frame[cursor], wz);
+                cursor += 4U;
+                packF32LE(&frame[cursor], yaw);
+                cursor += 4U;
+            };
+
+            packChassis4f(planned_data_.vel_x, planned_data_.vel_y, planned_data_.omega_z, planned_data_.rot_z);
+            packChassis4f(current_data_.vel_x, current_data_.vel_y, current_data_.omega_z, input_hwt_rot_z_);
+
+            const auto packMotor8f = [&](const Motor_Base *motor) {
+                const f32 tar_i_a = (motor != nullptr) ? (motor->getTargetCurrent() * 0.001f) : 0.0f;
+                const f32 act_i_a = (motor != nullptr) ? (motor->getCurrent() * 0.001f) : 0.0f;
+                const f32 tar_rpm = (motor != nullptr) ? motor->getTargetRPM() : 0.0f;
+                const f32 act_rpm = (motor != nullptr) ? motor->getRPM() : 0.0f;
+                const f32 tar_single_rad = (motor != nullptr) ? degToRadF32(motor->getTargetAngle()) : 0.0f;
+                const f32 act_single_rad = (motor != nullptr) ? degToRadF32(motor->getAngle()) : 0.0f;
+                const f32 tar_multi_rad = (motor != nullptr) ? degToRadF32(motor->getTargetTotalAngle()) : 0.0f;
+                const f32 act_multi_rad = (motor != nullptr) ? degToRadF32(motor->getTotalAngle()) : 0.0f;
+                packF32LE(&frame[cursor], tar_i_a);
+                cursor += 4U;
+                packF32LE(&frame[cursor], act_i_a);
+                cursor += 4U;
+                packF32LE(&frame[cursor], tar_rpm);
+                cursor += 4U;
+                packF32LE(&frame[cursor], act_rpm);
+                cursor += 4U;
+                packF32LE(&frame[cursor], tar_single_rad);
+                cursor += 4U;
+                packF32LE(&frame[cursor], act_single_rad);
+                cursor += 4U;
+                packF32LE(&frame[cursor], tar_multi_rad);
+                cursor += 4U;
+                packF32LE(&frame[cursor], act_multi_rad);
+                cursor += 4U;
+            };
+
+            for (u8 i = 0; i < 4U; ++i)
+            {
+                const WheelConfig &wheel = wheel_config_[i];
+                packMotor8f(wheel.steer_motor_h);
+            }
+
+            for (u8 i = 0; i < 4U; ++i)
+            {
+                const WheelConfig &wheel = wheel_config_[i];
+                packMotor8f(wheel.drive_motor_h);
+            }
+
+            const u16 payload_len = static_cast<u16>(cursor - payload_start);
+            packU16LE(&frame[payload_len_pos], payload_len);
+
+            const u16 crc = crc16CcittFalse(&frame[payload_start], payload_len);
+            packU16LE(&frame[cursor], crc);
+            cursor += 2U;
+
+            if (HAL_UART_Transmit_DMA(&huart8, frame, cursor) != HAL_OK)
+            {
+                return;
+            }
+
+            debug_output_.telemetry_last_ms = time_ms_;
+            debug_output_.telemetry_seq = static_cast<u16>(debug_output_.telemetry_seq + 1U);
+        }
+
         void Chassis::emitDebugOutputByMode(bool all_homed)
         {
             if (!debug_output_.output_enable)
@@ -2003,6 +2176,9 @@ namespace jia
                 break;
             case DebugOutputMode::kSingleWheelDualMotorJustFloat:
                 emitUart8VofaDualMotor1kHzTrace();
+                break;
+            case DebugOutputMode::kSwerveTelemetryV2:
+                emitUart8SwerveTelemetryV2(all_homed);
                 break;
             case DebugOutputMode::kOff:
             default:
