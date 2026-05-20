@@ -2,7 +2,9 @@
 #include <cstdio>
 #include <cstdlib>
 
+#define private public
 #include "chassis.h"
+#undef private
 
 namespace
 {
@@ -35,6 +37,41 @@ void expectNear(float actual, float expected, float tolerance, const char *expre
 #define EXPECT_NEAR(actual, expected, tolerance) expectNear((actual), (expected), (tolerance), #actual, __LINE__)
 
 using Chassis = jia::FourSteerChassis::Chassis;
+
+class TestMotor : public Motor_Base
+{
+public:
+    TestMotor() : Motor_Base(0U, false, nullptr) {}
+
+    std::size_t packCommand(CanFrame[], std::size_t) override
+    {
+        return 0U;
+    }
+
+    void updateFeedback(const CanFrame &) override
+    {
+    }
+
+    void setFeedbackRpm(float rpm)
+    {
+        rpm_ = rpm;
+    }
+
+    void setFeedbackCurrent(float current)
+    {
+        current_ = current;
+    }
+
+    void setFeedbackTotalAngleDeg(float total_angle_deg)
+    {
+        total_angle_ = total_angle_deg;
+    }
+
+    float getTargetBrake() const
+    {
+        return target_brake_;
+    }
+};
 
 void testExternalCommandMapsToInternalBodyAxesWithoutChangingOmega()
 {
@@ -103,6 +140,18 @@ void testRuntimeZeroAndMotorPolarityOnlyAffectMotorLocalConversion()
 
     EXPECT_NEAR(drive_rpm, jia::radsToRpmF32(-6.0f), 1.0e-4f);
     EXPECT_NEAR(round_trip_wheel_omega_rad_s, wheel_omega_rad_s, 1.0e-6f);
+}
+
+void testSteerMotorSignAndRuntimeZeroOffsetStayAsIndependentMappingStages()
+{
+    const float raw_motor_total_rad = jia::degToRadF32(75.0f);
+    const float signed_local_total_rad = Chassis::mapRawSteerMotorTotalToSignedLocalTotal(raw_motor_total_rad, -1.0f);
+    const float corrected_local_total_rad = Chassis::applyHomingRuntimeZeroOffset(signed_local_total_rad, jia::degToRadF32(20.0f));
+
+    EXPECT_NEAR(jia::radToDegF32(signed_local_total_rad), -75.0f, 1.0e-4f);
+    EXPECT_NEAR(jia::radToDegF32(corrected_local_total_rad), -55.0f, 1.0e-4f);
+    EXPECT_NEAR(Chassis::removeHomingRuntimeZeroOffset(corrected_local_total_rad, jia::degToRadF32(20.0f)), signed_local_total_rad, 1.0e-6f);
+    EXPECT_NEAR(Chassis::mapSignedLocalTotalToRawSteerMotorTotal(signed_local_total_rad, -1.0f), raw_motor_total_rad, 1.0e-6f);
 }
 
 void testTelemetrySnapshotKeepsTargetAndActualYawSemanticsSeparate()
@@ -250,6 +299,90 @@ void testDebugModuleOverrideRouteSeparatesSingleWheelAlignHomingAndDirect()
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(22) == Chassis::DebugModuleOverrideRoute::kHomingObserve);
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(30) == Chassis::DebugModuleOverrideRoute::kDirectActuator);
 }
+
+void testDirectActuatorContinuousInputResolvesAxisAndControlTypesConsistently()
+{
+    Chassis chassis;
+    chassis.debug_control_.wheel_index = 2U;
+    chassis.debug_control_.direct_input_source = 1U;
+    chassis.debug_control_.direct_steer_control_type = 1U;
+    chassis.debug_control_.direct_drive_control_type = 1U;
+    chassis.debug_control_.direct_steer_rpm_limit = 200.0f;
+    chassis.debug_control_.direct_drive_current_limit_mA = 8000.0f;
+    chassis.airjoy_data_.left_x = 0.5f;
+    chassis.airjoy_data_.right_x = -0.25f;
+
+    const Chassis::DirectActuatorCommandSnapshot resolved = chassis.resolveDirectActuatorCommand(2U);
+
+    EXPECT_TRUE(resolved.drive_control_type == 1U);
+    EXPECT_NEAR(resolved.steer_axis_value, 0.5f, 1.0e-6f);
+    EXPECT_NEAR(resolved.drive_axis_value, -0.25f, 1.0e-6f);
+    EXPECT_NEAR(resolved.steer_rpm_cmd, 100.0f, 1.0e-6f);
+    EXPECT_NEAR(resolved.drive_current_cmd_mA, -2000.0f, 1.0e-6f);
+    EXPECT_NEAR(resolved.applied_steer_cmd, 100.0f, 1.0e-6f);
+    EXPECT_NEAR(resolved.applied_drive_cmd, -2000.0f, 1.0e-6f);
+}
+
+void testDirectActuatorOverrideOnlyAppliesToSelectedWheel()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].steer_motor_h = &steer_motors[i];
+        chassis.wheel_config_[i].drive_motor_h = &drive_motors[i];
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = (i == 1) ? -1.0f : 1.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+    }
+
+    chassis.debug_control_.wheel_index = 1U;
+    chassis.debug_control_.direct_input_source = 0U;
+    chassis.debug_control_.direct_steer_control_type = 2U;
+    chassis.debug_control_.direct_drive_control_type = 2U;
+    chassis.debug_control_.direct_enable_steer[1] = true;
+    chassis.debug_control_.direct_enable_drive[1] = true;
+    chassis.debug_control_.direct_steer_single_turn_deg[1] = 45.0f;
+    chassis.debug_control_.direct_drive_brake_mA[1] = 1800.0f;
+
+    chassis.applyDirectActuatorDebugOverride(1U);
+
+    EXPECT_NEAR(chassis.wheel_config_[1].target_steer_motor_total_angle_rad, jia::degToRadF32(45.0f), 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.steer_angle_oa_rad[1], jia::degToRadF32(45.0f), 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[1].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetBrake(), -1800.0f, 1.0e-6f);
+    EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), 45.0f, 1.0e-4f);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[2].getTargetBrake(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[3].getTargetBrake(), 0.0f, 1.0e-6f);
+}
+
+void testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode()
+{
+    Chassis chassis;
+    chassis.wheel_config_[0].homing_state = Chassis::HomingState::kSearch;
+    chassis.wheel_config_[0].homing_elapsed_s = 1.25f;
+    chassis.wheel_config_[0].homing_zero_valid = false;
+    chassis.wheel_config_[0].homing_last_edge_is_falling = true;
+    chassis.wheel_config_[0].homing_runtime_zero_offset_rad = jia::degToRadF32(18.0f);
+    chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(12.0f);
+    chassis.wheel_config_[0].target_steer_motor_total_angle_rad = jia::degToRadF32(12.0f);
+    chassis.wheel_config_[0].target_drive_omega_rad_s = 4.0f;
+
+    chassis.debug_control_.wheel_index = 0U;
+    chassis.applyHomingObserveDebugOverride();
+    chassis.refreshDebugMirror(false);
+
+    EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
+                chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad,
+                1.0e-6f);
+    EXPECT_TRUE(chassis.debug_mirror_.homing_state[0] == static_cast<unsigned char>(Chassis::HomingState::kSearch));
+    EXPECT_TRUE(chassis.debug_mirror_.homing_last_edge_is_falling[0]);
+    EXPECT_NEAR(chassis.debug_mirror_.homing_runtime_zero_offset_deg[0], 18.0f, 1.0e-4f);
+}
 } // namespace
 
 int main()
@@ -258,6 +391,7 @@ int main()
     testPlannerAxisNormalizationDoesNotDependOnDebugStyleOmegaFlip();
     testSteerGeometryUsesSignedInstallationAngleOnly();
     testRuntimeZeroAndMotorPolarityOnlyAffectMotorLocalConversion();
+    testSteerMotorSignAndRuntimeZeroOffsetStayAsIndependentMappingStages();
     testTelemetrySnapshotKeepsTargetAndActualYawSemanticsSeparate();
     testTelemetrySnapshotPreservesWheelTargetsWithoutModeDependentReinterpretation();
     testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry();
@@ -265,6 +399,9 @@ int main()
     testHomingRuntimeZeroOffsetOnlyDependsOnEdgeGeometryAndRawMotorAngle();
     testDebugRouteClassificationSeparatesInputInjectionFromModuleOverride();
     testDebugModuleOverrideRouteSeparatesSingleWheelAlignHomingAndDirect();
+    testDirectActuatorContinuousInputResolvesAxisAndControlTypesConsistently();
+    testDirectActuatorOverrideOnlyAppliesToSelectedWheel();
+    testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode();
 
     if (g_failures != 0)
     {

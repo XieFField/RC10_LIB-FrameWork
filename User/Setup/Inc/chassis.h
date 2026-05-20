@@ -58,6 +58,26 @@ namespace jia
                 f32 drive_motor_sign = 1.0f;
             };
 
+            struct DirectActuatorCommandSnapshot
+            {
+                u8 wheel_idx = 0U;
+                u8 steer_control_type = 0U;
+                u8 drive_control_type = 0U;
+                f32 steer_axis_value = 0.0f;
+                f32 drive_axis_value = 0.0f;
+                f32 steer_step_sign = 0.0f;
+                f32 drive_step_sign = 0.0f;
+                f32 steer_current_cmd_mA = 0.0f;
+                f32 steer_rpm_cmd = 0.0f;
+                f32 steer_single_turn_deg_cmd = 0.0f;
+                f32 steer_multi_turn_deg_cmd = 0.0f;
+                f32 drive_rpm_cmd = 0.0f;
+                f32 drive_current_cmd_mA = 0.0f;
+                f32 drive_brake_cmd_mA = 0.0f;
+                f32 applied_steer_cmd = 0.0f;
+                f32 applied_drive_cmd = 0.0f;
+            };
+
             static constexpr u8 kTelemetryWheelCount = 4U;
 
             struct TelemetryChassisState
@@ -186,6 +206,10 @@ namespace jia
             f32 getCurrentOmegaZ() const;
             static BodyCommand mapExternalCommandToBody(const ExternalCommand &command);
             static BodyCommand normalizeBodyCommandForPlanner(const BodyCommand &command);
+            static f32 mapRawSteerMotorTotalToSignedLocalTotal(f32 raw_motor_total_rad, f32 steer_motor_sign);
+            static f32 mapSignedLocalTotalToRawSteerMotorTotal(f32 signed_local_total_rad, f32 steer_motor_sign);
+            static f32 applyHomingRuntimeZeroOffset(f32 signed_local_total_rad, f32 homing_runtime_zero_offset_rad);
+            static f32 removeHomingRuntimeZeroOffset(f32 corrected_local_total_rad, f32 homing_runtime_zero_offset_rad);
             static f32 mapOaTotalToCorrectedLocalTotal(f32 oa_total_rad, const SteerCalibration &calibration);
             static f32 mapCorrectedLocalTotalToOaTotal(f32 corrected_local_total_rad, const SteerCalibration &calibration);
             static f32 mapRawSteerMotorTotalToCorrectedLocalTotal(f32 raw_motor_total_rad, const SteerCalibration &calibration);
@@ -265,6 +289,12 @@ namespace jia
                 kReady,
                 kAlignToZero,
                 kFault,
+            };
+
+            enum class HomingFaultReason : u8
+            {
+                kNone = 0,
+                kTimeout = 1,
             };
 
             struct WheelInitConfig
@@ -421,6 +451,10 @@ namespace jia
             void applyHomingObserveDebugOverride();
             void applyDirectActuatorDebugOverride(u8 wheel_idx);
             void finalizeDebugModuleOverride(bool all_homed, DebugModuleOverrideRoute route);
+            DirectActuatorCommandSnapshot resolveDirectActuatorCommand(u8 wheel_idx);
+            void clearDirectDriveCommandByType(WheelConfig &wheel, u8 wheel_idx, u8 drive_control_type);
+            void applyDirectActuatorSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command);
+            void applyDirectActuatorDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command);
             void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z);
@@ -535,7 +569,7 @@ namespace jia
                 bool enable_drive_omega_limit = false; // [RW] 是否启用驱动角速度上限。
                 bool enable_drive_alpha_limit = false; // [RW] 是否启用驱动角加速度上限。
                 bool enable_steer_rate_limit = false;  // [RW] 是否启用舵向角速度上限。
-                bool enable_steer_alpha_limit = true; // [RW] 是否启用舵向角加速度上限。
+                bool enable_steer_alpha_limit = false; // [RW] 是否启用舵向角加速度上限。
             } actuator_limit_enable_;
 
             // =====================================================================
@@ -610,7 +644,7 @@ namespace jia
             struct DebugControl
             {
                 // ---- 调试总开关与模式入口 ---------------------------------------
-                bool enable = false;                                             // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
+                bool enable = true;                                             // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
                 u8 mode_raw = 1;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
                 u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。用于观察 mode_raw 经过归一化后的结果。
                 u8 wheel_index = 1;                                             // [RW] 主选中轮号（0~3）。默认作为单轮调试与单轮输出追踪的统一轮号来源。
@@ -702,7 +736,7 @@ namespace jia
                 // ---- mode5: SwerveTelemetryV2 binary ----------------------------
                 u8 telemetry_sample_divider = 1U;    // [RW] mode5 分频发送系数。1 表示每个满足周期门限的控制周期都尝试发送。
                 u8 telemetry_profile_id = 0U;        // [RW] mode5 配置档编号。编码到 flags 高 4 位，便于 PC 侧区分不同发送方案。
-                u32 telemetry_period_ms = 8U;        // [RW] mode5 最小发送周期（ms）。默认8ms，对应约125fps上限。
+                u32 telemetry_period_ms = 10U;        // [RW] mode5 最小发送周期（ms）。
                 TickType_t telemetry_last_ms = 0;    // [RO] mode5 最近一次发送时刻（tick/ms 基准），用于周期门限判断。
                 u8 telemetry_cycle_counter = 0U;     // [RO] mode5 分频计数器。与 sample_divider 配合决定本周期是否允许发送。
                 u16 telemetry_seq = 0U;              // [RO] mode5 帧序号。每成功发送一帧递增，便于 PC 侧检测丢帧。
@@ -889,6 +923,28 @@ namespace jia
             return planner_command;
         }
 
+        inline f32 Chassis::mapRawSteerMotorTotalToSignedLocalTotal(f32 raw_motor_total_rad, f32 steer_motor_sign)
+        {
+            const f32 steer_sign = (steer_motor_sign == 0.0f) ? 1.0f : steer_motor_sign;
+            return raw_motor_total_rad * steer_sign;
+        }
+
+        inline f32 Chassis::mapSignedLocalTotalToRawSteerMotorTotal(f32 signed_local_total_rad, f32 steer_motor_sign)
+        {
+            const f32 steer_sign = (steer_motor_sign == 0.0f) ? 1.0f : steer_motor_sign;
+            return signed_local_total_rad / steer_sign;
+        }
+
+        inline f32 Chassis::applyHomingRuntimeZeroOffset(f32 signed_local_total_rad, f32 homing_runtime_zero_offset_rad)
+        {
+            return signed_local_total_rad + homing_runtime_zero_offset_rad;
+        }
+
+        inline f32 Chassis::removeHomingRuntimeZeroOffset(f32 corrected_local_total_rad, f32 homing_runtime_zero_offset_rad)
+        {
+            return corrected_local_total_rad - homing_runtime_zero_offset_rad;
+        }
+
         inline f32 Chassis::mapOaTotalToCorrectedLocalTotal(f32 oa_total_rad, const SteerCalibration &calibration)
         {
             return oa_total_rad - calibration.theta_oa_to_owi_rad;
@@ -901,14 +957,14 @@ namespace jia
 
         inline f32 Chassis::mapRawSteerMotorTotalToCorrectedLocalTotal(f32 raw_motor_total_rad, const SteerCalibration &calibration)
         {
-            const f32 steer_sign = (calibration.steer_motor_sign == 0.0f) ? 1.0f : calibration.steer_motor_sign;
-            return raw_motor_total_rad * steer_sign + calibration.homing_runtime_zero_offset_rad;
+            const f32 signed_local_total_rad = mapRawSteerMotorTotalToSignedLocalTotal(raw_motor_total_rad, calibration.steer_motor_sign);
+            return applyHomingRuntimeZeroOffset(signed_local_total_rad, calibration.homing_runtime_zero_offset_rad);
         }
 
         inline f32 Chassis::mapCorrectedLocalTotalToRawSteerMotorTotal(f32 corrected_local_total_rad, const SteerCalibration &calibration)
         {
-            const f32 steer_sign = (calibration.steer_motor_sign == 0.0f) ? 1.0f : calibration.steer_motor_sign;
-            return (corrected_local_total_rad - calibration.homing_runtime_zero_offset_rad) / steer_sign;
+            const f32 signed_local_total_rad = removeHomingRuntimeZeroOffset(corrected_local_total_rad, calibration.homing_runtime_zero_offset_rad);
+            return mapSignedLocalTotalToRawSteerMotorTotal(signed_local_total_rad, calibration.steer_motor_sign);
         }
 
         inline f32 Chassis::mapDriveMotorRpmToWheelOmega(f32 motor_rpm, const SteerCalibration &calibration)
@@ -935,7 +991,8 @@ namespace jia
                                                            const SteerCalibration &calibration)
         {
             const f32 edge_local_corrected_rad = mapOaTotalToCorrectedLocalTotal(edge_mech_oa_rad, calibration);
-            return edge_local_corrected_rad + homing_zero_offset_rad - raw_motor_total_rad;
+            const f32 edge_local_signed_rad = edge_local_corrected_rad + homing_zero_offset_rad;
+            return edge_local_signed_rad - mapRawSteerMotorTotalToSignedLocalTotal(raw_motor_total_rad, calibration.steer_motor_sign);
         }
 
         inline Chassis::DebugControlRoute Chassis::classifyDebugControlRoute(bool debug_enable, u8 raw_mode)
