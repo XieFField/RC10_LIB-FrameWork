@@ -57,6 +57,8 @@ namespace jia
 
             // 公开接口
             Result setZeroCurrent();
+            // External frame convention for setSpeed*/get*:
+            // +x = vehicle right, +y = vehicle front, omega_z keeps current sign convention.
             Result setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z);
             Result setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
             Result setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z);
@@ -280,6 +282,7 @@ namespace jia
                 kOverviewJustFloat = 2,
                 kSingleWheelJustFloat = 3,
                 kSingleWheelDualMotorJustFloat = 4,
+                kSwerveTelemetryV2 = 5,
             };
             DebugMode resolveDebugMode(u8 raw_mode) const;
             void applyDebugTargetOverride();
@@ -332,6 +335,7 @@ namespace jia
             void applyDebugSteerPidRuntimeTuning();
             void emitUart8VofaPid1kHzTrace();
             void emitUart8VofaDualMotor1kHzTrace();
+            void emitUart8SwerveTelemetryV2(bool all_homed);
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us);
@@ -361,7 +365,7 @@ namespace jia
             f32 max_drive_omega_rad_s_ = 60.0f;                              // [RW] 驱动目标角速度上限（rad/s）。仅在 enable_drive_omega_limit=true 时生效。
             f32 max_drive_alpha_rad_s2_ = 1000.0f;                           // [RW] 驱动角速度变化率上限（rad/s^2）。仅在 enable_drive_alpha_limit=true 时生效。
             f32 max_steer_rate_rad_s_ = 10.0f;                               // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit=true 时生效。
-            f32 max_steer_alpha_rad_s2_ = 120.0f;                            // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit=true 时生效。
+            f32 max_steer_alpha_rad_s2_ = 10000.0f;                            // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit=true 时生效。
             f32 trans_dir_rate_limit_deg_s_ = 540.0f;                        // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
             bool enable_cosine_compensation_ = false;                        // [RW] 是否启用舵角余弦补偿。开启后，舵角偏离时会折算驱动分量，减小横滑和无效驱动。
             IdlePostureMode idle_posture_mode_ = IdlePostureMode::kXPark; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。
@@ -397,7 +401,7 @@ namespace jia
                 bool enable_drive_omega_limit = false; // [RW] 是否启用驱动角速度上限。
                 bool enable_drive_alpha_limit = false; // [RW] 是否启用驱动角加速度上限。
                 bool enable_steer_rate_limit = false;  // [RW] 是否启用舵向角速度上限。
-                bool enable_steer_alpha_limit = false; // [RW] 是否启用舵向角加速度上限。
+                bool enable_steer_alpha_limit = true; // [RW] 是否启用舵向角加速度上限。
             } actuator_limit_enable_;
 
             // =====================================================================
@@ -537,8 +541,8 @@ namespace jia
             struct DebugOutput
             {
                 // ---- 输出总开关与模式选择 ---------------------------------------
-                bool output_enable = true;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
-                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kSingleWheelDualMotorJustFloat); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat。
+                bool output_enable = false;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
+                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kSwerveTelemetryV2); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制）。
                 u32 text_period_ms = 500;                                     // [RW] 文本日志周期（ms）。只在 mode1 下使用，控制文本总刷新频率。
                 u8 text_log_level = 1;                                        // [RW] 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
                 TickType_t text_last_ms = 0;                                  // [RO] 文本日志节流时间戳。记录上一次发文本的时间，防止串口刷屏。
@@ -560,6 +564,15 @@ namespace jia
                 u8 single_wheel_dual_motor_index = 0;           // [RW] mode4 私有轮号（覆盖值）。仅当 single_wheel_dual_motor_use_override_index=true 时生效。
                 u32 single_wheel_dual_motor_period_ms = 2;      // [RW] mode4 目标周期（ms）。默认 2ms，兼顾分辨率与串口稳定性。
                 TickType_t single_wheel_dual_motor_last_ms = 0; // [RO] mode4 发送节流时间戳。记录双电机高速输出最近一次发送时刻。
+
+                // ---- mode5: SwerveTelemetryV2 binary ----------------------------
+                u8 telemetry_sample_divider = 1U;    // [RW] mode5 分频发送系数。1 表示每个满足周期门限的控制周期都尝试发送。
+                u8 telemetry_profile_id = 0U;        // [RW] mode5 配置档编号。编码到 flags 高 4 位，便于 PC 侧区分不同发送方案。
+                u32 telemetry_period_ms = 8U;        // [RW] mode5 最小发送周期（ms）。默认8ms，对应约125fps上限。
+                TickType_t telemetry_last_ms = 0;    // [RO] mode5 最近一次发送时刻（tick/ms 基准），用于周期门限判断。
+                u8 telemetry_cycle_counter = 0U;     // [RO] mode5 分频计数器。与 sample_divider 配合决定本周期是否允许发送。
+                u16 telemetry_seq = 0U;              // [RO] mode5 帧序号。每成功发送一帧递增，便于 PC 侧检测丢帧。
+                u8 telemetry_frame_buf[384] = {0U};  // [RO] mode5 DMA 发送缓冲区（header + payload + crc）。
 
                 // ---- mode1：文本追踪节流 ----------------------------------------
                 TickType_t single_wheel_trace_last_ms = 0; // [RO] 单轮文本跟踪节流时间戳。用于 mode1 下的单轮细节日志限频。
@@ -700,33 +713,40 @@ namespace jia
         inline Result Chassis::setZeroCurrent()
         {
             input_target_data_.zero_current_all = true;
-            input_target_data_.mode = Mode::kWheelTorqueFreeMode;
             return Result::kOk;
         }
 
         inline Result Chassis::setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
         {
-            return (coord == Coordinate::kBody) ? setTargetBodySpeedMode(vel_x, vel_y, omega_z)
-                                                : setTargetWorldSpeedMode(vel_x, vel_y, omega_z);
+            const f32 internal_vel_x = vel_y;
+            const f32 internal_vel_y = -vel_x;
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedMode(internal_vel_x, internal_vel_y, omega_z)
+                                                : setTargetWorldSpeedMode(internal_vel_x, internal_vel_y, omega_z);
         }
 
         inline Result Chassis::setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
         {
-            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockNowRotZWithNoOmegaZMode(vel_x, vel_y, omega_z)
-                                                : setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(vel_x, vel_y, omega_z);
+            const f32 internal_vel_x = vel_y;
+            const f32 internal_vel_y = -vel_x;
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockNowRotZWithNoOmegaZMode(internal_vel_x, internal_vel_y, omega_z)
+                                                : setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(internal_vel_x, internal_vel_y, omega_z);
         }
 
         inline Result Chassis::setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z)
         {
-            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockToRotZMode(vel_x, vel_y, rot_z)
-                                                : setTargetWorldSpeedLockToRotZMode(vel_x, vel_y, rot_z);
+            const f32 internal_vel_x = vel_y;
+            const f32 internal_vel_y = -vel_x;
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockToRotZMode(internal_vel_x, internal_vel_y, rot_z)
+                                                : setTargetWorldSpeedLockToRotZMode(internal_vel_x, internal_vel_y, rot_z);
         }
 
         inline Robot_Twist Chassis::getBodySpeed() const
         {
             Robot_Twist body_speed;
-            body_speed.vx = getTargetBodyVelX();
-            body_speed.vy = getTargetBodyVelY();
+            const f32 internal_vx = getTargetBodyVelX();
+            const f32 internal_vy = getTargetBodyVelY();
+            body_speed.vx = -internal_vy;
+            body_speed.vy = internal_vx;
             body_speed.vz = getTargetOmegaZ();
             return body_speed;
         }
@@ -734,8 +754,10 @@ namespace jia
         inline Robot_Twist Chassis::getWorldSpeed() const
         {
             Robot_Twist world_speed;
-            world_speed.vx = getTargetWorldVelX();
-            world_speed.vy = getTargetWorldVelY();
+            const f32 internal_vx = getTargetWorldVelX();
+            const f32 internal_vy = getTargetWorldVelY();
+            world_speed.vx = -internal_vy;
+            world_speed.vy = internal_vx;
             world_speed.vz = getTargetOmegaZ();
             return world_speed;
         }

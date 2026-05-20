@@ -4,7 +4,7 @@
 仓库路径：`D:\desktop\2026RC\Control\2026RC-Team1-R1Code\RC10_LIB-FrameWork`  
 当前分支：`Jia6_temp`  
 HEAD：`5264c3d`  
-文档路径：`D:\desktop\2026RC\Control\2026RC-Team1-R1Code\RC10_LIB-FrameWork\.ai_agent_workspace\handoff\ai_handoff_2026-05-15_2200_pid_debug_readback.md`
+文档路径：`D:\desktop\2026RC\Control\2026RC-Team1-R1Code\RC10_LIB-FrameWork\jia_docs\handoff\ai_handoff_2026-05-15_2200_pid_debug_readback.md`
 
 ## 1. 本轮目标与实际完成情况
 

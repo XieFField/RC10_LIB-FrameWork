@@ -132,10 +132,11 @@ void ALL_Setup_ConfigInit(void)
     ARM_Controller.setArmStatus(ARM_IDLE);
     
 
-    Weapon_Controller.init(&Weapon_Claw1, &Weapon_Claw2, &Weapon_Claw3, &Weapon_Launch, &Weapon_Elbow, &Weapon_Wrist);
+    Weapon_Controller.init(&oid_encoder);
+    Weapon_Controller.register_motors(&Weapon_Claw1, &Weapon_Claw2, &Weapon_Claw3, &Weapon_Launch, &Weapon_Wrist, &Weapon_Elbow);
     Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
 
-    // ChassisOmni.init();
+    ChassisOmni.init();
 
     ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
@@ -204,7 +205,6 @@ void CAN_Motor_Init(void)
 
    CAN2_Bus->init();
 
-#if !TEST_TEMP
     // CAN3 总线初始化：注册机械臂电机
     DJIGroupCAN3_High.addMotor(&arm_launchMotor); DJIGroupCAN3_High.addMotor(&arm_rotateMotor);
     DJIGroupCAN3_High.addMotor(&arm_stretchMotor); 
