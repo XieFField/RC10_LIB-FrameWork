@@ -124,6 +124,15 @@ namespace jia
                 kModuleOverride = 2,
             };
 
+            enum class DebugModuleOverrideRoute : u8
+            {
+                kNone = 0,
+                kSingleWheel = 1,
+                kAlignForward = 2,
+                kHomingObserve = 3,
+                kDirectActuator = 4,
+            };
+
             // 空闲姿态：定义底盘失能或无输入时，四个舵轮应保持的姿态策略。
             // kHoldLast 适合保持最后姿态，kXPark 适合进入 X 停靠姿态以减小外力拖拽干涉。
             enum class IdlePostureMode
@@ -190,6 +199,7 @@ namespace jia
                                                       const SteerCalibration &calibration);
             static PlannerInputSnapshot makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad);
             static DebugControlRoute classifyDebugControlRoute(bool debug_enable, u8 raw_mode);
+            static DebugModuleOverrideRoute classifyDebugModuleOverrideRoute(u8 raw_mode);
             static TelemetrySnapshot makeTelemetrySnapshot(bool homing_all_ready,
                                                            const TelemetryChassisState &target,
                                                            const TelemetryChassisState &actual,
@@ -405,6 +415,12 @@ namespace jia
             void resolvePlannerTargetData();
             void updatePlannedMotionData();
             void clearPlannedMotionForModuleOverride();
+            void resetDebugModuleOverrideTargets(u8 wheel_idx, bool preserve_soft_wheel_rate);
+            void applySingleWheelDebugOverride(u8 wheel_idx, bool all_homed);
+            void applyAlignForwardDebugOverride();
+            void applyHomingObserveDebugOverride();
+            void applyDirectActuatorDebugOverride(u8 wheel_idx);
+            void finalizeDebugModuleOverride(bool all_homed, DebugModuleOverrideRoute route);
             void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z);
@@ -947,6 +963,23 @@ namespace jia
             case 8:
             default:
                 return DebugControlRoute::kTargetInjection;
+            }
+        }
+
+        inline Chassis::DebugModuleOverrideRoute Chassis::classifyDebugModuleOverrideRoute(u8 raw_mode)
+        {
+            switch (raw_mode)
+            {
+            case 20:
+                return DebugModuleOverrideRoute::kSingleWheel;
+            case 21:
+                return DebugModuleOverrideRoute::kAlignForward;
+            case 22:
+                return DebugModuleOverrideRoute::kHomingObserve;
+            case 30:
+                return DebugModuleOverrideRoute::kDirectActuator;
+            default:
+                return DebugModuleOverrideRoute::kNone;
             }
         }
 

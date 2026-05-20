@@ -241,6 +241,15 @@ void testDebugRouteClassificationSeparatesInputInjectionFromModuleOverride()
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 20) == Chassis::DebugControlRoute::kModuleOverride);
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 30) == Chassis::DebugControlRoute::kModuleOverride);
 }
+
+void testDebugModuleOverrideRouteSeparatesSingleWheelAlignHomingAndDirect()
+{
+    EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(1) == Chassis::DebugModuleOverrideRoute::kNone);
+    EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(20) == Chassis::DebugModuleOverrideRoute::kSingleWheel);
+    EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(21) == Chassis::DebugModuleOverrideRoute::kAlignForward);
+    EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(22) == Chassis::DebugModuleOverrideRoute::kHomingObserve);
+    EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(30) == Chassis::DebugModuleOverrideRoute::kDirectActuator);
+}
 } // namespace
 
 int main()
@@ -255,6 +264,7 @@ int main()
     testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit();
     testHomingRuntimeZeroOffsetOnlyDependsOnEdgeGeometryAndRawMotorAngle();
     testDebugRouteClassificationSeparatesInputInjectionFromModuleOverride();
+    testDebugModuleOverrideRouteSeparatesSingleWheelAlignHomingAndDirect();
 
     if (g_failures != 0)
     {
