@@ -370,6 +370,9 @@ namespace jia
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us);
+            static SteerCalibration makeSteerCalibration(const WheelConfig &wheel);
+            static f32 mapWheelCorrectedLocalToOaTotal(const WheelConfig &wheel, f32 corrected_local_total_rad);
+            static f32 mapWheelOaTotalToCorrectedLocal(const WheelConfig &wheel, f32 oa_total_rad);
 
             // =====================================================================
             // 系统时基 [RO]
@@ -818,6 +821,26 @@ namespace jia
         {
             const f32 drive_sign = (calibration.drive_motor_sign == 0.0f) ? 1.0f : calibration.drive_motor_sign;
             return radsToRpmF32(wheel_omega_rad_s / drive_sign);
+        }
+
+        inline Chassis::SteerCalibration Chassis::makeSteerCalibration(const WheelConfig &wheel)
+        {
+            SteerCalibration calibration;
+            calibration.theta_oa_to_owi_rad = wheel.theta_oa_to_owi_rad;
+            calibration.homing_runtime_zero_offset_rad = wheel.homing_runtime_zero_offset_rad;
+            calibration.steer_motor_sign = wheel.steer_motor_sign;
+            calibration.drive_motor_sign = wheel.drive_motor_sign;
+            return calibration;
+        }
+
+        inline f32 Chassis::mapWheelCorrectedLocalToOaTotal(const WheelConfig &wheel, f32 corrected_local_total_rad)
+        {
+            return mapCorrectedLocalTotalToOaTotal(corrected_local_total_rad, makeSteerCalibration(wheel));
+        }
+
+        inline f32 Chassis::mapWheelOaTotalToCorrectedLocal(const WheelConfig &wheel, f32 oa_total_rad)
+        {
+            return mapOaTotalToCorrectedLocalTotal(oa_total_rad, makeSteerCalibration(wheel));
         }
 
         inline Robot_Twist Chassis::getBodySpeed() const

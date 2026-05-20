@@ -1142,7 +1142,7 @@ namespace jia
                 {
                     const bool is_falling_edge = wheel.homing_last_sensor_active && !sensor_raw_high;
                     const f32 edge_mech_oa_rad = is_falling_edge ? wheel.homing_falling_edge_mech_rad : wheel.homing_rising_edge_mech_rad;
-                    const f32 edge_local_corrected_rad = edge_mech_oa_rad - wheel.theta_oa_to_owi_rad;
+                    const f32 edge_local_corrected_rad = mapWheelOaTotalToCorrectedLocal(wheel, edge_mech_oa_rad);
 
                     wheel.homing_state = HomingState::kEdgeDetected;
                     wheel.homing_last_edge_is_falling = is_falling_edge;
@@ -1180,9 +1180,9 @@ namespace jia
             if (wheel.homing_state == HomingState::kAlignToZero)
             {
                 const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
-                const f32 current_oa_total_rad = current_local_total_rad + wheel.theta_oa_to_owi_rad;
+                const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_local_total_rad);
                 const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
-                const f32 target_local_total_rad = target_oa_total_rad - wheel.theta_oa_to_owi_rad;
+                const f32 target_local_total_rad = mapWheelOaTotalToCorrectedLocal(wheel, target_oa_total_rad);
                 const f32 oa_error_abs_rad = fabsf(shortestAngularDistance(current_oa_total_rad, target_oa_total_rad));
 
                 wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
@@ -1335,7 +1335,7 @@ namespace jia
             {
                 WheelConfig &wheel = wheel_config_[i];
                 const f32 current_local_total = wheel.corrected_steer_motor_total_angle_rad;
-                current_oa_total_rad[i] = current_local_total + wheel.theta_oa_to_owi_rad;
+                current_oa_total_rad[i] = mapWheelCorrectedLocalToOaTotal(wheel, current_local_total);
 
                 const f32 wheel_vx = command_data.vel_x + command_data.omega_z * wheel.pos_y_m;
                 const f32 wheel_vy = command_data.vel_y - command_data.omega_z * wheel.pos_x_m;
@@ -1491,7 +1491,7 @@ namespace jia
             {
                 const WheelConfig &wheel = wheel_config_[i];
                 const f32 current_local_total = wheel.corrected_steer_motor_total_angle_rad;
-                const f32 selected_local_total = selected_oa_total_rad[i] - wheel.theta_oa_to_owi_rad;
+                const f32 selected_local_total = mapWheelOaTotalToCorrectedLocal(wheel, selected_oa_total_rad[i]);
 
                 f32 next_steer_rate_rad_s = 0.0f;
                 planned_local_total_rad_arr[i] = limitPositionSecondOrder(
@@ -1513,7 +1513,7 @@ namespace jia
 
                 const f32 eta_s = remain_angle_rad / steer_rate_ref;
                 eta_max_s = (eta_s > eta_max_s) ? eta_s : eta_max_s;
-                planned_oa_total_rad_arr[i] = planned_local_total_rad_arr[i] + wheel.theta_oa_to_owi_rad;
+                planned_oa_total_rad_arr[i] = mapWheelCorrectedLocalToOaTotal(wheel, planned_local_total_rad_arr[i]);
             }
 
 // 第六阶段：基于“规划舵向角”重算每轮驱动投影，保证过渡期驱动与可实现滚动方向一致
@@ -1597,7 +1597,7 @@ namespace jia
 
                 last_steer_rate_cmd_rad_s_[i] = next_steer_rate_rad_s_arr[i];
                 last_drive_omega_cmd_rad_s_[i] = wheel.target_drive_omega_rad_s;
-                planned_data_.steer_angle_oa_rad[i] = wheel.target_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                planned_data_.steer_angle_oa_rad[i] = mapWheelCorrectedLocalToOaTotal(wheel, wheel.target_steer_motor_total_angle_rad);
                 planned_data_.drive_omega_rad_s[i] = wheel.target_drive_omega_rad_s;
             }
         }
@@ -1639,9 +1639,9 @@ namespace jia
                         // 注意：这里每拍都根据当前反馈重算“离 OA=0 最近的等效角”，
 // 避免被上游常规模块解算写回“保持当前角”后导致归位停滞
                         const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
-                        const f32 current_oa_total_rad = current_local_total_rad + wheel.theta_oa_to_owi_rad;
+                        const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_local_total_rad);
                         const f32 align_target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
-                        wheel.target_steer_motor_total_angle_rad = align_target_oa_total_rad - wheel.theta_oa_to_owi_rad;
+                        wheel.target_steer_motor_total_angle_rad = mapWheelOaTotalToCorrectedLocal(wheel, align_target_oa_total_rad);
                         setSteerMotorTargetTotalAngleRad(wheel, wheel.target_steer_motor_total_angle_rad);
                     }
                     else
@@ -1684,7 +1684,7 @@ namespace jia
 
             for (u8 i = 0; i < 4; ++i)
             {
-                current_data_.steer_angle_oa_rad[i] = wheel_config_[i].corrected_steer_motor_total_angle_rad + wheel_config_[i].theta_oa_to_owi_rad;
+                current_data_.steer_angle_oa_rad[i] = mapWheelCorrectedLocalToOaTotal(wheel_config_[i], wheel_config_[i].corrected_steer_motor_total_angle_rad);
                 current_data_.drive_omega_rad_s[i] = wheel_config_[i].corrected_drive_omega_rad_s;
             }
 
@@ -1722,8 +1722,8 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];
-                debug_mirror_.current_oa_deg[i] = radToDegF32(wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad);
-                debug_mirror_.target_oa_deg[i] = radToDegF32(wheel.target_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad);
+                debug_mirror_.current_oa_deg[i] = radToDegF32(mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad));
+                debug_mirror_.target_oa_deg[i] = radToDegF32(mapWheelCorrectedLocalToOaTotal(wheel, wheel.target_steer_motor_total_angle_rad));
                 debug_mirror_.current_drive_rpm[i] = radsToRpmF32(wheel.corrected_drive_omega_rad_s);
                 debug_mirror_.target_drive_rpm[i] = radsToRpmF32(wheel.target_drive_omega_rad_s);
                 debug_mirror_.homing_state[i] = static_cast<u8>(wheel.homing_state);
@@ -1886,7 +1886,7 @@ namespace jia
                 for (u8 i = 0; i < 4; ++i)
                 {
                     const WheelConfig &wheel = wheel_config_[i];
-                    const f32 current_oa_total_rad = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                    const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
                     const f32 align_target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
                     align_err_deg[i] = radToDegF32(shortestAngularDistance(current_oa_total_rad, align_target_oa_total_rad));
                 }
@@ -2260,7 +2260,7 @@ namespace jia
                 wheel.target_drive_omega_rad_s = 0.0f;
                 wheel.steer_target_velocity_rad_s = 0.0f;
                 wheel.flipped_drive_direction = false;
-                planned_data_.steer_angle_oa_rad[i] = wheel.target_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                planned_data_.steer_angle_oa_rad[i] = mapWheelCorrectedLocalToOaTotal(wheel, wheel.target_steer_motor_total_angle_rad);
                 planned_data_.drive_omega_rad_s[i] = 0.0f;
                 if (!(use_soft_steer && i == wheel_idx))
                 {
@@ -2273,9 +2273,9 @@ namespace jia
             {
                 WheelConfig &debug_wheel = wheel_config_[wheel_idx];
                 const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(debug_control_.single_wheel_target_steer_deg));
-                const f32 current_oa_total_rad = debug_wheel.corrected_steer_motor_total_angle_rad + debug_wheel.theta_oa_to_owi_rad;
+                const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(debug_wheel, debug_wheel.corrected_steer_motor_total_angle_rad);
                 const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, target_oa_mod_rad);
-                const f32 selected_local_total_rad = target_oa_total_rad - debug_wheel.theta_oa_to_owi_rad;
+                const f32 selected_local_total_rad = mapWheelOaTotalToCorrectedLocal(debug_wheel, target_oa_total_rad);
                 const f32 steer_error_deg = radToDegF32(fabsf(shortestAngularDistance(current_oa_total_rad, target_oa_total_rad)));
                 const f32 drive_release_error_deg = (debug_control_.single_wheel_drive_release_error_deg >= 0.0f) ? debug_control_.single_wheel_drive_release_error_deg : 0.0f;
                 const bool drive_released = !debug_control_.single_wheel_drive_release_gate_enable || (steer_error_deg <= drive_release_error_deg);
@@ -2326,7 +2326,7 @@ namespace jia
                 }
 
                 debug_wheel.target_drive_omega_rad_s = (debug_control_.single_wheel_drive_enable && drive_released) ? rpmToRadsF32(debug_control_.single_wheel_target_drive_rpm) : 0.0f;
-                planned_data_.steer_angle_oa_rad[wheel_idx] = debug_wheel.target_steer_motor_total_angle_rad + debug_wheel.theta_oa_to_owi_rad;
+                planned_data_.steer_angle_oa_rad[wheel_idx] = mapWheelCorrectedLocalToOaTotal(debug_wheel, debug_wheel.target_steer_motor_total_angle_rad);
                 planned_data_.drive_omega_rad_s[wheel_idx] = debug_wheel.target_drive_omega_rad_s;
                 last_drive_omega_cmd_rad_s_[wheel_idx] = debug_wheel.target_drive_omega_rad_s;
                 debug_mirror_.selected_wheel_steer_error_deg = steer_error_deg;
@@ -2353,7 +2353,7 @@ namespace jia
                 for (u8 i = 0; i < 4; ++i)
                 {
                     WheelConfig &wheel = wheel_config_[i];
-                    wheel.target_steer_motor_total_angle_rad = -wheel.theta_oa_to_owi_rad;
+                    wheel.target_steer_motor_total_angle_rad = mapWheelOaTotalToCorrectedLocal(wheel, 0.0f);
                     planned_data_.steer_angle_oa_rad[i] = 0.0f;
                 }
             }
@@ -2550,14 +2550,14 @@ namespace jia
                         {
                             const f32 target_current_mA = clampValue(steer_current_cmd_mA, -steer_current_limit_mA, steer_current_limit_mA);
                             wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
-                            planned_data_.steer_angle_oa_rad[i] = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                            planned_data_.steer_angle_oa_rad[i] = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
                             setSteerMotorTargetCurrent(wheel, target_current_mA);
                         }
                         else if (steer_control_type == 1U)
                         {
                             const f32 target_steer_rpm = clampValue(steer_rpm_cmd, -steer_rpm_limit, steer_rpm_limit);
                             wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
-                            planned_data_.steer_angle_oa_rad[i] = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                            planned_data_.steer_angle_oa_rad[i] = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
                             setSteerMotorTargetRPM(wheel, target_steer_rpm);
                         }
                         else if (steer_control_type == 2U)
@@ -2565,13 +2565,13 @@ namespace jia
                             const f32 target_single_turn_deg = clampValue(steer_single_turn_deg_cmd, -steer_single_turn_limit_deg, steer_single_turn_limit_deg);
                             const f32 target_local_total_rad = mapSingleTurnToNearestTotalAngle(wheel, target_single_turn_deg);
                             wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
-                            planned_data_.steer_angle_oa_rad[i] = target_local_total_rad + wheel.theta_oa_to_owi_rad;
+                            planned_data_.steer_angle_oa_rad[i] = mapWheelCorrectedLocalToOaTotal(wheel, target_local_total_rad);
                             setSteerMotorTargetTotalAngleRad(wheel, target_local_total_rad);
                         }
                         else
                         {
                             const f32 target_oa_total_rad = degToRadF32(clampValue(steer_multi_turn_deg_cmd, -steer_multi_turn_limit_deg, steer_multi_turn_limit_deg));
-                            const f32 target_local_total_rad = target_oa_total_rad - wheel.theta_oa_to_owi_rad;
+                            const f32 target_local_total_rad = mapWheelOaTotalToCorrectedLocal(wheel, target_oa_total_rad);
                             wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
                             planned_data_.steer_angle_oa_rad[i] = target_oa_total_rad;
                             setSteerMotorTargetTotalAngleRad(wheel, target_local_total_rad);
