@@ -240,10 +240,10 @@ void ArmSetup::manualControl()
         target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // 保持不变
 
 
-        if(airjoy_data_.right_x > 0.5f)
-            target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
-        else if(airjoy_data_.right_x < -0.5f)
-            target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
+    if(airjoy_data_.right_x > 0.5f)
+        target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
+    else if(airjoy_data_.right_x < -0.5f)
+        target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
 
     target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
     target_joint_status_.rotateJoint_angle_ = normalize_deg_0_360(target_joint_status_.rotateJoint_angle_);
@@ -1047,6 +1047,8 @@ Arm_InitData_S arm_initData = {
     .max_rotate_angle_ = 359.99999f,
     .safe_height_ = 0.08f,
     .store_height_ = 0.12f,
+    .lock_height_ = 0.04f,
+
     .Sucker_GPIO_Port = SUCKER_6_GPIO_Port,
     .Sucker_GPIO_Pin =  SUCKER_6_Pin,
 
