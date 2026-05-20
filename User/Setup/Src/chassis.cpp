@@ -30,11 +30,12 @@ namespace jia
             constexpr u16 kSwerveTelemetryFrameHeaderBytes = 18U; // magic(2)+ver(1)+flags(1)+seq(2)+ts(8)+msg_type(2)+payload_len(2)
             constexpr u16 kSwerveTelemetryFrameCrcBytes = 2U;
             constexpr u8 kSwerveTelemetryWheelCount = 4U;
-            constexpr u8 kSwerveTelemetryChassisFloatCount = 8U; // target 4f + actual 4f
-            constexpr u8 kSwerveTelemetryWheelFloatCountPerWheel = 4U; // target_drive_omega + actual_drive_omega + target_steer_oa + actual_steer_oa
+            constexpr u8 kSwerveTelemetryChassisFloatCount = 8U; // chassis target4f + chassis actual4f
+            constexpr u8 kSwerveTelemetryWheelFloatCountPerWheel = 8U; // per wheel(M0..M3): t_drive,a_drive,t_steer,a_steer,t_wvx,t_wvy,a_wvx,a_wvy
             constexpr u16 kSwerveTelemetryPayloadFloatCount = static_cast<u16>(kSwerveTelemetryChassisFloatCount +
                                                                                 (kSwerveTelemetryWheelFloatCountPerWheel * kSwerveTelemetryWheelCount));
             constexpr u16 kSwerveTelemetryPayloadBytes = static_cast<u16>(kSwerveTelemetryPayloadFloatCount * sizeof(f32));
+            static_assert(kSwerveTelemetryPayloadBytes == 160U, "mode5 V2 payload must be 160 bytes");
             constexpr u16 kSwerveTelemetryFrameBytes = static_cast<u16>(kSwerveTelemetryFrameHeaderBytes + kSwerveTelemetryPayloadBytes + kSwerveTelemetryFrameCrcBytes);
             constexpr u16 kSwerveTelemetryTxBufferBytes = 416U;
             static_assert(kSwerveTelemetryFrameBytes <= kSwerveTelemetryTxBufferBytes, "mode5 telemetry frame buffer too small");
@@ -2130,10 +2131,27 @@ namespace jia
 
             for (u8 i = 0U; i < kSwerveTelemetryWheelCount; ++i)
             {
+                f32 t_wvx = 0.0f;
+                f32 t_wvy = 0.0f;
+                f32 a_wvx = 0.0f;
+                f32 a_wvy = 0.0f;
+                if (i < 4U)
+                {
+                    const WheelConfig &wheel = wheel_config_[i];
+                    t_wvx = planned_data_.vel_x + planned_data_.omega_z * wheel.pos_y_m;
+                    t_wvy = planned_data_.vel_y - planned_data_.omega_z * wheel.pos_x_m;
+                    a_wvx = current_data_.vel_x + current_data_.omega_z * wheel.pos_y_m;
+                    a_wvy = current_data_.vel_y - current_data_.omega_z * wheel.pos_x_m;
+                }
+
                 if (!packPayloadF32(planned_data_.drive_omega_rad_s[i]) ||
                     !packPayloadF32(current_data_.drive_omega_rad_s[i]) ||
                     !packPayloadF32(planned_data_.steer_angle_oa_rad[i]) ||
-                    !packPayloadF32(current_data_.steer_angle_oa_rad[i]))
+                    !packPayloadF32(current_data_.steer_angle_oa_rad[i]) ||
+                    !packPayloadF32(t_wvx) ||
+                    !packPayloadF32(t_wvy) ||
+                    !packPayloadF32(a_wvx) ||
+                    !packPayloadF32(a_wvy))
                 {
                     return;
                 }
@@ -2788,6 +2806,12 @@ namespace jia
                     target_data_.vel_x = -target_data_.vel_x;
                     target_data_.vel_y = -target_data_.vel_y;
                 }
+                else
+                {
+                    target_data_.vel_x = -target_data_.vel_x;
+                    target_data_.vel_y = -target_data_.vel_y;
+                    target_data_.omega_z = -target_data_.omega_z;
+                }
 
                 if (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode)
                 {
@@ -2831,6 +2855,12 @@ namespace jia
                     {
                         all_homed = false;
                     }
+                }
+                if (!all_homed && input_target_data_.zero_current_all)
+                {
+                    // Homing has higher priority than external zero-current request.
+                    // Drop this request immediately to avoid interrupting homing.
+                    input_target_data_.zero_current_all = false;
                 }
                 homing_start_request_ = false;
 
@@ -2998,6 +3028,7 @@ namespace jia
         }
     }
 }
+
 
 
 
