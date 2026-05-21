@@ -331,10 +331,10 @@ void testProjectedDriveUsesReachableSteerInsteadOfIdealVector()
     Chassis chassis;
     chassis.wheel_radius_m_ = 0.05f;
     chassis.runtime_strategy_cfg_.enable_drive_gate = false;
-    chassis.enable_cosine_compensation_ = false;
+    chassis.runtime_strategy_cfg_.enable_cosine_compensation = false;
     chassis.runtime_strategy_cfg_.vector_consistency.enable = false;
-    chassis.actuator_limit_enable_.enable_steer_rate_limit = true;
-    chassis.actuator_limit_enable_.enable_steer_alpha_limit = false;
+    chassis.enable_steer_rate_limit_ = true;
+    chassis.enable_steer_alpha_limit_ = false;
     chassis.max_steer_rate_rad_s_ = 1.0f;
 
     for (int i = 0; i < 4; ++i)
@@ -369,15 +369,15 @@ void testVectorConsistencyGateTightensAndReleasesThroughPlannerOutput()
     Chassis chassis;
     chassis.wheel_radius_m_ = 0.05f;
     chassis.runtime_strategy_cfg_.enable_drive_gate = false;
-    chassis.enable_cosine_compensation_ = false;
+    chassis.runtime_strategy_cfg_.enable_cosine_compensation = false;
     chassis.runtime_strategy_cfg_.vector_consistency.enable = true;
     chassis.runtime_strategy_cfg_.vector_consistency.min_trans_speed_enable_m_s = 0.05f;
     chassis.runtime_strategy_cfg_.vector_consistency.dir_err_enter_deg = 5.0f;
     chassis.runtime_strategy_cfg_.vector_consistency.dir_err_exit_deg = 2.0f;
     chassis.runtime_strategy_cfg_.vector_consistency.eta_lock_s = 0.05f;
     chassis.runtime_strategy_cfg_.vector_consistency.eta_release_s = 0.01f;
-    chassis.actuator_limit_enable_.enable_steer_rate_limit = true;
-    chassis.actuator_limit_enable_.enable_steer_alpha_limit = false;
+    chassis.enable_steer_rate_limit_ = true;
+    chassis.enable_steer_alpha_limit_ = false;
     chassis.max_steer_rate_rad_s_ = 1.0f;
 
     for (int i = 0; i < 4; ++i)
@@ -501,8 +501,8 @@ void configureDriveContinuityHarness(Chassis &chassis, TestMotor drive_motors[4]
 {
     chassis.max_drive_alpha_rad_s2_ = 10.0f;
     chassis.max_drive_omega_rad_s_ = 1000.0f;
-    chassis.actuator_limit_enable_.enable_drive_alpha_limit = true;
-    chassis.actuator_limit_enable_.enable_drive_omega_limit = false;
+    chassis.enable_drive_alpha_limit_ = true;
+    chassis.enable_drive_omega_limit_ = false;
     chassis.input_target_data_.zero_current_all = false;
     chassis.current_mode_flag_.is_wheel_torque_free = false;
 

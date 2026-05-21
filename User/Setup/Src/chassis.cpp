@@ -365,7 +365,7 @@ namespace jia
 
         void Chassis::refreshActuatorLimitState()
         {
-// 预留钩子：当前执行器限幅开关直接从actuator_limit_enable_读取，无需额外派生状态
+// 预留钩子：当前执行器限幅开关直接从就近布置的 enable_* 成员读取，无需额外派生状态
         }
 
         f32 Chassis::mapSingleTurnToNearestTotalAngle(const WheelConfig &wheel, f32 target_oa_single_turn_deg) const
@@ -854,8 +854,8 @@ namespace jia
             }
 
             const f32 steer_rate_floor = 1.0e-3f;
-            const f32 steer_rate_limit_runtime = actuator_limit_enable_.enable_steer_rate_limit ? max_steer_rate_rad_s_ : 1.0e6f;
-            const f32 steer_alpha_limit_runtime = actuator_limit_enable_.enable_steer_alpha_limit ? max_steer_alpha_rad_s2_ : 1.0e8f;
+            const f32 steer_rate_limit_runtime = enable_steer_rate_limit_ ? max_steer_rate_rad_s_ : 1.0e6f;
+            const f32 steer_alpha_limit_runtime = enable_steer_alpha_limit_ ? max_steer_alpha_rad_s2_ : 1.0e8f;
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];
@@ -941,7 +941,7 @@ namespace jia
                 {
                     planner_output.gate_or_cos_scale[i] = gate_scales[i];
                 }
-                else if (enable_cosine_compensation_)
+                else if (runtime_strategy_cfg_.enable_cosine_compensation)
                 {
                     f32 cos_scale = cosf(planner_output.steering_errors_rad[i]);
                     if (cos_scale < 0.0f)
@@ -958,7 +958,7 @@ namespace jia
                 const f32 drive_scale =
                     clampValue(planner_output.gate_or_cos_scale[i] * planner_output.vector_gate_scale, 0.0f, 1.0f);
                 f32 target_drive_omega_rad_s = planner_output.projected_drive_omega_rad_s[i] * drive_scale;
-                if (actuator_limit_enable_.enable_drive_omega_limit)
+                if (enable_drive_omega_limit_)
                 {
                     target_drive_omega_rad_s = clampValue(target_drive_omega_rad_s, -max_drive_omega_rad_s_, max_drive_omega_rad_s_);
                 }
@@ -1207,8 +1207,8 @@ namespace jia
 
             if (debug_control_.single_wheel_soft_steer_enable)
             {
-                const bool enable_rate_limit = actuator_limit_enable_.enable_steer_rate_limit;
-                const bool enable_alpha_limit = actuator_limit_enable_.enable_steer_alpha_limit;
+                const bool enable_rate_limit = enable_steer_rate_limit_;
+                const bool enable_alpha_limit = enable_steer_alpha_limit_;
                 f32 steer_limit_rate_rad_s = enable_rate_limit ? max_steer_rate_rad_s_ : 1.0e6f;
                 f32 steer_limit_accel_rad_s2 = enable_alpha_limit ? max_steer_alpha_rad_s2_ : 1.0e8f;
                 if (debug_control_.single_wheel_use_custom_steer_limit)
@@ -2222,7 +2222,7 @@ namespace jia
                     allow_drive_position_loop = false;
                     allowed_drive_target_rad_s = 0.0f;
                     f32 delivered_drive_target_rad_s = 0.0f;
-                    if (actuator_limit_enable_.enable_drive_alpha_limit)
+                    if (enable_drive_alpha_limit_)
                     {
                         delivered_drive_target_rad_s =
                             limitValueWithAcceleration(last_drive_omega_cmd_rad_s_[i],
@@ -2230,7 +2230,7 @@ namespace jia
                                                        max_drive_alpha_rad_s2_,
                                                        period_);
                     }
-                    if (actuator_limit_enable_.enable_drive_omega_limit)
+                    if (enable_drive_omega_limit_)
                     {
                         delivered_drive_target_rad_s = clampValue(delivered_drive_target_rad_s, -max_drive_omega_rad_s_, max_drive_omega_rad_s_);
                     }
@@ -2280,7 +2280,7 @@ namespace jia
 // 只有“全部回零完成”且“不是扭矩自由模式”时
 // 才真正把上一阶段规划出的目标舵角和驱动角速度下发给电机闭环
                 f32 delivered_drive_target_rad_s = allowed_drive_target_rad_s;
-                if (actuator_limit_enable_.enable_drive_alpha_limit)
+                if (enable_drive_alpha_limit_)
                 {
                     delivered_drive_target_rad_s =
                         limitValueWithAcceleration(last_drive_omega_cmd_rad_s_[i],
@@ -2288,7 +2288,7 @@ namespace jia
                                                    max_drive_alpha_rad_s2_,
                                                    period_);
                 }
-                if (actuator_limit_enable_.enable_drive_omega_limit)
+                if (enable_drive_omega_limit_)
                 {
                     delivered_drive_target_rad_s = clampValue(delivered_drive_target_rad_s, -max_drive_omega_rad_s_, max_drive_omega_rad_s_);
                 }
@@ -2343,10 +2343,10 @@ namespace jia
             debug_mirror_.nz_xpark_enter_m_s = near_zero_derived_.xpark_enter_m_s;
             debug_mirror_.nz_xpark_exit_m_s = near_zero_derived_.xpark_exit_m_s;
             debug_mirror_.nz_stop_guard_release_m_s = near_zero_derived_.stop_guard_release_m_s;
-            debug_mirror_.lim_drive_omega = actuator_limit_enable_.enable_drive_omega_limit;
-            debug_mirror_.lim_drive_alpha = actuator_limit_enable_.enable_drive_alpha_limit;
-            debug_mirror_.lim_steer_rate = actuator_limit_enable_.enable_steer_rate_limit;
-            debug_mirror_.lim_steer_alpha = actuator_limit_enable_.enable_steer_alpha_limit;
+            debug_mirror_.lim_drive_omega = enable_drive_omega_limit_;
+            debug_mirror_.lim_drive_alpha = enable_drive_alpha_limit_;
+            debug_mirror_.lim_steer_rate = enable_steer_rate_limit_;
+            debug_mirror_.lim_steer_alpha = enable_steer_alpha_limit_;
             debug_mirror_.vec_gate_scale = vector_gate_scale_;
             debug_mirror_.vec_dir_err_deg = vector_dir_err_deg_;
             debug_mirror_.vec_eta_max_s = vector_eta_max_s_;
