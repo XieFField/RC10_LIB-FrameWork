@@ -13,6 +13,7 @@
 
 - RC10 最新交接文档：
   - [handoff/2026-05/ai_handoff_2026-05-21_1201_rc10_drive_gate_release_sync.md](handoff/2026-05/ai_handoff_2026-05-21_1201_rc10_drive_gate_release_sync.md)
+  - [handoff/2026-05/ai_handoff_2026-05-22_0121_rc10_near_zero_suppression_refactor.md](handoff/2026-05/ai_handoff_2026-05-22_0121_rc10_near_zero_suppression_refactor.md)
 - 交接索引：
   - [handoff/INDEX.md](handoff/INDEX.md)
 
@@ -23,6 +24,11 @@
   - HardGate 残余速度禁入阈值；
   - planner / delivered 驱动诊断口径；
   - 面向实车释放异常定位的低风险联调准备。
+- 当前最新一轮已继续推进到：
+  - 近零边界统一收口；
+  - 低速抑制 / 高速抑制双段语义；
+  - Stop Steer Guard 删除；
+  - 宿主测试迁移到新抑制链路。
 
 ## 命名规则
 

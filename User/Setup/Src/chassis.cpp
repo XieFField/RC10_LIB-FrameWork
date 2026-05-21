@@ -136,25 +136,25 @@ namespace jia
                 wheel.steer_target_velocity_rad_s = 0.0f;
                 wheel.flipped_drive_direction = false;
                 selected_flipped_solution_[i] = false;
-                drive_gate_scale_[i] = 1.0f;
+                low_speed_drive_suppression_scale_[i] = 1.0f;
             }
 
-            adaptive_gate_scale_ = 1.0f;
-            adaptive_gate_phase_ = AdaptiveGatePhase::kIdle;
-            vector_gate_scale_ = 1.0f;
-            vector_gate_active_ = false;
-            vector_dir_err_deg_ = 0.0f;
-            vector_eta_max_s_ = 0.0f;
+            high_speed_drive_suppression_scale_ = 1.0f;
+            high_speed_trans_gate_active_ = false;
+            high_speed_drive_suppression_active_ = false;
+            high_speed_dir_err_deg_ = 0.0f;
+            high_speed_eta_max_s_ = 0.0f;
+            low_speed_residual_bypass_active_ = false;
             trans_dir_freeze_active_ = false;
             trans_dir_ref_valid_ = false;
             trans_dir_ref_rad_ = 0.0f;
             trans_dir_tar_mag_m_s_ = 0.0f;
             trans_dir_out_mag_m_s_ = 0.0f;
             trans_dir_freeze_reason_ = 0U;
-            vector_gate_scale_ = 1.0f;
-            vector_gate_active_ = false;
-            vector_dir_err_deg_ = 0.0f;
-            vector_eta_max_s_ = 0.0f;
+            high_speed_drive_suppression_scale_ = 1.0f;
+            high_speed_drive_suppression_active_ = false;
+            high_speed_dir_err_deg_ = 0.0f;
+            high_speed_eta_max_s_ = 0.0f;
 
             rot_z_pid_.set_params(lock_angle_pid_params, 0.0f);
             rot_z_pid_.set_as_circular();
@@ -358,11 +358,6 @@ namespace jia
             return (exit_raw > enter) ? exit_raw : (enter + 1.0e-3f);
         }
 
-        f32 Chassis::getStopGuardReleaseSpeedMps() const
-        {
-            return getNearZeroExitSpeedMps();
-        }
-
         void Chassis::refreshActuatorLimitState()
         {
 // 预留钩子：当前执行器限幅开关直接从就近布置的 enable_* 成员读取，无需额外派生状态
@@ -445,14 +440,33 @@ namespace jia
             return true;
         }
 
-        f32 Chassis::updateVectorConsistencyGate(f32 translational_speed_m_s, f32 eta_max_s, f32 dir_err_deg)
+        f32 Chassis::updateHighSpeedDriveSuppression(f32 translational_speed_m_s, f32 eta_max_s, f32 dir_err_deg)
         {
-            const StrategyConfig::VectorConsistencyConfig &cfg = runtime_strategy_cfg_.vector_consistency;
-            if (!cfg.enable || translational_speed_m_s < cfg.min_trans_speed_enable_m_s)
+            const StrategyConfig::HighSpeedDriveSuppressionConfig &cfg = runtime_strategy_cfg_.high_speed_drive_suppression;
+            if (!runtime_strategy_cfg_.enable_high_speed_drive_suppression)
             {
-                vector_gate_active_ = false;
-                vector_gate_scale_ = 1.0f;
-                return vector_gate_scale_;
+                high_speed_trans_gate_active_ = false;
+                high_speed_drive_suppression_active_ = false;
+                high_speed_drive_suppression_scale_ = 1.0f;
+                return high_speed_drive_suppression_scale_;
+            }
+
+            const f32 trans_enter_speed_m_s = getNearZeroEnterSpeedMps();
+            const f32 trans_exit_speed_m_s = getNearZeroExitSpeedMps();
+            if (high_speed_trans_gate_active_)
+            {
+                high_speed_trans_gate_active_ = translational_speed_m_s > trans_enter_speed_m_s;
+            }
+            else
+            {
+                high_speed_trans_gate_active_ = translational_speed_m_s > trans_exit_speed_m_s;
+            }
+
+            if (!high_speed_trans_gate_active_)
+            {
+                high_speed_drive_suppression_active_ = false;
+                high_speed_drive_suppression_scale_ = 1.0f;
+                return high_speed_drive_suppression_scale_;
             }
 
             const f32 dir_enter = (cfg.dir_err_enter_deg > 0.0f) ? cfg.dir_err_enter_deg : 12.0f;
@@ -460,37 +474,37 @@ namespace jia
             const f32 eta_enter = (cfg.eta_lock_s > 0.0f) ? cfg.eta_lock_s : 0.20f;
             const f32 eta_exit = (cfg.eta_release_s > 0.0f && cfg.eta_release_s < eta_enter) ? cfg.eta_release_s : (eta_enter * 0.3f);
 
-            if (vector_gate_active_)
+            if (high_speed_drive_suppression_active_)
             {
-                vector_gate_active_ = (dir_err_deg >= dir_exit) || (eta_max_s >= eta_exit);
+                high_speed_drive_suppression_active_ = (dir_err_deg >= dir_exit) || (eta_max_s >= eta_exit);
             }
             else
             {
-                vector_gate_active_ = (dir_err_deg >= dir_enter) || (eta_max_s >= eta_enter);
+                high_speed_drive_suppression_active_ = (dir_err_deg >= dir_enter) || (eta_max_s >= eta_enter);
             }
 
             const f32 ramp_up_s = (cfg.gate_ramp_up_s > 1.0e-4f) ? cfg.gate_ramp_up_s : 0.08f;
             const f32 ramp_down_s = (cfg.gate_ramp_down_s > 1.0e-4f) ? cfg.gate_ramp_down_s : 0.03f;
-            if (vector_gate_active_)
+            if (high_speed_drive_suppression_active_)
             {
-                vector_gate_scale_ = clampValue(vector_gate_scale_ - period_ / ramp_down_s, 0.0f, 1.0f);
+                high_speed_drive_suppression_scale_ = clampValue(high_speed_drive_suppression_scale_ - period_ / ramp_down_s, 0.0f, 1.0f);
             }
             else
             {
-                vector_gate_scale_ = clampValue(vector_gate_scale_ + period_ / ramp_up_s, 0.0f, 1.0f);
+                high_speed_drive_suppression_scale_ = clampValue(high_speed_drive_suppression_scale_ + period_ / ramp_up_s, 0.0f, 1.0f);
             }
-            return vector_gate_scale_;
+            return high_speed_drive_suppression_scale_;
         }
 
         void Chassis::resetRuntimeStrategyToInitConfig()
         {
             runtime_strategy_cfg_ = default_strategy_cfg_;
-            adaptive_gate_scale_ = 1.0f;
-            adaptive_gate_phase_ = AdaptiveGatePhase::kIdle;
-            vector_gate_scale_ = 1.0f;
-            vector_gate_active_ = false;
-            vector_dir_err_deg_ = 0.0f;
-            vector_eta_max_s_ = 0.0f;
+            high_speed_drive_suppression_scale_ = 1.0f;
+            high_speed_trans_gate_active_ = false;
+            high_speed_drive_suppression_active_ = false;
+            high_speed_dir_err_deg_ = 0.0f;
+            high_speed_eta_max_s_ = 0.0f;
+            low_speed_residual_bypass_active_ = false;
             xpark_gate_active_ = false;
             xpark_stationary_hold_ms_ = 0U;
             trans_dir_freeze_active_ = false;
@@ -549,17 +563,12 @@ namespace jia
 
         bool Chassis::shouldActivateLaunchHold() const
         {
-            if (runtime_strategy_cfg_.drive_attenuation_mode != DriveAttenuationMode::kHardGate)
+            if (!runtime_strategy_cfg_.enable_low_speed_drive_suppression)
             {
                 return false;
             }
 
-            if (runtime_strategy_cfg_.hard_gate.scope != DriveGateScope::kGlobal)
-            {
-                return false;
-            }
-
-            if (runtime_strategy_cfg_.hard_gate.min_scale > 1.0e-6f)
+            if (runtime_strategy_cfg_.low_speed_drive_suppression.min_scale > 1.0e-6f)
             {
                 return false;
             }
@@ -570,7 +579,7 @@ namespace jia
 
         bool Chassis::isLaunchHoldAligned(const SwervePlannerOutput &planner_output) const
         {
-            const f32 close_rad = degToRadF32(runtime_strategy_cfg_.hard_gate.close_angle_deg);
+            const f32 close_rad = degToRadF32(runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg);
             for (u8 i = 0; i < 4; ++i)
             {
                 if (planner_output.steering_errors_rad[i] >= close_rad)
@@ -593,52 +602,14 @@ namespace jia
             return preview;
         }
 
-        f32 Chassis::computeDriveGateScale(f32 abs_error_rad) const
+        f32 Chassis::computeLowSpeedDriveSuppressionScale(f32 abs_error_rad) const
         {
-            switch (runtime_strategy_cfg_.drive_attenuation_mode)
-            {
-            case DriveAttenuationMode::kHardGate:
-            {
-                const f32 close_rad = degToRadF32(runtime_strategy_cfg_.hard_gate.close_angle_deg);
-                const f32 min_scale = clampValue(runtime_strategy_cfg_.hard_gate.min_scale, 0.0f, 1.0f);
-                return (abs_error_rad >= close_rad) ? min_scale : 1.0f;
-            }
-            case DriveAttenuationMode::kSoftGate:
-            {
-                const f32 close_rad = degToRadF32(runtime_strategy_cfg_.soft_gate.close_angle_deg);
-                const f32 min_scale = clampValue(runtime_strategy_cfg_.soft_gate.min_scale, 0.0f, 1.0f);
-                if (close_rad <= 1.0e-6f)
-                {
-                    return min_scale;
-                }
-                const f32 ratio = clampValue(abs_error_rad / close_rad, 0.0f, 1.0f);
-                return 1.0f - (1.0f - min_scale) * ratio;
-            }
-            case DriveAttenuationMode::kContinuousCurve:
-            {
-                const f32 half_rad = degToRadF32(runtime_strategy_cfg_.continuous_curve_gate.half_angle_deg);
-                const f32 exponent = (runtime_strategy_cfg_.continuous_curve_gate.exponent > 0.1f) ? runtime_strategy_cfg_.continuous_curve_gate.exponent : 2.0f;
-                const f32 curve_min = clampValue(runtime_strategy_cfg_.continuous_curve_gate.min_scale, 0.0f, 1.0f);
-                if (half_rad <= 1.0e-6f)
-                {
-                    return curve_min;
-                }
-                const f32 norm = abs_error_rad / half_rad;
-                const f32 scale = 1.0f / (1.0f + powf(norm, exponent));
-                return clampValue(curve_min + (1.0f - curve_min) * scale, curve_min, 1.0f);
-            }
-            case DriveAttenuationMode::kAdaptiveGate:
-            {
-                const f32 close_rad = degToRadF32(runtime_strategy_cfg_.adaptive_gate.close_angle_deg);
-                const f32 min_scale = clampValue(runtime_strategy_cfg_.adaptive_gate.min_scale, 0.0f, 1.0f);
-                return (abs_error_rad >= close_rad) ? min_scale : 1.0f;
-            }
-            default:
-                return 1.0f;
-            }
+            const f32 close_rad = degToRadF32(runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg);
+            const f32 min_scale = clampValue(runtime_strategy_cfg_.low_speed_drive_suppression.min_scale, 0.0f, 1.0f);
+            return (abs_error_rad >= close_rad) ? min_scale : 1.0f;
         }
 
-        void Chassis::computeDriveGateScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4])
+        void Chassis::computeLowSpeedDriveSuppressionScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4])
         {
             for (u8 i = 0; i < 4; ++i)
             {
@@ -646,147 +617,42 @@ namespace jia
             }
 
             max_residual_speed_m_s_ = planner_input.max_residual_speed_m_s;
-            hard_gate_bypassed_by_residual_speed_ = false;
+            low_speed_drive_suppression_bypassed_by_residual_speed_ = false;
 
-            const bool uses_gate_shape =
-                runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kHardGate ||
-                runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kSoftGate ||
-                runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kContinuousCurve ||
-                runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kAdaptiveGate;
-
-            if (!uses_gate_shape)
+            if (!runtime_strategy_cfg_.enable_low_speed_drive_suppression)
             {
-                adaptive_gate_scale_ = 1.0f;
-                adaptive_gate_phase_ = AdaptiveGatePhase::kDisabled;
                 return;
             }
 
-            if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kAdaptiveGate)
+            const f32 bypass_enter_speed_m_s = getNearZeroExitSpeedMps();
+            const f32 bypass_exit_speed_m_s = getNearZeroEnterSpeedMps();
+            if (low_speed_residual_bypass_active_)
             {
-                const Data &command_data = planner_input.command;
-                const f32 linear_speed = magnitude2D(command_data.vel_x, command_data.vel_y);
-                const f32 angular_speed = fabsf(command_data.omega_z);
-                const bool in_transition = (linear_speed >= runtime_strategy_cfg_.adaptive_gate.transition_linear_speed_m_s) ||
-                                           (angular_speed >= runtime_strategy_cfg_.adaptive_gate.transition_angular_speed_rad_s);
-                const f32 ramp_up = (runtime_strategy_cfg_.adaptive_gate.scale_ramp_up_s > 1.0e-6f) ? runtime_strategy_cfg_.adaptive_gate.scale_ramp_up_s : 0.10f;
-                const f32 ramp_down = (runtime_strategy_cfg_.adaptive_gate.scale_ramp_down_s > 1.0e-6f) ? runtime_strategy_cfg_.adaptive_gate.scale_ramp_down_s : 0.06f;
-                const f32 delta = period_ / (in_transition ? ramp_up : ramp_down);
-                if (in_transition)
-                {
-                    adaptive_gate_scale_ = clampValue(adaptive_gate_scale_ + delta, 0.0f, 1.0f);
-                    adaptive_gate_phase_ = AdaptiveGatePhase::kTransition;
-                }
-                else
-                {
-                    adaptive_gate_scale_ = clampValue(adaptive_gate_scale_ - delta, 0.0f, 1.0f);
-                    adaptive_gate_phase_ = AdaptiveGatePhase::kStartHold;
-                }
+                low_speed_residual_bypass_active_ = planner_input.max_residual_speed_m_s > bypass_exit_speed_m_s;
             }
             else
             {
-                adaptive_gate_scale_ = 1.0f;
-                adaptive_gate_phase_ = AdaptiveGatePhase::kLegacy;
+                low_speed_residual_bypass_active_ = planner_input.max_residual_speed_m_s > bypass_enter_speed_m_s;
             }
 
-            if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kHardGate)
+            if (low_speed_residual_bypass_active_)
             {
-                const f32 hard_gate_disable_residual_speed_m_s =
-                    (runtime_strategy_cfg_.hard_gate.disable_residual_speed_m_s >= 0.0f)
-                        ? runtime_strategy_cfg_.hard_gate.disable_residual_speed_m_s
-                        : 0.0f;
-                if (planner_input.max_residual_speed_m_s > hard_gate_disable_residual_speed_m_s)
-                {
-                    hard_gate_bypassed_by_residual_speed_ = true;
-                    return;
-                }
-            }
-
-            DriveGateScope gate_scope = DriveGateScope::kGlobal;
-            switch (runtime_strategy_cfg_.drive_attenuation_mode)
-            {
-            case DriveAttenuationMode::kHardGate:
-                gate_scope = runtime_strategy_cfg_.hard_gate.scope;
-                break;
-            case DriveAttenuationMode::kSoftGate:
-                gate_scope = runtime_strategy_cfg_.soft_gate.scope;
-                break;
-            case DriveAttenuationMode::kContinuousCurve:
-                gate_scope = runtime_strategy_cfg_.continuous_curve_gate.scope;
-                break;
-            case DriveAttenuationMode::kAdaptiveGate:
-                gate_scope = runtime_strategy_cfg_.adaptive_gate.scope;
-                break;
-            default:
-                gate_scope = DriveGateScope::kGlobal;
-                break;
-            }
-
-            if (gate_scope == DriveGateScope::kGlobal)
-            {
-                f32 max_abs = 0.0f;
-                for (u8 i = 0; i < 4; ++i)
-                {
-                    if (steering_errors_rad[i] > max_abs)
-                    {
-                        max_abs = steering_errors_rad[i];
-                    }
-                }
-                f32 scale = computeDriveGateScale(max_abs);
-                if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kAdaptiveGate)
-                {
-                    scale *= adaptive_gate_scale_;
-                }
-                scale = clampValue(scale, 0.0f, 1.0f);
-                for (u8 i = 0; i < 4; ++i)
-                {
-                    out_scales[i] = scale;
-                }
+                low_speed_drive_suppression_bypassed_by_residual_speed_ = true;
                 return;
             }
 
+            f32 max_abs = 0.0f;
             for (u8 i = 0; i < 4; ++i)
             {
-                f32 scale = computeDriveGateScale(steering_errors_rad[i]);
-                if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kAdaptiveGate)
+                if (steering_errors_rad[i] > max_abs)
                 {
-                    scale *= adaptive_gate_scale_;
+                    max_abs = steering_errors_rad[i];
                 }
-                out_scales[i] = clampValue(scale, 0.0f, 1.0f);
             }
-        }
-
-        f32 Chassis::stopSteerGuardBlend(f32 residual_speed_m_s) const
-        {
-            const f32 release_speed = getStopGuardReleaseSpeedMps();
-            if (residual_speed_m_s <= release_speed)
+            const f32 scale = clampValue(computeLowSpeedDriveSuppressionScale(max_abs), 0.0f, 1.0f);
+            for (u8 i = 0; i < 4; ++i)
             {
-                return 1.0f;
-            }
-
-            switch (runtime_strategy_cfg_.stop_steer_guard_strategy)
-            {
-            case StopSteerGuardStrategy::kHardHold:
-                return 0.0f;
-            case StopSteerGuardStrategy::kSoftBlend:
-            {
-                const f32 start_speed = (runtime_strategy_cfg_.stop_guard_blend_start_speed_m_s > release_speed)
-                                            ? runtime_strategy_cfg_.stop_guard_blend_start_speed_m_s
-                                            : (release_speed + 1.0e-3f);
-                const f32 norm = clampValue((residual_speed_m_s - release_speed) / (start_speed - release_speed), 0.0f, 1.0f);
-                return 1.0f - norm;
-            }
-            case StopSteerGuardStrategy::kContinuousBlend:
-            default:
-            {
-                const f32 half_speed = (runtime_strategy_cfg_.stop_guard_curve_half_speed_m_s > 1.0e-6f)
-                                           ? runtime_strategy_cfg_.stop_guard_curve_half_speed_m_s
-                                           : 0.08f;
-                const f32 exponent = (runtime_strategy_cfg_.stop_guard_curve_exponent > 0.1f)
-                                         ? runtime_strategy_cfg_.stop_guard_curve_exponent
-                                         : 2.0f;
-                const f32 norm = residual_speed_m_s / half_speed;
-                return 1.0f / (1.0f + powf(norm, exponent));
-            }
+                out_scales[i] = scale;
             }
         }
 
@@ -842,7 +708,6 @@ namespace jia
                 xpark_gate_active_ = false;
             }
 
-            planner_input.residual_drive_is_moving = planner_input.max_residual_speed_m_s > getStopGuardReleaseSpeedMps();
             planner_input.allow_xpark_pose = planner_input.command_stationary_intent && xpark_gate_active_;
             planner_input.force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
             planner_input.uniform_steer_oa_mod_rad = wrapTo2Pi(degToRadF32(input_target_data_.steer_lock_angle_deg));
@@ -927,30 +792,6 @@ namespace jia
                 planner_output.projected_drive_omega_rad_s[i] = selected_drive_omega_rad_s;
             }
 
-            if (!planner_input.force_uniform_steer_drive &&
-                runtime_strategy_cfg_.enable_stop_steer_guard &&
-                planner_input.command_stationary_intent &&
-                planner_input.residual_drive_is_moving)
-            {
-                for (u8 i = 0; i < 4; ++i)
-                {
-                    const f32 blend = stopSteerGuardBlend(planner_input.residual_speed_m_s[i]);
-                    if (blend >= 1.0f)
-                    {
-                        continue;
-                    }
-
-                    const f32 current_oa_total_rad = planner_input.current_oa_total_rad[i];
-                    const f32 protected_target_oa_total_rad =
-                        wrapTo2Pi(current_oa_total_rad +
-                                  shortestAngularDistance(current_oa_total_rad, planner_output.selected_oa_total_rad[i]) * blend);
-                    planner_output.selected_oa_total_rad[i] = protected_target_oa_total_rad;
-                    planner_output.steering_errors_rad[i] =
-                        fabsf(shortestAngularDistance(current_oa_total_rad, protected_target_oa_total_rad));
-                    planner_output.flipped_drive_direction[i] = false;
-                }
-            }
-
             const f32 steer_rate_floor = 1.0e-3f;
             const f32 steer_rate_limit_runtime = runtime_strategy_cfg_.enable_steer_rate_limit_ ? runtime_strategy_cfg_.max_steer_rate_rad_s_ : 1.0e6f;
             const f32 steer_alpha_limit_runtime = runtime_strategy_cfg_.enable_steer_alpha_limit_ ? runtime_strategy_cfg_.max_steer_alpha_rad_s2_ : 1.0e8f;
@@ -980,7 +821,7 @@ namespace jia
                     steer_rate_ref = (steer_rate_limit_runtime > steer_rate_floor) ? steer_rate_limit_runtime : steer_rate_floor;
                 }
                 const f32 eta_s = planner_output.steering_errors_rad[i] / steer_rate_ref;
-                planner_output.vector_eta_max_s = (eta_s > planner_output.vector_eta_max_s) ? eta_s : planner_output.vector_eta_max_s;
+                planner_output.high_speed_eta_max_s = (eta_s > planner_output.high_speed_eta_max_s) ? eta_s : planner_output.high_speed_eta_max_s;
             }
 
             for (u8 i = 0; i < 4; ++i)
@@ -994,8 +835,8 @@ namespace jia
                                                      planner_output.projected_drive_omega_rad_s);
             }
 
-            f32 gate_scales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-            computeDriveGateScales(planner_input, planner_output.steering_errors_rad, gate_scales);
+            f32 low_speed_scales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+            computeLowSpeedDriveSuppressionScales(planner_input, planner_output.steering_errors_rad, low_speed_scales);
 
             const f32 translational_speed_m_s = magnitude2D(planner_input.command.vel_x, planner_input.command.vel_y);
             f32 predicted_vel_x = 0.0f;
@@ -1012,22 +853,22 @@ namespace jia
                 {
                     const f32 target_dir_rad = atan2f(planner_input.command.vel_y, planner_input.command.vel_x);
                     const f32 predicted_dir_rad = atan2f(predicted_vel_y, predicted_vel_x);
-                    planner_output.vector_dir_err_deg =
+                    planner_output.high_speed_dir_err_deg =
                         radToDegF32(fabsf(shortestAngularDistance(target_dir_rad, predicted_dir_rad)));
                 }
             }
 
-            planner_output.vector_gate_scale = planner_input.force_uniform_steer_drive
+            planner_output.high_speed_suppression_scale = planner_input.force_uniform_steer_drive
                                                    ? 1.0f
-                                                   : updateVectorConsistencyGate(translational_speed_m_s,
-                                                                                 planner_output.vector_eta_max_s,
-                                                                                 planner_output.vector_dir_err_deg);
+                                                   : updateHighSpeedDriveSuppression(translational_speed_m_s,
+                                                                                    planner_output.high_speed_eta_max_s,
+                                                                                    planner_output.high_speed_dir_err_deg);
             if (planner_input.force_uniform_steer_drive)
             {
-                vector_gate_scale_ = 1.0f;
-                vector_gate_active_ = false;
+                high_speed_drive_suppression_scale_ = 1.0f;
+                high_speed_drive_suppression_active_ = false;
             }
-            planner_output.vector_gate_active = vector_gate_active_;
+            planner_output.high_speed_suppression_active = high_speed_drive_suppression_active_;
 
             f32 planner_drive_targets_rad_s[4] = {0.0f, 0.0f, 0.0f, 0.0f};
             f32 max_abs_planner_drive_target_rad_s = 0.0f;
@@ -1035,31 +876,15 @@ namespace jia
             {
                 if (planner_input.force_uniform_steer_drive)
                 {
-                    planner_output.gate_or_cos_scale[i] = 1.0f;
-                }
-                else if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kHardGate ||
-                         runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kSoftGate ||
-                         runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kContinuousCurve ||
-                         runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kAdaptiveGate)
-                {
-                    planner_output.gate_or_cos_scale[i] = gate_scales[i];
-                }
-                else if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kCosine)
-                {
-                    f32 cos_scale = cosf(planner_output.steering_errors_rad[i]);
-                    if (cos_scale < 0.0f)
-                    {
-                        cos_scale = 0.0f;
-                    }
-                    planner_output.gate_or_cos_scale[i] = cos_scale;
+                    planner_output.low_speed_suppression_scale[i] = 1.0f;
                 }
                 else
                 {
-                    planner_output.gate_or_cos_scale[i] = 1.0f;
+                    planner_output.low_speed_suppression_scale[i] = low_speed_scales[i];
                 }
 
                 const f32 drive_scale =
-                    clampValue(planner_output.gate_or_cos_scale[i] * planner_output.vector_gate_scale, 0.0f, 1.0f);
+                    clampValue(planner_output.low_speed_suppression_scale[i] * planner_output.high_speed_suppression_scale, 0.0f, 1.0f);
                 planner_drive_targets_rad_s[i] = planner_output.projected_drive_omega_rad_s[i] * drive_scale;
                 const f32 abs_target_drive = fabsf(planner_drive_targets_rad_s[i]);
                 max_abs_planner_drive_target_rad_s =
@@ -1101,8 +926,8 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
-                drive_gate_scale_[i] =
-                    clampValue(planner_output.gate_or_cos_scale[i] * planner_output.vector_gate_scale, 0.0f, 1.0f);
+                low_speed_drive_suppression_scale_[i] =
+                    clampValue(planner_output.low_speed_suppression_scale[i] * planner_output.high_speed_suppression_scale, 0.0f, 1.0f);
                 wheel.target_steer_motor_total_angle_rad = command_frame.steer_corrected_local_total_rad[i];
                 wheel.target_drive_omega_rad_s = command_frame.drive_omega_rad_s[i];
                 wheel.steer_target_velocity_rad_s = command_frame.steer_rate_rad_s[i];
@@ -1116,10 +941,10 @@ namespace jia
 
             planner_output_cache_ = planner_output;
             actuator_command_frame_ = command_frame;
-            vector_eta_max_s_ = planner_output.vector_eta_max_s;
-            vector_dir_err_deg_ = planner_output.vector_dir_err_deg;
-            vector_gate_scale_ = planner_output.vector_gate_scale;
-            vector_gate_active_ = planner_output.vector_gate_active;
+            high_speed_eta_max_s_ = planner_output.high_speed_eta_max_s;
+            high_speed_dir_err_deg_ = planner_output.high_speed_dir_err_deg;
+            high_speed_drive_suppression_scale_ = planner_output.high_speed_suppression_scale;
+            high_speed_drive_suppression_active_ = planner_output.high_speed_suppression_active;
         }
 
         f32 Chassis::computeHomingAlignTargetCorrectedLocalTotal(const WheelConfig &wheel) const
@@ -2334,7 +2159,7 @@ namespace jia
             {
                 for (u8 i = 0; i < 4; ++i)
                 {
-                    planner_output.gate_or_cos_scale[i] = 0.0f;
+                    planner_output.low_speed_suppression_scale[i] = 0.0f;
                     planner_output.final_drive_omega_rad_s[i] = 0.0f;
                 }
             }
@@ -2518,16 +2343,15 @@ namespace jia
             debug_mirror_.nz_freeze_exit_m_s = getNearZeroExitSpeedMps();
             debug_mirror_.nz_xpark_enter_m_s = getNearZeroEnterSpeedMps();
             debug_mirror_.nz_xpark_exit_m_s = getNearZeroExitSpeedMps();
-            debug_mirror_.nz_stop_guard_release_m_s = getStopGuardReleaseSpeedMps();
             debug_mirror_.lim_drive_omega = runtime_strategy_cfg_.enable_drive_omega_limit_;
             debug_mirror_.lim_drive_alpha = runtime_strategy_cfg_.enable_drive_alpha_limit_;
             debug_mirror_.lim_steer_rate = runtime_strategy_cfg_.enable_steer_rate_limit_;
             debug_mirror_.lim_steer_alpha = runtime_strategy_cfg_.enable_steer_alpha_limit_;
-            debug_mirror_.vec_gate_scale = vector_gate_scale_;
-            debug_mirror_.vec_dir_err_deg = vector_dir_err_deg_;
-            debug_mirror_.vec_eta_max_s = vector_eta_max_s_;
-            debug_mirror_.vec_gate_active = vector_gate_active_;
-            debug_mirror_.hard_gate_bypassed_by_residual_speed = hard_gate_bypassed_by_residual_speed_;
+            debug_mirror_.high_speed_drive_suppression_scale = high_speed_drive_suppression_scale_;
+            debug_mirror_.high_speed_dir_err_deg = high_speed_dir_err_deg_;
+            debug_mirror_.high_speed_eta_max_s = high_speed_eta_max_s_;
+            debug_mirror_.high_speed_drive_suppression_active = high_speed_drive_suppression_active_;
+            debug_mirror_.low_speed_drive_suppression_bypassed_by_residual_speed = low_speed_drive_suppression_bypassed_by_residual_speed_;
             debug_mirror_.max_residual_speed_m_s = max_residual_speed_m_s_;
             for (u8 i = 0; i < 4; ++i)
             {
@@ -2671,10 +2495,10 @@ namespace jia
                                        debug_mirror_.target_oa_deg[0],
                                        debug_mirror_.current_drive_rpm[0],
                                        debug_mirror_.target_drive_rpm[0],
-                                       debug_mirror_.vec_gate_scale,
-                                       debug_mirror_.vec_dir_err_deg,
-                                       debug_mirror_.vec_eta_max_s,
-                                       debug_mirror_.vec_gate_active ? 1U : 0U);
+                                       debug_mirror_.high_speed_drive_suppression_scale,
+                                       debug_mirror_.high_speed_dir_err_deg,
+                                       debug_mirror_.high_speed_eta_max_s,
+                                       debug_mirror_.high_speed_drive_suppression_active ? 1U : 0U);
             }
             else if (debug_output_.text_log_phase == 1U)
             {
@@ -2685,7 +2509,7 @@ namespace jia
                                        debug_mirror_.target_oa_deg[wheel_idx],
                                        debug_mirror_.current_drive_rpm[wheel_idx],
                                        debug_mirror_.target_drive_rpm[wheel_idx],
-                                       drive_gate_scale_[wheel_idx],
+                                       low_speed_drive_suppression_scale_[wheel_idx],
                                        wheel_config_[wheel_idx].flipped_drive_direction ? 1U : 0U,
                                        debug_mirror_.homing_sensor_active[wheel_idx] ? 1U : 0U,
                                        debug_mirror_.homing_last_edge_is_falling[wheel_idx] ? 1U : 0U,
