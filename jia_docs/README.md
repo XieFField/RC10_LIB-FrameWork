@@ -12,17 +12,17 @@
 ## 最新交接入口
 
 - RC10 最新交接文档：
-  - [handoff/2026-05/ai_handoff_2026-05-20_2330_rc10_swerve_pipeline_sync.md](handoff/2026-05/ai_handoff_2026-05-20_2330_rc10_swerve_pipeline_sync.md)
+  - [handoff/2026-05/ai_handoff_2026-05-21_1201_rc10_drive_gate_release_sync.md](handoff/2026-05/ai_handoff_2026-05-21_1201_rc10_drive_gate_release_sync.md)
 - 交接索引：
   - [handoff/INDEX.md](handoff/INDEX.md)
 
 ## 本轮主题
 
-- 当前文档主线已从“上下文同步”推进到：
-  - 统一输入语义；
-  - 显式舵轮规划流水；
-  - 宿主 TDD 扩展；
-  - 面向实车联调的低风险递进验证准备。
+- 当前文档主线已从“统一输入语义 / 显式舵轮规划流水”继续推进到：
+  - drive release continuity 收口；
+  - HardGate 残余速度禁入阈值；
+  - planner / delivered 驱动诊断口径；
+  - 面向实车释放异常定位的低风险联调准备。
 
 ## 命名规则
 
