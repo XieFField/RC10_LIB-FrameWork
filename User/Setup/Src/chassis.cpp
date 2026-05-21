@@ -348,13 +348,13 @@ namespace jia
 
         f32 Chassis::getNearZeroEnterSpeedMps() const
         {
-            return (near_zero_cfg_.base_enter_m_s >= 0.0f) ? near_zero_cfg_.base_enter_m_s : 0.0f;
+            return (runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s >= 0.0f) ? runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s : 0.0f;
         }
 
         f32 Chassis::getNearZeroExitSpeedMps() const
         {
             const f32 enter = getNearZeroEnterSpeedMps();
-            const f32 exit_raw = (near_zero_cfg_.base_exit_m_s >= 0.0f) ? near_zero_cfg_.base_exit_m_s : 0.0f;
+            const f32 exit_raw = (runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s >= 0.0f) ? runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s : 0.0f;
             return (exit_raw > enter) ? exit_raw : (enter + 1.0e-3f);
         }
 
@@ -384,7 +384,7 @@ namespace jia
 
         void Chassis::computeProjectedDriveFromPlannedSteer(const Data &command_data, const f32 planned_oa_total_rad[4], f32 out_drive_omega_rad_s[4]) const
         {
-            const f32 safe_wheel_radius = (wheel_radius_m_ > 1.0e-6f) ? wheel_radius_m_ : 1.0e-6f;
+            const f32 safe_wheel_radius = (runtime_strategy_cfg_.wheel_radius_m_ > 1.0e-6f) ? runtime_strategy_cfg_.wheel_radius_m_ : 1.0e-6f;
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];
@@ -408,7 +408,7 @@ namespace jia
                 const f32 steer_angle_oa_rad = planned_oa_total_rad[i];
                 const f32 cos_theta = cosf(steer_angle_oa_rad);
                 const f32 sin_theta = sinf(steer_angle_oa_rad);
-                const f32 drive_linear_m_s = planned_drive_omega_rad_s[i] * wheel_radius_m_;
+                const f32 drive_linear_m_s = planned_drive_omega_rad_s[i] * runtime_strategy_cfg_.wheel_radius_m_;
 
                 const f32 rows[2][3] = {
                     {cos_theta, sin_theta, -wheel.pos_y_m * cos_theta + wheel.pos_x_m * sin_theta},
@@ -534,10 +534,10 @@ namespace jia
 
         f32 Chassis::computeDriveGateScale(f32 abs_error_rad) const
         {
-            const f32 close_rad = degToRadF32(runtime_strategy_cfg_.drive_gate_close_angle_deg);
-            const f32 min_scale = clampValue(runtime_strategy_cfg_.drive_gate_min_scale, 0.0f, 1.0f);
+            const f32 close_rad = degToRadF32(runtime_strategy_cfg_.drive_gate.step_like.close_angle_deg);
+            const f32 min_scale = clampValue(runtime_strategy_cfg_.drive_gate.step_like.min_scale, 0.0f, 1.0f);
 
-            switch (runtime_strategy_cfg_.drive_gate_strategy)
+            switch (runtime_strategy_cfg_.drive_gate.strategy)
             {
             case DriveGateStrategy::kHardGate:
                 return (abs_error_rad >= close_rad) ? min_scale : 1.0f;
@@ -552,9 +552,9 @@ namespace jia
             }
             case DriveGateStrategy::kContinuousCurve:
             {
-                const f32 half_rad = degToRadF32(runtime_strategy_cfg_.drive_gate_curve_half_angle_deg);
-                const f32 exponent = (runtime_strategy_cfg_.drive_gate_curve_exponent > 0.1f) ? runtime_strategy_cfg_.drive_gate_curve_exponent : 2.0f;
-                const f32 curve_min = clampValue(runtime_strategy_cfg_.drive_gate_curve_min_scale, 0.0f, 1.0f);
+                const f32 half_rad = degToRadF32(runtime_strategy_cfg_.drive_gate.curve.half_angle_deg);
+                const f32 exponent = (runtime_strategy_cfg_.drive_gate.curve.exponent > 0.1f) ? runtime_strategy_cfg_.drive_gate.curve.exponent : 2.0f;
+                const f32 curve_min = clampValue(runtime_strategy_cfg_.drive_gate.curve.min_scale, 0.0f, 1.0f);
                 if (half_rad <= 1.0e-6f)
                 {
                     return curve_min;
@@ -579,22 +579,22 @@ namespace jia
             max_residual_speed_m_s_ = planner_input.max_residual_speed_m_s;
             hard_gate_bypassed_by_residual_speed_ = false;
 
-            if (!runtime_strategy_cfg_.enable_drive_gate)
+            if (runtime_strategy_cfg_.drive_attenuation_mode != DriveAttenuationMode::kGate)
             {
                 adaptive_gate_scale_ = 1.0f;
                 adaptive_gate_phase_ = AdaptiveGatePhase::kDisabled;
                 return;
             }
 
-            if (runtime_strategy_cfg_.drive_gate_strategy == DriveGateStrategy::kAdaptiveGate)
+            if (runtime_strategy_cfg_.drive_gate.strategy == DriveGateStrategy::kAdaptiveGate)
             {
                 const Data &command_data = planner_input.command;
                 const f32 linear_speed = magnitude2D(command_data.vel_x, command_data.vel_y);
                 const f32 angular_speed = fabsf(command_data.omega_z);
-                const bool in_transition = (linear_speed >= runtime_strategy_cfg_.drive_gate_transition_linear_speed_m_s) ||
-                                           (angular_speed >= runtime_strategy_cfg_.drive_gate_transition_angular_speed_rad_s);
-                const f32 ramp_up = (runtime_strategy_cfg_.drive_gate_scale_ramp_up_s > 1.0e-6f) ? runtime_strategy_cfg_.drive_gate_scale_ramp_up_s : 0.10f;
-                const f32 ramp_down = (runtime_strategy_cfg_.drive_gate_scale_ramp_down_s > 1.0e-6f) ? runtime_strategy_cfg_.drive_gate_scale_ramp_down_s : 0.06f;
+                const bool in_transition = (linear_speed >= runtime_strategy_cfg_.drive_gate.adaptive.transition_linear_speed_m_s) ||
+                                           (angular_speed >= runtime_strategy_cfg_.drive_gate.adaptive.transition_angular_speed_rad_s);
+                const f32 ramp_up = (runtime_strategy_cfg_.drive_gate.adaptive.scale_ramp_up_s > 1.0e-6f) ? runtime_strategy_cfg_.drive_gate.adaptive.scale_ramp_up_s : 0.10f;
+                const f32 ramp_down = (runtime_strategy_cfg_.drive_gate.adaptive.scale_ramp_down_s > 1.0e-6f) ? runtime_strategy_cfg_.drive_gate.adaptive.scale_ramp_down_s : 0.06f;
                 const f32 delta = period_ / (in_transition ? ramp_up : ramp_down);
                 if (in_transition)
                 {
@@ -613,11 +613,11 @@ namespace jia
                 adaptive_gate_phase_ = AdaptiveGatePhase::kLegacy;
             }
 
-            if (runtime_strategy_cfg_.drive_gate_strategy == DriveGateStrategy::kHardGate)
+            if (runtime_strategy_cfg_.drive_gate.strategy == DriveGateStrategy::kHardGate)
             {
                 const f32 hard_gate_disable_residual_speed_m_s =
-                    (runtime_strategy_cfg_.drive_gate_hard_disable_residual_speed_m_s >= 0.0f)
-                        ? runtime_strategy_cfg_.drive_gate_hard_disable_residual_speed_m_s
+                    (runtime_strategy_cfg_.drive_gate.hard.disable_residual_speed_m_s >= 0.0f)
+                        ? runtime_strategy_cfg_.drive_gate.hard.disable_residual_speed_m_s
                         : 0.0f;
                 if (planner_input.max_residual_speed_m_s > hard_gate_disable_residual_speed_m_s)
                 {
@@ -626,7 +626,7 @@ namespace jia
                 }
             }
 
-            if (runtime_strategy_cfg_.drive_gate_scope == DriveGateScope::kGlobal)
+            if (runtime_strategy_cfg_.drive_gate.scope == DriveGateScope::kGlobal)
             {
                 f32 max_abs = 0.0f;
                 for (u8 i = 0; i < 4; ++i)
@@ -637,7 +637,7 @@ namespace jia
                     }
                 }
                 f32 scale = computeDriveGateScale(max_abs);
-                if (runtime_strategy_cfg_.drive_gate_strategy == DriveGateStrategy::kAdaptiveGate)
+                if (runtime_strategy_cfg_.drive_gate.strategy == DriveGateStrategy::kAdaptiveGate)
                 {
                     scale *= adaptive_gate_scale_;
                 }
@@ -652,7 +652,7 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 f32 scale = computeDriveGateScale(steering_errors_rad[i]);
-                if (runtime_strategy_cfg_.drive_gate_strategy == DriveGateStrategy::kAdaptiveGate)
+                if (runtime_strategy_cfg_.drive_gate.strategy == DriveGateStrategy::kAdaptiveGate)
                 {
                     scale *= adaptive_gate_scale_;
                 }
@@ -715,7 +715,7 @@ namespace jia
                 planner_input.max_command_wheel_speed_m_s =
                     (wheel_speed_m_s > planner_input.max_command_wheel_speed_m_s) ? wheel_speed_m_s : planner_input.max_command_wheel_speed_m_s;
 
-                const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * wheel_radius_m_;
+                const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * runtime_strategy_cfg_.wheel_radius_m_;
                 planner_input.residual_speed_m_s[i] = residual_speed_m_s;
                 planner_input.max_residual_speed_m_s =
                     (residual_speed_m_s > planner_input.max_residual_speed_m_s) ? residual_speed_m_s : planner_input.max_residual_speed_m_s;
@@ -732,7 +732,7 @@ namespace jia
                 xpark_stationary_hold_ms_ = (xpark_stationary_hold_ms_ > (0xFFFFFFFFU - period_ms_))
                                                 ? 0xFFFFFFFFU
                                                 : (xpark_stationary_hold_ms_ + period_ms_);
-                if (xpark_stationary_hold_ms_ >= near_zero_cfg_.xpark_entry_delay_ms)
+                if (xpark_stationary_hold_ms_ >= runtime_strategy_cfg_.xpark_entry_delay_ms)
                 {
                     xpark_gate_active_ = true;
                 }
@@ -747,7 +747,7 @@ namespace jia
             planner_input.allow_xpark_pose = planner_input.command_stationary_intent && xpark_gate_active_;
             planner_input.force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
             planner_input.uniform_steer_oa_mod_rad = wrapTo2Pi(degToRadF32(input_target_data_.steer_lock_angle_deg));
-            planner_input.uniform_drive_omega_abs = fabsf(input_target_data_.drive_lock_speed_m_s) / wheel_radius_m_;
+            planner_input.uniform_drive_omega_abs = fabsf(input_target_data_.drive_lock_speed_m_s) / runtime_strategy_cfg_.wheel_radius_m_;
             planner_input.uniform_drive_sign = (input_target_data_.drive_lock_speed_m_s >= 0.0f) ? 1.0f : -1.0f;
             return planner_input;
         }
@@ -772,7 +772,7 @@ namespace jia
                 else
                 {
                     planner_output.ideal_oa_total_rad[i] = wrapTo2Pi(atan2f(planner_input.wheel_vy_m_s[i], planner_input.wheel_vx_m_s[i]));
-                    planner_output.ideal_drive_omega_rad_s[i] = wheel_speed_m_s / wheel_radius_m_;
+                    planner_output.ideal_drive_omega_rad_s[i] = wheel_speed_m_s / runtime_strategy_cfg_.wheel_radius_m_;
                 }
 
                 const f32 alt_target_oa_mod_rad = wrapTo2Pi(planner_output.ideal_oa_total_rad[i] + kPi);
@@ -853,8 +853,8 @@ namespace jia
             }
 
             const f32 steer_rate_floor = 1.0e-3f;
-            const f32 steer_rate_limit_runtime = enable_steer_rate_limit_ ? max_steer_rate_rad_s_ : 1.0e6f;
-            const f32 steer_alpha_limit_runtime = enable_steer_alpha_limit_ ? max_steer_alpha_rad_s2_ : 1.0e8f;
+            const f32 steer_rate_limit_runtime = runtime_strategy_cfg_.enable_steer_rate_limit_ ? runtime_strategy_cfg_.max_steer_rate_rad_s_ : 1.0e6f;
+            const f32 steer_alpha_limit_runtime = runtime_strategy_cfg_.enable_steer_alpha_limit_ ? runtime_strategy_cfg_.max_steer_alpha_rad_s2_ : 1.0e8f;
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];
@@ -936,11 +936,11 @@ namespace jia
                 {
                     planner_output.gate_or_cos_scale[i] = 1.0f;
                 }
-                else if (runtime_strategy_cfg_.enable_drive_gate)
+                else if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kGate)
                 {
                     planner_output.gate_or_cos_scale[i] = gate_scales[i];
                 }
-                else if (runtime_strategy_cfg_.enable_cosine_compensation)
+                else if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kCosine)
                 {
                     f32 cos_scale = cosf(planner_output.steering_errors_rad[i]);
                     if (cos_scale < 0.0f)
@@ -957,9 +957,9 @@ namespace jia
                 const f32 drive_scale =
                     clampValue(planner_output.gate_or_cos_scale[i] * planner_output.vector_gate_scale, 0.0f, 1.0f);
                 f32 target_drive_omega_rad_s = planner_output.projected_drive_omega_rad_s[i] * drive_scale;
-                if (enable_drive_omega_limit_)
+                if (runtime_strategy_cfg_.enable_drive_omega_limit_)
                 {
-                    target_drive_omega_rad_s = clampValue(target_drive_omega_rad_s, -max_drive_omega_rad_s_, max_drive_omega_rad_s_);
+                    target_drive_omega_rad_s = clampValue(target_drive_omega_rad_s, -runtime_strategy_cfg_.max_drive_omega_rad_s_, runtime_strategy_cfg_.max_drive_omega_rad_s_);
                 }
                 planner_output.final_drive_omega_rad_s[i] = target_drive_omega_rad_s;
             }
@@ -1094,10 +1094,10 @@ namespace jia
         {
             // 手柄平移坐标 -> 车体坐标约定：前推前进、左推左移。
             // 为匹配遥杆实际符号：left_y 正向映射到 +X；left_x 取反后映射到 +Y。
-            f32 target_vel_x = airjoy_data_.left_y * max_vel_x_;
-            f32 target_vel_y = -airjoy_data_.left_x * max_vel_y_;
+            f32 target_vel_x = airjoy_data_.left_y * runtime_strategy_cfg_.max_vel_x_;
+            f32 target_vel_y = -airjoy_data_.left_x * runtime_strategy_cfg_.max_vel_y_;
             const f32 right_x_cmd = -airjoy_data_.right_x;
-            f32 target_omega_z = -right_x_cmd * max_omega_z_;
+            f32 target_omega_z = -right_x_cmd * runtime_strategy_cfg_.max_omega_z_;
 
             if (debug_control_.inject_sine)
             {
@@ -1107,11 +1107,11 @@ namespace jia
             {
                 if (airjoy_data_.right_x > 0.3f)
                 {
-                    target_omega_z = max_omega_z_;
+                    target_omega_z = runtime_strategy_cfg_.max_omega_z_;
                 }
                 else if (airjoy_data_.right_x < -0.3f)
                 {
-                    target_omega_z = -max_omega_z_;
+                    target_omega_z = -runtime_strategy_cfg_.max_omega_z_;
                 }
                 else
                 {
@@ -1206,10 +1206,10 @@ namespace jia
 
             if (debug_control_.single_wheel_soft_steer_enable)
             {
-                const bool enable_rate_limit = enable_steer_rate_limit_;
-                const bool enable_alpha_limit = enable_steer_alpha_limit_;
-                f32 steer_limit_rate_rad_s = enable_rate_limit ? max_steer_rate_rad_s_ : 1.0e6f;
-                f32 steer_limit_accel_rad_s2 = enable_alpha_limit ? max_steer_alpha_rad_s2_ : 1.0e8f;
+                const bool enable_rate_limit = runtime_strategy_cfg_.enable_steer_rate_limit_;
+                const bool enable_alpha_limit = runtime_strategy_cfg_.enable_steer_alpha_limit_;
+                f32 steer_limit_rate_rad_s = enable_rate_limit ? runtime_strategy_cfg_.max_steer_rate_rad_s_ : 1.0e6f;
+                f32 steer_limit_accel_rad_s2 = enable_alpha_limit ? runtime_strategy_cfg_.max_steer_alpha_rad_s2_ : 1.0e8f;
                 if (debug_control_.single_wheel_use_custom_steer_limit)
                 {
                     if (enable_rate_limit)
@@ -1223,11 +1223,11 @@ namespace jia
                 }
                 if (enable_rate_limit && steer_limit_rate_rad_s <= 1.0e-6f)
                 {
-                    steer_limit_rate_rad_s = max_steer_rate_rad_s_;
+                    steer_limit_rate_rad_s = runtime_strategy_cfg_.max_steer_rate_rad_s_;
                 }
                 if (enable_alpha_limit && steer_limit_accel_rad_s2 <= 1.0e-6f)
                 {
-                    steer_limit_accel_rad_s2 = max_steer_alpha_rad_s2_;
+                    steer_limit_accel_rad_s2 = runtime_strategy_cfg_.max_steer_alpha_rad_s2_;
                 }
 
                 f32 next_steer_rate_rad_s = 0.0f;
@@ -1765,9 +1765,9 @@ namespace jia
 
         void Chassis::clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const
         {
-            out_vel_x = clampValue(vel_x, -max_vel_x_, max_vel_x_);
-            out_vel_y = clampValue(vel_y, -max_vel_y_, max_vel_y_);
-            out_omega_z = clampValue(omega_z, -max_omega_z_, max_omega_z_);
+            out_vel_x = clampValue(vel_x, -runtime_strategy_cfg_.max_vel_x_, runtime_strategy_cfg_.max_vel_x_);
+            out_vel_y = clampValue(vel_y, -runtime_strategy_cfg_.max_vel_y_, runtime_strategy_cfg_.max_vel_y_);
+            out_omega_z = clampValue(omega_z, -runtime_strategy_cfg_.max_omega_z_, runtime_strategy_cfg_.max_omega_z_);
         }
 
         void Chassis::resolvePlannerTargetData()
@@ -1817,16 +1817,16 @@ namespace jia
         void Chassis::limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z)
         {
 // 第一阶段：先x/y分量分别做加减速限幅，保证速度台阶被平滑化
-            out_vel_x = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_x, last_planned_data_.vel_x, period_, max_acc_xy_acc_, max_acc_xy_dec_);
-            out_vel_y = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_y, last_planned_data_.vel_y, period_, max_acc_xy_acc_, max_acc_xy_dec_);
-            out_omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_omega_z, last_planned_data_.omega_z, period_, max_alpha_z_acc_, max_alpha_z_dec_);
+            out_vel_x = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_x, last_planned_data_.vel_x, period_, runtime_strategy_cfg_.max_acc_xy_acc_, runtime_strategy_cfg_.max_acc_xy_dec_);
+            out_vel_y = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_y, last_planned_data_.vel_y, period_, runtime_strategy_cfg_.max_acc_xy_acc_, runtime_strategy_cfg_.max_acc_xy_dec_);
+            out_omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_omega_z, last_planned_data_.omega_z, period_, runtime_strategy_cfg_.max_alpha_z_acc_, runtime_strategy_cfg_.max_alpha_z_dec_);
 
 // 第二阶段：平移矢量方向限幅（低速滞回冻+方向角速度限幅）
             const f32 tar_mag = magnitude2D(tar_vel_x, tar_vel_y);
             const f32 out_mag = magnitude2D(out_vel_x, out_vel_y);
             const f32 enter_speed = getNearZeroEnterSpeedMps();
             const f32 exit_speed = getNearZeroExitSpeedMps();
-            const f32 dir_rate_limit_rad_s = degToRadF32((trans_dir_rate_limit_deg_s_ >= 0.0f) ? trans_dir_rate_limit_deg_s_ : 0.0f);
+            const f32 dir_rate_limit_rad_s = degToRadF32((runtime_strategy_cfg_.trans_dir_rate_limit_deg_s_ >= 0.0f) ? runtime_strategy_cfg_.trans_dir_rate_limit_deg_s_ : 0.0f);
             const f32 max_dir_step = dir_rate_limit_rad_s * period_;
             bool entered_freeze_now = false;
             trans_dir_tar_mag_m_s_ = tar_mag;
@@ -2221,17 +2221,17 @@ namespace jia
                     allow_drive_position_loop = false;
                     allowed_drive_target_rad_s = 0.0f;
                     f32 delivered_drive_target_rad_s = 0.0f;
-                    if (enable_drive_alpha_limit_)
+                    if (runtime_strategy_cfg_.enable_drive_alpha_limit_)
                     {
                         delivered_drive_target_rad_s =
                             limitValueWithAcceleration(last_drive_omega_cmd_rad_s_[i],
                                                        allowed_drive_target_rad_s,
-                                                       max_drive_alpha_rad_s2_,
+                                                       runtime_strategy_cfg_.max_drive_alpha_rad_s2_,
                                                        period_);
                     }
-                    if (enable_drive_omega_limit_)
+                    if (runtime_strategy_cfg_.enable_drive_omega_limit_)
                     {
-                        delivered_drive_target_rad_s = clampValue(delivered_drive_target_rad_s, -max_drive_omega_rad_s_, max_drive_omega_rad_s_);
+                        delivered_drive_target_rad_s = clampValue(delivered_drive_target_rad_s, -runtime_strategy_cfg_.max_drive_omega_rad_s_, runtime_strategy_cfg_.max_drive_omega_rad_s_);
                     }
                     wheel.target_drive_omega_rad_s = delivered_drive_target_rad_s;
                     planned_data_.drive_omega_rad_s[i] = delivered_drive_target_rad_s;
@@ -2279,17 +2279,17 @@ namespace jia
 // 只有“全部回零完成”且“不是扭矩自由模式”时
 // 才真正把上一阶段规划出的目标舵角和驱动角速度下发给电机闭环
                 f32 delivered_drive_target_rad_s = allowed_drive_target_rad_s;
-                if (enable_drive_alpha_limit_)
+                if (runtime_strategy_cfg_.enable_drive_alpha_limit_)
                 {
                     delivered_drive_target_rad_s =
                         limitValueWithAcceleration(last_drive_omega_cmd_rad_s_[i],
                                                    delivered_drive_target_rad_s,
-                                                   max_drive_alpha_rad_s2_,
+                                                   runtime_strategy_cfg_.max_drive_alpha_rad_s2_,
                                                    period_);
                 }
-                if (enable_drive_omega_limit_)
+                if (runtime_strategy_cfg_.enable_drive_omega_limit_)
                 {
-                    delivered_drive_target_rad_s = clampValue(delivered_drive_target_rad_s, -max_drive_omega_rad_s_, max_drive_omega_rad_s_);
+                    delivered_drive_target_rad_s = clampValue(delivered_drive_target_rad_s, -runtime_strategy_cfg_.max_drive_omega_rad_s_, runtime_strategy_cfg_.max_drive_omega_rad_s_);
                 }
 
                 wheel.target_drive_omega_rad_s = delivered_drive_target_rad_s;
@@ -2342,10 +2342,10 @@ namespace jia
             debug_mirror_.nz_xpark_enter_m_s = getNearZeroEnterSpeedMps();
             debug_mirror_.nz_xpark_exit_m_s = getNearZeroExitSpeedMps();
             debug_mirror_.nz_stop_guard_release_m_s = getStopGuardReleaseSpeedMps();
-            debug_mirror_.lim_drive_omega = enable_drive_omega_limit_;
-            debug_mirror_.lim_drive_alpha = enable_drive_alpha_limit_;
-            debug_mirror_.lim_steer_rate = enable_steer_rate_limit_;
-            debug_mirror_.lim_steer_alpha = enable_steer_alpha_limit_;
+            debug_mirror_.lim_drive_omega = runtime_strategy_cfg_.enable_drive_omega_limit_;
+            debug_mirror_.lim_drive_alpha = runtime_strategy_cfg_.enable_drive_alpha_limit_;
+            debug_mirror_.lim_steer_rate = runtime_strategy_cfg_.enable_steer_rate_limit_;
+            debug_mirror_.lim_steer_alpha = runtime_strategy_cfg_.enable_steer_alpha_limit_;
             debug_mirror_.vec_gate_scale = vector_gate_scale_;
             debug_mirror_.vec_dir_err_deg = vector_dir_err_deg_;
             debug_mirror_.vec_eta_max_s = vector_eta_max_s_;
@@ -3006,7 +3006,7 @@ namespace jia
                 const f32 steer_angle_oa_rad = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
                 const f32 cos_theta = cosf(steer_angle_oa_rad);
                 const f32 sin_theta = sinf(steer_angle_oa_rad);
-                const f32 drive_linear_m_s = wheel.corrected_drive_omega_rad_s * wheel_radius_m_;
+                const f32 drive_linear_m_s = wheel.corrected_drive_omega_rad_s * runtime_strategy_cfg_.wheel_radius_m_;
 
                 const f32 rows[2][3] = {
                     {cos_theta, sin_theta, -wheel.pos_y_m * cos_theta + wheel.pos_x_m * sin_theta},
