@@ -339,7 +339,7 @@ namespace jia
 
         void Chassis::setIdlePostureMode(IdlePostureMode mode)
         {
-            idle_posture_mode_ = mode;
+            runtime_strategy_cfg_.idle_posture_mode = mode;
         }
 
         void Chassis::setSteeringStrategyMode(SteeringStrategyMode mode)
@@ -765,7 +765,7 @@ namespace jia
 
                 if (is_stationary)
                 {
-                    planner_output.ideal_oa_total_rad[i] = (planner_input.allow_xpark_pose && idle_posture_mode_ == IdlePostureMode::kXPark)
+                    planner_output.ideal_oa_total_rad[i] = (planner_input.allow_xpark_pose && runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kXPark)
                                                                ? wrapTo2Pi(getXParkAngle(wheel))
                                                                : wrapTo2Pi(planner_input.current_oa_total_rad[i]);
                     planner_output.ideal_drive_omega_rad_s[i] = 0.0f;

@@ -610,7 +610,6 @@ namespace jia
             f32 max_steer_rate_rad_s_ = 99999999.0f;        // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit_=true 时生效。
             bool enable_steer_alpha_limit_ = false;         // [RW] 是否启用舵向角加速度上限。
             f32 max_steer_alpha_rad_s2_ = 10000.0f;         // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
-            IdlePostureMode idle_posture_mode_ = IdlePostureMode::kXPark; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。
 
             // =====================================================================
             // 近零门限统一配置（运行时可调）[RW]
@@ -664,6 +663,9 @@ namespace jia
                 f32 drive_gate_scale_ramp_up_s = 0.10f;                               // [RW] 门控放开时间常数（s）。越小表示释放越快，越大表示更平滑。
                 f32 drive_gate_scale_ramp_down_s = 0.50f;                             // [RW] 门控收紧时间常数（s）。越大表示收紧更慢，更不容易突然“掐断”驱动。
                 f32 drive_gate_hard_disable_residual_speed_m_s = 0.03f;               // [RW] 硬门控残余速度禁入阈值（m/s）。整车任一轮实际残余速度高于该阈值时，本拍旁路 HardGate。
+
+                // ---- 静止姿态 ----------------------------------------------------
+                IdlePostureMode idle_posture_mode = IdlePostureMode::kXPark; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。
 
                 // ---- 停车转向保护 ------------------------------------------------
                 // 在低速或静止时抑制不必要的舵角摆动，避免轮子在接近停住时反复“找角”。
