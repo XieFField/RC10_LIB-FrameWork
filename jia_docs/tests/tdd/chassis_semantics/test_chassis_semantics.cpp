@@ -496,6 +496,278 @@ void testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode()
     EXPECT_TRUE(chassis.debug_mirror_.homing_last_edge_is_falling[0]);
     EXPECT_NEAR(chassis.debug_mirror_.homing_runtime_zero_offset_deg[0], 18.0f, 1.0e-4f);
 }
+
+void configureDriveContinuityHarness(Chassis &chassis, TestMotor drive_motors[4])
+{
+    chassis.max_drive_alpha_rad_s2_ = 10.0f;
+    chassis.max_drive_omega_rad_s_ = 1000.0f;
+    chassis.actuator_limit_enable_.enable_drive_alpha_limit = true;
+    chassis.actuator_limit_enable_.enable_drive_omega_limit = false;
+    chassis.input_target_data_.zero_current_all = false;
+    chassis.current_mode_flag_.is_wheel_torque_free = false;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].drive_motor_h = &drive_motors[i];
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].target_drive_omega_rad_s = 0.0f;
+        chassis.last_drive_omega_cmd_rad_s_[i] = 0.0f;
+        chassis.planned_data_.drive_omega_rad_s[i] = 0.0f;
+        drive_motors[i].setTargetRPM(0.0f);
+    }
+}
+
+Chassis::ActuatorCommandFrame makeDriveOnlyCommandFrame(float drive_omega_rad_s)
+{
+    Chassis::ActuatorCommandFrame frame{};
+    for (int i = 0; i < 4; ++i)
+    {
+        frame.drive_omega_rad_s[i] = drive_omega_rad_s;
+    }
+    return frame;
+}
+
+Chassis::SwervePlannerOutput makeNeutralPlannerOutput()
+{
+    Chassis::SwervePlannerOutput output{};
+    output.vector_gate_scale = 1.0f;
+    for (int i = 0; i < 4; ++i)
+    {
+        output.gate_or_cos_scale[i] = 1.0f;
+    }
+    return output;
+}
+
+Chassis::SwervePlannerInput makeGatePlannerInput(float steering_error_deg,
+                                                 float command_vel_x,
+                                                 float command_omega_z,
+                                                 float max_residual_speed_m_s)
+{
+    Chassis::SwervePlannerInput input{};
+    input.command.vel_x = command_vel_x;
+    input.command.omega_z = command_omega_z;
+    input.max_residual_speed_m_s = max_residual_speed_m_s;
+    for (int i = 0; i < 4; ++i)
+    {
+        input.residual_speed_m_s[i] = max_residual_speed_m_s;
+        input.current_oa_total_rad[i] = 0.0f;
+        input.wheel_speed_m_s[i] = std::fabs(command_vel_x);
+    }
+    input.current_oa_total_rad[0] = 0.0f;
+    return input;
+}
+
+void testSuppressedDriveDoesNotAccumulateHiddenAccelState()
+{
+    Chassis chassis;
+    TestMotor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+    const Chassis::ActuatorCommandFrame command_frame = makeDriveOnlyCommandFrame(20.0f);
+
+    for (int cycle = 0; cycle < 3; ++cycle)
+    {
+        chassis.storePlannedActuatorFrame(planner_output, command_frame);
+        chassis.applyModuleCommands(false);
+    }
+
+    EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[0].getTargetRPM(), 0.0f, 1.0e-6f);
+}
+
+void testDriveReleaseResumesFromDeliveredSpeedNotVirtualSpeed()
+{
+    Chassis chassis;
+    TestMotor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+    const float expected_release_step = chassis.max_drive_alpha_rad_s2_ * Chassis::period_;
+
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+    const Chassis::ActuatorCommandFrame command_frame = makeDriveOnlyCommandFrame(20.0f);
+
+    for (int cycle = 0; cycle < 3; ++cycle)
+    {
+        chassis.storePlannedActuatorFrame(planner_output, command_frame);
+        chassis.applyModuleCommands(false);
+    }
+
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.applyModuleCommands(true);
+
+    EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], expected_release_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, expected_release_step, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[0].getTargetRPM(), jia::radsToRpmF32(expected_release_step), 1.0e-4f);
+}
+
+void testDriveReleaseHasNoVelocityJumpAfterZeroHold()
+{
+    Chassis chassis;
+    TestMotor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+    const Chassis::ActuatorCommandFrame command_frame = makeDriveOnlyCommandFrame(20.0f);
+
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.applyModuleCommands(false);
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].target_drive_omega_rad_s < 5.0f);
+    EXPECT_TRUE(chassis.last_drive_omega_cmd_rad_s_[0] < 5.0f);
+}
+
+void testPlannerTargetMayChangeWhileDeliveredStateRemainsContinuous()
+{
+    Chassis chassis;
+    TestMotor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+
+    chassis.storePlannedActuatorFrame(planner_output, makeDriveOnlyCommandFrame(10.0f));
+    chassis.applyModuleCommands(false);
+    EXPECT_NEAR(chassis.actuator_command_frame_.drive_omega_rad_s[0], 10.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
+
+    chassis.storePlannedActuatorFrame(planner_output, makeDriveOnlyCommandFrame(30.0f));
+    chassis.applyModuleCommands(false);
+    EXPECT_NEAR(chassis.actuator_command_frame_.drive_omega_rad_s[0], 30.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
+}
+
+void testTorqueFreeAndNotHomedPathsResetDriveDeliveryStateConsistently()
+{
+    Chassis chassis;
+    TestMotor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+    const Chassis::ActuatorCommandFrame command_frame = makeDriveOnlyCommandFrame(20.0f);
+
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.current_mode_flag_.is_wheel_torque_free = true;
+    chassis.applyModuleCommands(true);
+    EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+
+    chassis.current_mode_flag_.is_wheel_torque_free = false;
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.applyModuleCommands(false);
+    EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+}
+
+void testHardGateDisabledWhenMaxResidualSpeedAboveThreshold()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.enable_drive_gate = true;
+    chassis.runtime_strategy_cfg_.drive_gate_strategy = Chassis::DriveGateStrategy::kHardGate;
+    chassis.runtime_strategy_cfg_.drive_gate_scope = Chassis::DriveGateScope::kGlobal;
+    chassis.runtime_strategy_cfg_.drive_gate_min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.drive_gate_close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.drive_gate_hard_disable_residual_speed_m_s = 0.3f;
+
+    const Chassis::SwervePlannerInput planner_input = makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.5f);
+    const float steering_errors_rad[4] = {
+        jia::degToRadF32(10.0f), jia::degToRadF32(10.0f), jia::degToRadF32(10.0f), jia::degToRadF32(10.0f)};
+    float gate_scales[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+
+    chassis.computeDriveGateScales(planner_input, steering_errors_rad, gate_scales);
+
+    EXPECT_NEAR(gate_scales[0], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(gate_scales[3], 1.0f, 1.0e-6f);
+}
+
+void testHardGateReenabledWhenMaxResidualSpeedDropsBelowThreshold()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.enable_drive_gate = true;
+    chassis.runtime_strategy_cfg_.drive_gate_strategy = Chassis::DriveGateStrategy::kHardGate;
+    chassis.runtime_strategy_cfg_.drive_gate_scope = Chassis::DriveGateScope::kGlobal;
+    chassis.runtime_strategy_cfg_.drive_gate_min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.drive_gate_close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.drive_gate_hard_disable_residual_speed_m_s = 0.3f;
+
+    const float steering_errors_rad[4] = {
+        jia::degToRadF32(10.0f), jia::degToRadF32(10.0f), jia::degToRadF32(10.0f), jia::degToRadF32(10.0f)};
+    float gate_scales[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+
+    chassis.computeDriveGateScales(makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.5f), steering_errors_rad, gate_scales);
+    chassis.computeDriveGateScales(makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.1f), steering_errors_rad, gate_scales);
+
+    EXPECT_NEAR(gate_scales[0], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(gate_scales[2], 0.0f, 1.0e-6f);
+}
+
+void testSoftAndCurveGateIgnoreHardResidualDisableThreshold()
+{
+    Chassis hard_disabled_chassis;
+    hard_disabled_chassis.runtime_strategy_cfg_.enable_drive_gate = true;
+    hard_disabled_chassis.runtime_strategy_cfg_.drive_gate_min_scale = 0.2f;
+    hard_disabled_chassis.runtime_strategy_cfg_.drive_gate_close_angle_deg = 1.0f;
+    hard_disabled_chassis.runtime_strategy_cfg_.drive_gate_hard_disable_residual_speed_m_s = 0.3f;
+
+    const float steering_errors_rad[4] = {
+        jia::degToRadF32(10.0f), jia::degToRadF32(10.0f), jia::degToRadF32(10.0f), jia::degToRadF32(10.0f)};
+    float soft_gate_scales[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    float curve_gate_scales[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+
+    hard_disabled_chassis.runtime_strategy_cfg_.drive_gate_strategy = Chassis::DriveGateStrategy::kSoftGate;
+    hard_disabled_chassis.computeDriveGateScales(makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.5f), steering_errors_rad, soft_gate_scales);
+
+    hard_disabled_chassis.runtime_strategy_cfg_.drive_gate_strategy = Chassis::DriveGateStrategy::kContinuousCurve;
+    hard_disabled_chassis.computeDriveGateScales(makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.5f), steering_errors_rad, curve_gate_scales);
+
+    EXPECT_TRUE(soft_gate_scales[0] < 1.0f);
+    EXPECT_TRUE(curve_gate_scales[0] < 1.0f);
+}
+
+void testGlobalMaxResidualSpeedControlsHardGateForAllWheels()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.enable_drive_gate = true;
+    chassis.runtime_strategy_cfg_.drive_gate_strategy = Chassis::DriveGateStrategy::kHardGate;
+    chassis.runtime_strategy_cfg_.drive_gate_scope = Chassis::DriveGateScope::kGlobal;
+    chassis.runtime_strategy_cfg_.drive_gate_min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.drive_gate_close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.drive_gate_hard_disable_residual_speed_m_s = 0.3f;
+
+    Chassis::SwervePlannerInput planner_input = makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.1f);
+    planner_input.residual_speed_m_s[0] = 0.5f;
+    planner_input.max_residual_speed_m_s = 0.5f;
+    const float steering_errors_rad[4] = {
+        jia::degToRadF32(10.0f), jia::degToRadF32(2.0f), jia::degToRadF32(10.0f), jia::degToRadF32(2.0f)};
+    float gate_scales[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+
+    chassis.computeDriveGateScales(planner_input, steering_errors_rad, gate_scales);
+
+    EXPECT_NEAR(gate_scales[0], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(gate_scales[1], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(gate_scales[2], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(gate_scales[3], 1.0f, 1.0e-6f);
+}
+
+void testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics()
+{
+    Chassis chassis;
+    chassis.actuator_command_frame_.drive_omega_rad_s[0] = 12.0f;
+    chassis.wheel_config_[0].target_drive_omega_rad_s = 3.0f;
+    chassis.max_residual_speed_m_s_ = 0.45f;
+    chassis.hard_gate_bypassed_by_residual_speed_ = true;
+
+    chassis.refreshDebugMirror(true);
+
+    EXPECT_NEAR(chassis.debug_mirror_.planned_drive_target_rpm[0], jia::radsToRpmF32(12.0f), 1.0e-4f);
+    EXPECT_NEAR(chassis.debug_mirror_.delivered_drive_target_rpm[0], jia::radsToRpmF32(3.0f), 1.0e-4f);
+    EXPECT_TRUE(chassis.debug_mirror_.hard_gate_bypassed_by_residual_speed);
+    EXPECT_NEAR(chassis.debug_mirror_.max_residual_speed_m_s, 0.45f, 1.0e-6f);
+}
 } // namespace
 
 int main()
@@ -518,6 +790,16 @@ int main()
     testDirectActuatorContinuousInputResolvesAxisAndControlTypesConsistently();
     testDirectActuatorOverrideOnlyAppliesToSelectedWheel();
     testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode();
+    testSuppressedDriveDoesNotAccumulateHiddenAccelState();
+    testDriveReleaseResumesFromDeliveredSpeedNotVirtualSpeed();
+    testDriveReleaseHasNoVelocityJumpAfterZeroHold();
+    testPlannerTargetMayChangeWhileDeliveredStateRemainsContinuous();
+    testTorqueFreeAndNotHomedPathsResetDriveDeliveryStateConsistently();
+    testHardGateDisabledWhenMaxResidualSpeedAboveThreshold();
+    testHardGateReenabledWhenMaxResidualSpeedDropsBelowThreshold();
+    testSoftAndCurveGateIgnoreHardResidualDisableThreshold();
+    testGlobalMaxResidualSpeedControlsHardGateForAllWheels();
+    testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics();
 
     if (g_failures != 0)
     {

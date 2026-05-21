@@ -547,7 +547,7 @@ namespace jia
             f32 magnitude2D(f32 x, f32 y) const;
             f32 getXParkAngle(const WheelConfig &wheel) const;
             f32 computeDriveGateScale(f32 abs_error_rad) const;
-            void computeDriveGateScales(const f32 steering_errors_rad[4], const Data &command_data, f32 out_scales[4]);
+            void computeDriveGateScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4]);
             f32 stopSteerGuardBlend(f32 residual_speed_m_s) const;
             void deriveNearZeroThresholds();
             void refreshActuatorLimitState();
@@ -597,15 +597,15 @@ namespace jia
             f32 max_vel_x_ = 4.0f;                                         // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
             f32 max_vel_y_ = 4.0f;                                         // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
             f32 max_omega_z_ = 4.0f;                                       // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
-            f32 max_acc_xy_acc_ = 5.0f;                                   // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
-            f32 max_acc_xy_dec_ = 10.0f;                                   // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
-            f32 max_alpha_z_acc_ = 5.0f;                                  // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
-            f32 max_alpha_z_dec_ = 10.0f;                                  // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
+            f32 max_acc_xy_acc_ = 2.0f;                                   // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
+            f32 max_acc_xy_dec_ = 8.0f;                                   // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
+            f32 max_alpha_z_acc_ = 2.0f;                                  // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
+            f32 max_alpha_z_dec_ = 8.0f;                                  // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
+            f32 trans_dir_rate_limit_deg_s_ = 180.0f;                        // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
             f32 max_drive_omega_rad_s_ = 60.0f;                              // [RW] 驱动目标角速度上限（rad/s）。仅在 enable_drive_omega_limit=true 时生效。
-            f32 max_drive_alpha_rad_s2_ = 1000.0f;                           // [RW] 驱动角速度变化率上限（rad/s^2）。仅在 enable_drive_alpha_limit=true 时生效。
+            f32 max_drive_alpha_rad_s2_ = 50.0f;                           // [RW] 驱动角速度变化率上限（rad/s^2）。仅在 enable_drive_alpha_limit=true 时生效。
             f32 max_steer_rate_rad_s_ = 10.0f;                               // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit=true 时生效。
             f32 max_steer_alpha_rad_s2_ = 10000.0f;                            // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit=true 时生效。
-            f32 trans_dir_rate_limit_deg_s_ = 540.0f;                        // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
             bool enable_cosine_compensation_ = false;                        // [RW] 是否启用舵角余弦补偿。开启后，舵角偏离时会折算驱动分量，减小横滑和无效驱动。
             IdlePostureMode idle_posture_mode_ = IdlePostureMode::kXPark; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。
 
@@ -615,20 +615,20 @@ namespace jia
             // =====================================================================
             struct NearZeroThresholdConfig
             {
-                f32 base_enter_m_s = 0.10f;       // [RW] 近零门限进入基准（m/s）。
-                f32 base_exit_m_s = 0.14f;        // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
-                u32 xpark_entry_delay_ms = 500U;  // [RW] X-Park 进入最短静止持续时间（ms）。
+                f32 base_enter_m_s = 0.01f;       // [RW] 近零门限进入基准（m/s）。
+                f32 base_exit_m_s = 0.03f;        // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
+                u32 xpark_entry_delay_ms = 1000U;  // [RW] X-Park 进入最短静止持续时间（ms）。
                 f32 stop_guard_release_scale = 1.0f; // [RW] 停车保护释放阈值缩放系数。stop_guard_release = base_enter * scale。
             } near_zero_cfg_;
 
             struct DerivedNearZeroThresholds
             {
-                f32 stationary_m_s = 0.10f;          // [RO] 有效静止阈值（m/s）。
-                f32 freeze_enter_m_s = 0.10f;        // [RO] 平移方向冻结进入阈值（m/s）。
-                f32 freeze_exit_m_s = 0.14f;         // [RO] 平移方向冻结退出阈值（m/s）。
-                f32 xpark_enter_m_s = 0.10f;         // [RO] X-Park 静止判定进入阈值（m/s）。
-                f32 xpark_exit_m_s = 0.14f;          // [RO] X-Park 静止判定退出阈值（m/s）。
-                f32 stop_guard_release_m_s = 0.10f; // [RO] 停车保护释放阈值（m/s）。
+                f32 stationary_m_s = 0.01f;          // [RO] 有效静止阈值（m/s）。
+                f32 freeze_enter_m_s = 0.01f;        // [RO] 平移方向冻结进入阈值（m/s）。
+                f32 freeze_exit_m_s = 0.03f;         // [RO] 平移方向冻结退出阈值（m/s）。
+                f32 xpark_enter_m_s = 0.01f;         // [RO] X-Park 静止判定进入阈值（m/s）。
+                f32 xpark_exit_m_s = 0.03f;          // [RO] X-Park 静止判定退出阈值（m/s）。
+                f32 stop_guard_release_m_s = 0.01f; // [RO] 停车保护释放阈值（m/s）。
             } near_zero_derived_;
 
             // =====================================================================
@@ -659,11 +659,11 @@ namespace jia
                 // ---- 驱动抑制（Drive Gate） -------------------------------------
                 // 当舵角还没对准时，按策略压低驱动输出，减少横滑、打滑和轮子“边转边拖”的冲击。
                 // 适合大角度转向、起步前对轮、低速细调等场景。
-                bool enable_drive_gate = false;                                       // [RW] 是否启用驱动门控。关闭后驱动不再因舵角误差被额外压低。
+                bool enable_drive_gate = true;                                       // [RW] 是否启用驱动门控。关闭后驱动不再因舵角误差被额外压低。
                 DriveGateStrategy drive_gate_strategy = DriveGateStrategy::kHardGate; // [RW] 门控形状：硬门控更直接，曲线门控更平滑。
                 DriveGateScope drive_gate_scope = DriveGateScope::kGlobal;            // [RW] 门控作用范围：全局统一收紧，或按单轮分别计算。
-                f32 drive_gate_close_angle_deg = 1.0f;                                // [RW] 关闭区角差阈值（deg）。超过该误差后会进入更强的驱动抑制。
-                f32 drive_gate_min_scale = 0.5f;                                      // [RW] 硬门控最小缩放。0 表示可完全关断驱动，1 表示完全不压。
+                f32 drive_gate_close_angle_deg = 0.1f;                                // [RW] 关闭区角差阈值（deg）。超过该误差后会进入更强的驱动抑制。
+                f32 drive_gate_min_scale = 0.0f;                                      // [RW] 硬门控最小缩放。0 表示可完全关断驱动，1 表示完全不压。
                 f32 drive_gate_curve_exponent = 3.0f;                                 // [RW] 曲线门控指数。越大曲线越“硬”，越接近临界开关。
                 f32 drive_gate_curve_half_angle_deg = 3.0f;                           // [RW] 曲线门控半效角（deg）。大致决定从“明显抑制”到“基本放开”的过渡宽度。
                 f32 drive_gate_curve_min_scale = 0.0f;                                // [RW] 曲线门控保底缩放。即使误差很大，也至少保留多少驱动比例。
@@ -671,6 +671,7 @@ namespace jia
                 f32 drive_gate_transition_angular_speed_rad_s = 0.10f;                // [RW] 角速度过渡阈值（rad/s）。自转越慢，门控越偏向保守。
                 f32 drive_gate_scale_ramp_up_s = 0.10f;                               // [RW] 门控放开时间常数（s）。越小表示释放越快，越大表示更平滑。
                 f32 drive_gate_scale_ramp_down_s = 0.50f;                             // [RW] 门控收紧时间常数（s）。越大表示收紧更慢，更不容易突然“掐断”驱动。
+                f32 drive_gate_hard_disable_residual_speed_m_s = 0.03f;               // [RW] 硬门控残余速度禁入阈值（m/s）。整车任一轮实际残余速度高于该阈值时，本拍旁路 HardGate。
 
                 // ---- 停车转向保护 ------------------------------------------------
                 // 在低速或静止时抑制不必要的舵角摆动，避免轮子在接近停住时反复“找角”。
@@ -691,7 +692,7 @@ namespace jia
                     f32 eta_release_s = 0.06f;             // [RW] 最大到角时间退出阈值（s），应小于 lock。
                     f32 gate_ramp_up_s = 0.08f;            // [RW] 门控放开时间常数（s）。
                     f32 gate_ramp_down_s = 0.03f;          // [RW] 门控收紧时间常数（s）。
-                    f32 min_trans_speed_enable_m_s = 0.10f; // [RW] 启动门控的最小平移速度（m/s）。
+                    f32 min_trans_speed_enable_m_s = 0.03f; // [RW] 启动门控的最小平移速度（m/s）。
                 } vector_consistency;
             };
             StrategyConfig default_strategy_cfg_; // [RW, 慎改] 默认策略基线。用于初始化和“恢复默认值”，不要把它当作实时状态。
@@ -853,7 +854,7 @@ namespace jia
             f32 homing_align_to_zero_tolerance_deg_ = 2.0f;                    // [RW] 回零归位判稳阈值（deg）
             WheelConfig wheel_config_[4];                                      // [RO] 四个模块运行态快照
             f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};                        // [RO] 上周期转向速度命令
-            f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};                       // [RO] 上周期驱动角速度命令
+            f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};                       // [RO] 上周期最终实际下发到驱动闭环的角速度命令
             bool selected_flipped_solution_[4] = {false};                      // [RO] 每个模块是否选中翻转解
             f32 drive_gate_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f};               // [RO] 每轮驱动门控缩放
             f32 adaptive_gate_scale_ = 1.0f;                                   // [RO] 全局自适应门控缩放
@@ -862,6 +863,8 @@ namespace jia
             bool vector_gate_active_ = false;                                  // [RO] 全局矢量一致性门控是否激活。
             f32 vector_dir_err_deg_ = 0.0f;                                    // [RO] 当前合成平移方向误差（deg）。
             f32 vector_eta_max_s_ = 0.0f;                                      // [RO] 当前四轮最大预计到角时间（s）。
+            f32 max_residual_speed_m_s_ = 0.0f;                                // [RO] 当前拍四轮中的最大实际残余速度（m/s）。
+            bool hard_gate_bypassed_by_residual_speed_ = false;                 // [RO] 当前拍 HardGate 是否因残余速度阈值被旁路。
             u8 rot_z_pid_count_ = 0;                                           // [RO] 航向 PID 分频计数器
             f32 lock_now_rot_z_target_ = 0.0f;                                 // [RO] LockNow 真正维持的航向目标
             u32 lock_now_rot_z_shift_count_ = 0;                               // [RO] LockNow 松手缓冲倒计时
@@ -882,7 +885,7 @@ namespace jia
             Data last_planned_data_;            // [RO] 上一周期规划数据（用于加速度约束）
             Data current_data_;                 // [RO] 当前状态估计数据
             SwervePlannerOutput planner_output_cache_; // [RO] 最近一次舵轮规划输出
-            ActuatorCommandFrame actuator_command_frame_; // [RO] 最近一次执行器目标帧
+            ActuatorCommandFrame actuator_command_frame_; // [RO] 最近一次规划出的执行器目标帧（drive 仍是执行门控前目标）
             ModeFlag current_mode_flag_;        // [RO] 当前控制模式标志位
 
             // 传感器与输入缓存（观察）[RO]
@@ -898,6 +901,8 @@ namespace jia
                 f32 target_oa_deg[4] = {0.0f};                                      // [RO] 各轮目标 OA 角（deg）
                 f32 current_drive_rpm[4] = {0.0f};                                  // [RO] 各轮当前驱动速度（rpm）
                 f32 target_drive_rpm[4] = {0.0f};                                   // [RO] 各轮目标驱动速度（rpm）
+                f32 planned_drive_target_rpm[4] = {0.0f};                           // [RO] planner/gate 阶段计算出的驱动目标（rpm）
+                f32 delivered_drive_target_rpm[4] = {0.0f};                         // [RO] 最终执行层限幅并下发的驱动目标（rpm）
                 u8 homing_state[4] = {0, 0, 0, 0};                                  // [RO] 各轮回零状态机状态
                 bool homing_sensor_active[4] = {false, false, false, false};        // [RO] 各轮光电门有效状态
                 bool homing_last_edge_is_falling[4] = {false, false, false, false}; // [RO] 各轮最近边沿是否下降沿
@@ -918,6 +923,8 @@ namespace jia
                 f32 vec_dir_err_deg = 0.0f;                                         // [RO] 合成平移方向误差（deg）。
                 f32 vec_eta_max_s = 0.0f;                                           // [RO] 四轮最大预计到角时间（s）。
                 bool vec_gate_active = false;                                       // [RO] 全局矢量一致性门控当前是否激活。
+                bool hard_gate_bypassed_by_residual_speed = false;                  // [RO] 当前拍是否因为实际残余速度过高而旁路了 HardGate。
+                f32 max_residual_speed_m_s = 0.0f;                                  // [RO] 当前拍整车四轮中的最大实际残余速度（m/s）。
             } debug_mirror_;
 
             // 线程执行耗时统计（调试器只读观察）[RO]
