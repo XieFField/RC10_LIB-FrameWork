@@ -117,7 +117,7 @@ dji_motor_demo.init(&m2006_1);
 void CAN_Motor_Init(void);
 Point2D lader_install_offset = {0.0f, 0.0f}; // 激光雷达安装偏移，单位 m
 Locate_Setup* set1 = Locate_Setup::getInstance();
-
+Swerve_Task_Demo swerve_task_demo; // 轮式舵轮底盘调试任务实例
 
 void ALL_Setup_ConfigInit(void)
 {
@@ -140,8 +140,13 @@ void ALL_Setup_ConfigInit(void)
 
     ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
+    swerve_task_demo.registerSteerMotor(&steer1, 0); swerve_task_demo.registerSteerMotor(&steer2, 1);
+    swerve_task_demo.registerSteerMotor(&steer3, 2); swerve_task_demo.registerSteerMotor(&steer4, 3);
+    swerve_task_demo.registerDriveMotor(&U8_1, 0); swerve_task_demo.registerDriveMotor(&U8_2, 1);
+    swerve_task_demo.registerDriveMotor(&U8_3, 2); swerve_task_demo.registerDriveMotor(&U8_4, 3);
 
-#if JIA_USE_FOUR_STEER_CHASSIS && !TEST_TEMP
+    swerve_task_demo.init();
+#if JIA_USE_FOUR_STEER_CHASSIS && !TEST_TEMP && !DEBUG_SHIT
     Chassis::InitConfig chassis_init_config =
         {
             // 转向电机句柄（按轮序 0~3 对应）
@@ -158,6 +163,7 @@ void ALL_Setup_ConfigInit(void)
         };
     chassis.init(chassis_init_config);
 #endif
+
 
     Finite_StateMachine.registerArmSetup(&ARM_Controller);
     Finite_StateMachine.registerChassisSetup(&ChassisOmni);

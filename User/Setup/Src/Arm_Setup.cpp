@@ -344,7 +344,7 @@ bool ArmSetup::manual_store()
         case store_state::laucnh_state:
         {
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
-            this->set_PitchAngle(180.0f); //吸盘朝上
+            this->set_PitchAngle(90.0f); //吸盘抬平
             if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.01f && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 180.0f) < 30.0f)
             {
                 this->store_state_ = store_state::rotate_state;
@@ -356,6 +356,7 @@ bool ArmSetup::manual_store()
         {
             float target_rotate = 269.9f; //存储的目标旋转角度
             this->set_RotateAngle(target_rotate);
+            this->set_StretchLength(init_data_.store_ext_length_); // 伸展到存储位置需要的长度
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f)
             {
                 this->store_state_ = store_state::lower_state;
@@ -462,7 +463,7 @@ bool ArmSetup::manual_takeout()
 
                 if(this->get_currentJointStatus().launchJoint_Height_ > this->init_data_.max_launchHeight_ - 0.01f)
                 {
-                    this->set_PitchAngle(180.0f); //吸盘朝上
+                    this->set_PitchAngle(90.0f); //吸盘抬平
                     this->store_state_ = store_state::outstate2;
                 }
             }
@@ -1048,6 +1049,7 @@ Arm_InitData_S arm_initData = {
     .safe_height_ = 0.08f,
     .store_height_ = 0.12f,
     .lock_height_ = 0.04f,
+    .store_ext_length_ = 0.08f,
 
     .Sucker_GPIO_Port = SUCKER_6_GPIO_Port,
     .Sucker_GPIO_Pin =  SUCKER_6_Pin,

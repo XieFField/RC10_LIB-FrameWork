@@ -57,6 +57,8 @@ extern "C" {
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
 #include "chassis.h"
+
+
 #if SPEEDPLANNER_DEMO_DEBUG
     #include "speedplanner_demo.h"
 #endif
@@ -68,7 +70,8 @@ extern "C" {
 
 
 #include "m3508_steer_debug.h"
-
+#include "chassis_swerve_demo.h"
+#include "chassis_swerve_task_demo.h"
 
 class test:public RtosTask {
 public:

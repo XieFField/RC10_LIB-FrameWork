@@ -101,7 +101,7 @@ void Robot_Arm::update()
     if(motor_stretch_ != nullptr)
     {
         strech_fliter_ramp_.ramp_target_ = caculate_ramp_target(motor_stretch_->getTotalAngle(), 
-            target_stretchMotorAngle, strech_fliter_ramp_);
+        target_stretchMotorAngle, strech_fliter_ramp_);
         motor_stretch_->setTargetTotalAngle(strech_fliter_ramp_.ramp_target_);
     }
 
