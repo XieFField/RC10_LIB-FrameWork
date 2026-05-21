@@ -601,10 +601,10 @@ namespace jia
             f32 max_acc_xy_dec_ = 8.0f;                                   // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
             f32 max_alpha_z_acc_ = 2.0f;                                  // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
             f32 max_alpha_z_dec_ = 8.0f;                                  // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
-            f32 trans_dir_rate_limit_deg_s_ = 180.0f;                        // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
-            f32 max_drive_omega_rad_s_ = 60.0f;                              // [RW] 驱动目标角速度上限（rad/s）。仅在 enable_drive_omega_limit=true 时生效。
-            f32 max_drive_alpha_rad_s2_ = 50.0f;                           // [RW] 驱动角速度变化率上限（rad/s^2）。仅在 enable_drive_alpha_limit=true 时生效。
-            f32 max_steer_rate_rad_s_ = 10.0f;                               // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit=true 时生效。
+            f32 trans_dir_rate_limit_deg_s_ = 99999999.0f;                        // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
+            f32 max_drive_omega_rad_s_ = 99999999.0f;                              // [RW] 驱动目标角速度上限（rad/s）。仅在 enable_drive_omega_limit=true 时生效。
+            f32 max_drive_alpha_rad_s2_ = 99999999.0f;                           // [RW] 驱动角速度变化率上限（rad/s^2）。仅在 enable_drive_alpha_limit=true 时生效。
+            f32 max_steer_rate_rad_s_ = 99999999.0f;                               // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit=true 时生效。
             f32 max_steer_alpha_rad_s2_ = 10000.0f;                            // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit=true 时生效。
             bool enable_cosine_compensation_ = false;                        // [RW] 是否启用舵角余弦补偿。开启后，舵角偏离时会折算驱动分量，减小横滑和无效驱动。
             IdlePostureMode idle_posture_mode_ = IdlePostureMode::kXPark; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。
@@ -659,10 +659,10 @@ namespace jia
                 // ---- 驱动抑制（Drive Gate） -------------------------------------
                 // 当舵角还没对准时，按策略压低驱动输出，减少横滑、打滑和轮子“边转边拖”的冲击。
                 // 适合大角度转向、起步前对轮、低速细调等场景。
-                bool enable_drive_gate = true;                                       // [RW] 是否启用驱动门控。关闭后驱动不再因舵角误差被额外压低。
+                bool enable_drive_gate = false;                                       // [RW] 是否启用驱动门控。关闭后驱动不再因舵角误差被额外压低。
                 DriveGateStrategy drive_gate_strategy = DriveGateStrategy::kHardGate; // [RW] 门控形状：硬门控更直接，曲线门控更平滑。
                 DriveGateScope drive_gate_scope = DriveGateScope::kGlobal;            // [RW] 门控作用范围：全局统一收紧，或按单轮分别计算。
-                f32 drive_gate_close_angle_deg = 0.1f;                                // [RW] 关闭区角差阈值（deg）。超过该误差后会进入更强的驱动抑制。
+                f32 drive_gate_close_angle_deg = 1.0f;                                // [RW] 关闭区角差阈值（deg）。超过该误差后会进入更强的驱动抑制。
                 f32 drive_gate_min_scale = 0.0f;                                      // [RW] 硬门控最小缩放。0 表示可完全关断驱动，1 表示完全不压。
                 f32 drive_gate_curve_exponent = 3.0f;                                 // [RW] 曲线门控指数。越大曲线越“硬”，越接近临界开关。
                 f32 drive_gate_curve_half_angle_deg = 3.0f;                           // [RW] 曲线门控半效角（deg）。大致决定从“明显抑制”到“基本放开”的过渡宽度。
@@ -685,7 +685,7 @@ namespace jia
                 // ---- 全局矢量一致性门控 -------------------------------------------
                 struct VectorConsistencyConfig
                 {
-                    bool enable = true;                     // [RW] 是否启用全局矢量一致性门控。
+                    bool enable = false;                     // [RW] 是否启用全局矢量一致性门控。
                     f32 dir_err_enter_deg = 12.0f;         // [RW] 方向误差进入阈值（deg）。
                     f32 dir_err_exit_deg = 6.0f;           // [RW] 方向误差退出阈值（deg），应小于 enter 形成滞回。
                     f32 eta_lock_s = 0.20f;                // [RW] 最大到角时间进入阈值（s）。
