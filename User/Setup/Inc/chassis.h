@@ -548,12 +548,16 @@ namespace jia
             f32 nearestEquivalentAngle(f32 current_rad, f32 target_mod_rad) const;
             f32 magnitude2D(f32 x, f32 y) const;
             f32 getXParkAngle(const WheelConfig &wheel) const;
+            f32 computeMaxCommandWheelSpeedMps(const Data &command_data) const;
             f32 computeDriveGateScale(f32 abs_error_rad) const;
             void computeDriveGateScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4]);
             f32 stopSteerGuardBlend(f32 residual_speed_m_s) const;
             f32 getNearZeroEnterSpeedMps() const;
             f32 getNearZeroExitSpeedMps() const;
             f32 getStopGuardReleaseSpeedMps() const;
+            bool shouldActivateLaunchHold() const;
+            bool isLaunchHoldAligned(const SwervePlannerOutput &planner_output) const;
+            Data makeLaunchHoldPreviewCommand() const;
             void refreshActuatorLimitState();
             f32 mapSingleTurnToNearestTotalAngle(const WheelConfig &wheel, f32 target_oa_single_turn_deg) const;
             SwervePlannerInput makeSwervePlannerInput(const Data &command_data);
@@ -888,6 +892,7 @@ namespace jia
             u32 lock_now_rot_z_shift_count_ = 0;                               // [RO] LockNow 松手缓冲倒计时
             bool xpark_gate_active_ = false;                                   // [RO] X-Park 进入门控当前是否放行。true 时允许静止姿态切到 X-Park。
             u32 xpark_stationary_hold_ms_ = 0U;                                // [RO] 连续静止累计时长（ms）。用于判断是否达到 X-Park 延时门槛。
+            bool launch_hold_active_ = false;                                  // [RO] 静止起步整车等待门控是否激活。激活时先只转舵，不放驱动与车体速度规划。
             bool trans_dir_freeze_active_ = false;                              // [RO] 平移方向冻结门控当前状态。true 时方向保持参考角，只放行速度模长变化。
             bool trans_dir_ref_valid_ = false;                                  // [RO] 平移方向参考角是否有效。无效时先用当前指令方向建立参考。
             f32 trans_dir_ref_rad_ = 0.0f;                                      // [RO] 平移方向参考角（rad）。用于冻结保持与方向角速率限幅。

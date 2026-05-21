@@ -532,6 +532,67 @@ namespace jia
             return atan2f(wheel.pos_y_m, wheel.pos_x_m);
         }
 
+        f32 Chassis::computeMaxCommandWheelSpeedMps(const Data &command_data) const
+        {
+            f32 max_command_wheel_speed_m_s = 0.0f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                const WheelConfig &wheel = wheel_config_[i];
+                const f32 wheel_vx = command_data.vel_x + command_data.omega_z * wheel.pos_y_m;
+                const f32 wheel_vy = command_data.vel_y - command_data.omega_z * wheel.pos_x_m;
+                const f32 wheel_speed_m_s = magnitude2D(wheel_vx, wheel_vy);
+                max_command_wheel_speed_m_s =
+                    (wheel_speed_m_s > max_command_wheel_speed_m_s) ? wheel_speed_m_s : max_command_wheel_speed_m_s;
+            }
+            return max_command_wheel_speed_m_s;
+        }
+
+        bool Chassis::shouldActivateLaunchHold() const
+        {
+            if (runtime_strategy_cfg_.drive_attenuation_mode != DriveAttenuationMode::kHardGate)
+            {
+                return false;
+            }
+
+            if (runtime_strategy_cfg_.hard_gate.scope != DriveGateScope::kGlobal)
+            {
+                return false;
+            }
+
+            if (runtime_strategy_cfg_.hard_gate.min_scale > 1.0e-6f)
+            {
+                return false;
+            }
+
+            const f32 command_speed_m_s = computeMaxCommandWheelSpeedMps(target_data_);
+            return xpark_gate_active_ && (command_speed_m_s > getNearZeroExitSpeedMps());
+        }
+
+        bool Chassis::isLaunchHoldAligned(const SwervePlannerOutput &planner_output) const
+        {
+            const f32 close_rad = degToRadF32(runtime_strategy_cfg_.hard_gate.close_angle_deg);
+            for (u8 i = 0; i < 4; ++i)
+            {
+                if (planner_output.steering_errors_rad[i] >= close_rad)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        Chassis::Data Chassis::makeLaunchHoldPreviewCommand() const
+        {
+            Data preview = target_data_;
+            clampTargetSpeedInChassis(preview.vel_x, preview.vel_y, preview.omega_z,
+                                      preview.vel_x, preview.vel_y, preview.omega_z);
+            preview.acc_x = 0.0f;
+            preview.acc_y = 0.0f;
+            preview.alpha_z = 0.0f;
+            preview.rot_z = target_data_.rot_z;
+            return preview;
+        }
+
         f32 Chassis::computeDriveGateScale(f32 abs_error_rad) const
         {
             switch (runtime_strategy_cfg_.drive_attenuation_mode)
@@ -1839,6 +1900,36 @@ namespace jia
 
         void Chassis::updatePlannedMotionData()
         {
+            if (!launch_hold_active_ && shouldActivateLaunchHold())
+            {
+                launch_hold_active_ = true;
+                planned_data_ = Data{};
+                last_planned_data_ = Data{};
+                planned_data_.rot_z = target_data_.rot_z;
+                last_planned_data_.rot_z = target_data_.rot_z;
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    last_drive_omega_cmd_rad_s_[i] = 0.0f;
+                }
+            }
+
+            if (launch_hold_active_)
+            {
+                const SwervePlannerOutput launch_preview_output =
+                    planSwerveModules(makeSwervePlannerInput(makeLaunchHoldPreviewCommand()));
+                if (isLaunchHoldAligned(launch_preview_output))
+                {
+                    launch_hold_active_ = false;
+                }
+            }
+
+            if (launch_hold_active_)
+            {
+                planned_data_ = Data{};
+                planned_data_.rot_z = target_data_.rot_z;
+                return;
+            }
+
             clampTargetSpeedInChassis(target_data_.vel_x, target_data_.vel_y, target_data_.omega_z,
                                       target_data_.vel_x, target_data_.vel_y, target_data_.omega_z);
 
@@ -2217,8 +2308,17 @@ namespace jia
 
         void Chassis::computeModuleCommands(const Data &command_data)
         {
-            const SwervePlannerInput planner_input = makeSwervePlannerInput(command_data);
-            const SwervePlannerOutput planner_output = planSwerveModules(planner_input);
+            const Data planner_command = launch_hold_active_ ? makeLaunchHoldPreviewCommand() : command_data;
+            const SwervePlannerInput planner_input = makeSwervePlannerInput(planner_command);
+            SwervePlannerOutput planner_output = planSwerveModules(planner_input);
+            if (launch_hold_active_)
+            {
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    planner_output.gate_or_cos_scale[i] = 0.0f;
+                    planner_output.final_drive_omega_rad_s[i] = 0.0f;
+                }
+            }
             ActuatorCommandFrame command_frame{};
             buildActuatorCommandFrame(planner_output, command_frame);
             storePlannedActuatorFrame(planner_output, command_frame);

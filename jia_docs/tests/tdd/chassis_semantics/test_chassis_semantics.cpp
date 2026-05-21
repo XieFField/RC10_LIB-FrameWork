@@ -640,6 +640,59 @@ void configureDriveContinuityHarness(Chassis &chassis, TestMotor drive_motors[4]
     }
 }
 
+void configureXParkWheelGeometry(Chassis &chassis)
+{
+    const float half_track_m = 0.20f;
+    const float positions[4][2] = {
+        {half_track_m, half_track_m},
+        {-half_track_m, half_track_m},
+        {-half_track_m, -half_track_m},
+        {half_track_m, -half_track_m},
+    };
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].pos_x_m = positions[i][0];
+        chassis.wheel_config_[i].pos_y_m = positions[i][1];
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+    }
+}
+
+void setWheelPoseToXPark(Chassis &chassis)
+{
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad =
+            std::atan2(chassis.wheel_config_[i].pos_y_m, chassis.wheel_config_[i].pos_x_m);
+    }
+}
+
+void configureHardGateLaunchHarness(Chassis &chassis, TestMotor drive_motors[4])
+{
+    configureDriveContinuityHarness(chassis, drive_motors);
+    configureXParkWheelGeometry(chassis);
+    setWheelPoseToXPark(chassis);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kHardGate;
+    chassis.runtime_strategy_cfg_.hard_gate.scope = Chassis::DriveGateScope::kGlobal;
+    chassis.runtime_strategy_cfg_.hard_gate.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.hard_gate.min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.hard_gate.disable_residual_speed_m_s = 100.0f;
+    chassis.runtime_strategy_cfg_.vector_consistency.enable = false;
+    chassis.runtime_strategy_cfg_.enable_stop_steer_guard = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.max_acc_xy_acc_ = 1.0f;
+    chassis.runtime_strategy_cfg_.max_acc_xy_dec_ = 1.0f;
+    chassis.runtime_strategy_cfg_.max_alpha_z_acc_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_alpha_z_dec_ = 2.0f;
+    chassis.xpark_gate_active_ = true;
+}
+
 Chassis::ActuatorCommandFrame makeDriveOnlyCommandFrame(float drive_omega_rad_s)
 {
     Chassis::ActuatorCommandFrame frame{};
@@ -946,6 +999,95 @@ void testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics()
     EXPECT_TRUE(chassis.debug_mirror_.hard_gate_bypassed_by_residual_speed);
     EXPECT_NEAR(chassis.debug_mirror_.max_residual_speed_m_s, 0.45f, 1.0e-6f);
 }
+
+void testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle()
+{
+    Chassis chassis;
+    TestMotor drive_motors[4];
+    configureHardGateLaunchHarness(chassis, drive_motors);
+
+    Chassis::Data command{};
+    command.vel_x = 1.0f;
+
+    Chassis::SwervePlannerOutput planner_output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_TRUE(planner_output.steering_errors_rad[i] > jia::degToRadF32(1.0f));
+        EXPECT_NEAR(planner_output.gate_or_cos_scale[i], 0.0f, 1.0e-6f);
+        EXPECT_NEAR(planner_output.final_drive_omega_rad_s[i], 0.0f, 1.0e-6f);
+    }
+
+    for (int i = 0; i < 3; ++i)
+    {
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+    }
+
+    planner_output = chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(planner_output.gate_or_cos_scale[i], 0.0f, 1.0e-6f);
+        EXPECT_NEAR(planner_output.final_drive_omega_rad_s[i], 0.0f, 1.0e-6f);
+    }
+
+    chassis.wheel_config_[3].corrected_steer_motor_total_angle_rad = 0.0f;
+    planner_output = chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(planner_output.gate_or_cos_scale[i], 1.0f, 1.0e-6f);
+        EXPECT_TRUE(std::fabs(planner_output.final_drive_omega_rad_s[i]) > 1.0e-6f);
+    }
+}
+
+void testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned()
+{
+    Chassis chassis;
+    TestMotor drive_motors[4];
+    configureHardGateLaunchHarness(chassis, drive_motors);
+
+    chassis.target_data_.vel_x = 1.0f;
+    chassis.target_data_.vel_y = 0.0f;
+    chassis.target_data_.omega_z = 1.0f;
+
+    const float linear_step = chassis.runtime_strategy_cfg_.max_acc_xy_acc_ * Chassis::period_;
+    const float angular_step = chassis.runtime_strategy_cfg_.max_alpha_z_acc_ * Chassis::period_;
+    const float drive_step = chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ * Chassis::period_;
+
+    for (int cycle = 0; cycle < 3; ++cycle)
+    {
+        chassis.updatePlannedMotionData();
+        chassis.computeModuleCommands(chassis.planned_data_);
+        chassis.applyModuleCommands(true);
+        chassis.last_planned_data_ = chassis.planned_data_;
+    }
+
+    EXPECT_NEAR(chassis.planned_data_.vel_x, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.vel_y, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.omega_z, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.actuator_command_frame_.drive_omega_rad_s[0], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad =
+            chassis.planner_output_cache_.selected_oa_total_rad[i];
+    }
+
+    chassis.updatePlannedMotionData();
+    chassis.computeModuleCommands(chassis.planned_data_);
+
+    EXPECT_NEAR(chassis.planned_data_.vel_x, linear_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.vel_y, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.omega_z, angular_step, 1.0e-6f);
+    EXPECT_TRUE(std::fabs(chassis.actuator_command_frame_.drive_omega_rad_s[0]) > drive_step);
+
+    chassis.applyModuleCommands(true);
+
+    EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], drive_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, drive_step, 1.0e-6f);
+}
 } // namespace
 
 int main()
@@ -984,6 +1126,8 @@ int main()
     testCosineModeIgnoresAllGateParameterBlocks();
     testGlobalMaxResidualSpeedControlsHardGateForAllWheels();
     testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics();
+    testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle();
+    testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned();
 
     if (g_failures != 0)
     {
