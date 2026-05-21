@@ -549,7 +549,9 @@ namespace jia
             f32 computeDriveGateScale(f32 abs_error_rad) const;
             void computeDriveGateScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4]);
             f32 stopSteerGuardBlend(f32 residual_speed_m_s) const;
-            void deriveNearZeroThresholds();
+            f32 getNearZeroEnterSpeedMps() const;
+            f32 getNearZeroExitSpeedMps() const;
+            f32 getStopGuardReleaseSpeedMps() const;
             void refreshActuatorLimitState();
             f32 mapSingleTurnToNearestTotalAngle(const WheelConfig &wheel, f32 target_oa_single_turn_deg) const;
             SwervePlannerInput makeSwervePlannerInput(const Data &command_data);
@@ -619,19 +621,8 @@ namespace jia
             {
                 f32 base_enter_m_s = 0.01f;       // [RW] 近零门限进入基准（m/s）。
                 f32 base_exit_m_s = 0.03f;        // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
-                u32 xpark_entry_delay_ms = 1000U;  // [RW] X-Park 进入最短静止持续时间（ms）。
-                f32 stop_guard_release_scale = 1.0f; // [RW] 停车保护释放阈值缩放系数。stop_guard_release = base_enter * scale。
+                u32 xpark_entry_delay_ms = 1000U; // [RW] X-Park 进入最短静止持续时间（ms）。
             } near_zero_cfg_;
-
-            struct DerivedNearZeroThresholds
-            {
-                f32 stationary_m_s = 0.01f;          // [RO] 有效静止阈值（m/s）。
-                f32 freeze_enter_m_s = 0.01f;        // [RO] 平移方向冻结进入阈值（m/s）。
-                f32 freeze_exit_m_s = 0.03f;         // [RO] 平移方向冻结退出阈值（m/s）。
-                f32 xpark_enter_m_s = 0.01f;         // [RO] X-Park 静止判定进入阈值（m/s）。
-                f32 xpark_exit_m_s = 0.03f;          // [RO] X-Park 静止判定退出阈值（m/s）。
-                f32 stop_guard_release_m_s = 0.01f; // [RO] 停车保护释放阈值（m/s）。
-            } near_zero_derived_;
 
             // =====================================================================
             // 策略参数（运行时可调）[RW]

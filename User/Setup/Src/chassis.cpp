@@ -94,7 +94,6 @@ namespace jia
         void Chassis::init(InitConfig &config)
         {
             runtime_strategy_cfg_ = default_strategy_cfg_;
-            deriveNearZeroThresholds();
             refreshActuatorLimitState();
 
             static const WheelInitConfig kDefaultWheelInit[4] = {
@@ -347,20 +346,21 @@ namespace jia
             runtime_strategy_cfg_.steering_strategy_mode = mode;
         }
 
-        void Chassis::deriveNearZeroThresholds()
+        f32 Chassis::getNearZeroEnterSpeedMps() const
         {
-            const f32 enter = (near_zero_cfg_.base_enter_m_s >= 0.0f) ? near_zero_cfg_.base_enter_m_s : 0.0f;
-            const f32 exit_raw = (near_zero_cfg_.base_exit_m_s >= 0.0f) ? near_zero_cfg_.base_exit_m_s : 0.0f;
-            const f32 exit = (exit_raw > enter) ? exit_raw : (enter + 1.0e-3f);
-            const f32 release_scale = (near_zero_cfg_.stop_guard_release_scale >= 0.0f) ? near_zero_cfg_.stop_guard_release_scale : 0.0f;
-            const f32 release = enter * release_scale;
+            return (near_zero_cfg_.base_enter_m_s >= 0.0f) ? near_zero_cfg_.base_enter_m_s : 0.0f;
+        }
 
-            near_zero_derived_.stationary_m_s = enter;
-            near_zero_derived_.freeze_enter_m_s = enter;
-            near_zero_derived_.freeze_exit_m_s = exit;
-            near_zero_derived_.xpark_enter_m_s = enter;
-            near_zero_derived_.xpark_exit_m_s = exit;
-            near_zero_derived_.stop_guard_release_m_s = release;
+        f32 Chassis::getNearZeroExitSpeedMps() const
+        {
+            const f32 enter = getNearZeroEnterSpeedMps();
+            const f32 exit_raw = (near_zero_cfg_.base_exit_m_s >= 0.0f) ? near_zero_cfg_.base_exit_m_s : 0.0f;
+            return (exit_raw > enter) ? exit_raw : (enter + 1.0e-3f);
+        }
+
+        f32 Chassis::getStopGuardReleaseSpeedMps() const
+        {
+            return getNearZeroExitSpeedMps();
         }
 
         void Chassis::refreshActuatorLimitState()
@@ -499,7 +499,6 @@ namespace jia
             trans_dir_tar_mag_m_s_ = 0.0f;
             trans_dir_out_mag_m_s_ = 0.0f;
             trans_dir_freeze_reason_ = 0U;
-            deriveNearZeroThresholds();
             refreshActuatorLimitState();
         }
 
@@ -663,7 +662,7 @@ namespace jia
 
         f32 Chassis::stopSteerGuardBlend(f32 residual_speed_m_s) const
         {
-            const f32 release_speed = near_zero_derived_.stop_guard_release_m_s;
+            const f32 release_speed = getStopGuardReleaseSpeedMps();
             if (residual_speed_m_s <= release_speed)
             {
                 return 1.0f;
@@ -722,8 +721,8 @@ namespace jia
                     (residual_speed_m_s > planner_input.max_residual_speed_m_s) ? residual_speed_m_s : planner_input.max_residual_speed_m_s;
             }
 
-            const f32 xpark_enter_speed = near_zero_derived_.xpark_enter_m_s;
-            const f32 xpark_exit_speed = near_zero_derived_.xpark_exit_m_s;
+            const f32 xpark_enter_speed = getNearZeroEnterSpeedMps();
+            const f32 xpark_exit_speed = getNearZeroExitSpeedMps();
             planner_input.command_stationary_intent = xpark_gate_active_
                                                           ? (planner_input.max_command_wheel_speed_m_s <= xpark_exit_speed)
                                                           : (planner_input.max_command_wheel_speed_m_s <= xpark_enter_speed);
@@ -744,7 +743,7 @@ namespace jia
                 xpark_gate_active_ = false;
             }
 
-            planner_input.residual_drive_is_moving = planner_input.max_residual_speed_m_s > near_zero_derived_.stop_guard_release_m_s;
+            planner_input.residual_drive_is_moving = planner_input.max_residual_speed_m_s > getStopGuardReleaseSpeedMps();
             planner_input.allow_xpark_pose = planner_input.command_stationary_intent && xpark_gate_active_;
             planner_input.force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
             planner_input.uniform_steer_oa_mod_rad = wrapTo2Pi(degToRadF32(input_target_data_.steer_lock_angle_deg));
@@ -761,7 +760,7 @@ namespace jia
             {
                 const WheelConfig &wheel = wheel_config_[i];
                 const f32 wheel_speed_m_s = planner_input.wheel_speed_m_s[i];
-                const bool is_stationary = wheel_speed_m_s <= near_zero_derived_.stationary_m_s;
+                const bool is_stationary = wheel_speed_m_s <= getNearZeroEnterSpeedMps();
 
                 if (is_stationary)
                 {
@@ -1825,8 +1824,8 @@ namespace jia
 // 第二阶段：平移矢量方向限幅（低速滞回冻+方向角速度限幅）
             const f32 tar_mag = magnitude2D(tar_vel_x, tar_vel_y);
             const f32 out_mag = magnitude2D(out_vel_x, out_vel_y);
-            const f32 enter_speed = near_zero_derived_.freeze_enter_m_s;
-            const f32 exit_speed = near_zero_derived_.freeze_exit_m_s;
+            const f32 enter_speed = getNearZeroEnterSpeedMps();
+            const f32 exit_speed = getNearZeroExitSpeedMps();
             const f32 dir_rate_limit_rad_s = degToRadF32((trans_dir_rate_limit_deg_s_ >= 0.0f) ? trans_dir_rate_limit_deg_s_ : 0.0f);
             const f32 max_dir_step = dir_rate_limit_rad_s * period_;
             bool entered_freeze_now = false;
@@ -2337,12 +2336,12 @@ namespace jia
             debug_mirror_.all_homed = all_homed;
             debug_mirror_.selected_wheel_steer_error_deg = 0.0f;
             debug_mirror_.selected_wheel_drive_released = false;
-            debug_mirror_.nz_stationary_m_s = near_zero_derived_.stationary_m_s;
-            debug_mirror_.nz_freeze_enter_m_s = near_zero_derived_.freeze_enter_m_s;
-            debug_mirror_.nz_freeze_exit_m_s = near_zero_derived_.freeze_exit_m_s;
-            debug_mirror_.nz_xpark_enter_m_s = near_zero_derived_.xpark_enter_m_s;
-            debug_mirror_.nz_xpark_exit_m_s = near_zero_derived_.xpark_exit_m_s;
-            debug_mirror_.nz_stop_guard_release_m_s = near_zero_derived_.stop_guard_release_m_s;
+            debug_mirror_.nz_stationary_m_s = getNearZeroEnterSpeedMps();
+            debug_mirror_.nz_freeze_enter_m_s = getNearZeroEnterSpeedMps();
+            debug_mirror_.nz_freeze_exit_m_s = getNearZeroExitSpeedMps();
+            debug_mirror_.nz_xpark_enter_m_s = getNearZeroEnterSpeedMps();
+            debug_mirror_.nz_xpark_exit_m_s = getNearZeroExitSpeedMps();
+            debug_mirror_.nz_stop_guard_release_m_s = getStopGuardReleaseSpeedMps();
             debug_mirror_.lim_drive_omega = enable_drive_omega_limit_;
             debug_mirror_.lim_drive_alpha = enable_drive_alpha_limit_;
             debug_mirror_.lim_steer_rate = enable_steer_rate_limit_;
@@ -3072,8 +3071,7 @@ namespace jia
                 setModeFlag();
                 resolvePlannerTargetData();
 
-                // 运行时允许调试器直接改基准阈值/限幅开关，这里每周期派生一次，确保全链路口径一致。
-                deriveNearZeroThresholds();
+                // 运行时允许调试器直接改基准阈值/限幅开关，这里每周期刷新限幅镜像，近零阈值由 helper 直接读取。
                 refreshActuatorLimitState();
 
                 updatePlannedMotionData();
