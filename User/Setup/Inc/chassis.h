@@ -625,8 +625,8 @@ namespace jia
                 // 所有静止/冻结/X-Park/停车保护阈值统一由这组基准参数派生，避免多处手改失配。
                 struct NearZeroThresholdConfig
                 {
-                    f32 base_enter_m_s = 0.01f; // [RW] 近零门限进入基准（m/s）。
-                    f32 base_exit_m_s = 0.03f;  // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
+                    f32 base_enter_m_s = 0.10f; // [RW] 近零门限进入基准（m/s）。
+                    f32 base_exit_m_s = 0.15f;  // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
                 } near_zero_cfg_;
 
                 // ---- Drive Attenuation / Drive Gate -------------------------

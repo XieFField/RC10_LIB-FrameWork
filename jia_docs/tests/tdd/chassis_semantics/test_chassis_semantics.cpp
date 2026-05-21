@@ -693,6 +693,36 @@ void configureHardGateLaunchHarness(Chassis &chassis, TestMotor drive_motors[4])
     chassis.xpark_gate_active_ = true;
 }
 
+void configureXParkTriggerHarness(Chassis &chassis)
+{
+    const float half_track_m = 0.20f;
+    const float positions[4][2] = {
+        {half_track_m, half_track_m},
+        {-half_track_m, half_track_m},
+        {-half_track_m, -half_track_m},
+        {half_track_m, -half_track_m},
+    };
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.xpark_entry_delay_ms = 10U;
+    chassis.xpark_gate_active_ = false;
+    chassis.xpark_stationary_hold_ms_ = 0U;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].pos_x_m = positions[i][0];
+        chassis.wheel_config_[i].pos_y_m = positions[i][1];
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 0.0f;
+    }
+}
+
 Chassis::ActuatorCommandFrame makeDriveOnlyCommandFrame(float drive_omega_rad_s)
 {
     Chassis::ActuatorCommandFrame frame{};
@@ -1088,6 +1118,105 @@ void testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned()
     EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], drive_step, 1.0e-6f);
     EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, drive_step, 1.0e-6f);
 }
+
+void testXParkActivatesOnlyAfterActualResidualWheelSpeedHoldsForEntryDelay()
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+
+    Chassis::Data command{};
+    command.vel_x = 0.005f;
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 4.0f;
+    }
+
+    Chassis::SwervePlannerInput planner_input{};
+    for (jia::u32 i = 0; i < chassis.runtime_strategy_cfg_.xpark_entry_delay_ms - 1U; ++i)
+    {
+        planner_input = chassis.makeSwervePlannerInput(command);
+        EXPECT_TRUE(!chassis.xpark_gate_active_);
+        EXPECT_TRUE(!planner_input.allow_xpark_pose);
+    }
+
+    EXPECT_NEAR(static_cast<float>(chassis.xpark_stationary_hold_ms_), 0.0f, 1.0e-6f);
+
+    planner_input = chassis.makeSwervePlannerInput(command);
+    EXPECT_TRUE(!chassis.xpark_gate_active_);
+    EXPECT_TRUE(!planner_input.allow_xpark_pose);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 0.0f;
+    }
+
+    for (jia::u32 i = 0; i < chassis.runtime_strategy_cfg_.xpark_entry_delay_ms - 1U; ++i)
+    {
+        planner_input = chassis.makeSwervePlannerInput(command);
+        EXPECT_TRUE(!chassis.xpark_gate_active_);
+        EXPECT_TRUE(!planner_input.allow_xpark_pose);
+    }
+
+    EXPECT_NEAR(static_cast<float>(chassis.xpark_stationary_hold_ms_),
+                static_cast<float>(chassis.runtime_strategy_cfg_.xpark_entry_delay_ms - 1U),
+                1.0e-6f);
+
+    planner_input = chassis.makeSwervePlannerInput(command);
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+    EXPECT_TRUE(planner_input.allow_xpark_pose);
+}
+
+void testXParkHoldCounterResetsImmediatelyWhenCommandWheelSpeedExitsThreshold()
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+
+    Chassis::Data slow_command{};
+    slow_command.vel_x = 0.005f;
+    for (jia::u32 i = 0; i < chassis.runtime_strategy_cfg_.xpark_entry_delay_ms - 1U; ++i)
+    {
+        chassis.makeSwervePlannerInput(slow_command);
+    }
+
+    EXPECT_NEAR(static_cast<float>(chassis.xpark_stationary_hold_ms_),
+                static_cast<float>(chassis.runtime_strategy_cfg_.xpark_entry_delay_ms - 1U),
+                1.0e-6f);
+    EXPECT_TRUE(!chassis.xpark_gate_active_);
+
+    Chassis::Data moving_command{};
+    moving_command.vel_x = 0.02f;
+    Chassis::SwervePlannerInput planner_input = chassis.makeSwervePlannerInput(moving_command);
+
+    EXPECT_TRUE(!planner_input.command_stationary_intent);
+    EXPECT_NEAR(static_cast<float>(chassis.xpark_stationary_hold_ms_), 0.0f, 1.0e-6f);
+    EXPECT_TRUE(!chassis.xpark_gate_active_);
+    EXPECT_TRUE(!planner_input.allow_xpark_pose);
+}
+
+void testXParkResidualWheelSpeedAboveThresholdKeepsGateClosed()
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 4.0f;
+    }
+
+    Chassis::Data command{};
+    command.vel_x = 0.005f;
+
+    Chassis::SwervePlannerInput planner_input{};
+    for (jia::u32 i = 0; i < chassis.runtime_strategy_cfg_.xpark_entry_delay_ms; ++i)
+    {
+        planner_input = chassis.makeSwervePlannerInput(command);
+    }
+
+    EXPECT_TRUE(!chassis.xpark_gate_active_);
+    EXPECT_TRUE(!planner_input.allow_xpark_pose);
+    EXPECT_TRUE(planner_input.residual_drive_is_moving);
+    EXPECT_TRUE(planner_input.max_residual_speed_m_s > chassis.getStopGuardReleaseSpeedMps());
+}
 } // namespace
 
 int main()
@@ -1128,6 +1257,9 @@ int main()
     testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics();
     testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle();
     testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned();
+    testXParkActivatesOnlyAfterActualResidualWheelSpeedHoldsForEntryDelay();
+    testXParkHoldCounterResetsImmediatelyWhenCommandWheelSpeedExitsThreshold();
+    testXParkResidualWheelSpeedAboveThresholdKeepsGateClosed();
 
     if (g_failures != 0)
     {

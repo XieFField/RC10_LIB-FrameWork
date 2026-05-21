@@ -818,9 +818,13 @@ namespace jia
 
             const f32 xpark_enter_speed = getNearZeroEnterSpeedMps();
             const f32 xpark_exit_speed = getNearZeroExitSpeedMps();
-            planner_input.command_stationary_intent = xpark_gate_active_
-                                                          ? (planner_input.max_command_wheel_speed_m_s <= xpark_exit_speed)
-                                                          : (planner_input.max_command_wheel_speed_m_s <= xpark_enter_speed);
+            const bool command_stationary_intent = xpark_gate_active_
+                                                       ? (planner_input.max_command_wheel_speed_m_s <= xpark_exit_speed)
+                                                       : (planner_input.max_command_wheel_speed_m_s <= xpark_enter_speed);
+            const bool residual_stationary_intent = xpark_gate_active_
+                                                        ? (planner_input.max_residual_speed_m_s <= xpark_exit_speed)
+                                                        : (planner_input.max_residual_speed_m_s <= xpark_enter_speed);
+            planner_input.command_stationary_intent = command_stationary_intent && residual_stationary_intent;
 
             if (planner_input.command_stationary_intent)
             {
