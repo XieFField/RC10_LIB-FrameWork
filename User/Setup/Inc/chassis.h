@@ -271,13 +271,6 @@ namespace jia
             void resetRuntimeStrategyToInitConfig();
 
             // 内部策略/状态类型
-            enum class DriveGateStrategy : u8
-            {
-                kHardGate = 0,
-                kSoftGate = 1,
-                kContinuousCurve = 2,
-                kAdaptiveGate = 3,
-            };
             enum class DriveGateScope : u8
             {
                 kGlobal = 0,
@@ -287,7 +280,10 @@ namespace jia
             {
                 kNone = 0,
                 kCosine = 1,
-                kGate = 2,
+                kHardGate = 2,
+                kSoftGate = 3,
+                kContinuousCurve = 4,
+                kAdaptiveGate = 5,
             };
             enum class StopSteerGuardStrategy : u8
             {
@@ -630,40 +626,43 @@ namespace jia
                 } near_zero_cfg_;
 
                 // ---- Drive Attenuation / Drive Gate -------------------------
-                struct DriveGateStepLikeConfig
+                struct CosineAttenuationConfig
                 {
-                    f32 close_angle_deg = 1.0f; // [RW] Step-like 门控关闭区角差阈值（deg）。
-                    f32 min_scale = 0.5f;       // [RW] Step-like 门控最小缩放。
+                    u8 reserved = 0U; // [RW] 仅 kCosine 使用。当前保留为占位配置，便于后续扩展余弦模式参数。
                 };
 
-                struct DriveGateCurveConfig
+                struct HardGateConfig
                 {
-                    f32 exponent = 3.0f;        // [RW] 曲线门控指数。越大曲线越“硬”。
-                    f32 half_angle_deg = 3.0f;  // [RW] 曲线门控半效角（deg）。
-                    f32 min_scale = 0.0f;       // [RW] 曲线门控保底缩放。
+                    DriveGateScope scope = DriveGateScope::kGlobal; // [RW] 仅 kHardGate 使用。决定按整车统一门控，还是按单轮分别门控。
+                    f32 close_angle_deg = 1.0f;                    // [RW] 仅 kHardGate 使用。舵角误差超过该阈值后进入强抑制区。
+                    f32 min_scale = 0.0f;                          // [RW] 仅 kHardGate 使用。进入强抑制区后保留的最小驱动比例。
+                    f32 disable_residual_speed_m_s = 0.03f;        // [RW] 仅 kHardGate 使用。实际残余速度高于该值时旁路硬门控。
                 };
 
-                struct DriveGateAdaptiveConfig
+                struct SoftGateConfig
                 {
-                    f32 transition_linear_speed_m_s = 0.10f;    // [RW] 自适应门控线速度过渡阈值（m/s）。
-                    f32 transition_angular_speed_rad_s = 0.10f; // [RW] 自适应门控角速度过渡阈值（rad/s）。
-                    f32 scale_ramp_up_s = 0.10f;                // [RW] 自适应门控放开时间常数（s）。
-                    f32 scale_ramp_down_s = 0.50f;              // [RW] 自适应门控收紧时间常数（s）。
+                    DriveGateScope scope = DriveGateScope::kGlobal; // [RW] 仅 kSoftGate 使用。决定按整车统一门控，还是按单轮分别门控。
+                    f32 close_angle_deg = 1.0f;                    // [RW] 仅 kSoftGate 使用。线性缩放从误差 0 过渡到该阈值附近。
+                    f32 min_scale = 0.5f;                          // [RW] 仅 kSoftGate 使用。线性缩放落到最差时保留的最小驱动比例。
                 };
 
-                struct DriveGateHardConfig
+                struct ContinuousCurveGateConfig
                 {
-                    f32 disable_residual_speed_m_s = 0.03f; // [RW] HardGate 残余速度禁入阈值（m/s）。
+                    DriveGateScope scope = DriveGateScope::kGlobal; // [RW] 仅 kContinuousCurve 使用。决定按整车统一门控，还是按单轮分别门控。
+                    f32 exponent = 3.0f;                            // [RW] 仅 kContinuousCurve 使用。越大曲线越“硬”，越接近阈值式压制。
+                    f32 half_angle_deg = 3.0f;                      // [RW] 仅 kContinuousCurve 使用。曲线缩放落到中间区的大致角差位置。
+                    f32 min_scale = 0.0f;                           // [RW] 仅 kContinuousCurve 使用。曲线压到最差时保留的最小驱动比例。
                 };
 
-                struct DriveGateConfig
+                struct AdaptiveGateConfig
                 {
-                    DriveGateStrategy strategy = DriveGateStrategy::kHardGate; // [RW] 门控策略类型。
-                    DriveGateScope scope = DriveGateScope::kGlobal;            // [RW] 门控作用范围：全局统一或按单轮分别计算。
-                    DriveGateStepLikeConfig step_like{};
-                    DriveGateCurveConfig curve{};
-                    DriveGateAdaptiveConfig adaptive{};
-                    DriveGateHardConfig hard{};
+                    DriveGateScope scope = DriveGateScope::kGlobal; // [RW] 仅 kAdaptiveGate 使用。决定按整车统一门控，还是按单轮分别门控。
+                    f32 close_angle_deg = 1.0f;                    // [RW] 仅 kAdaptiveGate 使用。Adaptive 的基础 step-like 角差阈值。
+                    f32 min_scale = 0.5f;                          // [RW] 仅 kAdaptiveGate 使用。Adaptive 的基础 step-like 最小驱动比例。
+                    f32 transition_linear_speed_m_s = 0.10f;       // [RW] 仅 kAdaptiveGate 使用。线速度超过该值时更倾向快速放开门控。
+                    f32 transition_angular_speed_rad_s = 0.10f;    // [RW] 仅 kAdaptiveGate 使用。角速度超过该值时更倾向快速放开门控。
+                    f32 scale_ramp_up_s = 0.10f;                   // [RW] 仅 kAdaptiveGate 使用。门控放开时间常数。
+                    f32 scale_ramp_down_s = 0.50f;                 // [RW] 仅 kAdaptiveGate 使用。门控收紧时间常数。
                 };
 
                 // ---- 舵角解算 ----------------------------------------------------
@@ -675,10 +674,17 @@ namespace jia
 
                 // ---- 驱动抑制总模式 ----------------------------------------------
                 // kNone: 不做额外驱动缩放。
-                // kCosine: 仅按舵角误差余弦缩放驱动。
-                // kGate: 按 Drive Gate 配置计算驱动缩放。
-                DriveAttenuationMode drive_attenuation_mode = DriveAttenuationMode::kGate; // [RW] 驱动抑制总模式选择。
-                DriveGateConfig drive_gate{};                                               // [RW] 当 drive_attenuation_mode = kGate 时生效的 Drive Gate 配置。
+                // kCosine: 仅按舵角误差余弦缩放驱动，不读取任何 Gate 参数。
+                // kHardGate: 低速找向时可强力压驱动；残余速度超阈值时可旁路。
+                // kSoftGate: 按线性分段方式平滑压驱动。
+                // kContinuousCurve: 按连续曲线平滑缩放驱动，不做硬切换。
+                // kAdaptiveGate: 基于 step-like 基础形状，再按运动状态动态放开或收紧。
+                DriveAttenuationMode drive_attenuation_mode = DriveAttenuationMode::kHardGate; // [RW] 驱动抑制总模式选择。只读取当前模式对应的策略参数块。
+                CosineAttenuationConfig cosine{};                                              // [RW] 仅 kCosine 使用。
+                HardGateConfig hard_gate{};                                                    // [RW] 仅 kHardGate 使用。
+                SoftGateConfig soft_gate{};                                                    // [RW] 仅 kSoftGate 使用。
+                ContinuousCurveGateConfig continuous_curve_gate{};                             // [RW] 仅 kContinuousCurve 使用。
+                AdaptiveGateConfig adaptive_gate{};                                            // [RW] 仅 kAdaptiveGate 使用。
 
                 // ---- 静止姿态 ----------------------------------------------------
                 IdlePostureMode idle_posture_mode = IdlePostureMode::kXPark; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。

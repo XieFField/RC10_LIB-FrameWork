@@ -403,13 +403,14 @@ void testDriveAttenuationCosineUsesSteeringErrorOnly()
 void testContinuousCurveGateUsesCurveParamsInsteadOfStepLikeMinScale()
 {
     Chassis chassis;
-    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kGate;
-    chassis.runtime_strategy_cfg_.drive_gate.strategy = Chassis::DriveGateStrategy::kContinuousCurve;
-    chassis.runtime_strategy_cfg_.drive_gate.scope = Chassis::DriveGateScope::kPerWheel;
-    chassis.runtime_strategy_cfg_.drive_gate.step_like.min_scale = 0.8f;
-    chassis.runtime_strategy_cfg_.drive_gate.curve.exponent = 2.0f;
-    chassis.runtime_strategy_cfg_.drive_gate.curve.half_angle_deg = 10.0f;
-    chassis.runtime_strategy_cfg_.drive_gate.curve.min_scale = 0.1f;
+    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kContinuousCurve;
+    chassis.runtime_strategy_cfg_.hard_gate.min_scale = 0.8f;
+    chassis.runtime_strategy_cfg_.soft_gate.min_scale = 0.7f;
+    chassis.runtime_strategy_cfg_.adaptive_gate.min_scale = 0.6f;
+    chassis.runtime_strategy_cfg_.continuous_curve_gate.scope = Chassis::DriveGateScope::kPerWheel;
+    chassis.runtime_strategy_cfg_.continuous_curve_gate.exponent = 2.0f;
+    chassis.runtime_strategy_cfg_.continuous_curve_gate.half_angle_deg = 10.0f;
+    chassis.runtime_strategy_cfg_.continuous_curve_gate.min_scale = 0.1f;
 
     const float steering_errors_rad[4] = {
         jia::degToRadF32(10.0f), 0.0f, 0.0f, 0.0f};
@@ -423,15 +424,17 @@ void testContinuousCurveGateUsesCurveParamsInsteadOfStepLikeMinScale()
 void testAdaptiveGateUsesAdaptiveParamsWithStepLikeBaseShape()
 {
     Chassis chassis;
-    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kGate;
-    chassis.runtime_strategy_cfg_.drive_gate.strategy = Chassis::DriveGateStrategy::kAdaptiveGate;
-    chassis.runtime_strategy_cfg_.drive_gate.scope = Chassis::DriveGateScope::kPerWheel;
-    chassis.runtime_strategy_cfg_.drive_gate.step_like.close_angle_deg = 1.0f;
-    chassis.runtime_strategy_cfg_.drive_gate.step_like.min_scale = 0.2f;
-    chassis.runtime_strategy_cfg_.drive_gate.adaptive.transition_linear_speed_m_s = 0.05f;
-    chassis.runtime_strategy_cfg_.drive_gate.adaptive.transition_angular_speed_rad_s = 0.05f;
-    chassis.runtime_strategy_cfg_.drive_gate.adaptive.scale_ramp_up_s = 0.10f;
-    chassis.runtime_strategy_cfg_.drive_gate.adaptive.scale_ramp_down_s = 0.50f;
+    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kAdaptiveGate;
+    chassis.runtime_strategy_cfg_.hard_gate.min_scale = 0.8f;
+    chassis.runtime_strategy_cfg_.soft_gate.min_scale = 0.7f;
+    chassis.runtime_strategy_cfg_.continuous_curve_gate.min_scale = 0.6f;
+    chassis.runtime_strategy_cfg_.adaptive_gate.scope = Chassis::DriveGateScope::kPerWheel;
+    chassis.runtime_strategy_cfg_.adaptive_gate.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.adaptive_gate.min_scale = 0.2f;
+    chassis.runtime_strategy_cfg_.adaptive_gate.transition_linear_speed_m_s = 0.05f;
+    chassis.runtime_strategy_cfg_.adaptive_gate.transition_angular_speed_rad_s = 0.05f;
+    chassis.runtime_strategy_cfg_.adaptive_gate.scale_ramp_up_s = 0.10f;
+    chassis.runtime_strategy_cfg_.adaptive_gate.scale_ramp_down_s = 0.50f;
     chassis.adaptive_gate_scale_ = 0.0f;
 
     const float steering_errors_rad[4] = {
@@ -783,12 +786,11 @@ void testTorqueFreeAndNotHomedPathsResetDriveDeliveryStateConsistently()
 void testHardGateDisabledWhenMaxResidualSpeedAboveThreshold()
 {
     Chassis chassis;
-    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kGate;
-    chassis.runtime_strategy_cfg_.drive_gate.strategy = Chassis::DriveGateStrategy::kHardGate;
-    chassis.runtime_strategy_cfg_.drive_gate.scope = Chassis::DriveGateScope::kGlobal;
-    chassis.runtime_strategy_cfg_.drive_gate.step_like.min_scale = 0.0f;
-    chassis.runtime_strategy_cfg_.drive_gate.step_like.close_angle_deg = 1.0f;
-    chassis.runtime_strategy_cfg_.drive_gate.hard.disable_residual_speed_m_s = 0.3f;
+    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kHardGate;
+    chassis.runtime_strategy_cfg_.hard_gate.scope = Chassis::DriveGateScope::kGlobal;
+    chassis.runtime_strategy_cfg_.hard_gate.min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.hard_gate.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.hard_gate.disable_residual_speed_m_s = 0.3f;
 
     const Chassis::SwervePlannerInput planner_input = makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.5f);
     const float steering_errors_rad[4] = {
@@ -804,12 +806,11 @@ void testHardGateDisabledWhenMaxResidualSpeedAboveThreshold()
 void testHardGateReenabledWhenMaxResidualSpeedDropsBelowThreshold()
 {
     Chassis chassis;
-    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kGate;
-    chassis.runtime_strategy_cfg_.drive_gate.strategy = Chassis::DriveGateStrategy::kHardGate;
-    chassis.runtime_strategy_cfg_.drive_gate.scope = Chassis::DriveGateScope::kGlobal;
-    chassis.runtime_strategy_cfg_.drive_gate.step_like.min_scale = 0.0f;
-    chassis.runtime_strategy_cfg_.drive_gate.step_like.close_angle_deg = 1.0f;
-    chassis.runtime_strategy_cfg_.drive_gate.hard.disable_residual_speed_m_s = 0.3f;
+    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kHardGate;
+    chassis.runtime_strategy_cfg_.hard_gate.scope = Chassis::DriveGateScope::kGlobal;
+    chassis.runtime_strategy_cfg_.hard_gate.min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.hard_gate.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.hard_gate.disable_residual_speed_m_s = 0.3f;
 
     const float steering_errors_rad[4] = {
         jia::degToRadF32(10.0f), jia::degToRadF32(10.0f), jia::degToRadF32(10.0f), jia::degToRadF32(10.0f)};
@@ -825,35 +826,95 @@ void testHardGateReenabledWhenMaxResidualSpeedDropsBelowThreshold()
 void testSoftAndCurveGateIgnoreHardResidualDisableThreshold()
 {
     Chassis hard_disabled_chassis;
-    hard_disabled_chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kGate;
-    hard_disabled_chassis.runtime_strategy_cfg_.drive_gate.step_like.min_scale = 0.2f;
-    hard_disabled_chassis.runtime_strategy_cfg_.drive_gate.step_like.close_angle_deg = 1.0f;
-    hard_disabled_chassis.runtime_strategy_cfg_.drive_gate.hard.disable_residual_speed_m_s = 0.3f;
+    hard_disabled_chassis.runtime_strategy_cfg_.hard_gate.min_scale = 0.9f;
+    hard_disabled_chassis.runtime_strategy_cfg_.hard_gate.close_angle_deg = 1.0f;
+    hard_disabled_chassis.runtime_strategy_cfg_.hard_gate.disable_residual_speed_m_s = 0.3f;
+    hard_disabled_chassis.runtime_strategy_cfg_.soft_gate.scope = Chassis::DriveGateScope::kGlobal;
+    hard_disabled_chassis.runtime_strategy_cfg_.soft_gate.min_scale = 0.2f;
+    hard_disabled_chassis.runtime_strategy_cfg_.soft_gate.close_angle_deg = 1.0f;
+    hard_disabled_chassis.runtime_strategy_cfg_.continuous_curve_gate.scope = Chassis::DriveGateScope::kGlobal;
+    hard_disabled_chassis.runtime_strategy_cfg_.continuous_curve_gate.half_angle_deg = 10.0f;
+    hard_disabled_chassis.runtime_strategy_cfg_.continuous_curve_gate.exponent = 2.0f;
+    hard_disabled_chassis.runtime_strategy_cfg_.continuous_curve_gate.min_scale = 0.1f;
 
     const float steering_errors_rad[4] = {
         jia::degToRadF32(10.0f), jia::degToRadF32(10.0f), jia::degToRadF32(10.0f), jia::degToRadF32(10.0f)};
     float soft_gate_scales[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     float curve_gate_scales[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 
-    hard_disabled_chassis.runtime_strategy_cfg_.drive_gate.strategy = Chassis::DriveGateStrategy::kSoftGate;
+    hard_disabled_chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kSoftGate;
     hard_disabled_chassis.computeDriveGateScales(makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.5f), steering_errors_rad, soft_gate_scales);
 
-    hard_disabled_chassis.runtime_strategy_cfg_.drive_gate.strategy = Chassis::DriveGateStrategy::kContinuousCurve;
+    hard_disabled_chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kContinuousCurve;
     hard_disabled_chassis.computeDriveGateScales(makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.5f), steering_errors_rad, curve_gate_scales);
 
     EXPECT_TRUE(soft_gate_scales[0] < 1.0f);
     EXPECT_TRUE(curve_gate_scales[0] < 1.0f);
 }
 
+void testSoftGateReadsOnlySoftGateConfig()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kSoftGate;
+    chassis.runtime_strategy_cfg_.soft_gate.scope = Chassis::DriveGateScope::kPerWheel;
+    chassis.runtime_strategy_cfg_.soft_gate.close_angle_deg = 10.0f;
+    chassis.runtime_strategy_cfg_.soft_gate.min_scale = 0.2f;
+    chassis.runtime_strategy_cfg_.hard_gate.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.hard_gate.min_scale = 0.95f;
+    chassis.runtime_strategy_cfg_.continuous_curve_gate.half_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.continuous_curve_gate.exponent = 8.0f;
+    chassis.runtime_strategy_cfg_.continuous_curve_gate.min_scale = 0.9f;
+    chassis.runtime_strategy_cfg_.adaptive_gate.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.adaptive_gate.min_scale = 0.85f;
+
+    const float steering_errors_rad[4] = {
+        jia::degToRadF32(10.0f), 0.0f, 0.0f, 0.0f};
+    float gate_scales[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+
+    chassis.computeDriveGateScales(makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.0f), steering_errors_rad, gate_scales);
+
+    EXPECT_NEAR(gate_scales[0], 0.2f, 1.0e-6f);
+}
+
+void testCosineModeIgnoresAllGateParameterBlocks()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kCosine;
+    chassis.runtime_strategy_cfg_.vector_consistency.enable = false;
+    chassis.runtime_strategy_cfg_.steering_strategy_mode = Chassis::SteeringStrategyMode::kAlwaysForward;
+    chassis.runtime_strategy_cfg_.hard_gate.min_scale = 0.9f;
+    chassis.runtime_strategy_cfg_.soft_gate.min_scale = 0.9f;
+    chassis.runtime_strategy_cfg_.continuous_curve_gate.min_scale = 0.9f;
+    chassis.runtime_strategy_cfg_.adaptive_gate.min_scale = 0.9f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+    }
+
+    Chassis::Data command{};
+    command.vel_x = 1.0f;
+    chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(60.0f);
+
+    const Chassis::SwervePlannerOutput output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    EXPECT_NEAR(output.gate_or_cos_scale[0], 0.5f, 1.0e-4f);
+}
+
 void testGlobalMaxResidualSpeedControlsHardGateForAllWheels()
 {
     Chassis chassis;
-    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kGate;
-    chassis.runtime_strategy_cfg_.drive_gate.strategy = Chassis::DriveGateStrategy::kHardGate;
-    chassis.runtime_strategy_cfg_.drive_gate.scope = Chassis::DriveGateScope::kGlobal;
-    chassis.runtime_strategy_cfg_.drive_gate.step_like.min_scale = 0.0f;
-    chassis.runtime_strategy_cfg_.drive_gate.step_like.close_angle_deg = 1.0f;
-    chassis.runtime_strategy_cfg_.drive_gate.hard.disable_residual_speed_m_s = 0.3f;
+    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kHardGate;
+    chassis.runtime_strategy_cfg_.hard_gate.scope = Chassis::DriveGateScope::kGlobal;
+    chassis.runtime_strategy_cfg_.hard_gate.min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.hard_gate.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.hard_gate.disable_residual_speed_m_s = 0.3f;
 
     Chassis::SwervePlannerInput planner_input = makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.1f);
     planner_input.residual_speed_m_s[0] = 0.5f;
@@ -919,6 +980,8 @@ int main()
     testHardGateDisabledWhenMaxResidualSpeedAboveThreshold();
     testHardGateReenabledWhenMaxResidualSpeedDropsBelowThreshold();
     testSoftAndCurveGateIgnoreHardResidualDisableThreshold();
+    testSoftGateReadsOnlySoftGateConfig();
+    testCosineModeIgnoresAllGateParameterBlocks();
     testGlobalMaxResidualSpeedControlsHardGateForAllWheels();
     testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics();
 

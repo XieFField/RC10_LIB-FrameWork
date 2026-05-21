@@ -534,15 +534,18 @@ namespace jia
 
         f32 Chassis::computeDriveGateScale(f32 abs_error_rad) const
         {
-            const f32 close_rad = degToRadF32(runtime_strategy_cfg_.drive_gate.step_like.close_angle_deg);
-            const f32 min_scale = clampValue(runtime_strategy_cfg_.drive_gate.step_like.min_scale, 0.0f, 1.0f);
-
-            switch (runtime_strategy_cfg_.drive_gate.strategy)
+            switch (runtime_strategy_cfg_.drive_attenuation_mode)
             {
-            case DriveGateStrategy::kHardGate:
+            case DriveAttenuationMode::kHardGate:
+            {
+                const f32 close_rad = degToRadF32(runtime_strategy_cfg_.hard_gate.close_angle_deg);
+                const f32 min_scale = clampValue(runtime_strategy_cfg_.hard_gate.min_scale, 0.0f, 1.0f);
                 return (abs_error_rad >= close_rad) ? min_scale : 1.0f;
-            case DriveGateStrategy::kSoftGate:
+            }
+            case DriveAttenuationMode::kSoftGate:
             {
+                const f32 close_rad = degToRadF32(runtime_strategy_cfg_.soft_gate.close_angle_deg);
+                const f32 min_scale = clampValue(runtime_strategy_cfg_.soft_gate.min_scale, 0.0f, 1.0f);
                 if (close_rad <= 1.0e-6f)
                 {
                     return min_scale;
@@ -550,11 +553,11 @@ namespace jia
                 const f32 ratio = clampValue(abs_error_rad / close_rad, 0.0f, 1.0f);
                 return 1.0f - (1.0f - min_scale) * ratio;
             }
-            case DriveGateStrategy::kContinuousCurve:
+            case DriveAttenuationMode::kContinuousCurve:
             {
-                const f32 half_rad = degToRadF32(runtime_strategy_cfg_.drive_gate.curve.half_angle_deg);
-                const f32 exponent = (runtime_strategy_cfg_.drive_gate.curve.exponent > 0.1f) ? runtime_strategy_cfg_.drive_gate.curve.exponent : 2.0f;
-                const f32 curve_min = clampValue(runtime_strategy_cfg_.drive_gate.curve.min_scale, 0.0f, 1.0f);
+                const f32 half_rad = degToRadF32(runtime_strategy_cfg_.continuous_curve_gate.half_angle_deg);
+                const f32 exponent = (runtime_strategy_cfg_.continuous_curve_gate.exponent > 0.1f) ? runtime_strategy_cfg_.continuous_curve_gate.exponent : 2.0f;
+                const f32 curve_min = clampValue(runtime_strategy_cfg_.continuous_curve_gate.min_scale, 0.0f, 1.0f);
                 if (half_rad <= 1.0e-6f)
                 {
                     return curve_min;
@@ -563,9 +566,14 @@ namespace jia
                 const f32 scale = 1.0f / (1.0f + powf(norm, exponent));
                 return clampValue(curve_min + (1.0f - curve_min) * scale, curve_min, 1.0f);
             }
-            case DriveGateStrategy::kAdaptiveGate:
-            default:
+            case DriveAttenuationMode::kAdaptiveGate:
+            {
+                const f32 close_rad = degToRadF32(runtime_strategy_cfg_.adaptive_gate.close_angle_deg);
+                const f32 min_scale = clampValue(runtime_strategy_cfg_.adaptive_gate.min_scale, 0.0f, 1.0f);
                 return (abs_error_rad >= close_rad) ? min_scale : 1.0f;
+            }
+            default:
+                return 1.0f;
             }
         }
 
@@ -579,22 +587,28 @@ namespace jia
             max_residual_speed_m_s_ = planner_input.max_residual_speed_m_s;
             hard_gate_bypassed_by_residual_speed_ = false;
 
-            if (runtime_strategy_cfg_.drive_attenuation_mode != DriveAttenuationMode::kGate)
+            const bool uses_gate_shape =
+                runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kHardGate ||
+                runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kSoftGate ||
+                runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kContinuousCurve ||
+                runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kAdaptiveGate;
+
+            if (!uses_gate_shape)
             {
                 adaptive_gate_scale_ = 1.0f;
                 adaptive_gate_phase_ = AdaptiveGatePhase::kDisabled;
                 return;
             }
 
-            if (runtime_strategy_cfg_.drive_gate.strategy == DriveGateStrategy::kAdaptiveGate)
+            if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kAdaptiveGate)
             {
                 const Data &command_data = planner_input.command;
                 const f32 linear_speed = magnitude2D(command_data.vel_x, command_data.vel_y);
                 const f32 angular_speed = fabsf(command_data.omega_z);
-                const bool in_transition = (linear_speed >= runtime_strategy_cfg_.drive_gate.adaptive.transition_linear_speed_m_s) ||
-                                           (angular_speed >= runtime_strategy_cfg_.drive_gate.adaptive.transition_angular_speed_rad_s);
-                const f32 ramp_up = (runtime_strategy_cfg_.drive_gate.adaptive.scale_ramp_up_s > 1.0e-6f) ? runtime_strategy_cfg_.drive_gate.adaptive.scale_ramp_up_s : 0.10f;
-                const f32 ramp_down = (runtime_strategy_cfg_.drive_gate.adaptive.scale_ramp_down_s > 1.0e-6f) ? runtime_strategy_cfg_.drive_gate.adaptive.scale_ramp_down_s : 0.06f;
+                const bool in_transition = (linear_speed >= runtime_strategy_cfg_.adaptive_gate.transition_linear_speed_m_s) ||
+                                           (angular_speed >= runtime_strategy_cfg_.adaptive_gate.transition_angular_speed_rad_s);
+                const f32 ramp_up = (runtime_strategy_cfg_.adaptive_gate.scale_ramp_up_s > 1.0e-6f) ? runtime_strategy_cfg_.adaptive_gate.scale_ramp_up_s : 0.10f;
+                const f32 ramp_down = (runtime_strategy_cfg_.adaptive_gate.scale_ramp_down_s > 1.0e-6f) ? runtime_strategy_cfg_.adaptive_gate.scale_ramp_down_s : 0.06f;
                 const f32 delta = period_ / (in_transition ? ramp_up : ramp_down);
                 if (in_transition)
                 {
@@ -613,11 +627,11 @@ namespace jia
                 adaptive_gate_phase_ = AdaptiveGatePhase::kLegacy;
             }
 
-            if (runtime_strategy_cfg_.drive_gate.strategy == DriveGateStrategy::kHardGate)
+            if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kHardGate)
             {
                 const f32 hard_gate_disable_residual_speed_m_s =
-                    (runtime_strategy_cfg_.drive_gate.hard.disable_residual_speed_m_s >= 0.0f)
-                        ? runtime_strategy_cfg_.drive_gate.hard.disable_residual_speed_m_s
+                    (runtime_strategy_cfg_.hard_gate.disable_residual_speed_m_s >= 0.0f)
+                        ? runtime_strategy_cfg_.hard_gate.disable_residual_speed_m_s
                         : 0.0f;
                 if (planner_input.max_residual_speed_m_s > hard_gate_disable_residual_speed_m_s)
                 {
@@ -626,7 +640,27 @@ namespace jia
                 }
             }
 
-            if (runtime_strategy_cfg_.drive_gate.scope == DriveGateScope::kGlobal)
+            DriveGateScope gate_scope = DriveGateScope::kGlobal;
+            switch (runtime_strategy_cfg_.drive_attenuation_mode)
+            {
+            case DriveAttenuationMode::kHardGate:
+                gate_scope = runtime_strategy_cfg_.hard_gate.scope;
+                break;
+            case DriveAttenuationMode::kSoftGate:
+                gate_scope = runtime_strategy_cfg_.soft_gate.scope;
+                break;
+            case DriveAttenuationMode::kContinuousCurve:
+                gate_scope = runtime_strategy_cfg_.continuous_curve_gate.scope;
+                break;
+            case DriveAttenuationMode::kAdaptiveGate:
+                gate_scope = runtime_strategy_cfg_.adaptive_gate.scope;
+                break;
+            default:
+                gate_scope = DriveGateScope::kGlobal;
+                break;
+            }
+
+            if (gate_scope == DriveGateScope::kGlobal)
             {
                 f32 max_abs = 0.0f;
                 for (u8 i = 0; i < 4; ++i)
@@ -637,7 +671,7 @@ namespace jia
                     }
                 }
                 f32 scale = computeDriveGateScale(max_abs);
-                if (runtime_strategy_cfg_.drive_gate.strategy == DriveGateStrategy::kAdaptiveGate)
+                if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kAdaptiveGate)
                 {
                     scale *= adaptive_gate_scale_;
                 }
@@ -652,7 +686,7 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 f32 scale = computeDriveGateScale(steering_errors_rad[i]);
-                if (runtime_strategy_cfg_.drive_gate.strategy == DriveGateStrategy::kAdaptiveGate)
+                if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kAdaptiveGate)
                 {
                     scale *= adaptive_gate_scale_;
                 }
@@ -936,7 +970,10 @@ namespace jia
                 {
                     planner_output.gate_or_cos_scale[i] = 1.0f;
                 }
-                else if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kGate)
+                else if (runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kHardGate ||
+                         runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kSoftGate ||
+                         runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kContinuousCurve ||
+                         runtime_strategy_cfg_.drive_attenuation_mode == DriveAttenuationMode::kAdaptiveGate)
                 {
                     planner_output.gate_or_cos_scale[i] = gate_scales[i];
                 }
