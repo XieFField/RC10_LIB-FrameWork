@@ -733,6 +733,16 @@ Chassis::ActuatorCommandFrame makeDriveOnlyCommandFrame(float drive_omega_rad_s)
     return frame;
 }
 
+Chassis::ActuatorCommandFrame makePerWheelDriveCommandFrame(float drive0, float drive1, float drive2, float drive3)
+{
+    Chassis::ActuatorCommandFrame frame{};
+    frame.drive_omega_rad_s[0] = drive0;
+    frame.drive_omega_rad_s[1] = drive1;
+    frame.drive_omega_rad_s[2] = drive2;
+    frame.drive_omega_rad_s[3] = drive3;
+    return frame;
+}
+
 Chassis::SwervePlannerOutput makeNeutralPlannerOutput()
 {
     Chassis::SwervePlannerOutput output{};
@@ -1119,6 +1129,133 @@ void testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned()
     EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, drive_step, 1.0e-6f);
 }
 
+void testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels()
+{
+    Chassis chassis;
+    configureXParkWheelGeometry(chassis);
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.drive_attenuation_mode = Chassis::DriveAttenuationMode::kNone;
+    chassis.runtime_strategy_cfg_.vector_consistency.enable = false;
+    chassis.runtime_strategy_cfg_.enable_stop_steer_guard = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = true;
+    chassis.runtime_strategy_cfg_.max_drive_omega_rad_s_ = 10.0f;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+    }
+
+    Chassis::Data command{};
+    command.vel_x = 1.0f;
+    command.omega_z = 1.0f;
+
+    const Chassis::SwervePlannerOutput output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    float max_abs_projected = 0.0f;
+    for (int i = 0; i < 4; ++i)
+    {
+        max_abs_projected = std::max(max_abs_projected, std::fabs(output.projected_drive_omega_rad_s[i]));
+    }
+
+    const float expected_scale = chassis.runtime_strategy_cfg_.max_drive_omega_rad_s_ / max_abs_projected;
+    EXPECT_NEAR(std::fabs(output.final_drive_omega_rad_s[0]), std::fabs(output.projected_drive_omega_rad_s[0]) * expected_scale, 1.0e-4f);
+    EXPECT_NEAR(std::fabs(output.final_drive_omega_rad_s[1]), std::fabs(output.projected_drive_omega_rad_s[1]) * expected_scale, 1.0e-4f);
+    EXPECT_NEAR(std::fabs(output.final_drive_omega_rad_s[2]), std::fabs(output.projected_drive_omega_rad_s[2]) * expected_scale, 1.0e-4f);
+    EXPECT_NEAR(std::fabs(output.final_drive_omega_rad_s[3]), std::fabs(output.projected_drive_omega_rad_s[3]) * expected_scale, 1.0e-4f);
+}
+
+void testDriveAlphaDeliveryLimitUsesUniformScaleAcrossAllWheels()
+{
+    Chassis chassis;
+    TestMotor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+    chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 1000.0f;
+
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+    const Chassis::ActuatorCommandFrame command_frame = makePerWheelDriveCommandFrame(4.0f, 2.0f, -1.0f, 0.0f);
+
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.applyModuleCommands(true);
+
+    EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 1.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[1].target_drive_omega_rad_s, 0.5f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[2].target_drive_omega_rad_s, -0.25f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[3].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+}
+
+void testDriveAlphaDeliveryLimitUsesWorstWheelScaleWhenLastValuesDiffer()
+{
+    Chassis chassis;
+    TestMotor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+    chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 1000.0f;
+
+    chassis.last_drive_omega_cmd_rad_s_[0] = 3.0f;
+    chassis.last_drive_omega_cmd_rad_s_[1] = 1.0f;
+    chassis.last_drive_omega_cmd_rad_s_[2] = -0.5f;
+    chassis.last_drive_omega_cmd_rad_s_[3] = 0.0f;
+
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+    const Chassis::ActuatorCommandFrame command_frame = makePerWheelDriveCommandFrame(4.0f, 2.0f, -1.0f, 0.0f);
+
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.applyModuleCommands(true);
+
+    EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 4.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[1].target_drive_omega_rad_s, 2.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[2].target_drive_omega_rad_s, -1.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[3].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+}
+
+void testDriveAlphaDeliveryLimitUsesUniformScaleWhileNotHomed()
+{
+    Chassis chassis;
+    TestMotor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+    chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 1000.0f;
+
+    chassis.last_drive_omega_cmd_rad_s_[0] = 4.0f;
+    chassis.last_drive_omega_cmd_rad_s_[1] = 2.0f;
+    chassis.last_drive_omega_cmd_rad_s_[2] = -1.0f;
+    chassis.last_drive_omega_cmd_rad_s_[3] = 0.0f;
+
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+    const Chassis::ActuatorCommandFrame command_frame = makePerWheelDriveCommandFrame(4.0f, 2.0f, -1.0f, 0.0f);
+
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.applyModuleCommands(false);
+
+    EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 3.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[1].target_drive_omega_rad_s, 1.5f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[2].target_drive_omega_rad_s, -0.75f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[3].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+}
+
+void testDriveDeliveryLimitAlphaThenOmegaStillKeepsSharedProgress()
+{
+    Chassis chassis;
+    TestMotor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+    chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 3000.0f;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = true;
+    chassis.runtime_strategy_cfg_.max_drive_omega_rad_s_ = 0.75f;
+
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+    const Chassis::ActuatorCommandFrame command_frame = makePerWheelDriveCommandFrame(4.0f, 2.0f, -1.0f, 0.0f);
+
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.applyModuleCommands(true);
+
+    EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.75f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[1].target_drive_omega_rad_s, 0.75f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[2].target_drive_omega_rad_s, -0.75f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[3].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+}
+
 void testXParkActivatesOnlyAfterActualResidualWheelSpeedHoldsForEntryDelay()
 {
     Chassis chassis;
@@ -1257,6 +1394,11 @@ int main()
     testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics();
     testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle();
     testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned();
+    testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels();
+    testDriveAlphaDeliveryLimitUsesUniformScaleAcrossAllWheels();
+    testDriveAlphaDeliveryLimitUsesWorstWheelScaleWhenLastValuesDiffer();
+    testDriveAlphaDeliveryLimitUsesUniformScaleWhileNotHomed();
+    testDriveDeliveryLimitAlphaThenOmegaStillKeepsSharedProgress();
     testXParkActivatesOnlyAfterActualResidualWheelSpeedHoldsForEntryDelay();
     testXParkHoldCounterResetsImmediatelyWhenCommandWheelSpeedExitsThreshold();
     testXParkResidualWheelSpeedAboveThresholdKeepsGateClosed();

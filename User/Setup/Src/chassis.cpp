@@ -1029,6 +1029,8 @@ namespace jia
             }
             planner_output.vector_gate_active = vector_gate_active_;
 
+            f32 planner_drive_targets_rad_s[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            f32 max_abs_planner_drive_target_rad_s = 0.0f;
             for (u8 i = 0; i < 4; ++i)
             {
                 if (planner_input.force_uniform_steer_drive)
@@ -1058,12 +1060,25 @@ namespace jia
 
                 const f32 drive_scale =
                     clampValue(planner_output.gate_or_cos_scale[i] * planner_output.vector_gate_scale, 0.0f, 1.0f);
-                f32 target_drive_omega_rad_s = planner_output.projected_drive_omega_rad_s[i] * drive_scale;
-                if (runtime_strategy_cfg_.enable_drive_omega_limit_)
+                planner_drive_targets_rad_s[i] = planner_output.projected_drive_omega_rad_s[i] * drive_scale;
+                const f32 abs_target_drive = fabsf(planner_drive_targets_rad_s[i]);
+                max_abs_planner_drive_target_rad_s =
+                    (abs_target_drive > max_abs_planner_drive_target_rad_s) ? abs_target_drive : max_abs_planner_drive_target_rad_s;
+            }
+
+            f32 planner_drive_uniform_scale = 1.0f;
+            if (runtime_strategy_cfg_.enable_drive_omega_limit_)
+            {
+                const f32 drive_omega_limit_rad_s = fabsf(runtime_strategy_cfg_.max_drive_omega_rad_s_);
+                if ((drive_omega_limit_rad_s > 1.0e-6f) && (max_abs_planner_drive_target_rad_s > drive_omega_limit_rad_s))
                 {
-                    target_drive_omega_rad_s = clampValue(target_drive_omega_rad_s, -runtime_strategy_cfg_.max_drive_omega_rad_s_, runtime_strategy_cfg_.max_drive_omega_rad_s_);
+                    planner_drive_uniform_scale = drive_omega_limit_rad_s / max_abs_planner_drive_target_rad_s;
                 }
-                planner_output.final_drive_omega_rad_s[i] = target_drive_omega_rad_s;
+            }
+
+            for (u8 i = 0; i < 4; ++i)
+            {
+                planner_output.final_drive_omega_rad_s[i] = planner_drive_targets_rad_s[i] * planner_drive_uniform_scale;
             }
 
             return planner_output;
@@ -2333,6 +2348,31 @@ namespace jia
             // 这里是“四舵轮目标命令”真正落到电机接口前的最后一道门控：
 // computeModuleCommands()虽然已经为每个轮子算好了目标舵角和驱动速度
 // 但是否允许按这些目标下发，还要看当前是否全部完成回零，以及是否处于扭矩自由模式
+            f32 execution_allowed_drive_targets_rad_s[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            bool execution_allow_drive_position_loop[4] = {true, true, true, true};
+            bool execution_apply_shared_alpha = !input_target_data_.zero_current_all && !current_mode_flag_.is_wheel_torque_free;
+            f32 shared_drive_alpha_scale = 1.0f;
+
+            if (execution_apply_shared_alpha && runtime_strategy_cfg_.enable_drive_alpha_limit_)
+            {
+                const f32 drive_alpha_step_limit_rad_s = fabsf(runtime_strategy_cfg_.max_drive_alpha_rad_s2_) * period_;
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    execution_allow_drive_position_loop[i] = all_homed;
+                    execution_allowed_drive_targets_rad_s[i] = all_homed ? actuator_command_frame_.drive_omega_rad_s[i] : 0.0f;
+
+                    const f32 delta_drive_target_rad_s = execution_allowed_drive_targets_rad_s[i] - last_drive_omega_cmd_rad_s_[i];
+                    const f32 abs_delta_drive_target_rad_s = fabsf(delta_drive_target_rad_s);
+                    if (abs_delta_drive_target_rad_s <= drive_alpha_step_limit_rad_s || abs_delta_drive_target_rad_s <= 1.0e-6f)
+                    {
+                        continue;
+                    }
+
+                    const f32 wheel_alpha_scale = drive_alpha_step_limit_rad_s / abs_delta_drive_target_rad_s;
+                    shared_drive_alpha_scale = (wheel_alpha_scale < shared_drive_alpha_scale) ? wheel_alpha_scale : shared_drive_alpha_scale;
+                }
+            }
+
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
@@ -2359,16 +2399,14 @@ namespace jia
                 {
 // 只要还有任意一个轮子没有完成回零，就先禁止所有驱动轮输出
 // 避免底盘在零位未建立完成时带着错误朝向强行跑动
-                    allow_drive_position_loop = false;
-                    allowed_drive_target_rad_s = 0.0f;
-                    f32 delivered_drive_target_rad_s = 0.0f;
+                    allow_drive_position_loop = execution_allow_drive_position_loop[i];
+                    allowed_drive_target_rad_s = execution_allowed_drive_targets_rad_s[i];
+                    f32 delivered_drive_target_rad_s = allowed_drive_target_rad_s;
                     if (runtime_strategy_cfg_.enable_drive_alpha_limit_)
                     {
                         delivered_drive_target_rad_s =
-                            limitValueWithAcceleration(last_drive_omega_cmd_rad_s_[i],
-                                                       allowed_drive_target_rad_s,
-                                                       runtime_strategy_cfg_.max_drive_alpha_rad_s2_,
-                                                       period_);
+                            last_drive_omega_cmd_rad_s_[i] +
+                            (allowed_drive_target_rad_s - last_drive_omega_cmd_rad_s_[i]) * shared_drive_alpha_scale;
                     }
                     if (runtime_strategy_cfg_.enable_drive_omega_limit_)
                     {
@@ -2423,10 +2461,8 @@ namespace jia
                 if (runtime_strategy_cfg_.enable_drive_alpha_limit_)
                 {
                     delivered_drive_target_rad_s =
-                        limitValueWithAcceleration(last_drive_omega_cmd_rad_s_[i],
-                                                   delivered_drive_target_rad_s,
-                                                   runtime_strategy_cfg_.max_drive_alpha_rad_s2_,
-                                                   period_);
+                        last_drive_omega_cmd_rad_s_[i] +
+                        (allowed_drive_target_rad_s - last_drive_omega_cmd_rad_s_[i]) * shared_drive_alpha_scale;
                 }
                 if (runtime_strategy_cfg_.enable_drive_omega_limit_)
                 {
