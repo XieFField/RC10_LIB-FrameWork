@@ -1,4 +1,4 @@
-﻿#include "chassis.h"
+#include "chassis.h"
 
 #include <cmath>
 

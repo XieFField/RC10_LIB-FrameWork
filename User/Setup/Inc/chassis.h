@@ -586,8 +586,8 @@ namespace jia
                 f32 max_drive_alpha_rad_s2_ = 99999999.0f;                       // [RW] 驱动角速度变化率上限（rad/s^2）。仅在 enable_drive_alpha_limit_=true 时生效。
                 bool enable_steer_rate_limit_ = false;                           // [RW] 是否启用舵向角速度上限。
                 f32 max_steer_rate_rad_s_ = 99999999.0f;                         // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit_=true 时生效。
-                bool enable_steer_alpha_limit_ = false;                          // [RW] 是否启用舵向角加速度上限。
-                f32 max_steer_alpha_rad_s2_ = 10000.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
+                bool enable_steer_alpha_limit_ = true;                          // [RW] 是否启用舵向角加速度上限。
+                f32 max_steer_alpha_rad_s2_ = 20000.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
 
                 // ---- 近零门限统一配置 --------------------------------------------
                 // 所有静止/冻结/X-Park/停车保护阈值统一由这组基准参数派生，避免多处手改失配。
