@@ -1,6 +1,11 @@
 #ifndef TEST_TDD_BSP_TIMESTAMP_H
 #define TEST_TDD_BSP_TIMESTAMP_H
 
+void testHostSetTimeSeconds(float seconds);
+void testHostAdvanceTimeSeconds(float delta_seconds);
+void testHostResetTimeSeconds();
+float testHostGetTimeSeconds();
+
 class TimeStamp
 {
 public:
@@ -12,7 +17,7 @@ public:
 
     float getSeconds() const
     {
-        return 0.0f;
+        return testHostGetTimeSeconds();
     }
 };
 

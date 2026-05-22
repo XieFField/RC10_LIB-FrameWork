@@ -7,12 +7,24 @@ struct GPIO_TypeDef
 {
 };
 
+using HAL_StatusTypeDef = int;
+using GPIO_PinState = int;
+
 inline UART_HandleTypeDef huart7{};
 
 inline GPIO_TypeDef test_gpio_port_1{};
 inline GPIO_TypeDef test_gpio_port_2{};
 inline GPIO_TypeDef test_gpio_port_3{};
 inline GPIO_TypeDef test_gpio_port_4{};
+
+struct TestPhotogateState
+{
+    GPIO_TypeDef *port;
+    unsigned short pin;
+    GPIO_PinState state;
+};
+
+extern TestPhotogateState g_test_photogates[4];
 
 #define kPHOTOGATE_1_GPIO_Port (&test_gpio_port_1)
 #define kPHOTOGATE_2_GPIO_Port (&test_gpio_port_2)
@@ -23,9 +35,6 @@ inline GPIO_TypeDef test_gpio_port_4{};
 #define kPHOTOGATE_2_Pin 2U
 #define kPHOTOGATE_3_Pin 3U
 #define kPHOTOGATE_4_Pin 4U
-
-using HAL_StatusTypeDef = int;
-using GPIO_PinState = int;
 
 #define HAL_OK 0
 #define HAL_UART_STATE_READY 0
@@ -42,9 +51,13 @@ inline HAL_StatusTypeDef HAL_UART_Transmit_DMA(UART_HandleTypeDef *, unsigned ch
     return HAL_OK;
 }
 
-inline GPIO_PinState HAL_GPIO_ReadPin(GPIO_TypeDef *, unsigned short)
+GPIO_PinState testHostReadPhotogate(GPIO_TypeDef *port, unsigned short pin);
+void testHostSetPhotogate(GPIO_TypeDef *port, unsigned short pin, GPIO_PinState state);
+void testHostResetPhotogates();
+
+inline GPIO_PinState HAL_GPIO_ReadPin(GPIO_TypeDef *port, unsigned short pin)
 {
-    return GPIO_PIN_RESET;
+    return testHostReadPhotogate(port, pin);
 }
 
 inline void Error_Handler()

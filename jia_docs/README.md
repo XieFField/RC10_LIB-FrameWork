@@ -12,23 +12,25 @@
 ## 最新交接入口
 
 - RC10 最新交接文档：
+  - [handoff/2026-05/ai_handoff_2026-05-23_0226_rc10_steer_fault_recovery_pid_guard.md](handoff/2026-05/ai_handoff_2026-05-23_0226_rc10_steer_fault_recovery_pid_guard.md)
   - [handoff/2026-05/ai_handoff_2026-05-21_1201_rc10_drive_gate_release_sync.md](handoff/2026-05/ai_handoff_2026-05-21_1201_rc10_drive_gate_release_sync.md)
   - [handoff/2026-05/ai_handoff_2026-05-22_0121_rc10_near_zero_suppression_refactor.md](handoff/2026-05/ai_handoff_2026-05-22_0121_rc10_near_zero_suppression_refactor.md)
+  - [handoff/2026-05/ai_handoff_2026-05-22_1343_rc10_context_sync_after_fault_probe_revert.md](handoff/2026-05/ai_handoff_2026-05-22_1343_rc10_context_sync_after_fault_probe_revert.md)
 - 交接索引：
   - [handoff/INDEX.md](handoff/INDEX.md)
 
 ## 本轮主题
 
-- 当前文档主线已从“统一输入语义 / 显式舵轮规划流水”继续推进到：
-  - drive release continuity 收口；
-  - HardGate 残余速度禁入阈值；
-  - planner / delivered 驱动诊断口径；
-  - 面向实车释放异常定位的低风险联调准备。
-- 当前最新一轮已继续推进到：
-  - 近零边界统一收口；
-  - 低速抑制 / 高速抑制双段语义；
-  - Stop Steer Guard 删除；
-  - 宿主测试迁移到新抑制链路。
+- 当前文档主线已推进到：
+  - 舵向断链故障检测闭环；
+  - 故障锁存后整车 drive 全停；
+  - 故障恢复后仅故障轮重新 homing；
+  - 锁故障即清舵向闭环状态，避免重连首拍吃到残留 PID 输出。
+- 当前最新一轮同时补充了：
+  - 宿主测试对 photogate / 舵向电流反馈的可控桩；
+  - 断链锁存阶段纯 `current=0` 语义修复；
+  - 独立 PID reconnect 风险证据化；
+  - 下一位 agent 的继续排查建议。
 
 ## 命名规则
 

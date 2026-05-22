@@ -289,6 +289,13 @@ namespace jia
                 kTimeout = 1,
             };
 
+            enum class SteerFaultState : u8
+            {
+                kNone = 0,
+                kLatched = 1,
+                kRecovering = 2,
+            };
+
             struct WheelInitConfig
             {
                 f32 pos_x_m = 0.0f;
@@ -330,6 +337,7 @@ namespace jia
                 HomingState homing_state = HomingState::kIdle;    // 当前轮回零状态机所处阶段
                 bool homing_last_sensor_active = false;           // 上一控制周期的原始 GPIO 高低电平；用于检测 H/L 边沿
                 bool homing_last_edge_is_falling = false;         // 最近一次抓到的边沿方向：true=H->L，false=L->H；方便调试极性和触发角
+                bool homing_align_command_armed = false;          // 进入 AlignToZero 后是否已允许下发第一次对零位置命令；用于避免边沿抓取后同拍大跳变
                 bool homing_zero_valid = false;                   // 当前轮是否已经建立可用于闭环控制的零位
                 f32 homing_elapsed_s = 0.0f;                      // 本次回零已运行时间，单位秒；用于超时判定
                 f32 homing_runtime_zero_offset_rad = 0.0f;        // 本次上电运行实际采用的零位补偿；回零成功后会把“当前触发位置”修正成运行时零点
@@ -339,6 +347,20 @@ namespace jia
                 f32 target_drive_omega_rad_s = 0.0f;              // 当前周期解算后要发给驱动电机的目标角速度，单位 rad/s
                 f32 steer_target_velocity_rad_s = 0.0f;           // 转向二阶限幅后得到的目标角速度，便于平滑舵向变化
                 bool flipped_drive_direction = false;             // 本周期是否采用“舵角翻转 180 度、驱动反向”策略来走更短转角路径
+                SteerFaultState steer_fault_state = SteerFaultState::kNone;
+                bool steer_fault_rehome_request = false;
+                f32 steer_feedback_current_mA = 0.0f;
+                f32 steer_feedback_last_current_mA = 0.0f;
+                f32 steer_feedback_last_raw_total_angle_rad = 0.0f;
+                f32 steer_feedback_current_delta_mA = 0.0f;
+                f32 steer_feedback_angle_delta_rad = 0.0f;
+                f32 steer_fault_steer_error_rad = 0.0f;
+                bool steer_fault_control_intent = false;
+                bool steer_fault_xpark_stationary_hold = false;
+                bool steer_fault_freeze_candidate = false;
+                u32 steer_feedback_freeze_ms = 0U;
+                u32 steer_feedback_recovery_toggle_count = 0U;
+                u32 steer_fault_latched_count = 0U;
             };
 
             // Mode 表示四舵轮底盘当前采用的控制语义。
@@ -500,12 +522,18 @@ namespace jia
             void clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z);
             void updateWheelFeedback();
+            void updateSteerFaultState(WheelConfig &wheel);
+            void latchSteerFault(WheelConfig &wheel);
+            void clearSteerFaultState(WheelConfig &wheel);
+            void requestSingleWheelHoming(WheelConfig &wheel);
+            void resetSteerMotorClosedLoopState(WheelConfig &wheel);
             bool updateHomingState(WheelConfig &wheel);
             bool readHomingSensor(const WheelConfig &wheel) const;
             bool readHomingSensorRawHigh(const WheelConfig &wheel) const;
             f32 readSteerMotorRawTotalAngleRad(const WheelConfig &wheel) const;
             f32 readDriveMotorOmegaRadS(const WheelConfig &wheel) const;
             f32 readCorrectedSteerMotorTotalAngleRad(const WheelConfig &wheel) const;
+            f32 readSteerMotorCurrentMilliAmp(const WheelConfig &wheel) const;
             void setSteerMotorTargetCurrent(WheelConfig &wheel, f32 current);
             void setSteerMotorTargetRPM(WheelConfig &wheel, f32 rpm);
             void setSteerMotorTargetTotalAngleRad(WheelConfig &wheel, f32 corrected_local_total_angle_rad);
@@ -585,7 +613,7 @@ namespace jia
                 bool enable_drive_alpha_limit_ = false;                          // [RW] 是否启用驱动角加速度上限。
                 f32 max_drive_alpha_rad_s2_ = 99999999.0f;                       // [RW] 驱动角速度变化率上限（rad/s^2）。仅在 enable_drive_alpha_limit_=true 时生效。
                 bool enable_steer_rate_limit_ = false;                           // [RW] 是否启用舵向角速度上限。
-                f32 max_steer_rate_rad_s_ = 99999999.0f;                         // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit_=true 时生效。
+                f32 max_steer_rate_rad_s_ = 200.0f;                         // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit_=true 时生效。
                 bool enable_steer_alpha_limit_ = true;                          // [RW] 是否启用舵向角加速度上限。
                 f32 max_steer_alpha_rad_s2_ = 20000.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
 
@@ -602,6 +630,18 @@ namespace jia
                     f32 close_angle_deg = 1.0f;             // [RW] 低速抑制使用。舵角误差超过该阈值后进入驱动压制区。
                     f32 min_scale = 0.0f;                   // [RW] 低速抑制使用。进入压制区后保留的最小驱动比例。
                 };
+
+                struct SteerFaultConfig
+                {
+                    bool enable = true;                           // [RW] 是否启用舵向断链检测/恢复状态机。关闭后仅保留观测，不再锁故障。
+                    bool ignore_during_xpark_hold = false;         // [RW] 是否在 X 驻车静止保持期间屏蔽舵向断链判定，避免静止姿态误判。
+                    f32 freeze_current_delta_mA = 2.0f;           // [RW] 电流冻结阈值（mA）。相邻周期变化不超过该值时，认为电流近似不变。
+                    f32 active_current_min_mA = 0.0f;            // [RW] 激活检测所需最小电流幅值（mA）。低于该值时即便冻结也不判故障。
+                    f32 freeze_angle_delta_rad = 0.0175f;         // [RW] 角度冻结阈值（rad）。相邻周期总角度变化不超过该值时，认为角度近似不变。
+                    u32 freeze_duration_ms = 100U;                // [RW] 冻结持续时长（ms）。冻结候选持续达到该时长才锁故障。
+                    f32 recovery_current_delta_mA = 2.0f;         // [RW] 恢复电流跳变阈值（mA）。相邻周期电流变化超过该值时记一次恢复跳动。
+                    u32 recovery_toggle_threshold = 100U;         // [RW] 恢复跳动计数门槛。达到该次数后切入恢复重校准。
+                } steer_fault_cfg{};
 
                 // ---- 舵角解算 ----------------------------------------------------
                 // 决定每个模块在“直接转过去”与“翻转 180° 再配合驱动反向”之间如何选择。
@@ -812,6 +852,7 @@ namespace jia
             f32 trans_dir_tar_mag_m_s_ = 0.0f;                                  // [RO] 平移输入目标速度模长缓存（m/s）。
             f32 trans_dir_out_mag_m_s_ = 0.0f;                                  // [RO] 平移规划输出速度模长缓存（m/s）。
             u8 trans_dir_freeze_reason_ = 0U;                                    // [RO] 冻结原因缓存：0=none,1=enter,2=hold。
+            bool steer_fault_any_active_ = false;
 
             // 控制链路缓存（观察）[RO]
             InputTargetData input_target_data_; // [RO] 输入目标快照（模式与期望速度/角度）
@@ -860,6 +901,19 @@ namespace jia
                 bool high_speed_drive_suppression_active = false;                   // [RO] 当前高速抑制是否激活。
                 bool low_speed_drive_suppression_bypassed_by_residual_speed = false; // [RO] 当前拍是否因为残余速度过高而旁路了低速抑制。
                 f32 max_residual_speed_m_s = 0.0f;                                  // [RO] 当前拍整车四轮中的最大实际残余速度（m/s）。
+                bool steer_fault_active[4] = {false, false, false, false};
+                bool steer_fault_recovering[4] = {false, false, false, false};
+                bool steer_fault_control_intent[4] = {false, false, false, false};
+                bool steer_fault_xpark_stationary_hold[4] = {false, false, false, false};
+                bool steer_fault_freeze_candidate[4] = {false, false, false, false};
+                f32 steer_feedback_current_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                f32 steer_feedback_current_delta_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                f32 steer_feedback_angle_delta_rad[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                f32 steer_fault_steer_error_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                f32 steer_feedback_current_freeze_ms[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                f32 steer_feedback_recovery_toggle_count[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                f32 steer_fault_latched_count[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                bool steer_fault_any_active = false;
             } debug_mirror_;
 
             // 线程执行耗时统计（调试器只读观察）[RO]
