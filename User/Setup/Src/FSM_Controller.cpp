@@ -10,8 +10,8 @@ void FSM_Controller::loop()
 																	crsf_send_s.rsf_send_data.Spear);
     CrsfReceiver::GetInstance(&huart7)->process();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
-
-
+		communication::Lora_communication::GetInstance()->Task_Process();
+		communication::Lora_communication::GetInstance()->Tim_It_Process();
     switch(airjoy_data_.SWB)
     {
         case 0x00:
