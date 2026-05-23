@@ -35,6 +35,140 @@ namespace jia
                 kWorld,
             };
 
+            struct ExternalCommand
+            {
+                Coordinate coord = Coordinate::kBody;
+                f32 vel_x = 0.0f;
+                f32 vel_y = 0.0f;
+                f32 omega_z = 0.0f;
+            };
+
+            struct BodyCommand
+            {
+                f32 vel_x = 0.0f;
+                f32 vel_y = 0.0f;
+                f32 omega_z = 0.0f;
+            };
+
+            struct SteerCalibration
+            {
+                f32 theta_oa_to_owi_rad = 0.0f;
+                f32 homing_runtime_zero_offset_rad = 0.0f;
+                f32 steer_motor_sign = 1.0f;
+                f32 drive_motor_sign = 1.0f;
+            };
+
+            struct DirectActuatorCommandSnapshot
+            {
+                u8 wheel_idx = 0U;
+                u8 steer_control_type = 0U;
+                u8 drive_control_type = 0U;
+                f32 steer_axis_value = 0.0f;
+                f32 drive_axis_value = 0.0f;
+                f32 steer_step_sign = 0.0f;
+                f32 drive_step_sign = 0.0f;
+                f32 steer_current_cmd_mA = 0.0f;
+                f32 steer_rpm_cmd = 0.0f;
+                f32 steer_single_turn_deg_cmd = 0.0f;
+                f32 steer_multi_turn_deg_cmd = 0.0f;
+                f32 drive_rpm_cmd = 0.0f;
+                f32 drive_current_cmd_mA = 0.0f;
+                f32 drive_brake_cmd_mA = 0.0f;
+                f32 applied_steer_cmd = 0.0f;
+                f32 applied_drive_cmd = 0.0f;
+            };
+
+            static constexpr u8 kTelemetryWheelCount = 4U;
+
+            struct TelemetryChassisState
+            {
+                f32 vel_x = 0.0f;
+                f32 vel_y = 0.0f;
+                f32 omega_z = 0.0f;
+                f32 yaw_rad = 0.0f;
+            };
+
+            struct TelemetryWheelPose
+            {
+                f32 pos_x_m = 0.0f;
+                f32 pos_y_m = 0.0f;
+            };
+
+            struct TelemetryWheelState
+            {
+                f32 target_drive_omega_rad_s = 0.0f;
+                f32 actual_drive_omega_rad_s = 0.0f;
+                f32 target_steer_oa_rad = 0.0f;
+                f32 actual_steer_oa_rad = 0.0f;
+                f32 target_velocity_x_m_s = 0.0f;
+                f32 target_velocity_y_m_s = 0.0f;
+                f32 actual_velocity_x_m_s = 0.0f;
+                f32 actual_velocity_y_m_s = 0.0f;
+            };
+
+            struct TelemetrySnapshot
+            {
+                bool homing_all_ready = false;
+                TelemetryChassisState target{};
+                TelemetryChassisState actual{};
+                TelemetryWheelState wheels[kTelemetryWheelCount]{};
+            };
+
+            struct PlannerInputCommand
+            {
+                f32 vel_x = 0.0f;
+                f32 vel_y = 0.0f;
+                f32 omega_z = 0.0f;
+                f32 rot_z = 0.0f;
+                bool is_world_speed_mode = false;
+                bool is_steer_only_mode = false;
+            };
+
+            enum class CommandInputSource : u8
+            {
+                kApi = 0,
+                kDebugTarget = 1,
+                kDebugModuleOverride = 2,
+            };
+
+            struct NormalizedBodyCommand
+            {
+                CommandInputSource source = CommandInputSource::kApi;
+                BodyCommand body{};
+                f32 rot_z = 0.0f;
+                bool is_world_speed_mode = false;
+                bool is_steer_only_mode = false;
+            };
+
+            struct PlannerTargetState
+            {
+                f32 vel_x = 0.0f;
+                f32 vel_y = 0.0f;
+                f32 omega_z = 0.0f;
+                f32 rot_z = 0.0f;
+            };
+
+            struct PlannerInputSnapshot
+            {
+                PlannerTargetState target{};
+            };
+
+            enum class DebugControlRoute : u8
+            {
+                kDisabled = 0,
+                kTargetInjection = 1,
+                kModuleOverride = 2,
+            };
+
+            enum class DebugModuleOverrideRoute : u8
+            {
+                kNone = 0,
+                kSingleWheel = 1,
+                kAlignForward = 2,
+                kHomingObserve = 3,
+                kDirectActuator = 4,
+            };
+
             // 空闲姿态：定义底盘失能或无输入时，四个舵轮应保持的姿态策略。
             // kHoldLast 适合保持最后姿态，kXPark 适合进入 X 停靠姿态以减小外力拖拽干涉。
             enum class IdlePostureMode
@@ -86,6 +220,37 @@ namespace jia
             f32 getCurrentWorldVelX() const;
             f32 getCurrentWorldVelY() const;
             f32 getCurrentOmegaZ() const;
+            static BodyCommand mapExternalCommandToBody(const ExternalCommand &command);
+            static BodyCommand normalizeBodyCommandForPlanner(const BodyCommand &command);
+            static f32 mapRawSteerMotorTotalToSignedLocalTotal(f32 raw_motor_total_rad, f32 steer_motor_sign);
+            static f32 mapSignedLocalTotalToRawSteerMotorTotal(f32 signed_local_total_rad, f32 steer_motor_sign);
+            static f32 applyHomingRuntimeZeroOffset(f32 signed_local_total_rad, f32 homing_runtime_zero_offset_rad);
+            static f32 removeHomingRuntimeZeroOffset(f32 corrected_local_total_rad, f32 homing_runtime_zero_offset_rad);
+            static f32 mapOaTotalToCorrectedLocalTotal(f32 oa_total_rad, const SteerCalibration &calibration);
+            static f32 mapCorrectedLocalTotalToOaTotal(f32 corrected_local_total_rad, const SteerCalibration &calibration);
+            static f32 mapRawSteerMotorTotalToCorrectedLocalTotal(f32 raw_motor_total_rad, const SteerCalibration &calibration);
+            static f32 mapCorrectedLocalTotalToRawSteerMotorTotal(f32 corrected_local_total_rad, const SteerCalibration &calibration);
+            static f32 mapDriveMotorRpmToWheelOmega(f32 motor_rpm, const SteerCalibration &calibration);
+            static f32 mapWheelOmegaToDriveMotorRpm(f32 wheel_omega_rad_s, const SteerCalibration &calibration);
+            static f32 mapWheelCurrentToDriveMotorCurrent(f32 wheel_current_mA, const SteerCalibration &calibration);
+            static f32 computeHomingRuntimeZeroOffset(f32 edge_mech_oa_rad,
+                                                      f32 raw_motor_total_rad,
+                                                      f32 homing_zero_offset_rad,
+                                                      const SteerCalibration &calibration);
+            static NormalizedBodyCommand makeNormalizedBodyCommand(const PlannerInputCommand &command,
+                                                                   f32 input_yaw_rad,
+                                                                   CommandInputSource source);
+            static PlannerInputSnapshot makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad);
+            static DebugControlRoute classifyDebugControlRoute(bool debug_enable, u8 raw_mode);
+            static DebugModuleOverrideRoute classifyDebugModuleOverrideRoute(u8 raw_mode);
+            static TelemetrySnapshot makeTelemetrySnapshot(bool homing_all_ready,
+                                                           const TelemetryChassisState &target,
+                                                           const TelemetryChassisState &actual,
+                                                           const TelemetryWheelPose wheel_pose[kTelemetryWheelCount],
+                                                           const f32 target_drive_omega_rad_s[kTelemetryWheelCount],
+                                                           const f32 actual_drive_omega_rad_s[kTelemetryWheelCount],
+                                                           const f32 target_steer_oa_rad[kTelemetryWheelCount],
+                                                           const f32 actual_steer_oa_rad[kTelemetryWheelCount]);
 
             // 初始化配置：只做硬件句柄绑定。
             struct InitConfig
@@ -105,34 +270,7 @@ namespace jia
             bool isHomingDone() const;
             void resetRuntimeStrategyToInitConfig();
 
-            // 内部策略/状态类型：不再作为正式外部 API 暴露
-            enum class DriveGateStrategy : u8
-            {
-                kHardGate = 0,
-                kSoftGate = 1,
-                kContinuousCurve = 2,
-                kAdaptiveGate = 3,
-            };
-            enum class DriveGateScope : u8
-            {
-                kGlobal = 0,
-                kPerWheel = 1,
-            };
-            enum class StopSteerGuardStrategy : u8
-            {
-                kHardHold = 0,
-                kSoftBlend = 1,
-                kContinuousBlend = 2,
-            };
-            enum class AdaptiveGatePhase : u8
-            {
-                kIdle = 0,
-                kStartHold = 1,
-                kTransition = 2,
-                kContinuous = 3,
-                kLegacy = 4,
-                kDisabled = 5,
-            };
+            // 内部策略/状态类型
             enum class HomingState : u8
             {
                 kIdle,
@@ -143,6 +281,19 @@ namespace jia
                 kReady,
                 kAlignToZero,
                 kFault,
+            };
+
+            enum class HomingFaultReason : u8
+            {
+                kNone = 0,
+                kTimeout = 1,
+            };
+
+            enum class SteerFaultState : u8
+            {
+                kNone = 0,
+                kLatched = 1,
+                kRecovering = 2,
             };
 
             struct WheelInitConfig
@@ -186,6 +337,7 @@ namespace jia
                 HomingState homing_state = HomingState::kIdle;    // 当前轮回零状态机所处阶段
                 bool homing_last_sensor_active = false;           // 上一控制周期的原始 GPIO 高低电平；用于检测 H/L 边沿
                 bool homing_last_edge_is_falling = false;         // 最近一次抓到的边沿方向：true=H->L，false=L->H；方便调试极性和触发角
+                bool homing_align_command_armed = false;          // 进入 AlignToZero 后是否已允许下发第一次对零位置命令；用于避免边沿抓取后同拍大跳变
                 bool homing_zero_valid = false;                   // 当前轮是否已经建立可用于闭环控制的零位
                 f32 homing_elapsed_s = 0.0f;                      // 本次回零已运行时间，单位秒；用于超时判定
                 f32 homing_runtime_zero_offset_rad = 0.0f;        // 本次上电运行实际采用的零位补偿；回零成功后会把“当前触发位置”修正成运行时零点
@@ -195,6 +347,20 @@ namespace jia
                 f32 target_drive_omega_rad_s = 0.0f;              // 当前周期解算后要发给驱动电机的目标角速度，单位 rad/s
                 f32 steer_target_velocity_rad_s = 0.0f;           // 转向二阶限幅后得到的目标角速度，便于平滑舵向变化
                 bool flipped_drive_direction = false;             // 本周期是否采用“舵角翻转 180 度、驱动反向”策略来走更短转角路径
+                SteerFaultState steer_fault_state = SteerFaultState::kNone;
+                bool steer_fault_rehome_request = false;
+                f32 steer_feedback_current_mA = 0.0f;
+                f32 steer_feedback_last_current_mA = 0.0f;
+                f32 steer_feedback_last_raw_total_angle_rad = 0.0f;
+                f32 steer_feedback_current_delta_mA = 0.0f;
+                f32 steer_feedback_angle_delta_rad = 0.0f;
+                f32 steer_fault_steer_error_rad = 0.0f;
+                bool steer_fault_control_intent = false;
+                bool steer_fault_xpark_stationary_hold = false;
+                bool steer_fault_freeze_candidate = false;
+                u32 steer_feedback_freeze_ms = 0U;
+                u32 steer_feedback_recovery_toggle_count = 0U;
+                u32 steer_fault_latched_count = 0U;
             };
 
             // Mode 表示四舵轮底盘当前采用的控制语义。
@@ -252,6 +418,52 @@ namespace jia
                 f32 drive_omega_rad_s[4] = {0.0f};
             };
 
+            struct SwervePlannerInput
+            {
+                Data command{};
+                bool command_stationary_intent = false;
+                bool allow_xpark_pose = false;
+                bool force_uniform_steer_drive = false;
+                f32 uniform_steer_oa_mod_rad = 0.0f;
+                f32 uniform_drive_omega_abs = 0.0f;
+                f32 uniform_drive_sign = 1.0f;
+                f32 current_oa_total_rad[4] = {0.0f};
+                f32 wheel_vx_m_s[4] = {0.0f};
+                f32 wheel_vy_m_s[4] = {0.0f};
+                f32 wheel_speed_m_s[4] = {0.0f};
+                f32 residual_speed_m_s[4] = {0.0f};
+                f32 max_command_wheel_speed_m_s = 0.0f;
+                f32 max_residual_speed_m_s = 0.0f;
+            };
+
+            struct SwervePlannerOutput
+            {
+                f32 ideal_oa_total_rad[4] = {0.0f};
+                f32 ideal_drive_omega_rad_s[4] = {0.0f};
+                f32 selected_oa_total_rad[4] = {0.0f};
+                f32 steering_errors_rad[4] = {0.0f};
+                f32 planned_corrected_local_total_rad[4] = {0.0f};
+                f32 planned_oa_total_rad[4] = {0.0f};
+                f32 planned_steer_rate_rad_s[4] = {0.0f};
+                f32 projected_drive_omega_rad_s[4] = {0.0f};
+                f32 final_drive_omega_rad_s[4] = {0.0f};
+                f32 low_speed_suppression_scale[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+                bool flipped_drive_direction[4] = {false, false, false, false};
+                f32 high_speed_suppression_scale = 1.0f;
+                bool high_speed_suppression_active = false;
+                f32 high_speed_dir_err_deg = 0.0f;
+                f32 high_speed_eta_max_s = 0.0f;
+            };
+
+            struct ActuatorCommandFrame
+            {
+                f32 steer_corrected_local_total_rad[4] = {0.0f};
+                f32 steer_oa_total_rad[4] = {0.0f};
+                f32 steer_rate_rad_s[4] = {0.0f};
+                f32 drive_omega_rad_s[4] = {0.0f};
+                bool flipped_drive_direction[4] = {false, false, false, false};
+            };
+
             // 创建线程
             static void createThread(void *arg);
             // 运行线程函数
@@ -285,11 +497,24 @@ namespace jia
                 kSwerveTelemetryV2 = 5,
             };
             DebugMode resolveDebugMode(u8 raw_mode) const;
-            void applyDebugTargetOverride();
+            void applyDebugTargetOverride(DebugMode mode);
             bool applyDebugModuleOverride(bool all_homed);
             void emitDebugOutputByMode(bool all_homed);
             void clearInputTargetData();
             void setModeFlag();
+            void resolvePlannerTargetData();
+            void updatePlannedMotionData();
+            void clearPlannedMotionForModuleOverride();
+            void resetDebugModuleOverrideTargets(u8 wheel_idx, bool preserve_soft_wheel_rate);
+            void applySingleWheelDebugOverride(u8 wheel_idx, bool all_homed);
+            void applyAlignForwardDebugOverride();
+            void applyHomingObserveDebugOverride();
+            void applyDirectActuatorDebugOverride(u8 wheel_idx);
+            void finalizeDebugModuleOverride(bool all_homed, DebugModuleOverrideRoute route);
+            DirectActuatorCommandSnapshot resolveDirectActuatorCommand(u8 wheel_idx);
+            void clearDirectDriveCommandByType(WheelConfig &wheel, u8 wheel_idx, u8 drive_control_type);
+            void applyDirectActuatorSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command);
+            void applyDirectActuatorDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command);
             void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z);
@@ -297,12 +522,18 @@ namespace jia
             void clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z);
             void updateWheelFeedback();
+            void updateSteerFaultState(WheelConfig &wheel);
+            void latchSteerFault(WheelConfig &wheel);
+            void clearSteerFaultState(WheelConfig &wheel);
+            void requestSingleWheelHoming(WheelConfig &wheel);
+            void resetSteerMotorClosedLoopState(WheelConfig &wheel);
             bool updateHomingState(WheelConfig &wheel);
             bool readHomingSensor(const WheelConfig &wheel) const;
             bool readHomingSensorRawHigh(const WheelConfig &wheel) const;
             f32 readSteerMotorRawTotalAngleRad(const WheelConfig &wheel) const;
             f32 readDriveMotorOmegaRadS(const WheelConfig &wheel) const;
             f32 readCorrectedSteerMotorTotalAngleRad(const WheelConfig &wheel) const;
+            f32 readSteerMotorCurrentMilliAmp(const WheelConfig &wheel) const;
             void setSteerMotorTargetCurrent(WheelConfig &wheel, f32 current);
             void setSteerMotorTargetRPM(WheelConfig &wheel, f32 rpm);
             void setSteerMotorTargetTotalAngleRad(WheelConfig &wheel, f32 corrected_local_total_angle_rad);
@@ -315,15 +546,25 @@ namespace jia
             f32 nearestEquivalentAngle(f32 current_rad, f32 target_mod_rad) const;
             f32 magnitude2D(f32 x, f32 y) const;
             f32 getXParkAngle(const WheelConfig &wheel) const;
-            f32 computeDriveGateScale(f32 abs_error_rad) const;
-            void computeDriveGateScales(const f32 steering_errors_rad[4], const Data &command_data, f32 out_scales[4]);
-            f32 stopSteerGuardBlend(f32 residual_speed_m_s) const;
-            void deriveNearZeroThresholds();
+            f32 computeMaxCommandWheelSpeedMps(const Data &command_data) const;
+            f32 computeLowSpeedDriveSuppressionScale(f32 abs_error_rad) const;
+            void computeLowSpeedDriveSuppressionScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4]);
+            f32 getNearZeroEnterSpeedMps() const;
+            f32 getNearZeroExitSpeedMps() const;
+            bool shouldActivateReverseIntent(f32 target_vel_x, f32 target_vel_y, f32 reference_dir_rad) const;
+            bool shouldActivateLaunchHold() const;
+            bool isLaunchHoldAligned(const SwervePlannerOutput &planner_output) const;
+            Data makeLaunchHoldPreviewCommand() const;
             void refreshActuatorLimitState();
             f32 mapSingleTurnToNearestTotalAngle(const WheelConfig &wheel, f32 target_oa_single_turn_deg) const;
+            SwervePlannerInput makeSwervePlannerInput(const Data &command_data);
+            SwervePlannerOutput planSwerveModules(const SwervePlannerInput &planner_input);
+            void buildActuatorCommandFrame(const SwervePlannerOutput &planner_output, ActuatorCommandFrame &out_frame) const;
+            void storePlannedActuatorFrame(const SwervePlannerOutput &planner_output, const ActuatorCommandFrame &command_frame);
+            f32 computeHomingAlignTargetCorrectedLocalTotal(const WheelConfig &wheel) const;
             void computeProjectedDriveFromPlannedSteer(const Data &command_data, const f32 planned_oa_total_rad[4], f32 out_drive_omega_rad_s[4]) const;
             bool estimatePlannedBodyTwist(const f32 planned_oa_total_rad[4], const f32 planned_drive_omega_rad_s[4], f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
-            f32 updateVectorConsistencyGate(f32 translational_speed_m_s, f32 eta_max_s, f32 dir_err_deg);
+            f32 updateHighSpeedDriveSuppression(f32 translational_speed_m_s, f32 eta_max_s, f32 dir_err_deg);
             void computeModuleCommands(const Data &command_data);
             void applyModuleCommands(bool all_homed);
             void updateCurrentData(bool all_homed);
@@ -339,6 +580,9 @@ namespace jia
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us);
+            static SteerCalibration makeSteerCalibration(const WheelConfig &wheel);
+            static f32 mapWheelCorrectedLocalToOaTotal(const WheelConfig &wheel, f32 corrected_local_total_rad);
+            static f32 mapWheelOaTotalToCorrectedLocal(const WheelConfig &wheel, f32 oa_total_rad);
 
             // =====================================================================
             // 系统时基 [RO]
@@ -350,116 +594,96 @@ namespace jia
             TickType_t time_ms_ = 0;                             // [RO] 当前系统时刻（ms）。随控制线程推进，用于节流、计时和超时判断。
 
             // =====================================================================
-            // 底盘参数（运行时可调）[RW]
+            // 底盘参数与策略（运行时可调）[RW]
             // 说明：FourSteer 初始化后会把这里作为默认基线读取。
-            // 这一组决定“车能跑多快、加减速有多柔和、停下来时保持什么姿态”。
-            // =====================================================================
-            f32 wheel_radius_m_ = 0.052f;                                    // [RW, 慎改] 轮半径。决定线速度与驱动角速度的换算比例，改错会直接导致速度尺度和里程计比例偏差。
-            f32 max_vel_x_ = 2.0f;                                         // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
-            f32 max_vel_y_ = 2.0f;                                         // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
-            f32 max_omega_z_ = 2.0f;                                       // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
-            f32 max_acc_xy_acc_ = 2.0f;                                   // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
-            f32 max_acc_xy_dec_ = 4.0f;                                   // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
-            f32 max_alpha_z_acc_ = 2.0f;                                  // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
-            f32 max_alpha_z_dec_ = 4.0f;                                  // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
-            f32 max_drive_omega_rad_s_ = 60.0f;                              // [RW] 驱动目标角速度上限（rad/s）。仅在 enable_drive_omega_limit=true 时生效。
-            f32 max_drive_alpha_rad_s2_ = 1000.0f;                           // [RW] 驱动角速度变化率上限（rad/s^2）。仅在 enable_drive_alpha_limit=true 时生效。
-            f32 max_steer_rate_rad_s_ = 10.0f;                               // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit=true 时生效。
-            f32 max_steer_alpha_rad_s2_ = 10000.0f;                            // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit=true 时生效。
-            f32 trans_dir_rate_limit_deg_s_ = 540.0f;                        // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
-            bool enable_cosine_compensation_ = false;                        // [RW] 是否启用舵角余弦补偿。开启后，舵角偏离时会折算驱动分量，减小横滑和无效驱动。
-            IdlePostureMode idle_posture_mode_ = IdlePostureMode::kXPark; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。
-
-            // =====================================================================
-            // 近零门限统一配置（运行时可调）[RW]
-            // 说明：所有静止/冻结/X-Park/停车保护阈值统一由基准参数派生，避免多处手改失配。
-            // =====================================================================
-            struct NearZeroThresholdConfig
-            {
-                f32 base_enter_m_s = 0.10f;       // [RW] 近零门限进入基准（m/s）。
-                f32 base_exit_m_s = 0.14f;        // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
-                u32 xpark_entry_delay_ms = 500U;  // [RW] X-Park 进入最短静止持续时间（ms）。
-                f32 stop_guard_release_scale = 1.0f; // [RW] 停车保护释放阈值缩放系数。stop_guard_release = base_enter * scale。
-            } near_zero_cfg_;
-
-            struct DerivedNearZeroThresholds
-            {
-                f32 stationary_m_s = 0.10f;          // [RO] 有效静止阈值（m/s）。
-                f32 freeze_enter_m_s = 0.10f;        // [RO] 平移方向冻结进入阈值（m/s）。
-                f32 freeze_exit_m_s = 0.14f;         // [RO] 平移方向冻结退出阈值（m/s）。
-                f32 xpark_enter_m_s = 0.10f;         // [RO] X-Park 静止判定进入阈值（m/s）。
-                f32 xpark_exit_m_s = 0.14f;          // [RO] X-Park 静止判定退出阈值（m/s）。
-                f32 stop_guard_release_m_s = 0.10f; // [RO] 停车保护释放阈值（m/s）。
-            } near_zero_derived_;
-
-            // =====================================================================
-            // 执行器限幅开关（运行时可调）[RW]
-            // 说明：false 表示该层限幅被显式旁路，不再需要用超大数值“近似禁用”。
-            // =====================================================================
-            struct ActuatorLimitEnable
-            {
-                bool enable_drive_omega_limit = false; // [RW] 是否启用驱动角速度上限。
-                bool enable_drive_alpha_limit = false; // [RW] 是否启用驱动角加速度上限。
-                bool enable_steer_rate_limit = false;  // [RW] 是否启用舵向角速度上限。
-                bool enable_steer_alpha_limit = true; // [RW] 是否启用舵向角加速度上限。
-            } actuator_limit_enable_;
-
-            // =====================================================================
-            // 策略参数（运行时可调）[RW]
-            // 说明：这里控制“怎么解算”“什么时候翻转”“什么时候压驱动”“停车时怎么稳住”。
+            // 这一组决定“车能跑多快、加减速有多柔和、怎么解算模块、什么时候压驱动、停下来时保持什么姿态”。
             // =====================================================================
             struct StrategyConfig
             {
+                f32 wheel_radius_m_ = 0.052f;                                    // [RW, 慎改] 轮半径。决定线速度与驱动角速度的换算比例，改错会直接导致速度尺度和里程计比例偏差。
+                f32 max_vel_x_ = 2.0f;                                           // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
+                f32 max_vel_y_ = 2.0f;                                           // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
+                f32 max_omega_z_ = 2.0f;                                         // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
+                f32 max_acc_xy_acc_ = 2.0f;                                      // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
+                f32 max_acc_xy_dec_ = 4.0f;                                     // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
+                f32 max_alpha_z_acc_ = 2.0f;                                     // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
+                f32 max_alpha_z_dec_ = 4.0f;                                    // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
+                f32 trans_dir_rate_limit_deg_s_ = 99999999.0f;                   // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
+                bool enable_drive_omega_limit_ = false;                          // [RW] 是否启用驱动角速度上限。
+                f32 max_drive_omega_rad_s_ = 99999999.0f;                        // [RW] 驱动目标角速度上限（rad/s）。仅在 enable_drive_omega_limit_=true 时生效。
+                bool enable_drive_alpha_limit_ = false;                          // [RW] 是否启用驱动角加速度上限。
+                f32 max_drive_alpha_rad_s2_ = 99999999.0f;                       // [RW] 驱动角速度变化率上限（rad/s^2）。仅在 enable_drive_alpha_limit_=true 时生效。
+                bool enable_steer_rate_limit_ = false;                           // [RW] 是否启用舵向角速度上限。
+                f32 max_steer_rate_rad_s_ = 200.0f;                         // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit_=true 时生效。
+                bool enable_steer_alpha_limit_ = true;                          // [RW] 是否启用舵向角加速度上限。
+                f32 max_steer_alpha_rad_s2_ = 20000.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
+
+                // ---- 近零门限统一配置 --------------------------------------------
+                // 所有静止/冻结/X-Park/停车保护阈值统一由这组基准参数派生，避免多处手改失配。
+                struct NearZeroThresholdConfig
+                {
+                    f32 base_enter_m_s = 0.10f; // [RW] 近零门限进入基准（m/s）。
+                    f32 base_exit_m_s = 0.15f;  // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
+                } near_zero_cfg_;
+
+                struct LowSpeedDriveSuppressionConfig
+                {
+                    f32 close_angle_deg = 10.0f;             // [RW] 低速抑制使用。舵角误差超过该阈值后进入驱动压制区。
+                    f32 min_scale = 0.0f;                   // [RW] 低速抑制使用。进入压制区后保留的最小驱动比例。
+                };
+
+                struct SteerFaultConfig
+                {
+                    bool enable = true;                           // [RW] 是否启用舵向断链检测/恢复状态机。关闭后仅保留观测，不再锁故障。
+                    bool ignore_during_xpark_hold = false;         // [RW] 是否在 X 驻车静止保持期间屏蔽舵向断链判定，避免静止姿态误判。
+                    f32 freeze_current_delta_mA = 2.0f;           // [RW] 电流冻结阈值（mA）。相邻周期变化不超过该值时，认为电流近似不变。
+                    f32 active_current_min_mA = 0.0f;            // [RW] 激活检测所需最小电流幅值（mA）。低于该值时即便冻结也不判故障。
+                    f32 freeze_angle_delta_rad = 0.0175f;         // [RW] 角度冻结阈值（rad）。相邻周期总角度变化不超过该值时，认为角度近似不变。
+                    u32 freeze_duration_ms = 100U;                // [RW] 冻结持续时长（ms）。冻结候选持续达到该时长才锁故障。
+                    f32 recovery_current_delta_mA = 2.0f;         // [RW] 恢复电流跳变阈值（mA）。相邻周期电流变化超过该值时记一次恢复跳动。
+                    u32 recovery_toggle_threshold = 100U;         // [RW] 恢复跳动计数门槛。达到该次数后切入恢复重校准。
+                } steer_fault_cfg{};
+
                 // ---- 舵角解算 ----------------------------------------------------
                 // 决定每个模块在“直接转过去”与“翻转 180° 再配合驱动反向”之间如何选择。
                 // 这个选择直接影响转向路径长度、驱动方向是否反转，以及模块在大角度切换时是否抖动。
                 SteeringStrategyMode steering_strategy_mode = SteeringStrategyMode::kShortestPath; // [RW] 舵角解算策略。不同策略在转向路径和稳定性上有不同权衡。
-                f32 flip_enter_angle_deg = 135.0f; // [RW] 翻转保持上阈值（deg）。当前已在翻转解时，只有翻转解角差超过该阈值才退出翻转。
-                f32 flip_exit_angle_deg = 80.0f;   // [RW] 翻转切入下阈值（deg）。当前未翻转时，直达解角差足够大且翻转解更优才切入翻转。应小于 flip_enter_angle_deg 形成滞回。
-
-                // ---- 驱动抑制（Drive Gate） -------------------------------------
-                // 当舵角还没对准时，按策略压低驱动输出，减少横滑、打滑和轮子“边转边拖”的冲击。
-                // 适合大角度转向、起步前对轮、低速细调等场景。
-                bool enable_drive_gate = false;                                       // [RW] 是否启用驱动门控。关闭后驱动不再因舵角误差被额外压低。
-                DriveGateStrategy drive_gate_strategy = DriveGateStrategy::kHardGate; // [RW] 门控形状：硬门控更直接，曲线门控更平滑。
-                DriveGateScope drive_gate_scope = DriveGateScope::kGlobal;            // [RW] 门控作用范围：全局统一收紧，或按单轮分别计算。
-                f32 drive_gate_close_angle_deg = 1.0f;                                // [RW] 关闭区角差阈值（deg）。超过该误差后会进入更强的驱动抑制。
-                f32 drive_gate_min_scale = 0.5f;                                      // [RW] 硬门控最小缩放。0 表示可完全关断驱动，1 表示完全不压。
-                f32 drive_gate_curve_exponent = 3.0f;                                 // [RW] 曲线门控指数。越大曲线越“硬”，越接近临界开关。
-                f32 drive_gate_curve_half_angle_deg = 3.0f;                           // [RW] 曲线门控半效角（deg）。大致决定从“明显抑制”到“基本放开”的过渡宽度。
-                f32 drive_gate_curve_min_scale = 0.0f;                                // [RW] 曲线门控保底缩放。即使误差很大，也至少保留多少驱动比例。
-                f32 drive_gate_transition_linear_speed_m_s = 0.10f;                   // [RW] 线速度过渡阈值（m/s）。速度越低，门控越容易收紧，减少静止附近的横向冲击。
-                f32 drive_gate_transition_angular_speed_rad_s = 0.10f;                // [RW] 角速度过渡阈值（rad/s）。自转越慢，门控越偏向保守。
-                f32 drive_gate_scale_ramp_up_s = 0.10f;                               // [RW] 门控放开时间常数（s）。越小表示释放越快，越大表示更平滑。
-                f32 drive_gate_scale_ramp_down_s = 0.50f;                             // [RW] 门控收紧时间常数（s）。越大表示收紧更慢，更不容易突然“掐断”驱动。
-
-                // ---- 停车转向保护 ------------------------------------------------
-                // 在低速或静止时抑制不必要的舵角摆动，避免轮子在接近停住时反复“找角”。
-                // 它主要解决停车抖动、低速微调来回打舵、以及静止姿态不稳定的问题。
-                bool enable_stop_steer_guard = false;                                                    // [RW] 是否启用停车转向保护。默认开启以抑制过零与低速区舵角抖动。
-                StopSteerGuardStrategy stop_steer_guard_strategy = StopSteerGuardStrategy::kHardHold; // [RW] 停车保护形状：硬保持更稳，曲线混合更柔和。
-                f32 stop_guard_blend_start_speed_m_s = 0.20f;                                         // [RW] 混合起点速度（m/s）。从正常舵角控制逐步过渡到停车保护的起始点。
-                f32 stop_guard_curve_half_speed_m_s = 0.08f;                                          // [RW] 曲线混合半效速度（m/s）。决定混合函数中“过半”的速度位置。
-                f32 stop_guard_curve_exponent = 2.0f;                                                 // [RW] 曲线混合指数。越大过渡越陡，越小过渡越平缓。
-
-                // ---- 全局矢量一致性门控 -------------------------------------------
-                struct VectorConsistencyConfig
+                f32 flip_enter_angle_deg = 135.0f;                                        // [RW] 翻转保持上阈值（deg）。当前已在翻转解时，只有翻转解角差超过该阈值才退出翻转。
+                f32 flip_exit_angle_deg = 80.0f;                                          // [RW] 翻转切入下阈值（deg）。当前未翻转时，直达解角差足够大且翻转解更优才切入翻转。应小于 flip_enter_angle_deg 形成滞回。
+                struct ReverseIntentConfig
                 {
-                    bool enable = true;                     // [RW] 是否启用全局矢量一致性门控。
-                    f32 dir_err_enter_deg = 12.0f;         // [RW] 方向误差进入阈值（deg）。
-                    f32 dir_err_exit_deg = 6.0f;           // [RW] 方向误差退出阈值（deg），应小于 enter 形成滞回。
-                    f32 eta_lock_s = 0.20f;                // [RW] 最大到角时间进入阈值（s）。
-                    f32 eta_release_s = 0.06f;             // [RW] 最大到角时间退出阈值（s），应小于 lock。
-                    f32 gate_ramp_up_s = 0.08f;            // [RW] 门控放开时间常数（s）。
-                    f32 gate_ramp_down_s = 0.03f;          // [RW] 门控收紧时间常数（s）。
-                    f32 min_trans_speed_enable_m_s = 0.10f; // [RW] 启动门控的最小平移速度（m/s）。
-                } vector_consistency;
+                    bool enable = true;
+                    f32 enter_angle_deg = 135.0f;
+                    f32 exit_angle_deg = 105.0f;
+                    f32 min_speed_m_s = 0.0f;
+                    f32 flip_prefer_margin_deg = 5.0f;
+                } reverse_intent{};
+
+                bool enable_low_speed_drive_suppression = true; // [RW] 是否启用低速抑制。仅在近零/低速找向阶段额外压低驱动。
+                LowSpeedDriveSuppressionConfig low_speed_drive_suppression{};
+
+                // ---- 静止姿态 ----------------------------------------------------
+                IdlePostureMode idle_posture_mode = IdlePostureMode::kXPark; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。
+                u32 xpark_entry_delay_ms = 1000U;                            // [RW] X-Park 进入最短静止持续时间（ms）。
+
+                struct HighSpeedDriveSuppressionConfig
+                {
+                    f32 dir_err_enter_deg = 12.0f;          // [RW] 高速抑制使用。方向误差进入阈值（deg）。
+                    f32 dir_err_exit_deg = 6.0f;            // [RW] 高速抑制使用。方向误差退出阈值（deg），应小于 enter 形成滞回。
+                    f32 eta_lock_s = 0.20f;                 // [RW] 高速抑制使用。最大到角时间进入阈值（s）。
+                    f32 eta_release_s = 0.06f;              // [RW] 高速抑制使用。最大到角时间退出阈值（s），应小于 lock。
+                    f32 gate_ramp_up_s = 0.08f;             // [RW] 高速抑制使用。门控放开时间常数（s）。
+                    f32 gate_ramp_down_s = 0.03f;           // [RW] 高速抑制使用。门控收紧时间常数（s）。
+                };
+                bool enable_high_speed_drive_suppression = false; // [RW] 是否启用高速抑制。只在非近零平移一致性变差时收紧驱动。
+                HighSpeedDriveSuppressionConfig high_speed_drive_suppression{};
             };
             StrategyConfig default_strategy_cfg_; // [RW, 慎改] 默认策略基线。用于初始化和“恢复默认值”，不要把它当作实时状态。
             StrategyConfig runtime_strategy_cfg_; // [RW] 当前生效的运行时策略。可被外部接口动态切换，控制链路实际读取它。
-
+            
             // =====================================================================
             // 航向控制参数（运行时可调）[RW]
+            // 通过全局 chassis 对象在调试器内直接改值。[RW]
             // 说明：这组参数只影响航向锁定/锁角逻辑，不影响平移速度规划。
             // =====================================================================
             PID_Position rot_z_pid_;                  // [RW, 慎改] 航向位置环 PID。用于 LockToYaw / 相关锁角模式的角度误差闭环。
@@ -541,7 +765,7 @@ namespace jia
             struct DebugOutput
             {
                 // ---- 输出总开关与模式选择 ---------------------------------------
-                bool output_enable = false;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
+                bool output_enable = true;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
                 u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kSwerveTelemetryV2); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制）。
                 u32 text_period_ms = 500;                                     // [RW] 文本日志周期（ms）。只在 mode1 下使用，控制文本总刷新频率。
                 u8 text_log_level = 1;                                        // [RW] 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
@@ -568,7 +792,7 @@ namespace jia
                 // ---- mode5: SwerveTelemetryV2 binary ----------------------------
                 u8 telemetry_sample_divider = 1U;    // [RW] mode5 分频发送系数。1 表示每个满足周期门限的控制周期都尝试发送。
                 u8 telemetry_profile_id = 0U;        // [RW] mode5 配置档编号。编码到 flags 高 4 位，便于 PC 侧区分不同发送方案。
-                u32 telemetry_period_ms = 8U;        // [RW] mode5 最小发送周期（ms）。默认8ms，对应约125fps上限。
+                u32 telemetry_period_ms = 10U;        // [RW] mode5 最小发送周期（ms）。
                 TickType_t telemetry_last_ms = 0;    // [RO] mode5 最近一次发送时刻（tick/ms 基准），用于周期门限判断。
                 u8 telemetry_cycle_counter = 0U;     // [RO] mode5 分频计数器。与 sample_divider 配合决定本周期是否允许发送。
                 u16 telemetry_seq = 0U;              // [RO] mode5 帧序号。每成功发送一帧递增，便于 PC 侧检测丢帧。
@@ -614,33 +838,42 @@ namespace jia
             f32 homing_align_to_zero_tolerance_deg_ = 2.0f;                    // [RW] 回零归位判稳阈值（deg）
             WheelConfig wheel_config_[4];                                      // [RO] 四个模块运行态快照
             f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};                        // [RO] 上周期转向速度命令
-            f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};                       // [RO] 上周期驱动角速度命令
+            f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};                       // [RO] 上周期最终实际下发到驱动闭环的角速度命令
             bool selected_flipped_solution_[4] = {false};                      // [RO] 每个模块是否选中翻转解
-            f32 drive_gate_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f};               // [RO] 每轮驱动门控缩放
-            f32 adaptive_gate_scale_ = 1.0f;                                   // [RO] 全局自适应门控缩放
-            AdaptiveGatePhase adaptive_gate_phase_ = AdaptiveGatePhase::kIdle; // [RO] 自适应门控阶段
-            f32 vector_gate_scale_ = 1.0f;                                     // [RO] 全局矢量一致性门控缩放。
-            bool vector_gate_active_ = false;                                  // [RO] 全局矢量一致性门控是否激活。
-            f32 vector_dir_err_deg_ = 0.0f;                                    // [RO] 当前合成平移方向误差（deg）。
-            f32 vector_eta_max_s_ = 0.0f;                                      // [RO] 当前四轮最大预计到角时间（s）。
+            f32 low_speed_drive_suppression_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // [RO] 每轮低速抑制最终缩放。
+            f32 high_speed_drive_suppression_scale_ = 1.0f;                        // [RO] 当前高速抑制缩放。
+            bool high_speed_trans_gate_active_ = false;                            // [RO] 当前高速抑制速度门是否打开。复用 near-zero enter/exit 做滞回。
+            bool high_speed_drive_suppression_active_ = false;                     // [RO] 当前高速抑制是否激活。
+            f32 high_speed_dir_err_deg_ = 0.0f;                                    // [RO] 当前合成平移方向误差（deg）。
+            f32 high_speed_eta_max_s_ = 0.0f;                                      // [RO] 当前四轮最大预计到角时间（s）。
+            f32 max_residual_speed_m_s_ = 0.0f;                                // [RO] 当前拍四轮中的最大实际残余速度（m/s）。
+            bool low_speed_residual_bypass_active_ = false;                        // [RO] 当前低速抑制残余速度旁路门是否打开。复用 near-zero enter/exit 做滞回。
+            bool low_speed_drive_suppression_bypassed_by_residual_speed_ = false; // [RO] 当前拍低速抑制是否因残余速度阈值被旁路。
             u8 rot_z_pid_count_ = 0;                                           // [RO] 航向 PID 分频计数器
             f32 lock_now_rot_z_target_ = 0.0f;                                 // [RO] LockNow 真正维持的航向目标
             u32 lock_now_rot_z_shift_count_ = 0;                               // [RO] LockNow 松手缓冲倒计时
             bool xpark_gate_active_ = false;                                   // [RO] X-Park 进入门控当前是否放行。true 时允许静止姿态切到 X-Park。
             u32 xpark_stationary_hold_ms_ = 0U;                                // [RO] 连续静止累计时长（ms）。用于判断是否达到 X-Park 延时门槛。
+            bool launch_hold_active_ = false;                                  // [RO] 静止起步整车等待门控是否激活。激活时先只转舵，不放驱动与车体速度规划。
             bool trans_dir_freeze_active_ = false;                              // [RO] 平移方向冻结门控当前状态。true 时方向保持参考角，只放行速度模长变化。
             bool trans_dir_ref_valid_ = false;                                  // [RO] 平移方向参考角是否有效。无效时先用当前指令方向建立参考。
             f32 trans_dir_ref_rad_ = 0.0f;                                      // [RO] 平移方向参考角（rad）。用于冻结保持与方向角速率限幅。
             f32 trans_dir_tar_mag_m_s_ = 0.0f;                                  // [RO] 平移输入目标速度模长缓存（m/s）。
             f32 trans_dir_out_mag_m_s_ = 0.0f;                                  // [RO] 平移规划输出速度模长缓存（m/s）。
             u8 trans_dir_freeze_reason_ = 0U;                                    // [RO] 冻结原因缓存：0=none,1=enter,2=hold。
+            bool reverse_intent_active_ = false;                                 // [RO] 当前是否判定为近似反向意图。
+            f32 reverse_intent_dir_err_deg_ = 0.0f;                              // [RO] 当前目标方向与参考方向夹角（deg）。
+            bool steer_fault_any_active_ = false;
 
             // 控制链路缓存（观察）[RO]
             InputTargetData input_target_data_; // [RO] 输入目标快照（模式与期望速度/角度）
+            NormalizedBodyCommand normalized_body_command_; // [RO] 输入来源与统一车体系语义
             Data target_data_;                  // [RO] 模式映射后的目标数据
             Data planned_data_;                 // [RO] 经限幅/策略处理后的规划数据
             Data last_planned_data_;            // [RO] 上一周期规划数据（用于加速度约束）
             Data current_data_;                 // [RO] 当前状态估计数据
+            SwervePlannerOutput planner_output_cache_; // [RO] 最近一次舵轮规划输出
+            ActuatorCommandFrame actuator_command_frame_; // [RO] 最近一次规划出的执行器目标帧（drive 仍是执行门控前目标）
             ModeFlag current_mode_flag_;        // [RO] 当前控制模式标志位
 
             // 传感器与输入缓存（观察）[RO]
@@ -656,6 +889,8 @@ namespace jia
                 f32 target_oa_deg[4] = {0.0f};                                      // [RO] 各轮目标 OA 角（deg）
                 f32 current_drive_rpm[4] = {0.0f};                                  // [RO] 各轮当前驱动速度（rpm）
                 f32 target_drive_rpm[4] = {0.0f};                                   // [RO] 各轮目标驱动速度（rpm）
+                f32 planned_drive_target_rpm[4] = {0.0f};                           // [RO] planner/gate 阶段计算出的驱动目标（rpm）
+                f32 delivered_drive_target_rpm[4] = {0.0f};                         // [RO] 最终执行层限幅并下发的驱动目标（rpm）
                 u8 homing_state[4] = {0, 0, 0, 0};                                  // [RO] 各轮回零状态机状态
                 bool homing_sensor_active[4] = {false, false, false, false};        // [RO] 各轮光电门有效状态
                 bool homing_last_edge_is_falling[4] = {false, false, false, false}; // [RO] 各轮最近边沿是否下降沿
@@ -667,15 +902,31 @@ namespace jia
                 f32 nz_freeze_exit_m_s = 0.0f;                                      // [RO] 当前有效冻结退出阈值（m/s）。
                 f32 nz_xpark_enter_m_s = 0.0f;                                      // [RO] 当前有效 X-Park 进入阈值（m/s）。
                 f32 nz_xpark_exit_m_s = 0.0f;                                       // [RO] 当前有效 X-Park 退出阈值（m/s）。
-                f32 nz_stop_guard_release_m_s = 0.0f;                               // [RO] 当前有效停车保护释放阈值（m/s）。
                 bool lim_drive_omega = true;                                        // [RO] 驱动角速度限幅是否开启。
                 bool lim_drive_alpha = true;                                        // [RO] 驱动角加速度限幅是否开启。
                 bool lim_steer_rate = true;                                         // [RO] 舵向角速度限幅是否开启。
                 bool lim_steer_alpha = true;                                        // [RO] 舵向角加速度限幅是否开启。
-                f32 vec_gate_scale = 1.0f;                                          // [RO] 全局矢量一致性门控当前缩放。
-                f32 vec_dir_err_deg = 0.0f;                                         // [RO] 合成平移方向误差（deg）。
-                f32 vec_eta_max_s = 0.0f;                                           // [RO] 四轮最大预计到角时间（s）。
-                bool vec_gate_active = false;                                       // [RO] 全局矢量一致性门控当前是否激活。
+                f32 high_speed_drive_suppression_scale = 1.0f;                      // [RO] 当前高速抑制缩放。
+                f32 high_speed_dir_err_deg = 0.0f;                                  // [RO] 高速抑制使用的合成平移方向误差（deg）。
+                f32 high_speed_eta_max_s = 0.0f;                                    // [RO] 高速抑制使用的四轮最大预计到角时间（s）。
+                bool high_speed_drive_suppression_active = false;                   // [RO] 当前高速抑制是否激活。
+                bool low_speed_drive_suppression_bypassed_by_residual_speed = false; // [RO] 当前拍是否因为残余速度过高而旁路了低速抑制。
+                f32 max_residual_speed_m_s = 0.0f;                                  // [RO] 当前拍整车四轮中的最大实际残余速度（m/s）。
+                bool reverse_intent_active = false;
+                f32 reverse_intent_dir_err_deg = 0.0f;
+                bool steer_fault_active[4] = {false, false, false, false};
+                bool steer_fault_recovering[4] = {false, false, false, false};
+                bool steer_fault_control_intent[4] = {false, false, false, false};
+                bool steer_fault_xpark_stationary_hold[4] = {false, false, false, false};
+                bool steer_fault_freeze_candidate[4] = {false, false, false, false};
+                f32 steer_feedback_current_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                f32 steer_feedback_current_delta_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                f32 steer_feedback_angle_delta_rad[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                f32 steer_fault_steer_error_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                f32 steer_feedback_current_freeze_ms[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                f32 steer_feedback_recovery_toggle_count[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                f32 steer_fault_latched_count[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                bool steer_fault_any_active = false;
             } debug_mirror_;
 
             // 线程执行耗时统计（调试器只读观察）[RO]
@@ -718,26 +969,250 @@ namespace jia
 
         inline Result Chassis::setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
         {
-            const f32 internal_vel_x = vel_y;
-            const f32 internal_vel_y = -vel_x;
-            return (coord == Coordinate::kBody) ? setTargetBodySpeedMode(internal_vel_x, internal_vel_y, omega_z)
-                                                : setTargetWorldSpeedMode(internal_vel_x, internal_vel_y, omega_z);
+            const BodyCommand body_command = mapExternalCommandToBody({coord, vel_x, vel_y, omega_z});
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedMode(body_command.vel_x, body_command.vel_y, body_command.omega_z)
+                                                : setTargetWorldSpeedMode(body_command.vel_x, body_command.vel_y, body_command.omega_z);
         }
 
         inline Result Chassis::setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
         {
-            const f32 internal_vel_x = vel_y;
-            const f32 internal_vel_y = -vel_x;
-            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockNowRotZWithNoOmegaZMode(internal_vel_x, internal_vel_y, omega_z)
-                                                : setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(internal_vel_x, internal_vel_y, omega_z);
+            const BodyCommand body_command = mapExternalCommandToBody({coord, vel_x, vel_y, omega_z});
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockNowRotZWithNoOmegaZMode(body_command.vel_x, body_command.vel_y, body_command.omega_z)
+                                                : setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(body_command.vel_x, body_command.vel_y, body_command.omega_z);
         }
 
         inline Result Chassis::setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z)
         {
-            const f32 internal_vel_x = vel_y;
-            const f32 internal_vel_y = -vel_x;
-            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockToRotZMode(internal_vel_x, internal_vel_y, rot_z)
-                                                : setTargetWorldSpeedLockToRotZMode(internal_vel_x, internal_vel_y, rot_z);
+            const BodyCommand body_command = mapExternalCommandToBody({coord, vel_x, vel_y, 0.0f});
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockToRotZMode(body_command.vel_x, body_command.vel_y, rot_z)
+                                                : setTargetWorldSpeedLockToRotZMode(body_command.vel_x, body_command.vel_y, rot_z);
+        }
+
+        inline Chassis::BodyCommand Chassis::mapExternalCommandToBody(const ExternalCommand &command)
+        {
+            BodyCommand body_command;
+            body_command.vel_x = command.vel_y;
+            body_command.vel_y = -command.vel_x;
+            body_command.omega_z = command.omega_z;
+            return body_command;
+        }
+
+        inline Chassis::BodyCommand Chassis::normalizeBodyCommandForPlanner(const BodyCommand &command)
+        {
+            BodyCommand planner_command;
+            planner_command.vel_x = -command.vel_x;
+            planner_command.vel_y = -command.vel_y;
+            planner_command.omega_z = command.omega_z;
+            return planner_command;
+        }
+
+        inline f32 Chassis::mapRawSteerMotorTotalToSignedLocalTotal(f32 raw_motor_total_rad, f32 steer_motor_sign)
+        {
+            const f32 steer_sign = (steer_motor_sign == 0.0f) ? 1.0f : steer_motor_sign;
+            return raw_motor_total_rad * steer_sign;
+        }
+
+        inline f32 Chassis::mapSignedLocalTotalToRawSteerMotorTotal(f32 signed_local_total_rad, f32 steer_motor_sign)
+        {
+            const f32 steer_sign = (steer_motor_sign == 0.0f) ? 1.0f : steer_motor_sign;
+            return signed_local_total_rad / steer_sign;
+        }
+
+        inline f32 Chassis::applyHomingRuntimeZeroOffset(f32 signed_local_total_rad, f32 homing_runtime_zero_offset_rad)
+        {
+            return signed_local_total_rad + homing_runtime_zero_offset_rad;
+        }
+
+        inline f32 Chassis::removeHomingRuntimeZeroOffset(f32 corrected_local_total_rad, f32 homing_runtime_zero_offset_rad)
+        {
+            return corrected_local_total_rad - homing_runtime_zero_offset_rad;
+        }
+
+        inline f32 Chassis::mapOaTotalToCorrectedLocalTotal(f32 oa_total_rad, const SteerCalibration &calibration)
+        {
+            return oa_total_rad - calibration.theta_oa_to_owi_rad;
+        }
+
+        inline f32 Chassis::mapCorrectedLocalTotalToOaTotal(f32 corrected_local_total_rad, const SteerCalibration &calibration)
+        {
+            return corrected_local_total_rad + calibration.theta_oa_to_owi_rad;
+        }
+
+        inline f32 Chassis::mapRawSteerMotorTotalToCorrectedLocalTotal(f32 raw_motor_total_rad, const SteerCalibration &calibration)
+        {
+            const f32 signed_local_total_rad = mapRawSteerMotorTotalToSignedLocalTotal(raw_motor_total_rad, calibration.steer_motor_sign);
+            return applyHomingRuntimeZeroOffset(signed_local_total_rad, calibration.homing_runtime_zero_offset_rad);
+        }
+
+        inline f32 Chassis::mapCorrectedLocalTotalToRawSteerMotorTotal(f32 corrected_local_total_rad, const SteerCalibration &calibration)
+        {
+            const f32 signed_local_total_rad = removeHomingRuntimeZeroOffset(corrected_local_total_rad, calibration.homing_runtime_zero_offset_rad);
+            return mapSignedLocalTotalToRawSteerMotorTotal(signed_local_total_rad, calibration.steer_motor_sign);
+        }
+
+        inline f32 Chassis::mapDriveMotorRpmToWheelOmega(f32 motor_rpm, const SteerCalibration &calibration)
+        {
+            const f32 drive_sign = (calibration.drive_motor_sign == 0.0f) ? 1.0f : calibration.drive_motor_sign;
+            return drive_sign * rpmToRadsF32(motor_rpm);
+        }
+
+        inline f32 Chassis::mapWheelOmegaToDriveMotorRpm(f32 wheel_omega_rad_s, const SteerCalibration &calibration)
+        {
+            const f32 drive_sign = (calibration.drive_motor_sign == 0.0f) ? 1.0f : calibration.drive_motor_sign;
+            return radsToRpmF32(wheel_omega_rad_s / drive_sign);
+        }
+
+        inline f32 Chassis::mapWheelCurrentToDriveMotorCurrent(f32 wheel_current_mA, const SteerCalibration &calibration)
+        {
+            const f32 drive_sign = (calibration.drive_motor_sign == 0.0f) ? 1.0f : calibration.drive_motor_sign;
+            return wheel_current_mA / drive_sign;
+        }
+
+        inline f32 Chassis::computeHomingRuntimeZeroOffset(f32 edge_mech_oa_rad,
+                                                           f32 raw_motor_total_rad,
+                                                           f32 homing_zero_offset_rad,
+                                                           const SteerCalibration &calibration)
+        {
+            const f32 edge_local_corrected_rad = mapOaTotalToCorrectedLocalTotal(edge_mech_oa_rad, calibration);
+            const f32 edge_local_signed_rad = edge_local_corrected_rad + homing_zero_offset_rad;
+            return edge_local_signed_rad - mapRawSteerMotorTotalToSignedLocalTotal(raw_motor_total_rad, calibration.steer_motor_sign);
+        }
+
+        inline Chassis::NormalizedBodyCommand Chassis::makeNormalizedBodyCommand(const PlannerInputCommand &command,
+                                                                                 f32 input_yaw_rad,
+                                                                                 CommandInputSource source)
+        {
+            NormalizedBodyCommand normalized{};
+            normalized.source = source;
+            normalized.rot_z = command.rot_z;
+            normalized.is_world_speed_mode = command.is_world_speed_mode;
+            normalized.is_steer_only_mode = command.is_steer_only_mode;
+
+            f32 body_vel_x = command.vel_x;
+            f32 body_vel_y = command.vel_y;
+            if (command.is_world_speed_mode)
+            {
+                const f32 cos_theta = cosf(input_yaw_rad);
+                const f32 sin_theta = sinf(input_yaw_rad);
+                body_vel_x = command.vel_x * cos_theta + command.vel_y * sin_theta;
+                body_vel_y = -command.vel_x * sin_theta + command.vel_y * cos_theta;
+            }
+
+            normalized.body = normalizeBodyCommandForPlanner({body_vel_x, body_vel_y, command.omega_z});
+            if (command.is_steer_only_mode)
+            {
+                normalized.body.vel_x = 0.0f;
+                normalized.body.vel_y = 0.0f;
+                normalized.body.omega_z = 0.0f;
+            }
+            return normalized;
+        }
+
+        inline Chassis::DebugControlRoute Chassis::classifyDebugControlRoute(bool debug_enable, u8 raw_mode)
+        {
+            if (!debug_enable)
+            {
+                return DebugControlRoute::kDisabled;
+            }
+
+            switch (raw_mode)
+            {
+            case 20:
+            case 21:
+            case 22:
+            case 30:
+                return DebugControlRoute::kModuleOverride;
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+            default:
+                return DebugControlRoute::kTargetInjection;
+            }
+        }
+
+        inline Chassis::DebugModuleOverrideRoute Chassis::classifyDebugModuleOverrideRoute(u8 raw_mode)
+        {
+            switch (raw_mode)
+            {
+            case 20:
+                return DebugModuleOverrideRoute::kSingleWheel;
+            case 21:
+                return DebugModuleOverrideRoute::kAlignForward;
+            case 22:
+                return DebugModuleOverrideRoute::kHomingObserve;
+            case 30:
+                return DebugModuleOverrideRoute::kDirectActuator;
+            default:
+                return DebugModuleOverrideRoute::kNone;
+            }
+        }
+
+        inline Chassis::PlannerInputSnapshot Chassis::makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad)
+        {
+            PlannerInputSnapshot snapshot{};
+            const NormalizedBodyCommand normalized = makeNormalizedBodyCommand(command, input_yaw_rad, CommandInputSource::kApi);
+            snapshot.target.vel_x = normalized.body.vel_x;
+            snapshot.target.vel_y = normalized.body.vel_y;
+            snapshot.target.omega_z = normalized.body.omega_z;
+            snapshot.target.rot_z = normalized.rot_z;
+
+            return snapshot;
+        }
+
+        inline Chassis::TelemetrySnapshot Chassis::makeTelemetrySnapshot(bool homing_all_ready,
+                                                                         const TelemetryChassisState &target,
+                                                                         const TelemetryChassisState &actual,
+                                                                         const TelemetryWheelPose wheel_pose[kTelemetryWheelCount],
+                                                                         const f32 target_drive_omega_rad_s[kTelemetryWheelCount],
+                                                                         const f32 actual_drive_omega_rad_s[kTelemetryWheelCount],
+                                                                         const f32 target_steer_oa_rad[kTelemetryWheelCount],
+                                                                         const f32 actual_steer_oa_rad[kTelemetryWheelCount])
+        {
+            TelemetrySnapshot snapshot{};
+            snapshot.homing_all_ready = homing_all_ready;
+            snapshot.target = target;
+            snapshot.actual = actual;
+
+            for (u8 i = 0U; i < kTelemetryWheelCount; ++i)
+            {
+                TelemetryWheelState &wheel = snapshot.wheels[i];
+                wheel.target_drive_omega_rad_s = target_drive_omega_rad_s[i];
+                wheel.actual_drive_omega_rad_s = actual_drive_omega_rad_s[i];
+                wheel.target_steer_oa_rad = target_steer_oa_rad[i];
+                wheel.actual_steer_oa_rad = actual_steer_oa_rad[i];
+                wheel.target_velocity_x_m_s = target.vel_x + target.omega_z * wheel_pose[i].pos_y_m;
+                wheel.target_velocity_y_m_s = target.vel_y - target.omega_z * wheel_pose[i].pos_x_m;
+                wheel.actual_velocity_x_m_s = actual.vel_x + actual.omega_z * wheel_pose[i].pos_y_m;
+                wheel.actual_velocity_y_m_s = actual.vel_y - actual.omega_z * wheel_pose[i].pos_x_m;
+            }
+
+            return snapshot;
+        }
+
+        inline Chassis::SteerCalibration Chassis::makeSteerCalibration(const WheelConfig &wheel)
+        {
+            SteerCalibration calibration;
+            calibration.theta_oa_to_owi_rad = wheel.theta_oa_to_owi_rad;
+            calibration.homing_runtime_zero_offset_rad = wheel.homing_runtime_zero_offset_rad;
+            calibration.steer_motor_sign = wheel.steer_motor_sign;
+            calibration.drive_motor_sign = wheel.drive_motor_sign;
+            return calibration;
+        }
+
+        inline f32 Chassis::mapWheelCorrectedLocalToOaTotal(const WheelConfig &wheel, f32 corrected_local_total_rad)
+        {
+            return mapCorrectedLocalTotalToOaTotal(corrected_local_total_rad, makeSteerCalibration(wheel));
+        }
+
+        inline f32 Chassis::mapWheelOaTotalToCorrectedLocal(const WheelConfig &wheel, f32 oa_total_rad)
+        {
+            return mapOaTotalToCorrectedLocalTotal(oa_total_rad, makeSteerCalibration(wheel));
         }
 
         inline Robot_Twist Chassis::getBodySpeed() const

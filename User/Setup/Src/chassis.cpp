@@ -1,4 +1,8 @@
-﻿#include "chassis.h"
+#define private public
+#define protected public
+#include "chassis.h"
+#undef private
+#undef protected
 
 #include <cmath>
 
@@ -89,12 +93,12 @@ namespace jia
                 }
                 return crc;
             }
+
         } // namespace
 
         void Chassis::init(InitConfig &config)
         {
             runtime_strategy_cfg_ = default_strategy_cfg_;
-            deriveNearZeroThresholds();
             refreshActuatorLimitState();
 
             static const WheelInitConfig kDefaultWheelInit[4] = {
@@ -127,6 +131,7 @@ namespace jia
                 wheel.homing_state = wheel.homing_enabled ? HomingState::kIdle : HomingState::kReady;
                 wheel.homing_last_sensor_active = false;
                 wheel.homing_last_edge_is_falling = false;
+                wheel.homing_align_command_armed = false;
                 wheel.homing_zero_valid = !wheel.homing_enabled;
                 wheel.homing_elapsed_s = 0.0f;
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
@@ -136,26 +141,35 @@ namespace jia
                 wheel.target_drive_omega_rad_s = 0.0f;
                 wheel.steer_target_velocity_rad_s = 0.0f;
                 wheel.flipped_drive_direction = false;
+                wheel.steer_fault_state = SteerFaultState::kNone;
+                wheel.steer_fault_rehome_request = false;
+                wheel.steer_feedback_current_mA = 0.0f;
+                wheel.steer_feedback_last_current_mA = 0.0f;
+                wheel.steer_feedback_last_raw_total_angle_rad = 0.0f;
+                wheel.steer_feedback_freeze_ms = 0U;
+                wheel.steer_feedback_recovery_toggle_count = 0U;
+                wheel.steer_fault_latched_count = 0U;
                 selected_flipped_solution_[i] = false;
-                drive_gate_scale_[i] = 1.0f;
+                low_speed_drive_suppression_scale_[i] = 1.0f;
             }
 
-            adaptive_gate_scale_ = 1.0f;
-            adaptive_gate_phase_ = AdaptiveGatePhase::kIdle;
-            vector_gate_scale_ = 1.0f;
-            vector_gate_active_ = false;
-            vector_dir_err_deg_ = 0.0f;
-            vector_eta_max_s_ = 0.0f;
+            high_speed_drive_suppression_scale_ = 1.0f;
+            high_speed_trans_gate_active_ = false;
+            high_speed_drive_suppression_active_ = false;
+            high_speed_dir_err_deg_ = 0.0f;
+            high_speed_eta_max_s_ = 0.0f;
+            steer_fault_any_active_ = false;
+            low_speed_residual_bypass_active_ = false;
             trans_dir_freeze_active_ = false;
             trans_dir_ref_valid_ = false;
             trans_dir_ref_rad_ = 0.0f;
             trans_dir_tar_mag_m_s_ = 0.0f;
             trans_dir_out_mag_m_s_ = 0.0f;
             trans_dir_freeze_reason_ = 0U;
-            vector_gate_scale_ = 1.0f;
-            vector_gate_active_ = false;
-            vector_dir_err_deg_ = 0.0f;
-            vector_eta_max_s_ = 0.0f;
+            high_speed_drive_suppression_scale_ = 1.0f;
+            high_speed_drive_suppression_active_ = false;
+            high_speed_dir_err_deg_ = 0.0f;
+            high_speed_eta_max_s_ = 0.0f;
 
             rot_z_pid_.set_params(lock_angle_pid_params, 0.0f);
             rot_z_pid_.set_as_circular();
@@ -305,21 +319,26 @@ namespace jia
             // 回零请求只负责“拉起状态机”和清空本轮回零参考，不直接驱动电机；
 // 真正的搜索、沿边沿捕获零位、偏置生效和完成判定都在runThread中按周期推进
             homing_start_request_ = true;
+            steer_fault_any_active_ = false;
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
+                clearSteerFaultState(wheel);
                 wheel.homing_elapsed_s = 0.0f;
                 wheel.homing_last_sensor_active = false;
+                wheel.homing_align_command_armed = false;
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
                 if (wheel.homing_enabled && wheel.homing_gpio_port != nullptr)
                 {
                     wheel.homing_state = HomingState::kIdle;
                     wheel.homing_zero_valid = false;
+                    wheel.homing_align_command_armed = false;
                 }
                 else
                 {
                     wheel.homing_state = HomingState::kReady;
                     wheel.homing_zero_valid = true;
+                    wheel.homing_align_command_armed = false;
                 }
             }
             return Result::kOk;
@@ -339,7 +358,7 @@ namespace jia
 
         void Chassis::setIdlePostureMode(IdlePostureMode mode)
         {
-            idle_posture_mode_ = mode;
+            runtime_strategy_cfg_.idle_posture_mode = mode;
         }
 
         void Chassis::setSteeringStrategyMode(SteeringStrategyMode mode)
@@ -347,38 +366,62 @@ namespace jia
             runtime_strategy_cfg_.steering_strategy_mode = mode;
         }
 
-        void Chassis::deriveNearZeroThresholds()
+        f32 Chassis::getNearZeroEnterSpeedMps() const
         {
-            const f32 enter = (near_zero_cfg_.base_enter_m_s >= 0.0f) ? near_zero_cfg_.base_enter_m_s : 0.0f;
-            const f32 exit_raw = (near_zero_cfg_.base_exit_m_s >= 0.0f) ? near_zero_cfg_.base_exit_m_s : 0.0f;
-            const f32 exit = (exit_raw > enter) ? exit_raw : (enter + 1.0e-3f);
-            const f32 release_scale = (near_zero_cfg_.stop_guard_release_scale >= 0.0f) ? near_zero_cfg_.stop_guard_release_scale : 0.0f;
-            const f32 release = enter * release_scale;
+            return (runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s >= 0.0f) ? runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s : 0.0f;
+        }
 
-            near_zero_derived_.stationary_m_s = enter;
-            near_zero_derived_.freeze_enter_m_s = enter;
-            near_zero_derived_.freeze_exit_m_s = exit;
-            near_zero_derived_.xpark_enter_m_s = enter;
-            near_zero_derived_.xpark_exit_m_s = exit;
-            near_zero_derived_.stop_guard_release_m_s = release;
+        f32 Chassis::getNearZeroExitSpeedMps() const
+        {
+            const f32 enter = getNearZeroEnterSpeedMps();
+            const f32 exit_raw = (runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s >= 0.0f) ? runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s : 0.0f;
+            return (exit_raw > enter) ? exit_raw : (enter + 1.0e-3f);
+        }
+
+        bool Chassis::shouldActivateReverseIntent(f32 target_vel_x, f32 target_vel_y, f32 reference_dir_rad) const
+        {
+            const StrategyConfig::ReverseIntentConfig &cfg = runtime_strategy_cfg_.reverse_intent;
+            if (!cfg.enable)
+            {
+                return false;
+            }
+
+            const f32 speed_m_s = magnitude2D(target_vel_x, target_vel_y);
+            const f32 min_speed_m_s = (cfg.min_speed_m_s > 0.0f) ? cfg.min_speed_m_s : getNearZeroExitSpeedMps();
+            if (speed_m_s <= min_speed_m_s)
+            {
+                return false;
+            }
+
+            const f32 target_dir_rad = atan2f(target_vel_y, target_vel_x);
+            const f32 dir_err_deg = radToDegF32(fabsf(shortestAngularDistance(reference_dir_rad, target_dir_rad)));
+            const f32 enter_deg = (cfg.enter_angle_deg >= 0.0f) ? cfg.enter_angle_deg : 135.0f;
+            const f32 exit_deg = (cfg.exit_angle_deg >= 0.0f) ? cfg.exit_angle_deg : 105.0f;
+            return reverse_intent_active_ ? (dir_err_deg >= exit_deg) : (dir_err_deg >= enter_deg);
         }
 
         void Chassis::refreshActuatorLimitState()
         {
-// 预留钩子：当前执行器限幅开关直接从actuator_limit_enable_读取，无需额外派生状态
+// 预留钩子：当前执行器限幅开关直接从就近布置的 enable_* 成员读取，无需额外派生状态
         }
 
         f32 Chassis::mapSingleTurnToNearestTotalAngle(const WheelConfig &wheel, f32 target_oa_single_turn_deg) const
         {
             const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(target_oa_single_turn_deg));
-            const f32 current_oa_total_rad = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+            const SteerCalibration calibration{
+                wheel.theta_oa_to_owi_rad,
+                wheel.homing_runtime_zero_offset_rad,
+                wheel.steer_motor_sign,
+                wheel.drive_motor_sign,
+            };
+            const f32 current_oa_total_rad = mapCorrectedLocalTotalToOaTotal(wheel.corrected_steer_motor_total_angle_rad, calibration);
             const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, target_oa_mod_rad);
-            return target_oa_total_rad - wheel.theta_oa_to_owi_rad;
+            return mapOaTotalToCorrectedLocalTotal(target_oa_total_rad, calibration);
         }
 
         void Chassis::computeProjectedDriveFromPlannedSteer(const Data &command_data, const f32 planned_oa_total_rad[4], f32 out_drive_omega_rad_s[4]) const
         {
-            const f32 safe_wheel_radius = (wheel_radius_m_ > 1.0e-6f) ? wheel_radius_m_ : 1.0e-6f;
+            const f32 safe_wheel_radius = (runtime_strategy_cfg_.wheel_radius_m_ > 1.0e-6f) ? runtime_strategy_cfg_.wheel_radius_m_ : 1.0e-6f;
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];
@@ -402,7 +445,7 @@ namespace jia
                 const f32 steer_angle_oa_rad = planned_oa_total_rad[i];
                 const f32 cos_theta = cosf(steer_angle_oa_rad);
                 const f32 sin_theta = sinf(steer_angle_oa_rad);
-                const f32 drive_linear_m_s = planned_drive_omega_rad_s[i] * wheel_radius_m_;
+                const f32 drive_linear_m_s = planned_drive_omega_rad_s[i] * runtime_strategy_cfg_.wheel_radius_m_;
 
                 const f32 rows[2][3] = {
                     {cos_theta, sin_theta, -wheel.pos_y_m * cos_theta + wheel.pos_x_m * sin_theta},
@@ -439,14 +482,33 @@ namespace jia
             return true;
         }
 
-        f32 Chassis::updateVectorConsistencyGate(f32 translational_speed_m_s, f32 eta_max_s, f32 dir_err_deg)
+        f32 Chassis::updateHighSpeedDriveSuppression(f32 translational_speed_m_s, f32 eta_max_s, f32 dir_err_deg)
         {
-            const StrategyConfig::VectorConsistencyConfig &cfg = runtime_strategy_cfg_.vector_consistency;
-            if (!cfg.enable || translational_speed_m_s < cfg.min_trans_speed_enable_m_s)
+            const StrategyConfig::HighSpeedDriveSuppressionConfig &cfg = runtime_strategy_cfg_.high_speed_drive_suppression;
+            if (!runtime_strategy_cfg_.enable_high_speed_drive_suppression)
             {
-                vector_gate_active_ = false;
-                vector_gate_scale_ = 1.0f;
-                return vector_gate_scale_;
+                high_speed_trans_gate_active_ = false;
+                high_speed_drive_suppression_active_ = false;
+                high_speed_drive_suppression_scale_ = 1.0f;
+                return high_speed_drive_suppression_scale_;
+            }
+
+            const f32 trans_enter_speed_m_s = getNearZeroEnterSpeedMps();
+            const f32 trans_exit_speed_m_s = getNearZeroExitSpeedMps();
+            if (high_speed_trans_gate_active_)
+            {
+                high_speed_trans_gate_active_ = translational_speed_m_s > trans_enter_speed_m_s;
+            }
+            else
+            {
+                high_speed_trans_gate_active_ = translational_speed_m_s > trans_exit_speed_m_s;
+            }
+
+            if (!high_speed_trans_gate_active_)
+            {
+                high_speed_drive_suppression_active_ = false;
+                high_speed_drive_suppression_scale_ = 1.0f;
+                return high_speed_drive_suppression_scale_;
             }
 
             const f32 dir_enter = (cfg.dir_err_enter_deg > 0.0f) ? cfg.dir_err_enter_deg : 12.0f;
@@ -454,37 +516,37 @@ namespace jia
             const f32 eta_enter = (cfg.eta_lock_s > 0.0f) ? cfg.eta_lock_s : 0.20f;
             const f32 eta_exit = (cfg.eta_release_s > 0.0f && cfg.eta_release_s < eta_enter) ? cfg.eta_release_s : (eta_enter * 0.3f);
 
-            if (vector_gate_active_)
+            if (high_speed_drive_suppression_active_)
             {
-                vector_gate_active_ = (dir_err_deg >= dir_exit) || (eta_max_s >= eta_exit);
+                high_speed_drive_suppression_active_ = (dir_err_deg >= dir_exit) || (eta_max_s >= eta_exit);
             }
             else
             {
-                vector_gate_active_ = (dir_err_deg >= dir_enter) || (eta_max_s >= eta_enter);
+                high_speed_drive_suppression_active_ = (dir_err_deg >= dir_enter) || (eta_max_s >= eta_enter);
             }
 
             const f32 ramp_up_s = (cfg.gate_ramp_up_s > 1.0e-4f) ? cfg.gate_ramp_up_s : 0.08f;
             const f32 ramp_down_s = (cfg.gate_ramp_down_s > 1.0e-4f) ? cfg.gate_ramp_down_s : 0.03f;
-            if (vector_gate_active_)
+            if (high_speed_drive_suppression_active_)
             {
-                vector_gate_scale_ = clampValue(vector_gate_scale_ - period_ / ramp_down_s, 0.0f, 1.0f);
+                high_speed_drive_suppression_scale_ = clampValue(high_speed_drive_suppression_scale_ - period_ / ramp_down_s, 0.0f, 1.0f);
             }
             else
             {
-                vector_gate_scale_ = clampValue(vector_gate_scale_ + period_ / ramp_up_s, 0.0f, 1.0f);
+                high_speed_drive_suppression_scale_ = clampValue(high_speed_drive_suppression_scale_ + period_ / ramp_up_s, 0.0f, 1.0f);
             }
-            return vector_gate_scale_;
+            return high_speed_drive_suppression_scale_;
         }
 
         void Chassis::resetRuntimeStrategyToInitConfig()
         {
             runtime_strategy_cfg_ = default_strategy_cfg_;
-            adaptive_gate_scale_ = 1.0f;
-            adaptive_gate_phase_ = AdaptiveGatePhase::kIdle;
-            vector_gate_scale_ = 1.0f;
-            vector_gate_active_ = false;
-            vector_dir_err_deg_ = 0.0f;
-            vector_eta_max_s_ = 0.0f;
+            high_speed_drive_suppression_scale_ = 1.0f;
+            high_speed_trans_gate_active_ = false;
+            high_speed_drive_suppression_active_ = false;
+            high_speed_dir_err_deg_ = 0.0f;
+            high_speed_eta_max_s_ = 0.0f;
+            low_speed_residual_bypass_active_ = false;
             xpark_gate_active_ = false;
             xpark_stationary_hold_ms_ = 0U;
             trans_dir_freeze_active_ = false;
@@ -493,7 +555,8 @@ namespace jia
             trans_dir_tar_mag_m_s_ = 0.0f;
             trans_dir_out_mag_m_s_ = 0.0f;
             trans_dir_freeze_reason_ = 0U;
-            deriveNearZeroThresholds();
+            reverse_intent_active_ = false;
+            reverse_intent_dir_err_deg_ = 0.0f;
             refreshActuatorLimitState();
         }
 
@@ -527,150 +590,438 @@ namespace jia
             return atan2f(wheel.pos_y_m, wheel.pos_x_m);
         }
 
-        f32 Chassis::computeDriveGateScale(f32 abs_error_rad) const
+        f32 Chassis::computeMaxCommandWheelSpeedMps(const Data &command_data) const
         {
-            const f32 close_rad = degToRadF32(runtime_strategy_cfg_.drive_gate_close_angle_deg);
-            const f32 min_scale = clampValue(runtime_strategy_cfg_.drive_gate_min_scale, 0.0f, 1.0f);
-
-            switch (runtime_strategy_cfg_.drive_gate_strategy)
+            f32 max_command_wheel_speed_m_s = 0.0f;
+            for (u8 i = 0; i < 4; ++i)
             {
-            case DriveGateStrategy::kHardGate:
-                return (abs_error_rad >= close_rad) ? min_scale : 1.0f;
-            case DriveGateStrategy::kSoftGate:
-            {
-                if (close_rad <= 1.0e-6f)
-                {
-                    return min_scale;
-                }
-                const f32 ratio = clampValue(abs_error_rad / close_rad, 0.0f, 1.0f);
-                return 1.0f - (1.0f - min_scale) * ratio;
+                const WheelConfig &wheel = wheel_config_[i];
+                const f32 wheel_vx = command_data.vel_x + command_data.omega_z * wheel.pos_y_m;
+                const f32 wheel_vy = command_data.vel_y - command_data.omega_z * wheel.pos_x_m;
+                const f32 wheel_speed_m_s = magnitude2D(wheel_vx, wheel_vy);
+                max_command_wheel_speed_m_s =
+                    (wheel_speed_m_s > max_command_wheel_speed_m_s) ? wheel_speed_m_s : max_command_wheel_speed_m_s;
             }
-            case DriveGateStrategy::kContinuousCurve:
-            {
-                const f32 half_rad = degToRadF32(runtime_strategy_cfg_.drive_gate_curve_half_angle_deg);
-                const f32 exponent = (runtime_strategy_cfg_.drive_gate_curve_exponent > 0.1f) ? runtime_strategy_cfg_.drive_gate_curve_exponent : 2.0f;
-                const f32 curve_min = clampValue(runtime_strategy_cfg_.drive_gate_curve_min_scale, 0.0f, 1.0f);
-                if (half_rad <= 1.0e-6f)
-                {
-                    return curve_min;
-                }
-                const f32 norm = abs_error_rad / half_rad;
-                const f32 scale = 1.0f / (1.0f + powf(norm, exponent));
-                return clampValue(curve_min + (1.0f - curve_min) * scale, curve_min, 1.0f);
-            }
-            case DriveGateStrategy::kAdaptiveGate:
-            default:
-                return (abs_error_rad >= close_rad) ? min_scale : 1.0f;
-            }
+            return max_command_wheel_speed_m_s;
         }
 
-        void Chassis::computeDriveGateScales(const f32 steering_errors_rad[4], const Data &command_data, f32 out_scales[4])
+        bool Chassis::shouldActivateLaunchHold() const
+        {
+            if (!runtime_strategy_cfg_.enable_low_speed_drive_suppression)
+            {
+                return false;
+            }
+
+            if (runtime_strategy_cfg_.low_speed_drive_suppression.min_scale > 1.0e-6f)
+            {
+                return false;
+            }
+
+            const f32 command_speed_m_s = computeMaxCommandWheelSpeedMps(target_data_);
+            return xpark_gate_active_ && (command_speed_m_s > getNearZeroExitSpeedMps());
+        }
+
+        bool Chassis::isLaunchHoldAligned(const SwervePlannerOutput &planner_output) const
+        {
+            const f32 close_rad = degToRadF32(runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg);
+            for (u8 i = 0; i < 4; ++i)
+            {
+                if (planner_output.steering_errors_rad[i] >= close_rad)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        Chassis::Data Chassis::makeLaunchHoldPreviewCommand() const
+        {
+            Data preview = target_data_;
+            clampTargetSpeedInChassis(preview.vel_x, preview.vel_y, preview.omega_z,
+                                      preview.vel_x, preview.vel_y, preview.omega_z);
+            preview.acc_x = 0.0f;
+            preview.acc_y = 0.0f;
+            preview.alpha_z = 0.0f;
+            preview.rot_z = target_data_.rot_z;
+            return preview;
+        }
+
+        f32 Chassis::computeLowSpeedDriveSuppressionScale(f32 abs_error_rad) const
+        {
+            const f32 close_rad = degToRadF32(runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg);
+            const f32 min_scale = clampValue(runtime_strategy_cfg_.low_speed_drive_suppression.min_scale, 0.0f, 1.0f);
+            return (abs_error_rad >= close_rad) ? min_scale : 1.0f;
+        }
+
+        void Chassis::computeLowSpeedDriveSuppressionScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4])
         {
             for (u8 i = 0; i < 4; ++i)
             {
                 out_scales[i] = 1.0f;
             }
 
-            if (!runtime_strategy_cfg_.enable_drive_gate)
+            max_residual_speed_m_s_ = planner_input.max_residual_speed_m_s;
+            low_speed_drive_suppression_bypassed_by_residual_speed_ = false;
+
+            if (!runtime_strategy_cfg_.enable_low_speed_drive_suppression)
             {
-                adaptive_gate_scale_ = 1.0f;
-                adaptive_gate_phase_ = AdaptiveGatePhase::kDisabled;
                 return;
             }
 
-            if (runtime_strategy_cfg_.drive_gate_strategy == DriveGateStrategy::kAdaptiveGate)
+            const f32 bypass_enter_speed_m_s = getNearZeroExitSpeedMps();
+            const f32 bypass_exit_speed_m_s = getNearZeroEnterSpeedMps();
+            if (low_speed_residual_bypass_active_)
             {
-                const f32 linear_speed = magnitude2D(command_data.vel_x, command_data.vel_y);
-                const f32 angular_speed = fabsf(command_data.omega_z);
-                const bool in_transition = (linear_speed >= runtime_strategy_cfg_.drive_gate_transition_linear_speed_m_s) ||
-                                           (angular_speed >= runtime_strategy_cfg_.drive_gate_transition_angular_speed_rad_s);
-                const f32 ramp_up = (runtime_strategy_cfg_.drive_gate_scale_ramp_up_s > 1.0e-6f) ? runtime_strategy_cfg_.drive_gate_scale_ramp_up_s : 0.10f;
-                const f32 ramp_down = (runtime_strategy_cfg_.drive_gate_scale_ramp_down_s > 1.0e-6f) ? runtime_strategy_cfg_.drive_gate_scale_ramp_down_s : 0.06f;
-                const f32 delta = period_ / (in_transition ? ramp_up : ramp_down);
-                if (in_transition)
+                low_speed_residual_bypass_active_ = planner_input.max_residual_speed_m_s > bypass_exit_speed_m_s;
+            }
+            else
+            {
+                low_speed_residual_bypass_active_ = planner_input.max_residual_speed_m_s > bypass_enter_speed_m_s;
+            }
+
+            if (low_speed_residual_bypass_active_)
+            {
+                low_speed_drive_suppression_bypassed_by_residual_speed_ = true;
+                return;
+            }
+
+            f32 max_abs = 0.0f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                if (steering_errors_rad[i] > max_abs)
                 {
-                    adaptive_gate_scale_ = clampValue(adaptive_gate_scale_ + delta, 0.0f, 1.0f);
-                    adaptive_gate_phase_ = AdaptiveGatePhase::kTransition;
+                    max_abs = steering_errors_rad[i];
                 }
-                else
+            }
+            const f32 scale = clampValue(computeLowSpeedDriveSuppressionScale(max_abs), 0.0f, 1.0f);
+            for (u8 i = 0; i < 4; ++i)
+            {
+                out_scales[i] = scale;
+            }
+        }
+
+        Chassis::SwervePlannerInput Chassis::makeSwervePlannerInput(const Data &command_data)
+        {
+            SwervePlannerInput planner_input{};
+            planner_input.command = command_data;
+
+            for (u8 i = 0; i < 4; ++i)
+            {
+                WheelConfig &wheel = wheel_config_[i];
+                const f32 current_corrected_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
+                planner_input.current_oa_total_rad[i] = mapWheelCorrectedLocalToOaTotal(wheel, current_corrected_local_total_rad);
+
+                const f32 wheel_vx = command_data.vel_x + command_data.omega_z * wheel.pos_y_m;
+                const f32 wheel_vy = command_data.vel_y - command_data.omega_z * wheel.pos_x_m;
+                const f32 wheel_speed_m_s = magnitude2D(wheel_vx, wheel_vy);
+                planner_input.wheel_vx_m_s[i] = wheel_vx;
+                planner_input.wheel_vy_m_s[i] = wheel_vy;
+                planner_input.wheel_speed_m_s[i] = wheel_speed_m_s;
+                planner_input.max_command_wheel_speed_m_s =
+                    (wheel_speed_m_s > planner_input.max_command_wheel_speed_m_s) ? wheel_speed_m_s : planner_input.max_command_wheel_speed_m_s;
+
+                const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * runtime_strategy_cfg_.wheel_radius_m_;
+                planner_input.residual_speed_m_s[i] = residual_speed_m_s;
+                planner_input.max_residual_speed_m_s =
+                    (residual_speed_m_s > planner_input.max_residual_speed_m_s) ? residual_speed_m_s : planner_input.max_residual_speed_m_s;
+            }
+
+            const f32 xpark_enter_speed = getNearZeroEnterSpeedMps();
+            const f32 xpark_exit_speed = getNearZeroExitSpeedMps();
+            const bool command_stationary_intent = xpark_gate_active_
+                                                       ? (planner_input.max_command_wheel_speed_m_s <= xpark_exit_speed)
+                                                       : (planner_input.max_command_wheel_speed_m_s <= xpark_enter_speed);
+            const bool residual_stationary_intent = xpark_gate_active_
+                                                        ? (planner_input.max_residual_speed_m_s <= xpark_exit_speed)
+                                                        : (planner_input.max_residual_speed_m_s <= xpark_enter_speed);
+            planner_input.command_stationary_intent = command_stationary_intent && residual_stationary_intent;
+
+            if (planner_input.command_stationary_intent)
+            {
+                xpark_stationary_hold_ms_ = (xpark_stationary_hold_ms_ > (0xFFFFFFFFU - period_ms_))
+                                                ? 0xFFFFFFFFU
+                                                : (xpark_stationary_hold_ms_ + period_ms_);
+                if (xpark_stationary_hold_ms_ >= runtime_strategy_cfg_.xpark_entry_delay_ms)
                 {
-                    adaptive_gate_scale_ = clampValue(adaptive_gate_scale_ - delta, 0.0f, 1.0f);
-                    adaptive_gate_phase_ = AdaptiveGatePhase::kStartHold;
+                    xpark_gate_active_ = true;
                 }
             }
             else
             {
-                adaptive_gate_scale_ = 1.0f;
-                adaptive_gate_phase_ = AdaptiveGatePhase::kLegacy;
+                xpark_stationary_hold_ms_ = 0U;
+                xpark_gate_active_ = false;
             }
 
-            if (runtime_strategy_cfg_.drive_gate_scope == DriveGateScope::kGlobal)
+            planner_input.allow_xpark_pose = planner_input.command_stationary_intent && xpark_gate_active_;
+            planner_input.force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
+            planner_input.uniform_steer_oa_mod_rad = wrapTo2Pi(degToRadF32(input_target_data_.steer_lock_angle_deg));
+            planner_input.uniform_drive_omega_abs = fabsf(input_target_data_.drive_lock_speed_m_s) / runtime_strategy_cfg_.wheel_radius_m_;
+            planner_input.uniform_drive_sign = (input_target_data_.drive_lock_speed_m_s >= 0.0f) ? 1.0f : -1.0f;
+            return planner_input;
+        }
+
+        Chassis::SwervePlannerOutput Chassis::planSwerveModules(const SwervePlannerInput &planner_input)
+        {
+            SwervePlannerOutput planner_output{};
+            const f32 planner_command_speed_m_s = magnitude2D(planner_input.command.vel_x, planner_input.command.vel_y);
+            const f32 planner_reference_dir_rad = trans_dir_ref_valid_
+                                                     ? trans_dir_ref_rad_
+                                                     : ((magnitude2D(last_planned_data_.vel_x, last_planned_data_.vel_y) > 1.0e-6f)
+                                                            ? atan2f(last_planned_data_.vel_y, last_planned_data_.vel_x)
+                                                            : 0.0f);
+            const bool planner_reverse_intent =
+                (planner_command_speed_m_s > 1.0e-6f) && shouldActivateReverseIntent(planner_input.command.vel_x, planner_input.command.vel_y, planner_reference_dir_rad);
+
+            for (u8 i = 0; i < 4; ++i)
             {
-                f32 max_abs = 0.0f;
-                for (u8 i = 0; i < 4; ++i)
+                const WheelConfig &wheel = wheel_config_[i];
+                const f32 wheel_speed_m_s = planner_input.wheel_speed_m_s[i];
+                const bool is_stationary = wheel_speed_m_s <= getNearZeroEnterSpeedMps();
+
+                if (is_stationary)
                 {
-                    if (steering_errors_rad[i] > max_abs)
+                    planner_output.ideal_oa_total_rad[i] = (planner_input.allow_xpark_pose && runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kXPark)
+                                                               ? wrapTo2Pi(getXParkAngle(wheel))
+                                                               : wrapTo2Pi(planner_input.current_oa_total_rad[i]);
+                    planner_output.ideal_drive_omega_rad_s[i] = 0.0f;
+                }
+                else
+                {
+                    planner_output.ideal_oa_total_rad[i] = wrapTo2Pi(atan2f(planner_input.wheel_vy_m_s[i], planner_input.wheel_vx_m_s[i]));
+                    planner_output.ideal_drive_omega_rad_s[i] = wheel_speed_m_s / runtime_strategy_cfg_.wheel_radius_m_;
+                }
+
+                const f32 alt_target_oa_mod_rad = wrapTo2Pi(planner_output.ideal_oa_total_rad[i] + kPi);
+                const f32 candidate_a = nearestEquivalentAngle(planner_input.current_oa_total_rad[i], planner_output.ideal_oa_total_rad[i]);
+                const f32 candidate_b = nearestEquivalentAngle(planner_input.current_oa_total_rad[i], alt_target_oa_mod_rad);
+
+                f32 selected_oa_total_rad = candidate_a;
+                f32 selected_drive_omega_rad_s = planner_output.ideal_drive_omega_rad_s[i];
+                bool flipped = false;
+
+                if (!is_stationary)
+                {
+                    if (runtime_strategy_cfg_.steering_strategy_mode == SteeringStrategyMode::kAlwaysForward)
                     {
-                        max_abs = steering_errors_rad[i];
+                        flipped = false;
+                    }
+                    else
+                    {
+                        const f32 base_abs_deg = radToDegF32(fabsf(candidate_a - planner_input.current_oa_total_rad[i]));
+                        const f32 flip_abs_deg = radToDegF32(fabsf(candidate_b - planner_input.current_oa_total_rad[i]));
+                        if (reverse_intent_active_ || planner_reverse_intent)
+                        {
+                            const f32 prefer_margin_deg =
+                                clampValue(runtime_strategy_cfg_.reverse_intent.flip_prefer_margin_deg, 0.0f, 180.0f);
+                            if (flip_abs_deg + prefer_margin_deg < base_abs_deg)
+                            {
+                                flipped = true;
+                            }
+                            else if (base_abs_deg + prefer_margin_deg < flip_abs_deg)
+                            {
+                                flipped = false;
+                            }
+                            else
+                            {
+                                flipped = selected_flipped_solution_[i] || (flip_abs_deg < base_abs_deg);
+                            }
+                        }
+                        else if (selected_flipped_solution_[i])
+                        {
+                            flipped = flip_abs_deg <= runtime_strategy_cfg_.flip_enter_angle_deg;
+                        }
+                        else
+                        {
+                            flipped = (base_abs_deg > runtime_strategy_cfg_.flip_exit_angle_deg) && (flip_abs_deg < base_abs_deg);
+                        }
                     }
                 }
-                f32 scale = computeDriveGateScale(max_abs);
-                if (runtime_strategy_cfg_.drive_gate_strategy == DriveGateStrategy::kAdaptiveGate)
+
+                if (flipped)
                 {
-                    scale *= adaptive_gate_scale_;
+                    selected_oa_total_rad = candidate_b;
+                    selected_drive_omega_rad_s = -selected_drive_omega_rad_s;
                 }
-                scale = clampValue(scale, 0.0f, 1.0f);
-                for (u8 i = 0; i < 4; ++i)
+
+                if (planner_input.force_uniform_steer_drive)
                 {
-                    out_scales[i] = scale;
+                    const f32 fixed_a = nearestEquivalentAngle(planner_input.current_oa_total_rad[i], planner_input.uniform_steer_oa_mod_rad);
+                    const f32 fixed_b = nearestEquivalentAngle(planner_input.current_oa_total_rad[i], wrapTo2Pi(planner_input.uniform_steer_oa_mod_rad + kPi));
+                    const bool use_b = fabsf(shortestAngularDistance(planner_input.current_oa_total_rad[i], fixed_b)) <
+                                       fabsf(shortestAngularDistance(planner_input.current_oa_total_rad[i], fixed_a));
+                    selected_oa_total_rad = use_b ? fixed_b : fixed_a;
+                    selected_drive_omega_rad_s = planner_input.uniform_drive_sign * (use_b ? -1.0f : 1.0f) * planner_input.uniform_drive_omega_abs;
+                    flipped = use_b;
                 }
-                return;
+
+                planner_output.selected_oa_total_rad[i] = selected_oa_total_rad;
+                planner_output.flipped_drive_direction[i] = flipped;
+                planner_output.steering_errors_rad[i] =
+                    fabsf(shortestAngularDistance(planner_input.current_oa_total_rad[i], selected_oa_total_rad));
+                planner_output.projected_drive_omega_rad_s[i] = selected_drive_omega_rad_s;
+            }
+
+            const f32 steer_rate_floor = 1.0e-3f;
+            const f32 steer_rate_limit_runtime = runtime_strategy_cfg_.enable_steer_rate_limit_ ? runtime_strategy_cfg_.max_steer_rate_rad_s_ : 1.0e6f;
+            const f32 steer_alpha_limit_runtime = runtime_strategy_cfg_.enable_steer_alpha_limit_ ? runtime_strategy_cfg_.max_steer_alpha_rad_s2_ : 1.0e8f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                const WheelConfig &wheel = wheel_config_[i];
+                const f32 current_corrected_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
+                const f32 selected_corrected_local_total_rad =
+                    mapWheelOaTotalToCorrectedLocal(wheel, planner_output.selected_oa_total_rad[i]);
+
+                f32 next_steer_rate_rad_s = 0.0f;
+                planner_output.planned_corrected_local_total_rad[i] = limitPositionSecondOrder(
+                    current_corrected_local_total_rad,
+                    last_steer_rate_cmd_rad_s_[i],
+                    selected_corrected_local_total_rad,
+                    steer_rate_limit_runtime,
+                    steer_alpha_limit_runtime,
+                    period_,
+                    next_steer_rate_rad_s);
+                planner_output.planned_steer_rate_rad_s[i] = next_steer_rate_rad_s;
+                planner_output.planned_oa_total_rad[i] =
+                    mapWheelCorrectedLocalToOaTotal(wheel, planner_output.planned_corrected_local_total_rad[i]);
+
+                f32 steer_rate_ref = fabsf(next_steer_rate_rad_s);
+                if (steer_rate_ref < steer_rate_floor)
+                {
+                    steer_rate_ref = (steer_rate_limit_runtime > steer_rate_floor) ? steer_rate_limit_runtime : steer_rate_floor;
+                }
+                const f32 eta_s = planner_output.steering_errors_rad[i] / steer_rate_ref;
+                planner_output.high_speed_eta_max_s = (eta_s > planner_output.high_speed_eta_max_s) ? eta_s : planner_output.high_speed_eta_max_s;
             }
 
             for (u8 i = 0; i < 4; ++i)
             {
-                f32 scale = computeDriveGateScale(steering_errors_rad[i]);
-                if (runtime_strategy_cfg_.drive_gate_strategy == DriveGateStrategy::kAdaptiveGate)
+                planner_output.projected_drive_omega_rad_s[i] = planner_output.projected_drive_omega_rad_s[i];
+            }
+            if (!planner_input.force_uniform_steer_drive)
+            {
+                computeProjectedDriveFromPlannedSteer(planner_input.command,
+                                                     planner_output.planned_oa_total_rad,
+                                                     planner_output.projected_drive_omega_rad_s);
+            }
+
+            f32 low_speed_scales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+            computeLowSpeedDriveSuppressionScales(planner_input, planner_output.steering_errors_rad, low_speed_scales);
+
+            const f32 translational_speed_m_s = magnitude2D(planner_input.command.vel_x, planner_input.command.vel_y);
+            f32 predicted_vel_x = 0.0f;
+            f32 predicted_vel_y = 0.0f;
+            f32 predicted_omega_z = 0.0f;
+            if (estimatePlannedBodyTwist(planner_output.planned_oa_total_rad,
+                                         planner_output.projected_drive_omega_rad_s,
+                                         predicted_vel_x,
+                                         predicted_vel_y,
+                                         predicted_omega_z))
+            {
+                const f32 predicted_trans_speed_m_s = magnitude2D(predicted_vel_x, predicted_vel_y);
+                if ((translational_speed_m_s > 1.0e-6f) && (predicted_trans_speed_m_s > 1.0e-6f))
                 {
-                    scale *= adaptive_gate_scale_;
+                    const f32 target_dir_rad = atan2f(planner_input.command.vel_y, planner_input.command.vel_x);
+                    const f32 predicted_dir_rad = atan2f(predicted_vel_y, predicted_vel_x);
+                    planner_output.high_speed_dir_err_deg =
+                        radToDegF32(fabsf(shortestAngularDistance(target_dir_rad, predicted_dir_rad)));
                 }
-                out_scales[i] = clampValue(scale, 0.0f, 1.0f);
+            }
+
+            planner_output.high_speed_suppression_scale = planner_input.force_uniform_steer_drive
+                                                   ? 1.0f
+                                                   : updateHighSpeedDriveSuppression(translational_speed_m_s,
+                                                                                    planner_output.high_speed_eta_max_s,
+                                                                                    planner_output.high_speed_dir_err_deg);
+            if (planner_input.force_uniform_steer_drive)
+            {
+                high_speed_drive_suppression_scale_ = 1.0f;
+                high_speed_drive_suppression_active_ = false;
+            }
+            planner_output.high_speed_suppression_active = high_speed_drive_suppression_active_;
+
+            f32 planner_drive_targets_rad_s[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            f32 max_abs_planner_drive_target_rad_s = 0.0f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                if (planner_input.force_uniform_steer_drive)
+                {
+                    planner_output.low_speed_suppression_scale[i] = 1.0f;
+                }
+                else
+                {
+                    planner_output.low_speed_suppression_scale[i] = low_speed_scales[i];
+                }
+
+                const f32 drive_scale =
+                    clampValue(planner_output.low_speed_suppression_scale[i] * planner_output.high_speed_suppression_scale, 0.0f, 1.0f);
+                planner_drive_targets_rad_s[i] = planner_output.projected_drive_omega_rad_s[i] * drive_scale;
+                const f32 abs_target_drive = fabsf(planner_drive_targets_rad_s[i]);
+                max_abs_planner_drive_target_rad_s =
+                    (abs_target_drive > max_abs_planner_drive_target_rad_s) ? abs_target_drive : max_abs_planner_drive_target_rad_s;
+            }
+
+            f32 planner_drive_uniform_scale = 1.0f;
+            if (runtime_strategy_cfg_.enable_drive_omega_limit_)
+            {
+                const f32 drive_omega_limit_rad_s = fabsf(runtime_strategy_cfg_.max_drive_omega_rad_s_);
+                if ((drive_omega_limit_rad_s > 1.0e-6f) && (max_abs_planner_drive_target_rad_s > drive_omega_limit_rad_s))
+                {
+                    planner_drive_uniform_scale = drive_omega_limit_rad_s / max_abs_planner_drive_target_rad_s;
+                }
+            }
+
+            for (u8 i = 0; i < 4; ++i)
+            {
+                planner_output.final_drive_omega_rad_s[i] = planner_drive_targets_rad_s[i] * planner_drive_uniform_scale;
+            }
+
+            return planner_output;
+        }
+
+        void Chassis::buildActuatorCommandFrame(const SwervePlannerOutput &planner_output, ActuatorCommandFrame &out_frame) const
+        {
+            for (u8 i = 0; i < 4; ++i)
+            {
+                out_frame.steer_corrected_local_total_rad[i] = planner_output.planned_corrected_local_total_rad[i];
+                out_frame.steer_oa_total_rad[i] = planner_output.planned_oa_total_rad[i];
+                out_frame.steer_rate_rad_s[i] = planner_output.planned_steer_rate_rad_s[i];
+                out_frame.drive_omega_rad_s[i] = planner_output.final_drive_omega_rad_s[i];
+                out_frame.flipped_drive_direction[i] = planner_output.flipped_drive_direction[i];
             }
         }
 
-        f32 Chassis::stopSteerGuardBlend(f32 residual_speed_m_s) const
+        void Chassis::storePlannedActuatorFrame(const SwervePlannerOutput &planner_output, const ActuatorCommandFrame &command_frame)
         {
-            const f32 release_speed = near_zero_derived_.stop_guard_release_m_s;
-            if (residual_speed_m_s <= release_speed)
+            for (u8 i = 0; i < 4; ++i)
             {
-                return 1.0f;
+                WheelConfig &wheel = wheel_config_[i];
+                low_speed_drive_suppression_scale_[i] =
+                    clampValue(planner_output.low_speed_suppression_scale[i] * planner_output.high_speed_suppression_scale, 0.0f, 1.0f);
+                wheel.target_steer_motor_total_angle_rad = command_frame.steer_corrected_local_total_rad[i];
+                wheel.target_drive_omega_rad_s = command_frame.drive_omega_rad_s[i];
+                wheel.steer_target_velocity_rad_s = command_frame.steer_rate_rad_s[i];
+                wheel.flipped_drive_direction = command_frame.flipped_drive_direction[i];
+
+                last_steer_rate_cmd_rad_s_[i] = command_frame.steer_rate_rad_s[i];
+                selected_flipped_solution_[i] = command_frame.flipped_drive_direction[i];
+                planned_data_.steer_angle_oa_rad[i] = command_frame.steer_oa_total_rad[i];
+                planned_data_.drive_omega_rad_s[i] = command_frame.drive_omega_rad_s[i];
             }
 
-            switch (runtime_strategy_cfg_.stop_steer_guard_strategy)
-            {
-            case StopSteerGuardStrategy::kHardHold:
-                return 0.0f;
-            case StopSteerGuardStrategy::kSoftBlend:
-            {
-                const f32 start_speed = (runtime_strategy_cfg_.stop_guard_blend_start_speed_m_s > release_speed)
-                                            ? runtime_strategy_cfg_.stop_guard_blend_start_speed_m_s
-                                            : (release_speed + 1.0e-3f);
-                const f32 norm = clampValue((residual_speed_m_s - release_speed) / (start_speed - release_speed), 0.0f, 1.0f);
-                return 1.0f - norm;
-            }
-            case StopSteerGuardStrategy::kContinuousBlend:
-            default:
-            {
-                const f32 half_speed = (runtime_strategy_cfg_.stop_guard_curve_half_speed_m_s > 1.0e-6f)
-                                           ? runtime_strategy_cfg_.stop_guard_curve_half_speed_m_s
-                                           : 0.08f;
-                const f32 exponent = (runtime_strategy_cfg_.stop_guard_curve_exponent > 0.1f)
-                                         ? runtime_strategy_cfg_.stop_guard_curve_exponent
-                                         : 2.0f;
-                const f32 norm = residual_speed_m_s / half_speed;
-                return 1.0f / (1.0f + powf(norm, exponent));
-            }
-            }
+            planner_output_cache_ = planner_output;
+            actuator_command_frame_ = command_frame;
+            high_speed_eta_max_s_ = planner_output.high_speed_eta_max_s;
+            high_speed_dir_err_deg_ = planner_output.high_speed_dir_err_deg;
+            high_speed_drive_suppression_scale_ = planner_output.high_speed_suppression_scale;
+            high_speed_drive_suppression_active_ = planner_output.high_speed_suppression_active;
+        }
+
+        f32 Chassis::computeHomingAlignTargetCorrectedLocalTotal(const WheelConfig &wheel) const
+        {
+            const f32 current_corrected_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
+            const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_corrected_local_total_rad);
+            const f32 align_target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
+            return mapWheelOaTotalToCorrectedLocal(wheel, align_target_oa_total_rad);
         }
 
         void Chassis::setModeFlag()
@@ -750,14 +1101,14 @@ namespace jia
             }
         }
 
-        void Chassis::applyDebugTargetOverride()
+        void Chassis::applyDebugTargetOverride(DebugMode mode)
         {
             // 手柄平移坐标 -> 车体坐标约定：前推前进、左推左移。
             // 为匹配遥杆实际符号：left_y 正向映射到 +X；left_x 取反后映射到 +Y。
-            f32 target_vel_x = airjoy_data_.left_y * max_vel_x_;
-            f32 target_vel_y = -airjoy_data_.left_x * max_vel_y_;
+            f32 target_vel_x = airjoy_data_.left_y * runtime_strategy_cfg_.max_vel_x_;
+            f32 target_vel_y = -airjoy_data_.left_x * runtime_strategy_cfg_.max_vel_y_;
             const f32 right_x_cmd = -airjoy_data_.right_x;
-            f32 target_omega_z = -right_x_cmd * max_omega_z_;
+            f32 target_omega_z = -right_x_cmd * runtime_strategy_cfg_.max_omega_z_;
 
             if (debug_control_.inject_sine)
             {
@@ -767,11 +1118,11 @@ namespace jia
             {
                 if (airjoy_data_.right_x > 0.3f)
                 {
-                    target_omega_z = max_omega_z_;
+                    target_omega_z = runtime_strategy_cfg_.max_omega_z_;
                 }
                 else if (airjoy_data_.right_x < -0.3f)
                 {
-                    target_omega_z = -max_omega_z_;
+                    target_omega_z = -runtime_strategy_cfg_.max_omega_z_;
                 }
                 else
                 {
@@ -779,7 +1130,6 @@ namespace jia
                 }
             }
 
-            const DebugMode mode = resolveDebugMode(debug_control_.mode_raw);
             debug_control_.mode_resolved_raw = static_cast<u8>(mode);
             switch (mode)
             {
@@ -822,15 +1172,500 @@ namespace jia
             }
         }
 
+        void Chassis::clearPlannedMotionForModuleOverride()
+        {
+            target_data_.vel_x = 0.0f;
+            target_data_.vel_y = 0.0f;
+            target_data_.omega_z = 0.0f;
+            planned_data_.vel_x = 0.0f;
+            planned_data_.vel_y = 0.0f;
+            planned_data_.omega_z = 0.0f;
+            planned_data_.acc_x = 0.0f;
+            planned_data_.acc_y = 0.0f;
+            planned_data_.alpha_z = 0.0f;
+        }
+
+        void Chassis::resetDebugModuleOverrideTargets(u8 wheel_idx, bool preserve_soft_wheel_rate)
+        {
+            for (u8 i = 0; i < 4; ++i)
+            {
+                WheelConfig &wheel = wheel_config_[i];
+                wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
+                wheel.target_drive_omega_rad_s = 0.0f;
+                wheel.steer_target_velocity_rad_s = 0.0f;
+                wheel.flipped_drive_direction = false;
+                planned_data_.steer_angle_oa_rad[i] = mapWheelCorrectedLocalToOaTotal(wheel, wheel.target_steer_motor_total_angle_rad);
+                planned_data_.drive_omega_rad_s[i] = 0.0f;
+                if (!(preserve_soft_wheel_rate && i == wheel_idx))
+                {
+                    last_steer_rate_cmd_rad_s_[i] = 0.0f;
+                }
+                last_drive_omega_cmd_rad_s_[i] = 0.0f;
+            }
+        }
+
+        void Chassis::applySingleWheelDebugOverride(u8 wheel_idx, bool all_homed)
+        {
+            WheelConfig &debug_wheel = wheel_config_[wheel_idx];
+            const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(debug_control_.single_wheel_target_steer_deg));
+            const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(debug_wheel, debug_wheel.corrected_steer_motor_total_angle_rad);
+            const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, target_oa_mod_rad);
+            const f32 selected_local_total_rad = mapWheelOaTotalToCorrectedLocal(debug_wheel, target_oa_total_rad);
+            const f32 steer_error_deg = radToDegF32(fabsf(shortestAngularDistance(current_oa_total_rad, target_oa_total_rad)));
+            const f32 drive_release_error_deg = (debug_control_.single_wheel_drive_release_error_deg >= 0.0f) ? debug_control_.single_wheel_drive_release_error_deg : 0.0f;
+            const bool drive_released = !debug_control_.single_wheel_drive_release_gate_enable || (steer_error_deg <= drive_release_error_deg);
+
+            if (debug_control_.single_wheel_soft_steer_enable)
+            {
+                const bool enable_rate_limit = runtime_strategy_cfg_.enable_steer_rate_limit_;
+                const bool enable_alpha_limit = runtime_strategy_cfg_.enable_steer_alpha_limit_;
+                f32 steer_limit_rate_rad_s = enable_rate_limit ? runtime_strategy_cfg_.max_steer_rate_rad_s_ : 1.0e6f;
+                f32 steer_limit_accel_rad_s2 = enable_alpha_limit ? runtime_strategy_cfg_.max_steer_alpha_rad_s2_ : 1.0e8f;
+                if (debug_control_.single_wheel_use_custom_steer_limit)
+                {
+                    if (enable_rate_limit)
+                    {
+                        steer_limit_rate_rad_s = degToRadF32(debug_control_.single_wheel_steer_rate_limit_deg_s);
+                    }
+                    if (enable_alpha_limit)
+                    {
+                        steer_limit_accel_rad_s2 = degToRadF32(debug_control_.single_wheel_steer_accel_limit_deg_s2);
+                    }
+                }
+                if (enable_rate_limit && steer_limit_rate_rad_s <= 1.0e-6f)
+                {
+                    steer_limit_rate_rad_s = runtime_strategy_cfg_.max_steer_rate_rad_s_;
+                }
+                if (enable_alpha_limit && steer_limit_accel_rad_s2 <= 1.0e-6f)
+                {
+                    steer_limit_accel_rad_s2 = runtime_strategy_cfg_.max_steer_alpha_rad_s2_;
+                }
+
+                f32 next_steer_rate_rad_s = 0.0f;
+                debug_wheel.target_steer_motor_total_angle_rad = limitPositionSecondOrder(
+                    debug_wheel.corrected_steer_motor_total_angle_rad,
+                    last_steer_rate_cmd_rad_s_[wheel_idx],
+                    selected_local_total_rad,
+                    steer_limit_rate_rad_s,
+                    steer_limit_accel_rad_s2,
+                    period_,
+                    next_steer_rate_rad_s);
+                debug_wheel.steer_target_velocity_rad_s = next_steer_rate_rad_s;
+                last_steer_rate_cmd_rad_s_[wheel_idx] = next_steer_rate_rad_s;
+            }
+            else
+            {
+                debug_wheel.target_steer_motor_total_angle_rad = selected_local_total_rad;
+                debug_wheel.steer_target_velocity_rad_s = 0.0f;
+                last_steer_rate_cmd_rad_s_[wheel_idx] = 0.0f;
+            }
+
+            debug_wheel.target_drive_omega_rad_s = (debug_control_.single_wheel_drive_enable && drive_released) ? rpmToRadsF32(debug_control_.single_wheel_target_drive_rpm) : 0.0f;
+            planned_data_.steer_angle_oa_rad[wheel_idx] = mapWheelCorrectedLocalToOaTotal(debug_wheel, debug_wheel.target_steer_motor_total_angle_rad);
+            planned_data_.drive_omega_rad_s[wheel_idx] = debug_wheel.target_drive_omega_rad_s;
+            last_drive_omega_cmd_rad_s_[wheel_idx] = debug_wheel.target_drive_omega_rad_s;
+            debug_mirror_.selected_wheel_steer_error_deg = steer_error_deg;
+            debug_mirror_.selected_wheel_drive_released = drive_released;
+#if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
+            if (debug_output_.output_mode_raw == 1U && debug_output_.text_log_level >= 1U && (time_ms_ - debug_output_.single_wheel_trace_last_ms) >= 50U)
+            {
+                debug_output_.single_wheel_trace_last_ms = time_ms_;
+                debug_uart_.printf_DMA((char *)"SW20,%lu,%u,%u,%u,%.3f,%.3f,%.3f,%u,%u\r\n",
+                                       (u32)time_ms_,
+                                       (u32)wheel_idx,
+                                       all_homed ? 1U : 0U,
+                                       (u32)input_target_data_.mode,
+                                       radToDegF32(target_oa_total_rad),
+                                       radToDegF32(current_oa_total_rad),
+                                       steer_error_deg,
+                                       (u32)debug_wheel.homing_state,
+                                       drive_released ? 1U : 0U);
+            }
+#endif
+        }
+
+        void Chassis::applyAlignForwardDebugOverride()
+        {
+            for (u8 i = 0; i < 4; ++i)
+            {
+                WheelConfig &wheel = wheel_config_[i];
+                wheel.target_steer_motor_total_angle_rad = mapWheelOaTotalToCorrectedLocal(wheel, 0.0f);
+                planned_data_.steer_angle_oa_rad[i] = 0.0f;
+            }
+        }
+
+        void Chassis::applyHomingObserveDebugOverride()
+        {
+            for (u8 i = 0; i < 4; ++i)
+            {
+                WheelConfig &wheel = wheel_config_[i];
+                wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
+                wheel.target_drive_omega_rad_s = 0.0f;
+                wheel.steer_target_velocity_rad_s = 0.0f;
+                planned_data_.steer_angle_oa_rad[i] = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
+                planned_data_.drive_omega_rad_s[i] = 0.0f;
+                last_steer_rate_cmd_rad_s_[i] = 0.0f;
+                last_drive_omega_cmd_rad_s_[i] = 0.0f;
+            }
+        }
+
+        Chassis::DirectActuatorCommandSnapshot Chassis::resolveDirectActuatorCommand(u8 wheel_idx)
+        {
+            DirectActuatorCommandSnapshot command{};
+            command.wheel_idx = wheel_idx;
+            command.steer_control_type = debug_control_.direct_steer_control_type;
+            command.drive_control_type = (debug_control_.direct_drive_control_type <= 2U) ? debug_control_.direct_drive_control_type : 0U;
+
+            const f32 rpm_limit = (debug_control_.direct_drive_rpm_limit > 0.0f) ? debug_control_.direct_drive_rpm_limit : 300.0f;
+            const f32 drive_current_limit_mA = (debug_control_.direct_drive_current_limit_mA > 0.0f) ? debug_control_.direct_drive_current_limit_mA : 12000.0f;
+            const f32 drive_brake_limit_mA = (debug_control_.direct_drive_brake_limit_mA > 0.0f) ? debug_control_.direct_drive_brake_limit_mA : 12000.0f;
+            const f32 steer_rpm_limit = (debug_control_.direct_steer_rpm_limit > 0.0f) ? debug_control_.direct_steer_rpm_limit : 300.0f;
+            const f32 steer_current_limit_mA = (debug_control_.direct_steer_current_limit_mA > 0.0f) ? debug_control_.direct_steer_current_limit_mA : 12000.0f;
+            const f32 steer_single_turn_limit_deg = (debug_control_.direct_steer_single_turn_limit_deg > 0.0f) ? debug_control_.direct_steer_single_turn_limit_deg : 180.0f;
+            const f32 steer_multi_turn_limit_deg = (debug_control_.direct_steer_multi_turn_limit_deg > 0.0f) ? debug_control_.direct_steer_multi_turn_limit_deg : 1080.0f;
+            const f32 step_threshold = (debug_control_.direct_step_threshold > 0.01f) ? debug_control_.direct_step_threshold : 0.3f;
+            const f32 drive_step_threshold = (debug_control_.direct_step_drive_threshold > 0.01f) ? debug_control_.direct_step_drive_threshold : 0.3f;
+
+            command.steer_current_cmd_mA = debug_control_.direct_steer_current_mA[wheel_idx];
+            command.steer_rpm_cmd = debug_control_.direct_steer_rpm[wheel_idx];
+            command.steer_single_turn_deg_cmd = debug_control_.direct_steer_single_turn_deg[wheel_idx];
+            command.steer_multi_turn_deg_cmd = debug_control_.direct_steer_multi_turn_deg[wheel_idx];
+            command.drive_rpm_cmd = debug_control_.direct_drive_rpm[wheel_idx];
+            command.drive_current_cmd_mA = debug_control_.direct_drive_current_mA[wheel_idx];
+            command.drive_brake_cmd_mA = debug_control_.direct_drive_brake_mA[wheel_idx];
+
+            if (debug_control_.direct_input_source == 1U)
+            {
+                command.steer_axis_value = clampValue(airjoy_data_.left_x, -1.0f, 1.0f);
+                command.drive_axis_value = clampValue(airjoy_data_.right_x, -1.0f, 1.0f);
+                switch (command.steer_control_type)
+                {
+                case 0U:
+                    command.steer_current_cmd_mA = command.steer_axis_value * steer_current_limit_mA;
+                    break;
+                case 1U:
+                    command.steer_rpm_cmd = command.steer_axis_value * steer_rpm_limit;
+                    break;
+                case 2U:
+                    command.steer_single_turn_deg_cmd = command.steer_axis_value * steer_single_turn_limit_deg;
+                    break;
+                case 3U:
+                default:
+                    command.steer_multi_turn_deg_cmd = command.steer_axis_value * steer_multi_turn_limit_deg;
+                    break;
+                }
+                switch (command.drive_control_type)
+                {
+                case 1U:
+                    command.drive_current_cmd_mA = command.drive_axis_value * drive_current_limit_mA;
+                    break;
+                case 2U:
+                    command.drive_brake_cmd_mA = command.drive_axis_value * drive_brake_limit_mA;
+                    break;
+                case 0U:
+                default:
+                    command.drive_rpm_cmd = command.drive_axis_value * rpm_limit;
+                    break;
+                }
+            }
+            else if (debug_control_.direct_input_source == 2U)
+            {
+                if (airjoy_data_.left_x > step_threshold)
+                {
+                    command.steer_step_sign = 1.0f;
+                }
+                else if (airjoy_data_.left_x < -step_threshold)
+                {
+                    command.steer_step_sign = -1.0f;
+                }
+                switch (command.steer_control_type)
+                {
+                case 0U:
+                    command.steer_current_cmd_mA = command.steer_step_sign * fabsf(debug_control_.direct_step_steer_current_mA);
+                    break;
+                case 1U:
+                    command.steer_rpm_cmd = command.steer_step_sign * fabsf(debug_control_.direct_step_steer_rpm);
+                    break;
+                case 2U:
+                    command.steer_single_turn_deg_cmd = command.steer_step_sign * fabsf(debug_control_.direct_step_steer_single_turn_deg);
+                    break;
+                case 3U:
+                default:
+                    command.steer_multi_turn_deg_cmd = command.steer_step_sign * fabsf(debug_control_.direct_step_steer_multi_turn_deg);
+                    break;
+                }
+
+                if (airjoy_data_.right_x > drive_step_threshold)
+                {
+                    command.drive_step_sign = 1.0f;
+                }
+                else if (airjoy_data_.right_x < -drive_step_threshold)
+                {
+                    command.drive_step_sign = -1.0f;
+                }
+                switch (command.drive_control_type)
+                {
+                case 1U:
+                    command.drive_current_cmd_mA = command.drive_step_sign * fabsf(debug_control_.direct_step_drive_current_mA);
+                    break;
+                case 2U:
+                    command.drive_brake_cmd_mA = command.drive_step_sign * fabsf(debug_control_.direct_step_drive_brake_mA);
+                    break;
+                case 0U:
+                default:
+                    command.drive_rpm_cmd = command.drive_step_sign * fabsf(debug_control_.direct_step_drive_rpm);
+                    break;
+                }
+            }
+
+            debug_control_.direct_steer_current_mA[wheel_idx] = command.steer_current_cmd_mA;
+            debug_control_.direct_steer_rpm[wheel_idx] = command.steer_rpm_cmd;
+            debug_control_.direct_steer_single_turn_deg[wheel_idx] = command.steer_single_turn_deg_cmd;
+            debug_control_.direct_steer_multi_turn_deg[wheel_idx] = command.steer_multi_turn_deg_cmd;
+            debug_control_.direct_drive_rpm[wheel_idx] = command.drive_rpm_cmd;
+            debug_control_.direct_drive_current_mA[wheel_idx] = command.drive_current_cmd_mA;
+            debug_control_.direct_drive_brake_mA[wheel_idx] = command.drive_brake_cmd_mA;
+
+            switch (command.steer_control_type)
+            {
+            case 0U:
+                command.applied_steer_cmd = clampValue(command.steer_current_cmd_mA, -steer_current_limit_mA, steer_current_limit_mA);
+                break;
+            case 1U:
+                command.applied_steer_cmd = clampValue(command.steer_rpm_cmd, -steer_rpm_limit, steer_rpm_limit);
+                break;
+            case 2U:
+                command.applied_steer_cmd = clampValue(command.steer_single_turn_deg_cmd, -steer_single_turn_limit_deg, steer_single_turn_limit_deg);
+                break;
+            case 3U:
+            default:
+                command.applied_steer_cmd = clampValue(command.steer_multi_turn_deg_cmd, -steer_multi_turn_limit_deg, steer_multi_turn_limit_deg);
+                break;
+            }
+
+            switch (command.drive_control_type)
+            {
+            case 1U:
+                command.applied_drive_cmd = clampValue(command.drive_current_cmd_mA, -drive_current_limit_mA, drive_current_limit_mA);
+                break;
+            case 2U:
+                command.applied_drive_cmd = clampValue(command.drive_brake_cmd_mA, -drive_brake_limit_mA, drive_brake_limit_mA);
+                break;
+            case 0U:
+            default:
+                command.applied_drive_cmd = clampValue(command.drive_rpm_cmd, -rpm_limit, rpm_limit);
+                break;
+            }
+
+            return command;
+        }
+
+        void Chassis::clearDirectDriveCommandByType(WheelConfig &wheel, u8 wheel_idx, u8 drive_control_type)
+        {
+            wheel.target_drive_omega_rad_s = 0.0f;
+            planned_data_.drive_omega_rad_s[wheel_idx] = 0.0f;
+            if (wheel.drive_motor_h == nullptr)
+            {
+                return;
+            }
+            if (drive_control_type == 1U)
+            {
+                wheel.drive_motor_h->setTargetCurrent(0.0f);
+            }
+            else if (drive_control_type == 2U)
+            {
+                wheel.drive_motor_h->setBrake(0.0f);
+            }
+            else
+            {
+                setDriveMotorTargetOmegaRadS(wheel, 0.0f);
+            }
+        }
+
+        void Chassis::applyDirectActuatorSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command)
+        {
+            const f32 steer_current_limit_mA = (debug_control_.direct_steer_current_limit_mA > 0.0f) ? debug_control_.direct_steer_current_limit_mA : 12000.0f;
+            const f32 steer_rpm_limit = (debug_control_.direct_steer_rpm_limit > 0.0f) ? debug_control_.direct_steer_rpm_limit : 300.0f;
+            const f32 steer_single_turn_limit_deg = (debug_control_.direct_steer_single_turn_limit_deg > 0.0f) ? debug_control_.direct_steer_single_turn_limit_deg : 180.0f;
+            const f32 steer_multi_turn_limit_deg = (debug_control_.direct_steer_multi_turn_limit_deg > 0.0f) ? debug_control_.direct_steer_multi_turn_limit_deg : 1080.0f;
+
+            if (!debug_control_.direct_enable_steer[wheel_idx])
+            {
+                setSteerMotorTargetCurrent(wheel, 0.0f);
+                return;
+            }
+
+            if (command.steer_control_type == 0U)
+            {
+                const f32 target_current_mA = clampValue(command.steer_current_cmd_mA, -steer_current_limit_mA, steer_current_limit_mA);
+                wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
+                planned_data_.steer_angle_oa_rad[wheel_idx] = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
+                setSteerMotorTargetCurrent(wheel, target_current_mA);
+            }
+            else if (command.steer_control_type == 1U)
+            {
+                const f32 target_steer_rpm = clampValue(command.steer_rpm_cmd, -steer_rpm_limit, steer_rpm_limit);
+                wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
+                planned_data_.steer_angle_oa_rad[wheel_idx] = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
+                setSteerMotorTargetRPM(wheel, target_steer_rpm);
+            }
+            else if (command.steer_control_type == 2U)
+            {
+                const f32 target_single_turn_deg = clampValue(command.steer_single_turn_deg_cmd, -steer_single_turn_limit_deg, steer_single_turn_limit_deg);
+                const f32 target_local_total_rad = mapSingleTurnToNearestTotalAngle(wheel, target_single_turn_deg);
+                wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
+                planned_data_.steer_angle_oa_rad[wheel_idx] = mapWheelCorrectedLocalToOaTotal(wheel, target_local_total_rad);
+                setSteerMotorTargetTotalAngleRad(wheel, target_local_total_rad);
+            }
+            else
+            {
+                const f32 target_oa_total_rad = degToRadF32(clampValue(command.steer_multi_turn_deg_cmd, -steer_multi_turn_limit_deg, steer_multi_turn_limit_deg));
+                const f32 target_local_total_rad = mapWheelOaTotalToCorrectedLocal(wheel, target_oa_total_rad);
+                wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
+                planned_data_.steer_angle_oa_rad[wheel_idx] = target_oa_total_rad;
+                setSteerMotorTargetTotalAngleRad(wheel, target_local_total_rad);
+            }
+        }
+
+        void Chassis::applyDirectActuatorDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command)
+        {
+            const f32 rpm_limit = (debug_control_.direct_drive_rpm_limit > 0.0f) ? debug_control_.direct_drive_rpm_limit : 300.0f;
+            const f32 drive_current_limit_mA = (debug_control_.direct_drive_current_limit_mA > 0.0f) ? debug_control_.direct_drive_current_limit_mA : 12000.0f;
+            const f32 drive_brake_limit_mA = (debug_control_.direct_drive_brake_limit_mA > 0.0f) ? debug_control_.direct_drive_brake_limit_mA : 12000.0f;
+
+            if (!debug_control_.direct_enable_drive[wheel_idx])
+            {
+                clearDirectDriveCommandByType(wheel, wheel_idx, command.drive_control_type);
+                return;
+            }
+
+            if (command.drive_control_type == 1U)
+            {
+                const f32 target_current_mA = clampValue(command.drive_current_cmd_mA, -drive_current_limit_mA, drive_current_limit_mA);
+                wheel.target_drive_omega_rad_s = 0.0f;
+                planned_data_.drive_omega_rad_s[wheel_idx] = 0.0f;
+                if (wheel.drive_motor_h != nullptr)
+                {
+                    wheel.drive_motor_h->setTargetCurrent(mapWheelCurrentToDriveMotorCurrent(target_current_mA, makeSteerCalibration(wheel)));
+                }
+            }
+            else if (command.drive_control_type == 2U)
+            {
+                const f32 target_brake_mA = clampValue(command.drive_brake_cmd_mA, -drive_brake_limit_mA, drive_brake_limit_mA);
+                wheel.target_drive_omega_rad_s = 0.0f;
+                planned_data_.drive_omega_rad_s[wheel_idx] = 0.0f;
+                if (wheel.drive_motor_h != nullptr)
+                {
+                    wheel.drive_motor_h->setBrake(mapWheelCurrentToDriveMotorCurrent(target_brake_mA, makeSteerCalibration(wheel)));
+                }
+            }
+            else
+            {
+                const f32 target_rpm = clampValue(command.drive_rpm_cmd, -rpm_limit, rpm_limit);
+                const f32 target_omega_rad_s = rpmToRadsF32(target_rpm);
+                wheel.target_drive_omega_rad_s = target_omega_rad_s;
+                planned_data_.drive_omega_rad_s[wheel_idx] = target_omega_rad_s;
+                setDriveMotorTargetOmegaRadS(wheel, target_omega_rad_s);
+            }
+        }
+
+        void Chassis::applyDirectActuatorDebugOverride(u8 wheel_idx)
+        {
+            const DirectActuatorCommandSnapshot command = resolveDirectActuatorCommand(wheel_idx);
+
+            for (u8 i = 0; i < 4; ++i)
+            {
+                WheelConfig &wheel = wheel_config_[i];
+                if (debug_control_.direct_estop || i != wheel_idx)
+                {
+                    setSteerMotorTargetCurrent(wheel, 0.0f);
+                    clearDirectDriveCommandByType(wheel, i, command.drive_control_type);
+                    continue;
+                }
+
+                applyDirectActuatorSteerCommand(wheel, i, command);
+                applyDirectActuatorDriveCommand(wheel, i, command);
+            }
+
+#if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
+            if (debug_output_.output_mode_raw == 1U && debug_output_.text_log_level >= 1U && (time_ms_ - debug_output_.direct_trace_last_ms) >= 100U)
+            {
+                debug_output_.direct_trace_last_ms = time_ms_;
+                WheelConfig &dbg_wheel = wheel_config_[wheel_idx];
+                const Motor_Base *steer_motor = dbg_wheel.steer_motor_h;
+                const Motor_Base *drive_motor = dbg_wheel.drive_motor_h;
+                if (steer_motor != nullptr)
+                {
+                    debug_uart_.printf_DMA((char *)"SW30,t=%lu,w=%u,src=%u,stType=%u,drType=%u,stCmd=%.3f,drCmd=%.3f,stAxis=%.3f,drAxis=%.3f,stStep=%.1f,drStep=%.1f,stTarI=%.1f,stCurI=%.1f,stTarRPM=%.2f,stCurRPM=%.2f,drTarI=%.1f,drCurI=%.1f,drTarRPM=%.2f,drCurRPM=%.2f,enS=%u,enD=%u,estop=%u\r\n",
+                                           (u32)time_ms_,
+                                           (u32)wheel_idx,
+                                           (u32)debug_control_.direct_input_source,
+                                           (u32)command.steer_control_type,
+                                           (u32)command.drive_control_type,
+                                           command.applied_steer_cmd,
+                                           command.applied_drive_cmd,
+                                           command.steer_axis_value,
+                                           command.drive_axis_value,
+                                           command.steer_step_sign,
+                                           command.drive_step_sign,
+                                           steer_motor->getTargetCurrent(),
+                                           steer_motor->getCurrent(),
+                                           steer_motor->getTargetRPM(),
+                                           steer_motor->getRPM(),
+                                           (drive_motor != nullptr) ? drive_motor->getTargetCurrent() : 0.0f,
+                                           (drive_motor != nullptr) ? drive_motor->getCurrent() : 0.0f,
+                                           (drive_motor != nullptr) ? drive_motor->getTargetRPM() : 0.0f,
+                                           (drive_motor != nullptr) ? drive_motor->getRPM() : 0.0f,
+                                           debug_control_.direct_enable_steer[wheel_idx] ? 1U : 0U,
+                                           debug_control_.direct_enable_drive[wheel_idx] ? 1U : 0U,
+                                           debug_control_.direct_estop ? 1U : 0U);
+                }
+            }
+#endif
+        }
+
+        void Chassis::finalizeDebugModuleOverride(bool all_homed, DebugModuleOverrideRoute route)
+        {
+            planned_data_.vel_x = 0.0f;
+            planned_data_.vel_y = 0.0f;
+            planned_data_.omega_z = 0.0f;
+            planned_data_.acc_x = 0.0f;
+            planned_data_.acc_y = 0.0f;
+            planned_data_.alpha_z = 0.0f;
+            planned_data_.rot_z = input_hwt_rot_z_;
+
+            if (route != DebugModuleOverrideRoute::kDirectActuator)
+            {
+                applyModuleCommands(all_homed);
+            }
+
+            updateCurrentData(all_homed);
+            refreshDebugMirror(all_homed);
+            emitDebugOutputByMode(all_homed);
+            last_planned_data_ = planned_data_;
+        }
+
         void Chassis::isDebugMode()
         {
             syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
-            if (!debug_control_.enable)
+            const DebugControlRoute route = classifyDebugControlRoute(debug_control_.enable, debug_control_.mode_raw);
+            if (route == DebugControlRoute::kDisabled)
             {
                 debug_control_.mode_resolved_raw = static_cast<u8>(DebugMode::kTorqueFree);
                 return;
             }
-            applyDebugTargetOverride();
+
+            const DebugMode mode = resolveDebugMode(debug_control_.mode_raw);
+            debug_control_.mode_resolved_raw = static_cast<u8>(mode);
+
+            if (route == DebugControlRoute::kTargetInjection)
+            {
+                applyDebugTargetOverride(mode);
+                return;
+            }
+
+            setTargetBodySpeedMode(0.0f, 0.0f, 0.0f);
+            clearPlannedMotionForModuleOverride();
         }
 
         void Chassis::transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const
@@ -941,34 +1776,116 @@ namespace jia
 
         void Chassis::clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const
         {
-            out_vel_x = clampValue(vel_x, -max_vel_x_, max_vel_x_);
-            out_vel_y = clampValue(vel_y, -max_vel_y_, max_vel_y_);
-            out_omega_z = clampValue(omega_z, -max_omega_z_, max_omega_z_);
+            out_vel_x = clampValue(vel_x, -runtime_strategy_cfg_.max_vel_x_, runtime_strategy_cfg_.max_vel_x_);
+            out_vel_y = clampValue(vel_y, -runtime_strategy_cfg_.max_vel_y_, runtime_strategy_cfg_.max_vel_y_);
+            out_omega_z = clampValue(omega_z, -runtime_strategy_cfg_.max_omega_z_, runtime_strategy_cfg_.max_omega_z_);
+        }
+
+        void Chassis::resolvePlannerTargetData()
+        {
+            const PlannerInputCommand planner_command{
+                input_target_data_.vel_x,
+                input_target_data_.vel_y,
+                input_target_data_.omega_z,
+                input_target_data_.rot_z,
+                current_mode_flag_.is_world_speed_mode,
+                input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode,
+            };
+            const CommandInputSource source =
+                (classifyDebugControlRoute(debug_control_.enable, debug_control_.mode_raw) == DebugControlRoute::kTargetInjection)
+                    ? CommandInputSource::kDebugTarget
+                    : CommandInputSource::kApi;
+            normalized_body_command_ = makeNormalizedBodyCommand(planner_command, input_hwt_rot_z_, source);
+            target_data_.vel_x = normalized_body_command_.body.vel_x;
+            target_data_.vel_y = normalized_body_command_.body.vel_y;
+            target_data_.omega_z = normalized_body_command_.body.omega_z;
+            target_data_.rot_z = normalized_body_command_.rot_z;
+
+            if (current_mode_flag_.is_lock_now_rot_z)
+            {
+                isLockNowRotZ(true, target_data_.rot_z, target_data_.omega_z, target_data_.rot_z, target_data_.omega_z);
+            }
+            if (current_mode_flag_.is_lock_to_rot_z)
+            {
+                isLockToRotZ(true, input_target_data_.rot_z, target_data_.rot_z, target_data_.rot_z, target_data_.omega_z, target_data_.omega_z);
+            }
+        }
+
+        void Chassis::updatePlannedMotionData()
+        {
+            if (!launch_hold_active_ && shouldActivateLaunchHold())
+            {
+                launch_hold_active_ = true;
+                planned_data_ = Data{};
+                last_planned_data_ = Data{};
+                planned_data_.rot_z = target_data_.rot_z;
+                last_planned_data_.rot_z = target_data_.rot_z;
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    last_drive_omega_cmd_rad_s_[i] = 0.0f;
+                }
+            }
+
+            if (launch_hold_active_)
+            {
+                const SwervePlannerOutput launch_preview_output =
+                    planSwerveModules(makeSwervePlannerInput(makeLaunchHoldPreviewCommand()));
+                if (isLaunchHoldAligned(launch_preview_output))
+                {
+                    launch_hold_active_ = false;
+                }
+            }
+
+            if (launch_hold_active_)
+            {
+                planned_data_ = Data{};
+                planned_data_.rot_z = target_data_.rot_z;
+                return;
+            }
+
+            clampTargetSpeedInChassis(target_data_.vel_x, target_data_.vel_y, target_data_.omega_z,
+                                      target_data_.vel_x, target_data_.vel_y, target_data_.omega_z);
+
+            limitPlannedSpeed(target_data_.vel_x, target_data_.vel_y, target_data_.omega_z,
+                              planned_data_.vel_x, planned_data_.vel_y, planned_data_.omega_z);
+
+            planned_data_.acc_x = (planned_data_.vel_x - last_planned_data_.vel_x) / period_;
+            planned_data_.acc_y = (planned_data_.vel_y - last_planned_data_.vel_y) / period_;
+            planned_data_.alpha_z = (planned_data_.omega_z - last_planned_data_.omega_z) / period_;
+            planned_data_.rot_z = target_data_.rot_z;
         }
 
         void Chassis::limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z)
         {
 // 第一阶段：先x/y分量分别做加减速限幅，保证速度台阶被平滑化
-            out_vel_x = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_x, last_planned_data_.vel_x, period_, max_acc_xy_acc_, max_acc_xy_dec_);
-            out_vel_y = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_y, last_planned_data_.vel_y, period_, max_acc_xy_acc_, max_acc_xy_dec_);
-            out_omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_omega_z, last_planned_data_.omega_z, period_, max_alpha_z_acc_, max_alpha_z_dec_);
+            out_vel_x = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_x, last_planned_data_.vel_x, period_, runtime_strategy_cfg_.max_acc_xy_acc_, runtime_strategy_cfg_.max_acc_xy_dec_);
+            out_vel_y = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_y, last_planned_data_.vel_y, period_, runtime_strategy_cfg_.max_acc_xy_acc_, runtime_strategy_cfg_.max_acc_xy_dec_);
+            out_omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_omega_z, last_planned_data_.omega_z, period_, runtime_strategy_cfg_.max_alpha_z_acc_, runtime_strategy_cfg_.max_alpha_z_dec_);
 
 // 第二阶段：平移矢量方向限幅（低速滞回冻+方向角速度限幅）
             const f32 tar_mag = magnitude2D(tar_vel_x, tar_vel_y);
             const f32 out_mag = magnitude2D(out_vel_x, out_vel_y);
-            const f32 enter_speed = near_zero_derived_.freeze_enter_m_s;
-            const f32 exit_speed = near_zero_derived_.freeze_exit_m_s;
-            const f32 dir_rate_limit_rad_s = degToRadF32((trans_dir_rate_limit_deg_s_ >= 0.0f) ? trans_dir_rate_limit_deg_s_ : 0.0f);
+            const f32 enter_speed = getNearZeroEnterSpeedMps();
+            const f32 exit_speed = getNearZeroExitSpeedMps();
+            const f32 dir_rate_limit_rad_s = degToRadF32((runtime_strategy_cfg_.trans_dir_rate_limit_deg_s_ >= 0.0f) ? runtime_strategy_cfg_.trans_dir_rate_limit_deg_s_ : 0.0f);
             const f32 max_dir_step = dir_rate_limit_rad_s * period_;
             bool entered_freeze_now = false;
             trans_dir_tar_mag_m_s_ = tar_mag;
             trans_dir_out_mag_m_s_ = out_mag;
             trans_dir_freeze_reason_ = 0U;
+            reverse_intent_dir_err_deg_ = 0.0f;
 
             if (!trans_dir_ref_valid_ && out_mag > 1.0e-6f)
             {
                 trans_dir_ref_rad_ = atan2f(out_vel_y, out_vel_x);
                 trans_dir_ref_valid_ = true;
+            }
+
+            const f32 reverse_reference_dir_rad = trans_dir_ref_valid_ ? trans_dir_ref_rad_ : atan2f(last_planned_data_.vel_y, last_planned_data_.vel_x);
+            if (tar_mag > 1.0e-6f)
+            {
+                reverse_intent_dir_err_deg_ =
+                    radToDegF32(fabsf(shortestAngularDistance(reverse_reference_dir_rad, atan2f(tar_vel_y, tar_vel_x))));
             }
 
             if (trans_dir_freeze_active_)
@@ -991,6 +1908,18 @@ namespace jia
                 out_vel_y = 0.0f;
                 trans_dir_ref_valid_ = false;
                 trans_dir_ref_rad_ = 0.0f;
+                return;
+            }
+
+            reverse_intent_active_ = shouldActivateReverseIntent(tar_vel_x, tar_vel_y, reverse_reference_dir_rad);
+            if (reverse_intent_active_)
+            {
+                const f32 target_dir_rad = atan2f(tar_vel_y, tar_vel_x);
+                out_vel_x = out_mag * cosf(target_dir_rad);
+                out_vel_y = out_mag * sinf(target_dir_rad);
+                trans_dir_freeze_active_ = false;
+                trans_dir_ref_valid_ = true;
+                trans_dir_ref_rad_ = target_dir_rad;
                 return;
             }
 
@@ -1054,7 +1983,8 @@ namespace jia
             {
                 return 0.0f;
             }
-            return wheel.steer_motor_sign * degToRadF32(wheel.steer_motor_h->getTotalAngle());
+            const f32 steer_sign = (wheel.steer_motor_sign == 0.0f) ? 1.0f : wheel.steer_motor_sign;
+            return steer_sign * degToRadF32(wheel.steer_motor_h->getTotalAngle());
         }
 
         f32 Chassis::readDriveMotorOmegaRadS(const WheelConfig &wheel) const
@@ -1063,21 +1993,193 @@ namespace jia
             {
                 return 0.0f;
             }
-            return wheel.drive_motor_sign * rpmToRadsF32(wheel.drive_motor_h->getRPM());
+            const SteerCalibration calibration{
+                wheel.theta_oa_to_owi_rad,
+                wheel.homing_runtime_zero_offset_rad,
+                wheel.steer_motor_sign,
+                wheel.drive_motor_sign,
+            };
+            return mapDriveMotorRpmToWheelOmega(wheel.drive_motor_h->getRPM(), calibration);
         }
 
         f32 Chassis::readCorrectedSteerMotorTotalAngleRad(const WheelConfig &wheel) const
         {
-            return readSteerMotorRawTotalAngleRad(wheel) + wheel.homing_runtime_zero_offset_rad;
+            const SteerCalibration calibration{
+                wheel.theta_oa_to_owi_rad,
+                wheel.homing_runtime_zero_offset_rad,
+                wheel.steer_motor_sign,
+                wheel.drive_motor_sign,
+            };
+            return mapRawSteerMotorTotalToCorrectedLocalTotal((wheel.steer_motor_h == nullptr) ? 0.0f : degToRadF32(wheel.steer_motor_h->getTotalAngle()), calibration);
+        }
+
+        f32 Chassis::readSteerMotorCurrentMilliAmp(const WheelConfig &wheel) const
+        {
+            return (wheel.steer_motor_h == nullptr) ? 0.0f : wheel.steer_motor_h->getCurrent();
+        }
+
+        void Chassis::clearSteerFaultState(WheelConfig &wheel)
+        {
+            wheel.steer_fault_state = SteerFaultState::kNone;
+            wheel.steer_fault_rehome_request = false;
+            wheel.steer_feedback_freeze_ms = 0U;
+            wheel.steer_feedback_recovery_toggle_count = 0U;
+            wheel.steer_feedback_current_mA = readSteerMotorCurrentMilliAmp(wheel);
+            wheel.steer_feedback_last_current_mA = wheel.steer_feedback_current_mA;
+            wheel.steer_feedback_last_raw_total_angle_rad = readSteerMotorRawTotalAngleRad(wheel);
+            wheel.steer_feedback_current_delta_mA = 0.0f;
+            wheel.steer_feedback_angle_delta_rad = 0.0f;
+            wheel.steer_fault_steer_error_rad = 0.0f;
+            wheel.steer_fault_control_intent = false;
+            wheel.steer_fault_xpark_stationary_hold = false;
+            wheel.steer_fault_freeze_candidate = false;
+        }
+
+        void Chassis::latchSteerFault(WheelConfig &wheel)
+        {
+            wheel.steer_fault_state = SteerFaultState::kLatched;
+            wheel.steer_fault_rehome_request = false;
+            wheel.steer_feedback_recovery_toggle_count = 0U;
+            wheel.steer_fault_latched_count += 1U;
+            wheel.homing_state = HomingState::kFault;
+            wheel.homing_elapsed_s = 0.0f;
+            wheel.homing_zero_valid = false;
+            wheel.target_drive_omega_rad_s = 0.0f;
+            wheel.target_steer_motor_total_angle_rad = 0.0f;
+            wheel.steer_target_velocity_rad_s = 0.0f;
+            resetSteerMotorClosedLoopState(wheel);
+            steer_fault_any_active_ = true;
+        }
+
+        void Chassis::requestSingleWheelHoming(WheelConfig &wheel)
+        {
+            wheel.steer_fault_rehome_request = true;
+            wheel.homing_elapsed_s = 0.0f;
+            wheel.homing_last_sensor_active = readHomingSensorRawHigh(wheel);
+            wheel.homing_last_edge_is_falling = false;
+            wheel.homing_align_command_armed = false;
+            wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
+            wheel.homing_zero_valid = false;
+            wheel.homing_state = HomingState::kIdle;
+            wheel.target_drive_omega_rad_s = 0.0f;
+            wheel.target_steer_motor_total_angle_rad = 0.0f;
+            wheel.steer_target_velocity_rad_s = 0.0f;
+        }
+
+        void Chassis::resetSteerMotorClosedLoopState(WheelConfig &wheel)
+        {
+            if (wheel.steer_motor_h == nullptr)
+            {
+                return;
+            }
+
+            wheel.steer_motor_h->setTargetCurrent(0.0f);
+
+        #ifdef TEST_TDD_MOTOR_DJI_H
+            return;
+        #else
+            // Project wiring binds all four steer motors to M3508 in Setup_ConfigInit.cpp.
+            M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
+            steer_m3508->speed_pid_.reset();
+            steer_m3508->angle_pid_.reset();
+            steer_m3508->anglePid_timeCnt = 0;
+            steer_m3508->setTargetCurrent(0.0f);
+        #endif
+        }
+
+        void Chassis::updateSteerFaultState(WheelConfig &wheel)
+        {
+            const StrategyConfig::SteerFaultConfig &steer_fault_cfg = runtime_strategy_cfg_.steer_fault_cfg;
+            const f32 current_mA = readSteerMotorCurrentMilliAmp(wheel);
+            const f32 raw_total_angle_rad = readSteerMotorRawTotalAngleRad(wheel);
+            const f32 current_delta_mA = fabsf(current_mA - wheel.steer_feedback_last_current_mA);
+            const f32 angle_delta_rad = fabsf(raw_total_angle_rad - wheel.steer_feedback_last_raw_total_angle_rad);
+            const f32 command_speed_m_s = computeMaxCommandWheelSpeedMps(target_data_);
+            const bool xpark_stationary_hold = steer_fault_cfg.ignore_during_xpark_hold &&
+                                               xpark_gate_active_ &&
+                                               (command_speed_m_s <= getNearZeroExitSpeedMps());
+            const f32 steer_error_rad = fabsf(wrapToPi(wheel.target_steer_motor_total_angle_rad -
+                                                       wheel.corrected_steer_motor_total_angle_rad));
+            const bool steer_control_intent = !input_target_data_.zero_current_all &&
+                                              !current_mode_flag_.is_wheel_torque_free &&
+                                              ((command_speed_m_s > getNearZeroExitSpeedMps()) ||
+                                               (steer_error_rad > degToRadF32(homing_align_to_zero_tolerance_deg_)));
+            const bool freeze_candidate = (wheel.homing_state == HomingState::kReady) &&
+                                          wheel.homing_zero_valid &&
+                                          steer_control_intent &&
+                                          !xpark_stationary_hold &&
+                                          (fabsf(current_mA) >= steer_fault_cfg.active_current_min_mA) &&
+                                          (current_delta_mA <= steer_fault_cfg.freeze_current_delta_mA) &&
+                                          (angle_delta_rad <= steer_fault_cfg.freeze_angle_delta_rad);
+
+            wheel.steer_feedback_current_mA = current_mA;
+            wheel.steer_feedback_current_delta_mA = current_delta_mA;
+            wheel.steer_feedback_angle_delta_rad = angle_delta_rad;
+            wheel.steer_fault_steer_error_rad = steer_error_rad;
+            wheel.steer_fault_control_intent = steer_control_intent;
+            wheel.steer_fault_xpark_stationary_hold = xpark_stationary_hold;
+            wheel.steer_fault_freeze_candidate = freeze_candidate;
+
+            if (!steer_fault_cfg.enable)
+            {
+                wheel.steer_fault_rehome_request = false;
+                wheel.steer_feedback_freeze_ms = 0U;
+                wheel.steer_feedback_recovery_toggle_count = 0U;
+                wheel.steer_fault_state = SteerFaultState::kNone;
+                wheel.steer_feedback_last_current_mA = current_mA;
+                wheel.steer_feedback_last_raw_total_angle_rad = raw_total_angle_rad;
+                return;
+            }
+
+            if (wheel.steer_fault_state == SteerFaultState::kNone)
+            {
+                if (freeze_candidate)
+                {
+                    wheel.steer_feedback_freeze_ms = (wheel.steer_feedback_freeze_ms > (0xFFFFFFFFU - period_ms_))
+                                                         ? 0xFFFFFFFFU
+                                                         : (wheel.steer_feedback_freeze_ms + period_ms_);
+                    if (wheel.steer_feedback_freeze_ms >= steer_fault_cfg.freeze_duration_ms)
+                    {
+                        latchSteerFault(wheel);
+                    }
+                }
+                else
+                {
+                    wheel.steer_feedback_freeze_ms = 0U;
+                }
+                wheel.steer_feedback_recovery_toggle_count = 0U;
+            }
+            else if (wheel.steer_fault_state == SteerFaultState::kLatched)
+            {
+                if (current_delta_mA >= steer_fault_cfg.recovery_current_delta_mA)
+                {
+                    wheel.steer_feedback_recovery_toggle_count += 1U;
+                }
+                if (wheel.steer_feedback_recovery_toggle_count >= steer_fault_cfg.recovery_toggle_threshold)
+                {
+                    wheel.steer_fault_state = SteerFaultState::kRecovering;
+                    requestSingleWheelHoming(wheel);
+                }
+            }
+
+            if (wheel.steer_fault_state != SteerFaultState::kNone)
+            {
+                steer_fault_any_active_ = true;
+            }
+
+            wheel.steer_feedback_last_current_mA = current_mA;
+            wheel.steer_feedback_last_raw_total_angle_rad = raw_total_angle_rad;
         }
 
         void Chassis::updateWheelFeedback()
         {
+            steer_fault_any_active_ = false;
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
                 wheel.corrected_steer_motor_total_angle_rad = readCorrectedSteerMotorTotalAngleRad(wheel);
                 wheel.corrected_drive_omega_rad_s = readDriveMotorOmegaRadS(wheel);
+                updateSteerFaultState(wheel);
             }
         }
 
@@ -1092,11 +2194,23 @@ namespace jia
                 wheel.homing_zero_valid = true;
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
                 wheel.homing_last_edge_is_falling = false;
+                wheel.homing_align_command_armed = false;
                 return true;
             }
 
             const bool sensor_raw_high = readHomingSensorRawHigh(wheel);
             const f32 raw_total_angle_rad = readSteerMotorRawTotalAngleRad(wheel);
+
+            if (wheel.steer_fault_state == SteerFaultState::kRecovering && wheel.steer_fault_rehome_request)
+            {
+                wheel.steer_fault_rehome_request = false;
+                wheel.homing_state = HomingState::kSearch;
+                wheel.homing_elapsed_s = 0.0f;
+                wheel.homing_last_sensor_active = sensor_raw_high;
+                wheel.homing_align_command_armed = false;
+                steer_fault_any_active_ = true;
+                return false;
+            }
 
             if (wheel.homing_state == HomingState::kIdle)
             {
@@ -1123,16 +2237,26 @@ namespace jia
                 {
                     const bool is_falling_edge = wheel.homing_last_sensor_active && !sensor_raw_high;
                     const f32 edge_mech_oa_rad = is_falling_edge ? wheel.homing_falling_edge_mech_rad : wheel.homing_rising_edge_mech_rad;
-                    const f32 edge_local_corrected_rad = edge_mech_oa_rad - wheel.theta_oa_to_owi_rad;
+                    const SteerCalibration calibration = makeSteerCalibration(wheel);
 
                     wheel.homing_state = HomingState::kEdgeDetected;
                     wheel.homing_last_edge_is_falling = is_falling_edge;
-                    wheel.homing_runtime_zero_offset_rad = edge_local_corrected_rad + wheel.homing_zero_offset_rad - raw_total_angle_rad;
+                    wheel.homing_runtime_zero_offset_rad = computeHomingRuntimeZeroOffset(edge_mech_oa_rad,
+                                                                                          raw_total_angle_rad,
+                                                                                          wheel.homing_zero_offset_rad,
+                                                                                          calibration);
                     wheel.homing_zero_valid = true;
                 }
                 else if (wheel.homing_elapsed_s > wheel.homing_timeout_s)
                 {
-                    wheel.homing_state = HomingState::kFault;
+                    if (wheel.steer_fault_state == SteerFaultState::kRecovering)
+                    {
+                        latchSteerFault(wheel);
+                    }
+                    else
+                    {
+                        wheel.homing_state = HomingState::kFault;
+                    }
                 }
                 wheel.homing_last_sensor_active = sensor_raw_high;
                 return false;
@@ -1152,26 +2276,53 @@ namespace jia
             }
             if (wheel.homing_state == HomingState::kContinuousAngleReady)
             {
+                const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
+                const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_local_total_rad);
+                const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
+                const f32 oa_error_abs_rad = fabsf(shortestAngularDistance(current_oa_total_rad, target_oa_total_rad));
+                if (oa_error_abs_rad <= degToRadF32(homing_align_to_zero_tolerance_deg_))
+                {
+                    wheel.homing_state = HomingState::kReady;
+                    wheel.homing_align_command_armed = false;
+                    if (wheel.steer_fault_state == SteerFaultState::kRecovering)
+                    {
+                        clearSteerFaultState(wheel);
+                    }
+                    return true;
+                }
+                wheel.homing_state = HomingState::kAlignToZero;
+                wheel.homing_align_command_armed = false;
+                return false;
+            }
+            if (wheel.homing_state == HomingState::kContinuousAngleReady)
+            {
                 // 连续角度已可用后，先进入“归位到软件零点”阶段：
 // OA角自动走0°（车头前方）再判定该轮回零完成
                 wheel.homing_state = HomingState::kAlignToZero;
+                wheel.homing_align_command_armed = false;
                 return false;
             }
 
             if (wheel.homing_state == HomingState::kAlignToZero)
             {
                 const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
-                const f32 current_oa_total_rad = current_local_total_rad + wheel.theta_oa_to_owi_rad;
+                const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_local_total_rad);
                 const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
-                const f32 target_local_total_rad = target_oa_total_rad - wheel.theta_oa_to_owi_rad;
+                const f32 target_local_total_rad = mapWheelOaTotalToCorrectedLocal(wheel, target_oa_total_rad);
                 const f32 oa_error_abs_rad = fabsf(shortestAngularDistance(current_oa_total_rad, target_oa_total_rad));
 
                 wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
                 if (oa_error_abs_rad <= degToRadF32(homing_align_to_zero_tolerance_deg_))
                 {
                     wheel.homing_state = HomingState::kReady;
+                    wheel.homing_align_command_armed = false;
+                    if (wheel.steer_fault_state == SteerFaultState::kRecovering)
+                    {
+                        clearSteerFaultState(wheel);
+                    }
                     return true;
                 }
+                wheel.homing_align_command_armed = true;
                 return false;
             }
 
@@ -1190,7 +2341,8 @@ namespace jia
         {
             if (wheel.steer_motor_h != nullptr)
             {
-                wheel.steer_motor_h->setTargetRPM(rpm / wheel.steer_motor_sign);
+                const f32 steer_sign = (wheel.steer_motor_sign == 0.0f) ? 1.0f : wheel.steer_motor_sign;
+                wheel.steer_motor_h->setTargetRPM(rpm / steer_sign);
             }
         }
 
@@ -1200,7 +2352,13 @@ namespace jia
             {
                 return;
             }
-            f32 raw_motor_total_rad = (corrected_local_total_angle_rad - wheel.homing_runtime_zero_offset_rad) / wheel.steer_motor_sign;
+            const SteerCalibration calibration{
+                wheel.theta_oa_to_owi_rad,
+                wheel.homing_runtime_zero_offset_rad,
+                wheel.steer_motor_sign,
+                wheel.drive_motor_sign,
+            };
+            f32 raw_motor_total_rad = mapCorrectedLocalTotalToRawSteerMotorTotal(corrected_local_total_angle_rad, calibration);
             wheel.steer_motor_h->setTargetTotalAngle(radToDegF32(raw_motor_total_rad));
         }
 
@@ -1208,7 +2366,13 @@ namespace jia
         {
             if (wheel.drive_motor_h != nullptr)
             {
-                wheel.drive_motor_h->setTargetRPM(radsToRpmF32(drive_omega_rad_s / wheel.drive_motor_sign));
+                const SteerCalibration calibration{
+                    wheel.theta_oa_to_owi_rad,
+                    wheel.homing_runtime_zero_offset_rad,
+                    wheel.steer_motor_sign,
+                    wheel.drive_motor_sign,
+                };
+                wheel.drive_motor_h->setTargetRPM(mapWheelOmegaToDriveMotorRpm(drive_omega_rad_s, calibration));
             }
         }
 
@@ -1283,305 +2447,77 @@ namespace jia
 
         void Chassis::computeModuleCommands(const Data &command_data)
         {
-            f32 current_oa_total_rad[4] = {0.0f};
-            f32 target_drive_raw_rad_s[4] = {0.0f};
-            f32 selected_oa_total_rad[4] = {0.0f};
-            f32 steering_errors_rad[4] = {0.0f};
-            f32 planned_local_total_rad_arr[4] = {0.0f};
-            f32 planned_oa_total_rad_arr[4] = {0.0f};
-            f32 next_steer_rate_rad_s_arr[4] = {0.0f};
-            f32 wheel_vx_m_s[4] = {0.0f};
-            f32 wheel_vy_m_s[4] = {0.0f};
-            f32 wheel_speed_m_s_arr[4] = {0.0f};
-            f32 residual_speed_m_s_arr[4] = {0.0f};
-
-            f32 max_command_wheel_speed_m_s = 0.0f;
-            f32 max_residual_speed_m_s = 0.0f;
-
-// 第一阶段：采样每轮速度与残速，先建立“驻车进入门控”的判据
-            for (u8 i = 0; i < 4; ++i)
-            {
-                WheelConfig &wheel = wheel_config_[i];
-                const f32 current_local_total = wheel.corrected_steer_motor_total_angle_rad;
-                current_oa_total_rad[i] = current_local_total + wheel.theta_oa_to_owi_rad;
-
-                const f32 wheel_vx = command_data.vel_x + command_data.omega_z * wheel.pos_y_m;
-                const f32 wheel_vy = command_data.vel_y - command_data.omega_z * wheel.pos_x_m;
-                const f32 wheel_speed_m_s = magnitude2D(wheel_vx, wheel_vy);
-                wheel_vx_m_s[i] = wheel_vx;
-                wheel_vy_m_s[i] = wheel_vy;
-                wheel_speed_m_s_arr[i] = wheel_speed_m_s;
-                max_command_wheel_speed_m_s = (wheel_speed_m_s > max_command_wheel_speed_m_s) ? wheel_speed_m_s : max_command_wheel_speed_m_s;
-
-                const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * wheel_radius_m_;
-                residual_speed_m_s_arr[i] = residual_speed_m_s;
-                max_residual_speed_m_s = (residual_speed_m_s > max_residual_speed_m_s) ? residual_speed_m_s : max_residual_speed_m_s;
-            }
-
-            const f32 xpark_enter_speed = near_zero_derived_.xpark_enter_m_s;
-            const f32 xpark_exit_speed = near_zero_derived_.xpark_exit_m_s;
-
-            const bool command_stationary_intent = xpark_gate_active_
-                                                       ? (max_command_wheel_speed_m_s <= xpark_exit_speed)
-                                                       : (max_command_wheel_speed_m_s <= xpark_enter_speed);
-
-            if (command_stationary_intent)
-            {
-                xpark_stationary_hold_ms_ = (xpark_stationary_hold_ms_ > (0xFFFFFFFFU - period_ms_))
-                                                ? 0xFFFFFFFFU
-                                                : (xpark_stationary_hold_ms_ + period_ms_);
-                if (xpark_stationary_hold_ms_ >= near_zero_cfg_.xpark_entry_delay_ms)
-                {
-                    xpark_gate_active_ = true;
-                }
-            }
-            else
-            {
-                xpark_stationary_hold_ms_ = 0U;
-                xpark_gate_active_ = false;
-            }
-
-            const bool allow_xpark_pose = command_stationary_intent && xpark_gate_active_;
-            const bool force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
-            const f32 uniform_steer_oa_mod_rad = wrapTo2Pi(degToRadF32(input_target_data_.steer_lock_angle_deg));
-            const f32 uniform_drive_omega_abs = fabsf(input_target_data_.drive_lock_speed_m_s) / wheel_radius_m_;
-            const f32 uniform_drive_sign = (input_target_data_.drive_lock_speed_m_s >= 0.0f) ? 1.0f : -1.0f;
-
-// 第二阶段：计算每轮目标、翻转候选与误差（含X-Park延时门控）
-            for (u8 i = 0; i < 4; ++i)
-            {
-                const WheelConfig &wheel = wheel_config_[i];
-                const f32 wheel_speed_m_s = wheel_speed_m_s_arr[i];
-                const bool is_stationary = wheel_speed_m_s <= near_zero_derived_.stationary_m_s;
-                f32 raw_target_oa_mod_rad = 0.0f;
-                f32 drive_omega = 0.0f;
-
-                if (is_stationary)
-                {
-                    raw_target_oa_mod_rad = (allow_xpark_pose && idle_posture_mode_ == IdlePostureMode::kXPark)
-                                                ? wrapTo2Pi(getXParkAngle(wheel))
-                                                : wrapTo2Pi(current_oa_total_rad[i]);
-                    drive_omega = 0.0f;
-                }
-                else
-                {
-                    raw_target_oa_mod_rad = wrapTo2Pi(atan2f(wheel_vy_m_s[i], wheel_vx_m_s[i]));
-                    drive_omega = wheel_speed_m_s / wheel_radius_m_;
-                }
-
-                const f32 alt_target_oa_mod_rad = wrapTo2Pi(raw_target_oa_mod_rad + kPi);
-                const f32 candidate_a = nearestEquivalentAngle(current_oa_total_rad[i], raw_target_oa_mod_rad);
-                const f32 candidate_b = nearestEquivalentAngle(current_oa_total_rad[i], alt_target_oa_mod_rad);
-
-                f32 selected = candidate_a;
-                bool flipped = false;
-                if (!is_stationary)
-                {
-                    if (runtime_strategy_cfg_.steering_strategy_mode == SteeringStrategyMode::kAlwaysForward)
-                    {
-                        flipped = false;
-                    }
-                    else
-                    {
-                        const f32 base_abs_deg = radToDegF32(fabsf(candidate_a - current_oa_total_rad[i]));
-                        const f32 flip_abs_deg = radToDegF32(fabsf(candidate_b - current_oa_total_rad[i]));
-                        if (selected_flipped_solution_[i])
-                        {
-                            flipped = flip_abs_deg <= runtime_strategy_cfg_.flip_enter_angle_deg;
-                        }
-                        else
-                        {
-                            flipped = (base_abs_deg > runtime_strategy_cfg_.flip_exit_angle_deg) && (flip_abs_deg < base_abs_deg);
-                        }
-                    }
-                }
-
-                if (flipped)
-                {
-                    selected = candidate_b;
-                    drive_omega = -drive_omega;
-                }
-
-                if (force_uniform_steer_drive)
-                {
-                    const f32 fixed_a = nearestEquivalentAngle(current_oa_total_rad[i], uniform_steer_oa_mod_rad);
-                    const f32 fixed_b = nearestEquivalentAngle(current_oa_total_rad[i], wrapTo2Pi(uniform_steer_oa_mod_rad + kPi));
-                    const bool use_b = fabsf(shortestAngularDistance(current_oa_total_rad[i], fixed_b)) <
-                                       fabsf(shortestAngularDistance(current_oa_total_rad[i], fixed_a));
-                    selected = use_b ? fixed_b : fixed_a;
-                    const f32 selected_sign = use_b ? -1.0f : 1.0f;
-                    drive_omega = uniform_drive_sign * selected_sign * uniform_drive_omega_abs;
-                    flipped = use_b;
-                }
-
-                selected_oa_total_rad[i] = selected;
-                selected_flipped_solution_[i] = flipped;
-                steering_errors_rad[i] = fabsf(shortestAngularDistance(current_oa_total_rad[i], selected));
-                target_drive_raw_rad_s[i] = drive_omega;
-            }
-
-// 第三阶段：停车抑制（指令静止但残速未消失时，先保舵角）
-            const bool command_is_stationary = command_stationary_intent;
-            const bool residual_drive_is_moving = max_residual_speed_m_s > near_zero_derived_.stop_guard_release_m_s;
-            if (!force_uniform_steer_drive &&
-                runtime_strategy_cfg_.enable_stop_steer_guard &&
-                command_is_stationary &&
-                residual_drive_is_moving)
+            const Data planner_command = launch_hold_active_ ? makeLaunchHoldPreviewCommand() : command_data;
+            const SwervePlannerInput planner_input = makeSwervePlannerInput(planner_command);
+            SwervePlannerOutput planner_output = planSwerveModules(planner_input);
+            if (launch_hold_active_)
             {
                 for (u8 i = 0; i < 4; ++i)
                 {
-                    const f32 residual_speed_m_s = residual_speed_m_s_arr[i];
-                    const f32 blend = stopSteerGuardBlend(residual_speed_m_s);
-                    if (blend >= 1.0f)
-                    {
-                        continue;
-                    }
-
-                    const f32 current = current_oa_total_rad[i];
-                    const f32 protected_target = wrapTo2Pi(
-                        current + shortestAngularDistance(current, selected_oa_total_rad[i]) * blend);
-                    selected_oa_total_rad[i] = protected_target;
-                    steering_errors_rad[i] = fabsf(shortestAngularDistance(current, protected_target));
-                    selected_flipped_solution_[i] = false;
+                    planner_output.low_speed_suppression_scale[i] = 0.0f;
+                    planner_output.final_drive_omega_rad_s[i] = 0.0f;
                 }
             }
-
-// 第四阶段：驱动抑制比例（DriveGate或余弦补偿）
-            f32 gate_scales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-            computeDriveGateScales(steering_errors_rad, command_data, gate_scales);
-
-// 第五阶段：先规划舵向目标，并统计全局“最大到角时间”
-            const f32 steer_rate_floor = 1.0e-3f;
-            f32 eta_max_s = 0.0f;
-            const f32 steer_rate_limit_runtime = actuator_limit_enable_.enable_steer_rate_limit ? max_steer_rate_rad_s_ : 1.0e6f;
-            const f32 steer_alpha_limit_runtime = actuator_limit_enable_.enable_steer_alpha_limit ? max_steer_alpha_rad_s2_ : 1.0e8f;
-            for (u8 i = 0; i < 4; ++i)
-            {
-                const WheelConfig &wheel = wheel_config_[i];
-                const f32 current_local_total = wheel.corrected_steer_motor_total_angle_rad;
-                const f32 selected_local_total = selected_oa_total_rad[i] - wheel.theta_oa_to_owi_rad;
-
-                f32 next_steer_rate_rad_s = 0.0f;
-                planned_local_total_rad_arr[i] = limitPositionSecondOrder(
-                    current_local_total,
-                    last_steer_rate_cmd_rad_s_[i],
-                    selected_local_total,
-                    steer_rate_limit_runtime,
-                    steer_alpha_limit_runtime,
-                    period_,
-                    next_steer_rate_rad_s);
-                next_steer_rate_rad_s_arr[i] = next_steer_rate_rad_s;
-
-                const f32 remain_angle_rad = steering_errors_rad[i];
-                f32 steer_rate_ref = fabsf(next_steer_rate_rad_s);
-                if (steer_rate_ref < steer_rate_floor)
-                {
-                    steer_rate_ref = (steer_rate_limit_runtime > steer_rate_floor) ? steer_rate_limit_runtime : steer_rate_floor;
-                }
-
-                const f32 eta_s = remain_angle_rad / steer_rate_ref;
-                eta_max_s = (eta_s > eta_max_s) ? eta_s : eta_max_s;
-                planned_oa_total_rad_arr[i] = planned_local_total_rad_arr[i] + wheel.theta_oa_to_owi_rad;
-            }
-
-// 第六阶段：基于“规划舵向角”重算每轮驱动投影，保证过渡期驱动与可实现滚动方向一致
-            if (!force_uniform_steer_drive)
-            {
-                computeProjectedDriveFromPlannedSteer(command_data, planned_oa_total_rad_arr, target_drive_raw_rad_s);
-            }
-
-// 第七阶段：全局矢量一致性门控（方向优先）——根据合成方向误差与最大到角时间统一压放驱动
-            const f32 translational_speed_m_s = magnitude2D(command_data.vel_x, command_data.vel_y);
-            f32 predicted_vel_x = 0.0f;
-            f32 predicted_vel_y = 0.0f;
-            f32 predicted_omega_z = 0.0f;
-            f32 dir_err_deg = 0.0f;
-            if (estimatePlannedBodyTwist(planned_oa_total_rad_arr, target_drive_raw_rad_s, predicted_vel_x, predicted_vel_y, predicted_omega_z))
-            {
-                const f32 predicted_trans_speed_m_s = magnitude2D(predicted_vel_x, predicted_vel_y);
-                if ((translational_speed_m_s > 1.0e-6f) && (predicted_trans_speed_m_s > 1.0e-6f))
-                {
-                    const f32 target_dir_rad = atan2f(command_data.vel_y, command_data.vel_x);
-                    const f32 predicted_dir_rad = atan2f(predicted_vel_y, predicted_vel_x);
-                    dir_err_deg = radToDegF32(fabsf(shortestAngularDistance(target_dir_rad, predicted_dir_rad)));
-                }
-            }
-            vector_eta_max_s_ = eta_max_s;
-            vector_dir_err_deg_ = dir_err_deg;
-            const f32 vector_gate_scale = force_uniform_steer_drive
-                                              ? 1.0f
-                                              : updateVectorConsistencyGate(translational_speed_m_s, eta_max_s, dir_err_deg);
-            if (force_uniform_steer_drive)
-            {
-                vector_gate_scale_ = 1.0f;
-                vector_gate_active_ = false;
-            }
-
-// 第八阶段：下发前限幅与缓存（DriveGate/余弦补偿作为终端保护，与全局门控叠乘）
-            for (u8 i = 0; i < 4; ++i)
-            {
-                WheelConfig &wheel = wheel_config_[i];
-                f32 gate_or_cos_scale = 1.0f;
-                if (force_uniform_steer_drive)
-                {
-                    gate_or_cos_scale = 1.0f;
-                }
-                else if (runtime_strategy_cfg_.enable_drive_gate)
-                {
-                    gate_or_cos_scale = gate_scales[i];
-                }
-                else if (enable_cosine_compensation_)
-                {
-                    gate_or_cos_scale = cosf(steering_errors_rad[i]);
-                    if (gate_or_cos_scale < 0.0f)
-                    {
-                        gate_or_cos_scale = 0.0f;
-                    }
-                }
-
-                const f32 drive_scale = clampValue(gate_or_cos_scale * vector_gate_scale, 0.0f, 1.0f);
-                f32 target_drive_omega = target_drive_raw_rad_s[i] * drive_scale;
-                if (actuator_limit_enable_.enable_drive_omega_limit)
-                {
-                    target_drive_omega = clampValue(target_drive_omega, -max_drive_omega_rad_s_, max_drive_omega_rad_s_);
-                }
-                drive_gate_scale_[i] = drive_scale;
-                wheel.target_steer_motor_total_angle_rad = planned_local_total_rad_arr[i];
-                if (actuator_limit_enable_.enable_drive_alpha_limit)
-                {
-                    wheel.target_drive_omega_rad_s = limitValueWithAcceleration(last_drive_omega_cmd_rad_s_[i], target_drive_omega, max_drive_alpha_rad_s2_, period_);
-                }
-                else
-                {
-                    wheel.target_drive_omega_rad_s = target_drive_omega;
-                }
-                if (actuator_limit_enable_.enable_drive_omega_limit)
-                {
-                    wheel.target_drive_omega_rad_s = clampValue(wheel.target_drive_omega_rad_s, -max_drive_omega_rad_s_, max_drive_omega_rad_s_);
-                }
-
-                wheel.steer_target_velocity_rad_s = next_steer_rate_rad_s_arr[i];
-                wheel.flipped_drive_direction = selected_flipped_solution_[i];
-
-                last_steer_rate_cmd_rad_s_[i] = next_steer_rate_rad_s_arr[i];
-                last_drive_omega_cmd_rad_s_[i] = wheel.target_drive_omega_rad_s;
-                planned_data_.steer_angle_oa_rad[i] = wheel.target_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
-                planned_data_.drive_omega_rad_s[i] = wheel.target_drive_omega_rad_s;
-            }
+            ActuatorCommandFrame command_frame{};
+            buildActuatorCommandFrame(planner_output, command_frame);
+            storePlannedActuatorFrame(planner_output, command_frame);
         }
 
         void Chassis::applyModuleCommands(bool all_homed)
         {
+            bool steer_fault_any_active = false;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                if (wheel_config_[i].steer_fault_state != SteerFaultState::kNone)
+                {
+                    steer_fault_any_active = true;
+                    break;
+                }
+            }
+            steer_fault_any_active_ = steer_fault_any_active;
+            const bool chassis_motion_blocked = !all_homed || steer_fault_any_active;
             // 这里是“四舵轮目标命令”真正落到电机接口前的最后一道门控：
 // computeModuleCommands()虽然已经为每个轮子算好了目标舵角和驱动速度
 // 但是否允许按这些目标下发，还要看当前是否全部完成回零，以及是否处于扭矩自由模式
+            f32 execution_allowed_drive_targets_rad_s[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            bool execution_allow_drive_position_loop[4] = {true, true, true, true};
+            bool execution_apply_shared_alpha = !input_target_data_.zero_current_all && !current_mode_flag_.is_wheel_torque_free;
+            f32 shared_drive_alpha_scale = 1.0f;
+
+            if (execution_apply_shared_alpha && runtime_strategy_cfg_.enable_drive_alpha_limit_)
+            {
+                const f32 drive_alpha_step_limit_rad_s = fabsf(runtime_strategy_cfg_.max_drive_alpha_rad_s2_) * period_;
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    execution_allow_drive_position_loop[i] = all_homed;
+                    execution_allowed_drive_targets_rad_s[i] = all_homed ? actuator_command_frame_.drive_omega_rad_s[i] : 0.0f;
+
+                    const f32 delta_drive_target_rad_s = execution_allowed_drive_targets_rad_s[i] - last_drive_omega_cmd_rad_s_[i];
+                    const f32 abs_delta_drive_target_rad_s = fabsf(delta_drive_target_rad_s);
+                    if (abs_delta_drive_target_rad_s <= drive_alpha_step_limit_rad_s || abs_delta_drive_target_rad_s <= 1.0e-6f)
+                    {
+                        continue;
+                    }
+
+                    const f32 wheel_alpha_scale = drive_alpha_step_limit_rad_s / abs_delta_drive_target_rad_s;
+                    shared_drive_alpha_scale = (wheel_alpha_scale < shared_drive_alpha_scale) ? wheel_alpha_scale : shared_drive_alpha_scale;
+                }
+            }
+
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
+                const f32 planned_drive_target_rad_s = actuator_command_frame_.drive_omega_rad_s[i];
+                f32 allowed_drive_target_rad_s = planned_drive_target_rad_s;
+                bool allow_drive_position_loop = true;
 
                 if (input_target_data_.zero_current_all)
                 {
 // 硬零电流模式优先级最高：无论回零状态如何，四轮舵向/驱动都直接下0电流
+                    allowed_drive_target_rad_s = 0.0f;
+                    wheel.target_drive_omega_rad_s = 0.0f;
+                    planned_data_.drive_omega_rad_s[i] = 0.0f;
+                    last_drive_omega_cmd_rad_s_[i] = 0.0f;
                     setSteerMotorTargetCurrent(wheel, 0.0f);
                     if (wheel.drive_motor_h != nullptr)
                     {
@@ -1590,27 +2526,57 @@ namespace jia
                     continue;
                 }
 
-                if (!all_homed)
+                if (chassis_motion_blocked)
                 {
-// 只要还有任意一个轮子没有完成回零，就先禁止所有驱动轮输出
-// 避免底盘在零位未建立完成时带着错误朝向强行跑动
-                    setDriveMotorTargetOmegaRadS(wheel, 0.0f);
+// 只要还有任意一个轮子没有完成回零，或者存在舵向故障/恢复重校准中的轮子，
+// drive 一律按“电流清零”停机，不走 RPM=0 的速度闭环停机语义，
+// 避免离线前残留的驱动电流或速度闭环继续推动底盘。
+                    allow_drive_position_loop = execution_allow_drive_position_loop[i];
+                    allowed_drive_target_rad_s = 0.0f;
+                    f32 delivered_drive_target_rad_s = allowed_drive_target_rad_s;
+                    if (runtime_strategy_cfg_.enable_drive_alpha_limit_)
+                    {
+                        delivered_drive_target_rad_s =
+                            last_drive_omega_cmd_rad_s_[i] +
+                            (allowed_drive_target_rad_s - last_drive_omega_cmd_rad_s_[i]) * shared_drive_alpha_scale;
+                    }
+                    if (runtime_strategy_cfg_.enable_drive_omega_limit_)
+                    {
+                        delivered_drive_target_rad_s = clampValue(delivered_drive_target_rad_s, -runtime_strategy_cfg_.max_drive_omega_rad_s_, runtime_strategy_cfg_.max_drive_omega_rad_s_);
+                    }
+                    wheel.target_drive_omega_rad_s = delivered_drive_target_rad_s;
+                    planned_data_.drive_omega_rad_s[i] = delivered_drive_target_rad_s;
+                    last_drive_omega_cmd_rad_s_[i] = delivered_drive_target_rad_s;
+                    if (wheel.drive_motor_h != nullptr)
+                    {
+                        wheel.drive_motor_h->setTargetCurrent(0.0f);
+                    }
                     if (wheel.homing_state == HomingState::kSearch)
                     {
-// 正在搜索零位的轮子，允许转向电机按固定搜索转速慢慢转
-// 目的是继续寻找传感器边沿；此时不走位置闭环
+// 正在搜索零位的轮子，允许转向电机按固定搜索转速慢慢转；
+// 但 drive 仍然保持 current=0，全车不允许恢复驱动。
                         setSteerMotorTargetRPM(wheel, wheel.homing_search_rpm);
                     }
                     else if (wheel.homing_state == HomingState::kAlignToZero)
                     {
-// 零偏建立后允许转向电机继续走位置闭环，把OA自动归到软件零点
+// 零偏建立后允许转向电机继续走位置闭环，把 OA 自动归到软件零点；
+// 但在整车层面 drive 仍然保持 current=0，直到该轮重新 homing 完成。
                         // 注意：这里每拍都根据当前反馈重算“离 OA=0 最近的等效角”，
 // 避免被上游常规模块解算写回“保持当前角”后导致归位停滞
-                        const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
-                        const f32 current_oa_total_rad = current_local_total_rad + wheel.theta_oa_to_owi_rad;
-                        const f32 align_target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
-                        wheel.target_steer_motor_total_angle_rad = align_target_oa_total_rad - wheel.theta_oa_to_owi_rad;
-                        setSteerMotorTargetTotalAngleRad(wheel, wheel.target_steer_motor_total_angle_rad);
+                        if (wheel.homing_align_command_armed)
+                        {
+                            wheel.target_steer_motor_total_angle_rad = computeHomingAlignTargetCorrectedLocalTotal(wheel);
+                            setSteerMotorTargetTotalAngleRad(wheel, wheel.target_steer_motor_total_angle_rad);
+                        }
+                        else
+                        {
+                            setSteerMotorTargetCurrent(wheel, 0.0f);
+                            if (wheel.steer_motor_h != nullptr)
+                            {
+                                wheel.steer_motor_h->setTargetRPM(0.0f);
+                                wheel.steer_motor_h->setTargetTotalAngle(wheel.steer_motor_h->getTargetTotalAngle());
+                            }
+                        }
                     }
                     else
                     {
@@ -1625,6 +2591,10 @@ namespace jia
                 {
 // 扭矩自由模式下，不执行任何舵角或驱动速度闭环
 // 而是把转向和驱动都打成“零电流/零扭矩”状态，方便人工推动或安全释放
+                    allowed_drive_target_rad_s = 0.0f;
+                    wheel.target_drive_omega_rad_s = 0.0f;
+                    planned_data_.drive_omega_rad_s[i] = 0.0f;
+                    last_drive_omega_cmd_rad_s_[i] = 0.0f;
                     setSteerMotorTargetCurrent(wheel, 0.0f);
                     if (wheel.drive_motor_h != nullptr)
                     {
@@ -1635,15 +2605,42 @@ namespace jia
 
 // 只有“全部回零完成”且“不是扭矩自由模式”时
 // 才真正把上一阶段规划出的目标舵角和驱动角速度下发给电机闭环
+                f32 delivered_drive_target_rad_s = allowed_drive_target_rad_s;
+                if (runtime_strategy_cfg_.enable_drive_alpha_limit_)
+                {
+                    delivered_drive_target_rad_s =
+                        last_drive_omega_cmd_rad_s_[i] +
+                        (allowed_drive_target_rad_s - last_drive_omega_cmd_rad_s_[i]) * shared_drive_alpha_scale;
+                }
+                if (runtime_strategy_cfg_.enable_drive_omega_limit_)
+                {
+                    delivered_drive_target_rad_s = clampValue(delivered_drive_target_rad_s, -runtime_strategy_cfg_.max_drive_omega_rad_s_, runtime_strategy_cfg_.max_drive_omega_rad_s_);
+                }
+
+                wheel.target_drive_omega_rad_s = delivered_drive_target_rad_s;
+                planned_data_.drive_omega_rad_s[i] = delivered_drive_target_rad_s;
+                last_drive_omega_cmd_rad_s_[i] = delivered_drive_target_rad_s;
                 setSteerMotorTargetTotalAngleRad(wheel, wheel.target_steer_motor_total_angle_rad);
-                setDriveMotorTargetOmegaRadS(wheel, wheel.target_drive_omega_rad_s);
+                if (allow_drive_position_loop)
+                {
+                    setDriveMotorTargetOmegaRadS(wheel, delivered_drive_target_rad_s);
+                }
             }
         }
 
         void Chassis::updateCurrentData(bool all_homed)
         {
+            bool steer_fault_any_active = false;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                if (wheel_config_[i].steer_fault_state != SteerFaultState::kNone)
+                {
+                    steer_fault_any_active = true;
+                    break;
+                }
+            }
             current_data_ = planned_data_;
-            if (!all_homed)
+            if (!all_homed || steer_fault_any_active)
             {
                 current_data_.vel_x = 0.0f;
                 current_data_.vel_y = 0.0f;
@@ -1652,11 +2649,11 @@ namespace jia
 
             for (u8 i = 0; i < 4; ++i)
             {
-                current_data_.steer_angle_oa_rad[i] = wheel_config_[i].corrected_steer_motor_total_angle_rad + wheel_config_[i].theta_oa_to_owi_rad;
+                current_data_.steer_angle_oa_rad[i] = mapWheelCorrectedLocalToOaTotal(wheel_config_[i], wheel_config_[i].corrected_steer_motor_total_angle_rad);
                 current_data_.drive_omega_rad_s[i] = wheel_config_[i].corrected_drive_omega_rad_s;
             }
 
-            if (all_homed)
+            if (all_homed && !steer_fault_any_active)
             {
                 estimateBodySpeedFromModules(current_data_.vel_x, current_data_.vel_y, current_data_.omega_z);
             }
@@ -1673,31 +2670,49 @@ namespace jia
             debug_mirror_.all_homed = all_homed;
             debug_mirror_.selected_wheel_steer_error_deg = 0.0f;
             debug_mirror_.selected_wheel_drive_released = false;
-            debug_mirror_.nz_stationary_m_s = near_zero_derived_.stationary_m_s;
-            debug_mirror_.nz_freeze_enter_m_s = near_zero_derived_.freeze_enter_m_s;
-            debug_mirror_.nz_freeze_exit_m_s = near_zero_derived_.freeze_exit_m_s;
-            debug_mirror_.nz_xpark_enter_m_s = near_zero_derived_.xpark_enter_m_s;
-            debug_mirror_.nz_xpark_exit_m_s = near_zero_derived_.xpark_exit_m_s;
-            debug_mirror_.nz_stop_guard_release_m_s = near_zero_derived_.stop_guard_release_m_s;
-            debug_mirror_.lim_drive_omega = actuator_limit_enable_.enable_drive_omega_limit;
-            debug_mirror_.lim_drive_alpha = actuator_limit_enable_.enable_drive_alpha_limit;
-            debug_mirror_.lim_steer_rate = actuator_limit_enable_.enable_steer_rate_limit;
-            debug_mirror_.lim_steer_alpha = actuator_limit_enable_.enable_steer_alpha_limit;
-            debug_mirror_.vec_gate_scale = vector_gate_scale_;
-            debug_mirror_.vec_dir_err_deg = vector_dir_err_deg_;
-            debug_mirror_.vec_eta_max_s = vector_eta_max_s_;
-            debug_mirror_.vec_gate_active = vector_gate_active_;
+            debug_mirror_.nz_stationary_m_s = getNearZeroEnterSpeedMps();
+            debug_mirror_.nz_freeze_enter_m_s = getNearZeroEnterSpeedMps();
+            debug_mirror_.nz_freeze_exit_m_s = getNearZeroExitSpeedMps();
+            debug_mirror_.nz_xpark_enter_m_s = getNearZeroEnterSpeedMps();
+            debug_mirror_.nz_xpark_exit_m_s = getNearZeroExitSpeedMps();
+            debug_mirror_.lim_drive_omega = runtime_strategy_cfg_.enable_drive_omega_limit_;
+            debug_mirror_.lim_drive_alpha = runtime_strategy_cfg_.enable_drive_alpha_limit_;
+            debug_mirror_.lim_steer_rate = runtime_strategy_cfg_.enable_steer_rate_limit_;
+            debug_mirror_.lim_steer_alpha = runtime_strategy_cfg_.enable_steer_alpha_limit_;
+            debug_mirror_.high_speed_drive_suppression_scale = high_speed_drive_suppression_scale_;
+            debug_mirror_.high_speed_dir_err_deg = high_speed_dir_err_deg_;
+            debug_mirror_.high_speed_eta_max_s = high_speed_eta_max_s_;
+            debug_mirror_.high_speed_drive_suppression_active = high_speed_drive_suppression_active_;
+            debug_mirror_.low_speed_drive_suppression_bypassed_by_residual_speed = low_speed_drive_suppression_bypassed_by_residual_speed_;
+            debug_mirror_.max_residual_speed_m_s = max_residual_speed_m_s_;
+            debug_mirror_.reverse_intent_active = reverse_intent_active_;
+            debug_mirror_.reverse_intent_dir_err_deg = reverse_intent_dir_err_deg_;
+            debug_mirror_.steer_fault_any_active = steer_fault_any_active_;
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];
-                debug_mirror_.current_oa_deg[i] = radToDegF32(wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad);
-                debug_mirror_.target_oa_deg[i] = radToDegF32(wheel.target_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad);
+                debug_mirror_.current_oa_deg[i] = radToDegF32(mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad));
+                debug_mirror_.target_oa_deg[i] = radToDegF32(mapWheelCorrectedLocalToOaTotal(wheel, wheel.target_steer_motor_total_angle_rad));
                 debug_mirror_.current_drive_rpm[i] = radsToRpmF32(wheel.corrected_drive_omega_rad_s);
                 debug_mirror_.target_drive_rpm[i] = radsToRpmF32(wheel.target_drive_omega_rad_s);
+                debug_mirror_.planned_drive_target_rpm[i] = radsToRpmF32(actuator_command_frame_.drive_omega_rad_s[i]);
+                debug_mirror_.delivered_drive_target_rpm[i] = radsToRpmF32(wheel.target_drive_omega_rad_s);
                 debug_mirror_.homing_state[i] = static_cast<u8>(wheel.homing_state);
                 debug_mirror_.homing_sensor_active[i] = readHomingSensor(wheel);
                 debug_mirror_.homing_last_edge_is_falling[i] = wheel.homing_last_edge_is_falling;
                 debug_mirror_.homing_runtime_zero_offset_deg[i] = radToDegF32(wheel.homing_runtime_zero_offset_rad);
+                debug_mirror_.steer_fault_active[i] = (wheel.steer_fault_state != SteerFaultState::kNone);
+                debug_mirror_.steer_fault_recovering[i] = (wheel.steer_fault_state == SteerFaultState::kRecovering);
+                debug_mirror_.steer_fault_control_intent[i] = wheel.steer_fault_control_intent;
+                debug_mirror_.steer_fault_xpark_stationary_hold[i] = wheel.steer_fault_xpark_stationary_hold;
+                debug_mirror_.steer_fault_freeze_candidate[i] = wheel.steer_fault_freeze_candidate;
+                debug_mirror_.steer_feedback_current_mA[i] = wheel.steer_feedback_current_mA;
+                debug_mirror_.steer_feedback_current_delta_mA[i] = wheel.steer_feedback_current_delta_mA;
+                debug_mirror_.steer_feedback_angle_delta_rad[i] = wheel.steer_feedback_angle_delta_rad;
+                debug_mirror_.steer_fault_steer_error_deg[i] = radToDegF32(wheel.steer_fault_steer_error_rad);
+                debug_mirror_.steer_feedback_current_freeze_ms[i] = static_cast<f32>(wheel.steer_feedback_freeze_ms);
+                debug_mirror_.steer_feedback_recovery_toggle_count[i] = static_cast<f32>(wheel.steer_feedback_recovery_toggle_count);
+                debug_mirror_.steer_fault_latched_count[i] = static_cast<f32>(wheel.steer_fault_latched_count);
             }
         }
 
@@ -1827,10 +2842,10 @@ namespace jia
                                        debug_mirror_.target_oa_deg[0],
                                        debug_mirror_.current_drive_rpm[0],
                                        debug_mirror_.target_drive_rpm[0],
-                                       debug_mirror_.vec_gate_scale,
-                                       debug_mirror_.vec_dir_err_deg,
-                                       debug_mirror_.vec_eta_max_s,
-                                       debug_mirror_.vec_gate_active ? 1U : 0U);
+                                       debug_mirror_.high_speed_drive_suppression_scale,
+                                       debug_mirror_.high_speed_dir_err_deg,
+                                       debug_mirror_.high_speed_eta_max_s,
+                                       debug_mirror_.high_speed_drive_suppression_active ? 1U : 0U);
             }
             else if (debug_output_.text_log_phase == 1U)
             {
@@ -1841,7 +2856,7 @@ namespace jia
                                        debug_mirror_.target_oa_deg[wheel_idx],
                                        debug_mirror_.current_drive_rpm[wheel_idx],
                                        debug_mirror_.target_drive_rpm[wheel_idx],
-                                       drive_gate_scale_[wheel_idx],
+                                       low_speed_drive_suppression_scale_[wheel_idx],
                                        wheel_config_[wheel_idx].flipped_drive_direction ? 1U : 0U,
                                        debug_mirror_.homing_sensor_active[wheel_idx] ? 1U : 0U,
                                        debug_mirror_.homing_last_edge_is_falling[wheel_idx] ? 1U : 0U,
@@ -1854,7 +2869,7 @@ namespace jia
                 for (u8 i = 0; i < 4; ++i)
                 {
                     const WheelConfig &wheel = wheel_config_[i];
-                    const f32 current_oa_total_rad = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                    const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
                     const f32 align_target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
                     align_err_deg[i] = radToDegF32(shortestAngularDistance(current_oa_total_rad, align_target_oa_total_rad));
                 }
@@ -2123,35 +3138,52 @@ namespace jia
                        packPayloadF32(yaw);
             };
 
-            if (!packChassis4f(planned_data_.vel_x, planned_data_.vel_y, planned_data_.omega_z, planned_data_.rot_z) ||
-                !packChassis4f(current_data_.vel_x, current_data_.vel_y, current_data_.omega_z, input_hwt_rot_z_))
+            TelemetryChassisState target_state{};
+            target_state.vel_x = planned_data_.vel_x;
+            target_state.vel_y = planned_data_.vel_y;
+            target_state.omega_z = planned_data_.omega_z;
+            target_state.yaw_rad = planned_data_.rot_z;
+
+            TelemetryChassisState actual_state{};
+            actual_state.vel_x = current_data_.vel_x;
+            actual_state.vel_y = current_data_.vel_y;
+            actual_state.omega_z = current_data_.omega_z;
+            actual_state.yaw_rad = input_hwt_rot_z_;
+
+            TelemetryWheelPose wheel_pose[kTelemetryWheelCount]{};
+            for (u8 i = 0U; i < kTelemetryWheelCount; ++i)
+            {
+                wheel_pose[i].pos_x_m = wheel_config_[i].pos_x_m;
+                wheel_pose[i].pos_y_m = wheel_config_[i].pos_y_m;
+            }
+
+            const TelemetrySnapshot snapshot = makeTelemetrySnapshot(all_homed,
+                                                                    target_state,
+                                                                    actual_state,
+                                                                    wheel_pose,
+                                                                    planned_data_.drive_omega_rad_s,
+                                                                    current_data_.drive_omega_rad_s,
+                                                                    planned_data_.steer_angle_oa_rad,
+                                                                    current_data_.steer_angle_oa_rad);
+
+            if (!packChassis4f(snapshot.target.vel_x, snapshot.target.vel_y, snapshot.target.omega_z, snapshot.target.yaw_rad) ||
+                !packChassis4f(snapshot.actual.vel_x, snapshot.actual.vel_y, snapshot.actual.omega_z, snapshot.actual.yaw_rad))
             {
                 return;
             }
 
             for (u8 i = 0U; i < kSwerveTelemetryWheelCount; ++i)
             {
-                f32 t_wvx = 0.0f;
-                f32 t_wvy = 0.0f;
-                f32 a_wvx = 0.0f;
-                f32 a_wvy = 0.0f;
-                if (i < 4U)
-                {
-                    const WheelConfig &wheel = wheel_config_[i];
-                    t_wvx = planned_data_.vel_x + planned_data_.omega_z * wheel.pos_y_m;
-                    t_wvy = planned_data_.vel_y - planned_data_.omega_z * wheel.pos_x_m;
-                    a_wvx = current_data_.vel_x + current_data_.omega_z * wheel.pos_y_m;
-                    a_wvy = current_data_.vel_y - current_data_.omega_z * wheel.pos_x_m;
-                }
+                const TelemetryWheelState &wheel = snapshot.wheels[i];
 
-                if (!packPayloadF32(planned_data_.drive_omega_rad_s[i]) ||
-                    !packPayloadF32(current_data_.drive_omega_rad_s[i]) ||
-                    !packPayloadF32(planned_data_.steer_angle_oa_rad[i]) ||
-                    !packPayloadF32(current_data_.steer_angle_oa_rad[i]) ||
-                    !packPayloadF32(t_wvx) ||
-                    !packPayloadF32(t_wvy) ||
-                    !packPayloadF32(a_wvx) ||
-                    !packPayloadF32(a_wvy))
+                if (!packPayloadF32(wheel.target_drive_omega_rad_s) ||
+                    !packPayloadF32(wheel.actual_drive_omega_rad_s) ||
+                    !packPayloadF32(wheel.target_steer_oa_rad) ||
+                    !packPayloadF32(wheel.actual_steer_oa_rad) ||
+                    !packPayloadF32(wheel.target_velocity_x_m_s) ||
+                    !packPayloadF32(wheel.target_velocity_y_m_s) ||
+                    !packPayloadF32(wheel.actual_velocity_x_m_s) ||
+                    !packPayloadF32(wheel.actual_velocity_y_m_s))
                 {
                     return;
                 }
@@ -2213,434 +3245,33 @@ namespace jia
                 return false;
             }
 
-            const DebugMode mode = resolveDebugMode(debug_control_.mode_raw);
-            if (!(mode == DebugMode::kSingleWheel || mode == DebugMode::kAlignForward || mode == DebugMode::kHomingObserve || mode == DebugMode::kDirectActuator))
+            const DebugModuleOverrideRoute route = classifyDebugModuleOverrideRoute(debug_control_.mode_raw);
+            if (route == DebugModuleOverrideRoute::kNone)
             {
                 return false;
             }
 
             const u8 wheel_idx = (debug_control_.wheel_index < 4) ? debug_control_.wheel_index : 0;
-            const bool use_soft_steer = (mode == DebugMode::kSingleWheel) && debug_control_.single_wheel_soft_steer_enable;
-            for (u8 i = 0; i < 4; ++i)
+            resetDebugModuleOverrideTargets(wheel_idx, route == DebugModuleOverrideRoute::kSingleWheel && debug_control_.single_wheel_soft_steer_enable);
+
+            if (route == DebugModuleOverrideRoute::kSingleWheel)
             {
-                WheelConfig &wheel = wheel_config_[i];
-                wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
-                wheel.target_drive_omega_rad_s = 0.0f;
-                wheel.steer_target_velocity_rad_s = 0.0f;
-                wheel.flipped_drive_direction = false;
-                planned_data_.steer_angle_oa_rad[i] = wheel.target_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
-                planned_data_.drive_omega_rad_s[i] = 0.0f;
-                if (!(use_soft_steer && i == wheel_idx))
-                {
-                    last_steer_rate_cmd_rad_s_[i] = 0.0f;
-                }
-                last_drive_omega_cmd_rad_s_[i] = 0.0f;
+                applySingleWheelDebugOverride(wheel_idx, all_homed);
+            }
+            else if (route == DebugModuleOverrideRoute::kAlignForward)
+            {
+                applyAlignForwardDebugOverride();
+            }
+            else if (route == DebugModuleOverrideRoute::kHomingObserve)
+            {
+                applyHomingObserveDebugOverride();
+            }
+            else if (route == DebugModuleOverrideRoute::kDirectActuator)
+            {
+                applyDirectActuatorDebugOverride(wheel_idx);
             }
 
-            if (mode == DebugMode::kSingleWheel)
-            {
-                WheelConfig &debug_wheel = wheel_config_[wheel_idx];
-                const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(debug_control_.single_wheel_target_steer_deg));
-                const f32 current_oa_total_rad = debug_wheel.corrected_steer_motor_total_angle_rad + debug_wheel.theta_oa_to_owi_rad;
-                const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, target_oa_mod_rad);
-                const f32 selected_local_total_rad = target_oa_total_rad - debug_wheel.theta_oa_to_owi_rad;
-                const f32 steer_error_deg = radToDegF32(fabsf(shortestAngularDistance(current_oa_total_rad, target_oa_total_rad)));
-                const f32 drive_release_error_deg = (debug_control_.single_wheel_drive_release_error_deg >= 0.0f) ? debug_control_.single_wheel_drive_release_error_deg : 0.0f;
-                const bool drive_released = !debug_control_.single_wheel_drive_release_gate_enable || (steer_error_deg <= drive_release_error_deg);
-
-                if (debug_control_.single_wheel_soft_steer_enable)
-                {
-                    const bool enable_rate_limit = actuator_limit_enable_.enable_steer_rate_limit;
-                    const bool enable_alpha_limit = actuator_limit_enable_.enable_steer_alpha_limit;
-                    f32 steer_limit_rate_rad_s = enable_rate_limit ? max_steer_rate_rad_s_ : 1.0e6f;
-                    f32 steer_limit_accel_rad_s2 = enable_alpha_limit ? max_steer_alpha_rad_s2_ : 1.0e8f;
-                    if (debug_control_.single_wheel_use_custom_steer_limit)
-                    {
-                        if (enable_rate_limit)
-                        {
-                            steer_limit_rate_rad_s = degToRadF32(debug_control_.single_wheel_steer_rate_limit_deg_s);
-                        }
-                        if (enable_alpha_limit)
-                        {
-                            steer_limit_accel_rad_s2 = degToRadF32(debug_control_.single_wheel_steer_accel_limit_deg_s2);
-                        }
-                    }
-                    if (enable_rate_limit && steer_limit_rate_rad_s <= 1.0e-6f)
-                    {
-                        steer_limit_rate_rad_s = max_steer_rate_rad_s_;
-                    }
-                    if (enable_alpha_limit && steer_limit_accel_rad_s2 <= 1.0e-6f)
-                    {
-                        steer_limit_accel_rad_s2 = max_steer_alpha_rad_s2_;
-                    }
-
-                    f32 next_steer_rate_rad_s = 0.0f;
-                    debug_wheel.target_steer_motor_total_angle_rad = limitPositionSecondOrder(
-                        debug_wheel.corrected_steer_motor_total_angle_rad,
-                        last_steer_rate_cmd_rad_s_[wheel_idx],
-                        selected_local_total_rad,
-                        steer_limit_rate_rad_s,
-                        steer_limit_accel_rad_s2,
-                        period_,
-                        next_steer_rate_rad_s);
-                    debug_wheel.steer_target_velocity_rad_s = next_steer_rate_rad_s;
-                    last_steer_rate_cmd_rad_s_[wheel_idx] = next_steer_rate_rad_s;
-                }
-                else
-                {
-                    debug_wheel.target_steer_motor_total_angle_rad = selected_local_total_rad;
-                    debug_wheel.steer_target_velocity_rad_s = 0.0f;
-                    last_steer_rate_cmd_rad_s_[wheel_idx] = 0.0f;
-                }
-
-                debug_wheel.target_drive_omega_rad_s = (debug_control_.single_wheel_drive_enable && drive_released) ? rpmToRadsF32(debug_control_.single_wheel_target_drive_rpm) : 0.0f;
-                planned_data_.steer_angle_oa_rad[wheel_idx] = debug_wheel.target_steer_motor_total_angle_rad + debug_wheel.theta_oa_to_owi_rad;
-                planned_data_.drive_omega_rad_s[wheel_idx] = debug_wheel.target_drive_omega_rad_s;
-                last_drive_omega_cmd_rad_s_[wheel_idx] = debug_wheel.target_drive_omega_rad_s;
-                debug_mirror_.selected_wheel_steer_error_deg = steer_error_deg;
-                debug_mirror_.selected_wheel_drive_released = drive_released;
-#if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-                if (debug_output_.output_mode_raw == 1U && debug_output_.text_log_level >= 1U && (time_ms_ - debug_output_.single_wheel_trace_last_ms) >= 50U)
-                {
-                    debug_output_.single_wheel_trace_last_ms = time_ms_;
-                    debug_uart_.printf_DMA((char *)"SW20,%lu,%u,%u,%u,%.3f,%.3f,%.3f,%u,%u\r\n",
-                                           (u32)time_ms_,
-                                           (u32)wheel_idx,
-                                           all_homed ? 1U : 0U,
-                                           (u32)input_target_data_.mode,
-                                           radToDegF32(target_oa_total_rad),
-                                           radToDegF32(current_oa_total_rad),
-                                           steer_error_deg,
-                                           (u32)debug_wheel.homing_state,
-                                           drive_released ? 1U : 0U);
-                }
-#endif
-            }
-            else if (mode == DebugMode::kAlignForward)
-            {
-                for (u8 i = 0; i < 4; ++i)
-                {
-                    WheelConfig &wheel = wheel_config_[i];
-                    wheel.target_steer_motor_total_angle_rad = -wheel.theta_oa_to_owi_rad;
-                    planned_data_.steer_angle_oa_rad[i] = 0.0f;
-                }
-            }
-            else if (mode == DebugMode::kDirectActuator)
-            {
-                const f32 rpm_limit = (debug_control_.direct_drive_rpm_limit > 0.0f) ? debug_control_.direct_drive_rpm_limit : 300.0f;
-                const f32 drive_current_limit_mA = (debug_control_.direct_drive_current_limit_mA > 0.0f) ? debug_control_.direct_drive_current_limit_mA : 12000.0f;
-                const f32 drive_brake_limit_mA = (debug_control_.direct_drive_brake_limit_mA > 0.0f) ? debug_control_.direct_drive_brake_limit_mA : 12000.0f;
-                const f32 steer_rpm_limit = (debug_control_.direct_steer_rpm_limit > 0.0f) ? debug_control_.direct_steer_rpm_limit : 300.0f;
-                const f32 steer_current_limit_mA = (debug_control_.direct_steer_current_limit_mA > 0.0f) ? debug_control_.direct_steer_current_limit_mA : 12000.0f;
-                const f32 steer_single_turn_limit_deg = (debug_control_.direct_steer_single_turn_limit_deg > 0.0f) ? debug_control_.direct_steer_single_turn_limit_deg : 180.0f;
-                const f32 steer_multi_turn_limit_deg = (debug_control_.direct_steer_multi_turn_limit_deg > 0.0f) ? debug_control_.direct_steer_multi_turn_limit_deg : 1080.0f;
-                const f32 step_threshold = (debug_control_.direct_step_threshold > 0.01f) ? debug_control_.direct_step_threshold : 0.3f;
-                const f32 drive_step_threshold = (debug_control_.direct_step_drive_threshold > 0.01f) ? debug_control_.direct_step_drive_threshold : 0.3f;
-                f32 steer_current_cmd_mA = debug_control_.direct_steer_current_mA[wheel_idx];
-                f32 steer_rpm_cmd = debug_control_.direct_steer_rpm[wheel_idx];
-                f32 steer_single_turn_deg_cmd = debug_control_.direct_steer_single_turn_deg[wheel_idx];
-                f32 steer_multi_turn_deg_cmd = debug_control_.direct_steer_multi_turn_deg[wheel_idx];
-                f32 drive_rpm_cmd = debug_control_.direct_drive_rpm[wheel_idx];
-                f32 drive_current_cmd_mA = debug_control_.direct_drive_current_mA[wheel_idx];
-                f32 drive_brake_cmd_mA = debug_control_.direct_drive_brake_mA[wheel_idx];
-                f32 applied_steer_cmd = 0.0f;
-                f32 applied_drive_cmd = 0.0f;
-                const u8 drive_control_type = (debug_control_.direct_drive_control_type <= 2U) ? debug_control_.direct_drive_control_type : 0U;
-                f32 steer_axis_value = 0.0f;
-                f32 drive_axis_value = 0.0f;
-                f32 steer_step_sign = 0.0f;
-                f32 drive_step_sign = 0.0f;
-                auto clearDriveCommandByType = [&](WheelConfig &wheel_to_clear, u8 wheel_i) {
-                    wheel_to_clear.target_drive_omega_rad_s = 0.0f;
-                    planned_data_.drive_omega_rad_s[wheel_i] = 0.0f;
-                    if (wheel_to_clear.drive_motor_h == nullptr)
-                    {
-                        return;
-                    }
-                    if (drive_control_type == 1U)
-                    {
-                        wheel_to_clear.drive_motor_h->setTargetCurrent(0.0f);
-                    }
-                    else if (drive_control_type == 2U)
-                    {
-                        wheel_to_clear.drive_motor_h->setBrake(0.0f);
-                    }
-                    else
-                    {
-                        setDriveMotorTargetOmegaRadS(wheel_to_clear, 0.0f);
-                    }
-                };
-
-                if (debug_control_.direct_input_source == 1U)
-                {
-                    // 连续遥控输入：左摇杆控制舵向，右摇杆控制航向
-                    steer_axis_value = clampValue(airjoy_data_.left_x, -1.0f, 1.0f);
-                    drive_axis_value = clampValue(airjoy_data_.right_x, -1.0f, 1.0f);
-                    switch (debug_control_.direct_steer_control_type)
-                    {
-                    case 0U:
-                        steer_current_cmd_mA = steer_axis_value * steer_current_limit_mA;
-                        break;
-                    case 1U:
-                        steer_rpm_cmd = steer_axis_value * steer_rpm_limit;
-                        break;
-                    case 2U:
-                        steer_single_turn_deg_cmd = steer_axis_value * steer_single_turn_limit_deg;
-                        break;
-                    case 3U:
-                    default:
-                        steer_multi_turn_deg_cmd = steer_axis_value * steer_multi_turn_limit_deg;
-                        break;
-                    }
-                    switch (drive_control_type)
-                    {
-                    case 1U:
-                        drive_current_cmd_mA = drive_axis_value * drive_current_limit_mA;
-                        break;
-                    case 2U:
-                        drive_brake_cmd_mA = drive_axis_value * drive_brake_limit_mA;
-                        break;
-                    case 0U:
-                    default:
-                        drive_rpm_cmd = drive_axis_value * rpm_limit;
-                        break;
-                    }
-                }
-                else if (debug_control_.direct_input_source == 2U)
-                {
-                    // 阶跃遥控输入：左摇杆触发舵向阶跃，右摇杆触发航向阶跃
-                    if (airjoy_data_.left_x > step_threshold)
-                    {
-                        steer_step_sign = 1.0f;
-                    }
-                    else if (airjoy_data_.left_x < -step_threshold)
-                    {
-                        steer_step_sign = -1.0f;
-                    }
-                    switch (debug_control_.direct_steer_control_type)
-                    {
-                    case 0U:
-                        steer_current_cmd_mA = steer_step_sign * fabsf(debug_control_.direct_step_steer_current_mA);
-                        break;
-                    case 1U:
-                        steer_rpm_cmd = steer_step_sign * fabsf(debug_control_.direct_step_steer_rpm);
-                        break;
-                    case 2U:
-                        steer_single_turn_deg_cmd = steer_step_sign * fabsf(debug_control_.direct_step_steer_single_turn_deg);
-                        break;
-                    case 3U:
-                    default:
-                        steer_multi_turn_deg_cmd = steer_step_sign * fabsf(debug_control_.direct_step_steer_multi_turn_deg);
-                        break;
-                    }
-
-                    if (airjoy_data_.right_x > drive_step_threshold)
-                    {
-                        drive_step_sign = 1.0f;
-                    }
-                    else if (airjoy_data_.right_x < -drive_step_threshold)
-                    {
-                        drive_step_sign = -1.0f;
-                    }
-                    switch (drive_control_type)
-                    {
-                    case 1U:
-                        drive_current_cmd_mA = drive_step_sign * fabsf(debug_control_.direct_step_drive_current_mA);
-                        break;
-                    case 2U:
-                        drive_brake_cmd_mA = drive_step_sign * fabsf(debug_control_.direct_step_drive_brake_mA);
-                        break;
-                    case 0U:
-                    default:
-                        drive_rpm_cmd = drive_step_sign * fabsf(debug_control_.direct_step_drive_rpm);
-                        break;
-                    }
-                }
-
-                debug_control_.direct_steer_current_mA[wheel_idx] = steer_current_cmd_mA;
-                debug_control_.direct_steer_rpm[wheel_idx] = steer_rpm_cmd;
-                debug_control_.direct_steer_single_turn_deg[wheel_idx] = steer_single_turn_deg_cmd;
-                debug_control_.direct_steer_multi_turn_deg[wheel_idx] = steer_multi_turn_deg_cmd;
-                debug_control_.direct_drive_rpm[wheel_idx] = drive_rpm_cmd;
-                debug_control_.direct_drive_current_mA[wheel_idx] = drive_current_cmd_mA;
-                debug_control_.direct_drive_brake_mA[wheel_idx] = drive_brake_cmd_mA;
-                switch (debug_control_.direct_steer_control_type)
-                {
-                case 0U:
-                    applied_steer_cmd = clampValue(steer_current_cmd_mA, -steer_current_limit_mA, steer_current_limit_mA);
-                    break;
-                case 1U:
-                    applied_steer_cmd = clampValue(steer_rpm_cmd, -steer_rpm_limit, steer_rpm_limit);
-                    break;
-                case 2U:
-                    applied_steer_cmd = clampValue(steer_single_turn_deg_cmd, -steer_single_turn_limit_deg, steer_single_turn_limit_deg);
-                    break;
-                case 3U:
-                default:
-                    applied_steer_cmd = clampValue(steer_multi_turn_deg_cmd, -steer_multi_turn_limit_deg, steer_multi_turn_limit_deg);
-                    break;
-                }
-                switch (drive_control_type)
-                {
-                case 1U:
-                    applied_drive_cmd = clampValue(drive_current_cmd_mA, -drive_current_limit_mA, drive_current_limit_mA);
-                    break;
-                case 2U:
-                    applied_drive_cmd = clampValue(drive_brake_cmd_mA, -drive_brake_limit_mA, drive_brake_limit_mA);
-                    break;
-                case 0U:
-                default:
-                    applied_drive_cmd = clampValue(drive_rpm_cmd, -rpm_limit, rpm_limit);
-                    break;
-                }
-
-                for (u8 i = 0; i < 4; ++i)
-                {
-                    WheelConfig &wheel = wheel_config_[i];
-                    if (debug_control_.direct_estop)
-                    {
-                        setSteerMotorTargetCurrent(wheel, 0.0f);
-                        clearDriveCommandByType(wheel, i);
-                        continue;
-                    }
-
-                    if (i != wheel_idx)
-                    {
-                        setSteerMotorTargetCurrent(wheel, 0.0f);
-                        clearDriveCommandByType(wheel, i);
-                        continue;
-                    }
-
-                    if (debug_control_.direct_enable_steer[i])
-                    {
-                        const u8 steer_control_type = debug_control_.direct_steer_control_type;
-                        if (steer_control_type == 0U)
-                        {
-                            const f32 target_current_mA = clampValue(steer_current_cmd_mA, -steer_current_limit_mA, steer_current_limit_mA);
-                            wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
-                            planned_data_.steer_angle_oa_rad[i] = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
-                            setSteerMotorTargetCurrent(wheel, target_current_mA);
-                        }
-                        else if (steer_control_type == 1U)
-                        {
-                            const f32 target_steer_rpm = clampValue(steer_rpm_cmd, -steer_rpm_limit, steer_rpm_limit);
-                            wheel.target_steer_motor_total_angle_rad = wheel.corrected_steer_motor_total_angle_rad;
-                            planned_data_.steer_angle_oa_rad[i] = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
-                            setSteerMotorTargetRPM(wheel, target_steer_rpm);
-                        }
-                        else if (steer_control_type == 2U)
-                        {
-                            const f32 target_single_turn_deg = clampValue(steer_single_turn_deg_cmd, -steer_single_turn_limit_deg, steer_single_turn_limit_deg);
-                            const f32 target_local_total_rad = mapSingleTurnToNearestTotalAngle(wheel, target_single_turn_deg);
-                            wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
-                            planned_data_.steer_angle_oa_rad[i] = target_local_total_rad + wheel.theta_oa_to_owi_rad;
-                            setSteerMotorTargetTotalAngleRad(wheel, target_local_total_rad);
-                        }
-                        else
-                        {
-                            const f32 target_oa_total_rad = degToRadF32(clampValue(steer_multi_turn_deg_cmd, -steer_multi_turn_limit_deg, steer_multi_turn_limit_deg));
-                            const f32 target_local_total_rad = target_oa_total_rad - wheel.theta_oa_to_owi_rad;
-                            wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
-                            planned_data_.steer_angle_oa_rad[i] = target_oa_total_rad;
-                            setSteerMotorTargetTotalAngleRad(wheel, target_local_total_rad);
-                        }
-                    }
-                    else
-                    {
-                        setSteerMotorTargetCurrent(wheel, 0.0f);
-                    }
-
-                    if (debug_control_.direct_enable_drive[i])
-                    {
-                        if (drive_control_type == 1U)
-                        {
-                            const f32 target_current_mA = clampValue(drive_current_cmd_mA, -drive_current_limit_mA, drive_current_limit_mA);
-                            wheel.target_drive_omega_rad_s = 0.0f;
-                            planned_data_.drive_omega_rad_s[i] = 0.0f;
-                            if (wheel.drive_motor_h != nullptr)
-                            {
-                                wheel.drive_motor_h->setTargetCurrent(target_current_mA / wheel.drive_motor_sign);
-                            }
-                        }
-                        else if (drive_control_type == 2U)
-                        {
-                            const f32 target_brake_mA = clampValue(drive_brake_cmd_mA, -drive_brake_limit_mA, drive_brake_limit_mA);
-                            wheel.target_drive_omega_rad_s = 0.0f;
-                            planned_data_.drive_omega_rad_s[i] = 0.0f;
-                            if (wheel.drive_motor_h != nullptr)
-                            {
-                                wheel.drive_motor_h->setBrake(target_brake_mA / wheel.drive_motor_sign);
-                            }
-                        }
-                        else
-                        {
-                            const f32 target_rpm = clampValue(drive_rpm_cmd, -rpm_limit, rpm_limit);
-                            const f32 target_omega_rad_s = rpmToRadsF32(target_rpm);
-                            wheel.target_drive_omega_rad_s = target_omega_rad_s;
-                            planned_data_.drive_omega_rad_s[i] = target_omega_rad_s;
-                            setDriveMotorTargetOmegaRadS(wheel, target_omega_rad_s);
-                        }
-                    }
-                    else
-                    {
-                        clearDriveCommandByType(wheel, i);
-                    }
-                }
-
-#if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-                if (debug_output_.output_mode_raw == 1U && debug_output_.text_log_level >= 1U && (time_ms_ - debug_output_.direct_trace_last_ms) >= 100U)
-                {
-                    debug_output_.direct_trace_last_ms = time_ms_;
-                    WheelConfig &dbg_wheel = wheel_config_[wheel_idx];
-                    const Motor_Base *steer_motor = dbg_wheel.steer_motor_h;
-                    const Motor_Base *drive_motor = dbg_wheel.drive_motor_h;
-                    if (steer_motor != nullptr)
-                    {
-                        debug_uart_.printf_DMA((char *)"SW30,t=%lu,w=%u,src=%u,stType=%u,drType=%u,stCmd=%.3f,drCmd=%.3f,stAxis=%.3f,drAxis=%.3f,stStep=%.1f,drStep=%.1f,stTarI=%.1f,stCurI=%.1f,stTarRPM=%.2f,stCurRPM=%.2f,drTarI=%.1f,drCurI=%.1f,drTarRPM=%.2f,drCurRPM=%.2f,enS=%u,enD=%u,estop=%u\r\n",
-                                               (u32)time_ms_,
-                                               (u32)wheel_idx,
-                                               (u32)debug_control_.direct_input_source,
-                                               (u32)debug_control_.direct_steer_control_type,
-                                               (u32)drive_control_type,
-                                               applied_steer_cmd,
-                                               applied_drive_cmd,
-                                               steer_axis_value,
-                                               drive_axis_value,
-                                               steer_step_sign,
-                                               drive_step_sign,
-                                               steer_motor->getTargetCurrent(),
-                                               steer_motor->getCurrent(),
-                                               steer_motor->getTargetRPM(),
-                                               steer_motor->getRPM(),
-                                               (drive_motor != nullptr) ? drive_motor->getTargetCurrent() : 0.0f,
-                                               (drive_motor != nullptr) ? drive_motor->getCurrent() : 0.0f,
-                                               (drive_motor != nullptr) ? drive_motor->getTargetRPM() : 0.0f,
-                                               (drive_motor != nullptr) ? drive_motor->getRPM() : 0.0f,
-                                               debug_control_.direct_enable_steer[wheel_idx] ? 1U : 0U,
-                                               debug_control_.direct_enable_drive[wheel_idx] ? 1U : 0U,
-                                               debug_control_.direct_estop ? 1U : 0U);
-                    }
-                }
-#endif
-            }
-
-            planned_data_.vel_x = 0.0f;
-            planned_data_.vel_y = 0.0f;
-            planned_data_.omega_z = 0.0f;
-            planned_data_.acc_x = 0.0f;
-            planned_data_.acc_y = 0.0f;
-            planned_data_.alpha_z = 0.0f;
-            planned_data_.rot_z = input_hwt_rot_z_;
-
-            if (mode != DebugMode::kDirectActuator)
-            {
-                applyModuleCommands(all_homed);
-            }
-
-            updateCurrentData(all_homed);
-            refreshDebugMirror(all_homed);
-            emitDebugOutputByMode(all_homed);
-            last_planned_data_ = planned_data_;
+            finalizeDebugModuleOverride(all_homed, route);
             return true;
         }
 
@@ -2720,10 +3351,10 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];
-                const f32 steer_angle_oa_rad = wheel.corrected_steer_motor_total_angle_rad + wheel.theta_oa_to_owi_rad;
+                const f32 steer_angle_oa_rad = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
                 const f32 cos_theta = cosf(steer_angle_oa_rad);
                 const f32 sin_theta = sinf(steer_angle_oa_rad);
-                const f32 drive_linear_m_s = wheel.corrected_drive_omega_rad_s * wheel_radius_m_;
+                const f32 drive_linear_m_s = wheel.corrected_drive_omega_rad_s * runtime_strategy_cfg_.wheel_radius_m_;
 
                 const f32 rows[2][3] = {
                     {cos_theta, sin_theta, -wheel.pos_y_m * cos_theta + wheel.pos_x_m * sin_theta},
@@ -2786,64 +3417,12 @@ namespace jia
 
                 isDebugMode();
                 setModeFlag();
-                target_data_.rot_z = input_target_data_.rot_z;
+                resolvePlannerTargetData();
 
-                if (current_mode_flag_.is_world_speed_mode)
-                {
-                    transSpeedWorldToBody(input_target_data_.vel_x, input_target_data_.vel_y, target_data_.vel_x, target_data_.vel_y);
-                }
-                else
-                {
-                    target_data_.vel_x = input_target_data_.vel_x;
-                    target_data_.vel_y = input_target_data_.vel_y;
-                }
-                target_data_.omega_z = input_target_data_.omega_z;
-
-                if (debug_control_.enable)
-                {
-                    // Keep debug-visible vel_x/vel_y semantics intuitive for joystick,
-                    // while adapting to the current chassis internal axis convention.
-                    target_data_.vel_x = -target_data_.vel_x;
-                    target_data_.vel_y = -target_data_.vel_y;
-                }
-                else
-                {
-                    target_data_.vel_x = -target_data_.vel_x;
-                    target_data_.vel_y = -target_data_.vel_y;
-                    target_data_.omega_z = -target_data_.omega_z;
-                }
-
-                if (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode)
-                {
-                    target_data_.vel_x = 0.0f;
-                    target_data_.vel_y = 0.0f;
-                    target_data_.omega_z = 0.0f;
-                }
-
-                // 锁当前航向/锁到指定航向都在这里对目标 rot_z 和 omega_z 做二次整形。
-                if (current_mode_flag_.is_lock_now_rot_z)
-                {
-                    isLockNowRotZ(true, target_data_.rot_z, target_data_.omega_z, target_data_.rot_z, target_data_.omega_z);
-                }
-                if (current_mode_flag_.is_lock_to_rot_z)
-                {
-                    isLockToRotZ(true, input_target_data_.rot_z, target_data_.rot_z, target_data_.rot_z, target_data_.omega_z, target_data_.omega_z);
-                }
-
-                // 运行时允许调试器直接改基准阈值/限幅开关，这里每周期派生一次，确保全链路口径一致。
-                deriveNearZeroThresholds();
+                // 运行时允许调试器直接改基准阈值/限幅开关，这里每周期刷新限幅镜像，近零阈值由 helper 直接读取。
                 refreshActuatorLimitState();
 
-                clampTargetSpeedInChassis(target_data_.vel_x, target_data_.vel_y, target_data_.omega_z,
-                                          target_data_.vel_x, target_data_.vel_y, target_data_.omega_z);
-
-                limitPlannedSpeed(target_data_.vel_x, target_data_.vel_y, target_data_.omega_z,
-                                  planned_data_.vel_x, planned_data_.vel_y, planned_data_.omega_z);
-
-                planned_data_.acc_x = (planned_data_.vel_x - last_planned_data_.vel_x) / period_;
-                planned_data_.acc_y = (planned_data_.vel_y - last_planned_data_.vel_y) / period_;
-                planned_data_.alpha_z = (planned_data_.omega_z - last_planned_data_.omega_z) / period_;
-                planned_data_.rot_z = target_data_.rot_z;
+                updatePlannedMotionData();
 
                 updateWheelFeedback();
                 applyDebugSteerPidRuntimeTuning();

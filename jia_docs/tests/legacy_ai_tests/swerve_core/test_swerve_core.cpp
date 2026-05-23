@@ -43,7 +43,7 @@ jia::swerve::SwerveConfig makeTestConfig()
     config.shared.max_steer_rate_rad_s = 100.0f;
     config.shared.max_steer_alpha_rad_s2 = 1000.0f;
     config.shared.stationary_speed_epsilon_m_s = 0.001f;
-    config.shared.enable_cosine_compensation = false;
+    config.shared.drive_attenuation_mode = jia::swerve::DriveAttenuationMode::kNone;
 
     config.modules[0].geometry = {0.25f, 0.25f, 0.0f, 1.0f, 1.0f};
     config.modules[1].geometry = {0.25f, -0.25f, 0.0f, 1.0f, 1.0f};
