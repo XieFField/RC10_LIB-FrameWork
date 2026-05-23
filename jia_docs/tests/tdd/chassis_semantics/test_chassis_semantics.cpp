@@ -856,6 +856,108 @@ bool runHostControlCycle(Chassis &chassis)
     return all_homed;
 }
 
+void emitDebugOutputForHost(Chassis &chassis, bool all_homed)
+{
+    chassis.refreshDebugMirror(all_homed);
+    chassis.emitDebugOutputByMode(all_homed);
+}
+
+void configureYawPidTraceHarness(Chassis &chassis)
+{
+    testHostResetJustFloatCapture();
+    chassis.debug_output_.output_enable = true;
+    chassis.debug_output_.yaw_pid_justfloat_period_ms = 0U;
+    chassis.debug_output_.yaw_pid_justfloat_last_ms = 0U;
+    chassis.debug_output_.output_mode_raw = 6U;
+    chassis.time_ms_ = 100U;
+    chassis.input_hwt_omega_z_ = 0.25f;
+    chassis.debug_mirror_.all_homed = true;
+    chassis.debug_mirror_.steer_fault_any_active = false;
+    chassis.debug_mirror_.high_speed_drive_suppression_active = false;
+    chassis.debug_mirror_.reverse_intent_active = false;
+}
+
+void testYawPidJustFloatModeDispatchEmitsFixed15ChannelPayload()
+{
+    Chassis chassis;
+    configureYawPidTraceHarness(chassis);
+
+    chassis.yaw_pid_trace_.mode_tag = 4.0f;
+    chassis.yaw_pid_trace_.target_yaw_rad = 0.5f;
+    chassis.yaw_pid_trace_.feedback_yaw_rad = 0.25f;
+    chassis.yaw_pid_trace_.error_deg = jia::radToDegF32(0.25f);
+    chassis.yaw_pid_trace_.manual_omega_in_rad_s = 0.0f;
+    chassis.yaw_pid_trace_.pid_output_omega_rad_s = 0.8f;
+    chassis.yaw_pid_trace_.final_omega_cmd_rad_s = 0.8f;
+    chassis.yaw_pid_trace_.feedback_yaw_rate_rad_s = 0.25f;
+    chassis.yaw_pid_trace_.shift_remaining_ms = 0.0f;
+    chassis.yaw_pid_trace_.pid_compute_fired = 1.0f;
+
+    emitDebugOutputForHost(chassis, true);
+
+    EXPECT_TRUE(g_test_justfloat_capture.called);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 15U);
+    EXPECT_NEAR(g_test_justfloat_capture.values[0], 0.1f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[1], 4.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[2], 0.5f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[3], 0.25f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[10], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[12], 1.0f, 1.0e-6f);
+}
+
+void testLockToYawPidTracePublishesTargetErrorAndPidFireState()
+{
+    Chassis chassis;
+    configureYawPidTraceHarness(chassis);
+
+    chassis.rot_z_pid_period_ = 0U;
+    chassis.rot_z_pid_count_ = 0U;
+    chassis.input_hwt_rot_z_ = 0.2f;
+    chassis.input_hwt_omega_z_ = -0.4f;
+
+    float out_rot_z = 0.0f;
+    float out_omega_z = 0.0f;
+    chassis.isLockToRotZ(true, 0.6f, 0.2f, out_rot_z, 0.0f, out_omega_z);
+
+    EXPECT_NEAR(chassis.yaw_pid_trace_.mode_tag, 4.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, out_rot_z, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.feedback_yaw_rad, 0.2f, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.feedback_yaw_rate_rad_s, -0.4f, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.final_omega_cmd_rad_s, out_omega_z, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.pid_compute_fired, 1.0f, 1.0e-6f);
+    EXPECT_TRUE(chassis.yaw_pid_trace_.error_deg > 0.0f);
+}
+
+void testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates()
+{
+    Chassis chassis;
+    configureYawPidTraceHarness(chassis);
+    chassis.rot_z_pid_period_ = 0U;
+    chassis.rot_z_pid_count_ = 0U;
+    chassis.lock_now_rot_z_shift_time_ms_ = 3U;
+    chassis.input_hwt_rot_z_ = 0.3f;
+
+    float out_rot_z = 0.0f;
+    float out_omega_z = 0.0f;
+
+    chassis.isLockNowRotZ(true, 0.0f, 1.2f, out_rot_z, out_omega_z);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.mode_tag, 1.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.manual_omega_in_rad_s, 1.2f, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.final_omega_cmd_rad_s, 1.2f, 1.0e-6f);
+
+    chassis.isLockNowRotZ(true, 0.0f, 0.0f, out_rot_z, out_omega_z);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.mode_tag, 2.0f, 1.0e-6f);
+    EXPECT_TRUE(chassis.yaw_pid_trace_.shift_remaining_ms > 0.0f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.final_omega_cmd_rad_s, 0.0f, 1.0e-6f);
+
+    chassis.lock_now_rot_z_shift_count_ = 0U;
+    chassis.input_hwt_rot_z_ = 0.28f;
+    chassis.isLockNowRotZ(true, 0.0f, 0.0f, out_rot_z, out_omega_z);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.mode_tag, 3.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.pid_compute_fired, 1.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.shift_remaining_ms, 0.0f, 1.0e-6f);
+}
+
 void finishWheelHomingByEdgeAndAlign(Chassis &chassis, int wheel_idx, TestMotor steer_motors[4])
 {
     setPhotogateStateForWheel(wheel_idx, false);
@@ -2021,6 +2123,9 @@ int main()
     testLowSpeedDriveSuppressionUsesGlobalWorstWheelError();
     testGlobalMaxResidualSpeedControlsLowSpeedSuppressionForAllWheels();
     testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics();
+    testYawPidJustFloatModeDispatchEmitsFixed15ChannelPayload();
+    testLockToYawPidTracePublishesTargetErrorAndPidFireState();
+    testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates();
     testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle();
     testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned();
     testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels();

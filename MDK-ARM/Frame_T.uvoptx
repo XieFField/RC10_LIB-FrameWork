@@ -180,6 +180,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>swerve_task_demo,0x0A</ItemText>
         </Ww>
+        <Ww>
+          <count>5</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>chassis</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

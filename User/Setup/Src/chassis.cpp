@@ -1695,8 +1695,24 @@ namespace jia
             {
                 out_rot_z = rot_z;
                 out_omega_z = omega_z;
+                yaw_pid_trace_ = YawPidTraceState{};
                 return;
             }
+
+            yaw_pid_trace_.mode_tag = 0.0f;
+            yaw_pid_trace_.target_yaw_rad = lock_now_rot_z_target_;
+            yaw_pid_trace_.feedback_yaw_rad = input_hwt_rot_z_;
+            yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistance(input_hwt_rot_z_, lock_now_rot_z_target_));
+            yaw_pid_trace_.manual_omega_in_rad_s = omega_z;
+            yaw_pid_trace_.pid_output_omega_rad_s = 0.0f;
+            yaw_pid_trace_.final_omega_cmd_rad_s = 0.0f;
+            yaw_pid_trace_.feedback_yaw_rate_rad_s = input_hwt_omega_z_;
+            yaw_pid_trace_.shift_remaining_ms = static_cast<f32>(lock_now_rot_z_shift_count_);
+            yaw_pid_trace_.pid_compute_fired = 0.0f;
+            yaw_pid_trace_.steer_fault_any_active = debug_mirror_.steer_fault_any_active ? 1.0f : 0.0f;
+            yaw_pid_trace_.all_homed = debug_mirror_.all_homed ? 1.0f : 0.0f;
+            yaw_pid_trace_.high_speed_suppression_active = debug_mirror_.high_speed_drive_suppression_active ? 1.0f : 0.0f;
+            yaw_pid_trace_.reverse_intent_active = debug_mirror_.reverse_intent_active ? 1.0f : 0.0f;
 
 // “锁当前航向”不是简单地rot_z固定住，而是先在用户开始施加角速度
 // 抓取当前机体朝向，再在后续由PID产生角速度闭环，让机器人保持当下姿态
@@ -1713,6 +1729,12 @@ namespace jia
                     lock_now_rot_z_target_ = input_hwt_rot_z_;
                     out_rot_z = lock_now_rot_z_target_;
                     out_omega_z = 0.0f;
+                    yaw_pid_trace_.mode_tag = 2.0f;
+                    yaw_pid_trace_.target_yaw_rad = out_rot_z;
+                    yaw_pid_trace_.feedback_yaw_rad = input_hwt_rot_z_;
+                    yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistance(input_hwt_rot_z_, out_rot_z));
+                    yaw_pid_trace_.final_omega_cmd_rad_s = out_omega_z;
+                    yaw_pid_trace_.shift_remaining_ms = static_cast<f32>(lock_now_rot_z_shift_count_);
                 }
                 else
                 {
@@ -1725,6 +1747,8 @@ namespace jia
                     {
                         rot_z_pid_count_ = 0;
                         out_omega_z = rot_z_pid_.pid_calc(radToDegF32(lock_now_rot_z_target_), radToDegF32(input_hwt_rot_z_));
+                        yaw_pid_trace_.pid_compute_fired = 1.0f;
+                        yaw_pid_trace_.pid_output_omega_rad_s = out_omega_z;
                     }
                     else
                     {
@@ -1734,6 +1758,12 @@ namespace jia
                     }
                     // rot_z_pid_count_ / rot_z_pid_period_ 共同控制姿态 PID 的实际计算节拍。
                     rot_z_pid_count_++;
+                    yaw_pid_trace_.mode_tag = 3.0f;
+                    yaw_pid_trace_.target_yaw_rad = out_rot_z;
+                    yaw_pid_trace_.feedback_yaw_rad = input_hwt_rot_z_;
+                    yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistance(input_hwt_rot_z_, out_rot_z));
+                    yaw_pid_trace_.final_omega_cmd_rad_s = out_omega_z;
+                    yaw_pid_trace_.shift_remaining_ms = 0.0f;
                 }
             }
             else
@@ -1747,6 +1777,12 @@ namespace jia
                 out_rot_z = lock_now_rot_z_target_;
                 out_omega_z = omega_z;
                 lock_now_rot_z_shift_count_ = lock_now_rot_z_shift_time_ms_;
+                yaw_pid_trace_.mode_tag = 1.0f;
+                yaw_pid_trace_.target_yaw_rad = out_rot_z;
+                yaw_pid_trace_.feedback_yaw_rad = input_hwt_rot_z_;
+                yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistance(input_hwt_rot_z_, out_rot_z));
+                yaw_pid_trace_.final_omega_cmd_rad_s = out_omega_z;
+                yaw_pid_trace_.shift_remaining_ms = static_cast<f32>(lock_now_rot_z_shift_count_);
             }
         }
 
@@ -1756,21 +1792,39 @@ namespace jia
             {
                 out_rot_z = tar_rot_z;
                 out_omega_z = omega_z;
+                yaw_pid_trace_ = YawPidTraceState{};
                 return;
             }
 
 // “锁到指定航向”会先限制目标角速度变化率，再用姿PID生成维持/逼近该目标角度所需omega_z
 // 这样外层给出的目标角不会瞬间跳变，底盘转向更平滑
             out_rot_z = limit1DPiAngleRateByTimeF32(tar_rot_z, cur_rot_z, period_, max_lock_to_rot_z_rad_s_);
+            yaw_pid_trace_.mode_tag = 4.0f;
+            yaw_pid_trace_.target_yaw_rad = out_rot_z;
+            yaw_pid_trace_.feedback_yaw_rad = input_hwt_rot_z_;
+            yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistance(input_hwt_rot_z_, out_rot_z));
+            yaw_pid_trace_.manual_omega_in_rad_s = omega_z;
+            yaw_pid_trace_.pid_output_omega_rad_s = 0.0f;
+            yaw_pid_trace_.final_omega_cmd_rad_s = 0.0f;
+            yaw_pid_trace_.feedback_yaw_rate_rad_s = input_hwt_omega_z_;
+            yaw_pid_trace_.shift_remaining_ms = 0.0f;
+            yaw_pid_trace_.pid_compute_fired = 0.0f;
+            yaw_pid_trace_.steer_fault_any_active = debug_mirror_.steer_fault_any_active ? 1.0f : 0.0f;
+            yaw_pid_trace_.all_homed = debug_mirror_.all_homed ? 1.0f : 0.0f;
+            yaw_pid_trace_.high_speed_suppression_active = debug_mirror_.high_speed_drive_suppression_active ? 1.0f : 0.0f;
+            yaw_pid_trace_.reverse_intent_active = debug_mirror_.reverse_intent_active ? 1.0f : 0.0f;
             if (rot_z_pid_count_ >= rot_z_pid_period_)
             {
                 rot_z_pid_count_ = 0;
                 out_omega_z = rot_z_pid_.pid_calc(radToDegF32(out_rot_z), radToDegF32(input_hwt_rot_z_));
+                yaw_pid_trace_.pid_compute_fired = 1.0f;
+                yaw_pid_trace_.pid_output_omega_rad_s = out_omega_z;
             }
             else
             {
                 out_omega_z = planned_data_.omega_z;
             }
+            yaw_pid_trace_.final_omega_cmd_rad_s = out_omega_z;
             rot_z_pid_count_++;
         }
 
@@ -3071,6 +3125,45 @@ namespace jia
             debug_uart_.printf_DMA_JustFloat(payload, 17);
         }
 
+        void Chassis::emitUart8VofaYawPidTrace()
+        {
+            if (!debug_output_.output_enable || debug_output_.output_mode_raw != static_cast<u8>(DebugOutputMode::kYawPidJustFloat))
+            {
+                return;
+            }
+
+            const u32 period_ms = (debug_output_.yaw_pid_justfloat_period_ms > 0U) ? debug_output_.yaw_pid_justfloat_period_ms : 10U;
+            if ((time_ms_ - debug_output_.yaw_pid_justfloat_last_ms) < period_ms)
+            {
+                return;
+            }
+
+            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
+            {
+                return;
+            }
+
+            debug_output_.yaw_pid_justfloat_last_ms = time_ms_;
+
+            float payload[15] = {0.0f};
+            payload[0] = static_cast<f32>(time_ms_) * 0.001f;
+            payload[1] = yaw_pid_trace_.mode_tag;
+            payload[2] = yaw_pid_trace_.target_yaw_rad;
+            payload[3] = yaw_pid_trace_.feedback_yaw_rad;
+            payload[4] = yaw_pid_trace_.error_deg;
+            payload[5] = yaw_pid_trace_.manual_omega_in_rad_s;
+            payload[6] = yaw_pid_trace_.pid_output_omega_rad_s;
+            payload[7] = yaw_pid_trace_.final_omega_cmd_rad_s;
+            payload[8] = yaw_pid_trace_.feedback_yaw_rate_rad_s;
+            payload[9] = yaw_pid_trace_.shift_remaining_ms;
+            payload[10] = yaw_pid_trace_.pid_compute_fired;
+            payload[11] = debug_mirror_.steer_fault_any_active ? 1.0f : 0.0f;
+            payload[12] = debug_mirror_.all_homed ? 1.0f : 0.0f;
+            payload[13] = debug_mirror_.high_speed_drive_suppression_active ? 1.0f : 0.0f;
+            payload[14] = debug_mirror_.reverse_intent_active ? 1.0f : 0.0f;
+            debug_uart_.printf_DMA_JustFloat(payload, 15);
+        }
+
         void Chassis::emitUart8SwerveTelemetryV2(bool all_homed)
         {
             if (!debug_output_.output_enable || debug_output_.output_mode_raw != static_cast<u8>(DebugOutputMode::kSwerveTelemetryV2))
@@ -3228,6 +3321,9 @@ namespace jia
                 break;
             case DebugOutputMode::kSingleWheelDualMotorJustFloat:
                 emitUart8VofaDualMotor1kHzTrace();
+                break;
+            case DebugOutputMode::kYawPidJustFloat:
+                emitUart8VofaYawPidTrace();
                 break;
             case DebugOutputMode::kSwerveTelemetryV2:
                 emitUart8SwerveTelemetryV2(all_homed);
