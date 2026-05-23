@@ -49,6 +49,7 @@ typedef struct {
     float end_link_length_ = 0.0f; // 末端连杆长度，吸盘到机械臂连接点的距离，单位米
     float max_pitchRPM_ = 50.0f; // 末端关节最大转速，单位RPM   
     float rotate_end = 265.0f;
+    float rotate_start = 135.0f;
     float store_ext_length_ =0.0f; //存储时候伸展长度
     
 

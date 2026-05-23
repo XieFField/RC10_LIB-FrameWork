@@ -224,7 +224,7 @@ void ArmSetup::manualControl()
         {
              float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
 
-             if(this->get_currentJointStatus().launchJoint_Height_ < init_data_.lock_height_ + 0.005f)
+             if(this->get_currentJointStatus().launchJoint_Height_ < init_data_.lock_height_ + 0.01f)
              {
                 // 限制范围
                 if(std::fabs(current_angle - 0.0f) > 0.8f)
@@ -251,11 +251,11 @@ void ArmSetup::manualControl()
     float re = init_data_.rotate_end;
     if (re < 250.0f || re > 270.0f) re = 265.0f;
     float t = target_joint_status_.rotateJoint_angle_;
-    if (t > 135.0f && t < re)
+    if (t > init_data_.rotate_start && t < re)
     {
-        float d135 = t - 135.0f;
+        float d135 = t - init_data_.rotate_start;
         float dre = re - t;
-        target_joint_status_.rotateJoint_angle_ = (d135 < dre) ? 135.0f : re;
+        target_joint_status_.rotateJoint_angle_ = (d135 < dre) ? init_data_.rotate_start : re;
     }
     //pitch 控制
     int8_t target_pitch_logical = (airjoy_data_.scroll_wheel & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
@@ -1045,6 +1045,10 @@ Arm_InitData_S arm_initData = {
 
     .min_rotate_angle_ = 0.0f,
     .max_rotate_angle_ = 359.99999f,
+
+    .rotate_end = 265.0f,
+    .rotate_start = 135.0f,
+
     .safe_height_ = 0.08f,
     .store_height_ = 0.12f,
     .lock_height_ = 0.04f,

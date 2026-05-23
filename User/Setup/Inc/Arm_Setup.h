@@ -330,7 +330,7 @@ private:
 
         const float norm_deg = rotate_angle_deg;
 
-        if(h < init_data_.lock_height_) return 0.0f;
+        if(h < init_data_.lock_height_) return false;
         if(h < safe_h - 0.01f) return (norm_deg >= 0.0f && norm_deg <= 135.0f);
         return true;
     }

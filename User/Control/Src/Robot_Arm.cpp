@@ -188,11 +188,11 @@ float Robot_Arm::calc_legal_rotate_target(float current_0_360, float target_0_36
     current_0_360 = fmodf(current_0_360, 360.0f);
     if (current_0_360 < 0.0f) current_0_360 += 360.0f;
 
-    if (target_0_360 > 180.0f && target_0_360 < re)
+    if (target_0_360 > init_data_.rotate_start && target_0_360 < re)
     {
-        float dist_to_180 = target_0_360 - 180.0f;
+        float dist_to_start = target_0_360 - init_data_.rotate_start;
         float dist_to_re = re - target_0_360;
-        target_0_360 = (dist_to_180 < dist_to_re) ? 180.0f : re;
+        target_0_360 = (dist_to_start < dist_to_re) ? init_data_.rotate_start : re;
     }
 
     bool target_changed = (fabsf(target_0_360 - prev_norm_target_) > 0.01f);
@@ -215,12 +215,12 @@ float Robot_Arm::calc_legal_rotate_target(float current_0_360, float target_0_36
         bool crosses = false;
         if (shortest_diff > 0.0f)
         {
-            if (current_0_360 < re && (current_0_360 + shortest_diff) > 180.0f)
+            if (current_0_360 < re && (current_0_360 + shortest_diff) > init_data_.rotate_start)
                 crosses = true;
         }
         else if (shortest_diff < 0.0f)
         {
-            if (current_0_360 > 180.0f && (current_0_360 + shortest_diff) < re)
+            if (current_0_360 > init_data_.rotate_start && (current_0_360 + shortest_diff) < re)
                 crosses = true;
         }
 
