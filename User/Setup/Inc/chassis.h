@@ -21,6 +21,9 @@ namespace jia
         class Chassis
         {
         public:
+
+            float drive_current_[4] = {0.0f};
+
             /* ----------------------------------------------------------------- */
             // 对外控制接口
             enum class Result
