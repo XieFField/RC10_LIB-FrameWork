@@ -174,6 +174,10 @@ void USB_CDC_::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 							m++;
 						}
 					}
+					else if(receive_id == 5)
+					{
+						relocate_suceed_cnt++;
+					}
 				}
 //				uint8_t a=0x11;
 //			  CDC_Send_(0x04,&a,0x01);
