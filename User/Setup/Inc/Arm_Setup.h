@@ -319,30 +319,28 @@ private:
      * @param rotate_angle_deg 期望的旋转角度（度）
      * @return 旋转是否被允许
      * @details 根据当前关节高度判断旋转是否安全
-     * 1. H < 0.03m: [60度, 185度] (水平位置)
-     * 2. 0.03m <= H < Safe_H: [60度, 185度] (机械臂位置)
-     * 3. H >= Safe_H: [0度, 360度] (安全位置)
-     * 说明：角度范围为 rotate_angle 的有效范围，超出范围将被裁剪
+     *  H < lock_height_: 只允许在初始位置，即0度，不允许转动。
+     *  lock_height_ <= H < Safe_H: 只允许在 0 ~ 135度的范围内转动
+     *  H >= Safe_H: 允许在 135 ~ 360/0度范围内转动 不允许返回135~rotate_end之内的禁区角度 
      */
     bool isRotateAllowed(float rotate_angle_deg) const
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
         const float safe_h = init_data_.safe_height_;
 
-        // 锟斤拷锟截革拷锟斤拷锟斤拷锟斤拷一锟斤拷
         const float norm_deg = rotate_angle_deg;
 
-        if(h < 0.03f) return (norm_deg >= 60.0f && norm_deg <= 185.0f);
-        if(h < safe_h - 0.01f) return (norm_deg >= 60.0f && norm_deg <= 185.0f);
+        if(h < init_data_.lock_height_) return false;
+        if(h < safe_h - 0.01f) return (norm_deg >= 0.0f && norm_deg <= 135.0f);
         return true;
     }
 
     /**
      * @brief 返回安全的旋转角度
      * @details 根据当前关节高度裁剪旋转角度
-     * - H < 0.03m:  [60度, 180度]
-     * - 0.03m <= H < Safe_H: 旋转范围 [60度, 180度]
-     * - H >= Safe_H: 随意转
+     * - H < lock_height_:  0.0f
+     * - lock_height_ <= H < Safe_H: 旋转范围 [0度, 135度]
+     * - H >= Safe_H: 允许在 135 ~ 360/0度范围内转动 不允许返回135~rotate_end之内的禁区角度 
      * @param desired_deg 期望的旋转角度（度）
      * @return 安全的旋转角度
      */
@@ -350,16 +348,28 @@ private:
     {
         const float h = this->get_currentJointStatus().launchJoint_Height_;
         const float safe_h = init_data_.safe_height_;
+        const float lock_h = init_data_.lock_height_;
+        const float re = init_data_.rotate_end;
 
-        if(h >= safe_h - 0.01f) return desired_deg;
+        if (h < lock_h)
+            return 0.0f;
 
-        // 锟斤拷锟截革拷锟斤拷锟斤拷锟斤拷一锟斤拷
-        const float norm_deg = desired_deg;
+        if (h < safe_h - 0.01f)
+        {
+            float cur = this->get_currentJointStatus().rotateJoint_angle_;
+            bool in_storage_zone = (cur >= re && cur <= 360.0f)
+                                || (cur >= 0.0f && cur <= 135.0f) ;
+            if (in_storage_zone && this->get_currentJointStatus().launchJoint_Height_ > init_data_.store_height_ - 0.01f)
+                return desired_deg;
 
-        if(norm_deg < 60.0f) return 60.0f;
-        if(norm_deg > 179.9f && norm_deg < 270.0f) return 180.0f;
-        if(norm_deg >= 270.0f) return 60.0f;
-        return norm_deg;
+            const float norm_deg = desired_deg;
+            if (norm_deg < 0.0f)   return 0.0f;
+            if (norm_deg > 135.0f && norm_deg < 270.0f) return 135.0f;
+            if (norm_deg >= 270.0f) return 0.0f;
+            return norm_deg;
+        }
+
+        return desired_deg;
     }
 
 

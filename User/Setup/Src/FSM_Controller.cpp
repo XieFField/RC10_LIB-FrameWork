@@ -1,5 +1,7 @@
 #include "FSM_Controller.h"
 
+#include "chassis_swerve_task_demo.h"
+
 int text_index = 0;
 
 void FSM_Controller::loop()
@@ -55,6 +57,10 @@ void FSM_Controller::loop()
         robot_status_ = ALL_STOP;
     }
 
+    #if DEBUG_SHIT
+        robot_status_ = ALL_STOP;
+    #endif
+
    switch (robot_status_)
    {
     case ALL_STOP:
@@ -78,6 +84,8 @@ void FSM_Controller::loop()
     default:
         break;
    }
+
+
 
   if(KStarget != last_KStarget)
   {

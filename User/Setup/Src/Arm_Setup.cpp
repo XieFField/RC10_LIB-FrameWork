@@ -204,13 +204,12 @@ void ArmSetup::manualControl()
         arm_ctrlStatus.last_manual_pitch = current_pitch_logical;
         arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.scroll_wheel & 0x01) ^ current_pitch_logical;
 
-
         last_arm_status_ = ARM_MANUAL_CONTROL;
     }
 
 
     // 升降
-    if(_tool_Abs(airjoy_data_.right_y) > 0.1f)
+    if(_tool_Abs(airjoy_data_.right_y) > 0.2f)
     {
         float next_height = this->get_currentJointStatus().launchJoint_Height_ ;
         if(airjoy_data_.right_y > 0.3f)
@@ -225,13 +224,13 @@ void ArmSetup::manualControl()
         {
              float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
 
-             if(this->get_currentJointStatus().launchJoint_Height_ < 0.03f)
+             if(this->get_currentJointStatus().launchJoint_Height_ < init_data_.lock_height_ + 0.01f)
              {
-                 // 限制范围
-                 if(current_angle < 60.0f || current_angle > 180.0f)
-                 {
-                     next_height = target_joint_status_.launchJoint_Height_; // 保持不变
-                 }
+                // 限制范围
+                if(std::fabs(current_angle - 0.0f) > 0.8f)
+                {
+                    next_height = target_joint_status_.launchJoint_Height_; // 保持不变
+                }
              }
         }
         target_joint_status_.launchJoint_Height_ = next_height;
@@ -240,10 +239,10 @@ void ArmSetup::manualControl()
         target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // 保持不变
 
 
-        if(airjoy_data_.right_x > 0.5f)
-            target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
-        else if(airjoy_data_.right_x < -0.5f)
-            target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
+    if(airjoy_data_.right_x > 0.5f)
+        target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
+    else if(airjoy_data_.right_x < -0.5f)
+        target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
 
     target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
     target_joint_status_.rotateJoint_angle_ = normalize_deg_0_360(target_joint_status_.rotateJoint_angle_);
@@ -252,11 +251,11 @@ void ArmSetup::manualControl()
     float re = init_data_.rotate_end;
     if (re < 250.0f || re > 270.0f) re = 265.0f;
     float t = target_joint_status_.rotateJoint_angle_;
-    if (t > 180.0f && t < re)
+    if (t > init_data_.rotate_start && t < re)
     {
-        float d180 = t - 180.0f;
+        float d135 = t - init_data_.rotate_start;
         float dre = re - t;
-        target_joint_status_.rotateJoint_angle_ = (d180 < dre) ? 180.0f : re;
+        target_joint_status_.rotateJoint_angle_ = (d135 < dre) ? init_data_.rotate_start : re;
     }
     //pitch 控制
     int8_t target_pitch_logical = (airjoy_data_.scroll_wheel & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
@@ -344,8 +343,8 @@ bool ArmSetup::manual_store()
         case store_state::laucnh_state:
         {
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
-            this->set_PitchAngle(180.0f); //吸盘朝上
-            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.01f && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 180.0f) < 30.0f)
+            this->set_PitchAngle(90.0f); //吸盘抬平
+            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.01f && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 30.0f)
             {
                 this->store_state_ = store_state::rotate_state;
             }
@@ -356,6 +355,7 @@ bool ArmSetup::manual_store()
         {
             float target_rotate = 269.9f; //存储的目标旋转角度
             this->set_RotateAngle(target_rotate);
+            this->set_StretchLength(init_data_.store_ext_length_); // 伸展到存储位置需要的长度
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f)
             {
                 this->store_state_ = store_state::lower_state;
@@ -367,7 +367,7 @@ bool ArmSetup::manual_store()
         {
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 269.9f) < 15.0f )
             {
-                this->set_PitchAngle(0.0f); //放下
+                this->set_PitchAngle(90.0f); // 抬平
             }
 
             if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 5.0f)
@@ -462,7 +462,7 @@ bool ArmSetup::manual_takeout()
 
                 if(this->get_currentJointStatus().launchJoint_Height_ > this->init_data_.max_launchHeight_ - 0.01f)
                 {
-                    this->set_PitchAngle(180.0f); //吸盘朝上
+                    this->set_PitchAngle(90.0f); //吸盘抬平
                     this->store_state_ = store_state::outstate2;
                 }
             }
@@ -472,7 +472,7 @@ bool ArmSetup::manual_takeout()
 
         case store_state::outstate2:
         {
-            float target_rotate = 180.0f; //存储的目标旋转角度
+            float target_rotate = 0.0f; 
 
             // if(this->get_currentJointStatus().suckerJoint_angle_ > 160.0f)
             // {
@@ -481,7 +481,7 @@ bool ArmSetup::manual_takeout()
 
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f)
             {
-                this->set_PitchAngle(0.0f); // 放下
+                this->set_PitchAngle(90.0f); // 抬平
                 this->store_state_ = store_state::idle;
                 return true;
             }
@@ -922,9 +922,9 @@ bool ArmSetup::state_backStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    this->set_RotateAngle(180.0f); //旋转到目标位置
+    this->set_RotateAngle(0.0f); //旋转到目标位置
 
-    if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 180.0f) < 5.0f)
+    if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 5.0f)
     {
         return true;
     }
@@ -980,7 +980,7 @@ void ArmSetup::calibrateMotor()
     {
         //relocate
         this->motor_stretch_->relocate_totalAngle(0.0f);
-        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(179.99f));
+        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(0.001f));
         this->motor_launch_->relocate_totalAngle(0.0f);
 
         if(this->is_pitchEnable_)
@@ -1045,8 +1045,15 @@ Arm_InitData_S arm_initData = {
 
     .min_rotate_angle_ = 0.0f,
     .max_rotate_angle_ = 359.99999f,
+
+    .rotate_end = 265.0f,
+    .rotate_start = 135.0f,
+
     .safe_height_ = 0.08f,
     .store_height_ = 0.12f,
+    .lock_height_ = 0.04f,
+    .store_ext_length_ = 0.08f,
+
     .Sucker_GPIO_Port = SUCKER_6_GPIO_Port,
     .Sucker_GPIO_Pin =  SUCKER_6_Pin,
 
