@@ -378,6 +378,28 @@ namespace jia
             return (exit_raw > enter) ? exit_raw : (enter + 1.0e-3f);
         }
 
+        bool Chassis::shouldActivateReverseIntent(f32 target_vel_x, f32 target_vel_y, f32 reference_dir_rad) const
+        {
+            const StrategyConfig::ReverseIntentConfig &cfg = runtime_strategy_cfg_.reverse_intent;
+            if (!cfg.enable)
+            {
+                return false;
+            }
+
+            const f32 speed_m_s = magnitude2D(target_vel_x, target_vel_y);
+            const f32 min_speed_m_s = (cfg.min_speed_m_s > 0.0f) ? cfg.min_speed_m_s : getNearZeroExitSpeedMps();
+            if (speed_m_s <= min_speed_m_s)
+            {
+                return false;
+            }
+
+            const f32 target_dir_rad = atan2f(target_vel_y, target_vel_x);
+            const f32 dir_err_deg = radToDegF32(fabsf(shortestAngularDistance(reference_dir_rad, target_dir_rad)));
+            const f32 enter_deg = (cfg.enter_angle_deg >= 0.0f) ? cfg.enter_angle_deg : 135.0f;
+            const f32 exit_deg = (cfg.exit_angle_deg >= 0.0f) ? cfg.exit_angle_deg : 105.0f;
+            return reverse_intent_active_ ? (dir_err_deg >= exit_deg) : (dir_err_deg >= enter_deg);
+        }
+
         void Chassis::refreshActuatorLimitState()
         {
 // 预留钩子：当前执行器限幅开关直接从就近布置的 enable_* 成员读取，无需额外派生状态
@@ -533,6 +555,8 @@ namespace jia
             trans_dir_tar_mag_m_s_ = 0.0f;
             trans_dir_out_mag_m_s_ = 0.0f;
             trans_dir_freeze_reason_ = 0U;
+            reverse_intent_active_ = false;
+            reverse_intent_dir_err_deg_ = 0.0f;
             refreshActuatorLimitState();
         }
 
@@ -739,6 +763,14 @@ namespace jia
         Chassis::SwervePlannerOutput Chassis::planSwerveModules(const SwervePlannerInput &planner_input)
         {
             SwervePlannerOutput planner_output{};
+            const f32 planner_command_speed_m_s = magnitude2D(planner_input.command.vel_x, planner_input.command.vel_y);
+            const f32 planner_reference_dir_rad = trans_dir_ref_valid_
+                                                     ? trans_dir_ref_rad_
+                                                     : ((magnitude2D(last_planned_data_.vel_x, last_planned_data_.vel_y) > 1.0e-6f)
+                                                            ? atan2f(last_planned_data_.vel_y, last_planned_data_.vel_x)
+                                                            : 0.0f);
+            const bool planner_reverse_intent =
+                (planner_command_speed_m_s > 1.0e-6f) && shouldActivateReverseIntent(planner_input.command.vel_x, planner_input.command.vel_y, planner_reference_dir_rad);
 
             for (u8 i = 0; i < 4; ++i)
             {
@@ -777,7 +809,24 @@ namespace jia
                     {
                         const f32 base_abs_deg = radToDegF32(fabsf(candidate_a - planner_input.current_oa_total_rad[i]));
                         const f32 flip_abs_deg = radToDegF32(fabsf(candidate_b - planner_input.current_oa_total_rad[i]));
-                        if (selected_flipped_solution_[i])
+                        if (reverse_intent_active_ || planner_reverse_intent)
+                        {
+                            const f32 prefer_margin_deg =
+                                clampValue(runtime_strategy_cfg_.reverse_intent.flip_prefer_margin_deg, 0.0f, 180.0f);
+                            if (flip_abs_deg + prefer_margin_deg < base_abs_deg)
+                            {
+                                flipped = true;
+                            }
+                            else if (base_abs_deg + prefer_margin_deg < flip_abs_deg)
+                            {
+                                flipped = false;
+                            }
+                            else
+                            {
+                                flipped = selected_flipped_solution_[i] || (flip_abs_deg < base_abs_deg);
+                            }
+                        }
+                        else if (selected_flipped_solution_[i])
                         {
                             flipped = flip_abs_deg <= runtime_strategy_cfg_.flip_enter_angle_deg;
                         }
@@ -1824,11 +1873,19 @@ namespace jia
             trans_dir_tar_mag_m_s_ = tar_mag;
             trans_dir_out_mag_m_s_ = out_mag;
             trans_dir_freeze_reason_ = 0U;
+            reverse_intent_dir_err_deg_ = 0.0f;
 
             if (!trans_dir_ref_valid_ && out_mag > 1.0e-6f)
             {
                 trans_dir_ref_rad_ = atan2f(out_vel_y, out_vel_x);
                 trans_dir_ref_valid_ = true;
+            }
+
+            const f32 reverse_reference_dir_rad = trans_dir_ref_valid_ ? trans_dir_ref_rad_ : atan2f(last_planned_data_.vel_y, last_planned_data_.vel_x);
+            if (tar_mag > 1.0e-6f)
+            {
+                reverse_intent_dir_err_deg_ =
+                    radToDegF32(fabsf(shortestAngularDistance(reverse_reference_dir_rad, atan2f(tar_vel_y, tar_vel_x))));
             }
 
             if (trans_dir_freeze_active_)
@@ -1851,6 +1908,18 @@ namespace jia
                 out_vel_y = 0.0f;
                 trans_dir_ref_valid_ = false;
                 trans_dir_ref_rad_ = 0.0f;
+                return;
+            }
+
+            reverse_intent_active_ = shouldActivateReverseIntent(tar_vel_x, tar_vel_y, reverse_reference_dir_rad);
+            if (reverse_intent_active_)
+            {
+                const f32 target_dir_rad = atan2f(tar_vel_y, tar_vel_x);
+                out_vel_x = out_mag * cosf(target_dir_rad);
+                out_vel_y = out_mag * sinf(target_dir_rad);
+                trans_dir_freeze_active_ = false;
+                trans_dir_ref_valid_ = true;
+                trans_dir_ref_rad_ = target_dir_rad;
                 return;
             }
 
@@ -2616,6 +2685,8 @@ namespace jia
             debug_mirror_.high_speed_drive_suppression_active = high_speed_drive_suppression_active_;
             debug_mirror_.low_speed_drive_suppression_bypassed_by_residual_speed = low_speed_drive_suppression_bypassed_by_residual_speed_;
             debug_mirror_.max_residual_speed_m_s = max_residual_speed_m_s_;
+            debug_mirror_.reverse_intent_active = reverse_intent_active_;
+            debug_mirror_.reverse_intent_dir_err_deg = reverse_intent_dir_err_deg_;
             debug_mirror_.steer_fault_any_active = steer_fault_any_active_;
             for (u8 i = 0; i < 4; ++i)
             {

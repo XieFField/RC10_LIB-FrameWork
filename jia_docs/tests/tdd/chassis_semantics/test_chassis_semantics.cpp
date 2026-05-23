@@ -1248,6 +1248,133 @@ void testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels()
     EXPECT_NEAR(std::fabs(output.final_drive_omega_rad_s[3]), std::fabs(output.projected_drive_omega_rad_s[3]) * expected_scale, 1.0e-4f);
 }
 
+void testFlipSolutionPrefersSmallSteerDeltaAndInvertsDriveOnQuadrantCrossing()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.steering_strategy_mode = Chassis::SteeringStrategyMode::kShortestPath;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = jia::degToRadF32(10.0f);
+    }
+
+    Chassis::Data command{};
+    command.vel_x = -1.0f;
+    command.vel_y = 0.20f;
+
+    const Chassis::SwervePlannerOutput output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    const float direct_target_rad = std::atan2(command.vel_y, command.vel_x);
+    const float direct_delta_rad = std::fabs(chassis.shortestAngularDistance(jia::degToRadF32(10.0f), direct_target_rad));
+
+    EXPECT_TRUE(output.flipped_drive_direction[0]);
+    EXPECT_TRUE(output.steering_errors_rad[0] < direct_delta_rad);
+    EXPECT_TRUE(output.projected_drive_omega_rad_s[0] < 0.0f);
+    EXPECT_TRUE(output.final_drive_omega_rad_s[0] < 0.0f);
+}
+
+void testReverseIntentBypassesTranslationalDirectionSlewOnNearOppositeCommand()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.trans_dir_rate_limit_deg_s_ = 10.0f;
+    chassis.runtime_strategy_cfg_.max_acc_xy_acc_ = 1000.0f;
+    chassis.runtime_strategy_cfg_.max_acc_xy_dec_ = 1000.0f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.10f;
+    chassis.last_planned_data_.vel_x = 1.0f;
+    chassis.last_planned_data_.vel_y = 0.0f;
+    chassis.trans_dir_ref_valid_ = true;
+    chassis.trans_dir_ref_rad_ = 0.0f;
+    chassis.trans_dir_freeze_active_ = false;
+
+    float out_vel_x = 0.0f;
+    float out_vel_y = 0.0f;
+    float out_omega_z = 0.0f;
+    chassis.limitPlannedSpeed(-1.0f, 0.20f, 0.0f, out_vel_x, out_vel_y, out_omega_z);
+
+    EXPECT_TRUE(out_vel_x < 0.0f);
+    EXPECT_TRUE(std::atan2(out_vel_y, out_vel_x) > (jia::kPi / 2.0f));
+}
+
+void testReverseIntentDoesNotFallIntoZeroHoldOrSuppressionWhenSteerIsReachable()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = true;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 25.0f;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.10f;
+    chassis.last_planned_data_.vel_x = 1.0f;
+    chassis.last_planned_data_.vel_y = 0.0f;
+    chassis.trans_dir_ref_valid_ = true;
+    chassis.trans_dir_ref_rad_ = 0.0f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = jia::degToRadF32(10.0f);
+    }
+
+    Chassis::Data command{};
+    command.vel_x = -0.16f;
+    command.vel_y = 0.02f;
+
+    const Chassis::SwervePlannerInput input = chassis.makeSwervePlannerInput(command);
+    const Chassis::SwervePlannerOutput output = chassis.planSwerveModules(input);
+
+    EXPECT_TRUE(!input.command_stationary_intent);
+    EXPECT_TRUE(output.flipped_drive_direction[0]);
+    EXPECT_NEAR(output.low_speed_suppression_scale[0], 1.0f, 1.0e-6f);
+    EXPECT_TRUE(output.final_drive_omega_rad_s[0] < 0.0f);
+}
+
+void testAlwaysForwardModeIgnoresReverseIntentOverride()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.steering_strategy_mode = Chassis::SteeringStrategyMode::kAlwaysForward;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = jia::degToRadF32(10.0f);
+    }
+
+    Chassis::Data command{};
+    command.vel_x = -1.0f;
+    command.vel_y = 0.20f;
+
+    const Chassis::SwervePlannerOutput output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    EXPECT_TRUE(!output.flipped_drive_direction[0]);
+    EXPECT_TRUE(output.projected_drive_omega_rad_s[0] > 0.0f);
+}
+
 void testDriveAlphaDeliveryLimitUsesUniformScaleAcrossAllWheels()
 {
     Chassis chassis;
@@ -1897,6 +2024,10 @@ int main()
     testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle();
     testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned();
     testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels();
+    testFlipSolutionPrefersSmallSteerDeltaAndInvertsDriveOnQuadrantCrossing();
+    testReverseIntentBypassesTranslationalDirectionSlewOnNearOppositeCommand();
+    testReverseIntentDoesNotFallIntoZeroHoldOrSuppressionWhenSteerIsReachable();
+    testAlwaysForwardModeIgnoresReverseIntentOverride();
     testDriveAlphaDeliveryLimitUsesUniformScaleAcrossAllWheels();
     testDriveAlphaDeliveryLimitUsesWorstWheelScaleWhenLastValuesDiffer();
     testDriveAlphaDeliveryLimitUsesUniformScaleWhileNotHomed();
