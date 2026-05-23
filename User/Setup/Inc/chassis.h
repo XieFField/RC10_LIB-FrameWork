@@ -11,7 +11,7 @@
 #include "APP_PID.h"
 
 #ifndef FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 1
+#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 0
 #endif
 
 namespace jia
@@ -495,6 +495,7 @@ namespace jia
                 kSingleWheelJustFloat = 3,
                 kSingleWheelDualMotorJustFloat = 4,
                 kSwerveTelemetryV2 = 5,
+                kYawPidJustFloat = 6,
             };
             DebugMode resolveDebugMode(u8 raw_mode) const;
             void applyDebugTargetOverride(DebugMode mode);
@@ -577,6 +578,7 @@ namespace jia
             void emitUart8VofaPid1kHzTrace();
             void emitUart8VofaDualMotor1kHzTrace();
             void emitUart8SwerveTelemetryV2(bool all_homed);
+            void emitUart8VofaYawPidTrace();
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us);
@@ -605,9 +607,9 @@ namespace jia
                 f32 max_vel_y_ = 2.0f;                                           // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
                 f32 max_omega_z_ = 2.0f;                                         // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
                 f32 max_acc_xy_acc_ = 2.0f;                                      // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
-                f32 max_acc_xy_dec_ = 4.0f;                                     // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
+                f32 max_acc_xy_dec_ = 99999999.0f;                                     // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
                 f32 max_alpha_z_acc_ = 2.0f;                                     // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
-                f32 max_alpha_z_dec_ = 4.0f;                                    // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
+                f32 max_alpha_z_dec_ = 99999999.0f;                                    // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
                 f32 trans_dir_rate_limit_deg_s_ = 99999999.0f;                   // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
                 bool enable_drive_omega_limit_ = false;                          // [RW] 是否启用驱动角速度上限。
                 f32 max_drive_omega_rad_s_ = 99999999.0f;                        // [RW] 驱动目标角速度上限（rad/s）。仅在 enable_drive_omega_limit_=true 时生效。
@@ -765,8 +767,8 @@ namespace jia
             struct DebugOutput
             {
                 // ---- 输出总开关与模式选择 ---------------------------------------
-                bool output_enable = true;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
-                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kSwerveTelemetryV2); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制）。
+                bool output_enable = false;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
+                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kYawPidJustFloat); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制）。
                 u32 text_period_ms = 500;                                     // [RW] 文本日志周期（ms）。只在 mode1 下使用，控制文本总刷新频率。
                 u8 text_log_level = 1;                                        // [RW] 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
                 TickType_t text_last_ms = 0;                                  // [RO] 文本日志节流时间戳。记录上一次发文本的时间，防止串口刷屏。
@@ -788,6 +790,9 @@ namespace jia
                 u8 single_wheel_dual_motor_index = 0;           // [RW] mode4 私有轮号（覆盖值）。仅当 single_wheel_dual_motor_use_override_index=true 时生效。
                 u32 single_wheel_dual_motor_period_ms = 2;      // [RW] mode4 目标周期（ms）。默认 2ms，兼顾分辨率与串口稳定性。
                 TickType_t single_wheel_dual_motor_last_ms = 0; // [RO] mode4 发送节流时间戳。记录双电机高速输出最近一次发送时刻。
+                
+                u32 yaw_pid_justfloat_period_ms = 4U;
+                TickType_t yaw_pid_justfloat_last_ms = 0U;
 
                 // ---- mode5: SwerveTelemetryV2 binary ----------------------------
                 u8 telemetry_sample_divider = 1U;    // [RW] mode5 分频发送系数。1 表示每个满足周期门限的控制周期都尝试发送。
@@ -834,6 +839,24 @@ namespace jia
             } debug_pid_tune_;
 
             // 回零与模块运行态（主要观察）[RO]
+            struct YawPidTraceState
+            {
+                f32 mode_tag = 0.0f;
+                f32 target_yaw_rad = 0.0f;
+                f32 feedback_yaw_rad = 0.0f;
+                f32 error_deg = 0.0f;
+                f32 manual_omega_in_rad_s = 0.0f;
+                f32 pid_output_omega_rad_s = 0.0f;
+                f32 final_omega_cmd_rad_s = 0.0f;
+                f32 feedback_yaw_rate_rad_s = 0.0f;
+                f32 shift_remaining_ms = 0.0f;
+                f32 pid_compute_fired = 0.0f;
+                f32 steer_fault_any_active = 0.0f;
+                f32 all_homed = 0.0f;
+                f32 high_speed_suppression_active = 0.0f;
+                f32 reverse_intent_active = 0.0f;
+            } yaw_pid_trace_;
+
             bool homing_start_request_ = false;                                // [RW] 回零启动请求锁存位（由外部触发，在线程内消费）
             f32 homing_align_to_zero_tolerance_deg_ = 2.0f;                    // [RW] 回零归位判稳阈值（deg）
             WheelConfig wheel_config_[4];                                      // [RO] 四个模块运行态快照

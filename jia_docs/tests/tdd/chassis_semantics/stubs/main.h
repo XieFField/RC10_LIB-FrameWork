@@ -54,6 +54,7 @@ inline HAL_StatusTypeDef HAL_UART_Transmit_DMA(UART_HandleTypeDef *, unsigned ch
 GPIO_PinState testHostReadPhotogate(GPIO_TypeDef *port, unsigned short pin);
 void testHostSetPhotogate(GPIO_TypeDef *port, unsigned short pin, GPIO_PinState state);
 void testHostResetPhotogates();
+void testHostResetJustFloatCapture();
 
 inline GPIO_PinState HAL_GPIO_ReadPin(GPIO_TypeDef *port, unsigned short pin)
 {

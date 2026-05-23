@@ -7,6 +7,8 @@ TestPhotogateState g_test_photogates[4] = {
     {kPHOTOGATE_4_GPIO_Port, kPHOTOGATE_4_Pin, GPIO_PIN_RESET},
 };
 
+TestJustFloatCapture g_test_justfloat_capture{};
+
 static float g_test_time_seconds = 0.0f;
 
 GPIO_PinState testHostReadPhotogate(GPIO_TypeDef *port, unsigned short pin)
