@@ -61,24 +61,30 @@ namespace jia
                 f32 drive_motor_sign = 1.0f;
             };
 
+            // mode30 单轮直控命令快照。
+            // 这不是配置面板，而是每个控制周期里“解析后的当前有效命令”镜像，
+            // 便于文本日志、调试器观察和问题回放时直接看到两条轴最终走了什么语义。
             struct DirectActuatorCommandSnapshot
             {
-                u8 wheel_idx = 0U;
-                u8 steer_control_type = 0U;
-                u8 drive_control_type = 0U;
-                f32 steer_axis_value = 0.0f;
-                f32 drive_axis_value = 0.0f;
-                f32 steer_step_sign = 0.0f;
-                f32 drive_step_sign = 0.0f;
-                f32 steer_current_cmd_mA = 0.0f;
-                f32 steer_rpm_cmd = 0.0f;
-                f32 steer_single_turn_deg_cmd = 0.0f;
-                f32 steer_multi_turn_deg_cmd = 0.0f;
-                f32 drive_rpm_cmd = 0.0f;
-                f32 drive_current_cmd_mA = 0.0f;
-                f32 drive_brake_cmd_mA = 0.0f;
-                f32 applied_steer_cmd = 0.0f;
-                f32 applied_drive_cmd = 0.0f;
+                u8 wheel_idx = 0U;               // [RO] 本次快照对应的目标轮号。mode30 始终只会对这一只轮生成直控命令。
+                u8 steer_input_mode = 0U;        // [RO] 舵向轴输入模式快照：缓存值 / 遥控连续 / 遥控阶跃。
+                u8 drive_input_mode = 0U;        // [RO] 驱动轴输入模式快照：缓存值 / 遥控连续 / 遥控阶跃。
+                u8 steer_command_type = 0U;      // [RO] 舵向轴命令类型快照：电流 / 速度 / 单圈角 / 多圈角。
+                u8 drive_command_type = 0U;      // [RO] 驱动轴命令类型快照：速度 / 电流 / 刹车。
+                f32 steer_axis_value = 0.0f;     // [RO] 舵向轴本周期摇杆输入值，已归一化到 [-1, 1]；仅 RC 模式有意义。
+                f32 drive_axis_value = 0.0f;     // [RO] 驱动轴本周期摇杆输入值，已归一化到 [-1, 1]；仅 RC 模式有意义。
+                f32 steer_step_sign = 0.0f;      // [RO] 舵向阶跃方向：-1 / 0 / +1。用于观察 RcStep 当前触发了哪一侧。
+                f32 drive_step_sign = 0.0f;      // [RO] 驱动阶跃方向：-1 / 0 / +1。用于观察 RcStep 当前触发了哪一侧。
+                f32 steer_command_value = 0.0f;  // [RO] 舵向轴当前原始命令值。单位由 steer_command_type 决定，尚未做最终限幅。
+                f32 drive_command_value = 0.0f;  // [RO] 驱动轴当前原始命令值。单位由 drive_command_type 决定，尚未做最终限幅。
+                f32 steer_command_limit = 0.0f;  // [RO] 舵向轴本周期使用的命令限幅模板。连续输入映射和最终 clamp 都参考它。
+                f32 drive_command_limit = 0.0f;  // [RO] 驱动轴本周期使用的命令限幅模板。连续输入映射和最终 clamp 都参考它。
+                f32 steer_step_threshold = 0.0f; // [RO] 舵向轴阶跃触发阈值。摇杆绝对值超过它才会输出阶跃。
+                f32 drive_step_threshold = 0.0f; // [RO] 驱动轴阶跃触发阈值。摇杆绝对值超过它才会输出阶跃。
+                f32 steer_step_value = 0.0f;     // [RO] 舵向轴阶跃幅值模板。RcStep 触发后输出的是 +/- 这个值。
+                f32 drive_step_value = 0.0f;     // [RO] 驱动轴阶跃幅值模板。RcStep 触发后输出的是 +/- 这个值。
+                f32 applied_steer_cmd = 0.0f;    // [RO] 舵向轴最终下发值。等于原始命令经过本类型限幅后的结果。
+                f32 applied_drive_cmd = 0.0f;    // [RO] 驱动轴最终下发值。等于原始命令经过本类型限幅后的结果。
             };
 
             static constexpr u8 kTelemetryWheelCount = 4U;
@@ -494,6 +500,31 @@ namespace jia
                 kStep = 1,
                 kSine = 2,
             };
+            // mode30 单轴输入来源。
+            // 设计成舵向/驱动各自独立，避免两个轴被同一个输入模式强行绑定。
+            enum class DirectAxisInputMode : u8
+            {
+                kCached = 0,      // 直接使用调试面板里缓存的命令值。
+                kRcContinuous = 1, // 使用遥控摇杆连续量，并按当前命令限幅映射。
+                kRcStep = 2,      // 使用遥控摇杆阶跃触发，超过阈值后输出固定步进值。
+            };
+            // mode30 舵向轴命令类型。
+            // 当前活跃命令值、限幅和阶跃模板的物理单位都由它决定。
+            enum class DirectSteerCommandType : u8
+            {
+                kCurrent = 0,       // 直接给舵向电流命令（mA）。
+                kRpm = 1,           // 直接给舵向速度命令（rpm）。
+                kSingleTurnDeg = 2, // 直接给舵向单圈角命令（deg）。
+                kMultiTurnDeg = 3,  // 直接给舵向多圈角命令（deg）。
+            };
+            // mode30 驱动轴命令类型。
+            // drive 轴只保留速度/电流/刹车三种互斥语义，避免旧版多槽缓存并存。
+            enum class DirectDriveCommandType : u8
+            {
+                kRpm = 0,     // 直接给驱动速度命令（rpm）。
+                kCurrent = 1, // 直接给驱动电流命令（mA）。
+                kBrake = 2,   // 直接给驱动刹车命令（mA）。
+            };
             enum class DebugOutputMode : u8
             {
                 kOff = 0,
@@ -518,7 +549,8 @@ namespace jia
             void applyHomingObserveDebugOverride();
             void applyDirectActuatorDebugOverride(u8 wheel_idx);
             void finalizeDebugModuleOverride(bool all_homed, DebugModuleOverrideRoute route);
-            DirectActuatorCommandSnapshot resolveDirectActuatorCommand(u8 wheel_idx);
+            void syncDirectActuatorCommandTemplates(); // mode30 类型切换同步入口。用于在命令类型改变时刷新单值命令、限幅和阶跃模板。
+            DirectActuatorCommandSnapshot resolveDirectActuatorCommand(u8 wheel_idx); // 解析当前 control_wheel_index 对应轮的 mode30 双轴有效命令快照。
             void clearDirectDriveCommandByType(WheelConfig &wheel, u8 wheel_idx, u8 drive_control_type);
             void applyDirectActuatorSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command);
             void applyDirectActuatorDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command);
@@ -723,36 +755,24 @@ namespace jia
 
                 // ---- mode30：执行层直控 -----------------------------------------
                 bool direct_estop = false;                                       // [RW] mode30 急停闸门。true 时禁止所有执行层输出，适合调试前的“安全锁”。
-                bool direct_enable_steer[4] = {true, true, true, true};    // [RW] mode30 每轮舵向执行使能。单独放开某一轮的舵向下发。
-                bool direct_enable_drive[4] = {true, true, true, true};    // [RW] mode30 每轮驱动执行使能。单独放开某一轮的驱动下发。
-                u8 direct_input_source = 1;                                     // [RW] mode30 输入来源：0=调试器缓存值，1=遥控连续输入（左舵向/右航向），2=遥控阶跃输入（左舵向/右航向）。
-                u8 direct_steer_control_type = 1;                               // [RW] mode30 舵向控制方式：0=电流，1=速度，2=单圈角，3=多圈角。
-                u8 direct_drive_control_type = 0;                               // [RW] mode30 航向控制方式：0=速度，1=电流，2=刹车。默认 0=RPM。
-                f32 direct_steer_current_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};     // [RW] mode30 舵向电流目标缓存。作为直控输入的“待下发值”。
-                f32 direct_steer_rpm[4] = {0.0f, 0.0f, 0.0f, 0.0f};            // [RW] mode30 舵向速度目标缓存。作为直控输入的“待下发值”。
-                f32 direct_steer_single_turn_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] mode30 舵向单圈角目标缓存。作为直控输入的“待下发值”。
-                f32 direct_steer_multi_turn_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] mode30 舵向多圈角目标缓存。作为直控输入的“待下发值”。
-                f32 direct_drive_rpm[4] = {0.0f, 0.0f, 0.0f, 0.0f};            // [RW] mode30 航向速度目标缓存。作为直控输入的“待下发值”。
-                f32 direct_drive_current_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};     // [RW] mode30 航向电流目标缓存。作为直控输入的“待下发值”。
-                f32 direct_drive_brake_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};       // [RW] mode30 航向刹车目标缓存。作为直控输入的“待下发值”。
-                f32 direct_drive_rpm_limit = 1000.0f;                            // [RW] mode30 航向速度限幅（rpm）。下发前的安全上限。
-                f32 direct_drive_current_limit_mA = 12000.0f;                   // [RW] mode30 航向电流限幅（mA）。避免当前环指令过大。
-                f32 direct_drive_brake_limit_mA = 12000.0f;                     // [RW] mode30 航向刹车限幅（mA）。避免刹车指令过大。
-                f32 direct_steer_rpm_limit = 250.0f;                            // [RW] mode30 舵向速度限幅（rpm）。避免舵向指令过快。
-                f32 direct_steer_current_limit_mA = 12000.0f;                   // [RW] mode30 舵向电流限幅（mA）。避免当前环指令过大。
-                f32 direct_steer_single_turn_limit_deg = 180.0f;                // [RW] mode30 单圈角限幅（deg）。适合做单圈范围内的安全测试。
-                f32 direct_steer_multi_turn_limit_deg = 1080.0f;                // [RW] mode30 多圈角限幅（deg）。限制多圈试验时的总角度范围。
-                f32 direct_step_threshold = 0.3f;                               // [RW] 左摇杆舵向阶跃触发阈值。超过该幅值才认为用户想发出舵向阶跃动作。
-                f32 direct_step_drive_threshold = 0.3f;                         // [RW] 右摇杆航向阶跃触发阈值。超过该幅值才认为用户想发出航向阶跃动作。
-                f32 direct_step_steer_current_mA = 2000.0f;                     // [RW] 舵向阶跃幅值（电流，mA）。左摇杆触发后用于给舵向电流固定跃迁量。
-                f32 direct_step_steer_rpm = 200.0f;                             // [RW] 舵向阶跃幅值（速度，rpm）。左摇杆触发后用于给舵向速度固定跃迁量。
-                f32 direct_step_steer_single_turn_deg = 90.0f;                  // [RW] 舵向阶跃幅值（单圈角，deg）。左摇杆触发后用于给单圈角固定跃迁量。
-                f32 direct_step_steer_multi_turn_deg = 180.0f;                  // [RW] 舵向阶跃幅值（多圈角，deg）。左摇杆触发后用于给多圈角固定跃迁量。
-                f32 direct_step_drive_rpm = 200.0f;                             // [RW] 航向阶跃幅值（速度，rpm）。右摇杆触发后用于给航向速度固定跃迁量。
-                f32 direct_step_drive_current_mA = 2000.0f;                     // [RW] 航向阶跃幅值（电流，mA）。右摇杆触发后用于给航向电流固定跃迁量。
-                f32 direct_step_drive_brake_mA = 1500.0f;                       // [RW] 航向阶跃幅值（刹车，mA）。右摇杆触发后用于给航向刹车固定跃迁量。
+                bool direct_enable_steer = true;                                 // [RW] mode30 当前控制轮的舵向轴执行使能。false 时只保留安全清零，不下发舵向直控。
+                bool direct_enable_drive = true;                                 // [RW] mode30 当前控制轮的驱动轴执行使能。false 时只保留安全清零，不下发驱动直控。
+                u8 direct_steer_input_mode_raw = static_cast<u8>(DirectAxisInputMode::kCached); // [RW] mode30 舵向轴输入模式：0=缓存值，1=遥控连续，2=遥控阶跃。
+                u8 direct_drive_input_mode_raw = static_cast<u8>(DirectAxisInputMode::kCached); // [RW] mode30 驱动轴输入模式：0=缓存值，1=遥控连续，2=遥控阶跃。
+                u8 direct_steer_command_type_raw = static_cast<u8>(DirectSteerCommandType::kRpm); // [RW] mode30 舵向轴命令类型：0=电流，1=速度，2=单圈角，3=多圈角。
+                u8 direct_drive_command_type_raw = static_cast<u8>(DirectDriveCommandType::kRpm); // [RW] mode30 驱动轴命令类型：0=速度，1=电流，2=刹车。
+                f32 direct_steer_command_value = 0.0f;                            // [RW] mode30 舵向轴当前活跃命令值。单位由命令类型决定。
+                f32 direct_drive_command_value = 0.0f;                            // [RW] mode30 驱动轴当前活跃命令值。单位由命令类型决定。
+                f32 direct_steer_command_limit = 250.0f;                          // [RW] mode30 舵向轴命令限幅。单位跟随当前舵向命令类型；类型切换后回到安全默认值。
+                f32 direct_drive_command_limit = 1000.0f;                         // [RW] mode30 驱动轴命令限幅。单位跟随当前驱动命令类型；类型切换后回到安全默认值。
+                f32 direct_steer_step_threshold = 0.3f;                           // [RW] mode30 舵向轴阶跃触发阈值。仅在 RcStep 时生效。
+                f32 direct_drive_step_threshold = 0.3f;                           // [RW] mode30 驱动轴阶跃触发阈值。仅在 RcStep 时生效。
+                f32 direct_steer_step_value = 200.0f;                             // [RW] mode30 舵向轴阶跃幅值。单位跟随当前舵向命令类型；类型切换后回到默认值。
+                f32 direct_drive_step_value = 200.0f;                             // [RW] mode30 驱动轴阶跃幅值。单位跟随当前驱动命令类型；类型切换后回到默认值。
             } debug_control_;
             bool debug_enable_last_cycle_ = false; // [RO] 调试使能上周期状态。常用于检测 enable 上升沿，并在那一刻同步调试参数基线。
+            u8 direct_last_steer_command_type_raw_ = 0xFFU; // [RO] 上次已同步的 mode30 舵向命令类型。用于识别“真正发生了类型切换”。
+            u8 direct_last_drive_command_type_raw_ = 0xFFU; // [RO] 上次已同步的 mode30 驱动命令类型。用于识别“真正发生了类型切换”。
 
             // =====================================================================
             // 调试输出 [RW]
