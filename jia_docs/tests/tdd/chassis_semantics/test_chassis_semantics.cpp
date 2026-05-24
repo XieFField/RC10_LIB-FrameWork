@@ -928,6 +928,33 @@ void testLockToYawPidTracePublishesTargetErrorAndPidFireState()
     EXPECT_TRUE(chassis.yaw_pid_trace_.error_deg > 0.0f);
 }
 
+void testLockToYawThenLockNowKeepsTheEffectiveLockedYaw()
+{
+    Chassis chassis;
+    configureYawPidTraceHarness(chassis);
+
+    chassis.rot_z_pid_period_ = 0U;
+    chassis.rot_z_pid_count_ = 0U;
+    chassis.lock_now_rot_z_shift_count_ = 5U;
+    chassis.input_hwt_rot_z_ = 0.2f;
+
+    float out_rot_z = 0.0f;
+    float out_omega_z = 0.0f;
+
+    chassis.isLockToRotZ(true, 0.23f, 0.2f, out_rot_z, 0.0f, out_omega_z);
+    const float effective_lock_rot_z = out_rot_z;
+    EXPECT_TRUE(std::fabs(effective_lock_rot_z - 0.23f) > 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, effective_lock_rot_z, 1.0e-6f);
+    EXPECT_TRUE(chassis.lock_now_rot_z_shift_count_ == 0U);
+
+    chassis.input_hwt_rot_z_ = -0.35f;
+    chassis.isLockNowRotZ(true, 0.0f, 0.0f, out_rot_z, out_omega_z);
+
+    EXPECT_NEAR(out_rot_z, effective_lock_rot_z, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, effective_lock_rot_z, 1.0e-6f);
+    EXPECT_TRUE(std::fabs(out_rot_z - chassis.input_hwt_rot_z_) > 1.0e-6f);
+}
+
 void testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates()
 {
     Chassis chassis;
@@ -1310,6 +1337,239 @@ void testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned()
 
     EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], drive_step, 1.0e-6f);
     EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, drive_step, 1.0e-6f);
+}
+
+void testManualSCurveProfileLegacyModeKeepsCurrentAccelerationStepSemantics()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kLegacy;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
+    chassis.runtime_strategy_cfg_.max_acc_xy_acc_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_acc_xy_dec_ = 3.0f;
+    chassis.runtime_strategy_cfg_.max_alpha_z_acc_ = 4.0f;
+    chassis.runtime_strategy_cfg_.max_alpha_z_dec_ = 5.0f;
+
+    chassis.target_data_.vel_x = 1.0f;
+    chassis.target_data_.vel_y = -1.0f;
+    chassis.target_data_.omega_z = 1.0f;
+
+    chassis.updatePlannedMotionData();
+
+    EXPECT_NEAR(chassis.planned_data_.vel_x, 2.0f * Chassis::period_, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.vel_y, -2.0f * Chassis::period_, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.omega_z, 4.0f * Chassis::period_, 1.0e-6f);
+}
+
+void testManualSCurveProfileProducesSofterFirstStepAndContinuousAcceleration()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 3.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 20.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 30.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_alpha_acc_ = 4.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_alpha_dec_ = 5.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_jerk_acc_ = 40.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_jerk_dec_ = 50.0f;
+
+    chassis.target_data_.vel_x = 1.0f;
+    chassis.target_data_.vel_y = 0.0f;
+    chassis.target_data_.omega_z = 1.0f;
+
+    chassis.updatePlannedMotionData();
+    const float first_vel_x = chassis.planned_data_.vel_x;
+    const float first_acc_x = chassis.planned_data_.acc_x;
+    const float first_omega = chassis.planned_data_.omega_z;
+    const float first_alpha = chassis.planned_data_.alpha_z;
+    chassis.last_planned_data_ = chassis.planned_data_;
+
+    chassis.updatePlannedMotionData();
+    const float second_vel_x = chassis.planned_data_.vel_x;
+    const float second_acc_x = chassis.planned_data_.acc_x;
+    const float second_omega = chassis.planned_data_.omega_z;
+    const float second_alpha = chassis.planned_data_.alpha_z;
+
+    EXPECT_TRUE(first_vel_x > 0.0f);
+    EXPECT_TRUE(first_vel_x < chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ * Chassis::period_);
+    EXPECT_NEAR(first_vel_x, chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ * Chassis::period_ * Chassis::period_, 1.0e-6f);
+    EXPECT_TRUE(second_vel_x > first_vel_x);
+    EXPECT_TRUE(second_acc_x > first_acc_x);
+    EXPECT_TRUE(second_acc_x <= chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ + 1.0e-6f);
+
+    EXPECT_TRUE(first_omega > 0.0f);
+    EXPECT_TRUE(first_omega < chassis.runtime_strategy_cfg_.manual_yaw_alpha_acc_ * Chassis::period_);
+    EXPECT_NEAR(first_omega, chassis.runtime_strategy_cfg_.manual_yaw_jerk_acc_ * Chassis::period_ * Chassis::period_, 1.0e-6f);
+    EXPECT_TRUE(second_omega > first_omega);
+    EXPECT_TRUE(second_alpha > first_alpha);
+    EXPECT_TRUE(second_alpha <= chassis.runtime_strategy_cfg_.manual_yaw_alpha_acc_ + 1.0e-6f);
+}
+
+void testManualSCurveProfileToggleResetsShapingHistory()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 3.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 20.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 30.0f;
+
+    chassis.target_data_.vel_x = 1.0f;
+    chassis.updatePlannedMotionData();
+    chassis.last_planned_data_ = chassis.planned_data_;
+    chassis.updatePlannedMotionData();
+
+    EXPECT_TRUE(chassis.planned_data_.vel_x > chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ * Chassis::period_ * Chassis::period_);
+
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kLegacy;
+    chassis.updatePlannedMotionData();
+
+    EXPECT_NEAR(chassis.planned_data_.vel_x, chassis.runtime_strategy_cfg_.max_acc_xy_acc_ * Chassis::period_, 1.0e-6f);
+    EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
+    EXPECT_TRUE(!chassis.trans_dir_freeze_active_);
+    EXPECT_TRUE(chassis.trans_dir_ref_valid_);
+    EXPECT_NEAR(chassis.trans_dir_ref_rad_, 0.0f, 1.0e-6f);
+}
+
+void testManualSCurveProfileStartsBrakingBeforeTargetWhenRemainingErrorIsTooSmallForCurrentAcceleration()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 3.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 20.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 30.0f;
+
+    Chassis::JerkLimitedAxisState axis_state{};
+    axis_state.initialized = true;
+    axis_state.shaped_value = 0.95f;
+    axis_state.shaped_accel = 2.0f;
+
+    float next_value = chassis.limitValueByJerkProfile(1.0f,
+                                                       0.95f,
+                                                       axis_state,
+                                                       chassis.runtime_strategy_cfg_.manual_trans_acc_acc_,
+                                                       chassis.runtime_strategy_cfg_.manual_trans_acc_dec_,
+                                                       chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_,
+                                                       chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_,
+                                                       chassis.runtime_strategy_cfg_.manual_trans_settle_vel_eps_,
+                                                       chassis.runtime_strategy_cfg_.manual_trans_settle_acc_eps_);
+
+    EXPECT_TRUE(next_value > 0.95f);
+    EXPECT_TRUE(next_value < 0.952f);
+    EXPECT_TRUE(axis_state.shaped_accel < 2.0f);
+}
+
+void testManualSCurveProfileSmallResidualClampClearsInternalAcceleration()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 3.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 20.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 30.0f;
+
+    Chassis::JerkLimitedAxisState axis_state{};
+    axis_state.initialized = true;
+    axis_state.shaped_value = 0.9996f;
+    axis_state.shaped_accel = 0.5f;
+
+    float next_value = chassis.limitValueByJerkProfile(1.0f,
+                                                       0.9996f,
+                                                       axis_state,
+                                                       chassis.runtime_strategy_cfg_.manual_trans_acc_acc_,
+                                                       chassis.runtime_strategy_cfg_.manual_trans_acc_dec_,
+                                                       chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_,
+                                                       chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_,
+                                                       chassis.runtime_strategy_cfg_.manual_trans_settle_vel_eps_,
+                                                       chassis.runtime_strategy_cfg_.manual_trans_settle_acc_eps_);
+
+    EXPECT_NEAR(next_value, 1.0f, 1.0e-6f);
+    EXPECT_NEAR(axis_state.shaped_value, 1.0f, 1.0e-6f);
+    EXPECT_NEAR(axis_state.shaped_accel, 0.0f, 1.0e-6f);
+}
+
+void testManualSCurveProfileManualOnlyModeFallsBackForApiSource()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = true;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 3.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 20.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 30.0f;
+    chassis.runtime_strategy_cfg_.max_acc_xy_acc_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_acc_xy_dec_ = 3.0f;
+    chassis.normalized_body_command_.source = Chassis::CommandInputSource::kApi;
+
+    chassis.target_data_.vel_x = 1.0f;
+    chassis.updatePlannedMotionData();
+
+    EXPECT_TRUE(chassis.active_manual_speed_profile_mode_ == Chassis::ManualSpeedProfileMode::kLegacy);
+    EXPECT_NEAR(chassis.planned_data_.vel_x, 2.0f * Chassis::period_, 1.0e-6f);
+}
+
+void testManualSCurveProfileManualOnlyModeUsesSCurveForDebugSource()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = true;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 3.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 20.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 30.0f;
+    chassis.normalized_body_command_.source = Chassis::CommandInputSource::kDebugTarget;
+
+    chassis.target_data_.vel_x = 1.0f;
+    chassis.updatePlannedMotionData();
+
+    EXPECT_TRUE(chassis.active_manual_speed_profile_mode_ == Chassis::ManualSpeedProfileMode::kSCurve);
+    EXPECT_NEAR(chassis.planned_data_.vel_x, 20.0f * Chassis::period_ * Chassis::period_, 1.0e-6f);
+}
+
+void testManualSCurveProfileRapidReverseBleedsPositiveTrendBeforeBuildingNegativeTrend()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 3.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 20.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 30.0f;
+
+    chassis.target_data_.vel_x = 1.0f;
+    chassis.updatePlannedMotionData();
+    chassis.last_planned_data_ = chassis.planned_data_;
+    chassis.updatePlannedMotionData();
+    const float forward_vel = chassis.planned_data_.vel_x;
+    const float forward_acc = chassis.planned_data_.acc_x;
+
+    chassis.last_planned_data_ = chassis.planned_data_;
+    chassis.target_data_.vel_x = -1.0f;
+    chassis.updatePlannedMotionData();
+    const float first_reverse_vel = chassis.planned_data_.vel_x;
+    const float first_reverse_acc = chassis.planned_data_.acc_x;
+
+    chassis.last_planned_data_ = chassis.planned_data_;
+    chassis.updatePlannedMotionData();
+
+    EXPECT_TRUE(forward_vel > 0.0f);
+    EXPECT_TRUE(forward_acc > 0.0f);
+    EXPECT_TRUE(first_reverse_vel > 0.0f);
+    EXPECT_TRUE(first_reverse_acc < forward_acc);
+    EXPECT_TRUE(chassis.planned_data_.acc_x <= first_reverse_acc);
 }
 
 void testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels()
@@ -2125,9 +2385,18 @@ int main()
     testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics();
     testYawPidJustFloatModeDispatchEmitsFixed15ChannelPayload();
     testLockToYawPidTracePublishesTargetErrorAndPidFireState();
+    testLockToYawThenLockNowKeepsTheEffectiveLockedYaw();
     testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates();
     testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle();
     testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned();
+    testManualSCurveProfileLegacyModeKeepsCurrentAccelerationStepSemantics();
+    testManualSCurveProfileProducesSofterFirstStepAndContinuousAcceleration();
+    testManualSCurveProfileToggleResetsShapingHistory();
+    testManualSCurveProfileStartsBrakingBeforeTargetWhenRemainingErrorIsTooSmallForCurrentAcceleration();
+    testManualSCurveProfileSmallResidualClampClearsInternalAcceleration();
+    testManualSCurveProfileManualOnlyModeFallsBackForApiSource();
+    testManualSCurveProfileManualOnlyModeUsesSCurveForDebugSource();
+    testManualSCurveProfileRapidReverseBleedsPositiveTrendBeforeBuildingNegativeTrend();
     testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels();
     testFlipSolutionPrefersSmallSteerDeltaAndInvertsDriveOnQuadrantCrossing();
     testReverseIntentBypassesTranslationalDirectionSlewOnNearOppositeCommand();
