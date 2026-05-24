@@ -11,7 +11,7 @@
 #include "APP_PID.h"
 
 #ifndef FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 0
+#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 1
 #endif
 
 namespace jia
@@ -21,9 +21,6 @@ namespace jia
         class Chassis
         {
         public:
-
-            float drive_current_[4] = {0.0f};
-
             /* ----------------------------------------------------------------- */
             // 对外控制接口
             enum class Result

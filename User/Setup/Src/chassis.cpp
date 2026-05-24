@@ -3497,14 +3497,6 @@ namespace jia
             {
                 const u64 loop_start_us = RtosTimeStampUs64::getTimeUs();
 
-                for(int i = 0; i < 4; ++i)
-                {
-                    if(wheel_config_[i].drive_motor_h != nullptr)
-                    {
-                        drive_current_[i] = wheel_config_[i].drive_motor_h->getCurrent();
-                    }
-                }
-
                 // 2) 解析模式并做坐标系转换
                 // 1) 读取 IMU 航向/角速度
                 // 4) 更新轮反馈与回零状态机
