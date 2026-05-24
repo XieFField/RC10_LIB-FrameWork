@@ -12,6 +12,8 @@
 ## 最新交接入口
 
 - RC10 最新交接文档：
+  - [handoff/2026-05/ai_handoff_2026-05-24_2158_rc10_scurve_lock_yaw_context_sync.md](handoff/2026-05/ai_handoff_2026-05-24_2158_rc10_scurve_lock_yaw_context_sync.md)
+  - [handoff/2026-05/ai_handoff_2026-05-23_2140_rc10_yaw_pid_vofa_trace.md](handoff/2026-05/ai_handoff_2026-05-23_2140_rc10_yaw_pid_vofa_trace.md)
   - [handoff/2026-05/ai_handoff_2026-05-23_0226_rc10_steer_fault_recovery_pid_guard.md](handoff/2026-05/ai_handoff_2026-05-23_0226_rc10_steer_fault_recovery_pid_guard.md)
   - [handoff/2026-05/ai_handoff_2026-05-21_1201_rc10_drive_gate_release_sync.md](handoff/2026-05/ai_handoff_2026-05-21_1201_rc10_drive_gate_release_sync.md)
   - [handoff/2026-05/ai_handoff_2026-05-22_0121_rc10_near_zero_suppression_refactor.md](handoff/2026-05/ai_handoff_2026-05-22_0121_rc10_near_zero_suppression_refactor.md)
@@ -22,15 +24,15 @@
 ## 本轮主题
 
 - 当前文档主线已推进到：
-  - 舵向断链故障检测闭环；
-  - 故障锁存后整车 drive 全停；
-  - 故障恢复后仅故障轮重新 homing；
-  - 锁故障即清舵向闭环状态，避免重连首拍吃到残留 PID 输出。
+  - 舵向断链故障恢复闭环已经落地并进入稳定上下文；
+  - yaw 位置环 VOFA `JustFloat` 调试链路已补齐，便于 `LockTo` / `LockNow` 联调；
+  - 手操主链路已切入 S 形速度规划第二版；
+  - `LockToYaw -> LockNowYaw` 锁角连续性与默认调试参数已同步收口。
 - 当前最新一轮同时补充了：
-  - 宿主测试对 photogate / 舵向电流反馈的可控桩；
-  - 断链锁存阶段纯 `current=0` 语义修复；
-  - 独立 PID reconnect 风险证据化；
-  - 下一位 agent 的继续排查建议。
+  - jerk 受限手操速度成形、提前制动与近目标贴合语义；
+  - `reverse_intent`、低速抑制与默认调试入口的当前联调参数；
+  - `LockToYaw` 切回 `LockNowYaw` 时的锁角继承修复与宿主回归；
+  - S 形手操速度规划重新并回舵向故障恢复主线后的上下文同步。
 
 ## 命名规则
 
