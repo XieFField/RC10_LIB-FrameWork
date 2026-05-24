@@ -21,9 +21,6 @@ namespace jia
         class Chassis
         {
         public:
-
-            float drive_current_[4] = {0.0f};
-
             /* ----------------------------------------------------------------- */
             // 对外控制接口
             enum class Result
@@ -191,6 +188,19 @@ namespace jia
             {
                 kAlwaysForward = 0,
                 kShortestPath = 1,
+            };
+
+            enum class ManualSpeedProfileMode : u8
+            {
+                kLegacy = 0,
+                kSCurve = 1,
+            };
+
+            struct JerkLimitedAxisState
+            {
+                f32 shaped_value = 0.0f;
+                f32 shaped_accel = 0.0f;
+                bool initialized = false;
             };
 
             // 生命周期
@@ -560,6 +570,17 @@ namespace jia
             void isLockToRotZ(bool is_lock, f32 tar_rot_z, f32 cur_rot_z, f32 &out_rot_z, f32 omega_z, f32 &out_omega_z);
             void clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z);
+            ManualSpeedProfileMode resolveEffectiveManualSpeedProfileMode() const;
+            void resetManualSpeedProfileRuntimeState(bool reset_gate_state);
+            f32 limitValueByJerkProfile(f32 target_value,
+                                        f32 current_value,
+                                        JerkLimitedAxisState &axis_state,
+                                        f32 accel_limit,
+                                        f32 decel_limit,
+                                        f32 jerk_acc_limit,
+                                        f32 jerk_dec_limit,
+                                        f32 settle_vel_epsilon,
+                                        f32 settle_accel_epsilon) const;
             void updateWheelFeedback();
             void updateSteerFaultState(WheelConfig &wheel);
             void latchSteerFault(WheelConfig &wheel);
@@ -590,6 +611,8 @@ namespace jia
             void computeLowSpeedDriveSuppressionScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4]);
             f32 getNearZeroEnterSpeedMps() const;
             f32 getNearZeroExitSpeedMps() const;
+            f32 getXParkCommandEnterSpeedMps() const;
+            f32 getXParkCommandExitSpeedMps() const;
             bool shouldActivateReverseIntent(f32 target_vel_x, f32 target_vel_y, f32 reference_dir_rad) const;
             bool shouldActivateLaunchHold() const;
             bool isLaunchHoldAligned(const SwervePlannerOutput &planner_output) const;
@@ -640,6 +663,20 @@ namespace jia
             // =====================================================================
             struct StrategyConfig
             {
+                ManualSpeedProfileMode manual_speed_profile_mode = ManualSpeedProfileMode::kSCurve;
+                bool manual_speed_profile_manual_only = true;
+                f32 manual_trans_acc_acc_ = 5.0f;
+                f32 manual_trans_acc_dec_ = 12.0f;
+                f32 manual_trans_jerk_acc_ = 50.0f;
+                f32 manual_trans_jerk_dec_ = 50.0f;
+                f32 manual_trans_settle_vel_eps_ = 1.0e-4f;
+                f32 manual_trans_settle_acc_eps_ = 0.05f;
+                f32 manual_yaw_alpha_acc_ = 5.0f;
+                f32 manual_yaw_alpha_dec_ = 12.0f;
+                f32 manual_yaw_jerk_acc_ = 50.0f;
+                f32 manual_yaw_jerk_dec_ = 50.0f;
+                f32 manual_yaw_settle_vel_eps_ = 1.0e-4f;
+                f32 manual_yaw_settle_acc_eps_ = 0.05f;
                 f32 wheel_radius_m_ = 0.052f;                                    // [RW, 慎改] 轮半径。决定线速度与驱动角速度的换算比例，改错会直接导致速度尺度和里程计比例偏差。
                 f32 max_vel_x_ = 2.0f;                                           // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
                 f32 max_vel_y_ = 2.0f;                                           // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
@@ -665,6 +702,12 @@ namespace jia
                     f32 base_enter_m_s = 0.10f; // [RW] 近零门限进入基准（m/s）。
                     f32 base_exit_m_s = 0.15f;  // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
                 } near_zero_cfg_;
+
+                struct XParkCommandThresholdConfig
+                {
+                    f32 enter_m_s = 0.01f; // [RW] 仅用于 X-Park 命令静止意图的进入门限（m/s），不用于残余反馈过滤。
+                    f32 exit_m_s = 0.03f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
+                } xpark_command_threshold_cfg_;
 
                 struct LowSpeedDriveSuppressionConfig
                 {
@@ -693,8 +736,8 @@ namespace jia
                 struct ReverseIntentConfig
                 {
                     bool enable = true;
-                    f32 enter_angle_deg = 135.0f;
-                    f32 exit_angle_deg = 105.0f;
+                    f32 enter_angle_deg = 105.0f;
+                    f32 exit_angle_deg = 75.0f;
                     f32 min_speed_m_s = 0.0f;
                     f32 flip_prefer_margin_deg = 5.0f;
                 } reverse_intent{};
@@ -741,7 +784,7 @@ namespace jia
             {
                 // ---- 调试总开关与模式入口 ---------------------------------------
                 bool enable = false;                                             // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
-                u8 mode_raw = 1;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
+                u8 mode_raw = 2;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
                 u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。用于观察 mode_raw 经过归一化后的结果。
                 u8 control_wheel_index = 1;                                     // [RW] mode30 执行目标轮号（0~3）。只用于执行层直控链路选择当前被操作的轮。
                 u8 observe_wheel_index = 1;                                     // [RW] 单轮观测焦点轮号（0~3）。文本单轮日志与单轮高速输出统一跟随该轮。
@@ -900,6 +943,10 @@ namespace jia
             bool steer_fault_any_active_ = false;
 
             // 控制链路缓存（观察）[RO]
+            ManualSpeedProfileMode active_manual_speed_profile_mode_ = ManualSpeedProfileMode::kLegacy;
+            JerkLimitedAxisState manual_vel_x_shape_state_{};
+            JerkLimitedAxisState manual_vel_y_shape_state_{};
+            JerkLimitedAxisState manual_omega_z_shape_state_{};
             InputTargetData input_target_data_; // [RO] 输入目标快照（模式与期望速度/角度）
             NormalizedBodyCommand normalized_body_command_; // [RO] 输入来源与统一车体系语义
             Data target_data_;                  // [RO] 模式映射后的目标数据
