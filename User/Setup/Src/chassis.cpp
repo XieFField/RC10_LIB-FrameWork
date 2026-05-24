@@ -1992,6 +1992,9 @@ namespace jia
 // “锁到指定航向”会先限制目标角速度变化率，再用姿PID生成维持/逼近该目标角度所需omega_z
 // 这样外层给出的目标角不会瞬间跳变，底盘转向更平滑
             out_rot_z = limit1DPiAngleRateByTimeF32(tar_rot_z, cur_rot_z, period_, max_lock_to_rot_z_rad_s_);
+            // LockTo 生效的锁角会被 LockNow 继承，避免切回时重新抓 IMU。
+            lock_now_rot_z_target_ = out_rot_z;
+            lock_now_rot_z_shift_count_ = 0U;
             yaw_pid_trace_.mode_tag = 4.0f;
             yaw_pid_trace_.target_yaw_rad = out_rot_z;
             yaw_pid_trace_.feedback_yaw_rad = input_hwt_rot_z_;
