@@ -1089,7 +1089,7 @@ namespace jia
             case 8:
                 return DebugMode::kWorldLockNowWithNoOmegaZ;
             case 20:
-                return DebugMode::kSingleWheel;
+                return DebugMode::kTorqueFree;
             case 21:
                 return DebugMode::kAlignForward;
             case 22:
@@ -1160,7 +1160,6 @@ namespace jia
             case DebugMode::kWorldLockNowWithNoOmegaZ:
                 setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
                 break;
-            case DebugMode::kSingleWheel:
             case DebugMode::kAlignForward:
             case DebugMode::kHomingObserve:
             case DebugMode::kDirectActuator:
@@ -1202,86 +1201,6 @@ namespace jia
                 }
                 last_drive_omega_cmd_rad_s_[i] = 0.0f;
             }
-        }
-
-        void Chassis::applySingleWheelDebugOverride(u8 wheel_idx, bool all_homed)
-        {
-            WheelConfig &debug_wheel = wheel_config_[wheel_idx];
-            const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(debug_control_.single_wheel_target_steer_deg));
-            const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(debug_wheel, debug_wheel.corrected_steer_motor_total_angle_rad);
-            const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, target_oa_mod_rad);
-            const f32 selected_local_total_rad = mapWheelOaTotalToCorrectedLocal(debug_wheel, target_oa_total_rad);
-            const f32 steer_error_deg = radToDegF32(fabsf(shortestAngularDistance(current_oa_total_rad, target_oa_total_rad)));
-            const f32 drive_release_error_deg = (debug_control_.single_wheel_drive_release_error_deg >= 0.0f) ? debug_control_.single_wheel_drive_release_error_deg : 0.0f;
-            const bool drive_released = !debug_control_.single_wheel_drive_release_gate_enable || (steer_error_deg <= drive_release_error_deg);
-
-            if (debug_control_.single_wheel_soft_steer_enable)
-            {
-                const bool enable_rate_limit = runtime_strategy_cfg_.enable_steer_rate_limit_;
-                const bool enable_alpha_limit = runtime_strategy_cfg_.enable_steer_alpha_limit_;
-                f32 steer_limit_rate_rad_s = enable_rate_limit ? runtime_strategy_cfg_.max_steer_rate_rad_s_ : 1.0e6f;
-                f32 steer_limit_accel_rad_s2 = enable_alpha_limit ? runtime_strategy_cfg_.max_steer_alpha_rad_s2_ : 1.0e8f;
-                if (debug_control_.single_wheel_use_custom_steer_limit)
-                {
-                    if (enable_rate_limit)
-                    {
-                        steer_limit_rate_rad_s = degToRadF32(debug_control_.single_wheel_steer_rate_limit_deg_s);
-                    }
-                    if (enable_alpha_limit)
-                    {
-                        steer_limit_accel_rad_s2 = degToRadF32(debug_control_.single_wheel_steer_accel_limit_deg_s2);
-                    }
-                }
-                if (enable_rate_limit && steer_limit_rate_rad_s <= 1.0e-6f)
-                {
-                    steer_limit_rate_rad_s = runtime_strategy_cfg_.max_steer_rate_rad_s_;
-                }
-                if (enable_alpha_limit && steer_limit_accel_rad_s2 <= 1.0e-6f)
-                {
-                    steer_limit_accel_rad_s2 = runtime_strategy_cfg_.max_steer_alpha_rad_s2_;
-                }
-
-                f32 next_steer_rate_rad_s = 0.0f;
-                debug_wheel.target_steer_motor_total_angle_rad = limitPositionSecondOrder(
-                    debug_wheel.corrected_steer_motor_total_angle_rad,
-                    last_steer_rate_cmd_rad_s_[wheel_idx],
-                    selected_local_total_rad,
-                    steer_limit_rate_rad_s,
-                    steer_limit_accel_rad_s2,
-                    period_,
-                    next_steer_rate_rad_s);
-                debug_wheel.steer_target_velocity_rad_s = next_steer_rate_rad_s;
-                last_steer_rate_cmd_rad_s_[wheel_idx] = next_steer_rate_rad_s;
-            }
-            else
-            {
-                debug_wheel.target_steer_motor_total_angle_rad = selected_local_total_rad;
-                debug_wheel.steer_target_velocity_rad_s = 0.0f;
-                last_steer_rate_cmd_rad_s_[wheel_idx] = 0.0f;
-            }
-
-            debug_wheel.target_drive_omega_rad_s = (debug_control_.single_wheel_drive_enable && drive_released) ? rpmToRadsF32(debug_control_.single_wheel_target_drive_rpm) : 0.0f;
-            planned_data_.steer_angle_oa_rad[wheel_idx] = mapWheelCorrectedLocalToOaTotal(debug_wheel, debug_wheel.target_steer_motor_total_angle_rad);
-            planned_data_.drive_omega_rad_s[wheel_idx] = debug_wheel.target_drive_omega_rad_s;
-            last_drive_omega_cmd_rad_s_[wheel_idx] = debug_wheel.target_drive_omega_rad_s;
-            debug_mirror_.selected_wheel_steer_error_deg = steer_error_deg;
-            debug_mirror_.selected_wheel_drive_released = drive_released;
-#if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-            if (debug_output_.output_mode_raw == 1U && debug_output_.text_log_level >= 1U && (time_ms_ - debug_output_.single_wheel_trace_last_ms) >= 50U)
-            {
-                debug_output_.single_wheel_trace_last_ms = time_ms_;
-                debug_uart_.printf_DMA((char *)"SW20,%lu,%u,%u,%u,%.3f,%.3f,%.3f,%u,%u\r\n",
-                                       (u32)time_ms_,
-                                       (u32)wheel_idx,
-                                       all_homed ? 1U : 0U,
-                                       (u32)input_target_data_.mode,
-                                       radToDegF32(target_oa_total_rad),
-                                       radToDegF32(current_oa_total_rad),
-                                       steer_error_deg,
-                                       (u32)debug_wheel.homing_state,
-                                       drive_released ? 1U : 0U);
-            }
-#endif
         }
 
         void Chassis::applyAlignForwardDebugOverride()
@@ -2722,8 +2641,6 @@ namespace jia
         void Chassis::refreshDebugMirror(bool all_homed)
         {
             debug_mirror_.all_homed = all_homed;
-            debug_mirror_.selected_wheel_steer_error_deg = 0.0f;
-            debug_mirror_.selected_wheel_drive_released = false;
             debug_mirror_.nz_stationary_m_s = getNearZeroEnterSpeedMps();
             debug_mirror_.nz_freeze_enter_m_s = getNearZeroEnterSpeedMps();
             debug_mirror_.nz_freeze_exit_m_s = getNearZeroExitSpeedMps();
@@ -2903,7 +2820,7 @@ namespace jia
             }
             else if (debug_output_.text_log_phase == 1U)
             {
-                debug_uart_.printf_DMA((char *)"FSW i=%u hs=%u oa=%.1f->%.1f rpm=%.1f->%.1f gate=%.2f flip=%u sensor=%u edge=%u rel=%u err=%.2f\r\n",
+                debug_uart_.printf_DMA((char *)"FSW i=%u hs=%u oa=%.1f->%.1f rpm=%.1f->%.1f gate=%.2f flip=%u sensor=%u edge=%u\r\n",
                                        (u32)wheel_idx,
                                        (u32)debug_mirror_.homing_state[wheel_idx],
                                        debug_mirror_.current_oa_deg[wheel_idx],
@@ -2913,9 +2830,7 @@ namespace jia
                                        low_speed_drive_suppression_scale_[wheel_idx],
                                        wheel_config_[wheel_idx].flipped_drive_direction ? 1U : 0U,
                                        debug_mirror_.homing_sensor_active[wheel_idx] ? 1U : 0U,
-                                       debug_mirror_.homing_last_edge_is_falling[wheel_idx] ? 1U : 0U,
-                                       debug_mirror_.selected_wheel_drive_released ? 1U : 0U,
-                                       debug_mirror_.selected_wheel_steer_error_deg);
+                                       debug_mirror_.homing_last_edge_is_falling[wheel_idx] ? 1U : 0U);
             }
             else
             {
@@ -3348,13 +3263,9 @@ namespace jia
             }
 
             const u8 wheel_idx = (debug_control_.wheel_index < 4) ? debug_control_.wheel_index : 0;
-            resetDebugModuleOverrideTargets(wheel_idx, route == DebugModuleOverrideRoute::kSingleWheel && debug_control_.single_wheel_soft_steer_enable);
+            resetDebugModuleOverrideTargets(wheel_idx, false);
 
-            if (route == DebugModuleOverrideRoute::kSingleWheel)
-            {
-                applySingleWheelDebugOverride(wheel_idx, all_homed);
-            }
-            else if (route == DebugModuleOverrideRoute::kAlignForward)
+            if (route == DebugModuleOverrideRoute::kAlignForward)
             {
                 applyAlignForwardDebugOverride();
             }

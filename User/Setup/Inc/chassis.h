@@ -166,10 +166,9 @@ namespace jia
             enum class DebugModuleOverrideRoute : u8
             {
                 kNone = 0,
-                kSingleWheel = 1,
-                kAlignForward = 2,
-                kHomingObserve = 3,
-                kDirectActuator = 4,
+                kAlignForward = 1,
+                kHomingObserve = 2,
+                kDirectActuator = 3,
             };
 
             // 空闲姿态：定义底盘失能或无输入时，四个舵轮应保持的姿态策略。
@@ -485,7 +484,6 @@ namespace jia
                 kWorldLockTo = 6,
                 kBodyLockNowWithNoOmegaZ = 7,
                 kWorldLockNowWithNoOmegaZ = 8,
-                kSingleWheel = 20,
                 kAlignForward = 21,
                 kHomingObserve = 22,
                 kDirectActuator = 30,
@@ -510,7 +508,6 @@ namespace jia
             void updatePlannedMotionData();
             void clearPlannedMotionForModuleOverride();
             void resetDebugModuleOverrideTargets(u8 wheel_idx, bool preserve_soft_wheel_rate);
-            void applySingleWheelDebugOverride(u8 wheel_idx, bool all_homed);
             void applyAlignForwardDebugOverride();
             void applyHomingObserveDebugOverride();
             void applyDirectActuatorDebugOverride(u8 wheel_idx);
@@ -699,7 +696,7 @@ namespace jia
             // =====================================================================
             // 调试参数（通过全局 chassis 对象在调试器内直接改值）[RW]
             // 说明：这组参数只影响调试链路。正常控制不读取它们，只有切到相应 debug mode 时才会生效。
-            // 速查：0~8 = 底盘输入接管/信号注入类模式；20 = 单轮调试；21 = 四轮朝前；22 = 回零观察；30 = 执行层直控。
+            // 速查：0~8 = 底盘输入接管/信号注入类模式；20 = 已退役（安全回退）；21 = 四轮朝前；22 = 回零观察；30 = 执行层直控。
             // 手柄平移坐标约定（底盘层）：前推前进、左推左移（-left_y -> vel_x，left_x -> vel_y）。
             // =====================================================================
             struct DebugControl
@@ -717,17 +714,6 @@ namespace jia
                 f32 sine_amplitude = 0.0f; // [RW] 正弦幅值。与注入开关配合使用，表示激励强度。
                 f32 sine_frequency = 0.1f; // [RW] 正弦频率（Hz）。越高越能看出响应速度，越低越适合慢速观察。
                 f32 sine_offset = 0.0f;    // [RW] 正弦偏置。把激励整体平移到某个基线附近使用。
-
-                // ---- mode20：单轮调试 -------------------------------------------
-                bool single_wheel_drive_enable = true;               // [RW] mode20 下是否允许驱动输出。关闭时只看舵向，不下发驱动。
-                bool single_wheel_soft_steer_enable = false;         // [RW] mode20 下是否启用舵向软限幅轨迹。开启后不会一步跳到目标，而是按限速/限加速度渐进到位。
-                bool single_wheel_use_custom_steer_limit = false;    // [RW] mode20 是否使用自定义舵向限速参数。关闭时用默认舵向约束。
-                f32 single_wheel_steer_rate_limit_deg_s = 120.0f;    // [RW] mode20 舵向角速度上限（deg/s）。只在软舵向或限速轨迹下发挥作用。
-                f32 single_wheel_steer_accel_limit_deg_s2 = 600.0f;  // [RW] mode20 舵向角加速度上限（deg/s^2）。限制舵向变化“猛不猛”。
-                bool single_wheel_drive_release_gate_enable = false; // [RW] mode20 驱动释放门控。开启后，舵角没对准前会先压住驱动。
-                f32 single_wheel_drive_release_error_deg = 5.0f;     // [RW] mode20 驱动释放角差阈值（deg）。舵角误差小于该值时才允许更积极地释放驱动。
-                f32 single_wheel_target_steer_deg = 0.0f;            // [RW] mode20 单轮舵向目标 OA（deg）。单轮调试时直接给舵角目标。
-                f32 single_wheel_target_drive_rpm = 0.0f;            // [RW] mode20 单轮驱动目标（rpm）。单轮调试时直接给驱动速度目标。
 
                 // ---- mode30：执行层直控 -----------------------------------------
                 bool direct_estop = false;                                       // [RW] mode30 急停闸门。true 时禁止所有执行层输出，适合调试前的“安全锁”。
@@ -921,8 +907,6 @@ namespace jia
                 bool homing_sensor_active[4] = {false, false, false, false};        // [RO] 各轮光电门有效状态
                 bool homing_last_edge_is_falling[4] = {false, false, false, false}; // [RO] 各轮最近边沿是否下降沿
                 f32 homing_runtime_zero_offset_deg[4] = {0.0f};                     // [RO] 各轮运行时零偏（deg）
-                f32 selected_wheel_steer_error_deg = 0.0f;                          // [RO] 选中轮舵向误差（deg）
-                bool selected_wheel_drive_released = false;                         // [RO] 选中轮驱动是否已释放
                 f32 nz_stationary_m_s = 0.0f;                                       // [RO] 当前有效静止阈值（m/s）。
                 f32 nz_freeze_enter_m_s = 0.0f;                                     // [RO] 当前有效冻结进入阈值（m/s）。
                 f32 nz_freeze_exit_m_s = 0.0f;                                      // [RO] 当前有效冻结退出阈值（m/s）。
@@ -1143,7 +1127,6 @@ namespace jia
 
             switch (raw_mode)
             {
-            case 20:
             case 21:
             case 22:
             case 30:
@@ -1166,8 +1149,6 @@ namespace jia
         {
             switch (raw_mode)
             {
-            case 20:
-                return DebugModuleOverrideRoute::kSingleWheel;
             case 21:
                 return DebugModuleOverrideRoute::kAlignForward;
             case 22:

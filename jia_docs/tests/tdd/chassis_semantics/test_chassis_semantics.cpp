@@ -353,17 +353,24 @@ void testDebugRouteClassificationSeparatesInputInjectionFromModuleOverride()
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(false, 1) == Chassis::DebugControlRoute::kDisabled);
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 1) == Chassis::DebugControlRoute::kTargetInjection);
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 8) == Chassis::DebugControlRoute::kTargetInjection);
-    EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 20) == Chassis::DebugControlRoute::kModuleOverride);
+    EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 20) == Chassis::DebugControlRoute::kTargetInjection);
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 30) == Chassis::DebugControlRoute::kModuleOverride);
 }
 
-void testDebugModuleOverrideRouteSeparatesSingleWheelAlignHomingAndDirect()
+void testDebugModuleOverrideRouteSeparatesRetiredMode20AlignHomingAndDirect()
 {
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(1) == Chassis::DebugModuleOverrideRoute::kNone);
-    EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(20) == Chassis::DebugModuleOverrideRoute::kSingleWheel);
+    EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(20) == Chassis::DebugModuleOverrideRoute::kNone);
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(21) == Chassis::DebugModuleOverrideRoute::kAlignForward);
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(22) == Chassis::DebugModuleOverrideRoute::kHomingObserve);
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(30) == Chassis::DebugModuleOverrideRoute::kDirectActuator);
+}
+
+void testResolveDebugModeFallsBackToTorqueFreeWhenMode20IsRetired()
+{
+    Chassis chassis;
+    EXPECT_TRUE(chassis.resolveDebugMode(20) == Chassis::DebugMode::kTorqueFree);
+    EXPECT_TRUE(chassis.resolveDebugMode(255) == Chassis::DebugMode::kTorqueFree);
 }
 
 void testLowSpeedDriveSuppressionCanBeDisabled()
@@ -2104,7 +2111,8 @@ int main()
     testNormalizedBodyCommandKeepsDebugAndApiRoutesSemanticallyAligned();
     testHomingRuntimeZeroOffsetOnlyDependsOnEdgeGeometryAndRawMotorAngle();
     testDebugRouteClassificationSeparatesInputInjectionFromModuleOverride();
-    testDebugModuleOverrideRouteSeparatesSingleWheelAlignHomingAndDirect();
+    testDebugModuleOverrideRouteSeparatesRetiredMode20AlignHomingAndDirect();
+    testResolveDebugModeFallsBackToTorqueFreeWhenMode20IsRetired();
     testLowSpeedDriveSuppressionCanBeDisabled();
     testProjectedDriveUsesReachableSteerInsteadOfIdealVector();
     testHighSpeedDriveSuppressionTightensAndReleasesThroughPlannerOutput();
