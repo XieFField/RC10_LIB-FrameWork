@@ -4,6 +4,8 @@
 
 ## 2026-05
 
+- `2026-05-24 21:58` | `rc10_scurve_lock_yaw_context_sync` | [ai_handoff_2026-05-24_2158_rc10_scurve_lock_yaw_context_sync.md](2026-05/ai_handoff_2026-05-24_2158_rc10_scurve_lock_yaw_context_sync.md)
+- `2026-05-23 21:40` | `yaw_pid_vofa_trace` | [ai_handoff_2026-05-23_2140_rc10_yaw_pid_vofa_trace.md](2026-05/ai_handoff_2026-05-23_2140_rc10_yaw_pid_vofa_trace.md)
 - `2026-05-23 02:26` | `steer_fault_recovery_pid_guard` | [ai_handoff_2026-05-23_0226_rc10_steer_fault_recovery_pid_guard.md](2026-05/ai_handoff_2026-05-23_0226_rc10_steer_fault_recovery_pid_guard.md)
 - `2026-05-13 00:49` | `chassis` | [ai_handoff_2026-05-13_0049.md](2026-05/ai_handoff_2026-05-13_0049.md)
 - `2026-05-15 22:00` | `pid` | [ai_handoff_2026-05-15_2200_pid_debug_readback.md](2026-05/ai_handoff_2026-05-15_2200_pid_debug_readback.md)
