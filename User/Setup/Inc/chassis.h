@@ -576,6 +576,8 @@ namespace jia
             void computeLowSpeedDriveSuppressionScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4]);
             f32 getNearZeroEnterSpeedMps() const;
             f32 getNearZeroExitSpeedMps() const;
+            f32 getXParkCommandEnterSpeedMps() const;
+            f32 getXParkCommandExitSpeedMps() const;
             bool shouldActivateReverseIntent(f32 target_vel_x, f32 target_vel_y, f32 reference_dir_rad) const;
             bool shouldActivateLaunchHold() const;
             bool isLaunchHoldAligned(const SwervePlannerOutput &planner_output) const;
@@ -665,6 +667,12 @@ namespace jia
                     f32 base_enter_m_s = 0.10f; // [RW] 近零门限进入基准（m/s）。
                     f32 base_exit_m_s = 0.15f;  // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
                 } near_zero_cfg_;
+
+                struct XParkCommandThresholdConfig
+                {
+                    f32 enter_m_s = 0.01f; // [RW] 仅用于 X-Park 命令静止意图的进入门限（m/s），不用于残余反馈过滤。
+                    f32 exit_m_s = 0.03f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
+                } xpark_command_threshold_cfg_;
 
                 struct LowSpeedDriveSuppressionConfig
                 {
