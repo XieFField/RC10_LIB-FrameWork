@@ -11,7 +11,7 @@
 #include "APP_PID.h"
 
 #ifndef FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 1
+#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 0
 #endif
 
 namespace jia
@@ -693,8 +693,8 @@ namespace jia
                 struct ReverseIntentConfig
                 {
                     bool enable = true;
-                    f32 enter_angle_deg = 135.0f;
-                    f32 exit_angle_deg = 105.0f;
+                    f32 enter_angle_deg = 105.0f;
+                    f32 exit_angle_deg = 75.0f;
                     f32 min_speed_m_s = 0.0f;
                     f32 flip_prefer_margin_deg = 5.0f;
                 } reverse_intent{};
@@ -741,7 +741,7 @@ namespace jia
             {
                 // ---- 调试总开关与模式入口 ---------------------------------------
                 bool enable = false;                                             // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
-                u8 mode_raw = 1;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
+                u8 mode_raw = 2;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
                 u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。用于观察 mode_raw 经过归一化后的结果。
                 u8 wheel_index = 1;                                             // [RW] 主选中轮号（0~3）。默认作为单轮调试与单轮输出追踪的统一轮号来源。
 
