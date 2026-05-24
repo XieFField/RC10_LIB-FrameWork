@@ -166,6 +166,10 @@ namespace jia
             trans_dir_tar_mag_m_s_ = 0.0f;
             trans_dir_out_mag_m_s_ = 0.0f;
             trans_dir_freeze_reason_ = 0U;
+            active_manual_speed_profile_mode_ = runtime_strategy_cfg_.manual_speed_profile_mode;
+            manual_vel_x_shape_state_ = {};
+            manual_vel_y_shape_state_ = {};
+            manual_omega_z_shape_state_ = {};
             high_speed_drive_suppression_scale_ = 1.0f;
             high_speed_drive_suppression_active_ = false;
             high_speed_dir_err_deg_ = 0.0f;
@@ -212,6 +216,10 @@ namespace jia
             trans_dir_tar_mag_m_s_ = 0.0f;
             trans_dir_out_mag_m_s_ = 0.0f;
             trans_dir_freeze_reason_ = 0U;
+            active_manual_speed_profile_mode_ = runtime_strategy_cfg_.manual_speed_profile_mode;
+            manual_vel_x_shape_state_ = {};
+            manual_vel_y_shape_state_ = {};
+            manual_omega_z_shape_state_ = {};
         }
 
         Chassis::Result Chassis::setWheelTorqueFreeMode()
@@ -555,9 +563,194 @@ namespace jia
             trans_dir_tar_mag_m_s_ = 0.0f;
             trans_dir_out_mag_m_s_ = 0.0f;
             trans_dir_freeze_reason_ = 0U;
+            active_manual_speed_profile_mode_ = runtime_strategy_cfg_.manual_speed_profile_mode;
+            manual_vel_x_shape_state_ = {};
+            manual_vel_y_shape_state_ = {};
+            manual_omega_z_shape_state_ = {};
             reverse_intent_active_ = false;
             reverse_intent_dir_err_deg_ = 0.0f;
             refreshActuatorLimitState();
+        }
+
+        Chassis::ManualSpeedProfileMode Chassis::resolveEffectiveManualSpeedProfileMode() const
+        {
+            if (runtime_strategy_cfg_.manual_speed_profile_manual_only &&
+                normalized_body_command_.source != CommandInputSource::kDebugTarget)
+            {
+                return ManualSpeedProfileMode::kLegacy;
+            }
+            return runtime_strategy_cfg_.manual_speed_profile_mode;
+        }
+
+        void Chassis::resetManualSpeedProfileRuntimeState(bool reset_gate_state)
+        {
+            planned_data_ = Data{};
+            last_planned_data_ = Data{};
+            planned_data_.rot_z = target_data_.rot_z;
+            last_planned_data_.rot_z = target_data_.rot_z;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                last_drive_omega_cmd_rad_s_[i] = 0.0f;
+            }
+
+            manual_vel_x_shape_state_ = {};
+            manual_vel_y_shape_state_ = {};
+            manual_omega_z_shape_state_ = {};
+
+            trans_dir_freeze_active_ = false;
+            trans_dir_ref_valid_ = false;
+            trans_dir_ref_rad_ = 0.0f;
+            trans_dir_tar_mag_m_s_ = 0.0f;
+            trans_dir_out_mag_m_s_ = 0.0f;
+            trans_dir_freeze_reason_ = 0U;
+            reverse_intent_active_ = false;
+            reverse_intent_dir_err_deg_ = 0.0f;
+
+            if (reset_gate_state)
+            {
+                high_speed_trans_gate_active_ = false;
+                high_speed_drive_suppression_active_ = false;
+                high_speed_drive_suppression_scale_ = 1.0f;
+                high_speed_dir_err_deg_ = 0.0f;
+                high_speed_eta_max_s_ = 0.0f;
+                low_speed_residual_bypass_active_ = false;
+            }
+        }
+
+        f32 Chassis::limitValueByJerkProfile(f32 target_value,
+                                             f32 current_value,
+                                             JerkLimitedAxisState &axis_state,
+                                             f32 accel_limit,
+                                             f32 decel_limit,
+                                             f32 jerk_acc_limit,
+                                             f32 jerk_dec_limit,
+                                             f32 settle_vel_epsilon,
+                                             f32 settle_accel_epsilon) const
+        {
+            const f32 safe_acc_limit = fabsf(accel_limit);
+            const f32 safe_dec_limit = fabsf(decel_limit);
+            const f32 safe_jerk_acc_limit = fabsf(jerk_acc_limit);
+            const f32 safe_jerk_dec_limit = fabsf(jerk_dec_limit);
+            const f32 safe_settle_vel_epsilon = fabsf(settle_vel_epsilon);
+            const f32 safe_settle_accel_epsilon = fabsf(settle_accel_epsilon);
+
+            if (safe_acc_limit <= 1.0e-6f || safe_dec_limit <= 1.0e-6f ||
+                safe_jerk_acc_limit <= 1.0e-6f || safe_jerk_dec_limit <= 1.0e-6f)
+            {
+                axis_state.shaped_value = target_value;
+                axis_state.shaped_accel = 0.0f;
+                axis_state.initialized = true;
+                return target_value;
+            }
+
+            if (!axis_state.initialized)
+            {
+                axis_state.shaped_value = current_value;
+                axis_state.shaped_accel = 0.0f;
+                axis_state.initialized = true;
+            }
+
+            const f32 error = target_value - current_value;
+            const f32 current_accel = axis_state.shaped_accel;
+            const f32 error_sign = (error > 1.0e-6f) ? 1.0f : ((error < -1.0e-6f) ? -1.0f : 0.0f);
+            const f32 braking_accel_limit = (current_accel * error_sign >= 0.0f) ? safe_dec_limit : safe_acc_limit;
+            const f32 braking_jerk_limit = (current_accel * error_sign >= 0.0f) ? safe_jerk_dec_limit : safe_jerk_acc_limit;
+
+            if (fabsf(error) <= safe_settle_vel_epsilon && fabsf(current_accel) <= safe_settle_accel_epsilon)
+            {
+                axis_state.shaped_value = target_value;
+                axis_state.shaped_accel = 0.0f;
+                return target_value;
+            }
+
+            const f32 abs_current_accel = fabsf(current_accel);
+            const f32 time_to_cancel_accel = abs_current_accel / braking_jerk_limit;
+            const f32 residual_velocity_from_accel =
+                abs_current_accel * time_to_cancel_accel - 0.5f * braking_jerk_limit * time_to_cancel_accel * time_to_cancel_accel;
+            const f32 min_reachable_step = fabsf(current_accel) * period_ + braking_jerk_limit * period_ * period_;
+
+            if (fabsf(error) <= min_reachable_step)
+            {
+                axis_state.shaped_value = target_value;
+                axis_state.shaped_accel = 0.0f;
+                return target_value;
+            }
+
+            f32 target_accel = 0.0f;
+            if (error_sign == 0.0f)
+            {
+                if (fabsf(current_accel) <= safe_settle_accel_epsilon)
+                {
+                    axis_state.shaped_value = target_value;
+                    axis_state.shaped_accel = 0.0f;
+                    return target_value;
+                }
+                target_accel = (current_accel > 0.0f) ? -safe_dec_limit : safe_dec_limit;
+            }
+            else
+            {
+                if (current_value * target_value < 0.0f)
+                {
+                    target_accel = 0.0f;
+                }
+                else
+                {
+                const f32 accel_limit_for_error = (error_sign * current_accel >= 0.0f) ? safe_acc_limit : safe_dec_limit;
+                const f32 jerk_limit_for_error = (error_sign * current_accel >= 0.0f) ? safe_jerk_acc_limit : safe_jerk_dec_limit;
+                const f32 braking_guard = fabsf(current_accel) * period_ + jerk_limit_for_error * period_ * period_;
+                const bool should_brake_now =
+                    (error_sign * current_accel > 0.0f) &&
+                    (fabsf(error) <= residual_velocity_from_accel + braking_guard);
+
+                if (should_brake_now)
+                {
+                    target_accel = 0.0f;
+                }
+                else
+                {
+                    target_accel = error_sign * accel_limit_for_error;
+                }
+                }
+            }
+
+            const f32 accel_delta = target_accel - current_accel;
+            const f32 accel_delta_sign = (accel_delta > 0.0f) ? 1.0f : ((accel_delta < 0.0f) ? -1.0f : 0.0f);
+            const f32 jerk_limit = (accel_delta_sign * error_sign >= 0.0f) ? safe_jerk_acc_limit : safe_jerk_dec_limit;
+            const f32 max_accel_step = jerk_limit * period_;
+            f32 next_accel = current_accel;
+
+            if (accel_delta > max_accel_step)
+            {
+                next_accel += max_accel_step;
+            }
+            else if (accel_delta < -max_accel_step)
+            {
+                next_accel -= max_accel_step;
+            }
+            else
+            {
+                next_accel = target_accel;
+            }
+
+            next_accel = clampValue(next_accel, -braking_accel_limit, braking_accel_limit);
+
+            f32 next_value = current_value + next_accel * period_;
+            if ((current_value > 0.0f && target_value < 0.0f && next_value < 0.0f) ||
+                (current_value < 0.0f && target_value > 0.0f && next_value > 0.0f))
+            {
+                next_value = 0.0f;
+            }
+            const f32 next_error = target_value - next_value;
+            if (error_sign != 0.0f && next_error * error_sign <= 0.0f)
+            {
+                axis_state.shaped_value = target_value;
+                axis_state.shaped_accel = 0.0f;
+                return target_value;
+            }
+
+            axis_state.shaped_value = next_value;
+            axis_state.shaped_accel = next_accel;
+            return next_value;
         }
 
         f32 Chassis::wrapToPi(f32 angle_rad) const
@@ -1867,6 +2060,13 @@ namespace jia
 
         void Chassis::updatePlannedMotionData()
         {
+            const ManualSpeedProfileMode effective_profile_mode = resolveEffectiveManualSpeedProfileMode();
+            if (effective_profile_mode != active_manual_speed_profile_mode_)
+            {
+                active_manual_speed_profile_mode_ = effective_profile_mode;
+                resetManualSpeedProfileRuntimeState(true);
+            }
+
             if (!launch_hold_active_ && shouldActivateLaunchHold())
             {
                 launch_hold_active_ = true;
@@ -1912,9 +2112,43 @@ namespace jia
         void Chassis::limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z)
         {
 // 第一阶段：先x/y分量分别做加减速限幅，保证速度台阶被平滑化
-            out_vel_x = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_x, last_planned_data_.vel_x, period_, runtime_strategy_cfg_.max_acc_xy_acc_, runtime_strategy_cfg_.max_acc_xy_dec_);
-            out_vel_y = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_y, last_planned_data_.vel_y, period_, runtime_strategy_cfg_.max_acc_xy_acc_, runtime_strategy_cfg_.max_acc_xy_dec_);
-            out_omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_omega_z, last_planned_data_.omega_z, period_, runtime_strategy_cfg_.max_alpha_z_acc_, runtime_strategy_cfg_.max_alpha_z_dec_);
+            const ManualSpeedProfileMode effective_profile_mode = resolveEffectiveManualSpeedProfileMode();
+            if (effective_profile_mode == ManualSpeedProfileMode::kSCurve)
+            {
+                out_vel_x = limitValueByJerkProfile(tar_vel_x,
+                                                    last_planned_data_.vel_x,
+                                                    manual_vel_x_shape_state_,
+                                                    runtime_strategy_cfg_.manual_trans_acc_acc_,
+                                                    runtime_strategy_cfg_.manual_trans_acc_dec_,
+                                                    runtime_strategy_cfg_.manual_trans_jerk_acc_,
+                                                    runtime_strategy_cfg_.manual_trans_jerk_dec_,
+                                                    runtime_strategy_cfg_.manual_trans_settle_vel_eps_,
+                                                    runtime_strategy_cfg_.manual_trans_settle_acc_eps_);
+                out_vel_y = limitValueByJerkProfile(tar_vel_y,
+                                                    last_planned_data_.vel_y,
+                                                    manual_vel_y_shape_state_,
+                                                    runtime_strategy_cfg_.manual_trans_acc_acc_,
+                                                    runtime_strategy_cfg_.manual_trans_acc_dec_,
+                                                    runtime_strategy_cfg_.manual_trans_jerk_acc_,
+                                                    runtime_strategy_cfg_.manual_trans_jerk_dec_,
+                                                    runtime_strategy_cfg_.manual_trans_settle_vel_eps_,
+                                                    runtime_strategy_cfg_.manual_trans_settle_acc_eps_);
+                out_omega_z = limitValueByJerkProfile(tar_omega_z,
+                                                      last_planned_data_.omega_z,
+                                                      manual_omega_z_shape_state_,
+                                                      runtime_strategy_cfg_.manual_yaw_alpha_acc_,
+                                                      runtime_strategy_cfg_.manual_yaw_alpha_dec_,
+                                                      runtime_strategy_cfg_.manual_yaw_jerk_acc_,
+                                                      runtime_strategy_cfg_.manual_yaw_jerk_dec_,
+                                                      runtime_strategy_cfg_.manual_yaw_settle_vel_eps_,
+                                                      runtime_strategy_cfg_.manual_yaw_settle_acc_eps_);
+            }
+            else
+            {
+                out_vel_x = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_x, last_planned_data_.vel_x, period_, runtime_strategy_cfg_.max_acc_xy_acc_, runtime_strategy_cfg_.max_acc_xy_dec_);
+                out_vel_y = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_vel_y, last_planned_data_.vel_y, period_, runtime_strategy_cfg_.max_acc_xy_acc_, runtime_strategy_cfg_.max_acc_xy_dec_);
+                out_omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_omega_z, last_planned_data_.omega_z, period_, runtime_strategy_cfg_.max_alpha_z_acc_, runtime_strategy_cfg_.max_alpha_z_dec_);
+            }
 
 // 第二阶段：平移矢量方向限幅（低速滞回冻+方向角速度限幅）
             const f32 tar_mag = magnitude2D(tar_vel_x, tar_vel_y);
@@ -1965,7 +2199,9 @@ namespace jia
                 return;
             }
 
-            reverse_intent_active_ = shouldActivateReverseIntent(tar_vel_x, tar_vel_y, reverse_reference_dir_rad);
+            const bool allow_immediate_reverse_intent = (effective_profile_mode != ManualSpeedProfileMode::kSCurve);
+            reverse_intent_active_ = allow_immediate_reverse_intent &&
+                                     shouldActivateReverseIntent(tar_vel_x, tar_vel_y, reverse_reference_dir_rad);
             if (reverse_intent_active_)
             {
                 const f32 target_dir_rad = atan2f(tar_vel_y, tar_vel_x);
