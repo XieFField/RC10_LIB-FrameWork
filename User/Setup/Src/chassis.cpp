@@ -386,6 +386,18 @@ namespace jia
             return (exit_raw > enter) ? exit_raw : (enter + 1.0e-3f);
         }
 
+        f32 Chassis::getXParkCommandEnterSpeedMps() const
+        {
+            return (runtime_strategy_cfg_.xpark_command_threshold_cfg_.enter_m_s >= 0.0f) ? runtime_strategy_cfg_.xpark_command_threshold_cfg_.enter_m_s : 0.0f;
+        }
+
+        f32 Chassis::getXParkCommandExitSpeedMps() const
+        {
+            const f32 enter = getXParkCommandEnterSpeedMps();
+            const f32 exit_raw = (runtime_strategy_cfg_.xpark_command_threshold_cfg_.exit_m_s >= 0.0f) ? runtime_strategy_cfg_.xpark_command_threshold_cfg_.exit_m_s : 0.0f;
+            return (exit_raw > enter) ? exit_raw : (enter + 1.0e-3f);
+        }
+
         bool Chassis::shouldActivateReverseIntent(f32 target_vel_x, f32 target_vel_y, f32 reference_dir_rad) const
         {
             const StrategyConfig::ReverseIntentConfig &cfg = runtime_strategy_cfg_.reverse_intent;
@@ -811,7 +823,7 @@ namespace jia
             }
 
             const f32 command_speed_m_s = computeMaxCommandWheelSpeedMps(target_data_);
-            return xpark_gate_active_ && (command_speed_m_s > getNearZeroExitSpeedMps());
+            return xpark_gate_active_ && (command_speed_m_s > getXParkCommandExitSpeedMps());
         }
 
         bool Chassis::isLaunchHoldAligned(const SwervePlannerOutput &planner_output) const
@@ -919,14 +931,16 @@ namespace jia
                     (residual_speed_m_s > planner_input.max_residual_speed_m_s) ? residual_speed_m_s : planner_input.max_residual_speed_m_s;
             }
 
-            const f32 xpark_enter_speed = getNearZeroEnterSpeedMps();
-            const f32 xpark_exit_speed = getNearZeroExitSpeedMps();
+            const f32 xpark_command_enter_speed = getXParkCommandEnterSpeedMps();
+            const f32 xpark_command_exit_speed = getXParkCommandExitSpeedMps();
+            const f32 xpark_residual_enter_speed = getNearZeroEnterSpeedMps();
+            const f32 xpark_residual_exit_speed = getNearZeroExitSpeedMps();
             const bool command_stationary_intent = xpark_gate_active_
-                                                       ? (planner_input.max_command_wheel_speed_m_s <= xpark_exit_speed)
-                                                       : (planner_input.max_command_wheel_speed_m_s <= xpark_enter_speed);
+                                                       ? (planner_input.max_command_wheel_speed_m_s <= xpark_command_exit_speed)
+                                                       : (planner_input.max_command_wheel_speed_m_s <= xpark_command_enter_speed);
             const bool residual_stationary_intent = xpark_gate_active_
-                                                        ? (planner_input.max_residual_speed_m_s <= xpark_exit_speed)
-                                                        : (planner_input.max_residual_speed_m_s <= xpark_enter_speed);
+                                                        ? (planner_input.max_residual_speed_m_s <= xpark_residual_exit_speed)
+                                                        : (planner_input.max_residual_speed_m_s <= xpark_residual_enter_speed);
             planner_input.command_stationary_intent = command_stationary_intent && residual_stationary_intent;
 
             if (planner_input.command_stationary_intent)
@@ -2390,12 +2404,12 @@ namespace jia
             const f32 command_speed_m_s = computeMaxCommandWheelSpeedMps(target_data_);
             const bool xpark_stationary_hold = steer_fault_cfg.ignore_during_xpark_hold &&
                                                xpark_gate_active_ &&
-                                               (command_speed_m_s <= getNearZeroExitSpeedMps());
+                                               (command_speed_m_s <= getXParkCommandExitSpeedMps());
             const f32 steer_error_rad = fabsf(wrapToPi(wheel.target_steer_motor_total_angle_rad -
                                                        wheel.corrected_steer_motor_total_angle_rad));
             const bool steer_control_intent = !input_target_data_.zero_current_all &&
                                               !current_mode_flag_.is_wheel_torque_free &&
-                                              ((command_speed_m_s > getNearZeroExitSpeedMps()) ||
+                                              ((command_speed_m_s > getXParkCommandExitSpeedMps()) ||
                                                (steer_error_rad > degToRadF32(homing_align_to_zero_tolerance_deg_)));
             const bool freeze_candidate = (wheel.homing_state == HomingState::kReady) &&
                                           wheel.homing_zero_valid &&
@@ -2966,8 +2980,8 @@ namespace jia
             debug_mirror_.nz_stationary_m_s = getNearZeroEnterSpeedMps();
             debug_mirror_.nz_freeze_enter_m_s = getNearZeroEnterSpeedMps();
             debug_mirror_.nz_freeze_exit_m_s = getNearZeroExitSpeedMps();
-            debug_mirror_.nz_xpark_enter_m_s = getNearZeroEnterSpeedMps();
-            debug_mirror_.nz_xpark_exit_m_s = getNearZeroExitSpeedMps();
+            debug_mirror_.nz_xpark_enter_m_s = getXParkCommandEnterSpeedMps();
+            debug_mirror_.nz_xpark_exit_m_s = getXParkCommandExitSpeedMps();
             debug_mirror_.lim_drive_omega = runtime_strategy_cfg_.enable_drive_omega_limit_;
             debug_mirror_.lim_drive_alpha = runtime_strategy_cfg_.enable_drive_alpha_limit_;
             debug_mirror_.lim_steer_rate = runtime_strategy_cfg_.enable_steer_rate_limit_;
