@@ -1744,6 +1744,17 @@ namespace jia
         void Chassis::applyDirectActuatorDebugOverride(u8 wheel_idx)
         {
             const DirectActuatorCommandSnapshot command = resolveDirectActuatorCommand(wheel_idx);
+            bool steer_fault_any_active = false;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                if (wheel_config_[i].steer_fault_state != SteerFaultState::kNone)
+                {
+                    steer_fault_any_active = true;
+                    break;
+                }
+            }
+            steer_fault_any_active_ = steer_fault_any_active;
+            const bool allow_drive_output = !steer_fault_any_active;
 
             for (u8 i = 0; i < 4; ++i)
             {
@@ -1756,7 +1767,14 @@ namespace jia
                 }
 
                 applyDirectActuatorSteerCommand(wheel, i, command);
-                applyDirectActuatorDriveCommand(wheel, i, command);
+                if (allow_drive_output)
+                {
+                    applyDirectActuatorDriveCommand(wheel, i, command);
+                }
+                else
+                {
+                    clearDirectDriveCommandByType(wheel, i, command.drive_command_type);
+                }
             }
 
 #if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
@@ -1814,6 +1832,15 @@ namespace jia
             planned_data_.acc_y = 0.0f;
             planned_data_.alpha_z = 0.0f;
             planned_data_.rot_z = input_hwt_rot_z_;
+
+            if (route == DebugModuleOverrideRoute::kDirectActuator && !all_homed)
+            {
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    WheelConfig &wheel = wheel_config_[i];
+                    clearDirectDriveCommandByType(wheel, i, debug_control_.direct_drive_command_type_raw);
+                }
+            }
 
             if (route != DebugModuleOverrideRoute::kDirectActuator)
             {

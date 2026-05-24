@@ -768,6 +768,65 @@ void testMode30EstopZerosSelectedWheelAndNonTargetWheels()
     }
 }
 
+void testMode30DirectActuatorRespectsAllHomedGateByKeepingDriveCurrentZero()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+    configureDirectActuatorHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.control_wheel_index = 2U;
+    chassis.debug_control_.direct_steer_input_mode_raw = 0U;
+    chassis.debug_control_.direct_drive_input_mode_raw = 0U;
+    chassis.debug_control_.direct_steer_command_type_raw = 2U;
+    chassis.debug_control_.direct_drive_command_type_raw = 0U;
+    chassis.debug_control_.direct_enable_steer = true;
+    chassis.debug_control_.direct_enable_drive = true;
+    chassis.debug_control_.direct_steer_command_value = 60.0f;
+    chassis.debug_control_.direct_drive_command_value = 150.0f;
+    chassis.debug_control_.enable = true;
+    chassis.debug_control_.mode_raw = 30U;
+
+    const bool handled = chassis.applyDebugModuleOverride(false);
+
+    EXPECT_TRUE(handled);
+    EXPECT_NEAR(steer_motors[2].getTargetTotalAngle(), 60.0f, 1.0e-4f);
+    EXPECT_NEAR(chassis.wheel_config_[2].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[2].getTargetRPM(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[2].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_TRUE(!chassis.debug_mirror_.all_homed);
+}
+
+void testMode30DirectActuatorRespectsSteerFaultGateByKeepingDriveCurrentZero()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+    configureDirectActuatorHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.control_wheel_index = 1U;
+    chassis.debug_control_.direct_steer_input_mode_raw = 0U;
+    chassis.debug_control_.direct_drive_input_mode_raw = 0U;
+    chassis.debug_control_.direct_steer_command_type_raw = 2U;
+    chassis.debug_control_.direct_drive_command_type_raw = 0U;
+    chassis.debug_control_.direct_enable_steer = true;
+    chassis.debug_control_.direct_enable_drive = true;
+    chassis.debug_control_.direct_steer_command_value = 25.0f;
+    chassis.debug_control_.direct_drive_command_value = 120.0f;
+    chassis.debug_control_.enable = true;
+    chassis.debug_control_.mode_raw = 30U;
+    chassis.wheel_config_[0].steer_fault_state = Chassis::SteerFaultState::kLatched;
+
+    const bool handled = chassis.applyDebugModuleOverride(true);
+
+    EXPECT_TRUE(handled);
+    EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), 25.0f, 1.0e-4f);
+    EXPECT_NEAR(chassis.wheel_config_[1].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_TRUE(chassis.debug_mirror_.steer_fault_any_active);
+}
+
 void testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode()
 {
     Chassis chassis;
@@ -2749,6 +2808,8 @@ int main()
     testMode30TypeSwitchResetsSteerAndDriveCachedCommandAndSafeDefaults();
     testMode30OverrideOnlyAppliesToControlWheelAndZerosOtherWheels();
     testMode30EstopZerosSelectedWheelAndNonTargetWheels();
+    testMode30DirectActuatorRespectsAllHomedGateByKeepingDriveCurrentZero();
+    testMode30DirectActuatorRespectsSteerFaultGateByKeepingDriveCurrentZero();
     testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode();
     testDirectControlWheelSelectionIsIndependentFromObserveWheel();
     testSingleWheel1kHzOutputUsesObserveWheelIndex();
