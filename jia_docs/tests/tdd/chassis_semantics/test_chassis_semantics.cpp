@@ -928,6 +928,33 @@ void testLockToYawPidTracePublishesTargetErrorAndPidFireState()
     EXPECT_TRUE(chassis.yaw_pid_trace_.error_deg > 0.0f);
 }
 
+void testLockToYawThenLockNowKeepsTheEffectiveLockedYaw()
+{
+    Chassis chassis;
+    configureYawPidTraceHarness(chassis);
+
+    chassis.rot_z_pid_period_ = 0U;
+    chassis.rot_z_pid_count_ = 0U;
+    chassis.lock_now_rot_z_shift_count_ = 5U;
+    chassis.input_hwt_rot_z_ = 0.2f;
+
+    float out_rot_z = 0.0f;
+    float out_omega_z = 0.0f;
+
+    chassis.isLockToRotZ(true, 0.23f, 0.2f, out_rot_z, 0.0f, out_omega_z);
+    const float effective_lock_rot_z = out_rot_z;
+    EXPECT_TRUE(std::fabs(effective_lock_rot_z - 0.23f) > 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, effective_lock_rot_z, 1.0e-6f);
+    EXPECT_TRUE(chassis.lock_now_rot_z_shift_count_ == 0U);
+
+    chassis.input_hwt_rot_z_ = -0.35f;
+    chassis.isLockNowRotZ(true, 0.0f, 0.0f, out_rot_z, out_omega_z);
+
+    EXPECT_NEAR(out_rot_z, effective_lock_rot_z, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, effective_lock_rot_z, 1.0e-6f);
+    EXPECT_TRUE(std::fabs(out_rot_z - chassis.input_hwt_rot_z_) > 1.0e-6f);
+}
+
 void testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates()
 {
     Chassis chassis;
@@ -2125,6 +2152,7 @@ int main()
     testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics();
     testYawPidJustFloatModeDispatchEmitsFixed15ChannelPayload();
     testLockToYawPidTracePublishesTargetErrorAndPidFireState();
+    testLockToYawThenLockNowKeepsTheEffectiveLockedYaw();
     testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates();
     testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle();
     testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned();
