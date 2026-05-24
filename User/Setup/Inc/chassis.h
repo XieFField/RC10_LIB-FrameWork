@@ -185,6 +185,19 @@ namespace jia
                 kShortestPath = 1,
             };
 
+            enum class ManualSpeedProfileMode : u8
+            {
+                kLegacy = 0,
+                kSCurve = 1,
+            };
+
+            struct JerkLimitedAxisState
+            {
+                f32 shaped_value = 0.0f;
+                f32 shaped_accel = 0.0f;
+                bool initialized = false;
+            };
+
             // 生命周期
             Chassis() = default;
             ~Chassis() = default;
@@ -521,6 +534,17 @@ namespace jia
             void isLockToRotZ(bool is_lock, f32 tar_rot_z, f32 cur_rot_z, f32 &out_rot_z, f32 omega_z, f32 &out_omega_z);
             void clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z);
+            ManualSpeedProfileMode resolveEffectiveManualSpeedProfileMode() const;
+            void resetManualSpeedProfileRuntimeState(bool reset_gate_state);
+            f32 limitValueByJerkProfile(f32 target_value,
+                                        f32 current_value,
+                                        JerkLimitedAxisState &axis_state,
+                                        f32 accel_limit,
+                                        f32 decel_limit,
+                                        f32 jerk_acc_limit,
+                                        f32 jerk_dec_limit,
+                                        f32 settle_vel_epsilon,
+                                        f32 settle_accel_epsilon) const;
             void updateWheelFeedback();
             void updateSteerFaultState(WheelConfig &wheel);
             void latchSteerFault(WheelConfig &wheel);
@@ -608,6 +632,20 @@ namespace jia
                 f32 max_alpha_z_acc_ = 5.0f;                                     // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
                 f32 max_alpha_z_dec_ = 12.0f;                                    // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
                 f32 trans_dir_rate_limit_deg_s_ = 99999999.0f;                   // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
+                ManualSpeedProfileMode manual_speed_profile_mode = ManualSpeedProfileMode::kSCurve; // [RW] 手操主速度成形模式。legacy 保持现有限幅语义，s_curve 使用 jerk 受限成形。
+                bool manual_speed_profile_manual_only = true;                     // [RW] 是否仅对手操注入目标启用 S 形。true 时 API 直接设速仍走 legacy。
+                f32 manual_trans_acc_acc_ = 5.0f;                                 // [RW] S 形平移加速段最大加速度（m/s^2）。
+                f32 manual_trans_acc_dec_ = 12.0f;                                // [RW] S 形平移减速段最大减速度（m/s^2）。
+                f32 manual_trans_jerk_acc_ = 50.0f;                              // [RW] S 形平移加速段最大 jerk（m/s^3）。
+                f32 manual_trans_jerk_dec_ = 50.0f;                              // [RW] S 形平移减速段最大 jerk（m/s^3）。
+                f32 manual_trans_settle_vel_eps_ = 1.0e-4f;                     // [RW] S 形平移允许直接贴目标的速度误差阈值（m/s）。
+                f32 manual_trans_settle_acc_eps_ = 0.05f;                       // [RW] S 形平移允许清零内部加速度的阈值（m/s^2）。
+                f32 manual_yaw_alpha_acc_ = 5.0f;                                 // [RW] S 形航向加速段最大角加速度（rad/s^2）。
+                f32 manual_yaw_alpha_dec_ = 12.0f;                                // [RW] S 形航向减速段最大角减速度（rad/s^2）。
+                f32 manual_yaw_jerk_acc_ = 50.0f;                                // [RW] S 形航向加速段最大角 jerk（rad/s^3）。
+                f32 manual_yaw_jerk_dec_ = 50.0f;                                // [RW] S 形航向减速段最大角 jerk（rad/s^3）。
+                f32 manual_yaw_settle_vel_eps_ = 1.0e-4f;                       // [RW] S 形航向允许直接贴目标的角速度误差阈值（rad/s）。
+                f32 manual_yaw_settle_acc_eps_ = 0.05f;                         // [RW] S 形航向允许清零内部角加速度的阈值（rad/s^2）。
                 bool enable_drive_omega_limit_ = false;                          // [RW] 是否启用驱动角速度上限。
                 f32 max_drive_omega_rad_s_ = 99999999.0f;                        // [RW] 驱动目标角速度上限（rad/s）。仅在 enable_drive_omega_limit_=true 时生效。
                 bool enable_drive_alpha_limit_ = false;                          // [RW] 是否启用驱动角加速度上限。
@@ -757,7 +795,7 @@ namespace jia
             {
                 // ---- 输出总开关与模式选择 ---------------------------------------
                 bool output_enable = true;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
-                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kSwerveTelemetryV2); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制）。
+                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kSingleWheelDualMotorJustFloat); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制）。
                 u32 text_period_ms = 500;                                     // [RW] 文本日志周期（ms）。只在 mode1 下使用，控制文本总刷新频率。
                 u8 text_log_level = 1;                                        // [RW] 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
                 TickType_t text_last_ms = 0;                                  // [RO] 文本日志节流时间戳。记录上一次发文本的时间，防止串口刷屏。
@@ -852,6 +890,10 @@ namespace jia
             f32 trans_dir_tar_mag_m_s_ = 0.0f;                                  // [RO] 平移输入目标速度模长缓存（m/s）。
             f32 trans_dir_out_mag_m_s_ = 0.0f;                                  // [RO] 平移规划输出速度模长缓存（m/s）。
             u8 trans_dir_freeze_reason_ = 0U;                                    // [RO] 冻结原因缓存：0=none,1=enter,2=hold。
+            ManualSpeedProfileMode active_manual_speed_profile_mode_ = ManualSpeedProfileMode::kLegacy;
+            JerkLimitedAxisState manual_vel_x_shape_state_{};
+            JerkLimitedAxisState manual_vel_y_shape_state_{};
+            JerkLimitedAxisState manual_omega_z_shape_state_{};
             bool steer_fault_any_active_ = false;
 
             // 控制链路缓存（观察）[RO]
