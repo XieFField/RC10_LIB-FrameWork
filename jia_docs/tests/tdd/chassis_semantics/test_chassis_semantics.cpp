@@ -2353,6 +2353,143 @@ void testXParkResidualWheelSpeedAboveThresholdKeepsGateClosed()
     EXPECT_TRUE(planner_input.max_residual_speed_m_s > chassis.getNearZeroExitSpeedMps());
 }
 
+void testXParkCommandThresholdTreatsPointZeroFiveAsMovingDespiteLargeResidualFilter()
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.10f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.15f;
+
+    Chassis::Data command{};
+    command.vel_x = 0.05f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 1.6f;
+    }
+
+    const Chassis::SwervePlannerInput planner_input = chassis.makeSwervePlannerInput(command);
+
+    EXPECT_TRUE(!planner_input.command_stationary_intent);
+    EXPECT_TRUE(!chassis.xpark_gate_active_);
+    EXPECT_TRUE(!planner_input.allow_xpark_pose);
+    EXPECT_TRUE(planner_input.max_residual_speed_m_s < chassis.getNearZeroEnterSpeedMps());
+}
+
+void testXParkResidualThresholdStillBlocksEntryWhenCommandIsStationary()
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.10f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.15f;
+
+    Chassis::Data command{};
+    command.vel_x = 0.005f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 2.4f;
+    }
+
+    Chassis::SwervePlannerInput planner_input{};
+    for (jia::u32 i = 0; i < chassis.runtime_strategy_cfg_.xpark_entry_delay_ms; ++i)
+    {
+        planner_input = chassis.makeSwervePlannerInput(command);
+    }
+
+    EXPECT_TRUE(!planner_input.command_stationary_intent);
+    EXPECT_TRUE(!chassis.xpark_gate_active_);
+    EXPECT_TRUE(!planner_input.allow_xpark_pose);
+    EXPECT_TRUE(planner_input.max_residual_speed_m_s > chassis.getNearZeroEnterSpeedMps());
+}
+
+void testXParkUsesIndependentCommandThresholdWhileResidualMayUseLargeNearZeroFilter()
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.10f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.15f;
+
+    Chassis::Data command{};
+    command.vel_x = 0.005f;
+
+    Chassis::SwervePlannerInput planner_input{};
+    for (jia::u32 i = 0; i < chassis.runtime_strategy_cfg_.xpark_entry_delay_ms - 1U; ++i)
+    {
+        planner_input = chassis.makeSwervePlannerInput(command);
+        EXPECT_TRUE(!chassis.xpark_gate_active_);
+        EXPECT_TRUE(!planner_input.allow_xpark_pose);
+    }
+
+    EXPECT_TRUE(planner_input.command_stationary_intent);
+    EXPECT_NEAR(static_cast<float>(chassis.xpark_stationary_hold_ms_),
+                static_cast<float>(chassis.runtime_strategy_cfg_.xpark_entry_delay_ms - 1U),
+                1.0e-6f);
+
+    planner_input = chassis.makeSwervePlannerInput(command);
+    EXPECT_TRUE(planner_input.command_stationary_intent);
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+    EXPECT_TRUE(planner_input.allow_xpark_pose);
+}
+
+void testXParkAllowsEntryWhenBothCommandAndResidualAreBelowTheirOwnThresholds()
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.10f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.15f;
+
+    Chassis::Data command{};
+    command.vel_x = 0.005f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 1.0f;
+    }
+
+    Chassis::SwervePlannerInput planner_input{};
+    for (jia::u32 i = 0; i < chassis.runtime_strategy_cfg_.xpark_entry_delay_ms - 1U; ++i)
+    {
+        planner_input = chassis.makeSwervePlannerInput(command);
+        EXPECT_TRUE(planner_input.command_stationary_intent);
+        EXPECT_TRUE(!chassis.xpark_gate_active_);
+        EXPECT_TRUE(!planner_input.allow_xpark_pose);
+    }
+
+    planner_input = chassis.makeSwervePlannerInput(command);
+    EXPECT_TRUE(planner_input.command_stationary_intent);
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+    EXPECT_TRUE(planner_input.allow_xpark_pose);
+    EXPECT_TRUE(planner_input.max_residual_speed_m_s < chassis.getNearZeroEnterSpeedMps());
+}
+
+void testXParkDoesNotEnterWhenCommandExceedsDedicatedCommandThreshold()
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.10f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.15f;
+
+    Chassis::Data command{};
+    command.vel_x = 0.06f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 1.0f;
+    }
+
+    Chassis::SwervePlannerInput planner_input{};
+    for (jia::u32 i = 0; i < chassis.runtime_strategy_cfg_.xpark_entry_delay_ms; ++i)
+    {
+        planner_input = chassis.makeSwervePlannerInput(command);
+    }
+
+    EXPECT_TRUE(!planner_input.command_stationary_intent);
+    EXPECT_TRUE(!chassis.xpark_gate_active_);
+    EXPECT_TRUE(!planner_input.allow_xpark_pose);
+    EXPECT_TRUE(planner_input.max_residual_speed_m_s < chassis.getNearZeroEnterSpeedMps());
+}
+
 void testStationaryPhotogateTogglesDoNotSelfLockNormalReadyState()
 {
     Chassis chassis;
@@ -2855,6 +2992,11 @@ int main()
     testXParkActivatesOnlyAfterActualResidualWheelSpeedHoldsForEntryDelay();
     testXParkHoldCounterResetsImmediatelyWhenCommandWheelSpeedExitsThreshold();
     testXParkResidualWheelSpeedAboveThresholdKeepsGateClosed();
+    testXParkCommandThresholdTreatsPointZeroFiveAsMovingDespiteLargeResidualFilter();
+    testXParkResidualThresholdStillBlocksEntryWhenCommandIsStationary();
+    testXParkUsesIndependentCommandThresholdWhileResidualMayUseLargeNearZeroFilter();
+    testXParkAllowsEntryWhenBothCommandAndResidualAreBelowTheirOwnThresholds();
+    testXParkDoesNotEnterWhenCommandExceedsDedicatedCommandThreshold();
     testStationaryPhotogateTogglesDoNotSelfLockNormalReadyState();
     testReadyStationaryWheelsCanStillEnterXParkWithoutTriggeringSteerFault();
     testSingleWheelSteerFreezeFaultStopsVehicleAndFreezesFaultedWheelPath();
