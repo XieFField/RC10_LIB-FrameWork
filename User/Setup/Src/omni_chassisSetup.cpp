@@ -111,7 +111,7 @@ void OmniChassis_Setup::loop()
         num++;
         if(num>3)
         {
-            debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(),err_curve);
+//            debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(),err_curve);
             num=0;
         }
         // 夹杆自动流程：触发后执行路径规划、纠偏和速度合成。
@@ -130,10 +130,10 @@ void OmniChassis_Setup::loop()
                 // 获取曲线（带保护）
                 curve = path_line_.get_bezier_curve();
 
-                if (Clamping_Bar_Selection_pos_.x == curve.Get_End_point().x && Clamping_Bar_Selection_pos_.y == curve.Get_End_point().y)
-                {
-                    target_yaw_ = -90.0f;
-                }
+//                if (Clamping_Bar_Selection_pos_.x == curve.Get_End_point().x && Clamping_Bar_Selection_pos_.y == curve.Get_End_point().y)
+//                {
+//                    target_yaw_ = -90.0f;
+//                }
                 // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
                 planspeed = path_line_.plan(robot_pos_);
                 Path_correction();
@@ -146,32 +146,39 @@ void OmniChassis_Setup::loop()
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
             }
-//            else
-//            {
-//                float lock_err = (robot_pos_ - Clamping_Bar_Selection_pos_).magnitude();
-//                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Clamping_Bar_Selection_pos_).normalize();
-//                target_chassis_twist_.vx = speed.x;
-//                target_chassis_twist_.vy = speed.y;
-//                WeaponSage_END = true;
-//            }
             else
             {
-                // 路径结束：复位状态并清空速度命令。
-                flag = 0;
-                flag_run = 0;
-                flag_reset();
+                float lock_err = (robot_pos_ - test_point).magnitude();
+                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ -test_point).normalize();
+                target_chassis_twist_.vx = speed.x;
+                target_chassis_twist_.vy = speed.y;
                 WeaponSage_END = true;
-
-                speed = {0.0f, 0.0f};
-                planspeed = {0.0f, 0.0f};
-                target_chassis_twist_ = {0.0f, 0.0f};
-
-                path_line_.plan_reset();
-                path_line_.Reset();
-#if FF_V
-                ResetAutoControlStates();
-#endif
             }
+//             else
+//            {
+//                Path_correction();
+//                speed = corrVelocity;
+//                target_chassis_twist_.vx = speed.x;
+//                target_chassis_twist_.vy = speed.y;
+//            }
+//            else
+//            {
+//                // 路径结束：复位状态并清空速度命令。
+//                flag = 0;
+//                flag_run = 0;
+//                flag_reset();
+//                WeaponSage_END = true;
+
+//                speed = {0.0f, 0.0f};
+//                planspeed = {0.0f, 0.0f};
+//                target_chassis_twist_ = {0.0f, 0.0f};
+
+//                path_line_.plan_reset();
+//                path_line_.Reset();
+//#if FF_V
+//                ResetAutoControlStates();
+//#endif
+//            }
         }
         else
         {
@@ -181,7 +188,7 @@ void OmniChassis_Setup::loop()
             ResetAutoControlStates();
 #endif
         }
-
+        debug_uart.printf_DMA("%f\n",speed.magnitude());
         float target_yaw_rad = target_yaw_ * PI / 180.0f;
         chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
 
@@ -338,9 +345,9 @@ void OmniChassis_Setup::Path_correction(void)
     float obj_dis = _tool_Abs((curve.Get_End_point() - robot_pos_).magnitude());
     
     
-    /*
+
     // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
-    if (obj_dis < gradient_start_ || path_line_.Is_End() == false)
+    if (obj_dis < m_lookaheadDist_line || path_line_.Is_End() == false)
     {
         Vector2D endPt = curve.Get_End_point();
 #if FF_V
@@ -357,19 +364,9 @@ void OmniChassis_Setup::Path_correction(void)
         corrVelocity.x = pid_pos_x.pid_calc(endPt.x, robot_pos_.x);
         corrVelocity.y = pid_pos_y.pid_calc(endPt.y, robot_pos_.y);
         
-        if (obj_dis <= gradient_end_)
-        {
-            corrVelocity = corrVelocity * min_gradient_;
-        }
-        else
-        {
-            float gradient = min_gradient_ - (1 - _tool_Abs(obj_dis - gradient_end_) / _tool_Abs(gradient_start_ - gradient_end_)) * (1 - min_gradient_);
-            corrVelocity = corrVelocity * gradient;
-        }
-        
         return;
     }
-    */
+
     // ======== 动态兔子追踪 (2D Cartesian PID) ========
     // 2. 寻找前视点作为我们追踪的“虚拟兔子”
     Vector2D lookaheadPt; // 路径上的前视点
@@ -482,10 +479,12 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.plan_reset();
     path_line_.Reset();
     path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f, robot_pos_.y}, path_param_curve_);
-    path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f}, Vector2D{robot_pos_.x-0.5f-0.85f, robot_pos_.y-0.22f}, path_param_curve_);
+    path_line_.Add_End_Point(test_point, path_param_CB_);
+//    path_line_.Add_Start_Point(robot_pos_);
+//    path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f, robot_pos_.y}, path_param_curve_);
+//    path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f}, Vector2D{robot_pos_.x-0.5f-0.85f, robot_pos_.y-0.22f}, path_param_curve_); 
+//    path_line_.Add_End_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f+0.2f}, path_param_end_);
     //   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
-    path_line_.Add_End_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f+0.2f}, path_param_end_);
 }
 
 void OmniChassis_Setup::KFS_Selection_Planning(void)

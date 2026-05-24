@@ -518,7 +518,7 @@ public:
     }
 
 protected:
-    float dead = 0.04f;
+    float dead = 0.07f;
     int index_ = 0;
     BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // ´¢´æ¸÷Â·¶ÎÇúÏß
 

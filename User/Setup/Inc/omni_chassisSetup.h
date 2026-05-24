@@ -111,6 +111,7 @@ public:
     }
 
 private:
+    Vector2D test_point = {3.0f, 1.0f}; // 夹杆流程默认目标点。
     Vector2D control_point = {0.0f, 2.5f};
     float err_curve=0.0f;
     int num = 0;
@@ -166,7 +167,7 @@ private:
     Vector2D Clamping_Bar_Selection_pos_ = {2.405f, 0.69f}; // 夹杆流程默认目标点。
 
     Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 5.0f, .maxDec = 5.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};     // 夹杆流程速度规划参数。
+    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 10.0f, .maxDec = 1.0f, .maxJerk = 0.0f, .maxSpeed = 1.5f, .initialSpeed = 0.2f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.1f};     // 夹杆流程速度规划参数。
 
     Speedplanner_1D_Param_Config path_param_start_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.01f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; // KFS 速度规划参数。
     Speedplanner_1D_Param_Config path_param_line_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};   // KFS 速度规划参数。

@@ -383,15 +383,6 @@ PID_Param_Config foursteer_steer_angle_pid_params = {
     .deadband = 0.08f
 };
 
-PID_Param_Config track_pid_params = {
-    .kp = 6.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 1.5f,   
-    .deadband = 0.0009f 
-};
 
 PID_Param_Config camera_x_pid_params = {
     .kp = 6.0f,
@@ -484,12 +475,21 @@ CamZ_Param camera_z_ctrl_params = {
 
 PID_Param_Config path_lock_end = {
     
-    .kp = 0.6f,
+    .kp = 0.8f,
     .ki = 0.0f,
     .kd = 0.0f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
     .output_limit = 0.2f,   
-    .deadband = 0.005f 
+    .deadband = 0.01f 
 };
 
+PID_Param_Config track_pid_params = {
+    .kp = 6.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 2.0f,   
+    .deadband = 0.01f 
+};

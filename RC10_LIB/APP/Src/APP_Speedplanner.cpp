@@ -18,7 +18,7 @@ void TrapePlanner1D::param_reset(Speedplanner_1D_Param_Config params)
     m_deadzone_ = abs(params.deadzone);                         // 死区范围
     m_startPos_ = params.startPos;                              // 起始位置
     m_targetPos_ = (params.targetPos);                          // 目标位置
-    m_totalDistance_ = abs(params.targetPos - params.startPos); // 总路程
+    m_totalDistance_ = abs(params.targetPos - params.startPos)- m_deadzone_; // 总路程
 
     // 根据目标位置与起始位置计算运动方向
     if (params.targetPos - params.startPos > 0.0f)
@@ -73,7 +73,7 @@ TrapePlanner1D::TrapePlanner1D(Speedplanner_1D_Param_Config params)
  */
 Phase TrapePlanner1D::determinePhase(float traveled)
 {
-    if (abs(traveled - m_totalDistance_) < m_deadzone_)
+    if (abs(traveled - m_totalDistance_) < 0.001f)
         return FINISHED_PHASE; // 规划结束
 
     if (traveled < m_accelDistance_)
@@ -93,7 +93,7 @@ float TrapePlanner1D::plan(float now_dis)
 {
     // 计算已行驶距离
     float traveled_ = abs(now_dis - m_startPos_);
-    if (abs(m_targetPos_ - now_dis) < m_deadzone_)
+    if (abs(m_targetPos_ - now_dis) < 0.001f)
     {
         m_phase = FINISHED_PHASE;
         return 0.0f; // 如果距离小于死区范围，返回速度为0
