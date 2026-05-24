@@ -133,7 +133,7 @@ void ALL_Setup_ConfigInit(void)
     CAN_Motor_Init();
 
     ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
-    ARM_Controller.setArmStatus(ARM_IDLE);
+    ARM_Controller.setArmStatus(ARM CALIBRATE);
     
 
     Weapon_Controller.init(&oid_encoder);
