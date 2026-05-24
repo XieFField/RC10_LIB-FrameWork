@@ -1110,12 +1110,20 @@ namespace jia
             const f32 right_x_cmd = -airjoy_data_.right_x;
             f32 target_omega_z = -right_x_cmd * runtime_strategy_cfg_.max_omega_z_;
 
-            if (debug_control_.inject_sine)
+            const DebugOmegaZInjectionMode omega_z_injection_mode =
+                (debug_control_.omega_z_injection_mode_raw <= static_cast<u8>(DebugOmegaZInjectionMode::kSine))
+                    ? static_cast<DebugOmegaZInjectionMode>(debug_control_.omega_z_injection_mode_raw)
+                    : DebugOmegaZInjectionMode::kOff;
+            switch (omega_z_injection_mode)
             {
-                target_omega_z = sineWaveGeneratorF32(time_ms_ / 1000.0f, debug_control_.sine_amplitude, debug_control_.sine_frequency, 0.0f, debug_control_.sine_offset);
-            }
-            else if (debug_control_.inject_step)
-            {
+            case DebugOmegaZInjectionMode::kSine:
+                target_omega_z = sineWaveGeneratorF32(time_ms_ / 1000.0f,
+                                                      debug_control_.omega_z_sine_amplitude,
+                                                      debug_control_.omega_z_sine_frequency_hz,
+                                                      0.0f,
+                                                      debug_control_.omega_z_sine_offset);
+                break;
+            case DebugOmegaZInjectionMode::kStep:
                 if (airjoy_data_.right_x > 0.3f)
                 {
                     target_omega_z = runtime_strategy_cfg_.max_omega_z_;
@@ -1128,6 +1136,10 @@ namespace jia
                 {
                     target_omega_z = 0.0f;
                 }
+                break;
+            case DebugOmegaZInjectionMode::kOff:
+            default:
+                break;
             }
 
             debug_control_.mode_resolved_raw = static_cast<u8>(mode);
@@ -2797,7 +2809,7 @@ namespace jia
                 return;
             }
 
-            const u8 wheel_idx = (debug_control_.wheel_index < 4) ? debug_control_.wheel_index : 0;
+            const u8 wheel_idx = (debug_control_.observe_wheel_index < 4U) ? debug_control_.observe_wheel_index : 0U;
             if (debug_output_.text_log_phase == 0U)
             {
                 debug_uart_.printf_DMA((char *)"FS t=%lu home=%u mode=%u dbg=%u hs=%u/%u/%u/%u oa0=%.1f->%.1f rpm0=%.1f->%.1f vec=%.2f de=%.1f eta=%.3f va=%u\r\n",
@@ -2939,10 +2951,8 @@ namespace jia
             }
 
             debug_output_.single_wheel_1khz_last_ms = time_ms_;
-            const u8 master_wheel_idx = (debug_control_.wheel_index < 4U) ? debug_control_.wheel_index : 0U;
-            const u8 override_wheel_idx = (debug_output_.single_wheel_1khz_index < 4U) ? debug_output_.single_wheel_1khz_index : 0U;
-            const u8 active_wheel_idx = debug_output_.single_wheel_1khz_use_override_index ? override_wheel_idx : master_wheel_idx;
-            const WheelConfig &wheel = wheel_config_[active_wheel_idx];
+            const u8 observe_wheel_idx = (debug_control_.observe_wheel_index < 4U) ? debug_control_.observe_wheel_index : 0U;
+            const WheelConfig &wheel = wheel_config_[observe_wheel_idx];
             const Motor_Base *steer_motor = wheel.steer_motor_h;
             if (steer_motor == nullptr)
             {
@@ -2987,10 +2997,8 @@ namespace jia
                 return;
             }
 
-            const u8 master_wheel_idx = (debug_control_.wheel_index < 4U) ? debug_control_.wheel_index : 0U;
-            const u8 override_wheel_idx = (debug_output_.single_wheel_dual_motor_index < 4U) ? debug_output_.single_wheel_dual_motor_index : 0U;
-            const u8 active_wheel_idx = debug_output_.single_wheel_dual_motor_use_override_index ? override_wheel_idx : master_wheel_idx;
-            const WheelConfig &wheel = wheel_config_[active_wheel_idx];
+            const u8 observe_wheel_idx = (debug_control_.observe_wheel_index < 4U) ? debug_control_.observe_wheel_index : 0U;
+            const WheelConfig &wheel = wheel_config_[observe_wheel_idx];
             const Motor_Base *steer_motor = wheel.steer_motor_h;
             const Motor_Base *drive_motor = wheel.drive_motor_h;
             if (steer_motor == nullptr || drive_motor == nullptr)
@@ -3262,7 +3270,7 @@ namespace jia
                 return false;
             }
 
-            const u8 wheel_idx = (debug_control_.wheel_index < 4) ? debug_control_.wheel_index : 0;
+            const u8 wheel_idx = (debug_control_.control_wheel_index < 4U) ? debug_control_.control_wheel_index : 0U;
             resetDebugModuleOverrideTargets(wheel_idx, false);
 
             if (route == DebugModuleOverrideRoute::kAlignForward)

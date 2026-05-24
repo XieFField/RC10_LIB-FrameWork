@@ -44,6 +44,7 @@ Chassis::SwervePlannerInput makeGatePlannerInput(float steering_error_deg,
                                                  float command_vel_x,
                                                  float command_omega_z,
                                                  float max_residual_speed_m_s);
+void emitDebugOutputForHost(Chassis &chassis, bool all_homed);
 
 class TestMotor : public Motor_Base
 {
@@ -553,7 +554,8 @@ void testHighSpeedDriveSuppressionWaitsUntilNearZeroExitBeforeEnabling()
 void testDirectActuatorContinuousInputResolvesAxisAndControlTypesConsistently()
 {
     Chassis chassis;
-    chassis.debug_control_.wheel_index = 2U;
+    chassis.debug_control_.control_wheel_index = 2U;
+    chassis.debug_control_.observe_wheel_index = 0U;
     chassis.debug_control_.direct_input_source = 1U;
     chassis.debug_control_.direct_steer_control_type = 1U;
     chassis.debug_control_.direct_drive_control_type = 1U;
@@ -588,7 +590,8 @@ void testDirectActuatorOverrideOnlyAppliesToSelectedWheel()
         chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
     }
 
-    chassis.debug_control_.wheel_index = 1U;
+    chassis.debug_control_.control_wheel_index = 1U;
+    chassis.debug_control_.observe_wheel_index = 0U;
     chassis.debug_control_.direct_input_source = 0U;
     chassis.debug_control_.direct_steer_control_type = 2U;
     chassis.debug_control_.direct_drive_control_type = 2U;
@@ -621,7 +624,7 @@ void testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode()
     chassis.wheel_config_[0].target_steer_motor_total_angle_rad = jia::degToRadF32(12.0f);
     chassis.wheel_config_[0].target_drive_omega_rad_s = 4.0f;
 
-    chassis.debug_control_.wheel_index = 0U;
+    chassis.debug_control_.observe_wheel_index = 0U;
     chassis.applyHomingObserveDebugOverride();
     chassis.refreshDebugMirror(false);
 
@@ -632,6 +635,216 @@ void testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode()
     EXPECT_TRUE(chassis.debug_mirror_.homing_state[0] == static_cast<unsigned char>(Chassis::HomingState::kSearch));
     EXPECT_TRUE(chassis.debug_mirror_.homing_last_edge_is_falling[0]);
     EXPECT_NEAR(chassis.debug_mirror_.homing_runtime_zero_offset_deg[0], 18.0f, 1.0e-4f);
+}
+
+void testDirectControlWheelSelectionIsIndependentFromObserveWheel()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].steer_motor_h = &steer_motors[i];
+        chassis.wheel_config_[i].drive_motor_h = &drive_motors[i];
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+    }
+
+    chassis.debug_control_.control_wheel_index = 3U;
+    chassis.debug_control_.observe_wheel_index = 1U;
+    chassis.debug_control_.direct_input_source = 0U;
+    chassis.debug_control_.direct_steer_control_type = 2U;
+    chassis.debug_control_.direct_drive_control_type = 0U;
+    chassis.debug_control_.direct_enable_steer[3] = true;
+    chassis.debug_control_.direct_enable_drive[3] = true;
+    chassis.debug_control_.direct_steer_single_turn_deg[3] = 30.0f;
+    chassis.debug_control_.direct_drive_rpm[3] = 90.0f;
+
+    chassis.debug_control_.enable = true;
+    chassis.debug_control_.mode_raw = 30U;
+    const bool handled = chassis.applyDebugModuleOverride(true);
+
+    EXPECT_TRUE(handled);
+    EXPECT_NEAR(steer_motors[3].getTargetTotalAngle(), 30.0f, 1.0e-4f);
+    EXPECT_NEAR(drive_motors[3].getTargetRPM(), 90.0f, 1.0e-4f);
+    EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 0.0f, 1.0e-6f);
+}
+
+void testSingleWheel1kHzOutputUsesObserveWheelIndex()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].steer_motor_h = &steer_motors[i];
+    }
+
+    steer_motors[1].setTargetCurrent(111.0f);
+    steer_motors[2].setTargetCurrent(222.0f);
+    steer_motors[1].setTargetRPM(11.0f);
+    steer_motors[2].setTargetRPM(22.0f);
+
+    testHostResetJustFloatCapture();
+    chassis.debug_output_.output_enable = true;
+    chassis.debug_output_.output_mode_raw = 3U;
+    chassis.debug_output_.single_wheel_1khz_period_ms = 0U;
+    chassis.debug_output_.single_wheel_1khz_last_ms = 0U;
+    chassis.time_ms_ = 25U;
+    chassis.debug_control_.control_wheel_index = 2U;
+    chassis.debug_control_.observe_wheel_index = 1U;
+
+    emitDebugOutputForHost(chassis, true);
+
+    EXPECT_TRUE(g_test_justfloat_capture.called);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 9U);
+    EXPECT_NEAR(g_test_justfloat_capture.values[1], 111.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[3], 11.0f, 1.0e-6f);
+}
+
+void testSingleWheelDualMotorOutputUsesObserveWheelIndex()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].steer_motor_h = &steer_motors[i];
+        chassis.wheel_config_[i].drive_motor_h = &drive_motors[i];
+    }
+
+    steer_motors[0].setTargetCurrent(10.0f);
+    drive_motors[0].setTargetCurrent(20.0f);
+    steer_motors[2].setTargetCurrent(110.0f);
+    drive_motors[2].setTargetCurrent(220.0f);
+    steer_motors[0].setTargetRPM(30.0f);
+    drive_motors[0].setTargetRPM(40.0f);
+    steer_motors[2].setTargetRPM(130.0f);
+    drive_motors[2].setTargetRPM(240.0f);
+
+    testHostResetJustFloatCapture();
+    chassis.debug_output_.output_enable = true;
+    chassis.debug_output_.output_mode_raw = 4U;
+    chassis.debug_output_.single_wheel_dual_motor_period_ms = 0U;
+    chassis.debug_output_.single_wheel_dual_motor_last_ms = 0U;
+    chassis.time_ms_ = 40U;
+    chassis.debug_control_.control_wheel_index = 0U;
+    chassis.debug_control_.observe_wheel_index = 2U;
+
+    emitDebugOutputForHost(chassis, true);
+
+    EXPECT_TRUE(g_test_justfloat_capture.called);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 17U);
+    EXPECT_NEAR(g_test_justfloat_capture.values[1], 110.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[3], 130.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[9], 220.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[11], 240.0f, 1.0e-6f);
+}
+
+void testObserveWheelIndexFallsBackToZeroWhenOutOfRange()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].steer_motor_h = &steer_motors[i];
+    }
+
+    steer_motors[0].setTargetCurrent(321.0f);
+    steer_motors[3].setTargetCurrent(999.0f);
+
+    testHostResetJustFloatCapture();
+    chassis.debug_output_.output_enable = true;
+    chassis.debug_output_.output_mode_raw = 3U;
+    chassis.debug_output_.single_wheel_1khz_period_ms = 0U;
+    chassis.debug_output_.single_wheel_1khz_last_ms = 0U;
+    chassis.time_ms_ = 60U;
+    chassis.debug_control_.observe_wheel_index = 9U;
+
+    emitDebugOutputForHost(chassis, true);
+
+    EXPECT_TRUE(g_test_justfloat_capture.called);
+    EXPECT_NEAR(g_test_justfloat_capture.values[1], 321.0f, 1.0e-6f);
+}
+
+void testDebugOmegaZInjectionModeOffKeepsManualOmegaInput()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_vel_y_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 3.0f;
+    chassis.airjoy_data_.left_y = 0.0f;
+    chassis.airjoy_data_.left_x = 0.0f;
+    chassis.airjoy_data_.right_x = 0.5f;
+    chassis.debug_control_.omega_z_injection_mode_raw = 0U;
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kBodySpeedMode);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, 1.5f, 1.0e-6f);
+}
+
+void testDebugOmegaZInjectionModeStepOverridesManualOmegaInput()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_vel_y_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 3.0f;
+    chassis.airjoy_data_.left_y = 0.0f;
+    chassis.airjoy_data_.left_x = 0.0f;
+    chassis.airjoy_data_.right_x = 0.5f;
+    chassis.debug_control_.omega_z_injection_mode_raw = 1U;
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, 3.0f, 1.0e-6f);
+}
+
+void testDebugOmegaZInjectionModeSineOverridesManualOmegaInput()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_vel_y_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 3.0f;
+    chassis.airjoy_data_.left_y = 0.0f;
+    chassis.airjoy_data_.left_x = 0.0f;
+    chassis.airjoy_data_.right_x = 0.5f;
+    chassis.debug_control_.omega_z_injection_mode_raw = 2U;
+    chassis.debug_control_.omega_z_sine_amplitude = 1.0f;
+    chassis.debug_control_.omega_z_sine_frequency_hz = 0.0f;
+    chassis.debug_control_.omega_z_sine_offset = 0.25f;
+    chassis.time_ms_ = 250U;
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kWorldSpeed);
+
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kWorldSpeedMode);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, 0.25f, 1.0e-6f);
+}
+
+void testDebugOmegaZInjectionDoesNotAffectLockToTarget()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_vel_y_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 3.0f;
+    chassis.airjoy_data_.left_y = 0.2f;
+    chassis.airjoy_data_.left_x = -0.1f;
+    chassis.airjoy_data_.right_x = 0.8f;
+    chassis.debug_control_.omega_z_injection_mode_raw = 2U;
+    chassis.debug_control_.omega_z_sine_amplitude = 2.0f;
+    chassis.debug_control_.omega_z_sine_frequency_hz = 0.0f;
+    chassis.debug_control_.omega_z_sine_offset = 0.5f;
+    chassis.debug_control_.lock_rot_z = 1.2f;
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodyLockTo);
+
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kBodySpeedLockToRotZMode);
+    EXPECT_NEAR(chassis.input_target_data_.rot_z, 1.2f, 1.0e-6f);
 }
 
 void configureDriveContinuityHarness(Chassis &chassis, TestMotor drive_motors[4])
@@ -2121,6 +2334,14 @@ int main()
     testDirectActuatorContinuousInputResolvesAxisAndControlTypesConsistently();
     testDirectActuatorOverrideOnlyAppliesToSelectedWheel();
     testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode();
+    testDirectControlWheelSelectionIsIndependentFromObserveWheel();
+    testSingleWheel1kHzOutputUsesObserveWheelIndex();
+    testSingleWheelDualMotorOutputUsesObserveWheelIndex();
+    testObserveWheelIndexFallsBackToZeroWhenOutOfRange();
+    testDebugOmegaZInjectionModeOffKeepsManualOmegaInput();
+    testDebugOmegaZInjectionModeStepOverridesManualOmegaInput();
+    testDebugOmegaZInjectionModeSineOverridesManualOmegaInput();
+    testDebugOmegaZInjectionDoesNotAffectLockToTarget();
     testSuppressedDriveDoesNotAccumulateHiddenAccelState();
     testDriveReleaseResumesFromDeliveredSpeedNotVirtualSpeed();
     testDriveReleaseHasNoVelocityJumpAfterZeroHold();

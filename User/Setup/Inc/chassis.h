@@ -488,6 +488,12 @@ namespace jia
                 kHomingObserve = 22,
                 kDirectActuator = 30,
             };
+            enum class DebugOmegaZInjectionMode : u8
+            {
+                kOff = 0,
+                kStep = 1,
+                kSine = 2,
+            };
             enum class DebugOutputMode : u8
             {
                 kOff = 0,
@@ -705,15 +711,15 @@ namespace jia
                 bool enable = false;                                             // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
                 u8 mode_raw = 1;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
                 u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。用于观察 mode_raw 经过归一化后的结果。
-                u8 wheel_index = 1;                                             // [RW] 主选中轮号（0~3）。默认作为单轮调试与单轮输出追踪的统一轮号来源。
+                u8 control_wheel_index = 1;                                     // [RW] mode30 执行目标轮号（0~3）。只用于执行层直控链路选择当前被操作的轮。
+                u8 observe_wheel_index = 1;                                     // [RW] 单轮观测焦点轮号（0~3）。文本单轮日志与单轮高速输出统一跟随该轮。
 
-                // ---- 航向 / 激励注入 ---------------------------------------------
-                f32 lock_rot_z = 0.0f;     // [RW] LockTo 调试目标角（rad）。只在航向锁定相关调试中有意义。
-                bool inject_step = false;  // [RW] 是否注入阶跃信号。用于调试响应、阶跃跟踪或观察动态性能。
-                bool inject_sine = false;  // [RW] 是否注入正弦信号。用于频响、跟踪误差和相位滞后观察。
-                f32 sine_amplitude = 0.0f; // [RW] 正弦幅值。与注入开关配合使用，表示激励强度。
-                f32 sine_frequency = 0.1f; // [RW] 正弦频率（Hz）。越高越能看出响应速度，越低越适合慢速观察。
-                f32 sine_offset = 0.0f;    // [RW] 正弦偏置。把激励整体平移到某个基线附近使用。
+                // ---- LockTo / omega_z 注入 ---------------------------------------
+                f32 lock_rot_z = 0.0f;     // [RW] LockTo 调试目标角（rad）。只在 LockTo 相关调试模式中使用，不参与 omega_z 注入。
+                u8 omega_z_injection_mode_raw = static_cast<u8>(DebugOmegaZInjectionMode::kOff); // [RW] omega_z 注入模式：0=关闭，1=阶跃覆盖，2=正弦覆盖。启用后会覆盖正常 omega_z 输入，不是叠加。
+                f32 omega_z_sine_amplitude = 0.0f;    // [RW] omega_z 正弦注入幅值。仅在注入模式为 Sine 时使用。
+                f32 omega_z_sine_frequency_hz = 0.1f; // [RW] omega_z 正弦注入频率（Hz）。仅在注入模式为 Sine 时使用。
+                f32 omega_z_sine_offset = 0.0f;       // [RW] omega_z 正弦注入偏置。仅在注入模式为 Sine 时使用。
 
                 // ---- mode30：执行层直控 -----------------------------------------
                 bool direct_estop = false;                                       // [RW] mode30 急停闸门。true 时禁止所有执行层输出，适合调试前的“安全锁”。
@@ -768,15 +774,11 @@ namespace jia
                 TickType_t overview_justfloat_last_ms = 0; // [RO] mode2 发送节流时间戳。防止总览数据过于频繁。
 
                 // ---- mode3：单轮高速 justfloat ---------------------------------
-                bool single_wheel_1khz_use_override_index = false; // [RW] mode3 是否使用私有轮号覆盖。false=跟随 DebugControl::wheel_index，true=使用 single_wheel_1khz_index。
-                u8 single_wheel_1khz_index = 0;           // [RW] mode3 私有轮号（覆盖值）。仅当 single_wheel_1khz_use_override_index=true 时生效。
-                u32 single_wheel_1khz_period_ms = 1;      // [RW] mode3 目标周期（ms）。一般设为 1ms，表示尽可能按控制周期输出。
+                u32 single_wheel_1khz_period_ms = 1;      // [RW] mode3 目标周期（ms）。一般设为 1ms，表示尽可能按控制周期输出；输出轮固定跟随 observe_wheel_index。
                 TickType_t single_wheel_1khz_last_ms = 0; // [RO] mode3 发送节流时间戳。记录高速输出最近一次发送时刻。
 
                 // ---- mode4：单轮双电机高速 justfloat ----------------------------
-                // 约定：这里把 drive_motor_h 作为“航向电机”源，并和 steer_motor_h 同帧输出。
-                bool single_wheel_dual_motor_use_override_index = false; // [RW] mode4 是否使用私有轮号覆盖。false=跟随 DebugControl::wheel_index，true=使用 single_wheel_dual_motor_index。
-                u8 single_wheel_dual_motor_index = 0;           // [RW] mode4 私有轮号（覆盖值）。仅当 single_wheel_dual_motor_use_override_index=true 时生效。
+                // 约定：这里把 drive_motor_h 作为“航向电机”源，并和 steer_motor_h 同帧输出；输出轮固定跟随 observe_wheel_index。
                 u32 single_wheel_dual_motor_period_ms = 2;      // [RW] mode4 目标周期（ms）。默认 2ms，兼顾分辨率与串口稳定性。
                 TickType_t single_wheel_dual_motor_last_ms = 0; // [RO] mode4 发送节流时间戳。记录双电机高速输出最近一次发送时刻。
                 
