@@ -607,6 +607,31 @@ void configureSingleWheelIsolatedPlannerHarness(Chassis &chassis, TestMotor stee
     chassis.current_mode_flag_.is_wheel_torque_free = false;
 }
 
+void configureSingleWheelIsolatedDirectHarness(Chassis &chassis, TestMotor steer_motors[4], TestMotor drive_motors[4])
+{
+    configureSingleWheelDebugHarness(chassis, steer_motors, drive_motors);
+    configureDriveContinuityHarness(chassis, drive_motors);
+
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 30U;
+    chassis.debug_control_.common.control_wheel_index = 1U;
+    chassis.debug_control_.common.observe_wheel_index = 1U;
+    chassis.debug_control_.single_wheel.full_gate_enable = false;
+    chassis.debug_control_.single_wheel.scurve_enable = false;
+    chassis.debug_control_.single_wheel.steer_target.mode = static_cast<unsigned char>(Chassis::DirectSteerCommandType::kSingleTurnDeg);
+    chassis.debug_control_.single_wheel.steer_target.value = 90.0f;
+    chassis.debug_control_.single_wheel.drive_target.mode = static_cast<unsigned char>(Chassis::DirectDriveCommandType::kRpm);
+    chassis.debug_control_.single_wheel.drive_target.value = 1000.0f;
+}
+
 void configureSingleWheelFullGateHarness(Chassis &chassis, TestMotor steer_motors[4], TestMotor drive_motors[4])
 {
     configureSingleWheelIsolatedPlannerHarness(chassis, steer_motors, drive_motors);
@@ -661,19 +686,21 @@ bool runHostDebugControlCycle(Chassis &chassis)
     return all_homed;
 }
 
-void testMode30SingleWheelSCurveIsolationOnlyLetsTargetWheelMove()
+void testMode30SingleWheelDirectJoystickIsolationOnlyLetsTargetWheelMove()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
     TestMotor drive_motors[4];
-    configureSingleWheelIsolatedPlannerHarness(chassis, steer_motors, drive_motors);
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
-    chassis.airjoy_data_.left_y = -0.5f;
+    chassis.airjoy_data_.left_x = 0.5f;
+    chassis.airjoy_data_.right_x = -0.25f;
     EXPECT_TRUE(runHostDebugControlCycle(chassis));
 
     EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
     EXPECT_TRUE(!chassis.debug_mirror_.single_wheel_full_gate_enable);
-    EXPECT_TRUE(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s) > 1.0e-6f);
+    EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), 45.0f, 1.0e-4f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), -250.0f, 1.0e-4f);
     EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
     EXPECT_NEAR(chassis.wheel_config_[2].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
     EXPECT_NEAR(chassis.wheel_config_[3].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
@@ -685,34 +712,68 @@ void testMode30SingleWheelSCurveIsolationOnlyLetsTargetWheelMove()
     EXPECT_NEAR(drive_motors[3].getTargetCurrent(), 0.0f, 1.0e-6f);
 }
 
-void testMode30SingleWheelSCurveShapesTargetButDoesNotRequireFullGate()
+void testMode30SingleWheelDirectDriveCanUseSCurveShaping()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
     TestMotor drive_motors[4];
-    configureSingleWheelIsolatedPlannerHarness(chassis, steer_motors, drive_motors);
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
-    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = true;
+    chassis.debug_control_.single_wheel.scurve_enable = true;
     chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
     chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 3.0f;
     chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 20.0f;
     chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 30.0f;
-    chassis.runtime_strategy_cfg_.max_acc_xy_acc_ = 2.0f;
-    chassis.runtime_strategy_cfg_.max_acc_xy_dec_ = 3.0f;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
-    chassis.airjoy_data_.left_y = -0.5f;
+    chassis.debug_control_.single_wheel.drive_target.value = 600.0f;
+    chassis.airjoy_data_.right_x = 1.0f;
 
     EXPECT_TRUE(runHostDebugControlCycle(chassis));
 
     EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
     EXPECT_TRUE(!chassis.debug_mirror_.single_wheel_full_gate_enable);
     EXPECT_TRUE(chassis.active_manual_speed_profile_mode_ == Chassis::ManualSpeedProfileMode::kSCurve);
-    EXPECT_TRUE(std::fabs(chassis.planned_data_.vel_x) > 0.0f);
-    EXPECT_TRUE(std::fabs(chassis.planned_data_.vel_x) < chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ * Chassis::period_);
-    EXPECT_NEAR(std::fabs(chassis.planned_data_.vel_x),
-                chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ * Chassis::period_ * Chassis::period_,
+    EXPECT_TRUE(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s) > 0.0f);
+    EXPECT_TRUE(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s) < jia::rpmToRadsF32(600.0f));
+    EXPECT_NEAR(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s),
+                chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ * Chassis::period_ * Chassis::period_ / chassis.runtime_strategy_cfg_.wheel_radius_m_,
                 1.0e-6f);
-    EXPECT_TRUE(!chassis.debug_mirror_.high_speed_drive_suppression_active);
+}
+
+void testMode30CommonWheelIndexAliasCanDirectlySelectTargetWheel()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.common.control_wheel_index = 3U;
+    chassis.debug_control_.common.observe_wheel_index = 2U;
+    chassis.airjoy_data_.left_x = -1.0f;
+    chassis.airjoy_data_.right_x = 0.2f;
+
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+
+    EXPECT_TRUE(chassis.debug_control_.common.control_wheel_index == 3U);
+    EXPECT_TRUE(chassis.debug_control_.common.observe_wheel_index == 2U);
+    EXPECT_NEAR(steer_motors[3].getTargetTotalAngle(), -90.0f, 1.0e-4f);
+    EXPECT_NEAR(drive_motors[3].getTargetRPM(), 200.0f, 1.0e-4f);
+    EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 0.0f, 1.0e-6f);
+}
+
+void testMode30DirectDriveIgnoresAllHomedGateForTargetWheel()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+
+    chassis.airjoy_data_.right_x = 0.5f;
+    chassis.computeSingleWheelIsolatedCommandsMode30(1U);
+    chassis.applySingleWheelIsolationFilter(Chassis::DebugMode::kSingleWheelIsolated, 1U, false);
+
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 500.0f, 1.0e-4f);
+    EXPECT_TRUE(chassis.wheel_config_[1].target_drive_omega_rad_s > 0.0f);
 }
 
 void testMode30SingleWheelFullGateIsolationOnlyLetsTargetWheelMove()
@@ -2955,8 +3016,10 @@ int main()
     testHighSpeedDriveSuppressionTightensAndReleasesThroughPlannerOutput();
     testLowSpeedDriveSuppressionDoesNotReenterInsideNearZeroHysteresisBand();
     testHighSpeedDriveSuppressionWaitsUntilNearZeroExitBeforeEnabling();
-    testMode30SingleWheelSCurveIsolationOnlyLetsTargetWheelMove();
-    testMode30SingleWheelSCurveShapesTargetButDoesNotRequireFullGate();
+    testMode30SingleWheelDirectJoystickIsolationOnlyLetsTargetWheelMove();
+    testMode30SingleWheelDirectDriveCanUseSCurveShaping();
+    testMode30CommonWheelIndexAliasCanDirectlySelectTargetWheel();
+    testMode30DirectDriveIgnoresAllHomedGateForTargetWheel();
     testMode30SingleWheelFullGateIsolationOnlyLetsTargetWheelMove();
     testMode30SingleWheelFullGateKeepsPlannerGateSignalsVisible();
     testMode30SingleWheelFullGateRespectsAllHomedByKeepingTargetWheelDriveZeroCurrent();

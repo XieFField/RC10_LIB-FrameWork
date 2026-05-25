@@ -1,4 +1,4 @@
-﻿#ifndef CHASSIS_H_
+#ifndef CHASSIS_H_
 #define CHASSIS_H_
 
 #include "APP_Utils.h"
@@ -567,9 +567,13 @@ namespace jia
             void finalizeDebugModuleOverride(bool all_homed, DebugModuleOverrideRoute route);
             void syncDirectActuatorCommandTemplates(); // mode30 类型切换同步入口。用于在命令类型改变时刷新单值命令、限幅和阶跃模板。
             DirectActuatorCommandSnapshot resolveDirectActuatorCommand(u8 wheel_idx); // 解析当前 control_wheel_index 对应轮的 mode30 双轴有效命令快照。
+            DirectActuatorCommandSnapshot resolveSingleWheelIsolatedCommand(u8 wheel_idx);
             void clearDirectDriveCommandByType(WheelConfig &wheel, u8 wheel_idx, u8 drive_control_type);
+            void applyResolvedSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command, bool enable);
+            void applyResolvedDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command, bool enable);
             void applyDirectActuatorSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command);
             void applyDirectActuatorDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command);
+            f32 shapeSingleWheelDriveOmegaRadS(u8 wheel_idx, f32 target_omega_rad_s);
             void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z);
@@ -669,7 +673,7 @@ namespace jia
             // =====================================================================
             struct StrategyConfig
             {
-                ManualSpeedProfileMode manual_speed_profile_mode = ManualSpeedProfileMode::kSCurve;
+                ManualSpeedProfileMode manual_speed_profile_mode = ManualSpeedProfileMode::kLegacy;
                 bool manual_speed_profile_manual_only = true;
                 f32 manual_trans_acc_acc_ = 5.0f;
                 f32 manual_trans_acc_dec_ = 12.0f;
@@ -791,10 +795,10 @@ namespace jia
                 struct Common
                 {
                     bool enable = true;                                             // [RW] 调试总开关。
-                    u8 mode_raw = 1;                                                // [RW] 调试模式号。
+                    u8 mode_raw = 1;                                                 // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
-                    u8 control_wheel_index = 1U;                                    // [RW] 当前执行目标轮号。
-                    u8 observe_wheel_index = 1U;                                    // [RW] 当前输出观察轮号。
+                    u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
+                    u8 observe_wheel_index = 0U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。
                 } common{};
 
                 struct Injection
@@ -820,12 +824,12 @@ namespace jia
 
                 struct SingleWheel
                 {
-                    u8 debug_index = 1U;             // [RW] 单轮调试目标轮号。
-                    u8 observe_index = 1U;           // [RW] 单轮观测轮号。
+                    u8 debug_index = 0U;             // [legacy][compat] 历史兼容字段。当前单轮模式运行时不读取这里，不作为真值源。
+                    u8 observe_index = 0U;           // [legacy][compat] 历史兼容字段。当前单轮模式运行时不读取这里，不作为真值源。
                     bool full_gate_enable = false;   // [RW] 是否保留完整主线 gate。
-                    bool scurve_enable = true;       // [RW] 是否保留 S 型速度规划器。
-                    SingleWheelTarget steer_target{};
-                    SingleWheelTarget drive_target{};
+                    bool scurve_enable = false;        // [RW] 是否保留 S 型速度规划器。
+                    SingleWheelTarget steer_target{static_cast<u8>(DirectSteerCommandType::kSingleTurnDeg), 180.0f};
+                    SingleWheelTarget drive_target{static_cast<u8>(DirectDriveCommandType::kRpm), 1000.0f};
                     SingleWheelFullGate full_gate{};
                 } single_wheel{};
 
@@ -861,7 +865,7 @@ namespace jia
             {
                 // ---- 输出总开关与模式选择 ---------------------------------------
                 bool output_enable = true;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
-                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kYawPidJustFloat); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制）。
+                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kSingleWheelDualMotorJustFloat); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制）。
                 u32 text_period_ms = 500;                                     // [RW] 文本日志周期（ms）。只在 mode1 下使用，控制文本总刷新频率。
                 u8 text_log_level = 1;                                        // [RW] 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
                 TickType_t text_last_ms = 0;                                  // [RO] 文本日志节流时间戳。记录上一次发文本的时间，防止串口刷屏。
@@ -982,6 +986,9 @@ namespace jia
             JerkLimitedAxisState manual_vel_x_shape_state_{};
             JerkLimitedAxisState manual_vel_y_shape_state_{};
             JerkLimitedAxisState manual_omega_z_shape_state_{};
+            JerkLimitedAxisState single_wheel_drive_shape_state_{};
+            f32 single_wheel_last_drive_linear_m_s_ = 0.0f;
+            u8 single_wheel_last_shape_wheel_idx_ = 0xFFU;
             InputTargetData input_target_data_; // [RO] 输入目标快照（模式与期望速度/角度）
             NormalizedBodyCommand normalized_body_command_; // [RO] 输入来源与统一车体系语义
             Data target_data_;                  // [RO] 模式映射后的目标数据
