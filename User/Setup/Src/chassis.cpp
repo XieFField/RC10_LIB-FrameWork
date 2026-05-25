@@ -804,7 +804,9 @@ namespace jia
             {
                 if (current_value * target_value < 0.0f)
                 {
-                    target_accel = 0.0f;
+                    // 跨零反向时不能把目标加速度钉成 0，否则旧加速度被卸空后会停在原符号一侧不再过零。
+                    // 这里先按“刹向零点”的方向持续施加减速度，过零后再回到常规朝目标加速的分支。
+                    target_accel = (current_value > 0.0f) ? -safe_dec_limit : safe_dec_limit;
                 }
                 else
                 {
