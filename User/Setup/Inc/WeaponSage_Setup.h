@@ -65,11 +65,11 @@ namespace WeaponSage_Setup
 
     typedef enum{
         //将自动过程的每个状态枚举
-        STATE_AIM_POSITION, //对准位置
-        STATE_LOWER_CLAW,  //下降爪子
-        STATE_GRAB_CLAW,   //抓取爪子
-        STATE_LIFT_POSITION, //提升位置
-        STATE_DONE 
+        STATE_START,
+        STATE_ARM_MOVE,
+        STATE_CLAW_ADJUST,
+        STATE_LAUNCH_MOVE,
+        STATE_DONE,
     }auto_GRABstate_S;
 
 
@@ -85,9 +85,7 @@ namespace WeaponSage_Setup
 
         struct{
 			bool is_matching = false;  
-            bool grab_start = false;
-            float grab_startTime = 0.0f;
-            bool is_moving = false;  
+            bool dock_start = false;
 			bool arm_enable=false;
         }auto_state_bool_S; //局部状态结构体
 		float claw_close_pos = 32.36f;
@@ -97,9 +95,12 @@ namespace WeaponSage_Setup
         struct{
             bool is_clawed=false;
             bool is_catched=false;  //当夹爪到达安全高度视为已经完成抓取
+            bool is_moved=false;
+
         }flag;
         bool auto_ctrl1 = true;
         int pole_num = 1;
+        bool claw_flag[3]={false,false,false};
     }auto_ctrl_S;
 
      extern float weapon_pos[4];//武器位置数组
@@ -208,6 +209,7 @@ public:
     }
 
     bool Close_TargetClaw();
+    void Close_TargetClaw_Untight();
 
 protected:
     void loop() override;
@@ -229,17 +231,13 @@ private:
     void calibrate();
 
 
-    bool State_AimPosition(int pole_num);
-    void State_LowerClaw();
-    bool State_GrabClaw();
-    bool State_Lift();
     
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 
     
     WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
 	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_IDLE;
-	WeaponSage_Setup::auto_GRABstate_S now_state_=WeaponSage_Setup::STATE_DONE;
+	WeaponSage_Setup::auto_GRABstate_S now_state_=WeaponSage_Setup::STATE_START;
 
     WeaponSage_Setup::WeaponDock_E target_dock_ = WeaponSage_Setup::MID; // for auto_dock
 

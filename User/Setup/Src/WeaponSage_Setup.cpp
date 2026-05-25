@@ -345,7 +345,7 @@ void Robot_WeaponSage_Setup::autoControl_catch()
  *        2.半松爪子，不让杆子能掉出去，但也没有抓住杆的状态2.
  *        3.根据@paramtarget_dock_的值，调整爪子到对应的高度
  *        4.紧爪子抓住杆。
- *        5根据SwD是否被切换状态，按下决定是否将arm打到竖直5.
+ *        5根据SwD是否被切换状态，按下决定是否将arm打到竖直
  *        6.旋转完成后，将arm抬到竖直位置。
  *        7.完成后升降到预定位置(先定为中间位置，用于对接)
  *        8.完成进入idle状态
@@ -358,7 +358,60 @@ void Robot_WeaponSage_Setup::autoControl_catch()
  */
 void Robot_WeaponSage_Setup::autoControl_dock()
 {
+    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+    if(auto_ctrl_.auto_state_bool_S.dock_start)
+    {
+        switch (now_state_)
+        {
+            case WeaponSage_Setup::STATE_START:
+            {
+                break;
+            }
+            case WeaponSage_Setup::STATE_ARM_MOVE:
+            {
+                this->setTarget(0.0f, WeaponSage::Arm_Motor);      //先把arm放置到水平位置
+                if(abs(this->get_CurrentPos().arm_pos_)<0.02f ) //如果已经在水平位置了，进入下一个状态
+                {   
+                    auto_ctrl_.flag.is_moved=true;
+                    now_state_ = WeaponSage_Setup::STATE_CLAW_ADJUST;
+                }
+                break;
+            }
+            case WeaponSage_Setup::STATE_CLAW_ADJUST:
+            {
+                this->Close_TargetClaw_Untight();
+                if(abs(current_pos_.claw_1_pos_-target_pos_.claw_1_pos_)<0.02f&&
+                   abs(current_pos_.claw_2_pos_-target_pos_.claw_2_pos_)<0.02f&&
+                   abs(current_pos_.claw_3_pos_-target_pos_.claw_3_pos_)<0.02f) //如果已经调整好爪子了，进入下一个状态
+                {
+                    this->setTarget(target_dock_, WeaponSage::Launch_Motor);      //根据target_dock_的值调整爪子高度
+                    if(abs(this->get_CurrentPos().launch_pos_-target_dock_)<0.02f) //如果已经调整到位了，进入下一个状态
+                    {
+                        this->Close_TargetClaw();
+                       if(auto_ctrl_.flag.is_clawed)
+                       {
+                            now_state_ = WeaponSage_Setup::STATE_LAUNCH_MOVE;
+                       }
+                    }
+                }
+                break;   
+            }                           
+            case WeaponSage_Setup::STATE_LAUNCH_MOVE:
+            {
 
+                break;
+            }
+            case WeaponSage_Setup::STATE_DONE:
+            {
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+        auto_ctrl_.auto_state_bool_S.dock_start=false; //重置开始信号
+    }
 }
 
 void Robot_WeaponSage_Setup::stop()
@@ -376,32 +429,35 @@ void Robot_WeaponSage_Setup::stop()
  {
 
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-    bool claw_flag[3]={false,false,false};
-    claw_flag[0]=ctrl_status_.is_claw_1_closed;
-    claw_flag[1]=ctrl_status_.is_claw_2_closed;
-    claw_flag[2]=ctrl_status_.is_claw_3_closed;
+   
+    auto_ctrl_.claw_flag[0]=ctrl_status_.is_claw_1_closed;
+    auto_ctrl_.claw_flag[1]=ctrl_status_.is_claw_2_closed;
+    auto_ctrl_.claw_flag[2]=ctrl_status_.is_claw_3_closed;
     float target_claw_pos[3]={0.0f,0.0f,0.0f};
-    if(!claw_flag[0]&&!claw_flag[1]&&!claw_flag[2])
+    if(!auto_ctrl_.claw_flag[0]&&!auto_ctrl_.claw_flag[1]&&!auto_ctrl_.claw_flag[2])
     {
         auto_ctrl_.flag.is_clawed=false;
         return false;
     }
 
-    if(claw_flag[0])
+    if(auto_ctrl_.claw_flag[0])
     {
         target_claw_pos[0]=initData_.max_clawAngle_;
     }
-    if(claw_flag[1])
+    if(auto_ctrl_.claw_flag[1])
     {
        target_claw_pos[1]=initData_.max_clawAngle_;
     }
-    if(claw_flag[2])
+    if(auto_ctrl_.claw_flag[2])
     {
         target_claw_pos[2]=initData_.max_clawAngle_;
     }
     this->setTarget(target_claw_pos[0], WeaponSage::Claw_1_Motor);
     this->setTarget(target_claw_pos[1], WeaponSage::Claw_2_Motor);
     this->setTarget(target_claw_pos[2], WeaponSage::Claw_3_Motor);
+    target_pos_.claw_1_pos_=target_claw_pos[0];
+    target_pos_.claw_2_pos_=target_claw_pos[1];
+    target_pos_.claw_3_pos_=target_claw_pos[2];
     if(this->get_CurrentPos().claw_1_pos_>=target_claw_pos[0]*0.98f&&
        this->get_CurrentPos().claw_2_pos_>=target_claw_pos[1]*0.98f&&
        this->get_CurrentPos().claw_3_pos_>=target_claw_pos[2]*0.98f)
@@ -415,6 +471,27 @@ void Robot_WeaponSage_Setup::stop()
     }
  }
 
+void Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
+{
+    float target_claw_pos[3] = {0.0f,0.0f,0.0f};
+    for (int i=0;i<3;i++)       
+    {
+        if(auto_ctrl_.claw_flag[i])
+        {
+            target_claw_pos[i]=0.5*initData_.max_clawAngle_;
+        }
+        else
+        {
+            target_claw_pos[i]=initData_.max_clawAngle_;
+        }
+    }
+    target_pos_.claw_1_pos_=target_claw_pos[0];
+    target_pos_.claw_2_pos_=target_claw_pos[1];
+    target_pos_.claw_3_pos_=target_claw_pos[2];
+    this->setTarget(target_claw_pos[0], WeaponSage::Claw_1_Motor); //半松爪子
+    this->setTarget(target_claw_pos[1], WeaponSage::Claw_2_Motor);    
+    this->setTarget(target_claw_pos[2], WeaponSage::Claw_3_Motor);
+}
 
 WeaponSage_InitData_S initData_=
 {
