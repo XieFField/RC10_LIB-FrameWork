@@ -820,47 +820,71 @@ namespace jia
             // =====================================================================
             // 调试输出 [RW]
             // 说明：这里只管“串口往外发什么”，不管底盘怎么跑。
-            //       output_enable 是总开关，output_mode_raw 选路径，text_log_level 决定文本模式的细度。
+            //       output_enable 是总开关，output_mode_raw 选路径，text.log_level 决定文本模式的细度。
             // =====================================================================
-            struct DebugOutput
+            struct DebugOutputSlotConfig
             {
-                // ---- 输出总开关与模式选择 ---------------------------------------
-                bool output_enable = false;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
-                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kYawPidJustFloat); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制）。
-                u32 text_period_ms = 500;                                     // [RW] 文本日志周期（ms）。只在 mode1 下使用，控制文本总刷新频率。
-                u8 text_log_level = 1;                                        // [RW] 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
-                TickType_t text_last_ms = 0;                                  // [RO] 文本日志节流时间戳。记录上一次发文本的时间，防止串口刷屏。
-                u8 text_log_phase = 0;                                        // [RO] 文本分相输出索引。0=FS 总览，1=FSW 单轮细节，2=FSH 回零/对位细节。
+                u32 period_ms = 10U; // [RW] 当前输出槽位的最小发送周期（ms）。达到周期门限后才允许本模式尝试发送。
+            };
 
-                // ---- mode2：四轮总览 justfloat ---------------------------------
-                u32 overview_justfloat_period_ms = 5;      // [RW] mode2 四轮总览 justfloat 周期（ms）。控制每次发送完整四轮电机数据的频率。
-                TickType_t overview_justfloat_last_ms = 0; // [RO] mode2 发送节流时间戳。防止总览数据过于频繁。
+            struct DebugOutputTextConfig
+            {
+                u32 period_ms = 500U; // [RW] mode1 文本日志周期（ms）。控制文本总刷新频率。
+                u8 log_level = 1U;    // [RW] mode1 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
+            };
 
-                // ---- mode3：单轮高速 justfloat ---------------------------------
-                u32 single_wheel_1khz_period_ms = 1;      // [RW] mode3 目标周期（ms）。一般设为 1ms，表示尽可能按控制周期输出；输出轮固定跟随 observe_wheel_index。
-                TickType_t single_wheel_1khz_last_ms = 0; // [RO] mode3 发送节流时间戳。记录高速输出最近一次发送时刻。
+            struct DebugOutputTelemetryConfig
+            {
+                u8 sample_divider = 1U; // [RW] mode5 分频发送系数。1 表示每个满足周期门限的控制周期都尝试发送。
+                u8 profile_id = 0U;     // [RW] mode5 配置档编号。编码到 flags 高 4 位，便于 PC 侧区分不同发送方案。
+                u32 period_ms = 10U;    // [RW] mode5 最小发送周期（ms）。
+            };
 
-                // ---- mode4：单轮双电机高速 justfloat ----------------------------
-                // 约定：这里把 drive_motor_h 作为“航向电机”源，并和 steer_motor_h 同帧输出；输出轮固定跟随 observe_wheel_index。
-                u32 single_wheel_dual_motor_period_ms = 2;      // [RW] mode4 目标周期（ms）。默认 2ms，兼顾分辨率与串口稳定性。
-                TickType_t single_wheel_dual_motor_last_ms = 0; // [RO] mode4 发送节流时间戳。记录双电机高速输出最近一次发送时刻。
-                
-                u32 yaw_pid_justfloat_period_ms = 4U;
-                TickType_t yaw_pid_justfloat_last_ms = 0U;
+            // 调试输出配置 [RW]
+            // 说明：这里只放“外部可调”的输出参数，不再混入节流时间戳、计数器等运行态噪音。
+            struct DebugOutputConfig
+            {
+                bool output_enable = false; // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
+                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kYawPidJustFloat); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制），6=YawPid justfloat。
 
-                // ---- mode5: SwerveTelemetryV2 binary ----------------------------
-                u8 telemetry_sample_divider = 1U;    // [RW] mode5 分频发送系数。1 表示每个满足周期门限的控制周期都尝试发送。
-                u8 telemetry_profile_id = 0U;        // [RW] mode5 配置档编号。编码到 flags 高 4 位，便于 PC 侧区分不同发送方案。
-                u32 telemetry_period_ms = 10U;        // [RW] mode5 最小发送周期（ms）。
-                TickType_t telemetry_last_ms = 0;    // [RO] mode5 最近一次发送时刻（tick/ms 基准），用于周期门限判断。
-                u8 telemetry_cycle_counter = 0U;     // [RO] mode5 分频计数器。与 sample_divider 配合决定本周期是否允许发送。
-                u16 telemetry_seq = 0U;              // [RO] mode5 帧序号。每成功发送一帧递增，便于 PC 侧检测丢帧。
-                u8 telemetry_frame_buf[384] = {0U};  // [RO] mode5 DMA 发送缓冲区（header + payload + crc）。
-
-                // ---- mode1：文本追踪节流 ----------------------------------------
-                TickType_t single_wheel_trace_last_ms = 0; // [RO] 单轮文本跟踪节流时间戳。用于 mode1 下的单轮细节日志限频。
-                TickType_t direct_trace_last_ms = 0;       // [RO] 执行层文本跟踪节流时间戳。用于 mode1 下的直控调试日志限频。
+                DebugOutputTextConfig text{}; // [RW] mode1 文本日志配置。
+                DebugOutputSlotConfig overview = {5U}; // [RW] mode2 四轮总览 justfloat 配置。
+                DebugOutputSlotConfig single_wheel = {1U}; // [RW] mode3 单轮高速 justfloat 配置；输出轮固定跟随 observe_wheel_index。
+                DebugOutputSlotConfig dual_motor = {2U}; // [RW] mode4 单轮双电机高速 justfloat 配置；输出轮固定跟随 observe_wheel_index。
+                DebugOutputSlotConfig yaw_pid = {4U}; // [RW] mode6 Yaw PID justfloat 配置。
+                DebugOutputTelemetryConfig telemetry{}; // [RW] mode5 SwerveTelemetryV2 配置。
             } debug_output_;
+
+            struct DebugOutputSlotRuntime
+            {
+                TickType_t last_ms = 0U; // [RO] 当前输出槽位最近一次成功发送时刻。用于节流判断。
+            };
+
+            struct DebugOutputTextRuntime
+            {
+                TickType_t last_ms = 0U;      // [RO] mode1 文本总日志最近一次发送时刻。
+                u8 log_phase = 0U;            // [RO] mode1 文本分相输出索引。0=FS 总览，1=FSW 单轮细节，2=FSH 回零/对位细节。
+                TickType_t direct_trace_last_ms = 0U; // [RO] mode1 执行层文本跟踪最近一次发送时刻。用于 SW30 限频。
+            };
+
+            struct DebugOutputTelemetryRuntime
+            {
+                TickType_t last_ms = 0U;   // [RO] mode5 最近一次成功发送时刻（tick/ms 基准），用于周期门限判断。
+                u8 cycle_counter = 0U;     // [RO] mode5 分频计数器。与 sample_divider 配合决定本周期是否允许发送。
+                u16 seq = 0U;              // [RO] mode5 帧序号。每成功发送一帧递增，便于 PC 侧检测丢帧。
+            };
+
+            // 调试输出运行态 [RO]
+            // 说明：这里只放节流、相位和发送计数等运行时观察值，不参与外部调参。
+            struct DebugOutputRuntime
+            {
+                DebugOutputTextRuntime text{};
+                DebugOutputSlotRuntime overview{};
+                DebugOutputSlotRuntime single_wheel{};
+                DebugOutputSlotRuntime dual_motor{};
+                DebugOutputSlotRuntime yaw_pid{};
+                DebugOutputTelemetryRuntime telemetry{};
+            } debug_output_runtime_;
 
             // =====================================================================
             // DebugPidTune [RW]

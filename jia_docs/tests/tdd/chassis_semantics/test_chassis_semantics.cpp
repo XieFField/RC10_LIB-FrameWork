@@ -901,8 +901,8 @@ void testSingleWheel1kHzOutputUsesObserveWheelIndex()
     testHostResetJustFloatCapture();
     chassis.debug_output_.output_enable = true;
     chassis.debug_output_.output_mode_raw = 3U;
-    chassis.debug_output_.single_wheel_1khz_period_ms = 0U;
-    chassis.debug_output_.single_wheel_1khz_last_ms = 0U;
+    chassis.debug_output_.single_wheel.period_ms = 0U;
+    chassis.debug_output_runtime_.single_wheel.last_ms = 0U;
     chassis.time_ms_ = 25U;
     chassis.debug_control_.control_wheel_index = 2U;
     chassis.debug_control_.observe_wheel_index = 1U;
@@ -939,8 +939,8 @@ void testSingleWheelDualMotorOutputUsesObserveWheelIndex()
     testHostResetJustFloatCapture();
     chassis.debug_output_.output_enable = true;
     chassis.debug_output_.output_mode_raw = 4U;
-    chassis.debug_output_.single_wheel_dual_motor_period_ms = 0U;
-    chassis.debug_output_.single_wheel_dual_motor_last_ms = 0U;
+    chassis.debug_output_.dual_motor.period_ms = 0U;
+    chassis.debug_output_runtime_.dual_motor.last_ms = 0U;
     chassis.time_ms_ = 40U;
     chassis.debug_control_.control_wheel_index = 0U;
     chassis.debug_control_.observe_wheel_index = 2U;
@@ -971,8 +971,8 @@ void testObserveWheelIndexFallsBackToZeroWhenOutOfRange()
     testHostResetJustFloatCapture();
     chassis.debug_output_.output_enable = true;
     chassis.debug_output_.output_mode_raw = 3U;
-    chassis.debug_output_.single_wheel_1khz_period_ms = 0U;
-    chassis.debug_output_.single_wheel_1khz_last_ms = 0U;
+    chassis.debug_output_.single_wheel.period_ms = 0U;
+    chassis.debug_output_runtime_.single_wheel.last_ms = 0U;
     chassis.time_ms_ = 60U;
     chassis.debug_control_.observe_wheel_index = 9U;
 
@@ -1296,8 +1296,8 @@ void configureYawPidTraceHarness(Chassis &chassis)
 {
     testHostResetJustFloatCapture();
     chassis.debug_output_.output_enable = true;
-    chassis.debug_output_.yaw_pid_justfloat_period_ms = 0U;
-    chassis.debug_output_.yaw_pid_justfloat_last_ms = 0U;
+    chassis.debug_output_.yaw_pid.period_ms = 0U;
+    chassis.debug_output_runtime_.yaw_pid.last_ms = 0U;
     chassis.debug_output_.output_mode_raw = 6U;
     chassis.time_ms_ = 100U;
     chassis.input_hwt_omega_z_ = 0.25f;
