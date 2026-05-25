@@ -1,6 +1,6 @@
 # RC10 底盘调试 merge baseline 语义收口交接
 
-生成时间：2026-05-25 23:44（Asia/Shanghai）  
+生成时间：2026-05-25 23:44（Asia/Shanghai）<br>
 仓库路径：`D:\desktop\2026RC\Control\2026RC-Team1-R1Code\RC10_LIB-FrameWork`
 
 相关提交：
