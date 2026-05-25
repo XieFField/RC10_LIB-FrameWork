@@ -592,10 +592,10 @@ void configureSingleWheelIsolatedPlannerHarness(Chassis &chassis, TestMotor stee
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.2f;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
 
-    chassis.debug_control_.enable = true;
-    chassis.debug_control_.mode_raw = 30U;
-    chassis.debug_control_.control_wheel_index = 1U;
-    chassis.debug_control_.observe_wheel_index = 1U;
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 30U;
+    chassis.debug_control_.common.control_wheel_index = 1U;
+    chassis.debug_control_.common.observe_wheel_index = 1U;
     chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedMode;
     chassis.input_target_data_.vel_x = 0.4f;
     chassis.input_target_data_.vel_y = 0.0f;
@@ -610,15 +610,15 @@ void configureSingleWheelIsolatedPlannerHarness(Chassis &chassis, TestMotor stee
 void configureSingleWheelFullGateHarness(Chassis &chassis, TestMotor steer_motors[4], TestMotor drive_motors[4])
 {
     configureSingleWheelIsolatedPlannerHarness(chassis, steer_motors, drive_motors);
-    chassis.debug_control_.mode_raw = 30U;
-    chassis.debug_control_.single_wheel_full_gate_enable = true;
+    chassis.debug_control_.common.mode_raw = 30U;
+    chassis.debug_control_.single_wheel.full_gate_enable = true;
 }
 
 void configureSingleWheelAlias31Harness(Chassis &chassis, TestMotor steer_motors[4], TestMotor drive_motors[4])
 {
     configureSingleWheelIsolatedPlannerHarness(chassis, steer_motors, drive_motors);
-    chassis.debug_control_.mode_raw = 31U;
-    chassis.debug_control_.single_wheel_full_gate_enable = false;
+    chassis.debug_control_.common.mode_raw = 31U;
+    chassis.debug_control_.single_wheel.full_gate_enable = false;
 }
 
 bool runHostDebugControlCycle(Chassis &chassis)
@@ -671,7 +671,7 @@ void testMode30SingleWheelSCurveIsolationOnlyLetsTargetWheelMove()
     chassis.airjoy_data_.left_y = -0.5f;
     EXPECT_TRUE(runHostDebugControlCycle(chassis));
 
-    EXPECT_TRUE(chassis.debug_control_.mode_raw == 30U);
+    EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
     EXPECT_TRUE(!chassis.debug_mirror_.single_wheel_full_gate_enable);
     EXPECT_TRUE(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s) > 1.0e-6f);
     EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
@@ -704,7 +704,7 @@ void testMode30SingleWheelSCurveShapesTargetButDoesNotRequireFullGate()
 
     EXPECT_TRUE(runHostDebugControlCycle(chassis));
 
-    EXPECT_TRUE(chassis.debug_control_.mode_raw == 30U);
+    EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
     EXPECT_TRUE(!chassis.debug_mirror_.single_wheel_full_gate_enable);
     EXPECT_TRUE(chassis.active_manual_speed_profile_mode_ == Chassis::ManualSpeedProfileMode::kSCurve);
     EXPECT_TRUE(std::fabs(chassis.planned_data_.vel_x) > 0.0f);
@@ -725,7 +725,7 @@ void testMode30SingleWheelFullGateIsolationOnlyLetsTargetWheelMove()
     chassis.airjoy_data_.left_y = -0.5f;
     EXPECT_TRUE(runHostDebugControlCycle(chassis));
 
-    EXPECT_TRUE(chassis.debug_control_.mode_raw == 30U);
+    EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
     EXPECT_TRUE(chassis.debug_mirror_.single_wheel_full_gate_enable);
     EXPECT_TRUE(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s) > 1.0e-6f);
     EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
@@ -765,7 +765,7 @@ void testMode30SingleWheelFullGateKeepsPlannerGateSignalsVisible()
     chassis.airjoy_data_.left_y = -0.5f;
     EXPECT_TRUE(runHostDebugControlCycle(chassis));
 
-    EXPECT_TRUE(chassis.debug_control_.mode_raw == 30U);
+    EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
     EXPECT_TRUE(chassis.debug_mirror_.single_wheel_full_gate_enable);
     EXPECT_TRUE(chassis.debug_mirror_.high_speed_drive_suppression_active);
     EXPECT_TRUE(chassis.debug_mirror_.planned_drive_target_rpm[1] != 0.0f);
@@ -788,7 +788,7 @@ void testMode30SingleWheelFullGateRespectsAllHomedByKeepingTargetWheelDriveZeroC
     chassis.updateCurrentData(false);
     chassis.refreshDebugMirror(false);
 
-    EXPECT_TRUE(chassis.debug_control_.mode_raw == 30U);
+    EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
     EXPECT_TRUE(chassis.debug_mirror_.single_wheel_full_gate_enable);
     EXPECT_NEAR(drive_motors[1].getTargetCurrent(), 0.0f, 1.0e-6f);
     EXPECT_TRUE(!chassis.debug_mirror_.all_homed);
@@ -811,7 +811,7 @@ void testMode30SingleWheelFullGateRespectsSteerFaultByKeepingTargetWheelDriveZer
     chassis.updateCurrentData(true);
     chassis.refreshDebugMirror(true);
 
-    EXPECT_TRUE(chassis.debug_control_.mode_raw == 30U);
+    EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
     EXPECT_TRUE(chassis.debug_mirror_.single_wheel_full_gate_enable);
     EXPECT_NEAR(drive_motors[1].getTargetCurrent(), 0.0f, 1.0e-6f);
     EXPECT_TRUE(chassis.debug_mirror_.steer_fault_any_active);
@@ -827,8 +827,8 @@ void testMode31CompatibilityAliasMapsToMode30FullGateBehavior()
     chassis.airjoy_data_.left_y = -0.5f;
     EXPECT_TRUE(runHostDebugControlCycle(chassis));
 
-    EXPECT_TRUE(chassis.debug_control_.mode_raw == 31U);
-    EXPECT_TRUE(chassis.debug_control_.single_wheel_full_gate_enable);
+    EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 31U);
+    EXPECT_TRUE(chassis.debug_control_.single_wheel.full_gate_enable);
     EXPECT_TRUE(chassis.debug_mirror_.single_wheel_full_gate_enable);
     EXPECT_TRUE(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s) > 1.0e-6f);
     EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
@@ -839,8 +839,8 @@ void testMode31CompatibilityAliasMapsToMode30FullGateBehavior()
 void testLegacyMode32DirectActuatorRemainsSeparateFromUnifiedMode30()
 {
     Chassis chassis;
-    chassis.debug_control_.control_wheel_index = 1U;
-    chassis.debug_control_.mode_raw = 32U;
+    chassis.debug_control_.common.control_wheel_index = 1U;
+    chassis.debug_control_.common.mode_raw = 32U;
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(30U) != Chassis::DebugModuleOverrideRoute::kDirectActuator);
 }
 
@@ -856,7 +856,7 @@ void testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode()
     chassis.wheel_config_[0].target_steer_motor_total_angle_rad = jia::degToRadF32(12.0f);
     chassis.wheel_config_[0].target_drive_omega_rad_s = 4.0f;
 
-    chassis.debug_control_.observe_wheel_index = 0U;
+    chassis.debug_control_.common.observe_wheel_index = 0U;
     chassis.applyHomingObserveDebugOverride();
     chassis.refreshDebugMirror(false);
 
@@ -876,21 +876,21 @@ void testDirectControlWheelSelectionIsIndependentFromObserveWheel()
     TestMotor drive_motors[4];
     configureSingleWheelDebugHarness(chassis, steer_motors, drive_motors);
 
-    chassis.debug_control_.control_wheel_index = 3U;
-    chassis.debug_control_.observe_wheel_index = 1U;
-    chassis.debug_control_.direct_steer_input_mode_raw = 0U;
-    chassis.debug_control_.direct_drive_input_mode_raw = 0U;
-    chassis.debug_control_.direct_steer_command_type_raw = 2U;
-    chassis.debug_control_.direct_drive_command_type_raw = 0U;
-    chassis.debug_control_.direct_enable_steer = true;
-    chassis.debug_control_.direct_enable_drive = true;
-    chassis.debug_control_.direct_steer_command_value = 30.0f;
-    chassis.debug_control_.direct_drive_command_value = 90.0f;
-    chassis.debug_control_.direct_steer_command_limit = 180.0f;
-    chassis.debug_control_.direct_drive_command_limit = 200.0f;
+    chassis.debug_control_.common.control_wheel_index = 3U;
+    chassis.debug_control_.common.observe_wheel_index = 1U;
+    chassis.debug_control_.legacy_direct.steer_input_mode_raw = 0U;
+    chassis.debug_control_.legacy_direct.drive_input_mode_raw = 0U;
+    chassis.debug_control_.legacy_direct.steer_command_type_raw = 2U;
+    chassis.debug_control_.legacy_direct.drive_command_type_raw = 0U;
+    chassis.debug_control_.legacy_direct.enable_steer = true;
+    chassis.debug_control_.legacy_direct.enable_drive = true;
+    chassis.debug_control_.legacy_direct.steer_command_value = 30.0f;
+    chassis.debug_control_.legacy_direct.drive_command_value = 90.0f;
+    chassis.debug_control_.legacy_direct.steer_command_limit = 180.0f;
+    chassis.debug_control_.legacy_direct.drive_command_limit = 200.0f;
 
-    chassis.debug_control_.enable = true;
-    chassis.debug_control_.mode_raw = 32U;
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 32U;
     const bool handled = chassis.applyDebugModuleOverride(true);
 
     EXPECT_TRUE(handled);
@@ -921,8 +921,8 @@ void testSingleWheel1kHzOutputUsesObserveWheelIndex()
     chassis.debug_output_.single_wheel_1khz_period_ms = 0U;
     chassis.debug_output_.single_wheel_1khz_last_ms = 0U;
     chassis.time_ms_ = 25U;
-    chassis.debug_control_.control_wheel_index = 2U;
-    chassis.debug_control_.observe_wheel_index = 1U;
+    chassis.debug_control_.common.control_wheel_index = 2U;
+    chassis.debug_control_.common.observe_wheel_index = 1U;
 
     emitDebugOutputForHost(chassis, true);
 
@@ -959,8 +959,8 @@ void testSingleWheelDualMotorOutputUsesObserveWheelIndex()
     chassis.debug_output_.single_wheel_dual_motor_period_ms = 0U;
     chassis.debug_output_.single_wheel_dual_motor_last_ms = 0U;
     chassis.time_ms_ = 40U;
-    chassis.debug_control_.control_wheel_index = 0U;
-    chassis.debug_control_.observe_wheel_index = 2U;
+    chassis.debug_control_.common.control_wheel_index = 0U;
+    chassis.debug_control_.common.observe_wheel_index = 2U;
 
     emitDebugOutputForHost(chassis, true);
 
@@ -991,7 +991,7 @@ void testObserveWheelIndexFallsBackToZeroWhenOutOfRange()
     chassis.debug_output_.single_wheel_1khz_period_ms = 0U;
     chassis.debug_output_.single_wheel_1khz_last_ms = 0U;
     chassis.time_ms_ = 60U;
-    chassis.debug_control_.observe_wheel_index = 9U;
+    chassis.debug_control_.common.observe_wheel_index = 9U;
 
     emitDebugOutputForHost(chassis, true);
 
@@ -1008,7 +1008,7 @@ void testDebugOmegaZInjectionModeOffKeepsManualOmegaInput()
     chassis.airjoy_data_.left_y = 0.0f;
     chassis.airjoy_data_.left_x = 0.0f;
     chassis.airjoy_data_.right_x = 0.5f;
-    chassis.debug_control_.omega_z_injection_mode_raw = 0U;
+    chassis.debug_control_.injection.omega_z_injection_mode_raw = 0U;
 
     chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
 
@@ -1025,7 +1025,7 @@ void testDebugOmegaZInjectionModeStepOverridesManualOmegaInput()
     chassis.airjoy_data_.left_y = 0.0f;
     chassis.airjoy_data_.left_x = 0.0f;
     chassis.airjoy_data_.right_x = 0.5f;
-    chassis.debug_control_.omega_z_injection_mode_raw = 1U;
+    chassis.debug_control_.injection.omega_z_injection_mode_raw = 1U;
 
     chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
 
@@ -1041,10 +1041,10 @@ void testDebugOmegaZInjectionModeSineOverridesManualOmegaInput()
     chassis.airjoy_data_.left_y = 0.0f;
     chassis.airjoy_data_.left_x = 0.0f;
     chassis.airjoy_data_.right_x = 0.5f;
-    chassis.debug_control_.omega_z_injection_mode_raw = 2U;
-    chassis.debug_control_.omega_z_sine_amplitude = 1.0f;
-    chassis.debug_control_.omega_z_sine_frequency_hz = 0.0f;
-    chassis.debug_control_.omega_z_sine_offset = 0.25f;
+    chassis.debug_control_.injection.omega_z_injection_mode_raw = 2U;
+    chassis.debug_control_.injection.omega_z_sine_amplitude = 1.0f;
+    chassis.debug_control_.injection.omega_z_sine_frequency_hz = 0.0f;
+    chassis.debug_control_.injection.omega_z_sine_offset = 0.25f;
     chassis.time_ms_ = 250U;
 
     chassis.applyDebugTargetOverride(Chassis::DebugMode::kWorldSpeed);
@@ -1062,11 +1062,11 @@ void testDebugOmegaZInjectionDoesNotAffectLockToTarget()
     chassis.airjoy_data_.left_y = 0.2f;
     chassis.airjoy_data_.left_x = -0.1f;
     chassis.airjoy_data_.right_x = 0.8f;
-    chassis.debug_control_.omega_z_injection_mode_raw = 2U;
-    chassis.debug_control_.omega_z_sine_amplitude = 2.0f;
-    chassis.debug_control_.omega_z_sine_frequency_hz = 0.0f;
-    chassis.debug_control_.omega_z_sine_offset = 0.5f;
-    chassis.debug_control_.lock_rot_z = 1.2f;
+    chassis.debug_control_.injection.omega_z_injection_mode_raw = 2U;
+    chassis.debug_control_.injection.omega_z_sine_amplitude = 2.0f;
+    chassis.debug_control_.injection.omega_z_sine_frequency_hz = 0.0f;
+    chassis.debug_control_.injection.omega_z_sine_offset = 0.5f;
+    chassis.debug_control_.injection.lock_rot_z = 1.2f;
 
     chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodyLockTo);
 

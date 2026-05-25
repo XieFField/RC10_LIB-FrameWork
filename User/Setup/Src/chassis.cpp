@@ -666,9 +666,9 @@ namespace jia
 
         Chassis::ManualSpeedProfileMode Chassis::resolveEffectiveManualSpeedProfileMode() const
         {
-            const DebugMode debug_mode = resolveDebugMode(debug_control_.mode_raw);
+            const DebugMode debug_mode = resolveDebugMode(debug_control_.common.mode_raw);
             const bool single_wheel_scurve_debug =
-                debug_control_.enable && isSingleWheelIsolatedMode(debug_mode);
+                debug_control_.common.enable && isSingleWheelIsolatedMode(debug_mode);
             if (runtime_strategy_cfg_.manual_speed_profile_manual_only &&
                 normalized_body_command_.source != CommandInputSource::kDebugTarget &&
                 !single_wheel_scurve_debug)
@@ -1405,17 +1405,17 @@ namespace jia
             f32 target_omega_z = -right_x_cmd * runtime_strategy_cfg_.max_omega_z_;
 
             const DebugOmegaZInjectionMode omega_z_injection_mode =
-                (debug_control_.omega_z_injection_mode_raw <= static_cast<u8>(DebugOmegaZInjectionMode::kSine))
-                    ? static_cast<DebugOmegaZInjectionMode>(debug_control_.omega_z_injection_mode_raw)
+                (debug_control_.injection.omega_z_injection_mode_raw <= static_cast<u8>(DebugOmegaZInjectionMode::kSine))
+                    ? static_cast<DebugOmegaZInjectionMode>(debug_control_.injection.omega_z_injection_mode_raw)
                     : DebugOmegaZInjectionMode::kOff;
             switch (omega_z_injection_mode)
             {
             case DebugOmegaZInjectionMode::kSine:
                 target_omega_z = sineWaveGeneratorF32(time_ms_ / 1000.0f,
-                                                      debug_control_.omega_z_sine_amplitude,
-                                                      debug_control_.omega_z_sine_frequency_hz,
+                                                      debug_control_.injection.omega_z_sine_amplitude,
+                                                      debug_control_.injection.omega_z_sine_frequency_hz,
                                                       0.0f,
-                                                      debug_control_.omega_z_sine_offset);
+                                                      debug_control_.injection.omega_z_sine_offset);
                 break;
             case DebugOmegaZInjectionMode::kStep:
                 if (airjoy_data_.right_x > 0.3f)
@@ -1436,7 +1436,7 @@ namespace jia
                 break;
             }
 
-            debug_control_.mode_resolved_raw = static_cast<u8>(mode);
+            debug_control_.common.mode_resolved_raw = static_cast<u8>(mode);
             switch (mode)
             {
             case DebugMode::kTorqueFree:
@@ -1455,10 +1455,10 @@ namespace jia
                 setTargetWorldSpeedLockNowRotZMode(target_vel_x, target_vel_y);
                 break;
             case DebugMode::kBodyLockTo:
-                setTargetBodySpeedLockToRotZMode(target_vel_x, target_vel_y, debug_control_.lock_rot_z);
+                setTargetBodySpeedLockToRotZMode(target_vel_x, target_vel_y, debug_control_.injection.lock_rot_z);
                 break;
             case DebugMode::kWorldLockTo:
-                setTargetWorldSpeedLockToRotZMode(target_vel_x, target_vel_y, debug_control_.lock_rot_z);
+                setTargetWorldSpeedLockToRotZMode(target_vel_x, target_vel_y, debug_control_.injection.lock_rot_z);
                 break;
             case DebugMode::kBodyLockNowWithNoOmegaZ:
                 setTargetBodySpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
@@ -1537,53 +1537,53 @@ namespace jia
 
         void Chassis::syncDirectActuatorCommandTemplates()
         {
-            const DirectSteerCommandType steer_type = sanitizeDirectSteerCommandType(debug_control_.direct_steer_command_type_raw);
-            const DirectDriveCommandType drive_type = sanitizeDirectDriveCommandType(debug_control_.direct_drive_command_type_raw);
-            debug_control_.direct_steer_command_type_raw = static_cast<u8>(steer_type);
-            debug_control_.direct_drive_command_type_raw = static_cast<u8>(drive_type);
+            const DirectSteerCommandType steer_type = sanitizeDirectSteerCommandType(debug_control_.legacy_direct.steer_command_type_raw);
+            const DirectDriveCommandType drive_type = sanitizeDirectDriveCommandType(debug_control_.legacy_direct.drive_command_type_raw);
+            debug_control_.legacy_direct.steer_command_type_raw = static_cast<u8>(steer_type);
+            debug_control_.legacy_direct.drive_command_type_raw = static_cast<u8>(drive_type);
 
-            if (debug_control_.direct_steer_command_type_raw != direct_last_steer_command_type_raw_)
+            if (debug_control_.legacy_direct.steer_command_type_raw != direct_last_steer_command_type_raw_)
             {
                 if (direct_last_steer_command_type_raw_ == 0xFFU)
                 {
-                    if (debug_control_.direct_steer_command_limit <= 0.0f)
+                    if (debug_control_.legacy_direct.steer_command_limit <= 0.0f)
                     {
-                        debug_control_.direct_steer_command_limit = getDirectSteerDefaultLimit(steer_type);
+                        debug_control_.legacy_direct.steer_command_limit = getDirectSteerDefaultLimit(steer_type);
                     }
-                    if (debug_control_.direct_steer_step_value == 0.0f)
+                    if (debug_control_.legacy_direct.steer_step_value == 0.0f)
                     {
-                        debug_control_.direct_steer_step_value = getDirectSteerDefaultStepValue(steer_type);
+                        debug_control_.legacy_direct.steer_step_value = getDirectSteerDefaultStepValue(steer_type);
                     }
                 }
                 else
                 {
-                    debug_control_.direct_steer_command_value = 0.0f;
-                    debug_control_.direct_steer_command_limit = getDirectSteerDefaultLimit(steer_type);
-                    debug_control_.direct_steer_step_value = getDirectSteerDefaultStepValue(steer_type);
+                    debug_control_.legacy_direct.steer_command_value = 0.0f;
+                    debug_control_.legacy_direct.steer_command_limit = getDirectSteerDefaultLimit(steer_type);
+                    debug_control_.legacy_direct.steer_step_value = getDirectSteerDefaultStepValue(steer_type);
                 }
-                direct_last_steer_command_type_raw_ = debug_control_.direct_steer_command_type_raw;
+                direct_last_steer_command_type_raw_ = debug_control_.legacy_direct.steer_command_type_raw;
             }
 
-            if (debug_control_.direct_drive_command_type_raw != direct_last_drive_command_type_raw_)
+            if (debug_control_.legacy_direct.drive_command_type_raw != direct_last_drive_command_type_raw_)
             {
                 if (direct_last_drive_command_type_raw_ == 0xFFU)
                 {
-                    if (debug_control_.direct_drive_command_limit <= 0.0f)
+                    if (debug_control_.legacy_direct.drive_command_limit <= 0.0f)
                     {
-                        debug_control_.direct_drive_command_limit = getDirectDriveDefaultLimit(drive_type);
+                        debug_control_.legacy_direct.drive_command_limit = getDirectDriveDefaultLimit(drive_type);
                     }
-                    if (debug_control_.direct_drive_step_value == 0.0f)
+                    if (debug_control_.legacy_direct.drive_step_value == 0.0f)
                     {
-                        debug_control_.direct_drive_step_value = getDirectDriveDefaultStepValue(drive_type);
+                        debug_control_.legacy_direct.drive_step_value = getDirectDriveDefaultStepValue(drive_type);
                     }
                 }
                 else
                 {
-                    debug_control_.direct_drive_command_value = 0.0f;
-                    debug_control_.direct_drive_command_limit = getDirectDriveDefaultLimit(drive_type);
-                    debug_control_.direct_drive_step_value = getDirectDriveDefaultStepValue(drive_type);
+                    debug_control_.legacy_direct.drive_command_value = 0.0f;
+                    debug_control_.legacy_direct.drive_command_limit = getDirectDriveDefaultLimit(drive_type);
+                    debug_control_.legacy_direct.drive_step_value = getDirectDriveDefaultStepValue(drive_type);
                 }
-                direct_last_drive_command_type_raw_ = debug_control_.direct_drive_command_type_raw;
+                direct_last_drive_command_type_raw_ = debug_control_.legacy_direct.drive_command_type_raw;
             }
         }
 
@@ -1593,26 +1593,26 @@ namespace jia
 
             DirectActuatorCommandSnapshot command{};
             command.wheel_idx = wheel_idx;
-            command.steer_input_mode = static_cast<u8>(sanitizeDirectAxisInputMode(debug_control_.direct_steer_input_mode_raw));
-            command.drive_input_mode = static_cast<u8>(sanitizeDirectAxisInputMode(debug_control_.direct_drive_input_mode_raw));
-            command.steer_command_type = static_cast<u8>(sanitizeDirectSteerCommandType(debug_control_.direct_steer_command_type_raw));
-            command.drive_command_type = static_cast<u8>(sanitizeDirectDriveCommandType(debug_control_.direct_drive_command_type_raw));
-            command.steer_command_limit = (debug_control_.direct_steer_command_limit > 0.0f)
-                                              ? debug_control_.direct_steer_command_limit
+            command.steer_input_mode = static_cast<u8>(sanitizeDirectAxisInputMode(debug_control_.legacy_direct.steer_input_mode_raw));
+            command.drive_input_mode = static_cast<u8>(sanitizeDirectAxisInputMode(debug_control_.legacy_direct.drive_input_mode_raw));
+            command.steer_command_type = static_cast<u8>(sanitizeDirectSteerCommandType(debug_control_.legacy_direct.steer_command_type_raw));
+            command.drive_command_type = static_cast<u8>(sanitizeDirectDriveCommandType(debug_control_.legacy_direct.drive_command_type_raw));
+            command.steer_command_limit = (debug_control_.legacy_direct.steer_command_limit > 0.0f)
+                                              ? debug_control_.legacy_direct.steer_command_limit
                                               : getDirectSteerDefaultLimit(static_cast<DirectSteerCommandType>(command.steer_command_type));
-            command.drive_command_limit = (debug_control_.direct_drive_command_limit > 0.0f)
-                                              ? debug_control_.direct_drive_command_limit
+            command.drive_command_limit = (debug_control_.legacy_direct.drive_command_limit > 0.0f)
+                                              ? debug_control_.legacy_direct.drive_command_limit
                                               : getDirectDriveDefaultLimit(static_cast<DirectDriveCommandType>(command.drive_command_type));
-            command.steer_step_threshold = (debug_control_.direct_steer_step_threshold > 0.01f) ? debug_control_.direct_steer_step_threshold : 0.3f;
-            command.drive_step_threshold = (debug_control_.direct_drive_step_threshold > 0.01f) ? debug_control_.direct_drive_step_threshold : 0.3f;
-            command.steer_step_value = fabsf((debug_control_.direct_steer_step_value != 0.0f)
-                                                 ? debug_control_.direct_steer_step_value
+            command.steer_step_threshold = (debug_control_.legacy_direct.steer_step_threshold > 0.01f) ? debug_control_.legacy_direct.steer_step_threshold : 0.3f;
+            command.drive_step_threshold = (debug_control_.legacy_direct.drive_step_threshold > 0.01f) ? debug_control_.legacy_direct.drive_step_threshold : 0.3f;
+            command.steer_step_value = fabsf((debug_control_.legacy_direct.steer_step_value != 0.0f)
+                                                 ? debug_control_.legacy_direct.steer_step_value
                                                  : getDirectSteerDefaultStepValue(static_cast<DirectSteerCommandType>(command.steer_command_type)));
-            command.drive_step_value = fabsf((debug_control_.direct_drive_step_value != 0.0f)
-                                                 ? debug_control_.direct_drive_step_value
+            command.drive_step_value = fabsf((debug_control_.legacy_direct.drive_step_value != 0.0f)
+                                                 ? debug_control_.legacy_direct.drive_step_value
                                                  : getDirectDriveDefaultStepValue(static_cast<DirectDriveCommandType>(command.drive_command_type)));
-            command.steer_command_value = debug_control_.direct_steer_command_value;
-            command.drive_command_value = debug_control_.direct_drive_command_value;
+            command.steer_command_value = debug_control_.legacy_direct.steer_command_value;
+            command.drive_command_value = debug_control_.legacy_direct.drive_command_value;
 
             const DirectAxisInputMode steer_input_mode = static_cast<DirectAxisInputMode>(command.steer_input_mode);
             const DirectAxisInputMode drive_input_mode = static_cast<DirectAxisInputMode>(command.drive_input_mode);
@@ -1655,8 +1655,8 @@ namespace jia
                 command.drive_command_value = command.drive_step_sign * command.drive_step_value;
             }
 
-            debug_control_.direct_steer_command_value = command.steer_command_value;
-            debug_control_.direct_drive_command_value = command.drive_command_value;
+            debug_control_.legacy_direct.steer_command_value = command.steer_command_value;
+            debug_control_.legacy_direct.drive_command_value = command.drive_command_value;
 
             command.applied_steer_cmd = clampValue(command.steer_command_value, -command.steer_command_limit, command.steer_command_limit);
             command.applied_drive_cmd = clampValue(command.drive_command_value, -command.drive_command_limit, command.drive_command_limit);
@@ -1687,7 +1687,7 @@ namespace jia
 
         void Chassis::applyDirectActuatorSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command)
         {
-            if (!debug_control_.direct_enable_steer)
+            if (!debug_control_.legacy_direct.enable_steer)
             {
                 setSteerMotorTargetCurrent(wheel, 0.0f);
                 return;
@@ -1727,7 +1727,7 @@ namespace jia
 
         void Chassis::applyDirectActuatorDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command)
         {
-            if (!debug_control_.direct_enable_drive)
+            if (!debug_control_.legacy_direct.enable_drive)
             {
                 clearDirectDriveCommandByType(wheel, wheel_idx, command.drive_command_type);
                 return;
@@ -1781,7 +1781,7 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
-                if (debug_control_.direct_estop || i != wheel_idx)
+                if (debug_control_.legacy_direct.estop || i != wheel_idx)
                 {
                     setSteerMotorTargetCurrent(wheel, 0.0f);
                     clearDirectDriveCommandByType(wheel, i, command.drive_command_type);
@@ -1837,9 +1837,9 @@ namespace jia
                                            (drive_motor != nullptr) ? drive_motor->getCurrent() : 0.0f,
                                            (drive_motor != nullptr) ? drive_motor->getTargetRPM() : 0.0f,
                                            (drive_motor != nullptr) ? drive_motor->getRPM() : 0.0f,
-                                           debug_control_.direct_enable_steer ? 1U : 0U,
-                                           debug_control_.direct_enable_drive ? 1U : 0U,
-                                           debug_control_.direct_estop ? 1U : 0U);
+                                           debug_control_.legacy_direct.enable_steer ? 1U : 0U,
+                                           debug_control_.legacy_direct.enable_drive ? 1U : 0U,
+                                           debug_control_.legacy_direct.estop ? 1U : 0U);
                 }
             }
 #endif
@@ -1933,11 +1933,11 @@ namespace jia
 
         bool Chassis::isSingleWheelFullGateEnabled() const
         {
-            if (!isSingleWheelIsolatedMode(resolveDebugMode(debug_control_.mode_raw)))
+            if (!isSingleWheelIsolatedMode(resolveDebugMode(debug_control_.common.mode_raw)))
             {
                 return false;
             }
-            return (debug_control_.mode_raw == 31U) || debug_control_.single_wheel_full_gate_enable;
+            return (debug_control_.common.mode_raw == 31U) || debug_control_.single_wheel.full_gate_enable;
         }
 
         void Chassis::applySingleWheelIsolationFilter(DebugMode mode, u8 wheel_idx, bool all_homed)
@@ -2015,7 +2015,7 @@ namespace jia
                 for (u8 i = 0; i < 4; ++i)
                 {
                     WheelConfig &wheel = wheel_config_[i];
-                    clearDirectDriveCommandByType(wheel, i, debug_control_.direct_drive_command_type_raw);
+                    clearDirectDriveCommandByType(wheel, i, debug_control_.legacy_direct.drive_command_type_raw);
                 }
             }
 
@@ -2033,15 +2033,15 @@ namespace jia
         void Chassis::isDebugMode()
         {
             syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
-            const DebugControlRoute route = classifyDebugControlRoute(debug_control_.enable, debug_control_.mode_raw);
+            const DebugControlRoute route = classifyDebugControlRoute(debug_control_.common.enable, debug_control_.common.mode_raw);
             if (route == DebugControlRoute::kDisabled)
             {
-                debug_control_.mode_resolved_raw = static_cast<u8>(DebugMode::kTorqueFree);
+                debug_control_.common.mode_resolved_raw = static_cast<u8>(DebugMode::kTorqueFree);
                 return;
             }
 
-            const DebugMode mode = resolveDebugMode(debug_control_.mode_raw);
-            debug_control_.mode_resolved_raw = static_cast<u8>(mode);
+            const DebugMode mode = resolveDebugMode(debug_control_.common.mode_raw);
+            debug_control_.common.mode_resolved_raw = static_cast<u8>(mode);
 
             if (route == DebugControlRoute::kTargetInjection)
             {
@@ -2051,21 +2051,21 @@ namespace jia
 
             if (isSingleWheelIsolatedMode(mode))
             {
-                if (debug_control_.mode_raw == 31U)
+                if (debug_control_.common.mode_raw == 31U)
                 {
-                    debug_control_.single_wheel_full_gate_enable = true;
+                    debug_control_.single_wheel.full_gate_enable = true;
                 }
-                const u8 wheel_idx = (debug_control_.single_wheel_debug_index < 4U)
-                                         ? debug_control_.single_wheel_debug_index
-                                         : ((debug_control_.control_wheel_index < 4U) ? debug_control_.control_wheel_index : 0U);
-                debug_control_.control_wheel_index = wheel_idx;
-                if (debug_control_.single_wheel_observe_index < 4U)
+                const u8 wheel_idx = (debug_control_.single_wheel.debug_index < 4U)
+                                         ? debug_control_.single_wheel.debug_index
+                                         : ((debug_control_.common.control_wheel_index < 4U) ? debug_control_.common.control_wheel_index : 0U);
+                debug_control_.common.control_wheel_index = wheel_idx;
+                if (debug_control_.single_wheel.observe_index < 4U)
                 {
-                    debug_control_.observe_wheel_index = debug_control_.single_wheel_observe_index;
+                    debug_control_.common.observe_wheel_index = debug_control_.single_wheel.observe_index;
                 }
                 else
                 {
-                    debug_control_.single_wheel_observe_index = debug_control_.observe_wheel_index;
+                    debug_control_.single_wheel.observe_index = debug_control_.common.observe_wheel_index;
                 }
                 return;
             }
@@ -2255,7 +2255,7 @@ namespace jia
                 input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode,
             };
             const CommandInputSource source =
-                (classifyDebugControlRoute(debug_control_.enable, debug_control_.mode_raw) == DebugControlRoute::kTargetInjection)
+                (classifyDebugControlRoute(debug_control_.common.enable, debug_control_.common.mode_raw) == DebugControlRoute::kTargetInjection)
                     ? CommandInputSource::kDebugTarget
                     : CommandInputSource::kApi;
             normalized_body_command_ = makeNormalizedBodyCommand(planner_command, input_hwt_rot_z_, source);
@@ -2971,10 +2971,10 @@ namespace jia
 
         void Chassis::applyModuleCommands(bool all_homed)
         {
-            const DebugMode debug_mode = resolveDebugMode(debug_control_.mode_raw);
+            const DebugMode debug_mode = resolveDebugMode(debug_control_.common.mode_raw);
             const bool single_wheel_isolation_active =
-                debug_control_.enable && isSingleWheelIsolatedMode(debug_mode);
-            const u8 single_wheel_idx = (debug_control_.control_wheel_index < 4U) ? debug_control_.control_wheel_index : 0U;
+                debug_control_.common.enable && isSingleWheelIsolatedMode(debug_mode);
+            const u8 single_wheel_idx = (debug_control_.common.control_wheel_index < 4U) ? debug_control_.common.control_wheel_index : 0U;
             bool steer_fault_any_active = false;
             for (u8 i = 0; i < 4; ++i)
             {
@@ -3202,12 +3202,12 @@ namespace jia
         {
             debug_mirror_.all_homed = all_homed;
             debug_mirror_.single_wheel_target_index =
-                (debug_control_.single_wheel_debug_index < 4U)
-                    ? debug_control_.single_wheel_debug_index
-                    : ((debug_control_.control_wheel_index < 4U) ? debug_control_.control_wheel_index : 0U);
-            const DebugMode debug_mode = resolveDebugMode(debug_control_.mode_raw);
+                (debug_control_.single_wheel.debug_index < 4U)
+                    ? debug_control_.single_wheel.debug_index
+                    : ((debug_control_.common.control_wheel_index < 4U) ? debug_control_.common.control_wheel_index : 0U);
+            const DebugMode debug_mode = resolveDebugMode(debug_control_.common.mode_raw);
             const bool single_wheel_isolation_active =
-                debug_control_.enable && isSingleWheelIsolatedMode(debug_mode);
+                debug_control_.common.enable && isSingleWheelIsolatedMode(debug_mode);
             debug_mirror_.single_wheel_isolation_active =
                 single_wheel_isolation_active;
             debug_mirror_.single_wheel_full_gate_enable =
@@ -3262,7 +3262,7 @@ namespace jia
 
         void Chassis::syncDebugSteerPidTuneFromRuntimeOnEnableEdge()
         {
-            const bool enable_now = debug_control_.enable;
+            const bool enable_now = debug_control_.common.enable;
             if (!enable_now)
             {
                 debug_pid_tune_.synced_on_enable_edge = false;
@@ -3358,7 +3358,7 @@ namespace jia
                                        (u32)time_ms_,
                                        all_homed ? 1U : 0U,
                                        (u32)input_target_data_.mode,
-                                       debug_control_.enable ? 1U : 0U,
+                                       debug_control_.common.enable ? 1U : 0U,
                                        (u32)debug_mirror_.homing_state[0],
                                        (u32)debug_mirror_.homing_state[1],
                                        (u32)debug_mirror_.homing_state[2],
@@ -3370,14 +3370,14 @@ namespace jia
                 return;
             }
 
-            const u8 wheel_idx = (debug_control_.observe_wheel_index < 4U) ? debug_control_.observe_wheel_index : 0U;
+            const u8 wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
             if (debug_output_.text_log_phase == 0U)
             {
                 debug_uart_.printf_DMA((char *)"FS t=%lu home=%u mode=%u dbg=%u hs=%u/%u/%u/%u oa0=%.1f->%.1f rpm0=%.1f->%.1f vec=%.2f de=%.1f eta=%.3f va=%u\r\n",
                                        (u32)time_ms_,
                                        all_homed ? 1U : 0U,
                                        (u32)input_target_data_.mode,
-                                       debug_control_.enable ? 1U : 0U,
+                                       debug_control_.common.enable ? 1U : 0U,
                                        (u32)debug_mirror_.homing_state[0],
                                        (u32)debug_mirror_.homing_state[1],
                                        (u32)debug_mirror_.homing_state[2],
@@ -3512,7 +3512,7 @@ namespace jia
             }
 
             debug_output_.single_wheel_1khz_last_ms = time_ms_;
-            const u8 observe_wheel_idx = (debug_control_.observe_wheel_index < 4U) ? debug_control_.observe_wheel_index : 0U;
+            const u8 observe_wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
             const WheelConfig &wheel = wheel_config_[observe_wheel_idx];
             const Motor_Base *steer_motor = wheel.steer_motor_h;
             if (steer_motor == nullptr)
@@ -3558,7 +3558,7 @@ namespace jia
                 return;
             }
 
-            const u8 observe_wheel_idx = (debug_control_.observe_wheel_index < 4U) ? debug_control_.observe_wheel_index : 0U;
+            const u8 observe_wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
             const WheelConfig &wheel = wheel_config_[observe_wheel_idx];
             const Motor_Base *steer_motor = wheel.steer_motor_h;
             const Motor_Base *drive_motor = wheel.drive_motor_h;
@@ -3820,19 +3820,19 @@ namespace jia
 
         bool Chassis::applyDebugModuleOverride(bool all_homed)
         {
-            if (!debug_control_.enable)
+            if (!debug_control_.common.enable)
             {
                 return false;
             }
 
-            const DebugModuleOverrideRoute route = classifyDebugModuleOverrideRoute(debug_control_.mode_raw);
+            const DebugModuleOverrideRoute route = classifyDebugModuleOverrideRoute(debug_control_.common.mode_raw);
             if (route == DebugModuleOverrideRoute::kNone)
             {
                 return false;
             }
 
-            const u8 wheel_idx = (debug_control_.control_wheel_index < 4U) ? debug_control_.control_wheel_index : 0U;
-            const DebugMode mode = resolveDebugMode(debug_control_.mode_raw);
+            const u8 wheel_idx = (debug_control_.common.control_wheel_index < 4U) ? debug_control_.common.control_wheel_index : 0U;
+            const DebugMode mode = resolveDebugMode(debug_control_.common.mode_raw);
             resetDebugModuleOverrideTargets(wheel_idx, false);
 
             if (route == DebugModuleOverrideRoute::kAlignForward)
@@ -3997,7 +3997,7 @@ namespace jia
                 input_hwt_rot_z_ = hwt->get_yaw_rad();
                 input_hwt_omega_z_ = hwt->get_yaw_speed_rad();
 
-                // 常态同步手柄缓存：即使 debug_control_.enable 关闭，也保持 airjoy_data_ 实时更新。
+                // 常态同步手柄缓存：即使 debug_control_.common.enable 关闭，也保持 airjoy_data_ 实时更新。
                 // 便于通过调试器直接观察摇杆输入；不改变任何控制模式接管逻辑。
                 CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 
