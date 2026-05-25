@@ -172,6 +172,7 @@ namespace jia
                 kAlignForward = 1,
                 kHomingObserve = 2,
                 kDirectActuator = 3,
+                kSingleWheelIsolated = 4,
             };
 
             // 空闲姿态：定义底盘失能或无输入时，四个舵轮应保持的姿态策略。
@@ -502,7 +503,8 @@ namespace jia
                 kWorldLockNowWithNoOmegaZ = 8,
                 kAlignForward = 21,
                 kHomingObserve = 22,
-                kDirectActuator = 30,
+                kSingleWheelIsolated = 30,
+                kDirectActuator = 32,
             };
             enum class DebugOmegaZInjectionMode : u8
             {
@@ -558,12 +560,20 @@ namespace jia
             void applyAlignForwardDebugOverride();
             void applyHomingObserveDebugOverride();
             void applyDirectActuatorDebugOverride(u8 wheel_idx);
+            void computeSingleWheelIsolatedCommandsMode30(u8 wheel_idx);
+            bool isSingleWheelIsolatedMode(DebugMode mode) const;
+            bool isSingleWheelFullGateEnabled() const;
+            void applySingleWheelIsolationFilter(DebugMode mode, u8 wheel_idx, bool all_homed);
             void finalizeDebugModuleOverride(bool all_homed, DebugModuleOverrideRoute route);
             void syncDirectActuatorCommandTemplates(); // mode30 类型切换同步入口。用于在命令类型改变时刷新单值命令、限幅和阶跃模板。
             DirectActuatorCommandSnapshot resolveDirectActuatorCommand(u8 wheel_idx); // 解析当前 control_wheel_index 对应轮的 mode30 双轴有效命令快照。
+            DirectActuatorCommandSnapshot resolveSingleWheelIsolatedCommand(u8 wheel_idx);
             void clearDirectDriveCommandByType(WheelConfig &wheel, u8 wheel_idx, u8 drive_control_type);
+            void applyResolvedSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command, bool enable);
+            void applyResolvedDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command, bool enable);
             void applyDirectActuatorSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command);
             void applyDirectActuatorDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command);
+            f32 shapeSingleWheelDriveOmegaRadS(u8 wheel_idx, f32 target_omega_rad_s);
             void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z);
@@ -663,7 +673,7 @@ namespace jia
             // =====================================================================
             struct StrategyConfig
             {
-                ManualSpeedProfileMode manual_speed_profile_mode = ManualSpeedProfileMode::kSCurve;
+                ManualSpeedProfileMode manual_speed_profile_mode = ManualSpeedProfileMode::kLegacy;
                 bool manual_speed_profile_manual_only = true;
                 f32 manual_trans_acc_acc_ = 5.0f;
                 f32 manual_trans_acc_dec_ = 12.0f;
@@ -705,8 +715,8 @@ namespace jia
 
                 struct XParkCommandThresholdConfig
                 {
-                    f32 enter_m_s = 0.01f; // [RW] 仅用于 X-Park 命令静止意图的进入门限（m/s），不用于残余反馈过滤。
-                    f32 exit_m_s = 0.03f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
+                    f32 enter_m_s = 0.03f; // [RW] 仅用于 X-Park 命令静止意图的进入门限（m/s），不用于残余反馈过滤。
+                    f32 exit_m_s = 0.05f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
                 } xpark_command_threshold_cfg_;
 
                 struct LowSpeedDriveSuppressionConfig
@@ -782,36 +792,65 @@ namespace jia
             // =====================================================================
             struct DebugControl
             {
-                // ---- 调试总开关与模式入口 ---------------------------------------
-                bool enable = true;                                             // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
-                u8 mode_raw = 1;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
-                u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。用于观察 mode_raw 经过归一化后的结果。
-                u8 control_wheel_index = 1;                                     // [RW] mode30 执行目标轮号（0~3）。只用于执行层直控链路选择当前被操作的轮。
-                u8 observe_wheel_index = 1;                                     // [RW] 单轮观测焦点轮号（0~3）。文本单轮日志与单轮高速输出统一跟随该轮。
+                struct Common
+                {
+                    bool enable = true;                                             // [RW] 调试总开关。
+                    u8 mode_raw = 1;                                                 // [RW] 调试模式号。
+                    u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
+                    u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
+                    u8 observe_wheel_index = 0U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。
+                } common{};
 
-                // ---- LockTo / omega_z 注入 ---------------------------------------
-                f32 lock_rot_z = 0.0f;     // [RW] LockTo 调试目标角（rad）。只在 LockTo 相关调试模式中使用，不参与 omega_z 注入。
-                u8 omega_z_injection_mode_raw = static_cast<u8>(DebugOmegaZInjectionMode::kOff); // [RW] omega_z 注入模式：0=关闭，1=阶跃覆盖，2=正弦覆盖。启用后会覆盖正常 omega_z 输入，不是叠加。
-                f32 omega_z_sine_amplitude = 0.0f;    // [RW] omega_z 正弦注入幅值。仅在注入模式为 Sine 时使用。
-                f32 omega_z_sine_frequency_hz = 0.1f; // [RW] omega_z 正弦注入频率（Hz）。仅在注入模式为 Sine 时使用。
-                f32 omega_z_sine_offset = 0.0f;       // [RW] omega_z 正弦注入偏置。仅在注入模式为 Sine 时使用。
+                struct Injection
+                {
+                    f32 lock_rot_z = 0.0f;     // [RW] LockTo 调试目标角（rad）。
+                    u8 omega_z_injection_mode_raw = static_cast<u8>(DebugOmegaZInjectionMode::kOff); // [RW] omega_z 注入模式。
+                    f32 omega_z_sine_amplitude = 0.0f;    // [RW] omega_z 正弦注入幅值。
+                    f32 omega_z_sine_frequency_hz = 0.1f; // [RW] omega_z 正弦注入频率（Hz）。
+                    f32 omega_z_sine_offset = 0.0f;       // [RW] omega_z 正弦注入偏置。
+                } injection{};
 
-                // ---- mode30：执行层直控 -----------------------------------------
-                bool direct_estop = false;                                       // [RW] mode30 急停闸门。true 时禁止所有执行层输出，适合调试前的“安全锁”。
-                bool direct_enable_steer = true;                                 // [RW] mode30 当前控制轮的舵向轴执行使能。false 时只保留安全清零，不下发舵向直控。
-                bool direct_enable_drive = true;                                 // [RW] mode30 当前控制轮的驱动轴执行使能。false 时只保留安全清零，不下发驱动直控。
-                u8 direct_steer_input_mode_raw = static_cast<u8>(DirectAxisInputMode::kCached); // [RW] mode30 舵向轴输入模式：0=缓存值，1=遥控连续，2=遥控阶跃。
-                u8 direct_drive_input_mode_raw = static_cast<u8>(DirectAxisInputMode::kCached); // [RW] mode30 驱动轴输入模式：0=缓存值，1=遥控连续，2=遥控阶跃。
-                u8 direct_steer_command_type_raw = static_cast<u8>(DirectSteerCommandType::kRpm); // [RW] mode30 舵向轴命令类型：0=电流，1=速度，2=单圈角，3=多圈角。
-                u8 direct_drive_command_type_raw = static_cast<u8>(DirectDriveCommandType::kRpm); // [RW] mode30 驱动轴命令类型：0=速度，1=电流，2=刹车。
-                f32 direct_steer_command_value = 0.0f;                            // [RW] mode30 舵向轴当前活跃命令值。单位由命令类型决定。
-                f32 direct_drive_command_value = 0.0f;                            // [RW] mode30 驱动轴当前活跃命令值。单位由命令类型决定。
-                f32 direct_steer_command_limit = 250.0f;                          // [RW] mode30 舵向轴命令限幅。单位跟随当前舵向命令类型；类型切换后回到安全默认值。
-                f32 direct_drive_command_limit = 1000.0f;                         // [RW] mode30 驱动轴命令限幅。单位跟随当前驱动命令类型；类型切换后回到安全默认值。
-                f32 direct_steer_step_threshold = 0.3f;                           // [RW] mode30 舵向轴阶跃触发阈值。仅在 RcStep 时生效。
-                f32 direct_drive_step_threshold = 0.3f;                           // [RW] mode30 驱动轴阶跃触发阈值。仅在 RcStep 时生效。
-                f32 direct_steer_step_value = 200.0f;                             // [RW] mode30 舵向轴阶跃幅值。单位跟随当前舵向命令类型；类型切换后回到默认值。
-                f32 direct_drive_step_value = 200.0f;                             // [RW] mode30 驱动轴阶跃幅值。单位跟随当前驱动命令类型；类型切换后回到默认值。
+                struct SingleWheelTarget
+                {
+                    u8 mode = 0U;
+                    f32 value = 0.0f;
+                };
+
+                struct SingleWheelFullGate
+                {
+                    f32 lock_rot_z = 0.0f; // [RW] Full-gate 单轮调试锁角辅助参数。
+                    u8 yaw_mode = 0U;      // [RW] Full-gate 单轮调试 yaw 观测模式。
+                };
+
+                struct SingleWheel
+                {
+                    u8 debug_index = 0U;             // [legacy][compat] 历史兼容字段。当前单轮模式运行时不读取这里，不作为真值源。
+                    u8 observe_index = 0U;           // [legacy][compat] 历史兼容字段。当前单轮模式运行时不读取这里，不作为真值源。
+                    bool full_gate_enable = false;   // [RW] 是否保留完整主线 gate。
+                    bool scurve_enable = false;        // [RW] 是否保留 S 型速度规划器。
+                    SingleWheelTarget steer_target{static_cast<u8>(DirectSteerCommandType::kSingleTurnDeg), 180.0f};
+                    SingleWheelTarget drive_target{static_cast<u8>(DirectDriveCommandType::kRpm), 1000.0f};
+                    SingleWheelFullGate full_gate{};
+                } single_wheel{};
+
+                struct LegacyDirect
+                {
+                    bool estop = false;                                                   // [RW] legacy mode32 急停闸门。
+                    bool enable_steer = false;                                            // [RW] legacy mode32 舵向轴使能。
+                    bool enable_drive = false;                                            // [RW] legacy mode32 驱动轴使能。
+                    u8 steer_input_mode_raw = static_cast<u8>(DirectAxisInputMode::kCached); // [RW] legacy mode32 舵向轴输入模式。
+                    u8 drive_input_mode_raw = static_cast<u8>(DirectAxisInputMode::kCached); // [RW] legacy mode32 驱动轴输入模式。
+                    u8 steer_command_type_raw = static_cast<u8>(DirectSteerCommandType::kRpm); // [RW] legacy mode32 舵向轴命令类型。
+                    u8 drive_command_type_raw = static_cast<u8>(DirectDriveCommandType::kRpm); // [RW] legacy mode32 驱动轴命令类型。
+                    f32 steer_command_value = 0.0f;                                       // [RW] legacy mode32 舵向轴当前活跃命令值。
+                    f32 drive_command_value = 0.0f;                                       // [RW] legacy mode32 驱动轴当前活跃命令值。
+                    f32 steer_command_limit = 250.0f;                                     // [RW] legacy mode32 舵向轴命令限幅。
+                    f32 drive_command_limit = 1000.0f;                                    // [RW] legacy mode32 驱动轴命令限幅。
+                    f32 steer_step_threshold = 0.3f;                                      // [RW] legacy mode32 舵向轴阶跃触发阈值。
+                    f32 drive_step_threshold = 0.3f;                                      // [RW] legacy mode32 驱动轴阶跃触发阈值。
+                    f32 steer_step_value = 200.0f;                                        // [RW] legacy mode32 舵向轴阶跃幅值。
+                    f32 drive_step_value = 200.0f;                                        // [RW] legacy mode32 驱动轴阶跃幅值。
+                } legacy_direct{};
             } debug_control_;
             bool debug_enable_last_cycle_ = false; // [RO] 调试使能上周期状态。常用于检测 enable 上升沿，并在那一刻同步调试参数基线。
             u8 direct_last_steer_command_type_raw_ = 0xFFU; // [RO] 上次已同步的 mode30 舵向命令类型。用于识别“真正发生了类型切换”。
@@ -825,7 +864,7 @@ namespace jia
             struct DebugOutput
             {
                 // ---- 输出总开关与模式选择 ---------------------------------------
-                bool output_enable = false;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
+                bool output_enable = true;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
                 u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kSingleWheelDualMotorJustFloat); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制）。
                 u32 text_period_ms = 500;                                     // [RW] 文本日志周期（ms）。只在 mode1 下使用，控制文本总刷新频率。
                 u8 text_log_level = 1;                                        // [RW] 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
@@ -947,6 +986,9 @@ namespace jia
             JerkLimitedAxisState manual_vel_x_shape_state_{};
             JerkLimitedAxisState manual_vel_y_shape_state_{};
             JerkLimitedAxisState manual_omega_z_shape_state_{};
+            JerkLimitedAxisState single_wheel_drive_shape_state_{};
+            f32 single_wheel_last_drive_linear_m_s_ = 0.0f;
+            u8 single_wheel_last_shape_wheel_idx_ = 0xFFU;
             InputTargetData input_target_data_; // [RO] 输入目标快照（模式与期望速度/角度）
             NormalizedBodyCommand normalized_body_command_; // [RO] 输入来源与统一车体系语义
             Data target_data_;                  // [RO] 模式映射后的目标数据
@@ -993,6 +1035,10 @@ namespace jia
                 f32 max_residual_speed_m_s = 0.0f;                                  // [RO] 当前拍整车四轮中的最大实际残余速度（m/s）。
                 bool reverse_intent_active = false;
                 f32 reverse_intent_dir_err_deg = 0.0f;
+                u8 single_wheel_target_index = 0U;
+                bool single_wheel_isolation_active = false;
+                bool single_wheel_full_gate_enable = false;
+                bool single_wheel_non_target_zeroed[4] = {false, false, false, false};
                 bool steer_fault_active[4] = {false, false, false, false};
                 bool steer_fault_recovering[4] = {false, false, false, false};
                 bool steer_fault_control_intent[4] = {false, false, false, false};
@@ -1199,6 +1245,8 @@ namespace jia
             case 21:
             case 22:
             case 30:
+            case 31:
+            case 32:
                 return DebugControlRoute::kModuleOverride;
             case 0:
             case 1:
@@ -1223,6 +1271,9 @@ namespace jia
             case 22:
                 return DebugModuleOverrideRoute::kHomingObserve;
             case 30:
+            case 31:
+                return DebugModuleOverrideRoute::kSingleWheelIsolated;
+            case 32:
                 return DebugModuleOverrideRoute::kDirectActuator;
             default:
                 return DebugModuleOverrideRoute::kNone;
