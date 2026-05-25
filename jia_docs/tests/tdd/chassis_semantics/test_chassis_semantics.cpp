@@ -45,6 +45,8 @@ Chassis::SwervePlannerInput makeGatePlannerInput(float steering_error_deg,
                                                  float command_omega_z,
                                                  float max_residual_speed_m_s);
 void emitDebugOutputForHost(Chassis &chassis, bool all_homed);
+void runDebugPlannerCycleForHost(Chassis &chassis);
+bool runDebugControlCycleForHost(Chassis &chassis);
 void configureDebugOutputFamily(Chassis &chassis, unsigned char family_raw);
 void configureJustFloatProfile(Chassis &chassis, unsigned char profile_raw);
 void configureSingleWheelPayload(Chassis &chassis, unsigned char payload_raw);
@@ -1292,6 +1294,23 @@ bool runHostControlCycle(Chassis &chassis)
     return all_homed;
 }
 
+void runDebugPlannerCycleForHost(Chassis &chassis)
+{
+    chassis.isDebugMode();
+    chassis.setModeFlag();
+    chassis.resolvePlannerTargetData();
+    chassis.refreshActuatorLimitState();
+    chassis.updatePlannedMotionData();
+    chassis.last_planned_data_ = chassis.planned_data_;
+}
+
+bool runDebugControlCycleForHost(Chassis &chassis)
+{
+    chassis.isDebugMode();
+    chassis.setModeFlag();
+    return runHostControlCycle(chassis);
+}
+
 void emitDebugOutputForHost(Chassis &chassis, bool all_homed)
 {
     chassis.refreshDebugMirror(all_homed);
@@ -2023,6 +2042,285 @@ void testManualSCurveProfileRapidReverseBleedsPositiveTrendBeforeBuildingNegativ
     EXPECT_TRUE(first_reverse_vel > 0.0f);
     EXPECT_TRUE(first_reverse_acc < forward_acc);
     EXPECT_TRUE(chassis.planned_data_.acc_x <= first_reverse_acc);
+}
+
+void testDebugBodySpeedOmegaTargetFlipsSignImmediatelyWithRightStickDirection()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_vel_y_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 3.0f;
+    chassis.debug_control_.enable = true;
+    chassis.debug_control_.mode_raw = 1U;
+    chassis.debug_control_.omega_z_injection_mode_raw = 0U;
+
+    chassis.airjoy_data_.right_x = -1.0f;
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, -3.0f, 1.0e-6f);
+
+    chassis.airjoy_data_.right_x = 1.0f;
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, 3.0f, 1.0e-6f);
+}
+
+void testDebugBodySpeedOmegaRapidReverseUnderSCurveKeepsOldSignForFirstPlannerStep()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = true;
+    chassis.runtime_strategy_cfg_.manual_yaw_alpha_acc_ = 4.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_alpha_dec_ = 5.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_jerk_acc_ = 40.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_jerk_dec_ = 50.0f;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 3.0f;
+    chassis.debug_control_.enable = true;
+    chassis.debug_control_.mode_raw = 1U;
+    chassis.debug_control_.omega_z_injection_mode_raw = 0U;
+
+    chassis.airjoy_data_.right_x = 1.0f;
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+    chassis.setModeFlag();
+    chassis.resolvePlannerTargetData();
+    chassis.updatePlannedMotionData();
+    chassis.last_planned_data_ = chassis.planned_data_;
+    chassis.updatePlannedMotionData();
+    const float forward_omega = chassis.planned_data_.omega_z;
+    const float forward_alpha = chassis.planned_data_.alpha_z;
+
+    chassis.airjoy_data_.right_x = -1.0f;
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+    chassis.setModeFlag();
+    chassis.resolvePlannerTargetData();
+    EXPECT_NEAR(chassis.target_data_.omega_z, -3.0f, 1.0e-6f);
+    chassis.updatePlannedMotionData();
+    const float first_reverse_omega = chassis.planned_data_.omega_z;
+    const float first_reverse_alpha = chassis.planned_data_.alpha_z;
+
+    EXPECT_TRUE(forward_omega > 0.0f);
+    EXPECT_TRUE(forward_alpha > 0.0f);
+    EXPECT_TRUE(first_reverse_omega > 0.0f);
+    EXPECT_TRUE(first_reverse_alpha < forward_alpha);
+}
+
+void testDebugBodySpeedOmegaRapidReverseEventuallyCrossesNegativeAfterEnoughCycles()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = true;
+    chassis.runtime_strategy_cfg_.manual_yaw_alpha_acc_ = 5.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_alpha_dec_ = 12.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_jerk_acc_ = 50.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_jerk_dec_ = 50.0f;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 3.0f;
+    chassis.debug_control_.enable = true;
+    chassis.debug_control_.mode_raw = 1U;
+    chassis.debug_control_.omega_z_injection_mode_raw = 0U;
+
+    chassis.airjoy_data_.right_x = 1.0f;
+    for (int i = 0; i < 20; ++i)
+    {
+        runDebugPlannerCycleForHost(chassis);
+    }
+    EXPECT_TRUE(chassis.planned_data_.omega_z > 0.0f);
+
+    chassis.airjoy_data_.right_x = -1.0f;
+    bool crossed_negative = false;
+    for (int i = 0; i < 400; ++i)
+    {
+        runDebugPlannerCycleForHost(chassis);
+        if (chassis.planned_data_.omega_z < -1.0e-6f)
+        {
+            crossed_negative = true;
+            break;
+        }
+    }
+
+    EXPECT_TRUE(crossed_negative);
+}
+
+void testJerkProfileRapidReverseEventuallyCrossesZeroAndBuildsOppositeSign()
+{
+    Chassis chassis;
+    Chassis::JerkLimitedAxisState axis_state{};
+    float current_value = 0.0f;
+
+    for (int i = 0; i < 20; ++i)
+    {
+        current_value = chassis.limitValueByJerkProfile(2.0f,
+                                                        current_value,
+                                                        axis_state,
+                                                        5.0f,
+                                                        12.0f,
+                                                        50.0f,
+                                                        50.0f,
+                                                        1.0e-4f,
+                                                        0.05f);
+    }
+    EXPECT_TRUE(current_value > 0.0f);
+
+    bool crossed_negative = false;
+    for (int i = 0; i < 400; ++i)
+    {
+        current_value = chassis.limitValueByJerkProfile(-2.0f,
+                                                        current_value,
+                                                        axis_state,
+                                                        5.0f,
+                                                        12.0f,
+                                                        50.0f,
+                                                        50.0f,
+                                                        1.0e-4f,
+                                                        0.05f);
+        if (current_value < -1.0e-6f)
+        {
+            crossed_negative = true;
+            break;
+        }
+    }
+
+    EXPECT_TRUE(crossed_negative);
+}
+
+void testDebugBodySpeedOmegaRapidReverseEventuallyChangesPredictedActuatorOmegaSign()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = true;
+    chassis.runtime_strategy_cfg_.manual_yaw_alpha_acc_ = 5.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_alpha_dec_ = 12.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_jerk_acc_ = 50.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_jerk_dec_ = 50.0f;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 3.0f;
+    chassis.debug_control_.enable = true;
+    chassis.debug_control_.mode_raw = 1U;
+    chassis.debug_control_.omega_z_injection_mode_raw = 0U;
+
+    chassis.airjoy_data_.right_x = 1.0f;
+    for (int i = 0; i < 20; ++i)
+    {
+        EXPECT_TRUE(runDebugControlCycleForHost(chassis));
+    }
+    EXPECT_TRUE(chassis.planned_data_.omega_z > 0.0f);
+
+    float predicted_vel_x = 0.0f;
+    float predicted_vel_y = 0.0f;
+    float predicted_omega_z = 0.0f;
+    EXPECT_TRUE(chassis.estimatePlannedBodyTwist(chassis.actuator_command_frame_.steer_oa_total_rad,
+                                                 chassis.actuator_command_frame_.drive_omega_rad_s,
+                                                 predicted_vel_x,
+                                                 predicted_vel_y,
+                                                 predicted_omega_z));
+    const float baseline_predicted_omega_z = predicted_omega_z;
+    EXPECT_TRUE(std::fabs(baseline_predicted_omega_z) > 1.0e-6f);
+
+    chassis.airjoy_data_.right_x = -1.0f;
+    int first_negative_cycle = -1;
+    for (int i = 0; i < 1000; ++i)
+    {
+        EXPECT_TRUE(runDebugControlCycleForHost(chassis));
+        if (!chassis.estimatePlannedBodyTwist(chassis.actuator_command_frame_.steer_oa_total_rad,
+                                              chassis.actuator_command_frame_.drive_omega_rad_s,
+                                              predicted_vel_x,
+                                              predicted_vel_y,
+                                              predicted_omega_z))
+        {
+            continue;
+        }
+        if (predicted_omega_z * baseline_predicted_omega_z < -1.0e-6f)
+        {
+            first_negative_cycle = i;
+            break;
+        }
+    }
+
+    EXPECT_TRUE(first_negative_cycle >= 0);
+}
+
+void testDebugBodySpeedTranslationRapidReverseEventuallyChangesPredictedActuatorDirection()
+{
+    auto run_axis_case = [](bool test_x_axis) {
+        Chassis chassis;
+        TestMotor steer_motors[4];
+        TestMotor drive_motors[4];
+        configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+        configureXParkWheelGeometry(chassis);
+
+        chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+        chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = true;
+        chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 5.0f;
+        chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 12.0f;
+        chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 50.0f;
+        chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 50.0f;
+        chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
+        chassis.runtime_strategy_cfg_.max_vel_y_ = 2.0f;
+        chassis.debug_control_.enable = true;
+        chassis.debug_control_.mode_raw = 1U;
+        chassis.debug_control_.omega_z_injection_mode_raw = 0U;
+
+        float predicted_vel_x = 0.0f;
+        float predicted_vel_y = 0.0f;
+        float predicted_omega_z = 0.0f;
+        chassis.airjoy_data_.left_y = test_x_axis ? 1.0f : 0.0f;
+        chassis.airjoy_data_.left_x = test_x_axis ? 0.0f : -1.0f;
+        float baseline_axis_value = 0.0f;
+        bool established_baseline = false;
+        for (int i = 0; i < 1000; ++i)
+        {
+            EXPECT_TRUE(runDebugControlCycleForHost(chassis));
+            if (!chassis.estimatePlannedBodyTwist(chassis.actuator_command_frame_.steer_oa_total_rad,
+                                                  chassis.actuator_command_frame_.drive_omega_rad_s,
+                                                  predicted_vel_x,
+                                                  predicted_vel_y,
+                                                  predicted_omega_z))
+            {
+                continue;
+            }
+
+            baseline_axis_value = test_x_axis ? predicted_vel_x : predicted_vel_y;
+            if (std::fabs(baseline_axis_value) > 1.0e-6f)
+            {
+                established_baseline = true;
+                break;
+            }
+        }
+        EXPECT_TRUE(established_baseline);
+
+        chassis.airjoy_data_.left_y = test_x_axis ? -1.0f : 0.0f;
+        chassis.airjoy_data_.left_x = test_x_axis ? 0.0f : 1.0f;
+        int first_reversed_cycle = -1;
+        for (int i = 0; i < 1000; ++i)
+        {
+            EXPECT_TRUE(runDebugControlCycleForHost(chassis));
+            if (!chassis.estimatePlannedBodyTwist(chassis.actuator_command_frame_.steer_oa_total_rad,
+                                                  chassis.actuator_command_frame_.drive_omega_rad_s,
+                                                  predicted_vel_x,
+                                                  predicted_vel_y,
+                                                  predicted_omega_z))
+            {
+                continue;
+            }
+
+            const float current_axis_value = test_x_axis ? predicted_vel_x : predicted_vel_y;
+            if (current_axis_value * baseline_axis_value < -1.0e-6f)
+            {
+                first_reversed_cycle = i;
+                break;
+            }
+        }
+
+        EXPECT_TRUE(first_reversed_cycle >= 0);
+    };
+
+    run_axis_case(true);
+    run_axis_case(false);
 }
 
 void testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels()
@@ -3003,6 +3301,12 @@ int main()
     testManualSCurveProfileManualOnlyModeFallsBackForApiSource();
     testManualSCurveProfileManualOnlyModeUsesSCurveForDebugSource();
     testManualSCurveProfileRapidReverseBleedsPositiveTrendBeforeBuildingNegativeTrend();
+    testDebugBodySpeedOmegaTargetFlipsSignImmediatelyWithRightStickDirection();
+    testDebugBodySpeedOmegaRapidReverseUnderSCurveKeepsOldSignForFirstPlannerStep();
+    testDebugBodySpeedOmegaRapidReverseEventuallyCrossesNegativeAfterEnoughCycles();
+    testJerkProfileRapidReverseEventuallyCrossesZeroAndBuildsOppositeSign();
+    testDebugBodySpeedOmegaRapidReverseEventuallyChangesPredictedActuatorOmegaSign();
+    testDebugBodySpeedTranslationRapidReverseEventuallyChangesPredictedActuatorDirection();
     testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels();
     testFlipSolutionPrefersSmallSteerDeltaAndInvertsDriveOnQuadrantCrossing();
     testReverseIntentBypassesTranslationalDirectionSlewOnNearOppositeCommand();
