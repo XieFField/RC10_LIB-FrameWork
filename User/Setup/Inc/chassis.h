@@ -537,15 +537,23 @@ namespace jia
                 kCurrent = 1, // 直接给驱动电流命令（mA）。
                 kBrake = 2,   // 直接给驱动刹车命令（mA）。
             };
-            enum class DebugOutputMode : u8
+            enum class DebugOutputFamily : u8
             {
                 kOff = 0,
                 kText = 1,
-                kOverviewJustFloat = 2,
-                kSingleWheelJustFloat = 3,
-                kSingleWheelDualMotorJustFloat = 4,
-                kSwerveTelemetryV2 = 5,
-                kYawPidJustFloat = 6,
+                kJustFloat = 2,
+                kBinary = 3,
+            };
+            enum class JustFloatProfile : u8
+            {
+                kOverview = 0,
+                kSingleWheelTrace = 1,
+                kYawPid = 2,
+            };
+            enum class SingleWheelTracePayloadKind : u8
+            {
+                kSteerOnly = 0,
+                kSteerAndDrive = 1,
             };
             DebugMode resolveDebugMode(u8 raw_mode) const;
             void applyDebugTargetOverride(DebugMode mode);
@@ -673,7 +681,7 @@ namespace jia
             // =====================================================================
             struct StrategyConfig
             {
-                ManualSpeedProfileMode manual_speed_profile_mode = ManualSpeedProfileMode::kLegacy;
+                ManualSpeedProfileMode manual_speed_profile_mode = ManualSpeedProfileMode::kSCurve;
                 bool manual_speed_profile_manual_only = true;
                 f32 manual_trans_acc_acc_ = 5.0f;
                 f32 manual_trans_acc_dec_ = 12.0f;
@@ -715,8 +723,8 @@ namespace jia
 
                 struct XParkCommandThresholdConfig
                 {
-                    f32 enter_m_s = 0.03f; // [RW] 仅用于 X-Park 命令静止意图的进入门限（m/s），不用于残余反馈过滤。
-                    f32 exit_m_s = 0.05f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
+                    f32 enter_m_s = 0.01f; // [RW] 仅用于 X-Park 命令静止意图的进入门限（m/s），不用于残余反馈过滤。
+                    f32 exit_m_s = 0.03f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
                 } xpark_command_threshold_cfg_;
 
                 struct LowSpeedDriveSuppressionConfig
@@ -861,45 +869,84 @@ namespace jia
             // 说明：这里只管“串口往外发什么”，不管底盘怎么跑。
             //       output_enable 是总开关，output_mode_raw 选路径，text_log_level 决定文本模式的细度。
             // =====================================================================
-            struct DebugOutput
+            struct DebugOutputSlotConfig
             {
-                // ---- 输出总开关与模式选择 ---------------------------------------
-                bool output_enable = true;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
-                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kSingleWheelDualMotorJustFloat); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制）。
-                u32 text_period_ms = 500;                                     // [RW] 文本日志周期（ms）。只在 mode1 下使用，控制文本总刷新频率。
-                u8 text_log_level = 1;                                        // [RW] 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
-                TickType_t text_last_ms = 0;                                  // [RO] 文本日志节流时间戳。记录上一次发文本的时间，防止串口刷屏。
-                u8 text_log_phase = 0;                                        // [RO] 文本分相输出索引。0=FS 总览，1=FSW 单轮细节，2=FSH 回零/对位细节。
+                u32 period_ms = 10U;
+            };
 
-                // ---- mode2：四轮总览 justfloat ---------------------------------
-                u32 overview_justfloat_period_ms = 5;      // [RW] mode2 四轮总览 justfloat 周期（ms）。控制每次发送完整四轮电机数据的频率。
-                TickType_t overview_justfloat_last_ms = 0; // [RO] mode2 发送节流时间戳。防止总览数据过于频繁。
+            struct DebugOutputTextConfig
+            {
+                u32 period_ms = 500U;
+                u8 log_level = 1U;
+            };
 
-                // ---- mode3：单轮高速 justfloat ---------------------------------
-                u32 single_wheel_1khz_period_ms = 1;      // [RW] mode3 目标周期（ms）。一般设为 1ms，表示尽可能按控制周期输出；输出轮固定跟随 observe_wheel_index。
-                TickType_t single_wheel_1khz_last_ms = 0; // [RO] mode3 发送节流时间戳。记录高速输出最近一次发送时刻。
+            struct DebugOutputTelemetryConfig
+            {
+                u8 sample_divider = 1U;
+                u8 profile_id = 0U;
+                u32 period_ms = 10U;
+            };
 
-                // ---- mode4：单轮双电机高速 justfloat ----------------------------
-                // 约定：这里把 drive_motor_h 作为“航向电机”源，并和 steer_motor_h 同帧输出；输出轮固定跟随 observe_wheel_index。
-                u32 single_wheel_dual_motor_period_ms = 2;      // [RW] mode4 目标周期（ms）。默认 2ms，兼顾分辨率与串口稳定性。
-                TickType_t single_wheel_dual_motor_last_ms = 0; // [RO] mode4 发送节流时间戳。记录双电机高速输出最近一次发送时刻。
-                
-                u32 yaw_pid_justfloat_period_ms = 4U;
-                TickType_t yaw_pid_justfloat_last_ms = 0U;
+            struct DebugOutputJustFloatConfig
+            {
+                u8 profile_raw = static_cast<u8>(JustFloatProfile::kSingleWheelTrace);
+                u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kSteerAndDrive);
+                DebugOutputSlotConfig overview = {5U};
+                DebugOutputSlotConfig single_wheel = {1U};
+                DebugOutputSlotConfig yaw_pid = {4U};
+            };
 
-                // ---- mode5: SwerveTelemetryV2 binary ----------------------------
-                u8 telemetry_sample_divider = 1U;    // [RW] mode5 分频发送系数。1 表示每个满足周期门限的控制周期都尝试发送。
-                u8 telemetry_profile_id = 0U;        // [RW] mode5 配置档编号。编码到 flags 高 4 位，便于 PC 侧区分不同发送方案。
-                u32 telemetry_period_ms = 10U;        // [RW] mode5 最小发送周期（ms）。
-                TickType_t telemetry_last_ms = 0;    // [RO] mode5 最近一次发送时刻（tick/ms 基准），用于周期门限判断。
-                u8 telemetry_cycle_counter = 0U;     // [RO] mode5 分频计数器。与 sample_divider 配合决定本周期是否允许发送。
-                u16 telemetry_seq = 0U;              // [RO] mode5 帧序号。每成功发送一帧递增，便于 PC 侧检测丢帧。
-                u8 telemetry_frame_buf[384] = {0U};  // [RO] mode5 DMA 发送缓冲区（header + payload + crc）。
+            struct DebugOutputBinaryConfig
+            {
+                DebugOutputTelemetryConfig telemetry{};
+            };
 
-                // ---- mode1：文本追踪节流 ----------------------------------------
-                TickType_t single_wheel_trace_last_ms = 0; // [RO] 单轮文本跟踪节流时间戳。用于 mode1 下的单轮细节日志限频。
-                TickType_t direct_trace_last_ms = 0;       // [RO] 执行层文本跟踪节流时间戳。用于 mode1 下的直控调试日志限频。
+            struct DebugOutputConfig
+            {
+                bool output_enable = true;
+                u8 output_family_raw = static_cast<u8>(DebugOutputFamily::kJustFloat);
+                DebugOutputTextConfig text{};
+                DebugOutputJustFloatConfig justfloat{};
+                DebugOutputBinaryConfig binary{};
             } debug_output_;
+
+            struct DebugOutputSlotRuntime
+            {
+                TickType_t last_ms = 0U;
+            };
+
+            struct DebugOutputTextRuntime
+            {
+                TickType_t last_ms = 0U;
+                u8 log_phase = 0U;
+                TickType_t direct_trace_last_ms = 0U;
+            };
+
+            struct DebugOutputTelemetryRuntime
+            {
+                TickType_t last_ms = 0U;
+                u8 cycle_counter = 0U;
+                u16 seq = 0U;
+            };
+
+            struct DebugOutputJustFloatRuntime
+            {
+                DebugOutputSlotRuntime overview{};
+                DebugOutputSlotRuntime single_wheel{};
+                DebugOutputSlotRuntime yaw_pid{};
+            };
+
+            struct DebugOutputBinaryRuntime
+            {
+                DebugOutputTelemetryRuntime telemetry{};
+            };
+
+            struct DebugOutputRuntime
+            {
+                DebugOutputTextRuntime text{};
+                DebugOutputJustFloatRuntime justfloat{};
+                DebugOutputBinaryRuntime binary{};
+            } debug_output_runtime_;
 
             // =====================================================================
             // DebugPidTune [RW]

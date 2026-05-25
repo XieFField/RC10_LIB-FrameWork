@@ -115,6 +115,27 @@ namespace jia
                            : Chassis::DirectDriveCommandType::kRpm;
             }
 
+            inline Chassis::DebugOutputFamily sanitizeDebugOutputFamily(u8 raw_family)
+            {
+                return (raw_family <= static_cast<u8>(Chassis::DebugOutputFamily::kBinary))
+                           ? static_cast<Chassis::DebugOutputFamily>(raw_family)
+                           : Chassis::DebugOutputFamily::kOff;
+            }
+
+            inline Chassis::JustFloatProfile sanitizeJustFloatProfile(u8 raw_profile)
+            {
+                return (raw_profile <= static_cast<u8>(Chassis::JustFloatProfile::kYawPid))
+                           ? static_cast<Chassis::JustFloatProfile>(raw_profile)
+                           : Chassis::JustFloatProfile::kYawPid;
+            }
+
+            inline Chassis::SingleWheelTracePayloadKind sanitizeSingleWheelTracePayloadKind(u8 raw_payload)
+            {
+                return (raw_payload <= static_cast<u8>(Chassis::SingleWheelTracePayloadKind::kSteerAndDrive))
+                           ? static_cast<Chassis::SingleWheelTracePayloadKind>(raw_payload)
+                           : Chassis::SingleWheelTracePayloadKind::kSteerOnly;
+            }
+
             inline f32 getDirectSteerDefaultLimit(Chassis::DirectSteerCommandType type)
             {
                 switch (type)
@@ -787,7 +808,8 @@ namespace jia
             {
                 if (current_value * target_value < 0.0f)
                 {
-                    target_accel = 0.0f;
+                    // 快速反向跨零时不能把目标加速度钉成 0，否则旧趋势会在零点附近被卸空却不再真正过零。
+                    target_accel = (current_value > 0.0f) ? -safe_dec_limit : safe_dec_limit;
                 }
                 else
                 {
@@ -1890,9 +1912,11 @@ namespace jia
             }
 
 #if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-            if (debug_output_.output_mode_raw == 1U && debug_output_.text_log_level >= 1U && (time_ms_ - debug_output_.direct_trace_last_ms) >= 100U)
+            if (sanitizeDebugOutputFamily(debug_output_.output_family_raw) == DebugOutputFamily::kText &&
+                debug_output_.text.log_level >= 1U &&
+                (time_ms_ - debug_output_runtime_.text.direct_trace_last_ms) >= 100U)
             {
-                debug_output_.direct_trace_last_ms = time_ms_;
+                debug_output_runtime_.text.direct_trace_last_ms = time_ms_;
                 WheelConfig &dbg_wheel = wheel_config_[wheel_idx];
                 const Motor_Base *steer_motor = dbg_wheel.steer_motor_h;
                 const Motor_Base *drive_motor = dbg_wheel.drive_motor_h;
@@ -3379,13 +3403,13 @@ namespace jia
 
         void Chassis::emitDebugUart8Log(bool all_homed)
         {
-            if (!debug_output_.output_enable || debug_output_.output_mode_raw != 1U)
+            if (!debug_output_.output_enable || sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kText)
             {
                 return;
             }
 
-            const u32 period_ms = (debug_output_.text_period_ms > 0U) ? debug_output_.text_period_ms : 500U;
-            if ((time_ms_ - debug_output_.text_last_ms) < period_ms)
+            const u32 period_ms = (debug_output_.text.period_ms > 0U) ? debug_output_.text.period_ms : 500U;
+            if ((time_ms_ - debug_output_runtime_.text.last_ms) < period_ms)
             {
                 return;
             }
@@ -3395,8 +3419,8 @@ namespace jia
                 return;
             }
 
-            debug_output_.text_last_ms = time_ms_;
-            if (debug_output_.text_log_level == 0U)
+            debug_output_runtime_.text.last_ms = time_ms_;
+            if (debug_output_.text.log_level == 0U)
             {
                 debug_uart_.printf_DMA((char *)"FS t=%lu home=%u mode=%u dbg=%u hs=%u/%u/%u/%u oa0=%.1f->%.1f rpm0=%.1f->%.1f\r\n",
                                        (u32)time_ms_,
@@ -3415,7 +3439,7 @@ namespace jia
             }
 
             const u8 wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
-            if (debug_output_.text_log_phase == 0U)
+            if (debug_output_runtime_.text.log_phase == 0U)
             {
                 debug_uart_.printf_DMA((char *)"FS t=%lu home=%u mode=%u dbg=%u hs=%u/%u/%u/%u oa0=%.1f->%.1f rpm0=%.1f->%.1f vec=%.2f de=%.1f eta=%.3f va=%u\r\n",
                                        (u32)time_ms_,
@@ -3435,7 +3459,7 @@ namespace jia
                                        debug_mirror_.high_speed_eta_max_s,
                                        debug_mirror_.high_speed_drive_suppression_active ? 1U : 0U);
             }
-            else if (debug_output_.text_log_phase == 1U)
+            else if (debug_output_runtime_.text.log_phase == 1U)
             {
                 debug_uart_.printf_DMA((char *)"FSW i=%u hs=%u oa=%.1f->%.1f rpm=%.1f->%.1f gate=%.2f flip=%u sensor=%u edge=%u\r\n",
                                        (u32)wheel_idx,
@@ -3483,18 +3507,20 @@ namespace jia
                                        debug_mirror_.homing_runtime_zero_offset_deg[3]);
             }
 
-            debug_output_.text_log_phase = (u8)((debug_output_.text_log_phase + 1U) % 3U);
+            debug_output_runtime_.text.log_phase = (u8)((debug_output_runtime_.text.log_phase + 1U) % 3U);
         }
 
         void Chassis::emitUart8VofaJustFloatPidTrace()
         {
-            if (!debug_output_.output_enable || debug_output_.output_mode_raw != 2U)
+            if (!debug_output_.output_enable ||
+                sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
+                sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kOverview)
             {
                 return;
             }
 
-            const u32 period_ms = (debug_output_.overview_justfloat_period_ms > 0U) ? debug_output_.overview_justfloat_period_ms : 10U;
-            if ((time_ms_ - debug_output_.overview_justfloat_last_ms) < period_ms)
+            const u32 period_ms = (debug_output_.justfloat.overview.period_ms > 0U) ? debug_output_.justfloat.overview.period_ms : 10U;
+            if ((time_ms_ - debug_output_runtime_.justfloat.overview.last_ms) < period_ms)
             {
                 return;
             }
@@ -3504,7 +3530,7 @@ namespace jia
                 return;
             }
 
-            debug_output_.overview_justfloat_last_ms = time_ms_;
+            debug_output_runtime_.justfloat.overview.last_ms = time_ms_;
             float payload[33] = {0.0f};
             payload[0] = (f32)time_ms_ * 0.001f;
             for (u8 i = 0; i < 4; ++i)
@@ -3539,13 +3565,16 @@ namespace jia
 
         void Chassis::emitUart8VofaPid1kHzTrace()
         {
-            if (!debug_output_.output_enable || debug_output_.output_mode_raw != 3U)
+            if (!debug_output_.output_enable ||
+                sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
+                sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kSingleWheelTrace ||
+                sanitizeSingleWheelTracePayloadKind(debug_output_.justfloat.single_wheel_payload_raw) != SingleWheelTracePayloadKind::kSteerOnly)
             {
                 return;
             }
 
-            const u32 period_ms = (debug_output_.single_wheel_1khz_period_ms > 0U) ? debug_output_.single_wheel_1khz_period_ms : 1U;
-            if ((time_ms_ - debug_output_.single_wheel_1khz_last_ms) < period_ms)
+            const u32 period_ms = (debug_output_.justfloat.single_wheel.period_ms > 0U) ? debug_output_.justfloat.single_wheel.period_ms : 1U;
+            if ((time_ms_ - debug_output_runtime_.justfloat.single_wheel.last_ms) < period_ms)
             {
                 return;
             }
@@ -3555,7 +3584,7 @@ namespace jia
                 return;
             }
 
-            debug_output_.single_wheel_1khz_last_ms = time_ms_;
+            debug_output_runtime_.justfloat.single_wheel.last_ms = time_ms_;
             const u8 observe_wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
             const WheelConfig &wheel = wheel_config_[observe_wheel_idx];
             const Motor_Base *steer_motor = wheel.steer_motor_h;
@@ -3586,13 +3615,16 @@ namespace jia
 
         void Chassis::emitUart8VofaDualMotor1kHzTrace()
         {
-            if (!debug_output_.output_enable || debug_output_.output_mode_raw != 4U)
+            if (!debug_output_.output_enable ||
+                sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
+                sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kSingleWheelTrace ||
+                sanitizeSingleWheelTracePayloadKind(debug_output_.justfloat.single_wheel_payload_raw) != SingleWheelTracePayloadKind::kSteerAndDrive)
             {
                 return;
             }
 
-            const u32 period_ms = (debug_output_.single_wheel_dual_motor_period_ms > 0U) ? debug_output_.single_wheel_dual_motor_period_ms : 2U;
-            if ((time_ms_ - debug_output_.single_wheel_dual_motor_last_ms) < period_ms)
+            const u32 period_ms = (debug_output_.justfloat.single_wheel.period_ms > 0U) ? debug_output_.justfloat.single_wheel.period_ms : 2U;
+            if ((time_ms_ - debug_output_runtime_.justfloat.single_wheel.last_ms) < period_ms)
             {
                 return;
             }
@@ -3611,7 +3643,7 @@ namespace jia
                 return;
             }
 
-            debug_output_.single_wheel_dual_motor_last_ms = time_ms_;
+            debug_output_runtime_.justfloat.single_wheel.last_ms = time_ms_;
 
             const f32 steer_target_multi_turn_deg = steer_motor->getTargetTotalAngle();
             f32 steer_target_single_turn_deg = fmodf(steer_target_multi_turn_deg, 360.0f);
@@ -3655,13 +3687,15 @@ namespace jia
 
         void Chassis::emitUart8VofaYawPidTrace()
         {
-            if (!debug_output_.output_enable || debug_output_.output_mode_raw != static_cast<u8>(DebugOutputMode::kYawPidJustFloat))
+            if (!debug_output_.output_enable ||
+                sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
+                sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kYawPid)
             {
                 return;
             }
 
-            const u32 period_ms = (debug_output_.yaw_pid_justfloat_period_ms > 0U) ? debug_output_.yaw_pid_justfloat_period_ms : 10U;
-            if ((time_ms_ - debug_output_.yaw_pid_justfloat_last_ms) < period_ms)
+            const u32 period_ms = (debug_output_.justfloat.yaw_pid.period_ms > 0U) ? debug_output_.justfloat.yaw_pid.period_ms : 10U;
+            if ((time_ms_ - debug_output_runtime_.justfloat.yaw_pid.last_ms) < period_ms)
             {
                 return;
             }
@@ -3671,7 +3705,7 @@ namespace jia
                 return;
             }
 
-            debug_output_.yaw_pid_justfloat_last_ms = time_ms_;
+            debug_output_runtime_.justfloat.yaw_pid.last_ms = time_ms_;
 
             float payload[15] = {0.0f};
             payload[0] = static_cast<f32>(time_ms_) * 0.001f;
@@ -3694,21 +3728,21 @@ namespace jia
 
         void Chassis::emitUart8SwerveTelemetryV2(bool all_homed)
         {
-            if (!debug_output_.output_enable || debug_output_.output_mode_raw != static_cast<u8>(DebugOutputMode::kSwerveTelemetryV2))
+            if (!debug_output_.output_enable || sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kBinary)
             {
                 return;
             }
 
-            const u8 divider = (debug_output_.telemetry_sample_divider == 0U) ? 1U : debug_output_.telemetry_sample_divider;
-            debug_output_.telemetry_cycle_counter = static_cast<u8>(debug_output_.telemetry_cycle_counter + 1U);
-            if (debug_output_.telemetry_cycle_counter < divider)
+            const u8 divider = (debug_output_.binary.telemetry.sample_divider == 0U) ? 1U : debug_output_.binary.telemetry.sample_divider;
+            debug_output_runtime_.binary.telemetry.cycle_counter = static_cast<u8>(debug_output_runtime_.binary.telemetry.cycle_counter + 1U);
+            if (debug_output_runtime_.binary.telemetry.cycle_counter < divider)
             {
                 return;
             }
-            debug_output_.telemetry_cycle_counter = 0U;
+            debug_output_runtime_.binary.telemetry.cycle_counter = 0U;
 
-            const u32 period_ms = (debug_output_.telemetry_period_ms > 0U) ? debug_output_.telemetry_period_ms : 8U;
-            if ((time_ms_ - debug_output_.telemetry_last_ms) < period_ms)
+            const u32 period_ms = (debug_output_.binary.telemetry.period_ms > 0U) ? debug_output_.binary.telemetry.period_ms : 8U;
+            if ((time_ms_ - debug_output_runtime_.binary.telemetry.last_ms) < period_ms)
             {
                 return;
             }
@@ -3726,9 +3760,9 @@ namespace jia
             frame[cursor++] = kSwerveTelemetryVersion;
             const u8 flags = static_cast<u8>(kSwerveTelemetryFlagsCrcPayloadOnly |
                                              (all_homed ? kSwerveTelemetryFlagsAllHomed : 0U) |
-                                             ((debug_output_.telemetry_profile_id & 0x0FU) << 4U));
+                                             ((debug_output_.binary.telemetry.profile_id & 0x0FU) << 4U));
             frame[cursor++] = flags;
-            packU16LE(&frame[cursor], debug_output_.telemetry_seq);
+            packU16LE(&frame[cursor], debug_output_runtime_.binary.telemetry.seq);
             cursor += 2U;
             packU64LE(&frame[cursor], RtosTimeStampUs64::getTimeUs());
             cursor += 8U;
@@ -3826,8 +3860,8 @@ namespace jia
                 return;
             }
 
-            debug_output_.telemetry_last_ms = time_ms_;
-            debug_output_.telemetry_seq = static_cast<u16>(debug_output_.telemetry_seq + 1U);
+            debug_output_runtime_.binary.telemetry.last_ms = time_ms_;
+            debug_output_runtime_.binary.telemetry.seq = static_cast<u16>(debug_output_runtime_.binary.telemetry.seq + 1U);
         }
 
         void Chassis::emitDebugOutputByMode(bool all_homed)
@@ -3836,27 +3870,37 @@ namespace jia
             {
                 return;
             }
-            switch (static_cast<DebugOutputMode>(debug_output_.output_mode_raw))
+            switch (sanitizeDebugOutputFamily(debug_output_.output_family_raw))
             {
-            case DebugOutputMode::kText:
+            case DebugOutputFamily::kText:
                 emitDebugUart8Log(all_homed);
                 break;
-            case DebugOutputMode::kOverviewJustFloat:
-                emitUart8VofaJustFloatPidTrace();
+            case DebugOutputFamily::kJustFloat:
+                switch (sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw))
+                {
+                case JustFloatProfile::kOverview:
+                    emitUart8VofaJustFloatPidTrace();
+                    break;
+                case JustFloatProfile::kSingleWheelTrace:
+                    if (sanitizeSingleWheelTracePayloadKind(debug_output_.justfloat.single_wheel_payload_raw) == SingleWheelTracePayloadKind::kSteerAndDrive)
+                    {
+                        emitUart8VofaDualMotor1kHzTrace();
+                    }
+                    else
+                    {
+                        emitUart8VofaPid1kHzTrace();
+                    }
+                    break;
+                case JustFloatProfile::kYawPid:
+                default:
+                    emitUart8VofaYawPidTrace();
+                    break;
+                }
                 break;
-            case DebugOutputMode::kSingleWheelJustFloat:
-                emitUart8VofaPid1kHzTrace();
-                break;
-            case DebugOutputMode::kSingleWheelDualMotorJustFloat:
-                emitUart8VofaDualMotor1kHzTrace();
-                break;
-            case DebugOutputMode::kYawPidJustFloat:
-                emitUart8VofaYawPidTrace();
-                break;
-            case DebugOutputMode::kSwerveTelemetryV2:
+            case DebugOutputFamily::kBinary:
                 emitUart8SwerveTelemetryV2(all_homed);
                 break;
-            case DebugOutputMode::kOff:
+            case DebugOutputFamily::kOff:
             default:
                 break;
             }
