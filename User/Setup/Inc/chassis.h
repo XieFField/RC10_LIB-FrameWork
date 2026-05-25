@@ -11,7 +11,7 @@
 #include "APP_PID.h"
 
 #ifndef FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 0
+#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 1
 #endif
 
 namespace jia
@@ -705,8 +705,8 @@ namespace jia
 
                 struct XParkCommandThresholdConfig
                 {
-                    f32 enter_m_s = 0.01f; // [RW] 仅用于 X-Park 命令静止意图的进入门限（m/s），不用于残余反馈过滤。
-                    f32 exit_m_s = 0.03f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
+                    f32 enter_m_s = 0.03f; // [RW] 仅用于 X-Park 命令静止意图的进入门限（m/s），不用于残余反馈过滤。
+                    f32 exit_m_s = 0.05f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
                 } xpark_command_threshold_cfg_;
 
                 struct LowSpeedDriveSuppressionConfig
@@ -783,8 +783,8 @@ namespace jia
             struct DebugControl
             {
                 // ---- 调试总开关与模式入口 ---------------------------------------
-                bool enable = false;                                             // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
-                u8 mode_raw = 2;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
+                bool enable = true;                                             // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
+                u8 mode_raw = 1;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
                 u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。用于观察 mode_raw 经过归一化后的结果。
                 u8 control_wheel_index = 1;                                     // [RW] mode30 执行目标轮号（0~3）。只用于执行层直控链路选择当前被操作的轮。
                 u8 observe_wheel_index = 1;                                     // [RW] 单轮观测焦点轮号（0~3）。文本单轮日志与单轮高速输出统一跟随该轮。
@@ -798,8 +798,8 @@ namespace jia
 
                 // ---- mode30：执行层直控 -----------------------------------------
                 bool direct_estop = false;                                       // [RW] mode30 急停闸门。true 时禁止所有执行层输出，适合调试前的“安全锁”。
-                bool direct_enable_steer = true;                                 // [RW] mode30 当前控制轮的舵向轴执行使能。false 时只保留安全清零，不下发舵向直控。
-                bool direct_enable_drive = true;                                 // [RW] mode30 当前控制轮的驱动轴执行使能。false 时只保留安全清零，不下发驱动直控。
+                bool direct_enable_steer = false;                                 // [RW] mode30 当前控制轮的舵向轴执行使能。false 时只保留安全清零，不下发舵向直控。
+                bool direct_enable_drive = false;                                 // [RW] mode30 当前控制轮的驱动轴执行使能。false 时只保留安全清零，不下发驱动直控。
                 u8 direct_steer_input_mode_raw = static_cast<u8>(DirectAxisInputMode::kCached); // [RW] mode30 舵向轴输入模式：0=缓存值，1=遥控连续，2=遥控阶跃。
                 u8 direct_drive_input_mode_raw = static_cast<u8>(DirectAxisInputMode::kCached); // [RW] mode30 驱动轴输入模式：0=缓存值，1=遥控连续，2=遥控阶跃。
                 u8 direct_steer_command_type_raw = static_cast<u8>(DirectSteerCommandType::kRpm); // [RW] mode30 舵向轴命令类型：0=电流，1=速度，2=单圈角，3=多圈角。
@@ -825,7 +825,7 @@ namespace jia
             struct DebugOutput
             {
                 // ---- 输出总开关与模式选择 ---------------------------------------
-                bool output_enable = false;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
+                bool output_enable = true;                                    // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
                 u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kYawPidJustFloat); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制）。
                 u32 text_period_ms = 500;                                     // [RW] 文本日志周期（ms）。只在 mode1 下使用，控制文本总刷新频率。
                 u8 text_log_level = 1;                                        // [RW] 文本日志等级。0 只发基础汇总，>=1 会轮流输出更细的 FS/FSW/FSH 分相信息。
