@@ -11,7 +11,7 @@
 #include "APP_PID.h"
 
 #ifndef FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 0
+#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 1
 #endif
 
 namespace jia
@@ -791,8 +791,8 @@ namespace jia
             struct DebugControl
             {
                 // ---- 调试总开关与模式入口 ---------------------------------------
-                bool enable = false;                                             // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
-                u8 mode_raw = 2;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
+                bool enable = true;                                             // [RW] 调试总开关。false 时整个调试接管链路不生效，系统走正常控制。
+                u8 mode_raw = 1;                                                // [RW] 调试模式号。决定当前是输入接管、单轮调试、回零观察还是执行层直控。
                 u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。用于观察 mode_raw 经过归一化后的结果。
                 u8 control_wheel_index = 1;                                     // [RW] mode30 执行目标轮号（0~3）。只用于执行层直控链路选择当前被操作的轮。
                 u8 observe_wheel_index = 1;                                     // [RW] 单轮观测焦点轮号（0~3）。文本单轮日志与单轮高速输出统一跟随该轮。
@@ -850,8 +850,8 @@ namespace jia
 
             struct DebugOutputJustFloatConfig
             {
-                u8 profile_raw = static_cast<u8>(JustFloatProfile::kYawPid); // [RW] justfloat 载荷类型：0=四轮总览，1=单轮 trace，2=YawPid。
-                u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kSteerOnly); // [RW] 单轮 trace 载荷形态：0=仅舵向，1=舵向+驱动。
+                u8 profile_raw = static_cast<u8>(JustFloatProfile::kSingleWheelTrace); // [RW] justfloat 载荷类型：0=四轮总览，1=单轮 trace，2=YawPid。
+                u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kSteerAndDrive); // [RW] 单轮 trace 载荷形态：0=仅舵向，1=舵向+驱动。
 
                 DebugOutputSlotConfig overview = {5U}; // [RW] justfloat 四轮总览配置。
                 DebugOutputSlotConfig single_wheel = {1U}; // [RW] justfloat 单轮 trace 配置；输出轮固定跟随 observe_wheel_index。
@@ -867,7 +867,7 @@ namespace jia
             // 说明：这里只放“外部可调”的输出参数，不再混入节流时间戳、计数器等运行态噪音。
             struct DebugOutputConfig
             {
-                bool output_enable = false; // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
+                bool output_enable = true; // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
                 u8 output_family_raw = static_cast<u8>(DebugOutputFamily::kJustFloat); // [RW] 输出协议族：0=关，1=文本日志，2=justfloat，3=二进制 telemetry。
 
                 DebugOutputTextConfig text{}; // [RW] mode1 文本日志配置。
