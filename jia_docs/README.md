@@ -12,6 +12,7 @@
 ## 最新交接入口
 
 - RC10 最新交接文档：
+  - [handoff/2026-05/ai_handoff_2026-05-25_2344_rc10_debug_merge_semantics_sync.md](handoff/2026-05/ai_handoff_2026-05-25_2344_rc10_debug_merge_semantics_sync.md)
   - [handoff/2026-05/ai_handoff_2026-05-24_2158_rc10_scurve_lock_yaw_context_sync.md](handoff/2026-05/ai_handoff_2026-05-24_2158_rc10_scurve_lock_yaw_context_sync.md)
   - [handoff/2026-05/ai_handoff_2026-05-23_2140_rc10_yaw_pid_vofa_trace.md](handoff/2026-05/ai_handoff_2026-05-23_2140_rc10_yaw_pid_vofa_trace.md)
   - [handoff/2026-05/ai_handoff_2026-05-23_0226_rc10_steer_fault_recovery_pid_guard.md](handoff/2026-05/ai_handoff_2026-05-23_0226_rc10_steer_fault_recovery_pid_guard.md)
@@ -24,15 +25,15 @@
 ## 本轮主题
 
 - 当前文档主线已推进到：
-  - 舵向断链故障恢复闭环已经落地并进入稳定上下文；
-  - yaw 位置环 VOFA `JustFloat` 调试链路已补齐，便于 `LockTo` / `LockNow` 联调；
-  - 手操主链路已切入 S 形速度规划第二版；
-  - `LockToYaw -> LockNowYaw` 锁角连续性与默认调试参数已同步收口。
+  - `jia/develop` 已按 `jia/codex_2/3 -> jia/codex_1/3` 顺序完成两次 merge，当前入口文档对应的是这条合并后的统一底盘调试主线；
+  - `mode30 / mode31 / mode32` 调试路由以 `jia/codex_2/3` 的模式语义为准，单轮隔离直控、full-gate 兼容入口和旧执行层直控入口已经收口到同一套 `DebugControl` 配置边界；
+  - `DebugOutputFamily + JustFloatProfile + Binary` 输出族重构已并回当前主线，`text / justfloat / binary` 调试输出不再分叉；
+  - `mode1` 手操 jerk 反向跨零修复已保留，反向换向时不再把目标加速度错误清零。
 - 当前最新一轮同时补充了：
-  - jerk 受限手操速度成形、提前制动与近目标贴合语义；
-  - `reverse_intent`、低速抑制与默认调试入口的当前联调参数；
-  - `LockToYaw` 切回 `LockNowYaw` 时的锁角继承修复与宿主回归；
-  - S 形手操速度规划重新并回舵向故障恢复主线后的上下文同步。
+  - 当前稳定默认值继续保持主线口径：`manual_speed_profile_mode = kSCurve`，X-Park 阈值保持 `0.01 / 0.03`；
+  - 舵向 fault gate、homing gate 和 `current = 0` 保护未因这轮合并回退；
+  - 宿主测试入口仍以 `jia_docs/tests/tdd/chassis_semantics/run_test.ps1` 和 `run_pid_reconnect_test.ps1` 为主；
+  - 新的 merge baseline handoff 会优先说明合并提交、语义归属、验证结果和后续联调关注点。
 
 ## 命名规则
 
