@@ -45,6 +45,9 @@ Chassis::SwervePlannerInput makeGatePlannerInput(float steering_error_deg,
                                                  float command_omega_z,
                                                  float max_residual_speed_m_s);
 void emitDebugOutputForHost(Chassis &chassis, bool all_homed);
+void configureDebugOutputFamily(Chassis &chassis, unsigned char family_raw);
+void configureJustFloatProfile(Chassis &chassis, unsigned char profile_raw);
+void configureSingleWheelPayload(Chassis &chassis, unsigned char payload_raw);
 
 class TestMotor : public Motor_Base
 {
@@ -883,7 +886,7 @@ void testDirectControlWheelSelectionIsIndependentFromObserveWheel()
     EXPECT_NEAR(drive_motors[1].getTargetRPM(), 0.0f, 1.0e-6f);
 }
 
-void testSingleWheel1kHzOutputUsesObserveWheelIndex()
+void testJustFloatSingleWheelProfileUsesObserveWheelIndex()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
@@ -899,10 +902,11 @@ void testSingleWheel1kHzOutputUsesObserveWheelIndex()
     steer_motors[2].setTargetRPM(22.0f);
 
     testHostResetJustFloatCapture();
-    chassis.debug_output_.output_enable = true;
-    chassis.debug_output_.output_mode_raw = 3U;
-    chassis.debug_output_.single_wheel.period_ms = 0U;
-    chassis.debug_output_runtime_.single_wheel.last_ms = 0U;
+    configureDebugOutputFamily(chassis, 2U);
+    configureJustFloatProfile(chassis, 1U);
+    configureSingleWheelPayload(chassis, 0U);
+    chassis.debug_output_.justfloat.single_wheel.period_ms = 0U;
+    chassis.debug_output_runtime_.justfloat.single_wheel.last_ms = 0U;
     chassis.time_ms_ = 25U;
     chassis.debug_control_.control_wheel_index = 2U;
     chassis.debug_control_.observe_wheel_index = 1U;
@@ -915,7 +919,7 @@ void testSingleWheel1kHzOutputUsesObserveWheelIndex()
     EXPECT_NEAR(g_test_justfloat_capture.values[3], 11.0f, 1.0e-6f);
 }
 
-void testSingleWheelDualMotorOutputUsesObserveWheelIndex()
+void testJustFloatSingleWheelPayloadUsesObserveWheelIndex()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
@@ -937,10 +941,11 @@ void testSingleWheelDualMotorOutputUsesObserveWheelIndex()
     drive_motors[2].setTargetRPM(240.0f);
 
     testHostResetJustFloatCapture();
-    chassis.debug_output_.output_enable = true;
-    chassis.debug_output_.output_mode_raw = 4U;
-    chassis.debug_output_.dual_motor.period_ms = 0U;
-    chassis.debug_output_runtime_.dual_motor.last_ms = 0U;
+    configureDebugOutputFamily(chassis, 2U);
+    configureJustFloatProfile(chassis, 1U);
+    configureSingleWheelPayload(chassis, 1U);
+    chassis.debug_output_.justfloat.single_wheel.period_ms = 0U;
+    chassis.debug_output_runtime_.justfloat.single_wheel.last_ms = 0U;
     chassis.time_ms_ = 40U;
     chassis.debug_control_.control_wheel_index = 0U;
     chassis.debug_control_.observe_wheel_index = 2U;
@@ -955,7 +960,7 @@ void testSingleWheelDualMotorOutputUsesObserveWheelIndex()
     EXPECT_NEAR(g_test_justfloat_capture.values[11], 240.0f, 1.0e-6f);
 }
 
-void testObserveWheelIndexFallsBackToZeroWhenOutOfRange()
+void testJustFloatSingleWheelObserveIndexFallsBackToZeroWhenOutOfRange()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
@@ -969,10 +974,11 @@ void testObserveWheelIndexFallsBackToZeroWhenOutOfRange()
     steer_motors[3].setTargetCurrent(999.0f);
 
     testHostResetJustFloatCapture();
-    chassis.debug_output_.output_enable = true;
-    chassis.debug_output_.output_mode_raw = 3U;
-    chassis.debug_output_.single_wheel.period_ms = 0U;
-    chassis.debug_output_runtime_.single_wheel.last_ms = 0U;
+    configureDebugOutputFamily(chassis, 2U);
+    configureJustFloatProfile(chassis, 1U);
+    configureSingleWheelPayload(chassis, 0U);
+    chassis.debug_output_.justfloat.single_wheel.period_ms = 0U;
+    chassis.debug_output_runtime_.justfloat.single_wheel.last_ms = 0U;
     chassis.time_ms_ = 60U;
     chassis.debug_control_.observe_wheel_index = 9U;
 
@@ -1292,13 +1298,30 @@ void emitDebugOutputForHost(Chassis &chassis, bool all_homed)
     chassis.emitDebugOutputByMode(all_homed);
 }
 
+void configureDebugOutputFamily(Chassis &chassis, unsigned char family_raw)
+{
+    chassis.debug_output_.output_enable = true;
+    chassis.debug_output_.output_family_raw = family_raw;
+}
+
+void configureJustFloatProfile(Chassis &chassis, unsigned char profile_raw)
+{
+    chassis.debug_output_.justfloat.profile_raw = profile_raw;
+}
+
+void configureSingleWheelPayload(Chassis &chassis, unsigned char payload_raw)
+{
+    chassis.debug_output_.justfloat.single_wheel_payload_raw = payload_raw;
+}
+
 void configureYawPidTraceHarness(Chassis &chassis)
 {
     testHostResetJustFloatCapture();
-    chassis.debug_output_.output_enable = true;
-    chassis.debug_output_.yaw_pid.period_ms = 0U;
-    chassis.debug_output_runtime_.yaw_pid.last_ms = 0U;
-    chassis.debug_output_.output_mode_raw = 6U;
+    configureDebugOutputFamily(chassis, 2U);
+    configureJustFloatProfile(chassis, 2U);
+    chassis.debug_output_.justfloat.yaw_pid.period_ms = 0U;
+    chassis.debug_output_runtime_.justfloat.yaw_pid.last_ms = 0U;
+    configureSingleWheelPayload(chassis, 0U);
     chassis.time_ms_ = 100U;
     chassis.input_hwt_omega_z_ = 0.25f;
     chassis.debug_mirror_.all_homed = true;
@@ -1307,7 +1330,7 @@ void configureYawPidTraceHarness(Chassis &chassis)
     chassis.debug_mirror_.reverse_intent_active = false;
 }
 
-void testYawPidJustFloatModeDispatchEmitsFixed15ChannelPayload()
+void testJustFloatYawPidProfileDispatchEmitsFixed15ChannelPayload()
 {
     Chassis chassis;
     configureYawPidTraceHarness(chassis);
@@ -2949,9 +2972,9 @@ int main()
     testMode30DirectActuatorRespectsSteerFaultGateByKeepingDriveCurrentZero();
     testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode();
     testDirectControlWheelSelectionIsIndependentFromObserveWheel();
-    testSingleWheel1kHzOutputUsesObserveWheelIndex();
-    testSingleWheelDualMotorOutputUsesObserveWheelIndex();
-    testObserveWheelIndexFallsBackToZeroWhenOutOfRange();
+    testJustFloatSingleWheelProfileUsesObserveWheelIndex();
+    testJustFloatSingleWheelPayloadUsesObserveWheelIndex();
+    testJustFloatSingleWheelObserveIndexFallsBackToZeroWhenOutOfRange();
     testDebugOmegaZInjectionModeOffKeepsManualOmegaInput();
     testDebugOmegaZInjectionModeStepOverridesManualOmegaInput();
     testDebugOmegaZInjectionModeSineOverridesManualOmegaInput();
@@ -2966,7 +2989,7 @@ int main()
     testLowSpeedDriveSuppressionUsesGlobalWorstWheelError();
     testGlobalMaxResidualSpeedControlsLowSpeedSuppressionForAllWheels();
     testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics();
-    testYawPidJustFloatModeDispatchEmitsFixed15ChannelPayload();
+    testJustFloatYawPidProfileDispatchEmitsFixed15ChannelPayload();
     testLockToYawPidTracePublishesTargetErrorAndPidFireState();
     testLockToYawThenLockNowKeepsTheEffectiveLockedYaw();
     testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates();

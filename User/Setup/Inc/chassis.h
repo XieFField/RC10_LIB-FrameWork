@@ -535,15 +535,23 @@ namespace jia
                 kCurrent = 1, // 直接给驱动电流命令（mA）。
                 kBrake = 2,   // 直接给驱动刹车命令（mA）。
             };
-            enum class DebugOutputMode : u8
+            enum class DebugOutputFamily : u8
             {
                 kOff = 0,
                 kText = 1,
-                kOverviewJustFloat = 2,
-                kSingleWheelJustFloat = 3,
-                kSingleWheelDualMotorJustFloat = 4,
-                kSwerveTelemetryV2 = 5,
-                kYawPidJustFloat = 6,
+                kJustFloat = 2,
+                kBinary = 3,
+            };
+            enum class JustFloatProfile : u8
+            {
+                kOverview = 0,
+                kSingleWheelTrace = 1,
+                kYawPid = 2,
+            };
+            enum class SingleWheelTracePayloadKind : u8
+            {
+                kSteerOnly = 0,
+                kSteerAndDrive = 1,
             };
             DebugMode resolveDebugMode(u8 raw_mode) const;
             void applyDebugTargetOverride(DebugMode mode);
@@ -820,7 +828,7 @@ namespace jia
             // =====================================================================
             // 调试输出 [RW]
             // 说明：这里只管“串口往外发什么”，不管底盘怎么跑。
-            //       output_enable 是总开关，output_mode_raw 选路径，text.log_level 决定文本模式的细度。
+            //       output_enable 是总开关，output_family_raw 选协议族，text.log_level 决定文本模式的细度。
             // =====================================================================
             struct DebugOutputSlotConfig
             {
@@ -840,19 +848,31 @@ namespace jia
                 u32 period_ms = 10U;    // [RW] mode5 最小发送周期（ms）。
             };
 
+            struct DebugOutputJustFloatConfig
+            {
+                u8 profile_raw = static_cast<u8>(JustFloatProfile::kYawPid); // [RW] justfloat 载荷类型：0=四轮总览，1=单轮 trace，2=YawPid。
+                u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kSteerOnly); // [RW] 单轮 trace 载荷形态：0=仅舵向，1=舵向+驱动。
+
+                DebugOutputSlotConfig overview = {5U}; // [RW] justfloat 四轮总览配置。
+                DebugOutputSlotConfig single_wheel = {1U}; // [RW] justfloat 单轮 trace 配置；输出轮固定跟随 observe_wheel_index。
+                DebugOutputSlotConfig yaw_pid = {4U}; // [RW] justfloat YawPid trace 配置。
+            };
+
+            struct DebugOutputBinaryConfig
+            {
+                DebugOutputTelemetryConfig telemetry{}; // [RW] binary telemetry 配置。当前只承载 SwerveTelemetryV2。
+            };
+
             // 调试输出配置 [RW]
             // 说明：这里只放“外部可调”的输出参数，不再混入节流时间戳、计数器等运行态噪音。
             struct DebugOutputConfig
             {
                 bool output_enable = false; // [RW] 串口输出总开关。false 时所有调试串口输出都停止，但控制逻辑仍继续运行。
-                u8 output_mode_raw = static_cast<u8>(DebugOutputMode::kYawPidJustFloat); // [RW] 输出模式选择器：0=关，1=文本日志，2=四轮总览 justfloat，3=单轮高速 justfloat，4=单轮双电机 justfloat，5=SwerveTelemetryV2（二进制），6=YawPid justfloat。
+                u8 output_family_raw = static_cast<u8>(DebugOutputFamily::kJustFloat); // [RW] 输出协议族：0=关，1=文本日志，2=justfloat，3=二进制 telemetry。
 
                 DebugOutputTextConfig text{}; // [RW] mode1 文本日志配置。
-                DebugOutputSlotConfig overview = {5U}; // [RW] mode2 四轮总览 justfloat 配置。
-                DebugOutputSlotConfig single_wheel = {1U}; // [RW] mode3 单轮高速 justfloat 配置；输出轮固定跟随 observe_wheel_index。
-                DebugOutputSlotConfig dual_motor = {2U}; // [RW] mode4 单轮双电机高速 justfloat 配置；输出轮固定跟随 observe_wheel_index。
-                DebugOutputSlotConfig yaw_pid = {4U}; // [RW] mode6 Yaw PID justfloat 配置。
-                DebugOutputTelemetryConfig telemetry{}; // [RW] mode5 SwerveTelemetryV2 配置。
+                DebugOutputJustFloatConfig justfloat{}; // [RW] justfloat 家族配置。
+                DebugOutputBinaryConfig binary{}; // [RW] binary 家族配置。
             } debug_output_;
 
             struct DebugOutputSlotRuntime
@@ -874,16 +894,25 @@ namespace jia
                 u16 seq = 0U;              // [RO] mode5 帧序号。每成功发送一帧递增，便于 PC 侧检测丢帧。
             };
 
+            struct DebugOutputJustFloatRuntime
+            {
+                DebugOutputSlotRuntime overview{};
+                DebugOutputSlotRuntime single_wheel{};
+                DebugOutputSlotRuntime yaw_pid{};
+            };
+
+            struct DebugOutputBinaryRuntime
+            {
+                DebugOutputTelemetryRuntime telemetry{};
+            };
+
             // 调试输出运行态 [RO]
             // 说明：这里只放节流、相位和发送计数等运行时观察值，不参与外部调参。
             struct DebugOutputRuntime
             {
                 DebugOutputTextRuntime text{};
-                DebugOutputSlotRuntime overview{};
-                DebugOutputSlotRuntime single_wheel{};
-                DebugOutputSlotRuntime dual_motor{};
-                DebugOutputSlotRuntime yaw_pid{};
-                DebugOutputTelemetryRuntime telemetry{};
+                DebugOutputJustFloatRuntime justfloat{};
+                DebugOutputBinaryRuntime binary{};
             } debug_output_runtime_;
 
             // =====================================================================
