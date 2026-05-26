@@ -1129,6 +1129,81 @@ void testJustFloatSingleWheelObserveIndexFallsBackToZeroWhenOutOfRange()
     EXPECT_NEAR(g_test_justfloat_capture.values[1], 321.0f, 1.0e-6f);
 }
 
+void testJustFloatSingleWheelDriveOnlyPayloadUsesObserveWheelIndex()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].steer_motor_h = &steer_motors[i];
+        chassis.wheel_config_[i].drive_motor_h = &drive_motors[i];
+    }
+
+    steer_motors[1].setTargetCurrent(111.0f);
+    steer_motors[1].setTargetRPM(11.0f);
+    drive_motors[1].setTargetCurrent(222.0f);
+    drive_motors[1].setTargetRPM(22.0f);
+    drive_motors[1].setFeedbackCurrent(333.0f);
+    drive_motors[1].setFeedbackRpm(44.0f);
+    drive_motors[1].setTargetTotalAngle(555.0f);
+    drive_motors[1].setFeedbackTotalAngleDeg(666.0f);
+
+    testHostResetJustFloatCapture();
+    configureDebugOutputFamily(chassis, 2U);
+    configureJustFloatProfile(chassis, 1U);
+    configureSingleWheelPayload(chassis, 2U);
+    chassis.debug_output_.justfloat.single_wheel.period_ms = 0U;
+    chassis.debug_output_runtime_.justfloat.single_wheel.last_ms = 0U;
+    chassis.time_ms_ = 80U;
+    chassis.debug_control_.common.control_wheel_index = 0U;
+    chassis.debug_control_.common.observe_wheel_index = 1U;
+
+    emitDebugOutputForHost(chassis, true);
+
+    EXPECT_TRUE(g_test_justfloat_capture.called);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 9U);
+    EXPECT_NEAR(g_test_justfloat_capture.values[1], 222.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[2], 333.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[3], 22.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[4], 44.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[7], 555.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[8], 666.0f, 1.0e-6f);
+}
+
+void testJustFloatSingleWheelDriveOnlyObserveIndexFallsBackToZeroWhenOutOfRange()
+{
+    Chassis chassis;
+    TestMotor drive_motors[4];
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].drive_motor_h = &drive_motors[i];
+    }
+
+    drive_motors[0].setTargetCurrent(432.0f);
+    drive_motors[0].setTargetRPM(54.0f);
+    drive_motors[3].setTargetCurrent(999.0f);
+    drive_motors[3].setTargetRPM(88.0f);
+
+    testHostResetJustFloatCapture();
+    configureDebugOutputFamily(chassis, 2U);
+    configureJustFloatProfile(chassis, 1U);
+    configureSingleWheelPayload(chassis, 2U);
+    chassis.debug_output_.justfloat.single_wheel.period_ms = 0U;
+    chassis.debug_output_runtime_.justfloat.single_wheel.last_ms = 0U;
+    chassis.time_ms_ = 90U;
+    chassis.debug_control_.common.observe_wheel_index = 7U;
+
+    emitDebugOutputForHost(chassis, true);
+
+    EXPECT_TRUE(g_test_justfloat_capture.called);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 9U);
+    EXPECT_NEAR(g_test_justfloat_capture.values[1], 432.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[3], 54.0f, 1.0e-6f);
+}
+
 void testDebugOmegaZInjectionModeOffKeepsManualOmegaInput()
 {
     Chassis chassis;
@@ -3414,6 +3489,8 @@ int main()
     testJustFloatSingleWheelProfileUsesObserveWheelIndex();
     testJustFloatSingleWheelPayloadUsesObserveWheelIndex();
     testJustFloatSingleWheelObserveIndexFallsBackToZeroWhenOutOfRange();
+    testJustFloatSingleWheelDriveOnlyPayloadUsesObserveWheelIndex();
+    testJustFloatSingleWheelDriveOnlyObserveIndexFallsBackToZeroWhenOutOfRange();
     testDebugOmegaZInjectionModeOffKeepsManualOmegaInput();
     testDebugOmegaZInjectionModeStepOverridesManualOmegaInput();
     testDebugOmegaZInjectionModeSineOverridesManualOmegaInput();

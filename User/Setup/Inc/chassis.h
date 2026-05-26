@@ -611,6 +611,7 @@ namespace jia
             {
                 kSteerOnly = 0,
                 kSteerAndDrive = 1,
+                kDriveOnly = 2,
             };
             DebugMode resolveDebugMode(u8 raw_mode) const;
             void applyDebugTargetOverride(DebugMode mode);
@@ -710,6 +711,7 @@ namespace jia
             void syncDebugSteerPidTuneFromRuntime();
             void applyDebugSteerPidRuntimeTuning();
             void emitUart8VofaPid1kHzTrace();
+            void emitUart8VofaSingleWheelDriveTrace();
             void emitUart8VofaDualMotor1kHzTrace();
             void emitUart8SwerveTelemetryV2(bool all_homed);
             void emitUart8VofaYawPidTrace();
@@ -857,7 +859,7 @@ namespace jia
             {
                 struct Common
                 {
-                    bool enable = false;                                            // [RW] 调试总开关。
+                    bool enable = true;                                            // [RW] 调试总开关。
                     u8 mode_raw = 30;                                                 // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
@@ -878,7 +880,7 @@ namespace jia
                     bool estop = false;         // [RW] 单轮调试急停闸门。
                     f32 input_deadzone = 0.03f; // [RW] 单轮调试共享摇杆死区。落入死区后两轴输入都直接置 0。
                     SingleWheelAxisControl steer{
-                        true,
+                        false,
                         static_cast<u8>(DirectAxisInputMode::kRcContinuous),
                         static_cast<u8>(SingleWheelInputAxis::kLeftX),
                         false,
@@ -935,7 +937,7 @@ namespace jia
             struct DebugOutputJustFloatConfig
             {
                 u8 profile_raw = static_cast<u8>(JustFloatProfile::kSingleWheelTrace);
-                u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kSteerAndDrive);
+                u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kDriveOnly);
                 DebugOutputSlotConfig overview = {5U};
                 DebugOutputSlotConfig single_wheel = {1U};
                 DebugOutputSlotConfig yaw_pid = {4U};
