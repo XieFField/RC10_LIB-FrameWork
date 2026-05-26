@@ -1,11 +1,14 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <type_traits>
 
 #include "main.h"
+#include "Motor_VESC.h"
 
 #define private public
 #include "chassis.h"
+#include "Motor_VESC.h"
 #undef private
 
 namespace
@@ -101,7 +104,138 @@ public:
     }
 };
 
-void configureDriveContinuityHarness(Chassis &chassis, TestMotor drive_motors[4]);
+struct DrivePidTuneHarness
+{
+    Chassis chassis{};
+    VESC_Motor drive_vescs[4]{};
+    TestMotor steer_motors[4]{};
+};
+
+void configureDrivePidTuneHarness(DrivePidTuneHarness &harness)
+{
+    for (int i = 0; i < 4; ++i)
+    {
+        harness.chassis.wheel_config_[i].steer_motor_h = &harness.steer_motors[i];
+        harness.chassis.wheel_config_[i].drive_motor_h = &harness.drive_vescs[i];
+        harness.chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        harness.drive_vescs[i].pid_init(PID_Param_Config{}, 0.0f);
+        harness.drive_vescs[i].setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+    }
+}
+
+void testDrivePidEnableEdgeReadsBackRuntimeIntoCleanSharedCache()
+{
+    DrivePidTuneHarness harness;
+    configureDrivePidTuneHarness(harness);
+
+    PID_Param_Config runtime_cfg{};
+    runtime_cfg.kp = 6.0f;
+    runtime_cfg.ki = 0.4f;
+    runtime_cfg.kd = 0.1f;
+    runtime_cfg.output_limit = 2300.0f;
+    harness.drive_vescs[0].pid_init(runtime_cfg, 0.35f);
+
+    harness.chassis.debug_pid_tune_.drive_speed_pid_cfg = PID_Param_Config{};
+    harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio = 0.0f;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_apply_stamp = 0U;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp = 0U;
+    harness.chassis.debug_control_.common.enable = false;
+    harness.chassis.debug_enable_last_cycle_ = false;
+
+    harness.chassis.syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
+    harness.chassis.debug_control_.common.enable = true;
+    harness.chassis.syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
+
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.kp, runtime_cfg.kp, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.ki, runtime_cfg.ki, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.kd, runtime_cfg.kd, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.output_limit, runtime_cfg.output_limit, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio, 0.35f, 1.0e-6f);
+}
+
+void testDrivePidDirtyCacheBlocksRuntimeReadbackOverwrite()
+{
+    DrivePidTuneHarness harness;
+    configureDrivePidTuneHarness(harness);
+
+    PID_Param_Config manual_cfg{};
+    manual_cfg.kp = 11.0f;
+    manual_cfg.ki = 1.2f;
+    manual_cfg.output_limit = 4567.0f;
+    PID_Param_Config runtime_cfg{};
+    runtime_cfg.kp = 2.0f;
+    runtime_cfg.ki = 0.1f;
+    runtime_cfg.output_limit = 999.0f;
+    harness.drive_vescs[0].pid_init(runtime_cfg, 0.12f);
+
+    harness.chassis.debug_pid_tune_.drive_speed_pid_cfg = manual_cfg;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio = 0.8f;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_apply_stamp = 9U;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp = 7U;
+
+    harness.chassis.syncDebugSteerPidTuneFromRuntime();
+
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.kp, manual_cfg.kp, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.ki, manual_cfg.ki, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.output_limit, manual_cfg.output_limit, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio, 0.8f, 1.0e-6f);
+}
+
+void testDrivePidSharedApplyPushesSameParamsToAllVescsAndAlignsAppliedStamp()
+{
+    DrivePidTuneHarness harness;
+    configureDrivePidTuneHarness(harness);
+
+    PID_Param_Config shared_cfg{};
+    shared_cfg.kp = 8.0f;
+    shared_cfg.ki = 0.6f;
+    shared_cfg.kd = 0.02f;
+    shared_cfg.deadband = 3.0f;
+    shared_cfg.output_limit = 3200.0f;
+
+    harness.chassis.debug_pid_tune_.drive_speed_pid_cfg = shared_cfg;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio = 0.55f;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_apply_stamp = 41U;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp = 40U;
+
+    harness.chassis.applyDebugSteerPidRuntimeTuning();
+
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_params().kp, shared_cfg.kp, 1.0e-6f);
+        EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_params().ki, shared_cfg.ki, 1.0e-6f);
+        EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_params().kd, shared_cfg.kd, 1.0e-6f);
+        EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_params().deadband, shared_cfg.deadband, 1.0e-6f);
+        EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_params().output_limit, shared_cfg.output_limit, 1.0e-6f);
+        EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_td_ratio(), 0.55f, 1.0e-6f);
+    }
+    EXPECT_TRUE(harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp == 41U);
+}
+
+void testDrivePidApplySkipsNullHandlesAndStillUpdatesAppliedStamp()
+{
+    DrivePidTuneHarness harness;
+    configureDrivePidTuneHarness(harness);
+
+    harness.chassis.wheel_config_[1].drive_motor_h = nullptr;
+    harness.chassis.wheel_config_[2].drive_motor_h = nullptr;
+
+    PID_Param_Config shared_cfg{};
+    shared_cfg.kp = 12.0f;
+
+    harness.chassis.debug_pid_tune_.drive_speed_pid_cfg = shared_cfg;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio = 0.25f;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_apply_stamp = 77U;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp = 76U;
+
+    harness.chassis.applyDebugSteerPidRuntimeTuning();
+
+    EXPECT_TRUE(harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp == 77U);
+    EXPECT_NEAR(harness.drive_vescs[0].get_speed_pid_params().kp, shared_cfg.kp, 1.0e-6f);
+    EXPECT_NEAR(harness.drive_vescs[3].get_speed_pid_params().kp, shared_cfg.kp, 1.0e-6f);
+}
+
+void configureDriveContinuityHarness(Chassis &chassis, VESC_Motor drive_motors[4]);
 void configureXParkWheelGeometry(Chassis &chassis);
 
 void setPhotogateStateForWheel(int wheel_idx, bool active_high)
@@ -566,7 +700,7 @@ void testHighSpeedDriveSuppressionWaitsUntilNearZeroExitBeforeEnabling()
     EXPECT_TRUE(fast_output.high_speed_suppression_scale < 1.0f);
 }
 
-void configureSingleWheelDebugHarness(Chassis &chassis, TestMotor steer_motors[4], TestMotor drive_motors[4])
+void configureSingleWheelDebugHarness(Chassis &chassis, TestMotor steer_motors[4], VESC_Motor drive_motors[4])
 {
     for (int i = 0; i < 4; ++i)
     {
@@ -583,7 +717,7 @@ void configureSingleWheelDebugHarness(Chassis &chassis, TestMotor steer_motors[4
     }
 }
 
-void configureSingleWheelIsolatedPlannerHarness(Chassis &chassis, TestMotor steer_motors[4], TestMotor drive_motors[4])
+void configureSingleWheelIsolatedPlannerHarness(Chassis &chassis, TestMotor steer_motors[4], VESC_Motor drive_motors[4])
 {
     configureSingleWheelDebugHarness(chassis, steer_motors, drive_motors);
     configureDriveContinuityHarness(chassis, drive_motors);
@@ -614,7 +748,7 @@ void configureSingleWheelIsolatedPlannerHarness(Chassis &chassis, TestMotor stee
     chassis.current_mode_flag_.is_wheel_torque_free = false;
 }
 
-void configureSingleWheelIsolatedDirectHarness(Chassis &chassis, TestMotor steer_motors[4], TestMotor drive_motors[4])
+void configureSingleWheelIsolatedDirectHarness(Chassis &chassis, TestMotor steer_motors[4], VESC_Motor drive_motors[4])
 {
     configureSingleWheelDebugHarness(chassis, steer_motors, drive_motors);
     configureDriveContinuityHarness(chassis, drive_motors);
@@ -717,7 +851,7 @@ void testMode30SingleWheelDirectJoystickIsolationOnlyLetsTargetWheelMove()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
     chassis.airjoy_data_.left_x = 0.5f;
@@ -742,7 +876,7 @@ void testMode30SingleWheelDirectDriveCanUseSCurveShaping()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
     chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 999.0f;
@@ -771,7 +905,7 @@ void testMode30CommonWheelIndexAliasCanDirectlySelectTargetWheel()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
     chassis.debug_control_.common.control_wheel_index = 3U;
@@ -793,7 +927,7 @@ void testMode30DirectDriveIgnoresAllHomedGateForTargetWheel()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
     chassis.airjoy_data_.right_x = 0.5f;
@@ -808,7 +942,7 @@ void testMode30SingleWheelRemovedModes31And32DoNotEnterModuleOverride()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
     chassis.debug_control_.common.mode_raw = 31U;
@@ -826,7 +960,7 @@ void testMode30SingleWheelUsesConfiguredAxesAndInversion()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
     chassis.debug_control_.single_wheel.steer.input_axis_raw = static_cast<unsigned char>(Chassis::SingleWheelInputAxis::kLeftY);
@@ -848,7 +982,7 @@ void testMode30SingleWheelSharedDeadzoneSuppressesContinuousAndStepInputs()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
     chassis.debug_control_.single_wheel.input_deadzone = 0.3f;
@@ -869,7 +1003,7 @@ void testMode30SingleWheelAxisEnablesAndEstopGateOutputs()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
     chassis.debug_control_.single_wheel.steer.enable = false;
@@ -899,7 +1033,7 @@ void testMode30SingleWheelSteerPlannerSupportsSCurveAndTrapezoid()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
     chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 999.0f;
@@ -934,7 +1068,7 @@ void testMode30SingleWheelDrivePlannerSupportsTrapezoidAndIgnoresGlobalManualPro
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
     chassis.runtime_strategy_cfg_.max_acc_xy_acc_ = 999.0f;
@@ -982,7 +1116,7 @@ void testMode30SingleWheelNonTargetCommandTypesBypassPlanner()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
     chassis.debug_control_.single_wheel.steer.command_type_raw = static_cast<unsigned char>(Chassis::DirectSteerCommandType::kCurrent);
@@ -1005,7 +1139,7 @@ void testMode30SingleWheelPlannerStateResetsWhenWheelAndPlannerModeChange()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
     chassis.debug_control_.single_wheel.drive.command_limit = 600.0f;
@@ -1064,7 +1198,7 @@ void testJustFloatSingleWheelPayloadUsesObserveWheelIndex()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
 
     for (int i = 0; i < 4; ++i)
     {
@@ -1133,7 +1267,7 @@ void testJustFloatSingleWheelDriveOnlyPayloadUsesObserveWheelIndex()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
 
     for (int i = 0; i < 4; ++i)
     {
@@ -1175,7 +1309,7 @@ void testJustFloatSingleWheelDriveOnlyPayloadUsesObserveWheelIndex()
 void testJustFloatSingleWheelDriveOnlyObserveIndexFallsBackToZeroWhenOutOfRange()
 {
     Chassis chassis;
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
 
     for (int i = 0; i < 4; ++i)
     {
@@ -1279,7 +1413,7 @@ void testDebugOmegaZInjectionDoesNotAffectLockToTarget()
     EXPECT_NEAR(chassis.input_target_data_.rot_z, 1.2f, 1.0e-6f);
 }
 
-void configureDriveContinuityHarness(Chassis &chassis, TestMotor drive_motors[4])
+void configureDriveContinuityHarness(Chassis &chassis, VESC_Motor drive_motors[4])
 {
     chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 10.0f;
     chassis.runtime_strategy_cfg_.max_drive_omega_rad_s_ = 1000.0f;
@@ -1298,6 +1432,8 @@ void configureDriveContinuityHarness(Chassis &chassis, TestMotor drive_motors[4]
         chassis.wheel_config_[i].target_drive_omega_rad_s = 0.0f;
         chassis.last_drive_omega_cmd_rad_s_[i] = 0.0f;
         chassis.planned_data_.drive_omega_rad_s[i] = 0.0f;
+        drive_motors[i].pid_init(PID_Param_Config{}, 0.0f);
+        drive_motors[i].setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
         drive_motors[i].setTargetRPM(0.0f);
     }
 }
@@ -1332,7 +1468,7 @@ void setWheelPoseToXPark(Chassis &chassis)
     }
 }
 
-void configureHardGateLaunchHarness(Chassis &chassis, TestMotor drive_motors[4])
+void configureHardGateLaunchHarness(Chassis &chassis, VESC_Motor drive_motors[4])
 {
     configureDriveContinuityHarness(chassis, drive_motors);
     configureXParkWheelGeometry(chassis);
@@ -1384,7 +1520,7 @@ void configureXParkTriggerHarness(Chassis &chassis)
     }
 }
 
-void configureSteerFaultRecoveryHarness(Chassis &chassis, TestMotor steer_motors[4], TestMotor drive_motors[4])
+void configureSteerFaultRecoveryHarness(Chassis &chassis, TestMotor steer_motors[4], VESC_Motor drive_motors[4])
 {
     testHostResetPhotogates();
 
@@ -1471,6 +1607,8 @@ void configureSteerFaultRecoveryHarness(Chassis &chassis, TestMotor steer_motors
         drive_motors[i].setFeedbackCurrent(0.0f);
         drive_motors[i].setFeedbackRpm(0.0f);
         drive_motors[i].setFeedbackTotalAngleDeg(0.0f);
+        drive_motors[i].pid_init(PID_Param_Config{}, 0.0f);
+        drive_motors[i].setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
         drive_motors[i].setTargetCurrent(0.0f);
         drive_motors[i].setTargetRPM(0.0f);
         drive_motors[i].setTargetTotalAngle(0.0f);
@@ -1740,7 +1878,7 @@ Chassis::SwervePlannerInput makeGatePlannerInput(float steering_error_deg,
 void testSuppressedDriveDoesNotAccumulateHiddenAccelState()
 {
     Chassis chassis;
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureDriveContinuityHarness(chassis, drive_motors);
 
     const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
@@ -1760,7 +1898,7 @@ void testSuppressedDriveDoesNotAccumulateHiddenAccelState()
 void testDriveReleaseResumesFromDeliveredSpeedNotVirtualSpeed()
 {
     Chassis chassis;
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureDriveContinuityHarness(chassis, drive_motors);
     const float expected_release_step = chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ * Chassis::period_;
 
@@ -1784,7 +1922,7 @@ void testDriveReleaseResumesFromDeliveredSpeedNotVirtualSpeed()
 void testDriveReleaseHasNoVelocityJumpAfterZeroHold()
 {
     Chassis chassis;
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureDriveContinuityHarness(chassis, drive_motors);
 
     const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
@@ -1802,7 +1940,7 @@ void testDriveReleaseHasNoVelocityJumpAfterZeroHold()
 void testPlannerTargetMayChangeWhileDeliveredStateRemainsContinuous()
 {
     Chassis chassis;
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureDriveContinuityHarness(chassis, drive_motors);
 
     const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
@@ -1821,7 +1959,7 @@ void testPlannerTargetMayChangeWhileDeliveredStateRemainsContinuous()
 void testTorqueFreeAndNotHomedPathsResetDriveDeliveryStateConsistently()
 {
     Chassis chassis;
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureDriveContinuityHarness(chassis, drive_motors);
 
     const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
@@ -1939,7 +2077,7 @@ void testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics()
 void testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle()
 {
     Chassis chassis;
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureHardGateLaunchHarness(chassis, drive_motors);
 
     Chassis::Data command{};
@@ -1980,7 +2118,7 @@ void testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle()
 void testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned()
 {
     Chassis chassis;
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureHardGateLaunchHarness(chassis, drive_motors);
 
     chassis.target_data_.vel_x = 1.0f;
@@ -2402,7 +2540,7 @@ void testDebugBodySpeedOmegaRapidReverseEventuallyChangesPredictedActuatorOmegaS
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
     configureXParkWheelGeometry(chassis);
 
@@ -2463,7 +2601,7 @@ void testDebugBodySpeedTranslationRapidReverseEventuallyChangesPredictedActuator
     auto run_axis_case = [](bool test_x_axis) {
         Chassis chassis;
         TestMotor steer_motors[4];
-        TestMotor drive_motors[4];
+        VESC_Motor drive_motors[4];
         configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
         configureXParkWheelGeometry(chassis);
 
@@ -2727,7 +2865,7 @@ void testAlwaysForwardModeIgnoresReverseIntentOverride()
 void testDriveAlphaDeliveryLimitUsesUniformScaleAcrossAllWheels()
 {
     Chassis chassis;
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureDriveContinuityHarness(chassis, drive_motors);
     chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 1000.0f;
 
@@ -2746,7 +2884,7 @@ void testDriveAlphaDeliveryLimitUsesUniformScaleAcrossAllWheels()
 void testDriveAlphaDeliveryLimitUsesWorstWheelScaleWhenLastValuesDiffer()
 {
     Chassis chassis;
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureDriveContinuityHarness(chassis, drive_motors);
     chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 1000.0f;
 
@@ -2770,7 +2908,7 @@ void testDriveAlphaDeliveryLimitUsesWorstWheelScaleWhenLastValuesDiffer()
 void testDriveAlphaDeliveryLimitUsesUniformScaleWhileNotHomed()
 {
     Chassis chassis;
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureDriveContinuityHarness(chassis, drive_motors);
     chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 1000.0f;
 
@@ -2794,7 +2932,7 @@ void testDriveAlphaDeliveryLimitUsesUniformScaleWhileNotHomed()
 void testDriveDeliveryLimitAlphaThenOmegaStillKeepsSharedProgress()
 {
     Chassis chassis;
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureDriveContinuityHarness(chassis, drive_motors);
     chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 3000.0f;
     chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = true;
@@ -3051,7 +3189,7 @@ void testStationaryPhotogateTogglesDoNotSelfLockNormalReadyState()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
 
     chassis.target_data_.vel_x = 0.0f;
@@ -3073,7 +3211,7 @@ void testReadyStationaryWheelsCanStillEnterXParkWithoutTriggeringSteerFault()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
     configureXParkWheelGeometry(chassis);
 
@@ -3118,7 +3256,7 @@ void testSingleWheelSteerFreezeFaultStopsVehicleAndFreezesFaultedWheelPath()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
 
     chassis.input_target_data_.vel_x = 1.0f;
@@ -3162,7 +3300,7 @@ void testSingleWheelSteerFreezeFaultDoesNotRequireHugeCurrentMagnitude()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
 
     chassis.input_target_data_.vel_x = 1.0f;
@@ -3198,7 +3336,7 @@ void testSteerFaultThresholdsAreDebugTunableAndMirrorPublishesDecisionInputs()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
 
     chassis.input_target_data_.vel_x = 1.0f;
@@ -3251,7 +3389,7 @@ void testFaultedWheelOnlyRehomesAfterCurrentTogglesAndMotionResumesAfterRecovery
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
 
     chassis.input_target_data_.vel_x = 1.0f;
@@ -3320,7 +3458,7 @@ void testLatchedFaultedWheelKeepsPureZeroCurrentCommandWithoutOverwritingControl
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
 
     chassis.input_target_data_.vel_x = 1.0f;
@@ -3359,7 +3497,7 @@ void testRecoveryImmediatelyReopensSteerSearchAfterFaultLatchSidePidReset()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
 
     chassis.input_target_data_.vel_x = 1.0f;
@@ -3396,7 +3534,7 @@ void testHomingEdgeCaptureDoesNotImmediatelyJumpToLargeAlignCommand()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
 
     chassis.wheel_config_[0].homing_falling_edge_mech_rad = jia::degToRadF32(150.0f);
@@ -3430,7 +3568,7 @@ void testRecoveryRehomeTimeoutRelatchesFault()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
+    VESC_Motor drive_motors[4];
     configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
 
     chassis.input_target_data_.vel_x = 1.0f;
@@ -3472,6 +3610,7 @@ void testRecoveryRehomeTimeoutRelatchesFault()
         EXPECT_NEAR(drive_motors[i].getTargetCurrent(), 0.0f, 1.0e-6f);
     }
 }
+
 } // namespace
 
 int main()
@@ -3575,6 +3714,10 @@ int main()
     testRecoveryImmediatelyReopensSteerSearchAfterFaultLatchSidePidReset();
     testHomingEdgeCaptureDoesNotImmediatelyJumpToLargeAlignCommand();
     testRecoveryRehomeTimeoutRelatchesFault();
+    testDrivePidEnableEdgeReadsBackRuntimeIntoCleanSharedCache();
+    testDrivePidDirtyCacheBlocksRuntimeReadbackOverwrite();
+    testDrivePidSharedApplyPushesSameParamsToAllVescsAndAlignsAppliedStamp();
+    testDrivePidApplySkipsNullHandlesAndStillUpdatesAppliedStamp();
 
     if (g_failures != 0)
     {
