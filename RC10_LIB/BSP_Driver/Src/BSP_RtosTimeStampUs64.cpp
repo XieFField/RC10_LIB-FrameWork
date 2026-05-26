@@ -1,3 +1,9 @@
+/**
+ * @file BSP_RtosTimeStampUs64.cpp
+ * @author 桑叁年
+ * @brief RTOS 微秒时间戳实现
+ */
+
 #include "BSP_RtosTimeStampUs64.h"
 
 #if defined(STM32H723xx) && defined(USE_HAL_DRIVER)
