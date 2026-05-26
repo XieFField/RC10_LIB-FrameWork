@@ -91,6 +91,28 @@ public:
     void pid_init(const PID_Param_Config& speed_params, float speed_tdRatio);
 
     /**
+     * @brief 设置速度环输出附加电流偏置
+     * @note  该偏置只在 SET_PID_SPEED_CURRENT 模式下参与最终电流输出，
+     *        用于在 chassis 层把虚拟惯量/阻尼/库仑摩擦等效到电流指令端。
+     */
+    void setSpeedPidCurrentBias(float current_bias_mA) { speed_pid_current_bias_mA_ = current_bias_mA; }
+
+    /**
+     * @brief 读取当前配置的速度环电流偏置
+     */
+    float getSpeedPidCurrentBias() const { return speed_pid_current_bias_mA_; }
+
+    /**
+     * @brief 读取速度 PID 的原始输出电流（未叠加 bias）
+     */
+    float getSpeedPidRawOutputCurrent() const { return speed_pid_raw_output_current_mA_; }
+
+    /**
+     * @brief 读取速度 PID 的总输出电流（raw + bias）
+     */
+    float getSpeedPidTotalOutputCurrent() const { return speed_pid_total_output_current_mA_; }
+
+    /**
      * @brief 设置 RPM 控制策略
      * @note  默认仍为 VESC 原生 eRPM 闭环；仅显式切换后才使用本地 PID 速度环
      */
@@ -108,16 +130,13 @@ public:
     void setTargetRPM(float rpm_set) override;
     void setTargetAngle(float angle_set) override{};
     void setTargetTotalAngle(float totalAngle_set) override;
-
     void setBrake(float brake_current) override;
-
     void setDuty(float duty);
 
     PID_Param_Config get_speed_pid_params() const { return speed_pid_.get_params(); }
     float get_speed_pid_td_ratio() const { return speed_pid_.get_td_ratio(); }
 
     std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) override;
-
     void updateFeedback(const CanFrame& cf) override;
 
     bool matchesFrame(const CanFrame& cf) const override
@@ -143,7 +162,8 @@ public:
 
     /**
      * @brief 根据当前控制模式，重置其他控制参数，避免冲突
-     * @note  新增的 SET_PID_SPEED_CURRENT 模式保留 target_rpm_，因为它需要在 update() 中继续参与 PID 计算
+     * @note  新增的 SET_PID_SPEED_CURRENT 模式保留 target_rpm_ 和 bias，
+     *        因为 update() 仍需要继续参与速度环计算与虚拟负载叠加。
      */
     void reset_otherParam()
     {
@@ -156,12 +176,16 @@ public:
                 target_rpm_ = 0.0f;
                 target_brake_current_ = 0.0f;
                 target_eRPM_ = 0;
+                speed_pid_raw_output_current_mA_ = 0.0f;
+                speed_pid_total_output_current_mA_ = 0.0f;
                 break;
             case SET_eRPM:
                 target_duty_ = 0.0f;
                 target_brake_current_ = 0.0f;
                 target_current_ = 0.0f;
                 target_totalAngle_ = 0.0f;
+                speed_pid_raw_output_current_mA_ = 0.0f;
+                speed_pid_total_output_current_mA_ = 0.0f;
                 break;
             case SET_CURRENT:
                 target_duty_ = 0.0f;
@@ -169,6 +193,8 @@ public:
                 target_rpm_ = 0.0f;
                 target_totalAngle_ = 0.0f;
                 target_eRPM_ = 0;
+                speed_pid_raw_output_current_mA_ = 0.0f;
+                speed_pid_total_output_current_mA_ = 0.0f;
                 break;
             case SET_PID_SPEED_CURRENT:
                 target_duty_ = 0.0f;
@@ -182,6 +208,8 @@ public:
                 target_rpm_ = 0.0f;
                 target_totalAngle_ = 0.0f;
                 target_eRPM_ = 0;
+                speed_pid_raw_output_current_mA_ = 0.0f;
+                speed_pid_total_output_current_mA_ = 0.0f;
                 break;
             case SET_POS:
                 target_duty_ = 0.0f;
@@ -189,6 +217,8 @@ public:
                 target_current_ = 0.0f;
                 target_rpm_ = 0.0f;
                 target_eRPM_ = 0;
+                speed_pid_raw_output_current_mA_ = 0.0f;
+                speed_pid_total_output_current_mA_ = 0.0f;
                 break;
             case SET_BRAKE:
                 target_duty_ = 0.0f;
@@ -196,6 +226,8 @@ public:
                 target_rpm_ = 0.0f;
                 target_totalAngle_ = 0.0f;
                 target_eRPM_ = 0;
+                speed_pid_raw_output_current_mA_ = 0.0f;
+                speed_pid_total_output_current_mA_ = 0.0f;
                 break;
             default:
                 break;
@@ -211,6 +243,9 @@ private:
     float duty_ = 0.0f; // 当前占空比
     int32_t eRPM_ = 0;
     float target_brake_current_ = 0.0f; // brake current in mA
+    float speed_pid_current_bias_mA_ = 0.0f; // 速度环附加电流偏置，通常由上层虚拟负载模型写入
+    float speed_pid_raw_output_current_mA_ = 0.0f; // 本地速度 PID 原始输出，不含 bias
+    float speed_pid_total_output_current_mA_ = 0.0f; // 实际下发前的总电流输出，等于 raw + bias
     uint8_t id_check_ = 0; // 回传id，用于给用户分辨 motor_id_ 和电调 id 是否一致
     PID_Incremental speed_pid_; // 本地 PID 速度环，仅在显式启用时使用
 };

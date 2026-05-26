@@ -5,7 +5,7 @@
 
 enum VESC_RPM_CONTROL_MODE
 {
-    VESC_RPM_CONTROL_OPEN_LOOP = 0,
+    VESC_RPM_CONTROL_NATIVE_ERPM = 0,
     VESC_RPM_CONTROL_PID_CURRENT = 1,
 };
 
@@ -48,6 +48,32 @@ public:
     VESC_RPM_CONTROL_MODE getRpmControlMode() const
     {
         return rpm_control_mode_;
+    }
+
+    void setSpeedPidCurrentBias(float bias_current_mA)
+    {
+        speed_pid_current_bias_mA_ = bias_current_mA;
+    }
+
+    float getSpeedPidCurrentBias() const
+    {
+        return speed_pid_current_bias_mA_;
+    }
+
+    float getSpeedPidRawOutputCurrent() const
+    {
+        return speed_pid_raw_output_current_mA_;
+    }
+
+    float getSpeedPidTotalOutputCurrent() const
+    {
+        return speed_pid_total_output_current_mA_;
+    }
+
+    void setPidOutputObservation(float raw_current_mA, float total_current_mA)
+    {
+        speed_pid_raw_output_current_mA_ = raw_current_mA;
+        speed_pid_total_output_current_mA_ = total_current_mA;
     }
 
     void setFeedbackCurrent(float current)
@@ -98,8 +124,11 @@ public:
 private:
     struct PID_Param_Config speed_params_{};
     float speed_td_ratio_ = 0.0f;
-    VESC_RPM_CONTROL_MODE rpm_control_mode_ = VESC_RPM_CONTROL_OPEN_LOOP;
+    VESC_RPM_CONTROL_MODE rpm_control_mode_ = VESC_RPM_CONTROL_NATIVE_ERPM;
     std::uint32_t control_frequency_hz_ = 0U;
+    float speed_pid_current_bias_mA_ = 0.0f;
+    float speed_pid_raw_output_current_mA_ = 0.0f;
+    float speed_pid_total_output_current_mA_ = 0.0f;
 };
 
 #endif

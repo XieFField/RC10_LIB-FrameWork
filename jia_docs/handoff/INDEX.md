@@ -4,6 +4,7 @@
 
 ## 2026-05
 
+- `2026-05-26` | `rc10_drive_pid_load_tune_merge` | [ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md](2026-05/ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md)
 - `2026-05-25 23:44` | `rc10_debug_merge_semantics_sync` | [ai_handoff_2026-05-25_2344_rc10_debug_merge_semantics_sync.md](2026-05/ai_handoff_2026-05-25_2344_rc10_debug_merge_semantics_sync.md)
 - `2026-05-24 21:58` | `rc10_scurve_lock_yaw_context_sync` | [ai_handoff_2026-05-24_2158_rc10_scurve_lock_yaw_context_sync.md](2026-05/ai_handoff_2026-05-24_2158_rc10_scurve_lock_yaw_context_sync.md)
 - `2026-05-23 21:40` | `yaw_pid_vofa_trace` | [ai_handoff_2026-05-23_2140_rc10_yaw_pid_vofa_trace.md](2026-05/ai_handoff_2026-05-23_2140_rc10_yaw_pid_vofa_trace.md)
