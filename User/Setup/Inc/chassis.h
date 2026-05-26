@@ -979,12 +979,12 @@ namespace jia
 
             struct DebugOutputJustFloatConfig
             {
-                u8 profile_raw = static_cast<u8>(JustFloatProfile::kSingleWheelTrace);
+                u8 profile_raw = static_cast<u8>(JustFloatProfile::kDrivePidLoadTune);
                 u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kDriveOnly);
                 DebugOutputSlotConfig overview = {5U};
                 DebugOutputSlotConfig single_wheel = {1U};
                 DebugOutputSlotConfig yaw_pid = {4U};
-                DebugOutputSlotConfig drive_pid_load = {1U};
+                DebugOutputSlotConfig drive_pid_load = {2U};
             };
 
             struct DebugOutputBinaryConfig
@@ -1117,6 +1117,8 @@ namespace jia
             f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};                        // [RO] 上周期转向速度命令
             f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};                       // [RO] 上周期最终实际下发到驱动闭环的角速度命令
             f32 last_drive_feedback_omega_rad_s_[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            u32 drive_feedback_sample_ms_[4] = {0U, 0U, 0U, 0U};
+            u32 last_drive_feedback_sample_ms_[4] = {0U, 0U, 0U, 0U};
             bool selected_flipped_solution_[4] = {false};                      // [RO] 每个模块是否选中翻转解
             f32 low_speed_drive_suppression_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // [RO] 每轮低速抑制最终缩放。
             f32 high_speed_drive_suppression_scale_ = 1.0f;                        // [RO] 当前高速抑制缩放。

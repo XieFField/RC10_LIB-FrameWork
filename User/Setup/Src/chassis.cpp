@@ -2056,6 +2056,7 @@ namespace jia
             f32 b_term_mA = 0.0f;
             f32 tc_term_mA = 0.0f;
             f32 alpha_est_rad_s2 = 0.0f;
+            f32 alpha_dt_s = period_;
 
             const bool can_inject_virtual_load =
                 allow_drive_position_loop &&
@@ -2073,7 +2074,19 @@ namespace jia
             {
                 const DebugDriveVirtualLoadConfig &load_cfg = debug_drive_virtual_load_[wheel_idx];
                 const f32 omega_rad_s = wheel.corrected_drive_omega_rad_s;
-                alpha_est_rad_s2 = (omega_rad_s - last_drive_feedback_omega_rad_s_[wheel_idx]) / period_;
+                const u32 feedback_sample_ms = drive_feedback_sample_ms_[wheel_idx];
+                const u32 last_feedback_sample_ms = last_drive_feedback_sample_ms_[wheel_idx];
+                if ((feedback_sample_ms > last_feedback_sample_ms) && (last_feedback_sample_ms != 0U))
+                {
+                    const u32 delta_ms = feedback_sample_ms - last_feedback_sample_ms;
+                    const f32 measured_dt_s = static_cast<f32>(delta_ms) * 1.0e-3f;
+                    if ((delta_ms >= 1U) && (delta_ms <= 100U))
+                    {
+                        alpha_dt_s = measured_dt_s;
+                    }
+                }
+
+                alpha_est_rad_s2 = (omega_rad_s - last_drive_feedback_omega_rad_s_[wheel_idx]) / alpha_dt_s;
                 j_term_mA = -load_cfg.delta_j_current_per_rad_s2 * alpha_est_rad_s2;
                 b_term_mA = -load_cfg.delta_b_current_per_rad_s * omega_rad_s;
 
@@ -2126,6 +2139,7 @@ namespace jia
             }
 
             last_drive_feedback_omega_rad_s_[wheel_idx] = wheel.corrected_drive_omega_rad_s;
+            last_drive_feedback_sample_ms_[wheel_idx] = drive_feedback_sample_ms_[wheel_idx];
         }
 
         void Chassis::computeSingleWheelIsolatedCommandsMode30(u8 wheel_idx, bool all_homed)
@@ -2996,6 +3010,7 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
+                drive_feedback_sample_ms_[i] = static_cast<u32>(time_ms_);
                 wheel.corrected_steer_motor_total_angle_rad = readCorrectedSteerMotorTotalAngleRad(wheel);
                 wheel.corrected_drive_omega_rad_s = readDriveMotorOmegaRadS(wheel);
                 updateSteerFaultState(wheel);
