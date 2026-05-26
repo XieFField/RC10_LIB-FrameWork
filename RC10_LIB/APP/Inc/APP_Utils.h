@@ -1,3 +1,9 @@
+/**
+ * @file APP_Utils.h
+ * @author 桑叁年
+ * @brief 通用数学工具
+ */
+
 #ifndef APP_UTILS_H_
 #define APP_UTILS_H_
 
