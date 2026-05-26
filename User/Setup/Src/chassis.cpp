@@ -145,7 +145,7 @@ namespace jia
 
             inline Chassis::SingleWheelTracePayloadKind sanitizeSingleWheelTracePayloadKind(u8 raw_payload)
             {
-                return (raw_payload <= static_cast<u8>(Chassis::SingleWheelTracePayloadKind::kSteerAndDrive))
+                return (raw_payload <= static_cast<u8>(Chassis::SingleWheelTracePayloadKind::kDriveOnly))
                            ? static_cast<Chassis::SingleWheelTracePayloadKind>(raw_payload)
                            : Chassis::SingleWheelTracePayloadKind::kSteerOnly;
             }
@@ -3660,6 +3660,56 @@ namespace jia
             debug_uart_.printf_DMA_JustFloat(payload, 9);
         }
 
+        void Chassis::emitUart8VofaSingleWheelDriveTrace()
+        {
+            if (!debug_output_.output_enable ||
+                sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
+                sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kSingleWheelTrace ||
+                sanitizeSingleWheelTracePayloadKind(debug_output_.justfloat.single_wheel_payload_raw) != SingleWheelTracePayloadKind::kDriveOnly)
+            {
+                return;
+            }
+
+            const u32 period_ms = (debug_output_.justfloat.single_wheel.period_ms > 0U) ? debug_output_.justfloat.single_wheel.period_ms : 1U;
+            if ((time_ms_ - debug_output_runtime_.justfloat.single_wheel.last_ms) < period_ms)
+            {
+                return;
+            }
+
+            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
+            {
+                return;
+            }
+
+            debug_output_runtime_.justfloat.single_wheel.last_ms = time_ms_;
+            const u8 observe_wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
+            const WheelConfig &wheel = wheel_config_[observe_wheel_idx];
+            const Motor_Base *drive_motor = wheel.drive_motor_h;
+            if (drive_motor == nullptr)
+            {
+                return;
+            }
+
+            const f32 target_multi_turn_deg = drive_motor->getTargetTotalAngle();
+            f32 target_single_turn_deg = fmodf(target_multi_turn_deg, 360.0f);
+            if (target_single_turn_deg < 0.0f)
+            {
+                target_single_turn_deg += 360.0f;
+            }
+
+            float payload[9] = {0.0f};
+            payload[0] = (f32)time_ms_ * 0.001f;
+            payload[1] = drive_motor->getTargetCurrent(); // mA
+            payload[2] = drive_motor->getCurrent();       // mA
+            payload[3] = drive_motor->getTargetRPM();
+            payload[4] = drive_motor->getRPM();
+            payload[5] = target_single_turn_deg;
+            payload[6] = drive_motor->getAngle();
+            payload[7] = target_multi_turn_deg;
+            payload[8] = drive_motor->getTotalAngle();
+            debug_uart_.printf_DMA_JustFloat(payload, 9);
+        }
+
         void Chassis::emitUart8VofaDualMotor1kHzTrace()
         {
             if (!debug_output_.output_enable ||
@@ -3929,15 +3979,23 @@ namespace jia
                     emitUart8VofaJustFloatPidTrace();
                     break;
                 case JustFloatProfile::kSingleWheelTrace:
-                    if (sanitizeSingleWheelTracePayloadKind(debug_output_.justfloat.single_wheel_payload_raw) == SingleWheelTracePayloadKind::kSteerAndDrive)
+                {
+                    const SingleWheelTracePayloadKind payload_kind =
+                        sanitizeSingleWheelTracePayloadKind(debug_output_.justfloat.single_wheel_payload_raw);
+                    if (payload_kind == SingleWheelTracePayloadKind::kSteerAndDrive)
                     {
                         emitUart8VofaDualMotor1kHzTrace();
+                    }
+                    else if (payload_kind == SingleWheelTracePayloadKind::kDriveOnly)
+                    {
+                        emitUart8VofaSingleWheelDriveTrace();
                     }
                     else
                     {
                         emitUart8VofaPid1kHzTrace();
                     }
                     break;
+                }
                 case JustFloatProfile::kYawPid:
                 default:
                     emitUart8VofaYawPidTrace();
