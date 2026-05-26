@@ -4060,11 +4060,11 @@ namespace jia
             for (;;)
             {
                 const u64 loop_start_us = RtosTimeStampUs64::getTimeUs();
-                u64 plan_us = 0ULL;
-                u64 feedback_us = 0ULL;
-                u64 homing_us = 0ULL;
-                u64 apply_us = 0ULL;
-                u64 debug_us = 0ULL;
+                u64 plan_us = 0ULL;     // [RO] 本周期规划阶段耗时（微秒）
+                u64 feedback_us = 0ULL; // [RO] 本周期反馈刷新阶段耗时（微秒）
+                u64 homing_us = 0ULL;   // [RO] 本周期回零状态机阶段耗时（微秒）
+                u64 apply_us = 0ULL;    // [RO] 本周期命令生成与下发阶段耗时（微秒）
+                u64 debug_us = 0ULL;    // [RO] 本周期调试镜像与输出阶段耗时（微秒）
                 u64 stage_start_us = loop_start_us;
 
                 // 2) 解析模式并做坐标系转换
