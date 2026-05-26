@@ -915,38 +915,44 @@ namespace jia
                         {}};
                 } single_wheel{};
             } debug_control_;
+            // drive 轮虚拟负载配置。
+            // 用来在调试阶段给 drive 轮额外叠加“等效惯量/阻尼/库仑摩擦”电流，便于离线整定速度环手感。
             struct DebugDriveVirtualLoadConfig
             {
-                bool enable = false;
-                f32 delta_j_current_per_rad_s2 = 0.0f;
-                f32 delta_b_current_per_rad_s = 0.0f;
-                f32 coulomb_current_mA = 0.0f;
-                f32 coulomb_sign_vel_eps_rad_s = 0.1f;
-                f32 bias_current_limit_mA = 12000.0f;
+                bool enable = false;                    // [RW] 是否启用该轮虚拟负载。false 时这一轮只走原始调试命令，不额外叠加负载电流。
+                f32 delta_j_current_per_rad_s2 = 0.0f; // [RW] 等效惯量项系数。按角加速度估算需要补多少电流，数值越大越像“带重载起停”。
+                f32 delta_b_current_per_rad_s = 0.0f;  // [RW] 等效粘性阻尼系数。按当前转速叠加反向阻尼电流，用来模拟速度越高阻力越大的感觉。
+                f32 coulomb_current_mA = 0.0f;         // [RW] 等效库仑摩擦电流。只按转动方向施加固定偏置，适合模拟静摩擦/恒定拖拽。
+                f32 coulomb_sign_vel_eps_rad_s = 0.1f; // [RW] 判断速度正负号时用的近零阈值。速度太小时避免库仑摩擦方向来回抖动。
+                f32 bias_current_limit_mA = 12000.0f;  // [RW] 虚拟负载总偏置电流限幅。防止调试时叠加出来的附加电流过大。
             };
+            // drive 轮自动阶跃配置。
+            // 启用后可以自动生成正负转速阶跃，避免每次手动推杆，适合重复观察速度环响应。
             struct DebugDriveStepGeneratorConfig
             {
-                bool enable = false;
-                f32 step_target_rpm = 0.0f;
-                f32 hold_ms = 0.0f;
-                f32 rest_ms = 0.0f;
-                bool alternate_sign = false;
-                bool start_positive = true;
-                bool one_shot = false;
-                bool auto_restart = false;
+                bool enable = false;          // [RW] 是否启用该轮自动阶跃。false 时这一轮不会自动替你生成阶跃激励。
+                f32 step_target_rpm = 0.0f;   // [RW] 阶跃目标转速幅值。真正输出正还是负由起始方向和是否交替决定。
+                f32 hold_ms = 0.0f;           // [RW] 每次阶跃保持时长。用于观察速度环在激励期间的建立过程。
+                f32 rest_ms = 0.0f;           // [RW] 两次阶跃之间的静置时长。给系统一个回落或重新起步的间隔。
+                bool alternate_sign = false;  // [RW] 是否每轮阶跃后自动翻转正负号。打开后更适合连续看正反向响应差异。
+                bool start_positive = true;   // [RW] 首次输出是否从正向阶跃开始。关闭时第一拍先给负向激励。
+                bool one_shot = false;        // [RW] 是否只执行一轮阶跃流程。true 时跑完一次后停住，适合单次抓图。
+                bool auto_restart = false;    // [RW] 单轮流程结束后是否自动重启。适合长时间连续观察或反复录波。
             };
+            // 自动阶跃发生器运行时状态。
+            // 用来记录这一轮阶跃流程是否已启动、当前输出符号、阶段和本阶段累计时间。
             struct DebugDriveStepGeneratorRuntime
             {
-                bool initialized = false;
-                bool output_positive = true;
-                u8 phase = 0U;
-                f32 elapsed_ms = 0.0f;
+                bool initialized = false;  // [RO] 该轮阶跃发生器运行态是否已初始化。用于避免每个周期都从第一步重新开始。
+                bool output_positive = true; // [RO] 当前这一步实际输出的是正向还是负向阶跃。配合配置项一起看可判断当前激励方向。
+                u8 phase = 0U;             // [RO] 当前所处阶段编号。通常用来区分“保持输出”还是“静置等待”等内部阶段。
+                f32 elapsed_ms = 0.0f;     // [RO] 当前阶段已经持续的时间。达到 hold/rest 阈值后会切到下一阶段。
             };
-            bool debug_enable_last_cycle_ = false; // [RO] 调试使能上周期状态。常用于检测 enable 上升沿，并在那一刻同步调试参数基线。
-            u8 single_wheel_last_steer_command_type_raw_ = 0xFFU; // [RO] 上次已同步的 mode30 舵向命令类型。用于识别“真正发生了类型切换”。
-            u8 single_wheel_last_drive_command_type_raw_ = 0xFFU; // [RO] 上次已同步的 mode30 驱动命令类型。用于识别“真正发生了类型切换”。
-            DebugDriveVirtualLoadConfig debug_drive_virtual_load_[4]{};
-            DebugDriveStepGeneratorConfig debug_drive_step_generator_[4]{};
+            bool debug_enable_last_cycle_ = false; // [RO] 调试总开关上一周期的状态。主要用于识别 enable 上升沿，并在刚开启调试时做一次基线同步。
+            u8 single_wheel_last_steer_command_type_raw_ = 0xFFU; // [RO] 上一次已同步的 mode30 舵向命令类型。切换类型后可据此判断是否需要刷新对应模板。
+            u8 single_wheel_last_drive_command_type_raw_ = 0xFFU; // [RO] 上一次已同步的 mode30 驱动命令类型。切换类型后可据此判断是否需要刷新对应模板。
+            DebugDriveVirtualLoadConfig debug_drive_virtual_load_[4]{}; // [RW] 四个 drive 轮各自的虚拟负载配置。通常按轮独立整定，不要求四轮完全一致。
+            DebugDriveStepGeneratorConfig debug_drive_step_generator_[4]{}; // [RW] 四个 drive 轮各自的自动阶跃配置。可只打开观察轮对应那一项。
 
             // =====================================================================
             // 调试输出 [RW]
