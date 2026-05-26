@@ -1,24 +1,24 @@
 /**
  * @file		Motor_GO_demo.cpp
- * @brief       ÓîÊ÷GO-M8010-6µç»úÇı¶¯²âÊÔ
+ * @brief       å®‡æ ‘GO-M8010-6ç”µæœºé©±åŠ¨æµ‹è¯•
  * @author      ZhangJiaJia (Zhang643328686@163.com)
- * @date        2025-09 (´´½¨ÈÕÆÚ)
- * @date        2025-10-14 (×îºóĞŞ¸ÄÈÕÆÚ)
- * @platform	Ñ§ÔºSTM32H723ZGT6ºËĞÄ°å
+ * @date        2025-09 (åˆ›å»ºæ—¥æœŸ)
+ * @date        2025-10-14 (æœ€åä¿®æ”¹æ—¥æœŸ)
+ * @platform	å­¦é™¢STM32H723ZGT6æ ¸å¿ƒæ¿
  * @version     0.1.0
- * @details     ÔİÎŞ
- * @todo        ÔİÎŞ
- * @note        ÔİÎŞ
- * @warning		ÔİÎŞ
+ * @details     æš‚æ— 
+ * @todo        æš‚æ— 
+ * @note        æš‚æ— 
+ * @warning		æš‚æ— 
  * @license     WTFPL License
  *
- * @par °æ±¾ĞŞ¶©ÀúÊ·
+ * @par ç‰ˆæœ¬ä¿®è®¢å†å²
  * @{
- *  @li °æ±¾ºÅ: 0.1.0
- *      - ĞŞ¶©ÈÕÆÚ: 2025-10-14
- *      - Ö÷Òª±ä¸ü:
- *			- Íê³ÉGOµç»úÇı¶¯²âÊÔ
- *      - ×÷Õß: ZhangJiaJia
+ *  @li ç‰ˆæœ¬å·: 0.1.0
+ *      - ä¿®è®¢æ—¥æœŸ: 2025-10-14
+ *      - ä¸»è¦å˜æ›´:
+ *			- å®ŒæˆGOç”µæœºé©±åŠ¨æµ‹è¯•
+ *      - ä½œè€…: ZhangJiaJia
  */
 
 
@@ -30,7 +30,7 @@ GO_Motor GO_Motor_1(0, &CAN1_Bus);
 
 
 extern volatile uint8_t start_signal;
-extern volatile float delta_time; //Ä¿Ç°Ê¹ÓÃµÄµ¥Î»ÊÇÎ¢Ãë
+extern volatile float delta_time; //ç›®å‰ä½¿ç”¨çš„å•ä½æ˜¯å¾®ç§’
 extern volatile uint64_t last_time;
 
 
@@ -65,10 +65,10 @@ PID_Param_Config Go_angle_pid_params = {
 
 void GO_MotorDemo::init()
 {
-    CAN1_Bus.registerMotor(&GO_Motor_1); // ×¢²áµç»ú±¾Éí
+    CAN1_Bus.registerMotor(&GO_Motor_1); // æ³¨å†Œç”µæœºæœ¬èº«
     start(osPriorityNormal, 256);
 
-    // ³õÊ¼»¯PID²ÎÊı
+    // åˆå§‹åŒ–PIDå‚æ•°
     GO_Motor_1.pid_init(Go_speed_pid_params, 0.0f, Go_angle_pid_params, 0.0f);
     
     const char *msg2 = "Hallo GO_MotorDemo!\r\n";
@@ -82,7 +82,7 @@ void GO_MotorDemo::loop()
     if(last_time > 0)
     {
         delta_time = static_cast<float>(time_now - last_time); 
-        // ¿ÉÒÔÔÚÕâÀïÊ¹ÓÃ delta_time ½øĞĞÆäËû¼ÆËã
+        // å¯ä»¥åœ¨è¿™é‡Œä½¿ç”¨ delta_time è¿›è¡Œå…¶ä»–è®¡ç®—
     }
     last_time = time_now;
     debug_uart.printf_DMA("%f,%f,%f,%f,%f\r\n", GO_Motor_1.getTorque(), GO_Motor_1.getTargetRPM(), GO_Motor_1.getRPM(), GO_Motor_1.getTargetTotalAngle(), GO_Motor_1.getTotalAngle());

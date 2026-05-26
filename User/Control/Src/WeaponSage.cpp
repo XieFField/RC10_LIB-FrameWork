@@ -128,7 +128,7 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
                 // else
                 //     return false;
 
-                //DMµç»ú²»Ö§³ÖµçÁ÷¿ØÖÆ£¬Ö±½Ó·µ»Ø false
+                //DMç”µæœºä¸æ”¯æŒç”µæµæ§åˆ¶ï¼Œç›´æ¥è¿”å› false
                 return false;
             }
             else 
@@ -182,7 +182,7 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
             {
                 if(wrist_Motor_ != nullptr)
                 {
-                    target_pos_.wrist_pos_ = constrain(targetValue, 0.0f, initData_.max_wrist_angle_); //ÊÖÍó²»ÏŞÖÆÎ»ÖÃ
+                    target_pos_.wrist_pos_ = constrain(targetValue, 0.0f, initData_.max_wrist_angle_); //æ‰‹è…•ä¸é™åˆ¶ä½ç½®
                     target_pos_.wrist_TotalAngle_ = Realpos_to_MotorTotalAngle(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);
                 }
                 else
@@ -192,7 +192,7 @@ bool Robot_WeaponSage::setTarget(float targetValue, WeaponSage::Motor_Type_E mot
             {
                 if(arm_Motor_ != nullptr)
                 {
-                    target_pos_.arm_pos_ = constrain(targetValue, 0.0f, initData_.max_arm_angle_); //»úĞµ±Û²»ÏŞÖÆÎ»ÖÃ
+                    target_pos_.arm_pos_ = constrain(targetValue, 0.0f, initData_.max_arm_angle_); //æœºæ¢°è‡‚ä¸é™åˆ¶ä½ç½®
                     target_pos_.arm_TotalAngle_ = Realpos_to_MotorTotalAngle(target_pos_.arm_pos_, WeaponSage::Arm_Motor);
                 }
                 else
@@ -295,7 +295,7 @@ float Robot_WeaponSage::Realpos_to_MotorTotalAngle(float real_pos, WeaponSage::M
     switch(motor_type)
     {
         case WeaponSage::Launch_Motor:
-            return motor_reversed_.launch_reversed_ * real_pos / initData_.launch_Ratio_ * 360.0f; //ÒÔmasterµç»úÎª×¼
+            return motor_reversed_.launch_reversed_ * real_pos / initData_.launch_Ratio_ * 360.0f; //ä»¥masterç”µæœºä¸ºå‡†
         case WeaponSage::Claw_1_Motor:
             return motor_reversed_.claw_1_reversed_ * real_pos / initData_.claw_gearRatio_ * 360.0f;
         case WeaponSage::Claw_2_Motor:

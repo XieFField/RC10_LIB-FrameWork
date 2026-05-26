@@ -1,7 +1,7 @@
 /**
  * @file WeaponSage.h
  * @author XieFField
- * @brief ÎäÆ÷´óÊ¦¿ØÖÆÇı¶¯Àà
+ * @brief æ­¦å™¨å¤§å¸ˆæ§åˆ¶é©±åŠ¨ç±»
  * @version 1.0
  */
 #ifndef WEAPONSAGE_H
@@ -26,32 +26,32 @@ extern "C" {
 #include "Motor_GO.h"
 #include "BSP_TimeStamp.h"
 
-//³õÊ¼»¯Êı¾İ½á¹¹Ìå
+//åˆå§‹åŒ–æ•°æ®ç»“æ„ä½“
 typedef struct 
 {
     /* data */
-    float max_launchHeight_; // ×î´óÌ§Éı¸ß¶È
-    float max_clawAngle_; // ×î´ó¼Ğ×¦½Ç¶È
-    float max_arm_angle_; // ×î´ó»úĞµ±Û½Ç¶È
+    float max_launchHeight_; // æœ€å¤§æŠ¬å‡é«˜åº¦
+    float max_clawAngle_; // æœ€å¤§å¤¹çˆªè§’åº¦
+    float max_arm_angle_; // æœ€å¤§æœºæ¢°è‡‚è§’åº¦
     float max_wrist_angle_;
     float max_arm_rate_;
 
-    float wrist_gearRatio_; //ÊÖÍó¼õËÙ±È£¬ÊÖÍóµç»ú×ªÒ»È¦£¬Ä©¶Ë¹Ø½Ú×ª¶àÉÙ¶È 360¶È£¬Ö±Çı
-    float launch_Ratio_; // Ì§Éı¼õËÙ±È£¬Ì§Éıµç»ú×ªÒ»È¦£¬Ä©¶Ë¹Ø½ÚÒÆ¶¯¶àÉÙÃ×
-    float claw_gearRatio_; // ¼Ğ×¦¼õËÙ±È£¬¼Ğ×¦µç»ú×ªÒ»È¦£¬Ä©¶Ë¹Ø½ÚÒÆ¶¯¶àÉÙÃ×
-    float arm_gearRatio_; // »úĞµ±Û¼õËÙ±È£¬»úĞµ±Ûµç»ú×ªÒ»È¦£¬Ä©¶Ë¹Ø½ÚÒÆ¶¯¶àÉÙ¶È
+    float wrist_gearRatio_; //æ‰‹è…•å‡é€Ÿæ¯”ï¼Œæ‰‹è…•ç”µæœºè½¬ä¸€åœˆï¼Œæœ«ç«¯å…³èŠ‚è½¬å¤šå°‘åº¦ 360åº¦ï¼Œç›´é©±
+    float launch_Ratio_; // æŠ¬å‡å‡é€Ÿæ¯”ï¼ŒæŠ¬å‡ç”µæœºè½¬ä¸€åœˆï¼Œæœ«ç«¯å…³èŠ‚ç§»åŠ¨å¤šå°‘ç±³
+    float claw_gearRatio_; // å¤¹çˆªå‡é€Ÿæ¯”ï¼Œå¤¹çˆªç”µæœºè½¬ä¸€åœˆï¼Œæœ«ç«¯å…³èŠ‚ç§»åŠ¨å¤šå°‘ç±³
+    float arm_gearRatio_; // æœºæ¢°è‡‚å‡é€Ÿæ¯”ï¼Œæœºæ¢°è‡‚ç”µæœºè½¬ä¸€åœˆï¼Œæœ«ç«¯å…³èŠ‚ç§»åŠ¨å¤šå°‘åº¦
 }WeaponSage_InitData_S;
 
 namespace WeaponSage
 {
     enum Motor_Type_E
     {
-        Launch_Motor, // Ì§Éıµç»ú
-        Arm_Motor, // »úĞµ±Ûµç»ú
-        Claw_1_Motor,// ¼Ğ×¦µç»ú1
-        Claw_2_Motor,// ¼Ğ×¦µç»ú2
-        Claw_3_Motor,// ¼Ğ×¦µç»ú3
-        Wrist_Motor// ÊÖÍóµç»ú
+        Launch_Motor, // æŠ¬å‡ç”µæœº
+        Arm_Motor, // æœºæ¢°è‡‚ç”µæœº
+        Claw_1_Motor,// å¤¹çˆªç”µæœº1
+        Claw_2_Motor,// å¤¹çˆªç”µæœº2
+        Claw_3_Motor,// å¤¹çˆªç”µæœº3
+        Wrist_Motor// æ‰‹è…•ç”µæœº
     };
 
     typedef struct 
@@ -67,14 +67,14 @@ namespace WeaponSage
     enum WeaponSage_CtrlMode_S 
     {
         /* data */
-        CURRENT_CONTROL, // µçÁ÷¿ØÖÆÄ£Ê½£¬Ö±½Ó¿ØÖÆµçÁ÷Êä³ö
-        Join_POSITION_CONTROL, // Î»ÖÃ¿ØÖÆÄ£Ê½£¬¿ØÖÆ¹Ø½ÚÎ»ÖÃ
-        TOTAL_ANGLE_CONTROL,   // ×Ü½Ç¶È¿ØÖÆÄ£Ê½£¬¿ØÖÆ¹Ø½Ú×Ü½Ç¶È
+        CURRENT_CONTROL, // ç”µæµæ§åˆ¶æ¨¡å¼ï¼Œç›´æ¥æ§åˆ¶ç”µæµè¾“å‡º
+        Join_POSITION_CONTROL, // ä½ç½®æ§åˆ¶æ¨¡å¼ï¼Œæ§åˆ¶å…³èŠ‚ä½ç½®
+        TOTAL_ANGLE_CONTROL,   // æ€»è§’åº¦æ§åˆ¶æ¨¡å¼ï¼Œæ§åˆ¶å…³èŠ‚æ€»è§’åº¦
     };
     
     typedef struct
     {
-        float launch_pos_; //Ö÷Òª¹©µ÷ÊÔÊ±ºòÊ¹ÓÃ£¬Êµ¼Ê¿ØÖÆÒÔlaunch_TotalAngle_Îª×¼£¬µ¥Î»Ã×
+        float launch_pos_; //ä¸»è¦ä¾›è°ƒè¯•æ—¶å€™ä½¿ç”¨ï¼Œå®é™…æ§åˆ¶ä»¥launch_TotalAngle_ä¸ºå‡†ï¼Œå•ä½ç±³
         float claw_1_pos_;
         float claw_2_pos_;
         float claw_3_pos_;
@@ -156,9 +156,9 @@ public:
     void update();
     
     /**
-     * @brief ÉèÖÃµç»ú·´×ª
-     * @param reversed ĞèÒª·´×ªÊ±´«Èë true£¬·ñÔò´«Èë false
-     * @param motor_type µç»úÀàĞÍ
+     * @brief è®¾ç½®ç”µæœºåè½¬
+     * @param reversed éœ€è¦åè½¬æ—¶ä¼ å…¥ trueï¼Œå¦åˆ™ä¼ å…¥ false
+     * @param motor_type ç”µæœºç±»å‹
      */
 
     bool setMotorReversed(bool reversed, WeaponSage::Motor_Type_E motor_type);
@@ -213,21 +213,21 @@ private:
 
 protected:
 
-    M3508 *launch_Motor_ = nullptr; // Ì§Éıµç»ú1£¬Ö÷µç»ú
-    M2006 *claw_1_Motor_ = nullptr; // ¼Ğ×¦µç»ú1£¬¸ºÔğÎäÆ÷µÄ¼ĞÈ¡¶¯×÷
-    M2006 *claw_2_Motor_ = nullptr; // ¼Ğ×¦µç»ú2£¬¸ºÔğÎäÆ÷µÄ¼ĞÈ¡¶¯×÷
-    M2006 *claw_3_Motor_ = nullptr; // ¼Ğ×¦µç»ú3£¬¸ºÔğÎäÆ÷µÄ¼ĞÈ¡¶¯×÷
-    M2006 *wrist_Motor_ = nullptr; // ÊÖÍóµç»ú£¬¸ºÔğÎäÆ÷µÄÊÖÍó¶¯×÷
-    DM_Motor *arm_Motor_ = nullptr; // »úĞµ±Ûµç»ú£¬¸ºÔğÎäÆ÷µÄ»úĞµ±Û¶¯×÷
+    M3508 *launch_Motor_ = nullptr; // æŠ¬å‡ç”µæœº1ï¼Œä¸»ç”µæœº
+    M2006 *claw_1_Motor_ = nullptr; // å¤¹çˆªç”µæœº1ï¼Œè´Ÿè´£æ­¦å™¨çš„å¤¹å–åŠ¨ä½œ
+    M2006 *claw_2_Motor_ = nullptr; // å¤¹çˆªç”µæœº2ï¼Œè´Ÿè´£æ­¦å™¨çš„å¤¹å–åŠ¨ä½œ
+    M2006 *claw_3_Motor_ = nullptr; // å¤¹çˆªç”µæœº3ï¼Œè´Ÿè´£æ­¦å™¨çš„å¤¹å–åŠ¨ä½œ
+    M2006 *wrist_Motor_ = nullptr; // æ‰‹è…•ç”µæœºï¼Œè´Ÿè´£æ­¦å™¨çš„æ‰‹è…•åŠ¨ä½œ
+    DM_Motor *arm_Motor_ = nullptr; // æœºæ¢°è‡‚ç”µæœºï¼Œè´Ÿè´£æ­¦å™¨çš„æœºæ¢°è‡‚åŠ¨ä½œ
 
     WeaponSage::WeaponSage_Pos_S target_pos_;
     WeaponSage::WeaponSage_Pos_S current_pos_;
 	WeaponSage::WeaponSage_Pos_S last_pos_;
 
     /**
-     * @brief ½«Êµ¼ÊÎ»ÖÃ×ª»»Îªµç»ú×Ü½Ç¶È
-     * @param real_pos Êµ¼ÊÎ»ÖÃ
-     * @param motor_type µç»úÀàĞÍ
+     * @brief å°†å®é™…ä½ç½®è½¬æ¢ä¸ºç”µæœºæ€»è§’åº¦
+     * @param real_pos å®é™…ä½ç½®
+     * @param motor_type ç”µæœºç±»å‹
      */
     float Realpos_to_MotorTotalAngle(float real_pos, WeaponSage::Motor_Type_E motor_type);
 

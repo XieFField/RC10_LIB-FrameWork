@@ -1,6 +1,6 @@
 /**
  * @file Setup_ConfigInit.h
- * @brief Æô¶¯ÎÄ¼ş£¬°üº¬ËùÓĞ¿ØÖÆÆ÷ºÍµç»úµÄÊµÀı»¯ÉùÃ÷
+ * @brief å¯åŠ¨æ–‡ä»¶ï¼ŒåŒ…å«æ‰€æœ‰æ§åˆ¶å™¨å’Œç”µæœºçš„å®ä¾‹åŒ–å£°æ˜
  */
 
 #ifndef SETUP_CONFIGINIT_H
@@ -36,6 +36,7 @@ extern "C" {
 #include "BSP_fdCAN_Driver.h"
 #include "Motor_DJI.h"
 #include "Motor_DM.h"
+#include "Motor_VESC.h"
 #include "APP_tool.h"
 #include "BSP_TimeStamp.h"
 #include "APP_PID.h"
@@ -56,19 +57,21 @@ extern "C" {
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
 #include "chassis.h"
+
+
 #if SPEEDPLANNER_DEMO_DEBUG
     #include "speedplanner_demo.h"
 #endif
 
-#include "Module_Camera.h"
-#include "Module_Position.h"
-#include "Module_LaserPosition.h"
 #if ARM_DEMO_DEBUG
 
         #include "arm_demo.h"
 #endif
 
 
+#include "m3508_steer_debug.h"
+#include "chassis_swerve_demo.h"
+#include "chassis_swerve_task_demo.h"
 
 class test:public RtosTask {
 public:

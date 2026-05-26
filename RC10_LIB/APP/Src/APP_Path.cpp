@@ -3,7 +3,7 @@
 #define HALF_PI 1.570796326794896619f
 #define TWO_THIRD_PI 4.71238898038468985769f
 /**
- * @brief Ä¬ÈÏ¹¹Ôìº¯Êı
+ * @brief é»˜è®¤æ„é€ å‡½æ•°
  */
 Path::Path()
 {
@@ -19,11 +19,11 @@ Path::Path()
 }
 
 /**
- * @brief Ìí¼ÓÍ¾¾¶µã
- * @param point_ Í¾¾¶µã×ø±ê
- * @param smoothness_ Æ½»¬¶È²ÎÊı£¬·¶Î§[0, 0.5]
- * @return true Èç¹ûÌí¼Ó³É¹¦
- * @return false Èç¹ûÌí¼ÓÊ§°Ü
+ * @brief æ·»åŠ é€”å¾„ç‚¹
+ * @param point_ é€”å¾„ç‚¹åæ ‡
+ * @param smoothness_ å¹³æ»‘åº¦å‚æ•°ï¼ŒèŒƒå›´[0, 0.5]
+ * @return true å¦‚æœæ·»åŠ æˆåŠŸ
+ * @return false å¦‚æœæ·»åŠ å¤±è´¥
  */
 bool Path::Add_Point(Vector2D point_, float smoothness_) // 0~0.5)
 {
@@ -34,12 +34,12 @@ bool Path::Add_Point(Vector2D point_, float smoothness_) // 0~0.5)
 }
 
 /**
- * @brief Ìí¼ÓÆğÊ¼µã
- * @param point_ ÆğÊ¼µã×ø±ê
- * @param have_start_angle_ ÊÇ·ñÓĞÆğÊ¼½Ç¶È
- * @param start_angle_ ÆğÊ¼½Ç¶ÈÖµ
- * @return true Èç¹ûÌí¼Ó³É¹¦
- * @return false Èç¹ûÌí¼ÓÊ§°Ü
+ * @brief æ·»åŠ èµ·å§‹ç‚¹
+ * @param point_ èµ·å§‹ç‚¹åæ ‡
+ * @param have_start_angle_ æ˜¯å¦æœ‰èµ·å§‹è§’åº¦
+ * @param start_angle_ èµ·å§‹è§’åº¦å€¼
+ * @return true å¦‚æœæ·»åŠ æˆåŠŸ
+ * @return false å¦‚æœæ·»åŠ å¤±è´¥
  */
 bool Path::Add_Start_Point(Vector2D point_, bool have_start_angle_, float start_angle_,Speedplanner_1D_Param_Config params)
 {
@@ -49,18 +49,18 @@ bool Path::Add_Start_Point(Vector2D point_, bool have_start_angle_, float start_
 	have_start_angle = have_start_angle_;
 	start_angle = start_angle_;
     
-    params.initialSpeed = abs(params.initialSpeed) + 0.001f; // ÉèÖÃ³õÊ¼ËÙ¶È
+    params.initialSpeed = abs(params.initialSpeed) + 0.001f; // è®¾ç½®åˆå§‹é€Ÿåº¦
 	params_ = params;
 
 	return Generate_Curve(point_, 0);
 }
 
 /**
- * @brief Ìí¼Ó½áÊøµã
- * @param point_ ½áÊøµã×ø±ê
- * @param end_angle_ ½áÊø½Ç¶ÈÖµ
- * @return true Èç¹ûÌí¼Ó³É¹¦
- * @return false Èç¹ûÌí¼ÓÊ§°Ü
+ * @brief æ·»åŠ ç»“æŸç‚¹
+ * @param point_ ç»“æŸç‚¹åæ ‡
+ * @param end_angle_ ç»“æŸè§’åº¦å€¼
+ * @return true å¦‚æœæ·»åŠ æˆåŠŸ
+ * @return false å¦‚æœæ·»åŠ å¤±è´¥
  */
 bool Path::Add_End_Point(Vector2D point_, float end_angle_)
 {
@@ -77,9 +77,9 @@ bool Path::Add_End_Point(Vector2D point_, float end_angle_)
 	Calc_End_Vel();
 	is_end = true;
 	params_.targetPos = (total_len - params_.startPos);
-	params_.startPos = 0.0f; // ÉèÖÃÆğÊ¼Î»ÖÃ
+	params_.startPos = 0.0f; // è®¾ç½®èµ·å§‹ä½ç½®
 	sp_.param_reset(params_);
-	m_phase = S_ACCEL_JERK_UP_PHASE; // ³õÊ¼»¯½×¶ÎÎª¼ÓËÙ½×¶Î
+	m_phase = S_ACCEL_JERK_UP_PHASE; // åˆå§‹åŒ–é˜¶æ®µä¸ºåŠ é€Ÿé˜¶æ®µ
 	point_last_ = bezier_curve_list[index_].Get_Start_point();
 	// total_ = bezier_curve_list[index_].Get_len();
 	total_ = 0.0f;
@@ -87,11 +87,11 @@ bool Path::Add_End_Point(Vector2D point_, float end_angle_)
 }
 
 /**
- * @brief Éú³É¸÷Â·¶ÎµÄÇúÏß
- * @param point_ µ±Ç°µã×ø±ê
- * @param smoothness_ Æ½»¬¶È²ÎÊı
- * @return true Èç¹ûÉú³É³É¹¦
- * @return false Èç¹ûÉú³ÉÊ§°Ü
+ * @brief ç”Ÿæˆå„è·¯æ®µçš„æ›²çº¿
+ * @param point_ å½“å‰ç‚¹åæ ‡
+ * @param smoothness_ å¹³æ»‘åº¦å‚æ•°
+ * @return true å¦‚æœç”ŸæˆæˆåŠŸ
+ * @return false å¦‚æœç”Ÿæˆå¤±è´¥
  */
 bool Path::Generate_Curve(Vector2D point_, float smoothness_)
 {
@@ -105,82 +105,82 @@ bool Path::Generate_Curve(Vector2D point_, float smoothness_)
 
 	switch (generate_status)
 	{
-	case GENERATE_WAIT_FIRST_POINT: // µÈ´ıµÚÒ»¸öµã
+	case GENERATE_WAIT_FIRST_POINT: // ç­‰å¾…ç¬¬ä¸€ä¸ªç‚¹
 		point_list[0] = point_;
 		generate_status = GENERATE_FINISHED_STRAIGHT;
 		break;
 
-	case GENERATE_FINISHED_STRAIGHT: // ¸ÕÉú³ÉÍêÖ±Ïß
+	case GENERATE_FINISHED_STRAIGHT: // åˆšç”Ÿæˆå®Œç›´çº¿
 		if (smoothness_ == 0)
 		{
-			// Èç¹ûÆ½»¬¶ÈÎª0£¬Ö±½ÓÉú³ÉÖ±Ïß£¨Ò»½×±´Èû¶ûÇúÏß£©Á¬½ÓÉÏÒ»¸öµãºÍµ±Ç°µã
-			bezier_curve_list[bezier_curve_num].Bezier_Update(point_list[0], point_); // Ö±Ïß£¨Ò»½×±´Èû¶û£©
+			// å¦‚æœå¹³æ»‘åº¦ä¸º0ï¼Œç›´æ¥ç”Ÿæˆç›´çº¿ï¼ˆä¸€é˜¶è´å¡å°”æ›²çº¿ï¼‰è¿æ¥ä¸Šä¸€ä¸ªç‚¹å’Œå½“å‰ç‚¹
+			bezier_curve_list[bezier_curve_num].Bezier_Update(point_list[0], point_); // ç›´çº¿ï¼ˆä¸€é˜¶è´å¡å°”ï¼‰
 			total_len += bezier_curve_list[bezier_curve_num].Get_len();
-			// Èç¹ûÉú³ÉµÄÏß¶Î³¤¶ÈÓĞĞ§£¬Ôö¼ÓÇúÏß¼ÆÊı
+			// å¦‚æœç”Ÿæˆçš„çº¿æ®µé•¿åº¦æœ‰æ•ˆï¼Œå¢åŠ æ›²çº¿è®¡æ•°
 			if (bezier_curve_list[bezier_curve_num].Get_len() > 0.00001f)
 			{
 				bezier_curve_num++;
 			}
 
-			point_list[0] = point_; // ¸üĞÂÉÏÒ»¸öµãÎªµ±Ç°µã
+			point_list[0] = point_; // æ›´æ–°ä¸Šä¸€ä¸ªç‚¹ä¸ºå½“å‰ç‚¹
 
-			generate_status = GENERATE_FINISHED_STRAIGHT; // ×´Ì¬±£³ÖÎªÍê³ÉÖ±ÏßÉú³É
+			generate_status = GENERATE_FINISHED_STRAIGHT; // çŠ¶æ€ä¿æŒä¸ºå®Œæˆç›´çº¿ç”Ÿæˆ
 		}
 		else
 		{
-			// Èç¹ûÆ½»¬¶È²»Îª0£¬¼ÆËã¹ı¶Éµã
-			Vector2D temp_point = Vector2D::lerp(point_, point_list[0], smoothness_); // Ö±ÏßÏÎ½ÓÇúÏßµÄ¹ı¶Éµã£¨ÇúÏßÆğÊ¼µã£©
+			// å¦‚æœå¹³æ»‘åº¦ä¸ä¸º0ï¼Œè®¡ç®—è¿‡æ¸¡ç‚¹
+			Vector2D temp_point = Vector2D::lerp(point_, point_list[0], smoothness_); // ç›´çº¿è¡”æ¥æ›²çº¿çš„è¿‡æ¸¡ç‚¹ï¼ˆæ›²çº¿èµ·å§‹ç‚¹ï¼‰
 			last_smoothness = smoothness_;
 
-			// Éú³ÉÉÏÒ»¶ÎÖ±Ïßµ½¹ı¶ÉµãµÄÖ±Ïß¶Î
-			bezier_curve_list[bezier_curve_num].Bezier_Update(point_list[0], temp_point); // ÇúÏßÇ°µÄÏÎ½ÓÖ±Ïß
+			// ç”Ÿæˆä¸Šä¸€æ®µç›´çº¿åˆ°è¿‡æ¸¡ç‚¹çš„ç›´çº¿æ®µ
+			bezier_curve_list[bezier_curve_num].Bezier_Update(point_list[0], temp_point); // æ›²çº¿å‰çš„è¡”æ¥ç›´çº¿
 			total_len += bezier_curve_list[bezier_curve_num].Get_len();
 			if (bezier_curve_list[bezier_curve_num].Get_len() > 0.00001f)
 			{
 				bezier_curve_num++;
 			}
 
-			point_list[0] = temp_point; // ¼ÇÂ¼ÇúÏßÆğÊ¼µã
-			point_list[1] = point_;		// ¼ÇÂ¼ÇúÏß¿ØÖÆµã£¨¼´µ±Ç°ÊäÈëµÄµã£©
+			point_list[0] = temp_point; // è®°å½•æ›²çº¿èµ·å§‹ç‚¹
+			point_list[1] = point_;		// è®°å½•æ›²çº¿æ§åˆ¶ç‚¹ï¼ˆå³å½“å‰è¾“å…¥çš„ç‚¹ï¼‰
 
-			generate_status = GENERATE_WAIT_LAST_CURVE_POINT; // ×´Ì¬±ä¸üÎªµÈ´ıÇúÏß½áÊøµã
+			generate_status = GENERATE_WAIT_LAST_CURVE_POINT; // çŠ¶æ€å˜æ›´ä¸ºç­‰å¾…æ›²çº¿ç»“æŸç‚¹
 		}
 		break;
 
-	case GENERATE_WAIT_LAST_CURVE_POINT: // µÈ´ıÇúÏß×îºóµÄ½áÊøµã
+	case GENERATE_WAIT_LAST_CURVE_POINT: // ç­‰å¾…æ›²çº¿æœ€åçš„ç»“æŸç‚¹
 		if (smoothness_ == 0)
 		{
-			if (last_smoothness == 1.0f) // ÇúÏß¼äÎŞĞèÖ±Ïß¹ı¶É
+			if (last_smoothness == 1.0f) // æ›²çº¿é—´æ— éœ€ç›´çº¿è¿‡æ¸¡
 			{
-				// ¼ÆËãÇúÏß½áÊøµã£¨ÏÂÒ»¶ÎÇúÏßÆğÊ¼µã£©
-				Vector2D temp_point = Vector2D::lerp(point_list[1], point_, last_smoothness); // ÇúÏß½áÊøµã£¨ÏÂÒ»¶ÎÇúÏßÆğÊ¼µã£©
+				// è®¡ç®—æ›²çº¿ç»“æŸç‚¹ï¼ˆä¸‹ä¸€æ®µæ›²çº¿èµ·å§‹ç‚¹ï¼‰
+				Vector2D temp_point = Vector2D::lerp(point_list[1], point_, last_smoothness); // æ›²çº¿ç»“æŸç‚¹ï¼ˆä¸‹ä¸€æ®µæ›²çº¿èµ·å§‹ç‚¹ï¼‰
 
-				// Éú³É¶ş½×±´Èû¶ûÇúÏß
-				bezier_curve_list[bezier_curve_num].Bezier_Update(point_list[0], point_list[1], temp_point); // ÇúÏß
+				// ç”ŸæˆäºŒé˜¶è´å¡å°”æ›²çº¿
+				bezier_curve_list[bezier_curve_num].Bezier_Update(point_list[0], point_list[1], temp_point); // æ›²çº¿
 				total_len += bezier_curve_list[bezier_curve_num].Get_len();
 				if (bezier_curve_list[bezier_curve_num].Get_len() > 0.00001f)
 				{
 					bezier_curve_num++;
 				}
 
-				point_list[0] = point_; // ¸üĞÂµã
-				generate_status = GENERATE_FINISHED_STRAIGHT; // ×´Ì¬±ä¸üÎªÍê³ÉÖ±Ïß
+				point_list[0] = point_; // æ›´æ–°ç‚¹
+				generate_status = GENERATE_FINISHED_STRAIGHT; // çŠ¶æ€å˜æ›´ä¸ºå®Œæˆç›´çº¿
 			}
 			else
 			{
-				// ¼ÆËãÇúÏß½áÊøµã£¬Ò²ÊÇÏÎ½ÓÖ±ÏßµÄÆğµã
-				Vector2D temp_point = Vector2D::lerp(point_list[1], point_, last_smoothness); // ÇúÏß½áÊøµã£¬ÏÎ½ÓÖ±Ïß¹ı¶Éµã
+				// è®¡ç®—æ›²çº¿ç»“æŸç‚¹ï¼Œä¹Ÿæ˜¯è¡”æ¥ç›´çº¿çš„èµ·ç‚¹
+				Vector2D temp_point = Vector2D::lerp(point_list[1], point_, last_smoothness); // æ›²çº¿ç»“æŸç‚¹ï¼Œè¡”æ¥ç›´çº¿è¿‡æ¸¡ç‚¹
 
-				// Éú³É¶ş½×±´Èû¶ûÇúÏß
-				bezier_curve_list[bezier_curve_num].Bezier_Update(point_list[0], point_list[1], temp_point); // ÇúÏß£¨¶ş½×±´Èû¶û£©
+				// ç”ŸæˆäºŒé˜¶è´å¡å°”æ›²çº¿
+				bezier_curve_list[bezier_curve_num].Bezier_Update(point_list[0], point_list[1], temp_point); // æ›²çº¿ï¼ˆäºŒé˜¶è´å¡å°”ï¼‰
 				total_len += bezier_curve_list[bezier_curve_num].Get_len();
 				if (bezier_curve_list[bezier_curve_num].Get_len() > 0.00001f)
 				{
 					bezier_curve_num++;
 				}
 
-				// Éú³ÉÏÎ½ÓÖ±Ïß
-				bezier_curve_list[bezier_curve_num].Bezier_Update(temp_point, point_); // Ö±Ïß
+				// ç”Ÿæˆè¡”æ¥ç›´çº¿
+				bezier_curve_list[bezier_curve_num].Bezier_Update(temp_point, point_); // ç›´çº¿
 				total_len += bezier_curve_list[bezier_curve_num].Get_len();
 				if (bezier_curve_list[bezier_curve_num].Get_len() > 0.00001f)
 				{
@@ -193,31 +193,31 @@ bool Path::Generate_Curve(Vector2D point_, float smoothness_)
 		else
 		{
 
-			// ¼ÆËãÇúÏßÏÎ½ÓÖ±ÏßµÄ¹ı¶Éµã
-			Vector2D temp_point = Vector2D::lerp(point_list[1], point_, last_smoothness); // ÇúÏßÏÎ½ÓÖ±ÏßµÄ¹ı¶Éµã
+			// è®¡ç®—æ›²çº¿è¡”æ¥ç›´çº¿çš„è¿‡æ¸¡ç‚¹
+			Vector2D temp_point = Vector2D::lerp(point_list[1], point_, last_smoothness); // æ›²çº¿è¡”æ¥ç›´çº¿çš„è¿‡æ¸¡ç‚¹
 
-			// Éú³É¶ş½×±´Èû¶ûÇúÏß
-			bezier_curve_list[bezier_curve_num].Bezier_Update(point_list[0], point_list[1], temp_point); // ÇúÏß
+			// ç”ŸæˆäºŒé˜¶è´å¡å°”æ›²çº¿
+			bezier_curve_list[bezier_curve_num].Bezier_Update(point_list[0], point_list[1], temp_point); // æ›²çº¿
 			total_len += bezier_curve_list[bezier_curve_num].Get_len();
 			if (bezier_curve_list[bezier_curve_num].Get_len() > 0.00001f)
 			{
 				bezier_curve_num++;
 			}
 
-			// ¼ÆËãÖ±ÏßÏÎ½ÓÏÂÒ»¶ÎÇúÏßµÄ¹ı¶Éµã
-			Vector2D temp_point_1 = Vector2D::lerp(point_, point_list[1], smoothness_); // Ö±ÏßÏÎ½ÓÏÂÒ»¶ÎÇúÏßµÄ¹ı¶Éµã
+			// è®¡ç®—ç›´çº¿è¡”æ¥ä¸‹ä¸€æ®µæ›²çº¿çš„è¿‡æ¸¡ç‚¹
+			Vector2D temp_point_1 = Vector2D::lerp(point_, point_list[1], smoothness_); // ç›´çº¿è¡”æ¥ä¸‹ä¸€æ®µæ›²çº¿çš„è¿‡æ¸¡ç‚¹
 			last_smoothness = smoothness_;
 
-			// Éú³ÉÇúÏß¼äµÄÖ±Ïß¹ı¶É
-			bezier_curve_list[bezier_curve_num].Bezier_Update(temp_point, temp_point_1); // ÇúÏß¼äµÄÖ±Ïß¹ı¶É
+			// ç”Ÿæˆæ›²çº¿é—´çš„ç›´çº¿è¿‡æ¸¡
+			bezier_curve_list[bezier_curve_num].Bezier_Update(temp_point, temp_point_1); // æ›²çº¿é—´çš„ç›´çº¿è¿‡æ¸¡
 			total_len += bezier_curve_list[bezier_curve_num].Get_len();
 			if (bezier_curve_list[bezier_curve_num].Get_len() > 0.00001f)
 			{
 				bezier_curve_num++;
 			}
 
-			point_list[0] = temp_point_1; // ÏÂÒ»¶ÎÇúÏßÆğÊ¼µã
-			point_list[1] = point_;		  // ÏÂÒ»¶ÎÇúÏß¿ØÖÆµã
+			point_list[0] = temp_point_1; // ä¸‹ä¸€æ®µæ›²çº¿èµ·å§‹ç‚¹
+			point_list[1] = point_;		  // ä¸‹ä¸€æ®µæ›²çº¿æ§åˆ¶ç‚¹
 
 			generate_status = GENERATE_WAIT_LAST_CURVE_POINT;
 		}
@@ -230,20 +230,20 @@ bool Path::Generate_Curve(Vector2D point_, float smoothness_)
 }
 
 #define CURVE_FINISHED_THRESHOLD 0.05f			   // m
-#define START_ANGLE_THRESHOLD 2.f / 360.f * TWO_PI // 4¶È
+#define START_ANGLE_THRESHOLD 2.f / 360.f * TWO_PI // 4åº¦
 
 /**
- * @brief »ñÈ¡Â·¾¶Îó²îºÍÏòÁ¿
- * @param location_ µ±Ç°×ø±ê
- * @param yaw µ±Ç°º½Ïò½Ç
- * @param target_yaw Êä³öÄ¿±êº½Ïò½Ç
- * @param normal_error Êä³ö·¨ÏòÎó²î
- * @param tangent_error Êä³öÇĞÏòÎó²î
- * @param normal_vector Êä³ö·¨ÏòÁ¿
- * @param tangent_vector Êä³öÇĞÏòÁ¿
- * @param max_vel Êä³ö×î´óËÙ¶ÈÏŞÖÆ
- * @return true Èç¹û»ñÈ¡³É¹¦
- * @return false Èç¹û»ñÈ¡Ê§°Ü
+ * @brief è·å–è·¯å¾„è¯¯å·®å’Œå‘é‡
+ * @param location_ å½“å‰åæ ‡
+ * @param yaw å½“å‰èˆªå‘è§’
+ * @param target_yaw è¾“å‡ºç›®æ ‡èˆªå‘è§’
+ * @param normal_error è¾“å‡ºæ³•å‘è¯¯å·®
+ * @param tangent_error è¾“å‡ºåˆ‡å‘è¯¯å·®
+ * @param normal_vector è¾“å‡ºæ³•å‘é‡
+ * @param tangent_vector è¾“å‡ºåˆ‡å‘é‡
+ * @param max_vel è¾“å‡ºæœ€å¤§é€Ÿåº¦é™åˆ¶
+ * @return true å¦‚æœè·å–æˆåŠŸ
+ * @return false å¦‚æœè·å–å¤±è´¥
  */
 bool Path::Get_Error_And_Vector(Vector2D location_, float yaw, float *target_yaw, float *normal_error, float *tangent_error, Vector2D *normal_vector, Vector2D *tangent_vector, float *max_vel)
 {
@@ -273,52 +273,52 @@ bool Path::Get_Error_And_Vector(Vector2D location_, float yaw, float *target_yaw
 
 	*target_yaw = currnet_target_angle;
 
-	*normal_error = 0.f - bezier_curve_list[current_bezier_curve_dx].Get_Nearest_Distance(location_, &current_t); // »ñÈ¡×î½üµãµÄtÖµºÍ×î½üµã¾àÀë
-	current_curve_len = bezier_curve_list[current_bezier_curve_dx].Get_Current_Len(current_t);					  // ¼ÆËãµ±Ç°Â·³Ì
+	*normal_error = 0.f - bezier_curve_list[current_bezier_curve_dx].Get_Nearest_Distance(location_, &current_t); // è·å–æœ€è¿‘ç‚¹çš„tå€¼å’Œæœ€è¿‘ç‚¹è·ç¦»
+	current_curve_len = bezier_curve_list[current_bezier_curve_dx].Get_Current_Len(current_t);					  // è®¡ç®—å½“å‰è·¯ç¨‹
 
-	// ÅĞ¶ÏÊÇ·ñÇĞ»»ÇúÏß
+	// åˆ¤æ–­æ˜¯å¦åˆ‡æ¢æ›²çº¿
 	while (current_bezier_curve_dx < bezier_curve_num && bezier_curve_list[current_bezier_curve_dx].Get_len() - current_curve_len < CURVE_FINISHED_THRESHOLD && is_end == false)
 	{
 		if (current_bezier_curve_dx < bezier_curve_num - 1) //
 		{
-			current_finished_len += bezier_curve_list[current_bezier_curve_dx].Get_len(); // ¸üĞÂÒÑÍê³ÉÇúÏßµÄÀÛ¼ÆÂ·³Ì
+			current_finished_len += bezier_curve_list[current_bezier_curve_dx].Get_len(); // æ›´æ–°å·²å®Œæˆæ›²çº¿çš„ç´¯è®¡è·¯ç¨‹
 
-			current_bezier_curve_dx++; // ÇĞ»»µ½ÏÂÒ»¶ÎÇúÏß
+			current_bezier_curve_dx++; // åˆ‡æ¢åˆ°ä¸‹ä¸€æ®µæ›²çº¿
 
-			*normal_error = bezier_curve_list[current_bezier_curve_dx].Get_Nearest_Distance(location_, &current_t); // ÖØĞÂ»ñÈ¡×î½üµãµÄtÖµºÍ×î½üµã¾àÀë
-			current_curve_len = bezier_curve_list[current_bezier_curve_dx].Get_Current_Len(current_t);				// ÖØĞÂ¼ÆËãµ±Ç°Â·³Ì
+			*normal_error = bezier_curve_list[current_bezier_curve_dx].Get_Nearest_Distance(location_, &current_t); // é‡æ–°è·å–æœ€è¿‘ç‚¹çš„tå€¼å’Œæœ€è¿‘ç‚¹è·ç¦»
+			current_curve_len = bezier_curve_list[current_bezier_curve_dx].Get_Current_Len(current_t);				// é‡æ–°è®¡ç®—å½“å‰è·¯ç¨‹
 		}
-		else // Â·¾¶½áÊø
+		else // è·¯å¾„ç»“æŸ
 		{
 			is_end = true;
 		}
 	}
 
-	if (is_start == false) // Ö±½ÓËø¶¨Æğµã
+	if (is_start == false) // ç›´æ¥é”å®šèµ·ç‚¹
 	{
 		*tangent_error = 0;
-		*tangent_vector = Vector2D(0, 0); // ÇĞÏòÁ¿Îª0
+		*tangent_vector = Vector2D(0, 0); // åˆ‡å‘é‡ä¸º0
 
-		*normal_vector = bezier_curve_list[current_bezier_curve_dx].Get_Start_point() - location_; // ·¨ÏòÁ¿Ö¸ÏòÆğµã
+		*normal_vector = bezier_curve_list[current_bezier_curve_dx].Get_Start_point() - location_; // æ³•å‘é‡æŒ‡å‘èµ·ç‚¹
 		*normal_error = (*normal_vector).magnitude();
 
 		*normal_vector = (*normal_vector).normalize();
 	}
-	else if (current_t >= 1) // Ö±½ÓËø¶¨ÖÕµã
+	else if (current_t >= 1) // ç›´æ¥é”å®šç»ˆç‚¹
 	{
 		*tangent_error = 0;
-		*tangent_vector = Vector2D(0, 0); // ÇĞÏòÁ¿Îª0
+		*tangent_vector = Vector2D(0, 0); // åˆ‡å‘é‡ä¸º0
 
-		*normal_vector = bezier_curve_list[current_bezier_curve_dx].Get_End_point() - location_; // ·¨ÏòÁ¿Ö¸ÏòÖÕµã
+		*normal_vector = bezier_curve_list[current_bezier_curve_dx].Get_End_point() - location_; // æ³•å‘é‡æŒ‡å‘ç»ˆç‚¹
 		*normal_error = (*normal_vector).magnitude();
 
 		*normal_vector = (*normal_vector).normalize();
 	}
-	else // ÔÚÇúÏßÖĞ
+	else // åœ¨æ›²çº¿ä¸­
 	{
-		current_curve_len = bezier_curve_list[current_bezier_curve_dx].Get_Current_Len(current_t); // ¼ÆËãµ±Ç°Â·³Ì
+		current_curve_len = bezier_curve_list[current_bezier_curve_dx].Get_Current_Len(current_t); // è®¡ç®—å½“å‰è·¯ç¨‹
 
-		// ÇĞÏòÎó²î = ×ÜÂ·³Ì - µ±Ç°Â·¶ÎÒÑ×ßÂ·³Ì - Ö®Ç°Â·¶Î×ÜÂ·³Ì
+		// åˆ‡å‘è¯¯å·® = æ€»è·¯ç¨‹ - å½“å‰è·¯æ®µå·²èµ°è·¯ç¨‹ - ä¹‹å‰è·¯æ®µæ€»è·¯ç¨‹
 		*tangent_error = total_len - current_curve_len - current_finished_len;
 		*tangent_vector = bezier_curve_list[current_bezier_curve_dx].Get_Tangent_Vector(current_t);
 
@@ -330,78 +330,78 @@ bool Path::Get_Error_And_Vector(Vector2D location_, float yaw, float *target_yaw
 	return true;
 }
 
-#define CURVATURE_SAMPLE_STEP 0.02 // m ¼ÆËãÇúÂÊÊ±µÄÈı¸öµã²ÉÑù²½³¤
+#define CURVATURE_SAMPLE_STEP 0.02 // m è®¡ç®—æ›²ç‡æ—¶çš„ä¸‰ä¸ªç‚¹é‡‡æ ·æ­¥é•¿
 
 /**
- * @brief ¼ÆËãÃ¿Ò»¶ÎÇúÏßµÄ½áÊøËÙ¶È
+ * @brief è®¡ç®—æ¯ä¸€æ®µæ›²çº¿çš„ç»“æŸé€Ÿåº¦
  *
- * ¸ù¾İÇúÏßµÄÀàĞÍºÍÇúÂÊ£¬¼ÆËãÃ¿Ò»¶ÎÇúÏß½áÊøÊ±µÄ×î´óËÙ¶È¡£
+ * æ ¹æ®æ›²çº¿çš„ç±»å‹å’Œæ›²ç‡ï¼Œè®¡ç®—æ¯ä¸€æ®µæ›²çº¿ç»“æŸæ—¶çš„æœ€å¤§é€Ÿåº¦ã€‚
  */
 void Path::Calc_End_Vel()
 {
 	for (int16_t i = bezier_curve_num - 1; i >= 0; i--)
 	{
-		if (i == bezier_curve_num - 1) // Èç¹ûÊÇ×îºóÒ»¶ÎÇúÏß
+		if (i == bezier_curve_num - 1) // å¦‚æœæ˜¯æœ€åä¸€æ®µæ›²çº¿
 		{
-			bezier_curve_list[i].Set_End_Vel(0.f); // ÉèÖÃ½áÊøËÙ¶ÈÎª 0
+			bezier_curve_list[i].Set_End_Vel(0.f); // è®¾ç½®ç»“æŸé€Ÿåº¦ä¸º 0
 		}
 		else
 		{
-			// Èç¹ûµ±Ç°¶ÎºÍÏÂÒ»¶Î¶¼ÊÇÖ±Ïß
+			// å¦‚æœå½“å‰æ®µå’Œä¸‹ä¸€æ®µéƒ½æ˜¯ç›´çº¿
 			if (bezier_curve_list[i + 1].Get_Bezier_Order() == FIRST_ORDER_BEZIER && bezier_curve_list[i].Get_Bezier_Order() == FIRST_ORDER_BEZIER)
 			{
 				float temp_vel_1, temp_vel_2;
 
-				temp_vel_1 = bezier_curve_list[i + 1].Get_Max_Vel(0.f); // »ñÈ¡ÏÂÒ»¶ÎµÄ×î´óËÙ¶È
+				temp_vel_1 = bezier_curve_list[i + 1].Get_Max_Vel(0.f); // è·å–ä¸‹ä¸€æ®µçš„æœ€å¤§é€Ÿåº¦
 
-				// ¼ÆËãÁ¬½Ó´¦µÄÇúÂÊ£¬²ÉÑùµã£ºµ±Ç°¶ÎÄ©Î²Ç°Ò»µã£¬µ±Ç°¶ÎÄ©Î²£¨¼´ÏÂÒ»¶Î¿ªÊ¼£©£¬ÏÂÒ»¶Î¿ªÊ¼ºóÒ»µã
+				// è®¡ç®—è¿æ¥å¤„çš„æ›²ç‡ï¼Œé‡‡æ ·ç‚¹ï¼šå½“å‰æ®µæœ«å°¾å‰ä¸€ç‚¹ï¼Œå½“å‰æ®µæœ«å°¾ï¼ˆå³ä¸‹ä¸€æ®µå¼€å§‹ï¼‰ï¼Œä¸‹ä¸€æ®µå¼€å§‹åä¸€ç‚¹
 				float temp_curvature = Vector2D::curvatureFromThreePoints(
 					bezier_curve_list[i].Get_Point((bezier_curve_list[i].Get_len() - CURVATURE_SAMPLE_STEP) / bezier_curve_list[i].Get_len()),
 					bezier_curve_list[i].Get_Point(1.f),
 					bezier_curve_list[i + 1].Get_Point(CURVATURE_SAMPLE_STEP / bezier_curve_list[i + 1].Get_len()));
 
-				arm_sqrt_f32(1.f / temp_curvature, &temp_vel_2); // ¸ù¾İÇúÂÊ¼ÆËãÔÊĞíµÄ×î´óËÙ¶È (v = sqrt(a_n / k))£¬¼ÙÉè×î´óÏòĞÄ¼ÓËÙ¶ÈÎª 1m/s^2
+				arm_sqrt_f32(1.f / temp_curvature, &temp_vel_2); // æ ¹æ®æ›²ç‡è®¡ç®—å…è®¸çš„æœ€å¤§é€Ÿåº¦ (v = sqrt(a_n / k))ï¼Œå‡è®¾æœ€å¤§å‘å¿ƒåŠ é€Ÿåº¦ä¸º 1m/s^2
 
-				bezier_curve_list[i].Set_End_Vel(temp_vel_1 > temp_vel_2 ? temp_vel_2 : temp_vel_1); // ÉèÖÃ½ÏĞ¡µÄËÙ¶ÈÎª½áÊøËÙ¶È
+				bezier_curve_list[i].Set_End_Vel(temp_vel_1 > temp_vel_2 ? temp_vel_2 : temp_vel_1); // è®¾ç½®è¾ƒå°çš„é€Ÿåº¦ä¸ºç»“æŸé€Ÿåº¦
 			}
-			else // Ö±ÏßÓëÇúÏß¹ı¶É£¬ÇúÂÊ¿ÉºöÂÔ
+			else // ç›´çº¿ä¸æ›²çº¿è¿‡æ¸¡ï¼Œæ›²ç‡å¯å¿½ç•¥
 			{
-				bezier_curve_list[i].Set_End_Vel(bezier_curve_list[i + 1].Get_Max_Vel(0.f)); // ÉèÖÃ½áÊøËÙ¶ÈÎªÏÂÒ»¶ÎµÄ×î´óËÙ¶È
+				bezier_curve_list[i].Set_End_Vel(bezier_curve_list[i + 1].Get_Max_Vel(0.f)); // è®¾ç½®ç»“æŸé€Ÿåº¦ä¸ºä¸‹ä¸€æ®µçš„æœ€å¤§é€Ÿåº¦
 			}
 		}
 	}
 }
 
 /**
- * @brief ÖØÖÃÂ·¾¶¹æ»®Æ÷
+ * @brief é‡ç½®è·¯å¾„è§„åˆ’å™¨
  *
- * ÖØÖÃÂ·¾¶¹æ»®Æ÷µÄËùÓĞ×´Ì¬ºÍ²ÎÊı¡£
+ * é‡ç½®è·¯å¾„è§„åˆ’å™¨çš„æ‰€æœ‰çŠ¶æ€å’Œå‚æ•°ã€‚
  */
 void Path::Reset()
 {
-	is_init = false; // ÖØÖÃ³õÊ¼»¯±êÖ¾
+	is_init = false; // é‡ç½®åˆå§‹åŒ–æ ‡å¿—
 
-	bezier_curve_num = 0; // ÖØÖÃÇúÏßÊıÁ¿
+	bezier_curve_num = 0; // é‡ç½®æ›²çº¿æ•°é‡
 
-	generate_status = GENERATE_WAIT_FIRST_POINT; // ÖØÖÃÉú³É×´Ì¬
+	generate_status = GENERATE_WAIT_FIRST_POINT; // é‡ç½®ç”ŸæˆçŠ¶æ€
 
-	have_start_angle = 0; // ÖØÖÃÆğÊ¼½Ç¶È±êÖ¾
-	start_angle = 0;	  // ÖØÖÃÆğÊ¼½Ç¶È
-	end_angle = 0;		  // ÖØÖÃ½áÊø½Ç¶È
-	total_len = 0;		  // ÖØÖÃ×ÜÂ·¾¶³¤¶È
+	have_start_angle = 0; // é‡ç½®èµ·å§‹è§’åº¦æ ‡å¿—
+	start_angle = 0;	  // é‡ç½®èµ·å§‹è§’åº¦
+	end_angle = 0;		  // é‡ç½®ç»“æŸè§’åº¦
+	total_len = 0;		  // é‡ç½®æ€»è·¯å¾„é•¿åº¦
 
-	currnet_target_angle = 0; // ÖØÖÃµ±Ç°Ä¿±ê½Ç¶È
+	currnet_target_angle = 0; // é‡ç½®å½“å‰ç›®æ ‡è§’åº¦
 
-	current_bezier_curve_dx = 0; // ÖØÖÃµ±Ç°ÇúÏßË÷Òı
-	current_t = 0;				 // ÖØÖÃµ±Ç°ÇúÏß²ÎÊı t
+	current_bezier_curve_dx = 0; // é‡ç½®å½“å‰æ›²çº¿ç´¢å¼•
+	current_t = 0;				 // é‡ç½®å½“å‰æ›²çº¿å‚æ•° t
 
-	current_finished_len = 0; // ÖØÖÃÒÑÍê³ÉµÄÇúÏß³¤¶È
-	current_curve_len = 0;	  // ÖØÖÃµ±Ç°ÇúÏßµÄ³¤¶È
+	current_finished_len = 0; // é‡ç½®å·²å®Œæˆçš„æ›²çº¿é•¿åº¦
+	current_curve_len = 0;	  // é‡ç½®å½“å‰æ›²çº¿çš„é•¿åº¦
 
-	last_smoothness = 0; // ÖØÖÃÆ½»¬¶È
+	last_smoothness = 0; // é‡ç½®å¹³æ»‘åº¦
 
-	is_end = false;	  // ÖØÖÃÂ·¾¶½áÊø±êÖ¾
-	is_start = false; // ÖØÖÃÂ·¾¶¿ªÊ¼±êÖ¾
+	is_end = false;	  // é‡ç½®è·¯å¾„ç»“æŸæ ‡å¿—
+	is_start = false; // é‡ç½®è·¯å¾„å¼€å§‹æ ‡å¿—
 }
 
 Vector2D Path::plan(Vector2D point)
@@ -412,31 +412,31 @@ Vector2D Path::plan(Vector2D point)
 	}
 	if (Is_End() == true)
 	{
-		bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // »ñÈ¡µãµ½ÇúÏßµÄ×î½ü¾àÀë
+		bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // è·å–ç‚¹åˆ°æ›²çº¿çš„æœ€è¿‘è·ç¦»
 		distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
-		distance_ = total_ + distance_; // ¼ÆËãµ±Ç°×Ü¾àÀë
+		distance_ = total_ + distance_; // è®¡ç®—å½“å‰æ€»è·ç¦»
 
-		v_resultant_ = sp_.plan(distance_); // ËÙ¶È¹æ»®Æ÷¼ÆËãµ±Ç°Ä¿±êËÙ¶È
-		m_phase = sp_.getPhase();			// »ñÈ¡µ±Ç°ËÙ¶È¹æ»®½×¶Î
+		v_resultant_ = sp_.plan(distance_); // é€Ÿåº¦è§„åˆ’å™¨è®¡ç®—å½“å‰ç›®æ ‡é€Ÿåº¦
+		m_phase = sp_.getPhase();			// è·å–å½“å‰é€Ÿåº¦è§„åˆ’é˜¶æ®µ
 
-		bezier_curve_list[index_].Get_Nearest_Distance(point, &t_);					 // »ñÈ¡µãµ½ÇúÏßµÄ×î½ü¾àÀë
-		v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // ¼ÆËãÇĞÏßÏòÁ¿£¨µ¥Î»ÏòÁ¿£©
+		bezier_curve_list[index_].Get_Nearest_Distance(point, &t_);					 // è·å–ç‚¹åˆ°æ›²çº¿çš„æœ€è¿‘è·ç¦»
+		v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // è®¡ç®—åˆ‡çº¿å‘é‡ï¼ˆå•ä½å‘é‡ï¼‰
 
-		point_last_ = point; // ¸üĞÂÉÏÒ»¸öµã
+		point_last_ = point; // æ›´æ–°ä¸Šä¸€ä¸ªç‚¹
 
-		// Èç¹ûµ±Ç°ÇúÏß¶Î×ßÍê£¨t½Ó½ü1£©»òÕß¹æ»®Íê³É
+		// å¦‚æœå½“å‰æ›²çº¿æ®µèµ°å®Œï¼ˆtæ¥è¿‘1ï¼‰æˆ–è€…è§„åˆ’å®Œæˆ
 		if (t_ >= 0.999f || m_phase == S_FINISHED_PHASE)
 		{
-			total_ += bezier_curve_list[index_].Get_len(); // ÀÛ¼ÓÒÑÍê³ÉÂ·³Ì
-			index_++; // ÇĞ»»µ½ÏÂÒ»¶ÎÇúÏß
+			total_ += bezier_curve_list[index_].Get_len(); // ç´¯åŠ å·²å®Œæˆè·¯ç¨‹
+			index_++; // åˆ‡æ¢åˆ°ä¸‹ä¸€æ®µæ›²çº¿
 			if (index_ >= bezier_curve_num || m_phase == S_FINISHED_PHASE)
 			{
-				is_end = false; // ½áÊøÔËĞĞ
+				is_end = false; // ç»“æŸè¿è¡Œ
 				m_phase = S_FINISHED_PHASE;
 			}
 		}
 
-		return (v_tangent_ * v_resultant_); // ·µ»Ø ËÙ¶ÈÏòÁ¿ = ÇĞÏò·½Ïò * Ä¿±êËÙÂÊ
+		return (v_tangent_ * v_resultant_); // è¿”å› é€Ÿåº¦å‘é‡ = åˆ‡å‘æ–¹å‘ * ç›®æ ‡é€Ÿç‡
 	}
 	else
 	{
@@ -448,10 +448,10 @@ void Path::plan_reset()
 {
 	index_ = 0;
 	total_ = 0.0f;
-	point_last_ = bezier_curve_list[index_].Get_Start_point(); // ÖØÖÃÉÏÒ»¸öµãÎªÆğµã
+	point_last_ = bezier_curve_list[index_].Get_Start_point(); // é‡ç½®ä¸Šä¸€ä¸ªç‚¹ä¸ºèµ·ç‚¹
 	m_phase = S_ACCEL_JERK_UP_PHASE;
-	distance_ = 0.0f;	 // ÖØÖÃ¾àÀë
-	t_ = 0.0f;			 // ÖØÖÃ²ÎÊı t
-	v_resultant_ = 0.0f; // ÖØÖÃËÙ¶È
+	distance_ = 0.0f;	 // é‡ç½®è·ç¦»
+	t_ = 0.0f;			 // é‡ç½®å‚æ•° t
+	v_resultant_ = 0.0f; // é‡ç½®é€Ÿåº¦
 	is_end = true;
 }

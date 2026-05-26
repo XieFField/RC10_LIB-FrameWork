@@ -54,7 +54,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-// È«¾Ö±äÁ¿
+// å…¨å±€å˜é‡
 #define large_data_size 64
 uint8_t rx_buffer[RX_BUFFER_SIZE];
 uint8_t large_data_buffer[large_data_size];
@@ -128,7 +128,7 @@ int main(void)
   MX_UART8_Init();
   MX_I2C5_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim6); // Æô¶¯¶¨Ê±Æ÷²»È»CANÈÎÎñ²»»áÅÜµÄ
+  HAL_TIM_Base_Start_IT(&htim6); // å¯åŠ¨å®šæ—¶å™¨ä¸ç„¶CANä»»åŠ¡ä¸ä¼šè·‘çš„
   ALL_Setup_ConfigInit();
   /* USER CODE END 2 */
 
@@ -253,8 +253,8 @@ extern "C"
 
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
-  // Èç¹û½øÈëÕâÀï£¬ËµÃ÷·¢ÉúÁËÕ»Òç³ö
-  // pcTaskName ÊÇÒç³öµÄÈÎÎñÃû³Æ
+  // å¦‚æœè¿›å…¥è¿™é‡Œï¼Œè¯´æ˜å‘ç”Ÿäº†æ ˆæº¢å‡º
+  // pcTaskName æ˜¯æº¢å‡ºçš„ä»»åŠ¡åç§°
   taskDISABLE_INTERRUPTS();
   for (;;)
     ;
@@ -312,7 +312,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     fdcan_global_scheduler_tick_isr();
   }
 
-  if (htim->Instance == TIM4) // ¼ÙÉèÄãÊ¹ÓÃµÄÊÇ TIM4
+  if (htim->Instance == TIM4) // å‡è®¾ä½ ä½¿ç”¨çš„æ˜¯ TIM4
   {
     TimeStamp::overflowCallback();
   }

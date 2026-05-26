@@ -1,37 +1,37 @@
 #include "BSP_TimeStamp.h"
 
-// ³õÊ¼»¯¾²Ì¬³ÉÔ±±äÁ¿
+// åˆå§‹åŒ–é™æ€æˆå‘˜å˜é‡
 TIM_HandleTypeDef* TimeStamp::s_htim_ = nullptr;
 volatile uint64_t TimeStamp::s_overflow_count_ = 0;
 
-// Ë½ÓĞ¹¹Ôìº¯Êı
+// ç§æœ‰æ„é€ å‡½æ•°
 TimeStamp::TimeStamp() 
 {
     // do nothing
 }
 
-// »ñÈ¡µ¥ÀıÊµÀı
+// è·å–å•ä¾‹å®ä¾‹
 TimeStamp& TimeStamp::getInstance() 
 {
     static TimeStamp instance;
     return instance;
 }
 
-// ³õÊ¼»¯
+// åˆå§‹åŒ–
 void TimeStamp::init(TIM_HandleTypeDef* htim) 
 {
     if (s_htim_ == nullptr && htim != nullptr)
     {
         s_htim_ = htim;
-        // Æô¶¯¶¨Ê±Æ÷²¢Ê¹ÄÜ¸üĞÂÖĞ¶Ï
+        // å¯åŠ¨å®šæ—¶å™¨å¹¶ä½¿èƒ½æ›´æ–°ä¸­æ–­
         HAL_TIM_Base_Start_IT(s_htim_);
     }
 }
 
-// Òç³öÖĞ¶Ï»Øµ÷
+// æº¢å‡ºä¸­æ–­å›è°ƒ
 void TimeStamp::overflowCallback() 
 {
-    // ¼ì²é¶¨Ê±Æ÷ÊÇ·ñÒÑ³õÊ¼»¯ÇÒÖĞ¶Ï±êÖ¾Î»ÒÑÉèÖÃ
+    // æ£€æŸ¥å®šæ—¶å™¨æ˜¯å¦å·²åˆå§‹åŒ–ä¸”ä¸­æ–­æ ‡å¿—ä½å·²è®¾ç½®
     if (s_htim_ != nullptr) 
     {
         if (__HAL_TIM_GET_IT_SOURCE(s_htim_, TIM_IT_UPDATE) != RESET) 
@@ -42,7 +42,7 @@ void TimeStamp::overflowCallback()
     }
 }
 
-// »ñÈ¡Î¢Ãë
+// è·å–å¾®ç§’
 uint64_t TimeStamp::getMicroseconds() const 
 {
     if (!s_htim_) return 0.0f;
@@ -50,23 +50,23 @@ uint64_t TimeStamp::getMicroseconds() const
     uint64_t overflow_val;
     uint32_t counter_val;
 
-    // --- ½øÈëÁÙ½çÇø ---
-    uint32_t primask = __get_PRIMASK(); // ±£´æµ±Ç°µÄÖĞ¶Ï×´Ì¬
-    __disable_irq();                    // ½ûÖ¹ËùÓĞÖĞ¶Ï
+    // --- è¿›å…¥ä¸´ç•ŒåŒº ---
+    uint32_t primask = __get_PRIMASK(); // ä¿å­˜å½“å‰çš„ä¸­æ–­çŠ¶æ€
+    __disable_irq();                    // ç¦æ­¢æ‰€æœ‰ä¸­æ–­
 
-    // ÔÚÖĞ¶Ï±»½ûÖ¹µÄÇé¿öÏÂ£¬°²È«µØ¶ÁÈ¡
+    // åœ¨ä¸­æ–­è¢«ç¦æ­¢çš„æƒ…å†µä¸‹ï¼Œå®‰å…¨åœ°è¯»å–
     overflow_val = s_overflow_count_;
     counter_val = s_htim_->Instance->CNT;
 
     if (__HAL_TIM_GET_FLAG(s_htim_, TIM_FLAG_UPDATE) != RESET)
     {
-        // Èç¹û±êÖ¾Î»Îª1£¬ËµÃ÷CNTÒÑ¾­·­×ª£¬µ«overflow_val»¹Ã»À´µÃ¼°+1
-        //Ö®Ç°¾ÍÊÇÒòÎªÕâÀï64Î»Òç³ö¶øµ¼ÖÂ»á³öÏÖËæ»úµÄÎŞÇî´ó
+        // å¦‚æœæ ‡å¿—ä½ä¸º1ï¼Œè¯´æ˜CNTå·²ç»ç¿»è½¬ï¼Œä½†overflow_valè¿˜æ²¡æ¥å¾—åŠ+1
+        //ä¹‹å‰å°±æ˜¯å› ä¸ºè¿™é‡Œ64ä½æº¢å‡ºè€Œå¯¼è‡´ä¼šå‡ºç°éšæœºçš„æ— ç©·å¤§
         overflow_val = s_overflow_count_ + 1;
     }
 
-    // --- ÍË³öÁÙ½çÇø ---
-    if (!primask) // Èç¹ûÖ®Ç°ÖĞ¶ÏÊÇ¿ªÆôµÄ£¬¾Í»Ö¸´Ëü
+    // --- é€€å‡ºä¸´ç•ŒåŒº ---
+    if (!primask) // å¦‚æœä¹‹å‰ä¸­æ–­æ˜¯å¼€å¯çš„ï¼Œå°±æ¢å¤å®ƒ
     {
         __enable_irq();
     }
@@ -75,13 +75,13 @@ uint64_t TimeStamp::getMicroseconds() const
     return (overflow_val * period) + counter_val;
 }
 
-// »ñÈ¡ºÁÃë
+// è·å–æ¯«ç§’
 uint64_t TimeStamp::getMilliseconds() const 
 {
     return getMicroseconds() / 1000.0f;
 }
 
-// »ñÈ¡Ãë
+// è·å–ç§’
 float TimeStamp::getSeconds() const 
 {
     return static_cast<float>(getMicroseconds()) * 1e-6f;

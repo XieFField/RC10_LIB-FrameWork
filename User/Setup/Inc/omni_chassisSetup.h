@@ -1,6 +1,6 @@
 /**
  * @file omni_chassisSetup.h
- * @brief µ×ÅÌÓ¦ÓÃÀà
+ * @brief åº•ç›˜åº”ç”¨ç±»
  * @author @XieFField @naoganlin @GaGiaa
  */
 #ifndef __OMNI_CHASSISSETUP_H
@@ -47,32 +47,31 @@ extern "C"
 class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>
 {
 public:
-    // Í¨¹ıÂÖÏµ¼¸ºÎ²ÎÊı¹¹Ôìµ×ÅÌÈÎÎñ¶ÔÏó¡£
+    // é€šè¿‡è½®ç³»å‡ ä½•å‚æ•°æ„é€ åº•ç›˜ä»»åŠ¡å¯¹è±¡ã€‚
     OmniChassis_Setup(float wheel_radius, float max_wheel_rpm, float base_length, float side_length, bool three_wheel)
         : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(wheel_radius, max_wheel_rpm, base_length, side_length, three_wheel), debug_uart(&huart8)
     {
-        // yaw »·Ê¹ÓÃ½Ç¶ÈÑ­»·Îó²î£¨¿ç ¡À180 ¶ÈÁ¬Ğø£©¡£
+        // yaw ç¯ä½¿ç”¨è§’åº¦å¾ªç¯è¯¯å·®ï¼ˆè·¨ Â±180 åº¦è¿ç»­ï¼‰ã€‚
         yaw_pid_.set_as_circular();
     }
 
-    // Í¨¹ıÅäÖÃ½á¹¹Ìå¹¹Ôìµ×ÅÌÈÎÎñ¶ÔÏó¡£
+    // é€šè¿‡é…ç½®ç»“æ„ä½“æ„é€ åº•ç›˜ä»»åŠ¡å¯¹è±¡ã€‚
     OmniChassis_Setup(Chassis_Omni<3>::init_config &config)
         : RtosTask("OmniChassis_Setup", 1), Chassis_Omni<3>(config), debug_uart(&huart8)
     {
-        // yaw »·Ê¹ÓÃ½Ç¶ÈÑ­»·Îó²î£¨¿ç ¡À180 ¶ÈÁ¬Ğø£©¡£
+        // yaw ç¯ä½¿ç”¨è§’åº¦å¾ªç¯è¯¯å·®ï¼ˆè·¨ Â±180 åº¦è¿ç»­ï¼‰ã€‚
         yaw_pid_.set_as_circular();
     }
 
-    // Í³Ò»ÇĞ»»µ×ÅÌ×´Ì¬£¬²¢ÔÚÏà»úÁ÷³ÌÇĞÈë/ÇĞ³öÊ±ÇåÀíÏà¹ØÄÚ²¿×´Ì¬¡£
+    // ç»Ÿä¸€åˆ‡æ¢åº•ç›˜çŠ¶æ€ï¼Œå¹¶åœ¨ç›¸æœºæµç¨‹åˆ‡å…¥/åˆ‡å‡ºæ—¶æ¸…ç†ç›¸å…³å†…éƒ¨çŠ¶æ€ã€‚
     void setChassisStatus(CHASSIS_Status_E status)
     {
-        
 
-       // ×îºóĞ´Èëµ×ÅÌ×Ü×´Ì¬¡£
+        // æœ€åå†™å…¥åº•ç›˜æ€»çŠ¶æ€ã€‚
         chassis_status_ = status;
     }
 
-    // ³õÊ¼»¯µ×ÅÌ¿ØÖÆÆ÷²ÎÊı²¢Æô¶¯ RTOS ÈÎÎñ¡£
+    // åˆå§‹åŒ–åº•ç›˜æ§åˆ¶å™¨å‚æ•°å¹¶å¯åŠ¨ RTOS ä»»åŠ¡ã€‚
     void init()
     {
         if (this->wheels_[0] == nullptr || this->wheels_[1] == nullptr ||
@@ -90,7 +89,7 @@ public:
         pid_pos_y.set_params(track_pid_params, 0.0f);
         path_lock.set_params(path_lock_end, 0.0f);
 
-        // Ïà»úÄ£Ê½¶ÀÁ¢ PID£¬²ÎÊıÊ¹ÓÃ APP_PID ÖĞ¶ÀÁ¢ÅäÖÃ¶ÔÏó¡£
+        // ç›¸æœºæ¨¡å¼ç‹¬ç«‹ PIDï¼Œå‚æ•°ä½¿ç”¨ APP_PID ä¸­ç‹¬ç«‹é…ç½®å¯¹è±¡ã€‚
         camera_pid_x_.set_params(camera_x_pid_params, 0.0f);
         camera_pid_y_.set_params(camera_y_pid_params, 0.0f);
         camera_pid_vec_.set_params(camera_vec_pid_params, 0.0f);
@@ -102,7 +101,7 @@ public:
         init_flag = true;
     }
 
-    // ÉèÖÃµ×ÅÌÕı·´ÏòÓ³ÉäÏµÊı£¨ÓÃÓÚÊÖ¶¯¿ØÖÆ·½Ïò·­×ª£©¡£
+    // è®¾ç½®åº•ç›˜æ­£åå‘æ˜ å°„ç³»æ•°ï¼ˆç”¨äºæ‰‹åŠ¨æ§åˆ¶æ–¹å‘ç¿»è½¬ï¼‰ã€‚
     void setChassisReverse(bool isReverse)
     {
         if (!isReverse)
@@ -112,283 +111,295 @@ public:
     }
 
 private:
-    //-----------------------------------Í¨Ñ¶±êÖ¾Î»-----------------------------------------//
-    CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // µ±Ç°µ×ÅÌ×Ü×´Ì¬»ú×´Ì¬¡£
+    Vector2D control_point = {0.0f, 2.5f};
+    float err_curve=0.0f;
+    int num = 0;
+    //-----------------------------------é€šè®¯æ ‡å¿—ä½-----------------------------------------//
+    CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // å½“å‰åº•ç›˜æ€»çŠ¶æ€æœºçŠ¶æ€ã€‚
 
-    bool WeaponSage_END = false; // ¼Ğ¸ËÁ÷³ÌÍê³É±êÖ¾¡£
+    bool WeaponSage_END = false; // å¤¹æ†æµç¨‹å®Œæˆæ ‡å¿—ã€‚
 
-    bool Arm_Start = false; // »úĞµ±Û¶¯×÷´¥·¢±êÖ¾¡£
+    bool Arm_Start = false; // æœºæ¢°è‡‚åŠ¨ä½œè§¦å‘æ ‡å¿—ã€‚
 
-    //-----------------------------------½Ó¿Ú¼àÊÓ²ÎÊı-----------------------------------------//
-    int flag = 0;     // ×Ô¶¯Á÷³ÌÆğÊ¼´¥·¢Î»£¨±ßÑØ´¥·¢£©¡£
-    int flag_run = 0; // ×Ô¶¯Á÷³ÌÔËĞĞÖĞ±êÖ¾Î»¡£
+    //-----------------------------------æ¥å£ç›‘è§†å‚æ•°-----------------------------------------//
+    int flag = 0;     // è‡ªåŠ¨æµç¨‹èµ·å§‹è§¦å‘ä½ï¼ˆè¾¹æ²¿è§¦å‘ï¼‰ã€‚
+    int flag_run = 0; // è‡ªåŠ¨æµç¨‹è¿è¡Œä¸­æ ‡å¿—ä½ã€‚
 
-    int8_t MF1 = 0; // Ä¿±êµã 1 ±àºÅ¡£
-    int8_t MF2 = 0; // Ä¿±êµã 2 ±àºÅ¡£
+    int8_t MF1 = 0; // ç›®æ ‡ç‚¹ 1 ç¼–å·ã€‚
+    int8_t MF2 = 0; // ç›®æ ‡ç‚¹ 2 ç¼–å·ã€‚
 
-    Vector2D planspeed = {0.0f, 0.0f};              // Â·¾¶¹æ»®Êä³öµÄ²Î¿¼ËÙ¶È¡£
-    Vector2D corrVelocity = {0.0f, 0.0f}; // ¼ÆËã³öµÄºáÏò¾ÀÆ«ËÙ¶ÈÏòÁ¿
-    Vector2D speed = {0.0f, 0.0f};                   // ºÏ³ÉºóµÄµ×ÅÌÆ½ÒÆËÙ¶È¡£
+    Vector2D planspeed = {0.0f, 0.0f};    // è·¯å¾„è§„åˆ’è¾“å‡ºçš„æœ€å¤§é€Ÿåº¦ã€‚
+    Vector2D corrVelocity = {0.0f, 0.0f}; // è®¡ç®—å‡ºçš„æ¨ªå‘çº åé€Ÿåº¦å‘é‡
+    Vector2D speed = {0.0f, 0.0f};        // åˆæˆåçš„åº•ç›˜å¹³ç§»é€Ÿåº¦ã€‚
 
-    Vector2D robot_pos_ = {0.0f, 0.0f}; // µ±Ç°»úÆ÷ÈËÊÀ½ç×ø±ê¡£
-    float yaw = 0.0f;                   // µ±Ç°»úÆ÷ÈËº½Ïò½Ç£¨¶È£©¡£
-    Point3D ladar_data_;                // ¶¨Î»ÏµÍ³Êä³öµÄÔ­Ê¼Î»×ËÊı¾İ¡£
-
-    PID_Position pid_pos_x; // xÖá¾ø¶ÔÎ»ÖÃPID¿ØÖÆÆ÷
-    PID_Position pid_pos_y; // yÖá¾ø¶ÔÎ»ÖÃPID¿ØÖÆÆ÷
-    PID_Position path_lock; // Í£Ö¹Ëøµã
-
-    BezierCurve curve; // µ±Ç°Â·¾¶ÇúÏß»º´æ¡£
-
-    //---------------------------½Ó¿Úµ÷ÊÔ²ÎÊı£¨ĞèÒªĞŞ¸ÄÊ±¸´ÖÆ¹ıÀ´£©---------------------------------------------//
-
-    float max_robot_speed_ = 1.0f; // ³£¹æ¶Îµ×ÅÌ×î´óËÙ¶ÈÏŞÖÆ¡£
-    float min_robot_speed_ = 0.4f; // ³£¹æ¶Îµ×ÅÌ×î´óËÙ¶ÈÏŞÖÆ¡£
-
-    float gradient_start_ = 1.2f; // ÖÕµãÌİ¶ÈË¥¼õÆğÊ¼¾àÀë¡£
-    float gradient_end_ = 0.2f;   // ÖÕµãÌİ¶ÈË¥¼õ½áÊø¾àÀë¡£
-    float min_gradient_ = 0.8f;   // ÖÕµã×îĞ¡ËÙ¶ÈËõ·Å±ÈÀı¡£
-
-    float robot_speed_end_ = 0.3f; // ÖÕµã¶Î×î´óËÙ¶ÈÏŞÖÆ¡£
-    float deadzone_max_end_ = 0.1f;     // ÅĞ¶¨¡°½üÖÕµã¡±ãĞÖµ¡£
+    Vector2D robot_pos_ = {0.0f, 0.0f}; // å½“å‰æœºå™¨äººä¸–ç•Œåæ ‡ã€‚
+    float yaw = 0.0f;    // å½“å‰æœºå™¨äººèˆªå‘è§’ï¼ˆåº¦ï¼‰ã€‚
     
-    float m_lookaheadDist = 0.3f; // Ç°ÊÓ¾àÀë (µ¥Î»: Ã×)
-    //-----------------------------------ËÙ¶È¹æ»®²ÎÊı----------------------------------------------------//
+    Point3D ladar_data_; // å®šä½ç³»ç»Ÿè¾“å‡ºçš„åŸå§‹ä½å§¿æ•°æ®ã€‚
 
-    Path_line path_line_; // Â·¾¶¹æ»®Æ÷¶ÔÏó¡£
+    PID_Position pid_pos_x; // xè½´ç»å¯¹ä½ç½®PIDæ§åˆ¶å™¨
+    PID_Position pid_pos_y; // yè½´ç»å¯¹ä½ç½®PIDæ§åˆ¶å™¨
+    PID_Position path_lock; // åœæ­¢é”ç‚¹
 
-    Vector2D Clamping_Bar_Selection_pos_ = {2.405f , 0.69f}; // ¼Ğ¸ËÁ÷³ÌÄ¬ÈÏÄ¿±êµã¡£
+    BezierCurve curve; // å½“å‰è·¯å¾„æ›²çº¿ç¼“å­˜ã€‚
 
-    Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; // KFS ËÙ¶È¹æ»®²ÎÊı¡£
-    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 5.0f, .maxDec = 5.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};  // ¼Ğ¸ËÁ÷³ÌËÙ¶È¹æ»®²ÎÊı¡£
+    //---------------------------æ¥å£è°ƒè¯•å‚æ•°ï¼ˆéœ€è¦ä¿®æ”¹æ—¶å¤åˆ¶è¿‡æ¥ï¼‰---------------------------------------------//
 
-    //-----------------------------------Ç°ÊÓpid²ÎÊı-----------------------------------------//
+    //float max_robot_speed_ = 1.0f; // å¸¸è§„æ®µåº•ç›˜æœ€å¤§é€Ÿåº¦é™åˆ¶ã€‚
+    float min_robot_speed_ = 0.4f; // å¸¸è§„æ®µåº•ç›˜æœ€å¤§é€Ÿåº¦é™åˆ¶ã€‚
 
-    float tNearest = 0.0f;   // ×î½üµãÔÚ±´Èû¶ûÇúÏßÉÏµÄ²ÎÊıt (0~1)
-    float tLookahead = 0.0f; // Ç°ÊÓµãÔÚ±´Èû¶ûÇúÏßÉÏµÄ²ÎÊıt (0~1)
+    //float gradient_start_ = 1.2f; // ç»ˆç‚¹æ¢¯åº¦è¡°å‡èµ·å§‹è·ç¦»ã€‚
+    //float gradient_end_ = 0.2f;   // ç»ˆç‚¹æ¢¯åº¦è¡°å‡ç»“æŸè·ç¦»ã€‚
+    //float min_gradient_ = 0.8f;   // ç»ˆç‚¹æœ€å°é€Ÿåº¦ç¼©æ”¾æ¯”ä¾‹ã€‚
 
-    //Vector2D lookaheadTangent; // Ç°ÊÓµã´¦µÄÇĞÏß·½ÏòÏòÁ¿
-    //Vector2D pathEnd;          // Â·¾¶ÖÕµã×ø±ê
+    //å¤¹å–kfså‰çš„é€Ÿåº¦é™åˆ¶ï¼Œç”¨æ¥æ§åˆ¶å˜é‡
+    float robot_speed_end_ = 0.3f;  // ç»ˆç‚¹æ®µæœ€å¤§é€Ÿåº¦é™åˆ¶ã€‚
+    float deadzone_max_end_ = 0.1f; // åˆ¤å®šâ€œè¿‘ç»ˆç‚¹â€é˜ˆå€¼ã€‚
 
-    //-----------------------------------Ã·ÁÖ¹æ»®²ÎÊı-----------------------------------------//
-    
-    MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // ×Ô¶¯¹æ»®Êä³öµÄ¹Ø¼üÂ·¾¶ĞÅÏ¢¡£
+    float m_lookaheadDist = 0.3f;        // å‰è§†è·ç¦» (å•ä½: ç±³)
+    float m_lookaheadDist_line = 0.3f;   // å‰è§†è·ç¦» (å•ä½: ç±³)
+    float m_lookaheadDist_curve = 0.07f; // å‰è§†è·ç¦» (å•ä½: ç±³)
+    //-----------------------------------é€Ÿåº¦è§„åˆ’å‚æ•°----------------------------------------------------//
+
+    Path_line path_line_; // è·¯å¾„è§„åˆ’å™¨å¯¹è±¡ã€‚
+
+    Vector2D Clamping_Bar_Selection_pos_ = {2.405f, 0.69f}; // å¤¹æ†æµç¨‹é»˜è®¤ç›®æ ‡ç‚¹ã€‚
+
+    Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; // KFS é€Ÿåº¦è§„åˆ’å‚æ•°ã€‚
+    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 5.0f, .maxDec = 5.0f, .maxJerk = 0.0f, .maxSpeed = 0.75f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};     // å¤¹æ†æµç¨‹é€Ÿåº¦è§„åˆ’å‚æ•°ã€‚
+
+    Speedplanner_1D_Param_Config path_param_start_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.01f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f}; // KFS é€Ÿåº¦è§„åˆ’å‚æ•°ã€‚
+    Speedplanner_1D_Param_Config path_param_line_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};   // KFS é€Ÿåº¦è§„åˆ’å‚æ•°ã€‚
+    Speedplanner_1D_Param_Config path_param_curve_ = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.5f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};  // KFS é€Ÿåº¦è§„åˆ’å‚æ•°ã€‚
+    Speedplanner_1D_Param_Config path_param_end_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.0001f};    // KFS é€Ÿåº¦è§„åˆ’å‚æ•°ã€‚
+
+    //-----------------------------------å‰è§†pidå‚æ•°-----------------------------------------//
+
+    float tNearest = 0.0f;   // æœ€è¿‘ç‚¹åœ¨è´å¡å°”æ›²çº¿ä¸Šçš„å‚æ•°t (0~1)
+    float tLookahead = 0.0f; // å‰è§†ç‚¹åœ¨è´å¡å°”æ›²çº¿ä¸Šçš„å‚æ•°t (0~1)
+
+    //-----------------------------------æ¢…æ—è§„åˆ’å‚æ•°-----------------------------------------//
+
+    MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // è‡ªåŠ¨è§„åˆ’è¾“å‡ºçš„å…³é”®è·¯å¾„ä¿¡æ¯ã€‚
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
 
-    float MF2_target_yaw_ = 0.0f; // µÚ¶şÄ¿±êµã¶ÔÓ¦Ä¿±ê³¯Ïò¡£
-    bool spin_flag = false;       // ÊÇ·ñĞèÒªÖ´ĞĞÖĞÍ¾×ªÏò¡£
+    float MF2_target_yaw_ = 0.0f; // ç¬¬äºŒç›®æ ‡ç‚¹å¯¹åº”ç›®æ ‡æœå‘ã€‚
+    bool spin_flag = false;       // æ˜¯å¦éœ€è¦æ‰§è¡Œä¸­é€”è½¬å‘ã€‚
 
-    bool spin_up_flag = false;   // ÉÏÂ·¶ÎĞı×ªÁ÷³ÌÊ¹ÄÜ¡£
-    bool spin_down_flag = false; // ÏÂÂ·¶ÎĞı×ªÁ÷³ÌÊ¹ÄÜ¡£
+    bool spin_up_flag = false;   // ä¸Šè·¯æ®µæ—‹è½¬æµç¨‹ä½¿èƒ½ã€‚
+    bool spin_down_flag = false; // ä¸‹è·¯æ®µæ—‹è½¬æµç¨‹ä½¿èƒ½ã€‚
 
-    bool MF1_flag = false;   // ½øÈë MF1 Ä¿±êµã±êÖ¾¡£
-    bool MF2_flag = false;   // ½øÈë MF2 Ä¿±êµã±êÖ¾¡£
-    bool MF1_finish = false; // MF1 ½×¶ÎÒÑÍê³É±êÖ¾¡£
+    bool MF1_flag = false;   // è¿›å…¥ MF1 ç›®æ ‡ç‚¹æ ‡å¿—ã€‚
+    bool MF2_flag = false;   // è¿›å…¥ MF2 ç›®æ ‡ç‚¹æ ‡å¿—ã€‚
+    bool MF1_finish = false; // MF1 é˜¶æ®µå·²å®Œæˆæ ‡å¿—ã€‚
 
-    Vector2D spin_point_ = {3.6f, 8.72f}; // ÉÏ·½Ğı×ªµã
-    float spin_skew_ = -0.1f;            // ÏÂ·½Ğı×ªÎ»ÖÃyÖáÆ«ÒÆÁ¿
-    bool get_spin_flag = false; // Ğı×ª´¥·¢¹ı¶É±êÖ¾¡£
-    bool Spin_Start = false;    // µ±Ç°ÕıÔÚÖ´ĞĞĞı×ª¡£
+    Vector2D spin_point_ = {3.6f, 8.72f}; // ä¸Šæ–¹æ—‹è½¬ç‚¹
+    float spin_skew_ = -0.1f;             // ä¸‹æ–¹æ—‹è½¬ä½ç½®yè½´åç§»é‡
+    bool get_spin_flag = false;           // æ—‹è½¬è§¦å‘è¿‡æ¸¡æ ‡å¿—ã€‚
+    bool Spin_Start = false;              // å½“å‰æ­£åœ¨æ‰§è¡Œæ—‹è½¬ã€‚
 
-    //-----------------------------------yaw½Ç¿ØÖÆ²ÎÊı-----------------------------------------//
+    //-----------------------------------yawè§’æ§åˆ¶å‚æ•°-----------------------------------------//
 
-    float target_yaw_ = 0.0f; // µ×ÅÌËø½ÇÄ¿±ê£¨¶È£©¡£
+    float target_yaw_ = 0.0f; // åº•ç›˜é”è§’ç›®æ ‡ï¼ˆåº¦ï¼‰ã€‚
 
-    uint8_t yaw_pid_period_ = 3;       // yaw »·ÏÂ²ÉÑùÖÜÆÚ£¨Ô¤Áô£©¡£
-    uint8_t yaw_pid_period_count_ = 0; // yaw »·ÏÂ²ÉÑù¼ÆÊı£¨Ô¤Áô£©¡£
-    PID_Position yaw_pid_;             // yaw ½Ç¶È»·¿ØÖÆÆ÷¡£
+    uint8_t yaw_pid_period_ = 3;       // yaw ç¯ä¸‹é‡‡æ ·å‘¨æœŸï¼ˆé¢„ç•™ï¼‰ã€‚
+    uint8_t yaw_pid_period_count_ = 0; // yaw ç¯ä¸‹é‡‡æ ·è®¡æ•°ï¼ˆé¢„ç•™ï¼‰ã€‚
+    PID_Position yaw_pid_;             // yaw è§’åº¦ç¯æ§åˆ¶å™¨ã€‚
 
-    float is_chassis_reverse_ = 1.0f; // ÊÖ¶¯¿ØÖÆÕı·´ÏòÏµÊı¡£
+    float is_chassis_reverse_ = 1.0f; // æ‰‹åŠ¨æ§åˆ¶æ­£åå‘ç³»æ•°ã€‚
 
-    //-----------------------------------Ç°À¡²ÎÊı-----------------------------------------//
-    #if FF_V
-    float k_damp_ = 0.0f; // ÀúÊ·ËÙ¶È×èÄáÏµÊı¡£
-    // Ç°ÊÓµã²î·ÖÇ°À¡ÔöÒæ£¨Ô½´óÔ½¡°³å¡±£¬Ò²¸üÈİÒ×¶¶£©¡£
-    float kff_la_ = 0.0f;
-     // Ç°À¡ÏŞ·ù£¨m/s£©£¬ÓÃÓÚÔ¼Êø¼â·å¡£
-    float max_ff_speed_ = 1.0f;
-    // Ò»½×µÍÍ¨ÏµÊı£¬·¶Î§(0,1]£ºÔ½Ğ¡Ô½Æ½»¬£¬Ô½´óÔ½ÁéÃô¡£
-    float ff_lpf_alpha_ = 0.20f;
-    
-    float end_ff_scale_ = 0.35f; // ÖÕµã¶ÎÇ°À¡Ëõ·ÅÏµÊı¡£
-    float end_pid_scale_ = 0.7f; // ÖÕµã¶Î PID Ëõ·ÅÏµÊı¡£
-    
-    
-    
-    // ÓÃÓÚÇ°ÊÓµã²î·ÖÇ°À¡µÄ¡°²Î¿¼µã¡±£º
-    // Õı³£¸ú×Ù½×¶ÎµÈÓÚ lookaheadPt£¬ÖÕµã½×¶ÎµÈÓÚ endPt¡£
-    Vector2D ff_ref_point_ = {0.0f, 0.0f};
-    // ±£´æÉÏÒ»ÖÜÆÚ²Î¿¼µã£¬×öÀëÉ¢²î·Ö (p[k]-p[k-1]) / dt¡£
-    Vector2D ff_ref_point_last_ = {0.0f, 0.0f};
-    // µÍÍ¨ºóµÄÇ°À¡ËÙ¶È£¬ÒÖÖÆ t Ìø±äºÍÀëÉ¢ÔëÉùµ¼ÖÂµÄ¼â·å¡£
-    Vector2D ff_velocity_lpf_ = {0.0f, 0.0f};
-    // Ç°À¡²î·Ö³õÊ¼»¯±êÖ¾£¬±ÜÃâÊ×ÖÜÆÚÊ¹ÓÃÎŞĞ§²î·Ö¡£
-    bool ff_diff_inited_ = false;
-    
-    // ¿ØÖÆÈÎÎñÖÜÆÚ£¨µ±Ç°ÏµÍ³ 1ms µ÷¶È£©¡£
-    float control_period_s_ = 0.001f;
-    // ²î·Ö×îĞ¡Ê±¼ä£¬±ÜÃâ dt Ì«Ğ¡µ¼ÖÂÊıÖµ±¬·¢¡£
-    float ff_dt_min_s_ = 0.0009f;
-    // ²î·Ö×î´óÊ±¼ä£¬±ÜÃâÈÎÎñÒì³£ÑÓ³ÙºóÒ»´ÎĞÔ·Å´óËÙ¶ÈÂö³å¡£
-    float ff_dt_max_s_ = 0.010f;
-   
-    Vector2D v_robot_last_cmd_ = {0.0f, 0.0f}; // ÉÏÒ»ÖÜÆÚµ×ÅÌËÙ¶ÈÃüÁî¡£
-    #endif
-    //-----------------------------------ÆäËû²ÎÊı-----------------------------------------//
-    void loop() override; // RTOS Ö÷Ñ­»·¡£
 
-    bool init_flag = false; // ³õÊ¼»¯Íê³É±êÖ¾¡£
+    //-----------------------------------å…¶ä»–å‚æ•°-----------------------------------------//
+    void loop() override; // RTOS ä¸»å¾ªç¯ã€‚
 
-    RmPocketData_t airjoy_data_;                            // Ò£¿ØÆ÷Êı¾İ£¬·¶Î§ -1 ~ 1
-    Camera_Data_t cam_data_dbg_ = {0.0f, 0.0f, 0.0f, 0.0f}; // µ÷ÊÔÓÃÏà»úÊı¾İ»º´æ
+    bool init_flag = false; // åˆå§‹åŒ–å®Œæˆæ ‡å¿—ã€‚
 
-    Debug_Printf debug_uart = Debug_Printf(&huart8); // µ÷ÊÔ´®¿Ú
+    RmPocketData_t airjoy_data_;                            // é¥æ§å™¨æ•°æ®ï¼ŒèŒƒå›´ -1 ~ 1
+    Camera_Data_t cam_data_dbg_ = {0.0f, 0.0f, 0.0f, 0.0f}; // è°ƒè¯•ç”¨ç›¸æœºæ•°æ®ç¼“å­˜
 
-    PID_Position camera_pid_x_; // Ïà»úÄ£Ê½×¨ÓÃ x ÖáÎ»ÖÃ»·¡£
+    Debug_Printf debug_uart = Debug_Printf(&huart8); // è°ƒè¯•ä¸²å£
 
-    PID_Position camera_pid_y_; // Ïà»úÄ£Ê½×¨ÓÃ y ÖáÎ»ÖÃ»·£¨Ô¤Áô£©¡£
+    PID_Position camera_pid_x_; // ç›¸æœºæ¨¡å¼ä¸“ç”¨ x è½´ä½ç½®ç¯ã€‚
 
-    PID_Position camera_pid_vec_; // Ïà»úÄ£Ê½×¨ÓÃÏòÁ¿Ä£³¤Î»ÖÃ»·¡£
+    PID_Position camera_pid_y_; // ç›¸æœºæ¨¡å¼ä¸“ç”¨ y è½´ä½ç½®ç¯ï¼ˆé¢„ç•™ï¼‰ã€‚
 
-    PID_Position camera_pid_yaw_; // Ïà»úÄ£Ê½×¨ÓÃ yaw Î»ÖÃ»·¡£
+    PID_Position camera_pid_vec_; // ç›¸æœºæ¨¡å¼ä¸“ç”¨å‘é‡æ¨¡é•¿ä½ç½®ç¯ã€‚
 
-    Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};   // ÉÏÒ»ÖÜÆÚµ×ÅÌÄ¿±ê×ËÌ¬£¨Ô¤Áô£©¡£
-    Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}; // µ±Ç°ÖÜÆÚµ×ÅÌÄ¿±ê×ËÌ¬¡£
-    //-----------------------------------ÄÚ²¿¿ØÖÆº¯Êı-----------------------------------------//
+    PID_Position camera_pid_yaw_; // ç›¸æœºæ¨¡å¼ä¸“ç”¨ yaw ä½ç½®ç¯ã€‚
+
+    Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};   // ä¸Šä¸€å‘¨æœŸåº•ç›˜ç›®æ ‡å§¿æ€ï¼ˆé¢„ç•™ï¼‰ã€‚
+    Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}; // å½“å‰å‘¨æœŸåº•ç›˜ç›®æ ‡å§¿æ€ã€‚
+    //-----------------------------------å†…éƒ¨æ§åˆ¶å‡½æ•°-----------------------------------------//
 
     /**
-     * @brief »ñÈ¡Â·¾¶ÉÏ¾àÀë»úÆ÷ÈË×î½üµÄµã
-     * @param path_ ±´Èû¶ûÇúÏß¶ÔÏó
-     * @param robotPos »úÆ÷ÈËµ±Ç°Î»ÖÃ
-     * @param tNearest Êä³ö²ÎÊı£¬·µ»Ø×î½üµãµÄtÖµ
-     * @return Vector2D ×î½üµãµÄ×ø±ê
+     * @brief è·å–è·¯å¾„ä¸Šè·ç¦»æœºå™¨äººæœ€è¿‘çš„ç‚¹
+     * @param path_ è´å¡å°”æ›²çº¿å¯¹è±¡
+     * @param robotPos æœºå™¨äººå½“å‰ä½ç½®
+     * @param tNearest è¾“å‡ºå‚æ•°ï¼Œè¿”å›æœ€è¿‘ç‚¹çš„tå€¼
+     * @return Vector2D æœ€è¿‘ç‚¹çš„åæ ‡
      */
     Vector2D GetPathNearestPoint(BezierCurve &path_, const Vector2D &robotPos, float &tNearest);
 
     /**
-     * @brief Ñ°ÕÒÇ°ÊÓµã
-     * @param path_ ±´Èû¶ûÇúÏß¶ÔÏó
-     * @param tNearest ×î½üµãµÄtÖµ
-     * @param tLookahead Êä³ö²ÎÊı£¬·µ»ØÇ°ÊÓµãµÄtÖµ
-     * @return Vector2D Ç°ÊÓµãµÄ×ø±ê
+     * @brief å¯»æ‰¾å‰è§†ç‚¹
+     * @param path_ è´å¡å°”æ›²çº¿å¯¹è±¡
+     * @param tNearest æœ€è¿‘ç‚¹çš„tå€¼
+     * @param tLookahead è¾“å‡ºå‚æ•°ï¼Œè¿”å›å‰è§†ç‚¹çš„tå€¼
+     * @return Vector2D å‰è§†ç‚¹çš„åæ ‡
      */
     Vector2D FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead);
 
-    void KFS_Selection_Planning(void); // Éú³É KFS ×Ô¶¯Â·¾¶¡£
+    void KFS_Selection_Planning(void); // ç”Ÿæˆ KFS è‡ªåŠ¨è·¯å¾„ã€‚
 
-    void Path_correction(void); // »ùÓÚµ±Ç°Î»ÖÃÖ´ĞĞÂ·¾¶¾ÀÆ«¡£
+    void Path_correction(void); // åŸºäºå½“å‰ä½ç½®æ‰§è¡Œè·¯å¾„çº åã€‚
 
-    void Path_spin_check(void); // ¼ì²é²¢Ö´ĞĞÂ·¾¶ÖĞĞı×ªÂß¼­¡£
-    #if FF_V
-    // Í³Ò»Çå¿Õ×Ô¶¯¿ØÖÆÏà¹ØÄÚ²¿×´Ì¬£¨ËÙ¶ÈÃüÁî¼ÇÒäÓëÇ°À¡²î·Ö×´Ì¬£©¡£
-    void ResetAutoControlStates(void);
+    void Path_spin_check(void); // æ£€æŸ¥å¹¶æ‰§è¡Œè·¯å¾„ä¸­æ—‹è½¬é€»è¾‘ã€‚
 
-    Vector2D ComposeRobotVelocity(const Vector2D &v_pid); // ºÏ³É PID¡¢Ç°À¡¡¢×èÄáºóµÄËÙ¶ÈÃüÁî¡£
-
-    #endif
 
     Vector2D v_limit(Vector2D &v);
+
+    void flag_reset(void);                      // å¤ä½è‡ªåŠ¨æµç¨‹ç›¸å…³æ ‡å¿—ä½ã€‚
+    void Clamping_Bar_Selection_Planning(void); // ç”Ÿæˆå¤¹æ†æµç¨‹è·¯å¾„ã€‚
     
-    void flag_reset(void); // ¸´Î»×Ô¶¯Á÷³ÌÏà¹Ø±êÖ¾Î»¡£
-    void Clamping_Bar_Selection_Planning(void); // Éú³É¼Ğ¸ËÁ÷³ÌÂ·¾¶¡£
+    
+    //-----------------------------------å‰é¦ˆå‚æ•°-----------------------------------------//
+#if FF_V
+    float k_damp_ = 0.0f; // å†å²é€Ÿåº¦é˜»å°¼ç³»æ•°ã€‚
+    // å‰è§†ç‚¹å·®åˆ†å‰é¦ˆå¢ç›Šï¼ˆè¶Šå¤§è¶Šâ€œå†²â€ï¼Œä¹Ÿæ›´å®¹æ˜“æŠ–ï¼‰ã€‚
+    float kff_la_ = 0.0f;
+    // å‰é¦ˆé™å¹…ï¼ˆm/sï¼‰ï¼Œç”¨äºçº¦æŸå°–å³°ã€‚
+    float max_ff_speed_ = 1.0f;
+    // ä¸€é˜¶ä½é€šç³»æ•°ï¼ŒèŒƒå›´(0,1]ï¼šè¶Šå°è¶Šå¹³æ»‘ï¼Œè¶Šå¤§è¶Šçµæ•ã€‚
+    float ff_lpf_alpha_ = 0.20f;
+
+    float end_ff_scale_ = 0.35f; // ç»ˆç‚¹æ®µå‰é¦ˆç¼©æ”¾ç³»æ•°ã€‚
+    float end_pid_scale_ = 0.7f; // ç»ˆç‚¹æ®µ PID ç¼©æ”¾ç³»æ•°ã€‚
+
+    // ç”¨äºå‰è§†ç‚¹å·®åˆ†å‰é¦ˆçš„â€œå‚è€ƒç‚¹â€ï¼š
+    // æ­£å¸¸è·Ÿè¸ªé˜¶æ®µç­‰äº lookaheadPtï¼Œç»ˆç‚¹é˜¶æ®µç­‰äº endPtã€‚
+    Vector2D ff_ref_point_ = {0.0f, 0.0f};
+    // ä¿å­˜ä¸Šä¸€å‘¨æœŸå‚è€ƒç‚¹ï¼Œåšç¦»æ•£å·®åˆ† (p[k]-p[k-1]) / dtã€‚
+    Vector2D ff_ref_point_last_ = {0.0f, 0.0f};
+    // ä½é€šåçš„å‰é¦ˆé€Ÿåº¦ï¼ŒæŠ‘åˆ¶ t è·³å˜å’Œç¦»æ•£å™ªå£°å¯¼è‡´çš„å°–å³°ã€‚
+    Vector2D ff_velocity_lpf_ = {0.0f, 0.0f};
+    // å‰é¦ˆå·®åˆ†åˆå§‹åŒ–æ ‡å¿—ï¼Œé¿å…é¦–å‘¨æœŸä½¿ç”¨æ— æ•ˆå·®åˆ†ã€‚
+    bool ff_diff_inited_ = false;
+
+    // æ§åˆ¶ä»»åŠ¡å‘¨æœŸï¼ˆå½“å‰ç³»ç»Ÿ 1ms è°ƒåº¦ï¼‰ã€‚
+    float control_period_s_ = 0.001f;
+    // å·®åˆ†æœ€å°æ—¶é—´ï¼Œé¿å… dt å¤ªå°å¯¼è‡´æ•°å€¼çˆ†å‘ã€‚
+    float ff_dt_min_s_ = 0.0009f;
+    // å·®åˆ†æœ€å¤§æ—¶é—´ï¼Œé¿å…ä»»åŠ¡å¼‚å¸¸å»¶è¿Ÿåä¸€æ¬¡æ€§æ”¾å¤§é€Ÿåº¦è„‰å†²ã€‚
+    float ff_dt_max_s_ = 0.010f;
+
+    Vector2D v_robot_last_cmd_ = {0.0f, 0.0f}; // ä¸Šä¸€å‘¨æœŸåº•ç›˜é€Ÿåº¦å‘½ä»¤ã€‚
+#endif
+#if FF_V
+    // ç»Ÿä¸€æ¸…ç©ºè‡ªåŠ¨æ§åˆ¶ç›¸å…³å†…éƒ¨çŠ¶æ€ï¼ˆé€Ÿåº¦å‘½ä»¤è®°å¿†ä¸å‰é¦ˆå·®åˆ†çŠ¶æ€ï¼‰ã€‚
+    void ResetAutoControlStates(void);
+
+    Vector2D ComposeRobotVelocity(const Vector2D &v_pid); // åˆæˆ PIDã€å‰é¦ˆã€é˜»å°¼åçš„é€Ÿåº¦å‘½ä»¤ã€‚
+
+#endif
     /*
-    // ¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª       Ïà»ú½Ó¿Úº¯Êı        ¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª//
+>>>>>>> main
+    // â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”       ç›¸æœºæ¥å£å‡½æ•°        â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”//
 
 
 
 
-    void camera_ctrl(void); // Ïà»ú±Õ»·Ö÷Á÷³Ì×´Ì¬»ú¡£
+    void camera_ctrl(void); // ç›¸æœºé—­ç¯ä¸»æµç¨‹çŠ¶æ€æœºã€‚
 
-    bool check_stable(float error, float limit, uint8_t &count); // Á¬Ğø¼ÆÊıÅĞÎÈº¯Êı¡£
+    bool check_stable(float error, float limit, uint8_t &count); // è¿ç»­è®¡æ•°åˆ¤ç¨³å‡½æ•°ã€‚
 
-    Vector2D calc_vector(float x_err, float y_err, float max_vel); // x/y Îó²îÏòÁ¿ºÏ³ÉËÙ¶ÈÖ¸Áî¡£
+    Vector2D calc_vector(float x_err, float y_err, float max_vel); // x/y è¯¯å·®å‘é‡åˆæˆé€Ÿåº¦æŒ‡ä»¤ã€‚
 
-    float clamp_value(float value, float low, float high); // ±êÁ¿ÏŞ·ù¹¤¾ßº¯Êı¡£
+    float clamp_value(float value, float low, float high); // æ ‡é‡é™å¹…å·¥å…·å‡½æ•°ã€‚
 
-    float avg_z(float z_now); // z Öá 20 µã»¬¶¯Æ½¾ùÂË²¨¡£
+    float avg_z(float z_now); // z è½´ 20 ç‚¹æ»‘åŠ¨å¹³å‡æ»¤æ³¢ã€‚
 
     enum Camera_State_E
     {
-        CAMERA_WEAPON,  // Á÷³ÌÒ»£ºÎäÆ÷Ô¤¶Ô½Ó×ËÌ¬½×¶Î¡£
-        CAMERA_Z_ROUGH, // Á÷³Ì¶ş£ºz ´Öµ÷½×¶Î¡£
-        CAMERA_X_ROUGH, // Á÷³ÌÈı£ºx ´Öµ÷½×¶Î¡£
-        CAMERA_Z_FINE,  // Á÷³ÌÈı²¹³ä£ºz ¾«Ëø½×¶Î¡£
-        CAMERA_YAW,     // Á÷³ÌËÄ£ºyaw Ëø¶¨½×¶Î¡£
-        CAMERA_DOCK,    // Á÷³ÌÎå£ºËø½ÇÓĞÍ·¶Ô½Ó½×¶Î¡£
-        CAMERA_DONE,    // Á÷³Ì½áÊø½×¶Î¡£
+        CAMERA_WEAPON,  // æµç¨‹ä¸€ï¼šæ­¦å™¨é¢„å¯¹æ¥å§¿æ€é˜¶æ®µã€‚
+        CAMERA_Z_ROUGH, // æµç¨‹äºŒï¼šz ç²—è°ƒé˜¶æ®µã€‚
+        CAMERA_X_ROUGH, // æµç¨‹ä¸‰ï¼šx ç²—è°ƒé˜¶æ®µã€‚
+        CAMERA_Z_FINE,  // æµç¨‹ä¸‰è¡¥å……ï¼šz ç²¾é”é˜¶æ®µã€‚
+        CAMERA_YAW,     // æµç¨‹å››ï¼šyaw é”å®šé˜¶æ®µã€‚
+        CAMERA_DOCK,    // æµç¨‹äº”ï¼šé”è§’æœ‰å¤´å¯¹æ¥é˜¶æ®µã€‚
+        CAMERA_DONE,    // æµç¨‹ç»“æŸé˜¶æ®µã€‚
     };
 
-    Camera_State_E camera_state_ = CAMERA_WEAPON; // Ïà»úÁ÷³Ìµ±Ç°½×¶Î¡£
+    Camera_State_E camera_state_ = CAMERA_WEAPON; // ç›¸æœºæµç¨‹å½“å‰é˜¶æ®µã€‚
 
-    Module_Camera *camera_ = nullptr; // Ïà»úÄ£¿éÊµÀıÖ¸Õë¡£
+    Module_Camera *camera_ = nullptr; // ç›¸æœºæ¨¡å—å®ä¾‹æŒ‡é’ˆã€‚
 
-    UART_HandleTypeDef *camera_uart_ = &huart6; // Ïà»ú´®¿Ú¾ä±ú£¨Ä¬ÈÏ huart6£©¡£
+    UART_HandleTypeDef *camera_uart_ = &huart6; // ç›¸æœºä¸²å£å¥æŸ„ï¼ˆé»˜è®¤ huart6ï¼‰ã€‚
 
-    bool weapon_cameraStart = false; // Ö÷×´Ì¬»ú´¥·¢Ïà»úÁ÷³ÌµÄ±êÖ¾Î»¡£
+    bool weapon_cameraStart = false; // ä¸»çŠ¶æ€æœºè§¦å‘ç›¸æœºæµç¨‹çš„æ ‡å¿—ä½ã€‚
 
-    bool camera_init_ = false; // Ïà»ú´®¿Ú³õÊ¼»¯Íê³É±êÖ¾¡£
+    bool camera_init_ = false; // ç›¸æœºä¸²å£åˆå§‹åŒ–å®Œæˆæ ‡å¿—ã€‚
 
-    bool weapon_req_ = false; // µ×ÅÌµ½ÎäÆ÷£ºÔ¤¶Ô½Ó¶¯×÷ÇëÇóÎ»¡£
+    bool weapon_req_ = false; // åº•ç›˜åˆ°æ­¦å™¨ï¼šé¢„å¯¹æ¥åŠ¨ä½œè¯·æ±‚ä½ã€‚
 
-    bool z_req_ = false; // µ×ÅÌµ½ÎäÆ÷£ºz µ÷ÕûÇëÇóÎ»¡£
+    bool z_req_ = false; // åº•ç›˜åˆ°æ­¦å™¨ï¼šz è°ƒæ•´è¯·æ±‚ä½ã€‚
 
-    bool weapon_done_ = false; // ÎäÆ÷µ½µØÅÌ£ºÔ¤¶Ô½ÓÍê³É·´À¡Î»¡£
+    bool weapon_done_ = false; // æ­¦å™¨åˆ°åœ°ç›˜ï¼šé¢„å¯¹æ¥å®Œæˆåé¦ˆä½ã€‚
 
-    bool z_done_ = false; // ÎäÆ÷µ½µ×ÅÌ£ºz µ÷ÕûÍê³É·´À¡Î»¡£
+    bool z_done_ = false; // æ­¦å™¨åˆ°åº•ç›˜ï¼šz è°ƒæ•´å®Œæˆåé¦ˆä½ã€‚
 
-    bool dock_done_ = false; // Íâ²¿µ½µ×ÅÌ£º¶Ô½ÓÍê³É·´À¡Î»¡£
+    bool dock_done_ = false; // å¤–éƒ¨åˆ°åº•ç›˜ï¼šå¯¹æ¥å®Œæˆåé¦ˆä½ã€‚
 
-    float z_ref_ = 0.0f; // µ×ÅÌÍ¸´«¸øÎäÆ÷µÄ z ²Î¿¼Öµ¡£
+    float z_ref_ = 0.0f; // åº•ç›˜é€ä¼ ç»™æ­¦å™¨çš„ z å‚è€ƒå€¼ã€‚
 
-    float camera_x_ref_ = 0.0f; // Ïà»úÁ÷³Ì x ÖáÄ¿±êÖµ£¨Ã×£©¡£
+    float camera_x_ref_ = 0.0f; // ç›¸æœºæµç¨‹ x è½´ç›®æ ‡å€¼ï¼ˆç±³ï¼‰ã€‚
 
-    float camera_y_ref_ = 0.90f; // Ïà»úÁ÷³Ì y ÖáÄ¿±êÖµ£¨Ã×£©¡£
+    float camera_y_ref_ = 0.90f; // ç›¸æœºæµç¨‹ y è½´ç›®æ ‡å€¼ï¼ˆç±³ï¼‰ã€‚
 
-    float yaw_lock_ = 0.0f; // Ïà»úÁ÷³ÌÆÚ¼äµÄº½ÏòËø¶¨Ä¿±ê£¨¶È£©¡£
+    float yaw_lock_ = 0.0f; // ç›¸æœºæµç¨‹æœŸé—´çš„èˆªå‘é”å®šç›®æ ‡ï¼ˆåº¦ï¼‰ã€‚
 
-    float speed_max_ = 0.5f; // Ïà»úÁ÷³ÌÆ½ÒÆ×î´óÄ£³¤£¨m/s£©¡£
+    float speed_max_ = 0.5f; // ç›¸æœºæµç¨‹å¹³ç§»æœ€å¤§æ¨¡é•¿ï¼ˆm/sï¼‰ã€‚
 
-    float omega_max_ = 0.25f; // Ïà»úÁ÷³Ì½ÇËÙ¶È×î´óÖµ£¨rad/s£©¡£
+    float omega_max_ = 0.25f; // ç›¸æœºæµç¨‹è§’é€Ÿåº¦æœ€å¤§å€¼ï¼ˆrad/sï¼‰ã€‚
 
-    float pos_scale_ = 1.0f; // Î»ÖÃ»·Êä³öËõ·ÅÏµÊı¡£
+    float pos_scale_ = 1.0f; // ä½ç½®ç¯è¾“å‡ºç¼©æ”¾ç³»æ•°ã€‚
 
-    float yaw_scale_ = 1.0f; // º½Ïò»·Êä³öËõ·ÅÏµÊı¡£
+    float yaw_scale_ = 1.0f; // èˆªå‘ç¯è¾“å‡ºç¼©æ”¾ç³»æ•°ã€‚
 
-    uint8_t z_rough_count_ = 0; // z ´Öµ÷ÅĞÎÈ¼ÆÊı¡£
+    uint8_t z_rough_count_ = 0; // z ç²—è°ƒåˆ¤ç¨³è®¡æ•°ã€‚
 
-    uint8_t x_count_ = 0; // x ´Öµ÷ÅĞÎÈ¼ÆÊı¡£
+    uint8_t x_count_ = 0; // x ç²—è°ƒåˆ¤ç¨³è®¡æ•°ã€‚
 
-    uint8_t z_fine_count_ = 0; // z ¾«ËøÅĞÎÈ¼ÆÊı¡£
+    uint8_t z_fine_count_ = 0; // z ç²¾é”åˆ¤ç¨³è®¡æ•°ã€‚
 
-    uint8_t yaw_count_ = 0; // yaw ÅĞÎÈ¼ÆÊı¡£
+    uint8_t yaw_count_ = 0; // yaw åˆ¤ç¨³è®¡æ•°ã€‚
 
-    float z_buf_[20] = {0.0f}; // z Öá»¬¶¯Æ½¾ù»·ĞÎ»º³åÇø¡£
+    float z_buf_[20] = {0.0f}; // z è½´æ»‘åŠ¨å¹³å‡ç¯å½¢ç¼“å†²åŒºã€‚
 
-    float z_sum_ = 0.0f; // z Öá»¬¶¯Æ½¾ùÀÛ¼ÆºÍ¡£
+    float z_sum_ = 0.0f; // z è½´æ»‘åŠ¨å¹³å‡ç´¯è®¡å’Œã€‚
 
-    uint8_t z_idx_ = 0; // z »º³åÇøµ±Ç°Ğ´ÈëÏÂ±ê¡£
+    uint8_t z_idx_ = 0; // z ç¼“å†²åŒºå½“å‰å†™å…¥ä¸‹æ ‡ã€‚
 
-    uint8_t z_num_ = 0; // z »º³åÇøµ±Ç°ÓĞĞ§Ñù±¾Êı¡£
+    uint8_t z_num_ = 0; // z ç¼“å†²åŒºå½“å‰æœ‰æ•ˆæ ·æœ¬æ•°ã€‚
 
-    float fake_x = 0.0f; // µ÷ÊÔ¼ÙÊı¾İ£ºx Îó²îÊäÈë£¨Ã×£©¡£
+    float fake_x = 0.0f; // è°ƒè¯•å‡æ•°æ®ï¼šx è¯¯å·®è¾“å…¥ï¼ˆç±³ï¼‰ã€‚
 
-    float fake_y = 0.9f; // µ÷ÊÔ¼ÙÊı¾İ£ºy Îó²îÊäÈë£¨Ã×£©¡£
+    float fake_y = 0.9f; // è°ƒè¯•å‡æ•°æ®ï¼šy è¯¯å·®è¾“å…¥ï¼ˆç±³ï¼‰ã€‚
 
-    float fake_z = 0.08f; // µ÷ÊÔ¼ÙÊı¾İ£ºz Îó²îÊäÈë£¨Ã×£©¡£
+    float fake_z = 0.08f; // è°ƒè¯•å‡æ•°æ®ï¼šz è¯¯å·®è¾“å…¥ï¼ˆç±³ï¼‰ã€‚
 
-    float fake_yaw = 0.0f; // µ÷ÊÔ¼ÙÊı¾İ£ºyaw Îó²îÊäÈë£¨¶È£©¡£
+    float fake_yaw = 0.0f; // è°ƒè¯•å‡æ•°æ®ï¼šyaw è¯¯å·®è¾“å…¥ï¼ˆåº¦ï¼‰ã€‚
 
-    // Íâ²¿½Ó¿Úº¯Êı
+    // å¤–éƒ¨æ¥å£å‡½æ•°
     */
 public:
     /**
-     * @brief ÉèÖÃÂ·¾¶×Ô¶¯¿ªÊ¼±êÖ¾
-     * @param start 1±íÊ¾¿ªÊ¼£¬0±íÊ¾Í£Ö¹
-     * @param path_flagIndex Â·¾¶±êÖ¾Ë÷Òı£¬0»ò1
+     * @brief è®¾ç½®è·¯å¾„è‡ªåŠ¨å¼€å§‹æ ‡å¿—
+     * @param start 1è¡¨ç¤ºå¼€å§‹ï¼Œ0è¡¨ç¤ºåœæ­¢
+     * @param path_flagIndex è·¯å¾„æ ‡å¿—ç´¢å¼•ï¼Œ0æˆ–1
      */
-    
+
     void setPathAutoStart(uint8_t start)
     {
         if (start == 1)
@@ -404,94 +415,94 @@ public:
 
     bool GetReach_flag()
     {
-        // ¶ÁÈ¡¼Ğ¸ËÁ÷³ÌÍê³É±êÖ¾¡£
+        // è¯»å–å¤¹æ†æµç¨‹å®Œæˆæ ‡å¿—ã€‚
         return WeaponSage_END;
     }
 
     bool Get_Arm_Start_flag()
     {
-        // ¶ÁÈ¡»úĞµ±Û´¥·¢±êÖ¾¡£
+        // è¯»å–æœºæ¢°è‡‚è§¦å‘æ ‡å¿—ã€‚
         return Arm_Start;
     }
 
     void Receive_Arm_End_flag(bool arm_end)
     {
-        // Ğ´Èë»úĞµ±ÛÁ÷³Ì·´À¡±êÖ¾¡£
+        // å†™å…¥æœºæ¢°è‡‚æµç¨‹åé¦ˆæ ‡å¿—ã€‚
         Arm_Start = arm_end;
     }
 
     void set_KFS(int8_t KFS1, int8_t KFS2)
     {
-        // ¸üĞÂ×Ô¶¯¹æ»®Ä¿±êµã±àºÅ¡£
+        // æ›´æ–°è‡ªåŠ¨è§„åˆ’ç›®æ ‡ç‚¹ç¼–å·ã€‚
         MF1 = KFS1;
         MF2 = KFS2;
     }
     /*
     void set_camera_uart(UART_HandleTypeDef *uart)
     {
-        camera_uart_ = uart;  // ÉèÖÃÏà»ú´®¿Ú¾ä±ú¡£
-        camera_init_ = false; // Ç¿ÖÆÏÂ´Î½øÈëÏà»úÄ£Ê½Ê±ÖØĞÂ³õÊ¼»¯´®¿Ú¡£
+        camera_uart_ = uart;  // è®¾ç½®ç›¸æœºä¸²å£å¥æŸ„ã€‚
+        camera_init_ = false; // å¼ºåˆ¶ä¸‹æ¬¡è¿›å…¥ç›¸æœºæ¨¡å¼æ—¶é‡æ–°åˆå§‹åŒ–ä¸²å£ã€‚
     }
 
     void set_camera_limit(float speed_max, float omega_max)
     {
-        speed_max_ = speed_max; // ÉèÖÃÏà»úÄ£Ê½Æ½ÒÆËÙ¶ÈÉÏÏŞ£¨m/s£©¡£
-        omega_max_ = omega_max; // ÉèÖÃÏà»úÄ£Ê½½ÇËÙ¶ÈÉÏÏŞ£¨rad/s£©¡£
+        speed_max_ = speed_max; // è®¾ç½®ç›¸æœºæ¨¡å¼å¹³ç§»é€Ÿåº¦ä¸Šé™ï¼ˆm/sï¼‰ã€‚
+        omega_max_ = omega_max; // è®¾ç½®ç›¸æœºæ¨¡å¼è§’é€Ÿåº¦ä¸Šé™ï¼ˆrad/sï¼‰ã€‚
     }
 
     void set_camera_scale(float pos_scale, float yaw_scale)
     {
-        pos_scale_ = pos_scale; // ÉèÖÃÏà»úÄ£Ê½Î»ÖÃ»·Êä³öËõ·ÅÏµÊı¡£
-        yaw_scale_ = yaw_scale; // ÉèÖÃÏà»úÄ£Ê½º½Ïò»·Êä³öËõ·ÅÏµÊı¡£
+        pos_scale_ = pos_scale; // è®¾ç½®ç›¸æœºæ¨¡å¼ä½ç½®ç¯è¾“å‡ºç¼©æ”¾ç³»æ•°ã€‚
+        yaw_scale_ = yaw_scale; // è®¾ç½®ç›¸æœºæ¨¡å¼èˆªå‘ç¯è¾“å‡ºç¼©æ”¾ç³»æ•°ã€‚
     }
 
     void set_camera_xy_ref(float x_ref, float y_ref)
     {
-        camera_x_ref_ = x_ref; // ÉèÖÃÏà»úÄ£Ê½ x ÖáÄ¿±êÖµ£¨Ã×£©¡£
-        camera_y_ref_ = y_ref; // ÉèÖÃÏà»úÄ£Ê½ y ÖáÄ¿±êÖµ£¨Ã×£©¡£
+        camera_x_ref_ = x_ref; // è®¾ç½®ç›¸æœºæ¨¡å¼ x è½´ç›®æ ‡å€¼ï¼ˆç±³ï¼‰ã€‚
+        camera_y_ref_ = y_ref; // è®¾ç½®ç›¸æœºæ¨¡å¼ y è½´ç›®æ ‡å€¼ï¼ˆç±³ï¼‰ã€‚
     }
 
     void set_camera_y_ref(float y_ref)
     {
-        camera_y_ref_ = y_ref; // ÉèÖÃÏà»úÄ£Ê½ y ÖáÄ¿±êÖµ£¨Ã×£©¡£
+        camera_y_ref_ = y_ref; // è®¾ç½®ç›¸æœºæ¨¡å¼ y è½´ç›®æ ‡å€¼ï¼ˆç±³ï¼‰ã€‚
     }
 
     float get_camera_y_ref() const
     {
-        return camera_y_ref_; // ¶ÁÈ¡Ïà»úÄ£Ê½ y ÖáÄ¿±êÖµ£¨Ã×£©¡£
+        return camera_y_ref_; // è¯»å–ç›¸æœºæ¨¡å¼ y è½´ç›®æ ‡å€¼ï¼ˆç±³ï¼‰ã€‚
     }
 
     void set_weapon_done(bool done)
     {
-        weapon_done_ = done; // Ğ´ÈëÎäÆ÷Ô¤¶Ô½ÓÍê³É·´À¡Î»¡£
+        weapon_done_ = done; // å†™å…¥æ­¦å™¨é¢„å¯¹æ¥å®Œæˆåé¦ˆä½ã€‚
     }
 
     void set_z_done(bool done)
     {
-        z_done_ = done; // Ğ´ÈëÎäÆ÷ z µ÷ÕûÍê³É·´À¡Î»¡£
+        z_done_ = done; // å†™å…¥æ­¦å™¨ z è°ƒæ•´å®Œæˆåé¦ˆä½ã€‚
     }
 
     void set_dock_done(bool done)
     {
-        dock_done_ = done; // Ğ´ÈëÍâ²¿¶Ô½ÓÍê³É±êÖ¾Î»¡£
+        dock_done_ = done; // å†™å…¥å¤–éƒ¨å¯¹æ¥å®Œæˆæ ‡å¿—ä½ã€‚
     }
 
     bool get_weapon_req() const
     {
-        return weapon_req_; // ¶ÁÈ¡ÎäÆ÷Ô¤¶Ô½ÓÇëÇóÎ»¡£
+        return weapon_req_; // è¯»å–æ­¦å™¨é¢„å¯¹æ¥è¯·æ±‚ä½ã€‚
     }
 
     bool get_z_req() const
     {
-        return z_req_; // ¶ÁÈ¡ÎäÆ÷ z µ÷ÕûÇëÇóÎ»¡£
+        return z_req_; // è¯»å–æ­¦å™¨ z è°ƒæ•´è¯·æ±‚ä½ã€‚
     }
 
     float get_z_ref() const
     {
-        return z_ref_; // ¶ÁÈ¡Í¸´«¸øÎäÆ÷²ãµÄ z ²Î¿¼Öµ¡£
+        return z_ref_; // è¯»å–é€ä¼ ç»™æ­¦å™¨å±‚çš„ z å‚è€ƒå€¼ã€‚
     }
 
-    // ÓÉÖ÷×´Ì¬»úµ÷ÓÃ£¬ÉèÖÃ¿ªÆôÎäÆ÷¶Ô½ÓÁ÷³Ì
+    // ç”±ä¸»çŠ¶æ€æœºè°ƒç”¨ï¼Œè®¾ç½®å¼€å¯æ­¦å™¨å¯¹æ¥æµç¨‹
     void setWeaponStart(bool isstart)
     {
         weapon_cameraStart = isstart;

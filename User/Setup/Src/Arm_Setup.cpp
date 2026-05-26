@@ -1,9 +1,9 @@
 #include "Arm_setup.h"
 
-static bool s_has_recorded_strategy = false; //º«¬º «∑Ò“—æ≠º«¬ºπ˝≤ﬂ¬‘
+
 
 /**
- * @brief —∞÷˜—≠ª∑
+ * @brief ÊéßÂà∂Âæ™ÁéØ
  */
 // uint32_t ArmstackHighWaterMark = 0;
 void ArmSetup::loop()
@@ -24,14 +24,19 @@ void ArmSetup::loop()
     {
         calibrateMotor();
         arm_status_ = ARM_CALIBRATE;
-        // ±æ≈ƒΩˆ÷¥–––£◊º£¨≤ªΩ¯»Î∆‰À˚◊¥Ã¨∑÷÷ß£¨±‹√‚”Î…œ≤„◊¥Ã¨ª˙«¿–¥ arm_status_
+        // Â±èËîΩÂÖ∂‰ªñÁä∂ÊÄÅÁöÑÊéßÂà∂ÈÄªËæëÔºå‰ºòÂÖàËøõË°åÊ†°ÂáÜ
         this->update();
         last_arm_status_ = arm_status_;
         return;
     }
+    else if(!calibration_seen_)
+    {
+        calibration_seen_ = true;
+        arm_status_ = ARM_CALIBRATE;
+    }
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
-    //ƒø«∞ π”√–Èƒ‚◊¯±ÍΩ¯––◊‘øÿ¬ﬂº≠—È÷§
+    //Êó†Â∫ïÁõò‰∏ãÁöÑË∞ÉËØïÊ®°Âºè
     if(arm_status_ == ARM_AUTO_CONTROL&&arm_ctrlStatus.auto_start == 1)
     {
         auto_ctrl_.now_chassis_speed = get_nowChassisSpeed();
@@ -60,14 +65,6 @@ void ArmSetup::loop()
         }
     } 
 
-    if(arm_status_ == ARM_MANUAL_CONTROL && arm_ctrlStatus.last_manual_store == 0)
-    {
-        this->setRotateFilterK(270.0f); // ÷≤Ÿ ±Ã·∏ﬂ–˝◊™œÏ”¶ÀŸ∂»
-    }
-    else
-    {
-        this->setRotateFilterK(180.0f); //∑« ÷≤Ÿ ±ΩµµÕ–˝◊™œÏ”¶ÀŸ∂»£¨±‹√‚∏…»≈◊‘∂Øøÿ÷∆
-    }
 
     switch(arm_status_)
     {
@@ -75,32 +72,32 @@ void ArmSetup::loop()
         {
             if(last_arm_status_ != ARM_MANUAL_CONTROL)
             {
-                arm_ctrlStatus.last_manual_store = 0; //«–ªªµΩ ÷≤Ÿƒ£ Ω£¨÷ÿ÷√¥Ê¥¢◊¥Ã¨£¨±‹√‚Ã¯±‰
-                store_state_ = store_state::idle; //«–ªªµΩ ÷≤Ÿƒ£ Ω£¨÷ÿ÷√¥Ê¥¢◊¥Ã¨ª˙
-                arm_ctrlStatus.is_store_acting = 0; //«–ªªµΩ ÷≤Ÿƒ£ Ω£¨÷ÿ÷√¥Ê¥¢∂Ø◊˜◊¥Ã¨
+                arm_ctrlStatus.last_manual_store = 0; //ÂàáÊç¢Âà∞ÊâãÊìçÊó∂ÂÄôÈáçÁΩÆÂ≠òÂÇ®Áä∂ÊÄÅÔºåÈÅøÂÖçË∑≥Âèò
+                store_state_ = store_state::idle; //ÂàáÊç¢Âà∞ÊâãÊìçÊó∂ÂÄôÈáçÁΩÆÂ≠òÂÇ®Áä∂ÊÄÅÔºåÈÅøÂÖçË∑≥Âèò
+                arm_ctrlStatus.is_store_acting = 0; //ÂàáÊç¢Âà∞ÊâãÊìçÊó∂ÂÄôÈáçÁΩÆÂ≠òÂÇ®Áä∂ÊÄÅÔºåÈÅøÂÖçË∑≥Âèò
             }
 
-            if(arm_ctrlStatus.is_store_acting == 0) //∑«¥Ê¥¢∂Ø◊˜◊¥Ã¨£¨’˝≥£ ÷≤Ÿ
+            if(arm_ctrlStatus.is_store_acting == 0) //ÈùûÂ≠òÂÇ®Âä®‰ΩúÔºåÊ≠£Â∏∏ÊâãÊìç
             {
                 manualControl();
 
-                if(arm_ctrlStatus.button_click_state == 2) //À´ª˜
+                if(arm_ctrlStatus.button_click_state == 2) //ÂèåÂáª
                 {
                     arm_ctrlStatus.is_store_acting = 2;
                 }
-                else if(arm_ctrlStatus.button_click_state == 3) //»˝ª˜
+                else if(arm_ctrlStatus.button_click_state == 3) //‰∏âÂáª
                 {
                     if(this->getSuckerStatus() == Sucker_Status_E::SUCK)
                     {
-                        arm_ctrlStatus.is_store_acting = 2; //»Áπ˚µ±«∞Œ¸∏Ω◊¥Ã¨£¨÷¥––»°≥ˆ
-            }
+                        arm_ctrlStatus.is_store_acting = 2; //ÂΩìÂâçÂ§Ñ‰∫éÂê∏ÈôÑÁä∂ÊÄÅÔºåÂèñÂá∫
+                    }
                     else
                         arm_ctrlStatus.is_store_acting = 1;
                 }
                 arm_ctrlStatus.last_manual_store = 0;
                 store_state_ = store_state::idle;
             }
-            else if(arm_ctrlStatus.is_store_acting == 2 && this->getSuckerStatus() == Sucker_Status_E::SUCK) //’˝‘⁄÷¥––¥Ê¥¢∂Ø◊˜£¨µ»¥˝ÕÍ≥…
+            else if(arm_ctrlStatus.is_store_acting == 2 && this->getSuckerStatus() == Sucker_Status_E::SUCK) //Â≠òÂÇ®
             {
                 if(test())
                 { 
@@ -108,7 +105,7 @@ void ArmSetup::loop()
                 }
                 arm_ctrlStatus.last_manual_store = 2;
             }
-            else if(arm_ctrlStatus.is_store_acting == 1) //»°≥ˆ
+            else if(arm_ctrlStatus.is_store_acting == 1) //ÂèñÂá∫
             {
                 if(manual_takeout())
                 {
@@ -132,21 +129,21 @@ void ArmSetup::loop()
             
         case ARM_STOP: 
         {
-            // Õ£÷π◊¥Ã¨, Ω´∏˜∏ˆπÿΩ⁄ªÿπÈ≥ı ºŒª÷√∫Û£¨Ω´µÁ¡˜÷√¡„
+            // ÂÅúÊ≠¢Áä∂ÊÄÅ
             stop();
             break;
         }
           
         case ARM_IDLE:
         {
-            // ø’œ–◊¥Ã¨£¨Œ¨≥÷µ±«∞◊¥Ã¨
+            // ÂæÖÊú∫
             idle();
             break;
         }
 
         case ARM_DEBUG:
         {
-            // µ˜ ‘◊¥Ã¨
+            // ÊöÇÊó∂Êó†Áî®‰∫Ü
             if(arm_ctrlStatus.debug_start == 1)
                 debug();
 
@@ -156,8 +153,7 @@ void ArmSetup::loop()
 
         case ARM_CALIBRATE:
         {
-            // –£◊º◊¥Ã¨
-            // …œµÁ–£◊ºM2006µÁª˙Œª÷√
+            //Êó†‰∫ãÂèëÁîü
             break;
         }
         default:
@@ -165,63 +161,61 @@ void ArmSetup::loop()
     }
 
 
-    this->update(); //Ω´øÿ÷∆–≈œ¢∑¢ÀÕ∏¯µÁª˙
+    this->update(); //Êõ¥Êñ∞ÁîµÊú∫Áä∂ÊÄÅ
     last_arm_status_ = arm_status_;
-    debug_uart.printf_DMA("%f\n", motor_rotate_->getTotalAngle());
+    
+    // debug_uart.printf_DMA("%f\n", motor_rotate_->getTotalAngle());
 }
 bool test_num = 0;
 
 
 /**
- * @brief —∞ ÷≤Ÿ
+ * @brief ÊâãÂä®ÊéßÂà∂
  */
 void ArmSetup::manualControl()
 {
-    this->setRotateStrategy(ROTATE_PATH_SHORTEST);
-    //  ÷∂Øøÿ÷∆∫Ø ˝
+    // ËÆæÁΩÆÊéßÂà∂Ê®°Âºè
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
    
-    if(last_arm_status_ != ARM_MANUAL_CONTROL || arm_ctrlStatus.last_manual_store != 0)//»Ù ◊¥Œ∑«¥Àƒ£ Ω£¨–Ë∏¥÷∆“ªœ¬…œ¥Œ◊¥Ã¨£¨√‚µ√Ã¯±‰
+    if(last_arm_status_ != ARM_MANUAL_CONTROL || arm_ctrlStatus.last_manual_store != 0)//Ëã•È¶ñÊ¨°ËøõÂÖ•Ê≠§ÂáΩÊï∞ÔºåÊàñÂ≠òÂÇ®Áä∂ÊÄÅÂèëÁîüÂèòÂåñÔºåÂàôËøõË°åÁä∂ÊÄÅÂàùÂßãÂåñÔºåÈÅøÂÖçÁî±‰∫éÁä∂ÊÄÅË∑≥ÂèòÂØºËá¥ÁöÑÁõÆÊ†áÂÄºÁ™ÅÂèò
     {
-        /*¥Æ¡™±€*/
+        /*‰∏ä‰∏ÄÊ¨°Áä∂ÊÄÅ*/
         last_joint_status_ = this->get_currentJointStatus();
         target_joint_status_ = last_joint_status_;
 
-        // ∞Û∂®…Ï’π◊¥Ã¨
-        // ≈–∂®µ±«∞ «…Ïªπ «Àı
-        // ºŸ…Ë„–÷µŒ™ max_stretchLength / 2 ªÚ’ﬂ 0.05m
+        // ÁªëÂÆö‰º∏Â±ïÁä∂ÊÄÅ
+        // Âà§Êñ≠ÂΩìÂâçÊòØ‰º∏Â±ïÁä∂ÊÄÅ
+        // ÂÅáËÆæÈòàÂÄº‰∏∫ max_stretchLength / 2 ÊàñËÄÖ 0.05m
         float current_stretch = this->get_currentJointStatus().stretchJoint_Length_;
         int8_t current_extend_logical = (current_stretch > 0.01f) ? 1 : 0;
         
-        // º«¬º◊¥Ã¨
+        // ËÆ∞ÂΩïÁä∂ÊÄÅ
         arm_ctrlStatus.last_manual_extend = current_extend_logical;
         
-        // º∆À„∆´“∆: offset = switch ^ state
-        // ºŸ…Ë switch÷ª”–0∫Õ1
+        // Ê†áËÆ∞ÂÅèÁßª: offset = switch ^ state
+        // ÂÆö switchÂè™Êúâ01Áä∂ÊÄÅ
         arm_ctrlStatus.extend_switch_offset = (airjoy_data_.SWA & 0x01) ^ current_extend_logical;
 
 
-        // ∞Û∂®Œ¸≈Ã◊¥Ã¨
+        // ÁªëÂÆöÂê∏ÁõòÁä∂ÊÄÅ
         int8_t current_sucker_logical = (this->getSuckerStatus() == Sucker_Status_E::SUCK) ? 1 : 0;
         arm_ctrlStatus.last_manual_sucker = current_sucker_logical;     
         arm_ctrlStatus.sucker_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_sucker_logical;
 
         
         int8_t current_pitch_logical = (_tool_Abs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 1.0f) ? 1: 0;
-        //…œ¥Œ «∑Ò‘⁄90∂»∏ΩΩ¸£¨»œŒ™ «ø™◊¥Ã¨£¨∑¥÷Æ»œŒ™ «πÿ◊¥Ã¨
+        // Âà§Êñ≠ÂΩìÂâçÊòØÂê¶Âú®90Â∫¶ÈôÑËøëÔºåÂÅáËÆæ‰∏∫ÂºÄÂêØÁä∂ÊÄÅÔºåÂèç‰πã‰∏∫ÂÖ≥Èó≠Áä∂ÊÄÅ
         arm_ctrlStatus.last_manual_pitch = current_pitch_logical;
         arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.scroll_wheel & 0x01) ^ current_pitch_logical;
-
 
         last_arm_status_ = ARM_MANUAL_CONTROL;
     }
 
 
-    //…˝Ωµ≤Ÿøÿ
-    if(_tool_Abs(airjoy_data_.right_y) > 0.1f)
+    // ÂçáÈôç
+    if(_tool_Abs(airjoy_data_.right_y) > 0.2f)
     {
-
         float next_height = this->get_currentJointStatus().launchJoint_Height_ ;
         if(airjoy_data_.right_y > 0.3f)
             next_height += manual_control.launch_rate;
@@ -230,65 +224,72 @@ void ArmSetup::manualControl()
         else
             next_height = this->get_currentJointStatus().launchJoint_Height_ ;
 
-        //Ãß…˝œﬁ÷∆ºÏ≤È£∫»Áπ˚≤ª‘⁄30~135∂»µƒ«¯º‰ ±∫Ú£¨‘∆Ã®Ω˚÷πÕ˘…œÃß…˝ (¥”º´µÕ∏ﬂ∂»«¯Ω¯»Î∏……Ê«¯)
-        if(next_height > target_joint_status_.launchJoint_Height_) // ’˝‘⁄Ãß…˝
+        // Êä¨ÂçáÈôêÂà∂Ê£ÄÊü•Ôºö Â¶ÇÊûú‰∏çÂú®‰∫ëÂè∞ÂêàÊ≥ïÂå∫ÂüüÔºåÁ¶ÅÊ≠¢Êä¨Âçá
+        if(next_height > target_joint_status_.launchJoint_Height_) //Ê≠£Âú®Êä¨Âçá
         {
              float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
 
-             if(this->get_currentJointStatus().launchJoint_Height_ < 0.03f)
+             if(this->get_currentJointStatus().launchJoint_Height_ < init_data_.lock_height_ + 0.01f)
              {
-                 // ƒø±Í«¯”Úœﬁ÷∆ « 30~135£¨À˘“‘±ÿ–Î‘⁄¥À∑∂Œßƒ⁄≤≈ƒ‹Ãß…˝
-                 if(current_angle < 60.0f || current_angle > 185.0f)
-                 {
-                     next_height = target_joint_status_.launchJoint_Height_; // ±£≥÷≤ª±‰
-                 }
+                // ÈôêÂà∂ËåÉÂõ¥
+                if(std::fabs(current_angle - 0.0f) > 0.8f)
+                {
+                    next_height = target_joint_status_.launchJoint_Height_; // ‰øùÊåÅ‰∏çÂèò
+                }
              }
         }
         target_joint_status_.launchJoint_Height_ = next_height;
     }
     else
-        target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // ±£≥÷≤ª±‰
+        target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // ‰øùÊåÅ‰∏çÂèò
 
 
-        if(airjoy_data_.right_x > 0.5f)
-            target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
-        else if(airjoy_data_.right_x < -0.5f)
-            target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
-        // else
-        //     target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_; // ±£≥÷≤ª±‰
+    if(airjoy_data_.right_x > 0.5f)
+        target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
+    else if(airjoy_data_.right_x < -0.5f)
+        target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
 
-        target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
-        target_joint_status_.rotateJoint_angle_ = manual_roate_clamp(target_joint_status_.rotateJoint_angle_);
+    target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
+    target_joint_status_.rotateJoint_angle_ = normalize_deg_0_360(target_joint_status_.rotateJoint_angle_);
 
 
-    //pitch ø™πÿ
+    float re = init_data_.rotate_end;
+    if (re < 250.0f || re > 270.0f) re = 265.0f;
+    float t = target_joint_status_.rotateJoint_angle_;
+    if (t > init_data_.rotate_start && t < re)
+    {
+        float d135 = t - init_data_.rotate_start;
+        float dre = re - t;
+        target_joint_status_.rotateJoint_angle_ = (d135 < dre) ? init_data_.rotate_start : re;
+    }
+    //pitch ÊéßÂà∂
     int8_t target_pitch_logical = (airjoy_data_.scroll_wheel & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
     if(target_pitch_logical == 1)
     {
         if(test_num == 0)
-            target_joint_status_.suckerJoint_angle_ = 90.0f; // Œ¸≈ÃπÿΩ⁄¥Úø™µΩ90∂»
+            target_joint_status_.suckerJoint_angle_ = 90.0f; // Âê∏ÁõòÊâìÂºÄÂà∞90Â∫¶
         else
-            target_joint_status_.suckerJoint_angle_ = 180.0f; // Œ¸≈ÃπÿΩ⁄¥Úø™µΩ180∂»
+            target_joint_status_.suckerJoint_angle_ = 180.0f; // Âê∏ÁõòÊâìÂºÄÂà∞180Â∫¶
     }
     else
-        target_joint_status_.suckerJoint_angle_ = 0.0f; // Œ¸≈ÃπÿΩ⁄πÿ±’µΩ0∂»
+        target_joint_status_.suckerJoint_angle_ = 0.0f; // Âê∏ÁõòÂÖ≥Èó≠Âà∞0Â∫¶
 
-    //stretch ø™πÿ
-    // º∆À„µ±«∞”¶µ±µƒ¬ﬂº≠◊¥Ã¨ logic = switch ^ offset
+    //stretch ÊéßÂà∂
+    // ËÆ∞ÂΩïÂ∫îÂΩìÁöÑÈÄªËæëÁä∂ÊÄÅ logic = switch ^ offset
     int8_t target_extend_logical = (airjoy_data_.SWA & 0x01) ^ arm_ctrlStatus.extend_switch_offset;
     
-    // ∏¸–¬º«“‰
+    // Êõ¥ÁªÜËÆ∞ÂΩïÁä∂ÊÄÅ
     arm_ctrlStatus.last_manual_extend = target_extend_logical;
 
     if(target_extend_logical == 0)
-        target_joint_status_.stretchJoint_Length_ = 0.0f; // …Ï’ππÿΩ⁄ ’ªÿµΩ◊Ó–°Œª÷√
+        target_joint_status_.stretchJoint_Length_ = 0.0f; // Êî∂Âõû
     else
-        target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // …Ï’ππÿΩ⁄…Ï≥ˆµΩ◊Ó¥ÛŒª÷√
+        target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // Â±ïÂºÄÂà∞ÊúÄÂ§ß‰ΩçÁΩÆ
 
-    //Œ¸≈Ãø™πÿ
+    //Âê∏ÁõòÂºÄÂêØ
     int8_t target_sucker_logical = (airjoy_data_.SWD & 0x01) ^ arm_ctrlStatus.sucker_switch_offset;
 
-    // ∏¸–¬º«“‰
+    // Êõ¥Êñ∞ËÆ∞ÂΩï
     arm_ctrlStatus.last_manual_sucker = target_sucker_logical;
 
     if(target_sucker_logical == 1) 
@@ -347,8 +348,8 @@ bool ArmSetup::manual_store()
         case store_state::laucnh_state:
         {
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
-            this->set_PitchAngle(180.0f); //≥Ø…œ
-            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.01f && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 180.0f) < 30.0f)
+            this->set_PitchAngle(90.0f); //Âê∏ÁõòÊä¨Âπ≥
+            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.01f && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 30.0f)
             {
                 this->store_state_ = store_state::rotate_state;
             }
@@ -357,8 +358,9 @@ bool ArmSetup::manual_store()
 
         case store_state::rotate_state:
         {
-            float target_rotate = 269.9f; //–˝◊™µΩ90∂»Œª÷√
-            safe_rotate_to(target_rotate);
+            float target_rotate = 269.9f; //Â≠òÂÇ®ÁöÑÁõÆÊ†áÊóãËΩ¨ËßíÂ∫¶
+            this->set_RotateAngle(target_rotate);
+            this->set_StretchLength(init_data_.store_ext_length_); // ‰º∏Â±ïÂà∞Â≠òÂÇ®‰ΩçÁΩÆÈúÄË¶ÅÁöÑÈïøÂ∫¶
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f)
             {
                 this->store_state_ = store_state::lower_state;
@@ -370,17 +372,17 @@ bool ArmSetup::manual_store()
         {
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 269.9f) < 15.0f )
             {
-                this->set_PitchAngle(0.0f); //≥Øœ¬
+                this->set_PitchAngle(90.0f); // Êä¨Âπ≥
             }
 
             if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 5.0f)
             {
-                this->set_LaunchHeight(this->init_data_.store_height_); //ΩµµÕµΩ∞≤»´∏ﬂ∂»
+                this->set_LaunchHeight(this->init_data_.store_height_); // Èôç‰ΩéÂà∞ÂÆâÂÖ®È´òÂ∫¶
             }
 
             if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.store_height_) < 0.01f)
             {
-                this->setSuckerStatus(Sucker_Status_E::STOP); //∑≈ø™
+                this->setSuckerStatus(Sucker_Status_E::STOP); // ÂÅúÊ≠¢Âê∏Áõò
                 this->store_state_ = store_state::idle;
                 return true;
             }
@@ -394,12 +396,11 @@ bool ArmSetup::manual_store()
 
 
 
-float test_angle_for = 270.0f;
 
 bool ArmSetup::manual_takeout()
 {
     static bool is_catch = false;
-    static float catch_time = 0.0f; //≈ˆµΩƒø±Í∫Ûø™ ºº∆ ±
+    static float catch_time = 0.0f; //ËÆ∞ÂΩïÁ¢∞Âà∞KFSÁöÑÊó∂Èó¥
     switch(this->store_state_)
     {
         case store_state::idle:
@@ -420,7 +421,7 @@ bool ArmSetup::manual_takeout()
         {
             this->setSuckerStatus(Sucker_Status_E::STOP);
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
-            this->set_PitchAngle(0.0f); //≥Øœ¬
+            this->set_PitchAngle(0.0f); //Êîæ‰∏ã
             if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.04f)
             {
                 this->store_state_ = store_state::rotate_state;
@@ -430,9 +431,9 @@ bool ArmSetup::manual_takeout()
 
         case store_state::rotate_state:
         {
-            float target_rotate = 269.9f; //–˝◊™µΩ90∂»Œª÷√
+            float target_rotate = 269.9f; //Â≠òÂÇ®ÁöÑÁõÆÊ†áÊóãËΩ¨ËßíÂ∫¶
 
-            safe_rotate_to(target_rotate);
+            this->set_RotateAngle(target_rotate);
 
             this->store_state_ = store_state::lower_state;
             break;
@@ -455,18 +456,18 @@ bool ArmSetup::manual_takeout()
 
             if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.store_height_) < 0.005f && !is_catch)
             {
-                catch_time = TimeStamp::getInstance().getSeconds(); //º«¬º≈ˆµΩƒø±Íµƒ ±º‰
+                catch_time = TimeStamp::getInstance().getSeconds(); //ËÆ∞ÂΩïÁ¢∞Âà∞KFSÁöÑÊó∂Èó¥
                 is_catch = true;
             }
 
-            if(TimeStamp::getInstance().getSeconds() - catch_time > 0.3f && catch_time > 0.1f) //»Áπ˚“—æ≠≈ˆµΩƒø±Í≥¨π˝0.3√Î£¨»œŒ™“—æ≠Œ¸∏Ω
+            if(TimeStamp::getInstance().getSeconds() - catch_time > 0.3f && catch_time > 0.1f) //Â¶ÇÊûúÂ∑≤ÁªèÁ¢∞Âà∞KFSË∂ÖËøá0.3ÁßíÔºåËÆ§‰∏∫Â∑≤ÁªèÊäìÂà∞
             {
                 
-                this->set_LaunchHeight(this->init_data_.max_launchHeight_); //Ãß…˝µΩ∞≤»´∏ﬂ∂»
+                this->set_LaunchHeight(this->init_data_.max_launchHeight_); //ÊèêÂçáÂà∞ÂÆâÂÖ®È´òÂ∫¶
 
                 if(this->get_currentJointStatus().launchJoint_Height_ > this->init_data_.max_launchHeight_ - 0.01f)
                 {
-                    this->set_PitchAngle(180.0f); //≥Ø…œ
+                    this->set_PitchAngle(90.0f); //Âê∏ÁõòÊä¨Âπ≥
                     this->store_state_ = store_state::outstate2;
                 }
             }
@@ -476,16 +477,16 @@ bool ArmSetup::manual_takeout()
 
         case store_state::outstate2:
         {
-            float target_rotate = 180.0f; //–˝◊™µΩ180∂»Œª÷√
+            float target_rotate = 0.0f; 
 
-            if(this->get_currentJointStatus().suckerJoint_angle_ > 160.0f)
-            {
-                safe_rotate_to(target_rotate);
-            }
+            // if(this->get_currentJointStatus().suckerJoint_angle_ > 160.0f)
+            // {
+                this->set_RotateAngle(target_rotate);
+            // }
 
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f)
             {
-                this->set_PitchAngle(0.0f); //≥Øœ¬
+                this->set_PitchAngle(90.0f); // Êä¨Âπ≥
                 this->store_state_ = store_state::idle;
                 return true;
             }
@@ -500,34 +501,34 @@ bool ArmSetup::manual_takeout()
 /*=======================================================*/
 
 /**
- * @brief »Áπ˚”–¡Ω∏ˆƒø±ÍKFS£¨‘Úµ⁄“ª∏ˆKFS ∞»°ÕÍ∫Û∑≈µΩ¥Ê¥¢ª˙ππ
- *        µ⁄∂˛∏ˆKFS ∞»°ÕÍ∫Û¡Ù‘⁄Œ¸≈Ã…œ
- *        »Áπ˚√ª”–µ⁄∂˛∏ˆ£¨æÕŒ¸‘⁄Œ¸≈Ã…œ£¨≤ª±ÿ∑≈µΩ¥Ê¥¢ª˙ππ
+ * @brief Â¶ÇÊûúÊúâ‰∏§‰∏™ÁõÆÊ†áKFSÔºåÂàôÁ¨¨‰∏Ä‰∏™KFSÊãæÂèñÂÆåÂêéÊîæÂà∞Â≠òÂÇ®Êú∫ÊûÑ
+ *        Á¨¨‰∫å‰∏™KFSÊãæÂèñÂÆåÂêéÁïôÂú®Âê∏Áõò‰∏ä
+ *        Â¶ÇÊûúÊ≤°ÊúâÁ¨¨‰∫å‰∏™ÔºåÂ∞±Âê∏Âú®Âê∏Áõò‰∏äÔºå‰∏çÂøÖÊîæÂà∞Â≠òÂÇ®Êú∫ÊûÑ
  * 
- *        —∞◊‘∂Ø
+ *        ÂØªËá™Âä®
  * 
- * ◊‘∂Øº∆À„¬ﬂº≠◊Ò¥”¥Æ¡™±€◊‘∂Ø¬ﬂº≠ƒ©Œ≤µƒ ˝—ßπ´ Ω
+ * Ëá™Âä®ËÆ°ÁÆóÈÄªËæëÈÅµ‰ªé‰∏≤ËÅîËáÇËá™Âä®ÈÄªËæëÊú´Â∞æÁöÑÊï∞Â≠¶ÂÖ¨Âºè
  */
 void ArmSetup::autoControl()
 {
-    // ◊‘∂Øøÿ÷∆∫Ø ˝
+    // ËÆæÁΩÆÊéßÂà∂Ê®°Âºè
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
 
-    if(last_arm_status_ != ARM_AUTO_CONTROL || auto_ctrl_.start_to_autoctrl != 1)//»Ù ◊¥Œ∑«¥Àƒ£ Ω£¨–Ë≥ı ºªØ“ª–©◊¥Ã¨
+    if(last_arm_status_ != ARM_AUTO_CONTROL || auto_ctrl_.start_to_autoctrl != 1)//Ëã•È¶ñÊ¨°ËøõÂÖ•Ê≠§ÂáΩÊï∞ÔºåÊàñËá™Âä®ÊéßÂà∂ÂêØÂä®Áä∂ÊÄÅÂèëÁîüÂèòÂåñÔºåÂàôËøõË°åÁä∂ÊÄÅÂàùÂßãÂåñÔºåÈÅøÂÖçÁî±‰∫éÁä∂ÊÄÅË∑≥ÂèòÂØºËá¥ÁöÑÁõÆÊ†áÂÄºÁ™ÅÂèò
     {
-        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //◊‘∂Ø¡˜≥Ã◊¥Ã¨ª˙ªÿµΩ≥ı º◊¥Ã¨
+        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //Ëá™Âä®ÊéßÂà∂Áä∂ÊÄÅÊú∫ÂõûÂà∞ÂàùÂßãÁä∂ÊÄÅ
         
-            auto_ctrl_.flag.isrecalcPath = false; //¬∑æ∂÷ÿº∆À„±Í÷æ
-            auto_ctrl_.now_targetIndex = 0; //µ±«∞ƒø±ÍKFSÀ˜“˝÷ÿ÷√
+            auto_ctrl_.flag.isrecalcPath = false; //Ë∑ØÂæÑÈáçËÆ°ÁÆóÊ†áÂøó
+            auto_ctrl_.now_targetIndex = 0; //ÂΩìÂâçÁõÆÊ†áKFSÁ¥¢ÂºïÂàùÂßãÂåñ
             auto_ctrl_.flag.back_time = 0.0f;
             last_arm_status_ = ARM_AUTO_CONTROL;
     }
     
     if(auto_ctrl_.targetKFS[0] == 0)
-        return; //√ª”–ƒø±ÍKFS£¨÷±Ω”∑µªÿ 
+        return; //Ê≤°ÊúâÁõÆÊ†áKFSÔºåÁõ¥Êé•ËøîÂõû
 
-    //––Ω¯º‰ ∞»°
+    //ÊâßË°åËá™Âä®ÊéßÂà∂
     switch(auto_ctrl_.kfs_num)
     {
         case ONLY_ONE:
@@ -536,7 +537,7 @@ void ArmSetup::autoControl()
             break;
         }
         
-        case TWO: //◊ˆ
+        case TWO: //Èçã?
         {
             auto_stillnessTwo();
             break;
@@ -546,28 +547,26 @@ void ArmSetup::autoControl()
 }
 
 /*
-    –¬∞Êª˙–µ±€µƒ¡˜≥Ã  ∫Õ¿œ∞Ê¡˜≥Ã”–≤ª…Ÿ≤ªÕ¨£¨–Ë“™÷ÿ–¥
-    (1)»Ù «∂•Œ¸£∫ 
-        ÷¥––state_to_waitStillnessÃßµΩ◊Ó∏ﬂ£¨≤¢Ω´pitch…Ë÷√Œ™90∂»
-        Ω”◊≈÷¥––state_alignStillness∂‘∆Î Ω”Ω¸÷Æ∫Û÷¥––state_extStillness…Ï≥§µΩƒø±ÍKFSŒª÷√
-        »ª∫Û÷¥––state_lowerStillnessΩµµÕµΩƒø±ÍKFSŒª÷√£¨≤¢¥Úø™Œ¸≈Ã°£(LowerΩ◊∂ŒΩµµΩ¡ŸΩÁ∏ﬂ∂»∫ÛÕ£œ¬£¨µ»¥˝canExtend∑≈––‘Ÿœ¬ΩµµΩƒø±ÍŒª÷√)
-        ÷Æ∫Û÷¥––state_launchStillnessÃß…˝µΩ∞≤»´∏ﬂ∂»£¨◊Ó∫Û÷¥––state_backStillness∑µªÿ≥ı ºŒª÷√°£
+    Êñ∞ÁâàÊú∫Ê¢∞ËáÇÁöÑÊµÅÁ®ã  ÂíåËÄÅÁâàÊµÅÁ®ãÊúâ‰∏çÂ∞ë‰∏çÂêåÔºåÈúÄË¶ÅÈáçÂÜô
+    (1)Ëã•ÊòØÈ°∂Âê∏Ôºö 
+        ÊâßË°åstate_to_waitStillnessÊä¨Âà∞ÊúÄÈ´òÔºåÂπ∂Â∞ÜpitchËÆæÁΩÆ‰∏∫90Â∫¶
+        Êé•ÁùÄÊâßË°åstate_alignStillnessÂØπÈΩê Êé•Ëøë‰πãÂêéÊâßË°åstate_extStillness‰º∏ÈïøÂà∞ÁõÆÊ†áKFS‰ΩçÁΩÆ
+        ÁÑ∂ÂêéÊâßË°åstate_lowerStillnessÈôç‰ΩéÂà∞ÁõÆÊ†áKFS‰ΩçÁΩÆÔºåÂπ∂ÊâìÂºÄÂê∏Áõò„ÄÇ(LowerÈò∂ÊÆµÈôçÂà∞‰∏¥ÁïåÈ´òÂ∫¶ÂêéÂÅú‰∏ãÔºåÁ≠âÂæÖcanExtendÊîæË°åÂÜç‰∏ãÈôçÂà∞ÁõÆÊ†á‰ΩçÁΩÆ)
+        ‰πãÂêéÊâßË°åstate_launchStillnessÊä¨ÂçáÂà∞ÂÆâÂÖ®È´òÂ∫¶ÔºåÊúÄÂêéÊâßË°åstate_backStillnessËøîÂõûÂàùÂßã‰ΩçÁΩÆ„ÄÇ
 
 
-    (2)»Ù «≤‡Œ¸£∫
-        ÷¥––state_to_waitStillnessÃßµΩ◊Ó∏ﬂ£¨≤¢Ω´pitch…Ë÷√Œ™0∂»
-        Ω”◊≈÷¥––state_alignStillness∂‘∆Î Ω”Ω¸÷Æ∫Û÷¥––state_lowerStillnessΩµµÕµΩƒø±ÍKFSŒª÷√£¨≤¢¥Úø™Œ¸≈Ã°£
-        ÷Æ∫Û÷¥––state_extStillness…Ï≥§µΩ∞≤»´Œª÷√£¨◊Ó∫Û÷¥––state_backStillness∑µªÿ≥ı ºŒª÷√°£
+    (2)Ëã•ÊòØ‰æßÂê∏Ôºö
+        ÊâßË°åstate_to_waitStillnessÊä¨Âà∞ÊúÄÈ´òÔºåÂπ∂Â∞ÜpitchËÆæÁΩÆ‰∏∫0Â∫¶
+        Êé•ÁùÄÊâßË°åstate_alignStillnessÂØπÈΩê Êé•Ëøë‰πãÂêéÊâßË°åstate_lowerStillnessÈôç‰ΩéÂà∞ÁõÆÊ†áKFS‰ΩçÁΩÆÔºåÂπ∂ÊâìÂºÄÂê∏Áõò„ÄÇ
+        ‰πãÂêéÊâßË°åstate_extStillness‰º∏ÈïøÂà∞ÂÆâÂÖ®‰ΩçÁΩÆÔºåÊúÄÂêéÊâßË°åstate_backStillnessËøîÂõûÂàùÂßã‰ΩçÁΩÆ„ÄÇ
 */
 
-// ¡˜≥Ã∫Ø ˝ Õ£œ¬ ∞»°==============
-
-
+// ÊµÅÁ®ãÂáΩÊï∞ ÂÅú‰∏ãÊãæÂèñ==============
 #if ARM_VERSION == 1
 
 #else
-// VERSION 0 µƒ ¥ø≤‡Œ¸∞Ê±æ
-// ¡˜≥Ã∫Ø ˝ Õ£œ¬ ∞»°==============
+// VERSION 0 ÁöÑ Á∫Ø‰æßÂê∏ÁâàÊú¨
+// ÊµÅÁ®ãÂáΩÊï∞ ÂÅú‰∏ãÊãæÂèñ==============
 void ArmSetup::auto_stillnessOne()
 {
     switch(auto_ctrl_.now_state)
@@ -582,9 +581,9 @@ void ArmSetup::auto_stillnessOne()
                     auto_ctrl_.now_targetIndex = 0;
 
 
-                    auto_ctrl_.flag.isrecalcPath = true;//÷ÿ÷√¬∑æ∂÷ÿº∆À„±Í÷æ£¨»∑±£¬∑æ∂÷ª‘⁄¡˜≥Ãø™ º ±º∆À„“ª¥Œ
-                    auto_ctrl_.flag.canExtend = false; //÷ÿ÷√…Ï’π–Ìø…£¨µ»¥˝◊‘∂Øøÿ÷∆¡˜≥Ã∑≈––
-                    auto_ctrl_.flag.canChassisStart = false; //÷ÿ÷√µ◊≈Ã“∆∂Ø–Ìø…
+                    auto_ctrl_.flag.isrecalcPath = true;//ÈáçÊñ∞ËÆ°ÁÆóË∑ØÂæÑÊ†áÂøó
+                    auto_ctrl_.flag.canExtend = false; //ÈáçÁΩÆ‰º∏Â±ïËÆ∏ÂèØ
+                    auto_ctrl_.flag.canChassisStart = false; //ÈáçÁΩÆÂ∫ïÁõòÂêØÂä®ËÆ∏ÂèØ
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
                 }
@@ -594,7 +593,7 @@ void ArmSetup::auto_stillnessOne()
             else
             {
                 idle();
-                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //±£≥÷‘⁄ÕÍ≥…◊¥Ã¨
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //‰øùÊåÅÂú®ÂÆåÊàêÁä∂ÊÄÅ
             }
             break;
         }
@@ -653,8 +652,8 @@ void ArmSetup::auto_stillnessOne()
             {
                 auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE;
                 arm_ctrlStatus.auto_start = 0;
-                auto_ctrl_.start_to_autoctrl = false; //ÕÍ≥…“ª¥Œ¡˜≥Ã∫Û£¨÷ÿ÷√◊‘∂Øøÿ÷∆∆Ù∂ØÃıº˛
-                auto_ctrl_.flag.isrecalcPath = false; //÷ÿ÷√¬∑æ∂÷ÿº∆À„±Í÷æ
+                auto_ctrl_.start_to_autoctrl = false; //ÂÆåËΩ¶‰∏ÄÊ¨°ÊµÅÁ®ãÂêéÈáçÁΩÆÂêØÂä®Áä∂ÊÄÅ
+                auto_ctrl_.flag.isrecalcPath = false; //ÈáçÁΩÆË∑ØÂæÑËÆ°ÁÆóÊ†áÂøó
             }
             break;
         }
@@ -666,8 +665,8 @@ void ArmSetup::auto_stillnessOne()
 
 void ArmSetup::auto_stillnessTwo()
 {
-    //¥ÛÃÂ÷¥––¡˜≥Ã∫ÕstillnessOne“ª—˘,
-    //µ´ƒø«∞√ª”–◊ˆ¥Ê¥¢ª˙ππ£¨À˘“‘µ⁄“ª∏ˆKFSæÕ‘⁄backΩ◊∂Œ÷±Ω”∑≈œ¬°£
+    //Â§ß‰ΩìÊâßË°åÊµÅÁ®ãÂíåstillnessOne‰∏ÄÊ†∑,
+    //‰ΩÜÁõÆÂâçÊ≤°ÊúâÂÅöÂ≠òÂÇ®Êú∫ÊûÑÔºåÊâÄ‰ª•Á¨¨‰∏Ä‰∏™KFSÂ∞±Âú®backÈò∂ÊÆµÁõ¥Êé•Êîæ‰∏ã„ÄÇ
     switch(auto_ctrl_.now_state)
     {
         case ARM_AUTO_STILLNESS_E::STATE_DONE:
@@ -679,9 +678,9 @@ void ArmSetup::auto_stillnessTwo()
                     this->set_TargetKFS(auto_ctrl_.targetKFS[0], auto_ctrl_.targetKFS[1]);
                     auto_ctrl_.now_targetIndex = 0;
 
-                    auto_ctrl_.flag.isrecalcPath = true;//÷ÿ÷√¬∑æ∂÷ÿº∆À„±Í÷æ£¨»∑±£¬∑æ∂÷ª‘⁄¡˜≥Ãø™ º ±º∆À„“ª¥Œ
-                    auto_ctrl_.flag.canExtend = false; //÷ÿ÷√…Ï’π–Ìø…£¨µ»¥˝◊‘∂Øøÿ÷∆¡˜≥Ã∑≈––
-                    auto_ctrl_.flag.canChassisStart = false; //÷ÿ÷√µ◊≈Ã“∆∂Ø–Ìø…
+                    auto_ctrl_.flag.isrecalcPath = true;//ÈáçÊñ∞ËÆ°ÁÆóË∑ØÂæÑÊ†áÂøóÔºåÁ°Æ‰øùË∑ØÂæÑÂè™Âú®ÊµÅÁ®ãÂºÄÂßãÊó∂ËÆ°ÁÆó‰∏ÄÊ¨°
+                    auto_ctrl_.flag.canExtend = false; //ÈáçÁΩÆ‰º∏Â±ïËÆ∏ÂèØÔºåÁ≠âÂæÖËá™ÂÆö‰πâÊµÅÁ®ã‰º∏Â±ï
+                    auto_ctrl_.flag.canChassisStart = false; //ÈáçÁΩÆÂ∫ïÁõòÂêØÂä®ËÆ∏ÂèØ
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
                 }
@@ -691,7 +690,7 @@ void ArmSetup::auto_stillnessTwo()
             else
             {
                 idle();
-                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //±£≥÷‘⁄ÕÍ≥…◊¥Ã¨
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; //‰øùÊåÅÂú®ÂÆåÊàêÁä∂ÊÄÅ
             }
             break;
         }
@@ -778,11 +777,11 @@ void ArmSetup::auto_stillnessTwo()
                 if(state_backStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
                 {
                     arm_ctrlStatus.auto_start = 0;
-                    auto_ctrl_.start_to_autoctrl = false; //ÕÍ≥…“ª¥Œ¡˜≥Ã∫Û£¨÷ÿ÷√◊‘∂Øøÿ÷∆∆Ù∂ØÃıº˛
-                    auto_ctrl_.flag.isrecalcPath = false; //÷ÿ÷√¬∑æ∂÷ÿº∆À„±Í÷æ
-                    auto_ctrl_.now_targetIndex = 1; //∑¿÷π‘ΩΩÁ
-                    auto_ctrl_.flag.back_time = 0.0f; //÷ÿ÷√∑µªÿ ±º‰
-                    auto_ctrl_.flag.isbackdone = false; //÷ÿ÷√∑µªÿÕÍ≥…±Í÷æ
+                    auto_ctrl_.start_to_autoctrl = false; //ÂÆåËΩ¶‰∏ÄÊ¨°ÊµÅÁ®ãÂêéÈáçÁΩÆÂêØÂä®Áä∂ÊÄÅ
+                    auto_ctrl_.flag.isrecalcPath = false; //ÈáçÁΩÆË∑ØÂæÑËÆ°ÁÆóÊ†áÂøó
+                    auto_ctrl_.now_targetIndex = 1; //ÈáçÁΩÆÁõÆÊ†áÁ¥¢Âºï
+                    auto_ctrl_.flag.back_time = 0.0f; //ÈáçÁΩÆËøîÂõûÊó∂Èó¥
+                    auto_ctrl_.flag.isbackdone = false; //ÈáçÁΩÆËøîÂõûÂÆåÊàêÊ†áÂøó
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_OVER;
                 }
                 
@@ -792,7 +791,7 @@ void ArmSetup::auto_stillnessTwo()
 
         case ARM_AUTO_STILLNESS_E::STATE_OVER:
         {
-            //¡˜≥ÃÕÍ≥…£¨±£≥÷‘⁄ÕÍ≥…◊¥Ã¨
+            //ÂÆåÊàêÂêéÂæÖÊú∫
             idle();
             break;
         }
@@ -802,21 +801,21 @@ void ArmSetup::auto_stillnessTwo()
     }
 }
 
-//¡˜≥Ã∫Ø ˝ ––Ω¯º‰ ∞»°==============
+//ÊµÅÁ®ãÂáΩÊï∞ Ë°åËøõÈó¥ÊãæÂèñ==============
 bool ArmSetup::state_to_waitStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
     float target_height = 0.0f;
 
-    target_height = this->init_data_.max_launchHeight_; //÷±Ω”Ãß…˝µΩ◊Ó∏ﬂ£¨µ»¥˝––Ω¯º‰–˝◊™∂‘∆Î∫Û‘Ÿ∑≈µÕ
+    target_height = this->init_data_.max_launchHeight_; //Áõ¥Êé•‰º∏Â±ïÂà∞ÊúÄÈ´òÔºåÁ≠âÂæÖË°åËøõÈó¥ÊãæÂèñ
     if(isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_))
-        this->set_LaunchHeight(target_height); //Ãß…˝µΩƒø±Í∏ﬂ∂»
+        this->set_LaunchHeight(target_height); //‰º∏Â±ïÂà∞ÁõÆÊ†áÈ´òÂ∫¶
     else
     {
-        this->set_LaunchHeight(this->get_currentJointStatus().launchJoint_Height_); //±£≥÷µ±«∞∏ﬂ∂»≤ª±‰
+        this->set_LaunchHeight(this->get_currentJointStatus().launchJoint_Height_); //‰øùÊåÅÂΩìÂâçÈ´òÂ∫¶‰∏çÂèò
         float sanitized_angle = sanitizeRotateAngle(this->get_currentJointStatus().rotateJoint_angle_);
-        this->safe_rotate_to(sanitized_angle); //–˝◊™µΩ∞≤»´«¯”Ú
+        this->set_RotateAngle(sanitized_angle); //ÊóãËΩ¨Âà∞ÂÆâÂÖ®Âå∫Âüü
     }                                                                                                                                                               
 
     if(_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - target_height) < 0.01f)
@@ -829,10 +828,10 @@ bool ArmSetup::state_alignStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
-    this->set_PitchAngle(90.0f); //≥Ø«∞
+    this->set_PitchAngle(90.0f); //pitchÊä¨Âπ≥
 
-    //∏ƒŒ™‘∆Ã®…˝µΩ◊Ó∏ﬂ÷Æ∫ÛæÕ–˝◊™
-    safe_rotate_to(90.0f);
+    //ÂØπÂáÜkfs
+    this->set_RotateAngle(90.0f);
 
     if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 2.0f)
         return true;
@@ -842,11 +841,9 @@ bool ArmSetup::state_alignStillness(int targetKFS)
 
 bool ArmSetup::state_lowerStillness(int targetKFS)
 {
-    //≈–∂®µΩ¥Ôƒø±ÍµƒMF_road∫Û£¨∑≈µÕª˙–µ±€
-
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    float targetLowerHeight = 0.0f; //KFSÀ˘‘⁄∏ﬂ∂»µƒ‘∆Ã®œ¬∑≈∏ﬂ∂»£¨µ•Œª√◊
+    float targetLowerHeight = 0.0f; //ÁõÆÊ†ákfsÈ´òÂ∫¶
     if(MF_high[targetKFS - 1] == 0.2f)
         targetLowerHeight = 0.0f;
     else if(MF_high[targetKFS - 1] == 0.4f)
@@ -859,11 +856,11 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
     bool canLower = false;
     canLower = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
                                             auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
-                                            0.45f); //Ω¯»Îƒø±ÍKFSÀ˘‘⁄µƒMFroad÷––ƒ«“æ‡¿Î–°”⁄0.45mæÕ∑≈µÕ
+                                            0.45f); //Âà§Êñ≠ÊòØÂê¶ÂèØ‰ª•ÂºÄÂßã‰∏ãÈôç
     if(canLower)
     {
-        this->set_LaunchHeight(targetLowerHeight); //∑≈µÕµΩƒø±Í∏ﬂ∂»
-        this->setSuckerStatus(Sucker_Status_E::SUCK); //œ¬Ωµ ±¥Úø™Œ¸≈Ã
+        this->set_LaunchHeight(targetLowerHeight); //‰∏ãÈôçÂà∞ÁõÆÊ†áÈ´òÂ∫¶
+        this->setSuckerStatus(Sucker_Status_E::SUCK); //‰∏ãÈôçÊó∂ÊâìÂºÄÂê∏Áõò
     }
     else
         return false;
@@ -879,14 +876,14 @@ bool ArmSetup::state_extStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
-    this->set_StretchLength(this->init_data_.max_stretchLength_); //…Ï’πµΩ◊Ó¥Û≥§∂»
+    this->set_StretchLength(this->init_data_.max_stretchLength_); //‰º∏Â±ïÂà∞ÊúÄÂ§ßÈïøÂ∫¶
 
     if(_tool_Abs(this->get_currentJointStatus().stretchJoint_Length_ - 
-            this->init_data_.max_stretchLength_) < 0.01f)//…Ï’πÕÍ≥…≈–∂®
+            this->init_data_.max_stretchLength_) < 0.02f)//‰º∏Â±ïÂÆåÊàêÂà∞ÁõÆÊ†á
     {
         if(!auto_ctrl_.flag.isExtReach)
         {
-            auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //º«¬º ◊¥ŒµΩ¥Ôƒø±ÍŒª÷√µƒ ±º‰¥¡
+            auto_ctrl_.flag.reach_finishTimeStore = TimeStamp::getInstance().getSeconds(); //ËÆ∞ÂΩï‰º∏Â±ïÂÆåÊàêÁöÑÊó∂Èó¥
             auto_ctrl_.flag.isExtReach = true;
         }
     }
@@ -894,7 +891,7 @@ bool ArmSetup::state_extStillness(int targetKFS)
     const float now_s = TimeStamp::getInstance().getSeconds();
     if(auto_ctrl_.flag.isExtReach && (now_s - auto_ctrl_.flag.reach_finishTimeStore) >= 0.2f)
     {
-        this->set_StretchLength(0.0f); //Õ£¡Ù0.15s∫ÛÀıªÿ
+        this->set_StretchLength(0.0f); //Ë∂ÖËøá0.2ÁßíÂêéÊî∂ÂõûÔºåÂáÜÂ§áË°åËøõÈó¥ÊîæÁΩÆ
         return true;
     }
 
@@ -904,7 +901,7 @@ bool ArmSetup::state_extStillness(int targetKFS)
 bool ArmSetup::state_launchStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    float canMoveHeight = 0.0f;//‘∆Ã®…˝µΩ¥À∏ﬂ∂»º¥ø…“∆∂Ø
+    float canMoveHeight = 0.0f;//ÊòØÂê¶ÂèØ‰ª•ÁßªÂä®ÁöÑÈ´òÂ∫¶ÈòàÂÄºÔºåÁΩÆ
     if(MF_high[targetKFS - 1] == 0.2f)
         canMoveHeight = this->init_data_.safe_height_;
     else if(MF_high[targetKFS - 1] == 0.4f)
@@ -914,11 +911,11 @@ bool ArmSetup::state_launchStillness(int targetKFS)
     else
         canMoveHeight = this->init_data_.max_launchHeight_;
 
-    this->set_LaunchHeight(this->init_data_.max_launchHeight_); //…˝µΩ◊Ó∏ﬂµ„£¨◊º±∏“∆∂Ø
+    this->set_LaunchHeight(this->init_data_.max_launchHeight_); //‰º∏Â±ïÂà∞ÊúÄÂ§ßÈ´òÂ∫¶ÔºåÂáÜÂ§áÁßªÂä®
 
     if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.02f)
     {
-        auto_ctrl_.flag.canChassisStart = true; //ª˙–µ±€“—æ≠…˝µΩø…“‘“∆∂Øµƒ∏ﬂ∂»¡À
+        auto_ctrl_.flag.canChassisStart = true; //Êú∫Ê¢∞ËáÇÂ∑≤Áªè‰º∏Â±ïÂà∞ÂèØ‰ª•ÁßªÂä®ÁöÑÈ´òÂ∫¶
         return true;
     }
     else
@@ -930,9 +927,9 @@ bool ArmSetup::state_backStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    this->safe_rotate_to(180.0f); //–˝◊™µΩƒø±ÍŒª÷√
+    this->set_RotateAngle(0.0f); //ÊóãËΩ¨Âà∞ÁõÆÊ†á‰ΩçÁΩÆ
 
-    if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 180.0f) < 5.0f)
+    if(_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 5.0f)
     {
         return true;
     }
@@ -946,7 +943,7 @@ bool ArmSetup::state_backStillness(int targetKFS)
 /*=================================================================*/
 
 /**
- * @brief —∞Õ£÷π
+ * @brief ÂÅúÊ≠¢?
  */
 void ArmSetup::stop()
 {
@@ -959,36 +956,36 @@ void ArmSetup::stop()
 }
 
 /**
- * @brief —∞–£◊º
+ * @brief ÂØªÊ†°ÂáÜ
  * 
  * 
- * @brief …œµÁ–£◊ºµƒ÷ÿ–¬…Ëº∆
- *        1. …œµÁ∫Û£¨Ω¯»Î–£◊ºƒ£ Ω
- *        2. …Ï’πµÁª˙…Ëº∆≤ª±‰£¨“¿»ª «ÀıµΩ◊Ó∂Ã
- *        3. pitchµÁª˙∏ƒŒ™∑¥œÚÃßµΩ180∂»Ω¯–––£’˝
- *        4. ‘∆Ã®µƒª∞£¨∫Û–¯ª˙–µª·∏ƒ≥…µ÷◊°¬¡π‹œﬁŒª£¨œﬁŒª÷ÿ∂®ŒªŒ™180∂»°£
- *        5. Ãß…˝µÁª˙Œ™‘⁄◊ÓµÕ¥¶£¨œﬁŒª÷ÿ∂®ŒªŒ™0√◊
+ * @brief ‰∏äÁîµÊ†°ÂáÜÁöÑÈáçÊñ∞ËÆæËÆ°
+ *        1. ‰∏äÁîµÂêéÔºåËøõÂÖ•Ê†°ÂáÜÊ®°Âºè
+ *        2. ‰º∏Â±ïÁîµÊú∫ËÆæËÆ°‰∏çÂèòÔºå‰æùÁÑ∂ÊòØÁº©Âà∞ÊúÄÁü≠
+ *        3. pitchÁîµÊú∫Êîπ‰∏∫ÂèçÂêëÊä¨Âà∞180Â∫¶ËøõË°åÊ†°Ê≠£
+ *        4. ‰∫ëÂè∞ÁöÑËØùÔºåÂêéÁª≠Êú∫Ê¢∞‰ºöÊîπÊàêÊäµ‰ΩèÈìùÁÆ°Èôê‰ΩçÔºåÈôê‰ΩçÈáçÂÆö‰Ωç‰∏∫180Â∫¶„ÄÇ
+ *        5. Êä¨ÂçáÁîµÊú∫‰∏∫Âú®ÊúÄ‰ΩéÂ§ÑÔºåÈôê‰ΩçÈáçÂÆö‰Ωç‰∏∫0Á±≥
  */
 
 void ArmSetup::calibrateMotor()
 {
     this->set_controlMode(CURRENT_CONTROL_MODE); 
-    // …œµÁ–£◊ºM2006µÁª˙Œª÷√
-    // ∏¯”ËM2006“ª∏ˆ–°µÁ¡˜∂•◊°œﬁŒª£¨»ª∫Ûº∆ ±1s£¨Ω´µ±«∞Œª÷√÷ÿ∂®ŒªŒ™0∂»
+    // ‰∏äÁîµÊ†°ÂáÜM2006ÁîµÊú∫‰ΩçÁΩÆ
+    // Áªô‰∫àM2006‰∏Ä‰∏™Â∞èÁîµÊµÅÈ°∂‰ΩèÈôê‰ΩçÔºåÁÑ∂ÂêéËÆ°Êó∂1sÔºåÂ∞ÜÂΩìÂâç‰ΩçÁΩÆÈáçÂÆö‰Ωç‰∏∫0Â∫¶
     if(!arm_ctrlStatus.calibrate_start)
     {
         arm_ctrlStatus.calibrate_startTime = TimeStamp::getInstance().getSeconds();
         arm_ctrlStatus.calibrate_start = true;
     }
-    this->motor_stretch_->setTargetCurrent(700.0f); // ∏¯”Ë“ª∏ˆ–°µÁ¡˜∂•◊°œﬁŒª
-    this->motor_launch_->setTargetCurrent(700.0f); // ∏¯”Ë“ª∏ˆ–°µÁ¡˜∂•◊°œﬁŒª
+    this->motor_stretch_->setTargetCurrent(700.0f); // Áªô‰∫à‰º∏Â±ïÁîµÊú∫‰∏Ä‰∏™Â∞èÁîµÊµÅÈ°∂‰ΩèÈôê‰Ωç
+    this->motor_launch_->setTargetCurrent(700.0f); // Áªô‰∫àÂèëÂ∞ÑÁîµÊú∫‰∏Ä‰∏™Â∞èÁîµÊµÅÈ°∂‰ΩèÈôê‰Ωç
 
     //this->motor_rotate_->setTargetCurrent(1000.0f);
     if(this->now_time_s_ - arm_ctrlStatus.calibrate_startTime > 1.5f)
     {
         //relocate
         this->motor_stretch_->relocate_totalAngle(0.0f);
-        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(179.99f));
+        this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(0.001f));
         this->motor_launch_->relocate_totalAngle(0.0f);
 
         if(this->is_pitchEnable_)
@@ -1000,21 +997,18 @@ void ArmSetup::calibrateMotor()
         this->motor_rotate_->setTargetCurrent(0.0f);
         this->motor_launch_->setTargetCurrent(0.0f);
 
-        this->rotate_accum_initial_motor_total_ = this->motor_rotate_->getTotalAngle();
 
         arm_ctrlStatus.is_calibrating = true;
     }
 }
 
 /**
- * @brief —∞ø’œ–
+ * @brief ÂØªÂæÖÊú∫
  */
 void ArmSetup::idle()
 {
-    // ø’œ–øÿ÷∆∫Ø ˝£¨»Ù…œ“ª ±øÃ∑«¥Àƒ£ Ω£¨‘Úº«“‰…œ“ª ±øÃŒª÷√£¨≤¢Œ¨≥÷≤ª±‰
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    this->setRotateStrategy(ROTATE_PATH_SHORTEST);
 
     if(last_arm_status_ != ARM_IDLE)
     {
@@ -1029,11 +1023,11 @@ void ArmSetup::idle()
     this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
     this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
 
-    // this->setSuckerStatus(Sucker_Status_E::STOP); // ±£≥÷…œ“ªøÃ◊¥Ã¨£¨≤ª«ø÷∆πÿ±’
+    // this->setSuckerStatus(Sucker_Status_E::STOP); // 
 }
 
 /**
- * @brief —∞µ˜ ‘
+ * @brief ÁÄµÊòèÁöüÁíá?
  */
 void ArmSetup::debug()
 {
@@ -1049,16 +1043,33 @@ Arm_InitData_S arm_initData = {
 
     .stretch_Ratio_ = 0.11421f,
     .launch_Ratio_ = 0.07221f,
-    //    .rotate_gearRatio_ = 144.878f,  //æ…µƒ
+    //    .rotate_gearRatio_ = 144.878f,  //
     // .rotate_gearRatio_ = 145.755789f,
     .rotate_gearRatio_ = 115.179f,
     .pitch_gearRatio_ = 360.0f,
 
     .min_rotate_angle_ = 0.0f,
     .max_rotate_angle_ = 359.99999f,
+
+    .rotate_end = 265.0f,
+    .rotate_start = 135.0f,
+
     .safe_height_ = 0.08f,
     .store_height_ = 0.12f,
+    .lock_height_ = 0.04f,
+    .store_ext_length_ = 0.08f,
+
     .Sucker_GPIO_Port = SUCKER_6_GPIO_Port,
     .Sucker_GPIO_Pin =  SUCKER_6_Pin,
+
+    .Store_GPIO_Port = SUCKER_5_GPIO_Port,
+    .Store_GPIO_Pin =  SUCKER_5_Pin,
+
+    .Sucker_Soleniod_GPIO_Port = SUCKER_4_GPIO_Port,
+    .Sucker_Soleniod_GPIO_Pin =  SUCKER_4_Pin,
+
+    .Store_Soleniod_GPIO_Port = SUCKER_3_GPIO_Port,
+    .Store_Soleniod_GPIO_Pin =  SUCKER_3_Pin,
+
     .max_pitchRPM_ = 150.0f,
 };

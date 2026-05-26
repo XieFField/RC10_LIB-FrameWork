@@ -1,14 +1,14 @@
 /**
  * @file BSP_TimeStamp.h
  * @author XieFField
- * @brief Ê±¼ä·şÎñ£¬¿ÉÒÔÌá¹©Î¢Ãë¼¶Ê±¼ä´Á
- *        Ö÷Òª»¹ÊÇ²Î¿¼Ñî¸ç´úÂë£¬²»¹ıC/C++ñîºÏ¶È½Ï¸ß£¬È«¾Ö±äÁ¿¹ı¶à
- *        ÔÚ´Ë×ö³ö¸ÄÉÆ
+ * @brief æ—¶é—´æœåŠ¡ï¼Œå¯ä»¥æä¾›å¾®ç§’çº§æ—¶é—´æˆ³
+ *        ä¸»è¦è¿˜æ˜¯å‚è€ƒæ¨å“¥ä»£ç ï¼Œä¸è¿‡C/C++è€¦åˆåº¦è¾ƒé«˜ï¼Œå…¨å±€å˜é‡è¿‡å¤š
+ *        åœ¨æ­¤åšå‡ºæ”¹å–„
  * @version 1.0
  * 
  * @version 2.0
- *       ĞŞÕıÁË64Î»Òç³öµ¼ÖÂµÄËæ»úÎŞÇî´óbug
- *       ÓÅ»¯ÁËÁÙ½çÇøµÄ´¦Àí£¬¸ÄÎªÔ­×Ó²Ù×÷
+ *       ä¿®æ­£äº†64ä½æº¢å‡ºå¯¼è‡´çš„éšæœºæ— ç©·å¤§bug
+ *       ä¼˜åŒ–äº†ä¸´ç•ŒåŒºçš„å¤„ç†ï¼Œæ”¹ä¸ºåŸå­æ“ä½œ
  */
 
 /*
@@ -40,32 +40,32 @@ extern "C" {
 
 class TimeStamp{
 public:
-    static TimeStamp& getInstance(); //»ñÈ¡Î¨Ò»ÊµÀı
+    static TimeStamp& getInstance(); //è·å–å”¯ä¸€å®ä¾‹
 
     /**
-     * @brief ³õÊ¼»¯Ê±¼ä´Á·şÎñ
-     * @param htim Ö¸ÏòÒÑÅäÖÃÎª»ù±¾¼ÆÊıÆ÷Ä£Ê½µÄ¶¨Ê± 1us µÄ¾ä±ú
+     * @brief åˆå§‹åŒ–æ—¶é—´æˆ³æœåŠ¡
+     * @param htim æŒ‡å‘å·²é…ç½®ä¸ºåŸºæœ¬è®¡æ•°å™¨æ¨¡å¼çš„å®šæ—¶ 1us çš„å¥æŸ„
      */
     void init(TIM_HandleTypeDef* htim);
 
     /**
-     * @brief »ñÈ¡µ±Ç°Ê±¼ä´Á(×ÔÏµÍ³Æô¶¯ÒÔÀ´)£¬µ¥Î»Î¢Ãë
+     * @brief è·å–å½“å‰æ—¶é—´æˆ³(è‡ªç³»ç»Ÿå¯åŠ¨ä»¥æ¥)ï¼Œå•ä½å¾®ç§’
      */
     uint64_t getMicroseconds() const;
 
     /**
-     * @brief »ñÈ¡µ±Ç°Ê±¼ä´Á(×ÔÏµÍ³Æô¶¯ÒÔÀ´)£¬µ¥Î»ºÁÃë
+     * @brief è·å–å½“å‰æ—¶é—´æˆ³(è‡ªç³»ç»Ÿå¯åŠ¨ä»¥æ¥)ï¼Œå•ä½æ¯«ç§’
      */
     uint64_t getMilliseconds() const;
 
     /**
-     * @brief »ñÈ¡µ±Ç°Ê±¼ä´Á(×ÔÏµÍ³Æô¶¯ÒÔÀ´)£¬µ¥Î»Ãë
+     * @brief è·å–å½“å‰æ—¶é—´æˆ³(è‡ªç³»ç»Ÿå¯åŠ¨ä»¥æ¥)ï¼Œå•ä½ç§’
      */
     float getSeconds() const;
 
-    static void overflowCallback(); // ¶¨Ê±Æ÷Òç³ö»Øµ÷º¯Êı
+    static void overflowCallback(); // å®šæ—¶å™¨æº¢å‡ºå›è°ƒå‡½æ•°
 private:
-    //±£³Öµ¥Àı
+    //ä¿æŒå•ä¾‹
     TimeStamp();
 
     ~TimeStamp() = default;
@@ -74,9 +74,9 @@ private:
 
     TimeStamp& operator = (const TimeStamp&) = delete;
 
-    static TIM_HandleTypeDef* s_htim_; // ¶¨Ê±Æ÷¾ä±ú
+    static TIM_HandleTypeDef* s_htim_; // å®šæ—¶å™¨å¥æŸ„
 
-    static volatile uint64_t s_overflow_count_; // Òç³ö¼ÆÊı
+    static volatile uint64_t s_overflow_count_; // æº¢å‡ºè®¡æ•°
 };
 
 #endif // __cplusplus

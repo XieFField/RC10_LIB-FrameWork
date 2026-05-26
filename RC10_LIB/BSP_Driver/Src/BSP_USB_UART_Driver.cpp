@@ -50,7 +50,6 @@ UART_::UART_(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart
 	else
 	{
 		InstanceManager::RegisterInstance(this,NULL);
-	// ????????
 	}
 }
 
@@ -157,7 +156,7 @@ void USB_CDC_::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 			case WAIT_CHECK:
 				if (buf[i] == xor_check(receive_data, receive_len)) receive_flag = WAIT_TAIL;
 				else receive_flag = WAIT_HEAD_1;
-			  i++;
+			  	i++;
 				break;
 				
 			case WAIT_TAIL:// 0xee
@@ -168,13 +167,17 @@ void USB_CDC_::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 				{
 					if(receive_id==1)
 					{
-					uint8_t m=0;
-					for(int i=0;i<=receive_len-4;i=i+4)
-					{
-						Data_.data1[m]=*(float*)(&receive_data[i]);
-						m++;
+						uint8_t m=0;
+						for(int i=0;i<=receive_len-4;i=i+4)
+						{
+							Data_.data1[m]=*(float*)(&receive_data[i]);
+							m++;
+						}
 					}
-				}
+					else if(receive_id == 5)
+					{
+						relocate_suceed_cnt++;
+					}
 				}
 //				uint8_t a=0x11;
 //			  CDC_Send_(0x04,&a,0x01);
@@ -192,22 +195,22 @@ void USB_CDC_::Callback_DCD_Fuc(uint8_t *buf, uint16_t len)
 			}
 			/*-------------------------------------????--------------------*/
 		}
-}
-}
-
-
-	void USB_CDC_::CDC_Send_(uint8_t id_, uint8_t *data, uint16_t len)
-	{
-			send_buf[0] = head_1;
-			send_buf[1] = head_2;
-			send_buf[2] = id_;
-			send_buf[3] = len;
-			memcpy(&send_buf[4], data, len);
-			send_buf[len + 4] = xor_check(data, len);
-			send_buf[len + 5] = tail;
-		  uint8_t send_ret = USBD_BUSY;
-		  send_ret = CDC_Transmit_HS(send_buf, sizeof(send_buf));
 	}
+}
+
+
+void USB_CDC_::CDC_Send_(uint8_t id_, uint8_t *data, uint16_t len)
+{
+		send_buf[0] = head_1;
+		send_buf[1] = head_2;
+		send_buf[2] = id_;
+		send_buf[3] = len;
+		memcpy(&send_buf[4], data, len);
+		send_buf[len + 4] = xor_check(data, len);
+		send_buf[len + 5] = tail;
+		uint8_t send_ret = USBD_BUSY;
+		send_ret = CDC_Transmit_HS(send_buf, sizeof(send_buf));
+}
 uint8_t USB_CDC_::xor_check(const uint8_t *data, uint32_t length)
 {
 	uint8_t xor_val = 0;

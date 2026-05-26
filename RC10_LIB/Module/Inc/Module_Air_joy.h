@@ -1,7 +1,7 @@
 /**
  * @file   Module_Air_joy.h
  * @author Zhan HongLi
- * @brief  Ò£¿ØÆ÷ PPM ½âÂë
+ * @brief  é¥æ§å™¨ PPM è§£ç 
  * @version 1.0
  */
 
@@ -22,36 +22,36 @@
 class AirJoy
 {
 public:
-    // µ¥Àı·ÃÎÊ£¨»Øµ÷ÀïÖ±½Óµ÷ÓÃ AirJoy::instance().data_update(...)£©
+    // å•ä¾‹è®¿é—®ï¼ˆå›è°ƒé‡Œç›´æ¥è°ƒç”¨ AirJoy::instance().data_update(...)ï¼‰
     static AirJoy& getinstance();
 
     void data_update(uint16_t GPIO_Pin, uint16_t GPIO_EXTI_USED_PIN);
 
-    // Í¨µÀÊı¾İ
+    // é€šé“æ•°æ®
     volatile uint16_t SWA=0,SWB=0,SWC=0,SWD=0;
     volatile uint16_t LEFT_X=0,LEFT_Y=0,RIGHT_X=0,RIGHT_Y=0;
     
 private:
-    // ¹¹ÔìË½ÓĞ»¯£¬½ûÖ¹¿½±´
+    // æ„é€ ç§æœ‰åŒ–ï¼Œç¦æ­¢æ‹·è´
     AirJoy() = default;
     AirJoy(const AirJoy&) = delete;
     AirJoy& operator=(const AirJoy&) = delete;
 
-    // ³£Á¿¶¨Òå
-    static constexpr uint16_t FRAME_END_MIN = 2100;    // Ö¡½áÊø×îĞ¡Ê±³¤(us)
-    static constexpr uint16_t PWM_MIN       = 950;     // PWM×îĞ¡Âö¿í(us)
-    static constexpr uint16_t PWM_MAX       = 2050;    // PWM×î´óÂö¿í(us)
-    static constexpr uint8_t  MAX_CHANNELS  = 8;       // ×î´óÍ¨µÀÊı
-    static constexpr uint16_t FILTER_THRESHOLD_PERCENT = 15; // ÂË²¨ãĞÖµ°Ù·Ö±È£¨Î´Ê¹ÓÃÊ¾Àı£©
+    // å¸¸é‡å®šä¹‰
+    static constexpr uint16_t FRAME_END_MIN = 2100;    // å¸§ç»“æŸæœ€å°æ—¶é•¿(us)
+    static constexpr uint16_t PWM_MIN       = 950;     // PWMæœ€å°è„‰å®½(us)
+    static constexpr uint16_t PWM_MAX       = 2050;    // PWMæœ€å¤§è„‰å®½(us)
+    static constexpr uint8_t  MAX_CHANNELS  = 8;       // æœ€å¤§é€šé“æ•°
+    static constexpr uint16_t FILTER_THRESHOLD_PERCENT = 15; // æ»¤æ³¢é˜ˆå€¼ç™¾åˆ†æ¯”ï¼ˆæœªä½¿ç”¨ç¤ºä¾‹ï¼‰
     
-    // Ê±Ğò/½âÎö×´Ì¬
+    // æ—¶åº/è§£æçŠ¶æ€
     volatile uint32_t last_ppm_time=0, now_ppm_time=0;
-    uint8_t  ppm_ready=0,              // Ò»°ã³õÊ¼»¯Ê±£¬PPM½âÂë×´Ì¬Î´¾ÍĞ÷
+    uint8_t  ppm_ready=0,              // ä¸€èˆ¬åˆå§‹åŒ–æ—¶ï¼ŒPPMè§£ç çŠ¶æ€æœªå°±ç»ª
              ppm_sample_cnt=0;
     uint8_t  ppm_update_flag=0;
-    volatile uint16_t ppm_time_delta=0;   // ÉÏÒ»´ÎÓë±¾´ÎÑØ¼äµÄÊ±¼ä²î(us)
-    uint16_t PPM_buf[10]={0};             // ÁÙÊ±»º³å
-    static uint16_t last_valid[8];        // ÉÏ´ÎÓĞĞ§Í¨µÀÖµ
+    volatile uint16_t ppm_time_delta=0;   // ä¸Šä¸€æ¬¡ä¸æœ¬æ¬¡æ²¿é—´çš„æ—¶é—´å·®(us)
+    uint16_t PPM_buf[10]={0};             // ä¸´æ—¶ç¼“å†²
+    static uint16_t last_valid[8];        // ä¸Šæ¬¡æœ‰æ•ˆé€šé“å€¼
 };
 #endif // __cplusplus
 

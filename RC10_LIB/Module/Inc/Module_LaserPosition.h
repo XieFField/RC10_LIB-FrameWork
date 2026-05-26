@@ -1,8 +1,8 @@
 /**
  * @file Module_LaserPosition.
  * @author Zhuang Ji cao  Zhang Jia jia
- * @brief USB UARTÇı¶¯ÎÄ¼ş
- * @attention ´ËÎÄ¼şÓÃÓÚUSB UART
+ * @brief USB UARTé©±åŠ¨æ–‡ä»¶
+ * @attention æ­¤æ–‡ä»¶ç”¨äºUSB UART
  * @date 2025-12-1
  */
 
@@ -26,15 +26,15 @@ extern "C"
 #include "stm32h7xx_hal.h"
 #define RX_BUFFER_SIZE_Laser 15 
 
-#define LaserModule1Address				0x00							// ¼¤¹â²â¾àÄ£¿é1µØÖ·
-#define LaserModule1ReadAddress			(LaserModule1Address | 0x80)	// ¼¤¹â²â¾àÄ£¿é1¶ÁµØÖ·
-#define LaserModule1WriteAddress		LaserModule1Address				// ¼¤¹â²â¾àÄ£¿é1Ğ´µØÖ·
+#define LaserModule1Address				0x00							// æ¿€å…‰æµ‹è·æ¨¡å—1åœ°å€
+#define LaserModule1ReadAddress			(LaserModule1Address | 0x80)	// æ¿€å…‰æµ‹è·æ¨¡å—1è¯»åœ°å€
+#define LaserModule1WriteAddress		LaserModule1Address				// æ¿€å…‰æµ‹è·æ¨¡å—1å†™åœ°å€
 
 typedef struct LaserModuleConfigurationData
 {
-	UART_HandleTypeDef* UartHandle;			// ´®¿Ú¾ä±ú
-//	QueueHandle_t ReceiveQueue;		// ´®¿ÚDMA½ÓÊÕ¶ÓÁĞ¾ä±ú
-	uint8_t Address;			// ¼¤¹âÄ£¿éÔ­Ê¼µØÖ·
+	UART_HandleTypeDef* UartHandle;			// ä¸²å£å¥æŸ„
+//	QueueHandle_t ReceiveQueue;		// ä¸²å£DMAæ¥æ”¶é˜Ÿåˆ—å¥æŸ„
+	uint8_t Address;			// æ¿€å…‰æ¨¡å—åŸå§‹åœ°å€
 	uint8_t ReadAddress;
 	uint8_t WriteAddress;
 }LaserModuleConfigurationDataTypedef;
@@ -55,8 +55,8 @@ typedef struct LaserModuleData
 
 typedef struct WorldXYCoordinates
 {
-	float X;		// µ¥Î»£ºm
-	float Y;		// µ¥Î»£ºm
+	float X;		// å•ä½ï¼šm
+	float Y;		// å•ä½ï¼šm
 }WorldXYCoordinatesTypedef;
 #ifdef __cplusplus
 }
@@ -71,9 +71,9 @@ public:
 	float Data;
   LaserPosition(uint16_t rx_buffer_size,uint8_t *rx_buffer,UART_HandleTypeDef *uart_handle);
   void Callback_Fuc(uint8_t *buf, uint16_t len) override;
-  uint8_t LaserPositioningState = 0;	// ¼¤¹â¶¨Î»×´Ì¬±äÁ¿
-  WorldXYCoordinatesTypedef WorldXYCoordinates;	// ÊÀ½ç×ø±êÏµXY×ø±ê±äÁ¿£¬ÔÚ³¡µØÄÚÃæÏòÕı±±£¬³¡µØÓÒÉÏ½Ç¶¥µãÎª×ø±êÔ­µã£¬ÕıÎ÷ÎªXÖá£¬ÕıÄÏÎªYÖá
-//  float Yaw = (3.0f / 2.0f) * PI;					// Æ«º½½Ç±äÁ¿£¬µ¥Î»»¡¶È£¬0±íÊ¾ÊÀ½ç×ø±êÏµÕıXÖá·½Ïò£¬ÄæÊ±ÕëÎªÕı·½Ïò£¬·¶Î§ÊÇ-PIµ½PIÖ®¼ä
+  uint8_t LaserPositioningState = 0;	// æ¿€å…‰å®šä½çŠ¶æ€å˜é‡
+  WorldXYCoordinatesTypedef WorldXYCoordinates;	// ä¸–ç•Œåæ ‡ç³»XYåæ ‡å˜é‡ï¼Œåœ¨åœºåœ°å†…é¢å‘æ­£åŒ—ï¼Œåœºåœ°å³ä¸Šè§’é¡¶ç‚¹ä¸ºåæ ‡åŸç‚¹ï¼Œæ­£è¥¿ä¸ºXè½´ï¼Œæ­£å—ä¸ºYè½´
+//  float Yaw = (3.0f / 2.0f) * PI;					// åèˆªè§’å˜é‡ï¼Œå•ä½å¼§åº¦ï¼Œ0è¡¨ç¤ºä¸–ç•Œåæ ‡ç³»æ­£Xè½´æ–¹å‘ï¼Œé€†æ—¶é’ˆä¸ºæ­£æ–¹å‘ï¼ŒèŒƒå›´æ˜¯-PIåˆ°PIä¹‹é—´
   uint8_t LaserModuleGroup_Init(LaserModuleDataTypedef* LaserModuleData);
   uint8_t LaserModule_StateContinuousAutomaticMeasurement(LaserModuleDataTypedef* LaserModuleData);
   uint8_t LaserModule_StopContinuousAutomaticMeasurement(LaserModuleDataTypedef* LaserModuleData);
@@ -87,7 +87,7 @@ protected:
 private:
    UART_HandleTypeDef *uart_handle;
    bool init_flag = false;
-// ÊµÀı³ÉÔ±º¯Êı
+// å®ä¾‹æˆå‘˜å‡½æ•°
 	void ResetCallbackStatus(); 
   volatile uint8_t uart_callback_executed;
 	volatile uint8_t uart_callback_result;
@@ -98,11 +98,11 @@ class Laser_InstanceManager:public RtosTask
 public:
 	  Laser_InstanceManager();
     void InstanceManager_Init();
-    static void RegisterInstance(LaserPosition* Laser_instance);//×¢²á
+    static void RegisterInstance(LaserPosition* Laser_instance);//æ³¨å†Œ
     TickType_t LastTimestamp = xTaskGetTickCount();
     //static LaserPosition** get_instance(){return laser_instances;}
 protected:
-	  static LaserPosition* laser_instances[4]; // Ö§³Ö×î¶à4¸öÊµÀı
+	  static LaserPosition* laser_instances[4]; // æ”¯æŒæœ€å¤š4ä¸ªå®ä¾‹
     void loop() override;
     friend class Locate_Setup;
 private:

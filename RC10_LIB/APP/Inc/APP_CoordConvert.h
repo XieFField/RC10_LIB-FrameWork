@@ -1,146 +1,146 @@
 /**
  * @file APP_CoordConvert.cpp
  * @author Zhan Hongli (Original), XieFField (Refactored)
- * @brief Ê¹ÓÃ CMSIS-DSP (arm_math.h) ÓÅ»¯µÄÆë´Î×ø±ê±ä»»¿â¡£
+ * @brief ä½¿ç”¨ CMSIS-DSP (arm_math.h) ä¼˜åŒ–çš„é½æ¬¡åæ ‡å˜æ¢åº“ã€‚
  * @version 2.0
  * @brief
- * ¸Ã¿âÌá¹©ÁË2DºÍ3DµÄÆë´Î±ä»»¹¦ÄÜ£¬ÀıÈç½«¼¤¹âÀ×´ïµÄ×ø±êÏµ×ª»»µ½»úÆ÷ÈËµ×ÅÌµÄÖĞĞÄ×ø±êÏµ¡£
- * ËùÓĞ¾ØÕóÔËËã¾ùÊ¹ÓÃARM¹Ù·½µÄCMSIS-DSP¿â½øĞĞ¼ÓËÙ£¬ÒÔ»ñµÃ×î¼ÑĞÔÄÜ¡£
+ * è¯¥åº“æä¾›äº†2Då’Œ3Dçš„é½æ¬¡å˜æ¢åŠŸèƒ½ï¼Œä¾‹å¦‚å°†æ¿€å…‰é›·è¾¾çš„åæ ‡ç³»è½¬æ¢åˆ°æœºå™¨äººåº•ç›˜çš„ä¸­å¿ƒåæ ‡ç³»ã€‚
+ * æ‰€æœ‰çŸ©é˜µè¿ç®—å‡ä½¿ç”¨ARMå®˜æ–¹çš„CMSIS-DSPåº“è¿›è¡ŒåŠ é€Ÿï¼Œä»¥è·å¾—æœ€ä½³æ€§èƒ½ã€‚
  * 
- * @note ËùÓĞ½Ç¶È²ÎÊıµÄµ¥Î»¾ùÎª **»¡¶È (radians)**¡£
+ * @note æ‰€æœ‰è§’åº¦å‚æ•°çš„å•ä½å‡ä¸º **å¼§åº¦ (radians)**ã€‚
  */
 #ifndef __APP_COORDCONVERT_H
 #define __APP_COORDCONVERT_H
 
 #include "arm_math.h"
-#include "APP_tool.h" // °üº¬ Point2D ºÍ Point3D ½á¹¹Ìå¶¨Òå
+#include "APP_tool.h" // åŒ…å« Point2D å’Œ Point3D ç»“æ„ä½“å®šä¹‰
 
 
 
 /**
- * @brief Ê¹ÓÃ CMSIS-DSP µÄ2DÆë´Î±ä»»Àà¡£
+ * @brief ä½¿ç”¨ CMSIS-DSP çš„2Dé½æ¬¡å˜æ¢ç±»ã€‚
  * @details
- * ÓÃÓÚ´¦Àí¶şÎ¬Æ½ÃæÉÏµÄÆ½ÒÆºÍĞı×ª¡£
- * ÀıÈç£º½«Ò»¸ö°²×°ÔÚ»úÆ÷ÈËÉÏ¡¢ÓĞÒ»¶¨Æ«ÒÆºÍĞı×ª½Ç¶ÈµÄ´«¸ĞÆ÷µÄ×ø±ê£¬×ª»»µ½»úÆ÷ÈËµÄÖĞĞÄ×ø±êÏµ¡£
+ * ç”¨äºå¤„ç†äºŒç»´å¹³é¢ä¸Šçš„å¹³ç§»å’Œæ—‹è½¬ã€‚
+ * ä¾‹å¦‚ï¼šå°†ä¸€ä¸ªå®‰è£…åœ¨æœºå™¨äººä¸Šã€æœ‰ä¸€å®šåç§»å’Œæ—‹è½¬è§’åº¦çš„ä¼ æ„Ÿå™¨çš„åæ ‡ï¼Œè½¬æ¢åˆ°æœºå™¨äººçš„ä¸­å¿ƒåæ ‡ç³»ã€‚
  */
 class HomogeneousTransform2D {
 public:
     /**
-     * @brief Ä¬ÈÏ¹¹Ôìº¯Êı£¬´´½¨Ò»¸öµ¥Î»±ä»»£¨ÎŞÆ½ÒÆ¡¢ÎŞĞı×ª£©¡£
+     * @brief é»˜è®¤æ„é€ å‡½æ•°ï¼Œåˆ›å»ºä¸€ä¸ªå•ä½å˜æ¢ï¼ˆæ— å¹³ç§»ã€æ— æ—‹è½¬ï¼‰ã€‚
      */
     HomogeneousTransform2D();
 
     /**
-     * @brief ¹¹Ôìº¯Êı£¬¸ù¾İ¸ø¶¨µÄÎ»×Ë´´½¨Ò»¸ö±ä»»¡£
-     * @param pose °üº¬Æ½ÒÆºÍĞı×ªĞÅÏ¢µÄ2Dµã¡£
+     * @brief æ„é€ å‡½æ•°ï¼Œæ ¹æ®ç»™å®šçš„ä½å§¿åˆ›å»ºä¸€ä¸ªå˜æ¢ã€‚
+     * @param pose åŒ…å«å¹³ç§»å’Œæ—‹è½¬ä¿¡æ¯çš„2Dç‚¹ã€‚
      */
     HomogeneousTransform2D(const Point2D& pose);
 
     /**
-     * @brief ÉèÖÃÒ»¸öÈ«ĞÂµÄ±ä»»£¬¸²¸Çµ±Ç°Öµ¡£
-     * @param pose °üº¬Æ½ÒÆºÍĞı×ªĞÅÏ¢µÄ2Dµã¡£
+     * @brief è®¾ç½®ä¸€ä¸ªå…¨æ–°çš„å˜æ¢ï¼Œè¦†ç›–å½“å‰å€¼ã€‚
+     * @param pose åŒ…å«å¹³ç§»å’Œæ—‹è½¬ä¿¡æ¯çš„2Dç‚¹ã€‚
      */
     void setTransform(const Point2D& pose);
 
     /**
-     * @brief ½öÉèÖÃ±ä»»µÄÆ½ÒÆ²¿·Ö£¬Ğı×ª²¿·Ö±£³Ö²»±ä¡£
-     * @param translation °üº¬x, yÆ½ÒÆÁ¿µÄ2Dµã£¨½«ºöÂÔÆätheta³ÉÔ±£©¡£
+     * @brief ä»…è®¾ç½®å˜æ¢çš„å¹³ç§»éƒ¨åˆ†ï¼Œæ—‹è½¬éƒ¨åˆ†ä¿æŒä¸å˜ã€‚
+     * @param translation åŒ…å«x, yå¹³ç§»é‡çš„2Dç‚¹ï¼ˆå°†å¿½ç•¥å…¶thetaæˆå‘˜ï¼‰ã€‚
      */
     void setTranslation(const Point2D& translation);
 
     /**
-     * @brief ½öÉèÖÃ±ä»»µÄĞı×ª²¿·Ö£¬Æ½ÒÆ²¿·Ö±£³Ö²»±ä¡£
-     * @param theta_rad ÈÆZÖáµÄĞı×ª½Ç¶È£¨µ¥Î»£º»¡¶È£©¡£
+     * @brief ä»…è®¾ç½®å˜æ¢çš„æ—‹è½¬éƒ¨åˆ†ï¼Œå¹³ç§»éƒ¨åˆ†ä¿æŒä¸å˜ã€‚
+     * @param theta_rad ç»•Zè½´çš„æ—‹è½¬è§’åº¦ï¼ˆå•ä½ï¼šå¼§åº¦ï¼‰ã€‚
      */
     void setRotation(float theta_rad);
 
     /**
-     * @brief ½«´Ë±ä»»Ó¦ÓÃÓÚÒ»¸ö2Dµã¡£
-     * @param point Òª±ä»»µÄÔ­Ê¼µã¡£
-     * @return Point2D ±ä»»ºóµÄĞÂµã¡£
+     * @brief å°†æ­¤å˜æ¢åº”ç”¨äºä¸€ä¸ª2Dç‚¹ã€‚
+     * @param point è¦å˜æ¢çš„åŸå§‹ç‚¹ã€‚
+     * @return Point2D å˜æ¢åçš„æ–°ç‚¹ã€‚
      */
     Point2D apply(const Point2D& point) const;
 
     /**
-     * @brief ¾ØÕó³Ë·¨£º½«µ±Ç°±ä»»ÓëÁíÒ»¸ö±ä»»Ïà³Ë¡£
+     * @brief çŸ©é˜µä¹˜æ³•ï¼šå°†å½“å‰å˜æ¢ä¸å¦ä¸€ä¸ªå˜æ¢ç›¸ä¹˜ã€‚
      * @details
-     * ÕâÏàµ±ÓÚ½«Á½¸ö±ä»»µş¼Ó¡£ÀıÈç T_A_to_C = T_A_to_B.multiply(T_B_to_C)¡£
-     * @param other Òª³ËÔÚÓÒ±ßµÄ±ä»»¾ØÕó¡£
-     * @return HomogeneousTransform2D Á½¸ö±ä»»Ïà³ËºóµÄ½á¹û¡£
+     * è¿™ç›¸å½“äºå°†ä¸¤ä¸ªå˜æ¢å åŠ ã€‚ä¾‹å¦‚ T_A_to_C = T_A_to_B.multiply(T_B_to_C)ã€‚
+     * @param other è¦ä¹˜åœ¨å³è¾¹çš„å˜æ¢çŸ©é˜µã€‚
+     * @return HomogeneousTransform2D ä¸¤ä¸ªå˜æ¢ç›¸ä¹˜åçš„ç»“æœã€‚
      */
     HomogeneousTransform2D multiply(const HomogeneousTransform2D& other) const;
 
     /**
-     * @brief ¼ÆËãµ±Ç°±ä»»µÄÄæ±ä»»¡£
+     * @brief è®¡ç®—å½“å‰å˜æ¢çš„é€†å˜æ¢ã€‚
      * @details
-     * Èç¹ûÒ»¸ö±ä»»ÊÇ´ÓA×ø±êÏµµ½B×ø±êÏµ (T_A_to_B)£¬ÄÇÃ´ËüµÄÄæ±ä»»¾ÍÊÇ´ÓB×ø±êÏµµ½A×ø±êÏµ (T_B_to_A)¡£
-     * @return HomogeneousTransform2D Äæ±ä»»¾ØÕó¡£
+     * å¦‚æœä¸€ä¸ªå˜æ¢æ˜¯ä»Aåæ ‡ç³»åˆ°Båæ ‡ç³» (T_A_to_B)ï¼Œé‚£ä¹ˆå®ƒçš„é€†å˜æ¢å°±æ˜¯ä»Båæ ‡ç³»åˆ°Aåæ ‡ç³» (T_B_to_A)ã€‚
+     * @return HomogeneousTransform2D é€†å˜æ¢çŸ©é˜µã€‚
      */
     HomogeneousTransform2D inverse() const;
 
 private:
-    float32_t m_data[9]; // 3x3 ¾ØÕóÊı¾İ (ĞĞÖ÷Ğò)
-    arm_matrix_instance_f32 m_matrix; // CMSIS-DSP ¾ØÕóÊµÀı
+    float32_t m_data[9]; // 3x3 çŸ©é˜µæ•°æ® (è¡Œä¸»åº)
+    arm_matrix_instance_f32 m_matrix; // CMSIS-DSP çŸ©é˜µå®ä¾‹
 };
 
 /**
- * @brief Ê¹ÓÃ CMSIS-DSP µÄ3DÆë´Î±ä»»Àà¡£
+ * @brief ä½¿ç”¨ CMSIS-DSP çš„3Dé½æ¬¡å˜æ¢ç±»ã€‚
  * @details
- * ÓÃÓÚ´¦ÀíÈıÎ¬¿Õ¼äÖĞµÄÆ½ÒÆºÍĞı×ª¡£
+ * ç”¨äºå¤„ç†ä¸‰ç»´ç©ºé—´ä¸­çš„å¹³ç§»å’Œæ—‹è½¬ã€‚
  */
 class HomogeneousTransform3D {
 public:
     /**
-     * @brief Ä¬ÈÏ¹¹Ôìº¯Êı£¬´´½¨Ò»¸öµ¥Î»±ä»»¡£
+     * @brief é»˜è®¤æ„é€ å‡½æ•°ï¼Œåˆ›å»ºä¸€ä¸ªå•ä½å˜æ¢ã€‚
      */
     HomogeneousTransform3D();
 
     /**
-     * @brief ¹¹Ôìº¯Êı£¬¸ù¾İ¸ø¶¨µÄÎ»×Ë´´½¨Ò»¸ö±ä»»¡£
-     * @param pose °üº¬Æ½ÒÆºÍĞı×ªĞÅÏ¢µÄ3Dµã¡£
+     * @brief æ„é€ å‡½æ•°ï¼Œæ ¹æ®ç»™å®šçš„ä½å§¿åˆ›å»ºä¸€ä¸ªå˜æ¢ã€‚
+     * @param pose åŒ…å«å¹³ç§»å’Œæ—‹è½¬ä¿¡æ¯çš„3Dç‚¹ã€‚
      */
     HomogeneousTransform3D(const Point3D& pose);
 
     /**
-     * @brief ÉèÖÃÒ»¸öÈ«ĞÂµÄ±ä»»£¬¸²¸Çµ±Ç°Öµ¡£
-     * @param pose °üº¬Æ½ÒÆºÍĞı×ªĞÅÏ¢µÄ3Dµã¡£
+     * @brief è®¾ç½®ä¸€ä¸ªå…¨æ–°çš„å˜æ¢ï¼Œè¦†ç›–å½“å‰å€¼ã€‚
+     * @param pose åŒ…å«å¹³ç§»å’Œæ—‹è½¬ä¿¡æ¯çš„3Dç‚¹ã€‚
      */
     void setTransform(const Point3D& pose);
 
     /**
-     * @brief ½öÉèÖÃ±ä»»µÄÆ½ÒÆ²¿·Ö£¬Ğı×ª²¿·Ö±£³Ö²»±ä¡£
-     * @param translation °üº¬x, y, zÆ½ÒÆÁ¿µÄ3Dµã£¨½«ºöÂÔÆäĞı×ª³ÉÔ±£©¡£
+     * @brief ä»…è®¾ç½®å˜æ¢çš„å¹³ç§»éƒ¨åˆ†ï¼Œæ—‹è½¬éƒ¨åˆ†ä¿æŒä¸å˜ã€‚
+     * @param translation åŒ…å«x, y, zå¹³ç§»é‡çš„3Dç‚¹ï¼ˆå°†å¿½ç•¥å…¶æ—‹è½¬æˆå‘˜ï¼‰ã€‚
      */
     void setTranslation(const Point3D& translation);
 
     /**
-     * @brief ½öÉèÖÃ±ä»»µÄĞı×ª²¿·Ö£¨»ùÓÚÅ·À­½Ç£©£¬Æ½ÒÆ²¿·Ö±£³Ö²»±ä¡£
-     * @param roll_rad  ÈÆXÖáµÄĞı×ª£¨ºá¹ö½Ç£¬µ¥Î»£º»¡¶È£©¡£
-     * @param pitch_rad ÈÆYÖáµÄĞı×ª£¨¸©Ñö½Ç£¬µ¥Î»£º»¡¶È£©¡£
-     * @param yaw_rad   ÈÆZÖáµÄĞı×ª£¨Æ«º½½Ç£¬µ¥Î»£º»¡¶È£©¡£
+     * @brief ä»…è®¾ç½®å˜æ¢çš„æ—‹è½¬éƒ¨åˆ†ï¼ˆåŸºäºæ¬§æ‹‰è§’ï¼‰ï¼Œå¹³ç§»éƒ¨åˆ†ä¿æŒä¸å˜ã€‚
+     * @param roll_rad  ç»•Xè½´çš„æ—‹è½¬ï¼ˆæ¨ªæ»šè§’ï¼Œå•ä½ï¼šå¼§åº¦ï¼‰ã€‚
+     * @param pitch_rad ç»•Yè½´çš„æ—‹è½¬ï¼ˆä¿¯ä»°è§’ï¼Œå•ä½ï¼šå¼§åº¦ï¼‰ã€‚
+     * @param yaw_rad   ç»•Zè½´çš„æ—‹è½¬ï¼ˆåèˆªè§’ï¼Œå•ä½ï¼šå¼§åº¦ï¼‰ã€‚
      */
     void setRotation(float roll_rad, float pitch_rad, float yaw_rad);
 
     /**
-     * @brief ½«´Ë±ä»»Ó¦ÓÃÓÚÒ»¸ö3Dµã¡£
-     * @param point Òª±ä»»µÄÔ­Ê¼µã¡£
-     * @return Point3D ±ä»»ºóµÄĞÂµã¡£
+     * @brief å°†æ­¤å˜æ¢åº”ç”¨äºä¸€ä¸ª3Dç‚¹ã€‚
+     * @param point è¦å˜æ¢çš„åŸå§‹ç‚¹ã€‚
+     * @return Point3D å˜æ¢åçš„æ–°ç‚¹ã€‚
      */
     Point3D apply(const Point3D& point) const;
 
     /**
-     * @brief ¾ØÕó³Ë·¨£º½«µ±Ç°±ä»»ÓëÁíÒ»¸ö±ä»»Ïà³Ë¡£
+     * @brief çŸ©é˜µä¹˜æ³•ï¼šå°†å½“å‰å˜æ¢ä¸å¦ä¸€ä¸ªå˜æ¢ç›¸ä¹˜ã€‚
      */
     HomogeneousTransform3D multiply(const HomogeneousTransform3D& other) const;
 
     /**
-     * @brief ¼ÆËãµ±Ç°±ä»»µÄÄæ±ä»»¡£
+     * @brief è®¡ç®—å½“å‰å˜æ¢çš„é€†å˜æ¢ã€‚
      */
     HomogeneousTransform3D inverse() const;
 
 private:
-    float32_t m_data[16]; // 4x4 ¾ØÕóÊı¾İ (ĞĞÖ÷Ğò)
-    arm_matrix_instance_f32 m_matrix; // CMSIS-DSP ¾ØÕóÊµÀı
+    float32_t m_data[16]; // 4x4 çŸ©é˜µæ•°æ® (è¡Œä¸»åº)
+    arm_matrix_instance_f32 m_matrix; // CMSIS-DSP çŸ©é˜µå®ä¾‹
 };
 
 

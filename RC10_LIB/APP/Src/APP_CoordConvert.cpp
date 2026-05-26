@@ -4,42 +4,42 @@
 
 
 /* ==================================================================================
- *                            2DÆë´Î±ä»» - ÊµÏÖ
+ *                            2Dé½æ¬¡å˜æ¢ - å®ç°
  * ==================================================================================*/
 
-// ¹¹Ôìº¯Êı£º³õÊ¼»¯¾ØÕóÊµÀı²¢ÉèÎªµ¥Î»¾ØÕó
+// æ„é€ å‡½æ•°ï¼šåˆå§‹åŒ–çŸ©é˜µå®ä¾‹å¹¶è®¾ä¸ºå•ä½çŸ©é˜µ
 HomogeneousTransform2D::HomogeneousTransform2D() : m_matrix{3, 3, m_data} 
 {
-    arm_set_identity_f32(&m_matrix); //´Ëº¯ÊıÔÚAPP_toolÀïÃæ
+    arm_set_identity_f32(&m_matrix); //æ­¤å‡½æ•°åœ¨APP_toolé‡Œé¢
 }
 
-// ¹¹Ôìº¯Êı£º³õÊ¼»¯¾ØÕóÊµÀı²¢ÉèÖÃ³õÊ¼±ä»»
+// æ„é€ å‡½æ•°ï¼šåˆå§‹åŒ–çŸ©é˜µå®ä¾‹å¹¶è®¾ç½®åˆå§‹å˜æ¢
 HomogeneousTransform2D::HomogeneousTransform2D(const Point2D& pose) : m_matrix{3, 3, m_data} 
 {
     setTransform(pose);
 }
 
 
-// ÉèÖÃ±ä»»¾ØÕó
+// è®¾ç½®å˜æ¢çŸ©é˜µ
 void HomogeneousTransform2D::setTransform(const Point2D& pose) 
 {
     float32_t c, s;
     arm_sin_cos_f32(pose.theta, &s, &c); 
     
-    // °´ÕÕĞĞÖ÷ĞòÌî³ä¾ØÕóÊı¾İ
+    // æŒ‰ç…§è¡Œä¸»åºå¡«å……çŸ©é˜µæ•°æ®
     m_data[0] = c;  m_data[1] = -s; m_data[2] = pose.x;
     m_data[3] = s;  m_data[4] = c;  m_data[5] = pose.y;
     m_data[6] = 0;  m_data[7] = 0;  m_data[8] = 1;
 }
 
-// ½öÉèÖÃÆ½ÒÆ²¿·Ö
+// ä»…è®¾ç½®å¹³ç§»éƒ¨åˆ†
 void HomogeneousTransform2D::setTranslation(const Point2D& translation) 
 {
     m_data[2] = translation.x;
     m_data[5] = translation.y;
 }
 
-// ½öÉèÖÃĞı×ª²¿·Ö
+// ä»…è®¾ç½®æ—‹è½¬éƒ¨åˆ†
 void HomogeneousTransform2D::setRotation(float theta_rad) 
 {
     float32_t tx = m_data[2];
@@ -48,64 +48,64 @@ void HomogeneousTransform2D::setRotation(float theta_rad)
     arm_sin_cos_f32(theta_rad, &s, &c);
     m_data[0] = c; m_data[1] = -s;
     m_data[3] = s; m_data[4] = c;
-    // ±£³ÖÆ½ÒÆ²¿·Ö²»±ä
+    // ä¿æŒå¹³ç§»éƒ¨åˆ†ä¸å˜
     m_data[2] = tx;
     m_data[5] = ty;
 }
 
-// Ó¦ÓÃ±ä»»µ½2Dµã
+// åº”ç”¨å˜æ¢åˆ°2Dç‚¹
 Point2D HomogeneousTransform2D::apply(const Point2D& point) const 
 {
-    // ½«2DµãÀ©Õ¹ÎªÆë´Î×ø±ê [x, y, 1]'
+    // å°†2Dç‚¹æ‰©å±•ä¸ºé½æ¬¡åæ ‡ [x, y, 1]'
     float32_t p_in[3] = {point.x, point.y, 1.0f};
     float32_t p_out[3];
     arm_matrix_instance_f32 p_in_mat = {3, 1, p_in};
     arm_matrix_instance_f32 p_out_mat = {3, 1, p_out};
 
-    // Ö´ĞĞ¾ØÕó³Ë·¨: p_out = M * p_in
+    // æ‰§è¡ŒçŸ©é˜µä¹˜æ³•: p_out = M * p_in
     arm_mat_mult_f32(&m_matrix, &p_in_mat, &p_out_mat);
     
     return Point2D{p_out[0], p_out[1]};
 }
 
-// ¾ØÕó³Ë·¨
+// çŸ©é˜µä¹˜æ³•
 HomogeneousTransform2D HomogeneousTransform2D::multiply(const HomogeneousTransform2D& other) const 
 {
     HomogeneousTransform2D result;
-    // Ö´ĞĞ¾ØÕó³Ë·¨: result = this * other
+    // æ‰§è¡ŒçŸ©é˜µä¹˜æ³•: result = this * other
     arm_mat_mult_f32(&m_matrix, &other.m_matrix, &result.m_matrix);
     return result;
 }
 
-// ¼ÆËãÄæ±ä»»£¨Õë¶Ô¸ÕÌå±ä»»µÄÓÅ»¯·½·¨£©
+// è®¡ç®—é€†å˜æ¢ï¼ˆé’ˆå¯¹åˆšä½“å˜æ¢çš„ä¼˜åŒ–æ–¹æ³•ï¼‰
 HomogeneousTransform2D HomogeneousTransform2D::inverse() const 
 {
     HomogeneousTransform2D result;
-    // ¸ÕÌå±ä»»µÄÄæ£¬Ğı×ª²¿·ÖµÈÓÚÔ­Ğı×ª¾ØÕóµÄ×ªÖÃ
+    // åˆšä½“å˜æ¢çš„é€†ï¼Œæ—‹è½¬éƒ¨åˆ†ç­‰äºåŸæ—‹è½¬çŸ©é˜µçš„è½¬ç½®
     // R' = R^T
     result.m_data[0] = m_data[0]; result.m_data[1] = m_data[3];
     result.m_data[3] = m_data[1]; result.m_data[4] = m_data[4];
 
-    // Æ½ÒÆ²¿·ÖµÈÓÚ -R^T * t
+    // å¹³ç§»éƒ¨åˆ†ç­‰äº -R^T * t
     float32_t tx = m_data[2];
     float32_t ty = m_data[5];
     result.m_data[2] = -(result.m_data[0] * tx + result.m_data[1] * ty);
     result.m_data[5] = -(result.m_data[3] * tx + result.m_data[4] * ty);
     
-    // Ìî³äÆë´Î×ø±ê²¿·Ö
+    // å¡«å……é½æ¬¡åæ ‡éƒ¨åˆ†
     result.m_data[6] = 0; result.m_data[7] = 0; result.m_data[8] = 1;
     return result;
 }
 
 
 /* ==================================================================================
- *                            3DÆë´Î±ä»» - ÊµÏÖ
+ *                            3Dé½æ¬¡å˜æ¢ - å®ç°
  * ==================================================================================*/
 
-// ¹¹Ôìº¯Êı£º³õÊ¼»¯¾ØÕóÊµÀı²¢ÉèÎªµ¥Î»¾ØÕó
+// æ„é€ å‡½æ•°ï¼šåˆå§‹åŒ–çŸ©é˜µå®ä¾‹å¹¶è®¾ä¸ºå•ä½çŸ©é˜µ
 HomogeneousTransform3D::HomogeneousTransform3D() : m_matrix{4, 4, m_data} 
 {
-    arm_set_identity_f32(&m_matrix); //´Ëº¯ÊıÔÚAPP_toolÀïÃæ 
+    arm_set_identity_f32(&m_matrix); //æ­¤å‡½æ•°åœ¨APP_toolé‡Œé¢ 
 }
 
 HomogeneousTransform3D::HomogeneousTransform3D(const Point3D& pose) : m_matrix{4, 4, m_data} 
@@ -128,7 +128,7 @@ void HomogeneousTransform3D::setTranslation(const Point3D& translation)
     m_data[11] = translation.z;
 }
 
-// ¸ù¾İÅ·À­½ÇÉèÖÃĞı×ª¾ØÕó
+// æ ¹æ®æ¬§æ‹‰è§’è®¾ç½®æ—‹è½¬çŸ©é˜µ
 void HomogeneousTransform3D::setRotation(float roll_rad, float pitch_rad, float yaw_rad) 
 {
     float32_t sr, cr, sp, cp, sy, cy;
@@ -140,7 +140,7 @@ void HomogeneousTransform3D::setRotation(float roll_rad, float pitch_rad, float 
     float32_t ty = m_data[7];
     float32_t tz = m_data[11];
 
-    // °´ÕÕ Z-Y-X Å·À­½ÇË³Ğò¹¹½¨Ğı×ª¾ØÕó
+    // æŒ‰ç…§ Z-Y-X æ¬§æ‹‰è§’é¡ºåºæ„å»ºæ—‹è½¬çŸ©é˜µ
     m_data[0] = cy * cp;
     m_data[1] = cy * sp * sr - sy * cr;
     m_data[2] = cy * sp * cr + sy * sr;
@@ -157,26 +157,26 @@ void HomogeneousTransform3D::setRotation(float roll_rad, float pitch_rad, float 
     m_data[9]  = cp * sr;
     m_data[10] = cp * cr;
     
-    // È·±£Æë´Î×ø±ê²¿·ÖÕıÈ·
+    // ç¡®ä¿é½æ¬¡åæ ‡éƒ¨åˆ†æ­£ç¡®
     m_data[12] = 0; m_data[13] = 0; m_data[14] = 0; m_data[15] = 1;
 }
 
-// Ó¦ÓÃ±ä»»µ½3Dµã
+// åº”ç”¨å˜æ¢åˆ°3Dç‚¹
 Point3D HomogeneousTransform3D::apply(const Point3D& point) const 
 {
-    // ½«3DµãÀ©Õ¹ÎªÆë´Î×ø±ê [x, y, z, 1]'
+    // å°†3Dç‚¹æ‰©å±•ä¸ºé½æ¬¡åæ ‡ [x, y, z, 1]'
     float32_t p_in[4] = {point.x, point.y, point.z, 1.0f};
     float32_t p_out[4];
     arm_matrix_instance_f32 p_in_mat = {4, 1, p_in};
     arm_matrix_instance_f32 p_out_mat = {4, 1, p_out};
 
-    // Ö´ĞĞ¾ØÕó³Ë·¨: p_out = M * p_in
+    // æ‰§è¡ŒçŸ©é˜µä¹˜æ³•: p_out = M * p_in
     arm_mat_mult_f32(&m_matrix, &p_in_mat, &p_out_mat);
     
     return Point3D{p_out[0], p_out[1], p_out[2]};
 }
 
-// ¾ØÕó³Ë·¨
+// çŸ©é˜µä¹˜æ³•
 HomogeneousTransform3D HomogeneousTransform3D::multiply(const HomogeneousTransform3D& other) const 
 {
     HomogeneousTransform3D result;
@@ -184,26 +184,26 @@ HomogeneousTransform3D HomogeneousTransform3D::multiply(const HomogeneousTransfo
     return result;
 }
 
-// ¼ÆËãÄæ±ä»»£¨Õë¶Ô¸ÕÌå±ä»»µÄÓÅ»¯·½·¨£©
+// è®¡ç®—é€†å˜æ¢ï¼ˆé’ˆå¯¹åˆšä½“å˜æ¢çš„ä¼˜åŒ–æ–¹æ³•ï¼‰
 HomogeneousTransform3D HomogeneousTransform3D::inverse() const 
 {
     HomogeneousTransform3D result;
     
-    // ´´½¨Ò»¸öÁÙÊ±µÄ3x3¾ØÕóÓÃÓÚĞı×ª²¿·ÖµÄ¼ÆËã
+    // åˆ›å»ºä¸€ä¸ªä¸´æ—¶çš„3x3çŸ©é˜µç”¨äºæ—‹è½¬éƒ¨åˆ†çš„è®¡ç®—
     float32_t rot_data[9];
     arm_matrix_instance_f32 rot = {3, 3, rot_data};
 
-    // ÌáÈ¡Ô­Ğı×ª¾ØÕóµÄ×ªÖÃ£¨¼´Äæ£©
+    // æå–åŸæ—‹è½¬çŸ©é˜µçš„è½¬ç½®ï¼ˆå³é€†ï¼‰
     rot_data[0] = m_data[0]; rot_data[1] = m_data[4]; rot_data[2] = m_data[8];
     rot_data[3] = m_data[1]; rot_data[4] = m_data[5]; rot_data[5] = m_data[9];
     rot_data[6] = m_data[2]; rot_data[7] = m_data[6]; rot_data[8] = m_data[10];
     
-    // ½«×ªÖÃºóµÄĞı×ª¾ØÕó¸´ÖÆµ½½á¹ûÖĞ
+    // å°†è½¬ç½®åçš„æ—‹è½¬çŸ©é˜µå¤åˆ¶åˆ°ç»“æœä¸­
     result.m_data[0] = rot_data[0]; result.m_data[1] = rot_data[1]; result.m_data[2] = rot_data[2];
     result.m_data[4] = rot_data[3]; result.m_data[5] = rot_data[4]; result.m_data[6] = rot_data[5];
     result.m_data[8] = rot_data[6]; result.m_data[9] = rot_data[7]; result.m_data[10] = rot_data[8];
 
-    // ¼ÆËãĞÂµÄÆ½ÒÆ²¿·Ö: t' = -R^T * t
+    // è®¡ç®—æ–°çš„å¹³ç§»éƒ¨åˆ†: t' = -R^T * t
     float32_t t_in[3] = {m_data[3], m_data[7], m_data[11]};
     float32_t t_out[3];
     arm_matrix_instance_f32 t_in_mat = {3, 1, t_in};
@@ -215,7 +215,7 @@ HomogeneousTransform3D HomogeneousTransform3D::inverse() const
     result.m_data[7] = -t_out[1];
     result.m_data[11] = -t_out[2];
 
-    // ÉèÖÃÆë´Î×ø±ê²¿·Ö
+    // è®¾ç½®é½æ¬¡åæ ‡éƒ¨åˆ†
     result.m_data[12] = 0; result.m_data[13] = 0; result.m_data[14] = 0; result.m_data[15] = 1;
 
     return result;

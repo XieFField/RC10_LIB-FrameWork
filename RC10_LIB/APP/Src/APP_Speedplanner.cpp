@@ -1,166 +1,166 @@
-#include "APP_Speedplanner.h" // ËÙ¶È¹æ»®Æ÷Í·ÎÄ¼ş
+#include "APP_Speedplanner.h" // é€Ÿåº¦è§„åˆ’å™¨å¤´æ–‡ä»¶
 
-// ÖØÖÃËÙ¶È¹æ»®Æ÷²ÎÊı
+// é‡ç½®é€Ÿåº¦è§„åˆ’å™¨å‚æ•°
 /**
- * @brief ÖØÖÃËÙ¶È¹æ»®Æ÷µÄ²ÎÊı¡£
- * @details ¸ù¾İÊäÈëµÄ²ÎÊı½á¹¹Ìå£¬³õÊ¼»¯ËÙ¶È¹æ»®Æ÷µÄÄÚ²¿×´Ì¬£¬°üÀ¨×î´ó¼ÓËÙ¶È¡¢×î´ó¼õËÙ¶È¡¢Ä¿±êÎ»ÖÃµÈ¡£
- * @param params °üº¬ËÙ¶È¹æ»®Æ÷²ÎÊıµÄ½á¹¹Ìå¡£
+ * @brief é‡ç½®é€Ÿåº¦è§„åˆ’å™¨çš„å‚æ•°ã€‚
+ * @details æ ¹æ®è¾“å…¥çš„å‚æ•°ç»“æ„ä½“ï¼Œåˆå§‹åŒ–é€Ÿåº¦è§„åˆ’å™¨çš„å†…éƒ¨çŠ¶æ€ï¼ŒåŒ…æ‹¬æœ€å¤§åŠ é€Ÿåº¦ã€æœ€å¤§å‡é€Ÿåº¦ã€ç›®æ ‡ä½ç½®ç­‰ã€‚
+ * @param params åŒ…å«é€Ÿåº¦è§„åˆ’å™¨å‚æ•°çš„ç»“æ„ä½“ã€‚
  */
 void TrapePlanner1D::param_reset(Speedplanner_1D_Param_Config params)
 {
-    // ±£´æÓÃ»§²ÎÊı²¢³õÊ¼»¯³ÉÔ±±äÁ¿
-    m_maxAcc_ = abs(params.maxAcc);                             // ×î´ó¼ÓËÙ¶È
-    m_maxDec_ = abs(params.maxDec);                             // ×î´ó¼õËÙ¶È
-    m_maxJerk_ = abs(params.maxJerk);                           // ×î´ó¼Ó¼ÓËÙ¶È
-    m_maxSpeed_ = abs(params.maxSpeed);                         // ×î´óËÙ¶È
-    m_initialSpeed_ = abs(params.initialSpeed);                 // ÆğÊ¼ËÙ¶È
-    m_finalSpeed_ = abs(params.finalSpeed);                     // Ä¿±êËÙ¶È
-    m_deadzone_ = abs(params.deadzone);                         // ËÀÇø·¶Î§
-    m_startPos_ = params.startPos;                              // ÆğÊ¼Î»ÖÃ
-    m_targetPos_ = (params.targetPos);                          // Ä¿±êÎ»ÖÃ
-    m_totalDistance_ = abs(params.targetPos - params.startPos); // ×ÜÂ·³Ì
+    // ä¿å­˜ç”¨æˆ·å‚æ•°å¹¶åˆå§‹åŒ–æˆå‘˜å˜é‡
+    m_maxAcc_ = abs(params.maxAcc);                             // æœ€å¤§åŠ é€Ÿåº¦
+    m_maxDec_ = abs(params.maxDec);                             // æœ€å¤§å‡é€Ÿåº¦
+    m_maxJerk_ = abs(params.maxJerk);                           // æœ€å¤§åŠ åŠ é€Ÿåº¦
+    m_maxSpeed_ = abs(params.maxSpeed);                         // æœ€å¤§é€Ÿåº¦
+    m_initialSpeed_ = abs(params.initialSpeed);                 // èµ·å§‹é€Ÿåº¦
+    m_finalSpeed_ = abs(params.finalSpeed);                     // ç›®æ ‡é€Ÿåº¦
+    m_deadzone_ = abs(params.deadzone);                         // æ­»åŒºèŒƒå›´
+    m_startPos_ = params.startPos;                              // èµ·å§‹ä½ç½®
+    m_targetPos_ = (params.targetPos);                          // ç›®æ ‡ä½ç½®
+    m_totalDistance_ = abs(params.targetPos - params.startPos); // æ€»è·¯ç¨‹
 
-    // ¸ù¾İÄ¿±êÎ»ÖÃÓëÆğÊ¼Î»ÖÃ¼ÆËãÔË¶¯·½Ïò
+    // æ ¹æ®ç›®æ ‡ä½ç½®ä¸èµ·å§‹ä½ç½®è®¡ç®—è¿åŠ¨æ–¹å‘
     if (params.targetPos - params.startPos > 0.0f)
     {
-        direction_ = 1.0f; // Èç¹ûÄ¿±êÎ»ÖÃ´óÓÚÆğÊ¼Î»ÖÃ£¬·½ÏòÎªÕı
+        direction_ = 1.0f; // å¦‚æœç›®æ ‡ä½ç½®å¤§äºèµ·å§‹ä½ç½®ï¼Œæ–¹å‘ä¸ºæ­£
     }
     else if (params.targetPos - params.startPos < 0.0f)
     {
-        direction_ = -1.0f; // Èç¹ûÄ¿±êÎ»ÖÃĞ¡ÓÚÆğÊ¼Î»ÖÃ£¬·½ÏòÎª¸º
+        direction_ = -1.0f; // å¦‚æœç›®æ ‡ä½ç½®å°äºèµ·å§‹ä½ç½®ï¼Œæ–¹å‘ä¸ºè´Ÿ
     }
 
-    // ¼ÆËã¼ÓËÙºÍ¼õËÙËùĞèµÄÂ·³Ì
-    float d_acc = (m_maxSpeed_ * m_maxSpeed_ - m_initialSpeed_ * m_initialSpeed_) / (2.0f * m_maxAcc_); // ¼ÓËÙ¶ÎËùĞèµÄÂ·³Ì
-    float d_dec = (m_maxSpeed_ * m_maxSpeed_ - m_finalSpeed_ * m_finalSpeed_) / (2.0f * m_maxDec_);     // ¼õËÙ¶ÎËùĞèµÄÂ·³Ì
+    // è®¡ç®—åŠ é€Ÿå’Œå‡é€Ÿæ‰€éœ€çš„è·¯ç¨‹
+    float d_acc = (m_maxSpeed_ * m_maxSpeed_ - m_initialSpeed_ * m_initialSpeed_) / (2.0f * m_maxAcc_); // åŠ é€Ÿæ®µæ‰€éœ€çš„è·¯ç¨‹
+    float d_dec = (m_maxSpeed_ * m_maxSpeed_ - m_finalSpeed_ * m_finalSpeed_) / (2.0f * m_maxDec_);     // å‡é€Ÿæ®µæ‰€éœ€çš„è·¯ç¨‹
 
-    // ÅĞ¶ÏÊÇ·ñÄÜ¹»´ïµ½Éè¶¨×î´óËÙ¶È
+    // åˆ¤æ–­æ˜¯å¦èƒ½å¤Ÿè¾¾åˆ°è®¾å®šæœ€å¤§é€Ÿåº¦
     if (d_acc + d_dec <= m_totalDistance_)
     {
-        // ÌİĞÎ¹æ»®£º´æÔÚ¼ÓËÙ¡¢ÔÈËÙ¡¢¼õËÙÈı¸ö½×¶Î
-        m_accelDistance_ = d_acc; // ±£´æ¼ÓËÙ¶ÎÂ·³Ì
-        m_decelDistance_ = d_dec; // ±£´æ¼õËÙ¶ÎÂ·³Ì
+        // æ¢¯å½¢è§„åˆ’ï¼šå­˜åœ¨åŠ é€Ÿã€åŒ€é€Ÿã€å‡é€Ÿä¸‰ä¸ªé˜¶æ®µ
+        m_accelDistance_ = d_acc; // ä¿å­˜åŠ é€Ÿæ®µè·¯ç¨‹
+        m_decelDistance_ = d_dec; // ä¿å­˜å‡é€Ÿæ®µè·¯ç¨‹
     }
     else
     {
-        // Èı½ÇĞÎ¹æ»®£ºÎŞ·¨´ïµ½Éè¶¨×î´óËÙ¶È£¬¼ÆËã¿É´ïµ½µÄ·åÖµËÙ¶È v_peak
+        // ä¸‰è§’å½¢è§„åˆ’ï¼šæ— æ³•è¾¾åˆ°è®¾å®šæœ€å¤§é€Ÿåº¦ï¼Œè®¡ç®—å¯è¾¾åˆ°çš„å³°å€¼é€Ÿåº¦ v_peak
         float v_peak_sq = (m_maxDec_ * m_initialSpeed_ * m_initialSpeed_ +
                            m_maxAcc_ * m_finalSpeed_ * m_finalSpeed_ +
                            2 * m_maxAcc_ * m_maxDec_ * m_totalDistance_) /
-                          (m_maxAcc_ + m_maxDec_); // ¼ÆËã·åÖµËÙ¶ÈµÄÆ½·½
+                          (m_maxAcc_ + m_maxDec_); // è®¡ç®—å³°å€¼é€Ÿåº¦çš„å¹³æ–¹
         float v_peak = 0.0f;
-        arm_sqrt_f32(v_peak_sq, &v_peak);                                                              // ¼ÆËã·åÖµËÙ¶È
-        m_accelDistance_ = (v_peak * v_peak - m_initialSpeed_ * m_initialSpeed_) / (2.0f * m_maxAcc_); // ÖØĞÂ¼ÆËã¼ÓËÙ¶ÎÂ·³Ì
-        m_decelDistance_ = (v_peak * v_peak - m_finalSpeed_ * m_finalSpeed_) / (2.0f * m_maxDec_);     // ÖØĞÂ¼ÆËã¼õËÙ¶ÎÂ·³Ì
+        arm_sqrt_f32(v_peak_sq, &v_peak);                                                              // è®¡ç®—å³°å€¼é€Ÿåº¦
+        m_accelDistance_ = (v_peak * v_peak - m_initialSpeed_ * m_initialSpeed_) / (2.0f * m_maxAcc_); // é‡æ–°è®¡ç®—åŠ é€Ÿæ®µè·¯ç¨‹
+        m_decelDistance_ = (v_peak * v_peak - m_finalSpeed_ * m_finalSpeed_) / (2.0f * m_maxDec_);     // é‡æ–°è®¡ç®—å‡é€Ÿæ®µè·¯ç¨‹
     }
-    // ³õÊ¼»¯½×¶ÎÎª¼ÓËÙ¶Î
+    // åˆå§‹åŒ–é˜¶æ®µä¸ºåŠ é€Ÿæ®µ
     m_phase = ACCEL_PHASE;
 }
 
 /**
- * @brief ¹¹Ôìº¯Êı£¬³õÊ¼»¯ËÙ¶È¹æ»®Æ÷¡£
- * @param params °üº¬ËÙ¶È¹æ»®Æ÷²ÎÊıµÄ½á¹¹Ìå¡£
+ * @brief æ„é€ å‡½æ•°ï¼Œåˆå§‹åŒ–é€Ÿåº¦è§„åˆ’å™¨ã€‚
+ * @param params åŒ…å«é€Ÿåº¦è§„åˆ’å™¨å‚æ•°çš„ç»“æ„ä½“ã€‚
  */
 TrapePlanner1D::TrapePlanner1D(Speedplanner_1D_Param_Config params)
 {
-    param_reset(params); // µ÷ÓÃ²ÎÊıÖØÖÃº¯Êı
+    param_reset(params); // è°ƒç”¨å‚æ•°é‡ç½®å‡½æ•°
 }
 
 /**
- * @brief ¸ù¾İµ±Ç°ÒÑĞĞÊ»µÄ¾àÀë£¬ÅĞ¶Ïµ±Ç°Ëù´¦µÄÔË¶¯½×¶Î¡£
- * @param traveled µ±Ç°ÒÑĞĞÊ»µÄ¾àÀë¡£
- * @return µ±Ç°µÄÔË¶¯½×¶Î¡£
+ * @brief æ ¹æ®å½“å‰å·²è¡Œé©¶çš„è·ç¦»ï¼Œåˆ¤æ–­å½“å‰æ‰€å¤„çš„è¿åŠ¨é˜¶æ®µã€‚
+ * @param traveled å½“å‰å·²è¡Œé©¶çš„è·ç¦»ã€‚
+ * @return å½“å‰çš„è¿åŠ¨é˜¶æ®µã€‚
  */
 Phase TrapePlanner1D::determinePhase(float traveled)
 {
     if (abs(traveled - m_totalDistance_) < m_deadzone_)
-        return FINISHED_PHASE; // ¹æ»®½áÊø
+        return FINISHED_PHASE; // è§„åˆ’ç»“æŸ
 
     if (traveled < m_accelDistance_)
-        return ACCEL_PHASE; // ¼ÓËÙ½×¶Î
+        return ACCEL_PHASE; // åŠ é€Ÿé˜¶æ®µ
     else if (traveled < (m_totalDistance_ - m_decelDistance_))
-        return CONST_PHASE; // ÔÈËÙ½×¶Î
+        return CONST_PHASE; // åŒ€é€Ÿé˜¶æ®µ
     else
-        return DECEL_PHASE; // ¼õËÙ½×¶Î
+        return DECEL_PHASE; // å‡é€Ÿé˜¶æ®µ
 }
 
 /**
- * @brief ¸ù¾İµ±Ç°ÒÑĞĞÊ»µÄ¾àÀë£¬¼ÆËãÄ¿±êËÙ¶È¡£
- * @param now_dis µ±Ç°ÒÑĞĞÊ»µÄ¾àÀë¡£
- * @return ¹æ»®µÄÄ¿±êËÙ¶È¡£
+ * @brief æ ¹æ®å½“å‰å·²è¡Œé©¶çš„è·ç¦»ï¼Œè®¡ç®—ç›®æ ‡é€Ÿåº¦ã€‚
+ * @param now_dis å½“å‰å·²è¡Œé©¶çš„è·ç¦»ã€‚
+ * @return è§„åˆ’çš„ç›®æ ‡é€Ÿåº¦ã€‚
  */
 float TrapePlanner1D::plan(float now_dis)
 {
-    // ¼ÆËãÒÑĞĞÊ»¾àÀë
+    // è®¡ç®—å·²è¡Œé©¶è·ç¦»
     float traveled_ = abs(now_dis - m_startPos_);
     if (abs(m_targetPos_ - now_dis) < m_deadzone_)
     {
         m_phase = FINISHED_PHASE;
-        return 0.0f; // Èç¹û¾àÀëĞ¡ÓÚËÀÇø·¶Î§£¬·µ»ØËÙ¶ÈÎª0
+        return 0.0f; // å¦‚æœè·ç¦»å°äºæ­»åŒºèŒƒå›´ï¼Œè¿”å›é€Ÿåº¦ä¸º0
     }
     if (traveled_ >= m_totalDistance_)
     {
-        traveled_ = m_totalDistance_;      // ÏŞÖÆ×î´óĞĞÊ»¾àÀë
-        m_phase = FINISHED_PHASE;          // ÉèÖÃ½×¶ÎÎª¹æ»®½áÊø
-        return m_finalSpeed_ * direction_; // ·µ»ØÄ¿±êËÙ¶È
+        traveled_ = m_totalDistance_;      // é™åˆ¶æœ€å¤§è¡Œé©¶è·ç¦»
+        m_phase = FINISHED_PHASE;          // è®¾ç½®é˜¶æ®µä¸ºè§„åˆ’ç»“æŸ
+        return m_finalSpeed_ * direction_; // è¿”å›ç›®æ ‡é€Ÿåº¦
     }
 
-    // ÅĞ¶Ïµ±Ç°½×¶Î
+    // åˆ¤æ–­å½“å‰é˜¶æ®µ
     m_phase = determinePhase(traveled_);
 
     switch (m_phase)
     {
     case ACCEL_PHASE:
     {
-        // ¼ÓËÙ¶Î£ºv^2 = v0^2 + 2*a*s
+        // åŠ é€Ÿæ®µï¼šv^2 = v0^2 + 2*a*s
         float expr = m_initialSpeed_ * m_initialSpeed_ + 2.0f * m_maxAcc_ * traveled_;
         float sqrt_val = 0.0f;
-        arm_sqrt_f32(expr, &sqrt_val); // ¼ÆËã¼ÓËÙ½×¶ÎÄ¿±êËÙ¶È
+        arm_sqrt_f32(expr, &sqrt_val); // è®¡ç®—åŠ é€Ÿé˜¶æ®µç›®æ ‡é€Ÿåº¦
         v_target_ = sqrt_val;
 
         break;
     }
     case CONST_PHASE:
-        v_target_ = m_maxSpeed_; // ÔÈËÙ½×¶ÎÄ¿±êËÙ¶È
+        v_target_ = m_maxSpeed_; // åŒ€é€Ÿé˜¶æ®µç›®æ ‡é€Ÿåº¦
         break;
     case DECEL_PHASE:
     {
-        // ¼õËÙ½×¶Î£º¸ù¾İ¹«Ê½¼ÆËãÄ¿±êËÙ¶È
+        // å‡é€Ÿé˜¶æ®µï¼šæ ¹æ®å…¬å¼è®¡ç®—ç›®æ ‡é€Ÿåº¦
         float expr = m_finalSpeed_ * m_finalSpeed_ + 2 * m_maxDec_ * (m_totalDistance_ - traveled_);
         float sqrt_val = 0;
-        arm_sqrt_f32(expr, &sqrt_val); // ¼ÆËã¼õËÙ½×¶ÎÄ¿±êËÙ¶È
+        arm_sqrt_f32(expr, &sqrt_val); // è®¡ç®—å‡é€Ÿé˜¶æ®µç›®æ ‡é€Ÿåº¦
         v_target_ = sqrt_val;
         break;
     }
     case FINISHED_PHASE:
     default:
-        v_target_ = m_finalSpeed_; // ¹æ»®½áÊø½×¶ÎÄ¿±êËÙ¶È
+        v_target_ = m_finalSpeed_; // è§„åˆ’ç»“æŸé˜¶æ®µç›®æ ‡é€Ÿåº¦
         break;
     }
 
-    return v_target_ * direction_; // ·µ»ØÄ¿±êËÙ¶È
+    return v_target_ * direction_; // è¿”å›ç›®æ ‡é€Ÿåº¦
 }
 
 /**
- * @brief ÖØÖÃËÙ¶È¹æ»®Æ÷×´Ì¬¡£
+ * @brief é‡ç½®é€Ÿåº¦è§„åˆ’å™¨çŠ¶æ€ã€‚
  */
 /**
- * @brief ÖØÖÃÒ»Î¬ÌİĞÎËÙ¶È¹æ»®Æ÷×´Ì¬¡£
+ * @brief é‡ç½®ä¸€ç»´æ¢¯å½¢é€Ÿåº¦è§„åˆ’å™¨çŠ¶æ€ã€‚
  */
 void TrapePlanner1D::reset()
 {
-    m_phase = FINISHED_PHASE; // ÉèÖÃ½×¶ÎÎª¹æ»®½áÊø
-    m_totalDistance_ = 0;     // ÖØÖÃ×ÜÂ·³Ì
-    m_accelDistance_ = 0;     // ÖØÖÃ¼ÓËÙ¶Î³¤¶È
-    m_decelDistance_ = 0;     // ÖØÖÃ¼õËÙ¶Î³¤¶È
-    direction_ = 0;           // ÖØÖÃÔË¶¯·½Ïò
+    m_phase = FINISHED_PHASE; // è®¾ç½®é˜¶æ®µä¸ºè§„åˆ’ç»“æŸ
+    m_totalDistance_ = 0;     // é‡ç½®æ€»è·¯ç¨‹
+    m_accelDistance_ = 0;     // é‡ç½®åŠ é€Ÿæ®µé•¿åº¦
+    m_decelDistance_ = 0;     // é‡ç½®å‡é€Ÿæ®µé•¿åº¦
+    direction_ = 0;           // é‡ç½®è¿åŠ¨æ–¹å‘
 }
 
 // ---------------------------- SShapedPlanner1D ----------------------------
 
 /**
- * @brief ÖØÖÃ S ĞÍËÙ¶È¹æ»®Æ÷µÄ²ÎÊı¡£
- * @param params °üº¬ËÙ¶È¹æ»®Æ÷²ÎÊıµÄ½á¹¹Ìå¡£
+ * @brief é‡ç½® S å‹é€Ÿåº¦è§„åˆ’å™¨çš„å‚æ•°ã€‚
+ * @param params åŒ…å«é€Ÿåº¦è§„åˆ’å™¨å‚æ•°çš„ç»“æ„ä½“ã€‚
  */
 void SShapedPlanner1D::param_reset(Speedplanner_1D_Param_Config params)
 {
@@ -173,38 +173,38 @@ void SShapedPlanner1D::param_reset(Speedplanner_1D_Param_Config params)
     m_startPos_ = params.startPos;
     m_targetPos_ = params.targetPos;
     m_deadzone_ = params.deadzone;
-    // ¼ÆËã×Ü¾àÀë
+    // è®¡ç®—æ€»è·ç¦»
     m_totalDistance_ = abs(m_targetPos_ - m_startPos_);
 
     if (m_totalDistance_ > 0.0f)
     {
-        // Ô¤¼ÆËã¸÷¸ö½×¶ÎµÄÂ·³Ì
+        // é¢„è®¡ç®—å„ä¸ªé˜¶æ®µçš„è·¯ç¨‹
         cal_PhaseDistances();
     }
-    // ³õÊ¼»¯µ±Ç°½×¶Î
+    // åˆå§‹åŒ–å½“å‰é˜¶æ®µ
     m_phase = S_ACCEL_JERK_UP_PHASE;
 }
 
 /**
- * @brief ¹¹Ôìº¯Êı£¬³õÊ¼»¯ S ĞÍËÙ¶È¹æ»®Æ÷¡£
- * @param params °üº¬ËÙ¶È¹æ»®Æ÷²ÎÊıµÄ½á¹¹Ìå¡£
+ * @brief æ„é€ å‡½æ•°ï¼Œåˆå§‹åŒ– S å‹é€Ÿåº¦è§„åˆ’å™¨ã€‚
+ * @param params åŒ…å«é€Ÿåº¦è§„åˆ’å™¨å‚æ•°çš„ç»“æ„ä½“ã€‚
  */
 SShapedPlanner1D::SShapedPlanner1D(Speedplanner_1D_Param_Config params)
 {
-    param_reset(params); // µ÷ÓÃ²ÎÊıÖØÖÃº¯Êı
+    param_reset(params); // è°ƒç”¨å‚æ•°é‡ç½®å‡½æ•°
 }
 
 /**
- * @brief ¸ù¾İµ±Ç°ÒÑĞĞÊ»µÄ¾àÀë£¬¼ÆËãÄ¿±êËÙ¶È¡£
- * @param now_dis µ±Ç°ÒÑĞĞÊ»µÄ¾àÀë¡£
- * @return ¹æ»®µÄÄ¿±êËÙ¶È¡£
+ * @brief æ ¹æ®å½“å‰å·²è¡Œé©¶çš„è·ç¦»ï¼Œè®¡ç®—ç›®æ ‡é€Ÿåº¦ã€‚
+ * @param now_dis å½“å‰å·²è¡Œé©¶çš„è·ç¦»ã€‚
+ * @return è§„åˆ’çš„ç›®æ ‡é€Ÿåº¦ã€‚
  */
 float SShapedPlanner1D::plan(float now_dis)
 {
-    // ¼ÆËãÒÑĞĞÊ»µÄ¾àÀë
+    // è®¡ç®—å·²è¡Œé©¶çš„è·ç¦»
     float traveled_ = abs(now_dis - m_startPos_);
 
-    // È·¶¨µ±Ç°½×¶Î
+    // ç¡®å®šå½“å‰é˜¶æ®µ
     m_phase = determinePhase(traveled_);
 
     switch (m_phase)
@@ -244,46 +244,46 @@ float SShapedPlanner1D::plan(float now_dis)
 }
 
 /**
- * @brief ¸ù¾İÒÑĞĞÊ»µÄ¾àÀëÈ·¶¨µ±Ç°Ëù´¦µÄ S ĞÍ¹æ»®½×¶Î¡£
- * @param traveled ÒÑĞĞÊ»µÄ¾àÀë£¨´ÓÆğÊ¼Î»ÖÃËãÆğ£©¡£
- * @return µ±Ç° S ĞÍ¹æ»®½×¶Î¡£
+ * @brief æ ¹æ®å·²è¡Œé©¶çš„è·ç¦»ç¡®å®šå½“å‰æ‰€å¤„çš„ S å‹è§„åˆ’é˜¶æ®µã€‚
+ * @param traveled å·²è¡Œé©¶çš„è·ç¦»ï¼ˆä»èµ·å§‹ä½ç½®ç®—èµ·ï¼‰ã€‚
+ * @return å½“å‰ S å‹è§„åˆ’é˜¶æ®µã€‚
  */
 SPhase SShapedPlanner1D::determinePhase(float traveled)
 {
-    // ÀÛ¼Æ¾àÀëÅĞ¶Ïµ±Ç°½×¶Î
+    // ç´¯è®¡è·ç¦»åˆ¤æ–­å½“å‰é˜¶æ®µ
     float cumulative = 0.0f;
 
-    // ¼ÓËÙ¶Î£ºJerk ÉÏÉı
+    // åŠ é€Ÿæ®µï¼šJerk ä¸Šå‡
     cumulative += m_accelJerkUpDistance_;
     if (traveled < cumulative)
         return S_ACCEL_JERK_UP_PHASE;
 
-    // ¼ÓËÙ¶Î£º¼ÓËÙ¶Èºã¶¨
+    // åŠ é€Ÿæ®µï¼šåŠ é€Ÿåº¦æ’å®š
     cumulative += m_accelConstDistance_;
     if (traveled < cumulative)
         return S_ACCEL_CONST_PHASE;
 
-    // ¼ÓËÙ¶Î£ºJerk ÏÂ½µ
+    // åŠ é€Ÿæ®µï¼šJerk ä¸‹é™
     cumulative += m_accelJerkDownDistance_;
     if (traveled < cumulative)
         return S_ACCEL_JERK_DOWN_PHASE;
 
-    // ÔÈËÙ¶Î
+    // åŒ€é€Ÿæ®µ
     cumulative += m_constVelDistance_;
     if (traveled < cumulative)
         return S_CONST_VEL_PHASE;
 
-    // ¼õËÙ¶Î£ºJerk ÉÏÉı
+    // å‡é€Ÿæ®µï¼šJerk ä¸Šå‡
     cumulative += m_decelJerkUpDistance_;
     if (traveled < cumulative)
         return S_DECEL_JERK_UP_PHASE;
 
-    // ¼õËÙ¶Î£º¼ÓËÙ¶Èºã¶¨
+    // å‡é€Ÿæ®µï¼šåŠ é€Ÿåº¦æ’å®š
     cumulative += m_decelConstDistance_;
     if (traveled < cumulative)
         return S_DECEL_CONST_PHASE;
 
-    // ¼õËÙ¶Î£ºJerk ÏÂ½µ
+    // å‡é€Ÿæ®µï¼šJerk ä¸‹é™
     cumulative += m_decelJerkDownDistance_;
     if (traveled < cumulative - m_deadzone_)
         return S_DECEL_JERK_DOWN_PHASE;
@@ -291,92 +291,92 @@ SPhase SShapedPlanner1D::determinePhase(float traveled)
         return S_FINISHED_PHASE;
 }
 
-// ---------------------------- ÄÚ²¿¸¨Öúº¯Êı ----------------------------
+// ---------------------------- å†…éƒ¨è¾…åŠ©å‡½æ•° ----------------------------
 
 /**
- * @brief ¼ÆËã¸÷½×¶ÎµÄ¾àÀë¡£
+ * @brief è®¡ç®—å„é˜¶æ®µçš„è·ç¦»ã€‚
  */
 void SShapedPlanner1D::cal_PhaseDistances()
 {
-    // == == == == == ¼ÆËã¼ÓËÙ¶Î²ÎÊı == == == == ==
-    // ÅĞ¶ÏÊÇ·ñÄÜ´ïµ½×î´ó¼ÓËÙ¶È
+    // == == == == == è®¡ç®—åŠ é€Ÿæ®µå‚æ•° == == == == ==
+    // åˆ¤æ–­æ˜¯å¦èƒ½è¾¾åˆ°æœ€å¤§åŠ é€Ÿåº¦
     float Tj1, Ta, alima, Tj2, Td, alimd, Tv, vlim, T;
-    if ((m_maxSpeed_ - m_initialSpeed_) * m_maxJerk_ < m_maxAcc_ * m_maxAcc_) // ²»ÄÜ´ïµ½×î´ó¼ÓËÙ¶ÈµÄÇé¿ö
+    if ((m_maxSpeed_ - m_initialSpeed_) * m_maxJerk_ < m_maxAcc_ * m_maxAcc_) // ä¸èƒ½è¾¾åˆ°æœ€å¤§åŠ é€Ÿåº¦çš„æƒ…å†µ
     {
-        if (m_initialSpeed_ > m_maxSpeed_) // Èç¹û³õÊ¼ËÙ¶ÈÒÑ¾­´óÓÚ×î´óËÙ¶È
+        if (m_initialSpeed_ > m_maxSpeed_) // å¦‚æœåˆå§‹é€Ÿåº¦å·²ç»å¤§äºæœ€å¤§é€Ÿåº¦
         {
-            Tj1 = 0;   // ¼Ó¼ÓËÙÊ±¼äÎª0
-            Ta = 0;    // ×Ü¼ÓËÙÊ±¼äÎª0
-            alima = 0; // Êµ¼Ê×î´ó¼ÓËÙ¶ÈÎª0
+            Tj1 = 0;   // åŠ åŠ é€Ÿæ—¶é—´ä¸º0
+            Ta = 0;    // æ€»åŠ é€Ÿæ—¶é—´ä¸º0
+            alima = 0; // å®é™…æœ€å¤§åŠ é€Ÿåº¦ä¸º0
         }
 
-        else // Õı³£Çé¿öÏÂµÄ¼ÆËã
+        else // æ­£å¸¸æƒ…å†µä¸‹çš„è®¡ç®—
         {
-            arm_sqrt_f32((m_maxSpeed_ - m_initialSpeed_) / m_maxJerk_, &Tj1); // ¼Ó¼ÓËÙÊ±¼ä
-            Ta = 2 * Tj1;                                                     // ×Ü¼ÓËÙÊ±¼ä£¨¶Ô³ÆµÄ¼Ó¼ÓËÙºÍ¼õ¼ÓËÙ£©
-            alima = Tj1 * m_maxJerk_;                                         // Êµ¼ÊÄÜ´ïµ½µÄ×î´ó¼ÓËÙ¶È
+            arm_sqrt_f32((m_maxSpeed_ - m_initialSpeed_) / m_maxJerk_, &Tj1); // åŠ åŠ é€Ÿæ—¶é—´
+            Ta = 2 * Tj1;                                                     // æ€»åŠ é€Ÿæ—¶é—´ï¼ˆå¯¹ç§°çš„åŠ åŠ é€Ÿå’Œå‡åŠ é€Ÿï¼‰
+            alima = Tj1 * m_maxJerk_;                                         // å®é™…èƒ½è¾¾åˆ°çš„æœ€å¤§åŠ é€Ÿåº¦
         }
     }
-    else // ÄÜ´ïµ½×î´ó¼ÓËÙ¶ÈµÄÇé¿ö
+    else // èƒ½è¾¾åˆ°æœ€å¤§åŠ é€Ÿåº¦çš„æƒ…å†µ
     {
-        Tj1 = m_maxAcc_ / m_maxJerk_;                           // ¼Ó¼ÓËÙÊ±¼ä
-        Ta = Tj1 + (m_maxSpeed_ - m_initialSpeed_) / m_maxAcc_; // ×Ü¼ÓËÙÊ±¼ä
-        alima = m_maxAcc_;                                      // Êµ¼Ê×î´ó¼ÓËÙ¶ÈµÈÓÚÉè¶¨×î´ó¼ÓËÙ¶È
+        Tj1 = m_maxAcc_ / m_maxJerk_;                           // åŠ åŠ é€Ÿæ—¶é—´
+        Ta = Tj1 + (m_maxSpeed_ - m_initialSpeed_) / m_maxAcc_; // æ€»åŠ é€Ÿæ—¶é—´
+        alima = m_maxAcc_;                                      // å®é™…æœ€å¤§åŠ é€Ÿåº¦ç­‰äºè®¾å®šæœ€å¤§åŠ é€Ÿåº¦
     }
 
-    //========== ¼ÆËã¼õËÙ¶Î²ÎÊı ==========
-    // ÅĞ¶ÏÊÇ·ñÄÜ´ïµ½×î´ó¼õËÙ¶È
-    if ((m_maxSpeed_ - m_finalSpeed_) * m_maxJerk_ < m_maxDec_ * m_maxDec_) // ²»ÄÜ´ïµ½×î´ó¼õËÙ¶ÈµÄÇé¿ö
+    //========== è®¡ç®—å‡é€Ÿæ®µå‚æ•° ==========
+    // åˆ¤æ–­æ˜¯å¦èƒ½è¾¾åˆ°æœ€å¤§å‡é€Ÿåº¦
+    if ((m_maxSpeed_ - m_finalSpeed_) * m_maxJerk_ < m_maxDec_ * m_maxDec_) // ä¸èƒ½è¾¾åˆ°æœ€å¤§å‡é€Ÿåº¦çš„æƒ…å†µ
     {
-        arm_sqrt_f32((m_maxSpeed_ - m_finalSpeed_) / m_maxJerk_, &Tj2); // ¼Ó¼õËÙÊ±¼ä
-        Td = 2 * Tj2;                                                   // ×Ü¼õËÙÊ±¼ä
-        alimd = Tj2 * m_maxJerk_;                                       // Êµ¼Ê×î´ó¼õËÙ¶È
+        arm_sqrt_f32((m_maxSpeed_ - m_finalSpeed_) / m_maxJerk_, &Tj2); // åŠ å‡é€Ÿæ—¶é—´
+        Td = 2 * Tj2;                                                   // æ€»å‡é€Ÿæ—¶é—´
+        alimd = Tj2 * m_maxJerk_;                                       // å®é™…æœ€å¤§å‡é€Ÿåº¦
     }
-    else // ÄÜ´ïµ½×î´ó¼õËÙ¶ÈµÄÇé¿ö
+    else // èƒ½è¾¾åˆ°æœ€å¤§å‡é€Ÿåº¦çš„æƒ…å†µ
     {
-        Tj2 = m_maxDec_ / m_maxJerk_;                         // ¼Ó¼õËÙÊ±¼ä
-        Td = Tj2 + (m_maxSpeed_ - m_finalSpeed_) / m_maxDec_; // ×Ü¼õËÙÊ±¼ä
-        alimd = m_maxDec_;                                    // Êµ¼Ê×î´ó¼õËÙ¶ÈµÈÓÚÉè¶¨×î´ó¼õËÙ¶È
+        Tj2 = m_maxDec_ / m_maxJerk_;                         // åŠ å‡é€Ÿæ—¶é—´
+        Td = Tj2 + (m_maxSpeed_ - m_finalSpeed_) / m_maxDec_; // æ€»å‡é€Ÿæ—¶é—´
+        alimd = m_maxDec_;                                    // å®é™…æœ€å¤§å‡é€Ÿåº¦ç­‰äºè®¾å®šæœ€å¤§å‡é€Ÿåº¦
     }
 
-    // ========== ¼ÆËãÔÈËÙ¶ÎÊ±¼ä ==========
+    // ========== è®¡ç®—åŒ€é€Ÿæ®µæ—¶é—´ ==========
     Tv = (m_targetPos_ - m_startPos_) / m_maxSpeed_ - Ta / 2 * (1 + m_initialSpeed_ / m_maxSpeed_) - Td / 2 * (1 + m_finalSpeed_ / m_maxSpeed_);
 
-    // ========== ´¦Àí²»´æÔÚÔÈËÙ½×¶ÎµÄÇé¿ö ==========
-    if (Tv > 0) // ´æÔÚÔÈËÙ½×¶Î
+    // ========== å¤„ç†ä¸å­˜åœ¨åŒ€é€Ÿé˜¶æ®µçš„æƒ…å†µ ==========
+    if (Tv > 0) // å­˜åœ¨åŒ€é€Ÿé˜¶æ®µ
     {
-        vlim = m_maxSpeed_; // ÏŞÖÆËÙ¶ÈµÈÓÚ×î´óËÙ¶È
-        T = Tv + Ta + Td;   // ×ÜÊ±¼ä
+        vlim = m_maxSpeed_; // é™åˆ¶é€Ÿåº¦ç­‰äºæœ€å¤§é€Ÿåº¦
+        T = Tv + Ta + Td;   // æ€»æ—¶é—´
     }
-    else // ²»´æÔÚÔÈËÙ½×¶Î
+    else // ä¸å­˜åœ¨åŒ€é€Ÿé˜¶æ®µ
     {
-        Tv = 0;                           // ÔÈËÙÊ±¼äÎª0
-        float amax_accel_org = m_maxAcc_; // ±£´æÔ­Ê¼¼ÓËÙ¶Î×î´ó¼ÓËÙ¶ÈÖµ
-        float amax_decel_org = m_maxDec_; // ±£´æÔ­Ê¼¼õËÙ¶Î×î´ó¼ÓËÙ¶ÈÖµ
-        int count = 0;                    // µ÷Õû´ÎÊı¼ÆÊıÆ÷
-        // ¼ÆËãdeltaÖµ£¬ÓÃÓÚÇó½âÊ±¼ä²ÎÊı
-        // ÓÉÓÚÏÖÔÚÓĞÁ½¸ö²»Í¬µÄ¼ÓËÙ¶È£¬ĞèÒª·Ö±ğ¼ÆËã¼ÓËÙ¶ÎºÍ¼õËÙ¶Î
-        // ÕâÀïÊ¹ÓÃÆ½¾ù¼ÓËÙ¶ÈÀ´½üËÆ¼ÆËã
+        Tv = 0;                           // åŒ€é€Ÿæ—¶é—´ä¸º0
+        float amax_accel_org = m_maxAcc_; // ä¿å­˜åŸå§‹åŠ é€Ÿæ®µæœ€å¤§åŠ é€Ÿåº¦å€¼
+        float amax_decel_org = m_maxDec_; // ä¿å­˜åŸå§‹å‡é€Ÿæ®µæœ€å¤§åŠ é€Ÿåº¦å€¼
+        int count = 0;                    // è°ƒæ•´æ¬¡æ•°è®¡æ•°å™¨
+        // è®¡ç®—deltaå€¼ï¼Œç”¨äºæ±‚è§£æ—¶é—´å‚æ•°
+        // ç”±äºç°åœ¨æœ‰ä¸¤ä¸ªä¸åŒçš„åŠ é€Ÿåº¦ï¼Œéœ€è¦åˆ†åˆ«è®¡ç®—åŠ é€Ÿæ®µå’Œå‡é€Ÿæ®µ
+        // è¿™é‡Œä½¿ç”¨å¹³å‡åŠ é€Ÿåº¦æ¥è¿‘ä¼¼è®¡ç®—
         float a_avg = (m_maxAcc_ + m_maxDec_) / 2;
         float delta = (a_avg * a_avg * a_avg * a_avg) / (m_maxJerk_ * m_maxJerk_) + 2 * (m_initialSpeed_ * m_initialSpeed_ + m_finalSpeed_ * m_finalSpeed_) + a_avg * (4 * (m_targetPos_ - m_startPos_) - 2 * a_avg / m_maxJerk_ * (m_initialSpeed_ + m_finalSpeed_));
 
-        // ³õÊ¼Ê±¼ä²ÎÊı¼ÆËã£¨Ê¹ÓÃÆ½¾ù¼ÓËÙ¶È£©
+        // åˆå§‹æ—¶é—´å‚æ•°è®¡ç®—ï¼ˆä½¿ç”¨å¹³å‡åŠ é€Ÿåº¦ï¼‰
         Tj1 = m_maxAcc_ / m_maxJerk_;
         Ta = (a_avg * a_avg / m_maxJerk_ - 2 * m_initialSpeed_ + sqrt(delta)) / (2 * a_avg);
         Tj2 = m_maxDec_ / m_maxJerk_;
         Td = (a_avg * a_avg / m_maxJerk_ - 2 * m_finalSpeed_ + sqrt(delta)) / (2 * a_avg);
-        vlim = m_initialSpeed_ + (Ta - Tj1) * alima; // ¼ÆËãÊµ¼Ê´ïµ½µÄ×î´óËÙ¶È
+        vlim = m_initialSpeed_ + (Ta - Tj1) * alima; // è®¡ç®—å®é™…è¾¾åˆ°çš„æœ€å¤§é€Ÿåº¦
 
-        // Öğ½¥¼õÉÙ¼ÓËÙ¶È£¬Ö±µ½ÕÒµ½¿ÉĞĞµÄ½â
+        // é€æ¸å‡å°‘åŠ é€Ÿåº¦ï¼Œç›´åˆ°æ‰¾åˆ°å¯è¡Œçš„è§£
         while (Ta < 2 * Tj1 || Td < 2 * Tj2)
         {
             count += 1;
-            // Í¬Ê±¼õÉÙ¼ÓËÙ¶ÎºÍ¼õËÙ¶ÎµÄ¼ÓËÙ¶È£¬±£³Ö±ÈÀı¹ØÏµ
-            float reduction_factor = 0.9;             // Ã¿´Î¼õÉÙ10%
-            m_maxAcc_ = m_maxAcc_ * reduction_factor; // ±£³Ö×îĞ¡¼ÓËÙ¶È
-            m_maxDec_ = m_maxDec_ * reduction_factor; // ±£³Ö×îĞ¡¼ÓËÙ¶È
+            // åŒæ—¶å‡å°‘åŠ é€Ÿæ®µå’Œå‡é€Ÿæ®µçš„åŠ é€Ÿåº¦ï¼Œä¿æŒæ¯”ä¾‹å…³ç³»
+            float reduction_factor = 0.9;             // æ¯æ¬¡å‡å°‘10%
+            m_maxAcc_ = m_maxAcc_ * reduction_factor; // ä¿æŒæœ€å°åŠ é€Ÿåº¦
+            m_maxDec_ = m_maxDec_ * reduction_factor; // ä¿æŒæœ€å°åŠ é€Ÿåº¦
 
-            // ÖØĞÂ¼ÆËã¼ÓËÙ¶Î²ÎÊı
+            // é‡æ–°è®¡ç®—åŠ é€Ÿæ®µå‚æ•°
             if ((m_maxSpeed_ - m_initialSpeed_) * m_maxJerk_ < m_maxAcc_ * m_maxAcc_)
             {
                 arm_sqrt_f32((m_maxSpeed_ - m_initialSpeed_) / m_maxJerk_, &Tj1);
@@ -390,7 +390,7 @@ void SShapedPlanner1D::cal_PhaseDistances()
                 alima = m_maxAcc_;
             }
 
-            // ÖØĞÂ¼ÆËã¼õËÙ¶Î²ÎÊı
+            // é‡æ–°è®¡ç®—å‡é€Ÿæ®µå‚æ•°
             if ((m_maxSpeed_ - m_finalSpeed_) * m_maxJerk_ < m_maxDec_ * m_maxDec_)
             {
                 arm_sqrt_f32((m_maxSpeed_ - m_finalSpeed_) / m_maxJerk_, &Tj2);
@@ -403,7 +403,7 @@ void SShapedPlanner1D::cal_PhaseDistances()
                 Td = Tj2 + (m_maxSpeed_ - m_finalSpeed_) / m_maxDec_;
                 alimd = m_maxDec_;
             }
-            // ÖØĞÂ¼ÆËãÆ½¾ù¼ÓËÙ¶ÈºÍdeltaÖµ
+            // é‡æ–°è®¡ç®—å¹³å‡åŠ é€Ÿåº¦å’Œdeltaå€¼
             a_avg = (m_maxAcc_ + m_maxDec_) / 2;
             if (a_avg > 0)
             {
@@ -415,32 +415,32 @@ void SShapedPlanner1D::cal_PhaseDistances()
                 delta = (a_avg * a_avg * a_avg * a_avg) / (m_maxJerk_ * m_maxJerk_) + 2 * (m_initialSpeed_ * m_initialSpeed_ + m_finalSpeed_ * m_finalSpeed_) - a_avg * (4 * (m_targetPos_ - m_startPos_) - 2 * a_avg / m_maxJerk_ * (m_initialSpeed_ + m_finalSpeed_));
             }
 
-            // ÖØĞÂ¼ÆËãÊ±¼ä²ÎÊı
+            // é‡æ–°è®¡ç®—æ—¶é—´å‚æ•°
             Ta = (a_avg * a_avg / m_maxJerk_ - 2 * m_initialSpeed_ + sqrt(delta)) / (2 * a_avg);
             Td = (a_avg * a_avg / m_maxJerk_ - 2 * m_finalSpeed_ + sqrt(delta)) / (2 * a_avg);
-            vlim = m_initialSpeed_ + (Ta - Tj1) * alima; // ÖØĞÂ¼ÆËãÊµ¼Ê×î´óËÙ¶È
+            vlim = m_initialSpeed_ + (Ta - Tj1) * alima; // é‡æ–°è®¡ç®—å®é™…æœ€å¤§é€Ÿåº¦
 
-            // ·ÀÖ¹ÎŞÏŞÑ­»·
+            // é˜²æ­¢æ— é™å¾ªç¯
             if (count > 100)
             {
-                m_maxAcc_ = 0.0f;        // ×î´ó¼ÓËÙ¶È
-                m_maxDec_ = 0.0f;        // ×î´ó¼õËÙ¶È
-                m_maxJerk_ = 0.0f;       // ×î´ó¼Ó¼ÓËÙ¶È
-                m_maxSpeed_ = 0.0f;      // ×î´óËÙ¶È
-                m_initialSpeed_ = 0.0f;  // ÆğÊ¼ËÙ¶È
-                m_finalSpeed_ = 0.0f;    // Ä¿±êËÙ¶È
-                m_startPos_ = 0.0f;      // ÆğÊ¼Î»ÖÃ
-                m_targetPos_ = 0.0f;     // Ä¿±êÎ»ÖÃ
-                m_totalDistance_ = 0.0f; // ×ÜÂ·³Ì
-                m_deadzone_ = 0.0f;      // ËÀÇø·¶Î§
-                err_ = 1;                // ÉèÖÃ´íÎó±êÖ¾
+                m_maxAcc_ = 0.0f;        // æœ€å¤§åŠ é€Ÿåº¦
+                m_maxDec_ = 0.0f;        // æœ€å¤§å‡é€Ÿåº¦
+                m_maxJerk_ = 0.0f;       // æœ€å¤§åŠ åŠ é€Ÿåº¦
+                m_maxSpeed_ = 0.0f;      // æœ€å¤§é€Ÿåº¦
+                m_initialSpeed_ = 0.0f;  // èµ·å§‹é€Ÿåº¦
+                m_finalSpeed_ = 0.0f;    // ç›®æ ‡é€Ÿåº¦
+                m_startPos_ = 0.0f;      // èµ·å§‹ä½ç½®
+                m_targetPos_ = 0.0f;     // ç›®æ ‡ä½ç½®
+                m_totalDistance_ = 0.0f; // æ€»è·¯ç¨‹
+                m_deadzone_ = 0.0f;      // æ­»åŒºèŒƒå›´
+                err_ = 1;                // è®¾ç½®é”™è¯¯æ ‡å¿—
                 break;
             }
         }
-        // ´¦Àí¼ÓËÙ»ò¼õËÙÊ±¼äÎª¸ºµÄÇé¿ö
+        // å¤„ç†åŠ é€Ÿæˆ–å‡é€Ÿæ—¶é—´ä¸ºè´Ÿçš„æƒ…å†µ
         if (Ta < 0 || Td < 0)
         {
-            if (m_initialSpeed_ > m_finalSpeed_) // ³õÊ¼ËÙ¶È´óÓÚÄ¿±êËÙ¶È£¬Ö÷ÒªÊÇ¼õËÙ
+            if (m_initialSpeed_ > m_finalSpeed_) // åˆå§‹é€Ÿåº¦å¤§äºç›®æ ‡é€Ÿåº¦ï¼Œä¸»è¦æ˜¯å‡é€Ÿ
             {
                 Ta = 0;
                 Tj1 = 0;
@@ -452,7 +452,7 @@ void SShapedPlanner1D::cal_PhaseDistances()
                 alimd = -alimd;
             }
 
-            else // Ö÷ÒªÊÇ¼ÓËÙ
+            else // ä¸»è¦æ˜¯åŠ é€Ÿ
             {
                 Td = 0;
                 Tj2 = 0;
@@ -463,34 +463,34 @@ void SShapedPlanner1D::cal_PhaseDistances()
             }
         }
 
-        T = Tv + Ta + Td; // ¼ÆËã×ÜÊ±¼ä
+        T = Tv + Ta + Td; // è®¡ç®—æ€»æ—¶é—´
     }
 
     float T2_duration, v_start_stage2, T6_duration, v_start_stage6;
-    // ========== ¼ÆËã¸÷½×¶ÎÂ·³Ì ==========
-    // ½×¶Î1: ¼Ó¼ÓËÙ½×¶Î (0 <= t < Tj1)
+    // ========== è®¡ç®—å„é˜¶æ®µè·¯ç¨‹ ==========
+    // é˜¶æ®µ1: åŠ åŠ é€Ÿé˜¶æ®µ (0 <= t < Tj1)
     m_accelJerkUpDistance_ = m_initialSpeed_ * Tj1 + m_maxJerk_ * Tj1 * Tj1 * Tj1 / 6;
 
-    // ½×¶Î2: ÔÈ¼ÓËÙ½×¶Î (Tj1 <= t < (Ta - Tj1))
+    // é˜¶æ®µ2: åŒ€åŠ é€Ÿé˜¶æ®µ (Tj1 <= t < (Ta - Tj1))
     T2_duration = Ta - 2 * Tj1;
     v_start_stage2 = m_initialSpeed_ + m_maxJerk_ * Tj1 * Tj1 / 2;
     m_accelConstDistance_ = v_start_stage2 * T2_duration + 0.5 * alima * T2_duration * T2_duration;
 
-    // ½×¶Î3: ¼õ¼ÓËÙ½×¶Î ((Ta - Tj1) <= t < Ta)
+    // é˜¶æ®µ3: å‡åŠ é€Ÿé˜¶æ®µ ((Ta - Tj1) <= t < Ta)
     m_accelJerkDownDistance_ = vlim * Tj1 - m_maxJerk_ * Tj1 * Tj1 * Tj1 / 6;
 
-    // ½×¶Î4: ÔÈËÙ½×¶Î (Ta <= t < (Ta + Tv))
+    // é˜¶æ®µ4: åŒ€é€Ÿé˜¶æ®µ (Ta <= t < (Ta + Tv))
     m_constVelDistance_ = vlim * Tv;
 
-    // ½×¶Î5: ¼Ó¼õËÙ½×¶Î ((T - Td) <= t < (T - Td + Tj2))
+    // é˜¶æ®µ5: åŠ å‡é€Ÿé˜¶æ®µ ((T - Td) <= t < (T - Td + Tj2))
     m_decelJerkUpDistance_ = vlim * Tj2 - m_maxJerk_ * Tj2 * Tj2 * Tj2 / 6;
 
-    // ½×¶Î6: ÔÈ¼õËÙ½×¶Î ((T - Td + Tj2) <= t < (T - Tj2))
+    // é˜¶æ®µ6: åŒ€å‡é€Ÿé˜¶æ®µ ((T - Td + Tj2) <= t < (T - Tj2))
     T6_duration = Td - 2 * Tj2;
     v_start_stage6 = vlim - m_maxJerk_ * Tj2 * Tj2 / 2;
     m_decelConstDistance_ = v_start_stage6 * T6_duration - 0.5 * alimd * T6_duration * T6_duration;
 
-    // ½×¶Î7: ¼õ¼õËÙ½×¶Î ((T - Tj2) <= t < T)
+    // é˜¶æ®µ7: å‡å‡é€Ÿé˜¶æ®µ ((T - Tj2) <= t < T)
     m_decelJerkDownDistance_ = m_finalSpeed_ * Tj2 + m_maxJerk_ * Tj2 * Tj2 * Tj2 / 6;
 
     m_t1_ = Tj1;
@@ -503,14 +503,14 @@ void SShapedPlanner1D::cal_PhaseDistances()
     m_vlim_ = vlim;
 }
 /**
- * @brief ¼ÓËÙ¶Î£ºJerk ÉÏÉı½×¶ÎµÄËÙ¶È
+ * @brief åŠ é€Ÿæ®µï¼šJerk ä¸Šå‡é˜¶æ®µçš„é€Ÿåº¦
  */
 float SShapedPlanner1D::cal_Acc_JerkUpSpeed(float traveled)
 {
     float t_low = 0.0f;
     float t_high = m_t1_;
     float t_mid, x_mid;
-    for (int i = 0; i < 50; i++) // ¶ş·Ö·¨Çó½âÊ±¼ä t
+    for (int i = 0; i < 50; i++) // äºŒåˆ†æ³•æ±‚è§£æ—¶é—´ t
     {
         t_mid = (t_low + t_high) / 2;
         x_mid = m_initialSpeed_ * t_mid + m_maxJerk_ * t_mid * t_mid * t_mid / 6;
@@ -532,25 +532,25 @@ float SShapedPlanner1D::cal_Acc_JerkUpSpeed(float traveled)
 }
 
 /**
- * @brief ¼ÓËÙ¶Î£º¼ÓËÙ¶Èºã¶¨½×¶ÎµÄËÙ¶È
+ * @brief åŠ é€Ÿæ®µï¼šåŠ é€Ÿåº¦æ’å®šé˜¶æ®µçš„é€Ÿåº¦
  */
 float SShapedPlanner1D::cal_Acc_ConstSpeed(float traveled)
 {
-    float v_0 = m_initialSpeed_ + 0.5f * m_maxJerk_ * m_t1_ * m_t1_; // ¼ÓËÙ¶ÎÔÈ¼ÓËÙ½×¶Î³õËÙ¶È
+    float v_0 = m_initialSpeed_ + 0.5f * m_maxJerk_ * m_t1_ * m_t1_; // åŠ é€Ÿæ®µåŒ€åŠ é€Ÿé˜¶æ®µåˆé€Ÿåº¦
     float v;
     arm_sqrt_f32((2.0f * (traveled - m_accelJerkUpDistance_) * m_maxAcc_ + v_0 * v_0), &v);
     return v;
 }
 
 /**
- * @brief ¼ÓËÙ¶Î£ºJerk ÏÂ½µ½×¶ÎµÄËÙ¶È
+ * @brief åŠ é€Ÿæ®µï¼šJerk ä¸‹é™é˜¶æ®µçš„é€Ÿåº¦
  */
 float SShapedPlanner1D::cal_Acc_JerkDownSpeed(float traveled)
 {
     float t_low = m_t2_;
     float t_high = m_t3_;
     float t_mid, x_mid;
-    for (int i = 0; i < 50; i++) // ¶ş·Ö·¨Çó½âÊ±¼ä t
+    for (int i = 0; i < 50; i++) // äºŒåˆ†æ³•æ±‚è§£æ—¶é—´ t
     {
         t_mid = (t_low + t_high) / 2;
         x_mid = (m_vlim_ + m_initialSpeed_) * m_t3_ / 2 - m_vlim_ * (m_t3_ - t_mid) + m_maxJerk_ * (m_t3_ - t_mid) * (m_t3_ - t_mid) * (m_t3_ - t_mid) / 6;
@@ -572,7 +572,7 @@ float SShapedPlanner1D::cal_Acc_JerkDownSpeed(float traveled)
 }
 
 /**
- * @brief ¼õËÙ¶Î£ºJerk ÉÏÉı½×¶ÎµÄËÙ¶È
+ * @brief å‡é€Ÿæ®µï¼šJerk ä¸Šå‡é˜¶æ®µçš„é€Ÿåº¦
  */
 float SShapedPlanner1D::cal_Dec_JerkUpSpeed(float traveled)
 {
@@ -581,7 +581,7 @@ float SShapedPlanner1D::cal_Dec_JerkUpSpeed(float traveled)
     float t_high = m_t5_;
     float t_mid, x_mid;
     float Td = m_t7_ - m_t4_;
-    for (int i = 0; i < 50; i++) // ¶ş·Ö·¨Çó½âÊ±¼ä t
+    for (int i = 0; i < 50; i++) // äºŒåˆ†æ³•æ±‚è§£æ—¶é—´ t
     {
         t_mid = (t_low + t_high) / 2;
         x_mid = m_targetPos_ - (m_vlim_ + m_finalSpeed_) * Td / 2 + m_vlim_ * (t_mid - m_t4_) - m_maxJerk_ * (t_mid - m_t4_) * (t_mid - m_t4_) * (t_mid - m_t4_) / 6;
@@ -603,7 +603,7 @@ float SShapedPlanner1D::cal_Dec_JerkUpSpeed(float traveled)
 }
 
 /**
- * @brief ¼õËÙ¶Î£º¼ÓËÙ¶Èºã¶¨½×¶ÎµÄËÙ¶È
+ * @brief å‡é€Ÿæ®µï¼šåŠ é€Ÿåº¦æ’å®šé˜¶æ®µçš„é€Ÿåº¦
  */
 float SShapedPlanner1D::cal_Dec_ConstSpeed(float traveled)
 {
@@ -614,7 +614,7 @@ float SShapedPlanner1D::cal_Dec_ConstSpeed(float traveled)
 }
 
 /**
- * @brief ¼õËÙ¶Î£ºJerk ÏÂ½µ½×¶ÎµÄËÙ¶È
+ * @brief å‡é€Ÿæ®µï¼šJerk ä¸‹é™é˜¶æ®µçš„é€Ÿåº¦
  */
 float SShapedPlanner1D::cal_Dec_JerkDownSpeed(float traveled)
 {
@@ -622,7 +622,7 @@ float SShapedPlanner1D::cal_Dec_JerkDownSpeed(float traveled)
     float t_high = m_t7_;
     float t_mid, x_mid;
     float Td = m_t7_ - m_t4_;
-    for (int i = 0; i < 50; i++) // ¶ş·Ö·¨Çó½âÊ±¼ä t
+    for (int i = 0; i < 50; i++) // äºŒåˆ†æ³•æ±‚è§£æ—¶é—´ t
     {
         t_mid = (t_low + t_high) / 2;
         x_mid = m_targetPos_ - m_finalSpeed_ * (m_t7_ - t_mid) - m_maxJerk_ * (m_t7_ - t_mid) * (m_t7_ - t_mid) * (m_t7_ - t_mid) / 6;
@@ -644,32 +644,32 @@ float SShapedPlanner1D::cal_Dec_JerkDownSpeed(float traveled)
 }
 
 /**
- * @brief ÖØÖÃ S ĞÍËÙ¶È¹æ»®Æ÷µÄÄÚ²¿×´Ì¬¡£
+ * @brief é‡ç½® S å‹é€Ÿåº¦è§„åˆ’å™¨çš„å†…éƒ¨çŠ¶æ€ã€‚
  */
 void SShapedPlanner1D::reset()
 {
-    m_totalDistance_ = 0; // ÖØÖÃ×ÜÂ·³Ì
-    // ÄÚ²¿×´Ì¬±äÁ¿
-    m_phase = S_FINISHED_PHASE; // µ±Ç°¹æ»®Ëù´¦µÄ½×¶Î
-    // Ô¤¼ÆËãµÄ S ĞÍ¹æ»®¸÷¸ö½×¶ÎµÄ¾àÀë
-    m_accelJerkUpDistance_ = 0.0f;   // ¼ÓËÙ¶Î£ºJerk ÉÏÉı½×¶ÎµÄÂ·³Ì
-    m_accelConstDistance_ = 0.0f;    // ¼ÓËÙ¶Î£º¼ÓËÙ¶Èºã¶¨½×¶ÎµÄÂ·³Ì
-    m_accelJerkDownDistance_ = 0.0f; // ¼ÓËÙ¶Î£ºJerk ÏÂ½µ½×¶ÎµÄÂ·³Ì
-    m_constVelDistance_ = 0.0f;      // ÔÈËÙ¶Î£ººã¶¨ËÙ¶È½×¶ÎµÄÂ·³Ì
-    m_decelJerkUpDistance_ = 0.0f;   // ¼õËÙ¶Î£ºJerk ÉÏÉı£¨¼õËÙ¿ªÊ¼£©½×¶ÎµÄÂ·³Ì
-    m_decelConstDistance_ = 0.0f;    // ¼õËÙ¶Î£º¼ÓËÙ¶Èºã¶¨£¨¼õËÙÖĞ£©½×¶ÎµÄÂ·³Ì
-    m_decelJerkDownDistance_ = 0.0f; // ¼õËÙ¶Î£ºJerk ÏÂ½µ£¨¼õËÙ½áÊø£©½×¶ÎµÄÂ·³Ì
+    m_totalDistance_ = 0; // é‡ç½®æ€»è·¯ç¨‹
+    // å†…éƒ¨çŠ¶æ€å˜é‡
+    m_phase = S_FINISHED_PHASE; // å½“å‰è§„åˆ’æ‰€å¤„çš„é˜¶æ®µ
+    // é¢„è®¡ç®—çš„ S å‹è§„åˆ’å„ä¸ªé˜¶æ®µçš„è·ç¦»
+    m_accelJerkUpDistance_ = 0.0f;   // åŠ é€Ÿæ®µï¼šJerk ä¸Šå‡é˜¶æ®µçš„è·¯ç¨‹
+    m_accelConstDistance_ = 0.0f;    // åŠ é€Ÿæ®µï¼šåŠ é€Ÿåº¦æ’å®šé˜¶æ®µçš„è·¯ç¨‹
+    m_accelJerkDownDistance_ = 0.0f; // åŠ é€Ÿæ®µï¼šJerk ä¸‹é™é˜¶æ®µçš„è·¯ç¨‹
+    m_constVelDistance_ = 0.0f;      // åŒ€é€Ÿæ®µï¼šæ’å®šé€Ÿåº¦é˜¶æ®µçš„è·¯ç¨‹
+    m_decelJerkUpDistance_ = 0.0f;   // å‡é€Ÿæ®µï¼šJerk ä¸Šå‡ï¼ˆå‡é€Ÿå¼€å§‹ï¼‰é˜¶æ®µçš„è·¯ç¨‹
+    m_decelConstDistance_ = 0.0f;    // å‡é€Ÿæ®µï¼šåŠ é€Ÿåº¦æ’å®šï¼ˆå‡é€Ÿä¸­ï¼‰é˜¶æ®µçš„è·¯ç¨‹
+    m_decelJerkDownDistance_ = 0.0f; // å‡é€Ÿæ®µï¼šJerk ä¸‹é™ï¼ˆå‡é€Ÿç»“æŸï¼‰é˜¶æ®µçš„è·¯ç¨‹
 }
 
 // ---------------------------- TrapePlanner2D ----------------------------
 
 /**
- * @brief ÖØÖÃ¶şÎ¬ÌİĞÎËÙ¶È¹æ»®Æ÷µÄ²ÎÊı¡£
- * @param params °üº¬ËÙ¶È¹æ»®Æ÷²ÎÊıµÄ½á¹¹Ìå¡£
+ * @brief é‡ç½®äºŒç»´æ¢¯å½¢é€Ÿåº¦è§„åˆ’å™¨çš„å‚æ•°ã€‚
+ * @param params åŒ…å«é€Ÿåº¦è§„åˆ’å™¨å‚æ•°çš„ç»“æ„ä½“ã€‚
  */
 void TrapePlanner2D::param_reset(Speedplanner_2D_Param_Config params)
 {
-    // ±£´æÓÃ»§²ÎÊı
+    // ä¿å­˜ç”¨æˆ·å‚æ•°
     m_maxAcc_ = abs(params.maxAcc);
     m_maxDec_ = abs(params.maxDec);
     m_maxSpeed_ = abs(params.maxSpeed);
@@ -678,11 +678,11 @@ void TrapePlanner2D::param_reset(Speedplanner_2D_Param_Config params)
     m_startPos_ = params.startPos;
     m_targetPos_ = params.targetPos;
     m_deadzone_ = abs(params.deadzone);
-    // ¼ÆËã×ÜÂ·³Ì£ºÆğµãµ½Ä¿±êµãµÄÖ±Ïß¾àÀë
+    // è®¡ç®—æ€»è·¯ç¨‹ï¼šèµ·ç‚¹åˆ°ç›®æ ‡ç‚¹çš„ç›´çº¿è·ç¦»
     Vector2D diff = params.targetPos - params.startPos;
     m_totalDistance_ = diff.magnitude();
 
-    // ¼ÆËãÈôÄÜ´ïµ½Éè¶¨×î´óËÙ¶ÈÊ±µÄ¼ÓËÙºÍ¼õËÙÂ·³Ì
+    // è®¡ç®—è‹¥èƒ½è¾¾åˆ°è®¾å®šæœ€å¤§é€Ÿåº¦æ—¶çš„åŠ é€Ÿå’Œå‡é€Ÿè·¯ç¨‹
     float d_acc = 0;
     if (m_maxSpeed_ > m_initialSpeed_)
         d_acc = (m_maxSpeed_ * m_maxSpeed_ - m_initialSpeed_ * m_initialSpeed_) / (2.0f * m_maxAcc_);
@@ -690,17 +690,17 @@ void TrapePlanner2D::param_reset(Speedplanner_2D_Param_Config params)
     if (m_maxSpeed_ > m_finalSpeed_)
         d_dec = (m_maxSpeed_ * m_maxSpeed_ - m_finalSpeed_ * m_finalSpeed_) / (2.0f * m_maxDec_);
 
-    // ÅĞ¶ÏÊÇ·ñÄÜ¹»´ïµ½Éè¶¨×î´óËÙ¶È
+    // åˆ¤æ–­æ˜¯å¦èƒ½å¤Ÿè¾¾åˆ°è®¾å®šæœ€å¤§é€Ÿåº¦
     if (d_acc + d_dec <= m_totalDistance_)
     {
-        // ÌİĞÎ¹æ»®£º´æÔÚ¼ÓËÙ¡¢ÔÈËÙ¡¢¼õËÙÈı¸ö½×¶Î
+        // æ¢¯å½¢è§„åˆ’ï¼šå­˜åœ¨åŠ é€Ÿã€åŒ€é€Ÿã€å‡é€Ÿä¸‰ä¸ªé˜¶æ®µ
         m_profileType = TRAPEZOIDAL;
         m_accelDistance_ = d_acc;
         m_decelDistance_ = d_dec;
     }
     else
     {
-        // Èı½ÇĞÎ¹æ»®£ºÎŞ·¨´ïµ½Éè¶¨×î´óËÙ¶È£¬¼ÆËã¿É´ïµ½µÄ·åÖµËÙ¶È v_peak
+        // ä¸‰è§’å½¢è§„åˆ’ï¼šæ— æ³•è¾¾åˆ°è®¾å®šæœ€å¤§é€Ÿåº¦ï¼Œè®¡ç®—å¯è¾¾åˆ°çš„å³°å€¼é€Ÿåº¦ v_peak
         m_profileType = TRIANGULAR;
         float v_peak_sq = (m_maxDec_ * m_initialSpeed_ * m_initialSpeed_ +
                            m_maxAcc_ * m_finalSpeed_ * m_finalSpeed_ +
@@ -712,27 +712,27 @@ void TrapePlanner2D::param_reset(Speedplanner_2D_Param_Config params)
         m_decelDistance_ = (v_peak * v_peak - m_finalSpeed_ * m_finalSpeed_) / (2.0f * m_maxDec_);
     }
 
-    // ³õÊ¼»¯½×¶ÎÎª¼ÓËÙ¶Î
+    // åˆå§‹åŒ–é˜¶æ®µä¸ºåŠ é€Ÿæ®µ
     m_phase = ACCEL_PHASE;
 }
 
 /**
- * @brief ¹¹Ôìº¯Êı£¬³õÊ¼»¯¶şÎ¬ÌİĞÎËÙ¶È¹æ»®Æ÷¡£
- * @param params °üº¬ËÙ¶È¹æ»®Æ÷²ÎÊıµÄ½á¹¹Ìå¡£
+ * @brief æ„é€ å‡½æ•°ï¼Œåˆå§‹åŒ–äºŒç»´æ¢¯å½¢é€Ÿåº¦è§„åˆ’å™¨ã€‚
+ * @param params åŒ…å«é€Ÿåº¦è§„åˆ’å™¨å‚æ•°çš„ç»“æ„ä½“ã€‚
  */
 TrapePlanner2D::TrapePlanner2D(Speedplanner_2D_Param_Config params)
 {
-    param_reset(params); // µ÷ÓÃ²ÎÊıÖØÖÃº¯Êı
+    param_reset(params); // è°ƒç”¨å‚æ•°é‡ç½®å‡½æ•°
 }
 
 /**
- * @brief ¸ù¾İµ±Ç°ÒÑĞĞÊ»µÄ¾àÀë£¬¼ÆËãÄ¿±êËÙ¶È¡£
- * @param now_dis µ±Ç°ÒÑĞĞÊ»µÄ¾àÀë¡£
- * @return ¹æ»®µÄÄ¿±êËÙ¶È¡£
+ * @brief æ ¹æ®å½“å‰å·²è¡Œé©¶çš„è·ç¦»ï¼Œè®¡ç®—ç›®æ ‡é€Ÿåº¦ã€‚
+ * @param now_dis å½“å‰å·²è¡Œé©¶çš„è·ç¦»ã€‚
+ * @return è§„åˆ’çš„ç›®æ ‡é€Ÿåº¦ã€‚
  */
 Vector2D TrapePlanner2D::plan(Vector2D &now_dis)
 {
-    // ¼ÆËãÂ·¾¶¼°µ¥Î»·½Ïò
+    // è®¡ç®—è·¯å¾„åŠå•ä½æ–¹å‘
     Vector2D path = m_targetPos_ - now_dis;
     if (m_totalDistance_ < 0.0001f)
     {
@@ -742,7 +742,7 @@ Vector2D TrapePlanner2D::plan(Vector2D &now_dis)
 
     Vector2D direction = path.normalize();
 
-    // ¼ÆËãµ±Ç°Î»ÖÃÔÚ¹æ»®Â·¾¶ÉÏµÄÍ¶Ó°¾àÀë
+    // è®¡ç®—å½“å‰ä½ç½®åœ¨è§„åˆ’è·¯å¾„ä¸Šçš„æŠ•å½±è·ç¦»
     Vector2D delta = now_dis - m_startPos_;
     float traveled = delta * direction;
     if (traveled < 0)
@@ -751,7 +751,7 @@ Vector2D TrapePlanner2D::plan(Vector2D &now_dis)
     {
         return m_finalSpeed_ * (m_targetPos_ - m_startPos_).normalize();
     }
-    // ¼ÆËãµ±Ç°Î»ÖÃÓëÄ¿±êµãÖ®¼äµÄÖ±Ïß¾àÀë
+    // è®¡ç®—å½“å‰ä½ç½®ä¸ç›®æ ‡ç‚¹ä¹‹é—´çš„ç›´çº¿è·ç¦»
 
     float distanceToTarget = (m_targetPos_ - now_dis).magnitude();
 
@@ -788,9 +788,9 @@ Vector2D TrapePlanner2D::plan(Vector2D &now_dis)
 }
 
 /**
- * @brief ¸ù¾İµ±Ç°ÒÑĞĞÊ»µÄ¾àÀë£¬ÅĞ¶Ïµ±Ç°Ëù´¦µÄÔË¶¯½×¶Î¡£
- * @param traveled µ±Ç°ÒÑĞĞÊ»µÄ¾àÀë¡£
- * @return µ±Ç°µÄÔË¶¯½×¶Î¡£
+ * @brief æ ¹æ®å½“å‰å·²è¡Œé©¶çš„è·ç¦»ï¼Œåˆ¤æ–­å½“å‰æ‰€å¤„çš„è¿åŠ¨é˜¶æ®µã€‚
+ * @param traveled å½“å‰å·²è¡Œé©¶çš„è·ç¦»ã€‚
+ * @return å½“å‰çš„è¿åŠ¨é˜¶æ®µã€‚
  */
 Phase TrapePlanner2D::determinePhase(float traveled)
 {
@@ -816,22 +816,22 @@ Phase TrapePlanner2D::determinePhase(float traveled)
 }
 
 /**
- * @brief ÖØÖÃ¶şÎ¬ÌİĞÎËÙ¶È¹æ»®Æ÷×´Ì¬¡£
+ * @brief é‡ç½®äºŒç»´æ¢¯å½¢é€Ÿåº¦è§„åˆ’å™¨çŠ¶æ€ã€‚
  */
 void TrapePlanner2D::reset()
 {
-    m_phase = FINISHED_PHASE; // ÉèÖÃ½×¶ÎÎª¹æ»®½áÊø
-    m_totalDistance_ = 0;     // ÖØÖÃ×ÜÂ·³Ì
-    m_accelDistance_ = 0;     // ÖØÖÃ¼ÓËÙ¶Î³¤¶È
-    m_decelDistance_ = 0;     // ÖØÖÃ¼õËÙ¶Î³¤¶È
-    direction_ = 0;           // ÖØÖÃÔË¶¯·½Ïò
+    m_phase = FINISHED_PHASE; // è®¾ç½®é˜¶æ®µä¸ºè§„åˆ’ç»“æŸ
+    m_totalDistance_ = 0;     // é‡ç½®æ€»è·¯ç¨‹
+    m_accelDistance_ = 0;     // é‡ç½®åŠ é€Ÿæ®µé•¿åº¦
+    m_decelDistance_ = 0;     // é‡ç½®å‡é€Ÿæ®µé•¿åº¦
+    direction_ = 0;           // é‡ç½®è¿åŠ¨æ–¹å‘
 }
 
 // ---------------------------- SShapedPlanner2D ----------------------------
 
 /**
- * @brief ÖØÖÃ¶şÎ¬ S ĞÍËÙ¶È¹æ»®Æ÷µÄ²ÎÊı¡£
- * @param params °üº¬ËÙ¶È¹æ»®Æ÷²ÎÊıµÄ½á¹¹Ìå¡£
+ * @brief é‡ç½®äºŒç»´ S å‹é€Ÿåº¦è§„åˆ’å™¨çš„å‚æ•°ã€‚
+ * @param params åŒ…å«é€Ÿåº¦è§„åˆ’å™¨å‚æ•°çš„ç»“æ„ä½“ã€‚
  */
 void SShapedPlanner2D::param_reset(Speedplanner_2D_Param_Config params)
 {
@@ -846,34 +846,34 @@ void SShapedPlanner2D::param_reset(Speedplanner_2D_Param_Config params)
     m_startPos1_ = params.startPos;
     m_targetPos_ = params.targetPos - params.startPos;
     m_deadzone_ = abs(params.deadzone);
-    // ¼ÆËã×Ü¾àÀë
+    // è®¡ç®—æ€»è·ç¦»
     Vector2D diff = params.targetPos - params.startPos;
     m_totalDistance_ = diff.magnitude();
 
-    // Ô¤¼ÆËã¸÷¸ö½×¶ÎµÄÂ·³Ì
+    // é¢„è®¡ç®—å„ä¸ªé˜¶æ®µçš„è·¯ç¨‹
     cal_PhaseDistances();
 
-    // ³õÊ¼»¯µ±Ç°½×¶Î
+    // åˆå§‹åŒ–å½“å‰é˜¶æ®µ
     m_phase = S_ACCEL_JERK_UP_PHASE;
 }
 
 /**
- * @brief ¹¹Ôìº¯Êı£¬³õÊ¼»¯¶şÎ¬ S ĞÍËÙ¶È¹æ»®Æ÷¡£
- * @param params °üº¬ËÙ¶È¹æ»®Æ÷²ÎÊıµÄ½á¹¹Ìå¡£
+ * @brief æ„é€ å‡½æ•°ï¼Œåˆå§‹åŒ–äºŒç»´ S å‹é€Ÿåº¦è§„åˆ’å™¨ã€‚
+ * @param params åŒ…å«é€Ÿåº¦è§„åˆ’å™¨å‚æ•°çš„ç»“æ„ä½“ã€‚
  */
 SShapedPlanner2D::SShapedPlanner2D(Speedplanner_2D_Param_Config params)
 {
-    param_reset(params); // µ÷ÓÃ²ÎÊıÖØÖÃº¯Êı
+    param_reset(params); // è°ƒç”¨å‚æ•°é‡ç½®å‡½æ•°
 }
 
 /**
- * @brief ¸ù¾İµ±Ç°ÒÑĞĞÊ»µÄ¾àÀë£¬¼ÆËãÄ¿±êËÙ¶È¡£
- * @param now_dis µ±Ç°ÒÑĞĞÊ»µÄ¾àÀë¡£
- * @return ¹æ»®µÄÄ¿±êËÙ¶È¡£
+ * @brief æ ¹æ®å½“å‰å·²è¡Œé©¶çš„è·ç¦»ï¼Œè®¡ç®—ç›®æ ‡é€Ÿåº¦ã€‚
+ * @param now_dis å½“å‰å·²è¡Œé©¶çš„è·ç¦»ã€‚
+ * @return è§„åˆ’çš„ç›®æ ‡é€Ÿåº¦ã€‚
  */
 Vector2D SShapedPlanner2D::plan(Vector2D &now_dis1)
 {
-    // ¼ÆËãÂ·¾¶¼°µ¥Î»·½Ïò
+    // è®¡ç®—è·¯å¾„åŠå•ä½æ–¹å‘
     Vector2D now_dis = now_dis1 - m_startPos1_;
     if (now_dis.x < 0.000001f)
     {
@@ -893,7 +893,7 @@ Vector2D SShapedPlanner2D::plan(Vector2D &now_dis1)
         return Vector2D(0, 0);
     }
 
-    // ¼ÆËãµ±Ç°Î»ÖÃÔÚ¹æ»®Â·¾¶ÉÏµÄÍ¶Ó°¾àÀë
+    // è®¡ç®—å½“å‰ä½ç½®åœ¨è§„åˆ’è·¯å¾„ä¸Šçš„æŠ•å½±è·ç¦»
     Vector2D delta = now_dis - m_startPos_;
     float traveled = delta * direction;
     // float traveled = delta.magnitude();
@@ -905,13 +905,13 @@ Vector2D SShapedPlanner2D::plan(Vector2D &now_dis1)
         return m_finalSpeed_ * (m_targetPos_ - m_startPos_).normalize();
     }
 
-    // ¼ÆËãµ±Ç°Î»ÖÃÓëÄ¿±êµãÖ®¼äµÄÖ±Ïß¾àÀë
+    // è®¡ç®—å½“å‰ä½ç½®ä¸ç›®æ ‡ç‚¹ä¹‹é—´çš„ç›´çº¿è·ç¦»
     // float distanceToTarget = (m_targetPos_ - now_dis).magnitude();
 
-    // È·¶¨µ±Ç°½×¶Î
+    // ç¡®å®šå½“å‰é˜¶æ®µ
     m_phase = determinePhase(traveled);
 
-    // ¸ù¾İ½×¶Î¼ÆËãµ±Ç°ËÙ¶È
+    // æ ¹æ®é˜¶æ®µè®¡ç®—å½“å‰é€Ÿåº¦
     float currentSpeed = 0.0f;
 
     switch (m_phase)
@@ -946,141 +946,141 @@ Vector2D SShapedPlanner2D::plan(Vector2D &now_dis1)
 }
 
 /**
- * @brief ¸ù¾İÒÑĞĞÊ»µÄ¾àÀëÈ·¶¨µ±Ç°Ëù´¦µÄ S ĞÍ¹æ»®½×¶Î¡£
- * @param traveled ÒÑĞĞÊ»µÄ¾àÀë£¨´ÓÆğÊ¼Î»ÖÃËãÆğ£©¡£
- * @return µ±Ç° S ĞÍ¹æ»®½×¶Î¡£
+ * @brief æ ¹æ®å·²è¡Œé©¶çš„è·ç¦»ç¡®å®šå½“å‰æ‰€å¤„çš„ S å‹è§„åˆ’é˜¶æ®µã€‚
+ * @param traveled å·²è¡Œé©¶çš„è·ç¦»ï¼ˆä»èµ·å§‹ä½ç½®ç®—èµ·ï¼‰ã€‚
+ * @return å½“å‰ S å‹è§„åˆ’é˜¶æ®µã€‚
  */
 SPhase SShapedPlanner2D::determinePhase(float traveled)
 {
-    // ¼ì²éÊÇ·ñÒÑ¾­Íê³É
+    // æ£€æŸ¥æ˜¯å¦å·²ç»å®Œæˆ
     if (abs(traveled - m_totalDistance_) < m_deadzone_)
     {
         return S_FINISHED_PHASE;
     }
 
-    // ÀÛ¼Æ¾àÀëÅĞ¶Ïµ±Ç°½×¶Î
+    // ç´¯è®¡è·ç¦»åˆ¤æ–­å½“å‰é˜¶æ®µ
     float cumulative = 0.0f;
 
-    // ¼ÓËÙ¶Î£ºJerk ÉÏÉı
+    // åŠ é€Ÿæ®µï¼šJerk ä¸Šå‡
     cumulative += m_accelJerkUpDistance_;
     if (traveled < cumulative)
         return S_ACCEL_JERK_UP_PHASE;
 
-    // ¼ÓËÙ¶Î£º¼ÓËÙ¶Èºã¶¨
+    // åŠ é€Ÿæ®µï¼šåŠ é€Ÿåº¦æ’å®š
     cumulative += m_accelConstDistance_;
     if (traveled < cumulative)
         return S_ACCEL_CONST_PHASE;
 
-    // ¼ÓËÙ¶Î£ºJerk ÏÂ½µ
+    // åŠ é€Ÿæ®µï¼šJerk ä¸‹é™
     cumulative += m_accelJerkDownDistance_;
     if (traveled < cumulative)
         return S_ACCEL_JERK_DOWN_PHASE;
 
-    // ÔÈËÙ¶Î
+    // åŒ€é€Ÿæ®µ
     cumulative += m_constVelDistance_;
     if (traveled < cumulative)
         return S_CONST_VEL_PHASE;
 
-    // ¼õËÙ¶Î£ºJerk ÉÏÉı
+    // å‡é€Ÿæ®µï¼šJerk ä¸Šå‡
     cumulative += m_decelJerkUpDistance_;
     if (traveled < cumulative)
         return S_DECEL_JERK_UP_PHASE;
 
-    // ¼õËÙ¶Î£º¼ÓËÙ¶Èºã¶¨
+    // å‡é€Ÿæ®µï¼šåŠ é€Ÿåº¦æ’å®š
     cumulative += m_decelConstDistance_;
     if (traveled < cumulative)
         return S_DECEL_CONST_PHASE;
 
-    // ¼õËÙ¶Î£ºJerk ÏÂ½µ
+    // å‡é€Ÿæ®µï¼šJerk ä¸‹é™
     return S_DECEL_JERK_DOWN_PHASE;
 }
 
-// ---------------------------- ÄÚ²¿¸¨Öúº¯Êı ----------------------------
+// ---------------------------- å†…éƒ¨è¾…åŠ©å‡½æ•° ----------------------------
 
 /**
- * @brief ¼ÆËã¸÷½×¶ÎµÄ¾àÀë¡£
+ * @brief è®¡ç®—å„é˜¶æ®µçš„è·ç¦»ã€‚
  */
 void SShapedPlanner2D::cal_PhaseDistances()
 {
-    // == == == == == ¼ÆËã¼ÓËÙ¶Î²ÎÊı == == == == ==
-    // ÅĞ¶ÏÊÇ·ñÄÜ´ïµ½×î´ó¼ÓËÙ¶È
+    // == == == == == è®¡ç®—åŠ é€Ÿæ®µå‚æ•° == == == == ==
+    // åˆ¤æ–­æ˜¯å¦èƒ½è¾¾åˆ°æœ€å¤§åŠ é€Ÿåº¦
     float Tj1, Ta, alima, Tj2, Td, alimd, Tv, vlim, T;
-    if ((m_maxSpeed_ - m_initialSpeed_) * m_maxJerk_ < m_maxAcc_ * m_maxAcc_) // ²»ÄÜ´ïµ½×î´ó¼ÓËÙ¶ÈµÄÇé¿ö
+    if ((m_maxSpeed_ - m_initialSpeed_) * m_maxJerk_ < m_maxAcc_ * m_maxAcc_) // ä¸èƒ½è¾¾åˆ°æœ€å¤§åŠ é€Ÿåº¦çš„æƒ…å†µ
     {
-        if (m_initialSpeed_ > m_maxSpeed_) // Èç¹û³õÊ¼ËÙ¶ÈÒÑ¾­´óÓÚ×î´óËÙ¶È
+        if (m_initialSpeed_ > m_maxSpeed_) // å¦‚æœåˆå§‹é€Ÿåº¦å·²ç»å¤§äºæœ€å¤§é€Ÿåº¦
         {
-            Tj1 = 0;   // ¼Ó¼ÓËÙÊ±¼äÎª0
-            Ta = 0;    // ×Ü¼ÓËÙÊ±¼äÎª0
-            alima = 0; // Êµ¼Ê×î´ó¼ÓËÙ¶ÈÎª0
+            Tj1 = 0;   // åŠ åŠ é€Ÿæ—¶é—´ä¸º0
+            Ta = 0;    // æ€»åŠ é€Ÿæ—¶é—´ä¸º0
+            alima = 0; // å®é™…æœ€å¤§åŠ é€Ÿåº¦ä¸º0
         }
 
-        else // Õı³£Çé¿öÏÂµÄ¼ÆËã
+        else // æ­£å¸¸æƒ…å†µä¸‹çš„è®¡ç®—
         {
-            arm_sqrt_f32((m_maxSpeed_ - m_initialSpeed_) / m_maxJerk_, &Tj1); // ¼Ó¼ÓËÙÊ±¼ä
-            Ta = 2 * Tj1;                                                     // ×Ü¼ÓËÙÊ±¼ä£¨¶Ô³ÆµÄ¼Ó¼ÓËÙºÍ¼õ¼ÓËÙ£©
-            alima = Tj1 * m_maxJerk_;                                         // Êµ¼ÊÄÜ´ïµ½µÄ×î´ó¼ÓËÙ¶È
+            arm_sqrt_f32((m_maxSpeed_ - m_initialSpeed_) / m_maxJerk_, &Tj1); // åŠ åŠ é€Ÿæ—¶é—´
+            Ta = 2 * Tj1;                                                     // æ€»åŠ é€Ÿæ—¶é—´ï¼ˆå¯¹ç§°çš„åŠ åŠ é€Ÿå’Œå‡åŠ é€Ÿï¼‰
+            alima = Tj1 * m_maxJerk_;                                         // å®é™…èƒ½è¾¾åˆ°çš„æœ€å¤§åŠ é€Ÿåº¦
         }
     }
-    else // ÄÜ´ïµ½×î´ó¼ÓËÙ¶ÈµÄÇé¿ö
+    else // èƒ½è¾¾åˆ°æœ€å¤§åŠ é€Ÿåº¦çš„æƒ…å†µ
     {
-        Tj1 = m_maxAcc_ / m_maxJerk_;                           // ¼Ó¼ÓËÙÊ±¼ä
-        Ta = Tj1 + (m_maxSpeed_ - m_initialSpeed_) / m_maxAcc_; // ×Ü¼ÓËÙÊ±¼ä
-        alima = m_maxAcc_;                                      // Êµ¼Ê×î´ó¼ÓËÙ¶ÈµÈÓÚÉè¶¨×î´ó¼ÓËÙ¶È
+        Tj1 = m_maxAcc_ / m_maxJerk_;                           // åŠ åŠ é€Ÿæ—¶é—´
+        Ta = Tj1 + (m_maxSpeed_ - m_initialSpeed_) / m_maxAcc_; // æ€»åŠ é€Ÿæ—¶é—´
+        alima = m_maxAcc_;                                      // å®é™…æœ€å¤§åŠ é€Ÿåº¦ç­‰äºè®¾å®šæœ€å¤§åŠ é€Ÿåº¦
     }
 
-    //========== ¼ÆËã¼õËÙ¶Î²ÎÊı ==========
-    // ÅĞ¶ÏÊÇ·ñÄÜ´ïµ½×î´ó¼õËÙ¶È
-    if ((m_maxSpeed_ - m_finalSpeed_) * m_maxJerk_ < m_maxDec_ * m_maxDec_) // ²»ÄÜ´ïµ½×î´ó¼õËÙ¶ÈµÄÇé¿ö
+    //========== è®¡ç®—å‡é€Ÿæ®µå‚æ•° ==========
+    // åˆ¤æ–­æ˜¯å¦èƒ½è¾¾åˆ°æœ€å¤§å‡é€Ÿåº¦
+    if ((m_maxSpeed_ - m_finalSpeed_) * m_maxJerk_ < m_maxDec_ * m_maxDec_) // ä¸èƒ½è¾¾åˆ°æœ€å¤§å‡é€Ÿåº¦çš„æƒ…å†µ
     {
-        arm_sqrt_f32((m_maxSpeed_ - m_finalSpeed_) / m_maxJerk_, &Tj2); // ¼Ó¼õËÙÊ±¼ä
-        Td = 2 * Tj2;                                                   // ×Ü¼õËÙÊ±¼ä
-        alimd = Tj2 * m_maxJerk_;                                       // Êµ¼Ê×î´ó¼õËÙ¶È
+        arm_sqrt_f32((m_maxSpeed_ - m_finalSpeed_) / m_maxJerk_, &Tj2); // åŠ å‡é€Ÿæ—¶é—´
+        Td = 2 * Tj2;                                                   // æ€»å‡é€Ÿæ—¶é—´
+        alimd = Tj2 * m_maxJerk_;                                       // å®é™…æœ€å¤§å‡é€Ÿåº¦
     }
-    else // ÄÜ´ïµ½×î´ó¼õËÙ¶ÈµÄÇé¿ö
+    else // èƒ½è¾¾åˆ°æœ€å¤§å‡é€Ÿåº¦çš„æƒ…å†µ
     {
-        Tj2 = m_maxDec_ / m_maxJerk_;                         // ¼Ó¼õËÙÊ±¼ä
-        Td = Tj2 + (m_maxSpeed_ - m_finalSpeed_) / m_maxDec_; // ×Ü¼õËÙÊ±¼ä
-        alimd = m_maxDec_;                                    // Êµ¼Ê×î´ó¼õËÙ¶ÈµÈÓÚÉè¶¨×î´ó¼õËÙ¶È
+        Tj2 = m_maxDec_ / m_maxJerk_;                         // åŠ å‡é€Ÿæ—¶é—´
+        Td = Tj2 + (m_maxSpeed_ - m_finalSpeed_) / m_maxDec_; // æ€»å‡é€Ÿæ—¶é—´
+        alimd = m_maxDec_;                                    // å®é™…æœ€å¤§å‡é€Ÿåº¦ç­‰äºè®¾å®šæœ€å¤§å‡é€Ÿåº¦
     }
 
-    // ========== ¼ÆËãÔÈËÙ¶ÎÊ±¼ä ==========
+    // ========== è®¡ç®—åŒ€é€Ÿæ®µæ—¶é—´ ==========
     Tv = (m_targetPos_ - m_startPos_).magnitude() / m_maxSpeed_ - Ta / 2 * (1 + m_initialSpeed_ / m_maxSpeed_) - Td / 2 * (1 + m_finalSpeed_ / m_maxSpeed_);
 
-    // ========== ´¦Àí²»´æÔÚÔÈËÙ½×¶ÎµÄÇé¿ö ==========
-    if (Tv > 0) // ´æÔÚÔÈËÙ½×¶Î
+    // ========== å¤„ç†ä¸å­˜åœ¨åŒ€é€Ÿé˜¶æ®µçš„æƒ…å†µ ==========
+    if (Tv > 0) // å­˜åœ¨åŒ€é€Ÿé˜¶æ®µ
     {
-        vlim = m_maxSpeed_; // ÏŞÖÆËÙ¶ÈµÈÓÚ×î´óËÙ¶È
-        T = Tv + Ta + Td;   // ×ÜÊ±¼ä
+        vlim = m_maxSpeed_; // é™åˆ¶é€Ÿåº¦ç­‰äºæœ€å¤§é€Ÿåº¦
+        T = Tv + Ta + Td;   // æ€»æ—¶é—´
     }
-    else // ²»´æÔÚÔÈËÙ½×¶Î
+    else // ä¸å­˜åœ¨åŒ€é€Ÿé˜¶æ®µ
     {
-        Tv = 0;                           // ÔÈËÙÊ±¼äÎª0
-        float amax_accel_org = m_maxAcc_; // ±£´æÔ­Ê¼¼ÓËÙ¶Î×î´ó¼ÓËÙ¶ÈÖµ
-        float amax_decel_org = m_maxDec_; // ±£´æÔ­Ê¼¼õËÙ¶Î×î´ó¼ÓËÙ¶ÈÖµ
-        int count = 0;                    // µ÷Õû´ÎÊı¼ÆÊıÆ÷
-        // ¼ÆËãdeltaÖµ£¬ÓÃÓÚÇó½âÊ±¼ä²ÎÊı
-        // ÓÉÓÚÏÖÔÚÓĞÁ½¸ö²»Í¬µÄ¼ÓËÙ¶È£¬ĞèÒª·Ö±ğ¼ÆËã¼ÓËÙ¶ÎºÍ¼õËÙ¶Î
-        // ÕâÀïÊ¹ÓÃÆ½¾ù¼ÓËÙ¶ÈÀ´½üËÆ¼ÆËã
+        Tv = 0;                           // åŒ€é€Ÿæ—¶é—´ä¸º0
+        float amax_accel_org = m_maxAcc_; // ä¿å­˜åŸå§‹åŠ é€Ÿæ®µæœ€å¤§åŠ é€Ÿåº¦å€¼
+        float amax_decel_org = m_maxDec_; // ä¿å­˜åŸå§‹å‡é€Ÿæ®µæœ€å¤§åŠ é€Ÿåº¦å€¼
+        int count = 0;                    // è°ƒæ•´æ¬¡æ•°è®¡æ•°å™¨
+        // è®¡ç®—deltaå€¼ï¼Œç”¨äºæ±‚è§£æ—¶é—´å‚æ•°
+        // ç”±äºç°åœ¨æœ‰ä¸¤ä¸ªä¸åŒçš„åŠ é€Ÿåº¦ï¼Œéœ€è¦åˆ†åˆ«è®¡ç®—åŠ é€Ÿæ®µå’Œå‡é€Ÿæ®µ
+        // è¿™é‡Œä½¿ç”¨å¹³å‡åŠ é€Ÿåº¦æ¥è¿‘ä¼¼è®¡ç®—
         float a_avg = (m_maxAcc_ + m_maxDec_) / 2;
         float delta = (a_avg * a_avg * a_avg * a_avg) / (m_maxJerk_ * m_maxJerk_) + 2 * (m_initialSpeed_ * m_initialSpeed_ + m_finalSpeed_ * m_finalSpeed_) + a_avg * (4 * (m_targetPos_ - m_startPos_).magnitude() - 2 * a_avg / m_maxJerk_ * (m_initialSpeed_ + m_finalSpeed_));
 
-        // ³õÊ¼Ê±¼ä²ÎÊı¼ÆËã£¨Ê¹ÓÃÆ½¾ù¼ÓËÙ¶È£©
+        // åˆå§‹æ—¶é—´å‚æ•°è®¡ç®—ï¼ˆä½¿ç”¨å¹³å‡åŠ é€Ÿåº¦ï¼‰
         Tj1 = m_maxAcc_ / m_maxJerk_;
         Ta = (a_avg * a_avg / m_maxJerk_ - 2 * m_initialSpeed_ + sqrt(delta)) / (2 * a_avg);
         Tj2 = m_maxDec_ / m_maxJerk_;
         Td = (a_avg * a_avg / m_maxJerk_ - 2 * m_finalSpeed_ + sqrt(delta)) / (2 * a_avg);
-        vlim = m_initialSpeed_ + (Ta - Tj1) * alima; // ¼ÆËãÊµ¼Ê´ïµ½µÄ×î´óËÙ¶È
+        vlim = m_initialSpeed_ + (Ta - Tj1) * alima; // è®¡ç®—å®é™…è¾¾åˆ°çš„æœ€å¤§é€Ÿåº¦
 
-        // Öğ½¥¼õÉÙ¼ÓËÙ¶È£¬Ö±µ½ÕÒµ½¿ÉĞĞµÄ½â
+        // é€æ¸å‡å°‘åŠ é€Ÿåº¦ï¼Œç›´åˆ°æ‰¾åˆ°å¯è¡Œçš„è§£
         while (Ta < 2 * Tj1 || Td < 2 * Tj2)
         {
             count += 1;
-            // Í¬Ê±¼õÉÙ¼ÓËÙ¶ÎºÍ¼õËÙ¶ÎµÄ¼ÓËÙ¶È£¬±£³Ö±ÈÀı¹ØÏµ
-            float reduction_factor = 0.9;             // Ã¿´Î¼õÉÙ10%
-            m_maxAcc_ = m_maxAcc_ * reduction_factor; // ±£³Ö×îĞ¡¼ÓËÙ¶È
-            m_maxDec_ = m_maxDec_ * reduction_factor; // ±£³Ö×îĞ¡¼ÓËÙ¶È
+            // åŒæ—¶å‡å°‘åŠ é€Ÿæ®µå’Œå‡é€Ÿæ®µçš„åŠ é€Ÿåº¦ï¼Œä¿æŒæ¯”ä¾‹å…³ç³»
+            float reduction_factor = 0.9;             // æ¯æ¬¡å‡å°‘10%
+            m_maxAcc_ = m_maxAcc_ * reduction_factor; // ä¿æŒæœ€å°åŠ é€Ÿåº¦
+            m_maxDec_ = m_maxDec_ * reduction_factor; // ä¿æŒæœ€å°åŠ é€Ÿåº¦
 
-            // ÖØĞÂ¼ÆËã¼ÓËÙ¶Î²ÎÊı
+            // é‡æ–°è®¡ç®—åŠ é€Ÿæ®µå‚æ•°
             if ((m_maxSpeed_ - m_initialSpeed_) * m_maxJerk_ < m_maxAcc_ * m_maxAcc_)
             {
                 arm_sqrt_f32((m_maxSpeed_ - m_initialSpeed_) / m_maxJerk_, &Tj1);
@@ -1094,7 +1094,7 @@ void SShapedPlanner2D::cal_PhaseDistances()
                 alima = m_maxAcc_;
             }
 
-            // ÖØĞÂ¼ÆËã¼õËÙ¶Î²ÎÊı
+            // é‡æ–°è®¡ç®—å‡é€Ÿæ®µå‚æ•°
             if ((m_maxSpeed_ - m_finalSpeed_) * m_maxJerk_ < m_maxDec_ * m_maxDec_)
             {
                 arm_sqrt_f32((m_maxSpeed_ - m_finalSpeed_) / m_maxJerk_, &Tj2);
@@ -1107,7 +1107,7 @@ void SShapedPlanner2D::cal_PhaseDistances()
                 Td = Tj2 + (m_maxSpeed_ - m_finalSpeed_) / m_maxDec_;
                 alimd = m_maxDec_;
             }
-            // ÖØĞÂ¼ÆËãÆ½¾ù¼ÓËÙ¶ÈºÍdeltaÖµ
+            // é‡æ–°è®¡ç®—å¹³å‡åŠ é€Ÿåº¦å’Œdeltaå€¼
             a_avg = (m_maxAcc_ + m_maxDec_) / 2;
             if (a_avg > 0)
             {
@@ -1119,32 +1119,32 @@ void SShapedPlanner2D::cal_PhaseDistances()
                 delta = (a_avg * a_avg * a_avg * a_avg) / (m_maxJerk_ * m_maxJerk_) + 2 * (m_initialSpeed_ * m_initialSpeed_ + m_finalSpeed_ * m_finalSpeed_) - a_avg * (4 * (m_targetPos_ - m_startPos_).magnitude() - 2 * a_avg / m_maxJerk_ * (m_initialSpeed_ + m_finalSpeed_));
             }
 
-            // ÖØĞÂ¼ÆËãÊ±¼ä²ÎÊı
+            // é‡æ–°è®¡ç®—æ—¶é—´å‚æ•°
             Ta = (a_avg * a_avg / m_maxJerk_ - 2 * m_initialSpeed_ + sqrt(delta)) / (2 * a_avg);
             Td = (a_avg * a_avg / m_maxJerk_ - 2 * m_finalSpeed_ + sqrt(delta)) / (2 * a_avg);
-            vlim = m_initialSpeed_ + (Ta - Tj1) * alima; // ÖØĞÂ¼ÆËãÊµ¼Ê×î´óËÙ¶È
+            vlim = m_initialSpeed_ + (Ta - Tj1) * alima; // é‡æ–°è®¡ç®—å®é™…æœ€å¤§é€Ÿåº¦
 
-            // ·ÀÖ¹ÎŞÏŞÑ­»·
+            // é˜²æ­¢æ— é™å¾ªç¯
             if (count > 100)
             {
-                m_maxAcc_ = 0.0f;            // ×î´ó¼ÓËÙ¶È
-                m_maxDec_ = 0.0f;            // ×î´ó¼õËÙ¶È
-                m_maxJerk_ = 0.0f;           // ×î´ó¼Ó¼ÓËÙ¶È
-                m_maxSpeed_ = 0.0f;          // ×î´óËÙ¶È
-                m_initialSpeed_ = 0.0f;      // ÆğÊ¼ËÙ¶È
-                m_finalSpeed_ = 0.0f;        // Ä¿±êËÙ¶È
-                m_startPos_ = {0.0f, 0.0f};  // ÆğÊ¼Î»ÖÃ
-                m_targetPos_ = {0.0f, 0.0f}; // Ä¿±êÎ»ÖÃ
-                m_totalDistance_ = 0.0f;     // ×ÜÂ·³Ì
-                m_deadzone_ = 0.0f;          // ËÀÇø·¶Î§
-                err_ = 1;                    // ÉèÖÃ´íÎó±êÖ¾
+                m_maxAcc_ = 0.0f;            // æœ€å¤§åŠ é€Ÿåº¦
+                m_maxDec_ = 0.0f;            // æœ€å¤§å‡é€Ÿåº¦
+                m_maxJerk_ = 0.0f;           // æœ€å¤§åŠ åŠ é€Ÿåº¦
+                m_maxSpeed_ = 0.0f;          // æœ€å¤§é€Ÿåº¦
+                m_initialSpeed_ = 0.0f;      // èµ·å§‹é€Ÿåº¦
+                m_finalSpeed_ = 0.0f;        // ç›®æ ‡é€Ÿåº¦
+                m_startPos_ = {0.0f, 0.0f};  // èµ·å§‹ä½ç½®
+                m_targetPos_ = {0.0f, 0.0f}; // ç›®æ ‡ä½ç½®
+                m_totalDistance_ = 0.0f;     // æ€»è·¯ç¨‹
+                m_deadzone_ = 0.0f;          // æ­»åŒºèŒƒå›´
+                err_ = 1;                    // è®¾ç½®é”™è¯¯æ ‡å¿—
                 break;
             }
         }
-        // ´¦Àí¼ÓËÙ»ò¼õËÙÊ±¼äÎª¸ºµÄÇé¿ö
+        // å¤„ç†åŠ é€Ÿæˆ–å‡é€Ÿæ—¶é—´ä¸ºè´Ÿçš„æƒ…å†µ
         if (Ta < 0 || Td < 0)
         {
-            if (m_initialSpeed_ > m_finalSpeed_) // ³õÊ¼ËÙ¶È´óÓÚÄ¿±êËÙ¶È£¬Ö÷ÒªÊÇ¼õËÙ
+            if (m_initialSpeed_ > m_finalSpeed_) // åˆå§‹é€Ÿåº¦å¤§äºç›®æ ‡é€Ÿåº¦ï¼Œä¸»è¦æ˜¯å‡é€Ÿ
             {
                 Ta = 0;
                 Tj1 = 0;
@@ -1156,7 +1156,7 @@ void SShapedPlanner2D::cal_PhaseDistances()
                 alimd = -alimd;
             }
 
-            else // Ö÷ÒªÊÇ¼ÓËÙ
+            else // ä¸»è¦æ˜¯åŠ é€Ÿ
             {
                 Td = 0;
                 Tj2 = 0;
@@ -1167,34 +1167,34 @@ void SShapedPlanner2D::cal_PhaseDistances()
             }
         }
 
-        T = Tv + Ta + Td; // ¼ÆËã×ÜÊ±¼ä
+        T = Tv + Ta + Td; // è®¡ç®—æ€»æ—¶é—´
     }
 
     float T2_duration, v_start_stage2, T6_duration, v_start_stage6;
-    // ========== ¼ÆËã¸÷½×¶ÎÂ·³Ì ==========
-    // ½×¶Î1: ¼Ó¼ÓËÙ½×¶Î (0 <= t < Tj1)
+    // ========== è®¡ç®—å„é˜¶æ®µè·¯ç¨‹ ==========
+    // é˜¶æ®µ1: åŠ åŠ é€Ÿé˜¶æ®µ (0 <= t < Tj1)
     m_accelJerkUpDistance_ = m_initialSpeed_ * Tj1 + m_maxJerk_ * Tj1 * Tj1 * Tj1 / 6;
 
-    // ½×¶Î2: ÔÈ¼ÓËÙ½×¶Î (Tj1 <= t < (Ta - Tj1))
+    // é˜¶æ®µ2: åŒ€åŠ é€Ÿé˜¶æ®µ (Tj1 <= t < (Ta - Tj1))
     T2_duration = Ta - 2 * Tj1;
     v_start_stage2 = m_initialSpeed_ + m_maxJerk_ * Tj1 * Tj1 / 2;
     m_accelConstDistance_ = v_start_stage2 * T2_duration + 0.5 * alima * T2_duration * T2_duration;
 
-    // ½×¶Î3: ¼õ¼ÓËÙ½×¶Î ((Ta - Tj1) <= t < Ta)
+    // é˜¶æ®µ3: å‡åŠ é€Ÿé˜¶æ®µ ((Ta - Tj1) <= t < Ta)
     m_accelJerkDownDistance_ = vlim * Tj1 - m_maxJerk_ * Tj1 * Tj1 * Tj1 / 6;
 
-    // ½×¶Î4: ÔÈËÙ½×¶Î (Ta <= t < (Ta + Tv))
+    // é˜¶æ®µ4: åŒ€é€Ÿé˜¶æ®µ (Ta <= t < (Ta + Tv))
     m_constVelDistance_ = vlim * Tv;
 
-    // ½×¶Î5: ¼Ó¼õËÙ½×¶Î ((T - Td) <= t < (T - Td + Tj2))
+    // é˜¶æ®µ5: åŠ å‡é€Ÿé˜¶æ®µ ((T - Td) <= t < (T - Td + Tj2))
     m_decelJerkUpDistance_ = vlim * Tj2 - m_maxJerk_ * Tj2 * Tj2 * Tj2 / 6;
 
-    // ½×¶Î6: ÔÈ¼õËÙ½×¶Î ((T - Td + Tj2) <= t < (T - Tj2))
+    // é˜¶æ®µ6: åŒ€å‡é€Ÿé˜¶æ®µ ((T - Td + Tj2) <= t < (T - Tj2))
     T6_duration = Td - 2 * Tj2;
     v_start_stage6 = vlim - m_maxJerk_ * Tj2 * Tj2 / 2;
     m_decelConstDistance_ = v_start_stage6 * T6_duration - 0.5 * alimd * T6_duration * T6_duration;
 
-    // ½×¶Î7: ¼õ¼õËÙ½×¶Î ((T - Tj2) <= t < T)
+    // é˜¶æ®µ7: å‡å‡é€Ÿé˜¶æ®µ ((T - Tj2) <= t < T)
     m_decelJerkDownDistance_ = m_finalSpeed_ * Tj2 + m_maxJerk_ * Tj2 * Tj2 * Tj2 / 6;
 
     m_t1_ = Tj1;
@@ -1208,14 +1208,14 @@ void SShapedPlanner2D::cal_PhaseDistances()
 }
 
 /**
- * @brief ¼ÓËÙ¶Î£ºJerk ÉÏÉı½×¶ÎµÄËÙ¶È
+ * @brief åŠ é€Ÿæ®µï¼šJerk ä¸Šå‡é˜¶æ®µçš„é€Ÿåº¦
  */
 float SShapedPlanner2D::cal_Acc_JerkUpSpeed(float traveled)
 {
     float t_low = 0.0f;
     float t_high = m_t1_;
     float t_mid, x_mid;
-    for (int i = 0; i < 50; i++) // ¶ş·Ö·¨Çó½âÊ±¼ä t
+    for (int i = 0; i < 50; i++) // äºŒåˆ†æ³•æ±‚è§£æ—¶é—´ t
     {
         t_mid = (t_low + t_high) / 2;
         x_mid = m_initialSpeed_ * t_mid + m_maxJerk_ * t_mid * t_mid * t_mid / 6;
@@ -1237,25 +1237,25 @@ float SShapedPlanner2D::cal_Acc_JerkUpSpeed(float traveled)
 }
 
 /**
- * @brief ¼ÓËÙ¶Î£º¼ÓËÙ¶Èºã¶¨½×¶ÎµÄËÙ¶È
+ * @brief åŠ é€Ÿæ®µï¼šåŠ é€Ÿåº¦æ’å®šé˜¶æ®µçš„é€Ÿåº¦
  */
 float SShapedPlanner2D::cal_Acc_ConstSpeed(float traveled)
 {
-    float v_0 = m_initialSpeed_ + 0.5f * m_maxJerk_ * m_t1_ * m_t1_; // ¼ÓËÙ¶ÎÔÈ¼ÓËÙ½×¶Î³õËÙ¶È
+    float v_0 = m_initialSpeed_ + 0.5f * m_maxJerk_ * m_t1_ * m_t1_; // åŠ é€Ÿæ®µåŒ€åŠ é€Ÿé˜¶æ®µåˆé€Ÿåº¦
     float v;
     arm_sqrt_f32((2.0f * (traveled - m_accelJerkUpDistance_) * m_maxAcc_ + v_0 * v_0), &v);
     return v;
 }
 
 /**
- * @brief ¼ÓËÙ¶Î£ºJerk ÏÂ½µ½×¶ÎµÄËÙ¶È
+ * @brief åŠ é€Ÿæ®µï¼šJerk ä¸‹é™é˜¶æ®µçš„é€Ÿåº¦
  */
 float SShapedPlanner2D::cal_Acc_JerkDownSpeed(float traveled)
 {
     float t_low = m_t2_;
     float t_high = m_t3_;
     float t_mid, x_mid;
-    for (int i = 0; i < 50; i++) // ¶ş·Ö·¨Çó½âÊ±¼ä t
+    for (int i = 0; i < 50; i++) // äºŒåˆ†æ³•æ±‚è§£æ—¶é—´ t
     {
         t_mid = (t_low + t_high) / 2;
         x_mid = (m_vlim_ + m_initialSpeed_) * m_t3_ / 2 - m_vlim_ * (m_t3_ - t_mid) + m_maxJerk_ * (m_t3_ - t_mid) * (m_t3_ - t_mid) * (m_t3_ - t_mid) / 6;
@@ -1277,7 +1277,7 @@ float SShapedPlanner2D::cal_Acc_JerkDownSpeed(float traveled)
 }
 
 /**
- * @brief ¼õËÙ¶Î£ºJerk ÉÏÉı½×¶ÎµÄËÙ¶È
+ * @brief å‡é€Ÿæ®µï¼šJerk ä¸Šå‡é˜¶æ®µçš„é€Ÿåº¦
  */
 float SShapedPlanner2D::cal_Dec_JerkUpSpeed(float traveled)
 {
@@ -1286,7 +1286,7 @@ float SShapedPlanner2D::cal_Dec_JerkUpSpeed(float traveled)
     float t_high = m_t5_;
     float t_mid, x_mid;
     float Td = m_t7_ - m_t4_;
-    for (int i = 0; i < 50; i++) // ¶ş·Ö·¨Çó½âÊ±¼ä t
+    for (int i = 0; i < 50; i++) // äºŒåˆ†æ³•æ±‚è§£æ—¶é—´ t
     {
         t_mid = (t_low + t_high) / 2;
         x_mid = (m_targetPos_ - m_startPos_).magnitude() - (m_vlim_ + m_finalSpeed_) * Td / 2 + m_vlim_ * (t_mid - m_t4_) - m_maxJerk_ * (t_mid - m_t4_) * (t_mid - m_t4_) * (t_mid - m_t4_) / 6;
@@ -1308,7 +1308,7 @@ float SShapedPlanner2D::cal_Dec_JerkUpSpeed(float traveled)
 }
 
 /**
- * @brief ¼õËÙ¶Î£º¼ÓËÙ¶Èºã¶¨½×¶ÎµÄËÙ¶È
+ * @brief å‡é€Ÿæ®µï¼šåŠ é€Ÿåº¦æ’å®šé˜¶æ®µçš„é€Ÿåº¦
  */
 float SShapedPlanner2D::cal_Dec_ConstSpeed(float traveled)
 {
@@ -1319,7 +1319,7 @@ float SShapedPlanner2D::cal_Dec_ConstSpeed(float traveled)
 }
 
 /**
- * @brief ¼õËÙ¶Î£ºJerk ÏÂ½µ½×¶ÎµÄËÙ¶È
+ * @brief å‡é€Ÿæ®µï¼šJerk ä¸‹é™é˜¶æ®µçš„é€Ÿåº¦
  */
 float SShapedPlanner2D::cal_Dec_JerkDownSpeed(float traveled)
 {
@@ -1327,7 +1327,7 @@ float SShapedPlanner2D::cal_Dec_JerkDownSpeed(float traveled)
     float t_high = m_t7_;
     float t_mid, x_mid;
     float Td = m_t7_ - m_t4_;
-    for (int i = 0; i < 50; i++) // ¶ş·Ö·¨Çó½âÊ±¼ä t
+    for (int i = 0; i < 50; i++) // äºŒåˆ†æ³•æ±‚è§£æ—¶é—´ t
     {
         t_mid = (t_low + t_high) / 2;
         x_mid = (m_targetPos_ - m_startPos_).magnitude() - m_finalSpeed_ * (m_t7_ - t_mid) - m_maxJerk_ * (m_t7_ - t_mid) * (m_t7_ - t_mid) * (m_t7_ - t_mid) / 6;
@@ -1349,27 +1349,27 @@ float SShapedPlanner2D::cal_Dec_JerkDownSpeed(float traveled)
 }
 
 /**
- * @brief ÖØÖÃ S ĞÍËÙ¶È¹æ»®Æ÷µÄÄÚ²¿×´Ì¬¡£
+ * @brief é‡ç½® S å‹é€Ÿåº¦è§„åˆ’å™¨çš„å†…éƒ¨çŠ¶æ€ã€‚
  */
 void SShapedPlanner2D::reset()
 {
-    m_totalDistance_ = 0; // ÖØÖÃ×ÜÂ·³Ì
-    // ÄÚ²¿×´Ì¬±äÁ¿
-    m_phase = S_FINISHED_PHASE; // µ±Ç°¹æ»®Ëù´¦µÄ½×¶Î
-    // Ô¤¼ÆËãµÄ S ĞÍ¹æ»®¸÷¸ö½×¶ÎµÄ¾àÀë
-    m_accelJerkUpDistance_ = 0.0f;   // ¼ÓËÙ¶Î£ºJerk ÉÏÉı½×¶ÎµÄÂ·³Ì
-    m_accelConstDistance_ = 0.0f;    // ¼ÓËÙ¶Î£º¼ÓËÙ¶Èºã¶¨½×¶ÎµÄÂ·³Ì
-    m_accelJerkDownDistance_ = 0.0f; // ¼ÓËÙ¶Î£ºJerk ÏÂ½µ½×¶ÎµÄÂ·³Ì
-    m_constVelDistance_ = 0.0f;      // ÔÈËÙ¶Î£ººã¶¨ËÙ¶È½×¶ÎµÄÂ·³Ì
-    m_decelJerkUpDistance_ = 0.0f;   // ¼õËÙ¶Î£ºJerk ÉÏÉı£¨¼õËÙ¿ªÊ¼£©½×¶ÎµÄÂ·³Ì
-    m_decelConstDistance_ = 0.0f;    // ¼õËÙ¶Î£º¼ÓËÙ¶Èºã¶¨£¨¼õËÙÖĞ£©½×¶ÎµÄÂ·³Ì
-    m_decelJerkDownDistance_ = 0.0f; // ¼õËÙ¶Î£ºJerk ÏÂ½µ£¨¼õËÙ½áÊø£©½×¶ÎµÄÂ·³Ì
+    m_totalDistance_ = 0; // é‡ç½®æ€»è·¯ç¨‹
+    // å†…éƒ¨çŠ¶æ€å˜é‡
+    m_phase = S_FINISHED_PHASE; // å½“å‰è§„åˆ’æ‰€å¤„çš„é˜¶æ®µ
+    // é¢„è®¡ç®—çš„ S å‹è§„åˆ’å„ä¸ªé˜¶æ®µçš„è·ç¦»
+    m_accelJerkUpDistance_ = 0.0f;   // åŠ é€Ÿæ®µï¼šJerk ä¸Šå‡é˜¶æ®µçš„è·¯ç¨‹
+    m_accelConstDistance_ = 0.0f;    // åŠ é€Ÿæ®µï¼šåŠ é€Ÿåº¦æ’å®šé˜¶æ®µçš„è·¯ç¨‹
+    m_accelJerkDownDistance_ = 0.0f; // åŠ é€Ÿæ®µï¼šJerk ä¸‹é™é˜¶æ®µçš„è·¯ç¨‹
+    m_constVelDistance_ = 0.0f;      // åŒ€é€Ÿæ®µï¼šæ’å®šé€Ÿåº¦é˜¶æ®µçš„è·¯ç¨‹
+    m_decelJerkUpDistance_ = 0.0f;   // å‡é€Ÿæ®µï¼šJerk ä¸Šå‡ï¼ˆå‡é€Ÿå¼€å§‹ï¼‰é˜¶æ®µçš„è·¯ç¨‹
+    m_decelConstDistance_ = 0.0f;    // å‡é€Ÿæ®µï¼šåŠ é€Ÿåº¦æ’å®šï¼ˆå‡é€Ÿä¸­ï¼‰é˜¶æ®µçš„è·¯ç¨‹
+    m_decelJerkDownDistance_ = 0.0f; // å‡é€Ÿæ®µï¼šJerk ä¸‹é™ï¼ˆå‡é€Ÿç»“æŸï¼‰é˜¶æ®µçš„è·¯ç¨‹
 }
 
 /**
- * @brief Ò»Î¬ºã¼ÓËÙ¶ÈÆ½»¬Æ÷¹¹Ôìº¯Êı¡£
- * @param maxAcceleration ×î´ó¼ÓËÙ¶È¡£
- * @param initialValue ³õÊ¼ËÙ¶È¡£
+ * @brief ä¸€ç»´æ’åŠ é€Ÿåº¦å¹³æ»‘å™¨æ„é€ å‡½æ•°ã€‚
+ * @param maxAcceleration æœ€å¤§åŠ é€Ÿåº¦ã€‚
+ * @param initialValue åˆå§‹é€Ÿåº¦ã€‚
  */
 ConstantAcc::ConstantAcc(float maxAcceleration, float initialValue)
 {
@@ -1378,9 +1378,9 @@ ConstantAcc::ConstantAcc(float maxAcceleration, float initialValue)
 }
 
 /**
- * @brief ÖØÖÃºã¼ÓËÙ¶ÈÆ½»¬Æ÷¡£
- * @param maxAcceleration ×î´ó¼ÓËÙ¶È¡£
- * @param initialValue ³õÊ¼ËÙ¶È¡£
+ * @brief é‡ç½®æ’åŠ é€Ÿåº¦å¹³æ»‘å™¨ã€‚
+ * @param maxAcceleration æœ€å¤§åŠ é€Ÿåº¦ã€‚
+ * @param initialValue åˆå§‹é€Ÿåº¦ã€‚
  */
 void ConstantAcc::reset(float maxAcceleration, float initialValue)
 {
@@ -1389,14 +1389,14 @@ void ConstantAcc::reset(float maxAcceleration, float initialValue)
 }
 
 /**
- * @brief ¹æ»®Êä³öËÙ¶È£¬ÏŞÖÆ¼ÓËÙ¶È±ä»¯¡£
- * @param targetSpeed Ä¿±êËÙ¶È¡£
- * @return Æ½»¬ºóµÄËÙ¶È¡£
+ * @brief è§„åˆ’è¾“å‡ºé€Ÿåº¦ï¼Œé™åˆ¶åŠ é€Ÿåº¦å˜åŒ–ã€‚
+ * @param targetSpeed ç›®æ ‡é€Ÿåº¦ã€‚
+ * @return å¹³æ»‘åçš„é€Ÿåº¦ã€‚
  */
 float ConstantAcc::plan(float targetSpeed)
 {
     float diff = targetSpeed - lastOutput_;
-    // ÏŞÖÆËÙ¶È±ä»¯Á¿²»³¬¹ı×î´ó¼ÓËÙ¶È
+    // é™åˆ¶é€Ÿåº¦å˜åŒ–é‡ä¸è¶…è¿‡æœ€å¤§åŠ é€Ÿåº¦
     if (fabs(diff) > maxAcceleration_)
     {
         if (diff > 0)
@@ -1413,8 +1413,8 @@ float ConstantAcc::plan(float targetSpeed)
 }
 
 /**
- * @brief ÉèÖÃ×î´ó¼ÓËÙ¶È¡£
- * @param acceleration ×î´ó¼ÓËÙ¶È¡£
+ * @brief è®¾ç½®æœ€å¤§åŠ é€Ÿåº¦ã€‚
+ * @param acceleration æœ€å¤§åŠ é€Ÿåº¦ã€‚
  */
 void ConstantAcc::setMaxAcceleration(float acceleration)
 {
@@ -1422,16 +1422,16 @@ void ConstantAcc::setMaxAcceleration(float acceleration)
 }
 
 /**
- * @brief ½öÖØÖÃÆ½»¬Æ÷Êä³öËÙ¶ÈÎª0¡£
+ * @brief ä»…é‡ç½®å¹³æ»‘å™¨è¾“å‡ºé€Ÿåº¦ä¸º0ã€‚
  */
 void ConstantAcc::reset_speed()
 {
     lastOutput_ = 0.0f;
 }
-// ---------------------------- TdÆ½»¬Æ÷ ----------------------------
+// ---------------------------- Tdå¹³æ»‘å™¨ ----------------------------
 /**
- * @brief Ò»Î¬TDÆ½»¬Æ÷¹¹Ôìº¯Êı¡£
- * @param td_r_ TDÆ½»¬²ÎÊıR¡£
+ * @brief ä¸€ç»´TDå¹³æ»‘å™¨æ„é€ å‡½æ•°ã€‚
+ * @param td_r_ TDå¹³æ»‘å‚æ•°Rã€‚
  */
 Td::Td(float td_r_)
 {
@@ -1439,8 +1439,8 @@ Td::Td(float td_r_)
 }
 
 /**
- * @brief ÉèÖÃTDÆ½»¬²ÎÊıR¡£
- * @param td_r_ R²ÎÊı¡£
+ * @brief è®¾ç½®TDå¹³æ»‘å‚æ•°Rã€‚
+ * @param td_r_ Rå‚æ•°ã€‚
  */
 void Td::set_R(float td_r_)
 {
@@ -1448,26 +1448,26 @@ void Td::set_R(float td_r_)
 }
 
 /**
- * @brief TDÆ½»¬º¯Êı¡£
- * @param input_expect ÆÚÍûÊäÈë¡£
- * @return Æ½»¬Êä³ö¡£
- * @details ²ÉÓÃ¶ş½×TDËã·¨¶ÔÊäÈëĞÅºÅ½øĞĞÆ½»¬´¦Àí£¬RÔ½Ğ¡Ô½Æ½»¬¡£
+ * @brief TDå¹³æ»‘å‡½æ•°ã€‚
+ * @param input_expect æœŸæœ›è¾“å…¥ã€‚
+ * @return å¹³æ»‘è¾“å‡ºã€‚
+ * @details é‡‡ç”¨äºŒé˜¶TDç®—æ³•å¯¹è¾“å…¥ä¿¡å·è¿›è¡Œå¹³æ»‘å¤„ç†ï¼ŒRè¶Šå°è¶Šå¹³æ»‘ã€‚
  */
 float Td::plan(float input_expect)
 {
     expect_ = input_expect;
 
-    uint32_t current_time = HAL_GetTick(); // »ñÈ¡µ±Ç°Ê±¼ä£¬µ¥Î»ms
+    uint32_t current_time = HAL_GetTick(); // è·å–å½“å‰æ—¶é—´ï¼Œå•ä½ms
     if (previous_time_ != 0)
-    { // È·±£ÉÏÒ»´ÎÊ±¼ä²»Îª0
+    { // ç¡®ä¿ä¸Šä¸€æ¬¡æ—¶é—´ä¸ä¸º0
         Ts_ = float(current_time - previous_time_) / 1000.0f;
     }
     previous_time_ = current_time;
-    // ¶ş½×TDËã·¨ºËĞÄ£ºfh_Îª¼ÓËÙ¶ÈÏî
+    // äºŒé˜¶TDç®—æ³•æ ¸å¿ƒï¼šfh_ä¸ºåŠ é€Ÿåº¦é¡¹
     fh_ = -r_ * r_ * (V1_ - expect_) - 2.0f * r_ * V2_;
 
-    V1_ += V2_ * Ts_; // ËÙ¶È»ı·Ö
-    V2_ += fh_ * Ts_; // ¼ÓËÙ¶È»ı·Ö
+    V1_ += V2_ * Ts_; // é€Ÿåº¦ç§¯åˆ†
+    V2_ += fh_ * Ts_; // åŠ é€Ÿåº¦ç§¯åˆ†
 
     return V1_;
 }
@@ -1499,21 +1499,21 @@ void ADRC::ADRC_Param_Init(ADRC_Param_Config params)
 float ADRC::ADRC_Calculate(bool normalization, float unit)
 {
 
-    // ¸ú×ÙÎ¢·ÖÆ÷TD
+    // è·Ÿè¸ªå¾®åˆ†å™¨TD
     v1 = v1_last + h * v2_last;
     v2 = v2_last + h * fst(v1_last - v, v2_last, r, h);
 
     v1_last = v1;
     v2_last = v2;
 
-    // À©ÕÅ¹Û²âÆ÷ESO
+    // æ‰©å¼ è§‚æµ‹å™¨ESO
     float e = z1 - y;
 
     z1 = z1 + h * (z2 - beta_01 * e);
     z2 = z2 + h * (z3 - beta_02 * fal(e, alpha_1, delta) + b * u);
     z3 = z3 - h * beta_03 * fal(e, alpha_2, delta);
 
-    // ·ÇÏßĞÔ×éºÏNLSEF
+    // éçº¿æ€§ç»„åˆNLSEF
     e1 = v1 - z1;
     e2 = v2 - z2;
 
@@ -1523,10 +1523,10 @@ float ADRC::ADRC_Calculate(bool normalization, float unit)
 
     u = beta_1 * fal(e1, alpha_1, delta) + beta_2 * fal(e2, alpha_2, delta);
 
-    // ÈÅ¶¯²¹³¥
+    // æ‰°åŠ¨è¡¥å¿
     u0 = u - z3 / b;
 
-    // Êä³öÏŞ·ù
+    // è¾“å‡ºé™å¹…
     if (u0 > output_limit)
         u0 = output_limit;
     else if (u0 < -output_limit)
@@ -1540,7 +1540,7 @@ float ADRC::ADRC_Calculate(bool normalization, float unit)
 }
 
 /**
- * @brief ×îËÙ¿ØÖÆ×ÛºÏº¯Êı
+ * @brief æœ€é€Ÿæ§åˆ¶ç»¼åˆå‡½æ•°
  * @note
  * @param x:
  * @retval
@@ -1584,9 +1584,9 @@ float ADRC::fhan(float x1, float x2, float r, float h)
 }
 
 /**
- * @brief  ±¥ºÍº¯Êı
+ * @brief  é¥±å’Œå‡½æ•°
  * @note
- * @param delta_:ÏßĞÔ¶ÎÇø¼ä³¤¶È
+ * @param delta_:çº¿æ€§æ®µåŒºé—´é•¿åº¦
  * @retval
  */
 float ADRC::fal(float e_, float alpha_, float delta_)
@@ -1602,7 +1602,7 @@ float ADRC::fal(float e_, float alpha_, float delta_)
 }
 
 /**
- * @brief  ·ûºÅº¯Êı
+ * @brief  ç¬¦å·å‡½æ•°
  * @note
  * @param x_:
  * @retval
