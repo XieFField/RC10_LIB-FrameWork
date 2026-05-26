@@ -390,7 +390,18 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                         this->Close_TargetClaw();
                        if(auto_ctrl_.flag.is_clawed)
                        {
+                            if(target_dock_==WeaponSage_Setup:: HIGH) //如果是低位对接，直接进入下一个状态
+                            {
+                                target_pos_.wrist_pos_=180.0f;
+                                this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);      
+                            }else
+                            {
+                                //do nothing,保持当前手腕角度不变   
+                            }
+                            if(abs(current_pos_.wrist_pos_-target_pos_.wrist_pos_)<0.02f) //如果手腕调整到位了，进入下一个状态
+                           {
                             now_state_ = WeaponSage_Setup::STATE_LAUNCH_MOVE;
+                           }
                        }
                     }
                 }
