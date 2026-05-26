@@ -219,6 +219,23 @@ namespace jia
                 return type == Chassis::DirectDriveCommandType::kRpm;
             }
 
+            inline bool getDriveSpeedPidDerivativeFirst(const VESC_Motor *drive_motor)
+            {
+                // drive 共享调参链路需要回读当前运行态的微分先行开关。
+                return (drive_motor != nullptr) ? drive_motor->get_speed_pid_derivative_first() : false;
+            }
+
+            inline void setDriveSpeedPidDerivativeFirst(VESC_Motor *drive_motor, bool derivative_first)
+            {
+                if (drive_motor == nullptr)
+                {
+                    return;
+                }
+
+                // 通过 VESC 专门接口同步，避免重新把策略塞回 pid_init 入口。
+                drive_motor->set_speed_pid_derivative_first(derivative_first);
+            }
+
         } // namespace
 
         void Chassis::init(InitConfig &config)
@@ -3675,6 +3692,8 @@ namespace jia
 
                 debug_pid_tune_.drive_speed_pid_cfg = drive_motor->get_speed_pid_params();
                 debug_pid_tune_.drive_speed_pid_td_ratio = drive_motor->get_speed_pid_td_ratio();
+                // dirty cache 不存在时，回读共享 drive 速度环的微分先行状态。
+                debug_pid_tune_.drive_speed_pid_derivative_first = getDriveSpeedPidDerivativeFirst(drive_motor);
                 break;
             }
         }
@@ -3717,7 +3736,10 @@ namespace jia
                         continue;
                     }
 
-                    drive_motor->pid_init(debug_pid_tune_.drive_speed_pid_cfg, debug_pid_tune_.drive_speed_pid_td_ratio);
+                    drive_motor->pid_init(debug_pid_tune_.drive_speed_pid_cfg,
+                                          debug_pid_tune_.drive_speed_pid_td_ratio);
+                    // 参数仍从 pid_init 下发，但微分先行改走独立 setter，避免接口再次扩散。
+                    setDriveSpeedPidDerivativeFirst(drive_motor, debug_pid_tune_.drive_speed_pid_derivative_first);
                     applied_any = true;
                 }
 

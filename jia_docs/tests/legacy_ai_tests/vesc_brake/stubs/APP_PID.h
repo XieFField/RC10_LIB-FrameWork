@@ -17,7 +17,8 @@ typedef struct {
 class PID_Incremental
 {
 public:
-    PID_Incremental(PID_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, false, 0.0f, 0.0f}, float td_ratio = 0.0f)
+    PID_Incremental(PID_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, false, 0.0f, 0.0f},
+                    float td_ratio = 0.0f)
         : params_(params), td_ratio_(td_ratio)
     {
     }
@@ -28,6 +29,11 @@ public:
         td_ratio_ = td_ratio;
     }
 
+    void set_derivative_first(bool derivative_first)
+    {
+        derivative_first_ = derivative_first;
+    }
+
     PID_Param_Config get_params() const
     {
         return params_;
@@ -36,6 +42,11 @@ public:
     float get_td_ratio() const
     {
         return td_ratio_;
+    }
+
+    bool get_derivative_first() const
+    {
+        return derivative_first_;
     }
 
     float pid_calc(float target, float feedback)
@@ -52,6 +63,7 @@ public:
 private:
     PID_Param_Config params_;
     float td_ratio_ = 0.0f;
+    bool derivative_first_ = false;
 };
 
 #endif

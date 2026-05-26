@@ -89,6 +89,8 @@ public:
      * @param speed_tdRatio 增量式 PID 的 td_ratio
      */
     void pid_init(const PID_Param_Config& speed_params, float speed_tdRatio);
+    // 专门控制 VESC 本地速度环是否启用微分先行，默认保持关闭。
+    void set_speed_pid_derivative_first(bool derivative_first) { speed_pid_.set_derivative_first(derivative_first); }
 
     /**
      * @brief 设置速度环输出附加电流偏置
@@ -135,6 +137,8 @@ public:
 
     PID_Param_Config get_speed_pid_params() const { return speed_pid_.get_params(); }
     float get_speed_pid_td_ratio() const { return speed_pid_.get_td_ratio(); }
+    // 供运行态回读当前 drive 速度环的微分先行开关状态。
+    bool get_speed_pid_derivative_first() const { return speed_pid_.get_derivative_first(); }
 
     std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) override;
     void updateFeedback(const CanFrame& cf) override;

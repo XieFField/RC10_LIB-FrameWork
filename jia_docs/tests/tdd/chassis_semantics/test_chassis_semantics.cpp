@@ -4,7 +4,6 @@
 #include <type_traits>
 
 #include "main.h"
-#include "Motor_VESC.h"
 
 #define private public
 #include "chassis.h"
@@ -108,7 +107,7 @@ struct DrivePidTuneHarness
 {
     Chassis chassis{};
     VESC_Motor drive_vescs[4]{};
-    TestMotor steer_motors[4]{};
+    M3508 steer_motors[4]{};
 };
 
 void configureDrivePidTuneHarness(DrivePidTuneHarness &harness)
@@ -123,6 +122,11 @@ void configureDrivePidTuneHarness(DrivePidTuneHarness &harness)
     }
 }
 
+void setDriveRuntimeDerivativeFirst(VESC_Motor &drive_motor, bool derivative_first)
+{
+    drive_motor.set_speed_pid_derivative_first(derivative_first);
+}
+
 void testDrivePidEnableEdgeReadsBackRuntimeIntoCleanSharedCache()
 {
     DrivePidTuneHarness harness;
@@ -134,6 +138,7 @@ void testDrivePidEnableEdgeReadsBackRuntimeIntoCleanSharedCache()
     runtime_cfg.kd = 0.1f;
     runtime_cfg.output_limit = 2300.0f;
     harness.drive_vescs[0].pid_init(runtime_cfg, 0.35f);
+    setDriveRuntimeDerivativeFirst(harness.drive_vescs[0], true);
 
     harness.chassis.debug_pid_tune_.drive_speed_pid_cfg = PID_Param_Config{};
     harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio = 0.0f;
@@ -151,6 +156,7 @@ void testDrivePidEnableEdgeReadsBackRuntimeIntoCleanSharedCache()
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.kd, runtime_cfg.kd, 1.0e-6f);
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.output_limit, runtime_cfg.output_limit, 1.0e-6f);
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio, 0.35f, 1.0e-6f);
+    EXPECT_TRUE(harness.chassis.debug_pid_tune_.drive_speed_pid_derivative_first);
 }
 
 void testDrivePidDirtyCacheBlocksRuntimeReadbackOverwrite()
@@ -167,9 +173,11 @@ void testDrivePidDirtyCacheBlocksRuntimeReadbackOverwrite()
     runtime_cfg.ki = 0.1f;
     runtime_cfg.output_limit = 999.0f;
     harness.drive_vescs[0].pid_init(runtime_cfg, 0.12f);
+    setDriveRuntimeDerivativeFirst(harness.drive_vescs[0], false);
 
     harness.chassis.debug_pid_tune_.drive_speed_pid_cfg = manual_cfg;
     harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio = 0.8f;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_derivative_first = true;
     harness.chassis.debug_pid_tune_.drive_speed_pid_apply_stamp = 9U;
     harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp = 7U;
 
@@ -179,6 +187,7 @@ void testDrivePidDirtyCacheBlocksRuntimeReadbackOverwrite()
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.ki, manual_cfg.ki, 1.0e-6f);
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.output_limit, manual_cfg.output_limit, 1.0e-6f);
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio, 0.8f, 1.0e-6f);
+    EXPECT_TRUE(harness.chassis.debug_pid_tune_.drive_speed_pid_derivative_first);
 }
 
 void testDrivePidSharedApplyPushesSameParamsToAllVescsAndAlignsAppliedStamp()
@@ -195,6 +204,7 @@ void testDrivePidSharedApplyPushesSameParamsToAllVescsAndAlignsAppliedStamp()
 
     harness.chassis.debug_pid_tune_.drive_speed_pid_cfg = shared_cfg;
     harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio = 0.55f;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_derivative_first = true;
     harness.chassis.debug_pid_tune_.drive_speed_pid_apply_stamp = 41U;
     harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp = 40U;
 
@@ -208,6 +218,7 @@ void testDrivePidSharedApplyPushesSameParamsToAllVescsAndAlignsAppliedStamp()
         EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_params().deadband, shared_cfg.deadband, 1.0e-6f);
         EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_params().output_limit, shared_cfg.output_limit, 1.0e-6f);
         EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_td_ratio(), 0.55f, 1.0e-6f);
+        EXPECT_TRUE(harness.drive_vescs[i].get_speed_pid_derivative_first());
     }
     EXPECT_TRUE(harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp == 41U);
 }
@@ -225,6 +236,7 @@ void testDrivePidApplySkipsNullHandlesAndStillUpdatesAppliedStamp()
 
     harness.chassis.debug_pid_tune_.drive_speed_pid_cfg = shared_cfg;
     harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio = 0.25f;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_derivative_first = false;
     harness.chassis.debug_pid_tune_.drive_speed_pid_apply_stamp = 77U;
     harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp = 76U;
 
@@ -233,6 +245,8 @@ void testDrivePidApplySkipsNullHandlesAndStillUpdatesAppliedStamp()
     EXPECT_TRUE(harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp == 77U);
     EXPECT_NEAR(harness.drive_vescs[0].get_speed_pid_params().kp, shared_cfg.kp, 1.0e-6f);
     EXPECT_NEAR(harness.drive_vescs[3].get_speed_pid_params().kp, shared_cfg.kp, 1.0e-6f);
+    EXPECT_TRUE(!harness.drive_vescs[0].get_speed_pid_derivative_first());
+    EXPECT_TRUE(!harness.drive_vescs[3].get_speed_pid_derivative_first());
 }
 
 void configureDriveContinuityHarness(Chassis &chassis, VESC_Motor drive_motors[4]);

@@ -150,8 +150,9 @@ public:
      * @param td_ratio 微分系数比例，范围0.0~1.0，0表示不使用微分项。td_ratio越大，微分项影响越大
      *
     */
-    PID_Incremental(PID_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, false, 0.0f, 0.0f}, float td_ratio = 0.0f)
-        : params_(params), td_ratio_(td_ratio) 
+    PID_Incremental(PID_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, false, 0.0f, 0.0f},
+                    float td_ratio = 0.0f)
+        : params_(params), td_ratio_(td_ratio)
     {
         reset();
     }
@@ -177,6 +178,8 @@ public:
             output_last_ = 0.0f;
             td_v1_ = 0.0f;
             td_v2_ = 0.0f;
+            feedback_last_ = 0.0f;
+            feedback_earlier_ = 0.0f;
             isFirst_ = true; //  isFirst_
         }
 
@@ -186,9 +189,12 @@ public:
          * @param td_ratio 微分系数比例
          */
         void set_params(const PID_Param_Config& params, float td_ratio);
+        // 独立开关微分先行，默认关闭，避免把该策略耦合进通用参数初始化入口。
+        void set_derivative_first(bool derivative_first) { derivative_first_ = derivative_first; }
 
         PID_Param_Config get_params() const { return params_; }
         float get_td_ratio() const { return td_ratio_; }
+        bool get_derivative_first() const { return derivative_first_; }
 
         float get_dt() const { return dt_; }
         
@@ -207,9 +213,13 @@ private:
     float D_Term = 0.0f; // D项
 
     float td_ratio_ = 0.0f; // track_D占微分项的比例，范围0.0~1.0
+    // 微分先行需要保留反馈历史值；关闭时仍沿用原有误差差分路径。
+    bool derivative_first_ = false; // 是否启用微分先行（对反馈量做微分）
 
     float td_v1_ = 0.0f; // 跟踪微分项的第一部分，计算跟踪误差的微分
     float td_v2_ = 0.0f; // 跟踪微分项的第二部分，计算跟踪误差的二阶微分
+    float feedback_last_ = 0.0f;    // 上一次反馈值
+    float feedback_earlier_ = 0.0f; // 上上次反馈值
 
     float dt_ = 0.001f;             // 默认采样时间，单位秒
     float last_time_s_ = 0.0f;      // 上一次采样时间，单位秒

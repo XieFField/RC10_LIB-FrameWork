@@ -92,9 +92,9 @@ void VESC_Motor::setBrake(float brake_current)
 
 void VESC_Motor::setDuty(float duty)
 {
-    if(duty > 1.0f)
+    if (duty > 1.0f)
         duty = 1.0f;
-    else if(duty < -1.0f)
+    else if (duty < -1.0f)
         duty = -1.0f;
 
     target_duty_ = duty;
@@ -104,7 +104,7 @@ void VESC_Motor::setDuty(float duty)
 
 std::size_t VESC_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
 {
-    if(maxFrames < 1)
+    if (maxFrames < 1)
         return 0; // 无法打包
 
     CanFrame& cf = outFrames[0];

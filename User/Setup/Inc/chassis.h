@@ -1142,6 +1142,7 @@ namespace jia
                 bool synced_on_enable_edge = false;                         // [RO] 本次调试使能上升沿是否已完成同步。避免重复把缓存参数刷入运行态。
                 PID_Param_Config drive_speed_pid_cfg = {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f, .I_Outlimit = 20000.0f, .isIOutlimit = true, .output_limit = 20000.0f, .deadband = 0.0f};
                 f32 drive_speed_pid_td_ratio = 0.0f;                    // [RW] 四个 drive 轮共享的 VESC 本地速度环 TD 比例参数。apply 时会同步刷到 4 个驱动轮。
+                bool drive_speed_pid_derivative_first = false;          // [RW] drive 共享速度环微分先行开关。
                 u32 drive_speed_pid_apply_stamp = 0U;                   // [RW] drive 共享速度环参数申请生效戳。外部写入后，通过同步流程统一下发到 4 个驱动轮。
                 u32 drive_speed_pid_applied_stamp = 0U;                 // [RO] drive 共享速度环已生效戳。表示 4 个 drive 轮已经完成这组共享参数的同步。
             } debug_pid_tune_;
