@@ -111,7 +111,6 @@ dji_motor_demo.init(&m2006_1);
     laserpos.Init(); // 激光测距
 #endif
 
-    // system_detect_task_handle = osThreadNew(startSystemDetectTask, NULL, &system_detect_task_attributes);
 }
 
 void CAN_Motor_Init(void);
