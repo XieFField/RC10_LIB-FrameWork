@@ -19,6 +19,7 @@
 
 #include "APP_Utils.h"
 #include "chassis.h"
+#include "Motor_VESC.h"
 
 namespace jia
 {
@@ -138,7 +139,7 @@ namespace jia
 
             inline Chassis::JustFloatProfile sanitizeJustFloatProfile(u8 raw_profile)
             {
-                return (raw_profile <= static_cast<u8>(Chassis::JustFloatProfile::kYawPid))
+                return (raw_profile <= static_cast<u8>(Chassis::JustFloatProfile::kDrivePidLoadTune))
                            ? static_cast<Chassis::JustFloatProfile>(raw_profile)
                            : Chassis::JustFloatProfile::kYawPid;
             }
@@ -711,12 +712,8 @@ namespace jia
 
         Chassis::ManualSpeedProfileMode Chassis::resolveEffectiveManualSpeedProfileMode() const
         {
-            const DebugMode debug_mode = resolveDebugMode(debug_control_.common.mode_raw);
-            const bool single_wheel_scurve_debug =
-                debug_control_.common.enable && isSingleWheelIsolatedMode(debug_mode);
             if (runtime_strategy_cfg_.manual_speed_profile_manual_only &&
-                normalized_body_command_.source != CommandInputSource::kDebugTarget &&
-                !single_wheel_scurve_debug)
+                normalized_body_command_.source != CommandInputSource::kDebugTarget)
             {
                 return ManualSpeedProfileMode::kLegacy;
             }
@@ -1760,6 +1757,89 @@ namespace jia
             return shaped_linear_m_s / wheel_radius_m;
         }
 
+        f32 Chassis::resolveSingleWheelDriveStepTargetRpm(u8 wheel_idx, f32 fallback_target_rpm)
+        {
+            // mode30 单轮 drive 自动阶跃器。
+            // phase: 0=rest, 1=hold, 2=done；未启用时直接回退到原有手动目标。
+            if (wheel_idx >= 4U)
+            {
+                return fallback_target_rpm;
+            }
+
+            const DebugDriveStepGeneratorConfig &cfg = debug_drive_step_generator_[wheel_idx];
+            DebugDriveStepGeneratorRuntime &runtime = drive_step_generator_runtime_[wheel_idx];
+            if (!cfg.enable)
+            {
+                runtime = {};
+                return fallback_target_rpm;
+            }
+
+            if (!runtime.initialized)
+            {
+                runtime.initialized = true;
+                runtime.output_positive = cfg.start_positive;
+                runtime.phase = (fabsf(cfg.hold_ms) <= 1.0e-6f) ? 0U : 1U;
+                runtime.elapsed_ms = 0.0f;
+            }
+
+            const f32 hold_ms = (cfg.hold_ms > 0.0f) ? cfg.hold_ms : 0.0f;
+            const f32 rest_ms = (cfg.rest_ms > 0.0f) ? cfg.rest_ms : 0.0f;
+
+            if (runtime.phase == 1U)
+            {
+                runtime.elapsed_ms += static_cast<f32>(period_ms_);
+                if (runtime.elapsed_ms >= hold_ms)
+                {
+                    runtime.elapsed_ms = 0.0f;
+                    if (cfg.one_shot)
+                    {
+                        runtime.phase = 2U;
+                    }
+                    else if (rest_ms > 0.0f)
+                    {
+                        runtime.phase = 0U;
+                    }
+                    else if (cfg.alternate_sign)
+                    {
+                        runtime.output_positive = !runtime.output_positive;
+                    }
+                }
+            }
+            else if (runtime.phase == 0U)
+            {
+                runtime.elapsed_ms += static_cast<f32>(period_ms_);
+                if (runtime.elapsed_ms >= rest_ms)
+                {
+                    runtime.elapsed_ms = 0.0f;
+                    runtime.phase = 1U;
+                    if (cfg.alternate_sign)
+                    {
+                        runtime.output_positive = !runtime.output_positive;
+                    }
+                }
+            }
+            else if (runtime.phase == 2U)
+            {
+                if (cfg.auto_restart)
+                {
+                    runtime.initialized = false;
+                    return resolveSingleWheelDriveStepTargetRpm(wheel_idx, fallback_target_rpm);
+                }
+                return 0.0f;
+            }
+
+            debug_drive_load_trace_.step_phase = static_cast<f32>(runtime.phase);
+            debug_drive_load_trace_.stepgen_enable = 1.0f;
+
+            if (runtime.phase != 1U)
+            {
+                return 0.0f;
+            }
+
+            const f32 direction = runtime.output_positive ? 1.0f : -1.0f;
+            return direction * fabsf(cfg.step_target_rpm);
+        }
+
         Chassis::DirectActuatorCommandSnapshot Chassis::resolveSingleWheelCommand(u8 wheel_idx)
         {
             syncSingleWheelCommandTemplates();
@@ -1864,6 +1944,7 @@ namespace jia
             command.steer_command_value = shapeSingleWheelSteerCommand(wheel_idx, debug_control_.single_wheel.steer, command.steer_command_value);
             if (sanitizeDirectDriveCommandType(command.drive_command_type) == DirectDriveCommandType::kRpm)
             {
+                command.drive_command_value = resolveSingleWheelDriveStepTargetRpm(wheel_idx, command.drive_command_value);
                 const f32 shaped_omega_rad_s =
                     shapeSingleWheelDriveOmegaRadS(wheel_idx,
                                                    debug_control_.single_wheel.drive,
@@ -1873,6 +1954,7 @@ namespace jia
             else
             {
                 resetSingleWheelAxisPlannerRuntime(single_wheel_drive_planner_state_);
+                drive_step_generator_runtime_[wheel_idx] = {};
             }
 
             debug_control_.single_wheel.steer.command_value = command.steer_command_value;
@@ -1982,7 +2064,97 @@ namespace jia
             }
         }
 
-        void Chassis::computeSingleWheelIsolatedCommandsMode30(u8 wheel_idx)
+        void Chassis::applyDriveVirtualLoadAndCommand(WheelConfig &wheel,
+                                                      u8 wheel_idx,
+                                                      f32 delivered_drive_target_rad_s,
+                                                      bool single_wheel_isolation_active,
+                                                      u8 single_wheel_idx,
+                                                      bool chassis_motion_blocked,
+                                                      bool allow_drive_position_loop)
+        {
+            // 第二步虚拟重载整定入口：
+            // 仅在 mode30 单轮隔离 + drive RPM + VESC 本地速度环等条件下，
+            // 才把虚拟惯量/阻尼/库仑摩擦等效成电流 bias 注入到速度环输出端。
+            VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h);
+            f32 drive_bias_current_mA = 0.0f;
+            f32 j_term_mA = 0.0f;
+            f32 b_term_mA = 0.0f;
+            f32 tc_term_mA = 0.0f;
+            f32 alpha_est_rad_s2 = 0.0f;
+
+            const bool can_inject_virtual_load =
+                allow_drive_position_loop &&
+                (drive_vesc != nullptr) &&
+                (wheel_idx == single_wheel_idx) &&
+                single_wheel_isolation_active &&
+                (debug_control_.single_wheel.drive.command_type_raw == static_cast<u8>(DirectDriveCommandType::kRpm)) &&
+                (drive_vesc->getRpmControlMode() == VESC_RPM_CONTROL_PID_CURRENT) &&
+                debug_drive_virtual_load_[wheel_idx].enable &&
+                !current_mode_flag_.is_wheel_torque_free &&
+                !input_target_data_.zero_current_all &&
+                !chassis_motion_blocked;
+
+            if (can_inject_virtual_load)
+            {
+                const DebugDriveVirtualLoadConfig &load_cfg = debug_drive_virtual_load_[wheel_idx];
+                const f32 omega_rad_s = wheel.corrected_drive_omega_rad_s;
+                // alpha 直接用相邻周期反馈角速度差分估计，优先保持实现简单、可观测。
+                alpha_est_rad_s2 = (omega_rad_s - last_drive_feedback_omega_rad_s_[wheel_idx]) / period_;
+                j_term_mA = -load_cfg.delta_j_current_per_rad_s2 * alpha_est_rad_s2;
+                b_term_mA = -load_cfg.delta_b_current_per_rad_s * omega_rad_s;
+
+                f32 sign_ref = 0.0f;
+                if (fabsf(omega_rad_s) >= fabsf(load_cfg.coulomb_sign_vel_eps_rad_s))
+                {
+                    sign_ref = (omega_rad_s > 0.0f) ? 1.0f : ((omega_rad_s < 0.0f) ? -1.0f : 0.0f);
+                }
+                else if (fabsf(delivered_drive_target_rad_s) >= 1.0e-6f)
+                {
+                    sign_ref = (delivered_drive_target_rad_s > 0.0f) ? 1.0f : -1.0f;
+                }
+                tc_term_mA = -load_cfg.coulomb_current_mA * sign_ref;
+                drive_bias_current_mA = clampValue(j_term_mA + b_term_mA + tc_term_mA,
+                                                   -fabsf(load_cfg.bias_current_limit_mA),
+                                                   fabsf(load_cfg.bias_current_limit_mA));
+            }
+
+            if (drive_vesc != nullptr)
+            {
+                drive_vesc->setSpeedPidCurrentBias(drive_bias_current_mA);
+            }
+
+            if (allow_drive_position_loop)
+            {
+                setDriveMotorTargetOmegaRadS(wheel, delivered_drive_target_rad_s);
+            }
+
+            if (wheel_idx == static_cast<u8>(debug_drive_load_trace_.observe_wheel_idx))
+            {
+                debug_drive_load_trace_.target_rpm = radsToRpmF32(delivered_drive_target_rad_s);
+                debug_drive_load_trace_.feedback_rpm = radsToRpmF32(wheel.corrected_drive_omega_rad_s);
+                debug_drive_load_trace_.omega_rad_s = wheel.corrected_drive_omega_rad_s;
+                debug_drive_load_trace_.alpha_est_rad_s2 = alpha_est_rad_s2;
+                debug_drive_load_trace_.j_term_mA = j_term_mA;
+                debug_drive_load_trace_.b_term_mA = b_term_mA;
+                debug_drive_load_trace_.tc_term_mA = tc_term_mA;
+                debug_drive_load_trace_.load_bias_current_mA = drive_bias_current_mA;
+                debug_drive_load_trace_.virtual_load_enable = can_inject_virtual_load ? 1.0f : 0.0f;
+                if (debug_drive_step_generator_[wheel_idx].enable)
+                {
+                    debug_drive_load_trace_.stepgen_enable = 1.0f;
+                }
+
+                if (drive_vesc != nullptr)
+                {
+                    debug_drive_load_trace_.pid_current_mA = drive_vesc->getSpeedPidRawOutputCurrent();
+                    debug_drive_load_trace_.total_current_cmd_mA = drive_vesc->getSpeedPidTotalOutputCurrent();
+                }
+            }
+
+            last_drive_feedback_omega_rad_s_[wheel_idx] = wheel.corrected_drive_omega_rad_s;
+        }
+
+        void Chassis::computeSingleWheelIsolatedCommandsMode30(u8 wheel_idx, bool all_homed)
         {
             high_speed_trans_gate_active_ = false;
             high_speed_drive_suppression_active_ = false;
@@ -2025,6 +2197,58 @@ namespace jia
             const DirectActuatorCommandSnapshot command = resolveSingleWheelCommand(wheel_idx);
             applyResolvedSteerCommand(target_wheel, wheel_idx, command, debug_control_.single_wheel.steer.enable && !debug_control_.single_wheel.estop);
             applyResolvedDriveCommand(target_wheel, wheel_idx, command, debug_control_.single_wheel.drive.enable && !debug_control_.single_wheel.estop);
+            // 这里单独维护 drive load trace，避免影响旧 single wheel trace 的输出契约。
+            const f32 preserved_step_phase = debug_drive_load_trace_.step_phase;
+            const f32 preserved_stepgen_enable = debug_drive_load_trace_.stepgen_enable;
+            debug_drive_load_trace_ = {};
+            debug_drive_load_trace_.observe_wheel_idx = static_cast<f32>((debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U);
+            const bool observe_this_wheel = (wheel_idx == static_cast<u8>(debug_drive_load_trace_.observe_wheel_idx));
+            if (observe_this_wheel)
+            {
+                debug_drive_load_trace_.target_rpm = command.applied_drive_cmd;
+                debug_drive_load_trace_.feedback_rpm = radsToRpmF32(target_wheel.corrected_drive_omega_rad_s);
+                debug_drive_load_trace_.step_phase = preserved_step_phase;
+                debug_drive_load_trace_.stepgen_enable = (preserved_stepgen_enable > 0.5f || debug_drive_step_generator_[wheel_idx].enable) ? 1.0f : 0.0f;
+            }
+
+            if (command.drive_command_type == static_cast<u8>(DirectDriveCommandType::kRpm))
+            {
+                // drive 第二步调参工具只挂在 RPM 命令链路上；
+                // 若未回零/有故障/zero current/torque free，则必须显式清零 bias，避免残留。
+                bool steer_fault_any_active = false;
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    if (wheel_config_[i].steer_fault_state != SteerFaultState::kNone)
+                    {
+                        steer_fault_any_active = true;
+                        break;
+                    }
+                }
+                steer_fault_any_active_ = steer_fault_any_active;
+                const bool chassis_motion_blocked = !all_homed || steer_fault_any_active;
+                const bool drive_enabled = debug_control_.single_wheel.drive.enable && !debug_control_.single_wheel.estop;
+                if (drive_enabled && !chassis_motion_blocked && !current_mode_flag_.is_wheel_torque_free && !input_target_data_.zero_current_all)
+                {
+                    applyDriveVirtualLoadAndCommand(target_wheel,
+                                                    wheel_idx,
+                                                    target_wheel.target_drive_omega_rad_s,
+                                                    true,
+                                                    wheel_idx,
+                                                    chassis_motion_blocked,
+                                                    true);
+                }
+                else if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(target_wheel.drive_motor_h))
+                {
+                    drive_vesc->setSpeedPidCurrentBias(0.0f);
+                }
+            }
+            else
+            {
+                if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(target_wheel.drive_motor_h))
+                {
+                    drive_vesc->setSpeedPidCurrentBias(0.0f);
+                }
+            }
             target_wheel.steer_target_velocity_rad_s = 0.0f;
             target_wheel.flipped_drive_direction = false;
 
@@ -2158,6 +2382,7 @@ namespace jia
         void Chassis::isDebugMode()
         {
             syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
+            syncDebugDrivePidTuneFromRuntimeOnEnableEdge();
             const DebugControlRoute route = classifyDebugControlRoute(debug_control_.common.enable, debug_control_.common.mode_raw);
             if (route == DebugControlRoute::kDisabled)
             {
@@ -3090,8 +3315,10 @@ namespace jia
         {
             const DebugMode debug_mode = resolveDebugMode(debug_control_.common.mode_raw);
             const bool single_wheel_isolation_active =
-                debug_control_.common.enable && isSingleWheelIsolatedMode(debug_mode);
+                debug_mirror_.single_wheel_isolation_active && isSingleWheelIsolatedMode(debug_mode);
             const u8 single_wheel_idx = (debug_control_.common.control_wheel_index < 4U) ? debug_control_.common.control_wheel_index : 0U;
+            debug_drive_load_trace_ = {};
+            debug_drive_load_trace_.observe_wheel_idx = static_cast<f32>((debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U);
             bool steer_fault_any_active = false;
             for (u8 i = 0; i < 4; ++i)
             {
@@ -3149,6 +3376,10 @@ namespace jia
                     setSteerMotorTargetCurrent(wheel, 0.0f);
                     if (wheel.drive_motor_h != nullptr)
                     {
+                        if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h))
+                        {
+                            drive_vesc->setSpeedPidCurrentBias(0.0f);
+                        }
                         wheel.drive_motor_h->setTargetCurrent(0.0f);
                     }
                     continue;
@@ -3177,6 +3408,10 @@ namespace jia
                     last_drive_omega_cmd_rad_s_[i] = delivered_drive_target_rad_s;
                     if (wheel.drive_motor_h != nullptr)
                     {
+                        if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h))
+                        {
+                            drive_vesc->setSpeedPidCurrentBias(0.0f);
+                        }
                         wheel.drive_motor_h->setTargetCurrent(0.0f);
                     }
                     if (wheel.homing_state == HomingState::kSearch)
@@ -3226,6 +3461,10 @@ namespace jia
                     setSteerMotorTargetCurrent(wheel, 0.0f);
                     if (wheel.drive_motor_h != nullptr)
                     {
+                        if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h))
+                        {
+                            drive_vesc->setSpeedPidCurrentBias(0.0f);
+                        }
                         wheel.drive_motor_h->setTargetCurrent(0.0f);
                     }
                     continue;
@@ -3245,6 +3484,10 @@ namespace jia
                     setSteerMotorTargetCurrent(wheel, 0.0f);
                     if (wheel.drive_motor_h != nullptr)
                     {
+                        if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h))
+                        {
+                            drive_vesc->setSpeedPidCurrentBias(0.0f);
+                        }
                         wheel.drive_motor_h->setTargetCurrent(0.0f);
                     }
                     continue;
@@ -3266,10 +3509,13 @@ namespace jia
                 planned_data_.drive_omega_rad_s[i] = delivered_drive_target_rad_s;
                 last_drive_omega_cmd_rad_s_[i] = delivered_drive_target_rad_s;
                 setSteerMotorTargetTotalAngleRad(wheel, wheel.target_steer_motor_total_angle_rad);
-                if (allow_drive_position_loop)
-                {
-                    setDriveMotorTargetOmegaRadS(wheel, delivered_drive_target_rad_s);
-                }
+                applyDriveVirtualLoadAndCommand(wheel,
+                                                i,
+                                                delivered_drive_target_rad_s,
+                                                single_wheel_isolation_active,
+                                                single_wheel_idx,
+                                                chassis_motion_blocked,
+                                                allow_drive_position_loop);
             }
 
             if (single_wheel_isolation_active)
@@ -3324,7 +3570,9 @@ namespace jia
                     : 0U;
             const DebugMode debug_mode = resolveDebugMode(debug_control_.common.mode_raw);
             const bool single_wheel_isolation_active =
-                debug_control_.common.enable && isSingleWheelIsolatedMode(debug_mode);
+                debug_control_.common.enable &&
+                (classifyDebugControlRoute(debug_control_.common.enable, debug_control_.common.mode_raw) == DebugControlRoute::kModuleOverride) &&
+                isSingleWheelIsolatedMode(debug_mode);
             debug_mirror_.single_wheel_isolation_active =
                 single_wheel_isolation_active;
             debug_mirror_.nz_stationary_m_s = getNearZeroEnterSpeedMps();
@@ -3420,6 +3668,45 @@ namespace jia
             }
         }
 
+        void Chassis::syncDebugDrivePidTuneFromRuntimeOnEnableEdge()
+        {
+            // 与 steer PID 调参语义对齐：在 debug enable 上升沿，把当前运行态回灌成新的调参基线。
+            const bool enable_now = debug_control_.common.enable;
+            if (!enable_now)
+            {
+                debug_drive_pid_tune_.synced_on_enable_edge = false;
+                return;
+            }
+
+            if (!debug_enable_last_cycle_)
+            {
+                syncDebugDrivePidTuneFromRuntime();
+                debug_drive_pid_tune_.synced_on_enable_edge = true;
+            }
+        }
+
+        void Chassis::syncDebugDrivePidTuneFromRuntime()
+        {
+            for (u8 i = 0; i < 4; ++i)
+            {
+                // 有未消费的外部写入时不回灌，避免把调参器刚改的值又覆盖掉。
+                const bool speed_dirty = (debug_drive_pid_tune_.drive_speed_pid_applied_stamp[i] != debug_drive_pid_tune_.drive_speed_pid_apply_stamp[i]);
+                if (speed_dirty)
+                {
+                    continue;
+                }
+
+                VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel_config_[i].drive_motor_h);
+                if (drive_vesc == nullptr)
+                {
+                    continue;
+                }
+
+                debug_drive_pid_tune_.drive_speed_pid_cfg[i] = drive_vesc->get_speed_pid_params();
+                debug_drive_pid_tune_.drive_speed_pid_td_ratio[i] = drive_vesc->get_speed_pid_td_ratio();
+            }
+        }
+
         void Chassis::applyDebugSteerPidRuntimeTuning()
         {
             for (u8 i = 0; i < 4; ++i)
@@ -3444,6 +3731,25 @@ namespace jia
                                           debug_pid_tune_.steer_angle_pid_cfg[i], debug_pid_tune_.steer_angle_pid_i_separa[i]);
                     debug_pid_tune_.steer_angle_pid_applied_stamp[i] = debug_pid_tune_.steer_angle_pid_apply_stamp[i];
                     debug_pid_tune_.steer_speed_pid_applied_stamp[i] = debug_pid_tune_.steer_speed_pid_apply_stamp[i];
+                }
+            }
+        }
+
+        void Chassis::applyDebugDrivePidRuntimeTuning()
+        {
+            for (u8 i = 0; i < 4; ++i)
+            {
+                VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel_config_[i].drive_motor_h);
+                if (drive_vesc == nullptr)
+                {
+                    continue;
+                }
+
+                if (debug_drive_pid_tune_.drive_speed_pid_applied_stamp[i] != debug_drive_pid_tune_.drive_speed_pid_apply_stamp[i])
+                {
+                    // 仍沿用 apply_stamp / applied_stamp 机制，只有检测到新配置时才重新 pid_init。
+                    drive_vesc->pid_init(debug_drive_pid_tune_.drive_speed_pid_cfg[i], debug_drive_pid_tune_.drive_speed_pid_td_ratio[i]);
+                    debug_drive_pid_tune_.drive_speed_pid_applied_stamp[i] = debug_drive_pid_tune_.drive_speed_pid_apply_stamp[i];
                 }
             }
         }
@@ -3823,6 +4129,50 @@ namespace jia
             debug_uart_.printf_DMA_JustFloat(payload, 15);
         }
 
+        void Chassis::emitUart8VofaDrivePidLoadTrace()
+        {
+            // 15 通道固定顺序：
+            // time, wheel, target_rpm, feedback_rpm, total_current, raw_pid_current, bias_current,
+            // j_term, b_term, tc_term, omega, alpha, step_phase, virtual_load_enable, stepgen_enable
+            if (!debug_output_.output_enable ||
+                sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
+                sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kDrivePidLoadTune)
+            {
+                return;
+            }
+
+            const u32 period_ms = (debug_output_.justfloat.drive_pid_load.period_ms > 0U) ? debug_output_.justfloat.drive_pid_load.period_ms : 1U;
+            if ((time_ms_ - debug_output_runtime_.justfloat.drive_pid_load.last_ms) < period_ms)
+            {
+                return;
+            }
+
+            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
+            {
+                return;
+            }
+
+            debug_output_runtime_.justfloat.drive_pid_load.last_ms = time_ms_;
+
+            float payload[15] = {0.0f};
+            payload[0] = static_cast<f32>(time_ms_) * 0.001f;
+            payload[1] = debug_drive_load_trace_.observe_wheel_idx;
+            payload[2] = debug_drive_load_trace_.target_rpm;
+            payload[3] = debug_drive_load_trace_.feedback_rpm;
+            payload[4] = debug_drive_load_trace_.total_current_cmd_mA;
+            payload[5] = debug_drive_load_trace_.pid_current_mA;
+            payload[6] = debug_drive_load_trace_.load_bias_current_mA;
+            payload[7] = debug_drive_load_trace_.j_term_mA;
+            payload[8] = debug_drive_load_trace_.b_term_mA;
+            payload[9] = debug_drive_load_trace_.tc_term_mA;
+            payload[10] = debug_drive_load_trace_.omega_rad_s;
+            payload[11] = debug_drive_load_trace_.alpha_est_rad_s2;
+            payload[12] = debug_drive_load_trace_.step_phase;
+            payload[13] = debug_drive_load_trace_.virtual_load_enable;
+            payload[14] = debug_drive_load_trace_.stepgen_enable;
+            debug_uart_.printf_DMA_JustFloat(payload, 15);
+        }
+
         void Chassis::emitUart8SwerveTelemetryV2(bool all_homed)
         {
             if (!debug_output_.output_enable || sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kBinary)
@@ -3997,6 +4347,11 @@ namespace jia
                     break;
                 }
                 case JustFloatProfile::kYawPid:
+                    emitUart8VofaYawPidTrace();
+                    break;
+                case JustFloatProfile::kDrivePidLoadTune:
+                    emitUart8VofaDrivePidLoadTrace();
+                    break;
                 default:
                     emitUart8VofaYawPidTrace();
                     break;
@@ -4038,7 +4393,7 @@ namespace jia
             }
             else if (route == DebugModuleOverrideRoute::kSingleWheelIsolated)
             {
-                computeSingleWheelIsolatedCommandsMode30(wheel_idx);
+                computeSingleWheelIsolatedCommandsMode30(wheel_idx, all_homed);
                 applySingleWheelIsolationFilter(mode, wheel_idx, all_homed);
             }
 
@@ -4197,6 +4552,7 @@ namespace jia
 
                 updateWheelFeedback();
                 applyDebugSteerPidRuntimeTuning();
+                applyDebugDrivePidRuntimeTuning();
 
                 bool all_homed = true;
                 for (u8 i = 0; i < 4; ++i)

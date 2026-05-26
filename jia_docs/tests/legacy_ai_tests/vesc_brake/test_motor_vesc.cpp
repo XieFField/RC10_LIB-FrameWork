@@ -89,6 +89,22 @@ int main()
                  "pid speed mode should send CURRENT command for setTargetRPM()");
     ok &= expect(decode_i32_be(frame.data) == 300,
                  "pid speed mode should output 300 mA for 20 RPM error with kp=15");
+    ok &= expect(motor.getSpeedPidRawOutputCurrent() == 300.0f,
+                 "pid speed mode should expose raw pid current before bias");
+    ok &= expect(motor.getSpeedPidTotalOutputCurrent() == 300.0f,
+                 "pid speed mode should expose total pid current when bias is zero");
+
+    motor.setSpeedPidCurrentBias(80.0f);
+    motor.update();
+    motor.packCommand(&frame, 1);
+    ok &= expect(decode_i32_be(frame.data) == 380,
+                 "pid speed mode should add bias current on top of raw pid output");
+    ok &= expect(motor.getSpeedPidCurrentBias() == 80.0f,
+                 "pid speed mode should preserve configured bias");
+    ok &= expect(motor.getSpeedPidRawOutputCurrent() == 300.0f,
+                 "raw pid output should remain the un-biased controller result");
+    ok &= expect(motor.getSpeedPidTotalOutputCurrent() == 380.0f,
+                 "total pid output should include configured bias");
 
     motor.updateFeedback(makeStatus1Frame(101U, 0, 0, 0));
     motor.setTargetRPM(0.0f);
@@ -96,13 +112,23 @@ int main()
     motor.packCommand(&frame, 1);
     ok &= expect(frame.ID == ((CAN_CMD_SET_CURRENT << 8) | 101U),
                  "pid speed mode setTargetRPM(0) should still use CURRENT command");
-    ok &= expect(decode_i32_be(frame.data) == 0,
-                 "pid speed mode setTargetRPM(0) should output 0 mA");
+    ok &= expect(decode_i32_be(frame.data) == 80,
+                 "pid speed mode setTargetRPM(0) should still include configured bias");
+    ok &= expect(motor.getSpeedPidRawOutputCurrent() == 0.0f,
+                 "raw pid output should be zero when target and feedback match");
+    ok &= expect(motor.getSpeedPidTotalOutputCurrent() == 80.0f,
+                 "total pid output should retain bias even when raw pid output is zero");
 
     motor.setDuty(0.25f);
     motor.packCommand(&frame, 1);
     ok &= expect(frame.ID == ((CAN_CMD_SET_DUTY << 8) | 101U),
                  "setDuty() should still override back to DUTY command after pid mode");
+    ok &= expect(motor.getSpeedPidRawOutputCurrent() == 0.0f,
+                 "non pid modes should clear raw pid observation");
+    ok &= expect(motor.getSpeedPidTotalOutputCurrent() == 0.0f,
+                 "non pid modes should clear total pid observation");
+    ok &= expect(motor.getSpeedPidCurrentBias() == 80.0f,
+                 "switching away from pid mode should keep configured bias for later reuse");
 
     if (!ok)
     {

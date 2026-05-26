@@ -15,9 +15,19 @@ void VESC_Motor::update()
 {
     if (mode_ == SET_PID_SPEED_CURRENT)
     {
-        // 本地速度环模式：根据当前 rpm 反馈计算目标电流，最终由 packCommand() 发送 CURRENT 命令。
-        target_current_ = speed_pid_.pid_calc(target_rpm_, rpm_);
+        // 本地速度环模式：
+        // 1. 先计算纯 PID 输出
+        // 2. 再叠加上层注入的虚拟负载 bias
+        // 3. 最终仍统一下发 CURRENT 命令
+        speed_pid_raw_output_current_mA_ = speed_pid_.pid_calc(target_rpm_, rpm_);
+        speed_pid_total_output_current_mA_ = speed_pid_raw_output_current_mA_ + speed_pid_current_bias_mA_;
+        target_current_ = speed_pid_total_output_current_mA_;
+        return;
     }
+
+    // 非本地 PID 速度环模式下，不保留 raw/total 观测值，避免调试时误判当前输出来源。
+    speed_pid_raw_output_current_mA_ = 0.0f;
+    speed_pid_total_output_current_mA_ = 0.0f;
 }
 
 void VESC_Motor::updateFeedback(const CanFrame& cf)
@@ -38,7 +48,7 @@ void VESC_Motor::updateFeedback(const CanFrame& cf)
     // 将解析出的数据转换为标准单位并存入成员变量
     rpm_ = eRPM_to_RPM(eRPM_);
     current_ = static_cast<float>(current_raw) * 100.0f; // 转换为 mA
-    duty_ = static_cast<float>(duty_raw) * 0.001f;      // 转换为 -1.0 ~ 1.0
+    duty_ = static_cast<float>(duty_raw) * 0.001f;       // 转换为 -1.0 ~ 1.0
 }
 
 void VESC_Motor::setTargetCurrent(float current_set)
@@ -107,33 +117,25 @@ std::size_t VESC_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
     switch (mode_)
     {
         case SET_NULL:
-        {
             // Do nothing
             break;
-        }
 
         case SET_eRPM:
-        {
             cf.ID = (CAN_CMD_SET_ERPM << 8) | (motor_id_ & 0xFFU);
             sendMsgs = static_cast<int32_t>(target_eRPM_);
             break;
-        }
 
         case SET_CURRENT:
         case SET_PID_SPEED_CURRENT:
-        {
             // 本地 PID 速度环最终也统一落到 CURRENT 命令下发。
             cf.ID = (CAN_CMD_SET_CURRENT << 8) | (motor_id_ & 0xFFU);
             sendMsgs = static_cast<int32_t>(target_current_); // 单位 mA
             break;
-        }
 
         case SET_DUTY:
-        {
             cf.ID = (CAN_CMD_SET_DUTY << 8) | (motor_id_ & 0xFFU);
             sendMsgs = static_cast<int32_t>(target_duty_ * 100000.0f); // 放大 1e5 倍
             break;
-        }
 
         case SET_POS:
         {
@@ -144,17 +146,13 @@ std::size_t VESC_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
         }
 
         case SET_BRAKE:
-        {
             cf.ID = (CAN_CMD_SET_CURRENT_BRAKE << 8) | (motor_id_ & 0xFFU);
             sendMsgs = static_cast<int32_t>(target_brake_current_); // 单位 mA
             break;
-        }
 
         default:
-        {
             // Do nothing for unsupported modes
             break;
-        }
     }
 
     cf.data[0] = static_cast<uint8_t>((sendMsgs >> 24) & 0xFF);

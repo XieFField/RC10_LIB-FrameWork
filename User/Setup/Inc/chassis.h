@@ -606,6 +606,7 @@ namespace jia
                 kOverview = 0,
                 kSingleWheelTrace = 1,
                 kYawPid = 2,
+                kDrivePidLoadTune = 3, // Drive 轮第二步虚拟负载整定专用 15 通道 trace
             };
             enum class SingleWheelTracePayloadKind : u8
             {
@@ -625,7 +626,7 @@ namespace jia
             void resetDebugModuleOverrideTargets(u8 wheel_idx, bool preserve_soft_wheel_rate);
             void applyAlignForwardDebugOverride();
             void applyHomingObserveDebugOverride();
-            void computeSingleWheelIsolatedCommandsMode30(u8 wheel_idx);
+            void computeSingleWheelIsolatedCommandsMode30(u8 wheel_idx, bool all_homed = true);
             bool isSingleWheelIsolatedMode(DebugMode mode) const;
             void applySingleWheelIsolationFilter(DebugMode mode, u8 wheel_idx, bool all_homed);
             void finalizeDebugModuleOverride(bool all_homed, DebugModuleOverrideRoute route);
@@ -634,6 +635,13 @@ namespace jia
             void clearDirectDriveCommandByType(WheelConfig &wheel, u8 wheel_idx, u8 drive_control_type);
             void applyResolvedSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command, bool enable);
             void applyResolvedDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command, bool enable);
+            void applyDriveVirtualLoadAndCommand(WheelConfig &wheel,
+                                                 u8 wheel_idx,
+                                                 f32 delivered_drive_target_rad_s,
+                                                 bool single_wheel_isolation_active,
+                                                 u8 single_wheel_idx,
+                                                 bool chassis_motion_blocked,
+                                                 bool allow_drive_position_loop);
             f32 readSingleWheelInputAxisValue(u8 input_axis_raw) const;
             void resetSingleWheelAxisPlannerRuntime(SingleWheelAxisPlannerRuntime &runtime);
             f32 shapeSingleWheelSteerCommand(u8 wheel_idx, const SingleWheelAxisControl &axis_cfg, f32 target_value);
@@ -710,17 +718,22 @@ namespace jia
             void syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
             void syncDebugSteerPidTuneFromRuntime();
             void applyDebugSteerPidRuntimeTuning();
+            void syncDebugDrivePidTuneFromRuntimeOnEnableEdge();
+            void syncDebugDrivePidTuneFromRuntime();
+            void applyDebugDrivePidRuntimeTuning();
             void emitUart8VofaPid1kHzTrace();
             void emitUart8VofaSingleWheelDriveTrace();
             void emitUart8VofaDualMotor1kHzTrace();
             void emitUart8SwerveTelemetryV2(bool all_homed);
             void emitUart8VofaYawPidTrace();
+            void emitUart8VofaDrivePidLoadTrace();
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us);
             static SteerCalibration makeSteerCalibration(const WheelConfig &wheel);
             static f32 mapWheelCorrectedLocalToOaTotal(const WheelConfig &wheel, f32 corrected_local_total_rad);
             static f32 mapWheelOaTotalToCorrectedLocal(const WheelConfig &wheel, f32 oa_total_rad);
+            f32 resolveSingleWheelDriveStepTargetRpm(u8 wheel_idx, f32 fallback_target_rpm);
 
             // =====================================================================
             // 系统时基 [RO]
@@ -907,6 +920,50 @@ namespace jia
                         {}};
                 } single_wheel{};
             } debug_control_;
+
+            // =====================================================================
+            // Drive 虚拟负载调试配置 [RW]
+            // 说明：用于第二步“虚拟重载阶跃整定”。
+            //       这里的 ΔJ / ΔB / Tc 都是电流域等效系数，最终作用到 VESC 本地速度环的电流指令端。
+            // =====================================================================
+            struct DebugDriveVirtualLoadConfig
+            {
+                bool enable = false;                     // [RW] 总开关。仅在满足 mode30 + 单轮 + RPM + VESC 本地速度环等条件时生效。
+                f32 delta_j_current_per_rad_s2 = 0.0f;  // [RW] 虚拟惯量项系数。与 alpha 估计相乘后形成附加电流。
+                f32 delta_b_current_per_rad_s = 0.0f;   // [RW] 虚拟粘性阻尼项系数。与当前角速度相乘后形成附加电流。
+                f32 coulomb_current_mA = 0.0f;          // [RW] 虚拟库仑摩擦项幅值。按速度/目标方向决定正负。
+                f32 coulomb_sign_vel_eps_rad_s = 0.1f;  // [RW] 判定库仑摩擦符号时的速度零附近阈值。
+                f32 bias_current_limit_mA = 12000.0f;   // [RW] 虚拟负载总偏置限幅，避免调试参数过大直接把电流打满。
+            };
+
+            // =====================================================================
+            // Drive 阶跃激励器 [RW]
+            // 说明：给 mode30 单轮 RPM 调试提供重复、可控的标准阶跃源。
+            //       打开后会覆盖手动 drive RPM 目标；关闭后自动回退到原有手动语义。
+            // =====================================================================
+            struct DebugDriveStepGeneratorConfig
+            {
+                bool enable = false;           // [RW] 自动阶跃器总开关。
+                f32 step_target_rpm = 0.0f;    // [RW] 阶跃平台目标值，实际输出会按正负方向取符号。
+                f32 hold_ms = 0.0f;            // [RW] 每次阶跃保持时长。
+                f32 rest_ms = 0.0f;            // [RW] 平台之间的静置时长；为 0 时可连续翻转。
+                bool alternate_sign = false;   // [RW] 是否在相邻阶跃间自动翻转正负号。
+                bool start_positive = true;    // [RW] 首次输出是否从正向阶跃开始。
+                bool one_shot = false;         // [RW] 是否只打一拍，结束后进入 done 相位。
+                bool auto_restart = false;     // [RW] done 后是否自动重新开始下一轮。
+            };
+
+            // [RO] Drive 阶跃器运行态。phase: 0=rest, 1=hold, 2=done。
+            struct DebugDriveStepGeneratorRuntime
+            {
+                bool initialized = false;
+                bool output_positive = true;
+                u8 phase = 0U; // 0=rest, 1=hold, 2=done
+                f32 elapsed_ms = 0.0f;
+            };
+
+            DebugDriveVirtualLoadConfig debug_drive_virtual_load_[4]{}; // [RW] 每轮各自独立的虚拟负载配置。
+            DebugDriveStepGeneratorConfig debug_drive_step_generator_[4]{}; // [RW] 每轮各自独立的自动阶跃器配置。
             bool debug_enable_last_cycle_ = false; // [RO] 调试使能上周期状态。常用于检测 enable 上升沿，并在那一刻同步调试参数基线。
             u8 single_wheel_last_steer_command_type_raw_ = 0xFFU; // [RO] 上次已同步的 mode30 舵向命令类型。用于识别“真正发生了类型切换”。
             u8 single_wheel_last_drive_command_type_raw_ = 0xFFU; // [RO] 上次已同步的 mode30 驱动命令类型。用于识别“真正发生了类型切换”。
@@ -941,6 +998,7 @@ namespace jia
                 DebugOutputSlotConfig overview = {5U};
                 DebugOutputSlotConfig single_wheel = {1U};
                 DebugOutputSlotConfig yaw_pid = {4U};
+                DebugOutputSlotConfig drive_pid_load = {1U}; // [RW] Drive PID 虚拟负载整定专用 JustFloat 输出周期。
             };
 
             struct DebugOutputBinaryConfig
@@ -981,6 +1039,7 @@ namespace jia
                 DebugOutputSlotRuntime overview{};
                 DebugOutputSlotRuntime single_wheel{};
                 DebugOutputSlotRuntime yaw_pid{};
+                DebugOutputSlotRuntime drive_pid_load{};
             };
 
             struct DebugOutputBinaryRuntime
@@ -1025,6 +1084,44 @@ namespace jia
                 bool synced_on_enable_edge = false;                         // [RO] 本次调试使能上升沿是否已完成同步。避免重复把缓存参数刷入运行态。
             } debug_pid_tune_;
 
+            // =====================================================================
+            // DrivePidTune [RW]
+            // 说明：和 steer PID 调参缓存语义一致，存的是“待同步到运行态”的 drive 速度环配置。
+            //       外部改写后要靠 apply_stamp / applied_stamp 同步机制生效，不会立刻改动运行中的 PID。
+            // =====================================================================
+            struct DebugDrivePidTune
+            {
+                PID_Param_Config drive_speed_pid_cfg[4] = {
+                    {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.0f},
+                    {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.0f},
+                    {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.0f},
+                    {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.0f},
+                };
+                f32 drive_speed_pid_td_ratio[4] = {0.0f, 0.0f, 0.0f, 0.0f};  // [RW] drive 速度环 TD 比例参数。
+                u32 drive_speed_pid_apply_stamp[4] = {0U, 0U, 0U, 0U};       // [RW] drive 速度环参数申请生效戳。
+                u32 drive_speed_pid_applied_stamp[4] = {0U, 0U, 0U, 0U};     // [RO] drive 速度环已生效戳。
+                bool synced_on_enable_edge = false;                           // [RO] 本次调试使能上升沿是否已完成回灌同步。
+            } debug_drive_pid_tune_;
+
+            // [RO] Drive PID 虚拟负载整定观测快照。只服务 JustFloat trace，不参与控制闭环决策。
+            struct DebugDriveLoadTraceState
+            {
+                f32 target_rpm = 0.0f;
+                f32 feedback_rpm = 0.0f;
+                f32 pid_current_mA = 0.0f;
+                f32 load_bias_current_mA = 0.0f;
+                f32 total_current_cmd_mA = 0.0f;
+                f32 omega_rad_s = 0.0f;
+                f32 alpha_est_rad_s2 = 0.0f;
+                f32 j_term_mA = 0.0f;
+                f32 b_term_mA = 0.0f;
+                f32 tc_term_mA = 0.0f;
+                f32 step_phase = 0.0f;
+                f32 virtual_load_enable = 0.0f;
+                f32 stepgen_enable = 0.0f;
+                f32 observe_wheel_idx = 0.0f;
+            } debug_drive_load_trace_;
+
             // 回零与模块运行态（主要观察）[RO]
             struct YawPidTraceState
             {
@@ -1049,6 +1146,7 @@ namespace jia
             WheelConfig wheel_config_[4];                                      // [RO] 四个模块运行态快照
             f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};                        // [RO] 上周期转向速度命令
             f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};                       // [RO] 上周期最终实际下发到驱动闭环的角速度命令
+            f32 last_drive_feedback_omega_rad_s_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RO] 上周期驱动轮反馈角速度，用于估算 alpha 与虚拟惯量项，不等同于普通命令缓存
             bool selected_flipped_solution_[4] = {false};                      // [RO] 每个模块是否选中翻转解
             f32 low_speed_drive_suppression_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // [RO] 每轮低速抑制最终缩放。
             f32 high_speed_drive_suppression_scale_ = 1.0f;                        // [RO] 当前高速抑制缩放。
@@ -1082,6 +1180,7 @@ namespace jia
             JerkLimitedAxisState manual_omega_z_shape_state_{};
             SingleWheelAxisPlannerRuntime single_wheel_steer_planner_state_{};
             SingleWheelAxisPlannerRuntime single_wheel_drive_planner_state_{};
+            DebugDriveStepGeneratorRuntime drive_step_generator_runtime_[4]{}; // [RO] 单轮 drive 自动阶跃器运行态
             InputTargetData input_target_data_; // [RO] 输入目标快照（模式与期望速度/角度）
             NormalizedBodyCommand normalized_body_command_; // [RO] 输入来源与统一车体系语义
             Data target_data_;                  // [RO] 模式映射后的目标数据

@@ -8,6 +8,8 @@
 #include "chassis.h"
 #undef private
 
+#include "Motor_VESC.h"
+
 namespace
 {
 int g_failures = 0;
@@ -39,6 +41,7 @@ void expectNear(float actual, float expected, float tolerance, const char *expre
 #define EXPECT_NEAR(actual, expected, tolerance) expectNear((actual), (expected), (tolerance), #actual, __LINE__)
 
 using Chassis = jia::FourSteerChassis::Chassis;
+using VescMotor = VESC_Motor;
 
 Chassis::SwervePlannerInput makeGatePlannerInput(float steering_error_deg,
                                                  float command_vel_x,
@@ -101,7 +104,10 @@ public:
     }
 };
 
+void configureSingleWheelDriveVescHarness(Chassis &chassis, TestMotor steer_motors[4], VescMotor drive_motors[4]);
+
 void configureDriveContinuityHarness(Chassis &chassis, TestMotor drive_motors[4]);
+void configureDriveContinuityHarness(Chassis &chassis, VescMotor drive_motors[4]);
 void configureXParkWheelGeometry(Chassis &chassis);
 
 void setPhotogateStateForWheel(int wheel_idx, bool active_high)
@@ -631,6 +637,7 @@ void configureSingleWheelIsolatedDirectHarness(Chassis &chassis, TestMotor steer
     chassis.debug_control_.common.mode_raw = 30U;
     chassis.debug_control_.common.control_wheel_index = 1U;
     chassis.debug_control_.common.observe_wheel_index = 1U;
+    chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedMode;
     chassis.debug_control_.single_wheel.estop = false;
     chassis.debug_control_.single_wheel.input_deadzone = 0.0f;
 
@@ -671,6 +678,42 @@ void configureSingleWheelIsolatedDirectHarness(Chassis &chassis, TestMotor steer
     chassis.debug_control_.single_wheel.drive.scurve.settle_acc_eps = 0.05f;
     chassis.debug_control_.single_wheel.drive.trapezoid.acc = 2.0f;
     chassis.debug_control_.single_wheel.drive.trapezoid.dec = 3.0f;
+}
+
+void configureSingleWheelDriveVescHarness(Chassis &chassis, TestMotor steer_motors[4], VescMotor drive_motors[4])
+{
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].steer_motor_h = &steer_motors[i];
+        chassis.wheel_config_[i].drive_motor_h = &drive_motors[i];
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 0.0f;
+        chassis.wheel_config_[i].target_drive_omega_rad_s = 0.0f;
+        chassis.wheel_config_[i].target_steer_motor_total_angle_rad = 0.0f;
+        drive_motors[i].setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+        drive_motors[i].setSpeedPidCurrentBias(0.0f);
+        drive_motors[i].setPidOutputObservation(0.0f, 0.0f);
+    }
+
+    configureDriveContinuityHarness(chassis, drive_motors);
+
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 30U;
+    chassis.debug_control_.common.control_wheel_index = 1U;
+    chassis.debug_control_.common.observe_wheel_index = 1U;
+    chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedMode;
+    chassis.debug_control_.single_wheel.estop = false;
+    chassis.debug_control_.single_wheel.input_deadzone = 0.0f;
+    chassis.debug_control_.single_wheel.drive.enable = true;
+    chassis.debug_control_.single_wheel.drive.input_mode_raw = static_cast<unsigned char>(Chassis::DirectAxisInputMode::kCached);
+    chassis.debug_control_.single_wheel.drive.command_type_raw = static_cast<unsigned char>(Chassis::DirectDriveCommandType::kRpm);
+    chassis.debug_control_.single_wheel.drive.command_limit = 1000.0f;
+    chassis.debug_control_.single_wheel.drive.command_value = 0.0f;
+    chassis.current_mode_flag_.is_wheel_torque_free = false;
 }
 
 bool runHostDebugControlCycle(Chassis &chassis)
@@ -1204,6 +1247,136 @@ void testJustFloatSingleWheelDriveOnlyObserveIndexFallsBackToZeroWhenOutOfRange(
     EXPECT_NEAR(g_test_justfloat_capture.values[3], 54.0f, 1.0e-6f);
 }
 
+void testMode30SingleWheelDriveStepGeneratorOverridesManualInput()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VescMotor drive_motors[4];
+    configureSingleWheelDriveVescHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.drive.input_mode_raw = static_cast<unsigned char>(Chassis::DirectAxisInputMode::kRcContinuous);
+    chassis.debug_control_.single_wheel.drive.command_limit = 1000.0f;
+    chassis.airjoy_data_.right_x = 0.2f;
+    chassis.debug_drive_step_generator_[1].enable = true;
+    chassis.debug_drive_step_generator_[1].step_target_rpm = 420.0f;
+    chassis.debug_drive_step_generator_[1].hold_ms = 3.0f;
+    chassis.debug_drive_step_generator_[1].rest_ms = 2.0f;
+    chassis.debug_drive_step_generator_[1].alternate_sign = true;
+    chassis.debug_drive_step_generator_[1].start_positive = true;
+    chassis.debug_drive_step_generator_[1].auto_restart = true;
+
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 420.0f, 1.0e-4f);
+    EXPECT_NEAR(chassis.debug_drive_load_trace_.target_rpm, 420.0f, 1.0e-4f);
+    EXPECT_NEAR(chassis.debug_drive_load_trace_.step_phase, 1.0f, 1.0e-6f);
+    EXPECT_TRUE(chassis.debug_drive_load_trace_.stepgen_enable > 0.5f);
+}
+
+void testDriveVirtualLoadInjectsBiasOnlyForSelectedWheelAndPidMode()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VescMotor drive_motors[4];
+    configureSingleWheelDriveVescHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.drive.command_value = 180.0f;
+    chassis.debug_drive_virtual_load_[1].enable = true;
+    chassis.debug_drive_virtual_load_[1].delta_j_current_per_rad_s2 = 10.0f;
+    chassis.debug_drive_virtual_load_[1].delta_b_current_per_rad_s = 20.0f;
+    chassis.debug_drive_virtual_load_[1].coulomb_current_mA = 30.0f;
+    chassis.debug_drive_virtual_load_[1].coulomb_sign_vel_eps_rad_s = 0.1f;
+    chassis.debug_drive_virtual_load_[1].bias_current_limit_mA = 1000.0f;
+    drive_motors[1].setFeedbackRpm(jia::radsToRpmF32(2.0f));
+    chassis.last_drive_feedback_omega_rad_s_[1] = 1.0f;
+    drive_motors[1].setPidOutputObservation(90.0f, 90.0f);
+
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_NEAR(drive_motors[1].getSpeedPidCurrentBias(), -1000.0f, 1.0e-4f);
+    EXPECT_NEAR(chassis.debug_drive_load_trace_.omega_rad_s, 2.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.debug_drive_load_trace_.alpha_est_rad_s2, 1000.0f, 1.0e-3f);
+    EXPECT_NEAR(chassis.debug_drive_load_trace_.j_term_mA, -10000.0f, 1.0e-3f);
+    EXPECT_NEAR(chassis.debug_drive_load_trace_.b_term_mA, -40.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.debug_drive_load_trace_.tc_term_mA, -30.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.debug_drive_load_trace_.load_bias_current_mA, -1000.0f, 1.0e-6f);
+
+    drive_motors[1].setRpmControlMode(VESC_RPM_CONTROL_NATIVE_ERPM);
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_NEAR(drive_motors[1].getSpeedPidCurrentBias(), 0.0f, 1.0e-6f);
+}
+
+void testDebugDrivePidTuneSyncAndApplyUsesVescOnly()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor plain_drive_motors[4];
+    VescMotor vesc_drive_motors[4];
+    configureSingleWheelDebugHarness(chassis, steer_motors, plain_drive_motors);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].drive_motor_h = &plain_drive_motors[i];
+    }
+    chassis.wheel_config_[1].drive_motor_h = &vesc_drive_motors[1];
+    vesc_drive_motors[1].setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+
+    PID_Param_Config vesc_params{};
+    vesc_params.kp = 7.0f;
+    vesc_params.ki = 0.5f;
+    vesc_params.output_limit = 3210.0f;
+    vesc_drive_motors[1].pid_init(vesc_params, 0.25f);
+
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_enable_last_cycle_ = false;
+    chassis.syncDebugDrivePidTuneFromRuntimeOnEnableEdge();
+    EXPECT_NEAR(chassis.debug_drive_pid_tune_.drive_speed_pid_cfg[1].kp, 7.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.debug_drive_pid_tune_.drive_speed_pid_td_ratio[1], 0.25f, 1.0e-6f);
+    EXPECT_NEAR(chassis.debug_drive_pid_tune_.drive_speed_pid_cfg[0].kp, 0.0f, 1.0e-6f);
+
+    chassis.debug_drive_pid_tune_.drive_speed_pid_cfg[1].kp = 12.0f;
+    chassis.debug_drive_pid_tune_.drive_speed_pid_td_ratio[1] = 0.75f;
+    chassis.debug_drive_pid_tune_.drive_speed_pid_apply_stamp[1] = 9U;
+    chassis.applyDebugDrivePidRuntimeTuning();
+    EXPECT_NEAR(vesc_drive_motors[1].get_speed_pid_params().kp, 12.0f, 1.0e-6f);
+    EXPECT_NEAR(vesc_drive_motors[1].get_speed_pid_td_ratio(), 0.75f, 1.0e-6f);
+    EXPECT_TRUE(chassis.debug_drive_pid_tune_.drive_speed_pid_applied_stamp[1] == 9U);
+}
+
+void testJustFloatDrivePidLoadProfileEmitsFixed15ChannelPayload()
+{
+    Chassis chassis;
+    testHostResetJustFloatCapture();
+    configureDebugOutputFamily(chassis, 2U);
+    configureJustFloatProfile(chassis, 3U);
+    chassis.debug_output_.justfloat.drive_pid_load.period_ms = 0U;
+    chassis.debug_output_runtime_.justfloat.drive_pid_load.last_ms = 0U;
+    chassis.time_ms_ = 120U;
+    chassis.debug_drive_load_trace_.observe_wheel_idx = 1.0f;
+    chassis.debug_drive_load_trace_.target_rpm = 300.0f;
+    chassis.debug_drive_load_trace_.feedback_rpm = 250.0f;
+    chassis.debug_drive_load_trace_.total_current_cmd_mA = 600.0f;
+    chassis.debug_drive_load_trace_.pid_current_mA = 550.0f;
+    chassis.debug_drive_load_trace_.load_bias_current_mA = 50.0f;
+    chassis.debug_drive_load_trace_.j_term_mA = 10.0f;
+    chassis.debug_drive_load_trace_.b_term_mA = 20.0f;
+    chassis.debug_drive_load_trace_.tc_term_mA = 20.0f;
+    chassis.debug_drive_load_trace_.omega_rad_s = 4.0f;
+    chassis.debug_drive_load_trace_.alpha_est_rad_s2 = 6.0f;
+    chassis.debug_drive_load_trace_.step_phase = 2.0f;
+    chassis.debug_drive_load_trace_.virtual_load_enable = 1.0f;
+    chassis.debug_drive_load_trace_.stepgen_enable = 0.0f;
+
+    emitDebugOutputForHost(chassis, true);
+
+    EXPECT_TRUE(g_test_justfloat_capture.called);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 15U);
+    EXPECT_NEAR(g_test_justfloat_capture.values[0], 0.12f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[1], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[2], 300.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[4], 600.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[12], 2.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[13], 1.0f, 1.0e-6f);
+}
+
 void testDebugOmegaZInjectionModeOffKeepsManualOmegaInput()
 {
     Chassis chassis;
@@ -1299,6 +1472,32 @@ void configureDriveContinuityHarness(Chassis &chassis, TestMotor drive_motors[4]
         chassis.last_drive_omega_cmd_rad_s_[i] = 0.0f;
         chassis.planned_data_.drive_omega_rad_s[i] = 0.0f;
         drive_motors[i].setTargetRPM(0.0f);
+    }
+}
+
+void configureDriveContinuityHarness(Chassis &chassis, VescMotor drive_motors[4])
+{
+    chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 10.0f;
+    chassis.runtime_strategy_cfg_.max_drive_omega_rad_s_ = 1000.0f;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = true;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.input_target_data_.zero_current_all = false;
+    chassis.current_mode_flag_.is_wheel_torque_free = false;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].drive_motor_h = &drive_motors[i];
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].target_drive_omega_rad_s = 0.0f;
+        chassis.last_drive_omega_cmd_rad_s_[i] = 0.0f;
+        chassis.planned_data_.drive_omega_rad_s[i] = 0.0f;
+        drive_motors[i].setTargetRPM(0.0f);
+        drive_motors[i].setTargetCurrent(0.0f);
+        drive_motors[i].setSpeedPidCurrentBias(0.0f);
+        drive_motors[i].setPidOutputObservation(0.0f, 0.0f);
     }
 }
 
@@ -3491,6 +3690,10 @@ int main()
     testJustFloatSingleWheelObserveIndexFallsBackToZeroWhenOutOfRange();
     testJustFloatSingleWheelDriveOnlyPayloadUsesObserveWheelIndex();
     testJustFloatSingleWheelDriveOnlyObserveIndexFallsBackToZeroWhenOutOfRange();
+    testMode30SingleWheelDriveStepGeneratorOverridesManualInput();
+    testDriveVirtualLoadInjectsBiasOnlyForSelectedWheelAndPidMode();
+    testDebugDrivePidTuneSyncAndApplyUsesVescOnly();
+    testJustFloatDrivePidLoadProfileEmitsFixed15ChannelPayload();
     testDebugOmegaZInjectionModeOffKeepsManualOmegaInput();
     testDebugOmegaZInjectionModeStepOverridesManualOmegaInput();
     testDebugOmegaZInjectionModeSineOverridesManualOmegaInput();
