@@ -246,8 +246,8 @@ void CAN_Motor_Init(void)
     steer3.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
     steer4.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
 
-   U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
-   U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
+   U8_1.reset_controlFrequency(250);  U8_2.reset_controlFrequency(250);
+   U8_3.reset_controlFrequency(250);  U8_4.reset_controlFrequency(250);
 
    // 底盘 VESC 驱动轮切到本地 PID 速度闭环模式
    U8_1.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_1.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);

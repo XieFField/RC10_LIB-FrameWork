@@ -611,9 +611,81 @@ namespace jia
             };
             enum class JustFloatProfile : u8
             {
+                // kOverview (33ch, emitUart8VofaJustFloatPidTrace)
+                // ch0: time_s
+                // 轮 i (i=0..3) 的基址 = 1 + i*8:
+                // ch(base+0): tar_current_mA
+                // ch(base+1): cur_current_mA
+                // ch(base+2): tar_rpm
+                // ch(base+3): cur_rpm
+                // ch(base+4): tar_single_turn_deg
+                // ch(base+5): cur_single_turn_deg
+                // ch(base+6): tar_total_turn_deg
+                // ch(base+7): cur_total_turn_deg
                 kOverview = 0,
+
+                // kSingleWheelTrace (由 single_wheel_payload_raw 决定)
+                // 1) kSteerOnly (9ch, emitUart8VofaPid1kHzTrace)
+                // ch0: time_s
+                // ch1: steer_tar_current_mA
+                // ch2: steer_cur_current_mA
+                // ch3: steer_tar_rpm
+                // ch4: steer_cur_rpm
+                // ch5: steer_tar_single_turn_deg
+                // ch6: steer_cur_single_turn_deg
+                // ch7: steer_tar_total_turn_deg
+                // ch8: steer_cur_total_turn_deg
+                // 2) kDriveOnly (9ch, emitUart8VofaSingleWheelDriveTrace)
+                // ch0: time_s
+                // ch1: drive_tar_current_mA
+                // ch2: drive_cur_current_mA
+                // ch3: drive_tar_rpm
+                // ch4: drive_cur_rpm
+                // ch5: drive_tar_single_turn_deg
+                // ch6: drive_cur_single_turn_deg
+                // ch7: drive_tar_total_turn_deg
+                // ch8: drive_cur_total_turn_deg
+                // 3) kSteerAndDrive (17ch, emitUart8VofaDualMotor1kHzTrace)
+                // ch0: time_s
+                // ch1~ch8:  steer 的 8 通道
+                // ch9~ch16: drive 的 8 通道
                 kSingleWheelTrace = 1,
+
+                // kYawPid (15ch, emitUart8VofaYawPidTrace)
+                // ch0:  time_s
+                // ch1:  mode_tag
+                // ch2:  target_yaw_rad
+                // ch3:  feedback_yaw_rad
+                // ch4:  error_deg
+                // ch5:  manual_omega_in_rad_s
+                // ch6:  pid_output_omega_rad_s
+                // ch7:  final_omega_cmd_rad_s
+                // ch8:  feedback_yaw_rate_rad_s
+                // ch9:  shift_remaining_ms
+                // ch10: pid_compute_fired
+                // ch11: steer_fault_any_active
+                // ch12: all_homed
+                // ch13: high_speed_drive_suppression_active
+                // ch14: reverse_intent_active
                 kYawPid = 2,
+
+                // kDrivePidLoadTune (16ch, emitUart8VofaDrivePidLoadTrace)
+                // ch0:  time_s
+                // ch1:  observe_wheel_idx
+                // ch2:  target_rpm
+                // ch3:  feedback_rpm
+                // ch4:  total_current_cmd_mA
+                // ch5:  pid_current_mA
+                // ch6:  load_bias_current_mA
+                // ch7:  j_term_mA
+                // ch8:  b_term_mA
+                // ch9:  tc_term_mA
+                // ch10: omega_rad_s
+                // ch11: alpha_est_rad_s2
+                // ch12: step_phase
+                // ch13: virtual_load_enable
+                // ch14: stepgen_enable
+                // ch15: feedback_current_mA
                 kDrivePidLoadTune = 3,
             };
             enum class SingleWheelTracePayloadKind : u8
@@ -908,7 +980,7 @@ namespace jia
                         {}};
                     SingleWheelAxisControl drive{
                         true,
-                        static_cast<u8>(DirectAxisInputMode::kRcContinuous),
+                        static_cast<u8>(DirectAxisInputMode::kRcStep),
                         static_cast<u8>(SingleWheelInputAxis::kRightX),
                         false,
                         static_cast<u8>(DirectDriveCommandType::kRpm),
@@ -921,38 +993,44 @@ namespace jia
                         {}};
                 } single_wheel{};
             } debug_control_;
+            // drive 轮虚拟负载配置。
+            // 用来在调试阶段给 drive 轮额外叠加“等效惯量/阻尼/库仑摩擦”电流，便于离线整定速度环手感。
             struct DebugDriveVirtualLoadConfig
             {
-                bool enable = false;
-                f32 delta_j_current_per_rad_s2 = 0.0f;
-                f32 delta_b_current_per_rad_s = 0.0f;
-                f32 coulomb_current_mA = 0.0f;
-                f32 coulomb_sign_vel_eps_rad_s = 0.1f;
-                f32 bias_current_limit_mA = 12000.0f;
+                bool enable = false;                    // [RW] 是否启用该轮虚拟负载。false 时这一轮只走原始调试命令，不额外叠加负载电流。
+                f32 delta_j_current_per_rad_s2 = 0.0f; // [RW] 等效惯量项系数。按角加速度估算需要补多少电流，数值越大越像“带重载起停”。
+                f32 delta_b_current_per_rad_s = 0.0f;  // [RW] 等效粘性阻尼系数。按当前转速叠加反向阻尼电流，用来模拟速度越高阻力越大的感觉。
+                f32 coulomb_current_mA = 0.0f;         // [RW] 等效库仑摩擦电流。只按转动方向施加固定偏置，适合模拟静摩擦/恒定拖拽。
+                f32 coulomb_sign_vel_eps_rad_s = 0.1f; // [RW] 判断速度正负号时用的近零阈值。速度太小时避免库仑摩擦方向来回抖动。
+                f32 bias_current_limit_mA = 12000.0f;  // [RW] 虚拟负载总偏置电流限幅。防止调试时叠加出来的附加电流过大。
             };
+            // drive 轮自动阶跃配置。
+            // 启用后可以自动生成正负转速阶跃，避免每次手动推杆，适合重复观察速度环响应。
             struct DebugDriveStepGeneratorConfig
             {
-                bool enable = false;
-                f32 step_target_rpm = 0.0f;
-                f32 hold_ms = 0.0f;
-                f32 rest_ms = 0.0f;
-                bool alternate_sign = false;
-                bool start_positive = true;
-                bool one_shot = false;
-                bool auto_restart = false;
+                bool enable = false;          // [RW] 是否启用该轮自动阶跃。false 时这一轮不会自动替你生成阶跃激励。
+                f32 step_target_rpm = 0.0f;   // [RW] 阶跃目标转速幅值。真正输出正还是负由起始方向和是否交替决定。
+                f32 hold_ms = 0.0f;           // [RW] 每次阶跃保持时长。用于观察速度环在激励期间的建立过程。
+                f32 rest_ms = 0.0f;           // [RW] 两次阶跃之间的静置时长。给系统一个回落或重新起步的间隔。
+                bool alternate_sign = false;  // [RW] 是否每轮阶跃后自动翻转正负号。打开后更适合连续看正反向响应差异。
+                bool start_positive = true;   // [RW] 首次输出是否从正向阶跃开始。关闭时第一拍先给负向激励。
+                bool one_shot = false;        // [RW] 是否只执行一轮阶跃流程。true 时跑完一次后停住，适合单次抓图。
+                bool auto_restart = false;    // [RW] 单轮流程结束后是否自动重启。适合长时间连续观察或反复录波。
             };
+            // 自动阶跃发生器运行时状态。
+            // 用来记录这一轮阶跃流程是否已启动、当前输出符号、阶段和本阶段累计时间。
             struct DebugDriveStepGeneratorRuntime
             {
-                bool initialized = false;
-                bool output_positive = true;
-                u8 phase = 0U;
-                f32 elapsed_ms = 0.0f;
+                bool initialized = false;  // [RO] 该轮阶跃发生器运行态是否已初始化。用于避免每个周期都从第一步重新开始。
+                bool output_positive = true; // [RO] 当前这一步实际输出的是正向还是负向阶跃。配合配置项一起看可判断当前激励方向。
+                u8 phase = 0U;             // [RO] 当前所处阶段编号。通常用来区分“保持输出”还是“静置等待”等内部阶段。
+                f32 elapsed_ms = 0.0f;     // [RO] 当前阶段已经持续的时间。达到 hold/rest 阈值后会切到下一阶段。
             };
-            bool debug_enable_last_cycle_ = false; // [RO] 调试使能上周期状态。常用于检测 enable 上升沿，并在那一刻同步调试参数基线。
-            u8 single_wheel_last_steer_command_type_raw_ = 0xFFU; // [RO] 上次已同步的 mode30 舵向命令类型。用于识别“真正发生了类型切换”。
-            u8 single_wheel_last_drive_command_type_raw_ = 0xFFU; // [RO] 上次已同步的 mode30 驱动命令类型。用于识别“真正发生了类型切换”。
-            DebugDriveVirtualLoadConfig debug_drive_virtual_load_[4]{};
-            DebugDriveStepGeneratorConfig debug_drive_step_generator_[4]{};
+            bool debug_enable_last_cycle_ = false; // [RO] 调试总开关上一周期的状态。主要用于识别 enable 上升沿，并在刚开启调试时做一次基线同步。
+            u8 single_wheel_last_steer_command_type_raw_ = 0xFFU; // [RO] 上一次已同步的 mode30 舵向命令类型。切换类型后可据此判断是否需要刷新对应模板。
+            u8 single_wheel_last_drive_command_type_raw_ = 0xFFU; // [RO] 上一次已同步的 mode30 驱动命令类型。切换类型后可据此判断是否需要刷新对应模板。
+            DebugDriveVirtualLoadConfig debug_drive_virtual_load_[4]{}; // [RW] 四个 drive 轮各自的虚拟负载配置。通常按轮独立整定，不要求四轮完全一致。
+            DebugDriveStepGeneratorConfig debug_drive_step_generator_[4]{}; // [RW] 四个 drive 轮各自的自动阶跃配置。可只打开观察轮对应那一项。
 
             // =====================================================================
             // 调试输出 [RW]
@@ -979,12 +1057,12 @@ namespace jia
 
             struct DebugOutputJustFloatConfig
             {
-                u8 profile_raw = static_cast<u8>(JustFloatProfile::kSingleWheelTrace);
+                u8 profile_raw = static_cast<u8>(JustFloatProfile::kDrivePidLoadTune);
                 u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kDriveOnly);
                 DebugOutputSlotConfig overview = {5U};
                 DebugOutputSlotConfig single_wheel = {1U};
                 DebugOutputSlotConfig yaw_pid = {4U};
-                DebugOutputSlotConfig drive_pid_load = {1U};
+                DebugOutputSlotConfig drive_pid_load = {2U};
             };
 
             struct DebugOutputBinaryConfig
@@ -1117,6 +1195,8 @@ namespace jia
             f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};                        // [RO] 上周期转向速度命令
             f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};                       // [RO] 上周期最终实际下发到驱动闭环的角速度命令
             f32 last_drive_feedback_omega_rad_s_[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            u32 drive_feedback_sample_ms_[4] = {0U, 0U, 0U, 0U};
+            u32 last_drive_feedback_sample_ms_[4] = {0U, 0U, 0U, 0U};
             bool selected_flipped_solution_[4] = {false};                      // [RO] 每个模块是否选中翻转解
             f32 low_speed_drive_suppression_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // [RO] 每轮低速抑制最终缩放。
             f32 high_speed_drive_suppression_scale_ = 1.0f;                        // [RO] 当前高速抑制缩放。
