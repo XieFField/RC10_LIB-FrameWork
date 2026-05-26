@@ -472,6 +472,7 @@ namespace jia
                 bool high_speed_suppression_active = false;
                 f32 high_speed_dir_err_deg = 0.0f;
                 f32 high_speed_eta_max_s = 0.0f;
+                bool valid = false;
             };
 
             struct ActuatorCommandFrame
@@ -618,11 +619,6 @@ namespace jia
             void setDriveMotorTargetOmegaRadS(WheelConfig &wheel, f32 drive_omega_rad_s);
             f32 limitPositionSecondOrder(f32 current_value, f32 current_rate, f32 target_value, f32 max_rate, f32 max_accel, f32 dt_s, f32 &next_rate) const;
             f32 limitValueWithAcceleration(f32 current_value, f32 target_value, f32 max_accel, f32 dt_s) const;
-            f32 wrapToPi(f32 angle_rad) const;
-            f32 wrapTo2Pi(f32 angle_rad) const;
-            f32 shortestAngularDistance(f32 from_rad, f32 to_rad) const;
-            f32 nearestEquivalentAngle(f32 current_rad, f32 target_mod_rad) const;
-            f32 magnitude2D(f32 x, f32 y) const;
             f32 getXParkAngle(const WheelConfig &wheel) const;
             f32 computeMaxCommandWheelSpeedMps(const Data &command_data) const;
             f32 computeLowSpeedDriveSuppressionScale(f32 abs_error_rad) const;
@@ -661,6 +657,7 @@ namespace jia
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us);
+            void updateTaskPerfBreakdown(u64 plan_us, u64 feedback_us, u64 homing_us, u64 apply_us, u64 debug_us);
             static SteerCalibration makeSteerCalibration(const WheelConfig &wheel);
             static f32 mapWheelCorrectedLocalToOaTotal(const WheelConfig &wheel, f32 corrected_local_total_rad);
             static f32 mapWheelOaTotalToCorrectedLocal(const WheelConfig &wheel, f32 oa_total_rad);
@@ -1043,6 +1040,7 @@ namespace jia
             Data last_planned_data_;            // [RO] 上一周期规划数据（用于加速度约束）
             Data current_data_;                 // [RO] 当前状态估计数据
             SwervePlannerOutput planner_output_cache_; // [RO] 最近一次舵轮规划输出
+            SwervePlannerOutput launch_hold_preview_cache_;
             ActuatorCommandFrame actuator_command_frame_; // [RO] 最近一次规划出的执行器目标帧（drive 仍是执行门控前目标）
             ModeFlag current_mode_flag_;        // [RO] 当前控制模式标志位
 
@@ -1125,6 +1123,11 @@ namespace jia
                 u16 window_size = 500U;        // [RO] 短窗长度（循环次数）
                 u16 window_count = 0U;         // [RO] 当前窗口有效样本数（<=window_size）
                 u64 window_clamp_count = 0ULL; // [RO] 样本被 u16 饱和截断次数
+                u64 plan_us = 0ULL;
+                u64 feedback_us = 0ULL;
+                u64 homing_us = 0ULL;
+                u64 apply_us = 0ULL;
+                u64 debug_us = 0ULL;
             } task_perf_stat_;
 
             // 调试串口对象（一般不在调试器改动）[RO]
@@ -1264,8 +1267,8 @@ namespace jia
             f32 body_vel_y = command.vel_y;
             if (command.is_world_speed_mode)
             {
-                const f32 cos_theta = cosf(input_yaw_rad);
-                const f32 sin_theta = sinf(input_yaw_rad);
+                const f32 cos_theta = cosRadF32(input_yaw_rad);
+                const f32 sin_theta = sinRadF32(input_yaw_rad);
                 body_vel_x = command.vel_x * cos_theta + command.vel_y * sin_theta;
                 body_vel_y = -command.vel_x * sin_theta + command.vel_y * cos_theta;
             }
