@@ -45,7 +45,6 @@ extern "C" {
 #include "Module_Air_joy.h"
 #include "Module_Position.h"
 #include "Locate_Setup.h"
-#include "system_detect_task.h"
 #include "Module_HWT.h"
 #include "Module_JY61.h"
 #include "Motor_GO.h"
