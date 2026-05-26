@@ -531,7 +531,7 @@ namespace jia
                 return false;
             }
 
-            const f32 speed_m_s = magnitude2D(target_vel_x, target_vel_y);
+            const f32 speed_m_s = magnitude2DF32(target_vel_x, target_vel_y);
             const f32 min_speed_m_s = (cfg.min_speed_m_s > 0.0f) ? cfg.min_speed_m_s : getNearZeroExitSpeedMps();
             if (speed_m_s <= min_speed_m_s)
             {
@@ -539,7 +539,7 @@ namespace jia
             }
 
             const f32 target_dir_rad = atan2f(target_vel_y, target_vel_x);
-            const f32 dir_err_deg = radToDegF32(fabsf(shortestAngularDistance(reference_dir_rad, target_dir_rad)));
+            const f32 dir_err_deg = radToDegF32(fabsf(shortestAngularDistanceF32(reference_dir_rad, target_dir_rad)));
             const f32 enter_deg = (cfg.enter_angle_deg >= 0.0f) ? cfg.enter_angle_deg : 135.0f;
             const f32 exit_deg = (cfg.exit_angle_deg >= 0.0f) ? cfg.exit_angle_deg : 105.0f;
             return reverse_intent_active_ ? (dir_err_deg >= exit_deg) : (dir_err_deg >= enter_deg);
@@ -552,7 +552,7 @@ namespace jia
 
         f32 Chassis::mapSingleTurnToNearestTotalAngle(const WheelConfig &wheel, f32 target_oa_single_turn_deg) const
         {
-            const f32 target_oa_mod_rad = wrapTo2Pi(degToRadF32(target_oa_single_turn_deg));
+            const f32 target_oa_mod_rad = wrapTo2PiF32(degToRadF32(target_oa_single_turn_deg));
             const SteerCalibration calibration{
                 wheel.theta_oa_to_owi_rad,
                 wheel.homing_runtime_zero_offset_rad,
@@ -560,7 +560,7 @@ namespace jia
                 wheel.drive_motor_sign,
             };
             const f32 current_oa_total_rad = mapCorrectedLocalTotalToOaTotal(wheel.corrected_steer_motor_total_angle_rad, calibration);
-            const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, target_oa_mod_rad);
+            const f32 target_oa_total_rad = nearestEquivalentAngleF32(current_oa_total_rad, target_oa_mod_rad);
             return mapOaTotalToCorrectedLocalTotal(target_oa_total_rad, calibration);
         }
 
@@ -572,8 +572,8 @@ namespace jia
                 const WheelConfig &wheel = wheel_config_[i];
                 const f32 wheel_vx = command_data.vel_x + command_data.omega_z * wheel.pos_y_m;
                 const f32 wheel_vy = command_data.vel_y - command_data.omega_z * wheel.pos_x_m;
-                const f32 unit_x = cosf(planned_oa_total_rad[i]);
-                const f32 unit_y = sinf(planned_oa_total_rad[i]);
+                const f32 unit_x = cosRadF32(planned_oa_total_rad[i]);
+                const f32 unit_y = sinRadF32(planned_oa_total_rad[i]);
                 const f32 drive_linear = wheel_vx * unit_x + wheel_vy * unit_y;
                 out_drive_omega_rad_s[i] = drive_linear / safe_wheel_radius;
             }
@@ -588,8 +588,8 @@ namespace jia
             {
                 const WheelConfig &wheel = wheel_config_[i];
                 const f32 steer_angle_oa_rad = planned_oa_total_rad[i];
-                const f32 cos_theta = cosf(steer_angle_oa_rad);
-                const f32 sin_theta = sinf(steer_angle_oa_rad);
+                const f32 cos_theta = cosRadF32(steer_angle_oa_rad);
+                const f32 sin_theta = sinRadF32(steer_angle_oa_rad);
                 const f32 drive_linear_m_s = planned_drive_omega_rad_s[i] * runtime_strategy_cfg_.wheel_radius_m_;
 
                 const f32 rows[2][3] = {
@@ -895,31 +895,6 @@ namespace jia
             return next_value;
         }
 
-        f32 Chassis::wrapToPi(f32 angle_rad) const
-        {
-            return wrapToPiRuntimeF32(angle_rad);
-        }
-
-        f32 Chassis::wrapTo2Pi(f32 angle_rad) const
-        {
-            return wrapTo2PiRuntimeF32(angle_rad);
-        }
-
-        f32 Chassis::shortestAngularDistance(f32 from_rad, f32 to_rad) const
-        {
-            return shortestAngularDistanceRuntimeF32(from_rad, to_rad);
-        }
-
-        f32 Chassis::nearestEquivalentAngle(f32 current_rad, f32 target_mod_rad) const
-        {
-            return nearestEquivalentAngleRuntimeF32(current_rad, target_mod_rad);
-        }
-
-        f32 Chassis::magnitude2D(f32 x, f32 y) const
-        {
-            return magnitude2DRuntimeF32(x, y);
-        }
-
         f32 Chassis::getXParkAngle(const WheelConfig &wheel) const
         {
             return atan2f(wheel.pos_y_m, wheel.pos_x_m);
@@ -933,7 +908,7 @@ namespace jia
                 const WheelConfig &wheel = wheel_config_[i];
                 const f32 wheel_vx = command_data.vel_x + command_data.omega_z * wheel.pos_y_m;
                 const f32 wheel_vy = command_data.vel_y - command_data.omega_z * wheel.pos_x_m;
-                const f32 wheel_speed_m_s = magnitude2D(wheel_vx, wheel_vy);
+                const f32 wheel_speed_m_s = magnitude2DF32(wheel_vx, wheel_vy);
                 max_command_wheel_speed_m_s =
                     (wheel_speed_m_s > max_command_wheel_speed_m_s) ? wheel_speed_m_s : max_command_wheel_speed_m_s;
             }
@@ -1048,7 +1023,7 @@ namespace jia
 
                 const f32 wheel_vx = command_data.vel_x + command_data.omega_z * wheel.pos_y_m;
                 const f32 wheel_vy = command_data.vel_y - command_data.omega_z * wheel.pos_x_m;
-                const f32 wheel_speed_m_s = magnitude2D(wheel_vx, wheel_vy);
+                const f32 wheel_speed_m_s = magnitude2DF32(wheel_vx, wheel_vy);
                 planner_input.wheel_vx_m_s[i] = wheel_vx;
                 planner_input.wheel_vy_m_s[i] = wheel_vy;
                 planner_input.wheel_speed_m_s[i] = wheel_speed_m_s;
@@ -1091,7 +1066,7 @@ namespace jia
 
             planner_input.allow_xpark_pose = planner_input.command_stationary_intent && xpark_gate_active_;
             planner_input.force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
-            planner_input.uniform_steer_oa_mod_rad = wrapTo2Pi(degToRadF32(input_target_data_.steer_lock_angle_deg));
+            planner_input.uniform_steer_oa_mod_rad = wrapTo2PiF32(degToRadF32(input_target_data_.steer_lock_angle_deg));
             planner_input.uniform_drive_omega_abs = fabsf(input_target_data_.drive_lock_speed_m_s) / runtime_strategy_cfg_.wheel_radius_m_;
             planner_input.uniform_drive_sign = (input_target_data_.drive_lock_speed_m_s >= 0.0f) ? 1.0f : -1.0f;
             return planner_input;
@@ -1100,10 +1075,12 @@ namespace jia
         Chassis::SwervePlannerOutput Chassis::planSwerveModules(const SwervePlannerInput &planner_input)
         {
             SwervePlannerOutput planner_output{};
-            const f32 planner_command_speed_m_s = magnitude2D(planner_input.command.vel_x, planner_input.command.vel_y);
+            const f32 planner_command_speed_m_s = magnitude2DF32(planner_input.command.vel_x, planner_input.command.vel_y);
+            const bool last_planned_has_translation =
+                magnitude2DF32(last_planned_data_.vel_x, last_planned_data_.vel_y) > 1.0e-6f;
             const f32 planner_reference_dir_rad = trans_dir_ref_valid_
                                                      ? trans_dir_ref_rad_
-                                                     : ((magnitude2D(last_planned_data_.vel_x, last_planned_data_.vel_y) > 1.0e-6f)
+                                                     : (last_planned_has_translation
                                                             ? atan2f(last_planned_data_.vel_y, last_planned_data_.vel_x)
                                                             : 0.0f);
             const bool planner_reverse_intent =
@@ -1118,19 +1095,19 @@ namespace jia
                 if (is_stationary)
                 {
                     planner_output.ideal_oa_total_rad[i] = (planner_input.allow_xpark_pose && runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kXPark)
-                                                               ? wrapTo2Pi(getXParkAngle(wheel))
-                                                               : wrapTo2Pi(planner_input.current_oa_total_rad[i]);
+                                                               ? wrapTo2PiF32(getXParkAngle(wheel))
+                                                               : wrapTo2PiF32(planner_input.current_oa_total_rad[i]);
                     planner_output.ideal_drive_omega_rad_s[i] = 0.0f;
                 }
                 else
                 {
-                    planner_output.ideal_oa_total_rad[i] = wrapTo2Pi(atan2f(planner_input.wheel_vy_m_s[i], planner_input.wheel_vx_m_s[i]));
+                    planner_output.ideal_oa_total_rad[i] = wrapTo2PiF32(atan2f(planner_input.wheel_vy_m_s[i], planner_input.wheel_vx_m_s[i]));
                     planner_output.ideal_drive_omega_rad_s[i] = wheel_speed_m_s / runtime_strategy_cfg_.wheel_radius_m_;
                 }
 
-                const f32 alt_target_oa_mod_rad = wrapTo2Pi(planner_output.ideal_oa_total_rad[i] + kPi);
-                const f32 candidate_a = nearestEquivalentAngle(planner_input.current_oa_total_rad[i], planner_output.ideal_oa_total_rad[i]);
-                const f32 candidate_b = nearestEquivalentAngle(planner_input.current_oa_total_rad[i], alt_target_oa_mod_rad);
+                const f32 alt_target_oa_mod_rad = wrapTo2PiF32(planner_output.ideal_oa_total_rad[i] + kPi);
+                const f32 candidate_a = nearestEquivalentAngleF32(planner_input.current_oa_total_rad[i], planner_output.ideal_oa_total_rad[i]);
+                const f32 candidate_b = nearestEquivalentAngleF32(planner_input.current_oa_total_rad[i], alt_target_oa_mod_rad);
 
                 f32 selected_oa_total_rad = candidate_a;
                 f32 selected_drive_omega_rad_s = planner_output.ideal_drive_omega_rad_s[i];
@@ -1182,10 +1159,10 @@ namespace jia
 
                 if (planner_input.force_uniform_steer_drive)
                 {
-                    const f32 fixed_a = nearestEquivalentAngle(planner_input.current_oa_total_rad[i], planner_input.uniform_steer_oa_mod_rad);
-                    const f32 fixed_b = nearestEquivalentAngle(planner_input.current_oa_total_rad[i], wrapTo2Pi(planner_input.uniform_steer_oa_mod_rad + kPi));
-                    const bool use_b = fabsf(shortestAngularDistance(planner_input.current_oa_total_rad[i], fixed_b)) <
-                                       fabsf(shortestAngularDistance(planner_input.current_oa_total_rad[i], fixed_a));
+                    const f32 fixed_a = nearestEquivalentAngleF32(planner_input.current_oa_total_rad[i], planner_input.uniform_steer_oa_mod_rad);
+                    const f32 fixed_b = nearestEquivalentAngleF32(planner_input.current_oa_total_rad[i], wrapTo2PiF32(planner_input.uniform_steer_oa_mod_rad + kPi));
+                    const bool use_b = fabsf(shortestAngularDistanceF32(planner_input.current_oa_total_rad[i], fixed_b)) <
+                                       fabsf(shortestAngularDistanceF32(planner_input.current_oa_total_rad[i], fixed_a));
                     selected_oa_total_rad = use_b ? fixed_b : fixed_a;
                     selected_drive_omega_rad_s = planner_input.uniform_drive_sign * (use_b ? -1.0f : 1.0f) * planner_input.uniform_drive_omega_abs;
                     flipped = use_b;
@@ -1194,7 +1171,7 @@ namespace jia
                 planner_output.selected_oa_total_rad[i] = selected_oa_total_rad;
                 planner_output.flipped_drive_direction[i] = flipped;
                 planner_output.steering_errors_rad[i] =
-                    fabsf(shortestAngularDistance(planner_input.current_oa_total_rad[i], selected_oa_total_rad));
+                    fabsf(shortestAngularDistanceF32(planner_input.current_oa_total_rad[i], selected_oa_total_rad));
                 planner_output.projected_drive_omega_rad_s[i] = selected_drive_omega_rad_s;
             }
 
@@ -1244,7 +1221,7 @@ namespace jia
             f32 low_speed_scales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
             computeLowSpeedDriveSuppressionScales(planner_input, planner_output.steering_errors_rad, low_speed_scales);
 
-            const f32 translational_speed_m_s = magnitude2D(planner_input.command.vel_x, planner_input.command.vel_y);
+            const f32 translational_speed_m_s = planner_command_speed_m_s;
             f32 predicted_vel_x = 0.0f;
             f32 predicted_vel_y = 0.0f;
             f32 predicted_omega_z = 0.0f;
@@ -1254,13 +1231,13 @@ namespace jia
                                          predicted_vel_y,
                                          predicted_omega_z))
             {
-                const f32 predicted_trans_speed_m_s = magnitude2D(predicted_vel_x, predicted_vel_y);
+                const f32 predicted_trans_speed_m_s = magnitude2DF32(predicted_vel_x, predicted_vel_y);
                 if ((translational_speed_m_s > 1.0e-6f) && (predicted_trans_speed_m_s > 1.0e-6f))
                 {
                     const f32 target_dir_rad = atan2f(planner_input.command.vel_y, planner_input.command.vel_x);
                     const f32 predicted_dir_rad = atan2f(predicted_vel_y, predicted_vel_x);
                     planner_output.high_speed_dir_err_deg =
-                        radToDegF32(fabsf(shortestAngularDistance(target_dir_rad, predicted_dir_rad)));
+                        radToDegF32(fabsf(shortestAngularDistanceF32(target_dir_rad, predicted_dir_rad)));
                 }
             }
 
@@ -1357,7 +1334,7 @@ namespace jia
         {
             const f32 current_corrected_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
             const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_corrected_local_total_rad);
-            const f32 align_target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
+            const f32 align_target_oa_total_rad = nearestEquivalentAngleF32(current_oa_total_rad, 0.0f);
             return mapWheelOaTotalToCorrectedLocal(wheel, align_target_oa_total_rad);
         }
 
@@ -2193,16 +2170,16 @@ namespace jia
 
         void Chassis::transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const
         {
-            f32 cos_theta = cosf(input_hwt_rot_z_);
-            f32 sin_theta = sinf(input_hwt_rot_z_);
+            f32 cos_theta = cosRadF32(input_hwt_rot_z_);
+            f32 sin_theta = sinRadF32(input_hwt_rot_z_);
             out_vel_x = vel_x * cos_theta - vel_y * sin_theta;
             out_vel_y = vel_x * sin_theta + vel_y * cos_theta;
         }
 
         void Chassis::transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const
         {
-            f32 cos_theta = cosf(input_hwt_rot_z_);
-            f32 sin_theta = sinf(input_hwt_rot_z_);
+            f32 cos_theta = cosRadF32(input_hwt_rot_z_);
+            f32 sin_theta = sinRadF32(input_hwt_rot_z_);
             out_vel_x = vel_x * cos_theta + vel_y * sin_theta;
             out_vel_y = -vel_x * sin_theta + vel_y * cos_theta;
         }
@@ -2225,7 +2202,7 @@ namespace jia
             yaw_pid_trace_.mode_tag = 0.0f;
             yaw_pid_trace_.target_yaw_rad = lock_now_rot_z_target_;
             yaw_pid_trace_.feedback_yaw_rad = input_hwt_rot_z_;
-            yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistance(input_hwt_rot_z_, lock_now_rot_z_target_));
+            yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistanceF32(input_hwt_rot_z_, lock_now_rot_z_target_));
             yaw_pid_trace_.manual_omega_in_rad_s = omega_z;
             yaw_pid_trace_.pid_output_omega_rad_s = 0.0f;
             yaw_pid_trace_.final_omega_cmd_rad_s = 0.0f;
@@ -2255,7 +2232,7 @@ namespace jia
                     yaw_pid_trace_.mode_tag = 2.0f;
                     yaw_pid_trace_.target_yaw_rad = out_rot_z;
                     yaw_pid_trace_.feedback_yaw_rad = input_hwt_rot_z_;
-                    yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistance(input_hwt_rot_z_, out_rot_z));
+                    yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistanceF32(input_hwt_rot_z_, out_rot_z));
                     yaw_pid_trace_.final_omega_cmd_rad_s = out_omega_z;
                     yaw_pid_trace_.shift_remaining_ms = static_cast<f32>(lock_now_rot_z_shift_count_);
                 }
@@ -2284,7 +2261,7 @@ namespace jia
                     yaw_pid_trace_.mode_tag = 3.0f;
                     yaw_pid_trace_.target_yaw_rad = out_rot_z;
                     yaw_pid_trace_.feedback_yaw_rad = input_hwt_rot_z_;
-                    yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistance(input_hwt_rot_z_, out_rot_z));
+                    yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistanceF32(input_hwt_rot_z_, out_rot_z));
                     yaw_pid_trace_.final_omega_cmd_rad_s = out_omega_z;
                     yaw_pid_trace_.shift_remaining_ms = 0.0f;
                 }
@@ -2303,7 +2280,7 @@ namespace jia
                 yaw_pid_trace_.mode_tag = 1.0f;
                 yaw_pid_trace_.target_yaw_rad = out_rot_z;
                 yaw_pid_trace_.feedback_yaw_rad = input_hwt_rot_z_;
-                yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistance(input_hwt_rot_z_, out_rot_z));
+                yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistanceF32(input_hwt_rot_z_, out_rot_z));
                 yaw_pid_trace_.final_omega_cmd_rad_s = out_omega_z;
                 yaw_pid_trace_.shift_remaining_ms = static_cast<f32>(lock_now_rot_z_shift_count_);
             }
@@ -2328,7 +2305,7 @@ namespace jia
             yaw_pid_trace_.mode_tag = 4.0f;
             yaw_pid_trace_.target_yaw_rad = out_rot_z;
             yaw_pid_trace_.feedback_yaw_rad = input_hwt_rot_z_;
-            yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistance(input_hwt_rot_z_, out_rot_z));
+            yaw_pid_trace_.error_deg = radToDegF32(shortestAngularDistanceF32(input_hwt_rot_z_, out_rot_z));
             yaw_pid_trace_.manual_omega_in_rad_s = omega_z;
             yaw_pid_trace_.pid_output_omega_rad_s = 0.0f;
             yaw_pid_trace_.final_omega_cmd_rad_s = 0.0f;
@@ -2415,11 +2392,12 @@ namespace jia
 
             if (launch_hold_active_)
             {
-                const SwervePlannerOutput launch_preview_output =
-                    planSwerveModules(makeSwervePlannerInput(makeLaunchHoldPreviewCommand()));
-                if (isLaunchHoldAligned(launch_preview_output))
+                launch_hold_preview_cache_ = planSwerveModules(makeSwervePlannerInput(makeLaunchHoldPreviewCommand()));
+                launch_hold_preview_cache_.valid = true;
+                if (isLaunchHoldAligned(launch_hold_preview_cache_))
                 {
                     launch_hold_active_ = false;
+                    launch_hold_preview_cache_.valid = false;
                 }
             }
 
@@ -2484,8 +2462,8 @@ namespace jia
             }
 
 // 第二阶段：平移矢量方向限幅（低速滞回冻+方向角速度限幅）
-            const f32 tar_mag = magnitude2D(tar_vel_x, tar_vel_y);
-            const f32 out_mag = magnitude2D(out_vel_x, out_vel_y);
+            const f32 tar_mag = magnitude2DF32(tar_vel_x, tar_vel_y);
+            const f32 out_mag = magnitude2DF32(out_vel_x, out_vel_y);
             const f32 enter_speed = getNearZeroEnterSpeedMps();
             const f32 exit_speed = getNearZeroExitSpeedMps();
             const f32 dir_rate_limit_rad_s = degToRadF32((runtime_strategy_cfg_.trans_dir_rate_limit_deg_s_ >= 0.0f) ? runtime_strategy_cfg_.trans_dir_rate_limit_deg_s_ : 0.0f);
@@ -2495,6 +2473,7 @@ namespace jia
             trans_dir_out_mag_m_s_ = out_mag;
             trans_dir_freeze_reason_ = 0U;
             reverse_intent_dir_err_deg_ = 0.0f;
+            const f32 requested_dir_rad = (tar_mag > 1.0e-6f) ? atan2f(tar_vel_y, tar_vel_x) : 0.0f;
 
             if (!trans_dir_ref_valid_ && out_mag > 1.0e-6f)
             {
@@ -2506,7 +2485,7 @@ namespace jia
             if (tar_mag > 1.0e-6f)
             {
                 reverse_intent_dir_err_deg_ =
-                    radToDegF32(fabsf(shortestAngularDistance(reverse_reference_dir_rad, atan2f(tar_vel_y, tar_vel_x))));
+                    radToDegF32(fabsf(shortestAngularDistanceF32(reverse_reference_dir_rad, requested_dir_rad)));
             }
 
             if (trans_dir_freeze_active_)
@@ -2537,12 +2516,11 @@ namespace jia
                                      shouldActivateReverseIntent(tar_vel_x, tar_vel_y, reverse_reference_dir_rad);
             if (reverse_intent_active_)
             {
-                const f32 target_dir_rad = atan2f(tar_vel_y, tar_vel_x);
-                out_vel_x = out_mag * cosf(target_dir_rad);
-                out_vel_y = out_mag * sinf(target_dir_rad);
+                out_vel_x = out_mag * cosRadF32(requested_dir_rad);
+                out_vel_y = out_mag * sinRadF32(requested_dir_rad);
                 trans_dir_freeze_active_ = false;
                 trans_dir_ref_valid_ = true;
-                trans_dir_ref_rad_ = target_dir_rad;
+                trans_dir_ref_rad_ = requested_dir_rad;
                 return;
             }
 
@@ -2554,8 +2532,8 @@ namespace jia
                 }
                 if (trans_dir_ref_valid_)
                 {
-                    out_vel_x = out_mag * cosf(trans_dir_ref_rad_);
-                    out_vel_y = out_mag * sinf(trans_dir_ref_rad_);
+                    out_vel_x = out_mag * cosRadF32(trans_dir_ref_rad_);
+                    out_vel_y = out_mag * sinRadF32(trans_dir_ref_rad_);
                 }
                 return;
             }
@@ -2570,14 +2548,14 @@ namespace jia
             f32 output_dir_rad = target_dir_rad;
             if (max_dir_step > 1.0e-6f)
             {
-                const f32 dir_delta = shortestAngularDistance(trans_dir_ref_rad_, target_dir_rad);
+                const f32 dir_delta = shortestAngularDistanceF32(trans_dir_ref_rad_, target_dir_rad);
                 const f32 clamped_delta = clampValue(dir_delta, -max_dir_step, max_dir_step);
-                output_dir_rad = wrapToPi(trans_dir_ref_rad_ + clamped_delta);
+                output_dir_rad = wrapToPiF32(trans_dir_ref_rad_ + clamped_delta);
             }
 
             trans_dir_ref_rad_ = output_dir_rad;
-            out_vel_x = out_mag * cosf(output_dir_rad);
-            out_vel_y = out_mag * sinf(output_dir_rad);
+            out_vel_x = out_mag * cosRadF32(output_dir_rad);
+            out_vel_y = out_mag * sinRadF32(output_dir_rad);
         }
 
         bool Chassis::readHomingSensor(const WheelConfig &wheel) const
@@ -2721,7 +2699,7 @@ namespace jia
             const bool xpark_stationary_hold = steer_fault_cfg.ignore_during_xpark_hold &&
                                                xpark_gate_active_ &&
                                                (command_speed_m_s <= getXParkCommandExitSpeedMps());
-            const f32 steer_error_rad = fabsf(wrapToPi(wheel.target_steer_motor_total_angle_rad -
+            const f32 steer_error_rad = fabsf(wrapToPiF32(wheel.target_steer_motor_total_angle_rad -
                                                        wheel.corrected_steer_motor_total_angle_rad));
             const bool steer_control_intent = !input_target_data_.zero_current_all &&
                                               !current_mode_flag_.is_wheel_torque_free &&
@@ -2901,8 +2879,8 @@ namespace jia
             {
                 const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
                 const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_local_total_rad);
-                const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
-                const f32 oa_error_abs_rad = fabsf(shortestAngularDistance(current_oa_total_rad, target_oa_total_rad));
+                const f32 target_oa_total_rad = nearestEquivalentAngleF32(current_oa_total_rad, 0.0f);
+                const f32 oa_error_abs_rad = fabsf(shortestAngularDistanceF32(current_oa_total_rad, target_oa_total_rad));
                 if (oa_error_abs_rad <= degToRadF32(homing_align_to_zero_tolerance_deg_))
                 {
                     wheel.homing_state = HomingState::kReady;
@@ -2930,9 +2908,9 @@ namespace jia
             {
                 const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
                 const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_local_total_rad);
-                const f32 target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
+                const f32 target_oa_total_rad = nearestEquivalentAngleF32(current_oa_total_rad, 0.0f);
                 const f32 target_local_total_rad = mapWheelOaTotalToCorrectedLocal(wheel, target_oa_total_rad);
-                const f32 oa_error_abs_rad = fabsf(shortestAngularDistance(current_oa_total_rad, target_oa_total_rad));
+                const f32 oa_error_abs_rad = fabsf(shortestAngularDistanceF32(current_oa_total_rad, target_oa_total_rad));
 
                 wheel.target_steer_motor_total_angle_rad = target_local_total_rad;
                 if (oa_error_abs_rad <= degToRadF32(homing_align_to_zero_tolerance_deg_))
@@ -3070,9 +3048,17 @@ namespace jia
 
         void Chassis::computeModuleCommands(const Data &command_data)
         {
-            const Data planner_command = launch_hold_active_ ? makeLaunchHoldPreviewCommand() : command_data;
-            const SwervePlannerInput planner_input = makeSwervePlannerInput(planner_command);
-            SwervePlannerOutput planner_output = planSwerveModules(planner_input);
+            SwervePlannerOutput planner_output = {};
+            if (launch_hold_active_ && launch_hold_preview_cache_.valid)
+            {
+                planner_output = launch_hold_preview_cache_;
+            }
+            else
+            {
+                const Data planner_command = launch_hold_active_ ? makeLaunchHoldPreviewCommand() : command_data;
+                const SwervePlannerInput planner_input = makeSwervePlannerInput(planner_command);
+                planner_output = planSwerveModules(planner_input);
+            }
             if (launch_hold_active_)
             {
                 for (u8 i = 0; i < 4; ++i)
@@ -3527,8 +3513,8 @@ namespace jia
                 {
                     const WheelConfig &wheel = wheel_config_[i];
                     const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
-                    const f32 align_target_oa_total_rad = nearestEquivalentAngle(current_oa_total_rad, 0.0f);
-                    align_err_deg[i] = radToDegF32(shortestAngularDistance(current_oa_total_rad, align_target_oa_total_rad));
+                    const f32 align_target_oa_total_rad = nearestEquivalentAngleF32(current_oa_total_rad, 0.0f);
+                    align_err_deg[i] = radToDegF32(shortestAngularDistanceF32(current_oa_total_rad, align_target_oa_total_rad));
                 }
 
                 debug_uart_.printf_DMA((char *)"FSH hs=%u/%u/%u/%u curOA=%.1f/%.1f/%.1f/%.1f tarOA=%.1f/%.1f/%.1f/%.1f err0=%.1f/%.1f/%.1f/%.1f zoff=%.1f/%.1f/%.1f/%.1f\r\n",
@@ -4123,8 +4109,8 @@ namespace jia
             {
                 const WheelConfig &wheel = wheel_config_[i];
                 const f32 steer_angle_oa_rad = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
-                const f32 cos_theta = cosf(steer_angle_oa_rad);
-                const f32 sin_theta = sinf(steer_angle_oa_rad);
+                const f32 cos_theta = cosRadF32(steer_angle_oa_rad);
+                const f32 sin_theta = sinRadF32(steer_angle_oa_rad);
                 const f32 drive_linear_m_s = wheel.corrected_drive_omega_rad_s * runtime_strategy_cfg_.wheel_radius_m_;
 
                 const f32 rows[2][3] = {
@@ -4171,6 +4157,12 @@ namespace jia
             for (;;)
             {
                 const u64 loop_start_us = RtosTimeStampUs64::getTimeUs();
+                u64 plan_us = 0ULL;     // [RO] 本周期规划阶段耗时（微秒）
+                u64 feedback_us = 0ULL; // [RO] 本周期反馈刷新阶段耗时（微秒）
+                u64 homing_us = 0ULL;   // [RO] 本周期回零状态机阶段耗时（微秒）
+                u64 apply_us = 0ULL;    // [RO] 本周期命令生成与下发阶段耗时（微秒）
+                u64 debug_us = 0ULL;    // [RO] 本周期调试镜像与输出阶段耗时（微秒）
+                u64 stage_start_us = loop_start_us;
 
                 // 2) 解析模式并做坐标系转换
                 // 1) 读取 IMU 航向/角速度
@@ -4194,10 +4186,14 @@ namespace jia
                 refreshActuatorLimitState();
 
                 updatePlannedMotionData();
+                plan_us = RtosTimeStampUs64::getTimeUs() - stage_start_us;
 
+                stage_start_us = RtosTimeStampUs64::getTimeUs();
                 updateWheelFeedback();
                 applyDebugSteerPidRuntimeTuning();
+                feedback_us = RtosTimeStampUs64::getTimeUs() - stage_start_us;
 
+                stage_start_us = RtosTimeStampUs64::getTimeUs();
                 bool all_homed = true;
                 for (u8 i = 0; i < 4; ++i)
                 {
@@ -4213,9 +4209,11 @@ namespace jia
                     input_target_data_.zero_current_all = false;
                 }
                 homing_start_request_ = false;
+                homing_us = RtosTimeStampUs64::getTimeUs() - stage_start_us;
 
                 if (applyDebugModuleOverride(all_homed))
                 {
+                    updateTaskPerfBreakdown(plan_us, feedback_us, homing_us, 0ULL, 0ULL);
                     updateTaskPerfStat(loop_start_us, RtosTimeStampUs64::getTimeUs());
                     vTaskDelayUntil(&time_ms_, period_ms_);
                     continue;
@@ -4223,13 +4221,19 @@ namespace jia
 
 // 回零和正常控制共用同一套命令生成流程，但最终下发前会根all_homed选择
 // 未回零时只保留安全动作，已回零时才输出完整舵驱动目标
+                stage_start_us = RtosTimeStampUs64::getTimeUs();
                 computeModuleCommands(planned_data_);
                 applyModuleCommands(all_homed);
                 updateCurrentData(all_homed);
+                apply_us = RtosTimeStampUs64::getTimeUs() - stage_start_us;
+
+                stage_start_us = RtosTimeStampUs64::getTimeUs();
                 refreshDebugMirror(all_homed);
                 emitDebugOutputByMode(all_homed);
+                debug_us = RtosTimeStampUs64::getTimeUs() - stage_start_us;
 
                 last_planned_data_ = planned_data_;
+                updateTaskPerfBreakdown(plan_us, feedback_us, homing_us, apply_us, debug_us);
                 updateTaskPerfStat(loop_start_us, RtosTimeStampUs64::getTimeUs());
                 vTaskDelayUntil(&time_ms_, period_ms_);
             }
@@ -4313,6 +4317,15 @@ namespace jia
             perf.window_size = 500U;
             perf.window_count = perf.window.count;
             perf.window_clamp_count = perf.window.clamp_count;
+        }
+
+        void Chassis::updateTaskPerfBreakdown(u64 plan_us, u64 feedback_us, u64 homing_us, u64 apply_us, u64 debug_us)
+        {
+            task_perf_stat_.plan_us = plan_us;
+            task_perf_stat_.feedback_us = feedback_us;
+            task_perf_stat_.homing_us = homing_us;
+            task_perf_stat_.apply_us = apply_us;
+            task_perf_stat_.debug_us = debug_us;
         }
 
         f32 Chassis::getTargetBodyVelX() const

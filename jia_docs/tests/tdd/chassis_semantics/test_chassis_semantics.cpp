@@ -2602,7 +2602,7 @@ void testFlipSolutionPrefersSmallSteerDeltaAndInvertsDriveOnQuadrantCrossing()
         chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
 
     const float direct_target_rad = std::atan2(command.vel_y, command.vel_x);
-    const float direct_delta_rad = std::fabs(chassis.shortestAngularDistance(jia::degToRadF32(10.0f), direct_target_rad));
+    const float direct_delta_rad = std::fabs(jia::shortestAngularDistanceF32(jia::degToRadF32(10.0f), direct_target_rad));
 
     EXPECT_TRUE(output.flipped_drive_direction[0]);
     EXPECT_TRUE(output.steering_errors_rad[0] < direct_delta_rad);
@@ -2631,6 +2631,28 @@ void testReverseIntentBypassesTranslationalDirectionSlewOnNearOppositeCommand()
 
     EXPECT_TRUE(out_vel_x < 0.0f);
     EXPECT_TRUE(std::atan2(out_vel_y, out_vel_x) > (jia::kPi / 2.0f));
+}
+
+void testDirectionSlewCrossesPiBoundaryByShortestPath()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.trans_dir_rate_limit_deg_s_ = 30.0f;
+    chassis.runtime_strategy_cfg_.max_acc_xy_acc_ = 1000.0f;
+    chassis.runtime_strategy_cfg_.max_acc_xy_dec_ = 1000.0f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.02f;
+    chassis.trans_dir_ref_valid_ = true;
+    chassis.trans_dir_ref_rad_ = jia::degToRadF32(179.0f);
+    chassis.trans_dir_freeze_active_ = false;
+
+    float out_vel_x = -1.0f;
+    float out_vel_y = -0.01f;
+    float out_omega_z = 0.0f;
+    chassis.limitPlannedSpeed(-1.0f, -0.01f, 0.0f, out_vel_x, out_vel_y, out_omega_z);
+
+    const float output_dir_deg = jia::radToDegF32(std::atan2(out_vel_y, out_vel_x));
+    EXPECT_TRUE(output_dir_deg > 170.0f || output_dir_deg < -170.0f);
+    EXPECT_TRUE(std::fabs(jia::shortestAngularDistanceF32(chassis.trans_dir_ref_rad_, jia::degToRadF32(-179.0f))) < jia::degToRadF32(10.0f));
 }
 
 void testReverseIntentDoesNotFallIntoZeroHoldOrSuppressionWhenSteerIsReachable()
@@ -3528,6 +3550,7 @@ int main()
     testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels();
     testFlipSolutionPrefersSmallSteerDeltaAndInvertsDriveOnQuadrantCrossing();
     testReverseIntentBypassesTranslationalDirectionSlewOnNearOppositeCommand();
+    testDirectionSlewCrossesPiBoundaryByShortestPath();
     testReverseIntentDoesNotFallIntoZeroHoldOrSuppressionWhenSteerIsReachable();
     testAlwaysForwardModeIgnoresReverseIntentOverride();
     testDriveAlphaDeliveryLimitUsesUniformScaleAcrossAllWheels();
