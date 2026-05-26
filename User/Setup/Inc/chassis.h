@@ -6,6 +6,7 @@
 #include "FreeRTOS.h"
 
 #include "Motor_DJI.h"
+#include "Motor_VESC.h"
 #include "Module_CrsfReceiver.h"
 #include "APP_debugTool.h"
 #include "APP_PID.h"
@@ -282,7 +283,7 @@ namespace jia
             struct InitConfig
             {
                 Motor_Base *steer_motor_h[4] = {nullptr}; // 4 个转向电机句柄，顺序需与 wheels[4] 的轮位定义保持一致
-                Motor_Base *drive_motor_h[4] = {nullptr}; // 4 个驱动电机句柄，顺序需与对应转向模块一一匹配
+                VESC_Motor *drive_motor_h[4] = {nullptr}; // 4 个驱动电机句柄，顺序需与对应转向模块一一匹配
             };
 
             // 初始化与运行时策略接口
@@ -350,7 +351,7 @@ namespace jia
                 f32 steer_motor_sign = 1.0f;                      // 转向电机方向符号：1 表示不取反，-1 表示转向反馈和目标指令都按相反方向解释
                 f32 drive_motor_sign = 1.0f;                      // 驱动电机方向符号：1 表示不取反，-1 表示驱动反馈和目标指令都按相反方向解释
                 Motor_Base *steer_motor_h = nullptr;              // 该模块绑定的转向电机句柄
-                Motor_Base *drive_motor_h = nullptr;              // 该模块绑定的驱动电机句柄
+                VESC_Motor *drive_motor_h = nullptr;              // 该模块绑定的驱动电机句柄
                 bool homing_enabled = false;                      // 是否对该轮启用回零流程；false 时默认认为零位已可用
                 bool homing_sensor_active_high = true;            // 回零传感器逻辑 active 极性：true 表示高电平视为有效，false 表示低电平视为有效；不决定 H/L 边沿的机械角语义
                 void *homing_gpio_port = nullptr;                 // 回零传感器 GPIO 端口运行时副本；读取零位输入时直接使用
@@ -1023,6 +1024,10 @@ namespace jia
                 u32 steer_speed_pid_applied_stamp[4] = {0U, 0U, 0U, 0U};    // [RO] 速度环已生效戳。表示运行态已经真正接收到这组参数。
                 u32 steer_angle_pid_applied_stamp[4] = {0U, 0U, 0U, 0U};    // [RO] 角度环已生效戳。表示运行态已经真正接收到这组参数。
                 bool synced_on_enable_edge = false;                         // [RO] 本次调试使能上升沿是否已完成同步。避免重复把缓存参数刷入运行态。
+                PID_Param_Config drive_speed_pid_cfg = {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f, .I_Outlimit = 20000.0f, .isIOutlimit = true, .output_limit = 20000.0f, .deadband = 0.0f};
+                f32 drive_speed_pid_td_ratio = 0.0f;                    // [RW] 四个 drive 轮共享的 VESC 本地速度环 TD 比例参数。apply 时会同步刷到 4 个驱动轮。
+                u32 drive_speed_pid_apply_stamp = 0U;                   // [RW] drive 共享速度环参数申请生效戳。外部写入后，通过同步流程统一下发到 4 个驱动轮。
+                u32 drive_speed_pid_applied_stamp = 0U;                 // [RO] drive 共享速度环已生效戳。表示 4 个 drive 轮已经完成这组共享参数的同步。
             } debug_pid_tune_;
 
             // 回零与模块运行态（主要观察）[RO]

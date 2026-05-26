@@ -2039,7 +2039,7 @@ namespace jia
             {
                 debug_output_runtime_.text.direct_trace_last_ms = time_ms_;
                 const Motor_Base *steer_motor = target_wheel.steer_motor_h;
-                const Motor_Base *drive_motor = target_wheel.drive_motor_h;
+                const VESC_Motor *drive_motor = target_wheel.drive_motor_h;
                 if (steer_motor != nullptr)
                 {
                     debug_uart_.printf_DMA((char *)"SW30,t=%lu,w=%u,stIn=%u,drIn=%u,stAxisId=%u,drAxisId=%u,stType=%u,drType=%u,stPlan=%u,drPlan=%u,stInv=%u,drInv=%u,stDz=%u,drDz=%u,stRaw=%.3f,drRaw=%.3f,stLim=%.3f,drLim=%.3f,stTh=%.3f,drTh=%.3f,stStep=%.3f,drStep=%.3f,stApplied=%.3f,drApplied=%.3f,stAxis=%.3f,drAxis=%.3f,stStepSign=%.1f,drStepSign=%.1f,stTarI=%.1f,stCurI=%.1f,stTarRPM=%.2f,stCurRPM=%.2f,drTarI=%.1f,drCurI=%.1f,drTarRPM=%.2f,drCurRPM=%.2f,enS=%u,enD=%u,estop=%u\r\n",
@@ -3418,6 +3418,25 @@ namespace jia
                 debug_pid_tune_.steer_speed_pid_td_ratio[i] = steer_m3508->get_speed_pid_td_ratio();
                 debug_pid_tune_.steer_angle_pid_i_separa[i] = steer_m3508->get_angle_pid_i_separa_threshold();
             }
+
+            const bool drive_dirty = (debug_pid_tune_.drive_speed_pid_applied_stamp != debug_pid_tune_.drive_speed_pid_apply_stamp);
+            if (drive_dirty)
+            {
+                return;
+            }
+
+            for (u8 i = 0; i < 4; ++i)
+            {
+                VESC_Motor *drive_motor = wheel_config_[i].drive_motor_h;
+                if (drive_motor == nullptr)
+                {
+                    continue;
+                }
+
+                debug_pid_tune_.drive_speed_pid_cfg = drive_motor->get_speed_pid_params();
+                debug_pid_tune_.drive_speed_pid_td_ratio = drive_motor->get_speed_pid_td_ratio();
+                break;
+            }
         }
 
         void Chassis::applyDebugSteerPidRuntimeTuning()
@@ -3444,6 +3463,27 @@ namespace jia
                                           debug_pid_tune_.steer_angle_pid_cfg[i], debug_pid_tune_.steer_angle_pid_i_separa[i]);
                     debug_pid_tune_.steer_angle_pid_applied_stamp[i] = debug_pid_tune_.steer_angle_pid_apply_stamp[i];
                     debug_pid_tune_.steer_speed_pid_applied_stamp[i] = debug_pid_tune_.steer_speed_pid_apply_stamp[i];
+                }
+            }
+
+            if (debug_pid_tune_.drive_speed_pid_applied_stamp != debug_pid_tune_.drive_speed_pid_apply_stamp)
+            {
+                bool applied_any = false;
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    VESC_Motor *drive_motor = wheel_config_[i].drive_motor_h;
+                    if (drive_motor == nullptr)
+                    {
+                        continue;
+                    }
+
+                    drive_motor->pid_init(debug_pid_tune_.drive_speed_pid_cfg, debug_pid_tune_.drive_speed_pid_td_ratio);
+                    applied_any = true;
+                }
+
+                if (applied_any)
+                {
+                    debug_pid_tune_.drive_speed_pid_applied_stamp = debug_pid_tune_.drive_speed_pid_apply_stamp;
                 }
             }
         }
@@ -3684,7 +3724,7 @@ namespace jia
             debug_output_runtime_.justfloat.single_wheel.last_ms = time_ms_;
             const u8 observe_wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
             const WheelConfig &wheel = wheel_config_[observe_wheel_idx];
-            const Motor_Base *drive_motor = wheel.drive_motor_h;
+            const VESC_Motor *drive_motor = wheel.drive_motor_h;
             if (drive_motor == nullptr)
             {
                 return;
@@ -3734,7 +3774,7 @@ namespace jia
             const u8 observe_wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
             const WheelConfig &wheel = wheel_config_[observe_wheel_idx];
             const Motor_Base *steer_motor = wheel.steer_motor_h;
-            const Motor_Base *drive_motor = wheel.drive_motor_h;
+            const VESC_Motor *drive_motor = wheel.drive_motor_h;
             if (steer_motor == nullptr || drive_motor == nullptr)
             {
                 return;
