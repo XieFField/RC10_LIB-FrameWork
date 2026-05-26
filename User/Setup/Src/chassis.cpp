@@ -115,6 +115,20 @@ namespace jia
                            : Chassis::DirectDriveCommandType::kRpm;
             }
 
+            inline Chassis::SingleWheelInputAxis sanitizeSingleWheelInputAxis(u8 raw_axis)
+            {
+                return (raw_axis <= static_cast<u8>(Chassis::SingleWheelInputAxis::kRightY))
+                           ? static_cast<Chassis::SingleWheelInputAxis>(raw_axis)
+                           : Chassis::SingleWheelInputAxis::kLeftX;
+            }
+
+            inline Chassis::SingleWheelPlannerMode sanitizeSingleWheelPlannerMode(u8 raw_mode)
+            {
+                return (raw_mode <= static_cast<u8>(Chassis::SingleWheelPlannerMode::kTrapezoid))
+                           ? static_cast<Chassis::SingleWheelPlannerMode>(raw_mode)
+                           : Chassis::SingleWheelPlannerMode::kOff;
+            }
+
             inline Chassis::DebugOutputFamily sanitizeDebugOutputFamily(u8 raw_family)
             {
                 return (raw_family <= static_cast<u8>(Chassis::DebugOutputFamily::kBinary))
@@ -193,6 +207,16 @@ namespace jia
                 default:
                     return 200.0f;
                 }
+            }
+
+            inline bool isSingleWheelSteerPlannerSupported(Chassis::DirectSteerCommandType type)
+            {
+                return type != Chassis::DirectSteerCommandType::kCurrent;
+            }
+
+            inline bool isSingleWheelDrivePlannerSupported(Chassis::DirectDriveCommandType type)
+            {
+                return type == Chassis::DirectDriveCommandType::kRpm;
             }
 
         } // namespace
@@ -1408,10 +1432,7 @@ namespace jia
             case 22:
                 return DebugMode::kHomingObserve;
             case 30:
-            case 31:
                 return DebugMode::kSingleWheelIsolated;
-            case 32:
-                return DebugMode::kDirectActuator;
             default:
                 return DebugMode::kTorqueFree;
             }
@@ -1491,7 +1512,6 @@ namespace jia
             case DebugMode::kAlignForward:
             case DebugMode::kHomingObserve:
             case DebugMode::kSingleWheelIsolated:
-            case DebugMode::kDirectActuator:
                 setTargetBodySpeedMode(0.0f, 0.0f, 0.0f);
                 break;
             default:
@@ -1557,173 +1577,308 @@ namespace jia
             }
         }
 
-        void Chassis::syncDirectActuatorCommandTemplates()
+        void Chassis::syncSingleWheelCommandTemplates()
         {
-            const DirectSteerCommandType steer_type = sanitizeDirectSteerCommandType(debug_control_.legacy_direct.steer_command_type_raw);
-            const DirectDriveCommandType drive_type = sanitizeDirectDriveCommandType(debug_control_.legacy_direct.drive_command_type_raw);
-            debug_control_.legacy_direct.steer_command_type_raw = static_cast<u8>(steer_type);
-            debug_control_.legacy_direct.drive_command_type_raw = static_cast<u8>(drive_type);
+            SingleWheelAxisControl &steer = debug_control_.single_wheel.steer;
+            SingleWheelAxisControl &drive = debug_control_.single_wheel.drive;
 
-            if (debug_control_.legacy_direct.steer_command_type_raw != direct_last_steer_command_type_raw_)
+            const DirectSteerCommandType steer_type = sanitizeDirectSteerCommandType(steer.command_type_raw);
+            const DirectDriveCommandType drive_type = sanitizeDirectDriveCommandType(drive.command_type_raw);
+            steer.command_type_raw = static_cast<u8>(steer_type);
+            drive.command_type_raw = static_cast<u8>(drive_type);
+            steer.input_axis_raw = static_cast<u8>(sanitizeSingleWheelInputAxis(steer.input_axis_raw));
+            drive.input_axis_raw = static_cast<u8>(sanitizeSingleWheelInputAxis(drive.input_axis_raw));
+            steer.planner_mode_raw = static_cast<u8>(sanitizeSingleWheelPlannerMode(steer.planner_mode_raw));
+            drive.planner_mode_raw = static_cast<u8>(sanitizeSingleWheelPlannerMode(drive.planner_mode_raw));
+
+            if (steer.command_type_raw != single_wheel_last_steer_command_type_raw_)
             {
-                if (direct_last_steer_command_type_raw_ == 0xFFU)
+                if (single_wheel_last_steer_command_type_raw_ == 0xFFU)
                 {
-                    if (debug_control_.legacy_direct.steer_command_limit <= 0.0f)
+                    if (steer.command_limit <= 0.0f)
                     {
-                        debug_control_.legacy_direct.steer_command_limit = getDirectSteerDefaultLimit(steer_type);
+                        steer.command_limit = getDirectSteerDefaultLimit(steer_type);
                     }
-                    if (debug_control_.legacy_direct.steer_step_value == 0.0f)
+                    if (steer.step_value == 0.0f)
                     {
-                        debug_control_.legacy_direct.steer_step_value = getDirectSteerDefaultStepValue(steer_type);
+                        steer.step_value = getDirectSteerDefaultStepValue(steer_type);
                     }
                 }
                 else
                 {
-                    debug_control_.legacy_direct.steer_command_value = 0.0f;
-                    debug_control_.legacy_direct.steer_command_limit = getDirectSteerDefaultLimit(steer_type);
-                    debug_control_.legacy_direct.steer_step_value = getDirectSteerDefaultStepValue(steer_type);
+                    steer.command_value = 0.0f;
+                    steer.command_limit = getDirectSteerDefaultLimit(steer_type);
+                    steer.step_value = getDirectSteerDefaultStepValue(steer_type);
+                    resetSingleWheelAxisPlannerRuntime(single_wheel_steer_planner_state_);
                 }
-                direct_last_steer_command_type_raw_ = debug_control_.legacy_direct.steer_command_type_raw;
+                single_wheel_last_steer_command_type_raw_ = steer.command_type_raw;
             }
 
-            if (debug_control_.legacy_direct.drive_command_type_raw != direct_last_drive_command_type_raw_)
+            if (drive.command_type_raw != single_wheel_last_drive_command_type_raw_)
             {
-                if (direct_last_drive_command_type_raw_ == 0xFFU)
+                if (single_wheel_last_drive_command_type_raw_ == 0xFFU)
                 {
-                    if (debug_control_.legacy_direct.drive_command_limit <= 0.0f)
+                    if (drive.command_limit <= 0.0f)
                     {
-                        debug_control_.legacy_direct.drive_command_limit = getDirectDriveDefaultLimit(drive_type);
+                        drive.command_limit = getDirectDriveDefaultLimit(drive_type);
                     }
-                    if (debug_control_.legacy_direct.drive_step_value == 0.0f)
+                    if (drive.step_value == 0.0f)
                     {
-                        debug_control_.legacy_direct.drive_step_value = getDirectDriveDefaultStepValue(drive_type);
+                        drive.step_value = getDirectDriveDefaultStepValue(drive_type);
                     }
                 }
                 else
                 {
-                    debug_control_.legacy_direct.drive_command_value = 0.0f;
-                    debug_control_.legacy_direct.drive_command_limit = getDirectDriveDefaultLimit(drive_type);
-                    debug_control_.legacy_direct.drive_step_value = getDirectDriveDefaultStepValue(drive_type);
+                    drive.command_value = 0.0f;
+                    drive.command_limit = getDirectDriveDefaultLimit(drive_type);
+                    drive.step_value = getDirectDriveDefaultStepValue(drive_type);
+                    resetSingleWheelAxisPlannerRuntime(single_wheel_drive_planner_state_);
                 }
-                direct_last_drive_command_type_raw_ = debug_control_.legacy_direct.drive_command_type_raw;
+                single_wheel_last_drive_command_type_raw_ = drive.command_type_raw;
             }
         }
 
-        Chassis::DirectActuatorCommandSnapshot Chassis::resolveDirectActuatorCommand(u8 wheel_idx)
+        f32 Chassis::readSingleWheelInputAxisValue(u8 input_axis_raw) const
         {
-            syncDirectActuatorCommandTemplates();
-
-            DirectActuatorCommandSnapshot command{};
-            command.wheel_idx = wheel_idx;
-            command.steer_input_mode = static_cast<u8>(sanitizeDirectAxisInputMode(debug_control_.legacy_direct.steer_input_mode_raw));
-            command.drive_input_mode = static_cast<u8>(sanitizeDirectAxisInputMode(debug_control_.legacy_direct.drive_input_mode_raw));
-            command.steer_command_type = static_cast<u8>(sanitizeDirectSteerCommandType(debug_control_.legacy_direct.steer_command_type_raw));
-            command.drive_command_type = static_cast<u8>(sanitizeDirectDriveCommandType(debug_control_.legacy_direct.drive_command_type_raw));
-            command.steer_command_limit = (debug_control_.legacy_direct.steer_command_limit > 0.0f)
-                                              ? debug_control_.legacy_direct.steer_command_limit
-                                              : getDirectSteerDefaultLimit(static_cast<DirectSteerCommandType>(command.steer_command_type));
-            command.drive_command_limit = (debug_control_.legacy_direct.drive_command_limit > 0.0f)
-                                              ? debug_control_.legacy_direct.drive_command_limit
-                                              : getDirectDriveDefaultLimit(static_cast<DirectDriveCommandType>(command.drive_command_type));
-            command.steer_step_threshold = (debug_control_.legacy_direct.steer_step_threshold > 0.01f) ? debug_control_.legacy_direct.steer_step_threshold : 0.3f;
-            command.drive_step_threshold = (debug_control_.legacy_direct.drive_step_threshold > 0.01f) ? debug_control_.legacy_direct.drive_step_threshold : 0.3f;
-            command.steer_step_value = fabsf((debug_control_.legacy_direct.steer_step_value != 0.0f)
-                                                 ? debug_control_.legacy_direct.steer_step_value
-                                                 : getDirectSteerDefaultStepValue(static_cast<DirectSteerCommandType>(command.steer_command_type)));
-            command.drive_step_value = fabsf((debug_control_.legacy_direct.drive_step_value != 0.0f)
-                                                 ? debug_control_.legacy_direct.drive_step_value
-                                                 : getDirectDriveDefaultStepValue(static_cast<DirectDriveCommandType>(command.drive_command_type)));
-            command.steer_command_value = debug_control_.legacy_direct.steer_command_value;
-            command.drive_command_value = debug_control_.legacy_direct.drive_command_value;
-
-            const DirectAxisInputMode steer_input_mode = static_cast<DirectAxisInputMode>(command.steer_input_mode);
-            const DirectAxisInputMode drive_input_mode = static_cast<DirectAxisInputMode>(command.drive_input_mode);
-
-            if (steer_input_mode == DirectAxisInputMode::kRcContinuous)
+            switch (sanitizeSingleWheelInputAxis(input_axis_raw))
             {
-                command.steer_axis_value = clampValue(airjoy_data_.left_x, -1.0f, 1.0f);
-                command.steer_command_value = command.steer_axis_value * command.steer_command_limit;
+            case SingleWheelInputAxis::kLeftY:
+                return clampValue(airjoy_data_.left_y, -1.0f, 1.0f);
+            case SingleWheelInputAxis::kRightX:
+                return clampValue(airjoy_data_.right_x, -1.0f, 1.0f);
+            case SingleWheelInputAxis::kRightY:
+                return clampValue(airjoy_data_.right_y, -1.0f, 1.0f);
+            case SingleWheelInputAxis::kLeftX:
+            default:
+                return clampValue(airjoy_data_.left_x, -1.0f, 1.0f);
             }
-            else if (steer_input_mode == DirectAxisInputMode::kRcStep)
-            {
-                command.steer_axis_value = clampValue(airjoy_data_.left_x, -1.0f, 1.0f);
-                if (command.steer_axis_value > command.steer_step_threshold)
-                {
-                    command.steer_step_sign = 1.0f;
-                }
-                else if (command.steer_axis_value < -command.steer_step_threshold)
-                {
-                    command.steer_step_sign = -1.0f;
-                }
-                command.steer_command_value = command.steer_step_sign * command.steer_step_value;
-            }
-
-            if (drive_input_mode == DirectAxisInputMode::kRcContinuous)
-            {
-                command.drive_axis_value = clampValue(airjoy_data_.right_x, -1.0f, 1.0f);
-                command.drive_command_value = command.drive_axis_value * command.drive_command_limit;
-            }
-            else if (drive_input_mode == DirectAxisInputMode::kRcStep)
-            {
-                command.drive_axis_value = clampValue(airjoy_data_.right_x, -1.0f, 1.0f);
-                if (command.drive_axis_value > command.drive_step_threshold)
-                {
-                    command.drive_step_sign = 1.0f;
-                }
-                else if (command.drive_axis_value < -command.drive_step_threshold)
-                {
-                    command.drive_step_sign = -1.0f;
-                }
-                command.drive_command_value = command.drive_step_sign * command.drive_step_value;
-            }
-
-            debug_control_.legacy_direct.steer_command_value = command.steer_command_value;
-            debug_control_.legacy_direct.drive_command_value = command.drive_command_value;
-
-            command.applied_steer_cmd = clampValue(command.steer_command_value, -command.steer_command_limit, command.steer_command_limit);
-            command.applied_drive_cmd = clampValue(command.drive_command_value, -command.drive_command_limit, command.drive_command_limit);
-            return command;
         }
 
-        Chassis::DirectActuatorCommandSnapshot Chassis::resolveSingleWheelIsolatedCommand(u8 wheel_idx)
+        void Chassis::resetSingleWheelAxisPlannerRuntime(SingleWheelAxisPlannerRuntime &runtime)
         {
-            DirectActuatorCommandSnapshot command{};
-            command.wheel_idx = wheel_idx;
-            command.steer_input_mode = static_cast<u8>(DirectAxisInputMode::kRcContinuous);
-            command.drive_input_mode = static_cast<u8>(DirectAxisInputMode::kRcContinuous);
-            command.steer_command_type = static_cast<u8>(sanitizeDirectSteerCommandType(debug_control_.single_wheel.steer_target.mode));
-            command.drive_command_type = static_cast<u8>(sanitizeDirectDriveCommandType(debug_control_.single_wheel.drive_target.mode));
+            runtime = {};
+        }
 
-            const f32 steer_limit = fabsf(debug_control_.single_wheel.steer_target.value);
-            const f32 drive_limit = fabsf(debug_control_.single_wheel.drive_target.value);
-            command.steer_command_limit = (steer_limit > 1.0e-6f)
-                                              ? steer_limit
-                                              : getDirectSteerDefaultLimit(static_cast<DirectSteerCommandType>(command.steer_command_type));
-            command.drive_command_limit = (drive_limit > 1.0e-6f)
-                                              ? drive_limit
-                                              : getDirectDriveDefaultLimit(static_cast<DirectDriveCommandType>(command.drive_command_type));
-
-            command.steer_axis_value = clampValue(airjoy_data_.left_x, -1.0f, 1.0f);
-            command.drive_axis_value = clampValue(airjoy_data_.right_x, -1.0f, 1.0f);
-            command.steer_command_value = command.steer_axis_value * command.steer_command_limit;
-            command.drive_command_value = command.drive_axis_value * command.drive_command_limit;
-            command.applied_steer_cmd = clampValue(command.steer_command_value, -command.steer_command_limit, command.steer_command_limit);
-            command.applied_drive_cmd = clampValue(command.drive_command_value, -command.drive_command_limit, command.drive_command_limit);
-
-            if (debug_control_.single_wheel.scurve_enable &&
-                command.drive_command_type == static_cast<u8>(DirectDriveCommandType::kRpm))
+        f32 Chassis::shapeSingleWheelSteerCommand(u8 wheel_idx, const SingleWheelAxisControl &axis_cfg, f32 target_value)
+        {
+            const SingleWheelPlannerMode planner_mode = sanitizeSingleWheelPlannerMode(axis_cfg.planner_mode_raw);
+            const DirectSteerCommandType command_type = sanitizeDirectSteerCommandType(axis_cfg.command_type_raw);
+            if ((planner_mode == SingleWheelPlannerMode::kOff) ||
+                !isSingleWheelSteerPlannerSupported(command_type))
             {
-                const f32 shaped_omega_rad_s = shapeSingleWheelDriveOmegaRadS(wheel_idx, rpmToRadsF32(command.applied_drive_cmd));
-                command.drive_command_value = radsToRpmF32(shaped_omega_rad_s);
-                command.applied_drive_cmd = command.drive_command_value;
+                resetSingleWheelAxisPlannerRuntime(single_wheel_steer_planner_state_);
+                return target_value;
+            }
+
+            SingleWheelAxisPlannerRuntime &runtime = single_wheel_steer_planner_state_;
+            if ((runtime.last_wheel_idx != wheel_idx) ||
+                (runtime.last_command_type_raw != axis_cfg.command_type_raw) ||
+                (runtime.last_planner_mode_raw != axis_cfg.planner_mode_raw))
+            {
+                resetSingleWheelAxisPlannerRuntime(runtime);
+            }
+
+            f32 shaped_value = target_value;
+            if (planner_mode == SingleWheelPlannerMode::kSCurve)
+            {
+                shaped_value = limitValueByJerkProfile(target_value,
+                                                       runtime.last_output_value,
+                                                       runtime.jerk_state,
+                                                       axis_cfg.scurve.acc_acc,
+                                                       axis_cfg.scurve.acc_dec,
+                                                       axis_cfg.scurve.jerk_acc,
+                                                       axis_cfg.scurve.jerk_dec,
+                                                       axis_cfg.scurve.settle_vel_eps,
+                                                       axis_cfg.scurve.settle_acc_eps);
             }
             else
             {
-                single_wheel_drive_shape_state_ = {};
-                single_wheel_last_drive_linear_m_s_ = 0.0f;
-                single_wheel_last_shape_wheel_idx_ = 0xFFU;
+                shaped_value = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(target_value,
+                                                                              runtime.last_output_value,
+                                                                              period_,
+                                                                              fabsf(axis_cfg.trapezoid.acc),
+                                                                              fabsf(axis_cfg.trapezoid.dec));
             }
 
+            runtime.last_output_value = shaped_value;
+            runtime.last_wheel_idx = wheel_idx;
+            runtime.last_command_type_raw = axis_cfg.command_type_raw;
+            runtime.last_planner_mode_raw = axis_cfg.planner_mode_raw;
+            runtime.initialized = true;
+            return shaped_value;
+        }
+
+        f32 Chassis::shapeSingleWheelDriveOmegaRadS(u8 wheel_idx, const SingleWheelAxisControl &axis_cfg, f32 target_omega_rad_s)
+        {
+            const SingleWheelPlannerMode planner_mode = sanitizeSingleWheelPlannerMode(axis_cfg.planner_mode_raw);
+            const DirectDriveCommandType command_type = sanitizeDirectDriveCommandType(axis_cfg.command_type_raw);
+            if ((planner_mode == SingleWheelPlannerMode::kOff) ||
+                !isSingleWheelDrivePlannerSupported(command_type))
+            {
+                resetSingleWheelAxisPlannerRuntime(single_wheel_drive_planner_state_);
+                return target_omega_rad_s;
+            }
+
+            SingleWheelAxisPlannerRuntime &runtime = single_wheel_drive_planner_state_;
+            if ((runtime.last_wheel_idx != wheel_idx) ||
+                (runtime.last_command_type_raw != axis_cfg.command_type_raw) ||
+                (runtime.last_planner_mode_raw != axis_cfg.planner_mode_raw))
+            {
+                resetSingleWheelAxisPlannerRuntime(runtime);
+            }
+
+            const f32 wheel_radius_m = (fabsf(runtime_strategy_cfg_.wheel_radius_m_) > 1.0e-6f) ? fabsf(runtime_strategy_cfg_.wheel_radius_m_) : 1.0f;
+            const f32 target_linear_m_s = target_omega_rad_s * wheel_radius_m;
+            f32 shaped_linear_m_s = target_linear_m_s;
+            if (planner_mode == SingleWheelPlannerMode::kSCurve)
+            {
+                shaped_linear_m_s = limitValueByJerkProfile(target_linear_m_s,
+                                                            runtime.last_output_value,
+                                                            runtime.jerk_state,
+                                                            axis_cfg.scurve.acc_acc,
+                                                            axis_cfg.scurve.acc_dec,
+                                                            axis_cfg.scurve.jerk_acc,
+                                                            axis_cfg.scurve.jerk_dec,
+                                                            axis_cfg.scurve.settle_vel_eps,
+                                                            axis_cfg.scurve.settle_acc_eps);
+            }
+            else
+            {
+                shaped_linear_m_s =
+                    limit1DSignalRateByTimeSeparateAbsIncAndDecF32(target_linear_m_s,
+                                                                   runtime.last_output_value,
+                                                                   period_,
+                                                                   fabsf(axis_cfg.trapezoid.acc),
+                                                                   fabsf(axis_cfg.trapezoid.dec));
+            }
+
+            runtime.last_output_value = shaped_linear_m_s;
+            runtime.last_wheel_idx = wheel_idx;
+            runtime.last_command_type_raw = axis_cfg.command_type_raw;
+            runtime.last_planner_mode_raw = axis_cfg.planner_mode_raw;
+            runtime.initialized = true;
+            return shaped_linear_m_s / wheel_radius_m;
+        }
+
+        Chassis::DirectActuatorCommandSnapshot Chassis::resolveSingleWheelCommand(u8 wheel_idx)
+        {
+            syncSingleWheelCommandTemplates();
+
+            DirectActuatorCommandSnapshot command{};
+            command.wheel_idx = wheel_idx;
+            command.steer_input_mode = static_cast<u8>(sanitizeDirectAxisInputMode(debug_control_.single_wheel.steer.input_mode_raw));
+            command.drive_input_mode = static_cast<u8>(sanitizeDirectAxisInputMode(debug_control_.single_wheel.drive.input_mode_raw));
+            command.steer_input_axis = static_cast<u8>(sanitizeSingleWheelInputAxis(debug_control_.single_wheel.steer.input_axis_raw));
+            command.drive_input_axis = static_cast<u8>(sanitizeSingleWheelInputAxis(debug_control_.single_wheel.drive.input_axis_raw));
+            command.steer_command_type = static_cast<u8>(sanitizeDirectSteerCommandType(debug_control_.single_wheel.steer.command_type_raw));
+            command.drive_command_type = static_cast<u8>(sanitizeDirectDriveCommandType(debug_control_.single_wheel.drive.command_type_raw));
+            command.steer_planner_mode = static_cast<u8>(sanitizeSingleWheelPlannerMode(debug_control_.single_wheel.steer.planner_mode_raw));
+            command.drive_planner_mode = static_cast<u8>(sanitizeSingleWheelPlannerMode(debug_control_.single_wheel.drive.planner_mode_raw));
+            command.steer_invert_input = debug_control_.single_wheel.steer.invert_input;
+            command.drive_invert_input = debug_control_.single_wheel.drive.invert_input;
+            command.steer_command_limit = (debug_control_.single_wheel.steer.command_limit > 0.0f)
+                                              ? debug_control_.single_wheel.steer.command_limit
+                                              : getDirectSteerDefaultLimit(static_cast<DirectSteerCommandType>(command.steer_command_type));
+            command.drive_command_limit = (debug_control_.single_wheel.drive.command_limit > 0.0f)
+                                              ? debug_control_.single_wheel.drive.command_limit
+                                              : getDirectDriveDefaultLimit(static_cast<DirectDriveCommandType>(command.drive_command_type));
+            command.steer_step_threshold = (debug_control_.single_wheel.steer.step_threshold > 0.01f) ? debug_control_.single_wheel.steer.step_threshold : 0.3f;
+            command.drive_step_threshold = (debug_control_.single_wheel.drive.step_threshold > 0.01f) ? debug_control_.single_wheel.drive.step_threshold : 0.3f;
+            command.steer_step_value = fabsf((debug_control_.single_wheel.steer.step_value != 0.0f)
+                                                 ? debug_control_.single_wheel.steer.step_value
+                                                 : getDirectSteerDefaultStepValue(static_cast<DirectSteerCommandType>(command.steer_command_type)));
+            command.drive_step_value = fabsf((debug_control_.single_wheel.drive.step_value != 0.0f)
+                                                 ? debug_control_.single_wheel.drive.step_value
+                                                 : getDirectDriveDefaultStepValue(static_cast<DirectDriveCommandType>(command.drive_command_type)));
+            command.steer_command_value = debug_control_.single_wheel.steer.command_value;
+            command.drive_command_value = debug_control_.single_wheel.drive.command_value;
+
+            const f32 deadzone = fabsf(debug_control_.single_wheel.input_deadzone);
+            const DirectAxisInputMode steer_input_mode = static_cast<DirectAxisInputMode>(command.steer_input_mode);
+            const DirectAxisInputMode drive_input_mode = static_cast<DirectAxisInputMode>(command.drive_input_mode);
+
+            if (steer_input_mode != DirectAxisInputMode::kCached)
+            {
+                command.steer_axis_value = readSingleWheelInputAxisValue(command.steer_input_axis);
+                if (command.steer_invert_input)
+                {
+                    command.steer_axis_value = -command.steer_axis_value;
+                }
+                command.steer_axis_value = clampValue(command.steer_axis_value, -1.0f, 1.0f);
+                if (fabsf(command.steer_axis_value) < deadzone)
+                {
+                    command.steer_axis_value = 0.0f;
+                    command.steer_deadzone_applied = true;
+                }
+
+                if (steer_input_mode == DirectAxisInputMode::kRcContinuous)
+                {
+                    command.steer_command_value = command.steer_axis_value * command.steer_command_limit;
+                }
+                else if (steer_input_mode == DirectAxisInputMode::kRcStep)
+                {
+                    if (command.steer_axis_value > command.steer_step_threshold)
+                    {
+                        command.steer_step_sign = 1.0f;
+                    }
+                    else if (command.steer_axis_value < -command.steer_step_threshold)
+                    {
+                        command.steer_step_sign = -1.0f;
+                    }
+                    command.steer_command_value = command.steer_step_sign * command.steer_step_value;
+                }
+            }
+
+            if (drive_input_mode != DirectAxisInputMode::kCached)
+            {
+                command.drive_axis_value = readSingleWheelInputAxisValue(command.drive_input_axis);
+                if (command.drive_invert_input)
+                {
+                    command.drive_axis_value = -command.drive_axis_value;
+                }
+                command.drive_axis_value = clampValue(command.drive_axis_value, -1.0f, 1.0f);
+                if (fabsf(command.drive_axis_value) < deadzone)
+                {
+                    command.drive_axis_value = 0.0f;
+                    command.drive_deadzone_applied = true;
+                }
+
+                if (drive_input_mode == DirectAxisInputMode::kRcContinuous)
+                {
+                    command.drive_command_value = command.drive_axis_value * command.drive_command_limit;
+                }
+                else if (drive_input_mode == DirectAxisInputMode::kRcStep)
+                {
+                    if (command.drive_axis_value > command.drive_step_threshold)
+                    {
+                        command.drive_step_sign = 1.0f;
+                    }
+                    else if (command.drive_axis_value < -command.drive_step_threshold)
+                    {
+                        command.drive_step_sign = -1.0f;
+                    }
+                    command.drive_command_value = command.drive_step_sign * command.drive_step_value;
+                }
+            }
+
+            command.steer_command_value = shapeSingleWheelSteerCommand(wheel_idx, debug_control_.single_wheel.steer, command.steer_command_value);
+            if (sanitizeDirectDriveCommandType(command.drive_command_type) == DirectDriveCommandType::kRpm)
+            {
+                const f32 shaped_omega_rad_s =
+                    shapeSingleWheelDriveOmegaRadS(wheel_idx,
+                                                   debug_control_.single_wheel.drive,
+                                                   rpmToRadsF32(command.drive_command_value));
+                command.drive_command_value = radsToRpmF32(shaped_omega_rad_s);
+            }
+            else
+            {
+                resetSingleWheelAxisPlannerRuntime(single_wheel_drive_planner_state_);
+            }
+
+            debug_control_.single_wheel.steer.command_value = command.steer_command_value;
+            debug_control_.single_wheel.drive.command_value = command.drive_command_value;
+            command.applied_steer_cmd = clampValue(command.steer_command_value, -command.steer_command_limit, command.steer_command_limit);
+            command.applied_drive_cmd = clampValue(command.drive_command_value, -command.drive_command_limit, command.drive_command_limit);
             return command;
         }
 
@@ -1827,138 +1982,6 @@ namespace jia
             }
         }
 
-        void Chassis::applyDirectActuatorSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command)
-        {
-            applyResolvedSteerCommand(wheel, wheel_idx, command, debug_control_.legacy_direct.enable_steer);
-        }
-
-        void Chassis::applyDirectActuatorDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command)
-        {
-            applyResolvedDriveCommand(wheel, wheel_idx, command, debug_control_.legacy_direct.enable_drive);
-        }
-
-        f32 Chassis::shapeSingleWheelDriveOmegaRadS(u8 wheel_idx, f32 target_omega_rad_s)
-        {
-            const f32 wheel_radius_m = (fabsf(runtime_strategy_cfg_.wheel_radius_m_) > 1.0e-6f) ? fabsf(runtime_strategy_cfg_.wheel_radius_m_) : 1.0f;
-            if (single_wheel_last_shape_wheel_idx_ != wheel_idx)
-            {
-                single_wheel_drive_shape_state_ = {};
-                single_wheel_last_drive_linear_m_s_ = 0.0f;
-                single_wheel_last_shape_wheel_idx_ = wheel_idx;
-            }
-
-            const f32 target_linear_m_s = target_omega_rad_s * wheel_radius_m;
-            f32 shaped_linear_m_s = target_linear_m_s;
-            if (runtime_strategy_cfg_.manual_speed_profile_mode == ManualSpeedProfileMode::kSCurve)
-            {
-                shaped_linear_m_s = limitValueByJerkProfile(target_linear_m_s,
-                                                            single_wheel_last_drive_linear_m_s_,
-                                                            single_wheel_drive_shape_state_,
-                                                            runtime_strategy_cfg_.manual_trans_acc_acc_,
-                                                            runtime_strategy_cfg_.manual_trans_acc_dec_,
-                                                            runtime_strategy_cfg_.manual_trans_jerk_acc_,
-                                                            runtime_strategy_cfg_.manual_trans_jerk_dec_,
-                                                            runtime_strategy_cfg_.manual_trans_settle_vel_eps_,
-                                                            runtime_strategy_cfg_.manual_trans_settle_acc_eps_);
-            }
-            else
-            {
-                shaped_linear_m_s =
-                    limit1DSignalRateByTimeSeparateAbsIncAndDecF32(target_linear_m_s,
-                                                                   single_wheel_last_drive_linear_m_s_,
-                                                                   period_,
-                                                                   runtime_strategy_cfg_.max_acc_xy_acc_,
-                                                                   runtime_strategy_cfg_.max_acc_xy_dec_);
-            }
-
-            single_wheel_last_drive_linear_m_s_ = shaped_linear_m_s;
-            return shaped_linear_m_s / wheel_radius_m;
-        }
-
-        void Chassis::applyDirectActuatorDebugOverride(u8 wheel_idx)
-        {
-            const DirectActuatorCommandSnapshot command = resolveDirectActuatorCommand(wheel_idx);
-            bool steer_fault_any_active = false;
-            for (u8 i = 0; i < 4; ++i)
-            {
-                if (wheel_config_[i].steer_fault_state != SteerFaultState::kNone)
-                {
-                    steer_fault_any_active = true;
-                    break;
-                }
-            }
-            steer_fault_any_active_ = steer_fault_any_active;
-            const bool allow_drive_output = !steer_fault_any_active;
-
-            for (u8 i = 0; i < 4; ++i)
-            {
-                WheelConfig &wheel = wheel_config_[i];
-                if (debug_control_.legacy_direct.estop || i != wheel_idx)
-                {
-                    setSteerMotorTargetCurrent(wheel, 0.0f);
-                    clearDirectDriveCommandByType(wheel, i, command.drive_command_type);
-                    continue;
-                }
-
-                applyDirectActuatorSteerCommand(wheel, i, command);
-                if (allow_drive_output)
-                {
-                    applyDirectActuatorDriveCommand(wheel, i, command);
-                }
-                else
-                {
-                    clearDirectDriveCommandByType(wheel, i, command.drive_command_type);
-                }
-            }
-
-#if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-            if (sanitizeDebugOutputFamily(debug_output_.output_family_raw) == DebugOutputFamily::kText &&
-                debug_output_.text.log_level >= 1U &&
-                (time_ms_ - debug_output_runtime_.text.direct_trace_last_ms) >= 100U)
-            {
-                debug_output_runtime_.text.direct_trace_last_ms = time_ms_;
-                WheelConfig &dbg_wheel = wheel_config_[wheel_idx];
-                const Motor_Base *steer_motor = dbg_wheel.steer_motor_h;
-                const Motor_Base *drive_motor = dbg_wheel.drive_motor_h;
-                if (steer_motor != nullptr)
-                {
-                    debug_uart_.printf_DMA((char *)"SW30,t=%lu,w=%u,stIn=%u,drIn=%u,stType=%u,drType=%u,stRaw=%.3f,drRaw=%.3f,stLim=%.3f,drLim=%.3f,stTh=%.3f,drTh=%.3f,stStep=%.3f,drStep=%.3f,stApplied=%.3f,drApplied=%.3f,stAxis=%.3f,drAxis=%.3f,stStepSign=%.1f,drStepSign=%.1f,stTarI=%.1f,stCurI=%.1f,stTarRPM=%.2f,stCurRPM=%.2f,drTarI=%.1f,drCurI=%.1f,drTarRPM=%.2f,drCurRPM=%.2f,enS=%u,enD=%u,estop=%u\r\n",
-                                           (u32)time_ms_,
-                                           (u32)wheel_idx,
-                                           (u32)command.steer_input_mode,
-                                           (u32)command.drive_input_mode,
-                                           (u32)command.steer_command_type,
-                                           (u32)command.drive_command_type,
-                                           command.steer_command_value,
-                                           command.drive_command_value,
-                                           command.steer_command_limit,
-                                           command.drive_command_limit,
-                                           command.steer_step_threshold,
-                                           command.drive_step_threshold,
-                                           command.steer_step_value,
-                                           command.drive_step_value,
-                                           command.applied_steer_cmd,
-                                           command.applied_drive_cmd,
-                                           command.steer_axis_value,
-                                           command.drive_axis_value,
-                                           command.steer_step_sign,
-                                           command.drive_step_sign,
-                                           steer_motor->getTargetCurrent(),
-                                           steer_motor->getCurrent(),
-                                           steer_motor->getTargetRPM(),
-                                           steer_motor->getRPM(),
-                                           (drive_motor != nullptr) ? drive_motor->getTargetCurrent() : 0.0f,
-                                           (drive_motor != nullptr) ? drive_motor->getCurrent() : 0.0f,
-                                           (drive_motor != nullptr) ? drive_motor->getTargetRPM() : 0.0f,
-                                           (drive_motor != nullptr) ? drive_motor->getRPM() : 0.0f,
-                                           debug_control_.legacy_direct.enable_steer ? 1U : 0U,
-                                           debug_control_.legacy_direct.enable_drive ? 1U : 0U,
-                                           debug_control_.legacy_direct.estop ? 1U : 0U);
-                }
-            }
-#endif
-        }
-
         void Chassis::computeSingleWheelIsolatedCommandsMode30(u8 wheel_idx)
         {
             high_speed_trans_gate_active_ = false;
@@ -1999,15 +2022,69 @@ namespace jia
             }
 
             WheelConfig &target_wheel = wheel_config_[wheel_idx];
-            const DirectActuatorCommandSnapshot command = resolveSingleWheelIsolatedCommand(wheel_idx);
-            applyResolvedSteerCommand(target_wheel, wheel_idx, command, true);
-            applyResolvedDriveCommand(target_wheel, wheel_idx, command, true);
+            const DirectActuatorCommandSnapshot command = resolveSingleWheelCommand(wheel_idx);
+            applyResolvedSteerCommand(target_wheel, wheel_idx, command, debug_control_.single_wheel.steer.enable && !debug_control_.single_wheel.estop);
+            applyResolvedDriveCommand(target_wheel, wheel_idx, command, debug_control_.single_wheel.drive.enable && !debug_control_.single_wheel.estop);
             target_wheel.steer_target_velocity_rad_s = 0.0f;
             target_wheel.flipped_drive_direction = false;
 
             actuator_command_frame_.steer_corrected_local_total_rad[wheel_idx] = target_wheel.target_steer_motor_total_angle_rad;
             actuator_command_frame_.steer_oa_total_rad[wheel_idx] = planned_data_.steer_angle_oa_rad[wheel_idx];
             actuator_command_frame_.drive_omega_rad_s[wheel_idx] = target_wheel.target_drive_omega_rad_s;
+
+#if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
+            if (sanitizeDebugOutputFamily(debug_output_.output_family_raw) == DebugOutputFamily::kText &&
+                debug_output_.text.log_level >= 1U &&
+                (time_ms_ - debug_output_runtime_.text.direct_trace_last_ms) >= 100U)
+            {
+                debug_output_runtime_.text.direct_trace_last_ms = time_ms_;
+                const Motor_Base *steer_motor = target_wheel.steer_motor_h;
+                const Motor_Base *drive_motor = target_wheel.drive_motor_h;
+                if (steer_motor != nullptr)
+                {
+                    debug_uart_.printf_DMA((char *)"SW30,t=%lu,w=%u,stIn=%u,drIn=%u,stAxisId=%u,drAxisId=%u,stType=%u,drType=%u,stPlan=%u,drPlan=%u,stInv=%u,drInv=%u,stDz=%u,drDz=%u,stRaw=%.3f,drRaw=%.3f,stLim=%.3f,drLim=%.3f,stTh=%.3f,drTh=%.3f,stStep=%.3f,drStep=%.3f,stApplied=%.3f,drApplied=%.3f,stAxis=%.3f,drAxis=%.3f,stStepSign=%.1f,drStepSign=%.1f,stTarI=%.1f,stCurI=%.1f,stTarRPM=%.2f,stCurRPM=%.2f,drTarI=%.1f,drCurI=%.1f,drTarRPM=%.2f,drCurRPM=%.2f,enS=%u,enD=%u,estop=%u\r\n",
+                                           (u32)time_ms_,
+                                           (u32)wheel_idx,
+                                           (u32)command.steer_input_mode,
+                                           (u32)command.drive_input_mode,
+                                           (u32)command.steer_input_axis,
+                                           (u32)command.drive_input_axis,
+                                           (u32)command.steer_command_type,
+                                           (u32)command.drive_command_type,
+                                           (u32)command.steer_planner_mode,
+                                           (u32)command.drive_planner_mode,
+                                           command.steer_invert_input ? 1U : 0U,
+                                           command.drive_invert_input ? 1U : 0U,
+                                           command.steer_deadzone_applied ? 1U : 0U,
+                                           command.drive_deadzone_applied ? 1U : 0U,
+                                           command.steer_command_value,
+                                           command.drive_command_value,
+                                           command.steer_command_limit,
+                                           command.drive_command_limit,
+                                           command.steer_step_threshold,
+                                           command.drive_step_threshold,
+                                           command.steer_step_value,
+                                           command.drive_step_value,
+                                           command.applied_steer_cmd,
+                                           command.applied_drive_cmd,
+                                           command.steer_axis_value,
+                                           command.drive_axis_value,
+                                           command.steer_step_sign,
+                                           command.drive_step_sign,
+                                           steer_motor->getTargetCurrent(),
+                                           steer_motor->getCurrent(),
+                                           steer_motor->getTargetRPM(),
+                                           steer_motor->getRPM(),
+                                           (drive_motor != nullptr) ? drive_motor->getTargetCurrent() : 0.0f,
+                                           (drive_motor != nullptr) ? drive_motor->getCurrent() : 0.0f,
+                                           (drive_motor != nullptr) ? drive_motor->getTargetRPM() : 0.0f,
+                                           (drive_motor != nullptr) ? drive_motor->getRPM() : 0.0f,
+                                           (debug_control_.single_wheel.steer.enable && !debug_control_.single_wheel.estop) ? 1U : 0U,
+                                           (debug_control_.single_wheel.drive.enable && !debug_control_.single_wheel.estop) ? 1U : 0U,
+                                           debug_control_.single_wheel.estop ? 1U : 0U);
+                }
+            }
+#endif
         }
 
         bool Chassis::isSingleWheelIsolatedMode(DebugMode mode) const
@@ -2015,21 +2092,11 @@ namespace jia
             return mode == DebugMode::kSingleWheelIsolated;
         }
 
-        bool Chassis::isSingleWheelFullGateEnabled() const
-        {
-            if (!isSingleWheelIsolatedMode(resolveDebugMode(debug_control_.common.mode_raw)))
-            {
-                return false;
-            }
-            return (debug_control_.common.mode_raw == 31U) || debug_control_.single_wheel.full_gate_enable;
-        }
-
         void Chassis::applySingleWheelIsolationFilter(DebugMode mode, u8 wheel_idx, bool all_homed)
         {
             if (!isSingleWheelIsolatedMode(mode))
             {
                 debug_mirror_.single_wheel_isolation_active = false;
-                debug_mirror_.single_wheel_full_gate_enable = false;
                 for (u8 i = 0; i < 4; ++i)
                 {
                     debug_mirror_.single_wheel_non_target_zeroed[i] = false;
@@ -2037,10 +2104,8 @@ namespace jia
                 return;
             }
 
-            const bool single_wheel_full_gate_enable = isSingleWheelFullGateEnabled();
             debug_mirror_.single_wheel_target_index = wheel_idx;
             debug_mirror_.single_wheel_isolation_active = true;
-            debug_mirror_.single_wheel_full_gate_enable = single_wheel_full_gate_enable;
             for (u8 i = 0; i < 4; ++i)
             {
                 debug_mirror_.single_wheel_non_target_zeroed[i] = (i != wheel_idx);
@@ -2079,19 +2144,7 @@ namespace jia
                 planned_data_.alpha_z = 0.0f;
             }
             planned_data_.rot_z = input_hwt_rot_z_;
-
-            if (route == DebugModuleOverrideRoute::kDirectActuator && !all_homed)
-            {
-                for (u8 i = 0; i < 4; ++i)
-                {
-                    WheelConfig &wheel = wheel_config_[i];
-                    clearDirectDriveCommandByType(wheel, i, debug_control_.legacy_direct.drive_command_type_raw);
-                }
-            }
-
-            const bool single_wheel_direct_mode =
-                (route == DebugModuleOverrideRoute::kSingleWheelIsolated) && !isSingleWheelFullGateEnabled();
-            if (route != DebugModuleOverrideRoute::kDirectActuator && !single_wheel_direct_mode)
+            if (route != DebugModuleOverrideRoute::kSingleWheelIsolated)
             {
                 applyModuleCommands(all_homed);
             }
@@ -2123,10 +2176,6 @@ namespace jia
 
             if (isSingleWheelIsolatedMode(mode))
             {
-                if (debug_control_.common.mode_raw == 31U)
-                {
-                    debug_control_.single_wheel.full_gate_enable = true;
-                }
                 const u8 wheel_idx = (debug_control_.common.control_wheel_index < 4U)
                                          ? debug_control_.common.control_wheel_index
                                          : 0U;
@@ -3278,8 +3327,6 @@ namespace jia
                 debug_control_.common.enable && isSingleWheelIsolatedMode(debug_mode);
             debug_mirror_.single_wheel_isolation_active =
                 single_wheel_isolation_active;
-            debug_mirror_.single_wheel_full_gate_enable =
-                single_wheel_isolation_active && isSingleWheelFullGateEnabled();
             debug_mirror_.nz_stationary_m_s = getNearZeroEnterSpeedMps();
             debug_mirror_.nz_freeze_enter_m_s = getNearZeroEnterSpeedMps();
             debug_mirror_.nz_freeze_exit_m_s = getNearZeroExitSpeedMps();
@@ -3933,16 +3980,8 @@ namespace jia
             }
             else if (route == DebugModuleOverrideRoute::kSingleWheelIsolated)
             {
-                if (isSingleWheelFullGateEnabled())
-                {
-                    return false;
-                }
                 computeSingleWheelIsolatedCommandsMode30(wheel_idx);
                 applySingleWheelIsolationFilter(mode, wheel_idx, all_homed);
-            }
-            else if (route == DebugModuleOverrideRoute::kDirectActuator)
-            {
-                applyDirectActuatorDebugOverride(wheel_idx);
             }
 
             finalizeDebugModuleOverride(all_homed, route);

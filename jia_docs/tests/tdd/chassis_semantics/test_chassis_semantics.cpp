@@ -364,6 +364,8 @@ void testDebugRouteClassificationSeparatesInputInjectionFromModuleOverride()
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 8) == Chassis::DebugControlRoute::kTargetInjection);
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 20) == Chassis::DebugControlRoute::kTargetInjection);
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 30) == Chassis::DebugControlRoute::kModuleOverride);
+    EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 31) == Chassis::DebugControlRoute::kTargetInjection);
+    EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 32) == Chassis::DebugControlRoute::kTargetInjection);
 }
 
 void testDebugModuleOverrideRouteSeparatesRetiredMode20AlignHomingAndSingleWheelModes()
@@ -373,8 +375,8 @@ void testDebugModuleOverrideRouteSeparatesRetiredMode20AlignHomingAndSingleWheel
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(21) == Chassis::DebugModuleOverrideRoute::kAlignForward);
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(22) == Chassis::DebugModuleOverrideRoute::kHomingObserve);
     EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(30) == Chassis::DebugModuleOverrideRoute::kSingleWheelIsolated);
-    EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(31) == Chassis::DebugModuleOverrideRoute::kSingleWheelIsolated);
-    EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(32) == Chassis::DebugModuleOverrideRoute::kDirectActuator);
+    EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(31) == Chassis::DebugModuleOverrideRoute::kNone);
+    EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(32) == Chassis::DebugModuleOverrideRoute::kNone);
 }
 
 void testResolveDebugModeFallsBackToTorqueFreeWhenMode20IsRetired()
@@ -383,8 +385,8 @@ void testResolveDebugModeFallsBackToTorqueFreeWhenMode20IsRetired()
     EXPECT_TRUE(chassis.resolveDebugMode(20) == Chassis::DebugMode::kTorqueFree);
     EXPECT_TRUE(chassis.resolveDebugMode(255) == Chassis::DebugMode::kTorqueFree);
     EXPECT_TRUE(chassis.resolveDebugMode(30) == Chassis::DebugMode::kSingleWheelIsolated);
-    EXPECT_TRUE(chassis.resolveDebugMode(31) == Chassis::DebugMode::kSingleWheelIsolated);
-    EXPECT_TRUE(chassis.resolveDebugMode(32) == Chassis::DebugMode::kDirectActuator);
+    EXPECT_TRUE(chassis.resolveDebugMode(31) == Chassis::DebugMode::kTorqueFree);
+    EXPECT_TRUE(chassis.resolveDebugMode(32) == Chassis::DebugMode::kTorqueFree);
 }
 
 void testLowSpeedDriveSuppressionCanBeDisabled()
@@ -629,26 +631,46 @@ void configureSingleWheelIsolatedDirectHarness(Chassis &chassis, TestMotor steer
     chassis.debug_control_.common.mode_raw = 30U;
     chassis.debug_control_.common.control_wheel_index = 1U;
     chassis.debug_control_.common.observe_wheel_index = 1U;
-    chassis.debug_control_.single_wheel.full_gate_enable = false;
-    chassis.debug_control_.single_wheel.scurve_enable = false;
-    chassis.debug_control_.single_wheel.steer_target.mode = static_cast<unsigned char>(Chassis::DirectSteerCommandType::kSingleTurnDeg);
-    chassis.debug_control_.single_wheel.steer_target.value = 90.0f;
-    chassis.debug_control_.single_wheel.drive_target.mode = static_cast<unsigned char>(Chassis::DirectDriveCommandType::kRpm);
-    chassis.debug_control_.single_wheel.drive_target.value = 1000.0f;
-}
+    chassis.debug_control_.single_wheel.estop = false;
+    chassis.debug_control_.single_wheel.input_deadzone = 0.0f;
 
-void configureSingleWheelFullGateHarness(Chassis &chassis, TestMotor steer_motors[4], TestMotor drive_motors[4])
-{
-    configureSingleWheelIsolatedPlannerHarness(chassis, steer_motors, drive_motors);
-    chassis.debug_control_.common.mode_raw = 30U;
-    chassis.debug_control_.single_wheel.full_gate_enable = true;
-}
+    chassis.debug_control_.single_wheel.steer.enable = true;
+    chassis.debug_control_.single_wheel.steer.input_mode_raw = static_cast<unsigned char>(Chassis::DirectAxisInputMode::kRcContinuous);
+    chassis.debug_control_.single_wheel.steer.input_axis_raw = static_cast<unsigned char>(Chassis::SingleWheelInputAxis::kLeftX);
+    chassis.debug_control_.single_wheel.steer.invert_input = false;
+    chassis.debug_control_.single_wheel.steer.command_type_raw = static_cast<unsigned char>(Chassis::DirectSteerCommandType::kSingleTurnDeg);
+    chassis.debug_control_.single_wheel.steer.command_value = 0.0f;
+    chassis.debug_control_.single_wheel.steer.command_limit = 90.0f;
+    chassis.debug_control_.single_wheel.steer.step_threshold = 0.5f;
+    chassis.debug_control_.single_wheel.steer.step_value = 45.0f;
+    chassis.debug_control_.single_wheel.steer.planner_mode_raw = static_cast<unsigned char>(Chassis::SingleWheelPlannerMode::kOff);
+    chassis.debug_control_.single_wheel.steer.scurve.acc_acc = 60.0f;
+    chassis.debug_control_.single_wheel.steer.scurve.acc_dec = 60.0f;
+    chassis.debug_control_.single_wheel.steer.scurve.jerk_acc = 400.0f;
+    chassis.debug_control_.single_wheel.steer.scurve.jerk_dec = 400.0f;
+    chassis.debug_control_.single_wheel.steer.scurve.settle_vel_eps = 1.0e-4f;
+    chassis.debug_control_.single_wheel.steer.scurve.settle_acc_eps = 0.05f;
+    chassis.debug_control_.single_wheel.steer.trapezoid.acc = 120.0f;
+    chassis.debug_control_.single_wheel.steer.trapezoid.dec = 120.0f;
 
-void configureSingleWheelAlias31Harness(Chassis &chassis, TestMotor steer_motors[4], TestMotor drive_motors[4])
-{
-    configureSingleWheelIsolatedPlannerHarness(chassis, steer_motors, drive_motors);
-    chassis.debug_control_.common.mode_raw = 31U;
-    chassis.debug_control_.single_wheel.full_gate_enable = false;
+    chassis.debug_control_.single_wheel.drive.enable = true;
+    chassis.debug_control_.single_wheel.drive.input_mode_raw = static_cast<unsigned char>(Chassis::DirectAxisInputMode::kRcContinuous);
+    chassis.debug_control_.single_wheel.drive.input_axis_raw = static_cast<unsigned char>(Chassis::SingleWheelInputAxis::kRightX);
+    chassis.debug_control_.single_wheel.drive.invert_input = false;
+    chassis.debug_control_.single_wheel.drive.command_type_raw = static_cast<unsigned char>(Chassis::DirectDriveCommandType::kRpm);
+    chassis.debug_control_.single_wheel.drive.command_value = 0.0f;
+    chassis.debug_control_.single_wheel.drive.command_limit = 1000.0f;
+    chassis.debug_control_.single_wheel.drive.step_threshold = 0.5f;
+    chassis.debug_control_.single_wheel.drive.step_value = 200.0f;
+    chassis.debug_control_.single_wheel.drive.planner_mode_raw = static_cast<unsigned char>(Chassis::SingleWheelPlannerMode::kOff);
+    chassis.debug_control_.single_wheel.drive.scurve.acc_acc = 2.0f;
+    chassis.debug_control_.single_wheel.drive.scurve.acc_dec = 3.0f;
+    chassis.debug_control_.single_wheel.drive.scurve.jerk_acc = 20.0f;
+    chassis.debug_control_.single_wheel.drive.scurve.jerk_dec = 30.0f;
+    chassis.debug_control_.single_wheel.drive.scurve.settle_vel_eps = 1.0e-4f;
+    chassis.debug_control_.single_wheel.drive.scurve.settle_acc_eps = 0.05f;
+    chassis.debug_control_.single_wheel.drive.trapezoid.acc = 2.0f;
+    chassis.debug_control_.single_wheel.drive.trapezoid.dec = 3.0f;
 }
 
 bool runHostDebugControlCycle(Chassis &chassis)
@@ -703,7 +725,6 @@ void testMode30SingleWheelDirectJoystickIsolationOnlyLetsTargetWheelMove()
     EXPECT_TRUE(runHostDebugControlCycle(chassis));
 
     EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
-    EXPECT_TRUE(!chassis.debug_mirror_.single_wheel_full_gate_enable);
     EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), 45.0f, 1.0e-4f);
     EXPECT_NEAR(drive_motors[1].getTargetRPM(), -250.0f, 1.0e-4f);
     EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
@@ -724,23 +745,25 @@ void testMode30SingleWheelDirectDriveCanUseSCurveShaping()
     TestMotor drive_motors[4];
     configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
-    chassis.debug_control_.single_wheel.scurve_enable = true;
-    chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
-    chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 3.0f;
-    chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 20.0f;
-    chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 30.0f;
-    chassis.debug_control_.single_wheel.drive_target.value = 600.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 999.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 999.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 999.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 999.0f;
+    chassis.debug_control_.single_wheel.drive.command_limit = 600.0f;
+    chassis.debug_control_.single_wheel.drive.planner_mode_raw = static_cast<unsigned char>(Chassis::SingleWheelPlannerMode::kSCurve);
+    chassis.debug_control_.single_wheel.drive.scurve.acc_acc = 2.0f;
+    chassis.debug_control_.single_wheel.drive.scurve.acc_dec = 3.0f;
+    chassis.debug_control_.single_wheel.drive.scurve.jerk_acc = 20.0f;
+    chassis.debug_control_.single_wheel.drive.scurve.jerk_dec = 30.0f;
     chassis.airjoy_data_.right_x = 1.0f;
 
     EXPECT_TRUE(runHostDebugControlCycle(chassis));
 
     EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
-    EXPECT_TRUE(!chassis.debug_mirror_.single_wheel_full_gate_enable);
-    EXPECT_TRUE(chassis.active_manual_speed_profile_mode_ == Chassis::ManualSpeedProfileMode::kSCurve);
     EXPECT_TRUE(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s) > 0.0f);
     EXPECT_TRUE(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s) < jia::rpmToRadsF32(600.0f));
     EXPECT_NEAR(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s),
-                chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ * Chassis::period_ * Chassis::period_ / chassis.runtime_strategy_cfg_.wheel_radius_m_,
+                chassis.debug_control_.single_wheel.drive.scurve.jerk_acc * Chassis::period_ * Chassis::period_ / chassis.runtime_strategy_cfg_.wheel_radius_m_,
                 1.0e-6f);
 }
 
@@ -781,133 +804,153 @@ void testMode30DirectDriveIgnoresAllHomedGateForTargetWheel()
     EXPECT_TRUE(chassis.wheel_config_[1].target_drive_omega_rad_s > 0.0f);
 }
 
-void testMode30SingleWheelFullGateIsolationOnlyLetsTargetWheelMove()
+void testMode30SingleWheelRemovedModes31And32DoNotEnterModuleOverride()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
     TestMotor drive_motors[4];
-    configureSingleWheelFullGateHarness(chassis, steer_motors, drive_motors);
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
-    chassis.airjoy_data_.left_y = -0.5f;
-    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    chassis.debug_control_.common.mode_raw = 31U;
+    EXPECT_TRUE(!chassis.applyDebugModuleOverride(true));
+    EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 0.0f, 1.0e-6f);
 
-    EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
-    EXPECT_TRUE(chassis.debug_mirror_.single_wheel_full_gate_enable);
-    EXPECT_TRUE(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s) > 1.0e-6f);
-    EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
-    EXPECT_NEAR(chassis.wheel_config_[2].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
-    EXPECT_NEAR(chassis.wheel_config_[3].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
-    EXPECT_NEAR(steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
-    EXPECT_NEAR(steer_motors[2].getTargetCurrent(), 0.0f, 1.0e-6f);
-    EXPECT_NEAR(steer_motors[3].getTargetCurrent(), 0.0f, 1.0e-6f);
-    EXPECT_NEAR(drive_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
-    EXPECT_NEAR(drive_motors[2].getTargetCurrent(), 0.0f, 1.0e-6f);
-    EXPECT_NEAR(drive_motors[3].getTargetCurrent(), 0.0f, 1.0e-6f);
-}
-
-void testMode30SingleWheelFullGateKeepsPlannerGateSignalsVisible()
-{
-    Chassis chassis;
-    TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
-    configureSingleWheelFullGateHarness(chassis, steer_motors, drive_motors);
-
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = true;
-    chassis.runtime_strategy_cfg_.high_speed_drive_suppression.dir_err_enter_deg = 1.0f;
-    chassis.runtime_strategy_cfg_.high_speed_drive_suppression.dir_err_exit_deg = 0.5f;
-    chassis.runtime_strategy_cfg_.high_speed_drive_suppression.eta_lock_s = 0.01f;
-    chassis.runtime_strategy_cfg_.high_speed_drive_suppression.eta_release_s = 0.001f;
-    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kLegacy;
-    chassis.runtime_strategy_cfg_.max_acc_xy_acc_ = 1000.0f;
-    chassis.runtime_strategy_cfg_.max_acc_xy_dec_ = 1000.0f;
-    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = true;
-    chassis.runtime_strategy_cfg_.max_steer_rate_rad_s_ = 1.0f;
-    for (int i = 0; i < 4; ++i)
-    {
-        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = jia::degToRadF32(90.0f);
-        chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
-        steer_motors[i].setFeedbackTotalAngleDeg(90.0f);
-    }
-    chassis.airjoy_data_.left_y = -0.5f;
-    EXPECT_TRUE(runHostDebugControlCycle(chassis));
-
-    EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
-    EXPECT_TRUE(chassis.debug_mirror_.single_wheel_full_gate_enable);
-    EXPECT_TRUE(chassis.debug_mirror_.high_speed_drive_suppression_active);
-    EXPECT_TRUE(chassis.debug_mirror_.planned_drive_target_rpm[1] != 0.0f);
-    EXPECT_TRUE(chassis.debug_mirror_.delivered_drive_target_rpm[1] != 0.0f);
-}
-
-void testMode30SingleWheelFullGateRespectsAllHomedByKeepingTargetWheelDriveZeroCurrent()
-{
-    Chassis chassis;
-    TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
-    configureSingleWheelFullGateHarness(chassis, steer_motors, drive_motors);
-
-    chassis.resolvePlannerTargetData();
-    chassis.refreshActuatorLimitState();
-    chassis.updatePlannedMotionData();
-    chassis.updateWheelFeedback();
-    chassis.computeModuleCommands(chassis.planned_data_);
-    chassis.applyModuleCommands(false);
-    chassis.updateCurrentData(false);
-    chassis.refreshDebugMirror(false);
-
-    EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
-    EXPECT_TRUE(chassis.debug_mirror_.single_wheel_full_gate_enable);
-    EXPECT_NEAR(drive_motors[1].getTargetCurrent(), 0.0f, 1.0e-6f);
-    EXPECT_TRUE(!chassis.debug_mirror_.all_homed);
-}
-
-void testMode30SingleWheelFullGateRespectsSteerFaultByKeepingTargetWheelDriveZeroCurrent()
-{
-    Chassis chassis;
-    TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
-    configureSingleWheelFullGateHarness(chassis, steer_motors, drive_motors);
-
-    chassis.wheel_config_[0].steer_fault_state = Chassis::SteerFaultState::kLatched;
-    chassis.resolvePlannerTargetData();
-    chassis.refreshActuatorLimitState();
-    chassis.updatePlannedMotionData();
-    chassis.updateWheelFeedback();
-    chassis.computeModuleCommands(chassis.planned_data_);
-    chassis.applyModuleCommands(true);
-    chassis.updateCurrentData(true);
-    chassis.refreshDebugMirror(true);
-
-    EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 30U);
-    EXPECT_TRUE(chassis.debug_mirror_.single_wheel_full_gate_enable);
-    EXPECT_NEAR(drive_motors[1].getTargetCurrent(), 0.0f, 1.0e-6f);
-    EXPECT_TRUE(chassis.debug_mirror_.steer_fault_any_active);
-}
-
-void testMode31CompatibilityAliasMapsToMode30FullGateBehavior()
-{
-    Chassis chassis;
-    TestMotor steer_motors[4];
-    TestMotor drive_motors[4];
-    configureSingleWheelAlias31Harness(chassis, steer_motors, drive_motors);
-
-    chassis.airjoy_data_.left_y = -0.5f;
-    EXPECT_TRUE(runHostDebugControlCycle(chassis));
-
-    EXPECT_TRUE(chassis.debug_control_.common.mode_raw == 31U);
-    EXPECT_TRUE(chassis.debug_control_.single_wheel.full_gate_enable);
-    EXPECT_TRUE(chassis.debug_mirror_.single_wheel_full_gate_enable);
-    EXPECT_TRUE(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s) > 1.0e-6f);
-    EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
-    EXPECT_NEAR(chassis.wheel_config_[2].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
-    EXPECT_NEAR(chassis.wheel_config_[3].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
-}
-
-void testLegacyMode32DirectActuatorRemainsSeparateFromUnifiedMode30()
-{
-    Chassis chassis;
-    chassis.debug_control_.common.control_wheel_index = 1U;
     chassis.debug_control_.common.mode_raw = 32U;
-    EXPECT_TRUE(Chassis::classifyDebugModuleOverrideRoute(30U) != Chassis::DebugModuleOverrideRoute::kDirectActuator);
+    EXPECT_TRUE(!chassis.applyDebugModuleOverride(true));
+    EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 0.0f, 1.0e-6f);
+}
+
+void testMode30SingleWheelUsesConfiguredAxesAndInversion()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.steer.input_axis_raw = static_cast<unsigned char>(Chassis::SingleWheelInputAxis::kLeftY);
+    chassis.debug_control_.single_wheel.steer.invert_input = true;
+    chassis.debug_control_.single_wheel.drive.input_axis_raw = static_cast<unsigned char>(Chassis::SingleWheelInputAxis::kRightY);
+    chassis.debug_control_.single_wheel.drive.invert_input = true;
+    chassis.airjoy_data_.left_y = -0.4f;
+    chassis.airjoy_data_.right_y = -0.25f;
+
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+
+    EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), 36.0f, 1.0e-4f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 250.0f, 1.0e-4f);
+    EXPECT_TRUE(chassis.debug_control_.single_wheel.steer.command_value > 0.0f);
+    EXPECT_TRUE(chassis.debug_control_.single_wheel.drive.command_value > 0.0f);
+}
+
+void testMode30SingleWheelSharedDeadzoneSuppressesContinuousAndStepInputs()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.input_deadzone = 0.3f;
+    chassis.debug_control_.single_wheel.drive.input_mode_raw = static_cast<unsigned char>(Chassis::DirectAxisInputMode::kRcStep);
+    chassis.debug_control_.single_wheel.drive.step_threshold = 0.2f;
+    chassis.airjoy_data_.left_x = 0.2f;
+    chassis.airjoy_data_.right_x = 0.25f;
+
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+
+    EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.debug_control_.single_wheel.steer.command_value, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.debug_control_.single_wheel.drive.command_value, 0.0f, 1.0e-6f);
+}
+
+void testMode30SingleWheelAxisEnablesAndEstopGateOutputs()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.steer.enable = false;
+    chassis.debug_control_.single_wheel.drive.enable = true;
+    chassis.debug_control_.single_wheel.steer.input_mode_raw = static_cast<unsigned char>(Chassis::DirectAxisInputMode::kCached);
+    chassis.debug_control_.single_wheel.drive.input_mode_raw = static_cast<unsigned char>(Chassis::DirectAxisInputMode::kCached);
+    chassis.debug_control_.single_wheel.steer.command_value = 30.0f;
+    chassis.debug_control_.single_wheel.drive.command_value = 90.0f;
+
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_NEAR(steer_motors[1].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 90.0f, 1.0e-4f);
+
+    chassis.debug_control_.single_wheel.estop = true;
+    chassis.debug_control_.single_wheel.steer.enable = true;
+    chassis.debug_control_.single_wheel.drive.enable = true;
+    chassis.debug_control_.single_wheel.steer.command_value = 60.0f;
+    chassis.debug_control_.single_wheel.drive.command_value = 180.0f;
+
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_NEAR(steer_motors[1].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[1].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+}
+
+void testMode30SingleWheelSteerPlannerSupportsSCurveAndTrapezoid()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+
+    chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 999.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 999.0f;
+    chassis.debug_control_.single_wheel.steer.command_type_raw = static_cast<unsigned char>(Chassis::DirectSteerCommandType::kRpm);
+    chassis.debug_control_.single_wheel.steer.command_limit = 240.0f;
+    chassis.debug_control_.single_wheel.steer.planner_mode_raw = static_cast<unsigned char>(Chassis::SingleWheelPlannerMode::kSCurve);
+    chassis.debug_control_.single_wheel.steer.scurve.acc_acc = 80.0f;
+    chassis.debug_control_.single_wheel.steer.scurve.acc_dec = 80.0f;
+    chassis.debug_control_.single_wheel.steer.scurve.jerk_acc = 500.0f;
+    chassis.debug_control_.single_wheel.steer.scurve.jerk_dec = 500.0f;
+    chassis.airjoy_data_.left_x = 1.0f;
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_TRUE(std::fabs(steer_motors[1].getTargetRPM()) > 0.0f);
+    EXPECT_TRUE(std::fabs(steer_motors[1].getTargetRPM()) < 240.0f);
+
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+    chassis.runtime_strategy_cfg_.max_acc_xy_acc_ = 999.0f;
+    chassis.debug_control_.single_wheel.steer.command_type_raw = static_cast<unsigned char>(Chassis::DirectSteerCommandType::kRpm);
+    chassis.debug_control_.single_wheel.steer.command_limit = 240.0f;
+    chassis.debug_control_.single_wheel.steer.planner_mode_raw = static_cast<unsigned char>(Chassis::SingleWheelPlannerMode::kTrapezoid);
+    chassis.debug_control_.single_wheel.steer.trapezoid.acc = 120.0f;
+    chassis.debug_control_.single_wheel.steer.trapezoid.dec = 120.0f;
+    chassis.airjoy_data_.left_x = 1.0f;
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_NEAR(std::fabs(steer_motors[1].getTargetRPM()),
+                chassis.debug_control_.single_wheel.steer.trapezoid.acc * Chassis::period_,
+                1.0e-6f);
+}
+
+void testMode30SingleWheelDrivePlannerSupportsTrapezoidAndIgnoresGlobalManualProfileParams()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+
+    chassis.runtime_strategy_cfg_.max_acc_xy_acc_ = 999.0f;
+    chassis.runtime_strategy_cfg_.max_acc_xy_dec_ = 999.0f;
+    chassis.debug_control_.single_wheel.drive.command_limit = 600.0f;
+    chassis.debug_control_.single_wheel.drive.planner_mode_raw = static_cast<unsigned char>(Chassis::SingleWheelPlannerMode::kTrapezoid);
+    chassis.debug_control_.single_wheel.drive.trapezoid.acc = 2.0f;
+    chassis.debug_control_.single_wheel.drive.trapezoid.dec = 3.0f;
+    chassis.airjoy_data_.right_x = 1.0f;
+
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+
+    const float expected_drive_step_rad_s =
+        chassis.debug_control_.single_wheel.drive.trapezoid.acc * Chassis::period_ / chassis.runtime_strategy_cfg_.wheel_radius_m_;
+    EXPECT_NEAR(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s), expected_drive_step_rad_s, 1.0e-6f);
+    EXPECT_NEAR(std::fabs(drive_motors[1].getTargetRPM()), jia::radsToRpmF32(expected_drive_step_rad_s), 1.0e-4f);
 }
 
 void testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode()
@@ -935,35 +978,53 @@ void testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode()
     EXPECT_NEAR(chassis.debug_mirror_.homing_runtime_zero_offset_deg[0], 18.0f, 1.0e-4f);
 }
 
-void testDirectControlWheelSelectionIsIndependentFromObserveWheel()
+void testMode30SingleWheelNonTargetCommandTypesBypassPlanner()
 {
     Chassis chassis;
     TestMotor steer_motors[4];
     TestMotor drive_motors[4];
-    configureSingleWheelDebugHarness(chassis, steer_motors, drive_motors);
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
 
-    chassis.debug_control_.common.control_wheel_index = 3U;
-    chassis.debug_control_.common.observe_wheel_index = 1U;
-    chassis.debug_control_.legacy_direct.steer_input_mode_raw = 0U;
-    chassis.debug_control_.legacy_direct.drive_input_mode_raw = 0U;
-    chassis.debug_control_.legacy_direct.steer_command_type_raw = 2U;
-    chassis.debug_control_.legacy_direct.drive_command_type_raw = 0U;
-    chassis.debug_control_.legacy_direct.enable_steer = true;
-    chassis.debug_control_.legacy_direct.enable_drive = true;
-    chassis.debug_control_.legacy_direct.steer_command_value = 30.0f;
-    chassis.debug_control_.legacy_direct.drive_command_value = 90.0f;
-    chassis.debug_control_.legacy_direct.steer_command_limit = 180.0f;
-    chassis.debug_control_.legacy_direct.drive_command_limit = 200.0f;
+    chassis.debug_control_.single_wheel.steer.command_type_raw = static_cast<unsigned char>(Chassis::DirectSteerCommandType::kCurrent);
+    chassis.debug_control_.single_wheel.steer.command_limit = 1200.0f;
+    chassis.debug_control_.single_wheel.steer.planner_mode_raw = static_cast<unsigned char>(Chassis::SingleWheelPlannerMode::kSCurve);
+    chassis.debug_control_.single_wheel.drive.command_type_raw = static_cast<unsigned char>(Chassis::DirectDriveCommandType::kBrake);
+    chassis.debug_control_.single_wheel.drive.command_limit = 800.0f;
+    chassis.debug_control_.single_wheel.drive.planner_mode_raw = static_cast<unsigned char>(Chassis::SingleWheelPlannerMode::kTrapezoid);
+    chassis.airjoy_data_.left_x = 1.0f;
+    chassis.airjoy_data_.right_x = 1.0f;
 
-    chassis.debug_control_.common.enable = true;
-    chassis.debug_control_.common.mode_raw = 32U;
-    const bool handled = chassis.applyDebugModuleOverride(true);
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
 
-    EXPECT_TRUE(handled);
-    EXPECT_NEAR(steer_motors[3].getTargetTotalAngle(), 30.0f, 1.0e-4f);
-    EXPECT_NEAR(drive_motors[3].getTargetRPM(), 90.0f, 1.0e-4f);
-    EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), 0.0f, 1.0e-6f);
-    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(steer_motors[1].getTargetCurrent(), 1200.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[1].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+}
+
+void testMode30SingleWheelPlannerStateResetsWhenWheelAndPlannerModeChange()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    TestMotor drive_motors[4];
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.drive.command_limit = 600.0f;
+    chassis.debug_control_.single_wheel.drive.planner_mode_raw = static_cast<unsigned char>(Chassis::SingleWheelPlannerMode::kTrapezoid);
+    chassis.debug_control_.single_wheel.drive.trapezoid.acc = 2.0f;
+    chassis.debug_control_.single_wheel.drive.trapezoid.dec = 2.0f;
+    chassis.airjoy_data_.right_x = 1.0f;
+
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    const float first_wheel_step_rpm = drive_motors[1].getTargetRPM();
+    EXPECT_TRUE(first_wheel_step_rpm > 0.0f);
+
+    chassis.debug_control_.common.control_wheel_index = 2U;
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_NEAR(drive_motors[2].getTargetRPM(), first_wheel_step_rpm, 1.0e-4f);
+
+    chassis.debug_control_.single_wheel.drive.planner_mode_raw = static_cast<unsigned char>(Chassis::SingleWheelPlannerMode::kOff);
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_NEAR(drive_motors[2].getTargetRPM(), 600.0f, 1.0e-4f);
 }
 
 void testJustFloatSingleWheelProfileUsesObserveWheelIndex()
@@ -3341,14 +3402,15 @@ int main()
     testMode30SingleWheelDirectDriveCanUseSCurveShaping();
     testMode30CommonWheelIndexAliasCanDirectlySelectTargetWheel();
     testMode30DirectDriveIgnoresAllHomedGateForTargetWheel();
-    testMode30SingleWheelFullGateIsolationOnlyLetsTargetWheelMove();
-    testMode30SingleWheelFullGateKeepsPlannerGateSignalsVisible();
-    testMode30SingleWheelFullGateRespectsAllHomedByKeepingTargetWheelDriveZeroCurrent();
-    testMode30SingleWheelFullGateRespectsSteerFaultByKeepingTargetWheelDriveZeroCurrent();
-    testMode31CompatibilityAliasMapsToMode30FullGateBehavior();
-    testLegacyMode32DirectActuatorRemainsSeparateFromUnifiedMode30();
+    testMode30SingleWheelRemovedModes31And32DoNotEnterModuleOverride();
+    testMode30SingleWheelUsesConfiguredAxesAndInversion();
+    testMode30SingleWheelSharedDeadzoneSuppressesContinuousAndStepInputs();
+    testMode30SingleWheelAxisEnablesAndEstopGateOutputs();
+    testMode30SingleWheelSteerPlannerSupportsSCurveAndTrapezoid();
+    testMode30SingleWheelDrivePlannerSupportsTrapezoidAndIgnoresGlobalManualProfileParams();
     testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode();
-    testDirectControlWheelSelectionIsIndependentFromObserveWheel();
+    testMode30SingleWheelNonTargetCommandTypesBypassPlanner();
+    testMode30SingleWheelPlannerStateResetsWhenWheelAndPlannerModeChange();
     testJustFloatSingleWheelProfileUsesObserveWheelIndex();
     testJustFloatSingleWheelPayloadUsesObserveWheelIndex();
     testJustFloatSingleWheelObserveIndexFallsBackToZeroWhenOutOfRange();
