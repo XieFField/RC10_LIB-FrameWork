@@ -250,6 +250,12 @@ void CAN_Motor_Init(void)
    U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
    U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
 
+   // 底盘 VESC 驱动轮切到本地 PID 速度闭环模式
+   U8_1.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_1.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_2.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_2.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_3.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_3.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_4.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_4.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+
 
     // 机械臂电机 PID 参数初始化
     
