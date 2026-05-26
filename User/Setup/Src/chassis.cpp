@@ -4125,7 +4125,7 @@ namespace jia
 
             debug_output_runtime_.justfloat.drive_pid_load.last_ms = time_ms_;
 
-            float payload[15] = {0.0f};
+            float payload[16] = {0.0f};
             payload[0] = static_cast<f32>(time_ms_) * 0.001f;
             payload[1] = debug_drive_load_trace_.observe_wheel_idx;
             payload[2] = debug_drive_load_trace_.target_rpm;
@@ -4141,7 +4141,13 @@ namespace jia
             payload[12] = debug_drive_load_trace_.step_phase;
             payload[13] = debug_drive_load_trace_.virtual_load_enable;
             payload[14] = debug_drive_load_trace_.stepgen_enable;
-            debug_uart_.printf_DMA_JustFloat(payload, 15);
+            payload[15] = 0.0f;
+            const u8 observe_wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
+            if (wheel_config_[observe_wheel_idx].drive_motor_h != nullptr)
+            {
+                payload[15] = wheel_config_[observe_wheel_idx].drive_motor_h->getCurrent();
+            }
+            debug_uart_.printf_DMA_JustFloat(payload, 16);
         }
 
         void Chassis::emitUart8SwerveTelemetryV2(bool all_homed)

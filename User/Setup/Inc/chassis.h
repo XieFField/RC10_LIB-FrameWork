@@ -605,9 +605,81 @@ namespace jia
             };
             enum class JustFloatProfile : u8
             {
+                // kOverview (33ch, emitUart8VofaJustFloatPidTrace)
+                // ch0: time_s
+                // 轮 i (i=0..3) 的基址 = 1 + i*8:
+                // ch(base+0): tar_current_mA
+                // ch(base+1): cur_current_mA
+                // ch(base+2): tar_rpm
+                // ch(base+3): cur_rpm
+                // ch(base+4): tar_single_turn_deg
+                // ch(base+5): cur_single_turn_deg
+                // ch(base+6): tar_total_turn_deg
+                // ch(base+7): cur_total_turn_deg
                 kOverview = 0,
+
+                // kSingleWheelTrace (由 single_wheel_payload_raw 决定)
+                // 1) kSteerOnly (9ch, emitUart8VofaPid1kHzTrace)
+                // ch0: time_s
+                // ch1: steer_tar_current_mA
+                // ch2: steer_cur_current_mA
+                // ch3: steer_tar_rpm
+                // ch4: steer_cur_rpm
+                // ch5: steer_tar_single_turn_deg
+                // ch6: steer_cur_single_turn_deg
+                // ch7: steer_tar_total_turn_deg
+                // ch8: steer_cur_total_turn_deg
+                // 2) kDriveOnly (9ch, emitUart8VofaSingleWheelDriveTrace)
+                // ch0: time_s
+                // ch1: drive_tar_current_mA
+                // ch2: drive_cur_current_mA
+                // ch3: drive_tar_rpm
+                // ch4: drive_cur_rpm
+                // ch5: drive_tar_single_turn_deg
+                // ch6: drive_cur_single_turn_deg
+                // ch7: drive_tar_total_turn_deg
+                // ch8: drive_cur_total_turn_deg
+                // 3) kSteerAndDrive (17ch, emitUart8VofaDualMotor1kHzTrace)
+                // ch0: time_s
+                // ch1~ch8:  steer 的 8 通道
+                // ch9~ch16: drive 的 8 通道
                 kSingleWheelTrace = 1,
+
+                // kYawPid (15ch, emitUart8VofaYawPidTrace)
+                // ch0:  time_s
+                // ch1:  mode_tag
+                // ch2:  target_yaw_rad
+                // ch3:  feedback_yaw_rad
+                // ch4:  error_deg
+                // ch5:  manual_omega_in_rad_s
+                // ch6:  pid_output_omega_rad_s
+                // ch7:  final_omega_cmd_rad_s
+                // ch8:  feedback_yaw_rate_rad_s
+                // ch9:  shift_remaining_ms
+                // ch10: pid_compute_fired
+                // ch11: steer_fault_any_active
+                // ch12: all_homed
+                // ch13: high_speed_drive_suppression_active
+                // ch14: reverse_intent_active
                 kYawPid = 2,
+
+                // kDrivePidLoadTune (16ch, emitUart8VofaDrivePidLoadTrace)
+                // ch0:  time_s
+                // ch1:  observe_wheel_idx
+                // ch2:  target_rpm
+                // ch3:  feedback_rpm
+                // ch4:  total_current_cmd_mA
+                // ch5:  pid_current_mA
+                // ch6:  load_bias_current_mA
+                // ch7:  j_term_mA
+                // ch8:  b_term_mA
+                // ch9:  tc_term_mA
+                // ch10: omega_rad_s
+                // ch11: alpha_est_rad_s2
+                // ch12: step_phase
+                // ch13: virtual_load_enable
+                // ch14: stepgen_enable
+                // ch15: feedback_current_mA
                 kDrivePidLoadTune = 3,
             };
             enum class SingleWheelTracePayloadKind : u8
@@ -902,7 +974,7 @@ namespace jia
                         {}};
                     SingleWheelAxisControl drive{
                         true,
-                        static_cast<u8>(DirectAxisInputMode::kRcContinuous),
+                        static_cast<u8>(DirectAxisInputMode::kRcStep),
                         static_cast<u8>(SingleWheelInputAxis::kRightX),
                         false,
                         static_cast<u8>(DirectDriveCommandType::kRpm),
