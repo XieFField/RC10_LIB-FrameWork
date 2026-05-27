@@ -365,6 +365,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
         {
             case WeaponSage_Setup::STATE_START:
             {
+                now_state_ = WeaponSage_Setup::STATE_ARM_MOVE;
                 break;
             }
             case WeaponSage_Setup::STATE_ARM_MOVE:
@@ -408,8 +409,12 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                 break;   
             }                           
             case WeaponSage_Setup::STATE_LAUNCH_MOVE:
-            {
-
+            {   
+                this->setTarget(target_dock_, WeaponSage::Launch_Motor);      //抬高到预定位置
+                if(abs(this->get_CurrentPos().launch_pos_-target_dock_)<0.02f) //如果已经调整到位了，进入下一个状态
+                {
+                    now_state_ = WeaponSage_Setup::STATE_DONE;
+                }
                 break;
             }
             case WeaponSage_Setup::STATE_DONE:
@@ -422,6 +427,10 @@ void Robot_WeaponSage_Setup::autoControl_dock()
             }
         }
         auto_ctrl_.auto_state_bool_S.dock_start=false; //重置开始信号
+    }
+    else
+    {
+        this->idle(); //如果没有开始信号了，就进入idle状态
     }
 }
 

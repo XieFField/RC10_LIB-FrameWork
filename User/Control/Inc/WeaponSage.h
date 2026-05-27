@@ -201,6 +201,17 @@ public:
             normalized += 360.0f;
         return normalized;
     }
+	void register_motors(M2006* claw_1_motor,M2006* claw_2_motor ,M2006* claw_3_motor, M3508* launch_motor ,M2006* wrist_motor, DM_Motor* arm_motor )
+	{
+		register_launch_Motor(launch_motor);
+		register_claw_1_Motor(claw_1_motor);
+		register_claw_2_Motor(claw_2_motor);
+		register_claw_3_Motor(claw_3_motor);
+		register_wrist_Motor(wrist_motor);
+		register_arm_Motor(arm_motor);
+	}
+	
+	
 	
 private:
 
