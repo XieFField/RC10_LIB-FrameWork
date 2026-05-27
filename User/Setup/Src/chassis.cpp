@@ -2229,14 +2229,16 @@ namespace jia
                 steer_fault_any_active_ = steer_fault_any_active;
                 const bool chassis_motion_blocked = !all_homed || steer_fault_any_active;
                 const bool drive_enabled = debug_control_.single_wheel.drive.enable && !debug_control_.single_wheel.estop;
-                if (drive_enabled && !chassis_motion_blocked && !current_mode_flag_.is_wheel_torque_free && !input_target_data_.zero_current_all)
+                if (drive_enabled && !current_mode_flag_.is_wheel_torque_free && !input_target_data_.zero_current_all)
                 {
+                    // mode30 目标轮 RPM 直控本身已经绕过全车 homing/fault gate；
+                    // 虚拟负载只是叠加在这条目标轮速度环上的偏置电流，不应再被其他轮状态全车级短路。
                     applyDriveVirtualLoadAndCommand(target_wheel,
                                                     wheel_idx,
                                                     target_wheel.target_drive_omega_rad_s,
                                                     true,
                                                     wheel_idx,
-                                                    chassis_motion_blocked,
+                                                    false,
                                                     true);
                 }
                 else if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(target_wheel.drive_motor_h))

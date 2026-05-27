@@ -1,4 +1,4 @@
-#ifndef CHASSIS_H_
+﻿#ifndef CHASSIS_H_
 #define CHASSIS_H_
 
 #include "APP_Utils.h"
@@ -560,10 +560,10 @@ namespace jia
             };
             struct SingleWheelPlannerSCurveConfig
             {
-                f32 acc_acc = 5.0f;
-                f32 acc_dec = 12.0f;
-                f32 jerk_acc = 50.0f;
-                f32 jerk_dec = 50.0f;
+                f32 acc_acc = 200.0f;
+                f32 acc_dec = 200.0f;
+                f32 jerk_acc = 120.0f;
+                f32 jerk_dec = 120.0f;
                 f32 settle_vel_eps = 1.0e-4f;
                 f32 settle_acc_eps = 0.05f;
             };
@@ -992,11 +992,11 @@ namespace jia
             struct DebugDriveVirtualLoadConfig
             {
                 bool enable = false;                    // [RW] 是否启用该轮虚拟负载。false 时这一轮只走原始调试命令，不额外叠加负载电流。
-                f32 delta_j_current_per_rad_s2 = 0.0f; // [RW] 等效惯量项系数。按角加速度估算需要补多少电流，数值越大越像“带重载起停”。
-                f32 delta_b_current_per_rad_s = 0.0f;  // [RW] 等效粘性阻尼系数。按当前转速叠加反向阻尼电流，用来模拟速度越高阻力越大的感觉。
-                f32 coulomb_current_mA = 0.0f;         // [RW] 等效库仑摩擦电流。只按转动方向施加固定偏置，适合模拟静摩擦/恒定拖拽。
-                f32 coulomb_sign_vel_eps_rad_s = 0.1f; // [RW] 判断速度正负号时用的近零阈值。速度太小时避免库仑摩擦方向来回抖动。
-                f32 bias_current_limit_mA = 12000.0f;  // [RW] 虚拟负载总偏置电流限幅。防止调试时叠加出来的附加电流过大。
+                f32 delta_j_current_per_rad_s2 = 850.0f; // [RW] 等效惯量项系数。按角加速度估算需要补多少电流，数值越大越像“带重载起停”。
+                f32 delta_b_current_per_rad_s = 35.0f;  // [RW] 等效粘性阻尼系数。按当前转速叠加反向阻尼电流，用来模拟速度越高阻力越大的感觉。
+                f32 coulomb_current_mA = 1800.0f;         // [RW] 等效库仑摩擦电流。只按转动方向施加固定偏置，适合模拟静摩擦/恒定拖拽。
+                f32 coulomb_sign_vel_eps_rad_s = 0.2f; // [RW] 判断速度正负号时用的近零阈值。速度太小时避免库仑摩擦方向来回抖动。
+                f32 bias_current_limit_mA = 999999999.0f;  // [RW] 虚拟负载总偏置电流限幅。防止调试时叠加出来的附加电流过大。
             };
             // drive 轮自动阶跃配置。
             // 启用后可以自动生成正负转速阶跃，避免每次手动推杆，适合重复观察速度环响应。

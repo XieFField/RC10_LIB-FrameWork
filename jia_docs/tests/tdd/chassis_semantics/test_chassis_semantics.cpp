@@ -1426,6 +1426,57 @@ void testDriveVirtualLoadInjectsBiasOnlyForSelectedWheelAndPidMode()
     EXPECT_NEAR(drive_motors[1].getSpeedPidCurrentBias(), 0.0f, 1.0e-6f);
 }
 
+void testMode30DriveVirtualLoadIgnoresAllHomedGateForTargetWheel()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSingleWheelDriveVescHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.drive.command_value = 180.0f;
+    chassis.debug_drive_virtual_load_[1].enable = true;
+    chassis.debug_drive_virtual_load_[1].delta_j_current_per_rad_s2 = 10.0f;
+    chassis.debug_drive_virtual_load_[1].delta_b_current_per_rad_s = 20.0f;
+    chassis.debug_drive_virtual_load_[1].coulomb_current_mA = 30.0f;
+    chassis.debug_drive_virtual_load_[1].coulomb_sign_vel_eps_rad_s = 0.1f;
+    chassis.debug_drive_virtual_load_[1].bias_current_limit_mA = 1000.0f;
+    chassis.wheel_config_[1].corrected_drive_omega_rad_s = 2.0f;
+    chassis.last_drive_feedback_omega_rad_s_[1] = 1.0f;
+    drive_motors[1].setPidOutputObservation(90.0f, 90.0f);
+
+    // mode30 目标轮直控本来就应绕过全车 homing gate，虚拟负载也应该跟着这条语义走。
+    chassis.computeSingleWheelIsolatedCommandsMode30(1U, false);
+
+    EXPECT_NEAR(drive_motors[1].getSpeedPidCurrentBias(), -1000.0f, 1.0e-4f);
+    EXPECT_TRUE(chassis.debug_drive_load_trace_.virtual_load_enable > 0.5f);
+}
+
+void testMode30DriveVirtualLoadIgnoresOtherWheelSteerFaultForTargetWheel()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSingleWheelDriveVescHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.drive.command_value = 180.0f;
+    chassis.debug_drive_virtual_load_[1].enable = true;
+    chassis.debug_drive_virtual_load_[1].delta_j_current_per_rad_s2 = 10.0f;
+    chassis.debug_drive_virtual_load_[1].delta_b_current_per_rad_s = 20.0f;
+    chassis.debug_drive_virtual_load_[1].coulomb_current_mA = 30.0f;
+    chassis.debug_drive_virtual_load_[1].coulomb_sign_vel_eps_rad_s = 0.1f;
+    chassis.debug_drive_virtual_load_[1].bias_current_limit_mA = 1000.0f;
+    chassis.wheel_config_[1].corrected_drive_omega_rad_s = 2.0f;
+    chassis.last_drive_feedback_omega_rad_s_[1] = 1.0f;
+    drive_motors[1].setPidOutputObservation(90.0f, 90.0f);
+    chassis.wheel_config_[0].steer_fault_state = Chassis::SteerFaultState::kRecovering;
+
+    // 单轮虚拟负载只服务目标轮速度环，不该被其他轮的 steer fault 全车级短路。
+    chassis.computeSingleWheelIsolatedCommandsMode30(1U, true);
+
+    EXPECT_NEAR(drive_motors[1].getSpeedPidCurrentBias(), -1000.0f, 1.0e-4f);
+    EXPECT_TRUE(chassis.debug_drive_load_trace_.virtual_load_enable > 0.5f);
+}
+
 void testJustFloatDrivePidLoadProfileEmitsFixed15ChannelPayload()
 {
     Chassis chassis;
@@ -3778,6 +3829,8 @@ int main()
     testJustFloatSingleWheelDriveOnlyObserveIndexFallsBackToZeroWhenOutOfRange();
     testMode30SingleWheelDriveStepGeneratorOverridesManualInput();
     testDriveVirtualLoadInjectsBiasOnlyForSelectedWheelAndPidMode();
+    testMode30DriveVirtualLoadIgnoresAllHomedGateForTargetWheel();
+    testMode30DriveVirtualLoadIgnoresOtherWheelSteerFaultForTargetWheel();
     testJustFloatDrivePidLoadProfileEmitsFixed15ChannelPayload();
     testDebugOmegaZInjectionModeOffKeepsManualOmegaInput();
     testDebugOmegaZInjectionModeStepOverridesManualOmegaInput();
