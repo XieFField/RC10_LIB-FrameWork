@@ -434,6 +434,54 @@ void testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry()
     EXPECT_NEAR(Chassis::mapWheelCurrentToDriveMotorCurrent(3000.0f, calibration), 3000.0f, 1.0e-6f);
 }
 
+void testDefaultDriveMotorPolarityMatchesPositiveBodyXHardwareLayout()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    Chassis::InitConfig init_cfg{};
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        init_cfg.steer_motor_h[i] = &steer_motors[i];
+        init_cfg.drive_motor_h[i] = &drive_motors[i];
+    }
+    chassis.init(init_cfg);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].homing_enabled = false;
+        chassis.wheel_config_[i].homing_state = Chassis::HomingState::kReady;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad =
+            chassis.mapWheelOaTotalToCorrectedLocal(chassis.wheel_config_[i], 0.0f);
+    }
+
+    Chassis::Data command{};
+    command.vel_x = 1.0f;
+    command.vel_y = 0.0f;
+    command.omega_z = 0.0f;
+
+    chassis.computeModuleCommands(command);
+    chassis.applyModuleCommands(true);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_TRUE(chassis.wheel_config_[i].target_drive_omega_rad_s > 0.0f);
+    }
+    EXPECT_TRUE(drive_motors[0].getTargetRPM() < 0.0f);
+    EXPECT_TRUE(drive_motors[1].getTargetRPM() > 0.0f);
+    EXPECT_TRUE(drive_motors[2].getTargetRPM() < 0.0f);
+    EXPECT_TRUE(drive_motors[3].getTargetRPM() > 0.0f);
+}
+
 void testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit()
 {
     Chassis::PlannerInputCommand input{};
@@ -2338,6 +2386,65 @@ void testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned()
     EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, drive_step, 1.0e-6f);
 }
 
+void testNormalLaunchSCurveWaitsForSteerAlignmentBeforeAccumulatingBodyPlan()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = true;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 3.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 20.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 30.0f;
+
+    chassis.target_data_.vel_x = 0.0f;
+    chassis.target_data_.vel_y = 1.0f;
+    chassis.target_data_.omega_z = 0.0f;
+
+    for (int cycle = 0; cycle < 3; ++cycle)
+    {
+        chassis.updatePlannedMotionData();
+        chassis.computeModuleCommands(chassis.planned_data_);
+        chassis.applyModuleCommands(true);
+        chassis.last_planned_data_ = chassis.planned_data_;
+    }
+
+    EXPECT_TRUE(chassis.launch_hold_active_);
+    EXPECT_NEAR(chassis.planned_data_.vel_x, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.vel_y, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.omega_z, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.actuator_command_frame_.drive_omega_rad_s[0], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad =
+            chassis.planner_output_cache_.selected_oa_total_rad[i];
+    }
+
+    chassis.updatePlannedMotionData();
+    chassis.computeModuleCommands(chassis.planned_data_);
+
+    EXPECT_TRUE(!chassis.launch_hold_active_);
+    EXPECT_NEAR(chassis.planned_data_.vel_x, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.vel_y,
+                chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ * Chassis::period_ * Chassis::period_,
+                1.0e-6f);
+    EXPECT_TRUE(std::fabs(chassis.actuator_command_frame_.drive_omega_rad_s[0]) > 1.0e-6f);
+}
+
 void testManualSCurveProfileLegacyModeKeepsCurrentAccelerationStepSemantics()
 {
     Chassis chassis;
@@ -3798,6 +3905,7 @@ int main()
     testTelemetrySnapshotKeepsTargetAndActualYawSemanticsSeparate();
     testTelemetrySnapshotPreservesWheelTargetsWithoutModeDependentReinterpretation();
     testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry();
+    testDefaultDriveMotorPolarityMatchesPositiveBodyXHardwareLayout();
     testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit();
     testNormalizedBodyCommandKeepsDebugAndApiRoutesSemanticallyAligned();
     testHomingRuntimeZeroOffsetOnlyDependsOnEdgeGeometryAndRawMotorAngle();
@@ -3852,6 +3960,7 @@ int main()
     testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates();
     testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle();
     testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned();
+    testNormalLaunchSCurveWaitsForSteerAlignmentBeforeAccumulatingBodyPlan();
     testManualSCurveProfileLegacyModeKeepsCurrentAccelerationStepSemantics();
     testManualSCurveProfileProducesSofterFirstStepAndContinuousAcceleration();
     testManualSCurveProfileToggleResetsShapingHistory();
