@@ -562,15 +562,15 @@ namespace jia
             {
                 f32 acc_acc = 200.0f;
                 f32 acc_dec = 200.0f;
-                f32 jerk_acc = 120.0f;
-                f32 jerk_dec = 120.0f;
+                f32 jerk_acc = 130.0f;
+                f32 jerk_dec = 130.0f;
                 f32 settle_vel_eps = 1.0e-4f;
                 f32 settle_acc_eps = 0.05f;
             };
             struct SingleWheelPlannerTrapezoidConfig
             {
-                f32 acc = 2.0f;
-                f32 dec = 2.0f;
+                f32 acc = 60.0f;
+                f32 dec = 60.0f;
             };
             struct SingleWheelAxisControl
             {
@@ -940,7 +940,7 @@ namespace jia
                 struct Common
                 {
                     bool enable = true;                                            // [RW] 调试总开关。
-                    u8 mode_raw = 30;                                                 // [RW] 调试模式号。
+                    u8 mode_raw = 2;                                              // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
                     u8 observe_wheel_index = 0U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。
@@ -1051,7 +1051,7 @@ namespace jia
 
             struct DebugOutputJustFloatConfig
             {
-                u8 profile_raw = static_cast<u8>(JustFloatProfile::kDrivePidLoadTune);
+                u8 profile_raw = static_cast<u8>(JustFloatProfile::kSingleWheelTrace);
                 u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kDriveOnly);
                 DebugOutputSlotConfig overview = {5U};
                 DebugOutputSlotConfig single_wheel = {1U};
