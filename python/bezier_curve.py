@@ -8,14 +8,16 @@ def visualize(
     bezier_control_points,
     field_rect,
     forbidden_rect,
-    first_hit_index,
     half_size,
-    min_field_index,
-    min_forbidden_index,
+    intersect_idx,
+    is_p1_on_bisector,
+    p1_proj,
+    mid_p0p2,
+    dir_p0p2
 ):
     plt.figure()
     plt.plot(bezier_line[:, 0], bezier_line[:, 1], color='red', label='bezier')
-    plt.scatter(bezier_control_points[:, 0], bezier_control_points[:, 1], label='control')
+    plt.scatter(bezier_control_points[:, 0], bezier_control_points[:, 1], label='control', zorder=5)
 
     fx0, fy0, fx1, fy1 = field_rect
     plt.plot([fx0, fx1, fx1, fx0, fx0], [fy0, fy0, fy1, fy1, fy0], color='black', label='field')
@@ -23,27 +25,26 @@ def visualize(
     rx0, ry0, rx1, ry1 = forbidden_rect
     plt.plot([rx0, rx1, rx1, rx0, rx0], [ry0, ry0, ry1, ry1, ry0], color='orange', label='forbidden')
 
-    if first_hit_index is not None:
-        hit_point = bezier_line[first_hit_index]
-        plt.scatter(hit_point[0], hit_point[1], color='blue', label='first hit')
+    if mid_p0p2 is not None and dir_p0p2 is not None:
+        perp_dir = np.array([-dir_p0p2[1], dir_p0p2[0]])
+        dir_norm = np.linalg.norm(perp_dir)
+        if dir_norm > 1e-9:
+            perp_dir = perp_dir / dir_norm
+            line_len = 15.0
+            p_start = mid_p0p2 - perp_dir * line_len
+            p_end = mid_p0p2 + perp_dir * line_len
+            plt.plot([p_start[0], p_end[0]], [p_start[1], p_end[1]], color='gray', linestyle='--', label='bisector')
+
+    if not is_p1_on_bisector and p1_proj is not None:
+        plt.scatter(p1_proj[0], p1_proj[1], color='magenta', marker='x', s=80, label='projected control', zorder=5)
+
+    if intersect_idx is not None:
+        hit_point = bezier_line[intersect_idx]
+        plt.scatter(hit_point[0], hit_point[1], color='blue', label='curve intersect', zorder=4)
         cx, cy = hit_point
         car_rect_x = [cx - half_size, cx + half_size, cx + half_size, cx - half_size, cx - half_size]
         car_rect_y = [cy - half_size, cy - half_size, cy + half_size, cy + half_size, cy - half_size]
-        plt.plot(car_rect_x, car_rect_y, color='blue', label='car at hit')
-
-    if min_field_index is not None:
-        field_point = bezier_line[min_field_index]
-        cx, cy = field_point
-        car_rect_x = [cx - half_size, cx + half_size, cx + half_size, cx - half_size, cx - half_size]
-        car_rect_y = [cy - half_size, cy - half_size, cy + half_size, cy + half_size, cy - half_size]
-        plt.plot(car_rect_x, car_rect_y, color='green', label='car at min field')
-
-    if min_forbidden_index is not None:
-        forb_point = bezier_line[min_forbidden_index]
-        cx, cy = forb_point
-        car_rect_x = [cx - half_size, cx + half_size, cx + half_size, cx - half_size, cx - half_size]
-        car_rect_y = [cy - half_size, cy - half_size, cy + half_size, cy + half_size, cy - half_size]
-        plt.plot(car_rect_x, car_rect_y, color='purple', label='car at min forbidden')
+        plt.plot(car_rect_x, car_rect_y, color='cyan', label='car at intersect')
 
     plt.axis('equal')
     plt.legend()
@@ -111,7 +112,8 @@ def rect_signed_distance(a, b):
 
 
 if __name__ == '__main__':
-    control_points = np.array([(1.2, 2.6), (0.4, 2.4), (0.6, 3.2)])
+    """  control_points = np.array([(1.2, 2.6), (0.4, 2.4), (0.6, 3.2)]) """
+    control_points = np.array([(1.2, 2.57), (0.35, 2.35), (0.57, 3.2)])
     field_rect = (0.0, 0.0, 6.0, 9.45)
     forbidden_rect = (1.2, 3.2, 4.8, 8.0)
     car_size = 0.98
@@ -147,25 +149,53 @@ if __name__ == '__main__':
         if hit:
             print(f"Hit at t={t:.2f}, center=({pt[0]:.3f}, {pt[1]:.3f})")
 
-    bezier_lines = np.stack(recursive_bezier_line, axis=0)
-    hit_mask = np.array(hit_mask, dtype=bool)
-    first_hit_index = int(np.argmax(hit_mask)) if np.any(hit_mask) else None
-    visualize(
-        bezier_lines,
-        control_points,
-        field_rect,
-        forbidden_rect,
-        first_hit_index,
-        half_size,
-        min_field_index,
-        min_forbidden_index,
-    )
+    # Find the intersection between the trajectory and the perpendicular bisector of P0 and P2
+    p0 = control_points[0]
+    p1 = control_points[1]
+    p2 = control_points[2]
+    
+    mid_p0p2 = (p0 + p2) / 2.0
+    dir_p0p2 = p2 - p0
+    dir_norm = np.linalg.norm(dir_p0p2)
+    normal_p0p2 = dir_p0p2 / dir_norm if dir_norm > 1e-9 else np.array([1.0, 0.0])
+    
+    p1_dist_to_bisector = np.dot(p1 - mid_p0p2, normal_p0p2)
+    is_p1_on_bisector = abs(p1_dist_to_bisector) < 1e-6
+    p1_proj = p1 - p1_dist_to_bisector * normal_p0p2
+    
+    print(f"Control point on perpendicular bisector: {is_p1_on_bisector}")
+    if not is_p1_on_bisector:
+        print(f"Nearest point on bisector for control point: ({p1_proj[0]:.3f}, {p1_proj[1]:.3f})")
 
-    print(
-        "Min distance to field boundary: "
-        f"{min_field_distance:.3f} m at t={min_field_t:.3f}"
-    )
-    print(
-        "Min distance to forbidden zone: "
-        f"{min_forbidden_distance:.3f} m at t={min_forbidden_t:.3f}"
+    bezier_lines = np.stack(recursive_bezier_line, axis=0)
+    
+    # Find the intersection of bezier with the bisector
+    dots = np.dot(bezier_lines - mid_p0p2, dir_p0p2)
+    bisector_indices = np.where(np.diff(np.sign(dots)))[0]
+    
+    intersect_idx = None
+    if len(bisector_indices) > 0:
+        intersect_idx = bisector_indices[0]
+        # Approximate intersection point
+        pt_intersect = bezier_lines[intersect_idx]
+        intersect_rect = car_rect_from_center(pt_intersect, half_size)
+        dist_field = car_to_field_signed_distance(intersect_rect, field_rect)
+        dist_forb = rect_signed_distance(intersect_rect, forbidden_rect)
+        print(f"Trajectory intersects bisector near center=({pt_intersect[0]:.3f}, {pt_intersect[1]:.3f})")
+        print(f"At intersection -> Min distance to field boundary: {dist_field:.3f} m")
+        print(f"At intersection -> Min distance to forbidden zone: {dist_forb:.3f} m")
+    else:
+        print("Trajectory does not intersect the perpendicular bisector.")
+
+    visualize(
+        bezier_line=bezier_lines,
+        bezier_control_points=control_points,
+        field_rect=field_rect,
+        forbidden_rect=forbidden_rect,
+        half_size=half_size,
+        intersect_idx=intersect_idx,
+        is_p1_on_bisector=is_p1_on_bisector,
+        p1_proj=p1_proj,
+        mid_p0p2=mid_p0p2,
+        dir_p0p2=dir_p0p2
     )

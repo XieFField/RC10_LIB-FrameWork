@@ -19,6 +19,8 @@ DJI_Group DJIGroupCAN3_High(send_idHigh(), CAN3_Bus); // 5~8号 M3508/M2006 电�
 DJI_Group DJIGroupCAN3_Low(send_idLow(), CAN3_Bus);   // 1~4号 M3508/M2006 电机组
 
 Point2D arm_install_offset = {0.480f, 0.02f}; // 机械臂安装偏移，单位 m
+Serial1Protocol_Debug g_serial1_debug;
+//Serial1Protocol& g_serialProto1=Serial1Protocol::getInstance();
 
 
 /*==============Controller Instances===========*/
@@ -46,8 +48,7 @@ Chassis chassis;
 
 FSM_Controller Finite_StateMachine;
 ArmSetup ARM_Controller(arm_initData);
-Robot_WeaponSage_Setup Weapon_Controller(initData_);
-
+Robot_WeaponSage_Setup Weapon_Controller(initData_); 
 
 
 /*==============Controller Instances===========*/
@@ -79,7 +80,7 @@ DM_Motor Weapon_Elbow(J4310_Type, 0x06, 0x06, CAN2_Bus); M2006 Weapon_Wrist(6, C
 #if !TEST_TEMP
 M3508 arm_launchMotor(5, CAN3_Bus, true, false); M3508 arm_rotateMotor(7, CAN3_Bus, true, false);
 M2006 arm_stretchMotor(8, CAN3_Bus, true, false);  
-DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
+DM_Motor arm_pitchMotor(J4310_Type, 0x05, 0x05, CAN3_Bus);
 #else
 
 #endif
@@ -118,7 +119,10 @@ void CAN_Motor_Init(void);
 Point2D lader_install_offset = {0.0f, 0.0f}; // 激光雷达安装偏移，单位 m
 Locate_Setup* set1 = Locate_Setup::getInstance();
 
+#if DEBUG_SHIT
+Swerve_Task_Demo swerve_task_demo; // 轮式舵轮底盘调试任务实例
 
+#endif  
 void ALL_Setup_ConfigInit(void)
 {
 
@@ -129,19 +133,26 @@ void ALL_Setup_ConfigInit(void)
     CAN_Motor_Init();
 
     ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
-    ARM_Controller.setArmStatus(ARM_IDLE);
+    ARM_Controller.setArmStatus(ARM_CALIBRATE);
     
-
     Weapon_Controller.init(&oid_encoder);
     Weapon_Controller.register_motors(&Weapon_Claw1, &Weapon_Claw2, &Weapon_Claw3, &Weapon_Launch, &Weapon_Wrist, &Weapon_Elbow);
     Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
-
+    g_serial1_debug.init();
     ChassisOmni.init();
 
     ChassisOmni.setChassisStatus(CHASSIS_STOP);
 
+#if DEBUG_SHIT
 
-#if JIA_USE_FOUR_STEER_CHASSIS && !TEST_TEMP
+    swerve_task_demo.registerSteerMotor(&steer1, 0); swerve_task_demo.registerSteerMotor(&steer2, 1);
+    swerve_task_demo.registerSteerMotor(&steer3, 2); swerve_task_demo.registerSteerMotor(&steer4, 3);
+    swerve_task_demo.registerDriveMotor(&U8_1, 0); swerve_task_demo.registerDriveMotor(&U8_2, 1);
+    swerve_task_demo.registerDriveMotor(&U8_3, 2); swerve_task_demo.registerDriveMotor(&U8_4, 3);
+    swerve_task_demo.init();
+#endif
+
+#if JIA_USE_FOUR_STEER_CHASSIS && !TEST_TEMP && !DEBUG_SHIT
     Chassis::InitConfig chassis_init_config =
         {
             // 转向电机句柄（按轮序 0~3 对应）
@@ -159,6 +170,7 @@ void ALL_Setup_ConfigInit(void)
     chassis.init(chassis_init_config);
 #endif
 
+
     Finite_StateMachine.registerArmSetup(&ARM_Controller);
     Finite_StateMachine.registerChassisSetup(&ChassisOmni);
     Finite_StateMachine.registerWeaponSageSetup(&Weapon_Controller);
@@ -169,7 +181,16 @@ void ALL_Setup_ConfigInit(void)
 
     CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
     crsf_rc->init();
-
+ communication::Lora_communication::GetInstance(
+        &huart5,             // tx: UART5
+        &huart6,             // rx: UART6
+        GPIOB,               // tx_aux_port
+        GPIO_PIN_10,          // tx_aux_pin
+        GPIOB,               // rx_aux_port
+        GPIO_PIN_11,          // rx_aux_pin
+        nullptr              // timer
+    )->Init();
+				
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
     set1->locate_setup_init();
     set1->set_startToLRL(true);

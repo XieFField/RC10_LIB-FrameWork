@@ -49,6 +49,8 @@ typedef struct {
     float end_link_length_ = 0.0f; // 末端连杆长度，吸盘到机械臂连接点的距离，单位米
     float max_pitchRPM_ = 50.0f; // 末端关节最大转速，单位RPM   
     float rotate_end = 265.0f;
+    float rotate_start = 135.0f;
+    float store_ext_length_ =0.0f; //存储时候伸展长度
     
 
     float stretch_Ratio_ = 0.0f; // 伸展比率，伸展电机转一圈，伸展多少米   0.0942米(94.2mm)
@@ -59,6 +61,7 @@ typedef struct {
     float max_rotate_angle_ = 0.0f; // 最大旋转角度
     float safe_height_ = 0.0f; // 安全高度
     float store_height_ = 0.0f; // 储存高度
+    float lock_height_ = 0.0f; // 云台锁定高度
 
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘GPIO控制端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘GPIO控制引脚
@@ -379,13 +382,14 @@ private:
 
         // 计算最大速度变化量
         float max_dv = ramp.max_accel_ * dt_;
-        if (target_vel > ramp.current_velocity_ + max_dv) {
+        if (target_vel > ramp.current_velocity_ + max_dv) 
             ramp.current_velocity_ += max_dv;
-        } else if (target_vel < ramp.current_velocity_ - max_dv) {
+
+        else if (target_vel < ramp.current_velocity_ - max_dv) 
             ramp.current_velocity_ -= max_dv;
-        } else {
+            
+        else 
             ramp.current_velocity_ = target_vel;
-        }
 
         // 计算步长
         float step = ramp.current_velocity_ * dt_;
