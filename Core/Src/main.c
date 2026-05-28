@@ -100,27 +100,27 @@
 
 //  /* USER CODE END SysInit */
 
-//  /* Initialize all configured peripherals */
-//  MX_GPIO_Init();
-//  MX_DMA_Init();
-//  MX_FDCAN1_Init();
-//  MX_FDCAN2_Init();
-//  MX_FDCAN3_Init();
-//  MX_USART1_UART_Init();
-//  MX_TIM6_Init();
-//  MX_TIM4_Init();
-//  MX_TIM14_Init();
-//  MX_USART6_UART_Init();
-//  MX_USART10_UART_Init();
-//  MX_UART7_Init();
-//  MX_UART8_Init();
-//  MX_I2C5_Init();
-//  MX_UART5_Init();
-//  MX_TIM3_Init();
-//  /* USER CODE BEGIN 2 */
-//  HAL_TIM_Base_Start_IT(&htim6); // ������ʱ����ȻCAN���񲻻��ܵ�
-//  ALL_Setup_ConfigInit();
-//  /* USER CODE END 2 */
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_FDCAN1_Init();
+  MX_FDCAN2_Init();
+  MX_FDCAN3_Init();
+  MX_USART1_UART_Init();
+  MX_TIM6_Init();
+  MX_TIM4_Init();
+  MX_TIM14_Init();
+  MX_USART6_UART_Init();
+  MX_USART3_UART_Init();
+  MX_USART10_UART_Init();
+  MX_UART7_Init();
+  MX_UART8_Init();
+  MX_I2C5_Init();
+  MX_USART2_UART_Init();
+  /* USER CODE BEGIN 2 */
+  HAL_TIM_Base_Start_IT(&htim6); // 
+  ALL_Setup_ConfigInit();
+  /* USER CODE END 2 */
 
 //  /* Init scheduler */
 //  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
