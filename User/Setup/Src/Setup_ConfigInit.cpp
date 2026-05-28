@@ -79,7 +79,7 @@ DM_Motor Weapon_Elbow(J4310_Type, 0x06, 0x06, CAN2_Bus); M2006 Weapon_Wrist(6, C
 #if !TEST_TEMP
 M3508 arm_launchMotor(5, CAN3_Bus, true, false); M3508 arm_rotateMotor(7, CAN3_Bus, true, false);
 M2006 arm_stretchMotor(8, CAN3_Bus, true, false);  
-DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
+DM_Motor arm_pitchMotor(J4310_Type, 0x05, 0x05, CAN3_Bus);
 #else
 
 #endif
@@ -122,7 +122,6 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 Swerve_Task_Demo swerve_task_demo; // 轮式舵轮底盘调试任务实例
 
 #endif  
-
 void ALL_Setup_ConfigInit(void)
 {
 
@@ -133,9 +132,8 @@ void ALL_Setup_ConfigInit(void)
     CAN_Motor_Init();
 
     ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
-    ARM_Controller.setArmStatus(ARM CALIBRATE);
+    ARM_Controller.setArmStatus(ARM_CALIBRATE);
     
-
     Weapon_Controller.init(&oid_encoder);
     Weapon_Controller.register_motors(&Weapon_Claw1, &Weapon_Claw2, &Weapon_Claw3, &Weapon_Launch, &Weapon_Wrist, &Weapon_Elbow);
     Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
