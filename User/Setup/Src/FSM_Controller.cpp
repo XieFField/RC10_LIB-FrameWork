@@ -1,5 +1,7 @@
 #include "FSM_Controller.h"
 
+#include "chassis_swerve_task_demo.h"
+
 int text_index = 0;
 
 void FSM_Controller::loop()
@@ -10,8 +12,8 @@ void FSM_Controller::loop()
 																	crsf_send_s.rsf_send_data.Spear);
     CrsfReceiver::GetInstance(&huart7)->process();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
-
-
+		//communication::Lora_communication::GetInstance()->Task_Process();
+		//communication::Lora_communication::GetInstance()->Tim_It_Process();
     switch(airjoy_data_.SWB)
     {
         case 0x00:
@@ -55,6 +57,10 @@ void FSM_Controller::loop()
         robot_status_ = ALL_STOP;
     }
 
+    #if DEBUG_SHIT
+        robot_status_ = ALL_STOP;
+    #endif
+
    switch (robot_status_)
    {
     case ALL_STOP:
@@ -78,6 +84,8 @@ void FSM_Controller::loop()
     default:
         break;
    }
+
+
 
   if(KStarget != last_KStarget)
   {
@@ -399,7 +407,7 @@ void FSM_Controller::auto_ctrl()
             if(airjoy_data_.SWA == 0x00)
             {
                 weaponSage_setup_->Set_End_Flag(chassis_setup_->GetReach_flag());
-                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
+                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL_CATCH);
     //            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
                 chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
                 arm_setup_->setArmStatus(ARM_IDLE);
