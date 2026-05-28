@@ -3,17 +3,18 @@
 #include "chassis_swerve_task_demo.h"
 
 int text_index = 0;
-
+communication::RC10_AirJoy_Data_S rc_data;
 void FSM_Controller::loop()
 {
     if(!init_flag_) 
         return;
-    CrsfReceiver::GetInstance(&huart7)->send_kfsandSpear(crsf_send_s.rsf_send_data.kfs1, crsf_send_s.rsf_send_data.kfs2, 
-																	crsf_send_s.rsf_send_data.Spear);
-    CrsfReceiver::GetInstance(&huart7)->process();
-    CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+    // CrsfReceiver::GetInstance(&huart7)->send_kfsandSpear(crsf_send_s.rsf_send_data.kfs1, crsf_send_s.rsf_send_data.kfs2, 
+	// 																crsf_send_s.rsf_send_data.Spear);
+    // CrsfReceiver::GetInstance(&huart7)->process();
+    // CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     communication::Lora_communication::GetInstance()->Task_Process();
-    communication::Lora_communication::GetInstance()->Tim_It_Process();
+    communication::Lora_communication::GetInstance()->update_airjoy_data(&rc_data);
+    communication::Lora_communication::GetInstance()->send_claw_status(1, 1, 0);
     switch(airjoy_data_.SWB)
     {
         case 0x00:

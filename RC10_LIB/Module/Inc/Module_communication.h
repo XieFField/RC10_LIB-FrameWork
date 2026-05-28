@@ -84,15 +84,15 @@ namespace communication{
         /**
          * @brief 将发送环形缓冲区的数据转移到DMA缓冲区并拉起底层硬件发送
          * @param txhuart 触发调用的UART句柄（内部用于防重防错判）
-         * @note 时机/用法：写在发送的GPIO外部中断里面，不可以写在发送回调！！！！！！！！
+         * @note 时机/用法：写在发送的GPIO外部中断里面，模块繁忙时，锁tx_busy=1，模块空闲时，解锁tx_busy=0，不建议写在发送回调，因为DMA发送完成不代表模块可发送下一帧
          */
         void Comm_TxBufferToTxDMA(UART_HandleTypeDef *txhuart);
 
         /**
-         * @brief 将任意格式的一段数据塞入发送队列，并尝试激活发送
+         * @brief 将任意格式的一段数据塞入发送队列，并尝试激活发送，需要在接收工程中添加实现，谨慎使用
          * @param data 要发送的数据首地址
          * @param len  数据长度
-         * @note 时机/用法：当业务逻辑需要通过该串口打印日志、发送其他非标准结构的数据流时直接调用。
+         * @note 时机/用法：暂时设计为公开接口，理论上任何时候都可以调用，但需要用户自行保证调用时机和数据格式的合理性，以及发送过程中对 tx_busy 标志的正确管理
          */
         void Comm_SendAnyDataToTxBuffer(const uint8_t* data, uint16_t len);
 
@@ -100,7 +100,7 @@ namespace communication{
          * @brief 将底层DMA接收到的无序缓存数据推入业务侧接收环形缓冲区
          * @param rxhuart 产生中断的接收UART句柄
          * @param size    本次DMA/空闲中断接收到的实际长度
-         * @note 时机/用法：必须在串口空闲中断 (UARTEx_RxEventCallback)  中第一时间调用，防止新一轮DMA覆盖旧数据。
+         * @note 时机/用法：在接收中断服务程序中调用，将DMA接收到的数据推入业务侧接收环形缓冲区
          */
         void Comm_RxDMAToRxBuffer(UART_HandleTypeDef *rxhuart, uint16_t size);
 
@@ -109,7 +109,13 @@ namespace communication{
          * @param x X轴坐标 (16位)
          * @param y Y轴坐标 (16位)
          * @param z Z轴坐标 (16位)
-         * @note 时机/用法：定时器更新中断调用发送
+         * @param Gripper_Status 夹爪状态 (bit5-3)
+         * @param Suction_Cup_Status 吸盘状态 (bit2-1)
+         * @param Automatic_status 自动模式状态 (bit0)
+         * @param mode 模式 (8位)
+         * @param command1 预留命令1 (8位)
+         * @param command2 预留命令2 (8位)
+         * @note 时机/用法：检查在1ms定时中调用，外部需先判断锁tx_busy是否为0，且根据实际业务需求合理设置坐标和状态参数。函数内部会自动组装成标准帧并尝试触发发送。
          */
         void Comm_SendAxisDataToTxBuffer(uint16_t  x, uint16_t y, uint16_t z,
             uint8_t Gripper_Status, uint8_t Suction_Cup_Status,uint8_t Automatic_status, uint8_t mode, uint8_t command1, uint8_t command2);
@@ -125,6 +131,9 @@ namespace communication{
 
         /**
          * @brief 获取接收到的业务数据
+         * @param joystick 存放摇杆数据的数组，length为4，分别对应4个通道的16位数据
+         * @param key 存放按键数据的变量
+         * @note 时机/用法：需要获取最新摇杆数据时调用，前提是 Comm_Task_Loop 已经成功解析出至少一帧合法数据并刷新了相关变量。调用后，外部即可获得最新的摇杆和按键数据。
          */
         void GetRecvData(uint16_t* joystick, uint16_t& key) {
             for(int i = 0; i < 4; i++) joystick[i] = rec_joystick[i];
@@ -133,12 +142,38 @@ namespace communication{
 
         /**
          * @brief 获取接收到的设置帧数据
+         * @param command 存放命令的变量
+         * @param load1 存放负载1的变量
+         * @param load2 存放负载2的变量
+         * @note 时机/用法：需要获取最新设置数据时调用，前提是 Comm_Task_Loop 已经成功解析出至少一帧合法设置数据并刷新了相关变量。调用后，外部即可获得最新的设置命令和负载数据。
          */
         void GetSettingData(uint8_t& command, uint8_t& load1, uint8_t& load2) {
             command = rec_setting_command;
             load1 = rec_setting_load1;
             load2 = rec_setting_load2;
         }
+
+        /**
+         * @brief 查询指定索引的按键是否被按下
+         * @param key_index 按键索引 (0~15)，对应 rec_send_key 的 bit0~bit15
+         * @return true 表示该按键按下（对应位为1），false 表示未按下
+         * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，获取最新按键状态。
+         *       典型用法：if (comm.IsKeyPressed(0)) { // KEY0 按下处理 }
+         */
+        bool IsKeyPressed(uint8_t key_index) {
+            if (key_index >= 16) return false;
+            return (rec_send_key >> key_index) & 0x01;
+        }
+
+        /**
+         * @brief 获取全部16个按键的原始位图
+         * @return uint16_t 每一位代表一个按键状态，bit0=KEY0, bit1=KEY1, ... bit15=KEY15
+         * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，适合需要批量处理按键的场景。
+         */
+        uint16_t GetKeyStatus(void) {
+            return rec_send_key;
+        }
+
     private:
         void FIFO_Push(comm_FIFO_t& fifo, uint8_t data);
 
@@ -165,7 +200,7 @@ namespace communication{
         comm_FIFO_t tx_fifo;
 
         volatile uint8_t tx_busy; // 发送忙碌标志
-
+        
         /* 解析出来/待发送的业务数据 */
         uint16_t send_xyz[3]; 
         uint8_t send_mode;
@@ -182,3 +217,4 @@ namespace communication{
 }
 
 #endif
+

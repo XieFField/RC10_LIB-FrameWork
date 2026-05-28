@@ -182,16 +182,7 @@ void ALL_Setup_ConfigInit(void)
 
     CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
     crsf_rc->init();
-    communication::Lora_communication::GetInstance(
-        &huart5,             // tx: UART5
-        &huart6,             // rx: UART6
-        Lora_IO1_GPIO_Port,               // tx_aux_port
-        Lora_IO1_Pin,          // tx_aux_pin
-        Lora_IO2_GPIO_Port,               // rx_aux_port
-        Lora_IO2_Pin,          // rx_aux_pin
-        nullptr              // timer
-    )->Init();
-				
+    communication::Lora_communication::GetInstance()->Init();
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
     set1->locate_setup_init();
     set1->set_startToLRL(true);

@@ -17,6 +17,7 @@ typedef struct{
     float left_y;
     float right_x;
     float right_y;
+    uint8_t page;   //显示屏页面
 
     uint8_t SWA;   uint8_t SWB; //拨杆
     uint8_t SWC;   uint8_t SWD;
@@ -31,14 +32,7 @@ typedef struct{
 
 class Lora_communication : public Communication {
 public:
-    static Lora_communication* GetInstance(
-        UART_HandleTypeDef* tx_huart = nullptr,
-        UART_HandleTypeDef* rx_huart = nullptr,
-        GPIO_TypeDef* tx_aux_port = nullptr,
-        uint16_t tx_aux_pin = 0,
-        GPIO_TypeDef* rx_aux_port = nullptr,
-        uint16_t rx_aux_pin = 0,
-        tim::Tim* timer = nullptr);
+    static Lora_communication* GetInstance();
 
     void Init();
     void Task_Process();        //  public
@@ -54,6 +48,7 @@ public:
         data->left_y = airjoy_data_.left_y;
         data->right_x = airjoy_data_.right_x;
         data->right_y = airjoy_data_.right_y;
+        data->page = airjoy_data_.page;
 
         data->SWA = airjoy_data_.SWA;
         data->SWB = airjoy_data_.SWB;
@@ -73,15 +68,15 @@ public:
         data->d_pad_right = airjoy_data_.d_pad_right;
     }
 
-    void send_robot_pos(float x, float y, float yaw){}
+    void send_robot_pos(float x, float y, float yaw);
 
-    void send_claw_status(bool claw1, bool claw2, bool claw3){}
+    void send_claw_status(bool claw1, bool claw2, bool claw3);
 
-    void send_sucker_status(bool sucker1, bool sucker2){}
+    void send_sucker_status(bool sucker1, bool sucker2);
 
-    void send_auto_status(bool auto_status){}
+    void send_auto_status(bool auto_status);
 
-    void send_command(uint8_t cmd){}
+    void send_command(uint8_t cmd);
 
 protected:
     virtual void Comm_TxUseTxDMA(UART_HandleTypeDef* huart, uint8_t* data, uint16_t size) override;
@@ -93,6 +88,8 @@ private:
           GPIO_TypeDef* rx_aux_gpio_port, uint16_t rx_aux_gpio_pin,
            tim::Tim* timer);
     ~Lora_communication();
+
+    void flush_pending_frame();
 
     UART_HandleTypeDef* lora_tx_huart;
     UART_HandleTypeDef* lora_rx_huart;
@@ -107,6 +104,20 @@ private:
 
     UART_ bsp_rx;
     tim::Tim* attached_timer;
+
+    uint16_t pending_x_raw_;
+    uint16_t pending_y_raw_;
+    uint16_t pending_yaw_raw_;
+    uint8_t pending_claw_status_;
+    uint8_t pending_sucker_status_;
+    uint8_t pending_mode_;
+    uint8_t pending_command_;
+    bool pending_tx_dirty_;
+    bool auto_mode_;
+
+    uint16_t key_pressed_count_;
+    uint16_t key_down_count_;
+    uint16_t key_last_status_;
 
     static Lora_communication* s_instance;
     static Lora_communication* gpio_exti_list[MAX_GPIO_EXTI_NUM];
