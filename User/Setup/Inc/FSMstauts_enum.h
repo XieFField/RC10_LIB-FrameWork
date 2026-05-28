@@ -1,7 +1,7 @@
 /**
  * @file FSMstauts_enum.h
  * @author XieFField
- * @brief ×´Ì¬»úÏà¹ØµÄÊý¾Ý¿â
+ * @brief çŠ¶æ€æœºæžšä¸¾
  */
 
 #ifndef __FSM_STATUS_ENUM_H
@@ -20,78 +20,65 @@ extern "C" {
 #include "APP_tool.h"
 
 typedef enum{
-    ALL_STOP, //È«²¿»ú¹¹Í£Ö¹¹¤×÷
+    ALL_STOP, //STOPçŠ¶æ€
 
-    MANUAL_CONTROL, //ÊÖ¶¯¿ØÖÆÄ£Ê½
+    MANUAL_CONTROL, //æ‰‹åŠ¨æŽ§åˆ¶æ¨¡å¼
 
-    AUTO_CONTROL, //°ë×Ô¶¯¿ØÖÆÄ£Ê½
+    AUTO_CONTROL, //è‡ªåŠ¨æŽ§åˆ¶æ¨¡å¼
 
-    DEBUG_MODE, //µ÷ÊÔÄ£Ê½
+    DEBUG_MODE, //è°ƒè¯•æ¨¡å¼
 }FSM_Status_E;
 
 
 typedef enum{
-    ARM_MANUAL_CONTROL, //´®Áª±ÛÊÖ¶¯¿ØÖÆÄ£Ê½
+    ARM_MANUAL_CONTROL, //æ‰‹æ“
 
 
 
-    ARM_AUTO_CONTROL, //´®Áª±Û×Ô¶¯¿ØÖÆÄ£Ê½
+    ARM_AUTO_CONTROL, //è‡ªåŠ¨
 
 
 
-    ARM_IDLE, //´®Áª±Û¿ÕÏÐ×´Ì¬£¬Î¬³Öµ±Ç°×´Ì¬
+    ARM_IDLE, //å¾…æœº
 
     ARM_STOP,
 
     ARM_DEBUG,
 
-    ARM_CALIBRATE, //´®Áª±ÛÐ£×¼Ä£Ê½
+    ARM_CALIBRATE, //æ ¡å‡†
 
 
 }ARM_Status_E;
 
 
 typedef enum{
-    CHASSIS_MANUAL_CONTROL_A, //µ×ÅÌÊÖ¶¯¿ØÖÆÄ£Ê½£¨½ÇËÙ¶È¿É¿Ø£©
-    CHASSIS_MANUAL_CONTROL_B, //µ×ÅÌÊÖ¶¯¿ØÖÆÄ£Ê½£¨½ÇËÙ¶ÈÎª0£¬Ëø¶¨½Ç¶È£©
-    CHASSIS_LOCK_FORWEAPON,    //µ×ÅÌËø¶¨yaw£¬ÎªÎäÆ÷´óÊ¦Ìá¹©ÎÈ¶¨Æ½Ì¨
-    CHASSIS_MANUAL_CONTROL_C, //µ×ÅÌÊÖ¶¯¿ØÖÆÄ£Ê½C
+    CHASSIS_MANUAL_CONTROL_A, //æ‰‹æ“A æ— é”è§’
+    CHASSIS_MANUAL_CONTROL_B, //æ‰‹æ“B æœ‰é”è§’
+    CHASSIS_LOCK_FORWEAPON,    //æ— ç”¨
+    CHASSIS_MANUAL_CONTROL_C, //æ‰‹åŠ¨æŽ§åˆ¶æ¨¡å¼C
 
-    CHASSIS_TESTFOR_ARM, //µ×ÅÌ²âÊÔÄ£Ê½£¬Îª´®Áª±ÛÌá¹©ÎÈ¶¨Æ½Ì¨
+    CHASSIS_TESTFOR_ARM, //æµ‹è¯•æ¨¡å¼Îªá¹©È¶Æ½Ì¨
 
 
-    CHASSIS_CAMERA_DEBUG, // ÊÓ¾õµ÷ÊÔÄ£Ê½
-    CHASSIS_CAMERA, // Ïà»ú±Õ»·Ä£Ê½
-    CHASSIS_AUTO_CONTROL_CB, //µ×ÅÌ×Ô¶¯¿ØÖÆÄ£Ê½
-    CHASSIS_AUTO_CONTROL_KFS, //µ×ÅÌ×Ô¶¯¿ØÖÆÄ£Ê½Ã·ÁÖÄÚ
+    CHASSIS_CAMERA_DEBUG, // æ— ç”¨
+    CHASSIS_CAMERA, // æ— ç”¨
+    CHASSIS_AUTO_CONTROL_CB, //å¤¹æ†è‡ªåŠ¨
+    CHASSIS_AUTO_CONTROL_KFS, //KFSè‡ªåŠ¨
 
     CHASSIS_STOP,
 }CHASSIS_Status_E;
 
 typedef enum{
-    WEAPONSAGE_MANUAL_CONTROL, //ÊÖ²Ù
-    WEAPONSAGE_AUTO_CONTROL_CATCH, //×Ô¶¯¿ØÖÆÄ£Ê½,×¥È¡
-    WEAPONSAGE_AUTO_CONTROL_DOCK, //×Ô¶¯¿ØÖÆÄ£Ê½£¬¶Ô½Ó
-    WEAPONSAGE_STOP,        //Í£Ö¹
-    WEAPONSAGE_DEBUG,       //µ÷ÊÔÄ£Ê½  
-    WEAPONSAGE_CAMERA,      //Ïà»úÐ­Í¬Ä£Ê½
-    WEAPONSAGE_IDLE,    //¿ÕÏÐ×´Ì¬£¬Î¬³Öµ±Ç°×´Ì¬
-    WEAPONSAGE_CALIBRATE, //Ð£×¼Ä£Ê½
+    WEAPONSAGE_MANUAL_CONTROL, //æ‰‹åŠ¨æŽ§åˆ¶
+    WEAPONSAGE_AUTO_CONTROL_CATCH, //è‡ªåŠ¨æŽ§åˆ¶æ¨¡å¼,æŠ“å–
+    WEAPONSAGE_AUTO_CONTROL_DOCK, //è‡ªåŠ¨æŽ§åˆ¶æ¨¡å¼, docking
+    WEAPONSAGE_STOP,        //åœæ­¢
+    WEAPONSAGE_DEBUG,       //è°ƒè¯•æ¨¡å¼  
+    WEAPONSAGE_CAMERA,      //æ‘„åƒå¤´æ¨¡å¼
+    WEAPONSAGE_IDLE,    // å¾…æœº
+    WEAPONSAGE_CALIBRATE, //æ ¡å‡†æ¨¡å¼
 }WeaponSage_Status_E;
 
-
-//Ò£¿ØÁÙÊ±µ÷ÊÔÊ¹ÓÃ
-typedef struct{
-    uint16_t SWA;
-    uint16_t SWB;
-    uint16_t SWC;
-    uint16_t SWD;
-    uint16_t LEFT_X;
-    uint16_t LEFT_Y;
-    uint16_t RIGHT_X;
-    uint16_t RIGHT_Y;
-    
-}airjoy_S;
 
 
 

@@ -23,14 +23,14 @@ public:
         tim::Tim* timer = nullptr);
 
     void Init();
-    void Task_Process();        // ← public：主循环调用
-    void Tim_It_Process();      // ← public：定时器中断调用
+    void Task_Process();        //  public
+    void Tim_It_Process();      //  public
 
     static void All_EXTI_Prosess(uint16_t gpio_pin_);
 
 protected:
     virtual void Comm_TxUseTxDMA(UART_HandleTypeDef* huart, uint8_t* data, uint16_t size) override;
-    void EXTI_Prosess();        // ← protected：只由 All_EXTI_Prosess 内部调用
+    void EXTI_Prosess();        // 锟斤拷 protected锟斤拷只锟斤拷 All_EXTI_Prosess 锟节诧拷锟斤拷锟斤拷
 
 private:
     Lora_communication(UART_HandleTypeDef* tx_huart, UART_HandleTypeDef* rx_huart,

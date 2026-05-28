@@ -182,13 +182,13 @@ void ALL_Setup_ConfigInit(void)
 
     CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
     crsf_rc->init();
- communication::Lora_communication::GetInstance(
+    communication::Lora_communication::GetInstance(
         &huart5,             // tx: UART5
         &huart6,             // rx: UART6
-        GPIOB,               // tx_aux_port
-        GPIO_PIN_10,          // tx_aux_pin
-        GPIOB,               // rx_aux_port
-        GPIO_PIN_11,          // rx_aux_pin
+        Lora_IO1_GPIO_Port,               // tx_aux_port
+        Lora_IO1_Pin,          // tx_aux_pin
+        Lora_IO2_GPIO_Port,               // rx_aux_port
+        Lora_IO2_Pin,          // rx_aux_pin
         nullptr              // timer
     )->Init();
 				
