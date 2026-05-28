@@ -48,8 +48,7 @@ Chassis chassis;
 
 FSM_Controller Finite_StateMachine;
 ArmSetup ARM_Controller(arm_initData);
-Robot_WeaponSage_Setup Weapon_Controller(initData_);
-
+Robot_WeaponSage_Setup Weapon_Controller(initData_); 
 
 
 /*==============Controller Instances===========*/
