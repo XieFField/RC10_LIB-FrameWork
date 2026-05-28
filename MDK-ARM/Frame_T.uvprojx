@@ -1319,6 +1319,16 @@
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_communication.cpp</FilePath>
             </File>
+            <File>
+              <FileName>Module_Serial1Protocol.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_Serial1Protocol.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_Serial1Protocol.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_Serial1Protocol.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1950,6 +1960,16 @@
                   </Cads>
                 </FileArmAds>
               </FileOption>
+            </File>
+            <File>
+              <FileName>Serial1Protocol_debug.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\Serial1Protocol_debug.h</FilePath>
+            </File>
+            <File>
+              <FileName>Serial1Protocol_debug.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\Serial1Protocol_debug.cpp</FilePath>
             </File>
           </Files>
         </Group>
