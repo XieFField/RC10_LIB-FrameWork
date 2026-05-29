@@ -163,6 +163,8 @@ public:
 
     bool setMotorReversed(bool reversed, WeaponSage::Motor_Type_E motor_type);
 
+    WeaponSage_InitData_S getInitData() const { return initData_; }
+
 
     bool setTarget(float targetValue, WeaponSage::Motor_Type_E motor_type);
 

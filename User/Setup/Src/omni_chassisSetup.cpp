@@ -21,10 +21,16 @@ void OmniChassis_Setup::loop()
 
     float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
 
-    //	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
+#if !USE_RC10_AIRJOY
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+#else
+    communication::Lora_communication::GetInstance()->Task_Process();
+    communication::Lora_communication::GetInstance()->Tim_It_Process();
+
+    communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
+#endif
+
     ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
     robot_pos_.x = ladar_data_.x;
     robot_pos_.y = ladar_data_.y;
@@ -81,27 +87,27 @@ void OmniChassis_Setup::loop()
 
     case CHASSIS_LOCK_FORWEAPON:
     {
-        // 武器联动模式：平移可控，航向强制锁定到 90 度。
-        const float target_yaw_angle = 90.0f;
-        const float target_yaw_rad = 90.0f * PI / 180.0f;
+        // // 武器联动模式：平移可控，航向强制锁定到 90 度。
+        // const float target_yaw_angle = 90.0f;
+        // const float target_yaw_rad = 90.0f * PI / 180.0f;
 
-        float target_vel_x = 0.0f;
-        float target_vel_y = 0.0f;
-        float target_rot_z = 0.0f;
+        // float target_vel_x = 0.0f;
+        // float target_vel_y = 0.0f;
+        // float target_rot_z = 0.0f;
 
-        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target_vel_x = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
-        else
-            target_vel_x = 0.0f;
+        // if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+        //     target_vel_x = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
+        // else
+        //     target_vel_x = 0.0f;
 
-        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target_vel_y = airjoy_data_.left_y * 3 * this->is_chassis_reverse_;
-        else
-            target_vel_y = 0.0f;
+        // if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+        //     target_vel_y = airjoy_data_.left_y * 3 * this->is_chassis_reverse_;
+        // else
+        //     target_vel_y = 0.0f;
 
-        target_rot_z = target_yaw_rad;
+        // target_rot_z = target_yaw_rad;
 
-        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, target_rot_z);
+        // chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, target_rot_z);
 
         break;
     }
@@ -273,27 +279,6 @@ void OmniChassis_Setup::loop()
 
         chassis.setZeroCurrent();
 
-        break;
-    }
-
-    case CHASSIS_MANUAL_CONTROL_C:
-    {
-        // 模式 C：全向速度控制，角速度固定为 0。
-        target_chassis_twist_.yaw_rate = 0.0f;
-
-        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
-        else
-            target_chassis_twist_.vx = 0.0f;
-
-        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
-        else
-            target_chassis_twist_.vy = 0.0f;
-
-        chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_chassis_twist_.yaw_rate);
-
-        // 结束相机模式处理。
         break;
     }
 

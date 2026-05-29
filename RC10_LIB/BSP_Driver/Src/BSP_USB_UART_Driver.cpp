@@ -8,7 +8,7 @@
 #include "BSP_USB_UART_Driver.h"
 #include "Module_Serial1Protocol.h"
 #include "Serial1Protocol_Debug.h"
-extern Serial1Protocol_Debug g_serial1_debug;
+// extern Serial1Protocol_Debug g_serial1_debug;
 // ?????????????????
 UART_* InstanceManager::uart_instances[UART_MAX] = {nullptr};
 USB_CDC_* InstanceManager::usb_instances[2]={nullptr};
@@ -229,17 +229,17 @@ extern "C" {
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
     if (instance != nullptr) 
-		{
-       // ??? HAL ????? Size ?????????????????????
-        instance->Callback_Fuc(huart->pRxBuffPtr, Size);
-        // ???????????MA??
-        HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
-		}
-	  else if (huart->Instance == USART2) 
-		{
-        g_serial1_debug.m_serial1->onUartReceive(huart->pRxBuffPtr, Size);
-			  HAL_UARTEx_ReceiveToIdle_DMA(huart, huart->pRxBuffPtr,Size);
-    }
+	{
+	// ??? HAL ????? Size ?????????????????????
+		instance->Callback_Fuc(huart->pRxBuffPtr, Size);
+	// ???????????MA??
+		HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
+	}
+	//   else if (huart->Instance == USART2) 
+	// 	{
+    //     g_serial1_debug.m_serial1->onUartReceive(huart->pRxBuffPtr, Size);
+	// 		  HAL_UARTEx_ReceiveToIdle_DMA(huart, huart->pRxBuffPtr,Size);
+    // }
     
 }
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
