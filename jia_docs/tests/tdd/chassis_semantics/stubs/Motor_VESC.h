@@ -12,6 +12,14 @@ enum VESC_RPM_CONTROL_MODE
 class VESC_Motor : public Motor_Base
 {
 public:
+    enum class CommandKind : std::uint8_t
+    {
+        kNone = 0,
+        kCurrent,
+        kRpm,
+        kBrake,
+    };
+
     VESC_Motor() : Motor_Base(0U, false, nullptr) {}
     VESC_Motor(std::uint32_t, fdCANbus *, std::uint32_t) : Motor_Base(0U, false, nullptr) {}
 
@@ -120,6 +128,44 @@ public:
         return target_brake_;
     }
 
+    CommandKind getLastCommandKind() const
+    {
+        return last_command_kind_;
+    }
+
+    void resetLastCommandObservation()
+    {
+        last_command_kind_ = CommandKind::kNone;
+    }
+
+    void reset_speed_pid_state()
+    {
+        ++reset_speed_pid_state_call_count_;
+    }
+
+    std::uint32_t getResetSpeedPidStateCallCount() const
+    {
+        return reset_speed_pid_state_call_count_;
+    }
+
+    void setTargetCurrent(float current_set) override
+    {
+        Motor_Base::setTargetCurrent(current_set);
+        last_command_kind_ = CommandKind::kCurrent;
+    }
+
+    void setTargetRPM(float rpm_set) override
+    {
+        Motor_Base::setTargetRPM(rpm_set);
+        last_command_kind_ = CommandKind::kRpm;
+    }
+
+    void setBrake(float brake_current) override
+    {
+        Motor_Base::setBrake(brake_current);
+        last_command_kind_ = CommandKind::kBrake;
+    }
+
     void reset_controlFrequency(std::uint32_t control_frequency_hz)
     {
         control_frequency_hz_ = control_frequency_hz;
@@ -138,6 +184,8 @@ private:
     float speed_pid_current_bias_mA_ = 0.0f;
     float speed_pid_raw_output_current_mA_ = 0.0f;
     float speed_pid_total_output_current_mA_ = 0.0f;
+    CommandKind last_command_kind_ = CommandKind::kNone;
+    std::uint32_t reset_speed_pid_state_call_count_ = 0U;
 };
 
 #endif

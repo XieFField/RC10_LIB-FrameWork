@@ -92,6 +92,11 @@ public:
         return i_separa_threshold_;
     }
 
+    void reset()
+    {
+        i_term_ = 0.0f;
+    }
+
     float pid_calc(float target, float feedback)
     {
         float error = target - feedback;

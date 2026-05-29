@@ -1661,6 +1661,28 @@ void configureDriveContinuityHarness(Chassis &chassis, VESC_Motor drive_motors[4
     }
 }
 
+void configureDriveZeroStopHarness(Chassis &chassis, VESC_Motor drive_motors[4])
+{
+    configureDriveContinuityHarness(chassis, drive_motors);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_enter_speed_m_s = 0.08f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_exit_speed_m_s = 0.12f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+}
+
+void setWheelResidualSpeedMps(Chassis &chassis, int wheel_idx, float residual_speed_m_s)
+{
+    const float wheel_radius_m = chassis.runtime_strategy_cfg_.wheel_radius_m_;
+    chassis.wheel_config_[wheel_idx].corrected_drive_omega_rad_s =
+        (std::fabs(wheel_radius_m) > 1.0e-6f) ? (residual_speed_m_s / wheel_radius_m) : 0.0f;
+}
+
 void configureXParkWheelGeometry(Chassis &chassis)
 {
     const float half_track_m = 0.20f;
@@ -2199,6 +2221,86 @@ void testTorqueFreeAndNotHomedPathsResetDriveDeliveryStateConsistently()
     chassis.applyModuleCommands(false);
     EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
     EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
+}
+
+void testDriveZeroStopUsesBrakeWhenResidualSpeedIsStillHigh()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    setWheelResidualSpeedMps(chassis, 0, 0.15f);
+
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[0].getSpeedPidCurrentBias(), 0.0f, 1.0e-6f);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
+}
+
+void testDriveZeroStopSettlesToZeroCurrentWithoutHoldingBrake()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    setWheelResidualSpeedMps(chassis, 0, 0.01f);
+
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+    EXPECT_NEAR(drive_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
+}
+
+void testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    setWheelResidualSpeedMps(chassis, 0, 0.01f);
+    chassis.applyModuleCommands(true);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.00f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(20.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(!chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kRpm);
+    EXPECT_NEAR(drive_motors[0].getTargetRPM(), jia::radsToRpmF32(20.0f), 1.0e-4f);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 2U);
+}
+
+void testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    setWheelResidualSpeedMps(chassis, 0, 0.13f);
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.09f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.01f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
 }
 
 void testLowSpeedDriveSuppressionBypassesWhenResidualSpeedAboveThreshold()
@@ -3949,6 +4051,10 @@ int main()
     testDriveReleaseHasNoVelocityJumpAfterZeroHold();
     testPlannerTargetMayChangeWhileDeliveredStateRemainsContinuous();
     testTorqueFreeAndNotHomedPathsResetDriveDeliveryStateConsistently();
+    testDriveZeroStopUsesBrakeWhenResidualSpeedIsStillHigh();
+    testDriveZeroStopSettlesToZeroCurrentWithoutHoldingBrake();
+    testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop();
+    testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold();
     testLowSpeedDriveSuppressionBypassesWhenResidualSpeedAboveThreshold();
     testLowSpeedDriveSuppressionReenabledWhenResidualSpeedDropsBelowThreshold();
     testLowSpeedDriveSuppressionUsesGlobalWorstWheelError();

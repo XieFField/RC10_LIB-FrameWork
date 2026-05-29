@@ -116,6 +116,9 @@ public:
      */
     float getSpeedPidTotalOutputCurrent() const { return speed_pid_total_output_current_mA_; }
 
+    // 底盘在“目标已静止”时会调用这里，清掉本地速度环累计状态，避免停稳后再被残余积分反推一小下。
+    void reset_speed_pid_state();
+
     /**
      * @brief 设置 RPM 控制策略
      * @note  默认仍为 VESC 原生 eRPM 闭环；仅显式切换后才使用本地 PID 速度环

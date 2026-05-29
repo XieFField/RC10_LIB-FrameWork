@@ -1,4 +1,4 @@
-﻿#ifndef CHASSIS_H_
+#ifndef CHASSIS_H_
 #define CHASSIS_H_
 
 #include "APP_Utils.h"
@@ -715,7 +715,10 @@ namespace jia
                                                  bool single_wheel_isolation_active,
                                                  u8 single_wheel_idx,
                                                  bool chassis_motion_blocked,
-                                                 bool allow_drive_position_loop);
+                                                 bool allow_drive_position_loop,
+                                                 bool drive_zero_stop_active,
+                                                 bool entering_drive_zero_stop,
+                                                 bool leaving_drive_zero_stop);
             f32 readSingleWheelInputAxisValue(u8 input_axis_raw) const;
             void resetSingleWheelAxisPlannerRuntime(SingleWheelAxisPlannerRuntime &runtime);
             f32 shapeSingleWheelSteerCommand(u8 wheel_idx, const SingleWheelAxisControl &axis_cfg, f32 target_value);
@@ -818,7 +821,7 @@ namespace jia
             // =====================================================================
             struct StrategyConfig
             {
-                ManualSpeedProfileMode manual_speed_profile_mode = ManualSpeedProfileMode::kSCurve;
+                ManualSpeedProfileMode manual_speed_profile_mode = ManualSpeedProfileMode::kLegacy;
                 bool manual_speed_profile_manual_only = true;
                 f32 manual_trans_acc_acc_ = 5.0f;
                 f32 manual_trans_acc_dec_ = 12.0f;
@@ -837,9 +840,9 @@ namespace jia
                 f32 max_vel_y_ = 2.0f;                                           // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
                 f32 max_omega_z_ = 2.0f;                                         // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
                 f32 max_acc_xy_acc_ = 2.0f;                                      // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
-                f32 max_acc_xy_dec_ = 99999999.0f;                                     // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
+                f32 max_acc_xy_dec_ = 30.0f;                                     // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
                 f32 max_alpha_z_acc_ = 2.0f;                                     // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
-                f32 max_alpha_z_dec_ = 99999999.0f;                                    // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
+                f32 max_alpha_z_dec_ = 30.0f;                                    // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
                 f32 trans_dir_rate_limit_deg_s_ = 99999999.0f;                   // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
                 bool enable_drive_omega_limit_ = false;                          // [RW] 是否启用驱动角速度上限。
                 f32 max_drive_omega_rad_s_ = 99999999.0f;                        // [RW] 驱动目标角速度上限（rad/s）。仅在 enable_drive_omega_limit_=true 时生效。
@@ -863,6 +866,15 @@ namespace jia
                     f32 enter_m_s = 0.01f; // [RW] 仅用于 X-Park 命令静止意图的进入门限（m/s），不用于残余反馈过滤。
                     f32 exit_m_s = 0.03f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
                 } xpark_command_threshold_cfg_;
+
+                // ---- drive 零速止停辅助 -----------------------------------------
+                // 仅在整车正常 drive 闭环链路里使用，用来在“目标已经静止”时清理 VESC 本地速度环残留，
+                // 避免位置式 PID 的积分/状态尾巴把轮子短暂反向拖一下。
+                bool enable_drive_zero_stop_assist = true;          // [RW] 是否启用 drive 零速止停辅助。
+                f32 drive_zero_stop_settle_speed_m_s = 0.005f;       // [RW] 轮残余线速度低于该值后，直接下发零电流收尾，不持续抱刹。
+                f32 drive_zero_stop_brake_enter_speed_m_s = 0.005f;  // [RW] brake 保持释放阈值（m/s）。降到该值以下时允许退出 brake 分支。
+                f32 drive_zero_stop_brake_exit_speed_m_s = 0.01f;   // [RW] brake 重新进入阈值（m/s）。高于该值时重新启用短暂刹车收尾。
+                f32 drive_zero_stop_brake_current_mA = 25000.0f;     // [RW] 零速止停进入 brake 分支时下发的刹车电流。
 
                 struct LowSpeedDriveSuppressionConfig
                 {
@@ -1208,6 +1220,8 @@ namespace jia
             bool xpark_gate_active_ = false;                                   // [RO] X-Park 进入门控当前是否放行。true 时允许静止姿态切到 X-Park。
             u32 xpark_stationary_hold_ms_ = 0U;                                // [RO] 连续静止累计时长（ms）。用于判断是否达到 X-Park 延时门槛。
             bool launch_hold_active_ = false;                                  // [RO] 静止起步整车等待门控是否激活。激活时先只转舵，不放驱动与车体速度规划。
+            bool drive_zero_stop_active_ = false;                              // [RO] 当前是否处于 drive 零速止停辅助态。激活后正常 RPM 下发会改成 brake/zero current 收尾。
+            bool drive_zero_stop_brake_active_[4] = {false, false, false, false}; // [RO] 各轮零速止停 brake 子状态。用于近零残余速度的轮级滞回。
             bool trans_dir_freeze_active_ = false;                              // [RO] 平移方向冻结门控当前状态。true 时方向保持参考角，只放行速度模长变化。
             bool trans_dir_ref_valid_ = false;                                  // [RO] 平移方向参考角是否有效。无效时先用当前指令方向建立参考。
             f32 trans_dir_ref_rad_ = 0.0f;                                      // [RO] 平移方向参考角（rad）。用于冻结保持与方向角速率限幅。

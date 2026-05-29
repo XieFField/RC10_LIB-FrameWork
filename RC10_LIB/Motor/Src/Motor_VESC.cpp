@@ -12,6 +12,13 @@ void VESC_Motor::pid_init(const PID_Param_Config& speed_params, float speed_tdRa
     speed_pid_.set_params(speed_params, speed_tdRatio);
 }
 
+void VESC_Motor::reset_speed_pid_state()
+{
+    speed_pid_.reset();
+    speed_pid_raw_output_current_mA_ = 0.0f;
+    speed_pid_total_output_current_mA_ = 0.0f;
+}
+
 void VESC_Motor::update()
 {
     if (mode_ == SET_PID_SPEED_CURRENT)
