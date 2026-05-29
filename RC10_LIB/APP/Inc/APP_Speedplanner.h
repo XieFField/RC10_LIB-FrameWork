@@ -272,9 +272,6 @@ private:
     float m_decelConstDistance_ = 0.0f;    // 减速段：加速度恒定（减速中）阶段的路程
     float m_decelJerkDownDistance_ = 0.0f; // 减速段：Jerk 下降（减速结束）阶段的路程
 
-    float currentSpeed = 0.0f;
-
-    int err_ = 0; // 错误标志，0表示无错误，1表示参数计算错误
     float m_t1_ = 0.0f;
     float m_t2_ = 0.0f;
     float m_t3_ = 0.0f;
@@ -285,8 +282,9 @@ private:
     float m_vlim_ = 0.0f;
     /**
      * @brief 预计算各阶段的距离
+     * @return true 计算成功, false 参数无法收敛
      */
-    void
+    bool
     cal_PhaseDistances();
 
     /**
@@ -331,6 +329,8 @@ private:
      */
     float cal_Dec_JerkDownSpeed(float traveled);
 };
+
+
 
 ///////////////////////////////    2D 版本     //////////////////////////
 

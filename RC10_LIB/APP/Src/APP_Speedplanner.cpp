@@ -179,7 +179,11 @@ void SShapedPlanner1D::param_reset(Speedplanner_1D_Param_Config params)
     if (m_totalDistance_ > 0.0f)
     {
         // 预计算各个阶段的路程
-        cal_PhaseDistances();
+        if (!cal_PhaseDistances())
+        {
+            m_phase = S_FINISHED_PHASE; // 计算失败，设为完成态
+            return;
+        }
     }
     // 初始化当前阶段
     m_phase = S_ACCEL_JERK_UP_PHASE;
@@ -204,9 +208,17 @@ float SShapedPlanner1D::plan(float now_dis)
     // 计算已行驶的距离
     float traveled_ = abs(now_dis - m_startPos_);
 
+    // 检测 cal_PhaseDistances 是否计算失败（有路程但各阶段距离全为0）
+    if (m_totalDistance_ > m_deadzone_ && m_accelJerkUpDistance_ <= 0.0f && m_constVelDistance_ <= 0.0f && m_decelJerkDownDistance_ <= 0.0f)
+    {
+        m_phase = S_FINISHED_PHASE;
+        return -1.0f;
+    }
+
     // 确定当前阶段
     m_phase = determinePhase(traveled_);
 
+    float currentSpeed = 0.0f;
     switch (m_phase)
     {
     case S_ACCEL_JERK_UP_PHASE:
@@ -296,7 +308,7 @@ SPhase SShapedPlanner1D::determinePhase(float traveled)
 /**
  * @brief 计算各阶段的距离。
  */
-void SShapedPlanner1D::cal_PhaseDistances()
+bool SShapedPlanner1D::cal_PhaseDistances()
 {
     // == == == == == 计算加速段参数 == == == == ==
     // 判断是否能达到最大加速度
@@ -350,97 +362,94 @@ void SShapedPlanner1D::cal_PhaseDistances()
     }
     else // 不存在匀速阶段
     {
-        Tv = 0;                           // 匀速时间为0
-        float amax_accel_org = m_maxAcc_; // 保存原始加速段最大加速度值
-        float amax_decel_org = m_maxDec_; // 保存原始减速段最大加速度值
-        int count = 0;                    // 调整次数计数器
-        // 计算delta值，用于求解时间参数
-        // 由于现在有两个不同的加速度，需要分别计算加速段和减速段
-        // 这里使用平均加速度来近似计算
-        float a_avg = (m_maxAcc_ + m_maxDec_) / 2;
-        float delta = (a_avg * a_avg * a_avg * a_avg) / (m_maxJerk_ * m_maxJerk_) + 2 * (m_initialSpeed_ * m_initialSpeed_ + m_finalSpeed_ * m_finalSpeed_) + a_avg * (4 * (m_targetPos_ - m_startPos_) - 2 * a_avg / m_maxJerk_ * (m_initialSpeed_ + m_finalSpeed_));
+        Tv = 0;
+        float localMaxAcc = m_maxAcc_;
+        float localMaxDec = m_maxDec_;
 
-        // 初始时间参数计算（使用平均加速度）
-        Tj1 = m_maxAcc_ / m_maxJerk_;
-        Ta = (a_avg * a_avg / m_maxJerk_ - 2 * m_initialSpeed_ + sqrt(delta)) / (2 * a_avg);
-        Tj2 = m_maxDec_ / m_maxJerk_;
-        Td = (a_avg * a_avg / m_maxJerk_ - 2 * m_finalSpeed_ + sqrt(delta)) / (2 * a_avg);
-        vlim = m_initialSpeed_ + (Ta - Tj1) * alima; // 计算实际达到的最大速度
+        // 用二分法搜索峰值速度 vlim，使 d_acc(vlim) + d_dec(vlim) = totalDistance
+        // 加速段和减速段各自独立计算，正确处理 m_maxAcc_ ≠ m_maxDec_ 的情况
+        float v_peak_sq = (localMaxDec * m_initialSpeed_ * m_initialSpeed_ +
+                           localMaxAcc * m_finalSpeed_ * m_finalSpeed_ +
+                           2 * localMaxAcc * localMaxDec * m_totalDistance_) /
+                          (localMaxAcc + localMaxDec);
+        float v_peak;
+        arm_sqrt_f32(v_peak_sq, &v_peak);
 
-        // 逐渐减少加速度，直到找到可行的解
-        while (Ta < 2 * Tj1 || Td < 2 * Tj2)
+        float v_low = (m_initialSpeed_ > m_finalSpeed_) ? m_initialSpeed_ : m_finalSpeed_;
+        float v_high = v_peak * 2.0f;
+        if (v_high <= v_low)
+            v_high = v_low + 1.0f;
+
+        bool converged = false;
+        float d_total_at_vlim = 0.0f;
+        for (int iter = 0; iter < 40; iter++)
         {
-            count += 1;
-            // 同时减少加速段和减速段的加速度，保持比例关系
-            float reduction_factor = 0.9;             // 每次减少10%
-            m_maxAcc_ = m_maxAcc_ * reduction_factor; // 保持最小加速度
-            m_maxDec_ = m_maxDec_ * reduction_factor; // 保持最小加速度
+            vlim = (v_low + v_high) * 0.5f;
 
-            // 重新计算加速段参数
-            if ((m_maxSpeed_ - m_initialSpeed_) * m_maxJerk_ < m_maxAcc_ * m_maxAcc_)
+            // ---- 加速段：v0 → vlim ----
+            if ((vlim - m_initialSpeed_) * m_maxJerk_ < localMaxAcc * localMaxAcc)
             {
-                arm_sqrt_f32((m_maxSpeed_ - m_initialSpeed_) / m_maxJerk_, &Tj1);
-                Ta = 2 * Tj1;
+                float tmp;
+                arm_sqrt_f32((vlim - m_initialSpeed_) / m_maxJerk_, &tmp);
+                Tj1 = tmp;
+                Ta = 2.0f * Tj1;
                 alima = Tj1 * m_maxJerk_;
             }
             else
             {
-                Tj1 = m_maxAcc_ / m_maxJerk_;
-                Ta = Tj1 + (m_maxSpeed_ - m_initialSpeed_) / m_maxAcc_;
-                alima = m_maxAcc_;
+                Tj1 = localMaxAcc / m_maxJerk_;
+                Ta = Tj1 + (vlim - m_initialSpeed_) / localMaxAcc;
+                alima = localMaxAcc;
             }
 
-            // 重新计算减速段参数
-            if ((m_maxSpeed_ - m_finalSpeed_) * m_maxJerk_ < m_maxDec_ * m_maxDec_)
+            // ---- 减速段：vlim → vf ----
+            if ((vlim - m_finalSpeed_) * m_maxJerk_ < localMaxDec * localMaxDec)
             {
-                arm_sqrt_f32((m_maxSpeed_ - m_finalSpeed_) / m_maxJerk_, &Tj2);
-                Td = 2 * Tj2;
+                float tmp;
+                arm_sqrt_f32((vlim - m_finalSpeed_) / m_maxJerk_, &tmp);
+                Tj2 = tmp;
+                Td = 2.0f * Tj2;
                 alimd = Tj2 * m_maxJerk_;
             }
             else
             {
-                Tj2 = m_maxDec_ / m_maxJerk_;
-                Td = Tj2 + (m_maxSpeed_ - m_finalSpeed_) / m_maxDec_;
-                alimd = m_maxDec_;
-            }
-            // 重新计算平均加速度和delta值
-            a_avg = (m_maxAcc_ + m_maxDec_) / 2;
-            if (a_avg > 0)
-            {
-                delta = (a_avg * a_avg * a_avg * a_avg) / (m_maxJerk_ * m_maxJerk_) + 2 * (m_initialSpeed_ * m_initialSpeed_ + m_finalSpeed_ * m_finalSpeed_) + a_avg * (4 * (m_targetPos_ - m_startPos_) - 2 * a_avg / m_maxJerk_ * (m_initialSpeed_ + m_finalSpeed_));
+                Tj2 = localMaxDec / m_maxJerk_;
+                Td = Tj2 + (vlim - m_finalSpeed_) / localMaxDec;
+                alimd = localMaxDec;
             }
 
-            else
-            {
-                delta = (a_avg * a_avg * a_avg * a_avg) / (m_maxJerk_ * m_maxJerk_) + 2 * (m_initialSpeed_ * m_initialSpeed_ + m_finalSpeed_ * m_finalSpeed_) - a_avg * (4 * (m_targetPos_ - m_startPos_) - 2 * a_avg / m_maxJerk_ * (m_initialSpeed_ + m_finalSpeed_));
-            }
+            // ---- 计算加速段总距离 ----
+            float d_acc = m_initialSpeed_ * Tj1 + m_maxJerk_ * Tj1 * Tj1 * Tj1 / 6.0f;
+            float T2_dur = Ta - 2.0f * Tj1;
+            float v_s2 = m_initialSpeed_ + 0.5f * m_maxJerk_ * Tj1 * Tj1;
+            d_acc += v_s2 * T2_dur + 0.5f * alima * T2_dur * T2_dur;
+            d_acc += vlim * Tj1 - m_maxJerk_ * Tj1 * Tj1 * Tj1 / 6.0f;
 
-            // 重新计算时间参数
-            Ta = (a_avg * a_avg / m_maxJerk_ - 2 * m_initialSpeed_ + sqrt(delta)) / (2 * a_avg);
-            Td = (a_avg * a_avg / m_maxJerk_ - 2 * m_finalSpeed_ + sqrt(delta)) / (2 * a_avg);
-            vlim = m_initialSpeed_ + (Ta - Tj1) * alima; // 重新计算实际最大速度
+            // ---- 计算减速段总距离 ----
+            float d_dec = vlim * Tj2 - m_maxJerk_ * Tj2 * Tj2 * Tj2 / 6.0f;
+            float T6_dur = Td - 2.0f * Tj2;
+            float v_s6 = vlim - 0.5f * m_maxJerk_ * Tj2 * Tj2;
+            d_dec += v_s6 * T6_dur - 0.5f * alimd * T6_dur * T6_dur;
+            d_dec += m_finalSpeed_ * Tj2 + m_maxJerk_ * Tj2 * Tj2 * Tj2 / 6.0f;
 
-            // 防止无限循环
-            if (count > 100)
+            d_total_at_vlim = d_acc + d_dec;
+
+            if (fabsf(d_total_at_vlim - m_totalDistance_) < 0.0001f)
             {
-                m_maxAcc_ = 0.0f;        // 最大加速度
-                m_maxDec_ = 0.0f;        // 最大减速度
-                m_maxJerk_ = 0.0f;       // 最大加加速度
-                m_maxSpeed_ = 0.0f;      // 最大速度
-                m_initialSpeed_ = 0.0f;  // 起始速度
-                m_finalSpeed_ = 0.0f;    // 目标速度
-                m_startPos_ = 0.0f;      // 起始位置
-                m_targetPos_ = 0.0f;     // 目标位置
-                m_totalDistance_ = 0.0f; // 总路程
-                m_deadzone_ = 0.0f;      // 死区范围
-                err_ = 1;                // 设置错误标志
+                converged = true;
                 break;
             }
+
+            if (d_total_at_vlim < m_totalDistance_)
+                v_low = vlim;
+            else
+                v_high = vlim;
         }
-        // 处理加速或减速时间为负的情况
-        if (Ta < 0 || Td < 0)
+
+        // 二分法在边界处距离仍不足 → 回退到纯加速/纯减速
+        if (!converged || (vlim <= (m_initialSpeed_ > m_finalSpeed_ ? m_initialSpeed_ : m_finalSpeed_) + 0.001f && d_total_at_vlim > m_totalDistance_ + 0.01f))
         {
-            if (m_initialSpeed_ > m_finalSpeed_) // 初始速度大于目标速度，主要是减速
+            if (m_initialSpeed_ > m_finalSpeed_)
             {
                 Ta = 0;
                 Tj1 = 0;
@@ -451,8 +460,7 @@ void SShapedPlanner1D::cal_PhaseDistances()
                 vlim = m_finalSpeed_ - (Td - Tj2) * alimd;
                 alimd = -alimd;
             }
-
-            else // 主要是加速
+            else
             {
                 Td = 0;
                 Tj2 = 0;
@@ -463,7 +471,7 @@ void SShapedPlanner1D::cal_PhaseDistances()
             }
         }
 
-        T = Tv + Ta + Td; // 计算总时间
+        T = Tv + Ta + Td;
     }
 
     float T2_duration, v_start_stage2, T6_duration, v_start_stage6;
@@ -501,6 +509,7 @@ void SShapedPlanner1D::cal_PhaseDistances()
     m_t6_ = (T - Tj2);
     m_t7_ = T;
     m_vlim_ = vlim;
+    return true;
 }
 /**
  * @brief 加速段：Jerk 上升阶段的速度
@@ -659,6 +668,14 @@ void SShapedPlanner1D::reset()
     m_decelJerkUpDistance_ = 0.0f;   // 减速段：Jerk 上升（减速开始）阶段的路程
     m_decelConstDistance_ = 0.0f;    // 减速段：加速度恒定（减速中）阶段的路程
     m_decelJerkDownDistance_ = 0.0f; // 减速段：Jerk 下降（减速结束）阶段的路程
+    m_t1_ = 0.0f;
+    m_t2_ = 0.0f;
+    m_t3_ = 0.0f;
+    m_t4_ = 0.0f;
+    m_t5_ = 0.0f;
+    m_t6_ = 0.0f;
+    m_t7_ = 0.0f;
+    m_vlim_ = 0.0f;
 }
 
 // ---------------------------- TrapePlanner2D ----------------------------
