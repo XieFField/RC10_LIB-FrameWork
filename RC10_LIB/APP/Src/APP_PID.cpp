@@ -380,9 +380,9 @@ PID_Param_Config foursteer_steer_speed_pid_params = {
 
 // 四舵轮 VESC 驱动轮默认速度环 PID
 PID_Param_Config vesc_drive_speed_pid_params = {
-    .kp = 180.0f,
-    .ki = 16.0f,
-    .kd = 480.0f,
+    .kp = 50.0f,
+    .ki = 150.0f,
+    .kd = 1.5f,
     .I_Outlimit = 25000.0f,
     .isIOutlimit = true,
     .output_limit = 25000.0f,

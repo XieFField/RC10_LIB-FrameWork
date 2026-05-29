@@ -560,10 +560,10 @@ namespace jia
             };
             struct SingleWheelPlannerSCurveConfig
             {
-                f32 acc_acc = 200.0f;
-                f32 acc_dec = 200.0f;
-                f32 jerk_acc = 130.0f;
-                f32 jerk_dec = 130.0f;
+                f32 acc_acc = 60.0f;
+                f32 acc_dec = 60.0f;
+                f32 jerk_acc = 250.0f;
+                f32 jerk_dec = 250.0f;
                 f32 settle_vel_eps = 1.0e-4f;
                 f32 settle_acc_eps = 0.05f;
             };
@@ -940,7 +940,7 @@ namespace jia
                 struct Common
                 {
                     bool enable = true;                                            // [RW] 调试总开关。
-                    u8 mode_raw = 30;                                              // [RW] 调试模式号。
+                    u8 mode_raw = 1;                                              // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
                     u8 observe_wheel_index = 0U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。
