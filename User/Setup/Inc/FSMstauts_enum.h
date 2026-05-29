@@ -1,7 +1,7 @@
 /**
  * @file FSMstauts_enum.h
  * @author XieFField
- * @brief 状态机相关的数据库
+ * @brief 状态机枚举
  */
 
 #ifndef __FSM_STATUS_ENUM_H
@@ -19,79 +19,68 @@ extern "C" {
 #include <cmath>  
 #include "APP_tool.h"
 
+#define USE_RC10_AIRJOY 0 //启用自制遥控器
+
 typedef enum{
-    ALL_STOP, //全部机构停止工作
+    ALL_STOP, //STOP状态
 
     MANUAL_CONTROL, //手动控制模式
 
-    AUTO_CONTROL, //半自动控制模式
+    AUTO_CONTROL, //自动控制模式
 
     DEBUG_MODE, //调试模式
 }FSM_Status_E;
 
 
 typedef enum{
-    ARM_MANUAL_CONTROL, //串联臂手动控制模式
+    ARM_MANUAL_CONTROL, //手操
 
 
 
-    ARM_AUTO_CONTROL, //串联臂自动控制模式
+    ARM_AUTO_CONTROL, //自动
 
 
 
-    ARM_IDLE, //串联臂空闲状态，维持当前状态
+    ARM_IDLE, //待机
 
     ARM_STOP,
 
     ARM_DEBUG,
 
-    ARM_CALIBRATE, //串联臂校准模式
+    ARM_CALIBRATE, //校准
 
 
 }ARM_Status_E;
 
 
 typedef enum{
-    CHASSIS_MANUAL_CONTROL_A, //底盘手动控制模式（角速度可控）
-    CHASSIS_MANUAL_CONTROL_B, //底盘手动控制模式（角速度为0，锁定角度）
-    CHASSIS_LOCK_FORWEAPON,    //底盘锁定yaw，为武器大师提供稳定平台
-    CHASSIS_MANUAL_CONTROL_C, //底盘手动控制模式C
+    CHASSIS_MANUAL_CONTROL_A, //手操A 无锁角
+    CHASSIS_MANUAL_CONTROL_B, //手操B 有锁角
+    CHASSIS_LOCK_FORWEAPON,    //无用
+    CHASSIS_MANUAL_CONTROL_C, //手动控制模式C
 
-    CHASSIS_TESTFOR_ARM, //底盘测试模式，为串联臂提供稳定平台
+    CHASSIS_TESTFOR_ARM, //测试模式Ϊṩȶƽ̨
 
 
-    CHASSIS_CAMERA_DEBUG, // 视觉调试模式
-    CHASSIS_CAMERA, // 相机闭环模式
-    CHASSIS_AUTO_CONTROL_CB, //底盘自动控制模式
-    CHASSIS_AUTO_CONTROL_KFS, //底盘自动控制模式梅林内
+    CHASSIS_CAMERA_DEBUG, // 无用
+    CHASSIS_CAMERA, // 无用
+    CHASSIS_AUTO_CONTROL_CB, //夹杆自动
+    CHASSIS_AUTO_CONTROL_KFS, //KFS自动
 
     CHASSIS_STOP,
 }CHASSIS_Status_E;
 
 typedef enum{
-    WEAPONSAGE_MANUAL_CONTROL, //手操
+    WEAPONSAGE_MANUAL_CONTROL, //手动控制
     WEAPONSAGE_AUTO_CONTROL_CATCH, //自动控制模式,抓取
-    WEAPONSAGE_AUTO_CONTROL_DOCK, //自动控制模式，对接
+    WEAPONSAGE_AUTO_CONTROL_DOCK, //自动控制模式, docking
     WEAPONSAGE_STOP,        //停止
     WEAPONSAGE_DEBUG,       //调试模式  
-    WEAPONSAGE_CAMERA,      //相机协同模式
-    WEAPONSAGE_IDLE,    //空闲状态，维持当前状态
+    WEAPONSAGE_CAMERA,      //摄像头模式
+    WEAPONSAGE_IDLE,    // 待机
     WEAPONSAGE_CALIBRATE, //校准模式
 }WeaponSage_Status_E;
 
-
-//遥控临时调试使用
-typedef struct{
-    uint16_t SWA;
-    uint16_t SWB;
-    uint16_t SWC;
-    uint16_t SWD;
-    uint16_t LEFT_X;
-    uint16_t LEFT_Y;
-    uint16_t RIGHT_X;
-    uint16_t RIGHT_Y;
-    
-}airjoy_S;
 
 
 

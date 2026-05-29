@@ -1,8 +1,10 @@
 #include "Module_CrsfReceiver.h"
+#include "Module_Serial1Protocol.h"
+#include "Serial1Protocol_Debug.h"
 #include <cstring>
 #include <cmath>
 #include "core_cm7.h"
-
+extern Serial1Protocol_Debug g_serial1_debug;
 /* -------------  Cache 维锟斤拷锟斤拷/锟斤拷锟斤拷  ------------- */
 // SCB cache ops 要锟斤拷锟街凤拷锟斤拷小锟斤拷锟斤拷 cache line 锟斤拷锟斤拷(32锟街斤拷)
 static inline void dcache_clean_range(void* addr, uint32_t len) 
@@ -546,4 +548,8 @@ void CrsfReceiver::consumeRingBuffer()
 extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
 {
     if (huart == &huart7) tx_done = true;  
+		  else if (huart->Instance == USART2) 
+		{
+//        g_serial1_debug.m_serial1->onUartTxComplete();
+    }
 }

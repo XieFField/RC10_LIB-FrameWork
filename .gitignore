@@ -44,3 +44,4 @@ MDK-ARM/Frame_T/system_stm32h7xx.o
 # AI agent workspace policy
 # keep docs/tests/history/artifacts all trackable in current branch
 
+/doc_XieFFIeld
