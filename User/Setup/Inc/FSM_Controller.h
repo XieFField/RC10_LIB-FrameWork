@@ -30,7 +30,7 @@ extern "C" {
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
 #include "Setup_ConfigInit.h"
-
+#include "Locate_Setup.h"
 #include "Module_lora.h"
 
 
@@ -134,6 +134,7 @@ private:
 #else
 
     communication::RC10_AirJoy_Data_S airjoy_data_; //摇杆值为 -1 ~ 1
+    void set_cmd_to_R2();
 
 #endif
 

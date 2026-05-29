@@ -20,6 +20,12 @@ void FSM_Controller::loop()
     communication::Lora_communication::GetInstance()->Tim_It_Process();
 
     communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
+
+    communication::Lora_communication::GetInstance()->send_robot_pos(
+        Locate_Setup::getInstance()->get_RobotPos_inWorld().x,
+        Locate_Setup::getInstance()->get_RobotPos_inWorld().y,
+        Locate_Setup::getInstance()->get_RobotPos_inWorld().yaw
+    )
 #endif
 
 #if !USE_RC10_AIRJOY

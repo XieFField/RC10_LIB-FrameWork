@@ -74,7 +74,6 @@ public:
     }
 
     void send_robot_pos(float x, float y, float yaw){}
-
     void send_claw_status(bool claw1, bool claw2, bool claw3){}
 
     void send_sucker_status(bool sucker1, bool sucker2){}

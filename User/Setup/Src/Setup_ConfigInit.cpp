@@ -19,9 +19,8 @@ DJI_Group DJIGroupCAN3_High(send_idHigh(), CAN3_Bus); // 5~8号 M3508/M2006 电�
 DJI_Group DJIGroupCAN3_Low(send_idLow(), CAN3_Bus);   // 1~4号 M3508/M2006 电机组
 
 Point2D arm_install_offset = {0.480f, 0.02f}; // 机械臂安装偏移，单位 m
-Serial1Protocol_Debug g_serial1_debug;
+// Serial1Protocol_Debug g_serial1_debug;
 //Serial1Protocol& g_serialProto1=Serial1Protocol::getInstance();
-
 
 /*==============Controller Instances===========*/
 //USB_CDC_ cdc(&hUsbDeviceHS);
@@ -138,7 +137,7 @@ void ALL_Setup_ConfigInit(void)
     Weapon_Controller.init(&oid_encoder);
     Weapon_Controller.register_motors(&Weapon_Claw1, &Weapon_Claw2, &Weapon_Claw3, &Weapon_Launch, &Weapon_Wrist, &Weapon_Elbow);
     Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
-    g_serial1_debug.init();
+    // g_serial1_debug.init();
     ChassisOmni.init();
 
     ChassisOmni.setChassisStatus(CHASSIS_STOP);
