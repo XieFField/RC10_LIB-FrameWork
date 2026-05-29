@@ -13,7 +13,7 @@ void Robot_WeaponSage_Setup::loop()
 {	
 	ctrl_status_.now_times=TimeStamp::getInstance().getSeconds();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
-	
+	weaponSage_status_=WEAPONSAGE_STOP;
 	
 	
 //	if((wrist_Motor_->getErrorNum()==0x00||!auto_ctrl_.auto_state_bool_S.wrist_enable))
@@ -26,6 +26,8 @@ void Robot_WeaponSage_Setup::loop()
 /*
 待实现
 */
+    Judge_launch_status();
+    Judge_wrist_status();
 
 	if(!ctrl_status_.is_calibrating)
 	{
@@ -319,7 +321,10 @@ void Robot_WeaponSage_Setup::debug()
 void Robot_WeaponSage_Setup::autoControl_catch()
 {
 	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-    this->setTarget(0.0f, WeaponSage::Launch_Motor);      //先把架杆放置到最低位置
+    if(auto_ctrl_.auto_state_bool_S.launch_enable)
+    {
+        this->setTarget(0.0f, WeaponSage::Launch_Motor);      //先把架杆放置到最低位置
+    }
     if(auto_ctrl_.auto_state_bool_S.is_matching) //如果已经在对位了
     {
 		
@@ -385,13 +390,14 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                    abs(current_pos_.claw_2_pos_-target_pos_.claw_2_pos_)<0.02f&&
                    abs(current_pos_.claw_3_pos_-target_pos_.claw_3_pos_)<0.02f) //如果已经调整好爪子了，进入下一个状态
                 {
+                    if(auto_ctrl_.auto_state_bool_S.launch_enable)
                     this->setTarget(target_dock_, WeaponSage::Launch_Motor);      //根据target_dock_的值调整爪子高度
                     if(abs(this->get_CurrentPos().launch_pos_-target_dock_)<0.02f) //如果已经调整到位了，进入下一个状态
                     {
                         this->Close_TargetClaw();
                        if(auto_ctrl_.flag.is_clawed)
                        {
-                            if(target_dock_==WeaponSage_Setup:: HIGH) //如果是低位对接，直接进入下一个状态
+                            if(auto_ctrl_.auto_state_bool_S.wrist_enable) //如果是低位对接，直接进入下一个状态
                             {
                                 target_pos_.wrist_pos_=180.0f;
                                 this->setTarget(target_pos_.wrist_pos_, WeaponSage::Wrist_Motor);      
@@ -399,7 +405,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                             {
                                 //do nothing,保持当前手腕角度不变   
                             }
-                            if(abs(current_pos_.wrist_pos_-target_pos_.wrist_pos_)<0.02f) //如果手腕调整到位了，进入下一个状态
+                            if(abs(current_pos_.wrist_pos_-target_pos_.wrist_pos_)<0.2f) //如果手腕调整到位了，进入下一个状态
                            {
                             now_state_ = WeaponSage_Setup::STATE_LAUNCH_MOVE;
                            }
@@ -410,6 +416,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
             }                           
             case WeaponSage_Setup::STATE_LAUNCH_MOVE:
             {   
+                if(auto_ctrl_.auto_state_bool_S.launch_enable); //关闭launch的启动信号，防止重复进入这个状态
                 this->setTarget(target_dock_, WeaponSage::Launch_Motor);      //抬高到预定位置
                 if(abs(this->get_CurrentPos().launch_pos_-target_dock_)<0.02f) //如果已经调整到位了，进入下一个状态
                 {
@@ -511,6 +518,34 @@ void Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
     this->setTarget(target_claw_pos[0], WeaponSage::Claw_1_Motor); //半松爪子
     this->setTarget(target_claw_pos[1], WeaponSage::Claw_2_Motor);    
     this->setTarget(target_claw_pos[2], WeaponSage::Claw_3_Motor);
+}
+
+void Robot_WeaponSage_Setup::Judge_launch_status()
+{
+  if(current_pos_.launch_pos_>=target_pos_.launch_pos_)
+    {
+        auto_ctrl_.auto_state_bool_S.launch_enable=true;
+    }else
+    {
+        if(abs(current_pos_.arm_pos_)<0.02f)
+        {
+            auto_ctrl_.auto_state_bool_S.launch_enable=false;
+        }else
+        {
+            auto_ctrl_.auto_state_bool_S.launch_enable=true;
+        }
+    }
+}
+
+void Robot_WeaponSage_Setup::Judge_wrist_status()
+{
+    if(current_pos_.launch_pos_>=0.5*initData_.max_launchHeight_&&abs(current_pos_.arm_pos_-90.0f)<0.2f)
+    {
+        auto_ctrl_.auto_state_bool_S.wrist_enable=true;
+    }else
+    {
+        auto_ctrl_.auto_state_bool_S.wrist_enable=false;
+    }
 }
 
 WeaponSage_InitData_S initData_=

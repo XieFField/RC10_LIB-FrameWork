@@ -87,6 +87,8 @@ namespace WeaponSage_Setup
 			bool is_matching = false;  
             bool dock_start = false;
 			bool arm_enable=false;
+            bool launch_enable=false;
+            bool wrist_enable=false;
         }auto_state_bool_S; //局部状态结构体
 		float claw_close_pos = 32.36f;
         float claw_open_pos = 49.58f;
@@ -210,6 +212,8 @@ public:
 
     bool Close_TargetClaw();
     void Close_TargetClaw_Untight();
+    void Judge_launch_status();
+    void Judge_wrist_status();
 
 protected:
     void loop() override;
