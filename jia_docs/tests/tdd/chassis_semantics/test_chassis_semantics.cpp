@@ -156,7 +156,7 @@ void testDrivePidEnableEdgeReadsBackRuntimeIntoCleanSharedCache()
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.kd, runtime_cfg.kd, 1.0e-6f);
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.output_limit, runtime_cfg.output_limit, 1.0e-6f);
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio, 0.35f, 1.0e-6f);
-    EXPECT_TRUE(harness.chassis.debug_pid_tune_.drive_speed_pid_derivative_first);
+    EXPECT_TRUE(!harness.chassis.debug_pid_tune_.drive_speed_pid_derivative_first);
 }
 
 void testDrivePidDirtyCacheBlocksRuntimeReadbackOverwrite()
@@ -218,7 +218,7 @@ void testDrivePidSharedApplyPushesSameParamsToAllVescsAndAlignsAppliedStamp()
         EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_params().deadband, shared_cfg.deadband, 1.0e-6f);
         EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_params().output_limit, shared_cfg.output_limit, 1.0e-6f);
         EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_td_ratio(), 0.55f, 1.0e-6f);
-        EXPECT_TRUE(harness.drive_vescs[i].get_speed_pid_derivative_first());
+        EXPECT_TRUE(!harness.drive_vescs[i].get_speed_pid_derivative_first());
     }
     EXPECT_TRUE(harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp == 41U);
 }

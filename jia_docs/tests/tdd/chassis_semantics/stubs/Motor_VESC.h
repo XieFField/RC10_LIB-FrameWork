@@ -30,9 +30,8 @@ public:
         speed_td_ratio_ = speed_td_ratio;
     }
 
-    void set_speed_pid_derivative_first(bool speed_derivative_first)
+    void set_speed_pid_derivative_first(bool)
     {
-        speed_derivative_first_ = speed_derivative_first;
     }
 
     struct PID_Param_Config get_speed_pid_params() const
@@ -47,7 +46,7 @@ public:
 
     bool get_speed_pid_derivative_first() const
     {
-        return speed_derivative_first_;
+        return false;
     }
 
     void setRpmControlMode(VESC_RPM_CONTROL_MODE mode)
@@ -134,7 +133,6 @@ public:
 private:
     struct PID_Param_Config speed_params_{};
     float speed_td_ratio_ = 0.0f;
-    bool speed_derivative_first_ = false;
     VESC_RPM_CONTROL_MODE rpm_control_mode_ = VESC_RPM_CONTROL_NATIVE_ERPM;
     std::uint32_t control_frequency_hz_ = 0U;
     float speed_pid_current_bias_mA_ = 0.0f;

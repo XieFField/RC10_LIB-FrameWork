@@ -940,7 +940,7 @@ namespace jia
                 struct Common
                 {
                     bool enable = true;                                            // [RW] 调试总开关。
-                    u8 mode_raw = 2;                                              // [RW] 调试模式号。
+                    u8 mode_raw = 30;                                              // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
                     u8 observe_wheel_index = 0U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。
@@ -981,7 +981,7 @@ namespace jia
                         0.0f,
                         1000.0f,
                         0.5f,
-                        200.0f,
+                        800.0f,
                         static_cast<u8>(SingleWheelPlannerMode::kOff),
                         {},
                         {}};
@@ -1141,8 +1141,8 @@ namespace jia
                 u32 steer_angle_pid_applied_stamp[4] = {0U, 0U, 0U, 0U};    // [RO] 角度环已生效戳。表示运行态已经真正接收到这组参数。
                 bool synced_on_enable_edge = false;                         // [RO] 本次调试使能上升沿是否已完成同步。避免重复把缓存参数刷入运行态。
                 PID_Param_Config drive_speed_pid_cfg = {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f, .I_Outlimit = 20000.0f, .isIOutlimit = true, .output_limit = 20000.0f, .deadband = 0.0f};
-                f32 drive_speed_pid_td_ratio = 0.0f;                    // [RW] 四个 drive 轮共享的 VESC 本地速度环 TD 比例参数。apply 时会同步刷到 4 个驱动轮。
-                bool drive_speed_pid_derivative_first = false;          // [RW] drive 共享速度环微分先行开关。
+                f32 drive_speed_pid_td_ratio = 0.0f;                    // [RW] 兼容旧调参字段名。drive 轮改成位置式 PID 后，这里实际承载的是积分分离阈值。
+                bool drive_speed_pid_derivative_first = false;          // [RW] 兼容旧调参字段。位置式 PID 下该开关不再生效，运行态固定回读 false。
                 u32 drive_speed_pid_apply_stamp = 0U;                   // [RW] drive 共享速度环参数申请生效戳。外部写入后，通过同步流程统一下发到 4 个驱动轮。
                 u32 drive_speed_pid_applied_stamp = 0U;                 // [RO] drive 共享速度环已生效戳。表示 4 个 drive 轮已经完成这组共享参数的同步。
             } debug_pid_tune_;

@@ -251,10 +251,10 @@ void CAN_Motor_Init(void)
 
    // 底盘 VESC 驱动轮切到本地 PID 速度闭环模式
    // 仅 drive 轮默认开启微分先行，其余电机保持默认关闭，不走这条策略。
-   U8_1.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_1.set_speed_pid_derivative_first(true);  U8_1.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
-   U8_2.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_2.set_speed_pid_derivative_first(true);  U8_2.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
-   U8_3.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_3.set_speed_pid_derivative_first(true);  U8_3.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
-   U8_4.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_4.set_speed_pid_derivative_first(true);  U8_4.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_1.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_1.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_2.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_2.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_3.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_3.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_4.pid_init(vesc_drive_speed_pid_params, 0.0f);  U8_4.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
 
 
     // 机械臂电机 PID 参数初始化

@@ -8,6 +8,7 @@ VESC_Motor::VESC_Motor(uint32_t id, fdCANbus* bus, float poles)
 void VESC_Motor::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio)
 {
     // 本地 PID 速度环参数初始化。默认不启用，需结合 setRpmControlMode 显式切换。
+    // 这里保留原有二参入口，但 drive 轮改成位置式 PID 后，第二参数语义映射为积分分离阈值。
     speed_pid_.set_params(speed_params, speed_tdRatio);
 }
 

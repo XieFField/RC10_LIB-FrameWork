@@ -2,6 +2,7 @@
 #define TEST_APP_PID_H
 
 #include <cstdint>
+#include <cmath>
 #include "APP_tool.h"
 
 typedef struct {
@@ -64,6 +65,50 @@ private:
     PID_Param_Config params_;
     float td_ratio_ = 0.0f;
     bool derivative_first_ = false;
+};
+
+class PID_Position
+{
+public:
+    PID_Position(PID_Param_Config params = {0.0f, 0.0f, 0.0f, 0.0f, false, 0.0f, 0.0f},
+                 float i_separa_threshold = 0.0f)
+        : params_(params), i_separa_threshold_(i_separa_threshold)
+    {
+    }
+
+    void set_params(const PID_Param_Config& params, float i_separa_threshold)
+    {
+        params_ = params;
+        i_separa_threshold_ = i_separa_threshold;
+    }
+
+    PID_Param_Config get_params() const
+    {
+        return params_;
+    }
+
+    float get_i_separa_threshold() const
+    {
+        return i_separa_threshold_;
+    }
+
+    float pid_calc(float target, float feedback)
+    {
+        float error = target - feedback;
+        if (error > -params_.deadband && error < params_.deadband)
+            error = 0.0f;
+
+        float output = params_.kp * error;
+        if (i_separa_threshold_ > 0.0f && std::fabs(error) < i_separa_threshold_)
+            i_term_ += params_.ki * error;
+        output += i_term_;
+        return constrain(output, -params_.output_limit, params_.output_limit);
+    }
+
+private:
+    PID_Param_Config params_;
+    float i_separa_threshold_ = 0.0f;
+    float i_term_ = 0.0f;
 };
 
 #endif
