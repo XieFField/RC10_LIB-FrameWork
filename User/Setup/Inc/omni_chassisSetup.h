@@ -39,6 +39,7 @@ extern "C"
 #include "APP_Bezier_Curve.h"
 #include "AutoCtrler.h"
 #include "chassis.h"
+#include "Module_lora.h"
 
 #define debug_ladar 0
 
@@ -216,18 +217,12 @@ private:
 
     bool init_flag = false; // 初始化完成标志。
 
+#if !USE_RC10_AIRJOY
     RmPocketData_t airjoy_data_;                            // 遥控器数据，范围 -1 ~ 1
-    Camera_Data_t cam_data_dbg_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 调试用相机数据缓存
-
+#else
+    RC10_AirJoy_Data_S airjoy_data_;                            // 遥控器数据，范围 -1 ~ 1
+#endif
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
-
-    PID_Position camera_pid_x_; // 相机模式专用 x 轴位置环。
-
-    PID_Position camera_pid_y_; // 相机模式专用 y 轴位置环（预留）。
-
-    PID_Position camera_pid_vec_; // 相机模式专用向量模长位置环。
-
-    PID_Position camera_pid_yaw_; // 相机模式专用 yaw 位置环。
 
     Robot_Twist last_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};   // 上一周期底盘目标姿态（预留）。
     Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}; // 当前周期底盘目标姿态。

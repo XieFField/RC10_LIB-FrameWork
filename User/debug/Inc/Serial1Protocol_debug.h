@@ -20,14 +20,14 @@ public:
 
     void init(void)
     {
-        // »ñÈ¡ Serial1Protocol ÊµÀı²¢³õÊ¼»¯
+        // è·å– Serial1Protocol å®ä¾‹å¹¶åˆå§‹åŒ–
         m_serial1 = &Serial1Protocol::getInstance();
         m_serial1->init(&huart2);
         
         start(osPriorityNormal, 512);
     }
 
-    // ÊÖ¶¯·¢ËÍ²âÊÔÊı¾İ
+    // æ‰‹åŠ¨å‘é€æµ‹è¯•æ•°æ®
     void sendTestKFS(uint8_t kfs1, uint8_t kfs2, uint8_t kfs3)
     {
         if (m_serial1) {
@@ -48,16 +48,16 @@ protected:
 private:
     
     
-    // ²âÊÔ¼ÆÊıÆ÷
+    // æµ‹è¯•è®¡æ•°å™¨
     uint32_t m_test_counter = 0;
     uint32_t m_last_send_time = 0;
     
-    // ½ÓÊÕÊı¾İÍ³¼Æ
+    // æ¥æ”¶æ•°æ®ç»Ÿè®¡
     uint32_t m_recv_kfs_count = 0;
     uint32_t m_recv_cmd_count = 0;
     uint32_t m_recv_error_count = 0;
     
-    Debug_Printf debug_uart = Debug_Printf(&huart8);  // Ê¹ÓÃ uart8 Êä³öµ÷ÊÔĞÅÏ¢
+    Debug_Printf debug_uart = Debug_Printf(&huart8);  // ä½¿ç”¨ uart8 è¾“å‡ºè°ƒè¯•ä¿¡æ¯
 };
 
 #endif

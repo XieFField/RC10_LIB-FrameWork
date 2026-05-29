@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-/* Ğ­Òé³£Á¿¶¨Òå */
+/* åè®®å¸¸é‡å®šä¹‰ */
 #define SERIAL1_FRAME_HEAD0     0xFC
 #define SERIAL1_FRAME_HEAD1     0xFB
 #define SERIAL1_FRAME_TAIL0     0xFD
@@ -18,10 +18,10 @@ extern "C" {
 #define SERIAL1_DATA_LEN        3
 #define SERIAL1_FRAME_LEN       8
 
-#define SERIAL1_SEND_TIMES      3          // Ã¿Åú·¢ËÍ3´Î
-#define SERIAL1_RETRY_INTERVAL  500        // ÖØ·¢¼ä¸ô500ms
+#define SERIAL1_SEND_TIMES      3          // æ¯æ‰¹å‘é€3æ¬¡
+#define SERIAL1_RETRY_INTERVAL  500        // é‡å‘é—´éš”500ms
 
-/* Ğ£Ñé×Ö½ÚÎ»¶¨Òå */
+/* æ ¡éªŒå­—èŠ‚ä½å®šä¹‰ */
 #define SERIAL1_CHECKSUM_MASK   0x3F
 #define SERIAL1_PARITY_BIT_MASK 0x40
 #define DATA_BUFFER_SIZE        16
@@ -30,25 +30,25 @@ typedef enum {
     DATA_TYPE_CMD = 1
 } DataType_t;
 
-// Êı¾İ°ü½á¹¹Ìå
+// æ•°æ®åŒ…ç»“æ„ä½“
 typedef struct {
-    uint8_t type;     // ÀàĞÍ£ºKFS=0, CMD=1
+    uint8_t type;     // ç±»å‹ï¼šKFS=0, CMD=1
     union {
-        uint8_t cmd;      // ÃüÁî×Ö½Ú
-        uint8_t kfs[3];   // KFS 3×Ö½ÚÊı¾İ
+        uint8_t cmd;      // å‘½ä»¤å­—èŠ‚
+        uint8_t kfs[3];   // KFS 3å­—èŠ‚æ•°æ®
     } data;
 } DataPacket_t;
-/* ×´Ì¬Ã¶¾Ù */
+/* çŠ¶æ€æšä¸¾ */
 typedef enum {
-    SERIAL1_STATE_IDLE,           // ¿ÕÏĞ
-    SERIAL1_STATE_SENDING,        // Ö÷¶¯·¢ËÍÖĞ
-    SERIAL1_STATE_WAITING_ACK     // µÈ´ıÖ÷¶¯·¢ËÍµÄÓ¦´ğ
+    SERIAL1_STATE_IDLE,           // ç©ºé—²
+    SERIAL1_STATE_SENDING,        // ä¸»åŠ¨å‘é€ä¸­
+    SERIAL1_STATE_WAITING_ACK     // ç­‰å¾…ä¸»åŠ¨å‘é€çš„åº”ç­”
 } Serial1State_t;
 
-/* ·¢ËÍ½á¹û»Øµ÷ */
+/* å‘é€ç»“æœå›è°ƒ */
 typedef void (*Serial1SendResultCallback)(uint8_t* data, uint8_t parity, uint8_t success);
 
-/* Êı¾İ½ÓÊÕ»Øµ÷£¨´®¿Ú2Ö÷¶¯·¢À´µÄÊı¾İ£© */
+/* æ•°æ®æ¥æ”¶å›è°ƒï¼ˆä¸²å£2ä¸»åŠ¨å‘æ¥çš„æ•°æ®ï¼‰ */
 typedef void (*Serial1DataReceiveCallback)(uint8_t* data, uint8_t parity);
 
 class Serial1Protocol {
@@ -57,14 +57,14 @@ public:
     
     void init(UART_HandleTypeDef* huart);
     void process(void);
-    // ´®¿Ú»Øµ÷
+    // ä¸²å£å›è°ƒ
     void onUartReceive(uint8_t* buffer, uint16_t size);
     void onUartTxComplete(void);
     
     void setSendResultCallback(Serial1SendResultCallback callback);
     void setDataReceiveCallback(Serial1DataReceiveCallback callback);
     
-    // »ñÈ¡½ÓÊÕµ½µÄÊı¾İ£¨ÂÖÑ¯·½Ê½£©
+    // è·å–æ¥æ”¶åˆ°çš„æ•°æ®ï¼ˆè½®è¯¢æ–¹å¼ï¼‰
     void getReceivedData(uint8_t* data_out, uint8_t* parity_out);
 		void waitForSendComplete(void);
     void R1_Send_KFS(uint8_t KFS1, uint8_t KFS2, uint8_t KFS3);
@@ -83,11 +83,11 @@ private:
     void notifySendResult(uint8_t success);
     bool has_consecutive_zeros_exceed_10(const uint8_t* data);
     
-    // ÆæÅ¼Î»¹ÜÀí
+    // å¥‡å¶ä½ç®¡ç†
     int findHistoryIndex(uint8_t* data);
     uint8_t getNextParity(uint8_t* data);
     void updateSendHistory(uint8_t* data, uint8_t parity);
-    // Ó¦´ğ·¢ËÍ
+    // åº”ç­”å‘é€
     
 private:
     UART_HandleTypeDef* m_huart;
@@ -96,14 +96,14 @@ private:
     Serial1SendResultCallback m_resultCallback;
     Serial1DataReceiveCallback m_dataReceiveCallback;
     
-    // Ö÷¶¯·¢ËÍÏà¹Ø
+    // ä¸»åŠ¨å‘é€ç›¸å…³
     uint8_t m_current_send_data[SERIAL1_DATA_LEN];
     uint8_t m_current_send_parity;
     uint8_t m_uart_send_frame[SERIAL1_FRAME_LEN];
     uint8_t m_send_batch_count;
     volatile uint8_t m_tx_complete;
     
-    // ½ÓÊÕÏà¹Ø
+    // æ¥æ”¶ç›¸å…³
     uint8_t m_rx_buffer[30];
     volatile uint8_t m_rx_ready;
     volatile uint16_t m_rx_size;
@@ -112,16 +112,16 @@ private:
     uint8_t m_received_parity;
     uint8_t m_new_data_available;
     
-    // ½ÓÊÕÈ¥ÖØ£¨ÓÃÓÚÖ÷¶¯Êı¾İ£©
+    // æ¥æ”¶å»é‡ï¼ˆç”¨äºä¸»åŠ¨æ•°æ®ï¼‰
     uint8_t m_last_rx_data[SERIAL1_DATA_LEN];
     uint8_t m_last_rx_parity;
     uint32_t m_last_rx_time;
     uint32_t m_last_send_time; 
-    // Ö÷¶¯Êı¾İÓ¦´ğ¹ÜÀí£¨ÓÃÓÚÅĞ¶ÏÏàÍ¬Êı¾İÖØ·¢£©
-    uint8_t m_last_processed_data[SERIAL1_DATA_LEN];   // ÉÏ´Î´¦ÀíµÄÊı¾İ
-    uint8_t m_last_processed_parity;                  // ÉÏ´Î´¦ÀíµÄÆæÅ¼
+    // ä¸»åŠ¨æ•°æ®åº”ç­”ç®¡ç†ï¼ˆç”¨äºåˆ¤æ–­ç›¸åŒæ•°æ®é‡å‘ï¼‰
+    uint8_t m_last_processed_data[SERIAL1_DATA_LEN];   // ä¸Šæ¬¡å¤„ç†çš„æ•°æ®
+    uint8_t m_last_processed_parity;                  // ä¸Šæ¬¡å¤„ç†çš„å¥‡å¶
     
-    // ·¢ËÍÀúÊ·¼ÇÂ¼
+    // å‘é€å†å²è®°å½•
     #define MAX_HISTORY 10
     
     typedef struct {
@@ -135,15 +135,15 @@ private:
     
     uint8_t m_command_send_data[SERIAL1_DATA_LEN];
     uint8_t m_command_send_parity;
-		    // Êı¾İ´æ´¢Êı×é
-    DataPacket_t m_data_buffer[DATA_BUFFER_SIZE];  // ½á¹¹ÌåÊı×é
-    volatile int m_data_write_index;  // Ğ´ÈëË÷Òı
-    volatile int m_data_read_index;   // ¶ÁÈ¡Ë÷Òı
-    volatile int m_data_count;        // µ±Ç°´æ´¢ÊıÁ¿
-    // ×îĞÂÊı¾İ´æ´¢
-    DataPacket_t m_latest_packet;      // ×îĞÂ½ÓÊÕµ½µÄÊı¾İ°ü
-    bool m_has_latest_data;            // ÊÇ·ñÓĞÎ´Ïû·ÑµÄĞÂÊı¾İ
-    // ¸¨Öúº¯Êı
+		    // æ•°æ®å­˜å‚¨æ•°ç»„
+    DataPacket_t m_data_buffer[DATA_BUFFER_SIZE];  // ç»“æ„ä½“æ•°ç»„
+    volatile int m_data_write_index;  // å†™å…¥ç´¢å¼•
+    volatile int m_data_read_index;   // è¯»å–ç´¢å¼•
+    volatile int m_data_count;        // å½“å‰å­˜å‚¨æ•°é‡
+    // æœ€æ–°æ•°æ®å­˜å‚¨
+    DataPacket_t m_latest_packet;      // æœ€æ–°æ¥æ”¶åˆ°çš„æ•°æ®åŒ…
+    bool m_has_latest_data;            // æ˜¯å¦æœ‰æœªæ¶ˆè´¹çš„æ–°æ•°æ®
+    // è¾…åŠ©å‡½æ•°
     void storeReceivedData(uint8_t* data, uint8_t parity);
 };
 

@@ -1,6 +1,6 @@
 #include "Module_Serial1Protocol.h"
 #include "BSP_TimeStamp.h"
-// È«¾Ö±äÁ¿¶¨Òå
+// å…¨å±€å˜é‡å®šä¹‰
 volatile uint8_t g_recv_data[3] = {0};
 volatile uint8_t g_recv_parity = 0;
 volatile uint8_t g_send_complete = 0;
@@ -24,14 +24,14 @@ Serial1Protocol::Serial1Protocol() {
 
     m_new_data_available = 0;
     
-    // ³õÊ¼»¯Ö÷¶¯·¢ËÍ±äÁ¿
+    // åˆå§‹åŒ–ä¸»åŠ¨å‘é€å˜é‡
     m_last_send_time = 0;
     
-    // ³õÊ¼»¯Ö÷¶¯Êı¾İÓ¦´ğ¹ÜÀí
+    // åˆå§‹åŒ–ä¸»åŠ¨æ•°æ®åº”ç­”ç®¡ç†
     memset(m_last_processed_data, 0, SERIAL1_DATA_LEN);
     m_last_processed_parity = 0;
     
-    // ³õÊ¼»¯È¥ÖØ±äÁ¿
+    // åˆå§‹åŒ–å»é‡å˜é‡
     m_last_rx_time = 0;
     m_last_rx_parity = 0;
     memset(m_last_rx_data, 0, SERIAL1_DATA_LEN);
@@ -39,17 +39,17 @@ Serial1Protocol::Serial1Protocol() {
     memset(m_rx_buffer, 0, sizeof(m_rx_buffer));
     memset(m_current_send_data, 0, SERIAL1_DATA_LEN);
     
-    // ³õÊ¼»¯·¢ËÍÀúÊ·
+    // åˆå§‹åŒ–å‘é€å†å²
     m_history_count = 0;
     memset(m_send_history, 0, sizeof(m_send_history));
     memset(m_command_send_data, 0, SERIAL1_DATA_LEN);
     m_command_send_parity = 0;
-		    // ³õÊ¼»¯Êı¾İ»º³åÇø
+		    // åˆå§‹åŒ–æ•°æ®ç¼“å†²åŒº
     m_data_write_index = 0;
     m_data_read_index = 0;
     m_data_count = 0;
     memset(m_data_buffer, 0, sizeof(m_data_buffer));
-		    // ³õÊ¼»¯×îĞÂÊı¾İ´æ´¢
+		    // åˆå§‹åŒ–æœ€æ–°æ•°æ®å­˜å‚¨
     memset(&m_latest_packet, 0, sizeof(m_latest_packet));
     m_has_latest_data = false;
 }
@@ -128,7 +128,7 @@ void Serial1Protocol::sendFrame(uint8_t* data, uint8_t parity) {
        for (int i = 0; i < SERIAL1_SEND_TIMES; i++) {
 				 HAL_UART_Transmit(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN,100);
 //					while (HAL_UART_GetState(m_huart) & HAL_UART_STATE_BUSY_TX) {
-//							// µÈ´ıÉÏ´Î·¢ËÍÍê³É
+//							// ç­‰å¾…ä¸Šæ¬¡å‘é€å®Œæˆ
 //					}
 					HAL_UART_Transmit_DMA(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN);
 					HAL_Delay(2);
@@ -137,7 +137,7 @@ void Serial1Protocol::sendFrame(uint8_t* data, uint8_t parity) {
 		}
 }
 
-// ========== ·¢ËÍÓ¦´ğÖ¡ ==========
+// ========== å‘é€åº”ç­”å¸§ ==========
 void Serial1Protocol::sendAckFrame(void) {
     if (!m_huart ) return;
     
@@ -166,7 +166,7 @@ void Serial1Protocol::getReceivedData(uint8_t* data_out, uint8_t* parity_out) {
 }
 
 
-// ========== ²éÕÒÀúÊ·¼ÇÂ¼ ==========
+// ========== æŸ¥æ‰¾å†å²è®°å½• ==========
 int Serial1Protocol::findHistoryIndex(uint8_t* data) {
     for (int i = 0; i < m_history_count; i++) {
         if (memcmp(m_send_history[i].data, data, SERIAL1_DATA_LEN) == 0) {
@@ -212,7 +212,7 @@ void Serial1Protocol::updateSendHistory(uint8_t* data, uint8_t parity) {
     }
 }
 
-// ========== Ö÷¶¯·¢ËÍÖ¸Áî ==========
+// ========== ä¸»åŠ¨å‘é€æŒ‡ä»¤ ==========
 bool Serial1Protocol::sendCommand(uint8_t* data) {
     uint8_t parity = getNextParity(data);
     
@@ -227,12 +227,12 @@ bool Serial1Protocol::sendCommand(uint8_t* data) {
     return true;
 }
 
-// ========== Ö÷Ñ­»·´¦Àí ==========
+// ========== ä¸»å¾ªç¯å¤„ç† ==========
 void Serial1Protocol::process(void) 
 {
     uint32_t now = getTickMs();
     
-    // ========== 1. ´¦Àí´®¿Ú½ÓÊÕÊı¾İ ==========
+    // ========== 1. å¤„ç†ä¸²å£æ¥æ”¶æ•°æ® ==========
     if (m_rx_ready) {
         m_rx_ready = 0;
         uint8_t received_data[SERIAL1_DATA_LEN];
@@ -240,57 +240,57 @@ void Serial1Protocol::process(void)
         
         if (parseFrame(m_rx_buffer, m_rx_size, received_data, &received_parity)) {
             
-            // ¼ì²éÊÇ·ñÊÇ´®¿ÚÓ¦´ğ£¨Êı¾İÈ«0£©
+            // æ£€æŸ¥æ˜¯å¦æ˜¯ä¸²å£åº”ç­”ï¼ˆæ•°æ®å…¨0ï¼‰
             uint8_t is_ack = (received_data[0] == 0x00 && 
                               received_data[1] == 0x00 && 
                               received_data[2] == 0x00);
             
-            // ========== ³¡¾°B£ºÊÕµ½·ÇÓ¦´ğÊı¾İ£¨´®¿Ú2Ö÷¶¯·¢ËÍµÄÊı¾İ£© ==========
+            // ========== åœºæ™¯Bï¼šæ”¶åˆ°éåº”ç­”æ•°æ®ï¼ˆä¸²å£2ä¸»åŠ¨å‘é€çš„æ•°æ®ï¼‰ ==========
              if (!is_ack) {
                 
-                // ÅĞ¶ÏÊÇ·ñÓëÉÏ´Î´¦ÀíµÄÊı¾İÏàÍ¬£¨°üº¬ÆæÅ¼Î»£©
+                // åˆ¤æ–­æ˜¯å¦ä¸ä¸Šæ¬¡å¤„ç†çš„æ•°æ®ç›¸åŒï¼ˆåŒ…å«å¥‡å¶ä½ï¼‰
                 uint8_t is_same_as_last = (memcmp(received_data, m_last_processed_data, SERIAL1_DATA_LEN) == 0 &&
                                            received_parity == m_last_processed_parity);
                 
-                // È¥ÖØÅĞ¶Ï£¨·ÀÖ¹Í¬Ò»Êı¾İÖØ¸´½âÎö£©
+                // å»é‡åˆ¤æ–­ï¼ˆé˜²æ­¢åŒä¸€æ•°æ®é‡å¤è§£æï¼‰
                 uint8_t is_same_data = (memcmp(received_data, m_last_rx_data, SERIAL1_DATA_LEN) == 0);
                 uint8_t is_same_parity = (received_parity == m_last_rx_parity);
                 
-                // ? Çé¿ö1£ºÏàÍ¬Êı¾İ ¡ú ´®¿Ú2Ã»ÊÕµ½Ó¦´ğ£¬ÖØ·¢Ó¦´ğ
+                // ? æƒ…å†µ1ï¼šç›¸åŒæ•°æ® â†’ ä¸²å£2æ²¡æ”¶åˆ°åº”ç­”ï¼Œé‡å‘åº”ç­”
                 if (is_same_as_last) {
-                    // ÖØ·¢Ó¦´ğ£¬²»±£´æÊı¾İ£¬²»µ÷ÓÃ»Øµ÷
+                    // é‡å‘åº”ç­”ï¼Œä¸ä¿å­˜æ•°æ®ï¼Œä¸è°ƒç”¨å›è°ƒ
                     sendAckFrame();
                 }
-                // ? Çé¿ö2£ºĞÂÊı¾İ£¨ÓëÉÏ´Î²»Í¬£©
+                // ? æƒ…å†µ2ï¼šæ–°æ•°æ®ï¼ˆä¸ä¸Šæ¬¡ä¸åŒï¼‰
                 else if (!is_same_as_last && (!is_same_data || (is_same_data && !is_same_parity))) {
-                    // ¸üĞÂÉÏ´Î´¦Àí¼ÇÂ¼
+                    // æ›´æ–°ä¸Šæ¬¡å¤„ç†è®°å½•
                     memcpy(m_last_processed_data, received_data, SERIAL1_DATA_LEN);
                     m_last_processed_parity = received_parity;
                     
-                    // ±£´æÊı¾İ¹©ÉÏ²ã¶ÁÈ¡
+                    // ä¿å­˜æ•°æ®ä¾›ä¸Šå±‚è¯»å–
                     memcpy(m_received_data, received_data, SERIAL1_DATA_LEN);
                     m_received_parity = received_parity;
                     m_new_data_available = 1;
 									
                     storeReceivedData(received_data, received_parity);
-                    // »Øµ÷Í¨ÖªÉÏ²ã
+                    // å›è°ƒé€šçŸ¥ä¸Šå±‚
 //                    if (m_dataReceiveCallback) {
 //                        m_dataReceiveCallback(received_data, received_parity);
 //                    }
 //                    
-                    // ·¢ËÍÓ¦´ğ
+                    // å‘é€åº”ç­”
                     sendAckFrame();
                     
-                    // ¸üĞÂÈ¥ÖØ¼ÇÂ¼
+                    // æ›´æ–°å»é‡è®°å½•
                     memcpy(m_last_rx_data, received_data, SERIAL1_DATA_LEN);
                     m_last_rx_parity = received_parity;
                     m_last_rx_time = now;
                 }
-                // ÍêÈ«ÏàÍ¬µÄÖØ¸´Êı¾İ£¨ÒÑ±»È¥ÖØ¹ıÂË£©£ººöÂÔ
+                // å®Œå…¨ç›¸åŒçš„é‡å¤æ•°æ®ï¼ˆå·²è¢«å»é‡è¿‡æ»¤ï¼‰ï¼šå¿½ç•¥
             }
         }
         
-        // ÖØĞÂÆô¶¯½ÓÊÕ
+        // é‡æ–°å¯åŠ¨æ¥æ”¶
         if (m_huart) {
             HAL_UARTEx_ReceiveToIdle_DMA(m_huart, m_rx_buffer, 30);
             __HAL_UART_CLEAR_IDLEFLAG(m_huart);
@@ -298,7 +298,7 @@ void Serial1Protocol::process(void)
     }
 }
 
-// ========== ´®¿Ú»Øµ÷ ==========
+// ========== ä¸²å£å›è°ƒ ==========
 void Serial1Protocol::onUartReceive(uint8_t* buffer, uint16_t size) {
     if (size > 0 && size <= 30) {
         memcpy(m_rx_buffer, buffer, size);
@@ -332,12 +332,12 @@ void Serial1Protocol::send_cmd_to_R2(uint8_t cmd)
 		sendCommand(send_data);
 }
 uint32_t data3;
-// ´æ´¢½ÓÊÕµ½µÄÊı¾İ
+// å­˜å‚¨æ¥æ”¶åˆ°çš„æ•°æ®
 void Serial1Protocol::storeReceivedData(uint8_t* data, uint8_t parity) {
     DataPacket_t packet;
     uint8_t Data_valid_flag=0;
-    // ÅĞ¶ÏÊı¾İÀàĞÍ
-    // ¹æÔò£ºÈç¹û data[2] != 0 ÇÒ data[0]==0 && data[1]==0£¬ÔòÊÇ CMD
+    // åˆ¤æ–­æ•°æ®ç±»å‹
+    // è§„åˆ™ï¼šå¦‚æœ data[2] != 0 ä¸” data[0]==0 && data[1]==0ï¼Œåˆ™æ˜¯ CMD
     if (data[0] == 0 && data[1] == 0 && data[2] != 0) {
         packet.type = DATA_TYPE_CMD;
         packet.data.cmd = data[2];
@@ -362,29 +362,29 @@ void Serial1Protocol::storeReceivedData(uint8_t* data, uint8_t parity) {
 		if(Data_valid_flag==1)
 		{
 			
-			    // Ö»±£´æ×îĞÂÒ»Ìõ£¨¸²¸Ç£©
+			    // åªä¿å­˜æœ€æ–°ä¸€æ¡ï¼ˆè¦†ç›–ï¼‰
     m_latest_packet = packet;
     m_has_latest_data = true;
 			
-//// ========== »·ĞÎ»º³åÇøĞ´Èë ==========
-//    // ¼ì²é»º³åÇøÊÇ·ñÒÑÂú
+//// ========== ç¯å½¢ç¼“å†²åŒºå†™å…¥ ==========
+//    // æ£€æŸ¥ç¼“å†²åŒºæ˜¯å¦å·²æ»¡
 //    if (m_data_count >= DATA_BUFFER_SIZE) {
-//        // »º³åÇøÒÑÂú£º¸²¸Ç×î¾ÉµÄÊı¾İ
-//        // ¶ÁË÷ÒıºóÒÆ£¨¶ªÆú×î¾ÉÊı¾İ£©
+//        // ç¼“å†²åŒºå·²æ»¡ï¼šè¦†ç›–æœ€æ—§çš„æ•°æ®
+//        // è¯»ç´¢å¼•åç§»ï¼ˆä¸¢å¼ƒæœ€æ—§æ•°æ®ï¼‰
 //        m_data_read_index = (m_data_read_index + 1) % DATA_BUFFER_SIZE;
-//        // ÊıÁ¿²»±ä£¨ÒòÎª¶ªÆúÒ»Ìõ£¬¼ÓÈëÒ»Ìõ£©
+//        // æ•°é‡ä¸å˜ï¼ˆå› ä¸ºä¸¢å¼ƒä¸€æ¡ï¼ŒåŠ å…¥ä¸€æ¡ï¼‰
 //    } else {
 //        m_data_count++;
 //    }
 //    
-//    // Ğ´ÈëĞÂÊı¾İ
+//    // å†™å…¥æ–°æ•°æ®
 //    m_data_buffer[m_data_write_index] = packet;
 //    m_data_write_index = (m_data_write_index + 1) % DATA_BUFFER_SIZE;
 //  	}
 		}
 }
 
-// »ñÈ¡Êı¾İ
+// è·å–æ•°æ®
 bool Serial1Protocol::getLatestData(DataPacket_t* packet) {
 
 	    if (!m_has_latest_data) {
@@ -392,11 +392,11 @@ bool Serial1Protocol::getLatestData(DataPacket_t* packet) {
     }
     
     *packet = m_latest_packet;
-    m_has_latest_data = false;  // Ïû·ÑºóÇå³ı±êÖ¾
+    m_has_latest_data = false;  // æ¶ˆè´¹åæ¸…é™¤æ ‡å¿—
     return true;
 }
 bool Serial1Protocol::has_consecutive_zeros_exceed_10(const uint8_t* data) {
-    // ½«3¸ö×Ö½ÚÆ´³É24Î»Êı
+    // å°†3ä¸ªå­—èŠ‚æ‹¼æˆ24ä½æ•°
     uint32_t value = ((uint32_t)data[0] << 16) | ((uint32_t)data[1] << 8) | data[2];
     
     int max_consecutive_zeros = 0;

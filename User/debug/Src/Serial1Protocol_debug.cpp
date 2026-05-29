@@ -5,25 +5,25 @@ void Serial1Protocol_Debug::loop()
     static uint32_t last_print_time = 0;
     uint32_t now = HAL_GetTick();
     
-    // ========== 1. ´¦ÀíĞ­Òé²ã£¨±ØĞëµ÷ÓÃ£© ==========
+    // ========== 1. å¤„ç†åè®®å±‚ï¼ˆå¿…é¡»è°ƒç”¨ï¼‰ ==========
 //    if (m_serial1) {
-//        m_serial1->process();  // ´¦Àí½ÓÊÕºÍ·¢ËÍ
+//        m_serial1->process();  // å¤„ç†æ¥æ”¶å’Œå‘é€
 //    }
     
-    // ========== 2. ½ÓÊÕÊı¾İ²âÊÔ ==========
+    // ========== 2. æ¥æ”¶æ•°æ®æµ‹è¯• ==========
     DataPacket_t packet;
     if (m_serial1 && m_serial1->getLatestData(&packet)) 
 			{
             if (packet.type == DATA_TYPE_KFS) 
 						{
-                // ´¦Àí KFS Êı¾İ
+                // å¤„ç† KFS æ•°æ®
                 uint8_t k1 = packet.data.kfs[0];
                 uint8_t k2 = packet.data.kfs[1];
                 uint8_t k3 = packet.data.kfs[2];
             } 
 						else 
 						{
-                // ´¦Àí CMD
+                // å¤„ç† CMD
                 uint8_t cmd = packet.data.cmd;
             }
         }

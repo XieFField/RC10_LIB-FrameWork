@@ -19,7 +19,7 @@ extern "C" {
 #include <cmath>  
 #include "APP_tool.h"
 
-#define USE_RC10_AIRJOY 0 //启用自制遥控器
+#define USE_RC10_AIRJOY 1 //启用自制遥控器
 
 typedef enum{
     ALL_STOP, //STOP状态
@@ -85,14 +85,14 @@ typedef enum{
 typedef enum{
     WEAPONSAGE_MANUAL_CONTROL, //手动控制
 
-#if USE_RC10_AIRJOY
+
     WEAPONSAGE_AUTO_CONTROL, //自动控制
     WEAPONSAGE_SEMI_AUTO_CONTROL_1, //半自动控制
     WEAPONSAGE_SEMI_AUTO_CONTROL_2, //半自动控制
-#else
+
     WEAPONSAGE_AUTO_CONTROL_CATCH, //自动控制模式,抓取
     WEAPONSAGE_AUTO_CONTROL_DOCK, //自动控制模式, docking
-#endif
+
     WEAPONSAGE_STOP,        //停止
     WEAPONSAGE_DEBUG,       //调试模式  
     WEAPONSAGE_IDLE,    // 待机

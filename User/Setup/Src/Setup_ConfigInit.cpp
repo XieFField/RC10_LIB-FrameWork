@@ -20,7 +20,7 @@ DJI_Group DJIGroupCAN3_Low(send_idLow(), CAN3_Bus);   // 1~4号 M3508/M2006 电�
 
 Point2D arm_install_offset = {0.480f, 0.02f}; // 机械臂安装偏移，单位 m
 // Serial1Protocol_Debug g_serial1_debug;
-//Serial1Protocol& g_serialProto1=Serial1Protocol::getInstance();
+Serial1Protocol& g_serialProto1=Serial1Protocol::getInstance();
 
 /*==============Controller Instances===========*/
 //USB_CDC_ cdc(&hUsbDeviceHS);
@@ -131,6 +131,8 @@ void ALL_Setup_ConfigInit(void)
         
     CAN_Motor_Init();
 
+    g_serialProto1.init(&huart2); // 初始化 Serial1Protocol，使用 UART2
+
     ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
     ARM_Controller.setArmStatus(ARM_CALIBRATE);
     
@@ -193,6 +195,8 @@ void ALL_Setup_ConfigInit(void)
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
     set1->locate_setup_init();
     set1->set_startToLRL(true);
+
+
 }
 
 void CAN_Motor_Init(void)

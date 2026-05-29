@@ -32,7 +32,7 @@ extern "C" {
 #include "Setup_ConfigInit.h"
 #include "Locate_Setup.h"
 #include "Module_lora.h"
-
+#include "Module_Serial1Protocol.h"
 
 typedef enum{
     RELOCATE,
@@ -107,6 +107,7 @@ private:
     ArmSetup *arm_setup_ = nullptr;  
     bool arm_setup_registered_ = false; 
 
+    
 
     OmniChassis_Setup *chassis_setup_ = nullptr; 
     bool chassis_setup_registered_ = false; 

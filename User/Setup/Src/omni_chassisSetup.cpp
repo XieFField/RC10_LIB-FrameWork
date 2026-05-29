@@ -21,10 +21,16 @@ void OmniChassis_Setup::loop()
 
     float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
 
-    //	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
+#if !USE_RC10_AIRJOY
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+#else
+    communication::Lora_communication::GetInstance()->Task_Process();
+    communication::Lora_communication::GetInstance()->Tim_It_Process();
+
+    communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
+#endif
+
     ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
     robot_pos_.x = ladar_data_.x;
     robot_pos_.y = ladar_data_.y;

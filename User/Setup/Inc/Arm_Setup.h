@@ -29,6 +29,8 @@ extern "C" {
 #include "AutoCtrler.h"
 #include "Module_CrsfReceiver.h"
 #include "Locate_Setup.h"
+#include "Module_lora.h"
+
 
 // #include "usart.h"
 
@@ -51,18 +53,21 @@ typedef struct{
 
     int8_t last_manual_extend = 0; //上一次手动展状态
     int8_t last_manual_sucker = 0; //上一次手动吸盘状态
-
     int8_t last_manual_pitch = 0; //上一次手动pitch状态
+    int8_t last_manual_store_sucker = 0; //上一次手动存储位吸盘状态
 
     int8_t pitch_switch_offset = 0; //pitch开关偏移
     int8_t extend_switch_offset = 0; //展开关偏移
     int8_t sucker_switch_offset = 0; // 吸盘开关偏移
+    int8_t store_suker_switch_offset = 0; // 存储吸盘开关偏移
 
+
+#if !USE_RC10_AIRJOY
     uint8_t button_click_state = 0;
-    uint8_t is_store_acting = 0; //手操作存储状态 0无动作 1取出 2存储
-
-    
+#endif
+    uint8_t is_store_acting = 0; //手操作存储状态 0无动作 1取出 2存储 3拾取 4放下
     uint8_t last_manual_store = 0; //上一次手动存储状态
+
 }arm_ctrl_status_S;
 
 
@@ -282,14 +287,22 @@ private:
             auto_ctrl_.start_to_autoctrl = false;
     }
 
+#if !USE_RC10_AIRJOY
     RmPocketData_t airjoy_data_; // -1 ~ 1
+#else
+    communication::RC10_AirJoy_Data_S airjoy_data_; // -1 ~ 1
+#endif
 
     Debug_Printf debug_uart = Debug_Printf(&huart8);
 
     //控制函数相关
     void manualControl();
-    bool manual_store();
-    bool manual_takeout();
+
+    bool manual_store(); //存儲kfs
+    bool manual_takeout(); //取出存储kfs
+    bool manual_pickup(); //拾取地上的kfs
+    bool manual_putdown(); //放下kfs
+
     bool test();
 
     void autoControl();
@@ -302,6 +315,9 @@ private:
 
     //=======================
     //自动控制相关状态函数
+
+    void semiautoControl_1();
+    void semiautoControl_2();
 
     void auto_stillnessOne();
     void auto_stillnessTwo();

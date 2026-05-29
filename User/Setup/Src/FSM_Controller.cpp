@@ -25,7 +25,32 @@ void FSM_Controller::loop()
         Locate_Setup::getInstance()->get_RobotPos_inWorld().x,
         Locate_Setup::getInstance()->get_RobotPos_inWorld().y,
         Locate_Setup::getInstance()->get_RobotPos_inWorld().yaw
-    )
+    );
+
+    bool suker_status = false, store_sucker_status = false;
+
+    if(arm_setup_->getSuckerStatus() == SUCK)
+        suker_status = true;
+    else
+        suker_status = false;
+
+    if(arm_setup_->getStoreSuckerStatus() == SUCK)
+        store_sucker_status = true;
+    else
+        store_sucker_status = false;
+
+    communication::Lora_communication::GetInstance()->send_sucker_status(
+        suker_status,
+        store_sucker_status
+    );
+
+    communication::Lora_communication::GetInstance()->send_claw_status(
+        weaponSage_setup_->get_CurrentPos().claw_1_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false,
+        weaponSage_setup_->get_CurrentPos().claw_2_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false,
+        weaponSage_setup_->get_CurrentPos().claw_3_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false
+    );
+
+    communication::Lora_communication::GetInstance()->send_auto_status(arm_setup_->isArmAutoStart());
 #endif
 
 #if !USE_RC10_AIRJOY
