@@ -90,13 +90,6 @@ public:
         pid_pos_y.set_params(track_pid_params, 0.0f);
         path_lock.set_params(path_lock_end, 0.0f);
 
-        // 相机模式独立 PID，参数使用 APP_PID 中独立配置对象。
-        camera_pid_x_.set_params(camera_x_pid_params, 0.0f);
-        camera_pid_y_.set_params(camera_y_pid_params, 0.0f);
-        camera_pid_vec_.set_params(camera_vec_pid_params, 0.0f);
-        camera_pid_yaw_.set_params(camera_yaw_pid_params, 10000.0f);
-        camera_pid_yaw_.set_as_circular();
-
         this->start(osPriorityHigh, 1024);
         //        setTargetKFS(3);
         init_flag = true;
@@ -220,7 +213,7 @@ private:
 #if !USE_RC10_AIRJOY
     RmPocketData_t airjoy_data_;                            // 遥控器数据，范围 -1 ~ 1
 #else
-    RC10_AirJoy_Data_S airjoy_data_;                            // 遥控器数据，范围 -1 ~ 1
+    communication::RC10_AirJoy_Data_S airjoy_data_;                            // 遥控器数据，范围 -1 ~ 1
 #endif
     Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
 

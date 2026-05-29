@@ -139,9 +139,6 @@ private:
 
 #endif
 
-
-
-
     KSTarget_t KStarget = {0};
     KSTarget_t last_KStarget = {0};
 };

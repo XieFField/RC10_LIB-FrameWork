@@ -283,6 +283,17 @@ void ArmSetup::semiautoControl_1()
     }
 }
 
+bool ArmSetup::manual_pickup()
+{
+    return false;
+}
+
+
+bool ArmSetup::manual_putdown()
+{
+    return false;
+}
+
 void ArmSetup::semiautoControl_2()
 {
     //半自动控制逻辑2
