@@ -1,10 +1,9 @@
 #pragma once
 
 #include "Module_communication.h"
+#include "RC_gpio_exti.h"
 #include "BSP_USB_UART_Driver.h"
 #include "stdint.h"
-
-#define MAX_GPIO_EXTI_NUM 16
 
 namespace tim { class Tim; }
 
@@ -30,15 +29,13 @@ typedef struct{
     uint8_t d_pad_left; uint8_t d_pad_right; //十字键
 }RC10_AirJoy_Data_S;
 
-class Lora_communication : public Communication {
+class Lora_communication : public Communication, public gpio::GpioExti {
 public:
     static Lora_communication* GetInstance();
 
     void Init();
     void Task_Process();        //  public
     void Tim_It_Process();      //  public
-
-    static void All_EXTI_Prosess(uint16_t gpio_pin_);
 
     void update_airjoy_data(RC10_AirJoy_Data_S * data)
     {
@@ -120,7 +117,6 @@ private:
     uint16_t key_last_status_;
 
     static Lora_communication* s_instance;
-    static Lora_communication* gpio_exti_list[MAX_GPIO_EXTI_NUM];
     static void RxCallback(uint8_t* buf, uint16_t len);
 
     RC10_AirJoy_Data_S airjoy_data_; // 存储解析后的遥控器数据

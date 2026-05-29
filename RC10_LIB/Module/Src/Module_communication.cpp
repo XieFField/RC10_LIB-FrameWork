@@ -132,6 +132,7 @@ namespace communication{
                 rec_joystick[2] = pFrame->ch3;
                 rec_joystick[3] = pFrame->ch4;
                 rec_send_key = pFrame->key;
+                rec_page = pFrame->page;
 
                 // 将 FIFO 头部读取指针越过已经正确消费的这一帧
                 rx_fifo.head = p;
@@ -220,7 +221,7 @@ namespace communication{
         
     }
 
-void Communication::Comm_SendAnyDataToTxBuffer(const uint8_t* data, uint16_t len)
+    void Communication::Comm_SendAnyDataToTxBuffer(const uint8_t* data, uint16_t len)
     {
         if (data == NULL || len == 0) return;
 

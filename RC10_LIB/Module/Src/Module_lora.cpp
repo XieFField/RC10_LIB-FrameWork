@@ -3,11 +3,6 @@
 #include "main.h"
 #include <cmath>
 
-extern "C" void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-    communication::Lora_communication::All_EXTI_Prosess(GPIO_Pin);
-}
-
 namespace {
 static inline float NormalizeAxis(uint16_t raw, float center, float span, float deadzone = 0.05f)
 {
@@ -48,14 +43,13 @@ namespace communication {
 
 /* ========== 静态成员定义 ========== */
 Lora_communication* Lora_communication::s_instance = nullptr;
-Lora_communication* Lora_communication::gpio_exti_list[MAX_GPIO_EXTI_NUM] = {nullptr};
 
 /* ========== 单例获取 ========== */
 Lora_communication* Lora_communication::GetInstance()
 {
     static Lora_communication instance(&huart5, &huart6,
-                                       Lora_IO1_GPIO_Port, Lora_IO1_Pin,
-                                       Lora_IO2_GPIO_Port, Lora_IO2_Pin,
+                                       GPIOB, GPIO_PIN_11,
+                                       GPIOB, GPIO_PIN_10,
                                        nullptr);
     if (s_instance == nullptr) {
         s_instance = &instance;
@@ -71,6 +65,7 @@ Lora_communication::Lora_communication(UART_HandleTypeDef* tx_huart, UART_Handle
     : Communication(tx_huart, rx_huart,
         tx_ring_buffer, tx_dma_buffer, rx_ring_buffer, rx_dma_buffer,
         tx_aux_gpio_port, tx_aux_gpio_pin, rx_aux_gpio_port, rx_aux_gpio_pin),
+      GpioExti(tx_aux_gpio_pin),
       bsp_rx(DMA_BUF_SIZE, rx_dma_buffer, rx_huart),
       attached_timer(timer),
       pending_x_raw_(0),
@@ -91,11 +86,6 @@ Lora_communication::Lora_communication(UART_HandleTypeDef* tx_huart, UART_Handle
     lora_rx_huart = rx_huart;
     lora_aux_port = tx_aux_gpio_port;
     lora_aux_pin = tx_aux_gpio_pin;
-
-    uint8_t pin = __builtin_ctz(tx_aux_gpio_pin);
-    if (pin < MAX_GPIO_EXTI_NUM) {
-        gpio_exti_list[pin] = this;
-    }
     
     s_instance = this;
 }
@@ -105,15 +95,6 @@ Lora_communication::~Lora_communication() {
 
 /* ========== 初始化 ========== */
 void Lora_communication::Init() {
-    lora_tx_huart = &huart5;
-    lora_rx_huart = &huart6;
-    lora_aux_port = Lora_IO1_GPIO_Port;
-    lora_aux_pin = Lora_IO1_Pin;
-
-    uint8_t pin = __builtin_ctz(lora_aux_pin);
-    if (pin < MAX_GPIO_EXTI_NUM) {
-        gpio_exti_list[pin] = this;
-    }
 
     bsp_rx.SetCallback(RxCallback);
     bsp_rx.UART_Init();
@@ -123,16 +104,6 @@ void Lora_communication::Init() {
 void Lora_communication::RxCallback(uint8_t* buf, uint16_t len) {
     if (s_instance) {
         s_instance->Comm_RxDMAToRxBuffer(s_instance->lora_rx_huart, len);
-    }
-}
-
-/* ========== EXTI 分发 ========== */
-void Lora_communication::All_EXTI_Prosess(uint16_t gpio_pin_) {
-    uint8_t pin = __builtin_ctz(gpio_pin_);
-    if (pin < MAX_GPIO_EXTI_NUM) {
-        if (gpio_exti_list[pin] != nullptr) {
-            gpio_exti_list[pin]->EXTI_Prosess();
-        }
     }
 }
 
@@ -257,11 +228,9 @@ void Lora_communication::send_command(uint8_t cmd)
 /* ========== 定时器中断 ========== */
 void Lora_communication::Tim_It_Process() {
     timer_tick_count++;
-    if (timer_tick_count >= 20) {
+    if (timer_tick_count >= 2) { // 计数达到 2ms
         timer_tick_count = 0;
-        if (pending_tx_dirty_) {
-            flush_pending_frame();
-        }
+        flush_pending_frame();
     }
 }
 

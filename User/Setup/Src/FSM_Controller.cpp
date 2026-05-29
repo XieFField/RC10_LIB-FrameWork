@@ -1,8 +1,7 @@
 #include "FSM_Controller.h"
-
 #include "chassis_swerve_task_demo.h"
 
-int text_index = 0;
+
 communication::RC10_AirJoy_Data_S rc_data;
 void FSM_Controller::loop()
 {
@@ -14,7 +13,7 @@ void FSM_Controller::loop()
     // CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     communication::Lora_communication::GetInstance()->Task_Process();
     communication::Lora_communication::GetInstance()->update_airjoy_data(&rc_data);
-    communication::Lora_communication::GetInstance()->send_claw_status(1, 1, 0);
+    communication::Lora_communication::GetInstance()->Tim_It_Process();
     switch(airjoy_data_.SWB)
     {
         case 0x00:

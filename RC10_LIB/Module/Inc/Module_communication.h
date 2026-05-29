@@ -25,6 +25,7 @@ namespace communication{
         uint16_t ch3;
         uint16_t ch4;
         uint16_t key;
+        uint8_t page;
         uint8_t crc;
         uint8_t tail;      // e.g. 0xDE
     } JoystickFrame_t;
@@ -174,6 +175,15 @@ namespace communication{
             return rec_send_key;
         }
 
+        /**
+         * @brief 获取接收到的 page 值
+         * @return uint8_t 当前帧的 page 字段
+         * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，获取最新 page 值。
+         */
+        uint8_t GetPage(void) {
+            return rec_page;
+        }
+
     private:
         void FIFO_Push(comm_FIFO_t& fifo, uint8_t data);
 
@@ -209,6 +219,7 @@ namespace communication{
         uint8_t send_command2;
         uint16_t rec_joystick[4];
         uint16_t rec_send_key;
+        uint8_t rec_page;
         uint8_t rec_setting_command;
         uint8_t rec_setting_load1;
         uint8_t rec_setting_load2;
@@ -217,4 +228,3 @@ namespace communication{
 }
 
 #endif
-
