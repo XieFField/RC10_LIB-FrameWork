@@ -99,6 +99,8 @@ public:
         this->start(osPriorityHigh, 1024);
         //        setTargetKFS(3);
         init_flag = true;
+        
+        TP_1d.param_reset(Param_1d);
     }
 
     // 设置底盘正反向映射系数（用于手动控制方向翻转）。
@@ -111,6 +113,13 @@ public:
     }
 
 private:
+    int a=0;
+    float tp_speed_now = 0.0f;
+    float tp_pos_now = 0.0f;
+    // 1D的位置式
+    Speedplanner_1D_Param_Config Param_1d{.maxAcc = 2.9f, .maxDec = 2.0f, .maxJerk = 1.5f, .maxSpeed = 6.0f, .initialSpeed = 0.001f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 30.0f, .deadzone = 0.00001f};
+    SShapedPlanner1D TP_1d;
+
     Vector2D test_point = {3.0f, 1.0f}; // 夹杆流程默认目标点。
     Vector2D control_point = {0.0f, 2.5f};
     float err_curve=0.0f;
@@ -147,7 +156,7 @@ private:
     //---------------------------接口调试参数（需要修改时复制过来）---------------------------------------------//
 
     //float max_robot_speed_ = 1.0f; // 常规段底盘最大速度限制。
-    float min_robot_speed_ = 0.4f; // 常规段底盘最大速度限制。
+    float min_robot_speed_ = 0.01f; // 常规段底盘最大速度限制。
 
     //float gradient_start_ = 1.2f; // 终点梯度衰减起始距离。
     //float gradient_end_ = 0.2f;   // 终点梯度衰减结束距离。

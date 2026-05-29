@@ -170,6 +170,11 @@ void SShapedPlanner1D::param_reset(Speedplanner_1D_Param_Config params)
     m_maxSpeed_ = abs(params.maxSpeed);
     m_initialSpeed_ = abs(params.initialSpeed);
     m_finalSpeed_ = abs(params.finalSpeed);
+    // 钳位到最大速度，防止 sqrt(负数) → NaN → HardFault
+    if (m_initialSpeed_ > m_maxSpeed_)
+        m_initialSpeed_ = m_maxSpeed_;
+    if (m_finalSpeed_ > m_maxSpeed_)
+        m_finalSpeed_ = m_maxSpeed_;
     m_startPos_ = params.startPos;
     m_targetPos_ = params.targetPos;
     m_deadzone_ = params.deadzone;
@@ -449,13 +454,24 @@ bool SShapedPlanner1D::cal_PhaseDistances()
         // 二分法在边界处距离仍不足 → 回退到纯加速/纯减速
         if (!converged || (vlim <= (m_initialSpeed_ > m_finalSpeed_ ? m_initialSpeed_ : m_finalSpeed_) + 0.001f && d_total_at_vlim > m_totalDistance_ + 0.01f))
         {
+            float S = m_targetPos_ - m_startPos_;
+            float v_sum = m_finalSpeed_ + m_initialSpeed_;
+            // sqrt_arg = J * (J*S^2 - (v0+vf)^2 * |vf-v0|)，统一处理加减速两种情况
+            float sqrt_arg = m_maxJerk_ * (m_maxJerk_ * S * S - v_sum * v_sum * fabsf(m_finalSpeed_ - m_initialSpeed_));
+
+            if (sqrt_arg < 0.0f)
+                return false;
+
+            float sqrt_val;
+            arm_sqrt_f32(sqrt_arg, &sqrt_val);
+
             if (m_initialSpeed_ > m_finalSpeed_)
             {
                 Ta = 0;
                 Tj1 = 0;
                 alima = 0;
-                Td = 2 * (m_targetPos_ - m_startPos_) / (m_finalSpeed_ + m_initialSpeed_);
-                Tj2 = (m_maxJerk_ * (m_targetPos_ - m_startPos_) - sqrt(m_maxJerk_ * (m_maxJerk_ * (m_targetPos_ - m_startPos_) * (m_targetPos_ - m_startPos_) + (m_finalSpeed_ + m_initialSpeed_) * (m_finalSpeed_ + m_initialSpeed_) * (m_finalSpeed_ - m_initialSpeed_)))) / (m_maxJerk_ * (m_finalSpeed_ + m_initialSpeed_));
+                Td = 2 * S / v_sum;
+                Tj2 = (m_maxJerk_ * S - sqrt_val) / (m_maxJerk_ * v_sum);
                 alimd = -m_maxJerk_ * Tj2;
                 vlim = m_finalSpeed_ - (Td - Tj2) * alimd;
                 alimd = -alimd;
@@ -464,8 +480,8 @@ bool SShapedPlanner1D::cal_PhaseDistances()
             {
                 Td = 0;
                 Tj2 = 0;
-                Ta = 2 * (m_targetPos_ - m_startPos_) / (m_finalSpeed_ + m_initialSpeed_);
-                Tj1 = (m_maxJerk_ * (m_targetPos_ - m_startPos_) - sqrt(m_maxJerk_ * (m_maxJerk_ * (m_targetPos_ - m_startPos_) * (m_targetPos_ - m_startPos_) - (m_finalSpeed_ + m_initialSpeed_) * (m_finalSpeed_ + m_initialSpeed_) * (m_finalSpeed_ - m_initialSpeed_)))) / (m_maxJerk_ * (m_finalSpeed_ + m_initialSpeed_));
+                Ta = 2 * S / v_sum;
+                Tj1 = (m_maxJerk_ * S - sqrt_val) / (m_maxJerk_ * v_sum);
                 alima = m_maxJerk_ * Tj1;
                 vlim = m_initialSpeed_ + (Ta - Tj1) * alima;
             }
