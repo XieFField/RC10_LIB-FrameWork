@@ -355,9 +355,6 @@ void Serial1Protocol::storeReceivedData(uint8_t* data, uint8_t parity) {
 		{ 
 			  packet.type = DATA_TYPE_KFS;
 			  memcpy(packet.data.kfs,data,3);
-//        packet.data.kfs[0] = data[0];
-//        packet.data.kfs[1] = data[1];
-//        packet.data.kfs[2] = data[2];
 			  Data_valid_flag=1;
 			
 			
@@ -389,18 +386,7 @@ void Serial1Protocol::storeReceivedData(uint8_t* data, uint8_t parity) {
 
 // 获取数据
 bool Serial1Protocol::getLatestData(DataPacket_t* packet) {
-//    if (m_data_count == 0) {
-//        return false;
-//    }
-//    
-//    // 读取最早的数据
-//    *packet = m_data_buffer[m_data_read_index];
-//    
-//    // 移动读索引
-//    m_data_read_index = (m_data_read_index + 1) % DATA_BUFFER_SIZE;
-//    m_data_count--;
-//    
-//    return true;
+
 	    if (!m_has_latest_data) {
         return false;
     }

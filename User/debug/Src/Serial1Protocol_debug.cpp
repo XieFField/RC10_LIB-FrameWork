@@ -12,17 +12,19 @@ void Serial1Protocol_Debug::loop()
     
     // ========== 2. 接收数据测试 ==========
     DataPacket_t packet;
-    if (m_serial1 && m_serial1->getLatestData(&packet)) {
-            if (packet.type == DATA_TYPE_KFS) {
+    if (m_serial1 && m_serial1->getLatestData(&packet)) 
+			{
+            if (packet.type == DATA_TYPE_KFS) 
+						{
                 // 处理 KFS 数据
                 uint8_t k1 = packet.data.kfs[0];
                 uint8_t k2 = packet.data.kfs[1];
                 uint8_t k3 = packet.data.kfs[2];
-                // 你的业务逻辑...
-            } else {
+            } 
+						else 
+						{
                 // 处理 CMD
                 uint8_t cmd = packet.data.cmd;
-                // 你的业务逻辑...
             }
         }
 //     sendTestKFS(1, 2, 3);
