@@ -135,8 +135,9 @@ void ALL_Setup_ConfigInit(void)
     ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
     ARM_Controller.setArmStatus(ARM_CALIBRATE);
     
-    Weapon_Controller.init(&oid_encoder);
+    
     Weapon_Controller.register_motors(&Weapon_Claw1, &Weapon_Claw2, &Weapon_Claw3, &Weapon_Launch, &Weapon_Wrist, &Weapon_Elbow);
+	Weapon_Controller.init(&oid_encoder);
     Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
     g_serial1_debug.init();
     ChassisOmni.init();

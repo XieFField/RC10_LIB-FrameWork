@@ -142,14 +142,14 @@ public:
         }
 
         start(osPriorityNormal, 512);
-
+		wrist_encoder_ = wrist_encoder;
         ctrl_status_.init_flag = true;
     }
 
     void setLowerClawStart(bool start)
     {
         
-    }
+    };
 
     bool isWeaponSageCalibrated() const
     {
