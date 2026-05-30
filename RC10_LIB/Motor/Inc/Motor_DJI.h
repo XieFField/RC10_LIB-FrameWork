@@ -221,7 +221,10 @@ public:
     M3508(uint32_t motor_id, fdCANbus* bus, bool calcTotalAngle = true, bool calcAngle = true);
     ~M3508() {};
 
-    void pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa);
+    void pid_init(const PID_Param_Config& speed_params,
+                  float speed_tdRatio,
+                  const PID_Param_Config& angle_params,
+                  float angle_I_Separa);
 
     // 控制接口
     void setTargetCurrent(float current_set) override;
@@ -279,7 +282,10 @@ public:
     M2006(uint32_t motor_id, fdCANbus* bus, bool calcTotalAngle = true, bool calcAngle = true);
     ~M2006() {};
 
-    void pid_init(const PID_Param_Config& speed_params, float speed_I_Separa, const PID_Param_Config& angle_params, float angle_I_Separa);
+    void pid_init(const PID_Param_Config& speed_params,
+                  float speed_tdRatio,
+                  const PID_Param_Config& angle_params,
+                  float angle_I_Separa);
 
     // 控制接口
     void setTargetCurrent(float current_set) override;
@@ -315,7 +321,10 @@ public:
     GM6020(uint32_t motor_id, fdCANbus* bus, bool calcTotalAngle = true, bool calcAngle = true);
     ~GM6020() {};
 
-    void pid_init(const PID_Param_Config& speed_params, float speed_I_Separa, const PID_Param_Config& angle_params, float angle_I_Separa);
+    void pid_init(const PID_Param_Config& speed_params,
+                  float speed_tdRatio,
+                  const PID_Param_Config& angle_params,
+                  float angle_I_Separa);
 
     // 控制接口
     void setTargetCurrent(float current_set) override;

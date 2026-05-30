@@ -8,7 +8,15 @@ VESC_Motor::VESC_Motor(uint32_t id, fdCANbus* bus, float poles)
 void VESC_Motor::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio)
 {
     // 本地 PID 速度环参数初始化。默认不启用，需结合 setRpmControlMode 显式切换。
+    // 这里保留原有二参入口，但 drive 轮改成位置式 PID 后，第二参数语义映射为积分分离阈值。
     speed_pid_.set_params(speed_params, speed_tdRatio);
+}
+
+void VESC_Motor::reset_speed_pid_state()
+{
+    speed_pid_.reset();
+    speed_pid_raw_output_current_mA_ = 0.0f;
+    speed_pid_total_output_current_mA_ = 0.0f;
 }
 
 void VESC_Motor::update()
@@ -92,9 +100,9 @@ void VESC_Motor::setBrake(float brake_current)
 
 void VESC_Motor::setDuty(float duty)
 {
-    if(duty > 1.0f)
+    if (duty > 1.0f)
         duty = 1.0f;
-    else if(duty < -1.0f)
+    else if (duty < -1.0f)
         duty = -1.0f;
 
     target_duty_ = duty;
@@ -104,7 +112,7 @@ void VESC_Motor::setDuty(float duty)
 
 std::size_t VESC_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
 {
-    if(maxFrames < 1)
+    if (maxFrames < 1)
         return 0; // 无法打包
 
     CanFrame& cf = outFrames[0];

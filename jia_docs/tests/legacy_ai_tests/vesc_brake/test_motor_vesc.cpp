@@ -106,6 +106,27 @@ int main()
     ok &= expect(motor.getSpeedPidTotalOutputCurrent() == 380.0f,
                  "total pid output should include configured bias");
 
+    VESC_Motor threshold_motor(102, nullptr, 21.0f);
+    PID_Param_Config i_separate_pid_params = {
+        0.0f,
+        15.0f,
+        0.0f,
+        5000.0f,
+        true,
+        5000.0f,
+        0.0f
+    };
+    threshold_motor.pid_init(i_separate_pid_params, 5.0f);
+    threshold_motor.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+    threshold_motor.updateFeedback(makeStatus1Frame(102U, 0, 0, 0));
+    threshold_motor.setTargetRPM(20.0f);
+    threshold_motor.update();
+    threshold_motor.packCommand(&frame, 1);
+    ok &= expect(decode_i32_be(frame.data) == 0,
+                 "position speed pid should block integral accumulation when error exceeds I separation threshold");
+    ok &= expect(threshold_motor.getSpeedPidRawOutputCurrent() == 0.0f,
+                 "position speed pid raw output should stay zero when only integral term is configured outside threshold");
+
     motor.updateFeedback(makeStatus1Frame(101U, 0, 0, 0));
     motor.setTargetRPM(0.0f);
     motor.update();

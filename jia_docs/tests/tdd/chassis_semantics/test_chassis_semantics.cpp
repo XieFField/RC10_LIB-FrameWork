@@ -4,7 +4,6 @@
 #include <type_traits>
 
 #include "main.h"
-#include "Motor_VESC.h"
 
 #define private public
 #include "chassis.h"
@@ -108,7 +107,7 @@ struct DrivePidTuneHarness
 {
     Chassis chassis{};
     VESC_Motor drive_vescs[4]{};
-    TestMotor steer_motors[4]{};
+    M3508 steer_motors[4]{};
 };
 
 void configureDrivePidTuneHarness(DrivePidTuneHarness &harness)
@@ -123,6 +122,11 @@ void configureDrivePidTuneHarness(DrivePidTuneHarness &harness)
     }
 }
 
+void setDriveRuntimeDerivativeFirst(VESC_Motor &drive_motor, bool derivative_first)
+{
+    drive_motor.set_speed_pid_derivative_first(derivative_first);
+}
+
 void testDrivePidEnableEdgeReadsBackRuntimeIntoCleanSharedCache()
 {
     DrivePidTuneHarness harness;
@@ -134,6 +138,7 @@ void testDrivePidEnableEdgeReadsBackRuntimeIntoCleanSharedCache()
     runtime_cfg.kd = 0.1f;
     runtime_cfg.output_limit = 2300.0f;
     harness.drive_vescs[0].pid_init(runtime_cfg, 0.35f);
+    setDriveRuntimeDerivativeFirst(harness.drive_vescs[0], true);
 
     harness.chassis.debug_pid_tune_.drive_speed_pid_cfg = PID_Param_Config{};
     harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio = 0.0f;
@@ -151,6 +156,7 @@ void testDrivePidEnableEdgeReadsBackRuntimeIntoCleanSharedCache()
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.kd, runtime_cfg.kd, 1.0e-6f);
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.output_limit, runtime_cfg.output_limit, 1.0e-6f);
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio, 0.35f, 1.0e-6f);
+    EXPECT_TRUE(!harness.chassis.debug_pid_tune_.drive_speed_pid_derivative_first);
 }
 
 void testDrivePidDirtyCacheBlocksRuntimeReadbackOverwrite()
@@ -167,9 +173,11 @@ void testDrivePidDirtyCacheBlocksRuntimeReadbackOverwrite()
     runtime_cfg.ki = 0.1f;
     runtime_cfg.output_limit = 999.0f;
     harness.drive_vescs[0].pid_init(runtime_cfg, 0.12f);
+    setDriveRuntimeDerivativeFirst(harness.drive_vescs[0], false);
 
     harness.chassis.debug_pid_tune_.drive_speed_pid_cfg = manual_cfg;
     harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio = 0.8f;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_derivative_first = true;
     harness.chassis.debug_pid_tune_.drive_speed_pid_apply_stamp = 9U;
     harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp = 7U;
 
@@ -179,6 +187,7 @@ void testDrivePidDirtyCacheBlocksRuntimeReadbackOverwrite()
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.ki, manual_cfg.ki, 1.0e-6f);
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_cfg.output_limit, manual_cfg.output_limit, 1.0e-6f);
     EXPECT_NEAR(harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio, 0.8f, 1.0e-6f);
+    EXPECT_TRUE(harness.chassis.debug_pid_tune_.drive_speed_pid_derivative_first);
 }
 
 void testDrivePidSharedApplyPushesSameParamsToAllVescsAndAlignsAppliedStamp()
@@ -195,6 +204,7 @@ void testDrivePidSharedApplyPushesSameParamsToAllVescsAndAlignsAppliedStamp()
 
     harness.chassis.debug_pid_tune_.drive_speed_pid_cfg = shared_cfg;
     harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio = 0.55f;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_derivative_first = true;
     harness.chassis.debug_pid_tune_.drive_speed_pid_apply_stamp = 41U;
     harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp = 40U;
 
@@ -208,6 +218,7 @@ void testDrivePidSharedApplyPushesSameParamsToAllVescsAndAlignsAppliedStamp()
         EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_params().deadband, shared_cfg.deadband, 1.0e-6f);
         EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_params().output_limit, shared_cfg.output_limit, 1.0e-6f);
         EXPECT_NEAR(harness.drive_vescs[i].get_speed_pid_td_ratio(), 0.55f, 1.0e-6f);
+        EXPECT_TRUE(!harness.drive_vescs[i].get_speed_pid_derivative_first());
     }
     EXPECT_TRUE(harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp == 41U);
 }
@@ -225,6 +236,7 @@ void testDrivePidApplySkipsNullHandlesAndStillUpdatesAppliedStamp()
 
     harness.chassis.debug_pid_tune_.drive_speed_pid_cfg = shared_cfg;
     harness.chassis.debug_pid_tune_.drive_speed_pid_td_ratio = 0.25f;
+    harness.chassis.debug_pid_tune_.drive_speed_pid_derivative_first = false;
     harness.chassis.debug_pid_tune_.drive_speed_pid_apply_stamp = 77U;
     harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp = 76U;
 
@@ -233,6 +245,8 @@ void testDrivePidApplySkipsNullHandlesAndStillUpdatesAppliedStamp()
     EXPECT_TRUE(harness.chassis.debug_pid_tune_.drive_speed_pid_applied_stamp == 77U);
     EXPECT_NEAR(harness.drive_vescs[0].get_speed_pid_params().kp, shared_cfg.kp, 1.0e-6f);
     EXPECT_NEAR(harness.drive_vescs[3].get_speed_pid_params().kp, shared_cfg.kp, 1.0e-6f);
+    EXPECT_TRUE(!harness.drive_vescs[0].get_speed_pid_derivative_first());
+    EXPECT_TRUE(!harness.drive_vescs[3].get_speed_pid_derivative_first());
 }
 
 void configureDriveContinuityHarness(Chassis &chassis, VESC_Motor drive_motors[4]);
@@ -418,6 +432,54 @@ void testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry()
 
     calibration.drive_motor_sign = 1.0f;
     EXPECT_NEAR(Chassis::mapWheelCurrentToDriveMotorCurrent(3000.0f, calibration), 3000.0f, 1.0e-6f);
+}
+
+void testDefaultDriveMotorPolarityMatchesPositiveBodyXHardwareLayout()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    Chassis::InitConfig init_cfg{};
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        init_cfg.steer_motor_h[i] = &steer_motors[i];
+        init_cfg.drive_motor_h[i] = &drive_motors[i];
+    }
+    chassis.init(init_cfg);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].homing_enabled = false;
+        chassis.wheel_config_[i].homing_state = Chassis::HomingState::kReady;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad =
+            chassis.mapWheelOaTotalToCorrectedLocal(chassis.wheel_config_[i], 0.0f);
+    }
+
+    Chassis::Data command{};
+    command.vel_x = 1.0f;
+    command.vel_y = 0.0f;
+    command.omega_z = 0.0f;
+
+    chassis.computeModuleCommands(command);
+    chassis.applyModuleCommands(true);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_TRUE(chassis.wheel_config_[i].target_drive_omega_rad_s > 0.0f);
+    }
+    EXPECT_TRUE(drive_motors[0].getTargetRPM() < 0.0f);
+    EXPECT_TRUE(drive_motors[1].getTargetRPM() > 0.0f);
+    EXPECT_TRUE(drive_motors[2].getTargetRPM() < 0.0f);
+    EXPECT_TRUE(drive_motors[3].getTargetRPM() > 0.0f);
 }
 
 void testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit()
@@ -1412,6 +1474,57 @@ void testDriveVirtualLoadInjectsBiasOnlyForSelectedWheelAndPidMode()
     EXPECT_NEAR(drive_motors[1].getSpeedPidCurrentBias(), 0.0f, 1.0e-6f);
 }
 
+void testMode30DriveVirtualLoadIgnoresAllHomedGateForTargetWheel()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSingleWheelDriveVescHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.drive.command_value = 180.0f;
+    chassis.debug_drive_virtual_load_[1].enable = true;
+    chassis.debug_drive_virtual_load_[1].delta_j_current_per_rad_s2 = 10.0f;
+    chassis.debug_drive_virtual_load_[1].delta_b_current_per_rad_s = 20.0f;
+    chassis.debug_drive_virtual_load_[1].coulomb_current_mA = 30.0f;
+    chassis.debug_drive_virtual_load_[1].coulomb_sign_vel_eps_rad_s = 0.1f;
+    chassis.debug_drive_virtual_load_[1].bias_current_limit_mA = 1000.0f;
+    chassis.wheel_config_[1].corrected_drive_omega_rad_s = 2.0f;
+    chassis.last_drive_feedback_omega_rad_s_[1] = 1.0f;
+    drive_motors[1].setPidOutputObservation(90.0f, 90.0f);
+
+    // mode30 目标轮直控本来就应绕过全车 homing gate，虚拟负载也应该跟着这条语义走。
+    chassis.computeSingleWheelIsolatedCommandsMode30(1U, false);
+
+    EXPECT_NEAR(drive_motors[1].getSpeedPidCurrentBias(), -1000.0f, 1.0e-4f);
+    EXPECT_TRUE(chassis.debug_drive_load_trace_.virtual_load_enable > 0.5f);
+}
+
+void testMode30DriveVirtualLoadIgnoresOtherWheelSteerFaultForTargetWheel()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSingleWheelDriveVescHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.drive.command_value = 180.0f;
+    chassis.debug_drive_virtual_load_[1].enable = true;
+    chassis.debug_drive_virtual_load_[1].delta_j_current_per_rad_s2 = 10.0f;
+    chassis.debug_drive_virtual_load_[1].delta_b_current_per_rad_s = 20.0f;
+    chassis.debug_drive_virtual_load_[1].coulomb_current_mA = 30.0f;
+    chassis.debug_drive_virtual_load_[1].coulomb_sign_vel_eps_rad_s = 0.1f;
+    chassis.debug_drive_virtual_load_[1].bias_current_limit_mA = 1000.0f;
+    chassis.wheel_config_[1].corrected_drive_omega_rad_s = 2.0f;
+    chassis.last_drive_feedback_omega_rad_s_[1] = 1.0f;
+    drive_motors[1].setPidOutputObservation(90.0f, 90.0f);
+    chassis.wheel_config_[0].steer_fault_state = Chassis::SteerFaultState::kRecovering;
+
+    // 单轮虚拟负载只服务目标轮速度环，不该被其他轮的 steer fault 全车级短路。
+    chassis.computeSingleWheelIsolatedCommandsMode30(1U, true);
+
+    EXPECT_NEAR(drive_motors[1].getSpeedPidCurrentBias(), -1000.0f, 1.0e-4f);
+    EXPECT_TRUE(chassis.debug_drive_load_trace_.virtual_load_enable > 0.5f);
+}
+
 void testJustFloatDrivePidLoadProfileEmitsFixed15ChannelPayload()
 {
     Chassis chassis;
@@ -1446,6 +1559,94 @@ void testJustFloatDrivePidLoadProfileEmitsFixed15ChannelPayload()
     EXPECT_NEAR(g_test_justfloat_capture.values[4], 600.0f, 1.0e-6f);
     EXPECT_NEAR(g_test_justfloat_capture.values[12], 2.0f, 1.0e-6f);
     EXPECT_NEAR(g_test_justfloat_capture.values[13], 1.0f, 1.0e-6f);
+}
+
+void testJustFloatDriveZeroStopBrakeTraceEmitsFixed12ChannelPayloadWhenBrakeInactive()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+
+    testHostResetJustFloatCapture();
+    configureDebugOutputFamily(chassis, 2U);
+    configureJustFloatProfile(chassis, 4U);
+    chassis.debug_output_.justfloat.drive_zero_stop_brake.period_ms = 0U;
+    chassis.debug_output_runtime_.justfloat.drive_zero_stop_brake.last_ms = 0U;
+    chassis.time_ms_ = 220U;
+    chassis.debug_control_.common.observe_wheel_index = 2U;
+    chassis.debug_drive_load_trace_.observe_wheel_idx = 2.0f;
+    chassis.debug_drive_load_trace_.target_rpm = 180.0f;
+    chassis.debug_drive_load_trace_.feedback_rpm = 175.0f;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.target_data_.vel_x = 0.015f;
+    chassis.target_data_.vel_y = 0.0f;
+    chassis.target_data_.omega_z = 0.25f;
+    chassis.drive_zero_stop_brake_active_[2] = false;
+    chassis.drive_zero_stop_active_ = false;
+    chassis.wheel_config_[2].corrected_drive_omega_rad_s = 1.4f;
+    drive_motors[2].setTargetCurrent(0.0f);
+    drive_motors[2].setFeedbackCurrent(321.0f);
+
+    emitDebugOutputForHost(chassis, true);
+
+    EXPECT_TRUE(g_test_justfloat_capture.called);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 12U);
+    EXPECT_NEAR(g_test_justfloat_capture.values[0], 0.22f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[1], 2.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[2], 180.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[3], 175.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[4], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[5], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[6], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[7], 321.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[8], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[9], 0.07f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[10], 0.015f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[11], 0.25f, 1.0e-6f);
+}
+
+void testJustFloatDriveZeroStopBrakeTraceEmitsBrakeStateAndCurrent()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+
+    testHostResetJustFloatCapture();
+    configureDebugOutputFamily(chassis, 2U);
+    configureJustFloatProfile(chassis, 4U);
+    chassis.debug_output_.justfloat.drive_zero_stop_brake.period_ms = 0U;
+    chassis.debug_output_runtime_.justfloat.drive_zero_stop_brake.last_ms = 0U;
+    chassis.time_ms_ = 360U;
+    chassis.debug_control_.common.observe_wheel_index = 1U;
+    chassis.debug_drive_load_trace_.observe_wheel_idx = 1.0f;
+    chassis.debug_drive_load_trace_.target_rpm = 90.0f;
+    chassis.debug_drive_load_trace_.feedback_rpm = 110.0f;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.target_data_.vel_x = 0.0f;
+    chassis.target_data_.vel_y = 0.0f;
+    chassis.target_data_.omega_z = -0.4f;
+    chassis.drive_zero_stop_brake_active_[1] = true;
+    chassis.drive_zero_stop_active_ = true;
+    chassis.wheel_config_[1].corrected_drive_omega_rad_s = 3.2f;
+    drive_motors[1].setBrake(25000.0f);
+    drive_motors[1].setFeedbackCurrent(-18600.0f);
+
+    emitDebugOutputForHost(chassis, true);
+
+    EXPECT_TRUE(g_test_justfloat_capture.called);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 12U);
+    EXPECT_NEAR(g_test_justfloat_capture.values[0], 0.36f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[1], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[2], 90.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[3], 110.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[4], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[5], 25000.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[6], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[7], -18600.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[8], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[9], 0.16f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[10], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[11], -0.4f, 1.0e-6f);
 }
 
 void testDebugOmegaZInjectionModeOffKeepsManualOmegaInput()
@@ -1546,6 +1747,28 @@ void configureDriveContinuityHarness(Chassis &chassis, VESC_Motor drive_motors[4
         drive_motors[i].setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
         drive_motors[i].setTargetRPM(0.0f);
     }
+}
+
+void configureDriveZeroStopHarness(Chassis &chassis, VESC_Motor drive_motors[4])
+{
+    configureDriveContinuityHarness(chassis, drive_motors);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+}
+
+void setWheelResidualSpeedMps(Chassis &chassis, int wheel_idx, float residual_speed_m_s)
+{
+    const float wheel_radius_m = chassis.runtime_strategy_cfg_.wheel_radius_m_;
+    chassis.wheel_config_[wheel_idx].corrected_drive_omega_rad_s =
+        (std::fabs(wheel_radius_m) > 1.0e-6f) ? (residual_speed_m_s / wheel_radius_m) : 0.0f;
 }
 
 void configureXParkWheelGeometry(Chassis &chassis)
@@ -2088,6 +2311,218 @@ void testTorqueFreeAndNotHomedPathsResetDriveDeliveryStateConsistently()
     EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, 0.0f, 1.0e-6f);
 }
 
+void testDriveZeroStopUsesBrakeWhenResidualSpeedIsStillHigh()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    setWheelResidualSpeedMps(chassis, 0, 0.15f);
+
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[0].getSpeedPidCurrentBias(), 0.0f, 1.0e-6f);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
+}
+
+void testDriveZeroStopStillUsesBrakeWithNativeVescSpeedLoop()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        drive_motors[i].setRpmControlMode(VESC_RPM_CONTROL_NATIVE_ERPM);
+    }
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    setWheelResidualSpeedMps(chassis, 0, 0.15f);
+
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
+}
+
+void testNormalControlZeroStopUsesBrakeAfterBodyCommandDropsToZero()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedMode;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        drive_motors[i].setRpmControlMode(VESC_RPM_CONTROL_NATIVE_ERPM);
+    }
+
+    chassis.input_target_data_.vel_x = 1.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+    EXPECT_TRUE(runHostControlCycle(chassis));
+    EXPECT_TRUE(std::fabs(drive_motors[0].getTargetRPM()) > 1.0e-6f);
+
+    const float residual_feedback_rpm = jia::radsToRpmF32(0.15f / chassis.runtime_strategy_cfg_.wheel_radius_m_);
+    drive_motors[0].setFeedbackRpm(residual_feedback_rpm);
+    drive_motors[0].resetLastCommandObservation();
+
+    chassis.input_target_data_.vel_x = 0.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+    EXPECT_TRUE(runHostControlCycle(chassis));
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
+}
+
+void testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+
+    // 模拟“整车目标已归零，但速度规划执行帧还留着一个减速尾巴”的现场。
+    chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedMode;
+    chassis.input_target_data_.vel_x = 0.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+    chassis.target_data_.vel_x = 0.0f;
+    chassis.target_data_.vel_y = 0.0f;
+    chassis.target_data_.omega_z = 0.0f;
+    chassis.current_mode_flag_.is_wheel_torque_free = false;
+    chassis.current_mode_flag_.is_world_speed_mode = false;
+    chassis.current_mode_flag_.is_lock_now_rot_z = false;
+    chassis.current_mode_flag_.is_lock_to_rot_z = false;
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(1.0f));
+    setWheelResidualSpeedMps(chassis, 0, 0.15f);
+
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
+}
+
+void testDriveZeroStopSettlesToZeroCurrentWithoutHoldingBrake()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    setWheelResidualSpeedMps(chassis, 0, 0.01f);
+
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+    EXPECT_NEAR(drive_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
+}
+
+void testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    setWheelResidualSpeedMps(chassis, 0, 0.01f);
+    chassis.applyModuleCommands(true);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.00f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(20.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(!chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kRpm);
+    EXPECT_NEAR(drive_motors[0].getTargetRPM(), jia::radsToRpmF32(20.0f), 1.0e-4f);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 2U);
+}
+
+void testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    setWheelResidualSpeedMps(chassis, 0, 0.13f);
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.09f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.01f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+}
+
+void testDriveZeroStopSettleThresholdHasIndependentFinalSettleStage()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.005f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.02f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.05f;
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    setWheelResidualSpeedMps(chassis, 0, 0.06f);
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.015f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.004f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(chassis.drive_zero_stop_settled_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 2U);
+}
+
 void testLowSpeedDriveSuppressionBypassesWhenResidualSpeedAboveThreshold()
 {
     Chassis chassis;
@@ -2271,6 +2706,65 @@ void testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned()
 
     EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], drive_step, 1.0e-6f);
     EXPECT_NEAR(chassis.wheel_config_[0].target_drive_omega_rad_s, drive_step, 1.0e-6f);
+}
+
+void testNormalLaunchSCurveWaitsForSteerAlignmentBeforeAccumulatingBodyPlan()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveContinuityHarness(chassis, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = true;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_acc_dec_ = 3.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ = 20.0f;
+    chassis.runtime_strategy_cfg_.manual_trans_jerk_dec_ = 30.0f;
+
+    chassis.target_data_.vel_x = 0.0f;
+    chassis.target_data_.vel_y = 1.0f;
+    chassis.target_data_.omega_z = 0.0f;
+
+    for (int cycle = 0; cycle < 3; ++cycle)
+    {
+        chassis.updatePlannedMotionData();
+        chassis.computeModuleCommands(chassis.planned_data_);
+        chassis.applyModuleCommands(true);
+        chassis.last_planned_data_ = chassis.planned_data_;
+    }
+
+    EXPECT_TRUE(chassis.launch_hold_active_);
+    EXPECT_NEAR(chassis.planned_data_.vel_x, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.vel_y, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.omega_z, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.actuator_command_frame_.drive_omega_rad_s[0], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad =
+            chassis.planner_output_cache_.selected_oa_total_rad[i];
+    }
+
+    chassis.updatePlannedMotionData();
+    chassis.computeModuleCommands(chassis.planned_data_);
+
+    EXPECT_TRUE(!chassis.launch_hold_active_);
+    EXPECT_NEAR(chassis.planned_data_.vel_x, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.vel_y,
+                chassis.runtime_strategy_cfg_.manual_trans_jerk_acc_ * Chassis::period_ * Chassis::period_,
+                1.0e-6f);
+    EXPECT_TRUE(std::fabs(chassis.actuator_command_frame_.drive_omega_rad_s[0]) > 1.0e-6f);
 }
 
 void testManualSCurveProfileLegacyModeKeepsCurrentAccelerationStepSemantics()
@@ -2523,6 +3017,30 @@ void testDebugBodySpeedOmegaTargetFlipsSignImmediatelyWithRightStickDirection()
     chassis.airjoy_data_.right_x = 1.0f;
     chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
     EXPECT_NEAR(chassis.input_target_data_.omega_z, 3.0f, 1.0e-6f);
+}
+
+void testDebugBodySpeedModeCanEnterZeroStopBrakeAndExposeGateState()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 1U;
+    chassis.debug_control_.common.observe_wheel_index = 0U;
+    chassis.debug_control_.injection.omega_z_injection_mode_raw = 0U;
+    chassis.airjoy_data_.left_y = 0.0f;
+    chassis.airjoy_data_.left_x = 0.0f;
+    chassis.airjoy_data_.right_x = 0.0f;
+    drive_motors[0].setFeedbackRpm(jia::radsToRpmF32(0.15f / chassis.runtime_strategy_cfg_.wheel_radius_m_));
+
+    EXPECT_TRUE(runDebugControlCycleForHost(chassis));
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.computeMaxCommandWheelSpeedMps(chassis.target_data_), 0.0f, 1.0e-6f);
 }
 
 void testDebugBodySpeedOmegaRapidReverseUnderSCurveKeepsOldSignForFirstPlannerStep()
@@ -3733,6 +4251,7 @@ int main()
     testTelemetrySnapshotKeepsTargetAndActualYawSemanticsSeparate();
     testTelemetrySnapshotPreservesWheelTargetsWithoutModeDependentReinterpretation();
     testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry();
+    testDefaultDriveMotorPolarityMatchesPositiveBodyXHardwareLayout();
     testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit();
     testNormalizedBodyCommandKeepsDebugAndApiRoutesSemanticallyAligned();
     testHomingRuntimeZeroOffsetOnlyDependsOnEdgeGeometryAndRawMotorAngle();
@@ -3764,7 +4283,11 @@ int main()
     testJustFloatSingleWheelDriveOnlyObserveIndexFallsBackToZeroWhenOutOfRange();
     testMode30SingleWheelDriveStepGeneratorOverridesManualInput();
     testDriveVirtualLoadInjectsBiasOnlyForSelectedWheelAndPidMode();
+    testMode30DriveVirtualLoadIgnoresAllHomedGateForTargetWheel();
+    testMode30DriveVirtualLoadIgnoresOtherWheelSteerFaultForTargetWheel();
     testJustFloatDrivePidLoadProfileEmitsFixed15ChannelPayload();
+    testJustFloatDriveZeroStopBrakeTraceEmitsFixed12ChannelPayloadWhenBrakeInactive();
+    testJustFloatDriveZeroStopBrakeTraceEmitsBrakeStateAndCurrent();
     testDebugOmegaZInjectionModeOffKeepsManualOmegaInput();
     testDebugOmegaZInjectionModeStepOverridesManualOmegaInput();
     testDebugOmegaZInjectionModeSineOverridesManualOmegaInput();
@@ -3774,6 +4297,14 @@ int main()
     testDriveReleaseHasNoVelocityJumpAfterZeroHold();
     testPlannerTargetMayChangeWhileDeliveredStateRemainsContinuous();
     testTorqueFreeAndNotHomedPathsResetDriveDeliveryStateConsistently();
+    testDriveZeroStopUsesBrakeWhenResidualSpeedIsStillHigh();
+    testDriveZeroStopStillUsesBrakeWithNativeVescSpeedLoop();
+    testNormalControlZeroStopUsesBrakeAfterBodyCommandDropsToZero();
+    testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay();
+    testDriveZeroStopSettlesToZeroCurrentWithoutHoldingBrake();
+    testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop();
+    testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold();
+    testDriveZeroStopSettleThresholdHasIndependentFinalSettleStage();
     testLowSpeedDriveSuppressionBypassesWhenResidualSpeedAboveThreshold();
     testLowSpeedDriveSuppressionReenabledWhenResidualSpeedDropsBelowThreshold();
     testLowSpeedDriveSuppressionUsesGlobalWorstWheelError();
@@ -3785,6 +4316,7 @@ int main()
     testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates();
     testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle();
     testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned();
+    testNormalLaunchSCurveWaitsForSteerAlignmentBeforeAccumulatingBodyPlan();
     testManualSCurveProfileLegacyModeKeepsCurrentAccelerationStepSemantics();
     testManualSCurveProfileProducesSofterFirstStepAndContinuousAcceleration();
     testManualSCurveProfileToggleResetsShapingHistory();
@@ -3794,6 +4326,7 @@ int main()
     testManualSCurveProfileManualOnlyModeUsesSCurveForDebugSource();
     testManualSCurveProfileRapidReverseBleedsPositiveTrendBeforeBuildingNegativeTrend();
     testDebugBodySpeedOmegaTargetFlipsSignImmediatelyWithRightStickDirection();
+    testDebugBodySpeedModeCanEnterZeroStopBrakeAndExposeGateState();
     testDebugBodySpeedOmegaRapidReverseUnderSCurveKeepsOldSignForFirstPlannerStep();
     testDebugBodySpeedOmegaRapidReverseEventuallyCrossesNegativeAfterEnoughCycles();
     testJerkProfileRapidReverseEventuallyCrossesZeroAndBuildsOppositeSign();

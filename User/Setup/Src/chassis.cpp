@@ -144,7 +144,7 @@ namespace jia
 
             inline Chassis::JustFloatProfile sanitizeJustFloatProfile(u8 raw_profile)
             {
-                return (raw_profile <= static_cast<u8>(Chassis::JustFloatProfile::kDrivePidLoadTune))
+                return (raw_profile <= static_cast<u8>(Chassis::JustFloatProfile::kDriveZeroStopBrakeTrace))
                            ? static_cast<Chassis::JustFloatProfile>(raw_profile)
                            : Chassis::JustFloatProfile::kYawPid;
             }
@@ -225,6 +225,23 @@ namespace jia
                 return type == Chassis::DirectDriveCommandType::kRpm;
             }
 
+            inline bool getDriveSpeedPidDerivativeFirst(const VESC_Motor *drive_motor)
+            {
+                // drive 共享调参链路需要回读当前运行态的微分先行开关。
+                return (drive_motor != nullptr) ? drive_motor->get_speed_pid_derivative_first() : false;
+            }
+
+            inline void setDriveSpeedPidDerivativeFirst(VESC_Motor *drive_motor, bool derivative_first)
+            {
+                if (drive_motor == nullptr)
+                {
+                    return;
+                }
+
+                // 通过 VESC 专门接口同步，避免重新把策略塞回 pid_init 入口。
+                drive_motor->set_speed_pid_derivative_first(derivative_first);
+            }
+
         } // namespace
 
         void Chassis::init(InitConfig &config)
@@ -233,10 +250,10 @@ namespace jia
             refreshActuatorLimitState();
 
             static const WheelInitConfig kDefaultWheelInit[4] = {
-                {.pos_x_m = -0.39f, .pos_y_m = 0.40f, .theta_oa_to_owi_deg = -90.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = 1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_1_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_1_Pin, .homing_falling_edge_mech_deg = -30.0f, .homing_rising_edge_mech_deg = 150.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
+                {.pos_x_m = -0.39f, .pos_y_m = 0.40f, .theta_oa_to_owi_deg = -90.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = -1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_1_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_1_Pin, .homing_falling_edge_mech_deg = -30.0f, .homing_rising_edge_mech_deg = 150.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
                 {.pos_x_m = -0.39f, .pos_y_m = -0.40f, .theta_oa_to_owi_deg = 0.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = 1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_2_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_2_Pin, .homing_falling_edge_mech_deg = 60.0f, .homing_rising_edge_mech_deg = -120.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
-                {.pos_x_m = 0.39f, .pos_y_m = -0.40f, .theta_oa_to_owi_deg = 90.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = 1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_3_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_3_Pin, .homing_falling_edge_mech_deg = 150.0f, .homing_rising_edge_mech_deg = -30.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
-                {.pos_x_m = 0.39f, .pos_y_m = 0.40f, .theta_oa_to_owi_deg = 180.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = -1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_4_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_4_Pin, .homing_falling_edge_mech_deg = -120.0f, .homing_rising_edge_mech_deg = 60.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
+                {.pos_x_m = 0.39f, .pos_y_m = -0.40f, .theta_oa_to_owi_deg = 90.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = -1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_3_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_3_Pin, .homing_falling_edge_mech_deg = 150.0f, .homing_rising_edge_mech_deg = -30.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
+                {.pos_x_m = 0.39f, .pos_y_m = 0.40f, .theta_oa_to_owi_deg = 180.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = 1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_4_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_4_Pin, .homing_falling_edge_mech_deg = -120.0f, .homing_rising_edge_mech_deg = 60.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
             };
 
             for (u8 i = 0; i < 4; ++i)
@@ -934,7 +951,34 @@ namespace jia
             }
 
             const f32 command_speed_m_s = computeMaxCommandWheelSpeedMps(target_data_);
-            return xpark_gate_active_ && (command_speed_m_s > getXParkCommandExitSpeedMps());
+            if (command_speed_m_s <= getNearZeroExitSpeedMps())
+            {
+                return false;
+            }
+
+            if (xpark_gate_active_)
+            {
+                return true;
+            }
+
+            const f32 planned_speed_m_s = computeMaxCommandWheelSpeedMps(last_planned_data_);
+            // 正常 S 曲线起步只允许在“首拍仍完全静止”时进入一次等待门，
+            // 放行出第一拍后就按普通速度规划继续，不再因为近零小速度反复重进。
+            if (planned_speed_m_s > 1.0e-6f)
+            {
+                return false;
+            }
+
+            const f32 wheel_radius_m = (runtime_strategy_cfg_.wheel_radius_m_ >= 0.0f)
+                                           ? runtime_strategy_cfg_.wheel_radius_m_
+                                           : -runtime_strategy_cfg_.wheel_radius_m_;
+            f32 max_residual_speed_m_s = 0.0f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                const f32 residual_speed_m_s = fabsf(wheel_config_[i].corrected_drive_omega_rad_s) * wheel_radius_m;
+                max_residual_speed_m_s = (residual_speed_m_s > max_residual_speed_m_s) ? residual_speed_m_s : max_residual_speed_m_s;
+            }
+            return max_residual_speed_m_s <= getNearZeroEnterSpeedMps();
         }
 
         bool Chassis::isLaunchHoldAligned(const SwervePlannerOutput &planner_output) const
@@ -2054,7 +2098,10 @@ namespace jia
                                                       bool single_wheel_isolation_active,
                                                       u8 single_wheel_idx,
                                                       bool chassis_motion_blocked,
-                                                      bool allow_drive_position_loop)
+                                                      bool allow_drive_position_loop,
+                                                      bool drive_zero_stop_active,
+                                                      bool entering_drive_zero_stop,
+                                                      bool leaving_drive_zero_stop)
         {
             VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h);
             f32 drive_bias_current_mA = 0.0f;
@@ -2063,6 +2110,13 @@ namespace jia
             f32 tc_term_mA = 0.0f;
             f32 alpha_est_rad_s2 = 0.0f;
             f32 alpha_dt_s = period_;
+            const bool can_use_vesc_drive_assist =
+                allow_drive_position_loop &&
+                (drive_vesc != nullptr) &&
+                !single_wheel_isolation_active;
+            const bool can_reset_local_speed_pid =
+                can_use_vesc_drive_assist &&
+                (drive_vesc->getRpmControlMode() == VESC_RPM_CONTROL_PID_CURRENT);
 
             const bool can_inject_virtual_load =
                 allow_drive_position_loop &&
@@ -2076,7 +2130,13 @@ namespace jia
                 !input_target_data_.zero_current_all &&
                 !chassis_motion_blocked;
 
-            if (can_inject_virtual_load)
+            if (can_reset_local_speed_pid && leaving_drive_zero_stop)
+            {
+                // 从 zero-stop 恢复正常 RPM 闭环前，再清一次速度环状态，避免停前残留被带进下一次起步。
+                drive_vesc->reset_speed_pid_state();
+            }
+
+            if (!drive_zero_stop_active && can_inject_virtual_load)
             {
                 const DebugDriveVirtualLoadConfig &load_cfg = debug_drive_virtual_load_[wheel_idx];
                 const f32 omega_rad_s = wheel.corrected_drive_omega_rad_s;
@@ -2116,14 +2176,75 @@ namespace jia
                 drive_vesc->setSpeedPidCurrentBias(drive_bias_current_mA);
             }
 
-            if (allow_drive_position_loop)
+            const bool can_apply_zero_stop_assist =
+                drive_zero_stop_active &&
+                can_use_vesc_drive_assist &&
+                runtime_strategy_cfg_.enable_drive_zero_stop_assist;
+
+            if (can_apply_zero_stop_assist)
             {
-                setDriveMotorTargetOmegaRadS(wheel, delivered_drive_target_rad_s);
+                const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
+                const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * wheel_radius_m;
+                const f32 settle_speed_m_s = (runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s >= 0.0f)
+                                                 ? runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s
+                                                 : 0.0f;
+                const f32 brake_hold_speed_m_s = (runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s >= 0.0f)
+                                                     ? runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s
+                                                     : 0.0f;
+                const f32 brake_reenter_speed_m_s =
+                    (runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s > brake_hold_speed_m_s)
+                        ? runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s
+                        : brake_hold_speed_m_s;
+                const bool was_settled = drive_zero_stop_settled_[wheel_idx];
+                drive_zero_stop_settled_[wheel_idx] = residual_speed_m_s <= settle_speed_m_s;
+
+                if (drive_zero_stop_settled_[wheel_idx])
+                {
+                    drive_zero_stop_brake_active_[wheel_idx] = false;
+                }
+                else if (drive_zero_stop_brake_active_[wheel_idx])
+                {
+                    drive_zero_stop_brake_active_[wheel_idx] = residual_speed_m_s > brake_hold_speed_m_s;
+                }
+                else
+                {
+                    drive_zero_stop_brake_active_[wheel_idx] = residual_speed_m_s > brake_reenter_speed_m_s;
+                }
+
+                const bool need_reset_speed_pid_state =
+                    can_reset_local_speed_pid &&
+                    ((entering_drive_zero_stop || leaving_drive_zero_stop) ||
+                     (!entering_drive_zero_stop && !was_settled && drive_zero_stop_settled_[wheel_idx]));
+
+                if (need_reset_speed_pid_state)
+                {
+                    // 进入/退出 zero-stop，或第一次真正进入最终停稳区时，都清一次本地速度环状态。
+                    drive_vesc->reset_speed_pid_state();
+                }
+
+                if (drive_zero_stop_brake_active_[wheel_idx])
+                {
+                    drive_vesc->setBrake(fabsf(runtime_strategy_cfg_.drive_zero_stop_brake_current_mA));
+                }
+                else
+                {
+                    drive_vesc->setTargetCurrent(0.0f);
+                }
+            }
+            else
+            {
+                drive_zero_stop_brake_active_[wheel_idx] = false;
+                drive_zero_stop_settled_[wheel_idx] = false;
+                if (allow_drive_position_loop)
+                {
+                    setDriveMotorTargetOmegaRadS(wheel, delivered_drive_target_rad_s);
+                }
             }
 
             if (wheel_idx == static_cast<u8>(debug_drive_load_trace_.observe_wheel_idx))
             {
-                debug_drive_load_trace_.target_rpm = radsToRpmF32(delivered_drive_target_rad_s);
+                const f32 trace_target_rad_s = can_apply_zero_stop_assist ? 0.0f : delivered_drive_target_rad_s;
+                debug_drive_load_trace_.target_rpm = radsToRpmF32(trace_target_rad_s);
                 debug_drive_load_trace_.feedback_rpm = radsToRpmF32(wheel.corrected_drive_omega_rad_s);
                 debug_drive_load_trace_.omega_rad_s = wheel.corrected_drive_omega_rad_s;
                 debug_drive_load_trace_.alpha_est_rad_s2 = alpha_est_rad_s2;
@@ -2131,7 +2252,7 @@ namespace jia
                 debug_drive_load_trace_.b_term_mA = b_term_mA;
                 debug_drive_load_trace_.tc_term_mA = tc_term_mA;
                 debug_drive_load_trace_.load_bias_current_mA = drive_bias_current_mA;
-                debug_drive_load_trace_.virtual_load_enable = can_inject_virtual_load ? 1.0f : 0.0f;
+                debug_drive_load_trace_.virtual_load_enable = (!drive_zero_stop_active && can_inject_virtual_load) ? 1.0f : 0.0f;
                 if (debug_drive_step_generator_[wheel_idx].enable)
                 {
                     debug_drive_load_trace_.stepgen_enable = 1.0f;
@@ -2160,6 +2281,12 @@ namespace jia
             xpark_gate_active_ = false;
             xpark_stationary_hold_ms_ = 0U;
             launch_hold_active_ = false;
+            drive_zero_stop_active_ = false;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                drive_zero_stop_brake_active_[i] = false;
+                drive_zero_stop_settled_[i] = false;
+            }
             low_speed_residual_bypass_active_ = false;
             low_speed_drive_suppression_bypassed_by_residual_speed_ = false;
             max_residual_speed_m_s_ = 0.0f;
@@ -2218,15 +2345,20 @@ namespace jia
                 steer_fault_any_active_ = steer_fault_any_active;
                 const bool chassis_motion_blocked = !all_homed || steer_fault_any_active;
                 const bool drive_enabled = debug_control_.single_wheel.drive.enable && !debug_control_.single_wheel.estop;
-                if (drive_enabled && !chassis_motion_blocked && !current_mode_flag_.is_wheel_torque_free && !input_target_data_.zero_current_all)
+                if (drive_enabled && !current_mode_flag_.is_wheel_torque_free && !input_target_data_.zero_current_all)
                 {
+                    // mode30 目标轮 RPM 直控本身已经绕过全车 homing/fault gate；
+                    // 虚拟负载只是叠加在这条目标轮速度环上的偏置电流，不应再被其他轮状态全车级短路。
                     applyDriveVirtualLoadAndCommand(target_wheel,
                                                     wheel_idx,
                                                     target_wheel.target_drive_omega_rad_s,
                                                     true,
                                                     wheel_idx,
-                                                    chassis_motion_blocked,
-                                                    true);
+                                                    false,
+                                                    true,
+                                                    false,
+                                                    false,
+                                                    false);
                 }
                 else if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(target_wheel.drive_motor_h))
                 {
@@ -2615,7 +2747,9 @@ namespace jia
                 resetManualSpeedProfileRuntimeState(true);
             }
 
-            if (!launch_hold_active_ && shouldActivateLaunchHold())
+            if (!launch_hold_active_ &&
+                (xpark_gate_active_ || (effective_profile_mode == ManualSpeedProfileMode::kSCurve)) &&
+                shouldActivateLaunchHold())
             {
                 launch_hold_active_ = true;
                 planned_data_ = Data{};
@@ -3330,6 +3464,64 @@ namespace jia
             }
             steer_fault_any_active_ = steer_fault_any_active;
             const bool chassis_motion_blocked = !all_homed || steer_fault_any_active;
+            const bool prev_drive_zero_stop_active = drive_zero_stop_active_;
+            if (runtime_strategy_cfg_.enable_drive_zero_stop_assist &&
+                !single_wheel_isolation_active &&
+                !input_target_data_.zero_current_all &&
+                !current_mode_flag_.is_wheel_torque_free &&
+                !chassis_motion_blocked)
+            {
+                // 只有“整车目标意图”和“当前执行帧目标”都已经逼近静止时，才进入 zero-stop assist。
+                // 这样既不会误伤正常起步/恢复第一拍，也不会把宿主测试里手工塞入的 drive 命令当成静止收尾。
+                const bool use_body_target_for_zero_stop_gate =
+                    (input_target_data_.mode == Mode::kBodySpeedMode) ||
+                    (input_target_data_.mode == Mode::kBodySpeedLockNowRotZMode) ||
+                    (input_target_data_.mode == Mode::kBodySpeedLockNowRotZWithNoOmegaZMode) ||
+                    (input_target_data_.mode == Mode::kBodySpeedLockToRotZMode) ||
+                    (input_target_data_.mode == Mode::kWorldSpeedMode) ||
+                    (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZMode) ||
+                    (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode) ||
+                    (input_target_data_.mode == Mode::kWorldSpeedLockToRotZMode) ||
+                    (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
+                // 正常底盘链路下优先依据整车目标是否已静止来决定是否进入 zero-stop，
+                // 避免速度规划尾巴还没完全衰减时，把刹车收尾整体拖后。
+                f32 max_frame_command_speed_m_s = 0.0f;
+                const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    const f32 frame_command_speed_m_s = fabsf(actuator_command_frame_.drive_omega_rad_s[i]) * wheel_radius_m;
+                    max_frame_command_speed_m_s = (frame_command_speed_m_s > max_frame_command_speed_m_s) ? frame_command_speed_m_s : max_frame_command_speed_m_s;
+                }
+                const f32 target_command_speed_m_s = computeMaxCommandWheelSpeedMps(target_data_);
+                const f32 max_command_speed_m_s = use_body_target_for_zero_stop_gate
+                                                      ? target_command_speed_m_s
+                                                      : ((target_command_speed_m_s > max_frame_command_speed_m_s)
+                                                             ? target_command_speed_m_s
+                                                             : max_frame_command_speed_m_s);
+
+                if (drive_zero_stop_active_)
+                {
+                    drive_zero_stop_active_ = max_command_speed_m_s < getNearZeroExitSpeedMps();
+                }
+                else
+                {
+                    drive_zero_stop_active_ = max_command_speed_m_s <= getNearZeroEnterSpeedMps();
+                }
+            }
+            else
+            {
+                drive_zero_stop_active_ = false;
+            }
+            const bool entering_drive_zero_stop = !prev_drive_zero_stop_active && drive_zero_stop_active_;
+            const bool leaving_drive_zero_stop = prev_drive_zero_stop_active && !drive_zero_stop_active_;
+            if (!drive_zero_stop_active_)
+            {
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    drive_zero_stop_brake_active_[i] = false;
+                    drive_zero_stop_settled_[i] = false;
+                }
+            }
             // 这里是“四舵轮目标命令”真正落到电机接口前的最后一道门控：
 // computeModuleCommands()虽然已经为每个轮子算好了目标舵角和驱动速度
 // 但是否允许按这些目标下发，还要看当前是否全部完成回零，以及是否处于扭矩自由模式
@@ -3504,6 +3696,11 @@ namespace jia
                 {
                     delivered_drive_target_rad_s = clampValue(delivered_drive_target_rad_s, -runtime_strategy_cfg_.max_drive_omega_rad_s_, runtime_strategy_cfg_.max_drive_omega_rad_s_);
                 }
+                if (drive_zero_stop_active_)
+                {
+                    // 整车已经进入静止命令区后，不再让 drive 目标继续沿 RPM 路径慢慢收尾，而是交给后面的 zero-stop assist 收口。
+                    delivered_drive_target_rad_s = 0.0f;
+                }
 
                 wheel.target_drive_omega_rad_s = delivered_drive_target_rad_s;
                 planned_data_.drive_omega_rad_s[i] = delivered_drive_target_rad_s;
@@ -3515,7 +3712,10 @@ namespace jia
                                                 single_wheel_isolation_active,
                                                 single_wheel_idx,
                                                 chassis_motion_blocked,
-                                                allow_drive_position_loop);
+                                                allow_drive_position_loop,
+                                                drive_zero_stop_active_,
+                                                entering_drive_zero_stop,
+                                                leaving_drive_zero_stop);
             }
 
             if (single_wheel_isolation_active)
@@ -3681,6 +3881,8 @@ namespace jia
 
                 debug_pid_tune_.drive_speed_pid_cfg = drive_motor->get_speed_pid_params();
                 debug_pid_tune_.drive_speed_pid_td_ratio = drive_motor->get_speed_pid_td_ratio();
+                // dirty cache 不存在时，回读共享 drive 速度环的微分先行状态。
+                debug_pid_tune_.drive_speed_pid_derivative_first = getDriveSpeedPidDerivativeFirst(drive_motor);
                 break;
             }
         }
@@ -3723,7 +3925,10 @@ namespace jia
                         continue;
                     }
 
-                    drive_motor->pid_init(debug_pid_tune_.drive_speed_pid_cfg, debug_pid_tune_.drive_speed_pid_td_ratio);
+                    drive_motor->pid_init(debug_pid_tune_.drive_speed_pid_cfg,
+                                          debug_pid_tune_.drive_speed_pid_td_ratio);
+                    // 参数仍从 pid_init 下发，但微分先行改走独立 setter，避免接口再次扩散。
+                    setDriveSpeedPidDerivativeFirst(drive_motor, debug_pid_tune_.drive_speed_pid_derivative_first);
                     applied_any = true;
                 }
 
@@ -4156,6 +4361,52 @@ namespace jia
             debug_uart_.printf_DMA_JustFloat(payload, 16);
         }
 
+        void Chassis::emitUart8VofaDriveZeroStopBrakeTrace()
+        {
+            if (!debug_output_.output_enable ||
+                sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
+                sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kDriveZeroStopBrakeTrace)
+            {
+                return;
+            }
+
+            const u32 period_ms = (debug_output_.justfloat.drive_zero_stop_brake.period_ms > 0U) ? debug_output_.justfloat.drive_zero_stop_brake.period_ms : 1U;
+            if ((time_ms_ - debug_output_runtime_.justfloat.drive_zero_stop_brake.last_ms) < period_ms)
+            {
+                return;
+            }
+
+            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
+            {
+                return;
+            }
+
+            debug_output_runtime_.justfloat.drive_zero_stop_brake.last_ms = time_ms_;
+
+            const u8 observe_wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
+            const VESC_Motor *drive_motor = wheel_config_[observe_wheel_idx].drive_motor_h;
+            const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
+            const f32 residual_speed_m_s = fabsf(wheel_config_[observe_wheel_idx].corrected_drive_omega_rad_s) * wheel_radius_m;
+            const f32 target_command_speed_m_s = computeMaxCommandWheelSpeedMps(target_data_);
+
+            float payload[12] = {0.0f};
+            payload[0] = static_cast<f32>(time_ms_) * 0.001f;
+            payload[1] = static_cast<f32>(observe_wheel_idx);
+            // 速度口径继续复用现有 drive load trace，避免另起一套调试语义。
+            payload[2] = debug_drive_load_trace_.target_rpm;
+            payload[2] = debug_drive_load_trace_.target_rpm;
+            payload[3] = debug_drive_load_trace_.feedback_rpm;
+            payload[4] = drive_zero_stop_brake_active_[observe_wheel_idx] ? 1.0f : 0.0f;
+            payload[5] = (drive_motor != nullptr) ? drive_motor->getTargetBrakeCurrent() : 0.0f;
+            payload[6] = ((drive_motor != nullptr) && drive_motor->isBrakeCommandActive()) ? 1.0f : 0.0f;
+            payload[7] = (drive_motor != nullptr) ? drive_motor->getCurrent() : 0.0f;
+            payload[8] = drive_zero_stop_active_ ? 1.0f : 0.0f;
+            payload[9] = residual_speed_m_s;
+            payload[10] = target_command_speed_m_s;
+            payload[11] = target_data_.omega_z;
+            debug_uart_.printf_DMA_JustFloat(payload, 12);
+        }
+
         void Chassis::emitUart8SwerveTelemetryV2(bool all_homed)
         {
             if (!debug_output_.output_enable || sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kBinary)
@@ -4331,6 +4582,9 @@ namespace jia
                 }
                 case JustFloatProfile::kDrivePidLoadTune:
                     emitUart8VofaDrivePidLoadTrace();
+                    break;
+                case JustFloatProfile::kDriveZeroStopBrakeTrace:
+                    emitUart8VofaDriveZeroStopBrakeTrace();
                     break;
                 case JustFloatProfile::kYawPid:
                 default:

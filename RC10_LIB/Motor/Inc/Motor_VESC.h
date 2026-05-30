@@ -87,8 +87,12 @@ public:
      * @brief 初始化本地速度环 PID 参数
      * @param speed_params 速度环 PID 参数
      * @param speed_tdRatio 增量式 PID 的 td_ratio
+     * @note  drive 轮改成位置式 PID 后，这里兼容复用为积分分离阈值
      */
     void pid_init(const PID_Param_Config& speed_params, float speed_tdRatio);
+    // 专门控制 VESC 本地速度环是否启用微分先行，默认保持关闭。
+    // 兼容说明：drive 轮改成位置式 PID 后，这个接口保留但不再改动运行行为。
+    void set_speed_pid_derivative_first(bool derivative_first) { (void)derivative_first; }
 
     /**
      * @brief 设置速度环输出附加电流偏置
@@ -112,6 +116,9 @@ public:
      */
     float getSpeedPidTotalOutputCurrent() const { return speed_pid_total_output_current_mA_; }
 
+    // 底盘在“目标已静止”时会调用这里，清掉本地速度环累计状态，避免停稳后再被残余积分反推一小下。
+    void reset_speed_pid_state();
+
     /**
      * @brief 设置 RPM 控制策略
      * @note  默认仍为 VESC 原生 eRPM 闭环；仅显式切换后才使用本地 PID 速度环
@@ -132,9 +139,17 @@ public:
     void setTargetTotalAngle(float totalAngle_set) override;
     void setBrake(float brake_current) override;
     void setDuty(float duty);
+    // 供 JustFloat 零速止停观测模式回读当前刹车目标电流。
+    float getTargetBrakeCurrent() const { return target_brake_current_; }
+    // 供底盘判断当前这一拍是否真的走了刹车命令分支。
+    bool isBrakeCommandActive() const { return mode_ == SET_BRAKE; }
 
     PID_Param_Config get_speed_pid_params() const { return speed_pid_.get_params(); }
-    float get_speed_pid_td_ratio() const { return speed_pid_.get_td_ratio(); }
+    // 兼容旧调参字段名：这里回读的是位置式 PID 的积分分离阈值，不再是增量式 td_ratio。
+    float get_speed_pid_td_ratio() const { return speed_pid_.get_i_separa_threshold(); }
+    // 供运行态回读当前 drive 速度环的微分先行开关状态。
+    // 位置式 PID 下固定为 false。
+    bool get_speed_pid_derivative_first() const { return false; }
 
     std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) override;
     void updateFeedback(const CanFrame& cf) override;
@@ -247,7 +262,7 @@ private:
     float speed_pid_raw_output_current_mA_ = 0.0f; // 本地速度 PID 原始输出，不含 bias
     float speed_pid_total_output_current_mA_ = 0.0f; // 实际下发前的总电流输出，等于 raw + bias
     uint8_t id_check_ = 0; // 回传id，用于给用户分辨 motor_id_ 和电调 id 是否一致
-    PID_Incremental speed_pid_; // 本地 PID 速度环，仅在显式启用时使用
+    PID_Position speed_pid_; // drive 轮本地速度环改为位置式 PID，直接输出电流指令
 };
 
 #endif // __cplusplus
