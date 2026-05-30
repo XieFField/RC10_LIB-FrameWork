@@ -1,7 +1,5 @@
 #include "Arm_setup.h"
 
-
-
 /**
  * @brief 控制循环
  */
@@ -17,7 +15,6 @@ void ArmSetup::loop()
         motor_pitch_->motorEnable();
         this->is_pitchEnable_ = true;
     }
-
 	
 //	ArmstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
     if(!arm_ctrlStatus.is_calibrating)
@@ -69,8 +66,14 @@ void ArmSetup::loop()
         {
             this->start_toAutoCtrl(false);
         }
-    } 
+    }
 
+    // 捕获下降前云台角度：h>=lock_h时持续更新，h<lock_h时冻结
+    {
+        const float h = this->get_currentJointStatus().launchJoint_Height_;
+        if (h >= init_data_.lock_height_)
+            pre_descent_angle_ = this->get_currentJointStatus().rotateJoint_angle_;
+    }
 
     switch(arm_status_)
     {
@@ -285,12 +288,74 @@ void ArmSetup::semiautoControl_1()
 
 bool ArmSetup::manual_pickup()
 {
+    static bool is_pick = false;
+    static float pickup_start_time = 0.0f;
+    this->set_PitchAngle(0.0f);
+    this->setSuckerStatus(Sucker_Status_E::SUCK);
+    this->set_RotateAngle(90.0f);
+    
+    if(this->get_currentJointStatus().launchJoint_Height_ < init_data_.pick_up_height_ + 0.02f)
+    {
+        this->set_LaunchHeight(init_data_.pick_up_height_ + 0.04f);
+    }
+
+    if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f)
+    {
+        this->set_LaunchHeight(init_data_.pick_up_height_);
+
+        if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.pick_up_height_) < 0.008f)
+        {
+            is_pick = true;
+            pickup_start_time = TimeStamp::getInstance().getSeconds();
+        }
+    }
+
+    if(is_pick && TimeStamp::getInstance().getSeconds() - pickup_start_time > 0.5f && pickup_start_time > 0.5f)
+    {
+        this->set_LaunchHeight(init_data_.putdown_height_);
+        if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.008f)
+        {
+            is_pick = false;
+            pickup_start_time = 0.0f;
+            return true;
+        }
+    }
+    
     return false;
 }
 
 
 bool ArmSetup::manual_putdown()
 {
+    this->set_PitchAngle(90.0f);
+    this->set_LaunchHeight(init_data_.putdown_height_);
+
+    static bool is_putdown = false;
+    static float putdown_start_time = 0.0f;
+
+    if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.008f)
+    {
+        this->set_StretchLength(init_data_.max_stretchLength_ * 0.8f);
+        if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.max_stretchLength_ * 0.8f) < 0.01f
+            && is_putdown == false)
+        {
+            this->setSuckerStatus(Sucker_Status_E::STOP);
+            putdown_start_time = TimeStamp::getInstance().getSeconds();
+            is_putdown = true;
+        }
+    }
+
+    if(is_putdown && TimeStamp::getInstance().getSeconds() - putdown_start_time > 0.5f && putdown_start_time > 0.5f)
+    {
+        this->set_StretchLength(0.0f);
+        if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_) < 0.01f)
+        {
+            is_putdown = false;
+            putdown_start_time = 0.0f;
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -318,6 +383,15 @@ void ArmSetup::semiautoControl_2()
         last_arm_status_ = ARM_SEMI_AUTO_CONTROL_2;
     }
 
+    // 下降刹车条件计算（作用域覆盖升降和旋转两个区域）
+    const float h = this->get_currentJointStatus().launchJoint_Height_;
+    const float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
+    const bool pre_near_zero = (pre_descent_angle_ <= 3.0f || pre_descent_angle_ >= 357.0f);
+    const bool angle_off_zero = !(current_angle <= 0.8f || current_angle >= 359.2f);
+    const bool brake_active = pre_near_zero
+                           && (h < init_data_.lock_height_ + 0.01f)
+                           && angle_off_zero;
+
     // 升降==
     if(_tool_Abs(airjoy_data_.right_y) > 0.2f)
     {
@@ -329,19 +403,12 @@ void ArmSetup::semiautoControl_2()
         else
             next_height = this->get_currentJointStatus().launchJoint_Height_ ;
 
-        // 抬升限制检查： 如果不在云台合法区域，禁止抬升
-        if(next_height > target_joint_status_.launchJoint_Height_) //正在抬升
-        {
-             float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
-
-             if(this->get_currentJointStatus().launchJoint_Height_ < init_data_.lock_height_ + 0.01f)
-             {
-                // 限制范围
-                if(std::fabs(current_angle - 0.0f) > 0.8f)
-                {
-                    next_height = target_joint_status_.launchJoint_Height_; // 保持不变
-                }
-             }
+        // 下降刹车：只有下降前云台在0.0±3.0度时才激活
+        if (brake_active) {
+            if (next_height > target_joint_status_.launchJoint_Height_)
+                next_height = target_joint_status_.launchJoint_Height_; // 禁止抬升
+            if (next_height < init_data_.lock_height_)
+                next_height = init_data_.lock_height_; // 禁止降到lock_h以下
         }
         target_joint_status_.launchJoint_Height_ = next_height;
     }
@@ -366,6 +433,10 @@ void ArmSetup::semiautoControl_2()
         float dre = re - t;
         target_joint_status_.rotateJoint_angle_ = (d135 < dre) ? init_data_.rotate_start : re;
     }
+
+    // 刹车激活时强制自动旋转到0°
+    if (brake_active)
+        target_joint_status_.rotateJoint_angle_ = 0.0f;
 
     int8_t target_pitch_logical = (airjoy_data_.SWC & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
     if(target_pitch_logical == 1)
@@ -459,6 +530,15 @@ void ArmSetup::manualControl()
         last_arm_status_ = ARM_MANUAL_CONTROL;
     }
 
+    // 下降刹车条件计算（作用域覆盖升降和旋转两个区域）
+    const float h = this->get_currentJointStatus().launchJoint_Height_;
+    const float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
+    const bool pre_near_zero = (pre_descent_angle_ <= 3.0f || pre_descent_angle_ >= 357.0f);
+    const bool angle_off_zero = !(current_angle <= 0.8f || current_angle >= 359.2f);
+    const bool brake_active = pre_near_zero
+                           && (h < init_data_.lock_height_ + 0.01f)
+                           && angle_off_zero;
+
     // 升降==
     if(_tool_Abs(airjoy_data_.right_y) > 0.2f)
     {
@@ -470,19 +550,13 @@ void ArmSetup::manualControl()
         else
             next_height = this->get_currentJointStatus().launchJoint_Height_ ;
 
-        // 抬升限制检查： 如果不在云台合法区域，禁止抬升
-        if(next_height > target_joint_status_.launchJoint_Height_) //正在抬升
-        {
-             float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
+        // 下降刹车：只有下降前云台在0.0±3.0度时才激活
+        if (brake_active) {
+            if (next_height > target_joint_status_.launchJoint_Height_)
+                next_height = target_joint_status_.launchJoint_Height_; // 禁止抬升
 
-             if(this->get_currentJointStatus().launchJoint_Height_ < init_data_.lock_height_ + 0.01f)
-             {
-                // 限制范围
-                if(std::fabs(current_angle - 0.0f) > 0.8f)
-                {
-                    next_height = target_joint_status_.launchJoint_Height_; // 保持不变
-                }
-             }
+            if (next_height < init_data_.lock_height_)
+                next_height = init_data_.lock_height_; // 禁止降到lock_h以下
         }
         target_joint_status_.launchJoint_Height_ = next_height;
     }
@@ -507,6 +581,10 @@ void ArmSetup::manualControl()
         float dre = re - t;
         target_joint_status_.rotateJoint_angle_ = (d135 < dre) ? init_data_.rotate_start : re;
     }
+
+    // 刹车激活时强制自动旋转到0°
+    if (brake_active)
+        target_joint_status_.rotateJoint_angle_ = 0.0f;
 
     //pitch 控制
 #if !USE_RC10_AIRJOY

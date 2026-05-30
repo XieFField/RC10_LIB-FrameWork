@@ -346,7 +346,11 @@ private:
 
         const float norm_deg = rotate_angle_deg;
 
-        if(h < init_data_.lock_height_) return false;
+        if (h < init_data_.lock_height_) {
+            // 只有下降前在0.0±3.0度时才强制锁定到0°
+            if (pre_descent_angle_ <= 3.0f || pre_descent_angle_ >= 357.0f)
+                return false;
+        }
         if(h < safe_h - 0.01f) return (norm_deg >= 0.0f && norm_deg <= 135.0f);
         return true;
     }
@@ -367,8 +371,12 @@ private:
         const float lock_h = init_data_.lock_height_;
         const float re = init_data_.rotate_end;
 
-        if (h < lock_h)
-            return 0.0f;
+        if (h < lock_h) {
+            // 只有下降前在0.0±3.0度时才强制锁定到0°
+            if (pre_descent_angle_ <= 3.0f || pre_descent_angle_ >= 357.0f)
+                return 0.0f;
+            // 否则走safe_h限制
+        }
 
         if (h < safe_h - 0.01f)
         {
@@ -507,6 +515,8 @@ protected:
         float launch_rate = 0.03f;
         int cnt = 0;
     }manual_control;
+
+    float pre_descent_angle_ = 0.0f; // 下降前云台角度：h>=lock_h时持续更新，h<lock_h时冻结
 
     ButtonDetector button_detector_1 = ButtonDetector(0.200f); //双击三击检测器，200ms间隔
 

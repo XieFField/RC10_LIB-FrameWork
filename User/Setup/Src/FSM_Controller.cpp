@@ -2,7 +2,6 @@
 #include "chassis_swerve_task_demo.h"
 
 
-communication::RC10_AirJoy_Data_S rc_data;
 void FSM_Controller::loop()
 {
     if(!init_flag_) 
@@ -16,7 +15,6 @@ void FSM_Controller::loop()
 #else
 
     communication::Lora_communication::GetInstance()->Task_Process();
-    communication::Lora_communication::GetInstance()->update_airjoy_data(&rc_data);
     communication::Lora_communication::GetInstance()->Tim_It_Process();
 
     communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
@@ -141,8 +139,6 @@ void FSM_Controller::loop()
         break;
    }
 
-
-
   if(KStarget != last_KStarget)
   {
       chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1]);
@@ -151,6 +147,32 @@ void FSM_Controller::loop()
   }
 
    last_KStarget = KStarget;
+   set_cmd_to_R2();
+
+   //relocate
+   if(robot_status_ == ALL_STOP && airjoy_data_.SWB == 0x01)
+   {
+        static bool is_click = 0;
+        if(airjoy_data_.LB == 1 && !is_click)
+        {
+            Locate_Setup::getInstance()->Relocte_ToLader();
+            is_click = true;
+        }
+        else if(airjoy_data_.LB == 0)
+        {
+            is_click = false;
+        }
+   }
+}
+
+void FSM_Controller::set_cmd_to_R2()
+{
+    if(airjoy_data_.page == 0x02)
+    {
+        
+    }
+    else
+        return;
 }
 
 

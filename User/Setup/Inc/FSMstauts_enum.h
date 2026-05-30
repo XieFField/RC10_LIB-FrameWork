@@ -48,7 +48,7 @@ typedef enum{
 }SEND_MODE_TO_AIRJOY_E;
 
 typedef enum{
-
+    
 }SEND_CMD_TO_R2;
 
 typedef enum{
