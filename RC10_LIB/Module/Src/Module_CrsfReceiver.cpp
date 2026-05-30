@@ -2,7 +2,6 @@
 #include <cstring>
 #include <cmath>
 #include "core_cm7.h"
-
 /* -------------  Cache 维锟斤拷锟斤拷/锟斤拷锟斤拷  ------------- */
 // SCB cache ops 要锟斤拷锟街凤拷锟斤拷小锟斤拷锟斤拷 cache line 锟斤拷锟斤拷(32锟街斤拷)
 static inline void dcache_clean_range(void* addr, uint32_t len) 
@@ -545,5 +544,5 @@ void CrsfReceiver::consumeRingBuffer()
 /* ----------------  全锟斤拷 C 锟斤拷锟接ｏ拷指锟斤拷 UART7  ---------------- */
 extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
 {
-    if (huart == &huart7) tx_done = true;  
+    if (huart == &huart7) tx_done = true;
 }

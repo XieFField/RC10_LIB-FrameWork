@@ -8,6 +8,9 @@ void FSM_Controller::loop()
 {
     if(!init_flag_) 
         return;
+    communication::Lora_communication::GetInstance()->Task_Process();
+    communication::Lora_communication::GetInstance()->Tim_It_Process();
+    Serial1Protocol::getInstance().process();
     CrsfReceiver::GetInstance(&huart7)->send_kfsandSpear(crsf_send_s.rsf_send_data.kfs1, crsf_send_s.rsf_send_data.kfs2, 
 																	crsf_send_s.rsf_send_data.Spear);
     CrsfReceiver::GetInstance(&huart7)->process();

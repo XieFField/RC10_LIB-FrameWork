@@ -1,4 +1,6 @@
 #include "Setup_ConfigInit.h"
+#include "Module_Serial1Protocol.h"
+#include "Module_lora.h"
 
 // 外部声明 USB 高速设备句柄
 extern "C" 
@@ -124,6 +126,7 @@ Swerve_Task_Demo swerve_task_demo; // 轮式舵轮底盘调试任务实例
 
 void ALL_Setup_ConfigInit(void)
 {
+    Serial1Protocol &serial1_protocol = Serial1Protocol::getInstance();
 
     HWT101CT* imu = HWT101CT::GetInstance(&huart1);
     imu->InitUART();
@@ -181,6 +184,8 @@ void ALL_Setup_ConfigInit(void)
 
     CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
     crsf_rc->init();
+    serial1_protocol.init(&huart2);
+    communication::Lora_communication::GetInstance()->Init();
 
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
     set1->locate_setup_init();
