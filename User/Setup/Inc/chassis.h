@@ -1107,7 +1107,7 @@ namespace jia
             struct DebugOutputJustFloatConfig
             {
                 u8 profile_raw = static_cast<u8>(JustFloatProfile::kSingleWheelTrace);
-                u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kDriveOnly);
+                u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kSteerAndDrive);
                 DebugOutputSlotConfig overview = {5U};
                 DebugOutputSlotConfig single_wheel = {1U};
                 DebugOutputSlotConfig yaw_pid = {4U};
