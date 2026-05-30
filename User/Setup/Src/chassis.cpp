@@ -3525,6 +3525,15 @@ namespace jia
             // 这里是“四舵轮目标命令”真正落到电机接口前的最后一道门控：
 // computeModuleCommands()虽然已经为每个轮子算好了目标舵角和驱动速度
 // 但是否允许按这些目标下发，还要看当前是否全部完成回零，以及是否处于扭矩自由模式
+            auto clearXParkSteerDeadbandState = [](WheelConfig &wheel) {
+                wheel.xpark_steer_deadband_active = false;
+                wheel.xpark_steer_deadband_error_rad = 0.0f;
+            };
+            auto clearSteerSpeedPidSettleState = [](WheelConfig &wheel) {
+                wheel.steer_speed_pid_settled_active = false;
+                wheel.steer_speed_pid_settle_error_rad = 0.0f;
+                wheel.steer_speed_pid_settle_target_rate_rad_s = 0.0f;
+            };
             f32 execution_allowed_drive_targets_rad_s[4] = {0.0f, 0.0f, 0.0f, 0.0f};
             bool execution_allow_drive_position_loop[4] = {true, true, true, true};
             bool execution_apply_shared_alpha = !input_target_data_.zero_current_all && !current_mode_flag_.is_wheel_torque_free;
@@ -3561,6 +3570,8 @@ namespace jia
                 if (input_target_data_.zero_current_all)
                 {
 // 硬零电流模式优先级最高：无论回零状态如何，四轮舵向/驱动都直接下0电流
+                    clearXParkSteerDeadbandState(wheel);
+                    clearSteerSpeedPidSettleState(wheel);
                     allowed_drive_target_rad_s = 0.0f;
                     wheel.target_drive_omega_rad_s = 0.0f;
                     planned_data_.drive_omega_rad_s[i] = 0.0f;
@@ -3582,6 +3593,8 @@ namespace jia
 // 只要还有任意一个轮子没有完成回零，或者存在舵向故障/恢复重校准中的轮子，
 // drive 一律按“电流清零”停机，不走 RPM=0 的速度闭环停机语义，
 // 避免离线前残留的驱动电流或速度闭环继续推动底盘。
+                    clearXParkSteerDeadbandState(wheel);
+                    clearSteerSpeedPidSettleState(wheel);
                     allow_drive_position_loop = execution_allow_drive_position_loop[i];
                     allowed_drive_target_rad_s = 0.0f;
                     f32 delivered_drive_target_rad_s = allowed_drive_target_rad_s;
@@ -3646,6 +3659,8 @@ namespace jia
                 {
 // 扭矩自由模式下，不执行任何舵角或驱动速度闭环
 // 而是把转向和驱动都打成“零电流/零扭矩”状态，方便人工推动或安全释放
+                    clearXParkSteerDeadbandState(wheel);
+                    clearSteerSpeedPidSettleState(wheel);
                     allowed_drive_target_rad_s = 0.0f;
                     wheel.target_drive_omega_rad_s = 0.0f;
                     planned_data_.drive_omega_rad_s[i] = 0.0f;
@@ -3666,6 +3681,8 @@ namespace jia
 // 才真正把上一阶段规划出的目标舵角和驱动角速度下发给电机闭环
                 if (isolate_this_wheel)
                 {
+                    clearXParkSteerDeadbandState(wheel);
+                    clearSteerSpeedPidSettleState(wheel);
                     allowed_drive_target_rad_s = 0.0f;
                     wheel.target_drive_omega_rad_s = 0.0f;
                     planned_data_.drive_omega_rad_s[i] = 0.0f;
@@ -3705,7 +3722,139 @@ namespace jia
                 wheel.target_drive_omega_rad_s = delivered_drive_target_rad_s;
                 planned_data_.drive_omega_rad_s[i] = delivered_drive_target_rad_s;
                 last_drive_omega_cmd_rad_s_[i] = delivered_drive_target_rad_s;
-                setSteerMotorTargetTotalAngleRad(wheel, wheel.target_steer_motor_total_angle_rad);
+                wheel.target_steer_motor_total_angle_rad = actuator_command_frame_.steer_corrected_local_total_rad[i];
+                wheel.steer_target_velocity_rad_s = actuator_command_frame_.steer_rate_rad_s[i];
+                planned_data_.steer_angle_oa_rad[i] = actuator_command_frame_.steer_oa_total_rad[i];
+                const StrategyConfig::SteerSpeedPidSettleResetConfig &steer_settle_cfg =
+                    runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_;
+                const f32 steer_settle_enter_deg = clampValue(steer_settle_cfg.enter_angle_deg, 0.0f, 180.0f);
+                const f32 steer_settle_exit_deg = clampValue((steer_settle_cfg.exit_angle_deg > steer_settle_enter_deg)
+                                                                 ? steer_settle_cfg.exit_angle_deg
+                                                                 : (steer_settle_enter_deg + 1.0e-3f),
+                                                             steer_settle_enter_deg,
+                                                             180.0f);
+                const f32 steer_settle_enter_rate_deg_s =
+                    clampValue(steer_settle_cfg.enter_target_rate_deg_s, 0.0f, 360000.0f);
+                const f32 steer_settle_exit_rate_deg_s =
+                    clampValue((steer_settle_cfg.exit_target_rate_deg_s > steer_settle_enter_rate_deg_s)
+                                   ? steer_settle_cfg.exit_target_rate_deg_s
+                                   : (steer_settle_enter_rate_deg_s + 1.0e-3f),
+                               steer_settle_enter_rate_deg_s,
+                               360000.0f);
+                const f32 steer_settle_enter_rad = degToRadF32(steer_settle_enter_deg);
+                const f32 steer_settle_exit_rad = degToRadF32(steer_settle_exit_deg);
+                const f32 steer_settle_enter_rate_rad_s = degToRadF32(steer_settle_enter_rate_deg_s);
+                const f32 steer_settle_exit_rate_rad_s = degToRadF32(steer_settle_exit_rate_deg_s);
+                const StrategyConfig::XParkSteerDeadbandConfig &xpark_deadband_cfg = runtime_strategy_cfg_.xpark_steer_deadband_cfg_;
+                const f32 xpark_deadband_enter_deg = clampValue(xpark_deadband_cfg.enter_angle_deg, 0.0f, 180.0f);
+                const f32 xpark_deadband_exit_deg = clampValue((xpark_deadband_cfg.exit_angle_deg > xpark_deadband_enter_deg)
+                                                                   ? xpark_deadband_cfg.exit_angle_deg
+                                                                   : (xpark_deadband_enter_deg + 1.0e-3f),
+                                                               xpark_deadband_enter_deg,
+                                                               180.0f);
+                const bool xpark_deadband_zero_current_release_enable = xpark_deadband_cfg.zero_current_release_enable;
+                const f32 xpark_deadband_enter_rad = degToRadF32(xpark_deadband_enter_deg);
+                const f32 xpark_deadband_exit_rad = degToRadF32(xpark_deadband_exit_deg);
+                const bool xpark_deadband_eligible =
+                    xpark_deadband_cfg.enable &&
+                    xpark_gate_active_ &&
+                    (runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kXPark) &&
+                    (wheel.homing_state == HomingState::kReady) &&
+                    (wheel.steer_fault_state == SteerFaultState::kNone) &&
+                    !single_wheel_isolation_active;
+                if (xpark_deadband_eligible)
+                {
+                    const f32 current_corrected_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
+                    const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_corrected_local_total_rad);
+                    const f32 xpark_target_oa_total_rad =
+                        nearestEquivalentAngleF32(current_oa_total_rad, wrapTo2PiF32(getXParkAngle(wheel)));
+                    const f32 xpark_error_abs_rad =
+                        fabsf(shortestAngularDistanceF32(current_oa_total_rad, xpark_target_oa_total_rad));
+                    wheel.xpark_steer_deadband_error_rad = xpark_error_abs_rad;
+
+                    bool keep_deadband_active = wheel.xpark_steer_deadband_active;
+                    if (keep_deadband_active)
+                    {
+                        keep_deadband_active = (xpark_error_abs_rad <= xpark_deadband_exit_rad);
+                    }
+                    else
+                    {
+                        keep_deadband_active = (xpark_error_abs_rad <= xpark_deadband_enter_rad);
+                    }
+
+                    wheel.xpark_steer_deadband_active = keep_deadband_active;
+                    if (keep_deadband_active)
+                    {
+                        wheel.target_steer_motor_total_angle_rad = current_corrected_local_total_rad;
+                        wheel.steer_target_velocity_rad_s = 0.0f;
+                        planned_data_.steer_angle_oa_rad[i] = current_oa_total_rad;
+                        last_steer_rate_cmd_rad_s_[i] = 0.0f;
+                    }
+                }
+                else
+                {
+                    clearXParkSteerDeadbandState(wheel);
+                }
+                {
+                    const bool steer_position_control_active =
+                        !(wheel.xpark_steer_deadband_active && xpark_deadband_zero_current_release_enable);
+                    const bool steer_settle_eligible =
+                        steer_settle_cfg.enable &&
+                        steer_position_control_active &&
+                        all_homed &&
+                        (wheel.homing_state == HomingState::kReady) &&
+                        (wheel.steer_fault_state == SteerFaultState::kNone);
+                    if (steer_settle_eligible)
+                    {
+                        const f32 steer_error_abs_rad =
+                            fabsf(wheel.target_steer_motor_total_angle_rad - wheel.corrected_steer_motor_total_angle_rad);
+                        const f32 steer_target_rate_abs_rad_s = fabsf(wheel.steer_target_velocity_rad_s);
+                        wheel.steer_speed_pid_settle_error_rad = steer_error_abs_rad;
+                        wheel.steer_speed_pid_settle_target_rate_rad_s = steer_target_rate_abs_rad_s;
+
+                        const bool was_settled = wheel.steer_speed_pid_settled_active;
+                        bool keep_settled = was_settled;
+                        if (keep_settled)
+                        {
+                            keep_settled = (steer_error_abs_rad <= steer_settle_exit_rad) &&
+                                           (steer_target_rate_abs_rad_s <= steer_settle_exit_rate_rad_s);
+                        }
+                        else
+                        {
+                            keep_settled = (steer_error_abs_rad <= steer_settle_enter_rad) &&
+                                           (steer_target_rate_abs_rad_s <= steer_settle_enter_rate_rad_s);
+                        }
+
+                        wheel.steer_speed_pid_settled_active = keep_settled;
+                        if (!was_settled && keep_settled && (wheel.steer_motor_h != nullptr))
+                        {
+#ifdef TEST_TDD_MOTOR_DJI_H
+                            if (M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h))
+                            {
+                                steer_m3508->reset_speed_pid_state();
+                            }
+#else
+                            if (M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h))
+                            {
+                                steer_m3508->speed_pid_.reset();
+                            }
+#endif
+                        }
+                    }
+                    else
+                    {
+                        clearSteerSpeedPidSettleState(wheel);
+                    }
+                }
+                if (wheel.xpark_steer_deadband_active && xpark_deadband_zero_current_release_enable)
+                {
+                    // X-Park 死区内直接释放舵向电流，避免末端继续抱角和地面静摩擦对抗。
+                    setSteerMotorTargetCurrent(wheel, 0.0f);
+                }
+                else
+                {
+                    setSteerMotorTargetTotalAngleRad(wheel, wheel.target_steer_motor_total_angle_rad);
+                }
                 applyDriveVirtualLoadAndCommand(wheel,
                                                 i,
                                                 delivered_drive_target_rad_s,
@@ -3778,6 +3927,31 @@ namespace jia
             debug_mirror_.nz_freeze_exit_m_s = getNearZeroExitSpeedMps();
             debug_mirror_.nz_xpark_enter_m_s = getXParkCommandEnterSpeedMps();
             debug_mirror_.nz_xpark_exit_m_s = getXParkCommandExitSpeedMps();
+            debug_mirror_.xpark_steer_deadband_enter_deg =
+                clampValue(runtime_strategy_cfg_.xpark_steer_deadband_cfg_.enter_angle_deg, 0.0f, 180.0f);
+            debug_mirror_.xpark_steer_deadband_exit_deg =
+                clampValue((runtime_strategy_cfg_.xpark_steer_deadband_cfg_.exit_angle_deg > debug_mirror_.xpark_steer_deadband_enter_deg)
+                               ? runtime_strategy_cfg_.xpark_steer_deadband_cfg_.exit_angle_deg
+                               : (debug_mirror_.xpark_steer_deadband_enter_deg + 1.0e-3f),
+                           debug_mirror_.xpark_steer_deadband_enter_deg,
+                           180.0f);
+            debug_mirror_.steer_speed_pid_settle_enter_deg =
+                clampValue(runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.enter_angle_deg, 0.0f, 180.0f);
+            debug_mirror_.steer_speed_pid_settle_exit_deg =
+                clampValue((runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.exit_angle_deg > debug_mirror_.steer_speed_pid_settle_enter_deg)
+                               ? runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.exit_angle_deg
+                               : (debug_mirror_.steer_speed_pid_settle_enter_deg + 1.0e-3f),
+                           debug_mirror_.steer_speed_pid_settle_enter_deg,
+                           180.0f);
+            debug_mirror_.steer_speed_pid_settle_enter_rate_deg_s =
+                clampValue(runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.enter_target_rate_deg_s, 0.0f, 360000.0f);
+            debug_mirror_.steer_speed_pid_settle_exit_rate_deg_s =
+                clampValue((runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.exit_target_rate_deg_s >
+                            debug_mirror_.steer_speed_pid_settle_enter_rate_deg_s)
+                               ? runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.exit_target_rate_deg_s
+                               : (debug_mirror_.steer_speed_pid_settle_enter_rate_deg_s + 1.0e-3f),
+                           debug_mirror_.steer_speed_pid_settle_enter_rate_deg_s,
+                           360000.0f);
             debug_mirror_.lim_drive_omega = runtime_strategy_cfg_.enable_drive_omega_limit_;
             debug_mirror_.lim_drive_alpha = runtime_strategy_cfg_.enable_drive_alpha_limit_;
             debug_mirror_.lim_steer_rate = runtime_strategy_cfg_.enable_steer_rate_limit_;
@@ -3814,6 +3988,12 @@ namespace jia
                 debug_mirror_.steer_feedback_current_mA[i] = wheel.steer_feedback_current_mA;
                 debug_mirror_.steer_feedback_current_delta_mA[i] = wheel.steer_feedback_current_delta_mA;
                 debug_mirror_.steer_feedback_angle_delta_rad[i] = wheel.steer_feedback_angle_delta_rad;
+                debug_mirror_.steer_speed_pid_settled_active[i] = wheel.steer_speed_pid_settled_active;
+                debug_mirror_.steer_speed_pid_settle_error_deg[i] = radToDegF32(wheel.steer_speed_pid_settle_error_rad);
+                debug_mirror_.steer_speed_pid_settle_target_rate_deg_s[i] =
+                    radToDegF32(wheel.steer_speed_pid_settle_target_rate_rad_s);
+                debug_mirror_.xpark_steer_deadband_active[i] = wheel.xpark_steer_deadband_active;
+                debug_mirror_.xpark_steer_deadband_error_deg[i] = radToDegF32(wheel.xpark_steer_deadband_error_rad);
                 debug_mirror_.steer_fault_steer_error_deg[i] = radToDegF32(wheel.steer_fault_steer_error_rad);
                 debug_mirror_.steer_feedback_current_freeze_ms[i] = static_cast<f32>(wheel.steer_feedback_freeze_ms);
                 debug_mirror_.steer_feedback_recovery_toggle_count[i] = static_cast<f32>(wheel.steer_feedback_recovery_toggle_count);
