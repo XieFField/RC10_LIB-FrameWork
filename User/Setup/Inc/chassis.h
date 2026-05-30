@@ -871,9 +871,9 @@ namespace jia
                 // 仅在整车正常 drive 闭环链路里使用，用来在“目标已经静止”时清理 VESC 本地速度环残留，
                 // 避免位置式 PID 的积分/状态尾巴把轮子短暂反向拖一下。
                 bool enable_drive_zero_stop_assist = true;          // [RW] 是否启用 drive 零速止停辅助。
-                f32 drive_zero_stop_settle_speed_m_s = 0.005f;       // [RW] 轮残余线速度低于该值后，直接下发零电流收尾，不持续抱刹。
-                f32 drive_zero_stop_brake_enter_speed_m_s = 0.005f;  // [RW] brake 保持释放阈值（m/s）。降到该值以下时允许退出 brake 分支。
-                f32 drive_zero_stop_brake_exit_speed_m_s = 0.01f;   // [RW] brake 重新进入阈值（m/s）。高于该值时重新启用短暂刹车收尾。
+                f32 drive_zero_stop_settle_speed_m_s = 0.01f;       // [RW] 最终停稳阈值（m/s）。残余线速度低于该值后，进入 zero-stop 的“最终 settled 区”，继续零电流收尾并清理最终残留状态。
+                f32 drive_zero_stop_brake_release_speed_m_s = 0.01f;  // [RW] brake 释放阈值（m/s）。当前已在 brake 分支时，只有残余速度降到该值及以下才允许松开 brake，转入非刹车收尾段。
+                f32 drive_zero_stop_brake_reenter_speed_m_s = 0.03f; // [RW] brake 重进阈值（m/s）。当前不在 brake 分支时，只有残余速度高于该值才重新进入 brake，和 brake_release 一起形成滞回。
                 f32 drive_zero_stop_brake_current_mA = 25000.0f;     // [RW] 零速止停进入 brake 分支时下发的刹车电流。
 
                 struct LowSpeedDriveSuppressionConfig
@@ -1222,6 +1222,7 @@ namespace jia
             bool launch_hold_active_ = false;                                  // [RO] 静止起步整车等待门控是否激活。激活时先只转舵，不放驱动与车体速度规划。
             bool drive_zero_stop_active_ = false;                              // [RO] 当前是否处于 drive 零速止停辅助态。激活后正常 RPM 下发会改成 brake/zero current 收尾。
             bool drive_zero_stop_brake_active_[4] = {false, false, false, false}; // [RO] 各轮零速止停 brake 子状态。用于近零残余速度的轮级滞回。
+            bool drive_zero_stop_settled_[4] = {false, false, false, false};   // [RO] 各轮是否已经进入 zero-stop 的最终停稳区。用于区分“松刹车滑收”与“真正停稳收尾”。
             bool trans_dir_freeze_active_ = false;                              // [RO] 平移方向冻结门控当前状态。true 时方向保持参考角，只放行速度模长变化。
             bool trans_dir_ref_valid_ = false;                                  // [RO] 平移方向参考角是否有效。无效时先用当前指令方向建立参考。
             f32 trans_dir_ref_rad_ = 0.0f;                                      // [RO] 平移方向参考角（rad）。用于冻结保持与方向角速率限幅。

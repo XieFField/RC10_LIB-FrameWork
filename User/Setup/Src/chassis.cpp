@@ -2110,12 +2110,6 @@ namespace jia
                 !single_wheel_isolation_active &&
                 (drive_vesc->getRpmControlMode() == VESC_RPM_CONTROL_PID_CURRENT);
 
-            if (can_reset_local_speed_pid && (entering_drive_zero_stop || leaving_drive_zero_stop))
-            {
-                // 零速止停进入/退出的两个边沿都清一次本地速度环状态，避免把停前积分带进刹停或下一次起步。
-                drive_vesc->reset_speed_pid_state();
-            }
-
             const bool can_inject_virtual_load =
                 allow_drive_position_loop &&
                 (drive_vesc != nullptr) &&
@@ -2127,6 +2121,12 @@ namespace jia
                 !current_mode_flag_.is_wheel_torque_free &&
                 !input_target_data_.zero_current_all &&
                 !chassis_motion_blocked;
+
+            if (can_reset_local_speed_pid && leaving_drive_zero_stop)
+            {
+                // 从 zero-stop 恢复正常 RPM 闭环前，再清一次速度环状态，避免停前残留被带进下一次起步。
+                drive_vesc->reset_speed_pid_state();
+            }
 
             if (!drive_zero_stop_active && can_inject_virtual_load)
             {
@@ -2180,22 +2180,38 @@ namespace jia
                 const f32 settle_speed_m_s = (runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s >= 0.0f)
                                                  ? runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s
                                                  : 0.0f;
-                const f32 brake_hold_speed_m_s =
-                    (runtime_strategy_cfg_.drive_zero_stop_brake_enter_speed_m_s > settle_speed_m_s)
-                        ? runtime_strategy_cfg_.drive_zero_stop_brake_enter_speed_m_s
-                        : settle_speed_m_s;
+                const f32 brake_hold_speed_m_s = (runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s >= 0.0f)
+                                                     ? runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s
+                                                     : 0.0f;
                 const f32 brake_reenter_speed_m_s =
-                    (runtime_strategy_cfg_.drive_zero_stop_brake_exit_speed_m_s > brake_hold_speed_m_s)
-                        ? runtime_strategy_cfg_.drive_zero_stop_brake_exit_speed_m_s
+                    (runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s > brake_hold_speed_m_s)
+                        ? runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s
                         : brake_hold_speed_m_s;
+                const bool was_settled = drive_zero_stop_settled_[wheel_idx];
+                drive_zero_stop_settled_[wheel_idx] = residual_speed_m_s <= settle_speed_m_s;
 
-                if (drive_zero_stop_brake_active_[wheel_idx])
+                if (drive_zero_stop_settled_[wheel_idx])
+                {
+                    drive_zero_stop_brake_active_[wheel_idx] = false;
+                }
+                else if (drive_zero_stop_brake_active_[wheel_idx])
                 {
                     drive_zero_stop_brake_active_[wheel_idx] = residual_speed_m_s > brake_hold_speed_m_s;
                 }
                 else
                 {
                     drive_zero_stop_brake_active_[wheel_idx] = residual_speed_m_s > brake_reenter_speed_m_s;
+                }
+
+                const bool need_reset_speed_pid_state =
+                    can_reset_local_speed_pid &&
+                    ((entering_drive_zero_stop || leaving_drive_zero_stop) ||
+                     (!entering_drive_zero_stop && !was_settled && drive_zero_stop_settled_[wheel_idx]));
+
+                if (need_reset_speed_pid_state)
+                {
+                    // 进入/退出 zero-stop，或第一次真正进入最终停稳区时，都清一次本地速度环状态。
+                    drive_vesc->reset_speed_pid_state();
                 }
 
                 if (drive_zero_stop_brake_active_[wheel_idx])
@@ -2210,6 +2226,7 @@ namespace jia
             else
             {
                 drive_zero_stop_brake_active_[wheel_idx] = false;
+                drive_zero_stop_settled_[wheel_idx] = false;
                 if (allow_drive_position_loop)
                 {
                     setDriveMotorTargetOmegaRadS(wheel, delivered_drive_target_rad_s);
@@ -2260,6 +2277,7 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 drive_zero_stop_brake_active_[i] = false;
+                drive_zero_stop_settled_[i] = false;
             }
             low_speed_residual_bypass_active_ = false;
             low_speed_drive_suppression_bypassed_by_residual_speed_ = false;
@@ -3478,6 +3496,7 @@ namespace jia
                 for (u8 i = 0; i < 4; ++i)
                 {
                     drive_zero_stop_brake_active_[i] = false;
+                    drive_zero_stop_settled_[i] = false;
                 }
             }
             // 这里是“四舵轮目标命令”真正落到电机接口前的最后一道门控：
