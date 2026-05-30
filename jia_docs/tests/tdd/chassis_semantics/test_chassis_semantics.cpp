@@ -1525,7 +1525,7 @@ void testMode30DriveVirtualLoadIgnoresOtherWheelSteerFaultForTargetWheel()
     EXPECT_TRUE(chassis.debug_drive_load_trace_.virtual_load_enable > 0.5f);
 }
 
-void testJustFloatDrivePidLoadProfileEmitsFixed15ChannelPayload()
+void testJustFloatDrivePidLoadProfileEmitsFixed16ChannelPayload()
 {
     Chassis chassis;
     testHostResetJustFloatCapture();
@@ -1552,13 +1552,14 @@ void testJustFloatDrivePidLoadProfileEmitsFixed15ChannelPayload()
     emitDebugOutputForHost(chassis, true);
 
     EXPECT_TRUE(g_test_justfloat_capture.called);
-    EXPECT_TRUE(g_test_justfloat_capture.size == 15U);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 16U);
     EXPECT_NEAR(g_test_justfloat_capture.values[0], 0.12f, 1.0e-6f);
     EXPECT_NEAR(g_test_justfloat_capture.values[1], 1.0f, 1.0e-6f);
     EXPECT_NEAR(g_test_justfloat_capture.values[2], 300.0f, 1.0e-6f);
     EXPECT_NEAR(g_test_justfloat_capture.values[4], 600.0f, 1.0e-6f);
     EXPECT_NEAR(g_test_justfloat_capture.values[12], 2.0f, 1.0e-6f);
     EXPECT_NEAR(g_test_justfloat_capture.values[13], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[15], 0.0f, 1.0e-6f);
 }
 
 void testDebugOmegaZInjectionModeOffKeepsManualOmegaInput()
@@ -2099,6 +2100,60 @@ Chassis::SwervePlannerOutput makeNeutralPlannerOutput()
         output.low_speed_suppression_scale[i] = 1.0f;
     }
     return output;
+}
+
+float getWheelXParkTargetOaRad(const Chassis &chassis, int wheel_idx)
+{
+    return chassis.getXParkAngle(chassis.wheel_config_[wheel_idx]);
+}
+
+void setWheelOaAngleRad(Chassis &chassis, int wheel_idx, float oa_rad)
+{
+    chassis.wheel_config_[wheel_idx].corrected_steer_motor_total_angle_rad =
+        chassis.mapWheelOaTotalToCorrectedLocal(chassis.wheel_config_[wheel_idx], oa_rad);
+}
+
+Chassis::ActuatorCommandFrame makeXParkSteerCommandFrame(Chassis &chassis)
+{
+    Chassis::ActuatorCommandFrame frame{};
+    for (int i = 0; i < 4; ++i)
+    {
+        const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, i);
+        frame.steer_oa_total_rad[i] = xpark_target_oa_rad;
+        frame.steer_corrected_local_total_rad[i] =
+            chassis.mapWheelOaTotalToCorrectedLocal(chassis.wheel_config_[i], xpark_target_oa_rad);
+    }
+    return frame;
+}
+
+void configureXParkSteerDeadbandHarness(Chassis &chassis, VESC_Motor drive_motors[4])
+{
+    configureDriveContinuityHarness(chassis, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kXPark;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.input_target_data_.zero_current_all = false;
+    chassis.current_mode_flag_.is_wheel_torque_free = false;
+    chassis.current_mode_flag_.is_world_speed_mode = false;
+    chassis.current_mode_flag_.is_lock_now_rot_z = false;
+    chassis.current_mode_flag_.is_lock_to_rot_z = false;
+    chassis.debug_control_.common.enable = false;
+    chassis.xpark_gate_active_ = true;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].homing_state = Chassis::HomingState::kReady;
+        chassis.wheel_config_[i].steer_fault_state = Chassis::SteerFaultState::kNone;
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 0.0f;
+        chassis.wheel_config_[i].target_drive_omega_rad_s = 0.0f;
+        chassis.wheel_config_[i].target_steer_motor_total_angle_rad = 0.0f;
+        chassis.wheel_config_[i].steer_target_velocity_rad_s = 0.0f;
+        chassis.last_drive_omega_cmd_rad_s_[i] = 0.0f;
+        chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
+        setWheelOaAngleRad(chassis, i, getWheelXParkTargetOaRad(chassis, i));
+    }
 }
 
 Chassis::SwervePlannerInput makeGatePlannerInput(float steering_error_deg,
@@ -3569,6 +3624,101 @@ void testXParkDoesNotEnterWhenCommandExceedsDedicatedCommandThreshold()
     EXPECT_TRUE(planner_input.max_residual_speed_m_s < chassis.getNearZeroEnterSpeedMps());
 }
 
+void testXParkSteerDeadbandFreezesWheelWhenErrorEntersOneDegreeBand()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureXParkSteerDeadbandHarness(chassis, drive_motors);
+
+    const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
+
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+    const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+
+    const float current_corrected_local_total_rad = chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad;
+    const float planned_xpark_corrected_local_total_rad = command_frame.steer_corrected_local_total_rad[0];
+
+    chassis.applyModuleCommands(true);
+
+    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad, current_corrected_local_total_rad, 1.0e-6f);
+    EXPECT_TRUE(std::fabs(chassis.wheel_config_[0].target_steer_motor_total_angle_rad - planned_xpark_corrected_local_total_rad) > 1.0e-4f);
+}
+
+void testXParkSteerDeadbandStaysLatchedInsideThreeDegreeExitBand()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureXParkSteerDeadbandHarness(chassis, drive_motors);
+
+    const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+    const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
+    chassis.applyModuleCommands(true);
+    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
+                chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad,
+                1.0e-6f);
+
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(2.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
+                chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad,
+                1.0e-6f);
+}
+
+void testXParkSteerDeadbandReleasesOnceErrorExceedsThreeDegreeExitBand()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureXParkSteerDeadbandHarness(chassis, drive_motors);
+
+    const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+    const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
+    chassis.applyModuleCommands(true);
+    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
+                chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad,
+                1.0e-6f);
+
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(4.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
+                command_frame.steer_corrected_local_total_rad[0],
+                1.0e-6f);
+}
+
+void testNonXParkSteerCommandDoesNotTriggerSteerDeadbandFreeze()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureXParkSteerDeadbandHarness(chassis, drive_motors);
+
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
+    const float current_oa_rad = getWheelXParkTargetOaRad(chassis, 0) - jia::degToRadF32(0.5f);
+    setWheelOaAngleRad(chassis, 0, current_oa_rad);
+
+    Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
+    command_frame.steer_oa_total_rad[0] = current_oa_rad + jia::degToRadF32(0.5f);
+    command_frame.steer_corrected_local_total_rad[0] =
+        chassis.mapWheelOaTotalToCorrectedLocal(chassis.wheel_config_[0], command_frame.steer_oa_total_rad[0]);
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
+    chassis.applyModuleCommands(true);
+
+    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
+                command_frame.steer_corrected_local_total_rad[0],
+                1.0e-6f);
+}
+
 void testStationaryPhotogateTogglesDoNotSelfLockNormalReadyState()
 {
     Chassis chassis;
@@ -4041,7 +4191,7 @@ int main()
     testDriveVirtualLoadInjectsBiasOnlyForSelectedWheelAndPidMode();
     testMode30DriveVirtualLoadIgnoresAllHomedGateForTargetWheel();
     testMode30DriveVirtualLoadIgnoresOtherWheelSteerFaultForTargetWheel();
-    testJustFloatDrivePidLoadProfileEmitsFixed15ChannelPayload();
+    testJustFloatDrivePidLoadProfileEmitsFixed16ChannelPayload();
     testDebugOmegaZInjectionModeOffKeepsManualOmegaInput();
     testDebugOmegaZInjectionModeStepOverridesManualOmegaInput();
     testDebugOmegaZInjectionModeSineOverridesManualOmegaInput();
@@ -4099,6 +4249,10 @@ int main()
     testXParkUsesIndependentCommandThresholdWhileResidualMayUseLargeNearZeroFilter();
     testXParkAllowsEntryWhenBothCommandAndResidualAreBelowTheirOwnThresholds();
     testXParkDoesNotEnterWhenCommandExceedsDedicatedCommandThreshold();
+    testXParkSteerDeadbandFreezesWheelWhenErrorEntersOneDegreeBand();
+    testXParkSteerDeadbandStaysLatchedInsideThreeDegreeExitBand();
+    testXParkSteerDeadbandReleasesOnceErrorExceedsThreeDegreeExitBand();
+    testNonXParkSteerCommandDoesNotTriggerSteerDeadbandFreeze();
     testStationaryPhotogateTogglesDoNotSelfLockNormalReadyState();
     testReadyStationaryWheelsCanStillEnterXParkWithoutTriggeringSteerFault();
     testSingleWheelSteerFreezeFaultStopsVehicleAndFreezesFaultedWheelPath();

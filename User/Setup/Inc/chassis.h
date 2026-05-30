@@ -374,6 +374,8 @@ namespace jia
                 f32 target_drive_omega_rad_s = 0.0f;              // 当前周期解算后要发给驱动电机的目标角速度，单位 rad/s
                 f32 steer_target_velocity_rad_s = 0.0f;           // 转向二阶限幅后得到的目标角速度，便于平滑舵向变化
                 bool flipped_drive_direction = false;             // 本周期是否采用“舵角翻转 180 度、驱动反向”策略来走更短转角路径
+                bool xpark_steer_deadband_active = false;
+                f32 xpark_steer_deadband_error_rad = 0.0f;
                 SteerFaultState steer_fault_state = SteerFaultState::kNone;
                 bool steer_fault_rehome_request = false;
                 f32 steer_feedback_current_mA = 0.0f;
@@ -867,6 +869,13 @@ namespace jia
                     f32 exit_m_s = 0.03f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
                 } xpark_command_threshold_cfg_;
 
+                struct XParkSteerDeadbandConfig
+                {
+                    bool enable = true;
+                    f32 enter_angle_deg = 1.0f;
+                    f32 exit_angle_deg = 3.0f;
+                } xpark_steer_deadband_cfg_;
+
                 // ---- drive 零速止停辅助 -----------------------------------------
                 // 仅在整车正常 drive 闭环链路里使用，用来在“目标已经静止”时清理 VESC 本地速度环残留，
                 // 避免位置式 PID 的积分/状态尾巴把轮子短暂反向拖一下。
@@ -1285,6 +1294,8 @@ namespace jia
                 bool high_speed_drive_suppression_active = false;                   // [RO] 当前高速抑制是否激活。
                 bool low_speed_drive_suppression_bypassed_by_residual_speed = false; // [RO] 当前拍是否因为残余速度过高而旁路了低速抑制。
                 f32 max_residual_speed_m_s = 0.0f;                                  // [RO] 当前拍整车四轮中的最大实际残余速度（m/s）。
+                f32 xpark_steer_deadband_enter_deg = 0.0f;
+                f32 xpark_steer_deadband_exit_deg = 0.0f;
                 bool reverse_intent_active = false;
                 f32 reverse_intent_dir_err_deg = 0.0f;
                 u8 single_wheel_target_index = 0U;
@@ -1298,6 +1309,8 @@ namespace jia
                 f32 steer_feedback_current_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_feedback_current_delta_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_feedback_angle_delta_rad[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                bool xpark_steer_deadband_active[4] = {false, false, false, false};
+                f32 xpark_steer_deadband_error_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_fault_steer_error_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_feedback_current_freeze_ms[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_feedback_recovery_toggle_count[4] = {0.0f, 0.0f, 0.0f, 0.0f};
