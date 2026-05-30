@@ -1,10 +1,19 @@
 #include "omni_chassisSetup.h"
 
-#ifndef CAMERA_FAKE
-#define CAMERA_FAKE 0
-#endif
-
-
+void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
+{
+    // 夹杆流程只规划起点到固定终点的简化路径。
+    target_yaw_ = 0.0f;
+    path_line_.plan_reset();
+    path_line_.Reset();
+    path_line_.Add_Start_Point(robot_pos_);
+    path_line_.Add_End_Point(test_point, path_param_CB_);
+    //    path_line_.Add_Start_Point(robot_pos_);
+    //    path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f, robot_pos_.y}, path_param_curve_);
+    //    path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f}, Vector2D{robot_pos_.x-0.5f-0.85f, robot_pos_.y-0.22f}, path_param_curve_);
+    //    path_line_.Add_End_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f+0.2f}, path_param_end_);
+    //   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
+}
 
 #if debug_ladar
 
@@ -190,7 +199,6 @@ void OmniChassis_Setup::loop()
             ResetAutoControlStates();
 #endif
         }
-        debug_uart.printf_DMA("%f\n", speed.magnitude());
         float target_yaw_rad = target_yaw_ * PI / 180.0f;
         chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
 
@@ -279,34 +287,33 @@ void OmniChassis_Setup::loop()
 
     case CHASSIS_STOP:
     {
-        
+#ifndef s_debug
         num++;
-        if (tp_pos_now < 30.0f)
-        {
-            tp_speed_now = TP_1d.plan(tp_pos_now);
-            tp_pos_now += tp_speed_now * 0.001f;
 
-            if (num > 10)
-            {
-                debug_uart.printf_DMA("%f,%f\n", tp_speed_now, tp_pos_now);
-                num = 0;
-            }
-            if(TP_1d.isFinished()==1)
-            {
-                a++;
-            }
-            else
-            {
-                a=0;
-            }
-            if(a>1000)
-            {
-                a=0;          
-                tp_pos_now=0.0f;
-                TP_1d.param_reset(Param_1d);
-            }
+        tp_speed_now = TP_1d.plan(tp_pos_now);
+        tp_pos_now += tp_speed_now * 0.001f;
+
+        if (num > 2)
+        {
+            debug_uart.printf_DMA("%f,%f\n", tp_speed_now, tp_pos_now);
+            num = 0;
+        }
+        if (TP_1d.isFinished() == 1)
+        {
+            a++;
+        }
+        else
+        {
+            a = 0;
+        }
+        if (a > 1000)
+        {
+            a = 0;
+            tp_pos_now = 0.0f;
+            TP_1d.param_reset(Param_1d);
         }
 
+#endif
 
         chassis.setZeroCurrent();
 
@@ -372,7 +379,7 @@ void OmniChassis_Setup::Path_correction(void)
     float obj_dis = _tool_Abs((curve.Get_End_point() - robot_pos_).magnitude());
 
     // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
-    if (obj_dis < m_lookaheadDist_line || path_line_.Is_End() == false)
+    if (obj_dis < m_lookaheadDist || path_line_.Is_End() == false)
     {
         Vector2D endPt = curve.Get_End_point();
 #if FF_V
@@ -496,21 +503,6 @@ void OmniChassis_Setup::Path_spin_check(void)
 }
 
 /////////////////////////////////    路径初始化代码   //////////////////////////////////////////////
-
-void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
-{
-    // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw_ = 0.0f;
-    path_line_.plan_reset();
-    path_line_.Reset();
-    path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_End_Point(test_point, path_param_CB_);
-    //    path_line_.Add_Start_Point(robot_pos_);
-    //    path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f, robot_pos_.y}, path_param_curve_);
-    //    path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f}, Vector2D{robot_pos_.x-0.5f-0.85f, robot_pos_.y-0.22f}, path_param_curve_);
-    //    path_line_.Add_End_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f+0.2f}, path_param_end_);
-    //   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
-}
 
 void OmniChassis_Setup::KFS_Selection_Planning(void)
 {
@@ -876,5 +868,3 @@ Vector2D OmniChassis_Setup::v_limit(Vector2D &v)
     }
     return v;
 }
-
-//=======================================              相机接口函数         =====================================================//
