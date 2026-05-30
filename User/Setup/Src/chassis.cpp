@@ -3077,13 +3077,15 @@ namespace jia
                                               !current_mode_flag_.is_wheel_torque_free &&
                                               ((command_speed_m_s > getXParkCommandExitSpeedMps()) ||
                                                (steer_error_rad > degToRadF32(homing_align_to_zero_tolerance_deg_)));
+            const bool fault_detection_enabled_for_wheel = !input_target_data_.zero_current_all &&
+                                                           !current_mode_flag_.is_wheel_torque_free;
+            const bool feedback_frozen_candidate = (fabsf(current_mA) >= steer_fault_cfg.active_current_min_mA) &&
+                                                   (current_delta_mA <= steer_fault_cfg.freeze_current_delta_mA) &&
+                                                   (angle_delta_rad <= steer_fault_cfg.freeze_angle_delta_rad);
             const bool freeze_candidate = (wheel.homing_state == HomingState::kReady) &&
                                           wheel.homing_zero_valid &&
-                                          steer_control_intent &&
-                                          !xpark_stationary_hold &&
-                                          (fabsf(current_mA) >= steer_fault_cfg.active_current_min_mA) &&
-                                          (current_delta_mA <= steer_fault_cfg.freeze_current_delta_mA) &&
-                                          (angle_delta_rad <= steer_fault_cfg.freeze_angle_delta_rad);
+                                          fault_detection_enabled_for_wheel &&
+                                          feedback_frozen_candidate;
 
             wheel.steer_feedback_current_mA = current_mA;
             wheel.steer_feedback_current_delta_mA = current_delta_mA;
