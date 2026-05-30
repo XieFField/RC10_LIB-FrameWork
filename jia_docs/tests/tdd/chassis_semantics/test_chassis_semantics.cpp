@@ -1552,7 +1552,7 @@ void testJustFloatDrivePidLoadProfileEmitsFixed15ChannelPayload()
     emitDebugOutputForHost(chassis, true);
 
     EXPECT_TRUE(g_test_justfloat_capture.called);
-    EXPECT_TRUE(g_test_justfloat_capture.size == 15U);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 16U);
     EXPECT_NEAR(g_test_justfloat_capture.values[0], 0.12f, 1.0e-6f);
     EXPECT_NEAR(g_test_justfloat_capture.values[1], 1.0f, 1.0e-6f);
     EXPECT_NEAR(g_test_justfloat_capture.values[2], 300.0f, 1.0e-6f);
@@ -3914,6 +3914,357 @@ void testRecoveryImmediatelyReopensSteerSearchAfterFaultLatchSidePidReset()
     EXPECT_NEAR(steer_motors[0].getTargetRPM(), chassis.wheel_config_[0].homing_search_rpm, 1.0e-6f);
 }
 
+void testXParkStaticReconnectRehomesWithoutNewVelocityCommand()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.xpark_entry_delay_ms = 3U;
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kXPark;
+    chassis.input_target_data_.vel_x = 1.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 0.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+        steer_motors[i].setFeedbackCurrent((i == 1) ? 5200.0f : 120.0f);
+        steer_motors[i].setFeedbackTotalAngleDeg(0.0f);
+    }
+
+    bool latched_fault = false;
+    for (int cycle = 0; cycle < 8; ++cycle)
+    {
+        runHostControlCycle(chassis);
+        if (chassis.wheel_config_[1].homing_state == Chassis::HomingState::kFault)
+        {
+            latched_fault = true;
+            break;
+        }
+    }
+
+    EXPECT_TRUE(latched_fault);
+    EXPECT_TRUE(chassis.wheel_config_[1].steer_fault_state == Chassis::SteerFaultState::kLatched);
+
+    chassis.input_target_data_.vel_x = 0.0f;
+    for (int cycle = 0; cycle < 6; ++cycle)
+    {
+        runHostControlCycle(chassis);
+    }
+
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+
+    steer_motors[1].setFeedbackCurrent(-5200.0f);
+    runHostControlCycle(chassis);
+
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+    EXPECT_TRUE(chassis.wheel_config_[1].steer_fault_state == Chassis::SteerFaultState::kRecovering);
+    EXPECT_TRUE(chassis.wheel_config_[1].homing_state == Chassis::HomingState::kSearch);
+    EXPECT_NEAR(steer_motors[1].getTargetRPM(), chassis.wheel_config_[1].homing_search_rpm, 1.0e-6f);
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(drive_motors[i].getTargetCurrent(), 0.0f, 1.0e-6f);
+    }
+}
+
+void testIdleReadyWheelFreezeCanLatchFaultWithoutMotionIntent()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.input_target_data_.vel_x = 0.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+    chassis.current_mode_flag_.is_wheel_torque_free = false;
+    chassis.input_target_data_.zero_current_all = false;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        steer_motors[i].setFeedbackCurrent((i == 0) ? 5600.0f : 120.0f);
+        steer_motors[i].setFeedbackTotalAngleDeg(0.0f);
+        chassis.wheel_config_[i].homing_state = Chassis::HomingState::kReady;
+        chassis.wheel_config_[i].homing_zero_valid = true;
+    }
+
+    bool latched_fault = false;
+    for (int cycle = 0; cycle < 10; ++cycle)
+    {
+        runHostControlCycle(chassis);
+        if (chassis.wheel_config_[0].homing_state == Chassis::HomingState::kFault)
+        {
+            latched_fault = true;
+            break;
+        }
+    }
+
+    EXPECT_TRUE(latched_fault);
+    EXPECT_TRUE(chassis.wheel_config_[0].steer_fault_state == Chassis::SteerFaultState::kLatched);
+    EXPECT_TRUE(chassis.debug_mirror_.steer_fault_freeze_candidate[0]);
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(drive_motors[i].getTargetCurrent(), 0.0f, 1.0e-6f);
+    }
+}
+
+void testXParkReadyWheelFreezeCanLatchFaultWithoutMotionIntent()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.xpark_entry_delay_ms = 2U;
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kXPark;
+    chassis.input_target_data_.vel_x = 0.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        steer_motors[i].setFeedbackCurrent((i == 1) ? 5700.0f : 120.0f);
+        steer_motors[i].setFeedbackTotalAngleDeg(0.0f);
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 0.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+    }
+
+    bool xpark_armed = false;
+    bool latched_fault = false;
+    for (int cycle = 0; cycle < 12; ++cycle)
+    {
+        runHostControlCycle(chassis);
+        if (chassis.xpark_gate_active_)
+        {
+            xpark_armed = true;
+        }
+        if (chassis.wheel_config_[1].homing_state == Chassis::HomingState::kFault)
+        {
+            latched_fault = true;
+            break;
+        }
+    }
+
+    EXPECT_TRUE(xpark_armed);
+    EXPECT_TRUE(latched_fault);
+    EXPECT_TRUE(chassis.wheel_config_[1].steer_fault_state == Chassis::SteerFaultState::kLatched);
+    EXPECT_TRUE(chassis.debug_mirror_.steer_fault_xpark_stationary_hold[1]);
+    EXPECT_TRUE(chassis.debug_mirror_.steer_fault_freeze_candidate[1]);
+}
+
+void testReconnectRehomeRequestSurvivesZeroIntentAndStationaryHold()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.xpark_entry_delay_ms = 2U;
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kXPark;
+    chassis.input_target_data_.vel_x = 1.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 0.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+        steer_motors[i].setFeedbackCurrent((i == 0) ? 5400.0f : 120.0f);
+        steer_motors[i].setFeedbackTotalAngleDeg(0.0f);
+    }
+
+    bool latched_fault = false;
+    for (int cycle = 0; cycle < 10; ++cycle)
+    {
+        runHostControlCycle(chassis);
+        if (chassis.wheel_config_[0].homing_state == Chassis::HomingState::kFault)
+        {
+            latched_fault = true;
+            break;
+        }
+    }
+
+    EXPECT_TRUE(latched_fault);
+
+    chassis.input_target_data_.vel_x = 0.0f;
+    for (int cycle = 0; cycle < 4; ++cycle)
+    {
+        runHostControlCycle(chassis);
+    }
+
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+
+    steer_motors[0].setFeedbackCurrent(-5400.0f);
+    runHostControlCycle(chassis);
+
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+    EXPECT_TRUE(!chassis.wheel_config_[0].steer_fault_rehome_request);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
+    EXPECT_TRUE(chassis.wheel_config_[0].steer_fault_state == Chassis::SteerFaultState::kRecovering);
+    EXPECT_TRUE(chassis.debug_mirror_.steer_fault_xpark_stationary_hold[0]);
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(drive_motors[i].getTargetCurrent(), 0.0f, 1.0e-6f);
+    }
+}
+
+void testXParkLatchedFaultDoesNotRecoverWhenCurrentToggleBelowThreshold()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.xpark_entry_delay_ms = 2U;
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kXPark;
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.recovery_current_delta_mA = 7000.0f;
+    chassis.input_target_data_.vel_x = 1.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        steer_motors[i].setFeedbackCurrent((i == 2) ? 5600.0f : 120.0f);
+        steer_motors[i].setFeedbackTotalAngleDeg(0.0f);
+    }
+
+    bool latched_fault = false;
+    for (int cycle = 0; cycle < 10; ++cycle)
+    {
+        runHostControlCycle(chassis);
+        if (chassis.wheel_config_[2].homing_state == Chassis::HomingState::kFault)
+        {
+            latched_fault = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(latched_fault);
+
+    chassis.input_target_data_.vel_x = 0.0f;
+    for (int cycle = 0; cycle < 4; ++cycle)
+    {
+        runHostControlCycle(chassis);
+    }
+
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+
+    steer_motors[2].setFeedbackCurrent(-100.0f);
+    runHostControlCycle(chassis);
+
+    EXPECT_TRUE(chassis.wheel_config_[2].steer_fault_state == Chassis::SteerFaultState::kLatched);
+    EXPECT_TRUE(chassis.wheel_config_[2].homing_state == Chassis::HomingState::kFault);
+    EXPECT_TRUE(!chassis.wheel_config_[2].steer_fault_rehome_request);
+    EXPECT_NEAR(steer_motors[2].getTargetRPM(), 0.0f, 1.0e-6f);
+}
+
+void testXParkRecoveringWheelKeepsDriveBlockedUntilReady()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.xpark_entry_delay_ms = 2U;
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kXPark;
+    chassis.input_target_data_.vel_x = 1.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        steer_motors[i].setFeedbackCurrent((i == 3) ? 5300.0f : 120.0f);
+        steer_motors[i].setFeedbackTotalAngleDeg(0.0f);
+        drive_motors[i].setTargetCurrent(888.0f);
+    }
+
+    bool latched_fault = false;
+    for (int cycle = 0; cycle < 10; ++cycle)
+    {
+        runHostControlCycle(chassis);
+        if (chassis.wheel_config_[3].homing_state == Chassis::HomingState::kFault)
+        {
+            latched_fault = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(latched_fault);
+
+    chassis.input_target_data_.vel_x = 0.0f;
+    for (int cycle = 0; cycle < 4; ++cycle)
+    {
+        runHostControlCycle(chassis);
+    }
+
+    steer_motors[3].setFeedbackCurrent(-5300.0f);
+    runHostControlCycle(chassis);
+
+    EXPECT_TRUE(chassis.wheel_config_[3].steer_fault_state == Chassis::SteerFaultState::kRecovering);
+    EXPECT_TRUE(chassis.wheel_config_[3].homing_state == Chassis::HomingState::kSearch);
+    EXPECT_TRUE(chassis.debug_mirror_.steer_fault_any_active);
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(drive_motors[i].getTargetCurrent(), 0.0f, 1.0e-6f);
+    }
+}
+
+void testIgnoreDuringXParkHoldDoesNotBlockRecoveryForAlreadyLatchedFault()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.xpark_entry_delay_ms = 2U;
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kXPark;
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.ignore_during_xpark_hold = true;
+    chassis.input_target_data_.vel_x = 1.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        steer_motors[i].setFeedbackCurrent((i == 0) ? 5100.0f : 120.0f);
+        steer_motors[i].setFeedbackTotalAngleDeg(0.0f);
+    }
+
+    bool latched_fault = false;
+    for (int cycle = 0; cycle < 10; ++cycle)
+    {
+        runHostControlCycle(chassis);
+        if (chassis.wheel_config_[0].homing_state == Chassis::HomingState::kFault)
+        {
+            latched_fault = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(latched_fault);
+
+    chassis.input_target_data_.vel_x = 0.0f;
+    for (int cycle = 0; cycle < 4; ++cycle)
+    {
+        runHostControlCycle(chassis);
+    }
+
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+    EXPECT_TRUE(chassis.debug_mirror_.steer_fault_xpark_stationary_hold[0]);
+
+    steer_motors[0].setFeedbackCurrent(-5100.0f);
+    runHostControlCycle(chassis);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].steer_fault_state == Chassis::SteerFaultState::kRecovering);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
+    EXPECT_TRUE(chassis.debug_mirror_.steer_fault_xpark_stationary_hold[0]);
+}
+
 void testHomingEdgeCaptureDoesNotImmediatelyJumpToLargeAlignCommand()
 {
     Chassis chassis;
@@ -4107,6 +4458,13 @@ int main()
     testFaultedWheelOnlyRehomesAfterCurrentTogglesAndMotionResumesAfterRecoveryCompletes();
     testLatchedFaultedWheelKeepsPureZeroCurrentCommandWithoutOverwritingControlMode();
     testRecoveryImmediatelyReopensSteerSearchAfterFaultLatchSidePidReset();
+    testIdleReadyWheelFreezeCanLatchFaultWithoutMotionIntent();
+    testXParkReadyWheelFreezeCanLatchFaultWithoutMotionIntent();
+    testXParkStaticReconnectRehomesWithoutNewVelocityCommand();
+    testReconnectRehomeRequestSurvivesZeroIntentAndStationaryHold();
+    testXParkLatchedFaultDoesNotRecoverWhenCurrentToggleBelowThreshold();
+    testXParkRecoveringWheelKeepsDriveBlockedUntilReady();
+    testIgnoreDuringXParkHoldDoesNotBlockRecoveryForAlreadyLatchedFault();
     testHomingEdgeCaptureDoesNotImmediatelyJumpToLargeAlignCommand();
     testRecoveryRehomeTimeoutRelatchesFault();
     testDrivePidEnableEdgeReadsBackRuntimeIntoCleanSharedCache();
