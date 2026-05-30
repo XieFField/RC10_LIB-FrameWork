@@ -3722,9 +3722,10 @@ void testXParkSteerDeadbandFreezesWheelWhenErrorEntersOneDegreeBand()
 
     EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad, current_corrected_local_total_rad, 1.0e-6f);
     EXPECT_TRUE(std::fabs(chassis.wheel_config_[0].target_steer_motor_total_angle_rad - planned_xpark_corrected_local_total_rad) > 1.0e-4f);
-    EXPECT_TRUE(chassis.wheel_config_[0].steer_speed_pid_settled_active);
+    EXPECT_TRUE(!chassis.wheel_config_[0].steer_speed_pid_settled_active);
     EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
     EXPECT_NEAR(harness.steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 0U);
 }
 
 void testXParkSteerDeadbandStaysLatchedInsideThreeDegreeExitBand()
@@ -3743,8 +3744,10 @@ void testXParkSteerDeadbandStaysLatchedInsideThreeDegreeExitBand()
     EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
                 chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad,
                 1.0e-6f);
+    EXPECT_TRUE(!chassis.wheel_config_[0].steer_speed_pid_settled_active);
     EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
     EXPECT_NEAR(harness.steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 0U);
 
     setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(2.0f));
     chassis.applyModuleCommands(true);
@@ -3752,9 +3755,10 @@ void testXParkSteerDeadbandStaysLatchedInsideThreeDegreeExitBand()
     EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
                 chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad,
                 1.0e-6f);
-    EXPECT_TRUE(chassis.wheel_config_[0].steer_speed_pid_settled_active);
+    EXPECT_TRUE(!chassis.wheel_config_[0].steer_speed_pid_settled_active);
     EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
     EXPECT_NEAR(harness.steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 0U);
 }
 
 void testXParkSteerDeadbandReleasesOnceErrorExceedsThreeDegreeExitBand()
@@ -3813,6 +3817,35 @@ void testNonXParkSteerCommandDoesNotTriggerSteerDeadbandFreeze()
     EXPECT_TRUE(!chassis.wheel_config_[0].xpark_steer_deadband_active);
     EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
     EXPECT_TRUE(harness.steer_motors[0].getTargetCurrent() == 0.0f);
+}
+
+void testXParkSteerDeadbandCanUseFrozenAngleHoldWhenZeroCurrentModeDisabled()
+{
+    XParkSteerDeadbandHarness harness;
+    configureXParkSteerDeadbandHarness(harness);
+    Chassis &chassis = harness.chassis;
+
+    chassis.runtime_strategy_cfg_.xpark_steer_deadband_cfg_.zero_current_release_enable = false;
+
+    const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
+
+    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
+    const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
+    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+
+    const float current_corrected_local_total_rad = chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad;
+
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_deadband_active);
+    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad, current_corrected_local_total_rad, 1.0e-6f);
+    EXPECT_TRUE(chassis.wheel_config_[0].steer_speed_pid_settled_active);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
+    EXPECT_NEAR(harness.steer_motors[0].getTargetTotalAngle(),
+                jia::radToDegF32(current_corrected_local_total_rad),
+                1.0e-6f);
+    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 1U);
 }
 
 void testSteerSettleResetTriggersSingleSpeedPidResetOnEnter()
@@ -4423,6 +4456,7 @@ int main()
     testXParkSteerDeadbandStaysLatchedInsideThreeDegreeExitBand();
     testXParkSteerDeadbandReleasesOnceErrorExceedsThreeDegreeExitBand();
     testNonXParkSteerCommandDoesNotTriggerSteerDeadbandFreeze();
+    testXParkSteerDeadbandCanUseFrozenAngleHoldWhenZeroCurrentModeDisabled();
     testSteerSettleResetTriggersSingleSpeedPidResetOnEnter();
     testSteerSettleResetDoesNotRetriggerWhileInsideExitBand();
     testSteerSettleResetRetriggersAfterLeavingAndReEnteringBand();

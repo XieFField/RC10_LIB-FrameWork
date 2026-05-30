@@ -3710,6 +3710,7 @@ namespace jia
                                                                    : (xpark_deadband_enter_deg + 1.0e-3f),
                                                                xpark_deadband_enter_deg,
                                                                180.0f);
+                const bool xpark_deadband_zero_current_release_enable = xpark_deadband_cfg.zero_current_release_enable;
                 const f32 xpark_deadband_enter_rad = degToRadF32(xpark_deadband_enter_deg);
                 const f32 xpark_deadband_exit_rad = degToRadF32(xpark_deadband_exit_deg);
                 const bool xpark_deadband_eligible =
@@ -3753,8 +3754,11 @@ namespace jia
                     clearXParkSteerDeadbandState(wheel);
                 }
                 {
+                    const bool steer_position_control_active =
+                        !(wheel.xpark_steer_deadband_active && xpark_deadband_zero_current_release_enable);
                     const bool steer_settle_eligible =
                         steer_settle_cfg.enable &&
+                        steer_position_control_active &&
                         all_homed &&
                         (wheel.homing_state == HomingState::kReady) &&
                         (wheel.steer_fault_state == SteerFaultState::kNone);
@@ -3800,7 +3804,15 @@ namespace jia
                         clearSteerSpeedPidSettleState(wheel);
                     }
                 }
-                setSteerMotorTargetTotalAngleRad(wheel, wheel.target_steer_motor_total_angle_rad);
+                if (wheel.xpark_steer_deadband_active && xpark_deadband_zero_current_release_enable)
+                {
+                    // X-Park 死区内直接释放舵向电流，避免末端继续抱角和地面静摩擦对抗。
+                    setSteerMotorTargetCurrent(wheel, 0.0f);
+                }
+                else
+                {
+                    setSteerMotorTargetTotalAngleRad(wheel, wheel.target_steer_motor_total_angle_rad);
+                }
                 applyDriveVirtualLoadAndCommand(wheel,
                                                 i,
                                                 delivered_drive_target_rad_s,
