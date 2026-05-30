@@ -73,7 +73,10 @@ public:
 
     void send_auto_status(bool auto_status);
 
-    void send_command(uint8_t cmd);
+    void send_command(int8_t cmd);
+
+    // 返回指向长度为3的 KFS 数据缓冲区（command, load1, load2）
+    const uint8_t* GetKfs() const { return kfs_; }
 
 protected:
     virtual void Comm_TxUseTxDMA(UART_HandleTypeDef* huart, uint8_t* data, uint16_t size) override;
@@ -115,6 +118,8 @@ private:
     uint16_t key_pressed_count_;
     uint16_t key_down_count_;
     uint16_t key_last_status_;
+
+    uint8_t kfs_[3];
 
     static Lora_communication* s_instance;
     static void RxCallback(uint8_t* buf, uint16_t len);
