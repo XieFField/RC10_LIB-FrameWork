@@ -74,7 +74,7 @@ Lora_communication::Lora_communication(UART_HandleTypeDef* tx_huart, UART_Handle
       pending_claw_status_(0),
       pending_sucker_status_(0),
       pending_mode_(0x01),
-      pending_command_(0),
+    pending_command_(0),
       pending_tx_dirty_(false),
       auto_mode_(false),
       key_pressed_count_(0),
@@ -88,6 +88,8 @@ Lora_communication::Lora_communication(UART_HandleTypeDef* tx_huart, UART_Handle
     lora_aux_pin = tx_aux_gpio_pin;
     
     s_instance = this;
+    // 初始化 KFS 缓冲区为 0
+    kfs_[0] = kfs_[1] = kfs_[2] = 0;
 }
 
 Lora_communication::~Lora_communication() {
@@ -121,10 +123,11 @@ void Lora_communication::Task_Process() {
         GetRecvData(joystick, key);
         
         uint8_t command, load1, load2;
-        GetSettingData(command, load1, load2);
-        (void)command;
-        (void)load1;
-        (void)load2;
+            GetSettingData(command, load1, load2);
+            // 将遥控器设置的 KFS 三字节保存在本地缓冲，供外部通过 GetKfs() 读取
+            kfs_[0] = command;
+            kfs_[1] = load1;
+            kfs_[2] = load2;
 
         airjoy_data_.left_x  = NormalizeAxis(joystick[0], 512.0f, 512.0f);
         airjoy_data_.left_y  = NormalizeAxis(joystick[1], 512.0f, 512.0f);
@@ -218,9 +221,9 @@ void Lora_communication::send_auto_status(bool auto_status)
     flush_pending_frame();
 }
 
-void Lora_communication::send_command(uint8_t cmd)
+void Lora_communication::send_command(int8_t cmd)
 {
-    pending_command_ = cmd;
+    pending_command_ = static_cast<uint8_t>(cmd);
     pending_tx_dirty_ = true;
     flush_pending_frame();
 }
