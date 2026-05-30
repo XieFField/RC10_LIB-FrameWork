@@ -110,6 +110,20 @@ struct DrivePidTuneHarness
     M3508 steer_motors[4]{};
 };
 
+struct SteerSettleResetHarness
+{
+    Chassis chassis{};
+    VESC_Motor drive_motors[4]{};
+    M3508 steer_motors[4]{};
+};
+
+struct XParkSteerDeadbandHarness
+{
+    Chassis chassis{};
+    VESC_Motor drive_motors[4]{};
+    M3508 steer_motors[4]{};
+};
+
 void configureDrivePidTuneHarness(DrivePidTuneHarness &harness)
 {
     for (int i = 0; i < 4; ++i)
@@ -251,6 +265,7 @@ void testDrivePidApplySkipsNullHandlesAndStillUpdatesAppliedStamp()
 
 void configureDriveContinuityHarness(Chassis &chassis, VESC_Motor drive_motors[4]);
 void configureXParkWheelGeometry(Chassis &chassis);
+void configureSteerSettleResetHarness(SteerSettleResetHarness &harness);
 
 void setPhotogateStateForWheel(int wheel_idx, bool active_high)
 {
@@ -2126,14 +2141,18 @@ Chassis::ActuatorCommandFrame makeXParkSteerCommandFrame(Chassis &chassis)
     return frame;
 }
 
-void configureXParkSteerDeadbandHarness(Chassis &chassis, VESC_Motor drive_motors[4])
+void configureXParkSteerDeadbandHarness(XParkSteerDeadbandHarness &harness)
 {
-    configureDriveContinuityHarness(chassis, drive_motors);
+    Chassis &chassis = harness.chassis;
+    configureDriveContinuityHarness(chassis, harness.drive_motors);
     configureXParkWheelGeometry(chassis);
 
     chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kXPark;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.runtime_strategy_cfg_.xpark_steer_deadband_cfg_.enable = true;
+    chassis.runtime_strategy_cfg_.xpark_steer_deadband_cfg_.enter_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.xpark_steer_deadband_cfg_.exit_angle_deg = 3.0f;
     chassis.input_target_data_.zero_current_all = false;
     chassis.current_mode_flag_.is_wheel_torque_free = false;
     chassis.current_mode_flag_.is_world_speed_mode = false;
@@ -2144,6 +2163,7 @@ void configureXParkSteerDeadbandHarness(Chassis &chassis, VESC_Motor drive_motor
 
     for (int i = 0; i < 4; ++i)
     {
+        chassis.wheel_config_[i].steer_motor_h = &harness.steer_motors[i];
         chassis.wheel_config_[i].homing_state = Chassis::HomingState::kReady;
         chassis.wheel_config_[i].steer_fault_state = Chassis::SteerFaultState::kNone;
         chassis.wheel_config_[i].corrected_drive_omega_rad_s = 0.0f;
@@ -2152,8 +2172,66 @@ void configureXParkSteerDeadbandHarness(Chassis &chassis, VESC_Motor drive_motor
         chassis.wheel_config_[i].steer_target_velocity_rad_s = 0.0f;
         chassis.last_drive_omega_cmd_rad_s_[i] = 0.0f;
         chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
+        harness.steer_motors[i].setTargetCurrent(0.0f);
+        harness.steer_motors[i].setTargetTotalAngle(0.0f);
+        harness.steer_motors[i].resetLastCommandObservation();
         setWheelOaAngleRad(chassis, i, getWheelXParkTargetOaRad(chassis, i));
     }
+}
+
+void configureSteerSettleResetHarness(SteerSettleResetHarness &harness)
+{
+    configureDriveContinuityHarness(harness.chassis, harness.drive_motors);
+    configureXParkWheelGeometry(harness.chassis);
+
+    harness.chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    harness.chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    harness.chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
+    harness.chassis.runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.enable = true;
+    harness.chassis.runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.enter_angle_deg = 0.6f;
+    harness.chassis.runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.exit_angle_deg = 3.0f;
+    harness.chassis.runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.enter_target_rate_deg_s = 2.0f;
+    harness.chassis.runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.exit_target_rate_deg_s = 12.0f;
+    harness.chassis.input_target_data_.zero_current_all = false;
+    harness.chassis.current_mode_flag_.is_wheel_torque_free = false;
+    harness.chassis.debug_control_.common.enable = false;
+    harness.chassis.xpark_gate_active_ = false;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        harness.chassis.wheel_config_[i].steer_motor_h = &harness.steer_motors[i];
+        harness.chassis.wheel_config_[i].homing_state = Chassis::HomingState::kReady;
+        harness.chassis.wheel_config_[i].steer_fault_state = Chassis::SteerFaultState::kNone;
+        harness.chassis.wheel_config_[i].corrected_drive_omega_rad_s = 0.0f;
+        harness.chassis.wheel_config_[i].target_drive_omega_rad_s = 0.0f;
+        harness.chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+        harness.chassis.wheel_config_[i].target_steer_motor_total_angle_rad = 0.0f;
+        harness.chassis.wheel_config_[i].steer_target_velocity_rad_s = 0.0f;
+        harness.chassis.last_drive_omega_cmd_rad_s_[i] = 0.0f;
+        harness.chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
+    }
+}
+
+Chassis::ActuatorCommandFrame makeSteerSettleCommandFrame(Chassis &chassis,
+                                                          float wheel0_target_deg,
+                                                          float wheel0_rate_deg_s)
+{
+    Chassis::ActuatorCommandFrame frame{};
+    for (int i = 0; i < 4; ++i)
+    {
+        const float current_corrected_local_total_rad = chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad;
+        frame.steer_corrected_local_total_rad[i] = current_corrected_local_total_rad;
+        frame.steer_oa_total_rad[i] =
+            chassis.mapWheelCorrectedLocalToOaTotal(chassis.wheel_config_[i], current_corrected_local_total_rad);
+        frame.steer_rate_rad_s[i] = 0.0f;
+        frame.drive_omega_rad_s[i] = 0.0f;
+    }
+
+    frame.steer_corrected_local_total_rad[0] = jia::degToRadF32(wheel0_target_deg);
+    frame.steer_oa_total_rad[0] =
+        chassis.mapWheelCorrectedLocalToOaTotal(chassis.wheel_config_[0], frame.steer_corrected_local_total_rad[0]);
+    frame.steer_rate_rad_s[0] = jia::degToRadF32(wheel0_rate_deg_s);
+    return frame;
 }
 
 Chassis::SwervePlannerInput makeGatePlannerInput(float steering_error_deg,
@@ -3626,9 +3704,9 @@ void testXParkDoesNotEnterWhenCommandExceedsDedicatedCommandThreshold()
 
 void testXParkSteerDeadbandFreezesWheelWhenErrorEntersOneDegreeBand()
 {
-    Chassis chassis;
-    VESC_Motor drive_motors[4];
-    configureXParkSteerDeadbandHarness(chassis, drive_motors);
+    XParkSteerDeadbandHarness harness;
+    configureXParkSteerDeadbandHarness(harness);
+    Chassis &chassis = harness.chassis;
 
     const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
     setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
@@ -3644,13 +3722,16 @@ void testXParkSteerDeadbandFreezesWheelWhenErrorEntersOneDegreeBand()
 
     EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad, current_corrected_local_total_rad, 1.0e-6f);
     EXPECT_TRUE(std::fabs(chassis.wheel_config_[0].target_steer_motor_total_angle_rad - planned_xpark_corrected_local_total_rad) > 1.0e-4f);
+    EXPECT_TRUE(chassis.wheel_config_[0].steer_speed_pid_settled_active);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+    EXPECT_NEAR(harness.steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
 }
 
 void testXParkSteerDeadbandStaysLatchedInsideThreeDegreeExitBand()
 {
-    Chassis chassis;
-    VESC_Motor drive_motors[4];
-    configureXParkSteerDeadbandHarness(chassis, drive_motors);
+    XParkSteerDeadbandHarness harness;
+    configureXParkSteerDeadbandHarness(harness);
+    Chassis &chassis = harness.chassis;
 
     const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
     const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
@@ -3662,6 +3743,8 @@ void testXParkSteerDeadbandStaysLatchedInsideThreeDegreeExitBand()
     EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
                 chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad,
                 1.0e-6f);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+    EXPECT_NEAR(harness.steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
 
     setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(2.0f));
     chassis.applyModuleCommands(true);
@@ -3669,13 +3752,16 @@ void testXParkSteerDeadbandStaysLatchedInsideThreeDegreeExitBand()
     EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
                 chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad,
                 1.0e-6f);
+    EXPECT_TRUE(chassis.wheel_config_[0].steer_speed_pid_settled_active);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+    EXPECT_NEAR(harness.steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
 }
 
 void testXParkSteerDeadbandReleasesOnceErrorExceedsThreeDegreeExitBand()
 {
-    Chassis chassis;
-    VESC_Motor drive_motors[4];
-    configureXParkSteerDeadbandHarness(chassis, drive_motors);
+    XParkSteerDeadbandHarness harness;
+    configureXParkSteerDeadbandHarness(harness);
+    Chassis &chassis = harness.chassis;
 
     const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
     const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
@@ -3687,6 +3773,8 @@ void testXParkSteerDeadbandReleasesOnceErrorExceedsThreeDegreeExitBand()
     EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
                 chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad,
                 1.0e-6f);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+    EXPECT_NEAR(harness.steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
 
     setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(4.0f));
     chassis.applyModuleCommands(true);
@@ -3694,13 +3782,18 @@ void testXParkSteerDeadbandReleasesOnceErrorExceedsThreeDegreeExitBand()
     EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
                 command_frame.steer_corrected_local_total_rad[0],
                 1.0e-6f);
+    EXPECT_TRUE(!chassis.wheel_config_[0].steer_speed_pid_settled_active);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
+    EXPECT_NEAR(harness.steer_motors[0].getTargetTotalAngle(),
+                jia::radToDegF32(command_frame.steer_corrected_local_total_rad[0]),
+                1.0e-6f);
 }
 
 void testNonXParkSteerCommandDoesNotTriggerSteerDeadbandFreeze()
 {
-    Chassis chassis;
-    VESC_Motor drive_motors[4];
-    configureXParkSteerDeadbandHarness(chassis, drive_motors);
+    XParkSteerDeadbandHarness harness;
+    configureXParkSteerDeadbandHarness(harness);
+    Chassis &chassis = harness.chassis;
 
     chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
     const float current_oa_rad = getWheelXParkTargetOaRad(chassis, 0) - jia::degToRadF32(0.5f);
@@ -3717,6 +3810,83 @@ void testNonXParkSteerCommandDoesNotTriggerSteerDeadbandFreeze()
     EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
                 command_frame.steer_corrected_local_total_rad[0],
                 1.0e-6f);
+    EXPECT_TRUE(!chassis.wheel_config_[0].xpark_steer_deadband_active);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
+    EXPECT_TRUE(harness.steer_motors[0].getTargetCurrent() == 0.0f);
+}
+
+void testSteerSettleResetTriggersSingleSpeedPidResetOnEnter()
+{
+    SteerSettleResetHarness harness;
+    configureSteerSettleResetHarness(harness);
+
+    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(9.5f);
+    const Chassis::ActuatorCommandFrame command_frame = makeSteerSettleCommandFrame(harness.chassis, 10.0f, 2.0f);
+    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
+
+    harness.chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(harness.chassis.wheel_config_[0].steer_speed_pid_settled_active);
+    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 1U);
+}
+
+void testSteerSettleResetDoesNotRetriggerWhileInsideExitBand()
+{
+    SteerSettleResetHarness harness;
+    configureSteerSettleResetHarness(harness);
+
+    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(9.5f);
+    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(),
+                                              makeSteerSettleCommandFrame(harness.chassis, 10.0f, 2.0f));
+    harness.chassis.applyModuleCommands(true);
+
+    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(8.0f);
+    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(),
+                                              makeSteerSettleCommandFrame(harness.chassis, 10.0f, 10.0f));
+    harness.chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(harness.chassis.wheel_config_[0].steer_speed_pid_settled_active);
+    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 1U);
+}
+
+void testSteerSettleResetRetriggersAfterLeavingAndReEnteringBand()
+{
+    SteerSettleResetHarness harness;
+    configureSteerSettleResetHarness(harness);
+
+    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(9.5f);
+    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(),
+                                              makeSteerSettleCommandFrame(harness.chassis, 10.0f, 2.0f));
+    harness.chassis.applyModuleCommands(true);
+
+    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(6.0f);
+    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(),
+                                              makeSteerSettleCommandFrame(harness.chassis, 10.0f, 2.0f));
+    harness.chassis.applyModuleCommands(true);
+
+    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(9.5f);
+    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(),
+                                              makeSteerSettleCommandFrame(harness.chassis, 10.0f, 2.0f));
+    harness.chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(harness.chassis.wheel_config_[0].steer_speed_pid_settled_active);
+    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 2U);
+}
+
+void testSteerSettleResetDoesNotTriggerDuringZeroCurrentBranch()
+{
+    SteerSettleResetHarness harness;
+    configureSteerSettleResetHarness(harness);
+
+    harness.chassis.input_target_data_.zero_current_all = true;
+    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(9.5f);
+    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(),
+                                              makeSteerSettleCommandFrame(harness.chassis, 10.0f, 2.0f));
+
+    harness.chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(!harness.chassis.wheel_config_[0].steer_speed_pid_settled_active);
+    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 0U);
 }
 
 void testStationaryPhotogateTogglesDoNotSelfLockNormalReadyState()
@@ -4253,6 +4423,10 @@ int main()
     testXParkSteerDeadbandStaysLatchedInsideThreeDegreeExitBand();
     testXParkSteerDeadbandReleasesOnceErrorExceedsThreeDegreeExitBand();
     testNonXParkSteerCommandDoesNotTriggerSteerDeadbandFreeze();
+    testSteerSettleResetTriggersSingleSpeedPidResetOnEnter();
+    testSteerSettleResetDoesNotRetriggerWhileInsideExitBand();
+    testSteerSettleResetRetriggersAfterLeavingAndReEnteringBand();
+    testSteerSettleResetDoesNotTriggerDuringZeroCurrentBranch();
     testStationaryPhotogateTogglesDoNotSelfLockNormalReadyState();
     testReadyStationaryWheelsCanStillEnterXParkWithoutTriggeringSteerFault();
     testSingleWheelSteerFreezeFaultStopsVehicleAndFreezesFaultedWheelPath();
