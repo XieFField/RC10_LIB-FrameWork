@@ -139,6 +139,10 @@ public:
     void setTargetTotalAngle(float totalAngle_set) override;
     void setBrake(float brake_current) override;
     void setDuty(float duty);
+    // 供 JustFloat 零速止停观测模式回读当前刹车目标电流。
+    float getTargetBrakeCurrent() const { return target_brake_current_; }
+    // 供底盘判断当前这一拍是否真的走了刹车命令分支。
+    bool isBrakeCommandActive() const { return mode_ == SET_BRAKE; }
 
     PID_Param_Config get_speed_pid_params() const { return speed_pid_.get_params(); }
     // 兼容旧调参字段名：这里回读的是位置式 PID 的积分分离阈值，不再是增量式 td_ratio。

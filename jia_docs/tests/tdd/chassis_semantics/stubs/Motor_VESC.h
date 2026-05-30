@@ -128,6 +128,16 @@ public:
         return target_brake_;
     }
 
+    float getTargetBrakeCurrent() const
+    {
+        return target_brake_;
+    }
+
+    bool isBrakeCommandActive() const
+    {
+        return last_command_kind_ == CommandKind::kBrake;
+    }
+
     CommandKind getLastCommandKind() const
     {
         return last_command_kind_;

@@ -681,6 +681,20 @@ namespace jia
                 // ch14: stepgen_enable
                 // ch15: feedback_current_mA
                 kDrivePidLoadTune = 3,
+                // kDriveZeroStopBrakeTrace (12ch, emitUart8VofaDriveZeroStopBrakeTrace)
+                // ch0: time_s
+                // ch1: observe_wheel_idx
+                // ch2: target_rpm
+                // ch3: feedback_rpm
+                // ch4: zero_stop_brake_active
+                // ch5: target_brake_current_mA
+                // ch6: vesc_brake_command_active
+                // ch7: feedback_current_mA
+                // ch8: drive_zero_stop_active
+                // ch9: residual_speed_m_s
+                // ch10: target_command_speed_m_s
+                // ch11: target_omega_z_rad_s
+                kDriveZeroStopBrakeTrace = 4,
             };
             enum class SingleWheelTracePayloadKind : u8
             {
@@ -796,6 +810,7 @@ namespace jia
             void emitUart8SwerveTelemetryV2(bool all_homed);
             void emitUart8VofaYawPidTrace();
             void emitUart8VofaDrivePidLoadTrace();
+            void emitUart8VofaDriveZeroStopBrakeTrace();
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us);
@@ -1069,6 +1084,7 @@ namespace jia
                 DebugOutputSlotConfig single_wheel = {1U};
                 DebugOutputSlotConfig yaw_pid = {4U};
                 DebugOutputSlotConfig drive_pid_load = {2U};
+                DebugOutputSlotConfig drive_zero_stop_brake = {2U};
             };
 
             struct DebugOutputBinaryConfig
@@ -1110,6 +1126,7 @@ namespace jia
                 DebugOutputSlotRuntime single_wheel{};
                 DebugOutputSlotRuntime yaw_pid{};
                 DebugOutputSlotRuntime drive_pid_load{};
+                DebugOutputSlotRuntime drive_zero_stop_brake{};
             };
 
             struct DebugOutputBinaryRuntime

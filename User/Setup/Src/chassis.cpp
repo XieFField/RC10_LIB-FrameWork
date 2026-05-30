@@ -138,7 +138,7 @@ namespace jia
 
             inline Chassis::JustFloatProfile sanitizeJustFloatProfile(u8 raw_profile)
             {
-                return (raw_profile <= static_cast<u8>(Chassis::JustFloatProfile::kDrivePidLoadTune))
+                return (raw_profile <= static_cast<u8>(Chassis::JustFloatProfile::kDriveZeroStopBrakeTrace))
                            ? static_cast<Chassis::JustFloatProfile>(raw_profile)
                            : Chassis::JustFloatProfile::kYawPid;
             }
@@ -2104,10 +2104,12 @@ namespace jia
             f32 tc_term_mA = 0.0f;
             f32 alpha_est_rad_s2 = 0.0f;
             f32 alpha_dt_s = period_;
-            const bool can_reset_local_speed_pid =
+            const bool can_use_vesc_drive_assist =
                 allow_drive_position_loop &&
                 (drive_vesc != nullptr) &&
-                !single_wheel_isolation_active &&
+                !single_wheel_isolation_active;
+            const bool can_reset_local_speed_pid =
+                can_use_vesc_drive_assist &&
                 (drive_vesc->getRpmControlMode() == VESC_RPM_CONTROL_PID_CURRENT);
 
             const bool can_inject_virtual_load =
@@ -2170,7 +2172,7 @@ namespace jia
 
             const bool can_apply_zero_stop_assist =
                 drive_zero_stop_active &&
-                can_reset_local_speed_pid &&
+                can_use_vesc_drive_assist &&
                 runtime_strategy_cfg_.enable_drive_zero_stop_assist;
 
             if (can_apply_zero_stop_assist)
@@ -3465,6 +3467,18 @@ namespace jia
             {
                 // 只有“整车目标意图”和“当前执行帧目标”都已经逼近静止时，才进入 zero-stop assist。
                 // 这样既不会误伤正常起步/恢复第一拍，也不会把宿主测试里手工塞入的 drive 命令当成静止收尾。
+                const bool use_body_target_for_zero_stop_gate =
+                    (input_target_data_.mode == Mode::kBodySpeedMode) ||
+                    (input_target_data_.mode == Mode::kBodySpeedLockNowRotZMode) ||
+                    (input_target_data_.mode == Mode::kBodySpeedLockNowRotZWithNoOmegaZMode) ||
+                    (input_target_data_.mode == Mode::kBodySpeedLockToRotZMode) ||
+                    (input_target_data_.mode == Mode::kWorldSpeedMode) ||
+                    (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZMode) ||
+                    (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode) ||
+                    (input_target_data_.mode == Mode::kWorldSpeedLockToRotZMode) ||
+                    (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
+                // 正常底盘链路下优先依据整车目标是否已静止来决定是否进入 zero-stop，
+                // 避免速度规划尾巴还没完全衰减时，把刹车收尾整体拖后。
                 f32 max_frame_command_speed_m_s = 0.0f;
                 const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
                 for (u8 i = 0; i < 4; ++i)
@@ -3472,9 +3486,12 @@ namespace jia
                     const f32 frame_command_speed_m_s = fabsf(actuator_command_frame_.drive_omega_rad_s[i]) * wheel_radius_m;
                     max_frame_command_speed_m_s = (frame_command_speed_m_s > max_frame_command_speed_m_s) ? frame_command_speed_m_s : max_frame_command_speed_m_s;
                 }
-                const f32 max_command_speed_m_s = (computeMaxCommandWheelSpeedMps(target_data_) > max_frame_command_speed_m_s)
-                                                      ? computeMaxCommandWheelSpeedMps(target_data_)
-                                                      : max_frame_command_speed_m_s;
+                const f32 target_command_speed_m_s = computeMaxCommandWheelSpeedMps(target_data_);
+                const f32 max_command_speed_m_s = use_body_target_for_zero_stop_gate
+                                                      ? target_command_speed_m_s
+                                                      : ((target_command_speed_m_s > max_frame_command_speed_m_s)
+                                                             ? target_command_speed_m_s
+                                                             : max_frame_command_speed_m_s);
 
                 if (drive_zero_stop_active_)
                 {
@@ -4338,6 +4355,52 @@ namespace jia
             debug_uart_.printf_DMA_JustFloat(payload, 16);
         }
 
+        void Chassis::emitUart8VofaDriveZeroStopBrakeTrace()
+        {
+            if (!debug_output_.output_enable ||
+                sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
+                sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kDriveZeroStopBrakeTrace)
+            {
+                return;
+            }
+
+            const u32 period_ms = (debug_output_.justfloat.drive_zero_stop_brake.period_ms > 0U) ? debug_output_.justfloat.drive_zero_stop_brake.period_ms : 1U;
+            if ((time_ms_ - debug_output_runtime_.justfloat.drive_zero_stop_brake.last_ms) < period_ms)
+            {
+                return;
+            }
+
+            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
+            {
+                return;
+            }
+
+            debug_output_runtime_.justfloat.drive_zero_stop_brake.last_ms = time_ms_;
+
+            const u8 observe_wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
+            const VESC_Motor *drive_motor = wheel_config_[observe_wheel_idx].drive_motor_h;
+            const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
+            const f32 residual_speed_m_s = fabsf(wheel_config_[observe_wheel_idx].corrected_drive_omega_rad_s) * wheel_radius_m;
+            const f32 target_command_speed_m_s = computeMaxCommandWheelSpeedMps(target_data_);
+
+            float payload[12] = {0.0f};
+            payload[0] = static_cast<f32>(time_ms_) * 0.001f;
+            payload[1] = static_cast<f32>(observe_wheel_idx);
+            // 速度口径继续复用现有 drive load trace，避免另起一套调试语义。
+            payload[2] = debug_drive_load_trace_.target_rpm;
+            payload[2] = debug_drive_load_trace_.target_rpm;
+            payload[3] = debug_drive_load_trace_.feedback_rpm;
+            payload[4] = drive_zero_stop_brake_active_[observe_wheel_idx] ? 1.0f : 0.0f;
+            payload[5] = (drive_motor != nullptr) ? drive_motor->getTargetBrakeCurrent() : 0.0f;
+            payload[6] = ((drive_motor != nullptr) && drive_motor->isBrakeCommandActive()) ? 1.0f : 0.0f;
+            payload[7] = (drive_motor != nullptr) ? drive_motor->getCurrent() : 0.0f;
+            payload[8] = drive_zero_stop_active_ ? 1.0f : 0.0f;
+            payload[9] = residual_speed_m_s;
+            payload[10] = target_command_speed_m_s;
+            payload[11] = target_data_.omega_z;
+            debug_uart_.printf_DMA_JustFloat(payload, 12);
+        }
+
         void Chassis::emitUart8SwerveTelemetryV2(bool all_homed)
         {
             if (!debug_output_.output_enable || sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kBinary)
@@ -4513,6 +4576,9 @@ namespace jia
                 }
                 case JustFloatProfile::kDrivePidLoadTune:
                     emitUart8VofaDrivePidLoadTrace();
+                    break;
+                case JustFloatProfile::kDriveZeroStopBrakeTrace:
+                    emitUart8VofaDriveZeroStopBrakeTrace();
                     break;
                 case JustFloatProfile::kYawPid:
                 default:
