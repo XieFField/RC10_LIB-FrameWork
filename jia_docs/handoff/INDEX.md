@@ -5,6 +5,8 @@
 ## 当前推荐阅读
 
 - 首读：
+  - `2026-05-31` | `rc10_wait_1_7_7_1_6_1_merge` | [ai_handoff_2026-05-31_rc10_wait_1_7_7_1_6_1_merge.md](2026-05/ai_handoff_2026-05-31_rc10_wait_1_7_7_1_6_1_merge.md)
+- 前一阶段主线 merge：
   - `2026-05-26` | `rc10_drive_pid_load_tune_merge` | [ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md](2026-05/ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md)
 - 同日补充：
   - `2026-05-26 11:24` | `singlewheeltrace_payload_semantics` | [ai_handoff_2026-05-26_1124_singlewheeltrace_payload_semantics.md](2026-05/ai_handoff_2026-05-26_1124_singlewheeltrace_payload_semantics.md)
@@ -13,6 +15,7 @@
 
 ## 2026-05
 
+- `2026-05-31` | `rc10_wait_1_7_7_1_6_1_merge` | [ai_handoff_2026-05-31_rc10_wait_1_7_7_1_6_1_merge.md](2026-05/ai_handoff_2026-05-31_rc10_wait_1_7_7_1_6_1_merge.md)
 - `2026-05-26` | `rc10_drive_pid_load_tune_merge` | [ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md](2026-05/ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md)
 - `2026-05-26 11:24` | `singlewheeltrace_payload_semantics` | [ai_handoff_2026-05-26_1124_singlewheeltrace_payload_semantics.md](2026-05/ai_handoff_2026-05-26_1124_singlewheeltrace_payload_semantics.md)
 - `2026-05-25 23:44` | `rc10_debug_merge_semantics_sync` | [ai_handoff_2026-05-25_2344_rc10_debug_merge_semantics_sync.md](2026-05/ai_handoff_2026-05-25_2344_rc10_debug_merge_semantics_sync.md)
