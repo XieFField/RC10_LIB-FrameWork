@@ -133,25 +133,44 @@ namespace communication{
         /**
          * @brief 获取接收到的业务数据
          * @param joystick 存放摇杆数据的数组，length为4，分别对应4个通道的16位数据
-         * @param key 存放按键数据的变量
-         * @note 时机/用法：需要获取最新摇杆数据时调用，前提是 Comm_Task_Loop 已经成功解析出至少一帧合法数据并刷新了相关变量。调用后，外部即可获得最新的摇杆和按键数据。
+         * @note 时机/用法：需要获取最新摇杆数据时调用，前提是 Comm_Task_Loop 已经成功解析出至少一帧合法数据并刷新了相关变量。调用后，外部即可获得最新的摇杆数据。
          */
-        void GetRecvData(uint16_t* joystick, uint16_t& key) {
+        void GetRecvJoystickData(uint16_t* joystick) {
             for(int i = 0; i < 4; i++) joystick[i] = rec_joystick[i];
-            key = rec_send_key;
         }
 
-        /**
+        /**别用，别用，别用，用了就死了，重要的事情说三遍
          * @brief 获取接收到的设置帧数据
          * @param command 存放命令的变量
          * @param load1 存放负载1的变量
          * @param load2 存放负载2的变量
          * @note 时机/用法：需要获取最新设置数据时调用，前提是 Comm_Task_Loop 已经成功解析出至少一帧合法设置数据并刷新了相关变量。调用后，外部即可获得最新的设置命令和负载数据。
          */
-        void GetSettingData(uint8_t& command, uint8_t& load1, uint8_t& load2) {
+        void GetRecvCommandData(uint8_t& command, uint8_t& load1, uint8_t& load2) {
             command = rec_setting_command;
             load1 = rec_setting_load1;
             load2 = rec_setting_load2;
+        }
+
+        /**
+         * @brief 获取接收到的KFS位置数据
+         * @param index 位置索引 (0~2)，对应 rec_setting_load1 的低四位和高四位，以及 rec_setting_load2 的低四位
+         * @return uint8_t 索引对应的KFS位置值，若索引无效或当前命令不是0x01，则返回0
+         * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，获取最新的KFS位置数据。典型用法：uint8_t kfs0 = comm.GetRecvFKFSData(0); // 获取索引0位置
+         */
+        uint8_t GetRecvFKFSData(uint8_t index) {
+            if(rec_setting_command == 0x01) {
+                switch (index) {
+                    case 0: return rec_setting_load1 & 0x0F; // 索引0位置
+                    case 1: return (rec_setting_load1 >> 4) & 0x0F; // 索引1位置
+                    case 2: return rec_setting_load2 & 0x0F; // 索引2位置
+                    default: return 0; // 无效索引返回0
+                    
+                }
+            }
+            else {
+                return 13; // 按道理来说应该不可能用到，除非根本就没发设置帧过来
+            }
         }
 
         /**
@@ -159,9 +178,9 @@ namespace communication{
          * @param key_index 按键索引 (0~15)，对应 rec_send_key 的 bit0~bit15
          * @return true 表示该按键按下（对应位为1），false 表示未按下
          * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，获取最新按键状态。
-         *       典型用法：if (comm.IsKeyPressed(0)) { // KEY0 按下处理 }
+         *       典型用法：if (comm.GetRecvKeyData(0)) { // KEY0 按下处理 }
          */
-        bool IsKeyPressed(uint8_t key_index) {
+        bool GetRecvKeyData(uint8_t key_index) {
             if (key_index >= 16) return false;
             return (rec_send_key >> key_index) & 0x01;
         }
@@ -171,7 +190,7 @@ namespace communication{
          * @return uint16_t 每一位代表一个按键状态，bit0=KEY0, bit1=KEY1, ... bit15=KEY15
          * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，适合需要批量处理按键的场景。
          */
-        uint16_t GetKeyStatus(void) {
+        uint16_t GetRecvAllKeyData(void) {
             return rec_send_key;
         }
 
