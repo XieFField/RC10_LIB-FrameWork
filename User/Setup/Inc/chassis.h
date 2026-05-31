@@ -224,8 +224,9 @@ namespace jia
 
             // 公开接口
             Result setZeroCurrent();
-            // External frame convention for setSpeed*/get*:
-            // +x = vehicle right, +y = vehicle front, omega_z keeps current sign convention.
+            // External/public frame convention for setSpeed*/get*:
+            // +y points to the current 2/3 wheel-face side (forward), -x points to the current 3/4 wheel-face side (left),
+            // so +x points to the current 1/2 wheel-face side and omega_z keeps the existing sign convention.
             Result setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z);
             Result setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
             Result setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z);
@@ -805,6 +806,7 @@ namespace jia
             void storePlannedActuatorFrame(const SwervePlannerOutput &planner_output, const ActuatorCommandFrame &command_frame);
             f32 computeHomingAlignTargetCorrectedLocalTotal(const WheelConfig &wheel) const;
             void computeProjectedDriveFromPlannedSteer(const Data &command_data, const f32 planned_oa_total_rad[4], f32 out_drive_omega_rad_s[4]) const;
+            // Planned twist readback uses the same public/debug body frame as setSpeed*/get*.
             bool estimatePlannedBodyTwist(const f32 planned_oa_total_rad[4], const f32 planned_drive_omega_rad_s[4], f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             f32 updateHighSpeedDriveSuppression(f32 translational_speed_m_s, f32 eta_max_s, f32 dir_err_deg);
             void computeModuleCommands(const Data &command_data);
@@ -989,7 +991,8 @@ namespace jia
             // 调试参数（通过全局 chassis 对象在调试器内直接改值）[RW]
             // 说明：这组参数只影响调试链路。正常控制不读取它们，只有切到相应 debug mode 时才会生效。
             // 速查：0~8 = 底盘输入接管/信号注入类模式；20 = 已退役（安全回退）；21 = 四轮朝前；22 = 回零观察；30 = 单轮独立直控。
-            // 手柄平移坐标约定（底盘层）：前推前进、左推左移（-left_y -> vel_x，left_x -> vel_y）。
+            // 手柄平移坐标约定（对外/调试接管语义）：前推朝当前 2/3 面，左推朝当前 3/4 面；
+            // 映射到内部 body 命令时使用 -left_x -> vel_x、-left_y -> vel_y。
             // =====================================================================
             struct DebugControl
             {
@@ -1430,8 +1433,8 @@ namespace jia
         inline Chassis::BodyCommand Chassis::mapExternalCommandToBody(const ExternalCommand &command)
         {
             BodyCommand body_command;
-            body_command.vel_x = command.vel_y;
-            body_command.vel_y = -command.vel_x;
+            body_command.vel_x = -command.vel_x;
+            body_command.vel_y = -command.vel_y;
             body_command.omega_z = command.omega_z;
             return body_command;
         }
@@ -1656,8 +1659,8 @@ namespace jia
             Robot_Twist body_speed;
             const f32 internal_vx = getTargetBodyVelX();
             const f32 internal_vy = getTargetBodyVelY();
-            body_speed.vx = -internal_vy;
-            body_speed.vy = internal_vx;
+            body_speed.vx = -internal_vx;
+            body_speed.vy = -internal_vy;
             body_speed.vz = getTargetOmegaZ();
             return body_speed;
         }
@@ -1667,8 +1670,8 @@ namespace jia
             Robot_Twist world_speed;
             const f32 internal_vx = getTargetWorldVelX();
             const f32 internal_vy = getTargetWorldVelY();
-            world_speed.vx = -internal_vy;
-            world_speed.vy = internal_vx;
+            world_speed.vx = -internal_vx;
+            world_speed.vy = -internal_vy;
             world_speed.vz = getTargetOmegaZ();
             return world_speed;
         }
