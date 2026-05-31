@@ -295,9 +295,47 @@ void testExternalCommandMapsToInternalBodyAxesWithoutChangingOmega()
 
     const Chassis::BodyCommand body = Chassis::mapExternalCommandToBody(command);
 
-    EXPECT_NEAR(body.vel_x, -2.50f, 1.0e-6f);
-    EXPECT_NEAR(body.vel_y, -1.25f, 1.0e-6f);
+    EXPECT_NEAR(body.vel_x, -1.25f, 1.0e-6f);
+    EXPECT_NEAR(body.vel_y, 2.50f, 1.0e-6f);
     EXPECT_NEAR(body.omega_z, 0.75f, 1.0e-6f);
+}
+
+void testDebugBodySpeedLeftStickUpTargetsCurrentTwoThreeSide()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_vel_y_ = 2.0f;
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 1U;
+    chassis.debug_control_.injection.omega_z_injection_mode_raw = 0U;
+
+    chassis.airjoy_data_.left_y = 1.0f;
+    chassis.airjoy_data_.left_x = 0.0f;
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kBodySpeedMode);
+    EXPECT_NEAR(chassis.input_target_data_.vel_x, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.input_target_data_.vel_y, -2.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, 0.0f, 1.0e-6f);
+}
+
+void testDebugBodySpeedLeftStickLeftTargetsCurrentThreeFourSide()
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_vel_y_ = 2.0f;
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 1U;
+    chassis.debug_control_.injection.omega_z_injection_mode_raw = 0U;
+
+    chassis.airjoy_data_.left_y = 0.0f;
+    chassis.airjoy_data_.left_x = -1.0f;
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kBodySpeedMode);
+    EXPECT_NEAR(chassis.input_target_data_.vel_x, 2.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.input_target_data_.vel_y, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, 0.0f, 1.0e-6f);
 }
 
 void testPlannerAxisNormalizationDoesNotDependOnDebugStyleOmegaFlip()
@@ -3397,7 +3435,7 @@ void testDebugBodySpeedTranslationRapidReverseEventuallyChangesPredictedActuator
                 continue;
             }
 
-            baseline_axis_value = test_x_axis ? predicted_vel_x : predicted_vel_y;
+            baseline_axis_value = test_x_axis ? predicted_vel_y : predicted_vel_x;
             if (std::fabs(baseline_axis_value) > 1.0e-6f)
             {
                 established_baseline = true;
@@ -3421,7 +3459,7 @@ void testDebugBodySpeedTranslationRapidReverseEventuallyChangesPredictedActuator
                 continue;
             }
 
-            const float current_axis_value = test_x_axis ? predicted_vel_x : predicted_vel_y;
+            const float current_axis_value = test_x_axis ? predicted_vel_y : predicted_vel_x;
             if (current_axis_value * baseline_axis_value < -1.0e-6f)
             {
                 first_reversed_cycle = i;
@@ -4948,6 +4986,8 @@ void testRecoveryRehomeTimeoutRelatchesFault()
 int main()
 {
     testExternalCommandMapsToInternalBodyAxesWithoutChangingOmega();
+    testDebugBodySpeedLeftStickUpTargetsCurrentTwoThreeSide();
+    testDebugBodySpeedLeftStickLeftTargetsCurrentThreeFourSide();
     testPlannerAxisNormalizationDoesNotDependOnDebugStyleOmegaFlip();
     testSteerGeometryUsesSignedInstallationAngleOnly();
     testRuntimeZeroAndMotorPolarityOnlyAffectMotorLocalConversion();

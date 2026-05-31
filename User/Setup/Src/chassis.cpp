@@ -647,6 +647,9 @@ namespace jia
                 out_omega_z = 0.0f;
                 return false;
             }
+            // Expose planned twist in the public/debug body frame.
+            out_vel_x = -out_vel_x;
+            out_vel_y = -out_vel_y;
             return true;
         }
 
@@ -1281,11 +1284,13 @@ namespace jia
                                          predicted_vel_y,
                                          predicted_omega_z))
             {
-                const f32 predicted_trans_speed_m_s = magnitude2DF32(predicted_vel_x, predicted_vel_y);
+                const f32 predicted_internal_vel_x = -predicted_vel_x;
+                const f32 predicted_internal_vel_y = -predicted_vel_y;
+                const f32 predicted_trans_speed_m_s = magnitude2DF32(predicted_internal_vel_x, predicted_internal_vel_y);
                 if ((translational_speed_m_s > 1.0e-6f) && (predicted_trans_speed_m_s > 1.0e-6f))
                 {
                     const f32 target_dir_rad = atan2f(planner_input.command.vel_y, planner_input.command.vel_x);
-                    const f32 predicted_dir_rad = atan2f(predicted_vel_y, predicted_vel_x);
+                    const f32 predicted_dir_rad = atan2f(predicted_internal_vel_y, predicted_internal_vel_x);
                     planner_output.high_speed_dir_err_deg =
                         radToDegF32(fabsf(shortestAngularDistanceF32(target_dir_rad, predicted_dir_rad)));
                 }
@@ -1467,10 +1472,11 @@ namespace jia
 
         void Chassis::applyDebugTargetOverride(DebugMode mode)
         {
-            // 手柄平移坐标 -> 车体坐标约定：前推前进、左推左移。
-            // 为匹配遥杆实际符号：left_y 正向映射到 +X；left_x 取反后映射到 +Y。
-            f32 target_vel_x = airjoy_data_.left_y * runtime_strategy_cfg_.max_vel_x_;
-            f32 target_vel_y = -airjoy_data_.left_x * runtime_strategy_cfg_.max_vel_y_;
+            // Debug 左摇杆沿对外平移语义接管：上推朝当前 2/3 面，左推朝当前 3/4 面。
+            // 映射到内部 body 命令时使用 -left_x -> vel_x、-left_y -> vel_y；
+            // 右摇杆 omega_z 保持现有符号约定不变。
+            f32 target_vel_x = -airjoy_data_.left_x * runtime_strategy_cfg_.max_vel_x_;
+            f32 target_vel_y = -airjoy_data_.left_y * runtime_strategy_cfg_.max_vel_y_;
             const f32 right_x_cmd = -airjoy_data_.right_x;
             f32 target_omega_z = -right_x_cmd * runtime_strategy_cfg_.max_omega_z_;
 
