@@ -281,6 +281,7 @@ namespace jia
                 wheel.homing_last_edge_is_falling = false;
                 wheel.homing_align_command_armed = false;
                 wheel.homing_zero_valid = !wheel.homing_enabled;
+                wheel.homing_search_timeout_armed = false;
                 wheel.homing_elapsed_s = 0.0f;
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
                 wheel.corrected_steer_motor_total_angle_rad = 0.0f;
@@ -483,6 +484,7 @@ namespace jia
                 wheel.homing_elapsed_s = 0.0f;
                 wheel.homing_last_sensor_active = false;
                 wheel.homing_align_command_armed = false;
+                wheel.homing_search_timeout_armed = false;
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
                 if (wheel.homing_enabled && wheel.homing_gpio_port != nullptr)
                 {
@@ -3031,6 +3033,7 @@ namespace jia
             wheel.homing_last_sensor_active = readHomingSensorRawHigh(wheel);
             wheel.homing_last_edge_is_falling = false;
             wheel.homing_align_command_armed = false;
+            wheel.homing_search_timeout_armed = false;
             wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
             wheel.homing_zero_valid = false;
             wheel.homing_state = HomingState::kIdle;
@@ -3184,6 +3187,7 @@ namespace jia
                 wheel.homing_elapsed_s = 0.0f;
                 wheel.homing_last_sensor_active = sensor_raw_high;
                 wheel.homing_align_command_armed = false;
+                wheel.homing_search_timeout_armed = false;
                 steer_fault_any_active_ = true;
                 return false;
             }
@@ -3195,6 +3199,7 @@ namespace jia
                 // 两个触发角相差 180°，保证任意起始状态半圈内都能抓到一个有效边沿
                     wheel.homing_state = HomingState::kSearch;
                     wheel.homing_elapsed_s = 0.0f;
+                    wheel.homing_search_timeout_armed = false;
                 }
                 wheel.homing_last_sensor_active = sensor_raw_high;
                 return false;
@@ -3207,7 +3212,22 @@ namespace jia
                 //   H->L: 触发角是机械 +60°
                 //   L->H: 触发角是机械 -120°
                 // 两个触发角相差 180°，保证任意起始状态半圈内都能抓到一个有效边沿。
-                wheel.homing_elapsed_s += period_;
+                const bool has_first_valid_steer_feedback =
+                    (fabsf(wheel.steer_feedback_current_mA) > 1.0f) ||
+                    (wheel.steer_feedback_current_delta_mA > 1.0f) ||
+                    (wheel.steer_feedback_angle_delta_rad > 1.0e-4f);
+                if (!wheel.homing_search_timeout_armed)
+                {
+                    wheel.homing_elapsed_s = 0.0f;
+                    if (has_first_valid_steer_feedback)
+                    {
+                        wheel.homing_search_timeout_armed = true;
+                    }
+                }
+                else
+                {
+                    wheel.homing_elapsed_s += period_;
+                }
                 const bool is_edge = (sensor_raw_high != wheel.homing_last_sensor_active);
                 if (is_edge)
                 {
@@ -3223,7 +3243,7 @@ namespace jia
                                                                                           calibration);
                     wheel.homing_zero_valid = true;
                 }
-                else if (wheel.homing_elapsed_s > wheel.homing_timeout_s)
+                else if (wheel.homing_search_timeout_armed && (wheel.homing_elapsed_s > wheel.homing_timeout_s))
                 {
                     if (wheel.steer_fault_state == SteerFaultState::kRecovering)
                     {
