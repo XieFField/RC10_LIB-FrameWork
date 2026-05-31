@@ -3,9 +3,99 @@
 
 void OmniChassis_Setup::Path_CB_check(void)
 {
+    if (Clamping_Bar_Selection_pos_ .x == curve.Get_End_point().x && Clamping_Bar_Selection_pos_ .y == curve.Get_End_point().y)
+    {
+        CB_flag.WeaponSage_flag = true;
+    }
+    else if (CB_flag.WeaponSage_flag == true)
+    {
+        CB_flag.WeaponSage_flag = false;
+        WeaponSage_Start = true;
+    }
 
 
 }
+void OmniChassis_Setup::Path_spin_check(void)
+{
+    // KFS拾取判断MF1
+    if (MF1_pos_.x == curve.Get_End_point().x && MF1_pos_.y == curve.Get_End_point().y)
+    {
+        KFS_flag.MF1_flag = true;
+    }
+    else if (KFS_flag.MF1_flag == true)
+    {
+        KFS_flag.MF1_flag = false;
+        Arm_Start = true;
+        KFS_flag.MF1_finish = true;
+    }
+    
+    // KFS拾取判断MF2
+    if (MF2_pos_.x == curve.Get_End_point().x && MF2_pos_.y == curve.Get_End_point().y)
+    {
+        KFS_flag.MF2_flag = true;
+    }
+    else if (KFS_flag.MF2_flag == true)
+    {
+        KFS_flag.MF2_flag = false;
+        Arm_Start = true;
+    }
+
+    // 上方停止点旋转
+    if (KFS_flag.spin_up_flag == true)
+    {
+        // 判断旋转条件
+        if (spin_point_.x == curve.Get_End_point().x && spin_point_.y == curve.Get_End_point().y)
+        {
+            KFS_flag.get_spin_flag = true;
+        }
+        // 开始旋转
+        else if (KFS_flag.get_spin_flag == true)
+        {
+            KFS_flag.get_spin_flag = false;
+            // target_yaw_=MF2_target_yaw_;
+            KFS_flag.Spin_Start = true;
+        }
+        // 判断退出
+        else if (KFS_flag.Spin_Start == true)
+        {
+            if (_tool_Abs(yaw - target_yaw_) < 2.0f)
+            {
+                KFS_flag.Spin_Start = false;
+                KFS_flag.spin_up_flag = false;
+            }
+        }
+    }
+    
+    if (KFS_flag.spin_down_flag == true) // 下方偏移旋转
+    {
+        if (KFS_flag.MF1_finish == true)
+        {
+            // 第一排旋转
+            if (target_yaw_ == 90.0f)
+            {
+                // 延迟旋转
+                if (robot_pos_.y <= 2.55f)
+                {
+                    target_yaw_ = MF2_target_yaw_;
+                    KFS_flag.spin_down_flag = false;
+                }
+            }
+            // 两侧旋转判断
+            else if (MF1_pos_.x == curve.Get_Start_point().x && MF1_pos_.y == curve.Get_Start_point().y)
+            {
+                KFS_flag.get_spin_flag = true;
+            }
+            // 两侧开始旋转
+            else if (KFS_flag.get_spin_flag == true)
+            {
+                target_yaw_ = MF2_target_yaw_;
+                KFS_flag.spin_down_flag = false;
+                KFS_flag.get_spin_flag = false;
+            }
+        }
+    }
+}
+
 void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
@@ -20,12 +110,6 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     //    path_line_.Add_End_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f+0.2f}, path_param_end_);
     //   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
 }
-
-#if debug_ladar
-
-int last_cout_ladar_data = -1;
-
-#endif
 
 uint32_t chassisstackHighWaterMark = 0;
 extern Chassis chassis;
@@ -74,7 +158,6 @@ void OmniChassis_Setup::loop()
 
         break;
     }
-
     case CHASSIS_MANUAL_CONTROL_B:
     {
         // 模式 B：低速手动平移，锁当前航向。
@@ -95,40 +178,12 @@ void OmniChassis_Setup::loop()
 
         break;
     }
-
-    case CHASSIS_LOCK_FORWEAPON:
-    {
-        // 武器联动模式：平移可控，航向强制锁定到 90 度。
-        const float target_yaw_angle = 90.0f;
-        const float target_yaw_rad = 90.0f * PI / 180.0f;
-
-        float target_vel_x = 0.0f;
-        float target_vel_y = 0.0f;
-        float target_rot_z = 0.0f;
-
-        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target_vel_x = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
-        else
-            target_vel_x = 0.0f;
-
-        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target_vel_y = airjoy_data_.left_y * 3 * this->is_chassis_reverse_;
-        else
-            target_vel_y = 0.0f;
-
-        target_rot_z = target_yaw_rad;
-
-        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, target_rot_z);
-
-        break;
-    }
-
     case CHASSIS_AUTO_CONTROL_CB:
     {
         num++;
         if (num > 3)
         {
-            //            debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(),err_curve);
+            //debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(),err_curve);
             num = 0;
         }
         // 夹杆自动流程：触发后执行路径规划、纠偏和速度合成。
@@ -138,7 +193,7 @@ void OmniChassis_Setup::loop()
             flag = 0;
             flag_run = 1;
             Clamping_Bar_Selection_Planning();
-            WeaponSage_END = 0;
+            WeaponSage_Start = false;
         }
         if (flag_run == 1)
         {
@@ -166,7 +221,7 @@ void OmniChassis_Setup::loop()
                 speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
-                WeaponSage_END = true;
+                WeaponSage_Start = true;
             }
             //             else
             //            {
@@ -351,15 +406,6 @@ void OmniChassis_Setup::loop()
 
     // 接收一次雷达数据打印一次
 
-#if debug_ladar
-
-    if (Lader_position::GetInstance(&hUsbDeviceHS)->return_coutlar_data() > last_cout_ladar_data)
-    {
-        debug_uart.Printf_Ladar(ladar_data_.x, ladar_data_.y);
-        last_cout_ladar_data = Lader_position::GetInstance(&hUsbDeviceHS)->return_coutlar_data();
-    }
-
-#endif
 }
 
 //////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
@@ -422,87 +468,6 @@ void OmniChassis_Setup::Path_correction(void)
     corrVelocity.y = pid_pos_y.pid_calc(lookaheadPt.y, robot_pos_.y);
 
     // corrVelocity=path_line_.Get_Tangent_Vector()*corrVelocity.magnitude();
-}
-
-void OmniChassis_Setup::Path_spin_check(void)
-{
-    // KFS拾取判断MF1
-    if (MF1_pos_.x == curve.Get_End_point().x && MF1_pos_.y == curve.Get_End_point().y)
-    {
-        KFS_flag.MF1_flag = true;
-    }
-    else if (KFS_flag.MF1_flag == true)
-    {
-        KFS_flag.MF1_flag = false;
-        Arm_Start = true;
-        KFS_flag.MF1_finish = true;
-    }
-    
-    // KFS拾取判断MF2
-    if (MF2_pos_.x == curve.Get_End_point().x && MF2_pos_.y == curve.Get_End_point().y)
-    {
-        KFS_flag.MF2_flag = true;
-    }
-    else if (KFS_flag.MF2_flag == true)
-    {
-        KFS_flag.MF2_flag = false;
-        Arm_Start = true;
-    }
-
-    // 上方停止点旋转
-    if (KFS_flag.spin_up_flag == true)
-    {
-        // 判断旋转条件
-        if (spin_point_.x == curve.Get_End_point().x && spin_point_.y == curve.Get_End_point().y)
-        {
-            KFS_flag.get_spin_flag = true;
-        }
-        // 开始旋转
-        else if (KFS_flag.get_spin_flag == true)
-        {
-            KFS_flag.get_spin_flag = false;
-            // target_yaw_=MF2_target_yaw_;
-            KFS_flag.Spin_Start = true;
-        }
-        // 判断退出
-        else if (KFS_flag.Spin_Start == true)
-        {
-            if (_tool_Abs(yaw - target_yaw_) < 2.0f)
-            {
-                KFS_flag.Spin_Start = false;
-                KFS_flag.spin_up_flag = false;
-            }
-        }
-    }
-    
-    if (KFS_flag.spin_down_flag == true) // 下方偏移旋转
-    {
-        if (KFS_flag.MF1_finish == true)
-        {
-            // 第一排旋转
-            if (target_yaw_ == 90.0f)
-            {
-                // 延迟旋转
-                if (robot_pos_.y <= 2.55f)
-                {
-                    target_yaw_ = MF2_target_yaw_;
-                    KFS_flag.spin_down_flag = false;
-                }
-            }
-            // 两侧旋转判断
-            else if (MF1_pos_.x == curve.Get_Start_point().x && MF1_pos_.y == curve.Get_Start_point().y)
-            {
-                KFS_flag.get_spin_flag = true;
-            }
-            // 两侧开始旋转
-            else if (KFS_flag.get_spin_flag == true)
-            {
-                target_yaw_ = MF2_target_yaw_;
-                KFS_flag.spin_down_flag = false;
-                KFS_flag.get_spin_flag = false;
-            }
-        }
-    }
 }
 
 /////////////////////////////////    路径初始化代码   //////////////////////////////////////////////
@@ -745,7 +710,7 @@ Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNeares
 void OmniChassis_Setup::flag_reset(void)
 {
     // 统一清空自动流程的阶段标志与旋转状态。
-    WeaponSage_END = false;
+    WeaponSage_Start = false;
     Arm_Start = false;
     KFS_flag.MF1_flag = false;
     KFS_flag.MF2_flag = false;

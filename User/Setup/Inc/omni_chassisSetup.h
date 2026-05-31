@@ -40,7 +40,7 @@ extern "C"
 #include "AutoCtrler.h"
 #include "chassis.h"
 
-#define debug_ladar 0
+
 #define s_debug 0
 #define FF_V 0
 
@@ -62,7 +62,7 @@ typedef struct
 
 typedef struct
 {
-    bool spin_flag = false;       // 是否需要执行中途转向。
+    bool WeaponSage_flag = false;       // 进入 CB 目标点标志
 
 } CB_FLAG;
 
@@ -104,9 +104,6 @@ public:
 
         this->setThreeWheelSolver(true);
 
-#if debug_ladar
-        this->setThreeWheelSolver(false);
-#endif
         pid_pos_x.set_params(track_pid_params, 0.0f);
         pid_pos_y.set_params(track_pid_params, 0.0f);
         path_lock.set_params(path_lock_end, 0.0f);
@@ -137,7 +134,7 @@ private:
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
 
-    bool WeaponSage_END = false; // 夹杆流程完成标志。
+    bool WeaponSage_Start = false; // 夹杆流程完成标志。
 
     bool Arm_Start = false; // 机械臂动作触发标志。
     
@@ -190,14 +187,14 @@ private:
     Speedplanner_1D_Param_Config path_param_end_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 100.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};    // KFS 速度规划参数。
 
     //-----------------------------------梅林规划参数-----------------------------------------//
-
+    CB_FLAG CB_flag;
+    KFS_FLAG KFS_flag;
+        
     MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
 
-    KFS_FLAG KFS_flag;
-    
     float MF2_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
     
     Vector2D spin_point_ = {3.0f, 8.72f}; // 上方旋转点
@@ -318,7 +315,7 @@ public:
     bool GetReach_flag()
     {
         // 读取夹杆流程完成标志。
-        return WeaponSage_END;
+        return WeaponSage_Start;
     }
 
     bool Get_Arm_Start_flag()

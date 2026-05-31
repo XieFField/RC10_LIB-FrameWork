@@ -101,10 +101,10 @@
         <yPos>-1</yPos>
       </MaxPosition>
       <NormalPosition>
-        <Top>79</Top>
-        <Left>152</Left>
-        <Right>1112</Right>
-        <Bottom>593</Bottom>
+        <Top>110</Top>
+        <Left>37</Left>
+        <Right>997</Right>
+        <Bottom>624</Bottom>
       </NormalPosition>
     </WindowPosition>
     <MDIClientArea>
@@ -3606,18 +3606,18 @@
       <ActiveTab>1</ActiveTab>
       <Doc>
         <Name>..\User\Setup\Inc\omni_chassisSetup.h</Name>
-        <ColumnNumber>0</ColumnNumber>
-        <TopLine>117</TopLine>
-        <CurrentLine>136</CurrentLine>
+        <ColumnNumber>25</ColumnNumber>
+        <TopLine>127</TopLine>
+        <CurrentLine>137</CurrentLine>
         <Folding>1</Folding>
         <ContractedFolders></ContractedFolders>
         <PaneID>0</PaneID>
       </Doc>
       <Doc>
         <Name>..\User\Setup\Src\omni_chassisSetup.cpp</Name>
-        <ColumnNumber>38</ColumnNumber>
-        <TopLine>686</TopLine>
-        <CurrentLine>705</CurrentLine>
+        <ColumnNumber>30</ColumnNumber>
+        <TopLine>703</TopLine>
+        <CurrentLine>716</CurrentLine>
         <Folding>1</Folding>
         <ContractedFolders></ContractedFolders>
         <PaneID>0</PaneID>
