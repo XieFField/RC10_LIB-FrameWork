@@ -259,7 +259,10 @@ float M3508::getRPM() const
     return rpm_;
 }
 
-void M3508::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa)
+void M3508::pid_init(const PID_Param_Config& speed_params,
+                     float speed_tdRatio,
+                     const PID_Param_Config& angle_params,
+                     float angle_I_Separa)
 {
     speed_pid_.set_params(speed_params, speed_tdRatio);
     angle_pid_.set_params(angle_params, angle_I_Separa);
@@ -399,7 +402,10 @@ float M2006::getRPM() const
     return rpm_;
 }
 
-void M2006::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa)
+void M2006::pid_init(const PID_Param_Config& speed_params,
+                     float speed_tdRatio,
+                     const PID_Param_Config& angle_params,
+                     float angle_I_Separa)
 {
     speed_pid_.set_params(speed_params, speed_tdRatio);
     angle_pid_.set_params(angle_params, angle_I_Separa);
@@ -499,7 +505,10 @@ GM6020::GM6020(uint32_t motor_id, fdCANbus* bus, bool calcTotalAngle, bool calcA
     Motor_Base::inv_GEAR_RATIO_ = 1.0f;
 }
 
-void GM6020::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa)
+void GM6020::pid_init(const PID_Param_Config& speed_params,
+                      float speed_tdRatio,
+                      const PID_Param_Config& angle_params,
+                      float angle_I_Separa)
 {
     speed_pid_.set_params(speed_params, speed_tdRatio);
     angle_pid_.set_params(angle_params, angle_I_Separa);
