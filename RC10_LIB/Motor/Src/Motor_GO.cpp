@@ -419,7 +419,10 @@ void GO_Motor::resetTotalAngle()
  * @param angle_params 角度PID参数
  * @param angle_I_Separa 角度PID积分分离阈值
  */
-void GO_Motor::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa)
+void GO_Motor::pid_init(const PID_Param_Config& speed_params,
+                        float speed_tdRatio,
+                        const PID_Param_Config& angle_params,
+                        float angle_I_Separa)
 {
     speed_pid_.set_params(speed_params, speed_tdRatio);
     angle_pid_.set_params(angle_params, angle_I_Separa);

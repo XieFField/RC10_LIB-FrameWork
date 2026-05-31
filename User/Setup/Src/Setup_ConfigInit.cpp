@@ -1,4 +1,6 @@
 #include "Setup_ConfigInit.h"
+#include "Module_Serial1Protocol.h"
+#include "Module_lora.h"
 
 // 外部声明 USB 高速设备句柄
 extern "C" 
@@ -111,7 +113,6 @@ dji_motor_demo.init(&m2006_1);
     laserpos.Init(); // 激光测距
 #endif
 
-    // system_detect_task_handle = osThreadNew(startSystemDetectTask, NULL, &system_detect_task_attributes);
 }
 
 void CAN_Motor_Init(void);
@@ -125,6 +126,7 @@ Swerve_Task_Demo swerve_task_demo; // 轮式舵轮底盘调试任务实例
 
 void ALL_Setup_ConfigInit(void)
 {
+    Serial1Protocol &serial1_protocol = Serial1Protocol::getInstance();
 
     HWT101CT* imu = HWT101CT::GetInstance(&huart1);
     imu->InitUART();
@@ -182,6 +184,8 @@ void ALL_Setup_ConfigInit(void)
 
     CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
     crsf_rc->init();
+    serial1_protocol.init(&huart2);
+    communication::Lora_communication::GetInstance()->Init();
 
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
     set1->locate_setup_init();
@@ -247,8 +251,15 @@ void CAN_Motor_Init(void)
     steer3.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
     steer4.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
 
-   U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
-   U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
+   U8_1.reset_controlFrequency(200);  U8_2.reset_controlFrequency(200);
+   U8_3.reset_controlFrequency(200);  U8_4.reset_controlFrequency(200);
+
+   // 底盘 VESC 驱动轮切到本地 PID 速度闭环模式
+   // 仅 drive 轮默认开启微分先行，其余电机保持默认关闭，不走这条策略。
+   U8_1.pid_init(vesc_drive_speed_pid_params, 200.0f);  U8_1.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_2.pid_init(vesc_drive_speed_pid_params, 200.0f);  U8_2.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_3.pid_init(vesc_drive_speed_pid_params, 200.0f);  U8_3.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_4.pid_init(vesc_drive_speed_pid_params, 200.0f);  U8_4.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
 
 
     // 机械臂电机 PID 参数初始化

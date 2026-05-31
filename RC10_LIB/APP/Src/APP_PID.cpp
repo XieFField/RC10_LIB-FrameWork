@@ -253,6 +253,9 @@ float PID_Incremental::pid_calc(float target, float feedback)
     {
         error_last_ = 0;
         error_earlier_ = 0;
+        // 微分先行首拍把反馈历史对齐到当前值，避免 reset 后出现额外尖峰。
+        feedback_last_ = feedback;
+        feedback_earlier_ = feedback;
         isFirst_ = false;
         output_ = 0.0f; 
     }
@@ -269,7 +272,15 @@ float PID_Incremental::pid_calc(float target, float feedback)
         // D项增量
         if (dt_ > 0.0f)
         {
-            D_Term = params_.kd * (error_ - 2.0f * error_last_ + error_earlier_);
+            if (derivative_first_)
+            {
+                // 微分先行：D 项只对反馈变化响应，避免目标阶跃带来微分冲击。
+                D_Term = -params_.kd * (feedback - 2.0f * feedback_last_ + feedback_earlier_);
+            }
+            else
+            {
+                D_Term = params_.kd * (error_ - 2.0f * error_last_ + error_earlier_);
+            }
         }
         else
         {
@@ -286,6 +297,8 @@ float PID_Incremental::pid_calc(float target, float feedback)
     // 更新历史值
     error_earlier_ = error_last_;
     error_last_ = error_;
+    feedback_earlier_ = feedback_last_;
+    feedback_last_ = feedback;
     output_last_ = output_; // 保存当前总输出，作为下次计算的“上次总输出”
     last_time_s_ = current_time_s;
 
@@ -363,6 +376,17 @@ PID_Param_Config foursteer_steer_speed_pid_params = {
     .isIOutlimit = true, 
     .output_limit = 15000.0f,   
     .deadband = 0.1f * (3591.0f/187.0f) / 8.0f 
+};
+
+// 四舵轮 VESC 驱动轮默认速度环 PID
+PID_Param_Config vesc_drive_speed_pid_params = {
+    .kp = 50.0f,
+    .ki = 150.0f,
+    .kd = 1.5f,
+    .I_Outlimit = 25000.0f,
+    .isIOutlimit = true,
+    .output_limit = 25000.0f,
+    .deadband = 1.0f
 };
 
 PID_Param_Config foursteer_steer_angle_pid_params = {

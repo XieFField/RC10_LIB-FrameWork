@@ -1,9 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
 $testsRoot = Split-Path -Parent $PSScriptRoot
-$aiRoot = Split-Path -Parent $testsRoot
-$projectRoot = Split-Path -Parent $aiRoot
-$repo = Join-Path $projectRoot 'RC10_LIB-FrameWork'
+$docsRoot = Split-Path -Parent $testsRoot
+$jiaDocsRoot = Split-Path -Parent $docsRoot
+$repo = Split-Path -Parent $jiaDocsRoot
 $outDir = Join-Path $PSScriptRoot 'build'
 if (-not (Test-Path $outDir)) {
     New-Item -ItemType Directory -Path $outDir | Out-Null

@@ -1,11 +1,35 @@
+/**
+ * @file APP_Utils.h
+ * @author 桑叁年
+ * @brief 通用数学工具
+ */
+
 #ifndef APP_UTILS_H_
 #define APP_UTILS_H_
 
 #include <stdint.h>
 
 #include <algorithm>
+#include <cmath>
+#include <type_traits>
 
 #include "arm_math.h"
+
+#ifndef JIA_APP_MATH_MODE_STD
+#define JIA_APP_MATH_MODE_STD 0
+#endif
+
+#ifndef JIA_APP_MATH_MODE_DSP
+#define JIA_APP_MATH_MODE_DSP 1
+#endif
+
+#ifndef JIA_APP_MATH_MODE
+#define JIA_APP_MATH_MODE JIA_APP_MATH_MODE_DSP
+#endif
+
+#if (JIA_APP_MATH_MODE != JIA_APP_MATH_MODE_STD) && (JIA_APP_MATH_MODE != JIA_APP_MATH_MODE_DSP)
+#error "JIA_APP_MATH_MODE must be JIA_APP_MATH_MODE_STD or JIA_APP_MATH_MODE_DSP"
+#endif
 
 namespace jia
 {
@@ -22,7 +46,8 @@ namespace jia
     using f32 = float;
     using f64 = double;
 
-    constexpr f32 kPi = 3.14159265358979323846f;
+    inline constexpr f32 kPi = 3.14159265358979323846f;
+    inline constexpr f32 kTwoPi = 2.0f * kPi;
 
     /**
      * @brief 数值范围限制
@@ -61,6 +86,76 @@ namespace jia
         return deg * (2.0f * kPi) / 360.0f;
     }
 
+    inline f32 sinRadF32(f32 rad)
+    {
+#if JIA_APP_MATH_MODE == JIA_APP_MATH_MODE_DSP
+        return arm_sin_f32(rad);
+#else
+        return std::sin(rad);
+#endif
+    }
+
+    inline f32 cosRadF32(f32 rad)
+    {
+ #if JIA_APP_MATH_MODE == JIA_APP_MATH_MODE_DSP
+        return arm_cos_f32(rad);
+#else
+        return std::cos(rad);
+#endif
+    }
+
+    inline f32 sqrtF32(f32 value)
+    {
+#if JIA_APP_MATH_MODE == JIA_APP_MATH_MODE_DSP
+        float32_t result = 0.0f;
+        const arm_status status = arm_sqrt_f32(value, &result);
+        return (status == ARM_MATH_SUCCESS) ? result : 0.0f;
+#else
+        return (value > 0.0f) ? std::sqrt(value) : 0.0f;
+#endif
+    }
+
+    inline f32 magnitude2DF32(f32 x, f32 y)
+    {
+        return sqrtF32((x * x) + (y * y));
+    }
+
+    inline f32 wrapToPiF32(f32 angle_rad)
+    {
+        while (angle_rad >= kPi)
+        {
+            angle_rad -= kTwoPi;
+        }
+        while (angle_rad < -kPi)
+        {
+            angle_rad += kTwoPi;
+        }
+        return angle_rad;
+    }
+
+    inline f32 wrapTo2PiF32(f32 angle_rad)
+    {
+        while (angle_rad >= kTwoPi)
+        {
+            angle_rad -= kTwoPi;
+        }
+        while (angle_rad < 0.0f)
+        {
+            angle_rad += kTwoPi;
+        }
+        return angle_rad;
+    }
+
+    inline f32 shortestAngularDistanceF32(f32 from_rad, f32 to_rad)
+    {
+        return wrapToPiF32(to_rad - from_rad);
+    }
+
+    inline f32 nearestEquivalentAngleF32(f32 current_rad, f32 target_mod_rad)
+    {
+        return current_rad + shortestAngularDistanceF32(current_rad, target_mod_rad);
+    }
+
     /**
      * @brief 计算正弦值（角度制）
      * @param deg 角度（度）
@@ -68,7 +163,7 @@ namespace jia
      */
     inline f32 sinDegF32(f32 deg)
     {
-        f32 sinf_result = sinf(deg * (kPi / 180.0f));
+        f32 sinf_result = sinRadF32(deg * (kPi / 180.0f));
 
         // if (sinf_result > 1.0f)
         // {
@@ -89,7 +184,7 @@ namespace jia
      */
     inline f32 cosDegF32(f32 deg)
     {
-        f32 cosf_result = cosf(deg * (kPi / 180.0f));
+        f32 cosf_result = cosRadF32(deg * (kPi / 180.0f));
 
         // if (cosf_result > 1.0f)
         // {
@@ -260,7 +355,7 @@ namespace jia
      */
     inline f32 sineWaveGeneratorF32(f32 time, f32 amplitude = 1.0f, f32 frequency = 1.0f, f32 phase = 0.0f, f32 offset = 0.0f)
     {
-        return amplitude * sinf(2.0f * kPi * frequency * time + phase) + offset;
+        return amplitude * sinRadF32(2.0f * kPi * frequency * time + phase) + offset;
     }
 
     /**
@@ -366,11 +461,11 @@ namespace jia
      * @param theta 旋转弧度（逆时针为正）
      * @param x_out,y_out 输出旋转后坐标
      */
-    constexpr inline void rotateAroundZAxisF32(f32 x, f32 y, f32 theta,
-                                               f32 &x_out, f32 &y_out)
+    inline void rotateAroundZAxisF32(f32 x, f32 y, f32 theta,
+                                     f32 &x_out, f32 &y_out)
     {
-        f32 cos_theta = cosf(theta);
-        f32 sin_theta = sinf(theta);
+        f32 cos_theta = cosRadF32(theta);
+        f32 sin_theta = sinRadF32(theta);
 
         x_out = x * cos_theta + y * sin_theta;
         y_out = -x * sin_theta + y * cos_theta;
@@ -414,11 +509,11 @@ namespace jia
      * @return T 归一化后的角度（单位：度）
      */
     template <typename T>
-    constexpr inline typename std::enable_if<std::is_same<T, f32>::value, T>::type
+    inline typename std::enable_if<std::is_same<T, f32>::value, T>::type
     normalizeAngleTo360(T angle)
     {
         constexpr T full_circle = 360.0f;
-        T normalized = fmodf(angle, full_circle);
+        T normalized = std::fmod(angle, full_circle);
         if (normalized < 0.0f)
         {
             normalized += full_circle;
@@ -460,12 +555,17 @@ namespace jia
      * @return T 归一化后的角度（单位：弧度）
      */
     template <typename T>
-    constexpr inline typename std::enable_if<std::is_same<T, f32>::value, T>::type
+    inline typename std::enable_if<std::is_same<T, f32>::value, T>::type
     normalizeAngleToPi(T angle)
     {
         constexpr T full_circle = 2.0f * kPi;
-        T normalized = fmodf(angle, full_circle);
-        if (normalized < 0.0f)
+        constexpr T half_circle = kPi;
+        T normalized = std::fmod(angle, full_circle);
+        if (normalized >= half_circle)
+        {
+            normalized -= full_circle;
+        }
+        else if (normalized < -half_circle)
         {
             normalized += full_circle;
         }
@@ -477,14 +577,10 @@ namespace jia
      * @param angle 输入角度（单位：度）
      * @return 对应角度的正弦值
      */
-    constexpr inline f32 sinDegF32Fast(f32 angle)
+    inline f32 sinDegWrap360F32(f32 angle)
     {
         f32 normalized_deg = normalizeAngleTo360(angle);
-        f32 rad = degToRadF32(normalized_deg);
-
-        f32 sin_result = arm_sin_f32(rad);
-
-        return sin_result;
+        return sinDegF32(normalized_deg);
     }
 
     /**
@@ -492,22 +588,11 @@ namespace jia
      * @param angle 输入角度（单位：度）
      * @return 对应角度的余弦值
      */
-    constexpr inline f32 cosDegF32Fast(f32 angle)
+    inline f32 cosDegWrap360F32(f32 angle)
     {
         f32 normalized_deg = normalizeAngleTo360(angle);
-        f32 rad = degToRadF32(normalized_deg);
-
-        f32 cos_result = arm_cos_f32(rad);
-
-        return cos_result;
+        return cosDegF32(normalized_deg);
     }
-
-    // 供底盘/舵轮算法复用的运行时数学工具（非模板实现位于 APP_Utils.cpp）
-    f32 wrapToPiRuntimeF32(f32 angle_rad);
-    f32 wrapTo2PiRuntimeF32(f32 angle_rad);
-    f32 shortestAngularDistanceRuntimeF32(f32 from_rad, f32 to_rad);
-    f32 nearestEquivalentAngleRuntimeF32(f32 current_rad, f32 target_mod_rad);
-    f32 magnitude2DRuntimeF32(f32 x, f32 y);
 } // namespace jia
 
 #endif

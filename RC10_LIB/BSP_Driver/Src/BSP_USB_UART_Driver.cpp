@@ -6,10 +6,11 @@
  * @date 2025-10-1
  */
 #include "BSP_USB_UART_Driver.h"
-
+#include "Module_Serial1Protocol.h"
 // ?????????????????
 UART_* InstanceManager::uart_instances[UART_MAX] = {nullptr};
 USB_CDC_* InstanceManager::usb_instances[2]={nullptr};
+extern volatile bool tx_done;
 uint8_t n=0;
 uint8_t m=0;
 extern "C" 
@@ -30,6 +31,9 @@ void InstanceManager::RegisterInstance(UART_* uart_instance,USB_CDC_* usb_instan
 
 UART_* InstanceManager::GetInstanceByUartHandle(UART_HandleTypeDef *huart) {
     for (int i = 0; i < UART_MAX; i++) {
+            if (uart_instances[i] == nullptr) {
+                continue;
+            }
             if (uart_instances[i]->GetUartHandle() == huart) {
                 return uart_instances[i];
             }
@@ -226,12 +230,19 @@ extern "C" {
 #endif
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     UART_* instance = InstanceManager::GetInstanceByUartHandle(huart);
-    if (instance != nullptr) {
-       // ??? HAL ????? Size ?????????????????????
-        instance->Callback_Fuc(huart->pRxBuffPtr, Size);
-        // ???????????MA??
-        HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
+    if (instance != nullptr) 
+	{
+	// ??? HAL ????? Size ?????????????????????
+		instance->Callback_Fuc(huart->pRxBuffPtr, Size);
+	// ???????????MA??
+		HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
+	}
+	else if (huart == &huart2)
+	{
+        Serial1Protocol::getInstance().onUartReceive(huart->pRxBuffPtr, Size);
+		HAL_UARTEx_ReceiveToIdle_DMA(huart, huart->pRxBuffPtr, Size);
     }
+    
 }
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
@@ -263,6 +274,19 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     }
 	
 	HAL_UARTEx_ReceiveToIdle_DMA(huart, instance->rx_buffer, instance->rx_buffer_size);
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart == &huart7)
+    {
+        tx_done = true;
+    }
+
+    if (huart == &huart2)
+    {
+        Serial1Protocol::getInstance().onUartTxComplete();
+    }
 }
 
 
