@@ -1,5 +1,5 @@
 current_branch: jia/develop
-current_line: rc10_debug_merge_mainline_after_2026_05_26
+current_line: rc10_debug_merge_mainline_after_2026_05_31
 summary:
   - mode30_mode31_mode32 已统一到当前底盘调试主线
   - drive 轮句柄已收窄为 VESC_Motor*，drive PID 调参边界不再回灌到 Motor_Base
@@ -7,9 +7,11 @@ summary:
   - SingleWheelTrace 已扩展为 steer_only / drive_only / steer_and_drive 三类 payload
   - APP_Utils 数学入口已统一收口到公共 API
   - drive PID 第二步虚拟负载整定链路已并入主线
+  - wait /7 三路 merge 已完成，当前主机侧入口在 2026-05-31 handoff 中记录为 PASS
 latest_handoff:
-  primary: jia_docs/handoff/2026-05/ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md
+  primary: jia_docs/handoff/2026-05/ai_handoff_2026-05-31_rc10_wait_1_7_7_1_6_1_merge.md
   supporting:
+    - jia_docs/handoff/2026-05/ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md
     - jia_docs/handoff/2026-05/ai_handoff_2026-05-26_1124_singlewheeltrace_payload_semantics.md
 recommended_reading_order:
   - jia_docs/active/overview.md
@@ -18,22 +20,27 @@ recommended_reading_order:
   - jia_docs/handoff/INDEX.md
 recommended_verification:
   primary:
-    - jia_docs/tests/tdd/chassis_semantics/run_test.ps1
-    - jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
-  secondary:
-    - jia_docs/tests/legacy_ai_tests/vesc_brake/run_test.ps1
+    - jia_docs/tests/run_tests.ps1
+  compatibility:
+    - jia_docs/tests/host_cpp/chassis_semantics/run_test.ps1
+    - jia_docs/tests/host_cpp/chassis_semantics/run_pid_reconnect_test.ps1
+    - jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
 known_baseline_status:
-  - target: jia_docs/tests/tdd/chassis_semantics/run_test.ps1
-    status: failing_baseline
-    detail: 最新 merge handoff 记录仍有 18 个 baseline 失败；新增共享 PID、load tune、step generator、trace 相关测试已通过。
-  - target: jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
-    status: pass_in_latest_handoff
-    detail: 最新 merge handoff 记录为 PASS。
-  - target: jia_docs/tests/legacy_ai_tests/vesc_brake/run_test.ps1
-    status: pass_in_latest_handoff
-    detail: 最新 merge handoff 记录为 PASS。
+  - target: jia_docs/tests/run_tests.ps1
+    status: unified_entrypoint
+    detail: 测试重构后的统一入口；默认应覆盖当前 active host_cpp 套件，并可按需调度 Python 语义回归。
+  - target: jia_docs/tests/host_cpp/chassis_semantics/run_test.ps1
+    status: pass_in_2026_05_31_handoff
+    detail: 最新 2026-05-31 handoff 记录为 PASS；旧 `tdd/chassis_semantics/run_test.ps1` 仅作为兼容入口保留。
+  - target: jia_docs/tests/host_cpp/chassis_semantics/run_pid_reconnect_test.ps1
+    status: pass_in_2026_05_31_handoff
+    detail: 最新 2026-05-31 handoff 记录为 PASS；旧 `tdd/chassis_semantics/run_pid_reconnect_test.ps1` 仅作为兼容入口保留。
+  - target: jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
+    status: pass_in_2026_05_31_handoff
+    detail: 最新 2026-05-31 handoff 记录为 PASS；旧 `legacy_ai_tests/vesc_brake/run_test.ps1` 仅作为兼容入口保留。
 open_followups:
   - 完成 S 型速度规划的后续收口
   - 测试对外接口
   - 完成舵轮校准调用接口
   - 继续联调 mode30 单轮 RPM + VESC_RPM_CONTROL_PID_CURRENT
+  - 上板确认 zero-stop brake trace、drive-load trace、X-Park 零电流释放与静止 fault latch/rehome 链路
