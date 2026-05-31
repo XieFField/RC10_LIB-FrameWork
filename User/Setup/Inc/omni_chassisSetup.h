@@ -40,14 +40,13 @@ extern "C"
 #include "AutoCtrler.h"
 #include "chassis.h"
 
-
 #define s_debug 1
 #define FF_V 0
 
 typedef struct
 {
-    bool spin_flag = false;       // 是否需要执行中途转向。
-    
+    bool spin_flag = false; // 是否需要执行中途转向。
+
     bool get_spin_flag = false; // 旋转触发过渡标志。
 
     bool Spin_Start = false; // 当前正在执行旋转。
@@ -62,8 +61,8 @@ typedef struct
 
 typedef struct
 {
-    bool Selection_flag = false;       // 进入 CB 目标点标志
-    bool Retreat_flag = false;         // 进入 CB 停止点标志
+    bool Selection_flag = false; // 进入 CB 目标点标志
+    bool Retreat_flag = false;   // 进入 CB 停止点标志
 } CB_FLAG;
 
 class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>
@@ -135,15 +134,15 @@ private:
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
 
     bool WeaponSage_Start = false; // 夹杆流程开始标志。
-    bool WeaponSage_End = false; // 夹杆流程完成标志。
+    bool WeaponSage_End = false;   // 夹杆流程完成标志。
 
     bool Arm_Start = false; // 机械臂动作触发标志。
-    
+
     int flag = 0;     // 自动流程起始触发位（边沿触发）。
     int flag_run = 0; // 自动流程运行中标志位。
 
     //-----------------------------------接口监视参数-----------------------------------------//
-    float v_coefficient=1;
+    float v_coefficient = 1;
     int8_t MF1 = 0; // 目标点 1 编号。
     int8_t MF2 = 0; // 目标点 2 编号。
 
@@ -167,21 +166,21 @@ private:
     float min_robot_speed_ = 0.01f; // 常规段地板速度限制。
 
     // 夹取kfs前的速度限制，用来控制变量
-    //float robot_speed_end_ = 0.3f;  // 终点段最大速度限制。
-    //float deadzone_max_end_ = 0.1f; // 判定“近终点”阈值。
+    // float robot_speed_end_ = 0.3f;  // 终点段最大速度限制。
+    // float deadzone_max_end_ = 0.1f; // 判定“近终点”阈值。
 
-    float m_lookaheadDist = 0.15f;        // 前视距离 (单位: 米)
-    float m_lookaheadDist_line = 0.15f;   // 前视距离 (单位: 米)
+    float m_lookaheadDist = 0.15f;       // 前视距离 (单位: 米)
+    float m_lookaheadDist_line = 0.15f;  // 前视距离 (单位: 米)
     float m_lookaheadDist_curve = 0.07f; // 前视距离 (单位: 米)
     //-----------------------------------速度规划参数----------------------------------------------------//
 
     Path_line path_line_; // 路径规划器对象。
 
     Vector2D Clamping_Bar_Selection_pos_ = {2.405f, 0.69f}; // 夹杆流程默认目标点。
-    Vector2D Clamping_Bar_Retreat_pos_ = {2.405f, 1.0f}; // 夹杆流程默认目标点。
+    Vector2D Clamping_Bar_Retreat_pos_ = {2.405f, 1.0f};    // 夹杆流程默认目标点。
 
     Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 999.0f, .maxDec = 1.2f, .maxJerk = 999.0f, .maxSpeed = 3.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f};   // 夹杆流程速度规划参数。
+    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 999.0f, .maxDec = 1.2f, .maxJerk = 999.0f, .maxSpeed = 3.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f}; // 夹杆流程速度规划参数。
 
     Speedplanner_1D_Param_Config path_param_start_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 100.0f, .maxSpeed = 1.0f, .initialSpeed = 0.01f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
     Speedplanner_1D_Param_Config path_param_line_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 100.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
@@ -191,23 +190,23 @@ private:
     //-----------------------------------梅林规划参数-----------------------------------------//
     CB_FLAG CB_flag;
     KFS_FLAG KFS_flag;
-        
+
     MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
 
     float MF2_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
-    
+
     Vector2D spin_point_ = {3.0f, 8.72f}; // 上方旋转点
 
     float spin_skew_ = -0.1f; // 下方旋转位置y轴偏移量
-    
+
     //-----------------------------------yaw角控制参数-----------------------------------------//
 
     float target_yaw_ = 0.0f; // 底盘锁角目标（度）。
 
-    PID_Position yaw_pid_;             // yaw 角度环控制器。
+    PID_Position yaw_pid_; // yaw 角度环控制器。
 
     float is_chassis_reverse_ = 1.0f; // 手动控制正反向系数。
     //-----------------------------------其他参数-----------------------------------------//
@@ -217,9 +216,9 @@ private:
 
     RmPocketData_t airjoy_data_; // 遥控器数据，范围 -1 ~ 1
 
-    Debug_Printf debug_uart = Debug_Printf(&huart8); // 调试串口
+    Debug_Printf debug_uart = Debug_Printf(&huart8);                          // 调试串口
     Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}; // 当前周期底盘目标姿态。
-    
+
     //-----------------------------------内部控制函数-----------------------------------------//
 
     Vector2D GetPathNearestPoint(BezierCurve &path_, const Vector2D &robotPos, float &tNearest);
@@ -237,7 +236,7 @@ private:
     void flag_reset(void); // 复位自动流程相关标志位。
 
     void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
-    
+
     void Path_CB_check(void);
 
 #ifdef s_debug
@@ -245,7 +244,7 @@ private:
     float tp_speed_now = 0.0f;
     float tp_pos_now = 0.0f;
     // 1D的位置式
-    Speedplanner_1D_Param_Config Param_1d = {.maxAcc = 60.0f, .maxDec = 1.2f, .maxJerk = 20.0f, .maxSpeed = 3.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f};   // 夹杆流程速度规划参数。
+    Speedplanner_1D_Param_Config Param_1d = {.maxAcc = 60.0f, .maxDec = 1.2f, .maxJerk = 20.0f, .maxSpeed = 3.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f}; // 夹杆流程速度规划参数。
     SShapedPlanner1D TP_1d;
 #endif
 

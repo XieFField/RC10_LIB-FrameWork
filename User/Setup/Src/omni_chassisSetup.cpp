@@ -1,9 +1,8 @@
 #include "omni_chassisSetup.h"
 
-
 void OmniChassis_Setup::Path_CB_check(void)
 {
-    if (Clamping_Bar_Selection_pos_ .x == curve.Get_End_point().x && Clamping_Bar_Selection_pos_ .y == curve.Get_End_point().y)
+    if (Clamping_Bar_Selection_pos_.x == curve.Get_End_point().x && Clamping_Bar_Selection_pos_.y == curve.Get_End_point().y)
     {
         CB_flag.Selection_flag = true;
     }
@@ -12,8 +11,8 @@ void OmniChassis_Setup::Path_CB_check(void)
         CB_flag.Selection_flag = false;
         WeaponSage_Start = true;
     }
-    
-    if (Clamping_Bar_Retreat_pos_.x == curve.Get_End_point().x && Clamping_Bar_Retreat_pos_ .y == curve.Get_End_point().y)
+
+    if (Clamping_Bar_Retreat_pos_.x == curve.Get_End_point().x && Clamping_Bar_Retreat_pos_.y == curve.Get_End_point().y)
     {
         CB_flag.Retreat_flag = true;
     }
@@ -22,7 +21,6 @@ void OmniChassis_Setup::Path_CB_check(void)
         CB_flag.Retreat_flag = false;
         WeaponSage_End = true;
     }
-
 }
 void OmniChassis_Setup::Path_spin_check(void)
 {
@@ -37,7 +35,7 @@ void OmniChassis_Setup::Path_spin_check(void)
         Arm_Start = true;
         KFS_flag.MF1_finish = true;
     }
-    
+
     // KFS拾取判断MF2
     if (MF2_pos_.x == curve.Get_End_point().x && MF2_pos_.y == curve.Get_End_point().y)
     {
@@ -74,7 +72,7 @@ void OmniChassis_Setup::Path_spin_check(void)
             }
         }
     }
-    
+
     if (KFS_flag.spin_down_flag == true) // 下方偏移旋转
     {
         if (KFS_flag.MF1_finish == true)
@@ -206,26 +204,25 @@ void OmniChassis_Setup::loop()
         }
         if (flag_run == 1)
         {
-            if (path_line_.Is_End() == true)
+            if (path_line_.Is_End() == false)
             {
                 Path_CB_check();
-                if(WeaponSage_Start==false)
+                if (WeaponSage_Start == false)
                 {
                     // 获取曲线（带保护）
-                curve = path_line_.get_bezier_curve();
-                // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-                planspeed = path_line_.plan(robot_pos_);
-                Path_correction();
+                    curve = path_line_.get_bezier_curve();
+                    // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
+                    planspeed = path_line_.plan(robot_pos_);
+                    Path_correction();
 #if FF_V
-                speed = ComposeRobotVelocity(corrVelocity);
+                    speed = ComposeRobotVelocity(corrVelocity);
 #else
-                speed =v_coefficient*planspeed + (1-v_coefficient)*corrVelocity;
+                    speed = v_coefficient * planspeed + (1 - v_coefficient) * corrVelocity;
 
 #endif
-                speed = v_limit(speed);
-                target_chassis_twist_.vx = speed.x;
-                target_chassis_twist_.vy = speed.y;
-                    
+                    speed = v_limit(speed);
+                    target_chassis_twist_.vx = speed.x;
+                    target_chassis_twist_.vy = speed.y;
                 }
                 else
                 {
@@ -299,7 +296,7 @@ void OmniChassis_Setup::loop()
             // 获取曲线（带保护）
             curve = path_line_.get_bezier_curve();
 
-            if (path_line_.Is_End() == true)
+            if (path_line_.Is_End() == false)
             {
                 // 旋转点位判断以及KFS的拾取判断
                 Path_spin_check();
@@ -312,7 +309,7 @@ void OmniChassis_Setup::loop()
 #if FF_V
                     speed = ComposeRobotVelocity(corrVelocity);
 #else
-                    speed =v_coefficient*planspeed + (1-v_coefficient)*corrVelocity;
+                    speed = v_coefficient * planspeed + (1 - v_coefficient) * corrVelocity;
 #endif
                     speed = v_limit(speed);
                     target_chassis_twist_.vx = speed.x;
@@ -349,7 +346,7 @@ void OmniChassis_Setup::loop()
         }
         else
         {
-            //target_yaw_ = yaw;
+            // target_yaw_ = yaw;
             target_chassis_twist_ = {0.0f, 0.0f};
             chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
 
@@ -424,7 +421,6 @@ void OmniChassis_Setup::loop()
     }
 
     // 接收一次雷达数据打印一次
-
 }
 
 //////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
@@ -490,7 +486,6 @@ void OmniChassis_Setup::Path_correction(void)
 
     // corrVelocity=path_line_.Get_Tangent_Vector()*corrVelocity.magnitude();
 }
-
 
 Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead)
 {
@@ -840,15 +835,15 @@ Vector2D OmniChassis_Setup::v_limit(Vector2D &v)
     {
         v = v.normalize() * max_robot_speed_;
     } */
-//    bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
-//    if (KFS_flag.MF2_flag == true || KFS_flag.MF1_flag == true)
-//    {
-//        if (near_end)
-//        {
-//            v = v.normalize() * robot_speed_end_;
-//            return v;
-//        }
-//    }
+    //    bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
+    //    if (KFS_flag.MF2_flag == true || KFS_flag.MF1_flag == true)
+    //    {
+    //        if (near_end)
+    //        {
+    //            v = v.normalize() * robot_speed_end_;
+    //            return v;
+    //        }
+    //    }
     if (v.magnitude() > planspeed.magnitude())
     {
         v = v.normalize() * planspeed.magnitude();
