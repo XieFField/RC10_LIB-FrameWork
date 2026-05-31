@@ -865,11 +865,11 @@ namespace jia
                 f32 manual_yaw_settle_vel_eps_ = 1.0e-4f;
                 f32 manual_yaw_settle_acc_eps_ = 0.05f;
                 f32 wheel_radius_m_ = 0.052f;                                    // [RW, 慎改] 轮半径。决定线速度与驱动角速度的换算比例，改错会直接导致速度尺度和里程计比例偏差。
-                f32 max_vel_x_ = 2.0f;                                           // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
-                f32 max_vel_y_ = 2.0f;                                           // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
+                f32 max_vel_x_ = 5.0f;                                           // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
+                f32 max_vel_y_ = 5.0f;                                           // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
                 f32 max_omega_z_ = 2.0f;                                         // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
-                f32 max_acc_xy_acc_ = 2.0f;                                      // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
-                f32 max_acc_xy_dec_ = 30.0f;                                     // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
+                f32 max_acc_xy_acc_ = 9999.0f;                                      // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
+                f32 max_acc_xy_dec_ = 99999999.0f;                                     // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
                 f32 max_alpha_z_acc_ = 2.0f;                                     // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
                 f32 max_alpha_z_dec_ = 30.0f;                                    // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
                 f32 trans_dir_rate_limit_deg_s_ = 99999999.0f;                   // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
@@ -886,8 +886,8 @@ namespace jia
                 // 所有静止/冻结/X-Park/停车保护阈值统一由这组基准参数派生，避免多处手改失配。
                 struct NearZeroThresholdConfig
                 {
-                    f32 base_enter_m_s = 0.10f; // [RW] 近零门限进入基准（m/s）。
-                    f32 base_exit_m_s = 0.15f;  // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
+                    f32 base_enter_m_s = 0.02f; // [RW] 近零门限进入基准（m/s）。
+                    f32 base_exit_m_s = 0.02f;  // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
                 } near_zero_cfg_;
 
                 struct XParkCommandThresholdConfig

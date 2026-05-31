@@ -258,6 +258,7 @@ Reset_Handler    PROC
                  BLX     R0
                  LDR     R0, =__main
                  BX      R0
+				 
                  ENDP
 
 ; Dummy Exception Handlers (infinite loops which can be modified)

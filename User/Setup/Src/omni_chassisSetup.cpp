@@ -190,9 +190,9 @@ void OmniChassis_Setup::loop()
     case CHASSIS_AUTO_CONTROL_CB:
     {
         num++;
-        if (num > 3)
+        if (num > 2)
         {
-            //debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(),err_curve);
+            debug_uart.printf_DMA("%f\n", Locate_Setup::getInstance()->get_RobotSpeed_inWorld().y);
             num = 0;
         }
         // 夹杆自动流程：触发后执行路径规划、纠偏和速度合成。
@@ -219,7 +219,8 @@ void OmniChassis_Setup::loop()
 #if FF_V
                 speed = ComposeRobotVelocity(corrVelocity);
 #else
-                speed = corrVelocity;
+                speed =v_coefficient*planspeed + (1-v_coefficient)*corrVelocity;
+
 #endif
                 speed = v_limit(speed);
                 target_chassis_twist_.vx = speed.x;
@@ -311,7 +312,7 @@ void OmniChassis_Setup::loop()
 #if FF_V
                     speed = ComposeRobotVelocity(corrVelocity);
 #else
-                    speed = corrVelocity;
+                    speed =v_coefficient*planspeed + (1-v_coefficient)*corrVelocity;
 #endif
                     speed = v_limit(speed);
                     target_chassis_twist_.vx = speed.x;
@@ -362,7 +363,7 @@ void OmniChassis_Setup::loop()
 
     case CHASSIS_STOP:
     {
-#ifndef s_debug
+#ifdef s_debug
         num++;
 
         tp_speed_now = TP_1d.plan(tp_pos_now);
@@ -839,15 +840,15 @@ Vector2D OmniChassis_Setup::v_limit(Vector2D &v)
     {
         v = v.normalize() * max_robot_speed_;
     } */
-    bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
-    if (KFS_flag.MF2_flag == true || KFS_flag.MF1_flag == true)
-    {
-        if (near_end)
-        {
-            v = v.normalize() * robot_speed_end_;
-            return v;
-        }
-    }
+//    bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
+//    if (KFS_flag.MF2_flag == true || KFS_flag.MF1_flag == true)
+//    {
+//        if (near_end)
+//        {
+//            v = v.normalize() * robot_speed_end_;
+//            return v;
+//        }
+//    }
     if (v.magnitude() > planspeed.magnitude())
     {
         v = v.normalize() * planspeed.magnitude();
