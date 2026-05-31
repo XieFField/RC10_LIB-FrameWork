@@ -40,7 +40,7 @@ extern "C"
 #include "AutoCtrler.h"
 #include "chassis.h"
 
-#define s_debug 1
+#define s_debug 0
 #define FF_V 0
 
 typedef struct
@@ -84,13 +84,7 @@ public:
         yaw_pid_.set_as_circular();
     }
 
-    // 统一切换底盘状态，并在相机流程切入/切出时清理相关内部状态。
-    void setChassisStatus(CHASSIS_Status_E status)
-    {
 
-        // 最后写入底盘总状态。
-        chassis_status_ = status;
-    }
 
     // 初始化底盘控制器参数并启动 RTOS 任务。
     void init()
@@ -179,13 +173,13 @@ private:
     Vector2D Clamping_Bar_Selection_pos_ = {2.405f, 0.69f}; // 夹杆流程默认目标点。
     Vector2D Clamping_Bar_Retreat_pos_ = {2.405f, 1.0f};    // 夹杆流程默认目标点。
 
-    Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 999.0f, .maxDec = 1.2f, .maxJerk = 999.0f, .maxSpeed = 3.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f}; // 夹杆流程速度规划参数。
+    Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 0.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 999.0f, .maxDec = 1.2f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f}; // 夹杆流程速度规划参数。
 
-    Speedplanner_1D_Param_Config path_param_start_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 100.0f, .maxSpeed = 1.0f, .initialSpeed = 0.01f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_line_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 100.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_curve_ = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 100.0f, .maxSpeed = 0.5f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};  // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_end_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 100.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};    // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_start_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.01f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_line_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_curve_ = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.5f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};  // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_end_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};    // KFS 速度规划参数。
 
     //-----------------------------------梅林规划参数-----------------------------------------//
     CB_FLAG CB_flag;
@@ -310,6 +304,18 @@ public:
         // 读取夹杆流程完成标志。
         return WeaponSage_Start;
     }
+    
+    bool GetEnd_flag()
+    {
+        // 读取夹杆流程完成标志。
+        return WeaponSage_End;
+    }
+    
+    void ReceiveReach_flag(bool weapon_end)
+    {
+        // 写入机械臂流程反馈标志。
+        WeaponSage_Start = weapon_end;
+    }
 
     bool Get_Arm_Start_flag()
     {
@@ -328,6 +334,12 @@ public:
         // 更新自动规划目标点编号。
         MF1 = KFS1;
         MF2 = KFS2;
+    }
+    // 统一切换底盘状态，并在相机流程切入/切出时清理相关内部状态。
+    void setChassisStatus(CHASSIS_Status_E status)
+    {
+        // 最后写入底盘总状态。
+        chassis_status_ = status;
     }
 };
 #endif // __cplusplus

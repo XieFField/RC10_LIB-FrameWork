@@ -200,7 +200,6 @@ void OmniChassis_Setup::loop()
             flag = 0;
             flag_run = 1;
             Clamping_Bar_Selection_Planning();
-            WeaponSage_Start = false;
         }
         if (flag_run == 1)
         {
@@ -226,6 +225,9 @@ void OmniChassis_Setup::loop()
                 }
                 else
                 {
+//                    float lock_err = (robot_pos_ - Clamping_Bar_Selection_pos_).magnitude();
+//                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Clamping_Bar_Selection_pos_).normalize();
+                    
                     float lock_err = (robot_pos_ - test_point).magnitude();
                     speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
                     target_chassis_twist_.vx = speed.x;
@@ -234,18 +236,14 @@ void OmniChassis_Setup::loop()
             }
             else
             {
+//                    float lock_err = (robot_pos_ - Clamping_Bar_Retreat_pos_).magnitude();
+//                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Clamping_Bar_Retreat_pos_).normalize();
+
                 float lock_err = (robot_pos_ - test_point).magnitude();
                 speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
             }
-            //             else
-            //            {
-            //                Path_correction();
-            //                speed = corrVelocity;
-            //                target_chassis_twist_.vx = speed.x;
-            //                target_chassis_twist_.vy = speed.y;
-            //            }
             //            else
             //            {
             //                // 路径结束：复位状态并清空速度命令。
@@ -284,8 +282,6 @@ void OmniChassis_Setup::loop()
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
         if (flag == 1)
         {
-            path_line_.plan_reset();
-            path_line_.Reset();
             flag_reset();
             flag = 0;
             flag_run = 1;
@@ -387,9 +383,7 @@ void OmniChassis_Setup::loop()
         }
 
 #endif
-
         chassis.setZeroCurrent();
-
         break;
     }
 
@@ -420,7 +414,6 @@ void OmniChassis_Setup::loop()
     }
     }
 
-    // 接收一次雷达数据打印一次
 }
 
 //////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
@@ -429,13 +422,9 @@ void OmniChassis_Setup::Path_correction(void)
 {
     float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
     float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
-    // 1. 找最近点+t值：获取路径上距离当前位置最近的点及其参数 tNearest
 
-    // 第一步：调用你的Get_Nearest_Distance，拿到tNearest（最近点对应的t值）
-    // 重点：第二个参数传 &tNearest（tNearest的地址），因为你的函数是“输出参数”（通过指针赋值）
     curve.Get_Nearest_Distance(robot_pos_, &tNearest);
 
-    // 第二步：用第一步拿到的tNearest，调用你的Get_Point，拿到最近点坐标
     Vector2D nearestPt = curve.Get_Point(tNearest);
 
     err_curve = (nearestPt - robot_pos_).magnitude();
@@ -443,7 +432,7 @@ void OmniChassis_Setup::Path_correction(void)
     float obj_dis = _tool_Abs((curve.Get_End_point() - robot_pos_).magnitude());
 
     // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
-    if (obj_dis < m_lookaheadDist || path_line_.Is_End() == false)
+    if (obj_dis < m_lookaheadDist || path_line_.Is_End() == true)
     {
         Vector2D endPt = curve.Get_End_point();
 #if FF_V
@@ -456,10 +445,8 @@ void OmniChassis_Setup::Path_correction(void)
             corrVelocity = {0.0f, 0.0f};
             return;
         }
-
         corrVelocity.x = pid_pos_x.pid_calc(endPt.x, robot_pos_.x);
         corrVelocity.y = pid_pos_y.pid_calc(endPt.y, robot_pos_.y);
-
         return;
     }
 
