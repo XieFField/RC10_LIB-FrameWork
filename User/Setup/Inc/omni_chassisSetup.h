@@ -44,6 +44,28 @@ extern "C"
 #define s_debug 0
 #define FF_V 0
 
+typedef struct
+{
+    bool spin_flag = false;       // 是否需要执行中途转向。
+    
+    bool get_spin_flag = false; // 旋转触发过渡标志。
+
+    bool Spin_Start = false; // 当前正在执行旋转。
+
+    bool spin_up_flag = false;   // 上路段旋转流程使能。
+    bool spin_down_flag = false; // 下路段旋转流程使能。
+
+    bool MF1_flag = false;   // 进入 MF1 目标点标志。
+    bool MF2_flag = false;   // 进入 MF2 目标点标志。
+    bool MF1_finish = false; // MF1 阶段已完成标志。
+} KFS_FLAG;
+
+typedef struct
+{
+    bool spin_flag = false;       // 是否需要执行中途转向。
+
+} CB_FLAG;
+
 class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>
 {
 public:
@@ -118,10 +140,11 @@ private:
     bool WeaponSage_END = false; // 夹杆流程完成标志。
 
     bool Arm_Start = false; // 机械臂动作触发标志。
-
-    //-----------------------------------接口监视参数-----------------------------------------//
+    
     int flag = 0;     // 自动流程起始触发位（边沿触发）。
     int flag_run = 0; // 自动流程运行中标志位。
+
+    //-----------------------------------接口监视参数-----------------------------------------//
 
     int8_t MF1 = 0; // 目标点 1 编号。
     int8_t MF2 = 0; // 目标点 2 编号。
@@ -166,11 +189,6 @@ private:
     Speedplanner_1D_Param_Config path_param_curve_ = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 100.0f, .maxSpeed = 0.5f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};  // KFS 速度规划参数。
     Speedplanner_1D_Param_Config path_param_end_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 100.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};    // KFS 速度规划参数。
 
-    //-----------------------------------前视pid参数-----------------------------------------//
-
-    float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
-    float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
-
     //-----------------------------------梅林规划参数-----------------------------------------//
 
     MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
@@ -178,30 +196,25 @@ private:
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
 
+    KFS_FLAG KFS_flag;
+    
     float MF2_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
-    bool spin_flag = false;       // 是否需要执行中途转向。
-
-    bool spin_up_flag = false;   // 上路段旋转流程使能。
-    bool spin_down_flag = false; // 下路段旋转流程使能。
-
-    bool MF1_flag = false;   // 进入 MF1 目标点标志。
-    bool MF2_flag = false;   // 进入 MF2 目标点标志。
-    bool MF1_finish = false; // MF1 阶段已完成标志。
-
+    
     Vector2D spin_point_ = {3.0f, 8.72f}; // 上方旋转点
 
     float spin_skew_ = -0.1f; // 下方旋转位置y轴偏移量
+    
+    //-----------------------------------前视pid参数-----------------------------------------//
 
-    bool get_spin_flag = false; // 旋转触发过渡标志。
-
-    bool Spin_Start = false; // 当前正在执行旋转。
+    float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
+    float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
 
     //-----------------------------------yaw角控制参数-----------------------------------------//
 
     float target_yaw_ = 0.0f; // 底盘锁角目标（度）。
 
-    uint8_t yaw_pid_period_ = 3;       // yaw 环下采样周期（预留）。
-    uint8_t yaw_pid_period_count_ = 0; // yaw 环下采样计数（预留）。
+    //uint8_t yaw_pid_period_ = 3;       // yaw 环下采样周期（预留）。
+    //uint8_t yaw_pid_period_count_ = 0; // yaw 环下采样计数（预留）。
     PID_Position yaw_pid_;             // yaw 角度环控制器。
 
     float is_chassis_reverse_ = 1.0f; // 手动控制正反向系数。
@@ -233,6 +246,8 @@ private:
     void flag_reset(void); // 复位自动流程相关标志位。
 
     void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
+    
+    void Path_CB_check(void);
 
 #ifndef s_debug
     int a = 0;
