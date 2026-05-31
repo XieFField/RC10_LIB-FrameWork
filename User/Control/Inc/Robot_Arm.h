@@ -40,7 +40,7 @@ extern "C" {
 #include "Motor_DM.h"
 
 /**
- * @brief
+ * @brief 一锟叫碉拷位锟斤拷锟斤拷锟阶和讹拷
  */
 typedef struct {
     float max_launchHeight_ = 0.0f; // 升降最大行程，单位米 0
@@ -51,20 +51,17 @@ typedef struct {
     float rotate_end = 265.0f;
     float rotate_start = 135.0f;
     float store_ext_length_ =0.0f; //存储时候伸展长度
-
+    
 
     float stretch_Ratio_ = 0.0f; // 伸展比率，伸展电机转一圈，伸展多少米   0.0942米(94.2mm)
     float launch_Ratio_ = 0.0f; // 升降比率，升降电机转一圈，升降多少米    0.01099米(109.9mm)
-    float rotate_gearRatio_ = 0.0f; // 旋转减速比，旋转电机转一圈，机械臂转多少度 115.179f
+    float rotate_gearRatio_ = 0.0f; // 旋转减速比，旋转电机转一圈，机械臂转多少度 144.878度()   电机转222.289627度，机械臂转90度。  新矫正145.755789度
     float pitch_gearRatio_ = 0.0f; // 俯仰减速比，俯仰电机转一圈，末端关节转多少度 360度，直驱
     float min_rotate_angle_ = 0.0f; // 最小旋转角度
     float max_rotate_angle_ = 0.0f; // 最大旋转角度
     float safe_height_ = 0.0f; // 安全高度
     float store_height_ = 0.0f; // 储存高度
     float lock_height_ = 0.0f; // 云台锁定高度
-    float pick_up_height_ =0.0f; //拾取高度
-    float putdown_height_ = 0.0f; //放置高度
-
 
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘GPIO控制端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘GPIO控制引脚
@@ -385,14 +382,13 @@ private:
 
         // 计算最大速度变化量
         float max_dv = ramp.max_accel_ * dt_;
-        if (target_vel > ramp.current_velocity_ + max_dv) 
+        if (target_vel > ramp.current_velocity_ + max_dv) {
             ramp.current_velocity_ += max_dv;
-
-        else if (target_vel < ramp.current_velocity_ - max_dv) 
+        } else if (target_vel < ramp.current_velocity_ - max_dv) {
             ramp.current_velocity_ -= max_dv;
-            
-        else 
+        } else {
             ramp.current_velocity_ = target_vel;
+        }
 
         // 计算步长
         float step = ramp.current_velocity_ * dt_;

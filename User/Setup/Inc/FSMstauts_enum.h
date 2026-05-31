@@ -1,7 +1,7 @@
 /**
  * @file FSMstauts_enum.h
  * @author XieFField
- * @brief 状态机枚举
+ * @brief 状态机相关的数据库
  */
 
 #ifndef __FSM_STATUS_ENUM_H
@@ -19,88 +19,79 @@ extern "C" {
 #include <cmath>  
 #include "APP_tool.h"
 
-#define USE_RC10_AIRJOY 0 //启用自制遥控器
-
 typedef enum{
-    ALL_STOP, //STOP状态
+    ALL_STOP, //全部机构停止工作
 
     MANUAL_CONTROL, //手动控制模式
 
-    AUTO_CONTROL, //自动控制模式
+    AUTO_CONTROL, //半自动控制模式
 
     DEBUG_MODE, //调试模式
 }FSM_Status_E;
 
 
 typedef enum{
-    SEND_ALL_STOP = 0x01, //STOP状态
-    SEND_RELOCATE_LIDAR = 0x02, //重新定位雷达
-    SEND_CHASSIS_MANUAL_CTRL = 0x03, //底盘手动控制
-    SEND_ARM_MANUAL_CTRL = 0x04, //机械臂手动控制
-    SEND_WEAPON_MANUAL_CTRL = 0x05, //武器系统手动控制
-    SEND_CHASSIS_WAIT_AUTO = 0x06, //底盘等待自动控制
-    SEND_ARM_SEMI_AUTO_1 = 0x07, //机械臂半自动控制
-    SEND_ARM_SEMI_AUTO_2 = 0x08, //机械臂半自动控制
-    SEND_ARM_AUTO = 0x09, //机械臂自动控制
-    SEND_WEAPONSAGE_SEMI_AUTO_1 = 0x0A, //武器系统半自动控制
-    SEND_WEAPONSAGE_SEMI_AUTO_2 = 0x0B, //武器系统半自动控制
-    SEND_WEAPONSAGE_AUTO = 0x0C //武器系统自动控制
-}SEND_MODE_TO_AIRJOY_E;
-
-typedef enum{
-    SEND_COMBINE_CMD = 0x01, //发送合体指令
-    SEND_DOCK_SUCCESS = 0x02, //对接成功
-    SEND_DOCK_FAIL = 0x03, //对接失败
-
-    SEND_PUT_DOWN_LOW = 0x04, //放置低位
-    SEND_PUT_DOWN_HIGH = 0x05, //放置高位
-}SEND_CMD_TO_R2;
-
-typedef enum{
-    ARM_MANUAL_CONTROL, //手操
-
-    ARM_AUTO_CONTROL, //自动
+    ARM_MANUAL_CONTROL, //串联臂手动控制模式
 
 
-    ARM_SEMI_AUTO_CONTROL_1, //半自动
-    ARM_SEMI_AUTO_CONTROL_2, //半自动
-    ARM_IDLE, //待机
+
+    ARM_AUTO_CONTROL, //串联臂自动控制模式
+
+
+
+    ARM_IDLE, //串联臂空闲状态，维持当前状态
 
     ARM_STOP,
 
     ARM_DEBUG,
 
-    ARM_CALIBRATE, //校准
+    ARM_CALIBRATE, //串联臂校准模式
+
+
 }ARM_Status_E;
 
 
 typedef enum{
-    CHASSIS_MANUAL_CONTROL_A, //手操A 无锁角
-    CHASSIS_MANUAL_CONTROL_B, //手操B 有锁角
-    CHASSIS_LOCK_FORWEAPON,    //对接
+    CHASSIS_MANUAL_CONTROL_A, //底盘手动控制模式（角速度可控）
+    CHASSIS_MANUAL_CONTROL_B, //底盘手动控制模式（角速度为0，锁定角度）
+    CHASSIS_LOCK_FORWEAPON,    //底盘锁定yaw，为武器大师提供稳定平台
+    CHASSIS_MANUAL_CONTROL_C, //底盘手动控制模式C
 
-    CHASSIS_AUTO_CONTROL_CB, //夹杆自动
-    CHASSIS_AUTO_CONTROL_KFS, //KFS自动
+    CHASSIS_TESTFOR_ARM, //底盘测试模式，为串联臂提供稳定平台
+
+
+    CHASSIS_CAMERA_DEBUG, // 视觉调试模式
+    CHASSIS_CAMERA, // 相机闭环模式
+    CHASSIS_AUTO_CONTROL_CB, //底盘自动控制模式
+    CHASSIS_AUTO_CONTROL_KFS, //底盘自动控制模式梅林内
 
     CHASSIS_STOP,
 }CHASSIS_Status_E;
 
 typedef enum{
-    WEAPONSAGE_MANUAL_CONTROL, //手动控制
-
-
-    WEAPONSAGE_AUTO_CONTROL, //自动控制
-    WEAPONSAGE_SEMI_AUTO_CONTROL_1, //半自动控制
-    WEAPONSAGE_SEMI_AUTO_CONTROL_2, //半自动控制
-
-    WEAPONSAGE_AUTO_CONTROL_CATCH, //自动控制模式,抓取
-    WEAPONSAGE_AUTO_CONTROL_DOCK, //自动控制模式, docking
-
+    WEAPONSAGE_MANUAL_CONTROL, //手操
+    WEAPONSAGE_AUTO_CONTROL, //自动控制模式
     WEAPONSAGE_STOP,        //停止
     WEAPONSAGE_DEBUG,       //调试模式  
-    WEAPONSAGE_IDLE,    // 待机
+    WEAPONSAGE_CAMERA,      //相机协同模式
+    WEAPONSAGE_IDLE,    //空闲状态，维持当前状态
     WEAPONSAGE_CALIBRATE, //校准模式
 }WeaponSage_Status_E;
+
+
+//遥控临时调试使用
+typedef struct{
+    uint16_t SWA;
+    uint16_t SWB;
+    uint16_t SWC;
+    uint16_t SWD;
+    uint16_t LEFT_X;
+    uint16_t LEFT_Y;
+    uint16_t RIGHT_X;
+    uint16_t RIGHT_Y;
+    
+}airjoy_S;
+
 
 
 

@@ -30,9 +30,7 @@ extern "C" {
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
 #include "Setup_ConfigInit.h"
-#include "Locate_Setup.h"
-#include "Module_lora.h"
-#include "Module_Serial1Protocol.h"
+
 
 typedef enum{
     RELOCATE,
@@ -83,6 +81,10 @@ public:
         init_flag_ = true;
     }
 
+    void reset_airjoy_deadzone(float deadzone)
+    {
+        airjoy_deadzone_ = deadzone;
+    }
 private:
     void loop() override;
 
@@ -94,29 +96,24 @@ private:
     void auto_ctrl();
 
     void debug();
-#if !USE_RC10_AIRJOY
+    
     void stop_modeswitch();
-#endif
-
     FSM_Status_E robot_status_ = ALL_STOP; FSM_Status_E last_robot_status_;
 
+    float airjoy_deadzone_ = 50.0f; bool airjoy_connected_ = false;
 
     Robot_WeaponSage_Setup *weaponSage_setup_ = nullptr;
     bool weaponSage_setup_registered_ = false;
     
     ArmSetup *arm_setup_ = nullptr;  
     bool arm_setup_registered_ = false; 
-
-    
+    RmPocketData_t airjoy_data_; //摇杆值为 -1 ~ 1
 
     OmniChassis_Setup *chassis_setup_ = nullptr; 
     bool chassis_setup_registered_ = false; 
     bool init_flag_ = false; //所有需要注册的机构都已经注册完成
     uint8_t debug_flag_ = 0;
 
-#if !USE_RC10_AIRJOY
-
-    RmPocketData_t airjoy_data_; //摇杆值为 -1 ~ 1
     struct{
         
         TargetSet_t rsf_send_data={0};
@@ -132,12 +129,6 @@ private:
     }crsf_send_s;
 
     set_e Stop_set_stauts = NONE;
-#else
-
-    communication::RC10_AirJoy_Data_S airjoy_data_; //摇杆值为 -1 ~ 1
-    void set_cmd_to_R2();
-    
-#endif
 
     KSTarget_t KStarget = {0};
     KSTarget_t last_KStarget = {0};
