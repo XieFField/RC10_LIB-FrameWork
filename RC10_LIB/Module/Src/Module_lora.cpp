@@ -124,11 +124,18 @@ void Lora_communication::Task_Process() {
         uint16_t key = GetRecvAllKeyData();
 
         uint8_t command, load1, load2;
-        GetRecvCommandData(command, load1, load2);
+        // GetRecvCommandData(command, load1, load2);
         // 将遥控器设置的 KFS 三字节保存在本地缓冲，供外部通过 GetKfs() 读取
-        kfs_[0] = command;
-        kfs_[1] = load1;
-        kfs_[2] = load2;
+         if (command == 0x01) {
+            // 将解析出的 KFS 位置缓存，供外部通过 GetKfs() 读取
+            kfs_[0] = GetRecvFKFSData(0);
+            kfs_[1] = GetRecvFKFSData(1);
+            kfs_[2] = GetRecvFKFSData(2);
+        } else {
+            kfs_[0] = kfs_[1] = kfs_[2] = 13;
+        }
+
+        airjoy_data_.page = GetPage();
 
         airjoy_data_.left_x  = NormalizeAxis(joystick[0], 512.0f, 512.0f);
         airjoy_data_.left_y  = NormalizeAxis(joystick[1], 512.0f, 512.0f);
