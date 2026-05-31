@@ -10,6 +10,7 @@
 // ?????????????????
 UART_* InstanceManager::uart_instances[UART_MAX] = {nullptr};
 USB_CDC_* InstanceManager::usb_instances[2]={nullptr};
+extern volatile bool tx_done;
 uint8_t n=0;
 uint8_t m=0;
 extern "C" 
@@ -277,6 +278,11 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
+    if (huart == &huart7)
+    {
+        tx_done = true;
+    }
+
     if (huart == &huart2)
     {
         Serial1Protocol::getInstance().onUartTxComplete();

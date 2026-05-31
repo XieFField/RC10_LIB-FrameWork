@@ -8,6 +8,7 @@ $repo = Split-Path -Parent $jiaDocsRoot
 $setupConfigCpp = Join-Path $repo 'User\Setup\Src\Setup_ConfigInit.cpp'
 $usbDriverCpp = Join-Path $repo 'RC10_LIB\BSP_Driver\Src\BSP_USB_UART_Driver.cpp'
 $crsfCpp = Join-Path $repo 'RC10_LIB\Module\Src\Module_CrsfReceiver.cpp'
+$uvprojx = Join-Path $repo 'MDK-ARM\Frame_T.uvprojx'
 $loraCpp = Join-Path $repo 'RC10_LIB\Module\Src\Module_lora.cpp'
 $commCpp = Join-Path $repo 'RC10_LIB\Module\Src\Module_communication.cpp'
 $serialCpp = Join-Path $repo 'RC10_LIB\Module\Src\Module_Serial1Protocol.cpp'
@@ -16,6 +17,7 @@ $gpioExtiCpp = Join-Path $repo 'RC10_LIB\Module\Src\RC_gpio_exti.cpp'
 $setupConfigContent = Get-Content -LiteralPath $setupConfigCpp -Raw
 $usbDriverContent = Get-Content -LiteralPath $usbDriverCpp -Raw
 $crsfContent = Get-Content -LiteralPath $crsfCpp -Raw
+$uvprojxContent = Get-Content -LiteralPath $uvprojx -Raw
 $loraContent = Get-Content -LiteralPath $loraCpp -Raw
 $commContent = Get-Content -LiteralPath $commCpp -Raw
 $serialContent = Get-Content -LiteralPath $serialCpp -Raw
@@ -47,9 +49,12 @@ Check-Match $setupConfigContent 'crsf_rc->init\(\);' 'setup config still initial
 
 Check-NotMatch $usbDriverContent 'Serial1Protocol_Debug' 'USB UART driver does not retain Serial1Protocol debug coupling'
 Check-Match $usbDriverContent 'HAL_UARTEx_ReceiveToIdle_DMA\(huart,\s*instance->rx_buffer,\s*instance->rx_buffer_size\);' 'USB UART driver still rearms ReceiveToIdle DMA after callback dispatch'
+Check-Match $usbDriverContent 'if\s*\(\s*huart\s*==\s*&huart7\s*\)\s*\{\s*tx_done\s*=\s*true\s*;' 'USB UART driver still releases CRSF DMA completion through the shared UART TX callback'
 
 Check-NotMatch $crsfContent 'Serial1Protocol_Debug' 'CRSF receiver does not depend on Serial1Protocol debug helpers'
 Check-NotMatch $crsfContent 'Module_Serial1Protocol.h' 'CRSF receiver does not gain direct Serial1Protocol coupling during merge'
+Check-NotMatch $crsfContent 'static\s+volatile\s+bool\s+tx_done' 'CRSF receiver exports tx_done instead of hiding it as a file-local static'
+Check-Match $crsfContent 'volatile\s+bool\s+tx_done\s*=\s*true\s*;' 'CRSF receiver keeps a globally linkable tx_done flag for the shared UART TX completion path'
 
 Check-Match $loraContent 'bsp_rx\.SetCallback\(RxCallback\);' 'Lora init registers the RX callback on the UART wrapper'
 Check-Match $loraContent 'bsp_rx\.UART_Init\(\);' 'Lora init starts the wrapped UART receiver'
@@ -75,6 +80,15 @@ Check-Match $serialContent 'sendAckFrame\(\);' 'Serial1 processing still answers
 Check-Match $serialContent 'send_data\[2\]\s*=\s*cmd;' 'Serial1 command sender still stores outbound commands in the third data byte'
 
 Check-Match $gpioExtiContent 'gpio::GpioExti::All_EXTI_Prosess\(GPIO_Pin\);' 'global HAL EXTI callback still routes into the gpio::GpioExti multiplexer'
+
+Check-Match $uvprojxContent '\.\.\\RC10_LIB\\Module\\Inc\\Module_lora\.h' 'Keil project still includes Module_lora.h in RC10_LIB/Module'
+Check-Match $uvprojxContent '\.\.\\RC10_LIB\\Module\\Src\\Module_lora\.cpp' 'Keil project still includes Module_lora.cpp in RC10_LIB/Module'
+Check-Match $uvprojxContent '\.\.\\RC10_LIB\\Module\\Inc\\Module_communication\.h' 'Keil project still includes Module_communication.h in RC10_LIB/Module'
+Check-Match $uvprojxContent '\.\.\\RC10_LIB\\Module\\Src\\Module_communication\.cpp' 'Keil project still includes Module_communication.cpp in RC10_LIB/Module'
+Check-Match $uvprojxContent '\.\.\\RC10_LIB\\Module\\Inc\\Module_Serial1Protocol\.h' 'Keil project still includes Module_Serial1Protocol.h in RC10_LIB/Module'
+Check-Match $uvprojxContent '\.\.\\RC10_LIB\\Module\\Src\\Module_Serial1Protocol\.cpp' 'Keil project still includes Module_Serial1Protocol.cpp in RC10_LIB/Module'
+Check-Match $uvprojxContent '\.\.\\RC10_LIB\\Module\\Src\\RC_gpio_exti\.cpp' 'Keil project still includes RC_gpio_exti.cpp in RC10_LIB/Module'
+Check-Match $uvprojxContent '\.\.\\RC10_LIB\\Module\\Inc\\RC_gpio_exti\.h' 'Keil project still includes RC_gpio_exti.h in RC10_LIB/Module'
 
 if ($failures -ne 0) {
     Write-Host ''

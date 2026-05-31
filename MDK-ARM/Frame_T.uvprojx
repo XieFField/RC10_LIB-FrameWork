@@ -1294,6 +1294,46 @@
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_OIDEncoder.cpp</FilePath>
             </File>
+            <File>
+              <FileName>Module_lora.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_lora.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_lora.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_lora.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_communication.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_communication.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_communication.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_communication.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Module_Serial1Protocol.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_Serial1Protocol.h</FilePath>
+            </File>
+            <File>
+              <FileName>Module_Serial1Protocol.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_Serial1Protocol.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RC_gpio_exti.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\RC_gpio_exti.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RC_gpio_exti.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\RC_gpio_exti.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

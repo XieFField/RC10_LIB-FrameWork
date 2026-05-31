@@ -1,6 +1,8 @@
 #include "FSM_Controller.h"
 
 #include "chassis_swerve_task_demo.h"
+#include "Module_Serial1Protocol.h"
+#include "Module_lora.h"
 
 int text_index = 0;
 

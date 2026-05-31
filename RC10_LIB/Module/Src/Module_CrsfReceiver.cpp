@@ -284,7 +284,7 @@ void CrsfReceiver::getControlData(RmPocketData_t* data)
 }
 
 /* ----------------  遥锟解发锟斤拷  ---------------- */
-static volatile bool tx_done = true;
+volatile bool tx_done = true;
 void CrsfReceiver::sendTelemetryData(const RmPocketData_t* data)
 {
     if (!data || !tx_done) return;
@@ -542,7 +542,3 @@ void CrsfReceiver::consumeRingBuffer()
 }
 
 /* ----------------  全锟斤拷 C 锟斤拷锟接ｏ拷指锟斤拷 UART7  ---------------- */
-extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
-{
-    if (huart == &huart7) tx_done = true;
-}
