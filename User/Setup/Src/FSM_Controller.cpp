@@ -115,66 +115,77 @@ void FSM_Controller::loop()
         robot_status_ = ALL_STOP;
     #endif
 
-   switch (robot_status_)
-   {
-    case ALL_STOP:
-        all_stop();
-        break;
+    switch (robot_status_)
+    {
+        case ALL_STOP:
+            all_stop();
+            break;
 
-    case MANUAL_CONTROL:
-        // 手操模式
-        manual_ctrl();
-        break;
+        case MANUAL_CONTROL:
+            // 手操模式
+            manual_ctrl();
+            break;
 
-    case AUTO_CONTROL:
-        // 自动模式
-        auto_ctrl();
-        break;
-    case DEBUG_MODE:
-        // 调试模式
-        debug();
-        break;
+        case AUTO_CONTROL:
+            // 自动模式
+            auto_ctrl();
+            break;
+        case DEBUG_MODE:
+            // 调试模式
+            debug();
+            break;
 
-    default:
-        break;
-   }
+        default:
+            break;
+    }
 
-  if(KStarget != last_KStarget)
-  {
-      chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1]);
-      arm_setup_->set_TargetKFS(KStarget.KFS[0], KStarget.KFS[1]);
-      weaponSage_setup_->setTargetIndex(KStarget.Spear-1);
-  }
+#if USE_RC10_AIRJOY
+    //relocate
+    if(robot_status_ == ALL_STOP && airjoy_data_.SWB == 0x01 && airjoy_data_.SWE == 0x00)
+    {
+            static bool is_click = 0;
+            if(airjoy_data_.LB == 1 && !is_click)
+            {
+                Locate_Setup::getInstance()->Relocte_ToLader();
+                is_click = true;
+            }
+            else if(airjoy_data_.LB == 0)
+            {
+                is_click = false;
+            }
+    }
+    else if(robot_status_ == ALL_STOP && airjoy_data_.SWB == 0x01 && airjoy_data_.SWE == 0x01)
+    {
+        // 设置target 矛杆
+
+    }
+#endif
+    if(KStarget != last_KStarget)
+    {
+        chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1]);
+        arm_setup_->set_TargetKFS(KStarget.KFS[0], KStarget.KFS[1]);
+        weaponSage_setup_->setTargetIndex(KStarget.Spear-1);
+    }
 
    last_KStarget = KStarget;
-   set_cmd_to_R2();
 
-   //relocate
-   if(robot_status_ == ALL_STOP && airjoy_data_.SWB == 0x01)
-   {
-        static bool is_click = 0;
-        if(airjoy_data_.LB == 1 && !is_click)
-        {
-            Locate_Setup::getInstance()->Relocte_ToLader();
-            is_click = true;
-        }
-        else if(airjoy_data_.LB == 0)
-        {
-            is_click = false;
-        }
-   }
+   #if USE_RC10_AIRJOY
+    set_cmd_to_R2();
+    #endif
 }
+
+#if USE_RC10_AIRJOY
 
 void FSM_Controller::set_cmd_to_R2()
 {
-    if(airjoy_data_.page == 0x02)
+    if(airjoy_data_.page == 0x02 && robot_status_ != ALL_STOP)
     {
-        
+
     }
     else
         return;
 }
-
+#endif
 
 void FSM_Controller::all_stop()
 {

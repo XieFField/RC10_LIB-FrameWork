@@ -19,7 +19,7 @@ extern "C" {
 #include <cmath>  
 #include "APP_tool.h"
 
-#define USE_RC10_AIRJOY 1 //启用自制遥控器
+#define USE_RC10_AIRJOY 0 //启用自制遥控器
 
 typedef enum{
     ALL_STOP, //STOP状态
@@ -48,7 +48,12 @@ typedef enum{
 }SEND_MODE_TO_AIRJOY_E;
 
 typedef enum{
-    
+    SEND_COMBINE_CMD = 0x01, //发送合体指令
+    SEND_DOCK_SUCCESS = 0x02, //对接成功
+    SEND_DOCK_FAIL = 0x03, //对接失败
+
+    SEND_PUT_DOWN_LOW = 0x04, //放置低位
+    SEND_PUT_DOWN_HIGH = 0x05, //放置高位
 }SEND_CMD_TO_R2;
 
 typedef enum{
@@ -57,10 +62,8 @@ typedef enum{
     ARM_AUTO_CONTROL, //自动
 
 
-#if USE_RC10_AIRJOY
     ARM_SEMI_AUTO_CONTROL_1, //半自动
     ARM_SEMI_AUTO_CONTROL_2, //半自动
-#endif
     ARM_IDLE, //待机
 
     ARM_STOP,

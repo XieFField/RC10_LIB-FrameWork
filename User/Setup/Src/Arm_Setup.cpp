@@ -189,6 +189,7 @@ void ArmSetup::loop()
 
 void ArmSetup::semiautoControl_1()
 {
+    #if USE_RC10_AIRJOY
     //半自动控制逻辑1
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     switch(airjoy_data_.SWC)
@@ -284,6 +285,8 @@ void ArmSetup::semiautoControl_1()
         }
         arm_ctrlStatus.last_manual_store = 4;
     }
+
+    #endif
 }
 
 bool ArmSetup::manual_pickup()
@@ -361,6 +364,7 @@ bool ArmSetup::manual_putdown()
 
 void ArmSetup::semiautoControl_2()
 {
+    #if USE_RC10_AIRJOY
     //半自动控制逻辑2
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
@@ -459,6 +463,7 @@ void ArmSetup::semiautoControl_2()
     this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
     this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
     this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
+    #endif
 }
 
 bool test_num = 0;

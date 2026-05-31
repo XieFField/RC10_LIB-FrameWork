@@ -136,7 +136,7 @@ private:
 
     communication::RC10_AirJoy_Data_S airjoy_data_; //摇杆值为 -1 ~ 1
     void set_cmd_to_R2();
-
+    
 #endif
 
     KSTarget_t KStarget = {0};
