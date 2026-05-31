@@ -2205,6 +2205,17 @@ Chassis::SwervePlannerOutput makeNeutralPlannerOutput()
     return output;
 }
 
+void advanceDriveZeroStopCycle(Chassis &chassis,
+                               float command_drive_rad_s,
+                               float residual_speed_m_s,
+                               TickType_t time_ms)
+{
+    chassis.time_ms_ = time_ms;
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(command_drive_rad_s));
+    setWheelResidualSpeedMps(chassis, 0, residual_speed_m_s);
+    chassis.applyModuleCommands(true);
+}
+
 float getWheelXParkTargetOaRad(const Chassis &chassis, int wheel_idx)
 {
     return chassis.getXParkAngle(chassis.wheel_config_[wheel_idx]);
@@ -2654,6 +2665,92 @@ void testDriveZeroStopSettleThresholdHasIndependentFinalSettleStage()
     EXPECT_TRUE(chassis.drive_zero_stop_settled_[0]);
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 2U);
+}
+
+void testDriveZeroStopBrakeRampBuildsUpAcrossCycles()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_ramp_time_ms = 4U;
+
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 0U);
+    const float first_brake = drive_motors[0].getTargetBrake();
+
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 1U);
+    const float second_brake = drive_motors[0].getTargetBrake();
+
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 2U);
+    const float third_brake = drive_motors[0].getTargetBrake();
+
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 4U);
+    const float final_brake = drive_motors[0].getTargetBrake();
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_TRUE(first_brake > 0.0f);
+    EXPECT_TRUE(first_brake < second_brake);
+    EXPECT_TRUE(second_brake < third_brake);
+    EXPECT_NEAR(final_brake, 1200.0f, 1.0e-6f);
+}
+
+void testDriveZeroStopBrakeRampDisabledKeepsStepBrakeBehavior()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_ramp_time_ms = 0U;
+
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 0U);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
+}
+
+void testDriveZeroStopBrakeRampClearsImmediatelyWhenWheelSettles()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_ramp_time_ms = 10U;
+
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 0U);
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 1U);
+    EXPECT_TRUE(drive_motors[0].getTargetBrake() < 1200.0f);
+
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.01f, 2U);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(chassis.drive_zero_stop_settled_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+    EXPECT_NEAR(drive_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
+}
+
+void testDriveZeroStopBrakeRampRestartsFromZeroAfterReenteringBrake()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_ramp_time_ms = 4U;
+
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 0U);
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 2U);
+    const float brake_before_release = drive_motors[0].getTargetBrake();
+
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.01f, 3U);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 4U);
+    const float brake_after_reenter = drive_motors[0].getTargetBrake();
+
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(brake_before_release > brake_after_reenter);
+    EXPECT_TRUE(brake_after_reenter > 0.0f);
+    EXPECT_TRUE(brake_after_reenter < 1200.0f);
 }
 
 void testLowSpeedDriveSuppressionBypassesWhenResidualSpeedAboveThreshold()
@@ -5106,6 +5203,10 @@ int main()
     testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop();
     testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold();
     testDriveZeroStopSettleThresholdHasIndependentFinalSettleStage();
+    testDriveZeroStopBrakeRampBuildsUpAcrossCycles();
+    testDriveZeroStopBrakeRampDisabledKeepsStepBrakeBehavior();
+    testDriveZeroStopBrakeRampClearsImmediatelyWhenWheelSettles();
+    testDriveZeroStopBrakeRampRestartsFromZeroAfterReenteringBrake();
     testLowSpeedDriveSuppressionBypassesWhenResidualSpeedAboveThreshold();
     testLowSpeedDriveSuppressionReenabledWhenResidualSpeedDropsBelowThreshold();
     testLowSpeedDriveSuppressionUsesGlobalWorstWheelError();
