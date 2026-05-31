@@ -63,6 +63,10 @@ void parse_uart_data(uint8_t data);
 #define kPHOTOGATE_4_GPIO_Port GPIOF
 #define kPHOTOGATE_3_Pin GPIO_PIN_9
 #define kPHOTOGATE_3_GPIO_Port GPIOF
+#define Lora_IO1_Pin GPIO_PIN_10
+#define Lora_IO1_GPIO_Port GPIOB
+#define Lora_IO2_Pin GPIO_PIN_11
+#define Lora_IO2_GPIO_Port GPIOB
 #define kPHOTOGATE_1_Pin GPIO_PIN_14
 #define kPHOTOGATE_1_GPIO_Port GPIOD
 #define kPHOTOGATE_2_Pin GPIO_PIN_15
@@ -79,6 +83,14 @@ void parse_uart_data(uint8_t data);
 #define SUCKER_5_GPIO_Port GPIOG
 #define SUCKER_6_Pin GPIO_PIN_8
 #define SUCKER_6_GPIO_Port GPIOG
+#define RXLora_uart2_Pin GPIO_PIN_6
+#define RXLora_uart2_GPIO_Port GPIOC
+#define RXLora_uart2C7_Pin GPIO_PIN_7
+#define RXLora_uart2C7_GPIO_Port GPIOC
+#define TXLora_uart1_Pin GPIO_PIN_12
+#define TXLora_uart1_GPIO_Port GPIOC
+#define TXLora_uart1D2_Pin GPIO_PIN_2
+#define TXLora_uart1D2_GPIO_Port GPIOD
 #define SUCKER_P1_Pin GPIO_PIN_5
 #define SUCKER_P1_GPIO_Port GPIOD
 #define SUCKER_P2_Pin GPIO_PIN_6

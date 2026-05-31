@@ -39,6 +39,7 @@
                 "d:\\zy-for-R1\\Middlewares\\ST\\STM32_USB_Device_Library\\Core\\Src",
                 "d:\\zy-for-R1\\Middlewares\\ST\\STM32_USB_Device_Library\\Class\\CDC\\Src"
             ],
+            
             "defines": [
                 "USE_PWR_LDO_SUPPLY",
                 "USE_HAL_DRIVER",
