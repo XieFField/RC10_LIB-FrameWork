@@ -896,7 +896,7 @@ namespace jia
                 struct XParkSteerDeadbandConfig
                 {
                     bool enable = true;                     // [RW] 是否启用 X-Park 舵向末端死区冻结。
-                    bool zero_current_release_enable = true; // [RW] 死区激活后是否直接释放舵向零电流；false 时保持“冻结当前角度并继续走位置环”旧语义。
+                    bool zero_current_release_enable = false; // [RW] 死区激活后是否直接释放舵向零电流；false 时保持“冻结当前角度并继续走位置环”旧语义。
                     f32 enter_angle_deg = 1.0f;             // [RW] X-Park 舵向误差进入阈值（deg）。误差小于等于该值后进入冻结。
                     f32 exit_angle_deg = 5.0f;              // [RW] X-Park 舵向误差退出阈值（deg）。应大于 enter 形成滞回，避免边界抖动。
                 } xpark_steer_deadband_cfg_;
