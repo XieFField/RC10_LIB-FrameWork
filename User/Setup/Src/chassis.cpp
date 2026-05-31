@@ -2203,12 +2203,14 @@ namespace jia
                     (runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s > brake_hold_speed_m_s)
                         ? runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s
                         : brake_hold_speed_m_s;
+                const bool was_brake_active = drive_zero_stop_brake_active_[wheel_idx];
                 const bool was_settled = drive_zero_stop_settled_[wheel_idx];
                 drive_zero_stop_settled_[wheel_idx] = residual_speed_m_s <= settle_speed_m_s;
 
                 if (drive_zero_stop_settled_[wheel_idx])
                 {
                     drive_zero_stop_brake_active_[wheel_idx] = false;
+                    drive_zero_stop_brake_ramp_elapsed_ms_[wheel_idx] = 0U;
                 }
                 else if (drive_zero_stop_brake_active_[wheel_idx])
                 {
@@ -2232,10 +2234,34 @@ namespace jia
 
                 if (drive_zero_stop_brake_active_[wheel_idx])
                 {
-                    drive_vesc->setBrake(fabsf(runtime_strategy_cfg_.drive_zero_stop_brake_current_mA));
+                    const f32 target_brake_current_mA = fabsf(runtime_strategy_cfg_.drive_zero_stop_brake_current_mA);
+                    const u32 ramp_time_ms = runtime_strategy_cfg_.drive_zero_stop_brake_ramp_time_ms;
+
+                    if (!was_brake_active)
+                    {
+                        drive_zero_stop_brake_ramp_elapsed_ms_[wheel_idx] = 0U;
+                    }
+
+                    if (ramp_time_ms > 0U)
+                    {
+                        const u32 prev_elapsed_ms = drive_zero_stop_brake_ramp_elapsed_ms_[wheel_idx];
+                        const u32 next_elapsed_ms =
+                            (prev_elapsed_ms > (0xFFFFFFFFU - period_ms_)) ? 0xFFFFFFFFU : (prev_elapsed_ms + period_ms_);
+                        drive_zero_stop_brake_ramp_elapsed_ms_[wheel_idx] = next_elapsed_ms;
+
+                        const f32 ramp_ratio =
+                            clampValue(static_cast<f32>(next_elapsed_ms) / static_cast<f32>(ramp_time_ms), 0.0f, 1.0f);
+                        drive_vesc->setBrake(target_brake_current_mA * ramp_ratio);
+                    }
+                    else
+                    {
+                        drive_zero_stop_brake_ramp_elapsed_ms_[wheel_idx] = 0U;
+                        drive_vesc->setBrake(target_brake_current_mA);
+                    }
                 }
                 else
                 {
+                    drive_zero_stop_brake_ramp_elapsed_ms_[wheel_idx] = 0U;
                     drive_vesc->setTargetCurrent(0.0f);
                 }
             }
@@ -2243,6 +2269,7 @@ namespace jia
             {
                 drive_zero_stop_brake_active_[wheel_idx] = false;
                 drive_zero_stop_settled_[wheel_idx] = false;
+                drive_zero_stop_brake_ramp_elapsed_ms_[wheel_idx] = 0U;
                 if (allow_drive_position_loop)
                 {
                     setDriveMotorTargetOmegaRadS(wheel, delivered_drive_target_rad_s);
@@ -2294,6 +2321,7 @@ namespace jia
             {
                 drive_zero_stop_brake_active_[i] = false;
                 drive_zero_stop_settled_[i] = false;
+                drive_zero_stop_brake_ramp_elapsed_ms_[i] = 0U;
             }
             low_speed_residual_bypass_active_ = false;
             low_speed_drive_suppression_bypassed_by_residual_speed_ = false;
@@ -3548,6 +3576,7 @@ namespace jia
                 {
                     drive_zero_stop_brake_active_[i] = false;
                     drive_zero_stop_settled_[i] = false;
+                    drive_zero_stop_brake_ramp_elapsed_ms_[i] = 0U;
                 }
             }
             // 这里是“四舵轮目标命令”真正落到电机接口前的最后一道门控：

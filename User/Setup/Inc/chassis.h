@@ -921,6 +921,7 @@ namespace jia
                 f32 drive_zero_stop_brake_release_speed_m_s = 0.01f;  // [RW] brake 释放阈值（m/s）。当前已在 brake 分支时，只有残余速度降到该值及以下才允许松开 brake，转入非刹车收尾段。
                 f32 drive_zero_stop_brake_reenter_speed_m_s = 0.03f; // [RW] brake 重进阈值（m/s）。当前不在 brake 分支时，只有残余速度高于该值才重新进入 brake，和 brake_release 一起形成滞回。
                 f32 drive_zero_stop_brake_current_mA = 25000.0f;     // [RW] 零速止停进入 brake 分支时下发的刹车电流。
+                u32 drive_zero_stop_brake_ramp_time_ms = 0U;         // [RW] zero-stop brake 子状态激活后，从 0 线性爬升到 drive_zero_stop_brake_current_mA 的目标时长（ms）。0 表示关闭 ramp，保持阶跃下发。
 
                 struct LowSpeedDriveSuppressionConfig
                 {
@@ -1272,6 +1273,7 @@ namespace jia
             bool drive_zero_stop_active_ = false;                              // [RO] 当前是否处于 drive 零速止停辅助态。激活后正常 RPM 下发会改成 brake/zero current 收尾。
             bool drive_zero_stop_brake_active_[4] = {false, false, false, false}; // [RO] 各轮零速止停 brake 子状态。用于近零残余速度的轮级滞回。
             bool drive_zero_stop_settled_[4] = {false, false, false, false};   // [RO] 各轮是否已经进入 zero-stop 的最终停稳区。用于区分“松刹车滑收”与“真正停稳收尾”。
+            u32 drive_zero_stop_brake_ramp_elapsed_ms_[4] = {0U, 0U, 0U, 0U};  // [RO] 各轮 zero-stop brake ramp 已累计时长（ms）。只在 brake 子状态内增长，退出/settled 时清零。
             bool trans_dir_freeze_active_ = false;                              // [RO] 平移方向冻结门控当前状态。true 时方向保持参考角，只放行速度模长变化。
             bool trans_dir_ref_valid_ = false;                                  // [RO] 平移方向参考角是否有效。无效时先用当前指令方向建立参考。
             f32 trans_dir_ref_rad_ = 0.0f;                                      // [RO] 平移方向参考角（rad）。用于冻结保持与方向角速率限幅。

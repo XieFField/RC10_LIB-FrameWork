@@ -161,12 +161,14 @@ public:
     void setTargetCurrent(float current_set) override
     {
         Motor_Base::setTargetCurrent(current_set);
+        target_brake_ = 0.0f;
         last_command_kind_ = CommandKind::kCurrent;
     }
 
     void setTargetRPM(float rpm_set) override
     {
         Motor_Base::setTargetRPM(rpm_set);
+        target_brake_ = 0.0f;
         last_command_kind_ = CommandKind::kRpm;
     }
 
