@@ -111,11 +111,17 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.Reset();
     path_line_.Add_Start_Point(robot_pos_);
     path_line_.Add_End_Point(test_point, path_param_CB_);
-    //    path_line_.Add_Start_Point(robot_pos_);
-    //    path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f, robot_pos_.y}, path_param_curve_);
-    //    path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f}, Vector2D{robot_pos_.x-0.5f-0.85f, robot_pos_.y-0.22f}, path_param_curve_);
-    //    path_line_.Add_End_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f+0.2f}, path_param_end_);
-    //   path_line_.Add_End_Point(Clamping_Bar_Selection_pos_);
+    //曲线的测试
+    //   path_line_.Add_Start_Point(robot_pos_);
+    //   path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f, robot_pos_.y}, path_param_curve_);
+    //   path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f}, Vector2D{robot_pos_.x-0.5f-0.85f, robot_pos_.y-0.22f}, path_param_curve_);
+    //   path_line_.Add_End_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f+0.2f}, path_param_end_);
+    
+    //夹杆路径的测试
+    //   path_line_.Add_Start_Point(robot_pos_);
+    //   path_line_.Add_Point(CB_Selection_start_point_, path_param_CB_);
+    //   path_line_.Add_Point(Clamping_Bar_Selection_pos_, CB_Selection_control_point_}, path_param_curve_);
+    //   path_line_.Add_End_Point(Clamping_Bar_Retreat_pos_, path_param_end_);
 }
 
 uint32_t chassisstackHighWaterMark = 0;

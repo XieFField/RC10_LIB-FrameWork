@@ -169,9 +169,11 @@ private:
     //-----------------------------------速度规划参数----------------------------------------------------//
 
     Path_line path_line_; // 路径规划器对象。
-
-    Vector2D Clamping_Bar_Selection_pos_ = {2.405f, 0.69f}; // 夹杆流程默认目标点。
-    Vector2D Clamping_Bar_Retreat_pos_ = {2.405f, 1.0f};    // 夹杆流程默认目标点。
+    
+    Vector2D CB_Selection_start_point_ = {1.0f, 1.0f}; // 夹杆流程默认目标点。
+    Vector2D CB_Selection_control_point_ = {2.5f, 2.0f}; // 夹杆流程默认目标点。
+    Vector2D Clamping_Bar_Selection_pos_ = {2.4f, 0.8f}; // 夹杆流程默认目标点。
+    Vector2D Clamping_Bar_Retreat_pos_ = {2.4f, 1.0f};    // 夹杆流程默认目标点。
 
     Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 0.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
     Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 999.0f, .maxDec = 1.2f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f}; // 夹杆流程速度规划参数。
