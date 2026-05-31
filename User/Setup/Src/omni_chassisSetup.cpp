@@ -275,8 +275,7 @@ void OmniChassis_Setup::loop()
         }
         else
         {
-            // 未运行时保持原地锁角并清理自动控制历史量。
-            //            target_yaw_ = yaw;
+            //target_yaw_ = yaw;
             target_chassis_twist_ = {0.0f, 0.0f};
             chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
 
@@ -427,7 +426,7 @@ void OmniChassis_Setup::Path_correction(void)
 
 void OmniChassis_Setup::Path_spin_check(void)
 {
-    // KFS拾取判断
+    // KFS拾取判断MF1
     if (MF1_pos_.x == curve.Get_End_point().x && MF1_pos_.y == curve.Get_End_point().y)
     {
         KFS_flag.MF1_flag = true;
@@ -438,6 +437,8 @@ void OmniChassis_Setup::Path_spin_check(void)
         Arm_Start = true;
         KFS_flag.MF1_finish = true;
     }
+    
+    // KFS拾取判断MF2
     if (MF2_pos_.x == curve.Get_End_point().x && MF2_pos_.y == curve.Get_End_point().y)
     {
         KFS_flag.MF2_flag = true;
@@ -446,9 +447,8 @@ void OmniChassis_Setup::Path_spin_check(void)
     {
         KFS_flag.MF2_flag = false;
         Arm_Start = true;
-        KFS_flag.MF1_finish = true;
     }
-    // 根据路径节点关系，处理上/下两种旋转过渡逻辑。
+
     // 上方停止点旋转
     if (KFS_flag.spin_up_flag == true)
     {
@@ -474,7 +474,8 @@ void OmniChassis_Setup::Path_spin_check(void)
             }
         }
     }
-    else if (KFS_flag.spin_down_flag == true) // 下方偏移旋转
+    
+    if (KFS_flag.spin_down_flag == true) // 下方偏移旋转
     {
         if (KFS_flag.MF1_finish == true)
         {
