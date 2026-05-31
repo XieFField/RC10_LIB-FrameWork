@@ -62,8 +62,8 @@ typedef struct
 
 typedef struct
 {
-    bool WeaponSage_flag = false;       // 进入 CB 目标点标志
-
+    bool Selection_flag = false;       // 进入 CB 目标点标志
+    bool Retreat_flag = false;         // 进入 CB 停止点标志
 } CB_FLAG;
 
 class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>
@@ -134,7 +134,8 @@ private:
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
 
-    bool WeaponSage_Start = false; // 夹杆流程完成标志。
+    bool WeaponSage_Start = false; // 夹杆流程开始标志。
+    bool WeaponSage_End = false; // 夹杆流程完成标志。
 
     bool Arm_Start = false; // 机械臂动作触发标志。
     
@@ -177,6 +178,7 @@ private:
     Path_line path_line_; // 路径规划器对象。
 
     Vector2D Clamping_Bar_Selection_pos_ = {2.405f, 0.69f}; // 夹杆流程默认目标点。
+    Vector2D Clamping_Bar_Retreat_pos_ = {2.405f, 1.0f}; // 夹杆流程默认目标点。
 
     Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 100.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
     Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 10.0f, .maxDec = 1.0f, .maxJerk = 100.0f, .maxSpeed = 1.5f, .initialSpeed = 0.2f, .finalSpeed = 0.0f, .startPos = 0.1f, .targetPos = 0.0f, .deadzone = 0.001f};   // 夹杆流程速度规划参数。
@@ -201,11 +203,6 @@ private:
 
     float spin_skew_ = -0.1f; // 下方旋转位置y轴偏移量
     
-    //-----------------------------------前视pid参数-----------------------------------------//
-
-    float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
-    float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
-
     //-----------------------------------yaw角控制参数-----------------------------------------//
 
     float target_yaw_ = 0.0f; // 底盘锁角目标（度）。

@@ -5,14 +5,23 @@ void OmniChassis_Setup::Path_CB_check(void)
 {
     if (Clamping_Bar_Selection_pos_ .x == curve.Get_End_point().x && Clamping_Bar_Selection_pos_ .y == curve.Get_End_point().y)
     {
-        CB_flag.WeaponSage_flag = true;
+        CB_flag.Selection_flag = true;
     }
-    else if (CB_flag.WeaponSage_flag == true)
+    else if (CB_flag.Selection_flag == true)
     {
-        CB_flag.WeaponSage_flag = false;
+        CB_flag.Selection_flag = false;
         WeaponSage_Start = true;
     }
-
+    
+    if (Clamping_Bar_Retreat_pos_.x == curve.Get_End_point().x && Clamping_Bar_Retreat_pos_ .y == curve.Get_End_point().y)
+    {
+        CB_flag.Retreat_flag = true;
+    }
+    else if (CB_flag.Retreat_flag == true)
+    {
+        CB_flag.Retreat_flag = false;
+        WeaponSage_End = true;
+    }
 
 }
 void OmniChassis_Setup::Path_spin_check(void)
@@ -199,10 +208,11 @@ void OmniChassis_Setup::loop()
         {
             if (path_line_.Is_End() == true)
             {
-                // 获取曲线（带保护）
+                Path_CB_check();
+                if(WeaponSage_Start==false)
+                {
+                    // 获取曲线（带保护）
                 curve = path_line_.get_bezier_curve();
-
-
                 // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
                 planspeed = path_line_.plan(robot_pos_);
                 Path_correction();
@@ -214,6 +224,15 @@ void OmniChassis_Setup::loop()
                 speed = v_limit(speed);
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
+                    
+                }
+                else
+                {
+                    float lock_err = (robot_pos_ - test_point).magnitude();
+                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
+                    target_chassis_twist_.vx = speed.x;
+                    target_chassis_twist_.vy = speed.y;
+                }
             }
             else
             {
@@ -221,7 +240,6 @@ void OmniChassis_Setup::loop()
                 speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
-                WeaponSage_Start = true;
             }
             //             else
             //            {
@@ -412,6 +430,8 @@ void OmniChassis_Setup::loop()
 
 void OmniChassis_Setup::Path_correction(void)
 {
+    float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
+    float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
     // 1. 找最近点+t值：获取路径上距离当前位置最近的点及其参数 tNearest
 
     // 第一步：调用你的Get_Nearest_Distance，拿到tNearest（最近点对应的t值）
@@ -470,7 +490,47 @@ void OmniChassis_Setup::Path_correction(void)
     // corrVelocity=path_line_.Get_Tangent_Vector()*corrVelocity.magnitude();
 }
 
-/////////////////////////////////    路径初始化代码   //////////////////////////////////////////////
+
+Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead)
+{
+    tLookahead = tNearest;        // 前视点的编号，先从最近点的编号开始（比如t=0.3）
+    float accumulatedDist = 0.0f; // 累计挪了多少距离（刚开始是0）
+    float step = 0.01f;           // 每次挪的“小步子”
+
+    Vector2D lastPt = path_.Get_Point(tLookahead);
+
+    while (tLookahead < 1.0f && accumulatedDist < m_lookaheadDist)
+    {
+        // 1. 往前挪一小步：t增加0.005（比如0.3→0.305）
+        float nextT = tLookahead + step;
+        // 防止挪超终点：如果nextT>1.0，就改成1.0（不能超出曲线）
+        if (nextT > 1.0f)
+        {
+            nextT = 1.0f;
+        }
+
+        // 2. 拿到这一步挪到的点的坐标（比如t=0.305对应的曲线点(5.22, 6.11)）
+        Vector2D nextPt = path_.Get_Point(nextT);
+
+        // 3. 计算这一步走了多远（比如从(5.2,6.1)到(5.22,6.11)，距离≈0.022m）
+        float distStep = (nextPt - lastPt).magnitude();
+
+        // 4. 累计距离：把这一步的距离加进去（比如0+0.022=0.022m）
+        accumulatedDist += distStep;
+
+        // 5. 更新：准备下一步挪步（把当前点当起点，当前t当下一步的基础）
+        tLookahead = nextT; // 编号更新
+        lastPt = nextPt;    // 起点更新为(5.22,6.11)
+    }
+
+    if (tLookahead >= 1.0f)
+    {
+        lastPt = path_.Get_Point(1.0f); // 拿曲线终点坐标
+    }
+
+    return lastPt;
+}
+///////////////////////////////////       KFS路径生成            ////////////////////////////////
 
 void OmniChassis_Setup::KFS_Selection_Planning(void)
 {
@@ -665,62 +725,6 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
     }
 }
 
-/////////////////////////////////    路径纠偏代码   //////////////////////////////////////////////
-
-Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead)
-{
-    tLookahead = tNearest;        // 前视点的编号，先从最近点的编号开始（比如t=0.3）
-    float accumulatedDist = 0.0f; // 累计挪了多少距离（刚开始是0）
-    float step = 0.01f;           // 每次挪的“小步子”
-
-    Vector2D lastPt = path_.Get_Point(tLookahead);
-
-    while (tLookahead < 1.0f && accumulatedDist < m_lookaheadDist)
-    {
-        // 1. 往前挪一小步：t增加0.005（比如0.3→0.305）
-        float nextT = tLookahead + step;
-        // 防止挪超终点：如果nextT>1.0，就改成1.0（不能超出曲线）
-        if (nextT > 1.0f)
-        {
-            nextT = 1.0f;
-        }
-
-        // 2. 拿到这一步挪到的点的坐标（比如t=0.305对应的曲线点(5.22, 6.11)）
-        Vector2D nextPt = path_.Get_Point(nextT);
-
-        // 3. 计算这一步走了多远（比如从(5.2,6.1)到(5.22,6.11)，距离≈0.022m）
-        float distStep = (nextPt - lastPt).magnitude();
-
-        // 4. 累计距离：把这一步的距离加进去（比如0+0.022=0.022m）
-        accumulatedDist += distStep;
-
-        // 5. 更新：准备下一步挪步（把当前点当起点，当前t当下一步的基础）
-        tLookahead = nextT; // 编号更新
-        lastPt = nextPt;    // 起点更新为(5.22,6.11)
-    }
-
-    if (tLookahead >= 1.0f)
-    {
-        lastPt = path_.Get_Point(1.0f); // 拿曲线终点坐标
-    }
-
-    return lastPt;
-}
-
-void OmniChassis_Setup::flag_reset(void)
-{
-    // 统一清空自动流程的阶段标志与旋转状态。
-    WeaponSage_Start = false;
-    Arm_Start = false;
-    KFS_flag.MF1_flag = false;
-    KFS_flag.MF2_flag = false;
-    KFS_flag.spin_flag = false;
-    KFS_flag.spin_up_flag = false;
-    KFS_flag.spin_down_flag = false;
-    KFS_flag.MF1_finish = false;
-    KFS_flag.get_spin_flag = false;
-    KFS_flag.Spin_Start = false;
-}
 #if FF_V
 void OmniChassis_Setup::ResetAutoControlStates(void)
 {
@@ -804,6 +808,24 @@ Vector2D OmniChassis_Setup::ComposeRobotVelocity(const Vector2D &v_pid)
     return v_robot;
 }
 #endif
+void OmniChassis_Setup::flag_reset(void)
+{
+    // 统一清空自动流程的阶段标志与旋转状态。
+    WeaponSage_Start = false;
+    WeaponSage_End = false;
+    Arm_Start = false;
+    KFS_flag.MF1_flag = false;
+    KFS_flag.MF2_flag = false;
+    KFS_flag.spin_flag = false;
+    KFS_flag.spin_up_flag = false;
+    KFS_flag.spin_down_flag = false;
+    KFS_flag.MF1_finish = false;
+    KFS_flag.get_spin_flag = false;
+    KFS_flag.Spin_Start = false;
+    CB_flag.Selection_flag = false;
+    CB_flag.Retreat_flag = false;
+}
+
 Vector2D OmniChassis_Setup::v_limit(Vector2D &v)
 {
     // 判定是否进入终点段，用于控制参数切换。
