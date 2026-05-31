@@ -66,7 +66,10 @@ public:
 
     ~GO_Motor(){};
 
-    void pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa);
+    void pid_init(const PID_Param_Config& speed_params,
+                  float speed_tdRatio,
+                  const PID_Param_Config& angle_params,
+                  float angle_I_Separa);
 
     /**
      * @brief 检查CAN帧是否符合电机的报文格式

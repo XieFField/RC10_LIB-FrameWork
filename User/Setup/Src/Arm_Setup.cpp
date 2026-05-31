@@ -26,11 +26,11 @@ void ArmSetup::loop()
         last_arm_status_ = arm_status_;
         return;
     }
-    else if(!calibration_seen_)
-    {
-        calibration_seen_ = true;
-        arm_status_ = ARM_CALIBRATE;
-    }
+//    else if(!calibration_seen_)
+//    {
+//        calibration_seen_ = true;
+//        arm_status_ = ARM_CALIBRATE;
+//    }
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
     //无底盘下的调试模式
