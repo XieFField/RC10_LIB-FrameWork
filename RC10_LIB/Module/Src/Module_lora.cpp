@@ -41,10 +41,12 @@ static inline uint16_t PackSigned16(float value, float scale)
 
 namespace communication {
 
-/* ========== 静态成员定义 ========== */
+/* ========== 静态成员定义 
+========== */
 Lora_communication* Lora_communication::s_instance = nullptr;
 
-/* ========== 单例获取 ========== */
+/* ========== 单例获取 =======
+=== */
 Lora_communication* Lora_communication::GetInstance()
 {
     static Lora_communication instance(&huart5, &huart6,

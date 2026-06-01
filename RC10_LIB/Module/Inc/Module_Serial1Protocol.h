@@ -32,6 +32,7 @@ typedef enum {
 
 // 数据包结构体
 typedef struct {
+    
     uint8_t type;     // 类型：KFS=0, CMD=1
     union {
         uint8_t cmd;      // 命令字节
