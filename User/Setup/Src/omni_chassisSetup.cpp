@@ -410,10 +410,10 @@ void OmniChassis_Setup::loop()
 
 //        chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_chassis_twist_.yaw_rate);
 		if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
-			target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+			target_chassis_twist_.vx = airjoy_data_.left_x * 1 * this->is_chassis_reverse_;
 		else
 			target_chassis_twist_.vx = 0.0f;
-		chassis.setSteerDegAndDriveSpeed(180.0f, target_chassis_twist_.vx);
+		chassis.setSteerDegAndDriveSpeed(90.0f, target_chassis_twist_.vx);
         break;
     }
 
