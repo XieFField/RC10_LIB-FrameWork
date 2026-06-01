@@ -49,10 +49,10 @@ void Robot_WeaponSage::update()
 	if(ctrl_mode_ == WeaponSage::Join_POSITION_CONTROL)
 	{
         
-		float wrist_pos_ = normalize_deg_0_360(target_pos_.wrist_pos_);
-        float diff= current_pos_.wrist_pos_ - wrist_pos_;
+//		float wrist_pos_ = normalize_deg_0_360(target_pos_.wrist_pos_);
+        float diff= current_pos_.wrist_pos_ - target_pos_.wrist_pos_;
         float k =roundf(diff/360.0f);
-        float target_wrist_total= wrist_pos_ + k*360.0f;
+        float target_wrist_total= target_pos_.wrist_pos_ + k*360.0f;
 //		bool is_crossing_zero = false;
 //        if(abs(wrist_pos_  -current_pos_.wrist_pos_)>180.0f)
 //        {
@@ -82,7 +82,7 @@ void Robot_WeaponSage::update()
 		target_pos_.claw_1_TotalAngle_ = Realpos_to_MotorTotalAngle(target_pos_.claw_1_pos_, WeaponSage::Claw_1_Motor);
 		target_pos_.claw_2_TotalAngle_ = Realpos_to_MotorTotalAngle(target_pos_.claw_2_pos_, WeaponSage::Claw_2_Motor);
 		target_pos_.claw_3_TotalAngle_ = Realpos_to_MotorTotalAngle(target_pos_.claw_3_pos_, WeaponSage::Claw_3_Motor);
-		target_pos_.wrist_TotalAngle_ = Realpos_to_MotorTotalAngle(wrist_pos_, WeaponSage::Wrist_Motor);
+		target_pos_.wrist_TotalAngle_ = Realpos_to_MotorTotalAngle(target_wrist_total, WeaponSage::Wrist_Motor);
 
 
 		launch_Motor_->setTargetTotalAngle( target_pos_.launch_TotalAngle_);

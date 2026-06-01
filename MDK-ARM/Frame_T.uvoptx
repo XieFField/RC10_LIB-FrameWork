@@ -318,25 +318,10 @@
         <Ww>
           <count>33</count>
           <WinNumber>1</WinNumber>
-          <ItemText>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\Weapon_Controller.Robot_WeaponSage.wrist_Motor_-&gt;speed_pid_.error_earlier_</ItemText>
-        </Ww>
-        <Ww>
-          <count>34</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\Weapon_Controller.Robot_WeaponSage.wrist_Motor_-&gt;speed_pid_.params_.kp</ItemText>
-        </Ww>
-        <Ww>
-          <count>35</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\Weapon_Controller.Robot_WeaponSage.wrist_Motor_-&gt;angle_pid_</ItemText>
-        </Ww>
-        <Ww>
-          <count>36</count>
-          <WinNumber>1</WinNumber>
           <ItemText>CAN2_Bus</ItemText>
         </Ww>
         <Ww>
-          <count>37</count>
+          <count>34</count>
           <WinNumber>1</WinNumber>
           <ItemText>g_fdcan_bus_map_dbg[1],0x0A</ItemText>
         </Ww>

@@ -44,8 +44,8 @@ void Robot_WeaponSage_Setup::loop()
 	
 	if((arm_Motor_->getErrorNum()==0x00||!auto_ctrl_.auto_state_bool_S.arm_enable))
 	{	               
-            Weapon_arm_enable();
-			auto_ctrl_.auto_state_bool_S.arm_enable=true;
+		Weapon_arm_enable();
+		auto_ctrl_.auto_state_bool_S.arm_enable=true;
 	}
 	
     
@@ -77,8 +77,9 @@ void Robot_WeaponSage_Setup::loop()
             stop();
             break;
         case WEAPONSAGE_DEBUG:
+			
 		{
-            debug();
+//            debug();
             break;
 		}
         case WEAPONSAGE_AUTO_CONTROL_CATCH:
@@ -237,7 +238,8 @@ void Robot_WeaponSage_Setup::manualControl()
 
 
         
-/*----------------------------------------遥感X控制wrist_motor---------------------------------------------------- */
+/*-d..........---------------------------------------遥感X控制wrist_motor---------------------------------------------------- */
+//e
             if(_tool_Abs(airjoy_data_.right_x) < 0.1)
                 {
                     manual_ctrlForgrip_.changeTarget_state = false;
@@ -255,13 +257,30 @@ void Robot_WeaponSage_Setup::manualControl()
                 target_pos_.wrist_pos_-=90.0f;
                 ctrl_status_.wrist_rotate_enable=false;
             }
+	
 /*----------------------------------------遥感Y控制launch_motor---------------------------------------------------- */
             if(_tool_Abs(airjoy_data_.right_y) < 0.1)
                 manual_ctrlForgrip_.changeTarget_state = false;
             if(airjoy_data_.right_y > 0.5f&&target_pos_.launch_pos_ <=initData_.max_launchHeight_)
+			{
+				if(auto_ctrl_.auto_state_bool_S.launch_enable)
+				{
                 target_pos_.launch_pos_ += weapon_launch_rate;
+				}else
+				{
+					target_pos_.launch_pos_ = target_pos_.launch_pos_;
+				}
+			}
             else if(airjoy_data_.right_y < -0.5f)
+			{
+				if(target_pos_.launch_pos_ = target_pos_.launch_pos_)
+				{
                 target_pos_.launch_pos_ -= weapon_launch_rate;
+				}
+				else{
+				target_pos_.launch_pos_ -= weapon_launch_rate;	
+				}
+			}
             else
                 target_pos_.launch_pos_ = target_pos_.launch_pos_;
 
@@ -274,26 +293,29 @@ void Robot_WeaponSage_Setup::manualControl()
 
             if(target_claw_logical == 0)
             {
-                if(ctrl_status_.isClaw_tight)
-                    {
-                    target_pos_.claw_1_pos_ =initData_.max_clawAngle_; //开爪子
-                    target_pos_.claw_2_pos_ = initData_.max_clawAngle_; 
-                    target_pos_.claw_3_pos_ = initData_.max_clawAngle_;
-                    }
-                else
-                   {
-                    target_pos_.claw_1_pos_ = test_angle; //不太紧爪子
-                    target_pos_.claw_2_pos_ = test_angle;
-                    target_pos_.claw_3_pos_ = test_angle;
-                   }
+              
+                    target_pos_.claw_1_pos_ =0.0f; //开爪子
+                    target_pos_.claw_2_pos_ = 0.0f; 
+                    target_pos_.claw_3_pos_ = 0.0f;
+
+              
             }
             else
             {
-                target_pos_.claw_1_pos_ = 0.0f; //紧爪子
-                target_pos_.claw_2_pos_ = 0.0f;
-                target_pos_.claw_3_pos_ = 0.0f;
+				if(ctrl_status_.isClaw_tight)
+				{
+                target_pos_.claw_1_pos_ = initData_.max_clawAngle_; //紧爪子
+                target_pos_.claw_2_pos_ = initData_.max_clawAngle_;
+                target_pos_.claw_3_pos_ = initData_.max_clawAngle_;
+				}else
+				{
+					
+                    target_pos_.claw_1_pos_ = test_angle; //不太紧爪子
+                    target_pos_.claw_2_pos_ = test_angle;
+                    target_pos_.claw_3_pos_ = test_angle;
+				}
             }
-
+			
             int8_t target_arm_logical = (airjoy_data_.SWA & 0x01) ^ ctrl_status_.arm_switch_offset;
             ctrl_status_.last_arm_switch_state = target_arm_logical;
             int8_t target_arm_vertical_logical = (airjoy_data_.SWA & 0x01) ^ ctrl_status_.arm_switch_offset;
@@ -597,7 +619,7 @@ WeaponSage_InitData_S initData_=
     .max_clawAngle_ = 40.0f,
     .max_arm_angle_ = 135.0f,
     .max_wrist_angle_ = 360.0f,
-	.max_arm_rate_ =45.0f,
+	.max_arm_rate_ =90.0f,
 	
     .wrist_gearRatio_ = 144.0f,
     .launch_Ratio_ = 0.139989366256f,
