@@ -1,3 +1,9 @@
+/**
+ * @file BSP_RtosTimeStampUs64.h
+ * @author 桑叁年
+ * @brief RTOS 微秒时间戳接口
+ */
+
 #ifndef BSP_RTOS_TIME_STAMP_US64_H_
 #define BSP_RTOS_TIME_STAMP_US64_H_
 

@@ -12,8 +12,8 @@ void FSM_Controller::loop()
 																	crsf_send_s.rsf_send_data.Spear);
     CrsfReceiver::GetInstance(&huart7)->process();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
-    communication::Lora_communication::GetInstance()->Task_Process();
-    communication::Lora_communication::GetInstance()->Tim_It_Process();
+
+
     switch(airjoy_data_.SWB)
     {
         case 0x00:
@@ -362,8 +362,8 @@ void FSM_Controller::auto_ctrl()
              chassis_setup_->setChassisStatus(CHASSIS_STOP);
             #endif
             
-            arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-            //arm_setup_->setArmStatus(ARM_IDLE);
+            //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
             static uint8_t is_click = 0;
@@ -407,7 +407,7 @@ void FSM_Controller::auto_ctrl()
             if(airjoy_data_.SWA == 0x00)
             {
                 weaponSage_setup_->Set_End_Flag(chassis_setup_->GetReach_flag());
-                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL_CATCH);
+                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
     //            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
                 chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
                 arm_setup_->setArmStatus(ARM_IDLE);

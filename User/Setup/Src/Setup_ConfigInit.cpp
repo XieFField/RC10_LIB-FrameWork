@@ -19,8 +19,6 @@ DJI_Group DJIGroupCAN3_High(send_idHigh(), CAN3_Bus); // 5~8号 M3508/M2006 电�
 DJI_Group DJIGroupCAN3_Low(send_idLow(), CAN3_Bus);   // 1~4号 M3508/M2006 电机组
 
 Point2D arm_install_offset = {0.480f, 0.02f}; // 机械臂安装偏移，单位 m
-Serial1Protocol_Debug g_serial1_debug;
-//Serial1Protocol& g_serialProto1=Serial1Protocol::getInstance();
 
 
 /*==============Controller Instances===========*/
@@ -48,7 +46,8 @@ Chassis chassis;
 
 FSM_Controller Finite_StateMachine;
 ArmSetup ARM_Controller(arm_initData);
-Robot_WeaponSage_Setup Weapon_Controller(initData_); 
+Robot_WeaponSage_Setup Weapon_Controller(initData_);
+
 
 
 /*==============Controller Instances===========*/
@@ -80,7 +79,7 @@ DM_Motor Weapon_Elbow(J4310_Type, 0x06, 0x06, CAN2_Bus); M2006 Weapon_Wrist(6, C
 #if !TEST_TEMP
 M3508 arm_launchMotor(5, CAN3_Bus, true, false); M3508 arm_rotateMotor(7, CAN3_Bus, true, false);
 M2006 arm_stretchMotor(8, CAN3_Bus, true, false);  
-DM_Motor arm_pitchMotor(J4310_Type, 0x05, 0x05, CAN3_Bus);
+DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
 #else
 
 #endif
@@ -123,6 +122,7 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 Swerve_Task_Demo swerve_task_demo; // 轮式舵轮底盘调试任务实例
 
 #endif  
+
 void ALL_Setup_ConfigInit(void)
 {
 
@@ -139,7 +139,7 @@ void ALL_Setup_ConfigInit(void)
     Weapon_Controller.register_motors(&Weapon_Claw1, &Weapon_Claw2, &Weapon_Claw3, &Weapon_Launch, &Weapon_Wrist, &Weapon_Elbow);
 	Weapon_Controller.init(&oid_encoder);
     Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
-    g_serial1_debug.init();
+
     ChassisOmni.init();
 
     ChassisOmni.setChassisStatus(CHASSIS_STOP);
@@ -182,16 +182,7 @@ void ALL_Setup_ConfigInit(void)
 
     CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
     crsf_rc->init();
-    communication::Lora_communication::GetInstance(
-        &huart5,             // tx: UART5
-        &huart6,             // rx: UART6
-        Lora_IO1_GPIO_Port,               // tx_aux_port
-        Lora_IO1_Pin,          // tx_aux_pin
-        Lora_IO2_GPIO_Port,               // rx_aux_port
-        Lora_IO2_Pin,          // rx_aux_pin
-        nullptr              // timer
-    )->Init();
-				
+
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
     set1->locate_setup_init();
     set1->set_startToLRL(true);

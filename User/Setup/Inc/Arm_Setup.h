@@ -495,7 +495,6 @@ protected:
     ButtonDetector button_detector_1 = ButtonDetector(0.200f); //双击三击检测器，200ms间隔
 
 
-    bool calibration_seen_ = false;
     store_state store_state_ = store_state::idle; //存储状态机状态
 };
 

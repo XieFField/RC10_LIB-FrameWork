@@ -103,6 +103,13 @@ protected:
 class M3508 : public Motor_Base
 {
 public:
+    enum class CommandKind : std::uint8_t
+    {
+        kNone = 0,
+        kCurrent,
+        kTotalAngle,
+    };
+
     M3508() : Motor_Base(0U, false, nullptr) {}
 
     std::size_t packCommand(CanFrame[], std::size_t) override
@@ -145,11 +152,45 @@ public:
         return angle_i_separa_;
     }
 
+    void reset_speed_pid_state()
+    {
+        ++reset_speed_pid_state_call_count_;
+    }
+
+    CommandKind getLastCommandKind() const
+    {
+        return last_command_kind_;
+    }
+
+    void resetLastCommandObservation()
+    {
+        last_command_kind_ = CommandKind::kNone;
+    }
+
+    void setTargetCurrent(float current_set) override
+    {
+        Motor_Base::setTargetCurrent(current_set);
+        last_command_kind_ = CommandKind::kCurrent;
+    }
+
+    void setTargetTotalAngle(float total_angle_set) override
+    {
+        Motor_Base::setTargetTotalAngle(total_angle_set);
+        last_command_kind_ = CommandKind::kTotalAngle;
+    }
+
+    std::uint32_t getResetSpeedPidStateCallCount() const
+    {
+        return reset_speed_pid_state_call_count_;
+    }
+
 private:
     struct PID_Param_Config speed_params_{};
     struct PID_Param_Config angle_params_{};
     float speed_td_ratio_ = 0.0f;
     float angle_i_separa_ = 0.0f;
+    CommandKind last_command_kind_ = CommandKind::kNone;
+    std::uint32_t reset_speed_pid_state_call_count_ = 0U;
 };
 
 #endif

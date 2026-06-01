@@ -253,6 +253,9 @@ float PID_Incremental::pid_calc(float target, float feedback)
     {
         error_last_ = 0;
         error_earlier_ = 0;
+        // 微分先行首拍把反馈历史对齐到当前值，避免 reset 后出现额外尖峰。
+        feedback_last_ = feedback;
+        feedback_earlier_ = feedback;
         isFirst_ = false;
         output_ = 0.0f; 
     }
@@ -269,7 +272,15 @@ float PID_Incremental::pid_calc(float target, float feedback)
         // D项增量
         if (dt_ > 0.0f)
         {
-            D_Term = params_.kd * (error_ - 2.0f * error_last_ + error_earlier_);
+            if (derivative_first_)
+            {
+                // 微分先行：D 项只对反馈变化响应，避免目标阶跃带来微分冲击。
+                D_Term = -params_.kd * (feedback - 2.0f * feedback_last_ + feedback_earlier_);
+            }
+            else
+            {
+                D_Term = params_.kd * (error_ - 2.0f * error_last_ + error_earlier_);
+            }
         }
         else
         {
@@ -286,6 +297,8 @@ float PID_Incremental::pid_calc(float target, float feedback)
     // 更新历史值
     error_earlier_ = error_last_;
     error_last_ = error_;
+    feedback_earlier_ = feedback_last_;
+    feedback_last_ = feedback;
     output_last_ = output_; // 保存当前总输出，作为下次计算的“上次总输出”
     last_time_s_ = current_time_s;
 
@@ -365,6 +378,17 @@ PID_Param_Config foursteer_steer_speed_pid_params = {
     .deadband = 0.1f * (3591.0f/187.0f) / 8.0f 
 };
 
+// 四舵轮 VESC 驱动轮默认速度环 PID
+PID_Param_Config vesc_drive_speed_pid_params = {
+    .kp = 50.0f,
+    .ki = 150.0f,
+    .kd = 1.5f,
+    .I_Outlimit = 25000.0f,
+    .isIOutlimit = true,
+    .output_limit = 25000.0f,
+    .deadband = 1.0f
+};
+
 PID_Param_Config foursteer_steer_angle_pid_params = {
     // .kp = 5.0f,
     // .ki = 0.0f,
@@ -383,113 +407,34 @@ PID_Param_Config foursteer_steer_angle_pid_params = {
     .deadband = 0.08f
 };
 
+PID_Param_Config lock_angle_pid_params = {
+ .kp = 0.10f,
+ .ki = 0.0f,
+ .kd = 0.00f,
+ .I_Outlimit = 0.0f, 
+ .isIOutlimit = true, 
+ .output_limit = 1.0f, 
+ .deadband = 0.0f 
+};
+
+
+PID_Param_Config path_lock_end = {
+    
+    .kp = 0.8f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 0.2f,   
+    .deadband = 0.01f 
+};
+
 PID_Param_Config track_pid_params = {
     .kp = 6.0f,
     .ki = 0.0f,
     .kd = 0.0f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 1.5f,   
-    .deadband = 0.0009f 
+    .output_limit = 2.0f,   
+    .deadband = 0.01f 
 };
-
-PID_Param_Config camera_x_pid_params = {
-    .kp = 6.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f,
-    .isIOutlimit = true,
-    .output_limit = 0.05f,
-    .deadband = 0.002f
-};
-
-PID_Param_Config camera_y_pid_params = {
-    .kp = 6.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f,
-    .isIOutlimit = true,
-    .output_limit = 0.05f,
-    .deadband = 0.01f
-};
-
-PID_Param_Config camera_vec_pid_params = {
-    .kp = 6.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f,
-    .isIOutlimit = true,
-    .output_limit = 0.1f,
-    .deadband = 0.003f
-};
-
-PID_Param_Config lock_angle_pid_params = {
- .kp = 0.035f,
- .ki = 0.0f,
- .kd = 0.00f,
- .I_Outlimit = 0.0f, 
- .isIOutlimit = true, 
- .output_limit = 3.0f, 
- .deadband = 0.1f 
-};
-
-PID_Param_Config camera_yaw_pid_params = {
- .kp = 0.075f,
- .ki = 0.0f,
- .kd = 0.010f,
- .I_Outlimit = 0.0f,
- .isIOutlimit = true,
- .output_limit = 0.05f,
- .deadband = 0.1f
-};
-
-
-PID_Param_Config omega_z_pid_init_config =
-{
-    .kp = 0.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f,
-    .isIOutlimit = false,
-    .output_limit = 0.0f,
-    .deadband = 0.0f,
-};
-
-PID_Param_Config rot_z_pid_init_config = {
-    .kp = 0.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f,
-    .isIOutlimit = false,
-    .output_limit = 0.0f,
-    .deadband = 0.0f
-};
-
-CamZ_Param camera_z_ctrl_params = {
-    .kp = 1800.0f,
-    .ki = 80.0f,
-    .kv = 40.0f,
-    .out_lim = 4500.0f,
-    .i_lim = 3.0f,
-    .i_err = 0.004f,
-    .ref_rate = 0.03f,
-    .cam_gain = 0.1f,
-    .cam_db = 0.0015f,
-    .cam_gate = 0.008f,
-    .cam_delay = 0.06f,
-    .done_err = 0.003f,
-    .done_vel = 0.004f,
-    .done_time = 0.12f,
-};
-
-PID_Param_Config path_lock_end = {
-    
-    .kp = 0.6f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 0.2f,   
-    .deadband = 0.005f 
-};
-

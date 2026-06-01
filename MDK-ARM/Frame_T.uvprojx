@@ -1077,11 +1077,6 @@
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\APP\Src\APP_Speedplanner.cpp</FilePath>
             </File>
-            <File>
-              <FileName>APP_Utils.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_Utils.cpp</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -1298,36 +1293,6 @@
               <FileName>Module_OIDEncoder.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_OIDEncoder.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Module_lora.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_lora.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_lora.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_lora.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Module_communication.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_communication.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_communication.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_communication.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Module_Serial1Protocol.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_Serial1Protocol.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_Serial1Protocol.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_Serial1Protocol.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -1960,16 +1925,6 @@
                   </Cads>
                 </FileArmAds>
               </FileOption>
-            </File>
-            <File>
-              <FileName>Serial1Protocol_debug.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\debug\Inc\Serial1Protocol_debug.h</FilePath>
-            </File>
-            <File>
-              <FileName>Serial1Protocol_debug.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\debug\Src\Serial1Protocol_debug.cpp</FilePath>
             </File>
           </Files>
         </Group>
