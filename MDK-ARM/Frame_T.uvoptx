@@ -103,7 +103,7 @@
         <bEvRecOn>1</bEvRecOn>
         <bSchkAxf>0</bSchkAxf>
         <bTchkAxf>0</bTchkAxf>
-        <nTsel>3</nTsel>
+        <nTsel>2</nTsel>
         <sDll></sDll>
         <sDllPa></sDllPa>
         <sDlgDll></sDlgDll>
@@ -196,12 +196,12 @@
           <ItemText>g_fdcan_diag[1]</ItemText>
         </Ww>
         <Ww>
-          <count>8</count>
+          <count>18</count>
           <WinNumber>1</WinNumber>
           <ItemText>chassis</ItemText>
         </Ww>
         <Ww>
-          <count>9</count>
+          <count>19</count>
           <WinNumber>1</WinNumber>
           <ItemText>ChassisOmni</ItemText>
         </Ww>
