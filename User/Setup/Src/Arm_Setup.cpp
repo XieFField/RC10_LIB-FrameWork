@@ -31,7 +31,6 @@ void ArmSetup::loop()
 //        calibration_seen_ = true;
 //        arm_status_ = ARM_CALIBRATE;
 //    }
-
 #if ARM_AUTO_DEBUG_NOCHASSIS
     //无底盘下的调试模式
     if(arm_status_ == ARM_AUTO_CONTROL&&arm_ctrlStatus.auto_start == 1)

@@ -30,7 +30,6 @@ void OmniChassis_Setup::loop()
 
     communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
 #endif
-
     ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
     robot_pos_.x = ladar_data_.x;
     robot_pos_.y = ladar_data_.y;

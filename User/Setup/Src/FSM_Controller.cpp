@@ -24,7 +24,6 @@ void FSM_Controller::loop()
         Locate_Setup::getInstance()->get_RobotPos_inWorld().y,
         Locate_Setup::getInstance()->get_RobotPos_inWorld().yaw
     );
-
     bool suker_status = false, store_sucker_status = false;
 
     if(arm_setup_->getSuckerStatus() == SUCK)

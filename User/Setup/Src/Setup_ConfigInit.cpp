@@ -186,8 +186,6 @@ void ALL_Setup_ConfigInit(void)
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
     set1->locate_setup_init();
     set1->set_startToLRL(true);
-
-
 }
 
 void CAN_Motor_Init(void)
