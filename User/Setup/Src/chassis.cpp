@@ -3537,8 +3537,7 @@ namespace jia
                     (input_target_data_.mode == Mode::kWorldSpeedMode) ||
                     (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZMode) ||
                     (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode) ||
-                    (input_target_data_.mode == Mode::kWorldSpeedLockToRotZMode) ||
-                    (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
+                    (input_target_data_.mode == Mode::kWorldSpeedLockToRotZMode);
                 // 正常底盘链路下优先依据整车目标是否已静止来决定是否进入 zero-stop，
                 // 避免速度规划尾巴还没完全衰减时，把刹车收尾整体拖后。
                 f32 max_frame_command_speed_m_s = 0.0f;
