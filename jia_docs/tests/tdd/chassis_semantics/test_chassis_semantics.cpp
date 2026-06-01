@@ -611,6 +611,7 @@ void testDebugRouteClassificationSeparatesInputInjectionFromModuleOverride()
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(false, 1) == Chassis::DebugControlRoute::kDisabled);
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 1) == Chassis::DebugControlRoute::kTargetInjection);
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 8) == Chassis::DebugControlRoute::kTargetInjection);
+    EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 9) == Chassis::DebugControlRoute::kTargetInjection);
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 20) == Chassis::DebugControlRoute::kTargetInjection);
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 30) == Chassis::DebugControlRoute::kModuleOverride);
     EXPECT_TRUE(Chassis::classifyDebugControlRoute(true, 31) == Chassis::DebugControlRoute::kTargetInjection);
@@ -633,6 +634,7 @@ void testResolveDebugModeFallsBackToTorqueFreeWhenMode20IsRetired()
     Chassis chassis;
     EXPECT_TRUE(chassis.resolveDebugMode(20) == Chassis::DebugMode::kTorqueFree);
     EXPECT_TRUE(chassis.resolveDebugMode(255) == Chassis::DebugMode::kTorqueFree);
+    EXPECT_TRUE(chassis.resolveDebugMode(9) == Chassis::DebugMode::kSteerDegAndDriveSpeed);
     EXPECT_TRUE(chassis.resolveDebugMode(30) == Chassis::DebugMode::kSingleWheelIsolated);
     EXPECT_TRUE(chassis.resolveDebugMode(31) == Chassis::DebugMode::kTorqueFree);
     EXPECT_TRUE(chassis.resolveDebugMode(32) == Chassis::DebugMode::kTorqueFree);
@@ -1778,6 +1780,30 @@ void testDebugOmegaZInjectionDoesNotAffectLockToTarget()
     EXPECT_NEAR(chassis.input_target_data_.rot_z, 1.2f, 1.0e-6f);
 }
 
+void testDebugSteerDegAndDriveSpeedModeMapsLeftXAndRightXToInterface()
+{
+    Chassis chassis;
+    chassis.debug_control_.injection.steer_deg_limit = 180.0f;
+    chassis.debug_control_.injection.drive_speed_m_s_limit = 1.2f;
+    chassis.airjoy_data_.left_x = 0.0f;
+    chassis.airjoy_data_.right_x = 0.0f;
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kSteerDegAndDriveSpeed);
+
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kSteerAngleAndDriveSpeedMode);
+    EXPECT_NEAR(chassis.input_target_data_.steer_lock_angle_deg, 90.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.input_target_data_.drive_lock_speed_m_s, 0.0f, 1.0e-6f);
+
+    chassis.airjoy_data_.left_x = 0.25f;
+    chassis.airjoy_data_.right_x = -0.5f;
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kSteerDegAndDriveSpeed);
+
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kSteerAngleAndDriveSpeedMode);
+    EXPECT_NEAR(chassis.input_target_data_.steer_lock_angle_deg, 135.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.input_target_data_.drive_lock_speed_m_s, -0.6f, 1.0e-6f);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, 0.0f, 1.0e-6f);
+}
 void configureDriveContinuityHarness(Chassis &chassis, VESC_Motor drive_motors[4])
 {
     chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 10.0f;
@@ -2577,6 +2603,38 @@ void testNormalControlZeroStopUsesBrakeAfterBodyCommandDropsToZero()
     EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
 }
 
+void testSteerDegAndDriveSpeedSkipsZeroStopWhenDriveSpeedIsNonZero()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        drive_motors[i].setRpmControlMode(VESC_RPM_CONTROL_NATIVE_ERPM);
+    }
+
+    chassis.setSteerDegAndDriveSpeed(30.0f, 0.30f);
+    chassis.setModeFlag();
+
+    EXPECT_TRUE(runHostControlCycle(chassis));
+
+    EXPECT_TRUE(!chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kRpm);
+    EXPECT_TRUE(std::fabs(drive_motors[0].getTargetRPM()) > 1.0e-6f);
+}
 void testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay()
 {
     Chassis chassis;
@@ -3311,6 +3369,42 @@ void testDebugBodySpeedModeCanEnterZeroStopBrakeAndExposeGateState()
     EXPECT_NEAR(chassis.computeMaxCommandWheelSpeedMps(chassis.target_data_), 0.0f, 1.0e-6f);
 }
 
+void testDebugSteerDegAndDriveSpeedModeSkipsZeroStopWhenSpeedIsNonZero()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 9U;
+    chassis.debug_control_.injection.steer_deg_limit = 180.0f;
+    chassis.debug_control_.injection.drive_speed_m_s_limit = 1.0f;
+    chassis.airjoy_data_.left_x = 0.25f;
+    chassis.airjoy_data_.right_x = 0.4f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        drive_motors[i].setRpmControlMode(VESC_RPM_CONTROL_NATIVE_ERPM);
+    }
+
+    EXPECT_TRUE(runDebugControlCycleForHost(chassis));
+
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kSteerAngleAndDriveSpeedMode);
+    EXPECT_TRUE(!chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kRpm);
+    EXPECT_TRUE(std::fabs(drive_motors[0].getTargetRPM()) > 1.0e-6f);
+}
 void testDebugBodySpeedOmegaRapidReverseUnderSCurveKeepsOldSignForFirstPlannerStep()
 {
     Chassis chassis;
@@ -5230,6 +5324,7 @@ int main()
     testDebugOmegaZInjectionModeStepOverridesManualOmegaInput();
     testDebugOmegaZInjectionModeSineOverridesManualOmegaInput();
     testDebugOmegaZInjectionDoesNotAffectLockToTarget();
+    testDebugSteerDegAndDriveSpeedModeMapsLeftXAndRightXToInterface();
     testSuppressedDriveDoesNotAccumulateHiddenAccelState();
     testDriveReleaseResumesFromDeliveredSpeedNotVirtualSpeed();
     testDriveReleaseHasNoVelocityJumpAfterZeroHold();
@@ -5238,6 +5333,7 @@ int main()
     testDriveZeroStopUsesBrakeWhenResidualSpeedIsStillHigh();
     testDriveZeroStopStillUsesBrakeWithNativeVescSpeedLoop();
     testNormalControlZeroStopUsesBrakeAfterBodyCommandDropsToZero();
+    testSteerDegAndDriveSpeedSkipsZeroStopWhenDriveSpeedIsNonZero();
     testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay();
     testDriveZeroStopSettlesToZeroCurrentWithoutHoldingBrake();
     testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop();
@@ -5269,6 +5365,7 @@ int main()
     testManualSCurveProfileRapidReverseBleedsPositiveTrendBeforeBuildingNegativeTrend();
     testDebugBodySpeedOmegaTargetFlipsSignImmediatelyWithRightStickDirection();
     testDebugBodySpeedModeCanEnterZeroStopBrakeAndExposeGateState();
+    testDebugSteerDegAndDriveSpeedModeSkipsZeroStopWhenSpeedIsNonZero();
     testDebugBodySpeedOmegaRapidReverseUnderSCurveKeepsOldSignForFirstPlannerStep();
     testDebugBodySpeedOmegaRapidReverseEventuallyCrossesNegativeAfterEnoughCycles();
     testJerkProfileRapidReverseEventuallyCrossesZeroAndBuildsOppositeSign();
