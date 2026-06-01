@@ -1548,7 +1548,8 @@ namespace jia
                 break;
             case DebugMode::kSteerDegAndDriveSpeed:
             {
-                const f32 steer_angle_deg = clampValue(airjoy_data_.left_x, -1.0f, 1.0f) * debug_control_.injection.steer_deg_limit;
+                const f32 steer_angle_deg =
+                    90.0f + clampValue(airjoy_data_.left_x, -1.0f, 1.0f) * debug_control_.injection.steer_deg_limit;
                 const f32 drive_speed_m_s = clampValue(airjoy_data_.right_x, -1.0f, 1.0f) * debug_control_.injection.drive_speed_m_s_limit;
                 setSteerDegAndDriveSpeed(steer_angle_deg, drive_speed_m_s);
                 break;

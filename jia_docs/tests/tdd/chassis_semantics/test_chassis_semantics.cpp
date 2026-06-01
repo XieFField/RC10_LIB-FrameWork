@@ -1785,13 +1785,22 @@ void testDebugSteerDegAndDriveSpeedModeMapsLeftXAndRightXToInterface()
     Chassis chassis;
     chassis.debug_control_.injection.steer_deg_limit = 180.0f;
     chassis.debug_control_.injection.drive_speed_m_s_limit = 1.2f;
+    chassis.airjoy_data_.left_x = 0.0f;
+    chassis.airjoy_data_.right_x = 0.0f;
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kSteerDegAndDriveSpeed);
+
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kSteerAngleAndDriveSpeedMode);
+    EXPECT_NEAR(chassis.input_target_data_.steer_lock_angle_deg, 90.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.input_target_data_.drive_lock_speed_m_s, 0.0f, 1.0e-6f);
+
     chassis.airjoy_data_.left_x = 0.25f;
     chassis.airjoy_data_.right_x = -0.5f;
 
     chassis.applyDebugTargetOverride(Chassis::DebugMode::kSteerDegAndDriveSpeed);
 
     EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kSteerAngleAndDriveSpeedMode);
-    EXPECT_NEAR(chassis.input_target_data_.steer_lock_angle_deg, 45.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.input_target_data_.steer_lock_angle_deg, 135.0f, 1.0e-6f);
     EXPECT_NEAR(chassis.input_target_data_.drive_lock_speed_m_s, -0.6f, 1.0e-6f);
     EXPECT_NEAR(chassis.input_target_data_.omega_z, 0.0f, 1.0e-6f);
 }
