@@ -1000,7 +1000,7 @@ namespace jia
             {
                 struct Common
                 {
-                    bool enable = true;                                            // [RW] 调试总开关。
+                    bool enable = false;                                            // [RW] 调试总开关。
                     u8 mode_raw = 9;                                              // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
