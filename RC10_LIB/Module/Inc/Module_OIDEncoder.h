@@ -81,6 +81,15 @@ public:
        is_init_ = true;
     }
 
+	void set_return_angle_reverse(bool is_or_not)
+	{
+		if(is_or_not)
+			is_encoder_reverse = 1.0f;
+		
+		else if(!is_or_not)
+			is_encoder_reverse = -1.0f;
+	}
+	
     /**
      * 发送： 0x04（数据长度）+0x01（编码器地址）+0x01（指令码）+0x00（数据1）
      * 接收：0X07（数据长度）+0X01（编码器地址）+0X01（指令码）+0x00012345（数据）
@@ -252,6 +261,8 @@ private:
 
     uint16_t control_cnt = 0;
     uint16_t control_Frequency_ = 100; // 默认控制频率 Hz，重设的控制频率必须是100的整数倍
+	
+	float is_encoder_reverse = -1.0f;
 
 protected:    
     class testtask: public RtosTask

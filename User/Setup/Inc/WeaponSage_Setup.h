@@ -141,8 +141,9 @@ public:
             return;
         }
 
-        start(osPriorityNormal, 512);
+        start(osPriorityNormal, 1024);
 		wrist_encoder_ = wrist_encoder;
+		
         ctrl_status_.init_flag = true;
     }
 
@@ -255,6 +256,8 @@ private:
     WeaponSage_Setup::manual_ctrlForgrip_S manual_ctrlForgrip_;
 
     OIDEncoder *wrist_encoder_ = nullptr;
+	
+	volatile float wrist_encoder_angle_ = 0.0f;
 };
 
 extern WeaponSage_InitData_S initData_;

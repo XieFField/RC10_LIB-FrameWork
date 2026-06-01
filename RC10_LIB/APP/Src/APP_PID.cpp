@@ -334,7 +334,7 @@ PID_Param_Config m2006_angle_pid_params = {
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
     .output_limit = 450.0f,   
-    .deadband = 0.03f 
+    .deadband = 0.3f 
 };
 
 PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
