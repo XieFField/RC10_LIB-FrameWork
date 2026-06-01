@@ -1459,6 +1459,8 @@ namespace jia
                 return DebugMode::kBodyLockNowWithNoOmegaZ;
             case 8:
                 return DebugMode::kWorldLockNowWithNoOmegaZ;
+            case 9:
+                return DebugMode::kSteerDegAndDriveSpeed;
             case 20:
                 return DebugMode::kTorqueFree;
             case 21:
@@ -1544,6 +1546,13 @@ namespace jia
             case DebugMode::kWorldLockNowWithNoOmegaZ:
                 setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
                 break;
+            case DebugMode::kSteerDegAndDriveSpeed:
+            {
+                const f32 steer_angle_deg = clampValue(airjoy_data_.left_x, -1.0f, 1.0f) * debug_control_.injection.steer_deg_limit;
+                const f32 drive_speed_m_s = clampValue(airjoy_data_.right_x, -1.0f, 1.0f) * debug_control_.injection.drive_speed_m_s_limit;
+                setSteerDegAndDriveSpeed(steer_angle_deg, drive_speed_m_s);
+                break;
+            }
             case DebugMode::kAlignForward:
             case DebugMode::kHomingObserve:
             case DebugMode::kSingleWheelIsolated:
