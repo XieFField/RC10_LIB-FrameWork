@@ -12,7 +12,6 @@ $stubDir = Join-Path $testsDir 'stubs'
 $userInc = Join-Path $root 'User\Setup\Inc'
 $appInc = Join-Path $root 'RC10_LIB\APP\Inc'
 $testSupportSrc = Join-Path $testsDir 'stubs_src\test_host_globals.cpp'
-$appUtilsSrc = Join-Path $root 'RC10_LIB\APP\Src\APP_Utils.cpp'
 $chassisSrc = Join-Path $root 'User\Setup\Src\chassis.cpp'
 $testSrc = Join-Path $testsDir 'test_chassis_semantics.cpp'
 
@@ -24,7 +23,6 @@ $testSrc = Join-Path $testsDir 'test_chassis_semantics.cpp'
     '-I' $userInc `
     '-I' $appInc `
     $testSupportSrc `
-    $appUtilsSrc `
     $chassisSrc `
     $testSrc `
     '-Wl,--gc-sections' `
@@ -35,6 +33,11 @@ if (-not (Test-Path $exe)) {
 }
 
 & $exe
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}
+
+& (Join-Path $testsDir 'run_app_utils_backend_test.ps1')
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }

@@ -382,14 +382,13 @@ private:
 
         // 计算最大速度变化量
         float max_dv = ramp.max_accel_ * dt_;
-        if (target_vel > ramp.current_velocity_ + max_dv) 
+        if (target_vel > ramp.current_velocity_ + max_dv) {
             ramp.current_velocity_ += max_dv;
-
-        else if (target_vel < ramp.current_velocity_ - max_dv) 
+        } else if (target_vel < ramp.current_velocity_ - max_dv) {
             ramp.current_velocity_ -= max_dv;
-            
-        else 
+        } else {
             ramp.current_velocity_ = target_vel;
+        }
 
         // 计算步长
         float step = ramp.current_velocity_ * dt_;

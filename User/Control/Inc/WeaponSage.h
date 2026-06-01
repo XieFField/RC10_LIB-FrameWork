@@ -182,36 +182,6 @@ public:
         current_pos.arm_pos_ = MotorTotalAngle_to_Realpos(arm_Motor_->getTotalAngle(), WeaponSage::Arm_Motor);
 		return current_pos;
 	}
-
-    void Weapon_arm_enable()
-    {
-        if(arm_Motor_ != nullptr)
-            arm_Motor_->motorEnable();
-    }
-    void Weapon_arm_setZero()
-    {
-        if(arm_Motor_ != nullptr)
-            arm_Motor_->motorSetZero();
-    }
-
-    float NormalizeAngle(float* angle)
-    {
-        float normalized = fmodf(*angle, 360.0f);
-        if (normalized < 0) 
-            normalized += 360.0f;
-        return normalized;
-    }
-	void register_motors(M2006* claw_1_motor,M2006* claw_2_motor ,M2006* claw_3_motor, M3508* launch_motor ,M2006* wrist_motor, DM_Motor* arm_motor )
-	{
-		register_launch_Motor(launch_motor);
-		register_claw_1_Motor(claw_1_motor);
-		register_claw_2_Motor(claw_2_motor);
-		register_claw_3_Motor(claw_3_motor);
-		register_wrist_Motor(wrist_motor);
-		register_arm_Motor(arm_motor);
-	}
-	
-	
 	
 private:
 
