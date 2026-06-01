@@ -49,7 +49,7 @@ Lora_communication* Lora_communication::s_instance = nullptr;
 === */
 Lora_communication* Lora_communication::GetInstance()
 {
-    static Lora_communication instance(&huart5, &huart6,
+    static Lora_communication instance(&huart8, &huart6,
                                        GPIOB, GPIO_PIN_11,
                                        GPIOB, GPIO_PIN_10,
                                        nullptr);

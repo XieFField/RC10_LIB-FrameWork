@@ -290,4 +290,3 @@ bool Robot_WeaponSage::setMotorTargetTotalAngle(float total_angle, WeaponSage::M
         }
     }
 }
-

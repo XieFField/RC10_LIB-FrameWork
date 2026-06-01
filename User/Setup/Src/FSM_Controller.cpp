@@ -391,7 +391,7 @@ void FSM_Controller::stop_modeswitch()
 }
 
 #endif
-
+int8_t indexcccc = 0;
 void FSM_Controller::manual_ctrl()
 {
     chassis_setup_->setPathAutoStart(0); //路径自动开始标志清零
@@ -414,7 +414,10 @@ void FSM_Controller::manual_ctrl()
         }
         case 0x01:
         {
+			if(indexcccc ==0)
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+			else
+			chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_C);
             arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             break;  

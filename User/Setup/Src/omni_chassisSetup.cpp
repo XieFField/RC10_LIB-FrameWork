@@ -396,20 +396,24 @@ void OmniChassis_Setup::loop()
     case CHASSIS_MANUAL_CONTROL_C:
     {
         // 模式 C：全向速度控制，角速度固定为 0。
-        target_chassis_twist_.yaw_rate = 0.0f;
+//        target_chassis_twist_.yaw_rate = 0.0f;
 
-        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
-        else
-            target_chassis_twist_.vx = 0.0f;
+//        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+//            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+//        else
+//            target_chassis_twist_.vx = 0.0f;
 
-        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
-        else
-            target_chassis_twist_.vy = 0.0f;
+//        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+//            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
+//        else
+//            target_chassis_twist_.vy = 0.0f;
 
-        chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_chassis_twist_.yaw_rate);
-
+//        chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_chassis_twist_.yaw_rate);
+		if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
+			target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+		else
+			target_chassis_twist_.vx = 0.0f;
+		chassis.setSteerDegAndDriveSpeed(180.0f, target_chassis_twist_.vx);
         break;
     }
 

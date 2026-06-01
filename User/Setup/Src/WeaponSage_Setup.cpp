@@ -263,23 +263,13 @@ void Robot_WeaponSage_Setup::manualControl()
                 manual_ctrlForgrip_.changeTarget_state = false;
             if(airjoy_data_.right_y > 0.5f&&target_pos_.launch_pos_ <=initData_.max_launchHeight_)
 			{
-				if(auto_ctrl_.auto_state_bool_S.launch_enable)
-				{
-                target_pos_.launch_pos_ += weapon_launch_rate;
-				}else
-				{
-					target_pos_.launch_pos_ = target_pos_.launch_pos_;
-				}
+				
+                target_pos_.launch_pos_ += weapon_launch_rate;			
 			}
             else if(airjoy_data_.right_y < -0.5f)
 			{
-				if(target_pos_.launch_pos_ = target_pos_.launch_pos_)
-				{
-                target_pos_.launch_pos_ -= weapon_launch_rate;
-				}
-				else{
+
 				target_pos_.launch_pos_ -= weapon_launch_rate;	
-				}
 			}
             else
                 target_pos_.launch_pos_ = target_pos_.launch_pos_;

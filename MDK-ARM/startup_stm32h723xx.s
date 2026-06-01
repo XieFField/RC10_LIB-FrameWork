@@ -251,7 +251,6 @@ Reset_Handler    PROC
         IMPORT  ExitRun0Mode
         IMPORT  SystemInit
         IMPORT  __main
-
                  LDR     R0, =ExitRun0Mode
                  BLX     R0
                  LDR     R0, =SystemInit
