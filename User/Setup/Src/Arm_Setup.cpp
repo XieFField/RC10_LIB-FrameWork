@@ -1,7 +1,5 @@
 #include "Arm_setup.h"
 
-
-
 /**
  * @brief 控制循环
  */
@@ -17,7 +15,6 @@ void ArmSetup::loop()
         motor_pitch_->motorEnable();
         this->is_pitchEnable_ = true;
     }
-
 	
 //	ArmstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
     if(!arm_ctrlStatus.is_calibrating)
@@ -34,6 +31,7 @@ void ArmSetup::loop()
 //        calibration_seen_ = true;
 //        arm_status_ = ARM_CALIBRATE;
 //    }
+
 #if ARM_AUTO_DEBUG_NOCHASSIS
     //无底盘下的调试模式
     if(arm_status_ == ARM_AUTO_CONTROL&&arm_ctrlStatus.auto_start == 1)
@@ -48,10 +46,16 @@ void ArmSetup::loop()
     auto_ctrl_.now_ChassisPosition = get_nowChassisPose();
 #endif
 
+#if !USE_RC10_AIRJOY
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 
     arm_ctrlStatus.button_click_state =  button_detector_1.update(airjoy_data_.botton_click);
+#else
+    communication::Lora_communication::GetInstance()->Task_Process();
+    communication::Lora_communication::GetInstance()->Tim_It_Process();
 
+    communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
+#endif
     if(arm_status_ == ARM_AUTO_CONTROL)
     {
         if(arm_ctrlStatus.auto_start == 1)
@@ -62,13 +66,20 @@ void ArmSetup::loop()
         {
             this->start_toAutoCtrl(false);
         }
-    } 
+    }
 
+    // 捕获下降前云台角度：h>=lock_h时持续更新，h<lock_h时冻结
+    {
+        const float h = this->get_currentJointStatus().launchJoint_Height_;
+        if (h >= init_data_.lock_height_)
+            pre_descent_angle_ = this->get_currentJointStatus().rotateJoint_angle_;
+    }
 
     switch(arm_status_)
     {
         case ARM_MANUAL_CONTROL:
         {
+        #if !USE_RC10_AIRJOY
             if(last_arm_status_ != ARM_MANUAL_CONTROL)
             {
                 arm_ctrlStatus.last_manual_store = 0; //切换到手操时候重置存储状态，避免跳变
@@ -116,7 +127,9 @@ void ArmSetup::loop()
             {
                 arm_ctrlStatus.is_store_acting = 0;
             }
-        
+        #else
+            manualControl();
+        #endif
             break;
         }
         case ARM_AUTO_CONTROL:
@@ -125,7 +138,17 @@ void ArmSetup::loop()
             break;
 
         }   
-            
+        case ARM_SEMI_AUTO_CONTROL_1:
+        {
+            semiautoControl_1();
+            break;
+        }
+
+        case ARM_SEMI_AUTO_CONTROL_2:
+        {
+            semiautoControl_2();
+            break;
+        }
         case ARM_STOP: 
         {
             // 停止状态
@@ -158,16 +181,292 @@ void ArmSetup::loop()
         default:
             break;
     }
-
-
     this->update(); //更新电机状态
     last_arm_status_ = arm_status_;
     
     // debug_uart.printf_DMA("%f\n", motor_rotate_->getTotalAngle());
 }
+
+void ArmSetup::semiautoControl_1()
+{
+    #if USE_RC10_AIRJOY
+    //半自动控制逻辑1
+    this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    switch(airjoy_data_.SWC)
+    {
+        case 0x00:
+        {
+            static int8_t is_RB_clicked = 0;
+            static int8_t is_RT_clicked = 0;
+
+            if(airjoy_data_.RB == 0x01 && is_RB_clicked == 0)
+            {
+                is_RB_clicked = 1;
+                arm_ctrlStatus.is_store_acting = 3; //进入拾取状态
+            }
+            else if(airjoy_data_.RB == 0x00 && is_RB_clicked == 1)
+            {
+                is_RB_clicked = 0;
+            }
+
+            if(airjoy_data_.RT > 0.5f && is_RT_clicked == 0)
+            {
+                is_RT_clicked = 1;
+                arm_ctrlStatus.is_store_acting = 4; //进入放下状态
+            }
+            else if(airjoy_data_.RT < 0.5f && is_RT_clicked == 1)
+            {
+                is_RT_clicked = 0;
+            }
+
+            break;
+        }
+
+        case 0x01:
+        {
+            static int8_t is_RB_clicked = 0;
+            static int8_t is_RT_clicked = 0;
+
+            if(airjoy_data_.RB == 0x01 && is_RB_clicked == 0)
+            {
+                is_RB_clicked = 1;
+                arm_ctrlStatus.is_store_acting = 1; //进入存储状态
+            }
+            else if(airjoy_data_.RB == 0x00 && is_RB_clicked == 1)
+            {
+                is_RB_clicked = 0;
+            }
+
+            if(airjoy_data_.RT > 0.5f && is_RT_clicked == 0)
+            {
+                is_RT_clicked = 1;
+                arm_ctrlStatus.is_store_acting = 2; //进入取出状态
+            }
+            else if(airjoy_data_.RT < 0.5f && is_RT_clicked == 1)
+            {
+                is_RT_clicked = 0;
+            }
+            break;
+        }
+        default:
+            break;
+    }
+
+    if(arm_ctrlStatus.is_store_acting == 1) //存储
+    {
+        if(manual_store())
+        { 
+            arm_ctrlStatus.is_store_acting = 0;
+        }
+        arm_ctrlStatus.last_manual_store = 1;
+    }
+    else if(arm_ctrlStatus.is_store_acting == 2) //取出
+    {
+        if(manual_takeout())
+        {
+            arm_ctrlStatus.is_store_acting = 0;
+        }
+
+        arm_ctrlStatus.last_manual_store = 2;
+    }
+    else if(arm_ctrlStatus.is_store_acting == 3) //拾取
+    {
+        if(manual_pickup())
+        {
+            arm_ctrlStatus.is_store_acting = 0;
+        }
+        arm_ctrlStatus.last_manual_store = 3;
+    }
+    else if(arm_ctrlStatus.is_store_acting == 4) //放下
+    {
+        if(manual_putdown())
+        {
+            arm_ctrlStatus.is_store_acting = 0;
+        }
+        arm_ctrlStatus.last_manual_store = 4;
+    }
+
+    #endif
+}
+
+bool ArmSetup::manual_pickup()
+{
+    static bool is_pick = false;
+    static float pickup_start_time = 0.0f;
+    this->set_PitchAngle(0.0f);
+    this->setSuckerStatus(Sucker_Status_E::SUCK);
+    this->set_RotateAngle(90.0f);
+    
+    if(this->get_currentJointStatus().launchJoint_Height_ < init_data_.pick_up_height_ + 0.02f)
+    {
+        this->set_LaunchHeight(init_data_.pick_up_height_ + 0.04f);
+    }
+
+    if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f)
+    {
+        this->set_LaunchHeight(init_data_.pick_up_height_);
+
+        if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.pick_up_height_) < 0.008f)
+        {
+            is_pick = true;
+            pickup_start_time = TimeStamp::getInstance().getSeconds();
+        }
+    }
+
+    if(is_pick && TimeStamp::getInstance().getSeconds() - pickup_start_time > 0.5f && pickup_start_time > 0.5f)
+    {
+        this->set_LaunchHeight(init_data_.putdown_height_);
+        if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.008f)
+        {
+            is_pick = false;
+            pickup_start_time = 0.0f;
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+
+bool ArmSetup::manual_putdown()
+{
+    this->set_PitchAngle(90.0f);
+    this->set_LaunchHeight(init_data_.putdown_height_);
+
+    static bool is_putdown = false;
+    static float putdown_start_time = 0.0f;
+
+    if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.008f)
+    {
+        this->set_StretchLength(init_data_.max_stretchLength_ * 0.8f);
+        if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.max_stretchLength_ * 0.8f) < 0.01f
+            && is_putdown == false)
+        {
+            this->setSuckerStatus(Sucker_Status_E::STOP);
+            putdown_start_time = TimeStamp::getInstance().getSeconds();
+            is_putdown = true;
+        }
+    }
+
+    if(is_putdown && TimeStamp::getInstance().getSeconds() - putdown_start_time > 0.5f && putdown_start_time > 0.5f)
+    {
+        this->set_StretchLength(0.0f);
+        if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_) < 0.01f)
+        {
+            is_putdown = false;
+            putdown_start_time = 0.0f;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void ArmSetup::semiautoControl_2()
+{
+    #if USE_RC10_AIRJOY
+    //半自动控制逻辑2
+    this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+
+    if(last_arm_status_ != ARM_SEMI_AUTO_CONTROL_2)
+    {
+        //绑定按键状态 SWC切换pitch轴状态 SWD切换机械臂上吸盘状态
+        last_joint_status_ = this->get_currentJointStatus();
+        target_joint_status_ = last_joint_status_;
+
+        //绑定pitch状态 由SWC控制
+        int8_t current_pitch_logical = (_tool_Abs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 1.0f) ? 1: 0;
+        arm_ctrlStatus.last_manual_pitch = current_pitch_logical;
+        arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.SWC & 0x01) ^ current_pitch_logical;
+
+        //绑定机械臂吸盘状态 由SWD控制
+        int8_t current_sucker_logical = (this->getSuckerStatus() == Sucker_Status_E::SUCK) ? 1 : 0;
+        arm_ctrlStatus.last_manual_sucker = current_sucker_logical;
+        arm_ctrlStatus.sucker_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_sucker_logical;
+
+        last_arm_status_ = ARM_SEMI_AUTO_CONTROL_2;
+    }
+
+    // 下降刹车条件计算（作用域覆盖升降和旋转两个区域）
+    const float h = this->get_currentJointStatus().launchJoint_Height_;
+    const float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
+    const bool pre_near_zero = (pre_descent_angle_ <= 3.0f || pre_descent_angle_ >= 357.0f);
+    const bool angle_off_zero = !(current_angle <= 0.8f || current_angle >= 359.2f);
+    const bool brake_active = pre_near_zero
+                           && (h < init_data_.lock_height_ + 0.01f)
+                           && angle_off_zero;
+
+    // 升降==
+    if(_tool_Abs(airjoy_data_.right_y) > 0.2f)
+    {
+        float next_height = this->get_currentJointStatus().launchJoint_Height_ ;
+        if(airjoy_data_.right_y > 0.3f)
+            next_height += manual_control.launch_rate;
+        else if(airjoy_data_.right_y < -0.3f)
+            next_height -= manual_control.launch_rate;
+        else
+            next_height = this->get_currentJointStatus().launchJoint_Height_ ;
+
+        // 下降刹车：只有下降前云台在0.0±3.0度时才激活
+        if (brake_active) {
+            if (next_height > target_joint_status_.launchJoint_Height_)
+                next_height = target_joint_status_.launchJoint_Height_; // 禁止抬升
+            if (next_height < init_data_.lock_height_)
+                next_height = init_data_.lock_height_; // 禁止降到lock_h以下
+        }
+        target_joint_status_.launchJoint_Height_ = next_height;
+    }
+    else
+        target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // 保持不变
+
+    // 云台旋转控制 ==
+    if(airjoy_data_.right_x > 0.5f)
+        target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
+    else if(airjoy_data_.right_x < -0.5f)
+        target_joint_status_.rotateJoint_angle_ += manual_control.rotate_rate;
+
+    target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
+    target_joint_status_.rotateJoint_angle_ = normalize_deg_0_360(target_joint_status_.rotateJoint_angle_);
+
+    float re = init_data_.rotate_end;
+    if (re < 250.0f || re > 270.0f) re = 265.0f;
+    float t = target_joint_status_.rotateJoint_angle_;
+    if (t > init_data_.rotate_start && t < re)
+    {
+        float d135 = t - init_data_.rotate_start;
+        float dre = re - t;
+        target_joint_status_.rotateJoint_angle_ = (d135 < dre) ? init_data_.rotate_start : re;
+    }
+
+    // 刹车激活时强制自动旋转到0°
+    if (brake_active)
+        target_joint_status_.rotateJoint_angle_ = 0.0f;
+
+    int8_t target_pitch_logical = (airjoy_data_.SWC & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
+    if(target_pitch_logical == 1)
+    {
+        target_joint_status_.suckerJoint_angle_ = 90.0f; // 吸盘打开到90度
+    }
+    else
+        target_joint_status_.suckerJoint_angle_ = 0.0f; // 吸盘关闭到0度
+
+    int8_t target_sucker_logical = (airjoy_data_.SWD & 0x01) ^ arm_ctrlStatus.sucker_switch_offset;
+    // 更新记录
+    arm_ctrlStatus.last_manual_sucker = target_sucker_logical;
+
+    if(target_sucker_logical == 1) 
+        this->setSuckerStatus(Sucker_Status_E::SUCK);
+    else
+        this->setSuckerStatus(Sucker_Status_E::STOP);
+
+    this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
+    this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
+    this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
+    this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
+    #endif
+}
+
 bool test_num = 0;
-
-
 /**
  * @brief 手动控制
  */
@@ -179,10 +478,11 @@ void ArmSetup::manualControl()
    
     if(last_arm_status_ != ARM_MANUAL_CONTROL || arm_ctrlStatus.last_manual_store != 0)//若首次进入此函数，或存储状态发生变化，则进行状态初始化，避免由于状态跳变导致的目标值突变
     {
+        
         /*上一次状态*/
         last_joint_status_ = this->get_currentJointStatus();
         target_joint_status_ = last_joint_status_;
-
+    #if !USE_RC10_AIRJOY
         // 绑定伸展状态
         // 判断当前是伸展状态
         // 假设阈值为 max_stretchLength / 2 或者 0.05m
@@ -207,12 +507,44 @@ void ArmSetup::manualControl()
         // 判断当前是否在90度附近，假设为开启状态，反之为关闭状态
         arm_ctrlStatus.last_manual_pitch = current_pitch_logical;
         arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.scroll_wheel & 0x01) ^ current_pitch_logical;
+    #else
+        //绑定伸展状态 由SWB控制
+        float current_stretch = this->get_currentJointStatus().stretchJoint_Length_;
+        int8_t current_extend_logical = (current_stretch > 0.02f) ? 1 : 0;
+        //记录状态
+        arm_ctrlStatus.last_manual_extend = current_extend_logical;
+        //标记偏移: offset = switch ^ state
+        //定SWB只有01状态
+        arm_ctrlStatus.extend_switch_offset = (airjoy_data_.SWB & 0x01) ^ current_extend_logical;
 
+        //绑定机械臂吸盘状态 由SWD控制
+        int8_t current_sucker_logical = (this->getSuckerStatus() == Sucker_Status_E::SUCK) ? 1 : 0;
+        arm_ctrlStatus.last_manual_sucker = current_sucker_logical;
+        arm_ctrlStatus.sucker_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_sucker_logical;
+
+        //绑定存储吸盘状态 由SWE控制
+        int8_t current_store_sucker_logical = (this->getStoreSuckerStatus() == Sucker_Status_E::SUCK) ? 1 : 0;
+        arm_ctrlStatus.last_manual_store_sucker = current_store_sucker_logical;
+        arm_ctrlStatus.store_suker_switch_offset = (airjoy_data_.SWE & 0x01) ^ current_store_sucker_logical;
+
+        //绑定pitch状态 由SWC控制
+        int8_t current_pitch_logical = (_tool_Abs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 1.0f) ? 1: 0;
+        arm_ctrlStatus.last_manual_pitch = current_pitch_logical;
+        arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.SWC & 0x01) ^ current_pitch_logical;
+    #endif
         last_arm_status_ = ARM_MANUAL_CONTROL;
     }
 
+    // 下降刹车条件计算（作用域覆盖升降和旋转两个区域）
+    const float h = this->get_currentJointStatus().launchJoint_Height_;
+    const float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
+    const bool pre_near_zero = (pre_descent_angle_ <= 3.0f || pre_descent_angle_ >= 357.0f);
+    const bool angle_off_zero = !(current_angle <= 0.8f || current_angle >= 359.2f);
+    const bool brake_active = pre_near_zero
+                           && (h < init_data_.lock_height_ + 0.01f)
+                           && angle_off_zero;
 
-    // 升降
+    // 升降==
     if(_tool_Abs(airjoy_data_.right_y) > 0.2f)
     {
         float next_height = this->get_currentJointStatus().launchJoint_Height_ ;
@@ -223,26 +555,20 @@ void ArmSetup::manualControl()
         else
             next_height = this->get_currentJointStatus().launchJoint_Height_ ;
 
-        // 抬升限制检查： 如果不在云台合法区域，禁止抬升
-        if(next_height > target_joint_status_.launchJoint_Height_) //正在抬升
-        {
-             float current_angle = this->get_currentJointStatus().rotateJoint_angle_;
+        // 下降刹车：只有下降前云台在0.0±3.0度时才激活
+        if (brake_active) {
+            if (next_height > target_joint_status_.launchJoint_Height_)
+                next_height = target_joint_status_.launchJoint_Height_; // 禁止抬升
 
-             if(this->get_currentJointStatus().launchJoint_Height_ < init_data_.lock_height_ + 0.01f)
-             {
-                // 限制范围
-                if(std::fabs(current_angle - 0.0f) > 0.8f)
-                {
-                    next_height = target_joint_status_.launchJoint_Height_; // 保持不变
-                }
-             }
+            if (next_height < init_data_.lock_height_)
+                next_height = init_data_.lock_height_; // 禁止降到lock_h以下
         }
         target_joint_status_.launchJoint_Height_ = next_height;
     }
     else
         target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // 保持不变
 
-
+    // 云台旋转控制 ==
     if(airjoy_data_.right_x > 0.5f)
         target_joint_status_.rotateJoint_angle_ -= manual_control.rotate_rate;
     else if(airjoy_data_.right_x < -0.5f)
@@ -250,7 +576,6 @@ void ArmSetup::manualControl()
 
     target_joint_status_.rotateJoint_angle_ = sanitizeRotateAngle(target_joint_status_.rotateJoint_angle_);
     target_joint_status_.rotateJoint_angle_ = normalize_deg_0_360(target_joint_status_.rotateJoint_angle_);
-
 
     float re = init_data_.rotate_end;
     if (re < 250.0f || re > 270.0f) re = 265.0f;
@@ -261,22 +586,32 @@ void ArmSetup::manualControl()
         float dre = re - t;
         target_joint_status_.rotateJoint_angle_ = (d135 < dre) ? init_data_.rotate_start : re;
     }
+
+    // 刹车激活时强制自动旋转到0°
+    if (brake_active)
+        target_joint_status_.rotateJoint_angle_ = 0.0f;
+
     //pitch 控制
+#if !USE_RC10_AIRJOY
     int8_t target_pitch_logical = (airjoy_data_.scroll_wheel & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
+#else
+    int8_t target_pitch_logical = (airjoy_data_.SWC & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
+    test_num= 0;
+#endif
     if(target_pitch_logical == 1)
     {
-        if(test_num == 0)
-            target_joint_status_.suckerJoint_angle_ = 90.0f; // 吸盘打开到90度
-        else
-            target_joint_status_.suckerJoint_angle_ = 180.0f; // 吸盘打开到180度
+        target_joint_status_.suckerJoint_angle_ = 90.0f; // 吸盘打开到90度
     }
     else
         target_joint_status_.suckerJoint_angle_ = 0.0f; // 吸盘关闭到0度
 
     //stretch 控制
     // 记录应当的逻辑状态 logic = switch ^ offset
+#if !USE_RC10_AIRJOY
     int8_t target_extend_logical = (airjoy_data_.SWA & 0x01) ^ arm_ctrlStatus.extend_switch_offset;
-    
+#else
+    int8_t target_extend_logical = (airjoy_data_.SWB & 0x01) ^ arm_ctrlStatus.extend_switch_offset;
+#endif
     // 更细记录状态
     arm_ctrlStatus.last_manual_extend = target_extend_logical;
 
@@ -286,8 +621,11 @@ void ArmSetup::manualControl()
         target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 展开到最大位置
 
     //吸盘开启
+#if !USE_RC10_AIRJOY
     int8_t target_sucker_logical = (airjoy_data_.SWD & 0x01) ^ arm_ctrlStatus.sucker_switch_offset;
-
+#else
+    int8_t target_sucker_logical = (airjoy_data_.SWD & 0x01) ^ arm_ctrlStatus.sucker_switch_offset;
+#endif
     // 更新记录
     arm_ctrlStatus.last_manual_sucker = target_sucker_logical;
 
@@ -296,6 +634,16 @@ void ArmSetup::manualControl()
     else
         this->setSuckerStatus(Sucker_Status_E::STOP);
     
+#if USE_RC10_AIRJOY
+    //存储吸盘控制
+    int8_t target_store_sucker_logical = (airjoy_data_.SWE & 0x01) ^ arm_ctrlStatus.store_suker_switch_offset;
+    arm_ctrlStatus.last_manual_store_sucker = target_store_sucker_logical;
+    if(target_store_sucker_logical == 1) 
+        this->setStoreSuckerStatus(Sucker_Status_E::SUCK);
+    else
+        this->setStoreSuckerStatus(Sucker_Status_E::STOP);
+#endif
+
     this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
     this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
     this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
@@ -304,15 +652,6 @@ void ArmSetup::manualControl()
 
 bool ArmSetup::test()
 {
-    // this->set_PitchAngle(180.0f);
-    // if(this->get_currentJointStatus().suckerJoint_angle_ > 170.0f)
-    // {
-    //     return true;
-    // }
-    // else
-    //     return false;
-
-
     if(test_num == 0)
     {
         test_num = 1;
