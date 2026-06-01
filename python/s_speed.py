@@ -3,14 +3,14 @@ import matplotlib.pyplot as plt
 
 # 定义初始变量
 
-x_0 = 0
-x_g = 2
-v_max = 1.5
-v_0 = 0.2
+x_0 = 0.1
+x_g = 5.5
+v_max = 3.0
+v_0 = 0.5
 v_g = 0
-a_max_accel = 10.0     # 加速段最大加速度
+a_max_accel = 60.0     # 加速段最大加速度
 a_max_decel = 1.0    # 减速段最大加速度（现在可以分开设置）
-j_max = 999999999999999.0     # 最大加加速度（jerk）
+j_max = 20.0     # 最大加加速度（jerk）
 count = 0      # 计数器，用于记录调整次数
 
 print("加速度参数设置:")
