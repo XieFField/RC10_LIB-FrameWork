@@ -523,6 +523,7 @@ namespace jia
                 kWorldLockTo = 6,
                 kBodyLockNowWithNoOmegaZ = 7,
                 kWorldLockNowWithNoOmegaZ = 8,
+                kSteerDegAndDriveSpeed = 9,
                 kAlignForward = 21,
                 kHomingObserve = 22,
                 kSingleWheelIsolated = 30,
@@ -1000,7 +1001,7 @@ namespace jia
                 struct Common
                 {
                     bool enable = false;                                            // [RW] 调试总开关。
-                    u8 mode_raw = 1;                                              // [RW] 调试模式号。
+                    u8 mode_raw = 9;                                               // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
                     u8 observe_wheel_index = 0U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。
@@ -1013,6 +1014,8 @@ namespace jia
                     f32 omega_z_sine_amplitude = 0.0f;    // [RW] omega_z 正弦注入幅值。
                     f32 omega_z_sine_frequency_hz = 0.1f; // [RW] omega_z 正弦注入频率（Hz）。
                     f32 omega_z_sine_offset = 0.0f;       // [RW] omega_z 正弦注入偏置。
+                    f32 steer_deg_limit = 180.0f;
+                    f32 drive_speed_m_s_limit = 1.0f;
                 } injection{};
 
                 struct SingleWheel
@@ -1574,6 +1577,7 @@ namespace jia
             case 6:
             case 7:
             case 8:
+            case 9:
             default:
                 return DebugControlRoute::kTargetInjection;
             }
