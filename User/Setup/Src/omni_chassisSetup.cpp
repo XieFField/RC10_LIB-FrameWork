@@ -109,8 +109,10 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     target_yaw_ = 0.0f;
     path_line_.plan_reset();
     path_line_.Reset();
-    path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_End_Point(test_point, path_param_CB_);
+    
+    
+//    path_line_.Add_Start_Point(robot_pos_);
+//    path_line_.Add_End_Point(test_point, path_param_CB_);
     //曲线的测试
     //   path_line_.Add_Start_Point(robot_pos_);
     //   path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f, robot_pos_.y}, path_param_curve_);
@@ -118,10 +120,11 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     //   path_line_.Add_End_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f+0.2f}, path_param_end_);
     
     //夹杆路径的测试
-    //   path_line_.Add_Start_Point(robot_pos_);
-    //   path_line_.Add_Point(CB_Selection_start_point_, path_param_CB_);
-    //   path_line_.Add_Point(Clamping_Bar_Selection_pos_, CB_Selection_control_point_}, path_param_curve_);
-    //   path_line_.Add_End_Point(Clamping_Bar_Retreat_pos_, path_param_end_);
+       path_line_.Add_Start_Point(robot_pos_);
+       path_line_.Add_Point(CB_Selection_start_point_, path_param_start_);
+       path_line_.Add_Point(Clamping_Bar_Selection_pos_, CB_Selection_control_point_,path_param_curve_);
+       path_line_.Add_Point(Clamping_Bar_Retreat_pos_, path_param_end_);
+       path_line_.Add_End_Point(Clamping_Bar_Retreat_pos_, path_param_end_);
 }
 
 uint32_t chassisstackHighWaterMark = 0;
@@ -221,60 +224,59 @@ void OmniChassis_Setup::loop()
 #else              
 #endif
                     speed = v_limit();
-                    target_chassis_twist_.vx = corrVelocity.x;
-                    target_chassis_twist_.vy = corrVelocity.y;
+                    target_chassis_twist_.vx = speed.x;
+                    target_chassis_twist_.vy = speed.y;
                 }
                 else
                 {
 //                    float lock_err = (robot_pos_ - Clamping_Bar_Selection_pos_).magnitude();
 //                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Clamping_Bar_Selection_pos_).normalize();
                     
-                    float lock_err = (robot_pos_ - test_point).magnitude();
-                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
+                    float lock_err = (robot_pos_ - Clamping_Bar_Selection_pos_).magnitude();
+                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Clamping_Bar_Selection_pos_).normalize();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
                 }
             }
-            else
-            {
-//                    float lock_err = (robot_pos_ - Clamping_Bar_Retreat_pos_).magnitude();
-//                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Clamping_Bar_Retreat_pos_).normalize();
+//            else
+//            {
+////                    float lock_err = (robot_pos_ - Clamping_Bar_Retreat_pos_).magnitude();
+////                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Clamping_Bar_Retreat_pos_).normalize();
 
-                float lock_err = (robot_pos_ - test_point).magnitude();
-                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
-                target_chassis_twist_.vx = speed.x;
-                target_chassis_twist_.vy = speed.y;
-            }
-            //            else
-            //            {
-            //                // 路径结束：复位状态并清空速度命令。
-            //                flag = 0;
-            //                flag_run = 0;
-            //                flag_reset();
-            //                WeaponSage_END = true;
+//                float lock_err = (robot_pos_ - test_point).magnitude();
+//                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
+//                target_chassis_twist_.vx = speed.x;
+//                target_chassis_twist_.vy = speed.y;
+//            }
+                       else
+                       {
+                           // 路径结束：复位状态并清空速度命令。
+                           flag = 0;
+                           flag_run = 0;
+                           flag_reset();
 
-            //                speed = {0.0f, 0.0f};
-            //                planspeed = {0.0f, 0.0f};
-            //                target_chassis_twist_ = {0.0f, 0.0f};
+                           speed = {0.0f, 0.0f};
+                           planspeed = {0.0f, 0.0f};
+                           target_chassis_twist_ = {0.0f, 0.0f};
 
-            //                path_line_.plan_reset();
-            //                path_line_.Reset();
-            // #if FF_V
-            //                ResetAutoControlStates();
-            // #endif
-            //            }
+                           path_line_.plan_reset();
+                           path_line_.Reset();
+            #if FF_V
+                           ResetAutoControlStates();
+            #endif
+                       }
         }
         else
         {
             target_chassis_twist_ = {0.0f, 0.0f};
-            //chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
-            chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, 0.0f);
+            chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
+                // chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, 0.0f);
 #if FF_V
-            ResetAutoControlStates();
+            ResetAutoControlStates();   
 #endif
         }
-        float target_yaw_rad = target_yaw_ * PI / 180.0f;
-        chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
+        // float target_yaw_rad = target_yaw_ * PI / 180.0f;
+         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
 
         break;
     }
@@ -816,44 +818,50 @@ void OmniChassis_Setup::flag_reset(void)
 
 Vector2D OmniChassis_Setup::v_limit(void)
 {
-    // 判定是否进入终点段，用于控制参数切换。
-    /* bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
-    if (near_end)
-    {
-        v = v.normalize() * robot_speed_end_;
-        return v;
-    }
-    if (v.magnitude() > max_robot_speed_)
-    {*FF_coefficient
-        v = v.normalize() * max_robot_speed_;
-    } */
-    //    bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
-    //    if (KFS_flag.MF2_flag == true || KFS_flag.MF1_flag == true)
-    //    {
-    //        if (near_end)
-    //        {
-    //            v = v.normalize() * robot_speed_end_;
-    //            return v;
-    //        }
-    //    }
+//    // 使用单位向量做正交分解，避免 |normal|² 缩放
+//    Vector2D normal = curve.Get_End_point() - curve.Get_Start_point();
+//    Vector2D tangent_dir = normal.normalize();
+//    Vector2D normal_dir = tangent_dir.perpendicular();
 
+//    // 前馈速度：仅受 planspeed 幅度限制
+//    Vector2D v_ff = planspeed * FF_coefficient;
+//    if (v_ff.magnitude() > planspeed.magnitude())
+//        v_ff = v_ff.normalize() * planspeed.magnitude();
 
-    Vector2D normal = curve.Get_End_point()-curve.Get_Start_point();
-    Vector2D v_tangent = planspeed*FF_coefficient + corrVelocity.project_onto(normal);
-    if (v_tangent.magnitude() > planspeed .magnitude())
-    {
-        v_tangent = v_tangent.normalize() * planspeed .magnitude();
-    }
-    Vector2D v_normal=corrVelocity.project_onto(normal.perpendicular());
+//    // 切向 = 前馈 + PID纠偏沿切向分量（PID不限幅，终点 planspeed=0 时保留切向纠偏）
+//    Vector2D v_tangent = v_ff + corrVelocity.project_onto(tangent_dir);
+
+//    // 法向 = PID纠偏沿法向分量（限幅防止侧向过冲）
+//    Vector2D v_normal = corrVelocity.project_onto(normal_dir);
+//    if (v_normal.magnitude() > v_normal_max)
+//        v_normal = v_normal.normalize() * v_normal_max;
+
+//    Vector2D v = v_tangent + v_normal;
+
+    
+    
+    // 使用单位向量做正交分解，避免 |normal|² 缩放
+    Vector2D normal = curve.Get_End_point() - curve.Get_Start_point();
+    Vector2D tangent_dir = normal.normalize();
+    Vector2D normal_dir = tangent_dir.perpendicular();
+
+    // 切向 = 前馈 + PID纠偏沿切向分量（PID不限幅，终点 planspeed=0 时保留切向纠偏）
+    Vector2D v_tangent = planspeed * FF_coefficient + corrVelocity.project_onto(tangent_dir);
+
+    if (v_tangent.magnitude() > planspeed.magnitude())
+        v_tangent = v_tangent.normalize() * planspeed.magnitude();
+
+    // 法向 = PID纠偏沿法向分量（限幅防止侧向过冲）
+    Vector2D v_normal = corrVelocity.project_onto(normal_dir);
     if (v_normal.magnitude() > v_normal_max)
-    {
         v_normal = v_normal.normalize() * v_normal_max;
-    }
+
     Vector2D v = v_tangent + v_normal;
+    
     num++;
-    if (num > 8)
+    if (num > 5)
     {
-        debug_uart.printf_DMA("%f,%f,%f\n", v.magnitude(),v_tangent.magnitude(),v_normal.magnitude());
+        debug_uart.printf_DMA("%f,%f,%f\n", v.magnitude(), v_tangent.magnitude(), v_normal.magnitude());
         num = 0;
     }
     return v;

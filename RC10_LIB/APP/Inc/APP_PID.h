@@ -139,6 +139,8 @@ private:
     float dt_error_ = 0.01f; //dt默认值
     // 循环设置
     bool is_circular_ = false;
+
+    bool is_in_dead_zone = false;
 };
 
 // 增量式PID 默认1kHz更新频率

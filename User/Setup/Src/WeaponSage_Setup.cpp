@@ -169,9 +169,9 @@ void Robot_WeaponSage_Setup::calibrate()
 			this->claw_1_Motor_->setTargetCurrent(0.0f);
 			this->claw_2_Motor_->setTargetCurrent(0.0f);
 			this->claw_3_Motor_->setTargetCurrent(0.0f);
-            this->claw_1_Motor_->relocate_totalAngle(1.0f);
-            this->claw_2_Motor_->relocate_totalAngle(1.0f);
-            this->claw_3_Motor_->relocate_totalAngle(1.0f);
+            this->claw_1_Motor_->relocate_totalAngle(2.0f);
+            this->claw_2_Motor_->relocate_totalAngle(2.0f);
+            this->claw_3_Motor_->relocate_totalAngle(2.0f);
             this->launch_Motor_->relocate_totalAngle(0.0f);
 //            if(auto_ctrl_.auto_state_bool_S.arm_enable)
 //            {
@@ -339,7 +339,7 @@ void Robot_WeaponSage_Setup::idle()
     this->setClaw_1_angle(target_pos_.claw_1_pos_);
     this->setClaw_2_angle(target_pos_.claw_2_pos_);
     this->setClaw_3_angle(target_pos_.claw_3_pos_);
-    this->setArm_angle(target_pos_.arm_pos_);
+    this->setWrist_angle(target_pos_.wrist_pos_);
 }
 
 
@@ -605,7 +605,7 @@ void Robot_WeaponSage_Setup::Judge_wrist_status()
 WeaponSage_InitData_S initData_=
 {
     .max_launchHeight_ =0.358735231f,
-    .max_clawAngle_ = 40.0f,
+    .max_clawAngle_ = 31.5f,
     .max_arm_angle_ = 135.0f,
     .max_wrist_angle_ = 360.0f,
 	.max_arm_rate_ =90.0f,

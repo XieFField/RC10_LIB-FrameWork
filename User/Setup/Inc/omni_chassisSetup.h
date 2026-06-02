@@ -133,9 +133,9 @@ private:
     bool Arm_Start = false; // 机械臂动作触发标志。
 
     int flag = 0;     // 自动流程起始触发位（边沿触发）。
-    int flag_run = 0; // 自动流程运行中标志位。
 
     //-----------------------------------接口监视参数-----------------------------------------//
+    int flag_run = 0; // 自动流程运行中标志位。
     
     
     int8_t MF1 = 0; // 目标点 1 编号。
@@ -151,7 +151,7 @@ private:
     Point3D ladar_data_; // 定位系统输出的原始位姿数据。
     
     float PID_coefficient = 0.8;
-    float FF_coefficient = 0.8;
+    float FF_coefficient = 0.5;
 
     PID_Position pid_pos_x; // x轴绝对位置PID控制器
     PID_Position pid_pos_y; // y轴绝对位置PID控制器
@@ -176,17 +176,17 @@ private:
     Path_line path_line_; // 路径规划器对象。
     
     Vector2D CB_Selection_start_point_ = {1.0f, 1.0f}; // 夹杆流程默认目标点。
-    Vector2D CB_Selection_control_point_ = {2.555f, 2.03f}; // 夹杆流程默认目标点。
-    Vector2D Clamping_Bar_Selection_pos_ = {2.455f, 0.83f}; // 夹杆流程默认目标点。
-    Vector2D Clamping_Bar_Retreat_pos_ = {2.4f, 1.0f};    // 夹杆流程默认目标点。
+    Vector2D CB_Selection_control_point_ = {2.575f, 1.8}; // 夹杆流程默认目标点。
+    Vector2D Clamping_Bar_Selection_pos_ = {2.47f, 0.815f}; // 夹杆流程默认目标点。
+    Vector2D Clamping_Bar_Retreat_pos_ = {2.47f, 1.5f};    // 夹杆流程默认目标点。
 
     Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 0.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 999.0f, .maxDec = 1.3f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.10f, .targetPos = 0.0f, .deadzone = 0.001f}; // 夹杆流程速度规划参数。
+    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; // 0.8acc夹杆流程速度规划参数。
 
-    Speedplanner_1D_Param_Config path_param_start_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.01f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_line_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_curve_ = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.5f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};  // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_end_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};    // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_start_ = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.8f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_line_ = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_curve_ = {.maxAcc =999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.8f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};  // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config path_param_end_ = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};    // KFS 速度规划参数。
 
     //-----------------------------------梅林规划参数-----------------------------------------//
     CB_FLAG CB_flag;
