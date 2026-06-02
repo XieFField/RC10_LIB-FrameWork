@@ -194,7 +194,7 @@ void OmniChassis_Setup::loop()
     case CHASSIS_AUTO_CONTROL_CB:
     {
         num++;
-        if (num > 2)
+        if (num > 10)
         {
             debug_uart.printf_DMA("%f\n", Locate_Setup::getInstance()->get_RobotSpeed_inWorld().y);
             num = 0;
@@ -211,21 +211,21 @@ void OmniChassis_Setup::loop()
         {
             if (path_line_.Is_End() == false)
             {
+                // 获取曲线（带保护）
+                curve = path_line_.get_bezier_curve();
                 Path_CB_check();
                 if (WeaponSage_Start == false)
                 {
-                    // 获取曲线（带保护）
-                    curve = path_line_.get_bezier_curve();
+                    
                     // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-                    planspeed = path_line_.plan(robot_pos_);
+                    planspeed = path_line_.plan(robot_pos_)*FF_coefficient ;
                     Path_correction();
+                    corrVelocity = PID_coefficient * corrVelocity;
 #if FF_V
                     speed = ComposeRobotVelocity(corrVelocity);
-#else
-                    speed = v_coefficient * planspeed + (1 - v_coefficient) * corrVelocity;
-
+#else              
 #endif
-                    speed = v_limit(speed);
+                    speed = v_limit(planspeed, corrVelocity);
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
                 }
@@ -305,15 +305,14 @@ void OmniChassis_Setup::loop()
                 if (Arm_Start == false && KFS_flag.Spin_Start == false)
                 {
                     // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-                    planspeed = path_line_.plan(robot_pos_);
-
+                    planspeed = path_line_.plan(robot_pos_)*FF_coefficient ;
                     Path_correction();
+                    corrVelocity = PID_coefficient * corrVelocity;
 #if FF_V
                     speed = ComposeRobotVelocity(corrVelocity);
-#else
-                    speed = v_coefficient * planspeed + (1 - v_coefficient) * corrVelocity;
+#else              
 #endif
-                    speed = v_limit(speed);
+                    speed = v_limit(planspeed, corrVelocity);
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
                 }
@@ -370,7 +369,7 @@ void OmniChassis_Setup::loop()
 
         if (num > 2)
         {
-            debug_uart.printf_DMA("%f,%f\n", tp_speed_now, tp_pos_now);
+            // debug_uart.printf_DMA("%f,%f\n", tp_speed_now, tp_pos_now);
             num = 0;
         }
         if (TP_1d.isFinished() == 1)
@@ -819,7 +818,7 @@ void OmniChassis_Setup::flag_reset(void)
     CB_flag.Retreat_flag = false;
 }
 
-Vector2D OmniChassis_Setup::v_limit(Vector2D &v)
+Vector2D OmniChassis_Setup::v_limit(Vector2D &plan_v,Vector2D &pid_v)
 {
     // 判定是否进入终点段，用于控制参数切换。
     /* bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
@@ -841,13 +840,18 @@ Vector2D OmniChassis_Setup::v_limit(Vector2D &v)
     //            return v;
     //        }
     //    }
-    if (v.magnitude() > planspeed.magnitude())
+
+
+    Vector2D v_tangent = plan_v + pid_v.project_onto(plan_v);
+    if (v_tangent.magnitude() > plan_v.magnitude())
     {
-        v = v.normalize() * planspeed.magnitude();
+        v_tangent = v_tangent.normalize() * plan_v.magnitude();
     }
-    if (v.magnitude() < min_robot_speed_)
+    Vector2D v_normal=pid_v.project_onto(plan_v.perpendicular());
+    if (v_normal.magnitude() > v_normal_max)
     {
-        v = v.normalize() * min_robot_speed_;
+        v_normal = v_normal.normalize() * v_normal_max;
     }
+    Vector2D v = v_tangent + v_normal;
     return v;
 }

@@ -119,7 +119,7 @@ public:
     }
 
 private:
-    Vector2D test_point = {3.0f, 1.8f};
+    Vector2D test_point = {0.6f, 6.0f};
     Vector2D control_point = {0.0f, 2.5f};
     float err_curve = 0.0f;
     int num = 0;
@@ -136,7 +136,8 @@ private:
     int flag_run = 0; // 自动流程运行中标志位。
 
     //-----------------------------------接口监视参数-----------------------------------------//
-    float v_coefficient = 1;
+    
+    
     int8_t MF1 = 0; // 目标点 1 编号。
     int8_t MF2 = 0; // 目标点 2 编号。
 
@@ -148,35 +149,39 @@ private:
     float yaw = 0.0f;                   // 当前机器人航向角（度）。
 
     Point3D ladar_data_; // 定位系统输出的原始位姿数据。
+    
+    float PID_coefficient = 0.8;
+    float FF_coefficient = 0.8;
 
     PID_Position pid_pos_x; // x轴绝对位置PID控制器
     PID_Position pid_pos_y; // y轴绝对位置PID控制器
     PID_Position path_lock; // 停止锁点
 
-    BezierCurve curve; // 当前路径曲线缓存。
-
     //---------------------------接口调试参数（需要修改时复制过来）---------------------------------------------//
 
-    float min_robot_speed_ = 0.01f; // 常规段地板速度限制。
+    float v_normal_max = 0.5f; // 常规段地板速度限制。
 
     // 夹取kfs前的速度限制，用来控制变量
     // float robot_speed_end_ = 0.3f;  // 终点段最大速度限制。
     // float deadzone_max_end_ = 0.1f; // 判定“近终点”阈值。
 
-    float m_lookaheadDist = 0.15f;       // 前视距离 (单位: 米)
-    float m_lookaheadDist_line = 0.15f;  // 前视距离 (单位: 米)
+    float m_lookaheadDist = 0.5f;       // 前视距离 (单位: 米)
+    float m_lookaheadDist_line = 0.5f;  // 前视距离 (单位: 米)
     float m_lookaheadDist_curve = 0.07f; // 前视距离 (单位: 米)
+    
     //-----------------------------------速度规划参数----------------------------------------------------//
+    
+    BezierCurve curve; // 当前路径曲线缓存。
 
     Path_line path_line_; // 路径规划器对象。
     
     Vector2D CB_Selection_start_point_ = {1.0f, 1.0f}; // 夹杆流程默认目标点。
-    Vector2D CB_Selection_control_point_ = {2.5f, 2.0f}; // 夹杆流程默认目标点。
-    Vector2D Clamping_Bar_Selection_pos_ = {2.4f, 0.8f}; // 夹杆流程默认目标点。
+    Vector2D CB_Selection_control_point_ = {2.555f, 2.03f}; // 夹杆流程默认目标点。
+    Vector2D Clamping_Bar_Selection_pos_ = {2.455f, 0.83f}; // 夹杆流程默认目标点。
     Vector2D Clamping_Bar_Retreat_pos_ = {2.4f, 1.0f};    // 夹杆流程默认目标点。
 
     Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 0.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 999.0f, .maxDec = 1.2f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f}; // 夹杆流程速度规划参数。
+    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 999.0f, .maxDec = 1.0f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.10f, .targetPos = 0.0f, .deadzone = 0.001f}; // 夹杆流程速度规划参数。
 
     Speedplanner_1D_Param_Config path_param_start_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.01f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
     Speedplanner_1D_Param_Config path_param_line_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
@@ -227,7 +232,7 @@ private:
 
     void Path_spin_check(void); // 检查并执行路径中旋转逻辑。
 
-    Vector2D v_limit(Vector2D &v);
+    Vector2D v_limit(Vector2D &plan_v,Vector2D &pid_v); // 速度限幅函数。
 
     void flag_reset(void); // 复位自动流程相关标志位。
 

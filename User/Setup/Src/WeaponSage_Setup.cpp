@@ -340,7 +340,6 @@ void Robot_WeaponSage_Setup::idle()
     this->setClaw_2_angle(target_pos_.claw_2_pos_);
     this->setClaw_3_angle(target_pos_.claw_3_pos_);
     this->setArm_angle(target_pos_.arm_pos_);
-    this->setWrist_angle(target_pos_.wrist_pos_);
 }
 
 

@@ -4,7 +4,6 @@
  * @brief 控制循环
  */
 // uint32_t ArmstackHighWaterMark = 0;
-float aaa325 = 0;
 void ArmSetup::loop()
 {
     if(!arm_ctrlStatus.init_flag)
@@ -184,8 +183,6 @@ void ArmSetup::loop()
     }
     this->update(); //更新电机状态
     last_arm_status_ = arm_status_;
-	aaa325 = aaa325 + 1.f;
-    debug_uart.printf_DMA("%f\n", aaa325);
 }
 
 void ArmSetup::semiautoControl_1()
