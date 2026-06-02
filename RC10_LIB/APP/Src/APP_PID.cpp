@@ -428,7 +428,7 @@ PID_Param_Config path_lock_end = {
 };
 
 PID_Param_Config track_pid_params = {
-    .kp = 3.0f,
+    .kp = 3.6f,
     .ki = 0.0f,
     .kd = 0.0f,
     .I_Outlimit = 0.0f, 

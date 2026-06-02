@@ -181,7 +181,7 @@ private:
     Vector2D Clamping_Bar_Retreat_pos_ = {2.4f, 1.0f};    // 夹杆流程默认目标点。
 
     Speedplanner_1D_Param_Config path_param_KFS_ = {.maxAcc = 30.0f, .maxDec = 40.0f, .maxJerk = 0.0f, .maxSpeed = 0.6f, .initialSpeed = 0.3f, .finalSpeed = 0.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 999.0f, .maxDec = 1.0f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.10f, .targetPos = 0.0f, .deadzone = 0.001f}; // 夹杆流程速度规划参数。
+    Speedplanner_1D_Param_Config path_param_CB_ = {.maxAcc = 999.0f, .maxDec = 1.3f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.10f, .targetPos = 0.0f, .deadzone = 0.001f}; // 夹杆流程速度规划参数。
 
     Speedplanner_1D_Param_Config path_param_start_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.01f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
     Speedplanner_1D_Param_Config path_param_line_ = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
@@ -232,7 +232,7 @@ private:
 
     void Path_spin_check(void); // 检查并执行路径中旋转逻辑。
 
-    Vector2D v_limit(Vector2D &plan_v,Vector2D &pid_v); // 速度限幅函数。
+    Vector2D v_limit(void); // 速度限幅函数。
 
     void flag_reset(void); // 复位自动流程相关标志位。
 

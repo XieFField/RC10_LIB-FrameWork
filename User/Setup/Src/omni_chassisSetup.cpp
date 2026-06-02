@@ -193,12 +193,7 @@ void OmniChassis_Setup::loop()
     }
     case CHASSIS_AUTO_CONTROL_CB:
     {
-        num++;
-        if (num > 10)
-        {
-            debug_uart.printf_DMA("%f\n", Locate_Setup::getInstance()->get_RobotSpeed_inWorld().y);
-            num = 0;
-        }
+        
         // 夹杆自动流程：触发后执行路径规划、纠偏和速度合成。
         if (flag == 1)
         {
@@ -218,16 +213,16 @@ void OmniChassis_Setup::loop()
                 {
                     
                     // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-                    planspeed = path_line_.plan(robot_pos_)*FF_coefficient ;
+                    planspeed = path_line_.plan(robot_pos_) ;
                     Path_correction();
                     corrVelocity = PID_coefficient * corrVelocity;
 #if FF_V
                     speed = ComposeRobotVelocity(corrVelocity);
 #else              
 #endif
-                    speed = v_limit(planspeed, corrVelocity);
-                    target_chassis_twist_.vx = speed.x;
-                    target_chassis_twist_.vy = speed.y;
+                    speed = v_limit();
+                    target_chassis_twist_.vx = corrVelocity.x;
+                    target_chassis_twist_.vy = corrVelocity.y;
                 }
                 else
                 {
@@ -272,13 +267,14 @@ void OmniChassis_Setup::loop()
         else
         {
             target_chassis_twist_ = {0.0f, 0.0f};
-            chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
+            //chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
+            chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, 0.0f);
 #if FF_V
             ResetAutoControlStates();
 #endif
         }
         float target_yaw_rad = target_yaw_ * PI / 180.0f;
-        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
+        chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
 
         break;
     }
@@ -305,14 +301,14 @@ void OmniChassis_Setup::loop()
                 if (Arm_Start == false && KFS_flag.Spin_Start == false)
                 {
                     // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-                    planspeed = path_line_.plan(robot_pos_)*FF_coefficient ;
+                    planspeed = path_line_.plan(robot_pos_) ;
                     Path_correction();
                     corrVelocity = PID_coefficient * corrVelocity;
 #if FF_V
                     speed = ComposeRobotVelocity(corrVelocity);
 #else              
 #endif
-                    speed = v_limit(planspeed, corrVelocity);
+                    speed = v_limit();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
                 }
@@ -818,7 +814,7 @@ void OmniChassis_Setup::flag_reset(void)
     CB_flag.Retreat_flag = false;
 }
 
-Vector2D OmniChassis_Setup::v_limit(Vector2D &plan_v,Vector2D &pid_v)
+Vector2D OmniChassis_Setup::v_limit(void)
 {
     // 判定是否进入终点段，用于控制参数切换。
     /* bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
@@ -828,7 +824,7 @@ Vector2D OmniChassis_Setup::v_limit(Vector2D &plan_v,Vector2D &pid_v)
         return v;
     }
     if (v.magnitude() > max_robot_speed_)
-    {
+    {*FF_coefficient
         v = v.normalize() * max_robot_speed_;
     } */
     //    bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
@@ -842,16 +838,23 @@ Vector2D OmniChassis_Setup::v_limit(Vector2D &plan_v,Vector2D &pid_v)
     //    }
 
 
-    Vector2D v_tangent = plan_v + pid_v.project_onto(plan_v);
-    if (v_tangent.magnitude() > plan_v.magnitude())
+    Vector2D normal = curve.Get_End_point()-curve.Get_Start_point();
+    Vector2D v_tangent = planspeed*FF_coefficient + corrVelocity.project_onto(normal);
+    if (v_tangent.magnitude() > planspeed .magnitude())
     {
-        v_tangent = v_tangent.normalize() * plan_v.magnitude();
+        v_tangent = v_tangent.normalize() * planspeed .magnitude();
     }
-    Vector2D v_normal=pid_v.project_onto(plan_v.perpendicular());
+    Vector2D v_normal=corrVelocity.project_onto(normal.perpendicular());
     if (v_normal.magnitude() > v_normal_max)
     {
         v_normal = v_normal.normalize() * v_normal_max;
     }
     Vector2D v = v_tangent + v_normal;
+    num++;
+    if (num > 8)
+    {
+        debug_uart.printf_DMA("%f,%f,%f\n", v.magnitude(),v_tangent.magnitude(),v_normal.magnitude());
+        num = 0;
+    }
     return v;
 }
