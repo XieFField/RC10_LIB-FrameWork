@@ -613,5 +613,5 @@ WeaponSage_InitData_S initData_=
     .wrist_gearRatio_ = 144.0f,
     .launch_Ratio_ = 0.139989366256f,
     .claw_gearRatio_  =360.0f ,
-
+    .arm_gearRatio_ = 360.0f
 };
