@@ -29,6 +29,7 @@ extern "C" {
 #include "AutoCtrler.h"
 #include "Module_CrsfReceiver.h"
 #include "Locate_Setup.h"
+#include "Module_lora.h"
 
 // #include "usart.h"
 
@@ -53,10 +54,12 @@ typedef struct{
     int8_t last_manual_sucker = 0; //上一次手动吸盘状态
 
     int8_t last_manual_pitch = 0; //上一次手动pitch状态
+    int8_t last_manual_store_sucker = 0;
 
     int8_t pitch_switch_offset = 0; //pitch开关偏移
     int8_t extend_switch_offset = 0; //展开关偏移
     int8_t sucker_switch_offset = 0; // 吸盘开关偏移
+    int8_t store_suker_switch_offset = 0;
 
     uint8_t button_click_state = 0;
     uint8_t is_store_acting = 0; //手操作存储状态 0无动作 1取出 2存储
@@ -282,7 +285,11 @@ private:
             auto_ctrl_.start_to_autoctrl = false;
     }
 
+#if !USE_RC10_AIRJOY
     RmPocketData_t airjoy_data_; // -1 ~ 1
+#else
+    communication::RC10_AirJoy_Data_S airjoy_data_; // -1 ~ 1
+#endif
 
     Debug_Printf debug_uart = Debug_Printf(&huart8);
 
@@ -290,6 +297,8 @@ private:
     void manualControl();
     bool manual_store();
     bool manual_takeout();
+    bool manual_pickup();
+    bool manual_putdown();
     bool test();
 
     void autoControl();
@@ -302,6 +311,9 @@ private:
 
     //=======================
     //自动控制相关状态函数
+
+    void semiautoControl_1();
+    void semiautoControl_2();
 
     void auto_stillnessOne();
     void auto_stillnessTwo();
@@ -330,7 +342,10 @@ private:
 
         const float norm_deg = rotate_angle_deg;
 
-        if(h < init_data_.lock_height_) return false;
+        if (h < init_data_.lock_height_) {
+            if (pre_descent_angle_ <= 3.0f || pre_descent_angle_ >= 357.0f)
+                return false;
+        }
         if(h < safe_h - 0.01f) return (norm_deg >= 0.0f && norm_deg <= 135.0f);
         return true;
     }
@@ -351,8 +366,10 @@ private:
         const float lock_h = init_data_.lock_height_;
         const float re = init_data_.rotate_end;
 
-        if (h < lock_h)
-            return 0.0f;
+        if (h < lock_h) {
+            if (pre_descent_angle_ <= 3.0f || pre_descent_angle_ >= 357.0f)
+                return 0.0f;
+        }
 
         if (h < safe_h - 0.01f)
         {
@@ -492,8 +509,11 @@ protected:
         int cnt = 0;
     }manual_control;
 
+    float pre_descent_angle_ = 0.0f;
+
     ButtonDetector button_detector_1 = ButtonDetector(0.200f); //双击三击检测器，200ms间隔
 
+    bool calibration_seen_ = false;
 
     store_state store_state_ = store_state::idle; //存储状态机状态
 };

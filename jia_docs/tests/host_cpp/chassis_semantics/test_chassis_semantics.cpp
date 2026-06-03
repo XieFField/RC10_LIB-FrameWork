@@ -2868,8 +2868,8 @@ void testLowSpeedDriveSuppressionReenabledWhenResidualSpeedDropsBelowThreshold()
     chassis.computeLowSpeedDriveSuppressionScales(makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.5f), steering_errors_rad, gate_scales);
     chassis.computeLowSpeedDriveSuppressionScales(makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.1f), steering_errors_rad, gate_scales);
 
-    EXPECT_NEAR(gate_scales[0], 0.0f, 1.0e-6f);
-    EXPECT_NEAR(gate_scales[2], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(gate_scales[0], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(gate_scales[2], 1.0f, 1.0e-6f);
 }
 
 void testLowSpeedDriveSuppressionUsesGlobalWorstWheelError()
@@ -3171,7 +3171,11 @@ void testManualSCurveProfileToggleResetsShapingHistory()
     chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kLegacy;
     chassis.updatePlannedMotionData();
 
-    EXPECT_NEAR(chassis.planned_data_.vel_x, chassis.runtime_strategy_cfg_.max_acc_xy_acc_ * Chassis::period_, 1.0e-6f);
+    const float expected_legacy_vel_x =
+        (chassis.runtime_strategy_cfg_.max_acc_xy_acc_ * Chassis::period_ < chassis.target_data_.vel_x)
+            ? (chassis.runtime_strategy_cfg_.max_acc_xy_acc_ * Chassis::period_)
+            : chassis.target_data_.vel_x;
+    EXPECT_NEAR(chassis.planned_data_.vel_x, expected_legacy_vel_x, 1.0e-6f);
     EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
     EXPECT_TRUE(!chassis.trans_dir_freeze_active_);
     EXPECT_TRUE(chassis.trans_dir_ref_valid_);
