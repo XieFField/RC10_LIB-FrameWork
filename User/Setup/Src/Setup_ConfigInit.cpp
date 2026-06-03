@@ -24,7 +24,6 @@ Point2D arm_install_offset = {0.480f, 0.02f}; // 机械臂安装偏移，单位 
 /*==============Controller Instances===========*/
 //USB_CDC_ cdc(&hUsbDeviceHS);
 USB_CDC_ usb_1(&hUsbDeviceHS);
-JY61_IMU IMU(JY61_ADDR,&hi2c5);
 Chassis_Omni<3>::init_config chassis_initData = {
     .wheel_radius = 0.15f / 2.f,
     .max_wheel_rpm = 420,
@@ -182,6 +181,8 @@ void ALL_Setup_ConfigInit(void)
 
     CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
     crsf_rc->init();
+
+    communication::Lora_communication::GetInstance()->Init();
 
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
     set1->locate_setup_init();

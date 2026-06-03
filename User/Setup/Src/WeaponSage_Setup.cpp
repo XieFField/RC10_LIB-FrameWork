@@ -115,7 +115,7 @@ void Robot_WeaponSage_Setup::loop()
 }
 int CNT=0;
 float traverse_rate=0.0002f;
-float weapon_launch_rate=0.0002f;
+float weapon_launch_rate=0.0001f;
 float Kp_traverse=0.5f;
 
 
@@ -605,7 +605,7 @@ void Robot_WeaponSage_Setup::Judge_wrist_status()
 WeaponSage_InitData_S initData_=
 {
     .max_launchHeight_ =0.358735231f,
-    .max_clawAngle_ = 31.5f,
+    .max_clawAngle_ = 40.0f,
     .max_arm_angle_ = 135.0f,
     .max_wrist_angle_ = 360.0f,
 	.max_arm_rate_ =90.0f,
@@ -613,5 +613,5 @@ WeaponSage_InitData_S initData_=
     .wrist_gearRatio_ = 144.0f,
     .launch_Ratio_ = 0.139989366256f,
     .claw_gearRatio_  =360.0f ,
-
+    .arm_gearRatio_ = 360.0f
 };

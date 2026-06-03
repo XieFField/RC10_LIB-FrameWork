@@ -46,7 +46,6 @@ extern "C" {
 #include "Module_Position.h"
 #include "Locate_Setup.h"
 #include "Module_HWT.h"
-#include "Module_JY61.h"
 #include "Motor_GO.h"
 
 /*==============Controller===============*/

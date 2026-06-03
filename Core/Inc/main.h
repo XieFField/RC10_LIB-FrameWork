@@ -79,6 +79,10 @@ void parse_uart_data(uint8_t data);
 #define SUCKER_5_GPIO_Port GPIOG
 #define SUCKER_6_Pin GPIO_PIN_8
 #define SUCKER_6_GPIO_Port GPIOG
+#define Lora_IO2_Pin GPIO_PIN_12
+#define Lora_IO2_GPIO_Port GPIOC
+#define Lora_IO1_Pin GPIO_PIN_2
+#define Lora_IO1_GPIO_Port GPIOD
 #define SUCKER_P1_Pin GPIO_PIN_5
 #define SUCKER_P1_GPIO_Port GPIOD
 #define SUCKER_P2_Pin GPIO_PIN_6

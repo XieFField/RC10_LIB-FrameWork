@@ -9,6 +9,7 @@ void OmniChassis_Setup::Path_CB_check(void)
     else if (CB_flag.Selection_flag == true)
     {
         CB_flag.Selection_flag = false;
+        pid_dead_flag=false;
         WeaponSage_Start = true;
     }
 
@@ -19,6 +20,7 @@ void OmniChassis_Setup::Path_CB_check(void)
     else if (CB_flag.Retreat_flag == true)
     {
         CB_flag.Retreat_flag = false;
+        pid_dead_flag=false;
         WeaponSage_End = true;
     }
 }
@@ -32,6 +34,7 @@ void OmniChassis_Setup::Path_spin_check(void)
     else if (KFS_flag.MF1_flag == true)
     {
         KFS_flag.MF1_flag = false;
+        pid_dead_flag=false;
         Arm_Start = true;
         KFS_flag.MF1_finish = true;
     }
@@ -44,6 +47,7 @@ void OmniChassis_Setup::Path_spin_check(void)
     else if (KFS_flag.MF2_flag == true)
     {
         KFS_flag.MF2_flag = false;
+        pid_dead_flag=false;
         Arm_Start = true;
     }
 
@@ -209,7 +213,7 @@ void OmniChassis_Setup::loop()
                 // 获取曲线（带保护）
                 curve = path_line_.get_bezier_curve();
                 Path_CB_check();
-                if (WeaponSage_Start == false || WeaponSage_End == false)
+                if (WeaponSage_Start == false && WeaponSage_End == false)
                 {
                     planspeed = path_line_.plan(robot_pos_);
                     Path_correction();
@@ -224,12 +228,13 @@ void OmniChassis_Setup::loop()
                     speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - CB_point.Clamping_Bar_Selection_pos_).normalize();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
+                    pid_dead_flag=path_lock.get_is_in_dead_zone();
                 }
             }
             else
             {
                 float lock_err = (robot_pos_ - Path_end_point).magnitude();
-                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
+                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Path_end_point).normalize();
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
             }
@@ -281,12 +286,13 @@ void OmniChassis_Setup::loop()
                     speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
+                    pid_dead_flag=path_lock.get_is_in_dead_zone();
                 }
             }
             else
             {
                 float lock_err = (robot_pos_ - Path_end_point).magnitude();
-                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
+                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Path_end_point).normalize();
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
             }

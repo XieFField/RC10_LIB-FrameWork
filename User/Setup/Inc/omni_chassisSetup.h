@@ -47,10 +47,10 @@ typedef struct
     Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
     Speedplanner_1D_Param_Config CB = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};  // 0.8acc夹杆流程速度规划参数。
 
-    Speedplanner_1D_Param_Config start = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.8f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};  // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config line = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config start = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.8f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f};  // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config line = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
     Speedplanner_1D_Param_Config curve = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.8f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config end = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config end = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
 } PATH_PARAM;
 
 typedef struct
@@ -200,7 +200,8 @@ private:
     MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
 
     //-----------------------------------其他参数-----------------------------------------//
-
+    
+    bool pid_dead_flag=false;
     int num = 0;
 
     Point3D ladar_data_; // 定位系统输出的原始位姿数据。
@@ -266,14 +267,28 @@ public:
 
     bool GetReach_flag()
     {
+        if(pid_dead_flag==true)
+        {
+            return WeaponSage_Start;
+        }
+        else
+        {
+            return (!WeaponSage_Start);
+        }
         // 读取夹杆流程完成标志。
-        return WeaponSage_Start;
     }
 
     bool GetEnd_flag()
     {
-        // 读取夹杆流程完成标志。
-        return WeaponSage_End;
+         // 读取夹杆退后流程完成标志。
+        if(pid_dead_flag==true)
+        {
+            return WeaponSage_End;
+        }
+        else
+        {
+            return (!WeaponSage_End);
+        }
     }
 
     void ReceiveReach_flag(bool weapon_end)
@@ -285,7 +300,14 @@ public:
     bool Get_Arm_Start_flag()
     {
         // 读取机械臂触发标志。
-        return Arm_Start;
+        if(pid_dead_flag==true)
+        {
+            return Arm_Start;
+        }
+        else
+        {
+            return (!Arm_Start);
+        }
     }
 
     void Receive_Arm_End_flag(bool arm_end)
