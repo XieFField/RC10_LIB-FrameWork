@@ -14,6 +14,7 @@ float PID_Position::pid_calc(float target, float feedback)
         dt_ = dt_error_; 
         error_last_ = target - feedback; // 初始化上次误差
         feedback_last_ = feedback;
+        is_in_dead_zone = false;
     }
 
     // 对dt进行异常值处理
@@ -39,8 +40,10 @@ float PID_Position::pid_calc(float target, float feedback)
 
 
     if(fabs(error_) < params_.deadband)
+    {
+        is_in_dead_zone = true;
         error_ = 0.0f;
-
+    }
     // calc P
     P_Term = params_.kp * error_;
 
