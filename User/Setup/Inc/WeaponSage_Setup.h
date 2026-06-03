@@ -240,8 +240,8 @@ private:
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 
     
-    WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
-	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_IDLE;
+    WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_STOP;
+	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_STOP;
 	WeaponSage_Setup::auto_GRABstate_S now_state_=WeaponSage_Setup::STATE_START;
 
     WeaponSage_Setup::WeaponDock_E target_dock_ = WeaponSage_Setup::MID; // for auto_dock

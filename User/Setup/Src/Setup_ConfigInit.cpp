@@ -280,7 +280,7 @@ void CAN_Motor_Init(void)
 
     weapon_3508_anglePID.output_limit=100.0f;
     weapon_3508_speedPID.output_limit=15000.0f;
-    weapon_2006_speedPID.output_limit=4500;
+    weapon_2006_speedPID.output_limit=3000;
     weapon_2006_anglePID.output_limit=500;
     weapon_wrist_anglePID.output_limit=100.0f;
 	weapon_wrist_speedPID.output_limit=8000.0f;

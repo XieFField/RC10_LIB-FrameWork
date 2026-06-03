@@ -248,13 +248,19 @@ void Robot_WeaponSage_Setup::manualControl()
             else if(airjoy_data_.right_x > 0.5f&&ctrl_status_.wrist_rotate_enable)
             {
                 manual_ctrlForgrip_.changeTarget_state = true;
-                target_pos_.wrist_pos_+=90.0f;
+                float temp =normalize_deg_0_360(current_pos_.wrist_pos_+90.0f+45.0f);
+                float k = temp / 90.0f;
+                uint8_t round_cnt =floor(k);
+                target_pos_.wrist_pos_=round_cnt*90.0f;
                 ctrl_status_.wrist_rotate_enable=false;
             }
             else if(airjoy_data_.right_x < -0.5f&&ctrl_status_.wrist_rotate_enable)
             {
                 manual_ctrlForgrip_.changeTarget_state = true;
-                target_pos_.wrist_pos_-=90.0f;
+                 float temp =normalize_deg_0_360(current_pos_.wrist_pos_-90.0f+45.0f);
+                float k = temp / 90.0f;
+                uint8_t round_cnt =floor(k);
+                target_pos_.wrist_pos_=round_cnt*90.0f;
                 ctrl_status_.wrist_rotate_enable=false;
             }
 	
@@ -605,7 +611,7 @@ void Robot_WeaponSage_Setup::Judge_wrist_status()
 WeaponSage_InitData_S initData_=
 {
     .max_launchHeight_ =0.358735231f,
-    .max_clawAngle_ = 31.5f,
+    .max_clawAngle_ = 40.0f,
     .max_arm_angle_ = 135.0f,
     .max_wrist_angle_ = 360.0f,
 	.max_arm_rate_ =90.0f,
