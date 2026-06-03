@@ -2637,6 +2637,44 @@ void testSteerDegAndDriveSpeedSkipsZeroStopWhenDriveSpeedIsNonZero()
     EXPECT_TRUE(std::fabs(drive_motors[0].getTargetRPM()) > 1.0e-6f);
 }
 
+void testSteerDegAndDriveSpeedStillTurnsSteerWhenDriveSpeedIsZero()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
+    chassis.runtime_strategy_cfg_.xpark_steer_deadband_cfg_.enable = false;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        drive_motors[i].setRpmControlMode(VESC_RPM_CONTROL_NATIVE_ERPM);
+    }
+
+    chassis.setSteerDegAndDriveSpeed(30.0f, 0.0f);
+    chassis.setModeFlag();
+
+    EXPECT_TRUE(runHostControlCycle(chassis));
+
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kSteerAngleAndDriveSpeedMode);
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad, jia::degToRadF32(30.0f), 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.steer_angle_oa_rad[0], jia::degToRadF32(30.0f), 1.0e-6f);
+    EXPECT_NEAR(chassis.debug_mirror_.target_oa_deg[0], 30.0f, 1.0e-6f);
+    EXPECT_NEAR(steer_motors[0].getTargetTotalAngle(), 30.0f, 1.0e-4f);
+    EXPECT_NEAR(drive_motors[0].getTargetRPM(), 0.0f, 1.0e-6f);
+}
+
 void testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay()
 {
     Chassis chassis;
@@ -5337,6 +5375,7 @@ int main()
     testDriveZeroStopStillUsesBrakeWithNativeVescSpeedLoop();
     testNormalControlZeroStopUsesBrakeAfterBodyCommandDropsToZero();
     testSteerDegAndDriveSpeedSkipsZeroStopWhenDriveSpeedIsNonZero();
+    testSteerDegAndDriveSpeedStillTurnsSteerWhenDriveSpeedIsZero();
     testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay();
     testDriveZeroStopSettlesToZeroCurrentWithoutHoldingBrake();
     testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop();
