@@ -3760,7 +3760,8 @@ namespace jia
                         (xpark_error_abs_rad <= xpark_hold_entry_rad))
                     {
                         wheel.xpark_steer_hold_phase = XParkSteerHoldPhase::kSettling;
-                        wheel.xpark_steer_hold_locked_target_rad = current_corrected_local_total_rad;
+                        wheel.xpark_steer_hold_locked_target_rad =
+                            mapWheelOaTotalToCorrectedLocal(wheel, xpark_target_oa_total_rad);
                         wheel.xpark_steer_hold_settle_ms = 0U;
                         wheel.xpark_steer_hold_reacquire_ms = 0U;
                         if (xpark_hold_cfg.entry_reset_enable && (wheel.steer_motor_h != nullptr))
@@ -3792,8 +3793,10 @@ namespace jia
                         const f32 settle_target_rate_abs_rad_s = fabsf(wheel.steer_target_velocity_rad_s);
                         wheel.xpark_steer_hold_target_rate_rad_s = settle_target_rate_abs_rad_s;
 
-                        if ((settle_error_abs_rad <= xpark_hold_settle_rad) &&
-                            (settle_target_rate_abs_rad_s <= xpark_hold_settle_rate_rad_s))
+                        const bool settle_ready =
+                            (settle_error_abs_rad <= xpark_hold_settle_rad) &&
+                            (settle_target_rate_abs_rad_s <= xpark_hold_settle_rate_rad_s);
+                        if (settle_ready)
                         {
                             wheel.xpark_steer_hold_settle_ms =
                                 (wheel.xpark_steer_hold_settle_ms > (0xFFFFFFFFU - period_ms_))
@@ -3805,7 +3808,8 @@ namespace jia
                             wheel.xpark_steer_hold_settle_ms = 0U;
                         }
 
-                        if (wheel.xpark_steer_hold_settle_ms >= xpark_hold_cfg.settle_hold_ms)
+                        if (settle_ready &&
+                            (wheel.xpark_steer_hold_settle_ms >= xpark_hold_cfg.settle_hold_ms))
                         {
                             wheel.xpark_steer_hold_phase = XParkSteerHoldPhase::kLatchedZeroCurrent;
                             wheel.xpark_steer_hold_reacquire_ms = 0U;
@@ -3816,7 +3820,8 @@ namespace jia
                     {
                         command_steer_zero_current = true;
                         wheel.xpark_steer_hold_target_rate_rad_s = 0.0f;
-                        if (xpark_error_abs_rad > xpark_hold_exit_rad)
+                        const bool reacquire_ready = (xpark_error_abs_rad > xpark_hold_exit_rad);
+                        if (reacquire_ready)
                         {
                             wheel.xpark_steer_hold_reacquire_ms =
                                 (wheel.xpark_steer_hold_reacquire_ms > (0xFFFFFFFFU - period_ms_))
@@ -3828,7 +3833,8 @@ namespace jia
                             wheel.xpark_steer_hold_reacquire_ms = 0U;
                         }
 
-                        if (wheel.xpark_steer_hold_reacquire_ms >= xpark_hold_cfg.reacquire_hold_ms)
+                        if (reacquire_ready &&
+                            (wheel.xpark_steer_hold_reacquire_ms >= xpark_hold_cfg.reacquire_hold_ms))
                         {
                             wheel.xpark_steer_hold_phase = XParkSteerHoldPhase::kSettling;
                             wheel.xpark_steer_hold_locked_target_rad =

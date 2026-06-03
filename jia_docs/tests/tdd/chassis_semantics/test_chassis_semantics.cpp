@@ -3943,6 +3943,33 @@ void testXParkSteerHoldRequiresConsecutiveSettlingBeforeLatchedZeroCurrent()
     EXPECT_NEAR(harness.steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
 }
 
+void testXParkSteerHoldZeroSettleHoldStillRequiresSettleCondition()
+{
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
+    Chassis &chassis = harness.chassis;
+
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.settle_hold_ms = 0U;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.settle_angle_deg = 0.1f;
+
+    const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
+    const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
+
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kSettling);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
+
+    harness.steer_motors[0].resetLastCommandObservation();
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.05f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+}
+
 void testXParkSteerHoldLatchedZeroCurrentRejectsBoundaryJitterWithoutCommandFlap()
 {
     XParkSteerHoldHarness harness;
@@ -4038,6 +4065,41 @@ void testXParkSteerHoldRequiresSustainedExitBeforeReacquiringPositionControl()
     harness.steer_motors[0].resetLastCommandObservation();
     setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(4.0f));
     chassis.applyModuleCommands(true);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+
+    harness.steer_motors[0].resetLastCommandObservation();
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(4.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kSettling);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
+    EXPECT_NEAR(harness.steer_motors[0].getTargetTotalAngle(),
+                jia::radToDegF32(command_frame.steer_corrected_local_total_rad[0]),
+                1.0e-6f);
+}
+
+void testXParkSteerHoldZeroReacquireHoldStillRequiresExitCondition()
+{
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
+    Chassis &chassis = harness.chassis;
+
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.settle_hold_ms = 0U;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.reacquire_hold_ms = 0U;
+
+    const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
+    const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
+
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.05f));
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+
+    harness.steer_motors[0].resetLastCommandObservation();
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(2.0f));
+    chassis.applyModuleCommands(true);
+
     EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
     EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
 
