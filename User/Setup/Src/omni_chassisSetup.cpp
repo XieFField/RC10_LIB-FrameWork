@@ -376,7 +376,7 @@ void OmniChassis_Setup::loop()
 }
 
 //////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
-
+#define OPIT 0
 void OmniChassis_Setup::Path_correction(void)
 {
     float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
@@ -407,6 +407,7 @@ void OmniChassis_Setup::Path_correction(void)
 
     // ======== 动态兔子追踪 (2D Cartesian PID) ========
     // 2. 寻找前视点作为我们追踪的“虚拟兔子”
+
     Vector2D lookaheadPt; // 路径上的前视点
     if (curve.Get_Bezier_Order() == FIRST_ORDER_BEZIER)
     {
@@ -417,40 +418,57 @@ void OmniChassis_Setup::Path_correction(void)
         m_lookaheadDist = V.m_lookaheadDist_curve;
     }
 
-    tLookahead = tNearest;        // 前视点的编号，先从最近点的编号开始（比如t=0.3）
-    float accumulatedDist = 0.0f; // 累计挪了多少距离（刚开始是0）
-    float step = 0.01f;           // 每次挪的“小步子”
+    tLookahead = tNearest; // 前视点的编号，先从最近点的编号开始（比如t=0.3）
 
-    lookaheadPt = curve.Get_Point(tLookahead);
-
-    while (tLookahead < 1.0f && accumulatedDist < m_lookaheadDist)
+#if OPTI
     {
-        // 1. 往前挪一小步：t增加0.005（比如0.3→0.305）
-        float nextT = tLookahead + step;
-        // 防止挪超终点：如果nextT>1.0，就改成1.0（不能超出曲线）
-        if (nextT > 1.0f)
+        // 弧长表二分查找：利用 BezierCurve 已有的 distance_list[200]
+        // Get_Current_Len 内部做 O(1) 查表+线性插值，二分替代逐点步进
+        float current_len = curve.Get_Current_Len(tNearest);
+        float target_len  = current_len + m_lookaheadDist;
+
+        if (target_len >= curve.Get_len()) {
+            // 前视距离超出曲线总长 → 直接用终点
+            tLookahead = 1.0f;
+            lookaheadPt = curve.Get_Point(1.0f);
+        } else {
+            float lo = tNearest, hi = 1.0f;
+            for (int i = 0; i < 8; i++) {
+                float mid = (lo + hi) * 0.5f;
+                if (curve.Get_Current_Len(mid) < target_len)
+                    lo = mid;
+                else
+                    hi = mid;
+            }
+            tLookahead = hi;
+            lookaheadPt = curve.Get_Point(tLookahead);
+        }
+    }
+#else
+    {
+        // 原步进法
+        float accumulatedDist = 0.0f; // 累计挪了多少距离
+        float step = 0.01f;           // 步进
+
+        lookaheadPt = curve.Get_Point(tLookahead);
+        while (tLookahead < 1.0f && accumulatedDist < m_lookaheadDist)
         {
-            nextT = 1.0f;
+            float nextT = tLookahead + step;
+            if (nextT > 1.0f)
+                nextT = 1.0f;
+
+            Vector2D nextPt = curve.Get_Point(nextT);
+            float distStep = (nextPt - lookaheadPt).magnitude();
+            accumulatedDist += distStep;
+
+            tLookahead = nextT;
+            lookaheadPt = nextPt;
         }
 
-        // 2. 拿到这一步挪到的点的坐标（比如t=0.305对应的曲线点(5.22, 6.11)）
-        Vector2D nextPt = curve.Get_Point(nextT);
-
-        // 3. 计算这一步走了多远（比如从(5.2,6.1)到(5.22,6.11)，距离≈0.022m）
-        float distStep = (nextPt - lookaheadPt).magnitude();
-
-        // 4. 累计距离：把这一步的距离加进去（比如0+0.022=0.022m）
-        accumulatedDist += distStep;
-
-        // 5. 更新：准备下一步挪步（把当前点当起点，当前t当下一步的基础）
-        tLookahead = nextT;   // 编号更新
-        lookaheadPt = nextPt; // 起点更新为(5.22,6.11)
+        if (tLookahead >= 1.0f)
+            lookaheadPt = curve.Get_Point(1.0f);
     }
-
-    if (tLookahead >= 1.0f)
-    {
-        lookaheadPt = curve.Get_Point(1.0f); // 拿曲线终点坐标
-    }
+#endif
 
     // 3. 在绝对世界坐标系下，独立计算X轴和Y轴的纠偏向速度
     // 将不再计算切法向，直接基于XY差值PID

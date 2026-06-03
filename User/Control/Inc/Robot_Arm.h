@@ -290,44 +290,44 @@ private:
 protected:
 /*================================================================*/
     /*关节位置->电机角度*/
-    float launchHeight_to_MotorTotalAngle(float height)
+    constexpr inline float launchHeight_to_MotorTotalAngle(float height)
     {
         return sign_reversed_.sign_launch_ * height / init_data_.launch_Ratio_ * 360.0f;
     }
 
-    float stretchLength_to_MotorTotalAngle(float length)
+    constexpr inline float stretchLength_to_MotorTotalAngle(float length)
     {
         return sign_reversed_.sign_stretch_ * length / init_data_.stretch_Ratio_ * 360.0f;
     }
 
-    float rotateAngle_to_MotorTotalAngle(float angle)
+    constexpr inline float rotateAngle_to_MotorTotalAngle(float angle)
     {
         return sign_reversed_.sign_rotate_ * angle / init_data_.rotate_gearRatio_ * 360.0f;
     }
 
-    float pitchAngle_to_MotorTotalAngle(float angle)
+    constexpr inline float pitchAngle_to_MotorTotalAngle(float angle)
     {
         return sign_reversed_.sign_pitch_ * angle / init_data_.pitch_gearRatio_ * 360.0f;
     }
     
 /*=================================================================*/
     /*电机角度->关节位置*/
-    float MotorTotalAngle_to_launchHeight(float motor_angle)
+    constexpr inline float MotorTotalAngle_to_launchHeight(float motor_angle)
     {
         return sign_reversed_.sign_launch_ * motor_angle * init_data_.launch_Ratio_ / 360.0f;
     }
 
-    float MotorTotalAngle_to_stretchLength(float motor_angle)
+    constexpr inline float MotorTotalAngle_to_stretchLength(float motor_angle)
     {
         return sign_reversed_.sign_stretch_ * motor_angle * init_data_.stretch_Ratio_ / 360.0f;
     }
 
-    float MotorTotalAngle_to_rotateAngle(float motor_angle)
+    constexpr inline float MotorTotalAngle_to_rotateAngle(float motor_angle)
     {
         return sign_reversed_.sign_rotate_ * motor_angle * init_data_.rotate_gearRatio_ / 360.0f;
     }
 
-    float MotorTotalAngle_to_pitchAngle(float motor_angle)
+    constexpr inline float MotorTotalAngle_to_pitchAngle(float motor_angle)
     {
         return sign_reversed_.sign_pitch_ * motor_angle * init_data_.pitch_gearRatio_ / 360.0f;
     }
@@ -373,7 +373,7 @@ private:
     };
 
     
-    float caculate_ramp_target(float current, float target, Fliter_Ramp_S &ramp)
+    constexpr inline float caculate_ramp_target(float current, float target, Fliter_Ramp_S &ramp)
     {
         float diff = target - current;
         
