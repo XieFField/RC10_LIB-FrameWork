@@ -67,10 +67,6 @@ extern "C" {
 #endif
 
 
-#include "m3508_steer_debug.h"
-#include "chassis_swerve_demo.h"
-#include "chassis_swerve_task_demo.h"
-
 class test:public RtosTask {
 public:
     test():RtosTask("test", 1) {}

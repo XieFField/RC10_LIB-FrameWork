@@ -331,7 +331,7 @@ namespace jia
 
             const osThreadAttr_t thread_attributes = {
                 .name = "chassis_thread",
-                .stack_size = 500 * 4,
+                .stack_size = 1024 * 4,
                 .priority = (osPriority_t)(osPriorityAboveNormal7),
             };
 
