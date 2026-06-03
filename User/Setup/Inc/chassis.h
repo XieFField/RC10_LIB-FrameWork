@@ -908,8 +908,8 @@ namespace jia
                     f32 exit_angle_deg = 5.0f;            // [RW] X-Park 舵向误差退出 hold 的角误差阈值（deg）。应大于 entry 形成滞回。
                     f32 settle_angle_deg = 1.0f;          // [RW] X-Park 舵向 hold 判稳角误差阈值（deg）。
                     f32 settle_target_rate_deg_s = 1.0f;  // [RW] X-Park 舵向 hold 判稳目标角速度阈值（deg/s）。
-                    u32 settle_hold_ms = 0U;              // [RW] 满足判稳条件后，进入零电流锁定前需持续保持的时长（ms）。
-                    u32 reacquire_hold_ms = 0U;           // [RW] 零电流锁定退出后，重新允许锁定前的等待时长（ms）。
+                    u32 settle_hold_ms = 500U;              // [RW] 满足判稳条件后，进入零电流锁定前需持续保持的时长（ms）。
+                    u32 reacquire_hold_ms = 500U;           // [RW] 零电流锁定退出后，重新允许锁定前的等待时长（ms）。
                     bool entry_reset_enable = true;       // [RW] 进入 hold Settling 阶段时是否执行一次舵向速度环历史清理。
                 } xpark_steer_hold_cfg_;
 
