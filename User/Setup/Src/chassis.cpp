@@ -1459,6 +1459,8 @@ namespace jia
                 return DebugMode::kBodyLockNowWithNoOmegaZ;
             case 8:
                 return DebugMode::kWorldLockNowWithNoOmegaZ;
+            case 9:
+                return DebugMode::kSteerDegAndDriveSpeed;
             case 20:
                 return DebugMode::kTorqueFree;
             case 21:
@@ -1544,6 +1546,14 @@ namespace jia
             case DebugMode::kWorldLockNowWithNoOmegaZ:
                 setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
                 break;
+            case DebugMode::kSteerDegAndDriveSpeed:
+            {
+                const f32 steer_angle_deg =
+                    90.0f + clampValue(airjoy_data_.left_x, -1.0f, 1.0f) * debug_control_.injection.steer_deg_limit;
+                const f32 drive_speed_m_s = clampValue(airjoy_data_.right_x, -1.0f, 1.0f) * debug_control_.injection.drive_speed_m_s_limit;
+                setSteerDegAndDriveSpeed(steer_angle_deg, drive_speed_m_s);
+                break;
+            }
             case DebugMode::kAlignForward:
             case DebugMode::kHomingObserve:
             case DebugMode::kSingleWheelIsolated:
@@ -3537,8 +3547,7 @@ namespace jia
                     (input_target_data_.mode == Mode::kWorldSpeedMode) ||
                     (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZMode) ||
                     (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode) ||
-                    (input_target_data_.mode == Mode::kWorldSpeedLockToRotZMode) ||
-                    (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
+                    (input_target_data_.mode == Mode::kWorldSpeedLockToRotZMode);
                 // 正常底盘链路下优先依据整车目标是否已静止来决定是否进入 zero-stop，
                 // 避免速度规划尾巴还没完全衰减时，把刹车收尾整体拖后。
                 f32 max_frame_command_speed_m_s = 0.0f;

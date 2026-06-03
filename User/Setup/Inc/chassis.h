@@ -531,6 +531,7 @@ namespace jia
                 kWorldLockTo = 6,
                 kBodyLockNowWithNoOmegaZ = 7,
                 kWorldLockNowWithNoOmegaZ = 8,
+                kSteerDegAndDriveSpeed = 9,
                 kAlignForward = 21,
                 kHomingObserve = 22,
                 kSingleWheelIsolated = 30,
@@ -994,7 +995,7 @@ namespace jia
             // =====================================================================
             // 调试参数（通过全局 chassis 对象在调试器内直接改值）[RW]
             // 说明：这组参数只影响调试链路。正常控制不读取它们，只有切到相应 debug mode 时才会生效。
-            // 速查：0~8 = 底盘输入接管/信号注入类模式；20 = 已退役（安全回退）；21 = 四轮朝前；22 = 回零观察；30 = 单轮独立直控。
+            // 速查：0~9 = 底盘输入接管/信号注入类模式（9 = 定角驱动）；20 = 已退役（安全回退）；21 = 四轮朝前；22 = 回零观察；30 = 单轮独立直控。
             // 手柄平移坐标约定（对外/调试接管语义）：前推朝当前 2/3 面，左推朝当前 3/4 面；
             // 映射到内部 body 命令时使用 -left_x -> vel_x、-left_y -> vel_y。
             // =====================================================================
@@ -1002,8 +1003,8 @@ namespace jia
             {
                 struct Common
                 {
-                    bool enable = true;                                            // [RW] 调试总开关。
-                    u8 mode_raw = 1;                                              // [RW] 调试模式号。
+                    bool enable = true;                                           // [RW] 调试总开关。
+                    u8 mode_raw = 1;                                               // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
                     u8 observe_wheel_index = 0U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。
@@ -1016,6 +1017,8 @@ namespace jia
                     f32 omega_z_sine_amplitude = 0.0f;    // [RW] omega_z 正弦注入幅值。
                     f32 omega_z_sine_frequency_hz = 0.1f; // [RW] omega_z 正弦注入频率（Hz）。
                     f32 omega_z_sine_offset = 0.0f;       // [RW] omega_z 正弦注入偏置。
+                    f32 steer_deg_limit = 180.0f;
+                    f32 drive_speed_m_s_limit = 1.0f;
                 } injection{};
 
                 struct SingleWheel
@@ -1580,6 +1583,7 @@ namespace jia
             case 6:
             case 7:
             case 8:
+            case 9:
             default:
                 return DebugControlRoute::kTargetInjection;
             }

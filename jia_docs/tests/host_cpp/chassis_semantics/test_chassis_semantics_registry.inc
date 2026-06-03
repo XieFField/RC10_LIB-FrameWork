@@ -49,6 +49,7 @@
     testDebugOmegaZInjectionModeStepOverridesManualOmegaInput();
     testDebugOmegaZInjectionModeSineOverridesManualOmegaInput();
     testDebugOmegaZInjectionDoesNotAffectLockToTarget();
+    testDebugSteerDegAndDriveSpeedModeMapsLeftXAndRightXToInterface();
     testSuppressedDriveDoesNotAccumulateHiddenAccelState();
     testDriveReleaseResumesFromDeliveredSpeedNotVirtualSpeed();
     testDriveReleaseHasNoVelocityJumpAfterZeroHold();
@@ -57,6 +58,8 @@
     testDriveZeroStopUsesBrakeWhenResidualSpeedIsStillHigh();
     testDriveZeroStopStillUsesBrakeWithNativeVescSpeedLoop();
     testNormalControlZeroStopUsesBrakeAfterBodyCommandDropsToZero();
+    testSteerDegAndDriveSpeedSkipsZeroStopWhenDriveSpeedIsNonZero();
+    testSteerDegAndDriveSpeedStillTurnsSteerWhenDriveSpeedIsZero();
     testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay();
     testDriveZeroStopSettlesToZeroCurrentWithoutHoldingBrake();
     testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop();
@@ -88,6 +91,7 @@
     testManualSCurveProfileRapidReverseBleedsPositiveTrendBeforeBuildingNegativeTrend();
     testDebugBodySpeedOmegaTargetFlipsSignImmediatelyWithRightStickDirection();
     testDebugBodySpeedModeCanEnterZeroStopBrakeAndExposeGateState();
+    testDebugSteerDegAndDriveSpeedModeSkipsZeroStopWhenSpeedIsNonZero();
     testDebugBodySpeedOmegaRapidReverseUnderSCurveKeepsOldSignForFirstPlannerStep();
     testDebugBodySpeedOmegaRapidReverseEventuallyCrossesNegativeAfterEnoughCycles();
     testJerkProfileRapidReverseEventuallyCrossesZeroAndBuildsOppositeSign();
