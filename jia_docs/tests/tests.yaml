@@ -1,0 +1,221 @@
+version: 1
+suites:
+  - id: host_cpp.chassis_semantics.main
+    kind: host_cpp
+    status: active
+    default_level: smoke
+    path: jia_docs/tests/host_cpp/chassis_semantics
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
+    aliases:
+      - jia_docs/tests/tdd/chassis_semantics/run_test.ps1
+    purpose: 主底盘语义宿主回归入口，串联 chassis_semantics 主测试与 app_utils_backend
+    expected_result: pass
+  - id: host_cpp.chassis_semantics.pid_reconnect
+    kind: host_cpp
+    status: active
+    default_level: smoke
+    path: jia_docs/tests/host_cpp/chassis_semantics
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_pid_reconnect.ps1
+    aliases:
+      - jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
+    purpose: steer PID reconnect 专项宿主回归
+    expected_result: pass
+  - id: host_cpp.chassis_semantics.app_utils_backend
+    kind: host_cpp
+    status: active
+    default_level: extended
+    path: jia_docs/tests/host_cpp/chassis_semantics
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_app_utils_backend.ps1
+    aliases:
+      - jia_docs/tests/tdd/chassis_semantics/run_app_utils_backend_test.ps1
+    purpose: APP_Utils backend 双后端宿主回归
+    expected_result: pass
+  - id: host_cpp.chassis_semantics.app_utils_math
+    kind: host_cpp
+    status: active
+    default_level: extended
+    path: jia_docs/tests/host_cpp/chassis_semantics
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_app_utils_math.ps1
+    aliases:
+      - jia_docs/tests/tdd/chassis_semantics/run_app_utils_math_test.ps1
+    purpose: APP_Utils math 双后端专项宿主回归
+    expected_result: pass
+  - id: host_cpp.vesc_brake
+    kind: host_cpp
+    status: active
+    default_level: smoke
+    path: jia_docs/tests/host_cpp/vesc_brake
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
+    aliases:
+      - jia_docs/tests/legacy_ai_tests/vesc_brake/run_test.ps1
+    purpose: VESC 本地 PID 速度环与刹车相关宿主回归
+    expected_result: pass
+  - id: host_cpp.swerve_core
+    kind: host_cpp
+    status: active
+    default_level: extended
+    path: jia_docs/tests/host_cpp/swerve_core
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/swerve_core/run_test.ps1
+    aliases:
+      - jia_docs/tests/legacy_ai_tests/swerve_core/run_test.ps1
+    purpose: Module_ChassisSwerve 核心历史宿主回归
+    expected_result: pass
+  - id: python_semantics.swerve_port.lock_now_homing_gate
+    kind: python_semantics
+    status: active
+    default_level: active
+    path: jia_docs/tests/python_semantics/swerve_port
+    command: python jia_docs/tests/python_semantics/swerve_port/lock_now_homing_gate_regression.py
+    aliases:
+      - jia_docs/tests/ai2_tests/swerve_port/lock_now_homing_gate_regression.py
+    purpose: 聚合式四舵轮端口语义回归
+    expected_result: pass
+  - id: python_semantics.swerve_port.homing_debug
+    kind: python_semantics
+    status: active
+    default_level: extended
+    path: jia_docs/tests/python_semantics/swerve_port
+    command: python jia_docs/tests/python_semantics/swerve_port/four_steer_debug_homing_regression.py --mode green
+    aliases:
+      - jia_docs/tests/ai2_tests/swerve_port/four_steer_debug_homing_regression.py
+    purpose: 四舵轮 debug/homing 附加 green 回归
+    expected_result: pass
+  - id: python_semantics.lock_now_rot_z.green
+    kind: python_semantics
+    status: active
+    default_level: extended
+    path: jia_docs/tests/python_semantics/lock_now_rot_z
+    command: python jia_docs/tests/python_semantics/lock_now_rot_z/lock_now_rot_z_regression.py --mode green
+    aliases:
+      - jia_docs/tests/ai2_tests/lock_now_rot_z/lock_now_rot_z_regression.py
+    purpose: LockNowRotZ green 回归
+    expected_result: pass
+  - id: python_semantics.lock_now_rot_z.red
+    kind: python_semantics
+    status: active
+    default_level: manual
+    path: jia_docs/tests/python_semantics/lock_now_rot_z
+    command: python jia_docs/tests/python_semantics/lock_now_rot_z/lock_now_rot_z_regression.py --mode red
+    aliases: []
+    purpose: LockNowRotZ 缺口 red 证据 harness
+    expected_result: xfail
+  - id: python_semantics.homing_state.green
+    kind: python_semantics
+    status: active
+    default_level: extended
+    path: jia_docs/tests/python_semantics/homing_state
+    command: python jia_docs/tests/python_semantics/homing_state/update_homing_state_regression.py --mode green
+    aliases:
+      - jia_docs/tests/ai2_tests/homing_state/update_homing_state_regression.py
+    purpose: updateHomingState 外部状态机 green 回归
+    expected_result: pass
+  - id: python_semantics.time_stamp_us64
+    kind: python_semantics
+    status: active
+    default_level: extended
+    path: jia_docs/tests/python_semantics/time_stamp_us64
+    command: python jia_docs/tests/python_semantics/time_stamp_us64/time_stamp_us64_regression.py
+    aliases:
+      - jia_docs/tests/ai2_tests/time_stamp_us64/time_stamp_us64_regression.py
+    purpose: BSP_RtosTimeStampUs64 接口与换算语义回归
+    expected_result: pass
+  - id: historical.chassis_mode_fsm
+    kind: historical
+    status: historical
+    default_level: historical
+    path: jia_docs/tests/historical/chassis_mode_fsm
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/chassis_mode_fsm/run_test.ps1
+    aliases:
+      - jia_docs/tests/legacy_ai_tests/chassis_mode_fsm/run_test.ps1
+    purpose: chassis mode 状态机历史静态回归
+    expected_result: pass
+  - id: historical.chassis_module
+    kind: historical
+    status: historical
+    default_level: historical
+    path: jia_docs/tests/historical/chassis_module
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/chassis_module/run_test.ps1
+    aliases:
+      - jia_docs/tests/legacy_ai_tests/chassis_module/run_test.ps1
+    purpose: chassis module 历史编译回归
+    expected_result: pass
+  - id: historical.four_steer_setup_static
+    kind: historical
+    status: historical
+    default_level: historical
+    path: jia_docs/tests/historical/four_steer_setup_static
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/four_steer_setup_static/run_test.ps1
+    aliases:
+      - jia_docs/tests/legacy_ai_tests/four_steer_setup_static/run_test.ps1
+    purpose: four steer setup 静态结构回归
+    expected_result: pass
+  - id: historical.four_swerve_path
+    kind: historical
+    status: historical
+    default_level: historical
+    path: jia_docs/tests/historical/four_swerve_path
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/four_swerve_path/run_test.ps1
+    aliases:
+      - jia_docs/tests/legacy_ai_tests/four_swerve_path/run_test.ps1
+    purpose: four swerve path 静态断言
+    expected_result: pass
+  - id: historical.newrobo_merge_static
+    kind: historical
+    status: historical
+    default_level: historical
+    path: jia_docs/tests/historical/newrobo_merge_static
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/newrobo_merge_static/run_test.ps1
+    aliases:
+      - jia_docs/tests/legacy_ai_tests/newrobo_merge_static/run_test.ps1
+    purpose: NewRobo 合并前静态行为保护基线
+    expected_result: pass
+  - id: historical.omni_setup_static
+    kind: historical
+    status: historical
+    default_level: historical
+    path: jia_docs/tests/historical/omni_setup_static
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/omni_setup_static/run_test.ps1
+    aliases:
+      - jia_docs/tests/legacy_ai_tests/omni_setup_static/run_test.ps1
+    purpose: omni setup 静态回归
+    expected_result: pass
+  - id: historical.protocol_merge_static
+    kind: historical
+    status: historical
+    default_level: historical
+    path: jia_docs/tests/historical/protocol_merge_static
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/protocol_merge_static/run_test.ps1
+    aliases:
+      - jia_docs/tests/legacy_ai_tests/protocol_merge_static/run_test.ps1
+    purpose: 协议 merge 静态回归
+    expected_result: pass
+  - id: historical.serial1_protocol_host
+    kind: historical
+    status: historical
+    default_level: historical
+    path: jia_docs/tests/historical/serial1_protocol_host
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/serial1_protocol_host/run_test.ps1
+    aliases:
+      - jia_docs/tests/legacy_ai_tests/serial1_protocol_host/run_test.ps1
+    purpose: Serial1 host 历史协议回归
+    expected_result: pass
+  - id: historical.time_services
+    kind: historical
+    status: historical
+    default_level: historical
+    path: jia_docs/tests/historical/time_services
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/time_services/run_test.ps1
+    aliases:
+      - jia_docs/tests/legacy_ai_tests/time_services/run_test.ps1
+    purpose: time services 历史编译回归
+    expected_result: pass
+  - id: historical.tri_omni_kinematics
+    kind: historical
+    status: historical
+    default_level: historical
+    path: jia_docs/tests/historical/tri_omni_kinematics
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/tri_omni_kinematics/run_test.ps1
+    aliases:
+      - jia_docs/tests/legacy_ai_tests/tri_omni_kinematics/run_test.ps1
+    purpose: tri-omni 运动学历史回归
+    expected_result: pass

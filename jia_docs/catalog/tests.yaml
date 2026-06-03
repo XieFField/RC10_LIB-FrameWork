@@ -1,137 +1,155 @@
 groups:
-  - id: ai2_tests
-    path: jia_docs/tests/ai2_tests
-    role: current_ai_regression
-    description: 当前主线 AI 语义回归与外部行为 harness 集合
+  - id: host_cpp
+    path: jia_docs/tests/host_cpp
+    role: current_host_tests
+    description: 主机侧 C++ 测试集合，统一由 `jia_docs/tests/run_tests.ps1` 入口调度
     recommended_entrypoints:
-      - jia_docs/tests/ai2_tests/swerve_port/lock_now_homing_gate_regression.py
-      - jia_docs/tests/ai2_tests/lock_now_rot_z/lock_now_rot_z_regression.py
+      - jia_docs/tests/run_tests.ps1
+      - jia_docs/tests/host_cpp/chassis_semantics/run_test.ps1
     suites:
-      - id: swerve_port
-        path: jia_docs/tests/ai2_tests/swerve_port
+      - id: chassis_semantics
+        path: jia_docs/tests/host_cpp/chassis_semantics
         status: active
         primary: true
         entrypoints:
-          - path: jia_docs/tests/ai2_tests/swerve_port/lock_now_homing_gate_regression.py
+          - path: jia_docs/tests/run_tests.ps1
+            kind: powershell
+            purpose: 主统一入口，按默认顺序调度主机测试与兼容包装脚本
+            recommended: true
+          - path: jia_docs/tests/host_cpp/chassis_semantics/run_test.ps1
+            kind: powershell
+            purpose: chassis_semantics 兼容入口
+            recommended: true
+      - id: vesc_brake
+        path: jia_docs/tests/host_cpp/vesc_brake
+        status: active
+        primary: false
+        entrypoints:
+          - path: jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
+            kind: powershell
+            purpose: VESC 刹车语义回归兼容入口
+            recommended: true
+      - id: swerve_core
+        path: jia_docs/tests/host_cpp/swerve_core
+        status: active
+        primary: false
+        entrypoints:
+          - path: jia_docs/tests/host_cpp/swerve_core/run_test.ps1
+            kind: powershell
+            purpose: SwerveController 核心语义回归兼容入口
+            recommended: true
+  - id: python_semantics
+    path: jia_docs/tests/python_semantics
+    role: current_python_tests
+    description: Python 语义回归集合，由原 `ai2_tests` 迁移而来
+    recommended_entrypoints:
+      - jia_docs/tests/python_semantics/swerve_port/lock_now_homing_gate_regression.py
+      - jia_docs/tests/python_semantics/lock_now_rot_z/lock_now_rot_z_regression.py
+    suites:
+      - id: swerve_port
+        path: jia_docs/tests/python_semantics/swerve_port
+        status: active
+        primary: true
+        entrypoints:
+          - path: jia_docs/tests/python_semantics/swerve_port/lock_now_homing_gate_regression.py
             kind: python
             purpose: 聚合式四舵轮端口语义回归，覆盖 LockNowRotZ、homing、flip、DriveGate、StopSteerGuard
             recommended: true
-          - path: jia_docs/tests/ai2_tests/swerve_port/four_steer_debug_homing_regression.py
+          - path: jia_docs/tests/python_semantics/swerve_port/four_steer_debug_homing_regression.py
             kind: python
             purpose: 四舵轮 debug/homing 附加回归
             recommended: false
       - id: lock_now_rot_z
-        path: jia_docs/tests/ai2_tests/lock_now_rot_z
+        path: jia_docs/tests/python_semantics/lock_now_rot_z
         status: active
         primary: false
         entrypoints:
-          - path: jia_docs/tests/ai2_tests/lock_now_rot_z/lock_now_rot_z_regression.py
+          - path: jia_docs/tests/python_semantics/lock_now_rot_z/lock_now_rot_z_regression.py
             kind: python
             purpose: LockNowRotZ 缺陷 red/green 回归
             recommended: true
       - id: homing_state
-        path: jia_docs/tests/ai2_tests/homing_state
+        path: jia_docs/tests/python_semantics/homing_state
         status: active
         primary: false
         entrypoints:
-          - path: jia_docs/tests/ai2_tests/homing_state/update_homing_state_regression.py
+          - path: jia_docs/tests/python_semantics/homing_state/update_homing_state_regression.py
             kind: python
             purpose: updateHomingState 外部状态机回归
             recommended: false
       - id: time_stamp_us64
-        path: jia_docs/tests/ai2_tests/time_stamp_us64
+        path: jia_docs/tests/python_semantics/time_stamp_us64
         status: active
         primary: false
         entrypoints:
-          - path: jia_docs/tests/ai2_tests/time_stamp_us64/time_stamp_us64_regression.py
+          - path: jia_docs/tests/python_semantics/time_stamp_us64/time_stamp_us64_regression.py
             kind: python
             purpose: BSP_RtosTimeStampUs64 接口与换算语义回归
             recommended: false
-  - id: tdd
-    path: jia_docs/tests/tdd
-    role: current_host_tdd
-    description: 当前主维护的宿主侧编译与 TDD 套件
-    recommended_entrypoints:
-      - jia_docs/tests/tdd/chassis_semantics/run_test.ps1
-      - jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
-    suites:
-      - id: chassis_semantics
-        path: jia_docs/tests/tdd/chassis_semantics
-        status: active
-        primary: true
-        entrypoints:
-          - path: jia_docs/tests/tdd/chassis_semantics/run_test.ps1
-            kind: powershell
-            purpose: 主入口；编译并执行 test_chassis_semantics，再串 app_utils_backend 测试
-            recommended: true
-          - path: jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
-            kind: powershell
-            purpose: steer PID reconnect 专项测试
-            recommended: true
-          - path: jia_docs/tests/tdd/chassis_semantics/run_app_utils_backend_test.ps1
-            kind: powershell
-            purpose: APP_Utils backend 双后端测试
-            recommended: false
-          - path: jia_docs/tests/tdd/chassis_semantics/run_app_utils_math_test.ps1
-            kind: powershell
-            purpose: APP_Utils math 双后端专项测试
-            recommended: false
-        notes:
-          - run_test.ps1 在最新 merge handoff 中仍记录 18 个 baseline 失败
-  - id: legacy_ai_tests
-    path: jia_docs/tests/legacy_ai_tests
+  - id: historical
+    path: jia_docs/tests/historical
     role: legacy_regression
-    description: 历史回归保留区，用于行为对照与局部回归
+    description: 历史保留区，收纳不再默认执行但仍可作为兼容或对照的旧套件
     recommended_entrypoints:
-      - jia_docs/tests/legacy_ai_tests/swerve_core/run_test.ps1
-      - jia_docs/tests/legacy_ai_tests/vesc_brake/run_test.ps1
+      - jia_docs/tests/historical/swerve_core/run_test.ps1
+      - jia_docs/tests/historical/vesc_brake/run_test.ps1
     suites:
       - id: swerve_core
-        path: jia_docs/tests/legacy_ai_tests/swerve_core
+        path: jia_docs/tests/historical/swerve_core
         status: legacy
         primary: true
         entrypoints:
-          - path: jia_docs/tests/legacy_ai_tests/swerve_core/run_test.ps1
+          - path: jia_docs/tests/historical/swerve_core/run_test.ps1
             kind: powershell
             purpose: Module_ChassisSwerve 核心历史回归
             recommended: true
       - id: vesc_brake
-        path: jia_docs/tests/legacy_ai_tests/vesc_brake
+        path: jia_docs/tests/historical/vesc_brake
         status: legacy
         primary: false
         entrypoints:
-          - path: jia_docs/tests/legacy_ai_tests/vesc_brake/run_test.ps1
+          - path: jia_docs/tests/historical/vesc_brake/run_test.ps1
             kind: powershell
             purpose: VESC 本地 PID 速度环与刹车相关历史回归
             recommended: true
       - id: other_legacy
-        path: jia_docs/tests/legacy_ai_tests
+        path: jia_docs/tests/historical
         status: legacy
         primary: false
         entrypoints:
-          - path: jia_docs/tests/legacy_ai_tests/chassis_mode_fsm/run_test.ps1
+          - path: jia_docs/tests/historical/chassis_mode_fsm/run_test.ps1
             kind: powershell
             purpose: chassis mode 状态机静态回归
-          - path: jia_docs/tests/legacy_ai_tests/chassis_module/run_test.ps1
+          - path: jia_docs/tests/historical/chassis_module/run_test.ps1
             kind: powershell
             purpose: chassis module 历史编译回归
-          - path: jia_docs/tests/legacy_ai_tests/four_steer_setup_static/run_test.ps1
+          - path: jia_docs/tests/historical/four_steer_setup_static/run_test.ps1
             kind: powershell
             purpose: four steer setup 静态结构回归
-          - path: jia_docs/tests/legacy_ai_tests/four_swerve_path/run_test.ps1
+          - path: jia_docs/tests/historical/four_swerve_path/run_test.ps1
             kind: powershell
             purpose: four swerve path 静态断言
-          - path: jia_docs/tests/legacy_ai_tests/omni_setup_static/run_test.ps1
+          - path: jia_docs/tests/historical/newrobo_merge_static/run_test.ps1
+            kind: powershell
+            purpose: newrobo merge 静态回归
+          - path: jia_docs/tests/historical/omni_setup_static/run_test.ps1
             kind: powershell
             purpose: omni setup 静态回归
-          - path: jia_docs/tests/legacy_ai_tests/time_services/run_test.ps1
+          - path: jia_docs/tests/historical/protocol_merge_static/run_test.ps1
+            kind: powershell
+            purpose: protocol merge 静态回归
+          - path: jia_docs/tests/historical/serial1_protocol_host/run_test.ps1
+            kind: powershell
+            purpose: serial1 protocol host 历史主机回归
+          - path: jia_docs/tests/historical/time_services/run_test.ps1
             kind: powershell
             purpose: time services 历史编译回归
-          - path: jia_docs/tests/legacy_ai_tests/tri_omni_kinematics/run_test.ps1
+          - path: jia_docs/tests/historical/tri_omni_kinematics/run_test.ps1
             kind: powershell
             purpose: tri-omni 运动学历史回归
 recommended_execution_order:
-  - jia_docs/tests/tdd/chassis_semantics/run_test.ps1
-  - jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
-legacy_focus_entrypoint: jia_docs/tests/legacy_ai_tests/vesc_brake/run_test.ps1
-ai_regression_focus_entrypoint: jia_docs/tests/ai2_tests/swerve_port/lock_now_homing_gate_regression.py
+  - jia_docs/tests/run_tests.ps1
+  - jia_docs/tests/host_cpp/chassis_semantics/run_test.ps1
+  - jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
+legacy_focus_entrypoint: jia_docs/tests/historical/vesc_brake/run_test.ps1
+ai_regression_focus_entrypoint: jia_docs/tests/python_semantics/swerve_port/lock_now_homing_gate_regression.py
