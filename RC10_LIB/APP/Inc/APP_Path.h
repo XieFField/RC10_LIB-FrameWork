@@ -397,11 +397,13 @@ public:
         params_[bezier_curve_num] = params;
         bezier_curve_list[bezier_curve_num].Bezier_Update(point_last_, point_);
         bezier_curve_num++;
+        
         index_ = 0;
         params_[index_].targetPos = (bezier_curve_list[index_].Get_len() - params_[index_].startPos);
         params_[index_].startPos = 0.0f; // 设置起始位置
         sp_.param_reset(params_[index_]);
         m_phase = ACCEL_PHASE; // 初始化阶段为加速阶段
+        end_point=point_;
         return true;
     }
 
@@ -512,9 +514,15 @@ public:
         }
         return bezier_curve_list[index_];
     }
+    
     Vector2D Get_Tangent_Vector()
     {
         return v_tangent_;
+    }
+    
+    Vector2D Get_End_Point()
+    {
+        return end_point;
     }
 
 protected:
@@ -535,6 +543,7 @@ protected:
 
     uint8_t bezier_curve_num = 0; // 总曲线数量
 
+    Vector2D end_point = Vector2D(0.0f, 0.0f);
 private:
     /*---------------------------------状态-------------------------------------*/
     float err_end = 0.0f;

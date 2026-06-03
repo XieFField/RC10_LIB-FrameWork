@@ -125,6 +125,9 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
        path_line_.Add_Point(Clamping_Bar_Selection_pos_, CB_Selection_control_point_,path_param_curve_);
        path_line_.Add_Point(Clamping_Bar_Retreat_pos_, path_param_end_);
        path_line_.Add_End_Point(Clamping_Bar_Retreat_pos_, path_param_end_);
+    
+    
+    Path_end_point=path_line_.Get_End_Point();
 }
 
 uint32_t chassisstackHighWaterMark = 0;
@@ -228,43 +231,37 @@ void OmniChassis_Setup::loop()
                     target_chassis_twist_.vy = speed.y;
                 }
                 else
-                {
-//                    float lock_err = (robot_pos_ - Clamping_Bar_Selection_pos_).magnitude();
-//                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Clamping_Bar_Selection_pos_).normalize();
-                    
+                {                
                     float lock_err = (robot_pos_ - Clamping_Bar_Selection_pos_).magnitude();
                     speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Clamping_Bar_Selection_pos_).normalize();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
                 }
             }
-//            else
-//            {
-////                    float lock_err = (robot_pos_ - Clamping_Bar_Retreat_pos_).magnitude();
-////                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Clamping_Bar_Retreat_pos_).normalize();
+            else
+            {
+                float lock_err = (robot_pos_ - Path_end_point).magnitude();
+                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
+                target_chassis_twist_.vx = speed.x;
+                target_chassis_twist_.vy = speed.y;
+            }
+//                       else
+//                       {
+//                           // 路径结束：复位状态并清空速度命令。
+//                           flag = 0;
+//                           flag_run = 0;
+//                           flag_reset();
 
-//                float lock_err = (robot_pos_ - test_point).magnitude();
-//                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
-//                target_chassis_twist_.vx = speed.x;
-//                target_chassis_twist_.vy = speed.y;
-//            }
-                       else
-                       {
-                           // 路径结束：复位状态并清空速度命令。
-                           flag = 0;
-                           flag_run = 0;
-                           flag_reset();
+//                           speed = {0.0f, 0.0f};
+//                           planspeed = {0.0f, 0.0f};
+//                           target_chassis_twist_ = {0.0f, 0.0f};
 
-                           speed = {0.0f, 0.0f};
-                           planspeed = {0.0f, 0.0f};
-                           target_chassis_twist_ = {0.0f, 0.0f};
-
-                           path_line_.plan_reset();
-                           path_line_.Reset();
-            #if FF_V
-                           ResetAutoControlStates();
-            #endif
-                       }
+//                           path_line_.plan_reset();
+//                           path_line_.Reset();
+//            #if FF_V
+//                           ResetAutoControlStates();
+//            #endif
+//                       }
         }
         else
         {
@@ -325,21 +322,28 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-                // 路径结束：复位状态并清空速度命令。
-                flag = 0;
-                flag_run = 0;
-                flag_reset();
-
-                speed = {0.0f, 0.0f};
-                planspeed = {0.0f, 0.0f};
-                target_chassis_twist_ = {0.0f, 0.0f};
-
-                path_line_.plan_reset();
-                path_line_.Reset();
-#if FF_V
-                ResetAutoControlStates();
-#endif
+                float lock_err = (robot_pos_ - Path_end_point).magnitude();
+                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - test_point).normalize();
+                target_chassis_twist_.vx = speed.x;
+                target_chassis_twist_.vy = speed.y;
             }
+//            else
+//            {
+//                // 路径结束：复位状态并清空速度命令。
+//                flag = 0;
+//                flag_run = 0;
+//                flag_reset();
+
+//                speed = {0.0f, 0.0f};
+//                planspeed = {0.0f, 0.0f};
+//                target_chassis_twist_ = {0.0f, 0.0f};
+
+//                path_line_.plan_reset();
+//                path_line_.Reset();
+//#if FF_V
+//                ResetAutoControlStates();
+//#endif
+//            }
             float target_yaw_rad = target_yaw_ * PI / 180.0f;
             chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
         }
@@ -468,26 +472,14 @@ void OmniChassis_Setup::Path_correction(void)
     {
         m_lookaheadDist = m_lookaheadDist_curve;
     }
-    lookaheadPt = FindLookaheadPoint(curve, tNearest, tLookahead);
-#if FF_V
-    // 非终点阶段前馈参考点使用前视点。
-    ff_ref_point_ = lookaheadPt;
-#endif
-    // 3. 在绝对世界坐标系下，独立计算X轴和Y轴的纠偏向速度
-    // 将不再计算切法向，直接基于XY差值PID
-    corrVelocity.x = pid_pos_x.pid_calc(lookaheadPt.x, robot_pos_.x);
-    corrVelocity.y = pid_pos_y.pid_calc(lookaheadPt.y, robot_pos_.y);
-
-    // corrVelocity=path_line_.Get_Tangent_Vector()*corrVelocity.magnitude();
-}
-
-Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead)
-{
+    
+    
+    
     tLookahead = tNearest;        // 前视点的编号，先从最近点的编号开始（比如t=0.3）
     float accumulatedDist = 0.0f; // 累计挪了多少距离（刚开始是0）
     float step = 0.01f;           // 每次挪的“小步子”
 
-    Vector2D lastPt = path_.Get_Point(tLookahead);
+    lookaheadPt = curve.Get_Point(tLookahead);
 
     while (tLookahead < 1.0f && accumulatedDist < m_lookaheadDist)
     {
@@ -500,26 +492,34 @@ Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNeares
         }
 
         // 2. 拿到这一步挪到的点的坐标（比如t=0.305对应的曲线点(5.22, 6.11)）
-        Vector2D nextPt = path_.Get_Point(nextT);
+        Vector2D nextPt = curve.Get_Point(nextT);
 
         // 3. 计算这一步走了多远（比如从(5.2,6.1)到(5.22,6.11)，距离≈0.022m）
-        float distStep = (nextPt - lastPt).magnitude();
+        float distStep = (nextPt - lookaheadPt).magnitude();
 
         // 4. 累计距离：把这一步的距离加进去（比如0+0.022=0.022m）
         accumulatedDist += distStep;
 
         // 5. 更新：准备下一步挪步（把当前点当起点，当前t当下一步的基础）
         tLookahead = nextT; // 编号更新
-        lastPt = nextPt;    // 起点更新为(5.22,6.11)
+        lookaheadPt = nextPt;    // 起点更新为(5.22,6.11)
     }
 
     if (tLookahead >= 1.0f)
     {
-        lastPt = path_.Get_Point(1.0f); // 拿曲线终点坐标
+        lookaheadPt = curve.Get_Point(1.0f); // 拿曲线终点坐标
     }
 
-    return lastPt;
+#if FF_V
+    // 非终点阶段前馈参考点使用前视点。
+    ff_ref_point_ = lookaheadPt;
+#endif
+    // 3. 在绝对世界坐标系下，独立计算X轴和Y轴的纠偏向速度
+    // 将不再计算切法向，直接基于XY差值PID
+    corrVelocity.x = pid_pos_x.pid_calc(lookaheadPt.x, robot_pos_.x);
+    corrVelocity.y = pid_pos_y.pid_calc(lookaheadPt.y, robot_pos_.y);
 }
+
 ///////////////////////////////////       KFS路径生成            ////////////////////////////////
 
 void OmniChassis_Setup::KFS_Selection_Planning(void)
@@ -713,8 +713,49 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
             }
         }
     }
+    Path_end_point=path_line_.Get_End_Point();
 }
 
+
+//Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead)
+//{
+//    tLookahead = tNearest;        // 前视点的编号，先从最近点的编号开始（比如t=0.3）
+//    float accumulatedDist = 0.0f; // 累计挪了多少距离（刚开始是0）
+//    float step = 0.01f;           // 每次挪的“小步子”
+
+//    Vector2D lastPt = path_.Get_Point(tLookahead);
+
+//    while (tLookahead < 1.0f && accumulatedDist < m_lookaheadDist)
+//    {
+//        // 1. 往前挪一小步：t增加0.005（比如0.3→0.305）
+//        float nextT = tLookahead + step;
+//        // 防止挪超终点：如果nextT>1.0，就改成1.0（不能超出曲线）
+//        if (nextT > 1.0f)
+//        {
+//            nextT = 1.0f;
+//        }
+
+//        // 2. 拿到这一步挪到的点的坐标（比如t=0.305对应的曲线点(5.22, 6.11)）
+//        Vector2D nextPt = path_.Get_Point(nextT);
+
+//        // 3. 计算这一步走了多远（比如从(5.2,6.1)到(5.22,6.11)，距离≈0.022m）
+//        float distStep = (nextPt - lastPt).magnitude();
+
+//        // 4. 累计距离：把这一步的距离加进去（比如0+0.022=0.022m）
+//        accumulatedDist += distStep;
+
+//        // 5. 更新：准备下一步挪步（把当前点当起点，当前t当下一步的基础）
+//        tLookahead = nextT; // 编号更新
+//        lastPt = nextPt;    // 起点更新为(5.22,6.11)
+//    }
+
+//    if (tLookahead >= 1.0f)
+//    {
+//        lastPt = path_.Get_Point(1.0f); // 拿曲线终点坐标
+//    }
+
+//    return lastPt;
+//}
 #if FF_V
 void OmniChassis_Setup::ResetAutoControlStates(void)
 {
@@ -842,6 +883,8 @@ Vector2D OmniChassis_Setup::v_limit(void)
     
     // 使用单位向量做正交分解，避免 |normal|² 缩放
     Vector2D normal = curve.Get_End_point() - curve.Get_Start_point();
+    
+    
     Vector2D tangent_dir = normal.normalize();
     Vector2D normal_dir = tangent_dir.perpendicular();
 
