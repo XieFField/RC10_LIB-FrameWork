@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file chassis.h
  * @author 桑叁年
  * @brief 底盘控制声明
@@ -329,6 +329,13 @@ namespace jia
                 kRecovering = 2,
             };
 
+            enum class XParkSteerHoldPhase : u8
+            {
+                kInactive = 0,
+                kSettling = 1,
+                kLatchedZeroCurrent = 2,
+            };
+
             struct WheelInitConfig
             {
                 f32 pos_x_m = 0.0f;
@@ -380,8 +387,12 @@ namespace jia
                 f32 target_drive_omega_rad_s = 0.0f;              // 当前周期解算后要发给驱动电机的目标角速度，单位 rad/s
                 f32 steer_target_velocity_rad_s = 0.0f;           // 转向二阶限幅后得到的目标角速度，便于平滑舵向变化
                 bool flipped_drive_direction = false;             // 本周期是否采用“舵角翻转 180 度、驱动反向”策略来走更短转角路径
-                bool xpark_steer_deadband_active = false;          // [RO] 当前轮是否已进入 X-Park 舵向死区冻结状态。
-                f32 xpark_steer_deadband_error_rad = 0.0f;         // [RO] 当前轮相对 X-Park 理想目标角的绝对角误差（rad）。
+                XParkSteerHoldPhase xpark_steer_hold_phase = XParkSteerHoldPhase::kInactive; // [RO] 当前轮 X-Park 舵向 hold 状态机阶段。
+                f32 xpark_steer_hold_locked_target_rad = 0.0f;      // [RO] 当前轮进入 hold 后冻结的 corrected-local 总角目标（rad）。
+                f32 xpark_steer_hold_error_rad = 0.0f;              // [RO] 当前轮相对 X-Park 理想目标角的绝对角误差（rad）。
+                f32 xpark_steer_hold_target_rate_rad_s = 0.0f;      // [RO] 当前轮 hold 判稳使用的目标角速度绝对值（rad/s）。
+                u32 xpark_steer_hold_settle_ms = 0U;                // [RO] 当前轮满足 hold 判稳条件后已累计的保持时长（ms）。
+                u32 xpark_steer_hold_reacquire_ms = 0U;             // [RO] 当前轮从零电流锁定退出后，重新允许锁定前还需等待的时长（ms）。
                 SteerFaultState steer_fault_state = SteerFaultState::kNone;
                 bool steer_fault_rehome_request = false;
                 f32 steer_feedback_current_mA = 0.0f;
@@ -389,9 +400,6 @@ namespace jia
                 f32 steer_feedback_last_raw_total_angle_rad = 0.0f;
                 f32 steer_feedback_current_delta_mA = 0.0f;
                 f32 steer_feedback_angle_delta_rad = 0.0f;
-                bool steer_speed_pid_settled_active = false;       // [RO] 当前轮是否已进入“舵向到位判稳”状态；仅首次进入边沿触发一次速度环历史清理。
-                f32 steer_speed_pid_settle_error_rad = 0.0f;       // [RO] 当前轮“最终下发舵向目标”与“当前反馈角”之间的绝对误差（rad）。
-                f32 steer_speed_pid_settle_target_rate_rad_s = 0.0f; // [RO] 当前轮最终下发舵向目标角速度的绝对值（rad/s），用于判定是否已稳定收尾。
                 f32 steer_fault_steer_error_rad = 0.0f;
                 bool steer_fault_control_intent = false;
                 bool steer_fault_xpark_stationary_hold = false;
@@ -893,22 +901,17 @@ namespace jia
                     f32 exit_m_s = 0.03f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
                 } xpark_command_threshold_cfg_;
 
-                struct XParkSteerDeadbandConfig
+                struct XParkSteerHoldConfig
                 {
-                    bool enable = true;                     // [RW] 是否启用 X-Park 舵向末端死区冻结。
-                    bool zero_current_release_enable = true; // [RW] 死区激活后是否直接释放舵向零电流；false 时保持“冻结当前角度并继续走位置环”旧语义。
-                    f32 enter_angle_deg = 1.0f;             // [RW] X-Park 舵向误差进入阈值（deg）。误差小于等于该值后进入冻结。
-                    f32 exit_angle_deg = 5.0f;              // [RW] X-Park 舵向误差退出阈值（deg）。应大于 enter 形成滞回，避免边界抖动。
-                } xpark_steer_deadband_cfg_;
-
-                struct SteerSpeedPidSettleResetConfig
-                {
-                    bool enable = true;                  // [RW] 是否启用“舵向角到位后清增量式速度环历史”机制。
-                    f32 enter_angle_deg = 0.1f;          // [RW] 舵向角误差进入判稳阈值（deg）。误差小于等于该值才允许首次进入 settled。
-                    f32 exit_angle_deg = 0.5f;           // [RW] 舵向角误差退出判稳阈值（deg）。应大于 enter 形成滞回，避免到位边界抖动反复进出。
-                    f32 enter_target_rate_deg_s = 2.0f;  // [RW] 舵向目标角速度进入判稳阈值（deg/s）。只有目标变化已经足够慢才允许清历史。
-                    f32 exit_target_rate_deg_s = 5.0f;  // [RW] 舵向目标角速度退出判稳阈值（deg/s）。应大于 enter 形成滞回，避免轻微规划抖动反复触发。
-                } steer_speed_pid_settle_reset_cfg_;
+                    bool enable = true;                    // [RW] 是否启用统一的 X-Park 舵向 hold 状态机。
+                    f32 entry_angle_deg = 1.0f;           // [RW] X-Park 舵向误差进入 hold 的角误差阈值（deg）。
+                    f32 exit_angle_deg = 5.0f;            // [RW] X-Park 舵向误差退出 hold 的角误差阈值（deg）。应大于 entry 形成滞回。
+                    f32 settle_angle_deg = 1.0f;          // [RW] X-Park 舵向 hold 判稳角误差阈值（deg）。
+                    f32 settle_target_rate_deg_s = 1.0f;  // [RW] X-Park 舵向 hold 判稳目标角速度阈值（deg/s）。
+                    u32 settle_hold_ms = 0U;              // [RW] 满足判稳条件后，进入零电流锁定前需持续保持的时长（ms）。
+                    u32 reacquire_hold_ms = 0U;           // [RW] 零电流锁定退出后，重新允许锁定前的等待时长（ms）。
+                    bool entry_reset_enable = true;       // [RW] 进入 hold Settling 阶段时是否执行一次舵向速度环历史清理。
+                } xpark_steer_hold_cfg_;
 
                 // ---- drive 零速止停辅助 -----------------------------------------
                 // 仅在整车正常 drive 闭环链路里使用，用来在“目标已经静止”时清理 VESC 本地速度环残留，
@@ -1331,12 +1334,14 @@ namespace jia
                 bool high_speed_drive_suppression_active = false;                   // [RO] 当前高速抑制是否激活。
                 bool low_speed_drive_suppression_bypassed_by_residual_speed = false; // [RO] 当前拍是否因为残余速度过高而旁路了低速抑制。
                 f32 max_residual_speed_m_s = 0.0f;                                  // [RO] 当前拍整车四轮中的最大实际残余速度（m/s）。
-                f32 xpark_steer_deadband_enter_deg = 0.0f;           // [RO] 当前生效的 X-Park 舵向死区进入阈值（deg）。
-                f32 xpark_steer_deadband_exit_deg = 0.0f;            // [RO] 当前生效的 X-Park 舵向死区退出阈值（deg）。
-                f32 steer_speed_pid_settle_enter_deg = 0.0f;         // [RO] 当前生效的舵向判稳角误差进入阈值（deg）。
-                f32 steer_speed_pid_settle_exit_deg = 0.0f;          // [RO] 当前生效的舵向判稳角误差退出阈值（deg）。
-                f32 steer_speed_pid_settle_enter_rate_deg_s = 0.0f;  // [RO] 当前生效的舵向判稳目标角速度进入阈值（deg/s）。
-                f32 steer_speed_pid_settle_exit_rate_deg_s = 0.0f;   // [RO] 当前生效的舵向判稳目标角速度退出阈值（deg/s）。
+                bool xpark_steer_hold_enable = false;                  // [RO] 当前是否启用统一 X-Park 舵向 hold。
+                f32 xpark_steer_hold_entry_deg = 0.0f;                 // [RO] 当前生效的 X-Park 舵向 hold 进入阈值（deg）。
+                f32 xpark_steer_hold_exit_deg = 0.0f;                  // [RO] 当前生效的 X-Park 舵向 hold 退出阈值（deg）。
+                f32 xpark_steer_hold_settle_deg = 0.0f;                // [RO] 当前生效的 X-Park 舵向 hold 判稳角误差阈值（deg）。
+                f32 xpark_steer_hold_settle_target_rate_deg_s = 0.0f;  // [RO] 当前生效的 X-Park 舵向 hold 判稳目标角速度阈值（deg/s）。
+                f32 xpark_steer_hold_settle_hold_ms = 0.0f;            // [RO] 当前生效的 X-Park 舵向 hold 判稳保持时长（ms）。
+                f32 xpark_steer_hold_reacquire_hold_ms = 0.0f;         // [RO] 当前生效的 X-Park 舵向 hold 重新锁定等待时长（ms）。
+                bool xpark_steer_hold_entry_reset_enable = false;      // [RO] 当前生效的 X-Park 舵向 hold 进入时是否清理速度环历史。
                 bool reverse_intent_active = false;
                 f32 reverse_intent_dir_err_deg = 0.0f;
                 u8 single_wheel_target_index = 0U;
@@ -1350,11 +1355,12 @@ namespace jia
                 f32 steer_feedback_current_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_feedback_current_delta_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_feedback_angle_delta_rad[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-                bool steer_speed_pid_settled_active[4] = {false, false, false, false};      // [RO] 四个舵轮当前是否处于“到位判稳”状态。
-                f32 steer_speed_pid_settle_error_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};         // [RO] 四个舵轮当前“最终下发目标 vs 反馈角”的绝对误差（deg）。
-                f32 steer_speed_pid_settle_target_rate_deg_s[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RO] 四个舵轮当前最终下发目标角速度绝对值（deg/s）。
-                bool xpark_steer_deadband_active[4] = {false, false, false, false};         // [RO] 四个舵轮当前是否处于 X-Park 舵向死区冻结状态。
-                f32 xpark_steer_deadband_error_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};           // [RO] 四个舵轮相对 X-Park 理想目标角的绝对误差（deg）。
+                u8 xpark_steer_hold_phase[4] = {0U, 0U, 0U, 0U};                       // [RO] 四个舵轮当前 X-Park 舵向 hold 状态机阶段。
+                bool xpark_steer_hold_locked[4] = {false, false, false, false};       // [RO] 四个舵轮当前是否已经进入 X-Park hold 锁定阶段。
+                f32 xpark_steer_hold_error_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};         // [RO] 四个舵轮相对 X-Park 理想目标角的绝对误差（deg）。
+                f32 xpark_steer_hold_target_rate_deg_s[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RO] 四个舵轮 hold 判稳使用的目标角速度绝对值（deg/s）。
+                f32 xpark_steer_hold_settle_ms[4] = {0.0f, 0.0f, 0.0f, 0.0f};         // [RO] 四个舵轮满足 hold 判稳条件后的累计保持时长（ms）。
+                f32 xpark_steer_hold_reacquire_ms[4] = {0.0f, 0.0f, 0.0f, 0.0f};      // [RO] 四个舵轮重新允许零电流锁定前的剩余等待时长（ms）。
                 f32 steer_fault_steer_error_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_feedback_current_freeze_ms[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_feedback_recovery_toggle_count[4] = {0.0f, 0.0f, 0.0f, 0.0f};
