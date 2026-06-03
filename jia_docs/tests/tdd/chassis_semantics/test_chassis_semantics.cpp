@@ -4048,7 +4048,7 @@ void testXParkSteerHoldRequiresSustainedExitBeforeReacquiringPositionControl()
     EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kSettling);
     EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
     EXPECT_NEAR(harness.steer_motors[0].getTargetTotalAngle(),
-                jia::radToDegF32(chassis.wheel_config_[0].xpark_steer_hold_locked_target_rad),
+                jia::radToDegF32(command_frame.steer_corrected_local_total_rad[0]),
                 1.0e-6f);
 }
 

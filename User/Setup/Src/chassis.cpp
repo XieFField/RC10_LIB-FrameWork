@@ -3831,7 +3831,8 @@ namespace jia
                         if (wheel.xpark_steer_hold_reacquire_ms >= xpark_hold_cfg.reacquire_hold_ms)
                         {
                             wheel.xpark_steer_hold_phase = XParkSteerHoldPhase::kSettling;
-                            wheel.xpark_steer_hold_locked_target_rad = current_corrected_local_total_rad;
+                            wheel.xpark_steer_hold_locked_target_rad =
+                                mapWheelOaTotalToCorrectedLocal(wheel, xpark_target_oa_total_rad);
                             wheel.xpark_steer_hold_settle_ms = 0U;
                             wheel.xpark_steer_hold_reacquire_ms = 0U;
                             if (xpark_hold_cfg.entry_reset_enable && (wheel.steer_motor_h != nullptr))
