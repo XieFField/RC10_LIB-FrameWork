@@ -21,7 +21,6 @@
 #include "cmsis_os.h"
 #include "dma.h"
 #include "fdcan.h"
-#include "i2c.h"
 #include "tim.h"
 #include "usart.h"
 #include "usb_device.h"
@@ -111,15 +110,13 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM14_Init();
   MX_USART6_UART_Init();
+  MX_USART3_UART_Init();
   MX_USART10_UART_Init();
   MX_UART7_Init();
   MX_UART8_Init();
-  MX_I2C5_Init();
-  MX_USART2_UART_Init();
-  MX_UART5_Init();
-  MX_TIM3_Init();
+  MX_UART4_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim6);
+  HAL_TIM_Base_Start_IT(&htim6); // ������ʱ����ȻCAN���񲻻��ܵ�
   ALL_Setup_ConfigInit();
   /* USER CODE END 2 */
 

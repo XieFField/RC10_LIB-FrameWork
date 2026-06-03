@@ -29,6 +29,7 @@ typedef struct{
     uint8_t d_pad_left; uint8_t d_pad_right; //十字键
 }RC10_AirJoy_Data_S;
 
+
 class Lora_communication : public Communication, public gpio::GpioExti {
 public:
     static Lora_communication* GetInstance();

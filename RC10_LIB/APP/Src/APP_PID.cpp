@@ -14,6 +14,7 @@ float PID_Position::pid_calc(float target, float feedback)
         dt_ = dt_error_; 
         error_last_ = target - feedback; // 初始化上次误差
         feedback_last_ = feedback;
+        is_in_dead_zone_ = false;
     }
 
     // 对dt进行异常值处理
@@ -39,8 +40,10 @@ float PID_Position::pid_calc(float target, float feedback)
 
 
     if(fabs(error_) < params_.deadband)
+    {
+        is_in_dead_zone_ = true;
         error_ = 0.0f;
-
+    }
     // calc P
     P_Term = params_.kp * error_;
 
@@ -347,7 +350,7 @@ PID_Param_Config m2006_angle_pid_params = {
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
     .output_limit = 450.0f,   
-    .deadband = 0.03f 
+    .deadband = 0.3f 
 };
 
 PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
@@ -407,46 +410,6 @@ PID_Param_Config foursteer_steer_angle_pid_params = {
     .deadband = 0.08f
 };
 
-PID_Param_Config track_pid_params = {
-    .kp = 6.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f, 
-    .isIOutlimit = true, 
-    .output_limit = 1.5f,   
-    .deadband = 0.0009f 
-};
-
-PID_Param_Config camera_x_pid_params = {
-    .kp = 6.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f,
-    .isIOutlimit = true,
-    .output_limit = 0.05f,
-    .deadband = 0.002f
-};
-
-PID_Param_Config camera_y_pid_params = {
-    .kp = 6.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f,
-    .isIOutlimit = true,
-    .output_limit = 0.05f,
-    .deadband = 0.01f
-};
-
-PID_Param_Config camera_vec_pid_params = {
-    .kp = 6.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f,
-    .isIOutlimit = true,
-    .output_limit = 0.1f,
-    .deadband = 0.003f
-};
-
 PID_Param_Config lock_angle_pid_params = {
  .kp = 0.10f,
  .ki = 0.0f,
@@ -456,59 +419,9 @@ PID_Param_Config lock_angle_pid_params = {
  .output_limit = 1.0f, 
  .deadband = 0.0f 
 };
-
-PID_Param_Config camera_yaw_pid_params = {
- .kp = 0.075f,
- .ki = 0.0f,
- .kd = 0.010f,
- .I_Outlimit = 0.0f,
- .isIOutlimit = true,
- .output_limit = 0.05f,
- .deadband = 0.1f
-};
-
-
-PID_Param_Config omega_z_pid_init_config =
-{
-    .kp = 0.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f,
-    .isIOutlimit = false,
-    .output_limit = 0.0f,
-    .deadband = 0.0f,
-};
-
-PID_Param_Config rot_z_pid_init_config = {
-    .kp = 0.0f,
-    .ki = 0.0f,
-    .kd = 0.0f,
-    .I_Outlimit = 0.0f,
-    .isIOutlimit = false,
-    .output_limit = 0.0f,
-    .deadband = 0.0f
-};
-
-CamZ_Param camera_z_ctrl_params = {
-    .kp = 1800.0f,
-    .ki = 80.0f,
-    .kv = 40.0f,
-    .out_lim = 4500.0f,
-    .i_lim = 3.0f,
-    .i_err = 0.004f,
-    .ref_rate = 0.03f,
-    .cam_gain = 0.1f,
-    .cam_db = 0.0015f,
-    .cam_gate = 0.008f,
-    .cam_delay = 0.06f,
-    .done_err = 0.003f,
-    .done_vel = 0.004f,
-    .done_time = 0.12f,
-};
-
 PID_Param_Config path_lock_end = {
     
-    .kp = 0.6f,
+    .kp = 2.0f,
     .ki = 0.0f,
     .kd = 0.0f,
     .I_Outlimit = 0.0f, 
@@ -517,3 +430,12 @@ PID_Param_Config path_lock_end = {
     .deadband = 0.005f 
 };
 
+PID_Param_Config track_pid_params = {
+    .kp = 3.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
+    .I_Outlimit = 0.0f, 
+    .isIOutlimit = true, 
+    .output_limit = 3.0f,   
+    .deadband = 0.001f 
+};

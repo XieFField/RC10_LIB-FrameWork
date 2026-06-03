@@ -402,6 +402,9 @@ namespace jia
                 f32 steer_feedback_last_raw_total_angle_rad = 0.0f;
                 f32 steer_feedback_current_delta_mA = 0.0f;
                 f32 steer_feedback_angle_delta_rad = 0.0f;
+                bool steer_speed_pid_settled_active = false;       // [RO] 当前轮是否已进入“舵向到位判稳”状态；仅首次进入边沿触发一次速度环历史清理。
+                f32 steer_speed_pid_settle_error_rad = 0.0f;       // [RO] 当前轮“最终下发舵向目标”与“当前反馈角”之间的绝对误差（rad）。
+                f32 steer_speed_pid_settle_target_rate_rad_s = 0.0f; // [RO] 当前轮最终下发舵向目标角速度的绝对值（rad/s），用于判定是否已稳定收尾。
                 f32 steer_fault_steer_error_rad = 0.0f;
                 bool steer_fault_control_intent = false;
                 bool steer_fault_xpark_stationary_hold = false;
@@ -537,6 +540,88 @@ namespace jia
                 kSingleWheelIsolated = 30,
             };
             enum class DebugOmegaZInjectionMode : u8
+            {
+                kOff = 0,
+                kStep = 1,
+                kSine = 2,
+            };
+            // mode30 单轴输入来源。
+            // 设计成舵向/驱动各自独立，避免两个轴被同一个输入模式强行绑定。
+            enum class DirectAxisInputMode : u8
+            {
+                kCached = 0,      // 直接使用调试面板里缓存的命令值。
+                kRcContinuous = 1, // 使用遥控摇杆连续量，并按当前命令限幅映射。
+                kRcStep = 2,      // 使用遥控摇杆阶跃触发，超过阈值后输出固定步进值。
+            };
+            // mode30 舵向轴命令类型。
+            // 当前活跃命令值、限幅和阶跃模板的物理单位都由它决定。
+            enum class DirectSteerCommandType : u8
+            {
+                kCurrent = 0,       // 直接给舵向电流命令（mA）。
+                kRpm = 1,           // 直接给舵向速度命令（rpm）。
+                kSingleTurnDeg = 2, // 直接给舵向单圈角命令（deg）。
+                kMultiTurnDeg = 3,  // 直接给舵向多圈角命令（deg）。
+            };
+            // mode30 驱动轴命令类型。
+            // drive 轴只保留速度/电流/刹车三种互斥语义，避免旧版多槽缓存并存。
+            enum class DirectDriveCommandType : u8
+            {
+                kRpm = 0,     // 直接给驱动速度命令（rpm）。
+                kCurrent = 1, // 直接给驱动电流命令（mA）。
+                kBrake = 2,   // 直接给驱动刹车命令（mA）。
+            };
+            enum class SingleWheelInputAxis : u8
+            {
+                kLeftX = 0,
+                kLeftY = 1,
+                kRightX = 2,
+                kRightY = 3,
+            };
+            enum class SingleWheelPlannerMode : u8
+            {
+                kOff = 0,
+                kSCurve = 1,
+                kTrapezoid = 2,
+            };
+            struct SingleWheelPlannerSCurveConfig
+            {
+                f32 acc_acc = 60.0f;
+                f32 acc_dec = 60.0f;
+                f32 jerk_acc = 250.0f;
+                f32 jerk_dec = 250.0f;
+                f32 settle_vel_eps = 1.0e-4f;
+                f32 settle_acc_eps = 0.05f;
+            };
+            struct SingleWheelPlannerTrapezoidConfig
+            {
+                f32 acc = 60.0f;
+                f32 dec = 60.0f;
+            };
+            struct SingleWheelAxisControl
+            {
+                bool enable = true;
+                u8 input_mode_raw = static_cast<u8>(DirectAxisInputMode::kRcContinuous);
+                u8 input_axis_raw = static_cast<u8>(SingleWheelInputAxis::kLeftX);
+                bool invert_input = false;
+                u8 command_type_raw = 0U;
+                f32 command_value = 0.0f;
+                f32 command_limit = 0.0f;
+                f32 step_threshold = 0.5f;
+                f32 step_value = 0.0f;
+                u8 planner_mode_raw = static_cast<u8>(SingleWheelPlannerMode::kOff);
+                SingleWheelPlannerSCurveConfig scurve{};
+                SingleWheelPlannerTrapezoidConfig trapezoid{};
+            };
+            struct SingleWheelAxisPlannerRuntime
+            {
+                JerkLimitedAxisState jerk_state{};
+                f32 last_output_value = 0.0f;
+                u8 last_wheel_idx = 0xFFU;
+                u8 last_command_type_raw = 0xFFU;
+                u8 last_planner_mode_raw = 0xFFU;
+                bool initialized = false;
+            };
+            enum class DebugOutputFamily : u8
             {
                 kOff = 0,
                 kStep = 1,
@@ -874,11 +959,11 @@ namespace jia
                 f32 manual_yaw_settle_vel_eps_ = 1.0e-4f;
                 f32 manual_yaw_settle_acc_eps_ = 0.05f;
                 f32 wheel_radius_m_ = 0.052f;                                    // [RW, 慎改] 轮半径。决定线速度与驱动角速度的换算比例，改错会直接导致速度尺度和里程计比例偏差。
-                f32 max_vel_x_ = 2.0f;                                           // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
-                f32 max_vel_y_ = 2.0f;                                           // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
+                f32 max_vel_x_ = 5.0f;                                           // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
+                f32 max_vel_y_ = 5.0f;                                           // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
                 f32 max_omega_z_ = 2.0f;                                         // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
-                f32 max_acc_xy_acc_ = 2.0f;                                      // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
-                f32 max_acc_xy_dec_ = 30.0f;                                     // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
+                f32 max_acc_xy_acc_ = 9999.0f;                                      // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
+                f32 max_acc_xy_dec_ = 99999999.0f;                                     // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
                 f32 max_alpha_z_acc_ = 2.0f;                                     // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
                 f32 max_alpha_z_dec_ = 30.0f;                                    // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
                 f32 trans_dir_rate_limit_deg_s_ = 99999999.0f;                   // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
@@ -895,8 +980,8 @@ namespace jia
                 // 所有静止/冻结/X-Park/停车保护阈值统一由这组基准参数派生，避免多处手改失配。
                 struct NearZeroThresholdConfig
                 {
-                    f32 base_enter_m_s = 0.10f; // [RW] 近零门限进入基准（m/s）。
-                    f32 base_exit_m_s = 0.15f;  // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
+                    f32 base_enter_m_s = 0.02f; // [RW] 近零门限进入基准（m/s）。
+                    f32 base_exit_m_s = 0.02f;  // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
                 } near_zero_cfg_;
 
                 struct XParkCommandThresholdConfig
@@ -1003,8 +1088,8 @@ namespace jia
             {
                 struct Common
                 {
-                    bool enable = true;                                           // [RW] 调试总开关。
-                    u8 mode_raw = 1;                                               // [RW] 调试模式号。
+                    bool enable = false;                                            // [RW] 调试总开关。
+                    u8 mode_raw = 9;                                               // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
                     u8 observe_wheel_index = 0U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。

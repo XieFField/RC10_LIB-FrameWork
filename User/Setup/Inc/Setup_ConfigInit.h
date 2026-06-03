@@ -46,7 +46,6 @@ extern "C" {
 #include "Module_Position.h"
 #include "Locate_Setup.h"
 #include "Module_HWT.h"
-#include "Module_JY61.h"
 #include "Motor_GO.h"
 
 /*==============Controller===============*/
@@ -67,10 +66,6 @@ extern "C" {
         #include "arm_demo.h"
 #endif
 
-
-#include "m3508_steer_debug.h"
-#include "chassis_swerve_demo.h"
-#include "chassis_swerve_task_demo.h"
 
 class test:public RtosTask {
 public:
