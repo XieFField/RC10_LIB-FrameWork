@@ -898,24 +898,24 @@ namespace jia
                 // 所有静止/冻结/X-Park/停车保护阈值统一由这组基准参数派生，避免多处手改失配。
                 struct NearZeroThresholdConfig
                 {
-                    f32 base_enter_m_s = 0.02f; // [RW] 近零门限进入基准（m/s）。
+                    f32 base_enter_m_s = 0.01f; // [RW] 近零门限进入基准（m/s）。
                     f32 base_exit_m_s = 0.02f;  // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
                 } near_zero_cfg_;
 
                 struct XParkCommandThresholdConfig
                 {
                     f32 enter_m_s = 0.01f; // [RW] 仅用于 X-Park 命令静止意图的进入门限（m/s），不用于残余反馈过滤。
-                    f32 exit_m_s = 0.03f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
+                    f32 exit_m_s = 0.02f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
                 } xpark_command_threshold_cfg_;
 
                 struct XParkSteerHoldConfig
                 {
                     bool enable = true;                    // [RW] 是否启用统一的 X-Park 舵向 hold 状态机。
                     f32 entry_angle_deg = 1.0f;           // [RW] X-Park 舵向误差进入 hold 的角误差阈值（deg）。
-                    f32 exit_angle_deg = 5.0f;            // [RW] X-Park 舵向误差退出 hold 的角误差阈值（deg）。应大于 entry 形成滞回。
-                    f32 settle_angle_deg = 1.0f;          // [RW] X-Park 舵向 hold 判稳角误差阈值（deg）。
-                    f32 settle_target_rate_deg_s = 1.0f;  // [RW] X-Park 舵向 hold 判稳目标角速度阈值（deg/s）。
-                    u32 settle_hold_ms = 500U;              // [RW] 满足判稳条件后，进入零电流锁定前需持续保持的时长（ms）。
+                    f32 exit_angle_deg = 10.0f;            // [RW] X-Park 舵向误差退出 hold 的角误差阈值（deg）。应大于 entry 形成滞回。
+                    f32 settle_angle_deg = 2.0f;          // [RW] X-Park 舵向 hold 判稳角误差阈值（deg）。
+                    f32 settle_target_rate_deg_s = 2.0f;  // [RW] X-Park 舵向 hold 判稳目标角速度阈值（deg/s）。
+                    u32 settle_hold_ms = 1000;              // [RW] 满足判稳条件后，进入零电流锁定前需持续保持的时长（ms）。
                     u32 reacquire_hold_ms = 500U;           // [RW] 零电流锁定退出后，重新允许锁定前的等待时长（ms）。
                     bool entry_reset_enable = true;       // [RW] 进入 hold Settling 阶段时是否执行一次舵向速度环历史清理。
                 } xpark_steer_hold_cfg_;
@@ -926,7 +926,7 @@ namespace jia
                 bool enable_drive_zero_stop_assist = true;          // [RW] 是否启用 drive 零速止停辅助。
                 f32 drive_zero_stop_settle_speed_m_s = 0.01f;       // [RW] 最终停稳阈值（m/s）。残余线速度低于该值后，进入 zero-stop 的“最终 settled 区”，继续零电流收尾并清理最终残留状态。
                 f32 drive_zero_stop_brake_release_speed_m_s = 0.01f;  // [RW] brake 释放阈值（m/s）。当前已在 brake 分支时，只有残余速度降到该值及以下才允许松开 brake，转入非刹车收尾段。
-                f32 drive_zero_stop_brake_reenter_speed_m_s = 0.03f; // [RW] brake 重进阈值（m/s）。当前不在 brake 分支时，只有残余速度高于该值才重新进入 brake，和 brake_release 一起形成滞回。
+                f32 drive_zero_stop_brake_reenter_speed_m_s = 0.02f; // [RW] brake 重进阈值（m/s）。当前不在 brake 分支时，只有残余速度高于该值才重新进入 brake，和 brake_release 一起形成滞回。
                 f32 drive_zero_stop_brake_current_mA = 25000.0f;     // [RW] 零速止停进入 brake 分支时下发的刹车电流。
                 u32 drive_zero_stop_brake_ramp_time_ms = 0U;         // [RW] zero-stop brake 子状态激活后，从 0 线性爬升到 drive_zero_stop_brake_current_mA 的目标时长（ms）。0 表示关闭 ramp，保持阶跃下发。
 
