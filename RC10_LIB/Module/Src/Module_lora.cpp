@@ -121,15 +121,23 @@ void Lora_communication::Comm_TxUseTxDMA(UART_HandleTypeDef* huart, uint8_t* dat
 void Lora_communication::Task_Process() {
     if (Comm_Task_Loop()) {
         uint16_t joystick[4];
-        uint16_t key;
-        GetRecvData(joystick, key);
-        
+        // 新的 Communication 接口：分别获取摇杆和按键/设置数据
+        GetRecvJoystickData(joystick);
+        uint16_t key = GetRecvAllKeyData();
+
         uint8_t command, load1, load2;
-            GetSettingData(command, load1, load2);
-            // 将遥控器设置的 KFS 三字节保存在本地缓冲，供外部通过 GetKfs() 读取
-            kfs_[0] = command;
-            kfs_[1] = load1;
-            kfs_[2] = load2;
+        // GetRecvCommandData(command, load1, load2);
+        // 将遥控器设置的 KFS 三字节保存在本地缓冲，供外部通过 GetKfs() 读取
+         if (command == 0x01) {
+            // 将解析出的 KFS 位置缓存，供外部通过 GetKfs() 读取
+            kfs_[0] = GetRecvFKFSData(0);
+            kfs_[1] = GetRecvFKFSData(1);
+            kfs_[2] = GetRecvFKFSData(2);
+        } else {
+            kfs_[0] = kfs_[1] = kfs_[2] = 13;
+        }
+
+        airjoy_data_.page = GetPage();
 
         airjoy_data_.left_x  = NormalizeAxis(joystick[0], 512.0f, 512.0f);
         airjoy_data_.left_y  = NormalizeAxis(joystick[1], 512.0f, 512.0f);
@@ -153,7 +161,7 @@ void Lora_communication::Task_Process() {
         airjoy_data_.LT = static_cast<uint8_t>((key >> 14) & 0x01U);
         airjoy_data_.RT = static_cast<uint8_t>((key >> 15) & 0x01U);
 
-        uint16_t key_status = GetKeyStatus();
+        uint16_t key_status = key;
         for (uint8_t i = 0; i < 16; ++i) {
             if (key_status & (1U << i)) {
                 key_pressed_count_++;
