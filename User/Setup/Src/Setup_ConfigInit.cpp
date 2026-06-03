@@ -79,7 +79,7 @@ DM_Motor Weapon_Elbow(J4310_Type, 0x06, 0x06, CAN2_Bus); M2006 Weapon_Wrist(6, C
 #if !TEST_TEMP
 M3508 arm_launchMotor(5, CAN3_Bus, true, false); M3508 arm_rotateMotor(7, CAN3_Bus, true, false);
 M2006 arm_stretchMotor(8, CAN3_Bus, true, false);  
-DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
+DM_Motor arm_pitchMotor(J4310_Type, 0x05, 0x05, CAN3_Bus);
 #else
 
 #endif
