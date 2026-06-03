@@ -2,7 +2,7 @@
 
 void OmniChassis_Setup::Path_CB_check(void)
 {
-    if (Clamping_Bar_Selection_pos_.x == curve.Get_End_point().x && Clamping_Bar_Selection_pos_.y == curve.Get_End_point().y)
+    if (CB_point.Clamping_Bar_Selection_pos_.x == curve.Get_End_point().x && CB_point.Clamping_Bar_Selection_pos_.y == curve.Get_End_point().y)
     {
         CB_flag.Selection_flag = true;
     }
@@ -12,7 +12,7 @@ void OmniChassis_Setup::Path_CB_check(void)
         WeaponSage_Start = true;
     }
 
-    if (Clamping_Bar_Retreat_pos_.x == curve.Get_End_point().x && Clamping_Bar_Retreat_pos_.y == curve.Get_End_point().y)
+    if (CB_point.Clamping_Bar_Retreat_pos_.x == curve.Get_End_point().x && CB_point.Clamping_Bar_Retreat_pos_.y == curve.Get_End_point().y)
     {
         CB_flag.Retreat_flag = true;
     }
@@ -25,7 +25,7 @@ void OmniChassis_Setup::Path_CB_check(void)
 void OmniChassis_Setup::Path_spin_check(void)
 {
     // KFS拾取判断MF1
-    if (MF1_pos_.x == curve.Get_End_point().x && MF1_pos_.y == curve.Get_End_point().y)
+    if (KFS_point.MF1_pos_.x == curve.Get_End_point().x && KFS_point.MF1_pos_.y == curve.Get_End_point().y)
     {
         KFS_flag.MF1_flag = true;
     }
@@ -37,7 +37,7 @@ void OmniChassis_Setup::Path_spin_check(void)
     }
 
     // KFS拾取判断MF2
-    if (MF2_pos_.x == curve.Get_End_point().x && MF2_pos_.y == curve.Get_End_point().y)
+    if (KFS_point.MF2_pos_.x == curve.Get_End_point().x && KFS_point.MF2_pos_.y == curve.Get_End_point().y)
     {
         KFS_flag.MF2_flag = true;
     }
@@ -51,7 +51,7 @@ void OmniChassis_Setup::Path_spin_check(void)
     if (KFS_flag.spin_up_flag == true)
     {
         // 判断旋转条件
-        if (spin_point_.x == curve.Get_End_point().x && spin_point_.y == curve.Get_End_point().y)
+        if (KFS_point.spin_point_.x == curve.Get_End_point().x && KFS_point.spin_point_.y == curve.Get_End_point().y)
         {
             KFS_flag.get_spin_flag = true;
         }
@@ -83,19 +83,19 @@ void OmniChassis_Setup::Path_spin_check(void)
                 // 延迟旋转
                 if (robot_pos_.y <= 2.55f)
                 {
-                    target_yaw_ = MF2_target_yaw_;
+                    target_yaw_ = KFS_point.MF2_target_yaw_;
                     KFS_flag.spin_down_flag = false;
                 }
             }
             // 两侧旋转判断
-            else if (MF1_pos_.x == curve.Get_Start_point().x && MF1_pos_.y == curve.Get_Start_point().y)
+            else if (KFS_point.MF1_pos_.x == curve.Get_Start_point().x && KFS_point.MF1_pos_.y == curve.Get_Start_point().y)
             {
                 KFS_flag.get_spin_flag = true;
             }
             // 两侧开始旋转
             else if (KFS_flag.get_spin_flag == true)
             {
-                target_yaw_ = MF2_target_yaw_;
+                target_yaw_ = KFS_point.MF2_target_yaw_;
                 KFS_flag.spin_down_flag = false;
                 KFS_flag.get_spin_flag = false;
             }
@@ -109,28 +109,25 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     target_yaw_ = 0.0f;
     path_line_.plan_reset();
     path_line_.Reset();
-    
-    
-//    path_line_.Add_Start_Point(robot_pos_);
-//    path_line_.Add_End_Point(test_point, path_param_CB_);
-    //曲线的测试
+
+    //    path_line_.Add_Start_Point(robot_pos_);
+    //    path_line_.Add_End_Point(test_point, path_param_CB_);
+    // 曲线的测试
     //   path_line_.Add_Start_Point(robot_pos_);
     //   path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f, robot_pos_.y}, path_param_curve_);
     //   path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f}, Vector2D{robot_pos_.x-0.5f-0.85f, robot_pos_.y-0.22f}, path_param_curve_);
     //   path_line_.Add_End_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f+0.2f}, path_param_end_);
-    
-    //夹杆路径的测试
-       path_line_.Add_Start_Point(robot_pos_);
-       path_line_.Add_Point(CB_Selection_start_point_, path_param_start_);
-       path_line_.Add_Point(Clamping_Bar_Selection_pos_, CB_Selection_control_point_,path_param_curve_);
-       path_line_.Add_Point(Clamping_Bar_Retreat_pos_, path_param_end_);
-       path_line_.Add_End_Point(Clamping_Bar_Retreat_pos_, path_param_end_);
-    
-    
-    Path_end_point=path_line_.Get_End_Point();
+
+    // 夹杆路径的测试
+    path_line_.Add_Start_Point(robot_pos_);
+    path_line_.Add_Point(CB_point.CB_Selection_start_point_, path_param.start);
+    path_line_.Add_Point(CB_point.Clamping_Bar_Selection_pos_, CB_point.CB_Selection_control_point_, path_param.curve);
+    path_line_.Add_Point(CB_point.Clamping_Bar_Retreat_pos_, path_param.end);
+    path_line_.Add_End_Point(CB_point.Clamping_Bar_Retreat_pos_, path_param.end);
+
+    Path_end_point = path_line_.Get_End_Point();
 }
 
-uint32_t chassisstackHighWaterMark = 0;
 extern Chassis chassis;
 
 void OmniChassis_Setup::loop()
@@ -140,8 +137,6 @@ void OmniChassis_Setup::loop()
         return;
 
     float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
-
-    //	chassisstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
 
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
@@ -199,7 +194,6 @@ void OmniChassis_Setup::loop()
     }
     case CHASSIS_AUTO_CONTROL_CB:
     {
-        
         // 夹杆自动流程：触发后执行路径规划、纠偏和速度合成。
         if (flag == 1)
         {
@@ -215,25 +209,19 @@ void OmniChassis_Setup::loop()
                 // 获取曲线（带保护）
                 curve = path_line_.get_bezier_curve();
                 Path_CB_check();
-                if (WeaponSage_Start == false)
+                if (WeaponSage_Start == false || WeaponSage_End == false)
                 {
-                    
-                    // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-                    planspeed = path_line_.plan(robot_pos_) ;
+                    planspeed = path_line_.plan(robot_pos_);
                     Path_correction();
-                    corrVelocity = PID_coefficient * corrVelocity;
-#if FF_V
-                    speed = ComposeRobotVelocity(corrVelocity);
-#else              
-#endif
+                    corrVelocity = V.PID_coefficient * corrVelocity;
                     speed = v_limit();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
                 }
                 else
-                {                
-                    float lock_err = (robot_pos_ - Clamping_Bar_Selection_pos_).magnitude();
-                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Clamping_Bar_Selection_pos_).normalize();
+                {
+                    float lock_err = (robot_pos_ - CB_point.Clamping_Bar_Selection_pos_).magnitude();
+                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - CB_point.Clamping_Bar_Selection_pos_).normalize();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
                 }
@@ -245,35 +233,14 @@ void OmniChassis_Setup::loop()
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
             }
-//                       else
-//                       {
-//                           // 路径结束：复位状态并清空速度命令。
-//                           flag = 0;
-//                           flag_run = 0;
-//                           flag_reset();
-
-//                           speed = {0.0f, 0.0f};
-//                           planspeed = {0.0f, 0.0f};
-//                           target_chassis_twist_ = {0.0f, 0.0f};
-
-//                           path_line_.plan_reset();
-//                           path_line_.Reset();
-//            #if FF_V
-//                           ResetAutoControlStates();
-//            #endif
-//                       }
+            float target_yaw_rad = target_yaw_ * PI / 180.0f;
+            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
         }
         else
         {
             target_chassis_twist_ = {0.0f, 0.0f};
             chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
-                // chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, 0.0f);
-#if FF_V
-            ResetAutoControlStates();   
-#endif
         }
-        // float target_yaw_rad = target_yaw_ * PI / 180.0f;
-         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
 
         break;
     }
@@ -300,13 +267,9 @@ void OmniChassis_Setup::loop()
                 if (Arm_Start == false && KFS_flag.Spin_Start == false)
                 {
                     // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-                    planspeed = path_line_.plan(robot_pos_) ;
+                    planspeed = path_line_.plan(robot_pos_);
                     Path_correction();
-                    corrVelocity = PID_coefficient * corrVelocity;
-#if FF_V
-                    speed = ComposeRobotVelocity(corrVelocity);
-#else              
-#endif
+                    corrVelocity = V.PID_coefficient * corrVelocity;
                     speed = v_limit();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
@@ -327,35 +290,15 @@ void OmniChassis_Setup::loop()
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
             }
-//            else
-//            {
-//                // 路径结束：复位状态并清空速度命令。
-//                flag = 0;
-//                flag_run = 0;
-//                flag_reset();
-
-//                speed = {0.0f, 0.0f};
-//                planspeed = {0.0f, 0.0f};
-//                target_chassis_twist_ = {0.0f, 0.0f};
-
-//                path_line_.plan_reset();
-//                path_line_.Reset();
-//#if FF_V
-//                ResetAutoControlStates();
-//#endif
-//            }
+            
+            
             float target_yaw_rad = target_yaw_ * PI / 180.0f;
             chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
         }
         else
         {
-            // target_yaw_ = yaw;
             target_chassis_twist_ = {0.0f, 0.0f};
             chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
-
-#if FF_V
-            ResetAutoControlStates();
-#endif
         }
 
         break;
@@ -397,24 +340,24 @@ void OmniChassis_Setup::loop()
     case CHASSIS_MANUAL_CONTROL_C:
     {
         // 模式 C：全向速度控制，角速度固定为 0。
-//        target_chassis_twist_.yaw_rate = 0.0f;
+        //        target_chassis_twist_.yaw_rate = 0.0f;
 
-//        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-//            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
-//        else
-//            target_chassis_twist_.vx = 0.0f;
+        //        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+        //            target_chassis_twist_.vx = airjoy_data_.left_x * 6 * this->is_chassis_reverse_;
+        //        else
+        //            target_chassis_twist_.vx = 0.0f;
 
-//        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-//            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
-//        else
-//            target_chassis_twist_.vy = 0.0f;
+        //        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+        //            target_chassis_twist_.vy = airjoy_data_.left_y * 6 * this->is_chassis_reverse_;
+        //        else
+        //            target_chassis_twist_.vy = 0.0f;
 
-//        chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_chassis_twist_.yaw_rate);
-		if(_tool_Abs(airjoy_data_.left_x) > 0.05f)
-			target_chassis_twist_.vx = airjoy_data_.left_x * 1 * this->is_chassis_reverse_;
-		else
-			target_chassis_twist_.vx = 0.0f;
-		chassis.setSteerDegAndDriveSpeed(90.0f, target_chassis_twist_.vx);
+        //        chassis.setSpeed(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_chassis_twist_.yaw_rate);
+        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+            target_chassis_twist_.vx = airjoy_data_.left_x * 1 * this->is_chassis_reverse_;
+        else
+            target_chassis_twist_.vx = 0.0f;
+        chassis.setSteerDegAndDriveSpeed(90.0f, target_chassis_twist_.vx);
         break;
     }
 
@@ -424,7 +367,6 @@ void OmniChassis_Setup::loop()
         break;
     }
     }
-
 }
 
 //////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
@@ -438,7 +380,7 @@ void OmniChassis_Setup::Path_correction(void)
 
     Vector2D nearestPt = curve.Get_Point(tNearest);
 
-    err_curve = (nearestPt - robot_pos_).magnitude();
+    float err_curve = (nearestPt - robot_pos_).magnitude();
 
     float obj_dis = _tool_Abs((curve.Get_End_point() - robot_pos_).magnitude());
 
@@ -446,10 +388,6 @@ void OmniChassis_Setup::Path_correction(void)
     if (obj_dis < m_lookaheadDist || path_line_.Is_End() == true)
     {
         Vector2D endPt = curve.Get_End_point();
-#if FF_V
-        // 终点段把前馈参考点切换为终点坐标，差分会自然收敛到 0。
-        ff_ref_point_ = endPt;
-#endif
 
         if (curve.Get_len() < 0.0001f)
         {
@@ -466,15 +404,13 @@ void OmniChassis_Setup::Path_correction(void)
     Vector2D lookaheadPt; // 路径上的前视点
     if (curve.Get_Bezier_Order() == FIRST_ORDER_BEZIER)
     {
-        m_lookaheadDist = m_lookaheadDist_line;
+        m_lookaheadDist = V.m_lookaheadDist_line;
     }
     else
     {
-        m_lookaheadDist = m_lookaheadDist_curve;
+        m_lookaheadDist = V.m_lookaheadDist_curve;
     }
-    
-    
-    
+
     tLookahead = tNearest;        // 前视点的编号，先从最近点的编号开始（比如t=0.3）
     float accumulatedDist = 0.0f; // 累计挪了多少距离（刚开始是0）
     float step = 0.01f;           // 每次挪的“小步子”
@@ -501,8 +437,8 @@ void OmniChassis_Setup::Path_correction(void)
         accumulatedDist += distStep;
 
         // 5. 更新：准备下一步挪步（把当前点当起点，当前t当下一步的基础）
-        tLookahead = nextT; // 编号更新
-        lookaheadPt = nextPt;    // 起点更新为(5.22,6.11)
+        tLookahead = nextT;   // 编号更新
+        lookaheadPt = nextPt; // 起点更新为(5.22,6.11)
     }
 
     if (tLookahead >= 1.0f)
@@ -510,10 +446,6 @@ void OmniChassis_Setup::Path_correction(void)
         lookaheadPt = curve.Get_Point(1.0f); // 拿曲线终点坐标
     }
 
-#if FF_V
-    // 非终点阶段前馈参考点使用前视点。
-    ff_ref_point_ = lookaheadPt;
-#endif
     // 3. 在绝对世界坐标系下，独立计算X轴和Y轴的纠偏向速度
     // 将不再计算切法向，直接基于XY差值PID
     corrVelocity.x = pid_pos_x.pid_calc(lookaheadPt.x, robot_pos_.x);
@@ -531,7 +463,7 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
     // 自动规划接口转换
     Point2D robot_point_ = {robot_pos_.x, robot_pos_.y};
     // 计算理想的KFS路径
-    KFS_KeyPoint_ = MF_AutoCtrler::PathInformation_calc(robot_point_, MF1, MF2);
+    KFS_KeyPoint_ = MF_AutoCtrler::PathInformation_calc(robot_point_, KFS_point.MF1, KFS_point.MF2);
     // 判断MF1的车子朝向
     MF1_Point_ = KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[0]];
     MF2_Point_ = KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1]];
@@ -564,27 +496,27 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         if (MF2_Point_ < 10.0f)
         {
-            MF2_target_yaw_ = -90.0f;
+            KFS_point.MF2_target_yaw_ = -90.0f;
         }
         else
         {
-            MF2_target_yaw_ = 90.0f;
+            KFS_point.MF2_target_yaw_ = 90.0f;
         }
     }
     else
     {
         if (MF2_Point_ == 21 || MF2_Point_ == 16 || MF2_Point_ == 11 || MF2_Point_ == 6)
         {
-            MF2_target_yaw_ = 180.0f;
+            KFS_point.MF2_target_yaw_ = 180.0f;
         }
         else if (MF2_Point_ == 25 || MF2_Point_ == 20 || MF2_Point_ == 15 || MF2_Point_ == 10)
         {
-            MF2_target_yaw_ = 0.0f;
+            KFS_point.MF2_target_yaw_ = 0.0f;
         }
     }
 
     // 判断是否需要转向
-    if (target_yaw_ == MF2_target_yaw_ || MF2 == 0.0f)
+    if (target_yaw_ == KFS_point.MF2_target_yaw_ || KFS_point.MF2 == 0.0f)
     {
         KFS_flag.spin_flag = false;
     }
@@ -605,14 +537,14 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
     path_line_.Reset();
     path_line_.Add_Start_Point(robot_pos_);
 
-    MF1_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[0]]);
-    if (MF2 != 0)
+    KFS_point.MF1_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[0]]);
+    if (KFS_point.MF2 != 0)
     {
-        MF2_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1]]);
+        KFS_point.MF2_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1]]);
     }
     else
     {
-        MF2_pos_ = {0.0f, 0.0f};
+        KFS_point.MF2_pos_ = {0.0f, 0.0f};
     }
 
     if (KFS_flag.spin_flag == false)
@@ -622,12 +554,12 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
             if (i == (index_exit - 1))
             {
                 Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                path_line_.Add_End_Point(temp_vector, path_param_KFS_);
+                path_line_.Add_End_Point(temp_vector, path_param.KFS);
             }
             else
             {
                 Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                path_line_.Add_Point(temp_vector, path_param_KFS_);
+                path_line_.Add_Point(temp_vector, path_param.KFS);
             }
         }
     }
@@ -640,19 +572,19 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
                 if (i == (index_exit - 1))
                 {
                     Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_End_Point(temp_vector, path_param_KFS_);
+                    path_line_.Add_End_Point(temp_vector, path_param.KFS);
                 }
                 else if (i == (KFS_KeyPoint_.Index_MFroad[0] + 1))
                 {
                     Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    temp_vector.y = temp_vector.y + spin_skew_;
-                    path_line_.Add_Point(temp_vector, path_param_KFS_);
+                    temp_vector.y = temp_vector.y + KFS_point.spin_skew_;
+                    path_line_.Add_Point(temp_vector, path_param.KFS);
                     KFS_flag.spin_down_flag = true;
                 }
                 else
                 {
                     Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_Point(temp_vector, path_param_KFS_);
+                    path_line_.Add_Point(temp_vector, path_param.KFS);
                 }
             }
         }
@@ -663,19 +595,19 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
                 if (i == (index_exit - 1))
                 {
                     Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_End_Point(temp_vector, path_param_KFS_);
+                    path_line_.Add_End_Point(temp_vector, path_param.KFS);
                 }
                 else if (i == (KFS_KeyPoint_.Index_MFroad[0] + 1))
                 {
-                    path_line_.Add_Point(spin_point_, path_param_KFS_);
+                    path_line_.Add_Point(KFS_point.spin_point_, path_param.KFS);
                     Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_Point(temp_vector, path_param_KFS_);
+                    path_line_.Add_Point(temp_vector, path_param.KFS);
                     KFS_flag.spin_up_flag = true;
                 }
                 else
                 {
                     Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_Point(temp_vector, path_param_KFS_);
+                    path_line_.Add_Point(temp_vector, path_param.KFS);
                 }
             }
         }
@@ -686,42 +618,41 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
                 if (i == (index_exit - 1))
                 {
                     Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_End_Point(temp_vector, path_param_KFS_);
+                    path_line_.Add_End_Point(temp_vector, path_param.KFS);
                 }
                 else if (i == (KFS_KeyPoint_.Index_MFroad[0] + 1))
                 {
                     if (KFS_KeyPoint_.mustPastMap[i] == 26 || KFS_KeyPoint_.mustPastMap[i] == 30) // 上
                     {
-                        path_line_.Add_Point(spin_point_, path_param_KFS_);
+                        path_line_.Add_Point(KFS_point.spin_point_, path_param.KFS);
                         Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                        path_line_.Add_Point(temp_vector, path_param_KFS_);
+                        path_line_.Add_Point(temp_vector, path_param.KFS);
                         KFS_flag.spin_up_flag = true;
                     }
                     else if (KFS_KeyPoint_.mustPastMap[i] == 1 || KFS_KeyPoint_.mustPastMap[i] == 5) // 下
                     {
                         Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                        temp_vector.y = temp_vector.y + spin_skew_;
-                        path_line_.Add_Point(temp_vector, path_param_KFS_);
+                        temp_vector.y = temp_vector.y + KFS_point.spin_skew_;
+                        path_line_.Add_Point(temp_vector, path_param.KFS);
                         KFS_flag.spin_down_flag = true;
                     }
                 }
                 else
                 {
                     Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_Point(temp_vector, path_param_KFS_);
+                    path_line_.Add_Point(temp_vector, path_param.KFS);
                 }
             }
         }
     }
-    Path_end_point=path_line_.Get_End_Point();
+    Path_end_point = path_line_.Get_End_Point();
 }
 
-
-//Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead)
+// Vector2D OmniChassis_Setup::FindLookaheadPoint(BezierCurve &path_, float tNearest, float &tLookahead)
 //{
-//    tLookahead = tNearest;        // 前视点的编号，先从最近点的编号开始（比如t=0.3）
-//    float accumulatedDist = 0.0f; // 累计挪了多少距离（刚开始是0）
-//    float step = 0.01f;           // 每次挪的“小步子”
+//     tLookahead = tNearest;        // 前视点的编号，先从最近点的编号开始（比如t=0.3）
+//     float accumulatedDist = 0.0f; // 累计挪了多少距离（刚开始是0）
+//     float step = 0.01f;           // 每次挪的“小步子”
 
 //    Vector2D lastPt = path_.Get_Point(tLookahead);
 
@@ -756,89 +687,7 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
 
 //    return lastPt;
 //}
-#if FF_V
-void OmniChassis_Setup::ResetAutoControlStates(void)
-{
-    // 1) 阻尼项使用上一时刻 v_robot，退出自动流程后必须清零，避免“历史速度”带入下一次任务。
-    v_robot_last_cmd_ = {0.0f, 0.0f};
 
-    // 2) 前馈差分状态一并复位，避免参考点跳变时出现首帧尖峰。
-    ff_diff_inited_ = false;
-    ff_ref_point_last_ = {0.0f, 0.0f};
-    ff_velocity_lpf_ = {0.0f, 0.0f};
-}
-
-Vector2D OmniChassis_Setup::ComposeRobotVelocity(const Vector2D &v_pid)
-{
-    // 判定是否进入终点段，用于控制参数切换。
-    bool near_end = (_tool_Abs((curve.Get_End_point() - robot_pos_).magnitude()) < deadzone_max_end_);
-    // 使用 RTOS tick 估计离散 dt（单位秒）；该方法在嵌入式任务循环中稳定且开销小。
-    // uint32_t now_tick_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    Vector2D v_ff_raw = {0.0f, 0.0f};
-
-    // 首次进入或状态复位后，不做差分，先对齐历史参考点。
-    if (!ff_diff_inited_)
-    {
-        ff_diff_inited_ = true;
-        ff_ref_point_last_ = ff_ref_point_;
-        // ff_last_tick_ms_ = now_tick_ms;
-        ff_velocity_lpf_ = {0.0f, 0.0f};
-        return ff_velocity_lpf_;
-    }
-
-    // 计算 dt，防止 0 或过小导致差分放大。
-    float dt_s = getdt();
-    if (dt_s <= 0.0f)
-    {
-        dt_s = control_period_s_;
-    }
-    if (dt_s < ff_dt_min_s_)
-    {
-        dt_s = ff_dt_min_s_;
-    }
-    if (dt_s > ff_dt_max_s_)
-    {
-        dt_s = ff_dt_max_s_;
-    }
-
-    // 参考点差分前馈：
-    // p_ref 由 Path_correction 更新，常规阶段为 lookaheadPt，终点阶段为 endPt。
-    // 这样可在不依赖 planspeed 的前提下，给 PID 额外“提前量”。
-    v_ff_raw = (ff_ref_point_ - ff_ref_point_last_) * (kff_la_ / dt_s);
-
-    // 一阶低通：抑制前视点参数 t 跳变引起的速度尖峰。
-    ff_velocity_lpf_ = ff_velocity_lpf_ * (1.0f - ff_lpf_alpha_) + v_ff_raw * ff_lpf_alpha_;
-
-    // 限幅：前馈只是加速辅助，不能反客为主压过 PID 闭环。
-    if (ff_velocity_lpf_.magnitude() > max_ff_speed_)
-    {
-        ff_velocity_lpf_ = ff_velocity_lpf_ * max_ff_speed_;
-    }
-
-    // 终点段衰减：减少“冲终点”风险，把控制权更多交给 PID 位置吸附。
-    Vector2D v_ff = ff_velocity_lpf_;
-    if (near_end)
-    {
-        v_ff = v_ff * end_ff_scale_;
-    }
-
-    // 更新历史量，供下一周期差分。
-    ff_ref_point_last_ = ff_ref_point_;
-    // ff_last_tick_ms_ = now_tick_ms;
-
-    float pid_scale = 1.0f;
-
-    Vector2D v_pid_out = v_pid * pid_scale;
-
-    Vector2D v_damp = v_robot_last_cmd_ * (-k_damp_);
-
-    // 最终速度合成：闭环主导 + 前馈提速 + 历史速度阻尼。
-    Vector2D v_robot = v_pid_out + v_ff + v_damp;
-
-    v_robot_last_cmd_ = v_robot;
-    return v_robot;
-}
-#endif
 void OmniChassis_Setup::flag_reset(void)
 {
     // 统一清空自动流程的阶段标志与旋转状态。
@@ -859,53 +708,49 @@ void OmniChassis_Setup::flag_reset(void)
 
 Vector2D OmniChassis_Setup::v_limit(void)
 {
-//    // 使用单位向量做正交分解，避免 |normal|² 缩放
-//    Vector2D normal = curve.Get_End_point() - curve.Get_Start_point();
-//    Vector2D tangent_dir = normal.normalize();
-//    Vector2D normal_dir = tangent_dir.perpendicular();
+    //    // 使用单位向量做正交分解，避免 |normal|² 缩放
+    //    Vector2D normal = curve.Get_End_point() - curve.Get_Start_point();
+    //    Vector2D tangent_dir = normal.normalize();
+    //    Vector2D normal_dir = tangent_dir.perpendicular();
 
-//    // 前馈速度：仅受 planspeed 幅度限制
-//    Vector2D v_ff = planspeed * FF_coefficient;
-//    if (v_ff.magnitude() > planspeed.magnitude())
-//        v_ff = v_ff.normalize() * planspeed.magnitude();
+    //    // 前馈速度：仅受 planspeed 幅度限制
+    //    Vector2D v_ff = planspeed * FF_coefficient;
+    //    if (v_ff.magnitude() > planspeed.magnitude())
+    //        v_ff = v_ff.normalize() * planspeed.magnitude();
 
-//    // 切向 = 前馈 + PID纠偏沿切向分量（PID不限幅，终点 planspeed=0 时保留切向纠偏）
-//    Vector2D v_tangent = v_ff + corrVelocity.project_onto(tangent_dir);
+    //    // 切向 = 前馈 + PID纠偏沿切向分量（PID不限幅，终点 planspeed=0 时保留切向纠偏）
+    //    Vector2D v_tangent = v_ff + corrVelocity.project_onto(tangent_dir);
 
-//    // 法向 = PID纠偏沿法向分量（限幅防止侧向过冲）
-//    Vector2D v_normal = corrVelocity.project_onto(normal_dir);
-//    if (v_normal.magnitude() > v_normal_max)
-//        v_normal = v_normal.normalize() * v_normal_max;
+    //    // 法向 = PID纠偏沿法向分量（限幅防止侧向过冲）
+    //    Vector2D v_normal = corrVelocity.project_onto(normal_dir);
+    //    if (v_normal.magnitude() > v_normal_max)
+    //        v_normal = v_normal.normalize() * v_normal_max;
 
-//    Vector2D v = v_tangent + v_normal;
+    //    Vector2D v = v_tangent + v_normal;
 
-    
-    
     // 使用单位向量做正交分解，避免 |normal|² 缩放
-    Vector2D normal = curve.Get_End_point() - curve.Get_Start_point();
-    
-    
-    Vector2D tangent_dir = normal.normalize();
+    Vector2D tangent = path_line_.Get_Tangent_Vector();
+    Vector2D tangent_dir = tangent.normalize();
     Vector2D normal_dir = tangent_dir.perpendicular();
 
     // 切向 = 前馈 + PID纠偏沿切向分量（PID不限幅，终点 planspeed=0 时保留切向纠偏）
-    Vector2D v_tangent = planspeed * FF_coefficient + corrVelocity.project_onto(tangent_dir);
+    Vector2D v_tangent = planspeed * V.FF_coefficient + corrVelocity.project_onto(tangent_dir);
 
     if (v_tangent.magnitude() > planspeed.magnitude())
         v_tangent = v_tangent.normalize() * planspeed.magnitude();
 
     // 法向 = PID纠偏沿法向分量（限幅防止侧向过冲）
     Vector2D v_normal = corrVelocity.project_onto(normal_dir);
-    if (v_normal.magnitude() > v_normal_max)
-        v_normal = v_normal.normalize() * v_normal_max;
+    if (v_normal.magnitude() > V.v_normal_max)
+        v_normal = v_normal.normalize() * V.v_normal_max;
 
-    Vector2D v = v_tangent + v_normal;
-    
+    Vector2D v_end = v_tangent + v_normal;
+
     num++;
     if (num > 5)
     {
-        debug_uart.printf_DMA("%f,%f,%f\n", v.magnitude(), v_tangent.magnitude(), v_normal.magnitude());
+        debug_uart.printf_DMA("%f,%f,%f\n", v_end.magnitude(), v_tangent.magnitude(), v_normal.magnitude());
         num = 0;
     }
-    return v;
+    return v_end;
 }
