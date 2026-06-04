@@ -929,9 +929,6 @@ namespace jia
                 // - 目标速度离开 near_zero_cfg_ 的 exit 门后，退出 zero-stop，恢复正常 RPM 闭环。
                 // - 实际 residual 速度不再决定 brake 释放/重进，也不会因为足够小而自动切到零电流收尾。
                 bool enable_drive_zero_stop_assist = true;          // [RW] 是否启用 drive 零速止停辅助。
-                f32 drive_zero_stop_settle_speed_m_s = 0.01f;       // [RW, 兼容保留] 旧 residual settled 阈值。当前目标门控 brake 语义下不再参与自动松刹车。
-                f32 drive_zero_stop_brake_release_speed_m_s = 0.01f;  // [RW, 兼容保留] 旧 residual brake 释放阈值。当前不再用它决定 brake 退出。
-                f32 drive_zero_stop_brake_reenter_speed_m_s = 0.02f; // [RW, 兼容保留] 旧 residual brake 重进阈值。当前不再用它决定 brake 重进。
                 f32 drive_zero_stop_brake_current_mA = 25000.0f;     // [RW] 零速止停进入 brake 分支时下发的刹车电流。
                 u32 drive_zero_stop_brake_ramp_time_ms = 0U;         // [RW] zero-stop 目标门进入后，从 0 线性爬升到 brake 电流的时长（ms）。0 表示阶跃下发。
 
@@ -1286,7 +1283,6 @@ namespace jia
             bool launch_hold_active_ = false;                                  // [RO] 静止起步整车等待门控是否激活。激活时先只转舵，不放驱动与车体速度规划。
             bool drive_zero_stop_active_ = false;                              // [RO] drive zero-stop 目标门是否已激活。true 时目标速度仍在 near-zero 保持区内。
             bool drive_zero_stop_brake_active_[4] = {false, false, false, false}; // [RO] 各轮是否正在执行 zero-stop brake。当前由目标门直接驱动，不由 residual 门释放。
-            bool drive_zero_stop_settled_[4] = {false, false, false, false};   // [RO, 兼容保留] 旧 residual settled 观测位。当前目标门控 brake 语义下保持 false。
             u32 drive_zero_stop_brake_ramp_elapsed_ms_[4] = {0U, 0U, 0U, 0U};  // [RO] 各轮 zero-stop brake ramp 已累计时长（ms）。进入 brake 后增长，退出目标门时清零。
             bool trans_dir_freeze_active_ = false;                              // [RO] 平移方向冻结门控当前状态。true 时方向保持参考角，只放行速度模长变化。
             bool trans_dir_ref_valid_ = false;                                  // [RO] 平移方向参考角是否有效。无效时先用当前指令方向建立参考。

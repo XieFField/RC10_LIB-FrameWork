@@ -65,7 +65,7 @@
     testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop();
     testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold();
     testDriveZeroStopKeepsBrakeAtTargetExitBoundary();
-    testDriveZeroStopIgnoresResidualReleaseAndSettleThresholdsWhileTargetStaysNearZero();
+    testDriveZeroStopKeepsBrakeAcrossResidualSpeedChangesWhileTargetStaysNearZero();
     testDriveZeroStopBrakeRampBuildsUpAcrossCycles();
     testDriveZeroStopBrakeRampDisabledKeepsStepBrakeBehavior();
     testDriveZeroStopBrakeRampKeepsBuildingWhenResidualSettlesUnderTargetGate();

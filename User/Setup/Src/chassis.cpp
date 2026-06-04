@@ -2219,7 +2219,6 @@ namespace jia
                 // 不再通过 release/reenter/settle 阈值切到零电流收尾。
                 const bool was_brake_active = drive_zero_stop_brake_active_[wheel_idx];
                 drive_zero_stop_brake_active_[wheel_idx] = true;
-                drive_zero_stop_settled_[wheel_idx] = false;
 
                 const bool need_reset_speed_pid_state =
                     can_reset_local_speed_pid &&
@@ -2268,7 +2267,6 @@ namespace jia
             else
             {
                 drive_zero_stop_brake_active_[wheel_idx] = false;
-                drive_zero_stop_settled_[wheel_idx] = false;
                 drive_zero_stop_brake_ramp_elapsed_ms_[wheel_idx] = 0U;
                 if (allow_drive_position_loop)
                 {
@@ -2320,7 +2318,6 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 drive_zero_stop_brake_active_[i] = false;
-                drive_zero_stop_settled_[i] = false;
                 drive_zero_stop_brake_ramp_elapsed_ms_[i] = 0U;
             }
             low_speed_residual_bypass_active_ = false;
@@ -3574,7 +3571,6 @@ namespace jia
                 for (u8 i = 0; i < 4; ++i)
                 {
                     drive_zero_stop_brake_active_[i] = false;
-                    drive_zero_stop_settled_[i] = false;
                     drive_zero_stop_brake_ramp_elapsed_ms_[i] = 0U;
                 }
             }

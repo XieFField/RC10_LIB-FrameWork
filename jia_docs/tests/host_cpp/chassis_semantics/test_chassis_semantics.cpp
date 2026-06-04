@@ -1832,9 +1832,6 @@ void configureDriveZeroStopHarness(Chassis &chassis, VESC_Motor drive_motors[4])
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
 }
 
@@ -2517,9 +2514,6 @@ void testNormalControlZeroStopUsesBrakeAfterBodyCommandDropsToZero()
     chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
     chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedMode;
 
@@ -2560,9 +2554,6 @@ void testSteerDegAndDriveSpeedSkipsZeroStopWhenDriveSpeedIsNonZero()
     chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
 
@@ -2595,9 +2586,6 @@ void testSteerDegAndDriveSpeedStillTurnsSteerWhenDriveSpeedIsZero()
     chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
 
@@ -2663,7 +2651,6 @@ void testDriveZeroStopKeepsBrakeWhenTargetStaysNearZeroEvenIfResidualSettles()
 
     EXPECT_TRUE(chassis.drive_zero_stop_active_);
     EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
     EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
@@ -2739,21 +2726,17 @@ void testDriveZeroStopKeepsBrakeAtTargetExitBoundary()
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kRpm);
 }
 
-void testDriveZeroStopIgnoresResidualReleaseAndSettleThresholdsWhileTargetStaysNearZero()
+void testDriveZeroStopKeepsBrakeAcrossResidualSpeedChangesWhileTargetStaysNearZero()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
     configureDriveZeroStopHarness(chassis, drive_motors);
-    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.005f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.02f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.05f;
 
     chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
     setWheelResidualSpeedMps(chassis, 0, 0.06f);
     chassis.applyModuleCommands(true);
 
     EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
 
@@ -2762,7 +2745,6 @@ void testDriveZeroStopIgnoresResidualReleaseAndSettleThresholdsWhileTargetStaysN
     chassis.applyModuleCommands(true);
 
     EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
 
@@ -2771,7 +2753,6 @@ void testDriveZeroStopIgnoresResidualReleaseAndSettleThresholdsWhileTargetStaysN
     chassis.applyModuleCommands(true);
 
     EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
 }
@@ -2834,7 +2815,6 @@ void testDriveZeroStopBrakeRampKeepsBuildingWhenResidualSettlesUnderTargetGate()
 
     EXPECT_TRUE(chassis.drive_zero_stop_active_);
     EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
     EXPECT_TRUE(drive_motors[0].getTargetBrake() > 0.0f);
     EXPECT_TRUE(drive_motors[0].getTargetBrake() < 1200.0f);
@@ -3398,9 +3378,6 @@ void testDebugSteerDegAndDriveSpeedModeSkipsZeroStopWhenSpeedIsNonZero()
     chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.debug_control_.common.enable = true;
