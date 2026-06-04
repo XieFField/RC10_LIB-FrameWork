@@ -894,18 +894,21 @@ namespace jia
                 bool enable_steer_alpha_limit_ = true;                          // [RW] 是否启用舵向角加速度上限。
                 f32 max_steer_alpha_rad_s2_ = 20000.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
 
-                // ---- 近零门限统一配置 --------------------------------------------
-                // 所有静止/冻结/X-Park/停车保护阈值统一由这组基准参数派生，避免多处手改失配。
+                // ---- 通用 near-zero 门限 -----------------------------------------
+                // 这组阈值描述“速度已经接近 0”的通用口径。使用者看这里时要先分清对象：
+                // - actual/residual：反馈或残余速度是否已经足够小，X-Park 进入门会用它做一次安全确认。
+                // - target/command：drive zero-stop 直接复用这组阈值判断目标是否已经进入刹车模式。
+                // 它不是 X-Park 目标静止意图的专用门；X-Park command 门在下面单独配置。
                 struct NearZeroThresholdConfig
                 {
-                    f32 base_enter_m_s = 0.01f; // [RW] 近零门限进入基准（m/s）。
-                    f32 base_exit_m_s = 0.02f;  // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
+                    f32 base_enter_m_s = 0.01f; // [RW] 通用 near-zero 进入阈值（m/s）。未激活的门控用它判断“可以进入”。
+                    f32 base_exit_m_s = 0.02f;  // [RW] 通用 near-zero 退出阈值（m/s）。已激活的门控用它保持滞回，应大于 enter。
                 } near_zero_cfg_;
 
                 struct XParkCommandThresholdConfig
                 {
-                    f32 enter_m_s = 0.01f; // [RW] 仅用于 X-Park 命令静止意图的进入门限（m/s），不用于残余反馈过滤。
-                    f32 exit_m_s = 0.02f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
+                    f32 enter_m_s = 0.01f; // [RW] X-Park 目标静止进入阈值（m/s）。只看 target/command，不看 actual residual。
+                    f32 exit_m_s = 0.02f;  // [RW] X-Park 目标静止退出阈值（m/s）。X-Park 已锁存后只用它决定是否退出。
                 } xpark_command_threshold_cfg_;
 
                 struct XParkSteerHoldConfig
@@ -921,14 +924,16 @@ namespace jia
                 } xpark_steer_hold_cfg_;
 
                 // ---- drive 零速止停辅助 -----------------------------------------
-                // 仅在整车正常 drive 闭环链路里使用，用来在“目标已经静止”时清理 VESC 本地速度环残留，
-                // 避免位置式 PID 的积分/状态尾巴把轮子短暂反向拖一下。
+                // 仅在整车正常 drive 闭环链路里使用。当前语义是“目标速度决定刹车模式”：
+                // - 目标速度进入 near_zero_cfg_ 的 enter 门后，zero-stop active，并持续下发 brake。
+                // - 目标速度离开 near_zero_cfg_ 的 exit 门后，退出 zero-stop，恢复正常 RPM 闭环。
+                // - 实际 residual 速度不再决定 brake 释放/重进，也不会因为足够小而自动切到零电流收尾。
                 bool enable_drive_zero_stop_assist = true;          // [RW] 是否启用 drive 零速止停辅助。
-                f32 drive_zero_stop_settle_speed_m_s = 0.01f;       // [RW] 最终停稳阈值（m/s）。残余线速度低于该值后，进入 zero-stop 的“最终 settled 区”，继续零电流收尾并清理最终残留状态。
-                f32 drive_zero_stop_brake_release_speed_m_s = 0.01f;  // [RW] brake 释放阈值（m/s）。当前已在 brake 分支时，只有残余速度降到该值及以下才允许松开 brake，转入非刹车收尾段。
-                f32 drive_zero_stop_brake_reenter_speed_m_s = 0.02f; // [RW] brake 重进阈值（m/s）。当前不在 brake 分支时，只有残余速度高于该值才重新进入 brake，和 brake_release 一起形成滞回。
+                f32 drive_zero_stop_settle_speed_m_s = 0.01f;       // [RW, 兼容保留] 旧 residual settled 阈值。当前目标门控 brake 语义下不再参与自动松刹车。
+                f32 drive_zero_stop_brake_release_speed_m_s = 0.01f;  // [RW, 兼容保留] 旧 residual brake 释放阈值。当前不再用它决定 brake 退出。
+                f32 drive_zero_stop_brake_reenter_speed_m_s = 0.02f; // [RW, 兼容保留] 旧 residual brake 重进阈值。当前不再用它决定 brake 重进。
                 f32 drive_zero_stop_brake_current_mA = 25000.0f;     // [RW] 零速止停进入 brake 分支时下发的刹车电流。
-                u32 drive_zero_stop_brake_ramp_time_ms = 0U;         // [RW] zero-stop brake 子状态激活后，从 0 线性爬升到 drive_zero_stop_brake_current_mA 的目标时长（ms）。0 表示关闭 ramp，保持阶跃下发。
+                u32 drive_zero_stop_brake_ramp_time_ms = 0U;         // [RW] zero-stop 目标门进入后，从 0 线性爬升到 brake 电流的时长（ms）。0 表示阶跃下发。
 
                 struct LowSpeedDriveSuppressionConfig
                 {
@@ -1276,13 +1281,13 @@ namespace jia
             u8 rot_z_pid_count_ = 0;                                           // [RO] 航向 PID 分频计数器
             f32 lock_now_rot_z_target_ = 0.0f;                                 // [RO] LockNow 真正维持的航向目标
             u32 lock_now_rot_z_shift_count_ = 0;                               // [RO] LockNow 松手缓冲倒计时
-            bool xpark_gate_active_ = false;                                   // [RO] X-Park 进入门控当前是否放行。true 时允许静止姿态切到 X-Park。
-            u32 xpark_stationary_hold_ms_ = 0U;                                // [RO] 连续静止累计时长（ms）。用于判断是否达到 X-Park 延时门槛。
+            bool xpark_gate_active_ = false;                                   // [RO] X-Park 是否已锁存。未锁存进入看 target+residual；锁存后退出只看 target。
+            u32 xpark_stationary_hold_ms_ = 0U;                                // [RO] X-Park 进入条件连续成立时长（ms）。只用于进入延时，不表示保持态 residual 健康。
             bool launch_hold_active_ = false;                                  // [RO] 静止起步整车等待门控是否激活。激活时先只转舵，不放驱动与车体速度规划。
-            bool drive_zero_stop_active_ = false;                              // [RO] 当前是否处于 drive 零速止停辅助态。激活后正常 RPM 下发会改成 brake/zero current 收尾。
-            bool drive_zero_stop_brake_active_[4] = {false, false, false, false}; // [RO] 各轮零速止停 brake 子状态。用于近零残余速度的轮级滞回。
-            bool drive_zero_stop_settled_[4] = {false, false, false, false};   // [RO] 各轮是否已经进入 zero-stop 的最终停稳区。用于区分“松刹车滑收”与“真正停稳收尾”。
-            u32 drive_zero_stop_brake_ramp_elapsed_ms_[4] = {0U, 0U, 0U, 0U};  // [RO] 各轮 zero-stop brake ramp 已累计时长（ms）。只在 brake 子状态内增长，退出/settled 时清零。
+            bool drive_zero_stop_active_ = false;                              // [RO] drive zero-stop 目标门是否已激活。true 时目标速度仍在 near-zero 保持区内。
+            bool drive_zero_stop_brake_active_[4] = {false, false, false, false}; // [RO] 各轮是否正在执行 zero-stop brake。当前由目标门直接驱动，不由 residual 门释放。
+            bool drive_zero_stop_settled_[4] = {false, false, false, false};   // [RO, 兼容保留] 旧 residual settled 观测位。当前目标门控 brake 语义下保持 false。
+            u32 drive_zero_stop_brake_ramp_elapsed_ms_[4] = {0U, 0U, 0U, 0U};  // [RO] 各轮 zero-stop brake ramp 已累计时长（ms）。进入 brake 后增长，退出目标门时清零。
             bool trans_dir_freeze_active_ = false;                              // [RO] 平移方向冻结门控当前状态。true 时方向保持参考角，只放行速度模长变化。
             bool trans_dir_ref_valid_ = false;                                  // [RO] 平移方向参考角是否有效。无效时先用当前指令方向建立参考。
             f32 trans_dir_ref_rad_ = 0.0f;                                      // [RO] 平移方向参考角（rad）。用于冻结保持与方向角速率限幅。

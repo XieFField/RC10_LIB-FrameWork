@@ -61,14 +61,15 @@
     testSteerDegAndDriveSpeedSkipsZeroStopWhenDriveSpeedIsNonZero();
     testSteerDegAndDriveSpeedStillTurnsSteerWhenDriveSpeedIsZero();
     testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay();
-    testDriveZeroStopSettlesToZeroCurrentWithoutHoldingBrake();
+    testDriveZeroStopKeepsBrakeWhenTargetStaysNearZeroEvenIfResidualSettles();
     testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop();
     testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold();
-    testDriveZeroStopSettleThresholdHasIndependentFinalSettleStage();
+    testDriveZeroStopKeepsBrakeAtTargetExitBoundary();
+    testDriveZeroStopIgnoresResidualReleaseAndSettleThresholdsWhileTargetStaysNearZero();
     testDriveZeroStopBrakeRampBuildsUpAcrossCycles();
     testDriveZeroStopBrakeRampDisabledKeepsStepBrakeBehavior();
-    testDriveZeroStopBrakeRampClearsImmediatelyWhenWheelSettles();
-    testDriveZeroStopBrakeRampRestartsFromZeroAfterReenteringBrake();
+    testDriveZeroStopBrakeRampKeepsBuildingWhenResidualSettlesUnderTargetGate();
+    testDriveZeroStopBrakeRampRestartsFromZeroAfterTargetExitsAndReentersBrakeGate();
     testLowSpeedDriveSuppressionBypassesWhenResidualSpeedAboveThreshold();
     testLowSpeedDriveSuppressionReenabledWhenResidualSpeedDropsBelowThreshold();
     testLowSpeedDriveSuppressionUsesGlobalWorstWheelError();
@@ -115,6 +116,7 @@
     testXParkUsesIndependentCommandThresholdWhileResidualMayUseLargeNearZeroFilter();
     testXParkAllowsEntryWhenBothCommandAndResidualAreBelowTheirOwnThresholds();
     testXParkDoesNotEnterWhenCommandExceedsDedicatedCommandThreshold();
+    testXParkKeepsLatchedGateWhenResidualRisesAfterEntry();
     testXParkSteerHoldSettlingEntryResetsSpeedPidOnlyOnce();
     testXParkSteerHoldRequiresConsecutiveSettlingBeforeLatchedZeroCurrent();
     testXParkSteerHoldZeroSettleHoldStillRequiresSettleCondition();

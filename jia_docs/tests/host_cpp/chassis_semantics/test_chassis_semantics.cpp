@@ -2650,7 +2650,7 @@ void testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay()
     EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
 }
 
-void testDriveZeroStopSettlesToZeroCurrentWithoutHoldingBrake()
+void testDriveZeroStopKeepsBrakeWhenTargetStaysNearZeroEvenIfResidualSettles()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
@@ -2662,9 +2662,10 @@ void testDriveZeroStopSettlesToZeroCurrentWithoutHoldingBrake()
     chassis.applyModuleCommands(true);
 
     EXPECT_TRUE(chassis.drive_zero_stop_active_);
-    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
-    EXPECT_NEAR(drive_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
 }
 
@@ -2707,11 +2708,38 @@ void testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold()
     setWheelResidualSpeedMps(chassis, 0, 0.01f);
     chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
     chassis.applyModuleCommands(true);
-    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
 }
 
-void testDriveZeroStopSettleThresholdHasIndependentFinalSettleStage()
+void testDriveZeroStopKeepsBrakeAtTargetExitBoundary()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 0U);
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+
+    const float exit_boundary_drive_rad_s =
+        chassis.getNearZeroExitSpeedMps() / chassis.runtime_strategy_cfg_.wheel_radius_m_;
+    advanceDriveZeroStopCycle(chassis, exit_boundary_drive_rad_s, 0.15f, 1U);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+
+    const float outside_exit_drive_rad_s =
+        (chassis.getNearZeroExitSpeedMps() + 0.001f) / chassis.runtime_strategy_cfg_.wheel_radius_m_;
+    advanceDriveZeroStopCycle(chassis, outside_exit_drive_rad_s, 0.15f, 2U);
+
+    EXPECT_TRUE(!chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kRpm);
+}
+
+void testDriveZeroStopIgnoresResidualReleaseAndSettleThresholdsWhileTargetStaysNearZero()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
@@ -2733,19 +2761,19 @@ void testDriveZeroStopSettleThresholdHasIndependentFinalSettleStage()
     chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
     chassis.applyModuleCommands(true);
 
-    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
     EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
-    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
 
     setWheelResidualSpeedMps(chassis, 0, 0.004f);
     chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
     chassis.applyModuleCommands(true);
 
-    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(chassis.drive_zero_stop_settled_[0]);
-    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
-    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 2U);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
 }
 
 void testDriveZeroStopBrakeRampBuildsUpAcrossCycles()
@@ -2791,7 +2819,7 @@ void testDriveZeroStopBrakeRampDisabledKeepsStepBrakeBehavior()
     EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
 }
 
-void testDriveZeroStopBrakeRampClearsImmediatelyWhenWheelSettles()
+void testDriveZeroStopBrakeRampKeepsBuildingWhenResidualSettlesUnderTargetGate()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
@@ -2805,13 +2833,14 @@ void testDriveZeroStopBrakeRampClearsImmediatelyWhenWheelSettles()
     advanceDriveZeroStopCycle(chassis, 0.0f, 0.01f, 2U);
 
     EXPECT_TRUE(chassis.drive_zero_stop_active_);
-    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(chassis.drive_zero_stop_settled_[0]);
-    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
-    EXPECT_NEAR(drive_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_TRUE(drive_motors[0].getTargetBrake() > 0.0f);
+    EXPECT_TRUE(drive_motors[0].getTargetBrake() < 1200.0f);
 }
 
-void testDriveZeroStopBrakeRampRestartsFromZeroAfterReenteringBrake()
+void testDriveZeroStopBrakeRampRestartsFromZeroAfterTargetExitsAndReentersBrakeGate()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
@@ -2822,7 +2851,7 @@ void testDriveZeroStopBrakeRampRestartsFromZeroAfterReenteringBrake()
     advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 2U);
     const float brake_before_release = drive_motors[0].getTargetBrake();
 
-    advanceDriveZeroStopCycle(chassis, 0.0f, 0.01f, 3U);
+    advanceDriveZeroStopCycle(chassis, 1.0f, 0.15f, 3U);
     EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
 
     advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 4U);
@@ -4072,7 +4101,7 @@ void testXParkResidualThresholdStillBlocksEntryWhenCommandIsStationary()
         planner_input = chassis.makeSwervePlannerInput(command);
     }
 
-    EXPECT_TRUE(!planner_input.command_stationary_intent);
+    EXPECT_TRUE(planner_input.command_stationary_intent);
     EXPECT_TRUE(!chassis.xpark_gate_active_);
     EXPECT_TRUE(!planner_input.allow_xpark_pose);
     EXPECT_TRUE(planner_input.max_residual_speed_m_s > chassis.getNearZeroEnterSpeedMps());
@@ -4163,6 +4192,43 @@ void testXParkDoesNotEnterWhenCommandExceedsDedicatedCommandThreshold()
     EXPECT_TRUE(!chassis.xpark_gate_active_);
     EXPECT_TRUE(!planner_input.allow_xpark_pose);
     EXPECT_TRUE(planner_input.max_residual_speed_m_s < chassis.getNearZeroEnterSpeedMps());
+}
+
+void testXParkKeepsLatchedGateWhenResidualRisesAfterEntry()
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.10f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.15f;
+
+    Chassis::Data command{};
+    command.vel_x = 0.005f;
+
+    for (jia::u32 i = 0; i < chassis.runtime_strategy_cfg_.xpark_entry_delay_ms; ++i)
+    {
+        chassis.makeSwervePlannerInput(command);
+    }
+
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 4.0f;
+    }
+
+    Chassis::SwervePlannerInput planner_input = chassis.makeSwervePlannerInput(command);
+
+    EXPECT_TRUE(planner_input.command_stationary_intent);
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+    EXPECT_TRUE(planner_input.allow_xpark_pose);
+    EXPECT_TRUE(planner_input.max_residual_speed_m_s > chassis.getNearZeroExitSpeedMps());
+
+    command.vel_x = 0.06f;
+    planner_input = chassis.makeSwervePlannerInput(command);
+
+    EXPECT_TRUE(!planner_input.command_stationary_intent);
+    EXPECT_TRUE(!chassis.xpark_gate_active_);
+    EXPECT_TRUE(!planner_input.allow_xpark_pose);
 }
 
 void testXParkSteerHoldSettlingEntryResetsSpeedPidOnlyOnce()

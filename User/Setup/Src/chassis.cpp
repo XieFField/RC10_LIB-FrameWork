@@ -1095,31 +1095,43 @@ namespace jia
             const f32 xpark_command_exit_speed = getXParkCommandExitSpeedMps();
             const f32 xpark_residual_enter_speed = getNearZeroEnterSpeedMps();
             const f32 xpark_residual_exit_speed = getNearZeroExitSpeedMps();
-            const bool command_stationary_intent = xpark_gate_active_
-                                                       ? (planner_input.max_command_wheel_speed_m_s <= xpark_command_exit_speed)
-                                                       : (planner_input.max_command_wheel_speed_m_s <= xpark_command_enter_speed);
-            const bool residual_stationary_intent = xpark_gate_active_
-                                                        ? (planner_input.max_residual_speed_m_s <= xpark_residual_exit_speed)
-                                                        : (planner_input.max_residual_speed_m_s <= xpark_residual_enter_speed);
-            planner_input.command_stationary_intent = command_stationary_intent && residual_stationary_intent;
+            // X-Park 有两层门：
+            // 1. 进入门：目标速度已经进入 X-Park command 门，且实际残余速度也进入通用 near-zero 门。
+            // 2. 保持/退出门：一旦 xpark_gate_active_ 锁存，只看目标速度是否仍在 X-Park command 退出门内。
+            // residual 在进入后不再踢出 X-Park，否则轮子刚被锁到 X 姿态后的反馈扰动会反复打断保持态。
+            const bool xpark_target_stationary = xpark_gate_active_
+                                                     ? (planner_input.max_command_wheel_speed_m_s <= xpark_command_exit_speed)
+                                                     : (planner_input.max_command_wheel_speed_m_s <= xpark_command_enter_speed);
+            const bool xpark_residual_stationary = xpark_gate_active_
+                                                       ? (planner_input.max_residual_speed_m_s <= xpark_residual_exit_speed)
+                                                       : (planner_input.max_residual_speed_m_s <= xpark_residual_enter_speed);
+            const bool xpark_entry_ready = xpark_target_stationary && xpark_residual_stationary;
+            planner_input.command_stationary_intent = xpark_target_stationary;
 
-            if (planner_input.command_stationary_intent)
+            if (!xpark_gate_active_)
             {
-                xpark_stationary_hold_ms_ = (xpark_stationary_hold_ms_ > (0xFFFFFFFFU - period_ms_))
-                                                ? 0xFFFFFFFFU
-                                                : (xpark_stationary_hold_ms_ + period_ms_);
-                if (xpark_stationary_hold_ms_ >= runtime_strategy_cfg_.xpark_entry_delay_ms)
+                if (xpark_entry_ready)
                 {
-                    xpark_gate_active_ = true;
+                    xpark_stationary_hold_ms_ = (xpark_stationary_hold_ms_ > (0xFFFFFFFFU - period_ms_))
+                                                    ? 0xFFFFFFFFU
+                                                    : (xpark_stationary_hold_ms_ + period_ms_);
+                    if (xpark_stationary_hold_ms_ >= runtime_strategy_cfg_.xpark_entry_delay_ms)
+                    {
+                        xpark_gate_active_ = true;
+                    }
+                }
+                else
+                {
+                    xpark_stationary_hold_ms_ = 0U;
                 }
             }
-            else
+            else if (!xpark_target_stationary)
             {
                 xpark_stationary_hold_ms_ = 0U;
                 xpark_gate_active_ = false;
             }
 
-            planner_input.allow_xpark_pose = planner_input.command_stationary_intent && xpark_gate_active_;
+            planner_input.allow_xpark_pose = xpark_gate_active_ && xpark_target_stationary;
             planner_input.force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
             planner_input.uniform_steer_oa_mod_rad = wrapTo2PiF32(degToRadF32(input_target_data_.steer_lock_angle_deg));
             planner_input.uniform_drive_omega_abs = fabsf(input_target_data_.drive_lock_speed_m_s) / runtime_strategy_cfg_.wheel_radius_m_;
@@ -2201,44 +2213,22 @@ namespace jia
 
             if (can_apply_zero_stop_assist)
             {
-                const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
-                const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * wheel_radius_m;
-                const f32 settle_speed_m_s = (runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s >= 0.0f)
-                                                 ? runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s
-                                                 : 0.0f;
-                const f32 brake_hold_speed_m_s = (runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s >= 0.0f)
-                                                     ? runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s
-                                                     : 0.0f;
-                const f32 brake_reenter_speed_m_s =
-                    (runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s > brake_hold_speed_m_s)
-                        ? runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s
-                        : brake_hold_speed_m_s;
+                // 新 zero-stop 语义由目标速度直接决定 brake 模式：
+                // applyModuleCommands() 已经用目标 near-zero enter/exit 决定 drive_zero_stop_active_。
+                // 只要 active 仍为 true，本轮就持续下发 brake；实际 residual 只作为反馈观察，
+                // 不再通过 release/reenter/settle 阈值切到零电流收尾。
                 const bool was_brake_active = drive_zero_stop_brake_active_[wheel_idx];
-                const bool was_settled = drive_zero_stop_settled_[wheel_idx];
-                drive_zero_stop_settled_[wheel_idx] = residual_speed_m_s <= settle_speed_m_s;
-
-                if (drive_zero_stop_settled_[wheel_idx])
-                {
-                    drive_zero_stop_brake_active_[wheel_idx] = false;
-                    drive_zero_stop_brake_ramp_elapsed_ms_[wheel_idx] = 0U;
-                }
-                else if (drive_zero_stop_brake_active_[wheel_idx])
-                {
-                    drive_zero_stop_brake_active_[wheel_idx] = residual_speed_m_s > brake_hold_speed_m_s;
-                }
-                else
-                {
-                    drive_zero_stop_brake_active_[wheel_idx] = residual_speed_m_s > brake_reenter_speed_m_s;
-                }
+                drive_zero_stop_brake_active_[wheel_idx] = true;
+                drive_zero_stop_settled_[wheel_idx] = false;
 
                 const bool need_reset_speed_pid_state =
                     can_reset_local_speed_pid &&
-                    ((entering_drive_zero_stop || leaving_drive_zero_stop) ||
-                     (!entering_drive_zero_stop && !was_settled && drive_zero_stop_settled_[wheel_idx]));
+                    entering_drive_zero_stop;
 
                 if (need_reset_speed_pid_state)
                 {
-                    // 进入/退出 zero-stop，或第一次真正进入最终停稳区时，都清一次本地速度环状态。
+                    // 进入 zero-stop brake 前清一次本地速度环状态，避免旧速度环尾巴叠到刹车收尾里。
+                    // 退出时的清理在本函数前部 leaving_drive_zero_stop 分支完成。
                     drive_vesc->reset_speed_pid_state();
                 }
 
@@ -3566,7 +3556,7 @@ namespace jia
 
                 if (drive_zero_stop_active_)
                 {
-                    drive_zero_stop_active_ = max_command_speed_m_s < getNearZeroExitSpeedMps();
+                    drive_zero_stop_active_ = max_command_speed_m_s <= getNearZeroExitSpeedMps();
                 }
                 else
                 {
