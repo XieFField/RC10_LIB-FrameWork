@@ -524,6 +524,12 @@ public:
     {
         return end_point;
     }
+    
+    int Get_Index()
+    {
+        return index_;
+    }
+    
 
 protected:
     float dead = 0.05f;
