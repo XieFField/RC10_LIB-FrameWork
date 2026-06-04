@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file chassis.h
  * @author 桑叁年
  * @brief 底盘控制声明
@@ -18,7 +18,7 @@
 #include "APP_PID.h"
 
 #ifndef FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 1
+#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 0
 #endif
 
 namespace jia
@@ -1139,7 +1139,7 @@ namespace jia
 
             struct DebugOutputConfig
             {
-                bool output_enable = true;
+                bool output_enable = false;
                 u8 output_family_raw = static_cast<u8>(DebugOutputFamily::kJustFloat);
                 DebugOutputTextConfig text{};
                 DebugOutputJustFloatConfig justfloat{};
