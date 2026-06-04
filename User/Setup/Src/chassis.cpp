@@ -2213,12 +2213,32 @@ namespace jia
 
             if (can_apply_zero_stop_assist)
             {
-                // 新 zero-stop 语义由目标速度直接决定 brake 模式：
+                // zero-stop 的模式层只看“目标速度”：
                 // applyModuleCommands() 已经用目标 near-zero enter/exit 决定 drive_zero_stop_active_。
-                // 只要 active 仍为 true，本轮就持续下发 brake；实际 residual 只作为反馈观察，
-                // 不再通过 release/reenter/settle 阈值切到零电流收尾。
+                // 这里处理的是每个 drive 末端的收尾层：active 期间先 brake，把轮子压到静止；
+                // 如果允许 settle 零电流收尾，再用实际 residual 复用 NearZero enter/exit 做滞回。
+                // 这样目标门不会被反馈噪声踢出，但轮子确实停稳后也不必一直吃 brake 电流。
+                const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * runtime_strategy_cfg_.wheel_radius_m_;
                 const bool was_brake_active = drive_zero_stop_brake_active_[wheel_idx];
-                drive_zero_stop_brake_active_[wheel_idx] = true;
+                if (!runtime_strategy_cfg_.enable_drive_zero_stop_settle_zero_current)
+                {
+                    drive_zero_stop_brake_active_[wheel_idx] = true;
+                }
+                else if (entering_drive_zero_stop)
+                {
+                    // 刚进入 zero-stop 的第一拍先 brake，一方面清掉速度环旧状态，一方面避免反馈刚好贴近 0 时漏掉主动刹停。
+                    drive_zero_stop_brake_active_[wheel_idx] = true;
+                }
+                else if (drive_zero_stop_brake_active_[wheel_idx])
+                {
+                    // 仍在 brake 时，必须 residual 进入 NearZero enter 才认为“已经刹稳”，切到零电流。
+                    drive_zero_stop_brake_active_[wheel_idx] = residual_speed_m_s > getNearZeroEnterSpeedMps();
+                }
+                else
+                {
+                    // 已经零电流收尾后，只有 residual 离开 NearZero exit 才重新 brake，避免 enter 附近来回抖动。
+                    drive_zero_stop_brake_active_[wheel_idx] = residual_speed_m_s > getNearZeroExitSpeedMps();
+                }
 
                 const bool need_reset_speed_pid_state =
                     can_reset_local_speed_pid &&

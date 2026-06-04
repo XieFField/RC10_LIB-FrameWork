@@ -2638,14 +2638,14 @@ void testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay()
     EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
 }
 
-void testDriveZeroStopKeepsBrakeWhenTargetStaysNearZeroEvenIfResidualSettles()
+void testDriveZeroStopSettlesToZeroCurrentWhenResidualEntersNearZero()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
     configureDriveZeroStopHarness(chassis, drive_motors);
 
     chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
-    setWheelResidualSpeedMps(chassis, 0, 0.01f);
+    setWheelResidualSpeedMps(chassis, 0, 0.15f);
 
     chassis.applyModuleCommands(true);
 
@@ -2654,6 +2654,15 @@ void testDriveZeroStopKeepsBrakeWhenTargetStaysNearZeroEvenIfResidualSettles()
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
     EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
+
+    setWheelResidualSpeedMps(chassis, 0, chassis.getNearZeroEnterSpeedMps());
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+    EXPECT_NEAR(drive_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
 }
 
 void testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop()
@@ -2676,7 +2685,25 @@ void testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop()
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 2U);
 }
 
-void testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold()
+void testDriveZeroStopSettleZeroCurrentCanBeDisabled()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_settle_zero_current = false;
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    setWheelResidualSpeedMps(chassis, 0, chassis.getNearZeroEnterSpeedMps());
+
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
+}
+
+void testDriveZeroStopSettleHysteresisDoesNotToggleAroundNearZeroBand()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
@@ -2693,6 +2720,18 @@ void testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold()
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
 
     setWheelResidualSpeedMps(chassis, 0, 0.01f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.02f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.031f);
     chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
     chassis.applyModuleCommands(true);
     EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
@@ -2726,7 +2765,7 @@ void testDriveZeroStopKeepsBrakeAtTargetExitBoundary()
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kRpm);
 }
 
-void testDriveZeroStopKeepsBrakeAcrossResidualSpeedChangesWhileTargetStaysNearZero()
+void testDriveZeroStopReentersBrakeWhenResidualLeavesNearZeroExit()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
@@ -2749,6 +2788,14 @@ void testDriveZeroStopKeepsBrakeAcrossResidualSpeedChangesWhileTargetStaysNearZe
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
 
     setWheelResidualSpeedMps(chassis, 0, 0.004f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.031f);
     chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
     chassis.applyModuleCommands(true);
 
@@ -2800,7 +2847,7 @@ void testDriveZeroStopBrakeRampDisabledKeepsStepBrakeBehavior()
     EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
 }
 
-void testDriveZeroStopBrakeRampKeepsBuildingWhenResidualSettlesUnderTargetGate()
+void testDriveZeroStopBrakeRampStopsWhenResidualSettlesUnderTargetGate()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
@@ -2814,10 +2861,9 @@ void testDriveZeroStopBrakeRampKeepsBuildingWhenResidualSettlesUnderTargetGate()
     advanceDriveZeroStopCycle(chassis, 0.0f, 0.01f, 2U);
 
     EXPECT_TRUE(chassis.drive_zero_stop_active_);
-    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
-    EXPECT_TRUE(drive_motors[0].getTargetBrake() > 0.0f);
-    EXPECT_TRUE(drive_motors[0].getTargetBrake() < 1200.0f);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+    EXPECT_NEAR(drive_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
 }
 
 void testDriveZeroStopBrakeRampRestartsFromZeroAfterTargetExitsAndReentersBrakeGate()
