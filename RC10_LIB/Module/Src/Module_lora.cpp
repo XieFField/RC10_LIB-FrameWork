@@ -88,8 +88,8 @@ Lora_communication::Lora_communication(UART_HandleTypeDef* tx_huart, UART_Handle
     lora_aux_pin = tx_aux_gpio_pin;
     
     s_instance = this;
-    // 初始化 KFS 缓冲区为 0
-    kfs_[0] = kfs_[1] = kfs_[2] = 0;
+    // 初始化 KFS 结构体为 0
+    kfs_data_ = {};
 }
 
 Lora_communication::~Lora_communication() {
@@ -123,17 +123,18 @@ void Lora_communication::Task_Process() {
         GetRecvJoystickData(joystick);
         uint16_t key = GetRecvAllKeyData();
 
-        uint8_t command, load1, load2;
-        // GetRecvCommandData(command, load1, load2);
-        // 将遥控器设置的 KFS 三字节保存在本地缓冲，供外部通过 GetKfs() 读取
-         if (command == 0x01) {
-            // 将解析出的 KFS 位置缓存，供外部通过 GetKfs() 读取
-            kfs_[0] = GetRecvFKFSData(0);
-            kfs_[1] = GetRecvFKFSData(1);
-            kfs_[2] = GetRecvFKFSData(2);
-        } else {
-            kfs_[0] = kfs_[1] = kfs_[2] = 13;
-        }
+        kfs_data_.color = GetColor();
+
+        kfs_data_.r1_kfs[0] = GetRecvFKFS1Data(1);
+        kfs_data_.r1_kfs[1] = GetRecvFKFS1Data(2);
+        kfs_data_.r1_kfs[2] = GetRecvFKFS1Data(3);
+
+        kfs_data_.r2_kfs[0] = GetRecvFKFS2Data(1);
+        kfs_data_.r2_kfs[1] = GetRecvFKFS2Data(2);
+        kfs_data_.r2_kfs[2] = GetRecvFKFS2Data(3);
+        kfs_data_.r2_kfs[3] = GetRecvFKFS2Data(4);
+
+        kfs_data_.fake_kfs = GetRecvFKFSfData(1);
 
         airjoy_data_.page = GetPage();
 

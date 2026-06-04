@@ -1,11 +1,14 @@
 #pragma once
 
+
+
 #include "usart.h"
 
 #define RING_BUF_SIZE 256
 #define DMA_BUF_SIZE  64
 
 #ifdef __cplusplus
+
 
 namespace communication{
     typedef struct {
@@ -156,20 +159,31 @@ namespace communication{
          * @brief 获取接收到的KFS位置数据
          * @param index 位置索引 (0~2)，对应 rec_setting_load1 的低四位和高四位，以及 rec_setting_load2 的低四位
          * @return uint8_t 索引对应的KFS位置值，若索引无效或当前命令不是0x01，则返回0
-         * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，获取最新的KFS位置数据。典型用法：uint8_t kfs0 = comm.GetRecvFKFSData(0); // 获取索引0位置
+         * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，获取最新的KFS位置数据。典型用法：uint8_t kfs0 = comm.GetRecvFKFS1Data(0); // 获取索引0位置
          */
-        uint8_t GetRecvFKFSData(uint8_t index) {
-            if(rec_setting_command == 0x01) {
-                switch (index) {
-                    case 0: return rec_setting_load1 & 0x0F; // 索引0位置
-                    case 1: return (rec_setting_load1 >> 4) & 0x0F; // 索引1位置
-                    case 2: return rec_setting_load2 & 0x0F; // 索引2位置
-                    default: return 0; // 无效索引返回0
-                    
-                }
+        uint8_t GetRecvFKFS1Data(uint8_t index) {
+            switch (index) {
+                case 1: return rec_KFS1_place1; // 索引1位置
+                case 2: return rec_KFS1_place2; // 索引2位置
+                case 3: return rec_KFS1_place3; // 索引3位置
+                default: return 0; // 无效索引返回0   
             }
-            else {
-                return 13; // 按道理来说应该不可能用到，除非根本就没发设置帧过来
+        }
+
+        uint8_t GetRecvFKFS2Data(uint8_t index) {
+            switch (index) {
+                case 1: return rec_KFS2_place1; // 索引1位置
+                case 2: return rec_KFS2_place2; // 索引2位置
+                case 3: return rec_KFS2_place3; // 索引3位置
+                case 4: return rec_KFS2_place4; // 索引4位置
+                default: return 0; // 无效索引返回0   
+            }
+        }
+
+        uint8_t GetRecvFKFSfData(uint8_t index) {
+            switch (index) {
+                case 1: return rec_KFSf_place1; // 索引1位置
+                default: return 0; // 无效索引返回0   
             }
         }
 
@@ -200,7 +214,11 @@ namespace communication{
          * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，获取最新 page 值。
          */
         uint8_t GetPage(void) {
-            return rec_page;
+            return rec_page&0x01;
+        }
+
+        uint8_t GetColor(void) {
+            return rec_page>>4;
         }
 
     private:
@@ -242,6 +260,15 @@ namespace communication{
         uint8_t rec_setting_command;
         uint8_t rec_setting_load1;
         uint8_t rec_setting_load2;
+
+        uint8_t rec_KFS1_place1;
+        uint8_t rec_KFS1_place2;
+        uint8_t rec_KFS1_place3;
+        uint8_t rec_KFS2_place1;
+        uint8_t rec_KFS2_place2;
+        uint8_t rec_KFS2_place3;
+        uint8_t rec_KFS2_place4;
+        uint8_t rec_KFSf_place1;
     protected:
     };
 }

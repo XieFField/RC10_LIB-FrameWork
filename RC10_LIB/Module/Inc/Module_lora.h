@@ -29,6 +29,14 @@ typedef struct{
     uint8_t d_pad_left; uint8_t d_pad_right; //十字键
 }RC10_AirJoy_Data_S;
 
+/* KFS 梅花桩位置数据结构体 */
+typedef struct {
+    uint8_t r1_kfs[3];   // KFS1 三个位置
+    uint8_t r2_kfs[4];   // KFS2 四个位置
+    uint8_t fake_kfs;    // KFSf 位置
+    uint8_t color;       // 我方颜色
+} KFS_DATA_S;
+
 class Lora_communication : public Communication, public gpio::GpioExti {
 public:
     static Lora_communication* GetInstance();
@@ -75,8 +83,8 @@ public:
 
     void send_command(int8_t cmd);
 
-    // 返回指向长度为3的 KFS 数据缓冲区（command, load1, load2）
-    const uint8_t* GetKfs() const { return kfs_; }
+    // KFS 数据对外查询接口
+    const KFS_DATA_S& GetKFSData() const { return kfs_data_; }
 
 protected:
     virtual void Comm_TxUseTxDMA(UART_HandleTypeDef* huart, uint8_t* data, uint16_t size) override;
@@ -119,7 +127,7 @@ private:
     uint16_t key_down_count_;
     uint16_t key_last_status_;
 
-    uint8_t kfs_[3];
+    KFS_DATA_S kfs_data_;
 
     static Lora_communication* s_instance;
     static void RxCallback(uint8_t* buf, uint16_t len);

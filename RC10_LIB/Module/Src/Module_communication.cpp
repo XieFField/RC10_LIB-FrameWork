@@ -41,6 +41,15 @@ namespace communication{
         rec_setting_load1 = 0;
         rec_setting_load2 = 0;
 
+        rec_KFS1_place1=0;
+        rec_KFS1_place2=0;
+        rec_KFS1_place3=0;
+        rec_KFS2_place1=0;
+        rec_KFS2_place2=0;
+        rec_KFS2_place3=0;
+        rec_KFS2_place4=0;
+        rec_KFSf_place1=0;
+
         // Communication_RX_DMA(rxhuart, dma_rx_buf, DMA_BUF_SIZE);
         // __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); 
     }
@@ -159,9 +168,39 @@ namespace communication{
             // 验证帧尾 0xDE 与 CRC（CRC 覆盖 command + load1 + load2 共 3 字节）
             if (pFrame->tail == 0xDE && pFrame->crc == crc8(frame_buf+2, sizeof(SettingFrame_t) - 4)) {
                 // 提取解包好的设置数据
-                rec_setting_command = pFrame->command;
-                rec_setting_load1 = pFrame->load1;
-                rec_setting_load2 = pFrame->load2;
+                switch(pFrame->command) {
+                    case 0x04: // KFS1位置设置
+                        rec_setting_command = pFrame->command;
+                        rec_setting_load1 = pFrame->load1;
+                        rec_setting_load2 = pFrame->load2;
+
+                        rec_KFS1_place1 = pFrame->load1 & 0x0F;
+                        rec_KFS1_place2 = (pFrame->load1 >> 4) & 0x0F;
+                        rec_KFS1_place3 = pFrame->load2 & 0x0F;
+                        break;
+                    
+                    case 0x07: // KFS2位置设置
+                        rec_setting_command = pFrame->command;
+                        rec_setting_load1 = pFrame->load1;
+                        rec_setting_load2 = pFrame->load2;
+
+                        rec_KFS2_place1 = pFrame->load1 & 0x0F;
+                        rec_KFS2_place2 = (pFrame->load1 >> 4) & 0x0F;
+                        rec_KFS2_place3 = pFrame->load2 & 0x0F;
+                        rec_KFS2_place4 = (pFrame->load2 >> 4) & 0x0F;
+                        break;                    
+
+                    case 0x08: // KFSf位置设置
+                        rec_setting_command = pFrame->command;
+                        rec_setting_load1 = pFrame->load1;
+                        rec_setting_load2 = pFrame->load2;
+
+                        rec_KFSf_place1 = pFrame->load1 & 0x0F;
+                        break;
+                    default:
+                        // 未知命令，暂时不处理
+                        break;
+                }
 
                 // 将 FIFO 头部读取指针越过已经正确消费的这一帧
                 rx_fifo.head = p;
