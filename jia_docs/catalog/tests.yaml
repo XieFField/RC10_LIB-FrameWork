@@ -5,7 +5,7 @@ groups:
     description: 主机侧 C++ 测试集合，统一由 `jia_docs/tests/run_tests.ps1` 入口调度
     recommended_entrypoints:
       - jia_docs/tests/run_tests.ps1
-      - jia_docs/tests/host_cpp/chassis_semantics/run_test.ps1
+      - jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
     suites:
       - id: chassis_semantics
         path: jia_docs/tests/host_cpp/chassis_semantics
@@ -16,10 +16,14 @@ groups:
             kind: powershell
             purpose: 主统一入口，按默认顺序调度主机测试与兼容包装脚本
             recommended: true
-          - path: jia_docs/tests/host_cpp/chassis_semantics/run_test.ps1
+          - path: jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
             kind: powershell
-            purpose: chassis_semantics 兼容入口
+            purpose: chassis_semantics doctest 主入口，编译 runner、harness 和行为域分片
             recommended: true
+          - path: jia_docs/tests/tdd/chassis_semantics/run_test.ps1
+            kind: powershell
+            purpose: chassis_semantics 旧路径兼容入口，新增测试不要优先使用
+            recommended: false
       - id: vesc_brake
         path: jia_docs/tests/host_cpp/vesc_brake
         status: active
@@ -31,13 +35,13 @@ groups:
             recommended: true
       - id: swerve_core
         path: jia_docs/tests/host_cpp/swerve_core
-        status: active
+        status: legacy
         primary: false
         entrypoints:
           - path: jia_docs/tests/host_cpp/swerve_core/run_test.ps1
             kind: powershell
-            purpose: SwerveController 核心语义回归兼容入口
-            recommended: true
+            purpose: Module_ChassisSwerve 历史对照入口；当前生产源文件缺失，预期 xfail
+            recommended: false
   - id: python_semantics
     path: jia_docs/tests/python_semantics
     role: current_python_tests
@@ -91,31 +95,13 @@ groups:
     role: legacy_regression
     description: 历史保留区，收纳不再默认执行但仍可作为兼容或对照的旧套件
     recommended_entrypoints:
-      - jia_docs/tests/historical/swerve_core/run_test.ps1
-      - jia_docs/tests/historical/vesc_brake/run_test.ps1
+      - jia_docs/tests/historical/chassis_module/run_test.ps1
+      - jia_docs/tests/historical/serial1_protocol_host/run_test.ps1
     suites:
-      - id: swerve_core
-        path: jia_docs/tests/historical/swerve_core
-        status: legacy
-        primary: true
-        entrypoints:
-          - path: jia_docs/tests/historical/swerve_core/run_test.ps1
-            kind: powershell
-            purpose: Module_ChassisSwerve 核心历史回归
-            recommended: true
-      - id: vesc_brake
-        path: jia_docs/tests/historical/vesc_brake
-        status: legacy
-        primary: false
-        entrypoints:
-          - path: jia_docs/tests/historical/vesc_brake/run_test.ps1
-            kind: powershell
-            purpose: VESC 本地 PID 速度环与刹车相关历史回归
-            recommended: true
       - id: other_legacy
         path: jia_docs/tests/historical
         status: legacy
-        primary: false
+        primary: true
         entrypoints:
           - path: jia_docs/tests/historical/chassis_mode_fsm/run_test.ps1
             kind: powershell
@@ -149,7 +135,7 @@ groups:
             purpose: tri-omni 运动学历史回归
 recommended_execution_order:
   - jia_docs/tests/run_tests.ps1
-  - jia_docs/tests/host_cpp/chassis_semantics/run_test.ps1
+  - jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
   - jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
-legacy_focus_entrypoint: jia_docs/tests/historical/vesc_brake/run_test.ps1
+legacy_focus_entrypoint: jia_docs/tests/legacy_ai_tests/vesc_brake/run_test.ps1
 ai_regression_focus_entrypoint: jia_docs/tests/python_semantics/swerve_port/lock_now_homing_gate_regression.py

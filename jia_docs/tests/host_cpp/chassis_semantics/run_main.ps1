@@ -13,10 +13,19 @@ $userInc = Join-Path $repoRoot 'User\Setup\Inc'
 $appInc = Join-Path $repoRoot 'RC10_LIB\APP\Inc'
 $testSupportSrc = Join-Path $suiteDir 'stubs_src\test_host_globals.cpp'
 $chassisSrc = Join-Path $repoRoot 'User\Setup\Src\chassis.cpp'
-$testMainSrc = Join-Path $suiteDir 'test_chassis_semantics_main.cpp'
-$testSrc = Join-Path $suiteDir 'test_chassis_semantics.cpp'
+$testSrcs = @(
+    (Join-Path $suiteDir 'test_chassis_semantics_main.cpp'),
+    (Join-Path $suiteDir 'test_chassis_semantics_harness.cpp'),
+    (Join-Path $suiteDir 'test_chassis_semantics_drive_pid_and_mapping.cpp'),
+    (Join-Path $suiteDir 'test_chassis_semantics_single_wheel_debug.cpp'),
+    (Join-Path $suiteDir 'test_chassis_semantics_drive_delivery_zero_stop.cpp'),
+    (Join-Path $suiteDir 'test_chassis_semantics_yaw_and_motion_profile.cpp'),
+    (Join-Path $suiteDir 'test_chassis_semantics_swerve_planner_flip_reverse.cpp'),
+    (Join-Path $suiteDir 'test_chassis_semantics_xpark_gate_and_hold.cpp'),
+    (Join-Path $suiteDir 'test_chassis_semantics_steer_fault_homing_recovery.cpp')
+)
 
-Invoke-JiaGppCompile -Arguments @(
+$compileArgs = @(
     '-std=c++17',
     '-ffunction-sections',
     '-fdata-sections',
@@ -25,11 +34,12 @@ Invoke-JiaGppCompile -Arguments @(
     '-I', $userInc,
     '-I', $appInc,
     $testSupportSrc,
-    $chassisSrc,
-    $testMainSrc,
-    $testSrc,
+    $chassisSrc
+) + $testSrcs + @(
     '-Wl,--gc-sections'
-) -OutputPath $exe
+)
+
+Invoke-JiaGppCompile -Arguments $compileArgs -OutputPath $exe
 
 Invoke-JiaNativeExecutable -Path $exe -Arguments @(
     '--reporters=console',

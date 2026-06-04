@@ -22,22 +22,28 @@ recommended_verification:
   primary:
     - jia_docs/tests/run_tests.ps1
   compatibility:
-    - jia_docs/tests/host_cpp/chassis_semantics/run_test.ps1
-    - jia_docs/tests/host_cpp/chassis_semantics/run_pid_reconnect_test.ps1
+    - jia_docs/tests/tdd/chassis_semantics/run_test.ps1
+    - jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
     - jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
 known_baseline_status:
   - target: jia_docs/tests/run_tests.ps1
     status: unified_entrypoint
     detail: 测试重构后的统一入口；默认应覆盖当前 active host_cpp 套件，并可按需调度 Python 语义回归。
-  - target: jia_docs/tests/host_cpp/chassis_semantics/run_test.ps1
+  - target: jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
+    status: doctest_split_entrypoint
+    detail: 当前 chassis_semantics 主入口，编译 doctest runner、harness 与行为域分片；旧 `tdd/chassis_semantics/run_test.ps1` 仅作为兼容入口保留。
+  - target: jia_docs/tests/tdd/chassis_semantics/run_test.ps1
     status: pass_in_2026_05_31_handoff
-    detail: 最新 2026-05-31 handoff 记录为 PASS；旧 `tdd/chassis_semantics/run_test.ps1` 仅作为兼容入口保留。
-  - target: jia_docs/tests/host_cpp/chassis_semantics/run_pid_reconnect_test.ps1
+    detail: 最新 2026-05-31 handoff 记录为 PASS；现在通过 compat_wrapper 转发到 `host_cpp.chassis_semantics.main`。
+  - target: jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
     status: pass_in_2026_05_31_handoff
-    detail: 最新 2026-05-31 handoff 记录为 PASS；旧 `tdd/chassis_semantics/run_pid_reconnect_test.ps1` 仅作为兼容入口保留。
+    detail: 最新 2026-05-31 handoff 记录为 PASS；现在通过 compat_wrapper 转发到 `host_cpp.chassis_semantics.pid_reconnect`。
   - target: jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
     status: pass_in_2026_05_31_handoff
     detail: 最新 2026-05-31 handoff 记录为 PASS；旧 `legacy_ai_tests/vesc_brake/run_test.ps1` 仅作为兼容入口保留。
+  - target: jia_docs/tests/host_cpp/swerve_core/run_test.ps1
+    status: known_xfail_missing_source
+    detail: 当前仓库已无 `RC10_LIB/Module/Src/Module_ChassisSwerve.cpp` 与对应头文件；该历史宿主对照保留在 registry 中，但不再视作当前 active pass 套件。
 open_followups:
   - 完成 S 型速度规划的后续收口
   - 测试对外接口
