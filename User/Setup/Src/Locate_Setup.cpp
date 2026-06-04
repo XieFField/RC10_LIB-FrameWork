@@ -38,7 +38,6 @@ void Locate_Setup::update()
     }
 }
 
-
 void Locate_Setup::lader_transform_caculate()
 {
     // 如果还没初始化安装位姿则直接返回

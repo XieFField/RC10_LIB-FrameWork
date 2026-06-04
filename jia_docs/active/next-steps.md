@@ -1,10 +1,10 @@
 # 当前待办与联调关注点
 
-本页用于接替旧 `plan.txt` 的待办入口，保留仍然有效的项目，并合并最新 handoff 中仍值得继续跟进的事项。
+本页用于接替旧 `plan.txt` 的待办入口，保留仍然有效的事项，并对齐 2026-05-31 的最新 handoff 状态。
 
 ## 从旧 `plan.txt` 迁移出的未完成项
 
-以下条目在旧待办里未标记 `pass`，仍视为开放事项：
+以下条目在旧待办里仍未标记为 `pass`，现在继续视为开放事项：
 
 1. 完成 `S` 型速度规划的后续落地与收口
 2. 测试对外接口
@@ -12,7 +12,7 @@
 
 ## 从最新 handoff 提取的联调关注点
 
-围绕 [ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md](../handoff/2026-05/ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md)，继续联调时建议优先关注：
+围绕 [ai_handoff_2026-05-31_rc10_wait_1_7_7_1_6_1_merge.md](../handoff/2026-05/ai_handoff_2026-05-31_rc10_wait_1_7_7_1_6_1_merge.md)，继续联调时建议优先关注：
 
 1. `mode30` 单轮 RPM + `VESC_RPM_CONTROL_PID_CURRENT` 的联动行为
 2. 自动阶跃器的相位切换是否符合预期
@@ -23,14 +23,14 @@
    - 非目标轮
 4. `kDrivePidLoadTune` 的 15 通道 payload 顺序是否与上位机脚本一致
 
-## 若要继续清理 baseline 失败
+## 现在不再这样描述
 
-- `jia_docs/tests/tdd/chassis_semantics/run_test.ps1` 在最新 merge handoff 中仍记录 `18` 个 baseline 失败。
-- 这些失败并非本轮整理新引入的问题。
-- 若要继续消化，建议单开任务，不要与 handoff/文档结构重构混做。
+- 不再把 `jia_docs/tests/tdd/chassis_semantics/run_test.ps1` 描述为“仍有 18 个 baseline 失败”
+- 2026-05-31 handoff 已记录当前主机侧入口为 `PASS`
+- 旧 `run_test.ps1` 系列现在应按兼容包装入口理解，不应再作为主要结论来源
 
-## 建议的下一步顺序
+## 如果你要继续清理历史项
 
-1. 先完成当前文档与导航重构收口
-2. 再决定是继续底盘联调，还是单独清 baseline 失败
-3. 若进入协议/上位机联调，再补读 `SingleWheelTrace payload` 补充 handoff
+- 若要继续消化历史 baseline，建议单开任务，不要和当前主线交接混在一起
+- 若要继续追 `trace` 或上位机语义，优先补读 `SingleWheelTrace payload` 说明 handoff
+- 若要继续推进主机测试重构，优先以 `jia_docs/tests/run_tests.ps1` 为唯一主入口对齐文档

@@ -110,14 +110,7 @@ struct DrivePidTuneHarness
     M3508 steer_motors[4]{};
 };
 
-struct SteerSettleResetHarness
-{
-    Chassis chassis{};
-    VESC_Motor drive_motors[4]{};
-    M3508 steer_motors[4]{};
-};
-
-struct XParkSteerDeadbandHarness
+struct XParkSteerHoldHarness
 {
     Chassis chassis{};
     VESC_Motor drive_motors[4]{};
@@ -265,7 +258,7 @@ void testDrivePidApplySkipsNullHandlesAndStillUpdatesAppliedStamp()
 
 void configureDriveContinuityHarness(Chassis &chassis, VESC_Motor drive_motors[4]);
 void configureXParkWheelGeometry(Chassis &chassis);
-void configureSteerSettleResetHarness(SteerSettleResetHarness &harness);
+void configureXParkSteerHoldHarness(XParkSteerHoldHarness &harness);
 
 void setPhotogateStateForWheel(int wheel_idx, bool active_high)
 {
@@ -1804,6 +1797,7 @@ void testDebugSteerDegAndDriveSpeedModeMapsLeftXAndRightXToInterface()
     EXPECT_NEAR(chassis.input_target_data_.drive_lock_speed_m_s, -0.6f, 1.0e-6f);
     EXPECT_NEAR(chassis.input_target_data_.omega_z, 0.0f, 1.0e-6f);
 }
+
 void configureDriveContinuityHarness(Chassis &chassis, VESC_Motor drive_motors[4])
 {
     chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 10.0f;
@@ -1838,9 +1832,6 @@ void configureDriveZeroStopHarness(Chassis &chassis, VESC_Motor drive_motors[4])
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
 }
 
@@ -2304,7 +2295,7 @@ Chassis::ActuatorCommandFrame makeXParkSteerCommandFrame(Chassis &chassis)
     return frame;
 }
 
-void configureXParkSteerDeadbandHarness(XParkSteerDeadbandHarness &harness)
+void configureXParkSteerHoldHarness(XParkSteerHoldHarness &harness)
 {
     Chassis &chassis = harness.chassis;
     configureDriveContinuityHarness(chassis, harness.drive_motors);
@@ -2313,9 +2304,16 @@ void configureXParkSteerDeadbandHarness(XParkSteerDeadbandHarness &harness)
     chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kXPark;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
-    chassis.runtime_strategy_cfg_.xpark_steer_deadband_cfg_.enable = true;
-    chassis.runtime_strategy_cfg_.xpark_steer_deadband_cfg_.enter_angle_deg = 1.0f;
-    chassis.runtime_strategy_cfg_.xpark_steer_deadband_cfg_.exit_angle_deg = 3.0f;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = true;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.entry_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.exit_angle_deg = 3.0f;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.settle_angle_deg = 0.6f;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.settle_target_rate_deg_s = 2.0f;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.settle_hold_ms = 2U;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.reacquire_hold_ms = 2U;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.entry_reset_enable = true;
     chassis.input_target_data_.zero_current_all = false;
     chassis.current_mode_flag_.is_wheel_torque_free = false;
     chassis.current_mode_flag_.is_world_speed_mode = false;
@@ -2340,61 +2338,6 @@ void configureXParkSteerDeadbandHarness(XParkSteerDeadbandHarness &harness)
         harness.steer_motors[i].resetLastCommandObservation();
         setWheelOaAngleRad(chassis, i, getWheelXParkTargetOaRad(chassis, i));
     }
-}
-
-void configureSteerSettleResetHarness(SteerSettleResetHarness &harness)
-{
-    configureDriveContinuityHarness(harness.chassis, harness.drive_motors);
-    configureXParkWheelGeometry(harness.chassis);
-
-    harness.chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
-    harness.chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
-    harness.chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
-    harness.chassis.runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.enable = true;
-    harness.chassis.runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.enter_angle_deg = 0.6f;
-    harness.chassis.runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.exit_angle_deg = 3.0f;
-    harness.chassis.runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.enter_target_rate_deg_s = 2.0f;
-    harness.chassis.runtime_strategy_cfg_.steer_speed_pid_settle_reset_cfg_.exit_target_rate_deg_s = 12.0f;
-    harness.chassis.input_target_data_.zero_current_all = false;
-    harness.chassis.current_mode_flag_.is_wheel_torque_free = false;
-    harness.chassis.debug_control_.common.enable = false;
-    harness.chassis.xpark_gate_active_ = false;
-
-    for (int i = 0; i < 4; ++i)
-    {
-        harness.chassis.wheel_config_[i].steer_motor_h = &harness.steer_motors[i];
-        harness.chassis.wheel_config_[i].homing_state = Chassis::HomingState::kReady;
-        harness.chassis.wheel_config_[i].steer_fault_state = Chassis::SteerFaultState::kNone;
-        harness.chassis.wheel_config_[i].corrected_drive_omega_rad_s = 0.0f;
-        harness.chassis.wheel_config_[i].target_drive_omega_rad_s = 0.0f;
-        harness.chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
-        harness.chassis.wheel_config_[i].target_steer_motor_total_angle_rad = 0.0f;
-        harness.chassis.wheel_config_[i].steer_target_velocity_rad_s = 0.0f;
-        harness.chassis.last_drive_omega_cmd_rad_s_[i] = 0.0f;
-        harness.chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
-    }
-}
-
-Chassis::ActuatorCommandFrame makeSteerSettleCommandFrame(Chassis &chassis,
-                                                          float wheel0_target_deg,
-                                                          float wheel0_rate_deg_s)
-{
-    Chassis::ActuatorCommandFrame frame{};
-    for (int i = 0; i < 4; ++i)
-    {
-        const float current_corrected_local_total_rad = chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad;
-        frame.steer_corrected_local_total_rad[i] = current_corrected_local_total_rad;
-        frame.steer_oa_total_rad[i] =
-            chassis.mapWheelCorrectedLocalToOaTotal(chassis.wheel_config_[i], current_corrected_local_total_rad);
-        frame.steer_rate_rad_s[i] = 0.0f;
-        frame.drive_omega_rad_s[i] = 0.0f;
-    }
-
-    frame.steer_corrected_local_total_rad[0] = jia::degToRadF32(wheel0_target_deg);
-    frame.steer_oa_total_rad[0] =
-        chassis.mapWheelCorrectedLocalToOaTotal(chassis.wheel_config_[0], frame.steer_corrected_local_total_rad[0]);
-    frame.steer_rate_rad_s[0] = jia::degToRadF32(wheel0_rate_deg_s);
-    return frame;
 }
 
 Chassis::SwervePlannerInput makeGatePlannerInput(float steering_error_deg,
@@ -2571,9 +2514,6 @@ void testNormalControlZeroStopUsesBrakeAfterBodyCommandDropsToZero()
     chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
     chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedMode;
 
@@ -2614,9 +2554,6 @@ void testSteerDegAndDriveSpeedSkipsZeroStopWhenDriveSpeedIsNonZero()
     chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
 
@@ -2635,6 +2572,42 @@ void testSteerDegAndDriveSpeedSkipsZeroStopWhenDriveSpeedIsNonZero()
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kRpm);
     EXPECT_TRUE(std::fabs(drive_motors[0].getTargetRPM()) > 1.0e-6f);
 }
+
+void testSteerDegAndDriveSpeedStillTurnsSteerWhenDriveSpeedIsZero()
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        drive_motors[i].setRpmControlMode(VESC_RPM_CONTROL_NATIVE_ERPM);
+    }
+
+    chassis.setSteerDegAndDriveSpeed(30.0f, 0.0f);
+    chassis.setModeFlag();
+
+    EXPECT_TRUE(runHostControlCycle(chassis));
+
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kSteerAngleAndDriveSpeedMode);
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad, jia::degToRadF32(30.0f), 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.steer_angle_oa_rad[0], jia::degToRadF32(30.0f), 1.0e-6f);
+    EXPECT_NEAR(chassis.debug_mirror_.target_oa_deg[0], 30.0f, 1.0e-6f);
+    EXPECT_NEAR(steer_motors[0].getTargetTotalAngle(), 30.0f, 1.0e-4f);
+    EXPECT_NEAR(drive_motors[0].getTargetRPM(), 0.0f, 1.0e-6f);
+}
+
 void testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay()
 {
     Chassis chassis;
@@ -2665,22 +2638,31 @@ void testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay()
     EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
 }
 
-void testDriveZeroStopSettlesToZeroCurrentWithoutHoldingBrake()
+void testDriveZeroStopSettlesToZeroCurrentWhenResidualEntersNearZero()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
     configureDriveZeroStopHarness(chassis, drive_motors);
 
     chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
-    setWheelResidualSpeedMps(chassis, 0, 0.01f);
+    setWheelResidualSpeedMps(chassis, 0, 0.15f);
 
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
+
+    setWheelResidualSpeedMps(chassis, 0, chassis.getNearZeroEnterSpeedMps());
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
     chassis.applyModuleCommands(true);
 
     EXPECT_TRUE(chassis.drive_zero_stop_active_);
     EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
     EXPECT_NEAR(drive_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
-    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
 }
 
 void testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop()
@@ -2703,7 +2685,25 @@ void testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop()
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 2U);
 }
 
-void testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold()
+void testDriveZeroStopSettleZeroCurrentCanBeDisabled()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_settle_zero_current = false;
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    setWheelResidualSpeedMps(chassis, 0, chassis.getNearZeroEnterSpeedMps());
+
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
+}
+
+void testDriveZeroStopSettleHysteresisDoesNotToggleAroundNearZeroBand()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
@@ -2724,23 +2724,58 @@ void testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold()
     chassis.applyModuleCommands(true);
     EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.02f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.031f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
 }
 
-void testDriveZeroStopSettleThresholdHasIndependentFinalSettleStage()
+void testDriveZeroStopKeepsBrakeAtTargetExitBoundary()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
     configureDriveZeroStopHarness(chassis, drive_motors);
-    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.005f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.02f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.05f;
+
+    advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 0U);
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+
+    const float exit_boundary_drive_rad_s =
+        chassis.getNearZeroExitSpeedMps() / chassis.runtime_strategy_cfg_.wheel_radius_m_;
+    advanceDriveZeroStopCycle(chassis, exit_boundary_drive_rad_s, 0.15f, 1U);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+
+    const float outside_exit_drive_rad_s =
+        (chassis.getNearZeroExitSpeedMps() + 0.001f) / chassis.runtime_strategy_cfg_.wheel_radius_m_;
+    advanceDriveZeroStopCycle(chassis, outside_exit_drive_rad_s, 0.15f, 2U);
+
+    EXPECT_TRUE(!chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kRpm);
+}
+
+void testDriveZeroStopReentersBrakeWhenResidualLeavesNearZeroExit()
+{
+    Chassis chassis;
+    VESC_Motor drive_motors[4];
+    configureDriveZeroStopHarness(chassis, drive_motors);
 
     chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
     setWheelResidualSpeedMps(chassis, 0, 0.06f);
     chassis.applyModuleCommands(true);
 
     EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
 
@@ -2748,9 +2783,8 @@ void testDriveZeroStopSettleThresholdHasIndependentFinalSettleStage()
     chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
     chassis.applyModuleCommands(true);
 
-    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(!chassis.drive_zero_stop_settled_[0]);
-    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
     EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
 
     setWheelResidualSpeedMps(chassis, 0, 0.004f);
@@ -2758,9 +2792,16 @@ void testDriveZeroStopSettleThresholdHasIndependentFinalSettleStage()
     chassis.applyModuleCommands(true);
 
     EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(chassis.drive_zero_stop_settled_[0]);
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
-    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 2U);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.031f);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), makeDriveOnlyCommandFrame(0.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_TRUE(drive_motors[0].getResetSpeedPidStateCallCount() == 1U);
 }
 
 void testDriveZeroStopBrakeRampBuildsUpAcrossCycles()
@@ -2806,7 +2847,7 @@ void testDriveZeroStopBrakeRampDisabledKeepsStepBrakeBehavior()
     EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
 }
 
-void testDriveZeroStopBrakeRampClearsImmediatelyWhenWheelSettles()
+void testDriveZeroStopBrakeRampStopsWhenResidualSettlesUnderTargetGate()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
@@ -2821,12 +2862,11 @@ void testDriveZeroStopBrakeRampClearsImmediatelyWhenWheelSettles()
 
     EXPECT_TRUE(chassis.drive_zero_stop_active_);
     EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
-    EXPECT_TRUE(chassis.drive_zero_stop_settled_[0]);
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kCurrent);
     EXPECT_NEAR(drive_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
 }
 
-void testDriveZeroStopBrakeRampRestartsFromZeroAfterReenteringBrake()
+void testDriveZeroStopBrakeRampRestartsFromZeroAfterTargetExitsAndReentersBrakeGate()
 {
     Chassis chassis;
     VESC_Motor drive_motors[4];
@@ -2837,7 +2877,7 @@ void testDriveZeroStopBrakeRampRestartsFromZeroAfterReenteringBrake()
     advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 2U);
     const float brake_before_release = drive_motors[0].getTargetBrake();
 
-    advanceDriveZeroStopCycle(chassis, 0.0f, 0.01f, 3U);
+    advanceDriveZeroStopCycle(chassis, 1.0f, 0.15f, 3U);
     EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
 
     advanceDriveZeroStopCycle(chassis, 0.0f, 0.15f, 4U);
@@ -2883,8 +2923,8 @@ void testLowSpeedDriveSuppressionReenabledWhenResidualSpeedDropsBelowThreshold()
     chassis.computeLowSpeedDriveSuppressionScales(makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.5f), steering_errors_rad, gate_scales);
     chassis.computeLowSpeedDriveSuppressionScales(makeGatePlannerInput(10.0f, 0.0f, 0.0f, 0.1f), steering_errors_rad, gate_scales);
 
-    EXPECT_NEAR(gate_scales[0], 0.0f, 1.0e-6f);
-    EXPECT_NEAR(gate_scales[2], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(gate_scales[0], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(gate_scales[2], 1.0f, 1.0e-6f);
 }
 
 void testLowSpeedDriveSuppressionUsesGlobalWorstWheelError()
@@ -3186,7 +3226,11 @@ void testManualSCurveProfileToggleResetsShapingHistory()
     chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kLegacy;
     chassis.updatePlannedMotionData();
 
-    EXPECT_NEAR(chassis.planned_data_.vel_x, chassis.runtime_strategy_cfg_.max_acc_xy_acc_ * Chassis::period_, 1.0e-6f);
+    const float expected_legacy_vel_x =
+        (chassis.runtime_strategy_cfg_.max_acc_xy_acc_ * Chassis::period_ < chassis.target_data_.vel_x)
+            ? (chassis.runtime_strategy_cfg_.max_acc_xy_acc_ * Chassis::period_)
+            : chassis.target_data_.vel_x;
+    EXPECT_NEAR(chassis.planned_data_.vel_x, expected_legacy_vel_x, 1.0e-6f);
     EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
     EXPECT_TRUE(!chassis.trans_dir_freeze_active_);
     EXPECT_TRUE(chassis.trans_dir_ref_valid_);
@@ -3380,9 +3424,6 @@ void testDebugSteerDegAndDriveSpeedModeSkipsZeroStopWhenSpeedIsNonZero()
     chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_settle_speed_m_s = 0.02f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_release_speed_m_s = 0.08f;
-    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_reenter_speed_m_s = 0.12f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.debug_control_.common.enable = true;
@@ -3405,6 +3446,7 @@ void testDebugSteerDegAndDriveSpeedModeSkipsZeroStopWhenSpeedIsNonZero()
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kRpm);
     EXPECT_TRUE(std::fabs(drive_motors[0].getTargetRPM()) > 1.0e-6f);
 }
+
 void testDebugBodySpeedOmegaRapidReverseUnderSCurveKeepsOldSignForFirstPlannerStep()
 {
     Chassis chassis;
@@ -4082,7 +4124,7 @@ void testXParkResidualThresholdStillBlocksEntryWhenCommandIsStationary()
         planner_input = chassis.makeSwervePlannerInput(command);
     }
 
-    EXPECT_TRUE(!planner_input.command_stationary_intent);
+    EXPECT_TRUE(planner_input.command_stationary_intent);
     EXPECT_TRUE(!chassis.xpark_gate_active_);
     EXPECT_TRUE(!planner_input.allow_xpark_pose);
     EXPECT_TRUE(planner_input.max_residual_speed_m_s > chassis.getNearZeroEnterSpeedMps());
@@ -4175,107 +4217,177 @@ void testXParkDoesNotEnterWhenCommandExceedsDedicatedCommandThreshold()
     EXPECT_TRUE(planner_input.max_residual_speed_m_s < chassis.getNearZeroEnterSpeedMps());
 }
 
-void testXParkSteerDeadbandFreezesWheelWhenErrorEntersOneDegreeBand()
+void testXParkKeepsLatchedGateWhenResidualRisesAfterEntry()
 {
-    XParkSteerDeadbandHarness harness;
-    configureXParkSteerDeadbandHarness(harness);
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.10f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.15f;
+
+    Chassis::Data command{};
+    command.vel_x = 0.005f;
+
+    for (jia::u32 i = 0; i < chassis.runtime_strategy_cfg_.xpark_entry_delay_ms; ++i)
+    {
+        chassis.makeSwervePlannerInput(command);
+    }
+
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 4.0f;
+    }
+
+    Chassis::SwervePlannerInput planner_input = chassis.makeSwervePlannerInput(command);
+
+    EXPECT_TRUE(planner_input.command_stationary_intent);
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+    EXPECT_TRUE(planner_input.allow_xpark_pose);
+    EXPECT_TRUE(planner_input.max_residual_speed_m_s > chassis.getNearZeroExitSpeedMps());
+
+    command.vel_x = 0.06f;
+    planner_input = chassis.makeSwervePlannerInput(command);
+
+    EXPECT_TRUE(!planner_input.command_stationary_intent);
+    EXPECT_TRUE(!chassis.xpark_gate_active_);
+    EXPECT_TRUE(!planner_input.allow_xpark_pose);
+}
+
+void testXParkSteerHoldSettlingEntryResetsSpeedPidOnlyOnce()
+{
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
     Chassis &chassis = harness.chassis;
 
     const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
-    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
-
-    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
     const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
-    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
 
-    const float current_corrected_local_total_rad = chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad;
-    const float planned_xpark_corrected_local_total_rad = command_frame.steer_corrected_local_total_rad[0];
-
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
     chassis.applyModuleCommands(true);
 
-    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad, current_corrected_local_total_rad, 1.0e-6f);
-    EXPECT_TRUE(std::fabs(chassis.wheel_config_[0].target_steer_motor_total_angle_rad - planned_xpark_corrected_local_total_rad) > 1.0e-4f);
-    EXPECT_TRUE(chassis.wheel_config_[0].steer_speed_pid_settled_active);
-    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
-    EXPECT_NEAR(harness.steer_motors[0].getTargetTotalAngle(), jia::radToDegF32(current_corrected_local_total_rad), 1.0e-6f);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kSettling);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_settle_ms == 1U);
     EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 1U);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
+
+    harness.steer_motors[0].resetLastCommandObservation();
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.4f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_settle_ms == 2U);
+    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 1U);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
 }
 
-void testXParkSteerDeadbandStaysLatchedInsideThreeDegreeExitBand()
+void testXParkSteerHoldRequiresConsecutiveSettlingBeforeLatchedZeroCurrent()
 {
-    XParkSteerDeadbandHarness harness;
-    configureXParkSteerDeadbandHarness(harness);
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
     Chassis &chassis = harness.chassis;
 
     const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
-    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
     const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
-    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
 
     setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
     chassis.applyModuleCommands(true);
-    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
-                chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad,
-                1.0e-6f);
-    EXPECT_TRUE(chassis.wheel_config_[0].steer_speed_pid_settled_active);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kSettling);
     EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
-    EXPECT_NEAR(harness.steer_motors[0].getTargetTotalAngle(),
-                jia::radToDegF32(chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad),
-                1.0e-6f);
-    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 1U);
 
-    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(2.0f));
+    harness.steer_motors[0].resetLastCommandObservation();
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.4f));
     chassis.applyModuleCommands(true);
 
-    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
-                chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad,
-                1.0e-6f);
-    EXPECT_TRUE(chassis.wheel_config_[0].steer_speed_pid_settled_active);
-    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
-    EXPECT_NEAR(harness.steer_motors[0].getTargetTotalAngle(),
-                jia::radToDegF32(chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad),
-                1.0e-6f);
-    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 1U);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+    EXPECT_NEAR(harness.steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
 }
 
-void testXParkSteerDeadbandReleasesOnceErrorExceedsThreeDegreeExitBand()
+void testXParkSteerHoldZeroSettleHoldStillRequiresSettleCondition()
 {
-    XParkSteerDeadbandHarness harness;
-    configureXParkSteerDeadbandHarness(harness);
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
+    Chassis &chassis = harness.chassis;
+
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.settle_hold_ms = 0U;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.settle_angle_deg = 0.1f;
+
+    const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
+    const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
+
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kSettling);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
+
+    harness.steer_motors[0].resetLastCommandObservation();
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.05f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+}
+
+void testXParkSteerHoldLatchedZeroCurrentRejectsBoundaryJitterWithoutCommandFlap()
+{
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
     Chassis &chassis = harness.chassis;
 
     const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
-    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
     const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
-    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
 
     setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
     chassis.applyModuleCommands(true);
-    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
-                chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad,
-                1.0e-6f);
-    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
-    EXPECT_NEAR(harness.steer_motors[0].getTargetTotalAngle(),
-                jia::radToDegF32(chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad),
-                1.0e-6f);
-
-    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(4.0f));
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.4f));
     chassis.applyModuleCommands(true);
 
-    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
-                command_frame.steer_corrected_local_total_rad[0],
-                1.0e-6f);
-    EXPECT_TRUE(!chassis.wheel_config_[0].steer_speed_pid_settled_active);
-    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
-    EXPECT_NEAR(harness.steer_motors[0].getTargetTotalAngle(),
-                jia::radToDegF32(command_frame.steer_corrected_local_total_rad[0]),
-                1.0e-6f);
+    for (int cycle = 0; cycle < 4; ++cycle)
+    {
+        harness.steer_motors[0].resetLastCommandObservation();
+        const float jitter_deg = ((cycle % 2) == 0) ? 2.9f : 0.7f;
+        setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(jitter_deg));
+        chassis.applyModuleCommands(true);
+        EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+        EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+        EXPECT_NEAR(harness.steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
+    }
 }
 
-void testNonXParkSteerCommandDoesNotTriggerSteerDeadbandFreeze()
+void testXParkSteerHoldSingleSampleExitSpikeDoesNotDropLatchedZeroCurrent()
 {
-    XParkSteerDeadbandHarness harness;
-    configureXParkSteerDeadbandHarness(harness);
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
+    Chassis &chassis = harness.chassis;
+
+    const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
+    const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
+
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
+    chassis.applyModuleCommands(true);
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.4f));
+    chassis.applyModuleCommands(true);
+
+    harness.steer_motors[0].resetLastCommandObservation();
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(3.2f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+    EXPECT_NEAR(harness.steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
+}
+
+void testNonXParkSteerCommandDoesNotTriggerSteerHold()
+{
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
     Chassis &chassis = harness.chassis;
 
     chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
@@ -4293,112 +4405,102 @@ void testNonXParkSteerCommandDoesNotTriggerSteerDeadbandFreeze()
     EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
                 command_frame.steer_corrected_local_total_rad[0],
                 1.0e-6f);
-    EXPECT_TRUE(!chassis.wheel_config_[0].xpark_steer_deadband_active);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kInactive);
     EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
     EXPECT_TRUE(harness.steer_motors[0].getTargetCurrent() == 0.0f);
 }
 
-void testXParkSteerDeadbandCanUseFrozenAngleHoldWhenZeroCurrentModeDisabled()
+void testXParkSteerHoldRequiresSustainedExitBeforeReacquiringPositionControl()
 {
-    XParkSteerDeadbandHarness harness;
-    configureXParkSteerDeadbandHarness(harness);
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
     Chassis &chassis = harness.chassis;
 
-    chassis.runtime_strategy_cfg_.xpark_steer_deadband_cfg_.zero_current_release_enable = false;
-
     const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
-    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
-
-    const Chassis::SwervePlannerOutput planner_output = makeNeutralPlannerOutput();
     const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
-    chassis.storePlannedActuatorFrame(planner_output, command_frame);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
 
-    const float current_corrected_local_total_rad = chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad;
-
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
+    chassis.applyModuleCommands(true);
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.4f));
     chassis.applyModuleCommands(true);
 
-    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_deadband_active);
-    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad, current_corrected_local_total_rad, 1.0e-6f);
-    EXPECT_TRUE(chassis.wheel_config_[0].steer_speed_pid_settled_active);
+    harness.steer_motors[0].resetLastCommandObservation();
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(4.0f));
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+
+    harness.steer_motors[0].resetLastCommandObservation();
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(4.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kSettling);
     EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
     EXPECT_NEAR(harness.steer_motors[0].getTargetTotalAngle(),
-                jia::radToDegF32(current_corrected_local_total_rad),
+                jia::radToDegF32(command_frame.steer_corrected_local_total_rad[0]),
                 1.0e-6f);
-    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 1U);
 }
 
-void testSteerSettleResetTriggersSingleSpeedPidResetOnEnter()
+void testXParkSteerHoldZeroReacquireHoldStillRequiresExitCondition()
 {
-    SteerSettleResetHarness harness;
-    configureSteerSettleResetHarness(harness);
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
+    Chassis &chassis = harness.chassis;
 
-    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(9.5f);
-    const Chassis::ActuatorCommandFrame command_frame = makeSteerSettleCommandFrame(harness.chassis, 10.0f, 2.0f);
-    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.settle_hold_ms = 0U;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.reacquire_hold_ms = 0U;
 
-    harness.chassis.applyModuleCommands(true);
+    const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
+    const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
 
-    EXPECT_TRUE(harness.chassis.wheel_config_[0].steer_speed_pid_settled_active);
-    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 1U);
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.05f));
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+
+    harness.steer_motors[0].resetLastCommandObservation();
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(2.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+
+    harness.steer_motors[0].resetLastCommandObservation();
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(4.0f));
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kSettling);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
+    EXPECT_NEAR(harness.steer_motors[0].getTargetTotalAngle(),
+                jia::radToDegF32(command_frame.steer_corrected_local_total_rad[0]),
+                1.0e-6f);
 }
 
-void testSteerSettleResetDoesNotRetriggerWhileInsideExitBand()
+void testXParkSteerHoldDoesNotOverrideRecoveringSearchOrFaultControlOwnership()
 {
-    SteerSettleResetHarness harness;
-    configureSteerSettleResetHarness(harness);
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
+    Chassis &chassis = harness.chassis;
 
-    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(9.5f);
-    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(),
-                                              makeSteerSettleCommandFrame(harness.chassis, 10.0f, 2.0f));
-    harness.chassis.applyModuleCommands(true);
+    const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
+    const Chassis::ActuatorCommandFrame command_frame = makeXParkSteerCommandFrame(chassis);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
 
-    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(8.0f);
-    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(),
-                                              makeSteerSettleCommandFrame(harness.chassis, 10.0f, 10.0f));
-    harness.chassis.applyModuleCommands(true);
+    chassis.wheel_config_[0].steer_fault_state = Chassis::SteerFaultState::kRecovering;
+    chassis.wheel_config_[0].homing_state = Chassis::HomingState::kSearch;
+    harness.steer_motors[0].resetLastCommandObservation();
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kInactive);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() != M3508::CommandKind::kCurrent);
 
-    EXPECT_TRUE(harness.chassis.wheel_config_[0].steer_speed_pid_settled_active);
-    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 1U);
-}
-
-void testSteerSettleResetRetriggersAfterLeavingAndReEnteringBand()
-{
-    SteerSettleResetHarness harness;
-    configureSteerSettleResetHarness(harness);
-
-    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(9.5f);
-    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(),
-                                              makeSteerSettleCommandFrame(harness.chassis, 10.0f, 2.0f));
-    harness.chassis.applyModuleCommands(true);
-
-    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(6.0f);
-    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(),
-                                              makeSteerSettleCommandFrame(harness.chassis, 10.0f, 2.0f));
-    harness.chassis.applyModuleCommands(true);
-
-    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(9.5f);
-    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(),
-                                              makeSteerSettleCommandFrame(harness.chassis, 10.0f, 2.0f));
-    harness.chassis.applyModuleCommands(true);
-
-    EXPECT_TRUE(harness.chassis.wheel_config_[0].steer_speed_pid_settled_active);
-    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 2U);
-}
-
-void testSteerSettleResetDoesNotTriggerDuringZeroCurrentBranch()
-{
-    SteerSettleResetHarness harness;
-    configureSteerSettleResetHarness(harness);
-
-    harness.chassis.input_target_data_.zero_current_all = true;
-    harness.chassis.wheel_config_[0].corrected_steer_motor_total_angle_rad = jia::degToRadF32(9.5f);
-    harness.chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(),
-                                              makeSteerSettleCommandFrame(harness.chassis, 10.0f, 2.0f));
-
-    harness.chassis.applyModuleCommands(true);
-
-    EXPECT_TRUE(!harness.chassis.wheel_config_[0].steer_speed_pid_settled_active);
-    EXPECT_TRUE(harness.steer_motors[0].getResetSpeedPidStateCallCount() == 0U);
+    chassis.wheel_config_[0].steer_fault_state = Chassis::SteerFaultState::kLatched;
+    chassis.wheel_config_[0].homing_state = Chassis::HomingState::kFault;
+    harness.steer_motors[0].resetLastCommandObservation();
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kInactive);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
 }
 
 void testStationaryPhotogateTogglesDoNotSelfLockNormalReadyState()
@@ -5273,154 +5375,7 @@ void testRecoveryRehomeTimeoutRelatchesFault()
 
 int main()
 {
-    testExternalCommandMapsToInternalBodyAxesWithoutChangingOmega();
-    testDebugBodySpeedLeftStickUpTargetsCurrentTwoThreeSide();
-    testDebugBodySpeedLeftStickLeftTargetsCurrentThreeFourSide();
-    testPlannerAxisNormalizationDoesNotDependOnDebugStyleOmegaFlip();
-    testSteerGeometryUsesSignedInstallationAngleOnly();
-    testRuntimeZeroAndMotorPolarityOnlyAffectMotorLocalConversion();
-    testSteerMotorSignAndRuntimeZeroOffsetStayAsIndependentMappingStages();
-    testTelemetrySnapshotKeepsTargetAndActualYawSemanticsSeparate();
-    testTelemetrySnapshotPreservesWheelTargetsWithoutModeDependentReinterpretation();
-    testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry();
-    testDefaultDriveMotorPolarityMatchesPositiveBodyXHardwareLayout();
-    testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit();
-    testNormalizedBodyCommandKeepsDebugAndApiRoutesSemanticallyAligned();
-    testHomingRuntimeZeroOffsetOnlyDependsOnEdgeGeometryAndRawMotorAngle();
-    testDebugRouteClassificationSeparatesInputInjectionFromModuleOverride();
-    testDebugModuleOverrideRouteSeparatesRetiredMode20AlignHomingAndSingleWheelModes();
-    testResolveDebugModeFallsBackToTorqueFreeWhenMode20IsRetired();
-    testLowSpeedDriveSuppressionCanBeDisabled();
-    testProjectedDriveUsesReachableSteerInsteadOfIdealVector();
-    testHighSpeedDriveSuppressionTightensAndReleasesThroughPlannerOutput();
-    testLowSpeedDriveSuppressionDoesNotReenterInsideNearZeroHysteresisBand();
-    testHighSpeedDriveSuppressionWaitsUntilNearZeroExitBeforeEnabling();
-    testMode30SingleWheelDirectJoystickIsolationOnlyLetsTargetWheelMove();
-    testMode30SingleWheelDirectDriveCanUseSCurveShaping();
-    testMode30CommonWheelIndexAliasCanDirectlySelectTargetWheel();
-    testMode30DirectDriveIgnoresAllHomedGateForTargetWheel();
-    testMode30SingleWheelRemovedModes31And32DoNotEnterModuleOverride();
-    testMode30SingleWheelUsesConfiguredAxesAndInversion();
-    testMode30SingleWheelSharedDeadzoneSuppressesContinuousAndStepInputs();
-    testMode30SingleWheelAxisEnablesAndEstopGateOutputs();
-    testMode30SingleWheelSteerPlannerSupportsSCurveAndTrapezoid();
-    testMode30SingleWheelDrivePlannerSupportsTrapezoidAndIgnoresGlobalManualProfileParams();
-    testRefreshDebugMirrorPublishesHomingDiagnosticsForObserveMode();
-    testMode30SingleWheelNonTargetCommandTypesBypassPlanner();
-    testMode30SingleWheelPlannerStateResetsWhenWheelAndPlannerModeChange();
-    testJustFloatSingleWheelProfileUsesObserveWheelIndex();
-    testJustFloatSingleWheelPayloadUsesObserveWheelIndex();
-    testJustFloatSingleWheelObserveIndexFallsBackToZeroWhenOutOfRange();
-    testJustFloatSingleWheelDriveOnlyPayloadUsesObserveWheelIndex();
-    testJustFloatSingleWheelDriveOnlyObserveIndexFallsBackToZeroWhenOutOfRange();
-    testMode30SingleWheelDriveStepGeneratorOverridesManualInput();
-    testDriveVirtualLoadInjectsBiasOnlyForSelectedWheelAndPidMode();
-    testMode30DriveVirtualLoadIgnoresAllHomedGateForTargetWheel();
-    testMode30DriveVirtualLoadIgnoresOtherWheelSteerFaultForTargetWheel();
-    testJustFloatDrivePidLoadProfileEmitsFixed16ChannelPayload();
-    testJustFloatDriveZeroStopBrakeTraceEmitsFixed12ChannelPayloadWhenBrakeInactive();
-    testJustFloatDriveZeroStopBrakeTraceEmitsBrakeStateAndCurrent();
-    testDebugOmegaZInjectionModeOffKeepsManualOmegaInput();
-    testDebugOmegaZInjectionModeStepOverridesManualOmegaInput();
-    testDebugOmegaZInjectionModeSineOverridesManualOmegaInput();
-    testDebugOmegaZInjectionDoesNotAffectLockToTarget();
-    testDebugSteerDegAndDriveSpeedModeMapsLeftXAndRightXToInterface();
-    testSuppressedDriveDoesNotAccumulateHiddenAccelState();
-    testDriveReleaseResumesFromDeliveredSpeedNotVirtualSpeed();
-    testDriveReleaseHasNoVelocityJumpAfterZeroHold();
-    testPlannerTargetMayChangeWhileDeliveredStateRemainsContinuous();
-    testTorqueFreeAndNotHomedPathsResetDriveDeliveryStateConsistently();
-    testDriveZeroStopUsesBrakeWhenResidualSpeedIsStillHigh();
-    testDriveZeroStopStillUsesBrakeWithNativeVescSpeedLoop();
-    testNormalControlZeroStopUsesBrakeAfterBodyCommandDropsToZero();
-    testSteerDegAndDriveSpeedSkipsZeroStopWhenDriveSpeedIsNonZero();
-    testDriveZeroStopDoesNotWaitForPlannedTailToFullyDecay();
-    testDriveZeroStopSettlesToZeroCurrentWithoutHoldingBrake();
-    testDriveZeroStopReleaseClearsPidStateBeforeReturningToRpmLoop();
-    testDriveZeroStopBrakeHysteresisDoesNotToggleAroundThreshold();
-    testDriveZeroStopSettleThresholdHasIndependentFinalSettleStage();
-    testDriveZeroStopBrakeRampBuildsUpAcrossCycles();
-    testDriveZeroStopBrakeRampDisabledKeepsStepBrakeBehavior();
-    testDriveZeroStopBrakeRampClearsImmediatelyWhenWheelSettles();
-    testDriveZeroStopBrakeRampRestartsFromZeroAfterReenteringBrake();
-    testLowSpeedDriveSuppressionBypassesWhenResidualSpeedAboveThreshold();
-    testLowSpeedDriveSuppressionReenabledWhenResidualSpeedDropsBelowThreshold();
-    testLowSpeedDriveSuppressionUsesGlobalWorstWheelError();
-    testGlobalMaxResidualSpeedControlsLowSpeedSuppressionForAllWheels();
-    testRefreshDebugMirrorSeparatesPlannedAndDeliveredDriveDiagnostics();
-    testJustFloatYawPidProfileDispatchEmitsFixed15ChannelPayload();
-    testLockToYawPidTracePublishesTargetErrorAndPidFireState();
-    testLockToYawThenLockNowKeepsTheEffectiveLockedYaw();
-    testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates();
-    testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle();
-    testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned();
-    testNormalLaunchSCurveWaitsForSteerAlignmentBeforeAccumulatingBodyPlan();
-    testManualSCurveProfileLegacyModeKeepsCurrentAccelerationStepSemantics();
-    testManualSCurveProfileProducesSofterFirstStepAndContinuousAcceleration();
-    testManualSCurveProfileToggleResetsShapingHistory();
-    testManualSCurveProfileStartsBrakingBeforeTargetWhenRemainingErrorIsTooSmallForCurrentAcceleration();
-    testManualSCurveProfileSmallResidualClampClearsInternalAcceleration();
-    testManualSCurveProfileManualOnlyModeFallsBackForApiSource();
-    testManualSCurveProfileManualOnlyModeUsesSCurveForDebugSource();
-    testManualSCurveProfileRapidReverseBleedsPositiveTrendBeforeBuildingNegativeTrend();
-    testDebugBodySpeedOmegaTargetFlipsSignImmediatelyWithRightStickDirection();
-    testDebugBodySpeedModeCanEnterZeroStopBrakeAndExposeGateState();
-    testDebugSteerDegAndDriveSpeedModeSkipsZeroStopWhenSpeedIsNonZero();
-    testDebugBodySpeedOmegaRapidReverseUnderSCurveKeepsOldSignForFirstPlannerStep();
-    testDebugBodySpeedOmegaRapidReverseEventuallyCrossesNegativeAfterEnoughCycles();
-    testJerkProfileRapidReverseEventuallyCrossesZeroAndBuildsOppositeSign();
-    testDebugBodySpeedOmegaRapidReverseEventuallyChangesPredictedActuatorOmegaSign();
-    testDebugBodySpeedTranslationRapidReverseEventuallyChangesPredictedActuatorDirection();
-    testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels();
-    testFlipSolutionPrefersSmallSteerDeltaAndInvertsDriveOnQuadrantCrossing();
-    testReverseIntentBypassesTranslationalDirectionSlewOnNearOppositeCommand();
-    testDirectionSlewCrossesPiBoundaryByShortestPath();
-    testReverseIntentDoesNotFallIntoZeroHoldOrSuppressionWhenSteerIsReachable();
-    testAlwaysForwardModeIgnoresReverseIntentOverride();
-    testDriveAlphaDeliveryLimitUsesUniformScaleAcrossAllWheels();
-    testDriveAlphaDeliveryLimitUsesWorstWheelScaleWhenLastValuesDiffer();
-    testDriveAlphaDeliveryLimitUsesUniformScaleWhileNotHomed();
-    testDriveDeliveryLimitAlphaThenOmegaStillKeepsSharedProgress();
-    testXParkActivatesOnlyAfterActualResidualWheelSpeedHoldsForEntryDelay();
-    testXParkHoldCounterResetsImmediatelyWhenCommandWheelSpeedExitsThreshold();
-    testXParkResidualWheelSpeedAboveThresholdKeepsGateClosed();
-    testXParkCommandThresholdTreatsPointZeroFiveAsMovingDespiteLargeResidualFilter();
-    testXParkResidualThresholdStillBlocksEntryWhenCommandIsStationary();
-    testXParkUsesIndependentCommandThresholdWhileResidualMayUseLargeNearZeroFilter();
-    testXParkAllowsEntryWhenBothCommandAndResidualAreBelowTheirOwnThresholds();
-    testXParkDoesNotEnterWhenCommandExceedsDedicatedCommandThreshold();
-    testXParkSteerDeadbandFreezesWheelWhenErrorEntersOneDegreeBand();
-    testXParkSteerDeadbandStaysLatchedInsideThreeDegreeExitBand();
-    testXParkSteerDeadbandReleasesOnceErrorExceedsThreeDegreeExitBand();
-    testNonXParkSteerCommandDoesNotTriggerSteerDeadbandFreeze();
-    testXParkSteerDeadbandCanUseFrozenAngleHoldWhenZeroCurrentModeDisabled();
-    testSteerSettleResetTriggersSingleSpeedPidResetOnEnter();
-    testSteerSettleResetDoesNotRetriggerWhileInsideExitBand();
-    testSteerSettleResetRetriggersAfterLeavingAndReEnteringBand();
-    testSteerSettleResetDoesNotTriggerDuringZeroCurrentBranch();
-    testStationaryPhotogateTogglesDoNotSelfLockNormalReadyState();
-    testReadyStationaryWheelsCanStillEnterXParkWithoutTriggeringSteerFault();
-    testSingleWheelSteerFreezeFaultStopsVehicleAndFreezesFaultedWheelPath();
-    testSingleWheelSteerFreezeFaultDoesNotRequireHugeCurrentMagnitude();
-    testSteerFaultThresholdsAreDebugTunableAndMirrorPublishesDecisionInputs();
-    testFaultedWheelOnlyRehomesAfterCurrentTogglesAndMotionResumesAfterRecoveryCompletes();
-    testLatchedFaultedWheelKeepsPureZeroCurrentCommandWithoutOverwritingControlMode();
-    testRecoveryImmediatelyReopensSteerSearchAfterFaultLatchSidePidReset();
-    testIdleReadyWheelFreezeCanLatchFaultWithoutMotionIntent();
-    testXParkReadyWheelFreezeCanLatchFaultWithoutMotionIntent();
-    testXParkStaticReconnectRehomesWithoutNewVelocityCommand();
-    testReconnectRehomeRequestSurvivesZeroIntentAndStationaryHold();
-    testXParkLatchedFaultDoesNotRecoverWhenCurrentToggleBelowThreshold();
-    testXParkRecoveringWheelKeepsDriveBlockedUntilReady();
-    testIgnoreDuringXParkHoldDoesNotBlockRecoveryForAlreadyLatchedFault();
-    testHomingEdgeCaptureDoesNotImmediatelyJumpToLargeAlignCommand();
-    testLatePowerOnHomingDoesNotTimeoutBeforeFirstSteerFeedback();
-    testLatePowerOnHomingStillTimeoutsAfterFeedbackStartsWithoutEdge();
-    testRecoveryRehomeTimeoutRelatchesFault();
-    testDrivePidEnableEdgeReadsBackRuntimeIntoCleanSharedCache();
-    testDrivePidDirtyCacheBlocksRuntimeReadbackOverwrite();
-    testDrivePidSharedApplyPushesSameParamsToAllVescsAndAlignsAppliedStamp();
-    testDrivePidApplySkipsNullHandlesAndStillUpdatesAppliedStamp();
+    #include "test_chassis_semantics_registry.inc"
 
     if (g_failures != 0)
     {

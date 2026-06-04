@@ -108,8 +108,8 @@ public:
         return wheel_target_rpm_[wheel_index];
     }
 
-    Robot_Twist getRobotSpeed() const { return robot_twist_; } // 获取机器人速度（机器人坐标系）
-    Robot_Twist getWorldSpeed() const { return world_twist_; } // 获取机器人速度（世界坐标系）
+    Robot_Twist getRobotSpeed_() const { return robot_twist_; } // 获取机器人速度（机器人坐标系）
+    Robot_Twist getWorldSpeed_() const { return world_twist_; } // 获取机器人速度（世界坐标系）
     float getdt() const { return dt_; } // 获取时间差
  
     bool registerWheelMotor(uint8_t wheel_index, Motor_Base* motor) // 注册轮子电机

@@ -37,6 +37,7 @@ namespace communication{
         send_command1 = 0xCC;
         send_command2 = 0xDD;
 
+        
         rec_setting_command = 0;
         rec_setting_load1 = 0;
         rec_setting_load2 = 0;

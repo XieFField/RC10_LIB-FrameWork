@@ -62,6 +62,8 @@ typedef struct {
     float safe_height_ = 0.0f; // 安全高度
     float store_height_ = 0.0f; // 储存高度
     float lock_height_ = 0.0f; // 云台锁定高度
+    float pick_up_height_ = 0.0f; // 拾取高度
+    float putdown_height_ = 0.0f; // 放置高度
 
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘GPIO控制端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘GPIO控制引脚

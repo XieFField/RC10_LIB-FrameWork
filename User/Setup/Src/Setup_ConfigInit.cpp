@@ -26,7 +26,6 @@ Point2D arm_install_offset = {0.480f, 0.02f}; // 机械臂安装偏移，单位 
 /*==============Controller Instances===========*/
 //USB_CDC_ cdc(&hUsbDeviceHS);
 USB_CDC_ usb_1(&hUsbDeviceHS);
-JY61_IMU IMU(JY61_ADDR,&hi2c5);
 Chassis_Omni<3>::init_config chassis_initData = {
     .wheel_radius = 0.15f / 2.f,
     .max_wheel_rpm = 420,
@@ -137,9 +136,9 @@ void ALL_Setup_ConfigInit(void)
     ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
     ARM_Controller.setArmStatus(ARM_IDLE);
     
-
-    Weapon_Controller.init(&oid_encoder);
+    
     Weapon_Controller.register_motors(&Weapon_Claw1, &Weapon_Claw2, &Weapon_Claw3, &Weapon_Launch, &Weapon_Wrist, &Weapon_Elbow);
+	Weapon_Controller.init(&oid_encoder);
     Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
 
     ChassisOmni.init();
@@ -184,7 +183,7 @@ void ALL_Setup_ConfigInit(void)
 
     CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
     crsf_rc->init();
-    serial1_protocol.init(&huart2);
+
     communication::Lora_communication::GetInstance()->Init();
 
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
@@ -286,17 +285,23 @@ void CAN_Motor_Init(void)
     PID_Param_Config weapon_2006_speedPID = m2006_speed_pid_params;
     PID_Param_Config weapon_2006_anglePID =m2006_angle_pid_params;
 
-    weapon_3508_anglePID.output_limit=200.0f;
+    PID_Param_Config weapon_wrist_anglePID = m2006_angle_pid_params;
+    PID_Param_Config weapon_wrist_speedPID = m2006_speed_pid_params;
+
+    weapon_3508_anglePID.output_limit=100.0f;
     weapon_3508_speedPID.output_limit=15000.0f;
     weapon_2006_speedPID.output_limit=4500;
     weapon_2006_anglePID.output_limit=500;
-    
+    weapon_wrist_anglePID.output_limit=100.0f;
+	weapon_wrist_speedPID.output_limit=8000.0f;
+
     Weapon_Launch.pid_init(weapon_3508_speedPID, 0.0f, weapon_3508_anglePID, 0.0f);
     Weapon_Claw1.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
     Weapon_Claw2.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
     Weapon_Claw3.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
-    Weapon_Wrist.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
+    Weapon_Wrist.pid_init(weapon_wrist_speedPID, 0.0f, weapon_wrist_anglePID, 0.0f);
 
     Weapon_Elbow.reset_controlFrequency(100); // 肘部电机降到 100Hz，减轻总线负载
 }
+
 

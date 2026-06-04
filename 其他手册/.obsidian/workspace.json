@@ -30,9 +30,21 @@
               "icon": "excalidraw-icon",
               "title": "遥控界面"
             }
+          },
+          {
+            "id": "b3603afd44a06b93",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "Excalidraw/RC10遥控操控逻辑.md"
+              },
+              "icon": "excalidraw-icon",
+              "title": "RC10遥控操控逻辑"
+            }
           }
         ],
-        "currentTab": 1
+        "currentTab": 2
       }
     ],
     "direction": "vertical"
@@ -171,22 +183,23 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "obsidian-excalidraw-plugin:New drawing": false,
       "bases:新建数据库": false,
       "switcher:打开快速切换": false,
       "graph:查看关系图谱": false,
       "canvas:新建白板": false,
       "daily-notes:打开/创建今天的日记": false,
       "templates:插入模板": false,
-      "command-palette:打开命令面板": false
+      "command-palette:打开命令面板": false,
+      "obsidian-excalidraw-plugin:New drawing": false
     }
   },
-  "active": "6ec54cd1227ac4b5",
+  "active": "e62554a7a3cd8e20",
   "lastOpenFiles": [
     "Excalidraw/遥控界面.md",
+    "Excalidraw/RC10遥控操控逻辑.md",
+    "Excalidraw/孙元气遥控.md",
     "Pasted Image 20260424162542_967.png",
     "Excalidraw/期末考核，自动状态机流程图.md",
-    "Excalidraw/孙元气遥控.md",
     "Q.遥控器.md",
     "贝塞尔曲线中轨迹修正方案.md",
     "自动模式方案书.md",

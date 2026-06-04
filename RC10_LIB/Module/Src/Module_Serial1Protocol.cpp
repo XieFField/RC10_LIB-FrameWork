@@ -47,6 +47,7 @@ Serial1Protocol::Serial1Protocol() {
 		    // 初始化数据缓冲区
     m_data_write_index = 0;
     m_data_read_index = 0;
+    
     m_data_count = 0;
     memset(m_data_buffer, 0, sizeof(m_data_buffer));
 		    // 初始化最新数据存储
