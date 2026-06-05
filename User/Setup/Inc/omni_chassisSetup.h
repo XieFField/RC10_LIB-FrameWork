@@ -47,10 +47,10 @@ typedef struct
     Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
     Speedplanner_1D_Param_Config CB = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};  // 0.8acc夹杆流程速度规划参数。
 
-    Speedplanner_1D_Param_Config start = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.8f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f};  // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config line = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.5f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config curve = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.8f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config end = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config start = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.6f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};  // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config line = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config curve = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.8f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config end = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
 } PATH_PARAM;
 
 typedef struct
@@ -154,6 +154,7 @@ public:
     }
 
 private:
+    float b=0.2f;
     Vector2D test_point = {0.6f, 6.0f};
     Vector2D control_point = {0.0f, 2.5f};
     
@@ -200,7 +201,7 @@ private:
     MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
 
     //-----------------------------------其他参数-----------------------------------------//
-    
+    float err_curve=0.0f;
     bool pid_dead_flag=false;
     int num = 0;
 
