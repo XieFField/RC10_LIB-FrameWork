@@ -34,7 +34,7 @@ extern "C" {
 
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS  0 //无底盘下的模拟调试开关 1开启 0关闭
+#define ARM_AUTO_DEBUG_NOCHASSIS  1 //无底盘下的模拟调试开关 1开启 0关闭
 #define ARM_VERSION 0 //版本号 已无用
 
 
@@ -431,15 +431,25 @@ protected:
             bool inTargetMap = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
                                                 auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
                                                 0.1f);
-            if(inTargetMap)
+            if(inTargetMap && auto_ctrl_.flag.canChassisStart == false)
             {
-                auto_ctrl_.flag.canExtend = true;
+                speed = {0.0f, 0.0f, 0.0f};
             }
 
-            if(auto_ctrl_.flag.canChassisStart || !inTargetMap)
+            if(auto_ctrl_.now_state != STATE_EXT && auto_ctrl_.now_state != STATE_LAUNCH)
+            {
+                speed = { 0.0f, 1.0f, 0.0f};
+            }
+            else if(inTargetMap && auto_ctrl_.flag.canChassisStart == true)
+            {
                 speed = {0.0f, 1.0f, 0.0f};
-            else
-                speed = {0.0f, 0.0f, 0.0f};
+            }
+
+
+            // if(auto_ctrl_.flag.canChassisStart || !inTargetMap)
+            //     speed = {0.0f, 1.0f, 0.0f};
+            // else
+            //     speed = {0.0f, 0.0f, 0.0f};
         }
         return speed;
              
