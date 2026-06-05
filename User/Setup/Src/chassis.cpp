@@ -1135,8 +1135,9 @@ namespace jia
                 xpark_gate_active_ = false;
             }
 
-            planner_input.allow_xpark_pose = xpark_gate_active_ && xpark_target_stationary;
-            planner_input.force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
+            const bool force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
+            planner_input.allow_xpark_pose = (!force_uniform_steer_drive) && xpark_gate_active_ && xpark_target_stationary;
+            planner_input.force_uniform_steer_drive = force_uniform_steer_drive;
             planner_input.uniform_steer_oa_mod_rad = wrapTo2PiF32(degToRadF32(input_target_data_.steer_lock_angle_deg));
             planner_input.uniform_drive_omega_abs = fabsf(input_target_data_.drive_lock_speed_m_s) / runtime_strategy_cfg_.wheel_radius_m_;
             planner_input.uniform_drive_sign = (input_target_data_.drive_lock_speed_m_s >= 0.0f) ? 1.0f : -1.0f;
@@ -3845,9 +3846,11 @@ namespace jia
                 const f32 xpark_hold_exit_rad = degToRadF32(xpark_hold_exit_deg);
                 const f32 xpark_hold_settle_rad = degToRadF32(xpark_hold_settle_deg);
                 const f32 xpark_hold_settle_rate_rad_s = degToRadF32(xpark_hold_settle_rate_deg_s);
+                const bool force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
                 const bool xpark_hold_eligible =
                     xpark_hold_cfg.enable &&
                     xpark_gate_active_ &&
+                    !force_uniform_steer_drive &&
                     (runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kXPark) &&
                     all_homed &&
                     (wheel.homing_state == HomingState::kReady) &&

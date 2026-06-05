@@ -8,7 +8,7 @@ suites:
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
     aliases:
       - jia_docs/tests/tdd/chassis_semantics/run_test.ps1
-    purpose: 主底盘语义 doctest 宿主回归入口，使用 FULL_DEBUG 档编译多文件行为分片并串联 app_utils_backend
+    purpose: 主底盘语义 doctest 宿主回归入口，使用 FULL_DEBUG 档编译多文件行为分片，覆盖 X-Park/debug9 等调试语义，并串联 app_utils_backend
     expected_result: pass
   - id: host_cpp.chassis_semantics.slim_smoke
     kind: host_cpp
@@ -17,7 +17,7 @@ suites:
     path: jia_docs/tests/host_cpp/chassis_semantics
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1
     aliases: []
-    purpose: chassis RUNTIME_MIN 极限运行固件档宿主 smoke，验证默认瘦身 profile 可编译运行并显著降低 Chassis 对象体积
+    purpose: chassis RUNTIME_MIN 极限运行固件档宿主 smoke，验证默认瘦身 profile 可编译运行并显著降低 Chassis 对象体积，不承载 debug9 等调试语义回归
     expected_result: pass
   - id: host_cpp.chassis_semantics.pid_reconnect
     kind: host_cpp
@@ -57,7 +57,7 @@ suites:
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
     aliases:
       - jia_docs/tests/legacy_ai_tests/vesc_brake/run_test.ps1
-    purpose: VESC 本地 PID 速度环与刹车相关宿主回归
+    purpose: VESC 本地 PID 速度环与刹车相关宿主回归；旧 legacy_ai_tests 路径仅作兼容入口
     expected_result: pass
   - id: host_cpp.swerve_core
     kind: host_cpp

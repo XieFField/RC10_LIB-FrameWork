@@ -10,6 +10,8 @@
 2. `jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1`
 3. `jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1`
 
+默认 `run_tests.ps1` 的 `smoke` 已经会调度 `host_cpp.chassis_semantics.slim_smoke`；单独跑 `run_slim_smoke.ps1` 更适合定点复查 `RUNTIME_MIN` 瘦身档，而不是每次统一入口后的必做第二步。
+
 如果只想确认 chassis 发布固件瘦身档是否还能编译运行，直接跑：
 
 - `jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1`
@@ -31,7 +33,7 @@
 
 `host_cpp/chassis_semantics/` 是当前最主要的底盘宿主语义套件：
 
-- `run_main.ps1` 使用 `JIA_CHASSIS_PROFILE_FULL_DEBUG` 编译 doctest runner、harness 和行为域分片。它保留所有调试字段，服务语义回归和调试器可观察性。
+- `run_main.ps1` 使用 `JIA_CHASSIS_PROFILE_FULL_DEBUG` 编译 doctest runner、harness 和行为域分片。它保留所有调试字段，服务语义回归、debug9/X-Park 等调试链路验证，以及调试器可观察性。
 - `run_slim_smoke.ps1` 使用 `JIA_CHASSIS_PROFILE_RUNTIME_MIN` 编译最小 smoke。它不跑调试语义，只验证极限运行固件档可编译、可实例化，并输出 `sizeof(Chassis)`。
 - `test_chassis_semantics_harness.h/.cpp` 放公共测试桩、配置函数和循环驱动 helper。新增行为测试时优先复用这里已有 setup，不要在分片里复制一套。
 - 行为分片按 `test_chassis_semantics_<domain>.cpp` 命名。新增 case 时优先放进对应行为域，只有跨域公共准备逻辑才放入 harness。
@@ -45,6 +47,7 @@
 - `test_chassis_semantics_yaw_and_motion_profile.cpp`
 - `test_chassis_semantics_swerve_planner_flip_reverse.cpp`
 - `test_chassis_semantics_xpark_gate_and_hold.cpp`
+  - 覆盖 X-Park 进入门、保持态、target / command exit 门，以及 debug9 释放 X-Park pose / steer hold 覆盖的回归。
 - `test_chassis_semantics_steer_fault_homing_recovery.cpp`
 
 ## 编译档位

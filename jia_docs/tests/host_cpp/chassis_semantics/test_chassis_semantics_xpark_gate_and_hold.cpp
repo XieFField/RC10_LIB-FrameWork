@@ -277,6 +277,24 @@ TEST_CASE("testXParkKeepsLatchedGateWhenResidualRisesAfterEntry")
     EXPECT_TRUE(!planner_input.allow_xpark_pose);
 }
 
+TEST_CASE("testDebugSteerDegAndDriveSpeedPlannerDoesNotAllowXParkPose")
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+    chassis.xpark_gate_active_ = true;
+    chassis.input_target_data_.mode = Chassis::Mode::kSteerAngleAndDriveSpeedMode;
+    chassis.input_target_data_.steer_lock_angle_deg = 135.0f;
+    chassis.input_target_data_.drive_lock_speed_m_s = 0.0f;
+
+    Chassis::Data command{};
+    const Chassis::SwervePlannerInput planner_input = chassis.makeSwervePlannerInput(command);
+
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+    EXPECT_TRUE(planner_input.command_stationary_intent);
+    EXPECT_TRUE(planner_input.force_uniform_steer_drive);
+    EXPECT_TRUE(!planner_input.allow_xpark_pose);
+}
+
 TEST_CASE("testXParkSteerHoldSettlingEntryResetsSpeedPidOnlyOnce")
 {
     XParkSteerHoldHarness harness;
@@ -524,6 +542,48 @@ TEST_CASE("testXParkSteerHoldDoesNotOverrideRecoveringSearchOrFaultControlOwners
     chassis.applyModuleCommands(true);
     EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kInactive);
     EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+}
+
+TEST_CASE("testDebugSteerDegAndDriveSpeedReleasesLatchedXParkSteerHold")
+{
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
+    Chassis &chassis = harness.chassis;
+
+    const float xpark_target_oa_rad = getWheelXParkTargetOaRad(chassis, 0);
+    const Chassis::ActuatorCommandFrame xpark_command_frame = makeXParkSteerCommandFrame(chassis);
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), xpark_command_frame);
+
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.5f));
+    chassis.applyModuleCommands(true);
+    setWheelOaAngleRad(chassis, 0, xpark_target_oa_rad - jia::degToRadF32(0.4f));
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+
+    harness.steer_motors[0].resetLastCommandObservation();
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 9U;
+    chassis.debug_control_.injection.steer_deg_limit = 180.0f;
+    chassis.debug_control_.injection.drive_speed_m_s_limit = 1.0f;
+    chassis.airjoy_data_.left_x = 0.25f;
+    chassis.airjoy_data_.right_x = 0.0f;
+
+    EXPECT_TRUE(runDebugControlCycleForHost(chassis));
+
+    const float expected_debug_oa_rad = jia::degToRadF32(135.0f);
+    const float expected_debug_local_a_rad =
+        chassis.mapWheelOaTotalToCorrectedLocal(chassis.wheel_config_[0], expected_debug_oa_rad);
+    const float expected_debug_local_b_rad =
+        chassis.mapWheelOaTotalToCorrectedLocal(chassis.wheel_config_[0], jia::wrapTo2PiF32(expected_debug_oa_rad + jia::kPi));
+    const float target_debug_local_rad = jia::degToRadF32(harness.steer_motors[0].getTargetTotalAngle());
+    const bool uses_debug_equivalent_angle =
+        (std::fabs(jia::shortestAngularDistanceF32(target_debug_local_rad, expected_debug_local_a_rad)) <= 1.0e-4f) ||
+        (std::fabs(jia::shortestAngularDistanceF32(target_debug_local_rad, expected_debug_local_b_rad)) <= 1.0e-4f);
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kSteerAngleAndDriveSpeedMode);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kInactive);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kTotalAngle);
+    EXPECT_TRUE(uses_debug_equivalent_angle);
 }
 
 } // namespace chassis_semantics_test

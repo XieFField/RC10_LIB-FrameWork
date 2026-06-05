@@ -2,7 +2,7 @@ groups:
   - id: host_cpp
     path: jia_docs/tests/host_cpp
     role: current_host_tests
-    description: 主机侧 C++ 测试集合，统一由 `jia_docs/tests/run_tests.ps1` 入口调度
+    description: 主机侧 C++ 测试集合，统一由 `jia_docs/tests/run_tests.ps1` 入口调度；chassis_semantics 主语义入口为 FULL_DEBUG 的 `run_main.ps1`，瘦身验证入口为 RUNTIME_MIN 的 `run_slim_smoke.ps1`
     recommended_entrypoints:
       - jia_docs/tests/run_tests.ps1
       - jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
@@ -15,15 +15,15 @@ groups:
         entrypoints:
           - path: jia_docs/tests/run_tests.ps1
             kind: powershell
-            purpose: 主统一入口，按默认顺序调度主机测试与兼容包装脚本
+            purpose: 主统一入口，按默认顺序调度当前 host_cpp 主线套件与必要的兼容包装脚本
             recommended: true
           - path: jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
             kind: powershell
-            purpose: chassis_semantics FULL_DEBUG doctest 主入口，编译 runner、harness 和行为域分片
+            purpose: chassis_semantics FULL_DEBUG doctest 主入口，编译 runner、harness、7 个行为域分片与 chassis.cpp，并覆盖 X-Park/debug9 等调试语义
             recommended: true
           - path: jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1
             kind: powershell
-            purpose: chassis RUNTIME_MIN 极限运行固件档 smoke，验证瘦身 profile 可编译运行并降低对象体积
+            purpose: chassis RUNTIME_MIN 极限运行固件档 smoke，验证瘦身 profile 可编译运行并降低对象体积，不承载调试语义回归
             recommended: true
           - path: jia_docs/tests/tdd/chassis_semantics/run_test.ps1
             kind: powershell
@@ -36,7 +36,7 @@ groups:
         entrypoints:
           - path: jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
             kind: powershell
-            purpose: VESC 刹车语义回归兼容入口
+            purpose: VESC 刹车语义专项入口；旧 legacy_ai_tests 路径仅作兼容包装
             recommended: true
       - id: swerve_core
         path: jia_docs/tests/host_cpp/swerve_core
@@ -141,6 +141,7 @@ groups:
 recommended_execution_order:
   - jia_docs/tests/run_tests.ps1
   - jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
+  - jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1
   - jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
-legacy_focus_entrypoint: jia_docs/tests/legacy_ai_tests/vesc_brake/run_test.ps1
+legacy_focus_entrypoint: jia_docs/tests/historical/chassis_module/run_test.ps1
 ai_regression_focus_entrypoint: jia_docs/tests/python_semantics/swerve_port/lock_now_homing_gate_regression.py
