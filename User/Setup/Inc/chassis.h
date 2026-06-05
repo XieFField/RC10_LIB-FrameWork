@@ -74,7 +74,7 @@
 #include "APP_PID.h"
 
 #ifndef FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 1
+#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 0
 #endif
 
 namespace jia
@@ -1089,7 +1089,7 @@ namespace jia
             {
                 struct Common
                 {
-                    bool enable = true;                                            // [RW] 调试总开关。
+                    bool enable = false;                                            // [RW] 调试总开关。
                     u8 mode_raw = 1;                                               // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
@@ -1236,7 +1236,7 @@ namespace jia
 
             struct DebugOutputConfig
             {
-                bool output_enable = true;
+                bool output_enable = false;
                 u8 output_family_raw = static_cast<u8>(DebugOutputFamily::kJustFloat);
                 DebugOutputTextConfig text{};
                 DebugOutputJustFloatConfig justfloat{};
