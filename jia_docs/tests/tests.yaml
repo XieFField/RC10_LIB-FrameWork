@@ -8,7 +8,16 @@ suites:
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
     aliases:
       - jia_docs/tests/tdd/chassis_semantics/run_test.ps1
-    purpose: 主底盘语义宿主回归入口，串联 chassis_semantics 主测试与 app_utils_backend
+    purpose: 主底盘语义 doctest 宿主回归入口，使用 FULL_DEBUG 档编译多文件行为分片，覆盖 X-Park/debug9 等调试语义，并串联 app_utils_backend
+    expected_result: pass
+  - id: host_cpp.chassis_semantics.slim_smoke
+    kind: host_cpp
+    status: active
+    default_level: smoke
+    path: jia_docs/tests/host_cpp/chassis_semantics
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1
+    aliases: []
+    purpose: chassis RUNTIME_MIN 极限运行固件档宿主 smoke，验证默认瘦身 profile 可编译运行并显著降低 Chassis 对象体积，不承载 debug9 等调试语义回归
     expected_result: pass
   - id: host_cpp.chassis_semantics.pid_reconnect
     kind: host_cpp
@@ -48,18 +57,18 @@ suites:
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
     aliases:
       - jia_docs/tests/legacy_ai_tests/vesc_brake/run_test.ps1
-    purpose: VESC 本地 PID 速度环与刹车相关宿主回归
+    purpose: VESC 本地 PID 速度环与刹车相关宿主回归；旧 legacy_ai_tests 路径仅作兼容入口
     expected_result: pass
   - id: host_cpp.swerve_core
     kind: host_cpp
-    status: active
+    status: historical
     default_level: extended
     path: jia_docs/tests/host_cpp/swerve_core
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/swerve_core/run_test.ps1
     aliases:
       - jia_docs/tests/legacy_ai_tests/swerve_core/run_test.ps1
-    purpose: Module_ChassisSwerve 核心历史宿主回归
-    expected_result: pass
+    purpose: Module_ChassisSwerve 历史宿主对照；当前仓库已无对应生产源文件，保留为已知 xfail
+    expected_result: xfail
   - id: python_semantics.swerve_port.lock_now_homing_gate
     kind: python_semantics
     status: active
@@ -125,8 +134,6 @@ suites:
     default_level: historical
     path: jia_docs/tests/historical/chassis_mode_fsm
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/chassis_mode_fsm/run_test.ps1
-    aliases:
-      - jia_docs/tests/legacy_ai_tests/chassis_mode_fsm/run_test.ps1
     purpose: chassis mode 状态机历史静态回归
     expected_result: pass
   - id: historical.chassis_module
@@ -135,8 +142,6 @@ suites:
     default_level: historical
     path: jia_docs/tests/historical/chassis_module
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/chassis_module/run_test.ps1
-    aliases:
-      - jia_docs/tests/legacy_ai_tests/chassis_module/run_test.ps1
     purpose: chassis module 历史编译回归
     expected_result: pass
   - id: historical.four_steer_setup_static
@@ -145,8 +150,6 @@ suites:
     default_level: historical
     path: jia_docs/tests/historical/four_steer_setup_static
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/four_steer_setup_static/run_test.ps1
-    aliases:
-      - jia_docs/tests/legacy_ai_tests/four_steer_setup_static/run_test.ps1
     purpose: four steer setup 静态结构回归
     expected_result: pass
   - id: historical.four_swerve_path
@@ -155,8 +158,6 @@ suites:
     default_level: historical
     path: jia_docs/tests/historical/four_swerve_path
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/four_swerve_path/run_test.ps1
-    aliases:
-      - jia_docs/tests/legacy_ai_tests/four_swerve_path/run_test.ps1
     purpose: four swerve path 静态断言
     expected_result: pass
   - id: historical.newrobo_merge_static
@@ -175,8 +176,6 @@ suites:
     default_level: historical
     path: jia_docs/tests/historical/omni_setup_static
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/omni_setup_static/run_test.ps1
-    aliases:
-      - jia_docs/tests/legacy_ai_tests/omni_setup_static/run_test.ps1
     purpose: omni setup 静态回归
     expected_result: pass
   - id: historical.protocol_merge_static
@@ -205,8 +204,6 @@ suites:
     default_level: historical
     path: jia_docs/tests/historical/time_services
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/time_services/run_test.ps1
-    aliases:
-      - jia_docs/tests/legacy_ai_tests/time_services/run_test.ps1
     purpose: time services 历史编译回归
     expected_result: pass
   - id: historical.tri_omni_kinematics
@@ -215,7 +212,5 @@ suites:
     default_level: historical
     path: jia_docs/tests/historical/tri_omni_kinematics
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/historical/tri_omni_kinematics/run_test.ps1
-    aliases:
-      - jia_docs/tests/legacy_ai_tests/tri_omni_kinematics/run_test.ps1
     purpose: tri-omni 运动学历史回归
     expected_result: pass

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file chassis.cpp
  * @author 桑叁年
  * @brief 底盘控制主实现
@@ -739,9 +739,13 @@ namespace jia
 
         Chassis::ManualSpeedProfileMode Chassis::resolveEffectiveManualSpeedProfileMode() const
         {
+#if JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
             const DebugMode debug_mode = resolveDebugMode(debug_control_.common.mode_raw);
             const bool single_wheel_scurve_debug =
                 debug_control_.common.enable && isSingleWheelIsolatedMode(debug_mode);
+#else
+            const bool single_wheel_scurve_debug = false;
+#endif
             if (runtime_strategy_cfg_.manual_speed_profile_manual_only &&
                 normalized_body_command_.source != CommandInputSource::kDebugTarget &&
                 !single_wheel_scurve_debug)
@@ -1131,8 +1135,9 @@ namespace jia
                 xpark_gate_active_ = false;
             }
 
-            planner_input.allow_xpark_pose = xpark_gate_active_ && xpark_target_stationary;
-            planner_input.force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
+            const bool force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
+            planner_input.allow_xpark_pose = (!force_uniform_steer_drive) && xpark_gate_active_ && xpark_target_stationary;
+            planner_input.force_uniform_steer_drive = force_uniform_steer_drive;
             planner_input.uniform_steer_oa_mod_rad = wrapTo2PiF32(degToRadF32(input_target_data_.steer_lock_angle_deg));
             planner_input.uniform_drive_omega_abs = fabsf(input_target_data_.drive_lock_speed_m_s) / runtime_strategy_cfg_.wheel_radius_m_;
             planner_input.uniform_drive_sign = (input_target_data_.drive_lock_speed_m_s >= 0.0f) ? 1.0f : -1.0f;
@@ -1486,6 +1491,7 @@ namespace jia
             }
         }
 
+#if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
         void Chassis::applyDebugTargetOverride(DebugMode mode)
         {
             // Debug 左摇杆沿对外平移语义接管：上推朝当前 2/3 面，左推朝当前 3/4 面。
@@ -2121,6 +2127,7 @@ namespace jia
                 setDriveMotorTargetOmegaRadS(wheel, target_omega_rad_s);
             }
         }
+#endif
 
         void Chassis::applyDriveVirtualLoadAndCommand(WheelConfig &wheel,
                                                       u8 wheel_idx,
@@ -2135,11 +2142,15 @@ namespace jia
         {
             VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h);
             f32 drive_bias_current_mA = 0.0f;
+#if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
             f32 j_term_mA = 0.0f;
             f32 b_term_mA = 0.0f;
             f32 tc_term_mA = 0.0f;
             f32 alpha_est_rad_s2 = 0.0f;
+#endif
+#if JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
             f32 alpha_dt_s = period_;
+#endif
             const bool can_use_vesc_drive_assist =
                 allow_drive_position_loop &&
                 (drive_vesc != nullptr) &&
@@ -2148,6 +2159,7 @@ namespace jia
                 can_use_vesc_drive_assist &&
                 (drive_vesc->getRpmControlMode() == VESC_RPM_CONTROL_PID_CURRENT);
 
+#if JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
             const bool can_inject_virtual_load =
                 allow_drive_position_loop &&
                 (drive_vesc != nullptr) &&
@@ -2159,13 +2171,19 @@ namespace jia
                 !current_mode_flag_.is_wheel_torque_free &&
                 !input_target_data_.zero_current_all &&
                 !chassis_motion_blocked;
+#else
+            const bool can_inject_virtual_load = false;
+#endif
 
+#if JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
             if (can_reset_local_speed_pid && leaving_drive_zero_stop)
             {
                 // 从 zero-stop 恢复正常 RPM 闭环前，再清一次速度环状态，避免停前残留被带进下一次起步。
                 drive_vesc->reset_speed_pid_state();
             }
+#endif
 
+#if JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
             if (!drive_zero_stop_active && can_inject_virtual_load)
             {
                 const DebugDriveVirtualLoadConfig &load_cfg = debug_drive_virtual_load_[wheel_idx];
@@ -2200,6 +2218,7 @@ namespace jia
                                                    -fabsf(load_cfg.bias_current_limit_mA),
                                                    fabsf(load_cfg.bias_current_limit_mA));
             }
+#endif
 
             if (drive_vesc != nullptr)
             {
@@ -2294,6 +2313,7 @@ namespace jia
                 }
             }
 
+#if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
             if (wheel_idx == static_cast<u8>(debug_drive_load_trace_.observe_wheel_idx))
             {
                 const f32 trace_target_rad_s = can_apply_zero_stop_assist ? 0.0f : delivered_drive_target_rad_s;
@@ -2306,7 +2326,13 @@ namespace jia
                 debug_drive_load_trace_.tc_term_mA = tc_term_mA;
                 debug_drive_load_trace_.load_bias_current_mA = drive_bias_current_mA;
                 debug_drive_load_trace_.virtual_load_enable = (!drive_zero_stop_active && can_inject_virtual_load) ? 1.0f : 0.0f;
-                if (debug_drive_step_generator_[wheel_idx].enable)
+                if (
+#if JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR
+                    debug_drive_step_generator_[wheel_idx].enable
+#else
+                    false
+#endif
+                )
                 {
                     debug_drive_load_trace_.stepgen_enable = 1.0f;
                 }
@@ -2317,11 +2343,13 @@ namespace jia
                     debug_drive_load_trace_.total_current_cmd_mA = drive_vesc->getSpeedPidTotalOutputCurrent();
                 }
             }
+#endif
 
             last_drive_feedback_omega_rad_s_[wheel_idx] = wheel.corrected_drive_omega_rad_s;
             last_drive_feedback_sample_ms_[wheel_idx] = drive_feedback_sample_ms_[wheel_idx];
         }
 
+#if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
         void Chassis::computeSingleWheelIsolatedCommandsMode30(u8 wheel_idx, bool all_homed)
         {
             high_speed_trans_gate_active_ = false;
@@ -2590,6 +2618,7 @@ namespace jia
             setTargetBodySpeedMode(0.0f, 0.0f, 0.0f);
             clearPlannedMotionForModuleOverride();
         }
+#endif
 
         void Chassis::transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const
         {
@@ -2632,10 +2661,10 @@ namespace jia
             yaw_pid_trace_.feedback_yaw_rate_rad_s = input_hwt_omega_z_;
             yaw_pid_trace_.shift_remaining_ms = static_cast<f32>(lock_now_rot_z_shift_count_);
             yaw_pid_trace_.pid_compute_fired = 0.0f;
-            yaw_pid_trace_.steer_fault_any_active = debug_mirror_.steer_fault_any_active ? 1.0f : 0.0f;
-            yaw_pid_trace_.all_homed = debug_mirror_.all_homed ? 1.0f : 0.0f;
-            yaw_pid_trace_.high_speed_suppression_active = debug_mirror_.high_speed_drive_suppression_active ? 1.0f : 0.0f;
-            yaw_pid_trace_.reverse_intent_active = debug_mirror_.reverse_intent_active ? 1.0f : 0.0f;
+            yaw_pid_trace_.steer_fault_any_active = steer_fault_any_active_ ? 1.0f : 0.0f;
+            yaw_pid_trace_.all_homed = 0.0f;
+            yaw_pid_trace_.high_speed_suppression_active = high_speed_drive_suppression_active_ ? 1.0f : 0.0f;
+            yaw_pid_trace_.reverse_intent_active = reverse_intent_active_ ? 1.0f : 0.0f;
 
 // “锁当前航向”不是简单地rot_z固定住，而是先在用户开始施加角速度
 // 抓取当前机体朝向，再在后续由PID产生角速度闭环，让机器人保持当下姿态
@@ -2735,10 +2764,10 @@ namespace jia
             yaw_pid_trace_.feedback_yaw_rate_rad_s = input_hwt_omega_z_;
             yaw_pid_trace_.shift_remaining_ms = 0.0f;
             yaw_pid_trace_.pid_compute_fired = 0.0f;
-            yaw_pid_trace_.steer_fault_any_active = debug_mirror_.steer_fault_any_active ? 1.0f : 0.0f;
-            yaw_pid_trace_.all_homed = debug_mirror_.all_homed ? 1.0f : 0.0f;
-            yaw_pid_trace_.high_speed_suppression_active = debug_mirror_.high_speed_drive_suppression_active ? 1.0f : 0.0f;
-            yaw_pid_trace_.reverse_intent_active = debug_mirror_.reverse_intent_active ? 1.0f : 0.0f;
+            yaw_pid_trace_.steer_fault_any_active = steer_fault_any_active_ ? 1.0f : 0.0f;
+            yaw_pid_trace_.all_homed = 0.0f;
+            yaw_pid_trace_.high_speed_suppression_active = high_speed_drive_suppression_active_ ? 1.0f : 0.0f;
+            yaw_pid_trace_.reverse_intent_active = reverse_intent_active_ ? 1.0f : 0.0f;
             if (rot_z_pid_count_ >= rot_z_pid_period_)
             {
                 rot_z_pid_count_ = 0;
@@ -2772,9 +2801,13 @@ namespace jia
                 input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode,
             };
             const CommandInputSource source =
+#if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
                 (classifyDebugControlRoute(debug_control_.common.enable, debug_control_.common.mode_raw) == DebugControlRoute::kTargetInjection)
                     ? CommandInputSource::kDebugTarget
                     : CommandInputSource::kApi;
+#else
+                CommandInputSource::kApi;
+#endif
             normalized_body_command_ = makeNormalizedBodyCommand(planner_command, input_hwt_rot_z_, source);
             target_data_.vel_x = normalized_body_command_.body.vel_x;
             target_data_.vel_y = normalized_body_command_.body.vel_y;
@@ -3520,12 +3553,19 @@ namespace jia
 
         void Chassis::applyModuleCommands(bool all_homed)
         {
+#if JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
             const DebugMode debug_mode = resolveDebugMode(debug_control_.common.mode_raw);
             const bool single_wheel_isolation_active =
                 debug_control_.common.enable && isSingleWheelIsolatedMode(debug_mode);
             const u8 single_wheel_idx = (debug_control_.common.control_wheel_index < 4U) ? debug_control_.common.control_wheel_index : 0U;
+#else
+            const bool single_wheel_isolation_active = false;
+            const u8 single_wheel_idx = 0U;
+#endif
+#if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
             debug_drive_load_trace_ = {};
             debug_drive_load_trace_.observe_wheel_idx = static_cast<f32>((debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U);
+#endif
             bool steer_fault_any_active = false;
             for (u8 i = 0; i < 4; ++i)
             {
@@ -3806,9 +3846,11 @@ namespace jia
                 const f32 xpark_hold_exit_rad = degToRadF32(xpark_hold_exit_deg);
                 const f32 xpark_hold_settle_rad = degToRadF32(xpark_hold_settle_deg);
                 const f32 xpark_hold_settle_rate_rad_s = degToRadF32(xpark_hold_settle_rate_deg_s);
+                const bool force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
                 const bool xpark_hold_eligible =
                     xpark_hold_cfg.enable &&
                     xpark_gate_active_ &&
+                    !force_uniform_steer_drive &&
                     (runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kXPark) &&
                     all_homed &&
                     (wheel.homing_state == HomingState::kReady) &&
@@ -3970,7 +4012,9 @@ namespace jia
 
             if (single_wheel_isolation_active)
             {
+#if JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
                 applySingleWheelIsolationFilter(debug_mode, single_wheel_idx, all_homed);
+#endif
             }
         }
 
@@ -4011,6 +4055,7 @@ namespace jia
             }
         }
 
+#if JIA_CHASSIS_ENABLE_DEBUG_MIRROR
         void Chassis::refreshDebugMirror(bool all_homed)
         {
             debug_mirror_.all_homed = all_homed;
@@ -4097,7 +4142,9 @@ namespace jia
                 debug_mirror_.steer_fault_latched_count[i] = static_cast<f32>(wheel.steer_fault_latched_count);
             }
         }
+#endif
 
+#if JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
         void Chassis::syncDebugSteerPidTuneFromRuntimeOnEnableEdge()
         {
             const bool enable_now = debug_control_.common.enable;
@@ -4215,7 +4262,9 @@ namespace jia
                 }
             }
         }
+#endif
 
+#if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
         void Chassis::emitDebugUart8Log(bool all_homed)
         {
             if (!debug_output_.output_enable || sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kText)
@@ -4684,6 +4733,7 @@ namespace jia
             debug_uart_.printf_DMA_JustFloat(payload, 12);
         }
 
+#if JIA_CHASSIS_ENABLE_BINARY_TELEMETRY
         void Chassis::emitUart8SwerveTelemetryV2(bool all_homed)
         {
             if (!debug_output_.output_enable || sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kBinary)
@@ -4821,6 +4871,7 @@ namespace jia
             debug_output_runtime_.binary.telemetry.last_ms = time_ms_;
             debug_output_runtime_.binary.telemetry.seq = static_cast<u16>(debug_output_runtime_.binary.telemetry.seq + 1U);
         }
+#endif
 
         void Chassis::emitDebugOutputByMode(bool all_homed)
         {
@@ -4877,7 +4928,9 @@ namespace jia
                 break;
             }
         }
+#endif
 
+#if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
         bool Chassis::applyDebugModuleOverride(bool all_homed)
         {
             if (!debug_control_.common.enable)
@@ -4912,6 +4965,7 @@ namespace jia
             finalizeDebugModuleOverride(all_homed, route);
             return true;
         }
+#endif
 
         bool Chassis::solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const
         {
@@ -5037,6 +5091,7 @@ namespace jia
 
             for (;;)
             {
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 const u64 loop_start_us = RtosTimeStampUs64::getTimeUs();
                 u64 plan_us = 0ULL;     // [RO] 本周期规划阶段耗时（微秒）
                 u64 feedback_us = 0ULL; // [RO] 本周期反馈刷新阶段耗时（微秒）
@@ -5044,6 +5099,7 @@ namespace jia
                 u64 apply_us = 0ULL;    // [RO] 本周期命令生成与下发阶段耗时（微秒）
                 u64 debug_us = 0ULL;    // [RO] 本周期调试镜像与输出阶段耗时（微秒）
                 u64 stage_start_us = loop_start_us;
+#endif
 
                 // 2) 解析模式并做坐标系转换
                 // 1) 读取 IMU 航向/角速度
@@ -5059,7 +5115,10 @@ namespace jia
                 // 便于通过调试器直接观察摇杆输入；不改变任何控制模式接管逻辑。
                 CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 
+#if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
+                // RUNTIME_MIN 不走调试接管，避免调试面板字段把正常底盘输入链路拉进固件。
                 isDebugMode();
+#endif
                 setModeFlag();
                 resolvePlannerTargetData();
 
@@ -5067,14 +5126,24 @@ namespace jia
                 refreshActuatorLimitState();
 
                 updatePlannedMotionData();
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 plan_us = RtosTimeStampUs64::getTimeUs() - stage_start_us;
+#endif
 
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 stage_start_us = RtosTimeStampUs64::getTimeUs();
+#endif
                 updateWheelFeedback();
+#if JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
                 applyDebugSteerPidRuntimeTuning();
+#endif
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 feedback_us = RtosTimeStampUs64::getTimeUs() - stage_start_us;
+#endif
 
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 stage_start_us = RtosTimeStampUs64::getTimeUs();
+#endif
                 bool all_homed = true;
                 for (u8 i = 0; i < 4; ++i)
                 {
@@ -5090,36 +5159,57 @@ namespace jia
                     input_target_data_.zero_current_all = false;
                 }
                 homing_start_request_ = false;
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 homing_us = RtosTimeStampUs64::getTimeUs() - stage_start_us;
+#endif
 
+#if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
                 if (applyDebugModuleOverride(all_homed))
                 {
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                     updateTaskPerfBreakdown(plan_us, feedback_us, homing_us, 0ULL, 0ULL);
                     updateTaskPerfStat(loop_start_us, RtosTimeStampUs64::getTimeUs());
+#endif
                     vTaskDelayUntil(&time_ms_, period_ms_);
                     continue;
                 }
+#endif
 
 // 回零和正常控制共用同一套命令生成流程，但最终下发前会根all_homed选择
 // 未回零时只保留安全动作，已回零时才输出完整舵驱动目标
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 stage_start_us = RtosTimeStampUs64::getTimeUs();
+#endif
                 computeModuleCommands(planned_data_);
                 applyModuleCommands(all_homed);
                 updateCurrentData(all_homed);
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 apply_us = RtosTimeStampUs64::getTimeUs() - stage_start_us;
+#endif
 
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 stage_start_us = RtosTimeStampUs64::getTimeUs();
+#endif
+#if JIA_CHASSIS_ENABLE_DEBUG_MIRROR
                 refreshDebugMirror(all_homed);
+#endif
+#if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
                 emitDebugOutputByMode(all_homed);
+#endif
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 debug_us = RtosTimeStampUs64::getTimeUs() - stage_start_us;
+#endif
 
                 last_planned_data_ = planned_data_;
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 updateTaskPerfBreakdown(plan_us, feedback_us, homing_us, apply_us, debug_us);
                 updateTaskPerfStat(loop_start_us, RtosTimeStampUs64::getTimeUs());
+#endif
                 vTaskDelayUntil(&time_ms_, period_ms_);
             }
         }
 
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
         void Chassis::updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us)
         {
             if (loop_start_us == 0ULL || loop_end_us == 0ULL || loop_end_us < loop_start_us)
@@ -5208,6 +5298,7 @@ namespace jia
             task_perf_stat_.apply_us = apply_us;
             task_perf_stat_.debug_us = debug_us;
         }
+#endif
 
         f32 Chassis::getTargetBodyVelX() const
         {

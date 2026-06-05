@@ -60,11 +60,24 @@ function Invoke-JiaGppCompile {
 }
 
 function Invoke-JiaNativeExecutable {
-    param([Parameter(Mandatory = $true)][string] $Path)
+    param(
+        [Parameter(Mandatory = $true)][string] $Path,
+        [string[]] $Arguments = @()
+    )
 
-    & $Path
-    $nativeExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
-    if ($nativeExitCode -ne 0) {
-        exit $nativeExitCode
+    $gppBin = Split-Path -Parent (Get-JiaGppPath)
+    $oldPath = $env:PATH
+    try {
+        # Native host tests must load the MinGW runtime that matches the compiler.
+        # Put the selected g++ bin dir first so another toolchain's DLLs do not win PATH lookup.
+        $env:PATH = "$gppBin;$oldPath"
+        & $Path @Arguments
+        $nativeExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
+        if ($nativeExitCode -ne 0) {
+            exit $nativeExitCode
+        }
+    }
+    finally {
+        $env:PATH = $oldPath
     }
 }
