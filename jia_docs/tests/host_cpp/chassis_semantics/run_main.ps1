@@ -29,6 +29,7 @@ $compileArgs = @(
     '-std=c++17',
     '-ffunction-sections',
     '-fdata-sections',
+    '-DJIA_CHASSIS_PROFILE=JIA_CHASSIS_PROFILE_FULL_DEBUG',
     '-I', $stubDir,
     '-I', $doctestInc,
     '-I', $userInc,

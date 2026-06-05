@@ -8,7 +8,16 @@ suites:
     command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
     aliases:
       - jia_docs/tests/tdd/chassis_semantics/run_test.ps1
-    purpose: 主底盘语义 doctest 宿主回归入口，编译多文件行为分片并串联 app_utils_backend
+    purpose: 主底盘语义 doctest 宿主回归入口，使用 FULL_DEBUG 档编译多文件行为分片并串联 app_utils_backend
+    expected_result: pass
+  - id: host_cpp.chassis_semantics.slim_smoke
+    kind: host_cpp
+    status: active
+    default_level: smoke
+    path: jia_docs/tests/host_cpp/chassis_semantics
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1
+    aliases: []
+    purpose: chassis RUNTIME_MIN 极限运行固件档宿主 smoke，验证默认瘦身 profile 可编译运行并显著降低 Chassis 对象体积
     expected_result: pass
   - id: host_cpp.chassis_semantics.pid_reconnect
     kind: host_cpp

@@ -6,6 +6,7 @@ groups:
     recommended_entrypoints:
       - jia_docs/tests/run_tests.ps1
       - jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
+      - jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1
     suites:
       - id: chassis_semantics
         path: jia_docs/tests/host_cpp/chassis_semantics
@@ -18,7 +19,11 @@ groups:
             recommended: true
           - path: jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
             kind: powershell
-            purpose: chassis_semantics doctest 主入口，编译 runner、harness 和行为域分片
+            purpose: chassis_semantics FULL_DEBUG doctest 主入口，编译 runner、harness 和行为域分片
+            recommended: true
+          - path: jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1
+            kind: powershell
+            purpose: chassis RUNTIME_MIN 极限运行固件档 smoke，验证瘦身 profile 可编译运行并降低对象体积
             recommended: true
           - path: jia_docs/tests/tdd/chassis_semantics/run_test.ps1
             kind: powershell

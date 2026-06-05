@@ -1,40 +1,39 @@
 # tests 说明
 
-这个目录用于存放测试说明、主机侧测试套件、Python 语义回归、历史保留区，以及统一入口脚本和结果产物。主入口已经迁移为 `jia_docs/tests/run_tests.ps1`，旧脚本仍保留为兼容包装入口，不再作为首选路径。
+这个目录存放当前推荐的测试入口、host C++ 语义测试、Python 语义回归、历史保留区，以及统一调度脚本。主入口是 `jia_docs/tests/run_tests.ps1`；旧路径保留为兼容包装，不再作为新增测试的首选位置。
 
-## 现在优先看什么
+## 现在优先运行什么
 
 继续开发时，优先执行：
 
 1. `jia_docs/tests/run_tests.ps1`
 2. `jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1`
+3. `jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1`
 
-如果你要继续跟进 VESC 刹车相关宿主回归，再看：
+如果只想确认 chassis 发布固件瘦身档是否还能编译运行，直接跑：
+
+- `jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1`
+
+如果要继续跟进 VESC 刹车相关宿主回归，再看：
 
 - `jia_docs/tests/host_cpp/vesc_brake/run_test.ps1`
 
-如果你要继续看 Python 语义回归，再看：
+如果要继续看 Python 语义回归，再看：
 
 - `jia_docs/tests/python_semantics/swerve_port/lock_now_homing_gate_regression.py`
 
-## 分层说明
+## host_cpp/
 
-### `host_cpp/`
-
-当前主机侧 C++ 测试集合，默认由统一入口调度。
-
-当前 active 套件：
+当前 host C++ 测试由统一入口调度。active 套件包括：
 
 - `host_cpp/chassis_semantics/`
 - `host_cpp/vesc_brake/`
 
-`host_cpp/swerve_core/` 仍保留为历史宿主对照入口；当前仓库已无 `Module_ChassisSwerve` 生产源文件，所以在 registry 中标为已知 xfail，不作为当前 active 通过套件。
+`host_cpp/chassis_semantics/` 是当前最主要的底盘宿主语义套件：
 
-其中 `host_cpp/chassis_semantics/` 是当前最主要的底盘宿主语义套件：
-
-- 主入口是 `run_main.ps1`，它会编译 doctest runner、共享 harness、多个行为域分片以及 `chassis.cpp`。
-- doctest 单头文件固定 vendoring 在 `jia_docs/tests/third_party/doctest/`，只用于 host C++ 测试，不进入 Keil/固件工程。
-- `test_chassis_semantics_harness.h/.cpp` 放公共测试桩、配置函数和循环驱动 helper；新增测试时优先复用这里已有的 setup，不要在分片里复制一套。
+- `run_main.ps1` 使用 `JIA_CHASSIS_PROFILE_FULL_DEBUG` 编译 doctest runner、harness 和行为域分片。它保留所有调试字段，服务语义回归和调试器可观察性。
+- `run_slim_smoke.ps1` 使用 `JIA_CHASSIS_PROFILE_RUNTIME_MIN` 编译最小 smoke。它不跑调试语义，只验证极限运行固件档可编译、可实例化，并输出 `sizeof(Chassis)`。
+- `test_chassis_semantics_harness.h/.cpp` 放公共测试桩、配置函数和循环驱动 helper。新增行为测试时优先复用这里已有 setup，不要在分片里复制一套。
 - 行为分片按 `test_chassis_semantics_<domain>.cpp` 命名。新增 case 时优先放进对应行为域，只有跨域公共准备逻辑才放入 harness。
 - 旧的手写 `test_chassis_semantics_registry.inc` 已退役；测试发现、过滤和失败定位交给 doctest。
 
@@ -48,6 +47,17 @@
 - `test_chassis_semantics_xpark_gate_and_hold.cpp`
 - `test_chassis_semantics_steer_fault_homing_recovery.cpp`
 
+## 编译档位
+
+`User/Setup/Inc/chassis.h` 顶部定义底盘 profile：
+
+- `JIA_CHASSIS_PROFILE_RUNTIME_MIN`：比赛/发布固件默认档，关闭调试接管、单轮直控、调试输出、PID 调参缓存、DebugMirror 和 TaskPerf 大缓存。
+- `JIA_CHASSIS_PROFILE_FULL_DEBUG`：host 语义测试和调试器观察档，保留所有调试字段和输出路径。
+
+新增测试时，如果测试读取 `debug_control_`、`debug_output_`、`debug_pid_tune_`、`debug_mirror_` 等内部调试字段，应放进 `run_main.ps1` 的 FULL_DEBUG doctest 套件。只验证瘦身档编译、尺寸或基础运行时，应放到 slim smoke 或后续专门的 runtime-min 分片。
+
+## 兼容路径
+
 旧 `tdd/` 路径仍保留这些兼容包装入口，但不再作为新增测试的首选位置：
 
 - `run_test.ps1`
@@ -55,40 +65,9 @@
 - `run_app_utils_backend_test.ps1`
 - `run_app_utils_math_test.ps1`
 
-### `python_semantics/`
-
-由原 `ai2_tests/` 迁移而来的 Python 语义回归集合。
-
-当前重点子集：
-
-- `python_semantics/swerve_port/`
-- `python_semantics/lock_now_rot_z/`
-- `python_semantics/homing_state/`
-- `python_semantics/time_stamp_us64/`
-
-### `historical/`
-
-历史保留区，不默认运行，主要用于行为对照和旧回归定位。
-
-可关注的旧套件包括：
-
-- `historical/swerve_core/`
-- `historical/vesc_brake/`
-- `historical/chassis_module/`
-- `historical/time_services/`
-- `historical/tri_omni_kinematics/`
-- `historical/serial1_protocol_host/`
-
-### `shared/`
-
-共享的测试代码、公共 fixture、可复用脚本片段放在这里。
-
-### `artifacts/`
-
-过程参考物、结果摘要和可追溯输出放在这里，不放业务源代码。
-
 ## 维护约定
 
-- 新增测试时，优先在 `jia_docs/catalog/tests.yaml` 里登记高价值入口。
-- 统一入口写在 `jia_docs/tests/run_tests.ps1`，旧路径只保留兼容用途。
+- 新增高价值测试入口时，优先在 `jia_docs/tests/tests.yaml` 和 `jia_docs/catalog/tests.yaml` 登记。
+- 统一入口写在 `jia_docs/tests/run_tests.ps1`；旧路径只保留兼容用途。
 - 需要长期对照的内容放入 `historical/`，不要让历史保留区影响默认执行路径。
+- 文档使用 UTF-8 中文；提交前检查新增中文说明和提交信息没有乱码。
