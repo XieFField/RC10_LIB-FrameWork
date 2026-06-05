@@ -5,13 +5,18 @@
 ## 当前推荐阅读
 
 - 首读：
+  - `2026-06-05` | `rc10_chassis_doctest_zero_stop_sync` | [ai_handoff_2026-06-05_rc10_chassis_doctest_zero_stop_sync.md](2026-06/ai_handoff_2026-06-05_rc10_chassis_doctest_zero_stop_sync.md)
+- 上一阶段主线 merge：
   - `2026-05-31` | `rc10_wait_1_7_7_1_6_1_merge` | [ai_handoff_2026-05-31_rc10_wait_1_7_7_1_6_1_merge.md](2026-05/ai_handoff_2026-05-31_rc10_wait_1_7_7_1_6_1_merge.md)
-- 前一阶段主线 merge：
+- drive PID / payload 参考：
   - `2026-05-26` | `rc10_drive_pid_load_tune_merge` | [ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md](2026-05/ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md)
-- 同日补充：
   - `2026-05-26 11:24` | `singlewheeltrace_payload_semantics` | [ai_handoff_2026-05-26_1124_singlewheeltrace_payload_semantics.md](2026-05/ai_handoff_2026-05-26_1124_singlewheeltrace_payload_semantics.md)
 
-如果只读一份，请先读 merge handoff；如果要处理 `SingleWheelTrace` / 上位机解析，再补读 payload 说明。
+如果只读一份，请先读 2026-06-05 handoff；如果要处理 `SingleWheelTrace` / 上位机解析，再补读 payload 说明。
+
+## 2026-06
+
+- `2026-06-05` | `rc10_chassis_doctest_zero_stop_sync` | [ai_handoff_2026-06-05_rc10_chassis_doctest_zero_stop_sync.md](2026-06/ai_handoff_2026-06-05_rc10_chassis_doctest_zero_stop_sync.md)
 
 ## 2026-05
 
@@ -33,9 +38,6 @@
 
 ## 补充入口
 
-- 当前接手说明：
-  - [../active/onramp.md](../active/onramp.md)
-- 当前主线总览：
-  - [../active/overview.md](../active/overview.md)
-- 历史归档：
-  - [../history/INDEX.md](../history/INDEX.md)
+- 当前接手说明：[../active/onramp.md](../active/onramp.md)
+- 当前主线总览：[../active/overview.md](../active/overview.md)
+- 历史归档：[../history/INDEX.md](../history/INDEX.md)
