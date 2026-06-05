@@ -328,7 +328,7 @@ bool ArmSetup::manual_pickup()
 
 bool ArmSetup::manual_putdown()
 {
-    this->set_PitchAngle(90.0f);
+    this->set_PitchAngle(init_data_.pitch_lift_angle_);
     this->set_LaunchHeight(init_data_.putdown_height_);
 
     static bool is_putdown = false;
@@ -443,7 +443,7 @@ void ArmSetup::semiautoControl_2()
     int8_t target_pitch_logical = (airjoy_data_.SWC & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
     if(target_pitch_logical == 1)
     {
-        target_joint_status_.suckerJoint_angle_ = 90.0f; // 吸盘打开到90度
+        target_joint_status_.suckerJoint_angle_ = init_data_.pitch_lift_angle_; // 吸盘打开到90度
     }
     else
         target_joint_status_.suckerJoint_angle_ = 0.0f; // 吸盘关闭到0度
@@ -598,7 +598,7 @@ void ArmSetup::manualControl()
 #endif
     if(target_pitch_logical == 1)
     {
-        target_joint_status_.suckerJoint_angle_ = 90.0f; // 吸盘打开到90度
+        target_joint_status_.suckerJoint_angle_ = init_data_.pitch_lift_angle_; // 吸盘打开到90度
     }
     else
         target_joint_status_.suckerJoint_angle_ = 0.0f; // 吸盘关闭到0度
@@ -683,9 +683,10 @@ bool ArmSetup::manual_store()
 
         case store_state::laucnh_state:
         {
+            this->setStoreSuckerStatus(Sucker_Status_E::SUCK);
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
-            this->set_PitchAngle(90.0f); //吸盘抬平
-            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.01f && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 30.0f)
+            this->set_PitchAngle(this->init_data_.pitch_lift_angle_); //吸盘抬平
+            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.01f && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - this->init_data_.pitch_lift_angle_) < 30.0f)
             {
                 this->store_state_ = store_state::rotate_state;
             }
@@ -708,7 +709,7 @@ bool ArmSetup::manual_store()
         {
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 269.9f) < 15.0f )
             {
-                this->set_PitchAngle(90.0f); // 抬平
+                this->set_PitchAngle(this->init_data_.pitch_lift_angle_); // 抬平
             }
 
             if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 5.0f)
@@ -803,7 +804,7 @@ bool ArmSetup::manual_takeout()
 
                 if(this->get_currentJointStatus().launchJoint_Height_ > this->init_data_.max_launchHeight_ - 0.01f)
                 {
-                    this->set_PitchAngle(90.0f); //吸盘抬平
+                    this->set_PitchAngle(this->init_data_.pitch_lift_angle_); //吸盘抬平
                     this->store_state_ = store_state::outstate2;
                 }
             }
@@ -822,7 +823,7 @@ bool ArmSetup::manual_takeout()
 
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f)
             {
-                this->set_PitchAngle(90.0f); // 抬平
+                this->set_PitchAngle(this->init_data_.pitch_lift_angle_); // 抬平
                 this->store_state_ = store_state::idle;
                 return true;
             }
@@ -1065,7 +1066,6 @@ void ArmSetup::auto_stillnessTwo()
                 if(state_extStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
                 {
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
-                    this->set_PitchAngle(180.0f);
                 }
             }
             break;
@@ -1164,7 +1164,7 @@ bool ArmSetup::state_alignStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
-    this->set_PitchAngle(90.0f); //pitch抬平
+    this->set_PitchAngle(this->init_data_.pitch_lift_angle_); //pitch抬平
 
     //对准kfs
     this->set_RotateAngle(90.0f);
@@ -1324,10 +1324,10 @@ void ArmSetup::calibrateMotor()
         this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(0.001f));
         this->motor_launch_->relocate_totalAngle(0.0f);
 
-        if(this->is_pitchEnable_)
-        {
-            this->motor_pitch_->motorSetZero();
-        }
+        // if(this->is_pitchEnable_)
+        // {
+        //     this->motor_pitch_->motorSetZero();
+        // }
         //set current to 0
         this->motor_stretch_->setTargetCurrent(0.0f);
         this->motor_rotate_->setTargetCurrent(0.0f);
