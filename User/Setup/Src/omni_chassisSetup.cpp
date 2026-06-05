@@ -116,13 +116,7 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
 
     //    path_line_.Add_Start_Point(robot_pos_);
     //    path_line_.Add_End_Point(test_point, path_param_CB_);
-    // 曲线的测试
     
-//      path_line_.Add_Start_Point(robot_pos_);
-//      path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f, robot_pos_.y}, path_param.curve);
-//      path_line_.Add_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f}, Vector2D{robot_pos_.x-0.5f-0.85f, robot_pos_.y-0.22f}, path_param.curve);
-//      path_line_.Add_End_Point(Vector2D{robot_pos_.x-0.5f-0.63f, robot_pos_.y+0.63f+0.2f}, path_param.end);
-
     // 夹杆路径的测试
 //    path_line_.Add_Start_Point(robot_pos_);
 //    path_line_.Add_Point(CB_point.CB_Selection_start_point_, path_param.start);
@@ -131,8 +125,8 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     
     
       path_line_.Add_Start_Point(robot_pos_);
-      path_line_.Add_Point(Vector2D{0.6f+b, 2.6f}, path_param.start);
-      path_line_.Add_Point(Vector2D{0.6f, 2.6f+b}, path_param.line);
+      path_line_.Add_Point(Vector2D{0.6f+KFS_point.coner_ahead, 2.6f}, path_param.start);
+      path_line_.Add_Point(Vector2D{0.6f, 2.6f+KFS_point.coner_ahead}, path_param.line);
       path_line_.Add_End_Point(Vector2D{0.6f, 5.0f}, path_param.end);
 
 
@@ -222,9 +216,9 @@ void OmniChassis_Setup::loop()
                 Path_CB_check();
                 if (WeaponSage_Start == false && WeaponSage_End == false)
                 {
-                    planspeed = path_line_.plan(robot_pos_);
+                    V.planspeed = path_line_.plan(robot_pos_);
                     Path_correction();
-                    corrVelocity = V.PID_coefficient * corrVelocity;
+                    V.corrVelocity = V.PID_coefficient * V.corrVelocity;
                     speed = v_limit();
                     if(path_line_.Get_Index()==1)
                     {
@@ -283,9 +277,9 @@ void OmniChassis_Setup::loop()
                 if (Arm_Start == false && KFS_flag.Spin_Start == false)
                 {
                     // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-                    planspeed = path_line_.plan(robot_pos_);
+                    V.planspeed = path_line_.plan(robot_pos_);
                     Path_correction();
-                    corrVelocity = V.PID_coefficient * corrVelocity;
+                    V.corrVelocity = V.PID_coefficient * V.corrVelocity;
                     speed = v_limit();
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
@@ -397,22 +391,22 @@ void OmniChassis_Setup::Path_correction(void)
 
     Vector2D nearestPt = curve.Get_Point(tNearest);
 
-    err_curve = (nearestPt - robot_pos_).magnitude();
+    //float err_curve = (nearestPt - robot_pos_).magnitude();
 
     float obj_dis = _tool_Abs((curve.Get_End_point() - robot_pos_).magnitude());
 
     // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
-    if (obj_dis < m_lookaheadDist || path_line_.Is_End() == true)
+    if (obj_dis < V.m_lookaheadDist || path_line_.Is_End() == true)
     {
         Vector2D endPt = curve.Get_End_point();
 
         if (curve.Get_len() < 0.0001f)
         {
-            corrVelocity = {0.0f, 0.0f};
+            V.corrVelocity = {0.0f, 0.0f};
             return;
         }
-        corrVelocity.x = pid_pos_x.pid_calc(endPt.x, robot_pos_.x);
-        corrVelocity.y = pid_pos_y.pid_calc(endPt.y, robot_pos_.y);
+        V.corrVelocity.x = pid_pos_x.pid_calc(endPt.x, robot_pos_.x);
+        V.corrVelocity.y = pid_pos_y.pid_calc(endPt.y, robot_pos_.y);
         return;
     }
 
@@ -422,11 +416,11 @@ void OmniChassis_Setup::Path_correction(void)
     Vector2D lookaheadPt; // 路径上的前视点
     if (curve.Get_Bezier_Order() == FIRST_ORDER_BEZIER)
     {
-        m_lookaheadDist = V.m_lookaheadDist_line;
+        V.m_lookaheadDist = V.m_lookaheadDist_line;
     }
     else
     {
-        m_lookaheadDist = V.m_lookaheadDist_curve;
+        V.m_lookaheadDist = V.m_lookaheadDist_curve;
     }
 
     tLookahead = tNearest; // 前视点的编号，先从最近点的编号开始（比如t=0.3）
@@ -462,7 +456,7 @@ void OmniChassis_Setup::Path_correction(void)
         float step = 0.01f;           // 步进
 
         lookaheadPt = curve.Get_Point(tLookahead);
-        while (tLookahead < 1.0f && accumulatedDist < m_lookaheadDist)
+        while (tLookahead < 1.0f && accumulatedDist < V.m_lookaheadDist)
         {
             float nextT = tLookahead + step;
             if (nextT > 1.0f)
@@ -483,8 +477,8 @@ void OmniChassis_Setup::Path_correction(void)
 
     // 3. 在绝对世界坐标系下，独立计算X轴和Y轴的纠偏向速度
     // 将不再计算切法向，直接基于XY差值PID
-    corrVelocity.x = pid_pos_x.pid_calc(lookaheadPt.x, robot_pos_.x);
-    corrVelocity.y = pid_pos_y.pid_calc(lookaheadPt.y, robot_pos_.y);
+    V.corrVelocity.x = pid_pos_x.pid_calc(lookaheadPt.x, robot_pos_.x);
+    V.corrVelocity.y = pid_pos_y.pid_calc(lookaheadPt.y, robot_pos_.y);
 }
 
 ///////////////////////////////////       KFS路径生成            ////////////////////////////////
@@ -769,13 +763,13 @@ Vector2D OmniChassis_Setup::v_limit(void)
     Vector2D normal_dir = tangent_dir.perpendicular();
 
     // 切向 = 前馈 + PID纠偏沿切向分量（PID不限幅，终点 planspeed=0 时保留切向纠偏）
-    Vector2D v_tangent = planspeed * V.FF_coefficient + corrVelocity.project_onto(tangent_dir);
+    Vector2D v_tangent = V.planspeed * V.FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
 
-    if (v_tangent.magnitude() > planspeed.magnitude())
-        v_tangent = v_tangent.normalize() * planspeed.magnitude();
+    if (v_tangent.magnitude() > V.planspeed.magnitude())
+        v_tangent = v_tangent.normalize() * V.planspeed.magnitude();
 
     // 法向 = PID纠偏沿法向分量（限幅防止侧向过冲）
-    Vector2D v_normal = corrVelocity.project_onto(normal_dir);
+    Vector2D v_normal = V.corrVelocity.project_onto(normal_dir);
     if (v_normal.magnitude() > V.v_normal_max)
         v_normal = v_normal.normalize() * V.v_normal_max;
 
@@ -784,7 +778,7 @@ Vector2D OmniChassis_Setup::v_limit(void)
     num++;
     if (num > 5)
     {
-        debug_uart.printf_DMA("%f,%f,%f\n", robot_pos_.x, robot_pos_.y, err_curve);
+        //debug_uart.printf_DMA("%f,%f,%f\n", robot_pos_.x, robot_pos_.y,speed.magnitude());
         num = 0;
     }
     return v_end;

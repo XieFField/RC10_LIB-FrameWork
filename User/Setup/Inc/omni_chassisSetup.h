@@ -44,27 +44,35 @@ extern "C"
 
 typedef struct
 {
-    Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config CB = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};  // 0.8acc夹杆流程速度规划参数。
+    Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
+    Speedplanner_1D_Param_Config CB = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
 
-    Speedplanner_1D_Param_Config start = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.6f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};  // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config line = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config curve = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.8f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; // KFS 速度规划参数。
-    Speedplanner_1D_Param_Config end = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   // KFS 速度规划参数。
+    Speedplanner_1D_Param_Config start = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.6f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};  
+    Speedplanner_1D_Param_Config line = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   
+    Speedplanner_1D_Param_Config curve = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.8f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
+    Speedplanner_1D_Param_Config end = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   
 } PATH_PARAM;
 
 typedef struct
 {
+    Vector2D planspeed = {0.0f, 0.0f};    // 路径规划输出的最大速度。
+    Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
+
     float PID_coefficient = 0.8;
     float FF_coefficient = 0.5;
 
     float v_normal_max = 0.5f;
+    float m_lookaheadDist = 0.5f;         // 前视距离 (单位: 米)
     float m_lookaheadDist_line = 0.5f;   // 前视距离 (单位: 米)
     float m_lookaheadDist_curve = 0.07f; // 前视距离 (单位: 米)
 } SPEED_PARAM;
 
 typedef struct
 {
+    Vector2D CB_Start_pos = {1.0f, 0.9f};      // 夹杆起点。
+    Vector2D CB_Selection_pos = {2.47f, 0.815f}; // 夹杆流程默认目标点。
+    Vector2D CB_End_pos = {2.9f, 1.0f}; // 夹杆流程默认目标点。
+    
     Vector2D CB_Selection_start_point_ = {1.0f, 1.0f};      // 夹杆起点。
     Vector2D CB_Selection_control_point_ = {2.575f, 1.8};   // 夹杆控制点。
     Vector2D Clamping_Bar_Selection_pos_ = {2.47f, 0.815f}; // 夹杆流程默认目标点。
@@ -84,6 +92,8 @@ typedef struct
     Vector2D spin_point_ = {3.0f, 8.72f}; // 上方旋转点
 
     float spin_skew_ = -0.1f; // 下方旋转位置y轴偏移量
+    
+    float coner_ahead=0.2f;
 } KFS_POINT;
 
 typedef struct
@@ -154,9 +164,8 @@ public:
     }
 
 private:
-    float b=0.2f;
+
     Vector2D test_point = {0.6f, 6.0f};
-    Vector2D control_point = {0.0f, 2.5f};
     
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
@@ -165,6 +174,10 @@ private:
     bool WeaponSage_End = false;   // 夹杆流程完成标志。
 
     bool Arm_Start = false; // 机械臂动作触发标志。
+    
+    bool RB_Flag = false;//红蓝方标志位，默认false为现场地
+    
+    bool pid_dead_flag=false;
 
     int flag = 0;     // 自动流程起始触发位（边沿触发）。
     int flag_run = 0; // 自动流程运行中标志位。
@@ -174,12 +187,10 @@ private:
     Vector2D speed = {0.0f, 0.0f};      // 合成后的底盘平移速度。
     Vector2D robot_pos_ = {0.0f, 0.0f}; // 当前机器人世界坐标。
     float yaw = 0.0f;                   // 当前机器人航向角（度）。
+    float target_yaw_ = 0.0f; // 底盘锁角目标（度）。
 
     SPEED_PARAM V;
-    float m_lookaheadDist = 0.5f;         // 前视距离 (单位: 米)
-    Vector2D planspeed = {0.0f, 0.0f};    // 路径规划输出的最大速度。
-    Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
-
+    
     PID_Position pid_pos_x; // x轴绝对位置PID控制器
     PID_Position pid_pos_y; // y轴绝对位置PID控制器
     PID_Position path_lock; // 停止锁点
@@ -195,19 +206,15 @@ private:
     //-----------------------------------规划参数-----------------------------------------//
     CB_FLAG CB_flag;
     CB_POINT CB_point;
+    
     KFS_FLAG KFS_flag;
     KFS_POINT KFS_point;
 
     MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
-
     //-----------------------------------其他参数-----------------------------------------//
-    float err_curve=0.0f;
-    bool pid_dead_flag=false;
     int num = 0;
 
     Point3D ladar_data_; // 定位系统输出的原始位姿数据。
-
-    float target_yaw_ = 0.0f; // 底盘锁角目标（度）。
 
     Vector2D Path_end_point = {0.0f, 0.0f};
 
