@@ -421,16 +421,19 @@ public:
 
             v_resultant_ = sp_.plan(distance_); // 速度规划器�?�算当前�?标速度
             m_phase = sp_.getPhase();           // 获取当前速度规划阶�??
-
-            v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
-
+            
+            if(tangent_lock==false)
+            {
+                v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
+            }
+            
             err_end = _tool_Abs((point - bezier_curve_list[index_].Get_End_point()).magnitude());
 
             // 段切换条件：
             // 1) 近�??�?�?达到阈值可直接切�?�；
             // 2) t 接近 1 仅作为辅助条件，必须同时离终点不远，避免“投影到段末�?但车体仍较远”时�?切�?��?
             const float t_reach_guard = 0.20f;
-            bool reach_segment_end = (_tool_Abs(err_end) <= dead) || (t_ >= 0.995f && _tool_Abs(err_end) <= t_reach_guard);
+            bool reach_segment_end = (_tool_Abs(err_end) <= dead) || (t_ >= 0.999f && _tool_Abs(err_end) <= t_reach_guard);
             // bool reach_segment_end = (t_ >= 0.995f);
             if (reach_segment_end)
             {
@@ -443,6 +446,31 @@ public:
                 }
                 else
                 {
+                    //舵轮过弯特殊设计
+                    if(params_[index_].targetPos==1.0f)
+                    {
+                        tangent_lock=true;
+                        v_tangent_={1.0f,0.0f};
+                    }
+                    else if(params_[index_].targetPos==2.0f)
+                    {
+                        tangent_lock=true;
+                        v_tangent_={-1.0f,0.0f};
+                    }
+                    else if(params_[index_].targetPos==3.0f)
+                    {
+                        tangent_lock=true;
+                        v_tangent_={0.0f,1.0f};
+                    }
+                    else if(params_[index_].targetPos==4.0f)
+                    {
+                        tangent_lock=true;
+                        v_tangent_={0.0f,-1.0f};
+                    }
+                    else
+                    {
+                        tangent_lock=false;
+                    }
                     params_[index_].targetPos = (bezier_curve_list[index_].Get_len() - params_[index_].startPos);
                     params_[index_].startPos = 0.0f; // 设置起�?�位�?
                     sp_.param_reset(params_[index_]);
@@ -532,6 +560,7 @@ public:
     
 
 protected:
+    bool tangent_lock=false;
     float dead = 0.05f;
     int index_ = 0;
     BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // 储存各路段曲�?

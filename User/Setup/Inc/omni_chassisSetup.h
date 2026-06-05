@@ -48,8 +48,8 @@ typedef struct
     Speedplanner_1D_Param_Config CB = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
 
     Speedplanner_1D_Param_Config start = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.6f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};  
-    Speedplanner_1D_Param_Config line = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   
-    Speedplanner_1D_Param_Config curve = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.8f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
+    Speedplanner_1D_Param_Config line = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};   
+    Speedplanner_1D_Param_Config curve = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};   
     Speedplanner_1D_Param_Config end = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   
 } PATH_PARAM;
 
@@ -175,7 +175,7 @@ private:
 
     bool Arm_Start = false; // 机械臂动作触发标志。
     
-    bool RB_Flag = false;//红蓝方标志位，默认false为现场地
+    bool RB_Flag = true;//红蓝方标志位，默认true为现场地
     
     bool pid_dead_flag=false;
 
@@ -230,7 +230,7 @@ private:
     //-----------------------------------内部控制函数-----------------------------------------//
     void loop() override; // RTOS 主循环。
 
-    void KFS_Selection_Planning(void); // 生成 KFS 自动路径。
+    bool KFS_Selection_Planning(void); // 生成 KFS 自动路径。
 
     void Path_correction(void); // 基于当前位置执行路径纠偏。
 
