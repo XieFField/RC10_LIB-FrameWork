@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file chassis.h
  * @author 桑叁年
  * @brief 底盘控制声明
@@ -21,13 +21,13 @@
 #define JIA_CHASSIS_PROFILE_RUNTIME_MIN 1
 #define JIA_CHASSIS_PROFILE_FULL_DEBUG 2
 
-#ifndef JIA_CHASSIS_PROFILE
+#ifndef JIA_CHASSIS_PROFILE 
 #define JIA_CHASSIS_PROFILE JIA_CHASSIS_PROFILE_RUNTIME_MIN
 #endif
 
 // 功能开关均允许外部 -D 单独覆盖。下面只给 profile 的默认值：
 // FULL_DEBUG 全开；RUNTIME_MIN 关闭调试/观测/单轮直控类功能。
-#ifndef JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
+#ifndef JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE 
 #define JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
 #endif
 
