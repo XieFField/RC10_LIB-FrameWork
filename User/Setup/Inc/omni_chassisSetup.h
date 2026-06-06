@@ -246,7 +246,7 @@ private:
     void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
 
     void Path_CB_check(void);
-
+    bool spinodal_path(Vector2D last_vector, Vector2D temp_vector,int i);
 #ifdef s_debug
     int a = 0;
     float tp_speed_now = 0.0f;
