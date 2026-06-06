@@ -686,7 +686,8 @@ bool ArmSetup::manual_store()
             this->setStoreSuckerStatus(Sucker_Status_E::SUCK);
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
             this->set_PitchAngle(this->init_data_.pitch_lift_angle_); //吸盘抬平
-            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.01f && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - this->init_data_.pitch_lift_angle_) < 30.0f)
+            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.03f 
+                    && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - this->init_data_.pitch_lift_angle_) < 30.0f)
             {
                 this->store_state_ = store_state::rotate_state;
             }
@@ -698,7 +699,7 @@ bool ArmSetup::manual_store()
             float target_rotate = 269.9f; //存储的目标旋转角度
             this->set_RotateAngle(target_rotate);
             this->set_StretchLength(init_data_.store_ext_length_); // 伸展到存储位置需要的长度
-            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f)
+            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 5.0f)
             {
                 this->store_state_ = store_state::lower_state;
             }
