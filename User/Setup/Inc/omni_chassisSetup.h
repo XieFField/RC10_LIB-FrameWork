@@ -48,12 +48,13 @@ typedef struct
     Speedplanner_1D_Param_Config curve = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};   
     Speedplanner_1D_Param_Config end = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   
     
-    
+    Speedplanner_1D_Param_Config line = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.5f, .finalSpeed = 2.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   
+
+    //没用的
     Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
     //原始的测试数据
     Speedplanner_1D_Param_Config CB = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
-    Speedplanner_1D_Param_Config line = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   
-
+   
 } PATH_PARAM;
 
 typedef struct
@@ -237,7 +238,7 @@ private:
 
     void Path_correction(void); // 基于当前位置执行路径纠偏。
 
-    void Path_spin_check(void); // 检查并执行路径中旋转逻辑。
+    void Path_KFS_check(void); // 检查并执行路径中旋转逻辑。
 
     Vector2D v_limit(void); // 速度限幅函数。
 

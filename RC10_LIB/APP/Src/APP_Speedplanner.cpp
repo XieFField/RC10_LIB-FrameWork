@@ -96,7 +96,7 @@ float TrapePlanner1D::plan(float now_dis)
     if (abs(m_targetPos_ - now_dis) < m_deadzone_)
     {
         m_phase = FINISHED_PHASE;
-        return 0.0f; // 如果距离小于死区范围，返回速度为0
+        return m_finalSpeed_; // 如果距离小于死区范围，返回速度为0
     }
     if (traveled_ >= m_totalDistance_)
     {

@@ -471,7 +471,15 @@ public:
                     {
                         tangent_lock=false;
                     }
-                    params_[index_].targetPos = (bezier_curve_list[index_].Get_len() - params_[index_].startPos);
+                    float temp=(bezier_curve_list[index_].Get_len() - params_[index_].startPos);
+                    if(temp>0)
+                    {
+                        params_[index_].targetPos = temp;
+                    }
+                    else
+                    {
+                        params_[index_].targetPos = bezier_curve_list[index_].Get_len();
+                    }
                     params_[index_].startPos = 0.0f; // è®¾ç½®èµ·å?‹ä½ç½?
                     sp_.param_reset(params_[index_]);
                 }
