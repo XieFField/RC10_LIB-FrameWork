@@ -438,11 +438,11 @@ protected:
 
             if(auto_ctrl_.now_state != STATE_EXT && auto_ctrl_.now_state != STATE_LAUNCH)
             {
-                speed = { 0.0f, 1.0f, 0.0f};
+                speed = { 0.0f, 0.5f, 0.0f};
             }
             else if(inTargetMap && auto_ctrl_.flag.canChassisStart == true)
             {
-                speed = {0.0f, 1.0f, 0.0f};
+                speed = {0.0f, 0.5f, 0.0f};
             }
 
 
