@@ -511,14 +511,18 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         double_KFS = false;
     }
+    
     int8_t MF1_Point_ = 0; // MF1 对应地图点编号。
     int8_t MF2_Point_ = 0; // MF2 对应地图点编号。
 
     // 基于当前位置和目标点编号计算整条必经路径。
     // 自动规划接口转换
     Point2D robot_point_ = {robot_pos_.x, robot_pos_.y};
+
     // 计算理想的KFS路径
     KFS_KeyPoint_ = MF_AutoCtrler::PathInformation_calc(robot_point_, KFS_point.MF1, KFS_point.MF2);
+    
+
     // 判断MF1的车子朝向
     MF1_Point_ = KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[0]];
     MF2_Point_ = KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1]];
@@ -608,11 +612,17 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     Vector2D last_vector = robot_pos_;
     Vector2D temp_vector = {0.0f, 0.0f};
     int temp_point = 0;
+    int i=0;
+     //在梅林内的情况
+    if(MF_AutoCtrler::GetMapNumFromPos(robot_point_))
+    {
+        i=1;
+    }
 
     // 写入路径点坐标
     if (KFS_flag.spin_flag == false)
     {
-        for (int i = 0; i < index_exit; i++)
+        for (;i < index_exit; i++)
         {
             if (i == (index_exit - 1)) // 终点
             {
@@ -645,7 +655,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         if (target_yaw_ == -90.0f) // MF1在下
         {
-            for (int i = 0; i < index_exit; i++)
+            for (; i < index_exit; i++)
             {
 
                 if (i == (index_exit - 1)) // 终点
@@ -685,7 +695,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
         }
         else if (target_yaw_ == 90.0f) // MF1在上
         {
-            for (int i = 0; i < index_exit; i++)
+            for (; i < index_exit; i++)
             {
                 if (i == (index_exit - 1))
                 {
@@ -722,7 +732,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
         }
         else // MF1在两边
         {
-            for (int i = 0; i < index_exit; i++)
+            for (; i < index_exit; i++)
             {
                 if (i == (index_exit - 1))
                 {
