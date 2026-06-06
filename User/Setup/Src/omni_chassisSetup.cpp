@@ -289,7 +289,7 @@ void OmniChassis_Setup::loop()
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
         if (flag == 1)
         {
-            robot_pos_ = {0.0f, 0.0f};
+            robot_pos_ = test_point;
             flag_reset();
             flag = 0;
             flag_run = 1;
@@ -339,13 +339,19 @@ void OmniChassis_Setup::loop()
             target_chassis_twist_ = {0.0f, 0.0f};
             chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
         }
+        num++;
+        if (num > 5)
+        {
+            debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y,speed.magnitude(),target_yaw_);
+            num = 0;
+        }
 
         break;
     }
 
     case CHASSIS_STOP:
     {
-#ifdef s_debug
+#if s_debug
         num++;
 
         tp_speed_now = TP_1d.plan(tp_pos_now);
@@ -370,7 +376,6 @@ void OmniChassis_Setup::loop()
             tp_pos_now = 0.0f;
             TP_1d.param_reset(Param_1d);
         }
-
 #endif
         chassis.setZeroCurrent();
         break;
@@ -385,7 +390,7 @@ void OmniChassis_Setup::loop()
 }
 
 //////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
-#define OPIT 0
+
 void OmniChassis_Setup::Path_correction(void)
 {
     float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
@@ -638,7 +643,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     }
     else if (KFS_flag.spin_flag == true)
     {
-        if (target_yaw_ == 90.0f) // MF1在下
+        if (target_yaw_ == -90.0f) // MF1在下
         {
             for (int i = 0; i < index_exit; i++)
             {
@@ -678,7 +683,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
                 }
             }
         }
-        else if (target_yaw_ == -90.0f) // MF1在上
+        else if (target_yaw_ == 90.0f) // MF1在上
         {
             for (int i = 0; i < index_exit; i++)
             {
@@ -855,12 +860,7 @@ Vector2D OmniChassis_Setup::v_limit(void)
 
     Vector2D v_end = v_tangent + v_normal;
 
-    num++;
-    if (num > 5)
-    {
-        debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y,speed.magnitude(),target_yaw_);
-        num = 0;
-    }
+    
     return v_end;
 }
 

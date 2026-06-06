@@ -41,6 +41,7 @@ extern "C"
 #include "chassis.h"
 
 #define s_debug 0
+#define OPIT 1
 
 typedef struct
 {
@@ -153,7 +154,7 @@ public:
         this->start(osPriorityHigh, 1024);
         //        setTargetKFS(3);
         init_flag = true;
-#ifdef s_debug
+#if s_debug
         TP_1d.param_reset(Param_1d);
 #endif
     }
@@ -248,7 +249,7 @@ private:
 
     void Path_CB_check(void);
     bool spinodal_path(Vector2D last_vector, Vector2D temp_vector,int i);
-#ifdef s_debug
+#if s_debug
     int a = 0;
     float tp_speed_now = 0.0f;
     float tp_pos_now = 0.0f;
