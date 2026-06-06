@@ -520,7 +520,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     Point2D robot_point_ = {robot_pos_.x, robot_pos_.y};
 
     // 计算理想的KFS路径
-    KFS_KeyPoint_ = MF_AutoCtrler::PathInformation_calc(robot_point_, KFS_point.MF1, KFS_point.MF2);
+    KFS_KeyPoint_ = MF_AutoCtrler::PathInformation_calc(robot_point_, KFS_point.MF1, KFS_point.MF2,0);
     
 
     // 判断MF1的车子朝向
