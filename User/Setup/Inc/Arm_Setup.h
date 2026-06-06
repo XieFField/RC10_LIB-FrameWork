@@ -208,8 +208,8 @@ public:
         }
 
         MF_AutoCtrler::PathInformation_S temp = MF_AutoCtrler::PathInformation_calc(auto_ctrl_.now_ChassisPosition,
-                                       auto_ctrl_.targetKFS[0], 
-                                        auto_ctrl_.targetKFS[1]);
+                                       auto_ctrl_.targetKFS[0],
+                                        auto_ctrl_.targetKFS[1], 0);
         auto_ctrl_.pathInfo.entranceMap = temp.entranceMap;
         
         for(int i=0; i<2; i++)

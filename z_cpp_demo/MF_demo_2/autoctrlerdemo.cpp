@@ -726,19 +726,33 @@ static float CalcPathInfoCost(Point2D robotPos, const PathInformation_S &path)
     }
 
     int s12 = BFS_Steps(path.MFroad[0], path.MFroad[1]);
-    int s2X = BFS_Steps(path.MFroad[1], path.exitMap);
-    if (s12 >= BFS_INF || s2X >= BFS_INF)
+    if (s12 >= BFS_INF)
         return 1.0e9f;
 
-    return dRobotToE + CELL_M * (float)(sE1 + s12 + s2X);
+    if (path.MFroad[2] == 0)
+    {
+        int s2X = BFS_Steps(path.MFroad[1], path.exitMap);
+        if (s2X >= BFS_INF)
+            return 1.0e9f;
+        return dRobotToE + CELL_M * (float)(sE1 + s12 + s2X);
+    }
+
+    int s23 = BFS_Steps(path.MFroad[1], path.MFroad[2]);
+    int s3X = BFS_Steps(path.MFroad[2], path.exitMap);
+    if (s23 >= BFS_INF || s3X >= BFS_INF)
+        return 1.0e9f;
+
+    return dRobotToE + CELL_M * (float)(sE1 + s12 + s23 + s3X);
 }
 
-static float BruteForceBestCost(Point2D robotPos, int8_t MF1, int8_t MF2)
+static float BruteForceBestCost(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t MF3)
 {
     RoadResult_S MF1Road = MFNum_ToCatchRoadResult(MF1);
     RoadResult_S MF2Road = MFNum_ToCatchRoadResult(MF2);
+    RoadResult_S MF3Road = MFNum_ToCatchRoadResult(MF3);
     int8_t roadMF1[2] = {MF1Road.result1, MF1Road.result2};
     int8_t roadMF2[2] = {MF2Road.result1, MF2Road.result2};
+    int8_t roadMF3[2] = {MF3Road.result1, MF3Road.result2};
 
     int8_t entrances[30] = {0};
     uint8_t entranceCount = 0;
@@ -774,6 +788,7 @@ static float BruteForceBestCost(Point2D robotPos, int8_t MF1, int8_t MF2)
         return 1.0e9f;
 
     bool hasMF2 = (MF2 != 0 && (roadMF2[0] != 0 || roadMF2[1] != 0));
+    bool hasMF3 = (MF3 != 0 && hasMF2 && (roadMF3[0] != 0 || roadMF3[1] != 0));
     float bestCost = 1.0e9f;
 
     for (uint8_t ie = 0; ie < entranceCount; ++ie)
@@ -810,13 +825,37 @@ static float BruteForceBestCost(Point2D robotPos, int8_t MF1, int8_t MF2)
                         continue;
 
                     int s12 = BFS_Steps(R1, R2);
-                    int s2X = BFS_Steps(R2, 26);
-                    if (s12 >= BFS_INF || s2X >= BFS_INF)
+                    if (s12 >= BFS_INF)
                         continue;
 
-                    float J = dRobotToE + CELL_M * (float)(sE1 + s12 + s2X);
-                    if (J < bestCost)
-                        bestCost = J;
+                    if (!hasMF3)
+                    {
+                        int s2X = BFS_Steps(R2, 26);
+                        if (s2X >= BFS_INF)
+                            continue;
+
+                        float J = dRobotToE + CELL_M * (float)(sE1 + s12 + s2X);
+                        if (J < bestCost)
+                            bestCost = J;
+                    }
+                    else
+                    {
+                        for (int i3 = 0; i3 < 2; ++i3)
+                        {
+                            int8_t R3 = roadMF3[i3];
+                            if (R3 == 0)
+                                continue;
+
+                            int s23 = BFS_Steps(R2, R3);
+                            int s3X = BFS_Steps(R3, 26);
+                            if (s23 >= BFS_INF || s3X >= BFS_INF)
+                                continue;
+
+                            float J = dRobotToE + CELL_M * (float)(sE1 + s12 + s23 + s3X);
+                            if (J < bestCost)
+                                bestCost = J;
+                        }
+                    }
                 }
             }
         }
@@ -845,13 +884,14 @@ int main(void)
         Point2D robotPos;
         int8_t MF1;
         int8_t MF2;
+        int8_t MF3;
     };
 
     TestCase tests[] = {
-        {"Case-1 TWO MF UNDER", {0.2f, 0.8f, 0.0f}, 11, 1},
-        {"Case-2 ONE MF OVER", {5.5f, 9.6f, 0.0f}, 10, 0},
-        {"Case-3 TWO MF OUTSIDE", {5.0f, 1.0f, 0.0f}, 11, 3},
-        {"Case-4 TWO MF INSIDE", {0.6f, 5.0f, 0.0f}, 6, 11}};
+        {"Case-1 ONE MF OUTSIDE",  {5.0f, 1.0f, 0.0f}, 3,  0, 0},
+        {"Case-2 TWO MF OUTSIDE",  {5.0f, 1.0f, 0.0f}, 11, 3, 0},
+        {"Case-3 THREE MF OUTSIDE",{5.0f, 1.0f, 0.0f}, 3, 12, 7 },
+        {"Case-4 THREE MF INSIDE", {0.6f, 5.0f, 0.0f}, 6,  8, 10}};
 
     bool allPass = true;
 
@@ -861,9 +901,9 @@ int main(void)
     for (int i = 0; i < testCount; ++i)
     {
         TestCase &tc = tests[i];
-        PathInformation_S info = PathInformation_calc(tc.robotPos, tc.MF1, tc.MF2);
+        PathInformation_S info = PathInformation_calc(tc.robotPos, tc.MF1, tc.MF2, tc.MF3);
         float calcCost = CalcPathInfoCost(tc.robotPos, info);
-        float bruteCost = BruteForceBestCost(tc.robotPos, tc.MF1, tc.MF2);
+        float bruteCost = BruteForceBestCost(tc.robotPos, tc.MF1, tc.MF2, tc.MF3);
 
         float err = calcCost - bruteCost;
         if (err < 0.0f)
@@ -883,12 +923,14 @@ int main(void)
             allPass = false;
 
         cout << "\n[" << tc.name << "]" << endl;
-        cout << "  robotPos=(" << tc.robotPos.x << ", " << tc.robotPos.y << "), MF1=" << (int)tc.MF1 << ", MF2=" << (int)tc.MF2 << endl;
-        cout << "  entranceMap=" << (int)info.entranceMap << ", MFroad1=" << (int)info.MFroad[0] << ", MFroad2=" << (int)info.MFroad[1] << ", exitMap=" << (int)info.exitMap << endl;
+        cout << "  robotPos=(" << tc.robotPos.x << ", " << tc.robotPos.y << "), MF1=" << (int)tc.MF1 << ", MF2=" << (int)tc.MF2 << ", MF3=" << (int)tc.MF3 << endl;
+        cout << "  entranceMap=" << (int)info.entranceMap << ", MFroad1=" << (int)info.MFroad[0] << ", MFroad2=" << (int)info.MFroad[1] << ", MFroad3=" << (int)info.MFroad[2] << ", exitMap=" << (int)info.exitMap << endl;
         cout << "  calcCost=" << calcCost << ", bruteBestCost=" << bruteCost << ", absErr=" << err << endl;
-        cout << "MFroad1's index is " << (int)info.Index_MFroad[0] << endl;
+        cout << "  MFroad1's index is " << (int)info.Index_MFroad[0] << endl;
         if(info.MFroad[1] != 0)
-            cout << "MFroad2's index is " << (int)info.Index_MFroad[1] << endl;
+            cout << "  MFroad2's index is " << (int)info.Index_MFroad[1] << endl;
+        if(info.MFroad[2] != 0)
+            cout << "  MFroad3's index is " << (int)info.Index_MFroad[2] << endl;
         cout << "  result=" << (pass ? "PASS" : "FAIL") << endl;
         PrintMustPast(info);
     }
