@@ -498,7 +498,7 @@ void OmniChassis_Setup::KFS_Selection_Planning(void)
     // 自动规划接口转换
     Point2D robot_point_ = {robot_pos_.x, robot_pos_.y};
     // 计算理想的KFS路径
-    KFS_KeyPoint_ = MF_AutoCtrler::PathInformation_calc(robot_point_, KFS_point.MF1, KFS_point.MF2);
+    KFS_KeyPoint_ = MF_AutoCtrler::PathInformation_calc(robot_point_, KFS_point.MF1, KFS_point.MF2, 0);
     // 判断MF1的车子朝向
     MF1_Point_ = KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[0]];
     MF2_Point_ = KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1]];

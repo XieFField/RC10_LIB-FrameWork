@@ -660,30 +660,27 @@ static void PushMustPastNode(int8_t *mustPastMap, int cap, int &len, int8_t node
         mustPastMap[len++] = node;
 }
 
-PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
+PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t MF3)
 {
     /**
-     * 
+     *
      */
     PathInformation_S result;
     RoadResult_S MF1Road = MFNum_ToCatchRoadResult(MF1);
     RoadResult_S MF2Road = MFNum_ToCatchRoadResult(MF2);
+    RoadResult_S MF3Road = MFNum_ToCatchRoadResult(MF3);
 
     int cornerMap[4] = {1, 5, 26, 30}; // 四个角落的地图编号
 
     //解出目标梅花桩相邻的通道
     int roadMF1[2] = {MF1Road.result1, MF1Road.result2}; //集合，后续取出最优，result为0表示无效
     int roadMF2[2] = {MF2Road.result1, MF2Road.result2};
+    int roadMF3[2] = {MF3Road.result1, MF3Road.result2};
 
-    //根据当前机器人距离第一个MF1相邻通道的距离，生成最优路径的第一段路径
-    //如果机器人不在梅花林内，则entranceMap只能是1~5以及26~30的范围内，同时允许entranceMap和roadMF1的通道重合
-    //如果机器人在梅花林内，则entranceMap就是去roadMF1的路径上离机器人最近的一个通道，同时允许entranceMap和roadMF1的通道重合
-    //生成路径时候要包含转角，如果路径上包含转角，则需要在路径中添加转角点（cornerMap）作为路径节点
-    //PathInformation_S当中的mustPastMap就是路径上的必经点，包含entranceMap、roadMF1、转角点（如果有的话）以及roadMF2（如果有的话）
-    //且数组的顺序要按照路径顺序来，允许折返(如果需要的话)
     result.entranceMap = 0;
     result.MFroad[0] = 0;
     result.MFroad[1] = 0;
+    result.MFroad[2] = 0;
 
     // 林外上方时，禁止路径规划
     if (robotPos.y > MapNum_RealPos[29].y)
@@ -698,12 +695,11 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
 
     if (isRobotInsideMap)
     {
-        // 林内起点直接取当前所在通道，避免出现与真实起点不一致的入口
         entrances[entranceCount++] = robotMap;
     }
     else
     {
-        bool isBelow = (robotPos.y < MapNum_RealPos[0].y);  // 梅花林下 ,flase则为在梅林上方
+        bool isBelow = (robotPos.y < MapNum_RealPos[0].y);
         if (isBelow)
         {
             for (int8_t m = 1; m <= 5; ++m)
@@ -728,9 +724,11 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
     int8_t bestEntrance = 0;
     int8_t bestRoad1 = 0;
     int8_t bestRoad2 = 0;
+    int8_t bestRoad3 = 0;
     float bestCost = 1.0e9f;
 
     bool hasMF2 = (MF2 != 0 && (roadMF2[0] != 0 || roadMF2[1] != 0));
+    bool hasMF3 = (MF3 != 0 && hasMF2 && (roadMF3[0] != 0 || roadMF3[1] != 0));
 
     for (uint8_t ie = 0; ie < entranceCount; ++ie)
     {
@@ -760,6 +758,7 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
                     bestEntrance = E;
                     bestRoad1 = R1;
                     bestRoad2 = 0;
+                    bestRoad3 = 0;
                 }
             }
             else
@@ -774,17 +773,48 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
                     if (s12 >= BFS_INF)
                         continue;
 
-                    int s2X = BFS_Steps(R2, result.exitMap);
-                    if (s2X >= BFS_INF)
-                        continue;
-
-                    float J = dRobotToE + CELL_M * (float)(sE1 + s12 + s2X);
-                    if (J < bestCost)
+                    if (!hasMF3)
                     {
-                        bestCost = J;
-                        bestEntrance = E;
-                        bestRoad1 = R1;
-                        bestRoad2 = R2;
+                        int s2X = BFS_Steps(R2, result.exitMap);
+                        if (s2X >= BFS_INF)
+                            continue;
+
+                        float J = dRobotToE + CELL_M * (float)(sE1 + s12 + s2X);
+                        if (J < bestCost)
+                        {
+                            bestCost = J;
+                            bestEntrance = E;
+                            bestRoad1 = R1;
+                            bestRoad2 = R2;
+                            bestRoad3 = 0;
+                        }
+                    }
+                    else
+                    {
+                        for (int i3 = 0; i3 < 2; ++i3)
+                        {
+                            int8_t R3 = roadMF3[i3];
+                            if (R3 == 0)
+                                continue;
+
+                            int s23 = BFS_Steps(R2, R3);
+                            if (s23 >= BFS_INF)
+                                continue;
+
+                            int s3X = BFS_Steps(R3, result.exitMap);
+                            if (s3X >= BFS_INF)
+                                continue;
+
+                            float J = dRobotToE + CELL_M * (float)(sE1 + s12 + s23 + s3X);
+                            if (J < bestCost)
+                            {
+                                bestCost = J;
+                                bestEntrance = E;
+                                bestRoad1 = R1;
+                                bestRoad2 = R2;
+                                bestRoad3 = R3;
+                            }
+                        }
                     }
                 }
             }
@@ -797,23 +827,38 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
     result.entranceMap = bestEntrance;
     result.MFroad[0] = bestRoad1;
     result.MFroad[1] = bestRoad2;
+    result.MFroad[2] = bestRoad3;
 
-    int8_t seg1[32] = {0}, seg2[32] = {0}, seg3[32] = {0};
+    int8_t seg1[32] = {0}, seg2[32] = {0}, seg3[32] = {0}, seg4[32] = {0};
     int len1 = BFS_GetPath(bestEntrance, bestRoad1, seg1, 32);
     if (len1 <= 0)
         return result;
 
     int len2 = 0;
     int len3 = 0;
+    int len4 = 0;
     if (bestRoad2 != 0)
     {
         len2 = BFS_GetPath(bestRoad1, bestRoad2, seg2, 32);
         if (len2 <= 0)
             return result;
 
-        len3 = BFS_GetPath(bestRoad2, result.exitMap, seg3, 32);
-        if (len3 <= 0)
-            return result;
+        if (bestRoad3 != 0)
+        {
+            len3 = BFS_GetPath(bestRoad2, bestRoad3, seg3, 32);
+            if (len3 <= 0)
+                return result;
+
+            len4 = BFS_GetPath(bestRoad3, result.exitMap, seg4, 32);
+            if (len4 <= 0)
+                return result;
+        }
+        else
+        {
+            len3 = BFS_GetPath(bestRoad2, result.exitMap, seg3, 32);
+            if (len3 <= 0)
+                return result;
+        }
     }
     else
     {
@@ -837,11 +882,18 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
     for (int i = 1; i < len3 && fullLen < 96; ++i)
         fullPath[fullLen++] = seg3[i];
 
+    if (bestRoad3 != 0)
+    {
+        for (int i = 1; i < len4 && fullLen < 96; ++i)
+            fullPath[fullLen++] = seg4[i];
+    }
+
     int mustLen = 0;
     PushMustPastNode(result.mustPastMap, 12, mustLen, result.entranceMap);
 
     bool pushedRoad1 = (result.entranceMap == bestRoad1);
     bool pushedRoad2 = (bestRoad2 != 0 && result.entranceMap == bestRoad2);
+    bool pushedRoad3 = false;
 
     for (int i = 0; i < fullLen; ++i)
     {
@@ -867,6 +919,16 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
             continue;
         }
 
+        if (bestRoad3 != 0 && node == bestRoad3)
+        {
+            if (!pushedRoad3 && pushedRoad2)
+            {
+                PushMustPastNode(result.mustPastMap, 12, mustLen, node);
+                pushedRoad3 = true;
+            }
+            continue;
+        }
+
         if (node == result.exitMap || IsCornerMapByList(node, cornerMap, 4))
         {
             PushMustPastNode(result.mustPastMap, 12, mustLen, node);
@@ -882,6 +944,8 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
             result.Index_MFroad[0] = i;
         if (result.mustPastMap[i] == result.MFroad[1])
             result.Index_MFroad[1] = i;
+        if (result.mustPastMap[i] == result.MFroad[2])
+            result.Index_MFroad[2] = i;
     }
 
     return result;
