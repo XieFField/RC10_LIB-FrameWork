@@ -84,12 +84,14 @@ void OmniChassis_Setup::Path_spin_check(void)
             // 第一排旋转
             if (target_yaw_ == 90.0f)
             {
-                // 延迟旋转
-                if (robot_pos_.y <= 2.55f)
-                {
-                    target_yaw_ = KFS_point.MF2_target_yaw_;
-                    KFS_flag.spin_down_flag = false;
-                }
+                target_yaw_ = KFS_point.MF2_target_yaw_;
+                KFS_flag.spin_down_flag = false;
+//                // 延迟旋转
+//                if (robot_pos_.y <= 2.55f)
+//                {
+//                    target_yaw_ = KFS_point.MF2_target_yaw_;
+//                    KFS_flag.spin_down_flag = false;
+//                }
             }
             // 两侧旋转判断
             else if (KFS_point.MF1_pos_.x == curve.Get_Start_point().x && KFS_point.MF1_pos_.y == curve.Get_Start_point().y)
@@ -595,25 +597,28 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
 
     Vector2D last_vector = robot_pos_;
     Vector2D temp_vector = {0.0f, 0.0f};
+    int temp_point = 0;
 
     // 写入路径点坐标
     if (KFS_flag.spin_flag == false)
     {
         for (int i = 0; i < index_exit; i++)
         {
-            if (i == (index_exit - 1))
+            if (i == (index_exit - 1)) // 终点
             {
                 temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                path_line_.Add_End_Point(temp_vector, path_param.KFS);
+                path_line_.Add_End_Point(temp_vector, path_param.end);
             }
-            else
+            else // 中间的路径点
             {
-                temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                temp_point = KFS_KeyPoint_.mustPastMap[i];
+                temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
                 // 四个拐点的顺滑处理
-                if (KFS_KeyPoint_.mustPastMap[i] == 1 || KFS_KeyPoint_.mustPastMap[i] == 5 || KFS_KeyPoint_.mustPastMap[i] == 26 || KFS_KeyPoint_.mustPastMap[i] == 30)
+                if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
                 {
                     Vector2D forward_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i + 1]);
-                    path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.KFS);
+                    // 拐点前偏移点
+                    path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
                     /*
                     1->(1,0)
                     2->(-1,0)
@@ -621,32 +626,28 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
                     4->(0,-1)
                     */
                     // 拐点方向判断
-                    Vector2D tangent_vector=(forward_vector-last_vector).normalize();
-                    if(tangent_vector.x==1.0f)
-                    {
-                        path_param.curve.targetPos=1.0f;
-                    }
-                    else if(tangent_vector.x==-1.0f)
-                    {
-                        path_param.curve.targetPos=2.0f;
-                    }
-                    else if(tangent_vector.y==1.0f)
-                    {
-                        path_param.curve.targetPos=3.0f;
-                    }
-                    else if(tangent_vector.y==-1.0f)
-                    {
-                        path_param.curve.targetPos=4.0f;
-                    }
+                    Vector2D tangent_vector = (forward_vector - temp_vector).normalize();
+                    if (tangent_vector.x == 1.0f)
+                        path_param.curve.targetPos = 1.0f;
+                    else if (tangent_vector.x == -1.0f)
+                        path_param.curve.targetPos = 2.0f;
+                    else if (tangent_vector.y == 1.0f)
+                        path_param.curve.targetPos = 3.0f;
+                    else if (tangent_vector.y == -1.0f)
+                        path_param.curve.targetPos = 4.0f;
                     else
-                    {
                         return false;
-                    }
+                    // 拐点后偏移点
                     path_line_.Add_Point((temp_vector + (tangent_vector * KFS_point.coner_ahead)), path_param.curve);
+                    path_param.curve.targetPos = 999.0f;
                 }
-                else
+                else if (temp_point == MF1_Point_ || (temp_point == MF2_Point_ && double_KFS)) // MF停止点
                 {
-                    path_line_.Add_Point(temp_vector, path_param.KFS);
+                    path_line_.Add_Point(temp_vector, path_param.end);
+                }
+                else // 衔接路径
+                {
+                    path_line_.Add_Point(temp_vector, path_param.start);
                 }
                 last_vector = temp_vector;
             }
@@ -654,30 +655,68 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     }
     else if (KFS_flag.spin_flag == true)
     {
-        if (target_yaw_ == 90.0f) // 下
+        if (target_yaw_ == 90.0f) // MF1在下
         {
             for (int i = 0; i < index_exit; i++)
             {
-                if (i == (index_exit - 1))
+
+                if (i == (index_exit - 1)) // 终点
                 {
                     temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_End_Point(temp_vector, path_param.KFS);
-                }
-                else if (i == (KFS_KeyPoint_.Index_MFroad[0] + 1))
-                {
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    temp_vector.y = temp_vector.y + KFS_point.spin_skew_;
-                    path_line_.Add_Point(temp_vector, path_param.KFS);
-                    KFS_flag.spin_down_flag = true;
+                    path_line_.Add_End_Point(temp_vector, path_param.end);
                 }
                 else
                 {
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_Point(temp_vector, path_param.KFS);
+                    temp_point = KFS_KeyPoint_.mustPastMap[i];
+                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
+                    // 四个拐点的顺滑处理
+                    if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
+                    {
+                        Vector2D forward_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i + 1]);
+                        // 拐点前偏移点
+                        path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
+                        /*
+                        1->(1,0)
+                        2->(-1,0)
+                        3->(0,1)
+                        4->(0,-1)
+                        */
+                        // 拐点方向判断
+                        Vector2D tangent_vector = (forward_vector - temp_vector).normalize();
+                        if (tangent_vector.x == 1.0f)
+                            path_param.curve.targetPos = 1.0f;
+                        else if (tangent_vector.x == -1.0f)
+                            path_param.curve.targetPos = 2.0f;
+                        else if (tangent_vector.y == 1.0f)
+                            path_param.curve.targetPos = 3.0f;
+                        else if (tangent_vector.y == -1.0f)
+                            path_param.curve.targetPos = 4.0f;
+                        else
+                            return false;
+                        // 拐点后偏移点
+                        path_line_.Add_Point((temp_vector + (tangent_vector * KFS_point.coner_ahead)), path_param.curve);
+                        path_param.curve.targetPos = 999.0f;
+                    }
+                    else if (temp_point == MF1_Point_ || (temp_point == MF2_Point_ && double_KFS)) // MF停止点
+                    {
+                        path_line_.Add_Point(temp_vector, path_param.end);
+                    }
+                    else // 衔接路径
+                    {
+                        path_line_.Add_Point(temp_vector, path_param.start);
+                    }
+                    last_vector = temp_vector;
+                    //                else if (i == (KFS_KeyPoint_.Index_MFroad[0] + 1))//下方偏移旋转
+                    //                {
+                    //                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                    //                    temp_vector.y = temp_vector.y + KFS_point.spin_skew_;
+                    //                    path_line_.Add_Point(temp_vector, path_param.KFS);
+                    //                    KFS_flag.spin_down_flag = true;
+                    //                }
                 }
             }
         }
-        else if (target_yaw_ == -90.0f) // 上
+        else if (target_yaw_ == -90.0f) // MF1在上
         {
             for (int i = 0; i < index_exit; i++)
             {
@@ -700,7 +739,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
                 }
             }
         }
-        else // 两边
+        else // MF1在两边
         {
             for (int i = 0; i < index_exit; i++)
             {
