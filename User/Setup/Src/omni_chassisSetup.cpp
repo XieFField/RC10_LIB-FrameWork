@@ -519,7 +519,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     int8_t MF1_Point_ = 0; // MF1 对应地图点编号。
     int8_t MF2_Point_ = 0; // MF2 对应地图点编号。
     int8_t MF3_Point_ = 0; // MF3 对应地图点编号。
-    
+
     int8_t MF1_Index_ = KFS_KeyPoint_.Index_MFroad[0]; // MF1 对应索引
     int8_t MF2_Index_ = KFS_KeyPoint_.Index_MFroad[1]; // MF2 对应索引
     int8_t MF3_Index_ = KFS_KeyPoint_.Index_MFroad[2]; // MF3 对应索引
@@ -615,15 +615,56 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     // 写入起点到MF2路径点坐标
     if (KFS_flag.spin_flag == false)
     {
-        for (; i < MF2_Index_+1; i++)
+        for (; i < (KFS_num == 1 ? index_exit : MF2_Index_ + 1); i++)
         {
-            if (i == MF2_Index_) // 终点
+            if (KFS_num == 1)
             {
-                temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                path_line_.Add_End_Point(temp_vector, path_param.end);
+                if (i == (index_exit - 1)) // 终点
+                {
+                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                    path_line_.Add_End_Point(temp_vector, path_param.end);
+                    // 取末端点进行路径退出后的锁点pid
+                    Path_end_point = path_line_.Get_End_Point();
+                    return true;
+                }
             }
-            else // 中间的路径点
+            temp_point = KFS_KeyPoint_.mustPastMap[i];
+            temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
+            // 四个拐点的顺滑处理
+            if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
             {
+                if (spinodal_path(last_vector, temp_vector, i) == false)
+                    return false;
+            }
+            else if (temp_point == MF1_Point_ || (temp_point == MF2_Point_ && KFS_num > 1)) // MF停止点
+            {
+                path_line_.Add_Point(temp_vector, path_param.end);
+            }
+            else // 衔接路径
+            {
+                path_line_.Add_Point(temp_vector, path_param.start);
+            }
+            last_vector = temp_vector;
+        }
+    }
+    else if (KFS_flag.spin_flag == true)
+    {
+        if (target_yaw_ == -90.0f) // MF1在下
+        {
+            KFS_flag.spin_down_flag = true;
+            for (; i < (KFS_num == 1 ? index_exit : MF2_Index_ + 1); i++)
+            {
+                if (KFS_num == 1)
+                {
+                    if (i == (index_exit - 1)) // 终点
+                    {
+                        temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                        path_line_.Add_End_Point(temp_vector, path_param.end);
+                        // 取末端点进行路径退出后的锁点pid
+                        Path_end_point = path_line_.Get_End_Point();
+                        return true;
+                    }
+                }
                 temp_point = KFS_KeyPoint_.mustPastMap[i];
                 temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
                 // 四个拐点的顺滑处理
@@ -641,145 +682,110 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
                     path_line_.Add_Point(temp_vector, path_param.start);
                 }
                 last_vector = temp_vector;
-            }
-        }
-    }
-    else if (KFS_flag.spin_flag == true)
-    {
-        if (target_yaw_ == -90.0f) // MF1在下
-        {
-            for (; i < MF2_Index_+1; i++)
-            {
-
-                if (i == MF2_Index_) // 终点
-                {
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_End_Point(temp_vector, path_param.end);
-                    KFS_flag.spin_down_flag = true;
-                }
-                else
-                {
-                    temp_point = KFS_KeyPoint_.mustPastMap[i];
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
-                    // 四个拐点的顺滑处理
-                    if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
-                    {
-                        if (spinodal_path(last_vector, temp_vector, i) == false)
-                            return false;
-                    }
-                    else if (temp_point == MF1_Point_ || (temp_point == MF2_Point_ && KFS_num > 1)) // MF停止点
-                    {
-                        path_line_.Add_Point(temp_vector, path_param.end);
-                    }
-                    else // 衔接路径
-                    {
-                        path_line_.Add_Point(temp_vector, path_param.start);
-                    }
-                    last_vector = temp_vector;
-                    //else if (i == (KFS_KeyPoint_.Index_MFroad[0] + 1))//下方偏移旋转
-                    //{
-                    //    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    //    temp_vector.y = temp_vector.y + KFS_point.spin_skew_;
-                    //    path_line_.Add_Point(temp_vector, path_param.KFS);
-                    //    KFS_flag.spin_down_flag = true;
-                    //}
-                }
+                // else if (i == (KFS_KeyPoint_.Index_MFroad[0] + 1))//下方偏移旋转
+                //{
+                //     temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                //     temp_vector.y = temp_vector.y + KFS_point.spin_skew_;
+                //     path_line_.Add_Point(temp_vector, path_param.KFS);
+                //     KFS_flag.spin_down_flag = true;
+                // }
             }
         }
         else if (target_yaw_ == 90.0f) // MF1在上
         {
-            for (; i < MF2_Index_+1; i++)
+            for (; i < (KFS_num == 1 ? index_exit : MF2_Index_ + 1); i++)
             {
-                if (i == MF2_Index_)
+                if (KFS_num == 1)
                 {
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_End_Point(temp_vector, path_param.end);
+                    if (i == (index_exit - 1)) // 终点
+                    {
+                        temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                        path_line_.Add_End_Point(temp_vector, path_param.end);
+                        // 取末端点进行路径退出后的锁点pid
+                        Path_end_point = path_line_.Get_End_Point();
+                        return true;
+                    }
                 }
-                else
+                temp_point = KFS_KeyPoint_.mustPastMap[i];
+                temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
+                // 四个拐点的顺滑处理
+                if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
                 {
-                    temp_point = KFS_KeyPoint_.mustPastMap[i];
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
-                    // 四个拐点的顺滑处理
-                    if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
-                    {
-                        if (spinodal_path(last_vector, temp_vector, i) == false)
-                            return false;
-                    }
-                    else if (temp_point == MF1_Point_ || (temp_point == MF2_Point_ && KFS_num > 1)) // MF停止点
-                    {
-                        path_line_.Add_Point(temp_vector, path_param.end);
-                        // 上方旋转点
-                        if (temp_point == MF1_Point_)
-                        {
-                            path_line_.Add_Point(KFS_point.spin_point_, path_param.end);
-                            KFS_flag.spin_up_flag = true;
-                        }
-                    }
-                    else // 衔接路径
-                    {
-                        path_line_.Add_Point(temp_vector, path_param.start);
-                    }
-                    last_vector = temp_vector;
+                    if (spinodal_path(last_vector, temp_vector, i) == false)
+                        return false;
                 }
+                else if (temp_point == MF1_Point_ || (temp_point == MF2_Point_ && KFS_num > 1)) // MF停止点
+                {
+                    path_line_.Add_Point(temp_vector, path_param.end);
+                    // 上方旋转点
+                    if (temp_point == MF1_Point_)
+                    {
+                        path_line_.Add_Point(KFS_point.spin_point_, path_param.end);
+                        KFS_flag.spin_up_flag = true;
+                    }
+                }
+                else // 衔接路径
+                {
+                    path_line_.Add_Point(temp_vector, path_param.start);
+                }
+                last_vector = temp_vector;
             }
         }
         else // MF1在两边
         {
-            for (; i < MF2_Index_+1; i++)
+            for (; i < (KFS_num == 1 ? index_exit : MF2_Index_ + 1); i++)
             {
-                if (i == MF2_Index_)
+                if (KFS_num == 1)
                 {
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_End_Point(temp_vector, path_param.end);
-                }
-                else
-                {
-                    temp_point = KFS_KeyPoint_.mustPastMap[i];
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
-                    // 四个拐点的顺滑处理
-                    if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
+                    if (i == (index_exit - 1)) // 终点
                     {
-                        if (spinodal_path(last_vector, temp_vector, i) == false)
-                            return false;
-
-                        if (i == (KFS_KeyPoint_.Index_MFroad[0] + 1)) // MF1后的第一个拐点，进行旋转方式的判断
+                        temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                        path_line_.Add_End_Point(temp_vector, path_param.end);
+                        // 取末端点进行路径退出后的锁点pid
+                        Path_end_point = path_line_.Get_End_Point();
+                        return true;
+                    }
+                }
+                temp_point = KFS_KeyPoint_.mustPastMap[i];
+                temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
+                // 四个拐点的顺滑处理
+                if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
+                {
+                    if (spinodal_path(last_vector, temp_vector, i) == false)
+                        return false;
+                    if (i == (MF1_Index_ + 1)) // MF1后的第一个拐点，进行旋转方式的判断
+                    {
+                        if (KFS_KeyPoint_.mustPastMap[i] == 26 || KFS_KeyPoint_.mustPastMap[i] == 30) // 上方
                         {
-                            if (KFS_KeyPoint_.mustPastMap[i] == 26 || KFS_KeyPoint_.mustPastMap[i] == 30) // 上方
-                            {
-                                path_line_.Add_Point(KFS_point.spin_point_, path_param.end);
-                                KFS_flag.spin_up_flag = true;
-                            }
-                            else if (KFS_KeyPoint_.mustPastMap[i] == 1 || KFS_KeyPoint_.mustPastMap[i] == 5) // 下方
-                            {
-                                // temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                                // temp_vector.y = temp_vector.y + KFS_point.spin_skew_;
-                                // path_line_.Add_Point(temp_vector, path_param.KFS);
-                                KFS_flag.spin_down_flag = true;
-                            }
+                            path_line_.Add_Point(KFS_point.spin_point_, path_param.end);
+                            KFS_flag.spin_up_flag = true;
+                        }
+                        else if (KFS_KeyPoint_.mustPastMap[i] == 1 || KFS_KeyPoint_.mustPastMap[i] == 5) // 下方
+                        {
+                            // temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                            // temp_vector.y = temp_vector.y + KFS_point.spin_skew_;
+                            // path_line_.Add_Point(temp_vector, path_param.KFS);
+                            KFS_flag.spin_down_flag = true;
                         }
                     }
-                    else if (temp_point == MF1_Point_ || (temp_point == MF2_Point_ && KFS_num > 1)) // MF停止点
-                    {
-                        path_line_.Add_Point(temp_vector, path_param.end);
-                    }
-                    else // 衔接路径
-                    {
-                        path_line_.Add_Point(temp_vector, path_param.start);
-                    }
-                    last_vector = temp_vector;
                 }
+                else if (temp_point == MF1_Point_ || (temp_point == MF2_Point_ && KFS_num > 1)) // MF停止点
+                {
+                    path_line_.Add_Point(temp_vector, path_param.end);
+                }
+                else // 衔接路径
+                {
+                    path_line_.Add_Point(temp_vector, path_param.start);
+                }
+                last_vector = temp_vector;
             }
         }
     }
-    
-    
-    
-    
-    
+
     // 写入MF2到终点路径点坐标
     if (KFS_flag.spin_flag_2 == false)
     {
-        for (; i < index_exit; i++)
+        for (i = MF2_Index_ + 1; i < index_exit; i++)
         {
             if (i == (index_exit - 1)) // 终点
             {
@@ -796,7 +802,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
                     if (spinodal_path(last_vector, temp_vector, i) == false)
                         return false;
                 }
-                else if (temp_point == MF1_Point_ || (temp_point == MF2_Point_ && KFS_num > 1)) // MF停止点
+                else if (temp_point == MF3_Point_ && KFS_num > 2) // MF停止点
                 {
                     path_line_.Add_Point(temp_vector, path_param.end);
                 }
@@ -812,14 +818,14 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         if (KFS_point.MF2_target_yaw_ == -90.0f) // MF2在下
         {
-            for (; i < index_exit; i++)
+            KFS_flag.spin_down_flag_2 = true;
+            for (i = MF2_Index_ + 1; i < index_exit; i++)
             {
 
                 if (i == (index_exit - 1)) // 终点
                 {
                     temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
                     path_line_.Add_End_Point(temp_vector, path_param.end);
-                    KFS_flag.spin_down_flag = true;
                 }
                 else
                 {
@@ -831,7 +837,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
                         if (spinodal_path(last_vector, temp_vector, i) == false)
                             return false;
                     }
-                    else if (temp_point == MF1_Point_ || (temp_point == MF2_Point_ && KFS_num > 1)) // MF停止点
+                    else if (temp_point == MF3_Point_ && KFS_num > 2) // MF停止点
                     {
                         path_line_.Add_Point(temp_vector, path_param.end);
                     }
@@ -852,7 +858,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
         }
         else if (KFS_point.MF2_target_yaw_ == 90.0f) // MF2在上
         {
-            for (; i < index_exit; i++)
+            for (i = MF2_Index_ + 1; i < index_exit; i++)
             {
                 if (i == (index_exit - 1))
                 {
@@ -869,11 +875,11 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
                         if (spinodal_path(last_vector, temp_vector, i) == false)
                             return false;
                     }
-                    else if (temp_point == MF1_Point_ || (temp_point == MF2_Point_ && KFS_num > 1)) // MF停止点
+                    else if (temp_point == MF3_Point_ && KFS_num > 2) // MF停止点
                     {
                         path_line_.Add_Point(temp_vector, path_param.end);
                         // 上方旋转点
-                        if (temp_point == MF1_Point_)
+                        if (temp_point == MF2_Point_)
                         {
                             path_line_.Add_Point(KFS_point.spin_point_, path_param.end);
                             KFS_flag.spin_up_flag = true;
@@ -889,7 +895,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
         }
         else // MF2在两边
         {
-            for (; i < index_exit; i++)
+            for (i = MF2_Index_ + 1; i < index_exit; i++)
             {
                 if (i == (index_exit - 1))
                 {
@@ -935,8 +941,8 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
             }
         }
     }
-    
-    //取末端点进行路径退出后的锁点pid
+
+    // 取末端点进行路径退出后的锁点pid
     Path_end_point = path_line_.Get_End_Point();
     return true;
 }
@@ -1004,7 +1010,7 @@ void OmniChassis_Setup::flag_reset(void)
     Arm_Start = false;
     Spin_Start = false;
     pid_dead_flag = false;
-    
+
     KFS_flag.MF1_flag = false;
     KFS_flag.MF2_flag = false;
     KFS_flag.spin_flag = false;
@@ -1012,10 +1018,9 @@ void OmniChassis_Setup::flag_reset(void)
     KFS_flag.spin_down_flag = false;
     KFS_flag.MF1_finish = false;
     KFS_flag.get_spin_flag = false;
-    
+
     CB_flag.Selection_flag = false;
     CB_flag.Retreat_flag = false;
-    
 }
 
 Vector2D OmniChassis_Setup::v_limit(void)
