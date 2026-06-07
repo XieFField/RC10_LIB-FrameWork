@@ -41,7 +41,7 @@ extern "C"
 #include "chassis.h"
 
 #define s_debug 0
-#define opti 0
+#define opti 1
 
 typedef struct
 {
@@ -86,9 +86,9 @@ typedef struct
 
 typedef struct
 {
-    int8_t MF1 = 0; // 目标点 1 编号。
-    int8_t MF2 = 0; // 目标点 2 编号。
-    int8_t MF3 = 0; // 目标点 2 编号。
+    int8_t MF1 = 3; // 目标点 1 编号。
+    int8_t MF2 = 4; // 目标点 2 编号。
+    int8_t MF3 = 12; // 目标点 2 编号。
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
@@ -178,7 +178,7 @@ public:
 
 private:
 
-    Vector2D test_point = {0.6f, 6.0f};
+    Vector2D test_point = {0.0f, 0.0f};
     
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
