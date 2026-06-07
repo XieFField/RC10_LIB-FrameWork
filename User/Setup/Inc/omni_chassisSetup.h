@@ -114,6 +114,9 @@ typedef struct
 
     bool spin_up_flag = false;   // 上路段旋转流程使能。
     bool spin_down_flag = false; // 下路段旋转流程使能。
+    
+    bool spin_up_flag_2 = false;   // 上路段旋转流程使能。
+    bool spin_down_flag_2 = false; // 下路段旋转流程使能。
 
     bool MF1_flag = false;   // 进入 MF1 目标点标志。
     bool MF2_flag = false;   // 进入 MF2 目标点标志。
