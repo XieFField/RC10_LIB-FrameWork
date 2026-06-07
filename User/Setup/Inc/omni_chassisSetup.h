@@ -41,7 +41,7 @@ extern "C"
 #include "chassis.h"
 
 #define s_debug 0
-#define OPIT 1
+#define opti 0
 
 typedef struct
 {
@@ -106,11 +106,10 @@ typedef struct
 
 typedef struct
 {
-    bool spin_flag = false; // 是否需要执行中途转向。
-
     bool get_spin_flag = false; // 旋转触发过渡标志。
 
-    bool Spin_Start = false; // 当前正在执行旋转。
+    bool spin_flag = false; // 是否需要执行中途转向。
+    bool spin_flag_2 = false; // 是否需要执行中途转向。
 
     bool spin_up_flag = false;   // 上路段旋转流程使能。
     bool spin_down_flag = false; // 下路段旋转流程使能。
@@ -190,6 +189,8 @@ private:
     bool Arm_Start = false; // 机械臂动作触发标志。
     
     bool RB_Flag = true;//红蓝方标志位，默认true为现场地
+    
+    bool Spin_Start = false; // 当前正在执行旋转。
     
     bool pid_dead_flag=false;
 
