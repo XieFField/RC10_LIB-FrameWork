@@ -88,15 +88,18 @@ typedef struct
 {
     int8_t MF1 = 0; // 目标点 1 编号。
     int8_t MF2 = 0; // 目标点 2 编号。
+    int8_t MF3 = 0; // 目标点 2 编号。
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
+    Vector2D MF3_pos_ = {0.0f, 0.0f};
 
     float MF2_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
+    float MF3_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
 
     Vector2D spin_point_ = {3.0f, 8.72f}; // 上方旋转点
 
-    float spin_skew_ = -0.1f; // 下方旋转位置y轴偏移量
+    //float spin_skew_ = -0.1f; // 下方旋转位置y轴偏移量
     
     float coner_ahead=0.2f;
 } KFS_POINT;
@@ -114,7 +117,10 @@ typedef struct
 
     bool MF1_flag = false;   // 进入 MF1 目标点标志。
     bool MF2_flag = false;   // 进入 MF2 目标点标志。
+    bool MF3_flag = false;   // 进入 MF3 目标点标志。
+    
     bool MF1_finish = false; // MF1 阶段已完成标志。
+    bool MF2_finish = false; // MF1 阶段已完成标志。
 } KFS_FLAG;
 
 typedef struct
@@ -249,6 +255,7 @@ private:
 
     void Path_CB_check(void);
     bool spinodal_path(Vector2D last_vector, Vector2D temp_vector,int i);
+    void rotation_path(float MF_Point, float &target_yaw);
 #if s_debug
     int a = 0;
     float tp_speed_now = 0.0f;
