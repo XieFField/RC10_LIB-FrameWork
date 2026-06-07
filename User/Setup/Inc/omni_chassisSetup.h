@@ -196,7 +196,11 @@ private:
 
     int flag = 0;     // 自动流程起始触发位（边沿触发）。
     int flag_run = 0; // 自动流程运行中标志位。
-
+    
+    int8_t MF1_Point_=0;
+    int8_t MF2_Point_=0;
+    int8_t MF3_Point_=0;
+    
     //-----------------------------------接口监视参数-----------------------------------------//
 
     Vector2D speed = {0.0f, 0.0f};      // 合成后的底盘平移速度。
@@ -259,7 +263,6 @@ private:
 
     void Path_CB_check(void);
     bool spinodal_path(Vector2D last_vector, Vector2D temp_vector,int i);
-    void rotation_path(float MF_Point, float &target_yaw);
 #if s_debug
     int a = 0;
     float tp_speed_now = 0.0f;
@@ -278,6 +281,7 @@ public:
 
     void setPathAutoStart(uint8_t start)
     {
+        return;
         if (start == 1)
             flag = 1;
         else

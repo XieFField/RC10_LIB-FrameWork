@@ -343,7 +343,7 @@ void OmniChassis_Setup::loop()
         break;
     }
 
-    case CHASSIS_AUTO_CONTROL_KFS:
+    case CHASSIS_STOP:
     {
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
         if (flag == 1)
@@ -402,7 +402,7 @@ void OmniChassis_Setup::loop()
         break;
     }
 
-    case CHASSIS_STOP:
+    case CHASSIS_AUTO_CONTROL_KFS:
     {
 #if s_debug
         num++;
@@ -569,25 +569,20 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
         return false;
     }
 
-    int8_t MF1_Point_ = 0; // MF1 对应地图点编号。
-    int8_t MF2_Point_ = 0; // MF2 对应地图点编号。
-    int8_t MF3_Point_ = 0; // MF3 对应地图点编号。
-
-    int8_t MF1_Index_ = KFS_KeyPoint_.Index_MFroad[0]; // MF1 对应索引
-    int8_t MF2_Index_ = KFS_KeyPoint_.Index_MFroad[1]; // MF2 对应索引
-    int8_t MF3_Index_ = KFS_KeyPoint_.Index_MFroad[2]; // MF3 对应索引
-
-    // 基于当前位置和目标点编号计算整条必经路径。
     // 自动规划接口转换
     Point2D robot_point_ = {robot_pos_.x, robot_pos_.y};
 
     // 计算理想的KFS路径
     KFS_KeyPoint_ = MF_AutoCtrler::PathInformation_calc(robot_point_, KFS_point.MF1, KFS_point.MF2, KFS_point.MF3);
 
+    int8_t MF1_Index_ = KFS_KeyPoint_.Index_MFroad[0]; // MF1 对应索引
+    int8_t MF2_Index_ = KFS_KeyPoint_.Index_MFroad[1]; // MF2 对应索引
+    int8_t MF3_Index_ = KFS_KeyPoint_.Index_MFroad[2]; // MF3 对应索引
+
     // 寻找MF拾取车辆点位
-    MF1_Point_ = KFS_KeyPoint_.mustPastMap[MF1_Index_];
-    MF2_Point_ = KFS_KeyPoint_.mustPastMap[MF2_Index_];
-    MF3_Point_ = KFS_KeyPoint_.mustPastMap[MF3_Index_];
+    MF1_Point_ = KFS_KeyPoint_.mustPastMap[MF1_Index_]; // MF1 对应地图点编号。
+    MF2_Point_ = KFS_KeyPoint_.mustPastMap[MF2_Index_]; // MF2 对应地图点编号。
+    MF3_Point_ = KFS_KeyPoint_.mustPastMap[MF3_Index_]; // MF3 对应地图点编号。
 
     // 写入MF地图对应坐标
     KFS_point.MF1_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(MF1_Point_);
@@ -609,16 +604,70 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     }
 
     // 判断MF1的车子朝向
-    rotation_path(MF1_Point_, target_yaw_);
+    if (MF1_Point_ == 21 || MF1_Point_ == 16 || MF1_Point_ == 11 || MF1_Point_ == 6)
+    {
+        target_yaw_ = (RB_Flag ? 180.0f : 0.0f);
+    }
+    else if (MF1_Point_ == 25 || MF1_Point_ == 20 || MF1_Point_ == 15 || MF1_Point_ == 10)
+    {
+        target_yaw_ = (RB_Flag ? 0.0f : 180.0f);
+    }
+    else if (MF1_Point_ == 27 || MF1_Point_ == 28 || MF1_Point_ == 29 || MF1_Point_ == 30)
+    {
+        target_yaw_ = 90.0f;
+    }
+    else if (MF1_Point_ == 2 || MF1_Point_ == 3 || MF1_Point_ == 4 || MF1_Point_ == 5)
+    {
+        target_yaw_ = -90.0f;
+    }
+    else
+    {
+        return false;
+    }
+
     // 判断MF2的车子朝向
     if (KFS_num > 1)
     {
-        rotation_path(MF2_Point_, KFS_point.MF2_target_yaw_);
+        if (MF2_Point_ == 21 || MF2_Point_ == 16 || MF2_Point_ == 11 || MF2_Point_ == 6)
+        {
+            KFS_point.MF2_target_yaw_ = (RB_Flag ? 180.0f : 0.0f);
+        }
+        else if (MF2_Point_ == 25 || MF2_Point_ == 20 || MF2_Point_ == 15 || MF2_Point_ == 10)
+        {
+            KFS_point.MF2_target_yaw_ = (RB_Flag ? 0.0f : 180.0f);
+        }
+        else if (MF2_Point_ == 27 || MF2_Point_ == 28 || MF2_Point_ == 29 || MF2_Point_ == 30)
+        {
+            KFS_point.MF2_target_yaw_ = 90.0f;
+        }
+        else if (MF2_Point_ == 2 || MF2_Point_ == 3 || MF2_Point_ == 4 || MF2_Point_ == 5)
+        {
+            KFS_point.MF2_target_yaw_ = -90.0f;
+        }
+        else
+        {
+            return false;
+        }
     }
     // 判断MF3的车子朝向
     if (KFS_num > 2)
     {
-        rotation_path(MF3_Point_, KFS_point.MF3_target_yaw_);
+        if (MF3_Point_ == 21 || MF3_Point_ == 16 || MF3_Point_ == 11 || MF3_Point_ == 6)
+        {
+            KFS_point.MF3_target_yaw_ = (RB_Flag ? 180.0f : 0.0f);
+        }
+        else if (MF3_Point_ == 25 || MF3_Point_ == 20 || MF3_Point_ == 15 || MF3_Point_ == 10)
+        {
+            KFS_point.MF3_target_yaw_ = (RB_Flag ? 0.0f : 180.0f);
+        }
+        else if (MF3_Point_ == 27 || MF3_Point_ == 28 || MF3_Point_ == 29 || MF3_Point_ == 30)
+        {
+            KFS_point.MF3_target_yaw_ = 90.0f;
+        }
+        else if (MF3_Point_ == 2 || MF3_Point_ == 3 || MF3_Point_ == 4 || MF3_Point_ == 5)
+        {
+            KFS_point.MF3_target_yaw_ = -90.0f;
+        }
     }
 
     // 判断第一次是否需要转向
@@ -626,9 +675,13 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         KFS_flag.spin_flag = false;
     }
-    else
+    else if (target_yaw_ != KFS_point.MF2_target_yaw_)
     {
         KFS_flag.spin_flag = true;
+    }
+    else
+    {
+        KFS_flag.spin_flag = false;
     }
 
     // 判断第二次是否需要转向
@@ -636,9 +689,13 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         KFS_flag.spin_flag_2 = false;
     }
-    else
+    else if (KFS_point.MF2_target_yaw_ != KFS_point.MF3_target_yaw_)
     {
         KFS_flag.spin_flag_2 = true;
+    }
+    else
+    {
+        KFS_flag.spin_flag_2 = false;
     }
 
     // 计算出口索引
@@ -998,32 +1055,6 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     // 取末端点进行路径退出后的锁点pid
     Path_end_point = path_line_.Get_End_Point();
     return true;
-}
-
-void OmniChassis_Setup::rotation_path(float MF_Point, float &target_yaw)
-{
-    if (abs(KFS_KeyPoint_.mustPastMap[KFS_KeyPoint_.Index_MFroad[1] + 1] - MF_Point) < 5.0f)
-    {
-        if (MF_Point < 10.0f)
-        {
-            target_yaw = -90.0f;
-        }
-        else
-        {
-            target_yaw = 90.0f;
-        }
-    }
-    else
-    {
-        if (MF_Point == 21 || MF_Point == 16 || MF_Point == 11 || MF_Point == 6)
-        {
-            target_yaw = (RB_Flag ? 180.0f : 0.0f);
-        }
-        else if (MF_Point == 25 || MF_Point == 20 || MF_Point == 15 || MF_Point == 10)
-        {
-            target_yaw = (RB_Flag ? 0.0f : 180.0f);
-        }
-    }
 }
 
 bool OmniChassis_Setup::spinodal_path(Vector2D last_vector, Vector2D temp_vector, int i)
