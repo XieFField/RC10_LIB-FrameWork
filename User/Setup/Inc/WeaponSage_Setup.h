@@ -231,7 +231,10 @@ public:
     void Close_TargetClaw_Untight();
     void Judge_launch_status();
     void Judge_wrist_status();
-
+    bool Get_Catch_flag()
+    {
+        return auto_ctrl_.flag.is_catched;
+    }
 protected:
     void loop() override;
 
