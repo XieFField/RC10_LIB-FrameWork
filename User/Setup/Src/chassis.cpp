@@ -250,10 +250,10 @@ namespace jia
             refreshActuatorLimitState();
 
             static const WheelInitConfig kDefaultWheelInit[4] = {
-                {.pos_x_m = -0.39f, .pos_y_m = 0.40f, .theta_oa_to_owi_deg = -90.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = -1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_1_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_1_Pin, .homing_falling_edge_mech_deg = -30.0f, .homing_rising_edge_mech_deg = 150.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
-                {.pos_x_m = -0.39f, .pos_y_m = -0.40f, .theta_oa_to_owi_deg = 0.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = 1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_2_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_2_Pin, .homing_falling_edge_mech_deg = 60.0f, .homing_rising_edge_mech_deg = -120.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
-                {.pos_x_m = 0.39f, .pos_y_m = -0.40f, .theta_oa_to_owi_deg = 90.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = -1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_3_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_3_Pin, .homing_falling_edge_mech_deg = 150.0f, .homing_rising_edge_mech_deg = -30.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
-                {.pos_x_m = 0.39f, .pos_y_m = 0.40f, .theta_oa_to_owi_deg = 180.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = 1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_4_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_4_Pin, .homing_falling_edge_mech_deg = -120.0f, .homing_rising_edge_mech_deg = 60.0f, .homing_search_rpm = 10.0f, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
+                {.pos_x_m = -0.39f, .pos_y_m = 0.40f, .theta_oa_to_owi_deg = -90.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = -1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_1_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_1_Pin, .homing_falling_edge_mech_deg = -30.0f, .homing_rising_edge_mech_deg = 150.0f, .homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
+                {.pos_x_m = -0.39f, .pos_y_m = -0.40f, .theta_oa_to_owi_deg = 0.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = 1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_2_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_2_Pin, .homing_falling_edge_mech_deg = 60.0f, .homing_rising_edge_mech_deg = -120.0f, .homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
+                {.pos_x_m = 0.39f, .pos_y_m = -0.40f, .theta_oa_to_owi_deg = 90.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = -1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_3_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_3_Pin, .homing_falling_edge_mech_deg = 150.0f, .homing_rising_edge_mech_deg = -30.0f, .homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
+                {.pos_x_m = 0.39f, .pos_y_m = 0.40f, .theta_oa_to_owi_deg = 180.0f, .steer_motor_sign = 1.0f, .drive_motor_sign = 1.0f, .homing_enabled = true, .homing_sensor_active_high = true, .homing_gpio_port = kPHOTOGATE_4_GPIO_Port, .homing_gpio_pin = kPHOTOGATE_4_Pin, .homing_falling_edge_mech_deg = -120.0f, .homing_rising_edge_mech_deg = 60.0f, .homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM, .homing_zero_offset_deg = -30.0f, .homing_timeout_s = 5.0f},
             };
 
             for (u8 i = 0; i < 4; ++i)
@@ -282,8 +282,10 @@ namespace jia
                 wheel.homing_align_command_armed = false;
                 wheel.homing_zero_valid = !wheel.homing_enabled;
                 wheel.homing_search_timeout_armed = false;
+                resetHomingEdgeConfirmState(wheel);
                 wheel.homing_elapsed_s = 0.0f;
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
+                wheel.homing_hold_corrected_local_total_rad = 0.0f;
                 wheel.corrected_steer_motor_total_angle_rad = 0.0f;
                 wheel.corrected_drive_omega_rad_s = 0.0f;
                 wheel.target_steer_motor_total_angle_rad = 0.0f;
@@ -486,7 +488,9 @@ namespace jia
                 wheel.homing_last_sensor_active = false;
                 wheel.homing_align_command_armed = false;
                 wheel.homing_search_timeout_armed = false;
+                resetHomingEdgeConfirmState(wheel);
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
+                wheel.homing_hold_corrected_local_total_rad = 0.0f;
                 if (wheel.homing_enabled && wheel.homing_gpio_port != nullptr)
                 {
                     wheel.homing_state = HomingState::kIdle;
@@ -3035,6 +3039,61 @@ namespace jia
             out_vel_y = out_mag * sinRadF32(output_dir_rad);
         }
 
+        void Chassis::resetHomingEdgeConfirmState(WheelConfig &wheel)
+        {
+            wheel.homing_edge_confirm_count = 0U;
+            wheel.homing_last_confirm_edge_is_falling = false;
+            wheel.homing_last_confirm_signed_local_rad = 0.0f;
+            wheel.homing_candidate_zero_offset_sum_rad = 0.0f;
+        }
+
+        bool Chassis::recordHomingEdgeAndCheckConfirmed(WheelConfig &wheel, bool is_falling_edge, f32 signed_local_total_rad)
+        {
+            const f32 edge_mech_oa_rad = is_falling_edge ? wheel.homing_falling_edge_mech_rad : wheel.homing_rising_edge_mech_rad;
+            const SteerCalibration calibration = makeSteerCalibration(wheel);
+            f32 candidate_zero_offset_rad = computeHomingRuntimeZeroOffset(edge_mech_oa_rad,
+                                                                           signed_local_total_rad,
+                                                                           wheel.homing_zero_offset_rad,
+                                                                           calibration);
+
+            if (wheel.homing_edge_confirm_count == 0U)
+            {
+                wheel.homing_edge_confirm_count = 1U;
+                wheel.homing_last_confirm_edge_is_falling = is_falling_edge;
+                wheel.homing_last_confirm_signed_local_rad = signed_local_total_rad;
+                wheel.homing_candidate_zero_offset_sum_rad = candidate_zero_offset_rad;
+                return false;
+            }
+
+            const f32 delta_rad = signed_local_total_rad - wheel.homing_last_confirm_signed_local_rad;
+            const f32 tolerance_rad = degToRadF32(JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG);
+            if (fabsf(delta_rad - kPi) > tolerance_rad)
+            {
+                resetHomingEdgeConfirmState(wheel);
+                wheel.homing_state = HomingState::kFault;
+                wheel.homing_zero_valid = false;
+                return false;
+            }
+
+            const f32 previous_average_offset_rad =
+                wheel.homing_candidate_zero_offset_sum_rad / static_cast<f32>(wheel.homing_edge_confirm_count);
+            candidate_zero_offset_rad = nearestEquivalentAngleF32(previous_average_offset_rad, candidate_zero_offset_rad);
+            wheel.homing_candidate_zero_offset_sum_rad += candidate_zero_offset_rad;
+            wheel.homing_edge_confirm_count += 1U;
+            wheel.homing_last_confirm_edge_is_falling = is_falling_edge;
+            wheel.homing_last_confirm_signed_local_rad = signed_local_total_rad;
+
+            if (wheel.homing_edge_confirm_count < 3U)
+            {
+                return false;
+            }
+
+            wheel.homing_runtime_zero_offset_rad = wheel.homing_candidate_zero_offset_sum_rad / 3.0f;
+            wheel.homing_hold_corrected_local_total_rad = signed_local_total_rad + wheel.homing_runtime_zero_offset_rad;
+            wheel.homing_zero_valid = true;
+            return true;
+        }
+
         bool Chassis::readHomingSensor(const WheelConfig &wheel) const
         {
             if (!wheel.homing_enabled || wheel.homing_gpio_port == nullptr)
@@ -3137,7 +3196,9 @@ namespace jia
             wheel.homing_last_edge_is_falling = false;
             wheel.homing_align_command_armed = false;
             wheel.homing_search_timeout_armed = false;
+            resetHomingEdgeConfirmState(wheel);
             wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
+            wheel.homing_hold_corrected_local_total_rad = 0.0f;
             wheel.homing_zero_valid = false;
             wheel.homing_state = HomingState::kIdle;
             wheel.target_drive_omega_rad_s = 0.0f;
@@ -3268,7 +3329,7 @@ namespace jia
         bool Chassis::updateHomingState(WheelConfig &wheel)
         {
             // 四舵轮回零状态机的职责是：在每个周期读取限位/零位传感器，
-            // 依次完成 Idle -> Search -> EdgeDetected -> OffsetApply -> ContinuousAngleReady -> AlignToZero -> Ready。
+            // 依次完成 Idle -> Search -> EdgeDetected -> OffsetApply -> ContinuousAngleReady -> Ready。
             // 这里不直接“判定一次就完成”，而是通过多周期状态推进来吸收传感器抖动和机械延迟。
             if (!wheel.homing_enabled || wheel.homing_gpio_port == nullptr)
             {
@@ -3277,6 +3338,8 @@ namespace jia
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
                 wheel.homing_last_edge_is_falling = false;
                 wheel.homing_align_command_armed = false;
+                resetHomingEdgeConfirmState(wheel);
+                wheel.homing_hold_corrected_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
                 return true;
             }
 
@@ -3291,6 +3354,8 @@ namespace jia
                 wheel.homing_last_sensor_active = sensor_raw_high;
                 wheel.homing_align_command_armed = false;
                 wheel.homing_search_timeout_armed = false;
+                resetHomingEdgeConfirmState(wheel);
+                wheel.homing_zero_valid = false;
                 steer_fault_any_active_ = true;
                 return false;
             }
@@ -3303,6 +3368,8 @@ namespace jia
                     wheel.homing_state = HomingState::kSearch;
                     wheel.homing_elapsed_s = 0.0f;
                     wheel.homing_search_timeout_armed = false;
+                    resetHomingEdgeConfirmState(wheel);
+                    wheel.homing_zero_valid = false;
                 }
                 wheel.homing_last_sensor_active = sensor_raw_high;
                 return false;
@@ -3335,16 +3402,11 @@ namespace jia
                 if (is_edge)
                 {
                     const bool is_falling_edge = wheel.homing_last_sensor_active && !sensor_raw_high;
-                    const f32 edge_mech_oa_rad = is_falling_edge ? wheel.homing_falling_edge_mech_rad : wheel.homing_rising_edge_mech_rad;
-                    const SteerCalibration calibration = makeSteerCalibration(wheel);
-
-                    wheel.homing_state = HomingState::kEdgeDetected;
                     wheel.homing_last_edge_is_falling = is_falling_edge;
-                    wheel.homing_runtime_zero_offset_rad = computeHomingRuntimeZeroOffset(edge_mech_oa_rad,
-                                                                                          raw_total_angle_rad,
-                                                                                          wheel.homing_zero_offset_rad,
-                                                                                          calibration);
-                    wheel.homing_zero_valid = true;
+                    if (recordHomingEdgeAndCheckConfirmed(wheel, is_falling_edge, raw_total_angle_rad))
+                    {
+                        wheel.homing_state = HomingState::kEdgeDetected;
+                    }
                 }
                 else if (wheel.homing_search_timeout_armed && (wheel.homing_elapsed_s > wheel.homing_timeout_s))
                 {
@@ -3375,31 +3437,14 @@ namespace jia
             }
             if (wheel.homing_state == HomingState::kContinuousAngleReady)
             {
-                const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
-                const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_local_total_rad);
-                const f32 target_oa_total_rad = nearestEquivalentAngleF32(current_oa_total_rad, 0.0f);
-                const f32 oa_error_abs_rad = fabsf(shortestAngularDistanceF32(current_oa_total_rad, target_oa_total_rad));
-                if (oa_error_abs_rad <= degToRadF32(homing_align_to_zero_tolerance_deg_))
+                wheel.target_steer_motor_total_angle_rad = wheel.homing_hold_corrected_local_total_rad;
+                wheel.homing_state = HomingState::kReady;
+                wheel.homing_align_command_armed = false;
+                if (wheel.steer_fault_state == SteerFaultState::kRecovering)
                 {
-                    wheel.homing_state = HomingState::kReady;
-                    wheel.homing_align_command_armed = false;
-                    if (wheel.steer_fault_state == SteerFaultState::kRecovering)
-                    {
-                        clearSteerFaultState(wheel);
-                    }
-                    return true;
+                    clearSteerFaultState(wheel);
                 }
-                wheel.homing_state = HomingState::kAlignToZero;
-                wheel.homing_align_command_armed = false;
-                return false;
-            }
-            if (wheel.homing_state == HomingState::kContinuousAngleReady)
-            {
-                // 连续角度已可用后，先进入“归位到软件零点”阶段：
-// OA角自动走0°（车头前方）再判定该轮回零完成
-                wheel.homing_state = HomingState::kAlignToZero;
-                wheel.homing_align_command_armed = false;
-                return false;
+                return true;
             }
 
             if (wheel.homing_state == HomingState::kAlignToZero)
@@ -3752,6 +3797,15 @@ namespace jia
 // 正在搜索零位的轮子，允许转向电机按固定搜索转速慢慢转；
 // 但 drive 仍然保持 current=0，全车不允许恢复驱动。
                         setSteerMotorTargetRPM(wheel, wheel.homing_search_rpm);
+                    }
+                    else if ((wheel.homing_state == HomingState::kReady) &&
+                             wheel.homing_zero_valid &&
+                             (wheel.steer_fault_state == SteerFaultState::kNone))
+                    {
+                        wheel.target_steer_motor_total_angle_rad = wheel.homing_hold_corrected_local_total_rad;
+                        planned_data_.steer_angle_oa_rad[i] = mapWheelCorrectedLocalToOaTotal(wheel, wheel.homing_hold_corrected_local_total_rad);
+                        last_steer_rate_cmd_rad_s_[i] = 0.0f;
+                        setSteerMotorTargetTotalAngleRad(wheel, wheel.homing_hold_corrected_local_total_rad);
                     }
                     else if (wheel.homing_state == HomingState::kAlignToZero)
                     {

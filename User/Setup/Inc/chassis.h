@@ -63,6 +63,14 @@
 #define JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
 #endif
 
+#ifndef JIA_CHASSIS_HOMING_SEARCH_RPM
+#define JIA_CHASSIS_HOMING_SEARCH_RPM 50.0f
+#endif
+
+#ifndef JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG
+#define JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG 15.0f
+#endif
+
 #include "APP_Utils.h"
 
 #include "FreeRTOS.h"
@@ -402,7 +410,7 @@ namespace jia
                 u16 homing_gpio_pin = 0;
                 f32 homing_falling_edge_mech_deg = 60.0f;
                 f32 homing_rising_edge_mech_deg = -120.0f;
-                f32 homing_search_rpm = 10.0f;
+                f32 homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM;
                 f32 homing_zero_offset_deg = 0.0f;
                 f32 homing_timeout_s = 5.0f;
             };
@@ -424,7 +432,7 @@ namespace jia
                 u16 homing_gpio_pin = 0;                          // 回零传感器 GPIO 引脚运行时副本；与端口配合读取真实输入
                 f32 homing_falling_edge_mech_rad = 0.0f;          // 原始 GPIO H->L 边沿对应的机械 OA 角（rad）
                 f32 homing_rising_edge_mech_rad = 0.0f;           // 原始 GPIO L->H 边沿对应的机械 OA 角（rad）
-                f32 homing_search_rpm = 10.0f;                    // 回零搜索阶段给转向电机的转速指令，单位 rpm
+                f32 homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM; // 回零搜索阶段给转向电机的转速指令，单位 rpm
                 f32 homing_zero_offset_rad = 0.0f;                // 标定得到的零位补偿角：传感器触发点到期望机械零位的固定偏差
                 f32 homing_timeout_s = 5.0f;                      // 单轮回零允许持续的最长时间，超时后进入故障态，单位秒
                 HomingState homing_state = HomingState::kIdle;    // 当前轮回零状态机所处阶段
@@ -433,6 +441,11 @@ namespace jia
                 bool homing_align_command_armed = false;          // 进入 AlignToZero 后是否已允许下发第一次对零位置命令；用于避免边沿抓取后同拍大跳变
                 bool homing_zero_valid = false;                   // 当前轮是否已经建立可用于闭环控制的零位
                 bool homing_search_timeout_armed = false;         // Search 超时是否已武装。只有看到首个有效舵向反馈活动后才开始累计超时。
+                u8 homing_edge_confirm_count = 0U;                // 本次 Search 已连续确认的原始光电边沿数量
+                bool homing_last_confirm_edge_is_falling = false; // 上一次确认边沿方向：true=H->L，false=L->H
+                f32 homing_last_confirm_signed_local_rad = 0.0f;  // 上一次确认边沿对应的带方向本地连续角
+                f32 homing_candidate_zero_offset_sum_rad = 0.0f;  // 三边沿确认时，已 unwrap 到同一分支的候选零偏累加
+                f32 homing_hold_corrected_local_total_rad = 0.0f; // 单轮确认完成后，等待其他轮时保持的 corrected-local 连续角
                 f32 homing_elapsed_s = 0.0f;                      // 本次回零已运行时间，单位秒；用于超时判定
                 f32 homing_runtime_zero_offset_rad = 0.0f;        // 本次上电运行实际采用的零位补偿；回零成功后会把“当前触发位置”修正成运行时零点
                 f32 corrected_steer_motor_total_angle_rad = 0.0f; // 已乘方向符号并叠加运行时零位补偿后的转向电机连续总角度反馈
@@ -848,6 +861,8 @@ namespace jia
             void clearSteerFaultState(WheelConfig &wheel);
             void requestSingleWheelHoming(WheelConfig &wheel);
             void resetSteerMotorClosedLoopState(WheelConfig &wheel);
+            void resetHomingEdgeConfirmState(WheelConfig &wheel);
+            bool recordHomingEdgeAndCheckConfirmed(WheelConfig &wheel, bool is_falling_edge, f32 signed_local_total_rad);
             bool updateHomingState(WheelConfig &wheel);
             bool readHomingSensor(const WheelConfig &wheel) const;
             bool readHomingSensorRawHigh(const WheelConfig &wheel) const;

@@ -774,7 +774,7 @@ TEST_CASE("testHomingRequiresThreeConsistentEdgesAndHoldsConfirmedAverageAngle")
     EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kReady);
 
     const float expected_average_offset_rad =
-        (jia::degToRadF32(110.0f) + jia::degToRadF32(-250.0f) + jia::degToRadF32(-250.0f)) / 3.0f;
+        (jia::degToRadF32(-70.0f) + jia::degToRadF32(-70.0f) + jia::degToRadF32(-70.0f)) / 3.0f;
     const float expected_hold_rad = jia::degToRadF32(370.0f) + expected_average_offset_rad;
 
     EXPECT_NEAR(chassis.wheel_config_[0].homing_runtime_zero_offset_rad, expected_average_offset_rad, 1.0e-5f);

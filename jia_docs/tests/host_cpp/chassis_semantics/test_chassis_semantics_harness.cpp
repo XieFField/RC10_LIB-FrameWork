@@ -386,7 +386,7 @@ void configureSteerFaultRecoveryHarness(Chassis &chassis, TestMotor steer_motors
                                                                                : kPHOTOGATE_4_Pin);
         chassis.wheel_config_[i].homing_falling_edge_mech_rad = 0.0f;
         chassis.wheel_config_[i].homing_rising_edge_mech_rad = 0.0f;
-        chassis.wheel_config_[i].homing_search_rpm = 15.0f;
+        chassis.wheel_config_[i].homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM;
         chassis.wheel_config_[i].homing_zero_offset_rad = 0.0f;
         chassis.wheel_config_[i].homing_timeout_s = 0.003f;
         chassis.wheel_config_[i].homing_state = Chassis::HomingState::kReady;
@@ -515,20 +515,25 @@ void configureYawPidTraceHarness(Chassis &chassis)
 
 void finishWheelHomingByThreeConsistentEdges(Chassis &chassis, int wheel_idx, TestMotor steer_motors[4])
 {
-    setPhotogateStateForWheel(wheel_idx, false);
+    bool sensor_high = chassis.wheel_config_[wheel_idx].homing_last_sensor_active;
+    setPhotogateStateForWheel(wheel_idx, sensor_high);
     steer_motors[wheel_idx].setFeedbackCurrent(1200.0f);
     runHostControlCycle(chassis);
 
     steer_motors[wheel_idx].setFeedbackTotalAngleDeg(0.0f);
-    setPhotogateStateForWheel(wheel_idx, true);
+    sensor_high = !sensor_high;
+    setPhotogateStateForWheel(wheel_idx, sensor_high);
     runHostControlCycle(chassis);
 
     steer_motors[wheel_idx].setFeedbackTotalAngleDeg(180.0f);
-    setPhotogateStateForWheel(wheel_idx, false);
+    sensor_high = !sensor_high;
+    setPhotogateStateForWheel(wheel_idx, sensor_high);
     runHostControlCycle(chassis);
 
     steer_motors[wheel_idx].setFeedbackTotalAngleDeg(360.0f);
-    setPhotogateStateForWheel(wheel_idx, true);
+    sensor_high = !sensor_high;
+    setPhotogateStateForWheel(wheel_idx, sensor_high);
+    runHostControlCycle(chassis);
     runHostControlCycle(chassis);
     runHostControlCycle(chassis);
     runHostControlCycle(chassis);
