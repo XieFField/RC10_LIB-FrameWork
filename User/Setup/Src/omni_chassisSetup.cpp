@@ -847,6 +847,10 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
             {
                 temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
                 path_line_.Add_End_Point(temp_vector, path_param.end);
+                /*
+                    path_line_.Add_Point(uphill_pos, path_param.up);
+                    path_line_.Add_Point(M_pos, path_param.end);
+                */
             }
             else // 中间的路径点
             {
