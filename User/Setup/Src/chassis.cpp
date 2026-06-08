@@ -953,6 +953,43 @@ namespace jia
             return max_command_wheel_speed_m_s;
         }
 
+        bool Chassis::shouldSuppressYawLockOmegaForZeroStopDecel(const Data &command_data) const
+        {
+            const bool yaw_lock_control_requested =
+                current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
+            if (!yaw_lock_control_requested ||
+                input_target_data_.zero_current_all ||
+                current_mode_flag_.is_wheel_torque_free ||
+                (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode))
+            {
+                return false;
+            }
+
+            const f32 target_trans_speed_m_s = magnitude2DF32(target_data_.vel_x, target_data_.vel_y);
+            const f32 command_trans_speed_m_s = magnitude2DF32(command_data.vel_x, command_data.vel_y);
+            const bool manual_yaw_requested =
+                ((input_target_data_.mode == Mode::kBodySpeedLockNowRotZWithNoOmegaZMode) ||
+                 (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode)) &&
+                (fabsf(input_target_data_.omega_z) > 1.0e-6f);
+            if ((target_trans_speed_m_s > getNearZeroEnterSpeedMps()) ||
+                manual_yaw_requested ||
+                (fabsf(command_data.omega_z) <= 1.0e-6f))
+            {
+                return false;
+            }
+
+            const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
+            f32 max_residual_speed_m_s = 0.0f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                const f32 residual_speed_m_s = fabsf(wheel_config_[i].corrected_drive_omega_rad_s) * wheel_radius_m;
+                max_residual_speed_m_s = (residual_speed_m_s > max_residual_speed_m_s) ? residual_speed_m_s : max_residual_speed_m_s;
+            }
+
+            return (command_trans_speed_m_s > getNearZeroEnterSpeedMps()) ||
+                   (max_residual_speed_m_s > getNearZeroEnterSpeedMps());
+        }
+
         bool Chassis::shouldActivateLaunchHold() const
         {
             if (!runtime_strategy_cfg_.enable_low_speed_drive_suppression)
@@ -3653,7 +3690,11 @@ namespace jia
             }
             else
             {
-                const Data planner_command = launch_hold_active_ ? makeLaunchHoldPreviewCommand() : command_data;
+                Data planner_command = launch_hold_active_ ? makeLaunchHoldPreviewCommand() : command_data;
+                if (!launch_hold_active_ && shouldSuppressYawLockOmegaForZeroStopDecel(planner_command))
+                {
+                    planner_command.omega_z = 0.0f;
+                }
                 const SwervePlannerInput planner_input = makeSwervePlannerInput(planner_command);
                 planner_output = planSwerveModules(planner_input);
             }
@@ -3723,7 +3764,12 @@ namespace jia
                     const f32 frame_command_speed_m_s = fabsf(actuator_command_frame_.drive_omega_rad_s[i]) * wheel_radius_m;
                     max_frame_command_speed_m_s = (frame_command_speed_m_s > max_frame_command_speed_m_s) ? frame_command_speed_m_s : max_frame_command_speed_m_s;
                 }
-                const f32 target_command_speed_m_s = computeMaxCommandWheelSpeedMps(target_data_);
+                Data zero_stop_gate_target_data = target_data_;
+                if (shouldSuppressYawLockOmegaForZeroStopDecel(zero_stop_gate_target_data))
+                {
+                    zero_stop_gate_target_data.omega_z = 0.0f;
+                }
+                const f32 target_command_speed_m_s = computeMaxCommandWheelSpeedMps(zero_stop_gate_target_data);
                 const f32 max_command_speed_m_s = use_body_target_for_zero_stop_gate
                                                       ? target_command_speed_m_s
                                                       : ((target_command_speed_m_s > max_frame_command_speed_m_s)

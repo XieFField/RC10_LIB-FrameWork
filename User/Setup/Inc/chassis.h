@@ -881,6 +881,7 @@ namespace jia
             f32 limitValueWithAcceleration(f32 current_value, f32 target_value, f32 max_accel, f32 dt_s) const;
             f32 getXParkAngle(const WheelConfig &wheel) const;
             f32 computeMaxCommandWheelSpeedMps(const Data &command_data) const;
+            bool shouldSuppressYawLockOmegaForZeroStopDecel(const Data &command_data) const;
             f32 computeLowSpeedDriveSuppressionScale(f32 abs_error_rad) const;
             void computeLowSpeedDriveSuppressionScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4]);
             f32 getNearZeroEnterSpeedMps() const;
