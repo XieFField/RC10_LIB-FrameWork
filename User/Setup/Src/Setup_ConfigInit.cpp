@@ -156,19 +156,19 @@ void ALL_Setup_ConfigInit(void)
 
 #if JIA_USE_FOUR_STEER_CHASSIS && !TEST_TEMP && !DEBUG_SHIT
     Chassis::InitConfig chassis_init_config =
-        {
-            // 转向电机句柄（按轮序 0~3 对应）
-            .steer_motor_h[0] = &steer1,
-            .steer_motor_h[1] = &steer2,
-            .steer_motor_h[2] = &steer3,
-            .steer_motor_h[3] = &steer4,
+    {
+        // 转向电机句柄（按轮序 0~3 对应）
+        .steer_motor_h[0] = &steer1,
+        .steer_motor_h[1] = &steer2,
+        .steer_motor_h[2] = &steer3,
+        .steer_motor_h[3] = &steer4,
 
-            // 驱动电机句柄（按轮序 0~3 对应）
-            .drive_motor_h[0] = &U8_1,
-            .drive_motor_h[1] = &U8_2,
-            .drive_motor_h[2] = &U8_3,
-            .drive_motor_h[3] = &U8_4,
-        };
+        // 驱动电机句柄（按轮序 0~3 对应）
+        .drive_motor_h[0] = &U8_1,
+        .drive_motor_h[1] = &U8_2,
+        .drive_motor_h[2] = &U8_3,
+        .drive_motor_h[3] = &U8_4,
+    };
     chassis.init(chassis_init_config);
 #endif
 

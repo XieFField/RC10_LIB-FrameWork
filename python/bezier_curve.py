@@ -113,8 +113,8 @@ def rect_signed_distance(a, b):
 
 if __name__ == '__main__':
     """  control_points = np.array([(1.2, 2.6), (0.4, 2.4), (0.6, 3.2)]) """
-    """control_points = np.array([(1.2, 2.57), (0.35, 2.35), (0.57, 3.2)])"""
-    control_points = np.array([(1.0, 1.0), (2.5, 2.0), (2.4, 0.8)])
+    control_points = np.array([(1.2, 2.57), (0.35, 2.35), (0.57, 3.2)])
+    """control_points = np.array([(1.0, 1.0), (2.5, 2.0), (2.4, 0.8)])"""
     field_rect = (0.0, 0.0, 6.0, 9.45)
     forbidden_rect = (1.2, 3.2, 4.8, 8.0)
     car_size = 0.98

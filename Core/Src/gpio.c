@@ -55,11 +55,8 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOG, SUCKER_error_Pin|SUCKER_2_Pin|SUCKER_3_Pin|SUCKER_4_Pin
+  HAL_GPIO_WritePin(GPIOG, SUCKER_1_Pin|SUCKER_2_Pin|SUCKER_3_Pin|SUCKER_4_Pin
                           |SUCKER_5_Pin|SUCKER_6_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, SUCKER_P1_Pin|SUCKER_P2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : kPHOTOGATE_4_Pin kPHOTOGATE_3_Pin */
   GPIO_InitStruct.Pin = kPHOTOGATE_4_Pin|kPHOTOGATE_3_Pin;
@@ -73,9 +70,9 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : SUCKER_error_Pin SUCKER_2_Pin SUCKER_3_Pin SUCKER_4_Pin
+  /*Configure GPIO pins : SUCKER_1_Pin SUCKER_2_Pin SUCKER_3_Pin SUCKER_4_Pin
                            SUCKER_5_Pin SUCKER_6_Pin */
-  GPIO_InitStruct.Pin = SUCKER_error_Pin|SUCKER_2_Pin|SUCKER_3_Pin|SUCKER_4_Pin
+  GPIO_InitStruct.Pin = SUCKER_1_Pin|SUCKER_2_Pin|SUCKER_3_Pin|SUCKER_4_Pin
                           |SUCKER_5_Pin|SUCKER_6_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -93,13 +90,6 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(Lora_IO1_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : SUCKER_P1_Pin SUCKER_P2_Pin */
-  GPIO_InitStruct.Pin = SUCKER_P1_Pin|SUCKER_P2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
 }
 

@@ -50,6 +50,8 @@ typedef struct {
     float max_pitchRPM_ = 50.0f; // 末端关节最大转速，单位RPM   
     float rotate_end = 265.0f;
     float rotate_start = 135.0f;
+    float store_ext_length_ =0.0658f; //存储时候伸展长度
+
     float store_ext_length_ =0.0f; //存储时候伸展长度
     
 
@@ -62,6 +64,9 @@ typedef struct {
     float safe_height_ = 0.0f; // 安全高度
     float store_height_ = 0.0f; // 储存高度
     float lock_height_ = 0.0f; // 云台锁定高度
+    float pick_up_height_ =0.0f; //拾取高度
+    float putdown_height_ = 0.0f; //放置高度
+    float pitch_lift_angle_ = 91.0f; //俯仰抬平角度
     float pick_up_height_ = 0.0f; // 拾取高度
     float putdown_height_ = 0.0f; // 放置高度
 
@@ -289,44 +294,44 @@ private:
 protected:
 /*================================================================*/
     /*关节位置->电机角度*/
-    float launchHeight_to_MotorTotalAngle(float height)
+    constexpr inline float launchHeight_to_MotorTotalAngle(float height)
     {
         return sign_reversed_.sign_launch_ * height / init_data_.launch_Ratio_ * 360.0f;
     }
 
-    float stretchLength_to_MotorTotalAngle(float length)
+    constexpr inline float stretchLength_to_MotorTotalAngle(float length)
     {
         return sign_reversed_.sign_stretch_ * length / init_data_.stretch_Ratio_ * 360.0f;
     }
 
-    float rotateAngle_to_MotorTotalAngle(float angle)
+    constexpr inline float rotateAngle_to_MotorTotalAngle(float angle)
     {
         return sign_reversed_.sign_rotate_ * angle / init_data_.rotate_gearRatio_ * 360.0f;
     }
 
-    float pitchAngle_to_MotorTotalAngle(float angle)
+    constexpr inline float pitchAngle_to_MotorTotalAngle(float angle)
     {
         return sign_reversed_.sign_pitch_ * angle / init_data_.pitch_gearRatio_ * 360.0f;
     }
     
 /*=================================================================*/
     /*电机角度->关节位置*/
-    float MotorTotalAngle_to_launchHeight(float motor_angle)
+    constexpr inline float MotorTotalAngle_to_launchHeight(float motor_angle)
     {
         return sign_reversed_.sign_launch_ * motor_angle * init_data_.launch_Ratio_ / 360.0f;
     }
 
-    float MotorTotalAngle_to_stretchLength(float motor_angle)
+    constexpr inline float MotorTotalAngle_to_stretchLength(float motor_angle)
     {
         return sign_reversed_.sign_stretch_ * motor_angle * init_data_.stretch_Ratio_ / 360.0f;
     }
 
-    float MotorTotalAngle_to_rotateAngle(float motor_angle)
+    constexpr inline float MotorTotalAngle_to_rotateAngle(float motor_angle)
     {
         return sign_reversed_.sign_rotate_ * motor_angle * init_data_.rotate_gearRatio_ / 360.0f;
     }
 
-    float MotorTotalAngle_to_pitchAngle(float motor_angle)
+    constexpr inline float MotorTotalAngle_to_pitchAngle(float motor_angle)
     {
         return sign_reversed_.sign_pitch_ * motor_angle * init_data_.pitch_gearRatio_ / 360.0f;
     }
@@ -372,7 +377,7 @@ private:
     };
 
     
-    float caculate_ramp_target(float current, float target, Fliter_Ramp_S &ramp)
+    constexpr inline float caculate_ramp_target(float current, float target, Fliter_Ramp_S &ramp)
     {
         float diff = target - current;
         
