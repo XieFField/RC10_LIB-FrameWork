@@ -513,20 +513,30 @@ void configureYawPidTraceHarness(Chassis &chassis)
     chassis.debug_mirror_.reverse_intent_active = false;
 }
 
-void finishWheelHomingByEdgeAndAlign(Chassis &chassis, int wheel_idx, TestMotor steer_motors[4])
+void finishWheelHomingByThreeConsistentEdges(Chassis &chassis, int wheel_idx, TestMotor steer_motors[4])
 {
     setPhotogateStateForWheel(wheel_idx, false);
-    steer_motors[wheel_idx].setFeedbackTotalAngleDeg(0.0f);
+    steer_motors[wheel_idx].setFeedbackCurrent(1200.0f);
     runHostControlCycle(chassis);
 
+    steer_motors[wheel_idx].setFeedbackTotalAngleDeg(0.0f);
+    setPhotogateStateForWheel(wheel_idx, true);
+    runHostControlCycle(chassis);
+
+    steer_motors[wheel_idx].setFeedbackTotalAngleDeg(180.0f);
+    setPhotogateStateForWheel(wheel_idx, false);
+    runHostControlCycle(chassis);
+
+    steer_motors[wheel_idx].setFeedbackTotalAngleDeg(360.0f);
     setPhotogateStateForWheel(wheel_idx, true);
     runHostControlCycle(chassis);
     runHostControlCycle(chassis);
     runHostControlCycle(chassis);
+}
 
-    chassis.wheel_config_[wheel_idx].corrected_steer_motor_total_angle_rad = 0.0f;
-    steer_motors[wheel_idx].setFeedbackTotalAngleDeg(0.0f);
-    runHostControlCycle(chassis);
+void finishWheelHomingByEdgeAndAlign(Chassis &chassis, int wheel_idx, TestMotor steer_motors[4])
+{
+    finishWheelHomingByThreeConsistentEdges(chassis, wheel_idx, steer_motors);
 }
 
 Chassis::ActuatorCommandFrame makeDriveOnlyCommandFrame(float drive_omega_rad_s)
