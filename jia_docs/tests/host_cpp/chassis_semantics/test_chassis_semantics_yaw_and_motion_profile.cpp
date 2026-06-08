@@ -112,6 +112,8 @@ TEST_CASE("testApiLockToYawTargetIsRateLimitedAcrossPlannerCycles")
     Chassis chassis;
     configureYawLockSwitchHarness(chassis);
     chassis.max_lock_to_rot_z_rad_s_ = 0.1f;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 0.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 0.0f;
     chassis.input_hwt_rot_z_ = 0.0f;
 
     chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, 1.0f);
@@ -137,6 +139,8 @@ TEST_CASE("testDebugLockToYawTargetInjectionIsRateLimitedAcrossPlannerCycles")
     Chassis chassis;
     configureYawLockSwitchHarness(chassis);
     chassis.max_lock_to_rot_z_rad_s_ = 0.2f;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 0.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 0.0f;
     chassis.input_hwt_rot_z_ = 0.0f;
     chassis.debug_control_.common.enable = true;
     chassis.debug_control_.common.mode_raw = 5U;
@@ -155,6 +159,76 @@ TEST_CASE("testDebugLockToYawTargetInjectionIsRateLimitedAcrossPlannerCycles")
     EXPECT_NEAR(chassis.target_data_.rot_z, expected_second_step, 1.0e-6f);
     EXPECT_NEAR(chassis.lock_now_rot_z_target_, expected_second_step, 1.0e-6f);
     EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_second_step, 1.0e-6f);
+}
+
+TEST_CASE("testLockToYawTargetLowPassDefaultsToBypassAndCanFilterPidInput")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.max_lock_to_rot_z_rad_s_ = 1000.0f;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 0.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 0.0f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, 0.01f);
+
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, 0.01f, 1.0e-6f);
+    EXPECT_NEAR(chassis.rot_z_pid_.last_target, jia::radToDegF32(0.01f), 1.0e-6f);
+
+    chassis.setSpeed(Chassis::Coordinate::kBody, 0.0f, 0.0f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    chassis.lock_yaw_pid_target_lpf_alpha_ = 0.25f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, 0.04f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, 0.04f, 1.0e-6f);
+
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, 0.08f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    const float expected_filtered_target = 0.04f + 0.25f * (0.08f - 0.04f);
+    EXPECT_NEAR(chassis.target_data_.rot_z, expected_filtered_target, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_filtered_target, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.08f, 1.0e-6f);
+    EXPECT_NEAR(chassis.rot_z_pid_.last_target, jia::radToDegF32(expected_filtered_target), 1.0e-6f);
+}
+
+TEST_CASE("testLockYawPidDeadbandUsesEnterExitHysteresis")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.max_lock_to_rot_z_rad_s_ = 1000.0f;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 1.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 2.0f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, jia::degToRadF32(0.5f));
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_TRUE(chassis.lock_yaw_pid_deadband_active_);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.pid_compute_fired, 0.0f, 1.0e-6f);
+    EXPECT_TRUE(chassis.rot_z_pid_.calc_count == 0U);
+
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, jia::degToRadF32(1.5f));
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_TRUE(chassis.lock_yaw_pid_deadband_active_);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.pid_compute_fired, 0.0f, 1.0e-6f);
+    EXPECT_TRUE(chassis.rot_z_pid_.calc_count == 0U);
+
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, jia::degToRadF32(2.2f));
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_TRUE(!chassis.lock_yaw_pid_deadband_active_);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.pid_compute_fired, 1.0f, 1.0e-6f);
+    EXPECT_TRUE(chassis.rot_z_pid_.calc_count == 1U);
+    EXPECT_NEAR(chassis.rot_z_pid_.last_target, 2.2f, 1.0e-5f);
+
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 3.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 1.0f;
+    chassis.setSpeed(Chassis::Coordinate::kBody, 0.0f, 0.0f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, jia::degToRadF32(3.5f));
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_TRUE(chassis.rot_z_pid_.calc_count == 2U);
 }
 
 TEST_CASE("testApiBodyLockNowReanchorsAfterBodySpeedMode")

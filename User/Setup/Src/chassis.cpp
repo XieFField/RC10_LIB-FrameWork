@@ -362,6 +362,7 @@ namespace jia
             input_target_data_.zero_current_all = false;
             lock_now_rot_z_target_ = 0.0f;
             yaw_lock_control_active_last_cycle_ = false;
+            resetYawPidTargetRuntime();
             trans_dir_freeze_active_ = false;
             trans_dir_ref_valid_ = false;
             trans_dir_ref_rad_ = 0.0f;
@@ -2646,6 +2647,57 @@ namespace jia
             // 抓取当前机体朝向，再在后续由 PID 产生角速度闭环，让机器人保持当下姿态
 // 就把最近一次真实机体朝向当作要维持rot_z，再由姿PID生成out_omega_z来稳住该朝向
 // 因此它不是“始终锁某个固定角”，而是“手动旋转”和“松手后自动锁住当前角”之间的平滑切换器
+        void Chassis::resetYawPidTargetRuntime()
+        {
+            lock_yaw_pid_target_filter_valid_ = false;
+            lock_yaw_pid_target_filtered_rad_ = 0.0f;
+            lock_yaw_pid_deadband_active_ = false;
+        }
+
+        f32 Chassis::filterYawPidTarget(f32 target_yaw_rad)
+        {
+            const f32 alpha = clampValue(lock_yaw_pid_target_lpf_alpha_, 0.0f, 1.0f);
+            if (!lock_yaw_pid_target_filter_valid_)
+            {
+                lock_yaw_pid_target_filter_valid_ = true;
+                lock_yaw_pid_target_filtered_rad_ = target_yaw_rad;
+                return lock_yaw_pid_target_filtered_rad_;
+            }
+
+            lock_yaw_pid_target_filtered_rad_ +=
+                alpha * shortestAngularDistanceF32(lock_yaw_pid_target_filtered_rad_, target_yaw_rad);
+            return lock_yaw_pid_target_filtered_rad_;
+        }
+
+        bool Chassis::computeYawPidOmega(f32 target_yaw_rad, f32 feedback_yaw_rad, f32 &out_omega_z)
+        {
+            const f32 error_deg = radToDegF32(shortestAngularDistanceF32(feedback_yaw_rad, target_yaw_rad));
+            const f32 enter_deg = fabsf(lock_yaw_pid_deadband_enter_deg_);
+            const f32 exit_deg = (fabsf(lock_yaw_pid_deadband_exit_deg_) < enter_deg) ? enter_deg : fabsf(lock_yaw_pid_deadband_exit_deg_);
+            const f32 abs_error_deg = fabsf(error_deg);
+
+            if (lock_yaw_pid_deadband_active_)
+            {
+                if (abs_error_deg >= exit_deg)
+                {
+                    lock_yaw_pid_deadband_active_ = false;
+                }
+            }
+            else if (abs_error_deg <= enter_deg)
+            {
+                lock_yaw_pid_deadband_active_ = true;
+            }
+
+            if (lock_yaw_pid_deadband_active_)
+            {
+                out_omega_z = 0.0f;
+                return false;
+            }
+
+            out_omega_z = rot_z_pid_.pid_calc(radToDegF32(target_yaw_rad), radToDegF32(feedback_yaw_rad));
+            return true;
+        }
+
         void Chassis::isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z)
         {
                 // 1. out_rot_z 直接跟随 IMU 当前朝向 input_hwt_rot_z_，把目标角锁在此刻真实姿态上；
@@ -2654,6 +2706,7 @@ namespace jia
                 out_rot_z = rot_z;
                 out_omega_z = omega_z;
                 yaw_pid_trace_ = YawPidTraceState{};
+                resetYawPidTargetRuntime();
                 return;
             }
 
@@ -2685,7 +2738,7 @@ namespace jia
                 {
                     lock_now_rot_z_shift_count_--;
                     lock_now_rot_z_target_ = input_hwt_rot_z_;
-                    out_rot_z = lock_now_rot_z_target_;
+                    out_rot_z = filterYawPidTarget(lock_now_rot_z_target_);
                     out_omega_z = 0.0f;
                     yaw_pid_trace_.mode_tag = 2.0f;
                     yaw_pid_trace_.target_yaw_rad = out_rot_z;
@@ -2704,8 +2757,7 @@ namespace jia
                     if (rot_z_pid_count_ >= rot_z_pid_period_)
                     {
                         rot_z_pid_count_ = 0;
-                        out_omega_z = rot_z_pid_.pid_calc(radToDegF32(lock_now_rot_z_target_), radToDegF32(input_hwt_rot_z_));
-                        yaw_pid_trace_.pid_compute_fired = 1.0f;
+                        yaw_pid_trace_.pid_compute_fired = computeYawPidOmega(out_rot_z, input_hwt_rot_z_, out_omega_z) ? 1.0f : 0.0f;
                         yaw_pid_trace_.pid_output_omega_rad_s = out_omega_z;
                     }
                     else
@@ -2735,6 +2787,7 @@ namespace jia
                 out_rot_z = lock_now_rot_z_target_;
                 out_omega_z = omega_z;
                 lock_now_rot_z_shift_count_ = lock_now_rot_z_shift_time_ms_;
+                resetYawPidTargetRuntime();
                 yaw_pid_trace_.mode_tag = 1.0f;
                 yaw_pid_trace_.target_yaw_rad = out_rot_z;
                 yaw_pid_trace_.feedback_yaw_rad = input_hwt_rot_z_;
@@ -2751,14 +2804,16 @@ namespace jia
                 out_rot_z = tar_rot_z;
                 out_omega_z = omega_z;
                 yaw_pid_trace_ = YawPidTraceState{};
+                resetYawPidTargetRuntime();
                 return;
             }
 
 // “锁到指定航向”会先限制目标角速度变化率，再用姿PID生成维持/逼近该目标角度所需omega_z
 // 这样外层给出的目标角不会瞬间跳变，底盘转向更平滑
-            out_rot_z = limit1DPiAngleRateByTimeF32(tar_rot_z, cur_rot_z, period_, max_lock_to_rot_z_rad_s_);
+            const f32 rate_limited_rot_z = limit1DPiAngleRateByTimeF32(tar_rot_z, cur_rot_z, period_, max_lock_to_rot_z_rad_s_);
+            out_rot_z = filterYawPidTarget(rate_limited_rot_z);
             // LockTo 生效的锁角会被 LockNow 继承，避免切回时重新抓 IMU。
-            lock_now_rot_z_target_ = out_rot_z;
+            lock_now_rot_z_target_ = rate_limited_rot_z;
             lock_now_rot_z_shift_count_ = 0U;
             yaw_pid_trace_.mode_tag = 4.0f;
             yaw_pid_trace_.target_yaw_rad = out_rot_z;
@@ -2777,8 +2832,7 @@ namespace jia
             if (rot_z_pid_count_ >= rot_z_pid_period_)
             {
                 rot_z_pid_count_ = 0;
-                out_omega_z = rot_z_pid_.pid_calc(radToDegF32(out_rot_z), radToDegF32(input_hwt_rot_z_));
-                yaw_pid_trace_.pid_compute_fired = 1.0f;
+                yaw_pid_trace_.pid_compute_fired = computeYawPidOmega(out_rot_z, input_hwt_rot_z_, out_omega_z) ? 1.0f : 0.0f;
                 yaw_pid_trace_.pid_output_omega_rad_s = out_omega_z;
             }
             else
@@ -2834,6 +2888,7 @@ namespace jia
             {
                 lock_now_rot_z_target_ = input_hwt_rot_z_;
                 lock_now_rot_z_shift_count_ = 0U;
+                resetYawPidTargetRuntime();
             }
 
             if (yaw_lock_control_active && current_mode_flag_.is_lock_now_rot_z)
@@ -2842,7 +2897,7 @@ namespace jia
             }
             if (yaw_lock_control_active && current_mode_flag_.is_lock_to_rot_z)
             {
-                isLockToRotZ(true, input_target_data_.rot_z, target_data_.rot_z, target_data_.rot_z, target_data_.omega_z, target_data_.omega_z);
+                isLockToRotZ(true, input_target_data_.rot_z, lock_now_rot_z_target_, target_data_.rot_z, target_data_.omega_z, target_data_.omega_z);
             }
             yaw_lock_control_active_last_cycle_ = yaw_lock_control_active;
         }
