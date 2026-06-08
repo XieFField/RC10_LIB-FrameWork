@@ -51,7 +51,7 @@ typedef struct
     Speedplanner_1D_Param_Config curve = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};   
     Speedplanner_1D_Param_Config end = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   
     
-    Speedplanner_1D_Param_Config up = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   
+    Speedplanner_1D_Param_Config up = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.6f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   
 
     
     //没用的
@@ -70,6 +70,7 @@ typedef struct
     float FF_coefficient = 0.5;
 
     float v_normal_max = 0.5f;
+    
     float m_lookaheadDist = 0.5f;         // 前视距离 (单位: 米)
     float m_lookaheadDist_line = 0.5f;   // 前视距离 (单位: 米)
     float m_lookaheadDist_curve = 0.07f; // 前视距离 (单位: 米)
@@ -110,9 +111,9 @@ typedef struct
 typedef struct
 {
     Vector2D uphill_pos = {0.6f, 11.40f};//11.45f
-    Vector2D R_pos = {5.0f, 11.35f};
-    Vector2D M_pos = {5.0f, 10.82f};
-    Vector2D L_pos = {5.0f, 10.29f};
+    Vector2D R2_pos = {5.0f, 11.35f};
+    Vector2D M1_pos = {5.0f, 10.82f};
+    Vector2D L3_pos = {5.0f, 10.29f};
 } CZ_POINT;
 
 typedef struct

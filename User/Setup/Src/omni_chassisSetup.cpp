@@ -16,7 +16,8 @@ void OmniChassis_Setup::Path_CB_check(void)
     if (CB_point.Clamping_Bar_Retreat_pos_.x == curve.Get_End_point().x && CB_point.Clamping_Bar_Retreat_pos_.y == curve.Get_End_point().y)
     {
         CB_flag.Retreat_flag = true;
-        target_yaw_ = 90.0f;
+        if(WeaponSage_Start == false && pid_dead_flag == true)
+            target_yaw_ = 90.0f;
     }
     else if (CB_flag.Retreat_flag == true)
     {
@@ -176,10 +177,7 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.plan_reset();
     path_line_.Reset();
 
-    //    path_line_.Add_Start_Point(robot_pos_);
-    //    path_line_.Add_End_Point(test_point, path_param_CB_);
-
-    // 夹杆路径的测试
+    // 夹杆曲线路径的测试
     //    path_line_.Add_Start_Point(robot_pos_);
     //    path_line_.Add_Point(CB_point.CB_Selection_start_point_, path_param.start);
     //    path_line_.Add_Point(CB_point.Clamping_Bar_Selection_pos_, CB_point.CB_Selection_control_point_, path_param.curve);
@@ -190,7 +188,13 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     //    path_line_.Add_Point(Vector2D{0.6f + KFS_point.coner_ahead, 2.6f}, path_param.start);
     //    path_line_.Add_Point(Vector2D{0.6f, 2.6f + KFS_point.coner_ahead}, path_param.line);
     //    path_line_.Add_End_Point(Vector2D{0.6f, 5.0f}, path_param.end);
-
+    
+    // 上坡直线
+    //    path_line_.Add_Start_Point(robot_pos_);
+    //    path_line_.Add_Point(Vector2D{0.6f, 8.6f}, path_param.end);
+    //    path_line_.Add_End_Point(uphill_pos, path_param.up);
+    //
+    
     // 夹杆路径
     path_line_.Add_Start_Point(robot_pos_);
     path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
@@ -208,7 +212,7 @@ void OmniChassis_Setup::loop()
     if (!init_flag)
         return;
 
-    float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
+    //float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
 
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
