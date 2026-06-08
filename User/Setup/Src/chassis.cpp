@@ -359,6 +359,7 @@ namespace jia
             input_target_data_.drive_lock_speed_m_s = 0.0f;
             input_target_data_.zero_current_all = false;
             lock_now_rot_z_target_ = 0.0f;
+            yaw_lock_control_active_last_cycle_ = false;
             trans_dir_freeze_active_ = false;
             trans_dir_ref_valid_ = false;
             trans_dir_ref_rad_ = 0.0f;
@@ -2815,14 +2816,31 @@ namespace jia
             target_data_.omega_z = normalized_body_command_.body.omega_z;
             target_data_.rot_z = normalized_body_command_.rot_z;
 
-            if (current_mode_flag_.is_lock_now_rot_z)
+            const bool debug_module_override_active =
+#if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
+                classifyDebugControlRoute(debug_control_.common.enable, debug_control_.common.mode_raw) == DebugControlRoute::kModuleOverride;
+#else
+                false;
+#endif
+            const bool yaw_lock_control_requested =
+                current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
+            const bool yaw_lock_control_active =
+                yaw_lock_control_requested && !input_target_data_.zero_current_all && !debug_module_override_active;
+            if (!yaw_lock_control_active || !yaw_lock_control_active_last_cycle_)
+            {
+                lock_now_rot_z_target_ = input_hwt_rot_z_;
+                lock_now_rot_z_shift_count_ = 0U;
+            }
+
+            if (yaw_lock_control_active && current_mode_flag_.is_lock_now_rot_z)
             {
                 isLockNowRotZ(true, target_data_.rot_z, target_data_.omega_z, target_data_.rot_z, target_data_.omega_z);
             }
-            if (current_mode_flag_.is_lock_to_rot_z)
+            if (yaw_lock_control_active && current_mode_flag_.is_lock_to_rot_z)
             {
                 isLockToRotZ(true, input_target_data_.rot_z, target_data_.rot_z, target_data_.rot_z, target_data_.omega_z, target_data_.omega_z);
             }
+            yaw_lock_control_active_last_cycle_ = yaw_lock_control_active;
         }
 
         void Chassis::updatePlannedMotionData()
