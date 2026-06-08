@@ -107,6 +107,56 @@ TEST_CASE("testLockToYawThenLockNowKeepsTheEffectiveLockedYaw")
     EXPECT_TRUE(std::fabs(out_rot_z - chassis.input_hwt_rot_z_) > 1.0e-6f);
 }
 
+TEST_CASE("testApiLockToYawTargetIsRateLimitedAcrossPlannerCycles")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.max_lock_to_rot_z_rad_s_ = 0.1f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, 1.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    const float expected_first_step = chassis.max_lock_to_rot_z_rad_s_ * Chassis::period_;
+    EXPECT_NEAR(chassis.target_data_.rot_z, expected_first_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, expected_first_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_first_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.rot_z_pid_.last_target, jia::radToDegF32(expected_first_step), 1.0e-6f);
+
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    const float expected_second_step = 2.0f * chassis.max_lock_to_rot_z_rad_s_ * Chassis::period_;
+    EXPECT_NEAR(chassis.target_data_.rot_z, expected_second_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, expected_second_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_second_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.rot_z_pid_.last_target, jia::radToDegF32(expected_second_step), 1.0e-6f);
+}
+
+TEST_CASE("testDebugLockToYawTargetInjectionIsRateLimitedAcrossPlannerCycles")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.max_lock_to_rot_z_rad_s_ = 0.2f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 5U;
+    chassis.debug_control_.injection.lock_rot_z = 1.0f;
+
+    runDebugPlannerCycleForHost(chassis);
+
+    const float expected_first_step = chassis.max_lock_to_rot_z_rad_s_ * Chassis::period_;
+    EXPECT_NEAR(chassis.target_data_.rot_z, expected_first_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, expected_first_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_first_step, 1.0e-6f);
+
+    runDebugPlannerCycleForHost(chassis);
+
+    const float expected_second_step = 2.0f * chassis.max_lock_to_rot_z_rad_s_ * Chassis::period_;
+    EXPECT_NEAR(chassis.target_data_.rot_z, expected_second_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, expected_second_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_second_step, 1.0e-6f);
+}
+
 TEST_CASE("testApiBodyLockNowReanchorsAfterBodySpeedMode")
 {
     Chassis chassis;
