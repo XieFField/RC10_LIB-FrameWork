@@ -5,6 +5,30 @@ namespace chassis_semantics_test
 
 // 覆盖 yaw PID 调试输出、lock yaw 语义、手动 S-curve/Jerk 运动规划和快速反向。
 // 这些 case 主要防止调试输入、规划器历史状态和输出符号在模式切换时互相污染。
+static void configureYawLockSwitchHarness(Chassis &chassis)
+{
+    configureYawPidTraceHarness(chassis);
+    chassis.rot_z_pid_period_ = 0U;
+    chassis.rot_z_pid_count_ = 0U;
+    chassis.lock_now_rot_z_shift_count_ = 0U;
+    chassis.lock_now_rot_z_shift_time_ms_ = 0U;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kLegacy;
+}
+
+static void runApiPlannerCycleForYawLockSwitch(Chassis &chassis)
+{
+    chassis.setModeFlag();
+    chassis.resolvePlannerTargetData();
+    chassis.last_planned_data_ = chassis.planned_data_;
+}
+
+static void expectLockNowTargetReanchoredToYaw(const Chassis &chassis, float expected_yaw_rad)
+{
+    EXPECT_NEAR(chassis.target_data_.rot_z, expected_yaw_rad, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, expected_yaw_rad, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_yaw_rad, 1.0e-6f);
+}
+
 TEST_CASE("testJustFloatYawPidProfileDispatchEmitsFixed15ChannelPayload")
 {
     Chassis chassis;
@@ -81,6 +105,204 @@ TEST_CASE("testLockToYawThenLockNowKeepsTheEffectiveLockedYaw")
     EXPECT_NEAR(out_rot_z, effective_lock_rot_z, 1.0e-6f);
     EXPECT_NEAR(chassis.lock_now_rot_z_target_, effective_lock_rot_z, 1.0e-6f);
     EXPECT_TRUE(std::fabs(out_rot_z - chassis.input_hwt_rot_z_) > 1.0e-6f);
+}
+
+TEST_CASE("testApiBodyLockNowReanchorsAfterBodySpeedMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+
+    chassis.input_hwt_rot_z_ = 0.20f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.4f, 0.20f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.20f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = -0.55f;
+    chassis.setSpeed(Chassis::Coordinate::kBody, 0.0f, 0.4f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kBody, 0.0f, 0.4f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, -0.55f);
+}
+
+TEST_CASE("testApiWorldLockNowReanchorsAfterWorldSpeedMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+
+    chassis.input_hwt_rot_z_ = 0.15f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, 0.1f, 0.2f, 0.15f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.15f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = 0.85f;
+    chassis.setSpeed(Chassis::Coordinate::kWorld, 0.1f, 0.2f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, 0.1f, 0.2f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, 0.85f);
+}
+
+TEST_CASE("testApiManualLockNowReanchorsAfterBodySpeedMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+
+    chassis.input_hwt_rot_z_ = -0.10f;
+    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kBody, 0.0f, 0.4f, 0.7f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, -0.10f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = 0.62f;
+    chassis.setSpeed(Chassis::Coordinate::kBody, 0.0f, 0.4f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kBody, 0.0f, 0.4f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, 0.62f);
+}
+
+TEST_CASE("testDebugBodyLockNowReanchorsAfterBodySpeedMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.debug_control_.common.enable = true;
+
+    chassis.input_hwt_rot_z_ = 0.20f;
+    chassis.debug_control_.common.mode_raw = 5U;
+    chassis.debug_control_.injection.lock_rot_z = 0.20f;
+    runDebugPlannerCycleForHost(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.20f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = -0.35f;
+    chassis.debug_control_.common.mode_raw = 1U;
+    chassis.airjoy_data_.right_x = 0.0f;
+    runDebugPlannerCycleForHost(chassis);
+
+    chassis.debug_control_.common.mode_raw = 3U;
+    runDebugPlannerCycleForHost(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, -0.35f);
+}
+
+TEST_CASE("testDebugWorldLockNowReanchorsAfterWorldSpeedMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.debug_control_.common.enable = true;
+
+    chassis.input_hwt_rot_z_ = -0.25f;
+    chassis.debug_control_.common.mode_raw = 6U;
+    chassis.debug_control_.injection.lock_rot_z = -0.25f;
+    runDebugPlannerCycleForHost(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, -0.25f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = 0.48f;
+    chassis.debug_control_.common.mode_raw = 2U;
+    chassis.airjoy_data_.right_x = 0.0f;
+    runDebugPlannerCycleForHost(chassis);
+
+    chassis.debug_control_.common.mode_raw = 4U;
+    runDebugPlannerCycleForHost(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, 0.48f);
+}
+
+TEST_CASE("testDebugBodyLockNowReanchorsAfterSteerDegAndDriveSpeedMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.debug_control_.common.enable = true;
+
+    chassis.input_hwt_rot_z_ = 0.30f;
+    chassis.debug_control_.common.mode_raw = 5U;
+    chassis.debug_control_.injection.lock_rot_z = 0.30f;
+    runDebugPlannerCycleForHost(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.30f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = -0.42f;
+    chassis.debug_control_.common.mode_raw = 9U;
+    chassis.airjoy_data_.left_x = 0.25f;
+    chassis.airjoy_data_.right_x = 0.40f;
+    runDebugPlannerCycleForHost(chassis);
+
+    chassis.debug_control_.common.mode_raw = 3U;
+    chassis.airjoy_data_.right_x = 0.0f;
+    runDebugPlannerCycleForHost(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, -0.42f);
+}
+
+TEST_CASE("testDebugBodyLockNowReanchorsAfterModuleOverrideModes")
+{
+    const unsigned char override_modes[] = {21U, 22U, 30U};
+    for (const unsigned char override_mode : override_modes)
+    {
+        Chassis chassis;
+        configureYawLockSwitchHarness(chassis);
+        chassis.debug_control_.common.enable = true;
+
+        chassis.input_hwt_rot_z_ = 0.18f;
+        chassis.debug_control_.common.mode_raw = 5U;
+        chassis.debug_control_.injection.lock_rot_z = 0.18f;
+        runDebugPlannerCycleForHost(chassis);
+        EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.18f, 1.0e-6f);
+
+        chassis.input_hwt_rot_z_ = 0.72f;
+        chassis.debug_control_.common.mode_raw = override_mode;
+        runDebugPlannerCycleForHost(chassis);
+
+        chassis.debug_control_.common.mode_raw = 3U;
+        chassis.airjoy_data_.right_x = 0.0f;
+        runDebugPlannerCycleForHost(chassis);
+
+        expectLockNowTargetReanchoredToYaw(chassis, 0.72f);
+    }
+}
+
+TEST_CASE("testApiBodyLockNowReanchorsAfterTorqueFreeMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+
+    chassis.input_hwt_rot_z_ = 0.12f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.3f, 0.12f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.12f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = -0.64f;
+    chassis.setWheelTorqueFreeMode();
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kBody, 0.0f, 0.3f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, -0.64f);
+}
+
+TEST_CASE("testApiBodyLockNowReanchorsAfterZeroCurrentRequest")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+
+    chassis.input_hwt_rot_z_ = -0.18f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.3f, -0.18f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, -0.18f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = 0.53f;
+    chassis.setZeroCurrent();
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kBody, 0.0f, 0.3f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, 0.53f);
 }
 
 TEST_CASE("testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates")
