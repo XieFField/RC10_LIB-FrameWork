@@ -69,7 +69,7 @@ namespace MF_AutoCtrler
     {
         int8_t entranceMap= 0; //允许和MF1的MFroad重合
         int8_t MFroad[3] = {0};
-        int8_t mustPastMap[12] = {0};// 必经点[索引即路径顺序]，0表示无效，只包含地图边角点和MF点以及出入口
+        int8_t mustPastMap[15] = {0};// 必经点[索引即路径顺序]，0表示无效，只包含地图边角点和MF点以及出入口
 
         int8_t Index_MFroad[3] = {0,0,0}; //记录MFroad中MF1和MF2在mustPastMap中的索引位置，方便后续路径跟踪
 
