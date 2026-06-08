@@ -16,6 +16,7 @@ void OmniChassis_Setup::Path_CB_check(void)
     if (CB_point.Clamping_Bar_Retreat_pos_.x == curve.Get_End_point().x && CB_point.Clamping_Bar_Retreat_pos_.y == curve.Get_End_point().y)
     {
         CB_flag.Retreat_flag = true;
+        target_yaw_ = 90.0f;
     }
     else if (CB_flag.Retreat_flag == true)
     {
@@ -209,11 +210,11 @@ void OmniChassis_Setup::loop()
 
     float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
 
-    // yaw = Locate_Setup::getInstance()->get_yaw_from_position();
+    yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
-    // robot_pos_.x = ladar_data_.x;
-    // robot_pos_.y = ladar_data_.y;
+    robot_pos_.x = ladar_data_.x;
+    robot_pos_.y = ladar_data_.y;
 
     switch (chassis_status_)
     {
@@ -343,12 +344,11 @@ void OmniChassis_Setup::loop()
         break;
     }
 
-    case CHASSIS_STOP:
+    case CHASSIS_AUTO_CONTROL_KFS:
     {
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
         if (flag == 1)
         {
-            robot_pos_ = test_point;
             flag_reset();
             flag = 0;
             flag_run = 1;
@@ -402,7 +402,7 @@ void OmniChassis_Setup::loop()
         break;
     }
 
-    case CHASSIS_AUTO_CONTROL_KFS:
+    case CHASSIS_STOP:
     {
 #if s_debug
         num++;
@@ -1083,26 +1083,6 @@ void OmniChassis_Setup::flag_reset(void)
 
 Vector2D OmniChassis_Setup::v_limit(void)
 {
-    //    // 使用单位向量做正交分解，避免 |normal|² 缩放
-    //    Vector2D normal = curve.Get_End_point() - curve.Get_Start_point();
-    //    Vector2D tangent_dir = normal.normalize();
-    //    Vector2D normal_dir = tangent_dir.perpendicular();
-
-    //    // 前馈速度：仅受 planspeed 幅度限制
-    //    Vector2D v_ff = planspeed * FF_coefficient;
-    //    if (v_ff.magnitude() > planspeed.magnitude())
-    //        v_ff = v_ff.normalize() * planspeed.magnitude();
-
-    //    // 切向 = 前馈 + PID纠偏沿切向分量（PID不限幅，终点 planspeed=0 时保留切向纠偏）
-    //    Vector2D v_tangent = v_ff + corrVelocity.project_onto(tangent_dir);
-
-    //    // 法向 = PID纠偏沿法向分量（限幅防止侧向过冲）
-    //    Vector2D v_normal = corrVelocity.project_onto(normal_dir);
-    //    if (v_normal.magnitude() > v_normal_max)
-    //        v_normal = v_normal.normalize() * v_normal_max;
-
-    //    Vector2D v = v_tangent + v_normal;
-
     // 使用单位向量做正交分解，避免 |normal|² 缩放
     Vector2D tangent = path_line_.Get_Tangent_Vector();
     Vector2D tangent_dir = tangent.normalize();
@@ -1124,7 +1104,7 @@ Vector2D OmniChassis_Setup::v_limit(void)
     num++;
     if (num > 5)
     {
-        debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), target_yaw_);
+        //debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), target_yaw_);
         num = 0;
     }
 

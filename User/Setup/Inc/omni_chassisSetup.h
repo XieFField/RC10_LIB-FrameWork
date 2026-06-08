@@ -262,7 +262,9 @@ private:
     void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
 
     void Path_CB_check(void);
+    
     bool spinodal_path(Vector2D last_vector, Vector2D temp_vector,int i);
+    
     float rotation_path(float MF_Point);
 #if s_debug
     int a = 0;
@@ -282,7 +284,6 @@ public:
 
     void setPathAutoStart(uint8_t start)
     {
-        return;
         if (start == 1)
             flag = 1;
         else
@@ -296,13 +297,13 @@ public:
 
     bool GetReach_flag()
     {
-        if(pid_dead_flag==true)
+        if(pid_dead_flag==true && WeaponSage_Start==true)
         {
-            return WeaponSage_Start;
+            return true;
         }
         else
         {
-            return (!WeaponSage_Start);
+            return false;
         }
         // 读取夹杆流程完成标志。
     }
@@ -310,13 +311,13 @@ public:
     bool GetEnd_flag()
     {
          // 读取夹杆退后流程完成标志。
-        if(pid_dead_flag==true)
+        if(pid_dead_flag==true && WeaponSage_End==true)
         {
-            return WeaponSage_End;
+            return true;
         }
         else
         {
-            return (!WeaponSage_End);
+            return false;
         }
     }
 
@@ -329,13 +330,13 @@ public:
     bool Get_Arm_Start_flag()
     {
         // 读取机械臂触发标志。
-        if(pid_dead_flag==true)
+        if(pid_dead_flag==true && Arm_Start==true)
         {
-            return Arm_Start;
+            return true;
         }
         else
         {
-            return (!Arm_Start);
+            return false;
         }
     }
 
