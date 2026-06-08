@@ -107,9 +107,9 @@ void ArmSetup::loop()
                 arm_ctrlStatus.last_manual_store = 0;
                 store_state_ = store_state::idle;
             }
-            else if(arm_ctrlStatus.is_store_acting == 2 && this->getSuckerStatus() == Sucker_Status_E::SUCK) //存储
+            else if(arm_ctrlStatus.is_store_acting == 2) //存储
             {
-                if(test())
+                if(manual_store())
                 { 
                     arm_ctrlStatus.is_store_acting = 0;
                 }
@@ -328,7 +328,7 @@ bool ArmSetup::manual_pickup()
 
 bool ArmSetup::manual_putdown()
 {
-    this->set_PitchAngle(90.0f);
+    this->set_PitchAngle(init_data_.pitch_lift_angle_);
     this->set_LaunchHeight(init_data_.putdown_height_);
 
     static bool is_putdown = false;
@@ -443,7 +443,7 @@ void ArmSetup::semiautoControl_2()
     int8_t target_pitch_logical = (airjoy_data_.SWC & 0x01) ^ arm_ctrlStatus.pitch_switch_offset;
     if(target_pitch_logical == 1)
     {
-        target_joint_status_.suckerJoint_angle_ = 90.0f; // 吸盘打开到90度
+        target_joint_status_.suckerJoint_angle_ = init_data_.pitch_lift_angle_; // 吸盘打开到90度
     }
     else
         target_joint_status_.suckerJoint_angle_ = 0.0f; // 吸盘关闭到0度
@@ -598,7 +598,7 @@ void ArmSetup::manualControl()
 #endif
     if(target_pitch_logical == 1)
     {
-        target_joint_status_.suckerJoint_angle_ = 90.0f; // 吸盘打开到90度
+        target_joint_status_.suckerJoint_angle_ = init_data_.pitch_lift_angle_; // 吸盘打开到90度
     }
     else
         target_joint_status_.suckerJoint_angle_ = 0.0f; // 吸盘关闭到0度
@@ -665,14 +665,20 @@ bool ArmSetup::test()
 
 bool ArmSetup::manual_store()
 { 
+    static bool is_store = false;
+    static float store_start_time = 0.0f;
+    
     switch(this->store_state_)
     {
         case store_state::idle:
         {
             if(arm_ctrlStatus.last_manual_store != 2 || this->auto_ctrl_.start_to_autoctrl)
             {
+                is_store = false;
+                store_start_time = 0.1f;
                 this->store_state_ = store_state::laucnh_state;
                 this->setSuckerStatus(Sucker_Status_E::SUCK); 
+                this->setStoreSuckerStatus(Sucker_Status_E::SUCK);
             }
             else
             {
@@ -684,8 +690,9 @@ bool ArmSetup::manual_store()
         case store_state::laucnh_state:
         {
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
-            this->set_PitchAngle(90.0f); //吸盘抬平
-            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.01f && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 30.0f)
+            this->set_PitchAngle(this->init_data_.pitch_lift_angle_); //吸盘抬平
+            if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.03f 
+                    && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - this->init_data_.pitch_lift_angle_) < 30.0f)
             {
                 this->store_state_ = store_state::rotate_state;
             }
@@ -694,10 +701,10 @@ bool ArmSetup::manual_store()
 
         case store_state::rotate_state:
         {
-            float target_rotate = 269.9f; //存储的目标旋转角度
+            float target_rotate = 270.0f; //存储的目标旋转角度
             this->set_RotateAngle(target_rotate);
             this->set_StretchLength(init_data_.store_ext_length_); // 伸展到存储位置需要的长度
-            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f)
+            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 5.0f)
             {
                 this->store_state_ = store_state::lower_state;
             }
@@ -706,23 +713,50 @@ bool ArmSetup::manual_store()
 
         case store_state::lower_state:
         {
-            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 269.9f) < 15.0f )
+            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 270.0f) < 15.0f )
             {
-                this->set_PitchAngle(90.0f); // 抬平
+                this->set_PitchAngle(this->init_data_.pitch_lift_angle_); // 抬平
             }
 
-            if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 5.0f)
+            if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - this->init_data_.pitch_lift_angle_) < 5.0f)
             {
                 this->set_LaunchHeight(this->init_data_.store_height_); // 降低到安全高度
             }
 
             if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.store_height_) < 0.01f)
             {
+                is_store = true;
+                store_start_time = TimeStamp::getInstance().getSeconds();
+                this->store_state_ = store_state::outstate1;
+            }
+            break;
+        }
+
+        case store_state::outstate1:
+        {
+            if(is_store && TimeStamp::getInstance().getSeconds() - store_start_time > 0.5f && store_start_time > 0.1f)
+            {
+                this->set_StretchLength(0.0f); //收回
+                if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_) < 0.02f)
+                {
+                    this->set_RotateAngle(0.0f); //旋转回0度
+                    this->set_LaunchHeight(this->init_data_.max_launchHeight_ - 0.1f);
+                    this->store_state_ = store_state::outstate2;
+                }
+            }
+            break;
+        }
+
+        case store_state::outstate2:
+        {
+            if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - (this->init_data_.max_launchHeight_ - 0.1f)) < 0.05f
+                && (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 5.0f
+                || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 360.0f) < 5.0f))
+            {
                 this->setSuckerStatus(Sucker_Status_E::STOP); // 停止吸盘
                 this->store_state_ = store_state::idle;
                 return true;
             }
-            return false;
             break;
         }
     }
@@ -757,7 +791,7 @@ bool ArmSetup::manual_takeout()
         {
             this->setSuckerStatus(Sucker_Status_E::STOP);
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
-            this->set_PitchAngle(0.0f); //放下
+            this->set_PitchAngle(this->init_data_.pitch_lift_angle_); //抬平
             if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.04f)
             {
                 this->store_state_ = store_state::rotate_state;
@@ -767,7 +801,7 @@ bool ArmSetup::manual_takeout()
 
         case store_state::rotate_state:
         {
-            float target_rotate = 269.9f; //存储的目标旋转角度
+            float target_rotate = 270.0f; //存储的目标旋转角度
 
             this->set_RotateAngle(target_rotate);
 
@@ -783,28 +817,48 @@ bool ArmSetup::manual_takeout()
                 this->set_LaunchHeight(this->init_data_.store_height_); 
                 this->store_state_ = store_state::outstate1;
             }
-           
             break;
         }
 
         case store_state::outstate1:
         {
+            // if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.store_height_) < 0.005f && !is_catch)
+            // {
+            //     catch_time = TimeStamp::getInstance().getSeconds(); //记录碰到KFS的时间
+            //     is_catch = true;
+            // }
 
-            if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.store_height_) < 0.005f && !is_catch)
+            // if(TimeStamp::getInstance().getSeconds() - catch_time > 0.3f && catch_time > 0.1f) //如果已经碰到KFS超过0.3秒，认为已经抓到
+            // {
+                
+            //     this->set_LaunchHeight(this->init_data_.max_launchHeight_); //提升到安全高度
+
+            //     if(this->get_currentJointStatus().launchJoint_Height_ > this->init_data_.max_launchHeight_ - 0.01f)
+            //     {
+            //         this->set_PitchAngle(this->init_data_.pitch_lift_angle_); //吸盘抬平
+            //         this->store_state_ = store_state::outstate2;
+            //     }
+            // }
+            if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - this->init_data_.store_height_) < 0.01f)
             {
-                catch_time = TimeStamp::getInstance().getSeconds(); //记录碰到KFS的时间
+                this->set_StretchLength(init_data_.store_ext_length_); // 伸展到存储位置需要的长度
+                this->setStoreSuckerStatus(Sucker_Status_E::STOP); // 停止存储吸盘
+            }
+
+            if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.store_ext_length_) < 0.01f && !is_catch)
+            {
+                catch_time = TimeStamp::getInstance().getSeconds(); //记录伸展完成的时间
                 is_catch = true;
             }
 
-            if(TimeStamp::getInstance().getSeconds() - catch_time > 0.3f && catch_time > 0.1f) //如果已经碰到KFS超过0.3秒，认为已经抓到
+            if(TimeStamp::getInstance().getSeconds() - catch_time > 0.3f && catch_time > 0.1f)
             {
-                
-                this->set_LaunchHeight(this->init_data_.max_launchHeight_); //提升到安全高度
+                this->set_StretchLength(0.0f); // 收回
 
-                if(this->get_currentJointStatus().launchJoint_Height_ > this->init_data_.max_launchHeight_ - 0.01f)
+                if(this->get_currentJointStatus().stretchJoint_Length_ < 0.03f)
                 {
-                    this->set_PitchAngle(90.0f); //吸盘抬平
-                    this->store_state_ = store_state::outstate2;
+                    this->set_LaunchHeight(this->init_data_.max_launchHeight_);//提升到最高
+                    store_state_ = store_state::outstate2;
                 }
             }
 
@@ -813,16 +867,14 @@ bool ArmSetup::manual_takeout()
 
         case store_state::outstate2:
         {
-            float target_rotate = 0.0f; 
-
-            // if(this->get_currentJointStatus().suckerJoint_angle_ > 160.0f)
-            // {
-                this->set_RotateAngle(target_rotate);
-            // }
-
-            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f)
+            if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - (this->init_data_.max_launchHeight_ - 0.05f)) < 0.05f)
             {
-                this->set_PitchAngle(90.0f); // 抬平
+                this->set_RotateAngle(0.0f);
+            }
+
+            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 5.0f 
+                || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 360.0f) < 5.0f)
+            {
                 this->store_state_ = store_state::idle;
                 return true;
             }
@@ -1065,7 +1117,6 @@ void ArmSetup::auto_stillnessTwo()
                 if(state_extStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
                 {
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_LAUNCH;
-                    this->set_PitchAngle(180.0f);
                 }
             }
             break;
@@ -1087,11 +1138,11 @@ void ArmSetup::auto_stillnessTwo()
             {
                 if(!auto_ctrl_.flag.isbackdone)
                 {
+                    arm_ctrlStatus.last_manual_store = 0; // 强制激活 idle 入口
                     if(manual_store())
                     {
                         auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds();
                         auto_ctrl_.flag.isbackdone = true;
-                        
                     }
                 }
                 else if(TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time >= 0.3f)
@@ -1145,7 +1196,9 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
     float target_height = 0.0f;
 
     target_height = this->init_data_.max_launchHeight_; //直接伸展到最高，等待行进间拾取
-    if(isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_))
+    if(isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_) 
+        || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 360.0f) < 2.0f
+        || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 2.0f)
         this->set_LaunchHeight(target_height); //伸展到目标高度
     else
     {
@@ -1164,7 +1217,7 @@ bool ArmSetup::state_alignStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     
-    this->set_PitchAngle(90.0f); //pitch抬平
+    this->set_PitchAngle(this->init_data_.pitch_lift_angle_); //pitch抬平
 
     //对准kfs
     this->set_RotateAngle(90.0f);
@@ -1324,10 +1377,10 @@ void ArmSetup::calibrateMotor()
         this->motor_rotate_->relocate_totalAngle(this->rotateAngle_to_MotorTotalAngle(0.001f));
         this->motor_launch_->relocate_totalAngle(0.0f);
 
-        if(this->is_pitchEnable_)
-        {
-            this->motor_pitch_->motorSetZero();
-        }
+        // if(this->is_pitchEnable_)
+        // {
+        //     this->motor_pitch_->motorSetZero();
+        // }
         //set current to 0
         this->motor_stretch_->setTargetCurrent(0.0f);
         this->motor_rotate_->setTargetCurrent(0.0f);
@@ -1372,7 +1425,7 @@ void ArmSetup::debug()
 }
 
 Arm_InitData_S arm_initData = {
-    .max_launchHeight_ = 0.26f,
+    .max_launchHeight_ = 0.32f,
     .max_stretchLength_ = 0.1358f,
     .arm_length_ = 0.6f,
     .end_link_length_ = 0.08f,
@@ -1390,10 +1443,10 @@ Arm_InitData_S arm_initData = {
     .rotate_end = 265.0f,
     .rotate_start = 135.0f,
 
-    .safe_height_ = 0.08f,
-    .store_height_ = 0.12f,
-    .lock_height_ = 0.04f,
-    .store_ext_length_ = 0.08f,
+    .safe_height_ = 0.118f,
+    .store_height_ = 0.166f,
+    .lock_height_ = 0.055f,
+    .store_ext_length_ = 0.049f,
 
     .Sucker_GPIO_Port = SUCKER_6_GPIO_Port,
     .Sucker_GPIO_Pin =  SUCKER_6_Pin,
@@ -1401,8 +1454,8 @@ Arm_InitData_S arm_initData = {
     .Store_GPIO_Port = SUCKER_5_GPIO_Port,
     .Store_GPIO_Pin =  SUCKER_5_Pin,
 
-    .Sucker_Soleniod_GPIO_Port = SUCKER_4_GPIO_Port,
-    .Sucker_Soleniod_GPIO_Pin =  SUCKER_4_Pin,
+    .Sucker_Soleniod_GPIO_Port = SUCKER_2_GPIO_Port,
+    .Sucker_Soleniod_GPIO_Pin =  SUCKER_2_Pin,
 
     .Store_Soleniod_GPIO_Port = SUCKER_3_GPIO_Port,
     .Store_Soleniod_GPIO_Pin =  SUCKER_3_Pin,

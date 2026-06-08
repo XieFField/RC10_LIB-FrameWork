@@ -115,7 +115,7 @@ void Robot_WeaponSage_Setup::loop()
 }
 int CNT=0;
 float traverse_rate=0.0002f;
-float weapon_launch_rate=0.0001f;
+float weapon_launch_rate=0.0002f;
 float Kp_traverse=0.5f;
 
 
@@ -364,13 +364,12 @@ void Robot_WeaponSage_Setup::debug()
 
 
 
-
-    /**
-     * @brief 抓取流程
-     *        新版抓取杆时候不需要抬高，需降到最低，贴近后等待底盘停稳信号
-     *        底盘停稳信号到达后夹取目标杆
-     *        夹取完成后抬高到安全高度，完流程
-     */
+/**
+ * @brief 抓取流程
+ *        新版抓取杆时候不需要抬高，需降到最低，贴近后等待底盘停稳信号
+ *        底盘停稳信号到达后夹取目标杆
+ *        夹取完成后抬高到安全高度，完流程
+ */
 void Robot_WeaponSage_Setup::autoControl_catch()
 {
 	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
