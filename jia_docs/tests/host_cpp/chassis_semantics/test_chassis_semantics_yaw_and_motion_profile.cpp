@@ -87,6 +87,7 @@ TEST_CASE("testLockToYawThenLockNowKeepsTheEffectiveLockedYaw")
 
     chassis.rot_z_pid_period_ = 0U;
     chassis.rot_z_pid_count_ = 0U;
+    chassis.max_lock_to_rot_z_rad_s_ = 0.1f;
     chassis.lock_now_rot_z_shift_count_ = 5U;
     chassis.input_hwt_rot_z_ = 0.2f;
 

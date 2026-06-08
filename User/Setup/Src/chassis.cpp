@@ -326,7 +326,7 @@ namespace jia
             high_speed_dir_err_deg_ = 0.0f;
             high_speed_eta_max_s_ = 0.0f;
 
-            rot_z_pid_.set_params(lock_angle_pid_params, 0.0f);
+            rot_z_pid_.set_params(lock_angle_pid_params, 1.0f);
             rot_z_pid_.set_as_circular();
             clearInputTargetData();
             startHoming();

@@ -971,11 +971,11 @@ namespace jia
                 f32 wheel_radius_m_ = 0.052f;                                    // [RW, 慎改] 轮半径。决定线速度与驱动角速度的换算比例，改错会直接导致速度尺度和里程计比例偏差。
                 f32 max_vel_x_ = 5.0f;                                           // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
                 f32 max_vel_y_ = 5.0f;                                           // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
-                f32 max_omega_z_ = 2.0f;                                         // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
+                f32 max_omega_z_ = 5.0f;                                         // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
                 f32 max_acc_xy_acc_ = 99999999.0f;                                      // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
                 f32 max_acc_xy_dec_ = 99999999.0f;                                     // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
-                f32 max_alpha_z_acc_ = 2.0f;                                     // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
-                f32 max_alpha_z_dec_ = 30.0f;                                    // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
+                f32 max_alpha_z_acc_ = 99999999.0f;                                     // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
+                f32 max_alpha_z_dec_ = 99999999.0f;                                    // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
                 f32 trans_dir_rate_limit_deg_s_ = 99999999.0f;                   // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
                 bool enable_drive_omega_limit_ = false;                          // [RW] 是否启用驱动角速度上限。
                 f32 max_drive_omega_rad_s_ = 99999999.0f;                        // [RW] 驱动目标角速度上限（rad/s）。仅在 enable_drive_omega_limit_=true 时生效。
@@ -993,14 +993,14 @@ namespace jia
                 // 它不是 X-Park 目标静止意图的专用门；X-Park command 门在下面单独配置。
                 struct NearZeroThresholdConfig
                 {
-                    f32 base_enter_m_s = 0.01f; // [RW] 通用 near-zero 进入阈值（m/s）。未激活的门控用它判断“可以进入”。
-                    f32 base_exit_m_s = 0.02f;  // [RW] 通用 near-zero 退出阈值（m/s）。已激活的门控用它保持滞回，应大于 enter。
+                    f32 base_enter_m_s = 0.005f; // [RW] 通用 near-zero 进入阈值（m/s）。未激活的门控用它判断“可以进入”。
+                    f32 base_exit_m_s = 0.015f;  // [RW] 通用 near-zero 退出阈值（m/s）。已激活的门控用它保持滞回，应大于 enter。
                 } near_zero_cfg_;
 
                 struct XParkCommandThresholdConfig
                 {
-                    f32 enter_m_s = 0.01f; // [RW] X-Park 目标静止进入阈值（m/s）。只看 target/command，不看 actual residual。
-                    f32 exit_m_s = 0.02f;  // [RW] X-Park 目标静止退出阈值（m/s）。X-Park 已锁存后只用它决定是否退出。
+                    f32 enter_m_s = 0.005f; // [RW] X-Park 目标静止进入阈值（m/s）。只看 target/command，不看 actual residual。
+                    f32 exit_m_s = 0.015f;  // [RW] X-Park 目标静止退出阈值（m/s）。X-Park 已锁存后只用它决定是否退出。
                 } xpark_command_threshold_cfg_;
 
                 struct XParkSteerHoldConfig
@@ -1087,11 +1087,11 @@ namespace jia
             // =====================================================================
             PID_Position rot_z_pid_;                  // [RW, 慎改] 航向位置环 PID。用于 LockToYaw / 相关锁角模式的角度误差闭环。
             u8 rot_z_pid_period_ = 1;                 // [RW] PID 更新周期分频。1 表示每个控制周期都更新，数值越大频率越低、负载越小但响应更慢。
-            f32 max_lock_to_rot_z_rad_s_ = 2.0f;      // [RW] LockToYaw 模式下的角速度上限（rad/s）。用于限制“往目标角赶”的最快速度。
+            f32 max_lock_to_rot_z_rad_s_ = 99999999.0f;      // [RW] LockToYaw 模式下的角速度上限（rad/s）。用于限制“往目标角赶”的最快速度。
             u32 lock_now_rot_z_shift_time_ms_ = 1000; // [RW] LockNow 松手缓冲时长（ms）。松开后短时间内继续维持目标，避免姿态突然跳变。
             f32 lock_yaw_pid_target_lpf_alpha_ = 1.0f; // [RW] 航向 PID 目标低通系数，1=关闭滤波，0=保持上一滤波目标。
             f32 lock_yaw_pid_deadband_enter_deg_ = 0.05f; // [RW] 航向 PID 死区进入阈值（deg）。
-            f32 lock_yaw_pid_deadband_exit_deg_ = 0.10f;  // [RW] 航向 PID 死区退出阈值（deg）。
+            f32 lock_yaw_pid_deadband_exit_deg_ = 0.20f;  // [RW] 航向 PID 死区退出阈值（deg）。
 
             // =====================================================================
             // 调试参数（通过全局 chassis 对象在调试器内直接改值）[RW]
