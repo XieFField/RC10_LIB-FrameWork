@@ -263,6 +263,7 @@ private:
 
     void Path_CB_check(void);
     bool spinodal_path(Vector2D last_vector, Vector2D temp_vector,int i);
+    float rotation_path(float MF_Point);
 #if s_debug
     int a = 0;
     float tp_speed_now = 0.0f;
