@@ -73,10 +73,6 @@
 #include "APP_debugTool.h"
 #include "APP_PID.h"
 
-#ifndef FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 0
-#endif
-
 namespace jia
 {
     namespace FourSteerChassis

@@ -2460,8 +2460,9 @@ namespace jia
             actuator_command_frame_.steer_oa_total_rad[wheel_idx] = planned_data_.steer_angle_oa_rad[wheel_idx];
             actuator_command_frame_.drive_omega_rad_s[wheel_idx] = target_wheel.target_drive_omega_rad_s;
 
-#if FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-            if (sanitizeDebugOutputFamily(debug_output_.output_family_raw) == DebugOutputFamily::kText &&
+#if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
+            if (debug_output_.output_enable &&
+                sanitizeDebugOutputFamily(debug_output_.output_family_raw) == DebugOutputFamily::kText &&
                 debug_output_.text.log_level >= 1U &&
                 (time_ms_ - debug_output_runtime_.text.direct_trace_last_ms) >= 100U)
             {
