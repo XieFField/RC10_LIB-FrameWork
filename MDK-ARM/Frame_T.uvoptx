@@ -103,7 +103,7 @@
         <bEvRecOn>1</bEvRecOn>
         <bSchkAxf>0</bSchkAxf>
         <bTchkAxf>0</bTchkAxf>
-        <nTsel>3</nTsel>
+        <nTsel>2</nTsel>
         <sDll></sDll>
         <sDllPa></sDllPa>
         <sDlgDll></sDlgDll>
@@ -239,17 +239,17 @@
           <ItemText>Weapon_Controller,0x0A</ItemText>
         </Ww>
         <Ww>
-          <count>14</count>
+          <count>10</count>
           <WinNumber>1</WinNumber>
           <ItemText>round_cnt</ItemText>
         </Ww>
         <Ww>
-          <count>15</count>
+          <count>11</count>
           <WinNumber>1</WinNumber>
           <ItemText>relocate_mid</ItemText>
         </Ww>
         <Ww>
-          <count>16</count>
+          <count>12</count>
           <WinNumber>1</WinNumber>
           <ItemText>index</ItemText>
         </Ww>
