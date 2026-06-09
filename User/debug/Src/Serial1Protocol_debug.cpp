@@ -28,5 +28,6 @@ void Serial1Protocol_Debug::loop()
             }
         }
 //     sendTestKFS(1, 2, 3);
+				m_serial1->sendStop();
 
 }

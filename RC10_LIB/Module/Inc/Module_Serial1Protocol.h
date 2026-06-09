@@ -72,6 +72,7 @@ public:
 		void sendAckFrame(void);
 		bool hasData() const { return m_data_count > 0; }
 		bool getLatestData(DataPacket_t* packet);
+		void sendStop(void);
 private:
     Serial1Protocol();
     bool sendCommand(uint8_t* data);
