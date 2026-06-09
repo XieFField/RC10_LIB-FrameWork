@@ -1448,8 +1448,8 @@ Arm_InitData_S arm_initData = {
     .lock_height_ = 0.055f,
     .store_ext_length_ = 0.049f,
 
-    .Sucker_GPIO_Port = SUCKER_6_GPIO_Port,
-    .Sucker_GPIO_Pin =  SUCKER_6_Pin,
+    .Sucker_GPIO_Port = SUCKER_3_GPIO_Port,
+    .Sucker_GPIO_Pin =  SUCKER_3_Pin,
 
     .Store_GPIO_Port = SUCKER_5_GPIO_Port,
     .Store_GPIO_Pin =  SUCKER_5_Pin,
@@ -1457,8 +1457,8 @@ Arm_InitData_S arm_initData = {
     .Sucker_Soleniod_GPIO_Port = SUCKER_2_GPIO_Port,
     .Sucker_Soleniod_GPIO_Pin =  SUCKER_2_Pin,
 
-    .Store_Soleniod_GPIO_Port = SUCKER_3_GPIO_Port,
-    .Store_Soleniod_GPIO_Pin =  SUCKER_3_Pin,
+    .Store_Soleniod_GPIO_Port = SUCKER_5_GPIO_Port,
+    .Store_Soleniod_GPIO_Pin =  SUCKER_5_Pin,
 
     .max_pitchRPM_ = 150.0f,
 };

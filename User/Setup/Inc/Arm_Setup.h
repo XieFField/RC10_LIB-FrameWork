@@ -34,7 +34,7 @@ extern "C" {
 
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS  1 //无底盘下的模拟调试开关 1开启 0关闭
+#define ARM_AUTO_DEBUG_NOCHASSIS  0 //无底盘下的模拟调试开关 1开启 0关闭
 #define ARM_VERSION 0 //版本号 已无用
 
 

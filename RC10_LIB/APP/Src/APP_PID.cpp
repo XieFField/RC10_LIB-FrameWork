@@ -422,13 +422,13 @@ PID_Param_Config lock_angle_pid_params = {
 
 PID_Param_Config path_lock_end = {
     
-    .kp = 2.0f,
+    .kp = 6.0f,
     .ki = 0.0f,
     .kd = 0.0f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 0.2f,   
-    .deadband = 0.005f 
+    .output_limit = 0.3f,   
+    .deadband = 0.008f 
 };
 
 PID_Param_Config track_pid_params = {

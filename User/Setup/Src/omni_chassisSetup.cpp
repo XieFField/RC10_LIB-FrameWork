@@ -176,8 +176,8 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.plan_reset();
     path_line_.Reset();
 
-    //    path_line_.Add_Start_Point(robot_pos_);
-    //    path_line_.Add_End_Point(test_point, path_param_CB_);
+        //path_line_.Add_Start_Point(robot_pos_);
+        //path_line_.Add_End_Point(test_point, path_param.CB);
 
     // 夹杆路径的测试
     //    path_line_.Add_Start_Point(robot_pos_);
@@ -186,16 +186,16 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     //    path_line_.Add_End_Point(CB_point.Clamping_Bar_Retreat_pos_, path_param.end);
 
     // 顺滑过弯
-    //    path_line_.Add_Start_Point(robot_pos_);
-    //    path_line_.Add_Point(Vector2D{0.6f + KFS_point.coner_ahead, 2.6f}, path_param.start);
-    //    path_line_.Add_Point(Vector2D{0.6f, 2.6f + KFS_point.coner_ahead}, path_param.line);
-    //    path_line_.Add_End_Point(Vector2D{0.6f, 5.0f}, path_param.end);
+     path_line_.Add_Start_Point(robot_pos_);
+     path_line_.Add_Point(Vector2D{0.6f + KFS_point.coner_ahead, 2.6f}, path_param.start);
+     path_line_.Add_Point(Vector2D{0.6f, 2.6f + KFS_point.coner_ahead}, path_param.curve);
+     path_line_.Add_End_Point(Vector2D{0.6f, 5.0f}, path_param.end);
 
     // 夹杆路径
-    path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
-    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.end);
-    path_line_.Add_End_Point(CB_point.CB_End_pos, path_param.end);
+//    path_line_.Add_Start_Point(robot_pos_);
+//    path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
+//    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.end);
+//    path_line_.Add_End_Point(CB_point.CB_End_pos, path_param.end);
 
     Path_end_point = path_line_.Get_End_Point();
 }
@@ -312,8 +312,13 @@ void OmniChassis_Setup::loop()
                     Path_correction();
                     V.corrVelocity = V.PID_coefficient * V.corrVelocity;
                     speed = v_limit();
+                    if(path_line_.Get_Index()==1)
+                    {
+                        speed=speed.magnitude()*Vector2D{0.0f,1.0f};
+                    }
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
+                    
                 }
                 else
                 {
@@ -1104,7 +1109,7 @@ Vector2D OmniChassis_Setup::v_limit(void)
     num++;
     if (num > 5)
     {
-        //debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), target_yaw_);
+        debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), v_tangent);
         num = 0;
     }
 
