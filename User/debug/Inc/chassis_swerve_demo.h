@@ -21,6 +21,10 @@ extern "C" {
 #include "gpio.h"
 #include "BSP_TimeStamp.h"
 
+#ifndef JIA_CHASSIS_HOMING_SEARCH_RPM
+#define JIA_CHASSIS_HOMING_SEARCH_RPM 50.0f
+#endif
+
 namespace chassis_swerve_demo
 {
 
@@ -94,7 +98,7 @@ private:
         uint16_t homing_gpio_pin = 0;
         float homing_falling_edge_mech_rad = 0.0f;
         float homing_rising_edge_mech_rad = 0.0f;
-        float homing_search_rpm = 10.0f;
+        float homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM;
         float homing_zero_offset_rad = 0.0f;
         float homing_timeout_s = 5.0f;
 

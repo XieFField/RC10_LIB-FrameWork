@@ -248,8 +248,15 @@ void CAN_Motor_Init(void)
     steer3.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
     steer4.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
 
-   U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
-   U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
+   U8_1.reset_controlFrequency(200);  U8_2.reset_controlFrequency(200);
+   U8_3.reset_controlFrequency(200);  U8_4.reset_controlFrequency(200);
+
+   // 底盘 VESC 驱动轮切到本地 PID 速度闭环模式
+   // 仅 drive 轮默认开启微分先行，其余电机保持默认关闭，不走这条策略。
+   U8_1.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_1.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_2.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_2.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_3.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_3.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_4.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_4.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
 
 
     // 机械臂电机 PID 参数初始化
