@@ -46,6 +46,8 @@ namespace WeaponSage_Setup
         bool is_closeclaw_start = false;
         bool is_untight_start = false;
 
+        bool is_wrist_start=false;
+        float wrist_startTime=0.0f;
 
 
         int target_poleIndex = 0; //0~3号索引的矛杆
@@ -114,10 +116,10 @@ namespace WeaponSage_Setup
         bool claw_flag[3]={false,false,false};
         struct{
             float launch_start = 0.5f;
-            float launch_catch =0.2f;
+            float launch_catch =0.0f;
             float launch_untight =0.4f;
-            float launch_clawclosed = 0.3f;
-            float launch_rotate =0.5f;
+            float launch_clawclosed = 0.8f;
+            float launch_rotate =1.0f;
         }launch_kp;
     }auto_ctrl_S;
 
