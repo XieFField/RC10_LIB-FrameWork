@@ -4377,27 +4377,25 @@ namespace jia
 
         void Chassis::syncDebugSteerPidTuneFromRuntime()
         {
-            for (u8 i = 0; i < 4; ++i)
+            const bool steer_speed_dirty = (debug_pid_tune_.steer_speed_pid_applied_stamp != debug_pid_tune_.steer_speed_pid_apply_stamp);
+            const bool steer_angle_dirty = (debug_pid_tune_.steer_angle_pid_applied_stamp != debug_pid_tune_.steer_angle_pid_apply_stamp);
+            if (!steer_speed_dirty && !steer_angle_dirty)
             {
-                const bool speed_dirty = (debug_pid_tune_.steer_speed_pid_applied_stamp[i] != debug_pid_tune_.steer_speed_pid_apply_stamp[i]);
-                const bool angle_dirty = (debug_pid_tune_.steer_angle_pid_applied_stamp[i] != debug_pid_tune_.steer_angle_pid_apply_stamp[i]);
-                if (speed_dirty || angle_dirty)
+                for (u8 i = 0; i < 4; ++i)
                 {
-// 保护apply的手工改动：该轮缓存跳过同步，避免覆盖调试器刚写入的值
-                    continue;
-                }
+                    WheelConfig &wheel = wheel_config_[i];
+                    M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
+                    if (steer_m3508 == nullptr)
+                    {
+                        continue;
+                    }
 
-                WheelConfig &wheel = wheel_config_[i];
-                M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
-                if (steer_m3508 == nullptr)
-                {
-                    continue;
+                    debug_pid_tune_.steer_speed_pid_cfg = steer_m3508->get_speed_pid_params();
+                    debug_pid_tune_.steer_angle_pid_cfg = steer_m3508->get_angle_pid_params();
+                    debug_pid_tune_.steer_speed_pid_td_ratio = steer_m3508->get_speed_pid_td_ratio();
+                    debug_pid_tune_.steer_angle_pid_i_separa = steer_m3508->get_angle_pid_i_separa_threshold();
+                    break;
                 }
-
-                debug_pid_tune_.steer_speed_pid_cfg[i] = steer_m3508->get_speed_pid_params();
-                debug_pid_tune_.steer_angle_pid_cfg[i] = steer_m3508->get_angle_pid_params();
-                debug_pid_tune_.steer_speed_pid_td_ratio[i] = steer_m3508->get_speed_pid_td_ratio();
-                debug_pid_tune_.steer_angle_pid_i_separa[i] = steer_m3508->get_angle_pid_i_separa_threshold();
             }
 
             const bool drive_dirty = (debug_pid_tune_.drive_speed_pid_applied_stamp != debug_pid_tune_.drive_speed_pid_apply_stamp);
@@ -4424,28 +4422,29 @@ namespace jia
 
         void Chassis::applyDebugSteerPidRuntimeTuning()
         {
-            for (u8 i = 0; i < 4; ++i)
+            const bool steer_speed_dirty = (debug_pid_tune_.steer_speed_pid_applied_stamp != debug_pid_tune_.steer_speed_pid_apply_stamp);
+            const bool steer_angle_dirty = (debug_pid_tune_.steer_angle_pid_applied_stamp != debug_pid_tune_.steer_angle_pid_apply_stamp);
+            if (steer_speed_dirty || steer_angle_dirty)
             {
-                WheelConfig &wheel = wheel_config_[i];
-                M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
-                if (steer_m3508 == nullptr)
+                bool applied_any = false;
+                for (u8 i = 0; i < 4; ++i)
                 {
-                    continue;
+                    WheelConfig &wheel = wheel_config_[i];
+                    M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
+                    if (steer_m3508 == nullptr)
+                    {
+                        continue;
+                    }
+
+                    steer_m3508->pid_init(debug_pid_tune_.steer_speed_pid_cfg, debug_pid_tune_.steer_speed_pid_td_ratio,
+                                          debug_pid_tune_.steer_angle_pid_cfg, debug_pid_tune_.steer_angle_pid_i_separa);
+                    applied_any = true;
                 }
 
-                if (debug_pid_tune_.steer_speed_pid_applied_stamp[i] != debug_pid_tune_.steer_speed_pid_apply_stamp[i])
+                if (applied_any)
                 {
-                    steer_m3508->pid_init(debug_pid_tune_.steer_speed_pid_cfg[i], debug_pid_tune_.steer_speed_pid_td_ratio[i],
-                                          debug_pid_tune_.steer_angle_pid_cfg[i], debug_pid_tune_.steer_angle_pid_i_separa[i]);
-                    debug_pid_tune_.steer_speed_pid_applied_stamp[i] = debug_pid_tune_.steer_speed_pid_apply_stamp[i];
-                    debug_pid_tune_.steer_angle_pid_applied_stamp[i] = debug_pid_tune_.steer_angle_pid_apply_stamp[i];
-                }
-                if (debug_pid_tune_.steer_angle_pid_applied_stamp[i] != debug_pid_tune_.steer_angle_pid_apply_stamp[i])
-                {
-                    steer_m3508->pid_init(debug_pid_tune_.steer_speed_pid_cfg[i], debug_pid_tune_.steer_speed_pid_td_ratio[i],
-                                          debug_pid_tune_.steer_angle_pid_cfg[i], debug_pid_tune_.steer_angle_pid_i_separa[i]);
-                    debug_pid_tune_.steer_angle_pid_applied_stamp[i] = debug_pid_tune_.steer_angle_pid_apply_stamp[i];
-                    debug_pid_tune_.steer_speed_pid_applied_stamp[i] = debug_pid_tune_.steer_speed_pid_apply_stamp[i];
+                    debug_pid_tune_.steer_speed_pid_applied_stamp = debug_pid_tune_.steer_speed_pid_apply_stamp;
+                    debug_pid_tune_.steer_angle_pid_applied_stamp = debug_pid_tune_.steer_angle_pid_apply_stamp;
                 }
             }
 
@@ -5574,8 +5573,6 @@ namespace jia
         }
     }
 }
-
-
 
 
 
