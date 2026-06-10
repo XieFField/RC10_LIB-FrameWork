@@ -528,14 +528,6 @@ void OmniChassis_Setup::Path_correction(void)
     // 2. 寻找前视点作为我们追踪的“虚拟兔子”
 
     Vector2D lookaheadPt; // 路径上的前视点
-                          //    if (curve.Get_Bezier_Order() == FIRST_ORDER_BEZIER)
-                          //    {
-                          //        V.m_lookaheadDist = V.m_lookaheadDist_line;
-                          //    }
-                          //    else
-                          //    {
-                          //        V.m_lookaheadDist = V.m_lookaheadDist_curve;
-                          //    }
 
     tLookahead = tNearest; // 前视点的编号，先从最近点的编号开始（比如t=0.3）
 
@@ -1056,7 +1048,7 @@ Vector2D OmniChassis_Setup::v_limit(void)
     num++;
     if (num > 5)
     {
-        debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), v_tangent);
+        debug_uart.printf_DMA("%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude());
         num = 0;
     }
 

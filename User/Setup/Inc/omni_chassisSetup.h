@@ -68,8 +68,6 @@ typedef struct
 
     float v_normal_max = 0.5f;
     float m_lookaheadDist = 0.4f;         // 前视距离 (单位: 米)
-    //float m_lookaheadDist_line = 0.4f;   // 前视距离 (单位: 米)
-    //float m_lookaheadDist_curve = 0.07f; // 前视距离 (单位: 米)
 } SPEED_PARAM;
 
 typedef struct
