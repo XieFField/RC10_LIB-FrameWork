@@ -561,6 +561,8 @@ namespace jia
                 f32 planned_corrected_local_total_rad[4] = {0.0f};
                 f32 planned_oa_total_rad[4] = {0.0f};
                 f32 planned_steer_rate_rad_s[4] = {0.0f};
+                f32 steer_cmd_corrected_local_total_rad[4] = {0.0f};
+                f32 steer_cmd_oa_total_rad[4] = {0.0f};
                 f32 projected_drive_omega_rad_s[4] = {0.0f};
                 f32 final_drive_omega_rad_s[4] = {0.0f};
                 f32 low_speed_suppression_scale[4] = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -576,6 +578,8 @@ namespace jia
             {
                 f32 steer_corrected_local_total_rad[4] = {0.0f};
                 f32 steer_oa_total_rad[4] = {0.0f};
+                f32 steer_cmd_corrected_local_total_rad[4] = {0.0f};
+                f32 steer_cmd_oa_total_rad[4] = {0.0f};
                 f32 steer_rate_rad_s[4] = {0.0f};
                 f32 drive_omega_rad_s[4] = {0.0f};
                 bool flipped_drive_direction[4] = {false, false, false, false};
@@ -986,6 +990,10 @@ namespace jia
                 f32 max_steer_rate_rad_s_ = 200.0f;                         // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit_=true 时生效。
                 bool enable_steer_alpha_limit_ = true;                          // [RW] 是否启用舵向角加速度上限。
                 f32 max_steer_alpha_rad_s2_ = 20000.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
+                bool enable_steer_angle_feedforward = true;                      // [RW] 是否启用底盘层舵角超前前馈。只影响正常 swerve 规划下发角，不改变物理预计角。
+                f32 steer_angle_feedforward_lead_s = 0.02f;                      // [RW] 舵角超前时间（s）。用于补偿舵向电机响应滞后。
+                f32 steer_angle_feedforward_max_lead_rad = 0.13962634f;          // [RW] 舵角超前最大幅度（rad），默认约 8°。
+                f32 steer_angle_feedforward_settle_error_rad = 0.05235988f;      // [RW] 收尾线性衰减误差窗口（rad），默认约 3°。
 
                 // ---- 通用 near-zero 门限 -----------------------------------------
                 // 这组阈值描述“速度已经接近 0”的通用口径。使用者看这里时要先分清对象：

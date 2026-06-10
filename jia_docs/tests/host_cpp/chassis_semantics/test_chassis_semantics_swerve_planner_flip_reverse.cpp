@@ -3,8 +3,127 @@
 namespace chassis_semantics_test
 {
 
+namespace
+{
+
+void configureSteerAngleFeedforwardPlanner(Chassis &chassis)
+{
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = true;
+    chassis.runtime_strategy_cfg_.max_steer_alpha_rad_s2_ = 20000.0f;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_angle_feedforward = true;
+    chassis.runtime_strategy_cfg_.steer_angle_feedforward_lead_s = 0.02f;
+    chassis.runtime_strategy_cfg_.steer_angle_feedforward_max_lead_rad = jia::degToRadF32(8.0f);
+    chassis.runtime_strategy_cfg_.steer_angle_feedforward_settle_error_rad = jia::degToRadF32(3.0f);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
+        chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
+    }
+}
+
+} // namespace
+
 // 覆盖舵轮 planner 的翻转解、倒车意图、方向 slew 和统一限幅。
 // 这里的测试保护的是“轮级最优解”和“整车一致缩放”的边界，不直接检查电机下发细节。
+TEST_CASE("testSteerAngleFeedforwardLeadsPlannerCommandAfterSecondOrderProfile")
+{
+    Chassis chassis;
+    configureSteerAngleFeedforwardPlanner(chassis);
+
+    Chassis::Data command{};
+    command.vel_y = 1.0f;
+
+    const Chassis::SwervePlannerOutput output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+    Chassis::ActuatorCommandFrame frame{};
+    chassis.buildActuatorCommandFrame(output, frame);
+
+    const float expected_lead_rad = jia::degToRadF32(8.0f);
+    EXPECT_NEAR(output.steer_cmd_oa_total_rad[0] - output.planned_oa_total_rad[0], expected_lead_rad, 1.0e-5f);
+    EXPECT_NEAR(frame.steer_cmd_oa_total_rad[0], output.steer_cmd_oa_total_rad[0], 1.0e-6f);
+    EXPECT_NEAR(frame.steer_oa_total_rad[0], output.planned_oa_total_rad[0], 1.0e-6f);
+
+    float expected_projected_drive[4] = {};
+    chassis.computeProjectedDriveFromPlannedSteer(chassis.makeSwervePlannerInput(command).command,
+                                                  output.planned_oa_total_rad,
+                                                  expected_projected_drive);
+    EXPECT_NEAR(output.projected_drive_omega_rad_s[0], expected_projected_drive[0], 1.0e-6f);
+}
+
+TEST_CASE("testSteerAngleFeedforwardScalesDownInsideSettleErrorWindow")
+{
+    Chassis chassis;
+    configureSteerAngleFeedforwardPlanner(chassis);
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = jia::degToRadF32(88.5f);
+    }
+
+    Chassis::Data command{};
+    command.vel_y = 1.0f;
+
+    const Chassis::SwervePlannerOutput output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    const float expected_uncapped_lead_rad = chassis.runtime_strategy_cfg_.max_steer_alpha_rad_s2_ *
+                                             Chassis::period_ *
+                                             chassis.runtime_strategy_cfg_.steer_angle_feedforward_lead_s;
+    const float expected_full_lead_rad = std::min(expected_uncapped_lead_rad,
+                                                  chassis.runtime_strategy_cfg_.steer_angle_feedforward_max_lead_rad);
+    const float expected_scaled_lead_rad = expected_full_lead_rad * 0.5f;
+    EXPECT_NEAR(output.steer_cmd_oa_total_rad[0] - output.planned_oa_total_rad[0], expected_scaled_lead_rad, 1.0e-4f);
+}
+
+TEST_CASE("testSteerAngleFeedforwardDropsToZeroWhenSteerErrorIsZero")
+{
+    Chassis chassis;
+    configureSteerAngleFeedforwardPlanner(chassis);
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = jia::degToRadF32(90.0f);
+    }
+
+    Chassis::Data command{};
+    command.vel_y = 1.0f;
+
+    const Chassis::SwervePlannerOutput output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    EXPECT_NEAR(output.steer_cmd_oa_total_rad[0], output.planned_oa_total_rad[0], 1.0e-6f);
+}
+
+TEST_CASE("testSteerAngleFeedforwardDisabledForUniformSteerDriveMode")
+{
+    Chassis chassis;
+    configureSteerAngleFeedforwardPlanner(chassis);
+
+    Chassis::Data command{};
+    Chassis::SwervePlannerInput input = chassis.makeSwervePlannerInput(command);
+    input.force_uniform_steer_drive = true;
+    input.uniform_steer_oa_mod_rad = jia::degToRadF32(90.0f);
+    input.uniform_drive_omega_abs = 5.0f;
+    input.uniform_drive_sign = 1.0f;
+    for (int i = 0; i < 4; ++i)
+    {
+        input.wheel_speed_m_s[i] = 1.0f;
+    }
+
+    const Chassis::SwervePlannerOutput output = chassis.planSwerveModules(input);
+
+    EXPECT_NEAR(output.steer_cmd_oa_total_rad[0], output.planned_oa_total_rad[0], 1.0e-6f);
+}
+
 TEST_CASE("testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels")
 {
     Chassis chassis;
