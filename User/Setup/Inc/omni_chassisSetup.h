@@ -45,16 +45,16 @@ extern "C"
 
 typedef struct
 {
-    Speedplanner_1D_Param_Config start = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.6f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};  
-    Speedplanner_1D_Param_Config curve = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};   
-    Speedplanner_1D_Param_Config end = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   
+    Speedplanner_1D_Param_Config start = {.maxAcc = 999.0f, .maxDec = 1.1f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.8f, .startPos = 0.18f, .targetPos = 0.0f, .deadzone = 0.001f};  
+    Speedplanner_1D_Param_Config curve = {.maxAcc = 1.0f, .maxDec = 1.1f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};   
+    Speedplanner_1D_Param_Config end = {.maxAcc = 10.0f, .maxDec = 1.0f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.37f, .startPos = 0.18f, .targetPos = 0.0f, .deadzone = 0.001f}; 
     
     Speedplanner_1D_Param_Config line = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.5f, .finalSpeed = 2.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   
 
     //没用的
     Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
     //原始的测试数据
-    Speedplanner_1D_Param_Config CB = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
+    Speedplanner_1D_Param_Config CB = {.maxAcc = 999.0f, .maxDec = 1.1f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.37f, .startPos = 0.18f, .targetPos = 0.0f, .deadzone = 0.001f}; 
    
 } PATH_PARAM;
 
@@ -67,9 +67,9 @@ typedef struct
     float FF_coefficient = 0.5;
 
     float v_normal_max = 0.5f;
-    float m_lookaheadDist = 0.5f;         // 前视距离 (单位: 米)
-    float m_lookaheadDist_line = 0.5f;   // 前视距离 (单位: 米)
-    float m_lookaheadDist_curve = 0.07f; // 前视距离 (单位: 米)
+    float m_lookaheadDist = 0.4f;         // 前视距离 (单位: 米)
+    //float m_lookaheadDist_line = 0.4f;   // 前视距离 (单位: 米)
+    //float m_lookaheadDist_curve = 0.07f; // 前视距离 (单位: 米)
 } SPEED_PARAM;
 
 typedef struct
@@ -86,22 +86,25 @@ typedef struct
 
 typedef struct
 {
-    int8_t MF1 = 3; // 目标点 1 编号。
-    int8_t MF2 = 4; // 目标点 2 编号。
-    int8_t MF3 = 12; // 目标点 2 编号。
+    int8_t MF1 = 0; // 目标点 1 编号。
+    int8_t MF2 = 0; // 目标点 2 编号。
+    int8_t MF3 = 0; // 目标点 2 编号。
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
     Vector2D MF3_pos_ = {0.0f, 0.0f};
+    
+    Vector2D spin_pos = {0.0f, 0.0f}; // 是否需要执行中途转向。
+    Vector2D spin_pos_2 = {0.0f, 0.0f}; // 是否需要执行中途转向。
 
     float MF2_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
     float MF3_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
 
-    Vector2D spin_point_ = {3.0f, 8.72f}; // 上方旋转点
+    //Vector2D spin_point_ = {3.0f, 8.72f}; // 上方旋转点
 
     //float spin_skew_ = -0.1f; // 下方旋转位置y轴偏移量
     
-    float coner_ahead=0.2f;
+    float coner_ahead=0.15f;
 } KFS_POINT;
 
 typedef struct
@@ -111,11 +114,11 @@ typedef struct
     bool spin_flag = false; // 是否需要执行中途转向。
     bool spin_flag_2 = false; // 是否需要执行中途转向。
 
-    bool spin_up_flag = false;   // 上路段旋转流程使能。
-    bool spin_down_flag = false; // 下路段旋转流程使能。
+    //bool spin_up_flag = false;   // 上路段旋转流程使能。
+    //bool spin_down_flag = false; // 下路段旋转流程使能。
     
-    bool spin_up_flag_2 = false;   // 上路段旋转流程使能。
-    bool spin_down_flag_2 = false; // 下路段旋转流程使能。
+    //bool spin_up_flag_2 = false;   // 上路段旋转流程使能。
+    //bool spin_down_flag_2 = false; // 下路段旋转流程使能。
 
     bool MF1_flag = false;   // 进入 MF1 目标点标志。
     bool MF2_flag = false;   // 进入 MF2 目标点标志。
@@ -178,7 +181,7 @@ public:
 
 private:
 
-    Vector2D test_point = {0.0f, 0.0f};
+    Vector2D test_point = {0.6f, 6.0f};
     
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
@@ -232,6 +235,7 @@ private:
     MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
     //-----------------------------------其他参数-----------------------------------------//
     int num = 0;
+    int start_num=0;
 
     Point3D ladar_data_; // 定位系统输出的原始位姿数据。
 
@@ -262,7 +266,9 @@ private:
     void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
 
     void Path_CB_check(void);
-    bool spinodal_path(Vector2D last_vector, Vector2D temp_vector,int i);
+    
+    Vector2D spinodal_path(Vector2D last_vector, Vector2D temp_vector,int i);
+    
     float rotation_path(float MF_Point);
 #if s_debug
     int a = 0;
@@ -290,19 +296,25 @@ public:
 
         if (start == 0)
         {
-            flag_run = 0;
+            start_num++;
+            if(start_num==3)
+                flag_run = 0;
+        }
+        else
+        {
+            start_num=0;
         }
     }
 
     bool GetReach_flag()
     {
-        if(pid_dead_flag==true)
+        if(pid_dead_flag==true && WeaponSage_Start==true)
         {
-            return WeaponSage_Start;
+            return true;
         }
         else
         {
-            return (!WeaponSage_Start);
+            return false;
         }
         // 读取夹杆流程完成标志。
     }
@@ -310,32 +322,32 @@ public:
     bool GetEnd_flag()
     {
          // 读取夹杆退后流程完成标志。
-        if(pid_dead_flag==true)
+        if(pid_dead_flag==true && WeaponSage_End==true)
         {
-            return WeaponSage_End;
+            return true;
         }
         else
         {
-            return (!WeaponSage_End);
+            return false;
         }
     }
 
     void ReceiveReach_flag(bool weapon_end)
     {
         // 写入机械臂流程反馈标志。
-        WeaponSage_Start = weapon_end;
+        WeaponSage_Start = !weapon_end;
     }
 
     bool Get_Arm_Start_flag()
     {
         // 读取机械臂触发标志。
-        if(pid_dead_flag==true)
+        if(pid_dead_flag==true && Arm_Start==true)
         {
-            return Arm_Start;
+            return true;
         }
         else
         {
-            return (!Arm_Start);
+            return false;
         }
     }
 
