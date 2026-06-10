@@ -13,6 +13,14 @@
 
 `active/overview.md` 是当前主线状态的高层入口；根 README 只保留稳定导航，避免重复维护容易过期的主线细节。
 
+## 编码提示
+
+文档使用 UTF-8 中文。在 Windows PowerShell 中检查中文内容时，建议显式指定编码，避免终端默认编码造成误判：
+
+```powershell
+Get-Content -Raw -Encoding UTF8 jia_docs/README.md
+```
+
 ## 当前 handoff
 
 当前最推荐优先阅读：
