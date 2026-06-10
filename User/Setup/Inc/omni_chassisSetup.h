@@ -334,7 +334,7 @@ public:
     void ReceiveReach_flag(bool weapon_end)
     {
         // 写入机械臂流程反馈标志。
-        WeaponSage_Start = weapon_end;
+        WeaponSage_Start = !weapon_end;
     }
 
     bool Get_Arm_Start_flag()
