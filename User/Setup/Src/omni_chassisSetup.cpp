@@ -174,6 +174,28 @@ void OmniChassis_Setup::loop()
 
         break;
     }
+
+    case CHASSIS_MANUAL_CONTROL_D:
+    {
+        float target_vel_x = 0.0f;
+        float target_vel_y = 0.0f;
+
+        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+            target_vel_x = airjoy_data_.left_x * 1 * this->is_chassis_reverse_;
+        else
+            target_vel_x = 0.0f;
+
+        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+            target_vel_y = airjoy_data_.left_y * 1 * this->is_chassis_reverse_;
+        else
+            target_vel_y = 0.0f;
+
+
+        if(airjoy_data_.SWD == 0x00)
+            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, 90.0f);
+        else
+            chassis.setSteerDegAndDriveSpeed(Chassis::Coordinate::kWorld, 90.0f, target_vel_x);
+    }
     case CHASSIS_MANUAL_CONTROL_B:
     {
         // 模式 B：低速手动平移，锁当前航向。

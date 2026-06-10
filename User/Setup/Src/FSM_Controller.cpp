@@ -406,7 +406,14 @@ void FSM_Controller::manual_ctrl()
     {
         case 0x00:
         {
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            if(airjoy_data_.SWA == 0x00)
+            {
+                chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            }
+            else
+            {
+                chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_D);
+            }
             arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
