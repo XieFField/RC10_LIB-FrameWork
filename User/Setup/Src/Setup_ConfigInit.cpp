@@ -286,7 +286,7 @@ void CAN_Motor_Init(void)
     PID_Param_Config weapon_wrist_anglePID = m2006_angle_pid_params;
     PID_Param_Config weapon_wrist_speedPID = m2006_speed_pid_params;
 
-    weapon_3508_anglePID.output_limit=100.0f;
+    weapon_3508_anglePID.output_limit=250.0f;
     weapon_3508_speedPID.output_limit=15000.0f;
     weapon_2006_speedPID.output_limit=3000;
     weapon_2006_anglePID.output_limit=500;
