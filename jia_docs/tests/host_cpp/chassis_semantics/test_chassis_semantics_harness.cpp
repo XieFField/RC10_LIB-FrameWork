@@ -406,6 +406,8 @@ void configureSteerFaultRecoveryHarness(Chassis &chassis, TestMotor steer_motors
         chassis.actuator_command_frame_.drive_omega_rad_s[i] = 0.0f;
         chassis.actuator_command_frame_.steer_oa_total_rad[i] = 0.0f;
         chassis.actuator_command_frame_.steer_corrected_local_total_rad[i] = 0.0f;
+        chassis.actuator_command_frame_.steer_cmd_oa_total_rad[i] = 0.0f;
+        chassis.actuator_command_frame_.steer_cmd_corrected_local_total_rad[i] = 0.0f;
         chassis.planned_data_.drive_omega_rad_s[i] = 0.0f;
         chassis.planned_data_.steer_angle_oa_rad[i] = 0.0f;
         chassis.current_data_.drive_omega_rad_s[i] = 0.0f;
@@ -606,6 +608,8 @@ Chassis::ActuatorCommandFrame makeXParkSteerCommandFrame(Chassis &chassis)
         frame.steer_oa_total_rad[i] = xpark_target_oa_rad;
         frame.steer_corrected_local_total_rad[i] =
             chassis.mapWheelOaTotalToCorrectedLocal(chassis.wheel_config_[i], xpark_target_oa_rad);
+        frame.steer_cmd_oa_total_rad[i] = frame.steer_oa_total_rad[i];
+        frame.steer_cmd_corrected_local_total_rad[i] = frame.steer_corrected_local_total_rad[i];
     }
     return frame;
 }

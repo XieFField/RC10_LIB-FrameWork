@@ -1,6 +1,6 @@
 # AI handoff 2026-06-05 RC10 chassis doctest / zero-stop sync
 
-本页记录 `2026-06-05` 前后 RC10 底盘主线在宿主测试结构、zero-stop / X-Park 语义、调试参数口径和固件瘦身档上的收口状态。它接在 `2026-05-31` 三路 wait merge handoff 之后，作为当前进入 `jia_docs` 时的最新主线级交接。
+本页记录 `2026-06-05` 前后 RC10 底盘主线在宿主测试结构、zero-stop / X-Park 语义、调试参数口径和固件瘦身档上的收口状态。它接在 `2026-05-31` 三路 wait merge handoff 之后，创建时是当时最新主线级交接；当前首读请以 [ai_handoff_2026-06-09_rc10_path_yaw_homing_build_sync.md](ai_handoff_2026-06-09_rc10_path_yaw_homing_build_sync.md) 为准。
 
 ## 当前结论
 

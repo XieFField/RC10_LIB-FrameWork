@@ -44,11 +44,16 @@
 - `test_chassis_semantics_drive_pid_and_mapping.cpp`
 - `test_chassis_semantics_single_wheel_debug.cpp`
 - `test_chassis_semantics_drive_delivery_zero_stop.cpp`
+  - 覆盖 drive delivery、zero-stop，并承接 2026-06-09 yaw lock 减速阶段先刹再锁的交互回归。
 - `test_chassis_semantics_yaw_and_motion_profile.cpp`
+  - 覆盖 yaw lock 跨模式旧锁角、目标规划、目标限速与 PID 输入口径，是 2026-06-08/09 yaw 修复链的主回归入口。
 - `test_chassis_semantics_swerve_planner_flip_reverse.cpp`
 - `test_chassis_semantics_xpark_gate_and_hold.cpp`
   - 覆盖 X-Park 进入门、保持态、target / command exit 门，以及 debug9 释放 X-Park pose / steer hold 覆盖的回归。
 - `test_chassis_semantics_steer_fault_homing_recovery.cpp`
+  - 覆盖 homing 三边沿确认、舵向 fault 与恢复链路，是 2026-06-08 homing 修复的主回归入口。
+
+`host_cpp/*/build/` 下的内容视为可重建缓存；长期证据应优先登记到 `artifacts/` 或 handoff 中，并写清楚由哪个脚本重建。
 
 ## 编译档位
 
