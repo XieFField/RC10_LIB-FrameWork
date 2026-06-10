@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file chassis.cpp
  * @author 桑叁年
  * @brief 底盘控制主实现
@@ -1322,6 +1322,37 @@ namespace jia
                 planner_output.high_speed_eta_max_s = (eta_s > planner_output.high_speed_eta_max_s) ? eta_s : planner_output.high_speed_eta_max_s;
             }
 
+            const bool enable_steer_angle_feedforward =
+                runtime_strategy_cfg_.enable_steer_angle_feedforward &&
+                !planner_input.force_uniform_steer_drive &&
+                !planner_input.allow_xpark_pose;
+            const f32 steer_ff_lead_s = (runtime_strategy_cfg_.steer_angle_feedforward_lead_s > 0.0f)
+                                            ? runtime_strategy_cfg_.steer_angle_feedforward_lead_s
+                                            : 0.0f;
+            const f32 steer_ff_max_lead_rad = fabsf(runtime_strategy_cfg_.steer_angle_feedforward_max_lead_rad);
+            const f32 steer_ff_settle_error_rad = fabsf(runtime_strategy_cfg_.steer_angle_feedforward_settle_error_rad);
+            for (u8 i = 0; i < 4; ++i)
+            {
+                const WheelConfig &wheel = wheel_config_[i];
+                f32 steer_cmd_oa_total_rad = planner_output.planned_oa_total_rad[i];
+                if (enable_steer_angle_feedforward && (steer_ff_lead_s > 0.0f) && (steer_ff_max_lead_rad > 0.0f))
+                {
+                    f32 lead_rad = planner_output.planned_steer_rate_rad_s[i] * steer_ff_lead_s;
+                    lead_rad = clampValue(lead_rad, -steer_ff_max_lead_rad, steer_ff_max_lead_rad);
+                    if (steer_ff_settle_error_rad > 1.0e-6f)
+                    {
+                        const f32 settle_scale =
+                            clampValue(planner_output.steering_errors_rad[i] / steer_ff_settle_error_rad, 0.0f, 1.0f);
+                        lead_rad *= settle_scale;
+                    }
+                    steer_cmd_oa_total_rad += lead_rad;
+                }
+
+                planner_output.steer_cmd_oa_total_rad[i] = steer_cmd_oa_total_rad;
+                planner_output.steer_cmd_corrected_local_total_rad[i] =
+                    mapWheelOaTotalToCorrectedLocal(wheel, steer_cmd_oa_total_rad);
+            }
+
             for (u8 i = 0; i < 4; ++i)
             {
                 planner_output.projected_drive_omega_rad_s[i] = planner_output.projected_drive_omega_rad_s[i];
@@ -1415,6 +1446,8 @@ namespace jia
             {
                 out_frame.steer_corrected_local_total_rad[i] = planner_output.planned_corrected_local_total_rad[i];
                 out_frame.steer_oa_total_rad[i] = planner_output.planned_oa_total_rad[i];
+                out_frame.steer_cmd_corrected_local_total_rad[i] = planner_output.steer_cmd_corrected_local_total_rad[i];
+                out_frame.steer_cmd_oa_total_rad[i] = planner_output.steer_cmd_oa_total_rad[i];
                 out_frame.steer_rate_rad_s[i] = planner_output.planned_steer_rate_rad_s[i];
                 out_frame.drive_omega_rad_s[i] = planner_output.final_drive_omega_rad_s[i];
                 out_frame.flipped_drive_direction[i] = planner_output.flipped_drive_direction[i];
@@ -1428,7 +1461,7 @@ namespace jia
                 WheelConfig &wheel = wheel_config_[i];
                 low_speed_drive_suppression_scale_[i] =
                     clampValue(planner_output.low_speed_suppression_scale[i] * planner_output.high_speed_suppression_scale, 0.0f, 1.0f);
-                wheel.target_steer_motor_total_angle_rad = command_frame.steer_corrected_local_total_rad[i];
+                wheel.target_steer_motor_total_angle_rad = command_frame.steer_cmd_corrected_local_total_rad[i];
                 wheel.target_drive_omega_rad_s = command_frame.drive_omega_rad_s[i];
                 wheel.steer_target_velocity_rad_s = command_frame.steer_rate_rad_s[i];
                 wheel.flipped_drive_direction = command_frame.flipped_drive_direction[i];
@@ -2432,6 +2465,8 @@ namespace jia
                 planned_data_.drive_omega_rad_s[i] = 0.0f;
                 actuator_command_frame_.steer_corrected_local_total_rad[i] = wheel.corrected_steer_motor_total_angle_rad;
                 actuator_command_frame_.steer_oa_total_rad[i] = planned_data_.steer_angle_oa_rad[i];
+                actuator_command_frame_.steer_cmd_corrected_local_total_rad[i] = actuator_command_frame_.steer_corrected_local_total_rad[i];
+                actuator_command_frame_.steer_cmd_oa_total_rad[i] = actuator_command_frame_.steer_oa_total_rad[i];
                 actuator_command_frame_.steer_rate_rad_s[i] = 0.0f;
                 actuator_command_frame_.drive_omega_rad_s[i] = 0.0f;
                 actuator_command_frame_.flipped_drive_direction[i] = false;
@@ -2501,6 +2536,8 @@ namespace jia
 
             actuator_command_frame_.steer_corrected_local_total_rad[wheel_idx] = target_wheel.target_steer_motor_total_angle_rad;
             actuator_command_frame_.steer_oa_total_rad[wheel_idx] = planned_data_.steer_angle_oa_rad[wheel_idx];
+            actuator_command_frame_.steer_cmd_corrected_local_total_rad[wheel_idx] = actuator_command_frame_.steer_corrected_local_total_rad[wheel_idx];
+            actuator_command_frame_.steer_cmd_oa_total_rad[wheel_idx] = actuator_command_frame_.steer_oa_total_rad[wheel_idx];
             actuator_command_frame_.drive_omega_rad_s[wheel_idx] = target_wheel.target_drive_omega_rad_s;
 
 #if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
@@ -4003,7 +4040,7 @@ namespace jia
                 wheel.target_drive_omega_rad_s = delivered_drive_target_rad_s;
                 planned_data_.drive_omega_rad_s[i] = delivered_drive_target_rad_s;
                 last_drive_omega_cmd_rad_s_[i] = delivered_drive_target_rad_s;
-                wheel.target_steer_motor_total_angle_rad = actuator_command_frame_.steer_corrected_local_total_rad[i];
+                wheel.target_steer_motor_total_angle_rad = actuator_command_frame_.steer_cmd_corrected_local_total_rad[i];
                 wheel.steer_target_velocity_rad_s = actuator_command_frame_.steer_rate_rad_s[i];
                 planned_data_.steer_angle_oa_rad[i] = actuator_command_frame_.steer_oa_total_rad[i];
                 const StrategyConfig::XParkSteerHoldConfig &xpark_hold_cfg = runtime_strategy_cfg_.xpark_steer_hold_cfg_;
