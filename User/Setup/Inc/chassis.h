@@ -22,7 +22,7 @@
 #define JIA_CHASSIS_PROFILE_FULL_DEBUG 2
 
 #ifndef JIA_CHASSIS_PROFILE
-#define JIA_CHASSIS_PROFILE JIA_CHASSIS_PROFILE_RUNTIME_MIN
+#define JIA_CHASSIS_PROFILE JIA_CHASSIS_PROFILE_FULL_DEBUG
 #endif
 
 // 功能开关均允许外部 -D 单独覆盖。下面只给 profile 的默认值：
@@ -1127,7 +1127,7 @@ namespace jia
             {
                 struct Common
                 {
-                    bool enable = false;                                            // [RW] 调试总开关。
+                    bool enable = true;                                            // [RW] 调试总开关。
                     u8 mode_raw = 1;                                               // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
@@ -1275,7 +1275,7 @@ namespace jia
 
             struct DebugOutputConfig
             {
-                bool output_enable = false;
+                bool output_enable = true;
                 u8 output_family_raw = static_cast<u8>(DebugOutputFamily::kJustFloat);
                 DebugOutputTextConfig text{};
                 DebugOutputJustFloatConfig justfloat{};
