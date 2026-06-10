@@ -26,6 +26,7 @@ Get-Content -Raw -Encoding UTF8 jia_docs/README.md
 当前最推荐优先阅读：
 
 - [active/latest-handoff.md](active/latest-handoff.md)
+- 当前主线文件：`2026-06-09 rc10_path_yaw_homing_build_sync`
 
 完整索引：
 
