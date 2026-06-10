@@ -13,7 +13,7 @@ void Locate_Setup::update()
 
 	lader_transform_caculate();
 
-    yaw_from_position_ = -HWT101CT::GetInstance(&huart1)->get_yaw_rad() / PI * 180.0f;
+    yaw_from_position_ =  HWT101CT::GetInstance(&huart1)->get_yaw_rad() / PI * 180.0f;
 	dyaw_from_position_ = HWT101CT::GetInstance(&huart1)->get_yaw_speed_rad();
 
     float ladpos_x = Lad_Data.x * cos_neg90 - Lad_Data.y * sin_neg90;

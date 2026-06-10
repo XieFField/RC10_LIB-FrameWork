@@ -206,7 +206,7 @@ float Robot_WeaponSage::MotorTotalAngle_to_Realpos(float motor_angle, WeaponSage
             return motor_reversed_.arm_reversed_ * motor_angle * initData_.arm_gearRatio_ / 360.0f;
 
         default:
-            return 0.0f; 
+            return 0.0f;  
     }
 }
 

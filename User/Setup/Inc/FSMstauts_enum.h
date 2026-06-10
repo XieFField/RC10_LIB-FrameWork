@@ -96,6 +96,7 @@ typedef enum{
 
     WEAPONSAGE_AUTO_CONTROL_CATCH, //自动控制模式,抓取
     WEAPONSAGE_AUTO_CONTROL_DOCK, //自动控制模式, docking
+	WEAPONSAGE_AUTOCONTROL,
 
     WEAPONSAGE_STOP,        //停止
     WEAPONSAGE_DEBUG,       //调试模式  

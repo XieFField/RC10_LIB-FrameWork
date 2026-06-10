@@ -121,6 +121,7 @@ void configureXParkTriggerHarness(Chassis &chassis);
 void configureSteerFaultRecoveryHarness(Chassis &chassis, TestMotor steer_motors[4], VESC_Motor drive_motors[4]);
 bool runHostControlCycle(Chassis &chassis);
 void configureYawPidTraceHarness(Chassis &chassis);
+void finishWheelHomingByThreeConsistentEdges(Chassis &chassis, int wheel_idx, TestMotor steer_motors[4]);
 void finishWheelHomingByEdgeAndAlign(Chassis &chassis, int wheel_idx, TestMotor steer_motors[4]);
 Chassis::ActuatorCommandFrame makeDriveOnlyCommandFrame(float drive_omega_rad_s);
 Chassis::ActuatorCommandFrame makePerWheelDriveCommandFrame(float drive0, float drive1, float drive2, float drive3);

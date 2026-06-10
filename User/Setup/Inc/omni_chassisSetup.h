@@ -45,19 +45,16 @@ extern "C"
 
 typedef struct
 {
+    Speedplanner_1D_Param_Config start = {.maxAcc = 999.0f, .maxDec = 1.1f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.8f, .startPos = 0.18f, .targetPos = 0.0f, .deadzone = 0.001f};  
+    Speedplanner_1D_Param_Config curve = {.maxAcc = 1.0f, .maxDec = 1.1f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};   
+    Speedplanner_1D_Param_Config end = {.maxAcc = 10.0f, .maxDec = 1.0f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.37f, .startPos = 0.18f, .targetPos = 0.0f, .deadzone = 0.001f}; 
+    
     Speedplanner_1D_Param_Config line = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.5f, .finalSpeed = 2.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   
 
-    Speedplanner_1D_Param_Config start = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.6f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};  
-    Speedplanner_1D_Param_Config curve = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};   
-    Speedplanner_1D_Param_Config end = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   
-    
-    Speedplanner_1D_Param_Config up = {.maxAcc = 1.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.6f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};   
-
-    
     //没用的
-    //Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
+    Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
     //原始的测试数据
-    //Speedplanner_1D_Param_Config CB = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
+    Speedplanner_1D_Param_Config CB = {.maxAcc = 999.0f, .maxDec = 1.1f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.37f, .startPos = 0.18f, .targetPos = 0.0f, .deadzone = 0.001f}; 
    
 } PATH_PARAM;
 
@@ -70,9 +67,8 @@ typedef struct
     float FF_coefficient = 0.5;
 
     float v_normal_max = 0.5f;
-    
-    float m_lookaheadDist = 0.5f;         // 前视距离 (单位: 米)
-    float m_lookaheadDist_line = 0.5f;   // 前视距离 (单位: 米)
+    float m_lookaheadDist = 0.4f;         // 前视距离 (单位: 米)
+    float m_lookaheadDist_line = 0.4f;   // 前视距离 (单位: 米)
     float m_lookaheadDist_curve = 0.07f; // 前视距离 (单位: 米)
 } SPEED_PARAM;
 
@@ -105,16 +101,8 @@ typedef struct
 
     //float spin_skew_ = -0.1f; // 下方旋转位置y轴偏移量
     
-    float coner_ahead=0.2f;
+    float coner_ahead=0.15f;
 } KFS_POINT;
-
-typedef struct
-{
-    Vector2D uphill_pos = {0.6f, 11.40f};//11.45f
-    Vector2D R2_pos = {5.0f, 11.35f};
-    Vector2D M1_pos = {5.0f, 10.82f};
-    Vector2D L3_pos = {5.0f, 10.29f};
-} CZ_POINT;
 
 typedef struct
 {
@@ -190,7 +178,7 @@ public:
 
 private:
 
-    Vector2D test_point = {0.0f, 0.0f};
+    Vector2D test_point = {0.6f, 6.0f};
     
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。

@@ -16,8 +16,7 @@ void OmniChassis_Setup::Path_CB_check(void)
     if (CB_point.Clamping_Bar_Retreat_pos_.x == curve.Get_End_point().x && CB_point.Clamping_Bar_Retreat_pos_.y == curve.Get_End_point().y)
     {
         CB_flag.Retreat_flag = true;
-        if(WeaponSage_Start == false && pid_dead_flag == true)
-            target_yaw_ = 90.0f;
+        target_yaw_ = 90.0f;
     }
     else if (CB_flag.Retreat_flag == true)
     {
@@ -177,29 +176,26 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.plan_reset();
     path_line_.Reset();
 
-    // 夹杆曲线路径的测试
+        //path_line_.Add_Start_Point(robot_pos_);
+        //path_line_.Add_End_Point(test_point, path_param.CB);
+
+    // 夹杆路径的测试
     //    path_line_.Add_Start_Point(robot_pos_);
     //    path_line_.Add_Point(CB_point.CB_Selection_start_point_, path_param.start);
     //    path_line_.Add_Point(CB_point.Clamping_Bar_Selection_pos_, CB_point.CB_Selection_control_point_, path_param.curve);
     //    path_line_.Add_End_Point(CB_point.Clamping_Bar_Retreat_pos_, path_param.end);
 
     // 顺滑过弯
-    //    path_line_.Add_Start_Point(robot_pos_);
-    //    path_line_.Add_Point(Vector2D{0.6f + KFS_point.coner_ahead, 2.6f}, path_param.start);
-    //    path_line_.Add_Point(Vector2D{0.6f, 2.6f + KFS_point.coner_ahead}, path_param.line);
-    //    path_line_.Add_End_Point(Vector2D{0.6f, 5.0f}, path_param.end);
-    
-    // 上坡直线
-    //    path_line_.Add_Start_Point(robot_pos_);
-    //    path_line_.Add_Point(Vector2D{0.6f, 8.6f}, path_param.end);
-    //    path_line_.Add_End_Point(uphill_pos, path_param.up);
-    //
-    
+     path_line_.Add_Start_Point(robot_pos_);
+     path_line_.Add_Point(Vector2D{0.6f + KFS_point.coner_ahead, 2.6f}, path_param.start);
+     path_line_.Add_Point(Vector2D{0.6f, 2.6f + KFS_point.coner_ahead}, path_param.curve);
+     path_line_.Add_End_Point(Vector2D{0.6f, 5.0f}, path_param.end);
+
     // 夹杆路径
-    path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
-    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.end);
-    path_line_.Add_End_Point(CB_point.CB_End_pos, path_param.end);
+//    path_line_.Add_Start_Point(robot_pos_);
+//    path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
+//    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.end);
+//    path_line_.Add_End_Point(CB_point.CB_End_pos, path_param.end);
 
     Path_end_point = path_line_.Get_End_Point();
 }
@@ -212,7 +208,7 @@ void OmniChassis_Setup::loop()
     if (!init_flag)
         return;
 
-    //float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
+    float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
 
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
@@ -316,8 +312,13 @@ void OmniChassis_Setup::loop()
                     Path_correction();
                     V.corrVelocity = V.PID_coefficient * V.corrVelocity;
                     speed = v_limit();
+                    if(path_line_.Get_Index()==1)
+                    {
+                        speed=speed.magnitude()*Vector2D{0.0f,1.0f};
+                    }
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
+                    
                 }
                 else
                 {
@@ -851,10 +852,6 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
             {
                 temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
                 path_line_.Add_End_Point(temp_vector, path_param.end);
-                /*
-                    path_line_.Add_Point(uphill_pos, path_param.up);
-                    path_line_.Add_Point(M_pos, path_param.end);
-                */
             }
             else // 中间的路径点
             {
@@ -1112,7 +1109,7 @@ Vector2D OmniChassis_Setup::v_limit(void)
     num++;
     if (num > 5)
     {
-        //debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), target_yaw_);
+        debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), v_tangent);
         num = 0;
     }
 

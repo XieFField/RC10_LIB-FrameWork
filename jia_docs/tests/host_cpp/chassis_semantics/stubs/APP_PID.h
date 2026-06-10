@@ -23,10 +23,17 @@ public:
     void set_as_circular() {}
     void set_as_linear() {}
 
-    float pid_calc(float, float)
+    float pid_calc(float target, float feedback)
     {
+        last_target = target;
+        last_feedback = feedback;
+        calc_count += 1U;
         return 0.0f;
     }
+
+    float last_target = 0.0f;
+    float last_feedback = 0.0f;
+    unsigned int calc_count = 0U;
 };
 
 inline PID_Param_Config lock_angle_pid_params{};
