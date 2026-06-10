@@ -1,39 +1,66 @@
-current_branch: jia/develop
-current_line: rc10_debug_merge_mainline_after_2026_05_26
+current_branch: jia/develop_1
+current_line: rc10_path_yaw_homing_build_after_2026_06_09
 summary:
+  - AAA-Path 路径规划正式版已合入当前主线，主要触点为 APP_Path、APP_Speedplanner 与 omni_chassisSetup
   - mode30_mode31_mode32 已统一到当前底盘调试主线
   - drive 轮句柄已收窄为 VESC_Motor*，drive PID 调参边界不再回灌到 Motor_Base
   - VESC 本地 PID 速度闭环默认在工程初始化层启用
   - SingleWheelTrace 已扩展为 steer_only / drive_only / steer_and_drive 三类 payload
-  - APP_Utils 数学入口已统一收口到公共 API
-  - drive PID 第二步虚拟负载整定链路已并入主线
+  - chassis_semantics 已拆成 doctest runner、共享 harness 与 7 个行为域分片
+  - zero-stop 当前按目标门控和 residual 收尾两层职责理解，旧 residual 兼容字段不再作为当前口径
+  - X-Park 静止保持锁存后退出主要看 target / command exit 门
+  - debug9 统一舵向/驱动模式会释放 X-Park pose 与零电流保持覆盖，恢复舵角目标下发
+  - chassis 默认固件档为 RUNTIME_MIN，host 语义测试显式切到 FULL_DEBUG
+  - yaw lock 已修复跨模式旧锁角复用、目标规划/PID 输入、目标限速和减速阶段先刹再锁
+  - homing 三边沿确认误校准已修复，并由 host harness 与 steer_fault_homing_recovery 分片覆盖
+  - 调试开关已收口到关闭调试模式，02dbf00a 已清理合并残留恢复 MDK 编译
 latest_handoff:
-  primary: jia_docs/handoff/2026-05/ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md
+  primary: jia_docs/handoff/2026-06/ai_handoff_2026-06-09_rc10_path_yaw_homing_build_sync.md
   supporting:
+    - jia_docs/handoff/2026-06/ai_handoff_2026-06-05_rc10_chassis_doctest_zero_stop_sync.md
+    - jia_docs/handoff/2026-05/ai_handoff_2026-05-31_rc10_wait_1_7_7_1_6_1_merge.md
+    - jia_docs/handoff/2026-05/ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md
     - jia_docs/handoff/2026-05/ai_handoff_2026-05-26_1124_singlewheeltrace_payload_semantics.md
 recommended_reading_order:
   - jia_docs/active/overview.md
   - jia_docs/active/latest-handoff.md
   - jia_docs/active/onramp.md
+  - jia_docs/tests/README.md
   - jia_docs/handoff/INDEX.md
 recommended_verification:
   primary:
+    - jia_docs/tests/run_tests.ps1
+    - jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
+    - jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1
+  compatibility:
     - jia_docs/tests/tdd/chassis_semantics/run_test.ps1
     - jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
-  secondary:
-    - jia_docs/tests/legacy_ai_tests/vesc_brake/run_test.ps1
+    - jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
 known_baseline_status:
+  - target: jia_docs/tests/run_tests.ps1
+    status: unified_entrypoint
+    detail: 测试重构后的统一入口；默认覆盖当前 active host_cpp smoke 套件，并可按需调度 extended 与 Python 语义回归。
+  - target: jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
+    status: full_debug_doctest_entrypoint
+    detail: 当前 chassis_semantics 主入口，使用 FULL_DEBUG 编译 doctest runner、harness 与行为域分片；debug9/X-Park 等调试语义回归放在这里。
+  - target: jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1
+    status: runtime_min_smoke
+    detail: RUNTIME_MIN 极限运行固件档 smoke；只验证编译、基础实例化和 Chassis 对象体积下降，不承载调试语义回归。
   - target: jia_docs/tests/tdd/chassis_semantics/run_test.ps1
-    status: failing_baseline
-    detail: 最新 merge handoff 记录仍有 18 个 baseline 失败；新增共享 PID、load tune、step generator、trace 相关测试已通过。
+    status: compatibility_wrapper
+    detail: 旧路径兼容入口；现在通过 compat_wrapper 转发到 `host_cpp.chassis_semantics.main`，新增测试不要优先使用。
   - target: jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
-    status: pass_in_latest_handoff
-    detail: 最新 merge handoff 记录为 PASS。
-  - target: jia_docs/tests/legacy_ai_tests/vesc_brake/run_test.ps1
-    status: pass_in_latest_handoff
-    detail: 最新 merge handoff 记录为 PASS。
+    status: compatibility_wrapper
+    detail: 旧路径兼容入口；现在通过 compat_wrapper 转发到 `host_cpp.chassis_semantics.pid_reconnect`。
+  - target: jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
+    status: active_specialty_entrypoint
+    detail: VESC 刹车语义专项入口；旧 `legacy_ai_tests/vesc_brake/run_test.ps1` 仅作为兼容入口保留。
+  - target: jia_docs/tests/host_cpp/swerve_core/run_test.ps1
+    status: known_xfail_missing_source
+    detail: 当前仓库已无 `RC10_LIB/Module/Src/Module_ChassisSwerve.cpp` 与对应头文件；该历史宿主对照保留在 registry 中，但不再视作当前 active pass 套件。
 open_followups:
-  - 完成 S 型速度规划的后续收口
+  - 路径规划正式版合入后的 MDK 工程、烧录和实车路径复核
   - 测试对外接口
-  - 完成舵轮校准调用接口
+  - 结合 homing 三边沿确认修复完成舵轮校准调用接口的实车确认
   - 继续联调 mode30 单轮 RPM + VESC_RPM_CONTROL_PID_CURRENT
+  - 上板确认 yaw lock 先刹再锁、zero-stop brake trace、drive-load trace、X-Park 零电流释放与静止 fault latch/rehome 链路

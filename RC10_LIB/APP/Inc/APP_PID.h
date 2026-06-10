@@ -112,6 +112,8 @@ public:
         is_circular_ = false;
     }
 
+    bool get_is_in_dead_zone() const { return is_in_dead_zone_; }
+
     float get_P_Term() const { return P_Term; }
     float get_I_Term() const { return I_Term; }
     float get_D_Term() const { return D_Term; }
@@ -140,7 +142,7 @@ private:
     // 循环设置
     bool is_circular_ = false;
 
-    bool is_in_dead_zone = false;
+    bool is_in_dead_zone_ = false;
 };
 
 // 增量式PID 默认1kHz更新频率

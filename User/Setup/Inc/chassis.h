@@ -7,6 +7,70 @@
 #ifndef CHASSIS_H_
 #define CHASSIS_H_
 
+// =====================================================================
+// 底盘编译档位
+// =====================================================================
+// 使用说明：
+// - RUNTIME_MIN：比赛/发布固件默认档。保留正常底盘控制、安全门控、homing、X-Park、
+//   drive zero-stop、steer fault 和核心 swerve planner；编译期去掉串口观测、调试接管、
+//   单轮直控、PID 调参缓存、调试镜像和线程耗时大缓存，优先降低固件体积与 Chassis RAM 占用。
+// - FULL_DEBUG：调试器/host 语义测试档。保留所有调试字段和输出路径，方便直接观察内部状态。
+// 如果工程文件或 host 测试需要指定档位，可在编译参数中定义：
+//   -DJIA_CHASSIS_PROFILE=JIA_CHASSIS_PROFILE_FULL_DEBUG
+//   -DJIA_CHASSIS_PROFILE=JIA_CHASSIS_PROFILE_RUNTIME_MIN
+#define JIA_CHASSIS_PROFILE_RUNTIME_MIN 1
+#define JIA_CHASSIS_PROFILE_FULL_DEBUG 2
+
+#ifndef JIA_CHASSIS_PROFILE 
+#define JIA_CHASSIS_PROFILE JIA_CHASSIS_PROFILE_RUNTIME_MIN
+#endif
+
+// 功能开关均允许外部 -D 单独覆盖。下面只给 profile 的默认值：
+// FULL_DEBUG 全开；RUNTIME_MIN 关闭调试/观测/单轮直控类功能。
+#ifndef JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE 
+#define JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
+#endif
+
+#ifndef JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
+#define JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
+#endif
+
+#ifndef JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
+#define JIA_CHASSIS_ENABLE_DEBUG_OUTPUT (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
+#endif
+
+#ifndef JIA_CHASSIS_ENABLE_BINARY_TELEMETRY
+#define JIA_CHASSIS_ENABLE_BINARY_TELEMETRY (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
+#endif
+
+#ifndef JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
+#define JIA_CHASSIS_ENABLE_PID_TUNE_CACHE (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
+#endif
+
+#ifndef JIA_CHASSIS_ENABLE_DEBUG_MIRROR
+#define JIA_CHASSIS_ENABLE_DEBUG_MIRROR (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
+#endif
+
+#ifndef JIA_CHASSIS_ENABLE_TASK_PERF_STAT
+#define JIA_CHASSIS_ENABLE_TASK_PERF_STAT (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
+#endif
+
+#ifndef JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
+#define JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
+#endif
+
+#ifndef JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR
+#define JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
+#endif
+
+#ifndef JIA_CHASSIS_HOMING_SEARCH_RPM
+#define JIA_CHASSIS_HOMING_SEARCH_RPM 50.0f
+#endif
+
+#ifndef JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG
+#define JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG 15.0f
+#endif
+
 #include "APP_Utils.h"
 
 #include "FreeRTOS.h"
@@ -16,10 +80,6 @@
 #include "Module_CrsfReceiver.h"
 #include "APP_debugTool.h"
 #include "APP_PID.h"
-
-#ifndef FOURSTEER_SINGLE_WHEEL_TRACE_UART8
-#define FOURSTEER_SINGLE_WHEEL_TRACE_UART8 0
-#endif
 
 namespace jia
 {
@@ -297,7 +357,8 @@ namespace jia
             void init(InitConfig &config);
             void setIdlePostureMode(IdlePostureMode mode);
             void setSteeringStrategyMode(SteeringStrategyMode mode);
-            
+
+
 
         private:
             Result startHoming();
@@ -330,6 +391,12 @@ namespace jia
                 kRecovering = 2,
             };
 
+            enum class XParkSteerHoldPhase : u8
+            {
+                kInactive = 0,
+                kSettling = 1,
+                kLatchedZeroCurrent = 2,
+            };
             struct WheelInitConfig
             {
                 f32 pos_x_m = 0.0f;
@@ -343,7 +410,7 @@ namespace jia
                 u16 homing_gpio_pin = 0;
                 f32 homing_falling_edge_mech_deg = 60.0f;
                 f32 homing_rising_edge_mech_deg = -120.0f;
-                f32 homing_search_rpm = 10.0f;
+                f32 homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM;
                 f32 homing_zero_offset_deg = 0.0f;
                 f32 homing_timeout_s = 5.0f;
             };
@@ -365,7 +432,7 @@ namespace jia
                 u16 homing_gpio_pin = 0;                          // 回零传感器 GPIO 引脚运行时副本；与端口配合读取真实输入
                 f32 homing_falling_edge_mech_rad = 0.0f;          // 原始 GPIO H->L 边沿对应的机械 OA 角（rad）
                 f32 homing_rising_edge_mech_rad = 0.0f;           // 原始 GPIO L->H 边沿对应的机械 OA 角（rad）
-                f32 homing_search_rpm = 10.0f;                    // 回零搜索阶段给转向电机的转速指令，单位 rpm
+                f32 homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM; // 回零搜索阶段给转向电机的转速指令，单位 rpm
                 f32 homing_zero_offset_rad = 0.0f;                // 标定得到的零位补偿角：传感器触发点到期望机械零位的固定偏差
                 f32 homing_timeout_s = 5.0f;                      // 单轮回零允许持续的最长时间，超时后进入故障态，单位秒
                 HomingState homing_state = HomingState::kIdle;    // 当前轮回零状态机所处阶段
@@ -374,6 +441,11 @@ namespace jia
                 bool homing_align_command_armed = false;          // 进入 AlignToZero 后是否已允许下发第一次对零位置命令；用于避免边沿抓取后同拍大跳变
                 bool homing_zero_valid = false;                   // 当前轮是否已经建立可用于闭环控制的零位
                 bool homing_search_timeout_armed = false;         // Search 超时是否已武装。只有看到首个有效舵向反馈活动后才开始累计超时。
+                u8 homing_edge_confirm_count = 0U;                // 本次 Search 已连续确认的原始光电边沿数量
+                bool homing_last_confirm_edge_is_falling = false; // 上一次确认边沿方向：true=H->L，false=L->H
+                f32 homing_last_confirm_signed_local_rad = 0.0f;  // 上一次确认边沿对应的带方向本地连续角
+                f32 homing_candidate_zero_offset_sum_rad = 0.0f;  // 三边沿确认时，已 unwrap 到同一分支的候选零偏累加
+                f32 homing_hold_corrected_local_total_rad = 0.0f; // 单轮确认完成后，等待其他轮时保持的 corrected-local 连续角
                 f32 homing_elapsed_s = 0.0f;                      // 本次回零已运行时间，单位秒；用于超时判定
                 f32 homing_runtime_zero_offset_rad = 0.0f;        // 本次上电运行实际采用的零位补偿；回零成功后会把“当前触发位置”修正成运行时零点
                 f32 corrected_steer_motor_total_angle_rad = 0.0f; // 已乘方向符号并叠加运行时零位补偿后的转向电机连续总角度反馈
@@ -382,8 +454,12 @@ namespace jia
                 f32 target_drive_omega_rad_s = 0.0f;              // 当前周期解算后要发给驱动电机的目标角速度，单位 rad/s
                 f32 steer_target_velocity_rad_s = 0.0f;           // 转向二阶限幅后得到的目标角速度，便于平滑舵向变化
                 bool flipped_drive_direction = false;             // 本周期是否采用“舵角翻转 180 度、驱动反向”策略来走更短转角路径
-                bool xpark_steer_deadband_active = false;          // [RO] 当前轮是否已进入 X-Park 舵向死区冻结状态。
-                f32 xpark_steer_deadband_error_rad = 0.0f;         // [RO] 当前轮相对 X-Park 理想目标角的绝对角误差（rad）。
+                XParkSteerHoldPhase xpark_steer_hold_phase = XParkSteerHoldPhase::kInactive; // [RO] 当前轮 X-Park 舵向 hold 状态机阶段。
+                f32 xpark_steer_hold_locked_target_rad = 0.0f;      // [RO] 当前轮进入 hold 后冻结的 corrected-local 总角目标（rad）。
+                f32 xpark_steer_hold_error_rad = 0.0f;              // [RO] 当前轮相对 X-Park 理想目标角的绝对角误差（rad）。
+                f32 xpark_steer_hold_target_rate_rad_s = 0.0f;      // [RO] 当前轮 hold 判稳使用的目标角速度绝对值（rad/s）。
+                u32 xpark_steer_hold_settle_ms = 0U;                // [RO] 当前轮满足 hold 判稳条件后已累计的保持时长（ms）。
+                u32 xpark_steer_hold_reacquire_ms = 0U;             // [RO] 当前轮从零电流锁定退出后，重新允许锁定前还需等待的时长（ms）。
                 SteerFaultState steer_fault_state = SteerFaultState::kNone;
                 bool steer_fault_rehome_request = false;
                 f32 steer_feedback_current_mA = 0.0f;
@@ -485,6 +561,8 @@ namespace jia
                 f32 planned_corrected_local_total_rad[4] = {0.0f};
                 f32 planned_oa_total_rad[4] = {0.0f};
                 f32 planned_steer_rate_rad_s[4] = {0.0f};
+                f32 steer_cmd_corrected_local_total_rad[4] = {0.0f};
+                f32 steer_cmd_oa_total_rad[4] = {0.0f};
                 f32 projected_drive_omega_rad_s[4] = {0.0f};
                 f32 final_drive_omega_rad_s[4] = {0.0f};
                 f32 low_speed_suppression_scale[4] = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -500,6 +578,8 @@ namespace jia
             {
                 f32 steer_corrected_local_total_rad[4] = {0.0f};
                 f32 steer_oa_total_rad[4] = {0.0f};
+                f32 steer_cmd_corrected_local_total_rad[4] = {0.0f};
+                f32 steer_cmd_oa_total_rad[4] = {0.0f};
                 f32 steer_rate_rad_s[4] = {0.0f};
                 f32 drive_omega_rad_s[4] = {0.0f};
                 bool flipped_drive_direction[4] = {false, false, false, false};
@@ -511,7 +591,9 @@ namespace jia
             void runThread(void *arg);
 
             // 输入目标数据
+#if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
             void isDebugMode();
+#endif
             enum class DebugMode : u8
             {
                 kTorqueFree = 0,
@@ -717,26 +799,33 @@ namespace jia
                 kDriveOnly = 2,
             };
             DebugMode resolveDebugMode(u8 raw_mode) const;
+#if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
             void applyDebugTargetOverride(DebugMode mode);
             bool applyDebugModuleOverride(bool all_homed);
-            void emitDebugOutputByMode(bool all_homed);
+#endif
             void clearInputTargetData();
             void setModeFlag();
             void resolvePlannerTargetData();
             void updatePlannedMotionData();
             void clearPlannedMotionForModuleOverride();
+#if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
             void resetDebugModuleOverrideTargets(u8 wheel_idx, bool preserve_soft_wheel_rate);
             void applyAlignForwardDebugOverride();
             void applyHomingObserveDebugOverride();
+            void finalizeDebugModuleOverride(bool all_homed, DebugModuleOverrideRoute route);
+#if JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
             void computeSingleWheelIsolatedCommandsMode30(u8 wheel_idx, bool all_homed = true);
             bool isSingleWheelIsolatedMode(DebugMode mode) const;
             void applySingleWheelIsolationFilter(DebugMode mode, u8 wheel_idx, bool all_homed);
-            void finalizeDebugModuleOverride(bool all_homed, DebugModuleOverrideRoute route);
             void syncSingleWheelCommandTemplates(); // mode30 类型切换同步入口。用于在命令类型改变时刷新单值命令、限幅和阶跃模板。
             DirectActuatorCommandSnapshot resolveSingleWheelCommand(u8 wheel_idx); // 解析当前 control_wheel_index 对应轮的 mode30 双轴有效命令快照。
+#endif
+#endif
             void clearDirectDriveCommandByType(WheelConfig &wheel, u8 wheel_idx, u8 drive_control_type);
+#if JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
             void applyResolvedSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command, bool enable);
             void applyResolvedDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command, bool enable);
+#endif
             void applyDriveVirtualLoadAndCommand(WheelConfig &wheel,
                                                  u8 wheel_idx,
                                                  f32 delivered_drive_target_rad_s,
@@ -747,12 +836,17 @@ namespace jia
                                                  bool drive_zero_stop_active,
                                                  bool entering_drive_zero_stop,
                                                  bool leaving_drive_zero_stop);
+#if JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
             f32 readSingleWheelInputAxisValue(u8 input_axis_raw) const;
             void resetSingleWheelAxisPlannerRuntime(SingleWheelAxisPlannerRuntime &runtime);
             f32 shapeSingleWheelSteerCommand(u8 wheel_idx, const SingleWheelAxisControl &axis_cfg, f32 target_value);
             f32 shapeSingleWheelDriveOmegaRadS(u8 wheel_idx, const SingleWheelAxisControl &axis_cfg, f32 target_omega_rad_s);
+#endif
             void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
+            void resetYawPidTargetRuntime();
+            f32 filterYawPidTarget(f32 target_yaw_rad);
+            bool computeYawPidOmega(f32 target_yaw_rad, f32 feedback_yaw_rad, f32 &out_omega_z);
             void isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z);
             void isLockToRotZ(bool is_lock, f32 tar_rot_z, f32 cur_rot_z, f32 &out_rot_z, f32 omega_z, f32 &out_omega_z);
             void clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
@@ -774,6 +868,8 @@ namespace jia
             void clearSteerFaultState(WheelConfig &wheel);
             void requestSingleWheelHoming(WheelConfig &wheel);
             void resetSteerMotorClosedLoopState(WheelConfig &wheel);
+            void resetHomingEdgeConfirmState(WheelConfig &wheel);
+            bool recordHomingEdgeAndCheckConfirmed(WheelConfig &wheel, bool is_falling_edge, f32 signed_local_total_rad);
             bool updateHomingState(WheelConfig &wheel);
             bool readHomingSensor(const WheelConfig &wheel) const;
             bool readHomingSensorRawHigh(const WheelConfig &wheel) const;
@@ -789,6 +885,7 @@ namespace jia
             f32 limitValueWithAcceleration(f32 current_value, f32 target_value, f32 max_accel, f32 dt_s) const;
             f32 getXParkAngle(const WheelConfig &wheel) const;
             f32 computeMaxCommandWheelSpeedMps(const Data &command_data) const;
+            bool shouldSuppressYawLockOmegaForZeroStopDecel(const Data &command_data) const;
             f32 computeLowSpeedDriveSuppressionScale(f32 abs_error_rad) const;
             void computeLowSpeedDriveSuppressionScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4]);
             f32 getNearZeroEnterSpeedMps() const;
@@ -813,23 +910,34 @@ namespace jia
             void computeModuleCommands(const Data &command_data);
             void applyModuleCommands(bool all_homed);
             void updateCurrentData(bool all_homed);
+#if JIA_CHASSIS_ENABLE_DEBUG_MIRROR
             void refreshDebugMirror(bool all_homed);
+#endif
+#if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
             void emitDebugUart8Log(bool all_homed);
             void emitUart8VofaJustFloatPidTrace();
-            void syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
-            void syncDebugSteerPidTuneFromRuntime();
-            void applyDebugSteerPidRuntimeTuning();
             void emitUart8VofaPid1kHzTrace();
             void emitUart8VofaSingleWheelDriveTrace();
             void emitUart8VofaDualMotor1kHzTrace();
-            void emitUart8SwerveTelemetryV2(bool all_homed);
             void emitUart8VofaYawPidTrace();
             void emitUart8VofaDrivePidLoadTrace();
             void emitUart8VofaDriveZeroStopBrakeTrace();
+            void emitDebugOutputByMode(bool all_homed);
+#endif
+#if JIA_CHASSIS_ENABLE_BINARY_TELEMETRY
+            void emitUart8SwerveTelemetryV2(bool all_homed);
+#endif
+#if JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
+            void syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
+            void syncDebugSteerPidTuneFromRuntime();
+            void applyDebugSteerPidRuntimeTuning();
+#endif
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
             void updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us);
             void updateTaskPerfBreakdown(u64 plan_us, u64 feedback_us, u64 homing_us, u64 apply_us, u64 debug_us);
+#endif
             static SteerCalibration makeSteerCalibration(const WheelConfig &wheel);
             static f32 mapWheelCorrectedLocalToOaTotal(const WheelConfig &wheel, f32 corrected_local_total_rad);
             static f32 mapWheelOaTotalToCorrectedLocal(const WheelConfig &wheel, f32 oa_total_rad);
@@ -868,11 +976,11 @@ namespace jia
                 f32 wheel_radius_m_ = 0.052f;                                    // [RW, 慎改] 轮半径。决定线速度与驱动角速度的换算比例，改错会直接导致速度尺度和里程计比例偏差。
                 f32 max_vel_x_ = 5.0f;                                           // [RW] 车体 X 方向最大线速度上限（m/s）。用于规划/限幅，不是电机硬件极限。
                 f32 max_vel_y_ = 5.0f;                                           // [RW] 车体 Y 方向最大线速度上限（m/s）。同上，约束横移速度。
-                f32 max_omega_z_ = 2.0f;                                         // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
-                f32 max_acc_xy_acc_ = 9999.0f;                                      // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
+                f32 max_omega_z_ = 5.0f;                                         // [RW] 车体 Z 轴最大角速度上限（rad/s）。同上，约束原地旋转或航向变化速度。
+                f32 max_acc_xy_acc_ = 99999999.0f;                                      // [RW] 平面加速段最大加速度（m/s^2）。越小起步越柔和，越大响应越猛。
                 f32 max_acc_xy_dec_ = 99999999.0f;                                     // [RW] 平面减速段最大减速度（m/s^2）。越小刹车越平滑，越大停车越快但冲击更强。
-                f32 max_alpha_z_acc_ = 2.0f;                                     // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
-                f32 max_alpha_z_dec_ = 30.0f;                                    // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
+                f32 max_alpha_z_acc_ = 99999999.0f;                                     // [RW] 航向加速段最大角加速度（rad/s^2）。影响转向起步的平顺性。
+                f32 max_alpha_z_dec_ = 99999999.0f;                                    // [RW] 航向减速段最大角减速度（rad/s^2）。影响转向收尾和停摆冲击。
                 f32 trans_dir_rate_limit_deg_s_ = 99999999.0f;                   // [RW] 平移速度矢量方向变化率上限（deg/s）。限制“速度方向”每秒最多转多少度。
                 bool enable_drive_omega_limit_ = false;                          // [RW] 是否启用驱动角速度上限。
                 f32 max_drive_omega_rad_s_ = 99999999.0f;                        // [RW] 驱动目标角速度上限（rad/s）。仅在 enable_drive_omega_limit_=true 时生效。
@@ -882,47 +990,58 @@ namespace jia
                 f32 max_steer_rate_rad_s_ = 200.0f;                         // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit_=true 时生效。
                 bool enable_steer_alpha_limit_ = true;                          // [RW] 是否启用舵向角加速度上限。
                 f32 max_steer_alpha_rad_s2_ = 20000.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
+                bool enable_steer_angle_feedforward = true;                      // [RW] 是否启用底盘层舵角超前前馈。只影响正常 swerve 规划下发角，不改变物理预计角。
+                f32 steer_angle_feedforward_lead_s = 0.3f;                      // [RW] 舵角超前时间（s）。用于补偿舵向电机响应滞后。
+                f32 steer_angle_feedforward_max_lead_rad = 0.3f;          // [RW] 舵角超前最大幅度（rad）
+                f32 steer_angle_feedforward_settle_error_rad = 0.05235988f;      // [RW] 收尾线性衰减误差窗口（rad），默认约 3°。
 
-                // ---- 近零门限统一配置 --------------------------------------------
-                // 所有静止/冻结/X-Park/停车保护阈值统一由这组基准参数派生，避免多处手改失配。
+                // ---- 通用 near-zero 门限 -----------------------------------------
+                // 这组阈值描述“速度已经接近 0”的通用口径。使用者看这里时要先分清对象：
+                // - actual/residual：反馈或残余速度是否已经足够小，X-Park 进入门会用它做一次安全确认。
+                // - target/command：drive zero-stop 直接复用这组阈值判断目标是否已经进入刹车模式。
+                // 它不是 X-Park 目标静止意图的专用门；X-Park command 门在下面单独配置。
+                // ---- 通用 near-zero 门限 -----------------------------------------
+                // 这组阈值描述“速度已经接近 0”的通用口径。使用者看这里时要先分清对象：
+                // - actual/residual：反馈或残余速度是否已经足够小，X-Park 进入门会用它做一次安全确认。
+                // - target/command：drive zero-stop 直接复用这组阈值判断目标是否已经进入刹车模式。
+                // 它不是 X-Park 目标静止意图的专用门；X-Park command 门在下面单独配置。
                 struct NearZeroThresholdConfig
                 {
-                    f32 base_enter_m_s = 0.02f; // [RW] 近零门限进入基准（m/s）。
-                    f32 base_exit_m_s = 0.02f;  // [RW] 近零门限退出基准（m/s）。应大于 enter 形成滞回。
+                    f32 base_enter_m_s = 0.005f; // [RW] 通用 near-zero 进入阈值（m/s）。未激活的门控用它判断“可以进入”。
+                    f32 base_exit_m_s = 0.015f;  // [RW] 通用 near-zero 退出阈值（m/s）。已激活的门控用它保持滞回，应大于 enter。
                 } near_zero_cfg_;
 
                 struct XParkCommandThresholdConfig
                 {
-                    f32 enter_m_s = 0.01f; // [RW] 仅用于 X-Park 命令静止意图的进入门限（m/s），不用于残余反馈过滤。
-                    f32 exit_m_s = 0.03f;  // [RW] 仅用于 X-Park 命令静止意图的退出门限（m/s）。应大于 enter 形成滞回。
+                    f32 enter_m_s = 0.005f; // [RW] X-Park 目标静止进入阈值（m/s）。只看 target/command，不看 actual residual。
+                    f32 exit_m_s = 0.015f;  // [RW] X-Park 目标静止退出阈值（m/s）。X-Park 已锁存后只用它决定是否退出。
                 } xpark_command_threshold_cfg_;
 
-                struct XParkSteerDeadbandConfig
+                struct XParkSteerHoldConfig
                 {
-                    bool enable = true;                     // [RW] 是否启用 X-Park 舵向末端死区冻结。
-                    bool zero_current_release_enable = false; // [RW] 死区激活后是否直接释放舵向零电流；false 时保持“冻结当前角度并继续走位置环”旧语义。
-                    f32 enter_angle_deg = 1.0f;             // [RW] X-Park 舵向误差进入阈值（deg）。误差小于等于该值后进入冻结。
-                    f32 exit_angle_deg = 5.0f;              // [RW] X-Park 舵向误差退出阈值（deg）。应大于 enter 形成滞回，避免边界抖动。
-                } xpark_steer_deadband_cfg_;
-
-                struct SteerSpeedPidSettleResetConfig
-                {
-                    bool enable = true;                  // [RW] 是否启用“舵向角到位后清增量式速度环历史”机制。
-                    f32 enter_angle_deg = 0.1f;          // [RW] 舵向角误差进入判稳阈值（deg）。误差小于等于该值才允许首次进入 settled。
-                    f32 exit_angle_deg = 0.5f;           // [RW] 舵向角误差退出判稳阈值（deg）。应大于 enter 形成滞回，避免到位边界抖动反复进出。
-                    f32 enter_target_rate_deg_s = 2.0f;  // [RW] 舵向目标角速度进入判稳阈值（deg/s）。只有目标变化已经足够慢才允许清历史。
-                    f32 exit_target_rate_deg_s = 5.0f;  // [RW] 舵向目标角速度退出判稳阈值（deg/s）。应大于 enter 形成滞回，避免轻微规划抖动反复触发。
-                } steer_speed_pid_settle_reset_cfg_;
+                    bool enable = true;                    // [RW] 是否启用统一的 X-Park 舵向 hold 状态机。
+                    f32 entry_angle_deg = 1.0f;           // [RW] X-Park 舵向误差进入 hold 的角误差阈值（deg）。
+                    f32 exit_angle_deg = 10.0f;            // [RW] X-Park 舵向误差退出 hold 的角误差阈值（deg）。应大于 entry 形成滞回。
+                    f32 settle_angle_deg = 2.0f;          // [RW] X-Park 舵向 hold 判稳角误差阈值（deg）。
+                    f32 settle_target_rate_deg_s = 2.0f;  // [RW] X-Park 舵向 hold 判稳目标角速度阈值（deg/s）。
+                    u32 settle_hold_ms = 1000;              // [RW] 满足判稳条件后，进入零电流锁定前需持续保持的时长（ms）。
+                    u32 reacquire_hold_ms = 500U;           // [RW] 零电流锁定退出后，重新允许锁定前的等待时长（ms）。
+                    bool entry_reset_enable = true;       // [RW] 进入 hold Settling 阶段时是否执行一次舵向速度环历史清理。
+                } xpark_steer_hold_cfg_;
 
                 // ---- drive 零速止停辅助 -----------------------------------------
-                // 仅在整车正常 drive 闭环链路里使用，用来在“目标已经静止”时清理 VESC 本地速度环残留，
-                // 避免位置式 PID 的积分/状态尾巴把轮子短暂反向拖一下。
+                // 仅在整车正常 drive 闭环链路里使用。这里分成两层，调参时不要混在一起看：
+                // - 模式层：目标速度进入 near_zero_cfg_ 的 enter 门后，zero-stop active；目标速度离开 exit 门后恢复 RPM 闭环。
+                // - 末端层：zero-stop 已 active 后，实际 residual 只决定当前轮继续 brake，还是已经停稳可切到零电流。
+                // residual 不负责进入/退出 zero-stop 模式；它只负责 active 期间的“刹住以后是否安静收尾”。
+                // 仅在整车正常 drive 闭环链路里使用。这里分成两层，调参时不要混在一起看：
+                // - 模式层：目标速度进入 near_zero_cfg_ 的 enter 门后，zero-stop active；目标速度离开 exit 门后恢复 RPM 闭环。
+                // - 末端层：zero-stop 已 active 后，实际 residual 只决定当前轮继续 brake，还是已经停稳可切到零电流。
+                // residual 不负责进入/退出 zero-stop 模式；它只负责 active 期间的“刹住以后是否安静收尾”。
                 bool enable_drive_zero_stop_assist = true;          // [RW] 是否启用 drive 零速止停辅助。
-                f32 drive_zero_stop_settle_speed_m_s = 0.01f;       // [RW] 最终停稳阈值（m/s）。残余线速度低于该值后，进入 zero-stop 的“最终 settled 区”，继续零电流收尾并清理最终残留状态。
-                f32 drive_zero_stop_brake_release_speed_m_s = 0.01f;  // [RW] brake 释放阈值（m/s）。当前已在 brake 分支时，只有残余速度降到该值及以下才允许松开 brake，转入非刹车收尾段。
-                f32 drive_zero_stop_brake_reenter_speed_m_s = 0.03f; // [RW] brake 重进阈值（m/s）。当前不在 brake 分支时，只有残余速度高于该值才重新进入 brake，和 brake_release 一起形成滞回。
+                bool enable_drive_zero_stop_settle_zero_current = true; // [RW] 是否允许 drive zero-stop 在 residual 进入 near-zero enter 后切到零电流收尾。关闭后 active 期间始终 brake。
                 f32 drive_zero_stop_brake_current_mA = 25000.0f;     // [RW] 零速止停进入 brake 分支时下发的刹车电流。
-                u32 drive_zero_stop_brake_ramp_time_ms = 0U;         // [RW] zero-stop brake 子状态激活后，从 0 线性爬升到 drive_zero_stop_brake_current_mA 的目标时长（ms）。0 表示关闭 ramp，保持阶跃下发。
+                u32 drive_zero_stop_brake_ramp_time_ms = 0U;         // [RW] zero-stop 目标门进入后，从 0 线性爬升到 brake 电流的时长（ms）。0 表示阶跃下发。
 
                 struct LowSpeedDriveSuppressionConfig
                 {
@@ -978,7 +1097,8 @@ namespace jia
             };
             StrategyConfig default_strategy_cfg_; // [RW, 慎改] 默认策略基线。用于初始化和“恢复默认值”，不要把它当作实时状态。
             StrategyConfig runtime_strategy_cfg_; // [RW] 当前生效的运行时策略。可被外部接口动态切换，控制链路实际读取它。
-            
+
+
             // =====================================================================
             // 航向控制参数（运行时可调）[RW]
             // 通过全局 chassis 对象在调试器内直接改值。[RW]
@@ -986,22 +1106,29 @@ namespace jia
             // =====================================================================
             PID_Position rot_z_pid_;                  // [RW, 慎改] 航向位置环 PID。用于 LockToYaw / 相关锁角模式的角度误差闭环。
             u8 rot_z_pid_period_ = 1;                 // [RW] PID 更新周期分频。1 表示每个控制周期都更新，数值越大频率越低、负载越小但响应更慢。
-            f32 max_lock_to_rot_z_rad_s_ = 2.0f;      // [RW] LockToYaw 模式下的角速度上限（rad/s）。用于限制“往目标角赶”的最快速度。
+            f32 max_lock_to_rot_z_rad_s_ = 99999999.0f;      // [RW] LockToYaw 模式下的角速度上限（rad/s）。用于限制“往目标角赶”的最快速度。
             u32 lock_now_rot_z_shift_time_ms_ = 1000; // [RW] LockNow 松手缓冲时长（ms）。松开后短时间内继续维持目标，避免姿态突然跳变。
+            f32 lock_yaw_pid_target_lpf_alpha_ = 1.0f; // [RW] 航向 PID 目标低通系数，1=关闭滤波，0=保持上一滤波目标。
+            f32 lock_yaw_pid_deadband_enter_deg_ = 0.05f; // [RW] 航向 PID 死区进入阈值（deg）。
+            f32 lock_yaw_pid_deadband_exit_deg_ = 0.20f;  // [RW] 航向 PID 死区退出阈值（deg）。
 
             // =====================================================================
             // 调试参数（通过全局 chassis 对象在调试器内直接改值）[RW]
             // 说明：这组参数只影响调试链路。正常控制不读取它们，只有切到相应 debug mode 时才会生效。
-            // 速查：0~8 = 底盘输入接管/信号注入类模式；20 = 已退役（安全回退）；21 = 四轮朝前；22 = 回零观察；30 = 单轮独立直控。
+            // 速查：0~9 = 底盘输入接管/信号注入类模式（9 = 定角驱动）；20 = 已退役（安全回退）；21 = 四轮朝前；22 = 回零观察；30 = 单轮独立直控。
+            // 速查：0~9 = 底盘输入接管/信号注入类模式（9 = 定角驱动）；20 = 已退役（安全回退）；21 = 四轮朝前；22 = 回零观察；30 = 单轮独立直控。
             // 手柄平移坐标约定（对外/调试接管语义）：前推朝当前 2/3 面，左推朝当前 3/4 面；
             // 映射到内部 body 命令时使用 -left_x -> vel_x、-left_y -> vel_y。
+            // RUNTIME_MIN 会移除整组调试接管字段，避免比赛固件为面板模式、单轮直控和观测轮号长期占 RAM。
+            // RUNTIME_MIN 会移除整组调试接管字段，避免比赛固件为面板模式、单轮直控和观测轮号长期占 RAM。
             // =====================================================================
+#if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
             struct DebugControl
             {
                 struct Common
                 {
                     bool enable = false;                                            // [RW] 调试总开关。
-                    u8 mode_raw = 9;                                               // [RW] 调试模式号。
+                    u8 mode_raw = 2;                                               // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
                     u8 observe_wheel_index = 0U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。
@@ -1050,8 +1177,10 @@ namespace jia
                         {}};
                 } single_wheel{};
             } debug_control_;
+#endif
             // drive 轮虚拟负载配置。
             // 用来在调试阶段给 drive 轮额外叠加“等效惯量/阻尼/库仑摩擦”电流，便于离线整定速度环手感。
+#if JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
             struct DebugDriveVirtualLoadConfig
             {
                 bool enable = false;                    // [RW] 是否启用该轮虚拟负载。false 时这一轮只走原始调试命令，不额外叠加负载电流。
@@ -1061,8 +1190,10 @@ namespace jia
                 f32 coulomb_sign_vel_eps_rad_s = 0.2f; // [RW] 判断速度正负号时用的近零阈值。速度太小时避免库仑摩擦方向来回抖动。
                 f32 bias_current_limit_mA = 999999999.0f;  // [RW] 虚拟负载总偏置电流限幅。防止调试时叠加出来的附加电流过大。
             };
+#endif
             // drive 轮自动阶跃配置。
             // 启用后可以自动生成正负转速阶跃，避免每次手动推杆，适合重复观察速度环响应。
+#if JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR
             struct DebugDriveStepGeneratorConfig
             {
                 bool enable = false;          // [RW] 是否启用该轮自动阶跃。false 时这一轮不会自动替你生成阶跃激励。
@@ -1074,8 +1205,10 @@ namespace jia
                 bool one_shot = false;        // [RW] 是否只执行一轮阶跃流程。true 时跑完一次后停住，适合单次抓图。
                 bool auto_restart = false;    // [RW] 单轮流程结束后是否自动重启。适合长时间连续观察或反复录波。
             };
+#endif
             // 自动阶跃发生器运行时状态。
             // 用来记录这一轮阶跃流程是否已启动、当前输出符号、阶段和本阶段累计时间。
+#if JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR
             struct DebugDriveStepGeneratorRuntime
             {
                 bool initialized = false;  // [RO] 该轮阶跃发生器运行态是否已初始化。用于避免每个周期都从第一步重新开始。
@@ -1083,17 +1216,29 @@ namespace jia
                 u8 phase = 0U;             // [RO] 当前所处阶段编号。通常用来区分“保持输出”还是“静置等待”等内部阶段。
                 f32 elapsed_ms = 0.0f;     // [RO] 当前阶段已经持续的时间。达到 hold/rest 阈值后会切到下一阶段。
             };
+#if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE || JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
             bool debug_enable_last_cycle_ = false; // [RO] 调试总开关上一周期的状态。主要用于识别 enable 上升沿，并在刚开启调试时做一次基线同步。
+#endif
+#if JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
             u8 single_wheel_last_steer_command_type_raw_ = 0xFFU; // [RO] 上一次已同步的 mode30 舵向命令类型。切换类型后可据此判断是否需要刷新对应模板。
             u8 single_wheel_last_drive_command_type_raw_ = 0xFFU; // [RO] 上一次已同步的 mode30 驱动命令类型。切换类型后可据此判断是否需要刷新对应模板。
+#endif
+#if JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
             DebugDriveVirtualLoadConfig debug_drive_virtual_load_[4]{}; // [RW] 四个 drive 轮各自的虚拟负载配置。通常按轮独立整定，不要求四轮完全一致。
+#endif
+#if JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR
             DebugDriveStepGeneratorConfig debug_drive_step_generator_[4]{}; // [RW] 四个 drive 轮各自的自动阶跃配置。可只打开观察轮对应那一项。
+#endif
+#endif
 
             // =====================================================================
             // 调试输出 [RW]
             // 说明：这里只管“串口往外发什么”，不管底盘怎么跑。
             //       output_enable 是总开关，output_mode_raw 选路径，text_log_level 决定文本模式的细度。
+            // RUNTIME_MIN 默认移除整组配置和运行态，避免串口 trace/telemetry 占用固件空间和 Chassis RAM。
+            // RUNTIME_MIN 默认移除整组配置和运行态，避免串口 trace/telemetry 占用固件空间和 Chassis RAM。
             // =====================================================================
+#if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
             struct DebugOutputSlotConfig
             {
                 u32 period_ms = 10U;
@@ -1176,12 +1321,16 @@ namespace jia
                 DebugOutputJustFloatRuntime justfloat{};
                 DebugOutputBinaryRuntime binary{};
             } debug_output_runtime_;
+#endif
 
             // =====================================================================
             // DebugPidTune [RW]
             // 说明：这里存的是“待同步的 PID 配置缓存”，不是运行态实时对象。
             //       写完后通常还要等调试使能边沿或同步流程消费，运行中的 PID 才会真正换参数。
+            // RUNTIME_MIN 默认不保留这份缓存；比赛固件用初始化层的 PID 参数，避免每个 Chassis 常驻一份调参面板副本。
+            // RUNTIME_MIN 默认不保留这份缓存；比赛固件用初始化层的 PID 参数，避免每个 Chassis 常驻一份调参面板副本。
             // =====================================================================
+#if JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
             struct DebugPidTune
             {
                 PID_Param_Config steer_speed_pid_cfg[4] = {
@@ -1211,7 +1360,9 @@ namespace jia
                 u32 drive_speed_pid_apply_stamp = 0U;                   // [RW] drive 共享速度环参数申请生效戳。外部写入后，通过同步流程统一下发到 4 个驱动轮。
                 u32 drive_speed_pid_applied_stamp = 0U;                 // [RO] drive 共享速度环已生效戳。表示 4 个 drive 轮已经完成这组共享参数的同步。
             } debug_pid_tune_;
+#endif
 
+#if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
             struct DebugDriveLoadTraceState
             {
                 f32 target_rpm = 0.0f;
@@ -1229,8 +1380,13 @@ namespace jia
                 f32 stepgen_enable = 0.0f;
                 f32 observe_wheel_idx = 0.0f;
             } debug_drive_load_trace_;
+#endif
 
             // 回零与模块运行态（主要观察）[RO]
+            // 这份 yaw trace 很小，并且被航向控制函数直接写入。RUNTIME_MIN 保留它能避免把核心锁角逻辑切碎；
+            // 真正占空间的串口输出配置、调试镜像和任务耗时窗口仍由 profile 裁剪。
+            // 这份 yaw trace 很小，并且被航向控制函数直接写入。RUNTIME_MIN 保留它能避免把核心锁角逻辑切碎；
+            // 真正占空间的串口输出配置、调试镜像和任务耗时窗口仍由 profile 裁剪。
             struct YawPidTraceState
             {
                 f32 mode_tag = 0.0f;
@@ -1270,13 +1426,16 @@ namespace jia
             u8 rot_z_pid_count_ = 0;                                           // [RO] 航向 PID 分频计数器
             f32 lock_now_rot_z_target_ = 0.0f;                                 // [RO] LockNow 真正维持的航向目标
             u32 lock_now_rot_z_shift_count_ = 0;                               // [RO] LockNow 松手缓冲倒计时
-            bool xpark_gate_active_ = false;                                   // [RO] X-Park 进入门控当前是否放行。true 时允许静止姿态切到 X-Park。
-            u32 xpark_stationary_hold_ms_ = 0U;                                // [RO] 连续静止累计时长（ms）。用于判断是否达到 X-Park 延时门槛。
+            bool yaw_lock_control_active_last_cycle_ = false;                  // [RO] 上一规划周期是否处于 LockNow/LockTo yaw 锁控制族
+            bool lock_yaw_pid_target_filter_valid_ = false;                    // [RO] 航向 PID 目标低通状态是否已初始化
+            f32 lock_yaw_pid_target_filtered_rad_ = 0.0f;                      // [RO] 航向 PID 目标低通后的角度
+            bool lock_yaw_pid_deadband_active_ = false;                        // [RO] 航向 PID 双阈值死区当前是否激活
+            bool xpark_gate_active_ = false;                                   // [RO] X-Park 是否已锁存。未锁存进入看 target+residual；锁存后退出只看 target。
+            u32 xpark_stationary_hold_ms_ = 0U;                                // [RO] X-Park 进入条件连续成立时长（ms）。只用于进入延时，不表示保持态 residual 健康。
             bool launch_hold_active_ = false;                                  // [RO] 静止起步整车等待门控是否激活。激活时先只转舵，不放驱动与车体速度规划。
-            bool drive_zero_stop_active_ = false;                              // [RO] 当前是否处于 drive 零速止停辅助态。激活后正常 RPM 下发会改成 brake/zero current 收尾。
-            bool drive_zero_stop_brake_active_[4] = {false, false, false, false}; // [RO] 各轮零速止停 brake 子状态。用于近零残余速度的轮级滞回。
-            bool drive_zero_stop_settled_[4] = {false, false, false, false};   // [RO] 各轮是否已经进入 zero-stop 的最终停稳区。用于区分“松刹车滑收”与“真正停稳收尾”。
-            u32 drive_zero_stop_brake_ramp_elapsed_ms_[4] = {0U, 0U, 0U, 0U};  // [RO] 各轮 zero-stop brake ramp 已累计时长（ms）。只在 brake 子状态内增长，退出/settled 时清零。
+            bool drive_zero_stop_active_ = false;                              // [RO] drive zero-stop 目标门是否已激活。true 时目标速度仍在 near-zero 保持区内。
+            bool drive_zero_stop_brake_active_[4] = {false, false, false, false}; // [RO] 各轮 zero-stop 末端是否仍在 brake。active=true 且本值=false 表示该轮 residual 已按 NearZero 判稳并切到零电流。
+            u32 drive_zero_stop_brake_ramp_elapsed_ms_[4] = {0U, 0U, 0U, 0U};  // [RO] 各轮 zero-stop brake ramp 已累计时长（ms）。进入 brake 后增长，退出目标门时清零。
             bool trans_dir_freeze_active_ = false;                              // [RO] 平移方向冻结门控当前状态。true 时方向保持参考角，只放行速度模长变化。
             bool trans_dir_ref_valid_ = false;                                  // [RO] 平移方向参考角是否有效。无效时先用当前指令方向建立参考。
             f32 trans_dir_ref_rad_ = 0.0f;                                      // [RO] 平移方向参考角（rad）。用于冻结保持与方向角速率限幅。
@@ -1292,9 +1451,13 @@ namespace jia
             JerkLimitedAxisState manual_vel_x_shape_state_{};
             JerkLimitedAxisState manual_vel_y_shape_state_{};
             JerkLimitedAxisState manual_omega_z_shape_state_{};
+#if JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
             SingleWheelAxisPlannerRuntime single_wheel_steer_planner_state_{};
             SingleWheelAxisPlannerRuntime single_wheel_drive_planner_state_{};
+#if JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR
             DebugDriveStepGeneratorRuntime drive_step_generator_runtime_[4]{};
+#endif
+#endif
             InputTargetData input_target_data_; // [RO] 输入目标快照（模式与期望速度/角度）
             NormalizedBodyCommand normalized_body_command_; // [RO] 输入来源与统一车体系语义
             Data target_data_;                  // [RO] 模式映射后的目标数据
@@ -1312,6 +1475,12 @@ namespace jia
             RmPocketData_t airjoy_data_{}; // [RO] 遥控器输入快照
 
             // 调试镜像（只读观察）[RO]
+            // DebugMirror 是给调试器和 host FULL_DEBUG 语义测试读的“聚合视图”。
+            // RUNTIME_MIN 下不再维护这份镜像，运行代码直接读取真实控制状态即可。
+#if JIA_CHASSIS_ENABLE_DEBUG_MIRROR
+            // DebugMirror 是给调试器和 host FULL_DEBUG 语义测试读的“聚合视图”。
+            // RUNTIME_MIN 下不再维护这份镜像，运行代码直接读取真实控制状态即可。
+#if JIA_CHASSIS_ENABLE_DEBUG_MIRROR
             struct DebugMirror
             {
                 bool all_homed = false;                                             // [RO] 四轮是否全部回零完成
@@ -1340,12 +1509,14 @@ namespace jia
                 bool high_speed_drive_suppression_active = false;                   // [RO] 当前高速抑制是否激活。
                 bool low_speed_drive_suppression_bypassed_by_residual_speed = false; // [RO] 当前拍是否因为残余速度过高而旁路了低速抑制。
                 f32 max_residual_speed_m_s = 0.0f;                                  // [RO] 当前拍整车四轮中的最大实际残余速度（m/s）。
-                f32 xpark_steer_deadband_enter_deg = 0.0f;           // [RO] 当前生效的 X-Park 舵向死区进入阈值（deg）。
-                f32 xpark_steer_deadband_exit_deg = 0.0f;            // [RO] 当前生效的 X-Park 舵向死区退出阈值（deg）。
-                f32 steer_speed_pid_settle_enter_deg = 0.0f;         // [RO] 当前生效的舵向判稳角误差进入阈值（deg）。
-                f32 steer_speed_pid_settle_exit_deg = 0.0f;          // [RO] 当前生效的舵向判稳角误差退出阈值（deg）。
-                f32 steer_speed_pid_settle_enter_rate_deg_s = 0.0f;  // [RO] 当前生效的舵向判稳目标角速度进入阈值（deg/s）。
-                f32 steer_speed_pid_settle_exit_rate_deg_s = 0.0f;   // [RO] 当前生效的舵向判稳目标角速度退出阈值（deg/s）。
+                bool xpark_steer_hold_enable = false;                  // [RO] 当前是否启用统一 X-Park 舵向 hold。
+                f32 xpark_steer_hold_entry_deg = 0.0f;                 // [RO] 当前生效的 X-Park 舵向 hold 进入阈值（deg）。
+                f32 xpark_steer_hold_exit_deg = 0.0f;                  // [RO] 当前生效的 X-Park 舵向 hold 退出阈值（deg）。
+                f32 xpark_steer_hold_settle_deg = 0.0f;                // [RO] 当前生效的 X-Park 舵向 hold 判稳角误差阈值（deg）。
+                f32 xpark_steer_hold_settle_target_rate_deg_s = 0.0f;  // [RO] 当前生效的 X-Park 舵向 hold 判稳目标角速度阈值（deg/s）。
+                f32 xpark_steer_hold_settle_hold_ms = 0.0f;            // [RO] 当前生效的 X-Park 舵向 hold 判稳保持时长（ms）。
+                f32 xpark_steer_hold_reacquire_hold_ms = 0.0f;         // [RO] 当前生效的 X-Park 舵向 hold 重新锁定等待时长（ms）。
+                bool xpark_steer_hold_entry_reset_enable = false;      // [RO] 当前生效的 X-Park 舵向 hold 进入时是否清理速度环历史。
                 bool reverse_intent_active = false;
                 f32 reverse_intent_dir_err_deg = 0.0f;
                 u8 single_wheel_target_index = 0U;
@@ -1359,19 +1530,28 @@ namespace jia
                 f32 steer_feedback_current_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_feedback_current_delta_mA[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_feedback_angle_delta_rad[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-                bool steer_speed_pid_settled_active[4] = {false, false, false, false};      // [RO] 四个舵轮当前是否处于“到位判稳”状态。
-                f32 steer_speed_pid_settle_error_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};         // [RO] 四个舵轮当前“最终下发目标 vs 反馈角”的绝对误差（deg）。
-                f32 steer_speed_pid_settle_target_rate_deg_s[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RO] 四个舵轮当前最终下发目标角速度绝对值（deg/s）。
-                bool xpark_steer_deadband_active[4] = {false, false, false, false};         // [RO] 四个舵轮当前是否处于 X-Park 舵向死区冻结状态。
-                f32 xpark_steer_deadband_error_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};           // [RO] 四个舵轮相对 X-Park 理想目标角的绝对误差（deg）。
+                u8 xpark_steer_hold_phase[4] = {0U, 0U, 0U, 0U};                       // [RO] 四个舵轮当前 X-Park 舵向 hold 状态机阶段。
+                bool xpark_steer_hold_locked[4] = {false, false, false, false};       // [RO] 四个舵轮当前是否已经进入 X-Park hold 锁定阶段。
+                f32 xpark_steer_hold_error_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};         // [RO] 四个舵轮相对 X-Park 理想目标角的绝对误差（deg）。
+                f32 xpark_steer_hold_target_rate_deg_s[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RO] 四个舵轮 hold 判稳使用的目标角速度绝对值（deg/s）。
+                f32 xpark_steer_hold_settle_ms[4] = {0.0f, 0.0f, 0.0f, 0.0f};         // [RO] 四个舵轮满足 hold 判稳条件后的累计保持时长（ms）。
+                f32 xpark_steer_hold_reacquire_ms[4] = {0.0f, 0.0f, 0.0f, 0.0f};      // [RO] 四个舵轮重新允许零电流锁定前的剩余等待时长（ms）。
                 f32 steer_fault_steer_error_deg[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_feedback_current_freeze_ms[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_feedback_recovery_toggle_count[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 f32 steer_fault_latched_count[4] = {0.0f, 0.0f, 0.0f, 0.0f};
                 bool steer_fault_any_active = false;
             } debug_mirror_;
+#endif
+#endif
 
             // 线程执行耗时统计（调试器只读观察）[RO]
+            // 这块包含 500 点短窗采样，是 Chassis 对象里最大的调试缓存之一。
+            // RUNTIME_MIN 下默认不编译它；需要在调试器里看 1ms 线程预算/分段耗时时，切到 FULL_DEBUG。
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
+            // 这块包含 500 点短窗采样，是 Chassis 对象里最大的调试缓存之一。
+            // RUNTIME_MIN 下默认不编译它；需要在调试器里看 1ms 线程预算/分段耗时时，切到 FULL_DEBUG。
+#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
             struct TaskPerfStat
             {
                 struct WindowState
@@ -1401,9 +1581,13 @@ namespace jia
                 u64 apply_us = 0ULL;
                 u64 debug_us = 0ULL;
             } task_perf_stat_;
+#endif
+#endif
 
             // 调试串口对象（一般不在调试器改动）[RO]
+#if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
             Debug_Printf debug_uart_ = Debug_Printf(&huart8); // [RO]
+#endif
         };
 
         using Result = jia::FourSteerChassis::Chassis::Result;

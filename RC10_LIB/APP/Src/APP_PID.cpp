@@ -14,6 +14,7 @@ float PID_Position::pid_calc(float target, float feedback)
         dt_ = dt_error_; 
         error_last_ = target - feedback; // 初始化上次误差
         feedback_last_ = feedback;
+        is_in_dead_zone_ = false;
     }
 
     // 对dt进行异常值处理
@@ -39,8 +40,10 @@ float PID_Position::pid_calc(float target, float feedback)
 
 
     if(fabs(error_) < params_.deadband)
+    {
+        is_in_dead_zone_ = true;
         error_ = 0.0f;
-
+    }
     // calc P
     P_Term = params_.kp * error_;
 
@@ -380,9 +383,9 @@ PID_Param_Config foursteer_steer_speed_pid_params = {
 
 // 四舵轮 VESC 驱动轮默认速度环 PID
 PID_Param_Config vesc_drive_speed_pid_params = {
-    .kp = 50.0f,
+    .kp = 150.0f,
     .ki = 150.0f,
-    .kd = 1.5f,
+    .kd = 0.0f,
     .I_Outlimit = 25000.0f,
     .isIOutlimit = true,
     .output_limit = 25000.0f,
@@ -408,23 +411,24 @@ PID_Param_Config foursteer_steer_angle_pid_params = {
 };
 
 PID_Param_Config lock_angle_pid_params = {
- .kp = 0.10f,
- .ki = 0.0f,
+ .kp = 0.07f,
+ .ki = 0.05f,
  .kd = 0.00f,
- .I_Outlimit = 0.0f, 
+ .I_Outlimit = 1.0f,
  .isIOutlimit = true, 
- .output_limit = 1.0f, 
- .deadband = 0.0f 
+ .output_limit = 4.0f,
+ .deadband = 0.1f 
 };
+
 PID_Param_Config path_lock_end = {
     
-    .kp = 2.0f,
+    .kp = 6.0f,
     .ki = 0.0f,
     .kd = 0.0f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 0.2f,   
-    .deadband = 0.005f 
+    .output_limit = 0.3f,   
+    .deadband = 0.008f 
 };
 
 PID_Param_Config track_pid_params = {

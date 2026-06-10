@@ -24,7 +24,6 @@ Point2D arm_install_offset = {0.480f, 0.02f}; // 机械臂安装偏移，单位 
 /*==============Controller Instances===========*/
 //USB_CDC_ cdc(&hUsbDeviceHS);
 USB_CDC_ usb_1(&hUsbDeviceHS);
-JY61_IMU IMU(JY61_ADDR,&hi2c5);
 Chassis_Omni<3>::init_config chassis_initData = {
     .wheel_radius = 0.15f / 2.f,
     .max_wheel_rpm = 420,
@@ -79,7 +78,7 @@ DM_Motor Weapon_Elbow(J4310_Type, 0x06, 0x06, CAN2_Bus); M2006 Weapon_Wrist(6, C
 #if !TEST_TEMP
 M3508 arm_launchMotor(5, CAN3_Bus, true, false); M3508 arm_rotateMotor(7, CAN3_Bus, true, false);
 M2006 arm_stretchMotor(8, CAN3_Bus, true, false);  
-DM_Motor arm_pitchMotor(J4310_Type, 0x06, 0x06, CAN3_Bus);
+DM_Motor arm_pitchMotor(J4310_Type, 0x05, 0x05, CAN3_Bus);
 #else
 
 #endif
@@ -155,19 +154,19 @@ void ALL_Setup_ConfigInit(void)
 
 #if JIA_USE_FOUR_STEER_CHASSIS && !TEST_TEMP && !DEBUG_SHIT
     Chassis::InitConfig chassis_init_config =
-        {
-            // 转向电机句柄（按轮序 0~3 对应）
-            .steer_motor_h[0] = &steer1,
-            .steer_motor_h[1] = &steer2,
-            .steer_motor_h[2] = &steer3,
-            .steer_motor_h[3] = &steer4,
+    {
+        // 转向电机句柄（按轮序 0~3 对应）
+        .steer_motor_h[0] = &steer1,
+        .steer_motor_h[1] = &steer2,
+        .steer_motor_h[2] = &steer3,
+        .steer_motor_h[3] = &steer4,
 
-            // 驱动电机句柄（按轮序 0~3 对应）
-            .drive_motor_h[0] = &U8_1,
-            .drive_motor_h[1] = &U8_2,
-            .drive_motor_h[2] = &U8_3,
-            .drive_motor_h[3] = &U8_4,
-        };
+        // 驱动电机句柄（按轮序 0~3 对应）
+        .drive_motor_h[0] = &U8_1,
+        .drive_motor_h[1] = &U8_2,
+        .drive_motor_h[2] = &U8_3,
+        .drive_motor_h[3] = &U8_4,
+    };
     chassis.init(chassis_init_config);
 #endif
 
@@ -182,6 +181,8 @@ void ALL_Setup_ConfigInit(void)
 
     CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
     crsf_rc->init();
+
+    communication::Lora_communication::GetInstance()->Init();
 
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
     set1->locate_setup_init();
@@ -247,8 +248,15 @@ void CAN_Motor_Init(void)
     steer3.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
     steer4.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
 
-   U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
-   U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
+   U8_1.reset_controlFrequency(200);  U8_2.reset_controlFrequency(200);
+   U8_3.reset_controlFrequency(200);  U8_4.reset_controlFrequency(200);
+
+   // 底盘 VESC 驱动轮切到本地 PID 速度闭环模式
+   // 仅 drive 轮默认开启微分先行，其余电机保持默认关闭，不走这条策略。
+   U8_1.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_1.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_2.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_2.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_3.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_3.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_4.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_4.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
 
 
     // 机械臂电机 PID 参数初始化

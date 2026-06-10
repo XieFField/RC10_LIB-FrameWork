@@ -1,10 +1,22 @@
 entries:
   - kind: active
+    date: 2026-06-09
+    topic: rc10_path_yaw_homing_build_sync
+    path: jia_docs/handoff/2026-06/ai_handoff_2026-06-09_rc10_path_yaw_homing_build_sync.md
+    recommended: true
+    notes: 当前最推荐的主线 handoff，说明 AAA-Path 合入、yaw lock 修复链、homing 三边沿确认、debug 状态收口与 MDK 编译恢复。
+  - kind: active
+    date: 2026-06-05
+    topic: rc10_chassis_doctest_zero_stop_sync
+    path: jia_docs/handoff/2026-06/ai_handoff_2026-06-05_rc10_chassis_doctest_zero_stop_sync.md
+    recommended: false
+    notes: 上一阶段主线 handoff，说明 doctest 拆分、zero-stop / X-Park、RUNTIME_MIN / FULL_DEBUG 分层与 debug9 释放语义。
+  - kind: active
     date: 2026-05-26
     topic: rc10_drive_pid_load_tune_merge
     path: jia_docs/handoff/2026-05/ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md
-    recommended: true
-    notes: 当前最推荐的主线 handoff，说明 /6 merge 收口语义、验证结果与后续联调关注点。
+    recommended: false
+    notes: drive PID / payload supporting handoff，说明 /6 merge 收口语义、验证结果与后续联调关注点。
   - kind: active
     date: 2026-05-26 11:24
     topic: singlewheeltrace_payload_semantics

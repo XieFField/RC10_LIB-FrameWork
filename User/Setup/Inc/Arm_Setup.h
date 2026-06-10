@@ -208,8 +208,8 @@ public:
         }
 
         MF_AutoCtrler::PathInformation_S temp = MF_AutoCtrler::PathInformation_calc(auto_ctrl_.now_ChassisPosition,
-                                       auto_ctrl_.targetKFS[0], 
-                                        auto_ctrl_.targetKFS[1]);
+                                       auto_ctrl_.targetKFS[0],
+                                        auto_ctrl_.targetKFS[1], 0);
         auto_ctrl_.pathInfo.entranceMap = temp.entranceMap;
         
         for(int i=0; i<2; i++)
@@ -431,15 +431,25 @@ protected:
             bool inTargetMap = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
                                                 auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
                                                 0.1f);
-            if(inTargetMap)
+            if(inTargetMap && auto_ctrl_.flag.canChassisStart == false)
             {
-                auto_ctrl_.flag.canExtend = true;
+                speed = {0.0f, 0.0f, 0.0f};
             }
 
-            if(auto_ctrl_.flag.canChassisStart || !inTargetMap)
-                speed = {0.0f, 1.0f, 0.0f};
-            else
-                speed = {0.0f, 0.0f, 0.0f};
+            if(auto_ctrl_.now_state != STATE_EXT && auto_ctrl_.now_state != STATE_LAUNCH)
+            {
+                speed = { 0.0f, 0.5f, 0.0f};
+            }
+            else if(inTargetMap && auto_ctrl_.flag.canChassisStart == true)
+            {
+                speed = {0.0f, 0.5f, 0.0f};
+            }
+
+
+            // if(auto_ctrl_.flag.canChassisStart || !inTargetMap)
+            //     speed = {0.0f, 1.0f, 0.0f};
+            // else
+            //     speed = {0.0f, 0.0f, 0.0f};
         }
         return speed;
              

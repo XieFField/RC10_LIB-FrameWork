@@ -146,6 +146,12 @@ void Serial1Protocol::sendAckFrame(void) {
     sendFrame(ack_data, 0);
 }
 
+void Serial1Protocol::sendStop(void) {
+    if (!m_huart ) return;
+    
+    uint8_t ack_data[SERIAL1_DATA_LEN] = {0xFF, 0xFF, 0xFF};
+    sendFrame(ack_data, 0);
+}
 void Serial1Protocol::notifySendResult(uint8_t success) {
     if (m_resultCallback) {
         m_resultCallback(m_current_send_data, m_current_send_parity, success);

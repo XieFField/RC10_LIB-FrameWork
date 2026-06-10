@@ -9,12 +9,16 @@ groups:
         status: reserved
         purpose: 存放 swerve_port 聚合回归的 JSON 或摘要输出
         produced_by:
+          - jia_docs/tests/python_semantics/swerve_port/lock_now_homing_gate_regression.py
+        legacy_aliases:
           - jia_docs/tests/ai2_tests/swerve_port/lock_now_homing_gate_regression.py
       - id: lock_now_rot_z
         path: jia_docs/artifacts/ai2_artifacts/lock_now_rot_z
         status: reserved
         purpose: 存放 LockNowRotZ 缺陷复现与修复验证产物
         produced_by:
+          - jia_docs/tests/python_semantics/lock_now_rot_z/lock_now_rot_z_regression.py
+        legacy_aliases:
           - jia_docs/tests/ai2_tests/lock_now_rot_z/lock_now_rot_z_regression.py
   - id: comment_restore_refs
     path: jia_docs/artifacts/comment_restore_refs
