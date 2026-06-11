@@ -767,6 +767,67 @@ TEST_CASE("testYawLockStepDeadbandEntryDeceleratesDriveContinuouslyAfterSteerAli
     }
 }
 
+TEST_CASE("testYawLockMidRotationSteerErrorJitterDoesNotTogglePlannerDriveTarget")
+{
+    Chassis chassis;
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = true;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_angle_feedforward = false;
+
+    Chassis::Data command{};
+    command.vel_x = 0.0f;
+    command.vel_y = 0.0f;
+    command.omega_z = 1.2f;
+
+    const float steady_target_oa_rad[4] = {
+        std::atan2(-command.omega_z * chassis.wheel_config_[0].pos_x_m,
+                   command.omega_z * chassis.wheel_config_[0].pos_y_m),
+        std::atan2(-command.omega_z * chassis.wheel_config_[1].pos_x_m,
+                   command.omega_z * chassis.wheel_config_[1].pos_y_m),
+        std::atan2(-command.omega_z * chassis.wheel_config_[2].pos_x_m,
+                   command.omega_z * chassis.wheel_config_[2].pos_y_m),
+        std::atan2(-command.omega_z * chassis.wheel_config_[3].pos_x_m,
+                   command.omega_z * chassis.wheel_config_[3].pos_y_m),
+    };
+    const float jitter_error_deg[4] = {0.8f, 1.2f, 0.8f, 1.2f};
+    float min_abs_planner_drive_rad_s = 1000000.0f;
+    float max_abs_planner_drive_rad_s = 0.0f;
+    float min_abs_projected_drive_rad_s = 1000000.0f;
+
+    for (int cycle = 0; cycle < 4; ++cycle)
+    {
+        for (int i = 0; i < 4; ++i)
+        {
+            const float error_sign = ((cycle + i) % 2 == 0) ? 1.0f : -1.0f;
+            setWheelOaAngleRad(chassis, i, steady_target_oa_rad[i] + error_sign * jia::degToRadF32(jitter_error_deg[i]));
+        }
+
+        const Chassis::SwervePlannerOutput output =
+            chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+        const float abs_projected_drive_rad_s = std::fabs(output.projected_drive_omega_rad_s[0]);
+        const float abs_planner_drive_rad_s = std::fabs(output.final_drive_omega_rad_s[0]);
+        min_abs_projected_drive_rad_s = (abs_projected_drive_rad_s < min_abs_projected_drive_rad_s) ? abs_projected_drive_rad_s : min_abs_projected_drive_rad_s;
+        min_abs_planner_drive_rad_s = (abs_planner_drive_rad_s < min_abs_planner_drive_rad_s) ? abs_planner_drive_rad_s : min_abs_planner_drive_rad_s;
+        max_abs_planner_drive_rad_s = (abs_planner_drive_rad_s > max_abs_planner_drive_rad_s) ? abs_planner_drive_rad_s : max_abs_planner_drive_rad_s;
+    }
+
+    EXPECT_TRUE(min_abs_projected_drive_rad_s > 1.0f);
+    EXPECT_TRUE(max_abs_planner_drive_rad_s > 1.0f);
+    EXPECT_TRUE(min_abs_planner_drive_rad_s > max_abs_planner_drive_rad_s * 0.5f);
+}
+
 TEST_CASE("testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned")
 {
     Chassis chassis;
