@@ -179,7 +179,7 @@ public:
 
 private:
 
-    Vector2D test_point = {0.6f, 6.0f};
+    Vector2D test_point = {3.0f, 2.0f};
     
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。

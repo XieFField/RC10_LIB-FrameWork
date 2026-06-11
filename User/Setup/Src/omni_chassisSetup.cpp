@@ -225,7 +225,7 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.Reset();
 
      path_line_.Add_Start_Point(robot_pos_);
-     path_line_.Add_End_Point(test_point, path_param.KFS);
+     path_line_.Add_End_Point(test_point, path_param.CB);
 
     // 夹杆路径的测试
     //    path_line_.Add_Start_Point(robot_pos_);
@@ -1046,7 +1046,7 @@ Vector2D OmniChassis_Setup::v_limit(void)
     num++;
     if (num > 5)
     {
-        debug_uart.printf_DMA("%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude());
+        debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), v_tangent);
         num = 0;
     }
 
