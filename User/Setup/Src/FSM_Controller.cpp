@@ -2,11 +2,11 @@
 #include "chassis_swerve_task_demo.h"
 
 
+
 void FSM_Controller::loop()
 {
     if(!init_flag_) 
         return;
-
 #if !USE_RC10_AIRJOY
     CrsfReceiver::GetInstance(&huart7)->send_kfsandSpear(crsf_send_s.rsf_send_data.kfs1, crsf_send_s.rsf_send_data.kfs2, 
 																	crsf_send_s.rsf_send_data.Spear);
@@ -400,9 +400,6 @@ void FSM_Controller::manual_ctrl()
 
 #if !USE_RC10_AIRJOY
     switch(airjoy_data_.SWC)
-#else
-    switch(airjoy_data_.SWF)
-#endif
     {
         case 0x00:
         {
@@ -428,6 +425,36 @@ void FSM_Controller::manual_ctrl()
             break;
         }
     }
+#else
+    switch(airjoy_data_.SWF)
+    {
+        case 0x00:
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            break;
+        }
+
+        case 0x01:
+        {
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            if(airjoy_data_.SWE ==0x00)
+                chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            else if(airjoy_data_.SWE ==0x01)
+                chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            break;
+        }
+
+        case 0x02:
+        {
+            break;
+        }
+
+        default:
+            break;
+    }
+#endif
 }
 
 
@@ -547,36 +574,19 @@ void FSM_Controller::auto_ctrl()
         case 0x01:
         {
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-            if(airjoy_data_.SWB == 0x00) //半自动 semi_auto
+            if(airjoy_data_.SWB == 0x00) //
             {
-                chassis_setup_->setPathAutoStart(0); //路径自动开始标志清零
-                arm_setup_->set_Arm_autoStart(0); //自动流程标志清零
-                if(airjoy_data_.SWE == 0x00) //预设动作链手操
-                {
-                    chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-                    arm_setup_->setArmStatus(ARM_SEMI_AUTO_CONTROL_1);
-                }
-                else if(airjoy_data_.SWE == 0x01) //阉割版手操
-                {
-                    chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
-                    arm_setup_->setArmStatus(ARM_SEMI_AUTO_CONTROL_2);
-                }
-                else
-                {
-                    chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-                    arm_setup_->setArmStatus(ARM_IDLE);
-                }
-            }
-            else if(airjoy_data_.SWB == 0x01) //全自动 auto
-            {
+                //暂时不把路径规划部分纳入
                 #if !ARM_AUTO_DEBUG_NOCHASSIS
                 chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_KFS);
                 #else
                 chassis_setup_->setChassisStatus(CHASSIS_STOP);
-                #endif
-
+                #endif   
+                //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+                arm_setup_->setArmStatus(ARM_IDLE);
                 static uint8_t is_click = 0;
-                if(airjoy_data_.LB == 1 && is_click == 0)
+
+                if(airjoy_data_.botton_click == 1 && is_click == 0)
                 {
                     arm_setup_->set_Arm_autoStart(1); //开始自动流程
                     #if !ARM_AUTO_DEBUG_NOCHASSIS
@@ -584,7 +594,7 @@ void FSM_Controller::auto_ctrl()
                     #endif
                     is_click = 1;
                 }   
-                else if(airjoy_data_.LB == 0)
+                else if(airjoy_data_.botton_click == 0)
                 {
                     is_click = 0;
                 }
@@ -605,52 +615,46 @@ void FSM_Controller::auto_ctrl()
                 }
                 #endif
             }
-            else
+            else if(airjoy_data_.SWB == 0x01)
             {
-                chassis_setup_->setPathAutoStart(0); //路径自动开始标志清零
-                arm_setup_->set_Arm_autoStart(0); //自动流程标志清零
-                chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-                arm_setup_->setArmStatus(ARM_IDLE);
+                if(airjoy_data_.SWE == 0x00)
+                    chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+                else if(airjoy_data_.SWE == 0x01)
+                    chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+
+                arm_setup->setArmStatus(ARM_SEMI_AUTO_CONTROL);
             }
-            break;  
+            break;
         }
 
         case 0x02:
         {
             arm_setup_->setArmStatus(ARM_IDLE);
-            if(airjoy_data_.SWB == 0x00) //半自动 semi
+            if(airjoy_data_.SWB == 0x00) //全自动
             {
-                chassis_setup_->setPathAutoStart(0); //路径自动开始标志清零
-                arm_setup_->set_Arm_autoStart(0); //自动流程标志清零
-                if(airjoy_data_.SWE == 0x00) //预设动作链手操
-                {
-                    chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-                    weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_SEMI_AUTO_CONTROL_1);
-                }
-                else if(airjoy_data_.SWE == 0x01) //阉割版手操
-                {
-                    chassis_setup_->setChassisStatus(CHASSIS_LOCK_FORWEAPON);
-                    weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_SEMI_AUTO_CONTROL_2);
-                }
-                else
-                {
-                    chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-                    weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-                }
-            }
-            else if(airjoy_data_.SWB == 0x01) //全自动 auto
-            {
+                weaponSage_setup_->Set_End_Flag(chassis_setup_->GetReach_flag());
+                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
                 chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
                 static uint8_t is_click = 0;
-                if(airjoy_data_.LB == 1 && is_click == 0)
+                if(airjoy_data_.botton_click ==1 && is_click == 0)
                 {
+                    chassis_setup_->setPathAutoStart(1); //路径自动开始标志
                     weaponSage_setup_->setCBauto(true);
                     is_click = 1;
-                }   
-                else if(airjoy_data_.LB == 0)
+                }
+                else if(airjoy_data_.botton_click ==0)
                 {
                     is_click = 0;
                 }
+            }
+            else if(airjoy_data_.SWB == 0x01) //半自动
+            {
+                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_SEMI_AUTO_CONTROL);
+
+                if(airjoy_data_.SWE == 0x00)
+                    chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+                else if(airjoy_data_.SWE == 0x01)
+                    chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
             }
             break;
         }

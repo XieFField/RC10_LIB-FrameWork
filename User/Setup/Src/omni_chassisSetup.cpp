@@ -224,7 +224,6 @@ void OmniChassis_Setup::loop()
         float target_vel_x = 0.0f;
         float target_vel_y = 0.0f;
         float target_omega_z = 0.0f;
-
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
             target_vel_x = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
         else
@@ -239,7 +238,6 @@ void OmniChassis_Setup::loop()
             target_omega_z = airjoy_data_.right_x * 6;
         else
             target_omega_z = 0.0f;
-
         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, target_omega_z);
 
         break;

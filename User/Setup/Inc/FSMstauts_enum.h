@@ -62,8 +62,7 @@ typedef enum{
     ARM_AUTO_CONTROL, //自动
 
 
-    ARM_SEMI_AUTO_CONTROL_1, //半自动
-    ARM_SEMI_AUTO_CONTROL_2, //半自动
+    ARM_SEMI_AUTO_CONTROL, //半自动
     ARM_IDLE, //待机
 
     ARM_STOP,
@@ -91,6 +90,7 @@ typedef enum{
 
 
     WEAPONSAGE_AUTO_CONTROL, //自动控制
+    WEAPONSAGE_SEMI_AUTO_CONTROL, //半自动控制
     WEAPONSAGE_SEMI_AUTO_CONTROL_1, //半自动控制
     WEAPONSAGE_SEMI_AUTO_CONTROL_2, //半自动控制
 
