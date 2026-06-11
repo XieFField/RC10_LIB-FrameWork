@@ -1116,6 +1116,29 @@ namespace jia
         {
             SwervePlannerInput planner_input{};
             planner_input.command = command_data;
+            const bool yaw_lock_control_requested =
+                current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
+            const f32 command_wheel_speed_for_steer_gate = computeMaxCommandWheelSpeedMps(command_data);
+            const bool yaw_lock_steer_intent_preview =
+                yaw_lock_control_requested &&
+                (magnitude2DF32(command_data.vel_x, command_data.vel_y) <= getNearZeroEnterSpeedMps()) &&
+                (command_wheel_speed_for_steer_gate <= getNearZeroEnterSpeedMps()) &&
+                (computeMaxCommandWheelSpeedMps(target_data_) > getNearZeroEnterSpeedMps());
+            f32 max_residual_speed_for_steer_preview_m_s = 0.0f;
+            if (yaw_lock_steer_intent_preview)
+            {
+                const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    const f32 residual_speed_m_s = fabsf(wheel_config_[i].corrected_drive_omega_rad_s) * wheel_radius_m;
+                    max_residual_speed_for_steer_preview_m_s =
+                        (residual_speed_m_s > max_residual_speed_for_steer_preview_m_s) ? residual_speed_m_s : max_residual_speed_for_steer_preview_m_s;
+                }
+            }
+            const bool allow_yaw_lock_steer_intent_preview =
+                yaw_lock_steer_intent_preview &&
+                (max_residual_speed_for_steer_preview_m_s <= getNearZeroEnterSpeedMps());
+            const Data &steer_intent_data = allow_yaw_lock_steer_intent_preview ? target_data_ : command_data;
 
             for (u8 i = 0; i < 4; ++i)
             {
@@ -1126,11 +1149,19 @@ namespace jia
                 const f32 wheel_vx = command_data.vel_x + command_data.omega_z * wheel.pos_y_m;
                 const f32 wheel_vy = command_data.vel_y - command_data.omega_z * wheel.pos_x_m;
                 const f32 wheel_speed_m_s = magnitude2DF32(wheel_vx, wheel_vy);
+                const f32 steer_intent_vx = steer_intent_data.vel_x + steer_intent_data.omega_z * wheel.pos_y_m;
+                const f32 steer_intent_vy = steer_intent_data.vel_y - steer_intent_data.omega_z * wheel.pos_x_m;
+                const f32 steer_intent_speed_m_s = magnitude2DF32(steer_intent_vx, steer_intent_vy);
                 planner_input.wheel_vx_m_s[i] = wheel_vx;
                 planner_input.wheel_vy_m_s[i] = wheel_vy;
                 planner_input.wheel_speed_m_s[i] = wheel_speed_m_s;
+                planner_input.steer_intent_wheel_vx_m_s[i] = steer_intent_vx;
+                planner_input.steer_intent_wheel_vy_m_s[i] = steer_intent_vy;
+                planner_input.steer_intent_wheel_speed_m_s[i] = steer_intent_speed_m_s;
                 planner_input.max_command_wheel_speed_m_s =
                     (wheel_speed_m_s > planner_input.max_command_wheel_speed_m_s) ? wheel_speed_m_s : planner_input.max_command_wheel_speed_m_s;
+                planner_input.max_steer_intent_wheel_speed_m_s =
+                    (steer_intent_speed_m_s > planner_input.max_steer_intent_wheel_speed_m_s) ? steer_intent_speed_m_s : planner_input.max_steer_intent_wheel_speed_m_s;
 
                 const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * runtime_strategy_cfg_.wheel_radius_m_;
                 planner_input.residual_speed_m_s[i] = residual_speed_m_s;
@@ -1147,8 +1178,8 @@ namespace jia
             // 2. 保持/退出门：一旦 xpark_gate_active_ 锁存，只看目标速度是否仍在 X-Park command 退出门内。
             // residual 在进入后不再踢出 X-Park，否则轮子刚被锁到 X 姿态后的反馈扰动会反复打断保持态。
             const bool xpark_target_stationary = xpark_gate_active_
-                                                     ? (planner_input.max_command_wheel_speed_m_s <= xpark_command_exit_speed)
-                                                     : (planner_input.max_command_wheel_speed_m_s <= xpark_command_enter_speed);
+                                                     ? (planner_input.max_steer_intent_wheel_speed_m_s <= xpark_command_exit_speed)
+                                                     : (planner_input.max_steer_intent_wheel_speed_m_s <= xpark_command_enter_speed);
             const bool xpark_residual_stationary = xpark_gate_active_
                                                        ? (planner_input.max_residual_speed_m_s <= xpark_residual_exit_speed)
                                                        : (planner_input.max_residual_speed_m_s <= xpark_residual_enter_speed);
@@ -1205,9 +1236,10 @@ namespace jia
             {
                 const WheelConfig &wheel = wheel_config_[i];
                 const f32 wheel_speed_m_s = planner_input.wheel_speed_m_s[i];
-                const bool is_stationary = wheel_speed_m_s <= getNearZeroEnterSpeedMps();
+                const f32 steer_intent_wheel_speed_m_s = planner_input.steer_intent_wheel_speed_m_s[i];
+                const bool steer_intent_stationary = steer_intent_wheel_speed_m_s <= getNearZeroEnterSpeedMps();
 
-                if (is_stationary)
+                if (steer_intent_stationary)
                 {
                     planner_output.ideal_oa_total_rad[i] = (planner_input.allow_xpark_pose && runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kXPark)
                                                                ? wrapTo2PiF32(getXParkAngle(wheel))
@@ -1216,7 +1248,7 @@ namespace jia
                 }
                 else
                 {
-                    planner_output.ideal_oa_total_rad[i] = wrapTo2PiF32(atan2f(planner_input.wheel_vy_m_s[i], planner_input.wheel_vx_m_s[i]));
+                    planner_output.ideal_oa_total_rad[i] = wrapTo2PiF32(atan2f(planner_input.steer_intent_wheel_vy_m_s[i], planner_input.steer_intent_wheel_vx_m_s[i]));
                     planner_output.ideal_drive_omega_rad_s[i] = wheel_speed_m_s / runtime_strategy_cfg_.wheel_radius_m_;
                 }
 
@@ -1228,7 +1260,7 @@ namespace jia
                 f32 selected_drive_omega_rad_s = planner_output.ideal_drive_omega_rad_s[i];
                 bool flipped = false;
 
-                if (!is_stationary)
+                if (!steer_intent_stationary)
                 {
                     if (runtime_strategy_cfg_.steering_strategy_mode == SteeringStrategyMode::kAlwaysForward)
                     {

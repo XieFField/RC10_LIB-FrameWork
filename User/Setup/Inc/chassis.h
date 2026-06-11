@@ -547,8 +547,12 @@ namespace jia
                 f32 wheel_vx_m_s[4] = {0.0f};
                 f32 wheel_vy_m_s[4] = {0.0f};
                 f32 wheel_speed_m_s[4] = {0.0f};
+                f32 steer_intent_wheel_vx_m_s[4] = {0.0f};
+                f32 steer_intent_wheel_vy_m_s[4] = {0.0f};
+                f32 steer_intent_wheel_speed_m_s[4] = {0.0f};
                 f32 residual_speed_m_s[4] = {0.0f};
                 f32 max_command_wheel_speed_m_s = 0.0f;
+                f32 max_steer_intent_wheel_speed_m_s = 0.0f;
                 f32 max_residual_speed_m_s = 0.0f;
             };
 
