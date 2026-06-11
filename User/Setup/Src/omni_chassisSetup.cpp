@@ -65,7 +65,7 @@ void OmniChassis_Setup::Path_KFS_check(void)
         Arm_Start = true;
     }
 
-    if (KFS_flag.spin_flag == true && KFS_flag.MF1_finish == true)
+    if (KFS_flag.spin_flag == true && KFS_flag.MF1_finish == true && Arm_Start == false)
     {
         // 第一排和最后一排旋转
         if (target_yaw_ == -90.0f || target_yaw_ == 90.0f)
@@ -87,7 +87,7 @@ void OmniChassis_Setup::Path_KFS_check(void)
         }
     }
 
-    if (KFS_flag.spin_flag_2 == true && KFS_flag.spin_flag == false && KFS_flag.MF2_finish == true)
+    if (KFS_flag.spin_flag_2 == true && KFS_flag.spin_flag == false && KFS_flag.MF2_finish == true&& Arm_Start == false)
     {
         // 第一排旋转
         if (target_yaw_ == -90.0f || target_yaw_ == 90.0f)
@@ -224,8 +224,8 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.plan_reset();
     path_line_.Reset();
 
-     path_line_.Add_Start_Point(robot_pos_);
-     path_line_.Add_End_Point(test_point, path_param.CB);
+//     path_line_.Add_Start_Point(robot_pos_);
+//     path_line_.Add_End_Point(test_point, path_param.CB);
 
     // 夹杆路径的测试
     //    path_line_.Add_Start_Point(robot_pos_);
@@ -233,11 +233,11 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     //    path_line_.Add_Point(CB_point.Clamping_Bar_Selection_pos_, CB_point.CB_Selection_control_point_, path_param.curve);
     //    path_line_.Add_End_Point(CB_point.Clamping_Bar_Retreat_pos_, path_param.end);
 
-//    // 顺滑过弯
-//    path_line_.Add_Start_Point(robot_pos_);
-//    path_line_.Add_Point(Vector2D{0.6f + KFS_point.coner_ahead, 2.6f}, path_param.start);
-//    path_line_.Add_Point(Vector2D{0.6f, 2.6f + KFS_point.coner_ahead}, path_param.curve);
-//    path_line_.Add_End_Point(Vector2D{0.6f, 5.0f}, path_param.end);
+    // 顺滑过弯
+    path_line_.Add_Start_Point(robot_pos_);
+    path_line_.Add_Point(Vector2D{0.6f + KFS_point.coner_ahead, 2.6f}, path_param.start);
+    path_line_.Add_Point(Vector2D{0.6f, 2.6f + KFS_point.coner_ahead}, path_param.curve);
+    path_line_.Add_End_Point(Vector2D{0.6f, 5.0f}, path_param.end);
 
     // 夹杆路径
     //    path_line_.Add_Start_Point(robot_pos_);

@@ -489,8 +489,8 @@ void FSM_Controller::auto_ctrl()
              chassis_setup_->setChassisStatus(CHASSIS_STOP);
             #endif
             
-            //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-            arm_setup_->setArmStatus(ARM_IDLE);
+            arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            //arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
             static uint8_t is_click = 0;
@@ -534,9 +534,9 @@ void FSM_Controller::auto_ctrl()
             if(airjoy_data_.SWA == 0x00)
             {
                 
-                weaponSage_setup_->Get_OMNI_IM_flag(chassis_setup_->GetReach_flag());
-                chassis_setup_->ReceiveReach_flag(weaponSage_setup_->Get_Catch_flag());
-                weaponSage_setup_->Get_OMNI_DS_flag(chassis_setup_->GetEnd_flag());
+//                weaponSage_setup_->Get_OMNI_IM_flag(chassis_setup_->GetReach_flag());
+//                chassis_setup_->ReceiveReach_flag(weaponSage_setup_->Get_Catch_flag());
+//                weaponSage_setup_->Get_OMNI_DS_flag(chassis_setup_->GetEnd_flag());
                 
                 weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL_CATCH);
     //            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
