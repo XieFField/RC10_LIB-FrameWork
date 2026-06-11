@@ -362,6 +362,7 @@ namespace jia
             input_target_data_.zero_current_all = false;
             lock_now_rot_z_target_ = 0.0f;
             yaw_lock_control_active_last_cycle_ = false;
+            yaw_lock_zero_stop_decel_context_active_ = false;
             resetYawPidTargetRuntime();
             trans_dir_freeze_active_ = false;
             trans_dir_ref_valid_ = false;
@@ -726,6 +727,7 @@ namespace jia
             high_speed_dir_err_deg_ = 0.0f;
             high_speed_eta_max_s_ = 0.0f;
             low_speed_residual_bypass_active_ = false;
+            yaw_lock_zero_stop_decel_context_active_ = false;
             xpark_gate_active_ = false;
             xpark_stationary_hold_ms_ = 0U;
             trans_dir_freeze_active_ = false;
@@ -793,6 +795,7 @@ namespace jia
                 high_speed_dir_err_deg_ = 0.0f;
                 high_speed_eta_max_s_ = 0.0f;
                 low_speed_residual_bypass_active_ = false;
+                yaw_lock_zero_stop_decel_context_active_ = false;
             }
         }
 
@@ -953,7 +956,7 @@ namespace jia
             return max_command_wheel_speed_m_s;
         }
 
-        bool Chassis::shouldSuppressYawLockOmegaForZeroStopDecel(const Data &command_data) const
+        bool Chassis::shouldSuppressYawLockOmegaForZeroStopDecel(const Data &command_data)
         {
             const bool yaw_lock_control_requested =
                 current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
@@ -962,6 +965,7 @@ namespace jia
                 current_mode_flag_.is_wheel_torque_free ||
                 (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode))
             {
+                yaw_lock_zero_stop_decel_context_active_ = false;
                 return false;
             }
 
@@ -975,15 +979,7 @@ namespace jia
                 manual_yaw_requested ||
                 (fabsf(command_data.omega_z) <= 1.0e-6f))
             {
-                return false;
-            }
-
-            const f32 last_trans_speed_m_s = magnitude2DF32(last_planned_data_.vel_x, last_planned_data_.vel_y);
-            const bool translation_decel_context =
-                (command_trans_speed_m_s > getNearZeroEnterSpeedMps()) ||
-                (last_trans_speed_m_s > getNearZeroExitSpeedMps());
-            if (!translation_decel_context)
-            {
+                yaw_lock_zero_stop_decel_context_active_ = false;
                 return false;
             }
 
@@ -995,7 +991,22 @@ namespace jia
                 max_residual_speed_m_s = (residual_speed_m_s > max_residual_speed_m_s) ? residual_speed_m_s : max_residual_speed_m_s;
             }
 
-            return max_residual_speed_m_s > getNearZeroEnterSpeedMps();
+            if (max_residual_speed_m_s <= getNearZeroEnterSpeedMps())
+            {
+                yaw_lock_zero_stop_decel_context_active_ = false;
+                return false;
+            }
+
+            const f32 last_trans_speed_m_s = magnitude2DF32(last_planned_data_.vel_x, last_planned_data_.vel_y);
+            const bool translation_decel_context =
+                (command_trans_speed_m_s > getNearZeroEnterSpeedMps()) ||
+                (last_trans_speed_m_s > getNearZeroExitSpeedMps());
+            if (translation_decel_context)
+            {
+                yaw_lock_zero_stop_decel_context_active_ = true;
+            }
+
+            return yaw_lock_zero_stop_decel_context_active_;
         }
 
         bool Chassis::shouldActivateLaunchHold() const
@@ -2492,6 +2503,7 @@ namespace jia
             xpark_stationary_hold_ms_ = 0U;
             launch_hold_active_ = false;
             drive_zero_stop_active_ = false;
+            yaw_lock_zero_stop_decel_context_active_ = false;
             for (u8 i = 0; i < 4; ++i)
             {
                 drive_zero_stop_brake_active_[i] = false;
@@ -3876,6 +3888,7 @@ namespace jia
                         : 0.0f;
                 const bool yaw_lock_zero_command_decelerating =
                     yaw_lock_control_requested &&
+                    !yaw_lock_zero_stop_decel_context_active_ &&
                     runtime_strategy_cfg_.enable_drive_alpha_limit_ &&
                     (drive_alpha_step_speed_m_s > 1.0e-6f) &&
                     (target_command_speed_m_s <= getNearZeroEnterSpeedMps()) &&
@@ -3898,6 +3911,7 @@ namespace jia
             else
             {
                 drive_zero_stop_active_ = false;
+                yaw_lock_zero_stop_decel_context_active_ = false;
             }
             const bool entering_drive_zero_stop = !prev_drive_zero_stop_active && drive_zero_stop_active_;
             const bool leaving_drive_zero_stop = prev_drive_zero_stop_active && !drive_zero_stop_active_;
