@@ -3827,11 +3827,14 @@ namespace jia
                 // 正常底盘链路下优先依据整车目标是否已静止来决定是否进入 zero-stop，
                 // 避免速度规划尾巴还没完全衰减时，把刹车收尾整体拖后。
                 f32 max_frame_command_speed_m_s = 0.0f;
+                f32 max_last_delivered_speed_m_s = 0.0f;
                 const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
                 for (u8 i = 0; i < 4; ++i)
                 {
                     const f32 frame_command_speed_m_s = fabsf(actuator_command_frame_.drive_omega_rad_s[i]) * wheel_radius_m;
                     max_frame_command_speed_m_s = (frame_command_speed_m_s > max_frame_command_speed_m_s) ? frame_command_speed_m_s : max_frame_command_speed_m_s;
+                    const f32 last_delivered_speed_m_s = fabsf(last_drive_omega_cmd_rad_s_[i]) * wheel_radius_m;
+                    max_last_delivered_speed_m_s = (last_delivered_speed_m_s > max_last_delivered_speed_m_s) ? last_delivered_speed_m_s : max_last_delivered_speed_m_s;
                 }
                 Data zero_stop_gate_target_data = target_data_;
                 if (shouldSuppressYawLockOmegaForZeroStopDecel(zero_stop_gate_target_data))
@@ -3844,8 +3847,25 @@ namespace jia
                                                       : ((target_command_speed_m_s > max_frame_command_speed_m_s)
                                                              ? target_command_speed_m_s
                                                              : max_frame_command_speed_m_s);
+                const bool yaw_lock_control_requested =
+                    current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
+                const f32 drive_alpha_step_speed_m_s =
+                    runtime_strategy_cfg_.enable_drive_alpha_limit_
+                        ? (fabsf(runtime_strategy_cfg_.max_drive_alpha_rad_s2_) * period_ * wheel_radius_m)
+                        : 0.0f;
+                const bool yaw_lock_zero_command_decelerating =
+                    yaw_lock_control_requested &&
+                    runtime_strategy_cfg_.enable_drive_alpha_limit_ &&
+                    (drive_alpha_step_speed_m_s > 1.0e-6f) &&
+                    (target_command_speed_m_s <= getNearZeroEnterSpeedMps()) &&
+                    (max_frame_command_speed_m_s <= getNearZeroEnterSpeedMps()) &&
+                    (max_last_delivered_speed_m_s > (drive_alpha_step_speed_m_s + 1.0e-6f));
 
-                if (drive_zero_stop_active_)
+                if (yaw_lock_zero_command_decelerating)
+                {
+                    drive_zero_stop_active_ = false;
+                }
+                else if (drive_zero_stop_active_)
                 {
                     drive_zero_stop_active_ = max_command_speed_m_s <= getNearZeroExitSpeedMps();
                 }
