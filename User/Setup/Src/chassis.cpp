@@ -1354,6 +1354,14 @@ namespace jia
                 planner_output.high_speed_eta_max_s = (eta_s > planner_output.high_speed_eta_max_s) ? eta_s : planner_output.high_speed_eta_max_s;
             }
 
+            f32 planned_steering_errors_rad[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            for (u8 i = 0; i < 4; ++i)
+            {
+                planned_steering_errors_rad[i] =
+                    fabsf(shortestAngularDistanceF32(planner_output.planned_oa_total_rad[i],
+                                                      planner_output.selected_oa_total_rad[i]));
+            }
+
             const bool enable_steer_angle_feedforward =
                 runtime_strategy_cfg_.enable_steer_angle_feedforward &&
                 !planner_input.force_uniform_steer_drive &&
@@ -1397,7 +1405,12 @@ namespace jia
             }
 
             f32 low_speed_scales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-            computeLowSpeedDriveSuppressionScales(planner_input, planner_output.steering_errors_rad, low_speed_scales);
+            const bool pure_yaw_motion_intent =
+                (planner_command_speed_m_s <= getNearZeroEnterSpeedMps()) &&
+                (planner_input.max_command_wheel_speed_m_s > getNearZeroEnterSpeedMps());
+            computeLowSpeedDriveSuppressionScales(planner_input,
+                                                  pure_yaw_motion_intent ? planned_steering_errors_rad : planner_output.steering_errors_rad,
+                                                  low_speed_scales);
 
             const f32 translational_speed_m_s = planner_command_speed_m_s;
             f32 predicted_vel_x = 0.0f;
