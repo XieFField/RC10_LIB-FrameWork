@@ -131,7 +131,7 @@ float Kp_traverse=0.5f;
 float read_encoder = 0.0f;
 float angle_0_360 = 0.0f;
 float relocate_wrist_totalAngle__ = 0.0f;
-
+int8_t dm_zero_ = 1;
 void Robot_WeaponSage_Setup::calibrate()
 {
 	if(!ctrl_status_.is_calibrating)
@@ -169,7 +169,7 @@ void Robot_WeaponSage_Setup::calibrate()
             this->claw_2_Motor_->relocate_totalAngle(2.0f);
             this->claw_3_Motor_->relocate_totalAngle(2.0f);
             this->launch_Motor_->relocate_totalAngle(0.0f);
-//            if(auto_ctrl_.auto_state_bool_S.arm_enable)
+//            if(dm_zero_)
 //            {
 //                this->Weapon_arm_setZero();
 //            }
