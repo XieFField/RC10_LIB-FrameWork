@@ -28,6 +28,124 @@ static bool runApiControlCycleForYawLockSwitch(Chassis &chassis)
     return runHostControlCycle(chassis);
 }
 
+struct YawLockDriveSample
+{
+    float target_omega = 0.0f;
+    float planned_omega = 0.0f;
+    float projected_drive0 = 0.0f;
+    float frame_drive0 = 0.0f;
+    float delivered_drive0 = 0.0f;
+    bool flipped0 = false;
+    float planned_oa0 = 0.0f;
+    float selected_oa0 = 0.0f;
+};
+
+static void configureYawLockDriveStepHarness(Chassis &chassis, VESC_Motor drive_motors[4])
+{
+    configureDriveContinuityHarness(chassis, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_angle_feedforward = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kLegacy;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
+    chassis.runtime_strategy_cfg_.max_alpha_z_acc_ = 20.0f;
+    chassis.runtime_strategy_cfg_.max_alpha_z_dec_ = 20.0f;
+    chassis.max_lock_to_rot_z_rad_s_ = 1000.0f;
+
+    chassis.rot_z_pid_period_ = 0U;
+    chassis.rot_z_pid_count_ = 0U;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 0.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 0.0f;
+    chassis.rot_z_pid_.forced_output = 1.2f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.input_hwt_omega_z_ = 0.0f;
+    chassis.current_mode_flag_.is_wheel_torque_free = false;
+    chassis.input_target_data_.zero_current_all = false;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].homing_state = Chassis::HomingState::kReady;
+        chassis.wheel_config_[i].homing_zero_valid = true;
+        chassis.wheel_config_[i].steer_fault_state = Chassis::SteerFaultState::kNone;
+        setWheelOaAngleRad(chassis, i, 0.0f);
+    }
+}
+
+static YawLockDriveSample runYawLockDriveStepCycle(Chassis &chassis, float command_vel_x)
+{
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, command_vel_x, 0.0f, jia::degToRadF32(90.0f));
+    chassis.setModeFlag();
+    chassis.resolvePlannerTargetData();
+    chassis.updatePlannedMotionData();
+    chassis.computeModuleCommands(chassis.planned_data_);
+    chassis.applyModuleCommands(true);
+
+    YawLockDriveSample sample{};
+    sample.target_omega = chassis.target_data_.omega_z;
+    sample.planned_omega = chassis.planned_data_.omega_z;
+    sample.projected_drive0 = chassis.planner_output_cache_.projected_drive_omega_rad_s[0];
+    sample.frame_drive0 = chassis.actuator_command_frame_.drive_omega_rad_s[0];
+    sample.delivered_drive0 = chassis.wheel_config_[0].target_drive_omega_rad_s;
+    sample.flipped0 = chassis.planner_output_cache_.flipped_drive_direction[0];
+    sample.planned_oa0 = chassis.planner_output_cache_.planned_oa_total_rad[0];
+    sample.selected_oa0 = chassis.planner_output_cache_.selected_oa_total_rad[0];
+
+    for (int i = 0; i < 4; ++i)
+    {
+        const float current_oa = chassis.planner_output_cache_.planned_oa_total_rad[i];
+        const float target_oa = chassis.planner_output_cache_.selected_oa_total_rad[i];
+        const float next_oa = current_oa + 0.35f * jia::shortestAngularDistanceF32(current_oa, target_oa);
+        setWheelOaAngleRad(chassis, i, next_oa);
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = chassis.wheel_config_[i].target_drive_omega_rad_s;
+    }
+
+    chassis.last_planned_data_ = chassis.planned_data_;
+    return sample;
+}
+
+static int countNearZeroFrameDriveSamples(const YawLockDriveSample samples[], int size)
+{
+    int near_zero_count = 0;
+    for (int i = 0; i < size; ++i)
+    {
+        if (std::fabs(samples[i].frame_drive0) < 1.0e-4f)
+        {
+            ++near_zero_count;
+        }
+    }
+    return near_zero_count;
+}
+
+static int countDriveSignToggles(const YawLockDriveSample samples[], int size)
+{
+    int toggles = 0;
+    float last_sign = 0.0f;
+    for (int i = 0; i < size; ++i)
+    {
+        if (std::fabs(samples[i].frame_drive0) < 1.0e-4f)
+        {
+            continue;
+        }
+        const float sign = samples[i].frame_drive0 > 0.0f ? 1.0f : -1.0f;
+        if ((last_sign != 0.0f) && (sign != last_sign))
+        {
+            ++toggles;
+        }
+        last_sign = sign;
+    }
+    return toggles;
+}
+
 static void expectLockNowTargetReanchoredToYaw(const Chassis &chassis, float expected_yaw_rad)
 {
     EXPECT_NEAR(chassis.target_data_.rot_z, expected_yaw_rad, 1.0e-6f);
@@ -826,6 +944,65 @@ TEST_CASE("testYawLockMidRotationSteerErrorJitterDoesNotTogglePlannerDriveTarget
     EXPECT_TRUE(min_abs_projected_drive_rad_s > 1.0f);
     EXPECT_TRUE(max_abs_planner_drive_rad_s > 1.0f);
     EXPECT_TRUE(min_abs_planner_drive_rad_s > max_abs_planner_drive_rad_s * 0.5f);
+}
+
+TEST_CASE("testYawLockPureYawStepKeepsDriveTargetContinuousLikeTranslationYaw")
+{
+    Chassis pure_yaw_chassis;
+    Chassis translation_yaw_chassis;
+    VESC_Motor pure_yaw_drive_motors[4];
+    VESC_Motor translation_yaw_drive_motors[4];
+    configureYawLockDriveStepHarness(pure_yaw_chassis, pure_yaw_drive_motors);
+    configureYawLockDriveStepHarness(translation_yaw_chassis, translation_yaw_drive_motors);
+
+    constexpr int kCycles = 30;
+    YawLockDriveSample pure_yaw_samples[kCycles]{};
+    YawLockDriveSample translation_yaw_samples[kCycles]{};
+    for (int cycle = 0; cycle < kCycles; ++cycle)
+    {
+        pure_yaw_samples[cycle] = runYawLockDriveStepCycle(pure_yaw_chassis, 0.0f);
+        translation_yaw_samples[cycle] = runYawLockDriveStepCycle(translation_yaw_chassis, 0.08f);
+    }
+
+    int pure_near_zero_after_spinup = 0;
+    int translation_near_zero_after_spinup = 0;
+    for (int cycle = 6; cycle < kCycles; ++cycle)
+    {
+        if (std::fabs(pure_yaw_samples[cycle].frame_drive0) < 0.2f)
+        {
+            ++pure_near_zero_after_spinup;
+        }
+        if (std::fabs(translation_yaw_samples[cycle].frame_drive0) < 0.2f)
+        {
+            ++translation_near_zero_after_spinup;
+        }
+    }
+
+    EXPECT_NEAR(pure_yaw_samples[kCycles - 1].target_omega, 1.2f, 1.0e-6f);
+    EXPECT_TRUE(std::fabs(pure_yaw_samples[kCycles - 1].planned_omega) > 0.1f);
+    EXPECT_TRUE(std::fabs(translation_yaw_samples[kCycles - 1].planned_omega) > 0.1f);
+    const int pure_total_near_zero = countNearZeroFrameDriveSamples(pure_yaw_samples, kCycles);
+    const int translation_total_near_zero = countNearZeroFrameDriveSamples(translation_yaw_samples, kCycles);
+    const int pure_sign_toggles = countDriveSignToggles(pure_yaw_samples, kCycles);
+    const int translation_sign_toggles = countDriveSignToggles(translation_yaw_samples, kCycles);
+
+    CHECK_MESSAGE(pure_near_zero_after_spinup <= translation_near_zero_after_spinup,
+                  "pure_near_zero_after_spinup=", pure_near_zero_after_spinup,
+                  " translation_near_zero_after_spinup=", translation_near_zero_after_spinup,
+                  " pure_last_frame=", pure_yaw_samples[kCycles - 1].frame_drive0,
+                  " translation_last_frame=", translation_yaw_samples[kCycles - 1].frame_drive0,
+                  " pure_cycle6_projected=", pure_yaw_samples[6].projected_drive0,
+                  " pure_cycle6_planned_oa=", pure_yaw_samples[6].planned_oa0,
+                  " pure_cycle6_selected_oa=", pure_yaw_samples[6].selected_oa0,
+                  " pure_cycle6_flipped=", pure_yaw_samples[6].flipped0);
+    CHECK_MESSAGE(pure_sign_toggles <= translation_sign_toggles,
+                  "pure_sign_toggles=", pure_sign_toggles,
+                  " translation_sign_toggles=", translation_sign_toggles);
+    CHECK_MESSAGE(pure_total_near_zero <= translation_total_near_zero + 1,
+                  "pure_total_near_zero=", pure_total_near_zero,
+                  " translation_total_near_zero=", translation_total_near_zero,
+                  " pure_cycle6_frame=", pure_yaw_samples[6].frame_drive0,
+                  " translation_cycle6_frame=", translation_yaw_samples[6].frame_drive0);
 }
 
 TEST_CASE("testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned")

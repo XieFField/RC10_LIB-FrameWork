@@ -316,6 +316,9 @@ TEST_CASE("testYawLockZeroStopBrakesBeforePureRotationSteerPlanning")
     chassis.planned_data_.vel_x = 0.0f;
     chassis.planned_data_.vel_y = 0.0f;
     chassis.planned_data_.omega_z = 1.0f;
+    chassis.last_planned_data_.vel_x = 0.2f;
+    chassis.last_planned_data_.vel_y = 0.0f;
+    chassis.last_planned_data_.omega_z = 1.0f;
 
     setWheelResidualSpeedMps(chassis, 0, 0.15f);
     chassis.computeModuleCommands(chassis.planned_data_);

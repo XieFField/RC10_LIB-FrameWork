@@ -978,6 +978,15 @@ namespace jia
                 return false;
             }
 
+            const f32 last_trans_speed_m_s = magnitude2DF32(last_planned_data_.vel_x, last_planned_data_.vel_y);
+            const bool translation_decel_context =
+                (command_trans_speed_m_s > getNearZeroEnterSpeedMps()) ||
+                (last_trans_speed_m_s > getNearZeroExitSpeedMps());
+            if (!translation_decel_context)
+            {
+                return false;
+            }
+
             const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
             f32 max_residual_speed_m_s = 0.0f;
             for (u8 i = 0; i < 4; ++i)
@@ -986,8 +995,7 @@ namespace jia
                 max_residual_speed_m_s = (residual_speed_m_s > max_residual_speed_m_s) ? residual_speed_m_s : max_residual_speed_m_s;
             }
 
-            return (command_trans_speed_m_s > getNearZeroEnterSpeedMps()) ||
-                   (max_residual_speed_m_s > getNearZeroEnterSpeedMps());
+            return max_residual_speed_m_s > getNearZeroEnterSpeedMps();
         }
 
         bool Chassis::shouldActivateLaunchHold() const
