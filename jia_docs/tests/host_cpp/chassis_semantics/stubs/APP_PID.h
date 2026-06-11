@@ -28,9 +28,10 @@ public:
         last_target = target;
         last_feedback = feedback;
         calc_count += 1U;
-        return 0.0f;
+        return forced_output;
     }
 
+    float forced_output = 0.0f;
     float last_target = 0.0f;
     float last_feedback = 0.0f;
     unsigned int calc_count = 0U;
