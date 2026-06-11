@@ -49,6 +49,8 @@ typedef struct
     Speedplanner_1D_Param_Config curve = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};   
     Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f}; 
     
+    Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f}; 
+        
     Speedplanner_1D_Param_Config line = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.5f, .finalSpeed = 2.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   
 
     //没用的
@@ -105,18 +107,23 @@ typedef struct
     float coner_ahead=0.17f;
 } KFS_POINT;
 
+
+typedef struct
+{
+    Vector2D uphill_pos = {0.6f, 11.4f};//11.45f
+    Vector2D fit_pos = {4.83f, 11.5f};//11.45f
+    
+    Vector2D R2_pos = {4.535f, 10.185f};
+    Vector2D M1_pos = {4.535f, 10.705f};
+    Vector2D L3_pos = {4.535f, 11.285f};
+} CZ_POINT;
+
 typedef struct
 {
     bool get_spin_flag = false; // 旋转触发过渡标志。
 
     bool spin_flag = false; // 是否需要执行中途转向。
     bool spin_flag_2 = false; // 是否需要执行中途转向。
-
-    //bool spin_up_flag = false;   // 上路段旋转流程使能。
-    //bool spin_down_flag = false; // 下路段旋转流程使能。
-    
-    //bool spin_up_flag_2 = false;   // 上路段旋转流程使能。
-    //bool spin_down_flag_2 = false; // 下路段旋转流程使能。
 
     bool MF1_flag = false;   // 进入 MF1 目标点标志。
     bool MF2_flag = false;   // 进入 MF2 目标点标志。
@@ -226,6 +233,7 @@ private:
     //-----------------------------------规划参数-----------------------------------------//
     CB_FLAG CB_flag;
     CB_POINT CB_point;
+    CZ_POINT CZ_point;
     
     KFS_FLAG KFS_flag;
     KFS_POINT KFS_point;

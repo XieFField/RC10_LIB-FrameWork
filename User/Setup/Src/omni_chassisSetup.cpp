@@ -108,119 +108,12 @@ void OmniChassis_Setup::Path_KFS_check(void)
             KFS_flag.get_spin_flag = false;
         }
     }
-
-    /*
-        //-------------------------------          MF1              -------------------------------//
-        // 上方停止点旋转
-        if (KFS_flag.spin_up_flag == true)
-        {
-            // 判断旋转条件
-            if (KFS_point.spin_point_.x == curve.Get_End_point().x && KFS_point.spin_point_.y == curve.Get_End_point().y)
-            {
-                KFS_flag.get_spin_flag = true;
-            }
-            // 开始旋转
-            else if (KFS_flag.get_spin_flag == true)
-            {
-                KFS_flag.get_spin_flag = false;
-                target_yaw_ = KFS_point.MF2_target_yaw_;
-                Spin_Start = true;
-            }
-            // 判断退出
-            else if (Spin_Start == true)
-            {
-                if (_tool_Abs(yaw - target_yaw_) < 2.0f)
-                {
-                    Spin_Start = false;
-                    KFS_flag.spin_up_flag = false;
-                }
-            }
-        }
-
-        if (KFS_flag.spin_down_flag == true) // 下方偏移旋转
-        {
-            if (KFS_flag.MF1_finish == true)
-            {
-                // 第一排旋转
-                if (target_yaw_ == -90.0f)
-                {
-                    target_yaw_ = KFS_point.MF2_target_yaw_;
-                    KFS_flag.spin_down_flag = false;
-                }
-                // 两侧旋转判断
-                else if (KFS_point.MF1_pos_.x == curve.Get_Start_point().x && KFS_point.MF1_pos_.y == curve.Get_Start_point().y)
-                {
-                    KFS_flag.get_spin_flag = true;
-                }
-                // 两侧开始旋转
-                else if (KFS_flag.get_spin_flag == true)
-                {
-                    target_yaw_ = KFS_point.MF2_target_yaw_;
-                    KFS_flag.spin_down_flag = false;
-                    KFS_flag.get_spin_flag = false;
-                }
-            }
-        }
-
-        //-------------------------------          MF2              -------------------------------//
-        // 上方停止点旋转
-        if (KFS_flag.spin_up_flag_2 == true && KFS_flag.spin_down_flag == false && KFS_flag.spin_up_flag == false)
-        {
-            // 判断旋转条件
-            if (KFS_point.spin_point_.x == curve.Get_End_point().x && KFS_point.spin_point_.y == curve.Get_End_point().y)
-            {
-                KFS_flag.get_spin_flag = true;
-            }
-            // 开始旋转
-            else if (KFS_flag.get_spin_flag == true)
-            {
-                KFS_flag.get_spin_flag = false;
-                target_yaw_ = KFS_point.MF3_target_yaw_;
-                Spin_Start = true;
-            }
-            // 判断退出
-            else if (Spin_Start == true)
-            {
-                if (_tool_Abs(yaw - target_yaw_) < 2.0f)
-                {
-                    Spin_Start = false;
-                    KFS_flag.spin_up_flag_2 = false;
-                }
-            }
-        }
-
-        if (KFS_flag.spin_down_flag_2 == true && KFS_flag.spin_down_flag == false && KFS_flag.spin_up_flag == false) // 下方偏移旋转
-        {
-            if (KFS_flag.MF2_finish == true)
-            {
-                // 第一排旋转
-                if (target_yaw_ == -90.0f)
-                {
-                    target_yaw_ = KFS_point.MF3_target_yaw_;
-                    KFS_flag.spin_down_flag_2 = false;
-                }
-                // 两侧旋转判断
-                else if (KFS_point.MF2_pos_.x == curve.Get_Start_point().x && KFS_point.MF2_pos_.y == curve.Get_Start_point().y)
-                {
-                    KFS_flag.get_spin_flag = true;
-                }
-                // 两侧开始旋转
-                else if (KFS_flag.get_spin_flag == true)
-                {
-                    target_yaw_ = KFS_point.MF3_target_yaw_;
-                    KFS_flag.spin_down_flag_2 = false;
-                    KFS_flag.get_spin_flag = false;
-                }
-            }
-        }
-
-    */
 }
 
 void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw_ = 0.0f;
+    target_yaw_ = 180.0f;
     path_line_.plan_reset();
     path_line_.Reset();
 
@@ -232,12 +125,19 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     //    path_line_.Add_Point(CB_point.CB_Selection_start_point_, path_param.start);
     //    path_line_.Add_Point(CB_point.Clamping_Bar_Selection_pos_, CB_point.CB_Selection_control_point_, path_param.curve);
     //    path_line_.Add_End_Point(CB_point.Clamping_Bar_Retreat_pos_, path_param.end);
+    
+    //上坡直线
+    path_line_.Add_Start_Point(robot_pos_);
+//    path_line_.Add_Point(Vector2D{0.6f, 8.6f}, path_param.start);
+//    path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
+    path_line_.Add_End_Point(CZ_point.M1_pos, path_param.end);
+    
 
     // 顺滑过弯
-    path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_Point(Vector2D{0.6f + KFS_point.coner_ahead, 2.6f}, path_param.start);
-    path_line_.Add_Point(Vector2D{0.6f, 2.6f + KFS_point.coner_ahead}, path_param.curve);
-    path_line_.Add_End_Point(Vector2D{0.6f, 5.0f}, path_param.end);
+//    path_line_.Add_Start_Point(robot_pos_);
+//    path_line_.Add_Point(Vector2D{0.6f + KFS_point.coner_ahead, 2.6f}, path_param.start);
+//    path_line_.Add_Point(Vector2D{0.6f, 2.6f + KFS_point.coner_ahead}, path_param.curve);
+//    path_line_.Add_End_Point(Vector2D{0.6f, 5.0f}, path_param.end);
 
     // 夹杆路径
     //    path_line_.Add_Start_Point(robot_pos_);
