@@ -127,6 +127,170 @@ TEST_CASE("testDrivePidApplySkipsNullHandlesAndStillUpdatesAppliedStamp")
     EXPECT_TRUE(!harness.drive_vescs[3].get_speed_pid_derivative_first());
 }
 
+TEST_CASE("testSteerPidEnableEdgeReadsBackRuntimeIntoCleanSharedCache")
+{
+    DrivePidTuneHarness harness;
+    configureDrivePidTuneHarness(harness);
+
+    PID_Param_Config runtime_speed_cfg{};
+    runtime_speed_cfg.kp = 23.0f;
+    runtime_speed_cfg.ki = 0.33f;
+    runtime_speed_cfg.kd = 0.07f;
+    runtime_speed_cfg.output_limit = 6789.0f;
+    PID_Param_Config runtime_angle_cfg{};
+    runtime_angle_cfg.kp = 4.2f;
+    runtime_angle_cfg.kd = 0.12f;
+    runtime_angle_cfg.deadband = 0.04f;
+    runtime_angle_cfg.output_limit = 321.0f;
+    harness.steer_motors[0].pid_init(runtime_speed_cfg, 0.44f, runtime_angle_cfg, 0.66f);
+
+    harness.chassis.debug_pid_tune_.steer_speed_pid_cfg = PID_Param_Config{};
+    harness.chassis.debug_pid_tune_.steer_angle_pid_cfg = PID_Param_Config{};
+    harness.chassis.debug_pid_tune_.steer_speed_pid_td_ratio = 0.0f;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_i_separa = 0.0f;
+    harness.chassis.debug_pid_tune_.steer_speed_pid_apply_stamp = 0U;
+    harness.chassis.debug_pid_tune_.steer_speed_pid_applied_stamp = 0U;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_apply_stamp = 0U;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_applied_stamp = 0U;
+    harness.chassis.debug_control_.common.enable = false;
+    harness.chassis.debug_enable_last_cycle_ = false;
+
+    harness.chassis.syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
+    harness.chassis.debug_control_.common.enable = true;
+    harness.chassis.syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
+
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_speed_pid_cfg.kp, runtime_speed_cfg.kp, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_speed_pid_cfg.ki, runtime_speed_cfg.ki, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_speed_pid_cfg.kd, runtime_speed_cfg.kd, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_speed_pid_cfg.output_limit, runtime_speed_cfg.output_limit, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_angle_pid_cfg.kp, runtime_angle_cfg.kp, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_angle_pid_cfg.kd, runtime_angle_cfg.kd, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_angle_pid_cfg.deadband, runtime_angle_cfg.deadband, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_angle_pid_cfg.output_limit, runtime_angle_cfg.output_limit, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_speed_pid_td_ratio, 0.44f, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_angle_pid_i_separa, 0.66f, 1.0e-6f);
+}
+
+TEST_CASE("testSteerPidDirtyCacheBlocksRuntimeReadbackOverwrite")
+{
+    DrivePidTuneHarness harness;
+    configureDrivePidTuneHarness(harness);
+
+    PID_Param_Config manual_speed_cfg{};
+    manual_speed_cfg.kp = 31.0f;
+    manual_speed_cfg.ki = 0.88f;
+    manual_speed_cfg.output_limit = 7777.0f;
+    PID_Param_Config manual_angle_cfg{};
+    manual_angle_cfg.kp = 5.5f;
+    manual_angle_cfg.kd = 0.22f;
+    manual_angle_cfg.output_limit = 444.0f;
+    PID_Param_Config runtime_speed_cfg{};
+    runtime_speed_cfg.kp = 9.0f;
+    PID_Param_Config runtime_angle_cfg{};
+    runtime_angle_cfg.kp = 1.5f;
+    harness.steer_motors[0].pid_init(runtime_speed_cfg, 0.11f, runtime_angle_cfg, 0.22f);
+
+    harness.chassis.debug_pid_tune_.steer_speed_pid_cfg = manual_speed_cfg;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_cfg = manual_angle_cfg;
+    harness.chassis.debug_pid_tune_.steer_speed_pid_td_ratio = 0.91f;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_i_separa = 0.37f;
+    harness.chassis.debug_pid_tune_.steer_speed_pid_apply_stamp = 12U;
+    harness.chassis.debug_pid_tune_.steer_speed_pid_applied_stamp = 10U;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_apply_stamp = 14U;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_applied_stamp = 13U;
+
+    harness.chassis.syncDebugSteerPidTuneFromRuntime();
+
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_speed_pid_cfg.kp, manual_speed_cfg.kp, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_speed_pid_cfg.ki, manual_speed_cfg.ki, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_speed_pid_cfg.output_limit, manual_speed_cfg.output_limit, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_angle_pid_cfg.kp, manual_angle_cfg.kp, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_angle_pid_cfg.kd, manual_angle_cfg.kd, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_angle_pid_cfg.output_limit, manual_angle_cfg.output_limit, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_speed_pid_td_ratio, 0.91f, 1.0e-6f);
+    EXPECT_NEAR(harness.chassis.debug_pid_tune_.steer_angle_pid_i_separa, 0.37f, 1.0e-6f);
+}
+
+TEST_CASE("testSteerPidSharedApplyPushesSameParamsToAllM3508sAndAlignsAppliedStamps")
+{
+    DrivePidTuneHarness harness;
+    configureDrivePidTuneHarness(harness);
+
+    PID_Param_Config shared_speed_cfg{};
+    shared_speed_cfg.kp = 28.0f;
+    shared_speed_cfg.ki = 0.42f;
+    shared_speed_cfg.kd = 0.03f;
+    shared_speed_cfg.deadband = 0.6f;
+    shared_speed_cfg.output_limit = 10000.0f;
+    PID_Param_Config shared_angle_cfg{};
+    shared_angle_cfg.kp = 4.8f;
+    shared_angle_cfg.kd = 0.16f;
+    shared_angle_cfg.deadband = 0.02f;
+    shared_angle_cfg.output_limit = 520.0f;
+
+    harness.chassis.debug_pid_tune_.steer_speed_pid_cfg = shared_speed_cfg;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_cfg = shared_angle_cfg;
+    harness.chassis.debug_pid_tune_.steer_speed_pid_td_ratio = 0.25f;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_i_separa = 0.75f;
+    harness.chassis.debug_pid_tune_.steer_speed_pid_apply_stamp = 61U;
+    harness.chassis.debug_pid_tune_.steer_speed_pid_applied_stamp = 60U;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_apply_stamp = 71U;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_applied_stamp = 70U;
+
+    harness.chassis.applyDebugSteerPidRuntimeTuning();
+
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(harness.steer_motors[i].get_speed_pid_params().kp, shared_speed_cfg.kp, 1.0e-6f);
+        EXPECT_NEAR(harness.steer_motors[i].get_speed_pid_params().ki, shared_speed_cfg.ki, 1.0e-6f);
+        EXPECT_NEAR(harness.steer_motors[i].get_speed_pid_params().kd, shared_speed_cfg.kd, 1.0e-6f);
+        EXPECT_NEAR(harness.steer_motors[i].get_speed_pid_params().deadband, shared_speed_cfg.deadband, 1.0e-6f);
+        EXPECT_NEAR(harness.steer_motors[i].get_speed_pid_params().output_limit, shared_speed_cfg.output_limit, 1.0e-6f);
+        EXPECT_NEAR(harness.steer_motors[i].get_angle_pid_params().kp, shared_angle_cfg.kp, 1.0e-6f);
+        EXPECT_NEAR(harness.steer_motors[i].get_angle_pid_params().kd, shared_angle_cfg.kd, 1.0e-6f);
+        EXPECT_NEAR(harness.steer_motors[i].get_angle_pid_params().deadband, shared_angle_cfg.deadband, 1.0e-6f);
+        EXPECT_NEAR(harness.steer_motors[i].get_angle_pid_params().output_limit, shared_angle_cfg.output_limit, 1.0e-6f);
+        EXPECT_NEAR(harness.steer_motors[i].get_speed_pid_td_ratio(), 0.25f, 1.0e-6f);
+        EXPECT_NEAR(harness.steer_motors[i].get_angle_pid_i_separa_threshold(), 0.75f, 1.0e-6f);
+    }
+    EXPECT_TRUE(harness.chassis.debug_pid_tune_.steer_speed_pid_applied_stamp == 61U);
+    EXPECT_TRUE(harness.chassis.debug_pid_tune_.steer_angle_pid_applied_stamp == 71U);
+}
+
+TEST_CASE("testSteerPidApplySkipsNullHandlesAndStillUpdatesAppliedStamps")
+{
+    DrivePidTuneHarness harness;
+    configureDrivePidTuneHarness(harness);
+
+    harness.chassis.wheel_config_[1].steer_motor_h = nullptr;
+    harness.chassis.wheel_config_[2].steer_motor_h = nullptr;
+
+    PID_Param_Config shared_speed_cfg{};
+    shared_speed_cfg.kp = 35.0f;
+    PID_Param_Config shared_angle_cfg{};
+    shared_angle_cfg.kp = 6.2f;
+
+    harness.chassis.debug_pid_tune_.steer_speed_pid_cfg = shared_speed_cfg;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_cfg = shared_angle_cfg;
+    harness.chassis.debug_pid_tune_.steer_speed_pid_td_ratio = 0.18f;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_i_separa = 0.28f;
+    harness.chassis.debug_pid_tune_.steer_speed_pid_apply_stamp = 81U;
+    harness.chassis.debug_pid_tune_.steer_speed_pid_applied_stamp = 80U;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_apply_stamp = 91U;
+    harness.chassis.debug_pid_tune_.steer_angle_pid_applied_stamp = 90U;
+
+    harness.chassis.applyDebugSteerPidRuntimeTuning();
+
+    EXPECT_TRUE(harness.chassis.debug_pid_tune_.steer_speed_pid_applied_stamp == 81U);
+    EXPECT_TRUE(harness.chassis.debug_pid_tune_.steer_angle_pid_applied_stamp == 91U);
+    EXPECT_NEAR(harness.steer_motors[0].get_speed_pid_params().kp, shared_speed_cfg.kp, 1.0e-6f);
+    EXPECT_NEAR(harness.steer_motors[3].get_speed_pid_params().kp, shared_speed_cfg.kp, 1.0e-6f);
+    EXPECT_NEAR(harness.steer_motors[0].get_angle_pid_params().kp, shared_angle_cfg.kp, 1.0e-6f);
+    EXPECT_NEAR(harness.steer_motors[3].get_angle_pid_params().kp, shared_angle_cfg.kp, 1.0e-6f);
+    EXPECT_NEAR(harness.steer_motors[0].get_speed_pid_td_ratio(), 0.18f, 1.0e-6f);
+    EXPECT_NEAR(harness.steer_motors[3].get_angle_pid_i_separa_threshold(), 0.28f, 1.0e-6f);
+}
+
 TEST_CASE("testExternalCommandMapsToInternalBodyAxesWithoutChangingOmega")
 {
     Chassis::ExternalCommand command{};
