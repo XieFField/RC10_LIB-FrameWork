@@ -311,6 +311,10 @@ namespace jia
             high_speed_eta_max_s_ = 0.0f;
             steer_fault_any_active_ = false;
             low_speed_residual_bypass_active_ = false;
+            yaw_lock_zero_stop_decel_context_active_ = false;
+            yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
+            yaw_lock_zero_stop_preview_command_valid_ = false;
+            yaw_lock_zero_stop_preview_command_ = Data{};
             trans_dir_freeze_active_ = false;
             trans_dir_ref_valid_ = false;
             trans_dir_ref_rad_ = 0.0f;
@@ -979,9 +983,13 @@ namespace jia
                 ((input_target_data_.mode == Mode::kBodySpeedLockNowRotZWithNoOmegaZMode) ||
                  (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode)) &&
                 (fabsf(input_target_data_.omega_z) > 1.0e-6f);
+            const bool yaw_lock_zero_stop_hold_active =
+                yaw_lock_zero_stop_decel_context_active_ || (yaw_lock_zero_stop_release_hold_elapsed_ms_ > 0U);
+            const bool zero_omega_without_existing_hold =
+                (fabsf(command_data.omega_z) <= 1.0e-6f) && !yaw_lock_zero_stop_hold_active;
             if ((target_trans_speed_m_s > getNearZeroEnterSpeedMps()) ||
                 manual_yaw_requested ||
-                (fabsf(command_data.omega_z) <= 1.0e-6f))
+                zero_omega_without_existing_hold)
             {
                 yaw_lock_zero_stop_decel_context_active_ = false;
                 yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
@@ -992,7 +1000,11 @@ namespace jia
             f32 max_residual_speed_m_s = 0.0f;
             for (u8 i = 0; i < 4; ++i)
             {
-                const f32 residual_speed_m_s = fabsf(wheel_config_[i].corrected_drive_omega_rad_s) * wheel_radius_m;
+                const WheelConfig &wheel = wheel_config_[i];
+                const f32 cached_residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * wheel_radius_m;
+                const f32 live_residual_speed_m_s = fabsf(readDriveMotorOmegaRadS(wheel)) * wheel_radius_m;
+                const f32 residual_speed_m_s =
+                    (live_residual_speed_m_s > cached_residual_speed_m_s) ? live_residual_speed_m_s : cached_residual_speed_m_s;
                 max_residual_speed_m_s = (residual_speed_m_s > max_residual_speed_m_s) ? residual_speed_m_s : max_residual_speed_m_s;
             }
 
@@ -1051,6 +1063,74 @@ namespace jia
                 yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
             }
             return true;
+        }
+
+        bool Chassis::shouldPreviewSuppressYawLockOmegaForZeroStopDecel(const Data &command_data) const
+        {
+            const bool yaw_lock_control_requested =
+                current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
+            if (!yaw_lock_control_requested ||
+                input_target_data_.zero_current_all ||
+                current_mode_flag_.is_wheel_torque_free ||
+                (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode))
+            {
+                return false;
+            }
+
+            const f32 target_trans_speed_m_s = magnitude2DF32(target_data_.vel_x, target_data_.vel_y);
+            const f32 command_trans_speed_m_s = magnitude2DF32(command_data.vel_x, command_data.vel_y);
+            const bool manual_yaw_requested =
+                ((input_target_data_.mode == Mode::kBodySpeedLockNowRotZWithNoOmegaZMode) ||
+                 (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode)) &&
+                (fabsf(input_target_data_.omega_z) > 1.0e-6f);
+            const bool yaw_lock_zero_stop_hold_active =
+                yaw_lock_zero_stop_decel_context_active_ || (yaw_lock_zero_stop_release_hold_elapsed_ms_ > 0U);
+            const bool zero_omega_without_existing_hold =
+                (fabsf(command_data.omega_z) <= 1.0e-6f) && !yaw_lock_zero_stop_hold_active;
+            if ((target_trans_speed_m_s > getNearZeroEnterSpeedMps()) ||
+                manual_yaw_requested ||
+                zero_omega_without_existing_hold)
+            {
+                return false;
+            }
+
+            const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
+            f32 max_residual_speed_m_s = 0.0f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                const WheelConfig &wheel = wheel_config_[i];
+                const f32 cached_residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * wheel_radius_m;
+                const f32 live_residual_speed_m_s = fabsf(readDriveMotorOmegaRadS(wheel)) * wheel_radius_m;
+                const f32 residual_speed_m_s =
+                    (live_residual_speed_m_s > cached_residual_speed_m_s) ? live_residual_speed_m_s : cached_residual_speed_m_s;
+                max_residual_speed_m_s = (residual_speed_m_s > max_residual_speed_m_s) ? residual_speed_m_s : max_residual_speed_m_s;
+            }
+
+            if (max_residual_speed_m_s <= getNearZeroEnterSpeedMps())
+            {
+                if (!yaw_lock_zero_stop_decel_context_active_)
+                {
+                    return false;
+                }
+
+                const u32 release_hold_ms = runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms;
+                if (release_hold_ms == 0U)
+                {
+                    return false;
+                }
+
+                const u32 next_elapsed_ms =
+                    (yaw_lock_zero_stop_release_hold_elapsed_ms_ > (0xFFFFFFFFU - period_ms_))
+                        ? 0xFFFFFFFFU
+                        : (yaw_lock_zero_stop_release_hold_elapsed_ms_ + period_ms_);
+                return next_elapsed_ms < release_hold_ms;
+            }
+
+            const f32 last_trans_speed_m_s = magnitude2DF32(last_planned_data_.vel_x, last_planned_data_.vel_y);
+            const bool translation_decel_context =
+                (command_trans_speed_m_s > getNearZeroEnterSpeedMps()) ||
+                (last_trans_speed_m_s > getNearZeroExitSpeedMps());
+            return yaw_lock_zero_stop_decel_context_active_ || translation_decel_context;
         }
 
         bool Chassis::shouldActivateLaunchHold() const
@@ -3044,6 +3124,8 @@ namespace jia
 
         void Chassis::resolvePlannerTargetData()
         {
+            yaw_lock_zero_stop_preview_command_valid_ = false;
+            yaw_lock_zero_stop_preview_command_ = Data{};
             const PlannerInputCommand planner_command{
                 input_target_data_.vel_x,
                 input_target_data_.vel_y,
@@ -3138,6 +3220,15 @@ namespace jia
 
             clampTargetSpeedInChassis(target_data_.vel_x, target_data_.vel_y, target_data_.omega_z,
                                       target_data_.vel_x, target_data_.vel_y, target_data_.omega_z);
+
+            const bool suppress_yaw_lock_target_omega_for_zero_stop =
+                !launch_hold_active_ && shouldPreviewSuppressYawLockOmegaForZeroStopDecel(target_data_);
+            if (suppress_yaw_lock_target_omega_for_zero_stop)
+            {
+                yaw_lock_zero_stop_preview_command_ = target_data_;
+                yaw_lock_zero_stop_preview_command_valid_ = true;
+                target_data_.omega_z = 0.0f;
+            }
 
             limitPlannedSpeed(target_data_.vel_x, target_data_.vel_y, target_data_.omega_z,
                               planned_data_.vel_x, planned_data_.vel_y, planned_data_.omega_z);
@@ -3846,6 +3937,10 @@ namespace jia
             else
             {
                 Data planner_command = launch_hold_active_ ? makeLaunchHoldPreviewCommand() : command_data;
+                if (!launch_hold_active_ && yaw_lock_zero_stop_preview_command_valid_)
+                {
+                    planner_command = yaw_lock_zero_stop_preview_command_;
+                }
                 if (!launch_hold_active_ && shouldSuppressYawLockOmegaForZeroStopDecel(planner_command))
                 {
                     planner_command.omega_z = 0.0f;
@@ -3926,7 +4021,7 @@ namespace jia
                 }
                 Data zero_stop_gate_target_data = target_data_;
                 const bool suppress_yaw_lock_omega_for_zero_stop =
-                    yaw_lock_zero_stop_hold_pre_active || shouldSuppressYawLockOmegaForZeroStopDecel(zero_stop_gate_target_data);
+                    yaw_lock_zero_stop_hold_pre_active;
                 if (suppress_yaw_lock_omega_for_zero_stop)
                 {
                     zero_stop_gate_target_data.omega_z = 0.0f;

@@ -890,6 +890,7 @@ namespace jia
             f32 getXParkAngle(const WheelConfig &wheel) const;
             f32 computeMaxCommandWheelSpeedMps(const Data &command_data) const;
             bool shouldSuppressYawLockOmegaForZeroStopDecel(const Data &command_data);
+            bool shouldPreviewSuppressYawLockOmegaForZeroStopDecel(const Data &command_data) const;
             f32 computeLowSpeedDriveSuppressionScale(f32 abs_error_rad) const;
             void computeLowSpeedDriveSuppressionScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4]);
             f32 getNearZeroEnterSpeedMps() const;
@@ -1422,6 +1423,8 @@ namespace jia
             bool yaw_lock_control_active_last_cycle_ = false;                  // [RO] 上一规划周期是否处于 LockNow/LockTo yaw 锁控制族
             bool yaw_lock_zero_stop_decel_context_active_ = false;              // [RO] yaw lock 从平移减速进入纯旋转前，等待 drive residual 先刹停的锁存门
             u32 yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;               // [RO] yaw lock zero-stop 释放保持已累计时长（ms）。达到配置门限后才允许退出 brake latch。
+            bool yaw_lock_zero_stop_preview_command_valid_ = false;             // [RO] 当前控制周期是否缓存了用于 compute 阶段推进 hold 的未压零 yaw command。
+            Data yaw_lock_zero_stop_preview_command_{};                         // [RO] 当前控制周期在 planner 前保存的未压零 yaw command。
             bool lock_yaw_pid_target_filter_valid_ = false;                    // [RO] 航向 PID 目标低通状态是否已初始化
             f32 lock_yaw_pid_target_filtered_rad_ = 0.0f;                      // [RO] 航向 PID 目标低通后的角度
             bool lock_yaw_pid_deadband_active_ = false;                        // [RO] 航向 PID 双阈值死区当前是否激活

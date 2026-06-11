@@ -195,13 +195,17 @@ static void configureLockToYawReleaseHoldHarness(Chassis &chassis,
 
 static void followYawLockActuatorFrame(Chassis &chassis,
                                        TestMotor steer_motors[4],
+                                       VESC_Motor drive_motors[4],
                                        float residual_speed_m_s)
 {
+    const float wheel_radius_m = chassis.runtime_strategy_cfg_.wheel_radius_m_;
+    const float residual_omega_rad_s = (std::fabs(wheel_radius_m) > 1.0e-6f) ? (residual_speed_m_s / wheel_radius_m) : 0.0f;
+    const float residual_rpm = jia::radsToRpmF32(residual_omega_rad_s);
     for (int i = 0; i < 4; ++i)
     {
         setWheelOaAngleRad(chassis, i, chassis.actuator_command_frame_.steer_oa_total_rad[i]);
         steer_motors[i].setFeedbackTotalAngleDeg(jia::radToDegF32(chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad));
-        setWheelResidualSpeedMps(chassis, i, residual_speed_m_s);
+        drive_motors[i].setFeedbackRpm(residual_rpm);
     }
 }
 
@@ -947,11 +951,11 @@ TEST_CASE("testLockToYawPureDecelReleaseHoldKeepsTargetAndPlannedOmegaZero")
     const float lock_yaw_rad = jia::degToRadF32(20.0f);
     chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.24f, 0.0f, lock_yaw_rad);
     EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
-    followYawLockActuatorFrame(chassis, steer_motors, 0.18f);
+    followYawLockActuatorFrame(chassis, steer_motors, drive_motors, 0.18f);
 
     chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, lock_yaw_rad);
     EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
-    followYawLockActuatorFrame(chassis, steer_motors, 0.18f);
+    followYawLockActuatorFrame(chassis, steer_motors, drive_motors, 0.18f);
 
     EXPECT_TRUE(chassis.yaw_pid_trace_.pid_compute_fired == 1.0f);
     EXPECT_NEAR(chassis.yaw_pid_trace_.final_omega_cmd_rad_s, 0.08f, 1.0e-6f);
@@ -959,7 +963,7 @@ TEST_CASE("testLockToYawPureDecelReleaseHoldKeepsTargetAndPlannedOmegaZero")
     EXPECT_NEAR(chassis.target_data_.omega_z, 0.0f, 1.0e-6f);
     EXPECT_NEAR(chassis.planned_data_.omega_z, 0.0f, 1.0e-6f);
 
-    followYawLockActuatorFrame(chassis, steer_motors, chassis.getNearZeroEnterSpeedMps());
+    followYawLockActuatorFrame(chassis, steer_motors, drive_motors, chassis.getNearZeroEnterSpeedMps());
 
     for (unsigned int cycle = 0; cycle + 1U < chassis.runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms; ++cycle)
     {
@@ -969,7 +973,7 @@ TEST_CASE("testLockToYawPureDecelReleaseHoldKeepsTargetAndPlannedOmegaZero")
         EXPECT_NEAR(chassis.yaw_pid_trace_.final_omega_cmd_rad_s, 0.08f, 1.0e-6f);
         EXPECT_NEAR(chassis.target_data_.omega_z, 0.0f, 1.0e-6f);
         EXPECT_NEAR(chassis.planned_data_.omega_z, 0.0f, 1.0e-6f);
-        followYawLockActuatorFrame(chassis, steer_motors, chassis.getNearZeroEnterSpeedMps());
+        followYawLockActuatorFrame(chassis, steer_motors, drive_motors, chassis.getNearZeroEnterSpeedMps());
     }
 }
 
@@ -983,11 +987,11 @@ TEST_CASE("testLockToYawPureDecelReleaseHoldBoundaryReleasesOmegaOnlyAfterHoldEx
     const float lock_yaw_rad = jia::degToRadF32(25.0f);
     chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.20f, 0.0f, lock_yaw_rad);
     EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
-    followYawLockActuatorFrame(chassis, steer_motors, 0.16f);
+    followYawLockActuatorFrame(chassis, steer_motors, drive_motors, 0.16f);
 
     chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, lock_yaw_rad);
     EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
-    followYawLockActuatorFrame(chassis, steer_motors, chassis.getNearZeroEnterSpeedMps());
+    followYawLockActuatorFrame(chassis, steer_motors, drive_motors, chassis.getNearZeroEnterSpeedMps());
 
     for (unsigned int cycle = 0; cycle + 1U < chassis.runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms; ++cycle)
     {
@@ -995,7 +999,7 @@ TEST_CASE("testLockToYawPureDecelReleaseHoldBoundaryReleasesOmegaOnlyAfterHoldEx
         EXPECT_TRUE(chassis.yaw_lock_zero_stop_decel_context_active_);
         EXPECT_NEAR(chassis.target_data_.omega_z, 0.0f, 1.0e-6f);
         EXPECT_NEAR(chassis.planned_data_.omega_z, 0.0f, 1.0e-6f);
-        followYawLockActuatorFrame(chassis, steer_motors, chassis.getNearZeroEnterSpeedMps());
+        followYawLockActuatorFrame(chassis, steer_motors, drive_motors, chassis.getNearZeroEnterSpeedMps());
     }
 
     EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
@@ -1004,31 +1008,29 @@ TEST_CASE("testLockToYawPureDecelReleaseHoldBoundaryReleasesOmegaOnlyAfterHoldEx
     EXPECT_TRUE(chassis.planned_data_.omega_z > 0.0f);
 }
 
-TEST_CASE("testLockToYawPureDecelReleaseHoldBlocksPlannedOmegaReuseWhenYawPidIsDecimated")
+TEST_CASE("testLockToYawPureDecelBlocksPlannedOmegaReuseWhenYawPidIsDecimated")
 {
     Chassis chassis;
     TestMotor steer_motors[4];
     VESC_Motor drive_motors[4];
     configureLockToYawReleaseHoldHarness(chassis, steer_motors, drive_motors);
 
-    chassis.rot_z_pid_period_ = 2U;
-    chassis.rot_z_pid_count_ = 0U;
+    chassis.rot_z_pid_period_ = 3U;
+    chassis.rot_z_pid_count_ = 3U;
 
     const float lock_yaw_rad = jia::degToRadF32(18.0f);
     chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.22f, 0.0f, lock_yaw_rad);
     EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
-    followYawLockActuatorFrame(chassis, steer_motors, 0.14f);
+    followYawLockActuatorFrame(chassis, steer_motors, drive_motors, 0.14f);
+
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.22f, 0.0f, lock_yaw_rad);
+    EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
+    EXPECT_TRUE(chassis.yaw_pid_trace_.pid_compute_fired == 0.0f);
+    EXPECT_TRUE(chassis.planned_data_.omega_z > 0.0f);
+    followYawLockActuatorFrame(chassis, steer_motors, drive_motors, 0.14f);
 
     chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, lock_yaw_rad);
     EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
-    followYawLockActuatorFrame(chassis, steer_motors, 0.14f);
-
-    EXPECT_TRUE(chassis.yaw_pid_trace_.final_omega_cmd_rad_s > 0.0f);
-
-    followYawLockActuatorFrame(chassis, steer_motors, chassis.getNearZeroEnterSpeedMps());
-
-    EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
-    EXPECT_TRUE(chassis.yaw_lock_zero_stop_decel_context_active_);
     EXPECT_TRUE(chassis.yaw_pid_trace_.pid_compute_fired == 0.0f);
     EXPECT_TRUE(chassis.yaw_pid_trace_.final_omega_cmd_rad_s > 0.0f);
     EXPECT_NEAR(chassis.target_data_.omega_z, 0.0f, 1.0e-6f);
