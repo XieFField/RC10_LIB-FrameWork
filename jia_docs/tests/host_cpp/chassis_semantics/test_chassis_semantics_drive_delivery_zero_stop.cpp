@@ -341,6 +341,114 @@ TEST_CASE("testYawLockZeroStopBrakesBeforePureRotationSteerPlanning")
     EXPECT_NEAR(chassis.actuator_command_frame_.steer_oa_total_rad[0], pure_rotation_oa_rad, 1.0e-6f);
 }
 
+TEST_CASE("testYawLockZeroStopKeepsBrakeLatchAfterPlannedTranslationTailDecays")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedLockNowRotZMode;
+    chassis.input_target_data_.vel_x = 0.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+    chassis.current_mode_flag_.is_lock_now_rot_z = true;
+    chassis.target_data_.vel_x = 0.0f;
+    chassis.target_data_.vel_y = 0.0f;
+    chassis.target_data_.omega_z = 1.0f;
+    chassis.planned_data_.vel_x = 0.0f;
+    chassis.planned_data_.vel_y = 0.0f;
+    chassis.planned_data_.omega_z = 1.0f;
+    chassis.last_planned_data_.vel_x = 0.2f;
+    chassis.last_planned_data_.vel_y = 0.0f;
+    chassis.last_planned_data_.omega_z = 1.0f;
+
+    setWheelResidualSpeedMps(chassis, 0, 0.15f);
+    chassis.computeModuleCommands(chassis.planned_data_);
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(chassis.actuator_command_frame_.steer_oa_total_rad[0], 0.0f, 1.0e-6f);
+
+    drive_motors[0].resetLastCommandObservation();
+    chassis.last_planned_data_.vel_x = 0.0f;
+    chassis.last_planned_data_.vel_y = 0.0f;
+    setWheelResidualSpeedMps(chassis, 0, 0.15f);
+    chassis.computeModuleCommands(chassis.planned_data_);
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.actuator_command_frame_.steer_oa_total_rad[0], 0.0f, 1.0e-6f);
+
+    setWheelResidualSpeedMps(chassis, 0, 0.0f);
+    chassis.computeModuleCommands(chassis.planned_data_);
+    chassis.applyModuleCommands(true);
+
+    const float pure_rotation_oa_rad =
+        std::atan2(-chassis.planned_data_.omega_z * chassis.wheel_config_[0].pos_x_m,
+                   chassis.planned_data_.omega_z * chassis.wheel_config_[0].pos_y_m);
+    EXPECT_NEAR(chassis.actuator_command_frame_.steer_oa_total_rad[0], pure_rotation_oa_rad, 1.0e-6f);
+}
+
+TEST_CASE("testYawLockZeroStopBrakeLatchOverridesDriveAlphaDecelGuard")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = true;
+    chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 10.0f;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedLockNowRotZMode;
+    chassis.current_mode_flag_.is_lock_now_rot_z = true;
+    chassis.target_data_.omega_z = 1.0f;
+    chassis.planned_data_.omega_z = 1.0f;
+    chassis.last_planned_data_.vel_x = 0.2f;
+    chassis.last_planned_data_.omega_z = 1.0f;
+    chassis.last_drive_omega_cmd_rad_s_[0] = 10.0f;
+
+    setWheelResidualSpeedMps(chassis, 0, 0.15f);
+    chassis.computeModuleCommands(chassis.planned_data_);
+    chassis.applyModuleCommands(true);
+
+    EXPECT_TRUE(chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
+    EXPECT_NEAR(chassis.actuator_command_frame_.steer_oa_total_rad[0], 0.0f, 1.0e-6f);
+}
+
 TEST_CASE("testDriveZeroStopSettlesToZeroCurrentWhenResidualEntersNearZero")
 {
     Chassis chassis;
