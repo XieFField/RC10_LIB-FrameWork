@@ -1046,6 +1046,7 @@ namespace jia
                 bool enable_drive_zero_stop_settle_zero_current = true; // [RW] 是否允许 drive zero-stop 在 residual 进入 near-zero enter 后切到零电流收尾。关闭后 active 期间始终 brake。
                 f32 drive_zero_stop_brake_current_mA = 25000.0f;     // [RW] 零速止停进入 brake 分支时下发的刹车电流。
                 u32 drive_zero_stop_brake_ramp_time_ms = 0U;         // [RW] zero-stop 目标门进入后，从 0 线性爬升到 brake 电流的时长（ms）。0 表示阶跃下发。
+                u32 yaw_lock_zero_stop_release_hold_ms = 20U;       // [RW] yaw lock 从平移减速切到纯旋转前，residual 进入 near-zero 后额外保持 brake 的时长（ms）。
 
                 struct LowSpeedDriveSuppressionConfig
                 {
@@ -1420,6 +1421,7 @@ namespace jia
             u32 lock_now_rot_z_shift_count_ = 0;                               // [RO] LockNow 松手缓冲倒计时
             bool yaw_lock_control_active_last_cycle_ = false;                  // [RO] 上一规划周期是否处于 LockNow/LockTo yaw 锁控制族
             bool yaw_lock_zero_stop_decel_context_active_ = false;              // [RO] yaw lock 从平移减速进入纯旋转前，等待 drive residual 先刹停的锁存门
+            u32 yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;               // [RO] yaw lock zero-stop 释放保持已累计时长（ms）。达到配置门限后才允许退出 brake latch。
             bool lock_yaw_pid_target_filter_valid_ = false;                    // [RO] 航向 PID 目标低通状态是否已初始化
             f32 lock_yaw_pid_target_filtered_rad_ = 0.0f;                      // [RO] 航向 PID 目标低通后的角度
             bool lock_yaw_pid_deadband_active_ = false;                        // [RO] 航向 PID 双阈值死区当前是否激活

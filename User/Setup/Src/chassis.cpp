@@ -363,6 +363,7 @@ namespace jia
             lock_now_rot_z_target_ = 0.0f;
             yaw_lock_control_active_last_cycle_ = false;
             yaw_lock_zero_stop_decel_context_active_ = false;
+            yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
             resetYawPidTargetRuntime();
             trans_dir_freeze_active_ = false;
             trans_dir_ref_valid_ = false;
@@ -728,6 +729,7 @@ namespace jia
             high_speed_eta_max_s_ = 0.0f;
             low_speed_residual_bypass_active_ = false;
             yaw_lock_zero_stop_decel_context_active_ = false;
+            yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
             xpark_gate_active_ = false;
             xpark_stationary_hold_ms_ = 0U;
             trans_dir_freeze_active_ = false;
@@ -796,6 +798,7 @@ namespace jia
                 high_speed_eta_max_s_ = 0.0f;
                 low_speed_residual_bypass_active_ = false;
                 yaw_lock_zero_stop_decel_context_active_ = false;
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
             }
         }
 
@@ -966,6 +969,7 @@ namespace jia
                 (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode))
             {
                 yaw_lock_zero_stop_decel_context_active_ = false;
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
                 return false;
             }
 
@@ -980,6 +984,7 @@ namespace jia
                 (fabsf(command_data.omega_z) <= 1.0e-6f))
             {
                 yaw_lock_zero_stop_decel_context_active_ = false;
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
                 return false;
             }
 
@@ -991,9 +996,38 @@ namespace jia
                 max_residual_speed_m_s = (residual_speed_m_s > max_residual_speed_m_s) ? residual_speed_m_s : max_residual_speed_m_s;
             }
 
+            const u32 release_hold_ms = runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms;
             if (max_residual_speed_m_s <= getNearZeroEnterSpeedMps())
             {
+                if (!yaw_lock_zero_stop_decel_context_active_)
+                {
+                    yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
+                    return false;
+                }
+
+                if (release_hold_ms == 0U)
+                {
+                    yaw_lock_zero_stop_decel_context_active_ = false;
+                    yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
+                    return false;
+                }
+
+                if (yaw_lock_zero_stop_release_hold_elapsed_ms_ < release_hold_ms)
+                {
+                    const u32 next_elapsed_ms =
+                        (yaw_lock_zero_stop_release_hold_elapsed_ms_ > (0xFFFFFFFFU - period_ms_))
+                            ? 0xFFFFFFFFU
+                            : (yaw_lock_zero_stop_release_hold_elapsed_ms_ + period_ms_);
+                    yaw_lock_zero_stop_release_hold_elapsed_ms_ = next_elapsed_ms;
+                }
+
+                if (yaw_lock_zero_stop_release_hold_elapsed_ms_ < release_hold_ms)
+                {
+                    return true;
+                }
+
                 yaw_lock_zero_stop_decel_context_active_ = false;
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
                 return false;
             }
 
@@ -1006,7 +1040,17 @@ namespace jia
                 yaw_lock_zero_stop_decel_context_active_ = true;
             }
 
-            return yaw_lock_zero_stop_decel_context_active_;
+            if (!yaw_lock_zero_stop_decel_context_active_)
+            {
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
+                return false;
+            }
+
+            if (max_residual_speed_m_s > getNearZeroExitSpeedMps())
+            {
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
+            }
+            return true;
         }
 
         bool Chassis::shouldActivateLaunchHold() const
@@ -1156,6 +1200,7 @@ namespace jia
             }
             const bool allow_yaw_lock_steer_intent_preview =
                 yaw_lock_steer_intent_preview &&
+                !yaw_lock_zero_stop_decel_context_active_ &&
                 (max_residual_speed_for_steer_preview_m_s <= getNearZeroEnterSpeedMps());
             const Data &steer_intent_data = allow_yaw_lock_steer_intent_preview ? target_data_ : command_data;
 
@@ -2379,7 +2424,14 @@ namespace jia
                 // 这样目标门不会被反馈噪声踢出，但轮子确实停稳后也不必一直吃 brake 电流。
                 const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * runtime_strategy_cfg_.wheel_radius_m_;
                 const bool was_brake_active = drive_zero_stop_brake_active_[wheel_idx];
-                if (!runtime_strategy_cfg_.enable_drive_zero_stop_settle_zero_current)
+                const bool yaw_lock_release_hold_active =
+                    yaw_lock_zero_stop_decel_context_active_ ||
+                    (yaw_lock_zero_stop_release_hold_elapsed_ms_ > 0U);
+                if (yaw_lock_zero_stop_decel_context_active_ || yaw_lock_release_hold_active)
+                {
+                    drive_zero_stop_brake_active_[wheel_idx] = true;
+                }
+                else if (!runtime_strategy_cfg_.enable_drive_zero_stop_settle_zero_current)
                 {
                     drive_zero_stop_brake_active_[wheel_idx] = true;
                 }
@@ -2504,6 +2556,7 @@ namespace jia
             launch_hold_active_ = false;
             drive_zero_stop_active_ = false;
             yaw_lock_zero_stop_decel_context_active_ = false;
+            yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
             for (u8 i = 0; i < 4; ++i)
             {
                 drive_zero_stop_brake_active_[i] = false;
@@ -3840,6 +3893,8 @@ namespace jia
             steer_fault_any_active_ = steer_fault_any_active;
             const bool chassis_motion_blocked = !all_homed || steer_fault_any_active;
             const bool prev_drive_zero_stop_active = drive_zero_stop_active_;
+            const bool yaw_lock_zero_stop_hold_pre_active =
+                yaw_lock_zero_stop_decel_context_active_ || (yaw_lock_zero_stop_release_hold_elapsed_ms_ > 0U);
             if (runtime_strategy_cfg_.enable_drive_zero_stop_assist &&
                 !single_wheel_isolation_active &&
                 !input_target_data_.zero_current_all &&
@@ -3870,7 +3925,9 @@ namespace jia
                     max_last_delivered_speed_m_s = (last_delivered_speed_m_s > max_last_delivered_speed_m_s) ? last_delivered_speed_m_s : max_last_delivered_speed_m_s;
                 }
                 Data zero_stop_gate_target_data = target_data_;
-                if (shouldSuppressYawLockOmegaForZeroStopDecel(zero_stop_gate_target_data))
+                const bool suppress_yaw_lock_omega_for_zero_stop =
+                    yaw_lock_zero_stop_hold_pre_active || shouldSuppressYawLockOmegaForZeroStopDecel(zero_stop_gate_target_data);
+                if (suppress_yaw_lock_omega_for_zero_stop)
                 {
                     zero_stop_gate_target_data.omega_z = 0.0f;
                 }
@@ -3912,11 +3969,13 @@ namespace jia
             {
                 drive_zero_stop_active_ = false;
                 yaw_lock_zero_stop_decel_context_active_ = false;
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
             }
             const bool entering_drive_zero_stop = !prev_drive_zero_stop_active && drive_zero_stop_active_;
             const bool leaving_drive_zero_stop = prev_drive_zero_stop_active && !drive_zero_stop_active_;
             if (!drive_zero_stop_active_)
             {
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
                 for (u8 i = 0; i < 4; ++i)
                 {
                     drive_zero_stop_brake_active_[i] = false;

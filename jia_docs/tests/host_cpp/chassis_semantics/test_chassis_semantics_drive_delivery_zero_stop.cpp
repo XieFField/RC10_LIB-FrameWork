@@ -201,6 +201,7 @@ TEST_CASE("testSteerDegAndDriveSpeedSkipsZeroStopWhenDriveSpeedIsNonZero")
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms = 2U;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
 
     for (int i = 0; i < 4; ++i)
@@ -331,9 +332,12 @@ TEST_CASE("testYawLockZeroStopBrakesBeforePureRotationSteerPlanning")
     EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad, 0.0f, 1.0e-6f);
     EXPECT_NEAR(chassis.actuator_command_frame_.steer_oa_total_rad[0], 0.0f, 1.0e-6f);
 
-    setWheelResidualSpeedMps(chassis, 0, 0.0f);
-    chassis.computeModuleCommands(chassis.planned_data_);
-    chassis.applyModuleCommands(true);
+    for (unsigned int i = 0; i < chassis.runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms; ++i)
+    {
+        setWheelResidualSpeedMps(chassis, 0, 0.0f);
+        chassis.computeModuleCommands(chassis.planned_data_);
+        chassis.applyModuleCommands(true);
+    }
 
     const float pure_rotation_oa_rad =
         std::atan2(-chassis.planned_data_.omega_z * chassis.wheel_config_[0].pos_x_m,
@@ -361,6 +365,7 @@ TEST_CASE("testYawLockZeroStopKeepsBrakeLatchAfterPlannedTranslationTailDecays")
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms = 2U;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedLockNowRotZMode;
     chassis.input_target_data_.vel_x = 0.0f;
@@ -399,13 +404,19 @@ TEST_CASE("testYawLockZeroStopKeepsBrakeLatchAfterPlannedTranslationTailDecays")
     EXPECT_NEAR(drive_motors[0].getTargetBrake(), 1200.0f, 1.0e-6f);
     EXPECT_NEAR(chassis.actuator_command_frame_.steer_oa_total_rad[0], 0.0f, 1.0e-6f);
 
-    setWheelResidualSpeedMps(chassis, 0, 0.0f);
-    chassis.computeModuleCommands(chassis.planned_data_);
-    chassis.applyModuleCommands(true);
+    for (unsigned int i = 0; i < chassis.runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms; ++i)
+    {
+        setWheelResidualSpeedMps(chassis, 0, 0.0f);
+        chassis.computeModuleCommands(chassis.planned_data_);
+        chassis.applyModuleCommands(true);
+    }
 
     const float pure_rotation_oa_rad =
         std::atan2(-chassis.planned_data_.omega_z * chassis.wheel_config_[0].pos_x_m,
                    chassis.planned_data_.omega_z * chassis.wheel_config_[0].pos_y_m);
+    EXPECT_TRUE(!chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kRpm);
     EXPECT_NEAR(chassis.actuator_command_frame_.steer_oa_total_rad[0], pure_rotation_oa_rad, 1.0e-6f);
 }
 
@@ -430,6 +441,7 @@ TEST_CASE("testYawLockZeroStopBrakeLatchOverridesDriveAlphaDecelGuard")
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms = 2U;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedLockNowRotZMode;
     chassis.current_mode_flag_.is_lock_now_rot_z = true;
@@ -469,6 +481,7 @@ TEST_CASE("testYawLockPureYawWithoutTranslationHistorySkipsBrakeLatchDespiteResi
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms = 2U;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedLockNowRotZMode;
     chassis.current_mode_flag_.is_lock_now_rot_z = true;
@@ -508,6 +521,7 @@ TEST_CASE("testYawLockZeroStopReleaseHoldWaitsAfterResidualEntersNearZero")
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms = 2U;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedLockNowRotZMode;
     chassis.input_target_data_.vel_x = 0.0f;
@@ -532,8 +546,13 @@ TEST_CASE("testYawLockZeroStopReleaseHoldWaitsAfterResidualEntersNearZero")
 
     setWheelResidualSpeedMps(chassis, 0, chassis.getNearZeroEnterSpeedMps());
     chassis.computeModuleCommands(chassis.planned_data_);
+    EXPECT_TRUE(chassis.yaw_lock_zero_stop_decel_context_active_);
+    EXPECT_TRUE(chassis.yaw_lock_zero_stop_release_hold_elapsed_ms_ == 1U);
+    EXPECT_NEAR(chassis.actuator_command_frame_.steer_oa_total_rad[0], 0.0f, 1.0e-6f);
     chassis.applyModuleCommands(true);
 
+    EXPECT_TRUE(chassis.yaw_lock_zero_stop_decel_context_active_);
+    EXPECT_TRUE(chassis.yaw_lock_zero_stop_release_hold_elapsed_ms_ > 0U);
     EXPECT_TRUE(chassis.drive_zero_stop_active_);
     EXPECT_TRUE(chassis.drive_zero_stop_brake_active_[0]);
     EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kBrake);
@@ -560,6 +579,7 @@ TEST_CASE("testYawLockZeroStopReleaseHoldResetsWhenResidualRebounds")
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms = 20U;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.input_target_data_.mode = Chassis::Mode::kBodySpeedLockNowRotZMode;
     chassis.input_target_data_.vel_x = 0.0f;
