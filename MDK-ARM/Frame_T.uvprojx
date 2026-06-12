@@ -1475,6 +1475,11 @@
               <FilePath>..\User\Setup\Inc\FSM_Controller.h</FilePath>
             </File>
             <File>
+              <FileName>FSM_Controller.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\FSM_Controller.cpp</FilePath>
+            </File>
+            <File>
               <FileName>Arm_Setup.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Setup\Inc\Arm_Setup.h</FilePath>
@@ -1566,16 +1571,6 @@
               <FilePath>..\User\Setup\Inc\WeaponSage_Setup.h</FilePath>
             </File>
             <File>
-              <FileName>FSM_Controller.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\FSM_Controller.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>chassis.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\chassis.h</FilePath>
-            </File>
-            <File>
               <FileName>WeaponSage_Setup.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\WeaponSage_Setup.cpp</FilePath>
@@ -1630,6 +1625,11 @@
                   </Cads>
                 </FileArmAds>
               </FileOption>
+            </File>
+            <File>
+              <FileName>chassis.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\chassis.h</FilePath>
             </File>
             <File>
               <FileName>chassis.cpp</FileName>
