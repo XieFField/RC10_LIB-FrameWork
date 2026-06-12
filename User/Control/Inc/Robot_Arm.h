@@ -44,6 +44,7 @@ extern "C" {
  */
 typedef struct {
     float max_launchHeight_ = 0.0f; // 升降最大行程，单位米 0
+    float max_launchCatch_Height_ = 0.0f; // 升降最大可抓取高度，单位米 0
     float max_stretchLength_ = 0.0f; // 伸展最大行程，单位米
     float arm_length_ = 0.0f; // 机械臂长度
     float end_link_length_ = 0.0f; // 末端连杆长度，吸盘到机械臂连接点的距离，单位米

@@ -1273,7 +1273,7 @@ void ArmSetup::auto_stillnessTwo()
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
 
-                    this->set_LaunchHeight(this->init_data_.max_launchHeight_);
+                    this->set_LaunchHeight(this->init_data_.max_launchCatch_Height_);
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT;
                 }
             }
@@ -1298,7 +1298,7 @@ void ArmSetup::auto_stillnessTwo()
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
 
-                    this->set_LaunchHeight(this->init_data_.max_launchHeight_);
+                    this->set_LaunchHeight(this->init_data_.max_launchCatch_Height_);
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT;
                 }
             }
@@ -1338,7 +1338,7 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
 
     float target_height = 0.0f;
 
-    target_height = this->init_data_.max_launchHeight_; //直接伸展到最高，等待行进间拾取
+    target_height = this->init_data_.max_launchCatch_Height_; //直接伸展到最高，等待行进间拾取
     if(isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_) 
         || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 360.0f) < 2.0f
         || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 2.0f)
@@ -1381,9 +1381,9 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
     else if(MF_high[targetKFS - 1] == 0.4f)
         targetLowerHeight = this->init_data_.safe_height_; 
     else if(MF_high[targetKFS - 1] == 0.6f)
-        targetLowerHeight = this->init_data_.max_launchHeight_;
+        targetLowerHeight = this->init_data_.max_launchCatch_Height_;
     else
-        targetLowerHeight = this->init_data_.max_launchHeight_;
+        targetLowerHeight = this->init_data_.max_launchCatch_Height_;
 
     bool canLower = false;
     canLower = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
@@ -1437,13 +1437,13 @@ bool ArmSetup::state_launchStillness(int targetKFS)
     if(MF_high[targetKFS - 1] == 0.2f)
         canMoveHeight = this->init_data_.safe_height_;
     else if(MF_high[targetKFS - 1] == 0.4f)
-        canMoveHeight = this->init_data_.max_launchHeight_; 
+        canMoveHeight = this->init_data_.max_launchCatch_Height_ 
     else if(MF_high[targetKFS - 1] == 0.6f)
-        canMoveHeight = this->init_data_.max_launchHeight_;
+        canMoveHeight = this->init_data_.max_launchCatch_Height_;
     else
-        canMoveHeight = this->init_data_.max_launchHeight_;
+        canMoveHeight = this->init_data_.max_launchCatch_Height_;
 
-    this->set_LaunchHeight(this->init_data_.max_launchHeight_); //伸展到最大高度，准备移动
+    this->set_LaunchHeight(this->init_data_.max_launchCatch_Height_); //伸展到最大高度，准备移动
 
     if(this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.02f)
     {
@@ -1569,6 +1569,7 @@ void ArmSetup::debug()
 
 Arm_InitData_S arm_initData = {
     .max_launchHeight_ = 0.32f,
+    .max_launchCatch_Height_ = 0.32f,
     .max_stretchLength_ = 0.1358f,
     .arm_length_ = 0.6f,
     .end_link_length_ = 0.08f,
