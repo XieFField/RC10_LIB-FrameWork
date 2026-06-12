@@ -754,7 +754,10 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                 store_start_time = 0.1f;
                 this->store_state_ = store_state::laucnh_state;
                 this->setSuckerStatus(Sucker_Status_E::SUCK); 
-                this->setStoreSuckerStatus(Sucker_Status_E::SUCK);
+                if(kfs_index == 0x00)
+                    this->setStoreSuckerStatus_OutSide(Sucker_Status_E::SUCK);
+                else if(kfs_index == 0x01)
+                    this->setStoreSuckerStatus_InSide(Sucker_Status_E::SUCK);
             }
             else
             {
@@ -942,7 +945,11 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
                 if(kfs_index == 0x01)
                     this->set_StretchLength(init_data_.store_ext_length_); // 伸展到存储位置需要的长度
 
-                this->setStoreSuckerStatus(Sucker_Status_E::STOP); // 停止存储吸盘
+                if(kfs_index == 0x00)
+                    this->setStoreSuckerStatus_InSide(Sucker_Status_E::STOP); // 停止存储吸盘
+                else if(kfs_index == 0x01)
+                    this->setStoreSuckerStatus_OutSide(Sucker_Status_E::STOP); // 停止存储吸盘
+
             }
 
             if(kfs_index == 0x01 
@@ -1585,17 +1592,23 @@ Arm_InitData_S arm_initData = {
     .lock_height_ = 0.055f,
     .store_ext_length_ = 0.049f,
 
-    .Sucker_GPIO_Port = SUCKER_3_GPIO_Port,
-    .Sucker_GPIO_Pin =  SUCKER_3_Pin,
-
-    .Store_GPIO_Port = SUCKER_5_GPIO_Port,
-    .Store_GPIO_Pin =  SUCKER_5_Pin,
+    .Sucker_GPIO_Port = SUCKER_1_GPIO_Port,
+    .Sucker_GPIO_Pin = SUCKER_1_Pin,
 
     .Sucker_Soleniod_GPIO_Port = SUCKER_2_GPIO_Port,
-    .Sucker_Soleniod_GPIO_Pin =  SUCKER_2_Pin,
+    .Sucker_Soleniod_GPIO_Pin = SUCKER_2_Pin,
 
-    .Store_Soleniod_GPIO_Port = SUCKER_5_GPIO_Port,
-    .Store_Soleniod_GPIO_Pin =  SUCKER_5_Pin,
+    .StoreOutside_GPIO_Port = SUCKER_3_GPIO_Port,
+    .StoreOutside_GPIO_Pin = SUCKER_3_Pin,
+
+    .StoreOutside_Soleniod_GPIO_Port = SUCKER_4_GPIO_Port,
+    .StoreOutside_Soleniod_GPIO_Pin = SUCKER_4_Pin,
+
+    .StoreInside_GPIO_Port = SUCKER_5_GPIO_Port,
+    .StoreInside_GPIO_Pin = SUCKER_5_Pin,
+
+    .StoreInside_Soleniod_GPIO_Port = SUCKER_6_GPIO_Port,
+    .StoreInside_Soleniod_GPIO_Pin = SUCKER_6_Pin,
 
     .max_pitchRPM_ = 150.0f,
 };
