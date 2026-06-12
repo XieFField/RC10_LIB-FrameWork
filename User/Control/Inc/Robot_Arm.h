@@ -60,7 +60,9 @@ typedef struct {
     float min_rotate_angle_ = 0.0f; // 最小旋转角度
     float max_rotate_angle_ = 0.0f; // 最大旋转角度
     float safe_height_ = 0.0f; // 安全高度
-    float store_height_ = 0.0f; // 储存高度
+    float store_height_inside_ = 0.0f; // 储存高度
+    float store_height_outside_ = 0.0f; // 储存高度
+
     float lock_height_ = 0.0f; // 云台锁定高度
     float pick_up_height_ =0.0f; //拾取高度
     float putdown_height_ = 0.0f; //放置高度
@@ -69,14 +71,20 @@ typedef struct {
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘GPIO控制端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘GPIO控制引脚
 
-    GPIO_TypeDef* Store_GPIO_Port; // 储存位GPIO控制端口
-    uint16_t Store_GPIO_Pin;      // 储存位GPIO控制引脚
+    GPIO_TypeDef* StoreOutside_GPIO_Port; // 储存位GPIO控制端口
+    uint16_t StoreOutside_GPIO_Pin;      // 储存位GPIO控制引脚
+
+    GPIO_TypeDef* StoreInside_GPIO_Port; // 储存位GPIO控制端口
+    uint16_t StoreInside_GPIO_Pin;      // 储存位GPIO控制引脚
 
     GPIO_TypeDef* Sucker_Soleniod_GPIO_Port; // 吸盘电磁阀GPIO控制端口
     uint16_t Sucker_Soleniod_GPIO_Pin;      // 吸盘电磁阀GPIO控制引脚
 
-    GPIO_TypeDef* Store_Soleniod_GPIO_Port; // 储存位电磁阀GPIO控制端口
-    uint16_t Store_Soleniod_GPIO_Pin;      // 储存位电磁阀GPIO控制引脚
+    GPIO_TypeDef* StoreOutside_Soleniod_GPIO_Port; // 储存位电磁阀GPIO控制端口
+    uint16_t StoreOutside_Soleniod_GPIO_Pin;      // 储存位电磁阀GPIO控制引脚
+
+    GPIO_TypeDef* StoreInside_Soleniod_GPIO_Port; // 储存位电磁阀GPIO控制端口
+    uint16_t StoreInside_Soleniod_GPIO_Pin;      // 储存位电磁阀GPIO控制引脚
 }Arm_InitData_S;
 
 typedef enum {
@@ -200,11 +208,13 @@ public:
 
     void setSuckerStatus(Sucker_Status_E status){ sucker_status_ = status; }
 
-    void setStoreSuckerStatus(Sucker_Status_E status){ store_sucker_status_ = status; }
+    void setStoreSuckerStatus_OutSide(Sucker_Status_E status){ store_sucker_outside_status_ = status; }
+    void setStoreSuckerStatus_InSide(Sucker_Status_E status){ store_sucker_inside_status_ = status; }
 
     Sucker_Status_E getSuckerStatus() const { return sucker_status_; }
 
-    Sucker_Status_E getStoreSuckerStatus() const { return store_sucker_status_; }
+    Sucker_Status_E getStoreSuckerStatus_OutSide() const { return store_sucker_outside_status_; }
+    Sucker_Status_E getStoreSuckerStatus_InSide() const { return store_sucker_inside_status_; }
 
     /**
      * @brief 旋转角度合法化，确保旋转角度在合理范围内，避免超出机械限制
@@ -273,7 +283,8 @@ private:
     Arm_Point_S arm_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 当前点
 
     Sucker_Status_E sucker_status_ = Sucker_Status_E::STOP; // 吸附状态
-    Sucker_Status_E store_sucker_status_ = Sucker_Status_E::STOP; // 储位吸附状态
+    Sucker_Status_E store_sucker_outside_status_ = Sucker_Status_E::STOP; // 储位吸附状态
+    Sucker_Status_E store_sucker_inside_status_ = Sucker_Status_E::STOP; // 储位吸附状态
 
 
     Arm_control_mode_E control_mode_ = TARGET_POSITION_MODE; // 机械臂控制模式

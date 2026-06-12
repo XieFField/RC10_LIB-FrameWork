@@ -362,11 +362,12 @@ public:
         Arm_Start = arm_end;
     }
 
-    void set_KFS(int8_t KFS1, int8_t KFS2)
+    void set_KFS(int8_t KFS1, int8_t KFS2, int8_t KFS3)
     {
         // 更新自动规划目标点编号。
         KFS_point.MF1 = KFS1;
         KFS_point.MF2 = KFS2;
+        KFS_point.MF3 = KFS3;
     }
     // 统一切换底盘状态，并在相机流程切入/切出时清理相关内部状态。
     void setChassisStatus(CHASSIS_Status_E status)
