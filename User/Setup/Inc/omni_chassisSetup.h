@@ -50,7 +50,7 @@ typedef struct
     
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f}; 
         
-    Speedplanner_1D_Param_Config line = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.5f, .finalSpeed = 2.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   
+    Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f}; 
 
     //没用的
     Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
@@ -95,10 +95,10 @@ typedef struct
     float MF2_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
     float MF3_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
 
-    float spin_skew = -0.1f; // 旋转位置y轴偏移量
+    float spin_skew = 0.1f; // 旋转位置y轴偏移量
     
     float coner_ahead=0.17f;
-    float coner_behind=0.5f;
+    float coner_behind=0.4f;
     
 } KFS_POINT;
 
@@ -264,7 +264,7 @@ private:
 
     void Path_CB_check(void);
     
-    Vector2D spinodal_path(Vector2D last_vector, Vector2D temp_vector,int i);
+    Vector2D spinodal_path(Vector2D last_vector, Vector2D temp_vector,int i,float spin_flag);
     
     float rotation_path(float MF_Point);
 
