@@ -30,7 +30,7 @@ extern "C" {
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
 #include "Setup_ConfigInit.h"
-
+#include "Module_Serial1Protocol.h"
 
 typedef enum{
     RELOCATE,

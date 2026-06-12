@@ -1,10 +1,19 @@
 #include "FSM_Controller.h"
 #include "chassis_swerve_task_demo.h"
 
+int8_t test_led = 0;
+
 void FSM_Controller::loop()
 {
     if(!init_flag_) 
         return;
+
+    if(!test_led)
+        Serial1Protocol::getInstance()->sendStop();
+    else
+        Serial1Protocol::getInstance()->send_cmd_to_R2(test_led);
+
+
 #if !USE_RC10_AIRJOY
     CrsfReceiver::GetInstance(&huart7)->send_kfsandSpear(crsf_send_s.rsf_send_data.kfs1, crsf_send_s.rsf_send_data.kfs2, 
 																	crsf_send_s.rsf_send_data.Spear);
@@ -531,13 +540,12 @@ void FSM_Controller::auto_ctrl()
 
             if(airjoy_data_.SWA == 0x00)
             {
-                
-//                weaponSage_setup_->Get_OMNI_IM_flag(chassis_setup_->GetReach_flag());
-//                chassis_setup_->ReceiveReach_flag(weaponSage_setup_->Get_Catch_flag());
-//                weaponSage_setup_->Get_OMNI_DS_flag(chassis_setup_->GetEnd_flag());
+                // weaponSage_setup_->Get_OMNI_IM_flag(chassis_setup_->GetReach_flag());
+                // chassis_setup_->ReceiveReach_flag(weaponSage_setup_->Get_Catch_flag());
+                // weaponSage_setup_->Get_OMNI_DS_flag(chassis_setup_->GetEnd_flag());
                 
                 weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL_CATCH);
-    //            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+//            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
                 chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
                 arm_setup_->setArmStatus(ARM_IDLE);
                 

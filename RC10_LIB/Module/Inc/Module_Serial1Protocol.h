@@ -54,7 +54,7 @@ typedef void (*Serial1DataReceiveCallback)(uint8_t* data, uint8_t parity);
 
 class Serial1Protocol {
 public:
-    static Serial1Protocol& getInstance();
+    static Serial1Protocol* getInstance();
     
     void init(UART_HandleTypeDef* huart);
     void process(void);
@@ -67,13 +67,13 @@ public:
     
     // 获取接收到的数据（轮询方式）
     void getReceivedData(uint8_t* data_out, uint8_t* parity_out);
-		void waitForSendComplete(void);
+	void waitForSendComplete(void);
     void R1_Send_KFS(uint8_t KFS1, uint8_t KFS2, uint8_t KFS3);
     void send_cmd_to_R2(uint8_t);
-		void sendAckFrame(void);
-		bool hasData() const { return m_data_count > 0; }
-		bool getLatestData(DataPacket_t* packet);
-		void sendStop(void);
+    void sendAckFrame(void);
+    bool hasData() const { return m_data_count > 0; }
+    bool getLatestData(DataPacket_t* packet);
+    void sendStop(void);
 private:
     Serial1Protocol();
     bool sendCommand(uint8_t* data);
