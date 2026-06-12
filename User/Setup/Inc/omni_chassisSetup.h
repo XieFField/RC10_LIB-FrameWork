@@ -40,21 +40,22 @@ extern "C"
 #include "AutoCtrler.h"
 #include "chassis.h"
 
-#define s_debug 0
 #define opti 1
 
 typedef struct
 {
-    Speedplanner_1D_Param_Config start = {.maxAcc = 999.0f, .maxDec = 1.1f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.8f, .startPos = 0.18f, .targetPos = 0.0f, .deadzone = 0.001f};  
-    Speedplanner_1D_Param_Config curve = {.maxAcc = 1.0f, .maxDec = 1.1f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};   
-    Speedplanner_1D_Param_Config end = {.maxAcc = 10.0f, .maxDec = 1.0f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.37f, .startPos = 0.18f, .targetPos = 0.0f, .deadzone = 0.001f}; 
+    Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};  
+    Speedplanner_1D_Param_Config curve = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};   
+    Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f}; 
     
+    Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f}; 
+        
     Speedplanner_1D_Param_Config line = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.5f, .finalSpeed = 2.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};   
 
     //没用的
     Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f}; 
     //原始的测试数据
-    Speedplanner_1D_Param_Config CB = {.maxAcc = 999.0f, .maxDec = 1.1f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.37f, .startPos = 0.18f, .targetPos = 0.0f, .deadzone = 0.001f}; 
+    Speedplanner_1D_Param_Config CB = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f}; 
    
 } PATH_PARAM;
 
@@ -63,13 +64,11 @@ typedef struct
     Vector2D planspeed = {0.0f, 0.0f};    // 路径规划输出的最大速度。
     Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
 
-    float PID_coefficient = 0.8;
-    float FF_coefficient = 0.5;
+    float PID_coefficient = 1.0;
+    float FF_coefficient = 0.0;
 
     float v_normal_max = 0.5f;
-    float m_lookaheadDist = 0.4f;         // 前视距离 (单位: 米)
-    //float m_lookaheadDist_line = 0.4f;   // 前视距离 (单位: 米)
-    //float m_lookaheadDist_curve = 0.07f; // 前视距离 (单位: 米)
+    float m_lookaheadDist = 0.4f;         // 前视距离 
 } SPEED_PARAM;
 
 typedef struct
@@ -78,10 +77,6 @@ typedef struct
     Vector2D CB_Selection_pos = {2.47f, 0.815f}; // 夹杆流程默认目标点。
     Vector2D CB_End_pos = {2.9f, 1.0f}; // 夹杆流程默认目标点。
     
-    Vector2D CB_Selection_start_point_ = {1.0f, 1.0f};      // 夹杆起点。
-    Vector2D CB_Selection_control_point_ = {2.575f, 1.8};   // 夹杆控制点。
-    Vector2D Clamping_Bar_Selection_pos_ = {2.47f, 0.815f}; // 夹杆流程默认目标点。
-    Vector2D Clamping_Bar_Retreat_pos_ = {2.47f, 1.5f};     // 夹杆后退目标点。
 } CB_POINT;
 
 typedef struct
@@ -100,12 +95,26 @@ typedef struct
     float MF2_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
     float MF3_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
 
-    //Vector2D spin_point_ = {3.0f, 8.72f}; // 上方旋转点
-
-    //float spin_skew_ = -0.1f; // 下方旋转位置y轴偏移量
+    float spin_skew = -0.1f; // 旋转位置y轴偏移量
     
-    float coner_ahead=0.15f;
+    float coner_ahead=0.17f;
+    float coner_behind=0.5f;
+    
 } KFS_POINT;
+
+
+typedef struct
+{
+    Vector2D uphill_pos = {0.6f, 11.4f};
+    Vector2D fit_pos = {4.83f, 11.5f};
+    
+    float fit_yaw=180.0f;
+    
+    //左中右
+    Vector2D R1_pos[3]={{4.535f, 11.285f},{4.535f, 10.705f},{4.535f, 10.185f}};
+    Vector2D R2_pos[3]={{4.535f, 11.285f},{4.535f, 10.705f},{4.535f, 10.185f}};
+    
+} CZ_POINT;
 
 typedef struct
 {
@@ -113,12 +122,6 @@ typedef struct
 
     bool spin_flag = false; // 是否需要执行中途转向。
     bool spin_flag_2 = false; // 是否需要执行中途转向。
-
-    //bool spin_up_flag = false;   // 上路段旋转流程使能。
-    //bool spin_down_flag = false; // 下路段旋转流程使能。
-    
-    //bool spin_up_flag_2 = false;   // 上路段旋转流程使能。
-    //bool spin_down_flag_2 = false; // 下路段旋转流程使能。
 
     bool MF1_flag = false;   // 进入 MF1 目标点标志。
     bool MF2_flag = false;   // 进入 MF2 目标点标志。
@@ -165,9 +168,7 @@ public:
         this->start(osPriorityHigh, 1024);
         //        setTargetKFS(3);
         init_flag = true;
-#if s_debug
-        TP_1d.param_reset(Param_1d);
-#endif
+
     }
 
     // 设置底盘正反向映射系数（用于手动控制方向翻转）。
@@ -181,8 +182,7 @@ public:
 
 private:
 
-    Vector2D test_point = {0.6f, 6.0f};
-    
+    Vector2D test_point = {0.0f, 0.0f};
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
 
@@ -193,16 +193,10 @@ private:
     
     bool RB_Flag = true;//红蓝方标志位，默认true为现场地
     
-    bool Spin_Start = false; // 当前正在执行旋转。
-    
-    bool pid_dead_flag=false;
+    bool pid_dead_flag=false;//pid完成标志
 
     int flag = 0;     // 自动流程起始触发位（边沿触发）。
     int flag_run = 0; // 自动流程运行中标志位。
-    
-    int8_t MF1_Point_=0;
-    int8_t MF2_Point_=0;
-    int8_t MF3_Point_=0;
     
     //-----------------------------------接口监视参数-----------------------------------------//
 
@@ -210,29 +204,29 @@ private:
     Vector2D robot_pos_ = {0.0f, 0.0f}; // 当前机器人世界坐标。
     float yaw = 0.0f;                   // 当前机器人航向角（度）。
     float target_yaw_ = 0.0f; // 底盘锁角目标（度）。
-
-    SPEED_PARAM V;
     
-    PID_Position pid_pos_x; // x轴绝对位置PID控制器
-    PID_Position pid_pos_y; // y轴绝对位置PID控制器
-    PID_Position path_lock; // 停止锁点
-
-    //-----------------------------------速度规划参数----------------------------------------------------//
-
-    BezierCurve curve; // 当前路径曲线缓存。
-
-    Path_line path_line_; // 路径规划器对象。
-
-    PATH_PARAM path_param;
-
     //-----------------------------------规划参数-----------------------------------------//
     CB_FLAG CB_flag;
     CB_POINT CB_point;
     
     KFS_FLAG KFS_flag;
     KFS_POINT KFS_point;
+    
+    CZ_POINT CZ_point;
 
-    MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
+    //-----------------------------------速度规划参数--------------------------------------------//
+
+    SPEED_PARAM V;
+    PATH_PARAM path_param;
+    
+    PID_Position pid_pos_x; // x轴绝对位置PID控制器
+    PID_Position pid_pos_y; // y轴绝对位置PID控制器
+    PID_Position path_lock; // 停止锁点
+
+    BezierCurve curve; // 当前路径曲线缓存。
+
+    Path_line path_line_; // 路径规划器对象。
+
     //-----------------------------------其他参数-----------------------------------------//
     int num = 0;
     int start_num=0;
@@ -246,6 +240,7 @@ private:
     bool init_flag = false; // 初始化完成标志。
 
     RmPocketData_t airjoy_data_; // 遥控器数据，范围 -1 ~ 1
+    MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
 
     Debug_Printf debug_uart = Debug_Printf(&huart8);                          // 调试串口
     Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}; // 当前周期底盘目标姿态。
@@ -270,14 +265,6 @@ private:
     Vector2D spinodal_path(Vector2D last_vector, Vector2D temp_vector,int i);
     
     float rotation_path(float MF_Point);
-#if s_debug
-    int a = 0;
-    float tp_speed_now = 0.0f;
-    float tp_pos_now = 0.0f;
-    // 1D的位置式
-    Speedplanner_1D_Param_Config Param_1d = {.maxAcc = 60.0f, .maxDec = 1.2f, .maxJerk = 20.0f, .maxSpeed = 3.0f, .initialSpeed = 0.5f, .finalSpeed = 0.0f, .startPos = 0.15f, .targetPos = 0.0f, .deadzone = 0.001f}; // 夹杆流程速度规划参数。
-    SShapedPlanner1D TP_1d;
-#endif
 
 public:
     /**
@@ -335,7 +322,7 @@ public:
     void ReceiveReach_flag(bool weapon_end)
     {
         // 写入机械臂流程反馈标志。
-        WeaponSage_Start = !weapon_end;
+        WeaponSage_Start = weapon_end;
     }
 
     bool Get_Arm_Start_flag()
