@@ -164,8 +164,8 @@ void FSM_Controller::loop()
 #endif
     if (KStarget != last_KStarget)
     {
-        chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1]);
-        arm_setup_->set_TargetKFS(KStarget.KFS[0], KStarget.KFS[1]);
+        chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1], KStarget.KFS[2]);
+        arm_setup_->set_TargetKFS(KStarget.KFS[0], KStarget.KFS[1], KStarget.KFS[2]);
         weaponSage_setup_->setTargetIndex(KStarget.Spear-1);
     }
 
@@ -499,8 +499,8 @@ void FSM_Controller::auto_ctrl()
         chassis_setup_->setChassisStatus(CHASSIS_STOP);
 #endif
 
-        arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-        // arm_setup_->setArmStatus(ARM_IDLE);
+        //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+        arm_setup_->setArmStatus(ARM_IDLE);
         weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
         static uint8_t is_click = 0;
@@ -547,8 +547,8 @@ void FSM_Controller::auto_ctrl()
 //                chassis_setup_->ReceiveReach_flag(weaponSage_setup_->Get_Catch_flag());
 //                weaponSage_setup_->Get_OMNI_DS_flag(chassis_setup_->GetEnd_flag());
                 
-                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL_CATCH);
-    //            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+//                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTOCONTROL);
+                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
                 chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
                 arm_setup_->setArmStatus(ARM_IDLE);
                 

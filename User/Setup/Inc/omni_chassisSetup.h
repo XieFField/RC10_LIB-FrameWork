@@ -79,7 +79,8 @@ typedef struct
     float CB_pole_R =0.22f;
     Vector2D CB_Start_pos = {1.0f, 0.9f};        // 夹杆起点。
     Vector2D CB_Selection_pos = {2.47f, 0.815f}; // 夹杆流程默认目标点。
-    Vector2D CB_End_pos = {4.0f-CB_spiw-0.4f-0.49f, 2.0f+CB_pole_L};  // 夹杆终点对接默认目标点。(4.0为R2对接车体位置，0.5为夹杆预留长度，0.4为R2车体半径，0.49为R1车体半径）
+    Vector2D CB_End_pos = {2.66f, 1.17f};
+    //Vector2D CB_End_pos = {4.0f-CB_spiw-0.4f-0.49f, 2.0f+CB_pole_L};  // 夹杆终点对接默认目标点。(4.0为R2对接车体位置，0.5为夹杆预留长度，0.4为R2车体半径，0.49为R1车体半径）
 } CB_POINT;
 
 typedef struct

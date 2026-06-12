@@ -1,5 +1,5 @@
 #include "omni_chassisSetup.h"
-
+float CB_yaw = 89.0f;
 void OmniChassis_Setup::Path_CB_check(void)
 {
     if (CB_point.CB_Selection_pos.x == curve.Get_End_point().x && CB_point.CB_Selection_pos.y == curve.Get_End_point().y)
@@ -116,7 +116,7 @@ void OmniChassis_Setup::Path_KFS_check(void)
 void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw_ = 0.0f;
+    target_yaw_ = CB_yaw;
     path_line_.plan_reset();
     path_line_.Reset();
 
@@ -143,12 +143,12 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
 
     // 夹杆路径
     path_line_.Add_Start_Point(robot_pos_);
-    if (robot_pos_.y < CB_point.CB_Selection_pos.y)
-    {
-        path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
-    }
-    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.end);
-    path_line_.Add_End_Point(Vector2D {4.0f-CB_point.CB_spiw-0.4f-0.49f, 2.0f+CB_point.CB_pole_L}, path_param.end);
+//    if (robot_pos_.y < CB_point.CB_Selection_pos.y)
+//    {
+//        path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
+//    }
+//    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.end);
+    path_line_.Add_End_Point(CB_point.CB_End_pos, path_param.end);
 
     Path_end_point = path_line_.Get_End_Point();
 }
@@ -261,7 +261,7 @@ void OmniChassis_Setup::loop()
             target_omega_z = 0.0f;
 
         if (airjoy_data_.SWD == 0x00)
-            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, 90.0f * PI / 180.0f);
+            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, CB_yaw * PI / 180.0f);
 
         else if (airjoy_data_.SWD == 0x01)
             chassis.setSteerDegAndDriveSpeed(90.0f, target_vel_x);
