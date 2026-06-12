@@ -626,7 +626,6 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         if (target_yaw_ == -90.0f || target_yaw_ == 90.0f) // MF1在下
         {
-            // KFS_flag.spin_down_flag = true;
             for (; i < (KFS_num == 1 ? index_exit : MF2_Index_); i++)
             {
                 if (KFS_num == 1)
