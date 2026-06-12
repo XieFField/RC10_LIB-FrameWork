@@ -52,7 +52,7 @@ void FSM_Controller::loop()
         robot_status_ = ALL_STOP;
         if (airjoy_data_.SWA == 0x01)
         {
-            switch (airjoy_data_.SWC)
+            switch (airjoy_data_.SWC)   
             {
             case 0x00:
                 Stop_set_stauts = RELOCATE;
@@ -395,10 +395,17 @@ void FSM_Controller::manual_ctrl()
 
 #if !USE_RC10_AIRJOY
     switch (airjoy_data_.SWC)
+#else
+    switch (airjoy_data_.SWF)
+#endif
     {
     case 0x00:
     {
-        chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+        if (airjoy_data_.SWA == 0x00)
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+        else if (airjoy_data_.SWA == 0x01)
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_D);
+
         arm_setup_->setArmStatus(ARM_IDLE);
         weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
@@ -420,36 +427,36 @@ void FSM_Controller::manual_ctrl()
         break;
     }
     }
-#else
-    switch (airjoy_data_.SWF)
-    {
-    case 0x00:
-    {
-        chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-        arm_setup_->setArmStatus(ARM_IDLE);
-        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-        break;
-    }
+//#else
+//    switch (airjoy_data_.SWF)
+//    {
+//    case 0x00:
+//    {
+//        chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+//        arm_setup_->setArmStatus(ARM_IDLE);
+//        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+//        break;
+//    }
 
-    case 0x01:
-    {
-        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-        if (airjoy_data_.SWE == 0x00)
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
-        else if (airjoy_data_.SWE == 0x01)
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-        break;
-    }
+//    case 0x01:
+//    {
+//        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+//        if (airjoy_data_.SWE == 0x00)
+//            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+//        else if (airjoy_data_.SWE == 0x01)
+//            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+//        break;
+//    }
 
-    case 0x02:
-    {
-        break;
-    }
+//    case 0x02:
+//    {
+//        break;
+//    }
 
-    default:
-        break;
-    }
-#endif
+//    default:
+//        break;
+//    }
+//#endif
 }
 
 void FSM_Controller::auto_ctrl()

@@ -143,9 +143,12 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
 
     // 夹杆路径
     path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
+    if (robot_pos_.y < CB_point.CB_Selection_pos.y)
+    {
+        path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
+    }
     path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.end);
-    path_line_.Add_End_Point(CB_point.CB_End_pos, path_param.end);
+    path_line_.Add_End_Point(Vector2D {4.0f-CB_point.CB_spiw-0.4f-0.49f, 2.0f+CB_point.CB_pole_L}, path_param.end);
 
     Path_end_point = path_line_.Get_End_Point();
 }
@@ -236,6 +239,35 @@ void OmniChassis_Setup::loop()
         //        chassis.setSteerDegAndDriveSpeed(90.0f, target_chassis_twist_.vx);
         break;
     }
+    case CHASSIS_MANUAL_CONTROL_D:
+    {
+        float target_vel_x = 0.0f;
+        float target_vel_y = 0.0f;
+        float target_omega_z = 0.0f;
+
+        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+            target_vel_x = airjoy_data_.left_x * 1 * this->is_chassis_reverse_;
+        else
+            target_vel_x = 0.0f;
+
+        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+            target_vel_y = airjoy_data_.left_y * 1 * this->is_chassis_reverse_;
+        else
+            target_vel_y = 0.0f;
+
+        if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
+            target_omega_z = airjoy_data_.right_x * 1;
+        else
+            target_omega_z = 0.0f;
+
+        if (airjoy_data_.SWD == 0x00)
+            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, 90.0f * PI / 180.0f);
+
+        else if (airjoy_data_.SWD == 0x01)
+            chassis.setSteerDegAndDriveSpeed(90.0f, target_vel_x);
+
+        break;
+    }
 
     case CHASSIS_AUTO_CONTROL_CB:
     {
@@ -269,20 +301,12 @@ void OmniChassis_Setup::loop()
                 }
                 else
                 {
-                    Vector2D lock_point = curve.Get_Start_point();
-                    float lock_err = (robot_pos_ - lock_point).magnitude();
-                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
-                    target_chassis_twist_.vx = speed.x;
-                    target_chassis_twist_.vy = speed.y;
-                    pid_dead_flag = path_lock.get_is_in_dead_zone();
+                    Path_lock_point(curve.Get_Start_point());
                 }
             }
             else
             {
-                float lock_err = (robot_pos_ - Path_end_point).magnitude();
-                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Path_end_point).normalize();
-                target_chassis_twist_.vx = speed.x;
-                target_chassis_twist_.vy = speed.y;
+                Path_lock_point(Path_end_point);
             }
             float target_yaw_rad = target_yaw_ * PI / 180.0f;
             chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
@@ -326,22 +350,13 @@ void OmniChassis_Setup::loop()
                 }
                 else
                 {
-                    Vector2D lock_point = curve.Get_Start_point();
-                    float lock_err = (robot_pos_ - lock_point).magnitude();
-                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
-                    target_chassis_twist_.vx = speed.x;
-                    target_chassis_twist_.vy = speed.y;
-                    pid_dead_flag = path_lock.get_is_in_dead_zone();
+                    Path_lock_point(curve.Get_Start_point());
                 }
             }
             else
             {
-                float lock_err = (robot_pos_ - Path_end_point).magnitude();
-                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Path_end_point).normalize();
-                target_chassis_twist_.vx = speed.x;
-                target_chassis_twist_.vy = speed.y;
+                Path_lock_point(Path_end_point);
             }
-            robot_pos_ = robot_pos_ + speed * 0.001f;
             float target_yaw_rad = target_yaw_ * PI / 180.0f;
             chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
         }
@@ -369,6 +384,14 @@ void OmniChassis_Setup::loop()
 }
 
 //////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
+void OmniChassis_Setup::Path_lock_point(Vector2D lock_point)
+{
+    float lock_err = (robot_pos_ - lock_point).magnitude();
+    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
+    target_chassis_twist_.vx = speed.x;
+    target_chassis_twist_.vy = speed.y;
+    pid_dead_flag = path_lock.get_is_in_dead_zone();
+}
 
 void OmniChassis_Setup::Path_correction(void)
 {
