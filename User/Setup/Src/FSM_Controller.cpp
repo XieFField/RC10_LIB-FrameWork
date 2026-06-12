@@ -161,8 +161,8 @@ void FSM_Controller::loop()
 #endif
     if(KStarget != last_KStarget)
     {
-        chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1]);
-        arm_setup_->set_TargetKFS(KStarget.KFS[0], KStarget.KFS[1]);
+        chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1], KStarget.KFS[2]);
+        arm_setup_->set_TargetKFS(KStarget.KFS[0], KStarget.KFS[1], KStarget.KFS[2]);
         weaponSage_setup_->setTargetIndex(KStarget.Spear-1);
     }
 

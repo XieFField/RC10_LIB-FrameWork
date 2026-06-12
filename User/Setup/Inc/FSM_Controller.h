@@ -41,11 +41,12 @@ typedef enum{
 
 
 typedef struct KSTarget_t {
-    uint8_t KFS[2];
+    uint8_t KFS[3];
     int8_t Spear;
 
     bool operator!=(const KSTarget_t& other) const {
-         return KFS[0] != other.KFS[0] || KFS[1] != other.KFS[1] || Spear != other.Spear;
+         return KFS[0] != other.KFS[0] || KFS[1] != other.KFS[1] 
+         || KFS[2] != other.KFS[2] || Spear != other.Spear;
     }
 };
 
@@ -76,7 +77,7 @@ public:
         if(!arm_setup_registered_ || !chassis_setup_registered_ || !weaponSage_setup_registered_)
             init_flag_ = false;
         
-        this->arm_setup_->set_TargetKFS(0,0); //设置目标梅花桩编号
+        this->arm_setup_->set_TargetKFS(0,0,0); //设置目标梅花桩编号
         this->start(osPriorityHigh+1, 512);
         init_flag_ = true;
     }
