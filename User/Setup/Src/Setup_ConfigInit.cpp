@@ -86,7 +86,6 @@ OIDEncoder oid_encoder(91, CAN2_Bus, 4096, 200);
 
 /*============================== debug  DJI_Motor ===============================*/
 
-
 void debug_init()
 {
 /*============================= debug 机械臂 ================================*/
@@ -119,12 +118,10 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 
 #if DEBUG_SHIT
 Swerve_Task_Demo swerve_task_demo; // 轮式舵轮底盘调试任务实例
-
 #endif  
 
 void ALL_Setup_ConfigInit(void)
 {
-
     HWT101CT* imu = HWT101CT::GetInstance(&huart1);
     imu->InitUART();
     TimeStamp::getInstance().init(&htim4);
@@ -169,7 +166,6 @@ void ALL_Setup_ConfigInit(void)
     };
     chassis.init(chassis_init_config);
 #endif
-
 
     Finite_StateMachine.registerArmSetup(&ARM_Controller);
     Finite_StateMachine.registerChassisSetup(&ChassisOmni);

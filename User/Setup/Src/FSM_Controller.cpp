@@ -1,8 +1,6 @@
 #include "FSM_Controller.h"
 #include "chassis_swerve_task_demo.h"
 
-
-
 void FSM_Controller::loop()
 {
     if(!init_flag_) 
