@@ -6,6 +6,7 @@ extern Serial1Protocol* 	m_serial1;
 uint8_t ired_send_num=0;
 void FSM_Controller::loop()
 {
+	//红外测试
 	if(ired_send_num!=0&&ired_send_num!=9)
 	{
 	  m_serial1->R1_Send_KFS(1,ired_send_num,3);
