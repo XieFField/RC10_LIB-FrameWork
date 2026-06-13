@@ -2,7 +2,12 @@
 #include "usart.h"
 #include "main.h"
 #include <cmath>
-
+uint8_t KFS_want1;
+uint8_t KFS_want2;
+uint8_t spear;
+int16_t Axis_x;
+int16_t Axis_y;
+int16_t Axis_yaw;
 namespace {
 static inline float NormalizeAxis(uint16_t raw, float center, float span, float deadzone = 0.05f)
 {
@@ -48,8 +53,8 @@ Lora_communication* Lora_communication::s_instance = nullptr;
 Lora_communication* Lora_communication::GetInstance()
 {
     static Lora_communication instance(&huart5, &huart6,
-                                       GPIOB, GPIO_PIN_11,
                                        GPIOB, GPIO_PIN_10,
+                                       GPIOB, GPIO_PIN_11,
                                        nullptr);
     if (s_instance == nullptr) {
         s_instance = &instance;
@@ -98,6 +103,15 @@ Lora_communication::Lora_communication(UART_HandleTypeDef* tx_huart, UART_Handle
     s_instance = this;
     // 初始化 KFS 结构体为 0
     kfs_data_ = {};
+    send_x = 0; send_y = 0; send_z = 0;
+    send_gripper_status = 0;
+    send_suction_cup_status = 0;
+    send_automatic_status = 0;
+    send_mode = 0;
+    chosen_command = 1; chosen_command_cnt = 0;
+    send_kfs_want_place1 = 0; send_kfs_want_place2 = 0;
+    send_spear = 0;
+    send_kfs_keepplace = 0;
 }
 
 Lora_communication::~Lora_communication() {
@@ -126,6 +140,10 @@ void Lora_communication::Comm_TxUseTxDMA(UART_HandleTypeDef* huart, uint8_t* dat
 
 void Lora_communication::Task_Process() {
     if (Comm_Task_Loop()) {
+        SetSendAxisData(Axis_x, Axis_y, Axis_yaw);
+        SetSendWantKFSData(KFS_want1, KFS_want2);
+        SetSendSpearData(spear);
+
         uint16_t joystick[4];
         // 新的 Communication 接口：分别获取摇杆和按键/设置数据
         GetRecvJoystickData(joystick);
@@ -186,31 +204,57 @@ void Lora_communication::Task_Process() {
             }
         }
         key_last_status_ = key_status;
+
+        // ====== 同步全部数据到 airjoy_data_，方便 debug 查看 rc_data ======
+        airjoy_data_.joystick1 = joystick[0];
+        airjoy_data_.joystick2 = joystick[1];
+        airjoy_data_.joystick3 = joystick[2];
+        airjoy_data_.joystick4 = joystick[3];
+        airjoy_data_.key  = key;
+        airjoy_data_.page = airjoy_data_.page; // 上面已赋值
+
+        airjoy_data_.key_pressed_count = key_pressed_count_;
+        airjoy_data_.key_down_count    = key_down_count_;
+        airjoy_data_.key_last_status   = key_last_status_;
+
+        airjoy_data_.KFS1_1 = kfs_data_.r1_kfs[0];
+        airjoy_data_.KFS1_2 = kfs_data_.r1_kfs[1];
+        airjoy_data_.KFS1_3 = kfs_data_.r1_kfs[2];
+        airjoy_data_.KFS2_1 = kfs_data_.r2_kfs[0];
+        airjoy_data_.KFS2_2 = kfs_data_.r2_kfs[1];
+        airjoy_data_.KFS2_3 = kfs_data_.r2_kfs[2];
+        airjoy_data_.KFS2_4 = kfs_data_.r2_kfs[3];
+        airjoy_data_.KFSf_1 = kfs_data_.fake_kfs;
+        airjoy_data_.color  = kfs_data_.color;
+
+        airjoy_data_.recv_command_command = recv_command_command_;
+        airjoy_data_.recv_command_load1  = recv_command_load1_;
+        airjoy_data_.recv_command_load2  = recv_command_load2_;
     }
 }
 
 void Lora_communication::flush_pending_frame()
 {
-    if (!pending_tx_dirty_) {
-        return;
-    }
+//    if (!pending_tx_dirty_) {
+//        return;
+//    }
 
-    Comm_SendAxisDataToTxBuffer(
-        pending_x_raw_,
-        pending_y_raw_,
-        pending_yaw_raw_,
-        pending_claw_status_,
-        pending_sucker_status_,
-        auto_mode_,
-        pending_mode_,
-        pending_command_,
-        chosen_command_cnt_,
-        send_kfs_want_place1_,
-        send_kfs_want_place2_,
-        send_spear_,
-        send_kfs_keepplace_);
+//    Comm_SendAxisDataToTxBuffer(
+//        pending_x_raw_,
+//        pending_y_raw_,
+//        pending_yaw_raw_,
+//        pending_claw_status_,
+//        pending_sucker_status_,
+//        auto_mode_,
+//        pending_mode_,
+//        pending_command_,
+//        chosen_command_cnt_,
+//        send_kfs_want_place1_,
+//        send_kfs_want_place2_,
+//        send_spear_,
+//        send_kfs_keepplace_);
 
-    pending_tx_dirty_ = false;
+//    pending_tx_dirty_ = false;
 }
 
 void Lora_communication::send_robot_pos(float x, float y, float yaw)
@@ -256,9 +300,13 @@ void Lora_communication::send_command(int8_t cmd)
 /* ========== 定时器中断 ========== */
 void Lora_communication::Tim_It_Process() {
     timer_tick_count++;
-    if (timer_tick_count >= 2) { // 计数达到 2ms
+    if (timer_tick_count >= 2) { // 计数达到 1ms 
         timer_tick_count = 0;
-        flush_pending_frame();
+        GetChosenCommandAndCnt(chosen_command, chosen_command_cnt, recv_command_load2);
+        Comm_SendAxisDataToTxBuffer(send_x, send_y, send_z,
+            send_gripper_status, send_suction_cup_status, send_automatic_status,
+            send_mode, chosen_command, chosen_command_cnt,
+            send_kfs_want_place1, send_kfs_want_place2, send_spear, send_kfs_keepplace);
     }
 }
 
