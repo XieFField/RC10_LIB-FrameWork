@@ -77,6 +77,14 @@ Lora_communication::Lora_communication(UART_HandleTypeDef* tx_huart, UART_Handle
     pending_command_(0),
       pending_tx_dirty_(false),
       auto_mode_(false),
+      send_kfs_want_place1_(0),
+      send_kfs_want_place2_(0),
+      send_spear_(0),
+      send_kfs_keepplace_(0),
+      recv_command_command_(1),
+      recv_command_load1_(0),
+      recv_command_load2_(0),
+      chosen_command_cnt_(0),
       key_pressed_count_(0),
       key_down_count_(0),
       key_last_status_(0),
@@ -136,6 +144,10 @@ void Lora_communication::Task_Process() {
 
         kfs_data_.fake_kfs = GetRecvFKFSfData(1);
 
+        // 读取串口屏转发的命令帧（0xAA 0x77），并将命令/累计次数存入发送变量
+        GetChosenCommandAndCnt(recv_command_command_, recv_command_load1_, recv_command_load2_);
+        chosen_command_cnt_ = recv_command_load1_;  // 累计次数作为 command2 发送
+
         airjoy_data_.page = GetPage();
 
         airjoy_data_.left_x  = NormalizeAxis(joystick[0], 512.0f, 512.0f);
@@ -192,7 +204,11 @@ void Lora_communication::flush_pending_frame()
         auto_mode_,
         pending_mode_,
         pending_command_,
-        0x00);
+        chosen_command_cnt_,
+        send_kfs_want_place1_,
+        send_kfs_want_place2_,
+        send_spear_,
+        send_kfs_keepplace_);
 
     pending_tx_dirty_ = false;
 }
