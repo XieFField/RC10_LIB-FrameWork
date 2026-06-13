@@ -91,12 +91,16 @@ void Serial1Protocol::buildFrame(uint8_t* data, uint8_t parity, uint8_t* frame_o
     frame_out[7] = SERIAL1_FRAME_TAIL1;
 }
 
-int Serial1Protocol::parseFrame(uint8_t* buffer, uint16_t size, uint8_t* data_out, uint8_t* parity_out) {
+int Serial1Protocol::parseFrame(uint8_t* buffer, uint16_t size, uint8_t* data_out, uint8_t* parity_out) 
+{
     if (size < SERIAL1_FRAME_LEN) return 0;
     
-    for (uint16_t i = 0; i <= size - SERIAL1_FRAME_LEN; i++) {
-        if (buffer[i] == SERIAL1_FRAME_HEAD0 && buffer[i+1] == SERIAL1_FRAME_HEAD1) {
-            if (buffer[i+6] == SERIAL1_FRAME_TAIL0 && buffer[i+7] == SERIAL1_FRAME_TAIL1) {
+    for (uint16_t i = 0; i <= size - SERIAL1_FRAME_LEN; i++) 
+    {
+        if (buffer[i] == SERIAL1_FRAME_HEAD0 && buffer[i+1] == SERIAL1_FRAME_HEAD1) 
+        {
+            if (buffer[i+6] == SERIAL1_FRAME_TAIL0 && buffer[i+7] == SERIAL1_FRAME_TAIL1) 
+            {
                 memcpy(data_out, &buffer[i+2], SERIAL1_DATA_LEN);
                 
                 uint8_t check_byte = buffer[i+5];
@@ -104,7 +108,8 @@ int Serial1Protocol::parseFrame(uint8_t* buffer, uint16_t size, uint8_t* data_ou
                 uint8_t received_checksum = check_byte & SERIAL1_CHECKSUM_MASK;
                 uint8_t calc_checksum = calculateChecksum(data_out);
                 
-                if (received_checksum == calc_checksum) {
+                if (received_checksum == calc_checksum) 
+                {
                     return 1;
                 }
             }
@@ -124,8 +129,6 @@ void Serial1Protocol::sendFrame(uint8_t* data, uint8_t parity) {
     }
 	else
     {
-//			uint8_t test[8] = {0xFC, 0xFB, 0x12, 0x30, 0x00, 0x3B, 0xFD, 0xFE};
-//			HAL_UART_Transmit(m_huart, test, SERIAL1_FRAME_LEN,100);
         for (int i = 0; i < SERIAL1_SEND_TIMES; i++) 
         {
             // HAL_UART_Transmit(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN,100);
@@ -136,14 +139,16 @@ void Serial1Protocol::sendFrame(uint8_t* data, uint8_t parity) {
 }
 
 // ========== 发送应答帧 ==========
-void Serial1Protocol::sendAckFrame(void) {
+void Serial1Protocol::sendAckFrame(void) 
+{
     if (!m_huart ) return;
     
     uint8_t ack_data[SERIAL1_DATA_LEN] = {0x00, 0x00, 0x00};
     sendFrame(ack_data, 0);
 }
 
-void Serial1Protocol::sendStop(void) {
+void Serial1Protocol::sendStop(void) 
+{
     if (!m_huart ) return;
     
     uint8_t ack_data[SERIAL1_DATA_LEN] = {0xFF, 0xFF, 0xFF};
@@ -194,16 +199,22 @@ uint8_t Serial1Protocol::getNextParity(uint8_t* data) {
 void Serial1Protocol::updateSendHistory(uint8_t* data, uint8_t parity) {
     int index = findHistoryIndex(data);
     
-    if (index >= 0) {
+    if (index >= 0) 
+    {
         m_send_history[index].last_parity = parity;
         m_send_history[index].send_count++;
-    } else {
-        if (m_history_count < MAX_HISTORY) {
+    } 
+    else 
+    {
+        if (m_history_count < MAX_HISTORY) 
+        {
             memcpy(m_send_history[m_history_count].data, data, SERIAL1_DATA_LEN);
             m_send_history[m_history_count].last_parity = parity;
             m_send_history[m_history_count].send_count = 1;
             m_history_count++;
-        } else {
+        } 
+        else 
+        {
             for (int i = 0; i < MAX_HISTORY - 1; i++) {
                 memcpy(m_send_history[i].data, m_send_history[i+1].data, SERIAL1_DATA_LEN);
                 m_send_history[i].last_parity = m_send_history[i+1].last_parity;
@@ -305,17 +316,20 @@ void Serial1Protocol::process(void)
 }
 
 // ========== 串口回调 ==========
-void Serial1Protocol::onUartReceive(uint8_t* buffer, uint16_t size) {
-    if (size > 0 && size <= 30) {
-        memcpy(m_rx_buffer, buffer, size);
-        m_rx_size = size;
-        m_rx_ready = 1;
-			  process();
-    }
+void Serial1Protocol::onUartReceive(uint8_t* buffer, uint16_t size) 
+{
+    // if (size > 0 && size <= 30) 
+    // {
+    //     memcpy(m_rx_buffer, buffer, size);
+    //     m_rx_size = size;
+    //     m_rx_ready = 1;
+    //     process();
+    // }
 }
 
 
-void Serial1Protocol::onUartTxComplete(void) {
+void Serial1Protocol::onUartTxComplete(void) 
+{
     m_tx_complete = 1;
 
 }
@@ -358,36 +372,21 @@ void Serial1Protocol::storeReceivedData(uint8_t* data, uint8_t parity) {
 			  Data_valid_flag=1;
     }
     else if(!has_consecutive_zeros_exceed_10(data))
-		{ 
-			  packet.type = DATA_TYPE_KFS;
-			  memcpy(packet.data.kfs,data,3);
-			  Data_valid_flag=1;
-			
-			
-		}
-		if(Data_valid_flag==1)
-		{
-			
-			    // 只保存最新一条（覆盖）
-    m_latest_packet = packet;
-    m_has_latest_data = true;
-			
-//// ========== 环形缓冲区写入 ==========
-//    // 检查缓冲区是否已满
-//    if (m_data_count >= DATA_BUFFER_SIZE) {
-//        // 缓冲区已满：覆盖最旧的数据
-//        // 读索引后移（丢弃最旧数据）
-//        m_data_read_index = (m_data_read_index + 1) % DATA_BUFFER_SIZE;
-//        // 数量不变（因为丢弃一条，加入一条）
-//    } else {
-//        m_data_count++;
-//    }
-//    
-//    // 写入新数据
-//    m_data_buffer[m_data_write_index] = packet;
-//    m_data_write_index = (m_data_write_index + 1) % DATA_BUFFER_SIZE;
-//  	}
-		}
+    { 
+            packet.type = DATA_TYPE_KFS;
+            memcpy(packet.data.kfs,data,3);
+            Data_valid_flag=1;
+        
+        
+    }
+    if(Data_valid_flag==1)
+    {
+        
+                    // 只保存最新一条（覆盖）
+        m_latest_packet = packet;
+        m_has_latest_data = true;
+        
+    }
 }
 
 // 获取数据

@@ -126,7 +126,8 @@ private:
     // 发送历史记录
     #define MAX_HISTORY 10
     
-    typedef struct {
+    typedef struct 
+    {
         uint8_t data[SERIAL1_DATA_LEN];
         uint8_t last_parity;
         uint8_t send_count;
