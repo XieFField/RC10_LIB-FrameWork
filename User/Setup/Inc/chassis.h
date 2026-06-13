@@ -1866,10 +1866,6 @@ namespace jia
     }
 }
 
-#define JIA_USE_FOUR_STEER_CHASSIS 1
-
-#if JIA_USE_FOUR_STEER_CHASSIS
 using jia::FourSteerChassis::Chassis;
-#endif
 
 #endif // CHASSIS_H_
