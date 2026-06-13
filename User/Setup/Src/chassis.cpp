@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file chassis.cpp
  * @author 桑叁年
  * @brief 底盘控制主实现
@@ -362,6 +362,8 @@ namespace jia
             input_target_data_.zero_current_all = false;
             lock_now_rot_z_target_ = 0.0f;
             yaw_lock_control_active_last_cycle_ = false;
+            yaw_lock_zero_stop_decel_context_active_ = false;
+            yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
             resetYawPidTargetRuntime();
             trans_dir_freeze_active_ = false;
             trans_dir_ref_valid_ = false;
@@ -726,6 +728,8 @@ namespace jia
             high_speed_dir_err_deg_ = 0.0f;
             high_speed_eta_max_s_ = 0.0f;
             low_speed_residual_bypass_active_ = false;
+            yaw_lock_zero_stop_decel_context_active_ = false;
+            yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
             xpark_gate_active_ = false;
             xpark_stationary_hold_ms_ = 0U;
             trans_dir_freeze_active_ = false;
@@ -793,6 +797,8 @@ namespace jia
                 high_speed_dir_err_deg_ = 0.0f;
                 high_speed_eta_max_s_ = 0.0f;
                 low_speed_residual_bypass_active_ = false;
+                yaw_lock_zero_stop_decel_context_active_ = false;
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
             }
         }
 
@@ -953,7 +959,7 @@ namespace jia
             return max_command_wheel_speed_m_s;
         }
 
-        bool Chassis::shouldSuppressYawLockOmegaForZeroStopDecel(const Data &command_data) const
+        bool Chassis::shouldSuppressYawLockOmegaForZeroStopDecel(const Data &command_data)
         {
             const bool yaw_lock_control_requested =
                 current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
@@ -962,6 +968,8 @@ namespace jia
                 current_mode_flag_.is_wheel_torque_free ||
                 (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode))
             {
+                yaw_lock_zero_stop_decel_context_active_ = false;
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
                 return false;
             }
 
@@ -975,6 +983,8 @@ namespace jia
                 manual_yaw_requested ||
                 (fabsf(command_data.omega_z) <= 1.0e-6f))
             {
+                yaw_lock_zero_stop_decel_context_active_ = false;
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
                 return false;
             }
 
@@ -986,8 +996,61 @@ namespace jia
                 max_residual_speed_m_s = (residual_speed_m_s > max_residual_speed_m_s) ? residual_speed_m_s : max_residual_speed_m_s;
             }
 
-            return (command_trans_speed_m_s > getNearZeroEnterSpeedMps()) ||
-                   (max_residual_speed_m_s > getNearZeroEnterSpeedMps());
+            const u32 release_hold_ms = runtime_strategy_cfg_.yaw_lock_zero_stop_release_hold_ms;
+            if (max_residual_speed_m_s <= getNearZeroEnterSpeedMps())
+            {
+                if (!yaw_lock_zero_stop_decel_context_active_)
+                {
+                    yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
+                    return false;
+                }
+
+                if (release_hold_ms == 0U)
+                {
+                    yaw_lock_zero_stop_decel_context_active_ = false;
+                    yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
+                    return false;
+                }
+
+                if (yaw_lock_zero_stop_release_hold_elapsed_ms_ < release_hold_ms)
+                {
+                    const u32 next_elapsed_ms =
+                        (yaw_lock_zero_stop_release_hold_elapsed_ms_ > (0xFFFFFFFFU - period_ms_))
+                            ? 0xFFFFFFFFU
+                            : (yaw_lock_zero_stop_release_hold_elapsed_ms_ + period_ms_);
+                    yaw_lock_zero_stop_release_hold_elapsed_ms_ = next_elapsed_ms;
+                }
+
+                if (yaw_lock_zero_stop_release_hold_elapsed_ms_ < release_hold_ms)
+                {
+                    return true;
+                }
+
+                yaw_lock_zero_stop_decel_context_active_ = false;
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
+                return false;
+            }
+
+            const f32 last_trans_speed_m_s = magnitude2DF32(last_planned_data_.vel_x, last_planned_data_.vel_y);
+            const bool translation_decel_context =
+                (command_trans_speed_m_s > getNearZeroEnterSpeedMps()) ||
+                (last_trans_speed_m_s > getNearZeroExitSpeedMps());
+            if (translation_decel_context)
+            {
+                yaw_lock_zero_stop_decel_context_active_ = true;
+            }
+
+            if (!yaw_lock_zero_stop_decel_context_active_)
+            {
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
+                return false;
+            }
+
+            if (max_residual_speed_m_s > getNearZeroExitSpeedMps())
+            {
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
+            }
+            return true;
         }
 
         bool Chassis::shouldActivateLaunchHold() const
@@ -1116,6 +1179,30 @@ namespace jia
         {
             SwervePlannerInput planner_input{};
             planner_input.command = command_data;
+            const bool yaw_lock_control_requested =
+                current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
+            const f32 command_wheel_speed_for_steer_gate = computeMaxCommandWheelSpeedMps(command_data);
+            const bool yaw_lock_steer_intent_preview =
+                yaw_lock_control_requested &&
+                (magnitude2DF32(command_data.vel_x, command_data.vel_y) <= getNearZeroEnterSpeedMps()) &&
+                (command_wheel_speed_for_steer_gate <= getNearZeroEnterSpeedMps()) &&
+                (computeMaxCommandWheelSpeedMps(target_data_) > getNearZeroEnterSpeedMps());
+            f32 max_residual_speed_for_steer_preview_m_s = 0.0f;
+            if (yaw_lock_steer_intent_preview)
+            {
+                const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    const f32 residual_speed_m_s = fabsf(wheel_config_[i].corrected_drive_omega_rad_s) * wheel_radius_m;
+                    max_residual_speed_for_steer_preview_m_s =
+                        (residual_speed_m_s > max_residual_speed_for_steer_preview_m_s) ? residual_speed_m_s : max_residual_speed_for_steer_preview_m_s;
+                }
+            }
+            const bool allow_yaw_lock_steer_intent_preview =
+                yaw_lock_steer_intent_preview &&
+                !yaw_lock_zero_stop_decel_context_active_ &&
+                (max_residual_speed_for_steer_preview_m_s <= getNearZeroEnterSpeedMps());
+            const Data &steer_intent_data = allow_yaw_lock_steer_intent_preview ? target_data_ : command_data;
 
             for (u8 i = 0; i < 4; ++i)
             {
@@ -1126,11 +1213,19 @@ namespace jia
                 const f32 wheel_vx = command_data.vel_x + command_data.omega_z * wheel.pos_y_m;
                 const f32 wheel_vy = command_data.vel_y - command_data.omega_z * wheel.pos_x_m;
                 const f32 wheel_speed_m_s = magnitude2DF32(wheel_vx, wheel_vy);
+                const f32 steer_intent_vx = steer_intent_data.vel_x + steer_intent_data.omega_z * wheel.pos_y_m;
+                const f32 steer_intent_vy = steer_intent_data.vel_y - steer_intent_data.omega_z * wheel.pos_x_m;
+                const f32 steer_intent_speed_m_s = magnitude2DF32(steer_intent_vx, steer_intent_vy);
                 planner_input.wheel_vx_m_s[i] = wheel_vx;
                 planner_input.wheel_vy_m_s[i] = wheel_vy;
                 planner_input.wheel_speed_m_s[i] = wheel_speed_m_s;
+                planner_input.steer_intent_wheel_vx_m_s[i] = steer_intent_vx;
+                planner_input.steer_intent_wheel_vy_m_s[i] = steer_intent_vy;
+                planner_input.steer_intent_wheel_speed_m_s[i] = steer_intent_speed_m_s;
                 planner_input.max_command_wheel_speed_m_s =
                     (wheel_speed_m_s > planner_input.max_command_wheel_speed_m_s) ? wheel_speed_m_s : planner_input.max_command_wheel_speed_m_s;
+                planner_input.max_steer_intent_wheel_speed_m_s =
+                    (steer_intent_speed_m_s > planner_input.max_steer_intent_wheel_speed_m_s) ? steer_intent_speed_m_s : planner_input.max_steer_intent_wheel_speed_m_s;
 
                 const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * runtime_strategy_cfg_.wheel_radius_m_;
                 planner_input.residual_speed_m_s[i] = residual_speed_m_s;
@@ -1147,8 +1242,8 @@ namespace jia
             // 2. 保持/退出门：一旦 xpark_gate_active_ 锁存，只看目标速度是否仍在 X-Park command 退出门内。
             // residual 在进入后不再踢出 X-Park，否则轮子刚被锁到 X 姿态后的反馈扰动会反复打断保持态。
             const bool xpark_target_stationary = xpark_gate_active_
-                                                     ? (planner_input.max_command_wheel_speed_m_s <= xpark_command_exit_speed)
-                                                     : (planner_input.max_command_wheel_speed_m_s <= xpark_command_enter_speed);
+                                                     ? (planner_input.max_steer_intent_wheel_speed_m_s <= xpark_command_exit_speed)
+                                                     : (planner_input.max_steer_intent_wheel_speed_m_s <= xpark_command_enter_speed);
             const bool xpark_residual_stationary = xpark_gate_active_
                                                        ? (planner_input.max_residual_speed_m_s <= xpark_residual_exit_speed)
                                                        : (planner_input.max_residual_speed_m_s <= xpark_residual_enter_speed);
@@ -1205,9 +1300,10 @@ namespace jia
             {
                 const WheelConfig &wheel = wheel_config_[i];
                 const f32 wheel_speed_m_s = planner_input.wheel_speed_m_s[i];
-                const bool is_stationary = wheel_speed_m_s <= getNearZeroEnterSpeedMps();
+                const f32 steer_intent_wheel_speed_m_s = planner_input.steer_intent_wheel_speed_m_s[i];
+                const bool steer_intent_stationary = steer_intent_wheel_speed_m_s <= getNearZeroEnterSpeedMps();
 
-                if (is_stationary)
+                if (steer_intent_stationary)
                 {
                     planner_output.ideal_oa_total_rad[i] = (planner_input.allow_xpark_pose && runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kXPark)
                                                                ? wrapTo2PiF32(getXParkAngle(wheel))
@@ -1216,7 +1312,7 @@ namespace jia
                 }
                 else
                 {
-                    planner_output.ideal_oa_total_rad[i] = wrapTo2PiF32(atan2f(planner_input.wheel_vy_m_s[i], planner_input.wheel_vx_m_s[i]));
+                    planner_output.ideal_oa_total_rad[i] = wrapTo2PiF32(atan2f(planner_input.steer_intent_wheel_vy_m_s[i], planner_input.steer_intent_wheel_vx_m_s[i]));
                     planner_output.ideal_drive_omega_rad_s[i] = wheel_speed_m_s / runtime_strategy_cfg_.wheel_radius_m_;
                 }
 
@@ -1228,7 +1324,7 @@ namespace jia
                 f32 selected_drive_omega_rad_s = planner_output.ideal_drive_omega_rad_s[i];
                 bool flipped = false;
 
-                if (!is_stationary)
+                if (!steer_intent_stationary)
                 {
                     if (runtime_strategy_cfg_.steering_strategy_mode == SteeringStrategyMode::kAlwaysForward)
                     {
@@ -1322,6 +1418,14 @@ namespace jia
                 planner_output.high_speed_eta_max_s = (eta_s > planner_output.high_speed_eta_max_s) ? eta_s : planner_output.high_speed_eta_max_s;
             }
 
+            f32 planned_steering_errors_rad[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+            for (u8 i = 0; i < 4; ++i)
+            {
+                planned_steering_errors_rad[i] =
+                    fabsf(shortestAngularDistanceF32(planner_output.planned_oa_total_rad[i],
+                                                      planner_output.selected_oa_total_rad[i]));
+            }
+
             const bool enable_steer_angle_feedforward =
                 runtime_strategy_cfg_.enable_steer_angle_feedforward &&
                 !planner_input.force_uniform_steer_drive &&
@@ -1365,7 +1469,12 @@ namespace jia
             }
 
             f32 low_speed_scales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-            computeLowSpeedDriveSuppressionScales(planner_input, planner_output.steering_errors_rad, low_speed_scales);
+            const bool pure_yaw_motion_intent =
+                (planner_command_speed_m_s <= getNearZeroEnterSpeedMps()) &&
+                (planner_input.max_command_wheel_speed_m_s > getNearZeroEnterSpeedMps());
+            computeLowSpeedDriveSuppressionScales(planner_input,
+                                                  pure_yaw_motion_intent ? planned_steering_errors_rad : planner_output.steering_errors_rad,
+                                                  low_speed_scales);
 
             const f32 translational_speed_m_s = planner_command_speed_m_s;
             f32 predicted_vel_x = 0.0f;
@@ -2315,7 +2424,14 @@ namespace jia
                 // 这样目标门不会被反馈噪声踢出，但轮子确实停稳后也不必一直吃 brake 电流。
                 const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * runtime_strategy_cfg_.wheel_radius_m_;
                 const bool was_brake_active = drive_zero_stop_brake_active_[wheel_idx];
-                if (!runtime_strategy_cfg_.enable_drive_zero_stop_settle_zero_current)
+                const bool yaw_lock_release_hold_active =
+                    yaw_lock_zero_stop_decel_context_active_ ||
+                    (yaw_lock_zero_stop_release_hold_elapsed_ms_ > 0U);
+                if (yaw_lock_zero_stop_decel_context_active_ || yaw_lock_release_hold_active)
+                {
+                    drive_zero_stop_brake_active_[wheel_idx] = true;
+                }
+                else if (!runtime_strategy_cfg_.enable_drive_zero_stop_settle_zero_current)
                 {
                     drive_zero_stop_brake_active_[wheel_idx] = true;
                 }
@@ -2439,6 +2555,8 @@ namespace jia
             xpark_stationary_hold_ms_ = 0U;
             launch_hold_active_ = false;
             drive_zero_stop_active_ = false;
+            yaw_lock_zero_stop_decel_context_active_ = false;
+            yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
             for (u8 i = 0; i < 4; ++i)
             {
                 drive_zero_stop_brake_active_[i] = false;
@@ -3775,6 +3893,8 @@ namespace jia
             steer_fault_any_active_ = steer_fault_any_active;
             const bool chassis_motion_blocked = !all_homed || steer_fault_any_active;
             const bool prev_drive_zero_stop_active = drive_zero_stop_active_;
+            const bool yaw_lock_zero_stop_hold_pre_active =
+                yaw_lock_zero_stop_decel_context_active_ || (yaw_lock_zero_stop_release_hold_elapsed_ms_ > 0U);
             if (runtime_strategy_cfg_.enable_drive_zero_stop_assist &&
                 !single_wheel_isolation_active &&
                 !input_target_data_.zero_current_all &&
@@ -3795,14 +3915,19 @@ namespace jia
                 // 正常底盘链路下优先依据整车目标是否已静止来决定是否进入 zero-stop，
                 // 避免速度规划尾巴还没完全衰减时，把刹车收尾整体拖后。
                 f32 max_frame_command_speed_m_s = 0.0f;
+                f32 max_last_delivered_speed_m_s = 0.0f;
                 const f32 wheel_radius_m = fabsf(runtime_strategy_cfg_.wheel_radius_m_);
                 for (u8 i = 0; i < 4; ++i)
                 {
                     const f32 frame_command_speed_m_s = fabsf(actuator_command_frame_.drive_omega_rad_s[i]) * wheel_radius_m;
                     max_frame_command_speed_m_s = (frame_command_speed_m_s > max_frame_command_speed_m_s) ? frame_command_speed_m_s : max_frame_command_speed_m_s;
+                    const f32 last_delivered_speed_m_s = fabsf(last_drive_omega_cmd_rad_s_[i]) * wheel_radius_m;
+                    max_last_delivered_speed_m_s = (last_delivered_speed_m_s > max_last_delivered_speed_m_s) ? last_delivered_speed_m_s : max_last_delivered_speed_m_s;
                 }
                 Data zero_stop_gate_target_data = target_data_;
-                if (shouldSuppressYawLockOmegaForZeroStopDecel(zero_stop_gate_target_data))
+                const bool suppress_yaw_lock_omega_for_zero_stop =
+                    yaw_lock_zero_stop_hold_pre_active || shouldSuppressYawLockOmegaForZeroStopDecel(zero_stop_gate_target_data);
+                if (suppress_yaw_lock_omega_for_zero_stop)
                 {
                     zero_stop_gate_target_data.omega_z = 0.0f;
                 }
@@ -3812,8 +3937,26 @@ namespace jia
                                                       : ((target_command_speed_m_s > max_frame_command_speed_m_s)
                                                              ? target_command_speed_m_s
                                                              : max_frame_command_speed_m_s);
+                const bool yaw_lock_control_requested =
+                    current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
+                const f32 drive_alpha_step_speed_m_s =
+                    runtime_strategy_cfg_.enable_drive_alpha_limit_
+                        ? (fabsf(runtime_strategy_cfg_.max_drive_alpha_rad_s2_) * period_ * wheel_radius_m)
+                        : 0.0f;
+                const bool yaw_lock_zero_command_decelerating =
+                    yaw_lock_control_requested &&
+                    !yaw_lock_zero_stop_decel_context_active_ &&
+                    runtime_strategy_cfg_.enable_drive_alpha_limit_ &&
+                    (drive_alpha_step_speed_m_s > 1.0e-6f) &&
+                    (target_command_speed_m_s <= getNearZeroEnterSpeedMps()) &&
+                    (max_frame_command_speed_m_s <= getNearZeroEnterSpeedMps()) &&
+                    (max_last_delivered_speed_m_s > (drive_alpha_step_speed_m_s + 1.0e-6f));
 
-                if (drive_zero_stop_active_)
+                if (yaw_lock_zero_command_decelerating)
+                {
+                    drive_zero_stop_active_ = false;
+                }
+                else if (drive_zero_stop_active_)
                 {
                     drive_zero_stop_active_ = max_command_speed_m_s <= getNearZeroExitSpeedMps();
                 }
@@ -3825,11 +3968,14 @@ namespace jia
             else
             {
                 drive_zero_stop_active_ = false;
+                yaw_lock_zero_stop_decel_context_active_ = false;
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
             }
             const bool entering_drive_zero_stop = !prev_drive_zero_stop_active && drive_zero_stop_active_;
             const bool leaving_drive_zero_stop = prev_drive_zero_stop_active && !drive_zero_stop_active_;
             if (!drive_zero_stop_active_)
             {
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
                 for (u8 i = 0; i < 4; ++i)
                 {
                     drive_zero_stop_brake_active_[i] = false;
@@ -4377,27 +4523,25 @@ namespace jia
 
         void Chassis::syncDebugSteerPidTuneFromRuntime()
         {
-            for (u8 i = 0; i < 4; ++i)
+            const bool steer_speed_dirty = (debug_pid_tune_.steer_speed_pid_applied_stamp != debug_pid_tune_.steer_speed_pid_apply_stamp);
+            const bool steer_angle_dirty = (debug_pid_tune_.steer_angle_pid_applied_stamp != debug_pid_tune_.steer_angle_pid_apply_stamp);
+            if (!steer_speed_dirty && !steer_angle_dirty)
             {
-                const bool speed_dirty = (debug_pid_tune_.steer_speed_pid_applied_stamp[i] != debug_pid_tune_.steer_speed_pid_apply_stamp[i]);
-                const bool angle_dirty = (debug_pid_tune_.steer_angle_pid_applied_stamp[i] != debug_pid_tune_.steer_angle_pid_apply_stamp[i]);
-                if (speed_dirty || angle_dirty)
+                for (u8 i = 0; i < 4; ++i)
                 {
-// 保护apply的手工改动：该轮缓存跳过同步，避免覆盖调试器刚写入的值
-                    continue;
-                }
+                    WheelConfig &wheel = wheel_config_[i];
+                    M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
+                    if (steer_m3508 == nullptr)
+                    {
+                        continue;
+                    }
 
-                WheelConfig &wheel = wheel_config_[i];
-                M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
-                if (steer_m3508 == nullptr)
-                {
-                    continue;
+                    debug_pid_tune_.steer_speed_pid_cfg = steer_m3508->get_speed_pid_params();
+                    debug_pid_tune_.steer_angle_pid_cfg = steer_m3508->get_angle_pid_params();
+                    debug_pid_tune_.steer_speed_pid_td_ratio = steer_m3508->get_speed_pid_td_ratio();
+                    debug_pid_tune_.steer_angle_pid_i_separa = steer_m3508->get_angle_pid_i_separa_threshold();
+                    break;
                 }
-
-                debug_pid_tune_.steer_speed_pid_cfg[i] = steer_m3508->get_speed_pid_params();
-                debug_pid_tune_.steer_angle_pid_cfg[i] = steer_m3508->get_angle_pid_params();
-                debug_pid_tune_.steer_speed_pid_td_ratio[i] = steer_m3508->get_speed_pid_td_ratio();
-                debug_pid_tune_.steer_angle_pid_i_separa[i] = steer_m3508->get_angle_pid_i_separa_threshold();
             }
 
             const bool drive_dirty = (debug_pid_tune_.drive_speed_pid_applied_stamp != debug_pid_tune_.drive_speed_pid_apply_stamp);
@@ -4424,28 +4568,29 @@ namespace jia
 
         void Chassis::applyDebugSteerPidRuntimeTuning()
         {
-            for (u8 i = 0; i < 4; ++i)
+            const bool steer_speed_dirty = (debug_pid_tune_.steer_speed_pid_applied_stamp != debug_pid_tune_.steer_speed_pid_apply_stamp);
+            const bool steer_angle_dirty = (debug_pid_tune_.steer_angle_pid_applied_stamp != debug_pid_tune_.steer_angle_pid_apply_stamp);
+            if (steer_speed_dirty || steer_angle_dirty)
             {
-                WheelConfig &wheel = wheel_config_[i];
-                M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
-                if (steer_m3508 == nullptr)
+                bool applied_any = false;
+                for (u8 i = 0; i < 4; ++i)
                 {
-                    continue;
+                    WheelConfig &wheel = wheel_config_[i];
+                    M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
+                    if (steer_m3508 == nullptr)
+                    {
+                        continue;
+                    }
+
+                    steer_m3508->pid_init(debug_pid_tune_.steer_speed_pid_cfg, debug_pid_tune_.steer_speed_pid_td_ratio,
+                                          debug_pid_tune_.steer_angle_pid_cfg, debug_pid_tune_.steer_angle_pid_i_separa);
+                    applied_any = true;
                 }
 
-                if (debug_pid_tune_.steer_speed_pid_applied_stamp[i] != debug_pid_tune_.steer_speed_pid_apply_stamp[i])
+                if (applied_any)
                 {
-                    steer_m3508->pid_init(debug_pid_tune_.steer_speed_pid_cfg[i], debug_pid_tune_.steer_speed_pid_td_ratio[i],
-                                          debug_pid_tune_.steer_angle_pid_cfg[i], debug_pid_tune_.steer_angle_pid_i_separa[i]);
-                    debug_pid_tune_.steer_speed_pid_applied_stamp[i] = debug_pid_tune_.steer_speed_pid_apply_stamp[i];
-                    debug_pid_tune_.steer_angle_pid_applied_stamp[i] = debug_pid_tune_.steer_angle_pid_apply_stamp[i];
-                }
-                if (debug_pid_tune_.steer_angle_pid_applied_stamp[i] != debug_pid_tune_.steer_angle_pid_apply_stamp[i])
-                {
-                    steer_m3508->pid_init(debug_pid_tune_.steer_speed_pid_cfg[i], debug_pid_tune_.steer_speed_pid_td_ratio[i],
-                                          debug_pid_tune_.steer_angle_pid_cfg[i], debug_pid_tune_.steer_angle_pid_i_separa[i]);
-                    debug_pid_tune_.steer_angle_pid_applied_stamp[i] = debug_pid_tune_.steer_angle_pid_apply_stamp[i];
-                    debug_pid_tune_.steer_speed_pid_applied_stamp[i] = debug_pid_tune_.steer_speed_pid_apply_stamp[i];
+                    debug_pid_tune_.steer_speed_pid_applied_stamp = debug_pid_tune_.steer_speed_pid_apply_stamp;
+                    debug_pid_tune_.steer_angle_pid_applied_stamp = debug_pid_tune_.steer_angle_pid_apply_stamp;
                 }
             }
 
@@ -5574,8 +5719,6 @@ namespace jia
         }
     }
 }
-
-
 
 
 

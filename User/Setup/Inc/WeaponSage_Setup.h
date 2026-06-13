@@ -233,9 +233,18 @@ public:
     void Close_TargetClaw_Untight();
     void Judge_launch_status();
     void Judge_wrist_status();
-    bool Get_Catch_flag()
+    
+    bool Get_Catch_flag(void)
     {
         return auto_ctrl_.flag.is_catched;
+    }
+    void Get_OMNI_IM_flag(bool a)
+    {
+        auto_ctrl_.auto_state_bool_S.is_matching=a;
+    }
+    void Get_OMNI_DS_flag(bool a)
+    {
+        auto_ctrl_.auto_state_bool_S.dock_start=a;
     }
 protected:
     void loop() override;

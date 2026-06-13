@@ -7,9 +7,9 @@ volatile uint8_t g_send_complete = 0;
 volatile uint8_t g_send_success = 0;
 
 
-Serial1Protocol& Serial1Protocol::getInstance() {
+Serial1Protocol* Serial1Protocol::getInstance() {
     static Serial1Protocol instance;
-    return instance;
+    return &instance;
 }
 
 Serial1Protocol::Serial1Protocol() {
@@ -118,24 +118,21 @@ void Serial1Protocol::sendFrame(uint8_t* data, uint8_t parity) {
     
     m_tx_complete = 0;
     buildFrame(data, parity, m_uart_send_frame);
-	  if((data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00) )
-		{
-			HAL_UART_Transmit_DMA(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN);
-		}
-	  else
-		{
-//			uint8_t test[8] = {0xFC, 0xFB, 0x12, 0x30, 0x00, 0x3B, 0xFD, 0xFE};
-//			 HAL_UART_Transmit(m_huart, test, SERIAL1_FRAME_LEN,100);
-       for (int i = 0; i < SERIAL1_SEND_TIMES; i++) {
-				 HAL_UART_Transmit(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN,100);
-//					while (HAL_UART_GetState(m_huart) & HAL_UART_STATE_BUSY_TX) {
-//							// 等待上次发送完成
-//					}
-					HAL_UART_Transmit_DMA(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN);
-					HAL_Delay(2);
+    if((data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00) )
+    {
+        HAL_UART_Transmit_DMA(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN);
     }
+	else
+    {
+//			uint8_t test[8] = {0xFC, 0xFB, 0x12, 0x30, 0x00, 0x3B, 0xFD, 0xFE};
+//			HAL_UART_Transmit(m_huart, test, SERIAL1_FRAME_LEN,100);
+        for (int i = 0; i < SERIAL1_SEND_TIMES; i++) 
+        {
+            // HAL_UART_Transmit(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN,100);
+            HAL_UART_Transmit_DMA(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN);
+        }
 			
-		}
+    }
 }
 
 // ========== 发送应答帧 ==========
@@ -240,12 +237,13 @@ void Serial1Protocol::process(void)
     uint32_t now = getTickMs();
     
     // ========== 1. 处理串口接收数据 ==========
-    if (m_rx_ready) {
+    if (m_rx_ready) 
+    {
         m_rx_ready = 0;
         uint8_t received_data[SERIAL1_DATA_LEN];
-        uint8_t received_parity;
-        
-        if (parseFrame(m_rx_buffer, m_rx_size, received_data, &received_parity)) {
+        uint8_t received_parity;   
+        if (parseFrame(m_rx_buffer, m_rx_size, received_data, &received_parity)) 
+        {
             
             // 检查是否是串口应答（数据全0）
             uint8_t is_ack = (received_data[0] == 0x00 && 
@@ -253,7 +251,8 @@ void Serial1Protocol::process(void)
                               received_data[2] == 0x00);
             
             // ========== 场景B：收到非应答数据（串口2主动发送的数据） ==========
-             if (!is_ack) {
+             if (!is_ack) 
+             {
                 
                 // 判断是否与上次处理的数据相同（包含奇偶位）
                 uint8_t is_same_as_last = (memcmp(received_data, m_last_processed_data, SERIAL1_DATA_LEN) == 0 &&
@@ -263,12 +262,12 @@ void Serial1Protocol::process(void)
                 uint8_t is_same_data = (memcmp(received_data, m_last_rx_data, SERIAL1_DATA_LEN) == 0);
                 uint8_t is_same_parity = (received_parity == m_last_rx_parity);
                 
-                // ? 情况1：相同数据 → 串口2没收到应答，重发应答
+                //  情况1：相同数据 → 串口2没收到应答，重发应答
                 if (is_same_as_last) {
                     // 重发应答，不保存数据，不调用回调
                     sendAckFrame();
                 }
-                // ? 情况2：新数据（与上次不同）
+                //  情况2：新数据（与上次不同）
                 else if (!is_same_as_last && (!is_same_data || (is_same_data && !is_same_parity))) {
                     // 更新上次处理记录
                     memcpy(m_last_processed_data, received_data, SERIAL1_DATA_LEN);

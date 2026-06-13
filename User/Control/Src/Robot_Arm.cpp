@@ -125,15 +125,26 @@ void Robot_Arm::update()
     }
 
 
-    if(store_sucker_status_ == SUCK)
+    if(store_sucker_outside_status_ == SUCK)
     {
-        HAL_GPIO_WritePin(init_data_.Store_GPIO_Port, init_data_.Store_GPIO_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(init_data_.Store_Soleniod_GPIO_Port, init_data_.Store_Soleniod_GPIO_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(init_data_.StoreOutside_GPIO_Port, init_data_.StoreOutside_GPIO_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(init_data_.StoreOutside_Soleniod_GPIO_Port, init_data_.StoreOutside_Soleniod_GPIO_Pin, GPIO_PIN_RESET);
     }
     else
     {
-        HAL_GPIO_WritePin(init_data_.Store_GPIO_Port, init_data_.Store_GPIO_Pin, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(init_data_.Store_Soleniod_GPIO_Port, init_data_.Store_Soleniod_GPIO_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(init_data_.StoreOutside_GPIO_Port, init_data_.StoreOutside_GPIO_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(init_data_.StoreOutside_Soleniod_GPIO_Port, init_data_.StoreOutside_Soleniod_GPIO_Pin, GPIO_PIN_SET);
+    }
+
+    if(store_sucker_inside_status_ == SUCK)
+    {
+        HAL_GPIO_WritePin(init_data_.StoreInside_GPIO_Port, init_data_.StoreInside_GPIO_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(init_data_.StoreInside_Soleniod_GPIO_Port, init_data_.StoreInside_Soleniod_GPIO_Pin, GPIO_PIN_RESET);
+    }
+    else
+    {
+        HAL_GPIO_WritePin(init_data_.StoreInside_GPIO_Port, init_data_.StoreInside_GPIO_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(init_data_.StoreInside_Soleniod_GPIO_Port, init_data_.StoreInside_Soleniod_GPIO_Pin, GPIO_PIN_SET);
     }
 }
 

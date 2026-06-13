@@ -547,8 +547,12 @@ namespace jia
                 f32 wheel_vx_m_s[4] = {0.0f};
                 f32 wheel_vy_m_s[4] = {0.0f};
                 f32 wheel_speed_m_s[4] = {0.0f};
+                f32 steer_intent_wheel_vx_m_s[4] = {0.0f};
+                f32 steer_intent_wheel_vy_m_s[4] = {0.0f};
+                f32 steer_intent_wheel_speed_m_s[4] = {0.0f};
                 f32 residual_speed_m_s[4] = {0.0f};
                 f32 max_command_wheel_speed_m_s = 0.0f;
+                f32 max_steer_intent_wheel_speed_m_s = 0.0f;
                 f32 max_residual_speed_m_s = 0.0f;
             };
 
@@ -885,7 +889,7 @@ namespace jia
             f32 limitValueWithAcceleration(f32 current_value, f32 target_value, f32 max_accel, f32 dt_s) const;
             f32 getXParkAngle(const WheelConfig &wheel) const;
             f32 computeMaxCommandWheelSpeedMps(const Data &command_data) const;
-            bool shouldSuppressYawLockOmegaForZeroStopDecel(const Data &command_data) const;
+            bool shouldSuppressYawLockOmegaForZeroStopDecel(const Data &command_data);
             f32 computeLowSpeedDriveSuppressionScale(f32 abs_error_rad) const;
             void computeLowSpeedDriveSuppressionScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4]);
             f32 getNearZeroEnterSpeedMps() const;
@@ -1042,6 +1046,7 @@ namespace jia
                 bool enable_drive_zero_stop_settle_zero_current = true; // [RW] 是否允许 drive zero-stop 在 residual 进入 near-zero enter 后切到零电流收尾。关闭后 active 期间始终 brake。
                 f32 drive_zero_stop_brake_current_mA = 25000.0f;     // [RW] 零速止停进入 brake 分支时下发的刹车电流。
                 u32 drive_zero_stop_brake_ramp_time_ms = 0U;         // [RW] zero-stop 目标门进入后，从 0 线性爬升到 brake 电流的时长（ms）。0 表示阶跃下发。
+                u32 yaw_lock_zero_stop_release_hold_ms = 20U;       // [RW] yaw lock 从平移减速切到纯旋转前，residual 进入 near-zero 后额外保持 brake 的时长（ms）。
 
                 struct LowSpeedDriveSuppressionConfig
                 {
@@ -1127,7 +1132,7 @@ namespace jia
             {
                 struct Common
                 {
-                    bool enable = false;                                            // [RW] 调试总开关。
+                    bool enable = true;                                            // [RW] 调试总开关。
                     u8 mode_raw = 2;                                               // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
@@ -1275,7 +1280,7 @@ namespace jia
 
             struct DebugOutputConfig
             {
-                bool output_enable = false;
+                bool output_enable = true;
                 u8 output_family_raw = static_cast<u8>(DebugOutputFamily::kJustFloat);
                 DebugOutputTextConfig text{};
                 DebugOutputJustFloatConfig justfloat{};
@@ -1333,26 +1338,14 @@ namespace jia
 #if JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
             struct DebugPidTune
             {
-                PID_Param_Config steer_speed_pid_cfg[4] = {
-                    // [RW] 四轮舵向速度环参数缓存。这里只是待同步配置，不会立刻改动正在运行的 PID。
-                    {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f},
-                    {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f},
-                    {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f},
-                    {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f},
-                };
-                PID_Param_Config steer_angle_pid_cfg[4] = {
-                    // [RW] 四轮舵向角度环参数缓存。修改后同样要经过同步流程才会进入运行态。
-                    {.kp = 3.5f, .ki = 0.0f, .kd = 0.05f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 500.0f, .deadband = 0.03f},
-                    {.kp = 3.5f, .ki = 0.0f, .kd = 0.05f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 500.0f, .deadband = 0.03f},
-                    {.kp = 3.5f, .ki = 0.0f, .kd = 0.05f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 500.0f, .deadband = 0.03f},
-                    {.kp = 3.5f, .ki = 0.0f, .kd = 0.05f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 500.0f, .deadband = 0.03f},
-                };
-                f32 steer_speed_pid_td_ratio[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] 速度环 TD 比例参数。属于扩展调参项，通常和速度环整定一起看。
-                f32 steer_angle_pid_i_separa[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RW] 角度环积分分离参数。用于决定误差多大时才允许积分参与。
-                u32 steer_speed_pid_apply_stamp[4] = {0U, 0U, 0U, 0U};      // [RW] 速度环参数申请生效戳。外部写入后，通过同步流程消费。
-                u32 steer_angle_pid_apply_stamp[4] = {0U, 0U, 0U, 0U};      // [RW] 角度环参数申请生效戳。外部写入后，通过同步流程消费。
-                u32 steer_speed_pid_applied_stamp[4] = {0U, 0U, 0U, 0U};    // [RO] 速度环已生效戳。表示运行态已经真正接收到这组参数。
-                u32 steer_angle_pid_applied_stamp[4] = {0U, 0U, 0U, 0U};    // [RO] 角度环已生效戳。表示运行态已经真正接收到这组参数。
+                PID_Param_Config steer_speed_pid_cfg = {.kp = 32.0f, .ki = 0.085f, .kd = 0.0f, .I_Outlimit = 8000.0f, .isIOutlimit = true, .output_limit = 12000.0f, .deadband = 0.5f};
+                PID_Param_Config steer_angle_pid_cfg = {.kp = 3.5f, .ki = 0.0f, .kd = 0.05f, .I_Outlimit = 0.0f, .isIOutlimit = true, .output_limit = 500.0f, .deadband = 0.03f};
+                f32 steer_speed_pid_td_ratio = 0.0f;         // [RW] 共享舵向速度环 TD 比例参数。属于扩展调参项，通常和速度环整定一起看。
+                f32 steer_angle_pid_i_separa = 0.0f;         // [RW] 共享舵向角度环积分分离参数。用于决定误差多大时才允许积分参与。
+                u32 steer_speed_pid_apply_stamp = 0U;        // [RW] 共享舵向速度环参数申请生效戳。外部写入后，通过同步流程统一下发到 4 个舵向轮。
+                u32 steer_angle_pid_apply_stamp = 0U;        // [RW] 共享舵向角度环参数申请生效戳。外部写入后，通过同步流程统一下发到 4 个舵向轮。
+                u32 steer_speed_pid_applied_stamp = 0U;      // [RO] 共享舵向速度环已生效戳。表示存在的 steer 轮已经完成这组共享参数同步。
+                u32 steer_angle_pid_applied_stamp = 0U;      // [RO] 共享舵向角度环已生效戳。表示存在的 steer 轮已经完成这组共享参数同步。
                 bool synced_on_enable_edge = false;                         // [RO] 本次调试使能上升沿是否已完成同步。避免重复把缓存参数刷入运行态。
                 PID_Param_Config drive_speed_pid_cfg = {.kp = 0.0f, .ki = 0.0f, .kd = 0.0f, .I_Outlimit = 20000.0f, .isIOutlimit = true, .output_limit = 20000.0f, .deadband = 0.0f};
                 f32 drive_speed_pid_td_ratio = 0.0f;                    // [RW] 兼容旧调参字段名。drive 轮改成位置式 PID 后，这里实际承载的是积分分离阈值。
@@ -1427,6 +1420,8 @@ namespace jia
             f32 lock_now_rot_z_target_ = 0.0f;                                 // [RO] LockNow 真正维持的航向目标
             u32 lock_now_rot_z_shift_count_ = 0;                               // [RO] LockNow 松手缓冲倒计时
             bool yaw_lock_control_active_last_cycle_ = false;                  // [RO] 上一规划周期是否处于 LockNow/LockTo yaw 锁控制族
+            bool yaw_lock_zero_stop_decel_context_active_ = false;              // [RO] yaw lock 从平移减速进入纯旋转前，等待 drive residual 先刹停的锁存门
+            u32 yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;               // [RO] yaw lock zero-stop 释放保持已累计时长（ms）。达到配置门限后才允许退出 brake latch。
             bool lock_yaw_pid_target_filter_valid_ = false;                    // [RO] 航向 PID 目标低通状态是否已初始化
             f32 lock_yaw_pid_target_filtered_rad_ = 0.0f;                      // [RO] 航向 PID 目标低通后的角度
             bool lock_yaw_pid_deadband_active_ = false;                        // [RO] 航向 PID 双阈值死区当前是否激活
