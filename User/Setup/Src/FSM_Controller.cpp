@@ -478,9 +478,9 @@ void FSM_Controller::auto_ctrl()
     // 三区自动模式以及手操
     case 0x00:
     {
-        if (airjoy_data_.SWA == 0x01)
+        if (airjoy_data_.SWA == 0x01 && airjoy_data_.SWD == 0x00)
         {
-            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CZ);
+            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CZ_R1);
             arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
@@ -496,13 +496,31 @@ void FSM_Controller::auto_ctrl()
                 is_click = 0;
             }
         }
-        else if (airjoy_data_.SWA == 0x00)
+        else if (airjoy_data_.SWA == 0x00 && airjoy_data_.SWD == 0x00)
         {
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
             arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             chassis_setup_->setPathAutoStart(0); // 路径自动开始标志清零
             arm_setup_->set_Arm_autoStart(0);    // 自动流程标志清零
+        }
+        else if(airjoy_data_.SWD == 0x01)
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CZ_R2);
+            arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+
+            static uint8_t is_click = 0;
+            if (airjoy_data_.botton_click == 1 && is_click == 0)
+            {
+                chassis_setup_->setPathAutoStart(1); // 路径自动开始标志
+                weaponSage_setup_->setCBauto(true);
+                is_click = 1;
+            }
+            else if (airjoy_data_.botton_click == 0)
+            {
+                is_click = 0;
+            }
         }
         break;
     }

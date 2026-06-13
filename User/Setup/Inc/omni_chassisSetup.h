@@ -49,6 +49,7 @@ typedef struct
     Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     // 没用的
     // Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -108,17 +109,23 @@ typedef struct
 typedef struct
 {
     Vector2D uphill_pos = {0.6f, 11.4f};
-    Vector2D fit_pos = {4.83f, 11.5f};
+    
+    Vector2D fit_ahead_pos = {3.0f, 10.0f};
+    Vector2D fit_end_pos = {4.83f, 11.5f};
 
-    float fit_yaw = 180.0f;
+    float R1_yaw = 180.0f;
+    float fit_yaw = -90.0f;
 
     // 左中右的索引
+    
     int R1_pos_index = 0;
+    int fit_pos_index = 1;
     int R2_pos_index = 0;
 
-    // 左中右
+    // 左中右   或者   先后
     Vector2D R1_pos[3] = {{4.535f, 11.285f}, {4.535f, 10.705f}, {4.535f, 10.185f}};
-    Vector2D R2_pos[3] = {{4.535f, 11.285f}, {4.535f, 10.705f}, {4.535f, 10.185f}};
+    Vector2D fit_pos[2] = {fit_ahead_pos, fit_end_pos};
+    Vector2D R2_pos[3] = {{4.83f, 11.285f}, {4.83f, 10.705f}, {4.83f, 10.185f}};
 
 } CZ_POINT;
 
@@ -279,8 +286,10 @@ private:
     float rotation_path(float MF_Point);
 
     void Path_lock_point(Vector2D lock_point);
+    
+    void CZ_R1_Selection_Planning(void);
 
-    void Combat_Zone_Selection_Planning(void);
+    void CZ_R2_Selection_Planning(void);
 
 public:
     /**
