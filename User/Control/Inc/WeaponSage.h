@@ -42,6 +42,8 @@ typedef struct
     float arm_gearRatio_; // 机�?�臂减速比，机械臂电机�?一圈，�?�?关节移动多少�?
 }WeaponSage_InitData_S;
 
+
+
 namespace WeaponSage
 {
     enum Motor_Type_E
@@ -54,6 +56,14 @@ namespace WeaponSage
         Wrist_Motor// 手腕电机
     };
 
+	typedef struct{
+		float ramp__maxspeed_ = 0.0f;
+		float max_accel_ = 0.0f; // 最大加速度 (Motor Angle deg/s^2)
+		float current_velocity_ = 0.0f; // 当前速度 (Motor Angle deg/s)
+		float ramp_target_ = 0.0f; 
+		float filter_k_ = 0.0f; 
+	}Fliter_Ramp_S;
+	
     typedef struct 
     {
         float claw_1_reversed_ = -1.0f;
@@ -260,6 +270,49 @@ protected:
     bool setMotorTargetTotalAngle(float total_angle, WeaponSage::Motor_Type_E motor_type);
 
 	WeaponSage_InitData_S initData_;
+	
+	WeaponSage::Fliter_Ramp_S launch_fliter_ramp_ = {
+        .ramp__maxspeed_ = 1500000.0f,
+        .max_accel_ = 3000000.0f, //  (Motor Angle deg/s^2)
+        .current_velocity_ = 0.0f, // 记录当前 launch 速度
+        .ramp_target_ = 0.0f, 
+        .filter_k_ = 850.0f // launch 滤波器(平滑)系数，值越大响应越快，越小越平滑
+    };
+
+    
+    float caculate_ramp_target(float current, float target, WeaponSage::Fliter_Ramp_S &ramp)
+    {
+        float diff = target - current;
+        
+        float target_vel = diff * ramp.filter_k_;
+
+        // 限制目标速度
+        if (target_vel > ramp.ramp__maxspeed_) target_vel = ramp.ramp__maxspeed_;
+        if (target_vel < -ramp.ramp__maxspeed_) target_vel = -ramp.ramp__maxspeed_;
+
+        // 计算最大速度变化量
+        float max_dv = ramp.max_accel_ * 0.001;
+        if (target_vel > ramp.current_velocity_ + max_dv) 
+            ramp.current_velocity_ += max_dv;
+
+        else if (target_vel < ramp.current_velocity_ - max_dv) 
+            ramp.current_velocity_ -= max_dv;
+            
+        else 
+            ramp.current_velocity_ = target_vel;
+
+        // 计算步长
+        float step = ramp.current_velocity_ * 0.001;
+
+        // 检查是否到达目标位置
+        if(std::abs(diff) < 0.01f && std::abs(ramp.current_velocity_) < 0.1f) 
+        {
+            ramp.current_velocity_ = 0.0f; // 停止电机
+            return target;
+        }
+
+        return current + step;
+    }
 };
 
 

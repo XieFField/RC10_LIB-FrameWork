@@ -88,7 +88,6 @@ OIDEncoder oid_encoder(91, CAN2_Bus, 4096, 200);
 
 /*============================== debug  DJI_Motor ===============================*/
 
-
 void debug_init()
 {
 /*============================= debug 机械臂 ================================*/
@@ -120,13 +119,10 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 
 #if DEBUG_SHIT
 Swerve_Task_Demo swerve_task_demo; // 轮式舵轮底盘调试任务实例
-
 #endif  
 
 void ALL_Setup_ConfigInit(void)
 {
-    Serial1Protocol &serial1_protocol = Serial1Protocol::getInstance();
-
     HWT101CT* imu = HWT101CT::GetInstance(&huart1);
     imu->InitUART();
     TimeStamp::getInstance().init(&htim4);
@@ -171,7 +167,6 @@ void ALL_Setup_ConfigInit(void)
     };
     chassis.init(chassis_init_config);
 #endif
-
 
     Finite_StateMachine.registerArmSetup(&ARM_Controller);
     Finite_StateMachine.registerChassisSetup(&ChassisOmni);
@@ -288,9 +283,9 @@ void CAN_Motor_Init(void)
     PID_Param_Config weapon_wrist_anglePID = m2006_angle_pid_params;
     PID_Param_Config weapon_wrist_speedPID = m2006_speed_pid_params;
 
-    weapon_3508_anglePID.output_limit=100.0f;
+    weapon_3508_anglePID.output_limit=250.0f;
     weapon_3508_speedPID.output_limit=15000.0f;
-    weapon_2006_speedPID.output_limit=4500;
+    weapon_2006_speedPID.output_limit=3000;
     weapon_2006_anglePID.output_limit=500;
     weapon_wrist_anglePID.output_limit=100.0f;
 	weapon_wrist_speedPID.output_limit=8000.0f;
