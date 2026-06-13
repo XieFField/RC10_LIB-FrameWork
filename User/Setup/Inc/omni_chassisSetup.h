@@ -40,8 +40,6 @@ extern "C"
 #include "AutoCtrler.h"
 #include "chassis.h"
 
-#define opti 1
-
 typedef struct
 {
     Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 1.0f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -53,9 +51,9 @@ typedef struct
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     // 没用的
-    //Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};
+    // Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};
     // 原始的测试数据
-    //Speedplanner_1D_Param_Config CB = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    // Speedplanner_1D_Param_Config CB = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
 
 } PATH_PARAM;
 
@@ -73,14 +71,14 @@ typedef struct
 
 typedef struct
 {
-    float CB_spiw =0.5f;
-    float CB_pole_L =-0.18f;
-    float CB_pole_M =-0.02f;
-    float CB_pole_R =0.22f;
+    float CB_spiw = 0.5f;
+    float CB_pole_L = -0.18f;
+    float CB_pole_M = -0.02f;
+    float CB_pole_R = 0.22f;
     Vector2D CB_Start_pos = {1.0f, 0.9f};        // 夹杆起点。
     Vector2D CB_Selection_pos = {2.47f, 0.815f}; // 夹杆流程默认目标点。
     Vector2D CB_End_pos = {2.745f, 1.185f};
-    //Vector2D CB_End_pos = {4.0f-CB_spiw-0.4f-0.49f, 2.0f+CB_pole_L};  // 夹杆终点对接默认目标点。(4.0为R2对接车体位置，0.5为夹杆预留长度，0.4为R2车体半径，0.49为R1车体半径）
+    // Vector2D CB_End_pos = {4.0f-CB_spiw-0.4f-0.49f, 2.0f+CB_pole_L};  // 夹杆终点对接默认目标点。(4.0为R2对接车体位置，0.5为夹杆预留长度，0.4为R2车体半径，0.49为R1车体半径）
 } CB_POINT;
 
 typedef struct
@@ -112,7 +110,11 @@ typedef struct
     Vector2D fit_pos = {4.83f, 11.5f};
 
     float fit_yaw = 180.0f;
-
+    
+    // 左中右的索引
+    int R1_pos_index=0;
+    int R2_pos_index=0;
+    
     // 左中右
     Vector2D R1_pos[3] = {{4.535f, 11.285f}, {4.535f, 10.705f}, {4.535f, 10.185f}};
     Vector2D R2_pos[3] = {{4.535f, 11.285f}, {4.535f, 10.705f}, {4.535f, 10.185f}};
@@ -185,7 +187,7 @@ public:
 private:
     // Vector2D test_point = {3.0f, 2.0f};
     //-----------------------------------通讯标志位-----------------------------------------//
-    CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
+    CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;      // 当前底盘总状态机状态。
     CHASSIS_Status_E chassis_status_last_ = CHASSIS_STOP; // 当前底盘总状态机状态。（依旧是每个模式都赋值，用于进入自动模式时进行初始化）
 
     bool WeaponSage_Start = false; // 夹杆流程开始标志。
@@ -197,15 +199,15 @@ private:
 
     bool pid_dead_flag = false; // pid完成标志
 
-    int flag = 0;     // 自动流程起始触发位（边沿触发）。
-    //int flag_run = 0; // 自动流程运行中标志位。
+    int flag = 0; // 自动流程起始触发位（边沿触发）。
+    // int flag_run = 0; // 自动流程运行中标志位。
 
     //-----------------------------------接口监视参数-----------------------------------------//
 
     Vector2D speed = {0.0f, 0.0f};      // 合成后的底盘平移速度。
     Vector2D robot_pos_ = {0.0f, 0.0f}; // 当前机器人世界坐标。
     float yaw = 0.0f;                   // 当前机器人航向角（度）。
-    float target_yaw = 0.0f;           // 底盘锁角目标（度）。（手操模式要把当前值赋值进来，以便于自动切换时不会抽风）
+    float target_yaw = 0.0f;            // 底盘锁角目标（度）。（手操模式要把当前值赋值进来，以便于自动切换时不会抽风）
 
     //-----------------------------------规划参数-----------------------------------------//
     CB_FLAG CB_flag;
@@ -231,7 +233,7 @@ private:
 
     //-----------------------------------其他参数-----------------------------------------//
     int num = 0;
-    //int start_num = 0;
+    // int start_num = 0;
 
     Point3D ladar_data_; // 定位系统输出的原始位姿数据。
 
@@ -267,8 +269,10 @@ private:
     Vector2D spinodal_path(Vector2D last_vector, Vector2D temp_vector, int i, float spin_flag);
 
     float rotation_path(float MF_Point);
-    
+
     void Path_lock_point(Vector2D lock_point);
+
+    void Combat_Zone_Selection_Planning(void);
 
 public:
     /**
@@ -284,16 +288,16 @@ public:
         else
             flag = 0;
 
-//        if (start == 0)
-//        {
-//            start_num++;
-//            if (start_num == 3)
-//                flag_run = 0;
-//        }
-//        else
-//        {
-//            start_num = 0;
-//        }
+        //        if (start == 0)
+        //        {
+        //            start_num++;
+        //            if (start_num == 3)
+        //                flag_run = 0;
+        //        }
+        //        else
+        //        {
+        //            start_num = 0;
+        //        }
     }
 
     bool GetReach_flag()

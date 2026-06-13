@@ -82,7 +82,8 @@ typedef enum{
 
     CHASSIS_AUTO_CONTROL_CB, //夹杆自动
     CHASSIS_AUTO_CONTROL_KFS, //KFS自动
-
+    CHASSIS_AUTO_CONTROL_CZ, //KFS自动
+    
     CHASSIS_STOP,
 }CHASSIS_Status_E;
 
