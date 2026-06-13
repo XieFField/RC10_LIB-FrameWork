@@ -111,11 +111,11 @@ typedef struct
     Vector2D fit_pos = {4.83f, 11.5f};
 
     float fit_yaw = 180.0f;
-    
+
     // 左中右的索引
-    int R1_pos_index=0;
-    int R2_pos_index=0;
-    
+    int R1_pos_index = 0;
+    int R2_pos_index = 0;
+
     // 左中右
     Vector2D R1_pos[3] = {{4.535f, 11.285f}, {4.535f, 10.705f}, {4.535f, 10.185f}};
     Vector2D R2_pos[3] = {{4.535f, 11.285f}, {4.535f, 10.705f}, {4.535f, 10.185f}};
@@ -134,7 +134,9 @@ typedef struct
     bool MF3_flag = false; // 进入 MF3 目标点标志。
 
     bool MF1_finish = false; // MF1 阶段已完成标志。
-    bool MF2_finish = false; // MF1 阶段已完成标志。
+    bool MF2_finish = false; // MF2 阶段已完成标志。
+
+    bool uphill_flag = true; // 默认KFS自动后上坡进入三区
 } KFS_FLAG;
 
 typedef struct
@@ -142,6 +144,11 @@ typedef struct
     bool Selection_flag = false; // 进入 CB 目标点标志
     bool Retreat_flag = false;   // 进入 CB 停止点标志
 } CB_FLAG;
+
+typedef struct
+{
+
+} CZ_FLAG;
 
 class OmniChassis_Setup : public RtosTask, public Chassis_Omni<3>
 {
@@ -217,8 +224,8 @@ private:
     KFS_FLAG KFS_flag;
     KFS_POINT KFS_point;
 
+    CZ_FLAG CZ_flag;
     CZ_POINT CZ_point;
-
     //-----------------------------------速度规划参数--------------------------------------------//
 
     SPEED_PARAM V;
