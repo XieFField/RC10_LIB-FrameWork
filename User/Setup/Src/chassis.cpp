@@ -3824,7 +3824,12 @@ namespace jia
             if (wheel.steer_motor_h != nullptr)
             {
                 const f32 steer_sign = (wheel.steer_motor_sign == 0.0f) ? 1.0f : wheel.steer_motor_sign;
-                wheel.steer_motor_h->setTargetRPM(rpm / steer_sign);
+                const f32 expected_motor_rpm = rpm / steer_sign;
+                wheel.steer_motor_h->setTargetRPM(expected_motor_rpm);
+                if (fabsf(wheel.steer_motor_h->getTargetRPM() - expected_motor_rpm) > 1.0e-6f)
+                {
+                    wheel.steer_motor_h->setTargetRPM(expected_motor_rpm);
+                }
             }
         }
 
