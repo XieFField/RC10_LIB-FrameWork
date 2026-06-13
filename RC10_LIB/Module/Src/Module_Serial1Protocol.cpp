@@ -1,5 +1,8 @@
 #include "Module_Serial1Protocol.h"
 #include "BSP_TimeStamp.h"
+#include "FreeRTOS.h"      
+#include "task.h"  
+#include "cmsis_os.h"
 // 全局变量定义
 volatile uint8_t g_recv_data[3] = {0};
 volatile uint8_t g_recv_parity = 0;
@@ -123,24 +126,28 @@ void Serial1Protocol::sendFrame(uint8_t* data, uint8_t parity) {
     
     m_tx_complete = 0;
     buildFrame(data, parity, m_uart_send_frame);
-    if((data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00) )
-    {
-        HAL_UART_Transmit_DMA(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN);
+	  if((data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00) )
+		{
+			HAL_UART_Transmit_DMA(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN);
+		}
+	  else
+		{
+//			uint8_t test[8] = {0xFC, 0xFB, 0x12, 0x30, 0x00, 0x3B, 0xFD, 0xFE};
+//			 HAL_UART_Transmit(m_huart, test, SERIAL1_FRAME_LEN,100);
+       for (int i = 0; i < SERIAL1_SEND_TIMES; i++) {
+				 HAL_UART_Transmit(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN,100);
+//					while (HAL_UART_GetState(m_huart) & HAL_UART_STATE_BUSY_TX) {
+//							// �ȴ��ϴη������
+//					}
+					HAL_UART_Transmit_DMA(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN);
+					HAL_Delay(2);
     }
-	else
-    {
-        for (int i = 0; i < SERIAL1_SEND_TIMES; i++) 
-        {
-            // HAL_UART_Transmit(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN,100);
-            HAL_UART_Transmit_DMA(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN);
-        }
 			
-    }
+		}
 }
 
-// ========== 发送应答帧 ==========
-void Serial1Protocol::sendAckFrame(void) 
-{
+// ========== ����Ӧ��֡ ==========
+void Serial1Protocol::sendAckFrame(void) {
     if (!m_huart ) return;
     
     uint8_t ack_data[SERIAL1_DATA_LEN] = {0x00, 0x00, 0x00};
@@ -315,29 +322,25 @@ void Serial1Protocol::process(void)
     }
 }
 
-// ========== 串口回调 ==========
-void Serial1Protocol::onUartReceive(uint8_t* buffer, uint16_t size) 
-{
-    // if (size > 0 && size <= 30) 
-    // {
-    //     memcpy(m_rx_buffer, buffer, size);
-    //     m_rx_size = size;
-    //     m_rx_ready = 1;
-    //     process();
-    // }
+// ========== ���ڻص� ==========
+void Serial1Protocol::onUartReceive(uint8_t* buffer, uint16_t size) {
+    if (size > 0 && size <= 30) {
+        memcpy(m_rx_buffer, buffer, size);
+        m_rx_size = size;
+        m_rx_ready = 1;
+			  process();
+    }
 }
 
 
 void Serial1Protocol::onUartTxComplete(void) 
 {
     m_tx_complete = 1;
-
 }
 void Serial1Protocol::R1_Send_KFS(uint8_t KFS1, uint8_t KFS2, uint8_t KFS3)
 {
 		uint32_t sendata=0;
 	  sendata=(KFS1<<20|KFS2<<16|KFS3<<12);
-
 	  uint8_t send_data[3]={0};
 		send_data[0]=(sendata&0xFF0000)>>16;
 		send_data[1]=(sendata&0xFF00)>>8;
@@ -372,24 +375,39 @@ void Serial1Protocol::storeReceivedData(uint8_t* data, uint8_t parity) {
 			  Data_valid_flag=1;
     }
     else if(!has_consecutive_zeros_exceed_10(data))
-    { 
-            packet.type = DATA_TYPE_KFS;
-            memcpy(packet.data.kfs,data,3);
-            Data_valid_flag=1;
-        
-        
-    }
-    if(Data_valid_flag==1)
-    {
-        
-                    // 只保存最新一条（覆盖）
-        m_latest_packet = packet;
-        m_has_latest_data = true;
-        
-    }
+		{ 
+			  packet.type = DATA_TYPE_KFS;
+			  memcpy(packet.data.kfs,data,3);
+			  Data_valid_flag=1;
+			
+			
+		}
+		if(Data_valid_flag==1)
+		{
+			
+			    // ֻ��������һ�������ǣ�
+    m_latest_packet = packet;
+    m_has_latest_data = true;
+			
+//// ========== ���λ�����д�� ==========
+//    // ��黺�����Ƿ�����
+//    if (m_data_count >= DATA_BUFFER_SIZE) {
+//        // ������������������ɵ�����
+//        // ���������ƣ�����������ݣ�
+//        m_data_read_index = (m_data_read_index + 1) % DATA_BUFFER_SIZE;
+//        // �������䣨��Ϊ����һ��������һ����
+//    } else {
+//        m_data_count++;
+//    }
+//    
+//    // д��������
+//    m_data_buffer[m_data_write_index] = packet;
+//    m_data_write_index = (m_data_write_index + 1) % DATA_BUFFER_SIZE;
+//  	}
+		}
 }
 
-// 获取数据
+// ��ȡ����
 bool Serial1Protocol::getLatestData(DataPacket_t* packet) {
 
 	    if (!m_has_latest_data) {
