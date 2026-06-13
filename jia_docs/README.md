@@ -1,43 +1,78 @@
-﻿# jia_docs 说明
+# jia_docs
 
-该目录用于 AI 协作过程资料归档，不参与产品代码编译。
+`jia_docs` 用于归档 RC10 / AI 协作过程中的交接文档、测试资料、过程产物与当前接手入口，不参与产品代码编译。
 
-## 目录约定
+## 首选入口
 
-- `handoff/`：当前迭代交接文档（按年月分层）
-- `history/`：已归档的稳定交接记录（按年月分层）
-- `tests/`：AI 侧测试样例与脚本
-- `artifacts/`：临时产物、参考材料、过程附件
+如果你只想快速接手当前 RC10 / AI 协作状态，按这个顺序读：
 
-## 最新交接入口
+1. [active/overview.md](active/overview.md)
+2. [active/latest-handoff.md](active/latest-handoff.md)
+3. [active/onramp.md](active/onramp.md)
+4. [tests/README.md](tests/README.md)
 
-- RC10 最新交接文档：
-  - [handoff/2026-05/ai_handoff_2026-05-23_0226_rc10_steer_fault_recovery_pid_guard.md](handoff/2026-05/ai_handoff_2026-05-23_0226_rc10_steer_fault_recovery_pid_guard.md)
-  - [handoff/2026-05/ai_handoff_2026-05-21_1201_rc10_drive_gate_release_sync.md](handoff/2026-05/ai_handoff_2026-05-21_1201_rc10_drive_gate_release_sync.md)
-  - [handoff/2026-05/ai_handoff_2026-05-22_0121_rc10_near_zero_suppression_refactor.md](handoff/2026-05/ai_handoff_2026-05-22_0121_rc10_near_zero_suppression_refactor.md)
-  - [handoff/2026-05/ai_handoff_2026-05-22_1343_rc10_context_sync_after_fault_probe_revert.md](handoff/2026-05/ai_handoff_2026-05-22_1343_rc10_context_sync_after_fault_probe_revert.md)
-- 交接索引：
-  - [handoff/INDEX.md](handoff/INDEX.md)
+`active/overview.md` 是当前主线状态的高层入口；根 README 只保留稳定导航，避免重复维护容易过期的主线细节。
 
-## 本轮主题
+## 编码提示
 
-- 当前文档主线已推进到：
-  - 舵向断链故障检测闭环；
-  - 故障锁存后整车 drive 全停；
-  - 故障恢复后仅故障轮重新 homing；
-  - 锁故障即清舵向闭环状态，避免重连首拍吃到残留 PID 输出。
-- 当前最新一轮同时补充了：
-  - 宿主测试对 photogate / 舵向电流反馈的可控桩；
-  - 断链锁存阶段纯 `current=0` 语义修复；
-  - 独立 PID reconnect 风险证据化；
-  - 下一位 agent 的继续排查建议。
+文档使用 UTF-8 中文。在 Windows PowerShell 中检查中文内容时，建议显式指定编码，避免终端默认编码造成误判：
 
-## 命名规则
+```powershell
+Get-Content -Raw -Encoding UTF8 jia_docs/README.md
+```
 
-- 新交接文档统一使用：`ai_handoff_YYYY-MM-DD_HHMM_<topic>.md`
+## 当前 handoff
 
-## 维护约定
+当前最推荐优先阅读：
 
-- 每次迭代进行中：文档先落在 `handoff/`
-- 迭代稳定后：从 `handoff/` 迁移到 `history/` 并更新索引
-- 默认不删除历史记录；若要瘦身，单独做按日期清理
+- [active/latest-handoff.md](active/latest-handoff.md)
+- 当前主线文件：`2026-06-09 rc10_path_yaw_homing_build_sync`
+
+完整索引：
+
+- [handoff/INDEX.md](handoff/INDEX.md)
+
+## 主验证入口
+
+继续开发时，优先跑统一入口：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File jia_docs/tests/run_tests.ps1
+```
+
+如果只需要细跑当前 chassis doctest 宿主语义套件：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
+```
+
+如果只需要确认 chassis `RUNTIME_MIN` 极限运行固件档仍可编译运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1
+```
+
+兼容入口、专项入口和历史入口请看 [tests/README.md](tests/README.md)。
+
+## 下一步待办
+
+当前仍开放的待办与联调关注点已迁移到：
+
+- [active/next-steps.md](active/next-steps.md)
+
+旧的 `plan.txt` 会逐步退场，只作为历史兼容入口保留。
+
+## 目录说明
+
+- [active/](active/)：当前有效入口层，总览、最新 handoff、接手顺序、下一步待办。
+- [catalog/](catalog/)：元数据层，登记当前主线、测试套件、handoff 与 artifact 关联。
+- [handoff/](handoff/)：当前迭代交接流，按年月归档。
+- [history/](history/)：已冻结的稳定归档。
+- [tests/](tests/)：测试说明、统一入口、兼容包装入口、历史保留区与相关产物。
+- [artifacts/](artifacts/)：过程参考物、摘要产物、辅助附件。
+
+## 历史入口
+
+- 当前交接索引：[handoff/INDEX.md](handoff/INDEX.md)
+- 历史归档索引：[history/INDEX.md](history/INDEX.md)
+- 接手顺序：[active/onramp.md](active/onramp.md)

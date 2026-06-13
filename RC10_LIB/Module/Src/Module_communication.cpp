@@ -1,5 +1,8 @@
 #include "Module_communication.h"
 
+uint32_t rx_cnt; // 接收计数
+uint32_t tx_cnt; // 发送计数
+
 namespace communication{
     Communication::Communication(UART_HandleTypeDef *txhuart,UART_HandleTypeDef *rxhuart,
         uint8_t *tx_ring_buf,uint8_t *tx_dma_buf,uint8_t *rx_ring_buf,uint8_t *rx_dma_buf,
@@ -34,6 +37,7 @@ namespace communication{
         send_command1 = 0xCC;
         send_command2 = 0xDD;
 
+        
         rec_setting_command = 0;
         rec_setting_load1 = 0;
         rec_setting_load2 = 0;
@@ -129,9 +133,11 @@ namespace communication{
                 rec_joystick[2] = pFrame->ch3;
                 rec_joystick[3] = pFrame->ch4;
                 rec_send_key = pFrame->key;
+                rec_page = pFrame->page;
 
                 // 将 FIFO 头部读取指针越过已经正确消费的这一帧
                 rx_fifo.head = p;
+                rx_cnt++;
                 data_updated = true; // 标记数据已更新
             } else {
                 // 坏帧，跳过头部第一个错误字节，继续往后寻找
@@ -160,6 +166,7 @@ namespace communication{
 
                 // 将 FIFO 头部读取指针越过已经正确消费的这一帧
                 rx_fifo.head = p;
+                rx_cnt++;
                 data_updated = true; // 标记数据已更新
             } else {
                 // 坏帧，跳过头部第一个错误字节，继续往后寻找
@@ -176,43 +183,46 @@ namespace communication{
 
     void Communication::Comm_SendAxisDataToTxBuffer(uint16_t  x, uint16_t y, uint16_t z,uint8_t Gripper_Status, uint8_t Suction_Cup_Status,uint8_t Automatic_status, uint8_t mode, uint8_t command1, uint8_t command2)
     {
-        send_xyz[0] = x;
-        send_xyz[1] = y;
-        send_xyz[2] = z;
-        send_status = (Gripper_Status << 3) | (Suction_Cup_Status << 1) | Automatic_status;
-        send_mode = mode;
-        send_command1 = command1;
-        send_command2 = command2;
+        if(tx_busy==0) {
+            send_xyz[0] = x;
+            send_xyz[1] = y;
+            send_xyz[2] = z;
+            send_status = (Gripper_Status << 3) | (Suction_Cup_Status << 1) | Automatic_status;
+            send_mode = mode;
+            send_command1 = command1;
+            send_command2 = command2;
 
-            XYZFrame_t frame;
-        frame.header[0] = 0x55;
-        frame.header[1] = 0xAA;
-        // 把 3 个16位的坐标数据数据打包
-        frame.x = send_xyz[0];
-        frame.y = send_xyz[1];
-        frame.z = send_xyz[2];
-        frame.status = send_status;
-        frame.mode = send_mode;
-        frame.command1 = send_command1;
-        frame.command2 = send_command2;
-        frame.crc = crc8((uint8_t*)&frame + 2, sizeof(XYZFrame_t) - 4);
-        frame.tail = 0xED;
+                XYZFrame_t frame;
+            frame.header[0] = 0x55;
+            frame.header[1] = 0xAA;
+            // 把 3 个16位的坐标数据数据打包
+            frame.x = send_xyz[0];
+            frame.y = send_xyz[1];
+            frame.z = send_xyz[2];
+            frame.status = send_status;
+            frame.mode = send_mode;
+            frame.command1 = send_command1;
+            frame.command2 = send_command2;
+            frame.crc = crc8((uint8_t*)&frame + 2, sizeof(XYZFrame_t) - 4);
+            frame.tail = 0xED;
 
-        uint8_t* ptr = (uint8_t*)&frame;
-        for (int i = 0; i < sizeof(XYZFrame_t); i++) {
-            FIFO_Push(tx_fifo, ptr[i]);
-        }
-        
-        // 尝试拉起发送：如果底部DMA空闲，且队列里有东西
-        if (tx_busy == 0 && FIFO_Count(tx_fifo) > 0) {
-            if(HAL_GPIO_ReadPin(this->tx_aux_port, this->tx_aux_pin) == GPIO_PIN_SET)
-            {
-                Comm_TxBufferToTxDMA(txhuart); 
+            uint8_t* ptr = (uint8_t*)&frame;
+            for (int i = 0; i < sizeof(XYZFrame_t); i++) {
+                FIFO_Push(tx_fifo, ptr[i]);
+            }
+            
+            // 尝试拉起发送：如果底部DMA空闲，且队列里有东西
+            if (tx_busy == 0 && FIFO_Count(tx_fifo) > 0) {
+                if(HAL_GPIO_ReadPin(this->tx_aux_port, this->tx_aux_pin) == GPIO_PIN_SET)
+                {
+                    Comm_TxBufferToTxDMA(txhuart); 
+                }
             }
         }
+        
     }
 
-void Communication::Comm_SendAnyDataToTxBuffer(const uint8_t* data, uint16_t len)
+    void Communication::Comm_SendAnyDataToTxBuffer(const uint8_t* data, uint16_t len)
     {
         if (data == NULL || len == 0) return;
 
@@ -252,6 +262,7 @@ void Communication::Comm_SendAnyDataToTxBuffer(const uint8_t* data, uint16_t len
                 
                 tx_busy = 1; // 锁定发送状态
                 Comm_TxUseTxDMA(txhuart, dma_tx_buf, count);
+                tx_cnt++;
             } else {
                 // 如果且仅如果队列已经为空了，清除忙碌标志位
                 tx_busy = 0;
@@ -263,17 +274,14 @@ void Communication::Comm_SendAnyDataToTxBuffer(const uint8_t* data, uint16_t len
     void Communication::Comm_RxDMAToRxBuffer(UART_HandleTypeDef *rxhuart_param, uint16_t size)
     {
         if (this->rxhuart == rxhuart_param) {
-            // 【新增】使 Cache 中对应的区域无效化，迫使 CPU 接下来直接去 SRAM 读取 DMA 传来的新数据
-            SCB_InvalidateDCache_by_Addr((uint32_t*)dma_rx_buf, DMA_BUF_SIZE);
+            // 注意：SCB_InvalidateDCache 和 HAL_UARTEx_ReceiveToIdle_DMA
+            // 已由 RC_serial.cpp 的 All_Uart_Rx_It_Process 统一处理，
+            // 此处重复调用会导致 DMA 连续重启两次，中间窗口期可能丢数据
 
             // DMA 中断来了，将其固定缓存段里收到的数据复制到业务层的 RX 环形缓冲区中
             for (uint16_t i = 0; i < size; i++) {
                 FIFO_Push(rx_fifo, dma_rx_buf[i]);
             }
-            
-            // 立即开启下一次 DMA 接收，防止漏包
-            HAL_UARTEx_ReceiveToIdle_DMA(rxhuart_param, dma_rx_buf, DMA_BUF_SIZE);
-            // __HAL_DMA_DISABLE_IT(rxhuart->hdmarx, DMA_IT_HT);
         }
     }
 }

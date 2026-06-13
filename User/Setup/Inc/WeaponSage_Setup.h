@@ -1,7 +1,7 @@
 /**
  * @file WeaponSage_Setup.h
  * @author XieFField 70er66
- * @brief ÎäÆ÷¼Ü¿ØÖÆÊµÏÖ
+ * @brief æ­¦å™¨æ¶æ§åˆ¶å®ç°
  * @version 1.0
  */
 
@@ -34,13 +34,23 @@ namespace WeaponSage_Setup
     typedef struct{
         bool init_flag = false;
 
-        float debug_start = 1; //debug_start = 1±íÊ¾¿ªÊ¼µ÷ÊÔ
+        float debug_start = 1; //debug_start = 1è¡¨ç¤ºå¼€å§‹è°ƒè¯•
 		float now_times=0.0f;
         float calibrate_startTime = 0.0f;
         bool calibrate_start = false;
         bool is_calibrating = false;
 
-        int target_poleIndex = 0; //0~3ºÅË÷ÒıµÄÃ¬¸Ë
+        float closeclaw_startTime = 0.0f;
+        float untight_startTime = 0.0f;
+
+        bool is_closeclaw_start = false;
+        bool is_untight_start = false;
+
+        bool is_wrist_start=false;
+        float wrist_startTime=0.0f;
+
+
+        int target_poleIndex = 0; //0~3å·ç´¢å¼•çš„çŸ›æ†
         
         int8_t last_manual_claw_state = 0; // 0: open, 1: close
         int8_t claw_switch_offset = 0;
@@ -53,22 +63,22 @@ namespace WeaponSage_Setup
         int8_t arm_switch_offset = 0;
         int8_t last_arm_switch_state = 0;
 
-        int8_t isArm_Vertical;   //ÊúÖ±1 Ë®Æ½0
+        int8_t isArm_Vertical;   //ç«–ç›´1 æ°´å¹³0
         int8_t last_isArm_Vertical;
 
-        bool wrist_rotate_enable = false; //ÊÖÍó×ª¶¯ÄÜ±êÖ¾Î»
+        bool wrist_rotate_enable = false; //æ‰‹è…•è½¬åŠ¨èƒ½æ ‡å¿—ä½
 
-        bool is_claw_1_closed = false; // ¼Ğ×¦1ÊÇ·ñ±ÕºÏµÄ×´Ì¬
-        bool is_claw_2_closed = false; // ¼Ğ×¦2ÊÇ·ñ±ÕºÏµÄ×´Ì¬ 
-        bool is_claw_3_closed = false; // ¼Ğ×¦3ÊÇ·ñ±ÕºÏµÄ×´Ì¬
+        bool is_claw_1_closed = false; // å¤¹çˆª1æ˜¯å¦é—­åˆçš„çŠ¶æ€
+        bool is_claw_2_closed = false; // å¤¹çˆª2æ˜¯å¦é—­åˆçš„çŠ¶æ€ 
+        bool is_claw_3_closed = false; // å¤¹çˆª3æ˜¯å¦é—­åˆçš„çŠ¶æ€
     }ctrl_status_S;
 
     typedef enum{
-        //½«×Ô¶¯¹ı³ÌµÄÃ¿¸ö×´Ì¬Ã¶¾Ù
+        //å°†è‡ªåŠ¨è¿‡ç¨‹çš„æ¯ä¸ªçŠ¶æ€æšä¸¾
         STATE_START,
         STATE_ARM_MOVE,
         STATE_CLAW_ADJUST,
-        STATE_LAUNCH_MOVE,
+        STATE_SAGE_ADJUST,
         STATE_DONE,
     }auto_GRABstate_S;
 
@@ -77,7 +87,7 @@ namespace WeaponSage_Setup
         float last_right_stick_x = 0.0f;
         float last_right_stick_y = 0.0f;
 
-        bool changeTarget_state = false; //±ä¸üÄ¿±ê×´Ì¬±êÖ¾Î»
+        bool changeTarget_state = false; //å˜æ›´ç›®æ ‡çŠ¶æ€æ ‡å¿—ä½
    
     }manual_ctrlForgrip_S;
 
@@ -87,23 +97,33 @@ namespace WeaponSage_Setup
 			bool is_matching = false;  
             bool dock_start = false;
 			bool arm_enable=false;
-        }auto_state_bool_S; //¾Ö²¿×´Ì¬½á¹¹Ìå
-		float claw_close_pos = 32.36f;
-        float claw_open_pos = 49.58f;
-        float safe_height = 0.0f; 
-;
+            bool launch_enable=false;
+            bool wrist_enable=false;
+        }auto_state_bool_S; //å±€éƒ¨çŠ¶æ€ç»“æ„ä½“
         struct{
+            bool is_reach_sagelowest = false; //å½“å‡é™è¾¾åˆ°æœ€ä½ç‚¹è§†ä¸ºå·²ç»å®Œæˆä¸‹é™
+            bool is_reach_closedclaw = false; //å½“å¤¹çˆªåˆ°è¾¾ç›®æ ‡ä½ç½®è§†ä¸ºå·²ç»å®ŒæˆæŠ“å–
+            bool is_reach_start = false;
             bool is_clawed=false;
-            bool is_catched=false;  //µ±¼Ğ×¦µ½´ï°²È«¸ß¶ÈÊÓÎªÒÑ¾­Íê³É×¥È¡
+            bool is_untight=false;
+            bool is_catched=false;  //å½“å¤¹çˆªåˆ°è¾¾å®‰å…¨é«˜åº¦è§†ä¸ºå·²ç»å®ŒæˆæŠ“å–
             bool is_moved=false;
-
+            bool is_prepared=false; //å‡†å¤‡å°±ç»ªï¼Œæ»¡è¶³æŠ“å–æ¡ä»¶
+			bool is_arm_reset=false;
         }flag;
         bool auto_ctrl1 = true;
         int pole_num = 1;
         bool claw_flag[3]={false,false,false};
+        struct{
+            float launch_start = 0.5f;
+            float launch_catch =0.0f;
+            float launch_untight =0.4f;
+            float launch_clawclosed = 0.8f;
+            float launch_rotate =1.0f;
+        }launch_kp;
     }auto_ctrl_S;
 
-     extern float weapon_pos[4];//ÎäÆ÷Î»ÖÃÊı×é
+     extern float weapon_pos[4];//æ­¦å™¨ä½ç½®æ•°ç»„
 
 
     typedef enum WeaponDock_E
@@ -123,7 +143,7 @@ public:
     Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data);
     
     /**
-     * @brief ±ØĞëÔÚ×¢²áÍêËùÓĞµç»úºóµ÷ÓÃÒ»´Î init() À´Æô¶¯ÈÎÎñºÍÍê³É±ØÒªµÄ³õÊ¼»¯£¬·ñÔòÎäÆ÷¼Ü½«ÎŞ·¨Õı³£¹¤×÷
+     * @brief å¿…é¡»åœ¨æ³¨å†Œå®Œæ‰€æœ‰ç”µæœºåè°ƒç”¨ä¸€æ¬¡ init() æ¥å¯åŠ¨ä»»åŠ¡å’Œå®Œæˆå¿…è¦çš„åˆå§‹åŒ–ï¼Œå¦åˆ™æ­¦å™¨æ¶å°†æ— æ³•æ­£å¸¸å·¥ä½œ
      */
     void init(OIDEncoder * wrist_encoder)
     {
@@ -139,15 +159,16 @@ public:
             return;
         }
 
-        start(osPriorityNormal, 512);
-
+        start(osPriorityNormal, 1024);
+		wrist_encoder_ = wrist_encoder;
+		
         ctrl_status_.init_flag = true;
     }
 
     void setLowerClawStart(bool start)
     {
         
-    }
+    };
 
     bool isWeaponSageCalibrated() const
     {
@@ -208,9 +229,23 @@ public:
         ctrl_status_.is_claw_3_closed = claw_3;
     }
 
-    bool Close_TargetClaw();
+    void Close_TargetClaw();
     void Close_TargetClaw_Untight();
-
+    void Judge_launch_status();
+    void Judge_wrist_status();
+    
+    bool Get_Catch_flag(void)
+    {
+        return auto_ctrl_.flag.is_catched;
+    }
+    void Get_OMNI_IM_flag(bool a)
+    {
+        auto_ctrl_.auto_state_bool_S.is_matching=a;
+    }
+    void Get_OMNI_DS_flag(bool a)
+    {
+        auto_ctrl_.auto_state_bool_S.dock_start=a;
+    }
 protected:
     void loop() override;
 
@@ -225,23 +260,23 @@ private:
     void idle();
     void stop();
     void debug();
-    void autoControl_catch();
+    bool autoControl_catch();
     void autoControl_dock();
-
+    void autoControl();
     void calibrate();
 
 
     
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 
-    
-    WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
-	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_IDLE;
+    uint8_t auto_control_state_ = 0;
+    WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_STOP;
+	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_STOP;
 	WeaponSage_Setup::auto_GRABstate_S now_state_=WeaponSage_Setup::STATE_START;
 
     WeaponSage_Setup::WeaponDock_E target_dock_ = WeaponSage_Setup::MID; // for auto_dock
 
-    bool weapon_CameraStart = false; // Ö÷×´Ì¬»ú´¥·¢Ïà»úÁ÷³ÌµÄ±êÖ¾Î»¡£
+    bool weapon_CameraStart = false; // ä¸»çŠ¶æ€æœºè§¦å‘ç›¸æœºæµç¨‹çš„æ ‡å¿—ä½ã€‚
     bool debug_launch_target_valid_ = false;
     float debug_launch_target_ = 0.0f;
 
@@ -251,6 +286,8 @@ private:
     WeaponSage_Setup::manual_ctrlForgrip_S manual_ctrlForgrip_;
 
     OIDEncoder *wrist_encoder_ = nullptr;
+	
+	volatile float wrist_encoder_angle_ = 0.0f;
 };
 
 extern WeaponSage_InitData_S initData_;

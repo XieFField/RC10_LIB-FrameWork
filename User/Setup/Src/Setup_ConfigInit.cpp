@@ -5,6 +5,8 @@ extern "C"
 {
     extern USBD_HandleTypeDef hUsbDeviceHS;
 }
+
+Serial1Protocol* 	m_serial1 = Serial1Protocol::getInstance();
 fdCANbus *const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取 FDCAN1 唯一实例
 fdCANbus *const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // 获取 FDCAN2 唯一实例
 fdCANbus *const CAN3_Bus = fdCANbus::getInstance(&hfdcan3);
@@ -19,14 +21,11 @@ DJI_Group DJIGroupCAN3_High(send_idHigh(), CAN3_Bus); // 5~8号 M3508/M2006 电�
 DJI_Group DJIGroupCAN3_Low(send_idLow(), CAN3_Bus);   // 1~4号 M3508/M2006 电机组
 
 Point2D arm_install_offset = {0.480f, 0.02f}; // 机械臂安装偏移，单位 m
-Serial1Protocol_Debug g_serial1_debug;
-//Serial1Protocol& g_serialProto1=Serial1Protocol::getInstance();
 
 
 /*==============Controller Instances===========*/
 //USB_CDC_ cdc(&hUsbDeviceHS);
 USB_CDC_ usb_1(&hUsbDeviceHS);
-JY61_IMU IMU(JY61_ADDR,&hi2c5);
 Chassis_Omni<3>::init_config chassis_initData = {
     .wheel_radius = 0.15f / 2.f,
     .max_wheel_rpm = 420,
@@ -89,7 +88,6 @@ OIDEncoder oid_encoder(91, CAN2_Bus, 4096, 200);
 
 /*============================== debug  DJI_Motor ===============================*/
 
-
 void debug_init()
 {
 /*============================= debug 机械臂 ================================*/
@@ -122,11 +120,11 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 
 #if DEBUG_SHIT
 Swerve_Task_Demo swerve_task_demo; // 轮式舵轮底盘调试任务实例
-
 #endif  
+
 void ALL_Setup_ConfigInit(void)
 {
-
+	  m_serial1->init(&huart2);
     HWT101CT* imu = HWT101CT::GetInstance(&huart1);
     imu->InitUART();
     TimeStamp::getInstance().init(&htim4);
@@ -136,10 +134,11 @@ void ALL_Setup_ConfigInit(void)
     ARM_Controller.init(&arm_launchMotor, &arm_stretchMotor, &arm_rotateMotor, &arm_pitchMotor);
     ARM_Controller.setArmStatus(ARM_CALIBRATE);
     
-    Weapon_Controller.init(&oid_encoder);
+    
     Weapon_Controller.register_motors(&Weapon_Claw1, &Weapon_Claw2, &Weapon_Claw3, &Weapon_Launch, &Weapon_Wrist, &Weapon_Elbow);
+	  Weapon_Controller.init(&oid_encoder);
     Weapon_Controller.setWeaponSageControlStatus(WEAPONSAGE_CALIBRATE);
-    g_serial1_debug.init();
+
     ChassisOmni.init();
 
     ChassisOmni.setChassisStatus(CHASSIS_STOP);
@@ -155,22 +154,21 @@ void ALL_Setup_ConfigInit(void)
 
 #if JIA_USE_FOUR_STEER_CHASSIS && !TEST_TEMP && !DEBUG_SHIT
     Chassis::InitConfig chassis_init_config =
-        {
-            // 转向电机句柄（按轮序 0~3 对应）
-            .steer_motor_h[0] = &steer1,
-            .steer_motor_h[1] = &steer2,
-            .steer_motor_h[2] = &steer3,
-            .steer_motor_h[3] = &steer4,
+    {
+        // 转向电机句柄（按轮序 0~3 对应）
+        .steer_motor_h[0] = &steer1,
+        .steer_motor_h[1] = &steer2,
+        .steer_motor_h[2] = &steer3,
+        .steer_motor_h[3] = &steer4,
 
-            // 驱动电机句柄（按轮序 0~3 对应）
-            .drive_motor_h[0] = &U8_1,
-            .drive_motor_h[1] = &U8_2,
-            .drive_motor_h[2] = &U8_3,
-            .drive_motor_h[3] = &U8_4,
-        };
+        // 驱动电机句柄（按轮序 0~3 对应）
+        .drive_motor_h[0] = &U8_1,
+        .drive_motor_h[1] = &U8_2,
+        .drive_motor_h[2] = &U8_3,
+        .drive_motor_h[3] = &U8_4,
+    };
     chassis.init(chassis_init_config);
 #endif
-
 
     Finite_StateMachine.registerArmSetup(&ARM_Controller);
     Finite_StateMachine.registerChassisSetup(&ChassisOmni);
@@ -182,19 +180,14 @@ void ALL_Setup_ConfigInit(void)
 
     CrsfReceiver* crsf_rc = CrsfReceiver::GetInstance(&huart7);
     crsf_rc->init();
-    communication::Lora_communication::GetInstance(
-        &huart5,             // tx: UART5
-        &huart6,             // rx: UART6
-        Lora_IO1_GPIO_Port,               // tx_aux_port
-        Lora_IO1_Pin,          // tx_aux_pin
-        Lora_IO2_GPIO_Port,               // rx_aux_port
-        Lora_IO2_Pin,          // rx_aux_pin
-        nullptr              // timer
-    )->Init();
-				
+
+    communication::Lora_communication::GetInstance()->Init();
+
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
     set1->locate_setup_init();
     set1->set_startToLRL(true);
+		
+		
 }
 
 void CAN_Motor_Init(void)
@@ -256,8 +249,15 @@ void CAN_Motor_Init(void)
     steer3.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
     steer4.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
 
-   U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
-   U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
+   U8_1.reset_controlFrequency(200);  U8_2.reset_controlFrequency(200);
+   U8_3.reset_controlFrequency(200);  U8_4.reset_controlFrequency(200);
+
+   // 底盘 VESC 驱动轮切到本地 PID 速度闭环模式
+   // 仅 drive 轮默认开启微分先行，其余电机保持默认关闭，不走这条策略。
+   U8_1.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_1.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_2.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_2.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_3.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_3.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_4.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_4.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
 
 
     // 机械臂电机 PID 参数初始化
@@ -284,17 +284,23 @@ void CAN_Motor_Init(void)
     PID_Param_Config weapon_2006_speedPID = m2006_speed_pid_params;
     PID_Param_Config weapon_2006_anglePID =m2006_angle_pid_params;
 
-    weapon_3508_anglePID.output_limit=200.0f;
+    PID_Param_Config weapon_wrist_anglePID = m2006_angle_pid_params;
+    PID_Param_Config weapon_wrist_speedPID = m2006_speed_pid_params;
+
+    weapon_3508_anglePID.output_limit=250.0f;
     weapon_3508_speedPID.output_limit=15000.0f;
-    weapon_2006_speedPID.output_limit=4500;
+    weapon_2006_speedPID.output_limit=3000;
     weapon_2006_anglePID.output_limit=500;
-    
+    weapon_wrist_anglePID.output_limit=100.0f;
+	weapon_wrist_speedPID.output_limit=8000.0f;
+
     Weapon_Launch.pid_init(weapon_3508_speedPID, 0.0f, weapon_3508_anglePID, 0.0f);
     Weapon_Claw1.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
     Weapon_Claw2.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
     Weapon_Claw3.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
-    Weapon_Wrist.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
+    Weapon_Wrist.pid_init(weapon_wrist_speedPID, 0.0f, weapon_wrist_anglePID, 0.0f);
 
     Weapon_Elbow.reset_controlFrequency(100); // 肘部电机降到 100Hz，减轻总线负载
 }
+
 

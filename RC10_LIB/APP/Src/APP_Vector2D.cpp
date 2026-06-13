@@ -86,7 +86,11 @@ Vector2D operator*(float32_t scalar, const Vector2D &vec)
  */
 float32_t Vector2D::magnitude() const
 {
-    return sqrt(this->x * this->x + this->y * this->y);
+    // return sqrt(this->x * this->x + this->y * this->y);
+    float sum = this->x * this->x + this->y * this->y;
+    float r;
+    arm_sqrt_f32(sum, &r);
+    return r;
 }
 
 /**

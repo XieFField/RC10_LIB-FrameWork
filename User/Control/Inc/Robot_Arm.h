@@ -40,7 +40,7 @@ extern "C" {
 #include "Motor_DM.h"
 
 /**
- * @brief 一锟叫碉拷位锟斤拷锟斤拷锟阶和讹拷
+ * @brief
  */
 typedef struct {
     float max_launchHeight_ = 0.0f; // 升降最大行程，单位米 0
@@ -50,30 +50,41 @@ typedef struct {
     float max_pitchRPM_ = 50.0f; // 末端关节最大转速，单位RPM   
     float rotate_end = 265.0f;
     float rotate_start = 135.0f;
-    float store_ext_length_ =0.0f; //存储时候伸展长度
-    
+    float store_ext_length_ =0.0658f; //存储时候伸展长度
+
 
     float stretch_Ratio_ = 0.0f; // 伸展比率，伸展电机转一圈，伸展多少米   0.0942米(94.2mm)
     float launch_Ratio_ = 0.0f; // 升降比率，升降电机转一圈，升降多少米    0.01099米(109.9mm)
-    float rotate_gearRatio_ = 0.0f; // 旋转减速比，旋转电机转一圈，机械臂转多少度 144.878度()   电机转222.289627度，机械臂转90度。  新矫正145.755789度
+    float rotate_gearRatio_ = 0.0f; // 旋转减速比，旋转电机转一圈，机械臂转多少度 115.179f
     float pitch_gearRatio_ = 0.0f; // 俯仰减速比，俯仰电机转一圈，末端关节转多少度 360度，直驱
     float min_rotate_angle_ = 0.0f; // 最小旋转角度
     float max_rotate_angle_ = 0.0f; // 最大旋转角度
     float safe_height_ = 0.0f; // 安全高度
-    float store_height_ = 0.0f; // 储存高度
+    float store_height_inside_ = 0.0f; // 储存高度
+    float store_height_outside_ = 0.0f; // 储存高度
+
     float lock_height_ = 0.0f; // 云台锁定高度
+    float pick_up_height_ =0.0f; //拾取高度
+    float putdown_height_ = 0.0f; //放置高度
+    float pitch_lift_angle_ = 91.0f; //俯仰抬平角度
 
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘GPIO控制端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘GPIO控制引脚
 
-    GPIO_TypeDef* Store_GPIO_Port; // 储存位GPIO控制端口
-    uint16_t Store_GPIO_Pin;      // 储存位GPIO控制引脚
+    GPIO_TypeDef* StoreOutside_GPIO_Port; // 储存位GPIO控制端口
+    uint16_t StoreOutside_GPIO_Pin;      // 储存位GPIO控制引脚
+
+    GPIO_TypeDef* StoreInside_GPIO_Port; // 储存位GPIO控制端口
+    uint16_t StoreInside_GPIO_Pin;      // 储存位GPIO控制引脚
 
     GPIO_TypeDef* Sucker_Soleniod_GPIO_Port; // 吸盘电磁阀GPIO控制端口
     uint16_t Sucker_Soleniod_GPIO_Pin;      // 吸盘电磁阀GPIO控制引脚
 
-    GPIO_TypeDef* Store_Soleniod_GPIO_Port; // 储存位电磁阀GPIO控制端口
-    uint16_t Store_Soleniod_GPIO_Pin;      // 储存位电磁阀GPIO控制引脚
+    GPIO_TypeDef* StoreOutside_Soleniod_GPIO_Port; // 储存位电磁阀GPIO控制端口
+    uint16_t StoreOutside_Soleniod_GPIO_Pin;      // 储存位电磁阀GPIO控制引脚
+
+    GPIO_TypeDef* StoreInside_Soleniod_GPIO_Port; // 储存位电磁阀GPIO控制端口
+    uint16_t StoreInside_Soleniod_GPIO_Pin;      // 储存位电磁阀GPIO控制引脚
 }Arm_InitData_S;
 
 typedef enum {
@@ -197,11 +208,13 @@ public:
 
     void setSuckerStatus(Sucker_Status_E status){ sucker_status_ = status; }
 
-    void setStoreSuckerStatus(Sucker_Status_E status){ store_sucker_status_ = status; }
+    void setStoreSuckerStatus_OutSide(Sucker_Status_E status){ store_sucker_outside_status_ = status; }
+    void setStoreSuckerStatus_InSide(Sucker_Status_E status){ store_sucker_inside_status_ = status; }
 
     Sucker_Status_E getSuckerStatus() const { return sucker_status_; }
 
-    Sucker_Status_E getStoreSuckerStatus() const { return store_sucker_status_; }
+    Sucker_Status_E getStoreSuckerStatus_OutSide() const { return store_sucker_outside_status_; }
+    Sucker_Status_E getStoreSuckerStatus_InSide() const { return store_sucker_inside_status_; }
 
     /**
      * @brief 旋转角度合法化，确保旋转角度在合理范围内，避免超出机械限制
@@ -270,7 +283,8 @@ private:
     Arm_Point_S arm_ = {0.0f, 0.0f, 0.0f, 0.0f}; // 当前点
 
     Sucker_Status_E sucker_status_ = Sucker_Status_E::STOP; // 吸附状态
-    Sucker_Status_E store_sucker_status_ = Sucker_Status_E::STOP; // 储位吸附状态
+    Sucker_Status_E store_sucker_outside_status_ = Sucker_Status_E::STOP; // 储位吸附状态
+    Sucker_Status_E store_sucker_inside_status_ = Sucker_Status_E::STOP; // 储位吸附状态
 
 
     Arm_control_mode_E control_mode_ = TARGET_POSITION_MODE; // 机械臂控制模式
@@ -287,44 +301,44 @@ private:
 protected:
 /*================================================================*/
     /*关节位置->电机角度*/
-    float launchHeight_to_MotorTotalAngle(float height)
+    constexpr inline float launchHeight_to_MotorTotalAngle(float height)
     {
         return sign_reversed_.sign_launch_ * height / init_data_.launch_Ratio_ * 360.0f;
     }
 
-    float stretchLength_to_MotorTotalAngle(float length)
+    constexpr inline float stretchLength_to_MotorTotalAngle(float length)
     {
         return sign_reversed_.sign_stretch_ * length / init_data_.stretch_Ratio_ * 360.0f;
     }
 
-    float rotateAngle_to_MotorTotalAngle(float angle)
+    constexpr inline float rotateAngle_to_MotorTotalAngle(float angle)
     {
         return sign_reversed_.sign_rotate_ * angle / init_data_.rotate_gearRatio_ * 360.0f;
     }
 
-    float pitchAngle_to_MotorTotalAngle(float angle)
+    constexpr inline float pitchAngle_to_MotorTotalAngle(float angle)
     {
         return sign_reversed_.sign_pitch_ * angle / init_data_.pitch_gearRatio_ * 360.0f;
     }
     
 /*=================================================================*/
     /*电机角度->关节位置*/
-    float MotorTotalAngle_to_launchHeight(float motor_angle)
+    constexpr inline float MotorTotalAngle_to_launchHeight(float motor_angle)
     {
         return sign_reversed_.sign_launch_ * motor_angle * init_data_.launch_Ratio_ / 360.0f;
     }
 
-    float MotorTotalAngle_to_stretchLength(float motor_angle)
+    constexpr inline float MotorTotalAngle_to_stretchLength(float motor_angle)
     {
         return sign_reversed_.sign_stretch_ * motor_angle * init_data_.stretch_Ratio_ / 360.0f;
     }
 
-    float MotorTotalAngle_to_rotateAngle(float motor_angle)
+    constexpr inline float MotorTotalAngle_to_rotateAngle(float motor_angle)
     {
         return sign_reversed_.sign_rotate_ * motor_angle * init_data_.rotate_gearRatio_ / 360.0f;
     }
 
-    float MotorTotalAngle_to_pitchAngle(float motor_angle)
+    constexpr inline float MotorTotalAngle_to_pitchAngle(float motor_angle)
     {
         return sign_reversed_.sign_pitch_ * motor_angle * init_data_.pitch_gearRatio_ / 360.0f;
     }
@@ -370,7 +384,7 @@ private:
     };
 
     
-    float caculate_ramp_target(float current, float target, Fliter_Ramp_S &ramp)
+    constexpr inline float caculate_ramp_target(float current, float target, Fliter_Ramp_S &ramp)
     {
         float diff = target - current;
         

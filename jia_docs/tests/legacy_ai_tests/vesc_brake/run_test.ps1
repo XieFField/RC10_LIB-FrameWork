@@ -1,30 +1,4 @@
 $ErrorActionPreference = 'Stop'
-
-$testsRoot = Split-Path -Parent $PSScriptRoot
-$aiRoot = Split-Path -Parent $testsRoot
-$projectRoot = Split-Path -Parent $aiRoot
-$repo = Join-Path $projectRoot 'RC10_LIB-FrameWork'
-$outDir = Join-Path $PSScriptRoot 'build'
-if (-not (Test-Path $outDir)) {
-    New-Item -ItemType Directory -Path $outDir | Out-Null
-}
-
-$exe = Join-Path $outDir ("test_motor_vesc_{0}.exe" -f [System.Guid]::NewGuid().ToString('N'))
-$stubDir = Join-Path $PSScriptRoot 'stubs'
-$motorInc = Join-Path $repo 'RC10_LIB\\Motor\\Inc'
-$motorSrc = Join-Path $repo 'RC10_LIB\\Motor\\Src\\Motor_VESC.cpp'
-$testSrc = Join-Path $PSScriptRoot 'test_motor_vesc.cpp'
-
-& 'C:\Qt\Tools\mingw1310_64\bin\g++.exe' `
-    '-std=c++17' `
-    '-I' $stubDir `
-    '-I' $motorInc `
-    $motorSrc `
-    $testSrc `
-    '-o' $exe
-
-& $exe
-if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
-}
-Write-Host 'vesc_brake test: PASS'
+$compat = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'shared\compat_wrapper.ps1'
+& powershell -ExecutionPolicy Bypass -File $compat -SuiteId 'host_cpp.vesc_brake'
+exit $LASTEXITCODE

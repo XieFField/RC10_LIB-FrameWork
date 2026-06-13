@@ -82,7 +82,7 @@
           </BeforeMake>
           <AfterMake>
             <RunUserProg1>0</RunUserProg1>
-            <RunUserProg2>1</RunUserProg2>
+            <RunUserProg2>0</RunUserProg2>
             <UserProg1Name></UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
@@ -330,8 +330,8 @@
             <uC99>1</uC99>
             <uGnu>1</uGnu>
             <useXO>0</useXO>
-            <v6Lang>5</v6Lang>
-            <v6LangP>8</v6LangP>
+            <v6Lang>6</v6Lang>
+            <v6LangP>9</v6LangP>
             <vShortEn>1</vShortEn>
             <vShortWch>1</vShortWch>
             <v6Lto>0</v6Lto>
@@ -470,62 +470,6 @@
               <FileName>fdcan.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/fdcan.c</FilePath>
-            </File>
-            <File>
-              <FileName>i2c.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../Core/Src/i2c.c</FilePath>
-              <FileOption>
-                <CommonProperty>
-                  <UseCPPCompiler>2</UseCPPCompiler>
-                  <RVCTCodeConst>0</RVCTCodeConst>
-                  <RVCTZI>0</RVCTZI>
-                  <RVCTOtherData>0</RVCTOtherData>
-                  <ModuleSelection>0</ModuleSelection>
-                  <IncludeInBuild>1</IncludeInBuild>
-                  <AlwaysBuild>2</AlwaysBuild>
-                  <GenerateAssemblyFile>2</GenerateAssemblyFile>
-                  <AssembleAssemblyFile>2</AssembleAssemblyFile>
-                  <PublicsOnly>2</PublicsOnly>
-                  <StopOnExitCode>11</StopOnExitCode>
-                  <CustomArgument></CustomArgument>
-                  <IncludeLibraryModules></IncludeLibraryModules>
-                  <ComprImg>1</ComprImg>
-                </CommonProperty>
-                <FileArmAds>
-                  <Cads>
-                    <interw>2</interw>
-                    <Optim>0</Optim>
-                    <oTime>2</oTime>
-                    <SplitLS>2</SplitLS>
-                    <OneElfS>2</OneElfS>
-                    <Strict>2</Strict>
-                    <EnumInt>2</EnumInt>
-                    <PlainCh>2</PlainCh>
-                    <Ropi>2</Ropi>
-                    <Rwpi>2</Rwpi>
-                    <wLevel>0</wLevel>
-                    <uThumb>2</uThumb>
-                    <uSurpInc>2</uSurpInc>
-                    <uC99>2</uC99>
-                    <uGnu>2</uGnu>
-                    <useXO>2</useXO>
-                    <v6Lang>0</v6Lang>
-                    <v6LangP>0</v6LangP>
-                    <vShortEn>2</vShortEn>
-                    <vShortWch>2</vShortWch>
-                    <v6Lto>2</v6Lto>
-                    <v6WtE>2</v6WtE>
-                    <v6Rtti>2</v6Rtti>
-                    <VariousControls>
-                      <MiscControls></MiscControls>
-                      <Define></Define>
-                      <Undefine></Undefine>
-                      <IncludePath></IncludePath>
-                    </VariousControls>
-                  </Cads>
-                </FileArmAds>
-              </FileOption>
             </File>
             <File>
               <FileName>tim.c</FileName>
@@ -1020,7 +964,7 @@
                 <FileArmAds>
                   <Cads>
                     <interw>2</interw>
-                    <Optim>4</Optim>
+                    <Optim>3</Optim>
                     <oTime>2</oTime>
                     <SplitLS>2</SplitLS>
                     <OneElfS>2</OneElfS>
@@ -1076,11 +1020,6 @@
               <FileName>APP_Speedplanner.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\APP\Src\APP_Speedplanner.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>APP_Utils.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\APP\Src\APP_Utils.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -1162,11 +1101,6 @@
               <FileName>Module_Air_joy.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Module\Inc\Module_Air_joy.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_Air_joy.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_Air_joy.cpp</FilePath>
             </File>
             <File>
               <FileName>Module_ChassisOmni.h</FileName>
@@ -1280,16 +1214,6 @@
               <FilePath>..\RC10_LIB\Module\Src\Module_HWT.cpp</FilePath>
             </File>
             <File>
-              <FileName>Module_JY61.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_JY61.h</FilePath>
-            </File>
-            <File>
-              <FileName>Module_JY61.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_JY61.cpp</FilePath>
-            </File>
-            <File>
               <FileName>Module_OIDEncoder.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\RC10_LIB\Module\Inc\Module_OIDEncoder.h</FilePath>
@@ -1305,9 +1229,14 @@
               <FilePath>..\RC10_LIB\Module\Inc\Module_lora.h</FilePath>
             </File>
             <File>
-              <FileName>Module_lora.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\Module\Src\Module_lora.cpp</FilePath>
+              <FileName>Module_Serial1Protocol.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\Module_Serial1Protocol.h</FilePath>
+            </File>
+            <File>
+              <FileName>RC_gpio_exti.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Module\Inc\RC_gpio_exti.h</FilePath>
             </File>
             <File>
               <FileName>Module_communication.h</FileName>
@@ -1320,14 +1249,19 @@
               <FilePath>..\RC10_LIB\Module\Src\Module_communication.cpp</FilePath>
             </File>
             <File>
-              <FileName>Module_Serial1Protocol.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\Module\Inc\Module_Serial1Protocol.h</FilePath>
+              <FileName>Module_lora.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\Module_lora.cpp</FilePath>
             </File>
             <File>
               <FileName>Module_Serial1Protocol.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Module\Src\Module_Serial1Protocol.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RC_gpio_exti.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Module\Src\RC_gpio_exti.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -1445,16 +1379,6 @@
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\BSP_Driver\Src\BSP_USB_UART_Driver.cpp</FilePath>
             </File>
-            <File>
-              <FileName>BSP_I2C.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\RC10_LIB\BSP_Driver\Inc\BSP_I2C.h</FilePath>
-            </File>
-            <File>
-              <FileName>BSP_I2C.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\RC10_LIB\BSP_Driver\Src\BSP_I2C.cpp</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -1551,62 +1475,6 @@
               <FilePath>..\User\Setup\Inc\FSM_Controller.h</FilePath>
             </File>
             <File>
-              <FileName>FSM_Controller.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\FSM_Controller.cpp</FilePath>
-              <FileOption>
-                <CommonProperty>
-                  <UseCPPCompiler>2</UseCPPCompiler>
-                  <RVCTCodeConst>0</RVCTCodeConst>
-                  <RVCTZI>0</RVCTZI>
-                  <RVCTOtherData>0</RVCTOtherData>
-                  <ModuleSelection>0</ModuleSelection>
-                  <IncludeInBuild>2</IncludeInBuild>
-                  <AlwaysBuild>2</AlwaysBuild>
-                  <GenerateAssemblyFile>2</GenerateAssemblyFile>
-                  <AssembleAssemblyFile>2</AssembleAssemblyFile>
-                  <PublicsOnly>2</PublicsOnly>
-                  <StopOnExitCode>11</StopOnExitCode>
-                  <CustomArgument></CustomArgument>
-                  <IncludeLibraryModules></IncludeLibraryModules>
-                  <ComprImg>1</ComprImg>
-                </CommonProperty>
-                <FileArmAds>
-                  <Cads>
-                    <interw>2</interw>
-                    <Optim>1</Optim>
-                    <oTime>2</oTime>
-                    <SplitLS>2</SplitLS>
-                    <OneElfS>2</OneElfS>
-                    <Strict>2</Strict>
-                    <EnumInt>2</EnumInt>
-                    <PlainCh>2</PlainCh>
-                    <Ropi>2</Ropi>
-                    <Rwpi>2</Rwpi>
-                    <wLevel>0</wLevel>
-                    <uThumb>2</uThumb>
-                    <uSurpInc>2</uSurpInc>
-                    <uC99>2</uC99>
-                    <uGnu>2</uGnu>
-                    <useXO>2</useXO>
-                    <v6Lang>0</v6Lang>
-                    <v6LangP>0</v6LangP>
-                    <vShortEn>2</vShortEn>
-                    <vShortWch>2</vShortWch>
-                    <v6Lto>2</v6Lto>
-                    <v6WtE>2</v6WtE>
-                    <v6Rtti>2</v6Rtti>
-                    <VariousControls>
-                      <MiscControls></MiscControls>
-                      <Define></Define>
-                      <Undefine></Undefine>
-                      <IncludePath></IncludePath>
-                    </VariousControls>
-                  </Cads>
-                </FileArmAds>
-              </FileOption>
-            </File>
-            <File>
               <FileName>Arm_Setup.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Setup\Inc\Arm_Setup.h</FilePath>
@@ -1615,57 +1483,6 @@
               <FileName>Arm_Setup.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\Arm_Setup.cpp</FilePath>
-              <FileOption>
-                <CommonProperty>
-                  <UseCPPCompiler>2</UseCPPCompiler>
-                  <RVCTCodeConst>0</RVCTCodeConst>
-                  <RVCTZI>0</RVCTZI>
-                  <RVCTOtherData>0</RVCTOtherData>
-                  <ModuleSelection>0</ModuleSelection>
-                  <IncludeInBuild>2</IncludeInBuild>
-                  <AlwaysBuild>2</AlwaysBuild>
-                  <GenerateAssemblyFile>2</GenerateAssemblyFile>
-                  <AssembleAssemblyFile>2</AssembleAssemblyFile>
-                  <PublicsOnly>2</PublicsOnly>
-                  <StopOnExitCode>11</StopOnExitCode>
-                  <CustomArgument></CustomArgument>
-                  <IncludeLibraryModules></IncludeLibraryModules>
-                  <ComprImg>1</ComprImg>
-                </CommonProperty>
-                <FileArmAds>
-                  <Cads>
-                    <interw>2</interw>
-                    <Optim>1</Optim>
-                    <oTime>2</oTime>
-                    <SplitLS>2</SplitLS>
-                    <OneElfS>2</OneElfS>
-                    <Strict>2</Strict>
-                    <EnumInt>2</EnumInt>
-                    <PlainCh>2</PlainCh>
-                    <Ropi>2</Ropi>
-                    <Rwpi>2</Rwpi>
-                    <wLevel>0</wLevel>
-                    <uThumb>2</uThumb>
-                    <uSurpInc>2</uSurpInc>
-                    <uC99>2</uC99>
-                    <uGnu>2</uGnu>
-                    <useXO>2</useXO>
-                    <v6Lang>0</v6Lang>
-                    <v6LangP>0</v6LangP>
-                    <vShortEn>2</vShortEn>
-                    <vShortWch>2</vShortWch>
-                    <v6Lto>2</v6Lto>
-                    <v6WtE>2</v6WtE>
-                    <v6Rtti>2</v6Rtti>
-                    <VariousControls>
-                      <MiscControls></MiscControls>
-                      <Define></Define>
-                      <Undefine></Undefine>
-                      <IncludePath></IncludePath>
-                    </VariousControls>
-                  </Cads>
-                </FileArmAds>
-              </FileOption>
             </File>
             <File>
               <FileName>FSMstauts_enum.h</FileName>
@@ -1744,19 +1561,19 @@
               <FilePath>..\User\Setup\Src\Locate_Setup.cpp</FilePath>
             </File>
             <File>
-              <FileName>RTOS_QueueSetup.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\RTOS_QueueSetup.h</FilePath>
-            </File>
-            <File>
-              <FileName>RTOS_QueueSetup.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\Setup\Src\RTOS_QueueSetup.cpp</FilePath>
-            </File>
-            <File>
               <FileName>WeaponSage_Setup.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Setup\Inc\WeaponSage_Setup.h</FilePath>
+            </File>
+            <File>
+              <FileName>FSM_Controller.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\Setup\Src\FSM_Controller.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>chassis.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\chassis.h</FilePath>
             </File>
             <File>
               <FileName>WeaponSage_Setup.cpp</FileName>
@@ -1815,11 +1632,6 @@
               </FileOption>
             </File>
             <File>
-              <FileName>chassis.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\chassis.h</FilePath>
-            </File>
-            <File>
               <FileName>chassis.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\chassis.cpp</FilePath>
@@ -1828,150 +1640,6 @@
         </Group>
         <Group>
           <GroupName>User/test</GroupName>
-          <Files>
-            <File>
-              <FileName>m3508_steer_debug.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\debug\Inc\m3508_steer_debug.h</FilePath>
-            </File>
-            <File>
-              <FileName>m3508_steer_debug.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\debug\Src\m3508_steer_debug.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>chassis_swerve_demo.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\debug\Inc\chassis_swerve_demo.h</FilePath>
-            </File>
-            <File>
-              <FileName>chassis_swerve_demo.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\debug\Src\chassis_swerve_demo.cpp</FilePath>
-              <FileOption>
-                <CommonProperty>
-                  <UseCPPCompiler>2</UseCPPCompiler>
-                  <RVCTCodeConst>0</RVCTCodeConst>
-                  <RVCTZI>0</RVCTZI>
-                  <RVCTOtherData>0</RVCTOtherData>
-                  <ModuleSelection>0</ModuleSelection>
-                  <IncludeInBuild>2</IncludeInBuild>
-                  <AlwaysBuild>2</AlwaysBuild>
-                  <GenerateAssemblyFile>2</GenerateAssemblyFile>
-                  <AssembleAssemblyFile>2</AssembleAssemblyFile>
-                  <PublicsOnly>2</PublicsOnly>
-                  <StopOnExitCode>11</StopOnExitCode>
-                  <CustomArgument></CustomArgument>
-                  <IncludeLibraryModules></IncludeLibraryModules>
-                  <ComprImg>1</ComprImg>
-                </CommonProperty>
-                <FileArmAds>
-                  <Cads>
-                    <interw>2</interw>
-                    <Optim>1</Optim>
-                    <oTime>2</oTime>
-                    <SplitLS>2</SplitLS>
-                    <OneElfS>2</OneElfS>
-                    <Strict>2</Strict>
-                    <EnumInt>2</EnumInt>
-                    <PlainCh>2</PlainCh>
-                    <Ropi>2</Ropi>
-                    <Rwpi>2</Rwpi>
-                    <wLevel>0</wLevel>
-                    <uThumb>2</uThumb>
-                    <uSurpInc>2</uSurpInc>
-                    <uC99>2</uC99>
-                    <uGnu>2</uGnu>
-                    <useXO>2</useXO>
-                    <v6Lang>0</v6Lang>
-                    <v6LangP>0</v6LangP>
-                    <vShortEn>2</vShortEn>
-                    <vShortWch>2</vShortWch>
-                    <v6Lto>2</v6Lto>
-                    <v6WtE>2</v6WtE>
-                    <v6Rtti>2</v6Rtti>
-                    <VariousControls>
-                      <MiscControls></MiscControls>
-                      <Define></Define>
-                      <Undefine></Undefine>
-                      <IncludePath></IncludePath>
-                    </VariousControls>
-                  </Cads>
-                </FileArmAds>
-              </FileOption>
-            </File>
-            <File>
-              <FileName>chassis_swerve_task_demo.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\debug\Inc\chassis_swerve_task_demo.h</FilePath>
-            </File>
-            <File>
-              <FileName>chassis_swerve_task_demo.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\debug\Src\chassis_swerve_task_demo.cpp</FilePath>
-              <FileOption>
-                <CommonProperty>
-                  <UseCPPCompiler>2</UseCPPCompiler>
-                  <RVCTCodeConst>0</RVCTCodeConst>
-                  <RVCTZI>0</RVCTZI>
-                  <RVCTOtherData>0</RVCTOtherData>
-                  <ModuleSelection>0</ModuleSelection>
-                  <IncludeInBuild>2</IncludeInBuild>
-                  <AlwaysBuild>2</AlwaysBuild>
-                  <GenerateAssemblyFile>2</GenerateAssemblyFile>
-                  <AssembleAssemblyFile>2</AssembleAssemblyFile>
-                  <PublicsOnly>2</PublicsOnly>
-                  <StopOnExitCode>11</StopOnExitCode>
-                  <CustomArgument></CustomArgument>
-                  <IncludeLibraryModules></IncludeLibraryModules>
-                  <ComprImg>1</ComprImg>
-                </CommonProperty>
-                <FileArmAds>
-                  <Cads>
-                    <interw>2</interw>
-                    <Optim>1</Optim>
-                    <oTime>2</oTime>
-                    <SplitLS>2</SplitLS>
-                    <OneElfS>2</OneElfS>
-                    <Strict>2</Strict>
-                    <EnumInt>2</EnumInt>
-                    <PlainCh>2</PlainCh>
-                    <Ropi>2</Ropi>
-                    <Rwpi>2</Rwpi>
-                    <wLevel>0</wLevel>
-                    <uThumb>2</uThumb>
-                    <uSurpInc>2</uSurpInc>
-                    <uC99>2</uC99>
-                    <uGnu>2</uGnu>
-                    <useXO>2</useXO>
-                    <v6Lang>0</v6Lang>
-                    <v6LangP>0</v6LangP>
-                    <vShortEn>2</vShortEn>
-                    <vShortWch>2</vShortWch>
-                    <v6Lto>2</v6Lto>
-                    <v6WtE>2</v6WtE>
-                    <v6Rtti>2</v6Rtti>
-                    <VariousControls>
-                      <MiscControls></MiscControls>
-                      <Define></Define>
-                      <Undefine></Undefine>
-                      <IncludePath></IncludePath>
-                    </VariousControls>
-                  </Cads>
-                </FileArmAds>
-              </FileOption>
-            </File>
-            <File>
-              <FileName>Serial1Protocol_debug.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\debug\Inc\Serial1Protocol_debug.h</FilePath>
-            </File>
-            <File>
-              <FileName>Serial1Protocol_debug.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\User\debug\Src\Serial1Protocol_debug.cpp</FilePath>
-            </File>
-          </Files>
         </Group>
         <Group>
           <GroupName>CMSIS/DSP</GroupName>
