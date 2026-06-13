@@ -238,6 +238,10 @@ void OmniChassis_Setup::loop()
                 Path_correction();
                 V.corrVelocity = V.PID_coefficient * V.corrVelocity;
                 speed = v_limit();
+                if(path_line_.Get_Curve_Flag()==true)
+                {
+                    speed=speed*V.spinodal_coefficient;
+                }
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
             }

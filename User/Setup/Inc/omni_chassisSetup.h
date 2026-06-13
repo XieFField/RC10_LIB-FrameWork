@@ -62,8 +62,9 @@ typedef struct
     Vector2D planspeed = {0.0f, 0.0f};    // 路径规划输出的最大速度。
     Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
 
-    float PID_coefficient = 1.0;
-    float FF_coefficient = 0.0;
+    float PID_coefficient = 1.0f;
+    float FF_coefficient = 0.0f;
+    float spinodal_coefficient = 1.5f;
 
     float v_normal_max = 0.5f;
     float m_lookaheadDist = 0.4f; // 前视距离

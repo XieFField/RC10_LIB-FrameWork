@@ -258,6 +258,11 @@ public:
         return index_;
     }
     
+    bool Get_Curve_Flag()
+    {
+        return tangent_lock;
+    }
+    
 
 protected:
     bool tangent_lock=false;
