@@ -186,6 +186,7 @@ private:
     // Vector2D test_point = {3.0f, 2.0f};
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
+    CHASSIS_Status_E chassis_status_last_ = CHASSIS_STOP; // 当前底盘总状态机状态。（依旧是每个模式都赋值，用于进入自动模式时进行初始化）
 
     bool WeaponSage_Start = false; // 夹杆流程开始标志。
     bool WeaponSage_End = false;   // 夹杆流程完成标志。
@@ -197,14 +198,14 @@ private:
     bool pid_dead_flag = false; // pid完成标志
 
     int flag = 0;     // 自动流程起始触发位（边沿触发）。
-    int flag_run = 0; // 自动流程运行中标志位。
+    //int flag_run = 0; // 自动流程运行中标志位。
 
     //-----------------------------------接口监视参数-----------------------------------------//
 
     Vector2D speed = {0.0f, 0.0f};      // 合成后的底盘平移速度。
     Vector2D robot_pos_ = {0.0f, 0.0f}; // 当前机器人世界坐标。
     float yaw = 0.0f;                   // 当前机器人航向角（度）。
-    float target_yaw_ = 0.0f;           // 底盘锁角目标（度）。
+    float target_yaw = 0.0f;           // 底盘锁角目标（度）。（手操模式要把当前值赋值进来，以便于自动切换时不会抽风）
 
     //-----------------------------------规划参数-----------------------------------------//
     CB_FLAG CB_flag;
@@ -230,7 +231,7 @@ private:
 
     //-----------------------------------其他参数-----------------------------------------//
     int num = 0;
-    int start_num = 0;
+    //int start_num = 0;
 
     Point3D ladar_data_; // 定位系统输出的原始位姿数据。
 
@@ -283,16 +284,16 @@ public:
         else
             flag = 0;
 
-        if (start == 0)
-        {
-            start_num++;
-            if (start_num == 3)
-                flag_run = 0;
-        }
-        else
-        {
-            start_num = 0;
-        }
+//        if (start == 0)
+//        {
+//            start_num++;
+//            if (start_num == 3)
+//                flag_run = 0;
+//        }
+//        else
+//        {
+//            start_num = 0;
+//        }
     }
 
     bool GetReach_flag()
