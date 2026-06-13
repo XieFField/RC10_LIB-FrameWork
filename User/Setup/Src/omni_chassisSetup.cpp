@@ -264,7 +264,8 @@ void OmniChassis_Setup::loop()
         if(airjoy_data_.SWD == 0x00)
             chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, 90.0f);
         else
-            chassis.setSteerDegAndDriveSpeed(Chassis::Coordinate::kWorld, 90.0f, target_vel_x);
+            chassis.setSteerDegAndDriveSpeed( 90.0f, target_vel_x);
+		break;
     }
     case CHASSIS_MANUAL_CONTROL_B:
     {
