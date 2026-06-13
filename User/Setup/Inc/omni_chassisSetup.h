@@ -49,7 +49,7 @@ typedef struct
     Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
-    Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     // 没用的
     // Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -109,8 +109,9 @@ typedef struct
 typedef struct
 {
     Vector2D uphill_pos = {0.6f, 11.4f};
-    
-    Vector2D fit_ahead_pos = {3.0f, 10.0f};
+    float skew_yaw=1.7f;
+    //下界10.02f上界是11.52f
+    Vector2D fit_ahead_pos = {2.17f, 10.05f};
     Vector2D fit_end_pos = {4.83f, 11.5f};
 
     float R1_yaw = 180.0f;
@@ -184,6 +185,7 @@ public:
         pid_pos_x.set_params(track_pid_params, 0.0f);
         pid_pos_y.set_params(track_pid_params, 0.0f);
         path_lock.set_params(path_lock_end, 0.0f);
+        path_lock_r2.set_params(path_lock_R2, 0.0f);
 
         this->start(osPriorityHigh, 1024);
         //        setTargetKFS(3);
@@ -241,6 +243,7 @@ private:
     PID_Position pid_pos_x; // x轴绝对位置PID控制器
     PID_Position pid_pos_y; // y轴绝对位置PID控制器
     PID_Position path_lock; // 停止锁点
+    PID_Position path_lock_r2;// 停止R2锁点
 
     BezierCurve curve; // 当前路径曲线缓存。
 

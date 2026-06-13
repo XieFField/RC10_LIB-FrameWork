@@ -1272,6 +1272,8 @@ void ArmSetup::auto_stillnessTwo()
                     auto_ctrl_.flag.canChassisStart = false;
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
+                    auto_ctrl_.flag.isbackdone = false;
+                    auto_ctrl_.flag.back_time = 0.0f;
 
                     this->set_LaunchHeight(this->init_data_.max_launchCatch_Height_);
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT;
@@ -1297,6 +1299,8 @@ void ArmSetup::auto_stillnessTwo()
                     auto_ctrl_.flag.canChassisStart = false;
                     auto_ctrl_.flag.isExtReach = false;
                     auto_ctrl_.flag.reach_finishTimeStore = 0.0f;
+                    auto_ctrl_.flag.isbackdone = false;
+                    auto_ctrl_.flag.back_time = 0.0f;
 
                     this->set_LaunchHeight(this->init_data_.max_launchCatch_Height_);
                     auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_TO_WAIT;

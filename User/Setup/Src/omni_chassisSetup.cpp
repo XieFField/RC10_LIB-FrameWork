@@ -34,8 +34,9 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = CB_yaw;
+        path_line_.Reset();
     path_line_.plan_reset();
-    path_line_.Reset();
+
 
     //     path_line_.Add_Start_Point(robot_pos_);
     //     path_line_.Add_End_Point(test_point, path_param.CB);
@@ -62,8 +63,9 @@ void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = CZ_point.R1_yaw;
+        path_line_.Reset();
     path_line_.plan_reset();
-    path_line_.Reset();
+
     
     CZ_point.R1_pos_index = (CZ_point.R1_pos_index + 1) % 3;
     path_line_.Add_Start_Point(robot_pos_);
@@ -76,8 +78,9 @@ void OmniChassis_Setup::CZ_R2_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = CZ_point.fit_yaw;
+        path_line_.Reset();
     path_line_.plan_reset();
-    path_line_.Reset();
+
     
     //合体地点和等待地点的切换
     if(airjoy_data_.SWA == 0x01)
@@ -228,8 +231,9 @@ void OmniChassis_Setup::loop()
         if (chassis_status_last_ != chassis_status_)
         {
             flag_reset();
-            path_line_.plan_reset();
             path_line_.Reset();
+            path_line_.plan_reset();
+
             Path_end_point = robot_pos_;
         }
         // 夹杆自动流程：触发后执行路径规划、纠偏和速度合成。
@@ -278,8 +282,8 @@ void OmniChassis_Setup::loop()
         if (chassis_status_last_ != chassis_status_)
         {
             flag_reset();
-            path_line_.plan_reset();
             path_line_.Reset();
+            path_line_.plan_reset();
             Path_end_point = robot_pos_;
         }
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
@@ -326,8 +330,8 @@ void OmniChassis_Setup::loop()
         if (chassis_status_last_ != chassis_status_)
         {
             flag_reset();
-            path_line_.plan_reset();
             path_line_.Reset();
+            path_line_.plan_reset();
             Path_end_point = robot_pos_;
             CZ_point.fit_pos_index=1;
             CZ_point.R1_pos_index=0;
@@ -337,7 +341,7 @@ void OmniChassis_Setup::loop()
         if (flag == 1)
         {
             flag = 0;
-            CZ_R2_Selection_Planning();
+            CZ_R1_Selection_Planning();
         }
         if (path_line_.Is_End() == false)
         {
@@ -377,8 +381,8 @@ void OmniChassis_Setup::loop()
         if (chassis_status_last_ != chassis_status_)
         {
             flag_reset();
-            path_line_.plan_reset();
             path_line_.Reset();
+            path_line_.plan_reset();
             Path_end_point = robot_pos_;
             CZ_point.fit_pos_index=1;
             CZ_point.R1_pos_index=0;
@@ -445,10 +449,23 @@ void OmniChassis_Setup::loop()
 void OmniChassis_Setup::Path_lock_point(Vector2D lock_point)
 {
     float lock_err = (robot_pos_ - lock_point).magnitude();
-    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
+    if(airjoy_data_.SWA == 0x00 && chassis_status_==CHASSIS_AUTO_CONTROL_CZ_R2)
+    {
+        speed = path_lock_r2.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
+    }
+    else
+    {
+        speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
+    }
+    pid_dead_flag = path_lock.get_is_in_dead_zone();
+    if( pid_dead_flag==true)
+    {
+        target_chassis_twist_.vx = 0.0f;
+        target_chassis_twist_.vy = 0.0f;
+    }
     target_chassis_twist_.vx = speed.x;
     target_chassis_twist_.vy = speed.y;
-    pid_dead_flag = path_lock.get_is_in_dead_zone();
+
 }
 
 void OmniChassis_Setup::Path_correction(void)
@@ -634,8 +651,9 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     }
 
     // 重置路径规划器
-    path_line_.plan_reset();
     path_line_.Reset();
+    path_line_.plan_reset();
+
     path_line_.Add_Start_Point(robot_pos_);
 
     // 写入起点到MF2路径点坐标（不包含MF2）
@@ -856,7 +874,7 @@ void OmniChassis_Setup::Path_KFS_check(void)
         // 上坡后旋转判断
         if (CZ_point.uphill_pos.x == curve.Get_Start_point().x && CZ_point.uphill_pos.y == curve.Get_Start_point().y)
         {
-            if (robot_pos_.x > 1.5f)
+            if (robot_pos_.x > CZ_point.skew_yaw)
                 target_yaw = CZ_point.R1_yaw;
         }
     }

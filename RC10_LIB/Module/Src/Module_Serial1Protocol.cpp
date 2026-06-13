@@ -135,18 +135,11 @@ void Serial1Protocol::sendFrame(uint8_t* data, uint8_t parity) {
 //			uint8_t test[8] = {0xFC, 0xFB, 0x12, 0x30, 0x00, 0x3B, 0xFD, 0xFE};
 //			 HAL_UART_Transmit(m_huart, test, SERIAL1_FRAME_LEN,100);
        for (int i = 0; i < SERIAL1_SEND_TIMES; i++) {
-				 HAL_UART_Transmit(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN,100);
-//					while (HAL_UART_GetState(m_huart) & HAL_UART_STATE_BUSY_TX) {
-//							// �ȴ��ϴη������
-//					}
 					HAL_UART_Transmit_DMA(m_huart, m_uart_send_frame, SERIAL1_FRAME_LEN);
-					HAL_Delay(2);
-    }
+        }
 			
 		}
 }
-
-// ========== ����Ӧ��֡ ==========
 void Serial1Protocol::sendAckFrame(void) {
     if (!m_huart ) return;
     
