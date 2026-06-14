@@ -871,6 +871,8 @@ namespace jia
             // 与普通 setTarget* 不同，这里允许调试面板直接接管整车目标，或者绕开整车 planner 只改某些模块命令。
 #if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
             void applyDebugTargetOverride(DebugMode mode);
+            // applyDebugModuleOverride() 是调试侧少数会短路正常 compute/apply 链路的入口。
+            // 一旦它返回 true，本拍后续模块命令不再来自常规底盘规划，而由 debug route 直接决定。
             bool applyDebugModuleOverride(bool all_homed);
 #endif
             void clearInputTargetData();
@@ -882,10 +884,14 @@ namespace jia
             void clearPlannedMotionForModuleOverride();
 #if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
             void resetDebugModuleOverrideTargets(u8 wheel_idx, bool preserve_soft_wheel_rate);
+            // 这几个 helper 分别对应不同的 debug module route：
+            // AlignForward / HomingObserve 主要服务校对与观察；
+            // SingleWheelIsolated 则会真正接管某一轮的控制输出，并隔离其余轮。
             void applyAlignForwardDebugOverride();
             void applyHomingObserveDebugOverride();
             void finalizeDebugModuleOverride(bool all_homed, DebugModuleOverrideRoute route);
 #if JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
+            // mode30 单轮直控链路会先在局部构造“只属于目标轮”的命令真相，再由 filter/finalize 决定如何影响整车其余轮。
             void computeSingleWheelIsolatedCommandsMode30(u8 wheel_idx, bool all_homed = true);
             bool isSingleWheelIsolatedMode(DebugMode mode) const;
             void applySingleWheelIsolationFilter(DebugMode mode, u8 wheel_idx, bool all_homed);

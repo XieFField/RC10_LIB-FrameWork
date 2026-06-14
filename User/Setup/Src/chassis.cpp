@@ -2733,6 +2733,8 @@ namespace jia
 #if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
         void Chassis::computeSingleWheelIsolatedCommandsMode30(u8 wheel_idx, bool all_homed)
         {
+            // 进入 mode30 单轮隔离后，这里会主动清空整车级 high-speed / xpark / zero-stop / launch-hold 等门控缓存，
+            // 重新建立一份“只围绕目标轮”的局部控制真相，避免继承正常底盘链路留下的跨拍状态。
             high_speed_trans_gate_active_ = false;
             high_speed_drive_suppression_active_ = false;
             high_speed_drive_suppression_scale_ = 1.0f;
@@ -2815,6 +2817,8 @@ namespace jia
                 {
                     // mode30 目标轮 RPM 直控本身已经绕过全车 homing/fault gate；
                     // 虚拟负载只是叠加在这条目标轮速度环上的偏置电流，不应再被其他轮状态全车级短路。
+                    // 这里故意把 single_wheel_isolation_active 传成 true、observe idx 传成目标轮，
+                    // 让 applyDriveVirtualLoadAndCommand() 只把它当作“单轮局部执行路径”消费，而不是整车执行路径的一部分。
                     applyDriveVirtualLoadAndCommand(target_wheel,
                                                     wheel_idx,
                                                     target_wheel.target_drive_omega_rad_s,
@@ -2922,6 +2926,8 @@ namespace jia
 
             debug_mirror_.single_wheel_target_index = wheel_idx;
             debug_mirror_.single_wheel_isolation_active = true;
+            // 这里处理的是“其余非目标轮如何被隔离”，而不是目标轮本身该怎么跑。
+            // 目标轮命令已经在 computeSingleWheelIsolatedCommandsMode30() 里建好，这里只负责把其余轮静音并同步镜像。
             for (u8 i = 0; i < 4; ++i)
             {
                 debug_mirror_.single_wheel_non_target_zeroed[i] = (i != wheel_idx);
@@ -2950,6 +2956,8 @@ namespace jia
 
         void Chassis::finalizeDebugModuleOverride(bool all_homed, DebugModuleOverrideRoute route)
         {
+            // finalize 是 debug module override 的收尾闸门：
+            // 前面的 route helper 只负责构造局部目标，这里才决定是否还要走 apply、如何刷新 current/debug 输出，以及如何留下 last_planned_data_。
             if (route != DebugModuleOverrideRoute::kSingleWheelIsolated)
             {
                 planned_data_.vel_x = 0.0f;
@@ -2962,10 +2970,13 @@ namespace jia
             planned_data_.rot_z = input_hwt_rot_z_;
             if (route != DebugModuleOverrideRoute::kSingleWheelIsolated)
             {
+                // 非单轮隔离 route 仍复用统一 apply 层，让 homing/fault/zero-current 等执行门控保持一致。
                 applyModuleCommands(all_homed);
             }
 
             updateCurrentData(all_homed);
+            // debug route 即便短路了正常 compute/apply，也仍然要刷新 current/debug/output，
+            // 保证外部看到的是“这一拍最终采用的调试控制结果”，而不是上一拍残留镜像。
             refreshDebugMirror(all_homed);
             emitDebugOutputByMode(all_homed);
             last_planned_data_ = planned_data_;
@@ -5626,6 +5637,8 @@ namespace jia
 
             const u8 wheel_idx = (debug_control_.common.control_wheel_index < 4U) ? debug_control_.common.control_wheel_index : 0U;
             const DebugMode mode = resolveDebugMode(debug_control_.common.mode_raw);
+            // control_wheel_index 决定“谁被控制”，observe_wheel_index 只决定“谁被重点看”；
+            // 两者在单轮调试里故意分离，避免为了观察某一轮而误改控制对象。
             resetDebugModuleOverrideTargets(wheel_idx, false);
 
             if (route == DebugModuleOverrideRoute::kAlignForward)
