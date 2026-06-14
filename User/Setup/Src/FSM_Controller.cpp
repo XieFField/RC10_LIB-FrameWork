@@ -1,10 +1,18 @@
 #include "FSM_Controller.h"
 #include "chassis_swerve_task_demo.h"
 
+int8_t test_led = 0;
+
 void FSM_Controller::loop()
 {
     if (!init_flag_)
         return;
+
+    if (!test_led)
+        Serial1Protocol::getInstance()->sendStop();
+    else
+        Serial1Protocol::getInstance()->send_cmd_to_R2(test_led);
+
 #if !USE_RC10_AIRJOY
     CrsfReceiver::GetInstance(&huart7)->send_kfsandSpear(crsf_send_s.rsf_send_data.kfs1, crsf_send_s.rsf_send_data.kfs2,
                                                          crsf_send_s.rsf_send_data.Spear);
@@ -155,8 +163,8 @@ void FSM_Controller::loop()
 #endif
     if (KStarget != last_KStarget)
     {
-        chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1]);
-        arm_setup_->set_TargetKFS(KStarget.KFS[0], KStarget.KFS[1]);
+        chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1], KStarget.KFS[2]);
+        arm_setup_->set_TargetKFS(KStarget.KFS[0], KStarget.KFS[1], KStarget.KFS[2]);
         weaponSage_setup_->setTargetIndex(KStarget.Spear - 1);
     }
 
@@ -395,10 +403,17 @@ void FSM_Controller::manual_ctrl()
 
 #if !USE_RC10_AIRJOY
     switch (airjoy_data_.SWC)
+#else
+    switch (airjoy_data_.SWF)
+#endif
     {
     case 0x00:
     {
-        chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+        if (airjoy_data_.SWA == 0x00)
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+        else if (airjoy_data_.SWA == 0x01)
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_D);
+
         arm_setup_->setArmStatus(ARM_IDLE);
         weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
@@ -420,36 +435,36 @@ void FSM_Controller::manual_ctrl()
         break;
     }
     }
-#else
-    switch (airjoy_data_.SWF)
-    {
-    case 0x00:
-    {
-        chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-        arm_setup_->setArmStatus(ARM_IDLE);
-        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-        break;
-    }
+    // #else
+    //     switch (airjoy_data_.SWF)
+    //     {
+    //     case 0x00:
+    //     {
+    //         chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+    //         arm_setup_->setArmStatus(ARM_IDLE);
+    //         weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+    //         break;
+    //     }
 
-    case 0x01:
-    {
-        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-        if (airjoy_data_.SWE == 0x00)
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
-        else if (airjoy_data_.SWE == 0x01)
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-        break;
-    }
+    //    case 0x01:
+    //    {
+    //        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+    //        if (airjoy_data_.SWE == 0x00)
+    //            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+    //        else if (airjoy_data_.SWE == 0x01)
+    //            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+    //        break;
+    //    }
 
-    case 0x02:
-    {
-        break;
-    }
+    //    case 0x02:
+    //    {
+    //        break;
+    //    }
 
-    default:
-        break;
-    }
-#endif
+    //    default:
+    //        break;
+    //    }
+    // #endif
 }
 
 void FSM_Controller::auto_ctrl()
@@ -460,15 +475,53 @@ void FSM_Controller::auto_ctrl()
 #if !USE_RC10_AIRJOY
     switch (airjoy_data_.SWC)
     {
-    // 底盘手动模式
+    // 三区自动模式以及手操
     case 0x00:
     {
-        chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-        arm_setup_->setArmStatus(ARM_IDLE);
-        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+        if (airjoy_data_.SWA == 0x01 && airjoy_data_.SWD == 0x00)
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CZ_R1);
+            arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
-        chassis_setup_->setPathAutoStart(0); // 路径自动开始标志清零
-        arm_setup_->set_Arm_autoStart(0);    // 自动流程标志清零
+            static uint8_t is_click = 0;
+            if (airjoy_data_.botton_click == 1 && is_click == 0)
+            {
+                chassis_setup_->setPathAutoStart(1); // 路径自动开始标志
+                weaponSage_setup_->setCBauto(true);
+                is_click = 1;
+            }
+            else if (airjoy_data_.botton_click == 0)
+            {
+                is_click = 0;
+            }
+        }
+        else if (airjoy_data_.SWA == 0x00 && airjoy_data_.SWD == 0x00)
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            chassis_setup_->setPathAutoStart(0); // 路径自动开始标志清零
+            arm_setup_->set_Arm_autoStart(0);    // 自动流程标志清零
+        }
+        else if(airjoy_data_.SWD == 0x01)
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CZ_R2);
+            arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+
+            static uint8_t is_click = 0;
+            if (airjoy_data_.botton_click == 1 && is_click == 0)
+            {
+                chassis_setup_->setPathAutoStart(1); // 路径自动开始标志
+                weaponSage_setup_->setCBauto(true);
+                is_click = 1;
+            }
+            else if (airjoy_data_.botton_click == 0)
+            {
+                is_click = 0;
+            }
+        }
         break;
     }
 
@@ -484,7 +537,7 @@ void FSM_Controller::auto_ctrl()
 #endif
 
         arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-        // arm_setup_->setArmStatus(ARM_IDLE);
+        //arm_setup_->setArmStatus(ARM_IDLE);
         weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
         static uint8_t is_click = 0;
@@ -526,8 +579,8 @@ void FSM_Controller::auto_ctrl()
 
         if (airjoy_data_.SWA == 0x00)
         {
-            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL_CATCH);
-            // weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            // weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTOCONTROL);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
             arm_setup_->setArmStatus(ARM_IDLE);
 
@@ -543,17 +596,17 @@ void FSM_Controller::auto_ctrl()
                 is_click = 0;
             }
 
-            // 判断是否可以进入伸展阶段
-            if (chassis_setup_->GetReach_flag())
+            // 判断是否可以进行互相通讯
+            if (chassis_setup_->GetReach_flag() == true)
             {
                 weaponSage_setup_->Get_OMNI_IM_flag(true);
             }
-            if (weaponSage_setup_->Get_Catch_flag())
+            if (weaponSage_setup_->Get_Catch_flag() == true)
             {
                 chassis_setup_->ReceiveReach_flag(false);
             }
 
-            if (chassis_setup_->GetEnd_flag())
+            if (chassis_setup_->GetEnd_flag() == true)
             {
                 weaponSage_setup_->Get_OMNI_DS_flag(true);
             }

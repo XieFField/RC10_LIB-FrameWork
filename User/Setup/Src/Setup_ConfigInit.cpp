@@ -5,6 +5,8 @@ extern "C"
 {
     extern USBD_HandleTypeDef hUsbDeviceHS;
 }
+
+Serial1Protocol* 	m_serial1 = Serial1Protocol::getInstance();
 fdCANbus *const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取 FDCAN1 唯一实例
 fdCANbus *const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // 获取 FDCAN2 唯一实例
 fdCANbus *const CAN3_Bus = fdCANbus::getInstance(&hfdcan3);
@@ -86,7 +88,6 @@ OIDEncoder oid_encoder(91, CAN2_Bus, 4096, 200);
 
 /*============================== debug  DJI_Motor ===============================*/
 
-
 void debug_init()
 {
 /*============================= debug 机械臂 ================================*/
@@ -119,12 +120,11 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 
 #if DEBUG_SHIT
 Swerve_Task_Demo swerve_task_demo; // 轮式舵轮底盘调试任务实例
-
 #endif  
 
 void ALL_Setup_ConfigInit(void)
 {
-
+    m_serial1->init(&huart2);
     HWT101CT* imu = HWT101CT::GetInstance(&huart1);
     imu->InitUART();
     TimeStamp::getInstance().init(&htim4);
@@ -170,7 +170,6 @@ void ALL_Setup_ConfigInit(void)
     chassis.init(chassis_init_config);
 #endif
 
-
     Finite_StateMachine.registerArmSetup(&ARM_Controller);
     Finite_StateMachine.registerChassisSetup(&ChassisOmni);
     Finite_StateMachine.registerWeaponSageSetup(&Weapon_Controller);
@@ -187,6 +186,8 @@ void ALL_Setup_ConfigInit(void)
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
     set1->locate_setup_init();
     set1->set_startToLRL(true);
+		
+		
 }
 
 void CAN_Motor_Init(void)

@@ -28,23 +28,23 @@ extern "C"
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
 #include "Setup_ConfigInit.h"
+#include "Module_Serial1Protocol.h"
 
-typedef enum
-{
+typedef enum{
     RELOCATE,
     SET_KFS,
     SET_SPEAR,
     NONE,
 } set_e;
 
-typedef struct KSTarget_t
-{
-    uint8_t KFS[2];
+
+typedef struct KSTarget_t {
+    uint8_t KFS[3];
     int8_t Spear;
 
-    bool operator!=(const KSTarget_t &other) const
-    {
-        return KFS[0] != other.KFS[0] || KFS[1] != other.KFS[1] || Spear != other.Spear;
+    bool operator!=(const KSTarget_t& other) const {
+         return KFS[0] != other.KFS[0] || KFS[1] != other.KFS[1] 
+         || KFS[2] != other.KFS[2] || Spear != other.Spear;
     }
 };
 
@@ -75,9 +75,9 @@ public:
     {
         if (!arm_setup_registered_ || !chassis_setup_registered_ || !weaponSage_setup_registered_)
             init_flag_ = false;
-
-        this->arm_setup_->set_TargetKFS(0, 0); // 设置目标梅花桩编号
-        this->start(osPriorityHigh + 1, 512);
+        
+        this->arm_setup_->set_TargetKFS(0,0,0); //设置目标梅花桩编号
+        this->start(osPriorityHigh+1, 512);
         init_flag_ = true;
     }
 

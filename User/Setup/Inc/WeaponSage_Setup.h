@@ -111,7 +111,7 @@ namespace WeaponSage_Setup
             bool is_prepared=false; //准备就绪，满足抓取条件
 			bool is_arm_reset=false;
         }flag;
-        bool auto_ctrl1 = true;
+        bool auto_ctrl1 = false;
         int pole_num = 1;
         bool claw_flag[3]={false,false,false};
         struct{

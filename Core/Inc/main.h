@@ -84,7 +84,6 @@ void parse_uart_data(uint8_t data);
 #define Lora_IO1_Pin GPIO_PIN_2
 #define Lora_IO1_GPIO_Port GPIOD
 
-
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
