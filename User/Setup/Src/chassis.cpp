@@ -6073,6 +6073,13 @@ namespace jia
         }
 
 #if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
+        /**
+         * @brief 更新主循环总执行耗时统计。
+         * @param loop_start_us 本拍主循环开始时间戳。
+         * @param loop_end_us 本拍主循环结束时间戳。
+         * @details 该接口维护预算、历史极值、最近窗口均值与超预算计数，
+         *          面向 FULL_DEBUG 下的线程预算观察，不参与任何控制决策。
+         */
         void Chassis::updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us)
         {
             if (loop_start_us == 0ULL || loop_end_us == 0ULL || loop_end_us < loop_start_us)
@@ -6153,6 +6160,14 @@ namespace jia
             perf.window_clamp_count = perf.window.clamp_count;
         }
 
+        /**
+         * @brief 记录主循环各阶段的耗时拆分。
+         * @param plan_us 规划阶段耗时。
+         * @param feedback_us 反馈刷新阶段耗时。
+         * @param homing_us homing / steer fault 状态机阶段耗时。
+         * @param apply_us 模块命令仲裁与下发阶段耗时。
+         * @param debug_us 调试镜像与输出阶段耗时。
+         */
         void Chassis::updateTaskPerfBreakdown(u64 plan_us, u64 feedback_us, u64 homing_us, u64 apply_us, u64 debug_us)
         {
             task_perf_stat_.plan_us = plan_us;

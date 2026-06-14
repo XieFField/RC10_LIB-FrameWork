@@ -471,8 +471,6 @@ namespace jia
                 f32 homing_timeout_s = 5.0f;
             };
 
-            // WheelConfig 是运行时轮组状态快照：既保存静态几何和硬件句柄，也保存回零状态、
-            // 补偿结果与最近一次规划输出，供控制线程在每个周期更新。
             // WheelConfig 是“单个舵轮模块在底盘层的完整运行态容器”：
             // - 它既保存装配常量和硬件句柄，也保存该轮在 homing / fault / hold / execute 链路中的实时状态。
             // - chassis 主循环里凡是只影响某一个轮子的决策，原则上都应该收敛到这里，避免跨数组维护导致语义分裂。
@@ -1219,10 +1217,21 @@ namespace jia
             // 这些声明主要服务于观察和调参，不改变主控制决策本身。
 #if JIA_CHASSIS_ENABLE_DEBUG_MIRROR
             // refreshDebugMirror() 在 compute/apply/current 全部完成后刷新，只做只读观测镜像整理，不反向驱动控制。
+            /**
+             * @brief 刷新面向调试器与 host 语义测试的聚合镜像。
+             * @param all_homed 当前四轮是否全部回零完成。
+             * @details 它把分散在 runtime/cache 中的关键结论整理成易读视图，
+             *          但不生成任何新的控制命令，也不回写主控制状态机。
+             */
             void refreshDebugMirror(bool all_homed);
 #endif
 #if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
             // 这组 emitter 只负责把当前观测快照发出去；节流、profile 与 payload 口径都在各自函数内部定义，不改变控制链。
+            /**
+             * @brief 输出文本调试摘要。
+             * @param all_homed 当前四轮是否全部回零完成。
+             * @details 该接口服务“给人眼快速扫状态”的文本通道，主要复用 debug_mirror_ 等聚合视图。
+             */
             void emitDebugUart8Log(bool all_homed);
             void emitUart8VofaJustFloatPidTrace();
             void emitUart8VofaPid1kHzTrace();
@@ -1235,16 +1244,38 @@ namespace jia
             void emitUart8VofaDriveZeroStopBrakeTrace();
             // emitDebugOutputByMode() 只是输出分发层：
             // family/profile 的路由选择在这里完成，但具体 payload 定义、节流、sample_divider 和 seq 维护都在各自 emitter 内。
+            /**
+             * @brief 按当前调试输出 family/profile 分发本拍输出。
+             * @param all_homed 当前四轮是否全部回零完成。
+             * @details 它只做路由选择，不负责生成控制命令；真正的 payload 组织与节流逻辑在各自 emitter 内部。
+             */
             void emitDebugOutputByMode(bool all_homed);
 #endif
 #if JIA_CHASSIS_ENABLE_BINARY_TELEMETRY
             // emitUart8SwerveTelemetryV2() 发送面向上位机的 binary telemetry 快照。
             // 它面对的是协议消费者，因此 payload 顺序、header 字段和 CRC 口径都属于兼容契约，不能随意漂移。
+            /**
+             * @brief 发送 binary telemetry V2 快照。
+             * @param all_homed 当前四轮是否全部回零完成。
+             * @details 它面向上位机协议消费者，payload 字段顺序和编码口径属于兼容契约。
+             */
             void emitUart8SwerveTelemetryV2(bool all_homed);
 #endif
 #if JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
+            /**
+             * @brief 在调试使能上升沿时，把 PID 调参缓存同步到运行态。
+             * @details 该入口只在 enable edge 触发一次，避免缓存参数在调试打开期间被重复整包刷入。
+             */
             void syncDebugSteerPidTuneFromRuntimeOnEnableEdge();
+            /**
+             * @brief 将 PID 调参缓存同步到当前电机运行态。
+             * @details 该过程消费 debug_pid_tune_ 中的待生效参数戳，把共享配置下发到舵向/驱动执行器。
+             */
             void syncDebugSteerPidTuneFromRuntime();
+            /**
+             * @brief 根据调试缓存对运行中的 PID 进行在线参数更新。
+             * @details 它负责把调试面板中的 PID 配置真正写入运行对象，是调参与控制主链之间的桥接层。
+             */
             void applyDebugSteerPidRuntimeTuning();
 #endif
 
@@ -1262,7 +1293,22 @@ namespace jia
              */
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
 #if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
+            /**
+             * @brief 更新主循环总执行耗时统计窗口。
+             * @param loop_start_us 本拍主循环开始时间戳。
+             * @param loop_end_us 本拍主循环结束时间戳。
+             * @details 该函数维护最近窗口平均值、历史极值、超预算计数与短窗环形缓存，
+             *          主要服务 FULL_DEBUG 下的线程预算诊断。
+             */
             void updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us);
+            /**
+             * @brief 记录主循环各阶段耗时拆分。
+             * @param plan_us 规划阶段耗时。
+             * @param feedback_us 反馈刷新阶段耗时。
+             * @param homing_us homing / fault 状态机阶段耗时。
+             * @param apply_us 模块命令生成与执行阶段耗时。
+             * @param debug_us 调试镜像与输出阶段耗时。
+             */
             void updateTaskPerfBreakdown(u64 plan_us, u64 feedback_us, u64 homing_us, u64 apply_us, u64 debug_us);
 #endif
             static SteerCalibration makeSteerCalibration(const WheelConfig &wheel);
@@ -1899,6 +1945,8 @@ namespace jia
 #if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
             struct TaskPerfStat
             {
+                // WindowState 是线程耗时短窗统计的内部 O(1) 运行态：
+                // 它维护一个固定长度的环形缓冲和窗口和，用于在 1ms 主循环里低成本得到最近均值。
                 struct WindowState
                 {
                     u16 samples_us[500] = {0U}; // [RO] 短窗样本环形缓冲（内部状态）
@@ -1920,11 +1968,11 @@ namespace jia
                 u16 window_size = 500U;        // [RO] 短窗长度（循环次数）
                 u16 window_count = 0U;         // [RO] 当前窗口有效样本数（<=window_size）
                 u64 window_clamp_count = 0ULL; // [RO] 样本被 u16 饱和截断次数
-                u64 plan_us = 0ULL;
-                u64 feedback_us = 0ULL;
-                u64 homing_us = 0ULL;
-                u64 apply_us = 0ULL;
-                u64 debug_us = 0ULL;
+                u64 plan_us = 0ULL;          // [RO] 最近一次规划阶段耗时。
+                u64 feedback_us = 0ULL;      // [RO] 最近一次反馈刷新阶段耗时。
+                u64 homing_us = 0ULL;        // [RO] 最近一次 homing / fault 状态机阶段耗时。
+                u64 apply_us = 0ULL;         // [RO] 最近一次模块执行仲裁与下发阶段耗时。
+                u64 debug_us = 0ULL;         // [RO] 最近一次调试镜像/输出阶段耗时。
             } task_perf_stat_;
 #endif
 
