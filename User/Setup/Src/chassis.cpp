@@ -4196,6 +4196,13 @@ namespace jia
             return target_value;
         }
 
+        /**
+         * @brief 将车体级命令展开为本拍的模块规划结果与执行前命令帧。
+         * @param command_data 已完成车体级整形的整车目标。
+         * @details 该函数只产出 planner 视角下的理想值、规划值与执行前命令帧，
+         *          并写入 `planner_output_cache_` / `actuator_command_frame_` 等缓存；
+         *          真正是否允许原样下发，要等 applyModuleCommands() 再结合运行态仲裁。
+         */
         void Chassis::computeModuleCommands(const Data &command_data)
         {
             // 这里把车体级 planned_data_ 转换为每个轮子的执行目标。
@@ -4213,6 +4220,10 @@ namespace jia
             {
                 // 正常路径下先决定本拍真正喂给 planner 的车体级命令：
                 // launch-hold、yaw-lock zero-stop preview 与执行期 suppress 都可能在这里改写 omega_z。
+                // 优先级顺序是：
+                // 1. launch hold 需要时，直接改用 makeLaunchHoldPreviewCommand()；
+                // 2. 否则若存在 yaw_lock_zero_stop_preview_command_，优先采用那份过渡命令；
+                // 3. 最后再根据 shouldSuppressYawLockOmegaForZeroStopDecel() 决定是否把 omega_z 临时压到 0。
                 Data planner_command = launch_hold_active_ ? makeLaunchHoldPreviewCommand() : command_data;
                 if (!launch_hold_active_ && yaw_lock_zero_stop_preview_command_valid_)
                 {
@@ -4228,6 +4239,7 @@ namespace jia
             if (launch_hold_active_)
             {
                 // hold 期间 planner 只负责把舵向摆正，drive 目标在这里强制压零，避免“边对舵边起轮”。
+                // 也就是说，此处压零不是 planner 本体的职责，而是为了复用 planner 给出的 steer 对齐结果。
                 for (u8 i = 0; i < 4; ++i)
                 {
                     planner_output.low_speed_suppression_scale[i] = 0.0f;
@@ -4239,6 +4251,14 @@ namespace jia
             storePlannedActuatorFrame(planner_output, command_frame);
         }
 
+        /**
+         * @brief 将模块规划命令与运行态门控融合后真正下发到电机层。
+         * @param all_homed 当前四轮是否都已处于 Ready。
+         * @details 这是 chassis 主循环里“planner 理想结果”与“本拍最终执行语义”的分界点。
+         *          它会读取 homing、steer fault、zero-current、torque-free、single-wheel isolation、
+         *          drive zero-stop、X-Park hold 等运行态，并改写 `wheel.target_*`、`planned_data_.*`、
+         *          `last_*_cmd_*` 与真实电机接口下发结果。
+         */
         void Chassis::applyModuleCommands(bool all_homed)
         {
             // 这是底盘线程的最终执行仲裁层。
@@ -4436,6 +4456,10 @@ namespace jia
                     // 只要还有任意一个轮子没有完成回零，或者存在舵向故障/恢复重校准中的轮子，
                     // drive 一律按“电流清零”停机，不走 RPM=0 的速度闭环停机语义，
                     // 避免离线前残留的驱动电流或速度闭环继续推动底盘。
+                    // 这一总门控下 steer 和 drive 的待遇是刻意不同的：
+                    // - drive：全车统一降级成 zero-current，整车运动绝不放行；
+                    // - steer：允许搜索中的轮子继续按 homing_search_rpm 转，允许 AlignToZero 的轮子继续归位，
+                    //          其余轮子则保持静止等待，直到整条 homing / recovery 链真正收口。
                     clearXParkSteerHoldState(wheel);
                     allow_drive_position_loop = execution_allow_drive_position_loop[i];
                     allowed_drive_target_rad_s = 0.0f;
@@ -4532,7 +4556,8 @@ namespace jia
                 if (isolate_this_wheel)
                 {
                     // 单轮隔离不是“全车扭矩自由”，而是给被观察/调试的那一轮让出独占空间。
-                    // 非目标轮统一切成 drive zero-current，并把 steer 锁在当前反馈角，防止它们继续参与整车运动学闭环。
+                    // 非目标轮统一切成 drive zero-current，并把 steer 锁在当前反馈角，
+                    // 目的不是简单“让它别动”，而是让整车运动学闭环对这些轮子失效，只给被测轮保留独占执行空间。
                     clearXParkSteerHoldState(wheel);
                     allowed_drive_target_rad_s = 0.0f;
                     wheel.target_drive_omega_rad_s = 0.0f;
@@ -4610,6 +4635,9 @@ namespace jia
                     // X-Park hold 是执行层自己的小状态机：
                     // planner 仍然给出正常舵向目标，但一旦进入驻车姿态窗口，这里会把目标锁成固定 X-Park 角，
                     // 并在判稳足够久后切到 steer zero-current，以减少静止抖动和保持电流。
+                    // 局部相位可以概括为：
+                    // Inactive -> Settling -> LatchedZeroCurrent -> Reacquire。
+                    // 整车级 xpark_gate_active_ 只负责回答“现在是否值得进入这条链”，真正每轮何时锁定/退出由这里逐轮推进。
                     const f32 current_corrected_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
                     const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_corrected_local_total_rad);
                     const f32 xpark_target_oa_total_rad =
@@ -4769,6 +4797,13 @@ namespace jia
             }
         }
 
+        /**
+         * @brief 将本拍最终执行语义与实时轮反馈融合为对外可读的 current_data_。
+         * @param all_homed 当前四轮是否都已处于 Ready。
+         * @details `current_data_` 不是 planner 裸结果，也不是传感器裸回读；
+         *          它先继承本拍执行层已经确认的目标语义，再用真实轮侧反馈覆盖模块量，
+         *          并只在 homing/fault 条件允许时才放行整车 twist 反解结果。
+         */
         void Chassis::updateCurrentData(bool all_homed)
         {
             // current_data_ 面向“外部观测与反馈读取”：
@@ -4787,6 +4822,8 @@ namespace jia
             current_data_ = planned_data_;
             if (!all_homed || steer_fault_any_active)
             {
+                // 这里先给车体速度保守清零，意思是“默认先不信任模块反解结果”。
+                // 后面只有在 all_homed 且无 steer fault 时，才会用 estimateBodySpeedFromModules() 再次覆盖回来。
                 current_data_.vel_x = 0.0f;
                 current_data_.vel_y = 0.0f;
                 current_data_.omega_z = 0.0f;
@@ -4804,6 +4841,8 @@ namespace jia
             }
             else
             {
+                // 这里再次清零不是重复操作，而是对“本拍仍不允许信任模块反解”的显式收口，
+                // 确保 current_data_ 的整车速度口径不会残留上一次可用时的估计值。
                 current_data_.vel_x = 0.0f;
                 current_data_.vel_y = 0.0f;
                 current_data_.omega_z = 0.0f;
@@ -5833,6 +5872,16 @@ namespace jia
             return true;
         }
 
+        /**
+         * @brief 根据四个模块当前反馈反解整车 body twist。
+         * @param out_vel_x 输出的车体系 x 线速度。
+         * @param out_vel_y 输出的车体系 y 线速度。
+         * @param out_omega_z 输出的车体系偏航角速度。
+         * @return `true` 表示正规方程求解成功，结果可用于 current_data_ 与 telemetry。
+         * @details 该反解依赖每轮 corrected steer 与 corrected drive 反馈，
+         *          默认假设每个模块满足“轮平面切向速度匹配 + 横向无侧滑”；
+         *          最终采用最小二乘意义下的 3 自由度机体速度估计，失败时输出清零并返回 `false`。
+         */
         bool Chassis::estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const
         {
             // 从四个模块的当前朝向和驱动反馈反推底盘速度。
@@ -5856,6 +5905,8 @@ namespace jia
                     // 第 2 行是“轮横向速度为 0”的无侧滑约束，用来补足对 vy / omega_z 的可观测性。
                     {-sin_theta, cos_theta, wheel.pos_y_m * sin_theta + wheel.pos_x_m * cos_theta},
                 };
+                // 每个轮子贡献 2 条观测方程，因此四轮合起来是 8 条观测去拟合 3 个底盘自由度，
+                // 本质上属于过定约束最小二乘问题；这样比只挑 3 条方程更抗噪声和单轮误差。
                 const f32 measurements[2] = {drive_linear_m_s, 0.0f};
 
                 for (u8 row = 0; row < 2; ++row)
