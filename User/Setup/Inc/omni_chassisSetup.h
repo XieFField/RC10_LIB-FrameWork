@@ -126,12 +126,14 @@ typedef struct
 
     // 左中右的索引
 
-    int R1_pos_index = 0;
+    int R1_RL_index = 1;
+    int R1_FB_index = 0;
+    
     int fit_pos_index = 1;
     int R2_pos_index = 0;
 
     // 左中右   或者   先后
-    Vector2D R1_pos[3] = {{4.535f, 11.285f}, {4.535f, 10.705f}, {4.535f, 10.185f}};
+    Vector2D R1_pos[3][2] = {{{4.535f, 11.285f},{4.635f, 11.285f}}, {{4.535f, 10.705f},{4.635f, 10.705f}}, {{4.535f, 10.185f},{4.535f, 10.185f}}};
     Vector2D fit_pos[2] = {fit_ahead_pos, fit_end_pos};
     Vector2D R2_pos[3] = {{4.83f, 11.285f}, {4.83f, 10.705f}, {4.83f, 10.185f}};
 
@@ -299,7 +301,7 @@ private:
     void Path_lock_point(Vector2D lock_point);
 
     void CZ_R1_Selection_Planning(void);
-
+    
     void CZ_R2_Selection_Planning(void);
 
 public:
