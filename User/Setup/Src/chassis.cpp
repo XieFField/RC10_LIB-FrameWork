@@ -5277,6 +5277,7 @@ namespace jia
         {
             // 这里发送的是 yaw_pid_trace_ 录波缓存，不是“控制器内部唯一真相”；
             // 它适合用来看 LockNow/LockTo 每拍是如何决定 omega_z 的，而不是拿来反推所有底盘状态。
+            // 换句话说，这里更像“决策 trace”，重点是解释为什么这一拍给了这个 yaw/omega 命令。
             if (!debug_output_.output_enable ||
                 sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
                 sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kYawPid)
@@ -5318,6 +5319,9 @@ namespace jia
 
         void Chassis::emitUart8VofaDrivePidLoadTrace()
         {
+            // 这是单轮 drive PID / 虚拟负载调参与 step generator 观察口：
+            // 主要字段来自 debug_drive_load_trace_ 这份调试缓存，末尾少量字段再补实时电机 getter，
+            // 因而 payload 是“调试聚合量 + 原始反馈量”的混合视图，而不是单一来源镜像。
             if (!debug_output_.output_enable ||
                 sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
                 sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kDrivePidLoadTune)
@@ -5365,6 +5369,9 @@ namespace jia
 
         void Chassis::emitUart8VofaDriveZeroStopBrakeTrace()
         {
+            // 这一路 trace 专门服务 zero-stop / brake 行为观察：
+            // 它回答的是“策略层是否认为该刹、驱动层是否真的下发了刹车、当前电机响应怎样”，
+            // 而不是常规底盘运动学或整车 drive PID 的完整录波。
             if (!debug_output_.output_enable ||
                 sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
                 sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kDriveZeroStopBrakeTrace)
@@ -5416,6 +5423,7 @@ namespace jia
             // header 部分包含 magic/version/flags/seq/time/msg_type/payload_len；
             // payload 部分按固定顺序包含 chassis target、chassis actual，以及 4 个轮子的 target/actual steer/drive 与速度分量。
             // 这层只负责打包和发送，不改变 planned/current 数据语义。
+            // 对上位机来说，payload 顺序和字段口径就是协议契约；这里若调整顺序或来源，解析端也必须同步升级。
             // 其中：
             // - target chassis / target wheels 主要来自 planned_data_ 口径；
             // - actual chassis / actual wheels 主要来自 current_data_ 与实时反馈；
@@ -5512,6 +5520,8 @@ namespace jia
                                                                     current_data_.drive_omega_rad_s,
                                                                     planned_data_.steer_angle_oa_rad,
                                                                     current_data_.steer_angle_oa_rad);
+            // 从这一行开始，后续 pack 只消费 snapshot 这份聚合视图。
+            // 这样 text/binary telemetry 与 host 观察看到的都是同一套 target/actual 口径，而不是各自重拼一遍来源。
 
             // chassis 区先发两组 4f：target = planned_data_ 语义，actual = current_data_ + 当前 IMU yaw。
             if (!packChassis4f(snapshot.target.vel_x, snapshot.target.vel_y, snapshot.target.omega_z, snapshot.target.yaw_rad) ||
@@ -5523,6 +5533,9 @@ namespace jia
             for (u8 i = 0U; i < kSwerveTelemetryWheelCount; ++i)
             {
                 const TelemetryWheelState &wheel = snapshot.wheels[i];
+                // 每轮 payload 固定为 8 个 float：
+                // target/actual drive、target/actual steer、target/actual 平面速度分量。
+                // 其中速度分量属于 chassis 几何展开后的观测派生量，不是底层电机接口的原始直接回读。
 
                 if (!packPayloadF32(wheel.target_drive_omega_rad_s) ||
                     !packPayloadF32(wheel.actual_drive_omega_rad_s) ||
@@ -5564,6 +5577,7 @@ namespace jia
             // 这里是 debug output 的分发层：只根据 family/profile 选择一个输出后端。
             // 节流周期、分频计数、seq 连续性和具体 payload 组装都由各 emitter 与 debug_output_runtime_ 自己负责。
             // 它不维护业务状态，也不生成新的控制语义；只是在线程尾部把当前观测快照送到不同输出后端。
+            // 因而这里最重要的约束是“正确路由”，而不是“重新定义某一路输出的字段含义”。
             if (!debug_output_.output_enable)
             {
                 return;

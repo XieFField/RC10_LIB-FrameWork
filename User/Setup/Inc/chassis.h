@@ -187,6 +187,9 @@ namespace jia
 
             struct TelemetryChassisState
             {
+                // TelemetryChassisState 是面向外部观测的统一车体口径：
+                // 它允许 target 与 actual 分别来自不同内部层次，但对上位机/host 测试都暴露成一致字段集。
+                // 因而这里的值是“对外展示快照”，不是某个 runtime struct 的原样镜像，也不是控制内部唯一真值。
                 f32 vel_x = 0.0f;   // [RO] 车体 X 方向速度。target 口径通常来自 planned_data_，actual 口径来自 current_data_。
                 f32 vel_y = 0.0f;   // [RO] 车体 Y 方向速度。它是对外观测值，不会反向驱动控制。
                 f32 omega_z = 0.0f; // [RO] 车体航向角速度。actual 只有在 all_homed 且无 steer fault 时才可信。
@@ -201,6 +204,11 @@ namespace jia
 
             struct TelemetryWheelState
             {
+                // TelemetryWheelState 同时承载两类观测：
+                // 1. steer/drive 这类“每轮直接语义量”；
+                // 2. 由车体 twist + 轮位几何反推得到的平面速度分量。
+                // 因而 target_* 默认更接近 chassis/planner/apply 口径，actual_* 更接近 current/feedback 口径；
+                // 它们并不承诺等于底层电机对象最后一次 get/set 的原始值。
                 f32 target_drive_omega_rad_s = 0.0f; // [RO] 目标轮速观测值。默认取 planned/apply 后的目标快照，不保证等于电机对象内部最后一次写入值。
                 f32 actual_drive_omega_rad_s = 0.0f; // [RO] 实际轮速观测值。来自 current_data_/反馈链路。
                 f32 target_steer_oa_rad = 0.0f;      // [RO] 目标 OA 舵角观测值。是对外展示语义，不是控制内部唯一真坐标。
@@ -213,6 +221,9 @@ namespace jia
 
             struct TelemetrySnapshot
             {
+                // TelemetrySnapshot 代表“发送这一拍”的整车聚合快照：
+                // 它只服务打包、录包和 host 观察，不参与控制闭环，也不应该被上层当成新的控制真源写回。
+                // homing_all_ready 是生成快照当拍的结论，用来辅助解释 payload，而不是一份长期锁存状态。
                 bool homing_all_ready = false;                      // [RO] 发送 telemetry 时刻的整车 homing ready 结论。
                 TelemetryChassisState target{};                     // [RO] 面向上位机的目标车体状态快照。
                 TelemetryChassisState actual{};                     // [RO] 面向上位机的实际车体状态快照。
@@ -371,6 +382,7 @@ namespace jia
             static DebugModuleOverrideRoute classifyDebugModuleOverrideRoute(u8 raw_mode);
             // makeTelemetrySnapshot() 是 telemetry 打包前的轻量聚合层：
             // 它把 target/actual 底盘状态、轮位几何和每轮 steer/drive 结果收敛成固定快照，供 text/binary 输出共用。
+            // 这里不生成新的控制语义，只要求所有输入口径彼此一致；否则 snapshot 会变成“混来源观测”。
             static TelemetrySnapshot makeTelemetrySnapshot(bool homing_all_ready,
                                                            const TelemetryChassisState &target,
                                                            const TelemetryChassisState &actual,
@@ -1037,13 +1049,18 @@ namespace jia
             void emitUart8VofaPid1kHzTrace();
             void emitUart8VofaSingleWheelDriveTrace();
             void emitUart8VofaDualMotor1kHzTrace();
+            // VOFA trace 负责把某一条调试观察链路发给 JustFloat 后端：
+            // 它们都是只读 emitter，不生成新控制命令；具体节流周期和 profile 选择由 debug_output_ 与 runtime 配合完成。
             void emitUart8VofaYawPidTrace();
             void emitUart8VofaDrivePidLoadTrace();
             void emitUart8VofaDriveZeroStopBrakeTrace();
+            // emitDebugOutputByMode() 只是输出分发层：
+            // family/profile 的路由选择在这里完成，但具体 payload 定义、节流、sample_divider 和 seq 维护都在各自 emitter 内。
             void emitDebugOutputByMode(bool all_homed);
 #endif
 #if JIA_CHASSIS_ENABLE_BINARY_TELEMETRY
             // emitUart8SwerveTelemetryV2() 发送面向上位机的 binary telemetry 快照。
+            // 它面对的是协议消费者，因此 payload 顺序、header 字段和 CRC 口径都属于兼容契约，不能随意漂移。
             void emitUart8SwerveTelemetryV2(bool all_homed);
 #endif
 #if JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
@@ -1442,6 +1459,7 @@ namespace jia
             {
                 // DebugOutputRuntime 只回答“这一路上次发到哪了”：
                 // last_ms 用于节流，cycle_counter 用于分频，seq 用于 binary telemetry 序号连续性。
+                // 这些状态由各 emitter 在准备发送/发送成功后刷新；外部应把它当成输出链路私有运行态，只读观察即可。
                 DebugOutputTextRuntime text{};
                 DebugOutputJustFloatRuntime justfloat{};
                 DebugOutputBinaryRuntime binary{};
@@ -1941,6 +1959,7 @@ namespace jia
         {
             // telemetry wheel 状态既保留“每轮直接量”（steer/drive），也补一份由底盘 twist + 轮位几何反推的速度分量。
             // 这样上位机既能看单轮目标/反馈，也能在不重复做运动学展开的情况下直接看每轮速度矢量。
+            // 注意这里是“聚合快照生成”而不是控制计算：它只消费输入、组织口径，不反向影响 planned/current/runtime。
             TelemetrySnapshot snapshot{};
             snapshot.homing_all_ready = homing_all_ready;
             snapshot.target = target;
