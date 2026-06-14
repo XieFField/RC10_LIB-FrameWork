@@ -31,9 +31,10 @@ extern "C" {
 #include "Locate_Setup.h"
 #include "Module_lora.h"
 
+
 // #include "usart.h"
 
-#define ARM_AUTO_DEBUG_NOCHASSIS  1 //无底盘下的模拟调试开关 1开启 0关闭
+#define ARM_AUTO_DEBUG_NOCHASSIS  0 //无底盘下的模拟调试开关 1开启 0关闭
 #define ARM_VERSION 0 //版本号 已无用
 
 
@@ -52,20 +53,22 @@ typedef struct{
 
     int8_t last_manual_extend = 0; //上一次手动展状态
     int8_t last_manual_sucker = 0; //上一次手动吸盘状态
-
     int8_t last_manual_pitch = 0; //上一次手动pitch状态
-    int8_t last_manual_store_sucker = 0;
+    int8_t last_manual_store_sucker = 0; //上一次手动存储位吸盘状态
 
     int8_t pitch_switch_offset = 0; //pitch开关偏移
     int8_t extend_switch_offset = 0; //展开关偏移
     int8_t sucker_switch_offset = 0; // 吸盘开关偏移
-    int8_t store_suker_switch_offset = 0;
+    int8_t store_suker_switch_offset = 0; // 存储吸盘开关偏移
 
+
+#if !USE_RC10_AIRJOY
     uint8_t button_click_state = 0;
-    uint8_t is_store_acting = 0; //手操作存储状态 0无动作 1取出 2存储
-
+#endif
+    uint8_t is_store_acting = 0; //手操作存储状态 0无动作 1取出 2存储 3拾取 4放下
     
     uint8_t last_manual_store = 0; //上一次手动存储状态
+
 }arm_ctrl_status_S;
 
 
@@ -83,7 +86,7 @@ typedef enum{
 
 typedef enum{
     ONLY_ONE,
-    TWO,
+    TWO_OR_THREE,
     NONE_KFS,
 }KFS_NUM_E;
 
@@ -174,7 +177,7 @@ public:
      * @param KFS2 第二个KFS编号，范围0~12
      * @brief 0表示没有要拾取的KFS，如果KFS1和KFS2都为0，则返回false表示没有有效目标；如果至少有一个KFS编号有效，则计算路径并返回true
      */
-    bool set_TargetKFS(int KFS1, int KFS2)
+    bool set_TargetKFS(int KFS1, int KFS2, int KFS3)
     {
         if(KFS1 >=0 && KFS1 <=12)
             auto_ctrl_.targetKFS[0] = KFS1;
@@ -184,13 +187,17 @@ public:
             auto_ctrl_.targetKFS[1] = KFS2;
         else
             auto_ctrl_.targetKFS[1] = 0;
-        
-        if(KFS1 != 0 && KFS2 !=0)
-            auto_ctrl_.kfs_num = TWO;
+        if(KFS3 >=0 && KFS3 <=12)
+            auto_ctrl_.targetKFS[2] = KFS3;
+        else
+            auto_ctrl_.targetKFS[2] = 0;
+
+        if(KFS1 != 0 && KFS2 !=0 && KFS3 != 0)
+            auto_ctrl_.kfs_num = TWO_OR_THREE;
         else
             auto_ctrl_.kfs_num = ONLY_ONE;
 
-        if(KFS1 == 0 && KFS2 == 0)
+        if(KFS1 == 0 && KFS2 == 0 && KFS3 == 0)
             return false; //没锟斤拷目锟斤拷KFS锟斤拷锟斤拷锟斤拷失锟斤拷
         else
         {
@@ -203,14 +210,22 @@ public:
             {
                 auto_ctrl_.targetKFS_pos[1] = {0.0f, 0.0f, 0.0f};
             }
+            if(KFS3 != 0)
+            {
+                auto_ctrl_.targetKFS_pos[2] = MF_AutoCtrler::MapNum_RealPos[MF_AutoCtrler::MFNum_TransforMapNum(auto_ctrl_.targetKFS[2])-1];
+            }
+            else
+            {
+                auto_ctrl_.targetKFS_pos[2] = {0.0f, 0.0f, 0.0f};
+            }
         }
 
         MF_AutoCtrler::PathInformation_S temp = MF_AutoCtrler::PathInformation_calc(auto_ctrl_.now_ChassisPosition,
                                        auto_ctrl_.targetKFS[0],
-                                        auto_ctrl_.targetKFS[1], 0);
+                                        auto_ctrl_.targetKFS[1], auto_ctrl_.targetKFS[2]);
         auto_ctrl_.pathInfo.entranceMap = temp.entranceMap;
         
-        for(int i=0; i<2; i++)
+        for(int i=0; i<3; i++)
         {
             auto_ctrl_.pathInfo.MFroad[i] = temp.MFroad[i];
         }
@@ -220,7 +235,7 @@ public:
             auto_ctrl_.pathInfo.mustPastMap[i] = temp.mustPastMap[i];
         }
 
-        for(int i=0; i<2; i++)
+        for(int i=0; i<3; i++)
         {
             auto_ctrl_.pathInfo.Index_MFroad[i] = temp.Index_MFroad[i];
         }
@@ -295,10 +310,12 @@ private:
 
     //控制函数相关
     void manualControl();
-    bool manual_store();
-    bool manual_takeout();
-    bool manual_pickup();
-    bool manual_putdown();
+
+    bool manual_store(uint8_t kfs_index); //存儲kfs
+    bool manual_takeout(uint8_t kfs_index); //取出存储kfs
+    bool manual_pickup(); //拾取地上的kfs
+    bool manual_putdown(); //放下kfs
+
     bool test();
 
     void autoControl();
@@ -343,6 +360,7 @@ private:
         const float norm_deg = rotate_angle_deg;
 
         if (h < init_data_.lock_height_) {
+            // 只有下降前在0.0±3.0度时才强制锁定到0°
             if (pre_descent_angle_ <= 3.0f || pre_descent_angle_ >= 357.0f)
                 return false;
         }
@@ -367,8 +385,10 @@ private:
         const float re = init_data_.rotate_end;
 
         if (h < lock_h) {
+            // 只有下降前在0.0±3.0度时才强制锁定到0°
             if (pre_descent_angle_ <= 3.0f || pre_descent_angle_ >= 357.0f)
                 return 0.0f;
+            // 否则走safe_h限制
         }
 
         if (h < safe_h - 0.01f)
@@ -376,7 +396,7 @@ private:
             float cur = this->get_currentJointStatus().rotateJoint_angle_;
             bool in_storage_zone = (cur >= re && cur <= 360.0f)
                                 || (cur >= 0.0f && cur <= 135.0f) ;
-            if (in_storage_zone && this->get_currentJointStatus().launchJoint_Height_ > init_data_.store_height_ - 0.01f)
+            if (in_storage_zone && this->get_currentJointStatus().launchJoint_Height_ > init_data_.store_height_outside_ - 0.01f)
                 return desired_deg;
 
             const float norm_deg = desired_deg;
@@ -519,12 +539,12 @@ protected:
         int cnt = 0;
     }manual_control;
 
-    float pre_descent_angle_ = 0.0f;
+    float pre_descent_angle_ = 0.0f; // 下降前云台角度：h>=lock_h时持续更新，h<lock_h时冻结
 
     ButtonDetector button_detector_1 = ButtonDetector(0.200f); //双击三击检测器，200ms间隔
 
-    bool calibration_seen_ = false;
 
+    bool calibration_seen_ = false;
     store_state store_state_ = store_state::idle; //存储状态机状态
 };
 

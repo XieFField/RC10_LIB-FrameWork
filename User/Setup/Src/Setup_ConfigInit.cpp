@@ -7,6 +7,8 @@ extern "C"
 {
     extern USBD_HandleTypeDef hUsbDeviceHS;
 }
+
+Serial1Protocol* 	m_serial1 = Serial1Protocol::getInstance();
 fdCANbus *const CAN1_Bus = fdCANbus::getInstance(&hfdcan1); // 获取 FDCAN1 唯一实例
 fdCANbus *const CAN2_Bus = fdCANbus::getInstance(&hfdcan2); // 获取 FDCAN2 唯一实例
 fdCANbus *const CAN3_Bus = fdCANbus::getInstance(&hfdcan3);
@@ -88,7 +90,6 @@ OIDEncoder oid_encoder(91, CAN2_Bus, 4096, 200);
 
 /*============================== debug  DJI_Motor ===============================*/
 
-
 void debug_init()
 {
 /*============================= debug 机械臂 ================================*/
@@ -120,13 +121,11 @@ Locate_Setup* set1 = Locate_Setup::getInstance();
 
 #if DEBUG_SHIT
 Swerve_Task_Demo swerve_task_demo; // 轮式舵轮底盘调试任务实例
-
 #endif  
 
 void ALL_Setup_ConfigInit(void)
 {
-    Serial1Protocol &serial1_protocol = Serial1Protocol::getInstance();
-
+    m_serial1->init(&huart2);
     HWT101CT* imu = HWT101CT::GetInstance(&huart1);
     imu->InitUART();
     TimeStamp::getInstance().init(&htim4);
@@ -154,7 +153,7 @@ void ALL_Setup_ConfigInit(void)
     swerve_task_demo.init();
 #endif
 
-#if JIA_USE_FOUR_STEER_CHASSIS && !TEST_TEMP && !DEBUG_SHIT
+#if !TEST_TEMP && !DEBUG_SHIT
     Chassis::InitConfig chassis_init_config =
     {
         // 转向电机句柄（按轮序 0~3 对应）
@@ -172,7 +171,6 @@ void ALL_Setup_ConfigInit(void)
     chassis.init(chassis_init_config);
 #endif
 
-
     Finite_StateMachine.registerArmSetup(&ARM_Controller);
     Finite_StateMachine.registerChassisSetup(&ChassisOmni);
     Finite_StateMachine.registerWeaponSageSetup(&Weapon_Controller);
@@ -189,6 +187,8 @@ void ALL_Setup_ConfigInit(void)
     set1->init(&usb_1,lader_install_offset ,arm_install_offset);
     set1->locate_setup_init();
     set1->set_startToLRL(true);
+		
+		
 }
 
 void CAN_Motor_Init(void)
@@ -288,9 +288,9 @@ void CAN_Motor_Init(void)
     PID_Param_Config weapon_wrist_anglePID = m2006_angle_pid_params;
     PID_Param_Config weapon_wrist_speedPID = m2006_speed_pid_params;
 
-    weapon_3508_anglePID.output_limit=100.0f;
+    weapon_3508_anglePID.output_limit=250.0f;
     weapon_3508_speedPID.output_limit=15000.0f;
-    weapon_2006_speedPID.output_limit=4500;
+    weapon_2006_speedPID.output_limit=3000;
     weapon_2006_anglePID.output_limit=500;
     weapon_wrist_anglePID.output_limit=100.0f;
 	weapon_wrist_speedPID.output_limit=8000.0f;

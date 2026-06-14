@@ -372,6 +372,59 @@ TEST_CASE("testRecoveryImmediatelyReopensSteerSearchAfterFaultLatchSidePidReset"
     EXPECT_NEAR(steer_motors[0].getTargetRPM(), chassis.wheel_config_[0].homing_search_rpm, 1.0e-6f);
 }
 
+TEST_CASE("testWheel2RecoveryReissuesHomingSearchRpmAfterFirstCommandDrop")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.input_target_data_.vel_x = 1.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        steer_motors[i].setFeedbackCurrent((i == 1) ? 5000.0f : 100.0f);
+        steer_motors[i].setFeedbackTotalAngleDeg(0.0f);
+    }
+
+    bool latched_fault = false;
+    for (int cycle = 0; cycle < 8; ++cycle)
+    {
+        runHostControlCycle(chassis);
+        if (chassis.wheel_config_[1].homing_state == Chassis::HomingState::kFault)
+        {
+            latched_fault = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(latched_fault);
+
+    steer_motors[1].resetRpmCommandObservation();
+    steer_motors[1].setDropFirstRpmCommand(true);
+    steer_motors[1].setFeedbackCurrent(-5000.0f);
+
+    runHostControlCycle(chassis);
+
+    EXPECT_TRUE(chassis.wheel_config_[1].homing_state == Chassis::HomingState::kSearch);
+    EXPECT_TRUE(chassis.wheel_config_[1].steer_fault_state == Chassis::SteerFaultState::kRecovering);
+    EXPECT_TRUE(steer_motors[1].getRpmCommandCallCount() == 2U);
+    EXPECT_NEAR(steer_motors[1].getAcceptedTargetRPM(), chassis.wheel_config_[1].homing_search_rpm, 1.0e-6f);
+
+    runHostControlCycle(chassis);
+
+    EXPECT_TRUE(chassis.wheel_config_[1].homing_state == Chassis::HomingState::kSearch);
+    EXPECT_TRUE(chassis.wheel_config_[1].steer_fault_state == Chassis::SteerFaultState::kRecovering);
+    EXPECT_TRUE(steer_motors[1].getRpmCommandCallCount() == 3U);
+    EXPECT_NEAR(steer_motors[1].getAcceptedTargetRPM(), chassis.wheel_config_[1].homing_search_rpm, 1.0e-6f);
+
+    finishWheelHomingByEdgeAndAlign(chassis, 1, steer_motors);
+
+    EXPECT_TRUE(chassis.wheel_config_[1].homing_state == Chassis::HomingState::kReady);
+    EXPECT_TRUE(chassis.wheel_config_[1].steer_fault_state == Chassis::SteerFaultState::kNone);
+}
+
 TEST_CASE("testXParkStaticReconnectRehomesWithoutNewVelocityCommand")
 {
     Chassis chassis;

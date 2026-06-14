@@ -1,8 +1,9 @@
 #include "omni_chassisSetup.h"
-
+extern Chassis chassis;
+float CB_yaw = 89.0f;
 void OmniChassis_Setup::Path_CB_check(void)
 {
-    if (CB_point.Clamping_Bar_Selection_pos_.x == curve.Get_End_point().x && CB_point.Clamping_Bar_Selection_pos_.y == curve.Get_End_point().y)
+    if (CB_point.CB_Selection_pos.x == curve.Get_End_point().x && CB_point.CB_Selection_pos.y == curve.Get_End_point().y)
     {
         CB_flag.Selection_flag = true;
     }
@@ -13,10 +14,13 @@ void OmniChassis_Setup::Path_CB_check(void)
         WeaponSage_Start = true;
     }
 
-    if (CB_point.Clamping_Bar_Retreat_pos_.x == curve.Get_End_point().x && CB_point.Clamping_Bar_Retreat_pos_.y == curve.Get_End_point().y)
+    if (CB_point.CB_End_pos.x == curve.Get_End_point().x && CB_point.CB_End_pos.y == curve.Get_End_point().y)
     {
         CB_flag.Retreat_flag = true;
-        target_yaw_ = 90.0f;
+        if (WeaponSage_Start == false)
+        {
+            target_yaw = 90.0f;
+        }
     }
     else if (CB_flag.Retreat_flag == true)
     {
@@ -25,159 +29,17 @@ void OmniChassis_Setup::Path_CB_check(void)
         WeaponSage_End = true;
     }
 }
-void OmniChassis_Setup::Path_KFS_check(void)
-{
-    // KFS拾取判断MF1
-    if (KFS_point.MF1_pos_.x == curve.Get_End_point().x && KFS_point.MF1_pos_.y == curve.Get_End_point().y)
-    {
-        KFS_flag.MF1_flag = true;
-    }
-    else if (KFS_flag.MF1_flag == true)
-    {
-        KFS_flag.MF1_flag = false;
-        pid_dead_flag = false;
-        Arm_Start = true;
-        KFS_flag.MF1_finish = true;
-    }
-
-    // KFS拾取判断MF2
-    if (KFS_point.MF2_pos_.x == curve.Get_End_point().x && KFS_point.MF2_pos_.y == curve.Get_End_point().y)
-    {
-        KFS_flag.MF2_flag = true;
-    }
-    else if (KFS_flag.MF2_flag == true)
-    {
-        KFS_flag.MF2_flag = false;
-        pid_dead_flag = false;
-        Arm_Start = true;
-        KFS_flag.MF2_finish = true;
-    }
-
-    // KFS拾取判断MF3
-    if (KFS_point.MF3_pos_.x == curve.Get_End_point().x && KFS_point.MF3_pos_.y == curve.Get_End_point().y)
-    {
-        KFS_flag.MF3_flag = true;
-    }
-    else if (KFS_flag.MF3_flag == true)
-    {
-        KFS_flag.MF3_flag = false;
-        pid_dead_flag = false;
-        Arm_Start = true;
-    }
-
-    // 上方停止点旋转
-    if (KFS_flag.spin_up_flag == true)
-    {
-        // 判断旋转条件
-        if (KFS_point.spin_point_.x == curve.Get_End_point().x && KFS_point.spin_point_.y == curve.Get_End_point().y)
-        {
-            KFS_flag.get_spin_flag = true;
-        }
-        // 开始旋转
-        else if (KFS_flag.get_spin_flag == true)
-        {
-            KFS_flag.get_spin_flag = false;
-            target_yaw_ = KFS_point.MF2_target_yaw_;
-            Spin_Start = true;
-        }
-        // 判断退出
-        else if (Spin_Start == true)
-        {
-            if (_tool_Abs(yaw - target_yaw_) < 2.0f)
-            {
-                Spin_Start = false;
-                KFS_flag.spin_up_flag = false;
-            }
-        }
-    }
-
-    if (KFS_flag.spin_down_flag == true) // 下方偏移旋转
-    {
-        if (KFS_flag.MF1_finish == true)
-        {
-            // 第一排旋转
-            if (target_yaw_ == -90.0f)
-            {
-                target_yaw_ = KFS_point.MF2_target_yaw_;
-                KFS_flag.spin_down_flag = false;
-            }
-            // 两侧旋转判断
-            else if (KFS_point.MF1_pos_.x == curve.Get_Start_point().x && KFS_point.MF1_pos_.y == curve.Get_Start_point().y)
-            {
-                KFS_flag.get_spin_flag = true;
-            }
-            // 两侧开始旋转
-            else if (KFS_flag.get_spin_flag == true)
-            {
-                target_yaw_ = KFS_point.MF2_target_yaw_;
-                KFS_flag.spin_down_flag = false;
-                KFS_flag.get_spin_flag = false;
-            }
-        }
-    }
-
-    //-------------------------------          MF2              -------------------------------
-    // 上方停止点旋转
-    if (KFS_flag.spin_up_flag_2 == true && KFS_flag.spin_down_flag == false && KFS_flag.spin_up_flag == false)
-    {
-        // 判断旋转条件
-        if (KFS_point.spin_point_.x == curve.Get_End_point().x && KFS_point.spin_point_.y == curve.Get_End_point().y)
-        {
-            KFS_flag.get_spin_flag = true;
-        }
-        // 开始旋转
-        else if (KFS_flag.get_spin_flag == true)
-        {
-            KFS_flag.get_spin_flag = false;
-            target_yaw_ = KFS_point.MF3_target_yaw_;
-            Spin_Start = true;
-        }
-        // 判断退出
-        else if (Spin_Start == true)
-        {
-            if (_tool_Abs(yaw - target_yaw_) < 2.0f)
-            {
-                Spin_Start = false;
-                KFS_flag.spin_up_flag_2 = false;
-            }
-        }
-    }
-
-    if (KFS_flag.spin_down_flag_2 == true && KFS_flag.spin_down_flag == false && KFS_flag.spin_up_flag == false) // 下方偏移旋转
-    {
-        if (KFS_flag.MF2_finish == true)
-        {
-            // 第一排旋转
-            if (target_yaw_ == -90.0f)
-            {
-                target_yaw_ = KFS_point.MF3_target_yaw_;
-                KFS_flag.spin_down_flag_2 = false;
-            }
-            // 两侧旋转判断
-            else if (KFS_point.MF2_pos_.x == curve.Get_Start_point().x && KFS_point.MF2_pos_.y == curve.Get_Start_point().y)
-            {
-                KFS_flag.get_spin_flag = true;
-            }
-            // 两侧开始旋转
-            else if (KFS_flag.get_spin_flag == true)
-            {
-                target_yaw_ = KFS_point.MF3_target_yaw_;
-                KFS_flag.spin_down_flag_2 = false;
-                KFS_flag.get_spin_flag = false;
-            }
-        }
-    }
-}
 
 void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw_ = 0.0f;
+    target_yaw = CB_yaw;
+        path_line_.Reset();
     path_line_.plan_reset();
-    path_line_.Reset();
 
-    //    path_line_.Add_Start_Point(robot_pos_);
-    //    path_line_.Add_End_Point(test_point, path_param_CB_);
+
+    //     path_line_.Add_Start_Point(robot_pos_);
+    //     path_line_.Add_End_Point(test_point, path_param.CB);
 
     // 夹杆路径的测试
     //    path_line_.Add_Start_Point(robot_pos_);
@@ -185,22 +47,60 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     //    path_line_.Add_Point(CB_point.Clamping_Bar_Selection_pos_, CB_point.CB_Selection_control_point_, path_param.curve);
     //    path_line_.Add_End_Point(CB_point.Clamping_Bar_Retreat_pos_, path_param.end);
 
-    // 顺滑过弯
-    //    path_line_.Add_Start_Point(robot_pos_);
-    //    path_line_.Add_Point(Vector2D{0.6f + KFS_point.coner_ahead, 2.6f}, path_param.start);
-    //    path_line_.Add_Point(Vector2D{0.6f, 2.6f + KFS_point.coner_ahead}, path_param.line);
-    //    path_line_.Add_End_Point(Vector2D{0.6f, 5.0f}, path_param.end);
-
     // 夹杆路径
     path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
-    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.end);
+    //    if (robot_pos_.y < CB_point.CB_Selection_pos.y)
+    //    {
+    //        path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
+    //    }
+    //    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.end);
     path_line_.Add_End_Point(CB_point.CB_End_pos, path_param.end);
 
     Path_end_point = path_line_.Get_End_Point();
 }
 
-extern Chassis chassis;
+void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
+{
+    // 夹杆流程只规划起点到固定终点的简化路径。
+    target_yaw = CZ_point.R1_yaw;
+        path_line_.Reset();
+    path_line_.plan_reset();
+
+    
+    CZ_point.R1_pos_index = (CZ_point.R1_pos_index + 1) % 3;
+    path_line_.Add_Start_Point(robot_pos_);
+    path_line_.Add_End_Point(CZ_point.R1_pos[CZ_point.R1_pos_index], path_param.end);
+
+    Path_end_point = path_line_.Get_End_Point();
+}
+
+void OmniChassis_Setup::CZ_R2_Selection_Planning(void)
+{
+    // 夹杆流程只规划起点到固定终点的简化路径。
+    target_yaw = CZ_point.fit_yaw;
+        path_line_.Reset();
+    path_line_.plan_reset();
+
+    
+    //合体地点和等待地点的切换
+    if(airjoy_data_.SWA == 0x01)
+    {
+        CZ_point.fit_pos_index = (CZ_point.fit_pos_index + 1) % 2;
+        path_line_.Add_Start_Point(robot_pos_);
+        path_line_.Add_End_Point(CZ_point.fit_pos[CZ_point.fit_pos_index], path_param.end); 
+    }
+    else if(airjoy_data_.SWA == 0x00)
+    {
+        CZ_point.R2_pos_index = (CZ_point.R2_pos_index + 1) % 3;
+        path_line_.Add_Start_Point(robot_pos_);
+        path_line_.Add_End_Point(CZ_point.R2_pos[CZ_point.R2_pos_index], path_param.R2); 
+    }
+    
+
+    Path_end_point = path_line_.Get_End_Point();
+}
+
+
 
 void OmniChassis_Setup::loop()
 {
@@ -224,7 +124,6 @@ void OmniChassis_Setup::loop()
         float target_vel_x = 0.0f;
         float target_vel_y = 0.0f;
         float target_omega_z = 0.0f;
-
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
             target_vel_x = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
         else
@@ -239,9 +138,10 @@ void OmniChassis_Setup::loop()
             target_omega_z = airjoy_data_.right_x * 6;
         else
             target_omega_z = 0.0f;
-
         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, target_omega_z);
 
+        target_yaw = yaw;
+        chassis_status_last_ = chassis_status_;
         break;
     }
     case CHASSIS_MANUAL_CONTROL_B:
@@ -262,6 +162,8 @@ void OmniChassis_Setup::loop()
 
         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y);
 
+        target_yaw = yaw;
+        chassis_status_last_ = chassis_status_;
         break;
     }
 
@@ -281,168 +183,290 @@ void OmniChassis_Setup::loop()
             target_chassis_twist_.vy = 0.0f;
 
         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
+
         //        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
         //            target_chassis_twist_.vx = airjoy_data_.left_x * 1 * this->is_chassis_reverse_;
         //        else
         //            target_chassis_twist_.vx = 0.0f;
         //        chassis.setSteerDegAndDriveSpeed(90.0f, target_chassis_twist_.vx);
+
+        target_yaw = yaw;
+        chassis_status_last_ = chassis_status_;
+        break;
+    }
+    case CHASSIS_MANUAL_CONTROL_D:
+    {
+        float target_vel_x = 0.0f;
+        float target_vel_y = 0.0f;
+        float target_omega_z = 0.0f;
+
+        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+            target_vel_x = airjoy_data_.left_x * 1 * this->is_chassis_reverse_;
+        else
+            target_vel_x = 0.0f;
+
+        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+            target_vel_y = airjoy_data_.left_y * 1 * this->is_chassis_reverse_;
+        else
+            target_vel_y = 0.0f;
+
+        if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
+            target_omega_z = airjoy_data_.right_x * 1;
+        else
+            target_omega_z = 0.0f;
+
+        if (airjoy_data_.SWD == 0x00)
+            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, CB_yaw * PI / 180.0f);
+
+        else if (airjoy_data_.SWD == 0x01)
+            chassis.setSteerDegAndDriveSpeed(90.0f, target_vel_x);
+
+        chassis_status_last_ = chassis_status_;
         break;
     }
 
     case CHASSIS_AUTO_CONTROL_CB:
     {
+
+        if (chassis_status_last_ != chassis_status_)
+        {
+            flag_reset();
+            path_line_.Reset();
+            path_line_.plan_reset();
+
+            Path_end_point = robot_pos_;
+        }
         // 夹杆自动流程：触发后执行路径规划、纠偏和速度合成。
         if (flag == 1)
         {
-            flag_reset();
             flag = 0;
-            flag_run = 1;
             Clamping_Bar_Selection_Planning();
         }
-        if (flag_run == 1)
+
+        if (path_line_.Is_End() == false)
         {
-            if (path_line_.Is_End() == false)
+            // 获取曲线（带保护）
+            curve = path_line_.get_bezier_curve();
+            Path_CB_check();
+            if (WeaponSage_Start == false && WeaponSage_End == false)
             {
-                // 获取曲线（带保护）
-                curve = path_line_.get_bezier_curve();
-                Path_CB_check();
-                if (WeaponSage_Start == false && WeaponSage_End == false)
+                V.planspeed = path_line_.plan(robot_pos_);
+                Path_correction();
+                V.corrVelocity = V.PID_coefficient * V.corrVelocity;
+                speed = v_limit();
+                if (path_line_.Get_Curve_Flag() == true)
                 {
-                    V.planspeed = path_line_.plan(robot_pos_);
-                    Path_correction();
-                    V.corrVelocity = V.PID_coefficient * V.corrVelocity;
-                    speed = v_limit();
-                    target_chassis_twist_.vx = speed.x;
-                    target_chassis_twist_.vy = speed.y;
+                    speed = speed * V.spinodal_coefficient;
                 }
-                else
-                {
-                    Vector2D lock_point = curve.Get_Start_point();
-                    float lock_err = (robot_pos_ - lock_point).magnitude();
-                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
-                    target_chassis_twist_.vx = speed.x;
-                    target_chassis_twist_.vy = speed.y;
-                    pid_dead_flag = path_lock.get_is_in_dead_zone();
-                }
-            }
-            else
-            {
-                float lock_err = (robot_pos_ - Path_end_point).magnitude();
-                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Path_end_point).normalize();
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
             }
-            float target_yaw_rad = target_yaw_ * PI / 180.0f;
-            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
+            else
+            {
+                Path_lock_point(curve.Get_Start_point());
+            }
         }
         else
         {
-            target_chassis_twist_ = {0.0f, 0.0f};
-            chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
+            Path_lock_point(Path_end_point);
         }
+        float target_yaw_rad = target_yaw * PI / 180.0f;
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
 
+        chassis_status_last_ = chassis_status_;
         break;
     }
 
     case CHASSIS_AUTO_CONTROL_KFS:
     {
+        if (chassis_status_last_ != chassis_status_)
+        {
+            flag_reset();
+            path_line_.Reset();
+            path_line_.plan_reset();
+            Path_end_point = robot_pos_;
+        }
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
         if (flag == 1)
         {
-            flag_reset();
             flag = 0;
-            flag_run = 1;
             KFS_Selection_Planning();
         }
-        if (flag_run == 1)
+        if (path_line_.Is_End() == false)
         {
-            if (path_line_.Is_End() == false)
+            // 获取曲线（带保护）
+            curve = path_line_.get_bezier_curve();
+            // 旋转点位判断以及KFS的拾取判断
+            Path_KFS_check();
+            if (Arm_Start == false)
             {
-                // 获取曲线（带保护）
-                curve = path_line_.get_bezier_curve();
-                // 旋转点位判断以及KFS的拾取判断
-                Path_KFS_check();
-                if (Arm_Start == false && Spin_Start == false)
-                {
-                    // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
-                    V.planspeed = path_line_.plan(robot_pos_);
-                    Path_correction();
-                    V.corrVelocity = V.PID_coefficient * V.corrVelocity;
-                    speed = v_limit();
-                    target_chassis_twist_.vx = speed.x;
-                    target_chassis_twist_.vy = speed.y;
-                }
-                else
-                {
-                    Vector2D lock_point = curve.Get_Start_point();
-                    float lock_err = (robot_pos_ - lock_point).magnitude();
-                    speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
-                    target_chassis_twist_.vx = speed.x;
-                    target_chassis_twist_.vy = speed.y;
-                    pid_dead_flag = path_lock.get_is_in_dead_zone();
-                }
-            }
-            else
-            {
-                float lock_err = (robot_pos_ - Path_end_point).magnitude();
-                speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - Path_end_point).normalize();
+                // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
+                V.planspeed = path_line_.plan(robot_pos_);
+                Path_correction();
+                V.corrVelocity = V.PID_coefficient * V.corrVelocity;
+                speed = v_limit();
                 target_chassis_twist_.vx = speed.x;
                 target_chassis_twist_.vy = speed.y;
             }
-            robot_pos_ = robot_pos_ + speed * 0.001f;
-            float target_yaw_rad = target_yaw_ * PI / 180.0f;
-            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
+            else
+            {
+                Path_lock_point(curve.Get_Start_point());
+            }
         }
         else
         {
-            target_chassis_twist_ = {0.0f, 0.0f};
-            chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy);
+            Path_lock_point(Path_end_point);
         }
 
+        float target_yaw_rad = target_yaw * PI / 180.0f;
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
+
+        chassis_status_last_ = chassis_status_;
+        break;
+    }
+
+    case CHASSIS_AUTO_CONTROL_CZ_R1:
+    {
+        if (chassis_status_last_ != chassis_status_)
+        {
+            flag_reset();
+            path_line_.Reset();
+            path_line_.plan_reset();
+            Path_end_point = robot_pos_;
+            CZ_point.fit_pos_index=1;
+            CZ_point.R1_pos_index=0;
+            CZ_point.R2_pos_index=0;
+        }
+        // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
+        if (flag == 1)
+        {
+            flag = 0;
+            CZ_R1_Selection_Planning();
+        }
+        if (path_line_.Is_End() == false)
+        {
+            // 获取曲线（带保护）
+            curve = path_line_.get_bezier_curve();
+            // 旋转点位判断以及KFS的拾取判断
+            Path_KFS_check();
+            if (true)
+            {
+                // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
+                V.planspeed = path_line_.plan(robot_pos_);
+                Path_correction();
+                V.corrVelocity = V.PID_coefficient * V.corrVelocity;
+                speed = v_limit();
+                target_chassis_twist_.vx = speed.x;
+                target_chassis_twist_.vy = speed.y;
+            }
+            else
+            {
+                Path_lock_point(curve.Get_Start_point());
+            }
+        }
+        else
+        {
+            Path_lock_point(Path_end_point);
+        }
+
+        float target_yaw_rad = target_yaw * PI / 180.0f;
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
+
+        chassis_status_last_ = chassis_status_;
+        break;
+    }
+    
+    case CHASSIS_AUTO_CONTROL_CZ_R2:
+    {
+        if (chassis_status_last_ != chassis_status_)
+        {
+            flag_reset();
+            path_line_.Reset();
+            path_line_.plan_reset();
+            Path_end_point = robot_pos_;
+            CZ_point.fit_pos_index=1;
+            CZ_point.R1_pos_index=0;
+            CZ_point.R2_pos_index=0;
+        }
+        // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
+        if (flag == 1)
+        {
+            flag = 0;
+            CZ_R2_Selection_Planning();
+        }
+        if (path_line_.Is_End() == false)
+        {
+            // 获取曲线（带保护）
+            curve = path_line_.get_bezier_curve();
+            // 旋转点位判断以及KFS的拾取判断
+            Path_KFS_check();
+            if (true)
+            {
+                // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
+                V.planspeed = path_line_.plan(robot_pos_);
+                Path_correction();
+                V.corrVelocity = V.PID_coefficient * V.corrVelocity;
+                speed = v_limit();
+                target_chassis_twist_.vx = speed.x;
+                target_chassis_twist_.vy = speed.y;
+            }
+            else
+            {
+                Path_lock_point(curve.Get_Start_point());
+            }
+        }
+        else
+        {
+            Path_lock_point(Path_end_point);
+        }
+
+        float target_yaw_rad = target_yaw * PI / 180.0f;
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
+
+        chassis_status_last_ = chassis_status_;
         break;
     }
 
     case CHASSIS_STOP:
     {
-#if s_debug
-        num++;
-
-        tp_speed_now = TP_1d.plan(tp_pos_now);
-        tp_pos_now += tp_speed_now * 0.001f;
-
-        if (num > 2)
-        {
-            // debug_uart.printf_DMA("%f,%f\n", tp_speed_now, tp_pos_now);
-            num = 0;
-        }
-        if (TP_1d.isFinished() == 1)
-        {
-            a++;
-        }
-        else
-        {
-            a = 0;
-        }
-        if (a > 1000)
-        {
-            a = 0;
-            tp_pos_now = 0.0f;
-            TP_1d.param_reset(Param_1d);
-        }
-#endif
+        target_yaw = yaw;
+        chassis_status_last_ = chassis_status_;
         chassis.setZeroCurrent();
         break;
     }
 
     default:
     {
-        // 其他模式不下发新命令。
+        // 正常不会进入
+        target_yaw = yaw;
+        chassis_status_last_ = chassis_status_;
         break;
     }
     }
 }
 
 //////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
+void OmniChassis_Setup::Path_lock_point(Vector2D lock_point)
+{
+    float lock_err = (robot_pos_ - lock_point).magnitude();
+    if(airjoy_data_.SWA == 0x00 && chassis_status_==CHASSIS_AUTO_CONTROL_CZ_R2)
+    {
+        speed = path_lock_r2.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
+    }
+    else
+    {
+        speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
+    }
+    pid_dead_flag = path_lock.get_is_in_dead_zone();
+    if( pid_dead_flag==true)
+    {
+        target_chassis_twist_.vx = 0.0f;
+        target_chassis_twist_.vy = 0.0f;
+    }
+    target_chassis_twist_.vx = speed.x;
+    target_chassis_twist_.vy = speed.y;
+
+}
 
 void OmniChassis_Setup::Path_correction(void)
 {
@@ -452,8 +476,6 @@ void OmniChassis_Setup::Path_correction(void)
     curve.Get_Nearest_Distance(robot_pos_, &tNearest);
 
     Vector2D nearestPt = curve.Get_Point(tNearest);
-
-    // float err_curve = (nearestPt - robot_pos_).magnitude();
 
     float obj_dis = _tool_Abs((curve.Get_End_point() - robot_pos_).magnitude());
 
@@ -476,70 +498,34 @@ void OmniChassis_Setup::Path_correction(void)
     // 2. 寻找前视点作为我们追踪的“虚拟兔子”
 
     Vector2D lookaheadPt; // 路径上的前视点
-    if (curve.Get_Bezier_Order() == FIRST_ORDER_BEZIER)
-    {
-        V.m_lookaheadDist = V.m_lookaheadDist_line;
-    }
-    else
-    {
-        V.m_lookaheadDist = V.m_lookaheadDist_curve;
-    }
 
     tLookahead = tNearest; // 前视点的编号，先从最近点的编号开始（比如t=0.3）
 
-#if opti
-    {
-        // 弧长表二分查找：利用 BezierCurve 已有的 distance_list[200]
-        // Get_Current_Len 内部做 O(1) 查表+线性插值，二分替代逐点步进
-        float current_len = curve.Get_Current_Len(tNearest);
-        float target_len = current_len + V.m_lookaheadDist;
+    // 弧长表二分查找：利用 BezierCurve 已有的 distance_list[200]
+    // Get_Current_Len 内部做 O(1) 查表+线性插值，二分替代逐点步进
+    float current_len = curve.Get_Current_Len(tNearest);
+    float target_len = current_len + V.m_lookaheadDist;
 
-        if (target_len >= curve.Get_len())
-        {
-            // 前视距离超出曲线总长 → 直接用终点
-            tLookahead = 1.0f;
-            lookaheadPt = curve.Get_Point(1.0f);
-        }
-        else
-        {
-            float lo = tNearest, hi = 1.0f;
-            for (int i = 0; i < 8; i++)
-            {
-                float mid = (lo + hi) * 0.5f;
-                if (curve.Get_Current_Len(mid) < target_len)
-                    lo = mid;
-                else
-                    hi = mid;
-            }
-            tLookahead = hi;
-            lookaheadPt = curve.Get_Point(tLookahead);
-        }
+    if (target_len >= curve.Get_len())
+    {
+        // 前视距离超出曲线总长 → 直接用终点
+        tLookahead = 1.0f;
+        lookaheadPt = curve.Get_Point(1.0f);
     }
-#else
+    else
     {
-        // 原步进法
-        float accumulatedDist = 0.0f; // 累计挪了多少距离
-        float step = 0.01f;           // 步进
-
+        float lo = tNearest, hi = 1.0f;
+        for (int i = 0; i < 8; i++)
+        {
+            float mid = (lo + hi) * 0.5f;
+            if (curve.Get_Current_Len(mid) < target_len)
+                lo = mid;
+            else
+                hi = mid;
+        }
+        tLookahead = hi;
         lookaheadPt = curve.Get_Point(tLookahead);
-        while (tLookahead < 1.0f && accumulatedDist < V.m_lookaheadDist)
-        {
-            float nextT = tLookahead + step;
-            if (nextT > 1.0f)
-                nextT = 1.0f;
-
-            Vector2D nextPt = curve.Get_Point(nextT);
-            float distStep = (nextPt - lookaheadPt).magnitude();
-            accumulatedDist += distStep;
-
-            tLookahead = nextT;
-            lookaheadPt = nextPt;
-        }
-
-        if (tLookahead >= 1.0f)
-            lookaheadPt = curve.Get_Point(1.0f);
     }
-#endif
 
     // 3. 在绝对世界坐标系下，独立计算X轴和Y轴的纠偏向速度
     // 将不再计算切法向，直接基于XY差值PID
@@ -580,9 +566,9 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     int8_t MF3_Index_ = KFS_KeyPoint_.Index_MFroad[2]; // MF3 对应索引
 
     // 寻找MF拾取车辆点位
-    MF1_Point_ = KFS_KeyPoint_.mustPastMap[MF1_Index_]; // MF1 对应地图点编号。
-    MF2_Point_ = KFS_KeyPoint_.mustPastMap[MF2_Index_]; // MF2 对应地图点编号。
-    MF3_Point_ = KFS_KeyPoint_.mustPastMap[MF3_Index_]; // MF3 对应地图点编号。
+    int8_t MF1_Point_ = KFS_KeyPoint_.mustPastMap[MF1_Index_]; // MF1 对应地图点编号。
+    int8_t MF2_Point_ = KFS_KeyPoint_.mustPastMap[MF2_Index_]; // MF2 对应地图点编号。
+    int8_t MF3_Point_ = KFS_KeyPoint_.mustPastMap[MF3_Index_]; // MF3 对应地图点编号。
 
     // 写入MF地图对应坐标
     KFS_point.MF1_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(MF1_Point_);
@@ -602,26 +588,26 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         KFS_point.MF3_pos_ = {0.0f, 0.0f};
     }
-    
+
     // 判断MF1的车子朝向
-    target_yaw_ =rotation_path(MF1_Point_);
+    target_yaw = rotation_path(MF1_Point_);
     // 判断MF2的车子朝向
     if (KFS_num > 1)
     {
-        KFS_point.MF2_target_yaw_ =rotation_path(MF2_Point_);
+        KFS_point.MF2_target_yaw_ = rotation_path(MF2_Point_);
     }
     // 判断MF3的车子朝向
     if (KFS_num > 2)
     {
-        KFS_point.MF3_target_yaw_ =rotation_path(MF3_Point_);
+        KFS_point.MF3_target_yaw_ = rotation_path(MF3_Point_);
     }
 
     // 判断第一次是否需要转向
-    if (target_yaw_ == KFS_point.MF2_target_yaw_ || KFS_num < 2.0f)
+    if (target_yaw == KFS_point.MF2_target_yaw_ || KFS_num < 2.0f)
     {
         KFS_flag.spin_flag = false;
     }
-    else if (target_yaw_ != KFS_point.MF2_target_yaw_)
+    else if (target_yaw != KFS_point.MF2_target_yaw_)
     {
         KFS_flag.spin_flag = true;
     }
@@ -654,6 +640,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     // 写入路径点的临时变量
     Vector2D last_vector = robot_pos_;
     Vector2D temp_vector = {0.0f, 0.0f};
+    Vector2D spin_vector = {0.0f, 0.0f};
     int temp_point = 0;
     int i = 0;
 
@@ -664,36 +651,118 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     }
 
     // 重置路径规划器
-    path_line_.plan_reset();
     path_line_.Reset();
+    path_line_.plan_reset();
+
     path_line_.Add_Start_Point(robot_pos_);
 
     // 写入起点到MF2路径点坐标（不包含MF2）
-    if (KFS_flag.spin_flag == false)
+    bool FINSH = false;
+    for (; i < (KFS_num == 1 ? index_exit : MF2_Index_); i++)
     {
-        for (; i < (KFS_num == 1 ? index_exit : MF2_Index_); i++)
+        if (KFS_num == 1)
         {
-            if (KFS_num == 1)
+            if (i == (index_exit - 1)) // 终点
             {
-                if (i == (index_exit - 1)) // 终点
+                temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                path_line_.Add_End_Point(temp_vector, path_param.end);
+                // 取末端点进行路径退出后的锁点pid
+                Path_end_point = path_line_.Get_End_Point();
+                return true;
+            }
+        }
+        temp_point = KFS_KeyPoint_.mustPastMap[i];
+        temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
+        // 四个拐点的顺滑处理
+        if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
+        {
+            float spin_delay = KFS_flag.spin_flag == true && (target_yaw == 180.0f || target_yaw == 0.0f);
+            if (temp_point == 1 || temp_point == 5)
+            {
+                spin_delay *= (-1.0f);
+            }
+            spin_vector = spinodal_path(last_vector, temp_vector, i, (KFS_point.spin_skew * spin_delay));
+            if (spin_vector.x == 0.0f && spin_vector.x == 0.0f)
+                return false;
+            if (spin_delay != 0)
+            {
+                if (FINSH == true)
                 {
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_End_Point(temp_vector, path_param.end);
-                    // 取末端点进行路径退出后的锁点pid
-                    Path_end_point = path_line_.Get_End_Point();
-                    return true;
+                    KFS_point.spin_pos = spin_vector;
+                    FINSH = false;
                 }
             }
+        }
+        else if (temp_point == MF1_Point_) // MF停止点
+        {
+            path_line_.Add_Point(temp_vector, path_param.end);
+            FINSH = true;
+        }
+        else // 衔接路径
+        {
+            path_line_.Add_Point(temp_vector, path_param.start);
+        }
+        last_vector = temp_vector;
+    }
+
+    // 写入MF2到终点路径点坐标
+    FINSH = false;
+    for (i = MF2_Index_; i < index_exit; i++)
+    {
+        if (i == (index_exit - 1))
+        {
+            temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+
+            // 梅林自动规划后是否直接上三区
+            if (KFS_flag.uphill_flag == false)
+            {
+                path_line_.Add_End_Point(temp_vector, path_param.end);
+            }
+            else if (KFS_flag.uphill_flag == true)
+            {
+                if (last_vector.x == 0.6f)
+                {
+                    path_line_.Add_Point(temp_vector, path_param.start);
+                    path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
+                    path_line_.Add_End_Point(CZ_point.R1_pos[1], path_param.end);
+                }
+                else if (last_vector.y == 8.6f)
+                {
+                    path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
+                    path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
+                    path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
+                    path_line_.Add_End_Point(CZ_point.R1_pos[1], path_param.end);
+                }
+            }
+        }
+        else
+        {
             temp_point = KFS_KeyPoint_.mustPastMap[i];
             temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
             // 四个拐点的顺滑处理
             if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
             {
-                if (spinodal_path(last_vector, temp_vector, i) == false)
+                float spin_delay = KFS_flag.spin_flag_2 == true && (KFS_point.MF2_target_yaw_ == 180.0f || KFS_point.MF2_target_yaw_ == 0.0f);
+                if (temp_point == 1 || temp_point == 5)
+                {
+                    spin_delay *= (-1.0f);
+                }
+                spin_vector = spinodal_path(last_vector, temp_vector, i, (KFS_point.spin_skew * spin_delay));
+                if (spin_vector.x == 0.0f && spin_vector.x == 0.0f)
                     return false;
+                if (spin_delay != 0)
+                {
+                    if (FINSH == true)
+                    {
+                        KFS_point.spin_pos_2 = spin_vector;
+                        FINSH = false;
+                    }
+                }
             }
-            else if (temp_point == MF1_Point_) // MF停止点
+            else if (((temp_point == MF3_Point_) && KFS_num > 2) || ((temp_point == MF2_Point_) && KFS_num > 1)) // MF停止点
             {
+                if (temp_point == MF2_Point_)
+                    FINSH = true;
                 path_line_.Add_Point(temp_vector, path_param.end);
             }
             else // 衔接路径
@@ -703,301 +772,6 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
             last_vector = temp_vector;
         }
     }
-    else if (KFS_flag.spin_flag == true)
-    {
-        if (target_yaw_ == -90.0f) // MF1在下
-        {
-            KFS_flag.spin_down_flag = true;
-            for (; i < (KFS_num == 1 ? index_exit : MF2_Index_); i++)
-            {
-                if (KFS_num == 1)
-                {
-                    if (i == (index_exit - 1)) // 终点
-                    {
-                        temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                        path_line_.Add_End_Point(temp_vector, path_param.end);
-                        // 取末端点进行路径退出后的锁点pid
-                        Path_end_point = path_line_.Get_End_Point();
-                        return true;
-                    }
-                }
-                temp_point = KFS_KeyPoint_.mustPastMap[i];
-                temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
-                // 四个拐点的顺滑处理
-                if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
-                {
-                    if (spinodal_path(last_vector, temp_vector, i) == false)
-                        return false;
-                }
-                else if (temp_point == MF1_Point_) // MF停止点
-                {
-                    path_line_.Add_Point(temp_vector, path_param.end);
-                }
-                else // 衔接路径
-                {
-                    path_line_.Add_Point(temp_vector, path_param.start);
-                }
-                last_vector = temp_vector;
-                // else if (i == (KFS_KeyPoint_.Index_MFroad[0] + 1))//下方偏移旋转
-                //{
-                //     temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                //     temp_vector.y = temp_vector.y + KFS_point.spin_skew_;
-                //     path_line_.Add_Point(temp_vector, path_param.KFS);
-                //     KFS_flag.spin_down_flag = true;
-                // }
-            }
-        }
-        else if (target_yaw_ == 90.0f) // MF1在上
-        {
-            for (; i < (KFS_num == 1 ? index_exit : MF2_Index_); i++)
-            {
-                if (KFS_num == 1)
-                {
-                    if (i == (index_exit - 1)) // 终点
-                    {
-                        temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                        path_line_.Add_End_Point(temp_vector, path_param.end);
-                        // 取末端点进行路径退出后的锁点pid
-                        Path_end_point = path_line_.Get_End_Point();
-                        return true;
-                    }
-                }
-                temp_point = KFS_KeyPoint_.mustPastMap[i];
-                temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
-                // 四个拐点的顺滑处理
-                if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
-                {
-                    if (spinodal_path(last_vector, temp_vector, i) == false)
-                        return false;
-                }
-                else if (temp_point == MF1_Point_) // MF停止点
-                {
-                    path_line_.Add_Point(temp_vector, path_param.end);
-                    // 上方旋转点
-                    if (temp_point == MF1_Point_)
-                    {
-                        path_line_.Add_Point(KFS_point.spin_point_, path_param.end);
-                        KFS_flag.spin_up_flag = true;
-                    }
-                }
-                else // 衔接路径
-                {
-                    path_line_.Add_Point(temp_vector, path_param.start);
-                }
-                last_vector = temp_vector;
-            }
-        }
-        else // MF1在两边
-        {
-            for (; i < (KFS_num == 1 ? index_exit : MF2_Index_); i++)
-            {
-                if (KFS_num == 1)
-                {
-                    if (i == (index_exit - 1)) // 终点
-                    {
-                        temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                        path_line_.Add_End_Point(temp_vector, path_param.end);
-                        // 取末端点进行路径退出后的锁点pid
-                        Path_end_point = path_line_.Get_End_Point();
-                        return true;
-                    }
-                }
-                temp_point = KFS_KeyPoint_.mustPastMap[i];
-                temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
-                // 四个拐点的顺滑处理
-                if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
-                {
-                    if (spinodal_path(last_vector, temp_vector, i) == false)
-                        return false;
-                    if (i == (MF1_Index_ + 1)) // MF1后的第一个拐点，进行旋转方式的判断
-                    {
-                        if (KFS_KeyPoint_.mustPastMap[i] == 26 || KFS_KeyPoint_.mustPastMap[i] == 30) // 上方
-                        {
-                            path_line_.Add_Point(KFS_point.spin_point_, path_param.end);
-                            KFS_flag.spin_up_flag = true;
-                        }
-                        else if (KFS_KeyPoint_.mustPastMap[i] == 1 || KFS_KeyPoint_.mustPastMap[i] == 5) // 下方
-                        {
-                            // temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                            // temp_vector.y = temp_vector.y + KFS_point.spin_skew_;
-                            // path_line_.Add_Point(temp_vector, path_param.KFS);
-                            KFS_flag.spin_down_flag = true;
-                        }
-                    }
-                }
-                else if (temp_point == MF1_Point_) // MF停止点
-                {
-                    path_line_.Add_Point(temp_vector, path_param.end);
-                }
-                else // 衔接路径
-                {
-                    path_line_.Add_Point(temp_vector, path_param.start);
-                }
-                last_vector = temp_vector;
-            }
-        }
-    }
-
-    // 写入MF2到终点路径点坐标
-    if (KFS_flag.spin_flag_2 == false)
-    {
-        for (i = MF2_Index_; i < index_exit; i++)
-        {
-            if (i == (index_exit - 1)) // 终点
-            {
-                temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                path_line_.Add_End_Point(temp_vector, path_param.end);
-            }
-            else // 中间的路径点
-            {
-                temp_point = KFS_KeyPoint_.mustPastMap[i];
-                temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
-                // 四个拐点的顺滑处理
-                if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
-                {
-                    if (spinodal_path(last_vector, temp_vector, i) == false)
-                        return false;
-                }
-                else if (((temp_point == MF3_Point_) && KFS_num > 2) || ((temp_point == MF2_Point_) && KFS_num > 1)) // MF停止点
-                {
-                    path_line_.Add_Point(temp_vector, path_param.end);
-                }
-                else // 衔接路径
-                {
-                    path_line_.Add_Point(temp_vector, path_param.start);
-                }
-                last_vector = temp_vector;
-            }
-        }
-    }
-    else if (KFS_flag.spin_flag_2 == true)
-    {
-        if (KFS_point.MF2_target_yaw_ == -90.0f) // MF2在下
-        {
-            KFS_flag.spin_down_flag_2 = true;
-            for (i = MF2_Index_; i < index_exit; i++)
-            {
-
-                if (i == (index_exit - 1)) // 终点
-                {
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_End_Point(temp_vector, path_param.end);
-                }
-                else
-                {
-                    temp_point = KFS_KeyPoint_.mustPastMap[i];
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
-                    // 四个拐点的顺滑处理
-                    if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
-                    {
-                        if (spinodal_path(last_vector, temp_vector, i) == false)
-                            return false;
-                    }
-                    else if (((temp_point == MF3_Point_) && KFS_num > 2) || ((temp_point == MF2_Point_) && KFS_num > 1)) // MF停止点
-                    {
-                        path_line_.Add_Point(temp_vector, path_param.end);
-                    }
-                    else // 衔接路径
-                    {
-                        path_line_.Add_Point(temp_vector, path_param.start);
-                    }
-                    last_vector = temp_vector;
-                    //                else if (i == (KFS_KeyPoint_.Index_MFroad[0] + 1))//下方偏移旋转
-                    //                {
-                    //                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    //                    temp_vector.y = temp_vector.y + KFS_point.spin_skew_;
-                    //                    path_line_.Add_Point(temp_vector, path_param.KFS);
-                    //                    KFS_flag.spin_down_flag = true;
-                    //                }
-                }
-            }
-        }
-        else if (KFS_point.MF2_target_yaw_ == 90.0f) // MF2在上
-        {
-            for (i = MF2_Index_; i < index_exit; i++)
-            {
-                if (i == (index_exit - 1))
-                {
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_End_Point(temp_vector, path_param.end);
-                }
-                else
-                {
-                    temp_point = KFS_KeyPoint_.mustPastMap[i];
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
-                    // 四个拐点的顺滑处理
-                    if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
-                    {
-                        if (spinodal_path(last_vector, temp_vector, i) == false)
-                            return false;
-                    }
-                    else if (((temp_point == MF3_Point_) && KFS_num > 2) || ((temp_point == MF2_Point_) && KFS_num > 1)) // MF停止点
-                    {
-                        path_line_.Add_Point(temp_vector, path_param.end);
-                        // 上方旋转点
-                        if (temp_point == MF2_Point_)
-                        {
-                            path_line_.Add_Point(KFS_point.spin_point_, path_param.end);
-                            KFS_flag.spin_up_flag_2 = true;
-                        }
-                    }
-                    else // 衔接路径
-                    {
-                        path_line_.Add_Point(temp_vector, path_param.start);
-                    }
-                    last_vector = temp_vector;
-                }
-            }
-        }
-        else // MF2在两边
-        {
-            for (i = MF2_Index_; i < index_exit; i++)
-            {
-                if (i == (index_exit - 1))
-                {
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                    path_line_.Add_End_Point(temp_vector, path_param.end);
-                }
-                else
-                {
-                    temp_point = KFS_KeyPoint_.mustPastMap[i];
-                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
-                    // 四个拐点的顺滑处理
-                    if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
-                    {
-                        if (spinodal_path(last_vector, temp_vector, i) == false)
-                            return false;
-
-                        if (i == (MF2_Index_ + 1)) // MF2后的第一个拐点，进行旋转方式的判断
-                        {
-                            if (KFS_KeyPoint_.mustPastMap[i] == 26 || KFS_KeyPoint_.mustPastMap[i] == 30) // 上方
-                            {
-                                path_line_.Add_Point(KFS_point.spin_point_, path_param.end);
-                                KFS_flag.spin_up_flag_2 = true;
-                            }
-                            else if (KFS_KeyPoint_.mustPastMap[i] == 1 || KFS_KeyPoint_.mustPastMap[i] == 5) // 下方
-                            {
-                                // temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                                // temp_vector.y = temp_vector.y + KFS_point.spin_skew_;
-                                // path_line_.Add_Point(temp_vector, path_param.KFS);
-                                KFS_flag.spin_down_flag_2 = true;
-                            }
-                        }
-                    }
-                    else if (((temp_point == MF3_Point_) && KFS_num > 2) || ((temp_point == MF2_Point_) && KFS_num > 1)) // MF停止点
-                    {
-                        path_line_.Add_Point(temp_vector, path_param.end);
-                    }
-                    else // 衔接路径
-                    {
-                        path_line_.Add_Point(temp_vector, path_param.start);
-                    }
-                    last_vector = temp_vector;
-                }
-            }
-        }
-    }
-
     // 取末端点进行路径退出后的锁点pid
     Path_end_point = path_line_.Get_End_Point();
     return true;
@@ -1014,14 +788,14 @@ float OmniChassis_Setup::rotation_path(float MF_Point)
     }
     else if (MF_Point == 27 || MF_Point == 28 || MF_Point == 29 || MF_Point == 30)
     {
-        return  90.0f;
+        return 90.0f;
     }
     else if (MF_Point == 2 || MF_Point == 3 || MF_Point == 4 || MF_Point == 5)
     {
         return -90.0f;
-    } 
+    }
 }
-bool OmniChassis_Setup::spinodal_path(Vector2D last_vector, Vector2D temp_vector, int i)
+Vector2D OmniChassis_Setup::spinodal_path(Vector2D last_vector, Vector2D temp_vector, int i, float spin_flag)
 {
     Vector2D forward_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i + 1]);
     // 拐点前偏移点
@@ -1043,11 +817,111 @@ bool OmniChassis_Setup::spinodal_path(Vector2D last_vector, Vector2D temp_vector
     else if (tangent_vector.y == -1.0f)
         path_param.curve.targetPos = 4.0f;
     else
-        return false;
+        return Vector2D{0.0f, 0.0f};
+
+    // 拐点偏移
+    temp_vector.y = temp_vector.y + spin_flag;
+
     // 拐点后偏移点
-    path_line_.Add_Point((temp_vector + (tangent_vector * KFS_point.coner_ahead)), path_param.curve);
+    Vector2D result = (temp_vector + (tangent_vector * KFS_point.coner_behind));
+    path_line_.Add_Point(result, path_param.curve);
     path_param.curve.targetPos = 999.0f;
-    return true;
+    return result;
+}
+
+void OmniChassis_Setup::Path_KFS_check(void)
+{
+    // KFS拾取判断MF1
+    if (KFS_point.MF1_pos_.x == curve.Get_End_point().x && KFS_point.MF1_pos_.y == curve.Get_End_point().y)
+    {
+        KFS_flag.MF1_flag = true;
+    }
+    else if (KFS_flag.MF1_flag == true)
+    {
+        KFS_flag.MF1_flag = false;
+        pid_dead_flag = false;
+        Arm_Start = true;
+        KFS_flag.MF1_finish = true;
+    }
+
+    // KFS拾取判断MF2
+    if (KFS_point.MF2_pos_.x == curve.Get_End_point().x && KFS_point.MF2_pos_.y == curve.Get_End_point().y)
+    {
+        KFS_flag.MF2_flag = true;
+    }
+    else if (KFS_flag.MF2_flag == true)
+    {
+        KFS_flag.MF2_flag = false;
+        pid_dead_flag = false;
+        Arm_Start = true;
+        KFS_flag.MF2_finish = true;
+    }
+
+    // KFS拾取判断MF3
+    if (KFS_point.MF3_pos_.x == curve.Get_End_point().x && KFS_point.MF3_pos_.y == curve.Get_End_point().y)
+    {
+        KFS_flag.MF3_flag = true;
+    }
+    else if (KFS_flag.MF3_flag == true)
+    {
+        KFS_flag.MF3_flag = false;
+        pid_dead_flag = false;
+        Arm_Start = true;
+    }
+
+    if (KFS_flag.uphill_flag == true)
+    {
+        // 上坡后旋转判断
+        if (CZ_point.uphill_pos.x == curve.Get_Start_point().x && CZ_point.uphill_pos.y == curve.Get_Start_point().y)
+        {
+            if (robot_pos_.x > CZ_point.skew_yaw)
+                target_yaw = CZ_point.R1_yaw;
+        }
+    }
+
+    if (KFS_flag.spin_flag == true && KFS_flag.MF1_finish == true && Arm_Start == false)
+    {
+        // 第一排和最后一排旋转
+        if (target_yaw == -90.0f || target_yaw == 90.0f)
+        {
+            target_yaw = KFS_point.MF2_target_yaw_;
+            KFS_flag.spin_flag = false;
+        }
+        // 两侧旋转判断
+        else if (KFS_point.spin_pos.x == curve.Get_End_point().x && KFS_point.spin_pos.y == curve.Get_End_point().y)
+        {
+            KFS_flag.get_spin_flag = true;
+        }
+        // 两侧开始旋转
+        else if (KFS_flag.get_spin_flag == true)
+        {
+            target_yaw = KFS_point.MF2_target_yaw_;
+            KFS_flag.spin_flag = false;
+            KFS_flag.get_spin_flag = false;
+        }
+    }
+
+    if (KFS_flag.spin_flag_2 == true && KFS_flag.spin_flag == false && KFS_flag.MF2_finish == true && Arm_Start == false)
+    {
+        // 第一排旋转
+        if (target_yaw == -90.0f || target_yaw == 90.0f)
+        {
+            target_yaw = KFS_point.MF3_target_yaw_;
+            KFS_flag.spin_flag_2 = false;
+        }
+        // 两侧旋转判断
+        else if (KFS_point.spin_pos_2.x == curve.Get_End_point().x && KFS_point.spin_pos_2.y == curve.Get_End_point().y)
+        {
+            KFS_flag.get_spin_flag = true;
+        }
+        // 两侧开始旋转
+        else if (KFS_flag.get_spin_flag == true)
+        {
+            target_yaw = KFS_point.MF3_target_yaw_;
+            KFS_flag.spin_flag_2 = false;
+            KFS_flag.get_spin_flag = false;
+        }
+    }
 }
 
 void OmniChassis_Setup::flag_reset(void)
@@ -1056,7 +930,7 @@ void OmniChassis_Setup::flag_reset(void)
     WeaponSage_Start = false;
     WeaponSage_End = false;
     Arm_Start = false;
-    Spin_Start = false;
+
     pid_dead_flag = false;
 
     KFS_flag.MF1_flag = false;
@@ -1065,12 +939,6 @@ void OmniChassis_Setup::flag_reset(void)
 
     KFS_flag.spin_flag = false;
     KFS_flag.spin_flag_2 = false;
-
-    KFS_flag.spin_up_flag = false;
-    KFS_flag.spin_down_flag = false;
-
-    KFS_flag.spin_up_flag_2 = false;
-    KFS_flag.spin_down_flag_2 = false;
 
     KFS_flag.MF1_finish = false;
     KFS_flag.MF2_finish = false;
@@ -1104,7 +972,7 @@ Vector2D OmniChassis_Setup::v_limit(void)
     num++;
     if (num > 5)
     {
-        //debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), target_yaw_);
+        debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), v_tangent.magnitude());
         num = 0;
     }
 

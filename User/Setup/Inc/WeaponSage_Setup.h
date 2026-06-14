@@ -40,6 +40,16 @@ namespace WeaponSage_Setup
         bool calibrate_start = false;
         bool is_calibrating = false;
 
+        float closeclaw_startTime = 0.0f;
+        float untight_startTime = 0.0f;
+
+        bool is_closeclaw_start = false;
+        bool is_untight_start = false;
+
+        bool is_wrist_start=false;
+        float wrist_startTime=0.0f;
+
+
         int target_poleIndex = 0; //0~3号索引的矛杆
         
         int8_t last_manual_claw_state = 0; // 0: open, 1: close
@@ -68,7 +78,7 @@ namespace WeaponSage_Setup
         STATE_START,
         STATE_ARM_MOVE,
         STATE_CLAW_ADJUST,
-        STATE_LAUNCH_MOVE,
+        STATE_SAGE_ADJUST,
         STATE_DONE,
     }auto_GRABstate_S;
 
@@ -90,19 +100,27 @@ namespace WeaponSage_Setup
             bool launch_enable=false;
             bool wrist_enable=false;
         }auto_state_bool_S; //局部状态结构体
-		float claw_close_pos = 32.36f;
-        float claw_open_pos = 49.58f;
-        float safe_height = 0.0f; 
-;
         struct{
+            bool is_reach_sagelowest = false; //当升降达到最低点视为已经完成下降
+            bool is_reach_closedclaw = false; //当夹爪到达目标位置视为已经完成抓取
+            bool is_reach_start = false;
             bool is_clawed=false;
+            bool is_untight=false;
             bool is_catched=false;  //当夹爪到达安全高度视为已经完成抓取
             bool is_moved=false;
-
+            bool is_prepared=false; //准备就绪，满足抓取条件
+			bool is_arm_reset=false;
         }flag;
-        bool auto_ctrl1 = true;
+        bool auto_ctrl1 = false;
         int pole_num = 1;
         bool claw_flag[3]={false,false,false};
+        struct{
+            float launch_start = 0.5f;
+            float launch_catch =0.0f;
+            float launch_untight =0.4f;
+            float launch_clawclosed = 0.8f;
+            float launch_rotate =1.0f;
+        }launch_kp;
     }auto_ctrl_S;
 
      extern float weapon_pos[4];//武器位置数组
@@ -211,11 +229,23 @@ public:
         ctrl_status_.is_claw_3_closed = claw_3;
     }
 
-    bool Close_TargetClaw();
+    void Close_TargetClaw();
     void Close_TargetClaw_Untight();
     void Judge_launch_status();
     void Judge_wrist_status();
-
+    
+    bool Get_Catch_flag(void)
+    {
+        return auto_ctrl_.flag.is_catched;
+    }
+    void Get_OMNI_IM_flag(bool a)
+    {
+        auto_ctrl_.auto_state_bool_S.is_matching=a;
+    }
+    void Get_OMNI_DS_flag(bool a)
+    {
+        auto_ctrl_.auto_state_bool_S.dock_start=a;
+    }
 protected:
     void loop() override;
 
@@ -230,18 +260,18 @@ private:
     void idle();
     void stop();
     void debug();
-    void autoControl_catch();
+    bool autoControl_catch();
     void autoControl_dock();
-
+    void autoControl();
     void calibrate();
 
 
     
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 
-    
-    WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_IDLE;
-	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_IDLE;
+    uint8_t auto_control_state_ = 0;
+    WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_STOP;
+	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_STOP;
 	WeaponSage_Setup::auto_GRABstate_S now_state_=WeaponSage_Setup::STATE_START;
 
     WeaponSage_Setup::WeaponDock_E target_dock_ = WeaponSage_Setup::MID; // for auto_dock
