@@ -319,6 +319,7 @@ namespace jia
             Result setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z);
             Result setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
             Result setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z);
+            // 注意：这两个 readback 返回的是“当前目标语义快照”，不是 current_data_ 的实际反馈速度。
             Robot_Twist getBodySpeed() const;
             Robot_Twist getWorldSpeed() const;
             Result setSteerDegAndDriveSpeed(f32 steer_angle_deg, f32 chassis_speed_m_s);
@@ -460,6 +461,7 @@ namespace jia
             // 补偿结果与最近一次规划输出，供控制线程在每个周期更新。
             struct WheelConfig
             {
+                // ---- 静态装配与硬件绑定 -----------------------------------------
                 f32 pos_x_m = 0.0f;                               // 该舵轮模块在车体坐标系中的 x 安装位置，单位米
                 f32 pos_y_m = 0.0f;                               // 该舵轮模块在车体坐标系中的 y 安装位置，单位米
                 f32 theta_oa_to_owi_rad = 0.0f;                   // 安装几何偏移：把舵轮在底盘平面内实际指向/滚动的方向（OA 朝向）换算到转向电机本地机械角参考系（OWI）；它用于坐标变换，不是回零补偿
@@ -471,6 +473,8 @@ namespace jia
                 bool homing_sensor_active_high = true;            // 回零传感器逻辑 active 极性：true 表示高电平视为有效，false 表示低电平视为有效；不决定 H/L 边沿的机械角语义
                 void *homing_gpio_port = nullptr;                 // 回零传感器 GPIO 端口运行时副本；读取零位输入时直接使用
                 u16 homing_gpio_pin = 0;                          // 回零传感器 GPIO 引脚运行时副本；与端口配合读取真实输入
+
+                // ---- 回零输入与边沿确认缓存 -------------------------------------
                 f32 homing_falling_edge_mech_rad = 0.0f;          // 原始 GPIO H->L 边沿对应的机械 OA 角（rad）
                 f32 homing_rising_edge_mech_rad = 0.0f;           // 原始 GPIO L->H 边沿对应的机械 OA 角（rad）
                 f32 homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM; // 回零搜索阶段给转向电机的转速指令，单位 rpm
@@ -489,35 +493,41 @@ namespace jia
                 f32 homing_hold_corrected_local_total_rad = 0.0f; // 单轮确认完成后，等待其他轮时保持的 corrected-local 连续角
                 f32 homing_elapsed_s = 0.0f;                      // 本次回零已运行时间，单位秒；用于超时判定
                 f32 homing_runtime_zero_offset_rad = 0.0f;        // 本次上电运行实际采用的零位补偿；回零成功后会把“当前触发位置”修正成运行时零点
+
+                // ---- 实时反馈与本周期规划输出 -----------------------------------
                 f32 corrected_steer_motor_total_angle_rad = 0.0f; // 已乘方向符号并叠加运行时零位补偿后的转向电机连续总角度反馈
                 f32 corrected_drive_omega_rad_s = 0.0f;           // 已乘方向符号后的驱动轮角速度反馈，单位 rad/s
                 f32 target_steer_motor_total_angle_rad = 0.0f;    // 当前周期解算后要发给转向电机的本地连续目标角
                 f32 target_drive_omega_rad_s = 0.0f;              // 当前周期解算后要发给驱动电机的目标角速度，单位 rad/s
                 f32 steer_target_velocity_rad_s = 0.0f;           // 转向二阶限幅后得到的目标角速度，便于平滑舵向变化
                 bool flipped_drive_direction = false;             // 本周期是否采用“舵角翻转 180 度、驱动反向”策略来走更短转角路径
+
+                // ---- X-Park 舵向 hold 局部状态 ----------------------------------
                 XParkSteerHoldPhase xpark_steer_hold_phase = XParkSteerHoldPhase::kInactive; // [RO] 当前轮 X-Park 舵向 hold 状态机阶段。
                 f32 xpark_steer_hold_locked_target_rad = 0.0f;      // [RO] 当前轮进入 hold 后冻结的 corrected-local 总角目标（rad）。
                 f32 xpark_steer_hold_error_rad = 0.0f;              // [RO] 当前轮相对 X-Park 理想目标角的绝对角误差（rad）。
                 f32 xpark_steer_hold_target_rate_rad_s = 0.0f;      // [RO] 当前轮 hold 判稳使用的目标角速度绝对值（rad/s）。
                 u32 xpark_steer_hold_settle_ms = 0U;                // [RO] 当前轮满足 hold 判稳条件后已累计的保持时长（ms）。
                 u32 xpark_steer_hold_reacquire_ms = 0U;             // [RO] 当前轮从零电流锁定退出后，重新允许锁定前还需等待的时长（ms）。
+
+                // ---- 舵向故障观测与恢复计数 ------------------------------------
                 SteerFaultState steer_fault_state = SteerFaultState::kNone;
-                bool steer_fault_rehome_request = false;
-                f32 steer_feedback_current_mA = 0.0f;
-                f32 steer_feedback_last_current_mA = 0.0f;
-                f32 steer_feedback_last_raw_total_angle_rad = 0.0f;
-                f32 steer_feedback_current_delta_mA = 0.0f;
-                f32 steer_feedback_angle_delta_rad = 0.0f;
+                bool steer_fault_rehome_request = false;           // [RO] recover 流程是否已请求这一个轮子重新回零。
+                f32 steer_feedback_current_mA = 0.0f;              // [RO] 当前周期读取到的舵向电流反馈（mA）。
+                f32 steer_feedback_last_current_mA = 0.0f;         // [RO] 上一周期舵向电流反馈（mA）。用于计算冻结判据。
+                f32 steer_feedback_last_raw_total_angle_rad = 0.0f; // [RO] 上一周期原始舵向连续角反馈（rad）。用于检测“有电流但不动”。
+                f32 steer_feedback_current_delta_mA = 0.0f;        // [RO] 本周期与上一周期电流变化量绝对值（mA）。
+                f32 steer_feedback_angle_delta_rad = 0.0f;         // [RO] 本周期与上一周期原始连续角变化量绝对值（rad）。
                 bool steer_speed_pid_settled_active = false;       // [RO] 当前轮是否已进入“舵向到位判稳”状态；仅首次进入边沿触发一次速度环历史清理。
                 f32 steer_speed_pid_settle_error_rad = 0.0f;       // [RO] 当前轮“最终下发舵向目标”与“当前反馈角”之间的绝对误差（rad）。
                 f32 steer_speed_pid_settle_target_rate_rad_s = 0.0f; // [RO] 当前轮最终下发舵向目标角速度的绝对值（rad/s），用于判定是否已稳定收尾。
-                f32 steer_fault_steer_error_rad = 0.0f;
-                bool steer_fault_control_intent = false;
-                bool steer_fault_xpark_stationary_hold = false;
-                bool steer_fault_freeze_candidate = false;
-                u32 steer_feedback_freeze_ms = 0U;
-                u32 steer_feedback_recovery_toggle_count = 0U;
-                u32 steer_fault_latched_count = 0U;
+                f32 steer_fault_steer_error_rad = 0.0f;            // [RO] 当前目标舵角与反馈舵角的绝对误差（rad）。
+                bool steer_fault_control_intent = false;           // [RO] 当前周期是否存在真正的 steer 控制意图。
+                bool steer_fault_xpark_stationary_hold = false;    // [RO] 当前是否落在允许忽略故障判定的 X-Park 静止保持窗口。
+                bool steer_fault_freeze_candidate = false;         // [RO] 本周期是否满足“有电流且角度/电流变化同时冻结”的可疑条件。
+                u32 steer_feedback_freeze_ms = 0U;                 // [RO] 冻结候选已连续保持的时长（ms）。
+                u32 steer_feedback_recovery_toggle_count = 0U;     // [RO] Latched 态下检测到的恢复跳动累计次数。
+                u32 steer_fault_latched_count = 0U;                // [RO] 该轮历史上累计锁故障次数。
             };
 
             // Mode 表示四舵轮底盘当前采用的控制语义。
@@ -562,6 +572,8 @@ namespace jia
                 Mode mode = Mode::kWheelTorqueFreeMode;
             };
 
+            // Data 是“整车级状态/目标”的最小公共载体。
+            // 输入解析、规划、当前估计都复用它，只是所在阶段不同。
             struct Data
             {
                 f32 vel_x = 0.0f;
@@ -575,6 +587,8 @@ namespace jia
                 f32 drive_omega_rad_s[4] = {0.0f};
             };
 
+            // SwervePlannerInput 是真正喂给模块解算器的展开版输入：
+            // 除了整车命令，还会带上当前模块朝向、残余速度、统一朝向请求等上下文。
             struct SwervePlannerInput
             {
                 Data command{};
@@ -597,6 +611,8 @@ namespace jia
                 f32 max_residual_speed_m_s = 0.0f;
             };
 
+            // SwervePlannerOutput 汇总的是“planner 这一拍想出来的所有关键中间量”：
+            // 理想解、选中的翻转解、转向速率、抑制比例和最终 drive 目标都会放在这里。
             struct SwervePlannerOutput
             {
                 f32 ideal_oa_total_rad[4] = {0.0f};
@@ -619,6 +635,8 @@ namespace jia
                 bool valid = false;
             };
 
+            // ActuatorCommandFrame 是“已经准备好交给执行仲裁层”的一帧模块命令。
+            // 它仍然是理想执行目标，真正能否下发以及是否被 zero-stop / homing 改写，要到 applyModuleCommands() 决定。
             struct ActuatorCommandFrame
             {
                 f32 steer_corrected_local_total_rad[4] = {0.0f};
@@ -1026,6 +1044,8 @@ namespace jia
             // =====================================================================
             struct StrategyConfig
             {
+                // ---- 整车级速度曲线与基础限幅 -----------------------------------
+                // 这一组决定 target_data_ 进入 planned_data_ 时如何变得“可执行且平顺”。
                 ManualSpeedProfileMode manual_speed_profile_mode = ManualSpeedProfileMode::kLegacy;
                 bool manual_speed_profile_manual_only = true;
                 f32 manual_trans_acc_acc_ = 5.0f;
@@ -1067,11 +1087,6 @@ namespace jia
                 // - actual/residual：反馈或残余速度是否已经足够小，X-Park 进入门会用它做一次安全确认。
                 // - target/command：drive zero-stop 直接复用这组阈值判断目标是否已经进入刹车模式。
                 // 它不是 X-Park 目标静止意图的专用门；X-Park command 门在下面单独配置。
-                // ---- 通用 near-zero 门限 -----------------------------------------
-                // 这组阈值描述“速度已经接近 0”的通用口径。使用者看这里时要先分清对象：
-                // - actual/residual：反馈或残余速度是否已经足够小，X-Park 进入门会用它做一次安全确认。
-                // - target/command：drive zero-stop 直接复用这组阈值判断目标是否已经进入刹车模式。
-                // 它不是 X-Park 目标静止意图的专用门；X-Park command 门在下面单独配置。
                 struct NearZeroThresholdConfig
                 {
                     f32 base_enter_m_s = 0.005f; // [RW] 通用 near-zero 进入阈值（m/s）。未激活的门控用它判断“可以进入”。
@@ -1097,10 +1112,8 @@ namespace jia
                 } xpark_steer_hold_cfg_;
 
                 // ---- drive 零速止停辅助 -----------------------------------------
-                // 仅在整车正常 drive 闭环链路里使用。这里分成两层，调参时不要混在一起看：
-                // - 模式层：目标速度进入 near_zero_cfg_ 的 enter 门后，zero-stop active；目标速度离开 exit 门后恢复 RPM 闭环。
-                // - 末端层：zero-stop 已 active 后，实际 residual 只决定当前轮继续 brake，还是已经停稳可切到零电流。
-                // residual 不负责进入/退出 zero-stop 模式；它只负责 active 期间的“刹住以后是否安静收尾”。
+                // 这一组位于 planner 与最终 drive 输出之间：
+                // 先决定“目标是否足够接近静止，需要切入 zero-stop 模式”，再决定“每个轮子当前是继续 brake 还是切零电流收尾”。
                 // 仅在整车正常 drive 闭环链路里使用。这里分成两层，调参时不要混在一起看：
                 // - 模式层：目标速度进入 near_zero_cfg_ 的 enter 门后，zero-stop active；目标速度离开 exit 门后恢复 RPM 闭环。
                 // - 末端层：zero-stop 已 active 后，实际 residual 只决定当前轮继续 brake，还是已经停稳可切到零电流。
@@ -1117,6 +1130,8 @@ namespace jia
                     f32 min_scale = 0.0f;                   // [RW] 低速抑制使用。进入压制区后保留的最小驱动比例。
                 };
 
+                // ---- 舵向冻结故障检测与恢复 ------------------------------------
+                // 这一组只负责“是否怀疑舵向失联/断电”和“何时允许自动重回零”，不负责普通 homing 参数。
                 struct SteerFaultConfig
                 {
                     bool enable = true;                           // [RW] 是否启用舵向断链检测/恢复状态机。关闭后仅保留观测，不再锁故障。
@@ -1137,11 +1152,11 @@ namespace jia
                 f32 flip_exit_angle_deg = 80.0f;                                          // [RW] 翻转切入下阈值（deg）。当前未翻转时，直达解角差足够大且翻转解更优才切入翻转。应小于 flip_enter_angle_deg 形成滞回。
                 struct ReverseIntentConfig
                 {
-                    bool enable = true;
-                    f32 enter_angle_deg = 105.0f;
-                    f32 exit_angle_deg = 75.0f;
-                    f32 min_speed_m_s = 0.0f;
-                    f32 flip_prefer_margin_deg = 5.0f;
+                    bool enable = true;                 // [RW] 是否启用“近似反向意图”识别。启用后可更积极地偏向翻转解。
+                    f32 enter_angle_deg = 105.0f;      // [RW] 目标方向与参考方向夹角进入阈值（deg）。超过它开始视作“想反着走”。
+                    f32 exit_angle_deg = 75.0f;        // [RW] 退出阈值（deg）。小于 enter 形成滞回，避免方向抖动时反复切换。
+                    f32 min_speed_m_s = 0.0f;          // [RW] 最小速度门槛。低于它时即便方向反向也不激活 reverse intent。
+                    f32 flip_prefer_margin_deg = 5.0f; // [RW] 当翻转解更优时要求额外领先的角差裕量（deg），避免和普通最短路来回打架。
                 } reverse_intent{};
 
                 bool enable_low_speed_drive_suppression = true; // [RW] 是否启用低速抑制。仅在近零/低速找向阶段额外压低驱动。
@@ -1187,10 +1202,8 @@ namespace jia
             // 调试参数（通过全局 chassis 对象在调试器内直接改值）[RW]
             // 说明：这组参数只影响调试链路。正常控制不读取它们，只有切到相应 debug mode 时才会生效。
             // 速查：0~9 = 底盘输入接管/信号注入类模式（9 = 定角驱动）；20 = 已退役（安全回退）；21 = 四轮朝前；22 = 回零观察；30 = 单轮独立直控。
-            // 速查：0~9 = 底盘输入接管/信号注入类模式（9 = 定角驱动）；20 = 已退役（安全回退）；21 = 四轮朝前；22 = 回零观察；30 = 单轮独立直控。
             // 手柄平移坐标约定（对外/调试接管语义）：前推朝当前 2/3 面，左推朝当前 3/4 面；
             // 映射到内部 body 命令时使用 -left_x -> vel_x、-left_y -> vel_y。
-            // RUNTIME_MIN 会移除整组调试接管字段，避免比赛固件为面板模式、单轮直控和观测轮号长期占 RAM。
             // RUNTIME_MIN 会移除整组调试接管字段，避免比赛固件为面板模式、单轮直控和观测轮号长期占 RAM。
             // =====================================================================
 #if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
@@ -1306,7 +1319,6 @@ namespace jia
             // 调试输出 [RW]
             // 说明：这里只管“串口往外发什么”，不管底盘怎么跑。
             //       output_enable 是总开关，output_mode_raw 选路径，text_log_level 决定文本模式的细度。
-            // RUNTIME_MIN 默认移除整组配置和运行态，避免串口 trace/telemetry 占用固件空间和 Chassis RAM。
             // RUNTIME_MIN 默认移除整组配置和运行态，避免串口 trace/telemetry 占用固件空间和 Chassis RAM。
             // =====================================================================
 #if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
