@@ -950,6 +950,22 @@ void OmniChassis_Setup::Path_KFS_check(void)
                 target_yaw = CZ_point.R1_yaw;
         }
     }
+    
+    if (KFS_flag.spin_flag_0 == true && Arm_Start == false)
+    {
+        // 两侧旋转判断
+        if (KFS_point.spin_pos_0.x == curve.Get_End_point().x && KFS_point.spin_pos_0.y == curve.Get_End_point().y)
+        {
+            KFS_flag.get_spin_flag = true;
+        }
+        // 两侧开始旋转
+        else if (KFS_flag.get_spin_flag == true)
+        {
+            target_yaw = KFS_point.MF1_target_yaw_;
+            KFS_flag.spin_flag_0 = false;
+            KFS_flag.get_spin_flag = false;
+        }
+    }
 
     if (KFS_flag.spin_flag == true && KFS_flag.MF1_finish == true && Arm_Start == false)
     {
