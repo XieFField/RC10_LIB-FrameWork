@@ -644,6 +644,12 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     Vector2D spin_vector = {0.0f, 0.0f};
     int temp_point = 0;
     int i = 0;
+    
+    // 重置路径规划器
+    path_line_.Reset();
+    path_line_.plan_reset();
+
+    path_line_.Add_Start_Point(robot_pos_);
 
     // 在梅林内的情况处理，如果需要在外面旋转会先生成路径，如果需要拿同左右同列的会退出
     if (MF_AutoCtrler::GetMapNumFromPos(robot_point_))
@@ -656,12 +662,12 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
             if (robot_pos_.y > 2.6f || robot_pos_.y < 8.5f || robot_pos_.x > 0.7f || robot_pos_.x < 5.3f)
                 return false;
         }
-        else if (temp_point == 21 || temp_point == 16 || temp_point == 11 || temp_point == 6 || temp_point == 25 || temp_point == 20 || temp_point == 15 || temp_point == 10)
+        else if (temp_point == 27 || temp_point == 28 || temp_point == 29 || temp_point == 30 || temp_point == 2 || temp_point == 3 || temp_point == 4 || temp_point == 5)        
         {
             // 在上下两排就直接转
             target_yaw = KFS_point.MF1_target_yaw_;
         }
-        else if (temp_point == 27 || temp_point == 28 || temp_point == 29 || temp_point == 30 || temp_point == 2 || temp_point == 3 || temp_point == 4 || temp_point == 5)
+        else if (temp_point == 21 || temp_point == 16 || temp_point == 11 || temp_point == 6 || temp_point == 25 || temp_point == 20 || temp_point == 15 || temp_point == 10)
         {
             if (i != (index_exit - 1))
             {
@@ -679,15 +685,16 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
                         // 需要旋转的则生成路径并将索引改到2
                         KFS_flag.spin_flag_0 = true;
                         float spin_delay = 1.0f;
-                        if (temp_point == 1 || temp_point == 5)
+                        if (KFS_KeyPoint_.mustPastMap[1] == 1 || KFS_KeyPoint_.mustPastMap[1] == 5)
                         {
                             spin_delay *= (-1.0f);
                         }
-                        spin_vector = spinodal_path(last_vector, temp_vector, i, (KFS_point.spin_skew * spin_delay));
+                        spin_vector = spinodal_path(last_vector, MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[1]), i, (KFS_point.spin_skew * spin_delay));
                         if (spin_vector.x == 0.0f && spin_vector.x == 0.0f)
                             return false;
                         KFS_point.spin_pos_0 = spin_vector;
                         i = 2;
+                        last_vector=MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[1]);
                     }
                 }
                 else
@@ -701,12 +708,6 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         target_yaw = KFS_point.MF1_target_yaw_;
     }
-
-    // 重置路径规划器
-    path_line_.Reset();
-    path_line_.plan_reset();
-
-    path_line_.Add_Start_Point(robot_pos_);
 
     // 写入起点到MF2路径点坐标（不包含MF2）
     bool FINSH = false;
@@ -939,18 +940,9 @@ void OmniChassis_Setup::Path_KFS_check(void)
         KFS_flag.MF3_flag = false;
         pid_dead_flag = false;
         Arm_Start = true;
+        KFS_flag.MF3_finish= true;
     }
 
-    if (KFS_flag.uphill_flag == true)
-    {
-        // 上坡后旋转判断
-        if (CZ_point.uphill_pos.x == curve.Get_Start_point().x && CZ_point.uphill_pos.y == curve.Get_Start_point().y)
-        {
-            if (robot_pos_.x > CZ_point.skew_yaw)
-                target_yaw = CZ_point.R1_yaw;
-        }
-    }
-    
     if (KFS_flag.spin_flag_0 == true && Arm_Start == false)
     {
         // 两侧旋转判断
@@ -1010,6 +1002,16 @@ void OmniChassis_Setup::Path_KFS_check(void)
             KFS_flag.get_spin_flag = false;
         }
     }
+    
+    if (KFS_flag.uphill_flag == true)
+    {
+        // 上坡后旋转判断
+        if (CZ_point.uphill_pos.x == curve.Get_Start_point().x && CZ_point.uphill_pos.y == curve.Get_Start_point().y)
+        {
+            if (robot_pos_.x > CZ_point.skew_yaw)
+                target_yaw = CZ_point.R1_yaw;
+        }
+    }
 }
 
 void OmniChassis_Setup::flag_reset(void)
@@ -1031,6 +1033,7 @@ void OmniChassis_Setup::flag_reset(void)
 
     KFS_flag.MF1_finish = false;
     KFS_flag.MF2_finish = false;
+    KFS_flag.MF3_finish = false;
 
     KFS_flag.get_spin_flag = false;
 

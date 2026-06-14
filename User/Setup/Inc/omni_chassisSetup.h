@@ -151,6 +151,7 @@ typedef struct
 
     bool MF1_finish = false; // MF1 阶段已完成标志。
     bool MF2_finish = false; // MF2 阶段已完成标志。
+    bool MF3_finish = false; // MF2 阶段已完成标志。
 
     // 为全局默认参数，不需要重置
     bool uphill_flag = true; // 默认KFS自动后上坡进入三区
