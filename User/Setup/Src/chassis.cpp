@@ -5552,6 +5552,7 @@ namespace jia
             // 输入是增广矩阵，输出是三项未知量；失败通常意味着矩阵接近奇异。
             for (u8 pivot = 0; pivot < 3; ++pivot)
             {
+                // 每一轮都在当前列里挑绝对值最大的主元，优先减少数值放大带来的精度损失。
                 u8 best_row = pivot;
                 f32 best_abs = fabsf(matrix[pivot][pivot]);
                 for (u8 row = pivot + 1; row < 3; ++row)
@@ -5571,6 +5572,7 @@ namespace jia
 
                 if (best_row != pivot)
                 {
+                    // 把主元所在行交换到当前 pivot 行，后面的归一化和消元都围绕这行展开。
                     for (u8 column = pivot; column < 4; ++column)
                     {
                         const f32 temp = matrix[pivot][column];
@@ -5582,6 +5584,7 @@ namespace jia
                 const f32 diagonal = matrix[pivot][pivot];
                 for (u8 column = pivot; column < 4; ++column)
                 {
+                    // 先把主元行归一化成“对角线为 1”，这样后续其他行只需要直接减去 factor * 主元行。
                     matrix[pivot][column] /= diagonal;
                 }
 
@@ -5622,13 +5625,16 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];
+                // 先把当前 steer 总角映射到 OA 语义，再结合 drive 反馈换成该轮沿轮平面的线速度。
                 const f32 steer_angle_oa_rad = mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad);
                 const f32 cos_theta = cosRadF32(steer_angle_oa_rad);
                 const f32 sin_theta = sinRadF32(steer_angle_oa_rad);
                 const f32 drive_linear_m_s = wheel.corrected_drive_omega_rad_s * runtime_strategy_cfg_.wheel_radius_m_;
 
                 const f32 rows[2][3] = {
+                    // 第 1 行是“轮平面切向速度 = drive 线速度”的观测方程。
                     {cos_theta, sin_theta, -wheel.pos_y_m * cos_theta + wheel.pos_x_m * sin_theta},
+                    // 第 2 行是“轮横向速度为 0”的无侧滑约束，用来补足对 vy / omega_z 的可观测性。
                     {-sin_theta, cos_theta, wheel.pos_y_m * sin_theta + wheel.pos_x_m * cos_theta},
                 };
                 const f32 measurements[2] = {drive_linear_m_s, 0.0f};
@@ -5654,6 +5660,7 @@ namespace jia
 
             if (!solveLinear3x3(augmented, out_vel_x, out_vel_y, out_omega_z))
             {
+                // 反解失败时宁可保守清零，也不要把病态矩阵算出的异常底盘速度继续传播到 current_data_ / telemetry。
                 out_vel_x = 0.0f;
                 out_vel_y = 0.0f;
                 out_omega_z = 0.0f;
@@ -5668,6 +5675,9 @@ namespace jia
             HWT101CT *hwt = HWT101CT::GetInstance(&huart8);
             time_ms_ = xTaskGetTickCount();
 
+            // runThread() 是 chassis 的单周期主调度器：
+            // 它每 1ms 顺序串起“输入采集 -> 模式/目标折叠 -> 车体级规划 -> 反馈刷新/Homing -> 模块求解与下发 -> 调试观测输出”。
+            // 这里有意保持单线程串行时序，让 target/planned/current 以及 homing/fault 运行态都在同一拍内稳定演进。
             for (;;)
             {
 #if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
@@ -5714,6 +5724,7 @@ namespace jia
 #endif
                 updateWheelFeedback();
 #if JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
+                // 反馈刷新之后再同步调试 PID，保证调参逻辑读到的是这一拍最新的电机/轮反馈。
                 applyDebugSteerPidRuntimeTuning();
 #endif
 #if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
@@ -5745,6 +5756,8 @@ namespace jia
 #if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
                 if (applyDebugModuleOverride(all_homed))
                 {
+                    // 调试模块接管一旦生效，就直接短路掉后面的 compute/apply 正常链路；
+                    // 这样单轮隔离、对齐观测等模式不会再被常规底盘输出覆盖。
 #if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                     updateTaskPerfBreakdown(plan_us, feedback_us, homing_us, 0ULL, 0ULL);
                     updateTaskPerfStat(loop_start_us, RtosTimeStampUs64::getTimeUs());
@@ -5784,6 +5797,7 @@ namespace jia
                 updateTaskPerfBreakdown(plan_us, feedback_us, homing_us, apply_us, debug_us);
                 updateTaskPerfStat(loop_start_us, RtosTimeStampUs64::getTimeUs());
 #endif
+                // last_planned_data_ 在周期尾更新，供下一拍做速度/方向变化率限制、zero-stop 判定和 trace 对比。
                 vTaskDelayUntil(&time_ms_, period_ms_);
             }
         }
