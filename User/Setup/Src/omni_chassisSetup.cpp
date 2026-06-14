@@ -93,7 +93,6 @@ void OmniChassis_Setup::CZ_R2_Selection_Planning(void)
         path_line_.Add_End_Point(CZ_point.R2_pos[CZ_point.R2_pos_index], path_param.R2); 
     }
     
-
     Path_end_point = path_line_.Get_End_Point();
 }
 
@@ -573,7 +572,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     }
 
     // 判断MF1的车子朝向
-    target_yaw = rotation_path(MF1_Point_);
+    KFS_point.MF1_target_yaw_ = rotation_path(MF1_Point_);
     // 判断MF2的车子朝向
     if (KFS_num > 1)
     {
@@ -586,11 +585,11 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     }
 
     // 判断第一次是否需要转向
-    if (target_yaw == KFS_point.MF2_target_yaw_ || KFS_num < 2.0f)
+    if (KFS_point.MF1_target_yaw_ == KFS_point.MF2_target_yaw_ || KFS_num < 2.0f)
     {
         KFS_flag.spin_flag = false;
     }
-    else if (target_yaw != KFS_point.MF2_target_yaw_)
+    else if (KFS_point.MF1_target_yaw_ != KFS_point.MF2_target_yaw_)
     {
         KFS_flag.spin_flag = true;
     }
@@ -632,6 +631,10 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         i = 1;
     }
+    else
+    {
+        target_yaw=KFS_point.MF1_target_yaw_;
+    }
 
     // 重置路径规划器
     path_line_.plan_reset();
@@ -658,7 +661,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
         // 四个拐点的顺滑处理
         if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
         {
-            float spin_delay = KFS_flag.spin_flag == true && (target_yaw == 180.0f || target_yaw == 0.0f);
+            float spin_delay = KFS_flag.spin_flag == true && (KFS_point.MF1_target_yaw_ == 180.0f || KFS_point.MF1_target_yaw_ == 0.0f);
             if (temp_point == 1 || temp_point == 5)
             {
                 spin_delay *= (-1.0f);

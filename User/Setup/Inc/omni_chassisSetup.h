@@ -85,22 +85,29 @@ typedef struct
 
 typedef struct
 {
+    //接收外部的KFS位置，如果没有变化则不对MF进行赋值
+    int8_t KFS1 = 0; // 目标点 1 编号。
+    int8_t KFS2 = 0; // 目标点 2 编号。
+    int8_t KFS3 = 0; // 目标点 3 编号。
+    
+    //内部的KFS位置，用于退出保存功能
     int8_t MF1 = 0; // 目标点 1 编号。
     int8_t MF2 = 0; // 目标点 2 编号。
-    int8_t MF3 = 0; // 目标点 2 编号。
+    int8_t MF3 = 0; // 目标点 3 编号。
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
     Vector2D MF3_pos_ = {0.0f, 0.0f};
-
+    
+    Vector2D spin_pos_0 = {0.0f, 0.0f};   // 是否需要执行中途转向。
     Vector2D spin_pos = {0.0f, 0.0f};   // 是否需要执行中途转向。
     Vector2D spin_pos_2 = {0.0f, 0.0f}; // 是否需要执行中途转向。
-
+    
+    float MF1_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
     float MF2_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
     float MF3_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
 
     float spin_skew = 0.1f; // 旋转位置y轴偏移量
-
     float coner_ahead = 0.17f;
     float coner_behind = 0.4f;
 
