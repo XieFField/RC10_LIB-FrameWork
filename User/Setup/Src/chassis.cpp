@@ -599,6 +599,8 @@ namespace jia
 
         bool Chassis::shouldActivateReverseIntent(f32 target_vel_x, f32 target_vel_y, f32 reference_dir_rad) const
         {
+            // reverse intent 不是简单看“目标方向变了多少”，而是专门识别“用户其实想反着开”：
+            // 当速度足够大且目标方向相对当前参考方向接近反向时，它允许 planner 立即按新方向放行，避免方向冻结拖得过久。
             const StrategyConfig::ReverseIntentConfig &cfg = runtime_strategy_cfg_.reverse_intent;
             if (!cfg.enable)
             {
@@ -1194,6 +1196,8 @@ namespace jia
 
         bool Chassis::shouldActivateLaunchHold() const
         {
+            // launch hold 的语义是“先把舵轮摆到足够接近目标，再释放 drive”：
+            // 它只在低速抑制允许完全压零 drive、且整车还处于静止起步语境时进入，不应在已开始滚动后反复重入。
             if (!runtime_strategy_cfg_.enable_low_speed_drive_suppression)
             {
                 return false;
@@ -1275,6 +1279,8 @@ namespace jia
 
         void Chassis::computeLowSpeedDriveSuppressionScales(const SwervePlannerInput &planner_input, const f32 steering_errors_rad[4], f32 out_scales[4])
         {
+            // 低速 drive suppression 面向的是“舵轮角误差还大时，先别急着给 drive 全速”：
+            // 但如果残余速度本来就偏高，就优先旁路 suppression，让底盘先把现有动量收干净，而不是继续强压驱动目标。
             for (u8 i = 0; i < 4; ++i)
             {
                 out_scales[i] = 1.0f;
@@ -3040,6 +3046,8 @@ namespace jia
         // 因此它不是“始终锁某个固定角”，而是“手动旋转”和“松手后自动锁住当前角”之间的平滑切换器。
         void Chassis::resetYawPidTargetRuntime()
         {
+            // yaw lock 的目标低通与死区锁存在离开/重进锁角家族时必须整体清空；
+            // 否则下一次锁角会继承上一轮滤波历史，导致目标角和 PID 接管时机都带着旧上下文。
             lock_yaw_pid_target_filter_valid_ = false;
             lock_yaw_pid_target_filtered_rad_ = 0.0f;
             lock_yaw_pid_deadband_active_ = false;
@@ -3062,6 +3070,9 @@ namespace jia
 
         bool Chassis::computeYawPidOmega(f32 target_yaw_rad, f32 feedback_yaw_rad, f32 &out_omega_z)
         {
+            // computeYawPidOmega() 只回答一件事：
+            // “当前 yaw 误差是否已经大到值得启用 PID，如果值得，PID 应给出多少 omega_z”。
+            // 进入/退出死区的双阈值锁存也放在这里，避免 LockNow 和 LockTo 各自维护一套重复逻辑。
             const f32 error_deg = radToDegF32(shortestAngularDistanceF32(feedback_yaw_rad, target_yaw_rad));
             const f32 enter_deg = fabsf(lock_yaw_pid_deadband_enter_deg_);
             const f32 exit_deg = (fabsf(lock_yaw_pid_deadband_exit_deg_) < enter_deg) ? enter_deg : fabsf(lock_yaw_pid_deadband_exit_deg_);
@@ -3091,6 +3102,8 @@ namespace jia
 
         void Chassis::isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z)
         {
+            // LockNow 维护的是“松手后锁住当前朝向”的语义，而不是“始终追一个显式外部 rot_z 目标”：
+            // 手动旋转输入存在时，它持续刷新锁定基准；手动输入消失后，再经过一个 shift 缓冲切入 PID 保持。
             if (!is_lock)
             {
                 out_rot_z = rot_z;
@@ -3182,6 +3195,8 @@ namespace jia
 
         void Chassis::isLockToRotZ(bool is_lock, f32 tar_rot_z, f32 cur_rot_z, f32 &out_rot_z, f32 omega_z, f32 &out_omega_z)
         {
+            // LockTo 关注的是“朝指定绝对航向逼近”：
+            // 因而它先对目标 rot_z 做角速度限幅和低通，再交给 yaw PID 生成维持/逼近所需的 omega_z。
             if (!is_lock)
             {
                 out_rot_z = tar_rot_z;
@@ -3228,6 +3243,8 @@ namespace jia
 
         void Chassis::clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const
         {
+            // 这里是最靠近配置表的“硬边界钳位”：
+            // 它不考虑平滑性，也不考虑跨拍状态，只负责保证进入后续 planner 的 target_data_ 不超出允许范围。
             out_vel_x = clampValue(vel_x, -runtime_strategy_cfg_.max_vel_x_, runtime_strategy_cfg_.max_vel_x_);
             out_vel_y = clampValue(vel_y, -runtime_strategy_cfg_.max_vel_y_, runtime_strategy_cfg_.max_vel_y_);
             out_omega_z = clampValue(omega_z, -runtime_strategy_cfg_.max_omega_z_, runtime_strategy_cfg_.max_omega_z_);
@@ -3235,6 +3252,9 @@ namespace jia
 
         void Chassis::resolvePlannerTargetData()
         {
+            // resolvePlannerTargetData() 是控制语义归一化边界：
+            // 它把输入来源、坐标系、debug target 接管和 yaw lock 目标折叠成唯一的 target_data_，
+            // 让后续 planner 不再关心目标从哪来，而只关心“本拍底盘级目标是什么”。
             // 这一层负责把“外部希望底盘如何运动”统一折叠成 planner 只关心的 target_data_：
             // - API 输入与 debug target injection 统一入口
             // - 世界系/车体系目标归一到车体系
@@ -3296,6 +3316,9 @@ namespace jia
 
         void Chassis::updatePlannedMotionData()
         {
+            // updatePlannedMotionData() 是 target_data_ 进入模块 planner 之前的最后一道车体级整形层：
+            // 它在这里统一处理手动速度 profile、launch hold、yaw-lock zero-stop preview 与 planned_data_ 的时间连续性，
+            // 但并不直接生成单轮 steer/drive 目标。
             // updatePlannedMotionData() 只处理“车体级”目标，不直接生成单轮命令。
             // 它完成的事情包括：
             // 1. 选择生效的手动速度规划模式
@@ -3367,6 +3390,8 @@ namespace jia
 
         void Chassis::limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z)
         {
+            // 这层先整形速度分量，再整形平移方向：
+            // 前半段解决“本拍速度能涨多快/降多快”，后半段解决“方向该不该立即跟着 target 旋过去”。
             // 第一阶段：先对 x / y / omega 分量分别做加减速限幅，保证速度台阶被平滑化。
             const ManualSpeedProfileMode effective_profile_mode = resolveEffectiveManualSpeedProfileMode();
             if (effective_profile_mode == ManualSpeedProfileMode::kSCurve)
@@ -3407,6 +3432,10 @@ namespace jia
             }
 
             // 第二阶段：再对平移矢量方向做限幅，处理低速冻结滞回和方向角速率限制。
+            // 方向整形阶段真正决定的是三种互斥语义：
+            // 1. 近零低速时冻结当前方向；
+            // 2. 明确反向意图时允许直接换向；
+            // 3. 其余情况按方向角速率上限渐进转向。
             const f32 tar_mag = magnitude2DF32(tar_vel_x, tar_vel_y);
             const f32 out_mag = magnitude2DF32(out_vel_x, out_vel_y);
             const f32 enter_speed = getNearZeroEnterSpeedMps();

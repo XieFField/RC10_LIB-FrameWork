@@ -938,11 +938,15 @@ namespace jia
 #endif
             void transSpeedBodyToWorld(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
             void transSpeedWorldToBody(f32 vel_x, f32 vel_y, f32 &out_vel_x, f32 &out_vel_y) const;
+            // yaw lock 这一组 helper 只解决“目标朝向应如何演化、该不该由 PID 接管 omega_z”：
+            // 它们不碰平移规划，也不直接决定电机执行，只为 resolve/updatePlannedMotionData() 产出可继续消费的车体级目标。
             void resetYawPidTargetRuntime();
             f32 filterYawPidTarget(f32 target_yaw_rad);
             bool computeYawPidOmega(f32 target_yaw_rad, f32 feedback_yaw_rad, f32 &out_omega_z);
             void isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z);
             void isLockToRotZ(bool is_lock, f32 tar_rot_z, f32 cur_rot_z, f32 &out_rot_z, f32 omega_z, f32 &out_omega_z);
+            // clampTargetSpeedInChassis() 做的是配置层硬限幅，limitPlannedSpeed() 做的是跨拍整形与门控保持。
+            // 两者先后配合，保证 target_data_ 不越界、planned_data_ 再具备时间连续性。
             void clampTargetSpeedInChassis(f32 vel_x, f32 vel_y, f32 omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             void limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z);
             ManualSpeedProfileMode resolveEffectiveManualSpeedProfileMode() const;
@@ -1004,6 +1008,10 @@ namespace jia
             f32 getNearZeroExitSpeedMps() const;
             f32 getXParkCommandEnterSpeedMps() const;
             f32 getXParkCommandExitSpeedMps() const;
+            // reverse intent / launch hold / low-speed suppression 共同服务“低速大转角过渡”：
+            // - reverse intent 决定是否允许方向近似反转时直接按新方向放行；
+            // - launch hold 决定是否先只转舵再恢复 drive；
+            // - suppression 决定低速且误差较大时 drive 该被压到什么程度。
             bool shouldActivateReverseIntent(f32 target_vel_x, f32 target_vel_y, f32 reference_dir_rad) const;
             bool shouldActivateLaunchHold() const;
             // launch hold 相关 helper 只服务“先摆正舵轮、再恢复 drive”的过渡阶段：
