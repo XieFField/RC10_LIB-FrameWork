@@ -3542,6 +3542,16 @@ namespace jia
             wheel.homing_candidate_zero_offset_sum_rad = 0.0f;
         }
 
+        /**
+         * @brief 记录一次 homing 原始边沿，并判断是否已满足三边沿确认条件。
+         * @param wheel 目标轮运行态容器。
+         * @param is_falling_edge 当前边沿是否为 H->L。
+         * @param signed_local_total_rad 当前边沿对应的本地连续角。
+         * @return `true` 表示已经收集到足够可靠的边沿序列，可据此建立运行时零偏。
+         * @details 单次 GPIO 翻转只给出一个候选零偏，不能直接信任；这里会累计三次相隔近似半圈的边沿，
+         *          并把确认成功后的结果写回 `homing_runtime_zero_offset_rad`、
+         *          `homing_hold_corrected_local_total_rad` 与 `homing_zero_valid`。
+         */
         bool Chassis::recordHomingEdgeAndCheckConfirmed(WheelConfig &wheel, bool is_falling_edge, f32 signed_local_total_rad)
         {
             // 单次边沿只能提供一个“候选零偏”；为了吸收抖动和机械误差，这里要连续收集三次，
@@ -3700,10 +3710,19 @@ namespace jia
             steer_fault_any_active_ = true;
         }
 
+        /**
+         * @brief 为单轮挂起一次 recovery re-home 请求。
+         * @param wheel 目标轮运行态容器。
+         * @details 这里不会直接把电机推入 Search，而是先把 search 相关缓存和目标镜像复位到“重新入场”状态，
+         *          再由 updateHomingState() 在入口分拍消费该请求，让 recovery 与常规 homing 共用同一条主链。
+         */
         void Chassis::requestSingleWheelHoming(WheelConfig &wheel)
         {
             // recovering 不是直接“清故障继续跑”，而是要求这一个轮子重新走一遍最小回零流程。
-            // 这里把 search 相关缓存复位到重新入场的干净状态。
+            // 这里把 search 相关缓存复位到重新入场的干净状态：
+            // - 传感器/边沿侧：last_sensor_active、last_edge_is_falling、edge_confirm 链全部回到基线；
+            // - 零位侧：runtime_zero_offset / hold_target / zero_valid 复位，等新边沿重新建立；
+            // - 目标镜像侧：target_drive / target_steer / steer_target_velocity 清零，避免旧命令漏到 recovery 入口。
             // 注意：它只是挂起一次 rehome request，把真正进入 Search 的动作交给后面的 updateHomingState() 分拍消费。
             wheel.steer_fault_rehome_request = true;
             wheel.homing_elapsed_s = 0.0f;
@@ -3744,6 +3763,14 @@ namespace jia
         #endif
         }
 
+        /**
+         * @brief 更新单轮 steer freeze fault 观测并推进恢复状态机。
+         * @param wheel 目标轮运行态容器。
+         * @details 这一层不是简单“有电流但不动就报错”，而是分三层判断：
+         *          先看当前是否值得观测 steer 控制意图，再看当前模式是否允许故障检测，
+         *          最后才看电流/角度是否满足冻结特征。产物既会刷新 `wheel.steer_fault_*`
+         *          观测字段，也可能推进 `steer_feedback_freeze_ms` 与 `steer_fault_state`。
+         */
         void Chassis::updateSteerFaultState(WheelConfig &wheel)
         {
             // 这套故障检测不是简单“有电流但不动就报错”，而是同时检查：
@@ -3762,6 +3789,11 @@ namespace jia
                                                (command_speed_m_s <= getXParkCommandExitSpeedMps());
             const f32 steer_error_rad = fabsf(wrapToPiF32(wheel.target_steer_motor_total_angle_rad -
                                                        wheel.corrected_steer_motor_total_angle_rad));
+            // 三层门控的职责边界如下：
+            // 1. steer_control_intent：这拍是否“真的希望舵轮继续主动转起来”；
+            // 2. fault_detection_enabled_for_wheel：当前模式是否允许做冻结故障检测；
+            // 3. freeze_candidate：在前两层都满足时，这个 Ready 且 zero-valid 的轮子是否表现出“有电流/无变化”的冻结特征。
+            // 最终这些判断既会写回 wheel.steer_fault_* 调试观测字段，也会决定是否累计 freeze_ms 或推进故障状态机。
             const bool steer_control_intent = !input_target_data_.zero_current_all &&
                                               !current_mode_flag_.is_wheel_torque_free &&
                                               ((command_speed_m_s > getXParkCommandExitSpeedMps()) ||
@@ -3815,6 +3847,9 @@ namespace jia
             }
             else if (wheel.steer_fault_state == SteerFaultState::kLatched)
             {
+                // Latched 不会因为“看起来能动了”就直接清 fault：
+                // 这里先观察电流是否重新出现足够明显的恢复跳动；只有累计到门限，才切到 Recovering 并请求单轮 re-home。
+                // 原因是“执行器恢复响应”不代表“原零位仍可信”，所以必须重走一遍最小回零链路才能重新放行。
                 if (current_delta_mA >= steer_fault_cfg.recovery_current_delta_mA)
                 {
                     wheel.steer_feedback_recovery_toggle_count += 1U;
@@ -3856,6 +3891,14 @@ namespace jia
             }
         }
 
+        /**
+         * @brief 推进单轮 homing / recovery 状态机。
+         * @param wheel 目标轮运行态容器。
+         * @return `true` 表示该轮本拍结束后已处于 Ready，可参与正常底盘控制。
+         * @details 该状态机同时服务上电首次回零和 steer fault 后的 recovery re-home。
+         *          它会逐拍推进 Search、边沿确认、零偏建立、连续角 ready 和必要的 AlignToZero，
+         *          目标是把“零位建立成功”与“执行层真正开始采用该零位”拆成可观察、可隔离的阶段。
+         */
         bool Chassis::updateHomingState(WheelConfig &wheel)
         {
             // 四舵轮回零状态机的职责是：在每个周期读取限位/零位传感器，
@@ -3881,6 +3924,11 @@ namespace jia
             {
                 // Recovering 并不在原地直接跳 Search，而是等到 homing 状态机入口统一消费这次 rehome request，
                 // 这样“决定要重回零”和“真正进入搜索”两个时刻都能在调试上清晰观察。
+                // 这一拍明确做的事情是：
+                // - 清掉 rehome_request，避免后续重复消费；
+                // - 把 homing_state 切到 Search，并重置 elapsed / timeout / edge-confirm / zero_valid；
+                // - 用当前 raw 传感器电平建立新的 search 起点。
+                // 这样 recovery 入口就被并回常规 homing 主链，而不是单独开一条旁路状态机。
                 wheel.steer_fault_rehome_request = false;
                 wheel.homing_state = HomingState::kSearch;
                 wheel.homing_elapsed_s = 0.0f;
@@ -3898,6 +3946,9 @@ namespace jia
                 if (homing_start_request_)
                 {
                     // Search 从哪一相位开始并不重要，只要开始转动，半圈内总能遇到一个有效边沿。
+                    // 这里故意只切状态，不在 Idle 分支直接下电机命令；
+                    // 真正的搜索转速下发由 applyModuleCommands() 里的 kSearch 执行分支统一负责，
+                    // 这样“状态已经进入 Search”和“执行层本拍开始给 RPM”在时序上是可分辨的。
                     wheel.homing_state = HomingState::kSearch;
                     wheel.homing_elapsed_s = 0.0f;
                     wheel.homing_search_timeout_armed = false;
@@ -3926,6 +3977,7 @@ namespace jia
                     {
                         // Search 超时从“确认这轮已经真的开始动了”之后才开始计时，
                         // 避免刚发出搜索命令但电机/总线尚未真正响应时被提前算作 timeout。
+                        // 也就是说，底盘把“命令已经发出”和“电机已经真的起转”刻意拆成两拍观测。
                         wheel.homing_search_timeout_armed = true;
                     }
                 }
@@ -3940,6 +3992,9 @@ namespace jia
                     wheel.homing_last_edge_is_falling = is_falling_edge;
                     if (recordHomingEdgeAndCheckConfirmed(wheel, is_falling_edge, raw_total_angle_rad))
                     {
+                        // 边沿确认成功并不等于可以立刻宣布 Ready。
+                        // 后面还要故意走 EdgeDetected -> OffsetApply -> ContinuousAngleReady 三拍，
+                        // 把“确认序列可靠”“应用运行时零偏”“开始采用连续角 hold 目标”拆开，便于调试与时序隔离。
                         wheel.homing_state = HomingState::kEdgeDetected;
                     }
                 }
@@ -3962,17 +4017,22 @@ namespace jia
             {
                 // 边沿已确认后，故意再走两个显式中间态，
                 // 让“抓边沿”“应用零偏”“宣布连续角就绪”在调试观察上更容易区分。
+                // EdgeDetected 这一拍只负责宣布“边沿序列已经可信”，不再继续改写目标或零偏。
                 wheel.homing_state = HomingState::kOffsetApply;
                 return false;
             }
             if (wheel.homing_state == HomingState::kOffsetApply)
             {
                 // 这一拍只做“应用偏置”的状态切换，不再改零偏，保持状态机步骤清晰可追踪。
+                // 走到这里时，recordHomingEdgeAndCheckConfirmed() 已经写好了 runtime zero offset；
+                // 此处保留成独立相位，是为了把“零位建立成功”和“连续角执行准备就绪”拆成可见阶段。
                 wheel.homing_state = HomingState::kContinuousAngleReady;
                 return false;
             }
             if (wheel.homing_state == HomingState::kContinuousAngleReady)
             {
+                // ContinuousAngleReady 才真正把执行层准备采用的 hold 目标钉到 corrected-local 连续角上。
+                // 如果这是一次故障恢复 re-home，这里也是重新宣布“零位有效、可清 fault”的最早时刻。
                 wheel.target_steer_motor_total_angle_rad = wheel.homing_hold_corrected_local_total_rad;
                 wheel.homing_state = HomingState::kReady;
                 wheel.homing_align_command_armed = false;
@@ -3985,6 +4045,8 @@ namespace jia
 
             if (wheel.homing_state == HomingState::kAlignToZero)
             {
+                // AlignToZero 每拍都基于“当前反馈”重算最接近 OA=0 的等效连续角，
+                // 而不是沿用上一拍 target；这样可以防止上游普通模块命令或旧 target 把归零收口覆盖掉。
                 const f32 current_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
                 const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_local_total_rad);
                 const f32 target_oa_total_rad = nearestEquivalentAngleF32(current_oa_total_rad, 0.0f);
