@@ -3625,6 +3625,7 @@ namespace jia
         {
             // 从 recovering 回到正常控制前，冻结观测历史也必须一起刷新；
             // 否则上一轮故障遗留的电流/角度 delta 可能在下一拍继续触发误判。
+            // 这里做的是“恢复完成后的基线重建”，不只是把状态位改回 None。
             wheel.steer_fault_state = SteerFaultState::kNone;
             wheel.steer_fault_rehome_request = false;
             wheel.steer_feedback_freeze_ms = 0U;
@@ -3644,6 +3645,7 @@ namespace jia
         {
             // 舵向冻结一旦确认，就立刻把该轮打进“已锁存故障”：
             // 退出当前闭环目标、清空零位有效性，并等待后续恢复抖动触发 re-home。
+            // 这一步会主动把 fault 与 homing fault 语义耦合起来，让该轮彻底退出常规控制链。
             wheel.steer_fault_state = SteerFaultState::kLatched;
             wheel.steer_fault_rehome_request = false;
             wheel.steer_feedback_recovery_toggle_count = 0U;
@@ -3662,6 +3664,7 @@ namespace jia
         {
             // recovering 不是直接“清故障继续跑”，而是要求这一个轮子重新走一遍最小回零流程。
             // 这里把 search 相关缓存复位到重新入场的干净状态。
+            // 注意：它只是挂起一次 rehome request，把真正进入 Search 的动作交给后面的 updateHomingState() 分拍消费。
             wheel.steer_fault_rehome_request = true;
             wheel.homing_elapsed_s = 0.0f;
             wheel.homing_last_sensor_active = readHomingSensorRawHigh(wheel);
@@ -3707,6 +3710,7 @@ namespace jia
             // 1. 当前是否真的存在 steer 控制意图；
             // 2. 是否处于允许忽略的 X-Park 静止保持窗口；
             // 3. 电流变化和角度变化是否同时冻结到可疑范围。
+            // 也就是说，只有“执行器本来就应该动，但它没动”才会推进故障状态机。
             const StrategyConfig::SteerFaultConfig &steer_fault_cfg = runtime_strategy_cfg_.steer_fault_cfg;
             const f32 current_mA = readSteerMotorCurrentMilliAmp(wheel);
             const f32 raw_total_angle_rad = readSteerMotorRawTotalAngleRad(wheel);
@@ -3817,6 +3821,7 @@ namespace jia
             // 四舵轮回零状态机的职责是：在每个周期读取限位/零位传感器，
             // 依次完成 Idle -> Search -> EdgeDetected -> OffsetApply -> ContinuousAngleReady -> Ready。
             // 这里不直接“判定一次就完成”，而是通过多周期状态推进来吸收传感器抖动和机械延迟。
+            // fault recover 也复用这条链路，只是在入口多了一层“Recovering + rehome_request”的重入门。
             if (!wheel.homing_enabled || wheel.homing_gpio_port == nullptr)
             {
                 wheel.homing_state = HomingState::kReady;
@@ -3834,6 +3839,8 @@ namespace jia
 
             if (wheel.steer_fault_state == SteerFaultState::kRecovering && wheel.steer_fault_rehome_request)
             {
+                // Recovering 并不在原地直接跳 Search，而是等到 homing 状态机入口统一消费这次 rehome request，
+                // 这样“决定要重回零”和“真正进入搜索”两个时刻都能在调试上清晰观察。
                 wheel.steer_fault_rehome_request = false;
                 wheel.homing_state = HomingState::kSearch;
                 wheel.homing_elapsed_s = 0.0f;
@@ -3877,6 +3884,8 @@ namespace jia
                     wheel.homing_elapsed_s = 0.0f;
                     if (has_first_valid_steer_feedback)
                     {
+                        // Search 超时从“确认这轮已经真的开始动了”之后才开始计时，
+                        // 避免刚发出搜索命令但电机/总线尚未真正响应时被提前算作 timeout。
                         wheel.homing_search_timeout_armed = true;
                     }
                 }
@@ -4703,6 +4712,8 @@ namespace jia
         void Chassis::refreshDebugMirror(bool all_homed)
         {
             // DebugMirror 不保存额外真相，而是把分散在 runtime/cache 里的关键结论平铺成“调试器易读视图”。
+            // 刷新时机固定在 applyModuleCommands() 和 updateCurrentData() 之后，
+            // 因而它看到的是“这一拍最终采用的控制语义 + 最新反馈”的聚合镜像，而不是 planner 裸输出。
             debug_mirror_.all_homed = all_homed;
             debug_mirror_.single_wheel_target_index =
                 (debug_control_.common.control_wheel_index < 4U)
@@ -4755,6 +4766,10 @@ namespace jia
                 debug_mirror_.single_wheel_non_target_zeroed[i] =
                     debug_mirror_.single_wheel_isolation_active && (i != debug_mirror_.single_wheel_target_index);
                 const WheelConfig &wheel = wheel_config_[i];
+                // 这里同时保留三种 drive 口径，方便区分：
+                // - current_*: 实际反馈
+                // - planned_*: 执行门控前的 planner / command frame 目标
+                // - target / delivered_*: 执行层最终准备采用的目标镜像
                 debug_mirror_.current_oa_deg[i] = radToDegF32(mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad));
                 debug_mirror_.target_oa_deg[i] = radToDegF32(mapWheelCorrectedLocalToOaTotal(wheel, wheel.target_steer_motor_total_angle_rad));
                 debug_mirror_.current_drive_rpm[i] = radsToRpmF32(wheel.corrected_drive_omega_rad_s);
@@ -4911,6 +4926,8 @@ namespace jia
 #if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
         void Chassis::emitDebugUart8Log(bool all_homed)
         {
+            // 文本调试输出是“给人眼快速扫状态”的通道：
+            // 它优先复用 debug_mirror_ 这种聚合视图，而不是把控制内部所有原始字段逐个直接暴露出去。
             if (!debug_output_.output_enable || sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kText)
             {
                 return;
@@ -5020,6 +5037,8 @@ namespace jia
 
         void Chassis::emitUart8VofaJustFloatPidTrace()
         {
+            // overview justfloat 更接近“电机对象接口原始录波”，
+            // 因而它展示的是电机 target/current/rpm/angle，而不是经过 debug_mirror_ 再聚合后的解释型快照。
             if (!debug_output_.output_enable ||
                 sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
                 sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kOverview)
@@ -5245,6 +5264,8 @@ namespace jia
 
         void Chassis::emitUart8VofaYawPidTrace()
         {
+            // 这里发送的是 yaw_pid_trace_ 录波缓存，不是“控制器内部唯一真相”；
+            // 它适合用来看 LockNow/LockTo 每拍是如何决定 omega_z 的，而不是拿来反推所有底盘状态。
             if (!debug_output_.output_enable ||
                 sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
                 sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kYawPid)
@@ -5384,6 +5405,10 @@ namespace jia
             // header 部分包含 magic/version/flags/seq/time/msg_type/payload_len；
             // payload 部分按固定顺序包含 chassis target、chassis actual，以及 4 个轮子的 target/actual steer/drive 与速度分量。
             // 这层只负责打包和发送，不改变 planned/current 数据语义。
+            // 其中：
+            // - target chassis / target wheels 主要来自 planned_data_ 口径；
+            // - actual chassis / actual wheels 主要来自 current_data_ 与实时反馈；
+            // - yaw actual 单独直接取 IMU 当前值 input_hwt_rot_z_。
             if (!debug_output_.output_enable || sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kBinary)
             {
                 return;
@@ -5527,6 +5552,7 @@ namespace jia
         {
             // 这里是 debug output 的分发层：只根据 family/profile 选择一个输出后端。
             // 节流周期、分频计数、seq 连续性和具体 payload 组装都由各 emitter 与 debug_output_runtime_ 自己负责。
+            // 它不维护业务状态，也不生成新的控制语义；只是在线程尾部把当前观测快照送到不同输出后端。
             if (!debug_output_.output_enable)
             {
                 return;
@@ -5585,6 +5611,8 @@ namespace jia
 #if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
         bool Chassis::applyDebugModuleOverride(bool all_homed)
         {
+            // 这是少数会主动短路正常 compute/apply 链路的 debug 入口：
+            // 一旦某个 override route 生效，本拍后续就不再走常规底盘模块输出。
             if (!debug_control_.common.enable)
             {
                 return false;

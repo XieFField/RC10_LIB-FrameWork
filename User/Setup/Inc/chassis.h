@@ -187,10 +187,10 @@ namespace jia
 
             struct TelemetryChassisState
             {
-                f32 vel_x = 0.0f;
-                f32 vel_y = 0.0f;
-                f32 omega_z = 0.0f;
-                f32 yaw_rad = 0.0f;
+                f32 vel_x = 0.0f;   // [RO] 车体 X 方向速度。target 口径通常来自 planned_data_，actual 口径来自 current_data_。
+                f32 vel_y = 0.0f;   // [RO] 车体 Y 方向速度。它是对外观测值，不会反向驱动控制。
+                f32 omega_z = 0.0f; // [RO] 车体航向角速度。actual 只有在 all_homed 且无 steer fault 时才可信。
+                f32 yaw_rad = 0.0f; // [RO] 车体朝向角。target 侧通常沿用 planned rot_z，actual 侧直接取 IMU yaw。
             };
 
             struct TelemetryWheelPose
@@ -201,22 +201,22 @@ namespace jia
 
             struct TelemetryWheelState
             {
-                f32 target_drive_omega_rad_s = 0.0f;
-                f32 actual_drive_omega_rad_s = 0.0f;
-                f32 target_steer_oa_rad = 0.0f;
-                f32 actual_steer_oa_rad = 0.0f;
-                f32 target_velocity_x_m_s = 0.0f;
-                f32 target_velocity_y_m_s = 0.0f;
-                f32 actual_velocity_x_m_s = 0.0f;
-                f32 actual_velocity_y_m_s = 0.0f;
+                f32 target_drive_omega_rad_s = 0.0f; // [RO] 目标轮速观测值。默认取 planned/apply 后的目标快照，不保证等于电机对象内部最后一次写入值。
+                f32 actual_drive_omega_rad_s = 0.0f; // [RO] 实际轮速观测值。来自 current_data_/反馈链路。
+                f32 target_steer_oa_rad = 0.0f;      // [RO] 目标 OA 舵角观测值。是对外展示语义，不是控制内部唯一真坐标。
+                f32 actual_steer_oa_rad = 0.0f;      // [RO] 实际 OA 舵角观测值。由 corrected-local 反馈映射而来。
+                f32 target_velocity_x_m_s = 0.0f;    // [RO] 目标轮平面 X 速度分量。给 telemetry/host 看，不参与反向控制。
+                f32 target_velocity_y_m_s = 0.0f;    // [RO] 目标轮平面 Y 速度分量。
+                f32 actual_velocity_x_m_s = 0.0f;    // [RO] 实际轮平面 X 速度分量。
+                f32 actual_velocity_y_m_s = 0.0f;    // [RO] 实际轮平面 Y 速度分量。
             };
 
             struct TelemetrySnapshot
             {
-                bool homing_all_ready = false;
-                TelemetryChassisState target{};
-                TelemetryChassisState actual{};
-                TelemetryWheelState wheels[kTelemetryWheelCount]{};
+                bool homing_all_ready = false;                      // [RO] 发送 telemetry 时刻的整车 homing ready 结论。
+                TelemetryChassisState target{};                     // [RO] 面向上位机的目标车体状态快照。
+                TelemetryChassisState actual{};                     // [RO] 面向上位机的实际车体状态快照。
+                TelemetryWheelState wheels[kTelemetryWheelCount]{}; // [RO] 四个轮子的目标/实际观测快照。仅用于打包与观察，不驱动控制。
             };
 
             /* ----------------------------------------------------------------- */
@@ -241,11 +241,11 @@ namespace jia
 
             struct NormalizedBodyCommand
             {
-                CommandInputSource source = CommandInputSource::kApi;
-                BodyCommand body{};
-                f32 rot_z = 0.0f;
-                bool is_world_speed_mode = false;
-                bool is_steer_only_mode = false;
+                CommandInputSource source = CommandInputSource::kApi; // [RO] 命令来源标签。只描述“这条命令从哪来”，不代表后续一定由它主导最终执行。
+                BodyCommand body{};                                  // [RO] 统一到车体系/世界系解释后的基础 body 命令。
+                f32 rot_z = 0.0f;                                    // [RO] 与 body 命令配套的目标航向语义。
+                bool is_world_speed_mode = false;                    // [RO] 该命令是否按世界系解释。
+                bool is_steer_only_mode = false;                     // [RO] 该命令是否只驱动舵向而不请求常规 drive 运动。
             };
 
             struct PlannerTargetState
@@ -480,21 +480,21 @@ namespace jia
                 f32 homing_falling_edge_mech_rad = 0.0f;          // 原始 GPIO H->L 边沿对应的机械 OA 角（rad）
                 f32 homing_rising_edge_mech_rad = 0.0f;           // 原始 GPIO L->H 边沿对应的机械 OA 角（rad）
                 f32 homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM; // 回零搜索阶段给转向电机的转速指令，单位 rpm
-                f32 homing_zero_offset_rad = 0.0f;                // 标定得到的零位补偿角：传感器触发点到期望机械零位的固定偏差
+                f32 homing_zero_offset_rad = 0.0f;                // 标定零偏：传感器触发点到期望机械零位的固定偏差。它是静态标定量，不等于本次上电求得的运行时零偏。
                 f32 homing_timeout_s = 5.0f;                      // 单轮回零允许持续的最长时间，超时后进入故障态，单位秒
                 HomingState homing_state = HomingState::kIdle;    // 当前轮回零状态机所处阶段
                 bool homing_last_sensor_active = false;           // 上一控制周期的原始 GPIO 高低电平；用于检测 H/L 边沿
                 bool homing_last_edge_is_falling = false;         // 最近一次抓到的边沿方向：true=H->L，false=L->H；方便调试极性和触发角
-                bool homing_align_command_armed = false;          // 进入 AlignToZero 后是否已允许下发第一次对零位置命令；用于避免边沿抓取后同拍大跳变
+                bool homing_align_command_armed = false;          // AlignToZero 的节拍门：把“零位建立完成”和“开始下发第一条对零位置命令”拆到不同控制拍，避免抓边沿同拍大跳变。
                 bool homing_zero_valid = false;                   // 当前轮是否已经建立可用于闭环控制的零位
                 bool homing_search_timeout_armed = false;         // Search 超时是否已武装。只有看到首个有效舵向反馈活动后才开始累计超时。
                 u8 homing_edge_confirm_count = 0U;                // 本次 Search 已连续确认的原始光电边沿数量
                 bool homing_last_confirm_edge_is_falling = false; // 上一次确认边沿方向：true=H->L，false=L->H
                 f32 homing_last_confirm_signed_local_rad = 0.0f;  // 上一次确认边沿对应的带方向本地连续角
                 f32 homing_candidate_zero_offset_sum_rad = 0.0f;  // 三边沿确认时，已 unwrap 到同一分支的候选零偏累加
-                f32 homing_hold_corrected_local_total_rad = 0.0f; // 单轮确认完成后，等待其他轮时保持的 corrected-local 连续角
+                f32 homing_hold_corrected_local_total_rad = 0.0f; // 单轮 ready 后维持的 corrected-local 连续角。它是本拍 hold 目标，不是零偏本身。
                 f32 homing_elapsed_s = 0.0f;                      // 本次回零已运行时间，单位秒；用于超时判定
-                f32 homing_runtime_zero_offset_rad = 0.0f;        // 本次上电运行实际采用的零位补偿；回零成功后会把“当前触发位置”修正成运行时零点
+                f32 homing_runtime_zero_offset_rad = 0.0f;        // 本次上电运行实际采用的零位补偿。它由“当前 raw 触发位置 + 标定零偏”折算得出，和静态 homing_zero_offset_rad 不同。
 
                 // ---- 实时反馈与本周期规划输出 -----------------------------------
                 f32 corrected_steer_motor_total_angle_rad = 0.0f; // 已乘方向符号并叠加运行时零位补偿后的转向电机连续总角度反馈
@@ -513,8 +513,8 @@ namespace jia
                 u32 xpark_steer_hold_reacquire_ms = 0U;             // [RO] 当前轮从零电流锁定退出后，重新允许锁定前还需等待的时长（ms）。
 
                 // ---- 舵向故障观测与恢复计数 ------------------------------------
-                SteerFaultState steer_fault_state = SteerFaultState::kNone;
-                bool steer_fault_rehome_request = false;           // [RO] recover 流程是否已请求这一个轮子重新回零。
+                SteerFaultState steer_fault_state = SteerFaultState::kNone; // [RO] steer freeze fault 恢复状态机阶段：None=正常检测，Latched=故障锁存等待恢复跳动，Recovering=单轮 re-home 中。
+                bool steer_fault_rehome_request = false;           // [RO] recover 流程是否已请求这一个轮子重新回零。它会被 homing 状态机延后一拍消费，不代表本拍已进入 Search。
                 f32 steer_feedback_current_mA = 0.0f;              // [RO] 当前周期读取到的舵向电流反馈（mA）。
                 f32 steer_feedback_last_current_mA = 0.0f;         // [RO] 上一周期舵向电流反馈（mA）。用于计算冻结判据。
                 f32 steer_feedback_last_raw_total_angle_rad = 0.0f; // [RO] 上一周期原始舵向连续角反馈（rad）。用于检测“有电流但不动”。
@@ -528,7 +528,7 @@ namespace jia
                 bool steer_fault_xpark_stationary_hold = false;    // [RO] 当前是否落在允许忽略故障判定的 X-Park 静止保持窗口。
                 bool steer_fault_freeze_candidate = false;         // [RO] 本周期是否满足“有电流且角度/电流变化同时冻结”的可疑条件。
                 u32 steer_feedback_freeze_ms = 0U;                 // [RO] 冻结候选已连续保持的时长（ms）。
-                u32 steer_feedback_recovery_toggle_count = 0U;     // [RO] Latched 态下检测到的恢复跳动累计次数。
+                u32 steer_feedback_recovery_toggle_count = 0U;     // [RO] Latched 态下检测到的恢复跳动累计次数。达到阈值后才允许从 Latched 切入 Recovering。
                 u32 steer_fault_latched_count = 0U;                // [RO] 该轮历史上累计锁故障次数。
             };
 
@@ -944,6 +944,8 @@ namespace jia
             // 如果前面的 planner 解决的是“想去哪”，这一组解决的就是“轮子现在在哪、能不能去、最终给电机发什么”。
             // 其中 updateWheelFeedback() 只负责每轮局部反馈刷新与故障观测，整车 current_data_ 聚合在后面的 updateCurrentData() 完成。
             void updateWheelFeedback();
+            // 这组 helper 组成“正常控制 -> Latched 故障 -> Recovering -> 单轮 re-home -> 正常控制”的恢复链。
+            // 它们不是纯调试镜像；其中部分函数会直接修改 homing_state、fault_state 和闭环目标。
             void updateSteerFaultState(WheelConfig &wheel);
             void latchSteerFault(WheelConfig &wheel);
             void clearSteerFaultState(WheelConfig &wheel);
@@ -951,6 +953,8 @@ namespace jia
             void resetSteerMotorClosedLoopState(WheelConfig &wheel);
             void resetHomingEdgeConfirmState(WheelConfig &wheel);
             bool recordHomingEdgeAndCheckConfirmed(WheelConfig &wheel, bool is_falling_edge, f32 signed_local_total_rad);
+            // updateHomingState() 是单轮 homing / recovery 状态机主入口：
+            // 它读 GPIO 原始电平和 raw steer total angle，逐拍推进 zero-valid、runtime zero offset 和 ready/align/fault 状态。
             bool updateHomingState(WheelConfig &wheel);
             bool readHomingSensor(const WheelConfig &wheel) const;
             bool readHomingSensorRawHigh(const WheelConfig &wheel) const;
@@ -1017,9 +1021,11 @@ namespace jia
             // 调试输出与运行态镜像
             // 这些声明主要服务于观察和调参，不改变主控制决策本身。
 #if JIA_CHASSIS_ENABLE_DEBUG_MIRROR
+            // refreshDebugMirror() 在 compute/apply/current 全部完成后刷新，只做只读观测镜像整理，不反向驱动控制。
             void refreshDebugMirror(bool all_homed);
 #endif
 #if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
+            // 这组 emitter 只负责把当前观测快照发出去；节流、profile 与 payload 口径都在各自函数内部定义，不改变控制链。
             void emitDebugUart8Log(bool all_homed);
             void emitUart8VofaJustFloatPidTrace();
             void emitUart8VofaPid1kHzTrace();
@@ -1031,6 +1037,7 @@ namespace jia
             void emitDebugOutputByMode(bool all_homed);
 #endif
 #if JIA_CHASSIS_ENABLE_BINARY_TELEMETRY
+            // emitUart8SwerveTelemetryV2() 发送面向上位机的 binary telemetry 快照。
             void emitUart8SwerveTelemetryV2(bool all_homed);
 #endif
 #if JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
