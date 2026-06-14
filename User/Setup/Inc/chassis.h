@@ -369,6 +369,8 @@ namespace jia
             static PlannerInputSnapshot makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad);
             static DebugControlRoute classifyDebugControlRoute(bool debug_enable, u8 raw_mode);
             static DebugModuleOverrideRoute classifyDebugModuleOverrideRoute(u8 raw_mode);
+            // makeTelemetrySnapshot() 是 telemetry 打包前的轻量聚合层：
+            // 它把 target/actual 底盘状态、轮位几何和每轮 steer/drive 结果收敛成固定快照，供 text/binary 输出共用。
             static TelemetrySnapshot makeTelemetrySnapshot(bool homing_all_ready,
                                                            const TelemetryChassisState &target,
                                                            const TelemetryChassisState &actual,
@@ -961,6 +963,10 @@ namespace jia
             f32 limitValueWithAcceleration(f32 current_value, f32 target_value, f32 max_accel, f32 dt_s) const;
             f32 getXParkAngle(const WheelConfig &wheel) const;
             f32 computeMaxCommandWheelSpeedMps(const Data &command_data) const;
+            // 这两个 helper 服务 yaw lock 与 zero-stop 的衔接：
+            // - preview 版在 planner 阶段提前判断“是否需要先把 omega_z 压到 0”，让后续模块求解看到的是刹停前预览目标；
+            // - 非 preview 版在执行阶段再次按当前 residual / hold 上下文确认是否继续压零。
+            // 两者配合的目的是让“先刹平移、再纯旋转”的过渡既可预测又不突兀。
             bool shouldSuppressYawLockOmegaForZeroStopDecel(const Data &command_data);
             bool shouldPreviewSuppressYawLockOmegaForZeroStopDecel(const Data &command_data) const;
             f32 computeLowSpeedDriveSuppressionScale(f32 abs_error_rad) const;
@@ -1358,6 +1364,8 @@ namespace jia
 
             struct DebugOutputConfig
             {
+                // DebugOutputConfig 只回答“想发什么”：
+                // family 选文本/JustFloat/二进制，子配置决定各自 profile、周期和采样节拍。
                 bool output_enable = true;
                 u8 output_family_raw = static_cast<u8>(DebugOutputFamily::kJustFloat);
                 DebugOutputTextConfig text{};
@@ -1400,6 +1408,8 @@ namespace jia
 
             struct DebugOutputRuntime
             {
+                // DebugOutputRuntime 只回答“这一路上次发到哪了”：
+                // last_ms 用于节流，cycle_counter 用于分频，seq 用于 binary telemetry 序号连续性。
                 DebugOutputTextRuntime text{};
                 DebugOutputJustFloatRuntime justfloat{};
                 DebugOutputBinaryRuntime binary{};
@@ -1410,7 +1420,6 @@ namespace jia
             // DebugPidTune [RW]
             // 说明：这里存的是“待同步的 PID 配置缓存”，不是运行态实时对象。
             //       写完后通常还要等调试使能边沿或同步流程消费，运行中的 PID 才会真正换参数。
-            // RUNTIME_MIN 默认不保留这份缓存；比赛固件用初始化层的 PID 参数，避免每个 Chassis 常驻一份调参面板副本。
             // RUNTIME_MIN 默认不保留这份缓存；比赛固件用初始化层的 PID 参数，避免每个 Chassis 常驻一份调参面板副本。
             // =====================================================================
 #if JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
@@ -1463,6 +1472,8 @@ namespace jia
             // =====================================================================
             // 这份 yaw trace 很小，并且被航向控制函数直接写入。RUNTIME_MIN 保留它能避免把核心锁角逻辑切碎；
             // 真正占空间的串口输出配置、调试镜像和任务耗时窗口仍由 profile 裁剪。
+            // mode_tag 约定：
+            // 0=刚进入 Lock 流程的默认态，1=手动旋转输入仍在主导，2=LockNow 松手后的 shift 缓冲，3=LockNow PID 保持，4=LockTo PID 跟踪。
             struct YawPidTraceState
             {
                 f32 mode_tag = 0.0f;
@@ -1683,6 +1694,8 @@ namespace jia
 
         inline Result Chassis::setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
         {
+            // 第一层语义转换发生在 API 边界：
+            // 对外/public 坐标约定与底盘内部 body 语义的 x/y 正方向不同，因此先经 mapExternalCommandToBody() 做一次翻转。
             const BodyCommand body_command = mapExternalCommandToBody({coord, vel_x, vel_y, omega_z});
             return (coord == Coordinate::kBody) ? setTargetBodySpeedMode(body_command.vel_x, body_command.vel_y, body_command.omega_z)
                                                 : setTargetWorldSpeedMode(body_command.vel_x, body_command.vel_y, body_command.omega_z);
@@ -1690,6 +1703,8 @@ namespace jia
 
         inline Result Chassis::setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
         {
+            // LockNowYaw 的公开接口仍允许带入手动 omega_z：
+            // 当用户仍在主动旋转时，omega_z 会直接参与；松手后才切到“锁住当前 yaw”的自动保持语义。
             const BodyCommand body_command = mapExternalCommandToBody({coord, vel_x, vel_y, omega_z});
             return (coord == Coordinate::kBody) ? setTargetBodySpeedLockNowRotZWithNoOmegaZMode(body_command.vel_x, body_command.vel_y, body_command.omega_z)
                                                 : setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(body_command.vel_x, body_command.vel_y, body_command.omega_z);
@@ -1697,6 +1712,7 @@ namespace jia
 
         inline Result Chassis::setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z)
         {
+            // LockToYaw 的 yaw 目标单独传入 rot_z，平移部分仍沿公开坐标约定映射到内部 body 语义。
             const BodyCommand body_command = mapExternalCommandToBody({coord, vel_x, vel_y, 0.0f});
             return (coord == Coordinate::kBody) ? setTargetBodySpeedLockToRotZMode(body_command.vel_x, body_command.vel_y, rot_z)
                                                 : setTargetWorldSpeedLockToRotZMode(body_command.vel_x, body_command.vel_y, rot_z);
@@ -1704,6 +1720,8 @@ namespace jia
 
         inline Chassis::BodyCommand Chassis::mapExternalCommandToBody(const ExternalCommand &command)
         {
+            // 这里解决的是“公开 API 说的前/左”和“底盘内部 body 命令正方向”之间的约定差异。
+            // 它不关心 planner 习惯，只负责把外部调用方的语义先翻译成底盘控制层读得懂的 body 命令。
             BodyCommand body_command;
             body_command.vel_x = -command.vel_x;
             body_command.vel_y = -command.vel_y;
@@ -1713,6 +1731,9 @@ namespace jia
 
         inline Chassis::BodyCommand Chassis::normalizeBodyCommandForPlanner(const BodyCommand &command)
         {
+            // 第二层语义转换发生在 planner 边界：
+            // planner 沿用的是更早的一套内部轴向约定，因此在 body 命令进入 planner 前还要再做一次 x/y 翻转。
+            // 看起来像重复取反，但目的不同：前者面向外部 API，后者面向内部规划器。
             BodyCommand planner_command;
             planner_command.vel_x = -command.vel_x;
             planner_command.vel_y = -command.vel_y;
@@ -1886,6 +1907,8 @@ namespace jia
                                                                          const f32 target_steer_oa_rad[kTelemetryWheelCount],
                                                                          const f32 actual_steer_oa_rad[kTelemetryWheelCount])
         {
+            // telemetry wheel 状态既保留“每轮直接量”（steer/drive），也补一份由底盘 twist + 轮位几何反推的速度分量。
+            // 这样上位机既能看单轮目标/反馈，也能在不重复做运动学展开的情况下直接看每轮速度矢量。
             TelemetrySnapshot snapshot{};
             snapshot.homing_all_ready = homing_all_ready;
             snapshot.target = target;
@@ -1929,6 +1952,8 @@ namespace jia
 
         inline Robot_Twist Chassis::getBodySpeed() const
         {
+            // getter 返回的是“公开 API 语义下的目标速度快照”。
+            // 因为内部 target 仍保留底盘/规划层使用的方向约定，所以这里再翻回外部 readback 语义。
             Robot_Twist body_speed;
             const f32 internal_vx = getTargetBodyVelX();
             const f32 internal_vy = getTargetBodyVelY();
@@ -1940,6 +1965,8 @@ namespace jia
 
         inline Robot_Twist Chassis::getWorldSpeed() const
         {
+            // 世界系 getter 同样返回目标快照而非实际反馈；
+            // world/body 的区别只体现在目标已经过坐标变换，而这里仍要把内部方向约定翻回公开 readback 语义。
             Robot_Twist world_speed;
             const f32 internal_vx = getTargetWorldVelX();
             const f32 internal_vy = getTargetWorldVelY();

@@ -1002,6 +1002,9 @@ namespace jia
 
         bool Chassis::shouldSuppressYawLockOmegaForZeroStopDecel(const Data &command_data)
         {
+            // 这里压的是 yaw 角速度命令，不是取消 yaw lock 模式本身。
+            // 目标是让锁角模式下的平移减速先把轮上余速刹干净，再恢复纯旋转，避免 near-zero 区间边刹车边补 yaw 带来的抖动。
+            // 与 preview 版的区别是：本函数会读写 decel context / release hold 运行态，因此只能在执行阶段调用。
             const bool yaw_lock_control_requested =
                 current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
             if (!yaw_lock_control_requested ||
@@ -1038,6 +1041,7 @@ namespace jia
             for (u8 i = 0; i < 4; ++i)
             {
                 const WheelConfig &wheel = wheel_config_[i];
+                // 同时看缓存反馈和实时读取，并取更保守的较大值，避免单一路径更新滞后时过早认为“已经刹停”。
                 const f32 cached_residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * wheel_radius_m;
                 const f32 live_residual_speed_m_s = fabsf(readDriveMotorOmegaRadS(wheel)) * wheel_radius_m;
                 const f32 residual_speed_m_s =
@@ -1061,6 +1065,8 @@ namespace jia
                     return false;
                 }
 
+                // release_hold 不是“总抑制时长”，而是余速已经落入 enter 阈值后，再额外保持一小段时间，
+                // 防止刚停稳就立刻恢复 yaw 命令导致的二次摆动。
                 if (yaw_lock_zero_stop_release_hold_elapsed_ms_ < release_hold_ms)
                 {
                     const u32 next_elapsed_ms =
@@ -1104,6 +1110,8 @@ namespace jia
 
         bool Chassis::shouldPreviewSuppressYawLockOmegaForZeroStopDecel(const Data &command_data) const
         {
+            // preview 版只做“本周期若继续锁角，是否应该先把 omega_z 预览为 0”的无副作用判断。
+            // 它不会推进 decel context，也不会更新 hold 计时器；真正的状态推进在执行阶段的 shouldSuppress...() 完成。
             const bool yaw_lock_control_requested =
                 current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
             if (!yaw_lock_control_requested ||
@@ -3206,6 +3214,7 @@ namespace jia
             target_data_.omega_z = normalized_body_command_.body.omega_z;
             target_data_.rot_z = normalized_body_command_.rot_z;
 
+            // module override 会直接在后面接管单轮/模块输出，因此此处不再进入底盘级 yaw lock 目标整形。
             const bool debug_module_override_active =
 #if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
                 classifyDebugControlRoute(debug_control_.common.enable, debug_control_.common.mode_raw) == DebugControlRoute::kModuleOverride;
@@ -3218,6 +3227,7 @@ namespace jia
                 yaw_lock_control_requested && !input_target_data_.zero_current_all && !debug_module_override_active;
             if (!yaw_lock_control_active || !yaw_lock_control_active_last_cycle_)
             {
+                // 锁角链路重新进入时，用当前 IMU yaw 重新建基准，避免沿用上一次锁角周期残留的 target/runtime。
                 lock_now_rot_z_target_ = input_hwt_rot_z_;
                 lock_now_rot_z_shift_count_ = 0U;
                 resetYawPidTargetRuntime();
@@ -3289,6 +3299,8 @@ namespace jia
                 !launch_hold_active_ && shouldPreviewSuppressYawLockOmegaForZeroStopDecel(target_data_);
             if (suppress_yaw_lock_target_omega_for_zero_stop)
             {
+                // preview suppress 只改“这次交给 planner 看的 omega_z”，并把原始目标缓存起来，
+                // 方便后续 trace / 诊断知道真正请求过的 yaw 命令是什么。
                 yaw_lock_zero_stop_preview_command_ = target_data_;
                 yaw_lock_zero_stop_preview_command_valid_ = true;
                 target_data_.omega_z = 0.0f;
@@ -5295,6 +5307,10 @@ namespace jia
 #if JIA_CHASSIS_ENABLE_BINARY_TELEMETRY
         void Chassis::emitUart8SwerveTelemetryV2(bool all_homed)
         {
+            // 这里发送的是一帧定长 binary telemetry：
+            // header 部分包含 magic/version/flags/seq/time/msg_type/payload_len；
+            // payload 部分按固定顺序包含 chassis target、chassis actual，以及 4 个轮子的 target/actual steer/drive 与速度分量。
+            // 这层只负责打包和发送，不改变 planned/current 数据语义。
             if (!debug_output_.output_enable || sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kBinary)
             {
                 return;
@@ -5388,6 +5404,7 @@ namespace jia
                                                                     planned_data_.steer_angle_oa_rad,
                                                                     current_data_.steer_angle_oa_rad);
 
+            // chassis 区先发两组 4f：target = planned_data_ 语义，actual = current_data_ + 当前 IMU yaw。
             if (!packChassis4f(snapshot.target.vel_x, snapshot.target.vel_y, snapshot.target.omega_z, snapshot.target.yaw_rad) ||
                 !packChassis4f(snapshot.actual.vel_x, snapshot.actual.vel_y, snapshot.actual.omega_z, snapshot.actual.yaw_rad))
             {
@@ -5416,6 +5433,7 @@ namespace jia
             {
                 return;
             }
+            // V2 协议把 payload_len 回填到帧头，并且 CRC 只覆盖 payload 区，不覆盖 header 和尾部 CRC 自身。
             packU16LE(&frame[payload_len_pos], payload_len);
 
             const u16 crc = crc16CcittFalse(&frame[payload_start], payload_len);
@@ -5434,6 +5452,8 @@ namespace jia
 
         void Chassis::emitDebugOutputByMode(bool all_homed)
         {
+            // 这里是 debug output 的分发层：只根据 family/profile 选择一个输出后端。
+            // 节流周期、分频计数、seq 连续性和具体 payload 组装都由各 emitter 与 debug_output_runtime_ 自己负责。
             if (!debug_output_.output_enable)
             {
                 return;
