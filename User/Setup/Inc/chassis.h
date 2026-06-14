@@ -473,6 +473,10 @@ namespace jia
 
             // WheelConfig 是运行时轮组状态快照：既保存静态几何和硬件句柄，也保存回零状态、
             // 补偿结果与最近一次规划输出，供控制线程在每个周期更新。
+            // WheelConfig 是“单个舵轮模块在底盘层的完整运行态容器”：
+            // - 它既保存装配常量和硬件句柄，也保存该轮在 homing / fault / hold / execute 链路中的实时状态。
+            // - chassis 主循环里凡是只影响某一个轮子的决策，原则上都应该收敛到这里，避免跨数组维护导致语义分裂。
+            // - 阅读时建议按“静态装配 -> 回零缓存 -> 本拍反馈/目标 -> X-Park hold -> steer fault 观测”五层去理解。
             struct WheelConfig
             {
                 // ---- 静态装配与硬件绑定 -----------------------------------------
@@ -489,6 +493,9 @@ namespace jia
                 u16 homing_gpio_pin = 0;                          // 回零传感器 GPIO 引脚运行时副本；与端口配合读取真实输入
 
                 // ---- 回零输入与边沿确认缓存 -------------------------------------
+                // 这一组服务“三边沿确认 -> 运行时零偏建立 -> Search/Align 分拍收口”整条链路。
+                // 它把一次上电期间看见的原始边沿、候选零偏和 ready 后保持目标都收进单轮局部状态里，
+                // 供 resetHomingEdgeConfirmState() / recordHomingEdgeAndCheckConfirmed() / updateHomingState() 协同推进。
                 f32 homing_falling_edge_mech_rad = 0.0f;          // 原始 GPIO H->L 边沿对应的机械 OA 角（rad）
                 f32 homing_rising_edge_mech_rad = 0.0f;           // 原始 GPIO L->H 边沿对应的机械 OA 角（rad）
                 f32 homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM; // 回零搜索阶段给转向电机的转速指令，单位 rpm
@@ -509,6 +516,9 @@ namespace jia
                 f32 homing_runtime_zero_offset_rad = 0.0f;        // 本次上电运行实际采用的零位补偿。它由“当前 raw 触发位置 + 标定零偏”折算得出，和静态 homing_zero_offset_rad 不同。
 
                 // ---- 实时反馈与本周期规划输出 -----------------------------------
+                // 这里不是单纯“反馈区”，而是该轮本拍执行上下文：
+                // corrected_* 由 updateWheelFeedback() 刷新，target_* / steer_target_velocity_rad_s 则先承接 planner 结果，
+                // 再在 applyModuleCommands() / homing / zero-stop / fault 恢复等执行分支里被改写成最终执行镜像。
                 f32 corrected_steer_motor_total_angle_rad = 0.0f; // 已乘方向符号并叠加运行时零位补偿后的转向电机连续总角度反馈
                 f32 corrected_drive_omega_rad_s = 0.0f;           // 已乘方向符号后的驱动轮角速度反馈，单位 rad/s
                 f32 target_steer_motor_total_angle_rad = 0.0f;    // 当前周期准备采用的转向本地连续目标角。storePlannedActuatorFrame() 先写入规划 steer command，applyModuleCommands() 后才稳定代表最终执行值。
@@ -517,6 +527,9 @@ namespace jia
                 bool flipped_drive_direction = false;             // 当前周期采用的“舵角翻转 180 度、驱动反向”结果。它是本拍工作值，不等价于 selected_flipped_solution_ 那种跨拍锁存记忆。
 
                 // ---- X-Park 舵向 hold 局部状态 ----------------------------------
+                // 这组不是普通调试镜像，而是“单轮局部 hold 子状态机”的真实运行态。
+                // 整车级 xpark_gate_active_ / xpark_stationary_hold_ms_ 决定何时允许进入这条链，
+                // 真正每轮是否已判稳、是否切到零电流、多久后允许重新锁定，则由这里逐轮记录。
                 XParkSteerHoldPhase xpark_steer_hold_phase = XParkSteerHoldPhase::kInactive; // [RO] 当前轮 X-Park 舵向 hold 状态机阶段。
                 f32 xpark_steer_hold_locked_target_rad = 0.0f;      // [RO] 当前轮进入 hold 后冻结的 corrected-local 总角目标（rad）。
                 f32 xpark_steer_hold_error_rad = 0.0f;              // [RO] 当前轮相对 X-Park 理想目标角的绝对角误差（rad）。
@@ -525,6 +538,9 @@ namespace jia
                 u32 xpark_steer_hold_reacquire_ms = 0U;             // [RO] 当前轮从零电流锁定退出后，重新允许锁定前还需等待的时长（ms）。
 
                 // ---- 舵向故障观测与恢复计数 ------------------------------------
+                // 该组实现“冻结观测 -> 锁故障 -> 等恢复跳动 -> 请求单轮 re-home”的完整局部链路。
+                // 判据依赖单轮电流/角度微分，恢复动作也按轮推进，因此这些量收敛在 WheelConfig 内，
+                // 并由 updateSteerFaultState() / latchSteerFault() / requestSingleWheelHoming() / clearSteerFaultState() 协同维护。
                 SteerFaultState steer_fault_state = SteerFaultState::kNone; // [RO] steer freeze fault 恢复状态机阶段：None=正常检测，Latched=故障锁存等待恢复跳动，Recovering=单轮 re-home 中。
                 bool steer_fault_rehome_request = false;           // [RO] recover 流程是否已请求这一个轮子重新回零。它会被 homing 状态机延后一拍消费，不代表本拍已进入 Search。
                 f32 steer_feedback_current_mA = 0.0f;              // [RO] 当前周期读取到的舵向电流反馈（mA）。
@@ -887,12 +903,37 @@ namespace jia
             // 一旦它返回 true，本拍后续模块命令不再来自常规底盘规划，而由 debug route 直接决定。
             bool applyDebugModuleOverride(bool all_homed);
 #endif
+            /**
+             * @brief 清空上一拍遗留的输入目标意图。
+             * @details 把公开 set 接口、调试接管和上层命令留下来的目标缓存恢复为中性态，
+             *          让本拍 resolve 阶段只基于最新输入重新解释控制语义。
+             */
             void clearInputTargetData();
             // setModeFlag() 只做“公开 Mode -> 主流程布尔标签”的压平，
             // 它不是最终模式决策本身；更细的锁角/坐标/调试接管语义仍由后续 resolve 阶段继续解释。
+            /**
+             * @brief 将公开 Mode 压平成主流程常用的布尔标记。
+             * @details 该步骤只负责把模式族归类为 torque-free / world / yaw-lock 这类粗粒度标签，
+             *          真正的目标速度、目标朝向和调试覆盖仍由后续 resolve 阶段继续推导。
+             */
             void setModeFlag();
+            /**
+             * @brief 统一解释外部输入意图，得到 planner 可消费的 target_data_。
+             * @details 这里负责模式分流、坐标语义归一化、yaw lock 目标整理和调试接管入口，
+             *          产物仍是“整车想怎么动”的目标，不直接生成任何单轮命令。
+             */
             void resolvePlannerTargetData();
+            /**
+             * @brief 对 target_data_ 做跨拍整形，得到更平滑的 planned_data_。
+             * @details 这一层主要处理 jerk/acc 限幅、方向冻结、速度门控和若干保持态衔接，
+             *          目的是让后续模块解算看到的是时间连续、可执行的车体级目标。
+             */
             void updatePlannedMotionData();
+            /**
+             * @brief 在模块 override 接管时清理常规规划残留。
+             * @details 避免上一条常规底盘规划结果继续污染调试模块直控路径，让后续 apply/telemetry
+             *          看到的 planned_data_ 与 debug route 保持一致。
+             */
             void clearPlannedMotionForModuleOverride();
 #if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
             void resetDebugModuleOverrideTargets(u8 wheel_idx, bool preserve_soft_wheel_rate);
@@ -920,6 +961,21 @@ namespace jia
             /* ----------------------------------------------------------------- */
             // 运动学、航向锁定与限幅整形
             // 这部分把“输入意图”整形成“底盘可稳定执行的规划目标”，包括坐标转换、yaw lock、方向冻结和 jerk/acc 限幅。
+            /**
+             * @brief 将 drive 目标与调试虚拟负载/zero-stop 末端语义一起下发到单轮驱动电机。
+             * @param wheel 目标轮的运行态容器。
+             * @param wheel_idx 目标轮索引。
+             * @param delivered_drive_target_rad_s 执行层最终允许下发的 drive 角速度目标。
+             * @param single_wheel_isolation_active 当前是否处于单轮隔离模式。
+             * @param single_wheel_idx 单轮隔离模式下被保留控制权的轮号。
+             * @param chassis_motion_blocked 当前是否被 homing/fault 等整车门控阻断。
+             * @param allow_drive_position_loop 当前轮是否允许继续走 drive 位置/速度闭环。
+             * @param drive_zero_stop_active 整车 zero-stop 目标门是否已激活。
+             * @param entering_drive_zero_stop 本拍是否刚进入 zero-stop。
+             * @param leaving_drive_zero_stop 本拍是否刚退出 zero-stop。
+             * @details 它是 drive 末端下发的唯一汇合点，负责把调试虚拟负载、刹车 ramp 和零电流收尾
+             *          收敛成“这一拍最终发给驱动电机的真实接口语义”。
+             */
             void applyDriveVirtualLoadAndCommand(WheelConfig &wheel,
                                                  u8 wheel_idx,
                                                  f32 delivered_drive_target_rad_s,
@@ -965,18 +1021,69 @@ namespace jia
             // 轮组反馈、回零与执行器下发
             // 如果前面的 planner 解决的是“想去哪”，这一组解决的就是“轮子现在在哪、能不能去、最终给电机发什么”。
             // 其中 updateWheelFeedback() 只负责每轮局部反馈刷新与故障观测，整车 current_data_ 聚合在后面的 updateCurrentData() 完成。
+            /**
+             * @brief 刷新四个舵轮的局部反馈快照，并推进 steer fault 观测。
+             * @details 这里只更新“每轮当前读到了什么”，不负责整车级 current_data_ 聚合；
+             *          这样 homing/fault/debug mirror 都能在同一拍共享统一时间基准下的轮侧反馈。
+             */
             void updateWheelFeedback();
             // 这组 helper 组成“正常控制 -> Latched 故障 -> Recovering -> 单轮 re-home -> 正常控制”的恢复链。
             // 它们不是纯调试镜像；其中部分函数会直接修改 homing_state、fault_state 和闭环目标。
+            /**
+             * @brief 更新单轮 steer freeze fault 观测并推进其恢复状态机。
+             * @param wheel 目标轮运行态容器。
+             * @details 它同时检查控制意图、电流变化、角度变化和 X-Park 忽略窗口，
+             *          只在“本来应该动但没动”的条件下推进 None -> Latched -> Recovering。
+             */
             void updateSteerFaultState(WheelConfig &wheel);
+            /**
+             * @brief 将单轮舵向故障锁存为 Latched 态。
+             * @param wheel 目标轮运行态容器。
+             * @details 进入该状态后，常规底盘链路会挂起该轮的正常执行，等待恢复跳动达到阈值后再重回零。
+             */
             void latchSteerFault(WheelConfig &wheel);
+            /**
+             * @brief 清除单轮 steer fault 相关锁存与恢复计数。
+             * @param wheel 目标轮运行态容器。
+             * @details 一般在单轮 recovery homing 完成后调用，让该轮重新回到正常控制路径。
+             */
             void clearSteerFaultState(WheelConfig &wheel);
+            /**
+             * @brief 为单轮挂起一次重回零请求。
+             * @param wheel 目标轮运行态容器。
+             * @details 这里只设置请求位，不直接改 homing_state；真正进入 Search 在 updateHomingState() 入口统一消费。
+             */
             void requestSingleWheelHoming(WheelConfig &wheel);
+            /**
+             * @brief 清理单轮舵向闭环执行器的内部历史状态。
+             * @param wheel 目标轮运行态容器。
+             * @details 用于从故障恢复、重新回零或特殊保持态退出时，避免旧的 PID/目标历史继续影响下一拍。
+             */
             void resetSteerMotorClosedLoopState(WheelConfig &wheel);
+            /**
+             * @brief 重置单轮 homing 边沿确认链路的累计状态。
+             * @param wheel 目标轮运行态容器。
+             * @details Search 重新开始、Recovering 重入或零位失效时都需要调用，避免新一轮边沿确认混入旧拍缓存。
+             */
             void resetHomingEdgeConfirmState(WheelConfig &wheel);
+            /**
+             * @brief 记录一次 homing 原始边沿，并判断是否已满足三边沿确认条件。
+             * @param wheel 目标轮运行态容器。
+             * @param is_falling_edge 当前边沿是否为 H->L。
+             * @param signed_local_total_rad 当前边沿对应的本地连续角。
+             * @return `true` 表示本轮已拿到足够可靠的边沿序列，可推进到后续零偏建立阶段。
+             */
             bool recordHomingEdgeAndCheckConfirmed(WheelConfig &wheel, bool is_falling_edge, f32 signed_local_total_rad);
             // updateHomingState() 是单轮 homing / recovery 状态机主入口：
             // 它读 GPIO 原始电平和 raw steer total angle，逐拍推进 zero-valid、runtime zero offset 和 ready/align/fault 状态。
+            /**
+             * @brief 推进单轮 homing / recovery 状态机。
+             * @param wheel 目标轮运行态容器。
+             * @return `true` 表示该轮本拍结束后已处于 Ready，可参与正常底盘控制。
+             * @details 它既服务上电首次回零，也服务 steer fault 后的单轮重回零；
+             *          其中 Search、EdgeDetected、OffsetApply、ContinuousAngleReady、AlignToZero 分拍存在，
+             *          是为了让边沿确认、零偏建立和闭环归位在时序上可观察且可隔离。
+             */
             bool updateHomingState(WheelConfig &wheel);
             bool readHomingSensor(const WheelConfig &wheel) const;
             bool readHomingSensorRawHigh(const WheelConfig &wheel) const;
@@ -988,9 +1095,32 @@ namespace jia
             f32 readSteerMotorCurrentMilliAmp(const WheelConfig &wheel) const;
             // 这四个 target helper 把“底盘内部统一语义”收敛成“电机对象实际接口语义”：
             // 上层分别按电流、舵向 rpm、舵向连续角、drive wheel omega 调用，换算细节统一留在这一层。
+            /**
+             * @brief 按底盘统一语义给单轮舵向电机下发电流目标。
+             * @param wheel 目标轮运行态容器。
+             * @param current 目标电流，单位 mA。
+             */
             void setSteerMotorTargetCurrent(WheelConfig &wheel, f32 current);
+            /**
+             * @brief 按底盘统一语义给单轮舵向电机下发速度目标。
+             * @param wheel 目标轮运行态容器。
+             * @param rpm 以 corrected-local 正方向解释的目标转速。
+             * @details 该层负责完成方向符号换算，并在必要时做一次写后核对/补发，
+             *          统一兜住底盘写入成功但电机对象未接住目标的偶发场景。
+             */
             void setSteerMotorTargetRPM(WheelConfig &wheel, f32 rpm);
+            /**
+             * @brief 按底盘统一语义给单轮舵向电机下发连续角目标。
+             * @param wheel 目标轮运行态容器。
+             * @param corrected_local_total_angle_rad corrected-local 语义下的连续角目标。
+             * @details 该层负责把 corrected-local 连续角还原为电机对象理解的原始 total-angle 坐标。
+             */
             void setSteerMotorTargetTotalAngleRad(WheelConfig &wheel, f32 corrected_local_total_angle_rad);
+            /**
+             * @brief 按底盘统一语义给单轮驱动电机下发 wheel omega 目标。
+             * @param wheel 目标轮运行态容器。
+             * @param drive_omega_rad_s 轮侧角速度目标，单位 rad/s。
+             */
             void setDriveMotorTargetOmegaRadS(WheelConfig &wheel, f32 drive_omega_rad_s);
             f32 limitPositionSecondOrder(f32 current_value, f32 current_rate, f32 target_value, f32 max_rate, f32 max_accel, f32 dt_s, f32 &next_rate) const;
             f32 limitValueWithAcceleration(f32 current_value, f32 target_value, f32 max_accel, f32 dt_s) const;
@@ -1024,11 +1154,34 @@ namespace jia
             // mapSingleTurnToNearestTotalAngle() 把单圈 OA 语义目标映射成“离当前姿态最近”的连续总角，
             // 主要服务调试对齐与显式单轮舵角命令，避免同一目标因跨圈解释不同而多转整圈。
             f32 mapSingleTurnToNearestTotalAngle(const WheelConfig &wheel, f32 target_oa_single_turn_deg) const;
+            /**
+             * @brief 将车体级命令与当前反馈/门控上下文展开成模块 planner 输入。
+             * @param command_data 当前准备送入模块解算的整车级命令。
+             * @return 包含目标 twist、当前模块朝向、残余速度和统一朝向请求的完整 planner 输入。
+             */
             SwervePlannerInput makeSwervePlannerInput(const Data &command_data);
+            /**
+             * @brief 执行四舵轮模块规划，产出本拍的理想解、选中解和抑制结果。
+             * @param planner_input 已展开好的模块规划输入。
+             * @return planner 视角下的完整输出；其中仍保留理想值、规划值和最终 planner 值，不等于最终执行值。
+             */
             SwervePlannerOutput planSwerveModules(const SwervePlannerInput &planner_input);
             // 这两个 helper 把 planner 输出再收束成“后续执行/调试统一读取”的命令帧与缓存快照。
             // build 负责拍扁字段层次，store 负责写入本拍执行镜像与跨拍历史状态。
+            /**
+             * @brief 将 planner 输出压平成执行层易消费的命令帧。
+             * @param planner_output 最近一次模块规划结果。
+             * @param out_frame 输出命令帧。
+             * @details 该步骤会同时保留 planned 轨迹点与 steer_cmd 最终舵向命令两套视图，
+             *          便于后续执行层区分“规划轨迹”与“真正准备下发的舵向目标”。
+             */
             void buildActuatorCommandFrame(const SwervePlannerOutput &planner_output, ActuatorCommandFrame &out_frame) const;
+            /**
+             * @brief 存储本拍 planner 输出与执行前命令帧镜像。
+             * @param planner_output 最近一次模块规划结果。
+             * @param command_frame 由 planner 输出压平得到的执行前命令帧。
+             * @details 它只写缓存与镜像，不直接驱动电机；真正的执行仲裁在 applyModuleCommands() 内完成。
+             */
             void storePlannedActuatorFrame(const SwervePlannerOutput &planner_output, const ActuatorCommandFrame &command_frame);
             f32 computeHomingAlignTargetCorrectedLocalTotal(const WheelConfig &wheel) const;
             // 这两个 helper 组成“规划舵向 -> 规划驱动 -> 规划车体 twist readback”的观测链：
@@ -1038,9 +1191,27 @@ namespace jia
             bool estimatePlannedBodyTwist(const f32 planned_oa_total_rad[4], const f32 planned_drive_omega_rad_s[4], f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             f32 updateHighSpeedDriveSuppression(f32 translational_speed_m_s, f32 eta_max_s, f32 dir_err_deg);
             // computeModuleCommands() 负责“从车体命令 -> 模块规划命令帧”，只产出理想执行目标，不直接写电机。
+            /**
+             * @brief 把车体级命令解算为本拍的模块规划命令帧。
+             * @param command_data 已完成车体级整形的整车目标。
+             * @details 它只负责生成 planner 理想值、规划值和执行前命令帧，不直接写电机；
+             *          真正是否允许原样下发，要交给 applyModuleCommands() 再结合运行态仲裁。
+             */
             void computeModuleCommands(const Data &command_data);
             // applyModuleCommands() 是最终执行仲裁层：会结合 homing/fault/zero-current/torque-free/zero-stop 等运行态决定哪些目标真的下发。
+            /**
+             * @brief 把模块规划命令与运行态门控融合后真正下发到电机层。
+             * @param all_homed 当前四轮是否都已达到 Ready。
+             * @details 这是“planner 理想目标”与“本拍最终执行语义”的分界点；
+             *          它会更新 wheel.target_* / planned_data_ 中对外最常观察的执行镜像。
+             */
             void applyModuleCommands(bool all_homed);
+            /**
+             * @brief 基于本拍最终执行结果与反馈快照更新 current_data_。
+             * @param all_homed 当前四轮是否都已达到 Ready。
+             * @details 这里负责把轮侧反馈回填到对外可读的整车级 current_data_，
+             *          同时决定何时允许整车 twist 估计被视为可信。
+             */
             void updateCurrentData(bool all_homed);
 
             /* ----------------------------------------------------------------- */
@@ -1081,6 +1252,14 @@ namespace jia
             // 通用数学与轻量只读映射
             // 放在末尾是为了把主控制流程声明按职责集中阅读。
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
+            /**
+             * @brief 由四个模块当前反馈反解整车 body twist。
+             * @param out_vel_x 输出的车体系 x 线速度。
+             * @param out_vel_y 输出的车体系 y 线速度。
+             * @param out_omega_z 输出的车体系偏航角速度。
+             * @return `true` 表示本次反解成功且结果可用。
+             * @details 这是反馈侧估计接口，语义上不同于 planner 侧“按命令预估会怎么动”的反解 helper。
+             */
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
 #if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
             void updateTaskPerfStat(u64 loop_start_us, u64 loop_end_us);
@@ -1550,15 +1729,17 @@ namespace jia
                 f32 reverse_intent_active = 0.0f;
             } yaw_pid_trace_;
 
-            // 回零请求与轮组运行态快照：保存每轮的装配副本、反馈结果和局部状态机阶段。
+            // 回零请求与轮组运行态快照：
+            // 这一组保存“轮子自身”最核心的跨拍事实，包括装配副本、反馈快照、执行历史和局部状态机阶段。
+            // 其中 last_* 不是单纯调试缓存，而是限幅、zero-stop、残余速度判定这类跨拍整形逻辑的直接输入。
             bool homing_start_request_ = false;                                // [RW] 回零启动请求锁存位（由外部触发，在线程内消费）
             f32 homing_align_to_zero_tolerance_deg_ = 2.0f;                    // [RW] 回零归位判稳阈值（deg）
             WheelConfig wheel_config_[4];                                      // [RO] 四个模块运行态快照
             f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};                        // [RO] 上周期最终采用的转向速度命令。主要服务舵向二阶限幅与 hold 收尾。
             f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};                       // [RO] 上周期真正送入 drive 执行链路的角速度命令。zero-stop / alpha-limit 都依赖它做跨拍渐变。
-            f32 last_drive_feedback_omega_rad_s_[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-            u32 drive_feedback_sample_ms_[4] = {0U, 0U, 0U, 0U};
-            u32 last_drive_feedback_sample_ms_[4] = {0U, 0U, 0U, 0U};
+            f32 last_drive_feedback_omega_rad_s_[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [RO] 上一拍 drive 实际反馈角速度。主要服务残余速度估计与零速收尾判断。
+            u32 drive_feedback_sample_ms_[4] = {0U, 0U, 0U, 0U};               // [RO] 本拍读取 drive 反馈时的采样时间戳。用于判定“当前反馈来自哪一拍”。
+            u32 last_drive_feedback_sample_ms_[4] = {0U, 0U, 0U, 0U};          // [RO] 上一拍 drive 反馈采样时间戳。配合当前时间戳可判断反馈是否连续。
             bool selected_flipped_solution_[4] = {false};                      // [RO] 每个模块上一拍保留下来的翻转解锁存。和 planner_output 里的 flipped_drive_direction[本拍结果] 不同。
             f32 low_speed_drive_suppression_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // [RO] 每轮低速抑制最终缩放。
             f32 high_speed_drive_suppression_scale_ = 1.0f;                        // [RO] 当前高速抑制缩放。
@@ -1570,7 +1751,10 @@ namespace jia
             bool low_speed_residual_bypass_active_ = false;                        // [RO] 当前低速抑制残余速度旁路门是否打开。复用 near-zero enter/exit 做滞回。
             bool low_speed_drive_suppression_bypassed_by_residual_speed_ = false; // [RO] 当前拍低速抑制是否因残余速度阈值被旁路。
 
-            // 航向控制缓存与锁存：用于跨周期保持 LockNow/LockTo 的连续语义，而不是每拍重新解释一次目标。
+            // 航向控制缓存与锁存：
+            // 这一组的作用不是“再存一份 yaw 数据”，而是保证 LockNow / LockTo 在跨拍时具有连续语义，
+            // 包括目标保持、shift 缓冲、预览命令缓存，以及“先刹平移、再纯旋转”的 zero-stop 过渡锁存。
+            // 它们主要由 isLockNowRotZ() / isLockToRotZ() / filterYawPidTarget() / computeYawPidOmega() 读写。
             u8 rot_z_pid_count_ = 0;                                           // [RO] 航向 PID 分频计数器
             f32 lock_now_rot_z_target_ = 0.0f;                                 // [RO] LockNow 真正维持的航向目标
             u32 lock_now_rot_z_shift_count_ = 0;                               // [RO] LockNow 松手缓冲倒计时
@@ -1583,7 +1767,11 @@ namespace jia
             f32 lock_yaw_pid_target_filtered_rad_ = 0.0f;                      // [RO] 航向 PID 目标低通后的角度
             bool lock_yaw_pid_deadband_active_ = false;                        // [RO] 航向 PID 双阈值死区当前是否激活
 
-            // 整车门控与保持态锁存：决定某种动作当前是否允许推进，以及进入后应保持到何时退出。
+            // 整车门控与保持态锁存：
+            // 这一组负责描述“某种过渡是否已经进入、进入后何时退出”，
+            // 包括 X-Park、launch-hold、drive zero-stop、平移方向冻结和 reverse intent。
+            // 它们主要与 shouldActivateLaunchHold() / shouldSuppressYawLockOmegaForZeroStopDecel() / applyModuleCommands()
+            // 以及 WheelConfig 内部的 X-Park / homing / fault 局部状态机协同，让整车过渡拥有明确滞回与记忆。
             bool xpark_gate_active_ = false;                                   // [RO] X-Park 是否已锁存。未锁存进入看 target+residual；锁存后退出只看 target。
             u32 xpark_stationary_hold_ms_ = 0U;                                // [RO] X-Park 进入条件连续成立时长（ms）。只用于进入延时，不表示保持态 residual 健康。
             bool launch_hold_active_ = false;                                  // [RO] 静止起步整车等待门控是否激活。激活时先只转舵，不放驱动与车体速度规划。
@@ -1603,7 +1791,10 @@ namespace jia
             // =====================================================================
             // 控制链路快照与输入缓存 [RO]
             // 快照关注“这一拍最后算出了什么”，缓存关注“下一拍继续算时还需要记住什么”。
+            // 这组字段一起构成 chassis 主循环的中间真相：从输入意图、到车体级规划、到模块级 planner 输出、再到执行前命令帧，
+            // 都能在这里找到对应镜像，从而把“上游想做什么”和“本拍最终准备怎么做”区分开。
             // =====================================================================
+            // 这一小组是整形器自身运行态：保存 jerk profile 和单轮 planner 在跨拍时要延续的内部历史。
             ManualSpeedProfileMode active_manual_speed_profile_mode_ = ManualSpeedProfileMode::kLegacy;
             JerkLimitedAxisState manual_vel_x_shape_state_{};
             JerkLimitedAxisState manual_vel_y_shape_state_{};
@@ -1628,6 +1819,7 @@ namespace jia
 
             // 传感器与外部输入快照 [RO]
             // 这组只描述输入侧观测，不直接代表控制决策。
+            // 它们服务 resolvePlannerTargetData()、遥控映射和 yaw lock 输入解释，不应与 current_data_ 这类控制结论混淆。
             f32 input_hwt_rot_z_ = 0.0f;   // [RO] IMU yaw
             f32 input_hwt_omega_z_ = 0.0f; // [RO] IMU yaw speed
             RmPocketData_t airjoy_data_{}; // [RO] 遥控器输入快照
