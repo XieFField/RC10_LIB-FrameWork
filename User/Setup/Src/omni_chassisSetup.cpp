@@ -1,4 +1,5 @@
 #include "omni_chassisSetup.h"
+
 void OmniChassis_Setup::Path_CB_check(void)
 {
     if (CB_point.CB_Selection_pos.x == curve.Get_End_point().x && CB_point.CB_Selection_pos.y == curve.Get_End_point().y)
@@ -160,11 +161,11 @@ void OmniChassis_Setup::loop()
 
     float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
 
-    // yaw = Locate_Setup::getInstance()->get_yaw_from_position();
+    yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
-    // robot_pos_.x = ladar_data_.x;
-    // robot_pos_.y = ladar_data_.y;
+    robot_pos_.x = ladar_data_.x;
+    robot_pos_.y = ladar_data_.y;
 
     switch (chassis_status_)
     {
@@ -174,7 +175,6 @@ void OmniChassis_Setup::loop()
         float target_vel_x = 0.0f;
         float target_vel_y = 0.0f;
         float target_omega_z = 0.0f;
-
         if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
             target_vel_x = airjoy_data_.left_x * 3 * this->is_chassis_reverse_;
         else
@@ -189,7 +189,6 @@ void OmniChassis_Setup::loop()
             target_omega_z = airjoy_data_.right_x * 6;
         else
             target_omega_z = 0.0f;
-
         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, target_vel_x, target_vel_y, target_omega_z);
 
         break;
@@ -262,6 +261,10 @@ void OmniChassis_Setup::loop()
                     Path_correction();
                     V.corrVelocity = V.PID_coefficient * V.corrVelocity;
                     speed = v_limit();
+//                    if (path_line_.Get_Index() == 1)
+//                    {
+//                        speed = speed.magnitude() * Vector2D{0.0f, 1.0f};
+//                    }
                     target_chassis_twist_.vx = speed.x;
                     target_chassis_twist_.vy = speed.y;
                 }
@@ -294,12 +297,11 @@ void OmniChassis_Setup::loop()
         break;
     }
 
-    case CHASSIS_STOP:
+    case CHASSIS_AUTO_CONTROL_KFS:
     {
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
         if (flag == 1)
         {
-            robot_pos_ = test_point;
             flag_reset();
             flag = 0;
             flag_run = 1;
@@ -353,34 +355,8 @@ void OmniChassis_Setup::loop()
         break;
     }
 
-    case CHASSIS_AUTO_CONTROL_KFS:
+    case CHASSIS_STOP:
     {
-#if s_debug
-        num++;
-
-        tp_speed_now = TP_1d.plan(tp_pos_now);
-        tp_pos_now += tp_speed_now * 0.001f;
-
-        if (num > 2)
-        {
-            // debug_uart.printf_DMA("%f,%f\n", tp_speed_now, tp_pos_now);
-            num = 0;
-        }
-        if (TP_1d.isFinished() == 1)
-        {
-            a++;
-        }
-        else
-        {
-            a = 0;
-        }
-        if (a > 1000)
-        {
-            a = 0;
-            tp_pos_now = 0.0f;
-            TP_1d.param_reset(Param_1d);
-        }
-#endif
         chassis.setZeroCurrent();
         break;
     }
@@ -425,6 +401,7 @@ void OmniChassis_Setup::Path_correction(void)
     // 2. 寻找前视点作为我们追踪的“虚拟兔子”
 
     Vector2D lookaheadPt; // 路径上的前视点
+
     tLookahead = tNearest; // 前视点的编号，先从最近点的编号开始（比如t=0.3）
 
 #if opti
@@ -609,7 +586,7 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     path_line_.Reset();
     path_line_.Add_Start_Point(robot_pos_);
 
-    // 起点到MF2
+    // 写入起点到MF2路径点坐标（不包含MF2）
     bool FINSH = false;
     for (; i < (KFS_num == 1 ? index_exit : MF2_Index_); i++)
     {
@@ -696,7 +673,6 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
             last_vector = temp_vector;
         }
     }
-
     // 取末端点进行路径退出后的锁点pid
     Path_end_point = path_line_.Get_End_Point();
     return true;
@@ -756,6 +732,7 @@ void OmniChassis_Setup::flag_reset(void)
     WeaponSage_Start = false;
     WeaponSage_End = false;
     Arm_Start = false;
+
     pid_dead_flag = false;
 
     KFS_flag.MF1_flag = false;
@@ -797,7 +774,7 @@ Vector2D OmniChassis_Setup::v_limit(void)
     num++;
     if (num > 5)
     {
-        debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), target_yaw_);
+        debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), v_tangent.magnitude());
         num = 0;
     }
 

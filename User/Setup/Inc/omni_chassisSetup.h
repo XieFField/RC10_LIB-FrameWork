@@ -182,7 +182,7 @@ public:
 
 private:
 
-    Vector2D test_point = {0.0f, 0.0f};
+    //Vector2D test_point = {3.0f, 2.0f};
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP; // 当前底盘总状态机状态。
 
@@ -214,6 +214,8 @@ private:
     
     CZ_POINT CZ_point;
 
+    
+    
     //-----------------------------------速度规划参数--------------------------------------------//
 
     SPEED_PARAM V;
@@ -275,7 +277,6 @@ public:
 
     void setPathAutoStart(uint8_t start)
     {
-        return;
         if (start == 1)
             flag = 1;
         else

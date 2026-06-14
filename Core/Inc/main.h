@@ -67,8 +67,8 @@ void parse_uart_data(uint8_t data);
 #define kPHOTOGATE_1_GPIO_Port GPIOD
 #define kPHOTOGATE_2_Pin GPIO_PIN_15
 #define kPHOTOGATE_2_GPIO_Port GPIOD
-#define SUCKER_error_Pin GPIO_PIN_3
-#define SUCKER_error_GPIO_Port GPIOG
+#define SUCKER_1_Pin GPIO_PIN_3
+#define SUCKER_1_GPIO_Port GPIOG
 #define SUCKER_2_Pin GPIO_PIN_4
 #define SUCKER_2_GPIO_Port GPIOG
 #define SUCKER_3_Pin GPIO_PIN_5
@@ -83,10 +83,7 @@ void parse_uart_data(uint8_t data);
 #define Lora_IO2_GPIO_Port GPIOC
 #define Lora_IO1_Pin GPIO_PIN_2
 #define Lora_IO1_GPIO_Port GPIOD
-#define SUCKER_P1_Pin GPIO_PIN_5
-#define SUCKER_P1_GPIO_Port GPIOD
-#define SUCKER_P2_Pin GPIO_PIN_6
-#define SUCKER_P2_GPIO_Port GPIOD
+
 
 /* USER CODE BEGIN Private defines */
 

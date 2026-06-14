@@ -154,19 +154,19 @@ void ALL_Setup_ConfigInit(void)
 
 #if JIA_USE_FOUR_STEER_CHASSIS && !TEST_TEMP && !DEBUG_SHIT
     Chassis::InitConfig chassis_init_config =
-        {
-            // 转向电机句柄（按轮序 0~3 对应）
-            .steer_motor_h[0] = &steer1,
-            .steer_motor_h[1] = &steer2,
-            .steer_motor_h[2] = &steer3,
-            .steer_motor_h[3] = &steer4,
+    {
+        // 转向电机句柄（按轮序 0~3 对应）
+        .steer_motor_h[0] = &steer1,
+        .steer_motor_h[1] = &steer2,
+        .steer_motor_h[2] = &steer3,
+        .steer_motor_h[3] = &steer4,
 
-            // 驱动电机句柄（按轮序 0~3 对应）
-            .drive_motor_h[0] = &U8_1,
-            .drive_motor_h[1] = &U8_2,
-            .drive_motor_h[2] = &U8_3,
-            .drive_motor_h[3] = &U8_4,
-        };
+        // 驱动电机句柄（按轮序 0~3 对应）
+        .drive_motor_h[0] = &U8_1,
+        .drive_motor_h[1] = &U8_2,
+        .drive_motor_h[2] = &U8_3,
+        .drive_motor_h[3] = &U8_4,
+    };
     chassis.init(chassis_init_config);
 #endif
 
@@ -248,8 +248,15 @@ void CAN_Motor_Init(void)
     steer3.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
     steer4.pid_init(foursteer_steer_speed_pid_params, 0.0f, foursteer_steer_angle_pid_params, 0.0f);
 
-   U8_1.reset_controlFrequency(500);  U8_2.reset_controlFrequency(500);
-   U8_3.reset_controlFrequency(500);  U8_4.reset_controlFrequency(500);
+   U8_1.reset_controlFrequency(200);  U8_2.reset_controlFrequency(200);
+   U8_3.reset_controlFrequency(200);  U8_4.reset_controlFrequency(200);
+
+   // 底盘 VESC 驱动轮切到本地 PID 速度闭环模式
+   // 仅 drive 轮默认开启微分先行，其余电机保持默认关闭，不走这条策略。
+   U8_1.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_1.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_2.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_2.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_3.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_3.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
+   U8_4.pid_init(vesc_drive_speed_pid_params, 50.0f);  U8_4.setRpmControlMode(VESC_RPM_CONTROL_PID_CURRENT);
 
 
     // 机械臂电机 PID 参数初始化
@@ -279,9 +286,9 @@ void CAN_Motor_Init(void)
     PID_Param_Config weapon_wrist_anglePID = m2006_angle_pid_params;
     PID_Param_Config weapon_wrist_speedPID = m2006_speed_pid_params;
 
-    weapon_3508_anglePID.output_limit=100.0f;
+    weapon_3508_anglePID.output_limit=250.0f;
     weapon_3508_speedPID.output_limit=15000.0f;
-    weapon_2006_speedPID.output_limit=4500;
+    weapon_2006_speedPID.output_limit=3000;
     weapon_2006_anglePID.output_limit=500;
     weapon_wrist_anglePID.output_limit=100.0f;
 	weapon_wrist_speedPID.output_limit=8000.0f;

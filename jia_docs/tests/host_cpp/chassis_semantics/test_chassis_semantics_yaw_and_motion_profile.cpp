@@ -5,6 +5,154 @@ namespace chassis_semantics_test
 
 // 覆盖 yaw PID 调试输出、lock yaw 语义、手动 S-curve/Jerk 运动规划和快速反向。
 // 这些 case 主要防止调试输入、规划器历史状态和输出符号在模式切换时互相污染。
+static void configureYawLockSwitchHarness(Chassis &chassis)
+{
+    configureYawPidTraceHarness(chassis);
+    chassis.rot_z_pid_period_ = 0U;
+    chassis.rot_z_pid_count_ = 0U;
+    chassis.lock_now_rot_z_shift_count_ = 0U;
+    chassis.lock_now_rot_z_shift_time_ms_ = 0U;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kLegacy;
+}
+
+static void runApiPlannerCycleForYawLockSwitch(Chassis &chassis)
+{
+    chassis.setModeFlag();
+    chassis.resolvePlannerTargetData();
+    chassis.last_planned_data_ = chassis.planned_data_;
+}
+
+static bool runApiControlCycleForYawLockSwitch(Chassis &chassis)
+{
+    chassis.setModeFlag();
+    return runHostControlCycle(chassis);
+}
+
+struct YawLockDriveSample
+{
+    float target_omega = 0.0f;
+    float planned_omega = 0.0f;
+    float projected_drive0 = 0.0f;
+    float frame_drive0 = 0.0f;
+    float delivered_drive0 = 0.0f;
+    bool flipped0 = false;
+    float planned_oa0 = 0.0f;
+    float selected_oa0 = 0.0f;
+};
+
+static void configureYawLockDriveStepHarness(Chassis &chassis, VESC_Motor drive_motors[4])
+{
+    configureDriveContinuityHarness(chassis, drive_motors);
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_angle_feedforward = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kLegacy;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
+    chassis.runtime_strategy_cfg_.max_alpha_z_acc_ = 20.0f;
+    chassis.runtime_strategy_cfg_.max_alpha_z_dec_ = 20.0f;
+    chassis.max_lock_to_rot_z_rad_s_ = 1000.0f;
+
+    chassis.rot_z_pid_period_ = 0U;
+    chassis.rot_z_pid_count_ = 0U;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 0.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 0.0f;
+    chassis.rot_z_pid_.forced_output = 1.2f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.input_hwt_omega_z_ = 0.0f;
+    chassis.current_mode_flag_.is_wheel_torque_free = false;
+    chassis.input_target_data_.zero_current_all = false;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].homing_state = Chassis::HomingState::kReady;
+        chassis.wheel_config_[i].homing_zero_valid = true;
+        chassis.wheel_config_[i].steer_fault_state = Chassis::SteerFaultState::kNone;
+        setWheelOaAngleRad(chassis, i, 0.0f);
+    }
+}
+
+static YawLockDriveSample runYawLockDriveStepCycle(Chassis &chassis, float command_vel_x)
+{
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, command_vel_x, 0.0f, jia::degToRadF32(90.0f));
+    chassis.setModeFlag();
+    chassis.resolvePlannerTargetData();
+    chassis.updatePlannedMotionData();
+    chassis.computeModuleCommands(chassis.planned_data_);
+    chassis.applyModuleCommands(true);
+
+    YawLockDriveSample sample{};
+    sample.target_omega = chassis.target_data_.omega_z;
+    sample.planned_omega = chassis.planned_data_.omega_z;
+    sample.projected_drive0 = chassis.planner_output_cache_.projected_drive_omega_rad_s[0];
+    sample.frame_drive0 = chassis.actuator_command_frame_.drive_omega_rad_s[0];
+    sample.delivered_drive0 = chassis.wheel_config_[0].target_drive_omega_rad_s;
+    sample.flipped0 = chassis.planner_output_cache_.flipped_drive_direction[0];
+    sample.planned_oa0 = chassis.planner_output_cache_.planned_oa_total_rad[0];
+    sample.selected_oa0 = chassis.planner_output_cache_.selected_oa_total_rad[0];
+
+    for (int i = 0; i < 4; ++i)
+    {
+        const float current_oa = chassis.planner_output_cache_.planned_oa_total_rad[i];
+        const float target_oa = chassis.planner_output_cache_.selected_oa_total_rad[i];
+        const float next_oa = current_oa + 0.35f * jia::shortestAngularDistanceF32(current_oa, target_oa);
+        setWheelOaAngleRad(chassis, i, next_oa);
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = chassis.wheel_config_[i].target_drive_omega_rad_s;
+    }
+
+    chassis.last_planned_data_ = chassis.planned_data_;
+    return sample;
+}
+
+static int countNearZeroFrameDriveSamples(const YawLockDriveSample samples[], int size)
+{
+    int near_zero_count = 0;
+    for (int i = 0; i < size; ++i)
+    {
+        if (std::fabs(samples[i].frame_drive0) < 1.0e-4f)
+        {
+            ++near_zero_count;
+        }
+    }
+    return near_zero_count;
+}
+
+static int countDriveSignToggles(const YawLockDriveSample samples[], int size)
+{
+    int toggles = 0;
+    float last_sign = 0.0f;
+    for (int i = 0; i < size; ++i)
+    {
+        if (std::fabs(samples[i].frame_drive0) < 1.0e-4f)
+        {
+            continue;
+        }
+        const float sign = samples[i].frame_drive0 > 0.0f ? 1.0f : -1.0f;
+        if ((last_sign != 0.0f) && (sign != last_sign))
+        {
+            ++toggles;
+        }
+        last_sign = sign;
+    }
+    return toggles;
+}
+
+static void expectLockNowTargetReanchoredToYaw(const Chassis &chassis, float expected_yaw_rad)
+{
+    EXPECT_NEAR(chassis.target_data_.rot_z, expected_yaw_rad, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, expected_yaw_rad, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_yaw_rad, 1.0e-6f);
+}
+
 TEST_CASE("testJustFloatYawPidProfileDispatchEmitsFixed15ChannelPayload")
 {
     Chassis chassis;
@@ -63,6 +211,7 @@ TEST_CASE("testLockToYawThenLockNowKeepsTheEffectiveLockedYaw")
 
     chassis.rot_z_pid_period_ = 0U;
     chassis.rot_z_pid_count_ = 0U;
+    chassis.max_lock_to_rot_z_rad_s_ = 0.1f;
     chassis.lock_now_rot_z_shift_count_ = 5U;
     chassis.input_hwt_rot_z_ = 0.2f;
 
@@ -81,6 +230,328 @@ TEST_CASE("testLockToYawThenLockNowKeepsTheEffectiveLockedYaw")
     EXPECT_NEAR(out_rot_z, effective_lock_rot_z, 1.0e-6f);
     EXPECT_NEAR(chassis.lock_now_rot_z_target_, effective_lock_rot_z, 1.0e-6f);
     EXPECT_TRUE(std::fabs(out_rot_z - chassis.input_hwt_rot_z_) > 1.0e-6f);
+}
+
+TEST_CASE("testApiLockToYawTargetIsRateLimitedAcrossPlannerCycles")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.max_lock_to_rot_z_rad_s_ = 0.1f;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 0.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 0.0f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, 1.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    const float expected_first_step = chassis.max_lock_to_rot_z_rad_s_ * Chassis::period_;
+    EXPECT_NEAR(chassis.target_data_.rot_z, expected_first_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, expected_first_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_first_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.rot_z_pid_.last_target, jia::radToDegF32(expected_first_step), 1.0e-6f);
+
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    const float expected_second_step = 2.0f * chassis.max_lock_to_rot_z_rad_s_ * Chassis::period_;
+    EXPECT_NEAR(chassis.target_data_.rot_z, expected_second_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, expected_second_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_second_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.rot_z_pid_.last_target, jia::radToDegF32(expected_second_step), 1.0e-6f);
+}
+
+TEST_CASE("testDebugLockToYawTargetInjectionIsRateLimitedAcrossPlannerCycles")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.max_lock_to_rot_z_rad_s_ = 0.2f;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 0.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 0.0f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 5U;
+    chassis.debug_control_.injection.lock_rot_z = 1.0f;
+
+    runDebugPlannerCycleForHost(chassis);
+
+    const float expected_first_step = chassis.max_lock_to_rot_z_rad_s_ * Chassis::period_;
+    EXPECT_NEAR(chassis.target_data_.rot_z, expected_first_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, expected_first_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_first_step, 1.0e-6f);
+
+    runDebugPlannerCycleForHost(chassis);
+
+    const float expected_second_step = 2.0f * chassis.max_lock_to_rot_z_rad_s_ * Chassis::period_;
+    EXPECT_NEAR(chassis.target_data_.rot_z, expected_second_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, expected_second_step, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_second_step, 1.0e-6f);
+}
+
+TEST_CASE("testLockToYawTargetLowPassDefaultsToBypassAndCanFilterPidInput")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.max_lock_to_rot_z_rad_s_ = 1000.0f;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 0.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 0.0f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, 0.01f);
+
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, 0.01f, 1.0e-6f);
+    EXPECT_NEAR(chassis.rot_z_pid_.last_target, jia::radToDegF32(0.01f), 1.0e-6f);
+
+    chassis.setSpeed(Chassis::Coordinate::kBody, 0.0f, 0.0f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    chassis.lock_yaw_pid_target_lpf_alpha_ = 0.25f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, 0.04f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, 0.04f, 1.0e-6f);
+
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, 0.08f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    const float expected_filtered_target = 0.04f + 0.25f * (0.08f - 0.04f);
+    EXPECT_NEAR(chassis.target_data_.rot_z, expected_filtered_target, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.target_yaw_rad, expected_filtered_target, 1.0e-6f);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.08f, 1.0e-6f);
+    EXPECT_NEAR(chassis.rot_z_pid_.last_target, jia::radToDegF32(expected_filtered_target), 1.0e-6f);
+}
+
+TEST_CASE("testLockYawPidDeadbandUsesEnterExitHysteresis")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.max_lock_to_rot_z_rad_s_ = 1000.0f;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 1.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 2.0f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, jia::degToRadF32(0.5f));
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_TRUE(chassis.lock_yaw_pid_deadband_active_);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.pid_compute_fired, 0.0f, 1.0e-6f);
+    EXPECT_TRUE(chassis.rot_z_pid_.calc_count == 0U);
+
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, jia::degToRadF32(1.5f));
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_TRUE(chassis.lock_yaw_pid_deadband_active_);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.pid_compute_fired, 0.0f, 1.0e-6f);
+    EXPECT_TRUE(chassis.rot_z_pid_.calc_count == 0U);
+
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, jia::degToRadF32(2.2f));
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_TRUE(!chassis.lock_yaw_pid_deadband_active_);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.pid_compute_fired, 1.0f, 1.0e-6f);
+    EXPECT_TRUE(chassis.rot_z_pid_.calc_count == 1U);
+    EXPECT_NEAR(chassis.rot_z_pid_.last_target, 2.2f, 1.0e-5f);
+
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 3.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 1.0f;
+    chassis.setSpeed(Chassis::Coordinate::kBody, 0.0f, 0.0f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, jia::degToRadF32(3.5f));
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_TRUE(chassis.rot_z_pid_.calc_count == 2U);
+}
+
+TEST_CASE("testApiBodyLockNowReanchorsAfterBodySpeedMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+
+    chassis.input_hwt_rot_z_ = 0.20f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.4f, 0.20f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.20f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = -0.55f;
+    chassis.setSpeed(Chassis::Coordinate::kBody, 0.0f, 0.4f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kBody, 0.0f, 0.4f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, -0.55f);
+}
+
+TEST_CASE("testApiWorldLockNowReanchorsAfterWorldSpeedMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+
+    chassis.input_hwt_rot_z_ = 0.15f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, 0.1f, 0.2f, 0.15f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.15f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = 0.85f;
+    chassis.setSpeed(Chassis::Coordinate::kWorld, 0.1f, 0.2f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, 0.1f, 0.2f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, 0.85f);
+}
+
+TEST_CASE("testApiManualLockNowReanchorsAfterBodySpeedMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+
+    chassis.input_hwt_rot_z_ = -0.10f;
+    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kBody, 0.0f, 0.4f, 0.7f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, -0.10f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = 0.62f;
+    chassis.setSpeed(Chassis::Coordinate::kBody, 0.0f, 0.4f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kBody, 0.0f, 0.4f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, 0.62f);
+}
+
+TEST_CASE("testDebugBodyLockNowReanchorsAfterBodySpeedMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.debug_control_.common.enable = true;
+
+    chassis.input_hwt_rot_z_ = 0.20f;
+    chassis.debug_control_.common.mode_raw = 5U;
+    chassis.debug_control_.injection.lock_rot_z = 0.20f;
+    runDebugPlannerCycleForHost(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.20f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = -0.35f;
+    chassis.debug_control_.common.mode_raw = 1U;
+    chassis.airjoy_data_.right_x = 0.0f;
+    runDebugPlannerCycleForHost(chassis);
+
+    chassis.debug_control_.common.mode_raw = 3U;
+    runDebugPlannerCycleForHost(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, -0.35f);
+}
+
+TEST_CASE("testDebugWorldLockNowReanchorsAfterWorldSpeedMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.debug_control_.common.enable = true;
+
+    chassis.input_hwt_rot_z_ = -0.25f;
+    chassis.debug_control_.common.mode_raw = 6U;
+    chassis.debug_control_.injection.lock_rot_z = -0.25f;
+    runDebugPlannerCycleForHost(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, -0.25f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = 0.48f;
+    chassis.debug_control_.common.mode_raw = 2U;
+    chassis.airjoy_data_.right_x = 0.0f;
+    runDebugPlannerCycleForHost(chassis);
+
+    chassis.debug_control_.common.mode_raw = 4U;
+    runDebugPlannerCycleForHost(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, 0.48f);
+}
+
+TEST_CASE("testDebugBodyLockNowReanchorsAfterSteerDegAndDriveSpeedMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.debug_control_.common.enable = true;
+
+    chassis.input_hwt_rot_z_ = 0.30f;
+    chassis.debug_control_.common.mode_raw = 5U;
+    chassis.debug_control_.injection.lock_rot_z = 0.30f;
+    runDebugPlannerCycleForHost(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.30f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = -0.42f;
+    chassis.debug_control_.common.mode_raw = 9U;
+    chassis.airjoy_data_.left_x = 0.25f;
+    chassis.airjoy_data_.right_x = 0.40f;
+    runDebugPlannerCycleForHost(chassis);
+
+    chassis.debug_control_.common.mode_raw = 3U;
+    chassis.airjoy_data_.right_x = 0.0f;
+    runDebugPlannerCycleForHost(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, -0.42f);
+}
+
+TEST_CASE("testDebugBodyLockNowReanchorsAfterModuleOverrideModes")
+{
+    const unsigned char override_modes[] = {21U, 22U, 30U};
+    for (const unsigned char override_mode : override_modes)
+    {
+        Chassis chassis;
+        configureYawLockSwitchHarness(chassis);
+        chassis.debug_control_.common.enable = true;
+
+        chassis.input_hwt_rot_z_ = 0.18f;
+        chassis.debug_control_.common.mode_raw = 5U;
+        chassis.debug_control_.injection.lock_rot_z = 0.18f;
+        runDebugPlannerCycleForHost(chassis);
+        EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.18f, 1.0e-6f);
+
+        chassis.input_hwt_rot_z_ = 0.72f;
+        chassis.debug_control_.common.mode_raw = override_mode;
+        runDebugPlannerCycleForHost(chassis);
+
+        chassis.debug_control_.common.mode_raw = 3U;
+        chassis.airjoy_data_.right_x = 0.0f;
+        runDebugPlannerCycleForHost(chassis);
+
+        expectLockNowTargetReanchoredToYaw(chassis, 0.72f);
+    }
+}
+
+TEST_CASE("testApiBodyLockNowReanchorsAfterTorqueFreeMode")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+
+    chassis.input_hwt_rot_z_ = 0.12f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.3f, 0.12f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, 0.12f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = -0.64f;
+    chassis.setWheelTorqueFreeMode();
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kBody, 0.0f, 0.3f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, -0.64f);
+}
+
+TEST_CASE("testApiBodyLockNowReanchorsAfterZeroCurrentRequest")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+
+    chassis.input_hwt_rot_z_ = -0.18f;
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.3f, -0.18f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, -0.18f, 1.0e-6f);
+
+    chassis.input_hwt_rot_z_ = 0.53f;
+    chassis.setZeroCurrent();
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kBody, 0.0f, 0.3f, 0.0f);
+    runApiPlannerCycleForYawLockSwitch(chassis);
+
+    expectLockNowTargetReanchoredToYaw(chassis, 0.53f);
 }
 
 TEST_CASE("testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates")
@@ -111,6 +582,427 @@ TEST_CASE("testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates")
     EXPECT_NEAR(chassis.yaw_pid_trace_.mode_tag, 3.0f, 1.0e-6f);
     EXPECT_NEAR(chassis.yaw_pid_trace_.pid_compute_fired, 1.0f, 1.0e-6f);
     EXPECT_NEAR(chassis.yaw_pid_trace_.shift_remaining_ms, 0.0f, 1.0e-6f);
+}
+
+TEST_CASE("testLockYawPidForcedOmegaWithZeroTranslationDrivesPureRotationThroughFullControlCycle")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+    configureYawPidTraceHarness(chassis);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kLegacy;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_angle_feedforward = false;
+    chassis.runtime_strategy_cfg_.xpark_entry_delay_ms = 0U;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
+
+    chassis.rot_z_pid_period_ = 0U;
+    chassis.rot_z_pid_count_ = 0U;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 0.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 0.0f;
+    chassis.lock_yaw_pid_target_lpf_alpha_ = 1.0f;
+    chassis.rot_z_pid_.forced_output = 0.8f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.input_hwt_omega_z_ = 0.0f;
+
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 5U;
+    chassis.debug_control_.injection.lock_rot_z = 0.5f;
+    chassis.debug_control_.injection.omega_z_injection_mode_raw = 0U;
+    chassis.airjoy_data_.left_x = 0.0f;
+    chassis.airjoy_data_.left_y = 0.0f;
+    chassis.airjoy_data_.right_x = 0.0f;
+
+    EXPECT_TRUE(runDebugControlCycleForHost(chassis));
+
+    EXPECT_TRUE(chassis.rot_z_pid_.calc_count == 1U);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.pid_compute_fired, 1.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.pid_output_omega_rad_s, 0.8f, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.final_omega_cmd_rad_s, 0.8f, 1.0e-6f);
+    EXPECT_NEAR(chassis.target_data_.vel_x, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.target_data_.vel_y, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.target_data_.omega_z, 0.8f, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.omega_z, 0.8f, 1.0e-6f);
+    EXPECT_TRUE(chassis.computeMaxCommandWheelSpeedMps(chassis.target_data_) > chassis.getNearZeroExitSpeedMps());
+    EXPECT_TRUE(!chassis.drive_zero_stop_active_);
+    EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[0]);
+    EXPECT_TRUE(drive_motors[0].getLastCommandKind() == VESC_Motor::CommandKind::kRpm);
+
+    float max_abs_drive_rad_s = 0.0f;
+    for (int i = 0; i < 4; ++i)
+    {
+        const float abs_drive_rad_s = std::fabs(chassis.actuator_command_frame_.drive_omega_rad_s[i]);
+        max_abs_drive_rad_s = (abs_drive_rad_s > max_abs_drive_rad_s) ? abs_drive_rad_s : max_abs_drive_rad_s;
+    }
+    EXPECT_TRUE(max_abs_drive_rad_s > 1.0e-6f);
+    const float expected_oa0 =
+        std::atan2(-chassis.planned_data_.omega_z * chassis.wheel_config_[0].pos_x_m,
+                   chassis.planned_data_.omega_z * chassis.wheel_config_[0].pos_y_m);
+    EXPECT_NEAR(chassis.actuator_command_frame_.steer_oa_total_rad[0], expected_oa0, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[0].target_steer_motor_total_angle_rad,
+                chassis.actuator_command_frame_.steer_cmd_corrected_local_total_rad[0],
+                1.0e-6f);
+}
+
+TEST_CASE("testYawLockPureRotationBetweenNearZeroEnterExitKeepsRotationalSteerTarget")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+    configureYawPidTraceHarness(chassis);
+    setWheelPoseToXPark(chassis);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.xpark_command_threshold_cfg_.enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.xpark_command_threshold_cfg_.exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.xpark_entry_delay_ms = 0U;
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_angle_feedforward = false;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
+
+    chassis.rot_z_pid_period_ = 0U;
+    chassis.rot_z_pid_count_ = 0U;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 0.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 0.0f;
+    chassis.lock_yaw_pid_target_lpf_alpha_ = 1.0f;
+    chassis.rot_z_pid_.forced_output = 0.08f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.input_hwt_omega_z_ = 0.0f;
+
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 5U;
+    chassis.debug_control_.injection.lock_rot_z = 0.5f;
+    chassis.debug_control_.injection.omega_z_injection_mode_raw = 0U;
+    chassis.airjoy_data_.left_x = 0.0f;
+    chassis.airjoy_data_.left_y = 0.0f;
+    chassis.airjoy_data_.right_x = 0.0f;
+
+    EXPECT_TRUE(runDebugControlCycleForHost(chassis));
+
+    const float expected_oa0 =
+        std::atan2(-chassis.planned_data_.omega_z * chassis.wheel_config_[0].pos_x_m,
+                   chassis.planned_data_.omega_z * chassis.wheel_config_[0].pos_y_m);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.final_omega_cmd_rad_s, 0.08f, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.omega_z, 0.08f, 1.0e-6f);
+    EXPECT_TRUE(chassis.computeMaxCommandWheelSpeedMps(chassis.planned_data_) > chassis.getNearZeroEnterSpeedMps());
+    EXPECT_TRUE(chassis.computeMaxCommandWheelSpeedMps(chassis.planned_data_) < chassis.getNearZeroExitSpeedMps());
+    EXPECT_NEAR(chassis.actuator_command_frame_.steer_oa_total_rad[0], expected_oa0, 1.0e-6f);
+    EXPECT_TRUE(!chassis.drive_zero_stop_active_);
+}
+
+TEST_CASE("testYawLockPureRotationUsesTargetOmegaForSteerIntentBeforePlannedOmegaCrossesNearZero")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+    configureYawPidTraceHarness(chassis);
+    setWheelPoseToXPark(chassis);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.xpark_command_threshold_cfg_.enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.xpark_command_threshold_cfg_.exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.xpark_entry_delay_ms = 0U;
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_angle_feedforward = false;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kLegacy;
+    chassis.runtime_strategy_cfg_.max_alpha_z_acc_ = 0.02f;
+    chassis.runtime_strategy_cfg_.max_alpha_z_dec_ = 0.02f;
+
+    chassis.rot_z_pid_period_ = 0U;
+    chassis.rot_z_pid_count_ = 0U;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 0.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 0.0f;
+    chassis.lock_yaw_pid_target_lpf_alpha_ = 1.0f;
+    chassis.rot_z_pid_.forced_output = 0.8f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.input_hwt_omega_z_ = 0.0f;
+
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = 5U;
+    chassis.debug_control_.injection.lock_rot_z = 0.5f;
+    chassis.debug_control_.injection.omega_z_injection_mode_raw = 0U;
+    chassis.airjoy_data_.left_x = 0.0f;
+    chassis.airjoy_data_.left_y = 0.0f;
+    chassis.airjoy_data_.right_x = 0.0f;
+
+    EXPECT_TRUE(runDebugControlCycleForHost(chassis));
+
+    const float expected_oa0 =
+        std::atan2(-chassis.target_data_.omega_z * chassis.wheel_config_[0].pos_x_m,
+                   chassis.target_data_.omega_z * chassis.wheel_config_[0].pos_y_m);
+    EXPECT_NEAR(chassis.target_data_.omega_z, 0.8f, 1.0e-6f);
+    EXPECT_TRUE(chassis.computeMaxCommandWheelSpeedMps(chassis.planned_data_) < chassis.getNearZeroEnterSpeedMps());
+    EXPECT_TRUE(chassis.computeMaxCommandWheelSpeedMps(chassis.target_data_) > chassis.getNearZeroExitSpeedMps());
+    EXPECT_NEAR(chassis.actuator_command_frame_.steer_oa_total_rad[0], expected_oa0, 1.0e-6f);
+}
+
+TEST_CASE("testYawLockStepDeadbandEntryDeceleratesDriveContinuouslyAfterSteerAligned")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    configureXParkWheelGeometry(chassis);
+    configureYawPidTraceHarness(chassis);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.xpark_command_threshold_cfg_.enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.xpark_command_threshold_cfg_.exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.xpark_entry_delay_ms = 0U;
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
+    chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
+    chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = true;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = true;
+    chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 10.0f;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_angle_feedforward = false;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
+    chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
+    chassis.runtime_strategy_cfg_.manual_yaw_alpha_acc_ = 20.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_alpha_dec_ = 20.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_jerk_acc_ = 200.0f;
+    chassis.runtime_strategy_cfg_.manual_yaw_jerk_dec_ = 200.0f;
+
+    chassis.rot_z_pid_period_ = 0U;
+    chassis.rot_z_pid_count_ = 0U;
+    chassis.lock_yaw_pid_deadband_enter_deg_ = 1.0f;
+    chassis.lock_yaw_pid_deadband_exit_deg_ = 2.0f;
+    chassis.lock_yaw_pid_target_lpf_alpha_ = 1.0f;
+    chassis.rot_z_pid_.forced_output = 1.2f;
+    chassis.input_hwt_rot_z_ = 0.0f;
+    chassis.input_hwt_omega_z_ = 0.0f;
+
+    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kBody, 0.0f, 0.0f, jia::degToRadF32(8.0f));
+
+    EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
+    EXPECT_NEAR(chassis.yaw_pid_trace_.pid_compute_fired, 1.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.final_omega_cmd_rad_s, 1.2f, 1.0e-6f);
+    EXPECT_TRUE(chassis.launch_hold_active_);
+    EXPECT_NEAR(chassis.planned_data_.omega_z, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.actuator_command_frame_.drive_omega_rad_s[0], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[0], 0.0f, 1.0e-6f);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        setWheelOaAngleRad(chassis, i, chassis.launch_hold_preview_cache_.selected_oa_total_rad[i]);
+        steer_motors[i].setFeedbackTotalAngleDeg(jia::radToDegF32(chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad));
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 0.0f;
+    }
+
+    const float drive_step_rad_s = chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ * Chassis::period_;
+
+    bool observed_released_drive = false;
+    for (int cycle = 0; cycle < 120; ++cycle)
+    {
+        EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
+        EXPECT_NEAR(chassis.yaw_pid_trace_.final_omega_cmd_rad_s, 1.2f, 1.0e-6f);
+        EXPECT_TRUE(!chassis.drive_zero_stop_active_);
+        EXPECT_TRUE(!chassis.low_speed_residual_bypass_active_);
+
+        for (int i = 0; i < 4; ++i)
+        {
+            EXPECT_TRUE(!chassis.drive_zero_stop_brake_active_[i]);
+            const float delivered_drive = chassis.wheel_config_[i].target_drive_omega_rad_s;
+            EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[i], delivered_drive, 1.0e-6f);
+            chassis.wheel_config_[i].corrected_drive_omega_rad_s = delivered_drive;
+            steer_motors[i].setFeedbackTotalAngleDeg(jia::radToDegF32(chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad));
+            observed_released_drive = observed_released_drive || (std::fabs(delivered_drive) > (3.0f * drive_step_rad_s));
+        }
+
+        if (observed_released_drive)
+        {
+            break;
+        }
+    }
+
+    EXPECT_TRUE(observed_released_drive);
+
+    float previous_delivered_drive_rad_s[4] = {
+        chassis.last_drive_omega_cmd_rad_s_[0],
+        chassis.last_drive_omega_cmd_rad_s_[1],
+        chassis.last_drive_omega_cmd_rad_s_[2],
+        chassis.last_drive_omega_cmd_rad_s_[3],
+    };
+
+    chassis.input_hwt_rot_z_ = chassis.yaw_pid_trace_.target_yaw_rad - jia::degToRadF32(0.2f);
+    EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
+    EXPECT_NEAR(chassis.yaw_pid_trace_.pid_compute_fired, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.yaw_pid_trace_.final_omega_cmd_rad_s, 0.0f, 1.0e-6f);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        const float delivered_drive = chassis.wheel_config_[i].target_drive_omega_rad_s;
+        EXPECT_TRUE(std::fabs(delivered_drive - previous_delivered_drive_rad_s[i]) <= drive_step_rad_s + 1.0e-5f);
+        EXPECT_NEAR(chassis.last_drive_omega_cmd_rad_s_[i], delivered_drive, 1.0e-6f);
+    }
+}
+
+TEST_CASE("testYawLockMidRotationSteerErrorJitterDoesNotTogglePlannerDriveTarget")
+{
+    Chassis chassis;
+    configureXParkWheelGeometry(chassis);
+
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
+    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = true;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 1.0f;
+    chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
+    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_angle_feedforward = false;
+
+    Chassis::Data command{};
+    command.vel_x = 0.0f;
+    command.vel_y = 0.0f;
+    command.omega_z = 1.2f;
+
+    const float steady_target_oa_rad[4] = {
+        std::atan2(-command.omega_z * chassis.wheel_config_[0].pos_x_m,
+                   command.omega_z * chassis.wheel_config_[0].pos_y_m),
+        std::atan2(-command.omega_z * chassis.wheel_config_[1].pos_x_m,
+                   command.omega_z * chassis.wheel_config_[1].pos_y_m),
+        std::atan2(-command.omega_z * chassis.wheel_config_[2].pos_x_m,
+                   command.omega_z * chassis.wheel_config_[2].pos_y_m),
+        std::atan2(-command.omega_z * chassis.wheel_config_[3].pos_x_m,
+                   command.omega_z * chassis.wheel_config_[3].pos_y_m),
+    };
+    const float jitter_error_deg[4] = {0.8f, 1.2f, 0.8f, 1.2f};
+    float min_abs_planner_drive_rad_s = 1000000.0f;
+    float max_abs_planner_drive_rad_s = 0.0f;
+    float min_abs_projected_drive_rad_s = 1000000.0f;
+
+    for (int cycle = 0; cycle < 4; ++cycle)
+    {
+        for (int i = 0; i < 4; ++i)
+        {
+            const float error_sign = ((cycle + i) % 2 == 0) ? 1.0f : -1.0f;
+            setWheelOaAngleRad(chassis, i, steady_target_oa_rad[i] + error_sign * jia::degToRadF32(jitter_error_deg[i]));
+        }
+
+        const Chassis::SwervePlannerOutput output =
+            chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+        const float abs_projected_drive_rad_s = std::fabs(output.projected_drive_omega_rad_s[0]);
+        const float abs_planner_drive_rad_s = std::fabs(output.final_drive_omega_rad_s[0]);
+        min_abs_projected_drive_rad_s = (abs_projected_drive_rad_s < min_abs_projected_drive_rad_s) ? abs_projected_drive_rad_s : min_abs_projected_drive_rad_s;
+        min_abs_planner_drive_rad_s = (abs_planner_drive_rad_s < min_abs_planner_drive_rad_s) ? abs_planner_drive_rad_s : min_abs_planner_drive_rad_s;
+        max_abs_planner_drive_rad_s = (abs_planner_drive_rad_s > max_abs_planner_drive_rad_s) ? abs_planner_drive_rad_s : max_abs_planner_drive_rad_s;
+    }
+
+    EXPECT_TRUE(min_abs_projected_drive_rad_s > 1.0f);
+    EXPECT_TRUE(max_abs_planner_drive_rad_s > 1.0f);
+    EXPECT_TRUE(min_abs_planner_drive_rad_s > max_abs_planner_drive_rad_s * 0.5f);
+}
+
+TEST_CASE("testYawLockPureYawStepKeepsDriveTargetContinuousLikeTranslationYaw")
+{
+    Chassis pure_yaw_chassis;
+    Chassis translation_yaw_chassis;
+    VESC_Motor pure_yaw_drive_motors[4];
+    VESC_Motor translation_yaw_drive_motors[4];
+    configureYawLockDriveStepHarness(pure_yaw_chassis, pure_yaw_drive_motors);
+    configureYawLockDriveStepHarness(translation_yaw_chassis, translation_yaw_drive_motors);
+
+    constexpr int kCycles = 30;
+    YawLockDriveSample pure_yaw_samples[kCycles]{};
+    YawLockDriveSample translation_yaw_samples[kCycles]{};
+    for (int cycle = 0; cycle < kCycles; ++cycle)
+    {
+        pure_yaw_samples[cycle] = runYawLockDriveStepCycle(pure_yaw_chassis, 0.0f);
+        translation_yaw_samples[cycle] = runYawLockDriveStepCycle(translation_yaw_chassis, 0.08f);
+    }
+
+    int pure_near_zero_after_spinup = 0;
+    int translation_near_zero_after_spinup = 0;
+    for (int cycle = 6; cycle < kCycles; ++cycle)
+    {
+        if (std::fabs(pure_yaw_samples[cycle].frame_drive0) < 0.2f)
+        {
+            ++pure_near_zero_after_spinup;
+        }
+        if (std::fabs(translation_yaw_samples[cycle].frame_drive0) < 0.2f)
+        {
+            ++translation_near_zero_after_spinup;
+        }
+    }
+
+    EXPECT_NEAR(pure_yaw_samples[kCycles - 1].target_omega, 1.2f, 1.0e-6f);
+    EXPECT_TRUE(std::fabs(pure_yaw_samples[kCycles - 1].planned_omega) > 0.1f);
+    EXPECT_TRUE(std::fabs(translation_yaw_samples[kCycles - 1].planned_omega) > 0.1f);
+    const int pure_total_near_zero = countNearZeroFrameDriveSamples(pure_yaw_samples, kCycles);
+    const int translation_total_near_zero = countNearZeroFrameDriveSamples(translation_yaw_samples, kCycles);
+    const int pure_sign_toggles = countDriveSignToggles(pure_yaw_samples, kCycles);
+    const int translation_sign_toggles = countDriveSignToggles(translation_yaw_samples, kCycles);
+
+    CHECK_MESSAGE(pure_near_zero_after_spinup <= translation_near_zero_after_spinup,
+                  "pure_near_zero_after_spinup=", pure_near_zero_after_spinup,
+                  " translation_near_zero_after_spinup=", translation_near_zero_after_spinup,
+                  " pure_last_frame=", pure_yaw_samples[kCycles - 1].frame_drive0,
+                  " translation_last_frame=", translation_yaw_samples[kCycles - 1].frame_drive0,
+                  " pure_cycle6_projected=", pure_yaw_samples[6].projected_drive0,
+                  " pure_cycle6_planned_oa=", pure_yaw_samples[6].planned_oa0,
+                  " pure_cycle6_selected_oa=", pure_yaw_samples[6].selected_oa0,
+                  " pure_cycle6_flipped=", pure_yaw_samples[6].flipped0);
+    CHECK_MESSAGE(pure_sign_toggles <= translation_sign_toggles,
+                  "pure_sign_toggles=", pure_sign_toggles,
+                  " translation_sign_toggles=", translation_sign_toggles);
+    CHECK_MESSAGE(pure_total_near_zero <= translation_total_near_zero + 1,
+                  "pure_total_near_zero=", pure_total_near_zero,
+                  " translation_total_near_zero=", translation_total_near_zero,
+                  " pure_cycle6_frame=", pure_yaw_samples[6].frame_drive0,
+                  " translation_cycle6_frame=", translation_yaw_samples[6].frame_drive0);
 }
 
 TEST_CASE("testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned")
