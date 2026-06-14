@@ -211,7 +211,7 @@ public:
     }
 
 private:
-    // Vector2D test_point = {3.0f, 2.0f};
+    Vector2D test_point = {0.6f, 5.0f};
     //-----------------------------------通讯标志位-----------------------------------------//
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;      // 当前底盘总状态机状态。
     CHASSIS_Status_E chassis_status_last_ = CHASSIS_STOP; // 当前底盘总状态机状态。（依旧是每个模式都赋值，用于进入自动模式时进行初始化）
@@ -310,6 +310,7 @@ public:
 
     void setPathAutoStart(uint8_t start)
     {
+        return;
         if (start == 1)
             flag = 1;
         else

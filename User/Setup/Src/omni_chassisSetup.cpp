@@ -104,11 +104,11 @@ void OmniChassis_Setup::loop()
 
     float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
 
-    yaw = Locate_Setup::getInstance()->get_yaw_from_position();
+    //yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
-    robot_pos_.x = ladar_data_.x;
-    robot_pos_.y = ladar_data_.y;
+    //robot_pos_.x = ladar_data_.x;
+    //robot_pos_.y = ladar_data_.y;
 
     switch (chassis_status_)
     {
@@ -271,7 +271,7 @@ void OmniChassis_Setup::loop()
         break;
     }
 
-    case CHASSIS_AUTO_CONTROL_KFS:
+    case CHASSIS_STOP:
     {
         if (chassis_status_last_ != chassis_status_)
         {
@@ -283,6 +283,7 @@ void OmniChassis_Setup::loop()
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
         if (flag == 1)
         {
+            robot_pos_=test_point;
             flag = 0;
             KFS_Selection_Planning();
         }
@@ -311,7 +312,8 @@ void OmniChassis_Setup::loop()
         {
             Path_lock_point(Path_end_point);
         }
-
+        robot_pos_=robot_pos_+(speed*0.001f);
+        
         float target_yaw_rad = target_yaw * PI / 180.0f;
         chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
 
@@ -362,6 +364,7 @@ void OmniChassis_Setup::loop()
         {
             Path_lock_point(Path_end_point);
         }
+        
 
         float target_yaw_rad = target_yaw * PI / 180.0f;
         chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
@@ -421,7 +424,7 @@ void OmniChassis_Setup::loop()
         break;
     }
 
-    case CHASSIS_STOP:
+    case CHASSIS_AUTO_CONTROL_KFS:
     {
         target_yaw = yaw;
         chassis_status_last_ = chassis_status_;
@@ -644,6 +647,12 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     Vector2D spin_vector = {0.0f, 0.0f};
     int temp_point = 0;
     int i = 0;
+    
+    // 重置路径规划器
+    path_line_.Reset();
+    path_line_.plan_reset();
+
+    path_line_.Add_Start_Point(robot_pos_);
 
     // 在梅林内的情况处理，如果需要在外面旋转会先生成路径，如果需要拿同左右同列的会退出
     if (MF_AutoCtrler::GetMapNumFromPos(robot_point_))
@@ -656,12 +665,12 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
             if (robot_pos_.y > 2.6f || robot_pos_.y < 8.5f || robot_pos_.x > 0.7f || robot_pos_.x < 5.3f)
                 return false;
         }
-        else if (temp_point == 21 || temp_point == 16 || temp_point == 11 || temp_point == 6 || temp_point == 25 || temp_point == 20 || temp_point == 15 || temp_point == 10)
+        else if (temp_point == 27 || temp_point == 28 || temp_point == 29 || temp_point == 30 || temp_point == 2 || temp_point == 3 || temp_point == 4 || temp_point == 5)        
         {
             // 在上下两排就直接转
             target_yaw = KFS_point.MF1_target_yaw_;
         }
-        else if (temp_point == 27 || temp_point == 28 || temp_point == 29 || temp_point == 30 || temp_point == 2 || temp_point == 3 || temp_point == 4 || temp_point == 5)
+        else if (temp_point == 21 || temp_point == 16 || temp_point == 11 || temp_point == 6 || temp_point == 25 || temp_point == 20 || temp_point == 15 || temp_point == 10)
         {
             if (i != (index_exit - 1))
             {
@@ -679,15 +688,16 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
                         // 需要旋转的则生成路径并将索引改到2
                         KFS_flag.spin_flag_0 = true;
                         float spin_delay = 1.0f;
-                        if (temp_point == 1 || temp_point == 5)
+                        if (KFS_KeyPoint_.mustPastMap[1] == 1 || KFS_KeyPoint_.mustPastMap[1] == 5)
                         {
                             spin_delay *= (-1.0f);
                         }
-                        spin_vector = spinodal_path(last_vector, temp_vector, i, (KFS_point.spin_skew * spin_delay));
+                        spin_vector = spinodal_path(last_vector, MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[1]), i, (KFS_point.spin_skew * spin_delay));
                         if (spin_vector.x == 0.0f && spin_vector.x == 0.0f)
                             return false;
                         KFS_point.spin_pos_0 = spin_vector;
                         i = 2;
+                        last_vector=MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[1]);
                     }
                 }
                 else
@@ -701,12 +711,6 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     {
         target_yaw = KFS_point.MF1_target_yaw_;
     }
-
-    // 重置路径规划器
-    path_line_.Reset();
-    path_line_.plan_reset();
-
-    path_line_.Add_Start_Point(robot_pos_);
 
     // 写入起点到MF2路径点坐标（不包含MF2）
     bool FINSH = false;
@@ -1061,7 +1065,7 @@ Vector2D OmniChassis_Setup::v_limit(void)
     num++;
     if (num > 5)
     {
-        // debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), v_tangent.magnitude());
+        debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), target_yaw);
         num = 0;
     }
 
