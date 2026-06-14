@@ -1,7 +1,17 @@
 ﻿/**
  * @file chassis.h
  * @author 桑叁年
- * @brief 底盘控制声明
+ * @brief 四舵轮底盘控制类声明
+ *
+ * 这份头文件同时承担三层职责：
+ * 1. 对外暴露底盘控制接口与常用观测类型，供上层模块按“速度 / 锁航向 / 调试接管”语义使用。
+ * 2. 声明底盘内部关键运行时状态，帮助维护者理解 swerve 规划、回零、X-Park、故障门控如何配合工作。
+ * 3. 在 FULL_DEBUG / RUNTIME_MIN 两个编译档位之间，为调试缓存和观测镜像提供清晰裁剪边界。
+ *
+ * 阅读建议：
+ * - 先看 public 区的对外命令、telemetry 与规划归一化辅助类型；
+ * - 再看 private 区的轮组运行态、策略配置、门控锁存与调试缓存；
+ * - inline 小函数主要负责坐标系、符号和零偏映射，它们解释了“外部语义”和“内部执行语义”如何衔接。
  */
 
 #ifndef CHASSIS_H_
@@ -89,19 +99,26 @@ namespace jia
         {
         public:
             /* ----------------------------------------------------------------- */
-            // 对外控制接口
+            // 对外基础类型
+            // 这一组定义的是调用方与底盘共享的“命令语义词汇”，
+            // 外部先用这些类型表达意图，底盘内部再统一折算到 planner 能消费的车体系命令。
             enum class Result
             {
                 kOk,
                 kError,
             };
 
+            // 对外坐标语义。
+            // kBody 表示命令已经在底盘当前车体系下表达；
+            // kWorld 表示命令在世界系下表达，底盘需要结合当前 yaw 折算回车体系。
             enum class Coordinate
             {
                 kBody,
                 kWorld,
             };
 
+            // 对外速度命令格式。
+            // 保留坐标系字段，是为了让上层不用关心底盘内部的 yaw 变换细节。
             struct ExternalCommand
             {
                 Coordinate coord = Coordinate::kBody;
@@ -110,6 +127,8 @@ namespace jia
                 f32 omega_z = 0.0f;
             };
 
+            // 底盘内部统一使用的车体系速度命令。
+            // 一旦转成 BodyCommand，后续限幅、yaw lock 和 swerve planner 都围绕这套语义继续工作。
             struct BodyCommand
             {
                 f32 vel_x = 0.0f;
@@ -117,6 +136,8 @@ namespace jia
                 f32 omega_z = 0.0f;
             };
 
+            // 单轮几何/零偏/方向换算所需的最小标定集合。
+            // 把它抽出来，是为了避免“安装偏置 + 回零零偏 + 电机方向符号”在多个 helper 里散落重复。
             struct SteerCalibration
             {
                 f32 theta_oa_to_owi_rad = 0.0f;
@@ -159,6 +180,9 @@ namespace jia
                 f32 applied_drive_cmd = 0.0f;    // [RO] 驱动轴最终下发值。等于原始命令经过本类型限幅后的结果。
             };
 
+            /* ----------------------------------------------------------------- */
+            // 对外观测快照
+            // 这一组服务于 telemetry、host 测试和调试器观察，让使用者不深入内部状态也能读懂“目标是什么、实际到了哪”。
             static constexpr u8 kTelemetryWheelCount = 4U;
 
             struct TelemetryChassisState
@@ -195,6 +219,9 @@ namespace jia
                 TelemetryWheelState wheels[kTelemetryWheelCount]{};
             };
 
+            /* ----------------------------------------------------------------- */
+            // 规划归一化辅助类型
+            // 这层位于“对外命令”与“内部 planner”之间，用来统一记录命令来源、坐标变换结果与调试接管路由。
             struct PlannerInputCommand
             {
                 f32 vel_x = 0.0f;
@@ -278,11 +305,13 @@ namespace jia
                 bool initialized = false;
             };
 
-            // 生命周期
+            /* ----------------------------------------------------------------- */
+            // 生命周期与对外控制入口
             Chassis() = default;
             ~Chassis() = default;
 
-            // 公开接口
+            // 主控制接口：面向“整车应该怎么动”。
+            // 调用者不需要知道模块解算和门控细节，底盘内部会继续处理这些工作。
             Result setZeroCurrent();
             // External/public frame convention for setSpeed*/get*:
             // +y points to the current 2/3 wheel-face side (forward), -x points to the current 3/4 wheel-face side (left),
@@ -294,7 +323,7 @@ namespace jia
             Robot_Twist getWorldSpeed() const;
             Result setSteerDegAndDriveSpeed(f32 steer_angle_deg, f32 chassis_speed_m_s);
 
-            // 兼容控制层
+            // 兼容控制层接口：保留旧命名入口，但会落到同一套输入目标与 planner 链路中。
             Result setWheelTorqueFreeMode();
             Result setTargetBodySpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
             Result setTargetBodySpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
@@ -314,6 +343,8 @@ namespace jia
             f32 getCurrentWorldVelX() const;
             f32 getCurrentWorldVelY() const;
             f32 getCurrentOmegaZ() const;
+            // 纯函数辅助：集中承载坐标系、方向符号、零偏和 telemetry 相关换算。
+            // 它们存在的意义是把“容易混的语义”固定在单处，而不是让各业务流程各自解释一遍。
             static BodyCommand mapExternalCommandToBody(const ExternalCommand &command);
             static BodyCommand normalizeBodyCommandForPlanner(const BodyCommand &command);
             static f32 mapRawSteerMotorTotalToSignedLocalTotal(f32 raw_motor_total_rad, f32 steer_motor_sign);
@@ -346,7 +377,10 @@ namespace jia
                                                            const f32 target_steer_oa_rad[kTelemetryWheelCount],
                                                            const f32 actual_steer_oa_rad[kTelemetryWheelCount]);
 
-            // 初始化配置：只做硬件句柄绑定。
+            /* ----------------------------------------------------------------- */
+            // 初始化与运行时策略切换
+            // InitConfig 只负责把外部硬件句柄接进来，不承载几何、限幅或调试策略；
+            // 真正决定“如何控制”的，是类内默认策略和运行时策略快照。
             struct InitConfig
             {
                 Motor_Base *steer_motor_h[4] = {nullptr}; // 4 个转向电机句柄，顺序需与 wheels[4] 的轮位定义保持一致
@@ -361,11 +395,16 @@ namespace jia
 
 
         private:
+            /* ----------------------------------------------------------------- */
+            // 生命周期与总流程控制
+            // 这几项位于线程主循环入口附近，负责启动回零、判断底盘是否可进入正常控制，以及把运行时策略恢复到初始化基线。
             Result startHoming();
             bool isHomingDone() const;
             void resetRuntimeStrategyToInitConfig();
 
-            // 内部策略/状态类型
+            /* ----------------------------------------------------------------- */
+            // 内部关键状态类型
+            // 这一组不是给外部调用的接口，而是帮助维护者理解控制线程当前所处阶段、故障状态以及轮组运行时结构。
             enum class HomingState : u8
             {
                 kIdle,
@@ -397,6 +436,8 @@ namespace jia
                 kSettling = 1,
                 kLatchedZeroCurrent = 2,
             };
+            // 单轮初始化模板。
+            // 它描述“装车与回零应当如何初始化”；真正随线程推进变化的状态保存在后面的 WheelConfig 里。
             struct WheelInitConfig
             {
                 f32 pos_x_m = 0.0f;
@@ -589,9 +630,10 @@ namespace jia
                 bool flipped_drive_direction[4] = {false, false, false, false};
             };
 
-            // 创建线程
+            /* ----------------------------------------------------------------- */
+            // 线程与输入解析辅助
+            // 这一组负责把外部命令、调试接管和单轮直控统一折算成 planner 可消费的目标数据。
             static void createThread(void *arg);
-            // 运行线程函数
             void runThread(void *arg);
 
             // 输入目标数据
@@ -803,6 +845,10 @@ namespace jia
                 kDriveOnly = 2,
             };
             DebugMode resolveDebugMode(u8 raw_mode) const;
+
+            /* ----------------------------------------------------------------- */
+            // 调试接管与模块 override
+            // 与普通 setTarget* 不同，这里允许调试面板直接接管整车目标，或者绕开整车 planner 只改某些模块命令。
 #if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
             void applyDebugTargetOverride(DebugMode mode);
             bool applyDebugModuleOverride(bool all_homed);
@@ -830,6 +876,10 @@ namespace jia
             void applyResolvedSteerCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command, bool enable);
             void applyResolvedDriveCommand(WheelConfig &wheel, u8 wheel_idx, const DirectActuatorCommandSnapshot &command, bool enable);
 #endif
+
+            /* ----------------------------------------------------------------- */
+            // 运动学、航向锁定与限幅整形
+            // 这部分把“输入意图”整形成“底盘可稳定执行的规划目标”，包括坐标转换、yaw lock、方向冻结和 jerk/acc 限幅。
             void applyDriveVirtualLoadAndCommand(WheelConfig &wheel,
                                                  u8 wheel_idx,
                                                  f32 delivered_drive_target_rad_s,
@@ -866,6 +916,10 @@ namespace jia
                                         f32 jerk_dec_limit,
                                         f32 settle_vel_epsilon,
                                         f32 settle_accel_epsilon) const;
+
+            /* ----------------------------------------------------------------- */
+            // 轮组反馈、回零与执行器下发
+            // 如果前面的 planner 解决的是“想去哪”，这一组解决的就是“轮子现在在哪、能不能去、最终给电机发什么”。
             void updateWheelFeedback();
             void updateSteerFaultState(WheelConfig &wheel);
             void latchSteerFault(WheelConfig &wheel);
@@ -915,6 +969,10 @@ namespace jia
             void computeModuleCommands(const Data &command_data);
             void applyModuleCommands(bool all_homed);
             void updateCurrentData(bool all_homed);
+
+            /* ----------------------------------------------------------------- */
+            // 调试输出与运行态镜像
+            // 这些声明主要服务于观察和调参，不改变主控制决策本身。
 #if JIA_CHASSIS_ENABLE_DEBUG_MIRROR
             void refreshDebugMirror(bool all_homed);
 #endif
@@ -937,6 +995,10 @@ namespace jia
             void syncDebugSteerPidTuneFromRuntime();
             void applyDebugSteerPidRuntimeTuning();
 #endif
+
+            /* ----------------------------------------------------------------- */
+            // 通用数学与轻量只读映射
+            // 放在末尾是为了把主控制流程声明按职责集中阅读。
             bool solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const;
             bool estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
 #if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
@@ -949,9 +1011,9 @@ namespace jia
             f32 resolveSingleWheelDriveStepTargetRpm(u8 wheel_idx, f32 fallback_target_rpm);
 
             // =====================================================================
-            // 系统时基 [RO]
-            // 说明：底盘控制链路的统一时间基准。看这里时，先把它理解成“每周期多长”和“当前时刻是多少”。
-            // 这里通常不需要改；如果控制周期变化，和时间相关的节流、滤波、超时常量也要一起复核。
+            // 系统时基与线程时钟 [RO]
+            // 说明：这是所有“每周期推进一次”的逻辑共用的统一时间基准。
+            // 如果控制周期变化，后面的超时、hold、节流、滤波和采样窗口都要一起重新复核。
             // =====================================================================
             constexpr static u8 period_ms_ = 1;                  // [RO] 控制周期步长（ms）。用于把“每周期”换算成真实时间，默认 1ms。
             constexpr static f32 period_ = period_ms_ / 1000.0f; // [RO] 控制周期步长（s）。给需要秒单位的公式使用，和 period_ms_ 始终一致。
@@ -1101,6 +1163,9 @@ namespace jia
                 bool enable_high_speed_drive_suppression = false; // [RW] 是否启用高速抑制。只在非近零平移一致性变差时收紧驱动。
                 HighSpeedDriveSuppressionConfig high_speed_drive_suppression{};
             };
+            // 配置基线 vs 运行时快照：
+            // - default_strategy_cfg_ 是默认基线，回答“系统初始化后原则上应该怎么跑”；
+            // - runtime_strategy_cfg_ 是当前生效配置，回答“这一拍控制线程实际按什么规则在跑”。
             StrategyConfig default_strategy_cfg_; // [RW, 慎改] 默认策略基线。用于初始化和“恢复默认值”，不要把它当作实时状态。
             StrategyConfig runtime_strategy_cfg_; // [RW] 当前生效的运行时策略。可被外部接口动态切换，控制链路实际读取它。
 
@@ -1376,9 +1441,14 @@ namespace jia
             } debug_drive_load_trace_;
 #endif
 
-            // 回零与模块运行态（主要观察）[RO]
-            // 这份 yaw trace 很小，并且被航向控制函数直接写入。RUNTIME_MIN 保留它能避免把核心锁角逻辑切碎；
-            // 真正占空间的串口输出配置、调试镜像和任务耗时窗口仍由 profile 裁剪。
+            // =====================================================================
+            // 回零、模块反馈与门控锁存 [RO]
+            // 读这一组时建议按四种角色理解：
+            // - 配置副本：静态装配信息与硬件句柄在运行时的落地副本；
+            // - 快照：最近一次反馈、规划和执行结果；
+            // - 门控：当前是否允许某种动作继续推进；
+            // - 锁存：为了形成滞回和跨周期保持而保留的状态。
+            // =====================================================================
             // 这份 yaw trace 很小，并且被航向控制函数直接写入。RUNTIME_MIN 保留它能避免把核心锁角逻辑切碎；
             // 真正占空间的串口输出配置、调试镜像和任务耗时窗口仍由 profile 裁剪。
             struct YawPidTraceState
@@ -1399,6 +1469,7 @@ namespace jia
                 f32 reverse_intent_active = 0.0f;
             } yaw_pid_trace_;
 
+            // 回零请求与轮组运行态快照：保存每轮的装配副本、反馈结果和局部状态机阶段。
             bool homing_start_request_ = false;                                // [RW] 回零启动请求锁存位（由外部触发，在线程内消费）
             f32 homing_align_to_zero_tolerance_deg_ = 2.0f;                    // [RW] 回零归位判稳阈值（deg）
             WheelConfig wheel_config_[4];                                      // [RO] 四个模块运行态快照
@@ -1417,6 +1488,8 @@ namespace jia
             f32 max_residual_speed_m_s_ = 0.0f;                                // [RO] 当前拍四轮中的最大实际残余速度（m/s）。
             bool low_speed_residual_bypass_active_ = false;                        // [RO] 当前低速抑制残余速度旁路门是否打开。复用 near-zero enter/exit 做滞回。
             bool low_speed_drive_suppression_bypassed_by_residual_speed_ = false; // [RO] 当前拍低速抑制是否因残余速度阈值被旁路。
+
+            // 航向控制缓存与锁存：用于跨周期保持 LockNow/LockTo 的连续语义，而不是每拍重新解释一次目标。
             u8 rot_z_pid_count_ = 0;                                           // [RO] 航向 PID 分频计数器
             f32 lock_now_rot_z_target_ = 0.0f;                                 // [RO] LockNow 真正维持的航向目标
             u32 lock_now_rot_z_shift_count_ = 0;                               // [RO] LockNow 松手缓冲倒计时
@@ -1428,6 +1501,8 @@ namespace jia
             bool lock_yaw_pid_target_filter_valid_ = false;                    // [RO] 航向 PID 目标低通状态是否已初始化
             f32 lock_yaw_pid_target_filtered_rad_ = 0.0f;                      // [RO] 航向 PID 目标低通后的角度
             bool lock_yaw_pid_deadband_active_ = false;                        // [RO] 航向 PID 双阈值死区当前是否激活
+
+            // 整车门控与保持态锁存：决定某种动作当前是否允许推进，以及进入后应保持到何时退出。
             bool xpark_gate_active_ = false;                                   // [RO] X-Park 是否已锁存。未锁存进入看 target+residual；锁存后退出只看 target。
             u32 xpark_stationary_hold_ms_ = 0U;                                // [RO] X-Park 进入条件连续成立时长（ms）。只用于进入延时，不表示保持态 residual 健康。
             bool launch_hold_active_ = false;                                  // [RO] 静止起步整车等待门控是否激活。激活时先只转舵，不放驱动与车体速度规划。
@@ -1444,7 +1519,10 @@ namespace jia
             f32 reverse_intent_dir_err_deg_ = 0.0f;                              // [RO] 当前目标方向与参考方向夹角（deg）。
             bool steer_fault_any_active_ = false;
 
-            // 控制链路缓存（观察）[RO]
+            // =====================================================================
+            // 控制链路快照与输入缓存 [RO]
+            // 快照关注“这一拍最后算出了什么”，缓存关注“下一拍继续算时还需要记住什么”。
+            // =====================================================================
             ManualSpeedProfileMode active_manual_speed_profile_mode_ = ManualSpeedProfileMode::kLegacy;
             JerkLimitedAxisState manual_vel_x_shape_state_{};
             JerkLimitedAxisState manual_vel_y_shape_state_{};
@@ -1463,11 +1541,12 @@ namespace jia
             Data last_planned_data_;            // [RO] 上一周期规划数据（用于加速度约束）
             Data current_data_;                 // [RO] 当前状态估计数据
             SwervePlannerOutput planner_output_cache_; // [RO] 最近一次舵轮规划输出
-            SwervePlannerOutput launch_hold_preview_cache_;
+            SwervePlannerOutput launch_hold_preview_cache_; // [RO] 静止起步门控预演输出。帮助先验证“只转舵不放驱动”时模块会怎样收敛。
             ActuatorCommandFrame actuator_command_frame_; // [RO] 最近一次规划出的执行器目标帧（drive 仍是执行门控前目标）
             ModeFlag current_mode_flag_;        // [RO] 当前控制模式标志位
 
-            // 传感器与输入缓存（观察）[RO]
+            // 传感器与外部输入快照 [RO]
+            // 这组只描述输入侧观测，不直接代表控制决策。
             f32 input_hwt_rot_z_ = 0.0f;   // [RO] IMU yaw
             f32 input_hwt_omega_z_ = 0.0f; // [RO] IMU yaw speed
             RmPocketData_t airjoy_data_{}; // [RO] 遥控器输入快照
@@ -1477,8 +1556,7 @@ namespace jia
             // RUNTIME_MIN 下不再维护这份镜像，运行代码直接读取真实控制状态即可。
 #if JIA_CHASSIS_ENABLE_DEBUG_MIRROR
             // DebugMirror 是给调试器和 host FULL_DEBUG 语义测试读的“聚合视图”。
-            // RUNTIME_MIN 下不再维护这份镜像，运行代码直接读取真实控制状态即可。
-#if JIA_CHASSIS_ENABLE_DEBUG_MIRROR
+            // 它和上面的真实运行态不同，目标是把“分散在多个字段里的关键结论”整理成更容易读的镜像。
             struct DebugMirror
             {
                 bool all_homed = false;                                             // [RO] 四轮是否全部回零完成
@@ -1541,12 +1619,8 @@ namespace jia
                 bool steer_fault_any_active = false;
             } debug_mirror_;
 #endif
-#endif
 
             // 线程执行耗时统计（调试器只读观察）[RO]
-            // 这块包含 500 点短窗采样，是 Chassis 对象里最大的调试缓存之一。
-            // RUNTIME_MIN 下默认不编译它；需要在调试器里看 1ms 线程预算/分段耗时时，切到 FULL_DEBUG。
-#if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
             // 这块包含 500 点短窗采样，是 Chassis 对象里最大的调试缓存之一。
             // RUNTIME_MIN 下默认不编译它；需要在调试器里看 1ms 线程预算/分段耗时时，切到 FULL_DEBUG。
 #if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
@@ -1579,7 +1653,6 @@ namespace jia
                 u64 apply_us = 0ULL;
                 u64 debug_us = 0ULL;
             } task_perf_stat_;
-#endif
 #endif
 
             // 调试串口对象（一般不在调试器改动）[RO]

@@ -26,12 +26,30 @@
 #include "APP_Utils.h"
 #include "chassis.h"
 
+// ---------------------------------------------------------------------
+// chassis.cpp 阅读指引
+//
+// 这个实现文件承载四舵轮底盘控制线程的完整运行链路。主流程可以按下面顺序理解：
+// 1. 初始化与线程入口：init() / createThread() / runThread()
+// 2. 输入规范化：把 API、坐标系模式、锁角请求和调试接管统一折叠到 target_data_
+// 3. 车体级规划：限速、速度曲线、起步等待门、yaw lock / zero-stop 相关预处理
+// 4. 模块级求解：把车体目标转换成每个轮子的舵角和驱动目标
+// 5. 执行仲裁：结合 homing、steer fault、X-Park、zero-stop 等运行态决定最终是否允许下发
+// 6. 观测输出：刷新 current/debug mirror，并在 FULL_DEBUG 档输出 trace / telemetry
+//
+// 因为这里长期叠加了发布态、调试态、恢复态和安全门控，很多函数不仅要回答“做什么”，
+// 还要解释“为什么在这里做”和“它依赖哪个上游状态”。本轮注释优先补这一层语义。
+// ---------------------------------------------------------------------
 namespace jia
 {
     namespace FourSteerChassis
     {
         namespace
         {
+            // -----------------------------------------------------------------
+            // 二进制 telemetry 打包常量与轻量 helper
+            // 这组常量只服务 mode5 二进制遥测输出，故意放在匿名命名空间内，避免泄漏到底盘对外接口。
+            // -----------------------------------------------------------------
             constexpr u16 kSwerveTelemetryMagic = 0xA55AU;
             constexpr u8 kSwerveTelemetryVersion = 2U;
             constexpr u8 kSwerveTelemetryFlagsCrcPayloadOnly = 1U << 0;
@@ -100,6 +118,11 @@ namespace jia
                 return crc;
             }
 
+            // -----------------------------------------------------------------
+            // 调试面板 / 单轮直控配置清洗
+            // 所有来自调试面板的 raw u8 枚举都会先在这里被钳回合法范围，
+            // 这样线程主流程只处理“已清洗值”，不用到处散落防御判断。
+            // -----------------------------------------------------------------
             inline Chassis::DirectAxisInputMode sanitizeDirectAxisInputMode(u8 raw_mode)
             {
                 return (raw_mode <= static_cast<u8>(Chassis::DirectAxisInputMode::kRcStep))
@@ -244,8 +267,15 @@ namespace jia
 
         } // namespace
 
+        // -----------------------------------------------------------------
+        // 生命周期与线程入口
+        // -----------------------------------------------------------------
         void Chassis::init(InitConfig &config)
         {
+            // init() 只做两件事：
+            // 1. 绑定四个模块的硬件句柄，并把 wheel/runtime/cache 初始化到可预测基线；
+            // 2. 启动 1ms 底盘控制线程。
+            // 真正的控制闭环、状态机推进和输出仲裁都在线程周期里完成。
             runtime_strategy_cfg_ = default_strategy_cfg_;
             refreshActuatorLimitState();
 
@@ -350,12 +380,19 @@ namespace jia
 
         void Chassis::createThread(void *arg)
         {
+            // RTOS 线程入口到成员函数的桥接层。
             Chassis *chassis = static_cast<Chassis *>(arg);
             chassis->runThread(NULL);
         }
 
         void Chassis::clearInputTargetData()
         {
+            // “清空输入”并不只是把速度归零，还要一并复位所有和输入语义绑定的运行态：
+            // - yaw lock 目标与滤波状态
+            // - zero-stop / release hold 上下文
+            // - 平移方向冻结参考
+            // - 手动速度曲线内部状态
+            // 这样调用者拿到的才是真正干净的输入侧基线。
             input_target_data_.mode = Mode::kWheelTorqueFreeMode;
             input_target_data_.vel_x = 0.0f;
             input_target_data_.vel_y = 0.0f;
@@ -484,7 +521,7 @@ namespace jia
         Chassis::Result Chassis::startHoming()
         {
             // 回零请求只负责“拉起状态机”和清空本轮回零参考，不直接驱动电机；
-// 真正的搜索、沿边沿捕获零位、偏置生效和完成判定都在runThread中按周期推进
+            // 真正的搜索、沿边沿捕获零位、偏置生效和完成判定都在 runThread() 中按周期推进。
             homing_start_request_ = true;
             steer_fault_any_active_ = false;
             for (u8 i = 0; i < 4; ++i)
@@ -584,7 +621,7 @@ namespace jia
 
         void Chassis::refreshActuatorLimitState()
         {
-// 预留钩子：当前执行器限幅开关直接从就近布置的 enable_* 成员读取，无需额外派生状态
+            // 预留钩子：当前执行器限幅开关直接从就近布置的 enable_* 成员读取，无需额外派生状态。
         }
 
         f32 Chassis::mapSingleTurnToNearestTotalAngle(const WheelConfig &wheel, f32 target_oa_single_turn_deg) const
@@ -1645,6 +1682,8 @@ namespace jia
 
         void Chassis::storePlannedActuatorFrame(const SwervePlannerOutput &planner_output, const ActuatorCommandFrame &command_frame)
         {
+            // planner_output 里既保留了理想运动学解，也保留了翻转解选择、低速/高速抑制后的最终执行解。
+            // 这里把“下一阶段和调试观测真正要读的版本”统一写回成员缓存，避免后续再各自回头解释 planner_output。
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
@@ -1671,6 +1710,8 @@ namespace jia
 
         f32 Chassis::computeHomingAlignTargetCorrectedLocalTotal(const WheelConfig &wheel) const
         {
+            // 回零完成后的“对正前方”语义最终仍要落实到 corrected local 连续角。
+            // 这里先回到 OA 语义寻找离当前最近的 0° 等效角，再映射回 corrected local。
             const f32 current_corrected_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
             const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_corrected_local_total_rad);
             const f32 align_target_oa_total_rad = nearestEquivalentAngleF32(current_oa_total_rad, 0.0f);
@@ -1679,8 +1720,8 @@ namespace jia
 
         void Chassis::setModeFlag()
         {
-            // 将外部模式压缩成线程内使用的少量布尔标志，后续执行顺序只看这些标志，
-// 这样可以把“世界系/车体系”“定向锁跟随当前角”“空转模式”解耦开
+            // 将公开 Mode 压缩成线程主流程更容易消费的布尔标志。
+            // 后续 planner / gate / output 基本只看这些标志，而不用在每个分支里重复解释完整枚举语义。
             current_mode_flag_.is_world_speed_mode = false;
             current_mode_flag_.is_lock_now_rot_z = false;
             current_mode_flag_.is_lock_to_rot_z = false;
@@ -1721,6 +1762,8 @@ namespace jia
 
         Chassis::DebugMode Chassis::resolveDebugMode(u8 raw_mode) const
         {
+            // 调试面板长期沿用一套 raw mode 编号，这里集中做兼容映射。
+            // 线程其余部分统一消费 DebugMode，避免“面板协议值”扩散进控制分支。
             switch (raw_mode)
             {
             case 0:
@@ -1850,6 +1893,8 @@ namespace jia
 
         void Chassis::clearPlannedMotionForModuleOverride()
         {
+            // 模块级 override 接管时，整车 planner 的速度/加速度历史不应继续残留；
+            // 否则退出 override 后，旧 planned_data_ 可能被误当成仍有效的整车运动意图。
             target_data_.vel_x = 0.0f;
             target_data_.vel_y = 0.0f;
             target_data_.omega_z = 0.0f;
@@ -1863,6 +1908,8 @@ namespace jia
 
         void Chassis::resetDebugModuleOverrideTargets(u8 wheel_idx, bool preserve_soft_wheel_rate)
         {
+            // 把四个模块都拉回“保持当前舵角、驱动清零”的安全基线。
+            // preserve_soft_wheel_rate 用于保留被观察轮的软规划历史，避免切换调试模式时突然断层。
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
@@ -1882,6 +1929,8 @@ namespace jia
 
         void Chassis::applyAlignForwardDebugOverride()
         {
+            // AlignForward 是最纯粹的舵向语义检查模式：
+            // 不关心驱动，只要求所有轮子都面对 OA=0，便于核对零偏和安装方向。
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
@@ -1892,6 +1941,8 @@ namespace jia
 
         void Chassis::applyHomingObserveDebugOverride()
         {
+            // HomingObserve 不主动推模块运动，只把目标锁在当前反馈上。
+            // 这样可以单独观察边沿、零偏和恢复状态机，而不会被新的控制目标干扰。
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
@@ -1907,6 +1958,8 @@ namespace jia
 
         void Chassis::syncSingleWheelCommandTemplates()
         {
+            // 单轮直控允许在运行中切命令类型。
+            // 这里负责在“类型变化的边沿”同步默认限幅、阶跃值和局部 planner 状态，避免不同模式共用脏缓存。
             SingleWheelAxisControl &steer = debug_control_.single_wheel.steer;
             SingleWheelAxisControl &drive = debug_control_.single_wheel.drive;
 
@@ -1968,6 +2021,7 @@ namespace jia
 
         f32 Chassis::readSingleWheelInputAxisValue(u8 input_axis_raw) const
         {
+            // 单轮直控仍沿用 airjoy 原始摇杆值，但会统一钳到 [-1, 1]，让后续 direct/step/planner 逻辑只处理归一化输入。
             switch (sanitizeSingleWheelInputAxis(input_axis_raw))
             {
             case SingleWheelInputAxis::kLeftY:
@@ -1984,11 +2038,15 @@ namespace jia
 
         void Chassis::resetSingleWheelAxisPlannerRuntime(SingleWheelAxisPlannerRuntime &runtime)
         {
+            // 局部 planner runtime 只服务当前轮、当前命令类型和当前 planner 模式；
+            // 这些维度任一变化，都应从空状态重新建立。
             runtime = {};
         }
 
         f32 Chassis::shapeSingleWheelSteerCommand(u8 wheel_idx, const SingleWheelAxisControl &axis_cfg, f32 target_value)
         {
+            // 单轮 steer 直控既支持“原样直通”，也支持梯形/S 曲线整形。
+            // 输出的是调试链路最终允许给这个轮子的 steer 目标，而不是面板直接输入值。
             const SingleWheelPlannerMode planner_mode = sanitizeSingleWheelPlannerMode(axis_cfg.planner_mode_raw);
             const DirectSteerCommandType command_type = sanitizeDirectSteerCommandType(axis_cfg.command_type_raw);
             if ((planner_mode == SingleWheelPlannerMode::kOff) ||
@@ -2038,6 +2096,8 @@ namespace jia
 
         f32 Chassis::shapeSingleWheelDriveOmegaRadS(u8 wheel_idx, const SingleWheelAxisControl &axis_cfg, f32 target_omega_rad_s)
         {
+            // drive 轴整形内部先转成线速度做 planner，是为了让加减速参数保持更接近整车语义的直觉单位。
+            // 输出前再折回轮速，保持下游驱动接口不变。
             const SingleWheelPlannerMode planner_mode = sanitizeSingleWheelPlannerMode(axis_cfg.planner_mode_raw);
             const DirectDriveCommandType command_type = sanitizeDirectDriveCommandType(axis_cfg.command_type_raw);
             if ((planner_mode == SingleWheelPlannerMode::kOff) ||
@@ -2090,6 +2150,8 @@ namespace jia
 
         f32 Chassis::resolveSingleWheelDriveStepTargetRpm(u8 wheel_idx, f32 fallback_target_rpm)
         {
+            // 单轮 drive 阶跃发生器允许在观察轮上持续输出“保持/空档/反向”的节拍序列，
+            // 方便看 PID、虚拟负载和断电重连后的执行表现。
             if (wheel_idx >= 4U)
             {
                 return fallback_target_rpm;
@@ -2916,9 +2978,8 @@ namespace jia
         }
 
         // “锁当前航向”模式的核心语义是：
-            // 抓取当前机体朝向，再在后续由 PID 产生角速度闭环，让机器人保持当下姿态
-// 就把最近一次真实机体朝向当作要维持rot_z，再由姿PID生成out_omega_z来稳住该朝向
-// 因此它不是“始终锁某个固定角”，而是“手动旋转”和“松手后自动锁住当前角”之间的平滑切换器
+        // 抓取最近一次真实机体朝向，再由 PID 生成维持该姿态所需的角速度闭环；
+        // 因此它不是“始终锁某个固定角”，而是“手动旋转”和“松手后自动锁住当前角”之间的平滑切换器。
         void Chassis::resetYawPidTargetRuntime()
         {
             lock_yaw_pid_target_filter_valid_ = false;
@@ -2972,7 +3033,6 @@ namespace jia
 
         void Chassis::isLockNowRotZ(bool is_lock, f32 rot_z, f32 omega_z, f32 &out_rot_z, f32 &out_omega_z)
         {
-                // 1. out_rot_z 直接跟随 IMU 当前朝向 input_hwt_rot_z_，把目标角锁在此刻真实姿态上；
             if (!is_lock)
             {
                 out_rot_z = rot_z;
@@ -2997,15 +3057,11 @@ namespace jia
             yaw_pid_trace_.high_speed_suppression_active = high_speed_drive_suppression_active_ ? 1.0f : 0.0f;
             yaw_pid_trace_.reverse_intent_active = reverse_intent_active_ ? 1.0f : 0.0f;
 
-// “锁当前航向”不是简单地rot_z固定住，而是先在用户开始施加角速度
-// 抓取当前机体朝向，再在后续由PID产生角速度闭环，让机器人保持当下姿态
             if (omega_z == 0.0f)
             {
-                    // 过渡缓冲结束后，真正用于锁角的目标已经不是外部传入的 rot_z，
+                // 用户已经松开手动旋转输入，开始进入“保持当前朝向”的阶段。
+                // 这里不会立即让 PID 接管，而是先经过一个短暂的 shift 缓冲，避免手感突变。
                 // 但在刚松开摇杆的最初一小段时间内，不立即让 PID 介入，而是先进入过渡缓冲：
-                    // 后续由 rot_z_pid_ 根据“目标朝向 lock_now_rot_z_target_”和“当前真实朝向 input_hwt_rot_z_”
-                    // 的误差生成维持姿态所需的 out_omega_z
-// 3.lock_now_rot_z_shift_count_作为缓冲计数器，倒数结束后才真正进入锁角闭环
                 if (lock_now_rot_z_shift_count_ > 0)
                 {
                     lock_now_rot_z_shift_count_--;
@@ -3021,10 +3077,9 @@ namespace jia
                 }
                 else
                 {
-// 过渡缓冲结束后，真正用于锁角的目标已经不是外部传入的rot_z
-// 而是前面已经抓取并保存下来的lock_now_rot_z_target_
-                    // rot_z_pid_count_ / rot_z_pid_period_ 共同控制姿态 PID 的实际计算节拍
-// 的误差生成维持姿态所需out_omega_z
+                    // 缓冲结束后，真正用于锁角的目标已经不是外部传入的 rot_z，
+                    // 而是前面抓取并保持下来的 lock_now_rot_z_target_。
+                    // rot_z_pid_count_ / rot_z_pid_period_ 共同控制姿态 PID 的实际计算节拍。
                     out_rot_z = lock_now_rot_z_target_;
                     if (rot_z_pid_count_ >= rot_z_pid_period_)
                     {
@@ -3034,8 +3089,7 @@ namespace jia
                     }
                     else
                     {
-                // 3. 每次有手动旋转输入都重置缓冲计数器，为后续从手动旋转切回自动锁角预留平滑过渡窗口
-// 暂时沿用上一规划周期planned_data_.omega_z，减少输出抖动并维持角速度连续性
+                        // 非 PID 计算拍暂时沿用上一规划周期的 omega_z，减少输出抖动并维持角速度连续性。
                         out_omega_z = planned_data_.omega_z;
                     }
                     // rot_z_pid_count_ / rot_z_pid_period_ 共同控制姿态 PID 的实际计算节拍。
@@ -3050,11 +3104,10 @@ namespace jia
             }
             else
             {
-                // 这里表示“用户仍在主动要求旋转”：
-// 1.不进入锁角闭环，直接执行当前手动omega_z
-// 2.同时out_rot_z刷新成当IMU朝向input_hwt_rot_z_
-                //    相当于不断更新“等会儿松手后要锁住的那个角”；
-// 3.每次有手动旋转输入都重置缓冲计数器，为后续从手动旋转切回自动锁角预留平滑过渡窗口
+                // 用户仍在主动要求旋转：
+                // 1. 不进入锁角闭环，直接执行当前手动 omega_z；
+                // 2. 同时把 out_rot_z 刷成当前 IMU 朝向，相当于不断更新“等会儿松手后要锁住的那个角”；
+                // 3. 每次有手动旋转输入都重置缓冲计数器，为后续切回自动锁角预留平滑过渡窗口。
                 lock_now_rot_z_target_ = input_hwt_rot_z_;
                 out_rot_z = lock_now_rot_z_target_;
                 out_omega_z = omega_z;
@@ -3080,8 +3133,8 @@ namespace jia
                 return;
             }
 
-// “锁到指定航向”会先限制目标角速度变化率，再用姿PID生成维持/逼近该目标角度所需omega_z
-// 这样外层给出的目标角不会瞬间跳变，底盘转向更平滑
+            // “锁到指定航向”会先限制目标角变化率，再用姿态 PID 生成维持/逼近该目标角度所需的 omega_z。
+            // 这样外层给出的目标角不会瞬间跳变，底盘转向更平滑。
             const f32 rate_limited_rot_z = limit1DPiAngleRateByTimeF32(tar_rot_z, cur_rot_z, period_, max_lock_to_rot_z_rad_s_);
             out_rot_z = filterYawPidTarget(rate_limited_rot_z);
             // LockTo 生效的锁角会被 LockNow 继承，避免切回时重新抓 IMU。
@@ -3124,6 +3177,11 @@ namespace jia
 
         void Chassis::resolvePlannerTargetData()
         {
+            // 这一层负责把“外部希望底盘如何运动”统一折叠成 planner 只关心的 target_data_：
+            // - API 输入与 debug target injection 统一入口
+            // - 世界系/车体系目标归一到车体系
+            // - yaw lock 进入、保持、退出时的目标修正
+            // resolve 完成后，后续规划层就不再关心目标来源，只看 target_data_。
             yaw_lock_zero_stop_preview_command_valid_ = false;
             yaw_lock_zero_stop_preview_command_ = Data{};
             const PlannerInputCommand planner_command{
@@ -3178,6 +3236,12 @@ namespace jia
 
         void Chassis::updatePlannedMotionData()
         {
+            // updatePlannedMotionData() 只处理“车体级”目标，不直接生成单轮命令。
+            // 它完成的事情包括：
+            // 1. 选择生效的手动速度规划模式
+            // 2. 判断是否进入 launch hold
+            // 3. 为 zero-stop / yaw lock 生成必要的预览目标
+            // 4. 输出本周期 planned_data_（速度、加速度、目标朝向）
             const ManualSpeedProfileMode effective_profile_mode = resolveEffectiveManualSpeedProfileMode();
             if (effective_profile_mode != active_manual_speed_profile_mode_)
             {
@@ -3241,7 +3305,7 @@ namespace jia
 
         void Chassis::limitPlannedSpeed(f32 tar_vel_x, f32 tar_vel_y, f32 tar_omega_z, f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z)
         {
-// 第一阶段：先x/y分量分别做加减速限幅，保证速度台阶被平滑化
+            // 第一阶段：先对 x / y / omega 分量分别做加减速限幅，保证速度台阶被平滑化。
             const ManualSpeedProfileMode effective_profile_mode = resolveEffectiveManualSpeedProfileMode();
             if (effective_profile_mode == ManualSpeedProfileMode::kSCurve)
             {
@@ -3280,7 +3344,7 @@ namespace jia
                 out_omega_z = limit1DSignalRateByTimeSeparateAbsIncAndDecF32(tar_omega_z, last_planned_data_.omega_z, period_, runtime_strategy_cfg_.max_alpha_z_acc_, runtime_strategy_cfg_.max_alpha_z_dec_);
             }
 
-// 第二阶段：平移矢量方向限幅（低速滞回冻+方向角速度限幅）
+            // 第二阶段：再对平移矢量方向做限幅，处理低速冻结滞回和方向角速率限制。
             const f32 tar_mag = magnitude2DF32(tar_vel_x, tar_vel_y);
             const f32 out_mag = magnitude2DF32(out_vel_x, out_vel_y);
             const f32 enter_speed = getNearZeroEnterSpeedMps();
@@ -3379,6 +3443,8 @@ namespace jia
 
         void Chassis::resetHomingEdgeConfirmState(WheelConfig &wheel)
         {
+            // 这组缓存用于“多次边沿确认同一零偏”。
+            // 每次重新开始 search，或判定边沿序列失真时，都要把累计值和计数清空。
             wheel.homing_edge_confirm_count = 0U;
             wheel.homing_last_confirm_edge_is_falling = false;
             wheel.homing_last_confirm_signed_local_rad = 0.0f;
@@ -3387,6 +3453,8 @@ namespace jia
 
         bool Chassis::recordHomingEdgeAndCheckConfirmed(WheelConfig &wheel, bool is_falling_edge, f32 signed_local_total_rad)
         {
+            // 单次边沿只能提供一个“候选零偏”；为了吸收抖动和机械误差，这里要连续收集三次，
+            // 并要求相邻边沿位置近似相差半圈，才把平均结果认作运行时零偏。
             const f32 edge_mech_oa_rad = is_falling_edge ? wheel.homing_falling_edge_mech_rad : wheel.homing_rising_edge_mech_rad;
             const SteerCalibration calibration = makeSteerCalibration(wheel);
             f32 candidate_zero_offset_rad = computeHomingRuntimeZeroOffset(edge_mech_oa_rad,
@@ -3434,6 +3502,8 @@ namespace jia
 
         bool Chassis::readHomingSensor(const WheelConfig &wheel) const
         {
+            // readHomingSensor() 返回的是“语义上的传感器激活态”，已经吸收了 active_high / active_low 差异。
+            // 只有需要判断物理边沿方向时，才直接读取 raw high。
             if (!wheel.homing_enabled || wheel.homing_gpio_port == nullptr)
             {
                 return false;
@@ -3454,6 +3524,7 @@ namespace jia
 
         f32 Chassis::readSteerMotorRawTotalAngleRad(const WheelConfig &wheel) const
         {
+            // 原始总角保留电机安装符号语义，用于故障冻结检测和 homing 边沿位置记录。
             if (wheel.steer_motor_h == nullptr)
             {
                 return 0.0f;
@@ -3464,6 +3535,7 @@ namespace jia
 
         f32 Chassis::readDriveMotorOmegaRadS(const WheelConfig &wheel) const
         {
+            // 驱动反馈需要把“电机 RPM”重新折回“轮子沿当前 OA 方向的角速度”语义。
             if (wheel.drive_motor_h == nullptr)
             {
                 return 0.0f;
@@ -3479,6 +3551,8 @@ namespace jia
 
         f32 Chassis::readCorrectedSteerMotorTotalAngleRad(const WheelConfig &wheel) const
         {
+            // corrected local total 是底盘内部最稳定的舵向连续角语义：
+            // 已吸收安装方向、零偏与 OA/OWI 坐标差异，planner / homing / hold 都围绕它工作。
             const SteerCalibration calibration{
                 wheel.theta_oa_to_owi_rad,
                 wheel.homing_runtime_zero_offset_rad,
@@ -3495,6 +3569,8 @@ namespace jia
 
         void Chassis::clearSteerFaultState(WheelConfig &wheel)
         {
+            // 从 recovering 回到正常控制前，冻结观测历史也必须一起刷新；
+            // 否则上一轮故障遗留的电流/角度 delta 可能在下一拍继续触发误判。
             wheel.steer_fault_state = SteerFaultState::kNone;
             wheel.steer_fault_rehome_request = false;
             wheel.steer_feedback_freeze_ms = 0U;
@@ -3512,6 +3588,8 @@ namespace jia
 
         void Chassis::latchSteerFault(WheelConfig &wheel)
         {
+            // 舵向冻结一旦确认，就立刻把该轮打进“已锁存故障”：
+            // 退出当前闭环目标、清空零位有效性，并等待后续恢复抖动触发 re-home。
             wheel.steer_fault_state = SteerFaultState::kLatched;
             wheel.steer_fault_rehome_request = false;
             wheel.steer_feedback_recovery_toggle_count = 0U;
@@ -3528,6 +3606,8 @@ namespace jia
 
         void Chassis::requestSingleWheelHoming(WheelConfig &wheel)
         {
+            // recovering 不是直接“清故障继续跑”，而是要求这一个轮子重新走一遍最小回零流程。
+            // 这里把 search 相关缓存复位到重新入场的干净状态。
             wheel.steer_fault_rehome_request = true;
             wheel.homing_elapsed_s = 0.0f;
             wheel.homing_last_sensor_active = readHomingSensorRawHigh(wheel);
@@ -3546,6 +3626,8 @@ namespace jia
 
         void Chassis::resetSteerMotorClosedLoopState(WheelConfig &wheel)
         {
+            // 断电重连或冻结锁存后，舵向闭环内部历史很可能已经和电机真实状态脱节。
+            // 进入 recover/homing 前先把电流输出和 PID 累积量清零，避免恢复第一拍带着旧积分冲出去。
             if (wheel.steer_motor_h == nullptr)
             {
                 return;
@@ -3567,6 +3649,10 @@ namespace jia
 
         void Chassis::updateSteerFaultState(WheelConfig &wheel)
         {
+            // 这套故障检测不是简单“有电流但不动就报错”，而是同时检查：
+            // 1. 当前是否真的存在 steer 控制意图；
+            // 2. 是否处于允许忽略的 X-Park 静止保持窗口；
+            // 3. 电流变化和角度变化是否同时冻结到可疑范围。
             const StrategyConfig::SteerFaultConfig &steer_fault_cfg = runtime_strategy_cfg_.steer_fault_cfg;
             const f32 current_mA = readSteerMotorCurrentMilliAmp(wheel);
             const f32 raw_total_angle_rad = readSteerMotorRawTotalAngleRad(wheel);
@@ -3653,6 +3739,8 @@ namespace jia
 
         void Chassis::updateWheelFeedback()
         {
+            // 每拍先统一刷新四个模块反馈，再在同一拍上做故障检测。
+            // 这样 steer fault 看到的电流/角度变化量都来自同一时间基准。
             steer_fault_any_active_ = false;
             for (u8 i = 0; i < 4; ++i)
             {
@@ -3702,7 +3790,7 @@ namespace jia
             {
                 if (homing_start_request_)
                 {
-                // 两个触发角相差 180°，保证任意起始状态半圈内都能抓到一个有效边沿
+                    // Search 从哪一相位开始并不重要，只要开始转动，半圈内总能遇到一个有效边沿。
                     wheel.homing_state = HomingState::kSearch;
                     wheel.homing_elapsed_s = 0.0f;
                     wheel.homing_search_timeout_armed = false;
@@ -3763,13 +3851,14 @@ namespace jia
 
             if (wheel.homing_state == HomingState::kEdgeDetected)
             {
-// 边沿已抓到后，先走一个过渡态，确保零偏已经写入后再进入连续角度就绪态
+                // 边沿已确认后，故意再走两个显式中间态，
+                // 让“抓边沿”“应用零偏”“宣布连续角就绪”在调试观察上更容易区分。
                 wheel.homing_state = HomingState::kOffsetApply;
                 return false;
             }
             if (wheel.homing_state == HomingState::kOffsetApply)
             {
-// 这一拍只做“应用偏置”的状态切换，不再改零偏，保持状态机步骤清晰可追踪
+                // 这一拍只做“应用偏置”的状态切换，不再改零偏，保持状态机步骤清晰可追踪。
                 wheel.homing_state = HomingState::kContinuousAngleReady;
                 return false;
             }
@@ -3813,6 +3902,7 @@ namespace jia
 
         void Chassis::setSteerMotorTargetCurrent(WheelConfig &wheel, f32 current)
         {
+            // 电流模式只做最薄的一层透传，方便故障态、zero-current 和 torque-free 统一复用。
             if (wheel.steer_motor_h != nullptr)
             {
                 wheel.steer_motor_h->setTargetCurrent(current);
@@ -3823,9 +3913,13 @@ namespace jia
         {
             if (wheel.steer_motor_h != nullptr)
             {
+                // 底盘内部的 rpm 语义是“按 corrected local 正方向搜索”；
+                // 下发到具体电机前要先除以安装方向符号，恢复成电机对象理解的目标值。
                 const f32 steer_sign = (wheel.steer_motor_sign == 0.0f) ? 1.0f : wheel.steer_motor_sign;
                 const f32 expected_motor_rpm = rpm / steer_sign;
                 wheel.steer_motor_h->setTargetRPM(expected_motor_rpm);
+                // 断电重连现场偶发出现“底盘已写 RPM，但电机对象没接住”的情况，
+                // 因此这里统一做一次写后核对，必要时同周期立即补发一次。
                 if (fabsf(wheel.steer_motor_h->getTargetRPM() - expected_motor_rpm) > 1.0e-6f)
                 {
                     wheel.steer_motor_h->setTargetRPM(expected_motor_rpm);
@@ -3835,6 +3929,7 @@ namespace jia
 
         void Chassis::setSteerMotorTargetTotalAngleRad(WheelConfig &wheel, f32 corrected_local_total_angle_rad)
         {
+            // 位置闭环下发前，需要把底盘内部 corrected local 连续角重新映射回电机原始 total angle。
             if (wheel.steer_motor_h == nullptr)
             {
                 return;
@@ -3851,6 +3946,8 @@ namespace jia
 
         void Chassis::setDriveMotorTargetOmegaRadS(WheelConfig &wheel, f32 drive_omega_rad_s)
         {
+            // drive 下发同理：底盘内部一直讲“轮子角速度”，实际接口讲“电机 RPM”，
+            // 中间需要结合零偏、OA/OWI 和安装方向做一次完整换算。
             if (wheel.drive_motor_h != nullptr)
             {
                 const SteerCalibration calibration{
@@ -3863,28 +3960,23 @@ namespace jia
             }
         }
 
-// 这是一个“位置目+速度上限+加速度上限”的二阶限幅器
-            // rate_delta_limit 是“这一拍速度最多允许变化多少”，由最大加速度决定
-// 输出是“下一拍允许走到的位置”，并通过next_rate回传这一拍实际采用的速度
-// 在四舵轮里它主要用于转向角规划：既不允许舵角变化过快，也不允许舵角速度突变过猛
         f32 Chassis::limitPositionSecondOrder(f32 current_value, f32 current_rate, f32 target_value, f32 max_rate, f32 max_accel, f32 dt_s, f32 &next_rate) const
         {
-            // 先做速度变化率限制：如果期望速度离当前速度太远，
+            // 这是一个“位置目标 + 速度上限 + 加速度上限”的二阶限幅器。
+            // 在四舵轮里它主要用于舵角规划：既限制角速度，也限制角速度变化率，避免恢复/翻转时出现跳变。
             const f32 safe_dt = (dt_s <= 1.0e-6f) ? 1.0e-3f : dt_s;
 
-            // delta_value 是这一拍距离目标位置还差多少；
-            // desired_rate 是“如果想在一拍内尽量逼近目标，希望使用的速度”，
-// 但它先受max_rate限制，避免直接给出不可能达到的目标速度
+            // desired_rate 表示“若想尽快逼近目标，本拍理论上会想要的速度”，
+            // 但它会先受 max_rate 限制，避免直接给出不可能达到的指令。
             const f32 delta_value = target_value - current_value;
             const f32 desired_rate = clampValue(delta_value / safe_dt, -max_rate, max_rate);
 
-// rate_delta_limit是“这一拍速度最多允许变化多少”，由最大加速度决定
+            // rate_delta_limit 是“这一拍速度最多允许变化多少”，由最大加速度决定。
             const f32 rate_delta_limit = max_accel * safe_dt;
 
             next_rate = current_rate;
 
-// 先做速度变化率限制：如果期望速度离当前速度太远
-            // 再做一次绝对速度限幅，保证最终速度不超过 max_rate
+            // 先做速度变化率限制，再做一次绝对速度限幅，保证最终速度不超过 max_rate。
             if (desired_rate > current_rate + rate_delta_limit)
             {
                 next_rate = current_rate + rate_delta_limit;
@@ -3898,21 +3990,19 @@ namespace jia
                 next_rate = desired_rate;
             }
 
-            // 返回下一拍允许到达的位置；调用侧会把它当作新的舵角目标
             next_rate = clampValue(next_rate, -max_rate, max_rate);
 
-// 按这一拍最终允许的速度积分出位置步进量
+            // 按这一拍最终允许的速度积分出位置步进量。
             f32 step_value = next_rate * safe_dt;
 
-// 如果这一拍已经足够到达目标，则直接截断到目标位置
-// 避免积分后跨target_value造成过冲
+            // 如果这一拍已经足够到达目标，则直接截断到目标位置，避免积分后跨 target_value 造成过冲。
             if (fabsf(step_value) > fabsf(delta_value))
             {
                 step_value = delta_value;
                 next_rate = step_value / safe_dt;
             }
 
-// 返回下一拍允许到达的位置；调用侧会把它当作新的舵角目标
+            // 返回下一拍允许到达的位置；调用侧会把它当作新的舵角目标。
             return current_value + step_value;
         }
 
@@ -3934,6 +4024,9 @@ namespace jia
 
         void Chassis::computeModuleCommands(const Data &command_data)
         {
+            // 这里把车体级 planned_data_ 转换为每个轮子的执行目标。
+            // 如果说 updatePlannedMotionData() 解决“整车应该怎么动”，
+            // 那 computeModuleCommands() 解决的就是“每个轮子各自该转到哪里、驱动多快”。
             SwervePlannerOutput planner_output = {};
             if (launch_hold_active_ && launch_hold_preview_cache_.valid)
             {
@@ -3968,6 +4061,13 @@ namespace jia
 
         void Chassis::applyModuleCommands(bool all_homed)
         {
+            // 这是底盘线程的最终执行仲裁层。
+            // planner 已经给出了理想模块目标，但这里还要再结合运行态决定“是否允许原样下发”。
+            // 它同时处理：
+            // - homing 未完成时的安全降级
+            // - steer fault / recovering 期间的恢复控制
+            // - zero current / torque free / 单轮隔离等强制模式
+            // - drive zero-stop assist 与 X-Park steer hold 的末端执行语义
 #if JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
             const DebugMode debug_mode = resolveDebugMode(debug_control_.common.mode_raw);
             const bool single_wheel_isolation_active =
@@ -4083,8 +4183,8 @@ namespace jia
                 }
             }
             // 这里是“四舵轮目标命令”真正落到电机接口前的最后一道门控：
-// computeModuleCommands()虽然已经为每个轮子算好了目标舵角和驱动速度
-// 但是否允许按这些目标下发，还要看当前是否全部完成回零，以及是否处于扭矩自由模式
+            // computeModuleCommands() 虽然已经为每个轮子算好了目标舵角和驱动速度，
+            // 但是否允许按这些目标下发，还要看当前是否全部完成回零，以及是否处于扭矩自由模式。
             auto clearXParkSteerHoldState = [](WheelConfig &wheel) {
                 wheel.xpark_steer_hold_phase = XParkSteerHoldPhase::kInactive;
                 wheel.xpark_steer_hold_locked_target_rad = 0.0f;
@@ -4128,7 +4228,7 @@ namespace jia
 
                 if (input_target_data_.zero_current_all)
                 {
-// 硬零电流模式优先级最高：无论回零状态如何，四轮舵向/驱动都直接下0电流
+                    // 硬零电流模式优先级最高：无论回零状态如何，四轮舵向/驱动都直接下 0 电流。
                     clearXParkSteerHoldState(wheel);
                     allowed_drive_target_rad_s = 0.0f;
                     wheel.target_drive_omega_rad_s = 0.0f;
@@ -4148,9 +4248,9 @@ namespace jia
 
                 if (chassis_motion_blocked)
                 {
-// 只要还有任意一个轮子没有完成回零，或者存在舵向故障/恢复重校准中的轮子，
-// drive 一律按“电流清零”停机，不走 RPM=0 的速度闭环停机语义，
-// 避免离线前残留的驱动电流或速度闭环继续推动底盘。
+                    // 只要还有任意一个轮子没有完成回零，或者存在舵向故障/恢复重校准中的轮子，
+                    // drive 一律按“电流清零”停机，不走 RPM=0 的速度闭环停机语义，
+                    // 避免离线前残留的驱动电流或速度闭环继续推动底盘。
                     clearXParkSteerHoldState(wheel);
                     allow_drive_position_loop = execution_allow_drive_position_loop[i];
                     allowed_drive_target_rad_s = 0.0f;
@@ -4178,8 +4278,8 @@ namespace jia
                     }
                     if (wheel.homing_state == HomingState::kSearch)
                     {
-// 正在搜索零位的轮子，允许转向电机按固定搜索转速慢慢转；
-// 但 drive 仍然保持 current=0，全车不允许恢复驱动。
+                        // 正在搜索零位的轮子，允许转向电机按固定搜索转速慢慢转；
+                        // 但 drive 仍然保持 current=0，全车不允许恢复驱动。
                         setSteerMotorTargetRPM(wheel, wheel.homing_search_rpm);
                     }
                     else if ((wheel.homing_state == HomingState::kReady) &&
@@ -4193,10 +4293,10 @@ namespace jia
                     }
                     else if (wheel.homing_state == HomingState::kAlignToZero)
                     {
-// 零偏建立后允许转向电机继续走位置闭环，把 OA 自动归到软件零点；
-// 但在整车层面 drive 仍然保持 current=0，直到该轮重新 homing 完成。
+                        // 零偏建立后允许转向电机继续走位置闭环，把 OA 自动归到软件零点；
+                        // 但在整车层面 drive 仍然保持 current=0，直到该轮重新 homing 完成。
                         // 注意：这里每拍都根据当前反馈重算“离 OA=0 最近的等效角”，
-// 避免被上游常规模块解算写回“保持当前角”后导致归位停滞
+                        // 避免被上游常规模块解算写回“保持当前角”后导致归位停滞。
                         if (wheel.homing_align_command_armed)
                         {
                             wheel.target_steer_motor_total_angle_rad = computeHomingAlignTargetCorrectedLocalTotal(wheel);
@@ -4214,8 +4314,8 @@ namespace jia
                     }
                     else
                     {
-// 不在搜索态的轮子，不再给转向动作，直接把转向电机电流打零
-// 让状态机以“静止等待”的方式完成后续过渡
+                        // 不在搜索态的轮子，不再给转向动作，直接把转向电机电流打零，
+                        // 让状态机以“静止等待”的方式完成后续过渡。
                         setSteerMotorTargetCurrent(wheel, 0.0f);
                     }
                     continue;
@@ -4223,8 +4323,8 @@ namespace jia
 
                 if (current_mode_flag_.is_wheel_torque_free)
                 {
-// 扭矩自由模式下，不执行任何舵角或驱动速度闭环
-// 而是把转向和驱动都打成“零电流/零扭矩”状态，方便人工推动或安全释放
+                    // 扭矩自由模式下，不执行任何舵角或驱动速度闭环，
+                    // 而是把转向和驱动都打成“零电流/零扭矩”状态，方便人工推动或安全释放。
                     clearXParkSteerHoldState(wheel);
                     allowed_drive_target_rad_s = 0.0f;
                     wheel.target_drive_omega_rad_s = 0.0f;
@@ -4242,8 +4342,8 @@ namespace jia
                     continue;
                 }
 
-// 只有“全部回零完成”且“不是扭矩自由模式”时
-// 才真正把上一阶段规划出的目标舵角和驱动角速度下发给电机闭环
+                // 只有“全部回零完成”且“不是扭矩自由模式”时，
+                // 才真正把上一阶段规划出的目标舵角和驱动角速度下发给电机闭环。
                 if (isolate_this_wheel)
                 {
                     clearXParkSteerHoldState(wheel);
@@ -4477,6 +4577,8 @@ namespace jia
 
         void Chassis::updateCurrentData(bool all_homed)
         {
+            // current_data_ 面向“外部观测与反馈读取”：
+            // 它先继承本拍 planned_data_ 的结构，再根据 homing/fault 情况决定哪些车体速度反馈可以被信任。
             bool steer_fault_any_active = false;
             for (u8 i = 0; i < 4; ++i)
             {
@@ -4515,6 +4617,7 @@ namespace jia
 #if JIA_CHASSIS_ENABLE_DEBUG_MIRROR
         void Chassis::refreshDebugMirror(bool all_homed)
         {
+            // DebugMirror 不保存额外真相，而是把分散在 runtime/cache 里的关键结论平铺成“调试器易读视图”。
             debug_mirror_.all_homed = all_homed;
             debug_mirror_.single_wheel_target_index =
                 (debug_control_.common.control_wheel_index < 4U)
@@ -4614,7 +4717,7 @@ namespace jia
 
             if (!debug_enable_last_cycle_)
             {
-// 调试使能上升沿：从电机运行态回PID到调参缓存，形成“先读后改”基线
+                // 调试使能上升沿：先把当前电机运行态回读到缓存，形成“先读后改”的调参基线。
                 syncDebugSteerPidTuneFromRuntime();
                 debug_pid_tune_.synced_on_enable_edge = true;
             }
@@ -5425,8 +5528,8 @@ namespace jia
 
         bool Chassis::solveLinear3x3(f32 matrix[3][4], f32 &x0, f32 &x1, f32 &x2) const
         {
-// 这里用的是带主元选取的高斯消元，目标是稳定求3x3线性方程组
-// 输入是增广矩阵，输出是三项未知量，失败通常意味着矩阵接近奇异
+            // 这里用的是带主元选取的高斯消元，目标是稳定求解 3x3 线性方程组。
+            // 输入是增广矩阵，输出是三项未知量；失败通常意味着矩阵接近奇异。
             for (u8 pivot = 0; pivot < 3; ++pivot)
             {
                 u8 best_row = pivot;
@@ -5490,9 +5593,9 @@ namespace jia
 
         bool Chassis::estimateBodySpeedFromModules(f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const
         {
-            // 再求解 3 个底盘自由度 [vx, vy, omega_z]
-            // 这里不是直接解单个方程，而是把每个轮子的两个投影约束累积成最小二乘正规方程，
-// 再求3个底盘自由度[vx,vy,omega_z]
+            // 从四个模块的当前朝向和驱动反馈反推底盘速度。
+            // 这里不是直接解单个方程，而是把每轮的纵向约束与横向“无侧滑”约束累积成最小二乘正规方程，
+            // 最后统一求出 3 个底盘自由度 [vx, vy, omega_z]。
             f32 normal[3][3] = {};
             f32 rhs[3] = {};
 
@@ -5557,13 +5660,13 @@ namespace jia
                 u64 stage_start_us = loop_start_us;
 #endif
 
-                // 2) 解析模式并做坐标系转换
-                // 1) 读取 IMU 航向/角速度
-                // 4) 更新轮反馈与回零状态机
-                // 3) 处理锁航向逻辑与速度限幅
-                // 4) 更新轮反馈与回零状态机
-                // 5) 生成模块命令、下发电机目标
-                // 6) 回写当前估计值并等待下一周期
+                // 每个 1ms 控制周期都固定经过这六个阶段：
+                // 1. 读取 IMU / 遥控器输入
+                // 2. 折叠模式、坐标系和调试接管，得到 target_data_
+                // 3. 规划车体级目标 planned_data_
+                // 4. 刷新轮反馈，并推进 steer fault / homing 状态机
+                // 5. 求解并下发模块命令
+                // 6. 刷新观测镜像 / trace，然后等待下一拍
                 input_hwt_rot_z_ = hwt->get_yaw_rad();
                 input_hwt_omega_z_ = hwt->get_yaw_speed_rad();
 
@@ -5610,8 +5713,8 @@ namespace jia
                 }
                 if (!all_homed && input_target_data_.zero_current_all)
                 {
-                    // Homing has higher priority than external zero-current request.
-                    // Drop this request immediately to avoid interrupting homing.
+                    // Homing 优先级高于外部 zero-current 锁存；
+                    // 只要还没回零完成，就立刻丢掉这次 zero-current 请求，避免把校准流程自己打断。
                     input_target_data_.zero_current_all = false;
                 }
                 homing_start_request_ = false;
@@ -5631,8 +5734,8 @@ namespace jia
                 }
 #endif
 
-// 回零和正常控制共用同一套命令生成流程，但最终下发前会根all_homed选择
-// 未回零时只保留安全动作，已回零时才输出完整舵驱动目标
+                // 回零和正常控制共用同一套模块求解流程；
+                // 差别不在 compute，而在 apply 时依据 all_homed / steer fault 决定哪些目标允许真正落到电机。
 #if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 stage_start_us = RtosTimeStampUs64::getTimeUs();
 #endif
