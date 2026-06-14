@@ -499,10 +499,10 @@ namespace jia
                 // ---- 实时反馈与本周期规划输出 -----------------------------------
                 f32 corrected_steer_motor_total_angle_rad = 0.0f; // 已乘方向符号并叠加运行时零位补偿后的转向电机连续总角度反馈
                 f32 corrected_drive_omega_rad_s = 0.0f;           // 已乘方向符号后的驱动轮角速度反馈，单位 rad/s
-                f32 target_steer_motor_total_angle_rad = 0.0f;    // 当前周期解算后要发给转向电机的本地连续目标角
-                f32 target_drive_omega_rad_s = 0.0f;              // 当前周期解算后要发给驱动电机的目标角速度，单位 rad/s
-                f32 steer_target_velocity_rad_s = 0.0f;           // 转向二阶限幅后得到的目标角速度，便于平滑舵向变化
-                bool flipped_drive_direction = false;             // 本周期是否采用“舵角翻转 180 度、驱动反向”策略来走更短转角路径
+                f32 target_steer_motor_total_angle_rad = 0.0f;    // 当前周期准备采用的转向本地连续目标角。storePlannedActuatorFrame() 先写入规划 steer command，applyModuleCommands() 后才稳定代表最终执行值。
+                f32 target_drive_omega_rad_s = 0.0f;              // 当前周期准备采用的 drive 目标角速度，单位 rad/s。会先承载 planner 值，再在 zero-stop/homing/隔离等执行门控后改写为最终值。
+                f32 steer_target_velocity_rad_s = 0.0f;           // 当前周期准备采用的转向目标角速度。既是 planner 二阶限幅输出，也是 hold/homing 等执行分支会覆写的目标速率容器。
+                bool flipped_drive_direction = false;             // 当前周期采用的“舵角翻转 180 度、驱动反向”结果。它是本拍工作值，不等价于 selected_flipped_solution_ 那种跨拍锁存记忆。
 
                 // ---- X-Park 舵向 hold 局部状态 ----------------------------------
                 XParkSteerHoldPhase xpark_steer_hold_phase = XParkSteerHoldPhase::kInactive; // [RO] 当前轮 X-Park 舵向 hold 状态机阶段。
@@ -617,37 +617,37 @@ namespace jia
             // 理想解、选中的翻转解、转向速率、抑制比例和最终 drive 目标都会放在这里。
             struct SwervePlannerOutput
             {
-                f32 ideal_oa_total_rad[4] = {0.0f};
-                f32 ideal_drive_omega_rad_s[4] = {0.0f};
-                f32 selected_oa_total_rad[4] = {0.0f};
-                f32 steering_errors_rad[4] = {0.0f};
-                f32 planned_corrected_local_total_rad[4] = {0.0f};
-                f32 planned_oa_total_rad[4] = {0.0f};
-                f32 planned_steer_rate_rad_s[4] = {0.0f};
-                f32 steer_cmd_corrected_local_total_rad[4] = {0.0f};
-                f32 steer_cmd_oa_total_rad[4] = {0.0f};
-                f32 projected_drive_omega_rad_s[4] = {0.0f};
-                f32 final_drive_omega_rad_s[4] = {0.0f};
-                f32 low_speed_suppression_scale[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-                bool flipped_drive_direction[4] = {false, false, false, false};
-                f32 high_speed_suppression_scale = 1.0f;
-                bool high_speed_suppression_active = false;
-                f32 high_speed_dir_err_deg = 0.0f;
-                f32 high_speed_eta_max_s = 0.0f;
-                bool valid = false;
+                f32 ideal_oa_total_rad[4] = {0.0f};                 // [RO] 纯运动学理想 OA 连续角，不含翻转保持、限速或前馈修正。
+                f32 ideal_drive_omega_rad_s[4] = {0.0f};            // [RO] 与 ideal_oa_total_rad 配套的理想 drive 轮角速度。
+                f32 selected_oa_total_rad[4] = {0.0f};              // [RO] 在直达解/翻转解之间做完策略选择后的 OA 连续角。
+                f32 steering_errors_rad[4] = {0.0f};                // [RO] 当前反馈角到 selected_oa_total_rad 的误差；低速抑制与 launch-hold 主要看它。
+                f32 planned_corrected_local_total_rad[4] = {0.0f};  // [RO] 二阶限速/限加速度后的“规划舵向轨迹点”，坐标域为 corrected local 连续角。
+                f32 planned_oa_total_rad[4] = {0.0f};               // [RO] planned_corrected_local_total_rad 对应的 OA 连续角视图，便于调试与后续投影。
+                f32 planned_steer_rate_rad_s[4] = {0.0f};           // [RO] 规划轨迹点对应的舵向目标角速度。
+                f32 steer_cmd_corrected_local_total_rad[4] = {0.0f}; // [RO] 真正准备喂给舵向执行器的连续角命令，可能已叠加 feedforward lead。
+                f32 steer_cmd_oa_total_rad[4] = {0.0f};             // [RO] steer_cmd_corrected_local_total_rad 的 OA 视图，帮助区分“规划点”和“最终舵向命令”。
+                f32 projected_drive_omega_rad_s[4] = {0.0f};        // [RO] 沿 planned steer 投影后的 drive 预览值，还没经过高/低速抑制与最终执行裁决。
+                f32 final_drive_omega_rad_s[4] = {0.0f};            // [RO] planner 视角的最终 drive 目标；执行层仍可因 zero-stop/homing 再次改写。
+                f32 low_speed_suppression_scale[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // [RO] 每轮低速舵角未对齐时的 drive 压制比例。
+                bool flipped_drive_direction[4] = {false, false, false, false}; // [RO] 当前拍是否选择了翻转解。它是“本拍决策结果”，不是跨拍保持锁存本身。
+                f32 high_speed_suppression_scale = 1.0f;            // [RO] 当前拍全局高速抑制比例。会与低速抑制合并后再镜像给外部调试。
+                bool high_speed_suppression_active = false;         // [RO] 当前拍是否触发高速抑制。
+                f32 high_speed_dir_err_deg = 0.0f;                  // [RO] 当前合成平移方向误差（deg）。
+                f32 high_speed_eta_max_s = 0.0f;                    // [RO] 当前四轮最大预计到角时间（s）。
+                bool valid = false;                                 // [RO] 该拍 planner 输出是否有效，可否被 launch-hold 等缓存直接复用。
             };
 
             // ActuatorCommandFrame 是“已经准备好交给执行仲裁层”的一帧模块命令。
             // 它仍然是理想执行目标，真正能否下发以及是否被 zero-stop / homing 改写，要到 applyModuleCommands() 决定。
             struct ActuatorCommandFrame
             {
-                f32 steer_corrected_local_total_rad[4] = {0.0f};
-                f32 steer_oa_total_rad[4] = {0.0f};
-                f32 steer_cmd_corrected_local_total_rad[4] = {0.0f};
-                f32 steer_cmd_oa_total_rad[4] = {0.0f};
-                f32 steer_rate_rad_s[4] = {0.0f};
-                f32 drive_omega_rad_s[4] = {0.0f};
-                bool flipped_drive_direction[4] = {false, false, false, false};
+                f32 steer_corrected_local_total_rad[4] = {0.0f};     // [RO] 规划轨迹点对应的 corrected local 舵角。
+                f32 steer_oa_total_rad[4] = {0.0f};                  // [RO] 规划轨迹点的 OA 视图，便于输出与调试核对。
+                f32 steer_cmd_corrected_local_total_rad[4] = {0.0f}; // [RO] 执行层准备采用的最终舵向连续角命令。
+                f32 steer_cmd_oa_total_rad[4] = {0.0f};              // [RO] 最终舵向命令的 OA 视图。
+                f32 steer_rate_rad_s[4] = {0.0f};                    // [RO] 与最终舵向命令配套的目标转向速率。
+                f32 drive_omega_rad_s[4] = {0.0f};                   // [RO] planner 视角的最终 drive 目标；尚未经过 homing/zero-stop/单轮隔离等执行门控。
+                bool flipped_drive_direction[4] = {false, false, false, false}; // [RO] 当前帧的翻转解选择结果。
             };
 
             /* ----------------------------------------------------------------- */
@@ -874,6 +874,8 @@ namespace jia
             bool applyDebugModuleOverride(bool all_homed);
 #endif
             void clearInputTargetData();
+            // setModeFlag() 只做“公开 Mode -> 主流程布尔标签”的压平，
+            // 它不是最终模式决策本身；更细的锁角/坐标/调试接管语义仍由后续 resolve 阶段继续解释。
             void setModeFlag();
             void resolvePlannerTargetData();
             void updatePlannedMotionData();
@@ -940,6 +942,7 @@ namespace jia
             /* ----------------------------------------------------------------- */
             // 轮组反馈、回零与执行器下发
             // 如果前面的 planner 解决的是“想去哪”，这一组解决的就是“轮子现在在哪、能不能去、最终给电机发什么”。
+            // 其中 updateWheelFeedback() 只负责每轮局部反馈刷新与故障观测，整车 current_data_ 聚合在后面的 updateCurrentData() 完成。
             void updateWheelFeedback();
             void updateSteerFaultState(WheelConfig &wheel);
             void latchSteerFault(WheelConfig &wheel);
@@ -951,10 +954,14 @@ namespace jia
             bool updateHomingState(WheelConfig &wheel);
             bool readHomingSensor(const WheelConfig &wheel) const;
             bool readHomingSensorRawHigh(const WheelConfig &wheel) const;
+            // raw / corrected 读接口分别服务两套语义：
+            // raw 更接近电机轴自身观测，适合边沿定位与冻结检测；corrected 则是底盘内部统一使用的连续舵向语义。
             f32 readSteerMotorRawTotalAngleRad(const WheelConfig &wheel) const;
             f32 readDriveMotorOmegaRadS(const WheelConfig &wheel) const;
             f32 readCorrectedSteerMotorTotalAngleRad(const WheelConfig &wheel) const;
             f32 readSteerMotorCurrentMilliAmp(const WheelConfig &wheel) const;
+            // 这四个 target helper 把“底盘内部统一语义”收敛成“电机对象实际接口语义”：
+            // 上层分别按电流、舵向 rpm、舵向连续角、drive wheel omega 调用，换算细节统一留在这一层。
             void setSteerMotorTargetCurrent(WheelConfig &wheel, f32 current);
             void setSteerMotorTargetRPM(WheelConfig &wheel, f32 rpm);
             void setSteerMotorTargetTotalAngleRad(WheelConfig &wheel, f32 corrected_local_total_angle_rad);
@@ -977,20 +984,32 @@ namespace jia
             f32 getXParkCommandExitSpeedMps() const;
             bool shouldActivateReverseIntent(f32 target_vel_x, f32 target_vel_y, f32 reference_dir_rad) const;
             bool shouldActivateLaunchHold() const;
+            // launch hold 相关 helper 只服务“先摆正舵轮、再恢复 drive”的过渡阶段：
+            // 一个判断是否已经对齐到可放行动作的程度，另一个构造只用于对齐预览的 planner 命令。
             bool isLaunchHoldAligned(const SwervePlannerOutput &planner_output) const;
             Data makeLaunchHoldPreviewCommand() const;
+            // refreshActuatorLimitState() 当前是主循环中的“阶段边界钩子”：
+            // 现在限幅开关直接就近读取，但保留这层调用点，便于未来把限幅/阈值镜像收敛成统一快照。
             void refreshActuatorLimitState();
+            // mapSingleTurnToNearestTotalAngle() 把单圈 OA 语义目标映射成“离当前姿态最近”的连续总角，
+            // 主要服务调试对齐与显式单轮舵角命令，避免同一目标因跨圈解释不同而多转整圈。
             f32 mapSingleTurnToNearestTotalAngle(const WheelConfig &wheel, f32 target_oa_single_turn_deg) const;
             SwervePlannerInput makeSwervePlannerInput(const Data &command_data);
             SwervePlannerOutput planSwerveModules(const SwervePlannerInput &planner_input);
+            // 这两个 helper 把 planner 输出再收束成“后续执行/调试统一读取”的命令帧与缓存快照。
+            // build 负责拍扁字段层次，store 负责写入本拍执行镜像与跨拍历史状态。
             void buildActuatorCommandFrame(const SwervePlannerOutput &planner_output, ActuatorCommandFrame &out_frame) const;
             void storePlannedActuatorFrame(const SwervePlannerOutput &planner_output, const ActuatorCommandFrame &command_frame);
             f32 computeHomingAlignTargetCorrectedLocalTotal(const WheelConfig &wheel) const;
+            // 这两个 helper 组成“规划舵向 -> 规划驱动 -> 规划车体 twist readback”的观测链：
+            // 一个沿计划舵向投影 drive 目标，另一个再从计划 steer/drive 反解回底盘 twist，供调试/可视化核对规划结果。
             void computeProjectedDriveFromPlannedSteer(const Data &command_data, const f32 planned_oa_total_rad[4], f32 out_drive_omega_rad_s[4]) const;
-            // Planned twist readback uses the same public/debug body frame as setSpeed*/get*.
+            // estimatePlannedBodyTwist() 的输出沿用公开/debug body frame 语义，和 setSpeed*/get* 的坐标约定保持一致。
             bool estimatePlannedBodyTwist(const f32 planned_oa_total_rad[4], const f32 planned_drive_omega_rad_s[4], f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
             f32 updateHighSpeedDriveSuppression(f32 translational_speed_m_s, f32 eta_max_s, f32 dir_err_deg);
+            // computeModuleCommands() 负责“从车体命令 -> 模块规划命令帧”，只产出理想执行目标，不直接写电机。
             void computeModuleCommands(const Data &command_data);
+            // applyModuleCommands() 是最终执行仲裁层：会结合 homing/fault/zero-current/torque-free/zero-stop 等运行态决定哪些目标真的下发。
             void applyModuleCommands(bool all_homed);
             void updateCurrentData(bool all_homed);
 
@@ -1496,12 +1515,12 @@ namespace jia
             bool homing_start_request_ = false;                                // [RW] 回零启动请求锁存位（由外部触发，在线程内消费）
             f32 homing_align_to_zero_tolerance_deg_ = 2.0f;                    // [RW] 回零归位判稳阈值（deg）
             WheelConfig wheel_config_[4];                                      // [RO] 四个模块运行态快照
-            f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};                        // [RO] 上周期转向速度命令
-            f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};                       // [RO] 上周期最终实际下发到驱动闭环的角速度命令
+            f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};                        // [RO] 上周期最终采用的转向速度命令。主要服务舵向二阶限幅与 hold 收尾。
+            f32 last_drive_omega_cmd_rad_s_[4] = {0.0f};                       // [RO] 上周期真正送入 drive 执行链路的角速度命令。zero-stop / alpha-limit 都依赖它做跨拍渐变。
             f32 last_drive_feedback_omega_rad_s_[4] = {0.0f, 0.0f, 0.0f, 0.0f};
             u32 drive_feedback_sample_ms_[4] = {0U, 0U, 0U, 0U};
             u32 last_drive_feedback_sample_ms_[4] = {0U, 0U, 0U, 0U};
-            bool selected_flipped_solution_[4] = {false};                      // [RO] 每个模块是否选中翻转解
+            bool selected_flipped_solution_[4] = {false};                      // [RO] 每个模块上一拍保留下来的翻转解锁存。和 planner_output 里的 flipped_drive_direction[本拍结果] 不同。
             f32 low_speed_drive_suppression_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // [RO] 每轮低速抑制最终缩放。
             f32 high_speed_drive_suppression_scale_ = 1.0f;                        // [RO] 当前高速抑制缩放。
             bool high_speed_trans_gate_active_ = false;                            // [RO] 当前高速抑制速度门是否打开。复用 near-zero enter/exit 做滞回。
@@ -1559,13 +1578,13 @@ namespace jia
 #endif
             InputTargetData input_target_data_; // [RO] 输入目标快照（模式与期望速度/角度）
             NormalizedBodyCommand normalized_body_command_; // [RO] 输入来源与统一车体系语义
-            Data target_data_;                  // [RO] 模式映射后的目标数据
-            Data planned_data_;                 // [RO] 经限幅/策略处理后的规划数据
+            Data target_data_;                  // [RO] 模式映射后的目标数据。仍是“上游想让底盘做什么”的统一表达。
+            Data planned_data_;                 // [RO] 本拍目标镜像。以 planner 结果为主，但 apply 层可能进一步改写其中 drive/steer 可执行部分。
             Data last_planned_data_;            // [RO] 上一周期规划数据（用于加速度约束）
-            Data current_data_;                 // [RO] 当前状态估计数据
-            SwervePlannerOutput planner_output_cache_; // [RO] 最近一次舵轮规划输出
+            Data current_data_;                 // [RO] 面向外部读取的融合视图：轮角/轮速用实时反馈回填，整车 twist 仅在 all_homed 且无 steer fault 时可信。
+            SwervePlannerOutput planner_output_cache_; // [RO] 最近一次完整 planner 输出。保留“理想值/规划值/最终 planner 值”全套中间量，便于调试回看。
             SwervePlannerOutput launch_hold_preview_cache_; // [RO] 静止起步门控预演输出。帮助先验证“只转舵不放驱动”时模块会怎样收敛。
-            ActuatorCommandFrame actuator_command_frame_; // [RO] 最近一次规划出的执行器目标帧（drive 仍是执行门控前目标）
+            ActuatorCommandFrame actuator_command_frame_; // [RO] 最近一次准备交给执行层仲裁的命令帧。drive 仍是执行门控前目标，steer_cmd 则代表执行层优先采用的舵向命令。
             ModeFlag current_mode_flag_;        // [RO] 当前控制模式标志位
 
             // 传感器与外部输入快照 [RO]
