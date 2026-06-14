@@ -34,9 +34,8 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = CB_yaw;
-        path_line_.Reset();
+    path_line_.Reset();
     path_line_.plan_reset();
-
 
     //     path_line_.Add_Start_Point(robot_pos_);
     //     path_line_.Add_End_Point(test_point, path_param.CB);
@@ -63,10 +62,9 @@ void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = CZ_point.R1_yaw;
-        path_line_.Reset();
+    path_line_.Reset();
     path_line_.plan_reset();
 
-    
     CZ_point.R1_pos_index = (CZ_point.R1_pos_index + 1) % 3;
     path_line_.Add_Start_Point(robot_pos_);
     path_line_.Add_End_Point(CZ_point.R1_pos[CZ_point.R1_pos_index], path_param.end);
@@ -78,28 +76,25 @@ void OmniChassis_Setup::CZ_R2_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = CZ_point.fit_yaw;
-        path_line_.Reset();
+    path_line_.Reset();
     path_line_.plan_reset();
 
-    
-    //合体地点和等待地点的切换
-    if(airjoy_data_.SWA == 0x01)
+    // 合体地点和等待地点的切换
+    if (airjoy_data_.SWA == 0x01)
     {
         CZ_point.fit_pos_index = (CZ_point.fit_pos_index + 1) % 2;
         path_line_.Add_Start_Point(robot_pos_);
-        path_line_.Add_End_Point(CZ_point.fit_pos[CZ_point.fit_pos_index], path_param.end); 
+        path_line_.Add_End_Point(CZ_point.fit_pos[CZ_point.fit_pos_index], path_param.end);
     }
-    else if(airjoy_data_.SWA == 0x00)
+    else if (airjoy_data_.SWA == 0x00)
     {
         CZ_point.R2_pos_index = (CZ_point.R2_pos_index + 1) % 3;
         path_line_.Add_Start_Point(robot_pos_);
-        path_line_.Add_End_Point(CZ_point.R2_pos[CZ_point.R2_pos_index], path_param.R2); 
+        path_line_.Add_End_Point(CZ_point.R2_pos[CZ_point.R2_pos_index], path_param.R2);
     }
-    
+
     Path_end_point = path_line_.Get_End_Point();
 }
-
-
 
 void OmniChassis_Setup::loop()
 {
@@ -332,9 +327,9 @@ void OmniChassis_Setup::loop()
             path_line_.Reset();
             path_line_.plan_reset();
             Path_end_point = robot_pos_;
-            CZ_point.fit_pos_index=1;
-            CZ_point.R1_pos_index=0;
-            CZ_point.R2_pos_index=0;
+            CZ_point.fit_pos_index = 1;
+            CZ_point.R1_pos_index = 0;
+            CZ_point.R2_pos_index = 0;
         }
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
         if (flag == 1)
@@ -374,7 +369,7 @@ void OmniChassis_Setup::loop()
         chassis_status_last_ = chassis_status_;
         break;
     }
-    
+
     case CHASSIS_AUTO_CONTROL_CZ_R2:
     {
         if (chassis_status_last_ != chassis_status_)
@@ -383,9 +378,9 @@ void OmniChassis_Setup::loop()
             path_line_.Reset();
             path_line_.plan_reset();
             Path_end_point = robot_pos_;
-            CZ_point.fit_pos_index=1;
-            CZ_point.R1_pos_index=0;
-            CZ_point.R2_pos_index=0;
+            CZ_point.fit_pos_index = 1;
+            CZ_point.R1_pos_index = 0;
+            CZ_point.R2_pos_index = 0;
         }
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
         if (flag == 1)
@@ -448,7 +443,7 @@ void OmniChassis_Setup::loop()
 void OmniChassis_Setup::Path_lock_point(Vector2D lock_point)
 {
     float lock_err = (robot_pos_ - lock_point).magnitude();
-    if(airjoy_data_.SWA == 0x00 && chassis_status_==CHASSIS_AUTO_CONTROL_CZ_R2)
+    if (airjoy_data_.SWA == 0x00 && chassis_status_ == CHASSIS_AUTO_CONTROL_CZ_R2)
     {
         speed = path_lock_r2.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
     }
@@ -457,14 +452,14 @@ void OmniChassis_Setup::Path_lock_point(Vector2D lock_point)
         speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
     }
     pid_dead_flag = path_lock.get_is_in_dead_zone();
-    if( pid_dead_flag==true)
+
+    target_chassis_twist_.vx = speed.x;
+    target_chassis_twist_.vy = speed.y;
+    if (pid_dead_flag == true)
     {
         target_chassis_twist_.vx = 0.0f;
         target_chassis_twist_.vy = 0.0f;
     }
-    target_chassis_twist_.vx = speed.x;
-    target_chassis_twist_.vy = speed.y;
-
 }
 
 void OmniChassis_Setup::Path_correction(void)
@@ -536,6 +531,13 @@ void OmniChassis_Setup::Path_correction(void)
 
 bool OmniChassis_Setup::KFS_Selection_Planning(void)
 {
+    // 只能在一区和二区进行启动
+    if (robot_pos_.x < 0.0f || robot_pos_.x > 6.0f || robot_pos_.y > 10.0f || robot_pos_.y < 0.0f)
+    {
+        return false;
+    }
+
+    // 对kfs夹取数量进行判断，并进行合法判断
     int KFS_num = 0;
     if (KFS_point.MF1 > 0 && KFS_point.MF2 == 0 && KFS_point.MF3 == 0)
     {
@@ -643,14 +645,61 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
     int temp_point = 0;
     int i = 0;
 
-    // 在梅林内的情况
+    // 在梅林内的情况处理，如果需要在外面旋转会先生成路径，如果需要拿同左右同列的会退出
     if (MF_AutoCtrler::GetMapNumFromPos(robot_point_))
     {
         i = 1;
+        temp_point = KFS_KeyPoint_.mustPastMap[0];
+        // 拐角无法处理防止撞车
+        if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
+        {
+            if (robot_pos_.y > 2.6f || robot_pos_.y < 8.5f || robot_pos_.x > 0.7f || robot_pos_.x < 5.3f)
+                return false;
+        }
+        else if (temp_point == 21 || temp_point == 16 || temp_point == 11 || temp_point == 6 || temp_point == 25 || temp_point == 20 || temp_point == 15 || temp_point == 10)
+        {
+            // 在上下两排就直接转
+            target_yaw = KFS_point.MF1_target_yaw_;
+        }
+        else if (temp_point == 27 || temp_point == 28 || temp_point == 29 || temp_point == 30 || temp_point == 2 || temp_point == 3 || temp_point == 4 || temp_point == 5)
+        {
+            if (i != (index_exit - 1))
+            {
+                // 左右两排且接下来不为终点
+                if (KFS_KeyPoint_.mustPastMap[1] == 1 || KFS_KeyPoint_.mustPastMap[1] == 5 || KFS_KeyPoint_.mustPastMap[1] == 26 || KFS_KeyPoint_.mustPastMap[1] == 30)
+                {
+
+                    if (_tool_Abs(yaw - KFS_point.MF1_target_yaw_) < 10.0f)
+                    {
+                        // 角度差距小直接转当做无事发生
+                        target_yaw = KFS_point.MF1_target_yaw_;
+                    }
+                    else
+                    {
+                        // 需要旋转的则生成路径并将索引改到2
+                        KFS_flag.spin_flag_0 = true;
+                        float spin_delay = 1.0f;
+                        if (temp_point == 1 || temp_point == 5)
+                        {
+                            spin_delay *= (-1.0f);
+                        }
+                        spin_vector = spinodal_path(last_vector, temp_vector, i, (KFS_point.spin_skew * spin_delay));
+                        if (spin_vector.x == 0.0f && spin_vector.x == 0.0f)
+                            return false;
+                        KFS_point.spin_pos_0 = spin_vector;
+                        i = 2;
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+            }
+        }
     }
     else
     {
-        target_yaw=KFS_point.MF1_target_yaw_;
+        target_yaw = KFS_point.MF1_target_yaw_;
     }
 
     // 重置路径规划器
@@ -668,7 +717,27 @@ bool OmniChassis_Setup::KFS_Selection_Planning(void)
             if (i == (index_exit - 1)) // 终点
             {
                 temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                path_line_.Add_End_Point(temp_vector, path_param.end);
+                // 梅林自动规划后是否直接上三区
+                if (KFS_flag.uphill_flag == false)
+                {
+                    path_line_.Add_End_Point(temp_vector, path_param.end);
+                }
+                else if (KFS_flag.uphill_flag == true)
+                {
+                    if (last_vector.x == 0.6f)
+                    {
+                        path_line_.Add_Point(temp_vector, path_param.start);
+                        path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
+                        path_line_.Add_End_Point(CZ_point.R1_pos[1], path_param.end);
+                    }
+                    else if (last_vector.y == 8.6f)
+                    {
+                        path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
+                        path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
+                        path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
+                        path_line_.Add_End_Point(CZ_point.R1_pos[1], path_param.end);
+                    }
+                }
                 // 取末端点进行路径退出后的锁点pid
                 Path_end_point = path_line_.Get_End_Point();
                 return true;
@@ -940,6 +1009,7 @@ void OmniChassis_Setup::flag_reset(void)
     KFS_flag.MF2_flag = false;
     KFS_flag.MF3_flag = false;
 
+    KFS_flag.spin_flag_0 = false;
     KFS_flag.spin_flag = false;
     KFS_flag.spin_flag_2 = false;
 
@@ -975,7 +1045,7 @@ Vector2D OmniChassis_Setup::v_limit(void)
     num++;
     if (num > 5)
     {
-        debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), v_tangent.magnitude());
+        // debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), v_tangent.magnitude());
         num = 0;
     }
 

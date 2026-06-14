@@ -85,12 +85,12 @@ typedef struct
 
 typedef struct
 {
-    //接收外部的KFS位置，如果没有变化则不对MF进行赋值
+    // 接收外部的KFS位置，如果没有变化则不对MF进行赋值
     int8_t KFS1 = 0; // 目标点 1 编号。
     int8_t KFS2 = 0; // 目标点 2 编号。
     int8_t KFS3 = 0; // 目标点 3 编号。
-    
-    //内部的KFS位置，用于退出保存功能
+
+    // 内部的KFS位置，用于退出保存功能
     int8_t MF1 = 0; // 目标点 1 编号。
     int8_t MF2 = 0; // 目标点 2 编号。
     int8_t MF3 = 0; // 目标点 3 编号。
@@ -98,11 +98,11 @@ typedef struct
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
     Vector2D MF3_pos_ = {0.0f, 0.0f};
-    
-    Vector2D spin_pos_0 = {0.0f, 0.0f};   // 是否需要执行中途转向。
+
+    Vector2D spin_pos_0 = {0.0f, 0.0f}; // 是否需要执行中途转向。
     Vector2D spin_pos = {0.0f, 0.0f};   // 是否需要执行中途转向。
     Vector2D spin_pos_2 = {0.0f, 0.0f}; // 是否需要执行中途转向。
-    
+
     float MF1_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
     float MF2_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
     float MF3_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
@@ -116,8 +116,8 @@ typedef struct
 typedef struct
 {
     Vector2D uphill_pos = {0.6f, 11.4f};
-    float skew_yaw=1.7f;
-    //下界10.02f上界是11.52f
+    float skew_yaw = 1.7f;
+    // 下界10.02f上界是11.52f
     Vector2D fit_ahead_pos = {2.17f, 10.05f};
     Vector2D fit_end_pos = {4.83f, 11.5f};
 
@@ -125,7 +125,7 @@ typedef struct
     float fit_yaw = -90.0f;
 
     // 左中右的索引
-    
+
     int R1_pos_index = 0;
     int fit_pos_index = 1;
     int R2_pos_index = 0;
@@ -141,6 +141,7 @@ typedef struct
 {
     bool get_spin_flag = false; // 旋转触发过渡标志。
 
+    bool spin_flag_0 = false; // 是否需要执行中途转向。
     bool spin_flag = false;   // 是否需要执行中途转向。
     bool spin_flag_2 = false; // 是否需要执行中途转向。
 
@@ -151,6 +152,7 @@ typedef struct
     bool MF1_finish = false; // MF1 阶段已完成标志。
     bool MF2_finish = false; // MF2 阶段已完成标志。
 
+    // 为全局默认参数，不需要重置
     bool uphill_flag = true; // 默认KFS自动后上坡进入三区
 } KFS_FLAG;
 
@@ -224,7 +226,6 @@ private:
     bool pid_dead_flag = false; // pid完成标志
 
     int flag = 0; // 自动流程起始触发位（边沿触发）。
-    // int flag_run = 0; // 自动流程运行中标志位。
 
     //-----------------------------------接口监视参数-----------------------------------------//
 
@@ -242,23 +243,22 @@ private:
 
     CZ_FLAG CZ_flag;
     CZ_POINT CZ_point;
+
+    BezierCurve curve; // 当前路径曲线缓存。
+
+    Path_line path_line_; // 路径规划器对象。
     //-----------------------------------速度规划参数--------------------------------------------//
 
     SPEED_PARAM V;
     PATH_PARAM path_param;
 
-    PID_Position pid_pos_x; // x轴绝对位置PID控制器
-    PID_Position pid_pos_y; // y轴绝对位置PID控制器
-    PID_Position path_lock; // 停止锁点
-    PID_Position path_lock_r2;// 停止R2锁点
-
-    BezierCurve curve; // 当前路径曲线缓存。
-
-    Path_line path_line_; // 路径规划器对象。
+    PID_Position pid_pos_x;    // x轴绝对位置PID控制器
+    PID_Position pid_pos_y;    // y轴绝对位置PID控制器
+    PID_Position path_lock;    // 停止锁点
+    PID_Position path_lock_r2; // 停止R2锁点
 
     //-----------------------------------其他参数-----------------------------------------//
     int num = 0;
-    // int start_num = 0;
 
     Point3D ladar_data_; // 定位系统输出的原始位姿数据。
 
@@ -296,7 +296,7 @@ private:
     float rotation_path(float MF_Point);
 
     void Path_lock_point(Vector2D lock_point);
-    
+
     void CZ_R1_Selection_Planning(void);
 
     void CZ_R2_Selection_Planning(void);
@@ -314,17 +314,6 @@ public:
             flag = 1;
         else
             flag = 0;
-
-        //        if (start == 0)
-        //        {
-        //            start_num++;
-        //            if (start_num == 3)
-        //                flag_run = 0;
-        //        }
-        //        else
-        //        {
-        //            start_num = 0;
-        //        }
     }
 
     bool GetReach_flag()
