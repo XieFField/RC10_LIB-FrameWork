@@ -66,6 +66,7 @@ typedef struct{
     uint8_t button_click_state = 0;
 #endif
     uint8_t is_store_acting = 0; //手操作存储状态 0无动作 1取出 2存储 3拾取 4放下
+    
     uint8_t last_manual_store = 0; //上一次手动存储状态
 
 }arm_ctrl_status_S;

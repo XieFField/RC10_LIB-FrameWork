@@ -536,8 +536,8 @@ void FSM_Controller::auto_ctrl()
         chassis_setup_->setChassisStatus(CHASSIS_STOP);
 #endif
 
-        // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-        arm_setup_->setArmStatus(ARM_IDLE);
+        arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+        //arm_setup_->setArmStatus(ARM_IDLE);
         weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
         static uint8_t is_click = 0;
