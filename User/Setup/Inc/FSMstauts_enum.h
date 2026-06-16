@@ -60,17 +60,12 @@ typedef enum{
 
 typedef enum{
     ARM_MANUAL_CONTROL, //手操
-
     ARM_AUTO_CONTROL, //自动
-
-
-    ARM_SEMI_AUTO_CONTROL, //半自动
+    ARM_SEMI_AUTO_CONTROL, //半自动 (竞技场模式)
+    ARM_SEMI_LOW_LEVEL, // 减配版半自动
     ARM_IDLE, //待机
-
     ARM_STOP,
-
     ARM_DEBUG,
-
     ARM_CALIBRATE, //校准
 }ARM_Status_E;
 
@@ -95,7 +90,7 @@ typedef enum{
 
 
     WEAPONSAGE_AUTO_CONTROL, //自动控制
-    WEAPONSAGE_SEMI_AUTO_CONTROL, //半自动控制
+    WEAPONSAGE_SEMI_AUTO_CONTROL, //半自动控制 
     WEAPONSAGE_SEMI_AUTO_CONTROL_1, //半自动控制
     WEAPONSAGE_SEMI_AUTO_CONTROL_2, //半自动控制
 
