@@ -230,7 +230,7 @@ public:
 		register_arm_Motor(arm_motor);
 	}
 	
-	
+	WeaponSage_InitData_S getInitData() const { return initData_; }
 	
 private:
 

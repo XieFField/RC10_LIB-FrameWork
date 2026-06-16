@@ -29,21 +29,17 @@ void FSM_Controller::loop()
         Locate_Setup::getInstance()->get_RobotPos_inWorld().x,
         Locate_Setup::getInstance()->get_RobotPos_inWorld().y,
         Locate_Setup::getInstance()->get_RobotPos_inWorld().yaw);
-    bool suker_status = false, store_sucker_status = false;
+    bool suker_status = false;
 
     if (arm_setup_->getSuckerStatus() == SUCK)
         suker_status = true;
     else
         suker_status = false;
 
-    if (arm_setup_->getStoreSuckerStatus() == SUCK)
-        store_sucker_status = true;
-    else
-        store_sucker_status = false;
 
-    communication::Lora_communication::GetInstance()->send_sucker_status(
-        suker_status,
-        store_sucker_status);
+    // communication::Lora_communication::GetInstance()->send_sucker_status(
+    //     suker_status,
+    //     store_sucker_status);
 
     communication::Lora_communication::GetInstance()->send_claw_status(
         weaponSage_setup_->get_CurrentPos().claw_1_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false,
@@ -304,7 +300,7 @@ void FSM_Controller::manual_ctrl()
 
         case 0x02:
         {
-            weaponSage_setup_->setWeaponSageControl(WEAPONSAGE_MANUAL_CONTROL);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_CONTROL);
             arm_setup_->setArmStatus(ARM_IDLE);
             if(airjoy_data_.SWE == 0x00)
                 chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
@@ -478,12 +474,12 @@ void FSM_Controller::auto_ctrl()
 
         if(airjoy_data_.SWD == 0x00 && airjoy_data_.SWB == 0x00) //手操模式-机械臂十字键
         {
-            arm_setup->setArmStatus(ARM_MANUAL_CONTROL);
+            arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
         }
         else if(airjoy_data_.SWD == 0x01 && airjoy_data_.SWB == 0x00) //手操模式-武器十字键
         {
-            arm_setup->setArmStatus(ARM_IDLE);
+            arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_CONTROL);
         }
         else if(airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x00) //合体模式 上层IDLE
@@ -521,7 +517,7 @@ void FSM_Controller::auto_ctrl()
             arm_setup_->setArmStatus(ARM_IDLE);
             static uint8_t is_click = 0;
 
-            if (airjoy_data_.botton_click == 1 && is_click == 0)
+            if (airjoy_data_.LB == 1 && is_click == 0)
             {
                 arm_setup_->set_Arm_autoStart(1); // 开始自动流程
 #if !ARM_AUTO_DEBUG_NOCHASSIS
@@ -529,7 +525,7 @@ void FSM_Controller::auto_ctrl()
 #endif
                 is_click = 1;
             }
-            else if (airjoy_data_.botton_click == 0)
+            else if (airjoy_data_.LB == 0)
             {
                 is_click = 0;
             }
@@ -557,7 +553,7 @@ void FSM_Controller::auto_ctrl()
             else if (airjoy_data_.SWE == 0x01)
                 chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
 
-            arm_setup->setArmStatus(ARM_MANUAL_CONTROL); //需要区分SWE 来分开底盘和机械臂的手操模式
+            arm_setup_->setArmStatus(ARM_SEMI_LOW_LEVEL); //需要区分SWE 来分开底盘和机械臂的手操模式
         }
         break;
     }
@@ -575,13 +571,13 @@ void FSM_Controller::auto_ctrl()
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
             static uint8_t is_click = 0;
-            if (airjoy_data_.botton_click == 1 && is_click == 0)
+            if (airjoy_data_.LB == 1 && is_click == 0)
             {
                 chassis_setup_->setPathAutoStart(1); // 路径自动开始标志
                 weaponSage_setup_->setCBauto(true);
                 is_click = 1;
             }
-            else if (airjoy_data_.botton_click == 0)
+            else if (airjoy_data_.LB == 0)
             {
                 is_click = 0;
             }

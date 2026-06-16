@@ -37,6 +37,10 @@ extern "C" {
 #define ARM_AUTO_DEBUG_NOCHASSIS  0 //无底盘下的模拟调试开关 1开启 0关闭
 #define ARM_VERSION 0 //版本号 已无用
 
+typedef enum{
+    INSIDE,
+    OUTSIDE,
+}Store_MANUAL_E;
 
 typedef struct{
     bool init_flag = false;
@@ -70,6 +74,8 @@ typedef struct{
     uint8_t last_manual_store = 0; //上一次手动存储状态
 
     bool can_putdown = 0;
+
+    Store_MANUAL_E store_manual_mode = OUTSIDE; //存储位手动模式，默认外部
 }arm_ctrl_status_S;
 
 
@@ -319,6 +325,7 @@ private:
 
     //控制函数相关
     void manualControl();
+    void manualControl_lowLevel();
 
     bool manual_store(uint8_t kfs_index); //存儲kfs
     bool manual_takeout(uint8_t kfs_index); //取出存储kfs
@@ -337,9 +344,6 @@ private:
 
     //=======================
     //自动控制相关状态函数
-
-    void semiautoControl_1();
-    void semiautoControl_2();
 
     void auto_stillnessOne();
     void auto_stillnessTwo();
