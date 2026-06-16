@@ -64,9 +64,6 @@ void ArmSetup::loop()
 
     arm_ctrlStatus.button_click_state =  button_detector_1.update(airjoy_data_.botton_click);
 #else
-    communication::Lora_communication::GetInstance()->Task_Process();
-    communication::Lora_communication::GetInstance()->Tim_It_Process();
-
     communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
 #endif
     if(arm_status_ == ARM_AUTO_CONTROL)

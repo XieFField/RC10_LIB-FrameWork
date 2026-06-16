@@ -39,6 +39,7 @@ extern "C"
 #include "APP_Bezier_Curve.h"
 #include "AutoCtrler.h"
 #include "chassis.h"
+#include "Module_lora.h"
 
 typedef struct
 {
@@ -273,7 +274,11 @@ private:
 
     bool init_flag = false; // 初始化完成标志。
 
+    #if !USE_RC10_AIRJOY
     RmPocketData_t airjoy_data_;                    // 遥控器数据，范围 -1 ~ 1
+    #else
+    communication::RC10_AirJoy_Data_S airjoy_data_; // 遥控器数据，范围 -1 ~ 1
+    #endif
     MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
 
     Debug_Printf debug_uart = Debug_Printf(&huart8);                          // 调试串口

@@ -2,12 +2,6 @@
 #include "usart.h"
 #include "main.h"
 #include <cmath>
-uint8_t KFS_want1;
-uint8_t KFS_want2;
-uint8_t spear;
-int16_t Axis_x;
-int16_t Axis_y;
-int16_t Axis_yaw;
 namespace {
 static inline float NormalizeAxis(uint16_t raw, float center, float span, float deadzone = 0.05f, bool invert = false)
 {
@@ -60,9 +54,9 @@ Lora_communication* Lora_communication::s_instance = nullptr;
 === */
 Lora_communication* Lora_communication::GetInstance()
 {
-    static Lora_communication instance(&huart8, &huart6,
-                                       GPIOB, GPIO_PIN_11,
-                                       GPIOB, GPIO_PIN_10,
+    static Lora_communication instance(&huart4, &huart6,
+                                       Lora_IO1_GPIO_Port, Lora_IO1_Pin,
+                                       Lora_IO2_GPIO_Port, Lora_IO2_Pin,
                                        nullptr);
     if (s_instance == nullptr) {
         s_instance = &instance;
@@ -148,9 +142,9 @@ void Lora_communication::Comm_TxUseTxDMA(UART_HandleTypeDef* huart, uint8_t* dat
 
 void Lora_communication::Task_Process() {
     if (Comm_Task_Loop()) {
-        SetSendAxisData(Axis_x, Axis_y, Axis_yaw);
-        SetSendWantKFSData(KFS_want1, KFS_want2);
-        SetSendSpearData(spear);
+        // SetSendAxisData(Axis_x, Axis_y, Axis_yaw);
+        // SetSendWantKFSData(KFS_want1, KFS_want2);
+        // SetSendSpearData(spear);
 
         uint16_t joystick[4];
         // 新的 Communication 接口：分别获取摇杆和按键/设置数据
@@ -271,54 +265,45 @@ void Lora_communication::flush_pending_frame()
 
 void Lora_communication::send_robot_pos(float x, float y, float yaw)
 {
-    pending_x_raw_ = PackSigned16(x, 100.0f);
-    pending_y_raw_ = PackSigned16(y, 100.0f);
-    pending_yaw_raw_ = PackSigned16(yaw, 100.0f);
-    pending_tx_dirty_ = true;
-    flush_pending_frame();
+    send_x = PackSigned16(x, 100.0f);
+    send_y = PackSigned16(y, 100.0f);
+    send_z = PackSigned16(yaw, 100.0f);
 }
 
 void Lora_communication::send_claw_status(bool claw1, bool claw2, bool claw3)
 {
-    pending_claw_status_ = static_cast<uint8_t>((claw1 ? 0x01U : 0x00U) |
+    send_gripper_status = static_cast<uint8_t>((claw1 ? 0x01U : 0x00U) |
                                                (claw2 ? 0x02U : 0x00U) |
                                                (claw3 ? 0x04U : 0x00U));
-    pending_tx_dirty_ = true;
-    flush_pending_frame();
 }
 
 void Lora_communication::send_sucker_status(bool sucker1, bool sucker2)
 {
-    pending_sucker_status_ = static_cast<uint8_t>((sucker1 ? 0x01U : 0x00U) |
-                                                 (sucker2 ? 0x02U : 0x00U));
-    pending_tx_dirty_ = true;
-    flush_pending_frame();
+    send_suction_cup_status = static_cast<uint8_t>((sucker1 ? 0x01U : 0x00U) |
+                                                   (sucker2 ? 0x02U : 0x00U));
 }
 
 void Lora_communication::send_auto_status(bool auto_status)
 {
-    auto_mode_ = auto_status;
-    pending_tx_dirty_ = true;
-    flush_pending_frame();
+    send_automatic_status = auto_status;
 }
 
 void Lora_communication::send_command(int8_t cmd)
 {
-    pending_command_ = static_cast<uint8_t>(cmd);
-    pending_tx_dirty_ = true;
-    flush_pending_frame();
+    chosen_command = static_cast<uint8_t>(cmd);
 }
 
 /* ========== 定时器中断 ========== */
 void Lora_communication::Tim_It_Process() {
     timer_tick_count++;
-    if (timer_tick_count >= 2) { // 计数达到 1ms 
+    if (timer_tick_count >= 2) 
+    { // 计数达到 1ms 
         timer_tick_count = 0;
         GetChosenCommandAndCnt(chosen_command, chosen_command_cnt, recv_command_load2);
         Comm_SendAxisDataToTxBuffer(send_x, send_y, send_z,
-            send_gripper_status, send_suction_cup_status, send_automatic_status,
-            send_mode, chosen_command, chosen_command_cnt,
-            send_kfs_want_place1_, send_kfs_want_place2_, send_spear_, send_kfs_keepplace_);
+        send_gripper_status, send_suction_cup_status, send_automatic_status,
+        send_mode, chosen_command, chosen_command_cnt,
+        send_kfs_want_place1_, send_kfs_want_place2_, send_spear_, send_kfs_keepplace_);
     }
 }
 

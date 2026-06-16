@@ -2,7 +2,7 @@
 #include "chassis_swerve_task_demo.h"
 
 int8_t test_led = 0;
-
+float x_ , y_ , yaw_;
 void FSM_Controller::loop()
 {
     if (!init_flag_)
@@ -10,8 +10,11 @@ void FSM_Controller::loop()
 
     if (!test_led)
         Serial1Protocol::getInstance()->sendStop();
-    else
+    else if(test_led !=0 && test_led < 100)
+    {
         Serial1Protocol::getInstance()->send_cmd_to_R2(test_led);
+        test_led = 101;
+    }
 
 #if !USE_RC10_AIRJOY
     CrsfReceiver::GetInstance(&huart7)->send_kfsandSpear(crsf_send_s.rsf_send_data.kfs1, crsf_send_s.rsf_send_data.kfs2,
@@ -25,10 +28,14 @@ void FSM_Controller::loop()
 
     communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
 
+    // communication::Lora_communication::GetInstance()->send_robot_pos(
+    //     Locate_Setup::getInstance()->get_RobotPos_inWorld().x,
+    //     Locate_Setup::getInstance()->get_RobotPos_inWorld().y,
+    //     Locate_Setup::getInstance()->get_RobotPos_inWorld().yaw);
     communication::Lora_communication::GetInstance()->send_robot_pos(
-        Locate_Setup::getInstance()->get_RobotPos_inWorld().x,
-        Locate_Setup::getInstance()->get_RobotPos_inWorld().y,
-        Locate_Setup::getInstance()->get_RobotPos_inWorld().yaw);
+        x_,
+        y_,
+        yaw_);
     bool suker_status = false;
 
     if (arm_setup_->getSuckerStatus() == SUCK)
@@ -37,9 +44,9 @@ void FSM_Controller::loop()
         suker_status = false;
 
 
-    // communication::Lora_communication::GetInstance()->send_sucker_status(
-    //     suker_status,
-    //     store_sucker_status);
+    communication::Lora_communication::GetInstance()->send_sucker_status(
+        suker_status,
+        0);
 
     communication::Lora_communication::GetInstance()->send_claw_status(
         weaponSage_setup_->get_CurrentPos().claw_1_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false,
