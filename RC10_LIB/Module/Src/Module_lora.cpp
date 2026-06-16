@@ -9,27 +9,31 @@ int16_t Axis_x;
 int16_t Axis_y;
 int16_t Axis_yaw;
 namespace {
-static inline float NormalizeAxis(uint16_t raw, float center, float span, float deadzone = 0.05f)
+static inline float NormalizeAxis(uint16_t raw, float center, float span, float deadzone = 0.05f, bool invert = false)
 {
     float value = (static_cast<float>(raw) - center) / span;
+    if (invert) {
+        value = -value;
+    }
     if (std::fabs(value) < deadzone) {
         value = 0.0f;
     }
     return value;
 }
 
-static inline uint8_t DecodeSwitchLevel(uint16_t raw, uint8_t shift)
+// 三位拨杆解码（SWA/SWF）：raw编码 00=中,01=下,10=上 → 映射 0=上,1=中,2=下
+static inline uint8_t DecodeSwitch3Pos(uint16_t raw, uint8_t shift)
 {
     uint8_t value = static_cast<uint8_t>((raw >> shift) & 0x03U);
-    if (value > 2U) {
-        value = 2U;
-    }
-    return value;
+    // 映射表：raw[0]=00→1(中), raw[1]=01→2(下), raw[2]=10→0(上)
+    static const uint8_t map[] = {1, 2, 0};
+    return map[value > 2 ? 0 : value];
 }
 
-static inline uint8_t DecodeSwitchBit(uint16_t raw, uint8_t shift)
+// 二档拨杆解码（SWB/SWC/SWD/SWE）：raw编码 0=下,1=上 → 映射 0=上,1=下（取反）
+static inline uint8_t DecodeSwitch2Pos(uint16_t raw, uint8_t shift)
 {
-    return static_cast<uint8_t>((raw >> shift) & 0x01U);
+    return static_cast<uint8_t>(1U - ((raw >> shift) & 0x01U));
 }
 
 static inline uint16_t PackSigned16(float value, float scale)
@@ -42,7 +46,9 @@ static inline uint16_t PackSigned16(float value, float scale)
     }
     return static_cast<uint16_t>(static_cast<int16_t>(scaled));
 }
-}
+}  // namespace (anonymous)
+
+
 
 namespace communication {
 
@@ -53,8 +59,8 @@ Lora_communication* Lora_communication::s_instance = nullptr;
 Lora_communication* Lora_communication::GetInstance()
 {
     static Lora_communication instance(&huart5, &huart6,
-                                       GPIOB, GPIO_PIN_10,
                                        GPIOB, GPIO_PIN_11,
+                                       GPIOB, GPIO_PIN_10,
                                        nullptr);
     if (s_instance == nullptr) {
         s_instance = &instance;
@@ -168,27 +174,31 @@ void Lora_communication::Task_Process() {
 
         airjoy_data_.page = GetPage();
 
-        airjoy_data_.left_x  = NormalizeAxis(joystick[0], 512.0f, 512.0f);
-        airjoy_data_.left_y  = NormalizeAxis(joystick[1], 512.0f, 512.0f);
-        airjoy_data_.right_x = NormalizeAxis(joystick[2], 512.0f, 512.0f);
-        airjoy_data_.right_y = NormalizeAxis(joystick[3], 512.0f, 512.0f);
+        // 左摇杆：极性反转（4096=左/下, 0=右/上），映射后右=+1, 上=+1
+        airjoy_data_.left_x  = NormalizeAxis(joystick[0], 2048.0f, 2048.0f, 0.05f, true);
+        airjoy_data_.left_y  = NormalizeAxis(joystick[1], 2048.0f, 2048.0f, 0.05f, true);
+        // 右摇杆：极性正常（4096=右/上, 0=左/下），映射后右=+1, 上=+1
+        airjoy_data_.right_x = NormalizeAxis(joystick[2], 2048.0f, 2048.0f);
+        airjoy_data_.right_y = NormalizeAxis(joystick[3], 2048.0f, 2048.0f);
 
-        airjoy_data_.SWA = DecodeSwitchLevel(key, 0);
-        airjoy_data_.SWB = DecodeSwitchBit(key, 2);
-        airjoy_data_.SWC = DecodeSwitchBit(key, 3);
-        airjoy_data_.SWD = DecodeSwitchBit(key, 4);
-        airjoy_data_.SWE = DecodeSwitchBit(key, 5);
-        airjoy_data_.SWF = DecodeSwitchLevel(key, 6);
+        airjoy_data_.SWA = DecodeSwitch3Pos(key, 2);
+        airjoy_data_.SWB = DecodeSwitch2Pos(key, 7);
+        airjoy_data_.SWC = DecodeSwitch2Pos(key, 6);
+        airjoy_data_.SWD = DecodeSwitch2Pos(key, 5);
+        airjoy_data_.SWE = DecodeSwitch2Pos(key, 4);
+        airjoy_data_.SWF = DecodeSwitch3Pos(key, 0);
 
-        airjoy_data_.d_pad_up    = static_cast<uint8_t>((key >> 8) & 0x01U);
-        airjoy_data_.d_pad_down  = static_cast<uint8_t>((key >> 9) & 0x01U);
+        // 十字键：b11=上, b8=下, b10=左, b9=右
+        airjoy_data_.d_pad_up    = static_cast<uint8_t>((key >> 11) & 0x01U);
+        airjoy_data_.d_pad_down  = static_cast<uint8_t>((key >> 8) & 0x01U);
         airjoy_data_.d_pad_left  = static_cast<uint8_t>((key >> 10) & 0x01U);
-        airjoy_data_.d_pad_right = static_cast<uint8_t>((key >> 11) & 0x01U);
+        airjoy_data_.d_pad_right = static_cast<uint8_t>((key >> 9) & 0x01U);
 
-        airjoy_data_.LB = static_cast<uint8_t>((key >> 12) & 0x01U);
-        airjoy_data_.RB = static_cast<uint8_t>((key >> 13) & 0x01U);
+        // 肩键：LB=左后(b15), LT=左前(b14), RT=右前(b13), RB=右后(b12)
+        airjoy_data_.LB = static_cast<uint8_t>((key >> 15) & 0x01U);
         airjoy_data_.LT = static_cast<uint8_t>((key >> 14) & 0x01U);
-        airjoy_data_.RT = static_cast<uint8_t>((key >> 15) & 0x01U);
+        airjoy_data_.RT = static_cast<uint8_t>((key >> 13) & 0x01U);
+        airjoy_data_.RB = static_cast<uint8_t>((key >> 12) & 0x01U);
 
         uint16_t key_status = key;
         for (uint8_t i = 0; i < 16; ++i) {
@@ -306,7 +316,7 @@ void Lora_communication::Tim_It_Process() {
         Comm_SendAxisDataToTxBuffer(send_x, send_y, send_z,
             send_gripper_status, send_suction_cup_status, send_automatic_status,
             send_mode, chosen_command, chosen_command_cnt,
-            send_kfs_want_place1, send_kfs_want_place2, send_spear, send_kfs_keepplace);
+            send_kfs_want_place1_, send_kfs_want_place2_, send_spear_, send_kfs_keepplace_);
     }
 }
 

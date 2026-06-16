@@ -65,8 +65,10 @@ void parse_uart_data(uint8_t data);
 #define kPHOTOGATE_3_GPIO_Port GPIOF
 #define Lora_IO1_Pin GPIO_PIN_10
 #define Lora_IO1_GPIO_Port GPIOB
+#define Lora_IO1_EXTI_IRQn EXTI15_10_IRQn
 #define Lora_IO2_Pin GPIO_PIN_11
 #define Lora_IO2_GPIO_Port GPIOB
+#define Lora_IO2_EXTI_IRQn EXTI15_10_IRQn
 #define kPHOTOGATE_1_Pin GPIO_PIN_14
 #define kPHOTOGATE_1_GPIO_Port GPIOD
 #define kPHOTOGATE_2_Pin GPIO_PIN_15
