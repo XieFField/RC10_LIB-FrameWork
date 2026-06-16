@@ -105,7 +105,7 @@ private:
 /*------------------------------------------------------------------------------------*/
 	uint8_t Master_Id;                          //锟斤拷锟斤拷帧ID
 	uint8_t DM_Id;                              //锟斤拷锟絀D
-	uint8_t Error_num;                          //锟斤拷锟斤拷锟斤拷
+	uint8_t Error_num = 0;                          //锟斤拷锟斤拷锟斤拷
 	
 	int p_int,v_int,i_int;
 	float angle,speed,tarque;      				//锟角讹拷 锟劫讹拷 锟斤拷锟斤拷
@@ -120,7 +120,7 @@ private:
 	const float KP_MAX =500.0f,KP_MIN=0.0f;
 	const float KD_MAX =5.0f,KD_MIN=0.0f;
 	const float TFF_MAX=10.0f,TFF_MIN=-10.0f;
-	DM_MOTOR_MODE dm_mode_;
+	DM_MOTOR_MODE dm_mode_ = MOTOR_DISABLE_MODE;
 /*------------------------------------------------------------------------------------*/
 	float P_des=0.0f;                           //目锟斤拷位锟斤拷
 	float V_des=0.0f;							//目锟斤拷锟劫讹拷

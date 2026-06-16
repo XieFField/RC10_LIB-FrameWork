@@ -18,7 +18,7 @@ extern "C" {
 #define SERIAL1_DATA_LEN        3
 #define SERIAL1_FRAME_LEN       8
 
-#define SERIAL1_SEND_TIMES      3          // 每批发送3次
+#define SERIAL1_SEND_TIMES      10          // 每批发送3次
 #define SERIAL1_RETRY_INTERVAL  500        // 重发间隔500ms
 
 /* 校验字节位定义 */
@@ -126,7 +126,8 @@ private:
     // 发送历史记录
     #define MAX_HISTORY 10
     
-    typedef struct {
+    typedef struct 
+    {
         uint8_t data[SERIAL1_DATA_LEN];
         uint8_t last_parity;
         uint8_t send_count;

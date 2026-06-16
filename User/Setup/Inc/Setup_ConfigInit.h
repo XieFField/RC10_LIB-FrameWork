@@ -55,7 +55,7 @@ extern "C" {
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
 #include "chassis.h"
-
+#include "Module_Serial1Protocol.h"
 
 #if SPEEDPLANNER_DEMO_DEBUG
     #include "speedplanner_demo.h"

@@ -364,7 +364,14 @@ void fdCANbus::schedulerTaskbody()
 #endif
 
         for (std::size_t j = 0; j < frameCnt; ++j)
-            sendFrame(frames_to_send[j]);
+        {
+            if (!sendFrame(frames_to_send[j]))
+            {
+                static uint32_t tx_fail_count = 0;
+                tx_fail_count++;
+                (void)tx_fail_count; // 断点观察用，确认是否发生过发送失败
+            }
+        }
     }
 }
 

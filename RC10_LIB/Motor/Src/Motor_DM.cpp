@@ -22,6 +22,7 @@ void DM_Motor::updateFeedback(const CanFrame& cf)
 }
 void DM_Motor::setTargetTotalAngle(float v_target ,float totalAngle_set)
 {
+	
 	V_des=(v_target*pi)/180;
 	P_des=(totalAngle_set*pi)/180;
 	dm_mode_=MOTOR_POSVEL_MODE;
