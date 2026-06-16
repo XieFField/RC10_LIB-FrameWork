@@ -39,12 +39,14 @@ typedef enum{
     SEND_CHASSIS_MANUAL_CTRL = 0x04, //底盘手动控制
     SEND_ARM_MANUAL_CTRL = 0x05, //机械臂手动控制
     SEND_WEAPON_MANUAL_CTRL = 0x06, //武器系统手动控制
-    SEND_CHASSIS_WAIT_AUTO = 0x07, //底盘等待自动控制
-    SEND_ARM_SEMI_AUTO = 0x08, //机械臂半自动控制
-    SEND_ARM_AUTO = 0x09, //机械臂自动控制
-    SEND_WEAPONSAGE_SEMI_AUTO = 0x0A, //武器系统半自动控制
-    SEND_WEAPONSAGE_SEMI_AUTO_LOCK = 0x0B, //武器系统半自动控制
-    SEND_WEAPONSAGE_AUTO = 0x0C //武器系统自动控制
+    
+    SEND_COMBINE_MODE = 0x07, //发送合体模式
+    SEND_COMP_ARM = 0x08, // 竞技场机械臂模式
+    SEND_COMP_WEAPON = 0x09, // 竞技场武器模式
+    SEND_ARM_AUTO = 0x0A, //机械臂自动模式
+    SEND_ARM_SEMI = 0x0B, //机械臂半自动模式
+    SEND_WEAPON_AUTO = 0x0C, //武器系统自动模式
+    SEND_WEAPON_SEMI = 0x0D, //武器系统半自动模式
 }SEND_MODE_TO_AIRJOY_E;
 
 typedef enum{
@@ -58,17 +60,12 @@ typedef enum{
 
 typedef enum{
     ARM_MANUAL_CONTROL, //手操
-
     ARM_AUTO_CONTROL, //自动
-
-
-    ARM_SEMI_AUTO_CONTROL, //半自动
+    ARM_SEMI_AUTO_CONTROL, //半自动 (竞技场模式)
+    ARM_SEMI_LOW_LEVEL, // 减配版半自动
     ARM_IDLE, //待机
-
     ARM_STOP,
-
     ARM_DEBUG,
-
     ARM_CALIBRATE, //校准
 }ARM_Status_E;
 
@@ -93,7 +90,7 @@ typedef enum{
 
 
     WEAPONSAGE_AUTO_CONTROL, //自动控制
-    WEAPONSAGE_SEMI_AUTO_CONTROL, //半自动控制
+    WEAPONSAGE_SEMI_AUTO_CONTROL, //半自动控制 
     WEAPONSAGE_SEMI_AUTO_CONTROL_1, //半自动控制
     WEAPONSAGE_SEMI_AUTO_CONTROL_2, //半自动控制
 

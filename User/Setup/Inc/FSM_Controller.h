@@ -29,6 +29,7 @@ extern "C"
 #include "WeaponSage_Setup.h"
 #include "Setup_ConfigInit.h"
 #include "Module_Serial1Protocol.h"
+#include "Module_lora.h"
 
 typedef enum{
     RELOCATE,
@@ -98,6 +99,7 @@ private:
 
     void debug();
 
+
     void stop_modeswitch();
     FSM_Status_E robot_status_ = ALL_STOP;
     FSM_Status_E last_robot_status_;
@@ -110,8 +112,13 @@ private:
 
     ArmSetup *arm_setup_ = nullptr;
     bool arm_setup_registered_ = false;
-    RmPocketData_t airjoy_data_; // 摇杆值为 -1 ~ 1
 
+#if !USE_RC10_AIRJOY
+    RmPocketData_t airjoy_data_; // 摇杆值为 -1 ~ 1
+#else
+    void set_cmd_to_R2();
+    communication::RC10_AirJoy_Data_S airjoy_data_;
+#endif
     OmniChassis_Setup *chassis_setup_ = nullptr;
     bool chassis_setup_registered_ = false;
     bool init_flag_ = false; // 所有需要注册的机构都已经注册完成
