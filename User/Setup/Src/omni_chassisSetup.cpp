@@ -91,11 +91,11 @@ void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
     path_line_.Add_Start_Point(robot_pos_);
     if (CZ_flag.R1_FB_index == 1)
     {
-        path_line_.Add_End_Point({CZ_point.R1_pos[CZ_flag.R1_RL_index][CZ_flag.R1_FB_index].x, robot_pos_.y}, path_param.end);
+        path_line_.Add_End_Point({CZ_point.R1_pos[CZ_flag.R1_RL_index][1].x, robot_pos_.y}, path_param.end);
     }
     else
     {
-        path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][CZ_flag.R1_FB_index], path_param.end);
+        path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][0], path_param.end);
     }
 
     Path_end_point = path_line_.Get_End_Point();
@@ -281,8 +281,8 @@ void OmniChassis_Setup::loop()
         {
             if (CZ_flag.R1_FB_index == 0)
             {
-                if (CZ_flag.R1_RL_index++ > 2)
-                    CZ_flag.R1_RL_index = 2;
+                if (CZ_flag.R1_RL_index < 2)
+                    CZ_flag.R1_RL_index++;
                 CZ_R1_Selection_Planning();
             }
             right_flag = false;
@@ -294,8 +294,8 @@ void OmniChassis_Setup::loop()
         {
             if (CZ_flag.R1_FB_index == 0)
             {
-                if (CZ_flag.R1_RL_index-- < 0)
-                    CZ_flag.R1_RL_index = 0;
+                if (CZ_flag.R1_RL_index > 0)
+                    CZ_flag.R1_RL_index --;
                 CZ_R1_Selection_Planning();
             }
             right_flag = false;
@@ -303,7 +303,7 @@ void OmniChassis_Setup::loop()
         if (flag == 1)
         {
             flag_reset();
-            CZ_flag.R1_FB_index = (CZ_flag.R1_RL_index + 1) % 2;
+            CZ_flag.R1_FB_index = (CZ_flag.R1_FB_index + 1) % 2;
             CZ_R1_Selection_Planning();
             flag = 0;
         }
@@ -325,8 +325,8 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-                if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
-                    Chassis_Target.VY = (-airjoy_data_.right_x) * 0.6f * this->is_chassis_reverse_;
+                if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                    Chassis_Target.VY = (airjoy_data_.left_x) * 0.6f * this->is_chassis_reverse_;
                 else
                     Chassis_Target.VY = 0.0f;
             }
