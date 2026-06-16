@@ -226,47 +226,47 @@
           <ItemText>weapon_launch_rate</ItemText>
         </Ww>
         <Ww>
-          <count>8</count>
+          <count>14</count>
           <WinNumber>1</WinNumber>
           <ItemText>steer1</ItemText>
         </Ww>
         <Ww>
-          <count>9</count>
+          <count>15</count>
           <WinNumber>1</WinNumber>
           <ItemText>Finite_StateMachine,0x0A</ItemText>
         </Ww>
         <Ww>
-          <count>10</count>
+          <count>16</count>
           <WinNumber>1</WinNumber>
           <ItemText>test_store</ItemText>
         </Ww>
         <Ww>
-          <count>11</count>
+          <count>17</count>
           <WinNumber>1</WinNumber>
           <ItemText>x_</ItemText>
         </Ww>
         <Ww>
-          <count>12</count>
+          <count>18</count>
           <WinNumber>1</WinNumber>
           <ItemText>y_</ItemText>
         </Ww>
         <Ww>
-          <count>13</count>
+          <count>19</count>
           <WinNumber>1</WinNumber>
           <ItemText>yaw_</ItemText>
         </Ww>
         <Ww>
-          <count>14</count>
+          <count>20</count>
           <WinNumber>1</WinNumber>
           <ItemText>claw1</ItemText>
         </Ww>
         <Ww>
-          <count>15</count>
+          <count>21</count>
           <WinNumber>1</WinNumber>
           <ItemText>claw2</ItemText>
         </Ww>
         <Ww>
-          <count>16</count>
+          <count>22</count>
           <WinNumber>1</WinNumber>
           <ItemText>claw3</ItemText>
         </Ww>
