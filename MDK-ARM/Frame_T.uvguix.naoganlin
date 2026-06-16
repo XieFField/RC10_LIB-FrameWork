@@ -3606,27 +3606,27 @@
       <ActiveTab>0</ActiveTab>
       <Doc>
         <Name>..\User\Setup\Src\omni_chassisSetup.cpp</Name>
-        <ColumnNumber>8</ColumnNumber>
-        <TopLine>340</TopLine>
-        <CurrentLine>372</CurrentLine>
+        <ColumnNumber>28</ColumnNumber>
+        <TopLine>181</TopLine>
+        <CurrentLine>60</CurrentLine>
         <Folding>1</Folding>
         <ContractedFolders></ContractedFolders>
         <PaneID>0</PaneID>
       </Doc>
       <Doc>
         <Name>..\User\Setup\Inc\omni_chassisSetup.h</Name>
-        <ColumnNumber>0</ColumnNumber>
-        <TopLine>121</TopLine>
-        <CurrentLine>133</CurrentLine>
+        <ColumnNumber>24</ColumnNumber>
+        <TopLine>67</TopLine>
+        <CurrentLine>84</CurrentLine>
         <Folding>1</Folding>
         <ContractedFolders></ContractedFolders>
         <PaneID>0</PaneID>
       </Doc>
       <Doc>
         <Name>..\User\Setup\Src\FSM_Controller.cpp</Name>
-        <ColumnNumber>41</ColumnNumber>
-        <TopLine>490</TopLine>
-        <CurrentLine>499</CurrentLine>
+        <ColumnNumber>36</ColumnNumber>
+        <TopLine>470</TopLine>
+        <CurrentLine>481</CurrentLine>
         <Folding>1</Folding>
         <ContractedFolders></ContractedFolders>
         <PaneID>0</PaneID>

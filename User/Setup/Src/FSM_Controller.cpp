@@ -504,7 +504,7 @@ void FSM_Controller::auto_ctrl()
             chassis_setup_->setPathAutoStart(0); // 路径自动开始标志清零
             arm_setup_->set_Arm_autoStart(0);    // 自动流程标志清零
         }
-        else if(airjoy_data_.SWD == 0x01)
+        else if (airjoy_data_.SWD == 0x01)
         {
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CZ_R2);
             arm_setup_->setArmStatus(ARM_IDLE);
@@ -537,7 +537,7 @@ void FSM_Controller::auto_ctrl()
 #endif
 
         arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-        //arm_setup_->setArmStatus(ARM_IDLE);
+        // arm_setup_->setArmStatus(ARM_IDLE);
         weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
 
         static uint8_t is_click = 0;
@@ -577,40 +577,38 @@ void FSM_Controller::auto_ctrl()
     case 0x02:
     {
 
-        if (airjoy_data_.SWA == 0x00)
+        // weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTOCONTROL);
+        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+        chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
+        arm_setup_->setArmStatus(ARM_IDLE);
+
+        static uint8_t is_click = 0;
+        if (airjoy_data_.botton_click == 1 && is_click == 0)
         {
-            // weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTOCONTROL);
-            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
-            arm_setup_->setArmStatus(ARM_IDLE);
-
-            static uint8_t is_click = 0;
-            if (airjoy_data_.botton_click == 1 && is_click == 0)
-            {
-                chassis_setup_->setPathAutoStart(1); // 路径自动开始标志
-                weaponSage_setup_->setCBauto(true);
-                is_click = 1;
-            }
-            else if (airjoy_data_.botton_click == 0)
-            {
-                is_click = 0;
-            }
-
-            // 判断是否可以进行互相通讯
-            if (chassis_setup_->GetReach_flag() == true)
-            {
-                weaponSage_setup_->Get_OMNI_IM_flag(true);
-            }
-            if (weaponSage_setup_->Get_Catch_flag() == true)
-            {
-                chassis_setup_->ReceiveReach_flag(false);
-            }
-
-            if (chassis_setup_->GetEnd_flag() == true)
-            {
-                weaponSage_setup_->Get_OMNI_DS_flag(true);
-            }
+            chassis_setup_->setPathAutoStart(1); // 路径自动开始标志
+            weaponSage_setup_->setCBauto(true);
+            is_click = 1;
         }
+        else if (airjoy_data_.botton_click == 0)
+        {
+            is_click = 0;
+        }
+
+        // 判断是否可以进行互相通讯
+        if (chassis_setup_->GetReach_flag() == true)
+        {
+            weaponSage_setup_->Get_OMNI_IM_flag(true);
+        }
+        if (weaponSage_setup_->Get_Catch_flag() == true)
+        {
+            chassis_setup_->ReceiveReach_flag(false);
+        }
+
+        if (chassis_setup_->GetEnd_flag() == true)
+        {
+            weaponSage_setup_->Get_OMNI_DS_flag(true);
+        }
+
         break;
     }
     }

@@ -74,13 +74,15 @@ typedef struct
 typedef struct
 {
     float CB_spiw = 0.5f;
-    float CB_pole_L = -0.18f;
-    float CB_pole_M = -0.02f;
-    float CB_pole_R = 0.22f;
     Vector2D CB_Start_pos = {1.0f, 0.9f};        // 夹杆起点。
     Vector2D CB_Selection_pos = {2.47f, 0.815f}; // 夹杆流程默认目标点。
+    //相机流程
     Vector2D CB_End_pos = {2.745f, 1.185f};
-    // Vector2D CB_End_pos = {4.0f-CB_spiw-0.4f-0.49f, 2.0f+CB_pole_L};  // 夹杆终点对接默认目标点。(4.0为R2对接车体位置，0.5为夹杆预留长度，0.4为R2车体半径，0.49为R1车体半径）
+    
+    //贴边流程
+    Vector2D CB_transition_pos = {2.745f, 1.0f};
+    Vector2D CB_welt_pos = {3.3f, 0.50f};
+    
 } CB_POINT;
 
 typedef struct
@@ -128,12 +130,12 @@ typedef struct
 
     int R1_RL_index = 1;
     int R1_FB_index = 0;
-    
+
     int fit_pos_index = 1;
     int R2_pos_index = 0;
 
     // 左中右   或者   先后
-    Vector2D R1_pos[3][2] = {{{4.535f, 11.285f},{4.635f, 11.285f}}, {{4.535f, 10.705f},{4.635f, 10.705f}}, {{4.535f, 10.185f},{4.535f, 10.185f}}};
+    Vector2D R1_pos[3][2] = {{{4.535f, 11.285f}, {4.635f, 11.285f}}, {{4.535f, 10.705f}, {4.635f, 10.705f}}, {{4.535f, 10.185f}, {4.535f, 10.185f}}};
     Vector2D fit_pos[2] = {fit_ahead_pos, fit_end_pos};
     Vector2D R2_pos[3] = {{4.83f, 11.285f}, {4.83f, 10.705f}, {4.83f, 10.185f}};
 
@@ -301,7 +303,7 @@ private:
     void Path_lock_point(Vector2D lock_point);
 
     void CZ_R1_Selection_Planning(void);
-    
+
     void CZ_R2_Selection_Planning(void);
 
 public:

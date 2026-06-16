@@ -13,20 +13,42 @@ void OmniChassis_Setup::Path_CB_check(void)
         pid_dead_flag = false;
         WeaponSage_Start = true;
     }
-
-    if (CB_point.CB_End_pos.x == curve.Get_End_point().x && CB_point.CB_End_pos.y == curve.Get_End_point().y)
+    if (airjoy_data_.SWA == 0x00)
     {
-        CB_flag.Retreat_flag = true;
-        if (WeaponSage_Start == false)
+        if (CB_point.CB_End_pos.x == curve.Get_End_point().x && CB_point.CB_End_pos.y == curve.Get_End_point().y)
         {
-            target_yaw = 90.0f;
+            CB_flag.Retreat_flag = true;
+            if (WeaponSage_Start == false)
+            {
+                target_yaw = 90.0f;
+            }
+        }
+        else if (CB_flag.Retreat_flag == true)
+        {
+            CB_flag.Retreat_flag = false;
+            pid_dead_flag = false;
+            WeaponSage_End = true;
         }
     }
-    else if (CB_flag.Retreat_flag == true)
+    else if (airjoy_data_.SWA == 0x01)
     {
-        CB_flag.Retreat_flag = false;
-        pid_dead_flag = false;
-        WeaponSage_End = true;
+        if (CB_point.CB_transition_pos.x == curve.Get_End_point().x && CB_point.CB_transition_pos.y == curve.Get_End_point().y)
+        {
+            if (WeaponSage_Start == false)
+            {
+                target_yaw = 90.0f;
+            }
+        }
+        if (CB_point.CB_welt_pos.x == curve.Get_End_point().x && CB_point.CB_welt_pos.y == curve.Get_End_point().y)
+        {
+            CB_flag.Retreat_flag = true;
+        }
+        else if (CB_flag.Retreat_flag == true)
+        {
+            CB_flag.Retreat_flag = false;
+            pid_dead_flag = false;
+            WeaponSage_End = true;
+        }
     }
 }
 
@@ -37,24 +59,24 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
     path_line_.Reset();
     path_line_.plan_reset();
 
-    //     path_line_.Add_Start_Point(robot_pos_);
-    //     path_line_.Add_End_Point(test_point, path_param.CB);
-
-    // 夹杆路径的测试
-    //    path_line_.Add_Start_Point(robot_pos_);
-    //    path_line_.Add_Point(CB_point.CB_Selection_start_point_, path_param.start);
-    //    path_line_.Add_Point(CB_point.Clamping_Bar_Selection_pos_, CB_point.CB_Selection_control_point_, path_param.curve);
-    //    path_line_.Add_End_Point(CB_point.Clamping_Bar_Retreat_pos_, path_param.end);
-
     // 夹杆路径
     path_line_.Add_Start_Point(robot_pos_);
-    //    if (robot_pos_.y < CB_point.CB_Selection_pos.y)
-    //    {
-    //        path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
-    //    }
-    //    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.end);
-    path_line_.Add_End_Point(CB_point.CB_End_pos, path_param.end);
+    if (robot_pos_.y < CB_point.CB_Selection_pos.y)
+    {
+        path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
+    }
+    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.end);
 
+    // 相机流程
+    if (airjoy_data_.SWA == 0x00)
+    {
+        path_line_.Add_End_Point(CB_point.CB_End_pos, path_param.end);
+    }
+    else if (airjoy_data_.SWA == 0x01)
+    {
+        path_line_.Add_Point(CB_point.CB_transition_pos, path_param.end);
+        path_line_.Add_End_Point(CB_point.CB_welt_pos, path_param.end);
+    }
     Path_end_point = path_line_.Get_End_Point();
 }
 
@@ -66,15 +88,15 @@ void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
     path_line_.plan_reset();
 
     path_line_.Add_Start_Point(robot_pos_);
-    if(CZ_point.R1_FB_index==1)
+    if (CZ_point.R1_FB_index == 1)
     {
-       path_line_.Add_End_Point({CZ_point.R1_pos[CZ_point.R1_RL_index][CZ_point.R1_FB_index].x,robot_pos_.y}, path_param.end);
+        path_line_.Add_End_Point({CZ_point.R1_pos[CZ_point.R1_RL_index][CZ_point.R1_FB_index].x, robot_pos_.y}, path_param.end);
     }
     else
     {
         path_line_.Add_End_Point(CZ_point.R1_pos[CZ_point.R1_RL_index][CZ_point.R1_FB_index], path_param.end);
     }
-    
+
     Path_end_point = path_line_.Get_End_Point();
 }
 
@@ -109,7 +131,6 @@ void OmniChassis_Setup::loop()
         return;
 
     float dyaw = Locate_Setup::getInstance()->get_dyaw_from_position();
-
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
     ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
@@ -368,8 +389,7 @@ void OmniChassis_Setup::loop()
             CZ_R1_Selection_Planning();
             flag = 0;
         }
-        
-        
+
         if (path_line_.Is_End() == false)
         {
             // 获取曲线（带保护）
