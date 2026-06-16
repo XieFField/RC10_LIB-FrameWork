@@ -269,42 +269,32 @@ void Lora_communication::flush_pending_frame()
 
 void Lora_communication::send_robot_pos(float x, float y, float yaw)
 {
-    pending_x_raw_ = PackSigned16(x, 100.0f);
-    pending_y_raw_ = PackSigned16(y, 100.0f);
-    pending_yaw_raw_ = PackSigned16(yaw, 100.0f);
-    pending_tx_dirty_ = true;
-    flush_pending_frame();
+    send_x = PackSigned16(x, 100.0f);
+    send_y = PackSigned16(y, 100.0f);
+    send_z = PackSigned16(yaw, 100.0f);
 }
 
 void Lora_communication::send_claw_status(bool claw1, bool claw2, bool claw3)
 {
-    pending_claw_status_ = static_cast<uint8_t>((claw1 ? 0x01U : 0x00U) |
+    send_gripper_status = static_cast<uint8_t>((claw1 ? 0x01U : 0x00U) |
                                                (claw2 ? 0x02U : 0x00U) |
                                                (claw3 ? 0x04U : 0x00U));
-    pending_tx_dirty_ = true;
-    flush_pending_frame();
 }
 
 void Lora_communication::send_sucker_status(bool sucker1, bool sucker2)
 {
-    pending_sucker_status_ = static_cast<uint8_t>((sucker1 ? 0x01U : 0x00U) |
-                                                 (sucker2 ? 0x02U : 0x00U));
-    pending_tx_dirty_ = true;
-    flush_pending_frame();
+    send_suction_cup_status = static_cast<uint8_t>((sucker1 ? 0x01U : 0x00U) |
+                                                   (sucker2 ? 0x02U : 0x00U));
 }
 
 void Lora_communication::send_auto_status(bool auto_status)
 {
-    auto_mode_ = auto_status;
-    pending_tx_dirty_ = true;
-    flush_pending_frame();
+    send_automatic_status = static_cast<uint8_t>(auto_status ? 0x01U : 0x00U);
 }
 
 void Lora_communication::send_command(int8_t cmd)
 {
-    pending_command_ = static_cast<uint8_t>(cmd);
-    pending_tx_dirty_ = true;
-    flush_pending_frame();
+    chosen_command = static_cast<uint8_t>(cmd);
 }
 
 /* ========== 定时器中断 ========== */
