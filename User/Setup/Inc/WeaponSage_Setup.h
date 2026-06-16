@@ -28,7 +28,7 @@ extern "C" {
 #include "Module_CrsfReceiver.h"
 #include "Locate_Setup.h"
 #include "Module_OIDEncoder.h"
-
+#include "tim.h""
 namespace WeaponSage_Setup
 {
     typedef struct{
@@ -123,6 +123,7 @@ namespace WeaponSage_Setup
             float launch_clawclosed = 0.8f;
             float launch_rotate =1.0f;
         }launch_kp;
+		bool is_ServoStart= false;
     }auto_ctrl_S;
 
      extern float weapon_pos[4];//武器位置数组
@@ -253,6 +254,8 @@ public:
 	{
 		auto_ctrl_.auto_ctrl1=flag;      //手动置位：是否可以自动
 	}
+	
+	void SetServo_Angle(uint16_t angle);
 protected:
     void loop() override;
 
