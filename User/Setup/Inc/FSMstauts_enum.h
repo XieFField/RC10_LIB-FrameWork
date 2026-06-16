@@ -19,7 +19,7 @@ extern "C" {
 #include <cmath>  
 #include "APP_tool.h"
 
-#define USE_RC10_AIRJOY 1 //启用自制遥控器
+#define USE_RC10_AIRJOY 0 //启用自制遥控器
 
 typedef enum{
     ALL_STOP, //STOP状态

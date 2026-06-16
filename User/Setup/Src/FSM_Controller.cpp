@@ -3,6 +3,7 @@
 
 int8_t test_led = 0;
 float x_ , y_ , yaw_;
+bool claw1,claw2,claw3;
 void FSM_Controller::loop()
 {
     if (!init_flag_)
@@ -48,12 +49,16 @@ void FSM_Controller::loop()
         suker_status,
         0);
 
+    // communication::Lora_communication::GetInstance()->send_claw_status(
+    //     weaponSage_setup_->get_CurrentPos().claw_1_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false,
+    //     weaponSage_setup_->get_CurrentPos().claw_2_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false,
+    //     weaponSage_setup_->get_CurrentPos().claw_3_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false);
     communication::Lora_communication::GetInstance()->send_claw_status(
-        weaponSage_setup_->get_CurrentPos().claw_1_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false,
-        weaponSage_setup_->get_CurrentPos().claw_2_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false,
-        weaponSage_setup_->get_CurrentPos().claw_3_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false);
+        claw1,
+        claw2,
+        claw3);
 
-    communication::Lora_communication::GetInstance()->send_auto_status(arm_setup_->isArmAutoStart());
+    // communication::Lora_communication::GetInstance()->send_auto_status(arm_setup_->isArmAutoStart());
 #endif
 
 #if !USE_RC10_AIRJOY
