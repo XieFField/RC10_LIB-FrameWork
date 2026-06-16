@@ -47,7 +47,7 @@ void FSM_Controller::loop()
 
     communication::Lora_communication::GetInstance()->send_sucker_status(
         suker_status,
-        0);
+        0); 
 
     // communication::Lora_communication::GetInstance()->send_claw_status(
     //     weaponSage_setup_->get_CurrentPos().claw_1_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false,

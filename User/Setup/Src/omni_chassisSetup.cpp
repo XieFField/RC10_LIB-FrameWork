@@ -1,6 +1,6 @@
 #include "omni_chassisSetup.h"
 extern Chassis chassis;
-float CB_yaw = 89.0f;
+float CB_yaw = 90.0f;
 void OmniChassis_Setup::Path_CB_check(void)
 {
     if (CB_point.CB_Selection_pos.x == curve.Get_End_point().x && CB_point.CB_Selection_pos.y == curve.Get_End_point().y)
@@ -422,8 +422,8 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-                if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
-                    target_chassis_twist_.vy = (-airjoy_data_.right_x) * 0.6f * this->is_chassis_reverse_;
+                if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                    target_chassis_twist_.vy = (-airjoy_data_.left_x) * 0.6f * this->is_chassis_reverse_;
                 else
                     target_chassis_twist_.vy = 0.0f;
             }

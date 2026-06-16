@@ -187,7 +187,7 @@ void Robot_WeaponSage_Setup::calibrate()
 
 float test_angle = 20.0f;
 uint8_t round_cnt =0;
-
+float test_launch = 0.0625674725;
 //这版手操逻辑：（暂时）
 /**
  *  大体和之前的差不多，一些地方有变化
@@ -275,6 +275,8 @@ void Robot_WeaponSage_Setup::manualControl()
 			}
             else
                 target_pos_.launch_pos_ = target_pos_.launch_pos_;
+
+            this->target_pos_.launch_pos_=test_launch;
 
             int8_t target_claw_logical = (airjoy_data_.SWD & 0x01) ^ ctrl_status_.claw_switch_offset;
             
