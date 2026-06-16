@@ -69,6 +69,7 @@ typedef struct{
     
     uint8_t last_manual_store = 0; //上一次手动存储状态
 
+    bool can_putdown = 0;
 }arm_ctrl_status_S;
 
 
@@ -144,6 +145,14 @@ public:
             return true;
         else
             return false;
+    }
+
+    /**
+     * @brief 接收底盘是否可以放置的信号
+     */
+    void can_putdown(bool is_or_not)
+    {
+        arm_ctrlStatus.can_putdown = is_or_not;
     }
 
     void init(M3508 *motor_ArmLaunch, M2006 *motor_ArmStretch, 
