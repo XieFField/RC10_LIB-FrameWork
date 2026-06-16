@@ -1,11 +1,14 @@
 #pragma once
 
+
+
 #include "usart.h"
 
 #define RING_BUF_SIZE 256
 #define DMA_BUF_SIZE  64
 
 #ifdef __cplusplus
+
 
 namespace communication{
     typedef struct {
@@ -41,7 +44,17 @@ namespace communication{
         uint8_t tail;      // e.g. 0xDE
     } SettingFrame_t;
 
-    // 发送帧：XYZ (3 x 16位)
+    //接收帧：串口屏转发的命令帧
+    typedef struct {
+        uint8_t header[2]; // 0xAA 0x77
+        uint8_t command;   // 0-99分别表示不同的命令，机器人侧查表执行
+        uint8_t load1;     // 发送的累计次数，8位 0-255
+        uint8_t load2;     // 保留扩展
+        uint8_t crc;
+        uint8_t tail;      // 0xDE
+    } CommandFrame_t;
+
+    // 发送帧：XYZ (3 x 16位 有符号)  — 与遥控器端 XYZFrame_t 对齐
     typedef struct {
         uint8_t header[2]; // e.g. 0x55 0xAA
         uint16_t x;
@@ -51,6 +64,10 @@ namespace communication{
         uint8_t mode;
         uint8_t command1;
         uint8_t command2;
+        uint8_t KFS_want_place1; // （高四位为索引1的位置，低四位为索引0位置）
+        uint8_t KFS_want_place2; // （高四位为索引3的位置，低四位为索引2位置）
+        uint8_t spear;           // 0x00-0x07分别表示不同的武器头夹取状态
+        uint8_t KFS_Keepplace;   // KFS存储区
         uint8_t crc;
         uint8_t tail;      // e.g. 0xED
     } XYZFrame_t;
@@ -117,10 +134,15 @@ namespace communication{
          * @param mode 模式 (8位)
          * @param command1 预留命令1 (8位)
          * @param command2 预留命令2 (8位)
+         * @param KFS_want_place1 KFS位置索引0和1（高四位索引1，低四位索引0）
+         * @param KFS_want_place2 KFS位置索引2和3（高四位索引3，低四位索引2）
+         * @param spear 武器头夹取状态 0x00-0x07
+         * @param KFS_Keepplace KFS存储区
          * @note 时机/用法：检查在1ms定时中调用，外部需先判断锁tx_busy是否为0，且根据实际业务需求合理设置坐标和状态参数。函数内部会自动组装成标准帧并尝试触发发送。
          */
         void Comm_SendAxisDataToTxBuffer(uint16_t  x, uint16_t y, uint16_t z,
-            uint8_t Gripper_Status, uint8_t Suction_Cup_Status,uint8_t Automatic_status, uint8_t mode, uint8_t command1, uint8_t command2);
+            uint8_t Gripper_Status, uint8_t Suction_Cup_Status,uint8_t Automatic_status, uint8_t mode, uint8_t command1, uint8_t command2,
+            uint8_t KFS_want_place1, uint8_t KFS_want_place2, uint8_t spear, uint8_t KFS_Keepplace);
 
         /**
          * @brief 纯虚函数：启动底层物理发送动作
@@ -140,37 +162,59 @@ namespace communication{
             for(int i = 0; i < 4; i++) joystick[i] = rec_joystick[i];
         }
 
-        /**别用，别用，别用，用了就死了，重要的事情说三遍
-         * @brief 获取接收到的设置帧数据
+        /**
+         * @brief 获取接收到的命令帧数据（串口屏转发的命令）
          * @param command 存放命令的变量
-         * @param load1 存放负载1的变量
-         * @param load2 存放负载2的变量
-         * @note 时机/用法：需要获取最新设置数据时调用，前提是 Comm_Task_Loop 已经成功解析出至少一帧合法设置数据并刷新了相关变量。调用后，外部即可获得最新的设置命令和负载数据。
+         * @param load1 存放负载1的变量（累计次数）
+         * @param load2 存放负载2的变量（保留扩展）
+         * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，获取最新的命令帧数据。
          */
-        void GetRecvCommandData(uint8_t& command, uint8_t& load1, uint8_t& load2) {
-            command = rec_setting_command;
-            load1 = rec_setting_load1;
-            load2 = rec_setting_load2;
+        void GetRecvCommandFrameData(uint8_t& command, uint8_t& load1, uint8_t& load2) {
+            command = rec_command_command;
+            load1 = rec_command_load1;
+            load2 = rec_command_load2;
+        }
+
+        /**
+         * @brief [已废弃] 设置待发送的KFS相关数据，已合并至 Comm_SendAxisDataToTxBuffer 参数中
+         * @deprecated 请直接在 Comm_SendAxisDataToTxBuffer 调用时传入 KFS 参数，无需单独调用此函数
+         */
+        void SetSendKFSData(uint8_t KFS_want_place1, uint8_t KFS_want_place2, uint8_t spear, uint8_t KFS_Keepplace) {
+            send_KFS_want_place1 = KFS_want_place1;
+            send_KFS_want_place2 = KFS_want_place2;
+            send_spear = spear;
+            send_KFS_Keepplace = KFS_Keepplace;
         }
 
         /**
          * @brief 获取接收到的KFS位置数据
          * @param index 位置索引 (0~2)，对应 rec_setting_load1 的低四位和高四位，以及 rec_setting_load2 的低四位
          * @return uint8_t 索引对应的KFS位置值，若索引无效或当前命令不是0x01，则返回0
-         * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，获取最新的KFS位置数据。典型用法：uint8_t kfs0 = comm.GetRecvFKFSData(0); // 获取索引0位置
+         * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，获取最新的KFS位置数据。典型用法：uint8_t kfs0 = comm.GetRecvFKFS1Data(0); // 获取索引0位置
          */
-        uint8_t GetRecvFKFSData(uint8_t index) {
-            if(rec_setting_command == 0x01) {
-                switch (index) {
-                    case 0: return rec_setting_load1 & 0x0F; // 索引0位置
-                    case 1: return (rec_setting_load1 >> 4) & 0x0F; // 索引1位置
-                    case 2: return rec_setting_load2 & 0x0F; // 索引2位置
-                    default: return 0; // 无效索引返回0
-                    
-                }
+        uint8_t GetRecvFKFS1Data(uint8_t index) {
+            switch (index) {
+                case 1: return rec_KFS1_place1; // 索引1位置
+                case 2: return rec_KFS1_place2; // 索引2位置
+                case 3: return rec_KFS1_place3; // 索引3位置
+                default: return 0; // 无效索引返回0   
             }
-            else {
-                return 13; // 按道理来说应该不可能用到，除非根本就没发设置帧过来
+        }
+
+        uint8_t GetRecvFKFS2Data(uint8_t index) {
+            switch (index) {
+                case 1: return rec_KFS2_place1; // 索引1位置
+                case 2: return rec_KFS2_place2; // 索引2位置
+                case 3: return rec_KFS2_place3; // 索引3位置
+                case 4: return rec_KFS2_place4; // 索引4位置
+                default: return 0; // 无效索引返回0   
+            }
+        }
+
+        uint8_t GetRecvFKFSfData(uint8_t index) {
+            switch (index) {
+                case 1: return rec_KFSf_place1; // 索引1位置
+                default: return 0; // 无效索引返回0   
             }
         }
 
@@ -201,7 +245,11 @@ namespace communication{
          * @note 时机/用法：在 Comm_Task_Loop 返回 true 后调用，获取最新 page 值。
          */
         uint8_t GetPage(void) {
-            return rec_page;
+            return rec_page&0x0F; // 低四位为 page，返回时屏蔽高四位的颜色信息
+        }
+
+        uint8_t GetColor(void) {
+            return rec_page>>4;
         }
 
     private:
@@ -243,6 +291,26 @@ namespace communication{
         uint8_t rec_setting_command;
         uint8_t rec_setting_load1;
         uint8_t rec_setting_load2;
+
+        // 接收到的命令帧数据（串口屏转发，0xAA 0x66，command 0-99）
+        uint8_t rec_command_command;
+        uint8_t rec_command_load1;
+        uint8_t rec_command_load2;
+
+        // 待发送的KFS相关数据（填入XYZ帧扩展字段）
+        uint8_t send_KFS_want_place1;
+        uint8_t send_KFS_want_place2;
+        uint8_t send_spear;
+        uint8_t send_KFS_Keepplace;
+
+        uint8_t rec_KFS1_place1;
+        uint8_t rec_KFS1_place2;
+        uint8_t rec_KFS1_place3;
+        uint8_t rec_KFS2_place1;
+        uint8_t rec_KFS2_place2;
+        uint8_t rec_KFS2_place3;
+        uint8_t rec_KFS2_place4;
+        uint8_t rec_KFSf_place1;
     protected:
     };
 }

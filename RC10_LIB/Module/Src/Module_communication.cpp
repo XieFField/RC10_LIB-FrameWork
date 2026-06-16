@@ -42,6 +42,26 @@ namespace communication{
         rec_setting_load1 = 0;
         rec_setting_load2 = 0;
 
+        // 初始化命令帧接收变量
+        rec_command_command = 1;
+        rec_command_load1 = 0;
+        rec_command_load2 = 0;
+
+        // 初始化KFS发送变量
+        send_KFS_want_place1 = 0;
+        send_KFS_want_place2 = 0;
+        send_spear = 0;
+        send_KFS_Keepplace = 0;
+
+        rec_KFS1_place1=0;
+        rec_KFS1_place2=0;
+        rec_KFS1_place3=0;
+        rec_KFS2_place1=0;
+        rec_KFS2_place2=0;
+        rec_KFS2_place3=0;
+        rec_KFS2_place4=0;
+        rec_KFSf_place1=0;
+
         // Communication_RX_DMA(rxhuart, dma_rx_buf, DMA_BUF_SIZE);
         // __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); 
     }
@@ -160,9 +180,40 @@ namespace communication{
             // 验证帧尾 0xDE 与 CRC（CRC 覆盖 command + load1 + load2 共 3 字节）
             if (pFrame->tail == 0xDE && pFrame->crc == crc8(frame_buf+2, sizeof(SettingFrame_t) - 4)) {
                 // 提取解包好的设置数据
-                rec_setting_command = pFrame->command;
-                rec_setting_load1 = pFrame->load1;
-                rec_setting_load2 = pFrame->load2;
+                switch(pFrame->command) {
+                    case 0x04: // KFS1位置设置
+                        rec_setting_command = pFrame->command;
+                        rec_setting_load1 = pFrame->load1;
+                        rec_setting_load2 = pFrame->load2;
+
+                        rec_KFS1_place1 = pFrame->load1 & 0x0F;
+                        rec_KFS1_place2 = (pFrame->load1 >> 4) & 0x0F;
+                        rec_KFS1_place3 = pFrame->load2 & 0x0F;
+                        break;
+                    
+                    case 0x07: // KFS2位置设置
+                        rec_setting_command = pFrame->command;
+                        rec_setting_load1 = pFrame->load1;
+                        rec_setting_load2 = pFrame->load2;
+
+                        rec_KFS2_place1 = pFrame->load1 & 0x0F;
+                        rec_KFS2_place2 = (pFrame->load1 >> 4) & 0x0F;
+                        rec_KFS2_place3 = pFrame->load2 & 0x0F;
+                        rec_KFS2_place4 = (pFrame->load2 >> 4) & 0x0F;
+                        break;                    
+
+                    case 0x08: // KFSf位置设置
+                        rec_setting_command = pFrame->command;
+                        rec_setting_load1 = pFrame->load1;
+                        rec_setting_load2 = pFrame->load2;
+
+                        rec_KFSf_place1 = pFrame->load1 & 0x0F;
+                        break;
+
+                    default:
+                        // 其他KFS命令暂不处理
+                        break;
+                }
 
                 // 将 FIFO 头部读取指针越过已经正确消费的这一帧
                 rx_fifo.head = p;
@@ -170,6 +221,30 @@ namespace communication{
                 data_updated = true; // 标记数据已更新
             } else {
                 // 坏帧，跳过头部第一个错误字节，继续往后寻找
+                rx_fifo.head = (rx_fifo.head + 1) % RING_BUF_SIZE;
+            }
+        }
+        // 查找帧头 0xAA 0x77 (命令帧：串口屏转发)
+        else if (byte1 == 0xAA && byte2 == 0x77) {
+            uint8_t frame_buf[sizeof(CommandFrame_t)];
+            uint16_t p = t_head;
+
+            for(int i = 0; i < sizeof(CommandFrame_t); i++) {
+                frame_buf[i] = rx_fifo.buffer[p];
+                p = (p + 1) % RING_BUF_SIZE;
+            }
+
+            CommandFrame_t* pCmdFrame = (CommandFrame_t*)frame_buf;
+
+            if (pCmdFrame->tail == 0xDE && pCmdFrame->crc == crc8(frame_buf+2, sizeof(CommandFrame_t) - 4)) {
+                rec_command_command = pCmdFrame->command;
+                rec_command_load1 = pCmdFrame->load1;
+                rec_command_load2 = pCmdFrame->load2;
+
+                rx_fifo.head = p;
+                rx_cnt++;
+                data_updated = true;
+            } else {
                 rx_fifo.head = (rx_fifo.head + 1) % RING_BUF_SIZE;
             }
         }
@@ -181,7 +256,8 @@ namespace communication{
         return data_updated;
     }
 
-    void Communication::Comm_SendAxisDataToTxBuffer(uint16_t  x, uint16_t y, uint16_t z,uint8_t Gripper_Status, uint8_t Suction_Cup_Status,uint8_t Automatic_status, uint8_t mode, uint8_t command1, uint8_t command2)
+    void Communication::Comm_SendAxisDataToTxBuffer(uint16_t  x, uint16_t y, uint16_t z,uint8_t Gripper_Status, uint8_t Suction_Cup_Status,uint8_t Automatic_status, uint8_t mode, uint8_t command1, uint8_t command2,
+            uint8_t KFS_want_place1, uint8_t KFS_want_place2, uint8_t spear, uint8_t KFS_Keepplace)
     {
         if(tx_busy==0) {
             send_xyz[0] = x;
@@ -191,6 +267,10 @@ namespace communication{
             send_mode = mode;
             send_command1 = command1;
             send_command2 = command2;
+            send_KFS_want_place1 = KFS_want_place1;
+            send_KFS_want_place2 = KFS_want_place2;
+            send_spear = spear;
+            send_KFS_Keepplace = KFS_Keepplace;
 
                 XYZFrame_t frame;
             frame.header[0] = 0x55;
@@ -203,6 +283,11 @@ namespace communication{
             frame.mode = send_mode;
             frame.command1 = send_command1;
             frame.command2 = send_command2;
+            // 填充扩展的KFS字段（与遥控器端 XYZFrame_t 对齐）
+            frame.KFS_want_place1 = send_KFS_want_place1;
+            frame.KFS_want_place2 = send_KFS_want_place2;
+            frame.spear = send_spear;
+            frame.KFS_Keepplace = send_KFS_Keepplace;
             frame.crc = crc8((uint8_t*)&frame + 2, sizeof(XYZFrame_t) - 4);
             frame.tail = 0xED;
 
