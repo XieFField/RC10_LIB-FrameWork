@@ -4,19 +4,23 @@
  * @brief 控制循环
  */
 // uint32_t ArmstackHighWaterMark = 0;
+int8_t test_store = 0;
 void ArmSetup::loop()
 {
     if(!arm_ctrlStatus.init_flag)
         return;
 
 
+	
+//	ArmstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+
+    // pitch 电机首次使能：校准前确保电机已使能
     if((motor_pitch_->getErrorNum() == 0x00 || !this->is_pitchEnable_))
     {
         motor_pitch_->motorEnable();
         this->is_pitchEnable_ = true;
     }
-	
-//	ArmstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+
     if(!arm_ctrlStatus.is_calibrating)
     {
         calibrateMotor();
@@ -31,6 +35,15 @@ void ArmSetup::loop()
 //        calibration_seen_ = true;
 //        arm_status_ = ARM_CALIBRATE;
 //    }
+
+    if(test_store == 1)
+        this->setStoreSuckerStatus_OutSide(SUCK);
+    else if(test_store == 2)
+        this->setStoreSuckerStatus_OutSide(STOP);
+    else if(test_store == 3)
+        this->setStoreSuckerStatus_InSide(SUCK);
+    else if(test_store == 4)
+        this->setStoreSuckerStatus_InSide(STOP);
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
     //无底盘下的调试模式
@@ -260,6 +273,15 @@ void ArmSetup::loop()
             break;
     }
     this->update(); //更新电机状态
+
+    // pitch 电机使能检查：位于 update() 之后，确保 motorEnable() 后
+    // 下一次循环的 update() 能恢复 dm_mode_ = MOTOR_POSVEL_MODE
+    if((motor_pitch_->getErrorNum() == 0x00 || !this->is_pitchEnable_))
+    {
+        motor_pitch_->motorEnable();
+        this->is_pitchEnable_ = true;
+    }
+
     last_arm_status_ = arm_status_;
 }
 
@@ -1488,7 +1510,7 @@ void ArmSetup::stop()
     this->motor_stretch_->setTargetCurrent(0.0f);
     this->motor_rotate_->setTargetCurrent(0.0f);
     // this->motor_pitch_->setTargetCurrent(0.0f);
-    this->setSuckerStatus(Sucker_Status_E::STOP);
+    // this->setSuckerStatus(Sucker_Status_E::STOP);
 }
 
 /**
@@ -1572,7 +1594,7 @@ void ArmSetup::debug()
 }
 
 Arm_InitData_S arm_initData = {
-    .max_launchHeight_ = 0.32f,
+    .max_launchHeight_ = 0.39f,
     .max_launchCatch_Height_ = 0.32f,
     .max_stretchLength_ = 0.1358f,
     .arm_length_ = 0.6f,
@@ -1592,10 +1614,10 @@ Arm_InitData_S arm_initData = {
     .rotate_start = 135.0f,
 
     .safe_height_ = 0.118f,
-    .store_height_outside_ = 0.166f,
-    .store_height_inside_ = 0.216f,
+    .store_height_outside_ = 0.15977098f,
+    .store_height_inside_ = 0.329215854f,
     .lock_height_ = 0.055f,
-    .store_ext_length_ = 0.049f,
+    .store_ext_length_ = 0.0752612874f,
 
     .Sucker_GPIO_Port = SUCKER_1_GPIO_Port,
     .Sucker_GPIO_Pin = SUCKER_1_Pin,

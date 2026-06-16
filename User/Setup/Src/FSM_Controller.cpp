@@ -214,183 +214,31 @@ void FSM_Controller::stop_modeswitch()
 {
     switch (Stop_set_stauts)
     {
-    case NONE:
-    {
-        crsf_send_s.isread_srollWheelSpear = false;
-        break;
-    }
-
-    case RELOCATE:
-    {
-        crsf_send_s.isread_srollWheelKFS = false;
-        crsf_send_s.isread_srollWheelSpear = false;
-
-        static uint8_t iiii = 0;
-
-        if (airjoy_data_.botton_click == 1 && iiii == 0)
+        case NONE:
         {
-            Locate_Setup::getInstance()->Relocte_ToLader();
-
-            iiii++;
+            crsf_send_s.isread_srollWheelSpear = false;
+            break;
         }
-        else if (airjoy_data_.botton_click == 0)
-        {
-            iiii = 0;
-        }
-        break;
-    }
 
-    case SET_KFS:
-    {
-        crsf_send_s.isread_srollWheelSpear = false;
-        if (!crsf_send_s.isread_srollWheelKFS)
+        case RELOCATE:
         {
-            crsf_send_s.sroll_wheel_last = airjoy_data_.scroll_wheel;
-            crsf_send_s.isread_srollWheelKFS = true;
-        }
-        else
-        {
-            if (airjoy_data_.scroll_wheel != crsf_send_s.sroll_wheel_last)
+            crsf_send_s.isread_srollWheelKFS = false;
+            crsf_send_s.isread_srollWheelSpear = false;
+
+            static uint8_t iiii = 0;
+
+            if (airjoy_data_.botton_click == 1 && iiii == 0)
             {
-                crsf_send_s.kfs_setDone = false;
-                crsf_send_s.isread_srollWheelKFS = false;
-                crsf_send_s.rsf_send_data.kfs1 = 0;
-                crsf_send_s.rsf_send_data.kfs2 = 0;
-                crsf_send_s.now_setKFSindex = 0;
-            }
-        }
+                Locate_Setup::getInstance()->Relocte_ToLader();
 
-        if (!crsf_send_s.kfs_setDone)
-        {
-            if (_tool_Abs(airjoy_data_.right_x) > 0.5f)
-            {
-                crsf_send_s.count++;
-                if (crsf_send_s.count >= 200 && airjoy_data_.right_x < 0.0f)
-                {
-                    if (crsf_send_s.now_setKFSindex == 0)
-                    {
-                        crsf_send_s.rsf_send_data.kfs1++;
-                        if (crsf_send_s.rsf_send_data.kfs1 > 12)
-                            crsf_send_s.rsf_send_data.kfs1 = 12;
-                        crsf_send_s.count = 0;
-                    }
-                    else if (crsf_send_s.now_setKFSindex == 1)
-                    {
-                        crsf_send_s.rsf_send_data.kfs2++;
-                        if (crsf_send_s.rsf_send_data.kfs2 > 12)
-                            crsf_send_s.rsf_send_data.kfs2 = 12;
-                        crsf_send_s.count = 0;
-                    }
-                }
-                else if (crsf_send_s.count >= 200 && airjoy_data_.right_x > 0.0f)
-                {
-                    if (crsf_send_s.now_setKFSindex == 0)
-                    {
-                        crsf_send_s.rsf_send_data.kfs1--;
-                        if (crsf_send_s.rsf_send_data.kfs1 < 0)
-                            crsf_send_s.rsf_send_data.kfs1 = 0;
-                        if (crsf_send_s.rsf_send_data.kfs1 > 13)
-                            crsf_send_s.rsf_send_data.kfs1 = 0;
-                        crsf_send_s.count = 0;
-                    }
-                    else if (crsf_send_s.now_setKFSindex == 1)
-                    {
-                        crsf_send_s.rsf_send_data.kfs2--;
-                        if (crsf_send_s.rsf_send_data.kfs2 < 0)
-                            crsf_send_s.rsf_send_data.kfs2 = 0;
-                        if (crsf_send_s.rsf_send_data.kfs2 > 13)
-                            crsf_send_s.rsf_send_data.kfs2 = 0;
-                        crsf_send_s.count = 0;
-                    }
-                }
+                iiii++;
             }
-            else
+            else if (airjoy_data_.botton_click == 0)
             {
-                static uint8_t is_click = 0;
-                if (airjoy_data_.botton_click == 1 && is_click == 0)
-                {
-                    switch (crsf_send_s.now_setKFSindex)
-                    {
-                    case 0:
-                        KStarget.KFS[0] = crsf_send_s.rsf_send_data.kfs1;
-                        crsf_send_s.now_setKFSindex = 1;
-                        break;
-                    case 1:
-                        KStarget.KFS[1] = crsf_send_s.rsf_send_data.kfs2;
-                        crsf_send_s.now_setKFSindex = 2;
-                        crsf_send_s.kfs_setDone = true;
-                        break;
-                    }
-                    is_click = 1;
-                }
-                else if (airjoy_data_.botton_click == 0)
-                {
-                    is_click = 0;
-                }
-                crsf_send_s.count = 0;
+                iiii = 0;
             }
+            break;
         }
-        break;
-    }
-
-    case SET_SPEAR:
-    {
-        crsf_send_s.isread_srollWheelKFS = false;
-        if (!crsf_send_s.isread_srollWheelSpear)
-        {
-            crsf_send_s.sroll_wheel_last = airjoy_data_.scroll_wheel;
-            crsf_send_s.isread_srollWheelSpear = true;
-            crsf_send_s.spear_setDone = false;
-        }
-        else
-        {
-            if (airjoy_data_.scroll_wheel != crsf_send_s.sroll_wheel_last)
-            {
-                crsf_send_s.spear_setDone = false;
-                crsf_send_s.isread_srollWheelSpear = false;
-                crsf_send_s.rsf_send_data.Spear = 0;
-            }
-        }
-
-        if (!crsf_send_s.spear_setDone)
-        {
-            if (_tool_Abs(airjoy_data_.right_x) > 0.5f)
-            {
-                crsf_send_s.count++;
-                if (crsf_send_s.count >= 200 && airjoy_data_.right_x < 0.0f)
-                {
-                    crsf_send_s.rsf_send_data.Spear++;
-                    if (crsf_send_s.rsf_send_data.Spear > 4)
-                        crsf_send_s.rsf_send_data.Spear = 4;
-                    crsf_send_s.count = 0;
-                }
-                else if (crsf_send_s.count >= 200 && airjoy_data_.right_x > 0.0f)
-                {
-                    crsf_send_s.rsf_send_data.Spear--;
-                    if (crsf_send_s.rsf_send_data.Spear < 0)
-                        crsf_send_s.rsf_send_data.Spear = 0;
-                    crsf_send_s.count = 0;
-                }
-            }
-            else
-            {
-                static uint8_t is_click = 0;
-                if (airjoy_data_.botton_click == 1 && is_click == 0)
-                {
-                    KStarget.Spear = crsf_send_s.rsf_send_data.Spear;
-                    crsf_send_s.spear_setDone = true;
-                    is_click = 1;
-                }
-                else if (airjoy_data_.botton_click == 0)
-                {
-                    is_click = 0;
-                }
-                crsf_send_s.count = 0;
-            }
-        }
-
-        break;
-    }
     }
 }
 
@@ -403,68 +251,65 @@ void FSM_Controller::manual_ctrl()
 
 #if !USE_RC10_AIRJOY
     switch (airjoy_data_.SWC)
-#else
-    switch (airjoy_data_.SWF)
-#endif
     {
-    case 0x00:
-    {
-        if (airjoy_data_.SWA == 0x00)
+        case 0x00:
+        {
+            if (airjoy_data_.SWA == 0x00)
+                chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            else if (airjoy_data_.SWA == 0x01)
+                chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_D);
+
+            arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+
+            break;
+        }
+        case 0x01:
+        {
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            break;
+        }
+        case 0x02:
+        {
+            // chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_C);
+            arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_CONTROL);
+            break;
+        }
+    }
+    #else
+        switch (airjoy_data_.SWF)
+        {
+        case 0x00:
+        {
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-        else if (airjoy_data_.SWA == 0x01)
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_D);
+            arm_setup_->setArmStatus(ARM_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            break;
+        }
 
-        arm_setup_->setArmStatus(ARM_IDLE);
-        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+       case 0x01:
+       {
+           weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+           if (airjoy_data_.SWE == 0x00)
+               chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+           else if (airjoy_data_.SWE == 0x01)
+               chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+           break;
+       }
 
-        break;
-    }
-    case 0x01:
-    {
-        chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
-        arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
-        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-        break;
-    }
-    case 0x02:
-    {
-        // chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
-        chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_C);
-        arm_setup_->setArmStatus(ARM_IDLE);
-        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_CONTROL);
-        break;
-    }
-    }
-    // #else
-    //     switch (airjoy_data_.SWF)
-    //     {
-    //     case 0x00:
-    //     {
-    //         chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-    //         arm_setup_->setArmStatus(ARM_IDLE);
-    //         weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-    //         break;
-    //     }
+       case 0x02:
+       {
+           break;
+       }
 
-    //    case 0x01:
-    //    {
-    //        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-    //        if (airjoy_data_.SWE == 0x00)
-    //            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
-    //        else if (airjoy_data_.SWE == 0x01)
-    //            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-    //        break;
-    //    }
-
-    //    case 0x02:
-    //    {
-    //        break;
-    //    }
-
-    //    default:
-    //        break;
-    //    }
-    // #endif
+       default:
+           break;
+       }
+    #endif
 }
 
 void FSM_Controller::auto_ctrl()

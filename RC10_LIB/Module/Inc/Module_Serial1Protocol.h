@@ -18,7 +18,7 @@ extern "C" {
 #define SERIAL1_DATA_LEN        3
 #define SERIAL1_FRAME_LEN       8
 
-#define SERIAL1_SEND_TIMES      3          // 每批发送3次
+#define SERIAL1_SEND_TIMES      10          // 每批发送3次
 #define SERIAL1_RETRY_INTERVAL  500        // 重发间隔500ms
 
 /* 校验字节位定义 */
