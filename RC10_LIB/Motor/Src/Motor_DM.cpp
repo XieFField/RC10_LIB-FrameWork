@@ -106,7 +106,7 @@ std::size_t DM_Motor:: packCommand(CanFrame outFrames[], std::size_t maxFrames)
 
 		case MOTOR_POSVEL_MODE:
 		{
-			if(Error_num=0x01)
+			if(Error_num==0x01)
                 {
                 uint8_t *vbuf,*pbuf;
                 vbuf=  (uint8_t *)&this->V_des;
@@ -127,7 +127,7 @@ std::size_t DM_Motor:: packCommand(CanFrame outFrames[], std::size_t maxFrames)
 		}
 		case MOTOR_VEL_MODE:
 		{
-			if(Error_num=0x01)
+			if(Error_num==0x01)
 			{
 			cf.ID = 0x200|DM_Id;
 			cf.DLC = 8;

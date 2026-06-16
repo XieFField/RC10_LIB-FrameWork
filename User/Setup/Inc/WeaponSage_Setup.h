@@ -49,6 +49,8 @@ namespace WeaponSage_Setup
         bool is_wrist_start=false;
         float wrist_startTime=0.0f;
 
+        
+
 
         int target_poleIndex = 0; //0~3号索引的矛杆
         
@@ -111,7 +113,7 @@ namespace WeaponSage_Setup
             bool is_prepared=false; //准备就绪，满足抓取条件
 			bool is_arm_reset=false;
         }flag;
-        bool auto_ctrl1 = true;
+        bool auto_ctrl1 = false;
         int pole_num = 1;
         bool claw_flag[3]={false,false,false};
         struct{
@@ -246,6 +248,11 @@ public:
     {
         auto_ctrl_.auto_state_bool_S.dock_start=a;
     }
+	
+	void Set_AutoStart(bool flag)
+	{
+		auto_ctrl_.auto_ctrl1=flag;      //手动置位：是否可以自动
+	}
 protected:
     void loop() override;
 

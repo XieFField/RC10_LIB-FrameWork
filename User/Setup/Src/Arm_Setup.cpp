@@ -1437,7 +1437,7 @@ bool ArmSetup::state_launchStillness(int targetKFS)
     if(MF_high[targetKFS - 1] == 0.2f)
         canMoveHeight = this->init_data_.safe_height_;
     else if(MF_high[targetKFS - 1] == 0.4f)
-        canMoveHeight = this->init_data_.max_launchCatch_Height_ 
+        canMoveHeight = this->init_data_.max_launchCatch_Height_ ;
     else if(MF_high[targetKFS - 1] == 0.6f)
         canMoveHeight = this->init_data_.max_launchCatch_Height_;
     else
