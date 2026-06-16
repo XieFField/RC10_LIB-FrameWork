@@ -47,8 +47,9 @@ int binarySearch(const uint32_t arr[], uint8_t count, uint32_t key);
  * @param max 最大值
  */
 template <typename T>
-static inline T constrain(T value, T min, T max) 
+static inline T constrain(T value, T min, T max)
 {
+    if (!(value == value)) return (T)0;  // NaN guard: NaN != NaN, force to 0
     if (value < min) return min;
     if (value > max) return max;
     return value;

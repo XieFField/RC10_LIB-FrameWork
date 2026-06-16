@@ -143,7 +143,7 @@ void OmniChassis_Setup::loop()
     case CHASSIS_MANUAL_CONTROL_A:
     {
         // 模式 A：大速度手动平移 + 角速度控制。
-        CHASSIS_MANUAL(3.0f, 0.6f);
+        CHASSIS_MANUAL(2.0f, 2.0f);
         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
         chassis_status_last_ = chassis_status_;
         break;
@@ -262,7 +262,8 @@ void OmniChassis_Setup::loop()
     //----------------------------------             CZ_R1              --------------------------------------//
     case CHASSIS_AUTO_CONTROL_CZ_R1:
     {
-        static bool right_flag = false;
+        static int far_flag = 0;
+        static int near_flag = 0;
         if (chassis_status_last_ != chassis_status_)
         {
             flag_reset();
@@ -270,40 +271,60 @@ void OmniChassis_Setup::loop()
             path_line_.plan_reset();
             Path_end_point = robot_pos_;
             CZ_flag.fit_pos_index = 1;
-            CZ_flag.R1_FB_index = 0;
+            CZ_flag.R1_FB_index = 1;
             CZ_flag.R1_RL_index = 1;
             CZ_flag.R2_pos_index = 0;
         }
 
-        if (airjoy_data_.right_x > 0.80f)
-            right_flag = true;
-        else if (right_flag == true && CZ_flag.R1_FB_index == 0)
+        if (airjoy_data_.right_x < -0.80f)
+            far_flag = 1;
+        else if (far_flag > 0 &&airjoy_data_.right_x > -0.05f&& CZ_flag.R1_FB_index == 0)
         {
-            if (CZ_flag.R1_FB_index == 0)
+            if(far_flag > 5)
             {
                 if (CZ_flag.R1_RL_index < 2)
                     CZ_flag.R1_RL_index++;
                 CZ_R1_Selection_Planning();
+                far_flag = 0;
             }
-            right_flag = false;
+            else
+            {
+                far_flag ++;
+            }
+        }
+        else if(CZ_flag.R1_FB_index == 1)
+        {
+            far_flag=0;
         }
 
-        if (airjoy_data_.right_x < -0.80f)
-            right_flag = true;
-        else if (right_flag == true)
+
+        if (airjoy_data_.right_x > 0.80f)
+            near_flag  = 1;
+        else if (near_flag >0 &&airjoy_data_.right_x < 0.05f&&CZ_flag.R1_FB_index == 0)
         {
-            if (CZ_flag.R1_FB_index == 0)
+            if(near_flag >5)
             {
                 if (CZ_flag.R1_RL_index > 0)
                     CZ_flag.R1_RL_index --;
                 CZ_R1_Selection_Planning();
+                near_flag = 0;
+                
             }
-            right_flag = false;
+            else
+            {
+                near_flag++;
+            }
+                
         }
+        else if(CZ_flag.R1_FB_index == 1)
+        {
+            near_flag=0;
+        }
+
         if (flag == 1)
         {
             flag_reset();
-            CZ_flag.R1_FB_index = (CZ_flag.R1_FB_index + 1) % 2;
+            CZ_flag.R1_FB_index = (CZ_flag.R1_FB_index+1)%2;
             CZ_R1_Selection_Planning();
             flag = 0;
         }
@@ -326,9 +347,10 @@ void OmniChassis_Setup::loop()
             else
             {
                 if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-                    Chassis_Target.VY = (airjoy_data_.left_x) * 0.6f * this->is_chassis_reverse_;
+                    Chassis_Target.VY = (-airjoy_data_.left_x) * 0.6f * this->is_chassis_reverse_;
                 else
                     Chassis_Target.VY = 0.0f;
+                Chassis_Target.VX = 0.0f;
             }
         }
 
