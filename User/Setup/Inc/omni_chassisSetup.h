@@ -39,6 +39,21 @@ extern "C"
 #include "APP_Bezier_Curve.h"
 #include "AutoCtrler.h"
 #include "chassis.h"
+typedef enum
+{
+    MANUAL,
+    SEMI_AUIO_FIT,
+    SEMI_AUIO_ARM,
+    SEMI_AUIO_WEAPON,
+    CZ_STOP
+} CZ_STATE;
+
+typedef struct
+{
+    float VX = 0.0f;
+    float VY = 0.0f;
+    float yaw_rate = 0.0f;
+} CHASSIS_TARGET;
 
 typedef struct
 {
@@ -76,21 +91,21 @@ typedef struct
     float CB_spiw = 0.5f;
     Vector2D CB_Start_pos = {1.0f, 0.9f};        // 夹杆起点。
     Vector2D CB_Selection_pos = {2.47f, 0.815f}; // 夹杆流程默认目标点。
-    //相机流程
+    // 相机流程
     Vector2D CB_End_pos = {2.745f, 1.185f};
-    
-    //贴边流程
+
+    // 贴边流程
     Vector2D CB_transition_pos = {2.745f, 1.0f};
     Vector2D CB_welt_pos = {3.3f, 0.50f};
-    
+
 } CB_POINT;
 
 typedef struct
 {
     // 接收外部的KFS位置，如果没有变化则不对MF进行赋值
-    int8_t KFS1 = 0; // 目标点 1 编号。
-    int8_t KFS2 = 0; // 目标点 2 编号。
-    int8_t KFS3 = 0; // 目标点 3 编号。
+//    int8_t KFS1 = 0; // 目标点 1 编号。
+//    int8_t KFS2 = 0; // 目标点 2 编号。
+//    int8_t KFS3 = 0; // 目标点 3 编号。
 
     // 内部的KFS位置，用于退出保存功能
     int8_t MF1 = 0; // 目标点 1 编号。
@@ -248,6 +263,7 @@ private:
 
     CZ_FLAG CZ_flag;
     CZ_POINT CZ_point;
+    CZ_STATE CZ_state;
 
     BezierCurve curve; // 当前路径曲线缓存。
 
@@ -265,8 +281,6 @@ private:
     //-----------------------------------其他参数-----------------------------------------//
     int num = 0;
 
-    Point3D ladar_data_; // 定位系统输出的原始位姿数据。
-
     Vector2D Path_end_point = {0.0f, 0.0f};
 
     float is_chassis_reverse_ = 1.0f; // 手动控制正反向系数。
@@ -277,7 +291,7 @@ private:
     MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
 
     Debug_Printf debug_uart = Debug_Printf(&huart8);                          // 调试串口
-    Robot_Twist target_chassis_twist_ = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}; // 当前周期底盘目标姿态。
+    CHASSIS_TARGET Chassis_Target = {0.0f, 0.0f, 0.0f};                       // 底层对接接口缓冲区
 
     //-----------------------------------内部控制函数-----------------------------------------//
     void loop() override; // RTOS 主循环。
@@ -288,23 +302,17 @@ private:
 
     void Path_KFS_check(void); // 检查并执行路径中旋转逻辑。
 
-    Vector2D v_limit(void); // 速度限幅函数。
-
-    void flag_reset(void); // 复位自动流程相关标志位。
-
     void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
 
     void Path_CB_check(void);
-
-    Vector2D spinodal_path(Vector2D last_vector, Vector2D temp_vector, int i, float spin_flag);
-
-    float rotation_path(float MF_Point);
 
     void Path_lock_point(Vector2D lock_point);
 
     void CZ_R1_Selection_Planning(void);
 
     void CZ_R2_Selection_Planning(void);
+
+    void CZ_state_switch(void);
 
 public:
     /**
@@ -385,7 +393,152 @@ public:
         // 最后写入底盘总状态。
         chassis_status_ = status;
     }
+
+    // 写一些辅助函数和标志位函数
+private:
+    // 复位自动流程相关标志位。
+    void flag_reset(void)
+    {
+        // 统一清空自动流程的阶段标志与旋转状态。
+        WeaponSage_Start = false;
+        WeaponSage_End = false;
+        Arm_Start = false;
+
+        pid_dead_flag = false;
+
+        KFS_flag.MF1_flag = false;
+        KFS_flag.MF2_flag = false;
+        KFS_flag.MF3_flag = false;
+
+        KFS_flag.spin_flag_0 = false;
+        KFS_flag.spin_flag = false;
+        KFS_flag.spin_flag_2 = false;
+
+        KFS_flag.MF1_finish = false;
+        KFS_flag.MF2_finish = false;
+        KFS_flag.MF3_finish = false;
+
+        KFS_flag.get_spin_flag = false;
+
+        CB_flag.Selection_flag = false;
+        CB_flag.Retreat_flag = false;
+    }
+
+    Vector2D v_limit(void)
+    {
+        // 使用单位向量做正交分解，避免 |normal|² 缩放
+        Vector2D tangent = path_line_.Get_Tangent_Vector();
+        Vector2D tangent_dir = tangent.normalize();
+        Vector2D normal_dir = tangent_dir.perpendicular();
+
+        // 切向 = 前馈 + PID纠偏沿切向分量（PID不限幅，终点 planspeed=0 时保留切向纠偏）
+        Vector2D v_tangent = V.planspeed * V.FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
+
+        if (v_tangent.magnitude() > V.planspeed.magnitude())
+            v_tangent = v_tangent.normalize() * V.planspeed.magnitude();
+
+        // 法向 = PID纠偏沿法向分量（限幅防止侧向过冲）
+        Vector2D v_normal = V.corrVelocity.project_onto(normal_dir);
+        if (v_normal.magnitude() > V.v_normal_max)
+            v_normal = v_normal.normalize() * V.v_normal_max;
+
+        Vector2D v_end = v_tangent + v_normal;
+
+        num++;
+        if (num > 5)
+        {
+            // debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), v_tangent.magnitude());
+            num = 0;
+        }
+        return v_end;
+    }
+
+    Vector2D spinodal_path(Vector2D last_vector, Vector2D temp_vector, int i, float spin_flag)
+    {
+        Vector2D forward_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i + 1]);
+        // 拐点前偏移点
+        path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
+        /*
+        1->(1,0)
+        2->(-1,0)
+        3->(0,1)
+        4->(0,-1)
+        */
+        // 拐点方向判断
+        Vector2D tangent_vector = (forward_vector - temp_vector).normalize();
+        if (tangent_vector.x == 1.0f)
+            path_param.curve.targetPos = 1.0f;
+        else if (tangent_vector.x == -1.0f)
+            path_param.curve.targetPos = 2.0f;
+        else if (tangent_vector.y == 1.0f)
+            path_param.curve.targetPos = 3.0f;
+        else if (tangent_vector.y == -1.0f)
+            path_param.curve.targetPos = 4.0f;
+        else
+            return Vector2D{0.0f, 0.0f};
+
+        // 拐点偏移
+        temp_vector.y = temp_vector.y + spin_flag;
+
+        // 拐点后偏移点
+        Vector2D result = (temp_vector + (tangent_vector * KFS_point.coner_behind));
+        path_line_.Add_Point(result, path_param.curve);
+        path_param.curve.targetPos = 999.0f;
+        return result;
+    }
+
+    float rotation_path(float MF_Point)
+    {
+        if (MF_Point == 21 || MF_Point == 16 || MF_Point == 11 || MF_Point == 6)
+        {
+            return (RB_Flag ? 180.0f : 0.0f);
+        }
+        else if (MF_Point == 25 || MF_Point == 20 || MF_Point == 15 || MF_Point == 10)
+        {
+            return (RB_Flag ? 0.0f : 180.0f);
+        }
+        else if (MF_Point == 27 || MF_Point == 28 || MF_Point == 29 || MF_Point == 30)
+        {
+            return 90.0f;
+        }
+        else if (MF_Point == 2 || MF_Point == 3 || MF_Point == 4 || MF_Point == 5)
+        {
+            return -90.0f;
+        }
+    }
+    void v_plan(void)
+    {
+        V.planspeed = path_line_.plan(robot_pos_);
+        Path_correction();
+        V.corrVelocity = V.PID_coefficient * V.corrVelocity;
+        speed = v_limit();
+        if (path_line_.Get_Curve_Flag() == true)
+        {
+            speed = speed * V.spinodal_coefficient;
+        }
+        Chassis_Target.VX = speed.x;
+        Chassis_Target.VY = speed.y;
+    }
+
+    void CHASSIS_MANUAL(float v_ratio, float yaw_ratio=0.0f,bool yaw_update=true)
+    {
+        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+            Chassis_Target.VX = airjoy_data_.left_x * v_ratio * this->is_chassis_reverse_;
+        else
+            Chassis_Target.VX = 0.0f;
+        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+            Chassis_Target.VY = airjoy_data_.left_y * v_ratio * this->is_chassis_reverse_;
+        else
+            Chassis_Target.VY = 0.0f;
+            if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
+            Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio;
+        else
+            Chassis_Target.yaw_rate = 0.0f;
+        if(yaw_update)
+            target_yaw = yaw;
+    }
 };
+
 #endif // __cplusplus
 
 #endif // __OMNI_CHASSISSETUP_H

@@ -79,6 +79,9 @@ typedef enum{
 
     CHASSIS_AUTO_CONTROL_CB, //夹杆自动
     CHASSIS_AUTO_CONTROL_KFS, //KFS自动
+    
+    CHASSIS_AUTO_CONTROL_CZ,
+    
     CHASSIS_AUTO_CONTROL_CZ_R1, //对抗区R1自身自动
     CHASSIS_AUTO_CONTROL_CZ_R2, //对抗区R2合体自动
     
