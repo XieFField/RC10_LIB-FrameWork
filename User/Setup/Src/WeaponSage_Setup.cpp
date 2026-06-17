@@ -550,7 +550,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                         this->setLaunch_angle(auto_ctrl_.launch_kp.launch_start*initData_.max_launchHeight_); //将arm打到竖直位置
 						if(abs(current_pos_.launch_pos_-auto_ctrl_.launch_kp.launch_start*initData_.max_launchHeight_)<0.5f)
 						{
-							 now_state_ = WeaponSage_Setup::STATE_ARM_MOVE;
+							now_state_ = WeaponSage_Setup::STATE_ARM_MOVE;
 						}
                     }
                 }
@@ -561,7 +561,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
             {   
 
                 this->setArm_angle(0.0f); //将arm打到竖直位置
-                this->setLaunch_angle(initData_.max_launchHeight_ );      //抬高到预定位置
+                this->setLaunch_angle(initData_.dock_height);      //抬高到预定位置
                 if(abs(current_pos_.launch_pos_-initData_.max_launchHeight_ )<0.02f) //如果已经调整到位了，进入下一个状态
                 {
                     now_state_ = WeaponSage_Setup::STATE_DONE;
@@ -770,7 +770,7 @@ WeaponSage_InitData_S initData_=
     .max_arm_angle_ = 135.0f,
     .max_wrist_angle_ = 360.0f,
 	.max_arm_rate_ =90.0f,
-	
+	.dock_height_=0.0625674725,
     .wrist_gearRatio_ = 144.0f,
     .launch_Ratio_ = 0.139989366256f,
     .claw_gearRatio_  =360.0f ,
