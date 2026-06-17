@@ -57,13 +57,13 @@ typedef struct
 
 typedef struct
 {
-    Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 1.0f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 1.0f, .startPos = 0.055f, .targetPos = 0.0f, .deadzone = 0.001f};
 
-    Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.055f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config curve = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};
-    Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.055f, .targetPos = 0.0f, .deadzone = 0.001f};
 
-    Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.055f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     // 没用的
@@ -88,9 +88,9 @@ typedef struct
 
 typedef struct
 {
-    float CB_spiw = 0.5f;
     Vector2D CB_Start_pos = {1.0f, 0.9f};        // 夹杆起点。
     Vector2D CB_Selection_pos = {2.47f, 0.815f}; // 夹杆流程默认目标点。
+    
     // 相机流程
     Vector2D CB_End_pos = {2.745f, 1.185f};
 
@@ -170,8 +170,7 @@ typedef struct
 
 typedef struct
 {
-    bool Selection_flag = false; // 进入 CB 目标点标志
-    bool Retreat_flag = false;   // 进入 CB 停止点标志
+
 } CB_FLAG;
 
 typedef struct
@@ -231,8 +230,6 @@ public:
 private:
     // Vector2D test_point = {3.0f, 2.0f};
     //-----------------------------------通讯标志位-----------------------------------------//
-    CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;      // 当前底盘总状态机状态。
-    CHASSIS_Status_E chassis_status_last_ = CHASSIS_STOP; // 当前底盘总状态机状态。（依旧是每个模式都赋值，用于进入自动模式时进行初始化）
 
     bool WeaponSage_Start = false; // 夹杆流程开始标志。
     bool WeaponSage_End = false;   // 夹杆流程完成标志。
@@ -261,8 +258,6 @@ private:
 
     CZ_FLAG CZ_flag;
     CZ_POINT CZ_point;
-    CZ_STATE CZ_state;
-    CZ_STATE CZ_state_last;
 
     BezierCurve curve; // 当前路径曲线缓存。
 
@@ -292,18 +287,18 @@ private:
     Debug_Printf debug_uart = Debug_Printf(&huart8);    // 调试串口
     CHASSIS_TARGET Chassis_Target = {0.0f, 0.0f, 0.0f}; // 底层对接接口缓冲区
 
+    CZ_STATE CZ_state;
+    CZ_STATE CZ_state_last;
+
+    CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;      // 当前底盘总状态机状态。
+    CHASSIS_Status_E chassis_status_last_ = CHASSIS_STOP; // 当前底盘总状态机状态。（依旧是每个模式都赋值，用于进入自动模式时进行初始化）
+
     //-----------------------------------内部控制函数-----------------------------------------//
     void loop() override; // RTOS 主循环。
 
-    void Path_correction(void); // 基于当前位置执行路径纠偏。
+    void CB_Selection_Planning(void); // 生成夹杆流程路径。
 
-    void Path_KFS_check(void); // 检查并执行路径中旋转逻辑。
-
-    void Clamping_Bar_Selection_Planning(void); // 生成夹杆流程路径。
-
-    void Path_CB_check(void);
-
-    void Path_lock_point(Vector2D lock_point);
+    void CB_Path_Check(void);
 
     void CZ_R1_Selection_Planning(void);
 
@@ -314,6 +309,10 @@ private:
     void CZ_FIT_Path_Init(void);
 
     void CZ_ARM_Path_Init(void);
+
+    void CZ_index_reset(void);
+
+    void CZ_init(void);
 
 public:
     /**
@@ -397,24 +396,6 @@ public:
 
     // 写一些辅助函数和标志位函数
 private:
-    void CZ_init(void)
-    {
-        if(CZ_state_last != CZ_state)
-        {
-            flag_reset();
-            path_line_.Reset();
-            path_line_.plan_reset();
-            Path_end_point = robot_pos_;
-            CZ_flag.R1_RL_index = 1;
-            CZ_flag.R1_FB_index = 0;
-            CZ_flag.fit_pos_index = 1;
-            CZ_flag.R2_pos_index = -1;
-        }
-    }
-    // 三区地图索引复位
-    void CZ_index_reset(void)
-    {
-    }
     // 复位自动流程相关标志位。
     void flag_reset(void)
     {
@@ -438,9 +419,91 @@ private:
         KFS_flag.MF3_finish = false;
 
         KFS_flag.get_spin_flag = false;
+    }
+    //////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
+    void Path_lock_point(Vector2D lock_point)
+    {
+        float lock_err = (robot_pos_ - lock_point).magnitude();
+        if (airjoy_data_.SWA == 0x00 && chassis_status_ == CHASSIS_AUTO_CONTROL_CZ_R2)
+        {
+            speed = path_lock_r2.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
+        }
+        else
+        {
+            speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
+        }
+        pid_dead_flag = path_lock.get_is_in_dead_zone();
 
-        CB_flag.Selection_flag = false;
-        CB_flag.Retreat_flag = false;
+        Chassis_Target.VX = speed.x;
+        Chassis_Target.VY = speed.y;
+        if (pid_dead_flag == true)
+        {
+            Chassis_Target.VX = 0.0f;
+            Chassis_Target.VY = 0.0f;
+        }
+    }
+
+    void Path_correction(void)
+    {
+        float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
+        float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
+
+        curve.Get_Nearest_Distance(robot_pos_, &tNearest);
+
+        Vector2D nearestPt = curve.Get_Point(tNearest);
+
+        float obj_dis = _tool_Abs((curve.Get_End_point() - robot_pos_).magnitude());
+
+        // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
+        if (obj_dis < V.m_lookaheadDist)
+        {
+            Vector2D endPt = curve.Get_End_point();
+
+            if (curve.Get_len() < 0.0001f)
+            {
+                V.corrVelocity = {0.0f, 0.0f};
+                return;
+            }
+            V.corrVelocity.x = pid_pos_x.pid_calc(endPt.x, robot_pos_.x);
+            V.corrVelocity.y = pid_pos_y.pid_calc(endPt.y, robot_pos_.y);
+            return;
+        }
+
+        Vector2D lookaheadPt; // 路径上的前视点
+
+        tLookahead = tNearest; // 前视点的编号，先从最近点的编号开始（比如t=0.3）
+
+        // 弧长表二分查找：利用 BezierCurve 已有的 distance_list[200]
+        // Get_Current_Len 内部做 O(1) 查表+线性插值，二分替代逐点步进
+        float current_len = curve.Get_Current_Len(tNearest);
+        float target_len = current_len + V.m_lookaheadDist;
+
+        if (target_len >= curve.Get_len())
+        {
+            // 前视距离超出曲线总长 → 直接用终点
+            tLookahead = 1.0f;
+            lookaheadPt = curve.Get_Point(1.0f);
+        }
+        else
+        {
+            float lo = tNearest, hi = 1.0f;
+            for (int i = 0; i < 8; i++)
+            {
+                float mid = (lo + hi) * 0.5f;
+                if (curve.Get_Current_Len(mid) < target_len)
+                    lo = mid;
+                else
+                    hi = mid;
+            }
+            tLookahead = hi;
+            lookaheadPt = curve.Get_Point(tLookahead);
+        }
+        pid_dead_flag = path_lock.get_is_in_dead_zone();
+
+        // 3. 在绝对世界坐标系下，独立计算X轴和Y轴的纠偏向速度
+        // 将不再计算切法向，直接基于XY差值PID
+        V.corrVelocity.x = pid_pos_x.pid_calc(lookaheadPt.x, robot_pos_.x);
+        V.corrVelocity.y = pid_pos_y.pid_calc(lookaheadPt.y, robot_pos_.y);
     }
 
     Vector2D v_limit(void)
@@ -470,6 +533,119 @@ private:
             num = 0;
         }
         return v_end;
+    }
+    ///////////////////////////////////       KFS路径生成            ////////////////////////////////
+
+    void KFS_Path_Check(void)
+    {
+        // KFS拾取判断MF1
+        if (KFS_point.MF1_pos_.x == curve.Get_End_point().x && KFS_point.MF1_pos_.y == curve.Get_End_point().y)
+        {
+            KFS_flag.MF1_flag = true;
+        }
+        else if (KFS_flag.MF1_flag == true)
+        {
+            KFS_flag.MF1_flag = false;
+            pid_dead_flag = false;
+            Arm_Start = true;
+            KFS_flag.MF1_finish = true;
+        }
+
+        // KFS拾取判断MF2
+        if (KFS_point.MF2_pos_.x == curve.Get_End_point().x && KFS_point.MF2_pos_.y == curve.Get_End_point().y)
+        {
+            KFS_flag.MF2_flag = true;
+        }
+        else if (KFS_flag.MF2_flag == true)
+        {
+            KFS_flag.MF2_flag = false;
+            pid_dead_flag = false;
+            Arm_Start = true;
+            KFS_flag.MF2_finish = true;
+        }
+
+        // KFS拾取判断MF3
+        if (KFS_point.MF3_pos_.x == curve.Get_End_point().x && KFS_point.MF3_pos_.y == curve.Get_End_point().y)
+        {
+            KFS_flag.MF3_flag = true;
+        }
+        else if (KFS_flag.MF3_flag == true)
+        {
+            KFS_flag.MF3_flag = false;
+            pid_dead_flag = false;
+            Arm_Start = true;
+            KFS_flag.MF3_finish = true;
+        }
+
+        if (KFS_flag.spin_flag_0 == true && Arm_Start == false)
+        {
+            // 两侧旋转判断
+            if (KFS_point.spin_pos_0.x == curve.Get_End_point().x && KFS_point.spin_pos_0.y == curve.Get_End_point().y)
+            {
+                KFS_flag.get_spin_flag = true;
+            }
+            // 两侧开始旋转
+            else if (KFS_flag.get_spin_flag == true)
+            {
+                target_yaw = KFS_point.MF1_target_yaw_;
+                KFS_flag.spin_flag_0 = false;
+                KFS_flag.get_spin_flag = false;
+            }
+        }
+
+        if (KFS_flag.spin_flag == true && KFS_flag.MF1_finish == true && Arm_Start == false)
+        {
+            // 第一排和最后一排旋转
+            if (target_yaw == -90.0f || target_yaw == 90.0f)
+            {
+                target_yaw = KFS_point.MF2_target_yaw_;
+                KFS_flag.spin_flag = false;
+            }
+            // 两侧旋转判断
+            else if (KFS_point.spin_pos.x == curve.Get_End_point().x && KFS_point.spin_pos.y == curve.Get_End_point().y)
+            {
+                KFS_flag.get_spin_flag = true;
+            }
+            // 两侧开始旋转
+            else if (KFS_flag.get_spin_flag == true)
+            {
+                target_yaw = KFS_point.MF2_target_yaw_;
+                KFS_flag.spin_flag = false;
+                KFS_flag.get_spin_flag = false;
+            }
+        }
+
+        if (KFS_flag.spin_flag_2 == true && KFS_flag.spin_flag == false && KFS_flag.MF2_finish == true && Arm_Start == false)
+        {
+            // 第一排旋转
+            if (target_yaw == -90.0f || target_yaw == 90.0f)
+            {
+                target_yaw = KFS_point.MF3_target_yaw_;
+                KFS_flag.spin_flag_2 = false;
+            }
+            // 两侧旋转判断
+            else if (KFS_point.spin_pos_2.x == curve.Get_End_point().x && KFS_point.spin_pos_2.y == curve.Get_End_point().y)
+            {
+                KFS_flag.get_spin_flag = true;
+            }
+            // 两侧开始旋转
+            else if (KFS_flag.get_spin_flag == true)
+            {
+                target_yaw = KFS_point.MF3_target_yaw_;
+                KFS_flag.spin_flag_2 = false;
+                KFS_flag.get_spin_flag = false;
+            }
+        }
+
+        if (KFS_flag.uphill_flag == true)
+        {
+            // 上坡后旋转判断
+            if (CZ_point.uphill_pos.x == curve.Get_Start_point().x && CZ_point.uphill_pos.y == curve.Get_Start_point().y)
+            {
+                if (robot_pos_.x > CZ_point.skew_yaw)
+                    target_yaw = CZ_point.R1_yaw;
+            }
+        }
     }
 
     bool KFS_Selection_Planning(void)
