@@ -61,8 +61,19 @@ void Robot_Arm::update()
         );
     }
     else if(control_mode_ == CURRENT_CONTROL_MODE)
-        // 当前仅用于存储目标位置，不进行逆解和运动控制，直接
-        return; // 直接返回，不进行任何操作
+    {
+        // pitch 电机（DM_Motor）不受 CURRENT_CONTROL_MODE 影响，
+        // 持续发送位置指令以维持当前角度。
+        // DJI 电机（launch/stretch/rotate）通过各自的 setTargetCurrent(0) 停转。
+        if(motor_pitch_ != nullptr)
+        {
+            float target_pitchMotorAngle = pitchAngle_to_MotorTotalAngle(
+                target_joint_angle_.suckerJoint_angle_);
+            motor_pitch_->setTargetTotalAngle(init_data_.max_pitchRPM_,
+                target_pitchMotorAngle);
+        }
+        return;
+    }
     
   
     // 计算目标电机角度，单位为电机转过的总角度，考虑减速比和机械臂结构
@@ -125,15 +136,26 @@ void Robot_Arm::update()
     }
 
 
-    if(store_sucker_status_ == SUCK)
+    if(store_sucker_outside_status_ == SUCK)
     {
-        HAL_GPIO_WritePin(init_data_.Store_GPIO_Port, init_data_.Store_GPIO_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(init_data_.Store_Soleniod_GPIO_Port, init_data_.Store_Soleniod_GPIO_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(init_data_.StoreOutside_GPIO_Port, init_data_.StoreOutside_GPIO_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(init_data_.StoreOutside_Soleniod_GPIO_Port, init_data_.StoreOutside_Soleniod_GPIO_Pin, GPIO_PIN_RESET);
     }
     else
     {
-        HAL_GPIO_WritePin(init_data_.Store_GPIO_Port, init_data_.Store_GPIO_Pin, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(init_data_.Store_Soleniod_GPIO_Port, init_data_.Store_Soleniod_GPIO_Pin, GPIO_PIN_RESET);
+        // HAL_GPIO_WritePin(init_data_.StoreOutside_GPIO_Port, init_data_.StoreOutside_GPIO_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(init_data_.StoreOutside_Soleniod_GPIO_Port, init_data_.StoreOutside_Soleniod_GPIO_Pin, GPIO_PIN_SET);
+    }
+
+    if(store_sucker_inside_status_ == SUCK)
+    {
+        HAL_GPIO_WritePin(init_data_.StoreOutside_GPIO_Port, init_data_.StoreOutside_GPIO_Pin, GPIO_PIN_SET); //共用outside的GPIO口
+        HAL_GPIO_WritePin(init_data_.StoreInside_Soleniod_GPIO_Port, init_data_.StoreInside_Soleniod_GPIO_Pin, GPIO_PIN_SET);
+    }
+    else
+    {
+        // HAL_GPIO_WritePin(init_data_.StoreInside_GPIO_Port, init_data_.StoreInside_GPIO_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(init_data_.StoreInside_Soleniod_GPIO_Port, init_data_.StoreInside_Soleniod_GPIO_Pin, GPIO_PIN_RESET);
     }
 }
 

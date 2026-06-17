@@ -82,11 +82,23 @@ int16_t DJI_Motor::realCurrent_to_virtualCurrent(float realCurrent)
     switch(type_)
     {
         case M3508_Type:
-            return static_cast<int16_t>(realCurrent * inv_virM3508); // 20A满量程
+        {
+            float v = realCurrent * inv_virM3508;
+            v = constrain(v, -32767.0f, 32767.0f);
+            return static_cast<int16_t>(v);
+        }
         case M2006_Type:
-            return static_cast<int16_t>(realCurrent ); // 10A满量程
+        {
+            float v = realCurrent;
+            v = constrain(v, -32767.0f, 32767.0f);
+            return static_cast<int16_t>(v);
+        }
         case GM6020_Type:
-            return static_cast<int16_t>(realCurrent * inv_virGM6020);  //3A满量程
+        {
+            float v = realCurrent * inv_virGM6020;
+            v = constrain(v, -32767.0f, 32767.0f);
+            return static_cast<int16_t>(v);
+        }
         default:
             return 0;
     }
@@ -259,7 +271,10 @@ float M3508::getRPM() const
     return rpm_;
 }
 
-void M3508::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa)
+void M3508::pid_init(const PID_Param_Config& speed_params,
+                     float speed_tdRatio,
+                     const PID_Param_Config& angle_params,
+                     float angle_I_Separa)
 {
     speed_pid_.set_params(speed_params, speed_tdRatio);
     angle_pid_.set_params(angle_params, angle_I_Separa);
@@ -399,7 +414,10 @@ float M2006::getRPM() const
     return rpm_;
 }
 
-void M2006::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa)
+void M2006::pid_init(const PID_Param_Config& speed_params,
+                     float speed_tdRatio,
+                     const PID_Param_Config& angle_params,
+                     float angle_I_Separa)
 {
     speed_pid_.set_params(speed_params, speed_tdRatio);
     angle_pid_.set_params(angle_params, angle_I_Separa);
@@ -499,7 +517,10 @@ GM6020::GM6020(uint32_t motor_id, fdCANbus* bus, bool calcTotalAngle, bool calcA
     Motor_Base::inv_GEAR_RATIO_ = 1.0f;
 }
 
-void GM6020::pid_init(const PID_Param_Config& speed_params, float speed_tdRatio, const PID_Param_Config& angle_params, float angle_I_Separa)
+void GM6020::pid_init(const PID_Param_Config& speed_params,
+                      float speed_tdRatio,
+                      const PID_Param_Config& angle_params,
+                      float angle_I_Separa)
 {
     speed_pid_.set_params(speed_params, speed_tdRatio);
     angle_pid_.set_params(angle_params, angle_I_Separa);

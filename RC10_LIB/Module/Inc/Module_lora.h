@@ -54,17 +54,6 @@ typedef struct{
     uint8_t recv_command_load1;
     uint8_t recv_command_load2;
 
-    // ---- KFS 发送目标 ----
-    uint8_t KFS_want1;
-    uint8_t KFS_want2;
-
-    // ---- 武器头等 ----
-    uint8_t spear;
-
-    // ---- 底盘轴控（发送用，有符号）----
-    int16_t Axis_x;
-    int16_t Axis_y;
-    int16_t Axis_yaw;
 }RC10_AirJoy_Data_S;
 
 /* KFS 梅花桩位置数据结构体 */
@@ -79,94 +68,38 @@ class Lora_communication : public Communication, public gpio::GpioExti {
 public:
     static Lora_communication* GetInstance();
 
-    void Init();
-    void Task_Process();        //  public
-    void Tim_It_Process();      //  public
+    void Init();                //  初始化
+    void Task_Process();        //  更新 airjoy_data 和 kfs_data 中的数据
+    void Tim_It_Process();      //  定时器中断处理，负责定时触发发送
 
-    void update_airjoy_data(RC10_AirJoy_Data_S * data)
-    {
-        if(!data) return;
+//-----------------------------R1 数据查询接口---------------------------------------
+    const KFS_DATA_S& GetKFSData() const { return kfs_data; }
 
-        data->joystick1 = airjoy_data_.joystick1;
-        data->joystick2 = airjoy_data_.joystick2;
-        data->joystick3 = airjoy_data_.joystick3;
-        data->joystick4 = airjoy_data_.joystick4;
-
-        data->key  = airjoy_data_.key;
-        data->page = airjoy_data_.page;
-
-        data->left_x = airjoy_data_.left_x;
-        data->left_y = airjoy_data_.left_y;
-        data->right_y = airjoy_data_.right_x;
-        data->right_x = airjoy_data_.right_y;
-
-        data->SWA = airjoy_data_.SWA;
-        data->SWB = airjoy_data_.SWB;
-        data->SWC = airjoy_data_.SWC;
-        data->SWD = airjoy_data_.SWD;
-        data->SWE = airjoy_data_.SWE;
-        data->SWF = airjoy_data_.SWF;
-
-        data->LB = airjoy_data_.LB;
-        data->RB = airjoy_data_.RB;
-        data->LT = airjoy_data_.LT;
-        data->RT = airjoy_data_.RT;
-
-        data->d_pad_up = airjoy_data_.d_pad_up;
-        data->d_pad_down = airjoy_data_.d_pad_down;
-        data->d_pad_left = airjoy_data_.d_pad_left;
-        data->d_pad_right = airjoy_data_.d_pad_right;
-
-        data->key_pressed_count = airjoy_data_.key_pressed_count;
-        data->key_down_count    = airjoy_data_.key_down_count;
-        data->key_last_status   = airjoy_data_.key_last_status;
-
-        data->KFS1_1 = airjoy_data_.KFS1_1;
-        data->KFS1_2 = airjoy_data_.KFS1_2;
-        data->KFS1_3 = airjoy_data_.KFS1_3;
-        data->KFS2_1 = airjoy_data_.KFS2_1;
-        data->KFS2_2 = airjoy_data_.KFS2_2;
-        data->KFS2_3 = airjoy_data_.KFS2_3;
-        data->KFS2_4 = airjoy_data_.KFS2_4;
-        data->KFSf_1 = airjoy_data_.KFSf_1;
-        data->color  = airjoy_data_.color;
-
-        data->recv_command_command = airjoy_data_.recv_command_command;
-        data->recv_command_load1  = airjoy_data_.recv_command_load1;
-        data->recv_command_load2  = airjoy_data_.recv_command_load2;
-
-        data->KFS_want1 = airjoy_data_.KFS_want1;
-        data->KFS_want2 = airjoy_data_.KFS_want2;
-        data->spear     = airjoy_data_.spear;
-
-        data->Axis_x   = airjoy_data_.Axis_x;
-        data->Axis_y   = airjoy_data_.Axis_y;
-        data->Axis_yaw = airjoy_data_.Axis_yaw;
-    }
+    void update_airjoy_data(RC10_AirJoy_Data_S * data);
 
     void send_robot_pos(float x, float y, float yaw);
 
     void send_claw_status(bool claw1, bool claw2, bool claw3);
 
-    void send_sucker_status(bool sucker1, bool sucker2);
+    void send_sucker_status(bool sucker);
 
-    void send_auto_status(bool auto_status);
+    void send_robot_kfs_keepplace(uint8_t keepplace){send_kfs_keepplace = keepplace;}
 
-    void send_command(int8_t cmd);
+    void set_robot_KFS_want_place(uint8_t want1, uint8_t want2,uint8_t want3);
+
+    void send_robot_spear(bool spear1,bool spear2, bool spear3){send_spear = spear3|(spear2<<1)|(spear1<<2);}
+    
+    void send_robot_mode(uint8_t mode){send_mode = mode;}
+
+    // void send_auto_status(bool auto_status);
+
+    // void send_command(int8_t cmd);
+//-----------------------------R1 数据查询接口---------------------------------------
 
 
-    /**
-     * @brief 获取接收到的命令帧数据（串口屏转发）
-     * @param command 存放命令的变量
-     * @param load1 存放负载1的变量（累计次数）
-     * @param load2 存放负载2的变量（保留扩展）
-     */
-    void GetChosenCommandAndCnt(uint8_t& command, uint8_t& load1, uint8_t& load2) {
-        Communication::GetRecvCommandFrameData(command, load1, load2);
-    }
-    void SetSendAxisData(uint16_t x, uint16_t y, uint16_t z) {
+//-----------------------------老接口（不建议使用）-----------------------------------
+    void SetSendAxisData(int16_t x, int16_t y, int16_t z) {
         send_x = x; send_y = y; send_z = z;
-        pending_x_raw_ = x; pending_y_raw_ = y; pending_yaw_raw_ = z;
     }
 
     void SetSendStatus(uint8_t gripper_status, uint8_t suction_cup_status, uint8_t automatic_status) {
@@ -178,28 +111,29 @@ public:
     void SetSendMode(uint8_t mode) { send_mode = mode; }
 
     void SetSendCommand(uint8_t command1, uint8_t command2) {
-        chosen_command = command1; chosen_command_cnt = command2;
+        send_chosen_command = command1; send_chosen_command_cnt = command2;
     }
 
     // ---- 发送数据 setter 接口（外部调用修改发送参数）----
     void SetSendWantKFSData(uint8_t KFS_want_place1, uint8_t KFS_want_place2) {
-        send_kfs_want_place1_ = KFS_want_place1;
-        send_kfs_want_place2_ = KFS_want_place2;
+        send_kfs_want_place1 = KFS_want_place1;
+        send_kfs_want_place2 = KFS_want_place2;
     }
 
     void SetSendSpearData(uint8_t spear) {
-        send_spear_ = spear;
+        send_spear = spear;
     }
 
     void SetSendKeepKFSData(uint8_t KFS_Keepplace) {
-        send_kfs_keepplace_ = KFS_Keepplace;
+        send_kfs_keepplace = KFS_Keepplace;
     }
-    // KFS 数据对外查询接口
-    const KFS_DATA_S& GetKFSData() const { return kfs_data_; }
+//-----------------------------老接口（不建议使用）-----------------------------------
+
 
 protected:
     virtual void Comm_TxUseTxDMA(UART_HandleTypeDef* huart, uint8_t* data, uint16_t size) override;
     void EXTI_Prosess();        //  protectedֻ All_EXTI_Prosess
+    static void RxCallback(uint8_t* buf, uint16_t len);
 
 private:
     Lora_communication(UART_HandleTypeDef* tx_huart, UART_HandleTypeDef* rx_huart,
@@ -208,7 +142,6 @@ private:
            tim::Tim* timer);
     ~Lora_communication();
 
-    void flush_pending_frame();
 
     UART_HandleTypeDef* lora_tx_huart;
     UART_HandleTypeDef* lora_rx_huart;
@@ -224,46 +157,26 @@ private:
     UART_ bsp_rx;
     tim::Tim* attached_timer;
 
-    uint16_t pending_x_raw_;
-    uint16_t pending_y_raw_;
-    uint16_t pending_yaw_raw_;
-    uint8_t pending_claw_status_;
-    uint8_t pending_sucker_status_;
-    uint8_t pending_mode_;
-    uint8_t pending_command_;
-    bool pending_tx_dirty_;
-    bool auto_mode_;
-
-    // 待发送的 KFS 相关数据（填入 XYZ 帧扩展字段）
-    uint8_t send_kfs_want_place1_;
-    uint8_t send_kfs_want_place2_;
-    uint8_t send_spear_;
-    uint8_t send_kfs_keepplace_;
-
-    // 命令帧相关（串口屏转发）
-    uint8_t recv_command_command_;
-    uint8_t recv_command_load1_;
-    uint8_t recv_command_load2_;  // 保留扩展
-    uint8_t chosen_command_cnt_;  // 发送帧 command2（累计次数）
-
+   
+    //测试用，按键状态
     uint16_t key_pressed_count_;
     uint16_t key_down_count_;
     uint16_t key_last_status_;
 
-    KFS_DATA_S kfs_data_;
 
     static Lora_communication* s_instance;
-    static void RxCallback(uint8_t* buf, uint16_t len);
     uint16_t send_x, send_y, send_z;
     uint8_t send_gripper_status;
     uint8_t send_suction_cup_status;
     uint8_t send_automatic_status;
     uint8_t send_mode;
-    uint8_t chosen_command, chosen_command_cnt, recv_command_load2;
+    uint8_t send_chosen_command, send_chosen_command_cnt;
     uint8_t send_kfs_want_place1, send_kfs_want_place2;
     uint8_t send_spear;
     uint8_t send_kfs_keepplace;
-    RC10_AirJoy_Data_S airjoy_data_; // 存储解析后的遥控器数据
+    RC10_AirJoy_Data_S airjoy_data; // 存储解析后的遥控器数据
+    KFS_DATA_S kfs_data;
+
 };
 
 }

@@ -45,15 +45,9 @@ extern "C" {
 #include "Module_Air_joy.h"
 #include "Module_Position.h"
 #include "Locate_Setup.h"
-#include "system_detect_task.h"
 #include "Module_HWT.h"
-#include "Module_JY61.h"
 #include "Motor_GO.h"
-#include "Module_lora.h"
 
-
-#include "Module_Serial1Protocol.h"
-#include "Serial1Protocol_Debug.h"
 /*==============Controller===============*/
 #include "FSM_Controller.h"
 #include "Arm_Setup.h"
@@ -61,7 +55,7 @@ extern "C" {
 #include "Module_CrsfReceiver.h"
 #include "WeaponSage_Setup.h"
 #include "chassis.h"
-
+#include "Module_Serial1Protocol.h"
 
 #if SPEEDPLANNER_DEMO_DEBUG
     #include "speedplanner_demo.h"
@@ -72,10 +66,6 @@ extern "C" {
         #include "arm_demo.h"
 #endif
 
-
-#include "m3508_steer_debug.h"
-#include "chassis_swerve_demo.h"
-#include "chassis_swerve_task_demo.h"
 
 class test:public RtosTask {
 public:

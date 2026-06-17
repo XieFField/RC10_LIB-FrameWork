@@ -1,40 +1,4 @@
 $ErrorActionPreference = 'Stop'
-
-$testsDir = $PSScriptRoot
-$root = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $testsDir)))
-$outDir = Join-Path $testsDir 'build'
-if (-not (Test-Path $outDir)) {
-    New-Item -ItemType Directory -Path $outDir | Out-Null
-}
-
-$exe = Join-Path $outDir ("test_chassis_semantics_{0}.exe" -f [System.Guid]::NewGuid().ToString('N'))
-$stubDir = Join-Path $testsDir 'stubs'
-$userInc = Join-Path $root 'User\Setup\Inc'
-$appInc = Join-Path $root 'RC10_LIB\APP\Inc'
-$testSupportSrc = Join-Path $testsDir 'stubs_src\test_host_globals.cpp'
-$appUtilsSrc = Join-Path $root 'RC10_LIB\APP\Src\APP_Utils.cpp'
-$chassisSrc = Join-Path $root 'User\Setup\Src\chassis.cpp'
-$testSrc = Join-Path $testsDir 'test_chassis_semantics.cpp'
-
-& 'C:\Qt\Tools\mingw1310_64\bin\g++.exe' `
-    '-std=c++17' `
-    '-ffunction-sections' `
-    '-fdata-sections' `
-    '-I' $stubDir `
-    '-I' $userInc `
-    '-I' $appInc `
-    $testSupportSrc `
-    $appUtilsSrc `
-    $chassisSrc `
-    $testSrc `
-    '-Wl,--gc-sections' `
-    '-o' $exe
-
-if (-not (Test-Path $exe)) {
-    throw "compile failed, executable not generated: $exe"
-}
-
-& $exe
-if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
-}
+$compat = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'shared\compat_wrapper.ps1'
+& powershell -ExecutionPolicy Bypass -File $compat -SuiteId 'host_cpp.chassis_semantics.main'
+exit $LASTEXITCODE

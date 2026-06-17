@@ -33,6 +33,7 @@ namespace communication{
         uint8_t tail;      // e.g. 0xDE
     } JoystickFrame_t;
 
+    
     //接收帧：接收设置好的KFS位置
     typedef struct {
         uint8_t header[2]; // e.g. 0xAA 0x66
@@ -74,7 +75,7 @@ namespace communication{
     #pragma pack(pop)
 
     class Communication {
-    public:
+    protected:
         /**
          * @brief 构造函数，初始化通信类状态并绑定底层硬件资源
          * @param txhuart   发使用的UART句柄

@@ -22,6 +22,7 @@ void DM_Motor::updateFeedback(const CanFrame& cf)
 }
 void DM_Motor::setTargetTotalAngle(float v_target ,float totalAngle_set)
 {
+	
 	V_des=(v_target*pi)/180;
 	P_des=(totalAngle_set*pi)/180;
 	dm_mode_=MOTOR_POSVEL_MODE;
@@ -106,26 +107,28 @@ std::size_t DM_Motor:: packCommand(CanFrame outFrames[], std::size_t maxFrames)
 
 		case MOTOR_POSVEL_MODE:
 		{
-			if(Error_num=0x01)
-			{
-			uint8_t *vbuf,*pbuf;
-			vbuf=  (uint8_t *)&this->V_des;
-			pbuf = (uint8_t *)&this->P_des;
-			cf.ID = 0x100|DM_Id;
-			for(int i =0;i<4;i++)
-			{
-				cf.data[i]=*(pbuf+i);
+			if(Error_num==0x01)
+                {
+                uint8_t *vbuf,*pbuf;
+                vbuf=  (uint8_t *)&this->V_des;
+                pbuf = (uint8_t *)&this->P_des;
+                cf.ID = 0x100|DM_Id;
+                for(int i =0;i<4;i++)
+                {
+                    cf.data[i]=*(pbuf+i);
+                }
+                for(int i=4;i<8;i++)
+                {
+                    cf.data[i]=*(vbuf+i-4);
+                }
 			}
-			for(int i=4;i<8;i++)
-			{
-				cf.data[i]=*(vbuf+i-4);
-			}
-			}
+            else
+                return 0;
 			break;
 		}
 		case MOTOR_VEL_MODE:
 		{
-			if(Error_num=0x01)
+			if(Error_num==0x01)
 			{
 			cf.ID = 0x200|DM_Id;
 			cf.DLC = 8;

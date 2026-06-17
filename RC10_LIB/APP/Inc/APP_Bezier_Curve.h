@@ -15,8 +15,8 @@
 #ifdef __cplusplus
 
 // 常量定义
-#define FIND_NEAREST_DISTANCE_STEP_COUNT 200  // 查找最近点的迭代次数
-#define BEZIER_SAMPLE_NUM 200				  // 贝塞尔曲线采样点数量（不包含起点）
+#define FIND_NEAREST_DISTANCE_STEP_COUNT 100  // 查找最近点的迭代次数
+#define BEZIER_SAMPLE_NUM 100				  // 贝塞尔曲线采样点数量（不包含起点）
 #define GOLDEN_RATIO (sqrtf(5.f) - 1.f) / 2.f // 黄金分割比例 (~0.618)
 
 /**
