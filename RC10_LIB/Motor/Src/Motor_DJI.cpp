@@ -1,5 +1,8 @@
 #include "Motor_DJI.h"
 
+// NaN detection counter — PID 输出 NaN 时递增（调试断点用）
+static uint32_t g_pid_nan_count = 0;
+
 //M3508 and M2006
      uint32_t send_idLow(){return 0x200;}
      uint32_t send_idHigh(){return 0x1FF;}
@@ -85,18 +88,21 @@ int16_t DJI_Motor::realCurrent_to_virtualCurrent(float realCurrent)
         {
             float v = realCurrent * inv_virM3508;
             v = constrain(v, -32767.0f, 32767.0f);
+            if (!(v == v)) v = 0.0f;  // NaN guard → safe int16_t cast
             return static_cast<int16_t>(v);
         }
         case M2006_Type:
         {
             float v = realCurrent;
             v = constrain(v, -32767.0f, 32767.0f);
+            if (!(v == v)) v = 0.0f;
             return static_cast<int16_t>(v);
         }
         case GM6020_Type:
         {
             float v = realCurrent * inv_virGM6020;
             v = constrain(v, -32767.0f, 32767.0f);
+            if (!(v == v)) v = 0.0f;
             return static_cast<int16_t>(v);
         }
         default:
@@ -352,6 +358,7 @@ void M3508::update()
                 anglePid_timeCnt = 0;
             }
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
+            if (!(target_current_ == target_current_)) { target_current_ = 0.0f; g_pid_nan_count++; }
             //cur = target_current_;
             break;
         }
@@ -359,6 +366,7 @@ void M3508::update()
         {
             // 目标值 target_rpm_ 和反馈值 this->rpm_ 都已经是输出轴转速，尺度统一
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
+            if (!(target_current_ == target_current_)) { target_current_ = 0.0f; g_pid_nan_count++; }
             //cur = target_current_;
             break;
         }
@@ -373,6 +381,7 @@ void M3508::update()
                 anglePid_timeCnt = 0;
             }
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
+            if (!(target_current_ == target_current_)) { target_current_ = 0.0f; g_pid_nan_count++; }
             break;
         }
         
@@ -473,6 +482,7 @@ void M2006::update()
                 anglePid_timeCnt = 0;
             }
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
+            if (!(target_current_ == target_current_)) { target_current_ = 0.0f; g_pid_nan_count++; }
             //cur = target_current_;
             break;
         }
@@ -480,6 +490,7 @@ void M2006::update()
         case SPEED_CONTROL:
         {
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
+            if (!(target_current_ == target_current_)) { target_current_ = 0.0f; g_pid_nan_count++; }
             break;
         }
 
@@ -493,6 +504,7 @@ void M2006::update()
                 anglePid_timeCnt = 0;
             }
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
+            if (!(target_current_ == target_current_)) { target_current_ = 0.0f; g_pid_nan_count++; }
             break;
         }
 
@@ -574,6 +586,7 @@ void GM6020::update()
                 anglePid_timeCnt = 0;
             }
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
+            if (!(target_current_ == target_current_)) { target_current_ = 0.0f; g_pid_nan_count++; }
             //cur = target_current_;
             break;
             // Fallthrough to speed control
@@ -583,6 +596,7 @@ void GM6020::update()
         {
             // GM6020没有减速比，直接使用目标转速
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
+            if (!(target_current_ == target_current_)) { target_current_ = 0.0f; g_pid_nan_count++; }
             break;
         }
 
@@ -597,6 +611,7 @@ void GM6020::update()
                 anglePid_timeCnt = 0;
             }
             target_current_ = speed_pid_.pid_calc(target_rpm_, this->rpm_);
+            if (!(target_current_ == target_current_)) { target_current_ = 0.0f; g_pid_nan_count++; }
             break;
         }
 

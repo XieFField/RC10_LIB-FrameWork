@@ -64,6 +64,10 @@ typedef struct {
     float store_height_inside_ = 0.0f; // 储存高度
     float store_height_outside_ = 0.0f; // 储存高度
 
+    float catch_20height = 0.0121250749f;
+    float catch_40height = 0.156194746f;
+    float catch_60height = 0.31f;
+
     float lock_height_ = 0.0f; // 云台锁定高度
     float pick_up_height_ =0.0f; //拾取高度
     float putdown_height_ = 0.0f; //放置高度
