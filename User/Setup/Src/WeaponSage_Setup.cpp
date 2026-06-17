@@ -242,7 +242,7 @@ void Robot_WeaponSage_Setup::manualControl()
         manual_ctrlForgrip_.changeTarget_state = false;
         ctrl_status_.wrist_rotate_enable=true;
     }
-    else if(airjoy_data_.right_x > 0.5f&&ctrl_status_.wrist_rotate_enable)
+    else if(airjoy_data_.right_x > 0.5f&&ctrl_status_.wrist_rotate_enable&&auto_ctrl_.auto_state_bool_S.wrist_enable)
     {
         manual_ctrlForgrip_.changeTarget_state = true;
         float temp =normalize_deg_0_360(current_pos_.wrist_pos_+90.0f+45.0f);
@@ -251,7 +251,7 @@ void Robot_WeaponSage_Setup::manualControl()
         target_pos_.wrist_pos_=round_cnt*90.0f;
         ctrl_status_.wrist_rotate_enable=false;
     }
-    else if(airjoy_data_.right_x < -0.5f&&ctrl_status_.wrist_rotate_enable)
+    else if(airjoy_data_.right_x < -0.5f&&ctrl_status_.wrist_rotate_enable&&auto_ctrl_.auto_state_bool_S.wrist_enable)
     {
         manual_ctrlForgrip_.changeTarget_state = true;
             float temp =normalize_deg_0_360(current_pos_.wrist_pos_-90.0f+45.0f);
@@ -283,7 +283,6 @@ void Robot_WeaponSage_Setup::manualControl()
     else if(target_pos_.launch_pos_ < 0.0f)
         target_pos_.launch_pos_ = 0.0f;
 
-    this->target_pos_.launch_pos_=test_launch;
     int8_t target_claw_logical = (airjoy_data_.SWD & 0x01) ^ ctrl_status_.claw_switch_offset;
     
     ctrl_status_.last_manual_claw_state = target_claw_logical;
@@ -743,7 +742,7 @@ void Robot_WeaponSage_Setup::Judge_launch_status()
 
 void Robot_WeaponSage_Setup::Judge_wrist_status()
 {
-    if(current_pos_.launch_pos_>=0.5*initData_.max_launchHeight_&&abs(current_pos_.arm_pos_-90.0f)<0.2f)
+    if(current_pos_.launch_pos_>=initData_.dock_height_)
     {
         auto_ctrl_.auto_state_bool_S.wrist_enable=true;
     }else
