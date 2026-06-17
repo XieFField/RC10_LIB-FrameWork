@@ -1,15 +1,17 @@
 #include "omni_chassisSetup.h"
 extern Chassis chassis;
 float CB_yaw = 89.0f;
-void OmniChassis_Setup::Path_CB_check(void)
+void OmniChassis_Setup::CB_Path_Check(void)
 {
+    static bool Selection_flag = false;
+     static bool Retreat_flag = false;
     if (CB_point.CB_Selection_pos.x == curve.Get_End_point().x && CB_point.CB_Selection_pos.y == curve.Get_End_point().y)
     {
-        CB_flag.Selection_flag = true;
+        Selection_flag = true;
     }
-    else if (CB_flag.Selection_flag == true)
+    else if (Selection_flag == true)
     {
-        CB_flag.Selection_flag = false;
+        Selection_flag = false;
         pid_dead_flag = false;
         WeaponSage_Start = true;
     }
@@ -17,15 +19,15 @@ void OmniChassis_Setup::Path_CB_check(void)
     {
         if (CB_point.CB_End_pos.x == curve.Get_End_point().x && CB_point.CB_End_pos.y == curve.Get_End_point().y)
         {
-            CB_flag.Retreat_flag = true;
+            Retreat_flag = true;
             if (WeaponSage_Start == false)
             {
                 target_yaw = 90.0f;
             }
         }
-        else if (CB_flag.Retreat_flag == true)
+        else if (Retreat_flag == true)
         {
-            CB_flag.Retreat_flag = false;
+            Retreat_flag = false;
             pid_dead_flag = false;
             WeaponSage_End = true;
         }
@@ -41,18 +43,18 @@ void OmniChassis_Setup::Path_CB_check(void)
         }
         if (CB_point.CB_welt_pos.x == curve.Get_End_point().x && CB_point.CB_welt_pos.y == curve.Get_End_point().y)
         {
-            CB_flag.Retreat_flag = true;
+            Retreat_flag = true;
         }
-        else if (CB_flag.Retreat_flag == true)
+        else if (Retreat_flag == true)
         {
-            CB_flag.Retreat_flag = false;
+            Retreat_flag = false;
             pid_dead_flag = false;
             WeaponSage_End = true;
         }
     }
 }
 
-void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
+void OmniChassis_Setup::CB_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
     // target_yaw = CB_yaw;
@@ -78,50 +80,6 @@ void OmniChassis_Setup::Clamping_Bar_Selection_Planning(void)
         path_line_.Add_Point(CB_point.CB_transition_pos, path_param.end);
         path_line_.Add_End_Point(CB_point.CB_welt_pos, path_param.end);
     }
-    Path_end_point = path_line_.Get_End_Point();
-}
-
-void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
-{
-    // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw = CZ_point.R1_yaw;
-    path_line_.Reset();
-    path_line_.plan_reset();
-
-    path_line_.Add_Start_Point(robot_pos_);
-    if (CZ_flag.R1_FB_index == 1)
-    {
-        path_line_.Add_End_Point({CZ_point.R1_pos[CZ_flag.R1_RL_index][1].x, robot_pos_.y}, path_param.end);
-    }
-    else
-    {
-        path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][0], path_param.end);
-    }
-
-    Path_end_point = path_line_.Get_End_Point();
-}
-
-void OmniChassis_Setup::CZ_R2_Selection_Planning(void)
-{
-    // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw = CZ_point.fit_yaw;
-    path_line_.Reset();
-    path_line_.plan_reset();
-
-    // 合体地点和等待地点的切换
-    if (airjoy_data_.SWA == 0x01)
-    {
-        CZ_flag.fit_pos_index = (CZ_flag.fit_pos_index + 1) % 2;
-        path_line_.Add_Start_Point(robot_pos_);
-        path_line_.Add_End_Point(CZ_point.fit_pos[CZ_flag.fit_pos_index], path_param.end);
-    }
-    else if (airjoy_data_.SWA == 0x00)
-    {
-        CZ_flag.R2_pos_index = (CZ_flag.R2_pos_index + 1) % 3;
-        path_line_.Add_Start_Point(robot_pos_);
-        path_line_.Add_End_Point(CZ_point.R2_pos[CZ_flag.R2_pos_index], path_param.R2);
-    }
-
     Path_end_point = path_line_.Get_End_Point();
 }
 
@@ -188,12 +146,12 @@ void OmniChassis_Setup::loop()
         {
             flag = 0;
             flag_reset();
-            Clamping_Bar_Selection_Planning();
+            CB_Selection_Planning();
         }
         if (path_line_.Is_End() == false)
         {
             curve = path_line_.get_bezier_curve();
-            Path_CB_check();
+            CB_Path_Check();
             if (WeaponSage_Start == false && WeaponSage_End == false)
                 v_plan();
             else
@@ -242,7 +200,7 @@ void OmniChassis_Setup::loop()
         if (path_line_.Is_End() == false)
         {
             curve = path_line_.get_bezier_curve();
-            Path_KFS_check();
+            KFS_Path_Check();
             if (Arm_Start == false)
                 v_plan();
             else
@@ -270,17 +228,14 @@ void OmniChassis_Setup::loop()
             path_line_.Reset();
             path_line_.plan_reset();
             Path_end_point = robot_pos_;
-            CZ_flag.fit_pos_index = 1;
-            CZ_flag.R1_FB_index = 1;
-            CZ_flag.R1_RL_index = 1;
-            CZ_flag.R2_pos_index = 0;
+            CZ_index_reset();
         }
 
-        if (airjoy_data_.right_x < -0.80f)
+        if (airjoy_data_.right_x > -0.05f)
             far_flag = 1;
-        else if (far_flag > 0 &&airjoy_data_.right_x > -0.05f&& CZ_flag.R1_FB_index == 0)
+        else if (far_flag > 0 && airjoy_data_.right_x < -0.80f && CZ_flag.R1_FB_index == 0)
         {
-            if(far_flag > 5)
+            if (far_flag > 5)
             {
                 if (CZ_flag.R1_RL_index < 2)
                     CZ_flag.R1_RL_index++;
@@ -289,42 +244,39 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-                far_flag ++;
+                far_flag++;
             }
         }
-        else if(CZ_flag.R1_FB_index == 1)
+        else if (CZ_flag.R1_FB_index == 1)
         {
-            far_flag=0;
+            far_flag = 0;
         }
 
-
-        if (airjoy_data_.right_x > 0.80f)
-            near_flag  = 1;
-        else if (near_flag >0 &&airjoy_data_.right_x < 0.05f&&CZ_flag.R1_FB_index == 0)
+        if (airjoy_data_.right_x < 0.05f)
+            near_flag = 1;
+        else if (near_flag > 0 && airjoy_data_.right_x > 0.80f && CZ_flag.R1_FB_index == 0)
         {
-            if(near_flag >5)
+            if (near_flag > 5)
             {
                 if (CZ_flag.R1_RL_index > 0)
-                    CZ_flag.R1_RL_index --;
+                    CZ_flag.R1_RL_index--;
                 CZ_R1_Selection_Planning();
                 near_flag = 0;
-                
             }
             else
             {
                 near_flag++;
             }
-                
         }
-        else if(CZ_flag.R1_FB_index == 1)
+        else if (CZ_flag.R1_FB_index == 1)
         {
-            near_flag=0;
+            near_flag = 0;
         }
 
         if (flag == 1)
         {
             flag_reset();
-            CZ_flag.R1_FB_index = (CZ_flag.R1_FB_index+1)%2;
+            CZ_flag.R1_FB_index = (CZ_flag.R1_FB_index + 1) % 2;
             CZ_R1_Selection_Planning();
             flag = 0;
         }
@@ -369,10 +321,7 @@ void OmniChassis_Setup::loop()
             path_line_.Reset();
             path_line_.plan_reset();
             Path_end_point = robot_pos_;
-            CZ_flag.fit_pos_index = 1;
-            CZ_flag.R1_FB_index = 0;
-            CZ_flag.R1_RL_index = 1;
-            CZ_flag.R2_pos_index = 0;
+            CZ_index_reset();
         }
         if (flag == 1)
         {
@@ -406,10 +355,7 @@ void OmniChassis_Setup::loop()
             path_line_.Reset();
             path_line_.plan_reset();
             Path_end_point = robot_pos_;
-            CZ_flag.R1_RL_index = 1;
-            CZ_flag.R1_FB_index = 0;
-            CZ_flag.fit_pos_index = 1;
-            CZ_flag.R2_pos_index = -1;
+            CZ_index_reset();
         }
 
         CZ_state_switch();
@@ -417,6 +363,7 @@ void OmniChassis_Setup::loop()
         {
         case MANUAL:
         {
+            CZ_init();
             CHASSIS_MANUAL(1.0f, 1.0f);
             chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             CZ_state_last = CZ_state;
@@ -449,7 +396,6 @@ void OmniChassis_Setup::loop()
         {
             CZ_init();
             CZ_ARM_Path_Init();
-
             if (path_line_.Is_End() == false)
             {
                 curve = path_line_.get_bezier_curve();
@@ -460,9 +406,20 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-                Path_lock_point(Path_end_point);
+                // 锁点后切换为半手操
+                if (pid_dead_flag == false)
+                {
+                    Path_lock_point(Path_end_point);
+                }
+                else
+                {
+                    if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                        Chassis_Target.VY = airjoy_data_.left_x * 0.3f * this->is_chassis_reverse_ * RB_Flag ? (-1) : 1;
+                    else
+                        Chassis_Target.VY = 0.0f;
+                    Chassis_Target.VX = 0.0f;
+                }
             }
-
             chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
             chassis_status_last_ = chassis_status_;
             CZ_state_last = CZ_state;
@@ -471,6 +428,17 @@ void OmniChassis_Setup::loop()
         case SEMI_AUIO_WEAPON:
         {
             CZ_init();
+            // control a
+            if (false)
+            {
+                CHASSIS_MANUAL(2.0f, 2.0f);
+                chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
+            }
+            else if (false) // control b
+            {
+                CHASSIS_MANUAL(1.0f, 1.0f);
+                chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, CB_yaw * PI / 180.0f);
+            }
             CZ_state_last = CZ_state;
             break;
         }
@@ -513,207 +481,72 @@ void OmniChassis_Setup::loop()
     }
 }
 
-//////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
-void OmniChassis_Setup::Path_lock_point(Vector2D lock_point)
+// 三区地图索引复位
+void OmniChassis_Setup::CZ_index_reset(void)
 {
-    float lock_err = (robot_pos_ - lock_point).magnitude();
-    if (airjoy_data_.SWA == 0x00 && chassis_status_ == CHASSIS_AUTO_CONTROL_CZ_R2)
+    CZ_flag.fit_pos_index = 0;
+    CZ_flag.R1_FB_index = 0;
+    CZ_flag.R1_RL_index = -1;
+    CZ_flag.R2_pos_index = -1;
+}
+void OmniChassis_Setup::CZ_init(void)
+{
+    if (CZ_state_last != CZ_state)
     {
-        speed = path_lock_r2.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
+        flag_reset();
+        path_line_.Reset();
+        path_line_.plan_reset();
+        Path_end_point = robot_pos_;
+        CZ_index_reset();
+    }
+}
+void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
+{
+    // 夹杆流程只规划起点到固定终点的简化路径。
+    target_yaw = CZ_point.R1_yaw;
+    path_line_.Reset();
+    path_line_.plan_reset();
+
+    path_line_.Add_Start_Point(robot_pos_);
+    if (CZ_flag.R1_FB_index == 1)
+    {
+        path_line_.Add_End_Point({CZ_point.R1_pos[CZ_flag.R1_RL_index][1].x, robot_pos_.y}, path_param.end);
     }
     else
     {
-        speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
+        path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][0], path_param.end);
     }
-    pid_dead_flag = path_lock.get_is_in_dead_zone();
 
-    Chassis_Target.VX = speed.x;
-    Chassis_Target.VY = speed.y;
-    if (pid_dead_flag == true)
-    {
-        Chassis_Target.VX = 0.0f;
-        Chassis_Target.VY = 0.0f;
-    }
+    Path_end_point = path_line_.Get_End_Point();
 }
 
-void OmniChassis_Setup::Path_correction(void)
+void OmniChassis_Setup::CZ_R2_Selection_Planning(void)
 {
-    float tNearest = 0.0f;   // 最近点在贝塞尔曲线上的参数t (0~1)
-    float tLookahead = 0.0f; // 前视点在贝塞尔曲线上的参数t (0~1)
+    // 夹杆流程只规划起点到固定终点的简化路径。
+    target_yaw = CZ_point.fit_yaw;
+    path_line_.Reset();
+    path_line_.plan_reset();
 
-    curve.Get_Nearest_Distance(robot_pos_, &tNearest);
-
-    Vector2D nearestPt = curve.Get_Point(tNearest);
-
-    float obj_dis = _tool_Abs((curve.Get_End_point() - robot_pos_).magnitude());
-
-    // ======== 终点纠偏（新架构下平滑退化为终点位置吸附）========
-    if (obj_dis < V.m_lookaheadDist)
+    // 合体地点和等待地点的切换
+    if (airjoy_data_.SWA == 0x01)
     {
-        Vector2D endPt = curve.Get_End_point();
-
-        if (curve.Get_len() < 0.0001f)
-        {
-            V.corrVelocity = {0.0f, 0.0f};
-            return;
-        }
-        V.corrVelocity.x = pid_pos_x.pid_calc(endPt.x, robot_pos_.x);
-        V.corrVelocity.y = pid_pos_y.pid_calc(endPt.y, robot_pos_.y);
-        return;
+        CZ_flag.fit_pos_index = (CZ_flag.fit_pos_index + 1) % 2;
+        path_line_.Add_Start_Point(robot_pos_);
+        path_line_.Add_End_Point(CZ_point.fit_pos[CZ_flag.fit_pos_index], path_param.end);
+    }
+    else if (airjoy_data_.SWA == 0x00)
+    {
+        CZ_flag.R2_pos_index = (CZ_flag.R2_pos_index + 1) % 3;
+        path_line_.Add_Start_Point(robot_pos_);
+        path_line_.Add_End_Point(CZ_point.R2_pos[CZ_flag.R2_pos_index], path_param.R2);
     }
 
-    Vector2D lookaheadPt; // 路径上的前视点
-
-    tLookahead = tNearest; // 前视点的编号，先从最近点的编号开始（比如t=0.3）
-
-    // 弧长表二分查找：利用 BezierCurve 已有的 distance_list[200]
-    // Get_Current_Len 内部做 O(1) 查表+线性插值，二分替代逐点步进
-    float current_len = curve.Get_Current_Len(tNearest);
-    float target_len = current_len + V.m_lookaheadDist;
-
-    if (target_len >= curve.Get_len())
-    {
-        // 前视距离超出曲线总长 → 直接用终点
-        tLookahead = 1.0f;
-        lookaheadPt = curve.Get_Point(1.0f);
-    }
-    else
-    {
-        float lo = tNearest, hi = 1.0f;
-        for (int i = 0; i < 8; i++)
-        {
-            float mid = (lo + hi) * 0.5f;
-            if (curve.Get_Current_Len(mid) < target_len)
-                lo = mid;
-            else
-                hi = mid;
-        }
-        tLookahead = hi;
-        lookaheadPt = curve.Get_Point(tLookahead);
-    }
-    pid_dead_flag = path_lock.get_is_in_dead_zone();
-
-    // 3. 在绝对世界坐标系下，独立计算X轴和Y轴的纠偏向速度
-    // 将不再计算切法向，直接基于XY差值PID
-    V.corrVelocity.x = pid_pos_x.pid_calc(lookaheadPt.x, robot_pos_.x);
-    V.corrVelocity.y = pid_pos_y.pid_calc(lookaheadPt.y, robot_pos_.y);
+    Path_end_point = path_line_.Get_End_Point();
 }
 
-///////////////////////////////////       KFS路径生成            ////////////////////////////////
-
-void OmniChassis_Setup::Path_KFS_check(void)
-{
-    // KFS拾取判断MF1
-    if (KFS_point.MF1_pos_.x == curve.Get_End_point().x && KFS_point.MF1_pos_.y == curve.Get_End_point().y)
-    {
-        KFS_flag.MF1_flag = true;
-    }
-    else if (KFS_flag.MF1_flag == true)
-    {
-        KFS_flag.MF1_flag = false;
-        pid_dead_flag = false;
-        Arm_Start = true;
-        KFS_flag.MF1_finish = true;
-    }
-
-    // KFS拾取判断MF2
-    if (KFS_point.MF2_pos_.x == curve.Get_End_point().x && KFS_point.MF2_pos_.y == curve.Get_End_point().y)
-    {
-        KFS_flag.MF2_flag = true;
-    }
-    else if (KFS_flag.MF2_flag == true)
-    {
-        KFS_flag.MF2_flag = false;
-        pid_dead_flag = false;
-        Arm_Start = true;
-        KFS_flag.MF2_finish = true;
-    }
-
-    // KFS拾取判断MF3
-    if (KFS_point.MF3_pos_.x == curve.Get_End_point().x && KFS_point.MF3_pos_.y == curve.Get_End_point().y)
-    {
-        KFS_flag.MF3_flag = true;
-    }
-    else if (KFS_flag.MF3_flag == true)
-    {
-        KFS_flag.MF3_flag = false;
-        pid_dead_flag = false;
-        Arm_Start = true;
-        KFS_flag.MF3_finish = true;
-    }
-
-    if (KFS_flag.spin_flag_0 == true && Arm_Start == false)
-    {
-        // 两侧旋转判断
-        if (KFS_point.spin_pos_0.x == curve.Get_End_point().x && KFS_point.spin_pos_0.y == curve.Get_End_point().y)
-        {
-            KFS_flag.get_spin_flag = true;
-        }
-        // 两侧开始旋转
-        else if (KFS_flag.get_spin_flag == true)
-        {
-            target_yaw = KFS_point.MF1_target_yaw_;
-            KFS_flag.spin_flag_0 = false;
-            KFS_flag.get_spin_flag = false;
-        }
-    }
-
-    if (KFS_flag.spin_flag == true && KFS_flag.MF1_finish == true && Arm_Start == false)
-    {
-        // 第一排和最后一排旋转
-        if (target_yaw == -90.0f || target_yaw == 90.0f)
-        {
-            target_yaw = KFS_point.MF2_target_yaw_;
-            KFS_flag.spin_flag = false;
-        }
-        // 两侧旋转判断
-        else if (KFS_point.spin_pos.x == curve.Get_End_point().x && KFS_point.spin_pos.y == curve.Get_End_point().y)
-        {
-            KFS_flag.get_spin_flag = true;
-        }
-        // 两侧开始旋转
-        else if (KFS_flag.get_spin_flag == true)
-        {
-            target_yaw = KFS_point.MF2_target_yaw_;
-            KFS_flag.spin_flag = false;
-            KFS_flag.get_spin_flag = false;
-        }
-    }
-
-    if (KFS_flag.spin_flag_2 == true && KFS_flag.spin_flag == false && KFS_flag.MF2_finish == true && Arm_Start == false)
-    {
-        // 第一排旋转
-        if (target_yaw == -90.0f || target_yaw == 90.0f)
-        {
-            target_yaw = KFS_point.MF3_target_yaw_;
-            KFS_flag.spin_flag_2 = false;
-        }
-        // 两侧旋转判断
-        else if (KFS_point.spin_pos_2.x == curve.Get_End_point().x && KFS_point.spin_pos_2.y == curve.Get_End_point().y)
-        {
-            KFS_flag.get_spin_flag = true;
-        }
-        // 两侧开始旋转
-        else if (KFS_flag.get_spin_flag == true)
-        {
-            target_yaw = KFS_point.MF3_target_yaw_;
-            KFS_flag.spin_flag_2 = false;
-            KFS_flag.get_spin_flag = false;
-        }
-    }
-
-    if (KFS_flag.uphill_flag == true)
-    {
-        // 上坡后旋转判断
-        if (CZ_point.uphill_pos.x == curve.Get_Start_point().x && CZ_point.uphill_pos.y == curve.Get_Start_point().y)
-        {
-            if (robot_pos_.x > CZ_point.skew_yaw)
-                target_yaw = CZ_point.R1_yaw;
-        }
-    }
-}
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////       新代码主要服务于新遥控       //////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void OmniChassis_Setup::CZ_state_switch(void)
 {
@@ -751,49 +584,113 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
     if (false) // 上键合体
     {
         CZ_flag.fit_pos_index = 1;
-        CZ_R1_Selection_Planning();
+        CZ_R2_Selection_Planning();
     }
     else if (false) // 下键等待
     {
         CZ_flag.fit_pos_index = 0;
-        CZ_R1_Selection_Planning();
+        CZ_R2_Selection_Planning();
     }
     else if ((false && RB_Flag == true) || (false && RB_Flag == false)) // 蓝场左，红场右
     {
-        if (CZ_flag.R2_pos_index-- < 0)
-            CZ_flag.R2_pos_index = 0;
-        CZ_R1_Selection_Planning();
+        if (CZ_flag.R2_pos_index < 0)
+            CZ_flag.R2_pos_index--;
+        CZ_R2_Selection_Planning();
     }
     else if ((false && RB_Flag == true) || (false && RB_Flag == false)) // 蓝场右，红场左
     {
-        if (CZ_flag.R2_pos_index++ > 2)
-            CZ_flag.R2_pos_index = 2;
-        CZ_R1_Selection_Planning();
+        if (CZ_flag.R2_pos_index > 2)
+            CZ_flag.R2_pos_index++;
+        CZ_R2_Selection_Planning();
     }
 }
 
 void OmniChassis_Setup::CZ_ARM_Path_Init(void)
 {
-    if (false) // 上键合体
+    static int right_flag = 0;
+    static int left_flag = 0;
+    static bool first_flag = true;
+    if (false) // 上键放置
     {
-        CZ_flag.fit_pos_index = 1;
+        CZ_flag.R1_FB_index = 1;
         CZ_R1_Selection_Planning();
     }
     else if (false) // 下键等待
     {
-        CZ_flag.fit_pos_index = 0;
+        CZ_flag.R1_FB_index = 0;
         CZ_R1_Selection_Planning();
     }
-    else if ((false && RB_Flag == true) || (false && RB_Flag == false)) // 蓝场左，红场右
+    // 右摇杆往右拨
+    if (airjoy_data_.right_x > -0.05f)
+        right_flag = 1;
+    else if (right_flag > 0 && airjoy_data_.right_x < -0.80f && CZ_flag.R1_FB_index == 0)
     {
-        if (CZ_flag.R2_pos_index-- < 0)
-            CZ_flag.R2_pos_index = 0;
-        CZ_R1_Selection_Planning();
+        if (right_flag > 5)
+        {
+            if (first_flag)
+            {
+                CZ_flag.R1_RL_index = 1;
+            }
+            else
+            {
+                if (RB_Flag == true)
+                {
+                    if (CZ_flag.R1_RL_index < 2)
+                        CZ_flag.R1_RL_index++;
+                }
+                else if (RB_Flag == false)
+                {
+                    if (CZ_flag.R1_RL_index > 0)
+                        CZ_flag.R1_RL_index--;
+                }
+            }
+
+            CZ_R1_Selection_Planning();
+            right_flag = 0;
+        }
+        else
+        {
+            right_flag++;
+        }
     }
-    else if ((false && RB_Flag == true) || (false && RB_Flag == false)) // 蓝场右，红场左
+    else if (CZ_flag.R1_FB_index == 1)
     {
-        if (CZ_flag.R2_pos_index++ > 2)
-            CZ_flag.R2_pos_index = 2;
-        CZ_R1_Selection_Planning();
+        right_flag = 0;
+    }
+    // 右摇杆往左拨
+    if (airjoy_data_.right_x < 0.05f)
+        left_flag = 1;
+    else if (left_flag > 0 && airjoy_data_.right_x > 0.80f && CZ_flag.R1_FB_index == 0)
+    {
+        if (left_flag > 5)
+        {
+            if (first_flag)
+            {
+                CZ_flag.R1_RL_index = 1;
+            }
+            else
+            {
+                if (RB_Flag == true)
+                {
+                    if (CZ_flag.R1_RL_index > 0)
+                        CZ_flag.R1_RL_index--;
+                }
+                else if (RB_Flag == false)
+                {
+                    if (CZ_flag.R1_RL_index < 2)
+                        CZ_flag.R1_RL_index++;
+                }
+            }
+            CZ_R1_Selection_Planning();
+            left_flag = 0;
+        }
+        else
+        {
+            left_flag++;
+        }
+    }
+    else if (CZ_flag.R1_FB_index == 1)
+    {
+        left_flag = 0;
     }
 }
