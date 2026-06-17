@@ -1602,14 +1602,14 @@
               </FileOption>
             </File>
             <File>
-              <FileName>omni_chassisSetup.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\omni_chassisSetup.h</FilePath>
-            </File>
-            <File>
               <FileName>Locate_Setup.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Setup\Inc\Locate_Setup.h</FilePath>
+            </File>
+            <File>
+              <FileName>omni_chassisSetup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\omni_chassisSetup.h</FilePath>
             </File>
             <File>
               <FileName>Locate_Setup.cpp</FileName>

@@ -17,16 +17,13 @@ void OmniChassis_Setup::CB_Path_Check(void)
     }
     if (airjoy_data_.SWA == 0x00)
     {
-        if (CB_point.CB_End_pos.x == curve.Get_End_point().x && CB_point.CB_End_pos.y == curve.Get_End_point().y)
+        if (CB_point.CB_End_pos.x == curve.Get_End_point().x && CB_point.CB_End_pos.y == curve.Get_End_point().y&&path_line_.Is_End() == false)
         {
             Retreat_flag = true;
-            if (WeaponSage_Start == false)
-            {
-                target_yaw = 90.0f;
-            }
         }
-        else if (Retreat_flag == true)
+        else if (Retreat_flag == true&&path_line_.Is_End() == true)
         {
+			target_yaw = 90.0f;
             Retreat_flag = false;
             pid_dead_flag = false;
             WeaponSage_End = true;
@@ -36,17 +33,11 @@ void OmniChassis_Setup::CB_Path_Check(void)
     {
         if (CB_point.CB_transition_pos.x == curve.Get_End_point().x && CB_point.CB_transition_pos.y == curve.Get_End_point().y)
         {
-            if (WeaponSage_Start == false)
-            {
-                target_yaw = 90.0f;
-            }
-        }
-        if (CB_point.CB_welt_pos.x == curve.Get_End_point().x && CB_point.CB_welt_pos.y == curve.Get_End_point().y)
-        {
             Retreat_flag = true;
         }
         else if (Retreat_flag == true)
         {
+			target_yaw = 90.0f;
             Retreat_flag = false;
             pid_dead_flag = false;
             WeaponSage_End = true;
@@ -68,17 +59,17 @@ void OmniChassis_Setup::CB_Selection_Planning(void)
     {
         path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
     }
-    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.end);
+    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.cb);
 
     // 相机流程
     if (airjoy_data_.SWA == 0x00)
     {
-        path_line_.Add_End_Point(CB_point.CB_End_pos, path_param.end);
+        path_line_.Add_End_Point(CB_point.CB_End_pos, path_param.cb);
     }
     else if (airjoy_data_.SWA == 0x01)
     {
-        path_line_.Add_Point(CB_point.CB_transition_pos, path_param.end);
-        path_line_.Add_End_Point(CB_point.CB_welt_pos, path_param.end);
+        path_line_.Add_Point(CB_point.CB_transition_pos, path_param.cb);
+        path_line_.Add_End_Point(CB_point.CB_welt_pos, path_param.cb);
     }
     Path_end_point = path_line_.Get_End_Point();
 }
@@ -101,7 +92,7 @@ void OmniChassis_Setup::loop()
     case CHASSIS_MANUAL_CONTROL_A:
     {
         // 模式 A：大速度手动平移 + 角速度控制。
-        CHASSIS_MANUAL(0.6f, 0.6f);
+        CHASSIS_MANUAL(1.6f, 3.0f);
         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
         chassis_status_last_ = chassis_status_;
         break;
@@ -148,29 +139,52 @@ void OmniChassis_Setup::loop()
             flag_reset();
             CB_Selection_Planning();
         }
+		CB_Path_Check();
         if (path_line_.Is_End() == false)
         {
             curve = path_line_.get_bezier_curve();
-            CB_Path_Check();
             if (WeaponSage_Start == false && WeaponSage_End == false)
                 v_plan();
             else
                 Path_lock_point(curve.Get_Start_point());
+			chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+
         }
         else
         {
-            if (airjoy_data_.SWA == 0x00 && WeaponSage_End == true)
+            if (airjoy_data_.SWA == 0x00)
             {
+				if(pid_dead_flag == true)
+				{
+					CHASSIS_MANUAL(1.5f, 0.0f, false);
+					chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
 
-                CHASSIS_MANUAL(0.4f, 0.0f, false);
-                chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
-            }
-            else if (airjoy_data_.SWA == 0x01 && WeaponSage_End == true)
+					
+				}
+				else if(pid_dead_flag == false)
+				{
+					Path_lock_point(Path_end_point);
+					chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+
+				}
+                            }
+            else if (airjoy_data_.SWA == 0x01)
             {
+				if(pid_dead_flag == true)
+				{
+					CHASSIS_MANUAL(1.5f, 1.5f);
+					chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
 
-                CHASSIS_MANUAL(0.4f, 0.4f);
-                chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
-            }
+					
+				}
+				else if(pid_dead_flag == false)
+				{
+					Path_lock_point(Path_end_point);
+					chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+
+				}
+
+                            }
             else
             {
                 Path_lock_point(Path_end_point);

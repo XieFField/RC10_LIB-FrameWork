@@ -65,6 +65,7 @@ typedef struct
 
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
+	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.10f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     // 没用的
     // Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -89,14 +90,14 @@ typedef struct
 typedef struct
 {
     Vector2D CB_Start_pos = {1.0f, 0.9f};        // 夹杆起点。
-    Vector2D CB_Selection_pos = {2.47f, 0.815f}; // 夹杆流程默认目标点。
+    Vector2D CB_Selection_pos = {2.455f, 0.815f}; // 夹杆流程默认目标点。
     
     // 相机流程
     Vector2D CB_End_pos = {2.745f, 1.185f};
 
     // 贴边流程
-    Vector2D CB_transition_pos = {2.745f, 1.0f};
-    Vector2D CB_welt_pos = {3.3f, 0.50f};
+    Vector2D CB_transition_pos = {2.745f, 1.3f};
+    Vector2D CB_welt_pos = {3.7f, 0.495f};
 
 } CB_POINT;
 
@@ -332,7 +333,7 @@ public:
     bool GetReach_flag()
     {
         // 读取夹杆流程完成标志。
-        if (pid_dead_flag == true && WeaponSage_Start == true)
+        if (pid_dead_flag == true && WeaponSage_Start == true&&(_tool_Abs(yaw<target_yaw) < 1.0f))
         {
             return true;
         }
@@ -345,7 +346,7 @@ public:
     bool GetEnd_flag()
     {
         // 读取夹杆退后流程完成标志。
-        if (pid_dead_flag == true && WeaponSage_End == true)
+        if (pid_dead_flag == true && WeaponSage_End == true&&(_tool_Abs(yaw<target_yaw) < 1.0f))
         {
             return true;
         }
@@ -436,7 +437,7 @@ private:
 
         Chassis_Target.VX = speed.x;
         Chassis_Target.VY = speed.y;
-        if (pid_dead_flag == true)
+        if (pid_dead_flag == true&&airjoy_data_.SWA == 0x00 && chassis_status_ == CHASSIS_AUTO_CONTROL_CZ_R2)
         {
             Chassis_Target.VX = 0.0f;
             Chassis_Target.VY = 0.0f;

@@ -234,7 +234,7 @@
         <periodic>1</periodic>
         <aLwin>0</aLwin>
         <aCover>0</aCover>
-        <aSer1>0</aSer1>
+        <aSer1>1</aSer1>
         <aSer2>0</aSer2>
         <aPa>0</aPa>
         <viewmode>1</viewmode>
@@ -1636,7 +1636,7 @@
 
   <Group>
     <GroupName>User/Control</GroupName>
-    <tvExp>0</tvExp>
+    <tvExp>1</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -1823,8 +1823,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\User\Setup\Inc\omni_chassisSetup.h</PathWithFileName>
-      <FilenameWithoutPath>omni_chassisSetup.h</FilenameWithoutPath>
+      <PathWithFileName>..\User\Setup\Inc\Locate_Setup.h</PathWithFileName>
+      <FilenameWithoutPath>Locate_Setup.h</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
@@ -1835,8 +1835,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\User\Setup\Inc\Locate_Setup.h</PathWithFileName>
-      <FilenameWithoutPath>Locate_Setup.h</FilenameWithoutPath>
+      <PathWithFileName>..\User\Setup\Inc\omni_chassisSetup.h</PathWithFileName>
+      <FilenameWithoutPath>omni_chassisSetup.h</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>

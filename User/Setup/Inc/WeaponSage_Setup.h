@@ -119,7 +119,7 @@ namespace WeaponSage_Setup
         struct{
             float launch_start = 0.5f;
             float launch_catch =0.0f;
-            float launch_untight =0.4f;
+            float launch_untight =0.45f;
             float launch_clawclosed = 0.8f;
             float launch_rotate =1.0f;
         }launch_kp;
