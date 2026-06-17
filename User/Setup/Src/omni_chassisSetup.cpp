@@ -143,7 +143,7 @@ void OmniChassis_Setup::loop()
     case CHASSIS_MANUAL_CONTROL_A:
     {
         // 模式 A：大速度手动平移 + 角速度控制。
-        CHASSIS_MANUAL(2.0f, 2.0f);
+        CHASSIS_MANUAL(0.6f, 0.6f);
         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
         chassis_status_last_ = chassis_status_;
         break;

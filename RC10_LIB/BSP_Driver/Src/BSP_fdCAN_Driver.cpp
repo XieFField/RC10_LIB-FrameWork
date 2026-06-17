@@ -475,7 +475,7 @@ extern "C" void fdcan_global_scheduler_tick_isr()
  */
 extern "C" void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t ErrorStatusITs)
 {
-    int idx = fdcan_diag_bus_index(hfdcan);
+    int idx = fdcan_diag_bus_index(hfdcan); 
     if (idx >= 0)
     {
         g_fdcan_diag[idx].error_status_cb_count++;
