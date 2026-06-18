@@ -9,8 +9,11 @@ void FSM_Controller::loop()
     if (!init_flag_)
         return;
 
-    if (!test_led)
+    if (!test_led&& test_led < 100)
+    {
         Serial1Protocol::getInstance()->sendStop();
+        test_led = 101;
+    }
     else if (test_led != 0 && test_led < 100)
     {
         Serial1Protocol::getInstance()->send_cmd_to_R2(test_led);
