@@ -36,6 +36,7 @@ typedef struct
     float max_wrist_angle_;
     float max_arm_rate_;
     float dock_height_;
+    float wrist_protect_;
 
     float wrist_gearRatio_; //手腕减速比，手腕电机转一圈，�??�??关节�??多少�?? 360度，直驱
     float launch_Ratio_; // �??升减速比，抬升电机转一圈，�??�??关节移动多少�??

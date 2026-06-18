@@ -112,6 +112,8 @@ namespace WeaponSage_Setup
             bool is_moved=false;
             bool is_prepared=false; //准备就绪，满足抓取条件
 			bool is_arm_reset=false;
+            bool is_over = false;
+            bool is_reach_armrotate=false;
         }flag;
         bool auto_ctrl1 = false;
         int pole_num = 1;
@@ -122,6 +124,8 @@ namespace WeaponSage_Setup
             float launch_untight =0.45f;
             float launch_clawclosed = 0.8f;
             float launch_rotate =1.0f;
+            float launch_lastcatch=0.0094f;
+            float launch_dockprepare=0.6f;
         }launch_kp;
 		bool is_ServoStart= false;
     }auto_ctrl_S;
@@ -181,6 +185,11 @@ public:
             return false;
     }
 
+    bool is_auto_ctrl_over(void)
+    {
+        return auto_ctrl_.flag.is_over;
+    }
+
     void setTargetIndex(int8_t index)
     {
         ctrl_status_.target_poleIndex = index;
@@ -218,6 +227,7 @@ public:
     void setCBauto(bool flag)
     {
         auto_ctrl_.auto_ctrl1 = flag;
+        auto_control_state_ = 0;    
     }
 
     void set_dock(WeaponSage_Setup::WeaponDock_E dock)
@@ -253,6 +263,7 @@ public:
 	void Set_AutoStart(bool flag)
 	{
 		auto_ctrl_.auto_ctrl1=flag;      //手动置位：是否可以自动
+        auto_control_state_ = 0;              //状态机回到初始状态
 	}
 	
 	void SetServo_Angle(uint16_t angle);

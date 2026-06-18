@@ -9,16 +9,16 @@ void FSM_Controller::loop()
     if (!init_flag_)
         return;
 
-    // if (!test_led&& test_led < 100)
-    // {
-    //     Serial1Protocol::getInstance()->sendStop();
-    //     test_led = 101;
-    // }
-    // else if (test_led != 0 && test_led < 100)
-    // {
-    //     Serial1Protocol::getInstance()->send_cmd_to_R2(test_led);
-    //     test_led = 101;
-    // }
+    if (!test_led&& test_led < 100)
+    {
+        Serial1Protocol::getInstance()->sendStop();
+        test_led = 101;
+    }
+    else if (test_led != 0 && test_led < 100)
+    {
+        Serial1Protocol::getInstance()->send_cmd_to_R2(test_led);
+        test_led = 101;
+    }
 
 #if !USE_RC10_AIRJOY
     CrsfReceiver::GetInstance(&huart7)->send_kfsandSpear(crsf_send_s.rsf_send_data.kfs1, crsf_send_s.rsf_send_data.kfs2,
@@ -258,7 +258,7 @@ void FSM_Controller::manual_ctrl()
 {
     chassis_setup_->setPathAutoStart(0); // 路径自动开始标志清零
     arm_setup_->set_Arm_autoStart(0);    // 自动流程标志清零
-
+    weaponSage_setup_->setCBauto(false);
 #if !USE_RC10_AIRJOY
     switch (airjoy_data_.SWC)
     {
@@ -341,6 +341,7 @@ void FSM_Controller::auto_ctrl()
         // 三区自动模式以及手操
         case 0x00:
         {
+            weaponSage_setup_->setCBauto(false);
             arm_setup_->set_Arm_autoStart(0);    // 自动流程标志清零
             if (airjoy_data_.SWA == 0x01 && airjoy_data_.SWD == 0x00)
             {
@@ -428,7 +429,7 @@ void FSM_Controller::auto_ctrl()
     #else
             chassis_setup_->setChassisStatus(CHASSIS_STOP);
     #endif
-
+            weaponSage_setup_->setCBauto(false);
             arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
             // arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
@@ -475,11 +476,14 @@ void FSM_Controller::auto_ctrl()
             // 滚轮拨动 → 发送对接成功指令
             {
                 uint8_t sw_now = airjoy_data_.scroll_wheel & 0x01;
-                if (crsf_send_s.sw_cmd_section != 3) {
+                if (crsf_send_s.sw_cmd_section != 3) 
+                {
                     Serial1Protocol::getInstance()->sendStop();
                     crsf_send_s.sw_cmd_section = 3;
                     crsf_send_s.sw_cmd_last = sw_now;
-                } else if (sw_now != crsf_send_s.sw_cmd_last) {
+                } 
+                else if (sw_now != crsf_send_s.sw_cmd_last) 
+                {
                     crsf_send_s.sw_cmd_last = sw_now;
                     Serial1Protocol::getInstance()->send_cmd_to_R2(SEND_DOCK_SUCCESS);
                 }
@@ -499,6 +503,11 @@ void FSM_Controller::auto_ctrl()
             else if (airjoy_data_.botton_click == 0)
             {
                 is_click = 0;
+            }
+
+            if(weaponSage_setup_->is_auto_ctrl_over())
+            {
+                chassis_setup_->ReceiveEnd_flag(false);
             }
 
             // 判断是否可以进行互相通讯
