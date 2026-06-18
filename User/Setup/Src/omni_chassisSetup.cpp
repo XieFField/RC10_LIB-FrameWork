@@ -4,7 +4,7 @@ float CB_yaw = 89.0f;
 void OmniChassis_Setup::CB_Path_Check(void)
 {
     static bool Selection_flag = false;
-     static bool Retreat_flag = false;
+    static bool Retreat_flag = false;
     if (CB_point.CB_Selection_pos.x == curve.Get_End_point().x && CB_point.CB_Selection_pos.y == curve.Get_End_point().y)
     {
         Selection_flag = true;
@@ -17,13 +17,13 @@ void OmniChassis_Setup::CB_Path_Check(void)
     }
     if (airjoy_data_.SWA == 0x00)
     {
-        if (CB_point.CB_End_pos.x == curve.Get_End_point().x && CB_point.CB_End_pos.y == curve.Get_End_point().y&&path_line_.Is_End() == false)
+        if (CB_point.CB_End_pos.x == curve.Get_End_point().x && CB_point.CB_End_pos.y == curve.Get_End_point().y && path_line_.Is_End() == false)
         {
             Retreat_flag = true;
         }
-        else if (Retreat_flag == true&&path_line_.Is_End() == true)
+        else if (Retreat_flag == true)
         {
-			target_yaw = 90.0f;
+            target_yaw = 90.0f;
             Retreat_flag = false;
             pid_dead_flag = false;
             WeaponSage_End = true;
@@ -37,7 +37,7 @@ void OmniChassis_Setup::CB_Path_Check(void)
         }
         else if (Retreat_flag == true)
         {
-			target_yaw = 90.0f;
+            target_yaw = 90.0f;
             Retreat_flag = false;
             pid_dead_flag = false;
             WeaponSage_End = true;
@@ -139,7 +139,7 @@ void OmniChassis_Setup::loop()
             flag_reset();
             CB_Selection_Planning();
         }
-		CB_Path_Check();
+        CB_Path_Check();
         if (path_line_.Is_End() == false)
         {
             curve = path_line_.get_bezier_curve();
@@ -147,45 +147,26 @@ void OmniChassis_Setup::loop()
                 v_plan();
             else
                 Path_lock_point(curve.Get_Start_point());
-			chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
-
+            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
         }
         else
         {
-            if (airjoy_data_.SWA == 0x00)
+            if (pid_dead_flag == true)
             {
-				if(pid_dead_flag == true)
-				{
-					CHASSIS_MANUAL(1.5f, 0.0f, false);
-					chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+                if (airjoy_data_.SWA == 0x00)
+                {
 
-					
-				}
-				else if(pid_dead_flag == false)
-				{
-					Path_lock_point(Path_end_point);
-					chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+                    CHASSIS_MANUAL(1.5f, 0.0f, false);
+                    chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+                }
+                else if (airjoy_data_.SWA == 0x01)
+                {
 
-				}
-                            }
-            else if (airjoy_data_.SWA == 0x01)
-            {
-				if(pid_dead_flag == true)
-				{
-					CHASSIS_MANUAL(1.5f, 1.5f);
-					chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
-
-					
-				}
-				else if(pid_dead_flag == false)
-				{
-					Path_lock_point(Path_end_point);
-					chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
-
-				}
-
-                            }
-            else
+                    CHASSIS_MANUAL(1.5f, 1.5f);
+                    chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
+                }
+            }
+            else if (pid_dead_flag == false)
             {
                 Path_lock_point(Path_end_point);
                 chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
