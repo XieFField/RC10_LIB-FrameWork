@@ -259,6 +259,8 @@ void Robot_WeaponSage_Setup::manualControl()
         uint8_t round_cnt =floor(k);
         target_pos_.wrist_pos_=round_cnt*90.0f;
         ctrl_status_.wrist_rotate_enable=false;
+    }else{
+        target_pos_.wrist_pos_ = target_pos_.wrist_pos_;
     }
 	
 	
@@ -569,6 +571,18 @@ void Robot_WeaponSage_Setup::autoControl_dock()
             }
             case WeaponSage_Setup::STATE_DONE:
             {
+                auto_ctrl_.auto_state_bool_S.is_matching=false;
+                auto_ctrl_.auto_state_bool_S.dock_start=false;
+                auto_ctrl_.flag.is_prepared=false;
+                auto_ctrl_.flag.is_clawed=false;
+                auto_ctrl_.flag.is_catched=false;
+                auto_ctrl_.flag.is_reach_start=false;
+                auto_ctrl_.flag.is_reach_closedclaw=false;
+                auto_ctrl_.flag.is_reach_sagelowest=false;
+                auto_ctrl_.flag.is_arm_reset=false;
+                now_state_=WeaponSage_Setup::STATE_START;
+                auoto_ctrl_.auto_ctrl1=false;
+                auto_control_state_=0;
                 this->idle(); //进入idle状态
                 break;
             }
@@ -589,18 +603,9 @@ void Robot_WeaponSage_Setup::autoControl()
 		{
             if(auto_ctrl_.auto_ctrl1)
             {
-                auto_ctrl_.auto_state_bool_S.is_matching=false;
-                auto_ctrl_.auto_state_bool_S.dock_start=false;
-                auto_ctrl_.flag.is_prepared=false;
-                auto_ctrl_.flag.is_clawed=false;
-                auto_ctrl_.flag.is_catched=false;
-                auto_ctrl_.flag.is_reach_start=false;
-                auto_ctrl_.flag.is_reach_closedclaw=false;
-                auto_ctrl_.flag.is_reach_sagelowest=false;
-                auto_ctrl_.flag.is_arm_reset=false;
-                now_state_=WeaponSage_Setup::STATE_START;
                 auto_control_state_=1;
-            }else
+            }
+            else
 			{
 				this->idle();
 				auto_control_state_=0;
