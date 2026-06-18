@@ -50,12 +50,12 @@ typedef enum{
 }SEND_MODE_TO_AIRJOY_E;
 
 typedef enum{
-    SEND_COMBINE_CMD = 0x01, //发送合体指令
-    SEND_DOCK_SUCCESS = 0x02, //对接成功
-    SEND_DOCK_FAIL = 0x03, //对接失败
+    SEND_COMBINE_CMD = 0x03, //发送合体指令
+    SEND_WAIT_COMBINE = 0x02, //等待合体指令
+    SEND_DOCK_SUCCESS = 0x01, //对接成功
 
-    SEND_PUT_DOWN_LOW = 0x04, //放置低位
-    SEND_PUT_DOWN_HIGH = 0x05, //放置高位
+    SEND_PUT_DOWN_LOW = 0x05, //放置低位
+    SEND_PUT_DOWN_HIGH = 0x04, //放置高位
 }SEND_CMD_TO_R2;
 
 typedef enum{

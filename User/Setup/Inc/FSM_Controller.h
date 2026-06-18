@@ -137,6 +137,10 @@ private:
         // bool issetFirstKFS = false;
 
         bool isread_srollWheelSpear = false;
+
+        uint8_t sw_cmd_section = 0;   // 0=idle, 1=合体前, 2=合体后, 3=武器自动
+        uint8_t sw_cmd_last = 0;      // 上次滚轮值，边沿检测
+        bool sw_cmd_toggle = false;   // 合体前交替标志
     } crsf_send_s;
 
     set_e Stop_set_stauts = NONE;

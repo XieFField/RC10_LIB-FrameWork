@@ -581,7 +581,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                 auto_ctrl_.flag.is_reach_sagelowest=false;
                 auto_ctrl_.flag.is_arm_reset=false;
                 now_state_=WeaponSage_Setup::STATE_START;
-                auoto_ctrl_.auto_ctrl1=false;
+                auto_ctrl_.auto_ctrl1=false;
                 auto_control_state_=0;
                 this->idle(); //进入idle状态
                 break;

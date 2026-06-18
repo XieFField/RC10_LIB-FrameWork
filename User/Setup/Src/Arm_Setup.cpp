@@ -878,7 +878,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             }
             break;
         }
-            
+      
         case store_state::lower_state:
         {
             // float target_pitch = (kfs_index == 0x01) ? 0.0f : this->init_data_.pitch_lift_angle_;
