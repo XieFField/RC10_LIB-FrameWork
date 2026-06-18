@@ -81,10 +81,8 @@ void parse_uart_data(uint8_t data);
 #define SUCKER_6_GPIO_Port GPIOG
 #define Lora_IO2_Pin GPIO_PIN_12
 #define Lora_IO2_GPIO_Port GPIOC
-#define Lora_IO2_EXTI_IRQn EXTI15_10_IRQn
 #define Lora_IO1_Pin GPIO_PIN_2
 #define Lora_IO1_GPIO_Port GPIOD
-#define Lora_IO1_EXTI_IRQn EXTI2_IRQn
 
 /* USER CODE BEGIN Private defines */
 
