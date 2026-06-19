@@ -730,7 +730,7 @@ void FSM_Controller::auto_ctrl()
             //         SWD == 0x01为贴边路径
 
             weaponSage_setup_->Set_End_Flag(chassis_setup_->GetReach_flag());
-            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTOCONTROL);
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
             static uint8_t is_click = 0;
             if (airjoy_data_.LB == 1 && is_click == 0 && airjoy_data_.page != 0x01)
