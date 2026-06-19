@@ -115,9 +115,7 @@ void Robot_WeaponSage_Setup::loop()
 //		this->setArm_angle(90.0f);
 //	}
 	    this->update();
-//	this->setLaunch_angle(initData_.max_launchHeight_);
-//	auto_ctrl_.auto_state_bool_S.is_matching=Locate_Setup::getInstance()->ifSwitch1On();
-//	auto_ctrl_.auto_state_bool_S.is_matching= omni_flag;
+
 }
 int CNT=0;
 float traverse_rate=0.0002f;

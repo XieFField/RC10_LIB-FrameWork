@@ -443,7 +443,7 @@ bool ArmSetup::manual_pickup()
     
     if(this->get_currentJointStatus().launchJoint_Height_ < init_data_.pick_up_height_ + 0.02f)
     {
-        this->set_LaunchHeight(init_data_.pick_up_height_ + 0.04f);
+        this->set_LaunchHeight(init_data_.pick_up_height_);
     }
 
     if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f)
@@ -813,22 +813,6 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
         case store_state::laucnh_state:
         {
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
-            // if(kfs_index == 0x00)
-            // {
-            //     this->set_PitchAngle(this->init_data_.pitch_lift_angle_); //吸盘抬平
-
-            //     if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.03f 
-            //             && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - this->init_data_.pitch_lift_angle_) < 30.0f)
-            //         this->store_state_ = store_state::rotate_state;
-            // }
-            // else
-            // {
-            //     if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.03f)
-            //     {
-            //         this->store_state_ = store_state::rotate_state;
-            //     }
-            // }
-
             //全部顶存
             if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.03f)
             {
@@ -839,25 +823,6 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
 
         case store_state::rotate_state:
         {
-            // if(kfs_index == 0x01)
-            // {   
-            //     if(this->get_currentJointStatus().rotateJoint_angle_ > 265.0f && this->get_currentJointStatus().rotateJoint_angle_ < 350.0f)
-            //     {
-            //         this->set_PitchAngle(0.0f); //吸盘放下
-            //         this->set_StretchLength(0.0f); //收回
-            //     }
-            // }
-
-            // float target_rotate = 270.0f; //存储的目标旋转角度
-            // this->set_RotateAngle(target_rotate);
-
-            // if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 5.0f)
-            // {
-            //     if(kfs_index == 0x00)
-            //         this->set_StretchLength(init_data_.store_ext_length_); // 伸展到存储位置需要的长度
-            //     this->store_state_ = store_state::lower_state;
-            // }
-
             if(kfs_index == 0x00)
                 this->set_RotateAngle(270.0f); //存储的目标旋转角度
 
@@ -881,25 +846,6 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
       
         case store_state::lower_state:
         {
-            // float target_pitch = (kfs_index == 0x01) ? 0.0f : this->init_data_.pitch_lift_angle_;
-           
-            // if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - target_pitch) < 0.5f 
-            //     && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 270.0f) < 1.0f)
-            // {
-            //     this->set_LaunchHeight(target_store_height); // 降低到存储高度
-            // }
-
-            // if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - target_store_height) < 0.01f
-            //     && std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.store_ext_length_) < 0.01f)
-            // {
-            //     is_store = true;
-            //     store_start_time = TimeStamp::getInstance().getSeconds();
-            //     this->store_state_ = store_state::outstate1;
-            // }
-
-            // if(this->get_currentJointStatus().suckerJoint_angle_ < 20.0f && kfs_index == 0x01)
-            //     this->set_RotateAngle(270.0f); //存储的目标旋转角度
-
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 270.0f) < 1.0f
                 && kfs_index == 0x00)
             {
@@ -934,30 +880,16 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             if(is_store && TimeStamp::getInstance().getSeconds() - store_start_time > 0.6f && store_start_time > 0.1f )
             {
                 this->setSuckerStatus(Sucker_Status_E::STOP); // 停止吸盘
-                // if(kfs_index == 0x00)
-                // {
-                //     this->set_StretchLength(0.0f); //收回
-                //     if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_) < 0.02f)
-                //     {
-                //         this->set_RotateAngle(0.0f); //旋转回0度
-                //         this->set_LaunchHeight(target_back_height);
-                //         this->store_state_ = store_state::outstate2;
-                //     }
-                // }
-                // else
-                // {
-                //     this->set_LaunchHeight(target_back_height);
-
-                //     if(this->get_currentJointStatus().launchJoint_Height_ > target_back_height)
-                //     {
-                //         this->set_RotateAngle(0.0f); //旋转回0度
-                //         this->store_state_ = store_state::outstate2;
-                //     }
-                // }
                 this->set_LaunchHeight(init_data_.max_launchHeight_); //提升到最高
                 if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
                 {
-                    this->set_RotateAngle(0.0f); //旋转回0度
+
+                    if(arm_status_ == ARM_AUTO_CONTROL)
+                        this->set_RotateAngle(90.0f);
+                    else
+                        this->set_RotateAngle(0.0f); //旋转回0度
+
+                    this->set_StretchLength(0.0f); //收回
                     this->store_state_ = store_state::outstate2;
                 }
             }
@@ -971,9 +903,6 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                 || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 360.0f) < 5.0f))
             { 
                 this->store_state_ = store_state::idle;
-
-                // if(kfs_index == 0x01)
-                //     this->set_PitchAngle(init_data_.pitch_lift_angle_); //抬平
                 return true;
             }
             break;
@@ -997,7 +926,7 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 
     float target_back_height = (kfs_index == 0x00) ?
             this->init_data_.max_launchHeight_ - 0.02f : this->init_data_.max_launchHeight_ - 0.1f;
-
+    float target_rotate = 0.0f;
     switch(this->store_state_)
     {
         case store_state::idle:
@@ -1016,18 +945,6 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
         }
         case store_state::laucnh_state:
         {
-            // this->setSuckerStatus(Sucker_Status_E::STOP);
-            // this->set_LaunchHeight(this->init_data_.max_launchHeight_);
-            // if(kfs_index == 0x01)
-            //     this->set_PitchAngle(this->init_data_.pitch_lift_angle_); //抬平
-            // else if(kfs_index == 0x00)
-            //     this->set_PitchAngle(0.0f); //放下
-
-            // if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.04f)
-            // {
-            //     this->store_state_ = store_state::rotate_state;
-            // }
-
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
             this->set_PitchAngle(0.0f);
             this->set_StretchLength(0.0f);
@@ -1037,11 +954,19 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 
         case store_state::rotate_state:
         {
-            float target_rotate = 270.0f; //存储的目标旋转角度
+            
+            if(kfs_index == 0x01)
+                target_rotate = 270.0f; //存储的目标旋转角度
+            else if(kfs_index == 0x00)
+                target_rotate = 310.0f; //存储的目标旋转角度
 
-            if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.03f)
+            this->setSuckerStatus(Sucker_Status_E::SUCK);
+
+            if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.02f)
             {
                 this->set_RotateAngle(target_rotate);
+                if(kfs_index == 0x01)
+                    this->set_StretchLength(init_data_.max_stretchLength_); // 伸展到存储位置需要的长度
                 this->store_state_ = store_state::lower_state;
             }
             
@@ -1056,11 +981,9 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
                     this->set_StretchLength(init_data_.max_stretchLength_); // 伸展到存储位置需要的长度
             }
 
-            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 270.0f) < 5.0f
-                && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 0.5f)
+            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f
+                && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 0.2f)
             {
-                this->setSuckerStatus(Sucker_Status_E::SUCK); 
-                // this->set_LaunchHeight(target_store_height); // 降低到存储高度
                 this->set_LaunchHeight(init_data_.store_height_inside_); // 降低到存储高度
                 this->store_state_ = store_state::outstate1;
             }
@@ -1069,38 +992,6 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 
         case store_state::outstate1:
         {
-            // if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - target_store_height) < 0.01f)
-            // {
-            //     if(kfs_index == 0x01)
-            //         this->set_StretchLength(init_data_.store_ext_length_); // 伸展到存储位置需要的长度
-
-            //     if(kfs_index == 0x00)
-            //         this->setStoreSuckerStatus_InSide(Sucker_Status_E::STOP); // 停止存储吸盘
-            //     else if(kfs_index == 0x01)
-            //         this->setStoreSuckerStatus_OutSide(Sucker_Status_E::STOP); // 停止存储吸盘
-
-            // }
-
-            // if(kfs_index == 0x01 
-            //         && std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.store_ext_length_) < 0.005f 
-            //         && !is_catch)
-            // {
-            //     catch_time = TimeStamp::getInstance().getSeconds(); //记录伸展完成的时间
-            //     is_catch = true;
-            // }
-            // else if(kfs_index == 0x00 
-            //         && std::fabs(this->get_currentJointStatus().launchJoint_Height_ - target_store_height) < 0.01f
-            //         && !is_catch)
-            // {
-            //     catch_time = TimeStamp::getInstance().getSeconds(); //记录降低完成的时间
-            //     is_catch = true;
-            // }
-
-            // if(TimeStamp::getInstance().getSeconds() - catch_time > 0.6f && catch_time > 0.1f)
-            // {
-            //     store_state_ = store_state::outstate2;
-            //     this->set_LaunchHeight(target_back_height);//提升到最高
-            // }
             if(!is_catch && std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.store_height_inside_) < 0.01f)
             {
                 if(kfs_index == 0x00)
@@ -1122,20 +1013,6 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 
         case store_state::outstate2:
         {
-            // if(kfs_index == 0x01 && std::fabs(this->get_currentJointStatus().launchJoint_Height_ - target_back_height) < 0.05f)
-            //     this->set_StretchLength(0.0f); // 收回
-            // if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - target_back_height) < 0.005f)
-            // {   
-            //     this->set_RotateAngle(0.0f);
-            //     this->set_PitchAngle(init_data_.pitch_lift_angle_); //抬平
-            // }
-
-            // if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 5.0f 
-            //     || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 360.0f) < 5.0f)
-            // {
-            //     this->store_state_ = store_state::idle;
-            //     return true;
-            // }
             if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
             {
                 if(kfs_index == 0x00)
