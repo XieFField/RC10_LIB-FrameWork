@@ -116,7 +116,6 @@ int main(void)
   MX_UART8_Init();
   MX_UART4_Init();
   MX_USART2_UART_Init();
-  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim6); // ������ʱ����ȻCAN���񲻻��ܵ�
   ALL_Setup_ConfigInit();

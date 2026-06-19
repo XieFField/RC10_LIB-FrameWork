@@ -20,7 +20,8 @@ static inline uint8_t DecodeSwitch3Pos(uint16_t raw, uint8_t shift)
 {
     uint8_t value = static_cast<uint8_t>((raw >> shift) & 0x03U);
     // 映射表：raw[0]=00→1(中), raw[1]=01→2(下), raw[2]=10→0(上)
-    static const uint8_t map[] = {1, 2, 0};
+    // static const uint8_t map[] = {1, 2, 0};
+    static const uint8_t map[] = {1, 0, 2};  //修改逻辑，这个才匹配最上为0，最下为2的需求
     return map[value > 2 ? 0 : value];
 }
 
@@ -173,10 +174,10 @@ void Lora_communication::Task_Process() {
         airjoy_data.d_pad_right = GetRecvKeyData(9)  ? 1U : 0U;
 
         // 肩键：LB=左后(b15), LT=左前(b14), RT=右前(b13), RB=右后(b12)
-        airjoy_data.LB = GetRecvKeyData(15) ? 1U : 0U;
-        airjoy_data.LT = GetRecvKeyData(14) ? 1U : 0U;
-        airjoy_data.RT = GetRecvKeyData(13) ? 1U : 0U;
-        airjoy_data.RB = GetRecvKeyData(12) ? 1U : 0U;
+        airjoy_data.LT = GetRecvKeyData(15) ? 1U : 0U;
+        airjoy_data.LB = GetRecvKeyData(14) ? 1U : 0U;
+        airjoy_data.RB = GetRecvKeyData(13) ? 1U : 0U;
+        airjoy_data.RT = GetRecvKeyData(12) ? 1U : 0U;  //这里原本T和B是和现在相反的，但因为和我想要的逻辑反了，所以我就自己改了
 
         uint16_t key_status = key;
         for (uint8_t i = 0; i < 16; ++i) {

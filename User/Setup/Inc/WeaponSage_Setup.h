@@ -206,8 +206,6 @@ public:
         }
     }
 
-   
-
     Point2D getClawPos()
     {   
 		Point2D pos;

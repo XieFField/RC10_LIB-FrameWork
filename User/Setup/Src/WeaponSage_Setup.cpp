@@ -827,13 +827,13 @@ void Robot_WeaponSage_Setup::Judge_wrist_status()
 
 void Robot_WeaponSage_Setup::SetServo_Angle(uint16_t angle)
 {
-	if(!auto_ctrl_.is_ServoStart)
-	{
-		HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-		auto_ctrl_.is_ServoStart=true;
-	}
-	uint16_t target_cnt = 500+(angle*2700)/2000; 
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, target_cnt);
+	// if(!auto_ctrl_.is_ServoStart)
+	// {
+	// 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+	// 	auto_ctrl_.is_ServoStart=true;
+	// }
+	// uint16_t target_cnt = 500+(angle*2700)/2000; 
+	// __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, target_cnt);
 }
 
 WeaponSage_InitData_S initData_=

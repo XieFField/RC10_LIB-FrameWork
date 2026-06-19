@@ -41,11 +41,11 @@ typedef enum{
 
 typedef struct KSTarget_t {
     uint8_t KFS[3];
-    int8_t Spear;
+    bool Spear[3];
 
     bool operator!=(const KSTarget_t& other) const {
          return KFS[0] != other.KFS[0] || KFS[1] != other.KFS[1] 
-         || KFS[2] != other.KFS[2] || Spear != other.Spear;
+         || KFS[2] != other.KFS[2] || Spear[0] != other.Spear[0] || Spear[1] != other.Spear[1] || Spear[2] != other.Spear[2];
     }
 };
 
@@ -147,6 +147,8 @@ private:
 
     KSTarget_t KStarget = {0};
     KSTarget_t last_KStarget = {0};
+
+    uint8_t cmd_to_r2_cnt = 0;
 };
 
 #endif

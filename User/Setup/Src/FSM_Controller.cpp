@@ -32,35 +32,38 @@ void FSM_Controller::loop()
 
     communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
 
+    communication::Lora_communication::GetInstance()->send_robot_pos(x_, y_, yaw_);
     // communication::Lora_communication::GetInstance()->send_robot_pos(
     //     Locate_Setup::getInstance()->get_RobotPos_inWorld().x,
     //     Locate_Setup::getInstance()->get_RobotPos_inWorld().y,
-    //     Locate_Setup::getInstance()->get_RobotPos_inWorld().yaw);
-    communication::Lora_communication::GetInstance()->send_robot_pos(
-        x_,
-        y_,
-        yaw_);
-    bool suker_status = false;
-
-    if (arm_setup_->getSuckerStatus() == SUCK)
-        suker_status = true;
-    else
-        suker_status = false;
-
-    communication::Lora_communication::GetInstance()->send_sucker_status(
-        suker_status,
-        0);
+    //     Locate_Setup::getInstance()->get_RobotPos_inWorld().yaw
+    // );
+    communication::Lora_communication::GetInstance()->send_claw_status(claw1, claw2, claw3);
 
     // communication::Lora_communication::GetInstance()->send_claw_status(
-    //     weaponSage_setup_->get_CurrentPos().claw_1_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false,
-    //     weaponSage_setup_->get_CurrentPos().claw_2_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false,
-    //     weaponSage_setup_->get_CurrentPos().claw_3_pos_ > weaponSage_setup_->getInitData().max_arm_angle_ - 20 ? true : false);
-    communication::Lora_communication::GetInstance()->send_claw_status(
-        claw1,
-        claw2,
-        claw3);
+    //     weaponSage_setup_->is_claw_close(1),
+    //     weaponSage_setup_->is_claw_close(2),
+    //     weaponSage_setup_->is_claw_close(3)
+    // );
 
-    // communication::Lora_communication::GetInstance()->send_auto_status(arm_setup_->isArmAutoStart());
+    communication::Lora_communication::GetInstance()->send_sucker_status(
+        arm_setup_->getSuckerStatus() == Sucker_Status_E::SUCK ? true : false
+    );
+
+    communication::Lora_communication::GetInstance()->set_robot_KFS_want_place(
+        KStarget.KFS[0], KStarget.KFS[1], KStarget.KFS[2]
+    );
+
+    communication::Lora_communication::GetInstance()->send_robot_spear(
+        KStarget.Spear[0], KStarget.Spear[1], KStarget.Spear[2]
+    );
+
+    communication::Lora_communication::GetInstance()->send_robot_kfs_keepplace(
+        arm_setup_->get_store_side() == Store_MANUAL_E::INSIDE ? 1 : 0
+    );
+
+    KStarget.KFS[0] = airjoy_data_.KFS1_1; KStarget.KFS[1] = airjoy_data_.KFS1_2; KStarget.KFS[2] = airjoy_data_.KFS1_3;
+
 #endif
 
 #if !USE_RC10_AIRJOY
@@ -115,6 +118,7 @@ void FSM_Controller::loop()
         robot_status_ = AUTO_CONTROL;
         break;
     }
+
 #endif
 
     // if(arm_setup_->isArmcalibrated() == false )
@@ -152,8 +156,23 @@ void FSM_Controller::loop()
     }
 
 #if USE_RC10_AIRJOY
+
+    static bool is_RB_click = 0;
+    if(airjoy_data_.RB == 1 && is_RB_click == 0 && airjoy_data_.page != 0x01)
+    {
+        is_RB_click = 1;
+        arm_setup_->set_store_side(
+            arm_setup_->get_store_side() == Store_MANUAL_E::INSIDE ? OUTSIDE : INSIDE
+        );
+    }
+    else if(airjoy_data_.RB == 0x00)
+    {
+        is_RB_click = 0;
+    }
+
     // relocate
-    if (robot_status_ == ALL_STOP && airjoy_data_.SWB == 0x01 && airjoy_data_.SWE == 0x00)
+    if (robot_status_ == ALL_STOP && airjoy_data_.SWB == 0x01 && airjoy_data_.SWE == 0x00 
+        && airjoy_data_.page != 0x01)
     {
         static bool is_click = 0;
         if (airjoy_data_.LB == 1 && !is_click)
@@ -165,17 +184,59 @@ void FSM_Controller::loop()
         {
             is_click = false;
         }
+        communication::Lora_communication::GetInstance()->send_robot_mode(SEND_RELOCATE_LIDAR);
     }
     else if (robot_status_ == ALL_STOP && airjoy_data_.SWB == 0x01 && airjoy_data_.SWE == 0x01)
     {
         // 设置target 矛杆
+        communication::Lora_communication::GetInstance()->send_robot_mode(SEND_SET_SPEAR);
+
+        static bool is_click = 0;
+        if(airjoy_data_.d_pad_down == 0x01 && is_click ==0)
+        {
+            is_click = 1;
+            for(int i = 0; i < 3; i++)
+            {
+                KStarget.Spear[i] = 0;
+            }
+        }
+        else if(airjoy_data_.d_pad_left == 0x01 && is_click == 0)
+        {
+            is_click = 1;
+            KStarget.Spear[0] = 1;
+        }
+        else if(airjoy_data_.d_pad_up == 0x01 && is_click == 0)
+        {
+            is_click = 1;
+            KStarget.Spear[1] = 1;
+        }
+        else if(airjoy_data_.d_pad_right == 0x01 && is_click == 0)
+        {
+            is_click = 1;
+            KStarget.Spear[2] = 1;
+        }
+        else if(airjoy_data_.d_pad_down == 0x00 && airjoy_data_.d_pad_left == 0x00 
+                && airjoy_data_.d_pad_right == 0x00 && airjoy_data_.d_pad_up == 0x00)
+        {
+            is_click = 0;
+        }
+        else
+        {
+            is_click = 0;
+        }
+    }
+    else if (robot_status_ == ALL_STOP && airjoy_data_.SWB == 0x00 && airjoy_data_.SWE == 0x00)
+    {
+        communication::Lora_communication::GetInstance()->send_robot_mode(SEND_ALL_STOP);
     }
 #endif
     if (KStarget != last_KStarget)
     {
         chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1], KStarget.KFS[2]);
         arm_setup_->set_TargetKFS(KStarget.KFS[0], KStarget.KFS[1], KStarget.KFS[2]);
-        weaponSage_setup_->setTargetIndex(KStarget.Spear - 1);
+        weaponSage_setup_->set_claw_flag(
+            KStarget.Spear[0], KStarget.Spear[1], KStarget.Spear[2]
+        );
     }
 
     last_KStarget = KStarget;
@@ -187,10 +248,31 @@ void FSM_Controller::loop()
 
 #if USE_RC10_AIRJOY
 
+SEND_CMD_TO_R2 now_cmd;
+SEND_CMD_TO_R2 send_cmd;
 void FSM_Controller::set_cmd_to_R2()
 {
-    if (airjoy_data_.page == 0x02 && robot_status_ != ALL_STOP)
+    if(airjoy_data_.page != 0x01)
     {
+        if(cmd_to_r2_cnt < airjoy_data_.recv_command_load1)
+        {
+            if(airjoy_data_.recv_command_command != 0)
+            {
+                Serial1Protocol::getInstance()->send_cmd_to_R2(airjoy_data_.recv_command_command);
+
+                if(airjoy_data_.recv_command_command < 0x08 && airjoy_data_.recv_command_command >= 0x00)
+                    send_cmd = (SEND_CMD_TO_R2)airjoy_data_.recv_command_command;
+                cmd_to_r2_cnt++;
+            }
+            else if(airjoy_data_.recv_command_command == 0)
+            {
+                Serial1Protocol::getInstance()->sendStop();
+                send_cmd = SEND_NONE;
+                cmd_to_r2_cnt++;
+            }
+        }
+        if(airjoy_data_.recv_command_command < 0x08 && airjoy_data_.recv_command_command >= 0x00)
+                now_cmd = (SEND_CMD_TO_R2)airjoy_data_.recv_command_command;
     }
     else
         return;
@@ -298,6 +380,7 @@ void FSM_Controller::manual_ctrl()
         chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
         arm_setup_->setArmStatus(ARM_IDLE);
         weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+        communication::Lora_communication::GetInstance()->send_robot_mode(SEND_CHASSIS_MANUAL_CTRL);
         break;
     }
 
@@ -309,6 +392,8 @@ void FSM_Controller::manual_ctrl()
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
         else if (airjoy_data_.SWE == 0x01)
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+
+        communication::Lora_communication::GetInstance()->send_robot_mode(SEND_ARM_MANUAL_CTRL);
         break;
     }
 
@@ -320,6 +405,8 @@ void FSM_Controller::manual_ctrl()
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
         else if (airjoy_data_.SWE == 0x01)
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+
+        communication::Lora_communication::GetInstance()->send_robot_mode(SEND_WEAPON_MANUAL_CTRL);
         break;
     }
 
@@ -544,28 +631,33 @@ void FSM_Controller::auto_ctrl()
 
         if (airjoy_data_.SWD == 0x00 && airjoy_data_.SWB == 0x00) // 手操模式-机械臂十字键
         {
-            arm_setup_->setArmStatus(ARM_MANUAL_CONTROL);
+            arm_setup_->setArmStatus(ARM_SEMI_AUTO_CONTROL);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            communication::Lora_communication::GetInstance()->send_robot_mode(SEND_ARM_SEMI);
         }
         else if (airjoy_data_.SWD == 0x01 && airjoy_data_.SWB == 0x00) // 手操模式-武器十字键
         {
             arm_setup_->setArmStatus(ARM_IDLE);
-            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_CONTROL);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_SEMI_AUTO_CONTROL);
+            communication::Lora_communication::GetInstance()->send_robot_mode(SEND_WEAPON_SEMI);
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x00) // 合体模式 上层IDLE
         {
             arm_setup_->setArmStatus(ARM_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            communication::Lora_communication::GetInstance()->send_robot_mode(SEND_COMBINE_MODE);
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x01 && airjoy_data_.SWD == 0x00) // 竞技场 机械臂模式
         {
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             arm_setup_->setArmStatus(ARM_SEMI_AUTO_CONTROL);
+            communication::Lora_communication::GetInstance()->send_robot_mode(SEND_COMP_ARM);
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x01 && airjoy_data_.SWD == 0x01) // 竞技场 武器模式
         {
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_SEMI_AUTO_CONTROL);
             arm_setup_->setArmStatus(ARM_IDLE);
+            communication::Lora_communication::GetInstance()->send_robot_mode(SEND_COMP_WEAPON);
         }
         break;
     }
@@ -575,17 +667,18 @@ void FSM_Controller::auto_ctrl()
         weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
         if (airjoy_data_.SWB == 0x01) // 自动模式
         {
+            communication::Lora_communication::GetInstance()->send_robot_mode(SEND_ARM_AUTO);
 // 暂时不把路径规划部分纳入
 #if !ARM_AUTO_DEBUG_NOCHASSIS
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_KFS);
 #else
             chassis_setup_->setChassisStatus(CHASSIS_STOP);
 #endif
-            // arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-            arm_setup_->setArmStatus(ARM_IDLE);
+            arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            //arm_setup_->setArmStatus(ARM_IDLE);
             static uint8_t is_click = 0;
 
-            if (airjoy_data_.LB == 1 && is_click == 0)
+            if (airjoy_data_.LB == 1 && is_click == 0 && airjoy_data_.page != 0x01)
             {
                 arm_setup_->set_Arm_autoStart(1); // 开始自动流程
 #if !ARM_AUTO_DEBUG_NOCHASSIS
@@ -616,12 +709,13 @@ void FSM_Controller::auto_ctrl()
         }
         else if (airjoy_data_.SWB == 0x00) // 手操模式
         {
+            communication::Lora_communication::GetInstance()->send_robot_mode(SEND_ARM_LOW_MANUAL_LEVEL);
             if (airjoy_data_.SWE == 0x00)
                 chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
             else if (airjoy_data_.SWE == 0x01)
                 chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
 
-            arm_setup_->setArmStatus(ARM_SEMI_LOW_LEVEL); // 需要区分SWE 来分开底盘和机械臂的手操模式
+            arm_setup_->setArmStatus(ARM_MANUAL_LOW_LEVEL); // 需要区分SWE 来分开底盘和机械臂的手操模式
         }
         break;
     }
@@ -631,6 +725,7 @@ void FSM_Controller::auto_ctrl()
         arm_setup_->setArmStatus(ARM_IDLE);
         if (airjoy_data_.SWB == 0x01) // 全自动
         {
+            communication::Lora_communication::GetInstance()->send_robot_mode(SEND_WEAPON_AUTO);
             // 这里使用SWD == 0x00为摄像头路径
             //         SWD == 0x01为贴边路径
 
@@ -638,7 +733,7 @@ void FSM_Controller::auto_ctrl()
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTO_CONTROL);
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
             static uint8_t is_click = 0;
-            if (airjoy_data_.LB == 1 && is_click == 0)
+            if (airjoy_data_.LB == 1 && is_click == 0 && airjoy_data_.page != 0x01)
             {
                 chassis_setup_->setPathAutoStart(1); // 路径自动开始标志
                 weaponSage_setup_->setCBauto(true);
@@ -651,7 +746,8 @@ void FSM_Controller::auto_ctrl()
         }
         else if (airjoy_data_.SWB == 0x00) // 半自动
         {
-            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_CONTROL);
+            communication::Lora_communication::GetInstance()->send_robot_mode(SEND_WEAPON_LOW_MANUAL_LEVEL);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_LOW_LEVEL);
 
             if (airjoy_data_.SWE == 0x00)
                 chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);

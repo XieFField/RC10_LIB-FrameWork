@@ -179,11 +179,20 @@ public:
 
     void setArmStatus(ARM_Status_E status)
     {
-        // 未锟斤拷锟叫Ｗ际憋拷锟街伙拷锟斤拷锟斤拷锟斤拷锟斤拷锟叫Ｗ继?锟斤拷锟斤拷锟解被锟较诧拷状态锟斤拷锟斤拷前锟叫碉拷锟街诧拷/锟斤拷锟斤拷
         if(status != ARM_CALIBRATE && !isArmcalibrated())
             return;
 
         arm_status_ = status;
+    }
+
+    Store_MANUAL_E get_store_side()
+    {
+        return arm_ctrlStatus.store_manual_mode;
+    }
+
+    void set_store_side(Store_MANUAL_E side)
+    {
+        arm_ctrlStatus.store_manual_mode = side;
     }
 
     /**

@@ -220,7 +220,7 @@ void ArmSetup::loop()
         case ARM_SEMI_AUTO_CONTROL:
         {
         #if USE_RC10_AIRJOY
-            if(last_arm_status_ != ARM_MANUAL_CONTROL)
+            if(last_arm_status_ != ARM_SEMI_AUTO_CONTROL)
             {
                 arm_ctrlStatus.last_manual_store = 0; //切换到手操时候重置存储状态，避免跳变
                 store_state_ = store_state::idle; //切换到手操时候重置存储状态，避免跳变
@@ -310,10 +310,10 @@ void ArmSetup::loop()
             break;
         }
 
-        case ARM_SEMI_LOW_LEVEL:
+        case ARM_MANUAL_LOW_LEVEL:
         {
         #if USE_RC10_AIRJOY
-            if(last_arm_status_ != ARM_MANUAL_CONTROL)
+            if(last_arm_status_ != ARM_MANUAL_LOW_LEVEL)
             {
                 arm_ctrlStatus.last_manual_store = 0; //切换到手操时候重置存储状态，避免跳变
                 store_state_ = store_state::idle; //切换到手操时候重置存储状态，避免跳变
@@ -512,11 +512,11 @@ bool ArmSetup::manual_putdown()
 void ArmSetup::manualControl_lowLevel()
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    if(last_arm_status_ != ARM_SEMI_LOW_LEVEL || arm_ctrlStatus.last_manual_store != 0)
+    if(last_arm_status_ != ARM_MANUAL_LOW_LEVEL || arm_ctrlStatus.last_manual_store != 0)
     {
         last_joint_status_ = this->get_currentJointStatus();
         target_joint_status_ = last_joint_status_;
-        last_arm_status_ = ARM_SEMI_LOW_LEVEL;
+        last_arm_status_ = ARM_MANUAL_LOW_LEVEL;
     }
 #if USE_RC10_AIRJOY
     if(airjoy_data_.SWE == 0x00)

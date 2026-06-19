@@ -28,7 +28,7 @@ typedef struct{
     // ---- 按键统计 ----
     uint16_t key_pressed_count;   // 当前帧中被按下的按键个数 (0~16)
     uint16_t key_down_count;      // 累计检测到的按键按下次数（上升沿计数）
-    uint16_t key_last_status;     // 上一帧的按键状态
+    uint16_t key_last_status;     // 上一帧的按键状态F
 
     // ---- 拨杆 ----
     uint8_t SWA;   uint8_t SWB; //拨杆
@@ -85,7 +85,7 @@ public:
 
     void send_robot_kfs_keepplace(uint8_t keepplace){send_kfs_keepplace = keepplace;}
 
-    void set_robot_KFS_want_place(uint8_t want1, uint8_t want2,uint8_t want3);
+    void set_robot_KFS_want_place(uint8_t want1, uint8_t want2, uint8_t want3);
 
     void send_robot_spear(bool spear1,bool spear2, bool spear3){send_spear = spear3|(spear2<<1)|(spear1<<2);}
     
