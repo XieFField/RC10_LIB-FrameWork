@@ -90,8 +90,8 @@ typedef struct
 typedef struct
 {
     Vector2D CB_Start_pos = {1.0f, 0.9f};         // 夹杆起点。
-    Vector2D CB_Selection_pos = {2.455f, 0.805f}; // 夹杆流程默认目标点。
-                                                  // 6/18往下挪了1cm XieFField
+    Vector2D CB_Selection_pos = {2.457f, 0.825f}; // 夹杆流程默认目标点。
+                                                  // 6/18往下挪了0.5cm XieFField
 
     // 相机流程
     Vector2D CB_End_pos = {2.455f, 1.185f};
@@ -431,6 +431,7 @@ private:
         
         CB_flag.Retreat_flag = false;
         CB_flag.Selection_flag = false;
+        curve.Rest();
     }
     //////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
     void Path_lock_point(Vector2D lock_point)

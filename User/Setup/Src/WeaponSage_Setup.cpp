@@ -16,6 +16,7 @@ volatile uint8_t encoder_cnt = 0;
 float test_target_arm = 0.0f;
 uint8_t reverse___ = 1;
 uint8_t index = 0;
+uint8_t dm_zero_____ = 0;
 void Robot_WeaponSage_Setup::loop()
 {	
 	ctrl_status_.now_times=TimeStamp::getInstance().getSeconds();
@@ -38,6 +39,11 @@ void Robot_WeaponSage_Setup::loop()
 		wrist_encoder_->set_reverse(reverse___);
 	}
 	
+            if(dm_zero_____)
+            {
+                this->Weapon_arm_setZero();
+            }
+    
 	wrist_encoder_angle_ = this->wrist_encoder_->get_angle();
 	wrist_encoder_angle_222 = this->wrist_encoder_->get_angle();
 
@@ -93,7 +99,11 @@ void Robot_WeaponSage_Setup::loop()
 			
             break;
 	    }
-			
+        case WEAPONSAGE_KFS_IDLE:
+        {
+            kfs_idle();
+            break;
+        }
         default:
             idle();
             break;
@@ -114,7 +124,14 @@ float traverse_rate=0.0002f;
 float weapon_launch_rate=0.0001f;
 float Kp_traverse=0.5f;
 
-
+void Robot_WeaponSage_Setup::kfs_idle()
+{
+    this->setLaunch_angle(initData_.max_launchHeight_);
+    if(current_pos_.launch_pos_ < initData_.max_launchHeight_-0.02f)
+    {
+        this->setArm_angle(90.0f);
+    }
+}
 
 
 /**
@@ -169,10 +186,7 @@ void Robot_WeaponSage_Setup::calibrate()
             this->claw_2_Motor_->relocate_totalAngle(2.0f);
             this->claw_3_Motor_->relocate_totalAngle(2.0f);
             this->launch_Motor_->relocate_totalAngle(0.0f);
-//            if(dm_zero_)
-//            {
-//                this->Weapon_arm_setZero();
-//            }
+
 			if(auto_ctrl_.auto_state_bool_S.arm_enable)
 			{
 				this->setArm_angle(0.0f);
@@ -185,7 +199,7 @@ void Robot_WeaponSage_Setup::calibrate()
 	
 }
 
-float test_angle = 20.0f;
+float test_angle = 30.0f;
 uint8_t round_cnt =0;
 float test_launch = 0.0625674725;
 
@@ -473,8 +487,6 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
  */
 void Robot_WeaponSage_Setup::autoControl_dock()
 {
-    static float launch_time = 0.0f;
-    static bool is_launching = false;
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
         switch (now_state_)
         {
@@ -573,15 +585,15 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                     auto_ctrl_.flag.is_reach_armrotate=true;
                 }
 
-                if(std::fabs(current_pos_.launch_pos_ - initData_.max_launchHeight_*auto_ctrl_.launch_kp.launch_dockprepare) < 0.02f && !is_launching)
+                if(std::fabs(current_pos_.launch_pos_ - initData_.max_launchHeight_*auto_ctrl_.launch_kp.launch_dockprepare) < 0.02f && !auto_ctrl_.dock_is_launching)
                 {
-                    launch_time = TimeStamp::getInstance().getSeconds();
-                    is_launching = true;
+                    auto_ctrl_.dock_launch_time = TimeStamp::getInstance().getSeconds();
+                    auto_ctrl_.dock_is_launching = true;
                 }
 
-                if(is_launching && TimeStamp::getInstance().getSeconds() - launch_time > 0.4f && launch_time > 0.1f) // 如果已经调整到位了，进入下一个状态
+                if(auto_ctrl_.dock_is_launching && TimeStamp::getInstance().getSeconds() - auto_ctrl_.dock_launch_time > 0.4f && auto_ctrl_.dock_launch_time > 0.1f) // 如果已经调整到位了，进入下一个状态
                 {
-                    is_launching = false;
+                    auto_ctrl_.dock_is_launching = false;
                    this->setLaunch_angle(initData_.dock_height_);      //抬高到预定位置
                     // if(abs(current_pos_.launch_pos_-initData_.dock_height_)<0.02f)
                     // {
@@ -647,6 +659,20 @@ void Robot_WeaponSage_Setup::autoControl()
                 ctrl_status_.is_wrist_start=false;
                 auto_ctrl_.flag.is_moved=false;
                 auto_ctrl_.flag.is_reach_armrotate=false;
+
+                // 补充重置：上次中断可能留下的残留状态
+                ctrl_status_.is_closeclaw_start = false;
+                ctrl_status_.closeclaw_startTime = 0.0f;
+                ctrl_status_.is_untight_start = false;
+                ctrl_status_.untight_startTime = 0.0f;
+                ctrl_status_.is_claw_1_closed = false;
+                ctrl_status_.is_claw_2_closed = false;
+                ctrl_status_.is_claw_3_closed = false;
+                auto_ctrl_.claw_flag[0] = false;
+                auto_ctrl_.claw_flag[1] = false;
+                auto_ctrl_.claw_flag[2] = false;
+                auto_ctrl_.dock_is_launching = false;
+                auto_ctrl_.dock_launch_time = 0.0f;
             }
             else
 			{

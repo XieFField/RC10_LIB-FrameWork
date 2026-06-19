@@ -386,7 +386,7 @@ void FSM_Controller::auto_ctrl()
                     is_click = 0;
                 }
 
-                if(airjoy_data_.SWA == 0x00)  //合体前命令
+                if(airjoy_data_.SWA == 0x01)  //合体前命令
                 {
                     uint8_t sw_now = airjoy_data_.scroll_wheel & 0x01;
                     if (crsf_send_s.sw_cmd_section != 1) {
@@ -403,7 +403,7 @@ void FSM_Controller::auto_ctrl()
                         crsf_send_s.sw_cmd_toggle = !crsf_send_s.sw_cmd_toggle;
                     }
                 }
-                else if(airjoy_data_.SWA == 0x01) //合体后命令
+                else if(airjoy_data_.SWA == 0x00) //合体后命令
                 {
                     uint8_t sw_now = airjoy_data_.scroll_wheel & 0x01;
                     if (crsf_send_s.sw_cmd_section != 2) {
@@ -432,7 +432,7 @@ void FSM_Controller::auto_ctrl()
             weaponSage_setup_->setCBauto(false);
             arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
             // arm_setup_->setArmStatus(ARM_IDLE);
-            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_KFS_IDLE);
 
             static uint8_t is_click = 0;
             if (airjoy_data_.botton_click == 1 && is_click == 0)
@@ -505,26 +505,28 @@ void FSM_Controller::auto_ctrl()
                 is_click = 0;
             }
 
-            if(weaponSage_setup_->is_auto_ctrl_over())
-            {
-                chassis_setup_->ReceiveEnd_flag(false);
-            }
+            // if(weaponSage_setup_->is_auto_ctrl1())
+            // {
+                if(weaponSage_setup_->is_auto_ctrl_over())
+                {
+                    chassis_setup_->ReceiveEnd_flag(false);
+                }
 
-            // 判断是否可以进行互相通讯
-            if (chassis_setup_->GetReach_flag() == true)
-            {
-                weaponSage_setup_->Get_OMNI_IM_flag(true);
-            }
-            if (weaponSage_setup_->Get_Catch_flag() == true)
-            {
-                chassis_setup_->ReceiveReach_flag(false);
-            }
+                // 判断是否可以进行互相通讯
+                if (chassis_setup_->GetReach_flag() == true)
+                {
+                    weaponSage_setup_->Get_OMNI_IM_flag(true);
+                }
+                if (weaponSage_setup_->Get_Catch_flag() == true)
+                {
+                    chassis_setup_->ReceiveReach_flag(false);
+                }
 
-            if (chassis_setup_->GetEnd_flag() == true)
-            {
-                weaponSage_setup_->Get_OMNI_DS_flag(true);
-            }
-
+                if (chassis_setup_->GetEnd_flag() == true)
+                {
+                    weaponSage_setup_->Get_OMNI_DS_flag(true);
+                }
+            // }
             break;
         }
     }

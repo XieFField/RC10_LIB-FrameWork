@@ -105,6 +105,7 @@ typedef enum{
     WEAPONSAGE_DEBUG,       //调试模式  
     WEAPONSAGE_IDLE,    // 待机
     WEAPONSAGE_CALIBRATE, //校准模式
+    WEAPONSAGE_KFS_IDLE, // KFS自动模式的待机状态
 }WeaponSage_Status_E;
 
 

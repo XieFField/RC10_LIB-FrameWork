@@ -124,10 +124,12 @@ namespace WeaponSage_Setup
             float launch_untight =0.45f;
             float launch_clawclosed = 0.8f;
             float launch_rotate =1.0f;
-            float launch_lastcatch=0.0094f;
+            float launch_lastcatch=0.11f;
             float launch_dockprepare=0.6f;
         }launch_kp;
 		bool is_ServoStart= false;
+		float dock_launch_time = 0.0f;      // autoControl_dock 定时器（替代 static）
+		bool dock_is_launching = false;
     }auto_ctrl_S;
 
      extern float weapon_pos[4];//武器位置数组
@@ -253,11 +255,15 @@ public:
     }
     void Get_OMNI_IM_flag(bool a)
     {
-        auto_ctrl_.auto_state_bool_S.is_matching=a;
+        // 只在 catch 阶段接受对位信号，防止初始化阶段被旧信号污染
+        if (auto_ctrl_.auto_ctrl1 && auto_control_state_ == 1)
+            auto_ctrl_.auto_state_bool_S.is_matching = a;
     }
     void Get_OMNI_DS_flag(bool a)
     {
-        auto_ctrl_.auto_state_bool_S.dock_start=a;
+        // 只在 dock 阶段接受对接开始信号，防止初始化/catch 阶段被旧信号污染
+        if (auto_ctrl_.auto_ctrl1 && auto_control_state_ == 2)
+            auto_ctrl_.auto_state_bool_S.dock_start = a;
     }
 	
 	void Set_AutoStart(bool flag)
@@ -265,7 +271,14 @@ public:
 		auto_ctrl_.auto_ctrl1=flag;      //手动置位：是否可以自动
         auto_control_state_ = 0;              //状态机回到初始状态
 	}
+
+    bool is_auto_ctrl1()
+    {
+        return auto_ctrl_.auto_ctrl1;
+    }
 	
+    void kfs_idle();
+
 	void SetServo_Angle(uint16_t angle);
 protected:
     void loop() override;

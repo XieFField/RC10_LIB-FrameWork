@@ -207,7 +207,7 @@ public:
         else
             auto_ctrl_.targetKFS[2] = 0;
 
-        if(KFS1 != 0 && KFS2 !=0 && KFS3 != 0)
+        if(KFS1 != 0 && KFS2 !=0)
             auto_ctrl_.kfs_num = TWO_OR_THREE;
         else
             auto_ctrl_.kfs_num = ONLY_ONE;
