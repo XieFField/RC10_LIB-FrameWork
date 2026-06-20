@@ -59,7 +59,7 @@ void FSM_Controller::loop()
     );
 
     communication::Lora_communication::GetInstance()->send_robot_kfs_keepplace(
-        arm_setup_->get_store_side() == Store_MANUAL_E::INSIDE ? 1 : 0
+        arm_setup_->get_store_side() == Store_MANUAL_E::INSIDE ? 0 : 1
     );
 
     KStarget.KFS[0] = airjoy_data_.KFS1_1; KStarget.KFS[1] = airjoy_data_.KFS1_2; KStarget.KFS[2] = airjoy_data_.KFS1_3;
