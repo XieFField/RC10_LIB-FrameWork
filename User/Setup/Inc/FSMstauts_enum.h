@@ -96,7 +96,7 @@ typedef enum{
 
 typedef enum{
     WEAPONSAGE_MANUAL_CONTROL, //手动控制
-    WEAPONSAGE_SEMI_AUTO_CONTROL, //半自动控制 
+    WEAPONSAGE_SEMI_AUTO_CONTROL, //半自动控制  只保留十字键逻辑
     WEAPONSAGE_MANUAL_LOW_LEVEL, //减配版手操
     WEAPONSAGE_COMP_MANUAL_CONTROL, //竞技场手操
 
