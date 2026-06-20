@@ -1,0 +1,8 @@
+#ifndef TEST_PID_RECONNECT_STM32H7XX_HAL_H
+#define TEST_PID_RECONNECT_STM32H7XX_HAL_H
+
+struct TIM_HandleTypeDef
+{
+};
+
+#endif
