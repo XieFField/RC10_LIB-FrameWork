@@ -336,6 +336,8 @@ private:
     void manualControl();
     void manualControl_lowLevel();
 
+    void arm_d_pad_ctrl(); //十字键统一处理
+
     bool manual_store(uint8_t kfs_index); //存儲kfs
     bool manual_takeout(uint8_t kfs_index); //取出存储kfs
     bool manual_pickup(); //拾取地上的kfs
@@ -562,6 +564,13 @@ protected:
     }manual_control;
 
     float pre_descent_angle_ = 0.0f; // 下降前云台角度：h>=lock_h时持续更新，h<lock_h时冻结
+
+#if USE_RC10_AIRJOY
+    int8_t is_d_pad_up_clicked = 0;
+    int8_t is_d_pad_down_clicked = 0;
+    int8_t is_d_pad_left_clicked = 0;
+    int8_t is_d_pad_right_clicked = 0;
+#endif
 
     ButtonDetector button_detector_1 = ButtonDetector(0.200f); //双击三击检测器，200ms间隔
 

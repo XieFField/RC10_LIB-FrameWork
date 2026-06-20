@@ -64,10 +64,11 @@ typedef enum{
 }SEND_CMD_TO_R2;
 
 typedef enum{
-    ARM_MANUAL_CONTROL, //手操
+    ARM_MANUAL_CONTROL, //手操 (十字键不包含放置模式)
     ARM_AUTO_CONTROL, //自动
-    ARM_SEMI_AUTO_CONTROL, //半自动 (竞技场模式)
-    ARM_MANUAL_LOW_LEVEL, // 减配版手操
+    ARM_SEMI_AUTO_CONTROL, //半自动 (十字键模式，没有放置功能)
+    ARM_COMP_SEMI_CONTROL, //竞技场半自动 (十字键模式，包含放置功能，不包含拾取功能)
+    ARM_MANUAL_LOW_LEVEL, // 减配版手操   (十字键不包含放置模式)
     ARM_IDLE, //待机
     ARM_STOP,
     ARM_DEBUG,

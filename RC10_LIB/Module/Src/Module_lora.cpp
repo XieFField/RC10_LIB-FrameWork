@@ -76,9 +76,6 @@ Lora_communication::Lora_communication(UART_HandleTypeDef* tx_huart, UART_Handle
       GpioExti(tx_aux_gpio_pin),
       bsp_rx(DMA_BUF_SIZE, rx_dma_buffer, rx_huart),
       attached_timer(timer),
-      key_pressed_count_(0),
-      key_down_count_(0),
-      key_last_status_(0),
       airjoy_data()
 {
     lora_tx_huart = tx_huart;
@@ -94,7 +91,7 @@ Lora_communication::Lora_communication(UART_HandleTypeDef* tx_huart, UART_Handle
     send_suction_cup_status = 0;
     send_automatic_status = 0;
     send_mode = 0;
-    send_chosen_command = 1; send_chosen_command_cnt = 0;
+    send_chosen_command = 0; send_chosen_command_cnt = 0;
     send_kfs_want_place1 = 0; send_kfs_want_place2 = 0;
     send_spear = 0;
     send_kfs_keepplace = 0;
@@ -182,17 +179,17 @@ void Lora_communication::Task_Process() {
         uint16_t key_status = key;
         for (uint8_t i = 0; i < 16; ++i) {
             if (key_status & (1U << i)) {
-                key_pressed_count_++;
+                airjoy_data.key_pressed_count++;
             }
         }
 
-        uint16_t rising_edges = static_cast<uint16_t>(key_status & (~key_last_status_));
+        uint16_t rising_edges = static_cast<uint16_t>(key_status & (~airjoy_data.key_last_status));
         for (uint8_t i = 0; i < 16; ++i) {
             if (rising_edges & (1U << i)) {
-                key_down_count_++;
+                airjoy_data.key_down_count++;
             }
         }
-        key_last_status_ = key_status;
+        airjoy_data.key_last_status = key_status;
 
         // ====== 同步全部数据到 airjoy_data，方便 debug 查看 rc_data ======
         airjoy_data.joystick1 = joystick[0];
@@ -201,10 +198,6 @@ void Lora_communication::Task_Process() {
         airjoy_data.joystick4 = joystick[3];
         airjoy_data.key  = key;
         airjoy_data.page = airjoy_data.page; // 上面已赋值
-
-        airjoy_data.key_pressed_count = key_pressed_count_;
-        airjoy_data.key_down_count    = key_down_count_;
-        airjoy_data.key_last_status   = key_last_status_;
 
         airjoy_data.KFS1_1 = kfs_data.r1_kfs[0];
         airjoy_data.KFS1_2 = kfs_data.r1_kfs[1];

@@ -157,12 +157,6 @@ private:
     UART_ bsp_rx;
     tim::Tim* attached_timer;
 
-   
-    //测试用，按键状态
-    uint16_t key_pressed_count_;
-    uint16_t key_down_count_;
-    uint16_t key_last_status_;
-
 
     static Lora_communication* s_instance;
     uint16_t send_x, send_y, send_z;
