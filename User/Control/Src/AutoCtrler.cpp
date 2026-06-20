@@ -6,6 +6,21 @@
 namespace MF_AutoCtrler
 {
 
+int8_t color = 1; //1 为蓝色场地， 0为红色场地。
+
+void set_color(int8_t color_)
+{
+    if(color_ == 0 || color_ == 1)
+        color = color_;
+    else
+        color = 1; //默认蓝色场地
+}
+
+int8_t get_color()
+{
+    return color;
+}
+
 const Point2D MapNum_RealPos[30] = {
 {0.6, 2.6, 0}, {1.8, 2.6, 0}, {3.0, 2.6, 0}, {4.2, 2.6, 0}, {5.4, 2.6, 0}, 
 {0.6, 3.8, 0}, {1.8, 3.8, 0}, {3.0, 3.8, 0}, {4.2, 3.8, 0}, {5.4, 3.8, 0}, 
@@ -295,15 +310,34 @@ int8_t MFNum_TransforMapNum(int8_t MFNum) // 将梅花桩编号转换为梅花�
     if (MFNum < 1 || MFNum > 12)
         return -1;
 
-    return MFNum + 6 + 2 * (static_cast<int8_t>((MFNum - 1) / 3.0));
+    int8_t row = 2 + (MFNum - 1) / 3;                 // row 2-5
+    int8_t col;
+    if (color == 1) // 蓝场：col 从左到右 2,3,4
+        col = 2 + ((MFNum - 1) % 3);
+    else            // 红场：col 从左到右 4,3,2
+        col = 4 - ((MFNum - 1) % 3);
+
+    return (row - 1) * MAP_COLS + col;
 }
 
 int8_t MapNum_TransforMFNum(int8_t mapNum) // 将梅花林方格地图编号转换为梅花桩编号
 {
-    int8_t MFNum_ = mapNum - 6 - 2 * ((mapNum - 7) / 3);
-    if (MFNum_ < 1 || MFNum_ > 12)
+    int8_t c, r;
+    Map_ToCR(mapNum, c, r);
+
+    if (r < 2 || r > 5 || c < 2 || c > 4)
         return -1;
-    return MFNum_;
+
+    int8_t colOffset;
+    if (color == 1) // 蓝场
+        colOffset = c - 2;   // col2→0, col3→1, col4→2
+    else            // 红场
+        colOffset = 4 - c;   // col4→0, col3→1, col2→2
+
+    int8_t mf = (r - 2) * 3 + colOffset + 1;
+    if (mf < 1 || mf > 12)
+        return -1;
+    return mf;
 }
 
 static bool IsAdjacent4(int8_t a, int8_t b)

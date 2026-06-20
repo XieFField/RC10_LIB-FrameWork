@@ -1325,11 +1325,12 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
         catch_offset = 0.00f;
     else
         catch_offset = 0.0f;
-    if(MF_high[targetKFS - 1] == 0.2f)
+    float kfs_h = GetKFSHeight(targetKFS);
+    if(kfs_h == 0.2f)
         targetLowerHeight = init_data_.catch_20height;
-    else if(MF_high[targetKFS - 1] == 0.4f)
+    else if(kfs_h == 0.4f)
         targetLowerHeight = this->init_data_.catch_40height + catch_offset;
-    else if(MF_high[targetKFS - 1] == 0.6f)
+    else if(kfs_h == 0.6f)
         targetLowerHeight = this->init_data_.catch_60height + catch_offset;
     else
         targetLowerHeight = this->init_data_.max_launchCatch_Height_ + catch_offset;
@@ -1383,11 +1384,12 @@ bool ArmSetup::state_launchStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     float canMoveHeight = 0.0f;//是否可以移动的高度阈值，置
-    if(MF_high[targetKFS - 1] == 0.2f)
+    float kfs_h = GetKFSHeight(targetKFS);
+    if(kfs_h == 0.2f)
         canMoveHeight = this->init_data_.catch_40height - 0.1f;
-    else if(MF_high[targetKFS - 1] == 0.4f)
+    else if(kfs_h == 0.4f)
         canMoveHeight = this->init_data_.max_launchCatch_Height_;
-    else if(MF_high[targetKFS - 1] == 0.6f)
+    else if(kfs_h == 0.6f)
         canMoveHeight = this->init_data_.max_launchCatch_Height_;
     else
         canMoveHeight = this->init_data_.max_launchCatch_Height_;

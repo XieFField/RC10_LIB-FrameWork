@@ -27,6 +27,10 @@ void FSM_Controller::loop()
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 #else
 
+    //设置红蓝场：遥控器反馈数据 1为蓝 2为红， 代码内为1蓝 0红
+    MF_AutoCtrler::set_color(airjoy_data_.color == 1 ? 1 : 0);
+
+        
     communication::Lora_communication::GetInstance()->Task_Process();
     communication::Lora_communication::GetInstance()->Tim_It_Process();
 
