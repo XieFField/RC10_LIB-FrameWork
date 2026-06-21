@@ -443,19 +443,19 @@ void OmniChassis_Setup::CZ_R2_Selection_Planning(void)
     path_line_.Reset();
     path_line_.plan_reset();
 
-    // 合体地点和等待地点的切换
-    if (airjoy_data_.SWA == 0x01)
-    {
-        CZ_flag.fit_pos_index = (CZ_flag.fit_pos_index + 1) % 2;
-        path_line_.Add_Start_Point(robot_pos_);
-        path_line_.Add_End_Point(CZ_point.fit_pos[CZ_flag.fit_pos_index], path_param.end);
-    }
-    else if (airjoy_data_.SWA == 0x00)
-    {
-        CZ_flag.R2_pos_index = (CZ_flag.R2_pos_index + 1) % 3;
-        path_line_.Add_Start_Point(robot_pos_);
-        path_line_.Add_End_Point(CZ_point.R2_pos[CZ_flag.R2_pos_index], path_param.R2);
-    }
+//    // 合体地点和等待地点的切换
+//    if (airjoy_data_.SWA == 0x01)
+//    {
+//        CZ_flag.fit_pos_index = (CZ_flag.fit_pos_index + 1) % 2;
+//        path_line_.Add_Start_Point(robot_pos_);
+//        path_line_.Add_End_Point(CZ_point.fit_pos[CZ_flag.fit_pos_index], path_param.end);
+//    }
+//    else if (airjoy_data_.SWA == 0x00)
+//    {
+//        CZ_flag.R2_pos_index = (CZ_flag.R2_pos_index + 1) % 3;
+//        path_line_.Add_Start_Point(robot_pos_);
+//        path_line_.Add_End_Point(CZ_point.R2_pos[CZ_flag.R2_pos_index], path_param.R2);
+//    }
 
     Path_end_point = path_line_.Get_End_Point();
 }
@@ -477,6 +477,7 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
         up_click = true;
         CZ_flag.fit_pos_index = 1;
         CZ_R2_Selection_Planning();
+        debug_uart.printf_DMA("fit_pos_index:%d\n", CZ_flag.fit_pos_index);
     }
     else if (airjoy_data_.d_pad_up == 0)
     {
@@ -489,6 +490,7 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
         down_click = true;
         CZ_flag.fit_pos_index = 0;
         CZ_R2_Selection_Planning();
+        debug_uart.printf_DMA("fit_pos_index:%d\n", CZ_flag.fit_pos_index);
     }
     else if (airjoy_data_.d_pad_down == 0)
     {
@@ -499,9 +501,10 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
     if (((airjoy_data_.d_pad_left == 1 && RB_Flag == true) || (airjoy_data_.d_pad_right == 1 && RB_Flag == false)) && far_click == false)
     {
         far_click = true;
-        if (CZ_flag.R2_pos_index < 0)
+        if (CZ_flag.R2_pos_index > 0)
             CZ_flag.R2_pos_index--;
         CZ_R2_Selection_Planning();
+        debug_uart.printf_DMA("R2_pos_index:%d\n", CZ_flag.R2_pos_index);
     }
     else if ((airjoy_data_.d_pad_left == 0 && RB_Flag == true) || (airjoy_data_.d_pad_right == 0 && RB_Flag == false))
     {
@@ -512,9 +515,10 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
     if (((airjoy_data_.d_pad_right == 1 && RB_Flag == true) || (airjoy_data_.d_pad_left == 1 && RB_Flag == false)) && near_click == false)
     {
         near_click = true;
-        if (CZ_flag.R2_pos_index > 2)
+        if (CZ_flag.R2_pos_index < 2)
             CZ_flag.R2_pos_index++;
         CZ_R2_Selection_Planning();
+        debug_uart.printf_DMA("R2_pos_index:%d\n", CZ_flag.R2_pos_index);
     }
     else if ((airjoy_data_.d_pad_right == 0 && RB_Flag == true) || (airjoy_data_.d_pad_left == 0 && RB_Flag == false))
     {
@@ -537,6 +541,7 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
         up_click = true;
         CZ_flag.R1_FB_index = 1;
         CZ_R1_Selection_Planning();
+        debug_uart.printf_DMA("R1_FB_index:%d\n", CZ_flag.R1_FB_index);
     }
     else if (airjoy_data_.d_pad_up == 0)
     {
@@ -549,13 +554,14 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
         down_click = true;
         CZ_flag.R1_FB_index = 0;
         CZ_R1_Selection_Planning();
+        debug_uart.printf_DMA("R1_FB_index:%d\n", CZ_flag.R1_FB_index);
     }
     else if (airjoy_data_.d_pad_down == 0)
     {
         down_click = false;
     }
 
-    // 右摇杆往右拨,蓝场近，红场远
+    // 右摇杆往左拨,蓝场远，红场近
     if (airjoy_data_.right_x > -0.05f)
         right_flag = 1;
     else if (right_flag > 0 && airjoy_data_.right_x < -0.80f && CZ_flag.R1_FB_index == 0)
@@ -571,14 +577,15 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
             {
                 if (RB_Flag == true)
                 {
-                    if (CZ_flag.R1_RL_index < 2)
-                        CZ_flag.R1_RL_index++;
-                }
-                else if (RB_Flag == false)
-                {
                     if (CZ_flag.R1_RL_index > 0)
                         CZ_flag.R1_RL_index--;
                 }
+                else if (RB_Flag == false)
+                {
+                    if (CZ_flag.R1_RL_index < 2)
+                        CZ_flag.R1_RL_index++;
+                }
+                debug_uart.printf_DMA("R1_RL_index:%d\n", CZ_flag.R1_RL_index);
             }
             CZ_R1_Selection_Planning();
             right_flag = 0;
@@ -593,7 +600,7 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
         right_flag = 0;
     }
 
-    // 右摇杆往左拨,蓝场远，红场近
+    // 右摇杆往右拨,蓝场近，红场远
     if (airjoy_data_.right_x < 0.05f)
         left_flag = 1;
     else if (left_flag > 0 && airjoy_data_.right_x > 0.80f && CZ_flag.R1_FB_index == 0)
@@ -609,14 +616,15 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
             {
                 if (RB_Flag == true)
                 {
-                    if (CZ_flag.R1_RL_index > 0)
-                        CZ_flag.R1_RL_index--;
-                }
-                else if (RB_Flag == false)
-                {
                     if (CZ_flag.R1_RL_index < 2)
                         CZ_flag.R1_RL_index++;
                 }
+                else if (RB_Flag == false)
+                {
+                    if (CZ_flag.R1_RL_index > 0)
+                        CZ_flag.R1_RL_index--;
+                }
+                debug_uart.printf_DMA("R1_RL_index:%d\n", CZ_flag.R1_RL_index);
             }
             CZ_R1_Selection_Planning();
             left_flag = 0;

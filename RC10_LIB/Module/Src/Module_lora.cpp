@@ -241,6 +241,9 @@ void Lora_communication::set_robot_KFS_want_place(uint8_t want1, uint8_t want2,u
     send_kfs_want_place2 = want3;
 }
 
+float r_x_delta = 0.08f;
+float l_x_delta = -0.055f;
+
 void Lora_communication::update_airjoy_data(RC10_AirJoy_Data_S * data)
 {
     if(!data) return;
@@ -253,10 +256,10 @@ void Lora_communication::update_airjoy_data(RC10_AirJoy_Data_S * data)
     data->key  = airjoy_data.key;
     data->page = airjoy_data.page;
 
-    data->left_x = airjoy_data.left_x;
+    data->left_x = airjoy_data.left_x + l_x_delta;
     data->left_y = airjoy_data.left_y;
     data->right_y = airjoy_data.right_x;
-    data->right_x = airjoy_data.right_y;
+    data->right_x = airjoy_data.right_y + r_x_delta;
 
     data->SWA = airjoy_data.SWA;
     data->SWB = airjoy_data.SWB;

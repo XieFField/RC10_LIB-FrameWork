@@ -381,6 +381,25 @@ public:
         // 写入机械臂流程反馈标志。
         Arm_Start = arm_end;
     }
+    
+    bool Get_CZ_Arm_flag()
+    {
+        // 读取机械臂触发标志。
+        if (pid_dead_flag == true && CZ_Arm == true)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    void Receive_CZ_Arm_flag(bool CZ_end)
+    {
+        // 写入机械臂流程反馈标志。
+        CZ_Arm = CZ_end;
+    }
 
     void set_KFS(int8_t KFS1, int8_t KFS2, int8_t KFS3)
     {
@@ -1058,6 +1077,7 @@ private:
         WeaponSage_Start = false;
         WeaponSage_End = false;
         Arm_Start = false;
+        CZ_Arm = false;
         pid_dead_flag = false;
 
         KFS_flag.MF1_flag = false;
