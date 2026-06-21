@@ -635,7 +635,7 @@ void FSM_Controller::auto_ctrl()
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_ARM_SEMI);
 
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_CZ);
 
             chassis_setup_->setPathAutoStart(0); // 路径自动开始标志清零
             arm_setup_->set_Arm_autoStart(0);    // 自动流程标志清零
@@ -646,7 +646,7 @@ void FSM_Controller::auto_ctrl()
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_SEMI_AUTO_CONTROL);
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_WEAPON_SEMI);
 
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_CZ);
 
             chassis_setup_->setPathAutoStart(0); // 路径自动开始标志清零
             arm_setup_->set_Arm_autoStart(0);    // 自动流程标志清零
@@ -657,7 +657,7 @@ void FSM_Controller::auto_ctrl()
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_COMBINE_MODE);
 
-            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CZ_R2);
+            chassis_setup_->setChassisStatus(SEMI_AUIO_CZ_FIT);
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x01 && airjoy_data_.SWD == 0x00) // 竞技场 机械臂模式
         {
@@ -665,7 +665,7 @@ void FSM_Controller::auto_ctrl()
             arm_setup_->setArmStatus(ARM_COMP_SEMI_CONTROL);
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_COMP_ARM);
 
-            chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CZ_R1);
+            chassis_setup_->setChassisStatus(SEMI_AUIO_CZ_ARM);
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x01 && airjoy_data_.SWD == 0x01) // 竞技场 武器模式
         {
@@ -673,11 +673,11 @@ void FSM_Controller::auto_ctrl()
             arm_setup_->setArmStatus(ARM_IDLE);
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_COMP_WEAPON);
             
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            chassis_setup_->setChassisStatus(SEMI_AUIO_CZ_WEAPON);
         }
         else
         {
-            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+            chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_CZ);
 
             chassis_setup_->setPathAutoStart(0); // 路径自动开始标志清零
             arm_setup_->set_Arm_autoStart(0);    // 自动流程标志清零

@@ -39,14 +39,7 @@ extern "C"
 #include "APP_Bezier_Curve.h"
 #include "AutoCtrler.h"
 #include "chassis.h"
-typedef enum
-{
-    MANUAL,
-    SEMI_AUIO_FIT,
-    SEMI_AUIO_ARM,
-    SEMI_AUIO_WEAPON,
-    CZ_STOP
-} CZ_STATE;
+#include "Module_lora.h"
 
 typedef struct
 {
@@ -92,7 +85,6 @@ typedef struct
     Vector2D CB_Start_pos = {1.0f, 0.9f};         // 夹杆起点。
     Vector2D CB_Selection_pos = {2.457f, 0.825f}; // 夹杆流程默认目标点。
                                                   // 6/18往下挪了0.5cm XieFField
-
     // 相机流程
     Vector2D CB_End_pos = {2.455f, 1.185f};
 
@@ -240,6 +232,8 @@ private:
 
     bool Arm_Start = false; // 机械臂动作触发标志。
 
+    bool CZ_Arm = false; // 机械臂动作触发标志。
+
     bool RB_Flag = true; // 红蓝方标志位，默认true为蓝场
 
     bool pid_dead_flag = false; // pid完成标志
@@ -285,17 +279,19 @@ private:
 
     bool init_flag = false; // 初始化完成标志。
 
-    RmPocketData_t airjoy_data_;                    // 遥控器数据，范围 -1 ~ 1
     MF_AutoCtrler::PathInformation_S KFS_KeyPoint_; // 自动规划输出的关键路径信息。
 
     Debug_Printf debug_uart = Debug_Printf(&huart8);    // 调试串口
     CHASSIS_TARGET Chassis_Target = {0.0f, 0.0f, 0.0f}; // 底层对接接口缓冲区
 
-    CZ_STATE CZ_state;
-    CZ_STATE CZ_state_last;
-
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;      // 当前底盘总状态机状态。
     CHASSIS_Status_E chassis_status_last_ = CHASSIS_STOP; // 当前底盘总状态机状态。（依旧是每个模式都赋值，用于进入自动模式时进行初始化）
+
+#if !USE_RC10_AIRJOY
+    RmPocketData_t airjoy_data_; // 摇杆值为 -1 ~ 1
+#else
+    communication::RC10_AirJoy_Data_S airjoy_data_;
+#endif
 
     //-----------------------------------内部控制函数-----------------------------------------//
     void loop() override; // RTOS 主循环。
@@ -308,15 +304,11 @@ private:
 
     void CZ_R2_Selection_Planning(void);
 
-    void CZ_state_switch(void);
-
     void CZ_FIT_Path_Init(void);
 
     void CZ_ARM_Path_Init(void);
 
     void CZ_index_reset(void);
-
-    void CZ_init(void);
 
 public:
     /**
@@ -406,33 +398,6 @@ public:
 
     // 写一些辅助函数和标志位函数
 private:
-    // 复位自动流程相关标志位。
-    void flag_reset(void)
-    {
-        // 统一清空自动流程的阶段标志与旋转状态。
-        WeaponSage_Start = false;
-        WeaponSage_End = false;
-        Arm_Start = false;
-        pid_dead_flag = false;
-
-        KFS_flag.MF1_flag = false;
-        KFS_flag.MF2_flag = false;
-        KFS_flag.MF3_flag = false;
-
-        KFS_flag.spin_flag_0 = false;
-        KFS_flag.spin_flag = false;
-        KFS_flag.spin_flag_2 = false;
-
-        KFS_flag.MF1_finish = false;
-        KFS_flag.MF2_finish = false;
-        KFS_flag.MF3_finish = false;
-
-        KFS_flag.get_spin_flag = false;
-        
-        CB_flag.Retreat_flag = false;
-        CB_flag.Selection_flag = false;
-        curve.Rest();
-    }
     //////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
     void Path_lock_point(Vector2D lock_point)
     {
@@ -1048,23 +1013,82 @@ private:
         Chassis_Target.VX = speed.x;
         Chassis_Target.VY = speed.y;
     }
-
-    void CHASSIS_MANUAL(float v_ratio, float yaw_ratio = 0.0f, bool yaw_update = true)
+    // 当需要所目标角时第四个参数给false
+    void CHASSIS_MANUAL(float vx_ratio, float vy_ratio, float yaw_ratio = 0.0f, bool yaw_update = true, bool CZ_flag = false)
     {
-        if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-            Chassis_Target.VX = airjoy_data_.left_x * v_ratio * this->is_chassis_reverse_;
-        else
-            Chassis_Target.VX = 0.0f;
-        if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-            Chassis_Target.VY = airjoy_data_.left_y * v_ratio * this->is_chassis_reverse_;
-        else
-            Chassis_Target.VY = 0.0f;
-        if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
-            Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio;
-        else
-            Chassis_Target.yaw_rate = 0.0f;
+        if (CZ_flag == false)
+        {
+            if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                Chassis_Target.VX = airjoy_data_.left_x * vx_ratio * this->is_chassis_reverse_;
+            else
+                Chassis_Target.VX = 0.0f;
+            if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+                Chassis_Target.VY = airjoy_data_.left_y * vy_ratio * this->is_chassis_reverse_;
+            else
+                Chassis_Target.VY = 0.0f;
+            if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
+                Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio;
+            else
+                Chassis_Target.yaw_rate = 0.0f;
+        }
+        else if (CZ_flag == true)
+        {
+            if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                Chassis_Target.VY = airjoy_data_.left_x * vy_ratio * this->is_chassis_reverse_ * RB_Flag ? (-1) : 1;
+            else
+                Chassis_Target.VY = 0.0f;
+
+            if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+                Chassis_Target.VX = airjoy_data_.left_y * vx_ratio * this->is_chassis_reverse_ * RB_Flag ? 1 : (-1);
+            else
+                Chassis_Target.VX = 0.0f;
+            if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
+                Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio;
+            else
+                Chassis_Target.yaw_rate = 0.0f;
+        }
+
         if (yaw_update)
             target_yaw = yaw;
+    }
+    // 复位自动流程相关标志位。
+    void flag_reset(void)
+    {
+        // 统一清空自动流程的阶段标志与旋转状态。
+        WeaponSage_Start = false;
+        WeaponSage_End = false;
+        Arm_Start = false;
+        pid_dead_flag = false;
+
+        KFS_flag.MF1_flag = false;
+        KFS_flag.MF2_flag = false;
+        KFS_flag.MF3_flag = false;
+
+        KFS_flag.spin_flag_0 = false;
+        KFS_flag.spin_flag = false;
+        KFS_flag.spin_flag_2 = false;
+
+        KFS_flag.MF1_finish = false;
+        KFS_flag.MF2_finish = false;
+        KFS_flag.MF3_finish = false;
+
+        KFS_flag.get_spin_flag = false;
+
+        CB_flag.Retreat_flag = false;
+        CB_flag.Selection_flag = false;
+        curve.Rest();
+    }
+    void mode_init(void)
+    {
+        if (chassis_status_last_ != chassis_status_)
+        {
+            flag_reset();
+            CZ_index_reset();
+            path_line_.Reset();
+            path_line_.plan_reset();
+            Path_end_point = robot_pos_;
+        }
+        chassis_status_last_ = chassis_status_;
     }
 };
 
