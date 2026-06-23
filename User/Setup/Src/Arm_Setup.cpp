@@ -637,6 +637,9 @@ void ArmSetup::arm_d_pad_ctrl()
                 is_d_pad_up_clicked = 0;
             }
         }
+
+        arm_ctrlStatus.last_manual_store = 0;
+        store_state_ = store_state::idle;
     }
     else if (arm_ctrlStatus.is_store_acting == 1) // 取出
     {
