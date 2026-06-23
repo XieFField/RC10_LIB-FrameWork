@@ -308,7 +308,12 @@ private:
     void CZ_ARM_Path_Init(void);
 
     void CZ_index_reset(void);
-
+    
+    void CZ_FIT_WAIT_Selection_Planning(void);
+    
+    void CZ_FIT_R2_Selection_Planning(void);
+    
+    void CZ_ARM_Selection_Planning(void);
 public:
     /**
      * @brief 设置路径自动开始标志
