@@ -29,6 +29,7 @@ extern "C" {
 #include "Locate_Setup.h"
 #include "Module_OIDEncoder.h"
 #include "tim.h"
+#include "Module_lora.h"
 namespace WeaponSage_Setup
 {
     typedef struct{
@@ -107,7 +108,7 @@ namespace WeaponSage_Setup
         float weapon_launch_fastrate = 0.0002; 
         float weapon_launch_slowrate = 0.0001;
         float weapon_wrist_rate=0.001f;
-        bool is_using_Dpad = false; //是否正在使用D-pad控制
+        bool is_Dpad_Done = false; //是否正在使用D-pad控制
     }manual_RC10_ctrlForgrip_S;
 
     typedef struct{
@@ -292,9 +293,10 @@ private:
     void autoControl();
     void calibrate();
     void semi_autoControl();
+    void semi_low_level();
 
     bool D_pad_acting();
-    bool Right_stick_acting();
+
     float WristToClosest_poistive(float current_angle);
     float WristToClosest_negative(float current_angle);
 
@@ -312,9 +314,11 @@ private:
     bool debug_launch_target_valid_ = false;
     float debug_launch_target_ = 0.0f;
 
-	
+	#if !USE_RC10_AIRJOY
     RmPocketData_t airjoy_data_; 
-
+	#else
+    communication::RC10_AirJoy_Data_S airjoy_data_; // -1 ~ 1
+	#endif
     WeaponSage_Setup::manual_ctrlForgrip_S manual_ctrlForgrip_;
 
     OIDEncoder *wrist_encoder_ = nullptr;

@@ -68,11 +68,21 @@ void Robot_WeaponSage_Setup::loop()
     switch(weaponSage_status_)
     {
         case WEAPONSAGE_MANUAL_CONTROL:
-        
+
+            #if !USE_RC10_AIRJOY
             manualControl();
-        #if USE_RC10_AIRJOY
-            
-        #endif
+            #else
+            if(last_weaponSage_status_!=WEAPONSAGE_MANUAL_CONTROL)
+            {
+                manual_RC10_ctrlForgrip_.is_Dpad_Done=false;
+            }
+            manual_RC10_ctrlForgrip_.is_Dpad_Done=D_pad_acting();
+            if(manual_RC10_ctrlForgrip_.is_Dpad_Done)
+            {
+                manualControl();
+
+            }
+            #endif
             break;
         case WEAPONSAGE_IDLE:
             idle();
@@ -89,6 +99,11 @@ void Robot_WeaponSage_Setup::loop()
         case WEAPONSAGE_AUTOCONTROL:
         {
             autoControl();
+            break;
+        }
+        case WEAPONSAGE_SEMI_LOW_LEVEL:
+        {
+            semi_low_level();
             break;
         }
 		case WEAPONSAGE_CALIBRATE:
@@ -390,20 +405,22 @@ void Robot_WeaponSage_Setup::manualControl()
         target_pos_.launch_pos_ = initData_.max_launchHeight_;
     else if(target_pos_.launch_pos_ < 0.0f)
         target_pos_.launch_pos_ = 0.0f;
-    
-    if(_tool_Abs(airjoy_data_.right_x) < 0.1)
+    if(airjoy_data_.SWE==0)
     {
-        manual_RC10_ctrlForgrip.changeTarget_state = false;
-    }
-    else if(airjoy_data_.right_x > 0.5)
-    {
-        target_pos_.wrist_pos_ += manual_RC10_ctrlForgrip_.wrist_rate;
-    }
-    else if(airjoy_data_.right_x < -0.5)
-    {
-        target_pos_.wrist_pos_ -= manual_RC10_ctrlForgrip_.wrist_rate;
-    }else{
-        target_pos_.wrist_pos_ = target_pos_.wrist_pos_;
+        if(_tool_Abs(airjoy_data_.right_x) < 0.1)
+        {
+            manual_RC10_ctrlForgrip.changeTarget_state = false;
+        }
+        else if(airjoy_data_.right_x > 0.5)
+        {
+            target_pos_.wrist_pos_ += manual_RC10_ctrlForgrip_.wrist_rate;
+        }
+        else if(airjoy_data_.right_x < -0.5)
+        {
+            target_pos_.wrist_pos_ -= manual_RC10_ctrlForgrip_.wrist_rate;
+        }else{
+            target_pos_.wrist_pos_ = target_pos_.wrist_pos_;
+        }
     }
     
     int8_t target_claw_logical = (airjoy_data_.SWD & 0x01) ^ ctrl_status_.claw_switch_offset;
@@ -765,10 +782,48 @@ void Robot_WeaponSage_Setup::stop()
 void Robot_WeaponSage_Setup::semi_autoControl()
 {
     #if USE_RC10_AIRJOY
-        if(airjoy_data_.SWD==1)
+    if(last_weaponSage_status_!=WEAPONSAGE_SEMI_AUTO_CONTROL)
+    {
+        manual_RC10_ctrlForgrip_.is_Dpad_Done=false;
+    }
+    if(airjoy_data_.SWD==1)
+    {
+        manual_ctrlForgrip_.is_Dpad_Done=D_pad_acting();
+        if(manual_RC10_ctrlForgrip_.is_Dpad_Done)
         {
-            D_pad_acting();
+            if(airjoy_data_.right_y > 0.5f&&target_pos_.launch_pos_ <=initData_.max_launchHeight_)
+            {
+            target_pos_.launch_pos_ += manual_RC10_ctrlForgrip_.weapon_launch_fastrate;			
+            }
+            else if(airjoy_data_.right_y < -0.5f)
+            {
+
+            target_pos_.launch_pos_ -= manual_RC10_ctrlForgrip_.weapon_launch_fastrate;	
+            }
+        else
+            target_pos_.launch_pos_ = target_pos_.launch_pos_;
+
+        if(target_pos_.launch_pos_ > initData_.max_launchHeight_)
+        target_pos_.launch_pos_ = initData_.max_launchHeight_;
+        else if(target_pos_.launch_pos_ < 0.0f)
+            target_pos_.launch_pos_ = 0.0f;
+   
+        if(_tool_Abs(airjoy_data_.right_x) < 0.1)
+        {
+            manual_RC10_ctrlForgrip.changeTarget_state = false;
         }
+        else if(airjoy_data_.right_x > 0.5)
+        {
+            target_pos_.wrist_pos_ += manual_RC10_ctrlForgrip_.wrist_rate;
+        }
+        else if(airjoy_data_.right_x < -0.5)
+        {
+            target_pos_.wrist_pos_ -= manual_RC10_ctrlForgrip_.wrist_rate;
+        }else{
+            target_pos_.wrist_pos_ = target_pos_.wrist_pos_;
+        }
+        }
+    }
 
 
     #endif
@@ -777,54 +832,99 @@ void Robot_WeaponSage_Setup::semi_autoControl()
 
 bool Robot_WeaponSage_Setup::D_pad_acting()
 {
-    bool is_receive_Dpad_command=false;
-    if(airjoy_data_.dpad_up==1&&manual_RC10_ctrlForgrip_.is_Dpad_up_enabled==0)
+	#if USE_RC10_AIRJOY
+    if(airjoy_data_.d_pad_up==1&&manual_RC10_ctrlForgrip_.is_Dpad_up_enabled==0)
     {
         this->target_pos_.launch_pos_=0.9*initData_.max_launchHeight_;
-        manual_Rc10_ctrlForgrip_.is_Dpad_up_enabled=1;
-        is_receive_Dpad_command=true;
-    }else if(airjoy_data_.dpad_up==0&&manual_RC10_ctrlForgrip_.is_Dpad_up_enabled==1)
+        manual_RC10_ctrlForgrip_.is_Dpad_up_enabled=1;
+    }else if(airjoy_data_.d_pad_up==0&&manual_RC10_ctrlForgrip_.is_Dpad_up_enabled==1)
     {
-        manual_Rc10_ctrlForgrip_.is_Dpad_up_enabled=0;
+        manual_RC10_ctrlForgrip_.is_Dpad_up_enabled=0;
     }
-    if(airjoy_data_.dpad_down==1&&manual_RC10_ctrlForgrip_.is_Dpad_down_enabled==0)
+    if(airjoy_data_.d_pad_down==1&&manual_RC10_ctrlForgrip_.is_Dpad_down_enabled==0)
     {
         this->target_pos_.launch_pos_=0.1*initData_.max_launchHeight_;
-        manual_Rc10_ctrlForgrip_.is_Dpad_down_enabled=1;
-        is_receive_Dpad_command=true;
-    }else if(airjoy_data_.dpad_down==0&&manual_RC10_ctrlForgrip_.is_Dpad_down_enabled==1)
+        manual_RC10_ctrlForgrip_.is_Dpad_down_enabled=1;
+    }else if(airjoy_data_.d_pad_down==0&&manual_RC10_ctrlForgrip_.is_Dpad_down_enabled==1)
     {
-        manual_Rc10_ctrlForgrip_.is_Dpad_down_enabled=0;
+        manual_RC10_ctrlForgrip_.is_Dpad_down_enabled=0;
     }
     if(airjoy_data_.dpad_left==1&&manual_RC10_ctrlForgrip_.is_Dpad_left_enabled==0)
     {
         target_pos_.wrist_pos_=WristToClosest_negative(current_pos_.wrist_pos_);
-        manual_Rc10_ctrlForgrip_.is_Dpad_left_enabled=1;
-        is_receive_Dpad_command=true;
+        manual_RC10_ctrlForgrip_.is_Dpad_left_enabled=1;
     }else if(airjoy_data_.dpad_left==0&&manual_RC10_ctrlForgrip_.is_Dpad_left_enabled==1)
     {
-        manual_Rc10_ctrlForgrip_.is_Dpad_left_enabled=0;
+        manual_RC10_ctrlForgrip_.is_Dpad_left_enabled=0;
     } 
     if(airjoy_data_.dpad_right==1&&manual_RC10_ctrlForgrip_.is_Dpad_right_enabled==0)
     {
         target_pos_.wrist_pos_=WristToClosest_poistive(current_pos_.wrist_pos_);
-        manual_Rc10_ctrlForgrip_.is_Dpad_right_enabled=1; 
-        is_receive_Dpad_command=true;
+        manual_RC10_ctrlForgrip_.is_Dpad_right_enabled=1; 
     }else if(airjoy_data_.dpad_right==0&&manual_RC10_ctrlForgrip_.is_Dpad_right_enabled==1)
     {
-        manual_Rc10_ctrlForgrip_.is_Dpad_right_enabled=0;
+        manual_RC10_ctrlForgrip_.is_Dpad_right_enabled=0;
     }
     //------------------------------------------------------保证长按值只执行一次------------------------------------------------------
-    if(abs(current_pos_.launch_pos_-target_pos_.launch_pos_)<0.02f&&abs(current_pos_.wrist_pos_-target_pos_.wrist_pos_)<1.0f&&is_receive_Dpad_command==true)
+    if(abs(current_pos_.launch_pos_-target_pos_.launch_pos_)<0.02f&&abs(current_pos_.wrist_pos_-target_pos_.wrist_pos_)<1.0f)
     {
-        is_receive_Dpad_command=false;
         return true;
     }
     else
     {
         return false;
     }
+	#endif
 }
+
+
+void Robot_WeaponSage_Setup::semi_low_level()
+{
+    #if USE_RC1O_AIRJOY
+    if(last_weaponSage_status_!=WEAPONSAGE_SEMI_LOW_LEVEL)
+    {
+        manual_RC10_ctrlForgrip_.is_Dpad_Done=false;
+    }
+    manual_RC10_ctrlForgrip_.is_Dpad_Done=D_pad_acting();
+    if(airjoy_data_.SWE==1&&manual_RC10_ctrlForgrip_.is_Dpad_Done)
+    {
+        anual_RC10_ctrlForgrip.changeTarget_state = false;
+        if(airjoy_data_.right_y > 0.5f&&target_pos_.launch_pos_ <=initData_.max_launchHeight_)
+        {
+            
+            target_pos_.launch_pos_ += manual_RC10_ctrlForgrip_.weapon_launch_slowrate;			
+        }
+        else if(airjoy_data_.right_y < -0.5f)
+        {
+
+            target_pos_.launch_pos_ -= manual_RC10_ctrlForgrip_.weapon_launch_slowrate;	
+        }
+        else
+            target_pos_.launch_pos_ = target_pos_.launch_pos_;
+
+        if(target_pos_.launch_pos_ > initData_.max_launchHeight_)
+            target_pos_.launch_pos_ = initData_.max_launchHeight_;
+        else if(target_pos_.launch_pos_ < 0.0f)
+            target_pos_.launch_pos_ = 0.0f;
+        if(_tool_Abs(airjoy_data_.right_x) < 0.1)
+        {
+            manual_RC10_ctrlForgrip.changeTarget_state = false;
+        }
+        else if(airjoy_data_.right_x > 0.5)
+        {
+            target_pos_.wrist_pos_ += manual_RC10_ctrlForgrip_.wrist_rate;
+        }
+        else if(airjoy_data_.right_x < -0.5)
+        {
+            target_pos_.wrist_pos_ -= manual_RC10_ctrlForgrip_.wrist_rate;
+        }else{
+            target_pos_.wrist_pos_ = target_pos_.wrist_pos_;
+        }
+    
+    }
+    #endif
+}
+
 
 
 float Robot_WeaponSage_Setup:: WristToClosest_poistive(float current_angle)
@@ -837,7 +937,8 @@ float Robot_WeaponSage_Setup:: WristToClosest_poistive(float current_angle)
         target_angle = 0.0f;
     }else
     {
-        if(fmode(normalized_angle,90.0f)<45.0f)
+		float test =fmod(normalized_angle,90.0f);
+        if(test<45.0f)
         {
             round_cnt = floor(normalized_angle / 90.0f);
             target_angle = round_cnt*90.0f;
@@ -860,7 +961,8 @@ float Robot_WeaponSage_Setup::WristToClosest_negative(float current_angle)
         target_angle = 0.0f;
     }else
     {
-        if(fmode(normalized_angle,90.0f)>45.0f)
+		float test=fmod(normalized_angle,90.0f);
+        if(test>45.0f)
         {
             round_cnt = floor(normalized_angle / 90.0f);
             target_angle = (round_cnt+1)*90.0f;
