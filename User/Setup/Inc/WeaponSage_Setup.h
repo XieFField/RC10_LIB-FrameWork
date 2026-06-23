@@ -142,7 +142,7 @@ namespace WeaponSage_Setup
             float launch_untight =0.45f;
             float launch_clawclosed = 0.8f;
             float launch_rotate =1.0f;
-            float launch_lastcatch=0.11f;
+            float launch_lastcatch=0.14f;
             float launch_dockprepare=0.6f;
         }launch_kp;
 		bool is_ServoStart= false;

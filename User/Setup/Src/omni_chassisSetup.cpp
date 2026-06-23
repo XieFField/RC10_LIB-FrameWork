@@ -3,7 +3,7 @@ extern Chassis chassis;
 
 void OmniChassis_Setup::CB_Path_Check(void)
 {
-    if (CB_point.CB_Selection_pos.x == curve.Get_End_point().x && CB_point.CB_Selection_pos.y == curve.Get_End_point().y)
+    if (CB_point.CB_Selection_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_Selection_pos[RB_Flag].y == curve.Get_End_point().y)
     {
         CB_flag.Selection_flag = true;
     }
@@ -13,6 +13,8 @@ void OmniChassis_Setup::CB_Path_Check(void)
         pid_dead_flag = false;
         WeaponSage_Start = true;
     }
+
+    #if !USE_RC10_AIRJOY
     if (airjoy_data_.SWA == 0x00)
     {
         if (CB_point.CB_End_pos.x == curve.Get_End_point().x && CB_point.CB_End_pos.y == curve.Get_End_point().y && path_line_.Is_End() == false)
@@ -41,6 +43,43 @@ void OmniChassis_Setup::CB_Path_Check(void)
             WeaponSage_End = true;
         }
     }
+#else
+    if (airjoy_data_.SWC == 0x00)
+    {
+        if (CB_point.CB_End_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_End_pos[RB_Flag].y == curve.Get_End_point().y && path_line_.Is_End() == false)
+        {
+            CB_flag.Retreat_flag = true;
+        }
+        else if (CB_flag.Retreat_flag == true)
+        {
+            if(RB_Flag)
+                target_yaw = 90.0f;
+            else 
+                target_yaw = -90.0f;
+            CB_flag.Retreat_flag = false;
+            pid_dead_flag = false;
+            WeaponSage_End = true;
+        }
+    }
+    else if (airjoy_data_.SWC == 0x01)
+    {
+        if (CB_point.CB_transition_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_transition_pos[RB_Flag].y == curve.Get_End_point().y)
+        {
+            CB_flag.Retreat_flag = true;
+        }
+        else if (CB_flag.Retreat_flag == true)
+        {
+            if(RB_Flag)
+                target_yaw = 90.0f;
+            else 
+                target_yaw = -90.0f;
+            CB_flag.Retreat_flag = false;
+            pid_dead_flag = false;
+            WeaponSage_End = true;
+        }
+    }
+#endif
+    
 }
 
 void OmniChassis_Setup::CB_Selection_Planning(void)
@@ -52,11 +91,11 @@ void OmniChassis_Setup::CB_Selection_Planning(void)
 
     // 夹杆路径
     path_line_.Add_Start_Point(robot_pos_);
-    if (robot_pos_.y < CB_point.CB_Selection_pos.y)
+    if (robot_pos_.y < CB_point.CB_Selection_pos[RB_Flag].y)
     {
-        path_line_.Add_Point(CB_point.CB_Start_pos, path_param.line);
+        path_line_.Add_Point(CB_point.CB_Start_pos[RB_Flag], path_param.line);
     }
-    path_line_.Add_Point(CB_point.CB_Selection_pos, path_param.cb);
+    path_line_.Add_Point(CB_point.CB_Selection_pos[RB_Flag], path_param.cb);
 
 #if !USE_RC10_AIRJOY
     // 相机流程
@@ -74,13 +113,13 @@ void OmniChassis_Setup::CB_Selection_Planning(void)
     // 相机流程
     if (airjoy_data_.SWC == 0x00)
     {
-        path_line_.Add_End_Point(CB_point.CB_End_pos, path_param.end);
+        path_line_.Add_End_Point(CB_point.CB_End_pos[RB_Flag], path_param.end);
     }
     else if (airjoy_data_.SWC == 0x01)
     {
-        path_line_.Add_Point(CB_point.CB_transition_pos, path_param.R2);
-        path_line_.Add_Point(CB_point.CB_transition_pos_1, path_param.line);
-        path_line_.Add_End_Point(CB_point.CB_welt_pos, path_param.R2);
+        path_line_.Add_Point(CB_point.CB_transition_pos[RB_Flag], path_param.R2);
+        path_line_.Add_Point(CB_point.CB_transition_pos_1[RB_Flag], path_param.line);
+        path_line_.Add_End_Point(CB_point.CB_welt_pos[RB_Flag], path_param.R2);
     }
 #endif
     Path_end_point = path_line_.Get_End_Point();
@@ -200,7 +239,7 @@ void OmniChassis_Setup::loop()
     //----------------------------------             CZ_新状态机              -----------------------------------//
     case CHASSIS_MANUAL_CONTROL_CZ:
     {
-        CHASSIS_MANUAL(1.0f, 1.0f, 2.0f, true, true);
+        CHASSIS_MANUAL(1.0f, 1.0f, 2.0f, true);
         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
         chassis_status_last_ = chassis_status_;
         break;
@@ -216,6 +255,7 @@ void OmniChassis_Setup::loop()
                 v_plan();
             else
                 Path_lock_point(curve.Get_Start_point());
+            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
         }
         else
         {
@@ -227,7 +267,7 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true, true);
+                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
         }
@@ -244,6 +284,7 @@ void OmniChassis_Setup::loop()
                 v_plan();
             else
                 Path_lock_point(curve.Get_Start_point());
+            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
         }
         else
         {
@@ -255,7 +296,7 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true, true);
+                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
         }
@@ -267,12 +308,12 @@ void OmniChassis_Setup::loop()
         mode_init();
         if (airjoy_data_.SWE == 0)
         {
-            CHASSIS_MANUAL(1.0f, 1.0f, 2.0f, true, true);
+            CHASSIS_MANUAL(1.0f, 1.0f, 2.0f, true);
             chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
         }
         else if (airjoy_data_.SWE == 1)
         {
-            CHASSIS_MANUAL(1.0f, 1.0f, 0.0f, false, true);
+            CHASSIS_MANUAL(1.0f, 1.0f, 0.0f, false);
             chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, target_yaw * PI / 180.0f);
         }
         break;
