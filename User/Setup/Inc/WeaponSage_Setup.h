@@ -109,6 +109,7 @@ namespace WeaponSage_Setup
         float weapon_launch_slowrate = 0.0001;
         float weapon_wrist_rate=0.001f;
         bool is_Dpad_Done = false; //�Ƿ�����ʹ��D-pad����
+        uint8_t Dpad_acting_state=0;
     }manual_RC10_ctrlForgrip_S;
 
     typedef struct{
@@ -260,8 +261,8 @@ public:
         ctrl_status_.is_claw_3_closed = claw_3;
     }
 
-    void Close_TargetClaw();
-    void Close_TargetClaw_Untight();
+    bool Close_TargetClaw();
+    bool Close_TargetClaw_Untight();
     void Judge_launch_status();
     void Judge_wrist_status();
     
@@ -302,7 +303,6 @@ protected:
 private:
 	
 	bool omni_flag = false;
-
     WeaponSage_Setup::ctrl_status_S ctrl_status_;
     Debug_Printf debug_uart = Debug_Printf(&huart1);
 
@@ -321,8 +321,8 @@ private:
 
     float WristToClosest_poistive(float current_angle);
     float WristToClosest_negative(float current_angle);
-    void Sage_to_high();
-    void Sage_to_low();
+    bool Sage_to_high();
+    bool Sage_to_low();
     
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 
