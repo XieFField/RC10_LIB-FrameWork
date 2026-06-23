@@ -1,7 +1,7 @@
 /**
  * @file WeaponSage_Setup.h
  * @author XieFField 70er66
- * @brief 武器架控制实现
+ * @brief 武器架控制实�?
  * @version 1.0
  */
 
@@ -34,7 +34,7 @@ namespace WeaponSage_Setup
     typedef struct{
         bool init_flag = false;
 
-        float debug_start = 1; //debug_start = 1表示开始调试
+        float debug_start = 1; //debug_start = 1表示开始调�?
 		float now_times=0.0f;
         float calibrate_startTime = 0.0f;
         bool calibrate_start = false;
@@ -68,15 +68,15 @@ namespace WeaponSage_Setup
         int8_t isArm_Vertical;   //竖直1 水平0
         int8_t last_isArm_Vertical;
 
-        bool wrist_rotate_enable = false; //手腕转动能标志位
+        bool wrist_rotate_enable = false; //手腕�?动能标志�?
 
-        bool is_claw_1_closed = false; // 夹爪1是否闭合的状态
-        bool is_claw_2_closed = false; // 夹爪2是否闭合的状态 
-        bool is_claw_3_closed = false; // 夹爪3是否闭合的状态
+        bool is_claw_1_closed = false; // 夹爪1�?否闭合的状�?
+        bool is_claw_2_closed = false; // 夹爪2�?否闭合的状�? 
+        bool is_claw_3_closed = false; // 夹爪3�?否闭合的状�?
     }ctrl_status_S;
 
     typedef enum{
-        //将自动过程的每个状态枚举
+        //将自动过程的每个状态枚�?
         STATE_START,
         STATE_ARM_MOVE,
         STATE_CLAW_ADJUST,
@@ -89,9 +89,26 @@ namespace WeaponSage_Setup
         float last_right_stick_x = 0.0f;
         float last_right_stick_y = 0.0f;
 
-        bool changeTarget_state = false; //变更目标状态标志位
-   
+        bool changeTarget_state = false; //变更�?标状态标志位
+    
+
     }manual_ctrlForgrip_S;
+
+
+    typedef struct{
+        bool is_Dpad_left_enabled = false;       //�Ƿ�����D-pad����
+        bool is_Dpad_right_enabled = false;
+        bool is_Dpad_up_enabled = false;
+        bool is_Dpad_down_enabled = false;
+        bool is_Right_stick_enabled = false;//�Ƿ�ʹ����ҡ�˿���
+        float last_right_stick_x = 0.0f;
+        float last_right_stick_y = 0.0f;
+        bool changeTarget_state = false; //�Ƿ����л�Ŀ��״̬
+        float weapon_launch_fastrate = 0.0002; 
+        float weapon_launch_slowrate = 0.0001;
+        float weapon_wrist_rate=0.001f;
+        bool is_using_Dpad = false; //�Ƿ�����ʹ��D-pad����
+    }manual_RC10_ctrlForgrip_S;
 
     typedef struct{
 
@@ -104,13 +121,13 @@ namespace WeaponSage_Setup
         }auto_state_bool_S; //局部状态结构体
         struct{
             bool is_reach_sagelowest = false; //当升降达到最低点视为已经完成下降
-            bool is_reach_closedclaw = false; //当夹爪到达目标位置视为已经完成抓取
+            bool is_reach_closedclaw = false; //当夹�?到达�?标位�?视为已经完成抓取
             bool is_reach_start = false;
             bool is_clawed=false;
             bool is_untight=false;
-            bool is_catched=false;  //当夹爪到达安全高度视为已经完成抓取
+            bool is_catched=false;  //当夹�?到达安全高度视为已经完成抓取
             bool is_moved=false;
-            bool is_prepared=false; //准备就绪，满足抓取条件
+            bool is_prepared=false; //准�?�就�?，满足抓取条�?
 			bool is_arm_reset=false;
         }flag;
         bool auto_ctrl1 = false;
@@ -146,7 +163,7 @@ public:
     Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data);
     
     /**
-     * @brief 必须在注册完所有电机后调用一次 init() 来启动任务和完成必要的初始化，否则武器架将无法正常工作
+     * @brief 必须在注册完所有电机后调用一�? init() 来启动任务和完成必�?�的初�?�化，否则�?�器架将无法正常工作
      */
     void init(OIDEncoder * wrist_encoder)
     {
@@ -252,7 +269,7 @@ public:
 	
 	void Set_AutoStart(bool flag)
 	{
-		auto_ctrl_.auto_ctrl1=flag;      //手动置位：是否可以自动
+		auto_ctrl_.auto_ctrl1=flag;      //手动�?位：�?否可以自�?
 	}
 	
 	void SetServo_Angle(uint16_t angle);
@@ -274,7 +291,12 @@ private:
     void autoControl_dock();
     void autoControl();
     void calibrate();
+    void semi_autoControl();
 
+    bool D_pad_acting();
+    bool Right_stick_acting();
+    float WristToClosest_poistive(float current_angle);
+    float WristToClosest_negative(float current_angle);
 
     
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
@@ -286,7 +308,7 @@ private:
 
     WeaponSage_Setup::WeaponDock_E target_dock_ = WeaponSage_Setup::MID; // for auto_dock
 
-    bool weapon_CameraStart = false; // 主状态机触发相机流程的标志位。
+    bool weapon_CameraStart = false; // 主状态机触发相机流程的标志位�?
     bool debug_launch_target_valid_ = false;
     float debug_launch_target_ = 0.0f;
 
@@ -298,6 +320,7 @@ private:
     OIDEncoder *wrist_encoder_ = nullptr;
 	
 	volatile float wrist_encoder_angle_ = 0.0f;
+    WeaponSage_Setup::manual_RC10_ctrlForgrip_S manual_RC10_ctrlForgrip_;
 };
 
 extern WeaponSage_InitData_S initData_;
