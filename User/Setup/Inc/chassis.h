@@ -81,6 +81,19 @@
 #define JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG 15.0f
 #endif
 
+// “首次上电回零延时”只作用在本次上电后的第一次整车 homing：
+// - 它不是每次 startHoming() 都会等待，首次机会一旦消耗，后续手动再次回零不再等待；
+// - ENABLE 只控制这段逻辑是否参与编译，不改变其他 homing / recovery 分支的语义；
+// - DELAY_MS 表示四个舵轮共享的统一等待时长，0U 等价于关闭等待、退化为当前立即进入 Search 的行为；
+// - 等待窗口 active 期间，四个轮都停留在 kIdle，上游也不会放行到 kSearch，因此不会下发搜索 RPM。
+#ifndef JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_ENABLE
+#define JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_ENABLE 1
+#endif
+
+#ifndef JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS
+#define JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS 0U
+#endif
+
 #include "APP_Utils.h"
 
 #include "FreeRTOS.h"
@@ -1065,6 +1078,12 @@ namespace jia
              */
             void resetHomingEdgeConfirmState(WheelConfig &wheel);
             /**
+             * @brief 推进“本次上电首次整车 homing”统一延时窗口。
+             * @details 该窗口只在本次上电后的第一次整车 homing 生效；恢复回零与后续人工重回零不走这里。
+             *          真实线程与 host 语义测试夹具都应调用同一 helper，避免时序语义分叉。
+             */
+            void updateFirstBootHomingDelayState();
+            /**
              * @brief 记录一次 homing 原始边沿，并判断是否已满足三边沿确认条件。
              * @param wheel 目标轮运行态容器。
              * @param is_falling_edge 当前边沿是否为 H->L。
@@ -1779,6 +1798,12 @@ namespace jia
             // 这一组保存“轮子自身”最核心的跨拍事实，包括装配副本、反馈快照、执行历史和局部状态机阶段。
             // 其中 last_* 不是单纯调试缓存，而是限幅、zero-stop、残余速度判定这类跨拍整形逻辑的直接输入。
             bool homing_start_request_ = false;                                // [RW] 回零启动请求锁存位（由外部触发，在线程内消费）
+            struct FirstBootHomingDelayState
+            {
+                bool pending = true;   // [RW] 本次上电首次整车 homing 的延时机会是否尚未消耗。
+                bool active = false;   // [RW] 当前是否正处在首次整车 homing 的统一等待窗口。
+                u32 elapsed_ms = 0U;   // [RW] 首次整车 homing 统一等待已累计时长（ms，仅这一轮使用）。
+            } first_boot_homing_delay_;
             f32 homing_align_to_zero_tolerance_deg_ = 2.0f;                    // [RW] 回零归位判稳阈值（deg）
             WheelConfig wheel_config_[4];                                      // [RO] 四个模块运行态快照
             f32 last_steer_rate_cmd_rad_s_[4] = {0.0f};                        // [RO] 上周期最终采用的转向速度命令。主要服务舵向二阶限幅与 hold 收尾。

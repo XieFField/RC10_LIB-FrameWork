@@ -520,9 +520,20 @@ namespace jia
 
         Chassis::Result Chassis::startHoming()
         {
-            // 回零请求只负责“拉起状态机”和清空本轮回零参考，不直接驱动电机；
-            // 真正的搜索、沿边沿捕获零位、偏置生效和完成判定都在 runThread() 中按周期推进。
+            // startHoming() 这里只负责“挂起一次整车 homing 请求”并重置每轮回零参考，
+            // 不在入口阻塞等待，也不在这里直接把轮子切进 kSearch。
+            // 这样首次上电延时仍然由主线程按拍推进，后续 recovery re-home / 常规 homing 也继续共用同一条状态机主链。
             homing_start_request_ = true;
+#if JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_ENABLE
+            // 只有“本次上电后的第一次整车 homing”会在这里 arm 统一等待窗口：
+            // pending 表示这次机会还没用掉；delay_ms > 0 才真的需要等待。
+            // 如果后续再次手动 startHoming()，pending 已经被消耗，就会直接按现有逻辑进入 Search。
+            if (first_boot_homing_delay_.pending && (JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS > 0U))
+            {
+                first_boot_homing_delay_.active = true;
+                first_boot_homing_delay_.elapsed_ms = 0U;
+            }
+#endif
             steer_fault_any_active_ = false;
             for (u8 i = 0; i < 4; ++i)
             {
@@ -549,6 +560,37 @@ namespace jia
                 }
             }
             return Result::kOk;
+        }
+
+        void Chassis::updateFirstBootHomingDelayState()
+        {
+#if JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_ENABLE
+            // 这是 chassis 级“统一等待窗口”计时器，不给四个轮子各自分开累计，
+            // 这样放行时刻只有一个，能保证四轮在同一拍一起具备 Idle -> Search 的资格。
+            if (!first_boot_homing_delay_.active)
+            {
+                return;
+            }
+
+            if (JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS == 0U)
+            {
+                first_boot_homing_delay_.active = false;
+                first_boot_homing_delay_.pending = false;
+                return;
+            }
+
+            // 每拍按 period_ms_ 推进；如果达到配置阈值，就在这一拍末尾同时关闭 active 并消耗 pending。
+            first_boot_homing_delay_.elapsed_ms =
+                (first_boot_homing_delay_.elapsed_ms > (0xFFFFFFFFU - period_ms_))
+                    ? 0xFFFFFFFFU
+                    : (first_boot_homing_delay_.elapsed_ms + period_ms_);
+
+            if (first_boot_homing_delay_.elapsed_ms >= JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS)
+            {
+                first_boot_homing_delay_.active = false;
+                first_boot_homing_delay_.pending = false;
+            }
+#endif
         }
 
         bool Chassis::isHomingDone() const
@@ -3945,6 +3987,19 @@ namespace jia
             {
                 if (homing_start_request_)
                 {
+#if JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_ENABLE
+                    // 首次上电统一延时生效时，这里只拦住 Idle -> Search 的放行，
+                    // 让轮子继续停在 kIdle，同时仍刷新本拍 sensor 状态。
+                    // 这里必须写回 homing_last_sensor_active：它是 Search 态做 H/L 边沿检测时使用的“上一拍 GPIO 快照”，
+                    // 如果延时窗口里不持续更新，放行后的第一拍 Search 就会拿着一个过旧基线，
+                    // 把延时期间积累下来的电平变化误判成刚刚搜索到的有效边沿。
+                    // steer fault recovery re-home 不走这道门，它在上面的 Recovering 分支里直接并回 Search 主链。
+                    if (first_boot_homing_delay_.active)
+                    {
+                        wheel.homing_last_sensor_active = sensor_raw_high;
+                        return false;
+                    }
+#endif
                     // Search 从哪一相位开始并不重要，只要开始转动，半圈内总能遇到一个有效边沿。
                     // 这里故意只切状态，不在 Idle 分支直接下电机命令；
                     // 真正的搜索转速下发由 applyModuleCommands() 里的 kSearch 执行分支统一负责，
@@ -6004,6 +6059,9 @@ namespace jia
 #if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 stage_start_us = RtosTimeStampUs64::getTimeUs();
 #endif
+                // 先推进 chassis 级统一等待窗口，再逐轮调用 updateHomingState()，
+                // 才能保证四个轮子在同一拍共享同一个“是否允许进入 Search”的判定结果。
+                updateFirstBootHomingDelayState();
                 bool all_homed = true;
                 for (u8 i = 0; i < 4; ++i)
                 {
@@ -6018,7 +6076,13 @@ namespace jia
                     // 只要还没回零完成，就立刻丢掉这次 zero-current 请求，避免把校准流程自己打断。
                     input_target_data_.zero_current_all = false;
                 }
-                homing_start_request_ = false;
+                // 统一延时 active 期间，homing_start_request_ 还不能清：
+                // 如果这里提前消费掉，请求会在真正进入 kSearch 之前丢失，首次 homing 就会一直卡在 Idle。
+                // 只有等待窗口结束或未启用等待时，才允许把这次启动请求视为“已被状态机接管”。
+                if (!first_boot_homing_delay_.active)
+                {
+                    homing_start_request_ = false;
+                }
 #if JIA_CHASSIS_ENABLE_TASK_PERF_STAT
                 homing_us = RtosTimeStampUs64::getTimeUs() - stage_start_us;
 #endif

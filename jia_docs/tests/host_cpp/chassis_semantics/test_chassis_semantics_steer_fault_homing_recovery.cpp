@@ -49,6 +49,122 @@ TEST_CASE("testHomingSearchRpmDefaultsToCompileTimeMacro")
     EXPECT_NEAR(steer_motors[0].getTargetRPM(), 50.0f, 1.0e-6f);
 }
 
+TEST_CASE("testFirstBootHomingDelayKeepsInitialStartIdleThenReleasesSearchOnce")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.startHoming();
+
+#if JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_ENABLE && (JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS > 0U)
+    EXPECT_TRUE(chassis.first_boot_homing_delay_.pending);
+    EXPECT_TRUE(chassis.first_boot_homing_delay_.active);
+    EXPECT_TRUE(chassis.first_boot_homing_delay_.elapsed_ms == 0U);
+
+    for (unsigned int cycle = 0; cycle + 1U < JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS; ++cycle)
+    {
+        const bool all_homed = runHostControlCycle(chassis);
+        EXPECT_TRUE(!all_homed);
+        for (int i = 0; i < 4; ++i)
+        {
+            EXPECT_TRUE(chassis.wheel_config_[i].homing_state == Chassis::HomingState::kIdle);
+            EXPECT_NEAR(steer_motors[i].getTargetRPM(), 0.0f, 1.0e-6f);
+        }
+    }
+
+    bool released = false;
+    for (int release_cycle = 0; release_cycle < 2; ++release_cycle)
+    {
+        const bool all_homed_after_release = runHostControlCycle(chassis);
+        EXPECT_TRUE(!all_homed_after_release);
+        EXPECT_TRUE(!chassis.first_boot_homing_delay_.pending);
+        EXPECT_TRUE(!chassis.first_boot_homing_delay_.active);
+        EXPECT_TRUE(chassis.first_boot_homing_delay_.elapsed_ms >= JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS);
+
+        bool all_search = true;
+        for (int i = 0; i < 4; ++i)
+        {
+            if (chassis.wheel_config_[i].homing_state != Chassis::HomingState::kSearch)
+            {
+                all_search = false;
+                break;
+            }
+        }
+        if (all_search)
+        {
+            released = true;
+            for (int i = 0; i < 4; ++i)
+            {
+                EXPECT_NEAR(steer_motors[i].getTargetRPM(), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
+            }
+            break;
+        }
+    }
+    EXPECT_TRUE(released);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].homing_state = Chassis::HomingState::kReady;
+        chassis.wheel_config_[i].homing_zero_valid = true;
+        chassis.wheel_config_[i].homing_hold_corrected_local_total_rad =
+            chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad;
+    }
+
+    chassis.startHoming();
+    const bool all_homed_second_start = runHostControlCycle(chassis);
+    EXPECT_TRUE(!all_homed_second_start);
+    EXPECT_TRUE(!chassis.first_boot_homing_delay_.pending);
+    EXPECT_TRUE(!chassis.first_boot_homing_delay_.active);
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_TRUE(chassis.wheel_config_[i].homing_state == Chassis::HomingState::kSearch);
+        EXPECT_NEAR(steer_motors[i].getTargetRPM(), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
+    }
+#else
+    const bool all_homed = runHostControlCycle(chassis);
+    EXPECT_TRUE(!all_homed);
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_TRUE(chassis.wheel_config_[i].homing_state == Chassis::HomingState::kSearch);
+        EXPECT_NEAR(steer_motors[i].getTargetRPM(), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
+    }
+#endif
+}
+
+TEST_CASE("testSteerFaultRecoveryRehomeBypassesFirstBootHomingDelay")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.startHoming();
+    chassis.wheel_config_[0].homing_state = Chassis::HomingState::kFault;
+    chassis.wheel_config_[0].steer_fault_state = Chassis::SteerFaultState::kRecovering;
+    chassis.wheel_config_[0].steer_fault_rehome_request = true;
+    chassis.wheel_config_[0].homing_zero_valid = true;
+
+    const bool all_homed = runHostControlCycle(chassis);
+    EXPECT_TRUE(!all_homed);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
+    EXPECT_TRUE(!chassis.wheel_config_[0].steer_fault_rehome_request);
+    EXPECT_TRUE(!chassis.wheel_config_[0].homing_zero_valid);
+    EXPECT_NEAR(steer_motors[0].getTargetRPM(), chassis.wheel_config_[0].homing_search_rpm, 1.0e-6f);
+
+#if JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_ENABLE && (JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS > 0U)
+    EXPECT_TRUE(chassis.first_boot_homing_delay_.pending);
+    EXPECT_TRUE(chassis.first_boot_homing_delay_.active);
+    EXPECT_TRUE(chassis.first_boot_homing_delay_.elapsed_ms > 0U);
+    for (int i = 1; i < 4; ++i)
+    {
+        EXPECT_TRUE(chassis.wheel_config_[i].homing_state == Chassis::HomingState::kIdle);
+        EXPECT_NEAR(steer_motors[i].getTargetRPM(), 0.0f, 1.0e-6f);
+    }
+#endif
+}
+
 TEST_CASE("testReadyStationaryWheelsCanStillEnterXParkWithoutTriggeringSteerFault")
 {
     Chassis chassis;
