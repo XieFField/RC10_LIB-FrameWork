@@ -142,6 +142,7 @@ void ArmSetup::loop()
                 arm_ctrlStatus.last_manual_store = 0;
                 store_state_ = store_state::idle;
                 arm_ctrlStatus.is_store_acting = 0;
+                manualControl(); // 首次进入时绑定开关offset(此时last_arm_status_为旧值)
             }
             else
             {
