@@ -37,6 +37,10 @@ extern "C" {
 #define ARM_AUTO_DEBUG_NOCHASSIS  0 //无底盘下的模拟调试开关 1开启 0关闭
 #define ARM_VERSION 0 //版本号 已无用
 
+typedef enum{
+    INSIDE,
+    OUTSIDE,
+}Store_MANUAL_E;
 
 typedef struct{
     bool init_flag = false;
@@ -69,6 +73,9 @@ typedef struct{
     
     uint8_t last_manual_store = 0; //上一次手动存储状态
 
+    bool can_putdown = 0;
+
+    Store_MANUAL_E store_manual_mode = OUTSIDE; //存储位手动模式，默认外部
 }arm_ctrl_status_S;
 
 
@@ -123,13 +130,27 @@ typedef struct{
 }ARM_AUTO_S;
 
 
-const float MF_high[12] = 
+const float MF_high_blue[12] =
 {
     0.4f, 0.2f, 0.4f,
     0.2f, 0.4f, 0.6f,
     0.4f, 0.6f, 0.4f,
     0.2f, 0.4f, 0.2f
 };
+
+const float MF_high_red[12] =
+{
+    0.4f, 0.2f, 0.4f,
+    0.6f, 0.4f, 0.2f,
+    0.4f, 0.6f, 0.4f,
+    0.2f, 0.4f, 0.2f
+};
+
+inline float GetKFSHeight(int8_t mfNum)
+{
+    const float* arr = (MF_AutoCtrler::get_color() == 1) ? MF_high_blue : MF_high_red;
+    return arr[mfNum - 1];
+}
 
 class ArmSetup: public RtosTask ,public Robot_Arm {
 public:
@@ -144,6 +165,14 @@ public:
             return true;
         else
             return false;
+    }
+
+    /**
+     * @brief 接收底盘是否可以放置的信号
+     */
+    void can_putdown(bool is_or_not)
+    {
+        arm_ctrlStatus.can_putdown = is_or_not;
     }
 
     void init(M3508 *motor_ArmLaunch, M2006 *motor_ArmStretch, 
@@ -164,11 +193,20 @@ public:
 
     void setArmStatus(ARM_Status_E status)
     {
-        // 未锟斤拷锟叫Ｗ际憋拷锟街伙拷锟斤拷锟斤拷锟斤拷锟斤拷锟叫Ｗ继?锟斤拷锟斤拷锟解被锟较诧拷状态锟斤拷锟斤拷前锟叫碉拷锟街诧拷/锟斤拷锟斤拷
         if(status != ARM_CALIBRATE && !isArmcalibrated())
             return;
 
         arm_status_ = status;
+    }
+
+    Store_MANUAL_E get_store_side()
+    {
+        return arm_ctrlStatus.store_manual_mode;
+    }
+
+    void set_store_side(Store_MANUAL_E side)
+    {
+        arm_ctrlStatus.store_manual_mode = side;
     }
 
     /**
@@ -192,7 +230,7 @@ public:
         else
             auto_ctrl_.targetKFS[2] = 0;
 
-        if(KFS1 != 0 && KFS2 !=0 && KFS3 != 0)
+        if(KFS1 != 0 && KFS2 !=0)
             auto_ctrl_.kfs_num = TWO_OR_THREE;
         else
             auto_ctrl_.kfs_num = ONLY_ONE;
@@ -310,6 +348,9 @@ private:
 
     //控制函数相关
     void manualControl();
+    void manualControl_lowLevel();
+
+    void arm_d_pad_ctrl(); //十字键统一处理
 
     bool manual_store(uint8_t kfs_index); //存儲kfs
     bool manual_takeout(uint8_t kfs_index); //取出存储kfs
@@ -328,9 +369,6 @@ private:
 
     //=======================
     //自动控制相关状态函数
-
-    void semiautoControl_1();
-    void semiautoControl_2();
 
     void auto_stillnessOne();
     void auto_stillnessTwo();
@@ -540,6 +578,13 @@ protected:
     }manual_control;
 
     float pre_descent_angle_ = 0.0f; // 下降前云台角度：h>=lock_h时持续更新，h<lock_h时冻结
+
+#if USE_RC10_AIRJOY
+    int8_t is_d_pad_up_clicked = 0;
+    int8_t is_d_pad_down_clicked = 0;
+    int8_t is_d_pad_left_clicked = 0;
+    int8_t is_d_pad_right_clicked = 0;
+#endif
 
     ButtonDetector button_detector_1 = ButtonDetector(0.200f); //双击三击检测器，200ms间隔
 

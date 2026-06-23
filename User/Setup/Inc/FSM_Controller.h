@@ -29,6 +29,7 @@ extern "C"
 #include "WeaponSage_Setup.h"
 #include "Setup_ConfigInit.h"
 #include "Module_Serial1Protocol.h"
+#include "Module_lora.h"
 
 typedef enum{
     RELOCATE,
@@ -40,11 +41,11 @@ typedef enum{
 
 typedef struct KSTarget_t {
     uint8_t KFS[3];
-    int8_t Spear;
+    bool Spear[3];
 
     bool operator!=(const KSTarget_t& other) const {
          return KFS[0] != other.KFS[0] || KFS[1] != other.KFS[1] 
-         || KFS[2] != other.KFS[2] || Spear != other.Spear;
+         || KFS[2] != other.KFS[2] || Spear[0] != other.Spear[0] || Spear[1] != other.Spear[1] || Spear[2] != other.Spear[2];
     }
 };
 
@@ -98,6 +99,7 @@ private:
 
     void debug();
 
+
     void stop_modeswitch();
     FSM_Status_E robot_status_ = ALL_STOP;
     FSM_Status_E last_robot_status_;
@@ -110,8 +112,13 @@ private:
 
     ArmSetup *arm_setup_ = nullptr;
     bool arm_setup_registered_ = false;
-    RmPocketData_t airjoy_data_; // 摇杆值为 -1 ~ 1
 
+#if !USE_RC10_AIRJOY
+    RmPocketData_t airjoy_data_; // 摇杆值为 -1 ~ 1
+#else
+    void set_cmd_to_R2();
+    communication::RC10_AirJoy_Data_S airjoy_data_;
+#endif
     OmniChassis_Setup *chassis_setup_ = nullptr;
     bool chassis_setup_registered_ = false;
     bool init_flag_ = false; // 所有需要注册的机构都已经注册完成
@@ -130,12 +137,18 @@ private:
         // bool issetFirstKFS = false;
 
         bool isread_srollWheelSpear = false;
+
+        uint8_t sw_cmd_section = 0;   // 0=idle, 1=合体前, 2=合体后, 3=武器自动
+        uint8_t sw_cmd_last = 0;      // 上次滚轮值，边沿检测
+        bool sw_cmd_toggle = false;   // 合体前交替标志
     } crsf_send_s;
 
     set_e Stop_set_stauts = NONE;
 
     KSTarget_t KStarget = {0};
     KSTarget_t last_KStarget = {0};
+
+    uint8_t cmd_to_r2_cnt = 0;
 };
 
 #endif

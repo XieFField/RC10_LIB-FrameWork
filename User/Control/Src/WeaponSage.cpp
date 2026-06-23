@@ -85,11 +85,11 @@ void Robot_WeaponSage::update()
 		target_pos_.wrist_TotalAngle_ = Realpos_to_MotorTotalAngle(target_wrist_total, WeaponSage::Wrist_Motor);
 
 
-//		launch_fliter_ramp_.ramp_target_ = caculate_ramp_target(launch_Motor_->getTotalAngle(), 
-//				target_pos_.launch_TotalAngle_, launch_fliter_ramp_);
+		launch_fliter_ramp_.ramp_target_ = caculate_ramp_target(launch_Motor_->getTotalAngle(), 
+				target_pos_.launch_TotalAngle_, launch_fliter_ramp_);
 
-		launch_Motor_->setTargetTotalAngle( target_pos_.launch_TotalAngle_);
-//		launch_Motor_->setTargetTotalAngle( launch_fliter_ramp_.ramp_target_);
+//		launch_Motor_->setTargetTotalAngle( target_pos_.launch_TotalAngle_);
+		launch_Motor_->setTargetTotalAngle( launch_fliter_ramp_.ramp_target_);
 		
 		claw_1_Motor_->setTargetTotalAngle(target_pos_.claw_1_TotalAngle_);
 		claw_2_Motor_->setTargetTotalAngle(target_pos_.claw_2_TotalAngle_);

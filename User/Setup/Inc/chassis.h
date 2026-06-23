@@ -994,7 +994,7 @@ namespace jia
                 f32 max_steer_rate_rad_s_ = 200.0f;                         // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit_=true 时生效。
                 bool enable_steer_alpha_limit_ = true;                          // [RW] 是否启用舵向角加速度上限。
                 f32 max_steer_alpha_rad_s2_ = 20000.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
-                bool enable_steer_angle_feedforward = true;                      // [RW] 是否启用底盘层舵角超前前馈。只影响正常 swerve 规划下发角，不改变物理预计角。
+                bool enable_steer_angle_feedforward = false;                      // [RW] 是否启用底盘层舵角超前前馈。只影响正常 swerve 规划下发角，不改变物理预计角。
                 f32 steer_angle_feedforward_lead_s = 0.3f;                      // [RW] 舵角超前时间（s）。用于补偿舵向电机响应滞后。
                 f32 steer_angle_feedforward_max_lead_rad = 0.3f;          // [RW] 舵角超前最大幅度（rad）
                 f32 steer_angle_feedforward_settle_error_rad = 0.05235988f;      // [RW] 收尾线性衰减误差窗口（rad），默认约 3°。
