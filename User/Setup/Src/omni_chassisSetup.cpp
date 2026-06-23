@@ -14,7 +14,7 @@ void OmniChassis_Setup::CB_Path_Check(void)
         WeaponSage_Start = true;
     }
 
-    #if !USE_RC10_AIRJOY
+#if !USE_RC10_AIRJOY
     if (airjoy_data_.SWA == 0x00)
     {
         if (CB_point.CB_End_pos.x == curve.Get_End_point().x && CB_point.CB_End_pos.y == curve.Get_End_point().y && path_line_.Is_End() == false)
@@ -52,9 +52,9 @@ void OmniChassis_Setup::CB_Path_Check(void)
         }
         else if (CB_flag.Retreat_flag == true)
         {
-            if(RB_Flag)
+            if (RB_Flag)
                 target_yaw = 90.0f;
-            else 
+            else
                 target_yaw = -90.0f;
             CB_flag.Retreat_flag = false;
             pid_dead_flag = false;
@@ -69,9 +69,9 @@ void OmniChassis_Setup::CB_Path_Check(void)
         }
         else if (CB_flag.Retreat_flag == true)
         {
-            if(RB_Flag)
+            if (RB_Flag)
                 target_yaw = 90.0f;
-            else 
+            else
                 target_yaw = -90.0f;
             CB_flag.Retreat_flag = false;
             pid_dead_flag = false;
@@ -79,7 +79,6 @@ void OmniChassis_Setup::CB_Path_Check(void)
         }
     }
 #endif
-    
 }
 
 void OmniChassis_Setup::CB_Selection_Planning(void)
@@ -140,7 +139,7 @@ void OmniChassis_Setup::loop()
 #endif
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     Point3D ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
-    RB_Flag=MF_AutoCtrler::get_color();
+    RB_Flag = MF_AutoCtrler::get_color();
     robot_pos_.x = ladar_data_.x;
     robot_pos_.y = ladar_data_.y;
 
@@ -462,11 +461,10 @@ void OmniChassis_Setup::CZ_index_reset(void)
 void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw = CZ_point.R1_yaw;
+    target_yaw = RB_Flag ? 180.0f : 0.0f;
     path_line_.Reset();
     path_line_.plan_reset();
-    
-    
+
     pid_dead_flag = false;
 
     path_line_.Add_Start_Point(robot_pos_);
@@ -483,7 +481,6 @@ void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
 
     Path_end_point = path_line_.Get_End_Point();
 }
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////       新代码主要服务于新遥控       //////////////////////////////////
@@ -579,8 +576,8 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
     {
         down_click = false;
     }
-// 右摇杆往左拨,蓝场远，红场近
-    
+
+    // 右摇杆往左拨,蓝场远，红场近
     if (airjoy_data_.right_x > -0.05f)
         right_flag = 1;
     else if (right_flag > 0 && airjoy_data_.right_x < -0.80f && CZ_flag.R1_FB_index == 0)
@@ -604,8 +601,6 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
                     if (CZ_flag.R1_RL_index < 2)
                         CZ_flag.R1_RL_index++;
                 }
-                
-                
             }
             CZ_R1_Selection_Planning();
             right_flag = 0;
@@ -644,7 +639,6 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
                     if (CZ_flag.R1_RL_index > 0)
                         CZ_flag.R1_RL_index--;
                 }
-
             }
             CZ_R1_Selection_Planning();
             left_flag = 0;
@@ -662,7 +656,7 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
 void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw = CZ_point.fit_yaw;
+    target_yaw = RB_Flag ? -90.0f : 90.0f;
     path_line_.Reset();
     path_line_.plan_reset();
 
@@ -674,18 +668,15 @@ void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
 void OmniChassis_Setup::CZ_FIT_R2_Selection_Planning(void)
 {
     // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw = CZ_point.fit_yaw;
+    target_yaw = RB_Flag ? -90.0f : 90.0f;
     path_line_.Reset();
     path_line_.plan_reset();
-    
-    //R2放置物块
+
+    // R2放置物块
     path_line_.Add_Start_Point(robot_pos_);
     path_line_.Add_End_Point(CZ_point.R2_pos[CZ_flag.R2_pos_index], path_param.R2);
     Path_end_point = path_line_.Get_End_Point();
 }
-
-
-
 
 /*
 void OmniChassis_Setup::CZ_R2_Selection_Planning(void)
