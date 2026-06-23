@@ -16,6 +16,7 @@ volatile uint8_t encoder_cnt = 0;
 float test_target_arm = 0.0f;
 uint8_t reverse___ = 1;
 uint8_t index = 0;
+uint8_t dm_zero_____ = 0;
 void Robot_WeaponSage_Setup::loop()
 {	
 	ctrl_status_.now_times=TimeStamp::getInstance().getSeconds();
@@ -38,6 +39,11 @@ void Robot_WeaponSage_Setup::loop()
 		wrist_encoder_->set_reverse(reverse___);
 	}
 	
+            if(dm_zero_____)
+            {
+                this->Weapon_arm_setZero();
+            }
+    
 	wrist_encoder_angle_ = this->wrist_encoder_->get_angle();
 	wrist_encoder_angle_222 = this->wrist_encoder_->get_angle();
 
@@ -119,6 +125,11 @@ void Robot_WeaponSage_Setup::loop()
             break;
         }
 			
+        case WEAPONSAGE_KFS_IDLE:
+        {
+            kfs_idle();
+            break;
+        }
         default:
             idle();
             break;
@@ -130,16 +141,21 @@ void Robot_WeaponSage_Setup::loop()
 //		this->setArm_angle(90.0f);
 //	}
 	    this->update();
-//	this->setLaunch_angle(initData_.max_launchHeight_);
-//	auto_ctrl_.auto_state_bool_S.is_matching=Locate_Setup::getInstance()->ifSwitch1On();
-//	auto_ctrl_.auto_state_bool_S.is_matching= omni_flag;
+
 }
 int CNT=0;
 float traverse_rate=0.0002f;
 float weapon_launch_rate=0.0001f;
 float Kp_traverse=0.5f;
 
-
+void Robot_WeaponSage_Setup::kfs_idle()
+{
+    this->setLaunch_angle(initData_.max_launchHeight_);
+    if(current_pos_.launch_pos_ < initData_.max_launchHeight_-0.02f)
+    {
+        this->setArm_angle(90.0f);
+    }
+}
 
 
 /**
@@ -194,10 +210,7 @@ void Robot_WeaponSage_Setup::calibrate()
             this->claw_2_Motor_->relocate_totalAngle(2.0f);
             this->claw_3_Motor_->relocate_totalAngle(2.0f);
             this->launch_Motor_->relocate_totalAngle(0.0f);
-//            if(dm_zero_)
-//            {
-//                this->Weapon_arm_setZero();
-//            }
+
 			if(auto_ctrl_.auto_state_bool_S.arm_enable)
 			{
 				this->setArm_angle(0.0f);
@@ -210,7 +223,7 @@ void Robot_WeaponSage_Setup::calibrate()
 	
 }
 
-float test_angle = 20.0f;
+float test_angle = 30.0f;
 uint8_t round_cnt =0;
 float test_launch = 0.0625674725;
 
@@ -236,8 +249,8 @@ void Robot_WeaponSage_Setup::manualControl()
         float current_claw_theta = this->get_CurrentPos().claw_1_pos_; // 这里以claw_1为代表，假设三个爪子位置一致
         float current_arm_pos= this->get_CurrentPos().arm_pos_;
         
-        int8_t current_claw_logical = (current_claw_theta > initData_.max_clawAngle_ * 0.5f) ? 1 : 0;
-        int8_t current_arm_logical = (current_arm_pos > initData_.max_arm_angle_ * 0.5f) ? 1 : 0;
+        int8_t current_claw_logical = (current_claw_theta > initData_.max_clawAngle_ * 0.25f) ? 1 : 0;
+        int8_t current_arm_logical = (current_arm_pos > initData_.max_arm_angle_ * 0.25f) ? 1 : 0;
 
         // 记录状态
         ctrl_status_.last_manual_claw_state = current_claw_logical;
@@ -254,8 +267,7 @@ void Robot_WeaponSage_Setup::manualControl()
 
         ctrl_status_.last_isArm_Vertical = ctrl_status_.isArm_Vertical;
 
-        ctrl_status_.scroll_offset = (airjoy_data_.scroll_wheel & 0x01) ^ ctrl_status_.last_isClaw_tight; // 初始状态假设为0
-       
+        ctrl_status_.scroll_offset = (airjoy_data_.scroll_wheel & 0x01) ^ ctrl_status_.last_isClaw_tight; // 初始状态假设为0 
     }
 
 
@@ -521,6 +533,8 @@ void Robot_WeaponSage_Setup::debug()
      */
 bool Robot_WeaponSage_Setup::autoControl_catch()
 {
+    static float launch_time = 0.0f;
+    static bool is_launching = false;
 	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
     if(!auto_ctrl_.flag.is_reach_start)
     {
@@ -616,7 +630,9 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                 if(!auto_ctrl_.auto_state_bool_S.dock_start)
                 {
                     this->idle(); //进入idle状态，等待对接开始的信号
-                }else{
+                }
+                else
+                {
                 now_state_ = WeaponSage_Setup::STATE_CLAW_ADJUST;
                 }
                 break;
@@ -671,8 +687,8 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                     this->Close_TargetClaw_Untight();
                     if(auto_ctrl_.flag.is_untight)
                     {
-                        this->setLaunch_angle(0.0f);
-                        if(abs(current_pos_.launch_pos_-0.0f)<0.02f)
+                        this->setLaunch_angle(auto_ctrl_.launch_kp.launch_lastcatch*initData_.max_launchHeight_);      //降到最低，贴近目标杆
+                        if(abs(current_pos_.launch_pos_-auto_ctrl_.launch_kp.launch_lastcatch*initData_.max_launchHeight_)<0.02f)
                         {
                             auto_ctrl_.flag.is_reach_sagelowest=true;
                             auto_ctrl_.flag.is_untight=false;
@@ -698,11 +714,28 @@ void Robot_WeaponSage_Setup::autoControl_dock()
             {   
 
                 this->setArm_angle(0.0f); //将arm打到竖直位置
-                this->setLaunch_angle(initData_.dock_height_);      //抬高到预定位置
-                if(abs(current_pos_.launch_pos_-initData_.max_launchHeight_ )<0.02f) //如果已经调整到位了，进入下一个状态
+                if(!auto_ctrl_.flag.is_reach_armrotate)
                 {
-                    now_state_ = WeaponSage_Setup::STATE_DONE;
+                    this->setLaunch_angle(initData_.max_launchHeight_*auto_ctrl_.launch_kp.launch_dockprepare);      //抬高到预定位置
+                    auto_ctrl_.flag.is_reach_armrotate=true;
                 }
+
+                if(std::fabs(current_pos_.launch_pos_ - initData_.max_launchHeight_*auto_ctrl_.launch_kp.launch_dockprepare) < 0.02f && !auto_ctrl_.dock_is_launching)
+                {
+                    auto_ctrl_.dock_launch_time = TimeStamp::getInstance().getSeconds();
+                    auto_ctrl_.dock_is_launching = true;
+                }
+
+                if(auto_ctrl_.dock_is_launching && TimeStamp::getInstance().getSeconds() - auto_ctrl_.dock_launch_time > 0.4f && auto_ctrl_.dock_launch_time > 0.1f) // 如果已经调整到位了，进入下一个状态
+                {
+                    auto_ctrl_.dock_is_launching = false;
+                   this->setLaunch_angle(initData_.dock_height_);      //抬高到预定位置
+                    // if(abs(current_pos_.launch_pos_-initData_.dock_height_)<0.02f)
+                    // {
+                        now_state_ = WeaponSage_Setup::STATE_DONE;
+                    // }
+                }
+
                 break;
             }
             case WeaponSage_Setup::STATE_DONE:
@@ -716,9 +749,13 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                 auto_ctrl_.flag.is_reach_closedclaw=false;
                 auto_ctrl_.flag.is_reach_sagelowest=false;
                 auto_ctrl_.flag.is_arm_reset=false;
+                auto_ctrl_.flag.is_untight=false;
+                ctrl_status_.is_wrist_start=false;
+                auto_ctrl_.flag.is_reach_armrotate=false;
                 now_state_=WeaponSage_Setup::STATE_START;
                 auto_ctrl_.auto_ctrl1=false;
                 auto_control_state_=0;
+                auto_ctrl_.flag.is_over = true;
                 this->idle(); //进入idle状态
                 break;
             }
@@ -739,7 +776,38 @@ void Robot_WeaponSage_Setup::autoControl()
 		{
             if(auto_ctrl_.auto_ctrl1)
             {
+                now_state_=WeaponSage_Setup::STATE_START;
                 auto_control_state_=1;
+                auto_ctrl_.flag.is_over = false;
+                auto_ctrl_.auto_state_bool_S.is_matching=false;
+                auto_ctrl_.auto_state_bool_S.dock_start=false;
+                auto_ctrl_.flag.is_prepared=false;
+                auto_ctrl_.flag.is_clawed=false;
+                auto_ctrl_.flag.is_catched=false;
+                auto_ctrl_.flag.is_reach_start=false;
+                auto_ctrl_.flag.is_reach_closedclaw=false;
+                auto_ctrl_.flag.is_reach_sagelowest=false;
+                auto_ctrl_.flag.is_arm_reset=false;
+                auto_ctrl_.auto_state_bool_S.is_matching=false;
+                auto_ctrl_.auto_state_bool_S.dock_start=false;
+                auto_ctrl_.flag.is_untight=false;
+                ctrl_status_.is_wrist_start=false;
+                auto_ctrl_.flag.is_moved=false;
+                auto_ctrl_.flag.is_reach_armrotate=false;
+
+                // 补充重置：上次中断可能留下的残留状态
+                ctrl_status_.is_closeclaw_start = false;
+                ctrl_status_.closeclaw_startTime = 0.0f;
+                ctrl_status_.is_untight_start = false;
+                ctrl_status_.untight_startTime = 0.0f;
+                ctrl_status_.is_claw_1_closed = false;
+                ctrl_status_.is_claw_2_closed = false;
+                ctrl_status_.is_claw_3_closed = false;
+                auto_ctrl_.claw_flag[0] = false;
+                auto_ctrl_.claw_flag[1] = false;
+                auto_ctrl_.claw_flag[2] = false;
+                auto_ctrl_.dock_is_launching = false;
+                auto_ctrl_.dock_launch_time = 0.0f;
             }
             else
 			{
@@ -1043,7 +1111,7 @@ void Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
     {
         if(auto_ctrl_.claw_flag[i])
         {
-            target_claw_pos[i]=0.5*initData_.max_clawAngle_;
+            target_claw_pos[i]=0.75*initData_.max_clawAngle_;
         }
         else
         {
@@ -1090,7 +1158,7 @@ void Robot_WeaponSage_Setup::Judge_launch_status()
 
 void Robot_WeaponSage_Setup::Judge_wrist_status()
 {
-    if(current_pos_.launch_pos_>=initData_.dock_height_)
+    if(current_pos_.launch_pos_>=initData_.wrist_protect_)
     {
         auto_ctrl_.auto_state_bool_S.wrist_enable=true;
     }else
@@ -1101,13 +1169,13 @@ void Robot_WeaponSage_Setup::Judge_wrist_status()
 
 void Robot_WeaponSage_Setup::SetServo_Angle(uint16_t angle)
 {
-	if(!auto_ctrl_.is_ServoStart)
-	{
-		HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-		auto_ctrl_.is_ServoStart=true;
-	}
-	uint16_t target_cnt = 500+(angle*2700)/2000; 
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, target_cnt);
+	// if(!auto_ctrl_.is_ServoStart)
+	// {
+	// 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+	// 	auto_ctrl_.is_ServoStart=true;
+	// }
+	// uint16_t target_cnt = 500+(angle*2700)/2000; 
+	// __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, target_cnt);
 }
 
 WeaponSage_InitData_S initData_=
@@ -1118,6 +1186,7 @@ WeaponSage_InitData_S initData_=
     .max_wrist_angle_ = 360.0f,
 	.max_arm_rate_ =90.0f,
 	.dock_height_=0.0625674725,
+    .wrist_protect_=0.174290136,
     .wrist_gearRatio_ = 144.0f,
     .launch_Ratio_ = 0.139989366256f,
     .claw_gearRatio_  =360.0f ,

@@ -43,7 +43,7 @@ namespace communication{
         rec_setting_load2 = 0;
 
         // 初始化命令帧接收变量
-        rec_command_command = 1;
+        rec_command_command = 0;
         rec_command_load1 = 0;
         rec_command_load2 = 0;
 

@@ -75,7 +75,7 @@ namespace communication{
     #pragma pack(pop)
 
     class Communication {
-    public:
+    protected:
         /**
          * @brief 构造函数，初始化通信类状态并绑定底层硬件资源
          * @param txhuart   发使用的UART句柄

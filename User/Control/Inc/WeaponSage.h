@@ -1,7 +1,7 @@
 /**
  * @file WeaponSage.h
  * @author XieFField
- * @brief 武器大师控制驱动�??
+ * @brief 武器大师控制驱动�??
  * @version 1.0
  */
 #ifndef WEAPONSAGE_H
@@ -26,21 +26,22 @@ extern "C" {
 #include "Motor_GO.h"
 #include "BSP_TimeStamp.h"
 
-//初�?�化数据结构�??
+//初�?�化数据结构�??
 typedef struct 
 {
     /* data */
-    float max_launchHeight_; // 最大抬升高�??
-    float max_clawAngle_; // 最大夹�??角度
+    float max_launchHeight_; // 最大抬升高�??
+    float max_clawAngle_; // 最大夹�??角度
     float max_arm_angle_; // 最大机械臂角度
     float max_wrist_angle_;
     float max_arm_rate_;
     float dock_height_;
+    float wrist_protect_;
 
-    float wrist_gearRatio_; //手腕减速比，手腕电机转一圈，�??�??关节�??多少�?? 360度，直驱
-    float launch_Ratio_; // �??升减速比，抬升电机转一圈，�??�??关节移动多少�??
-    float claw_gearRatio_; // 夹爪减速比，夹�??电机�??一圈，�??�??关节移动多少�??
-    float arm_gearRatio_; // 机�?�臂减速比，机械臂电机�??一圈，�??�??关节移动多少�??
+    float wrist_gearRatio_; //手腕减速比，手腕电机转一圈，�??�??关节�??多少�?? 360度，直驱
+    float launch_Ratio_; // �??升减速比，抬升电机转一圈，�??�??关节移动多少�??
+    float claw_gearRatio_; // 夹爪减速比，夹�??电机�??一圈，�??�??关节移动多少�??
+    float arm_gearRatio_; // 机�?�臂减速比，机械臂电机�??一圈，�??�??关节移动多少�??
 }WeaponSage_InitData_S;
 
 
@@ -49,7 +50,7 @@ namespace WeaponSage
 {
     enum Motor_Type_E
     {
-        Launch_Motor, // �??升电�??
+        Launch_Motor, // �??升电�??
         Arm_Motor, // 机�?�臂电机
         Claw_1_Motor,// 夹爪电机1
         Claw_2_Motor,// 夹爪电机2
@@ -78,14 +79,14 @@ namespace WeaponSage
     enum WeaponSage_CtrlMode_S 
     {
         /* data */
-        CURRENT_CONTROL, // 电流控制模式，直接控制电流输�??
-        Join_POSITION_CONTROL, // 位置控制模式，控制关节位�??
+        CURRENT_CONTROL, // 电流控制模式，直接控制电流输�??
+        Join_POSITION_CONTROL, // 位置控制模式，控制关节位�??
         TOTAL_ANGLE_CONTROL,   // 总�?�度控制模式，控制关节总�?�度
     };
     
     typedef struct
     {
-        float launch_pos_; //主�?�供调试时候使�??，实际控制以launch_TotalAngle_为准，单位米
+        float launch_pos_; //主�?�供调试时候使�??，实际控制以launch_TotalAngle_为准，单位米
         float claw_1_pos_;
         float claw_2_pos_;
         float claw_3_pos_;
@@ -168,7 +169,7 @@ public:
     
     /**
      * @brief 设置电机反转
-     * @param reversed 需要反�??时传�?? true，否则传�?? false
+     * @param reversed 需要反�??时传�?? true，否则传�?? false
      * @param motor_type 电机类型
      */
 
@@ -189,6 +190,21 @@ public:
         ctrl_mode_ = mode;
     }
 	
+    bool is_claw_close(int8_t index)
+    {
+        switch(index)
+        {
+            case 1:
+                return claw_1_Motor_ != nullptr && current_pos_.claw_1_pos_ > 30.0f; // 夹爪角度大于30度认为是闭合状态
+            case 2:
+                return claw_2_Motor_ != nullptr && current_pos_.claw_2_pos_ > 30.0f;
+            case 3:
+                return claw_3_Motor_ != nullptr && current_pos_.claw_3_pos_ > 30.0f;
+            default:
+                return false;
+        }
+    }
+
 	WeaponSage::WeaponSage_Pos_S get_CurrentPos()
 	{
 		WeaponSage::WeaponSage_Pos_S current_pos;
@@ -248,11 +264,11 @@ protected:
 		target_pos_.claw_1_pos_ = angle;
 	}
 
-    M3508 *launch_Motor_ = nullptr; // �??升电�??1，主电机
-    M2006 *claw_1_Motor_ = nullptr; // 夹爪电机1，负责�?�器的夹取动�??
-    M2006 *claw_2_Motor_ = nullptr; // 夹爪电机2，负责�?�器的夹取动�??
-    M2006 *claw_3_Motor_ = nullptr; // 夹爪电机3，负责�?�器的夹取动�??
-    M2006 *wrist_Motor_ = nullptr; // 手腕电机，负责�?�器的手腕动�??
+    M3508 *launch_Motor_ = nullptr; // �??升电�??1，主电机
+    M2006 *claw_1_Motor_ = nullptr; // 夹爪电机1，负责�?�器的夹取动�??
+    M2006 *claw_2_Motor_ = nullptr; // 夹爪电机2，负责�?�器的夹取动�??
+    M2006 *claw_3_Motor_ = nullptr; // 夹爪电机3，负责�?�器的夹取动�??
+    M2006 *wrist_Motor_ = nullptr; // 手腕电机，负责�?�器的手腕动�??
     DM_Motor *arm_Motor_ = nullptr; // 机�?�臂电机，负责�?�器的机械臂动作
 
     WeaponSage::WeaponSage_Pos_S target_pos_;
@@ -260,7 +276,7 @@ protected:
 	WeaponSage::WeaponSage_Pos_S last_pos_;
 
     /**
-     * @brief 将实际位�??�??�??为电机总�?�度
+     * @brief 将实际位�??�??�??为电机总�?�度
      * @param real_pos 实际位置
      * @param motor_type 电机类型
      */
@@ -277,7 +293,7 @@ protected:
         .max_accel_ = 3000000.0f, //  (Motor Angle deg/s^2)
         .current_velocity_ = 0.0f, // 记录当前 launch 速度
         .ramp_target_ = 0.0f, 
-        .filter_k_ = 850.0f // launch 滤波�?(平滑)系数，值越大响应越�?，越小越平滑
+        .filter_k_ = 850.0f // launch 滤波�?(平滑)系数，值越大响应越�?，越小越平滑
     };
 
     
@@ -287,11 +303,11 @@ protected:
         
         float target_vel = diff * ramp.filter_k_;
 
-        // 限制�?标速度
+        // 限制�?标速度
         if (target_vel > ramp.ramp__maxspeed_) target_vel = ramp.ramp__maxspeed_;
         if (target_vel < -ramp.ramp__maxspeed_) target_vel = -ramp.ramp__maxspeed_;
 
-        // 计算最大速度变化�?
+        // 计算最大速度变化�?
         float max_dv = ramp.max_accel_ * 0.001;
         if (target_vel > ramp.current_velocity_ + max_dv) 
             ramp.current_velocity_ += max_dv;
@@ -305,10 +321,10 @@ protected:
         // 计算步长
         float step = ramp.current_velocity_ * 0.001;
 
-        // 检查是否到达目标位�?
+        // 检查是否到达目标位�?
         if(std::abs(diff) < 0.01f && std::abs(ramp.current_velocity_) < 0.1f) 
         {
-            ramp.current_velocity_ = 0.0f; // 停�?�电�?
+            ramp.current_velocity_ = 0.0f; // 停�?�电�?
             return target;
         }
 

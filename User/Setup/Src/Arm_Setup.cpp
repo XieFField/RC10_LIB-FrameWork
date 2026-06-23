@@ -84,15 +84,6 @@ void ArmSetup::loop()
         if (h >= init_data_.lock_height_)
             pre_descent_angle_ = this->get_currentJointStatus().rotateJoint_angle_;
     }
-
-    #if USE_RC10_AIRJOY
-
-    static int8_t is_d_pad_up_clicked = 0;
-    static int8_t is_d_pad_down_clicked = 0;
-    static int8_t is_d_pad_left_clicked = 0;
-    static int8_t is_d_pad_right_clicked = 0;
-
-    #endif
     switch(arm_status_)
     {
         case ARM_MANUAL_CONTROL:
@@ -148,237 +139,63 @@ void ArmSetup::loop()
         #else
             if(last_arm_status_ != ARM_MANUAL_CONTROL)
             {
-                arm_ctrlStatus.last_manual_store = 0; //切换到手操时候重置存储状态，避免跳变
-                store_state_ = store_state::idle; //切换到手操时候重置存储状态，避免跳变
-                arm_ctrlStatus.is_store_acting = 0; //切换到手操时候重置存储状态，避免跳变
+                arm_ctrlStatus.last_manual_store = 0;
+                store_state_ = store_state::idle;
+                arm_ctrlStatus.is_store_acting = 0;
             }
-            if(arm_ctrlStatus.is_store_acting == 0)
+            else
             {
-                manualControl();
-
-                if(airjoy_data_.d_pad_left == 1 && is_d_pad_left_clicked == 0)
-                {
-                    arm_ctrlStatus.is_store_acting = 2; //进入存储状态
-                    is_d_pad_left_clicked = 1;
-                }
-                else if(airjoy_data_.d_pad_left == 0 && is_d_pad_left_clicked == 1)
-                {
-                    is_d_pad_left_clicked = 0;
-                }
-
-                if(airjoy_data_.d_pad_right == 1 && is_d_pad_right_clicked == 0)
-                {
-                    arm_ctrlStatus.is_store_acting = 1; //进入取出状态
-                    is_d_pad_right_clicked = 1;
-                }
-                else if(airjoy_data_.d_pad_right == 0 && is_d_pad_right_clicked == 1)
-                {
-                    is_d_pad_right_clicked = 0;
-                }
-
-                if(airjoy_data_.d_pad_down == 1 && is_d_pad_down_clicked == 0)
-                {
-                    arm_ctrlStatus.is_store_acting = 3; //进入拾取状态
-                    is_d_pad_down_clicked = 1;
-                }
-                else if(airjoy_data_.d_pad_down == 0 && is_d_pad_down_clicked == 1)
-                {
-                    is_d_pad_down_clicked = 0;
-                }
+                arm_d_pad_ctrl();
             }
-            else if(arm_ctrlStatus.is_store_acting == 1) //取出
-            {
-                int8_t tar = (arm_ctrlStatus.store_manual_mode == OUTSIDE) ? 0x01 : 0x00;
-
-                if(manual_takeout(tar))
-                {
-                    arm_ctrlStatus.is_store_acting = 0;
-                }
-                arm_ctrlStatus.last_manual_store = 1;
-            }
-            else if(arm_ctrlStatus.is_store_acting == 2) //存储
-            {
-                int8_t tar = (arm_ctrlStatus.store_manual_mode == OUTSIDE) ? 0x00 : 0x01;
-                if(manual_store(tar))
-                { 
-                    arm_ctrlStatus.is_store_acting = 0;
-                }
-                arm_ctrlStatus.last_manual_store = 2;
-            }
-            else if(arm_ctrlStatus.is_store_acting == 3) //拾取
-            {
-                if(manual_pickup())
-                {
-                    arm_ctrlStatus.is_store_acting = 0;
-                }
-                arm_ctrlStatus.last_manual_store = 3;
-            }
-
         #endif
             break;
         }
         case ARM_SEMI_AUTO_CONTROL:
         {
         #if USE_RC10_AIRJOY
-            if(last_arm_status_ != ARM_MANUAL_CONTROL)
+            if(last_arm_status_ != ARM_SEMI_AUTO_CONTROL)
             {
-                arm_ctrlStatus.last_manual_store = 0; //切换到手操时候重置存储状态，避免跳变
-                store_state_ = store_state::idle; //切换到手操时候重置存储状态，避免跳变
-                arm_ctrlStatus.is_store_acting = 0; //切换到手操时候重置存储状态，避免跳变
+                arm_ctrlStatus.last_manual_store = 0;
+                store_state_ = store_state::idle;
+                arm_ctrlStatus.is_store_acting = 0;
             }
-            if(arm_ctrlStatus.is_store_acting == 0)
+            else
             {
-                idle();
-
-                if(airjoy_data_.d_pad_left == 1 && is_d_pad_left_clicked == 0)
-                {
-                    arm_ctrlStatus.is_store_acting = 2; //进入存储状态
-                    is_d_pad_left_clicked = 1;
-                }
-                else if(airjoy_data_.d_pad_left == 0 && is_d_pad_left_clicked == 1)
-                {
-                    is_d_pad_left_clicked = 0;
-                }
-
-                if(airjoy_data_.d_pad_right == 1 && is_d_pad_right_clicked == 0)
-                {
-                    arm_ctrlStatus.is_store_acting = 1; //进入取出状态
-                    is_d_pad_right_clicked = 1;
-                }
-                else if(airjoy_data_.d_pad_right == 0 && is_d_pad_right_clicked == 1)
-                {
-                    is_d_pad_right_clicked = 0;
-                }
-
-                if(airjoy_data_.d_pad_up == 1 && is_d_pad_up_clicked == 0)
-                {
-                    arm_ctrlStatus.is_store_acting = 4; //进入放下状态
-                    is_d_pad_up_clicked = 1;
-                }
-                else if(airjoy_data_.d_pad_up == 0 && is_d_pad_up_clicked == 1)
-                {
-                    is_d_pad_up_clicked = 0;
-                }
-
-                if(airjoy_data_.d_pad_down == 1 && is_d_pad_down_clicked == 0)
-                {
-                    arm_ctrlStatus.is_store_acting = 3; //进入拾取状态
-                    is_d_pad_down_clicked = 1;
-                }
-                else if(airjoy_data_.d_pad_down == 0 && is_d_pad_down_clicked == 1)
-                {
-                    is_d_pad_down_clicked = 0;
-                }
+                arm_d_pad_ctrl();
             }
-            else if(arm_ctrlStatus.is_store_acting == 1) //取出
-            {
-                int8_t tar = (arm_ctrlStatus.store_manual_mode == OUTSIDE) ? 0x01 : 0x00;
-
-                if(manual_takeout(tar))
-                {
-                    arm_ctrlStatus.is_store_acting = 0;
-                }
-                arm_ctrlStatus.last_manual_store = 1;
-            }
-            else if(arm_ctrlStatus.is_store_acting == 2) //存储
-            {
-                int8_t tar = (arm_ctrlStatus.store_manual_mode == OUTSIDE) ? 0x00 : 0x01;
-                if(manual_store(tar))
-                { 
-                    arm_ctrlStatus.is_store_acting = 0;
-                }
-                arm_ctrlStatus.last_manual_store = 2;
-            }
-            else if(arm_ctrlStatus.is_store_acting == 3) //拾取
-            {
-                if(manual_pickup())
-                {
-                    arm_ctrlStatus.is_store_acting = 0;
-                }
-                arm_ctrlStatus.last_manual_store = 3;
-            }
-            else if(arm_ctrlStatus.is_store_acting == 4) //放下
-            {
-                if(manual_putdown())
-                {
-                    arm_ctrlStatus.is_store_acting = 0;
-                }
-                arm_ctrlStatus.last_manual_store = 4;
-            }
-
         #endif
             break;
         }
 
-        case ARM_SEMI_LOW_LEVEL:
+        case ARM_COMP_SEMI_CONTROL:
         {
         #if USE_RC10_AIRJOY
-            if(last_arm_status_ != ARM_MANUAL_CONTROL)
+            if(last_arm_status_ != ARM_COMP_SEMI_CONTROL)
             {
-                arm_ctrlStatus.last_manual_store = 0; //切换到手操时候重置存储状态，避免跳变
-                store_state_ = store_state::idle; //切换到手操时候重置存储状态，避免跳变
-                arm_ctrlStatus.is_store_acting = 0; //切换到手操时候重置存储状态，避免跳变
+                arm_ctrlStatus.last_manual_store = 0;
+                store_state_ = store_state::idle;
+                arm_ctrlStatus.is_store_acting = 0;
             }
-            if(arm_ctrlStatus.is_store_acting == 0)
+            else
             {
-                manualControl_lowLevel();
-
-                if(airjoy_data_.d_pad_left == 1 && is_d_pad_left_clicked == 0)
-                {
-                    arm_ctrlStatus.is_store_acting = 2; //进入存储状态
-                    is_d_pad_left_clicked = 1;
-                }
-                else if(airjoy_data_.d_pad_left == 0 && is_d_pad_left_clicked == 1)
-                {
-                    is_d_pad_left_clicked = 0;
-                }
-
-                if(airjoy_data_.d_pad_right == 1 && is_d_pad_right_clicked == 0)
-                {
-                    arm_ctrlStatus.is_store_acting = 1; //进入取出状态
-                    is_d_pad_right_clicked = 1;
-                }
-                else if(airjoy_data_.d_pad_right == 0 && is_d_pad_right_clicked == 1)
-                {
-                    is_d_pad_right_clicked = 0;
-                }
-
-                if(airjoy_data_.d_pad_down == 1 && is_d_pad_down_clicked == 0)
-                {
-                    arm_ctrlStatus.is_store_acting = 3; //进入拾取状态
-                    is_d_pad_down_clicked = 1;
-                }
-                else if(airjoy_data_.d_pad_down == 0 && is_d_pad_down_clicked == 1)
-                {
-                    is_d_pad_down_clicked = 0;
-                }
+                arm_d_pad_ctrl();
             }
-            else if(arm_ctrlStatus.is_store_acting == 1) //取出
-            {
-                int8_t tar = (arm_ctrlStatus.store_manual_mode == OUTSIDE) ? 0x01 : 0x00;
+        #endif
+            break;
+        }
 
-                if(manual_takeout(tar))
-                {
-                    arm_ctrlStatus.is_store_acting = 0;
-                }
-                arm_ctrlStatus.last_manual_store = 1;
-            }
-            else if(arm_ctrlStatus.is_store_acting == 2) //存储
+        case ARM_MANUAL_LOW_LEVEL:
+        {
+        #if USE_RC10_AIRJOY
+            if(last_arm_status_ != ARM_MANUAL_LOW_LEVEL)
             {
-                int8_t tar = (arm_ctrlStatus.store_manual_mode == OUTSIDE) ? 0x00 : 0x01;
-                if(manual_store(tar))
-                { 
-                    arm_ctrlStatus.is_store_acting = 0;
-                }
-                arm_ctrlStatus.last_manual_store = 2;
+                arm_ctrlStatus.last_manual_store = 0;
+                store_state_ = store_state::idle;
+                arm_ctrlStatus.is_store_acting = 0;
             }
-            else if(arm_ctrlStatus.is_store_acting == 3) //拾取
+            else
             {
-                if(manual_pickup())
-                {
-                    arm_ctrlStatus.is_store_acting = 0;
-                }
-                arm_ctrlStatus.last_manual_store = 3;
+                arm_d_pad_ctrl();
             }
         #endif
             break;
@@ -443,7 +260,7 @@ bool ArmSetup::manual_pickup()
     
     if(this->get_currentJointStatus().launchJoint_Height_ < init_data_.pick_up_height_ + 0.02f)
     {
-        this->set_LaunchHeight(init_data_.pick_up_height_ + 0.04f);
+        this->set_LaunchHeight(init_data_.pick_up_height_);
     }
 
     if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f)
@@ -476,32 +293,16 @@ bool ArmSetup::manual_putdown()
 {
     this->set_PitchAngle(init_data_.pitch_lift_angle_);
     this->set_LaunchHeight(init_data_.putdown_height_);
+    this->set_RotateAngle(90.0f);
 
-    static bool is_putdown = false;
-    static float putdown_start_time = 0.0f;
-
-    if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.008f)
+    if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.008f 
+        && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f)
     {
-        this->set_StretchLength(init_data_.max_stretchLength_ * 0.8f);
-        if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.max_stretchLength_ * 0.8f) < 0.01f
-            && is_putdown == false)
+        this->set_StretchLength(init_data_.max_stretchLength_);
+        if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.max_stretchLength_) < 0.01f
+            && arm_ctrlStatus.can_putdown)
         {
-            putdown_start_time = TimeStamp::getInstance().getSeconds();
-            if(arm_ctrlStatus.can_putdown)
-            {
-                is_putdown = true;
-                this->setSuckerStatus(Sucker_Status_E::STOP);
-            }
-        }
-    }
-
-    if(is_putdown && TimeStamp::getInstance().getSeconds() - putdown_start_time > 0.5f && putdown_start_time > 0.5f)
-    {
-        this->set_StretchLength(0.0f);
-        if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_) < 0.01f)
-        {
-            is_putdown = false;
-            putdown_start_time = 0.0f;
+            this->setSuckerStatus(Sucker_Status_E::STOP);
             return true;
         }
     }
@@ -512,11 +313,11 @@ bool ArmSetup::manual_putdown()
 void ArmSetup::manualControl_lowLevel()
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    if(last_arm_status_ != ARM_SEMI_LOW_LEVEL || arm_ctrlStatus.last_manual_store != 0)
+    if(last_arm_status_ != ARM_MANUAL_LOW_LEVEL || arm_ctrlStatus.last_manual_store != 0)
     {
         last_joint_status_ = this->get_currentJointStatus();
         target_joint_status_ = last_joint_status_;
-        last_arm_status_ = ARM_SEMI_LOW_LEVEL;
+        last_arm_status_ = ARM_MANUAL_LOW_LEVEL;
     }
 #if USE_RC10_AIRJOY
     if(airjoy_data_.SWE == 0x00)
@@ -765,6 +566,107 @@ void ArmSetup::manualControl()
     this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
 }
 
+/**
+ * @brief 十字键统一处理（AirJoy 路径）
+ * @details 根据 arm_status_ 选择活跃函数和启用的十字键方向:
+ *          COMP_SEMI: 左=存储  右=取出  上=放下 (无拾取)
+ *          其他模式:  左=存储  右=取出  下=拾取 (无放下)
+ */
+void ArmSetup::arm_d_pad_ctrl()
+{
+#if USE_RC10_AIRJOY
+    const bool enable_pickup  = (arm_status_ != ARM_COMP_SEMI_CONTROL);
+    const bool enable_putdown = (arm_status_ == ARM_COMP_SEMI_CONTROL);
+
+    if (arm_ctrlStatus.is_store_acting == 0)
+    {
+        // --- 活跃函数 ---
+        if (arm_status_ == ARM_MANUAL_CONTROL)
+            manualControl();
+        else if (arm_status_ == ARM_SEMI_AUTO_CONTROL || arm_status_ == ARM_COMP_SEMI_CONTROL)
+            idle();
+        else if (arm_status_ == ARM_MANUAL_LOW_LEVEL)
+            manualControl_lowLevel();
+
+        // --- 十字键左：存储 ---
+        if (airjoy_data_.d_pad_left == 1 && is_d_pad_left_clicked == 0)
+        {
+            arm_ctrlStatus.is_store_acting = 2;
+            is_d_pad_left_clicked = 1;
+        }
+        else if (airjoy_data_.d_pad_left == 0 && is_d_pad_left_clicked == 1)
+        {
+            is_d_pad_left_clicked = 0;
+        }
+
+        // --- 十字键右：取出 ---
+        if (airjoy_data_.d_pad_right == 1 && is_d_pad_right_clicked == 0)
+        {
+            arm_ctrlStatus.is_store_acting = 1;
+            is_d_pad_right_clicked = 1;
+        }
+        else if (airjoy_data_.d_pad_right == 0 && is_d_pad_right_clicked == 1)
+        {
+            is_d_pad_right_clicked = 0;
+        }
+
+        // --- 十字键下：拾取 (COMP_SEMI 禁用) ---
+        if (enable_pickup)
+        {
+            if (airjoy_data_.d_pad_down == 1 && is_d_pad_down_clicked == 0)
+            {
+                arm_ctrlStatus.is_store_acting = 3;
+                is_d_pad_down_clicked = 1;
+            }
+            else if (airjoy_data_.d_pad_down == 0 && is_d_pad_down_clicked == 1)
+            {
+                is_d_pad_down_clicked = 0;
+            }
+        }
+
+        // --- 十字键上：放下 (仅 COMP_SEMI 启用) ---
+        if (enable_putdown)
+        {
+            if (airjoy_data_.d_pad_up == 1 && is_d_pad_up_clicked == 0)
+            {
+                arm_ctrlStatus.is_store_acting = 4;
+                is_d_pad_up_clicked = 1;
+            }
+            else if (airjoy_data_.d_pad_up == 0 && is_d_pad_up_clicked == 1)
+            {
+                is_d_pad_up_clicked = 0;
+            }
+        }
+    }
+    else if (arm_ctrlStatus.is_store_acting == 1) // 取出
+    {
+        int8_t tar = (arm_ctrlStatus.store_manual_mode == OUTSIDE) ? 0x01 : 0x00;
+        if (manual_takeout(tar))
+            arm_ctrlStatus.is_store_acting = 0;
+        arm_ctrlStatus.last_manual_store = 1;
+    }
+    else if (arm_ctrlStatus.is_store_acting == 2) // 存储
+    {
+        int8_t tar = (arm_ctrlStatus.store_manual_mode == OUTSIDE) ? 0x00 : 0x01;
+        if (manual_store(tar))
+            arm_ctrlStatus.is_store_acting = 0;
+        arm_ctrlStatus.last_manual_store = 2;
+    }
+    else if (arm_ctrlStatus.is_store_acting == 3 && enable_pickup) // 拾取
+    {
+        if (manual_pickup())
+            arm_ctrlStatus.is_store_acting = 0;
+        arm_ctrlStatus.last_manual_store = 3;
+    }
+    else if (arm_ctrlStatus.is_store_acting == 4 && enable_putdown) // 放下
+    {
+        if (manual_putdown())
+            arm_ctrlStatus.is_store_acting = 0;
+        arm_ctrlStatus.last_manual_store = 4;
+    }
+#endif
+}
+
 
 bool ArmSetup::manual_store(uint8_t kfs_index)
 { 
@@ -813,22 +715,6 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
         case store_state::laucnh_state:
         {
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
-            // if(kfs_index == 0x00)
-            // {
-            //     this->set_PitchAngle(this->init_data_.pitch_lift_angle_); //吸盘抬平
-
-            //     if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.03f 
-            //             && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - this->init_data_.pitch_lift_angle_) < 30.0f)
-            //         this->store_state_ = store_state::rotate_state;
-            // }
-            // else
-            // {
-            //     if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.03f)
-            //     {
-            //         this->store_state_ = store_state::rotate_state;
-            //     }
-            // }
-
             //全部顶存
             if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.03f)
             {
@@ -839,25 +725,6 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
 
         case store_state::rotate_state:
         {
-            // if(kfs_index == 0x01)
-            // {   
-            //     if(this->get_currentJointStatus().rotateJoint_angle_ > 265.0f && this->get_currentJointStatus().rotateJoint_angle_ < 350.0f)
-            //     {
-            //         this->set_PitchAngle(0.0f); //吸盘放下
-            //         this->set_StretchLength(0.0f); //收回
-            //     }
-            // }
-
-            // float target_rotate = 270.0f; //存储的目标旋转角度
-            // this->set_RotateAngle(target_rotate);
-
-            // if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 5.0f)
-            // {
-            //     if(kfs_index == 0x00)
-            //         this->set_StretchLength(init_data_.store_ext_length_); // 伸展到存储位置需要的长度
-            //     this->store_state_ = store_state::lower_state;
-            // }
-
             if(kfs_index == 0x00)
                 this->set_RotateAngle(270.0f); //存储的目标旋转角度
 
@@ -881,25 +748,6 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
       
         case store_state::lower_state:
         {
-            // float target_pitch = (kfs_index == 0x01) ? 0.0f : this->init_data_.pitch_lift_angle_;
-           
-            // if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - target_pitch) < 0.5f 
-            //     && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 270.0f) < 1.0f)
-            // {
-            //     this->set_LaunchHeight(target_store_height); // 降低到存储高度
-            // }
-
-            // if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - target_store_height) < 0.01f
-            //     && std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.store_ext_length_) < 0.01f)
-            // {
-            //     is_store = true;
-            //     store_start_time = TimeStamp::getInstance().getSeconds();
-            //     this->store_state_ = store_state::outstate1;
-            // }
-
-            // if(this->get_currentJointStatus().suckerJoint_angle_ < 20.0f && kfs_index == 0x01)
-            //     this->set_RotateAngle(270.0f); //存储的目标旋转角度
-
             if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 270.0f) < 1.0f
                 && kfs_index == 0x00)
             {
@@ -934,30 +782,16 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             if(is_store && TimeStamp::getInstance().getSeconds() - store_start_time > 0.6f && store_start_time > 0.1f )
             {
                 this->setSuckerStatus(Sucker_Status_E::STOP); // 停止吸盘
-                // if(kfs_index == 0x00)
-                // {
-                //     this->set_StretchLength(0.0f); //收回
-                //     if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_) < 0.02f)
-                //     {
-                //         this->set_RotateAngle(0.0f); //旋转回0度
-                //         this->set_LaunchHeight(target_back_height);
-                //         this->store_state_ = store_state::outstate2;
-                //     }
-                // }
-                // else
-                // {
-                //     this->set_LaunchHeight(target_back_height);
-
-                //     if(this->get_currentJointStatus().launchJoint_Height_ > target_back_height)
-                //     {
-                //         this->set_RotateAngle(0.0f); //旋转回0度
-                //         this->store_state_ = store_state::outstate2;
-                //     }
-                // }
                 this->set_LaunchHeight(init_data_.max_launchHeight_); //提升到最高
                 if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
                 {
-                    this->set_RotateAngle(0.0f); //旋转回0度
+
+                    if(arm_status_ == ARM_AUTO_CONTROL)
+                        this->set_RotateAngle(90.0f);
+                    else
+                        this->set_RotateAngle(0.0f); //旋转回0度
+
+                    this->set_StretchLength(0.0f); //收回
                     this->store_state_ = store_state::outstate2;
                 }
             }
@@ -971,9 +805,6 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                 || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 360.0f) < 5.0f))
             { 
                 this->store_state_ = store_state::idle;
-
-                // if(kfs_index == 0x01)
-                //     this->set_PitchAngle(init_data_.pitch_lift_angle_); //抬平
                 return true;
             }
             break;
@@ -997,7 +828,7 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 
     float target_back_height = (kfs_index == 0x00) ?
             this->init_data_.max_launchHeight_ - 0.02f : this->init_data_.max_launchHeight_ - 0.1f;
-
+    static float target_rotate = 0.0f;
     switch(this->store_state_)
     {
         case store_state::idle:
@@ -1016,18 +847,6 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
         }
         case store_state::laucnh_state:
         {
-            // this->setSuckerStatus(Sucker_Status_E::STOP);
-            // this->set_LaunchHeight(this->init_data_.max_launchHeight_);
-            // if(kfs_index == 0x01)
-            //     this->set_PitchAngle(this->init_data_.pitch_lift_angle_); //抬平
-            // else if(kfs_index == 0x00)
-            //     this->set_PitchAngle(0.0f); //放下
-
-            // if(this->get_currentJointStatus().launchJoint_Height_ >= this->init_data_.max_launchHeight_ - 0.04f)
-            // {
-            //     this->store_state_ = store_state::rotate_state;
-            // }
-
             this->set_LaunchHeight(this->init_data_.max_launchHeight_);
             this->set_PitchAngle(0.0f);
             this->set_StretchLength(0.0f);
@@ -1037,11 +856,19 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 
         case store_state::rotate_state:
         {
-            float target_rotate = 270.0f; //存储的目标旋转角度
+            
+            if(kfs_index == 0x01)
+                target_rotate = 270.0f; //存储的目标旋转角度
+            else if(kfs_index == 0x00)
+                target_rotate = 310.0f; //存储的目标旋转角度
 
-            if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.03f)
+            this->setSuckerStatus(Sucker_Status_E::SUCK);
+
+            if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.02f)
             {
                 this->set_RotateAngle(target_rotate);
+                if(kfs_index == 0x01)
+                    this->set_StretchLength(init_data_.max_stretchLength_); // 伸展到存储位置需要的长度
                 this->store_state_ = store_state::lower_state;
             }
             
@@ -1056,11 +883,9 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
                     this->set_StretchLength(init_data_.max_stretchLength_); // 伸展到存储位置需要的长度
             }
 
-            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 270.0f) < 5.0f
-                && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 0.5f)
+            if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - target_rotate) < 1.0f
+                && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 0.2f)
             {
-                this->setSuckerStatus(Sucker_Status_E::SUCK); 
-                // this->set_LaunchHeight(target_store_height); // 降低到存储高度
                 this->set_LaunchHeight(init_data_.store_height_inside_); // 降低到存储高度
                 this->store_state_ = store_state::outstate1;
             }
@@ -1069,38 +894,6 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 
         case store_state::outstate1:
         {
-            // if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - target_store_height) < 0.01f)
-            // {
-            //     if(kfs_index == 0x01)
-            //         this->set_StretchLength(init_data_.store_ext_length_); // 伸展到存储位置需要的长度
-
-            //     if(kfs_index == 0x00)
-            //         this->setStoreSuckerStatus_InSide(Sucker_Status_E::STOP); // 停止存储吸盘
-            //     else if(kfs_index == 0x01)
-            //         this->setStoreSuckerStatus_OutSide(Sucker_Status_E::STOP); // 停止存储吸盘
-
-            // }
-
-            // if(kfs_index == 0x01 
-            //         && std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.store_ext_length_) < 0.005f 
-            //         && !is_catch)
-            // {
-            //     catch_time = TimeStamp::getInstance().getSeconds(); //记录伸展完成的时间
-            //     is_catch = true;
-            // }
-            // else if(kfs_index == 0x00 
-            //         && std::fabs(this->get_currentJointStatus().launchJoint_Height_ - target_store_height) < 0.01f
-            //         && !is_catch)
-            // {
-            //     catch_time = TimeStamp::getInstance().getSeconds(); //记录降低完成的时间
-            //     is_catch = true;
-            // }
-
-            // if(TimeStamp::getInstance().getSeconds() - catch_time > 0.6f && catch_time > 0.1f)
-            // {
-            //     store_state_ = store_state::outstate2;
-            //     this->set_LaunchHeight(target_back_height);//提升到最高
-            // }
             if(!is_catch && std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.store_height_inside_) < 0.01f)
             {
                 if(kfs_index == 0x00)
@@ -1122,20 +915,6 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 
         case store_state::outstate2:
         {
-            // if(kfs_index == 0x01 && std::fabs(this->get_currentJointStatus().launchJoint_Height_ - target_back_height) < 0.05f)
-            //     this->set_StretchLength(0.0f); // 收回
-            // if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - target_back_height) < 0.005f)
-            // {   
-            //     this->set_RotateAngle(0.0f);
-            //     this->set_PitchAngle(init_data_.pitch_lift_angle_); //抬平
-            // }
-
-            // if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 5.0f 
-            //     || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 360.0f) < 5.0f)
-            // {
-            //     this->store_state_ = store_state::idle;
-            //     return true;
-            // }
             if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
             {
                 if(kfs_index == 0x00)
@@ -1546,11 +1325,12 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
         catch_offset = 0.00f;
     else
         catch_offset = 0.0f;
-    if(MF_high[targetKFS - 1] == 0.2f)
+    float kfs_h = GetKFSHeight(targetKFS);
+    if(kfs_h == 0.2f)
         targetLowerHeight = init_data_.catch_20height;
-    else if(MF_high[targetKFS - 1] == 0.4f)
+    else if(kfs_h == 0.4f)
         targetLowerHeight = this->init_data_.catch_40height + catch_offset;
-    else if(MF_high[targetKFS - 1] == 0.6f)
+    else if(kfs_h == 0.6f)
         targetLowerHeight = this->init_data_.catch_60height + catch_offset;
     else
         targetLowerHeight = this->init_data_.max_launchCatch_Height_ + catch_offset;
@@ -1604,11 +1384,12 @@ bool ArmSetup::state_launchStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     float canMoveHeight = 0.0f;//是否可以移动的高度阈值，置
-    if(MF_high[targetKFS - 1] == 0.2f)
+    float kfs_h = GetKFSHeight(targetKFS);
+    if(kfs_h == 0.2f)
         canMoveHeight = this->init_data_.catch_40height - 0.1f;
-    else if(MF_high[targetKFS - 1] == 0.4f)
+    else if(kfs_h == 0.4f)
         canMoveHeight = this->init_data_.max_launchCatch_Height_;
-    else if(MF_high[targetKFS - 1] == 0.6f)
+    else if(kfs_h == 0.6f)
         canMoveHeight = this->init_data_.max_launchCatch_Height_;
     else
         canMoveHeight = this->init_data_.max_launchCatch_Height_;
@@ -1782,5 +1563,5 @@ Arm_InitData_S arm_initData = {
     .StoreInside_Soleniod_GPIO_Port = SUCKER_6_GPIO_Port,
     .StoreInside_Soleniod_GPIO_Pin = SUCKER_6_Pin,
 
-    .max_pitchRPM_ = 150.0f,
+    .max_pitchRPM_ = 200.0f,
 };
