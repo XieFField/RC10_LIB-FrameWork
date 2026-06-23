@@ -28,7 +28,7 @@ void FSM_Controller::loop()
 #else
 
     //设置红蓝场：遥控器反馈数据 1为蓝 2为红， 代码内为1蓝 0红
-    MF_AutoCtrler::set_color(airjoy_data_.color == 1 ? 1 : 0);
+    MF_AutoCtrler::set_color(airjoy_data_.color == 1 ? 0 : 1);
 
         
     communication::Lora_communication::GetInstance()->Task_Process();
@@ -36,19 +36,19 @@ void FSM_Controller::loop()
 
     communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
 
-    communication::Lora_communication::GetInstance()->send_robot_pos(x_, y_, yaw_);
-    // communication::Lora_communication::GetInstance()->send_robot_pos(
-    //     Locate_Setup::getInstance()->get_RobotPos_inWorld().x,
-    //     Locate_Setup::getInstance()->get_RobotPos_inWorld().y,
-    //     Locate_Setup::getInstance()->get_RobotPos_inWorld().yaw
-    // );
-    communication::Lora_communication::GetInstance()->send_claw_status(claw1, claw2, claw3);
+    //communication::Lora_communication::GetInstance()->send_robot_pos(x_, y_, yaw_);
+     communication::Lora_communication::GetInstance()->send_robot_pos(
+         Locate_Setup::getInstance()->get_RobotPos_inWorld().x,
+         Locate_Setup::getInstance()->get_RobotPos_inWorld().y,
+         Locate_Setup::getInstance()->get_RobotPos_inWorld().yaw
+     );
+    //communication::Lora_communication::GetInstance()->send_claw_status(claw1, claw2, claw3);
 
-    // communication::Lora_communication::GetInstance()->send_claw_status(
-    //     weaponSage_setup_->is_claw_close(1),
-    //     weaponSage_setup_->is_claw_close(2),
-    //     weaponSage_setup_->is_claw_close(3)
-    // );
+     communication::Lora_communication::GetInstance()->send_claw_status(
+         weaponSage_setup_->is_claw_close(1),
+         weaponSage_setup_->is_claw_close(2),
+         weaponSage_setup_->is_claw_close(3)
+     );
 
     communication::Lora_communication::GetInstance()->send_sucker_status(
         arm_setup_->getSuckerStatus() == Sucker_Status_E::SUCK ? true : false

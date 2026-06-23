@@ -101,6 +101,7 @@ void OmniChassis_Setup::loop()
 #endif
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     Point3D ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
+    RB_Flag=MF_AutoCtrler::get_color();
     robot_pos_.x = ladar_data_.x;
     robot_pos_.y = ladar_data_.y;
 
@@ -537,8 +538,8 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
     {
         down_click = false;
     }
-
-    // 右摇杆往右拨,蓝场近，红场远
+// 右摇杆往左拨,蓝场远，红场近
+    
     if (airjoy_data_.right_x > -0.05f)
         right_flag = 1;
     else if (right_flag > 0 && airjoy_data_.right_x < -0.80f && CZ_flag.R1_FB_index == 0)
@@ -554,14 +555,15 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
             {
                 if (RB_Flag == true)
                 {
-                    if (CZ_flag.R1_RL_index < 2)
-                        CZ_flag.R1_RL_index++;
-                }
-                else if (RB_Flag == false)
-                {
                     if (CZ_flag.R1_RL_index > 0)
                         CZ_flag.R1_RL_index--;
                 }
+                else if (RB_Flag == false)
+                {
+                    if (CZ_flag.R1_RL_index < 2)
+                        CZ_flag.R1_RL_index++;
+                }
+                
                 
             }
             CZ_R1_Selection_Planning();
@@ -576,8 +578,8 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
     {
         right_flag = 0;
     }
-// 右摇杆往左拨,蓝场远，红场近
-    
+
+    // 右摇杆往右拨,蓝场近，红场远
     if (airjoy_data_.right_x < 0.05f)
         left_flag = 1;
     else if (left_flag > 0 && airjoy_data_.right_x > 0.80f && CZ_flag.R1_FB_index == 0)
@@ -593,14 +595,15 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
             {
                 if (RB_Flag == true)
                 {
-                    if (CZ_flag.R1_RL_index > 0)
-                        CZ_flag.R1_RL_index--;
-                }
-                else if (RB_Flag == false)
-                {
                     if (CZ_flag.R1_RL_index < 2)
                         CZ_flag.R1_RL_index++;
                 }
+                else if (RB_Flag == false)
+                {
+                    if (CZ_flag.R1_RL_index > 0)
+                        CZ_flag.R1_RL_index--;
+                }
+
             }
             CZ_R1_Selection_Planning();
             left_flag = 0;

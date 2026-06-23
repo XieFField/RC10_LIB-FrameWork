@@ -828,7 +828,7 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 
     float target_back_height = (kfs_index == 0x00) ?
             this->init_data_.max_launchHeight_ - 0.02f : this->init_data_.max_launchHeight_ - 0.1f;
-    float target_rotate = 0.0f;
+    static float target_rotate = 0.0f;
     switch(this->store_state_)
     {
         case store_state::idle:
@@ -1563,5 +1563,5 @@ Arm_InitData_S arm_initData = {
     .StoreInside_Soleniod_GPIO_Port = SUCKER_6_GPIO_Port,
     .StoreInside_Soleniod_GPIO_Pin = SUCKER_6_Pin,
 
-    .max_pitchRPM_ = 150.0f,
+    .max_pitchRPM_ = 200.0f,
 };
