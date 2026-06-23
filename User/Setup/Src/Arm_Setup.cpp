@@ -595,6 +595,9 @@ void ArmSetup::arm_d_pad_ctrl()
 
     if (arm_ctrlStatus.is_store_acting == 0)
     {
+        arm_ctrlStatus.last_manual_store = 0;
+        store_state_ = store_state::idle;
+
         // --- 活跃函数 ---
         if (arm_status_ == ARM_MANUAL_CONTROL)
             manualControl();
@@ -652,9 +655,6 @@ void ArmSetup::arm_d_pad_ctrl()
                 is_d_pad_up_clicked = 0;
             }
         }
-
-        arm_ctrlStatus.last_manual_store = 0;
-        store_state_ = store_state::idle;
     }
     else if (arm_ctrlStatus.is_store_acting == 1) // 取出
     {
@@ -833,7 +833,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
 }
 
 
-
+int8_t test_outstate2 = 1; //用于测试不同的取出方案
 
 bool ArmSetup::manual_takeout(uint8_t kfs_index)
 {
@@ -912,6 +912,10 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 
         case store_state::outstate1:
         {
+            if(kfs_index == 0x00)
+                    this->setStoreSuckerStatus_InSide(Sucker_Status_E::STOP); // 停止存储吸盘
+                else if(kfs_index == 0x01)
+                    this->setStoreSuckerStatus_OutSide(Sucker_Status_E::STOP); // 停止存储吸盘
             if(!is_catch && std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.store_height_inside_) < 0.01f)
             {
                 if(kfs_index == 0x00)
@@ -941,7 +945,7 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
                     this->store_state_ = store_state::idle;
                     return true;
                 }
-                else
+                else if(test_outstate2 == 0)
                 {
                     this->set_RotateAngle(0.0f);
                     this->set_StretchLength(0.0f); // 收回
@@ -950,6 +954,35 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
                     {
                         this->store_state_ = store_state::idle;
                         return true;
+                    }
+                }
+                else if(test_outstate2 == 1)
+                {
+                    this->set_StretchLength(0.0f);
+                    if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - 0.0f) < 0.01f)
+                    {
+                        this->set_RotateAngle(0.0f);
+
+                        if(this->get_currentJointStatus().rotateJoint_angle_ > 300.0f)
+                        {
+                            this->store_state_ = store_state::idle;
+                            return true;
+                        }
+                    }
+                }
+                else if(test_outstate2 == 2)
+                {
+                    if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.008f)
+                    {
+                        this->set_PitchAngle(0.0f);
+
+                        if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 0.2f)
+                        {
+                            this->set_RotateAngle(0.0f);
+                            this->set_StretchLength(0.0f); // 收回
+                            this->store_state_ = store_state::idle;
+                            return true;
+                        }
                     }
                 }
             }
