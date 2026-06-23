@@ -271,7 +271,6 @@ private:
     PID_Position path_lock_r2; // 停止R2锁点
 
     //-----------------------------------其他参数-----------------------------------------//
-    int num = 0;
 
     Vector2D Path_end_point = {0.0f, 0.0f};
 
@@ -438,6 +437,11 @@ private:
             Chassis_Target.VX = 0.0f;
             Chassis_Target.VY = 0.0f;
         }
+        if(pid_dead_flag == true && chassis_status_ == CHASSIS_AUTO_CONTROL_CB&&WeaponSage_End==true)
+        {
+            Chassis_Target.VX = 0.0f;
+            Chassis_Target.VY = 0.0f;
+        }
     }
 
     void Path_correction(void)
@@ -505,6 +509,7 @@ private:
 
     Vector2D v_limit(void)
     {
+        static int num = 0;
         // 使用单位向量做正交分解，避免 |normal|² 缩放
         Vector2D tangent = path_line_.Get_Tangent_Vector();
         Vector2D tangent_dir = tangent.normalize();
@@ -1037,6 +1042,7 @@ private:
     {
         if (CZ_flag == false)
         {
+            #if !USE_RC10_AIRJOY
             if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
                 Chassis_Target.VX = airjoy_data_.left_x * vx_ratio * this->is_chassis_reverse_;
             else
@@ -1049,9 +1055,24 @@ private:
                 Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio;
             else
                 Chassis_Target.yaw_rate = 0.0f;
+            #else
+            if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                Chassis_Target.VX = airjoy_data_.left_x * vx_ratio * this->is_chassis_reverse_*(-1.0f);
+            else
+                Chassis_Target.VX = 0.0f;
+            if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+                Chassis_Target.VY = airjoy_data_.left_y * vy_ratio * this->is_chassis_reverse_;
+            else
+                Chassis_Target.VY = 0.0f;
+            if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
+                Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio*(-1.0f);
+            else
+                Chassis_Target.yaw_rate = 0.0f;
+            #endif
         }
         else if (CZ_flag == true)
         {
+            #if !USE_RC10_AIRJOY
             if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
                 Chassis_Target.VY = airjoy_data_.left_x * vy_ratio * this->is_chassis_reverse_ * RB_Flag ? (-1) : 1;
             else
@@ -1065,7 +1086,24 @@ private:
                 Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio;
             else
                 Chassis_Target.yaw_rate = 0.0f;
-        }
+        #else
+            if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                Chassis_Target.VY = airjoy_data_.left_x * vy_ratio * this->is_chassis_reverse_ * RB_Flag ? (1.0f) : (-1.0f);
+            else
+                Chassis_Target.VY = 0.0f;
+
+            if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+                Chassis_Target.VX = airjoy_data_.left_y * vx_ratio * this->is_chassis_reverse_ * RB_Flag ? (-1.0f) :(1.0f);
+            else
+                Chassis_Target.VX = 0.0f;
+            if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
+                Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio;
+            else
+                Chassis_Target.yaw_rate = 0.0f;
+            
+            #endif
+            
+            }
 
         if (yaw_update)
             target_yaw = yaw;

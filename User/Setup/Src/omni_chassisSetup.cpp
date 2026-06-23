@@ -477,7 +477,6 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
         up_click = true;
         CZ_flag.fit_pos_index = 1;
         CZ_R2_Selection_Planning();
-        debug_uart.printf_DMA("fit_pos_index:%d\n", CZ_flag.fit_pos_index);
     }
     else if (airjoy_data_.d_pad_up == 0)
     {
@@ -490,7 +489,6 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
         down_click = true;
         CZ_flag.fit_pos_index = 0;
         CZ_R2_Selection_Planning();
-        debug_uart.printf_DMA("fit_pos_index:%d\n", CZ_flag.fit_pos_index);
     }
     else if (airjoy_data_.d_pad_down == 0)
     {
@@ -504,7 +502,6 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
         if (CZ_flag.R2_pos_index > 0)
             CZ_flag.R2_pos_index--;
         CZ_R2_Selection_Planning();
-        debug_uart.printf_DMA("R2_pos_index:%d\n", CZ_flag.R2_pos_index);
     }
     else if ((airjoy_data_.d_pad_left == 0 && RB_Flag == true) || (airjoy_data_.d_pad_right == 0 && RB_Flag == false))
     {
@@ -518,7 +515,6 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
         if (CZ_flag.R2_pos_index < 2)
             CZ_flag.R2_pos_index++;
         CZ_R2_Selection_Planning();
-        debug_uart.printf_DMA("R2_pos_index:%d\n", CZ_flag.R2_pos_index);
     }
     else if ((airjoy_data_.d_pad_right == 0 && RB_Flag == true) || (airjoy_data_.d_pad_left == 0 && RB_Flag == false))
     {
@@ -541,7 +537,6 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
         up_click = true;
         CZ_flag.R1_FB_index = 1;
         CZ_R1_Selection_Planning();
-        debug_uart.printf_DMA("R1_FB_index:%d\n", CZ_flag.R1_FB_index);
     }
     else if (airjoy_data_.d_pad_up == 0)
     {
@@ -554,7 +549,6 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
         down_click = true;
         CZ_flag.R1_FB_index = 0;
         CZ_R1_Selection_Planning();
-        debug_uart.printf_DMA("R1_FB_index:%d\n", CZ_flag.R1_FB_index);
     }
     else if (airjoy_data_.d_pad_down == 0)
     {
@@ -577,15 +571,15 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
             {
                 if (RB_Flag == true)
                 {
-                    if (CZ_flag.R1_RL_index > 0)
-                        CZ_flag.R1_RL_index--;
-                }
-                else if (RB_Flag == false)
-                {
                     if (CZ_flag.R1_RL_index < 2)
                         CZ_flag.R1_RL_index++;
                 }
-                debug_uart.printf_DMA("R1_RL_index:%d\n", CZ_flag.R1_RL_index);
+                else if (RB_Flag == false)
+                {
+                    if (CZ_flag.R1_RL_index > 0)
+                        CZ_flag.R1_RL_index--;
+                }
+                
             }
             CZ_R1_Selection_Planning();
             right_flag = 0;
@@ -616,15 +610,14 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
             {
                 if (RB_Flag == true)
                 {
-                    if (CZ_flag.R1_RL_index < 2)
-                        CZ_flag.R1_RL_index++;
-                }
-                else if (RB_Flag == false)
-                {
                     if (CZ_flag.R1_RL_index > 0)
                         CZ_flag.R1_RL_index--;
                 }
-                debug_uart.printf_DMA("R1_RL_index:%d\n", CZ_flag.R1_RL_index);
+                else if (RB_Flag == false)
+                {
+                    if (CZ_flag.R1_RL_index < 2)
+                        CZ_flag.R1_RL_index++;
+                }
             }
             CZ_R1_Selection_Planning();
             left_flag = 0;
