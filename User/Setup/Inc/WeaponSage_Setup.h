@@ -321,7 +321,8 @@ private:
 
     float WristToClosest_poistive(float current_angle);
     float WristToClosest_negative(float current_angle);
-
+    void Sage_to_high();
+    void Sage_to_low();
     
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 
