@@ -49,10 +49,6 @@
 #define JIA_CHASSIS_ENABLE_DEBUG_OUTPUT (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
 #endif
 
-#ifndef JIA_CHASSIS_ENABLE_BINARY_TELEMETRY
-#define JIA_CHASSIS_ENABLE_BINARY_TELEMETRY (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
-#endif
-
 #ifndef JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
 #define JIA_CHASSIS_ENABLE_PID_TUNE_CACHE (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
 #endif
@@ -63,14 +59,6 @@
 
 #ifndef JIA_CHASSIS_ENABLE_TASK_PERF_STAT
 #define JIA_CHASSIS_ENABLE_TASK_PERF_STAT (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
-#endif
-
-#ifndef JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
-#define JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
-#endif
-
-#ifndef JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR
-#define JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR (JIA_CHASSIS_PROFILE == JIA_CHASSIS_PROFILE_FULL_DEBUG)
 #endif
 
 #ifndef JIA_CHASSIS_HOMING_SEARCH_RPM
@@ -194,55 +182,6 @@ namespace jia
             };
 
             /* ----------------------------------------------------------------- */
-            // 对外观测快照
-            // 这一组服务于 telemetry、host 测试和调试器观察，让使用者不深入内部状态也能读懂“目标是什么、实际到了哪”。
-            static constexpr u8 kTelemetryWheelCount = 4U;
-
-            struct TelemetryChassisState
-            {
-                // TelemetryChassisState 是面向外部观测的统一车体口径：
-                // 它允许 target 与 actual 分别来自不同内部层次，但对上位机/host 测试都暴露成一致字段集。
-                // 因而这里的值是“对外展示快照”，不是某个 runtime struct 的原样镜像，也不是控制内部唯一真值。
-                f32 vel_x = 0.0f;   // [RO] 车体 X 方向速度。target 口径通常来自 planned_data_，actual 口径来自 current_data_。
-                f32 vel_y = 0.0f;   // [RO] 车体 Y 方向速度。它是对外观测值，不会反向驱动控制。
-                f32 omega_z = 0.0f; // [RO] 车体航向角速度。actual 只有在 all_homed 且无 steer fault 时才可信。
-                f32 yaw_rad = 0.0f; // [RO] 车体朝向角。target 侧通常沿用 planned rot_z，actual 侧直接取 IMU yaw。
-            };
-
-            struct TelemetryWheelPose
-            {
-                f32 pos_x_m = 0.0f;
-                f32 pos_y_m = 0.0f;
-            };
-
-            struct TelemetryWheelState
-            {
-                // TelemetryWheelState 同时承载两类观测：
-                // 1. steer/drive 这类“每轮直接语义量”；
-                // 2. 由车体 twist + 轮位几何反推得到的平面速度分量。
-                // 因而 target_* 默认更接近 chassis/planner/apply 口径，actual_* 更接近 current/feedback 口径；
-                // 它们并不承诺等于底层电机对象最后一次 get/set 的原始值。
-                f32 target_drive_omega_rad_s = 0.0f; // [RO] 目标轮速观测值。默认取 planned/apply 后的目标快照，不保证等于电机对象内部最后一次写入值。
-                f32 actual_drive_omega_rad_s = 0.0f; // [RO] 实际轮速观测值。来自 current_data_/反馈链路。
-                f32 target_steer_oa_rad = 0.0f;      // [RO] 目标 OA 舵角观测值。是对外展示语义，不是控制内部唯一真坐标。
-                f32 actual_steer_oa_rad = 0.0f;      // [RO] 实际 OA 舵角观测值。由 corrected-local 反馈映射而来。
-                f32 target_velocity_x_m_s = 0.0f;    // [RO] 目标轮平面 X 速度分量。给 telemetry/host 看，不参与反向控制。
-                f32 target_velocity_y_m_s = 0.0f;    // [RO] 目标轮平面 Y 速度分量。
-                f32 actual_velocity_x_m_s = 0.0f;    // [RO] 实际轮平面 X 速度分量。
-                f32 actual_velocity_y_m_s = 0.0f;    // [RO] 实际轮平面 Y 速度分量。
-            };
-
-            struct TelemetrySnapshot
-            {
-                // TelemetrySnapshot 代表“发送这一拍”的整车聚合快照：
-                // 它只服务打包、录包和 host 观察，不参与控制闭环，也不应该被上层当成新的控制真源写回。
-                // homing_all_ready 是生成快照当拍的结论，用来辅助解释 payload，而不是一份长期锁存状态。
-                bool homing_all_ready = false;                      // [RO] 发送 telemetry 时刻的整车 homing ready 结论。
-                TelemetryChassisState target{};                     // [RO] 面向上位机的目标车体状态快照。
-                TelemetryChassisState actual{};                     // [RO] 面向上位机的实际车体状态快照。
-                TelemetryWheelState wheels[kTelemetryWheelCount]{}; // [RO] 四个轮子的目标/实际观测快照。仅用于打包与观察，不驱动控制。
-            };
-
             /* ----------------------------------------------------------------- */
             // 规划归一化辅助类型
             // 这层位于“对外命令”与“内部 planner”之间，用来统一记录命令来源、坐标变换结果与调试接管路由。
@@ -393,18 +332,6 @@ namespace jia
             static PlannerInputSnapshot makePlannerInputSnapshot(const PlannerInputCommand &command, f32 input_yaw_rad);
             static DebugControlRoute classifyDebugControlRoute(bool debug_enable, u8 raw_mode);
             static DebugModuleOverrideRoute classifyDebugModuleOverrideRoute(u8 raw_mode);
-            // makeTelemetrySnapshot() 是 telemetry 打包前的轻量聚合层：
-            // 它把 target/actual 底盘状态、轮位几何和每轮 steer/drive 结果收敛成固定快照，供 text/binary 输出共用。
-            // 这里不生成新的控制语义，只要求所有输入口径彼此一致；否则 snapshot 会变成“混来源观测”。
-            static TelemetrySnapshot makeTelemetrySnapshot(bool homing_all_ready,
-                                                           const TelemetryChassisState &target,
-                                                           const TelemetryChassisState &actual,
-                                                           const TelemetryWheelPose wheel_pose[kTelemetryWheelCount],
-                                                           const f32 target_drive_omega_rad_s[kTelemetryWheelCount],
-                                                           const f32 actual_drive_omega_rad_s[kTelemetryWheelCount],
-                                                           const f32 target_steer_oa_rad[kTelemetryWheelCount],
-                                                           const f32 actual_steer_oa_rad[kTelemetryWheelCount]);
-
             /* ----------------------------------------------------------------- */
             // 初始化与运行时策略切换
             // InitConfig 只负责把外部硬件句柄接进来，不承载几何、限幅或调试策略；
@@ -802,7 +729,6 @@ namespace jia
                 kOff = 0,
                 kText = 1,
                 kJustFloat = 2,
-                kBinary = 3,
             };
             enum class JustFloatProfile : u8
             {
@@ -864,24 +790,6 @@ namespace jia
                 // ch14: reverse_intent_active
                 kYawPid = 2,
 
-                // kDrivePidLoadTune (16ch, emitUart8VofaDrivePidLoadTrace)
-                // ch0:  time_s
-                // ch1:  observe_wheel_idx
-                // ch2:  target_rpm
-                // ch3:  feedback_rpm
-                // ch4:  total_current_cmd_mA
-                // ch5:  pid_current_mA
-                // ch6:  load_bias_current_mA
-                // ch7:  j_term_mA
-                // ch8:  b_term_mA
-                // ch9:  tc_term_mA
-                // ch10: omega_rad_s
-                // ch11: alpha_est_rad_s2
-                // ch12: step_phase
-                // ch13: virtual_load_enable
-                // ch14: stepgen_enable
-                // ch15: feedback_current_mA
-                kDrivePidLoadTune = 3,
                 // kDriveZeroStopBrakeTrace (12ch, emitUart8VofaDriveZeroStopBrakeTrace)
                 // ch0: time_s
                 // ch1: observe_wheel_idx
@@ -1259,7 +1167,6 @@ namespace jia
             // VOFA trace 负责把某一条调试观察链路发给 JustFloat 后端：
             // 它们都是只读 emitter，不生成新控制命令；具体节流周期和 profile 选择由 debug_output_ 与 runtime 配合完成。
             void emitUart8VofaYawPidTrace();
-            void emitUart8VofaDrivePidLoadTrace();
             void emitUart8VofaDriveZeroStopBrakeTrace();
             // emitDebugOutputByMode() 只是输出分发层：
             // family/profile 的路由选择在这里完成，但具体 payload 定义、节流、sample_divider 和 seq 维护都在各自 emitter 内。
@@ -1269,16 +1176,6 @@ namespace jia
              * @details 它只做路由选择，不负责生成控制命令；真正的 payload 组织与节流逻辑在各自 emitter 内部。
              */
             void emitDebugOutputByMode(bool all_homed);
-#endif
-#if JIA_CHASSIS_ENABLE_BINARY_TELEMETRY
-            // emitUart8SwerveTelemetryV2() 发送面向上位机的 binary telemetry 快照。
-            // 它面对的是协议消费者，因此 payload 顺序、header 字段和 CRC 口径都属于兼容契约，不能随意漂移。
-            /**
-             * @brief 发送 binary telemetry V2 快照。
-             * @param all_homed 当前四轮是否全部回零完成。
-             * @details 它面向上位机协议消费者，payload 字段顺序和编码口径属于兼容契约。
-             */
-            void emitUart8SwerveTelemetryV2(bool all_homed);
 #endif
 #if JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
             /**
@@ -1333,8 +1230,6 @@ namespace jia
             static SteerCalibration makeSteerCalibration(const WheelConfig &wheel);
             static f32 mapWheelCorrectedLocalToOaTotal(const WheelConfig &wheel, f32 corrected_local_total_rad);
             static f32 mapWheelOaTotalToCorrectedLocal(const WheelConfig &wheel, f32 oa_total_rad);
-            f32 resolveSingleWheelDriveStepTargetRpm(u8 wheel_idx, f32 fallback_target_rpm);
-
             // =====================================================================
             // 系统时基与线程时钟 [RO]
             // 说明：这是所有“每周期推进一次”的逻辑共用的统一时间基准。
@@ -1569,57 +1464,12 @@ namespace jia
                 } single_wheel{};
             } debug_control_;
 #endif
-            // drive 轮虚拟负载配置。
-            // 用来在调试阶段给 drive 轮额外叠加“等效惯量/阻尼/库仑摩擦”电流，便于离线整定速度环手感。
-#if JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
-            struct DebugDriveVirtualLoadConfig
-            {
-                bool enable = false;                    // [RW] 是否启用该轮虚拟负载。false 时这一轮只走原始调试命令，不额外叠加负载电流。
-                f32 delta_j_current_per_rad_s2 = 850.0f; // [RW] 等效惯量项系数。按角加速度估算需要补多少电流，数值越大越像“带重载起停”。
-                f32 delta_b_current_per_rad_s = 35.0f;  // [RW] 等效粘性阻尼系数。按当前转速叠加反向阻尼电流，用来模拟速度越高阻力越大的感觉。
-                f32 coulomb_current_mA = 1800.0f;         // [RW] 等效库仑摩擦电流。只按转动方向施加固定偏置，适合模拟静摩擦/恒定拖拽。
-                f32 coulomb_sign_vel_eps_rad_s = 0.2f; // [RW] 判断速度正负号时用的近零阈值。速度太小时避免库仑摩擦方向来回抖动。
-                f32 bias_current_limit_mA = 999999999.0f;  // [RW] 虚拟负载总偏置电流限幅。防止调试时叠加出来的附加电流过大。
-            };
-#endif
-            // drive 轮自动阶跃配置。
-            // 启用后可以自动生成正负转速阶跃，避免每次手动推杆，适合重复观察速度环响应。
-#if JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR
-            struct DebugDriveStepGeneratorConfig
-            {
-                bool enable = false;          // [RW] 是否启用该轮自动阶跃。false 时这一轮不会自动替你生成阶跃激励。
-                f32 step_target_rpm = 0.0f;   // [RW] 阶跃目标转速幅值。真正输出正还是负由起始方向和是否交替决定。
-                f32 hold_ms = 0.0f;           // [RW] 每次阶跃保持时长。用于观察速度环在激励期间的建立过程。
-                f32 rest_ms = 0.0f;           // [RW] 两次阶跃之间的静置时长。给系统一个回落或重新起步的间隔。
-                bool alternate_sign = false;  // [RW] 是否每轮阶跃后自动翻转正负号。打开后更适合连续看正反向响应差异。
-                bool start_positive = true;   // [RW] 首次输出是否从正向阶跃开始。关闭时第一拍先给负向激励。
-                bool one_shot = false;        // [RW] 是否只执行一轮阶跃流程。true 时跑完一次后停住，适合单次抓图。
-                bool auto_restart = false;    // [RW] 单轮流程结束后是否自动重启。适合长时间连续观察或反复录波。
-            };
-#endif
-            // 自动阶跃发生器运行时状态。
-            // 用来记录这一轮阶跃流程是否已启动、当前输出符号、阶段和本阶段累计时间。
-#if JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR
-            struct DebugDriveStepGeneratorRuntime
-            {
-                bool initialized = false;  // [RO] 该轮阶跃发生器运行态是否已初始化。用于避免每个周期都从第一步重新开始。
-                bool output_positive = true; // [RO] 当前这一步实际输出的是正向还是负向阶跃。配合配置项一起看可判断当前激励方向。
-                u8 phase = 0U;             // [RO] 当前所处阶段编号。通常用来区分“保持输出”还是“静置等待”等内部阶段。
-                f32 elapsed_ms = 0.0f;     // [RO] 当前阶段已经持续的时间。达到 hold/rest 阈值后会切到下一阶段。
-            };
 #if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE || JIA_CHASSIS_ENABLE_PID_TUNE_CACHE
             bool debug_enable_last_cycle_ = false; // [RO] 调试总开关上一周期的状态。主要用于识别 enable 上升沿，并在刚开启调试时做一次基线同步。
 #endif
 #if JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
             u8 single_wheel_last_steer_command_type_raw_ = 0xFFU; // [RO] 上一次已同步的 mode30 舵向命令类型。切换类型后可据此判断是否需要刷新对应模板。
             u8 single_wheel_last_drive_command_type_raw_ = 0xFFU; // [RO] 上一次已同步的 mode30 驱动命令类型。切换类型后可据此判断是否需要刷新对应模板。
-#endif
-#if JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
-            DebugDriveVirtualLoadConfig debug_drive_virtual_load_[4]{}; // [RW] 四个 drive 轮各自的虚拟负载配置。通常按轮独立整定，不要求四轮完全一致。
-#endif
-#if JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR
-            DebugDriveStepGeneratorConfig debug_drive_step_generator_[4]{}; // [RW] 四个 drive 轮各自的自动阶跃配置。可只打开观察轮对应那一项。
-#endif
 #endif
 
             // =====================================================================
@@ -1640,13 +1490,6 @@ namespace jia
                 u8 log_level = 1U;
             };
 
-            struct DebugOutputTelemetryConfig
-            {
-                u8 sample_divider = 1U;
-                u8 profile_id = 0U;
-                u32 period_ms = 10U;
-            };
-
             struct DebugOutputJustFloatConfig
             {
                 u8 profile_raw = static_cast<u8>(JustFloatProfile::kSingleWheelTrace);
@@ -1654,24 +1497,21 @@ namespace jia
                 DebugOutputSlotConfig overview = {5U};
                 DebugOutputSlotConfig single_wheel = {1U};
                 DebugOutputSlotConfig yaw_pid = {4U};
-                DebugOutputSlotConfig drive_pid_load = {2U};
                 DebugOutputSlotConfig drive_zero_stop_brake = {2U};
-            };
-
-            struct DebugOutputBinaryConfig
-            {
-                DebugOutputTelemetryConfig telemetry{};
             };
 
             struct DebugOutputConfig
             {
                 // DebugOutputConfig 只回答“想发什么”：
-                // family 选文本/JustFloat/二进制，子配置决定各自 profile、周期和采样节拍。
+                // family 选关闭/文本/JustFloat，子配置决定各自 profile 和发送周期。
+                // 当前 text / justfloat 都只保留“发送节流”这一层语义：
+                // DebugOutputSlotConfig.period_ms 就是该路输出最短隔多久允许发一次，不再区分额外采样周期。
+                // 旧 binary telemetry 曾有 sample_divider 这类“采样分频/采样周期”概念；
+                // 该概念已随 binary 输出删除，当前 justfloat 配置里不存在“先采样、后发送”的第二层节拍。
                 bool output_enable = true;
                 u8 output_family_raw = static_cast<u8>(DebugOutputFamily::kJustFloat);
                 DebugOutputTextConfig text{};
                 DebugOutputJustFloatConfig justfloat{};
-                DebugOutputBinaryConfig binary{};
             } debug_output_;
 
             struct DebugOutputSlotRuntime
@@ -1686,35 +1526,23 @@ namespace jia
                 TickType_t direct_trace_last_ms = 0U;
             };
 
-            struct DebugOutputTelemetryRuntime
-            {
-                TickType_t last_ms = 0U;
-                u8 cycle_counter = 0U;
-                u16 seq = 0U;
-            };
-
             struct DebugOutputJustFloatRuntime
             {
                 DebugOutputSlotRuntime overview{};
                 DebugOutputSlotRuntime single_wheel{};
                 DebugOutputSlotRuntime yaw_pid{};
-                DebugOutputSlotRuntime drive_pid_load{};
                 DebugOutputSlotRuntime drive_zero_stop_brake{};
-            };
-
-            struct DebugOutputBinaryRuntime
-            {
-                DebugOutputTelemetryRuntime telemetry{};
             };
 
             struct DebugOutputRuntime
             {
                 // DebugOutputRuntime 只回答“这一路上次发到哪了”：
-                // last_ms 用于节流，cycle_counter 用于分频，seq 用于 binary telemetry 序号连续性。
-                // 这些状态由各 emitter 在准备发送/发送成功后刷新；外部应把它当成输出链路私有运行态，只读观察即可。
+                // last_ms 用于发送节流；它记录的是“上一帧何时允许/已经发出”，
+                // 不是旧 binary telemetry 那种独立采样分频计数。
+                // 这些状态由各 emitter 在准备发送/发送成功后刷新，
+                // 外部应把它当成输出链路私有运行态，只读观察即可。
                 DebugOutputTextRuntime text{};
                 DebugOutputJustFloatRuntime justfloat{};
-                DebugOutputBinaryRuntime binary{};
             } debug_output_runtime_;
 #endif
 
@@ -1745,23 +1573,15 @@ namespace jia
 #endif
 
 #if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
-            struct DebugDriveLoadTraceState
+            // 这不是旧 drive load trace 的残留，而是 JustFloatProfile::kDriveZeroStopBrakeTrace
+            // 专用的最小观察缓存。前面的 drive 执行路径 / mode30 单轮直控路径先把当前观察轮的关键量写进来，
+            // emitter 只负责按既定 payload 顺序消费这 3 个字段，不在发送阶段重新回溯整条控制链。
+            struct DebugDriveZeroStopBrakeTraceState
             {
-                f32 target_rpm = 0.0f;
-                f32 feedback_rpm = 0.0f;
-                f32 pid_current_mA = 0.0f;
-                f32 load_bias_current_mA = 0.0f;
-                f32 total_current_cmd_mA = 0.0f;
-                f32 omega_rad_s = 0.0f;
-                f32 alpha_est_rad_s2 = 0.0f;
-                f32 j_term_mA = 0.0f;
-                f32 b_term_mA = 0.0f;
-                f32 tc_term_mA = 0.0f;
-                f32 step_phase = 0.0f;
-                f32 virtual_load_enable = 0.0f;
-                f32 stepgen_enable = 0.0f;
-                f32 observe_wheel_idx = 0.0f;
-            } debug_drive_load_trace_;
+                f32 target_rpm = 0.0f;       // 当前观察轮这一拍用于 trace 展示的目标 RPM。
+                f32 feedback_rpm = 0.0f;     // 当前观察轮这一拍用于 trace 展示的反馈 RPM。
+                f32 observe_wheel_idx = 0.0f; // 当前 zero-stop-brake trace 正在观察哪一轮。
+            } debug_drive_zero_stop_brake_trace_;
 #endif
 
             // =====================================================================
@@ -1873,9 +1693,6 @@ namespace jia
 #if JIA_CHASSIS_ENABLE_SINGLE_WHEEL_DEBUG
             SingleWheelAxisPlannerRuntime single_wheel_steer_planner_state_{};
             SingleWheelAxisPlannerRuntime single_wheel_drive_planner_state_{};
-#if JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR
-            DebugDriveStepGeneratorRuntime drive_step_generator_runtime_[4]{};
-#endif
 #endif
             InputTargetData input_target_data_; // [RO] 输入目标快照（模式与期望速度/角度）
             NormalizedBodyCommand normalized_body_command_; // [RO] 输入来源与统一车体系语义
@@ -2217,39 +2034,6 @@ namespace jia
             snapshot.target.vel_y = normalized.body.vel_y;
             snapshot.target.omega_z = normalized.body.omega_z;
             snapshot.target.rot_z = normalized.rot_z;
-
-            return snapshot;
-        }
-
-        inline Chassis::TelemetrySnapshot Chassis::makeTelemetrySnapshot(bool homing_all_ready,
-                                                                         const TelemetryChassisState &target,
-                                                                         const TelemetryChassisState &actual,
-                                                                         const TelemetryWheelPose wheel_pose[kTelemetryWheelCount],
-                                                                         const f32 target_drive_omega_rad_s[kTelemetryWheelCount],
-                                                                         const f32 actual_drive_omega_rad_s[kTelemetryWheelCount],
-                                                                         const f32 target_steer_oa_rad[kTelemetryWheelCount],
-                                                                         const f32 actual_steer_oa_rad[kTelemetryWheelCount])
-        {
-            // telemetry wheel 状态既保留“每轮直接量”（steer/drive），也补一份由底盘 twist + 轮位几何反推的速度分量。
-            // 这样上位机既能看单轮目标/反馈，也能在不重复做运动学展开的情况下直接看每轮速度矢量。
-            // 注意这里是“聚合快照生成”而不是控制计算：它只消费输入、组织口径，不反向影响 planned/current/runtime。
-            TelemetrySnapshot snapshot{};
-            snapshot.homing_all_ready = homing_all_ready;
-            snapshot.target = target;
-            snapshot.actual = actual;
-
-            for (u8 i = 0U; i < kTelemetryWheelCount; ++i)
-            {
-                TelemetryWheelState &wheel = snapshot.wheels[i];
-                wheel.target_drive_omega_rad_s = target_drive_omega_rad_s[i];
-                wheel.actual_drive_omega_rad_s = actual_drive_omega_rad_s[i];
-                wheel.target_steer_oa_rad = target_steer_oa_rad[i];
-                wheel.actual_steer_oa_rad = actual_steer_oa_rad[i];
-                wheel.target_velocity_x_m_s = target.vel_x + target.omega_z * wheel_pose[i].pos_y_m;
-                wheel.target_velocity_y_m_s = target.vel_y - target.omega_z * wheel_pose[i].pos_x_m;
-                wheel.actual_velocity_x_m_s = actual.vel_x + actual.omega_z * wheel_pose[i].pos_y_m;
-                wheel.actual_velocity_y_m_s = actual.vel_y - actual.omega_z * wheel_pose[i].pos_x_m;
-            }
 
             return snapshot;
         }

@@ -47,78 +47,6 @@ namespace jia
         namespace
         {
             // -----------------------------------------------------------------
-            // 二进制 telemetry 打包常量与轻量 helper
-            // 这组常量只服务 mode5 二进制遥测输出，故意放在匿名命名空间内，避免泄漏到底盘对外接口。
-            // -----------------------------------------------------------------
-            constexpr u16 kSwerveTelemetryMagic = 0xA55AU;
-            constexpr u8 kSwerveTelemetryVersion = 2U;
-            constexpr u8 kSwerveTelemetryFlagsCrcPayloadOnly = 1U << 0;
-            constexpr u8 kSwerveTelemetryFlagsAllHomed = 1U << 1;
-            constexpr u16 kSwerveTelemetryMsgTypeMode5 = 0x001FU;
-            constexpr u16 kSwerveTelemetryFrameHeaderBytes = 18U; // magic(2)+ver(1)+flags(1)+seq(2)+ts(8)+msg_type(2)+payload_len(2)
-            constexpr u16 kSwerveTelemetryFrameCrcBytes = 2U;
-            constexpr u8 kSwerveTelemetryWheelCount = 4U;
-            constexpr u8 kSwerveTelemetryChassisFloatCount = 8U; // chassis target4f + chassis actual4f
-            constexpr u8 kSwerveTelemetryWheelFloatCountPerWheel = 8U; // per wheel(M0..M3): t_drive,a_drive,t_steer,a_steer,t_wvx,t_wvy,a_wvx,a_wvy
-            constexpr u16 kSwerveTelemetryPayloadFloatCount = static_cast<u16>(kSwerveTelemetryChassisFloatCount +
-                                                                                (kSwerveTelemetryWheelFloatCountPerWheel * kSwerveTelemetryWheelCount));
-            constexpr u16 kSwerveTelemetryPayloadBytes = static_cast<u16>(kSwerveTelemetryPayloadFloatCount * sizeof(f32));
-            static_assert(kSwerveTelemetryPayloadBytes == 160U, "mode5 V2 payload must be 160 bytes");
-            constexpr u16 kSwerveTelemetryFrameBytes = static_cast<u16>(kSwerveTelemetryFrameHeaderBytes + kSwerveTelemetryPayloadBytes + kSwerveTelemetryFrameCrcBytes);
-            constexpr u16 kSwerveTelemetryTxBufferBytes = 416U;
-            static_assert(kSwerveTelemetryFrameBytes <= kSwerveTelemetryTxBufferBytes, "mode5 telemetry frame buffer too small");
-            alignas(4) static u8 swerve_telemetry_tx_frame_buf[kSwerveTelemetryTxBufferBytes] = {0U};
-
-            inline void packU16LE(u8 *dst, u16 value)
-            {
-                dst[0] = static_cast<u8>(value & 0xFFU);
-                dst[1] = static_cast<u8>((value >> 8) & 0xFFU);
-            }
-
-            inline void packU64LE(u8 *dst, u64 value)
-            {
-                for (u8 i = 0U; i < 8U; ++i)
-                {
-                    dst[i] = static_cast<u8>((value >> (8U * i)) & 0xFFU);
-                }
-            }
-
-            inline void packF32LE(u8 *dst, f32 value)
-            {
-                union
-                {
-                    f32 f;
-                    u32 u;
-                } conv;
-                conv.f = value;
-                dst[0] = static_cast<u8>(conv.u & 0xFFU);
-                dst[1] = static_cast<u8>((conv.u >> 8) & 0xFFU);
-                dst[2] = static_cast<u8>((conv.u >> 16) & 0xFFU);
-                dst[3] = static_cast<u8>((conv.u >> 24) & 0xFFU);
-            }
-
-            u16 crc16CcittFalse(const u8 *data, u16 len)
-            {
-                u16 crc = 0xFFFFU;
-                for (u16 i = 0U; i < len; ++i)
-                {
-                    crc ^= static_cast<u16>(data[i]) << 8;
-                    for (u8 bit = 0U; bit < 8U; ++bit)
-                    {
-                        if ((crc & 0x8000U) != 0U)
-                        {
-                            crc = static_cast<u16>((crc << 1) ^ 0x1021U);
-                        }
-                        else
-                        {
-                            crc = static_cast<u16>(crc << 1);
-                        }
-                    }
-                }
-                return crc;
-            }
-
-            // -----------------------------------------------------------------
             // 调试面板 / 单轮直控配置清洗
             // 所有来自调试面板的 raw u8 枚举都会先在这里被钳回合法范围，
             // 这样线程主流程只处理“已清洗值”，不用到处散落防御判断。
@@ -160,16 +88,23 @@ namespace jia
 
             inline Chassis::DebugOutputFamily sanitizeDebugOutputFamily(u8 raw_family)
             {
-                return (raw_family <= static_cast<u8>(Chassis::DebugOutputFamily::kBinary))
+                return (raw_family <= static_cast<u8>(Chassis::DebugOutputFamily::kJustFloat))
                            ? static_cast<Chassis::DebugOutputFamily>(raw_family)
                            : Chassis::DebugOutputFamily::kOff;
             }
 
             inline Chassis::JustFloatProfile sanitizeJustFloatProfile(u8 raw_profile)
             {
-                return (raw_profile <= static_cast<u8>(Chassis::JustFloatProfile::kDriveZeroStopBrakeTrace))
-                           ? static_cast<Chassis::JustFloatProfile>(raw_profile)
-                           : Chassis::JustFloatProfile::kYawPid;
+                switch (raw_profile)
+                {
+                case static_cast<u8>(Chassis::JustFloatProfile::kOverview):
+                case static_cast<u8>(Chassis::JustFloatProfile::kSingleWheelTrace):
+                case static_cast<u8>(Chassis::JustFloatProfile::kYawPid):
+                case static_cast<u8>(Chassis::JustFloatProfile::kDriveZeroStopBrakeTrace):
+                    return static_cast<Chassis::JustFloatProfile>(raw_profile);
+                default:
+                    return Chassis::JustFloatProfile::kYawPid;
+                }
             }
 
             inline Chassis::SingleWheelTracePayloadKind sanitizeSingleWheelTracePayloadKind(u8 raw_payload)
@@ -2239,89 +2174,6 @@ namespace jia
             return shaped_linear_m_s / wheel_radius_m;
         }
 
-        f32 Chassis::resolveSingleWheelDriveStepTargetRpm(u8 wheel_idx, f32 fallback_target_rpm)
-        {
-            // 单轮 drive 阶跃发生器允许在观察轮上持续输出“保持/空档/反向”的节拍序列，
-            // 方便看 PID、虚拟负载和断电重连后的执行表现。
-            if (wheel_idx >= 4U)
-            {
-                return fallback_target_rpm;
-            }
-
-            const DebugDriveStepGeneratorConfig &cfg = debug_drive_step_generator_[wheel_idx];
-            DebugDriveStepGeneratorRuntime &runtime = drive_step_generator_runtime_[wheel_idx];
-            if (!cfg.enable)
-            {
-                runtime = {};
-                return fallback_target_rpm;
-            }
-
-            if (!runtime.initialized)
-            {
-                runtime.initialized = true;
-                runtime.output_positive = cfg.start_positive;
-                runtime.phase = (fabsf(cfg.hold_ms) <= 1.0e-6f) ? 0U : 1U;
-                runtime.elapsed_ms = 0.0f;
-            }
-
-            const f32 hold_ms = (cfg.hold_ms > 0.0f) ? cfg.hold_ms : 0.0f;
-            const f32 rest_ms = (cfg.rest_ms > 0.0f) ? cfg.rest_ms : 0.0f;
-
-            if (runtime.phase == 1U)
-            {
-                runtime.elapsed_ms += static_cast<f32>(period_ms_);
-                if (runtime.elapsed_ms >= hold_ms)
-                {
-                    runtime.elapsed_ms = 0.0f;
-                    if (cfg.one_shot)
-                    {
-                        runtime.phase = 2U;
-                    }
-                    else if (rest_ms > 0.0f)
-                    {
-                        runtime.phase = 0U;
-                    }
-                    else if (cfg.alternate_sign)
-                    {
-                        runtime.output_positive = !runtime.output_positive;
-                    }
-                }
-            }
-            else if (runtime.phase == 0U)
-            {
-                runtime.elapsed_ms += static_cast<f32>(period_ms_);
-                if (runtime.elapsed_ms >= rest_ms)
-                {
-                    runtime.elapsed_ms = 0.0f;
-                    runtime.phase = 1U;
-                    if (cfg.alternate_sign)
-                    {
-                        runtime.output_positive = !runtime.output_positive;
-                    }
-                }
-            }
-            else if (runtime.phase == 2U)
-            {
-                if (cfg.auto_restart)
-                {
-                    runtime.initialized = false;
-                    return resolveSingleWheelDriveStepTargetRpm(wheel_idx, fallback_target_rpm);
-                }
-                return 0.0f;
-            }
-
-            debug_drive_load_trace_.step_phase = static_cast<f32>(runtime.phase);
-            debug_drive_load_trace_.stepgen_enable = 1.0f;
-
-            if (runtime.phase != 1U)
-            {
-                return 0.0f;
-            }
-
-            const f32 direction = runtime.output_positive ? 1.0f : -1.0f;
-            return direction * fabsf(cfg.step_target_rpm);
-        }
-
         Chassis::DirectActuatorCommandSnapshot Chassis::resolveSingleWheelCommand(u8 wheel_idx)
         {
             syncSingleWheelCommandTemplates();
@@ -2426,7 +2278,6 @@ namespace jia
             command.steer_command_value = shapeSingleWheelSteerCommand(wheel_idx, debug_control_.single_wheel.steer, command.steer_command_value);
             if (sanitizeDirectDriveCommandType(command.drive_command_type) == DirectDriveCommandType::kRpm)
             {
-                command.drive_command_value = resolveSingleWheelDriveStepTargetRpm(wheel_idx, command.drive_command_value);
                 const f32 shaped_omega_rad_s =
                     shapeSingleWheelDriveOmegaRadS(wheel_idx,
                                                    debug_control_.single_wheel.drive,
@@ -2436,7 +2287,6 @@ namespace jia
             else
             {
                 resetSingleWheelAxisPlannerRuntime(single_wheel_drive_planner_state_);
-                drive_step_generator_runtime_[wheel_idx] = {};
             }
 
             debug_control_.single_wheel.steer.command_value = command.steer_command_value;
@@ -2558,21 +2408,11 @@ namespace jia
                                                       bool entering_drive_zero_stop,
                                                       bool leaving_drive_zero_stop)
         {
-            // applyModuleCommands() 负责整车级“这拍该不该让 drive 继续走速度闭环”，
-            // 这里负责单轮级“既然允许进入 drive 执行链路，最终以什么方式把命令落到电机接口”。
-            // 因而 zero-stop active 只表示已经切到 near-zero 收尾模式；
-            // 真正是 brake、零电流收尾，还是正常 RPM/PID-current 路径，都在这一层按轮细化。
+            // ??????? drive ????? zero-stop assist?
+            // ???? virtual load / step generator ?????????????? PID bias current?
+            (void)single_wheel_idx;
+            (void)chassis_motion_blocked;
             VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h);
-            f32 drive_bias_current_mA = 0.0f;
-#if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
-            f32 j_term_mA = 0.0f;
-            f32 b_term_mA = 0.0f;
-            f32 tc_term_mA = 0.0f;
-            f32 alpha_est_rad_s2 = 0.0f;
-#endif
-#if JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
-            f32 alpha_dt_s = period_;
-#endif
             const bool can_use_vesc_drive_assist =
                 allow_drive_position_loop &&
                 (drive_vesc != nullptr) &&
@@ -2581,70 +2421,14 @@ namespace jia
                 can_use_vesc_drive_assist &&
                 (drive_vesc->getRpmControlMode() == VESC_RPM_CONTROL_PID_CURRENT);
 
-#if JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
-            const bool can_inject_virtual_load =
-                allow_drive_position_loop &&
-                (drive_vesc != nullptr) &&
-                (wheel_idx == single_wheel_idx) &&
-                single_wheel_isolation_active &&
-                (debug_control_.single_wheel.drive.command_type_raw == static_cast<u8>(DirectDriveCommandType::kRpm)) &&
-                (drive_vesc->getRpmControlMode() == VESC_RPM_CONTROL_PID_CURRENT) &&
-                debug_drive_virtual_load_[wheel_idx].enable &&
-                !current_mode_flag_.is_wheel_torque_free &&
-                !input_target_data_.zero_current_all &&
-                !chassis_motion_blocked;
-#else
-            const bool can_inject_virtual_load = false;
-#endif
-
-#if JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
-            if (can_reset_local_speed_pid && leaving_drive_zero_stop)
-            {
-                // 从 zero-stop 恢复正常 RPM 闭环前，再清一次速度环状态，避免停前残留被带进下一次起步。
-                drive_vesc->reset_speed_pid_state();
-            }
-#endif
-
-#if JIA_CHASSIS_ENABLE_DRIVE_VIRTUAL_LOAD
-            if (!drive_zero_stop_active && can_inject_virtual_load)
-            {
-                const DebugDriveVirtualLoadConfig &load_cfg = debug_drive_virtual_load_[wheel_idx];
-                const f32 omega_rad_s = wheel.corrected_drive_omega_rad_s;
-                const u32 feedback_sample_ms = drive_feedback_sample_ms_[wheel_idx];
-                const u32 last_feedback_sample_ms = last_drive_feedback_sample_ms_[wheel_idx];
-                if ((feedback_sample_ms > last_feedback_sample_ms) && (last_feedback_sample_ms != 0U))
-                {
-                    const u32 delta_ms = feedback_sample_ms - last_feedback_sample_ms;
-                    const f32 measured_dt_s = static_cast<f32>(delta_ms) * 1.0e-3f;
-                    if ((delta_ms >= 1U) && (delta_ms <= 100U))
-                    {
-                        alpha_dt_s = measured_dt_s;
-                    }
-                }
-
-                alpha_est_rad_s2 = (omega_rad_s - last_drive_feedback_omega_rad_s_[wheel_idx]) / alpha_dt_s;
-                j_term_mA = -load_cfg.delta_j_current_per_rad_s2 * alpha_est_rad_s2;
-                b_term_mA = -load_cfg.delta_b_current_per_rad_s * omega_rad_s;
-
-                f32 sign_ref = 0.0f;
-                if (fabsf(omega_rad_s) >= fabsf(load_cfg.coulomb_sign_vel_eps_rad_s))
-                {
-                    sign_ref = (omega_rad_s > 0.0f) ? 1.0f : ((omega_rad_s < 0.0f) ? -1.0f : 0.0f);
-                }
-                else if (fabsf(delivered_drive_target_rad_s) >= 1.0e-6f)
-                {
-                    sign_ref = (delivered_drive_target_rad_s > 0.0f) ? 1.0f : -1.0f;
-                }
-                tc_term_mA = -load_cfg.coulomb_current_mA * sign_ref;
-                drive_bias_current_mA = clampValue(j_term_mA + b_term_mA + tc_term_mA,
-                                                   -fabsf(load_cfg.bias_current_limit_mA),
-                                                   fabsf(load_cfg.bias_current_limit_mA));
-            }
-#endif
-
             if (drive_vesc != nullptr)
             {
-                drive_vesc->setSpeedPidCurrentBias(drive_bias_current_mA);
+                drive_vesc->setSpeedPidCurrentBias(0.0f);
+            }
+
+            if (can_reset_local_speed_pid && leaving_drive_zero_stop)
+            {
+                drive_vesc->reset_speed_pid_state();
             }
 
             const bool can_apply_zero_stop_assist =
@@ -2654,11 +2438,6 @@ namespace jia
 
             if (can_apply_zero_stop_assist)
             {
-                // zero-stop 的模式层只看“目标速度”：
-                // applyModuleCommands() 已经用目标 near-zero enter/exit 决定 drive_zero_stop_active_。
-                // 这里处理的是每个 drive 末端的收尾层：active 期间先 brake，把轮子压到静止；
-                // 如果允许 settle 零电流收尾，再用实际 residual 复用 NearZero enter/exit 做滞回。
-                // 这样目标门不会被反馈噪声踢出，但轮子确实停稳后也不必一直吃 brake 电流。
                 const f32 residual_speed_m_s = fabsf(wheel.corrected_drive_omega_rad_s) * runtime_strategy_cfg_.wheel_radius_m_;
                 const bool was_brake_active = drive_zero_stop_brake_active_[wheel_idx];
                 const bool yaw_lock_release_hold_active =
@@ -2674,28 +2453,19 @@ namespace jia
                 }
                 else if (entering_drive_zero_stop)
                 {
-                    // 刚进入 zero-stop 的第一拍先 brake，一方面清掉速度环旧状态，一方面避免反馈刚好贴近 0 时漏掉主动刹停。
                     drive_zero_stop_brake_active_[wheel_idx] = true;
                 }
                 else if (drive_zero_stop_brake_active_[wheel_idx])
                 {
-                    // 仍在 brake 时，必须 residual 进入 NearZero enter 才认为“已经刹稳”，切到零电流。
                     drive_zero_stop_brake_active_[wheel_idx] = residual_speed_m_s > getNearZeroEnterSpeedMps();
                 }
                 else
                 {
-                    // 已经零电流收尾后，只有 residual 离开 NearZero exit 才重新 brake，避免 enter 附近来回抖动。
                     drive_zero_stop_brake_active_[wheel_idx] = residual_speed_m_s > getNearZeroExitSpeedMps();
                 }
 
-                const bool need_reset_speed_pid_state =
-                    can_reset_local_speed_pid &&
-                    entering_drive_zero_stop;
-
-                if (need_reset_speed_pid_state)
+                if (can_reset_local_speed_pid && entering_drive_zero_stop)
                 {
-                    // 进入 zero-stop brake 前清一次本地速度环状态，避免旧速度环尾巴叠到刹车收尾里。
-                    // 退出时的清理在本函数前部 leaving_drive_zero_stop 分支完成。
                     drive_vesc->reset_speed_pid_state();
                 }
 
@@ -2743,34 +2513,13 @@ namespace jia
             }
 
 #if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
-            if (wheel_idx == static_cast<u8>(debug_drive_load_trace_.observe_wheel_idx))
+            if (wheel_idx == static_cast<u8>(debug_drive_zero_stop_brake_trace_.observe_wheel_idx))
             {
                 const f32 trace_target_rad_s = can_apply_zero_stop_assist ? 0.0f : delivered_drive_target_rad_s;
-                debug_drive_load_trace_.target_rpm = radsToRpmF32(trace_target_rad_s);
-                debug_drive_load_trace_.feedback_rpm = radsToRpmF32(wheel.corrected_drive_omega_rad_s);
-                debug_drive_load_trace_.omega_rad_s = wheel.corrected_drive_omega_rad_s;
-                debug_drive_load_trace_.alpha_est_rad_s2 = alpha_est_rad_s2;
-                debug_drive_load_trace_.j_term_mA = j_term_mA;
-                debug_drive_load_trace_.b_term_mA = b_term_mA;
-                debug_drive_load_trace_.tc_term_mA = tc_term_mA;
-                debug_drive_load_trace_.load_bias_current_mA = drive_bias_current_mA;
-                debug_drive_load_trace_.virtual_load_enable = (!drive_zero_stop_active && can_inject_virtual_load) ? 1.0f : 0.0f;
-                if (
-#if JIA_CHASSIS_ENABLE_DRIVE_STEP_GENERATOR
-                    debug_drive_step_generator_[wheel_idx].enable
-#else
-                    false
-#endif
-                )
-                {
-                    debug_drive_load_trace_.stepgen_enable = 1.0f;
-                }
-
-                if (drive_vesc != nullptr)
-                {
-                    debug_drive_load_trace_.pid_current_mA = drive_vesc->getSpeedPidRawOutputCurrent();
-                    debug_drive_load_trace_.total_current_cmd_mA = drive_vesc->getSpeedPidTotalOutputCurrent();
-                }
+                // 常规 drive 执行路径每拍都在这里刷新观察轮缓存，
+                // 让 zero-stop-brake justfloat 输出读到的是同一拍的目标/反馈 RPM。
+                debug_drive_zero_stop_brake_trace_.target_rpm = radsToRpmF32(trace_target_rad_s);
+                debug_drive_zero_stop_brake_trace_.feedback_rpm = radsToRpmF32(wheel.corrected_drive_omega_rad_s);
             }
 #endif
 
@@ -2834,17 +2583,15 @@ namespace jia
             const DirectActuatorCommandSnapshot command = resolveSingleWheelCommand(wheel_idx);
             applyResolvedSteerCommand(target_wheel, wheel_idx, command, debug_control_.single_wheel.steer.enable && !debug_control_.single_wheel.estop);
             applyResolvedDriveCommand(target_wheel, wheel_idx, command, debug_control_.single_wheel.drive.enable && !debug_control_.single_wheel.estop);
-            const f32 preserved_step_phase = debug_drive_load_trace_.step_phase;
-            const f32 preserved_stepgen_enable = debug_drive_load_trace_.stepgen_enable;
-            debug_drive_load_trace_ = {};
-            debug_drive_load_trace_.observe_wheel_idx = static_cast<f32>((debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U);
-            const bool observe_this_wheel = (wheel_idx == static_cast<u8>(debug_drive_load_trace_.observe_wheel_idx));
+            // mode30 单轮直控也复用同一份 zero-stop-brake trace 缓存，
+            // 这样发送侧不用区分“常规驱动路径”还是“单轮直控路径”。
+            debug_drive_zero_stop_brake_trace_ = {};
+            debug_drive_zero_stop_brake_trace_.observe_wheel_idx = static_cast<f32>((debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U);
+            const bool observe_this_wheel = (wheel_idx == static_cast<u8>(debug_drive_zero_stop_brake_trace_.observe_wheel_idx));
             if (observe_this_wheel)
             {
-                debug_drive_load_trace_.target_rpm = command.applied_drive_cmd;
-                debug_drive_load_trace_.feedback_rpm = radsToRpmF32(target_wheel.corrected_drive_omega_rad_s);
-                debug_drive_load_trace_.step_phase = preserved_step_phase;
-                debug_drive_load_trace_.stepgen_enable = (preserved_stepgen_enable > 0.5f || debug_drive_step_generator_[wheel_idx].enable) ? 1.0f : 0.0f;
+                debug_drive_zero_stop_brake_trace_.target_rpm = command.applied_drive_cmd;
+                debug_drive_zero_stop_brake_trace_.feedback_rpm = radsToRpmF32(target_wheel.corrected_drive_omega_rad_s);
             }
 
             if (command.drive_command_type == static_cast<u8>(DirectDriveCommandType::kRpm))
@@ -4334,8 +4081,10 @@ namespace jia
             const u8 single_wheel_idx = 0U;
 #endif
 #if JIA_CHASSIS_ENABLE_DEBUG_OUTPUT
-            debug_drive_load_trace_ = {};
-            debug_drive_load_trace_.observe_wheel_idx = static_cast<f32>((debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U);
+            // 每轮处理前先按当前观察轮初始化 zero-stop-brake trace 缓存，
+            // 后续常规路径或 mode30 路径会在各自命中的那一轮上补齐目标/反馈 RPM。
+            debug_drive_zero_stop_brake_trace_ = {};
+            debug_drive_zero_stop_brake_trace_.observe_wheel_idx = static_cast<f32>((debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U);
 #endif
             bool steer_fault_any_active = false;
             for (u8 i = 0; i < 4; ++i)
@@ -5502,56 +5251,6 @@ namespace jia
             debug_uart_.printf_DMA_JustFloat(payload, 15);
         }
 
-        void Chassis::emitUart8VofaDrivePidLoadTrace()
-        {
-            // 这是单轮 drive PID / 虚拟负载调参与 step generator 观察口：
-            // 主要字段来自 debug_drive_load_trace_ 这份调试缓存，末尾少量字段再补实时电机 getter，
-            // 因而 payload 是“调试聚合量 + 原始反馈量”的混合视图，而不是单一来源镜像。
-            if (!debug_output_.output_enable ||
-                sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
-                sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kDrivePidLoadTune)
-            {
-                return;
-            }
-
-            const u32 period_ms = (debug_output_.justfloat.drive_pid_load.period_ms > 0U) ? debug_output_.justfloat.drive_pid_load.period_ms : 1U;
-            if ((time_ms_ - debug_output_runtime_.justfloat.drive_pid_load.last_ms) < period_ms)
-            {
-                return;
-            }
-
-            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
-            {
-                return;
-            }
-
-            debug_output_runtime_.justfloat.drive_pid_load.last_ms = time_ms_;
-
-            float payload[16] = {0.0f};
-            payload[0] = static_cast<f32>(time_ms_) * 0.001f;
-            payload[1] = debug_drive_load_trace_.observe_wheel_idx;
-            payload[2] = debug_drive_load_trace_.target_rpm;
-            payload[3] = debug_drive_load_trace_.feedback_rpm;
-            payload[4] = debug_drive_load_trace_.total_current_cmd_mA;
-            payload[5] = debug_drive_load_trace_.pid_current_mA;
-            payload[6] = debug_drive_load_trace_.load_bias_current_mA;
-            payload[7] = debug_drive_load_trace_.j_term_mA;
-            payload[8] = debug_drive_load_trace_.b_term_mA;
-            payload[9] = debug_drive_load_trace_.tc_term_mA;
-            payload[10] = debug_drive_load_trace_.omega_rad_s;
-            payload[11] = debug_drive_load_trace_.alpha_est_rad_s2;
-            payload[12] = debug_drive_load_trace_.step_phase;
-            payload[13] = debug_drive_load_trace_.virtual_load_enable;
-            payload[14] = debug_drive_load_trace_.stepgen_enable;
-            payload[15] = 0.0f;
-            const u8 observe_wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
-            if (wheel_config_[observe_wheel_idx].drive_motor_h != nullptr)
-            {
-                payload[15] = wheel_config_[observe_wheel_idx].drive_motor_h->getCurrent();
-            }
-            debug_uart_.printf_DMA_JustFloat(payload, 16);
-        }
-
         void Chassis::emitUart8VofaDriveZeroStopBrakeTrace()
         {
             // 这一路 trace 专门服务 zero-stop / brake 行为观察：
@@ -5586,10 +5285,11 @@ namespace jia
             float payload[12] = {0.0f};
             payload[0] = static_cast<f32>(time_ms_) * 0.001f;
             payload[1] = static_cast<f32>(observe_wheel_idx);
-            // 速度口径继续复用现有 drive load trace，避免另起一套调试语义。
-            payload[2] = debug_drive_load_trace_.target_rpm;
-            payload[2] = debug_drive_load_trace_.target_rpm;
-            payload[3] = debug_drive_load_trace_.feedback_rpm;
+            // payload[2]/[3] 直接消费共享缓存里的目标/反馈 RPM；
+            // 这些值已在前面的 drive 执行路径或 mode30 单轮直控路径里按观察轮写好。
+            payload[2] = debug_drive_zero_stop_brake_trace_.target_rpm;
+            payload[2] = debug_drive_zero_stop_brake_trace_.target_rpm;
+            payload[3] = debug_drive_zero_stop_brake_trace_.feedback_rpm;
             payload[4] = drive_zero_stop_brake_active_[observe_wheel_idx] ? 1.0f : 0.0f;
             payload[5] = (drive_motor != nullptr) ? drive_motor->getTargetBrakeCurrent() : 0.0f;
             payload[6] = ((drive_motor != nullptr) && drive_motor->isBrakeCommandActive()) ? 1.0f : 0.0f;
@@ -5601,161 +5301,6 @@ namespace jia
             debug_uart_.printf_DMA_JustFloat(payload, 12);
         }
 
-#if JIA_CHASSIS_ENABLE_BINARY_TELEMETRY
-        void Chassis::emitUart8SwerveTelemetryV2(bool all_homed)
-        {
-            // 这里发送的是一帧定长 binary telemetry：
-            // header 部分包含 magic/version/flags/seq/time/msg_type/payload_len；
-            // payload 部分按固定顺序包含 chassis target、chassis actual，以及 4 个轮子的 target/actual steer/drive 与速度分量。
-            // 这层只负责打包和发送，不改变 planned/current 数据语义。
-            // 对上位机来说，payload 顺序和字段口径就是协议契约；这里若调整顺序或来源，解析端也必须同步升级。
-            // 其中：
-            // - target chassis / target wheels 主要来自 planned_data_ 口径；
-            // - actual chassis / actual wheels 主要来自 current_data_ 与实时反馈；
-            // - yaw actual 单独直接取 IMU 当前值 input_hwt_rot_z_。
-            if (!debug_output_.output_enable || sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kBinary)
-            {
-                return;
-            }
-
-            const u8 divider = (debug_output_.binary.telemetry.sample_divider == 0U) ? 1U : debug_output_.binary.telemetry.sample_divider;
-            debug_output_runtime_.binary.telemetry.cycle_counter = static_cast<u8>(debug_output_runtime_.binary.telemetry.cycle_counter + 1U);
-            if (debug_output_runtime_.binary.telemetry.cycle_counter < divider)
-            {
-                return;
-            }
-            debug_output_runtime_.binary.telemetry.cycle_counter = 0U;
-
-            const u32 period_ms = (debug_output_.binary.telemetry.period_ms > 0U) ? debug_output_.binary.telemetry.period_ms : 8U;
-            if ((time_ms_ - debug_output_runtime_.binary.telemetry.last_ms) < period_ms)
-            {
-                return;
-            }
-
-            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
-            {
-                return;
-            }
-
-            u8 *const frame = swerve_telemetry_tx_frame_buf;
-            u16 cursor = 0U;
-
-            packU16LE(&frame[cursor], kSwerveTelemetryMagic);
-            cursor += 2U;
-            frame[cursor++] = kSwerveTelemetryVersion;
-            const u8 flags = static_cast<u8>(kSwerveTelemetryFlagsCrcPayloadOnly |
-                                             (all_homed ? kSwerveTelemetryFlagsAllHomed : 0U) |
-                                             ((debug_output_.binary.telemetry.profile_id & 0x0FU) << 4U));
-            frame[cursor++] = flags;
-            packU16LE(&frame[cursor], debug_output_runtime_.binary.telemetry.seq);
-            cursor += 2U;
-            packU64LE(&frame[cursor], RtosTimeStampUs64::getTimeUs());
-            cursor += 8U;
-            packU16LE(&frame[cursor], kSwerveTelemetryMsgTypeMode5);
-            cursor += 2U;
-            const u16 payload_len_pos = cursor;
-            cursor += 2U;
-
-            const u16 payload_start = cursor;
-            const u16 payload_capacity = kSwerveTelemetryPayloadBytes;
-            const auto canPackF32 = [&]() -> bool {
-                return static_cast<u16>(cursor - payload_start) <= static_cast<u16>(payload_capacity - sizeof(f32));
-            };
-            const auto packPayloadF32 = [&](f32 value) -> bool {
-                if (!canPackF32())
-                {
-                    return false;
-                }
-                packF32LE(&frame[cursor], value);
-                cursor += sizeof(f32);
-                return true;
-            };
-
-            const auto packChassis4f = [&](f32 vx, f32 vy, f32 wz, f32 yaw) -> bool {
-                return packPayloadF32(vx) &&
-                       packPayloadF32(vy) &&
-                       packPayloadF32(wz) &&
-                       packPayloadF32(yaw);
-            };
-
-            TelemetryChassisState target_state{};
-            target_state.vel_x = planned_data_.vel_x;
-            target_state.vel_y = planned_data_.vel_y;
-            target_state.omega_z = planned_data_.omega_z;
-            target_state.yaw_rad = planned_data_.rot_z;
-
-            TelemetryChassisState actual_state{};
-            actual_state.vel_x = current_data_.vel_x;
-            actual_state.vel_y = current_data_.vel_y;
-            actual_state.omega_z = current_data_.omega_z;
-            actual_state.yaw_rad = input_hwt_rot_z_;
-
-            TelemetryWheelPose wheel_pose[kTelemetryWheelCount]{};
-            for (u8 i = 0U; i < kTelemetryWheelCount; ++i)
-            {
-                wheel_pose[i].pos_x_m = wheel_config_[i].pos_x_m;
-                wheel_pose[i].pos_y_m = wheel_config_[i].pos_y_m;
-            }
-
-            const TelemetrySnapshot snapshot = makeTelemetrySnapshot(all_homed,
-                                                                    target_state,
-                                                                    actual_state,
-                                                                    wheel_pose,
-                                                                    planned_data_.drive_omega_rad_s,
-                                                                    current_data_.drive_omega_rad_s,
-                                                                    planned_data_.steer_angle_oa_rad,
-                                                                    current_data_.steer_angle_oa_rad);
-            // 从这一行开始，后续 pack 只消费 snapshot 这份聚合视图。
-            // 这样 text/binary telemetry 与 host 观察看到的都是同一套 target/actual 口径，而不是各自重拼一遍来源。
-
-            // chassis 区先发两组 4f：target = planned_data_ 语义，actual = current_data_ + 当前 IMU yaw。
-            if (!packChassis4f(snapshot.target.vel_x, snapshot.target.vel_y, snapshot.target.omega_z, snapshot.target.yaw_rad) ||
-                !packChassis4f(snapshot.actual.vel_x, snapshot.actual.vel_y, snapshot.actual.omega_z, snapshot.actual.yaw_rad))
-            {
-                return;
-            }
-
-            for (u8 i = 0U; i < kSwerveTelemetryWheelCount; ++i)
-            {
-                const TelemetryWheelState &wheel = snapshot.wheels[i];
-                // 每轮 payload 固定为 8 个 float：
-                // target/actual drive、target/actual steer、target/actual 平面速度分量。
-                // 其中速度分量属于 chassis 几何展开后的观测派生量，不是底层电机接口的原始直接回读。
-
-                if (!packPayloadF32(wheel.target_drive_omega_rad_s) ||
-                    !packPayloadF32(wheel.actual_drive_omega_rad_s) ||
-                    !packPayloadF32(wheel.target_steer_oa_rad) ||
-                    !packPayloadF32(wheel.actual_steer_oa_rad) ||
-                    !packPayloadF32(wheel.target_velocity_x_m_s) ||
-                    !packPayloadF32(wheel.target_velocity_y_m_s) ||
-                    !packPayloadF32(wheel.actual_velocity_x_m_s) ||
-                    !packPayloadF32(wheel.actual_velocity_y_m_s))
-                {
-                    return;
-                }
-            }
-
-            const u16 payload_len = static_cast<u16>(cursor - payload_start);
-            if (payload_len != kSwerveTelemetryPayloadBytes)
-            {
-                return;
-            }
-            // V2 协议把 payload_len 回填到帧头，并且 CRC 只覆盖 payload 区，不覆盖 header 和尾部 CRC 自身。
-            packU16LE(&frame[payload_len_pos], payload_len);
-
-            const u16 crc = crc16CcittFalse(&frame[payload_start], payload_len);
-            packU16LE(&frame[cursor], crc);
-            cursor += 2U;
-
-            if (HAL_UART_Transmit_DMA(&huart8, frame, cursor) != HAL_OK)
-            {
-                return;
-            }
-
-            debug_output_runtime_.binary.telemetry.last_ms = time_ms_;
-            debug_output_runtime_.binary.telemetry.seq = static_cast<u16>(debug_output_runtime_.binary.telemetry.seq + 1U);
-        }
-#endif
 
         void Chassis::emitDebugOutputByMode(bool all_homed)
         {
@@ -5796,9 +5341,6 @@ namespace jia
                     }
                     break;
                 }
-                case JustFloatProfile::kDrivePidLoadTune:
-                    emitUart8VofaDrivePidLoadTrace();
-                    break;
                 case JustFloatProfile::kDriveZeroStopBrakeTrace:
                     emitUart8VofaDriveZeroStopBrakeTrace();
                     break;
@@ -5807,9 +5349,6 @@ namespace jia
                     emitUart8VofaYawPidTrace();
                     break;
                 }
-                break;
-            case DebugOutputFamily::kBinary:
-                emitUart8SwerveTelemetryV2(all_homed);
                 break;
             case DebugOutputFamily::kOff:
             default:
