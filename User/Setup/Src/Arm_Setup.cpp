@@ -295,14 +295,29 @@ bool ArmSetup::manual_putdown()
     this->set_LaunchHeight(init_data_.putdown_height_);
     this->set_RotateAngle(90.0f);
 
+    static bool is_put = false;
+    static float putdown_start_time = 0.0f;
+
     if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.008f 
-        && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f)
+        && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f && !is_put)
     {
         this->set_StretchLength(init_data_.max_stretchLength_);
         if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.max_stretchLength_) < 0.01f
             && arm_ctrlStatus.can_putdown)
         {
             this->setSuckerStatus(Sucker_Status_E::STOP);
+            is_put = true;
+            putdown_start_time = TimeStamp::getInstance().getSeconds();
+        }
+    }
+
+    if(is_put && TimeStamp::getInstance().getSeconds() - putdown_start_time > 0.5f && putdown_start_time > 0.5f)
+    {
+        this->set_StretchLength(0.0f);
+        if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - 0.0f) < 0.01f)
+        {
+            is_put = false;
+            putdown_start_time = 0.0f;
             return true;
         }
     }
@@ -1524,7 +1539,7 @@ void ArmSetup::debug()
 Arm_InitData_S arm_initData = {
     .max_launchHeight_ = 0.39f,
     .max_launchCatch_Height_ = 0.32f,
-    .max_stretchLength_ = 0.1358f,
+    .max_stretchLength_ = 0.1288f,
     .arm_length_ = 0.6f,
     .end_link_length_ = 0.08f,
 
