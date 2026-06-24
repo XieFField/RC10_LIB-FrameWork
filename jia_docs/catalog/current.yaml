@@ -1,25 +1,22 @@
 current_branch: jia/develop_1
-current_line: rc10_path_yaw_homing_build_after_2026_06_09
+current_line: rc10_chassis_airjoy_homing_debug_after_2026_06_24
 summary:
-  - AAA-Path 路径规划正式版已合入当前主线，主要触点为 APP_Path、APP_Speedplanner 与 omni_chassisSetup
-  - mode30_mode31_mode32 已统一到当前底盘调试主线
-  - drive 轮句柄已收窄为 VESC_Motor*，drive PID 调参边界不再回灌到 Motor_Base
-  - VESC 本地 PID 速度闭环默认在工程初始化层启用
-  - SingleWheelTrace 已扩展为 steer_only / drive_only / steer_and_drive 三类 payload
-  - chassis_semantics 已拆成 doctest runner、共享 harness 与 7 个行为域分片
-  - zero-stop 当前按目标门控和 residual 收尾两层职责理解，旧 residual 兼容字段不再作为当前口径
-  - X-Park 静止保持锁存后退出主要看 target / command exit 门
-  - debug9 统一舵向/驱动模式会释放 X-Park pose 与零电流保持覆盖，恢复舵角目标下发
-  - chassis 默认固件档为 RUNTIME_MIN，host 语义测试显式切到 FULL_DEBUG
-  - yaw lock 已修复跨模式旧锁角复用、目标规划/PID 输入、目标限速和减速阶段先刹再锁
-  - homing 三边沿确认误校准已修复，并由 host harness 与 steer_fault_homing_recovery 分片覆盖
-  - 调试开关已收口到关闭调试模式，02dbf00a 已清理合并残留恢复 MDK 编译
+  - 2026-06-09 的 AAA-Path、yaw lock、homing 三边沿确认、debug 状态收口和 MDK 编译恢复主线仍然有效
+  - 底盘线程内部 airjoy_data_ 已切换为 communication::RC10_AirJoy_Data_S
+  - runThread() 当前通过 communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_) 主动拉取 AirJoy 数据
+  - 首次上电整车 homing 延时已经落地到 first_boot_homing_delay_ 结构体，并以 pending / active / elapsed_ms 作为统一观察口径
+  - debug 摇杆输入已增加死区重映射，整车 debug 接管链按 translation_input_deadzone / rotation_input_deadzone 分组，mode30 单轮 debug 继续使用 single_wheel.input_deadzone
+  - debug deadzone 只作用于 debug 链，不影响正常非 debug 整车控制链路
+  - 当前 chassis 默认固件档为 RUNTIME_MIN
+  - 当前 JIA_CHASSIS_HOMING_SEARCH_RPM 默认值为 100.0f
+  - 当前 JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS 默认值为 500U
+  - chassis_semantics host 主入口最近已知状态为 run_main.ps1 通过，run_slim_smoke.ps1 通过且 sizeof(Chassis)=2736
 latest_handoff:
-  primary: jia_docs/handoff/2026-06/ai_handoff_2026-06-09_rc10_path_yaw_homing_build_sync.md
+  primary: jia_docs/handoff/2026-06/ai_handoff_2026-06-24_rc10_chassis_airjoy_homing_debug_context_sync.md
   supporting:
+    - jia_docs/handoff/2026-06/ai_handoff_2026-06-09_rc10_path_yaw_homing_build_sync.md
     - jia_docs/handoff/2026-06/ai_handoff_2026-06-05_rc10_chassis_doctest_zero_stop_sync.md
     - jia_docs/handoff/2026-05/ai_handoff_2026-05-31_rc10_wait_1_7_7_1_6_1_merge.md
-    - jia_docs/handoff/2026-05/ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md
     - jia_docs/handoff/2026-05/ai_handoff_2026-05-26_1124_singlewheeltrace_payload_semantics.md
 recommended_reading_order:
   - jia_docs/active/overview.md
@@ -36,31 +33,10 @@ recommended_verification:
     - jia_docs/tests/tdd/chassis_semantics/run_test.ps1
     - jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
     - jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
-known_baseline_status:
-  - target: jia_docs/tests/run_tests.ps1
-    status: unified_entrypoint
-    detail: 测试重构后的统一入口；默认覆盖当前 active host_cpp smoke 套件，并可按需调度 extended 与 Python 语义回归。
-  - target: jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
-    status: full_debug_doctest_entrypoint
-    detail: 当前 chassis_semantics 主入口，使用 FULL_DEBUG 编译 doctest runner、harness 与行为域分片；debug9/X-Park 等调试语义回归放在这里。
-  - target: jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1
-    status: runtime_min_smoke
-    detail: RUNTIME_MIN 极限运行固件档 smoke；只验证编译、基础实例化和 Chassis 对象体积下降，不承载调试语义回归。
-  - target: jia_docs/tests/tdd/chassis_semantics/run_test.ps1
-    status: compatibility_wrapper
-    detail: 旧路径兼容入口；现在通过 compat_wrapper 转发到 `host_cpp.chassis_semantics.main`，新增测试不要优先使用。
-  - target: jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
-    status: compatibility_wrapper
-    detail: 旧路径兼容入口；现在通过 compat_wrapper 转发到 `host_cpp.chassis_semantics.pid_reconnect`。
-  - target: jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
-    status: active_specialty_entrypoint
-    detail: VESC 刹车语义专项入口；旧 `legacy_ai_tests/vesc_brake/run_test.ps1` 仅作为兼容入口保留。
-  - target: jia_docs/tests/host_cpp/swerve_core/run_test.ps1
-    status: known_xfail_missing_source
-    detail: 当前仓库已无 `RC10_LIB/Module/Src/Module_ChassisSwerve.cpp` 与对应头文件；该历史宿主对照保留在 registry 中，但不再视作当前 active pass 套件。
 open_followups:
   - 路径规划正式版合入后的 MDK 工程、烧录和实车路径复核
-  - 测试对外接口
-  - 结合 homing 三边沿确认修复完成舵轮校准调用接口的实车确认
+  - 结合 first_boot_homing_delay_ 和 homing_search_rpm=100.0f 做首次上电舵轮校准的板上确认
+  - 继续确认 AirJoy/Lora 输入链在底盘线程中的真实板上行为
+  - 继续确认整车 debug deadzone 和 mode30 单轮 deadzone 的手感与语义
   - 继续联调 mode30 单轮 RPM + VESC_RPM_CONTROL_PID_CURRENT
-  - 上板确认 yaw lock 先刹再锁、zero-stop brake trace、drive-load trace、X-Park 零电流释放与静止 fault latch/rehome 链路
+  - 上板确认 yaw lock 先刹再锁、zero-stop brake trace、X-Park 零电流释放与静止 fault latch/rehome 链路

@@ -1194,4 +1194,122 @@ TEST_CASE("testRecoveryRehomeTimeoutRelatchesFault")
     }
 }
 
+TEST_CASE("testHomingFaultAutoRetryReentersSearchAfterIntervalWithoutResettingOtherWheels")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.wheel_config_[0].homing_state = Chassis::HomingState::kFault;
+    chassis.wheel_config_[0].homing_zero_valid = false;
+    chassis.wheel_config_[0].homing_elapsed_s = 3.2f;
+    chassis.wheel_config_[0].homing_search_timeout_armed = true;
+    chassis.wheel_config_[0].homing_last_sensor_active = true;
+    chassis.wheel_config_[0].homing_last_edge_is_falling = true;
+    chassis.wheel_config_[0].homing_edge_confirm_count = 2U;
+    chassis.wheel_config_[0].homing_last_confirm_edge_is_falling = true;
+    chassis.wheel_config_[0].homing_last_confirm_signed_local_rad = 1.2f;
+    chassis.wheel_config_[0].homing_candidate_zero_offset_sum_rad = 0.8f;
+    chassis.wheel_config_[0].homing_align_command_armed = true;
+    chassis.wheel_config_[1].homing_state = Chassis::HomingState::kReady;
+    chassis.wheel_config_[1].homing_zero_valid = true;
+
+    for (unsigned int cycle = 0; cycle < (JIA_CHASSIS_HOMING_AUTO_RETRY_INTERVAL_MS / Chassis::period_ms_) - 1U; ++cycle)
+    {
+        runHostControlCycle(chassis);
+        EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kFault);
+    }
+
+    runHostControlCycle(chassis);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_auto_retry_attempt_count == 1U);
+    EXPECT_NEAR(chassis.wheel_config_[0].homing_elapsed_s, 0.0f, 1.0e-6f);
+    EXPECT_TRUE(!chassis.wheel_config_[0].homing_search_timeout_armed);
+    EXPECT_TRUE(!chassis.wheel_config_[0].homing_last_sensor_active);
+    EXPECT_TRUE(!chassis.wheel_config_[0].homing_last_edge_is_falling);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_edge_confirm_count == 0U);
+    EXPECT_TRUE(!chassis.wheel_config_[0].homing_last_confirm_edge_is_falling);
+    EXPECT_NEAR(chassis.wheel_config_[0].homing_last_confirm_signed_local_rad, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.wheel_config_[0].homing_candidate_zero_offset_sum_rad, 0.0f, 1.0e-6f);
+    EXPECT_TRUE(!chassis.wheel_config_[0].homing_zero_valid);
+    EXPECT_TRUE(!chassis.wheel_config_[0].homing_align_command_armed);
+    EXPECT_TRUE(chassis.wheel_config_[1].homing_state == Chassis::HomingState::kReady);
+}
+
+TEST_CASE("testRecoveryRehomeFaultAutoRetryReentersSearchAndClearsLegacyRequest")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.wheel_config_[3].homing_state = Chassis::HomingState::kFault;
+    chassis.wheel_config_[3].steer_fault_state = Chassis::SteerFaultState::kRecovering;
+    chassis.wheel_config_[3].steer_fault_rehome_request = true;
+
+    for (unsigned int cycle = 0; cycle < JIA_CHASSIS_HOMING_AUTO_RETRY_INTERVAL_MS / Chassis::period_ms_; ++cycle)
+    {
+        runHostControlCycle(chassis);
+    }
+
+    EXPECT_TRUE(chassis.wheel_config_[3].homing_state == Chassis::HomingState::kSearch);
+    EXPECT_TRUE(chassis.wheel_config_[3].homing_auto_retry_attempt_count == 1U);
+    EXPECT_TRUE(!chassis.wheel_config_[3].steer_fault_rehome_request);
+    EXPECT_TRUE(chassis.wheel_config_[3].steer_fault_state == Chassis::SteerFaultState::kRecovering);
+}
+
+TEST_CASE("testHomingFaultAutoRetryStopsAfterConfiguredMaxAttempts")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.wheel_config_[2].homing_state = Chassis::HomingState::kFault;
+
+    const unsigned int cycles_per_attempt = JIA_CHASSIS_HOMING_AUTO_RETRY_INTERVAL_MS / Chassis::period_ms_;
+    for (unsigned int attempt = 0; attempt < JIA_CHASSIS_HOMING_AUTO_RETRY_MAX_ATTEMPTS; ++attempt)
+    {
+        for (unsigned int cycle = 0; cycle < cycles_per_attempt; ++cycle)
+        {
+            runHostControlCycle(chassis);
+        }
+        EXPECT_TRUE(chassis.wheel_config_[2].homing_state == Chassis::HomingState::kSearch);
+        chassis.wheel_config_[2].homing_state = Chassis::HomingState::kFault;
+    }
+
+    for (unsigned int cycle = 0; cycle < cycles_per_attempt + 5U; ++cycle)
+    {
+        runHostControlCycle(chassis);
+    }
+
+    EXPECT_TRUE(chassis.wheel_config_[2].homing_state == Chassis::HomingState::kFault);
+    EXPECT_TRUE(chassis.wheel_config_[2].homing_auto_retry_attempt_count == JIA_CHASSIS_HOMING_AUTO_RETRY_MAX_ATTEMPTS);
+    EXPECT_TRUE(!chassis.wheel_config_[2].homing_auto_retry_wait_active);
+}
+
+TEST_CASE("testHomingAutoRetryCountersClearAfterWheelReturnsReady")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.wheel_config_[0].homing_state = Chassis::HomingState::kFault;
+    for (unsigned int cycle = 0; cycle < JIA_CHASSIS_HOMING_AUTO_RETRY_INTERVAL_MS / Chassis::period_ms_; ++cycle)
+    {
+        runHostControlCycle(chassis);
+    }
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_auto_retry_attempt_count == 1U);
+
+    finishWheelHomingByThreeConsistentEdges(chassis, 0, steer_motors);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kReady);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_auto_retry_attempt_count == 0U);
+    EXPECT_TRUE(!chassis.wheel_config_[0].homing_auto_retry_wait_active);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_auto_retry_wait_elapsed_ms == 0U);
+}
+
 } // namespace chassis_semantics_test

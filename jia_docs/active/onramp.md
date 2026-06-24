@@ -11,7 +11,7 @@
 这三页会先告诉你：
 
 - 当前主线已经并入了什么。
-- 现在推荐看哪份 handoff。
+- 现在推荐先看哪份 handoff。
 - `FULL_DEBUG` doctest 主套件和 `RUNTIME_MIN` slim smoke 分别负责什么。
 
 ## 第二步：先跑统一入口
@@ -28,7 +28,7 @@ powershell -ExecutionPolicy Bypass -File jia_docs/tests/run_tests.ps1
 powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_main.ps1
 ```
 
-如果只需要确认发布/比赛固件瘦身档：
+如果只需要确认发布 / 比赛固件瘦身档：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/chassis_semantics/run_slim_smoke.ps1
@@ -53,8 +53,8 @@ powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/vesc_brake/run_
 
 ## 第四步：决定后续方向
 
-- 若继续底盘联调，优先看 `mode30`、VESC 本地 PID、drive load tune 相关 handoff。
-- 若继续 zero-stop / X-Park 语义，优先看 2026-06-05 handoff 和 doctest 分片。
-- 若继续固件瘦身，优先检查 `chassis.h` 顶部 profile 宏和 `run_slim_smoke.ps1`。
-- 若继续协议信号/上位机语义，补看 `SingleWheelTrace payload` 说明。
-- 若继续清理 host baseline，把历史失败和当前主线验证分开处理，不要混成一个任务。
+- 若继续底盘联调，优先看首次上电 homing 延时、`homing_search_rpm = 100.0f`、AirJoy/Lora 输入链和 `mode30` 单轮 debug。
+- 若继续 path / yaw / homing 主线，补读 2026-06-09 handoff。
+- 若继续 zero-stop / X-Park 语义，补读 2026-06-05 handoff 和 doctest 分片。
+- 若继续协议 / 上位机语义，补看 `SingleWheelTrace payload` 说明，并按当前 AirJoy/Lora 输入链理解底盘线程。
+- 若继续固件瘦身，优先检查 `chassis.h` 顶部 profile 宏和 `run_slim_smoke.ps1`，不要把 debug 回归塞进 slim smoke。
