@@ -1,36 +1,29 @@
 # 当前待办与联调关注点
 
-本页用于接替旧 `plan.txt` 的待办入口，保留仍然有效的事项，并对齐 2026-06-09 的当前 handoff 状态。
+本页用于接替旧 `plan.txt` 的待办入口，保留仍然有效的事项，并对齐 2026-06-24 的当前 handoff 状态。
 
-## 从旧 `plan.txt` 迁移出的未完成项
+## 当前仍然有效的联调关注点
 
-以下条目来自旧待办，但需要按 2026-06-09 主线重新理解：
+围绕 [ai_handoff_2026-06-24_rc10_chassis_airjoy_homing_debug_context_sync.md](../handoff/2026-06/ai_handoff_2026-06-24_rc10_chassis_airjoy_homing_debug_context_sync.md)，继续联调时建议优先关注：
 
-1. `S` 型速度规划与路径规划正式版已经合入，下一步改为 MDK 工程、实车路径和比赛流程复核。
-2. 测试对外接口仍开放，下一步应优先确认当前 `run_tests.ps1`、host doctest 与路径规划实车验证之间的边界。
-3. 舵轮校准调用接口仍需结合 homing 三边沿确认修复做实车确认，不再按纯文档旧待办理解。
+1. 首次上电整车 homing 延时默认值 `500U` 是否真的合适，重点结合 `first_boot_homing_delay_.pending / active / elapsed_ms` 和四轮 `homing_state` 板上观察。
+2. `JIA_CHASSIS_HOMING_SEARCH_RPM = 100.0f` 的当前默认基线是否与现有舵轮校准手感匹配，必要时和首次上电延时一起联调。
+3. AirJoy/Lora 输入链切换后，底盘线程的真实摇杆数据是否稳定，零位漂移、映射符号和更新时机是否符合预期。
+4. debug 摇杆 deadzone 重映射在两条链上的实际手感：
+   - 整车 debug 接管链：平移组 / 旋转组 deadzone
+   - mode30 单轮 debug：`single_wheel.input_deadzone`
+5. 继续保持 `RUNTIME_MIN` 默认固件档与 `FULL_DEBUG` host 语义回归分层清晰，不要把 debug 语义回归塞进 slim smoke。
+6. 继续保持 MDK 编译入口检查，避免路径规划、机械臂和底盘头文件合并残留再次破坏工程编译。
 
-## 从当前 handoff 提取的联调关注点
+## 上一阶段主线仍需补读的场景
 
-围绕 [ai_handoff_2026-06-09_rc10_path_yaw_homing_build_sync.md](../handoff/2026-06/ai_handoff_2026-06-09_rc10_path_yaw_homing_build_sync.md)，继续联调时建议优先关注：
-
-1. 路径规划正式版合入后，`APP_Path.*`、`APP_Speedplanner.*`、`omni_chassisSetup.*` 的 MDK 编译、烧录和实车路径行为。
-2. yaw lock 减速阶段“先刹再锁”是否符合上板手感、目标规划和 zero-stop / brake 交互预期。
-3. homing 三边沿确认修复后，光电边沿抖动、误触发、静止 fault latch 与 rehome 链路是否稳定。
-4. 关闭调试模式后，`RUNTIME_MIN` 默认固件档与 `FULL_DEBUG` host 语义回归是否继续分层清晰。
-5. `02dbf00a` 之后继续保持 MDK 编译入口检查，避免路径规划、机械臂和底盘头文件合并残留复发。
-6. `kDrivePidLoadTune` 与 `SingleWheelTrace` 的 payload 顺序是否仍与上位机脚本一致。
+- 若要继续路径规划、yaw lock、三边沿 homing 修复主线，先补读 2026-06-09 handoff。
+- 若要继续 doctest 拆分、zero-stop / X-Park、`RUNTIME_MIN` / `FULL_DEBUG` 分层，再补读 2026-06-05 handoff。
+- 若要继续 `SingleWheelTrace` 或上位机解析脚本，再补读 2026-05-26 payload 说明。
 
 ## 现在不再这样描述
 
-- 不再把 `jia_docs/tests/tdd/chassis_semantics/run_test.ps1` 描述为“仍有 18 个 baseline 失败”。
-- 2026-06-05 handoff 只作为上一阶段验证记录；当前入口以 2026-06-09 path / yaw / homing / build 主线说明为准。
-- 旧 `run_test.ps1` 系列现在应按兼容包装入口理解，不应再作为主要结论来源。
-- `RUNTIME_MIN` slim smoke 不承载 debug9、DebugMirror、串口输出等调试语义回归。
-
-## 如果你要继续清理历史项
-
-- 若要继续消化历史 baseline，建议单开任务，不要和当前主线交接混在一起。
-- 若要继续追 `trace` 或上位机语义，优先补读 `SingleWheelTrace payload` 说明 handoff。
-- 若要继续推进主机测试重构，优先以 `jia_docs/tests/run_tests.ps1` 为唯一主入口对齐文档。
-- 若要继续路径规划调试，优先记录实车验证结果，不要把实车问题埋进旧 `plan.txt`。
+- 不再把当前主线入口停留在 2026-06-09；默认交接入口已切到 2026-06-24 新总览。
+- 不再把 `jia_docs/tests/tdd/chassis_semantics/run_test.ps1` 描述为当前主入口；它仍是兼容包装入口。
+- 不再把 `RUNTIME_MIN` slim smoke 当作 debug 语义回归入口；它只回答瘦身档可编译、可实例化和尺寸基线。
+- 不再按旧 CRSF 直取口径理解底盘线程输入链；当前默认应按 AirJoy/Lora 主动拉取理解。

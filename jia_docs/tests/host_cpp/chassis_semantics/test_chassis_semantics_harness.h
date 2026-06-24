@@ -41,6 +41,11 @@ public:
         accepted_target_rpm_ = rpm_set;
     }
 
+    void setTargetTotalAngle(float total_angle_set) override
+    {
+        Motor_Base::setTargetTotalAngle(total_angle_set);
+    }
+
     std::size_t packCommand(CanFrame[], std::size_t) override
     {
         return 0U;
