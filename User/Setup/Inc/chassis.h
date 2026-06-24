@@ -81,6 +81,12 @@
 #define JIA_CHASSIS_HOMING_AUTO_RETRY_INTERVAL_MS 1000U
 #endif
 
+// 光电门回零搜索方向默认按对角轮成对反转，避免四轮同向搜索时把底盘净扭矩打到同一方向。
+// 轮位约定来自 chassis.cpp 的初始化顺序：
+//   0 = 左前, 1 = 左后, 2 = 右后, 3 = 右前
+// 默认让 0 + 2 反转，1 + 3 保持同向。
+static constexpr float JIA_CHASSIS_HOMING_SEARCH_RPM_SIGN[4] = { -1.0f, 1.0f, -1.0f, 1.0f };
+
 // “首次上电回零延时”只作用在本次上电后的第一次整车 homing：
 // - 它不是每次 startHoming() 都会等待，首次机会一旦消耗，后续手动再次回零不再等待；
 // - ENABLE 只控制这段逻辑是否参与编译，不改变其他 homing / recovery 分支的语义；

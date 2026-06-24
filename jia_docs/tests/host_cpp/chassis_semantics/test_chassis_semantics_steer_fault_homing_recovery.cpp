@@ -5,6 +5,47 @@ namespace chassis_semantics_test
 
 // 覆盖光电门、舵轮冻结故障、故障恢复和迟到上电 homing。
 // 这些 case 会直接操纵反馈电流、角度和光电门状态，用来保护故障锁存/恢复的时序边界。
+
+TEST_CASE("testHomingSearchUsesCompileTimeDiagonalOppositeDirections")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].homing_state = Chassis::HomingState::kSearch;
+        chassis.wheel_config_[i].homing_zero_valid = false;
+        chassis.wheel_config_[i].homing_last_sensor_active = false;
+        steer_motors[i].setFeedbackCurrent(1200.0f);
+    }
+
+    runHostControlCycle(chassis);
+
+    int positive_count = 0;
+    int negative_count = 0;
+    for (int i = 0; i < 4; ++i)
+    {
+        const float target_rpm = steer_motors[i].getTargetRPM();
+        EXPECT_NEAR(std::fabs(target_rpm), JIA_CHASSIS_HOMING_SEARCH_RPM, 1.0e-6f);
+        if (target_rpm > 0.0f)
+        {
+            ++positive_count;
+        }
+        else if (target_rpm < 0.0f)
+        {
+            ++negative_count;
+        }
+    }
+
+    EXPECT_TRUE(positive_count == 2);
+    EXPECT_TRUE(negative_count == 2);
+    EXPECT_TRUE(steer_motors[0].getTargetRPM() < 0.0f);
+    EXPECT_TRUE(steer_motors[1].getTargetRPM() > 0.0f);
+    EXPECT_TRUE(steer_motors[2].getTargetRPM() < 0.0f);
+    EXPECT_TRUE(steer_motors[3].getTargetRPM() > 0.0f);
+}
 TEST_CASE("testStationaryPhotogateTogglesDoNotSelfLockNormalReadyState")
 {
     Chassis chassis;
@@ -46,7 +87,7 @@ TEST_CASE("testHomingSearchRpmDefaultsToCompileTimeMacro")
 
     runHostControlCycle(chassis);
 
-    EXPECT_NEAR(steer_motors[0].getTargetRPM(), JIA_CHASSIS_HOMING_SEARCH_RPM, 1.0e-6f);
+    EXPECT_NEAR(std::fabs(steer_motors[0].getTargetRPM()), JIA_CHASSIS_HOMING_SEARCH_RPM, 1.0e-6f);
 }
 
 TEST_CASE("testFirstBootHomingDelayKeepsInitialStartIdleThenReleasesSearchOnce")
@@ -97,7 +138,7 @@ TEST_CASE("testFirstBootHomingDelayKeepsInitialStartIdleThenReleasesSearchOnce")
             released = true;
             for (int i = 0; i < 4; ++i)
             {
-                EXPECT_NEAR(steer_motors[i].getTargetRPM(), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
+                EXPECT_NEAR(std::fabs(steer_motors[i].getTargetRPM()), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
             }
             break;
         }
@@ -120,7 +161,7 @@ TEST_CASE("testFirstBootHomingDelayKeepsInitialStartIdleThenReleasesSearchOnce")
     for (int i = 0; i < 4; ++i)
     {
         EXPECT_TRUE(chassis.wheel_config_[i].homing_state == Chassis::HomingState::kSearch);
-        EXPECT_NEAR(steer_motors[i].getTargetRPM(), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
+        EXPECT_NEAR(std::fabs(steer_motors[i].getTargetRPM()), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
     }
 #else
     const bool all_homed = runHostControlCycle(chassis);
@@ -128,7 +169,7 @@ TEST_CASE("testFirstBootHomingDelayKeepsInitialStartIdleThenReleasesSearchOnce")
     for (int i = 0; i < 4; ++i)
     {
         EXPECT_TRUE(chassis.wheel_config_[i].homing_state == Chassis::HomingState::kSearch);
-        EXPECT_NEAR(steer_motors[i].getTargetRPM(), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
+        EXPECT_NEAR(std::fabs(steer_motors[i].getTargetRPM()), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
     }
 #endif
 }
@@ -151,7 +192,7 @@ TEST_CASE("testSteerFaultRecoveryRehomeBypassesFirstBootHomingDelay")
     EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
     EXPECT_TRUE(!chassis.wheel_config_[0].steer_fault_rehome_request);
     EXPECT_TRUE(!chassis.wheel_config_[0].homing_zero_valid);
-    EXPECT_NEAR(steer_motors[0].getTargetRPM(), chassis.wheel_config_[0].homing_search_rpm, 1.0e-6f);
+    EXPECT_NEAR(std::fabs(steer_motors[0].getTargetRPM()), chassis.wheel_config_[0].homing_search_rpm, 1.0e-6f);
 
 #if JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_ENABLE && (JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS > 0U)
     EXPECT_TRUE(chassis.first_boot_homing_delay_.pending);
@@ -485,7 +526,7 @@ TEST_CASE("testRecoveryImmediatelyReopensSteerSearchAfterFaultLatchSidePidReset"
 
     EXPECT_TRUE(chassis.wheel_config_[0].steer_fault_state == Chassis::SteerFaultState::kRecovering);
     EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
-    EXPECT_NEAR(steer_motors[0].getTargetRPM(), chassis.wheel_config_[0].homing_search_rpm, 1.0e-6f);
+    EXPECT_NEAR(std::fabs(steer_motors[0].getTargetRPM()), chassis.wheel_config_[0].homing_search_rpm, 1.0e-6f);
 }
 
 TEST_CASE("testWheel2RecoveryReissuesHomingSearchRpmAfterFirstCommandDrop")

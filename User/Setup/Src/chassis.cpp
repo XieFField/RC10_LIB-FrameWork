@@ -4540,7 +4540,8 @@ namespace jia
                     {
                         // 正在搜索零位的轮子，允许转向电机按固定搜索转速慢慢转；
                         // 但 drive 仍然保持 current=0，全车不允许恢复驱动。
-                        setSteerMotorTargetRPM(wheel, wheel.homing_search_rpm);
+                        const f32 homing_search_rpm_sign = JIA_CHASSIS_HOMING_SEARCH_RPM_SIGN[i];
+                        setSteerMotorTargetRPM(wheel, wheel.homing_search_rpm * homing_search_rpm_sign);
                     }
                     else if ((wheel.homing_state == HomingState::kReady) &&
                              wheel.homing_zero_valid &&
@@ -5655,8 +5656,6 @@ namespace jia
             payload[20] = steer_fault_any_active_ ? 1.0f : 0.0f;
             debug_uart_.printf_DMA_JustFloat(payload, 21);
         }
-
-
         void Chassis::emitDebugOutputByMode(bool all_homed)
         {
             // 这里是 debug output 的分发层：只根据 family/profile 选择一个输出后端。
@@ -6202,7 +6201,3 @@ namespace jia
         }
     }
 }
-
-
-
-

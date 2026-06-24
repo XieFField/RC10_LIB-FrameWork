@@ -1,6 +1,9 @@
 ﻿current_branch: jia/develop_1
-current_line: rc10_homing_auto_retry_xpark_priority_brake_debug_after_2026_06_24
+current_line: rc10_homing_search_diagonal_reverse_after_2026_06_24
 summary:
+  - 2026-06-24 最新交接主线已追加光电门回零搜索对角轮反转收口
+  - HomingState::kSearch 搜索阶段使用编译期固定方向表 JIA_CHASSIS_HOMING_SEARCH_RPM_SIGN[4]
+  - 默认 0 + 2 对角轮反转，1 + 3 保持同向；只影响光电门回零搜索 RPM 下发
   - 2026-06-24 新交接主线已切换为 homing auto-retry / X-Park priority brake / debug 接入收口
   - 底盘线程内部 airjoy_data_ 已切换为 communication::RC10_AirJoy_Data_S
   - runThread() 通过 communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_) 主动拉取 AirJoy 数据
@@ -10,10 +13,11 @@ summary:
   - 当前 chassis 默认固件档为 RUNTIME_MIN
   - 当前 JIA_CHASSIS_HOMING_SEARCH_RPM 默认值为 100.0f
   - 当前 JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS 默认值为 500U
-  - chassis_semantics host 最新已知状态为 run_main.ps1 通过，run_slim_smoke.ps1 通过，数字更新为 210/210 passed 与 sizeof(Chassis)=2856
+  - chassis_semantics host 最新已知状态为 run_main.ps1 通过，数字更新为 211/211 passed；上一轮 run_slim_smoke.ps1 通过与 sizeof(Chassis)=2856 仍作为背景记录
 latest_handoff:
-  primary: jia_docs/handoff/2026-06/ai_handoff_2026-06-24_rc10_homing_auto_retry_xpark_priority_brake_debug_sync.md
+  primary: jia_docs/handoff/2026-06/ai_handoff_2026-06-24_rc10_homing_search_diagonal_reverse_sync.md
   supporting:
+    - jia_docs/handoff/2026-06/ai_handoff_2026-06-24_rc10_homing_auto_retry_xpark_priority_brake_debug_sync.md
     - jia_docs/handoff/2026-06/ai_handoff_2026-06-24_rc10_chassis_airjoy_homing_debug_context_sync.md
     - jia_docs/handoff/2026-06/ai_handoff_2026-06-09_rc10_path_yaw_homing_build_sync.md
     - jia_docs/handoff/2026-06/ai_handoff_2026-06-05_rc10_chassis_doctest_zero_stop_sync.md
@@ -35,6 +39,7 @@ recommended_verification:
     - jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
     - jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
 open_followups:
+  - 继续做 MDK / 实车对光电门回零搜索方向表的板上复核，确认 0 + 2 反转、1 + 3 同向符合实车轮位
   - 继续做 MDK / 实车对 `homing auto-retry` 的板上复核
   - 结合 first_boot_homing_delay_ 与 homing_search_rpm=100.0f 做首次上电舵轮校准确认
   - 继续确认 AirJoy/Lora 输入链在底盘线程中的真实板上行为
