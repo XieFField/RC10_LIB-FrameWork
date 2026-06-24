@@ -564,6 +564,8 @@ TEST_CASE("testDebugSteerDegAndDriveSpeedReleasesLatchedXParkSteerHold")
     harness.steer_motors[0].resetLastCommandObservation();
     chassis.debug_control_.common.enable = true;
     chassis.debug_control_.common.mode_raw = 9U;
+    chassis.debug_control_.injection.translation_input_deadzone = 0.0f;
+    chassis.debug_control_.injection.rotation_input_deadzone = 0.0f;
     chassis.debug_control_.injection.steer_deg_limit = 180.0f;
     chassis.debug_control_.injection.drive_speed_m_s_limit = 1.0f;
     chassis.airjoy_data_.left_x = 0.25f;

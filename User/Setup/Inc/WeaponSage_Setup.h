@@ -138,12 +138,12 @@ namespace WeaponSage_Setup
         int pole_num = 1;
         bool claw_flag[3]={false,false,false};
         struct{
-            float launch_start = 0.5f;
+            float launch_start = 0.82f;
             float launch_catch =0.0f;
             float launch_untight =0.45f;
             float launch_clawclosed = 0.8f;
             float launch_rotate =1.0f;
-            float launch_lastcatch=0.11f;
+            float launch_lastcatch=0.14f;
             float launch_dockprepare=0.6f;
         }launch_kp;
 		bool is_ServoStart= false;

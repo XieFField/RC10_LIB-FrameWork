@@ -29,6 +29,23 @@ class TestMotor : public Motor_Base
 public:
     TestMotor() : Motor_Base(0U, false, nullptr) {}
 
+    void setTargetRPM(float rpm_set) override
+    {
+        ++rpm_command_call_count_;
+        if (drop_first_rpm_command_ && rpm_command_call_count_ == 1U)
+        {
+            return;
+        }
+
+        Motor_Base::setTargetRPM(rpm_set);
+        accepted_target_rpm_ = rpm_set;
+    }
+
+    void setTargetTotalAngle(float total_angle_set) override
+    {
+        Motor_Base::setTargetTotalAngle(total_angle_set);
+    }
+
     std::size_t packCommand(CanFrame[], std::size_t) override
     {
         return 0U;
@@ -53,6 +70,28 @@ public:
         total_angle_ = total_angle_deg;
     }
 
+    void setDropFirstRpmCommand(bool enabled)
+    {
+        drop_first_rpm_command_ = enabled;
+    }
+
+    void resetRpmCommandObservation()
+    {
+        rpm_command_call_count_ = 0U;
+        accepted_target_rpm_ = 0.0f;
+        drop_first_rpm_command_ = false;
+    }
+
+    std::uint32_t getRpmCommandCallCount() const
+    {
+        return rpm_command_call_count_;
+    }
+
+    float getAcceptedTargetRPM() const
+    {
+        return accepted_target_rpm_;
+    }
+
     float getTargetBrake() const
     {
         return target_brake_;
@@ -72,6 +111,11 @@ public:
     {
         return total_angle_;
     }
+
+private:
+    bool drop_first_rpm_command_ = false;
+    std::uint32_t rpm_command_call_count_ = 0U;
+    float accepted_target_rpm_ = 0.0f;
 };
 
 struct DrivePidTuneHarness

@@ -174,6 +174,9 @@ bool runHostDebugControlCycle(Chassis &chassis)
     chassis.refreshActuatorLimitState();
     chassis.updatePlannedMotionData();
     chassis.updateWheelFeedback();
+    // Host harness 需要和真实 runThread() 保持同一时序：
+    // 先推进 chassis 级首次上电统一等待窗口，再逐轮推进 homing 状态机。
+    chassis.updateFirstBootHomingDelayState();
 
     bool all_homed = true;
     for (int i = 0; i < 4; ++i)
@@ -188,7 +191,12 @@ bool runHostDebugControlCycle(Chassis &chassis)
     {
         chassis.input_target_data_.zero_current_all = false;
     }
-    chassis.homing_start_request_ = false;
+    // 只要首次上电统一等待窗口还 active，就不能提前清掉 homing_start_request_，
+    // 否则 host 夹具会和真实线程一样，把首次请求在进入 Search 之前提前消费掉。
+    if (!chassis.first_boot_homing_delay_.active)
+    {
+        chassis.homing_start_request_ = false;
+    }
 
     if (chassis.applyDebugModuleOverride(all_homed))
     {
@@ -436,6 +444,8 @@ bool runHostControlCycle(Chassis &chassis)
     chassis.refreshActuatorLimitState();
     chassis.updatePlannedMotionData();
     chassis.updateWheelFeedback();
+    // 普通 host control cycle 也要复用和真实线程一致的放行顺序，避免测试与量产时序分叉。
+    chassis.updateFirstBootHomingDelayState();
 
     bool all_homed = true;
     for (int i = 0; i < 4; ++i)
@@ -450,7 +460,11 @@ bool runHostControlCycle(Chassis &chassis)
     {
         chassis.input_target_data_.zero_current_all = false;
     }
-    chassis.homing_start_request_ = false;
+    // 统一等待窗口未结束前，启动请求必须继续保留，直到四轮真正获得 Idle -> Search 的放行资格。
+    if (!chassis.first_boot_homing_delay_.active)
+    {
+        chassis.homing_start_request_ = false;
+    }
 
     chassis.computeModuleCommands(chassis.planned_data_);
     chassis.applyModuleCommands(all_homed);

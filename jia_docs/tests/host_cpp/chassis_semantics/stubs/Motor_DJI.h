@@ -10,6 +10,8 @@ struct CanFrame
 {
 };
 
+class M3508;
+
 class fdCANbus
 {
 };
@@ -47,6 +49,10 @@ public:
 
     virtual std::size_t packCommand(CanFrame[], std::size_t) = 0;
     virtual void updateFeedback(const CanFrame &) = 0;
+    virtual M3508 *asM3508()
+    {
+        return nullptr;
+    }
 
     virtual float getRPM() const
     {
@@ -182,6 +188,11 @@ public:
     std::uint32_t getResetSpeedPidStateCallCount() const
     {
         return reset_speed_pid_state_call_count_;
+    }
+
+    M3508 *asM3508() override
+    {
+        return this;
     }
 
 private:

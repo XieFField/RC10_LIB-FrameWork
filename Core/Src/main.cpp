@@ -107,7 +107,7 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
   /* USER CODE BEGIN SysInit */
-     PeriphCommonClock_Config();
+    PeriphCommonClock_Config();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */

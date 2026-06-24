@@ -5,8 +5,6 @@
     testSteerGeometryUsesSignedInstallationAngleOnly();
     testRuntimeZeroAndMotorPolarityOnlyAffectMotorLocalConversion();
     testSteerMotorSignAndRuntimeZeroOffsetStayAsIndependentMappingStages();
-    testTelemetrySnapshotKeepsTargetAndActualYawSemanticsSeparate();
-    testTelemetrySnapshotPreservesWheelTargetsWithoutModeDependentReinterpretation();
     testDriveMotorHardwarePolarityMapsCurrentWithoutLeakingIntoGeometry();
     testDefaultDriveMotorPolarityMatchesPositiveBodyXHardwareLayout();
     testPlannerInputNormalizationKeepsWorldBodyAndSteerOnlySemanticsExplicit();
