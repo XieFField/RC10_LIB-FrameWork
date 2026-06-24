@@ -76,6 +76,10 @@ namespace MF_AutoCtrler
         int8_t exitMap = 26; // 固定出口
     }PathInformation_S;
 
+
+    void set_color(int8_t color_); //设置场地颜色，1为蓝色场地，0为红色场地
+    int8_t get_color(); //获取当前场地颜色
+
     // 求解梅花桩所有前一通道结果
     RoadResult_S MFNum_ToRoadResult(int8_t MFNum);
     static bool IsWalkable(int8_t map);

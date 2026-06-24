@@ -62,10 +62,14 @@ typedef struct {
     float store_height_inside_ = 0.0f; // 储存高度
     float store_height_outside_ = 0.0f; // 储存高度
 
+    float catch_20height = 0.0121250749f;
+    float catch_40height = 0.156194746f;
+    float catch_60height = 0.31f;
+
     float lock_height_ = 0.0f; // 云台锁定高度
+    float pick_up_height_ =0.07f; //拾取高度
+    float putdown_height_ = 0.0f; //放置高度
     float pitch_lift_angle_ = 91.0f; //俯仰抬平角度
-    float pick_up_height_ = 0.0f; // 拾取高度
-    float putdown_height_ = 0.0f; // 放置高度
 
     GPIO_TypeDef * Sucker_GPIO_Port; // 吸盘GPIO控制端口
     uint16_t Sucker_GPIO_Pin;      // 吸盘GPIO控制引脚
@@ -79,8 +83,8 @@ typedef struct {
     GPIO_TypeDef* Sucker_Soleniod_GPIO_Port; // 吸盘电磁阀GPIO控制端口
     uint16_t Sucker_Soleniod_GPIO_Pin;      // 吸盘电磁阀GPIO控制引脚
 
-    GPIO_TypeDef* StoreOutside_Soleniod_GPIO_Port; // 储存位电磁阀GPIO控制端口
-    uint16_t StoreOutside_Soleniod_GPIO_Pin;      // 储存位电磁阀GPIO控制引脚
+    GPIO_TypeDef* StoreOutside_Soleniod_GPIO_Port; // 外侧储存位电磁阀GPIO控制端口
+    uint16_t StoreOutside_Soleniod_GPIO_Pin;      // 外侧储存位电磁阀GPIO控制引脚
 
     GPIO_TypeDef* StoreInside_Soleniod_GPIO_Port; // 储存位电磁阀GPIO控制端口
     uint16_t StoreInside_Soleniod_GPIO_Pin;      // 储存位电磁阀GPIO控制引脚

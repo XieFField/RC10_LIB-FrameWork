@@ -30,6 +30,8 @@ $compileArgs = @(
     '-ffunction-sections',
     '-fdata-sections',
     '-DJIA_CHASSIS_PROFILE=JIA_CHASSIS_PROFILE_FULL_DEBUG',
+    '-DJIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_ENABLE=1',
+    '-DJIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS=3',
     '-I', $stubDir,
     '-I', $doctestInc,
     '-I', $userInc,

@@ -162,6 +162,14 @@ public:
 	 * @return float 最大速度
 	 */
 	float Get_Max_Vel(float t);
+    
+    void Rest(void)
+    {
+        start_point={0.0f,0.0f};
+        end_point={0.0f,0.0f};
+        control_point={0.0f,0.0f};
+        Bezier_Update(start_point,control_point,end_point);
+    }
 
 protected:
 	float len = 0.0f;										   // 曲线总长度
