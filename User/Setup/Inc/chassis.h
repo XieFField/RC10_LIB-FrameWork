@@ -1309,8 +1309,8 @@ namespace jia
                 bool enable_steer_rate_limit_ = false;                           // [RW] 是否启用舵向角速度上限。
                 f32 max_steer_rate_rad_s_ = 200.0f;                         // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit_=true 时生效。
                 bool enable_steer_alpha_limit_ = true;                          // [RW] 是否启用舵向角加速度上限。
-                f32 max_steer_alpha_rad_s2_ = 20000.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
-                bool enable_steer_angle_feedforward = true;                      // [RW] 是否启用底盘层舵角超前前馈。只影响正常 swerve 规划下发角，不改变物理预计角。
+                f32 max_steer_alpha_rad_s2_ = 99999999.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
+                bool enable_steer_angle_feedforward = false;                    // [RW] 是否启用底盘层舵角超前前馈。只影响正常 swerve 规划下发角，不改变物理预计角。
                 f32 steer_angle_feedforward_lead_s = 0.3f;                      // [RW] 舵角超前时间（s）。用于补偿舵向电机响应滞后。
                 f32 steer_angle_feedforward_max_lead_rad = 0.3f;          // [RW] 舵角超前最大幅度（rad）
                 f32 steer_angle_feedforward_settle_error_rad = 0.05235988f;      // [RW] 收尾线性衰减误差窗口（rad），默认约 3°。
@@ -1447,8 +1447,8 @@ namespace jia
                     bool enable = true;                                            // [RW] 调试总开关。
                     u8 mode_raw = 2;                                               // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
-                    u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
-                    u8 observe_wheel_index = 0U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。
+                    u8 control_wheel_index = 1U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
+                    u8 observe_wheel_index = 1U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。
                 } common{};
 
                 struct Injection
@@ -1469,7 +1469,7 @@ namespace jia
                     bool estop = false;         // [RW] 单轮调试急停闸门。
                     f32 input_deadzone = 0.1f; // [RW] 单轮调试共享摇杆死区。落入死区归 0，出区后从死区边界重新起算。
                     SingleWheelAxisControl steer{
-                        false,
+                        true,
                         static_cast<u8>(DirectAxisInputMode::kRcContinuous),
                         static_cast<u8>(SingleWheelInputAxis::kLeftX),
                         false,
@@ -1477,12 +1477,12 @@ namespace jia
                         0.0f,
                         200.0f,
                         0.5f,
-                        45.0f,
+                        90.0f,
                         static_cast<u8>(SingleWheelPlannerMode::kOff),
                         {},
                         {}};
                     SingleWheelAxisControl drive{
-                        true,
+                        false,
                         static_cast<u8>(DirectAxisInputMode::kRcStep),
                         static_cast<u8>(SingleWheelInputAxis::kRightX),
                         false,
@@ -1533,7 +1533,7 @@ namespace jia
                 };
 
                 u8 profile_raw = static_cast<u8>(JustFloatProfile::kSingleWheelTrace);
-                u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kSteerAndDrive);
+                u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kSteerOnly);
                 DebugOutputSlotConfig overview = {5U};
                 DebugOutputSlotConfig single_wheel = {1U};
                 DebugOutputSlotConfig yaw_pid = {4U};
