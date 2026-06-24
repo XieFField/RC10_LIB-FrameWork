@@ -401,7 +401,7 @@ void Robot_WeaponSage_Setup::manualControl()
         ctrl_status_.last_isArm_Vertical = ctrl_status_.isArm_Vertical;
 
         ctrl_status_.scroll_offset = (airjoy_data_.SWC & 0x01) ^ ctrl_status_.last_isClaw_tight; // 初始状态假设为0
-       
+		weaponSage_status_=WEAPONSAGE_MANUAL_CONTROL;
     }
     if(airjoy_data_.SWE==0)
     {
@@ -675,7 +675,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                                 ctrl_status_.wrist_startTime=TimeStamp::getInstance().getSeconds();
                             }
 							float current_wrist_pos=normalize_deg_0_360(current_pos_.wrist_pos_);
-							if(abs(current_wrist_pos-target_pos_.wrist_pos_)<0.2f&&(ctrl_status_.now_times-ctrl_status_.wrist_startTime)>=1.0f) //如果手腕调整到位了，进入下一个状态
+							if(abs(current_wrist_pos-target_pos_.wrist_pos_)<0.2f&&(ctrl_status_.now_times-ctrl_status_.wrist_startTime)>=0.5f) //如果手腕调整到位了，进入下一个状态
 							{
 								now_state_ = WeaponSage_Setup::STATE_SAGE_ADJUST;
 								auto_ctrl_.flag.is_clawed=false;
@@ -1151,7 +1151,7 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw()
 		close_time_cnt++;
         ctrl_status_.is_closeclaw_start=true;
      }
-     if(ctrl_status_.now_times-ctrl_status_.closeclaw_startTime>=1.0f&&ctrl_status_.is_closeclaw_start) //保持夹紧状态0.5秒钟
+     if(ctrl_status_.now_times-ctrl_status_.closeclaw_startTime>=0.5f&&ctrl_status_.is_closeclaw_start) //保持夹紧状态0.5秒钟
      {
         auto_ctrl_.flag.is_clawed=true;
         ctrl_status_.is_closeclaw_start=false;
@@ -1189,7 +1189,7 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
             ctrl_status_.is_untight_start=true;
 			untight_time_cnt++;
         }
-        if(ctrl_status_.now_times-ctrl_status_.untight_startTime>=1.0f&& ctrl_status_.is_untight_start) //保持半松状态1秒钟
+        if(ctrl_status_.now_times-ctrl_status_.untight_startTime>=0.5f&& ctrl_status_.is_untight_start) //保持半松状态1秒钟
         {
             auto_ctrl_.flag.is_untight=true;
             ctrl_status_.is_untight_start=false;
