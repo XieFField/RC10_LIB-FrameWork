@@ -82,6 +82,7 @@ typedef struct
 
 typedef struct
 {
+    //第数组第零为红场
     Vector2D CB_Start_pos[2] = {{5.0f, 1.0f}, {1.0f, 1.0f}};             // 夹杆起点。
     Vector2D CB_Selection_pos[2] = {{3.539f, 0.835f}, {2.461f, 0.835f}}; // 夹杆流程默认目标点。
 
@@ -223,7 +224,6 @@ public:
 private:
     // Vector2D test_point = {3.0f, 2.0f};
     //-----------------------------------通讯标志位-----------------------------------------//
-
     bool WeaponSage_Start = false; // 夹杆流程开始标志。
     bool WeaponSage_End = false;   // 夹杆流程完成标志。
 
