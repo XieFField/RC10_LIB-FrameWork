@@ -947,6 +947,57 @@ TEST_CASE("testDebugOmegaZInjectionDoesNotAffectLockToTarget")
     EXPECT_NEAR(chassis.input_target_data_.rot_z, 1.2f, 1.0e-6f);
 }
 
+TEST_CASE("testDebugXParkBrakeModesRouteToDedicatedLockYawTargets")
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_vel_y_ = 3.0f;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 4.0f;
+    chassis.debug_control_.injection.translation_input_deadzone = 0.0f;
+    chassis.debug_control_.injection.rotation_input_deadzone = 0.0f;
+    chassis.debug_control_.injection.lock_rot_z = -0.75f;
+    chassis.airjoy_data_.left_x = 0.25f;
+    chassis.airjoy_data_.left_y = -0.5f;
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodyLockNowXParkBrake);
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kBodySpeedLockNowRotZWithXParkBrakeMode);
+    EXPECT_NEAR(chassis.input_target_data_.vel_x, -0.25f * 2.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.input_target_data_.vel_y, 0.5f * 3.0f, 1.0e-6f);
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kWorldLockNowXParkBrake);
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kWorldSpeedLockNowRotZWithXParkBrakeMode);
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodyLockToXParkBrake);
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kBodySpeedLockToRotZWithXParkBrakeMode);
+    EXPECT_NEAR(chassis.input_target_data_.rot_z, -0.75f, 1.0e-6f);
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kWorldLockToXParkBrake);
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kWorldSpeedLockToRotZWithXParkBrakeMode);
+    EXPECT_NEAR(chassis.input_target_data_.rot_z, -0.75f, 1.0e-6f);
+}
+
+TEST_CASE("testRefreshDebugMirrorPublishesXParkPriorityBrakeFields")
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.xpark_priority_brake_cfg_.residual_enter_m_s = 0.08f;
+    chassis.runtime_strategy_cfg_.xpark_priority_brake_cfg_.residual_exit_m_s = 0.10f;
+    chassis.runtime_strategy_cfg_.xpark_priority_brake_cfg_.entry_delay_ms = 12U;
+    chassis.current_mode_flag_.use_xpark_priority_brake = true;
+    chassis.xpark_priority_brake_gate_active_ = true;
+    chassis.xpark_priority_brake_skip_yaw_reengage_active_ = true;
+    chassis.debug_control_.common.enable = true;
+    chassis.debug_control_.common.mode_raw = static_cast<unsigned char>(Chassis::DebugMode::kBodyLockToXParkBrake);
+
+    chassis.refreshDebugMirror(false);
+
+    EXPECT_TRUE(chassis.debug_mirror_.xpark_priority_brake_mode_active);
+    EXPECT_TRUE(chassis.debug_mirror_.xpark_priority_brake_threshold_active);
+    EXPECT_TRUE(chassis.debug_mirror_.xpark_priority_brake_skip_yaw_reengage);
+    EXPECT_NEAR(chassis.debug_mirror_.xpark_priority_brake_residual_enter_m_s, 0.08f, 1.0e-6f);
+    EXPECT_NEAR(chassis.debug_mirror_.xpark_priority_brake_residual_exit_m_s, 0.10f, 1.0e-6f);
+    EXPECT_NEAR(chassis.debug_mirror_.xpark_priority_brake_entry_delay_ms, 12.0f, 1.0e-6f);
+}
+
 TEST_CASE("testDebugSteerDegAndDriveSpeedModeMapsLeftXAndRightXToInterface")
 {
     Chassis chassis;

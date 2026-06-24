@@ -294,6 +294,8 @@ namespace jia
             Result setSpeed(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z);
             Result setSpeed_LockNowYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
             Result setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z);
+            Result setSpeed_LockNowYaw_XParkBrake(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
+            Result setSpeed_LockToYaw_XParkBrake(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z);
             // 注意：这两个 readback 返回的是“当前目标语义快照”，不是 current_data_ 的实际反馈速度。
             Robot_Twist getBodySpeed() const;
             Robot_Twist getWorldSpeed() const;
@@ -305,10 +307,14 @@ namespace jia
             Result setTargetBodySpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
             Result setTargetBodySpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
             Result setTargetBodySpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
+            Result setTargetBodySpeedLockNowRotZWithXParkBrakeMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
+            Result setTargetBodySpeedLockToRotZWithXParkBrakeMode(f32 vel_x, f32 vel_y, f32 rot_z);
             Result setTargetWorldSpeedMode(f32 vel_x, f32 vel_y, f32 omega_z);
             Result setTargetWorldSpeedLockNowRotZMode(f32 vel_x, f32 vel_y);
             Result setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
             Result setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z);
+            Result setTargetWorldSpeedLockNowRotZWithXParkBrakeMode(f32 vel_x, f32 vel_y, f32 omega_z = 0.0f);
+            Result setTargetWorldSpeedLockToRotZWithXParkBrakeMode(f32 vel_x, f32 vel_y, f32 rot_z);
             f32 getTargetBodyVelX() const;
             f32 getTargetBodyVelY() const;
             f32 getTargetWorldVelX() const;
@@ -529,6 +535,10 @@ namespace jia
                 kWorldSpeedLockToRotZMode,
                 kWorldSpeedLockNowRotZWithNoOmegaZMode,
                 kBodySpeedLockNowRotZWithNoOmegaZMode,
+                kBodySpeedLockNowRotZWithXParkBrakeMode,
+                kBodySpeedLockToRotZWithXParkBrakeMode,
+                kWorldSpeedLockNowRotZWithXParkBrakeMode,
+                kWorldSpeedLockToRotZWithXParkBrakeMode,
                 kSteerAngleAndDriveSpeedMode,
             };
 
@@ -540,6 +550,7 @@ namespace jia
                 bool is_world_speed_mode = false;  // 是否为世界坐标系速度模式
                 bool is_lock_now_rot_z = false;    // 是否固定当前rot_z
                 bool is_lock_to_rot_z = false;     // 是否固定到rot_z
+                bool use_xpark_priority_brake = false; // 是否启用“锁角 + X-Park 优先停车”收尾策略
             };
 
             // InputTargetData 保存上层最近一次输入的目标意图：
@@ -655,6 +666,10 @@ namespace jia
                 kBodyLockNowWithNoOmegaZ = 7,
                 kWorldLockNowWithNoOmegaZ = 8,
                 kSteerDegAndDriveSpeed = 9,
+                kBodyLockNowXParkBrake = 10,
+                kWorldLockNowXParkBrake = 11,
+                kBodyLockToXParkBrake = 12,
+                kWorldLockToXParkBrake = 13,
                 kAlignForward = 21,
                 kHomingObserve = 22,
                 kSingleWheelIsolated = 30,
@@ -1332,6 +1347,13 @@ namespace jia
                     f32 exit_m_s = 0.015f;  // [RW] X-Park 目标静止退出阈值（m/s）。X-Park 已锁存后只用它决定是否退出。
                 } xpark_command_threshold_cfg_;
 
+                struct XParkPriorityBrakeConfig
+                {
+                    f32 residual_enter_m_s = 0.08f;  // [RW] 优先停车 residual 进入阈值（m/s）。
+                    f32 residual_exit_m_s = 0.10f;   // [RW] 优先停车 residual 退出阈值（m/s）。
+                    u32 entry_delay_ms = 1U;         // [RW] 优先停车 X-Park 进入保持时长（ms）。
+                } xpark_priority_brake_cfg_;
+
                 struct XParkSteerHoldConfig
                 {
                     bool enable = true;                    // [RW] 是否启用统一的 X-Park 舵向 hold 状态机。
@@ -1713,6 +1735,8 @@ namespace jia
             // 以及 WheelConfig 内部的 X-Park / homing / fault 局部状态机协同，让整车过渡拥有明确滞回与记忆。
             bool xpark_gate_active_ = false;                                   // [RO] X-Park 是否已锁存。未锁存进入看 target+residual；锁存后退出只看 target。
             u32 xpark_stationary_hold_ms_ = 0U;                                // [RO] X-Park 进入条件连续成立时长（ms）。只用于进入延时，不表示保持态 residual 健康。
+            bool xpark_priority_brake_gate_active_ = false;                    // [RO] 当前 X-Park gate 是否使用优先停车 residual 门限。
+            bool xpark_priority_brake_skip_yaw_reengage_active_ = false;       // [RO] 当前是否已切入“跳过 yaw lock 回接”的停车收尾。
             bool launch_hold_active_ = false;                                  // [RO] 静止起步整车等待门控是否激活。激活时先只转舵，不放驱动与车体速度规划。
             bool drive_zero_stop_active_ = false;                              // [RO] drive zero-stop 目标门是否已激活。true 时目标速度仍在 near-zero 保持区内。
             bool drive_zero_stop_brake_active_[4] = {false, false, false, false}; // [RO] 各轮 zero-stop 末端是否仍在 brake。active=true 且本值=false 表示该轮 residual 已按 NearZero 判稳并切到零电流。
@@ -1788,6 +1812,12 @@ namespace jia
                 f32 nz_freeze_exit_m_s = 0.0f;                                      // [RO] 当前有效冻结退出阈值（m/s）。
                 f32 nz_xpark_enter_m_s = 0.0f;                                      // [RO] 当前有效 X-Park 进入阈值（m/s）。
                 f32 nz_xpark_exit_m_s = 0.0f;                                       // [RO] 当前有效 X-Park 退出阈值（m/s）。
+                bool xpark_priority_brake_mode_active = false;                      // [RO] 当前是否为 X-Park 优先停车模式。
+                bool xpark_priority_brake_threshold_active = false;                 // [RO] 当前是否使用优先停车 residual 门限。
+                bool xpark_priority_brake_skip_yaw_reengage = false;                // [RO] 当前是否跳过 yaw lock 回接。
+                f32 xpark_priority_brake_residual_enter_m_s = 0.0f;                 // [RO] 当前优先停车 residual enter 阈值（m/s）。
+                f32 xpark_priority_brake_residual_exit_m_s = 0.0f;                  // [RO] 当前优先停车 residual exit 阈值（m/s）。
+                f32 xpark_priority_brake_entry_delay_ms = 0.0f;                     // [RO] 当前优先停车 entry delay（ms）。
                 bool lim_drive_omega = true;                                        // [RO] 驱动角速度限幅是否开启。
                 bool lim_drive_alpha = true;                                        // [RO] 驱动角加速度限幅是否开启。
                 bool lim_steer_rate = true;                                         // [RO] 舵向角速度限幅是否开启。
@@ -1902,12 +1932,26 @@ namespace jia
                                                 : setTargetWorldSpeedLockNowRotZWithNoOmegaZMode(body_command.vel_x, body_command.vel_y, body_command.omega_z);
         }
 
+        inline Result Chassis::setSpeed_LockNowYaw_XParkBrake(Coordinate coord, f32 vel_x, f32 vel_y, f32 omega_z)
+        {
+            const BodyCommand body_command = mapExternalCommandToBody({coord, vel_x, vel_y, omega_z});
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockNowRotZWithXParkBrakeMode(body_command.vel_x, body_command.vel_y, body_command.omega_z)
+                                                : setTargetWorldSpeedLockNowRotZWithXParkBrakeMode(body_command.vel_x, body_command.vel_y, body_command.omega_z);
+        }
+
         inline Result Chassis::setSpeed_LockToYaw(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z)
         {
             // LockToYaw 的 yaw 目标单独传入 rot_z，平移部分仍沿公开坐标约定映射到内部 body 语义。
             const BodyCommand body_command = mapExternalCommandToBody({coord, vel_x, vel_y, 0.0f});
             return (coord == Coordinate::kBody) ? setTargetBodySpeedLockToRotZMode(body_command.vel_x, body_command.vel_y, rot_z)
                                                 : setTargetWorldSpeedLockToRotZMode(body_command.vel_x, body_command.vel_y, rot_z);
+        }
+
+        inline Result Chassis::setSpeed_LockToYaw_XParkBrake(Coordinate coord, f32 vel_x, f32 vel_y, f32 rot_z)
+        {
+            const BodyCommand body_command = mapExternalCommandToBody({coord, vel_x, vel_y, 0.0f});
+            return (coord == Coordinate::kBody) ? setTargetBodySpeedLockToRotZWithXParkBrakeMode(body_command.vel_x, body_command.vel_y, rot_z)
+                                                : setTargetWorldSpeedLockToRotZWithXParkBrakeMode(body_command.vel_x, body_command.vel_y, rot_z);
         }
 
         inline Chassis::BodyCommand Chassis::mapExternalCommandToBody(const ExternalCommand &command)

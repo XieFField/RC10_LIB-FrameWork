@@ -1037,6 +1037,65 @@ TEST_CASE("testLockToYawPureDecelBlocksPlannedOmegaReuseWhenYawPidIsDecimated")
     EXPECT_NEAR(chassis.planned_data_.omega_z, 0.0f, 1.0e-6f);
 }
 
+TEST_CASE("testLockToYawXParkBrakeUsesLockToYawSemanticsWhileMoving")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+
+    const float lock_yaw_rad = jia::degToRadF32(30.0f);
+    chassis.setSpeed_LockToYaw_XParkBrake(Chassis::Coordinate::kBody, 0.0f, 0.3f, lock_yaw_rad);
+    EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
+
+    EXPECT_TRUE(chassis.current_mode_flag_.is_lock_to_rot_z);
+    EXPECT_TRUE(chassis.yaw_pid_trace_.pid_compute_fired == 1.0f);
+    EXPECT_NEAR(chassis.target_data_.rot_z, lock_yaw_rad, 1.0e-6f);
+}
+
+TEST_CASE("testLockNowYawXParkBrakeUsesLockNowYawSemanticsWhileMoving")
+{
+    Chassis chassis;
+    configureYawLockSwitchHarness(chassis);
+    chassis.input_hwt_rot_z_ = jia::degToRadF32(12.0f);
+    chassis.lock_now_rot_z_shift_time_ms_ = 3U;
+
+    chassis.setSpeed_LockNowYaw_XParkBrake(Chassis::Coordinate::kBody, 0.0f, 0.3f, 0.0f);
+    EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
+
+    EXPECT_TRUE(chassis.current_mode_flag_.is_lock_now_rot_z);
+    EXPECT_TRUE((chassis.yaw_pid_trace_.mode_tag == 2.0f) || (chassis.yaw_pid_trace_.mode_tag == 3.0f));
+    EXPECT_NEAR(chassis.lock_now_rot_z_target_, chassis.input_hwt_rot_z_, 1.0e-6f);
+}
+
+TEST_CASE("testLockToYawXParkBrakeSkipsYawLockReengageAfterZeroStopRelease")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureLockToYawReleaseHoldHarness(chassis, steer_motors, drive_motors);
+
+    chassis.runtime_strategy_cfg_.xpark_priority_brake_cfg_.residual_enter_m_s = 0.08f;
+    chassis.runtime_strategy_cfg_.xpark_priority_brake_cfg_.residual_exit_m_s = 0.10f;
+    chassis.runtime_strategy_cfg_.xpark_priority_brake_cfg_.entry_delay_ms = 1U;
+
+    const float lock_yaw_rad = jia::degToRadF32(20.0f);
+    chassis.setSpeed_LockToYaw_XParkBrake(Chassis::Coordinate::kBody, 0.24f, 0.0f, lock_yaw_rad);
+    EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
+    followYawLockActuatorFrame(chassis, steer_motors, drive_motors, 0.18f);
+
+    chassis.setSpeed_LockToYaw_XParkBrake(Chassis::Coordinate::kBody, 0.0f, 0.0f, lock_yaw_rad);
+    EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
+    EXPECT_TRUE(chassis.yaw_lock_zero_stop_decel_context_active_);
+    EXPECT_TRUE(!chassis.xpark_gate_active_);
+
+    followYawLockActuatorFrame(chassis, steer_motors, drive_motors, 0.06f);
+    EXPECT_TRUE(runApiControlCycleForYawLockSwitch(chassis));
+
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+    EXPECT_TRUE(!chassis.yaw_lock_zero_stop_decel_context_active_);
+    EXPECT_NEAR(chassis.target_data_.omega_z, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(chassis.planned_data_.omega_z, 0.0f, 1.0e-6f);
+}
+
 TEST_CASE("testYawLockMidRotationSteerErrorJitterDoesNotTogglePlannerDriveTarget")
 {
     Chassis chassis;

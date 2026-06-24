@@ -78,6 +78,9 @@
     testLockToYawPidTracePublishesTargetErrorAndPidFireState();
     testLockToYawThenLockNowKeepsTheEffectiveLockedYaw();
     testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates();
+    testLockToYawXParkBrakeUsesLockToYawSemanticsWhileMoving();
+    testLockNowYawXParkBrakeUsesLockNowYawSemanticsWhileMoving();
+    testLockToYawXParkBrakeSkipsYawLockReengageAfterZeroStopRelease();
     testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle();
     testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned();
     testNormalLaunchSCurveWaitsForSteerAlignmentBeforeAccumulatingBodyPlan();

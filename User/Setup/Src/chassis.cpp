@@ -427,6 +427,26 @@ namespace jia
             return Result::kOk;
         }
 
+        Chassis::Result Chassis::setTargetBodySpeedLockNowRotZWithXParkBrakeMode(f32 vel_x, f32 vel_y, f32 omega_z)
+        {
+            input_target_data_.mode = Mode::kBodySpeedLockNowRotZWithXParkBrakeMode;
+            input_target_data_.zero_current_all = false;
+            input_target_data_.vel_x = vel_x;
+            input_target_data_.vel_y = vel_y;
+            input_target_data_.omega_z = omega_z;
+            return Result::kOk;
+        }
+
+        Chassis::Result Chassis::setTargetBodySpeedLockToRotZWithXParkBrakeMode(f32 vel_x, f32 vel_y, f32 rot_z)
+        {
+            input_target_data_.mode = Mode::kBodySpeedLockToRotZWithXParkBrakeMode;
+            input_target_data_.zero_current_all = false;
+            input_target_data_.vel_x = vel_x;
+            input_target_data_.vel_y = vel_y;
+            input_target_data_.rot_z = rot_z;
+            return Result::kOk;
+        }
+
         Chassis::Result Chassis::setTargetWorldSpeedMode(f32 vel_x, f32 vel_y, f32 omega_z)
         {
             input_target_data_.mode = Mode::kWorldSpeedMode;
@@ -460,6 +480,26 @@ namespace jia
         Chassis::Result Chassis::setTargetWorldSpeedLockToRotZMode(f32 vel_x, f32 vel_y, f32 rot_z)
         {
             input_target_data_.mode = Mode::kWorldSpeedLockToRotZMode;
+            input_target_data_.zero_current_all = false;
+            input_target_data_.vel_x = vel_x;
+            input_target_data_.vel_y = vel_y;
+            input_target_data_.rot_z = rot_z;
+            return Result::kOk;
+        }
+
+        Chassis::Result Chassis::setTargetWorldSpeedLockNowRotZWithXParkBrakeMode(f32 vel_x, f32 vel_y, f32 omega_z)
+        {
+            input_target_data_.mode = Mode::kWorldSpeedLockNowRotZWithXParkBrakeMode;
+            input_target_data_.zero_current_all = false;
+            input_target_data_.vel_x = vel_x;
+            input_target_data_.vel_y = vel_y;
+            input_target_data_.omega_z = omega_z;
+            return Result::kOk;
+        }
+
+        Chassis::Result Chassis::setTargetWorldSpeedLockToRotZWithXParkBrakeMode(f32 vel_x, f32 vel_y, f32 rot_z)
+        {
+            input_target_data_.mode = Mode::kWorldSpeedLockToRotZWithXParkBrakeMode;
             input_target_data_.zero_current_all = false;
             input_target_data_.vel_x = vel_x;
             input_target_data_.vel_y = vel_y;
@@ -1031,6 +1071,12 @@ namespace jia
             // 与 preview 版的区别是：本函数会读写 decel context / release hold 运行态，因此只能在执行阶段调用。
             const bool yaw_lock_control_requested =
                 current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
+            if (current_mode_flag_.use_xpark_priority_brake && xpark_priority_brake_skip_yaw_reengage_active_ && xpark_gate_active_)
+            {
+                yaw_lock_zero_stop_decel_context_active_ = false;
+                yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
+                return false;
+            }
             if (!yaw_lock_control_requested ||
                 input_target_data_.zero_current_all ||
                 current_mode_flag_.is_wheel_torque_free ||
@@ -1045,7 +1091,9 @@ namespace jia
             const f32 command_trans_speed_m_s = magnitude2DF32(command_data.vel_x, command_data.vel_y);
             const bool manual_yaw_requested =
                 ((input_target_data_.mode == Mode::kBodySpeedLockNowRotZWithNoOmegaZMode) ||
-                 (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode)) &&
+                 (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode) ||
+                 (input_target_data_.mode == Mode::kBodySpeedLockNowRotZWithXParkBrakeMode) ||
+                 (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithXParkBrakeMode)) &&
                 (fabsf(input_target_data_.omega_z) > 1.0e-6f);
             const bool yaw_lock_zero_stop_hold_active =
                 yaw_lock_zero_stop_decel_context_active_ || (yaw_lock_zero_stop_release_hold_elapsed_ms_ > 0U);
@@ -1138,6 +1186,10 @@ namespace jia
             // 它不会推进 decel context，也不会更新 hold 计时器；真正的状态推进在执行阶段的 shouldSuppress...() 完成。
             const bool yaw_lock_control_requested =
                 current_mode_flag_.is_lock_now_rot_z || current_mode_flag_.is_lock_to_rot_z;
+            if (current_mode_flag_.use_xpark_priority_brake && xpark_priority_brake_skip_yaw_reengage_active_ && xpark_gate_active_)
+            {
+                return false;
+            }
             if (!yaw_lock_control_requested ||
                 input_target_data_.zero_current_all ||
                 current_mode_flag_.is_wheel_torque_free ||
@@ -1150,7 +1202,9 @@ namespace jia
             const f32 command_trans_speed_m_s = magnitude2DF32(command_data.vel_x, command_data.vel_y);
             const bool manual_yaw_requested =
                 ((input_target_data_.mode == Mode::kBodySpeedLockNowRotZWithNoOmegaZMode) ||
-                 (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode)) &&
+                 (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode) ||
+                 (input_target_data_.mode == Mode::kBodySpeedLockNowRotZWithXParkBrakeMode) ||
+                 (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithXParkBrakeMode)) &&
                 (fabsf(input_target_data_.omega_z) > 1.0e-6f);
             const bool yaw_lock_zero_stop_hold_active =
                 yaw_lock_zero_stop_decel_context_active_ || (yaw_lock_zero_stop_release_hold_elapsed_ms_ > 0U);
@@ -1394,8 +1448,21 @@ namespace jia
 
             const f32 xpark_command_enter_speed = getXParkCommandEnterSpeedMps();
             const f32 xpark_command_exit_speed = getXParkCommandExitSpeedMps();
-            const f32 xpark_residual_enter_speed = getNearZeroEnterSpeedMps();
-            const f32 xpark_residual_exit_speed = getNearZeroExitSpeedMps();
+            const bool use_xpark_priority_brake_threshold =
+                current_mode_flag_.use_xpark_priority_brake;
+            const f32 xpark_residual_enter_speed = use_xpark_priority_brake_threshold
+                                                       ? fabsf(runtime_strategy_cfg_.xpark_priority_brake_cfg_.residual_enter_m_s)
+                                                       : getNearZeroEnterSpeedMps();
+            const f32 xpark_residual_exit_speed_raw = use_xpark_priority_brake_threshold
+                                                          ? fabsf(runtime_strategy_cfg_.xpark_priority_brake_cfg_.residual_exit_m_s)
+                                                          : getNearZeroExitSpeedMps();
+            const f32 xpark_residual_exit_speed =
+                (xpark_residual_exit_speed_raw >= xpark_residual_enter_speed)
+                    ? xpark_residual_exit_speed_raw
+                    : xpark_residual_enter_speed;
+            const u32 xpark_entry_delay_ms = use_xpark_priority_brake_threshold
+                                                 ? runtime_strategy_cfg_.xpark_priority_brake_cfg_.entry_delay_ms
+                                                 : runtime_strategy_cfg_.xpark_entry_delay_ms;
             // X-Park 有两层门：
             // 1. 进入门：目标速度已经进入 X-Park command 门，且实际残余速度也进入通用 near-zero 门。
             // 2. 保持/退出门：一旦 xpark_gate_active_ 锁存，只看目标速度是否仍在 X-Park command 退出门内。
@@ -1416,20 +1483,30 @@ namespace jia
                     xpark_stationary_hold_ms_ = (xpark_stationary_hold_ms_ > (0xFFFFFFFFU - period_ms_))
                                                     ? 0xFFFFFFFFU
                                                     : (xpark_stationary_hold_ms_ + period_ms_);
-                    if (xpark_stationary_hold_ms_ >= runtime_strategy_cfg_.xpark_entry_delay_ms)
+                    if (xpark_stationary_hold_ms_ >= xpark_entry_delay_ms)
                     {
                         xpark_gate_active_ = true;
+                        xpark_priority_brake_gate_active_ = use_xpark_priority_brake_threshold;
+                        xpark_priority_brake_skip_yaw_reengage_active_ = use_xpark_priority_brake_threshold;
+                        if (use_xpark_priority_brake_threshold)
+                        {
+                            yaw_lock_zero_stop_decel_context_active_ = false;
+                            yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
+                        }
                     }
                 }
                 else
                 {
                     xpark_stationary_hold_ms_ = 0U;
+                    xpark_priority_brake_gate_active_ = false;
                 }
             }
             else if (!xpark_target_stationary)
             {
                 xpark_stationary_hold_ms_ = 0U;
                 xpark_gate_active_ = false;
+                xpark_priority_brake_gate_active_ = false;
+                xpark_priority_brake_skip_yaw_reengage_active_ = false;
             }
 
             const bool force_uniform_steer_drive = (input_target_data_.mode == Mode::kSteerAngleAndDriveSpeedMode);
@@ -1775,6 +1852,7 @@ namespace jia
             current_mode_flag_.is_lock_now_rot_z = false;
             current_mode_flag_.is_lock_to_rot_z = false;
             current_mode_flag_.is_wheel_torque_free = false;
+            current_mode_flag_.use_xpark_priority_brake = false;
 
             switch (input_target_data_.mode)
             {
@@ -1790,9 +1868,17 @@ namespace jia
                 // “手动 omega_z 是否继续参与”不是在 flag 层区分，而是在后面的目标解算里决定。
                 current_mode_flag_.is_lock_now_rot_z = true;
                 break;
+            case Mode::kBodySpeedLockNowRotZWithXParkBrakeMode:
+                current_mode_flag_.is_lock_now_rot_z = true;
+                current_mode_flag_.use_xpark_priority_brake = true;
+                break;
             case Mode::kBodySpeedLockToRotZMode:
                 // LockTo 与 LockNow 的差别不在“是否开锁角”，而在后面使用的是显式 rot_z 目标角，而不是当前 yaw 快照。
                 current_mode_flag_.is_lock_to_rot_z = true;
+                break;
+            case Mode::kBodySpeedLockToRotZWithXParkBrakeMode:
+                current_mode_flag_.is_lock_to_rot_z = true;
+                current_mode_flag_.use_xpark_priority_brake = true;
                 break;
             case Mode::kWorldSpeedMode:
                 // world flag 只表示“输入命令按世界系解释”，不表示轮反馈或内部所有运行态也切到了世界系。
@@ -1804,9 +1890,19 @@ namespace jia
                 // 先标成 world + lock-now，后续再由 yaw lock 逻辑处理“当前 yaw 目标”和手动旋转输入之间的关系。
                 current_mode_flag_.is_lock_now_rot_z = true;
                 break;
+            case Mode::kWorldSpeedLockNowRotZWithXParkBrakeMode:
+                current_mode_flag_.is_world_speed_mode = true;
+                current_mode_flag_.is_lock_now_rot_z = true;
+                current_mode_flag_.use_xpark_priority_brake = true;
+                break;
             case Mode::kWorldSpeedLockToRotZMode:
                 current_mode_flag_.is_world_speed_mode = true;
                 current_mode_flag_.is_lock_to_rot_z = true;
+                break;
+            case Mode::kWorldSpeedLockToRotZWithXParkBrakeMode:
+                current_mode_flag_.is_world_speed_mode = true;
+                current_mode_flag_.is_lock_to_rot_z = true;
+                current_mode_flag_.use_xpark_priority_brake = true;
                 break;
             case Mode::kSteerAngleAndDriveSpeedMode:
                 // steer-angle + drive-speed 的差异由后续专门分支消费；
@@ -1843,6 +1939,14 @@ namespace jia
                 return DebugMode::kWorldLockNowWithNoOmegaZ;
             case 9:
                 return DebugMode::kSteerDegAndDriveSpeed;
+            case 10:
+                return DebugMode::kBodyLockNowXParkBrake;
+            case 11:
+                return DebugMode::kWorldLockNowXParkBrake;
+            case 12:
+                return DebugMode::kBodyLockToXParkBrake;
+            case 13:
+                return DebugMode::kWorldLockToXParkBrake;
             case 20:
                 return DebugMode::kTorqueFree;
             case 21:
@@ -1925,6 +2029,18 @@ namespace jia
                 break;
             case DebugMode::kWorldLockTo:
                 setTargetWorldSpeedLockToRotZMode(target_vel_x, target_vel_y, debug_control_.injection.lock_rot_z);
+                break;
+            case DebugMode::kBodyLockNowXParkBrake:
+                setTargetBodySpeedLockNowRotZWithXParkBrakeMode(target_vel_x, target_vel_y);
+                break;
+            case DebugMode::kWorldLockNowXParkBrake:
+                setTargetWorldSpeedLockNowRotZWithXParkBrakeMode(target_vel_x, target_vel_y);
+                break;
+            case DebugMode::kBodyLockToXParkBrake:
+                setTargetBodySpeedLockToRotZWithXParkBrakeMode(target_vel_x, target_vel_y, debug_control_.injection.lock_rot_z);
+                break;
+            case DebugMode::kWorldLockToXParkBrake:
+                setTargetWorldSpeedLockToRotZWithXParkBrakeMode(target_vel_x, target_vel_y, debug_control_.injection.lock_rot_z);
                 break;
             case DebugMode::kBodyLockNowWithNoOmegaZ:
                 setTargetBodySpeedLockNowRotZWithNoOmegaZMode(target_vel_x, target_vel_y, target_omega_z);
@@ -4241,11 +4357,15 @@ namespace jia
                     (input_target_data_.mode == Mode::kBodySpeedMode) ||
                     (input_target_data_.mode == Mode::kBodySpeedLockNowRotZMode) ||
                     (input_target_data_.mode == Mode::kBodySpeedLockNowRotZWithNoOmegaZMode) ||
+                    (input_target_data_.mode == Mode::kBodySpeedLockNowRotZWithXParkBrakeMode) ||
                     (input_target_data_.mode == Mode::kBodySpeedLockToRotZMode) ||
+                    (input_target_data_.mode == Mode::kBodySpeedLockToRotZWithXParkBrakeMode) ||
                     (input_target_data_.mode == Mode::kWorldSpeedMode) ||
                     (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZMode) ||
                     (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithNoOmegaZMode) ||
-                    (input_target_data_.mode == Mode::kWorldSpeedLockToRotZMode);
+                    (input_target_data_.mode == Mode::kWorldSpeedLockNowRotZWithXParkBrakeMode) ||
+                    (input_target_data_.mode == Mode::kWorldSpeedLockToRotZMode) ||
+                    (input_target_data_.mode == Mode::kWorldSpeedLockToRotZWithXParkBrakeMode);
                 // 正常底盘链路下优先依据整车目标是否已静止来决定是否进入 zero-stop，
                 // 避免速度规划尾巴还没完全衰减时，把刹车收尾整体拖后。
                 f32 max_frame_command_speed_m_s = 0.0f;
@@ -4797,6 +4917,16 @@ namespace jia
             debug_mirror_.nz_freeze_exit_m_s = getNearZeroExitSpeedMps();
             debug_mirror_.nz_xpark_enter_m_s = getXParkCommandEnterSpeedMps();
             debug_mirror_.nz_xpark_exit_m_s = getXParkCommandExitSpeedMps();
+            debug_mirror_.xpark_priority_brake_mode_active = current_mode_flag_.use_xpark_priority_brake;
+            debug_mirror_.xpark_priority_brake_threshold_active = xpark_priority_brake_gate_active_;
+            debug_mirror_.xpark_priority_brake_skip_yaw_reengage = xpark_priority_brake_skip_yaw_reengage_active_;
+            debug_mirror_.xpark_priority_brake_residual_enter_m_s = fabsf(runtime_strategy_cfg_.xpark_priority_brake_cfg_.residual_enter_m_s);
+            const f32 xpark_priority_brake_residual_exit_raw = fabsf(runtime_strategy_cfg_.xpark_priority_brake_cfg_.residual_exit_m_s);
+            debug_mirror_.xpark_priority_brake_residual_exit_m_s =
+                (xpark_priority_brake_residual_exit_raw >= debug_mirror_.xpark_priority_brake_residual_enter_m_s)
+                    ? xpark_priority_brake_residual_exit_raw
+                    : debug_mirror_.xpark_priority_brake_residual_enter_m_s;
+            debug_mirror_.xpark_priority_brake_entry_delay_ms = static_cast<f32>(runtime_strategy_cfg_.xpark_priority_brake_cfg_.entry_delay_ms);
             debug_mirror_.xpark_steer_hold_enable = runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable;
             debug_mirror_.xpark_steer_hold_entry_deg =
                 clampValue(runtime_strategy_cfg_.xpark_steer_hold_cfg_.entry_angle_deg, 0.0f, 180.0f);
