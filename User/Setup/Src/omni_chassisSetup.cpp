@@ -320,6 +320,11 @@ void OmniChassis_Setup::loop()
             }
             else
             {
+                if(CZ_Arm==false)
+                {
+                    CZ_flag.R1_FB_index = 0;
+                    CZ_R1_Selection_Planning();  
+                }
                 CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
@@ -491,17 +496,16 @@ void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
     path_line_.plan_reset();
 
     pid_dead_flag = false;
-
     path_line_.Add_Start_Point(robot_pos_);
     if (CZ_flag.R1_FB_index == 1)
     {
         CZ_Arm = true;
-        path_line_.Add_End_Point({CZ_point.R1_pos[CZ_flag.R1_RL_index][1].x, robot_pos_.y}, path_param.end);
+        path_line_.Add_End_Point({CZ_point.R1_pos[CZ_flag.R1_RL_index][RB_Flag].x+CZ_point.set_skew*(RB_Flag?1.0f:(-1.0f)), robot_pos_.y}, path_param.end);
     }
     else
     {
         CZ_Arm = false;
-        path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][0], path_param.end);
+        path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][RB_Flag], path_param.end);
     }
 
     Path_end_point = path_line_.Get_End_Point();
@@ -687,7 +691,8 @@ void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
 
     // 合体地点和等待地点的切换
     path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_End_Point(CZ_point.fit_pos[CZ_flag.fit_pos_index], path_param.end);
+    path_line_.Add_Point(CZ_point.fit_pos[2][RB_Flag], path_param.line);
+    path_line_.Add_End_Point(CZ_point.fit_pos[CZ_flag.fit_pos_index][RB_Flag], path_param.end);
     Path_end_point = path_line_.Get_End_Point();
 }
 void OmniChassis_Setup::CZ_FIT_R2_Selection_Planning(void)
@@ -699,7 +704,7 @@ void OmniChassis_Setup::CZ_FIT_R2_Selection_Planning(void)
 
     // R2放置物块
     path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_End_Point(CZ_point.R2_pos[CZ_flag.R2_pos_index], path_param.R2);
+    path_line_.Add_End_Point(CZ_point.R2_pos[CZ_flag.R2_pos_index][RB_Flag], path_param.R2);
     Path_end_point = path_line_.Get_End_Point();
 }
 
