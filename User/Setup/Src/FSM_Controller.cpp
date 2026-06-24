@@ -753,6 +753,7 @@ void FSM_Controller::auto_ctrl()
             //         SWD == 0x01为贴边路径
 
             weaponSage_setup_->Set_End_Flag(chassis_setup_->GetReach_flag());
+            //weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTOCONTROL);
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
             static uint8_t is_click = 0;
@@ -765,6 +766,27 @@ void FSM_Controller::auto_ctrl()
             else if (airjoy_data_.LB == 0)
             {
                 is_click = 0;
+            }
+            
+            
+            if(weaponSage_setup_->is_auto_ctrl_over())
+            {
+                chassis_setup_->ReceiveEnd_flag(false);
+            }
+
+            // 判断是否可以进行互相通讯
+            if (chassis_setup_->GetReach_flag() == true)
+            {
+                weaponSage_setup_->Get_OMNI_IM_flag(true);
+            }
+            if (weaponSage_setup_->Get_Catch_flag() == true)
+            {
+                chassis_setup_->ReceiveReach_flag(false);
+            }
+
+            if (chassis_setup_->GetEnd_flag() == true)
+            {
+                weaponSage_setup_->Get_OMNI_DS_flag(true);
             }
         }
         else if (airjoy_data_.SWB == 0x00) // 半自动

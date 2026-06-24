@@ -58,7 +58,7 @@ typedef struct
 
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
-    Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.1f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     // 没用的
     // Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -82,16 +82,17 @@ typedef struct
 
 typedef struct
 {
-    Vector2D CB_Start_pos = {1.0f, 0.9f};         // 夹杆起点。
-    Vector2D CB_Selection_pos = {2.457f, 0.825f}; // 夹杆流程默认目标点。
-                                                  // 6/18往下挪了0.5cm XieFField
+    //第数组第零为红场
+    Vector2D CB_Start_pos[2] = {{5.0f, 1.0f}, {1.0f, 1.0f}};             // 夹杆起点。
+    Vector2D CB_Selection_pos[2] = {{3.539f, 0.835f}, {2.461f, 0.835f}}; // 夹杆流程默认目标点。
+
     // 相机流程
-    Vector2D CB_End_pos = {2.455f, 1.185f};
+    Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
 
     // 贴边流程
-    Vector2D CB_transition_pos = {2.455f, 1.3f};
-    Vector2D CB_transition_pos_1 = {3.4f, 1.0f};
-    Vector2D CB_welt_pos = {3.7f, 0.495f};
+    Vector2D CB_transition_pos[2] = {{3.539f, 1.3f}, {2.461f, 1.3f}};
+    Vector2D CB_transition_pos_1[2] = {{2.6f, 1.0f}, {3.4f, 1.0f}};
+    Vector2D CB_welt_pos[2] = {{3.3f, 0.495f}, {3.7f, 0.495f}};
 
 } CB_POINT;
 
@@ -132,9 +133,6 @@ typedef struct
     // 下界10.02f上界是11.52f
     Vector2D fit_wait_pos = {2.17f, 10.05f};
     Vector2D fit_end_pos = {4.83f, 11.5f};
-
-    float R1_yaw = 180.0f;
-    float fit_yaw = -90.0f;
 
     // 左中右   或者   先后
     Vector2D R1_pos[3][2] = {{{4.535f, 11.27f}, {4.75f, 11.27f}}, {{4.535f, 10.755f}, {4.75f, 10.755f}}, {{4.535f, 10.19f}, {4.75f, 10.19f}}};
@@ -226,7 +224,6 @@ public:
 private:
     // Vector2D test_point = {3.0f, 2.0f};
     //-----------------------------------通讯标志位-----------------------------------------//
-
     bool WeaponSage_Start = false; // 夹杆流程开始标志。
     bool WeaponSage_End = false;   // 夹杆流程完成标志。
 
@@ -308,12 +305,13 @@ private:
     void CZ_ARM_Path_Init(void);
 
     void CZ_index_reset(void);
-    
+
     void CZ_FIT_WAIT_Selection_Planning(void);
-    
+
     void CZ_FIT_R2_Selection_Planning(void);
-    
+
     void CZ_ARM_Selection_Planning(void);
+
 public:
     /**
      * @brief 设置路径自动开始标志
@@ -385,7 +383,7 @@ public:
         // 写入机械臂流程反馈标志。
         Arm_Start = arm_end;
     }
-    
+
     bool Get_CZ_Arm_flag()
     {
         // 读取机械臂触发标志。
@@ -442,7 +440,7 @@ private:
             Chassis_Target.VX = 0.0f;
             Chassis_Target.VY = 0.0f;
         }
-        if(pid_dead_flag == true && chassis_status_ == CHASSIS_AUTO_CONTROL_CB&&WeaponSage_End==true)
+        if (pid_dead_flag == true && chassis_status_ == CHASSIS_AUTO_CONTROL_CB && WeaponSage_End == true)
         {
             Chassis_Target.VX = 0.0f;
             Chassis_Target.VY = 0.0f;
@@ -650,7 +648,7 @@ private:
             if (CZ_point.uphill_pos.x == curve.Get_Start_point().x && CZ_point.uphill_pos.y == curve.Get_Start_point().y)
             {
                 if (robot_pos_.x > CZ_point.skew_yaw)
-                    target_yaw = CZ_point.R1_yaw;
+                    target_yaw = RB_Flag ? 180.0f : 0.0f;
             }
         }
     }
@@ -1043,44 +1041,20 @@ private:
         Chassis_Target.VY = speed.y;
     }
     // 当需要所目标角时第四个参数给false
-    void CHASSIS_MANUAL(float vx_ratio, float vy_ratio, float yaw_ratio = 0.0f, bool yaw_update = true, bool CZ_flag = false)
+    void CHASSIS_MANUAL(float vx_ratio, float vy_ratio, float yaw_ratio = 0.0f, bool yaw_update = true)
     {
-        if (CZ_flag == false)
-        {
-
-            if (_tool_Abs(airjoy_data_.left_x) > 0.1f)
-                Chassis_Target.VX = airjoy_data_.left_x * vx_ratio * this->is_chassis_reverse_;
-            else
-                Chassis_Target.VX = 0.0f;
-            if (_tool_Abs(airjoy_data_.left_y) > 0.1f)
-                Chassis_Target.VY = airjoy_data_.left_y * vy_ratio * this->is_chassis_reverse_;
-            else
-                Chassis_Target.VY = 0.0f;
-            if (_tool_Abs(airjoy_data_.right_x) > 0.1f)
-                Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio*(-1.0f);
-            else
-                Chassis_Target.yaw_rate = 0.0f;
-
-        }
-        else if (CZ_flag == true)
-        {
-
-            if (_tool_Abs(airjoy_data_.left_x) > 0.1f)
-                Chassis_Target.VY = airjoy_data_.left_x * vy_ratio * this->is_chassis_reverse_ * RB_Flag ? (-1) : 1;
-            else
-                Chassis_Target.VY = 0.0f;
-
-            if (_tool_Abs(airjoy_data_.left_y) > 0.1f)
-                Chassis_Target.VX = airjoy_data_.left_y * vx_ratio * this->is_chassis_reverse_ * RB_Flag ? 1 : (-1);
-            else
-                Chassis_Target.VX = 0.0f;
-            if (_tool_Abs(airjoy_data_.right_x) > 0.1f)
-                Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio*(-1.0f);
-            else
-                Chassis_Target.yaw_rate = 0.0f;
-
-            
-            }
+        if (_tool_Abs(airjoy_data_.left_x) > 0.1f)
+            Chassis_Target.VX = airjoy_data_.left_x * vx_ratio * this->is_chassis_reverse_;
+        else
+            Chassis_Target.VX = 0.0f;
+        if (_tool_Abs(airjoy_data_.left_y) > 0.1f)
+            Chassis_Target.VY = airjoy_data_.left_y * vy_ratio * this->is_chassis_reverse_;
+        else
+            Chassis_Target.VY = 0.0f;
+        if (_tool_Abs(airjoy_data_.right_x) > 0.1f)
+            Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio * (-1.0f);
+        else
+            Chassis_Target.yaw_rate = 0.0f;
 
         if (yaw_update)
             target_yaw = yaw;
