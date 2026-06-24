@@ -274,7 +274,7 @@ void OmniChassis_Setup::loop()
         }
 
         float target_yaw_rad = target_yaw * PI / 180.0f;
-        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, target_yaw_rad);
 
         chassis_status_last_ = chassis_status_;
         break;
@@ -288,9 +288,9 @@ void OmniChassis_Setup::loop()
             path_line_.Reset();
             path_line_.plan_reset();
             Path_end_point = robot_pos_;
-            CZ_point.fit_pos_index=1;
-            CZ_point.R1_pos_index=0;
-            CZ_point.R2_pos_index=0;
+            CZ_flag.fit_pos_index = 1;
+            CZ_flag.R1_RL_index = 0;
+            CZ_flag.R2_pos_index = 0;
         }
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
         if (flag == 1)
@@ -303,7 +303,7 @@ void OmniChassis_Setup::loop()
             // 获取曲线（带保护）
             curve = path_line_.get_bezier_curve();
             // 旋转点位判断以及KFS的拾取判断
-            Path_KFS_check();
+            KFS_Path_Check();
             if (true)
             {
                 // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
@@ -311,8 +311,8 @@ void OmniChassis_Setup::loop()
                 Path_correction();
                 V.corrVelocity = V.PID_coefficient * V.corrVelocity;
                 speed = v_limit();
-                target_chassis_twist_.vx = speed.x;
-                target_chassis_twist_.vy = speed.y;
+                Chassis_Target.VX = speed.x;
+                Chassis_Target.VY = speed.y;
             }
             else
             {
@@ -325,7 +325,7 @@ void OmniChassis_Setup::loop()
         }
 
         float target_yaw_rad = target_yaw * PI / 180.0f;
-        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, target_yaw_rad);
 
         chassis_status_last_ = chassis_status_;
         break;
@@ -339,9 +339,9 @@ void OmniChassis_Setup::loop()
             path_line_.Reset();
             path_line_.plan_reset();
             Path_end_point = robot_pos_;
-            CZ_point.fit_pos_index=1;
-            CZ_point.R1_pos_index=0;
-            CZ_point.R2_pos_index=0;
+            CZ_flag.fit_pos_index = 1;
+            CZ_flag.R1_RL_index = 0;
+            CZ_flag.R2_pos_index = 0;
         }
         // KFS 自动流程：路径跟踪 + 旋转点处理 + 机械臂联动。
         if (flag == 1)
@@ -354,7 +354,7 @@ void OmniChassis_Setup::loop()
             // 获取曲线（带保护）
             curve = path_line_.get_bezier_curve();
             // 旋转点位判断以及KFS的拾取判断
-            Path_KFS_check();
+            KFS_Path_Check();
             if (true)
             {
                 // 5. 规划速度+叠加纠偏速度：计算路径规划的前进速度（切向速度）
@@ -362,8 +362,8 @@ void OmniChassis_Setup::loop()
                 Path_correction();
                 V.corrVelocity = V.PID_coefficient * V.corrVelocity;
                 speed = v_limit();
-                target_chassis_twist_.vx = speed.x;
-                target_chassis_twist_.vy = speed.y;
+                Chassis_Target.VX = speed.x;
+                Chassis_Target.VY = speed.y;
             }
             else
             {
@@ -376,7 +376,7 @@ void OmniChassis_Setup::loop()
         }
 
         float target_yaw_rad = target_yaw * PI / 180.0f;
-        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, target_chassis_twist_.vx, target_chassis_twist_.vy, target_yaw_rad);
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, target_yaw_rad);
 
         chassis_status_last_ = chassis_status_;
         break;
