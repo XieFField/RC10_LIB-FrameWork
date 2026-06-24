@@ -86,6 +86,8 @@ void OmniChassis_Setup::CB_Selection_Planning(void)
     Path_end_point = path_line_.Get_End_Point();
 }
 
+///////////////////////          主循环         ////////////////////////////////////////
+
 void OmniChassis_Setup::loop()
 {
     // 未初始化时不进入控制流程。
@@ -99,6 +101,7 @@ void OmniChassis_Setup::loop()
 #endif
     yaw = Locate_Setup::getInstance()->get_yaw_from_position();
     Point3D ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
+    RB_Flag=MF_AutoCtrler::get_color();
     robot_pos_.x = ladar_data_.x;
     robot_pos_.y = ladar_data_.y;
 
@@ -272,7 +275,6 @@ void OmniChassis_Setup::loop()
             CHASSIS_MANUAL(1.0f, 1.0f, 0.0f, false, true);
             chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, target_yaw * PI / 180.0f);
         }
-
         break;
     }
 
@@ -410,9 +412,9 @@ void OmniChassis_Setup::loop()
 // 三区地图索引复位
 void OmniChassis_Setup::CZ_index_reset(void)
 {
-    CZ_flag.fit_pos_index = 0;
+    CZ_flag.fit_pos_index = 1;
     CZ_flag.R1_FB_index = 0;
-    CZ_flag.R1_RL_index = -1;
+    CZ_flag.R1_RL_index = 0;
     CZ_flag.R2_pos_index = -1;
 }
 
@@ -422,43 +424,25 @@ void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
     target_yaw = CZ_point.R1_yaw;
     path_line_.Reset();
     path_line_.plan_reset();
+    
+    
+    pid_dead_flag = false;
 
     path_line_.Add_Start_Point(robot_pos_);
     if (CZ_flag.R1_FB_index == 1)
     {
+        CZ_Arm = true;
         path_line_.Add_End_Point({CZ_point.R1_pos[CZ_flag.R1_RL_index][1].x, robot_pos_.y}, path_param.end);
     }
     else
     {
+        CZ_Arm = false;
         path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][0], path_param.end);
     }
 
     Path_end_point = path_line_.Get_End_Point();
 }
 
-void OmniChassis_Setup::CZ_R2_Selection_Planning(void)
-{
-    // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw = CZ_point.fit_yaw;
-    path_line_.Reset();
-    path_line_.plan_reset();
-
-//    // 合体地点和等待地点的切换
-//    if (airjoy_data_.SWA == 0x01)
-//    {
-//        CZ_flag.fit_pos_index = (CZ_flag.fit_pos_index + 1) % 2;
-//        path_line_.Add_Start_Point(robot_pos_);
-//        path_line_.Add_End_Point(CZ_point.fit_pos[CZ_flag.fit_pos_index], path_param.end);
-//    }
-//    else if (airjoy_data_.SWA == 0x00)
-//    {
-//        CZ_flag.R2_pos_index = (CZ_flag.R2_pos_index + 1) % 3;
-//        path_line_.Add_Start_Point(robot_pos_);
-//        path_line_.Add_End_Point(CZ_point.R2_pos[CZ_flag.R2_pos_index], path_param.R2);
-//    }
-
-    Path_end_point = path_line_.Get_End_Point();
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////       新代码主要服务于新遥控       //////////////////////////////////
@@ -476,7 +460,7 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
     {
         up_click = true;
         CZ_flag.fit_pos_index = 1;
-        CZ_R2_Selection_Planning();
+        CZ_FIT_WAIT_Selection_Planning();
     }
     else if (airjoy_data_.d_pad_up == 0)
     {
@@ -488,7 +472,7 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
     {
         down_click = true;
         CZ_flag.fit_pos_index = 0;
-        CZ_R2_Selection_Planning();
+        CZ_FIT_WAIT_Selection_Planning();
     }
     else if (airjoy_data_.d_pad_down == 0)
     {
@@ -501,7 +485,7 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
         far_click = true;
         if (CZ_flag.R2_pos_index > 0)
             CZ_flag.R2_pos_index--;
-        CZ_R2_Selection_Planning();
+        CZ_FIT_R2_Selection_Planning();
     }
     else if ((airjoy_data_.d_pad_left == 0 && RB_Flag == true) || (airjoy_data_.d_pad_right == 0 && RB_Flag == false))
     {
@@ -514,7 +498,7 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
         near_click = true;
         if (CZ_flag.R2_pos_index < 2)
             CZ_flag.R2_pos_index++;
-        CZ_R2_Selection_Planning();
+        CZ_FIT_R2_Selection_Planning();
     }
     else if ((airjoy_data_.d_pad_right == 0 && RB_Flag == true) || (airjoy_data_.d_pad_left == 0 && RB_Flag == false))
     {
@@ -554,8 +538,8 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
     {
         down_click = false;
     }
-
-    // 右摇杆往左拨,蓝场远，红场近
+// 右摇杆往左拨,蓝场远，红场近
+    
     if (airjoy_data_.right_x > -0.05f)
         right_flag = 1;
     else if (right_flag > 0 && airjoy_data_.right_x < -0.80f && CZ_flag.R1_FB_index == 0)
@@ -571,14 +555,15 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
             {
                 if (RB_Flag == true)
                 {
-                    if (CZ_flag.R1_RL_index < 2)
-                        CZ_flag.R1_RL_index++;
-                }
-                else if (RB_Flag == false)
-                {
                     if (CZ_flag.R1_RL_index > 0)
                         CZ_flag.R1_RL_index--;
                 }
+                else if (RB_Flag == false)
+                {
+                    if (CZ_flag.R1_RL_index < 2)
+                        CZ_flag.R1_RL_index++;
+                }
+                
                 
             }
             CZ_R1_Selection_Planning();
@@ -610,14 +595,15 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
             {
                 if (RB_Flag == true)
                 {
-                    if (CZ_flag.R1_RL_index > 0)
-                        CZ_flag.R1_RL_index--;
-                }
-                else if (RB_Flag == false)
-                {
                     if (CZ_flag.R1_RL_index < 2)
                         CZ_flag.R1_RL_index++;
                 }
+                else if (RB_Flag == false)
+                {
+                    if (CZ_flag.R1_RL_index > 0)
+                        CZ_flag.R1_RL_index--;
+                }
+
             }
             CZ_R1_Selection_Planning();
             left_flag = 0;
@@ -632,3 +618,57 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
         left_flag = 0;
     }
 }
+void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
+{
+    // 夹杆流程只规划起点到固定终点的简化路径。
+    target_yaw = CZ_point.fit_yaw;
+    path_line_.Reset();
+    path_line_.plan_reset();
+
+    // 合体地点和等待地点的切换
+    path_line_.Add_Start_Point(robot_pos_);
+    path_line_.Add_End_Point(CZ_point.fit_pos[CZ_flag.fit_pos_index], path_param.end);
+    Path_end_point = path_line_.Get_End_Point();
+}
+void OmniChassis_Setup::CZ_FIT_R2_Selection_Planning(void)
+{
+    // 夹杆流程只规划起点到固定终点的简化路径。
+    target_yaw = CZ_point.fit_yaw;
+    path_line_.Reset();
+    path_line_.plan_reset();
+    
+    //R2放置物块
+    path_line_.Add_Start_Point(robot_pos_);
+    path_line_.Add_End_Point(CZ_point.R2_pos[CZ_flag.R2_pos_index], path_param.R2);
+    Path_end_point = path_line_.Get_End_Point();
+}
+
+
+
+
+/*
+void OmniChassis_Setup::CZ_R2_Selection_Planning(void)
+{
+    // 夹杆流程只规划起点到固定终点的简化路径。
+    target_yaw = CZ_point.fit_yaw;
+    path_line_.Reset();
+    path_line_.plan_reset();
+
+    // 合体地点和等待地点的切换
+    if (airjoy_data_.SWA == 0x01)
+    {
+        CZ_flag.fit_pos_index = (CZ_flag.fit_pos_index + 1) % 2;
+        path_line_.Add_Start_Point(robot_pos_);
+        path_line_.Add_End_Point(CZ_point.fit_pos[CZ_flag.fit_pos_index], path_param.end);
+    }
+    else if (airjoy_data_.SWA == 0x00)
+    {
+        CZ_flag.R2_pos_index = (CZ_flag.R2_pos_index + 1) % 3;
+        path_line_.Add_Start_Point(robot_pos_);
+        path_line_.Add_End_Point(CZ_point.R2_pos[CZ_flag.R2_pos_index], path_param.R2);
+    }
+
+    Path_end_point = path_line_.Get_End_Point();
+}
+
+*/
