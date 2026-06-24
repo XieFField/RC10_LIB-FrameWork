@@ -663,6 +663,9 @@ void FSM_Controller::auto_ctrl()
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_COMP_ARM);
 
             chassis_setup_->setChassisStatus(SEMI_AUIO_CZ_ARM);
+            
+            if (chassis_setup_->Get_CZ_Arm_flag())
+                arm_setup_->can_putdown(1);
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x01 && airjoy_data_.SWD == 0x01) // 竞技场 武器模式
         {
@@ -750,7 +753,7 @@ void FSM_Controller::auto_ctrl()
             //         SWD == 0x01为贴边路径
 
             weaponSage_setup_->Set_End_Flag(chassis_setup_->GetReach_flag());
-            //weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            // weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_AUTOCONTROL);
             chassis_setup_->setChassisStatus(CHASSIS_AUTO_CONTROL_CB);
             static uint8_t is_click = 0;
@@ -764,9 +767,8 @@ void FSM_Controller::auto_ctrl()
             {
                 is_click = 0;
             }
-            
-            
-            if(weaponSage_setup_->is_auto_ctrl_over())
+
+            if (weaponSage_setup_->is_auto_ctrl_over())
             {
                 chassis_setup_->ReceiveEnd_flag(false);
             }

@@ -176,9 +176,14 @@
           <ItemText>ARM_Controller</ItemText>
         </Ww>
         <Ww>
-          <count>25</count>
+          <count>4</count>
           <WinNumber>1</WinNumber>
           <ItemText>steer2</ItemText>
+        </Ww>
+        <Ww>
+          <count>5</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>test_angle</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
@@ -1591,7 +1596,7 @@
 
   <Group>
     <GroupName>User/Control</GroupName>
-    <tvExp>0</tvExp>
+    <tvExp>1</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>

@@ -74,7 +74,7 @@ typedef struct
 
     float lock_height_ = 0.0f;       // 云台锁定高度
     float pick_up_height_ = 0.07f;   // 拾取高度
-    float putdown_height_ = 0.07f;   // 放置高度
+    float putdown_height_ = 0.23f;   // 放置高度
     float pitch_lift_angle_ = 91.0f; // 俯仰抬平角度
 
     GPIO_TypeDef *Sucker_GPIO_Port; // 吸盘GPIO控制端口

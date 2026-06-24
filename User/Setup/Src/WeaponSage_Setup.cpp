@@ -227,7 +227,7 @@ void Robot_WeaponSage_Setup::calibrate()
 	
 }
 
-float test_angle = 30.0f;
+float test_angle = 27.0f;
 uint8_t round_cnt =0;
 float test_launch = 0.0625674725;
 
@@ -1134,7 +1134,7 @@ void Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
     {
         if(auto_ctrl_.claw_flag[i])
         {
-            target_claw_pos[i]=0.75*initData_.max_clawAngle_;
+            target_claw_pos[i]=initData_.claw_untight;
         }
         else
         {
@@ -1210,6 +1210,7 @@ WeaponSage_InitData_S initData_=
 	.max_arm_rate_ =90.0f,
 	.dock_height_=0.0625674725,
     .wrist_protect_=0.174290136,
+    .claw_untight = 27.0f,
     .wrist_gearRatio_ = 144.0f,
     .launch_Ratio_ = 0.139989366256f,
     .claw_gearRatio_  =360.0f ,
