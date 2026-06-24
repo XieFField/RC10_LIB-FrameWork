@@ -19,7 +19,7 @@
 
 #include "BSP_TimeStamp.h"
 #include "BSP_RtosTimeStampUs64.h"
-#include "Module_CrsfReceiver.h"
+#include "Module_lora.h"
 #include "Module_HWT.h"
 #include "APP_PID.h"
 
@@ -5566,7 +5566,7 @@ namespace jia
 
                 // 常态同步手柄缓存：即使 debug_control_.common.enable 关闭，也保持 airjoy_data_ 实时更新。
                 // 便于通过调试器直接观察摇杆输入；不改变任何控制模式接管逻辑。
-                CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
+                communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
 
 #if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
                 // RUNTIME_MIN 不走调试接管，避免调试面板字段把正常底盘输入链路拉进固件。

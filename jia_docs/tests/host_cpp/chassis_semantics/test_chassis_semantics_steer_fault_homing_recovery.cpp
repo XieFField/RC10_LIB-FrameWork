@@ -36,7 +36,7 @@ TEST_CASE("testHomingSearchRpmDefaultsToCompileTimeMacro")
 
     for (int i = 0; i < 4; ++i)
     {
-        EXPECT_NEAR(chassis.wheel_config_[i].homing_search_rpm, 50.0f, 1.0e-6f);
+        EXPECT_NEAR(chassis.wheel_config_[i].homing_search_rpm, JIA_CHASSIS_HOMING_SEARCH_RPM, 1.0e-6f);
     }
 
     chassis.wheel_config_[0].homing_state = Chassis::HomingState::kSearch;
@@ -46,7 +46,7 @@ TEST_CASE("testHomingSearchRpmDefaultsToCompileTimeMacro")
 
     runHostControlCycle(chassis);
 
-    EXPECT_NEAR(steer_motors[0].getTargetRPM(), 50.0f, 1.0e-6f);
+    EXPECT_NEAR(steer_motors[0].getTargetRPM(), JIA_CHASSIS_HOMING_SEARCH_RPM, 1.0e-6f);
 }
 
 TEST_CASE("testFirstBootHomingDelayKeepsInitialStartIdleThenReleasesSearchOnce")
@@ -997,6 +997,8 @@ TEST_CASE("testHomingEdgeDeltaToleranceBoundaryUsesCompileTimeMacro")
     TestMotor steer_motors[4];
     VESC_Motor drive_motors[4];
     configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+    const float within_tolerance_deg = JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG * 0.5f;
+    const float outside_tolerance_deg = JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG + 1.0f;
 
     chassis.wheel_config_[0].homing_state = Chassis::HomingState::kSearch;
     chassis.wheel_config_[0].homing_zero_valid = false;
@@ -1010,12 +1012,12 @@ TEST_CASE("testHomingEdgeDeltaToleranceBoundaryUsesCompileTimeMacro")
     setPhotogateStateForWheel(0, true);
     runHostControlCycle(chassis);
 
-    steer_motors[0].setFeedbackTotalAngleDeg(180.0f + 14.0f);
+    steer_motors[0].setFeedbackTotalAngleDeg(180.0f + within_tolerance_deg);
     setPhotogateStateForWheel(0, false);
     runHostControlCycle(chassis);
     EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
 
-    steer_motors[0].setFeedbackTotalAngleDeg(360.0f + 28.0f);
+    steer_motors[0].setFeedbackTotalAngleDeg(360.0f + outside_tolerance_deg);
     setPhotogateStateForWheel(0, true);
     runHostControlCycle(chassis);
 

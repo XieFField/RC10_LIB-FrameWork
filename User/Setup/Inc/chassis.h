@@ -32,7 +32,7 @@
 #define JIA_CHASSIS_PROFILE_FULL_DEBUG 2
 
 #ifndef JIA_CHASSIS_PROFILE
-#define JIA_CHASSIS_PROFILE JIA_CHASSIS_PROFILE_RUNTIME_MIN
+#define JIA_CHASSIS_PROFILE JIA_CHASSIS_PROFILE_FULL_DEBUG
 #endif
 
 // 功能开关均允许外部 -D 单独覆盖。下面只给 profile 的默认值：
@@ -62,11 +62,11 @@
 #endif
 
 #ifndef JIA_CHASSIS_HOMING_SEARCH_RPM
-#define JIA_CHASSIS_HOMING_SEARCH_RPM 50.0f
+#define JIA_CHASSIS_HOMING_SEARCH_RPM 60.0f
 #endif
 
 #ifndef JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG
-#define JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG 15.0f
+#define JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG 2.0f
 #endif
 
 // “首次上电回零延时”只作用在本次上电后的第一次整车 homing：
@@ -88,7 +88,7 @@
 
 #include "Motor_DJI.h"
 #include "Motor_VESC.h"
-#include "Module_CrsfReceiver.h"
+#include "Module_lora.h"
 #include "APP_debugTool.h"
 #include "APP_PID.h"
 
@@ -1710,7 +1710,7 @@ namespace jia
             // 它们服务 resolvePlannerTargetData()、遥控映射和 yaw lock 输入解释，不应与 current_data_ 这类控制结论混淆。
             f32 input_hwt_rot_z_ = 0.0f;   // [RO] IMU yaw
             f32 input_hwt_omega_z_ = 0.0f; // [RO] IMU yaw speed
-            RmPocketData_t airjoy_data_{}; // [RO] 遥控器输入快照
+            communication::RC10_AirJoy_Data_S airjoy_data_{}; // [RO] 遥控器输入快照
 
             // 调试镜像（只读观察）[RO]
             // DebugMirror 是给调试器和 host FULL_DEBUG 语义测试读的“聚合视图”。
