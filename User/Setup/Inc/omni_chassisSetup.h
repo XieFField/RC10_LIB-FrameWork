@@ -120,6 +120,8 @@ typedef struct
     float MF3_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
 
     float spin_skew = 0.1f; // 旋转位置y轴偏移量
+    float point_skew = 0.06f; // 旋转位置y轴偏移量
+    
     float coner_ahead = 0.17f;
     float coner_behind = 0.4f;
 
@@ -697,8 +699,39 @@ private:
         int8_t MF2_Point_ = KFS_KeyPoint_.mustPastMap[MF2_Index_]; // MF2 对应地图点编号。
         int8_t MF3_Point_ = KFS_KeyPoint_.mustPastMap[MF3_Index_]; // MF3 对应地图点编号。
 
+        // 判断MF1的车子朝向
+        KFS_point.MF1_target_yaw_ = rotation_path(MF1_Point_);
+        // 判断MF2的车子朝向
+        if (KFS_num > 1)
+        {
+            KFS_point.MF2_target_yaw_ = rotation_path(MF2_Point_);
+        }
+        // 判断MF3的车子朝向
+        if (KFS_num > 2)
+        {
+            KFS_point.MF3_target_yaw_ = rotation_path(MF3_Point_);
+        }
+        
+        
         // 写入MF地图对应坐标
-        KFS_point.MF1_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(MF1_Point_);
+        Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(MF1_Point_);
+                if(KFS_point.MF1_target_yaw_==0.0f)
+                {
+                    KFS_point.MF1_pos_ = {temp_vector.x-KFS_point.point_skew,temp_vector.y};  
+                }
+                else if(KFS_point.MF1_target_yaw_==180.0f)
+                {
+                    KFS_point.MF1_pos_ = {temp_vector.x+KFS_point.point_skew,temp_vector.y};  
+                }
+                else if(KFS_point.MF1_target_yaw_==90.0f)
+                {
+                    KFS_point.MF1_pos_ = {temp_vector.x,temp_vector.y-KFS_point.point_skew};  
+                }
+                else if(KFS_point.MF1_target_yaw_==-90.0f)
+                {
+                    KFS_point.MF1_pos_ = {temp_vector.x,temp_vector.y+KFS_point.point_skew};   
+                }
+        
         if (KFS_num > 1)
         {
             KFS_point.MF2_pos_ = MF_AutoCtrler::MapCenterWorld_Vector2D(MF2_Point_);
@@ -714,19 +747,6 @@ private:
         else
         {
             KFS_point.MF3_pos_ = {0.0f, 0.0f};
-        }
-
-        // 判断MF1的车子朝向
-        KFS_point.MF1_target_yaw_ = rotation_path(MF1_Point_);
-        // 判断MF2的车子朝向
-        if (KFS_num > 1)
-        {
-            KFS_point.MF2_target_yaw_ = rotation_path(MF2_Point_);
-        }
-        // 判断MF3的车子朝向
-        if (KFS_num > 2)
-        {
-            KFS_point.MF3_target_yaw_ = rotation_path(MF3_Point_);
         }
 
         // 判断第一次是否需要转向
@@ -766,7 +786,6 @@ private:
 
         // 写入路径点的临时变量
         Vector2D last_vector = robot_pos_;
-        Vector2D temp_vector = {0.0f, 0.0f};
         Vector2D spin_vector = {0.0f, 0.0f};
         int temp_point = 0;
         int i = 0;
@@ -894,7 +913,7 @@ private:
             }
             else if (temp_point == MF1_Point_) // MF停止点
             {
-                path_line_.Add_Point(temp_vector, path_param.end);
+                path_line_.Add_Point(KFS_point.MF1_pos_, path_param.end);
                 FINSH = true;
             }
             else // 衔接路径

@@ -780,9 +780,11 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                 {
                     if(kfs_index == 0x01)
                     this->set_PitchAngle(0.0f); //吸盘放下
+                    else if(kfs_index == 0x00)
+                    this->set_PitchAngle(init_data_.pitch_lift_angle_); //吸盘抬平
 
-                    if(kfs_index == 0x00)
-                        this->set_StretchLength(init_data_.max_stretchLength_); // 伸展到存储位置需要的长度
+                    // if(kfs_index == 0x00)
+                    //     this->set_StretchLength(init_data_.max_stretchLength_); // 伸展到存储位置需要的长度
                     this->store_state_ = store_state::lower_state;
                 }
             }
@@ -850,6 +852,8 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
 
                     if(arm_status_ == ARM_AUTO_CONTROL)
                         this->set_RotateAngle(90.0f);
+                    else
+                        this->set_RotateAngle(0.0f);
 
                     this->set_StretchLength(0.0f); //收回
                     this->store_state_ = store_state::outstate2;
@@ -965,7 +969,8 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
                 this->set_LaunchHeight(init_data_.store_height_inside_); // 降低到存储高度
                 this->store_state_ = store_state::outstate1;
             }
-            else if(kfs_index == 0x01)
+            else if(kfs_index == 0x01 && this->get_currentJointStatus().rotateJoint_angle_ > 265.0f && this->get_currentJointStatus().rotateJoint_angle_ < 280.0f
+                && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 10.0f)
             {
                 this->set_LaunchHeight(init_data_.new_store_height_outside_); // 降低到存储高度
                 this->store_state_ = store_state::outstate1;
@@ -1016,60 +1021,35 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 
         case store_state::outstate2:
         {
-            if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
+            if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.05f)
             {
-                if(kfs_index == 0x00)
+                if(kfs_index == 0x00 && this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
                 {
                     this->set_RotateAngle(0.0f);
-                    this->store_state_ = store_state::idle;
-                    return true;
+                    
+                    if((this->get_currentJointStatus().rotateJoint_angle_ > 359.0f && this->get_currentJointStatus().rotateJoint_angle_ < 360.0f) 
+                        || (this->get_currentJointStatus().rotateJoint_angle_ < 1.0f && this->get_currentJointStatus().rotateJoint_angle_ > 0.0f))
+                    {
+                        this->store_state_ = store_state::idle;
+                        return true;
+                    }
+                    else
+                        return false;
+                        
                 }
-                else
+                else if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.05f && kfs_index == 0x01)
                 {
                     this->set_RotateAngle(0.0f);
-                    this->store_state_ = store_state::idle;
-                    return true;
+                    
+                    if((this->get_currentJointStatus().rotateJoint_angle_ > 355.0f && this->get_currentJointStatus().rotateJoint_angle_ < 360.0f) 
+                        || (this->get_currentJointStatus().rotateJoint_angle_ < 5.0f && this->get_currentJointStatus().rotateJoint_angle_ > 0.0f))
+                    {
+                        this->store_state_ = store_state::idle;
+                        return true;
+                    }
+                    else 
+                        return false;
                 }
-                // else if(test_outstate2 == 0)
-                // {
-                //     this->set_RotateAngle(0.0f);
-                //     this->set_StretchLength(0.0f); // 收回
-
-                //     if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - 0.0f) < 0.02f)
-                //     {
-                //         this->store_state_ = store_state::idle;
-                //         return true;
-                //     }
-                // }
-                // else if(test_outstate2 == 1)
-                // {
-                //     this->set_StretchLength(0.0f);
-                //     if(std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - 0.0f) < 0.01f)
-                //     {
-                //         this->set_RotateAngle(0.0f);
-
-                //         if(this->get_currentJointStatus().rotateJoint_angle_ > 300.0f)
-                //         {
-                //             this->store_state_ = store_state::idle;
-                //             return true;
-                //         }
-                //     }
-                // }
-                // else if(test_outstate2 == 2)
-                // {
-                //     if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.008f)
-                //     {
-                //         this->set_PitchAngle(0.0f);
-
-                //         if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 0.2f)
-                //         {
-                //             this->set_RotateAngle(0.0f);
-                //             this->set_StretchLength(0.0f); // 收回
-                //             this->store_state_ = store_state::idle;
-                //             return true;
-                //         }
-                //     }
-                // }
             }
             break;
         }
