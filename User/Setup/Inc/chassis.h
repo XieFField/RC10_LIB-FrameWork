@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file chassis.h
  * @author 桑叁年
  * @brief 四舵轮底盘控制类声明
@@ -66,7 +66,19 @@
 #endif
 
 #ifndef JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG
-#define JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG 2.0f
+#define JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG 5.0f
+#endif
+
+#ifndef JIA_CHASSIS_HOMING_AUTO_RETRY_ENABLE
+#define JIA_CHASSIS_HOMING_AUTO_RETRY_ENABLE 1
+#endif
+
+#ifndef JIA_CHASSIS_HOMING_AUTO_RETRY_MAX_ATTEMPTS
+#define JIA_CHASSIS_HOMING_AUTO_RETRY_MAX_ATTEMPTS 3U
+#endif
+
+#ifndef JIA_CHASSIS_HOMING_AUTO_RETRY_INTERVAL_MS
+#define JIA_CHASSIS_HOMING_AUTO_RETRY_INTERVAL_MS 1000U
 #endif
 
 // “首次上电回零延时”只作用在本次上电后的第一次整车 homing：
@@ -447,11 +459,16 @@ namespace jia
                 bool homing_search_timeout_armed = false;         // Search 超时是否已武装。只有看到首个有效舵向反馈活动后才开始累计超时。
                 u8 homing_edge_confirm_count = 0U;                // 本次 Search 已连续确认的原始光电边沿数量
                 bool homing_last_confirm_edge_is_falling = false; // 上一次确认边沿方向：true=H->L，false=L->H
+                f32 homing_first_confirm_signed_local_rad = 0.0f; // 首次确认边沿对应的本地连续角；用于约束第一/第三边同极性一致性。
                 f32 homing_last_confirm_signed_local_rad = 0.0f;  // 上一次确认边沿对应的带方向本地连续角
                 f32 homing_candidate_zero_offset_sum_rad = 0.0f;  // 三边沿确认时，已 unwrap 到同一分支的候选零偏累加
                 f32 homing_hold_corrected_local_total_rad = 0.0f; // 单轮 ready 后维持的 corrected-local 连续角。它是本拍 hold 目标，不是零偏本身。
                 f32 homing_elapsed_s = 0.0f;                      // 本次回零已运行时间，单位秒；用于超时判定
                 f32 homing_runtime_zero_offset_rad = 0.0f;        // 本次上电运行实际采用的零位补偿。它由“当前 raw 触发位置 + 标定零偏”折算得出，和静态 homing_zero_offset_rad 不同。
+                u32 homing_auto_retry_attempt_count = 0U;         // 当前这一轮失败链已消耗的自动重试次数。
+                bool homing_auto_retry_wait_active = false;       // 当前是否正处于 fault 后等待自动重试的窗口。
+                u32 homing_auto_retry_wait_elapsed_ms = 0U;       // 当前等待自动重试窗口已累计的时长（ms）。
+                bool homing_auto_retry_armed_by_recovery_failure = false; // 当前自动重试是否由 recovery re-home 失败触发，仅用于观测。
 
                 // ---- 实时反馈与本周期规划输出 -----------------------------------
                 // 这里不是单纯“反馈区”，而是该轮本拍执行上下文：
@@ -804,12 +821,23 @@ namespace jia
                 // ch10: target_command_speed_m_s
                 // ch11: target_omega_z_rad_s
                 kDriveZeroStopBrakeTrace = 4,
+
+                // kHomingTrace
+                // 由 homing_trace.view_raw 决定视图：
+                // 1) kFourWheelOverview (21ch, emitUart8VofaHomingTrace)
+                // 2) kObserveWheelDetail (25ch, emitUart8VofaHomingTrace)
+                kHomingTrace = 5,
             };
             enum class SingleWheelTracePayloadKind : u8
             {
                 kSteerOnly = 0,
                 kSteerAndDrive = 1,
                 kDriveOnly = 2,
+            };
+            enum class HomingTraceView : u8
+            {
+                kFourWheelOverview = 0,
+                kObserveWheelDetail = 1,
             };
             DebugMode resolveDebugMode(u8 raw_mode) const;
 
@@ -980,6 +1008,7 @@ namespace jia
              * @details 用于从故障恢复、重新回零或特殊保持态退出时，避免旧的 PID/目标历史继续影响下一拍。
              */
             void resetSteerMotorClosedLoopState(WheelConfig &wheel);
+            void resetSingleWheelHomingSearchState(WheelConfig &wheel, bool sensor_raw_high);
             /**
              * @brief 重置单轮 homing 边沿确认链路的累计状态。
              * @param wheel 目标轮运行态容器。
@@ -1169,6 +1198,7 @@ namespace jia
             // 它们都是只读 emitter，不生成新控制命令；具体节流周期和 profile 选择由 debug_output_ 与 runtime 配合完成。
             void emitUart8VofaYawPidTrace();
             void emitUart8VofaDriveZeroStopBrakeTrace();
+            void emitUart8VofaHomingTrace();
             // emitDebugOutputByMode() 只是输出分发层：
             // family/profile 的路由选择在这里完成，但具体 payload 定义、节流、sample_divider 和 seq 维护都在各自 emitter 内。
             /**
@@ -1279,8 +1309,8 @@ namespace jia
                 bool enable_steer_rate_limit_ = false;                           // [RW] 是否启用舵向角速度上限。
                 f32 max_steer_rate_rad_s_ = 200.0f;                         // [RW] 转向目标角速度上限（rad/s）。仅在 enable_steer_rate_limit_=true 时生效。
                 bool enable_steer_alpha_limit_ = true;                          // [RW] 是否启用舵向角加速度上限。
-                f32 max_steer_alpha_rad_s2_ = 20000.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
-                bool enable_steer_angle_feedforward = true;                      // [RW] 是否启用底盘层舵角超前前馈。只影响正常 swerve 规划下发角，不改变物理预计角。
+                f32 max_steer_alpha_rad_s2_ = 99999999.0f;                          // [RW] 转向目标角加速度上限（rad/s^2）。仅在 enable_steer_alpha_limit_=true 时生效。
+                bool enable_steer_angle_feedforward = false;                    // [RW] 是否启用底盘层舵角超前前馈。只影响正常 swerve 规划下发角，不改变物理预计角。
                 f32 steer_angle_feedforward_lead_s = 0.3f;                      // [RW] 舵角超前时间（s）。用于补偿舵向电机响应滞后。
                 f32 steer_angle_feedforward_max_lead_rad = 0.3f;          // [RW] 舵角超前最大幅度（rad）
                 f32 steer_angle_feedforward_settle_error_rad = 0.05235988f;      // [RW] 收尾线性衰减误差窗口（rad），默认约 3°。
@@ -1417,8 +1447,8 @@ namespace jia
                     bool enable = true;                                            // [RW] 调试总开关。
                     u8 mode_raw = 2;                                               // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
-                    u8 control_wheel_index = 0U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
-                    u8 observe_wheel_index = 0U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。
+                    u8 control_wheel_index = 1U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。
+                    u8 observe_wheel_index = 1U;                                    // [RW] 当前输出观察轮号。单轮模式运行时只认这一处。
                 } common{};
 
                 struct Injection
@@ -1439,7 +1469,7 @@ namespace jia
                     bool estop = false;         // [RW] 单轮调试急停闸门。
                     f32 input_deadzone = 0.1f; // [RW] 单轮调试共享摇杆死区。落入死区归 0，出区后从死区边界重新起算。
                     SingleWheelAxisControl steer{
-                        false,
+                        true,
                         static_cast<u8>(DirectAxisInputMode::kRcContinuous),
                         static_cast<u8>(SingleWheelInputAxis::kLeftX),
                         false,
@@ -1447,12 +1477,12 @@ namespace jia
                         0.0f,
                         200.0f,
                         0.5f,
-                        45.0f,
+                        90.0f,
                         static_cast<u8>(SingleWheelPlannerMode::kOff),
                         {},
                         {}};
                     SingleWheelAxisControl drive{
-                        true,
+                        false,
                         static_cast<u8>(DirectAxisInputMode::kRcStep),
                         static_cast<u8>(SingleWheelInputAxis::kRightX),
                         false,
@@ -1495,12 +1525,20 @@ namespace jia
 
             struct DebugOutputJustFloatConfig
             {
+                struct HomingTraceConfig
+                {
+                    u8 view_raw = static_cast<u8>(HomingTraceView::kFourWheelOverview);
+                    DebugOutputSlotConfig overview = {10U};
+                    DebugOutputSlotConfig detail = {2U};
+                };
+
                 u8 profile_raw = static_cast<u8>(JustFloatProfile::kSingleWheelTrace);
-                u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kSteerAndDrive);
+                u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kSteerOnly);
                 DebugOutputSlotConfig overview = {5U};
                 DebugOutputSlotConfig single_wheel = {1U};
                 DebugOutputSlotConfig yaw_pid = {4U};
                 DebugOutputSlotConfig drive_zero_stop_brake = {2U};
+                HomingTraceConfig homing_trace{};
             };
 
             struct DebugOutputConfig
@@ -1531,10 +1569,17 @@ namespace jia
 
             struct DebugOutputJustFloatRuntime
             {
+                struct HomingTraceRuntime
+                {
+                    DebugOutputSlotRuntime overview{};
+                    DebugOutputSlotRuntime detail{};
+                };
+
                 DebugOutputSlotRuntime overview{};
                 DebugOutputSlotRuntime single_wheel{};
                 DebugOutputSlotRuntime yaw_pid{};
                 DebugOutputSlotRuntime drive_zero_stop_brake{};
+                HomingTraceRuntime homing_trace{};
             };
 
             struct DebugOutputRuntime
@@ -1734,6 +1779,10 @@ namespace jia
                 bool homing_sensor_active[4] = {false, false, false, false};        // [RO] 各轮光电门有效状态
                 bool homing_last_edge_is_falling[4] = {false, false, false, false}; // [RO] 各轮最近边沿是否下降沿
                 f32 homing_runtime_zero_offset_deg[4] = {0.0f};                     // [RO] 各轮运行时零偏（deg）
+                f32 homing_auto_retry_attempt_count[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                bool homing_auto_retry_wait_active[4] = {false, false, false, false};
+                f32 homing_auto_retry_wait_elapsed_ms[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                bool homing_auto_retry_armed_by_recovery_failure[4] = {false, false, false, false};
                 f32 nz_stationary_m_s = 0.0f;                                       // [RO] 当前有效静止阈值（m/s）。
                 f32 nz_freeze_enter_m_s = 0.0f;                                     // [RO] 当前有效冻结进入阈值（m/s）。
                 f32 nz_freeze_exit_m_s = 0.0f;                                      // [RO] 当前有效冻结退出阈值（m/s）。

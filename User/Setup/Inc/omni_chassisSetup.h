@@ -308,7 +308,12 @@ private:
     void CZ_ARM_Path_Init(void);
 
     void CZ_index_reset(void);
-
+    
+    void CZ_FIT_WAIT_Selection_Planning(void);
+    
+    void CZ_FIT_R2_Selection_Planning(void);
+    
+    void CZ_ARM_Selection_Planning(void);
 public:
     /**
      * @brief 设置路径自动开始标志
@@ -1042,66 +1047,38 @@ private:
     {
         if (CZ_flag == false)
         {
-            #if !USE_RC10_AIRJOY
-            if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+
+            if (_tool_Abs(airjoy_data_.left_x) > 0.1f)
                 Chassis_Target.VX = airjoy_data_.left_x * vx_ratio * this->is_chassis_reverse_;
             else
                 Chassis_Target.VX = 0.0f;
-            if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+            if (_tool_Abs(airjoy_data_.left_y) > 0.1f)
                 Chassis_Target.VY = airjoy_data_.left_y * vy_ratio * this->is_chassis_reverse_;
             else
                 Chassis_Target.VY = 0.0f;
-            if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
-                Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio;
-            else
-                Chassis_Target.yaw_rate = 0.0f;
-            #else
-            if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-                Chassis_Target.VX = airjoy_data_.left_x * vx_ratio * this->is_chassis_reverse_*(-1.0f);
-            else
-                Chassis_Target.VX = 0.0f;
-            if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-                Chassis_Target.VY = airjoy_data_.left_y * vy_ratio * this->is_chassis_reverse_;
-            else
-                Chassis_Target.VY = 0.0f;
-            if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
+            if (_tool_Abs(airjoy_data_.right_x) > 0.1f)
                 Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio*(-1.0f);
             else
                 Chassis_Target.yaw_rate = 0.0f;
-            #endif
+
         }
         else if (CZ_flag == true)
         {
-            #if !USE_RC10_AIRJOY
-            if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+
+            if (_tool_Abs(airjoy_data_.left_x) > 0.1f)
                 Chassis_Target.VY = airjoy_data_.left_x * vy_ratio * this->is_chassis_reverse_ * RB_Flag ? (-1) : 1;
             else
                 Chassis_Target.VY = 0.0f;
 
-            if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
+            if (_tool_Abs(airjoy_data_.left_y) > 0.1f)
                 Chassis_Target.VX = airjoy_data_.left_y * vx_ratio * this->is_chassis_reverse_ * RB_Flag ? 1 : (-1);
             else
                 Chassis_Target.VX = 0.0f;
-            if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
-                Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio;
+            if (_tool_Abs(airjoy_data_.right_x) > 0.1f)
+                Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio*(-1.0f);
             else
                 Chassis_Target.yaw_rate = 0.0f;
-        #else
-            if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-                Chassis_Target.VY = airjoy_data_.left_x * vy_ratio * this->is_chassis_reverse_ * RB_Flag ? (1.0f) : (-1.0f);
-            else
-                Chassis_Target.VY = 0.0f;
 
-            if (_tool_Abs(airjoy_data_.left_y) > 0.05f)
-                Chassis_Target.VX = airjoy_data_.left_y * vx_ratio * this->is_chassis_reverse_ * RB_Flag ? (-1.0f) :(1.0f);
-            else
-                Chassis_Target.VX = 0.0f;
-            if (_tool_Abs(airjoy_data_.right_x) > 0.05f)
-                Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio;
-            else
-                Chassis_Target.yaw_rate = 0.0f;
-            
-            #endif
             
             }
 

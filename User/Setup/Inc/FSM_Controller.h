@@ -99,6 +99,7 @@ private:
 
     void debug();
 
+
     void stop_modeswitch();
     FSM_Status_E robot_status_ = ALL_STOP;
     FSM_Status_E last_robot_status_;

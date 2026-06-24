@@ -365,20 +365,13 @@ PID_Param_Config m3508_speed_pid_paramsForSpeedMotor = {
 
 // 四舵轮舵向电机 PID
 PID_Param_Config foursteer_steer_speed_pid_params = {
-    // .kp = 150.0f,
-    // .ki = 0.8f,
-    // .kd = 0.0f,
-    // .I_Outlimit = 8000.0f,
-    // .isIOutlimit = true,
-    // .output_limit = 8000.0f,
-    // .deadband = 0.0f
-    .kp = 250.0f / (3591.0f/187.0f) * 8.0f,
-    .ki = 12.0f / (3591.0f/187.0f) * 8.0f,
-    .kd = 0.0f / (3591.0f/187.0f) * 8.0f,
+    .kp = 150.0f,
+    .ki = 8.0f,
+    .kd = 0.0f,
     .I_Outlimit = 8000.0f, 
     .isIOutlimit = true, 
-    .output_limit = 15000.0f,   
-    .deadband = 0.1f * (3591.0f/187.0f) / 8.0f 
+    .output_limit = 16000.0f,   
+    .deadband = 0.24f 
 };
 
 // 四舵轮 VESC 驱动轮默认速度环 PID
@@ -393,20 +386,12 @@ PID_Param_Config vesc_drive_speed_pid_params = {
 };
 
 PID_Param_Config foursteer_steer_angle_pid_params = {
-    // .kp = 5.0f,
-    // .ki = 0.0f,
-    // .kd = 0.0f,
-    // .I_Outlimit = 0.0f,
-    // .isIOutlimit = true,
-    // .output_limit = 200.0f,
-    // .deadband = 0.1f
-    .kp = 3.5f / (3591.0f/187.0f) * 8.0f,
-    .ki = 0.0f / (3591.0f/187.0f) * 8.0f,
-    .kd = 0.05f / (3591.0f/187.0f) * 8.0f,
+    .kp = 7.0f,
+    .ki = 0.0f,
+    .kd = 0.0f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 1050.0f,   
-    // .deadband = 0.03f * (3591.0f/187.0f) / 8.0f
+    .output_limit = 1000.0f,   
     .deadband = 0.08f
 };
 
