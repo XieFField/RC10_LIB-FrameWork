@@ -1049,6 +1049,18 @@ namespace jia
             return atan2f(wheel.pos_y_m, wheel.pos_x_m);
         }
 
+        f32 Chassis::getOParkAngle(const WheelConfig &wheel) const
+        {
+            return wrapTo2PiF32(getXParkAngle(wheel) + (kPi * 0.5f));
+        }
+
+        f32 Chassis::getIdlePostureAngle(const WheelConfig &wheel) const
+        {
+            return (runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kOPark)
+                       ? getOParkAngle(wheel)
+                       : getXParkAngle(wheel);
+        }
+
         f32 Chassis::computeMaxCommandWheelSpeedMps(const Data &command_data) const
         {
             f32 max_command_wheel_speed_m_s = 0.0f;
@@ -1541,8 +1553,12 @@ namespace jia
 
                 if (steer_intent_stationary)
                 {
-                    planner_output.ideal_oa_total_rad[i] = (planner_input.allow_xpark_pose && runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kXPark)
-                                                               ? wrapTo2PiF32(getXParkAngle(wheel))
+                    const bool use_idle_posture_pose =
+                        planner_input.allow_xpark_pose &&
+                        ((runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kXPark) ||
+                         (runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kOPark));
+                    planner_output.ideal_oa_total_rad[i] = use_idle_posture_pose
+                                                               ? wrapTo2PiF32(getIdlePostureAngle(wheel))
                                                                : wrapTo2PiF32(planner_input.current_oa_total_rad[i]);
                     planner_output.ideal_drive_omega_rad_s[i] = 0.0f;
                 }
@@ -4675,7 +4691,8 @@ namespace jia
                     xpark_hold_cfg.enable &&
                     xpark_gate_active_ &&
                     !force_uniform_steer_drive &&
-                    (runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kXPark) &&
+                    ((runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kXPark) ||
+                     (runtime_strategy_cfg_.idle_posture_mode == IdlePostureMode::kOPark)) &&
                     all_homed &&
                     (wheel.homing_state == HomingState::kReady) &&
                     (wheel.steer_fault_state == SteerFaultState::kNone) &&
@@ -4693,7 +4710,7 @@ namespace jia
                     const f32 current_corrected_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
                     const f32 current_oa_total_rad = mapWheelCorrectedLocalToOaTotal(wheel, current_corrected_local_total_rad);
                     const f32 xpark_target_oa_total_rad =
-                        nearestEquivalentAngleF32(current_oa_total_rad, wrapTo2PiF32(getXParkAngle(wheel)));
+                        nearestEquivalentAngleF32(current_oa_total_rad, wrapTo2PiF32(getIdlePostureAngle(wheel)));
                     const f32 xpark_error_abs_rad =
                         fabsf(shortestAngularDistanceF32(current_oa_total_rad, xpark_target_oa_total_rad));
                     wheel.xpark_steer_hold_error_rad = xpark_error_abs_rad;

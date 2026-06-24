@@ -258,11 +258,12 @@ namespace jia
             };
 
             // 空闲姿态：定义底盘失能或无输入时，四个舵轮应保持的姿态策略。
-            // kHoldLast 适合保持最后姿态，kXPark 适合进入 X 停靠姿态以减小外力拖拽干涉。
+            // kHoldLast 适合保持最后姿态，kXPark / kOPark 适合进入固定停靠姿态以减小外力拖拽干涉。
             enum class IdlePostureMode
             {
                 kHoldLast,
                 kXPark,
+                kOPark,
             };
 
             // 转向解选择策略：kAlwaysForward 永远不走 180 度翻转解；
@@ -1101,6 +1102,8 @@ namespace jia
             f32 limitPositionSecondOrder(f32 current_value, f32 current_rate, f32 target_value, f32 max_rate, f32 max_accel, f32 dt_s, f32 &next_rate) const;
             f32 limitValueWithAcceleration(f32 current_value, f32 target_value, f32 max_accel, f32 dt_s) const;
             f32 getXParkAngle(const WheelConfig &wheel) const;
+            f32 getOParkAngle(const WheelConfig &wheel) const;
+            f32 getIdlePostureAngle(const WheelConfig &wheel) const;
             f32 computeMaxCommandWheelSpeedMps(const Data &command_data) const;
             // 这两个 helper 服务 yaw lock 与 zero-stop 的衔接：
             // - preview 版在 planner 阶段提前判断“是否需要先把 omega_z 压到 0”，让后续模块求解看到的是刹停前预览目标；

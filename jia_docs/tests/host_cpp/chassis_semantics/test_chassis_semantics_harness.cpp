@@ -607,6 +607,11 @@ float getWheelXParkTargetOaRad(const Chassis &chassis, int wheel_idx)
     return chassis.getXParkAngle(chassis.wheel_config_[wheel_idx]);
 }
 
+float getWheelOParkTargetOaRad(const Chassis &chassis, int wheel_idx)
+{
+    return chassis.getOParkAngle(chassis.wheel_config_[wheel_idx]);
+}
+
 void setWheelOaAngleRad(Chassis &chassis, int wheel_idx, float oa_rad)
 {
     chassis.wheel_config_[wheel_idx].corrected_steer_motor_total_angle_rad =
@@ -622,6 +627,21 @@ Chassis::ActuatorCommandFrame makeXParkSteerCommandFrame(Chassis &chassis)
         frame.steer_oa_total_rad[i] = xpark_target_oa_rad;
         frame.steer_corrected_local_total_rad[i] =
             chassis.mapWheelOaTotalToCorrectedLocal(chassis.wheel_config_[i], xpark_target_oa_rad);
+        frame.steer_cmd_oa_total_rad[i] = frame.steer_oa_total_rad[i];
+        frame.steer_cmd_corrected_local_total_rad[i] = frame.steer_corrected_local_total_rad[i];
+    }
+    return frame;
+}
+
+Chassis::ActuatorCommandFrame makeOParkSteerCommandFrame(Chassis &chassis)
+{
+    Chassis::ActuatorCommandFrame frame{};
+    for (int i = 0; i < 4; ++i)
+    {
+        const float opark_target_oa_rad = getWheelOParkTargetOaRad(chassis, i);
+        frame.steer_oa_total_rad[i] = opark_target_oa_rad;
+        frame.steer_corrected_local_total_rad[i] =
+            chassis.mapWheelOaTotalToCorrectedLocal(chassis.wheel_config_[i], opark_target_oa_rad);
         frame.steer_cmd_oa_total_rad[i] = frame.steer_oa_total_rad[i];
         frame.steer_cmd_corrected_local_total_rad[i] = frame.steer_corrected_local_total_rad[i];
     }
