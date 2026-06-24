@@ -55,7 +55,7 @@ typedef struct
     float store_ext_length_ = 0.0658f; // 存储时候伸展长度
 
     float up_20cm_lower_height_ = 0.2053f;
-    float new_store_height_outside_ = 0.0926f;
+    float new_store_height_outside_ = 0.0936f;
     float new_store_ext_length_ = 0.07f;
 
     float stretch_Ratio_ = 0.0f;        // 伸展比率，伸展电机转一圈，伸展多少米   0.0942米(94.2mm)
@@ -74,7 +74,7 @@ typedef struct
 
     float lock_height_ = 0.0f;       // 云台锁定高度
     float pick_up_height_ = 0.07f;   // 拾取高度
-    float putdown_height_ = 0.23f;   // 放置高度
+    float putdown_height_ = 0.24f;   // 放置高度
     float pitch_lift_angle_ = 91.0f; // 俯仰抬平角度
 
     GPIO_TypeDef *Sucker_GPIO_Port; // 吸盘GPIO控制端口

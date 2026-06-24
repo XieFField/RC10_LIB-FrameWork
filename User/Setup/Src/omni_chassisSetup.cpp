@@ -320,12 +320,12 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-                if(CZ_Arm==false)
+                if(CZ_Arm==false&&CZ_flag.R1_FB_index == 1)
                 {
                     CZ_flag.R1_FB_index = 0;
                     CZ_R1_Selection_Planning();  
                 }
-                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true);
+                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
         }

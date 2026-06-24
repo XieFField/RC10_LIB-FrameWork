@@ -147,12 +147,9 @@ void ArmSetup::loop()
             arm_ctrlStatus.last_manual_store = 0;
             store_state_ = store_state::idle;
             arm_ctrlStatus.is_store_acting = 0;
-            manualControl(); // 首次进入时绑定开关offset(此时last_arm_status_为旧值)
+            arm_ctrlStatus.need_rebind_switches = true;
         }
-        else
-        {
-            arm_d_pad_ctrl();
-        }
+        arm_d_pad_ctrl();
 #endif
         break;
     }
@@ -198,11 +195,9 @@ void ArmSetup::loop()
             arm_ctrlStatus.last_manual_store = 0;
             store_state_ = store_state::idle;
             arm_ctrlStatus.is_store_acting = 0;
+            arm_ctrlStatus.need_rebind_switches = true;
         }
-        else
-        {
-            arm_d_pad_ctrl();
-        }
+        arm_d_pad_ctrl();
 #endif
         break;
     }
@@ -305,6 +300,7 @@ bool ArmSetup::manual_putdown()
 
     if (std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.008f && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f && !is_put)
     {
+        arm_ctrlStatus.is_putdown_done = false;
         this->set_StretchLength(init_data_.max_stretchLength_);
         if (std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.max_stretchLength_) < 0.01f && arm_ctrlStatus.can_putdown)
         {
@@ -321,6 +317,7 @@ bool ArmSetup::manual_putdown()
         {
             is_put = false;
             putdown_start_time = 0.0f;
+            arm_ctrlStatus.is_putdown_done = true;
             return true;
         }
     }
@@ -331,11 +328,13 @@ bool ArmSetup::manual_putdown()
 void ArmSetup::manualControl_lowLevel()
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    if (last_arm_status_ != ARM_MANUAL_LOW_LEVEL || arm_ctrlStatus.last_manual_store != 0)
+    if (last_arm_status_ != ARM_MANUAL_LOW_LEVEL || arm_ctrlStatus.last_manual_store != 0
+        || arm_ctrlStatus.need_rebind_switches)
     {
         last_joint_status_ = this->get_currentJointStatus();
         target_joint_status_ = last_joint_status_;
         last_arm_status_ = ARM_MANUAL_LOW_LEVEL;
+        arm_ctrlStatus.need_rebind_switches = false;
     }
 #if USE_RC10_AIRJOY
     if (airjoy_data_.SWE == 0x00)
@@ -415,7 +414,8 @@ void ArmSetup::manualControl()
     // 设置控制模式
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    if (last_arm_status_ != ARM_MANUAL_CONTROL || arm_ctrlStatus.last_manual_store != 0) // 若首次进入此函数，或存储状态发生变化，则进行状态初始化，避免由于状态跳变导致的目标值突变
+    if (last_arm_status_ != ARM_MANUAL_CONTROL || arm_ctrlStatus.last_manual_store != 0
+        || arm_ctrlStatus.need_rebind_switches) // 若首次进入此函数，或存储状态发生变化，或需要重新绑定开关
     {
 
         /*上一次状态*/
@@ -465,6 +465,7 @@ void ArmSetup::manualControl()
         arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.SWC & 0x01) ^ current_pitch_logical;
 #endif
         last_arm_status_ = ARM_MANUAL_CONTROL;
+        arm_ctrlStatus.need_rebind_switches = false;
     }
 
     // 下降刹车条件计算（作用域覆盖升降和旋转两个区域）
@@ -692,27 +693,29 @@ void ArmSetup::arm_d_pad_ctrl()
     {
         if (manual_putdown())
         {
-            if(auto_ctrl_.kfs_num == ONLY_ONE)
+            if(auto_ctrl_.kfs_num == TWO_OR_THREE)
             {
-                arm_ctrlStatus.is_store_acting = 0;
+                arm_ctrlStatus.is_store_acting = 5;
                 target_joint_status_ = this->get_currentJointStatus();
-            }
-            else if(arm_ctrlStatus.comp_takeout_now[1] != 2)
-            {
-                if(manual_takeout(arm_ctrlStatus.comp_takeout_now[0]))
-                {
-                    arm_ctrlStatus.comp_takeout_now[1] = arm_ctrlStatus.comp_takeout_now[0];
-                    arm_ctrlStatus.is_store_acting = 0;
-                    target_joint_status_ = this->get_currentJointStatus();
-                }
             }
             else
             {
                 arm_ctrlStatus.is_store_acting = 0;
                 target_joint_status_ = this->get_currentJointStatus();
             }
+            
         }
         arm_ctrlStatus.last_manual_store = 4;
+    }
+    else if(arm_ctrlStatus.is_store_acting == 5)
+    {
+        if(manual_takeout(arm_ctrlStatus.comp_takeout_now[0] - 1))
+        {
+            arm_ctrlStatus.comp_takeout_now[0]++;
+            arm_ctrlStatus.comp_takeout_now[1] = arm_ctrlStatus.comp_takeout_now[0];
+            arm_ctrlStatus.is_store_acting = 0;
+            target_joint_status_ = this->get_currentJointStatus();
+        }
     }
 #endif
 }
@@ -1013,7 +1016,12 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
         {
             if (kfs_index == 0x00 && this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
             {
-                this->set_RotateAngle(0.0f);
+
+                if(arm_status_ == ARM_COMP_SEMI_CONTROL)
+                    this->set_RotateAngle(90.0f);
+
+                else
+                    this->set_RotateAngle(0.0f);
 
                 if ((this->get_currentJointStatus().rotateJoint_angle_ > 359.0f && this->get_currentJointStatus().rotateJoint_angle_ < 360.0f) || (this->get_currentJointStatus().rotateJoint_angle_ < 1.0f && this->get_currentJointStatus().rotateJoint_angle_ > 0.0f))
                 {
@@ -1025,9 +1033,23 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
             }
             else if (this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.05f && kfs_index == 0x01)
             {
-                this->set_RotateAngle(0.0f);
 
-                if ((this->get_currentJointStatus().rotateJoint_angle_ > 355.0f && this->get_currentJointStatus().rotateJoint_angle_ < 360.0f) || (this->get_currentJointStatus().rotateJoint_angle_ < 5.0f && this->get_currentJointStatus().rotateJoint_angle_ > 0.0f))
+                if(arm_status_ == ARM_COMP_SEMI_CONTROL)
+                {
+                    this->set_RotateAngle(90.0f);
+                    this->set_PitchAngle(init_data_.pitch_lift_angle_); // 吸盘抬平
+                }
+                else
+                    this->set_RotateAngle(0.0f);
+
+                if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 0.5f && arm_status_ == ARM_COMP_SEMI_CONTROL)
+                {
+                    this->store_state_ = store_state::idle;
+                    return true;
+                }
+                else if ((this->get_currentJointStatus().rotateJoint_angle_ > 359.7f && this->get_currentJointStatus().rotateJoint_angle_ < 360.0f) 
+                    || (this->get_currentJointStatus().rotateJoint_angle_ < 0.3f && this->get_currentJointStatus().rotateJoint_angle_ > 0.0f) 
+                    && arm_status_ != ARM_COMP_SEMI_CONTROL)
                 {
                     this->store_state_ = store_state::idle;
                     return true;
@@ -1200,13 +1222,37 @@ void ArmSetup::auto_stillnessOne()
     {
         if (state_backStillness(auto_ctrl_.targetKFS[0]))
         {
-            auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE;
-            arm_ctrlStatus.auto_start = 0;
-            auto_ctrl_.start_to_autoctrl = false; // 完车一次流程后重置启动状态
-            auto_ctrl_.flag.isrecalcPath = false; // 重置路径计算标志
-
-            arm_ctrlStatus.comp_takeout_now[0] = 0;
-            arm_ctrlStatus.comp_takeout_now[1] = 0; //last为OUTSIDE的时候，不进行取出
+            if(auto_ctrl_.targetKFS[0] == 6)
+            {
+                static bool back_delay_started = false;
+                static float back_delay_time = 0.0f;
+                if(!back_delay_started)
+                {
+                    auto_ctrl_.flag.canChassisStart = true;
+                    back_delay_started = true;
+                    back_delay_time = TimeStamp::getInstance().getSeconds();
+                }
+                else if(TimeStamp::getInstance().getSeconds() - back_delay_time > 0.5f)
+                {
+                    back_delay_started = false;
+                    back_delay_time = 0.0f;
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE;
+                    arm_ctrlStatus.auto_start = 0;
+                    auto_ctrl_.start_to_autoctrl = false;
+                    auto_ctrl_.flag.isrecalcPath = false;
+                    arm_ctrlStatus.comp_takeout_now[0] = 0;
+                    arm_ctrlStatus.comp_takeout_now[1] = 0;
+                }
+            }
+            else
+            {
+                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE;
+                arm_ctrlStatus.auto_start = 0;
+                auto_ctrl_.start_to_autoctrl = false;
+                auto_ctrl_.flag.isrecalcPath = false;
+                arm_ctrlStatus.comp_takeout_now[0] = 0;
+                arm_ctrlStatus.comp_takeout_now[1] = 0;
+            }
         }
         break;
     }
@@ -1314,12 +1360,6 @@ void ArmSetup::auto_stillnessTwo()
             {
                 arm_ctrlStatus.last_manual_store = 0; // 强制激活 idle 入口
 
-                if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
-                {
-                    if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
-                        auto_ctrl_.flag.canChassisStart = true;
-                }
-
                 int8_t store_tar = 0x00;
                 if (auto_ctrl_.targetKFS[2] == 0)
                     store_tar = 0x01;
@@ -1329,6 +1369,12 @@ void ArmSetup::auto_stillnessTwo()
                 {
                     auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds();
                     auto_ctrl_.flag.isbackdone = true;
+
+                    if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
+                    {
+                        if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
+                            auto_ctrl_.flag.canChassisStart = true;
+                    }
                 }
             }
             else if (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time >= 0.3f)
@@ -1351,17 +1397,18 @@ void ArmSetup::auto_stillnessTwo()
         {
             if (!auto_ctrl_.flag.isbackdone)
             {
-                if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
-                {
-                    if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
-                        auto_ctrl_.flag.canChassisStart = true;
-                }
-
+            
                 arm_ctrlStatus.last_manual_store = 0; // 强制激活 idle 入口
                 if (manual_store(0x01))
                 {
                     auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds();
                     auto_ctrl_.flag.isbackdone = true;
+
+                    if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
+                    {
+                        if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
+                            auto_ctrl_.flag.canChassisStart = true;
+                    }
                 }
             }
             else if (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time >= 0.3f)
@@ -1384,16 +1431,43 @@ void ArmSetup::auto_stillnessTwo()
         {
             if (state_backStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
             {
-                arm_ctrlStatus.auto_start = 0;
-                auto_ctrl_.start_to_autoctrl = false; // 完车一次流程后重置启动状态
-                auto_ctrl_.flag.isrecalcPath = false; // 重置路径计算标志
-                auto_ctrl_.now_targetIndex = 1;       // 重置目标索引
-                auto_ctrl_.flag.back_time = 0.0f;     // 重置返回时间
-                auto_ctrl_.flag.isbackdone = false;   // 重置返回完成标志
-                auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_OVER;
-
-                arm_ctrlStatus.comp_takeout_now[0] = 1;
-                arm_ctrlStatus.comp_takeout_now[1] = 0; //last 为INSIDE的时候才能取出
+                if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
+                {
+                    static bool back_delay_started = false;
+                    static float back_delay_time = 0.0f;
+                    if(!back_delay_started)
+                    {
+                        auto_ctrl_.flag.canChassisStart = true;
+                        back_delay_started = true;
+                        back_delay_time = TimeStamp::getInstance().getSeconds();
+                    }
+                    else if(TimeStamp::getInstance().getSeconds() - back_delay_time > 0.5f)
+                    {
+                        back_delay_started = false;
+                        back_delay_time = 0.0f;
+                        arm_ctrlStatus.auto_start = 0;
+                        auto_ctrl_.start_to_autoctrl = false;
+                        auto_ctrl_.flag.isrecalcPath = false;
+                        auto_ctrl_.now_targetIndex = 1;
+                        auto_ctrl_.flag.back_time = 0.0f;
+                        auto_ctrl_.flag.isbackdone = false;
+                        auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_OVER;
+                        arm_ctrlStatus.comp_takeout_now[0] = 1;
+                        arm_ctrlStatus.comp_takeout_now[1] = 0;
+                    }
+                }
+                else
+                {
+                    arm_ctrlStatus.auto_start = 0;
+                    auto_ctrl_.start_to_autoctrl = false;
+                    auto_ctrl_.flag.isrecalcPath = false;
+                    auto_ctrl_.now_targetIndex = 1;
+                    auto_ctrl_.flag.back_time = 0.0f;
+                    auto_ctrl_.flag.isbackdone = false;
+                    auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_OVER;
+                    arm_ctrlStatus.comp_takeout_now[0] = 1;
+                    arm_ctrlStatus.comp_takeout_now[1] = 0;
+                }
             }
         }
         break;
@@ -1585,14 +1659,8 @@ bool ArmSetup::state_backStillness(int targetKFS)
 
     this->set_RotateAngle(0.0f); // 旋转到目标位置
 
-
-    if (_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 5.0f)
-    {
-        if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
-            auto_ctrl_.flag.canChassisStart = true;
-
+    if (_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 10.0f)
         return true;
-    }
     else
         return false;
 }
@@ -1675,11 +1743,38 @@ void ArmSetup::idle()
         last_arm_status_ = ARM_IDLE;
     }
 
-    this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
-    this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
-    this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
-    this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
+    if(arm_status_ = ARM_COMP_SEMI_CONTROL)
+    {
+        this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
+        this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
+        this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
+        float next_height = this->get_currentJointStatus().launchJoint_Height_;
 
+        if(std::fabs(airjoy_data_.right_y) > 0.8)
+        {
+            if (airjoy_data_.right_y > 0.85f)
+                next_height += manual_control.launch_rate * 0.7;
+            else if (airjoy_data_.right_y < -0.85f)
+                next_height -= manual_control.launch_rate * 0.7;
+            else
+                next_height = this->get_currentJointStatus().launchJoint_Height_;
+
+            target_joint_status_.launchJoint_Height_ = next_height;
+
+            init_data_.putdown_height_ = this->get_currentJointStatus().launchJoint_Height_;
+        }
+        else
+            target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // 保持不变
+
+        this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
+    }
+    else
+    {
+        this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
+        this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
+        this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
+        this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
+    }
     // this->setSuckerStatus(Sucker_Status_E::STOP); //
 }
 

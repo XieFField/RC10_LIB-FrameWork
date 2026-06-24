@@ -874,14 +874,14 @@ private:
                         {
                             path_line_.Add_Point(temp_vector, path_param.start);
                             path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
-                            path_line_.Add_End_Point(CZ_point.R1_pos[1][0], path_param.end);
+                            path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
                         }
                         else if (last_vector.y == 8.6f)
                         {
                             path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
                             path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
                             path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
-                            path_line_.Add_End_Point(CZ_point.R1_pos[1][0], path_param.end);
+                            path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
                         }
                     }
                     // 取末端点进行路径退出后的锁点pid
@@ -942,14 +942,14 @@ private:
                     {
                         path_line_.Add_Point(temp_vector, path_param.start);
                         path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
-                        path_line_.Add_End_Point(CZ_point.R1_pos[1][0], path_param.end);
+                        path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
                     }
                     else if (last_vector.y == 8.6f)
                     {
                         path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
                         path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
                         path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
-                        path_line_.Add_End_Point(CZ_point.R1_pos[1][0], path_param.end);
+                        path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
                     }
                 }
             }

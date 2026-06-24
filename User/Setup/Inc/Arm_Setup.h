@@ -77,6 +77,9 @@ typedef struct{
 
     Store_MANUAL_E store_manual_mode = OUTSIDE; //存储位手动模式，默认外部
     uint8_t comp_takeout_now[2] = {0}; //当前取出位置 0 为初始即无，1为内，2为外
+
+    bool is_putdown_done = false; //放下完成标志
+    bool need_rebind_switches = true; //进入手操模式时需要重新绑定开关
 }arm_ctrl_status_S;
 
 
@@ -200,6 +203,11 @@ public:
             return;
 
         arm_status_ = status;
+    }
+
+    bool is_putdown_done()
+    {
+        return arm_ctrlStatus.is_putdown_done;
     }
 
     Store_MANUAL_E get_store_side()
