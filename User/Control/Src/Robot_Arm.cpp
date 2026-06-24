@@ -8,12 +8,11 @@ Robot_Arm::Robot_Arm(Arm_InitData_S init_Data)
         init_data_.rotate_end = 265.0f;
 }
 
-
 void Robot_Arm::update()
 {
     now_time_s_ = TimeStamp::getInstance().getSeconds();
 
-    if(!time_initialized_)
+    if (!time_initialized_)
     {
         last_time_s_ = now_time_s_;
         time_initialized_ = true;
@@ -29,53 +28,50 @@ void Robot_Arm::update()
     {
         ramped_rotateMotorAngle_ = motor_rotate_->getTotalAngle();
     }
-    
-    if(motor_rotate_ != nullptr)
+
+    if (motor_rotate_ != nullptr)
     {
         // 归一化到0~360度范围内
         float raw_angle = MotorTotalAngle_to_rotateAngle(motor_rotate_->getTotalAngle());
         joint_angle_.rotateJoint_angle_ = normalize_deg_0_360(raw_angle);
     }
-    if(motor_stretch_ != nullptr)
+    if (motor_stretch_ != nullptr)
         joint_angle_.stretchJoint_Length_ = MotorTotalAngle_to_stretchLength(motor_stretch_->getTotalAngle());
-    if(motor_launch_ != nullptr)
+    if (motor_launch_ != nullptr)
         joint_angle_.launchJoint_Height_ = MotorTotalAngle_to_launchHeight(motor_launch_->getTotalAngle());
-    if(motor_pitch_ != nullptr)
+    if (motor_pitch_ != nullptr)
         joint_angle_.suckerJoint_angle_ = MotorTotalAngle_to_pitchAngle(motor_pitch_->getTotalAngle());
-
 
     forwardKinematics(arm_forward_);
 
-    if(control_mode_ == TARGET_POSITION_MODE)
+    if (control_mode_ == TARGET_POSITION_MODE)
         inverseKinematics(arm_target_);
 
-    else if(control_mode_ == MANUAL_MOTOR_POSITION_MODE)
+    else if (control_mode_ == MANUAL_MOTOR_POSITION_MODE)
     {
         // 归一化到0~360度范围内
-        target_joint_angle_.launchJoint_Height_  = constrain(target_joint_angle_.launchJoint_Height_,  0.0f, init_data_.max_launchHeight_);
+        target_joint_angle_.launchJoint_Height_ = constrain(target_joint_angle_.launchJoint_Height_, 0.0f, init_data_.max_launchHeight_);
         target_joint_angle_.stretchJoint_Length_ = constrain(target_joint_angle_.stretchJoint_Length_, 0.0f, init_data_.max_stretchLength_);
-       
+
         target_joint_angle_.rotateJoint_angle_ = calc_legal_rotate_target(
             joint_angle_.rotateJoint_angle_,
-            target_joint_angle_.rotateJoint_angle_
-        );
+            target_joint_angle_.rotateJoint_angle_);
     }
-    else if(control_mode_ == CURRENT_CONTROL_MODE)
+    else if (control_mode_ == CURRENT_CONTROL_MODE)
     {
         // pitch 电机（DM_Motor）不受 CURRENT_CONTROL_MODE 影响，
         // 持续发送位置指令以维持当前角度。
         // DJI 电机（launch/stretch/rotate）通过各自的 setTargetCurrent(0) 停转。
-        if(motor_pitch_ != nullptr)
+        if (motor_pitch_ != nullptr)
         {
             float target_pitchMotorAngle = pitchAngle_to_MotorTotalAngle(
                 target_joint_angle_.suckerJoint_angle_);
             motor_pitch_->setTargetTotalAngle(init_data_.max_pitchRPM_,
-                target_pitchMotorAngle);
+                                              target_pitchMotorAngle);
         }
         return;
     }
-    
-  
+
     // 计算目标电机角度，单位为电机转过的总角度，考虑减速比和机械臂结构
     float target_rotateMotorAngle = 0.0f;
     float target_stretchMotorAngle = 0.0f;
@@ -99,7 +95,7 @@ void Robot_Arm::update()
         target_rotateMotorAngle = rotateAngle_to_MotorTotalAngle(target_arm_total);
 
         rotate_fliter_ramp_.ramp_target_ = caculate_ramp_target(motor_rotate_->getTotalAngle(),
-            target_rotateMotorAngle, rotate_fliter_ramp_);
+                                                                target_rotateMotorAngle, rotate_fliter_ramp_);
         motor_rotate_->setTargetTotalAngle(rotate_fliter_ramp_.ramp_target_);
     }
 
@@ -108,23 +104,23 @@ void Robot_Arm::update()
     target_pitchMotorAngle = pitchAngle_to_MotorTotalAngle(target_joint_angle_.suckerJoint_angle_);
     /*计算时考虑斜率*/
 
-    if(motor_stretch_ != nullptr)
+    if (motor_stretch_ != nullptr)
     {
-        strech_fliter_ramp_.ramp_target_ = caculate_ramp_target(motor_stretch_->getTotalAngle(), 
-        target_stretchMotorAngle, strech_fliter_ramp_);
+        strech_fliter_ramp_.ramp_target_ = caculate_ramp_target(motor_stretch_->getTotalAngle(),
+                                                                target_stretchMotorAngle, strech_fliter_ramp_);
         motor_stretch_->setTargetTotalAngle(strech_fliter_ramp_.ramp_target_);
     }
 
-    if(motor_launch_ != nullptr)
+    if (motor_launch_ != nullptr)
     {
-        launch_fliter_ramp_.ramp_target_ = caculate_ramp_target(motor_launch_->getTotalAngle(), 
-            target_launchMotorAngle, launch_fliter_ramp_);
+        launch_fliter_ramp_.ramp_target_ = caculate_ramp_target(motor_launch_->getTotalAngle(),
+                                                                target_launchMotorAngle, launch_fliter_ramp_);
         motor_launch_->setTargetTotalAngle(launch_fliter_ramp_.ramp_target_);
     }
-    if(motor_pitch_ != nullptr)
+    if (motor_pitch_ != nullptr)
         motor_pitch_->setTargetTotalAngle(init_data_.max_pitchRPM_, target_pitchMotorAngle);
 
-    if(sucker_status_ == SUCK)
+    if (sucker_status_ == SUCK)
     {
         HAL_GPIO_WritePin(init_data_.Sucker_GPIO_Port, init_data_.Sucker_GPIO_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(init_data_.Sucker_Soleniod_GPIO_Port, init_data_.Sucker_Soleniod_GPIO_Pin, GPIO_PIN_SET);
@@ -135,26 +131,25 @@ void Robot_Arm::update()
         HAL_GPIO_WritePin(init_data_.Sucker_Soleniod_GPIO_Port, init_data_.Sucker_Soleniod_GPIO_Pin, GPIO_PIN_RESET);
     }
 
-
-    if(store_sucker_outside_status_ == SUCK)
+    if (store_sucker_outside_status_ == SUCK)
     {
         HAL_GPIO_WritePin(init_data_.StoreOutside_GPIO_Port, init_data_.StoreOutside_GPIO_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(init_data_.StoreOutside_Soleniod_GPIO_Port, init_data_.StoreOutside_Soleniod_GPIO_Pin, GPIO_PIN_RESET);
     }
     else
     {
-        // HAL_GPIO_WritePin(init_data_.StoreOutside_GPIO_Port, init_data_.StoreOutside_GPIO_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(init_data_.StoreOutside_GPIO_Port, init_data_.StoreOutside_GPIO_Pin, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(init_data_.StoreOutside_Soleniod_GPIO_Port, init_data_.StoreOutside_Soleniod_GPIO_Pin, GPIO_PIN_SET);
     }
 
-    if(store_sucker_inside_status_ == SUCK)
+    if (store_sucker_inside_status_ == SUCK)
     {
-        HAL_GPIO_WritePin(init_data_.StoreOutside_GPIO_Port, init_data_.StoreOutside_GPIO_Pin, GPIO_PIN_SET); //共用outside的GPIO口
+        HAL_GPIO_WritePin(init_data_.StoreInside_GPIO_Port, init_data_.StoreInside_GPIO_Pin, GPIO_PIN_SET); // 共用outside的GPIO口
         HAL_GPIO_WritePin(init_data_.StoreInside_Soleniod_GPIO_Port, init_data_.StoreInside_Soleniod_GPIO_Pin, GPIO_PIN_SET);
     }
     else
     {
-        // HAL_GPIO_WritePin(init_data_.StoreInside_GPIO_Port, init_data_.StoreInside_GPIO_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(init_data_.StoreInside_GPIO_Port, init_data_.StoreInside_GPIO_Pin, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(init_data_.StoreInside_Soleniod_GPIO_Port, init_data_.StoreInside_Soleniod_GPIO_Pin, GPIO_PIN_RESET);
     }
 }
@@ -165,7 +160,7 @@ void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
     // 解算
     float raw_deg;
     if (std::abs(target_point.x) < 1e-6f && std::abs(target_point.y) < 1e-6f)
-        raw_deg = joint_angle_.rotateJoint_angle_;  // 
+        raw_deg = joint_angle_.rotateJoint_angle_; //
     else
         raw_deg = atan2f(target_point.y, target_point.x) * 180.0f / PI;
     target_joint_angle_.rotateJoint_angle_ = normalize_deg_0_360(raw_deg);
@@ -173,23 +168,21 @@ void Robot_Arm::inverseKinematics(Arm_Point_S target_point)
     target_joint_angle_.launchJoint_Height_ = target_point.z;
     target_joint_angle_.stretchJoint_Length_ = sqrt(target_point.x * target_point.x + target_point.y * target_point.y) - init_data_.arm_length_;
 
-   
     target_joint_angle_.suckerJoint_angle_ = target_point.suckerJoint_status_;
 
     target_joint_angle_.launchJoint_Height_ = constrain(target_joint_angle_.launchJoint_Height_,
-                                                    0.0f,
-                                                    init_data_.max_launchHeight_);
+                                                        0.0f,
+                                                        init_data_.max_launchHeight_);
     target_joint_angle_.stretchJoint_Length_ = constrain(target_joint_angle_.stretchJoint_Length_,
-                                                     0.0f,
-                                                     init_data_.max_stretchLength_);
+                                                         0.0f,
+                                                         init_data_.max_stretchLength_);
 }
 
-
-bool Robot_Arm::forwardKinematics(Arm_Point_S& out) const
+bool Robot_Arm::forwardKinematics(Arm_Point_S &out) const
 {
     /*解算*/
     float theta = joint_angle_.rotateJoint_angle_ * 3.1415926f / 180.0f;
-    float Ltot  = init_data_.arm_length_ + joint_angle_.stretchJoint_Length_;
+    float Ltot = init_data_.arm_length_ + joint_angle_.stretchJoint_Length_;
 
     out.x = Ltot * cosf(theta);
     out.y = Ltot * sinf(theta);
@@ -206,9 +199,11 @@ float Robot_Arm::calc_legal_rotate_target(float current_0_360, float target_0_36
         re = 265.0f;
 
     target_0_360 = fmodf(target_0_360, 360.0f);
-    if (target_0_360 < 0.0f) target_0_360 += 360.0f;
+    if (target_0_360 < 0.0f)
+        target_0_360 += 360.0f;
     current_0_360 = fmodf(current_0_360, 360.0f);
-    if (current_0_360 < 0.0f) current_0_360 += 360.0f;
+    if (current_0_360 < 0.0f)
+        current_0_360 += 360.0f;
 
     if (target_0_360 > init_data_.rotate_start && target_0_360 < re)
     {
@@ -261,14 +256,16 @@ float Robot_Arm::calc_legal_rotate_target(float current_0_360, float target_0_36
     {
         switch (rotate_strategy_)
         {
-            case ROTATE_PATH_POSITIVE:
-                if (diff < 0.0f) diff += 360.0f;
-                break;
-            case ROTATE_PATH_NEGATIVE:
-                if (diff > 0.0f) diff -= 360.0f;
-                break;
-            default:
-                break;
+        case ROTATE_PATH_POSITIVE:
+            if (diff < 0.0f)
+                diff += 360.0f;
+            break;
+        case ROTATE_PATH_NEGATIVE:
+            if (diff > 0.0f)
+                diff -= 360.0f;
+            break;
+        default:
+            break;
         }
     }
 
@@ -283,6 +280,7 @@ float Robot_Arm::calc_legal_rotate_target(float current_0_360, float target_0_36
     prev_rotate_target_ = result;
 
     result = fmodf(result, 360.0f);
-    if (result < 0.0f) result += 360.0f;
+    if (result < 0.0f)
+        result += 360.0f;
     return result;
 }
