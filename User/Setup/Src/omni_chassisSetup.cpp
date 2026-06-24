@@ -186,18 +186,43 @@ void OmniChassis_Setup::loop()
             curve = path_line_.get_bezier_curve();
             if (WeaponSage_Start == false && WeaponSage_End == false)
                 v_plan();
+
             else
                 Path_lock_point(curve.Get_Start_point());
             chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
         }
         else
         {
-            if (pid_dead_flag == true)
+            if (pid_dead_flag == true && (target_yaw == 90.0f || target_yaw == (-90.0f)))
             {
-                CHASSIS_MANUAL(1.5f, 1.5f, 1.5f);
+				static bool end=false;
+                if (airjoy_data_.left_x > 0.9f)
+				{
+					Chassis_Target.VX = 0.0f;
+					end=true;
+				}
+				else if(airjoy_data_.left_x > 0.8f&&airjoy_data_.left_x < 0.9f && end==false)
+					Chassis_Target.VX = 2.0f;
+                else if (_tool_Abs(airjoy_data_.left_x) > 0.1f && end==false)
+                    Chassis_Target.VX = airjoy_data_.left_x * 1.5f * this->is_chassis_reverse_;
+                else
+				{
+					Chassis_Target.VX = 0.0f;
+					if(_tool_Abs(airjoy_data_.left_x) < 0.1f )
+						end=false;
+				}
+                if (_tool_Abs(airjoy_data_.left_y) > 0.1f&&end==false)
+                    Chassis_Target.VY = airjoy_data_.left_y * 1.5f * this->is_chassis_reverse_;
+                else
+                    Chassis_Target.VY = 0.0f;
+                if (_tool_Abs(airjoy_data_.right_x) > 0.1f)
+                    Chassis_Target.yaw_rate = airjoy_data_.right_x * 1.5f * (-1.0f);
+                else
+                    Chassis_Target.yaw_rate = 0.0f;
+
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
-            else if (pid_dead_flag == false)
+            else
             {
                 Path_lock_point(Path_end_point);
                 chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
