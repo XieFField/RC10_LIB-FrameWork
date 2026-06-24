@@ -134,12 +134,14 @@ typedef struct
     float skew_yaw = 1.7f;
     // 下界10.02f上界是11.52f
     Vector2D fit_wait_pos = {2.17f, 10.05f};
+    Vector2D fit_transition_pos = {3.0f, 11.5f};
     Vector2D fit_end_pos = {4.83f, 11.5f};
 
     // 左中右   或者   先后
-    Vector2D R1_pos[3][2] = {{{4.535f, 11.318f}, {4.75f, 11.318f}}, {{4.535f, 10.795f}, {4.75f, 10.795f}}, {{4.535f, 10.225f}, {4.75f, 10.225f}}};
-    Vector2D fit_pos[2] = {fit_wait_pos, fit_end_pos};
-    Vector2D R2_pos[3] = {{4.83f, 11.285f}, {4.83f, 10.705f}, {4.83f, 10.185f}};
+    float set_skew = 0.215f;
+    Vector2D R1_pos[3][2] = {{{1.465f, 11.318f}, {4.535f, 11.318f}}, {{1.465f, 10.795f}, {4.535f, 10.795f}}, {{1.465f, 10.225f}, {4.535f, 10.225f}}};
+    Vector2D fit_pos[3][2] = {{{6.0f-fit_wait_pos.x,fit_wait_pos.y},fit_wait_pos},{{6.0f-fit_end_pos.x,fit_end_pos.y},fit_end_pos}, {{6.0f-fit_transition_pos.x,fit_transition_pos.y},fit_transition_pos}};
+    Vector2D R2_pos[3][2] = {{{1.17f, 11.318f},{4.83f, 11.318f}}, {{1.17f, 10.795f},{4.83f, 10.795f}}, {{1.17f, 10.225f},{4.83f, 10.225f}}};
 
 } CZ_POINT;
 
@@ -398,7 +400,7 @@ public:
             return false;
         }
     }
-
+    
     void Receive_CZ_Arm_flag(bool CZ_end)
     {
         // 写入机械臂流程反馈标志。
