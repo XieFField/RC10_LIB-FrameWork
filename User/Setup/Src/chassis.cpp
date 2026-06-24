@@ -101,6 +101,7 @@ namespace jia
                 case static_cast<u8>(Chassis::JustFloatProfile::kSingleWheelTrace):
                 case static_cast<u8>(Chassis::JustFloatProfile::kYawPid):
                 case static_cast<u8>(Chassis::JustFloatProfile::kDriveZeroStopBrakeTrace):
+                case static_cast<u8>(Chassis::JustFloatProfile::kHomingTrace):
                     return static_cast<Chassis::JustFloatProfile>(raw_profile);
                 default:
                     return Chassis::JustFloatProfile::kYawPid;
@@ -112,6 +113,13 @@ namespace jia
                 return (raw_payload <= static_cast<u8>(Chassis::SingleWheelTracePayloadKind::kDriveOnly))
                            ? static_cast<Chassis::SingleWheelTracePayloadKind>(raw_payload)
                            : Chassis::SingleWheelTracePayloadKind::kSteerOnly;
+            }
+
+            inline Chassis::HomingTraceView sanitizeHomingTraceView(u8 raw_view)
+            {
+                return (raw_view <= static_cast<u8>(Chassis::HomingTraceView::kObserveWheelDetail))
+                           ? static_cast<Chassis::HomingTraceView>(raw_view)
+                           : Chassis::HomingTraceView::kFourWheelOverview;
             }
 
             inline f32 applySignedDeadzoneRemap(f32 input, f32 deadzone)
@@ -5323,6 +5331,104 @@ namespace jia
             debug_uart_.printf_DMA_JustFloat(payload, 12);
         }
 
+        void Chassis::emitUart8VofaHomingTrace()
+        {
+            if (!debug_output_.output_enable ||
+                sanitizeDebugOutputFamily(debug_output_.output_family_raw) != DebugOutputFamily::kJustFloat ||
+                sanitizeJustFloatProfile(debug_output_.justfloat.profile_raw) != JustFloatProfile::kHomingTrace)
+            {
+                return;
+            }
+
+            const HomingTraceView view = sanitizeHomingTraceView(debug_output_.justfloat.homing_trace.view_raw);
+            DebugOutputSlotRuntime *slot_runtime = nullptr;
+            u32 period_ms = 0U;
+            if (view == HomingTraceView::kObserveWheelDetail)
+            {
+                slot_runtime = &debug_output_runtime_.justfloat.homing_trace.detail;
+                period_ms = debug_output_.justfloat.homing_trace.detail.period_ms;
+            }
+            else
+            {
+                slot_runtime = &debug_output_runtime_.justfloat.homing_trace.overview;
+                period_ms = debug_output_.justfloat.homing_trace.overview.period_ms;
+            }
+
+            if ((time_ms_ - slot_runtime->last_ms) < period_ms)
+            {
+                return;
+            }
+
+            if (HAL_UART_GetState(&huart8) != HAL_UART_STATE_READY)
+            {
+                return;
+            }
+
+            slot_runtime->last_ms = time_ms_;
+
+            if (view == HomingTraceView::kObserveWheelDetail)
+            {
+                const u8 observe_wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
+                const WheelConfig &wheel = wheel_config_[observe_wheel_idx];
+                const bool sensor_active = readHomingSensor(wheel);
+                const bool sensor_raw_high = readHomingSensorRawHigh(wheel);
+                const f32 current_oa_deg = radToDegF32(mapWheelCorrectedLocalToOaTotal(wheel, wheel.corrected_steer_motor_total_angle_rad));
+                const f32 target_oa_deg = radToDegF32(mapWheelCorrectedLocalToOaTotal(wheel, wheel.target_steer_motor_total_angle_rad));
+                const f32 hold_corrected_local_total_deg = radToDegF32(wheel.homing_hold_corrected_local_total_rad);
+                const f32 steer_target_rpm =
+                    (wheel.homing_state == HomingState::kSearch) ? wheel.homing_search_rpm : ((wheel.steer_motor_h != nullptr) ? wheel.steer_motor_h->getTargetRPM() : 0.0f);
+                const f32 expected_next_edge_is_falling =
+                    (wheel.homing_edge_confirm_count == 0U) ? 0.0f : (wheel.homing_last_confirm_edge_is_falling ? 0.0f : 1.0f);
+
+                float payload[25] = {0.0f};
+                payload[0] = static_cast<f32>(time_ms_) * 0.001f;
+                payload[1] = static_cast<f32>(observe_wheel_idx);
+                payload[2] = first_boot_homing_delay_.pending ? 1.0f : 0.0f;
+                payload[3] = first_boot_homing_delay_.active ? 1.0f : 0.0f;
+                payload[4] = static_cast<f32>(first_boot_homing_delay_.elapsed_ms);
+                payload[5] = homing_start_request_ ? 1.0f : 0.0f;
+                payload[6] = static_cast<f32>(wheel.homing_state);
+                payload[7] = sensor_active ? 1.0f : 0.0f;
+                payload[8] = sensor_raw_high ? 1.0f : 0.0f;
+                payload[9] = wheel.homing_last_sensor_active ? 1.0f : 0.0f;
+                payload[10] = wheel.homing_last_edge_is_falling ? 1.0f : 0.0f;
+                payload[11] = static_cast<f32>(wheel.homing_edge_confirm_count);
+                payload[12] = expected_next_edge_is_falling;
+                payload[13] = wheel.homing_search_timeout_armed ? 1.0f : 0.0f;
+                payload[14] = wheel.homing_elapsed_s;
+                payload[15] = wheel.homing_zero_valid ? 1.0f : 0.0f;
+                payload[16] = static_cast<f32>(wheel.steer_fault_state);
+                payload[17] = wheel.steer_fault_rehome_request ? 1.0f : 0.0f;
+                payload[18] = current_oa_deg;
+                payload[19] = target_oa_deg;
+                payload[20] = radToDegF32(wheel.homing_runtime_zero_offset_rad);
+                payload[21] = hold_corrected_local_total_deg;
+                payload[22] = steer_target_rpm;
+                payload[23] = wheel.steer_feedback_current_mA;
+                payload[24] = radToDegF32(wheel.steer_feedback_angle_delta_rad);
+                debug_uart_.printf_DMA_JustFloat(payload, 25);
+                return;
+            }
+
+            float payload[21] = {0.0f};
+            payload[0] = static_cast<f32>(time_ms_) * 0.001f;
+            payload[1] = first_boot_homing_delay_.pending ? 1.0f : 0.0f;
+            payload[2] = first_boot_homing_delay_.active ? 1.0f : 0.0f;
+            payload[3] = static_cast<f32>(first_boot_homing_delay_.elapsed_ms);
+            payload[4] = homing_start_request_ ? 1.0f : 0.0f;
+            payload[5] = debug_mirror_.all_homed ? 1.0f : 0.0f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                payload[6U + i] = static_cast<f32>(wheel_config_[i].homing_state);
+                payload[10U + i] = readHomingSensor(wheel_config_[i]) ? 1.0f : 0.0f;
+                payload[14U + i] = wheel_config_[i].homing_last_edge_is_falling ? 1.0f : 0.0f;
+            }
+            payload[18] = wheel_config_[0].homing_search_rpm;
+            payload[19] = wheel_config_[1].homing_search_rpm;
+            payload[20] = steer_fault_any_active_ ? 1.0f : 0.0f;
+            debug_uart_.printf_DMA_JustFloat(payload, 21);
+        }
+
 
         void Chassis::emitDebugOutputByMode(bool all_homed)
         {
@@ -5365,6 +5471,9 @@ namespace jia
                 }
                 case JustFloatProfile::kDriveZeroStopBrakeTrace:
                     emitUart8VofaDriveZeroStopBrakeTrace();
+                    break;
+                case JustFloatProfile::kHomingTrace:
+                    emitUart8VofaHomingTrace();
                     break;
                 case JustFloatProfile::kYawPid:
                 default:

@@ -804,12 +804,23 @@ namespace jia
                 // ch10: target_command_speed_m_s
                 // ch11: target_omega_z_rad_s
                 kDriveZeroStopBrakeTrace = 4,
+
+                // kHomingTrace
+                // 由 homing_trace.view_raw 决定视图：
+                // 1) kFourWheelOverview (21ch, emitUart8VofaHomingTrace)
+                // 2) kObserveWheelDetail (25ch, emitUart8VofaHomingTrace)
+                kHomingTrace = 5,
             };
             enum class SingleWheelTracePayloadKind : u8
             {
                 kSteerOnly = 0,
                 kSteerAndDrive = 1,
                 kDriveOnly = 2,
+            };
+            enum class HomingTraceView : u8
+            {
+                kFourWheelOverview = 0,
+                kObserveWheelDetail = 1,
             };
             DebugMode resolveDebugMode(u8 raw_mode) const;
 
@@ -1169,6 +1180,7 @@ namespace jia
             // 它们都是只读 emitter，不生成新控制命令；具体节流周期和 profile 选择由 debug_output_ 与 runtime 配合完成。
             void emitUart8VofaYawPidTrace();
             void emitUart8VofaDriveZeroStopBrakeTrace();
+            void emitUart8VofaHomingTrace();
             // emitDebugOutputByMode() 只是输出分发层：
             // family/profile 的路由选择在这里完成，但具体 payload 定义、节流、sample_divider 和 seq 维护都在各自 emitter 内。
             /**
@@ -1495,12 +1507,20 @@ namespace jia
 
             struct DebugOutputJustFloatConfig
             {
+                struct HomingTraceConfig
+                {
+                    u8 view_raw = static_cast<u8>(HomingTraceView::kFourWheelOverview);
+                    DebugOutputSlotConfig overview = {10U};
+                    DebugOutputSlotConfig detail = {2U};
+                };
+
                 u8 profile_raw = static_cast<u8>(JustFloatProfile::kSingleWheelTrace);
                 u8 single_wheel_payload_raw = static_cast<u8>(SingleWheelTracePayloadKind::kSteerAndDrive);
                 DebugOutputSlotConfig overview = {5U};
                 DebugOutputSlotConfig single_wheel = {1U};
                 DebugOutputSlotConfig yaw_pid = {4U};
                 DebugOutputSlotConfig drive_zero_stop_brake = {2U};
+                HomingTraceConfig homing_trace{};
             };
 
             struct DebugOutputConfig
@@ -1531,10 +1551,17 @@ namespace jia
 
             struct DebugOutputJustFloatRuntime
             {
+                struct HomingTraceRuntime
+                {
+                    DebugOutputSlotRuntime overview{};
+                    DebugOutputSlotRuntime detail{};
+                };
+
                 DebugOutputSlotRuntime overview{};
                 DebugOutputSlotRuntime single_wheel{};
                 DebugOutputSlotRuntime yaw_pid{};
                 DebugOutputSlotRuntime drive_zero_stop_brake{};
+                HomingTraceRuntime homing_trace{};
             };
 
             struct DebugOutputRuntime
