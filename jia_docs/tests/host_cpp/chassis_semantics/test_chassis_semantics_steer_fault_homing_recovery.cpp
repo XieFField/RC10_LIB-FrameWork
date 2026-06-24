@@ -1020,8 +1020,7 @@ TEST_CASE("testHomingEdgeDeltaToleranceBoundaryUsesCompileTimeMacro")
     steer_motors[0].setFeedbackTotalAngleDeg(360.0f + outside_tolerance_deg);
     setPhotogateStateForWheel(0, true);
     runHostControlCycle(chassis);
-
-    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kEdgeDetected);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kFault);
 }
 
 TEST_CASE("testHomingAfterAllWheelsReadyResumesZeroCurrentAndBodySpeedModes")

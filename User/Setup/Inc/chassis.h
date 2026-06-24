@@ -818,6 +818,7 @@ namespace jia
             // 与普通 setTarget* 不同，这里允许调试面板直接接管整车目标，或者绕开整车 planner 只改某些模块命令。
 #if JIA_CHASSIS_ENABLE_DEBUG_OVERRIDE
             void applyDebugTargetOverride(DebugMode mode);
+            f32 remapDebugInputWithDeadzone(f32 input, f32 deadzone) const;
             // applyDebugModuleOverride() 是调试侧少数会短路正常 compute/apply 链路的入口。
             // 一旦它返回 true，本拍后续模块命令不再来自常规底盘规划，而由 debug route 直接决定。
             bool applyDebugModuleOverride(bool all_homed);
@@ -1427,6 +1428,8 @@ namespace jia
                     f32 omega_z_sine_amplitude = 0.0f;    // [RW] omega_z 正弦注入幅值。
                     f32 omega_z_sine_frequency_hz = 0.1f; // [RW] omega_z 正弦注入频率（Hz）。
                     f32 omega_z_sine_offset = 0.0f;       // [RW] omega_z 正弦注入偏置。
+                    f32 translation_input_deadzone = 0.1f; // [RW] 整车 debug 接管里的平移类摇杆死区。出区后按边界重映射，不丢死区外分辨率。
+                    f32 rotation_input_deadzone = 0.1f;    // [RW] 整车 debug 接管里的旋转类摇杆死区。供 omega_z/同类旋转速度注入输入使用。
                     f32 steer_deg_limit = 180.0f;
                     f32 drive_speed_m_s_limit = 1.0f;
                 } injection{};
@@ -1434,7 +1437,7 @@ namespace jia
                 struct SingleWheel
                 {
                     bool estop = false;         // [RW] 单轮调试急停闸门。
-                    f32 input_deadzone = 0.03f; // [RW] 单轮调试共享摇杆死区。落入死区后两轴输入都直接置 0。
+                    f32 input_deadzone = 0.1f; // [RW] 单轮调试共享摇杆死区。落入死区归 0，出区后从死区边界重新起算。
                     SingleWheelAxisControl steer{
                         false,
                         static_cast<u8>(DirectAxisInputMode::kRcContinuous),

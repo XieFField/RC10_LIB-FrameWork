@@ -114,6 +114,20 @@ namespace jia
                            : Chassis::SingleWheelTracePayloadKind::kSteerOnly;
             }
 
+            inline f32 applySignedDeadzoneRemap(f32 input, f32 deadzone)
+            {
+                const f32 clamped_input = clampValue(input, -1.0f, 1.0f);
+                const f32 clamped_deadzone = clampValue(fabsf(deadzone), 0.0f, 0.999f);
+                const f32 abs_input = fabsf(clamped_input);
+                if (abs_input <= clamped_deadzone)
+                {
+                    return 0.0f;
+                }
+
+                const f32 remapped = (abs_input - clamped_deadzone) / (1.0f - clamped_deadzone);
+                return (clamped_input >= 0.0f) ? remapped : -remapped;
+            }
+
             inline f32 getDirectSteerDefaultLimit(Chassis::DirectSteerCommandType type)
             {
                 switch (type)
@@ -1831,9 +1845,12 @@ namespace jia
             // Debug 左摇杆沿对外平移语义接管：上推朝当前 2/3 面，左推朝当前 3/4 面。
             // 映射到内部 body 命令时使用 -left_x -> vel_x、-left_y -> vel_y；
             // 右摇杆 omega_z 保持现有符号约定不变。
-            f32 target_vel_x = -airjoy_data_.left_x * runtime_strategy_cfg_.max_vel_x_;
-            f32 target_vel_y = -airjoy_data_.left_y * runtime_strategy_cfg_.max_vel_y_;
-            const f32 right_x_cmd = -airjoy_data_.right_x;
+            const f32 translation_left_x = remapDebugInputWithDeadzone(airjoy_data_.left_x, debug_control_.injection.translation_input_deadzone);
+            const f32 translation_left_y = remapDebugInputWithDeadzone(airjoy_data_.left_y, debug_control_.injection.translation_input_deadzone);
+            const f32 rotation_right_x = remapDebugInputWithDeadzone(airjoy_data_.right_x, debug_control_.injection.rotation_input_deadzone);
+            f32 target_vel_x = -translation_left_x * runtime_strategy_cfg_.max_vel_x_;
+            f32 target_vel_y = -translation_left_y * runtime_strategy_cfg_.max_vel_y_;
+            const f32 right_x_cmd = -rotation_right_x;
             f32 target_omega_z = -right_x_cmd * runtime_strategy_cfg_.max_omega_z_;
 
             const DebugOmegaZInjectionMode omega_z_injection_mode =
@@ -1850,11 +1867,11 @@ namespace jia
                                                       debug_control_.injection.omega_z_sine_offset);
                 break;
             case DebugOmegaZInjectionMode::kStep:
-                if (airjoy_data_.right_x > 0.3f)
+                if (rotation_right_x > 0.3f)
                 {
                     target_omega_z = runtime_strategy_cfg_.max_omega_z_;
                 }
-                else if (airjoy_data_.right_x < -0.3f)
+                else if (rotation_right_x < -0.3f)
                 {
                     target_omega_z = -runtime_strategy_cfg_.max_omega_z_;
                 }
@@ -1901,8 +1918,8 @@ namespace jia
             case DebugMode::kSteerDegAndDriveSpeed:
             {
                 const f32 steer_angle_deg =
-                    90.0f + clampValue(airjoy_data_.left_x, -1.0f, 1.0f) * debug_control_.injection.steer_deg_limit;
-                const f32 drive_speed_m_s = clampValue(airjoy_data_.right_x, -1.0f, 1.0f) * debug_control_.injection.drive_speed_m_s_limit;
+                    90.0f + translation_left_x * debug_control_.injection.steer_deg_limit;
+                const f32 drive_speed_m_s = rotation_right_x * debug_control_.injection.drive_speed_m_s_limit;
                 setSteerDegAndDriveSpeed(steer_angle_deg, drive_speed_m_s);
                 break;
             }
@@ -2062,6 +2079,11 @@ namespace jia
             }
         }
 
+        f32 Chassis::remapDebugInputWithDeadzone(f32 input, f32 deadzone) const
+        {
+            return applySignedDeadzoneRemap(input, deadzone);
+        }
+
         void Chassis::resetSingleWheelAxisPlannerRuntime(SingleWheelAxisPlannerRuntime &runtime)
         {
             // 局部 planner runtime 只服务当前轮、当前命令类型和当前 planner 模式；
@@ -2218,10 +2240,10 @@ namespace jia
                 {
                     command.steer_axis_value = -command.steer_axis_value;
                 }
-                command.steer_axis_value = clampValue(command.steer_axis_value, -1.0f, 1.0f);
-                if (fabsf(command.steer_axis_value) < deadzone)
+                const f32 steer_axis_before_deadzone = clampValue(command.steer_axis_value, -1.0f, 1.0f);
+                command.steer_axis_value = remapDebugInputWithDeadzone(steer_axis_before_deadzone, deadzone);
+                if (command.steer_axis_value == 0.0f && fabsf(steer_axis_before_deadzone) > 0.0f)
                 {
-                    command.steer_axis_value = 0.0f;
                     command.steer_deadzone_applied = true;
                 }
 
@@ -2250,10 +2272,10 @@ namespace jia
                 {
                     command.drive_axis_value = -command.drive_axis_value;
                 }
-                command.drive_axis_value = clampValue(command.drive_axis_value, -1.0f, 1.0f);
-                if (fabsf(command.drive_axis_value) < deadzone)
+                const f32 drive_axis_before_deadzone = clampValue(command.drive_axis_value, -1.0f, 1.0f);
+                command.drive_axis_value = remapDebugInputWithDeadzone(drive_axis_before_deadzone, deadzone);
+                if (command.drive_axis_value == 0.0f && fabsf(drive_axis_before_deadzone) > 0.0f)
                 {
-                    command.drive_axis_value = 0.0f;
                     command.drive_deadzone_applied = true;
                 }
 

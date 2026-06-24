@@ -157,6 +157,51 @@ TEST_CASE("testMode30SingleWheelSharedDeadzoneSuppressesContinuousAndStepInputs"
     EXPECT_NEAR(chassis.debug_control_.single_wheel.drive.command_value, 0.0f, 1.0e-6f);
 }
 
+TEST_CASE("testMode30SingleWheelSharedDeadzoneRemapsContinuousInputFromEdge")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.input_deadzone = 0.3f;
+    chassis.debug_control_.single_wheel.drive.input_mode_raw = static_cast<unsigned char>(Chassis::DirectAxisInputMode::kRcContinuous);
+    chassis.debug_control_.single_wheel.drive.command_limit = 1000.0f;
+    chassis.airjoy_data_.left_x = 0.65f;
+    chassis.airjoy_data_.right_x = 0.65f;
+
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+
+    const float remapped = (0.65f - 0.3f) / (1.0f - 0.3f);
+    EXPECT_NEAR(chassis.debug_control_.single_wheel.steer.command_value, remapped * 90.0f, 1.0e-4f);
+    EXPECT_NEAR(chassis.debug_control_.single_wheel.drive.command_value, remapped * 1000.0f, 1.0e-4f);
+    EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), remapped * 90.0f, 1.0e-4f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), remapped * 1000.0f, 1.0e-4f);
+}
+
+TEST_CASE("testMode30SingleWheelSharedDeadzoneRemapsStepThresholdDecision")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.input_deadzone = 0.3f;
+    chassis.debug_control_.single_wheel.drive.input_mode_raw = static_cast<unsigned char>(Chassis::DirectAxisInputMode::kRcStep);
+    chassis.debug_control_.single_wheel.drive.step_threshold = 0.2f;
+    chassis.debug_control_.single_wheel.drive.step_value = 200.0f;
+
+    chassis.airjoy_data_.right_x = 0.42f;
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_NEAR(chassis.debug_control_.single_wheel.drive.command_value, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 0.0f, 1.0e-6f);
+
+    chassis.airjoy_data_.right_x = 0.50f;
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_NEAR(chassis.debug_control_.single_wheel.drive.command_value, 200.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 200.0f, 1.0e-6f);
+}
+
 TEST_CASE("testMode30SingleWheelAxisEnablesAndEstopGateOutputs")
 {
     Chassis chassis;
@@ -672,6 +717,8 @@ TEST_CASE("testDebugOmegaZInjectionModeOffKeepsManualOmegaInput")
     chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
     chassis.runtime_strategy_cfg_.max_vel_y_ = 2.0f;
     chassis.runtime_strategy_cfg_.max_omega_z_ = 3.0f;
+    chassis.debug_control_.injection.translation_input_deadzone = 0.0f;
+    chassis.debug_control_.injection.rotation_input_deadzone = 0.0f;
     chassis.airjoy_data_.left_y = 0.0f;
     chassis.airjoy_data_.left_x = 0.0f;
     chassis.airjoy_data_.right_x = 0.5f;
@@ -744,6 +791,8 @@ TEST_CASE("testDebugOmegaZInjectionDoesNotAffectLockToTarget")
 TEST_CASE("testDebugSteerDegAndDriveSpeedModeMapsLeftXAndRightXToInterface")
 {
     Chassis chassis;
+    chassis.debug_control_.injection.translation_input_deadzone = 0.0f;
+    chassis.debug_control_.injection.rotation_input_deadzone = 0.0f;
     chassis.debug_control_.injection.steer_deg_limit = 180.0f;
     chassis.debug_control_.injection.drive_speed_m_s_limit = 1.2f;
     chassis.airjoy_data_.left_x = 0.0f;
@@ -764,6 +813,57 @@ TEST_CASE("testDebugSteerDegAndDriveSpeedModeMapsLeftXAndRightXToInterface")
     EXPECT_NEAR(chassis.input_target_data_.steer_lock_angle_deg, 135.0f, 1.0e-6f);
     EXPECT_NEAR(chassis.input_target_data_.drive_lock_speed_m_s, -0.6f, 1.0e-6f);
     EXPECT_NEAR(chassis.input_target_data_.omega_z, 0.0f, 1.0e-6f);
+}
+
+TEST_CASE("testDebugTargetInjectionDeadzoneRemapsTranslationAndRotationInputs")
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_vel_y_ = 3.0f;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 4.0f;
+    chassis.debug_control_.injection.translation_input_deadzone = 0.2f;
+    chassis.debug_control_.injection.rotation_input_deadzone = 0.4f;
+    chassis.airjoy_data_.left_x = 0.5f;
+    chassis.airjoy_data_.left_y = -0.6f;
+    chassis.airjoy_data_.right_x = -0.7f;
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+
+    const float left_x_remapped = (0.5f - 0.2f) / (1.0f - 0.2f);
+    const float left_y_remapped = -(0.6f - 0.2f) / (1.0f - 0.2f);
+    const float right_x_remapped = -(0.7f - 0.4f) / (1.0f - 0.4f);
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kBodySpeedMode);
+    EXPECT_NEAR(chassis.input_target_data_.vel_x, -left_x_remapped * 2.0f, 1.0e-5f);
+    EXPECT_NEAR(chassis.input_target_data_.vel_y, -left_y_remapped * 3.0f, 1.0e-5f);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, right_x_remapped * 4.0f, 1.0e-5f);
+}
+
+TEST_CASE("testDebugTargetInjectionDeadzoneControlsStepAndSteerDriveMapping")
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 3.0f;
+    chassis.debug_control_.injection.translation_input_deadzone = 0.2f;
+    chassis.debug_control_.injection.rotation_input_deadzone = 0.4f;
+    chassis.debug_control_.injection.omega_z_injection_mode_raw = static_cast<unsigned char>(Chassis::DebugOmegaZInjectionMode::kStep);
+    chassis.debug_control_.injection.steer_deg_limit = 180.0f;
+    chassis.debug_control_.injection.drive_speed_m_s_limit = 1.2f;
+
+    chassis.airjoy_data_.right_x = 0.55f;
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, 0.0f, 1.0e-6f);
+
+    chassis.airjoy_data_.right_x = 0.8f;
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, 3.0f, 1.0e-6f);
+
+    chassis.airjoy_data_.left_x = 0.3f;
+    chassis.airjoy_data_.right_x = -0.7f;
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kSteerDegAndDriveSpeed);
+
+    const float left_x_remapped = (0.3f - 0.2f) / (1.0f - 0.2f);
+    const float right_x_remapped = -(0.7f - 0.4f) / (1.0f - 0.4f);
+    EXPECT_NEAR(chassis.input_target_data_.steer_lock_angle_deg, 90.0f + left_x_remapped * 180.0f, 1.0e-5f);
+    EXPECT_NEAR(chassis.input_target_data_.drive_lock_speed_m_s, right_x_remapped * 1.2f, 1.0e-5f);
 }
 
 } // namespace chassis_semantics_test
