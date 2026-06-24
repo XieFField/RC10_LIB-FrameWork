@@ -825,6 +825,10 @@ TEST_CASE("testJustFloatHomingTraceObserveWheelDetailEmitsFixed25ChannelPayload"
     chassis.wheel_config_[2].homing_zero_valid = false;
     chassis.wheel_config_[2].steer_fault_state = Chassis::SteerFaultState::kRecovering;
     chassis.wheel_config_[2].steer_fault_rehome_request = true;
+    chassis.wheel_config_[2].homing_auto_retry_attempt_count = 3U;
+    chassis.wheel_config_[2].homing_auto_retry_wait_active = true;
+    chassis.wheel_config_[2].homing_auto_retry_wait_elapsed_ms = 654U;
+    chassis.wheel_config_[2].homing_auto_retry_armed_by_recovery_failure = true;
     chassis.wheel_config_[2].theta_oa_to_owi_rad = jia::degToRadF32(90.0f);
     chassis.wheel_config_[2].homing_runtime_zero_offset_rad = jia::degToRadF32(17.0f);
     chassis.wheel_config_[2].homing_hold_corrected_local_total_rad = jia::degToRadF32(123.0f);
@@ -862,8 +866,8 @@ TEST_CASE("testJustFloatHomingTraceObserveWheelDetailEmitsFixed25ChannelPayload"
     EXPECT_NEAR(g_test_justfloat_capture.values[20], 17.0f, 1.0e-4f);
     EXPECT_NEAR(g_test_justfloat_capture.values[21], 123.0f, 1.0e-4f);
     EXPECT_NEAR(g_test_justfloat_capture.values[22], chassis.wheel_config_[2].homing_search_rpm, 1.0e-6f);
-    EXPECT_NEAR(g_test_justfloat_capture.values[23], 2345.0f, 1.0e-6f);
-    EXPECT_NEAR(g_test_justfloat_capture.values[24], 2.5f, 1.0e-4f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[23], 3.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[24], 1.0f, 1.0e-6f);
 }
 
 TEST_CASE("testDebugOmegaZInjectionModeOffKeepsManualOmegaInput")

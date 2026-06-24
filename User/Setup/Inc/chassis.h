@@ -66,7 +66,19 @@
 #endif
 
 #ifndef JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG
-#define JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG 2.0f
+#define JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG 5.0f
+#endif
+
+#ifndef JIA_CHASSIS_HOMING_AUTO_RETRY_ENABLE
+#define JIA_CHASSIS_HOMING_AUTO_RETRY_ENABLE 1
+#endif
+
+#ifndef JIA_CHASSIS_HOMING_AUTO_RETRY_MAX_ATTEMPTS
+#define JIA_CHASSIS_HOMING_AUTO_RETRY_MAX_ATTEMPTS 3U
+#endif
+
+#ifndef JIA_CHASSIS_HOMING_AUTO_RETRY_INTERVAL_MS
+#define JIA_CHASSIS_HOMING_AUTO_RETRY_INTERVAL_MS 1000U
 #endif
 
 // “首次上电回零延时”只作用在本次上电后的第一次整车 homing：
@@ -447,11 +459,16 @@ namespace jia
                 bool homing_search_timeout_armed = false;         // Search 超时是否已武装。只有看到首个有效舵向反馈活动后才开始累计超时。
                 u8 homing_edge_confirm_count = 0U;                // 本次 Search 已连续确认的原始光电边沿数量
                 bool homing_last_confirm_edge_is_falling = false; // 上一次确认边沿方向：true=H->L，false=L->H
+                f32 homing_first_confirm_signed_local_rad = 0.0f; // 首次确认边沿对应的本地连续角；用于约束第一/第三边同极性一致性。
                 f32 homing_last_confirm_signed_local_rad = 0.0f;  // 上一次确认边沿对应的带方向本地连续角
                 f32 homing_candidate_zero_offset_sum_rad = 0.0f;  // 三边沿确认时，已 unwrap 到同一分支的候选零偏累加
                 f32 homing_hold_corrected_local_total_rad = 0.0f; // 单轮 ready 后维持的 corrected-local 连续角。它是本拍 hold 目标，不是零偏本身。
                 f32 homing_elapsed_s = 0.0f;                      // 本次回零已运行时间，单位秒；用于超时判定
                 f32 homing_runtime_zero_offset_rad = 0.0f;        // 本次上电运行实际采用的零位补偿。它由“当前 raw 触发位置 + 标定零偏”折算得出，和静态 homing_zero_offset_rad 不同。
+                u32 homing_auto_retry_attempt_count = 0U;         // 当前这一轮失败链已消耗的自动重试次数。
+                bool homing_auto_retry_wait_active = false;       // 当前是否正处于 fault 后等待自动重试的窗口。
+                u32 homing_auto_retry_wait_elapsed_ms = 0U;       // 当前等待自动重试窗口已累计的时长（ms）。
+                bool homing_auto_retry_armed_by_recovery_failure = false; // 当前自动重试是否由 recovery re-home 失败触发，仅用于观测。
 
                 // ---- 实时反馈与本周期规划输出 -----------------------------------
                 // 这里不是单纯“反馈区”，而是该轮本拍执行上下文：
@@ -991,6 +1008,7 @@ namespace jia
              * @details 用于从故障恢复、重新回零或特殊保持态退出时，避免旧的 PID/目标历史继续影响下一拍。
              */
             void resetSteerMotorClosedLoopState(WheelConfig &wheel);
+            void resetSingleWheelHomingSearchState(WheelConfig &wheel, bool sensor_raw_high);
             /**
              * @brief 重置单轮 homing 边沿确认链路的累计状态。
              * @param wheel 目标轮运行态容器。
@@ -1761,6 +1779,10 @@ namespace jia
                 bool homing_sensor_active[4] = {false, false, false, false};        // [RO] 各轮光电门有效状态
                 bool homing_last_edge_is_falling[4] = {false, false, false, false}; // [RO] 各轮最近边沿是否下降沿
                 f32 homing_runtime_zero_offset_deg[4] = {0.0f};                     // [RO] 各轮运行时零偏（deg）
+                f32 homing_auto_retry_attempt_count[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                bool homing_auto_retry_wait_active[4] = {false, false, false, false};
+                f32 homing_auto_retry_wait_elapsed_ms[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+                bool homing_auto_retry_armed_by_recovery_failure[4] = {false, false, false, false};
                 f32 nz_stationary_m_s = 0.0f;                                       // [RO] 当前有效静止阈值（m/s）。
                 f32 nz_freeze_enter_m_s = 0.0f;                                     // [RO] 当前有效冻结进入阈值（m/s）。
                 f32 nz_freeze_exit_m_s = 0.0f;                                      // [RO] 当前有效冻结退出阈值（m/s）。

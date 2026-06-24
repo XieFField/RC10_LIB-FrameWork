@@ -272,6 +272,10 @@ namespace jia
                 resetHomingEdgeConfirmState(wheel);
                 wheel.homing_elapsed_s = 0.0f;
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
+                wheel.homing_auto_retry_attempt_count = 0U;
+                wheel.homing_auto_retry_wait_active = false;
+                wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+                wheel.homing_auto_retry_armed_by_recovery_failure = false;
                 wheel.homing_hold_corrected_local_total_rad = 0.0f;
                 wheel.corrected_steer_motor_total_angle_rad = 0.0f;
                 wheel.corrected_drive_omega_rad_s = 0.0f;
@@ -498,8 +502,13 @@ namespace jia
                 clearSteerFaultState(wheel);
                 wheel.homing_elapsed_s = 0.0f;
                 wheel.homing_last_sensor_active = false;
+                wheel.homing_last_edge_is_falling = false;
                 wheel.homing_align_command_armed = false;
                 wheel.homing_search_timeout_armed = false;
+                wheel.homing_auto_retry_attempt_count = 0U;
+                wheel.homing_auto_retry_wait_active = false;
+                wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+                wheel.homing_auto_retry_armed_by_recovery_failure = false;
                 resetHomingEdgeConfirmState(wheel);
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
                 wheel.homing_hold_corrected_local_total_rad = 0.0f;
@@ -2442,7 +2451,7 @@ namespace jia
             // ???? virtual load / step generator ?????????????? PID bias current?
             (void)single_wheel_idx;
             (void)chassis_motion_blocked;
-            VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h);
+            VESC_Motor *drive_vesc = wheel.drive_motor_h;
             const bool can_use_vesc_drive_assist =
                 allow_drive_position_loop &&
                 (drive_vesc != nullptr) &&
@@ -2455,7 +2464,6 @@ namespace jia
             {
                 drive_vesc->setSpeedPidCurrentBias(0.0f);
             }
-
             if (can_reset_local_speed_pid && leaving_drive_zero_stop)
             {
                 drive_vesc->reset_speed_pid_state();
@@ -2493,7 +2501,6 @@ namespace jia
                 {
                     drive_zero_stop_brake_active_[wheel_idx] = residual_speed_m_s > getNearZeroExitSpeedMps();
                 }
-
                 if (can_reset_local_speed_pid && entering_drive_zero_stop)
                 {
                     drive_vesc->reset_speed_pid_state();
@@ -2508,7 +2515,6 @@ namespace jia
                     {
                         drive_zero_stop_brake_ramp_elapsed_ms_[wheel_idx] = 0U;
                     }
-
                     if (ramp_time_ms > 0U)
                     {
                         const u32 prev_elapsed_ms = drive_zero_stop_brake_ramp_elapsed_ms_[wheel_idx];
@@ -2655,14 +2661,14 @@ namespace jia
                                                     false,
                                                     false);
                 }
-                else if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(target_wheel.drive_motor_h))
+                else if (VESC_Motor *drive_vesc = target_wheel.drive_motor_h)
                 {
                     drive_vesc->setSpeedPidCurrentBias(0.0f);
                 }
             }
             else
             {
-                if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(target_wheel.drive_motor_h))
+                if (VESC_Motor *drive_vesc = target_wheel.drive_motor_h)
                 {
                     drive_vesc->setSpeedPidCurrentBias(0.0f);
                 }
@@ -3357,6 +3363,7 @@ namespace jia
             // 每次重新开始 search，或判定边沿序列失真时，都要把累计值和计数清空。
             wheel.homing_edge_confirm_count = 0U;
             wheel.homing_last_confirm_edge_is_falling = false;
+            wheel.homing_first_confirm_signed_local_rad = 0.0f;
             wheel.homing_last_confirm_signed_local_rad = 0.0f;
             wheel.homing_candidate_zero_offset_sum_rad = 0.0f;
         }
@@ -3386,6 +3393,7 @@ namespace jia
             {
                 wheel.homing_edge_confirm_count = 1U;
                 wheel.homing_last_confirm_edge_is_falling = is_falling_edge;
+                wheel.homing_first_confirm_signed_local_rad = signed_local_total_rad;
                 wheel.homing_last_confirm_signed_local_rad = signed_local_total_rad;
                 wheel.homing_candidate_zero_offset_sum_rad = candidate_zero_offset_rad;
                 return false;
@@ -3411,6 +3419,15 @@ namespace jia
 
             if (wheel.homing_edge_confirm_count < 3U)
             {
+                return false;
+            }
+
+            const f32 first_to_third_delta_rad = signed_local_total_rad - wheel.homing_first_confirm_signed_local_rad;
+            if (fabsf(first_to_third_delta_rad - (2.0f * kPi)) > tolerance_rad)
+            {
+                resetHomingEdgeConfirmState(wheel);
+                wheel.homing_state = HomingState::kFault;
+                wheel.homing_zero_valid = false;
                 return false;
             }
 
@@ -3499,6 +3516,10 @@ namespace jia
             wheel.steer_fault_rehome_request = false;
             wheel.steer_feedback_freeze_ms = 0U;
             wheel.steer_feedback_recovery_toggle_count = 0U;
+            wheel.homing_auto_retry_attempt_count = 0U;
+            wheel.homing_auto_retry_wait_active = false;
+            wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+            wheel.homing_auto_retry_armed_by_recovery_failure = false;
             wheel.steer_feedback_current_mA = readSteerMotorCurrentMilliAmp(wheel);
             wheel.steer_feedback_last_current_mA = wheel.steer_feedback_current_mA;
             wheel.steer_feedback_last_raw_total_angle_rad = readSteerMotorRawTotalAngleRad(wheel);
@@ -3515,6 +3536,7 @@ namespace jia
             // 舵向冻结一旦确认，就立刻把该轮打进“已锁存故障”：
             // 退出当前闭环目标、清空零位有效性，并等待后续恢复抖动触发 re-home。
             // 这一步会主动把 fault 与 homing fault 语义耦合起来，让该轮彻底退出常规控制链。
+            const bool recovery_rehome_failure = (wheel.steer_fault_state == SteerFaultState::kRecovering);
             wheel.steer_fault_state = SteerFaultState::kLatched;
             wheel.steer_fault_rehome_request = false;
             wheel.steer_feedback_recovery_toggle_count = 0U;
@@ -3522,6 +3544,9 @@ namespace jia
             wheel.homing_state = HomingState::kFault;
             wheel.homing_elapsed_s = 0.0f;
             wheel.homing_zero_valid = false;
+            wheel.homing_auto_retry_wait_active = false;
+            wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+            wheel.homing_auto_retry_armed_by_recovery_failure = recovery_rehome_failure;
             wheel.target_drive_omega_rad_s = 0.0f;
             wheel.target_steer_motor_total_angle_rad = 0.0f;
             wheel.steer_target_velocity_rad_s = 0.0f;
@@ -3549,6 +3574,10 @@ namespace jia
             wheel.homing_last_edge_is_falling = false;
             wheel.homing_align_command_armed = false;
             wheel.homing_search_timeout_armed = false;
+            wheel.homing_auto_retry_attempt_count = 0U;
+            wheel.homing_auto_retry_wait_active = false;
+            wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+            wheel.homing_auto_retry_armed_by_recovery_failure = true;
             resetHomingEdgeConfirmState(wheel);
             wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
             wheel.homing_hold_corrected_local_total_rad = 0.0f;
@@ -3557,6 +3586,19 @@ namespace jia
             wheel.target_drive_omega_rad_s = 0.0f;
             wheel.target_steer_motor_total_angle_rad = 0.0f;
             wheel.steer_target_velocity_rad_s = 0.0f;
+        }
+
+        void Chassis::resetSingleWheelHomingSearchState(WheelConfig &wheel, bool sensor_raw_high)
+        {
+            wheel.homing_elapsed_s = 0.0f;
+            wheel.homing_last_sensor_active = sensor_raw_high;
+            wheel.homing_last_edge_is_falling = false;
+            wheel.homing_align_command_armed = false;
+            wheel.homing_search_timeout_armed = false;
+            resetHomingEdgeConfirmState(wheel);
+            wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
+            wheel.homing_hold_corrected_local_total_rad = 0.0f;
+            wheel.homing_zero_valid = false;
         }
 
         void Chassis::resetSteerMotorClosedLoopState(WheelConfig &wheel)
@@ -3731,6 +3773,10 @@ namespace jia
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
                 wheel.homing_last_edge_is_falling = false;
                 wheel.homing_align_command_armed = false;
+                wheel.homing_auto_retry_attempt_count = 0U;
+                wheel.homing_auto_retry_wait_active = false;
+                wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+                wheel.homing_auto_retry_armed_by_recovery_failure = false;
                 resetHomingEdgeConfirmState(wheel);
                 wheel.homing_hold_corrected_local_total_rad = wheel.corrected_steer_motor_total_angle_rad;
                 return true;
@@ -3739,7 +3785,9 @@ namespace jia
             const bool sensor_raw_high = readHomingSensorRawHigh(wheel);
             const f32 raw_total_angle_rad = readSteerMotorRawTotalAngleRad(wheel);
 
-            if (wheel.steer_fault_state == SteerFaultState::kRecovering && wheel.steer_fault_rehome_request)
+            if ((wheel.steer_fault_state == SteerFaultState::kRecovering) &&
+                wheel.steer_fault_rehome_request &&
+                ((wheel.homing_state != HomingState::kFault) || homing_start_request_))
             {
                 // Recovering 并不在原地直接跳 Search，而是等到 homing 状态机入口统一消费这次 rehome request，
                 // 这样“决定要重回零”和“真正进入搜索”两个时刻都能在调试上清晰观察。
@@ -3749,13 +3797,10 @@ namespace jia
                 // - 用当前 raw 传感器电平建立新的 search 起点。
                 // 这样 recovery 入口就被并回常规 homing 主链，而不是单独开一条旁路状态机。
                 wheel.steer_fault_rehome_request = false;
+                wheel.homing_auto_retry_wait_active = false;
+                wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+                resetSingleWheelHomingSearchState(wheel, sensor_raw_high);
                 wheel.homing_state = HomingState::kSearch;
-                wheel.homing_elapsed_s = 0.0f;
-                wheel.homing_last_sensor_active = sensor_raw_high;
-                wheel.homing_align_command_armed = false;
-                wheel.homing_search_timeout_armed = false;
-                resetHomingEdgeConfirmState(wheel);
-                wheel.homing_zero_valid = false;
                 steer_fault_any_active_ = true;
                 return false;
             }
@@ -3781,11 +3826,11 @@ namespace jia
                     // 这里故意只切状态，不在 Idle 分支直接下电机命令；
                     // 真正的搜索转速下发由 applyModuleCommands() 里的 kSearch 执行分支统一负责，
                     // 这样“状态已经进入 Search”和“执行层本拍开始给 RPM”在时序上是可分辨的。
+                    wheel.homing_auto_retry_wait_active = false;
+                    wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+                    wheel.homing_auto_retry_armed_by_recovery_failure = false;
+                    resetSingleWheelHomingSearchState(wheel, sensor_raw_high);
                     wheel.homing_state = HomingState::kSearch;
-                    wheel.homing_elapsed_s = 0.0f;
-                    wheel.homing_search_timeout_armed = false;
-                    resetHomingEdgeConfirmState(wheel);
-                    wheel.homing_zero_valid = false;
                 }
                 wheel.homing_last_sensor_active = sensor_raw_high;
                 return false;
@@ -3839,6 +3884,9 @@ namespace jia
                     else
                     {
                         wheel.homing_state = HomingState::kFault;
+                        wheel.homing_auto_retry_wait_active = false;
+                        wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+                        wheel.homing_auto_retry_armed_by_recovery_failure = false;
                     }
                 }
                 wheel.homing_last_sensor_active = sensor_raw_high;
@@ -3868,11 +3916,56 @@ namespace jia
                 wheel.target_steer_motor_total_angle_rad = wheel.homing_hold_corrected_local_total_rad;
                 wheel.homing_state = HomingState::kReady;
                 wheel.homing_align_command_armed = false;
+                wheel.homing_auto_retry_attempt_count = 0U;
+                wheel.homing_auto_retry_wait_active = false;
+                wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+                wheel.homing_auto_retry_armed_by_recovery_failure = false;
                 if (wheel.steer_fault_state == SteerFaultState::kRecovering)
                 {
                     clearSteerFaultState(wheel);
                 }
                 return true;
+            }
+
+            if (wheel.homing_state == HomingState::kFault)
+            {
+#if JIA_CHASSIS_HOMING_AUTO_RETRY_ENABLE
+                if ((wheel.steer_fault_state == SteerFaultState::kLatched) &&
+                    !wheel.homing_auto_retry_armed_by_recovery_failure)
+                {
+                    wheel.homing_auto_retry_wait_active = false;
+                    wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+                    return false;
+                }
+
+                if (wheel.homing_auto_retry_attempt_count >= JIA_CHASSIS_HOMING_AUTO_RETRY_MAX_ATTEMPTS)
+                {
+                    wheel.homing_auto_retry_wait_active = false;
+                    wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+                    return false;
+                }
+
+                wheel.homing_auto_retry_wait_active = true;
+                wheel.homing_auto_retry_wait_elapsed_ms =
+                    (wheel.homing_auto_retry_wait_elapsed_ms > (0xFFFFFFFFU - period_ms_))
+                        ? 0xFFFFFFFFU
+                        : (wheel.homing_auto_retry_wait_elapsed_ms + period_ms_);
+
+                if (wheel.homing_auto_retry_wait_elapsed_ms < JIA_CHASSIS_HOMING_AUTO_RETRY_INTERVAL_MS)
+                {
+                    return false;
+                }
+
+                wheel.homing_auto_retry_attempt_count += 1U;
+                wheel.homing_auto_retry_wait_active = false;
+                wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+                wheel.steer_fault_rehome_request = false;
+                resetSingleWheelHomingSearchState(wheel, sensor_raw_high);
+                wheel.homing_state = HomingState::kSearch;
+                return false;
+#else
+                return false;
+#endif
             }
 
             if (wheel.homing_state == HomingState::kAlignToZero)
@@ -3890,6 +3983,10 @@ namespace jia
                 {
                     wheel.homing_state = HomingState::kReady;
                     wheel.homing_align_command_armed = false;
+                    wheel.homing_auto_retry_attempt_count = 0U;
+                    wheel.homing_auto_retry_wait_active = false;
+                    wheel.homing_auto_retry_wait_elapsed_ms = 0U;
+                    wheel.homing_auto_retry_armed_by_recovery_failure = false;
                     if (wheel.steer_fault_state == SteerFaultState::kRecovering)
                     {
                         clearSteerFaultState(wheel);
@@ -4276,7 +4373,7 @@ namespace jia
                     setSteerMotorTargetCurrent(wheel, 0.0f);
                     if (wheel.drive_motor_h != nullptr)
                     {
-                        if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h))
+                        if (VESC_Motor *drive_vesc = wheel.drive_motor_h)
                         {
                             drive_vesc->setSpeedPidCurrentBias(0.0f);
                         }
@@ -4313,7 +4410,7 @@ namespace jia
                     last_drive_omega_cmd_rad_s_[i] = delivered_drive_target_rad_s;
                     if (wheel.drive_motor_h != nullptr)
                     {
-                        if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h))
+                        if (VESC_Motor *drive_vesc = wheel.drive_motor_h)
                         {
                             drive_vesc->setSpeedPidCurrentBias(0.0f);
                         }
@@ -4376,7 +4473,7 @@ namespace jia
                     setSteerMotorTargetCurrent(wheel, 0.0f);
                     if (wheel.drive_motor_h != nullptr)
                     {
-                        if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h))
+                        if (VESC_Motor *drive_vesc = wheel.drive_motor_h)
                         {
                             drive_vesc->setSpeedPidCurrentBias(0.0f);
                         }
@@ -4403,7 +4500,7 @@ namespace jia
                     setSteerMotorTargetCurrent(wheel, 0.0f);
                     if (wheel.drive_motor_h != nullptr)
                     {
-                        if (VESC_Motor *drive_vesc = dynamic_cast<VESC_Motor *>(wheel.drive_motor_h))
+                        if (VESC_Motor *drive_vesc = wheel.drive_motor_h)
                         {
                             drive_vesc->setSpeedPidCurrentBias(0.0f);
                         }
@@ -4491,15 +4588,13 @@ namespace jia
                         if (xpark_hold_cfg.entry_reset_enable && (wheel.steer_motor_h != nullptr))
                         {
 #ifdef TEST_TDD_MOTOR_DJI_H
-                            if (M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h))
+                            if (M3508 *steer_m3508 = wheel.steer_motor_h->asM3508())
                             {
                                 steer_m3508->reset_speed_pid_state();
                             }
 #else
-                            if (M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h))
-                            {
-                                steer_m3508->speed_pid_.reset();
-                            }
+                            M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
+                            steer_m3508->speed_pid_.reset();
 #endif
                         }
                     }
@@ -4568,15 +4663,13 @@ namespace jia
                             if (xpark_hold_cfg.entry_reset_enable && (wheel.steer_motor_h != nullptr))
                             {
 #ifdef TEST_TDD_MOTOR_DJI_H
-                                if (M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h))
+                                if (M3508 *steer_m3508 = wheel.steer_motor_h->asM3508())
                                 {
                                     steer_m3508->reset_speed_pid_state();
                                 }
 #else
-                                if (M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h))
-                                {
-                                    steer_m3508->speed_pid_.reset();
-                                }
+                                M3508 *steer_m3508 = static_cast<M3508 *>(wheel.steer_motor_h);
+                                steer_m3508->speed_pid_.reset();
 #endif
                             }
                             wheel.target_steer_motor_total_angle_rad = wheel.xpark_steer_hold_locked_target_rad;
@@ -4755,6 +4848,10 @@ namespace jia
                 debug_mirror_.homing_sensor_active[i] = readHomingSensor(wheel);
                 debug_mirror_.homing_last_edge_is_falling[i] = wheel.homing_last_edge_is_falling;
                 debug_mirror_.homing_runtime_zero_offset_deg[i] = radToDegF32(wheel.homing_runtime_zero_offset_rad);
+                debug_mirror_.homing_auto_retry_attempt_count[i] = static_cast<f32>(wheel.homing_auto_retry_attempt_count);
+                debug_mirror_.homing_auto_retry_wait_active[i] = wheel.homing_auto_retry_wait_active;
+                debug_mirror_.homing_auto_retry_wait_elapsed_ms[i] = static_cast<f32>(wheel.homing_auto_retry_wait_elapsed_ms);
+                debug_mirror_.homing_auto_retry_armed_by_recovery_failure[i] = wheel.homing_auto_retry_armed_by_recovery_failure;
                 debug_mirror_.steer_fault_active[i] = (wheel.steer_fault_state != SteerFaultState::kNone);
                 debug_mirror_.steer_fault_recovering[i] = (wheel.steer_fault_state == SteerFaultState::kRecovering);
                 debug_mirror_.steer_fault_control_intent[i] = wheel.steer_fault_control_intent;
@@ -5404,8 +5501,8 @@ namespace jia
                 payload[20] = radToDegF32(wheel.homing_runtime_zero_offset_rad);
                 payload[21] = hold_corrected_local_total_deg;
                 payload[22] = steer_target_rpm;
-                payload[23] = wheel.steer_feedback_current_mA;
-                payload[24] = radToDegF32(wheel.steer_feedback_angle_delta_rad);
+                payload[23] = static_cast<f32>(wheel.homing_auto_retry_attempt_count);
+                payload[24] = wheel.homing_auto_retry_wait_active ? 1.0f : 0.0f;
                 debug_uart_.printf_DMA_JustFloat(payload, 25);
                 return;
             }
