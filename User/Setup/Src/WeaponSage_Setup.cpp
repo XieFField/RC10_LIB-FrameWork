@@ -453,7 +453,6 @@ void Robot_WeaponSage_Setup::manualControl()
             target_pos_.claw_2_pos_ = 0.0f; 
             target_pos_.claw_3_pos_ = 0.0f;
 
-            
         }
         else
         {

@@ -692,8 +692,25 @@ void ArmSetup::arm_d_pad_ctrl()
     {
         if (manual_putdown())
         {
-            arm_ctrlStatus.is_store_acting = 0;
-            target_joint_status_ = this->get_currentJointStatus();
+            if(auto_ctrl_.kfs_num == ONLY_ONE)
+            {
+                arm_ctrlStatus.is_store_acting = 0;
+                target_joint_status_ = this->get_currentJointStatus();
+            }
+            else if(arm_ctrlStatus.comp_takeout_now[1] != 2)
+            {
+                if(manual_takeout(arm_ctrlStatus.comp_takeout_now[0]))
+                {
+                    arm_ctrlStatus.comp_takeout_now[1] = arm_ctrlStatus.comp_takeout_now[0];
+                    arm_ctrlStatus.is_store_acting = 0;
+                    target_joint_status_ = this->get_currentJointStatus();
+                }
+            }
+            else
+            {
+                arm_ctrlStatus.is_store_acting = 0;
+                target_joint_status_ = this->get_currentJointStatus();
+            }
         }
         arm_ctrlStatus.last_manual_store = 4;
     }
@@ -1116,7 +1133,16 @@ void ArmSetup::auto_stillnessOne()
         }
         else
         {
-            idle();
+            if(Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 10.1 && MF_AutoCtrler::get_color() == 1
+                && Locate_Setup::getInstance()->get_RobotPos_inWorld().x > 1.7) //蓝场
+            {
+                this->set_RotateAngle(90.0f);
+                this->set_PitchAngle(init_data_.pitch_lift_angle_);
+                if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 5.0f)
+                    this->set_LaunchHeight(init_data_.putdown_height_);
+            }
+            else
+                idle();
             auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; // 保持在完成状态
         }
         break;
@@ -1178,6 +1204,9 @@ void ArmSetup::auto_stillnessOne()
             arm_ctrlStatus.auto_start = 0;
             auto_ctrl_.start_to_autoctrl = false; // 完车一次流程后重置启动状态
             auto_ctrl_.flag.isrecalcPath = false; // 重置路径计算标志
+
+            arm_ctrlStatus.comp_takeout_now[0] = 0;
+            arm_ctrlStatus.comp_takeout_now[1] = 0; //last为OUTSIDE的时候，不进行取出
         }
         break;
     }
@@ -1213,7 +1242,16 @@ void ArmSetup::auto_stillnessTwo()
         }
         else
         {
-            idle();
+            if(Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 10.1 && MF_AutoCtrler::get_color() == 1
+                && Locate_Setup::getInstance()->get_RobotPos_inWorld().x > 1.7) //蓝场
+            {
+                this->set_RotateAngle(90.0f);
+                this->set_PitchAngle(init_data_.pitch_lift_angle_);
+                if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 5.0f)
+                    this->set_LaunchHeight(init_data_.putdown_height_);
+            }
+            else
+                idle();
             auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_DONE; // 保持在完成状态
         }
         break;
@@ -1276,6 +1314,12 @@ void ArmSetup::auto_stillnessTwo()
             {
                 arm_ctrlStatus.last_manual_store = 0; // 强制激活 idle 入口
 
+                if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
+                {
+                    if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
+                        auto_ctrl_.flag.canChassisStart = true;
+                }
+
                 int8_t store_tar = 0x00;
                 if (auto_ctrl_.targetKFS[2] == 0)
                     store_tar = 0x01;
@@ -1307,6 +1351,12 @@ void ArmSetup::auto_stillnessTwo()
         {
             if (!auto_ctrl_.flag.isbackdone)
             {
+                if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
+                {
+                    if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
+                        auto_ctrl_.flag.canChassisStart = true;
+                }
+
                 arm_ctrlStatus.last_manual_store = 0; // 强制激活 idle 入口
                 if (manual_store(0x01))
                 {
@@ -1341,6 +1391,9 @@ void ArmSetup::auto_stillnessTwo()
                 auto_ctrl_.flag.back_time = 0.0f;     // 重置返回时间
                 auto_ctrl_.flag.isbackdone = false;   // 重置返回完成标志
                 auto_ctrl_.now_state = ARM_AUTO_STILLNESS_E::STATE_OVER;
+
+                arm_ctrlStatus.comp_takeout_now[0] = 1;
+                arm_ctrlStatus.comp_takeout_now[1] = 0; //last 为INSIDE的时候才能取出
             }
         }
         break;
@@ -1510,7 +1563,11 @@ bool ArmSetup::state_launchStillness(int targetKFS)
     if (this->get_currentJointStatus().launchJoint_Height_ > canMoveHeight - 0.02f)
     {
         this->set_PitchAngle(this->init_data_.pitch_lift_angle_); // pitch抬平
-        auto_ctrl_.flag.canChassisStart = true;                   // 机械臂已经伸展到可以移动的高度
+
+        if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
+            auto_ctrl_.flag.canChassisStart = false;
+        else
+            auto_ctrl_.flag.canChassisStart = true;                   // 机械臂已经伸展到可以移动的高度
 
         if (_tool_Abs(this->get_currentJointStatus().suckerJoint_angle_ - this->init_data_.pitch_lift_angle_) < 20.0f)
             return true;
@@ -1528,8 +1585,12 @@ bool ArmSetup::state_backStillness(int targetKFS)
 
     this->set_RotateAngle(0.0f); // 旋转到目标位置
 
+
     if (_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 5.0f)
     {
+        if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
+            auto_ctrl_.flag.canChassisStart = true;
+
         return true;
     }
     else

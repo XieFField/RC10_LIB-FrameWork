@@ -76,6 +76,7 @@ typedef struct{
     bool can_putdown = 0;
 
     Store_MANUAL_E store_manual_mode = OUTSIDE; //存储位手动模式，默认外部
+    uint8_t comp_takeout_now[2] = {0}; //当前取出位置 0 为初始即无，1为内，2为外
 }arm_ctrl_status_S;
 
 
@@ -126,6 +127,8 @@ typedef struct{
 
         bool isbackdone = false; //是否返回完成
         float back_time = 0.0f; //返回时长
+
+
     }flag;
 }ARM_AUTO_S;
 
