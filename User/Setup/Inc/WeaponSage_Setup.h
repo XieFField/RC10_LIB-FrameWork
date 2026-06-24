@@ -120,6 +120,7 @@ namespace WeaponSage_Setup
 			bool arm_enable=false;
             bool launch_enable=false;
             bool wrist_enable=false;
+		
         }auto_state_bool_S; //局部状态结构体
         struct{
             bool is_reach_sagelowest = false; //当升降达到最低点视为已经完成下降
