@@ -1466,7 +1466,8 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     float targetLowerHeight = 0.0f; //目标kfs高度
     float catch_offset = 0.0f;
-    if(auto_ctrl_.now_targetIndex == 0 && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) != 0.2f)
+    if(auto_ctrl_.now_targetIndex == 0 && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) != 0.2f
+        && auto_ctrl_.kfs_num == TWO_OR_THREE)
         //catch_offset = -0.07f;
         catch_offset = -0.05f;
     else if(auto_ctrl_.now_targetIndex == 1)
@@ -1474,9 +1475,9 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
     else
         catch_offset = 0.0f;
     float kfs_h = GetKFSHeight(targetKFS);
-    if(kfs_h == 0.2f && auto_ctrl_.now_targetIndex != 0)
+    if(kfs_h == 0.2f)
         targetLowerHeight = init_data_.catch_20height;
-    else if(kfs_h == 0.2f && auto_ctrl_.now_targetIndex == 0)
+    else if(kfs_h == 0.2f && auto_ctrl_.now_targetIndex == 0 && auto_ctrl_.targetKFS[2] != 0)
         targetLowerHeight = this->init_data_.up_20cm_lower_height_;
     else if(kfs_h == 0.4f)
         targetLowerHeight = this->init_data_.catch_40height + catch_offset;
@@ -1491,7 +1492,7 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
                                             0.45f); //判断是否可以开始下降
     if(canLower)
     {
-        if(kfs_h == 0.2f && auto_ctrl_.now_targetIndex == 0)
+        if(kfs_h == 0.2f && auto_ctrl_.now_targetIndex == 0 && auto_ctrl_.targetKFS[2] != 0)
         {
             this->set_LaunchHeight(this->init_data_.up_20cm_lower_height_ + 0.05f); //下降到目标高度
             this->set_StretchLength(this->init_data_.max_stretchLength_); //伸展到最大长度
@@ -1518,7 +1519,8 @@ bool ArmSetup::state_extStillness(int targetKFS)
     
     this->set_StretchLength(this->init_data_.max_stretchLength_); //伸展到最大长度
 
-    if(auto_ctrl_.now_targetIndex == 0x00 && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f)
+    if(auto_ctrl_.now_targetIndex == 0x00 && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f
+        && auto_ctrl_.targetKFS[2] != 0)
     {
         if(_tool_Abs(this->get_currentJointStatus().stretchJoint_Length_ - this->init_data_.max_stretchLength_) < 0.01f
             && !auto_ctrl_.flag.isExtReach)
