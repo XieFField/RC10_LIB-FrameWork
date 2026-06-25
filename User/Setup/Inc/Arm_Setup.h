@@ -136,25 +136,12 @@ typedef struct{
 }ARM_AUTO_S;
 
 
-const float MF_high_blue[12] =
-{
-    0.4f, 0.2f, 0.4f,
-    0.2f, 0.4f, 0.6f,
-    0.4f, 0.6f, 0.4f,
-    0.2f, 0.4f, 0.2f
-};
 
-const float MF_high_red[12] =
-{
-    0.4f, 0.2f, 0.4f,
-    0.6f, 0.4f, 0.2f,
-    0.4f, 0.6f, 0.4f,
-    0.2f, 0.4f, 0.2f
-};
 
 inline float GetKFSHeight(int8_t mfNum)
 {
-    const float* arr = (MF_AutoCtrler::get_color() == 1) ? MF_high_blue : MF_high_red;
+    const float* arr = (MF_AutoCtrler::get_color() == 1) ? 
+        MF_AutoCtrler::MF_high_blue : MF_AutoCtrler::MF_high_red;
     return arr[mfNum - 1];
 }
 

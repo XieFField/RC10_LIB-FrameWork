@@ -29,7 +29,8 @@ namespace MF_AutoCtrler
     static constexpr int BFS_INF = 30000;
 
     extern const Point2D MapNum_RealPos[30];
-
+    extern const float MF_high_blue[12];
+    extern const float MF_high_red[12];
     typedef enum
     {
         Positive_X,
@@ -72,6 +73,8 @@ namespace MF_AutoCtrler
         int8_t mustPastMap[15] = {0};// 必经点[索引即路径顺序]，0表示无效，只包含地图边角点和MF点以及出入口
 
         int8_t Index_MFroad[3] = {0,0,0}; //记录MFroad中MF1和MF2在mustPastMap中的索引位置，方便后续路径跟踪
+
+        int8_t sp_handling_KFS[3] = {0, 0, 0}; // 0,1,2索引对应MF1,MF2,MF3是否需要特殊处理，1代表需要，0则是不需要。
 
         int8_t exitMap = 26; // 固定出口
     }PathInformation_S;

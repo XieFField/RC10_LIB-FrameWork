@@ -987,7 +987,7 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
         }
         else if (!is_catch && kfs_index == 0x01 && std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.new_store_height_outside_) < 0.01f && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 270.0f) < 1.0f)
         {
-            this->set_StretchLength(init_data_.new_store_ext_length_ + 0.01f); // 伸展到存储位置需要的长度
+            this->set_StretchLength(init_data_.new_store_ext_length_ + 0.02f); // 伸展到存储位置需要的长度
         }
 
         if (!is_catch && kfs_index == 0x01 && std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.new_store_ext_length_) < 0.01f)
@@ -1222,7 +1222,7 @@ void ArmSetup::auto_stillnessOne()
     {
         if (state_backStillness(auto_ctrl_.targetKFS[0]))
         {
-            if(auto_ctrl_.targetKFS[0] == 6)
+            if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1)
             {
                 static bool back_delay_started = false;
                 static float back_delay_time = 0.0f;
@@ -1370,7 +1370,7 @@ void ArmSetup::auto_stillnessTwo()
                     auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds();
                     auto_ctrl_.flag.isbackdone = true;
 
-                    if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
+                    if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1)
                     {
                         if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
                             auto_ctrl_.flag.canChassisStart = true;
@@ -1404,7 +1404,7 @@ void ArmSetup::auto_stillnessTwo()
                     auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds();
                     auto_ctrl_.flag.isbackdone = true;
 
-                    if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
+                    if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1)
                     {
                         if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
                             auto_ctrl_.flag.canChassisStart = true;
@@ -1431,7 +1431,7 @@ void ArmSetup::auto_stillnessTwo()
         {
             if (state_backStillness(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]))
             {
-                if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
+                if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1)
                 {
                     static bool back_delay_started = false;
                     static float back_delay_time = 0.0f;
@@ -1638,7 +1638,7 @@ bool ArmSetup::state_launchStillness(int targetKFS)
     {
         this->set_PitchAngle(this->init_data_.pitch_lift_angle_); // pitch抬平
 
-        if(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex] == 6)
+        if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1)
             auto_ctrl_.flag.canChassisStart = false;
         else
             auto_ctrl_.flag.canChassisStart = true;                   // 机械臂已经伸展到可以移动的高度

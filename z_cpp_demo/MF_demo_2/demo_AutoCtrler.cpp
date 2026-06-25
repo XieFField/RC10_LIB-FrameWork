@@ -11,6 +11,29 @@ const Point2D MapNum_RealPos[30] = {
     {0.6, 8.6, 0}, {1.8, 8.6, 0}, {3.0, 8.6, 0}, {4.2, 8.6, 0}, {5.4, 8.6, 0}
 };
 
+int8_t color = 1; //1=蓝 0=红
+
+const float MF_high_blue[12] =
+{
+    0.4f, 0.2f, 0.4f,
+    0.2f, 0.4f, 0.6f,
+    0.4f, 0.6f, 0.4f,
+    0.2f, 0.4f, 0.2f
+};
+
+const float MF_high_red[12] =
+{
+    0.4f, 0.2f, 0.4f,
+    0.6f, 0.4f, 0.2f,
+    0.4f, 0.6f, 0.4f,
+    0.2f, 0.4f, 0.2f
+};
+
+float GetMFHeight(int8_t mfNum)
+{
+    const float* arr = (color == 1) ? MF_high_blue : MF_high_blue;
+    return arr[mfNum - 1];
+}
 
 // 行列转地图编号
 int8_t CR_ToMap(int8_t c, int8_t r) 
@@ -30,15 +53,30 @@ int8_t MFNum_TransforMapNum(int8_t MFNum)//将梅花桩编号转换为梅花林�
     if(MFNum < 1 || MFNum > 12 )
         return -1;
 
-    return MFNum + 6 + 2 * (static_cast<int8_t>((MFNum - 1) / 3.0));
+    int8_t row = 2 + (MFNum - 1) / 3;
+    int8_t col;
+    if (color == 1)
+        col = 2 + ((MFNum - 1) % 3);
+    else
+        col = 4 - ((MFNum - 1) % 3);
+    return (row - 1) * MAP_COLS + col;
 }
 
 int8_t MapNum_TransforMFNum(int8_t mapNum)//将梅花林方格地图编号转换为梅花桩编号
 {
-    int8_t MFNum_ = mapNum - 6 - 2 * ((mapNum - 7) / 3);
-    if(MFNum_ < 1 || MFNum_ > 12 )
+    int8_t c, r;
+    Map_ToCR(mapNum, c, r);
+    if (r < 2 || r > 5 || c < 2 || c > 4)
         return -1;
-    return MFNum_;
+    int8_t colOffset;
+    if (color == 1)
+        colOffset = c - 2;
+    else
+        colOffset = 4 - c;
+    int8_t mf = (r - 2) * 3 + colOffset + 1;
+    if(mf < 1 || mf > 12)
+        return -1;
+    return mf;
 }
 
 // 撞墙判断(梅花桩)
@@ -948,6 +986,55 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2,
             result.Index_MFroad[2] = i;
     }
 
+    float MF_dir[3] = {-1.0f, -1.0f, -1.0f};
+    for(int i = 0; i < 3; i++)
+    {
+        if(result.MFroad[i] == 0) break;
+        MF_dir[i] = chassisMoveDir(result.MFroad[i],
+            result.mustPastMap[result.Index_MFroad[i] + 1]);
+    }
+
+    for(int i = 0; i < 3; i++)
+    {
+        if(result.MFroad[i] == 0) break;
+        if(MF_dir[i] < 0.0f) continue;
+
+        int8_t c, r;
+        Map_ToCR(result.MFroad[i], c, r);
+
+        bool edge_ok = false;
+        if(r == 6 && std::fabs(MF_dir[i] - 180.0f) < 1.0f) edge_ok = true;
+        else if(c == 1 && std::fabs(MF_dir[i] - 270.0f) < 1.0f) edge_ok = true;
+        else if(r == 1 && std::fabs(MF_dir[i] -   0.0f) < 1.0f) edge_ok = true;
+        else if(c == 5 && std::fabs(MF_dir[i] -  90.0f) < 1.0f) edge_ok = true;
+
+        if(!edge_ok) continue;
+
+        int8_t currentMF = (i == 0) ? MF1 : (i == 1) ? MF2 : MF3;
+        if(GetMFHeight(currentMF) == 0.60f)
+        {
+            result.sp_handling_KFS[i] = 1;
+            continue;
+        }
+
+        int8_t kfsMap = MFNum_TransforMapNum(currentMF);
+        int8_t kfs_c, kfs_r;
+        Map_ToCR(kfsMap, kfs_c, kfs_r);
+
+        int8_t next_c = kfs_c, next_r = kfs_r;
+        if(std::fabs(MF_dir[i] -   0.0f) < 1.0f)      next_c++;
+        else if(std::fabs(MF_dir[i] -  90.0f) < 1.0f)  next_r++;
+        else if(std::fabs(MF_dir[i] - 180.0f) < 1.0f)  next_c--;
+        else if(std::fabs(MF_dir[i] - 270.0f) < 1.0f)  next_r--;
+
+        int8_t nextMap = CR_ToMap(next_c, next_r);
+        int8_t nextMF = MapNum_TransforMFNum(nextMap);
+        if(nextMF < 1 || nextMF > 12) continue;
+
+        if(GetMFHeight(nextMF) > GetMFHeight(currentMF))
+            result.sp_handling_KFS[i] = 1;
+    }
+
     return result;
 }
 
@@ -1053,6 +1140,29 @@ int8_t GetMapNumFromPos(Point2D pos)
     return CR_ToMap(c, r);
 }
 
+float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
+{
+    if(startmapNum < 1 || startmapNum >30 || next_mapNum < 1 || next_mapNum >30)
+        return -1.0f;
+
+    bool isinMFstart = IsWalkable(startmapNum);
+    bool isinMFnext = IsWalkable(next_mapNum);
+
+    if(isinMFstart && isinMFnext)
+    {
+        Point2D startPos = MapCenterWorld(startmapNum);
+        Point2D nextPos = MapCenterWorld(next_mapNum);
+        float dx = nextPos.x - startPos.x;
+        float dy = nextPos.y - startPos.y;
+        float deg = rad_to_deg(atan2f(dy, dx));
+        deg = normalize_deg_0_360(deg);
+        return deg;
+    }
+    else
+    {
+        return -1.0f;
+    }
+}
 
 void get_MoveDiretion(Point2D robotPos, int8_t MF1, int8_t MF2, Direction_E Diresult[])
 {
