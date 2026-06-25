@@ -74,7 +74,7 @@ typedef struct
 
     float PID_coefficient = 1.0f;
     float FF_coefficient = 0.0f;
-    float spinodal_coefficient = 1.6f;
+    float spinodal_coefficient = 1.5f;
 
     float v_normal_max = 0.5f;
     float m_lookaheadDist = 0.4f; // 前视距离
@@ -84,7 +84,7 @@ typedef struct
 {
     //第数组第零为红场
     Vector2D CB_Start_pos[2] = {{5.0f, 1.0f}, {1.0f, 1.0f}};             // 夹杆起点。
-    Vector2D CB_Selection_pos[2] = {{3.539f, 0.835f}, {2.455f, 0.81f}}; // 夹杆流程默认目标点。
+    Vector2D CB_Selection_pos[2] = {{3.539f, 0.835f}, {2.455f, 0.835f}}; // 夹杆流程默认目标点。
 
     // 相机流程
     Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
@@ -1053,10 +1053,16 @@ private:
         V.planspeed = path_line_.plan(robot_pos_);
         Path_correction();
         V.corrVelocity = V.PID_coefficient * V.corrVelocity;
-        speed = v_limit();
+        
         if (path_line_.Get_Curve_Flag() == true)
         {
-            speed = speed * V.spinodal_coefficient;
+            V.corrVelocity = V.corrVelocity* V.spinodal_coefficient;
+            //speed = speed * V.spinodal_coefficient;
+            speed=V.corrVelocity+V.planspeed;
+        }
+        else
+        {
+            speed = v_limit();
         }
         Chassis_Target.VX = speed.x;
         Chassis_Target.VY = speed.y;
