@@ -79,7 +79,6 @@ typedef struct{
     uint8_t comp_takeout_now[2] = {0}; //当前取出位置 0 为初始即无，1为内，2为外
 
     bool is_putdown_done = false; //放下完成标志
-    bool need_rebind_switches = true; //进入手操模式时需要重新绑定开关
 }arm_ctrl_status_S;
 
 
@@ -256,26 +255,9 @@ public:
             }
         }
 
-        MF_AutoCtrler::PathInformation_S temp = MF_AutoCtrler::PathInformation_calc(auto_ctrl_.now_ChassisPosition,
+        auto_ctrl_.pathInfo = MF_AutoCtrler::PathInformation_calc(auto_ctrl_.now_ChassisPosition,
                                        auto_ctrl_.targetKFS[0],
                                         auto_ctrl_.targetKFS[1], auto_ctrl_.targetKFS[2]);
-        auto_ctrl_.pathInfo.entranceMap = temp.entranceMap;
-        
-        for(int i=0; i<3; i++)
-        {
-            auto_ctrl_.pathInfo.MFroad[i] = temp.MFroad[i];
-        }
-
-        for(int i=0; i<12; i++)
-        {
-            auto_ctrl_.pathInfo.mustPastMap[i] = temp.mustPastMap[i];
-        }
-
-        for(int i=0; i<3; i++)
-        {
-            auto_ctrl_.pathInfo.Index_MFroad[i] = temp.Index_MFroad[i];
-        }
-
 
 #if ARM_AUTO_DEBUG_NOCHASSIS
         auto_ctrl_.now_ChassisPosition.x = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0]-1].x;

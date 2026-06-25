@@ -839,8 +839,8 @@ int main(void)
     TestCase tests[] = {
         {"Case-1 ONE MF OUTSIDE",  {5.0f, 1.0f, 0.0f}, 3,  0, 0},
         {"Case-2 TWO MF OUTSIDE",  {0.0f, 0.0f, 0.0f}, 10, 4, 3},
-        {"Case-3 THREE MF OUTSIDE",{0.0f, 1.0f, 0.0f}, 6, 12, 10 },
-        {"Case-4 THREE MF INSIDE", {0.6f, 0.0f, 0.0f}, 6,  11, 7}};
+        {"Case-3 THREE MF OUTSIDE",{0.0f, 1.0f, 0.0f}, 6, 10, 7 },
+        {"Case-4 THREE MF INSIDE", {5.44f, 5.78f, 0.0f}, 6,  9, 12}};
 
     const char* colorNames[] = {"Red(0)", "Blue(1)"};
     for(int c = 1; c >= 0; c--)

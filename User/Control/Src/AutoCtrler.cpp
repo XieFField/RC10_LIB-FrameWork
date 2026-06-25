@@ -1266,7 +1266,7 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2,
     PushMustPastNode(result.mustPastMap, 12, mustLen, result.entranceMap);
 
     bool pushedRoad1 = (result.entranceMap == bestRoad1);
-    bool pushedRoad2 = (bestRoad2 != 0 && result.entranceMap == bestRoad2);
+    bool pushedRoad2 = false;
     bool pushedRoad3 = false;
 
     for (int i = 0; i < fullLen; ++i)
@@ -1334,10 +1334,10 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2,
 
     //找出特殊情况：
     /**
-     * 必须满足的条件： 如果底盘移动在最上，而MF_dir为180则满足
-     *                 如果底盘移动在最左,而MF_dir为270则满足
-     *                 如果底盘移动在最下，而MF_dir为0 则满足
-     *                 如果底盘移动在最右，而MF_dir为90则满足
+     * 必须满足的条件： 如果底盘移动在最上，而MF_dir为90则满足
+     *                 如果底盘移动在最左,而MF_dir为180则满足
+     *                 如果底盘移动在最下，而MF_dir为270则满足
+     *                 如果底盘移动在最右，而MF_dir为0则满足
      * 满足以上其中之一的条件时候进入第二步判断：
      * 第二步判断：在底盘移动方向上的下一个MF(如果有的话)，如果下一个MF的高度大于当前的MF，则为需要考虑的特殊情况
      *            或者当前MF高度为60cm（即最高的），为特殊考虑情况
@@ -1358,36 +1358,16 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2,
 
         // 第一步：边缘 + 特定方向
         bool edge_ok = false;
-        if(r == 6 && std::fabs(MF_dir[i] - 180.0f) < 1.0f) edge_ok = true;    // 上+左
-        else if(c == 1 && std::fabs(MF_dir[i] - 270.0f) < 1.0f) edge_ok = true; // 左+下
-        else if(r == 1 && std::fabs(MF_dir[i] -   0.0f) < 1.0f) edge_ok = true; // 下+右
-        else if(c == 5 && std::fabs(MF_dir[i] -  90.0f) < 1.0f) edge_ok = true; // 右+上
+        if(r == 6 && std::fabs(MF_dir[i] - 180.0f) < 1.0f) 
+                edge_ok = true;    // 上+左
+        else if(c == 1 && std::fabs(MF_dir[i] - 270.0f) < 1.0f) 
+                edge_ok = true; // 左+下
+        else if(r == 1 && std::fabs(MF_dir[i] -   0.0f) < 1.0f) 
+                edge_ok = true; // 下+右
+        else if(c == 5 && std::fabs(MF_dir[i] -  90.0f) < 1.0f) 
+                edge_ok = true; // 右+上
 
-        if(!edge_ok) continue;
-
-        // 第二步：当前KFS高度为0.60m，或下一个KFS高度大于当前KFS
-        int8_t currentMF = (i == 0) ? MF1 : (i == 1) ? MF2 : MF3;
-        if(GetMFHeight(currentMF) == 0.60f)
-        {
-            result.sp_handling_KFS[i] = 1;
-            continue;
-        }
-
-        int8_t kfsMap = MFNum_TransforMapNum(currentMF);
-        int8_t kfs_c, kfs_r;
-        Map_ToCR(kfsMap, kfs_c, kfs_r);
-
-        int8_t next_c = kfs_c, next_r = kfs_r;
-        if(std::fabs(MF_dir[i] -   0.0f) < 1.0f)      next_c++;
-        else if(std::fabs(MF_dir[i] -  90.0f) < 1.0f)  next_r++;
-        else if(std::fabs(MF_dir[i] - 180.0f) < 1.0f)  next_c--;
-        else if(std::fabs(MF_dir[i] - 270.0f) < 1.0f)  next_r--;
-
-        int8_t nextMap = CR_ToMap(next_c, next_r);
-        int8_t nextMF = MapNum_TransforMFNum(nextMap);
-        if(nextMF < 1 || nextMF > 12) continue;
-
-        if(GetMFHeight(nextMF) > GetMFHeight(currentMF))
+        if(edge_ok)
             result.sp_handling_KFS[i] = 1;
     }
 

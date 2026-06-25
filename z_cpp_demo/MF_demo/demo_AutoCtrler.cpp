@@ -841,7 +841,7 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
     PushMustPastNode(result.mustPastMap, 12, mustLen, result.entranceMap);
 
     bool pushedRoad1 = (result.entranceMap == bestRoad1);
-    bool pushedRoad2 = (bestRoad2 != 0 && result.entranceMap == bestRoad2);
+    bool pushedRoad2 = false;
 
     for (int i = 0; i < fullLen; ++i)
     {
@@ -859,7 +859,7 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2)
 
         if (bestRoad2 != 0 && node == bestRoad2)
         {
-            if (!pushedRoad2)
+            if (!pushedRoad2 && pushedRoad1)
             {
                 PushMustPastNode(result.mustPastMap, 12, mustLen, node);
                 pushedRoad2 = true;
