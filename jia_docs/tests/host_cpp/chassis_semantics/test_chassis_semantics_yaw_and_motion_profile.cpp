@@ -49,7 +49,6 @@ static void configureYawLockDriveStepHarness(Chassis &chassis, VESC_Motor drive_
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
@@ -172,7 +171,6 @@ static void configureLockToYawReleaseHoldHarness(Chassis &chassis,
     chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
     chassis.runtime_strategy_cfg_.drive_zero_stop_brake_current_mA = 1200.0f;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
@@ -659,7 +657,6 @@ TEST_CASE("testLockYawPidForcedOmegaWithZeroTranslationDrivesPureRotationThrough
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 1.0f;
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
@@ -735,7 +732,6 @@ TEST_CASE("testYawLockPureRotationBetweenNearZeroEnterExitKeepsRotationalSteerTa
     chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
     chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
@@ -792,7 +788,6 @@ TEST_CASE("testYawLockPureRotationUsesTargetOmegaForSteerIntentBeforePlannedOmeg
     chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
     chassis.runtime_strategy_cfg_.enable_drive_zero_stop_assist = true;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
@@ -852,7 +847,6 @@ TEST_CASE("testYawLockStepDeadbandEntryDeceleratesDriveContinuouslyAfterSteerAli
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = true;
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 1.0f;
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = true;
     chassis.runtime_strategy_cfg_.max_drive_alpha_rad_s2_ = 10.0f;
     chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
@@ -1107,7 +1101,6 @@ TEST_CASE("testYawLockMidRotationSteerErrorJitterDoesNotTogglePlannerDriveTarget
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = true;
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 1.0f;
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
@@ -1277,7 +1270,6 @@ TEST_CASE("testNormalLaunchSCurveWaitsForSteerAlignmentBeforeAccumulatingBodyPla
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
@@ -1327,7 +1319,6 @@ TEST_CASE("testManualSCurveProfileLegacyModeKeepsCurrentAccelerationStepSemantic
 {
     Chassis chassis;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kLegacy;
     chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
     chassis.runtime_strategy_cfg_.max_acc_xy_acc_ = 2.0f;
@@ -1350,7 +1341,6 @@ TEST_CASE("testManualSCurveProfileProducesSofterFirstStepAndContinuousAccelerati
 {
     Chassis chassis;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
     chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
     chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
@@ -1398,7 +1388,6 @@ TEST_CASE("testManualSCurveProfileToggleResetsShapingHistory")
 {
     Chassis chassis;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
     chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
     chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
@@ -1487,7 +1476,6 @@ TEST_CASE("testManualSCurveProfileManualOnlyModeFallsBackForApiSource")
 {
     Chassis chassis;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
     chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = true;
     chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
@@ -1509,7 +1497,6 @@ TEST_CASE("testManualSCurveProfileManualOnlyModeUsesSCurveForDebugSource")
 {
     Chassis chassis;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
     chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = true;
     chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
@@ -1529,7 +1516,6 @@ TEST_CASE("testManualSCurveProfileRapidReverseBleedsPositiveTrendBeforeBuildingN
 {
     Chassis chassis;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
     chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
     chassis.runtime_strategy_cfg_.manual_trans_acc_acc_ = 2.0f;
@@ -1641,7 +1627,6 @@ TEST_CASE("testDebugBodySpeedOmegaRapidReverseUnderSCurveKeepsOldSignForFirstPla
 {
     Chassis chassis;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
     chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = true;
     chassis.runtime_strategy_cfg_.manual_yaw_alpha_acc_ = 4.0f;
@@ -1682,7 +1667,6 @@ TEST_CASE("testDebugBodySpeedOmegaRapidReverseEventuallyCrossesNegativeAfterEnou
 {
     Chassis chassis;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.manual_speed_profile_mode = Chassis::ManualSpeedProfileMode::kSCurve;
     chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = true;
     chassis.runtime_strategy_cfg_.manual_yaw_alpha_acc_ = 5.0f;

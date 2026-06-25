@@ -67,7 +67,6 @@ void configureSingleWheelIsolatedPlannerHarness(Chassis &chassis, TestMotor stee
     chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = true;
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 8.0f;
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.2f;
@@ -97,7 +96,6 @@ void configureSingleWheelIsolatedDirectHarness(Chassis &chassis, TestMotor steer
     chassis.runtime_strategy_cfg_.manual_speed_profile_manual_only = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
 
@@ -300,7 +298,6 @@ void configureHardGateLaunchHarness(Chassis &chassis, VESC_Motor drive_motors[4]
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.01f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.03f;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.max_acc_xy_acc_ = 1.0f;
@@ -346,7 +343,6 @@ void configureSteerFaultRecoveryHarness(Chassis &chassis, TestMotor steer_motors
 
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
@@ -525,7 +521,10 @@ void configureYawPidTraceHarness(Chassis &chassis)
     chassis.input_hwt_omega_z_ = 0.25f;
     chassis.debug_mirror_.all_homed = true;
     chassis.debug_mirror_.steer_fault_any_active = false;
-    chassis.debug_mirror_.high_speed_drive_suppression_active = false;
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.debug_mirror_.motion_direction_guard_active[i] = false;
+    }
     chassis.debug_mirror_.reverse_intent_active = false;
 }
 
@@ -583,7 +582,6 @@ Chassis::ActuatorCommandFrame makePerWheelDriveCommandFrame(float drive0, float 
 Chassis::SwervePlannerOutput makeNeutralPlannerOutput()
 {
     Chassis::SwervePlannerOutput output{};
-    output.high_speed_suppression_scale = 1.0f;
     for (int i = 0; i < 4; ++i)
     {
         output.low_speed_suppression_scale[i] = 1.0f;

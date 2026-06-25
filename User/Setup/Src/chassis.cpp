@@ -295,11 +295,10 @@ namespace jia
                 low_speed_drive_suppression_scale_[i] = 1.0f;
             }
 
-            high_speed_drive_suppression_scale_ = 1.0f;
-            high_speed_trans_gate_active_ = false;
-            high_speed_drive_suppression_active_ = false;
-            high_speed_dir_err_deg_ = 0.0f;
-            high_speed_eta_max_s_ = 0.0f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                motion_direction_guard_active_[i] = false;
+            }
             steer_fault_any_active_ = false;
             low_speed_residual_bypass_active_ = false;
             yaw_lock_zero_stop_decel_context_active_ = false;
@@ -316,10 +315,10 @@ namespace jia
             manual_vel_x_shape_state_ = {};
             manual_vel_y_shape_state_ = {};
             manual_omega_z_shape_state_ = {};
-            high_speed_drive_suppression_scale_ = 1.0f;
-            high_speed_drive_suppression_active_ = false;
-            high_speed_dir_err_deg_ = 0.0f;
-            high_speed_eta_max_s_ = 0.0f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                motion_direction_guard_active_[i] = false;
+            }
 
             rot_z_pid_.set_params(lock_angle_pid_params, 1.0f);
             rot_z_pid_.set_as_circular();
@@ -768,70 +767,13 @@ namespace jia
             return true;
         }
 
-        f32 Chassis::updateHighSpeedDriveSuppression(f32 translational_speed_m_s, f32 eta_max_s, f32 dir_err_deg)
-        {
-            const StrategyConfig::HighSpeedDriveSuppressionConfig &cfg = runtime_strategy_cfg_.high_speed_drive_suppression;
-            if (!runtime_strategy_cfg_.enable_high_speed_drive_suppression)
-            {
-                high_speed_trans_gate_active_ = false;
-                high_speed_drive_suppression_active_ = false;
-                high_speed_drive_suppression_scale_ = 1.0f;
-                return high_speed_drive_suppression_scale_;
-            }
-
-            const f32 trans_enter_speed_m_s = getNearZeroEnterSpeedMps();
-            const f32 trans_exit_speed_m_s = getNearZeroExitSpeedMps();
-            if (high_speed_trans_gate_active_)
-            {
-                high_speed_trans_gate_active_ = translational_speed_m_s > trans_enter_speed_m_s;
-            }
-            else
-            {
-                high_speed_trans_gate_active_ = translational_speed_m_s > trans_exit_speed_m_s;
-            }
-
-            if (!high_speed_trans_gate_active_)
-            {
-                high_speed_drive_suppression_active_ = false;
-                high_speed_drive_suppression_scale_ = 1.0f;
-                return high_speed_drive_suppression_scale_;
-            }
-
-            const f32 dir_enter = (cfg.dir_err_enter_deg > 0.0f) ? cfg.dir_err_enter_deg : 12.0f;
-            const f32 dir_exit = (cfg.dir_err_exit_deg > 0.0f && cfg.dir_err_exit_deg < dir_enter) ? cfg.dir_err_exit_deg : (dir_enter * 0.5f);
-            const f32 eta_enter = (cfg.eta_lock_s > 0.0f) ? cfg.eta_lock_s : 0.20f;
-            const f32 eta_exit = (cfg.eta_release_s > 0.0f && cfg.eta_release_s < eta_enter) ? cfg.eta_release_s : (eta_enter * 0.3f);
-
-            if (high_speed_drive_suppression_active_)
-            {
-                high_speed_drive_suppression_active_ = (dir_err_deg >= dir_exit) || (eta_max_s >= eta_exit);
-            }
-            else
-            {
-                high_speed_drive_suppression_active_ = (dir_err_deg >= dir_enter) || (eta_max_s >= eta_enter);
-            }
-
-            const f32 ramp_up_s = (cfg.gate_ramp_up_s > 1.0e-4f) ? cfg.gate_ramp_up_s : 0.08f;
-            const f32 ramp_down_s = (cfg.gate_ramp_down_s > 1.0e-4f) ? cfg.gate_ramp_down_s : 0.03f;
-            if (high_speed_drive_suppression_active_)
-            {
-                high_speed_drive_suppression_scale_ = clampValue(high_speed_drive_suppression_scale_ - period_ / ramp_down_s, 0.0f, 1.0f);
-            }
-            else
-            {
-                high_speed_drive_suppression_scale_ = clampValue(high_speed_drive_suppression_scale_ + period_ / ramp_up_s, 0.0f, 1.0f);
-            }
-            return high_speed_drive_suppression_scale_;
-        }
-
         void Chassis::resetRuntimeStrategyToInitConfig()
         {
             runtime_strategy_cfg_ = default_strategy_cfg_;
-            high_speed_drive_suppression_scale_ = 1.0f;
-            high_speed_trans_gate_active_ = false;
-            high_speed_drive_suppression_active_ = false;
-            high_speed_dir_err_deg_ = 0.0f;
-            high_speed_eta_max_s_ = 0.0f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                motion_direction_guard_active_[i] = false;
+            }
             low_speed_residual_bypass_active_ = false;
             yaw_lock_zero_stop_decel_context_active_ = false;
             yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
@@ -896,11 +838,10 @@ namespace jia
 
             if (reset_gate_state)
             {
-                high_speed_trans_gate_active_ = false;
-                high_speed_drive_suppression_active_ = false;
-                high_speed_drive_suppression_scale_ = 1.0f;
-                high_speed_dir_err_deg_ = 0.0f;
-                high_speed_eta_max_s_ = 0.0f;
+                for (u8 i = 0; i < 4; ++i)
+                {
+                    motion_direction_guard_active_[i] = false;
+                }
                 low_speed_residual_bypass_active_ = false;
                 yaw_lock_zero_stop_decel_context_active_ = false;
                 yaw_lock_zero_stop_release_hold_elapsed_ms_ = 0U;
@@ -1458,6 +1399,10 @@ namespace jia
                     (residual_speed_m_s > planner_input.max_residual_speed_m_s) ? residual_speed_m_s : planner_input.max_residual_speed_m_s;
             }
 
+            planner_input.actual_body_vel_x = current_data_.vel_x;
+            planner_input.actual_body_vel_y = current_data_.vel_y;
+            planner_input.actual_body_speed_m_s = magnitude2DF32(planner_input.actual_body_vel_x, planner_input.actual_body_vel_y);
+
             const f32 xpark_command_enter_speed = getXParkCommandEnterSpeedMps();
             const f32 xpark_command_exit_speed = getXParkCommandExitSpeedMps();
             const bool use_xpark_priority_brake_threshold =
@@ -1543,6 +1488,20 @@ namespace jia
                                                             : 0.0f);
             const bool planner_reverse_intent =
                 (planner_command_speed_m_s > 1.0e-6f) && shouldActivateReverseIntent(planner_input.command.vel_x, planner_input.command.vel_y, planner_reference_dir_rad);
+            const StrategyConfig::MotionDirectionGuardConfig &motion_guard_cfg = runtime_strategy_cfg_.motion_direction_guard;
+            const f32 guard_min_actual_speed_m_s =
+                (motion_guard_cfg.min_actual_speed_m_s > 0.0f) ? motion_guard_cfg.min_actual_speed_m_s : 0.0f;
+            const f32 guard_target_min_speed_m_s =
+                (motion_guard_cfg.target_min_speed_m_s > 0.0f) ? motion_guard_cfg.target_min_speed_m_s : 0.0f;
+            const f32 guard_dot_threshold = clampValue(motion_guard_cfg.anti_motion_dot_threshold, -1.0f, 1.0f);
+            const f32 guard_margin_deg = clampValue(motion_guard_cfg.prefer_forward_margin_deg, 0.0f, 180.0f);
+            const bool motion_direction_guard_ready =
+                runtime_strategy_cfg_.enable_motion_direction_guard &&
+                !planner_input.force_uniform_steer_drive &&
+                (planner_command_speed_m_s > guard_target_min_speed_m_s) &&
+                (planner_input.actual_body_speed_m_s > guard_min_actual_speed_m_s);
+            const f32 actual_dir_x = motion_direction_guard_ready ? (planner_input.actual_body_vel_x / planner_input.actual_body_speed_m_s) : 0.0f;
+            const f32 actual_dir_y = motion_direction_guard_ready ? (planner_input.actual_body_vel_y / planner_input.actual_body_speed_m_s) : 0.0f;
 
             for (u8 i = 0; i < 4; ++i)
             {
@@ -1611,6 +1570,24 @@ namespace jia
                         {
                             flipped = (base_abs_deg > runtime_strategy_cfg_.flip_exit_angle_deg) && (flip_abs_deg < base_abs_deg);
                         }
+
+                        if (flipped && motion_direction_guard_ready && (runtime_strategy_cfg_.steering_strategy_mode != SteeringStrategyMode::kAlwaysForward))
+                        {
+                            const f32 base_dir_x = cosRadF32(planner_input.current_oa_total_rad[i]);
+                            const f32 base_dir_y = sinRadF32(planner_input.current_oa_total_rad[i]);
+                            const f32 flip_dir_x = -base_dir_x;
+                            const f32 flip_dir_y = -base_dir_y;
+                            const f32 base_dot = actual_dir_x * base_dir_x + actual_dir_y * base_dir_y;
+                            const f32 flip_dot = actual_dir_x * flip_dir_x + actual_dir_y * flip_dir_y;
+                            const bool base_avoids_anti_motion = base_dot >= guard_dot_threshold;
+                            const bool flip_pushes_against_motion = flip_dot < guard_dot_threshold;
+                            const bool base_extra_steer_is_acceptable = (base_abs_deg - flip_abs_deg) <= guard_margin_deg;
+                            if (flip_pushes_against_motion && base_avoids_anti_motion && base_extra_steer_is_acceptable)
+                            {
+                                flipped = false;
+                                planner_output.motion_direction_guard_active[i] = true;
+                            }
+                        }
                     }
                 }
 
@@ -1666,8 +1643,7 @@ namespace jia
                 {
                     steer_rate_ref = (steer_rate_limit_runtime > steer_rate_floor) ? steer_rate_limit_runtime : steer_rate_floor;
                 }
-                const f32 eta_s = planner_output.steering_errors_rad[i] / steer_rate_ref;
-                planner_output.high_speed_eta_max_s = (eta_s > planner_output.high_speed_eta_max_s) ? eta_s : planner_output.high_speed_eta_max_s;
+                (void)steer_rate_ref;
             }
 
             f32 planned_steering_errors_rad[4] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -1728,40 +1704,6 @@ namespace jia
                                                   pure_yaw_motion_intent ? planned_steering_errors_rad : planner_output.steering_errors_rad,
                                                   low_speed_scales);
 
-            const f32 translational_speed_m_s = planner_command_speed_m_s;
-            f32 predicted_vel_x = 0.0f;
-            f32 predicted_vel_y = 0.0f;
-            f32 predicted_omega_z = 0.0f;
-            if (estimatePlannedBodyTwist(planner_output.planned_oa_total_rad,
-                                         planner_output.projected_drive_omega_rad_s,
-                                         predicted_vel_x,
-                                         predicted_vel_y,
-                                         predicted_omega_z))
-            {
-                const f32 predicted_internal_vel_x = -predicted_vel_x;
-                const f32 predicted_internal_vel_y = -predicted_vel_y;
-                const f32 predicted_trans_speed_m_s = magnitude2DF32(predicted_internal_vel_x, predicted_internal_vel_y);
-                if ((translational_speed_m_s > 1.0e-6f) && (predicted_trans_speed_m_s > 1.0e-6f))
-                {
-                    const f32 target_dir_rad = atan2f(planner_input.command.vel_y, planner_input.command.vel_x);
-                    const f32 predicted_dir_rad = atan2f(predicted_internal_vel_y, predicted_internal_vel_x);
-                    planner_output.high_speed_dir_err_deg =
-                        radToDegF32(fabsf(shortestAngularDistanceF32(target_dir_rad, predicted_dir_rad)));
-                }
-            }
-
-            planner_output.high_speed_suppression_scale = planner_input.force_uniform_steer_drive
-                                                   ? 1.0f
-                                                   : updateHighSpeedDriveSuppression(translational_speed_m_s,
-                                                                                    planner_output.high_speed_eta_max_s,
-                                                                                    planner_output.high_speed_dir_err_deg);
-            if (planner_input.force_uniform_steer_drive)
-            {
-                high_speed_drive_suppression_scale_ = 1.0f;
-                high_speed_drive_suppression_active_ = false;
-            }
-            planner_output.high_speed_suppression_active = high_speed_drive_suppression_active_;
-
             f32 planner_drive_targets_rad_s[4] = {0.0f, 0.0f, 0.0f, 0.0f};
             f32 max_abs_planner_drive_target_rad_s = 0.0f;
             for (u8 i = 0; i < 4; ++i)
@@ -1775,8 +1717,7 @@ namespace jia
                     planner_output.low_speed_suppression_scale[i] = low_speed_scales[i];
                 }
 
-                const f32 drive_scale =
-                    clampValue(planner_output.low_speed_suppression_scale[i] * planner_output.high_speed_suppression_scale, 0.0f, 1.0f);
+                const f32 drive_scale = clampValue(planner_output.low_speed_suppression_scale[i], 0.0f, 1.0f);
                 planner_drive_targets_rad_s[i] = planner_output.projected_drive_omega_rad_s[i] * drive_scale;
                 const f32 abs_target_drive = fabsf(planner_drive_targets_rad_s[i]);
                 max_abs_planner_drive_target_rad_s =
@@ -1819,14 +1760,13 @@ namespace jia
 
         void Chassis::storePlannedActuatorFrame(const SwervePlannerOutput &planner_output, const ActuatorCommandFrame &command_frame)
         {
-            // planner_output 里既保留了理想运动学解，也保留了翻转解选择、低速/高速抑制后的最终执行解。
+            // planner_output 里既保留了理想运动学解，也保留了翻转解选择、低速抑制后的最终执行解。
             // 这里把“下一阶段和调试观测真正要读的版本”统一写回成员缓存，避免后续再各自回头解释 planner_output。
             for (u8 i = 0; i < 4; ++i)
             {
                 WheelConfig &wheel = wheel_config_[i];
-                // low/high speed 抑制在这里合并成单一 scale，供 mirror/trace/输出层统一观察“当前 drive 实际被压了多少”。
-                low_speed_drive_suppression_scale_[i] =
-                    clampValue(planner_output.low_speed_suppression_scale[i] * planner_output.high_speed_suppression_scale, 0.0f, 1.0f);
+                low_speed_drive_suppression_scale_[i] = clampValue(planner_output.low_speed_suppression_scale[i], 0.0f, 1.0f);
+                motion_direction_guard_active_[i] = planner_output.motion_direction_guard_active[i];
                 wheel.target_steer_motor_total_angle_rad = command_frame.steer_cmd_corrected_local_total_rad[i];
                 wheel.target_drive_omega_rad_s = command_frame.drive_omega_rad_s[i];
                 wheel.steer_target_velocity_rad_s = command_frame.steer_rate_rad_s[i];
@@ -1840,10 +1780,6 @@ namespace jia
 
             planner_output_cache_ = planner_output;
             actuator_command_frame_ = command_frame;
-            high_speed_eta_max_s_ = planner_output.high_speed_eta_max_s;
-            high_speed_dir_err_deg_ = planner_output.high_speed_dir_err_deg;
-            high_speed_drive_suppression_scale_ = planner_output.high_speed_suppression_scale;
-            high_speed_drive_suppression_active_ = planner_output.high_speed_suppression_active;
         }
 
         f32 Chassis::computeHomingAlignTargetCorrectedLocalTotal(const WheelConfig &wheel) const
@@ -2700,11 +2636,10 @@ namespace jia
         {
             // 进入 mode30 单轮隔离后，这里会主动清空整车级 high-speed / xpark / zero-stop / launch-hold 等门控缓存，
             // 重新建立一份“只围绕目标轮”的局部控制真相，避免继承正常底盘链路留下的跨拍状态。
-            high_speed_trans_gate_active_ = false;
-            high_speed_drive_suppression_active_ = false;
-            high_speed_drive_suppression_scale_ = 1.0f;
-            high_speed_dir_err_deg_ = 0.0f;
-            high_speed_eta_max_s_ = 0.0f;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                motion_direction_guard_active_[i] = false;
+            }
             reverse_intent_active_ = false;
             reverse_intent_dir_err_deg_ = 0.0f;
             xpark_gate_active_ = false;
@@ -3082,7 +3017,11 @@ namespace jia
             yaw_pid_trace_.pid_compute_fired = 0.0f;
             yaw_pid_trace_.steer_fault_any_active = steer_fault_any_active_ ? 1.0f : 0.0f;
             yaw_pid_trace_.all_homed = 0.0f;
-            yaw_pid_trace_.high_speed_suppression_active = high_speed_drive_suppression_active_ ? 1.0f : 0.0f;
+            yaw_pid_trace_.motion_direction_guard_active =
+                (motion_direction_guard_active_[0] || motion_direction_guard_active_[1] ||
+                 motion_direction_guard_active_[2] || motion_direction_guard_active_[3])
+                    ? 1.0f
+                    : 0.0f;
             yaw_pid_trace_.reverse_intent_active = reverse_intent_active_ ? 1.0f : 0.0f;
 
             if (omega_z == 0.0f)
@@ -3182,7 +3121,11 @@ namespace jia
             yaw_pid_trace_.pid_compute_fired = 0.0f;
             yaw_pid_trace_.steer_fault_any_active = steer_fault_any_active_ ? 1.0f : 0.0f;
             yaw_pid_trace_.all_homed = 0.0f;
-            yaw_pid_trace_.high_speed_suppression_active = high_speed_drive_suppression_active_ ? 1.0f : 0.0f;
+            yaw_pid_trace_.motion_direction_guard_active =
+                (motion_direction_guard_active_[0] || motion_direction_guard_active_[1] ||
+                 motion_direction_guard_active_[2] || motion_direction_guard_active_[3])
+                    ? 1.0f
+                    : 0.0f;
             yaw_pid_trace_.reverse_intent_active = reverse_intent_active_ ? 1.0f : 0.0f;
             if (rot_z_pid_count_ >= rot_z_pid_period_)
             {
@@ -4968,10 +4911,10 @@ namespace jia
             debug_mirror_.lim_drive_alpha = runtime_strategy_cfg_.enable_drive_alpha_limit_;
             debug_mirror_.lim_steer_rate = runtime_strategy_cfg_.enable_steer_rate_limit_;
             debug_mirror_.lim_steer_alpha = runtime_strategy_cfg_.enable_steer_alpha_limit_;
-            debug_mirror_.high_speed_drive_suppression_scale = high_speed_drive_suppression_scale_;
-            debug_mirror_.high_speed_dir_err_deg = high_speed_dir_err_deg_;
-            debug_mirror_.high_speed_eta_max_s = high_speed_eta_max_s_;
-            debug_mirror_.high_speed_drive_suppression_active = high_speed_drive_suppression_active_;
+            for (u8 i = 0; i < 4; ++i)
+            {
+                debug_mirror_.motion_direction_guard_active[i] = motion_direction_guard_active_[i];
+            }
             debug_mirror_.low_speed_drive_suppression_bypassed_by_residual_speed = low_speed_drive_suppression_bypassed_by_residual_speed_;
             debug_mirror_.max_residual_speed_m_s = max_residual_speed_m_s_;
             debug_mirror_.reverse_intent_active = reverse_intent_active_;
@@ -5186,7 +5129,7 @@ namespace jia
             const u8 wheel_idx = (debug_control_.common.observe_wheel_index < 4U) ? debug_control_.common.observe_wheel_index : 0U;
             if (debug_output_runtime_.text.log_phase == 0U)
             {
-                debug_uart_.printf_DMA((char *)"FS t=%lu home=%u mode=%u dbg=%u hs=%u/%u/%u/%u oa0=%.1f->%.1f rpm0=%.1f->%.1f vec=%.2f de=%.1f eta=%.3f va=%u\r\n",
+                debug_uart_.printf_DMA((char *)"FS t=%lu home=%u mode=%u dbg=%u hs=%u/%u/%u/%u oa0=%.1f->%.1f rpm0=%.1f->%.1f guard=0x%X\r\n",
                                        (u32)time_ms_,
                                        all_homed ? 1U : 0U,
                                        (u32)input_target_data_.mode,
@@ -5199,10 +5142,10 @@ namespace jia
                                        debug_mirror_.target_oa_deg[0],
                                        debug_mirror_.current_drive_rpm[0],
                                        debug_mirror_.target_drive_rpm[0],
-                                       debug_mirror_.high_speed_drive_suppression_scale,
-                                       debug_mirror_.high_speed_dir_err_deg,
-                                       debug_mirror_.high_speed_eta_max_s,
-                                       debug_mirror_.high_speed_drive_suppression_active ? 1U : 0U);
+                                       (debug_mirror_.motion_direction_guard_active[0] ? 0x1U : 0U) |
+                                           (debug_mirror_.motion_direction_guard_active[1] ? 0x2U : 0U) |
+                                           (debug_mirror_.motion_direction_guard_active[2] ? 0x4U : 0U) |
+                                           (debug_mirror_.motion_direction_guard_active[3] ? 0x8U : 0U));
             }
             else if (debug_output_runtime_.text.log_phase == 1U)
             {
@@ -5521,7 +5464,12 @@ namespace jia
             payload[10] = yaw_pid_trace_.pid_compute_fired;
             payload[11] = debug_mirror_.steer_fault_any_active ? 1.0f : 0.0f;
             payload[12] = debug_mirror_.all_homed ? 1.0f : 0.0f;
-            payload[13] = debug_mirror_.high_speed_drive_suppression_active ? 1.0f : 0.0f;
+            payload[13] = (debug_mirror_.motion_direction_guard_active[0] ||
+                           debug_mirror_.motion_direction_guard_active[1] ||
+                           debug_mirror_.motion_direction_guard_active[2] ||
+                           debug_mirror_.motion_direction_guard_active[3])
+                              ? 1.0f
+                              : 0.0f;
             payload[14] = debug_mirror_.reverse_intent_active ? 1.0f : 0.0f;
             debug_uart_.printf_DMA_JustFloat(payload, 15);
         }

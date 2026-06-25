@@ -610,7 +610,10 @@ TEST_CASE("testRemovedDrivePidLoadProfileRawValueFallsBackToYawPidSafeProfile")
     chassis.yaw_pid_trace_.target_yaw_rad = 0.25f;
     chassis.debug_mirror_.all_homed = true;
     chassis.debug_mirror_.steer_fault_any_active = false;
-    chassis.debug_mirror_.high_speed_drive_suppression_active = false;
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.debug_mirror_.motion_direction_guard_active[i] = false;
+    }
     chassis.debug_mirror_.reverse_intent_active = false;
 
     emitDebugOutputForHost(chassis, true);

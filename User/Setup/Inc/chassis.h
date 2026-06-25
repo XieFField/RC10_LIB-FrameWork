@@ -612,6 +612,9 @@ namespace jia
                 f32 max_command_wheel_speed_m_s = 0.0f;
                 f32 max_steer_intent_wheel_speed_m_s = 0.0f;
                 f32 max_residual_speed_m_s = 0.0f;
+                f32 actual_body_vel_x = 0.0f;
+                f32 actual_body_vel_y = 0.0f;
+                f32 actual_body_speed_m_s = 0.0f;
             };
 
             // SwervePlannerOutput 汇总的是“planner 这一拍想出来的所有关键中间量”：
@@ -631,10 +634,7 @@ namespace jia
                 f32 final_drive_omega_rad_s[4] = {0.0f};            // [RO] planner 视角的最终 drive 目标；执行层仍可因 zero-stop/homing 再次改写。
                 f32 low_speed_suppression_scale[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // [RO] 每轮低速舵角未对齐时的 drive 压制比例。
                 bool flipped_drive_direction[4] = {false, false, false, false}; // [RO] 当前拍是否选择了翻转解。它是“本拍决策结果”，不是跨拍保持锁存本身。
-                f32 high_speed_suppression_scale = 1.0f;            // [RO] 当前拍全局高速抑制比例。会与低速抑制合并后再镜像给外部调试。
-                bool high_speed_suppression_active = false;         // [RO] 当前拍是否触发高速抑制。
-                f32 high_speed_dir_err_deg = 0.0f;                  // [RO] 当前合成平移方向误差（deg）。
-                f32 high_speed_eta_max_s = 0.0f;                    // [RO] 当前四轮最大预计到角时间（s）。
+                bool motion_direction_guard_active[4] = {false, false, false, false}; // [RO] 当前拍是否因实际运动方向约束拒绝了翻转解。
                 bool valid = false;                                 // [RO] 该拍 planner 输出是否有效，可否被 launch-hold 等缓存直接复用。
             };
 
@@ -825,7 +825,7 @@ namespace jia
                 // ch10: pid_compute_fired
                 // ch11: steer_fault_any_active
                 // ch12: all_homed
-                // ch13: high_speed_drive_suppression_active
+                // ch13: motion_direction_guard_active
                 // ch14: reverse_intent_active
                 kYawPid = 2,
 
@@ -1168,7 +1168,6 @@ namespace jia
             void computeProjectedDriveFromPlannedSteer(const Data &command_data, const f32 planned_oa_total_rad[4], f32 out_drive_omega_rad_s[4]) const;
             // estimatePlannedBodyTwist() 的输出沿用公开/debug body frame 语义，和 setSpeed*/get* 的坐标约定保持一致。
             bool estimatePlannedBodyTwist(const f32 planned_oa_total_rad[4], const f32 planned_drive_omega_rad_s[4], f32 &out_vel_x, f32 &out_vel_y, f32 &out_omega_z) const;
-            f32 updateHighSpeedDriveSuppression(f32 translational_speed_m_s, f32 eta_max_s, f32 dir_err_deg);
             // computeModuleCommands() 负责“从车体命令 -> 模块规划命令帧”，只产出理想执行目标，不直接写电机。
             /**
              * @brief 把车体级命令解算为本拍的模块规划命令帧。
@@ -1430,17 +1429,15 @@ namespace jia
                 IdlePostureMode idle_posture_mode = IdlePostureMode::kXPark; // [RW] 静止姿态策略。决定停住后是维持当前轮姿态，还是自动收拢为 X-Park。
                 u32 xpark_entry_delay_ms = 1000U;                            // [RW] X-Park 进入最短静止持续时间（ms）。
 
-                struct HighSpeedDriveSuppressionConfig
+                struct MotionDirectionGuardConfig
                 {
-                    f32 dir_err_enter_deg = 12.0f;          // [RW] 高速抑制使用。方向误差进入阈值（deg）。
-                    f32 dir_err_exit_deg = 6.0f;            // [RW] 高速抑制使用。方向误差退出阈值（deg），应小于 enter 形成滞回。
-                    f32 eta_lock_s = 0.20f;                 // [RW] 高速抑制使用。最大到角时间进入阈值（s）。
-                    f32 eta_release_s = 0.06f;              // [RW] 高速抑制使用。最大到角时间退出阈值（s），应小于 lock。
-                    f32 gate_ramp_up_s = 0.08f;             // [RW] 高速抑制使用。门控放开时间常数（s）。
-                    f32 gate_ramp_down_s = 0.03f;           // [RW] 高速抑制使用。门控收紧时间常数（s）。
+                    f32 min_actual_speed_m_s = 0.10f;       // [RW] 实际底盘平移速度超过该值，才认为残余运动方向可信。
+                    f32 target_min_speed_m_s = 0.05f;       // [RW] 目标平移速度超过该值，才认为上层正在请求明确的新运动方向。
+                    f32 anti_motion_dot_threshold = 0.0f;   // [RW] 候选轮驱动方向与实际运动方向点积小于该值时，视为反向对抗。
+                    f32 prefer_forward_margin_deg = 20.0f;  // [RW] 直接解只比翻转解多转不超过该角度时，优先避免反向 drive。
                 };
-                bool enable_high_speed_drive_suppression = false; // [RW] 是否启用高速抑制。只在非近零平移一致性变差时收紧驱动。
-                HighSpeedDriveSuppressionConfig high_speed_drive_suppression{};
+                bool enable_motion_direction_guard = true; // [RW] 是否用实际残余运动方向约束“翻转 180 度 + drive 反向”解。
+                MotionDirectionGuardConfig motion_direction_guard{};
             };
             // 配置基线 vs 运行时快照：
             // - default_strategy_cfg_ 是默认基线，回答“系统初始化后原则上应该怎么跑”；
@@ -1689,7 +1686,7 @@ namespace jia
                 f32 pid_compute_fired = 0.0f;
                 f32 steer_fault_any_active = 0.0f;
                 f32 all_homed = 0.0f;
-                f32 high_speed_suppression_active = 0.0f;
+                f32 motion_direction_guard_active = 0.0f;
                 f32 reverse_intent_active = 0.0f;
             } yaw_pid_trace_;
 
@@ -1712,11 +1709,7 @@ namespace jia
             u32 last_drive_feedback_sample_ms_[4] = {0U, 0U, 0U, 0U};          // [RO] 上一拍 drive 反馈采样时间戳。配合当前时间戳可判断反馈是否连续。
             bool selected_flipped_solution_[4] = {false};                      // [RO] 每个模块上一拍保留下来的翻转解锁存。和 planner_output 里的 flipped_drive_direction[本拍结果] 不同。
             f32 low_speed_drive_suppression_scale_[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // [RO] 每轮低速抑制最终缩放。
-            f32 high_speed_drive_suppression_scale_ = 1.0f;                        // [RO] 当前高速抑制缩放。
-            bool high_speed_trans_gate_active_ = false;                            // [RO] 当前高速抑制速度门是否打开。复用 near-zero enter/exit 做滞回。
-            bool high_speed_drive_suppression_active_ = false;                     // [RO] 当前高速抑制是否激活。
-            f32 high_speed_dir_err_deg_ = 0.0f;                                    // [RO] 当前合成平移方向误差（deg）。
-            f32 high_speed_eta_max_s_ = 0.0f;                                      // [RO] 当前四轮最大预计到角时间（s）。
+            bool motion_direction_guard_active_[4] = {false, false, false, false}; // [RO] 当前拍是否因实际运动方向约束拒绝了翻转解。
             f32 max_residual_speed_m_s_ = 0.0f;                                // [RO] 当前拍四轮中的最大实际残余速度（m/s）。
             bool low_speed_residual_bypass_active_ = false;                        // [RO] 当前低速抑制残余速度旁路门是否打开。复用 near-zero enter/exit 做滞回。
             bool low_speed_drive_suppression_bypassed_by_residual_speed_ = false; // [RO] 当前拍低速抑制是否因残余速度阈值被旁路。
@@ -1831,10 +1824,7 @@ namespace jia
                 bool lim_drive_alpha = true;                                        // [RO] 驱动角加速度限幅是否开启。
                 bool lim_steer_rate = true;                                         // [RO] 舵向角速度限幅是否开启。
                 bool lim_steer_alpha = true;                                        // [RO] 舵向角加速度限幅是否开启。
-                f32 high_speed_drive_suppression_scale = 1.0f;                      // [RO] 当前高速抑制缩放。
-                f32 high_speed_dir_err_deg = 0.0f;                                  // [RO] 高速抑制使用的合成平移方向误差（deg）。
-                f32 high_speed_eta_max_s = 0.0f;                                    // [RO] 高速抑制使用的四轮最大预计到角时间（s）。
-                bool high_speed_drive_suppression_active = false;                   // [RO] 当前高速抑制是否激活。
+                bool motion_direction_guard_active[4] = {false, false, false, false}; // [RO] 当前拍是否因实际运动方向约束拒绝了翻转解。
                 bool low_speed_drive_suppression_bypassed_by_residual_speed = false; // [RO] 当前拍是否因为残余速度过高而旁路了低速抑制。
                 f32 max_residual_speed_m_s = 0.0f;                                  // [RO] 当前拍整车四轮中的最大实际残余速度（m/s）。
                 bool xpark_steer_hold_enable = false;                  // [RO] 当前是否启用统一 X-Park 舵向 hold。
