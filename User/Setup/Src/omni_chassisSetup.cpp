@@ -490,6 +490,8 @@ void OmniChassis_Setup::CZ_index_reset(void)
 
 void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
 {
+    if(robot_pos_.y>10.02f&&robot_pos_.y<11.6f&&robot_pos_.x<0.0f&&robot_pos_.x>6.0f)
+        return;
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = RB_Flag ? 180.0f : 0.0f;
     path_line_.Reset();
@@ -684,6 +686,8 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
 }
 void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
 {
+    if(robot_pos_.y>10.02f&&robot_pos_.y<11.6f&&robot_pos_.x<0.0f&&robot_pos_.x>6.0f)
+        return;
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = RB_Flag ? -90.0f : 90.0f;
     path_line_.Reset();
@@ -697,6 +701,8 @@ void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
 }
 void OmniChassis_Setup::CZ_FIT_R2_Selection_Planning(void)
 {
+    if(robot_pos_.y>10.02f&&robot_pos_.y<11.6f&&robot_pos_.x<0.0f&&robot_pos_.x>6.0f)
+        return;
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = RB_Flag ? -90.0f : 90.0f;
     path_line_.Reset();

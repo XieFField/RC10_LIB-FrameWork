@@ -1434,11 +1434,6 @@
               </FileOption>
             </File>
             <File>
-              <FileName>omni_chassisSetup.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\User\Setup\Inc\omni_chassisSetup.h</FilePath>
-            </File>
-            <File>
               <FileName>Arm_Setup.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Setup\Inc\Arm_Setup.h</FilePath>
@@ -1447,6 +1442,11 @@
               <FileName>Arm_Setup.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\Arm_Setup.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>omni_chassisSetup.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\Setup\Inc\omni_chassisSetup.h</FilePath>
             </File>
             <File>
               <FileName>omni_chassisSetup.cpp</FileName>

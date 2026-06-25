@@ -74,7 +74,7 @@ typedef struct
 
     float PID_coefficient = 1.0f;
     float FF_coefficient = 0.0f;
-    float spinodal_coefficient = 1.5f;
+    float spinodal_coefficient = 1.6f;
 
     float v_normal_max = 0.5f;
     float m_lookaheadDist = 0.4f; // 前视距离
@@ -123,7 +123,7 @@ typedef struct
     float spin_skew = 0.1f; // 旋转位置y轴偏移量
     float point_skew = 0.06f; // 旋转位置y轴偏移量
     
-    float coner_ahead = 0.17f;
+    float coner_ahead = 0.25f;
     float coner_behind = 0.4f;
 
 } KFS_POINT;
