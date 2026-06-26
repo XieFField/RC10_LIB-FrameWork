@@ -835,9 +835,10 @@ private:
             }
             else if (temp_point == 21 || temp_point == 16 || temp_point == 11 || temp_point == 6 || temp_point == 25 || temp_point == 20 || temp_point == 15 || temp_point == 10)
             {
+                // 左右两排且接下来不为终点
                 if (i != (index_exit - 1))
                 {
-                    // 左右两排且接下来不为终点
+                    //下一个点为拐点
                     if (KFS_KeyPoint_.mustPastMap[1] == 1 || KFS_KeyPoint_.mustPastMap[1] == 5 || KFS_KeyPoint_.mustPastMap[1] == 26 || KFS_KeyPoint_.mustPastMap[1] == 30)
                     {
 
@@ -861,6 +862,18 @@ private:
                             KFS_point.spin_pos_0 = spin_vector;
                             i = 2;
                             last_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[1]);
+                        }
+                    }
+                    else if (KFS_KeyPoint_.mustPastMap[1] == MF1_Point_)//下一个为KFS1
+                    {
+                         if (_tool_Abs(yaw - KFS_point.MF1_target_yaw_) < 10.0f)
+                        {
+                            // 角度差距小直接转当做无事发生
+                            target_yaw = KFS_point.MF1_target_yaw_;
+                        }
+                        else
+                        {
+                            return false;
                         }
                     }
                     else
@@ -1089,14 +1102,18 @@ private:
             {
                 if (KFS_flag.MF1_finish == true)
                 {
-                    KFS_point.MF1 = KFS_point.MF2;
-                    KFS_point.MF2 = KFS_point.MF3;
-                    KFS_point.MF3 = 0;
+                    KFS_point.KFS1 = KFS_point.KFS2;
+                    KFS_point.KFS2 = KFS_point.KFS3;
+                    KFS_point.KFS3 = 0;
                 }
                 if (KFS_flag.MF2_finish == true)
                 {
-                    KFS_point.MF1 = KFS_point.MF2;
-                    KFS_point.MF2 = 0;
+                    KFS_point.KFS1 = KFS_point.KFS2;
+                    KFS_point.KFS2 = 0;
+                }
+                if (KFS_flag.MF3_finish == true)
+                {
+                    KFS_point.KFS1 = 0;
                 }
             }
             else if (KFS_flag.pause_flag == false)
