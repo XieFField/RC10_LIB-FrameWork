@@ -767,6 +767,8 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
         else if (kfs_index == 0x01)
             this->set_RotateAngle(295.0f);
 
+        
+
         if (this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.005f)
         {
             if (this->get_currentJointStatus().rotateJoint_angle_ > 255.0f && this->get_currentJointStatus().rotateJoint_angle_ < 350.0f)
@@ -788,6 +790,12 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
 
     case store_state::lower_state:
     {
+        if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1 && auto_ctrl_.start_to_autoctrl == 1)
+        {
+            if(this->get_currentJointStatus().rotateJoint_angle_ > 250.0f && this->get_currentJointStatus().rotateJoint_angle_ < 340.0f)
+                auto_ctrl_.flag.canChassisStart = true;
+        }
+
         if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 258.0f) < 1.0f
             && kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 
             && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0))
