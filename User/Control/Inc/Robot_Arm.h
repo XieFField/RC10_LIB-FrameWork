@@ -424,7 +424,14 @@ private:
             return target;
         }
 
-        return current + step;
+        float next = current + step;
+        // 钳位：不允许越过目标
+        if ((step > 0.0f && next > target) || (step < 0.0f && next < target))
+        {
+            ramp.current_velocity_ = 0.0f;
+            return target;
+        }
+        return next;
     }
 };
 
