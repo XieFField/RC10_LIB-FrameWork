@@ -137,11 +137,11 @@ void OmniChassis_Setup::loop()
 #else
     communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
 #endif
-    yaw = Locate_Setup::getInstance()->get_yaw_from_position();
-    Point3D ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
-    RB_Flag = MF_AutoCtrler::get_color();
-    robot_pos_.x = ladar_data_.x;
-    robot_pos_.y = ladar_data_.y;
+    //yaw = Locate_Setup::getInstance()->get_yaw_from_position();
+    //Point3D ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
+    //RB_Flag = MF_AutoCtrler::get_color();
+    //robot_pos_.x = ladar_data_.x;
+    //robot_pos_.y = ladar_data_.y;
 
     switch (chassis_status_)
     {
@@ -232,11 +232,12 @@ void OmniChassis_Setup::loop()
     }
 
     /////-----------------------------               二区            -----------------------------------/////
-    case CHASSIS_AUTO_CONTROL_KFS:
+    case CHASSIS_STOP:
     {
         mode_init();
         if (flag == 1)
         {
+            robot_pos_=test_point;
             flag = 0;
             flag_reset();
             KFS_Selection_Planning();
@@ -256,6 +257,8 @@ void OmniChassis_Setup::loop()
         }
 
         chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+        robot_pos_.x+=(Chassis_Target.VX*0.001f);
+        robot_pos_.y+=(Chassis_Target.VY*0.001f);
         break;
     }
 
@@ -461,7 +464,7 @@ void OmniChassis_Setup::loop()
         break;
     }
 #endif
-    case CHASSIS_STOP:
+    case CHASSIS_AUTO_CONTROL_KFS:
     {
         target_yaw = yaw;
         chassis_status_last_ = chassis_status_;
@@ -704,7 +707,7 @@ void OmniChassis_Setup::CZ_FIT_R2_Selection_Planning(void)
     if(robot_pos_.y>10.02f&&robot_pos_.y<11.6f&&robot_pos_.x<0.0f&&robot_pos_.x>6.0f)
         return;
     // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw = RB_Flag ? -90.0f : 90.0f;
+    target_yaw = -90.0f;
     path_line_.Reset();
     path_line_.plan_reset();
 

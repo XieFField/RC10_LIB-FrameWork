@@ -78,19 +78,20 @@ typedef struct
 
     float v_normal_max = 0.5f;
     float m_lookaheadDist = 0.4f; // 前视距离
+    
 } SPEED_PARAM;
 
 typedef struct
 {
-    //第数组第零为红场
+    ////////////            数组最后一位索引固定填入红蓝场标志位用于区分         /////////////////////////////
     Vector2D CB_Start_pos[2] = {{5.0f, 1.0f}, {1.0f, 1.0f}};             // 夹杆起点。
     Vector2D CB_Selection_pos[2] = {{3.466f, 0.835f}, {2.455f, 0.835f}}; // 夹杆流程默认目标点。
 
     // 相机流程
-    Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
+    Vector2D CB_End_pos[2] = {{3.466f, 1.085f}, {2.461f, 1.085f}};
 
     // 贴边流程
-    Vector2D CB_transition_pos[2] = {{3.539f, 1.3f}, {2.461f, 1.3f}};
+    Vector2D CB_transition_pos[2] = {{3.466f, 1.2f}, {2.461f, 1.2f}};
     Vector2D CB_transition_pos_1[2] = {{2.6f, 1.0f}, {3.4f, 1.0f}};
     Vector2D CB_welt_pos[2] = {{3.3f, 0.495f}, {3.7f, 0.495f}};
 
@@ -537,9 +538,9 @@ private:
         Vector2D v_end = v_tangent + v_normal;
 
         num++;
-        if (num > 5)
+        if (num > 3)
         {
-            // debug_uart.printf_DMA("%f,%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude(), v_tangent.magnitude());
+            debug_uart.printf_DMA("%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude());
             num = 0;
         }
         return v_end;
