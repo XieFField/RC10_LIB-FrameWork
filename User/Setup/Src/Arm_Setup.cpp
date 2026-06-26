@@ -790,10 +790,16 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
 
     case store_state::lower_state:
     {
-        if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1 && auto_ctrl_.start_to_autoctrl == 1)
+        if((auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1 && auto_ctrl_.start_to_autoctrl == 1))
         {
             if(this->get_currentJointStatus().rotateJoint_angle_ > 250.0f && this->get_currentJointStatus().rotateJoint_angle_ < 340.0f)
-                auto_ctrl_.flag.canChassisStart = true;
+            {
+                if(auto_ctrl_.now_targetIndex == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 
+                    && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0)) //第一个顶存不能直接走
+                    auto_ctrl_.flag.canChassisStart = false;
+                else
+                    auto_ctrl_.flag.canChassisStart = true;
+            }
         }
 
         if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 1.0f
@@ -807,6 +813,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             && auto_ctrl_.start_to_autoctrl == 1 && auto_ctrl_.now_targetIndex == 0x00  //顶吸侧存
             && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0)
         {
+
             this->set_LaunchHeight(init_data_.new_store_height_outside_); // 降低到存储高度
             this->set_StretchLength(init_data_.new_store_ext_length_);
         }
@@ -823,6 +830,9 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
         {
             if(this->get_currentJointStatus().stretchJoint_Length_ > init_data_.max_stretchLength_ - 0.01f)
             {
+                if(auto_ctrl_.now_targetIndex == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 
+                    && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0))
+                        auto_ctrl_.flag.canChassisStart = true;
                 this->set_LaunchHeight(init_data_.store_height_inside_); // 降低到存储高度
                 //this->set_LaunchHeight(init_data_.max_launchHeight_); // 降低到存储高度
             }
@@ -1434,11 +1444,11 @@ void ArmSetup::auto_stillnessTwo()
                     auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds();
                     auto_ctrl_.flag.isbackdone = true;
 
-                    if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1)
-                    {
-                        if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
-                            auto_ctrl_.flag.canChassisStart = true;
-                    }
+                    // if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1)
+                    // {
+                    //     if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
+                    //         auto_ctrl_.flag.canChassisStart = true;
+                    // }
                 }
             }
             else if (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time >= 0.3f)
@@ -1468,11 +1478,11 @@ void ArmSetup::auto_stillnessTwo()
                     auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds();
                     auto_ctrl_.flag.isbackdone = true;
 
-                    if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1)
-                    {
-                        if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
-                            auto_ctrl_.flag.canChassisStart = true;
-                    }
+                    // if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1)
+                    // {
+                    //     if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
+                    //         auto_ctrl_.flag.canChassisStart = true;
+                    // }
                 }
             }
             else if (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time >= 0.3f)
@@ -1719,6 +1729,9 @@ bool ArmSetup::state_launchStillness(int targetKFS)
 
         if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1)
             auto_ctrl_.flag.canChassisStart = false;
+        else if(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.targetKFS[2] != 0)
+            
+        auto_ctrl_.flag.canChassisStart = false;
         else
             auto_ctrl_.flag.canChassisStart = true;                   // 机械臂已经伸展到可以移动的高度
 
