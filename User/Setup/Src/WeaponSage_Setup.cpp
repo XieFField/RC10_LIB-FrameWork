@@ -664,7 +664,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                             auto_ctrl_.is_sage_adjust_start=true;
                             auto_ctrl_.sage_adjust_time=TimeStamp::getInstance().getSeconds();
                         }
-                        if(auto_ctrl_.is_sage_adjust_start&&(ctrl_status_.now_times-auto_ctrl_.sage_adjust_time)>0.5f) //等待0.5秒后再调整升降
+                        if(auto_ctrl_.is_sage_adjust_start&&(ctrl_status_.now_times-auto_ctrl_.sage_adjust_time)>0.4f) //等待0.4秒后再调整升降
                         {
                         this->setLaunch_angle(auto_ctrl_.launch_kp.launch_clawclosed*initData_.max_launchHeight_);   
                             if(abs(current_pos_.launch_pos_-auto_ctrl_.launch_kp.launch_clawclosed*initData_.max_launchHeight_)<0.02f) //如果已经调整到位了，进入下一个状态
@@ -1175,8 +1175,19 @@ bool Robot_WeaponSage_Setup::Sage_to_high()
     if(!launch_flag)
     {
         this->setLaunch_angle(0.9*initData_.max_launchHeight_);
+        
+
         if(abs(current_pos_.launch_pos_-0.9*initData_.max_launchHeight_)<0.02)
-        {
+        {   
+			float current_wrist=normalize_deg_0_360(current_pos_.wrist_pos_);
+            if(abs(current_wrist-180.0f)<90.0f)
+            {
+                this->setWrist_angle(180.0f);
+            }
+            if(abs(current_wrist-180.0f)>90.0f)
+            {
+                this->setWrist_angle(0.0f);
+            }
             launch_flag=true;
             is_launch_ok= true;
         }
@@ -1221,6 +1232,15 @@ bool Robot_WeaponSage_Setup::Sage_to_low()
         this->setLaunch_angle(0.9*initData_.max_launchHeight_);
         if(current_pos_.launch_pos_-0.9*initData_.max_launchHeight_)
         {
+			float current_wrist=normalize_deg_0_360(current_pos_.wrist_pos_);
+            if(abs(current_wrist-180.0f)<90.0f)
+            {
+                this->setWrist_angle(180.0f);
+            }
+            if(abs(current_wrist-180.0f)>90.0f)
+            {
+                this->setWrist_angle(0.0f);
+            }
             launch_flag=true;
             is_launch_ok =true;
         }
