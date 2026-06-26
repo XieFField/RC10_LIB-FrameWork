@@ -129,7 +129,7 @@ typedef struct{
 
         bool isbackdone = false; //是否返回完成
         float back_time = 0.0f; //返回时长
-
+        float target_high [3] = {0.0f, 0.0f, 0.0f}; //目标KFS高度
 
     }flag;
 }ARM_AUTO_S;
@@ -140,7 +140,7 @@ typedef struct{
 inline float GetKFSHeight(int8_t mfNum)
 {
     const float* arr = (MF_AutoCtrler::get_color() == 1) ? 
-        MF_AutoCtrler::MF_high_blue : MF_AutoCtrler::MF_high_red;
+        MF_AutoCtrler::MF_high_blue : MF_AutoCtrler::MF_high_blue;
     return arr[mfNum - 1];
 }
 
@@ -258,7 +258,10 @@ public:
         auto_ctrl_.pathInfo = MF_AutoCtrler::PathInformation_calc(auto_ctrl_.now_ChassisPosition,
                                        auto_ctrl_.targetKFS[0],
                                         auto_ctrl_.targetKFS[1], auto_ctrl_.targetKFS[2]);
-
+        for(int i = 0; i < 3; i++)
+        {
+            auto_ctrl_.flag.target_high[i] = GetKFSHeight(auto_ctrl_.targetKFS[i]);
+        }
 #if ARM_AUTO_DEBUG_NOCHASSIS
         auto_ctrl_.now_ChassisPosition.x = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0]-1].x;
         auto_ctrl_.now_ChassisPosition.y = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0]-1].y - 3.0f;

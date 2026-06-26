@@ -29,13 +29,6 @@ const float MF_high_blue[12] =
     0.2f, 0.4f, 0.2f
 };
 
-const float MF_high_red[12] =
-{
-    0.4f, 0.2f, 0.4f,
-    0.6f, 0.4f, 0.2f,
-    0.4f, 0.6f, 0.4f,
-    0.2f, 0.4f, 0.2f
-};
 
 float GetMFHeight(int8_t mfNum)
 {
@@ -1036,7 +1029,8 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2,
     RoadResult_S MF1Road = MFNum_ToCatchRoadResult(MF1);
     RoadResult_S MF2Road = MFNum_ToCatchRoadResult(MF2);
     RoadResult_S MF3Road = MFNum_ToCatchRoadResult(MF3);
-
+    if(color == 1) result.exitMap = 26;
+    else if(color == 0) result.exitMap = 30;
     int cornerMap[4] = {1, 5, 26, 30}; // 四个角落的地图编号
 
     //解出目标梅花桩相邻的通道

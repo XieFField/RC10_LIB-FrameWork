@@ -680,7 +680,7 @@ void ArmSetup::arm_d_pad_ctrl()
     {
         if (manual_putdown())
         {
-            if(auto_ctrl_.kfs_num == TWO_OR_THREE)
+            if(auto_ctrl_.kfs_num == TWO_OR_THREE && arm_ctrlStatus.comp_takeout_now[1] < 2)
             {
                 arm_ctrlStatus.is_store_acting = 5;
                 target_joint_status_ = this->get_currentJointStatus();
@@ -695,6 +695,7 @@ void ArmSetup::arm_d_pad_ctrl()
     }
     else if(arm_ctrlStatus.is_store_acting == 5)
     {
+        init_data_.putdown_height_ = 0.24f; //重置putdown_height
         if(manual_takeout(arm_ctrlStatus.comp_takeout_now[0] - 1))
         {
             arm_ctrlStatus.comp_takeout_now[0]++;
@@ -1040,8 +1041,9 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
                 this->set_LaunchHeight(init_data_.max_launchHeight_); // 提升到最高
                 if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
                 {
-                    this->set_StretchLength(0.0f);                        // 收回
-                    store_state_ = store_state::outstate2;
+                    this->set_StretchLength(0.0f);        // 收回
+                    if(this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
+                        store_state_ = store_state::outstate2;
                 }
             }
         }
@@ -1212,6 +1214,15 @@ void ArmSetup::auto_stillnessOne()
         {
             if(Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 10.1 && MF_AutoCtrler::get_color() == 1
                 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x > 1.7) //蓝场
+            {
+                this->set_RotateAngle(90.0f);
+                this->set_PitchAngle(init_data_.pitch_lift_angle_);
+                if(std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 5.0f)
+                    this->set_LaunchHeight(init_data_.putdown_height_);
+            }
+            else if(Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 10.1 
+                && MF_AutoCtrler::get_color() == 0
+                && Locate_Setup::getInstance()->get_RobotPos_inWorld().x < 4.3) //红场
             {
                 this->set_RotateAngle(90.0f);
                 this->set_PitchAngle(init_data_.pitch_lift_angle_);
@@ -1566,7 +1577,7 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
 bool ArmSetup::state_alignStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    if (auto_ctrl_.now_targetIndex == 0 && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f)
+    if (auto_ctrl_.now_targetIndex == 0 && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0)
     {
         this->set_PitchAngle(0.0f); // pitch放下
     }

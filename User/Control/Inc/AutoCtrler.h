@@ -105,7 +105,7 @@ namespace MF_AutoCtrler
     // 计算路径节点结果
     PathNode_S PathNodeResult_calc(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t EXIT = 26);
     
-    
+    float GetMFHeight(int8_t mfNum);
 
     PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t MF3);
 
