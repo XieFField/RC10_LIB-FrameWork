@@ -659,12 +659,20 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                     this->Close_TargetClaw_Untight();
                     if(auto_ctrl_.flag.is_untight) //如果已经调整好爪子了，进入下一个状态
                     {
-                        this->setLaunch_angle(auto_ctrl_.launch_kp.launch_clawclosed*initData_.max_launchHeight_);   
-                        if(abs(current_pos_.launch_pos_-auto_ctrl_.launch_kp.launch_clawclosed*initData_.max_launchHeight_)<0.02f) //如果已经调整到位了，进入下一个状态
+                        if(!auto_ctrl_.is_sage_adjust_start)
                         {
-                            auto_ctrl_.flag.is_reach_closedclaw=true;
-                            auto_ctrl_.flag.is_untight=false;
-                        } 
+                            auto_ctrl_.is_sage_adjust_start=true;
+                            auto_ctrl_.sage_adjust_time=TimeStamp::getInstance().getSeconds();
+                        }
+                        if(auto_ctrl_.is_sage_adjust_start&&(ctrl_status_.now_times-auto_ctrl_.sage_adjust_time)>0.5f) //等待0.5秒后再调整升降
+                        {
+                        this->setLaunch_angle(auto_ctrl_.launch_kp.launch_clawclosed*initData_.max_launchHeight_);   
+                            if(abs(current_pos_.launch_pos_-auto_ctrl_.launch_kp.launch_clawclosed*initData_.max_launchHeight_)<0.02f) //如果已经调整到位了，进入下一个状态
+                            {
+                                auto_ctrl_.flag.is_reach_closedclaw=true;
+                                auto_ctrl_.flag.is_untight=false;
+                            }    
+                        }
                     }
                 }					
                 else //如果已经调整到位了，进入下一个状态
@@ -746,7 +754,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                    this->setLaunch_angle(initData_.dock_height_);      //抬高到预定位置
                     // if(abs(current_pos_.launch_pos_-initData_.dock_height_)<0.02f)
                     // {
-                        now_state_ = WeaponSage_Setup::STATE_DONE;
+                    now_state_ = WeaponSage_Setup::STATE_DONE;
                     // }
                 }
 
@@ -819,6 +827,8 @@ void Robot_WeaponSage_Setup::autoControl()
                 auto_ctrl_.claw_flag[2] = false;
                 auto_ctrl_.dock_is_launching = false;
                 auto_ctrl_.dock_launch_time = 0.0f;
+                auto_ctrl_.is_sage_adjust_start = false;
+                auto_ctrl_.sage_adjust_time = 0.0f;
             }
             else
 			{

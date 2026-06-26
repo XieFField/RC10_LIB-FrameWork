@@ -151,6 +151,9 @@ namespace WeaponSage_Setup
 		bool is_ServoStart= false;
 		float dock_launch_time = 0.0f;      // autoControl_dock 定时器（替代 static）
 		bool dock_is_launching = false;
+        float sage_adjust_time = 0.0f;
+        bool is_sage_adjust_start=false;
+
     }auto_ctrl_S;
 
      extern float weapon_pos[4];//武器位置数组
