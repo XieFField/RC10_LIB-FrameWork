@@ -1,7 +1,47 @@
 #include "Module_communication.h"
+#include <cstdint>
 
 uint32_t rx_cnt; // 接收计数
 uint32_t tx_cnt; // 发送计数
+
+namespace {
+static inline uint32_t EnterCritical()
+{
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    return primask;
+}
+
+static inline void ExitCritical(uint32_t primask)
+{
+    if (primask == 0U) {
+        __enable_irq();
+    }
+}
+
+static inline void CleanDCacheRange(uint8_t* addr, uint16_t len)
+{
+    if (addr == nullptr || len == 0U) {
+        return;
+    }
+    if ((SCB->CCR & SCB_CCR_DC_Msk) == 0U) {
+        return;
+    }
+
+    uintptr_t start = reinterpret_cast<uintptr_t>(addr) & ~static_cast<uintptr_t>(31U);
+    uintptr_t end = (reinterpret_cast<uintptr_t>(addr) + len + 31U) & ~static_cast<uintptr_t>(31U);
+    SCB_CleanDCache_by_Addr(reinterpret_cast<uint32_t*>(start), static_cast<int32_t>(end - start));
+}
+
+static inline uint8_t MaybeCorruptTxCrc(uint8_t crc)
+{
+#if COMM_TEST_CORRUPT_TX_CRC
+    return static_cast<uint8_t>(crc ^ 0xFFU);
+#else
+    return crc;
+#endif
+}
+}
 
 namespace communication{
     Communication::Communication(UART_HandleTypeDef *txhuart,UART_HandleTypeDef *rxhuart,
@@ -22,20 +62,32 @@ namespace communication{
         this->tx_fifo.buffer = tx_ring_buf;
         this->tx_fifo.head = 0;
         this->tx_fifo.tail = 0;
+        this->tx_fifo.drop_cnt = 0;
         
         this->rx_fifo.buffer = rx_ring_buf;
         this->rx_fifo.head = 0;
         this->rx_fifo.tail = 0;
+        this->rx_fifo.drop_cnt = 0;
 
         this->tx_busy = 0; // 初始状态为非忙碌
+        this->tx_error_cnt = 0;
+        this->rx_crc_error_cnt = 0;
+        this->joystick_frame_count = 0;
 
-        send_xyz[0]=0xA9CB;
-        send_xyz[1]=0x6587;
-        send_xyz[2]=0x2143;
-        send_mode = 0xAA;
-        send_status = 0xBB;
-        send_command1 = 0xCC;
-        send_command2 = 0xDD;
+        send_xyz[0]=0;
+        send_xyz[1]=0;
+        send_xyz[2]=0;
+        send_mode = 0;
+        send_status = 0;
+        send_command1 = 0;
+        send_command2 = 0;
+
+        rec_joystick[0] = 2048;
+        rec_joystick[1] = 2048;
+        rec_joystick[2] = 2048;
+        rec_joystick[3] = 2048;
+        rec_send_key = 0;
+        rec_page = 0;
 
         
         rec_setting_command = 0;
@@ -46,7 +98,9 @@ namespace communication{
         rec_command_command = 0;
         rec_command_load1 = 0;
         rec_command_load2 = 0;
-        for (uint8_t i = 0; i < 9; i++) recv_command_cnts[i] = 0;
+        for (uint8_t i = 0; i < 9; ++i) {
+            recv_command_cnts[i] = 0;
+        }
 
         // 初始化KFS发送变量
         send_KFS_want_place1 = 0;
@@ -63,6 +117,7 @@ namespace communication{
         rec_KFS2_place4=0;
         rec_KFSf_place1=0;
 
+        saved_color=1;
         // Communication_RX_DMA(rxhuart, dma_rx_buf, DMA_BUF_SIZE);
         // __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); 
     }
@@ -76,6 +131,8 @@ namespace communication{
         if (next != fifo.head) { 
             fifo.buffer[fifo.tail] = data;
             fifo.tail = next;
+        } else {
+            fifo.drop_cnt++;
         }
     }
 
@@ -122,7 +179,11 @@ namespace communication{
 
     bool Communication::Comm_Task_Loop(void)
     {
+#if COMM_TEST_BLOCK_RX_PARSE
+        return false;
+#endif
         bool data_updated = false;
+        uint32_t primask = EnterCritical();
         // 不断处理 RX FIFO 里面收到的数据，直到剩余数据不足最小帧长度
         while (FIFO_Count(rx_fifo) >= sizeof(SettingFrame_t)) {
         
@@ -147,7 +208,9 @@ namespace communication{
             JoystickFrame_t* pFrame = (JoystickFrame_t*)frame_buf;
             
             // 验证帧尾是否对应 0xDE
-            if (pFrame->tail == 0xDE && pFrame->crc == crc8(frame_buf+2, sizeof(JoystickFrame_t) - 4)) {
+            bool tail_ok = (pFrame->tail == 0xDE);
+            bool crc_ok = (pFrame->crc == crc8(frame_buf+2, sizeof(JoystickFrame_t) - 4));
+            if (tail_ok && crc_ok) {
                 // 提取解包好的摇杆数据 (均为 16位 uint16_t 数据)
                 rec_joystick[0] = pFrame->ch1;
                 rec_joystick[1] = pFrame->ch2;
@@ -159,8 +222,12 @@ namespace communication{
                 // 将 FIFO 头部读取指针越过已经正确消费的这一帧
                 rx_fifo.head = p;
                 rx_cnt++;
+                joystick_frame_count++;
                 data_updated = true; // 标记数据已更新
             } else {
+                if (tail_ok && !crc_ok) {
+                    rx_crc_error_cnt++;
+                }
                 // 坏帧，跳过头部第一个错误字节，继续往后寻找
                 rx_fifo.head = (rx_fifo.head + 1) % RING_BUF_SIZE;
             }
@@ -179,7 +246,9 @@ namespace communication{
             SettingFrame_t* pFrame = (SettingFrame_t*)frame_buf;
             
             // 验证帧尾 0xDE 与 CRC（CRC 覆盖 command + load1 + load2 共 3 字节）
-            if (pFrame->tail == 0xDE && pFrame->crc == crc8(frame_buf+2, sizeof(SettingFrame_t) - 4)) {
+            bool tail_ok = (pFrame->tail == 0xDE);
+            bool crc_ok = (pFrame->crc == crc8(frame_buf+2, sizeof(SettingFrame_t) - 4));
+            if (tail_ok && crc_ok) {
                 // 提取解包好的设置数据
                 switch(pFrame->command) {
                     case 0x04: // KFS1位置设置
@@ -221,6 +290,9 @@ namespace communication{
                 rx_cnt++;
                 data_updated = true; // 标记数据已更新
             } else {
+                if (tail_ok && !crc_ok) {
+                    rx_crc_error_cnt++;
+                }
                 // 坏帧，跳过头部第一个错误字节，继续往后寻找
                 rx_fifo.head = (rx_fifo.head + 1) % RING_BUF_SIZE;
             }
@@ -237,11 +309,14 @@ namespace communication{
 
             CommandFrame_t* pCmdFrame = (CommandFrame_t*)frame_buf;
 
-            if (pCmdFrame->tail == 0xDE && pCmdFrame->crc == crc8(frame_buf+2, sizeof(CommandFrame_t) - 4)) {
+            bool tail_ok = (pCmdFrame->tail == 0xDE);
+            bool crc_ok = (pCmdFrame->crc == crc8(frame_buf+2, sizeof(CommandFrame_t) - 4));
+            if (tail_ok && crc_ok) {
                 rec_command_command = pCmdFrame->command;
                 rec_command_load1 = pCmdFrame->load1;
                 rec_command_load2 = pCmdFrame->load2;
-                if (pCmdFrame->command < 9) {
+                // load1 即遥控器端该命令的累计发送次数，直接同步，避免三帧重复导致重复计数
+                if (pCmdFrame->command < 9U) {
                     recv_command_cnts[pCmdFrame->command] = pCmdFrame->load1;
                 }
 
@@ -249,6 +324,9 @@ namespace communication{
                 rx_cnt++;
                 data_updated = true;
             } else {
+                if (tail_ok && !crc_ok) {
+                    rx_crc_error_cnt++;
+                }
                 rx_fifo.head = (rx_fifo.head + 1) % RING_BUF_SIZE;
             }
         }
@@ -257,6 +335,7 @@ namespace communication{
                 rx_fifo.head = (rx_fifo.head + 1) % RING_BUF_SIZE;
             }
         }        
+        ExitCritical(primask);
         return data_updated;
     }
 
@@ -264,6 +343,8 @@ namespace communication{
             uint8_t KFS_want_place1, uint8_t KFS_want_place2, uint8_t spear, uint8_t KFS_Keepplace)
     {
         if(tx_busy==0) {
+            bool should_start_dma = false;
+
             send_xyz[0] = x;
             send_xyz[1] = y;
             send_xyz[2] = z;
@@ -292,16 +373,19 @@ namespace communication{
             frame.KFS_want_place2 = send_KFS_want_place2;
             frame.spear = send_spear;
             frame.KFS_Keepplace = send_KFS_Keepplace;
-            frame.crc = crc8((uint8_t*)&frame + 2, sizeof(XYZFrame_t) - 4);
+            frame.crc = MaybeCorruptTxCrc(crc8((uint8_t*)&frame + 2, sizeof(XYZFrame_t) - 4));
             frame.tail = 0xED;
 
             uint8_t* ptr = (uint8_t*)&frame;
+            uint32_t primask = EnterCritical();
             for (int i = 0; i < sizeof(XYZFrame_t); i++) {
                 FIFO_Push(tx_fifo, ptr[i]);
             }
+            should_start_dma = (tx_busy == 0 && FIFO_Count(tx_fifo) > 0);
+            ExitCritical(primask);
             
             // 尝试拉起发送：如果底部DMA空闲，且队列里有东西
-            if (tx_busy == 0 && FIFO_Count(tx_fifo) > 0) {
+            if (should_start_dma) {
                 if(HAL_GPIO_ReadPin(this->tx_aux_port, this->tx_aux_pin) == GPIO_PIN_SET)
                 {
                     Comm_TxBufferToTxDMA(txhuart); 
@@ -315,13 +399,15 @@ namespace communication{
     {
         if (data == NULL || len == 0) return;
 
-        // __disable_irq(); 
+        bool should_start_dma = false;
+        uint32_t primask = EnterCritical();
         for (uint16_t i = 0; i < len; i++) {
             FIFO_Push(tx_fifo, data[i]);
         }
-        // __enable_irq();
+        should_start_dma = (tx_busy == 0 && FIFO_Count(tx_fifo) > 0);
+        ExitCritical(primask);
 
-        if (tx_busy == 0 && FIFO_Count(tx_fifo) > 0) {
+        if (should_start_dma) {
             if(HAL_GPIO_ReadPin(this->tx_aux_port, this->tx_aux_pin) == GPIO_PIN_SET) {
                 Comm_TxBufferToTxDMA(this->txhuart); 
             }
@@ -336,7 +422,9 @@ namespace communication{
                 return;
             }
 
-            uint16_t count = FIFO_Count(tx_fifo);
+            uint16_t count = 0;
+            uint32_t primask = EnterCritical();
+            count = FIFO_Count(tx_fifo);
             if (count > 0) {
                 if (count > DMA_BUF_SIZE) count = DMA_BUF_SIZE;
                 
@@ -344,17 +432,23 @@ namespace communication{
                 for (uint16_t i = 0; i < count; i++) {
                     FIFO_Pop(tx_fifo, dma_tx_buf[i]);
                 }
-                
-                // 【新增】将 D-Cache 里的数据主动推入 SRAM 供 DMA 读取
-                // 注意这里要保证清除完整的 count 长度，如果你传入的是部分长度可能没刷新干净
-                SCB_CleanDCache_by_Addr((uint32_t*)dma_tx_buf, count);
-                
                 tx_busy = 1; // 锁定发送状态
-                Comm_TxUseTxDMA(txhuart, dma_tx_buf, count);
-                tx_cnt++;
             } else {
                 // 如果且仅如果队列已经为空了，清除忙碌标志位
                 tx_busy = 0;
+            }
+            ExitCritical(primask);
+
+            if (count > 0) {
+                CleanDCacheRange(dma_tx_buf, count);
+                if (Comm_TxUseTxDMA(txhuart, dma_tx_buf, count) == HAL_OK) {
+                    tx_cnt++;
+                } else {
+                    uint32_t fail_primask = EnterCritical();
+                    tx_busy = 0;
+                    tx_error_cnt++;
+                    ExitCritical(fail_primask);
+                }
             }
         }
     }
@@ -368,9 +462,11 @@ namespace communication{
             // 此处重复调用会导致 DMA 连续重启两次，中间窗口期可能丢数据
 
             // DMA 中断来了，将其固定缓存段里收到的数据复制到业务层的 RX 环形缓冲区中
+            uint32_t primask = EnterCritical();
             for (uint16_t i = 0; i < size; i++) {
                 FIFO_Push(rx_fifo, dma_rx_buf[i]);
             }
+            ExitCritical(primask);
         }
     }
 }

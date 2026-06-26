@@ -254,7 +254,7 @@ void FSM_Controller::set_cmd_to_R2()
 {
     if(airjoy_data_.page != 0x01)
     {
-        if(cmd_to_r2_cnt < airjoy_data_.recv_command_load1)
+        if(cmd_to_r2_cnt < airjoy_data_.recv_command_total_cnt)
         {
             if(airjoy_data_.recv_command_command != 0)
             {

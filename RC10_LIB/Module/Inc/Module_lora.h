@@ -5,6 +5,13 @@
 #include "BSP_USB_UART_Driver.h"
 #include "stdint.h"
 
+//测试通过 本机tx_error_cnt=1
+#ifndef LORA_TEST_FORCE_TX_DMA_FAIL_ONCE
+// 置 1：第一次启动 LoRa TX DMA 时模拟返回 HAL_BUSY。
+// 现象：tx_error_cnt 增加 1，tx_busy 被清零，后续 AUX 触发仍可继续发送。
+#define LORA_TEST_FORCE_TX_DMA_FAIL_ONCE 0
+#endif
+
 namespace tim { class Tim; }
 
 #ifdef __cplusplus
@@ -51,7 +58,15 @@ typedef struct{
 
     // ---- 串口屏命令帧 ----
     uint8_t recv_command_command;
-    uint8_t recv_command_cnt;
+    uint8_t recv_command_cnt;        // 当前命令的累计次数（单命令）
+    uint8_t recv_command_total_cnt;  // 全部 9 个命令 (0~8) 的计数器总和
+    uint8_t link_lost;
+
+    // ---- 通信统计 -------
+    uint16_t rx_drop_cnt;
+    uint16_t tx_drop_cnt;
+    uint16_t tx_error_cnt;
+    uint16_t rx_crc_error_cnt;
 
 }RC10_AirJoy_Data_S;
 
@@ -75,6 +90,11 @@ public:
     const KFS_DATA_S& GetKFSData() const { return kfs_data; }
 
     void update_airjoy_data(RC10_AirJoy_Data_S * data);
+    bool is_link_lost() const { return link_lost; }
+    uint16_t get_rx_drop_cnt() const { return GetRxDropCnt(); }
+    uint16_t get_tx_drop_cnt() const { return GetTxDropCnt(); }
+    uint16_t get_tx_error_cnt() const { return GetTxErrorCnt(); }
+    uint16_t get_rx_crc_error_cnt() const { return GetRxCrcErrorCnt(); }
 
     void send_robot_pos(float x, float y, float yaw);
 
@@ -129,7 +149,7 @@ public:
 
 
 protected:
-    virtual void Comm_TxUseTxDMA(UART_HandleTypeDef* huart, uint8_t* data, uint16_t size) override;
+    virtual HAL_StatusTypeDef Comm_TxUseTxDMA(UART_HandleTypeDef* huart, uint8_t* data, uint16_t size) override;
     void EXTI_Prosess();        //  protectedֻ All_EXTI_Prosess
     static void RxCallback(uint8_t* buf, uint16_t len);
 
@@ -146,6 +166,9 @@ private:
     GPIO_TypeDef* lora_aux_port;
     uint16_t lora_aux_pin;
     uint32_t timer_tick_count;
+    uint32_t last_joystick_rx_tick;
+    uint32_t last_joystick_frame_count;
+    bool link_lost;
     
     uint8_t tx_ring_buffer[RING_BUF_SIZE];
     uint8_t rx_ring_buffer[RING_BUF_SIZE];
