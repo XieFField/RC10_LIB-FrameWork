@@ -1097,6 +1097,7 @@ private:
         // 暂停自动
         if (airjoy_data_.RT == 1 && pause_click == false)
         {
+            pause_click = true;
             KFS_flag.pause_flag = !KFS_flag.pause_flag;
             if (KFS_flag.pause_flag == true)
             {
@@ -1118,6 +1119,7 @@ private:
             }
             else if (KFS_flag.pause_flag == false)
             {
+                Path_end_point = robot_pos_;
                 flag_reset();
                 KFS_Selection_Planning();
             }
