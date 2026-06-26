@@ -152,7 +152,7 @@ void ALL_Setup_ConfigInit(void)
     swerve_task_demo.init();
 #endif
 
-#if JIA_USE_FOUR_STEER_CHASSIS && !TEST_TEMP && !DEBUG_SHIT
+#if !TEST_TEMP && !DEBUG_SHIT
     Chassis::InitConfig chassis_init_config =
     {
         // 转向电机句柄（按轮序 0~3 对应）

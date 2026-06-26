@@ -62,6 +62,7 @@ namespace communication{
         rec_KFS2_place4=0;
         rec_KFSf_place1=0;
 
+        saven_color = 1;
         // Communication_RX_DMA(rxhuart, dma_rx_buf, DMA_BUF_SIZE);
         // __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); 
     }

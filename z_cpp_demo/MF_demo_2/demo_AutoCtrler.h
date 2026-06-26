@@ -61,6 +61,7 @@ typedef struct
     int8_t MFroad[3] = {0};
     int8_t mustPastMap[12] = {0};
     int8_t Index_MFroad[3] = {0,0,0}; //记录MFroad在mustPastMap中的索引位置，方便后续路径跟踪
+    int8_t sp_handling_KFS[3] = {0, 0, 0};
     int8_t exitMap = 26;
 } PathInformation_S;
 
@@ -81,6 +82,12 @@ Point2D MapCenterWorld(int8_t map);
 PathNode_S PathNodeResult_calc(Point2D robotPos, int8_t MF1, int8_t MF2);
 
 PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t MF3);
+
+extern const float MF_high_blue[12];
+extern const float MF_high_red[12];
+extern int8_t color;
+float GetMFHeight(int8_t mfNum);
+float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum);
 
 RoadResult_S MFNum_ToCatchRoadResult(int8_t MFNum);
 

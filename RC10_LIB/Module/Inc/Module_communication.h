@@ -249,7 +249,11 @@ namespace communication{
         }
 
         uint8_t GetColor(void) {
-            return rec_page>>4;
+            if((rec_page&0x0F)==0x01)
+            {
+                saven_color = rec_page>>4;
+            }
+            return saven_color;
         }
 
     private:
@@ -311,6 +315,8 @@ namespace communication{
         uint8_t rec_KFS2_place3;
         uint8_t rec_KFS2_place4;
         uint8_t rec_KFSf_place1;
+
+        uint8_t saven_color;
     protected:
     };
 }

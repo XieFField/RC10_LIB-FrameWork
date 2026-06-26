@@ -157,6 +157,51 @@ TEST_CASE("testMode30SingleWheelSharedDeadzoneSuppressesContinuousAndStepInputs"
     EXPECT_NEAR(chassis.debug_control_.single_wheel.drive.command_value, 0.0f, 1.0e-6f);
 }
 
+TEST_CASE("testMode30SingleWheelSharedDeadzoneRemapsContinuousInputFromEdge")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.input_deadzone = 0.3f;
+    chassis.debug_control_.single_wheel.drive.input_mode_raw = static_cast<unsigned char>(Chassis::DirectAxisInputMode::kRcContinuous);
+    chassis.debug_control_.single_wheel.drive.command_limit = 1000.0f;
+    chassis.airjoy_data_.left_x = 0.65f;
+    chassis.airjoy_data_.right_x = 0.65f;
+
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+
+    const float remapped = (0.65f - 0.3f) / (1.0f - 0.3f);
+    EXPECT_NEAR(chassis.debug_control_.single_wheel.steer.command_value, remapped * 90.0f, 1.0e-4f);
+    EXPECT_NEAR(chassis.debug_control_.single_wheel.drive.command_value, remapped * 1000.0f, 1.0e-4f);
+    EXPECT_NEAR(steer_motors[1].getTargetTotalAngle(), remapped * 90.0f, 1.0e-4f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), remapped * 1000.0f, 1.0e-4f);
+}
+
+TEST_CASE("testMode30SingleWheelSharedDeadzoneRemapsStepThresholdDecision")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSingleWheelIsolatedDirectHarness(chassis, steer_motors, drive_motors);
+
+    chassis.debug_control_.single_wheel.input_deadzone = 0.3f;
+    chassis.debug_control_.single_wheel.drive.input_mode_raw = static_cast<unsigned char>(Chassis::DirectAxisInputMode::kRcStep);
+    chassis.debug_control_.single_wheel.drive.step_threshold = 0.2f;
+    chassis.debug_control_.single_wheel.drive.step_value = 200.0f;
+
+    chassis.airjoy_data_.right_x = 0.42f;
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_NEAR(chassis.debug_control_.single_wheel.drive.command_value, 0.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 0.0f, 1.0e-6f);
+
+    chassis.airjoy_data_.right_x = 0.50f;
+    EXPECT_TRUE(runHostDebugControlCycle(chassis));
+    EXPECT_NEAR(chassis.debug_control_.single_wheel.drive.command_value, 200.0f, 1.0e-6f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 200.0f, 1.0e-6f);
+}
+
 TEST_CASE("testMode30SingleWheelAxisEnablesAndEstopGateOutputs")
 {
     Chassis chassis;
@@ -496,7 +541,7 @@ TEST_CASE("testJustFloatSingleWheelDriveOnlyObserveIndexFallsBackToZeroWhenOutOf
     EXPECT_NEAR(g_test_justfloat_capture.values[3], 54.0f, 1.0e-6f);
 }
 
-TEST_CASE("testMode30SingleWheelDriveStepGeneratorOverridesManualInput")
+TEST_CASE("testMode30SingleWheelDirectDriveUsesManualInputWithoutRemovedStepGenerator")
 {
     Chassis chassis;
     TestMotor steer_motors[4];
@@ -504,22 +549,24 @@ TEST_CASE("testMode30SingleWheelDriveStepGeneratorOverridesManualInput")
     configureSingleWheelDriveVescHarness(chassis, steer_motors, drive_motors);
 
     chassis.debug_control_.single_wheel.drive.command_value = 100.0f;
-    chassis.debug_drive_step_generator_[1].enable = true;
-    chassis.debug_drive_step_generator_[1].step_target_rpm = 420.0f;
-    chassis.debug_drive_step_generator_[1].hold_ms = 3.0f;
-    chassis.debug_drive_step_generator_[1].rest_ms = 2.0f;
-    chassis.debug_drive_step_generator_[1].alternate_sign = true;
-    chassis.debug_drive_step_generator_[1].start_positive = true;
-    chassis.debug_drive_step_generator_[1].auto_restart = true;
 
     EXPECT_TRUE(runHostDebugControlCycle(chassis));
-    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 420.0f, 1.0e-4f);
-    EXPECT_NEAR(chassis.debug_drive_load_trace_.target_rpm, 420.0f, 1.0e-4f);
-    EXPECT_NEAR(chassis.debug_drive_load_trace_.step_phase, 1.0f, 1.0e-6f);
-    EXPECT_TRUE(chassis.debug_drive_load_trace_.stepgen_enable > 0.5f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 100.0f, 1.0e-4f);
 }
 
-TEST_CASE("testDriveVirtualLoadInjectsBiasOnlyForSelectedWheelAndPidMode")
+TEST_CASE("testRemovedDebugOutputFamilyRawValueFallsBackToOffAndDoesNotEmitPayload")
+{
+    Chassis chassis;
+    testHostResetJustFloatCapture();
+    configureDebugOutputFamily(chassis, 3U);
+    chassis.time_ms_ = 120U;
+
+    emitDebugOutputForHost(chassis, true);
+
+    EXPECT_TRUE(!g_test_justfloat_capture.called);
+}
+
+TEST_CASE("testMode30DirectDriveIgnoresAllHomedGateForTargetWheel")
 {
     Chassis chassis;
     TestMotor steer_motors[4];
@@ -527,56 +574,14 @@ TEST_CASE("testDriveVirtualLoadInjectsBiasOnlyForSelectedWheelAndPidMode")
     configureSingleWheelDriveVescHarness(chassis, steer_motors, drive_motors);
 
     chassis.debug_control_.single_wheel.drive.command_value = 180.0f;
-    chassis.debug_drive_virtual_load_[1].enable = true;
-    chassis.debug_drive_virtual_load_[1].delta_j_current_per_rad_s2 = 10.0f;
-    chassis.debug_drive_virtual_load_[1].delta_b_current_per_rad_s = 20.0f;
-    chassis.debug_drive_virtual_load_[1].coulomb_current_mA = 30.0f;
-    chassis.debug_drive_virtual_load_[1].coulomb_sign_vel_eps_rad_s = 0.1f;
-    chassis.debug_drive_virtual_load_[1].bias_current_limit_mA = 1000.0f;
-    drive_motors[1].setFeedbackRpm(jia::radsToRpmF32(2.0f));
-    chassis.last_drive_feedback_omega_rad_s_[1] = 1.0f;
-    drive_motors[1].setPidOutputObservation(90.0f, 90.0f);
-
-    EXPECT_TRUE(runHostDebugControlCycle(chassis));
-    EXPECT_NEAR(drive_motors[1].getSpeedPidCurrentBias(), -1000.0f, 1.0e-4f);
-    EXPECT_NEAR(chassis.debug_drive_load_trace_.omega_rad_s, 2.0f, 1.0e-6f);
-    EXPECT_NEAR(chassis.debug_drive_load_trace_.alpha_est_rad_s2, 1000.0f, 1.0e-3f);
-    EXPECT_NEAR(chassis.debug_drive_load_trace_.j_term_mA, -10000.0f, 1.0e-3f);
-    EXPECT_NEAR(chassis.debug_drive_load_trace_.b_term_mA, -40.0f, 1.0e-6f);
-    EXPECT_NEAR(chassis.debug_drive_load_trace_.tc_term_mA, -30.0f, 1.0e-6f);
-    EXPECT_NEAR(chassis.debug_drive_load_trace_.load_bias_current_mA, -1000.0f, 1.0e-6f);
-
-    drive_motors[1].setRpmControlMode(VESC_RPM_CONTROL_NATIVE_ERPM);
-    EXPECT_TRUE(runHostDebugControlCycle(chassis));
-    EXPECT_NEAR(drive_motors[1].getSpeedPidCurrentBias(), 0.0f, 1.0e-6f);
-}
-
-TEST_CASE("testMode30DriveVirtualLoadIgnoresAllHomedGateForTargetWheel")
-{
-    Chassis chassis;
-    TestMotor steer_motors[4];
-    VESC_Motor drive_motors[4];
-    configureSingleWheelDriveVescHarness(chassis, steer_motors, drive_motors);
-
-    chassis.debug_control_.single_wheel.drive.command_value = 180.0f;
-    chassis.debug_drive_virtual_load_[1].enable = true;
-    chassis.debug_drive_virtual_load_[1].delta_j_current_per_rad_s2 = 10.0f;
-    chassis.debug_drive_virtual_load_[1].delta_b_current_per_rad_s = 20.0f;
-    chassis.debug_drive_virtual_load_[1].coulomb_current_mA = 30.0f;
-    chassis.debug_drive_virtual_load_[1].coulomb_sign_vel_eps_rad_s = 0.1f;
-    chassis.debug_drive_virtual_load_[1].bias_current_limit_mA = 1000.0f;
-    chassis.wheel_config_[1].corrected_drive_omega_rad_s = 2.0f;
-    chassis.last_drive_feedback_omega_rad_s_[1] = 1.0f;
-    drive_motors[1].setPidOutputObservation(90.0f, 90.0f);
 
     // mode30 目标轮直控本来就应绕过全车 homing gate，虚拟负载也应该跟着这条语义走。
     chassis.computeSingleWheelIsolatedCommandsMode30(1U, false);
 
-    EXPECT_NEAR(drive_motors[1].getSpeedPidCurrentBias(), -1000.0f, 1.0e-4f);
-    EXPECT_TRUE(chassis.debug_drive_load_trace_.virtual_load_enable > 0.5f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 180.0f, 1.0e-4f);
 }
 
-TEST_CASE("testMode30DriveVirtualLoadIgnoresOtherWheelSteerFaultForTargetWheel")
+TEST_CASE("testMode30DirectDriveIgnoresOtherWheelSteerFaultForTargetWheel")
 {
     Chassis chassis;
     TestMotor steer_motors[4];
@@ -584,59 +589,38 @@ TEST_CASE("testMode30DriveVirtualLoadIgnoresOtherWheelSteerFaultForTargetWheel")
     configureSingleWheelDriveVescHarness(chassis, steer_motors, drive_motors);
 
     chassis.debug_control_.single_wheel.drive.command_value = 180.0f;
-    chassis.debug_drive_virtual_load_[1].enable = true;
-    chassis.debug_drive_virtual_load_[1].delta_j_current_per_rad_s2 = 10.0f;
-    chassis.debug_drive_virtual_load_[1].delta_b_current_per_rad_s = 20.0f;
-    chassis.debug_drive_virtual_load_[1].coulomb_current_mA = 30.0f;
-    chassis.debug_drive_virtual_load_[1].coulomb_sign_vel_eps_rad_s = 0.1f;
-    chassis.debug_drive_virtual_load_[1].bias_current_limit_mA = 1000.0f;
-    chassis.wheel_config_[1].corrected_drive_omega_rad_s = 2.0f;
-    chassis.last_drive_feedback_omega_rad_s_[1] = 1.0f;
-    drive_motors[1].setPidOutputObservation(90.0f, 90.0f);
     chassis.wheel_config_[0].steer_fault_state = Chassis::SteerFaultState::kRecovering;
 
     // 单轮虚拟负载只服务目标轮速度环，不该被其他轮的 steer fault 全车级短路。
     chassis.computeSingleWheelIsolatedCommandsMode30(1U, true);
 
-    EXPECT_NEAR(drive_motors[1].getSpeedPidCurrentBias(), -1000.0f, 1.0e-4f);
-    EXPECT_TRUE(chassis.debug_drive_load_trace_.virtual_load_enable > 0.5f);
+    EXPECT_NEAR(drive_motors[1].getTargetRPM(), 180.0f, 1.0e-4f);
 }
 
-TEST_CASE("testJustFloatDrivePidLoadProfileEmitsFixed16ChannelPayload")
+TEST_CASE("testRemovedDrivePidLoadProfileRawValueFallsBackToYawPidSafeProfile")
 {
     Chassis chassis;
     testHostResetJustFloatCapture();
     configureDebugOutputFamily(chassis, 2U);
     configureJustFloatProfile(chassis, 3U);
-    chassis.debug_output_.justfloat.drive_pid_load.period_ms = 0U;
-    chassis.debug_output_runtime_.justfloat.drive_pid_load.last_ms = 0U;
+    chassis.debug_output_.justfloat.yaw_pid.period_ms = 0U;
+    chassis.debug_output_runtime_.justfloat.yaw_pid.last_ms = 0U;
     chassis.time_ms_ = 120U;
-    chassis.debug_drive_load_trace_.observe_wheel_idx = 1.0f;
-    chassis.debug_drive_load_trace_.target_rpm = 300.0f;
-    chassis.debug_drive_load_trace_.feedback_rpm = 250.0f;
-    chassis.debug_drive_load_trace_.total_current_cmd_mA = 600.0f;
-    chassis.debug_drive_load_trace_.pid_current_mA = 550.0f;
-    chassis.debug_drive_load_trace_.load_bias_current_mA = 50.0f;
-    chassis.debug_drive_load_trace_.j_term_mA = 10.0f;
-    chassis.debug_drive_load_trace_.b_term_mA = 20.0f;
-    chassis.debug_drive_load_trace_.tc_term_mA = 20.0f;
-    chassis.debug_drive_load_trace_.omega_rad_s = 4.0f;
-    chassis.debug_drive_load_trace_.alpha_est_rad_s2 = 6.0f;
-    chassis.debug_drive_load_trace_.step_phase = 2.0f;
-    chassis.debug_drive_load_trace_.virtual_load_enable = 1.0f;
-    chassis.debug_drive_load_trace_.stepgen_enable = 0.0f;
+    chassis.yaw_pid_trace_.mode_tag = 0.5f;
+    chassis.yaw_pid_trace_.target_yaw_rad = 0.25f;
+    chassis.debug_mirror_.all_homed = true;
+    chassis.debug_mirror_.steer_fault_any_active = false;
+    chassis.debug_mirror_.high_speed_drive_suppression_active = false;
+    chassis.debug_mirror_.reverse_intent_active = false;
 
     emitDebugOutputForHost(chassis, true);
 
     EXPECT_TRUE(g_test_justfloat_capture.called);
-    EXPECT_TRUE(g_test_justfloat_capture.size == 16U);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 15U);
     EXPECT_NEAR(g_test_justfloat_capture.values[0], 0.12f, 1.0e-6f);
-    EXPECT_NEAR(g_test_justfloat_capture.values[1], 1.0f, 1.0e-6f);
-    EXPECT_NEAR(g_test_justfloat_capture.values[2], 300.0f, 1.0e-6f);
-    EXPECT_NEAR(g_test_justfloat_capture.values[4], 600.0f, 1.0e-6f);
-    EXPECT_NEAR(g_test_justfloat_capture.values[12], 2.0f, 1.0e-6f);
-    EXPECT_NEAR(g_test_justfloat_capture.values[13], 1.0f, 1.0e-6f);
-    EXPECT_NEAR(g_test_justfloat_capture.values[15], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[1], 0.5f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[2], 0.25f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[12], 1.0f, 1.0e-6f);
 }
 
 TEST_CASE("testJustFloatDriveZeroStopBrakeTraceEmitsFixed12ChannelPayloadWhenBrakeInactive")
@@ -652,9 +636,9 @@ TEST_CASE("testJustFloatDriveZeroStopBrakeTraceEmitsFixed12ChannelPayloadWhenBra
     chassis.debug_output_runtime_.justfloat.drive_zero_stop_brake.last_ms = 0U;
     chassis.time_ms_ = 220U;
     chassis.debug_control_.common.observe_wheel_index = 2U;
-    chassis.debug_drive_load_trace_.observe_wheel_idx = 2.0f;
-    chassis.debug_drive_load_trace_.target_rpm = 180.0f;
-    chassis.debug_drive_load_trace_.feedback_rpm = 175.0f;
+    chassis.debug_drive_zero_stop_brake_trace_.observe_wheel_idx = 2.0f;
+    chassis.debug_drive_zero_stop_brake_trace_.target_rpm = 180.0f;
+    chassis.debug_drive_zero_stop_brake_trace_.feedback_rpm = 175.0f;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.target_data_.vel_x = 0.015f;
     chassis.target_data_.vel_y = 0.0f;
@@ -696,9 +680,9 @@ TEST_CASE("testJustFloatDriveZeroStopBrakeTraceEmitsBrakeStateAndCurrent")
     chassis.debug_output_runtime_.justfloat.drive_zero_stop_brake.last_ms = 0U;
     chassis.time_ms_ = 360U;
     chassis.debug_control_.common.observe_wheel_index = 1U;
-    chassis.debug_drive_load_trace_.observe_wheel_idx = 1.0f;
-    chassis.debug_drive_load_trace_.target_rpm = 90.0f;
-    chassis.debug_drive_load_trace_.feedback_rpm = 110.0f;
+    chassis.debug_drive_zero_stop_brake_trace_.observe_wheel_idx = 1.0f;
+    chassis.debug_drive_zero_stop_brake_trace_.target_rpm = 90.0f;
+    chassis.debug_drive_zero_stop_brake_trace_.feedback_rpm = 110.0f;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.target_data_.vel_x = 0.0f;
     chassis.target_data_.vel_y = 0.0f;
@@ -727,12 +711,173 @@ TEST_CASE("testJustFloatDriveZeroStopBrakeTraceEmitsBrakeStateAndCurrent")
     EXPECT_NEAR(g_test_justfloat_capture.values[11], -0.4f, 1.0e-6f);
 }
 
+TEST_CASE("testJustFloatHomingTraceOverviewEmitsFixed21ChannelPayload")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSingleWheelDebugHarness(chassis, steer_motors, drive_motors);
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].homing_enabled = true;
+        chassis.wheel_config_[i].homing_sensor_active_high = true;
+        chassis.wheel_config_[i].homing_gpio_port = (i == 0) ? kPHOTOGATE_1_GPIO_Port
+                                               : (i == 1) ? kPHOTOGATE_2_GPIO_Port
+                                               : (i == 2) ? kPHOTOGATE_3_GPIO_Port
+                                                          : kPHOTOGATE_4_GPIO_Port;
+        chassis.wheel_config_[i].homing_gpio_pin = static_cast<jia::u16>((i == 0) ? kPHOTOGATE_1_Pin
+                                                                        : (i == 1) ? kPHOTOGATE_2_Pin
+                                                                        : (i == 2) ? kPHOTOGATE_3_Pin
+                                                                                   : kPHOTOGATE_4_Pin);
+    }
+    testHostResetJustFloatCapture();
+    configureDebugOutputFamily(chassis, 2U);
+    configureJustFloatProfile(chassis, 5U);
+    chassis.debug_output_.justfloat.homing_trace.view_raw = 0U;
+    chassis.debug_output_.justfloat.homing_trace.overview.period_ms = 0U;
+    chassis.debug_output_runtime_.justfloat.homing_trace.overview.last_ms = 0U;
+    chassis.time_ms_ = 480U;
+    chassis.first_boot_homing_delay_.pending = true;
+    chassis.first_boot_homing_delay_.active = true;
+    chassis.first_boot_homing_delay_.elapsed_ms = 123U;
+    chassis.homing_start_request_ = true;
+    chassis.steer_fault_any_active_ = true;
+    chassis.wheel_config_[0].homing_state = Chassis::HomingState::kIdle;
+    chassis.wheel_config_[1].homing_state = Chassis::HomingState::kSearch;
+    chassis.wheel_config_[2].homing_state = Chassis::HomingState::kEdgeDetected;
+    chassis.wheel_config_[3].homing_state = Chassis::HomingState::kReady;
+    chassis.wheel_config_[0].homing_last_edge_is_falling = false;
+    chassis.wheel_config_[1].homing_last_edge_is_falling = true;
+    chassis.wheel_config_[2].homing_last_edge_is_falling = false;
+    chassis.wheel_config_[3].homing_last_edge_is_falling = true;
+    setPhotogateStateForWheel(0, false);
+    setPhotogateStateForWheel(1, true);
+    setPhotogateStateForWheel(2, false);
+    setPhotogateStateForWheel(3, true);
+
+    emitDebugOutputForHost(chassis, false);
+
+    EXPECT_TRUE(g_test_justfloat_capture.called);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 21U);
+    EXPECT_NEAR(g_test_justfloat_capture.values[0], 0.48f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[1], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[2], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[3], 123.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[4], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[5], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[6], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[7], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[8], 2.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[9], 5.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[10], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[11], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[12], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[13], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[14], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[15], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[16], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[17], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[18], chassis.wheel_config_[0].homing_search_rpm, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[19], chassis.wheel_config_[1].homing_search_rpm, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[20], 1.0f, 1.0e-6f);
+}
+
+TEST_CASE("testJustFloatHomingTraceObserveWheelDetailEmitsFixed25ChannelPayload")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSingleWheelDebugHarness(chassis, steer_motors, drive_motors);
+    configureDriveContinuityHarness(chassis, drive_motors);
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].homing_enabled = true;
+        chassis.wheel_config_[i].homing_sensor_active_high = true;
+        chassis.wheel_config_[i].homing_gpio_port = (i == 0) ? kPHOTOGATE_1_GPIO_Port
+                                               : (i == 1) ? kPHOTOGATE_2_GPIO_Port
+                                               : (i == 2) ? kPHOTOGATE_3_GPIO_Port
+                                                          : kPHOTOGATE_4_GPIO_Port;
+        chassis.wheel_config_[i].homing_gpio_pin = static_cast<jia::u16>((i == 0) ? kPHOTOGATE_1_Pin
+                                                                        : (i == 1) ? kPHOTOGATE_2_Pin
+                                                                        : (i == 2) ? kPHOTOGATE_3_Pin
+                                                                                   : kPHOTOGATE_4_Pin);
+    }
+
+    testHostResetJustFloatCapture();
+    configureDebugOutputFamily(chassis, 2U);
+    configureJustFloatProfile(chassis, 5U);
+    chassis.debug_output_.justfloat.homing_trace.view_raw = 1U;
+    chassis.debug_output_.justfloat.homing_trace.detail.period_ms = 0U;
+    chassis.debug_output_runtime_.justfloat.homing_trace.detail.last_ms = 0U;
+    chassis.time_ms_ = 612U;
+    chassis.debug_control_.common.observe_wheel_index = 2U;
+    chassis.first_boot_homing_delay_.pending = false;
+    chassis.first_boot_homing_delay_.active = true;
+    chassis.first_boot_homing_delay_.elapsed_ms = 456U;
+    chassis.homing_start_request_ = true;
+    chassis.wheel_config_[2].homing_state = Chassis::HomingState::kSearch;
+    chassis.wheel_config_[2].homing_last_sensor_active = true;
+    chassis.wheel_config_[2].homing_last_edge_is_falling = true;
+    chassis.wheel_config_[2].homing_edge_confirm_count = 2U;
+    chassis.wheel_config_[2].homing_last_confirm_edge_is_falling = true;
+    chassis.wheel_config_[2].homing_search_timeout_armed = true;
+    chassis.wheel_config_[2].homing_elapsed_s = 0.789f;
+    chassis.wheel_config_[2].homing_zero_valid = false;
+    chassis.wheel_config_[2].steer_fault_state = Chassis::SteerFaultState::kRecovering;
+    chassis.wheel_config_[2].steer_fault_rehome_request = true;
+    chassis.wheel_config_[2].homing_auto_retry_attempt_count = 3U;
+    chassis.wheel_config_[2].homing_auto_retry_wait_active = true;
+    chassis.wheel_config_[2].homing_auto_retry_wait_elapsed_ms = 654U;
+    chassis.wheel_config_[2].homing_auto_retry_armed_by_recovery_failure = true;
+    chassis.wheel_config_[2].theta_oa_to_owi_rad = jia::degToRadF32(90.0f);
+    chassis.wheel_config_[2].homing_runtime_zero_offset_rad = jia::degToRadF32(17.0f);
+    chassis.wheel_config_[2].homing_hold_corrected_local_total_rad = jia::degToRadF32(123.0f);
+    chassis.wheel_config_[2].corrected_steer_motor_total_angle_rad = jia::degToRadF32(30.0f);
+    chassis.wheel_config_[2].target_steer_motor_total_angle_rad = jia::degToRadF32(45.0f);
+    chassis.wheel_config_[2].steer_feedback_current_mA = 2345.0f;
+    chassis.wheel_config_[2].steer_feedback_angle_delta_rad = jia::degToRadF32(2.5f);
+    setPhotogateStateForWheel(2, true);
+    steer_motors[2].setTargetRPM(321.0f);
+
+    emitDebugOutputForHost(chassis, false);
+
+    EXPECT_TRUE(g_test_justfloat_capture.called);
+    EXPECT_TRUE(g_test_justfloat_capture.size == 25U);
+    EXPECT_NEAR(g_test_justfloat_capture.values[0], 0.612f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[1], 2.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[2], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[3], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[4], 456.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[5], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[6], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[7], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[8], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[9], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[10], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[11], 2.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[12], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[13], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[14], 0.789f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[15], 0.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[16], 2.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[17], 1.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[18], 120.0f, 1.0e-4f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[19], 135.0f, 1.0e-4f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[20], 17.0f, 1.0e-4f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[21], 123.0f, 1.0e-4f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[22], chassis.wheel_config_[2].homing_search_rpm, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[23], 3.0f, 1.0e-6f);
+    EXPECT_NEAR(g_test_justfloat_capture.values[24], 1.0f, 1.0e-6f);
+}
+
 TEST_CASE("testDebugOmegaZInjectionModeOffKeepsManualOmegaInput")
 {
     Chassis chassis;
     chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
     chassis.runtime_strategy_cfg_.max_vel_y_ = 2.0f;
     chassis.runtime_strategy_cfg_.max_omega_z_ = 3.0f;
+    chassis.debug_control_.injection.translation_input_deadzone = 0.0f;
+    chassis.debug_control_.injection.rotation_input_deadzone = 0.0f;
     chassis.airjoy_data_.left_y = 0.0f;
     chassis.airjoy_data_.left_x = 0.0f;
     chassis.airjoy_data_.right_x = 0.5f;
@@ -805,6 +950,8 @@ TEST_CASE("testDebugOmegaZInjectionDoesNotAffectLockToTarget")
 TEST_CASE("testDebugSteerDegAndDriveSpeedModeMapsLeftXAndRightXToInterface")
 {
     Chassis chassis;
+    chassis.debug_control_.injection.translation_input_deadzone = 0.0f;
+    chassis.debug_control_.injection.rotation_input_deadzone = 0.0f;
     chassis.debug_control_.injection.steer_deg_limit = 180.0f;
     chassis.debug_control_.injection.drive_speed_m_s_limit = 1.2f;
     chassis.airjoy_data_.left_x = 0.0f;
@@ -825,6 +972,57 @@ TEST_CASE("testDebugSteerDegAndDriveSpeedModeMapsLeftXAndRightXToInterface")
     EXPECT_NEAR(chassis.input_target_data_.steer_lock_angle_deg, 135.0f, 1.0e-6f);
     EXPECT_NEAR(chassis.input_target_data_.drive_lock_speed_m_s, -0.6f, 1.0e-6f);
     EXPECT_NEAR(chassis.input_target_data_.omega_z, 0.0f, 1.0e-6f);
+}
+
+TEST_CASE("testDebugTargetInjectionDeadzoneRemapsTranslationAndRotationInputs")
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.max_vel_x_ = 2.0f;
+    chassis.runtime_strategy_cfg_.max_vel_y_ = 3.0f;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 4.0f;
+    chassis.debug_control_.injection.translation_input_deadzone = 0.2f;
+    chassis.debug_control_.injection.rotation_input_deadzone = 0.4f;
+    chassis.airjoy_data_.left_x = 0.5f;
+    chassis.airjoy_data_.left_y = -0.6f;
+    chassis.airjoy_data_.right_x = -0.7f;
+
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+
+    const float left_x_remapped = (0.5f - 0.2f) / (1.0f - 0.2f);
+    const float left_y_remapped = -(0.6f - 0.2f) / (1.0f - 0.2f);
+    const float right_x_remapped = -(0.7f - 0.4f) / (1.0f - 0.4f);
+    EXPECT_TRUE(chassis.input_target_data_.mode == Chassis::Mode::kBodySpeedMode);
+    EXPECT_NEAR(chassis.input_target_data_.vel_x, -left_x_remapped * 2.0f, 1.0e-5f);
+    EXPECT_NEAR(chassis.input_target_data_.vel_y, -left_y_remapped * 3.0f, 1.0e-5f);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, right_x_remapped * 4.0f, 1.0e-5f);
+}
+
+TEST_CASE("testDebugTargetInjectionDeadzoneControlsStepAndSteerDriveMapping")
+{
+    Chassis chassis;
+    chassis.runtime_strategy_cfg_.max_omega_z_ = 3.0f;
+    chassis.debug_control_.injection.translation_input_deadzone = 0.2f;
+    chassis.debug_control_.injection.rotation_input_deadzone = 0.4f;
+    chassis.debug_control_.injection.omega_z_injection_mode_raw = static_cast<unsigned char>(Chassis::DebugOmegaZInjectionMode::kStep);
+    chassis.debug_control_.injection.steer_deg_limit = 180.0f;
+    chassis.debug_control_.injection.drive_speed_m_s_limit = 1.2f;
+
+    chassis.airjoy_data_.right_x = 0.55f;
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, 0.0f, 1.0e-6f);
+
+    chassis.airjoy_data_.right_x = 0.8f;
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kBodySpeed);
+    EXPECT_NEAR(chassis.input_target_data_.omega_z, 3.0f, 1.0e-6f);
+
+    chassis.airjoy_data_.left_x = 0.3f;
+    chassis.airjoy_data_.right_x = -0.7f;
+    chassis.applyDebugTargetOverride(Chassis::DebugMode::kSteerDegAndDriveSpeed);
+
+    const float left_x_remapped = (0.3f - 0.2f) / (1.0f - 0.2f);
+    const float right_x_remapped = -(0.7f - 0.4f) / (1.0f - 0.4f);
+    EXPECT_NEAR(chassis.input_target_data_.steer_lock_angle_deg, 90.0f + left_x_remapped * 180.0f, 1.0e-5f);
+    EXPECT_NEAR(chassis.input_target_data_.drive_lock_speed_m_s, right_x_remapped * 1.2f, 1.0e-5f);
 }
 
 } // namespace chassis_semantics_test

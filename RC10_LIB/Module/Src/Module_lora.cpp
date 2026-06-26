@@ -302,7 +302,7 @@ void Lora_communication::update_airjoy_data(RC10_AirJoy_Data_S * data)
 /* ========== 定时器中断 ========== */
 void Lora_communication::Tim_It_Process() {
     timer_tick_count++;
-    if (timer_tick_count >= 20) 
+    if (timer_tick_count >= 15) 
     { // 计数达到 1ms    
         timer_tick_count = 0;
         Comm_SendAxisDataToTxBuffer(send_x, send_y, send_z,
