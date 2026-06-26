@@ -220,6 +220,21 @@ void FSM_Controller::loop()
         {
             is_click = 0;
         }
+
+        static bool is_LB_click = 0;
+        if (airjoy_data_.LB == 1 && is_LB_click == 0) //重新设置夹杆位置
+        {
+            is_LB_click = 1;
+            chassis_setup_->reset_CB_point(
+                Locate_Setup::getInstance()->get_RobotPos_inWorld().x,
+                Locate_Setup::getInstance()->get_RobotPos_inWorld().y
+            )
+
+        }
+        else if (airjoy_data_.LB == 0)
+        {
+            is_LB_click = 0;
+        }
     }
     else if (robot_status_ == ALL_STOP && airjoy_data_.SWB == 0x00 && airjoy_data_.SWE == 0x00)
     {

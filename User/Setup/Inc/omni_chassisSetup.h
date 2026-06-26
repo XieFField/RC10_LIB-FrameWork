@@ -225,6 +225,12 @@ public:
             this->is_chassis_reverse_ = -1.0f;
     }
 
+    void reset_CB_point(float x, float y)
+    {
+        CB_point.CB_Selection_pos[MF_AutoCtrler::get_color()].x = x;
+        CB_point.CB_Selection_pos[MF_AutoCtrler::get_color()].y = y;
+    }
+
 private:
     // Vector2D test_point = {3.0f, 2.0f};
     //-----------------------------------通讯标志位-----------------------------------------//
