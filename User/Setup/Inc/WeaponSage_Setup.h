@@ -107,8 +107,9 @@ namespace WeaponSage_Setup
         bool changeTarget_state = false; //�Ƿ����л�Ŀ��״̬
         float weapon_launch_fastrate = 0.0002; 
         float weapon_launch_slowrate = 0.0001;
-        float weapon_wrist_rate=0.001f;
+        float weapon_wrist_rate=0.05f;
         bool is_Dpad_Done = false; //�Ƿ�����ʹ��D-pad����
+        uint8_t last_Dpad_acting_state=0;
         uint8_t Dpad_acting_state=0;
     }manual_RC10_ctrlForgrip_S;
 

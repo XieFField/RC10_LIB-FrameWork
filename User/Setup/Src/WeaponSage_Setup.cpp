@@ -90,7 +90,7 @@ void Robot_WeaponSage_Setup::loop()
             if(manual_RC10_ctrlForgrip_.is_Dpad_Done)
             {
                 manualControl();
-
+                manual_RC10_ctrlForgrip_.last_Dpad_acting_state=0;
             }
             #endif
             break;
@@ -377,9 +377,9 @@ void Robot_WeaponSage_Setup::manualControl()
 
     #else
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-    if(last_weaponSage_status_ != WEAPONSAGE_MANUAL_CONTROL||manual_RC10_ctrlForgrip_.is_Dpad_Done==true)
+    if(last_weaponSage_status_ != WEAPONSAGE_MANUAL_CONTROL||manual_RC10_ctrlForgrip_.last_Dpad_acting_state!=0)
     {
-		this->idle();
+		//this->idle();
         // 获取当前爪子实际位置，判定逻辑状态
         float current_claw_theta = fmax(fmax(current_pos_.claw_1_pos_,current_pos_.claw_2_pos_),current_pos_.claw_3_pos_); // 以最大闭合角为为夹爪的角度进行计算；
         float current_arm_pos= this->get_CurrentPos().arm_pos_;
@@ -408,7 +408,7 @@ void Robot_WeaponSage_Setup::manualControl()
     if(airjoy_data_.SWE==0)
     {
         if(_tool_Abs(airjoy_data_.right_y) < 0.1)
-        manual_RC10_ctrlForgrip_.changeTarget_state = false;
+			manual_RC10_ctrlForgrip_.changeTarget_state = false;
         if(airjoy_data_.right_y > 0.5f&&target_pos_.launch_pos_ <=initData_.max_launchHeight_)
         {
             
@@ -1038,15 +1038,19 @@ bool Robot_WeaponSage_Setup::D_pad_acting()
     }else if(manual_RC10_ctrlForgrip_.Dpad_acting_state==1)
     {
         bool Sage_up_flag=Sage_to_high();
+        
         if(Sage_up_flag)
         {
+            manual_RC10_ctrlForgrip_.last_Dpad_acting_state=1;
             manual_RC10_ctrlForgrip_.Dpad_acting_state=0;
         }
     }else if(manual_RC10_ctrlForgrip_.Dpad_acting_state==2)
     {
         float sage_down_flag=Sage_to_low();
+        
         if(sage_down_flag)
         {
+            manual_RC10_ctrlForgrip_.last_Dpad_acting_state=2;
             manual_RC10_ctrlForgrip_.Dpad_acting_state=0;
         }
     }  
@@ -1057,6 +1061,7 @@ bool Robot_WeaponSage_Setup::D_pad_acting()
         if(abs(current_pos_.wrist_pos_-target_pos_.wrist_pos_)<0.1f)
         {
             manual_RC10_ctrlForgrip_.Dpad_acting_state=0;
+            manual_RC10_ctrlForgrip_.last_Dpad_acting_state=3;
         }
     }else if(manual_RC10_ctrlForgrip_.Dpad_acting_state==4)
     {
@@ -1064,6 +1069,7 @@ bool Robot_WeaponSage_Setup::D_pad_acting()
         if(abs(current_pos_.wrist_pos_-target_pos_.wrist_pos_)<0.1f)
         {
             manual_RC10_ctrlForgrip_.Dpad_acting_state=0;
+            manual_RC10_ctrlForgrip_.last_Dpad_acting_state=4;
         }
     }
     if(manual_RC10_ctrlForgrip_.Dpad_acting_state==0)
@@ -1152,15 +1158,21 @@ float Robot_WeaponSage_Setup::WristToClosest_negative(float current_angle)
     return target_angle;
 }
 static bool launch_flag=false;
+static bool is_launch_ok=false;
 bool Robot_WeaponSage_Setup::Sage_to_high()
 {
   
     if(!launch_flag)
     {
         this->setLaunch_angle(0.9*initData_.max_launchHeight_);
-        launch_flag=true;
+        if(abs(current_pos_.launch_pos_-0.9*initData_.max_launchHeight_)<0.02)
+        {
+            launch_flag=true;
+            is_launch_ok= true;
+        }
+            
     }
-    if(abs(current_pos_.launch_pos_-0.9*initData_.max_launchHeight_)<0.02f)
+    if(is_launch_ok)
     {
         this->setArm_angle(90.0f);
         if(abs(current_pos_.arm_pos_-90.0f)<0.02f)
@@ -1168,35 +1180,28 @@ bool Robot_WeaponSage_Setup::Sage_to_high()
             this->Close_TargetClaw_Untight();
             if(auto_ctrl_.flag.is_untight)
             {
-                bool flag_done=Close_TargetClaw();
-                if(flag_done)
+                // bool flag_done=
+                Close_TargetClaw();
+                if(auto_ctrl_.flag.is_clawed)
                 {
                     this->setLaunch_angle(initData_.max_launchHeight_);
                     if(abs(current_pos_.launch_pos_-initData_.max_launchHeight_)<0.02f)
                     {
+                        // this->Close_TargetClaw();
+                        // if(auto_ctrl_.flag.is_clawed)
+                        // {
                         launch_flag=false;
+                        is_launch_ok=false;
+                        auto_ctrl_.flag.is_clawed=false;
+                        auto_ctrl_.flag.is_untight=false;
                         return true;
+                        // }         
                     }
-                    else
-                    {
-                        return false;
-                    }
-                }else
-                {
-                    return false;
-                }
-            }else
-            {
-                return false;
+                }   
             }
-        }else
-        {
-            return false;
         }
-    }else
-    {
-        return false;
     }
+    return false;
 }
 
 bool Robot_WeaponSage_Setup::Sage_to_low()
@@ -1204,9 +1209,13 @@ bool Robot_WeaponSage_Setup::Sage_to_low()
     if(!launch_flag)
     {
         this->setLaunch_angle(0.9*initData_.max_launchHeight_);
-        launch_flag=true;
+        if(current_pos_.launch_pos_-0.9*initData_.max_launchHeight_)
+        {
+            launch_flag=true;
+            is_launch_ok =true;
+        }
     }
-    if(abs(current_pos_.launch_pos_-0.9*initData_.max_launchHeight_)<0.02f)
+    if(is_launch_ok)
     {
         this->setArm_angle(90.0f);
         if(abs(current_pos_.arm_pos_-90.0f)<0.02f)
@@ -1218,36 +1227,28 @@ bool Robot_WeaponSage_Setup::Sage_to_low()
                 this->setLaunch_angle(0.1*initData_.max_launchHeight_);
                 if(abs(current_pos_.launch_pos_-0.1*initData_.max_launchHeight_)<0.02f)
                 {
-                    bool flag_done=Close_TargetClaw();
-                    if(flag_done)
+                    //bool flag_done=
+                    Close_TargetClaw();
+                    if(auto_ctrl_.flag.is_clawed)
                     {
-                        this->setLaunch_angle(0.2f*initData_.max_launchHeight_);
-                        if(abs(current_pos_.launch_pos_-0.2f*initData_.max_launchHeight_)<0.02f)
-                        {
-                            launch_flag=false;
-                            return true;
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }else
-                    {
-                        return false;
+                        this->setLaunch_angle(0.2*initData_.max_launchHeight_);
                     }
-                }else{
-                return false;
                 }
-            }else{
-                return false;
+                else
+                {
+                    if(abs(current_pos_.launch_pos_-0.2f*initData_.max_launchHeight_)<0.02)
+                    {
+                        auto_ctrl_.flag.is_clawed=false;
+                        auto_ctrl_.flag.is_untight=false;
+                        launch_flag=false;
+                        is_launch_ok=false;
+                        return true;
+                    }
+                }
             }
-        }else
-        {
-            return false;
         }
-    }else{
-        return false;
     }
+    return false;
 }
 
 
@@ -1268,10 +1269,10 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw()
     auto_ctrl_.claw_flag[1]=ctrl_status_.is_claw_2_closed;
     auto_ctrl_.claw_flag[2]=ctrl_status_.is_claw_3_closed;
     float target_claw_pos[3]={0.0f,0.0f,0.0f};
-    if(!auto_ctrl_.claw_flag[0]&&!auto_ctrl_.claw_flag[1]&&!auto_ctrl_.claw_flag[2])
-    {
-        auto_ctrl_.flag.is_clawed=false;
-    }
+//    if(!auto_ctrl_.claw_flag[0]&&!auto_ctrl_.claw_flag[1]&&!auto_ctrl_.claw_flag[2])
+//    {
+//        auto_ctrl_.flag.is_clawed=false;
+//    }
 
     if(auto_ctrl_.claw_flag[0])
     {
@@ -1284,6 +1285,12 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw()
     if(auto_ctrl_.claw_flag[2])
     {
         target_claw_pos[2]=initData_.max_clawAngle_;
+    }
+
+    if(!auto_ctrl_.auto_ctrl1)
+    {
+        for(int i=0;i<3;i++)
+            target_claw_pos[i]=initData_.max_clawAngle_;
     }
     this->setClaw_1_angle(target_claw_pos[0]);
     this->setClaw_2_angle(target_claw_pos[1]);
@@ -1304,9 +1311,8 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw()
         ctrl_status_.is_closeclaw_start=false;
 		 close_over_cnt++;
          return true;
-     }else{
-        return false;
      }
+        return false;
 }
 
 bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
@@ -1323,28 +1329,34 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
             target_claw_pos[i]=initData_.max_clawAngle_;
         }
     }
-        target_pos_.claw_1_pos_=target_claw_pos[0];
-        target_pos_.claw_2_pos_=target_claw_pos[1];
-        target_pos_.claw_3_pos_=target_claw_pos[2];
-        this->setClaw_1_angle(target_claw_pos[0]); //半松爪子
-        this->setClaw_2_angle(target_claw_pos[1]);
-        this->setClaw_3_angle(target_claw_pos[2]);
 
-        if(!ctrl_status_.is_untight_start && !auto_ctrl_.flag.is_untight) //如果已经调整好爪子了，进入下一个状态
-        {
-            ctrl_status_.untight_startTime=TimeStamp::getInstance().getSeconds();
-            ctrl_status_.is_untight_start=true;
-			untight_time_cnt++;
-        }
-        if(ctrl_status_.now_times-ctrl_status_.untight_startTime>=claw_untight_time&& ctrl_status_.is_untight_start) //保持半松状态1秒钟
-        {
-            auto_ctrl_.flag.is_untight=true;
-            ctrl_status_.is_untight_start=false;
-			untight_over_cnt++;
-            return true;
-        }else{
-            return false;
-        }
+    if(!auto_ctrl_.auto_ctrl1)
+    {
+        for (int i=0;i<3;i++)
+            target_claw_pos[i] = initData_.claw_untight;
+    }
+    target_pos_.claw_1_pos_=target_claw_pos[0];
+    target_pos_.claw_2_pos_=target_claw_pos[1];
+    target_pos_.claw_3_pos_=target_claw_pos[2];
+    this->setClaw_1_angle(target_claw_pos[0]); //半松爪子
+    this->setClaw_2_angle(target_claw_pos[1]);
+    this->setClaw_3_angle(target_claw_pos[2]);
+
+    if(!ctrl_status_.is_untight_start && !auto_ctrl_.flag.is_untight) //如果已经调整好爪子了，进入下一个状态
+    {
+        ctrl_status_.untight_startTime=TimeStamp::getInstance().getSeconds();
+        ctrl_status_.is_untight_start=true;
+        untight_time_cnt++;
+    }
+    if(ctrl_status_.now_times-ctrl_status_.untight_startTime>=claw_untight_time&& ctrl_status_.is_untight_start) //保持半松状态1秒钟
+    {
+        auto_ctrl_.flag.is_untight=true;
+        ctrl_status_.is_untight_start=false;
+        untight_over_cnt++;
+        return true;
+    }else{
+        return false;
+    }
 }
 
 void Robot_WeaponSage_Setup::Judge_launch_status()
