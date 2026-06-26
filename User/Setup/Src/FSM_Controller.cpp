@@ -27,8 +27,8 @@ void FSM_Controller::loop()
     CrsfReceiver::GetInstance(&huart7)->getControlData(&airjoy_data_);
 #else
 
-    // 设置红蓝场：遥控器反馈数据 1为蓝 2为红， 代码内为0蓝 1红
-    MF_AutoCtrler::set_color(airjoy_data_.color == 1 ? 0 : 1);
+    // 设置红蓝场：遥控器反馈数据 1为蓝 2为红， 
+    MF_AutoCtrler::set_color(airjoy_data_.color == 1 ? 1 : 0);
 
     communication::Lora_communication::GetInstance()->Task_Process();
     communication::Lora_communication::GetInstance()->Tim_It_Process();
@@ -666,6 +666,9 @@ void FSM_Controller::auto_ctrl()
             
             if (chassis_setup_->Get_CZ_Arm_flag())
                 arm_setup_->can_putdown(1);
+
+            if(arm_setup_->is_putdown_done())
+                chassis_setup_->Receive_CZ_Arm_flag(false);
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x01 && airjoy_data_.SWD == 0x01) // 竞技场 武器模式
         {
@@ -698,7 +701,7 @@ void FSM_Controller::auto_ctrl()
             chassis_setup_->setChassisStatus(CHASSIS_STOP);
 #endif
             arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-            // arm_setup_->setArmStatus(ARM_IDLE);
+            //arm_setup_->setArmStatus(ARM_IDLE);
             static uint8_t is_click = 0;
 
             if (airjoy_data_.LB == 1 && is_click == 0 && airjoy_data_.page != 0x01)

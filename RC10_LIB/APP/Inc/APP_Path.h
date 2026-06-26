@@ -164,7 +164,9 @@ public:
                         tangent_lock=false;
                     }
                     float temp=(bezier_curve_list[index_].Get_len() - params_[index_].startPos);
-                    if(temp>0)
+                    if( tangent_lock==false)
+                    {
+                        if(temp>0)
                     {
                         params_[index_].targetPos = temp;
                     }
@@ -172,6 +174,9 @@ public:
                     {
                         params_[index_].targetPos = bezier_curve_list[index_].Get_len();
                     }
+                        
+                    }
+                    
                     params_[index_].startPos = 0.0f; // 设置起忋位罿
                     sp_.param_reset(params_[index_]);
                 }
@@ -190,6 +195,7 @@ public:
      */
     void plan_reset()
     {
+        tangent_lock=false;
         is_init = false; // 重置初忋化标志
 
         bezier_curve_num = 0; // 重置曲线数量
@@ -209,6 +215,7 @@ public:
      */
     void Reset()
     {
+        tangent_lock=false;
         index_ = 0;
         point_last_ = bezier_curve_list[index_].Get_Start_point(); // 重置上一丿点为起点
         m_phase = ACCEL_PHASE;

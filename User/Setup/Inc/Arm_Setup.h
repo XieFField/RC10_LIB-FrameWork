@@ -76,6 +76,9 @@ typedef struct{
     bool can_putdown = 0;
 
     Store_MANUAL_E store_manual_mode = OUTSIDE; //存储位手动模式，默认外部
+    uint8_t comp_takeout_now[2] = {0}; //当前取出位置 0 为初始即无，1为内，2为外
+
+    bool is_putdown_done = false; //放下完成标志
 }arm_ctrl_status_S;
 
 
@@ -126,29 +129,18 @@ typedef struct{
 
         bool isbackdone = false; //是否返回完成
         float back_time = 0.0f; //返回时长
+        float target_high [3] = {0.0f, 0.0f, 0.0f}; //目标KFS高度
+
     }flag;
 }ARM_AUTO_S;
 
 
-const float MF_high_blue[12] =
-{
-    0.4f, 0.2f, 0.4f,
-    0.2f, 0.4f, 0.6f,
-    0.4f, 0.6f, 0.4f,
-    0.2f, 0.4f, 0.2f
-};
 
-const float MF_high_red[12] =
-{
-    0.4f, 0.2f, 0.4f,
-    0.6f, 0.4f, 0.2f,
-    0.4f, 0.6f, 0.4f,
-    0.2f, 0.4f, 0.2f
-};
 
 inline float GetKFSHeight(int8_t mfNum)
 {
-    const float* arr = (MF_AutoCtrler::get_color() == 1) ? MF_high_blue : MF_high_red;
+    const float* arr = (MF_AutoCtrler::get_color() == 1) ? 
+        MF_AutoCtrler::MF_high_blue : MF_AutoCtrler::MF_high_blue;
     return arr[mfNum - 1];
 }
 
@@ -197,6 +189,11 @@ public:
             return;
 
         arm_status_ = status;
+    }
+
+    bool is_putdown_done()
+    {
+        return arm_ctrlStatus.is_putdown_done;
     }
 
     Store_MANUAL_E get_store_side()
@@ -258,27 +255,13 @@ public:
             }
         }
 
-        MF_AutoCtrler::PathInformation_S temp = MF_AutoCtrler::PathInformation_calc(auto_ctrl_.now_ChassisPosition,
+        auto_ctrl_.pathInfo = MF_AutoCtrler::PathInformation_calc(auto_ctrl_.now_ChassisPosition,
                                        auto_ctrl_.targetKFS[0],
                                         auto_ctrl_.targetKFS[1], auto_ctrl_.targetKFS[2]);
-        auto_ctrl_.pathInfo.entranceMap = temp.entranceMap;
-        
-        for(int i=0; i<3; i++)
+        for(int i = 0; i < 3; i++)
         {
-            auto_ctrl_.pathInfo.MFroad[i] = temp.MFroad[i];
+            auto_ctrl_.flag.target_high[i] = GetKFSHeight(auto_ctrl_.targetKFS[i]);
         }
-
-        for(int i=0; i<12; i++)
-        {
-            auto_ctrl_.pathInfo.mustPastMap[i] = temp.mustPastMap[i];
-        }
-
-        for(int i=0; i<3; i++)
-        {
-            auto_ctrl_.pathInfo.Index_MFroad[i] = temp.Index_MFroad[i];
-        }
-
-
 #if ARM_AUTO_DEBUG_NOCHASSIS
         auto_ctrl_.now_ChassisPosition.x = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0]-1].x;
         auto_ctrl_.now_ChassisPosition.y = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0]-1].y - 3.0f;

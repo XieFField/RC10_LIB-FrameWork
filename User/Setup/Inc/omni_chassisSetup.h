@@ -50,11 +50,11 @@ typedef struct
 
 typedef struct
 {
-    Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.6f, .finalSpeed = 0.8f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
 
-    Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
-    Speedplanner_1D_Param_Config curve = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};
-    Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config curve = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.6f, .initialSpeed = 0.6f, .finalSpeed = 0.6f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -74,7 +74,7 @@ typedef struct
 
     float PID_coefficient = 1.0f;
     float FF_coefficient = 0.0f;
-    float spinodal_coefficient = 1.5f;
+    float spinodal_coefficient = 1.2f;
 
     float v_normal_max = 0.5f;
     float m_lookaheadDist = 0.4f; // 前视距离
@@ -84,7 +84,7 @@ typedef struct
 {
     //第数组第零为红场
     Vector2D CB_Start_pos[2] = {{5.0f, 1.0f}, {1.0f, 1.0f}};             // 夹杆起点。
-    Vector2D CB_Selection_pos[2] = {{3.539f, 0.835f}, {2.455f, 0.81f}}; // 夹杆流程默认目标点。
+    Vector2D CB_Selection_pos[2] = {{3.466f, 0.835f}, {2.455f, 0.835f}}; // 夹杆流程默认目标点。
 
     // 相机流程
     Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
@@ -123,23 +123,25 @@ typedef struct
     float spin_skew = 0.1f; // 旋转位置y轴偏移量
     float point_skew = 0.06f; // 旋转位置y轴偏移量
     
-    float coner_ahead = 0.17f;
-    float coner_behind = 0.4f;
+    float coner_ahead = 0.2f;
+    float coner_behind = 0.5f;
 
 } KFS_POINT;
 
 typedef struct
 {
-    Vector2D uphill_pos = {0.6f, 11.4f};
+    Vector2D uphill_pos[2] = {{5.4f, 11.4f},{0.6f, 11.4f}};
     float skew_yaw = 1.7f;
     // 下界10.02f上界是11.52f
     Vector2D fit_wait_pos = {2.17f, 10.05f};
+    Vector2D fit_transition_pos = {3.0f, 11.5f};
     Vector2D fit_end_pos = {4.83f, 11.5f};
 
     // 左中右   或者   先后
-    Vector2D R1_pos[3][2] = {{{4.535f, 11.318f}, {4.75f, 11.318f}}, {{4.535f, 10.795f}, {4.75f, 10.795f}}, {{4.535f, 10.225f}, {4.75f, 10.225f}}};
-    Vector2D fit_pos[2] = {fit_wait_pos, fit_end_pos};
-    Vector2D R2_pos[3] = {{4.83f, 11.285f}, {4.83f, 10.705f}, {4.83f, 10.185f}};
+    float set_skew = 0.215f;
+    Vector2D R1_pos[3][2] = {{{1.465f, 11.318f}, {4.535f, 11.318f}}, {{1.465f, 10.795f}, {4.535f, 10.795f}}, {{1.465f, 10.225f}, {4.535f, 10.225f}}};
+    Vector2D fit_pos[3][2] = {{{6.0f-fit_wait_pos.x,fit_wait_pos.y},fit_wait_pos},{{6.0f-fit_end_pos.x,fit_end_pos.y},fit_end_pos}, {{6.0f-fit_transition_pos.x,fit_transition_pos.y},fit_transition_pos}};
+    Vector2D R2_pos[3][2] = {{{1.17f, 11.318f},{4.83f, 11.318f}}, {{1.17f, 10.795f},{4.83f, 10.795f}}, {{1.17f, 10.225f},{4.83f, 10.225f}}};
 
 } CZ_POINT;
 
@@ -398,7 +400,7 @@ public:
             return false;
         }
     }
-
+    
     void Receive_CZ_Arm_flag(bool CZ_end)
     {
         // 写入机械臂流程反馈标志。
@@ -647,7 +649,7 @@ private:
         if (KFS_flag.uphill_flag == true)
         {
             // 上坡后旋转判断
-            if (CZ_point.uphill_pos.x == curve.Get_Start_point().x && CZ_point.uphill_pos.y == curve.Get_Start_point().y)
+            if (CZ_point.uphill_pos[RB_Flag].x == curve.Get_Start_point().x && CZ_point.uphill_pos[RB_Flag].y == curve.Get_Start_point().y)
             {
                 if (robot_pos_.x > CZ_point.skew_yaw)
                     target_yaw = RB_Flag ? 180.0f : 0.0f;
@@ -713,7 +715,9 @@ private:
         
         // 写入MF地图对应坐标
         Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(MF1_Point_);
-                if(KFS_point.MF1_target_yaw_==0.0f)
+        if(MF_AutoCtrler::GetMFHeight(MF1_Point_) == 0.2f && MF3_Point_ != 0)
+        {
+            if(KFS_point.MF1_target_yaw_==0.0f)
                 {
                     KFS_point.MF1_pos_ = {temp_vector.x-KFS_point.point_skew,temp_vector.y};  
                 }
@@ -729,6 +733,13 @@ private:
                 {
                     KFS_point.MF1_pos_ = {temp_vector.x,temp_vector.y+KFS_point.point_skew};   
                 }
+            
+        }
+        else
+        {
+            KFS_point.MF1_pos_ = {temp_vector.x,temp_vector.y};
+        }
+                
         
         if (KFS_num > 1)
         {
@@ -868,18 +879,18 @@ private:
                     }
                     else if (KFS_flag.uphill_flag == true)
                     {
-                        if (last_vector.x == 0.6f)
+                        if ((last_vector.x == 0.6f&&RB_Flag==true)||(last_vector.x == 5.4f&&RB_Flag==false))
                         {
                             path_line_.Add_Point(temp_vector, path_param.start);
-                            path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
-                            path_line_.Add_End_Point(CZ_point.R1_pos[1][0], path_param.end);
+                            path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
+                            path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
                         }
                         else if (last_vector.y == 8.6f)
                         {
                             path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
                             path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
-                            path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
-                            path_line_.Add_End_Point(CZ_point.R1_pos[1][0], path_param.end);
+                            path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
+                            path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
                         }
                     }
                     // 取末端点进行路径退出后的锁点pid
@@ -935,21 +946,21 @@ private:
                     path_line_.Add_End_Point(temp_vector, path_param.end);
                 }
                 else if (KFS_flag.uphill_flag == true)
-                {
-                    if (last_vector.x == 0.6f)
                     {
-                        path_line_.Add_Point(temp_vector, path_param.start);
-                        path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
-                        path_line_.Add_End_Point(CZ_point.R1_pos[1][0], path_param.end);
+                        if ((last_vector.x == 0.6f&&RB_Flag==true)||(last_vector.x == 5.4f&&RB_Flag==false))
+                        {
+                            path_line_.Add_Point(temp_vector, path_param.start);
+                            path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
+                            path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
+                        }
+                        else if (last_vector.y == 8.6f)
+                        {
+                            path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
+                            path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
+                            path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
+                            path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
+                        }
                     }
-                    else if (last_vector.y == 8.6f)
-                    {
-                        path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
-                        path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
-                        path_line_.Add_Point(CZ_point.uphill_pos, path_param.up);
-                        path_line_.Add_End_Point(CZ_point.R1_pos[1][0], path_param.end);
-                    }
-                }
             }
             else
             {
@@ -1031,11 +1042,11 @@ private:
     {
         if (MF_Point == 21 || MF_Point == 16 || MF_Point == 11 || MF_Point == 6)
         {
-            return (RB_Flag ? 180.0f : 0.0f);
+            return 180.0f ;
         }
         else if (MF_Point == 25 || MF_Point == 20 || MF_Point == 15 || MF_Point == 10)
         {
-            return (RB_Flag ? 0.0f : 180.0f);
+            return 0.0f;
         }
         else if (MF_Point == 27 || MF_Point == 28 || MF_Point == 29 || MF_Point == 30)
         {
@@ -1051,10 +1062,16 @@ private:
         V.planspeed = path_line_.plan(robot_pos_);
         Path_correction();
         V.corrVelocity = V.PID_coefficient * V.corrVelocity;
-        speed = v_limit();
+        
         if (path_line_.Get_Curve_Flag() == true)
         {
-            speed = speed * V.spinodal_coefficient;
+            V.corrVelocity = V.corrVelocity* V.spinodal_coefficient;
+            //speed = speed * V.spinodal_coefficient;
+            speed=V.corrVelocity+V.planspeed;
+        }
+        else
+        {
+            speed = v_limit();
         }
         Chassis_Target.VX = speed.x;
         Chassis_Target.VY = speed.y;
