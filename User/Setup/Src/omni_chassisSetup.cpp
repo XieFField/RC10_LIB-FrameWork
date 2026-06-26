@@ -235,30 +235,33 @@ void OmniChassis_Setup::loop()
     case CHASSIS_STOP:
     {
         mode_init();
-        if (flag == 1)
+        KFS_Path_Init();
+        if (KFS_flag.pause_flag == false)
         {
-            robot_pos_=test_point;
-            flag = 0;
-            flag_reset();
-            KFS_Selection_Planning();
-        }
-        if (path_line_.Is_End() == false)
-        {
-            curve = path_line_.get_bezier_curve();
-            KFS_Path_Check();
-            if (Arm_Start == false)
-                v_plan();
+            if (path_line_.Is_End() == false)
+            {
+                curve = path_line_.get_bezier_curve();
+                KFS_Path_Check();
+                if (Arm_Start == false)
+                    v_plan();
+                else
+                    Path_lock_point(curve.Get_Start_point());
+            }
             else
-                Path_lock_point(curve.Get_Start_point());
+            {
+                Path_lock_point(Path_end_point);
+            }
+            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+            robot_pos_.x+=(Chassis_Target.VX*0.001f);
+            robot_pos_.y+=(Chassis_Target.VY*0.001f);
         }
         else
         {
-            Path_lock_point(Path_end_point);
+            CHASSIS_MANUAL(1.6f, 1.6f, 3.0f);
+            chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
         }
 
-        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
-        robot_pos_.x+=(Chassis_Target.VX*0.001f);
-        robot_pos_.y+=(Chassis_Target.VY*0.001f);
+        debug_uart.printf_DMA("%f,%f,%f\n", robot_pos_.x, robot_pos_.y, speed.magnitude());
         break;
     }
 
