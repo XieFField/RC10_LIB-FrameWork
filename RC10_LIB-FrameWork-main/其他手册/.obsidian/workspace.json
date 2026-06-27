@@ -1,0 +1,226 @@
+{
+  "main": {
+    "id": "02d699eb7de63352",
+    "type": "split",
+    "children": [
+      {
+        "id": "9fc654534b0348af",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4f8c736a50b1bbf6",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "Excalidraw/孙元气遥控.md"
+              },
+              "icon": "excalidraw-icon",
+              "title": "孙元气遥控"
+            }
+          },
+          {
+            "id": "6ec54cd1227ac4b5",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "Excalidraw/遥控界面.md"
+              },
+              "icon": "excalidraw-icon",
+              "title": "遥控界面"
+            }
+          },
+          {
+            "id": "b3603afd44a06b93",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "Excalidraw/RC10遥控操控逻辑.md"
+              },
+              "icon": "excalidraw-icon",
+              "title": "RC10遥控操控逻辑"
+            }
+          }
+        ],
+        "currentTab": 2
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "ebbe63b0bdf7a075",
+    "type": "split",
+    "children": [
+      {
+        "id": "b9b41189e895a5fe",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "e62554a7a3cd8e20",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "文件列表"
+            }
+          },
+          {
+            "id": "343552e22ec05ce9",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "1c81eb6adb9cb25d",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 200
+  },
+  "right": {
+    "id": "8027ee1eb249bd80",
+    "type": "split",
+    "children": [
+      {
+        "id": "df7df3e4156493ae",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "46b65f7d2e6f3774",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "串联臂自动逻辑.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for 串联臂自动逻辑"
+            }
+          },
+          {
+            "id": "fb6282061d07b1e2",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "串联臂自动逻辑.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from 串联臂自动逻辑"
+            }
+          },
+          {
+            "id": "9461d1d9f955ca28",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "a33517ce681575f0",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "串联臂自动逻辑.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of 串联臂自动逻辑"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "bases:新建数据库": false,
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false,
+      "obsidian-excalidraw-plugin:New drawing": false
+    }
+  },
+  "active": "e62554a7a3cd8e20",
+  "lastOpenFiles": [
+    "Excalidraw/遥控界面.md",
+    "Excalidraw/RC10遥控操控逻辑.md",
+    "Excalidraw/孙元气遥控.md",
+    "Pasted Image 20260424162542_967.png",
+    "Excalidraw/期末考核，自动状态机流程图.md",
+    "Q.遥控器.md",
+    "贝塞尔曲线中轨迹修正方案.md",
+    "自动模式方案书.md",
+    "Pasted Image 20260406222452_679.png",
+    "停下拾取KFS方案书.md",
+    "3. 电机上手流程(三)-MIT模式说明.pdf",
+    "串联刚体臂吸盘解算.md",
+    "初代状态机.md",
+    "串联臂自动逻辑.md",
+    "R1自动夹取武器杆的状态机.md",
+    "自动模式方案书.pdf",
+    "路径规划方案AI炼丹.md",
+    "二代状态机.md",
+    "Excalidraw",
+    "Untitled.base",
+    "Untitled.md",
+    "初代状态机.pdf",
+    "串联臂自动逻辑.pdf",
+    "ROS在全国机器人大赛中的应用.pdf",
+    "自动模式方案书_tmp.html",
+    "自动模式方案书",
+    "初代状态机_tmp.html"
+  ]
+}

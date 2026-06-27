@@ -3,6 +3,109 @@
 namespace chassis_semantics_test
 {
 
+TEST_CASE("testOParkUsesTangentialIdlePostureAfterXParkGateEntry")
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kOPark;
+
+    Chassis::Data command{};
+    for (jia::u32 i = 0; i < chassis.runtime_strategy_cfg_.xpark_entry_delay_ms; ++i)
+    {
+        chassis.makeSwervePlannerInput(command);
+    }
+
+    Chassis::SwervePlannerInput planner_input = chassis.makeSwervePlannerInput(command);
+    Chassis::SwervePlannerOutput planner_output = chassis.planSwerveModules(planner_input);
+
+    EXPECT_TRUE(chassis.xpark_gate_active_);
+    EXPECT_TRUE(planner_input.allow_xpark_pose);
+    for (int i = 0; i < 4; ++i)
+    {
+        const float opark_target = getWheelOParkTargetOaRad(chassis, i);
+        const float xpark_target = getWheelXParkTargetOaRad(chassis, i);
+        EXPECT_NEAR(jia::shortestAngularDistanceF32(planner_output.ideal_oa_total_rad[i], opark_target), 0.0f, 1.0e-6f);
+        EXPECT_NEAR(std::fabs(jia::shortestAngularDistanceF32(opark_target, xpark_target)), jia::kPi / 2.0f, 1.0e-6f);
+    }
+}
+
+TEST_CASE("testXParkAndHoldLastIdlePosturesRemainUnchanged")
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+
+    Chassis::Data command{};
+    chassis.xpark_gate_active_ = true;
+
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kXPark;
+    Chassis::SwervePlannerOutput xpark_output = chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(jia::shortestAngularDistanceF32(xpark_output.ideal_oa_total_rad[i], getWheelXParkTargetOaRad(chassis, i)),
+                    0.0f,
+                    1.0e-6f);
+    }
+
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.25f * static_cast<float>(i + 1);
+    }
+
+    Chassis::SwervePlannerInput hold_last_input = chassis.makeSwervePlannerInput(command);
+    Chassis::SwervePlannerOutput hold_last_output = chassis.planSwerveModules(hold_last_input);
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(jia::shortestAngularDistanceF32(hold_last_output.ideal_oa_total_rad[i], hold_last_input.current_oa_total_rad[i]),
+                    0.0f,
+                    1.0e-6f);
+    }
+}
+
+TEST_CASE("testOParkReusesXParkGateBeforeChangingIdlePosture")
+{
+    Chassis chassis;
+    configureXParkTriggerHarness(chassis);
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kOPark;
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].corrected_drive_omega_rad_s = 4.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.1f * static_cast<float>(i + 1);
+    }
+
+    Chassis::Data command{};
+    Chassis::SwervePlannerInput planner_input = chassis.makeSwervePlannerInput(command);
+    Chassis::SwervePlannerOutput planner_output = chassis.planSwerveModules(planner_input);
+
+    EXPECT_TRUE(!chassis.xpark_gate_active_);
+    EXPECT_TRUE(!planner_input.allow_xpark_pose);
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(jia::shortestAngularDistanceF32(planner_output.ideal_oa_total_rad[i], planner_input.current_oa_total_rad[i]),
+                    0.0f,
+                    1.0e-6f);
+    }
+}
+
+TEST_CASE("testOParkSteerHoldCanLatchZeroCurrent")
+{
+    XParkSteerHoldHarness harness;
+    configureXParkSteerHoldHarness(harness);
+    Chassis &chassis = harness.chassis;
+    chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kOPark;
+    chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.settle_hold_ms = Chassis::period_ms_;
+
+    const float opark_target_oa_rad = getWheelOParkTargetOaRad(chassis, 0);
+    const Chassis::ActuatorCommandFrame command_frame = makeOParkSteerCommandFrame(chassis);
+    setWheelOaAngleRad(chassis, 0, opark_target_oa_rad);
+
+    chassis.storePlannedActuatorFrame(makeNeutralPlannerOutput(), command_frame);
+    chassis.applyModuleCommands(true);
+    EXPECT_TRUE(chassis.wheel_config_[0].xpark_steer_hold_phase == Chassis::XParkSteerHoldPhase::kLatchedZeroCurrent);
+    EXPECT_TRUE(harness.steer_motors[0].getLastCommandKind() == M3508::CommandKind::kCurrent);
+    EXPECT_NEAR(harness.steer_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
+}
+
 // 覆盖 X-Park 进入门、保持门和舵向零电流保持。
 // target command 决定静止意图，actual residual 只参与进入前确认；锁存后的保持/退出另按专用门限验证。
 TEST_CASE("testXParkActivatesOnlyAfterActualResidualWheelSpeedHoldsForEntryDelay")

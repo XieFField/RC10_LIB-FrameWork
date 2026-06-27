@@ -179,7 +179,9 @@ void advanceDriveZeroStopCycle(Chassis &chassis,
                                float residual_speed_m_s,
                                TickType_t time_ms);
 float getWheelXParkTargetOaRad(const Chassis &chassis, int wheel_idx);
+float getWheelOParkTargetOaRad(const Chassis &chassis, int wheel_idx);
 void setWheelOaAngleRad(Chassis &chassis, int wheel_idx, float oa_rad);
 Chassis::ActuatorCommandFrame makeXParkSteerCommandFrame(Chassis &chassis);
+Chassis::ActuatorCommandFrame makeOParkSteerCommandFrame(Chassis &chassis);
 
 } // namespace chassis_semantics_test
