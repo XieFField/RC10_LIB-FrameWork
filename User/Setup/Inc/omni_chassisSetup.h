@@ -50,16 +50,18 @@ typedef struct
 
 typedef struct
 {
-    Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.6f, .finalSpeed = 0.8f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.6f, .finalSpeed = 2.0f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.001f, .startPos = 0.083f, .targetPos = 0.0f, .deadzone = 0.001f};
+	Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.4f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.1f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config curve = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.6f, .initialSpeed = 0.6f, .finalSpeed = 0.6f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
-    Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
-    Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.07f, .targetPos = 0.0f, .deadzone = 0.001f};
-
+    
+	Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
+    
     // 没用的
     // Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};
     // 原始的测试数据
@@ -82,17 +84,19 @@ typedef struct
 
 typedef struct
 {
+	float spin_y=1.0f;
     // 第数组第零为红场
-    Vector2D CB_Start_pos[2] = {{5.0f, 1.0f}, {1.0f, 1.0f}};             // 夹杆起点。
+    Vector2D CB_Start_pos[2] = {{5.0f, 1.0f}, {1.0f, 0.9f}};             // 夹杆起点。
     Vector2D CB_Selection_pos[2] = {{3.466f, 0.835f}, {2.455f, 0.835f}}; // 夹杆流程默认目标点。
 
     // 相机流程
     Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
 
     // 贴边流程
-    Vector2D CB_transition_pos[2] = {{3.539f, 1.3f}, {2.461f, 1.3f}};
-    Vector2D CB_transition_pos_1[2] = {{2.6f, 1.0f}, {3.4f, 1.0f}};
-    Vector2D CB_welt_pos[2] = {{3.3f, 0.495f}, {3.7f, 0.495f}};
+    Vector2D CB_transition_pos[2] = {{3.539f, 1.1f}, {3.0f, 1.5f}};
+    //Vector2D CB_transition_pos_1[2] = {{2.6f, 1.0f}, {3.47f, 0.85f}};
+	
+    Vector2D CB_welt_pos[2] = {{3.3f, 0.5f}, {3.7f, 0.5f}};
 
 } CB_POINT;
 
@@ -294,6 +298,8 @@ private:
 
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;      // 当前底盘总状态机状态。
     CHASSIS_Status_E chassis_status_last_ = CHASSIS_STOP; // 当前底盘总状态机状态。（依旧是每个模式都赋值，用于进入自动模式时进行初始化）
+	
+	
 
 #if !USE_RC10_AIRJOY
     RmPocketData_t airjoy_data_; // 摇杆值为 -1 ~ 1
@@ -323,7 +329,7 @@ private:
     void CZ_FIT_R2_Selection_Planning(void);
 
     void CZ_ARM_Selection_Planning(void);
-
+	
 public:
     /**
      * @brief 设置路径自动开始标志
@@ -342,7 +348,7 @@ public:
     bool GetReach_flag()
     {
         // 读取夹杆流程完成标志。
-        if (pid_dead_flag == true && WeaponSage_Start == true && (_tool_Abs(yaw - target_yaw) < 1.0f))
+        if (pid_dead_flag == true && WeaponSage_Start == true && (_tool_Abs(yaw - target_yaw) < 3.0f))
         {
             return true;
         }
@@ -355,7 +361,7 @@ public:
     bool GetEnd_flag()
     {
         // 读取夹杆退后流程完成标志。
-        if (pid_dead_flag == true && WeaponSage_End == true && (_tool_Abs(yaw - target_yaw) < 1.0f))
+        if (WeaponSage_End == true && (_tool_Abs(yaw - target_yaw) < 3.0f))
         {
             return true;
         }
@@ -438,25 +444,28 @@ private:
         if (airjoy_data_.SWA == 0x00 && chassis_status_ == CHASSIS_AUTO_CONTROL_CZ_R2)
         {
             speed = path_lock_r2.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
+			pid_dead_flag = path_lock_r2.get_is_in_dead_zone();
+			Chassis_Target.VX = speed.x;
+			Chassis_Target.VY = speed.y;
         }
+		else if(chassis_status_ == CHASSIS_AUTO_CONTROL_CB && WeaponSage_End == true)
+		{
+			Chassis_Target.VX = 0.0f;
+			Chassis_Target.VY = 0.0f;
+		}
+		else if(chassis_status_ == CHASSIS_AUTO_CONTROL_CB && path_line_.Is_End() == true)
+		{
+			Chassis_Target.VX = 0.0f;
+			Chassis_Target.VY = 0.0f;
+		}		
         else
         {
             speed = path_lock.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
+			pid_dead_flag = path_lock.get_is_in_dead_zone();
+			Chassis_Target.VX = speed.x;
+			Chassis_Target.VY = speed.y;
         }
-        pid_dead_flag = path_lock.get_is_in_dead_zone();
-
-        Chassis_Target.VX = speed.x;
-        Chassis_Target.VY = speed.y;
-//        if (pid_dead_flag == true && airjoy_data_.SWA == 0x00 && chassis_status_ == CHASSIS_AUTO_CONTROL_CZ_R2)
-//        {
-//            Chassis_Target.VX = 0.0f;
-//            Chassis_Target.VY = 0.0f;
-//        }
-//        if (pid_dead_flag == true && chassis_status_ == CHASSIS_AUTO_CONTROL_CB && WeaponSage_End == true)
-//        {
-//            Chassis_Target.VX = 0.0f;
-//            Chassis_Target.VY = 0.0f;
-//        }
+        
     }
 
     void Path_correction(void)
@@ -1082,8 +1091,9 @@ private:
             return -90.0f;
         }
     }
-    void KFS_Path_Init(void)
+	void KFS_Path_Init(void)
     {
+		static bool pause_click = false;
         if (flag == 1)
         {
             KFS_point.KFS1 = KFS_point.MF1; // 目标点 1 编号。
@@ -1093,9 +1103,9 @@ private:
             flag_reset();
             KFS_Selection_Planning();
         }
-        static bool pause_click = false;
+        
         // 暂停自动
-        if (airjoy_data_.RT == 1 && pause_click == false)
+        if (airjoy_data_.RB == 1 && pause_click == false)
         {
             pause_click = true;
             KFS_flag.pause_flag = !KFS_flag.pause_flag;
@@ -1124,11 +1134,12 @@ private:
                 KFS_Selection_Planning();
             }
         }
-        else if (airjoy_data_.RT == 0)
+        if (airjoy_data_.RB == 0)
         {
             pause_click = false;
         }
     }
+
     void v_plan(void)
     {
         V.planspeed = path_line_.plan(robot_pos_);

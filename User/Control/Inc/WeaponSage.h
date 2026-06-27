@@ -289,8 +289,8 @@ protected:
 	WeaponSage_InitData_S initData_;
 	
 	WeaponSage::Fliter_Ramp_S launch_fliter_ramp_ = {
-        .ramp__maxspeed_ = 1500000.0f,
-        .max_accel_ = 3000000.0f, //  (Motor Angle deg/s^2)
+        .ramp__maxspeed_ = 2000000.0f,
+        .max_accel_ = 4000000.0f, //  (Motor Angle deg/s^2)
         .current_velocity_ = 0.0f, // 记录当前 launch 速度
         .ramp_target_ = 0.0f, 
         .filter_k_ = 850.0f // launch 滤波�?(平滑)系数，值越大响应越�?，越小越平滑
