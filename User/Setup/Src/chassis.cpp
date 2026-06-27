@@ -3474,9 +3474,10 @@ namespace jia
                 return false;
             }
 
-            const f32 delta_rad = signed_local_total_rad - wheel.homing_last_confirm_signed_local_rad;
             const f32 tolerance_rad = degToRadF32(JIA_CHASSIS_HOMING_EDGE_DELTA_TOLERANCE_DEG);
-            if (fabsf(delta_rad - kPi) > tolerance_rad)
+            const f32 delta_rad = signed_local_total_rad - wheel.homing_last_confirm_signed_local_rad;
+            const f32 delta_sign = (delta_rad >= 0.0f) ? 1.0f : -1.0f;
+            if (fabsf(fabsf(delta_rad) - kPi) > tolerance_rad)
             {
                 resetHomingEdgeConfirmState(wheel);
                 wheel.homing_state = HomingState::kFault;
@@ -3498,7 +3499,9 @@ namespace jia
             }
 
             const f32 first_to_third_delta_rad = signed_local_total_rad - wheel.homing_first_confirm_signed_local_rad;
-            if (fabsf(first_to_third_delta_rad - (2.0f * kPi)) > tolerance_rad)
+            const f32 first_to_third_sign = (first_to_third_delta_rad >= 0.0f) ? 1.0f : -1.0f;
+            if ((delta_sign != first_to_third_sign) ||
+                (fabsf(fabsf(first_to_third_delta_rad) - (2.0f * kPi)) > tolerance_rad))
             {
                 resetHomingEdgeConfirmState(wheel);
                 wheel.homing_state = HomingState::kFault;
