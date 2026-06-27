@@ -66,6 +66,7 @@ typedef struct{
     uint16_t rx_drop_cnt;
     uint16_t tx_drop_cnt;
     uint16_t tx_error_cnt;
+    uint16_t tx_timeout_recovery_cnt;
     uint16_t rx_crc_error_cnt;
 
 }RC10_AirJoy_Data_S;
@@ -94,6 +95,7 @@ public:
     uint16_t get_rx_drop_cnt() const { return GetRxDropCnt(); }
     uint16_t get_tx_drop_cnt() const { return GetTxDropCnt(); }
     uint16_t get_tx_error_cnt() const { return GetTxErrorCnt(); }
+    uint16_t get_tx_timeout_recovery_cnt() const { return GetTxTimeoutRecoveryCnt(); }
     uint16_t get_rx_crc_error_cnt() const { return GetRxCrcErrorCnt(); }
 
     void send_robot_pos(float x, float y, float yaw);

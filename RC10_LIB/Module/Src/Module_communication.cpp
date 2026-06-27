@@ -70,6 +70,8 @@ namespace communication{
         this->rx_fifo.drop_cnt = 0;
 
         this->tx_busy = 0; // 初始状态为非忙碌
+        this->tx_busy_start_tick = 0;
+        this->tx_timeout_recovery_cnt = 0;
         this->tx_error_cnt = 0;
         this->rx_crc_error_cnt = 0;
         this->joystick_frame_count = 0;
@@ -87,7 +89,7 @@ namespace communication{
         rec_joystick[2] = 2048;
         rec_joystick[3] = 2048;
         rec_send_key = 0;
-        rec_page = 0;
+        rec_page = 2;
 
         
         rec_setting_command = 0;
@@ -179,6 +181,25 @@ namespace communication{
 
     bool Communication::Comm_Task_Loop(void)
     {
+        if (tx_busy != 0U &&
+            (HAL_GetTick() - tx_busy_start_tick) >= COMM_TX_BUSY_TIMEOUT_MS) {
+            bool should_retry;
+
+            (void)HAL_UART_AbortTransmit(txhuart);
+
+            uint32_t timeout_primask = EnterCritical();
+            tx_busy = 0U;
+            tx_busy_start_tick = 0U;
+            tx_timeout_recovery_cnt++;
+            should_retry = (FIFO_Count(tx_fifo) > 0U);
+            ExitCritical(timeout_primask);
+
+            if (should_retry &&
+                HAL_GPIO_ReadPin(tx_aux_port, tx_aux_pin) == GPIO_PIN_SET) {
+                Comm_TxBufferToTxDMA(txhuart);
+            }
+        }
+
 #if COMM_TEST_BLOCK_RX_PARSE
         return false;
 #endif
@@ -433,9 +454,11 @@ namespace communication{
                     FIFO_Pop(tx_fifo, dma_tx_buf[i]);
                 }
                 tx_busy = 1; // 锁定发送状态
+                tx_busy_start_tick = HAL_GetTick();
             } else {
                 // 如果且仅如果队列已经为空了，清除忙碌标志位
                 tx_busy = 0;
+                tx_busy_start_tick = 0U;
             }
             ExitCritical(primask);
 
@@ -446,6 +469,7 @@ namespace communication{
                 } else {
                     uint32_t fail_primask = EnterCritical();
                     tx_busy = 0;
+                    tx_busy_start_tick = 0U;
                     tx_error_cnt++;
                     ExitCritical(fail_primask);
                 }
