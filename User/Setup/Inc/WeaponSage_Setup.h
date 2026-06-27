@@ -30,6 +30,9 @@ extern "C" {
 #include "Module_OIDEncoder.h"
 #include "tim.h"
 #include "Module_lora.h"
+
+
+#define USE_NEW_AUTO 1
 namespace WeaponSage_Setup
 {
     typedef struct{
@@ -84,6 +87,14 @@ namespace WeaponSage_Setup
         STATE_SAGE_ADJUST,
         STATE_DONE,
     }auto_GRABstate_S;
+
+    typedef enum{
+        STATE_START_1,
+        STATE_SAGE_ADJUST_1,
+        STATE_ARM_MOVE_1,
+        STATE_SAGE_MOVE,
+        STATE_DONE_1,
+    }auto_NEW_GRABstate_S;
 
 
     typedef struct{
@@ -147,6 +158,8 @@ namespace WeaponSage_Setup
             float launch_rotate =1.0f;
             float launch_lastcatch=0.14f;
             float launch_dockprepare=0.6f;
+        //----------------------new_auto---------------------------
+            float launch_sage_untight=0.9; //用于夹爪对其杆子后升降到合适位置以夹住杆子的中间部分
         }launch_kp;
 		bool is_ServoStart= false;
 		float dock_launch_time = 0.0f;      // autoControl_dock 定时器（替代 static）
@@ -329,6 +342,7 @@ private:
     float WristToClosest_negative(float current_angle);
     bool Sage_to_high();
     bool Sage_to_low();
+
     
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 
@@ -336,7 +350,7 @@ private:
     WeaponSage_Status_E weaponSage_status_ = WEAPONSAGE_STOP;
 	WeaponSage_Status_E last_weaponSage_status_ = WEAPONSAGE_STOP;
 	WeaponSage_Setup::auto_GRABstate_S now_state_=WeaponSage_Setup::STATE_START;
-
+    WeaponSage_Setup::auto_NEW_GRABstate_S now_new_state_= WeaponSage_Setup::STATE_START_1;
     WeaponSage_Setup::WeaponDock_E target_dock_ = WeaponSage_Setup::MID; // for auto_dock
 
     bool weapon_CameraStart = false; // 主状态机触发相机流程的标志位�?

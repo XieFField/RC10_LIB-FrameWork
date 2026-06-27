@@ -1924,5 +1924,5 @@ Arm_InitData_S arm_initData = {
     .StoreInside_Soleniod_GPIO_Port = SUCKER_6_GPIO_Port,
     .StoreInside_Soleniod_GPIO_Pin = SUCKER_6_Pin,
 
-    .max_pitchRPM_ = 200.0f,
+    .max_pitchRPM_ = 1080.0f,
 };
