@@ -1,6 +1,13 @@
 ﻿current_branch: jia/develop_1
-current_line: rc10_reverse_homing_edge_confirm_full_debug_after_2026_06_27
+current_line: rc10_reverse_homing_drive_direction_after_2026_06_27
 summary:
+  - 2026-06-27 最新状态已推进到提交 c6e466c2，需叠加在 2026-06-24 handoff 之上理解
+  - c6e466c2 修复反向回零后的 drive 正方向语义，反向搜索不再改变校准完成后的 drive 正方向
+  - homing_search_direction_sign 在进入 Search 时锁存本轮搜索方向，Search RPM 使用锁存方向
+  - 反向搜索时按搜索方向反解释 GPIO 边沿机械语义，避免运行时零偏产生 180 度错位
+  - 已新增正向与反向 homing 完成后 drive 方向一致性的 host 回归测试
+  - APP_PID 已调整 VESC drive speed 输出 / 积分限幅和 lock angle PID 参数
+  - chassis_semantics host 最新引用验证来自 c6e466c2：run_main.ps1 为 221/221 passed、2850/2850 assertions；jia_docs/tests/run_tests.ps1 统一入口已通过
   - 2026-06-27 最新状态来自提交 fc1f0fac 与 cbe88bff，需叠加在 2026-06-24 handoff 之上理解
   - HomingState::kSearch 三边沿确认已同时接受正向和反向搜索序列
   - 第二边沿按绝对角差接近 180 度校验，第三边沿按绝对角差接近 360 度校验
@@ -20,7 +27,7 @@ summary:
   - debug deadzone 只作用于 debug 链，不影响正常非 debug 整车控制链路
   - 当前 JIA_CHASSIS_HOMING_SEARCH_RPM 默认值为 100.0f
   - 当前 JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS 默认值为 500U
-  - chassis_semantics host 最新引用验证来自 2026-06-27 两次提交记录的 jia_docs/tests/run_tests.ps1；211/211 passed、run_slim_smoke.ps1 通过与 sizeof(Chassis)=2856 是上一轮背景记录
+  - 211/211 passed、run_slim_smoke.ps1 通过与 sizeof(Chassis)=2856 是 c6e466c2 之前的背景记录，不再作为最新数字
 latest_handoff:
   primary: jia_docs/handoff/2026-06/ai_handoff_2026-06-24_rc10_homing_search_diagonal_reverse_sync.md
   supporting:
@@ -46,7 +53,9 @@ recommended_verification:
     - jia_docs/tests/tdd/chassis_semantics/run_pid_reconnect_test.ps1
     - jia_docs/tests/host_cpp/vesc_brake/run_test.ps1
 open_followups:
+  - 继续做 MDK / 实车对反向搜索后 drive 正方向一致性的板上复核，确认正向搜索轮和反向搜索轮对同一底盘速度指令不会互相打架
   - 继续做 MDK / 实车对反向 Homing 搜索三边沿确认的板上复核，特别是方向一致性检查和第三边沿超容差 Fault
+  - 继续结合 APP_PID 新参数确认 VESC drive speed 输出限幅和 lock angle PID 手感
   - 继续确认默认 FULL_DEBUG profile 对板上调试链、资源占用和实际联调入口的影响
   - 继续确认 motion direction guard 默认阈值调整后的实车运动方向约束是否符合预期
   - 继续做 MDK / 实车对光电门回零搜索方向表的板上复核，确认 0 + 2 反转、1 + 3 同向符合实车轮位

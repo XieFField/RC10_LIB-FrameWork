@@ -26,7 +26,7 @@ Get-Content -Raw -Encoding UTF8 jia_docs/README.md
 当前最推荐优先阅读：
 
 - [active/latest-handoff.md](active/latest-handoff.md)
-- 当前主线入口：以 [active/latest-handoff.md](active/latest-handoff.md) 和 [active/overview.md](active/overview.md) 为准；`2026-06-27` 的最新状态来自最近两次提交，现有 `2026-06-24` handoff 继续作为背景入口。
+- 当前主线入口：以 [active/latest-handoff.md](active/latest-handoff.md) 和 [active/overview.md](active/overview.md) 为准；`2026-06-27` 最新状态已推进到提交 `c6e466c2`，现有 `2026-06-24` handoff 继续作为背景入口。
 
 完整索引：
 
