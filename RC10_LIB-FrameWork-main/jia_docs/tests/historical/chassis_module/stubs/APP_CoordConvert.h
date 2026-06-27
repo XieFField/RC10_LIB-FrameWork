@@ -1,4 +1,0 @@
-#ifndef TEST_APP_COORDCONVERT_H
-#define TEST_APP_COORDCONVERT_H
-
-#endif
