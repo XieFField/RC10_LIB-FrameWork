@@ -58,7 +58,7 @@ typedef struct
 
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
-    Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.1f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.07f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     // 没用的
     // Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -342,7 +342,7 @@ public:
     bool GetReach_flag()
     {
         // 读取夹杆流程完成标志。
-        if (pid_dead_flag == true && WeaponSage_Start == true && (_tool_Abs(yaw < target_yaw) < 1.0f))
+        if (pid_dead_flag == true && WeaponSage_Start == true && (_tool_Abs(yaw - target_yaw) < 1.0f))
         {
             return true;
         }
@@ -447,16 +447,16 @@ private:
 
         Chassis_Target.VX = speed.x;
         Chassis_Target.VY = speed.y;
-        if (pid_dead_flag == true && airjoy_data_.SWA == 0x00 && chassis_status_ == CHASSIS_AUTO_CONTROL_CZ_R2)
-        {
-            Chassis_Target.VX = 0.0f;
-            Chassis_Target.VY = 0.0f;
-        }
-        if (pid_dead_flag == true && chassis_status_ == CHASSIS_AUTO_CONTROL_CB && WeaponSage_End == true)
-        {
-            Chassis_Target.VX = 0.0f;
-            Chassis_Target.VY = 0.0f;
-        }
+//        if (pid_dead_flag == true && airjoy_data_.SWA == 0x00 && chassis_status_ == CHASSIS_AUTO_CONTROL_CZ_R2)
+//        {
+//            Chassis_Target.VX = 0.0f;
+//            Chassis_Target.VY = 0.0f;
+//        }
+//        if (pid_dead_flag == true && chassis_status_ == CHASSIS_AUTO_CONTROL_CB && WeaponSage_End == true)
+//        {
+//            Chassis_Target.VX = 0.0f;
+//            Chassis_Target.VY = 0.0f;
+//        }
     }
 
     void Path_correction(void)

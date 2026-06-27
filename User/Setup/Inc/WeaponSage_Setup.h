@@ -156,7 +156,7 @@ namespace WeaponSage_Setup
             float launch_untight =0.45f;
             float launch_clawclosed = 0.8f;
             float launch_rotate =1.0f;
-            float launch_lastcatch=0.14f;
+            float launch_lastcatch=0.20f;
             float launch_dockprepare=0.6f;
         //----------------------new_auto---------------------------
             float launch_sage_untight=0.9; //用于夹爪对其杆子后升降到合适位置以夹住杆子的中间部分
