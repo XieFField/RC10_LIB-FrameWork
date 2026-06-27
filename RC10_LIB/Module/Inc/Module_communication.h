@@ -7,6 +7,20 @@
 #define RING_BUF_SIZE 256
 #define DMA_BUF_SIZE  64
 
+//测试通过 本机rx_drop_cnt累加
+#ifndef COMM_TEST_BLOCK_RX_PARSE
+// 置 1：停止消费 RX FIFO，但 DMA 接收回调仍继续写入。
+// 现象：遥控数据停止更新；FIFO 填满后 rx_fifo.drop_cnt 持续增加。
+#define COMM_TEST_BLOCK_RX_PARSE 0
+#endif
+
+//测试通过，遥控器rx_crc_error_cnt累加
+#ifndef COMM_TEST_CORRUPT_TX_CRC
+// 置 1：将所有发送 XYZ 帧的正确 CRC 按位取反。
+// 现象：遥控器拒绝这些帧，遥控器的 rx_crc_error_cnt 持续增加。
+#define COMM_TEST_CORRUPT_TX_CRC 0
+#endif
+
 #ifdef __cplusplus
 
 
@@ -15,6 +29,7 @@ namespace communication{
     uint8_t* buffer;
     volatile uint16_t head;
     volatile uint16_t tail;
+    volatile uint16_t drop_cnt;
     } comm_FIFO_t;
 
     /* 强制一字节对齐的数据帧 */
@@ -151,7 +166,7 @@ namespace communication{
          * @param size  待发送字节数
          * @note 时机/用法：用户需继承此 Communication 类，重写并在内部实现 `HAL_UART_Transmit_DMA(huart, data, size);` 等平台相关底层操作。
          */
-        virtual void Comm_TxUseTxDMA(UART_HandleTypeDef * huart, uint8_t* data, uint16_t size)=0;
+        virtual HAL_StatusTypeDef Comm_TxUseTxDMA(UART_HandleTypeDef * huart, uint8_t* data, uint16_t size)=0;
 
         /**
          * @brief 获取接收到的业务数据
@@ -173,6 +188,47 @@ namespace communication{
             command = rec_command_command;
             load1 = rec_command_load1;
             load2 = rec_command_load2;
+        }
+
+        /**
+         * @brief 获取单个命令的计数值
+         * @param cmd 命令号 (0~8)
+         * @return 该命令的累计计数值
+         */
+        uint8_t GetRecvCommandCnt(uint8_t cmd) {
+            return (cmd < 9) ? recv_command_cnts[cmd] : 0;
+        }
+
+        /**
+         * @brief 获取全部 9 个命令 (0~8) 的计数器总和
+         * @return 0~8 号命令计数值的累加和
+         */
+        uint8_t GetRecvCommandTotalCnt() {
+            uint16_t sum = 0;
+            for (uint8_t i = 0; i < 9; i++) {
+                sum += recv_command_cnts[i];
+            }
+            return static_cast<uint8_t>(sum);
+        }
+
+        uint32_t GetRecvJoystickFrameCount() const {
+            return joystick_frame_count;
+        }
+
+        uint16_t GetRxDropCnt() const {
+            return rx_fifo.drop_cnt;
+        }
+
+        uint16_t GetTxDropCnt() const {
+            return tx_fifo.drop_cnt;
+        }
+
+        uint16_t GetTxErrorCnt() const {
+            return tx_error_cnt;
+        }
+
+        uint16_t GetRxCrcErrorCnt() const {
+            return rx_crc_error_cnt;
         }
 
         /**
@@ -249,11 +305,10 @@ namespace communication{
         }
 
         uint8_t GetColor(void) {
-            if((rec_page&0x0F)==0x01)
-            {
-                saven_color = rec_page>>4;
+            if ((rec_page & 0x0F) == 1) {
+                saved_color = rec_page >> 4;
             }
-            return saven_color;
+            return saved_color;
         }
 
     private:
@@ -282,7 +337,10 @@ namespace communication{
         comm_FIFO_t tx_fifo;
 
         volatile uint8_t tx_busy; // 发送忙碌标志
-        
+        volatile uint16_t tx_error_cnt;
+        volatile uint16_t rx_crc_error_cnt;
+        uint32_t joystick_frame_count;
+
         /* 解析出来/待发送的业务数据 */
         uint16_t send_xyz[3]; 
         uint8_t send_mode;
@@ -296,10 +354,11 @@ namespace communication{
         uint8_t rec_setting_load1;
         uint8_t rec_setting_load2;
 
-        // 接收到的命令帧数据（串口屏转发，0xAA 0x66，command 0-99）
+        // 接收到的命令帧数据（串口屏转发，0xAA 0x77，command 0-99）
         uint8_t rec_command_command;
         uint8_t rec_command_load1;
         uint8_t rec_command_load2;
+        uint8_t recv_command_cnts[9];  // 0~8 号命令各自的计数器
 
         // 待发送的KFS相关数据（填入XYZ帧扩展字段）
         uint8_t send_KFS_want_place1;
@@ -315,8 +374,8 @@ namespace communication{
         uint8_t rec_KFS2_place3;
         uint8_t rec_KFS2_place4;
         uint8_t rec_KFSf_place1;
+        uint8_t saved_color;  // color 缓存，仅在 page==1 时更新
 
-        uint8_t saven_color;
     protected:
     };
 }
