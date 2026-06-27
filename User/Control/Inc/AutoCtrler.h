@@ -55,15 +55,15 @@ namespace MF_AutoCtrler
         int8_t result3 = 0;
     } RoadResult_S;
 
-    typedef struct
-    {
-        int8_t entranceMap;
-        int8_t bestB1;   // 前一桩
-        int8_t bestBMF1; // 正对桩
-        int8_t bestB2;
-        int8_t bestBMF2;
-        int8_t exitMap = 26; // 固定出口
-    } PathNode_S;            // 值为0就意味着没有这个节点
+    // typedef struct
+    // {
+    //     int8_t entranceMap;
+    //     int8_t bestB1;   // 前一桩
+    //     int8_t bestBMF1; // 正对桩
+    //     int8_t bestB2;
+    //     int8_t bestBMF2;
+    //     int8_t exitMap = 26; // 固定出口
+    // } PathNode_S;            // 值为0就意味着没有这个节点
 
 
     typedef struct //新一版的路径生成
@@ -103,7 +103,7 @@ namespace MF_AutoCtrler
     Point2D MapCenterWorld(int8_t map);
 
     // 计算路径节点结果
-    PathNode_S PathNodeResult_calc(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t EXIT = 26);
+//    PathNode_S PathNodeResult_calc(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t EXIT = 26);
     
     float GetMFHeight(int8_t mfNum);
 

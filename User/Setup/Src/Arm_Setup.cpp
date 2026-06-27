@@ -786,8 +786,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                 else if (kfs_index == 0x00)
                     this->set_PitchAngle(init_data_.pitch_lift_angle_); // 吸盘抬平
 
-               if(kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.start_to_autoctrl == 1
-                    && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0))
+               if(kfs_index == 0x00 && !auto_ctrl_.flag.is_up_catch)
                     this->set_StretchLength(init_data_.max_stretchLength_); // 伸展到存储位置需要的长度
 
                 this->store_state_ = store_state::lower_state;
@@ -802,8 +801,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
         {
             if(this->get_currentJointStatus().rotateJoint_angle_ > 250.0f && this->get_currentJointStatus().rotateJoint_angle_ < 340.0f)
             {
-                if(auto_ctrl_.now_targetIndex == 0x00 && kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.start_to_autoctrl == 1
-                    && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0)) //第一个顶存不能直接走
+                if(auto_ctrl_.now_targetIndex == 0x00 && kfs_index == 0x00 && !auto_ctrl_.flag.is_up_catch) //第一个顶存不能直接走
                     auto_ctrl_.flag.canChassisStart = false;
                 else
                     auto_ctrl_.flag.canChassisStart = true;
@@ -811,15 +809,13 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
         }
 
         if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 1.0f
-            && kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.start_to_autoctrl == 1
-            && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0))
+            && kfs_index == 0x00 && !auto_ctrl_.flag.is_up_catch)
         {
             this->set_PitchAngle(0.0f); //吸盘放下
         }
 
         if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 5.0f && kfs_index == 0x00
-            && auto_ctrl_.start_to_autoctrl == 1 && auto_ctrl_.now_targetIndex == 0x00  //顶吸侧存
-            && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0)
+            && auto_ctrl_.flag.is_up_catch)
         {
 
             this->set_LaunchHeight(init_data_.new_store_height_outside_); // 降低到存储高度
@@ -831,14 +827,12 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             this->set_LaunchHeight(init_data_.store_height_inside_); // 降低到存储高度
         }
         else if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 5.0f && kfs_index == 0x00 
-            && !(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.start_to_autoctrl == 1
-            && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0)
+            && !auto_ctrl_.flag.is_up_catch
             &&  std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 0.2f) //侧吸顶存
         {
             if(this->get_currentJointStatus().stretchJoint_Length_ > init_data_.max_stretchLength_ - 0.01f)
             {
-                if(auto_ctrl_.now_targetIndex == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.start_to_autoctrl == 1
-                    && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0))
+                if(auto_ctrl_.now_targetIndex == 0x00 && !auto_ctrl_.flag.is_up_catch)
                         auto_ctrl_.flag.canChassisStart = true;
                 this->set_LaunchHeight(init_data_.store_height_inside_); // 降低到存储高度
             }
@@ -857,8 +851,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
         else if ( // std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.max_launchHeight_) < 0.01f
             std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.new_store_height_outside_) < 0.01f 
                 && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 1.0f && kfs_index == 0x00
-            && auto_ctrl_.start_to_autoctrl == 1 && auto_ctrl_.now_targetIndex == 0x00 
-            && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0) //顶吸侧存
+            && auto_ctrl_.flag.is_up_catch) //顶吸侧存
         {
             is_store = true;
             
@@ -866,8 +859,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             this->store_state_ = store_state::outstate1;
         }
         else if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.store_height_inside_) < 0.01f 
-            && kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.start_to_autoctrl == 1
-            && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0)
+            && kfs_index == 0x00 && !auto_ctrl_.flag.is_up_catch
             && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 1.0f)
         {
             is_store = true;
@@ -1559,7 +1551,7 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
 bool ArmSetup::state_alignStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    if (auto_ctrl_.now_targetIndex == 0 && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0)
+    if (auto_ctrl_.flag.is_up_catch)
     {
         this->set_PitchAngle(0.0f); // pitch放下
     }
@@ -1606,7 +1598,7 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
     float kfs_h = GetKFSHeight(targetKFS);
     if (kfs_h == 0.2f)
         targetLowerHeight = init_data_.catch_20height;
-    else if (kfs_h == 0.2f && auto_ctrl_.now_targetIndex == 0 && auto_ctrl_.targetKFS[2] != 0)
+    else if (auto_ctrl_.flag.is_up_catch)
         targetLowerHeight = this->init_data_.up_20cm_lower_height_;
     else if (kfs_h == 0.4f)
         targetLowerHeight = this->init_data_.catch_40height + catch_offset;
@@ -1621,7 +1613,7 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
                                             0.45f); // 判断是否可以开始下降
     if (canLower)
     {
-        if (kfs_h == 0.2f && auto_ctrl_.now_targetIndex == 0 && auto_ctrl_.targetKFS[2] != 0)
+        if (auto_ctrl_.flag.is_up_catch)
         {
             this->set_LaunchHeight(this->init_data_.up_20cm_lower_height_ + 0.05f); // 下降到目标高度
             this->set_StretchLength(this->init_data_.max_stretchLength_);           // 伸展到最大长度
@@ -1645,11 +1637,10 @@ bool ArmSetup::state_extStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    if(!(auto_ctrl_.now_targetIndex == 0x00 && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f 
-        && auto_ctrl_.targetKFS[2] != 0) && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - this->init_data_.pitch_lift_angle_) < 3.0f)
+    if(!auto_ctrl_.flag.is_up_catch && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - this->init_data_.pitch_lift_angle_) < 3.0f)
         this->set_StretchLength(this->init_data_.max_stretchLength_); // 伸展到最大长度
 
-    if (auto_ctrl_.now_targetIndex == 0x00 && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0)
+    if (auto_ctrl_.flag.is_up_catch)
     {
         if (_tool_Abs(this->get_currentJointStatus().stretchJoint_Length_ - this->init_data_.max_stretchLength_) < 0.01f && !auto_ctrl_.flag.isExtReach)
         {

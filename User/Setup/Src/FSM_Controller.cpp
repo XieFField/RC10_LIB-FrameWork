@@ -705,7 +705,6 @@ void FSM_Controller::auto_ctrl()
 
     case 0x01:
     {
-        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
         if (airjoy_data_.SWB == 0x01) // 自动模式
         {
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_ARM_AUTO);
@@ -735,6 +734,7 @@ void FSM_Controller::auto_ctrl()
 #if !ARM_AUTO_DEBUG_NOCHASSIS
             if (arm_setup_->isArmAutoStart())
             {
+                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_KFS_IDLE);
                 // 判断是否可以进入伸展阶段
                 if (chassis_setup_->Get_Arm_Start_flag())
                 {
@@ -750,6 +750,7 @@ void FSM_Controller::auto_ctrl()
         }
         else if (airjoy_data_.SWB == 0x00) // 手操模式
         {
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_ARM_LOW_MANUAL_LEVEL);
             if (airjoy_data_.SWE == 0x00)
                 chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
