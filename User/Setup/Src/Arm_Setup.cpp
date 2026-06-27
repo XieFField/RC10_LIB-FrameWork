@@ -238,6 +238,12 @@ void ArmSetup::loop()
         // 无事发生
         break;
     }
+
+    case ARM_COMBINE_IDLE:
+    {
+        combine_idle();
+        break;
+    }
     default:
         break;
     }
@@ -680,15 +686,17 @@ void ArmSetup::arm_d_pad_ctrl()
     {
         if (manual_putdown())
         {
-            if(auto_ctrl_.kfs_num == TWO_OR_THREE && arm_ctrlStatus.comp_takeout_now[1] < 2)
+           target_joint_status_ = this->get_currentJointStatus();
+
+            if (auto_ctrl_.kfs_num == TWO_OR_THREE && 
+                arm_ctrlStatus.comp_takeout_now[1] < 2 && 
+                (arm_ctrlStatus.comp_takeout_now[1] == 0 || auto_ctrl_.targetKFS[2] != 0))
             {
                 arm_ctrlStatus.is_store_acting = 5;
-                target_joint_status_ = this->get_currentJointStatus();
             }
             else
             {
                 arm_ctrlStatus.is_store_acting = 0;
-                target_joint_status_ = this->get_currentJointStatus();
             }
         }
         arm_ctrlStatus.last_manual_store = 4;
@@ -778,7 +786,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                 else if (kfs_index == 0x00)
                     this->set_PitchAngle(init_data_.pitch_lift_angle_); // 吸盘抬平
 
-               if(kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 
+               if(kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.start_to_autoctrl == 1
                     && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0))
                     this->set_StretchLength(init_data_.max_stretchLength_); // 伸展到存储位置需要的长度
 
@@ -794,7 +802,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
         {
             if(this->get_currentJointStatus().rotateJoint_angle_ > 250.0f && this->get_currentJointStatus().rotateJoint_angle_ < 340.0f)
             {
-                if(auto_ctrl_.now_targetIndex == 0x00 && kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 
+                if(auto_ctrl_.now_targetIndex == 0x00 && kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.start_to_autoctrl == 1
                     && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0)) //第一个顶存不能直接走
                     auto_ctrl_.flag.canChassisStart = false;
                 else
@@ -803,7 +811,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
         }
 
         if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 1.0f
-            && kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 
+            && kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.start_to_autoctrl == 1
             && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0))
         {
             this->set_PitchAngle(0.0f); //吸盘放下
@@ -821,16 +829,15 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                     && this->get_currentJointStatus().suckerJoint_angle_ < 0.2f)
         {
             this->set_LaunchHeight(init_data_.store_height_inside_); // 降低到存储高度
-            // this->set_LaunchHeight(init_data_.max_launchHeight_); // 降低到存储高度
         }
         else if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 5.0f && kfs_index == 0x00 
-            && !(auto_ctrl_.now_targetIndex == 0x00 
+            && !(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.start_to_autoctrl == 1
             && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0)
             &&  std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 0.2f) //侧吸顶存
         {
             if(this->get_currentJointStatus().stretchJoint_Length_ > init_data_.max_stretchLength_ - 0.01f)
             {
-                if(auto_ctrl_.now_targetIndex == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 
+                if(auto_ctrl_.now_targetIndex == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.start_to_autoctrl == 1
                     && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0))
                         auto_ctrl_.flag.canChassisStart = true;
                 this->set_LaunchHeight(init_data_.store_height_inside_); // 降低到存储高度
@@ -859,7 +866,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             this->store_state_ = store_state::outstate1;
         }
         else if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.store_height_inside_) < 0.01f 
-            && kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 
+            && kfs_index == 0x00 && !(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.start_to_autoctrl == 1
             && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f && auto_ctrl_.targetKFS[2] != 0)
             && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 1.0f)
         {
@@ -1059,52 +1066,6 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 
     case store_state::outstate2:
     {
-        // if (this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.05f)
-        // {
-        //     if (kfs_index == 0x00 && this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
-        //     {
-
-        //         if(arm_status_ == ARM_COMP_SEMI_CONTROL)
-        //             this->set_RotateAngle(90.0f);
-
-        //         else
-        //             this->set_RotateAngle(0.0f);
-
-        //         if ((this->get_currentJointStatus().rotateJoint_angle_ > 359.0f && this->get_currentJointStatus().rotateJoint_angle_ < 360.0f) || (this->get_currentJointStatus().rotateJoint_angle_ < 1.0f && this->get_currentJointStatus().rotateJoint_angle_ > 0.0f))
-        //         {
-        //             this->store_state_ = store_state::idle;
-        //             return true;
-        //         }
-        //         else
-        //             return false;
-        //     }
-        //     else if (this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.05f && kfs_index == 0x01)
-        //     {
-
-        //         if(arm_status_ == ARM_COMP_SEMI_CONTROL)
-        //         {
-        //             this->set_RotateAngle(90.0f);
-        //             this->set_PitchAngle(init_data_.pitch_lift_angle_); // 吸盘抬平
-        //         }
-        //         else
-        //             this->set_RotateAngle(0.0f);
-
-        //         if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 0.5f && arm_status_ == ARM_COMP_SEMI_CONTROL)
-        //         {
-        //             this->store_state_ = store_state::idle;
-        //             return true;
-        //         }
-        //         else if ((this->get_currentJointStatus().rotateJoint_angle_ > 359.7f && this->get_currentJointStatus().rotateJoint_angle_ < 360.0f) 
-        //             || (this->get_currentJointStatus().rotateJoint_angle_ < 0.3f && this->get_currentJointStatus().rotateJoint_angle_ > 0.0f) 
-        //             && arm_status_ != ARM_COMP_SEMI_CONTROL)
-        //         {
-        //             this->store_state_ = store_state::idle;
-        //             return true;
-        //         }
-        //         else
-        //             return false;
-        //     }
-        // }
         if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
         {
             float rotate_tar = (arm_status_ == ARM_COMP_SEMI_CONTROL) ? 90.0f : 1.0f;
@@ -1125,6 +1086,20 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
         break;
     }
     }
+    return false;
+}
+
+bool ArmSetup::combine_idle()
+{
+    this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
+    this->set_LaunchHeight(init_data_.max_launchHeight_);
+    this->set_StretchLength(0.0f);
+    if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.1f)
+        this->set_RotateAngle(358.0f);
+
+    if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 358.0f) < 1.0f)
+        return true;
+
     return false;
 }
 

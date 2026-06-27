@@ -665,7 +665,7 @@ void FSM_Controller::auto_ctrl()
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x00) // 合体模式 上层IDLE
         {
-            arm_setup_->setArmStatus(ARM_IDLE);
+            arm_setup_->setArmStatus(ARM_COMBINE_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_COMBINE_MODE);
 

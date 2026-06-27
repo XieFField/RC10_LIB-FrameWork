@@ -347,6 +347,8 @@ private:
     void idle();
     void debug();
 
+    bool combine_idle();
+
     //校准
     void calibrateMotor();
 
