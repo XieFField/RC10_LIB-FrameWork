@@ -107,8 +107,10 @@ namespace WeaponSage_Setup
         bool changeTarget_state = false; //�Ƿ����л�Ŀ��״̬
         float weapon_launch_fastrate = 0.0002; 
         float weapon_launch_slowrate = 0.0001;
-        float weapon_wrist_rate=0.001f;
+        float weapon_wrist_rate=0.05f;
         bool is_Dpad_Done = false; //�Ƿ�����ʹ��D-pad����
+        uint8_t last_Dpad_acting_state=0;
+        uint8_t Dpad_acting_state=0;
     }manual_RC10_ctrlForgrip_S;
 
     typedef struct{
@@ -119,6 +121,7 @@ namespace WeaponSage_Setup
 			bool arm_enable=false;
             bool launch_enable=false;
             bool wrist_enable=false;
+		
         }auto_state_bool_S; //局部状态结构体
         struct{
             bool is_reach_sagelowest = false; //当升降达到最低点视为已经完成下降
@@ -137,12 +140,12 @@ namespace WeaponSage_Setup
         int pole_num = 1;
         bool claw_flag[3]={false,false,false};
         struct{
-            float launch_start = 0.5f;
+            float launch_start = 0.82f;
             float launch_catch =0.0f;
             float launch_untight =0.45f;
             float launch_clawclosed = 0.8f;
             float launch_rotate =1.0f;
-            float launch_lastcatch=0.11f;
+            float launch_lastcatch=0.14f;
             float launch_dockprepare=0.6f;
         }launch_kp;
 		bool is_ServoStart= false;
@@ -260,8 +263,8 @@ public:
         ctrl_status_.is_claw_3_closed = claw_3;
     }
 
-    void Close_TargetClaw();
-    void Close_TargetClaw_Untight();
+    bool Close_TargetClaw();
+    bool Close_TargetClaw_Untight();
     void Judge_launch_status();
     void Judge_wrist_status();
     
@@ -302,7 +305,6 @@ protected:
 private:
 	
 	bool omni_flag = false;
-
     WeaponSage_Setup::ctrl_status_S ctrl_status_;
     Debug_Printf debug_uart = Debug_Printf(&huart1);
 
@@ -321,8 +323,8 @@ private:
 
     float WristToClosest_poistive(float current_angle);
     float WristToClosest_negative(float current_angle);
-    void Sage_to_high();
-    void Sage_to_low();
+    bool Sage_to_high();
+    bool Sage_to_low();
     
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 

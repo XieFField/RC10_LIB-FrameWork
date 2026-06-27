@@ -1,0 +1,121 @@
+entries:
+  - kind: active
+    date: 2026-06-09
+    topic: rc10_path_yaw_homing_build_sync
+    path: jia_docs/handoff/2026-06/ai_handoff_2026-06-09_rc10_path_yaw_homing_build_sync.md
+    recommended: true
+    notes: 当前最推荐的主线 handoff，说明 AAA-Path 合入、yaw lock 修复链、homing 三边沿确认、debug 状态收口与 MDK 编译恢复。
+  - kind: active
+    date: 2026-06-05
+    topic: rc10_chassis_doctest_zero_stop_sync
+    path: jia_docs/handoff/2026-06/ai_handoff_2026-06-05_rc10_chassis_doctest_zero_stop_sync.md
+    recommended: false
+    notes: 上一阶段主线 handoff，说明 doctest 拆分、zero-stop / X-Park、RUNTIME_MIN / FULL_DEBUG 分层与 debug9 释放语义。
+  - kind: active
+    date: 2026-05-26
+    topic: rc10_drive_pid_load_tune_merge
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-26_rc10_drive_pid_load_tune_merge.md
+    recommended: false
+    notes: drive PID / payload supporting handoff，说明 /6 merge 收口语义、验证结果与后续联调关注点。
+  - kind: active
+    date: 2026-05-26 11:24
+    topic: singlewheeltrace_payload_semantics
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-26_1124_singlewheeltrace_payload_semantics.md
+    recommended: false
+    notes: 作为 2026-05-26 主线 handoff 的协议补充，专门解释 SingleWheelTrace 的 payload 分类与 9 通道风险。
+  - kind: active
+    date: 2026-05-25 23:44
+    topic: rc10_debug_merge_semantics_sync
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-25_2344_rc10_debug_merge_semantics_sync.md
+    recommended: false
+    notes: /6 合并前的上一站主线交接，可用于追溯 merge baseline。
+  - kind: active
+    date: 2026-05-24 21:58
+    topic: rc10_scurve_lock_yaw_context_sync
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-24_2158_rc10_scurve_lock_yaw_context_sync.md
+    recommended: false
+    notes: S 曲线、锁角与 yaw 调试上下文同步。
+  - kind: active
+    date: 2026-05-23 21:40
+    topic: rc10_yaw_pid_vofa_trace
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-23_2140_rc10_yaw_pid_vofa_trace.md
+    recommended: false
+    notes: yaw PID 观测与 VOFA trace 相关交接。
+  - kind: active
+    date: 2026-05-23 02:26
+    topic: rc10_steer_fault_recovery_pid_guard
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-23_0226_rc10_steer_fault_recovery_pid_guard.md
+    recommended: false
+    notes: 舵向 fault recovery 与 PID guard 语义交接。
+  - kind: active
+    date: 2026-05-22 13:43
+    topic: rc10_context_sync_after_fault_probe_revert
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-22_1343_rc10_context_sync_after_fault_probe_revert.md
+    recommended: false
+    notes: fault probe revert 之后的上下文同步。
+  - kind: active
+    date: 2026-05-22 01:21
+    topic: rc10_near_zero_suppression_refactor
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-22_0121_rc10_near_zero_suppression_refactor.md
+    recommended: false
+    notes: near-zero suppression 重构交接。
+  - kind: active
+    date: 2026-05-21 12:01
+    topic: rc10_drive_gate_release_sync
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-21_1201_rc10_drive_gate_release_sync.md
+    recommended: false
+    notes: drive gate release 语义同步。
+  - kind: active
+    date: 2026-05-20 23:30
+    topic: rc10_swerve_pipeline_sync
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-20_2330_rc10_swerve_pipeline_sync.md
+    recommended: false
+    notes: swerve pipeline 同步。
+  - kind: active
+    date: 2026-05-20
+    topic: rc10_context_sync
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-20_rc10_context_sync.md
+    recommended: false
+    notes: RC10 上下文同步入口。
+  - kind: active
+    date: 2026-05-15 22:23
+    topic: time_stamp_us64_port
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-15_2223_time_stamp_us64_port.md
+    recommended: false
+    notes: 时间戳接口移植相关交接。
+  - kind: active
+    date: 2026-05-15 22:00
+    topic: pid_debug_readback
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-15_2200_pid_debug_readback.md
+    recommended: false
+    notes: PID 调试回读交接。
+  - kind: active
+    date: 2026-05-13 00:49
+    topic: chassis
+    path: jia_docs/handoff/2026-05/ai_handoff_2026-05-13_0049.md
+    recommended: false
+    notes: 当前 2026-05 handoff 序列中较早的 chassis 入口。
+  - kind: history
+    date: 2026-05-08 13:13
+    topic: chassis_refactor_continue
+    path: jia_docs/history/2026-05/ai_handoff_2026-05-08_1313_Jia6_chassis_refactor_continue.md
+    recommended: false
+    notes: 已归档的 chassis refactor 连续交接。
+  - kind: history
+    date: 2026-05-08 00:45
+    topic: chassis_refactor_followup
+    path: jia_docs/history/2026-05/ai_handoff_2026-05-08_0045_Jia6_chassis_refactor_followup.md
+    recommended: false
+    notes: 已归档的 chassis refactor follow-up。
+  - kind: history
+    date: 2026-05-07 23:05
+    topic: chassis_refactor
+    path: jia_docs/history/2026-05/ai_handoff_2026-05-07_2305_Jia6_chassis_refactor.md
+    recommended: false
+    notes: 已归档的 chassis refactor 初始交接。
+  - kind: history
+    date: 2026-04-28 12:10
+    topic: vesc_chassis_context
+    path: jia_docs/history/2026-04/2026-04-28_1210_单舵轮VESC调试与底盘上下文交接文档.md
+    recommended: false
+    notes: 更早期的单舵轮 VESC 调试与底盘上下文归档。

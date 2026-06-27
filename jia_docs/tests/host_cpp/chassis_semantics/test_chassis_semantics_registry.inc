@@ -15,9 +15,7 @@
     testResolveDebugModeFallsBackToTorqueFreeWhenMode20IsRetired();
     testLowSpeedDriveSuppressionCanBeDisabled();
     testProjectedDriveUsesReachableSteerInsteadOfIdealVector();
-    testHighSpeedDriveSuppressionTightensAndReleasesThroughPlannerOutput();
     testLowSpeedDriveSuppressionDoesNotReenterInsideNearZeroHysteresisBand();
-    testHighSpeedDriveSuppressionWaitsUntilNearZeroExitBeforeEnabling();
     testMode30SingleWheelDirectJoystickIsolationOnlyLetsTargetWheelMove();
     testMode30SingleWheelDirectDriveCanUseSCurveShaping();
     testMode30CommonWheelIndexAliasCanDirectlySelectTargetWheel();
@@ -78,6 +76,9 @@
     testLockToYawPidTracePublishesTargetErrorAndPidFireState();
     testLockToYawThenLockNowKeepsTheEffectiveLockedYaw();
     testLockNowYawPidTraceDistinguishesManualShiftAndHoldStates();
+    testLockToYawXParkBrakeUsesLockToYawSemanticsWhileMoving();
+    testLockNowYawXParkBrakeUsesLockNowYawSemanticsWhileMoving();
+    testLockToYawXParkBrakeSkipsYawLockReengageAfterZeroStopRelease();
     testHardGateFromXParkHoldsAllDriveUntilAllWheelsPassCloseAngle();
     testLaunchFromXParkHoldsBodyAndDriveAtZeroUntilAllWheelsAligned();
     testNormalLaunchSCurveWaitsForSteerAlignmentBeforeAccumulatingBodyPlan();

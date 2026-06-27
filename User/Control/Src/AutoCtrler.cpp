@@ -3,10 +3,10 @@
 
 #include <iostream>
 
+int8_t color = 1; //1 为蓝色场地， 0为红色场地。
 namespace MF_AutoCtrler
 {
 
-int8_t color = 1; //1 为蓝色场地， 0为红色场地。
 
 void set_color(int8_t color_)
 {
@@ -19,6 +19,22 @@ void set_color(int8_t color_)
 int8_t get_color()
 {
     return color;
+}
+
+const float MF_high_blue[12] =
+{
+    0.4f, 0.2f, 0.4f,
+    0.2f, 0.4f, 0.6f,
+    0.4f, 0.6f, 0.4f,
+    0.2f, 0.4f, 0.2f
+};
+
+
+float GetMFHeight(int8_t mfNum)
+{
+    const float* arr = (MF_AutoCtrler::get_color() == 1) ? 
+        MF_AutoCtrler::MF_high_blue : MF_AutoCtrler::MF_high_blue;  //高度不用分
+    return arr[mfNum - 1];
 }
 
 const Point2D MapNum_RealPos[30] = {
@@ -1013,7 +1029,8 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2,
     RoadResult_S MF1Road = MFNum_ToCatchRoadResult(MF1);
     RoadResult_S MF2Road = MFNum_ToCatchRoadResult(MF2);
     RoadResult_S MF3Road = MFNum_ToCatchRoadResult(MF3);
-
+    if(color == 1) result.exitMap = 26;
+    else if(color == 0) result.exitMap = 30;
     int cornerMap[4] = {1, 5, 26, 30}; // 四个角落的地图编号
 
     //解出目标梅花桩相邻的通道
@@ -1243,7 +1260,7 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2,
     PushMustPastNode(result.mustPastMap, 12, mustLen, result.entranceMap);
 
     bool pushedRoad1 = (result.entranceMap == bestRoad1);
-    bool pushedRoad2 = (bestRoad2 != 0 && result.entranceMap == bestRoad2);
+    bool pushedRoad2 = false;
     bool pushedRoad3 = false;
 
     for (int i = 0; i < fullLen; ++i)
@@ -1297,6 +1314,55 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2,
             result.Index_MFroad[1] = i;
         if (result.mustPastMap[i] == result.MFroad[2])
             result.Index_MFroad[2] = i;
+    }
+
+    float MF_dir[3] = {-1.0f, -1.0f, -1.0f};
+    for(int i = 0; i < 3; i++) //计算每个MF_road上拾取KFS完成后的底盘移动方向. 取值: 0 90 180 270
+    {
+        if(result.MFroad[i] == 0)
+            break;
+
+        MF_dir[i] = chassisMoveDir(result.MFroad[i], 
+            result.mustPastMap[result.Index_MFroad[i] + 1]);
+    }
+
+    //找出特殊情况：
+    /**
+     * 必须满足的条件： 如果底盘移动在最上，而MF_dir为90则满足
+     *                 如果底盘移动在最左,而MF_dir为180则满足
+     *                 如果底盘移动在最下，而MF_dir为270则满足
+     *                 如果底盘移动在最右，而MF_dir为0则满足
+     * 满足以上其中之一的条件时候进入第二步判断：
+     * 第二步判断：在底盘移动方向上的下一个MF(如果有的话)，如果下一个MF的高度大于当前的MF，则为需要考虑的特殊情况
+     *            或者当前MF高度为60cm（即最高的），为特殊考虑情况
+     * 
+     * 满足两步考虑的则为特殊情况。
+     */
+
+
+
+
+    for(int i = 0; i < 3; i++)
+    {
+        if(result.MFroad[i] == 0) break;
+        if(MF_dir[i] < 0.0f) continue;
+
+        int8_t c, r;
+        Map_ToCR(result.MFroad[i], c, r);
+
+        // 第一步：边缘 + 特定方向
+        bool edge_ok = false;
+        if(r == 6 && std::fabs(MF_dir[i] - 180.0f) < 1.0f) 
+                edge_ok = true;    // 上+左
+        else if(c == 1 && std::fabs(MF_dir[i] - 270.0f) < 1.0f) 
+                edge_ok = true; // 左+下
+        else if(r == 1 && std::fabs(MF_dir[i] -   0.0f) < 1.0f) 
+                edge_ok = true; // 下+右
+        else if(c == 5 && std::fabs(MF_dir[i] -  90.0f) < 1.0f) 
+                edge_ok = true; // 右+上
+
+        if(edge_ok)
+            result.sp_handling_KFS[i] = 1;
     }
 
     return result;
@@ -1426,6 +1492,13 @@ int8_t GetMapNumFromPos(Point2D pos)
     return MF_AutoCtrler::CR_ToMap(c, r);
 }
 
+/**
+     * @brief 计算底盘行进方向 
+     * @param startmapNum 起点所在的地图格编号
+     * @param next_mapNum 下一个地图格编号
+     * @return 返回底盘速度方向，以角度代替矢量，0度对应X轴正方向，逆时针为正，单位度
+     *         取值范围[0, 360)，如果输入无效返回-1]
+     */
 float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
 {
     if(startmapNum < 1 || startmapNum >30 || next_mapNum < 1 || next_mapNum >30)
@@ -1435,7 +1508,6 @@ float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
     
     bool isinMFstart = IsWalkable(startmapNum);
     bool isinMFnext = IsWalkable(next_mapNum);
-
 
     if(isinMFstart && isinMFnext)
     {
