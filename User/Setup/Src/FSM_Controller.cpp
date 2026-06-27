@@ -715,8 +715,8 @@ void FSM_Controller::auto_ctrl()
 #else
             chassis_setup_->setChassisStatus(CHASSIS_STOP);
 #endif
-            arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-            //arm_setup_->setArmStatus(ARM_IDLE);
+            //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            arm_setup_->setArmStatus(ARM_IDLE);
             static uint8_t is_click = 0;
 
             if (airjoy_data_.LB == 1 && is_click == 0 && airjoy_data_.page != 0x01)
