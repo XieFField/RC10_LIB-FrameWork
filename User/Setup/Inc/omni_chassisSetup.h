@@ -353,7 +353,7 @@ public:
     bool GetEnd_flag()
     {
         // 读取夹杆退后流程完成标志。
-        if (pid_dead_flag == true && WeaponSage_End == true && (_tool_Abs(yaw < target_yaw) < 1.0f))
+        if (pid_dead_flag == true && WeaponSage_End == true && (_tool_Abs(yaw - target_yaw) < 1.0f))
         {
             return true;
         }
@@ -512,7 +512,7 @@ private:
             tLookahead = hi;
             lookaheadPt = curve.Get_Point(tLookahead);
         }
-        pid_dead_flag = path_lock.get_is_in_dead_zone();
+        pid_dead_flag = (pid_pos_y.get_is_in_dead_zone()&&pid_pos_y.get_is_in_dead_zone());
 
         // 3. 在绝对世界坐标系下，独立计算X轴和Y轴的纠偏向速度
         // 将不再计算切法向，直接基于XY差值PID

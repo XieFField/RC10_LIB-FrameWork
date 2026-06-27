@@ -268,6 +268,7 @@ public:
 
     bool Close_TargetClaw();
     bool Close_TargetClaw_Untight();
+    bool Close_TargetClaw_Untight1();
     void Judge_launch_status();
     void Judge_wrist_status();
     

@@ -103,7 +103,7 @@
         <bEvRecOn>1</bEvRecOn>
         <bSchkAxf>0</bSchkAxf>
         <bTchkAxf>0</bTchkAxf>
-        <nTsel>2</nTsel>
+        <nTsel>3</nTsel>
         <sDll></sDll>
         <sDllPa></sDllPa>
         <sDlgDll></sDlgDll>
@@ -153,7 +153,56 @@
           <Name>UL2CM3(-S0 -C0 -P0 -FD20000000 -FC8000 -FN1 -FF0STM32H72x-73x_1024 -FS08000000 -FL0100000 -FP0($$Device:STM32H723ZGTx$CMSIS\Flash\STM32H72x-73x_1024.FLM))</Name>
         </SetRegEntry>
       </TargetDriverDllRegistry>
-      <Breakpoint/>
+      <Breakpoint>
+        <Bp>
+          <Number>0</Number>
+          <Type>0</Type>
+          <LineNumber>176</LineNumber>
+          <EnabledFlag>0</EnabledFlag>
+          <Address>134326384</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\User\Setup\Src\omni_chassisSetup.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Frame_T\../User/Setup/Src/omni_chassisSetup.cpp\176</Expression>
+        </Bp>
+        <Bp>
+          <Number>1</Number>
+          <Type>0</Type>
+          <LineNumber>196</LineNumber>
+          <EnabledFlag>0</EnabledFlag>
+          <Address>134327142</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\User\Setup\Src\omni_chassisSetup.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Frame_T\../User/Setup/Src/omni_chassisSetup.cpp\196</Expression>
+        </Bp>
+        <Bp>
+          <Number>2</Number>
+          <Type>0</Type>
+          <LineNumber>799</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134311570</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\User\Setup\Src\FSM_Controller.cpp</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Frame_T\../User/Setup/Src/FSM_Controller.cpp\799</Expression>
+        </Bp>
+      </Breakpoint>
       <WatchWindow1>
         <Ww>
           <count>0</count>
@@ -245,6 +294,16 @@
           <WinNumber>1</WinNumber>
           <ItemText>is_launch_ok</ItemText>
         </Ww>
+        <Ww>
+          <count>18</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\ChassisOmni.robot_pos_.x</ItemText>
+        </Ww>
+        <Ww>
+          <count>19</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\ChassisOmni.path_line_.bezier_curve_list[0].end_point.y</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>
@@ -271,7 +330,7 @@
         <periodic>1</periodic>
         <aLwin>0</aLwin>
         <aCover>0</aCover>
-        <aSer1>0</aSer1>
+        <aSer1>1</aSer1>
         <aSer2>0</aSer2>
         <aPa>0</aPa>
         <viewmode>1</viewmode>
@@ -1581,7 +1640,7 @@
 
   <Group>
     <GroupName>RC10_LIB/Motor</GroupName>
-    <tvExp>0</tvExp>
+    <tvExp>1</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>

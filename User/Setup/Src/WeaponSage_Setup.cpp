@@ -656,7 +656,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
             {
                 if (!auto_ctrl_.flag.is_reach_closedclaw)
                 {
-                    this->Close_TargetClaw_Untight();
+                    this->Close_TargetClaw_Untight1();
                     if(auto_ctrl_.flag.is_untight) //如果已经调整好爪子了，进入下一个状态
                     {
                         if(!auto_ctrl_.is_sage_adjust_start)
@@ -1066,9 +1066,9 @@ bool Robot_WeaponSage_Setup::D_pad_acting()
     }  
     else if(manual_RC10_ctrlForgrip_.Dpad_acting_state==3)
     {
-        
+        float currrent_wrist=normalize_deg_0_360(current_pos_.wrist_pos_);
     //    target_pos_.wrist_pos_=WristToClosest_poistive(current_pos_.wrist_pos_);
-        if(abs(current_pos_.wrist_pos_-target_pos_.wrist_pos_)<0.1f)
+        if(abs(currrent_wrist-target_pos_.wrist_pos_)<0.1f)
         {
             manual_RC10_ctrlForgrip_.Dpad_acting_state=0;
             manual_RC10_ctrlForgrip_.last_Dpad_acting_state=3;
@@ -1076,7 +1076,8 @@ bool Robot_WeaponSage_Setup::D_pad_acting()
     }else if(manual_RC10_ctrlForgrip_.Dpad_acting_state==4)
     {
     //    target_pos_.wrist_pos_=WristToClosest_negative(current_pos_.wrist_pos_);
-        if(abs(current_pos_.wrist_pos_-target_pos_.wrist_pos_)<0.1f)
+        float currrent_wrist=normalize_deg_0_360(current_pos_.wrist_pos_);
+        if(abs(currrent_wrist-target_pos_.wrist_pos_)<0.1f)
         {
             manual_RC10_ctrlForgrip_.Dpad_acting_state=0;
             manual_RC10_ctrlForgrip_.last_Dpad_acting_state=4;
@@ -1345,6 +1346,7 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw()
         return false;
 }
 
+
 bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
 {
     float target_claw_pos[3] = {0.0f,0.0f,0.0f};
@@ -1388,6 +1390,60 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
         return false;
     }
 }
+
+bool Close_TargetClaw_Untight1();
+{
+float target_claw_pos[3] = {0.0f,0.0f,0.0f};
+for (int i=0;i<3;i++)       
+{
+    if(auto_ctrl_.claw_flag[i])
+    {
+        target_claw_pos[i]=20.0f;
+    }
+    else
+    {
+        target_claw_pos[i]=initData_.max_clawAngle_;
+    }
+}
+
+if(!auto_ctrl_.auto_ctrl1)
+{
+    for (int i=0;i<3;i++)
+        target_claw_pos[i] = initData_.claw_untight;
+}
+target_pos_.claw_1_pos_=target_claw_pos[0];
+target_pos_.claw_2_pos_=target_claw_pos[1];
+target_pos_.claw_3_pos_=target_claw_pos[2];
+this->setClaw_1_angle(target_claw_pos[0]); //半松爪子
+this->setClaw_2_angle(target_claw_pos[1]);
+this->setClaw_3_angle(target_claw_pos[2]);
+
+if(!ctrl_status_.is_untight_start && !auto_ctrl_.flag.is_untight) //如果已经调整好爪子了，进入下一个状态
+{
+    ctrl_status_.untight_startTime=TimeStamp::getInstance().getSeconds();
+    ctrl_status_.is_untight_start=true;
+    untight_time_cnt++;
+}
+if(ctrl_status_.now_times-ctrl_status_.untight_startTime>=claw_untight_time&& ctrl_status_.is_untight_start) //保持半松状态1秒钟
+{
+    auto_ctrl_.flag.is_untight=true;
+    ctrl_status_.is_untight_start=false;
+    untight_over_cnt++;
+    return true;
+}else{
+    return false;
+}
+}
+
+
+
+
+
+
+
+
+
+
 
 void Robot_WeaponSage_Setup::Judge_launch_status()
 {

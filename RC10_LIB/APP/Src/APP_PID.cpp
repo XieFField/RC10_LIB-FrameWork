@@ -44,6 +44,10 @@ float PID_Position::pid_calc(float target, float feedback)
         is_in_dead_zone_ = true;
         error_ = 0.0f;
     }
+	else
+	{
+		is_in_dead_zone_ = false;
+	}
     // calc P
     P_Term = params_.kp * error_;
 
