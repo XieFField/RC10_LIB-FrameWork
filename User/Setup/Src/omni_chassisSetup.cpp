@@ -49,15 +49,19 @@ void OmniChassis_Setup::CB_Path_Check(void)
         if (CB_point.CB_End_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_End_pos[RB_Flag].y == curve.Get_End_point().y && path_line_.Is_End() == false)
         {
             CB_flag.Retreat_flag = true;
-        }
-        else if (CB_flag.Retreat_flag == true)
-        {
-            if (RB_Flag)
+			if(robot_pos_.y>CB_point.spin_y&&WeaponSage_Start == false)
+			{
+				if (RB_Flag)
                 target_yaw = 90.0f;
             else
                 target_yaw = -90.0f;
+				
+			}
+        }
+        else if (CB_flag.Retreat_flag == true)
+        {
+            
             CB_flag.Retreat_flag = false;
-            pid_dead_flag = false;
             WeaponSage_End = true;
         }
     }
@@ -66,15 +70,18 @@ void OmniChassis_Setup::CB_Path_Check(void)
         if (CB_point.CB_transition_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_transition_pos[RB_Flag].y == curve.Get_End_point().y)
         {
             CB_flag.Retreat_flag = true;
-        }
-        else if (CB_flag.Retreat_flag == true)
-        {
-            if (RB_Flag)
+			if(robot_pos_.y>CB_point.spin_y&&WeaponSage_Start == false)
+			{
+				if (RB_Flag)
                 target_yaw = 90.0f;
             else
                 target_yaw = -90.0f;
+				
+			}
+        }
+        else if (CB_flag.Retreat_flag == true)
+        {
             CB_flag.Retreat_flag = false;
-            pid_dead_flag = false;
             WeaponSage_End = true;
         }
     }
@@ -83,6 +90,9 @@ void OmniChassis_Setup::CB_Path_Check(void)
 
 void OmniChassis_Setup::CB_Selection_Planning(void)
 {
+	// 只能在一区和进行启动
+    if (robot_pos_.x < 0.0f || robot_pos_.x > 6.0f || robot_pos_.y > 2.8f || robot_pos_.y < 0.0f)
+       return ;
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = 0.0f;
     path_line_.Reset();
@@ -116,9 +126,8 @@ void OmniChassis_Setup::CB_Selection_Planning(void)
     }
     else if (airjoy_data_.SWC == 0x01)
     {
-        path_line_.Add_Point(CB_point.CB_transition_pos[RB_Flag], path_param.R2);
-        path_line_.Add_Point(CB_point.CB_transition_pos_1[RB_Flag], path_param.line);
-        path_line_.Add_End_Point(CB_point.CB_welt_pos[RB_Flag], path_param.R2);
+        path_line_.Add_Point(CB_point.CB_transition_pos[RB_Flag], path_param.speed);
+        path_line_.Add_End_Point(CB_point.CB_welt_pos[RB_Flag], path_param.speed);
     }
 #endif
     Path_end_point = path_line_.Get_End_Point();
@@ -186,15 +195,12 @@ void OmniChassis_Setup::loop()
             curve = path_line_.get_bezier_curve();
             if (WeaponSage_Start == false && WeaponSage_End == false)
                 v_plan();
-
             else
                 Path_lock_point(curve.Get_Start_point());
             chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
         }
         else
         {
-            if (pid_dead_flag == true && (target_yaw == 90.0f || target_yaw == (-90.0f)))
-            {
                 static bool end = false;
                 if (airjoy_data_.left_x > 0.9f)
                 {
@@ -221,12 +227,6 @@ void OmniChassis_Setup::loop()
                     Chassis_Target.yaw_rate = 0.0f;
 
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
-            }
-            else
-            {
-                Path_lock_point(Path_end_point);
-                chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
-            }
         }
         break;
     }
@@ -492,7 +492,7 @@ void OmniChassis_Setup::CZ_index_reset(void)
 
 void OmniChassis_Setup::CZ_R1_Selection_Planning(void)
 {
-    if (robot_pos_.y > 10.02f && robot_pos_.y < 11.6f && robot_pos_.x < 0.0f && robot_pos_.x > 6.0f)
+    if (robot_pos_.y < 10.02f || robot_pos_.y > 11.6f || robot_pos_.x < 0.0f || robot_pos_.x > 6.0f)
         return;
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = RB_Flag ? 180.0f : 0.0f;
@@ -688,7 +688,7 @@ void OmniChassis_Setup::CZ_ARM_Path_Init(void)
 }
 void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
 {
-    if (robot_pos_.y > 10.02f && robot_pos_.y < 11.6f && robot_pos_.x < 0.0f && robot_pos_.x > 6.0f)
+    if (robot_pos_.y < 10.02f || robot_pos_.y > 11.6f || robot_pos_.x < 0.0f || robot_pos_.x > 6.0f)
         return;
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = -90.0f;
@@ -703,7 +703,7 @@ void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
 }
 void OmniChassis_Setup::CZ_FIT_R2_Selection_Planning(void)
 {
-    if (robot_pos_.y > 10.02f && robot_pos_.y < 11.6f && robot_pos_.x < 0.0f && robot_pos_.x > 6.0f)
+    if (robot_pos_.y < 10.02f || robot_pos_.y > 11.6f || robot_pos_.x < 0.0f || robot_pos_.x > 6.0f)
         return;
     // 夹杆流程只规划起点到固定终点的简化路径。
     target_yaw = -90.0f;
@@ -715,6 +715,9 @@ void OmniChassis_Setup::CZ_FIT_R2_Selection_Planning(void)
     path_line_.Add_End_Point(CZ_point.R2_pos[CZ_flag.R2_pos_index][RB_Flag], path_param.R2);
     Path_end_point = path_line_.Get_End_Point();
 }
+
+
+
 
 /*
 void OmniChassis_Setup::CZ_R2_Selection_Planning(void)

@@ -43,10 +43,10 @@ void Robot_WeaponSage_Setup::loop()
 		wrist_encoder_->set_reverse(reverse___);
 	}
 	
-            if(dm_zero_____)
-            {
-                this->Weapon_arm_setZero();
-            }
+	if(dm_zero_____)
+	{
+		this->Weapon_arm_setZero();
+	}
     
 	wrist_encoder_angle_ = this->wrist_encoder_->get_angle();
 	wrist_encoder_angle_222 = this->wrist_encoder_->get_angle();
@@ -144,7 +144,12 @@ void Robot_WeaponSage_Setup::loop()
 //	if(this->arm_Motor_->getErrorNum()==0x01){
 //		this->setArm_angle(90.0f);
 //	}
-	    this->update();
+	if((arm_Motor_->getErrorNum()==0x00||!auto_ctrl_.auto_state_bool_S.arm_enable))
+	{	               
+		Weapon_arm_enable();
+		auto_ctrl_.auto_state_bool_S.arm_enable=true;
+	}
+	this->update();
 
 }
 int CNT=0;
@@ -634,7 +639,7 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
 		this->setWrist_angle(180.0f); 
 	}
 	float current_wrist_pos= normalize_deg_0_360(current_pos_.wrist_pos_);
-    if(abs(current_wrist_pos-180.0f)<0.1f) //如果手腕也调整到位了，进入等待底盘停稳的状态
+    if(abs(current_wrist_pos-180.0f)<0.5f) //如果手腕也调整到位了，进入等待底盘停稳的状态
     {
 		if(!auto_ctrl_.flag.is_prepared)
 		{
@@ -894,7 +899,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                     ctrl_status_.wrist_startTime=TimeStamp::getInstance().getSeconds();
                 }
                 float current_wrist_pos=normalize_deg_0_360(current_pos_.wrist_pos_);
-                if(abs(current_wrist_pos-target_pos_.wrist_pos_)<0.2f 
+                if(abs(current_wrist_pos-target_pos_.wrist_pos_)<0.5f 
 					&& (ctrl_status_.now_times-ctrl_status_.wrist_startTime)>=wrist_waitting_time
 					&& auto_ctrl_.auto_state_bool_S.dock_start) //如果手腕调整到位了，进入下一个状态
                 {
