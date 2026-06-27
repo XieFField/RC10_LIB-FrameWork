@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file chassis.h
  * @author 桑叁年
  * @brief 四舵轮底盘控制类声明
@@ -32,7 +32,7 @@
 #define JIA_CHASSIS_PROFILE_FULL_DEBUG 2
 
 #ifndef JIA_CHASSIS_PROFILE
-#define JIA_CHASSIS_PROFILE JIA_CHASSIS_PROFILE_RUNTIME_MIN
+#define JIA_CHASSIS_PROFILE JIA_CHASSIS_PROFILE_FULL_DEBUG
 #endif
 
 // 功能开关均允许外部 -D 单独覆盖。下面只给 profile 的默认值：
@@ -1431,10 +1431,10 @@ namespace jia
 
                 struct MotionDirectionGuardConfig
                 {
-                    f32 min_actual_speed_m_s = 0.10f;       // [RW] 实际底盘平移速度超过该值，才认为残余运动方向可信。
-                    f32 target_min_speed_m_s = 0.05f;       // [RW] 目标平移速度超过该值，才认为上层正在请求明确的新运动方向。
-                    f32 anti_motion_dot_threshold = 0.0f;   // [RW] 候选轮驱动方向与实际运动方向点积小于该值时，视为反向对抗。
-                    f32 prefer_forward_margin_deg = 20.0f;  // [RW] 直接解只比翻转解多转不超过该角度时，优先避免反向 drive。
+                    f32 min_actual_speed_m_s = 0.015f;       // [RW] 实际底盘平移速度超过该值，才认为残余运动方向可信。
+                    f32 target_min_speed_m_s = 0.015f;       // [RW] 目标平移速度超过该值，才认为上层正在请求明确的新运动方向。
+                    f32 anti_motion_dot_threshold = 0.05f;   // [RW] 候选轮驱动方向与实际运动方向点积小于该值时，视为反向对抗。
+                    f32 prefer_forward_margin_deg = 5.0f;  // [RW] 直接解只比翻转解多转不超过该角度时，优先避免反向 drive。
                 };
                 bool enable_motion_direction_guard = true; // [RW] 是否用实际残余运动方向约束“翻转 180 度 + drive 反向”解。
                 MotionDirectionGuardConfig motion_direction_guard{};
