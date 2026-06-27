@@ -1133,7 +1133,7 @@ void ArmSetup::autoControl()
         break;
     }
 
-    case TWO_OR_THREE: // 鍋?
+    case TWO_OR_THREE: 
     {
         auto_stillnessTwo();
         break;
@@ -1846,7 +1846,7 @@ void ArmSetup::debug()
 }
 
 Arm_InitData_S arm_initData = {
-    .max_launchHeight_ = 0.39f,
+    .max_launchHeight_ = 0.415f,
     .max_launchCatch_Height_ = 0.32f,
     .max_stretchLength_ = 0.1288f,
     .arm_length_ = 0.6f,
@@ -1890,5 +1890,5 @@ Arm_InitData_S arm_initData = {
     .StoreInside_Soleniod_GPIO_Port = SUCKER_6_GPIO_Port,
     .StoreInside_Soleniod_GPIO_Pin = SUCKER_6_Pin,
 
-    .max_pitchRPM_ = 200.0f,
+    .max_pitchRPM_ = 300.0f,
 };

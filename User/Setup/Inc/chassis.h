@@ -1384,7 +1384,7 @@ namespace jia
                 // residual 不负责进入/退出 zero-stop 模式；它只负责 active 期间的“刹住以后是否安静收尾”。
                 bool enable_drive_zero_stop_assist = true;          // [RW] 是否启用 drive 零速止停辅助。
                 bool enable_drive_zero_stop_settle_zero_current = true; // [RW] 是否允许 drive zero-stop 在 residual 进入 near-zero enter 后切到零电流收尾。关闭后 active 期间始终 brake。
-                f32 drive_zero_stop_brake_current_mA = 25000.0f;     // [RW] 零速止停进入 brake 分支时下发的刹车电流。
+                f32 drive_zero_stop_brake_current_mA = 30000.0f;     // [RW] 零速止停进入 brake 分支时下发的刹车电流。
                 u32 drive_zero_stop_brake_ramp_time_ms = 0U;         // [RW] zero-stop 目标门进入后，从 0 线性爬升到 brake 电流的时长（ms）。0 表示阶跃下发。
                 u32 yaw_lock_zero_stop_release_hold_ms = 20U;       // [RW] yaw lock 从平移减速切到纯旋转前，residual 进入 near-zero 后额外保持 brake 的时长（ms）。
 

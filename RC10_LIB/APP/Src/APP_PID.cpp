@@ -379,9 +379,9 @@ PID_Param_Config vesc_drive_speed_pid_params = {
     .kp = 150.0f,
     .ki = 150.0f,
     .kd = 0.0f,
-    .I_Outlimit = 35000.0f,
+    .I_Outlimit = 30000.0f,
     .isIOutlimit = true,
-    .output_limit = 35000.0f,
+    .output_limit = 30000.0f,
     .deadband = 1.0f
 };
 
