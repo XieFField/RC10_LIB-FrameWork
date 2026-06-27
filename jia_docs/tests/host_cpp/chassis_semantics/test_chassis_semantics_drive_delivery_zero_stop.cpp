@@ -297,7 +297,6 @@ TEST_CASE("testYawLockZeroStopBrakesBeforePureRotationSteerPlanning")
     chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
     chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
@@ -357,7 +356,6 @@ TEST_CASE("testYawLockZeroStopKeepsBrakeLatchAfterPlannedTranslationTailDecays")
     chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
     chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
@@ -432,7 +430,6 @@ TEST_CASE("testYawLockZeroStopBrakeLatchOverridesDriveAlphaDecelGuard")
     chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
     chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = true;
@@ -473,7 +470,6 @@ TEST_CASE("testYawLockPureYawWithoutTranslationHistorySkipsBrakeLatchDespiteResi
     chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
     chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
@@ -513,7 +509,6 @@ TEST_CASE("testYawLockZeroStopReleaseHoldWaitsAfterResidualEntersNearZero")
     chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
     chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
@@ -571,7 +566,6 @@ TEST_CASE("testYawLockZeroStopReleaseHoldResetsWhenResidualRebounds")
     chassis.runtime_strategy_cfg_.idle_posture_mode = Chassis::IdlePostureMode::kHoldLast;
     chassis.runtime_strategy_cfg_.xpark_steer_hold_cfg_.enable = false;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;

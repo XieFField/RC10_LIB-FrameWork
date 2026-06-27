@@ -155,7 +155,7 @@ float Kp_traverse=0.5f;
 void Robot_WeaponSage_Setup::kfs_idle()
 {
     this->setLaunch_angle(initData_.max_launchHeight_);
-    if(current_pos_.launch_pos_ < initData_.max_launchHeight_-0.02f)
+    if(current_pos_.launch_pos_ < initData_.max_launchHeight_-0.1f)
     {
         this->setArm_angle(90.0f);
     }

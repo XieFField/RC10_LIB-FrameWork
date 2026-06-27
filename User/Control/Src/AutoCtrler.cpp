@@ -72,111 +72,111 @@ bool isInTargetMap(Point2D robotPos, int targetMap, float tolerance)
 
 
 
-void get_MoveDiretion(Point2D robotPos,
-                        int8_t MF1, int8_t MF2,
-                        Direction_E Diresult[])
-{
-    PathNode_S path = PathNodeResult_calc(robotPos, MF1, MF2);
+// void get_MoveDiretion(Point2D robotPos,
+//                         int8_t MF1, int8_t MF2,
+//                         Direction_E Diresult[])
+// {
+//     PathNode_S path = PathNodeResult_calc(robotPos, MF1, MF2);
 
-    int8_t bestB1_c_, bestB1_r_, // 列 行
-        bestB2_c_, bestB2_r_,
-        bestBMF1_c_, bestBMF1_r_,
-        bestBMF2_c_, bestBMF2_r_;
+//     int8_t bestB1_c_, bestB1_r_, // 列 行
+//         bestB2_c_, bestB2_r_,
+//         bestBMF1_c_, bestBMF1_r_,
+//         bestBMF2_c_, bestBMF2_r_;
 
-    Direction_E result_[2] = {NONE, NONE};
+//     Direction_E result_[2] = {NONE, NONE};
 
-    Map_ToCR(path.bestB1, bestB1_c_, bestB1_r_);
-    Map_ToCR(path.bestB2, bestB2_c_, bestB2_r_);
-    Map_ToCR(path.bestBMF1, bestBMF1_c_, bestBMF1_r_);
-    Map_ToCR(path.bestBMF2, bestBMF2_c_, bestBMF2_r_);
+//     Map_ToCR(path.bestB1, bestB1_c_, bestB1_r_);
+//     Map_ToCR(path.bestB2, bestB2_c_, bestB2_r_);
+//     Map_ToCR(path.bestBMF1, bestBMF1_c_, bestBMF1_r_);
+//     Map_ToCR(path.bestBMF2, bestBMF2_c_, bestBMF2_r_);
 
-    if (MF1 != 0 && MF2 != 0)
-    {
-        if (bestB1_c_ == bestBMF1_c_) // 同列不同行
-        {
-            if (bestB1_r_ < bestBMF1_r_)
-                result_[0] = Positive_Y;
-            else
-                result_[0] = Negative_Y;
-        }
-        else if (bestB1_r_ == bestBMF1_r_) // 同行不同列
-        {
-            if (bestB1_c_ < bestBMF1_c_)
-                result_[0] = Positive_X;
-            else
-                result_[0] = Negative_X;
-        }
-        else
-            result_[0] = NONE;
+//     if (MF1 != 0 && MF2 != 0)
+//     {
+//         if (bestB1_c_ == bestBMF1_c_) // 同列不同行
+//         {
+//             if (bestB1_r_ < bestBMF1_r_)
+//                 result_[0] = Positive_Y;
+//             else
+//                 result_[0] = Negative_Y;
+//         }
+//         else if (bestB1_r_ == bestBMF1_r_) // 同行不同列
+//         {
+//             if (bestB1_c_ < bestBMF1_c_)
+//                 result_[0] = Positive_X;
+//             else
+//                 result_[0] = Negative_X;
+//         }
+//         else
+//             result_[0] = NONE;
 
-        if (bestB2_c_ == bestBMF2_c_) // 同列不同行
-        {
-            if (bestB2_r_ < bestBMF2_r_)
-                result_[1] = Positive_Y;
-            else
-                result_[1] = Negative_Y;
-        }
-        else if (bestB2_r_ == bestBMF2_r_) // 同行不同列
-        {
-            if (bestB2_c_ < bestBMF2_c_)
-                result_[1] = Positive_X;
-            else
-                result_[1] = Negative_X;
-        }
-        else
-            result_[1] = NONE;
-    }
+//         if (bestB2_c_ == bestBMF2_c_) // 同列不同行
+//         {
+//             if (bestB2_r_ < bestBMF2_r_)
+//                 result_[1] = Positive_Y;
+//             else
+//                 result_[1] = Negative_Y;
+//         }
+//         else if (bestB2_r_ == bestBMF2_r_) // 同行不同列
+//         {
+//             if (bestB2_c_ < bestBMF2_c_)
+//                 result_[1] = Positive_X;
+//             else
+//                 result_[1] = Negative_X;
+//         }
+//         else
+//             result_[1] = NONE;
+//     }
 
-    else
-    {
-        if (MF1 != 0)
-        {
-            if (bestB1_c_ == bestBMF1_c_) // 同行不同列
-            {
-                if (bestB1_r_ < bestBMF1_r_)
-                    result_[0] = Positive_Y;
-                else
-                    result_[0] = Negative_Y;
-            }
-            else if (bestB1_r_ == bestBMF1_r_) // 同列不同航
-            {
-                if (bestB1_c_ < bestBMF1_c_)
-                    result_[0] = Positive_X;
-                else
-                    result_[0] = Negative_X;
-            }
-            else
-                result_[0] = NONE;
-        }
-        else
-            result_[0] = NONE;
+//     else
+//     {
+//         if (MF1 != 0)
+//         {
+//             if (bestB1_c_ == bestBMF1_c_) // 同行不同列
+//             {
+//                 if (bestB1_r_ < bestBMF1_r_)
+//                     result_[0] = Positive_Y;
+//                 else
+//                     result_[0] = Negative_Y;
+//             }
+//             else if (bestB1_r_ == bestBMF1_r_) // 同列不同航
+//             {
+//                 if (bestB1_c_ < bestBMF1_c_)
+//                     result_[0] = Positive_X;
+//                 else
+//                     result_[0] = Negative_X;
+//             }
+//             else
+//                 result_[0] = NONE;
+//         }
+//         else
+//             result_[0] = NONE;
 
-        if (MF2 != 0)
-        {
-            if (bestB2_c_ == bestBMF2_c_) // 同行不同列
-            {
-                if (bestB2_r_ < bestBMF2_r_)
-                    result_[1] = Positive_Y;
-                else
-                    result_[1] = Negative_Y;
-            }
-            else if (bestB2_r_ == bestBMF2_r_) // 同列不同航
-            {
-                if (bestB2_c_ < bestBMF2_c_)
-                    result_[1] = Positive_X;
-                else
-                    result_[1] = Negative_X;
-            }
-            else
-                result_[1] = NONE;
-        }
-        else
-            result_[1] = NONE;
-    }
+//         if (MF2 != 0)
+//         {
+//             if (bestB2_c_ == bestBMF2_c_) // 同行不同列
+//             {
+//                 if (bestB2_r_ < bestBMF2_r_)
+//                     result_[1] = Positive_Y;
+//                 else
+//                     result_[1] = Negative_Y;
+//             }
+//             else if (bestB2_r_ == bestBMF2_r_) // 同列不同航
+//             {
+//                 if (bestB2_c_ < bestBMF2_c_)
+//                     result_[1] = Positive_X;
+//                 else
+//                     result_[1] = Negative_X;
+//             }
+//             else
+//                 result_[1] = NONE;
+//         }
+//         else
+//             result_[1] = NONE;
+//     }
 
-    Diresult[0] = result_[0];
-    Diresult[1] = result_[1];
-}   
+//     Diresult[0] = result_[0];
+//     Diresult[1] = result_[1];
+// }   
 
 
 float Get_ChassisYawForArmAlign(int8_t targetKFS, int8_t B1, int8_t BMF1)
@@ -660,287 +660,7 @@ int8_t BestEntrance_calc(Point2D robotPos, RoadResult_S *B1)
     }
 
     return bestE;
-} // BestEntrance_calc
-
-PathNode_S PathNodeResult_calc(Point2D robotPos,int8_t MF1, int8_t MF2,int8_t EXIT)
-{
-    PathNode_S out{0, 0, 0, 0, 0, 26};
-    out.exitMap=EXIT;
-    // 候选 B1
-    RoadResult_S B1_can = MFNum_ToRoadResult(MF1);
-    int8_t B1set[3] = {B1_can.result1, B1_can.result2, B1_can.result3};
-    uint8_t nB1 = 0;
-
-    for (int i = 0; i < 3; i++)
-    {
-        if (B1set[i])
-            nB1++;
-    }
-
-    if (nB1 == 0)
-        return out;
-
-    // 候选 B2
-    RoadResult_S B2_can = MFNum_ToRoadResult(MF2);
-
-    int8_t B2set[3] =
-        {B2_can.result1, B2_can.result2, B2_can.result3};
-    uint8_t nB2 = 0;
-
-    for (int i = 0; i < 3; i++)
-    {
-        if (B2set[i])
-            nB2++;
-    }
-
-    // 候选bestMF1
-    RoadResult_S bestBMF1_can = MFNum_ToCatchRoadResult(MF1);
-    int8_t bestMF1set[2] = // 最多两解
-        {bestBMF1_can.result1, bestBMF1_can.result2};
-    uint8_t nbestBMF1 = 0;
-    for (int i = 0; i < 2; i++)
-    {
-        if (bestMF1set[i])
-            nbestBMF1++;
-    }
-
-    if (nbestBMF1 == 0)
-        return out;
-
-    // 候选bestMF2
-    RoadResult_S bestBMF2_can = MFNum_ToCatchRoadResult(MF2);
-    int8_t bestBMF2set[2] = // 最多两解
-        {bestBMF2_can.result1, bestBMF2_can.result2};
-
-    uint8_t nbestBMF2 = 0;
-    for (int i = 0; i < 2; i++)
-    {
-        if (bestBMF2set[i])
-            nbestBMF2++;
-    }
-
-    // 可选入口集合（外圈通道格）
-    int8_t entrances[30];
-    uint8_t eCount = 0;
-
-    const bool isBelow = (robotPos.y < MapNum_RealPos[0].y);  // 梅花林下
-    const bool isAbove = (robotPos.y > MapNum_RealPos[29].y); // 梅花林上
-    const bool isInside = (!isBelow && !isAbove);             // 梅花林中
-
-    // for(int8_t m=1; m<=30; ++m)
-    // {
-    //     if(IsWalkable(m))
-    //         entrances[eCount++] = m;
-    // }
-    if (isBelow)
-    {
-        for (int8_t m = 1; m <= 5; ++m)
-        {
-            if (IsWalkable(m))
-                entrances[eCount++] = m;
-        }
-    }
-    else if (isAbove)
-    {
-        for (int8_t m = 26; m <= 30; ++m)
-        {
-            if (IsWalkable(m))
-                entrances[eCount++] = m;
-        }
-    }
-    else // inside
-    {
-        eCount = 0; // 林内无需入口，以B1为起点
-    }
-
-    float bestCost = 1.0e9f;
-    int8_t bestE = 0, bestB1 = 0, bestB2 = 0, bestBMF1 = 0, bestBMF2 = 0; // 最优
-
-    // 全组合搜索全局最优
-    for (uint8_t ie = 0; ie < eCount; ++ie)
-    {
-        int8_t E = entrances[ie];
-        float d_out = euclid(robotPos, MapCenterWorld(E)); // robot→入口 欧氏
-
-        for (uint8_t i1 = 0; i1 < nB1; i1++)
-        {
-            int8_t B1 = B1set[i1];
-            if (!B1)
-                continue;
-
-            int sE1 = BFS_Steps(E, B1);
-            if (sE1 >= BFS_INF)
-                continue;
-
-            // BMF1 必须与 B1 4-邻接
-            for (uint8_t m1 = 0; m1 < nbestBMF1; m1++)
-            {
-                int8_t BMF1 = bestMF1set[m1];
-                if (!BMF1)
-                    continue;
-                if (!IsAdjacent4(B1, BMF1))
-                    continue;
-
-                int s1m1 = BFS_Steps(B1, BMF1);
-                if (s1m1 >= BFS_INF)
-                    continue;
-
-                if (nB2 == 0 || nbestBMF2 == 0)
-                {
-                    // 无第二段：E→B1→BMF1→Exit
-                    int s_m1_X = BFS_Steps(BMF1, out.exitMap);
-                    if (s_m1_X >= BFS_INF)
-                        continue;
-
-                    float J = d_out + CELL_M * (sE1 + s1m1 + s_m1_X);
-                    if (J < bestCost)
-                    {
-                        bestCost = J;
-                        bestE = E;
-                        bestB1 = B1;
-                        bestBMF1 = BMF1;
-                        bestB2 = 0;
-                        bestBMF2 = 0;
-                    }
-                    continue;
-                }
-
-                // 有第二段：E→B1→BMF1→B2→BMF2→Exit
-                for (uint8_t i2 = 0; i2 < nB2; i2++)
-                {
-                    int8_t B2 = B2set[i2];
-                    if (!B2)
-                        continue;
-
-                    int s_m1_2 = BFS_Steps(BMF1, B2);
-                    if (s_m1_2 >= BFS_INF)
-                        continue;
-
-                    // BMF2 必须与 B2 4-邻接
-                    for (uint8_t m2 = 0; m2 < nbestBMF2; m2++)
-                    {
-                        int8_t BMF2 = bestBMF2set[m2];
-                        if (!BMF2)
-                            continue;
-                        if (!IsAdjacent4(B2, BMF2))
-                            continue;
-
-                        int s_2_m2 = BFS_Steps(B2, BMF2);
-                        if (s_2_m2 >= BFS_INF)
-                            continue;
-
-                        int s_m2_X = BFS_Steps(BMF2, out.exitMap);
-                        if (s_m2_X >= BFS_INF)
-                            continue;
-
-                        float J = d_out + CELL_M * (sE1 + s1m1 + s_m1_2 + s_2_m2 + s_m2_X);
-                        if (J < bestCost)
-                        {
-                            bestCost = J;
-                            bestE = E;
-                            bestB1 = B1;
-                            bestBMF1 = BMF1;
-                            bestB2 = B2;
-                            bestBMF2 = BMF2;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // 回退策略：若没有任何可达链路
-    if (bestE == 0)
-    {
-        // 简单回退：选离机器人最近的入口；再选入口→B1 步数最小；再选 B1→B2 最小
-        if (eCount == 0)
-            return out;
-        float bestD = 1.0e9f;
-        bestE = entrances[0];
-        for (uint8_t ie = 0; ie < eCount; ++ie)
-        {
-            float d = euclid(robotPos, MapCenterWorld(entrances[ie]));
-            if (d < bestD)
-            {
-                bestD = d;
-                bestE = entrances[ie];
-            }
-        }
-        int bestS1 = BFS_INF;
-        for (uint8_t i1 = 0; i1 < nB1; i1++)
-        {
-            int8_t B1 = B1set[i1];
-            int s = BFS_Steps(bestE, B1);
-            if (s < bestS1)
-            {
-                bestS1 = s;
-                bestB1 = B1;
-            }
-        }
-        if (nB2)
-        {
-            int bestS2 = BFS_INF;
-            for (uint8_t i2 = 0; i2 < nB2; i2++)
-            {
-                int8_t B2 = B2set[i2];
-                int s = BFS_Steps(bestB1, B2);
-                if (s < bestS2)
-                {
-                    bestS2 = s;
-                    bestB2 = B2;
-                }
-            }
-        }
-
-        // 为回退分支补充 BMF1/BMF2（各自需与 B1/B2 四邻接）
-        //  选择使剩余代价最小的相邻通道
-        //  1) BMF1
-        int bestCost_m1 = BFS_INF;
-        for (uint8_t m1 = 0; m1 < nbestBMF1; ++m1)
-        {
-            int8_t cand = bestMF1set[m1];
-            if (!cand)
-                continue;
-            if (!IsAdjacent4(bestB1, cand))
-                continue;
-            int s = BFS_Steps(bestB1, cand) + BFS_Steps(cand, out.exitMap);
-
-            if (s < bestCost_m1)
-            {
-                bestCost_m1 = s;
-                bestBMF1 = cand;
-            }
-        }
-        // 2) BMF2（若存在第二段）
-        if (nB2 && bestB2)
-        {
-            int bestCost_m2 = BFS_INF;
-            for (uint8_t m2 = 0; m2 < nbestBMF2; ++m2)
-            {
-                int8_t cand = bestBMF2set[m2];
-                if (!cand)
-                    continue;
-                if (!IsAdjacent4(bestB2, cand))
-                    continue;
-                int s = BFS_Steps(bestB2, cand) + BFS_Steps(cand, out.exitMap);
-
-                if (s < bestCost_m2)
-                {
-                    bestCost_m2 = s;
-                    bestBMF2 = cand;
-                }
-            }
-        }
-    }
-
-    out.entranceMap = bestE;
-    out.bestB1 = bestB1;
-    out.bestB2 = bestB2;
-    out.bestBMF1 = bestBMF1;
-    out.bestBMF2 = bestBMF2;
-    return out;
-}
-    
+} // BestEntrance_calc    
     
 int BFS_Steps(int8_t startMap, int8_t goalMap) // BFS 最少步数
 {

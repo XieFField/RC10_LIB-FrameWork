@@ -5,6 +5,32 @@ namespace chassis_semantics_test
 
 // 覆盖光电门、舵轮冻结故障、故障恢复和迟到上电 homing。
 // 这些 case 会直接操纵反馈电流、角度和光电门状态，用来保护故障锁存/恢复的时序边界。
+
+TEST_CASE("testHomingSearchUsesCompileTimeSearchRpmSigns")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].homing_state = Chassis::HomingState::kSearch;
+        chassis.wheel_config_[i].homing_zero_valid = false;
+        chassis.wheel_config_[i].homing_last_sensor_active = false;
+        steer_motors[i].setFeedbackCurrent(1200.0f);
+    }
+
+    runHostControlCycle(chassis);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        const float target_rpm = steer_motors[i].getTargetRPM();
+        EXPECT_NEAR(target_rpm,
+                    JIA_CHASSIS_HOMING_SEARCH_RPM * JIA_CHASSIS_HOMING_SEARCH_RPM_SIGN[i],
+                    1.0e-6f);
+    }
+}
 TEST_CASE("testStationaryPhotogateTogglesDoNotSelfLockNormalReadyState")
 {
     Chassis chassis;
@@ -46,7 +72,7 @@ TEST_CASE("testHomingSearchRpmDefaultsToCompileTimeMacro")
 
     runHostControlCycle(chassis);
 
-    EXPECT_NEAR(steer_motors[0].getTargetRPM(), JIA_CHASSIS_HOMING_SEARCH_RPM, 1.0e-6f);
+    EXPECT_NEAR(std::fabs(steer_motors[0].getTargetRPM()), JIA_CHASSIS_HOMING_SEARCH_RPM, 1.0e-6f);
 }
 
 TEST_CASE("testFirstBootHomingDelayKeepsInitialStartIdleThenReleasesSearchOnce")
@@ -97,7 +123,7 @@ TEST_CASE("testFirstBootHomingDelayKeepsInitialStartIdleThenReleasesSearchOnce")
             released = true;
             for (int i = 0; i < 4; ++i)
             {
-                EXPECT_NEAR(steer_motors[i].getTargetRPM(), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
+                EXPECT_NEAR(std::fabs(steer_motors[i].getTargetRPM()), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
             }
             break;
         }
@@ -120,7 +146,7 @@ TEST_CASE("testFirstBootHomingDelayKeepsInitialStartIdleThenReleasesSearchOnce")
     for (int i = 0; i < 4; ++i)
     {
         EXPECT_TRUE(chassis.wheel_config_[i].homing_state == Chassis::HomingState::kSearch);
-        EXPECT_NEAR(steer_motors[i].getTargetRPM(), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
+        EXPECT_NEAR(std::fabs(steer_motors[i].getTargetRPM()), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
     }
 #else
     const bool all_homed = runHostControlCycle(chassis);
@@ -128,7 +154,7 @@ TEST_CASE("testFirstBootHomingDelayKeepsInitialStartIdleThenReleasesSearchOnce")
     for (int i = 0; i < 4; ++i)
     {
         EXPECT_TRUE(chassis.wheel_config_[i].homing_state == Chassis::HomingState::kSearch);
-        EXPECT_NEAR(steer_motors[i].getTargetRPM(), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
+        EXPECT_NEAR(std::fabs(steer_motors[i].getTargetRPM()), chassis.wheel_config_[i].homing_search_rpm, 1.0e-6f);
     }
 #endif
 }
@@ -151,7 +177,7 @@ TEST_CASE("testSteerFaultRecoveryRehomeBypassesFirstBootHomingDelay")
     EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
     EXPECT_TRUE(!chassis.wheel_config_[0].steer_fault_rehome_request);
     EXPECT_TRUE(!chassis.wheel_config_[0].homing_zero_valid);
-    EXPECT_NEAR(steer_motors[0].getTargetRPM(), chassis.wheel_config_[0].homing_search_rpm, 1.0e-6f);
+    EXPECT_NEAR(std::fabs(steer_motors[0].getTargetRPM()), chassis.wheel_config_[0].homing_search_rpm, 1.0e-6f);
 
 #if JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_ENABLE && (JIA_CHASSIS_FIRST_BOOT_HOMING_DELAY_MS > 0U)
     EXPECT_TRUE(chassis.first_boot_homing_delay_.pending);
@@ -485,7 +511,7 @@ TEST_CASE("testRecoveryImmediatelyReopensSteerSearchAfterFaultLatchSidePidReset"
 
     EXPECT_TRUE(chassis.wheel_config_[0].steer_fault_state == Chassis::SteerFaultState::kRecovering);
     EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
-    EXPECT_NEAR(steer_motors[0].getTargetRPM(), chassis.wheel_config_[0].homing_search_rpm, 1.0e-6f);
+    EXPECT_NEAR(std::fabs(steer_motors[0].getTargetRPM()), chassis.wheel_config_[0].homing_search_rpm, 1.0e-6f);
 }
 
 TEST_CASE("testWheel2RecoveryReissuesHomingSearchRpmAfterFirstCommandDrop")
@@ -906,6 +932,7 @@ TEST_CASE("testHomingRequiresThreeConsistentEdgesAndHoldsConfirmedAverageAngle")
     chassis.wheel_config_[0].homing_state = Chassis::HomingState::kSearch;
     chassis.wheel_config_[0].homing_zero_valid = false;
     chassis.wheel_config_[0].homing_last_sensor_active = false;
+    chassis.wheel_config_[0].homing_search_direction_sign = 1.0f;
     chassis.wheel_config_[1].homing_state = Chassis::HomingState::kSearch;
     chassis.wheel_config_[1].homing_zero_valid = false;
     steer_motors[0].setFeedbackCurrent(1200.0f);
@@ -958,6 +985,130 @@ TEST_CASE("testHomingRequiresThreeConsistentEdgesAndHoldsConfirmedAverageAngle")
     EXPECT_NEAR(drive_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
 }
 
+TEST_CASE("testReverseHomingRequiresThreeConsistentEdgesAndReachesReady")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.wheel_config_[0].homing_falling_edge_mech_rad = jia::degToRadF32(150.0f);
+    chassis.wheel_config_[0].homing_rising_edge_mech_rad = jia::degToRadF32(-30.0f);
+    chassis.wheel_config_[0].homing_zero_offset_rad = jia::degToRadF32(-30.0f);
+    chassis.wheel_config_[0].homing_runtime_zero_offset_rad = chassis.wheel_config_[0].homing_zero_offset_rad;
+    chassis.wheel_config_[0].homing_state = Chassis::HomingState::kSearch;
+    chassis.wheel_config_[0].homing_zero_valid = false;
+    chassis.wheel_config_[0].homing_last_sensor_active = false;
+    chassis.wheel_config_[0].homing_search_direction_sign = -1.0f;
+    steer_motors[0].setFeedbackCurrent(1200.0f);
+
+    setPhotogateStateForWheel(0, false);
+    steer_motors[0].setFeedbackTotalAngleDeg(0.0f);
+    runHostControlCycle(chassis);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
+
+    setPhotogateStateForWheel(0, true);
+    runHostControlCycle(chassis);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
+
+    steer_motors[0].setFeedbackTotalAngleDeg(-180.0f);
+    setPhotogateStateForWheel(0, false);
+    runHostControlCycle(chassis);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
+    EXPECT_TRUE(!chassis.wheel_config_[0].homing_zero_valid);
+
+    steer_motors[0].setFeedbackTotalAngleDeg(-360.0f);
+    setPhotogateStateForWheel(0, true);
+    runHostControlCycle(chassis);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kEdgeDetected);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_zero_valid);
+
+    runHostControlCycle(chassis);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kOffsetApply);
+
+    runHostControlCycle(chassis);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kContinuousAngleReady);
+
+    runHostControlCycle(chassis);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kReady);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_zero_valid);
+    EXPECT_NEAR(drive_motors[0].getTargetCurrent(), 0.0f, 1.0e-6f);
+}
+
+TEST_CASE("testReverseHomingKeepsDriveDirectionConsistentWithForwardHoming")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.runtime_strategy_cfg_.steer_fault_cfg.enable = false;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].homing_falling_edge_mech_rad = jia::degToRadF32(150.0f);
+        chassis.wheel_config_[i].homing_rising_edge_mech_rad = jia::degToRadF32(-30.0f);
+        chassis.wheel_config_[i].homing_zero_offset_rad = jia::degToRadF32(-30.0f);
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = chassis.wheel_config_[i].homing_zero_offset_rad;
+        chassis.wheel_config_[i].homing_state = Chassis::HomingState::kSearch;
+        chassis.wheel_config_[i].homing_zero_valid = false;
+        chassis.wheel_config_[i].homing_last_sensor_active = false;
+        steer_motors[i].setFeedbackCurrent(1200.0f);
+        setPhotogateStateForWheel(i, false);
+    }
+    for (int i = 2; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].homing_state = Chassis::HomingState::kReady;
+        chassis.wheel_config_[i].homing_zero_valid = true;
+    }
+
+    chassis.wheel_config_[0].homing_search_direction_sign = 1.0f;
+    EXPECT_TRUE(!chassis.recordHomingEdgeAndCheckConfirmed(chassis.wheel_config_[0], false, jia::degToRadF32(0.0f)));
+    EXPECT_TRUE(!chassis.recordHomingEdgeAndCheckConfirmed(chassis.wheel_config_[0], true, jia::degToRadF32(180.0f)));
+    EXPECT_TRUE(chassis.recordHomingEdgeAndCheckConfirmed(chassis.wheel_config_[0], false, jia::degToRadF32(360.0f)));
+    chassis.wheel_config_[0].homing_state = Chassis::HomingState::kEdgeDetected;
+
+    chassis.wheel_config_[1].homing_search_direction_sign = -1.0f;
+    EXPECT_TRUE(!chassis.recordHomingEdgeAndCheckConfirmed(chassis.wheel_config_[1], true, jia::degToRadF32(0.0f)));
+    EXPECT_TRUE(!chassis.recordHomingEdgeAndCheckConfirmed(chassis.wheel_config_[1], false, jia::degToRadF32(-180.0f)));
+    EXPECT_TRUE(chassis.recordHomingEdgeAndCheckConfirmed(chassis.wheel_config_[1], true, jia::degToRadF32(-360.0f)));
+    chassis.wheel_config_[1].homing_state = Chassis::HomingState::kEdgeDetected;
+
+    steer_motors[0].setFeedbackTotalAngleDeg(jia::radToDegF32(
+        chassis.removeHomingRuntimeZeroOffset(0.0f, chassis.wheel_config_[0].homing_runtime_zero_offset_rad)));
+    steer_motors[1].setFeedbackTotalAngleDeg(jia::radToDegF32(
+        chassis.removeHomingRuntimeZeroOffset(0.0f, chassis.wheel_config_[1].homing_runtime_zero_offset_rad)));
+
+    for (int cycle = 0; cycle < 3; ++cycle)
+    {
+        runHostControlCycle(chassis);
+    }
+
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kReady);
+    EXPECT_TRUE(chassis.wheel_config_[1].homing_state == Chassis::HomingState::kReady);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_zero_valid);
+    EXPECT_TRUE(chassis.wheel_config_[1].homing_zero_valid);
+
+    chassis.input_target_data_.vel_x = 1.0f;
+    chassis.input_target_data_.vel_y = 0.0f;
+    chassis.input_target_data_.omega_z = 0.0f;
+    for (int cycle = 0; cycle < 4; ++cycle)
+    {
+        runHostControlCycle(chassis);
+    }
+
+    EXPECT_TRUE(std::fabs(chassis.wheel_config_[0].target_drive_omega_rad_s) > 1.0e-6f);
+    EXPECT_TRUE(std::fabs(chassis.wheel_config_[1].target_drive_omega_rad_s) > 1.0e-6f);
+    EXPECT_TRUE(chassis.wheel_config_[0].target_drive_omega_rad_s *
+                    chassis.wheel_config_[1].target_drive_omega_rad_s >
+                0.0f);
+}
+
 TEST_CASE("testHomingThirdEdgeOutsideToleranceImmediatelyFaults")
 {
     Chassis chassis;
@@ -968,6 +1119,7 @@ TEST_CASE("testHomingThirdEdgeOutsideToleranceImmediatelyFaults")
     chassis.wheel_config_[0].homing_state = Chassis::HomingState::kSearch;
     chassis.wheel_config_[0].homing_zero_valid = false;
     chassis.wheel_config_[0].homing_last_sensor_active = false;
+    chassis.wheel_config_[0].homing_search_direction_sign = 1.0f;
     steer_motors[0].setFeedbackCurrent(1200.0f);
 
     setPhotogateStateForWheel(0, false);
@@ -991,6 +1143,40 @@ TEST_CASE("testHomingThirdEdgeOutsideToleranceImmediatelyFaults")
     EXPECT_TRUE(!chassis.wheel_config_[0].homing_zero_valid);
 }
 
+TEST_CASE("testReverseHomingThirdEdgeOutsideToleranceImmediatelyFaults")
+{
+    Chassis chassis;
+    TestMotor steer_motors[4];
+    VESC_Motor drive_motors[4];
+    configureSteerFaultRecoveryHarness(chassis, steer_motors, drive_motors);
+
+    chassis.wheel_config_[0].homing_state = Chassis::HomingState::kSearch;
+    chassis.wheel_config_[0].homing_zero_valid = false;
+    chassis.wheel_config_[0].homing_last_sensor_active = false;
+    chassis.wheel_config_[0].homing_search_direction_sign = -1.0f;
+    steer_motors[0].setFeedbackCurrent(1200.0f);
+
+    setPhotogateStateForWheel(0, false);
+    steer_motors[0].setFeedbackTotalAngleDeg(0.0f);
+    runHostControlCycle(chassis);
+
+    setPhotogateStateForWheel(0, true);
+    runHostControlCycle(chassis);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
+
+    steer_motors[0].setFeedbackTotalAngleDeg(-180.0f);
+    setPhotogateStateForWheel(0, false);
+    runHostControlCycle(chassis);
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kSearch);
+
+    steer_motors[0].setFeedbackTotalAngleDeg(-376.0f);
+    setPhotogateStateForWheel(0, true);
+    runHostControlCycle(chassis);
+
+    EXPECT_TRUE(chassis.wheel_config_[0].homing_state == Chassis::HomingState::kFault);
+    EXPECT_TRUE(!chassis.wheel_config_[0].homing_zero_valid);
+}
+
 TEST_CASE("testHomingEdgeDeltaToleranceBoundaryUsesCompileTimeMacro")
 {
     Chassis chassis;
@@ -1003,6 +1189,7 @@ TEST_CASE("testHomingEdgeDeltaToleranceBoundaryUsesCompileTimeMacro")
     chassis.wheel_config_[0].homing_state = Chassis::HomingState::kSearch;
     chassis.wheel_config_[0].homing_zero_valid = false;
     chassis.wheel_config_[0].homing_last_sensor_active = false;
+    chassis.wheel_config_[0].homing_search_direction_sign = 1.0f;
     steer_motors[0].setFeedbackCurrent(1200.0f);
 
     setPhotogateStateForWheel(0, false);
@@ -1057,6 +1244,7 @@ TEST_CASE("testLatePowerOnHomingDoesNotTimeoutBeforeFirstSteerFeedback")
     chassis.wheel_config_[0].homing_zero_valid = false;
     chassis.wheel_config_[0].homing_last_sensor_active = false;
     chassis.wheel_config_[0].homing_last_edge_is_falling = false;
+    chassis.wheel_config_[0].homing_search_direction_sign = 1.0f;
     chassis.wheel_config_[0].homing_elapsed_s = 0.0f;
     chassis.wheel_config_[0].homing_zero_offset_rad = 0.0f;
     chassis.wheel_config_[0].homing_runtime_zero_offset_rad = 0.0f;

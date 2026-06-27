@@ -73,6 +73,8 @@ typedef enum{
     ARM_STOP,
     ARM_DEBUG,
     ARM_CALIBRATE, //校准
+
+    ARM_COMBINE_IDLE, //合体待机
 }ARM_Status_E;
 
 

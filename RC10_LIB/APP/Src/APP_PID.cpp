@@ -383,9 +383,9 @@ PID_Param_Config vesc_drive_speed_pid_params = {
     .kp = 150.0f,
     .ki = 150.0f,
     .kd = 0.0f,
-    .I_Outlimit = 25000.0f,
+    .I_Outlimit = 30000.0f,
     .isIOutlimit = true,
-    .output_limit = 25000.0f,
+    .output_limit = 30000.0f,
     .deadband = 1.0f
 };
 
@@ -400,13 +400,13 @@ PID_Param_Config foursteer_steer_angle_pid_params = {
 };
 
 PID_Param_Config lock_angle_pid_params = {
- .kp = 0.07f,
- .ki = 0.05f,
- .kd = 0.00f,
+ .kp = 0.08f,
+ .ki = 0.08f,
+ .kd = 0.005f,
  .I_Outlimit = 1.0f,
  .isIOutlimit = true, 
- .output_limit = 4.0f,
- .deadband = 0.1f 
+ .output_limit = 3.0f,
+ .deadband = 0.0f 
 };
 
 PID_Param_Config track_pid_params = {

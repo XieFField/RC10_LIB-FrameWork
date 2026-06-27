@@ -10,7 +10,6 @@ void configureSteerAngleFeedforwardPlanner(Chassis &chassis)
 {
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = true;
     chassis.runtime_strategy_cfg_.max_steer_alpha_rad_s2_ = 20000.0f;
@@ -30,6 +29,32 @@ void configureSteerAngleFeedforwardPlanner(Chassis &chassis)
         chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
         chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
     }
+}
+
+void configureMotionDirectionGuardPlanner(Chassis &chassis)
+{
+    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
+    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
+    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
+    chassis.runtime_strategy_cfg_.steering_strategy_mode = Chassis::SteeringStrategyMode::kShortestPath;
+    chassis.runtime_strategy_cfg_.enable_motion_direction_guard = true;
+    chassis.runtime_strategy_cfg_.motion_direction_guard.min_actual_speed_m_s = 0.10f;
+    chassis.runtime_strategy_cfg_.motion_direction_guard.target_min_speed_m_s = 0.05f;
+    chassis.runtime_strategy_cfg_.motion_direction_guard.anti_motion_dot_threshold = 0.0f;
+    chassis.runtime_strategy_cfg_.motion_direction_guard.prefer_forward_margin_deg = 20.0f;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
+        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
+        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
+        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
+        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = jia::degToRadF32(175.0f);
+    }
+
+    chassis.current_data_.vel_x = 0.0f;
+    chassis.current_data_.vel_y = 1.0f;
 }
 
 } // namespace
@@ -130,7 +155,6 @@ TEST_CASE("testDriveOmegaPlannerLimitUsesUniformScaleAcrossAllWheels")
     configureXParkWheelGeometry(chassis);
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_omega_limit_ = true;
@@ -167,7 +191,7 @@ TEST_CASE("testFlipSolutionPrefersSmallSteerDeltaAndInvertsDriveOnQuadrantCrossi
     Chassis chassis;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_motion_direction_guard = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.steering_strategy_mode = Chassis::SteeringStrategyMode::kShortestPath;
@@ -249,7 +273,7 @@ TEST_CASE("testReverseIntentDoesNotFallIntoZeroHoldOrSuppressionWhenSteerIsReach
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = true;
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 25.0f;
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_motion_direction_guard = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.05f;
@@ -286,7 +310,7 @@ TEST_CASE("testAlwaysForwardModeIgnoresReverseIntentOverride")
     Chassis chassis;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
+    chassis.runtime_strategy_cfg_.enable_motion_direction_guard = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.steering_strategy_mode = Chassis::SteeringStrategyMode::kAlwaysForward;
@@ -309,6 +333,91 @@ TEST_CASE("testAlwaysForwardModeIgnoresReverseIntentOverride")
 
     EXPECT_TRUE(!output.flipped_drive_direction[0]);
     EXPECT_TRUE(output.projected_drive_omega_rad_s[0] > 0.0f);
+}
+
+TEST_CASE("testMotionDirectionGuardBlocksFlipThatPushesAgainstActualMotion")
+{
+    Chassis chassis;
+    configureMotionDirectionGuardPlanner(chassis);
+
+    Chassis::Data command{};
+    command.vel_x = 0.0f;
+    command.vel_y = -1.0f;
+
+    const Chassis::SwervePlannerOutput output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    EXPECT_TRUE(!output.flipped_drive_direction[0]);
+    EXPECT_TRUE(output.motion_direction_guard_active[0]);
+    EXPECT_TRUE(output.projected_drive_omega_rad_s[0] > 0.0f);
+}
+
+TEST_CASE("testMotionDirectionGuardIgnoresActualSpeedBelowThreshold")
+{
+    Chassis chassis;
+    configureMotionDirectionGuardPlanner(chassis);
+    chassis.current_data_.vel_x = 0.09f;
+
+    Chassis::Data command{};
+    command.vel_x = 0.0f;
+    command.vel_y = -1.0f;
+
+    const Chassis::SwervePlannerOutput output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    EXPECT_TRUE(output.flipped_drive_direction[0]);
+    EXPECT_TRUE(!output.motion_direction_guard_active[0]);
+    EXPECT_TRUE(output.projected_drive_omega_rad_s[0] < 0.0f);
+}
+
+TEST_CASE("testMotionDirectionGuardIgnoresTargetSpeedBelowThreshold")
+{
+    Chassis chassis;
+    configureMotionDirectionGuardPlanner(chassis);
+
+    Chassis::Data command{};
+    command.vel_x = 0.0f;
+    command.vel_y = -0.04f;
+
+    const Chassis::SwervePlannerOutput output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    EXPECT_TRUE(output.flipped_drive_direction[0]);
+    EXPECT_TRUE(!output.motion_direction_guard_active[0]);
+}
+
+TEST_CASE("testMotionDirectionGuardUsesAntiMotionDotThreshold")
+{
+    Chassis chassis;
+    configureMotionDirectionGuardPlanner(chassis);
+    chassis.runtime_strategy_cfg_.motion_direction_guard.anti_motion_dot_threshold = -0.20f;
+
+    Chassis::Data command{};
+    command.vel_x = 0.0f;
+    command.vel_y = -1.0f;
+
+    const Chassis::SwervePlannerOutput output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    EXPECT_TRUE(output.flipped_drive_direction[0]);
+    EXPECT_TRUE(!output.motion_direction_guard_active[0]);
+}
+
+TEST_CASE("testMotionDirectionGuardRespectsPreferForwardMargin")
+{
+    Chassis chassis;
+    configureMotionDirectionGuardPlanner(chassis);
+    chassis.runtime_strategy_cfg_.motion_direction_guard.prefer_forward_margin_deg = 2.0f;
+
+    Chassis::Data command{};
+    command.vel_x = 0.0f;
+    command.vel_y = -1.0f;
+
+    const Chassis::SwervePlannerOutput output =
+        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
+
+    EXPECT_TRUE(output.flipped_drive_direction[0]);
+    EXPECT_TRUE(!output.motion_direction_guard_active[0]);
 }
 
 TEST_CASE("testDriveAlphaDeliveryLimitUsesUniformScaleAcrossAllWheels")

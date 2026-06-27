@@ -264,7 +264,7 @@ void FSM_Controller::set_cmd_to_R2()
 {
     if (airjoy_data_.page != 0x01)
     {
-        if (cmd_to_r2_cnt < airjoy_data_.recv_command_load1)
+        if(cmd_to_r2_cnt < airjoy_data_.recv_command_total_cnt)
         {
             if (airjoy_data_.recv_command_command != 0)
             {
@@ -665,7 +665,7 @@ void FSM_Controller::auto_ctrl()
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x00) // 合体模式 上层IDLE
         {
-            arm_setup_->setArmStatus(ARM_IDLE);
+            arm_setup_->setArmStatus(ARM_COMBINE_IDLE);
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_COMBINE_MODE);
 
@@ -705,7 +705,6 @@ void FSM_Controller::auto_ctrl()
 
     case 0x01:
     {
-        weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
         if (airjoy_data_.SWB == 0x01) // 自动模式
         {
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_ARM_AUTO);
@@ -715,8 +714,8 @@ void FSM_Controller::auto_ctrl()
 #else
             chassis_setup_->setChassisStatus(CHASSIS_STOP);
 #endif
-            arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
-            //arm_setup_->setArmStatus(ARM_IDLE);
+            //arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            arm_setup_->setArmStatus(ARM_IDLE);
             static uint8_t is_click = 0;
 
             if (airjoy_data_.LB == 1 && is_click == 0 && airjoy_data_.page != 0x01)
@@ -735,6 +734,7 @@ void FSM_Controller::auto_ctrl()
 #if !ARM_AUTO_DEBUG_NOCHASSIS
             if (arm_setup_->isArmAutoStart())
             {
+                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_KFS_IDLE);
                 // 判断是否可以进入伸展阶段
                 if (chassis_setup_->Get_Arm_Start_flag())
                 {
@@ -750,6 +750,7 @@ void FSM_Controller::auto_ctrl()
         }
         else if (airjoy_data_.SWB == 0x00) // 手操模式
         {
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_ARM_LOW_MANUAL_LEVEL);
             if (airjoy_data_.SWE == 0x00)
                 chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);

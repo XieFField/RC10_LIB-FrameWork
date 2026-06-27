@@ -130,7 +130,7 @@ typedef struct{
         bool isbackdone = false; //是否返回完成
         float back_time = 0.0f; //返回时长
         float target_high [3] = {0.0f, 0.0f, 0.0f}; //目标KFS高度
-
+        bool is_up_catch = false;
     }flag;
 }ARM_AUTO_S;
 
@@ -262,6 +262,12 @@ public:
         {
             auto_ctrl_.flag.target_high[i] = GetKFSHeight(auto_ctrl_.targetKFS[i]);
         }
+
+        auto_ctrl_.flag.is_up_catch = (auto_ctrl_.now_targetIndex == 0x00 
+            && auto_ctrl_.start_to_autoctrl == 1
+            && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) == 0.2f 
+            && auto_ctrl_.targetKFS[2] != 0);
+
 #if ARM_AUTO_DEBUG_NOCHASSIS
         auto_ctrl_.now_ChassisPosition.x = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0]-1].x;
         auto_ctrl_.now_ChassisPosition.y = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0]-1].y - 3.0f;
@@ -346,6 +352,8 @@ private:
     void stop();
     void idle();
     void debug();
+
+    bool combine_idle();
 
     //校准
     void calibrateMotor();

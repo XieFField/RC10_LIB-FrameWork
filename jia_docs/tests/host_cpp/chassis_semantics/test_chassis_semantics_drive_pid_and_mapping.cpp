@@ -431,7 +431,6 @@ TEST_CASE("testDefaultDriveMotorPolarityMatchesPositiveBodyXHardwareLayout")
 
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_drive_alpha_limit_ = false;
@@ -580,7 +579,6 @@ TEST_CASE("testLowSpeedDriveSuppressionCanBeDisabled")
     Chassis chassis;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = false;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
 
@@ -608,7 +606,6 @@ TEST_CASE("testProjectedDriveUsesReachableSteerInsteadOfIdealVector")
     Chassis chassis;
     chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = true;
     chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
     chassis.runtime_strategy_cfg_.max_steer_rate_rad_s_ = 1.0f;
@@ -640,58 +637,10 @@ TEST_CASE("testProjectedDriveUsesReachableSteerInsteadOfIdealVector")
                 std::fabs(planner_output.projected_drive_omega_rad_s[0]) + 1.0e-6f);
 }
 
-TEST_CASE("testHighSpeedDriveSuppressionTightensAndReleasesThroughPlannerOutput")
-{
-    Chassis chassis;
-    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
-    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = true;
-    chassis.runtime_strategy_cfg_.high_speed_drive_suppression.dir_err_enter_deg = 5.0f;
-    chassis.runtime_strategy_cfg_.high_speed_drive_suppression.dir_err_exit_deg = 2.0f;
-    chassis.runtime_strategy_cfg_.high_speed_drive_suppression.eta_lock_s = 0.05f;
-    chassis.runtime_strategy_cfg_.high_speed_drive_suppression.eta_release_s = 0.01f;
-    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = true;
-    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
-    chassis.runtime_strategy_cfg_.max_steer_rate_rad_s_ = 1.0f;
-
-    for (int i = 0; i < 4; ++i)
-    {
-        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
-        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
-        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
-        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
-        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = jia::degToRadF32(90.0f);
-        chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
-        chassis.last_drive_omega_cmd_rad_s_[i] = 0.0f;
-    }
-
-    Chassis::Data command{};
-    command.vel_x = 1.0f;
-    command.vel_y = 0.0f;
-    command.omega_z = 0.0f;
-
-    const Chassis::SwervePlannerOutput gated_output =
-        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
-    EXPECT_TRUE(gated_output.high_speed_suppression_active);
-    EXPECT_TRUE(gated_output.high_speed_suppression_scale < 1.0f);
-
-    for (int i = 0; i < 4; ++i)
-    {
-        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = 0.0f;
-        chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
-    }
-
-    const Chassis::SwervePlannerOutput released_output =
-        chassis.planSwerveModules(chassis.makeSwervePlannerInput(command));
-    EXPECT_TRUE(!released_output.high_speed_suppression_active);
-    EXPECT_TRUE(released_output.high_speed_suppression_scale > gated_output.high_speed_suppression_scale);
-}
-
 TEST_CASE("testLowSpeedDriveSuppressionDoesNotReenterInsideNearZeroHysteresisBand")
 {
     Chassis chassis;
     chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = true;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = false;
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.min_scale = 0.0f;
     chassis.runtime_strategy_cfg_.low_speed_drive_suppression.close_angle_deg = 1.0f;
     chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.10f;
@@ -710,46 +659,5 @@ TEST_CASE("testLowSpeedDriveSuppressionDoesNotReenterInsideNearZeroHysteresisBan
     EXPECT_NEAR(gate_scales[3], 1.0f, 1.0e-6f);
 }
 
-TEST_CASE("testHighSpeedDriveSuppressionWaitsUntilNearZeroExitBeforeEnabling")
-{
-    Chassis chassis;
-    chassis.runtime_strategy_cfg_.wheel_radius_m_ = 0.05f;
-    chassis.runtime_strategy_cfg_.enable_low_speed_drive_suppression = false;
-    chassis.runtime_strategy_cfg_.enable_high_speed_drive_suppression = true;
-    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_enter_m_s = 0.10f;
-    chassis.runtime_strategy_cfg_.near_zero_cfg_.base_exit_m_s = 0.15f;
-    chassis.runtime_strategy_cfg_.high_speed_drive_suppression.dir_err_enter_deg = 5.0f;
-    chassis.runtime_strategy_cfg_.high_speed_drive_suppression.dir_err_exit_deg = 2.0f;
-    chassis.runtime_strategy_cfg_.high_speed_drive_suppression.eta_lock_s = 0.05f;
-    chassis.runtime_strategy_cfg_.high_speed_drive_suppression.eta_release_s = 0.01f;
-    chassis.runtime_strategy_cfg_.enable_steer_rate_limit_ = true;
-    chassis.runtime_strategy_cfg_.enable_steer_alpha_limit_ = false;
-    chassis.runtime_strategy_cfg_.max_steer_rate_rad_s_ = 1.0f;
-
-    for (int i = 0; i < 4; ++i)
-    {
-        chassis.wheel_config_[i].theta_oa_to_owi_rad = 0.0f;
-        chassis.wheel_config_[i].homing_runtime_zero_offset_rad = 0.0f;
-        chassis.wheel_config_[i].steer_motor_sign = 1.0f;
-        chassis.wheel_config_[i].drive_motor_sign = 1.0f;
-        chassis.wheel_config_[i].corrected_steer_motor_total_angle_rad = jia::degToRadF32(90.0f);
-        chassis.last_steer_rate_cmd_rad_s_[i] = 0.0f;
-        chassis.last_drive_omega_cmd_rad_s_[i] = 0.0f;
-    }
-
-    Chassis::Data slow_command{};
-    slow_command.vel_x = 0.12f;
-    const Chassis::SwervePlannerOutput slow_output =
-        chassis.planSwerveModules(chassis.makeSwervePlannerInput(slow_command));
-    EXPECT_TRUE(!slow_output.high_speed_suppression_active);
-    EXPECT_NEAR(slow_output.high_speed_suppression_scale, 1.0f, 1.0e-6f);
-
-    Chassis::Data fast_command{};
-    fast_command.vel_x = 0.20f;
-    const Chassis::SwervePlannerOutput fast_output =
-        chassis.planSwerveModules(chassis.makeSwervePlannerInput(fast_command));
-    EXPECT_TRUE(fast_output.high_speed_suppression_active);
-    EXPECT_TRUE(fast_output.high_speed_suppression_scale < 1.0f);
-}
 
 } // namespace chassis_semantics_test
