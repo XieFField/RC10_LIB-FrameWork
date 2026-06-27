@@ -3,6 +3,8 @@
 #include "main.h"
 #include <cmath>
 namespace {
+constexpr uint32_t LORA_LINK_TIMEOUT_MS = 200U;
+
 static inline float NormalizeJoystick(uint16_t raw, float center, float span, float deadzone = 0.05f, bool invert = false)
 {
     float value = (static_cast<float>(raw) - center) / span;
@@ -96,6 +98,10 @@ Lora_communication::Lora_communication(UART_HandleTypeDef* tx_huart, UART_Handle
     send_spear = 0;
     send_kfs_keepplace = 0;
     timer_tick_count=0;
+    last_joystick_rx_tick = HAL_GetTick();
+    last_joystick_frame_count = 0;
+    link_lost = true;
+    airjoy_data.link_lost = 1;
 }
 
 Lora_communication::~Lora_communication() {
@@ -110,10 +116,18 @@ void Lora_communication::Init() {
 
 
 /* ========== 虚函数实现 ========== */
-void Lora_communication::Comm_TxUseTxDMA(UART_HandleTypeDef* huart, uint8_t* data, uint16_t size) {
-    if (huart != nullptr && huart == lora_tx_huart) {
-        HAL_UART_Transmit_DMA(huart, data, size);
+HAL_StatusTypeDef Lora_communication::Comm_TxUseTxDMA(UART_HandleTypeDef* huart, uint8_t* data, uint16_t size) {
+#if LORA_TEST_FORCE_TX_DMA_FAIL_ONCE
+    static uint8_t force_fail_once = 1U;
+    if (force_fail_once) {
+        force_fail_once = 0U;
+        return HAL_BUSY;
     }
+#endif
+    if (huart != nullptr && huart == lora_tx_huart) {
+        return HAL_UART_Transmit_DMA(huart, data, size);
+    }
+    return HAL_ERROR;
 }
 
 void Lora_communication::Task_Process() {
@@ -142,9 +156,10 @@ void Lora_communication::Task_Process() {
 
         // 读取串口屏转发的命令帧数据
         uint8_t _;
-        GetRecvCommandFrameData(send_chosen_command, send_chosen_command_cnt,_);
+        GetRecvCommandFrameData(send_chosen_command, send_chosen_command_cnt, _);
         airjoy_data.recv_command_command = send_chosen_command;
-        airjoy_data.recv_command_load1  = send_chosen_command_cnt;
+        airjoy_data.recv_command_cnt       = GetRecvCommandCnt(send_chosen_command);  // 当前单个命令的累计次数
+        airjoy_data.recv_command_total_cnt = GetRecvCommandTotalCnt();                // 0~8号命令的总和
 
         airjoy_data.page = GetPage();
 
@@ -177,6 +192,7 @@ void Lora_communication::Task_Process() {
         airjoy_data.RT = GetRecvKeyData(12) ? 1U : 0U;  //这里原本T和B是和现在相反的，但因为和我想要的逻辑反了，所以我就自己改了
 
         uint16_t key_status = key;
+        airjoy_data.key_pressed_count = 0;
         for (uint8_t i = 0; i < 16; ++i) {
             if (key_status & (1U << i)) {
                 airjoy_data.key_pressed_count++;
@@ -209,6 +225,42 @@ void Lora_communication::Task_Process() {
         airjoy_data.KFSf_1 = kfs_data.fake_kfs;
         airjoy_data.color  = kfs_data.color;
     }
+
+    uint32_t joystick_frame_count = GetRecvJoystickFrameCount();
+    if (joystick_frame_count != last_joystick_frame_count) {
+        last_joystick_frame_count = joystick_frame_count;
+        last_joystick_rx_tick = HAL_GetTick();
+        link_lost = false;
+    } else if ((HAL_GetTick() - last_joystick_rx_tick) > LORA_LINK_TIMEOUT_MS) {
+        link_lost = true;
+        airjoy_data.left_x = 0.0f;
+        airjoy_data.left_y = 0.0f;
+        airjoy_data.right_x = 0.0f;
+        airjoy_data.right_y = 0.0f;
+        airjoy_data.key = 0;
+        airjoy_data.key_pressed_count = 0;
+        airjoy_data.SWA = 1;
+        airjoy_data.SWB = 1;
+        airjoy_data.SWC = 1;
+        airjoy_data.SWD = 1;
+        airjoy_data.SWE = 1;
+        airjoy_data.SWF = 1;
+        airjoy_data.LB = 0;
+        airjoy_data.RB = 0;
+        airjoy_data.LT = 0;
+        airjoy_data.RT = 0;
+        airjoy_data.d_pad_up = 0;
+        airjoy_data.d_pad_down = 0;
+        airjoy_data.d_pad_left = 0;
+        airjoy_data.d_pad_right = 0;
+    }
+    airjoy_data.link_lost = link_lost ? 1U : 0U;
+
+    // 实时快照通信统计至 airjoy_data
+    airjoy_data.rx_drop_cnt      = GetRxDropCnt();
+    airjoy_data.tx_drop_cnt      = GetTxDropCnt();
+    airjoy_data.tx_error_cnt     = GetTxErrorCnt();
+    airjoy_data.rx_crc_error_cnt = GetRxCrcErrorCnt();
 }
 
 void Lora_communication::send_robot_pos(float x, float y, float yaw)
@@ -241,9 +293,6 @@ void Lora_communication::set_robot_KFS_want_place(uint8_t want1, uint8_t want2,u
     send_kfs_want_place2 = want3;
 }
 
-float r_x_delta = 0.08f;
-float l_x_delta = -0.055f;
-
 void Lora_communication::update_airjoy_data(RC10_AirJoy_Data_S * data)
 {
     if(!data) return;
@@ -256,10 +305,10 @@ void Lora_communication::update_airjoy_data(RC10_AirJoy_Data_S * data)
     data->key  = airjoy_data.key;
     data->page = airjoy_data.page;
 
-    data->left_x = airjoy_data.left_x + l_x_delta;
+    data->left_x = airjoy_data.left_x;
     data->left_y = airjoy_data.left_y;
     data->right_y = airjoy_data.right_x;
-    data->right_x = airjoy_data.right_y + r_x_delta;
+    data->right_x = airjoy_data.right_y;
 
     data->SWA = airjoy_data.SWA;
     data->SWB = airjoy_data.SWB;
@@ -293,17 +342,22 @@ void Lora_communication::update_airjoy_data(RC10_AirJoy_Data_S * data)
     data->color  = airjoy_data.color;
 
     data->recv_command_command = airjoy_data.recv_command_command;
-    data->recv_command_load1  = airjoy_data.recv_command_load1;
-    data->recv_command_load2  = airjoy_data.recv_command_load2;
+    data->recv_command_cnt       = airjoy_data.recv_command_cnt;
+    data->recv_command_total_cnt = airjoy_data.recv_command_total_cnt;
+    data->link_lost = airjoy_data.link_lost;
 
+    data->rx_drop_cnt      = airjoy_data.rx_drop_cnt;
+    data->tx_drop_cnt      = airjoy_data.tx_drop_cnt;
+    data->tx_error_cnt     = airjoy_data.tx_error_cnt;
+    data->rx_crc_error_cnt = airjoy_data.rx_crc_error_cnt;
 
 }
 
 /* ========== 定时器中断 ========== */
 void Lora_communication::Tim_It_Process() {
     timer_tick_count++;
-    if (timer_tick_count >= 15) 
-    { // 计数达到 1ms    
+    if (timer_tick_count >= 15)
+    { // 计数达到 1ms 
         timer_tick_count = 0;
         Comm_SendAxisDataToTxBuffer(send_x, send_y, send_z,
         send_gripper_status, send_suction_cup_status, send_automatic_status,
@@ -319,6 +373,7 @@ void Lora_communication::EXTI_Prosess() {
 
 /* ========== 静态回调 ========== */
 void Lora_communication::RxCallback(uint8_t* buf, uint16_t len) {
+    (void)buf;
     if (s_instance) {
         s_instance->Comm_RxDMAToRxBuffer(s_instance->lora_rx_huart, len);
     }

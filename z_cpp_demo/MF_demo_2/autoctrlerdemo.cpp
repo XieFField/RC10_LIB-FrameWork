@@ -27,58 +27,7 @@ typedef enum {
     ROTATE_PATH_NEGATIVE     // 指定负方向旋转
 } Rotate_Strategy_E;
 
-// KFS 高度表 (cm)
-const float MF_high[12] = 
-{
-    40.0f, 20.0f, 40.0f,
-    20.0f, 40.0f, 60.0f,
-    40.0f, 60.0f, 40.0f,
-    20.0f, 40.0f, 20.0f
-};
-
-float chassisMoveDir(int8_t startmapNum, int8_t next_mapNum)
-{
-    if(startmapNum < 1 || startmapNum >30 || next_mapNum < 1 || next_mapNum >30)
-    {
-        if(startmapNum < 1 || startmapNum >30)
-            cout << "Start mapNum " << (int)startmapNum << " is out of range." << endl;
-
-        if(next_mapNum < 1 || next_mapNum >30)
-            cout << "Next mapNum " << (int)next_mapNum << " is out of range." << endl;
-
-        return -1.0f; // 无效输入
-    }
-    
-    bool isinMFstart = IsWalkable(startmapNum);
-    bool isinMFnext = IsWalkable(next_mapNum);
-
-    if(isinMFstart == false)
-    {
-        cout << "Start map " << (int)startmapNum << " is in MF." << endl;
-    }
-    if(isinMFnext == false)
-    {
-        cout << "Next map " << (int)next_mapNum << " is in MF." << endl;
-    }
-
-     
-
-    if(isinMFstart && isinMFnext)
-    {
-        // 两个都不在梅花桩内，直接计算方向
-        Point2D startPos = MapCenterWorld(startmapNum);
-        Point2D nextPos = MapCenterWorld(next_mapNum);
-        float dx = nextPos.x - startPos.x;
-        float dy = nextPos.y - startPos.y;
-        float deg = rad_to_deg(atan2f(dy, dx));
-        deg = normalize_deg_0_360(deg);
-        return deg;
-    }
-    else
-    {
-        return -1.0f; //无效
-    }
-}
+// KFS 高度通过 GetMFHeight() 获取，自动适配红蓝场
 
 // 模拟 ArmSetup 类
 class MockArmSetup {
@@ -200,8 +149,8 @@ public:
         current_rotate_angle = 0.0f;
         
         // [新增] 设置初始高度：KFS高度 - 20cm
-        float kfs_h_cm = MF_high[targetKFS_Index - 1];
-        current_launch_height = (kfs_h_cm - 20.0f) / 100.0f; // 转换为米
+        float kfs_h_m = GetMFHeight(targetKFS_Index);
+        current_launch_height = kfs_h_m - 0.20f; // KFS高度下方20cm
         if(current_launch_height < 0) current_launch_height = 0;
 
         // 重置标志位
@@ -889,64 +838,60 @@ int main(void)
 
     TestCase tests[] = {
         {"Case-1 ONE MF OUTSIDE",  {5.0f, 1.0f, 0.0f}, 3,  0, 0},
-        {"Case-2 TWO MF OUTSIDE",  {5.0f, 1.0f, 0.0f}, 11, 3, 0},
-        {"Case-3 THREE MF OUTSIDE",{5.0f, 1.0f, 0.0f}, 3, 12, 7 },
-        {"Case-4 THREE MF INSIDE", {0.6f, 5.0f, 0.0f}, 6,  8, 10}};
+        {"Case-2 TWO MF OUTSIDE",  {0.0f, 0.0f, 0.0f}, 10, 4, 3},
+        {"Case-3 THREE MF OUTSIDE",{0.0f, 1.0f, 0.0f}, 6, 10, 7 },
+        {"Case-4 THREE MF INSIDE", {5.44f, 5.78f, 0.0f}, 6,  9, 12}};
 
-    bool allPass = true;
-
-    cout << "=== PathInformation TEST START ===" << endl;
-
-    int testCount = (int)(sizeof(tests) / sizeof(tests[0]));
-    for (int i = 0; i < testCount; ++i)
+    const char* colorNames[] = {"Red(0)", "Blue(1)"};
+    for(int c = 1; c >= 0; c--)
     {
-        TestCase &tc = tests[i];
-        PathInformation_S info = PathInformation_calc(tc.robotPos, tc.MF1, tc.MF2, tc.MF3);
-        float calcCost = CalcPathInfoCost(tc.robotPos, info);
-        float bruteCost = BruteForceBestCost(tc.robotPos, tc.MF1, tc.MF2, tc.MF3);
+        MF_AutoCtrler::color = c;
+        cout << "\n========== " << colorNames[c] << " Field ==========" << endl;
 
-        float err = calcCost - bruteCost;
-        if (err < 0.0f)
-            err = -err;
+        bool allPass = true;
+        int testCount = (int)(sizeof(tests) / sizeof(tests[0]));
+        for (int i = 0; i < testCount; ++i)
+        {
+            TestCase &tc = tests[i];
+            PathInformation_S info = PathInformation_calc(tc.robotPos, tc.MF1, tc.MF2, tc.MF3);
+            float calcCost = CalcPathInfoCost(tc.robotPos, info);
+            float bruteCost = BruteForceBestCost(tc.robotPos, tc.MF1, tc.MF2, tc.MF3);
 
-        bool calcHasPath = (info.entranceMap != 0 && info.MFroad[0] != 0);
-        bool bruteHasPath = (bruteCost < 1.0e8f);
-        bool pass = false;
+            float err = calcCost - bruteCost;
+            if (err < 0.0f) err = -err;
 
-        if (!calcHasPath && !bruteHasPath)
-            pass = true;
-        else if (calcHasPath && bruteHasPath)
-            pass = (err < 1.0e-4f);
-        else
-            pass = false;
-        if (!pass)
-            allPass = false;
+            bool calcHasPath = (info.entranceMap != 0 && info.MFroad[0] != 0);
+            bool bruteHasPath = (bruteCost < 1.0e8f);
+            bool pass = false;
 
-        cout << "\n[" << tc.name << "]" << endl;
-        cout << "  robotPos=(" << tc.robotPos.x << ", " << tc.robotPos.y << "), MF1=" << (int)tc.MF1 << ", MF2=" << (int)tc.MF2 << ", MF3=" << (int)tc.MF3 << endl;
-        cout << "  entranceMap=" << (int)info.entranceMap << ", MFroad1=" << (int)info.MFroad[0] << ", MFroad2=" << (int)info.MFroad[1] << ", MFroad3=" << (int)info.MFroad[2] << ", exitMap=" << (int)info.exitMap << endl;
-        cout << "  calcCost=" << calcCost << ", bruteBestCost=" << bruteCost << ", absErr=" << err << endl;
-        cout << "  MFroad1's index is " << (int)info.Index_MFroad[0] << endl;
-        if(info.MFroad[1] != 0)
-            cout << "  MFroad2's index is " << (int)info.Index_MFroad[1] << endl;
-        if(info.MFroad[2] != 0)
-            cout << "  MFroad3's index is " << (int)info.Index_MFroad[2] << endl;
-        cout << "  result=" << (pass ? "PASS" : "FAIL") << endl;
-        PrintMustPast(info);
+            if (!calcHasPath && !bruteHasPath) pass = true;
+            else if (calcHasPath && bruteHasPath) pass = (err < 1.0e-4f);
+            else pass = false;
+            if (!pass) allPass = false;
+
+            cout << "\n[" << tc.name << "]" << endl;
+            cout << "  robotPos=(" << tc.robotPos.x << ", " << tc.robotPos.y << "), MF1=" << (int)tc.MF1 << ", MF2=" << (int)tc.MF2 << ", MF3=" << (int)tc.MF3 << endl;
+            cout << "  entranceMap=" << (int)info.entranceMap << ", MFroad1=" << (int)info.MFroad[0] << ", MFroad2=" << (int)info.MFroad[1] << ", MFroad3=" << (int)info.MFroad[2] << ", exitMap=" << (int)info.exitMap << endl;
+            cout << "  calcCost=" << calcCost << ", bruteBestCost=" << bruteCost << ", absErr=" << err << endl;
+            cout << "  sp_handling_KFS: [0]=" << (int)info.sp_handling_KFS[0]
+                 << " [1]=" << (int)info.sp_handling_KFS[1]
+                 << " [2]=" << (int)info.sp_handling_KFS[2] << endl;
+            cout << "  result=" << (pass ? "PASS" : "FAIL") << endl;
+            PrintMustPast(info);
+        }
+        cout << "\n=== " << colorNames[c] << " TEST: " << (allPass ? "ALL PASS" : "HAVE FAIL") << " ===" << endl;
     }
 
-    cout << "\n=== PathInformation TEST OVER: " << (allPass ? "ALL PASS" : "HAVE FAIL") << " ===" << endl;
-
+    cout << "\n=== Direction Tests ===" << endl;
     int testDir[4][2] =
     {
         {2,5}, {15,30}, {6,26}, {30,26}
     };
-
     float testDirresult[4];
     for(int i = 0; i < 4; i ++)
     {
         testDirresult[i] = chassisMoveDir(testDir[i][0], testDir[i][1]);
-        cout << "\n[Direction Test " << (i+1) << "] From Map " << testDir[i][0] << " to Map " << testDir[i][1] << ": Direction = " << testDirresult[i] << endl;
+        cout << "[Dir " << (i+1) << "] Map " << testDir[i][0] << "->" << testDir[i][1] << ": " << testDirresult[i] << endl;
     }
 
     // return allPass ? 0 : 1;

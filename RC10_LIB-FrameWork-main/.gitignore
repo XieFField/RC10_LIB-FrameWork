@@ -1,0 +1,46 @@
+*.o
+*.d
+*.o
+*.o
+*.o
+*.d
+*.o
+*.d
+*.d
+/MDK-ARM/Frame_T
+MDK-ARM/Frame_T/stm32h7xx_hal_uart_ex.o
+/MDK-ARM/Frame_T
+/MDK-ARM/Frame_T
+*.d
+*.d
+/MDK-ARM/Frame_T
+*.d
+MDK-ARM/Frame_T/app_pid.d
+MDK-ARM/Frame_T/app_tool.d
+MDK-ARM/Frame_T/bsp_fdcan_driver.d
+MDK-ARM/Frame_T/cmsis_os2.d
+MDK-ARM/Frame_T/cmsis_os2.o
+MDK-ARM/Frame_T/croutine.d
+MDK-ARM/Frame_T/croutine.o
+MDK-ARM/Frame_T/event_groups.d
+MDK-ARM/Frame_T/system_stm32h7xx.o
+*.d
+/.vs
+/MDK-ARM/RTE/Device/STM32H723ZGTx
+/MDK-ARM/Frame_T.uvprojx
+/MDK-ARM/Frame_T.uvguix.ayou
+/MDK-ARM/Frame_T.uvoptx
+/MDK-ARM/Frame_T.uvoptx
+/MDK-ARM/RTE/_Frame_T/RTE_Components.h
+/MDK-ARM/Frame_T.uvprojx
+/MDK-ARM/.vs
+/MDK-ARM/Frame_T.uvguix.86130
+
+# local backup snapshots
+/Core/Inc/Backup/
+/Core/Src/Backup/
+*.bak
+
+# AI agent workspace policy
+# keep docs/tests/history/artifacts all trackable in current branch
+

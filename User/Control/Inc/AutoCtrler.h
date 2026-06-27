@@ -29,7 +29,8 @@ namespace MF_AutoCtrler
     static constexpr int BFS_INF = 30000;
 
     extern const Point2D MapNum_RealPos[30];
-
+    extern const float MF_high_blue[12];
+    extern const float MF_high_red[12];
     typedef enum
     {
         Positive_X,
@@ -73,6 +74,8 @@ namespace MF_AutoCtrler
 
         int8_t Index_MFroad[3] = {0,0,0}; //记录MFroad中MF1和MF2在mustPastMap中的索引位置，方便后续路径跟踪
 
+        int8_t sp_handling_KFS[3] = {0, 0, 0}; // 0,1,2索引对应MF1,MF2,MF3是否需要特殊处理，1代表需要，0则是不需要。
+
         int8_t exitMap = 26; // 固定出口
     }PathInformation_S;
 
@@ -102,7 +105,7 @@ namespace MF_AutoCtrler
     // 计算路径节点结果
     PathNode_S PathNodeResult_calc(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t EXIT = 26);
     
-    
+    float GetMFHeight(int8_t mfNum);
 
     PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2, int8_t MF3);
 
