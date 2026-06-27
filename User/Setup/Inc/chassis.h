@@ -32,7 +32,7 @@
 #define JIA_CHASSIS_PROFILE_FULL_DEBUG 2
 
 #ifndef JIA_CHASSIS_PROFILE
-#define JIA_CHASSIS_PROFILE JIA_CHASSIS_PROFILE_FULL_DEBUG
+#define JIA_CHASSIS_PROFILE JIA_CHASSIS_PROFILE_RUNTIME_MIN
 #endif
 
 // 功能开关均允许外部 -D 单独覆盖。下面只给 profile 的默认值：
@@ -462,6 +462,7 @@ namespace jia
                 f32 homing_falling_edge_mech_rad = 0.0f;          // 原始 GPIO H->L 边沿对应的机械 OA 角（rad）
                 f32 homing_rising_edge_mech_rad = 0.0f;           // 原始 GPIO L->H 边沿对应的机械 OA 角（rad）
                 f32 homing_search_rpm = JIA_CHASSIS_HOMING_SEARCH_RPM; // 回零搜索阶段给转向电机的转速指令，单位 rpm
+                f32 homing_search_direction_sign = 0.0f;          // 本次 Search 采用的 corrected-local 搜索方向：0 表示尚未锁存，+1/-1 只影响搜索展开，不改变校准后的 drive 正方向语义
                 f32 homing_zero_offset_rad = 0.0f;                // 标定零偏：传感器触发点到期望机械零位的固定偏差。它是静态标定量，不等于本次上电求得的运行时零偏。
                 f32 homing_timeout_s = 5.0f;                      // 单轮回零允许持续的最长时间，超时后进入故障态，单位秒
                 HomingState homing_state = HomingState::kIdle;    // 当前轮回零状态机所处阶段
@@ -1357,9 +1358,9 @@ namespace jia
 
                 struct XParkPriorityBrakeConfig
                 {
-                    f32 residual_enter_m_s = 0.08f;  // [RW] 优先停车 residual 进入阈值（m/s）。
-                    f32 residual_exit_m_s = 0.10f;   // [RW] 优先停车 residual 退出阈值（m/s）。
-                    u32 entry_delay_ms = 1U;         // [RW] 优先停车 X-Park 进入保持时长（ms）。
+                    f32 residual_enter_m_s = 0.5f;  // [RW] 优先停车 residual 进入阈值（m/s）。
+                    f32 residual_exit_m_s = 0.55f;   // [RW] 优先停车 residual 退出阈值（m/s）。
+                    u32 entry_delay_ms = 0U;         // [RW] 优先停车 X-Park 进入保持时长（ms）。
                 } xpark_priority_brake_cfg_;
 
                 struct XParkSteerHoldConfig
@@ -1456,8 +1457,8 @@ namespace jia
             f32 max_lock_to_rot_z_rad_s_ = 99999999.0f;      // [RW] LockToYaw 模式下的角速度上限（rad/s）。用于限制“往目标角赶”的最快速度。
             u32 lock_now_rot_z_shift_time_ms_ = 1000; // [RW] LockNow 松手缓冲时长（ms）。松开后短时间内继续维持目标，避免姿态突然跳变。
             f32 lock_yaw_pid_target_lpf_alpha_ = 1.0f; // [RW] 航向 PID 目标低通系数，1=关闭滤波，0=保持上一滤波目标。
-            f32 lock_yaw_pid_deadband_enter_deg_ = 0.05f; // [RW] 航向 PID 死区进入阈值（deg）。
-            f32 lock_yaw_pid_deadband_exit_deg_ = 0.20f;  // [RW] 航向 PID 死区退出阈值（deg）。
+            f32 lock_yaw_pid_deadband_enter_deg_ = 0.15f; // [RW] 航向 PID 死区进入阈值（deg）。
+            f32 lock_yaw_pid_deadband_exit_deg_ = 0.30f;  // [RW] 航向 PID 死区退出阈值（deg）。
 
             // =====================================================================
             // 调试参数（通过全局 chassis 对象在调试器内直接改值）[RW]
@@ -1472,7 +1473,7 @@ namespace jia
             {
                 struct Common
                 {
-                    bool enable = true;                                            // [RW] 调试总开关。
+                    bool enable = false;                                            // [RW] 调试总开关。
                     u8 mode_raw = 2;                                               // [RW] 调试模式号。
                     u8 mode_resolved_raw = static_cast<u8>(DebugMode::kWorldSpeed); // [RO] 解析后的实际模式号。
                     u8 control_wheel_index = 1U;                                    // [RW] 当前执行目标轮号。单轮模式运行时只认这一处。

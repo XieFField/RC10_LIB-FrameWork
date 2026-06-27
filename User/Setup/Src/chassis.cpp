@@ -320,7 +320,7 @@ namespace jia
                 motion_direction_guard_active_[i] = false;
             }
 
-            rot_z_pid_.set_params(lock_angle_pid_params, 1.0f);
+            rot_z_pid_.set_params(lock_angle_pid_params, 0.8f);
             rot_z_pid_.set_as_circular();
             clearInputTargetData();
             startHoming();
@@ -548,6 +548,7 @@ namespace jia
                 wheel.homing_auto_retry_wait_active = false;
                 wheel.homing_auto_retry_wait_elapsed_ms = 0U;
                 wheel.homing_auto_retry_armed_by_recovery_failure = false;
+                wheel.homing_search_direction_sign = 0.0f;
                 resetHomingEdgeConfirmState(wheel);
                 wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
                 wheel.homing_hold_corrected_local_total_rad = 0.0f;
@@ -3457,7 +3458,12 @@ namespace jia
         {
             // 单次边沿只能提供一个“候选零偏”；为了吸收抖动和机械误差，这里要连续收集三次，
             // 并要求相邻边沿位置近似相差半圈，才把平均结果认作运行时零偏。
-            const f32 edge_mech_oa_rad = is_falling_edge ? wheel.homing_falling_edge_mech_rad : wheel.homing_rising_edge_mech_rad;
+            const f32 search_direction_sign =
+                (wheel.homing_search_direction_sign == 0.0f) ? 1.0f : wheel.homing_search_direction_sign;
+            const bool edge_is_positive_rotation_falling =
+                (search_direction_sign >= 0.0f) ? is_falling_edge : !is_falling_edge;
+            const f32 edge_mech_oa_rad =
+                edge_is_positive_rotation_falling ? wheel.homing_falling_edge_mech_rad : wheel.homing_rising_edge_mech_rad;
             const SteerCalibration calibration = makeSteerCalibration(wheel);
             f32 candidate_zero_offset_rad = computeHomingRuntimeZeroOffset(edge_mech_oa_rad,
                                                                            signed_local_total_rad,
@@ -3673,6 +3679,9 @@ namespace jia
             wheel.homing_last_edge_is_falling = false;
             wheel.homing_align_command_armed = false;
             wheel.homing_search_timeout_armed = false;
+            const u8 wheel_idx = static_cast<u8>(&wheel - &wheel_config_[0]);
+            wheel.homing_search_direction_sign =
+                (wheel_idx < 4U) ? JIA_CHASSIS_HOMING_SEARCH_RPM_SIGN[wheel_idx] : 1.0f;
             resetHomingEdgeConfirmState(wheel);
             wheel.homing_runtime_zero_offset_rad = wheel.homing_zero_offset_rad;
             wheel.homing_hold_corrected_local_total_rad = 0.0f;
@@ -4502,7 +4511,12 @@ namespace jia
                     {
                         // 正在搜索零位的轮子，允许转向电机按固定搜索转速慢慢转；
                         // 但 drive 仍然保持 current=0，全车不允许恢复驱动。
-                        const f32 homing_search_rpm_sign = JIA_CHASSIS_HOMING_SEARCH_RPM_SIGN[i];
+                        f32 homing_search_rpm_sign = wheel.homing_search_direction_sign;
+                        if (homing_search_rpm_sign == 0.0f)
+                        {
+                            homing_search_rpm_sign = JIA_CHASSIS_HOMING_SEARCH_RPM_SIGN[i];
+                            wheel.homing_search_direction_sign = homing_search_rpm_sign;
+                        }
                         setSteerMotorTargetRPM(wheel, wheel.homing_search_rpm * homing_search_rpm_sign);
                     }
                     else if ((wheel.homing_state == HomingState::kReady) &&
