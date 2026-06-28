@@ -134,6 +134,11 @@ void Robot_WeaponSage_Setup::loop()
             kfs_idle();
             break;
         }
+        
+        case WEAPONSAGE_TEST_POINT:
+        {
+            test_point();
+        }
         default:
             idle();
             break;
@@ -157,8 +162,17 @@ float traverse_rate=0.0002f;
 float weapon_launch_rate=0.0001f;
 float Kp_traverse=0.5f;
 
+void Robot_WeaponSage_Setup::test_point()
+{
+    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+    this->setArm_angle(90.0f);
+    this->setLaunch_angle(0.0f);
+}
+
+
 void Robot_WeaponSage_Setup::kfs_idle()
 {
+    this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
     this->setLaunch_angle(initData_.max_launchHeight_);
     if(current_pos_.launch_pos_ < initData_.max_launchHeight_-0.1f)
     {
@@ -656,7 +670,7 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
     {
 
 		this->setArm_angle(90.0f);
-		if(abs(current_pos_.arm_pos_-90.f)<0.1)
+		if(abs(current_pos_.arm_pos_-90.f)<0.5)
 		{
             if(!auto_ctrl_.flag.is_untight)
             {
@@ -880,7 +894,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
         {
             case WeaponSage_Setup::STATE_START_1:
             {
-                if(auto_ctrl_.auto_state_bool_S.dock_start || Locate_Setup::getInstance()->get_RobotPos_inWorld().y < 0.9f)
+                if(auto_ctrl_.auto_state_bool_S.dock_start || Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 0.9f)
                 {
 					now_new_state_ = WeaponSage_Setup::STATE_SAGE_ADJUST_1;
                 }

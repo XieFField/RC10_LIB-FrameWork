@@ -50,9 +50,9 @@ typedef struct
 
 typedef struct
 {
-    Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.6f, .finalSpeed = 2.0f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
-	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.001f, .startPos = 0.083f, .targetPos = 0.0f, .deadzone = 0.001f};
-	Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.4f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.1f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.6f, .finalSpeed = 2.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
+	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.001f, .startPos = 0.067f, .targetPos = 0.0f, .deadzone = 0.001f};
+	Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.2f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config curve = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.6f, .initialSpeed = 0.6f, .finalSpeed = 0.6f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};
@@ -93,10 +93,10 @@ typedef struct
     Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
 
     // 贴边流程
-    Vector2D CB_transition_pos[2] = {{3.539f, 1.1f}, {3.0f, 1.5f}};
+    Vector2D CB_transition_pos[2] = {{3.539f, 1.1f}, {3.0f, 1.4f}};
     //Vector2D CB_transition_pos_1[2] = {{2.6f, 1.0f}, {3.47f, 0.85f}};
 	
-    Vector2D CB_welt_pos[2] = {{3.3f, 0.5f}, {3.7f, 0.5f}};
+    Vector2D CB_welt_pos[2] = {{3.3f, 0.5f}, {3.98f, 0.5f}};
 
 } CB_POINT;
 
@@ -348,7 +348,7 @@ public:
     bool GetReach_flag()
     {
         // 读取夹杆流程完成标志。
-        if (pid_dead_flag == true && WeaponSage_Start == true && (_tool_Abs(yaw - target_yaw) < 3.0f))
+        if (pid_dead_flag == true && WeaponSage_Start == true && (_tool_Abs(yaw - target_yaw) < 5.0f))
         {
             return true;
         }
@@ -361,7 +361,7 @@ public:
     bool GetEnd_flag()
     {
         // 读取夹杆退后流程完成标志。
-        if (WeaponSage_End == true && (_tool_Abs(yaw - target_yaw) < 3.0f))
+        if (WeaponSage_End == true && (_tool_Abs(yaw - target_yaw) < 5.0f))
         {
             return true;
         }

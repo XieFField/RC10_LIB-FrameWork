@@ -82,6 +82,7 @@ typedef enum{
     CHASSIS_MANUAL_CONTROL_A, //手操A 无锁角
     CHASSIS_MANUAL_CONTROL_B, //手操B 有锁角
     CHASSIS_MANUAL_CONTROL_C,
+    CHASSIS_MANUAL_CONTROL_D,
     CHASSIS_MANUAL_CONTROL_CZ,//xy换
 
     CHASSIS_AUTO_CONTROL_CB, //夹杆自动
@@ -110,6 +111,7 @@ typedef enum{
     WEAPONSAGE_IDLE,    // 待机
     WEAPONSAGE_CALIBRATE, //校准模式
     WEAPONSAGE_KFS_IDLE, // KFS自动模式的待机状态
+    WEAPONSAGE_TEST_POINT,
 }WeaponSage_Status_E;
 
 

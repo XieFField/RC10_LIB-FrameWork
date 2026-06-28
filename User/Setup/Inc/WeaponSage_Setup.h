@@ -313,8 +313,7 @@ public:
         return auto_ctrl_.auto_ctrl1;
     }
 	
-    void kfs_idle();
-
+    
 	void SetServo_Angle(uint16_t angle);
 protected:
     void loop() override;
@@ -324,6 +323,9 @@ private:
 	bool omni_flag = false;
     WeaponSage_Setup::ctrl_status_S ctrl_status_;
     Debug_Printf debug_uart = Debug_Printf(&huart1);
+
+    void kfs_idle();
+    void test_point();
 
     void manualControl();
     void idle();

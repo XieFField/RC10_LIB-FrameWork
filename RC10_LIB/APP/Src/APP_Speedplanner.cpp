@@ -98,7 +98,7 @@ float TrapePlanner1D::plan(float now_dis)
         m_phase = FINISHED_PHASE;
         return m_finalSpeed_; // 如果距离小于死区范围，返回速度为0
     }
-    if (traveled_ >= m_totalDistance_)
+    if ((traveled_ - m_totalDistance_)>2.0f)
     {
         traveled_ = m_totalDistance_;      // 限制最大行驶距离
         m_phase = FINISHED_PHASE;          // 设置阶段为规划结束

@@ -824,12 +824,21 @@ void FSM_Controller::auto_ctrl()
         else if (airjoy_data_.SWB == 0x00) // 半自动
         {
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_WEAPON_LOW_MANUAL_LEVEL);
-            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_LOW_LEVEL);
+            
 
-            if (airjoy_data_.SWE == 0x00)
-                chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
-            else if (airjoy_data_.SWE == 0x01)
-                chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            if(airjoy_data_.SWD == 0x00)
+            {
+                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_MANUAL_LOW_LEVEL);
+                if (airjoy_data_.SWE == 0x00)
+                    chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_A);
+                else if (airjoy_data_.SWE == 0x01)
+                    chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_B);
+            }
+            else if(airjoy_data_.SWD == 0x01)
+            {
+                chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_D);
+                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_TEST_POINT);
+            }
         }
         break;
     }
