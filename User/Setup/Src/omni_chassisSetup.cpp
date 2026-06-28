@@ -48,6 +48,7 @@ void OmniChassis_Setup::CB_Path_Check(void)
     {
         if (CB_point.CB_End_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_End_pos[RB_Flag].y == curve.Get_End_point().y && path_line_.Is_End() == false)
         {
+            CB_flag.FF_flag=true;
             CB_flag.Retreat_flag = true;
 			if(robot_pos_.y>CB_point.spin_y&&WeaponSage_Start == false)
 			{

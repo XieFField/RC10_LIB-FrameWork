@@ -52,10 +52,6 @@ typedef struct
 {
     //Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.2f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
     
-    
-    
-    
-    
     Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.6f, .finalSpeed = 2.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
 	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.001f, .startPos = 0.067f, .targetPos = 0.0f, .deadzone = 0.001f};
 	Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.3f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.02f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -68,11 +64,6 @@ typedef struct
     
 	Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
     
-    // 没用的
-    // Speedplanner_1D_Param_Config KFS = {.maxAcc = 999.0f, .maxDec = 0.8f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.5f, .finalSpeed = 0.15f, .startPos = 0.25f, .targetPos = 0.0f, .deadzone = 0.001f};
-    // 原始的测试数据
-    // Speedplanner_1D_Param_Config CB = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
-
 } PATH_PARAM;
 
 typedef struct
@@ -90,22 +81,24 @@ typedef struct
 
 typedef struct
 {
+    float CB_FF_coefficient = 0.1f;
+    
     //float spin_y=1.0f;
 	float spin_y=0.88f;
     
     // 第数组第零为红场
-    Vector2D CB_Start_pos[2] = {{5.0f, 1.0f}, {1.0f, 0.9f}};             // 夹杆起点。
+    Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.9f}};             // 夹杆起点。
     Vector2D CB_Selection_pos[2] = {{3.466f, 0.835f}, {2.455f, 0.835f}}; // 夹杆流程默认目标点。
 
     // 相机流程
     Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
 
     // 贴边流程
-    Vector2D CB_transition_pos[2] = {{3.539f, 1.1f}, {3.0f, 1.01f}};
+    Vector2D CB_transition_pos[2] = {{3.539f, 1.01f}, {3.0f, 1.01f}};
     //Vector2D CB_transition_pos[2] = {{3.539f, 1.1f}, {3.0f, 1.4f}};
 	
     // Vector2D CB_welt_pos[2] = {{3.3f, 0.5f}, {3.98f, 0.5f}};
-    Vector2D CB_welt_pos[2] = {{3.3f, 0.5f}, {3.98f, 0.52f}};
+    Vector2D CB_welt_pos[2] = {{3.3f, 0.52f}, {3.98f, 0.52f}};
 
 } CB_POINT;
 
@@ -182,8 +175,12 @@ typedef struct
 
 typedef struct
 {
+    
     bool Selection_flag = false;
     bool Retreat_flag = false;
+    
+    bool FF_flag = false;
+    
 } CB_FLAG;
 
 typedef struct
@@ -1155,11 +1152,15 @@ private:
         Path_correction();
         V.corrVelocity = V.PID_coefficient * V.corrVelocity;
 
-        if (path_line_.Get_Curve_Flag() == true)
+        if (path_line_.Get_Curve_Flag() == true && chassis_status_==CHASSIS_AUTO_CONTROL_KFS)
         {
             V.corrVelocity = V.corrVelocity * V.spinodal_coefficient;
             // speed = speed * V.spinodal_coefficient;
             speed = V.corrVelocity + V.planspeed;
+        }
+        else if(CB_flag.FF_flag==true &&chassis_status_==CHASSIS_AUTO_CONTROL_CB)
+        {
+            speed = V.corrVelocity + V.planspeed*CB_point.CB_FF_coefficient;
         }
         else
         {
@@ -1214,6 +1215,8 @@ private:
 
         CB_flag.Retreat_flag = false;
         CB_flag.Selection_flag = false;
+        CB_flag.FF_flag=false;
+        
         curve.Rest();
     }
     void mode_init(void)
