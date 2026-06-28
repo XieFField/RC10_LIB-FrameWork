@@ -723,6 +723,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
     static float store_start_time = 0.0f;
     float target_store_height = (kfs_index == 0x01) ? this->init_data_.store_height_inside_ : this->init_data_.store_height_outside_;
     float target_back_height = 0.0f;
+    float target_rotate_angle = 0.0f;
     if (arm_status_ != ARM_AUTO_CONTROL)
     {
         target_back_height = (kfs_index == 0x01) ? this->init_data_.max_launchHeight_ - 0.02f : this->init_data_.max_launchHeight_ - 0.1f;
@@ -769,13 +770,17 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
 
     case store_state::rotate_state:
     {
-        if (kfs_index == 0x00)
-            this->set_RotateAngle(260.0f); // 存储的目标旋转角度
+        // if (kfs_index == 0x00)
+        //     this->set_RotateAngle(260.0f); // 存储的目标旋转角度
 
-        else if (kfs_index == 0x01)
-            this->set_RotateAngle(295.0f);
+        // else if (kfs_index == 0x01)
+        //     this->set_RotateAngle(295.0f);
 
-        
+        if(kfs_index == 0x00)
+        {
+            if(auto_ctrl_.flag.is_up_catch && auto_ctrl_.start_to_autoctrl == 1)
+                target_rotate_angle
+        }
 
         if (this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.005f)
         {
@@ -1410,12 +1415,6 @@ void ArmSetup::auto_stillnessTwo()
                     auto_ctrl_.flag.is_up_catch = false;
                     auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds();
                     auto_ctrl_.flag.isbackdone = true;
-
-                    // if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1)
-                    // {
-                    //     if(this->get_currentJointStatus().rotateJoint_angle_ > 270.0f)
-                    //         auto_ctrl_.flag.canChassisStart = true;
-                    // }
                 }
             }
             else if (TimeStamp::getInstance().getSeconds() - auto_ctrl_.flag.back_time >= 0.3f)
