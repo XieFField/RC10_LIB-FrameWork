@@ -270,6 +270,26 @@
           <WinNumber>1</WinNumber>
           <ItemText>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\ChassisOmni.path_line_.v_tangent_.y</ItemText>
         </Ww>
+        <Ww>
+          <count>23</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>wrist_waitting_time</ItemText>
+        </Ww>
+        <Ww>
+          <count>24</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>claw_untight_time</ItemText>
+        </Ww>
+        <Ww>
+          <count>25</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>claw_close_time</ItemText>
+        </Ww>
+        <Ww>
+          <count>26</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\ChassisOmni.CB_point.CB_Selection_pos</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

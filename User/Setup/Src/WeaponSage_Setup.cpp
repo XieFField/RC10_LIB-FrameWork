@@ -597,7 +597,7 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
 		this->setWrist_angle(180.0f); 
 	}
 	float current_wrist_pos= normalize_deg_0_360(current_pos_.wrist_pos_);
-    if(abs(current_wrist_pos-180.0f)<0.1f) //如果手腕也调整到位了，进入等待底盘停稳的状态
+    if(abs(current_wrist_pos-180.0f)<0.5f) //如果手腕也调整到位了，进入等待底盘停稳的状态
     {
 		if(!auto_ctrl_.flag.is_prepared)
 		{
@@ -670,7 +670,7 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
     {
 
 		this->setArm_angle(90.0f);
-		if(abs(current_pos_.arm_pos_-90.f)<0.5)
+		if(abs(current_pos_.arm_pos_-90.f)<1.0)
 		{
             if(!auto_ctrl_.flag.is_untight)
             {
@@ -935,7 +935,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                 this->Close_TargetClaw();
                 if(auto_ctrl_.flag.is_clawed)
                 {
-					if(current_pos_.launch_pos_ - auto_ctrl_.launch_kp.launch_lastcatch*initData_.max_launchHeight_ > 0.05f)
+					if(current_pos_.launch_pos_ - auto_ctrl_.launch_kp.launch_lastcatch*initData_.max_launchHeight_ > 0.01f)
 						auto_ctrl_.flag.is_over = true;
 					
                     this->setLaunch_angle(auto_ctrl_.launch_kp.launch_dockprepare*initData_.max_launchHeight_);
