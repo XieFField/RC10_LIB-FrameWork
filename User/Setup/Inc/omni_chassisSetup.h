@@ -1105,7 +1105,7 @@ private:
         }
         
         // 暂停自动
-        if (airjoy_data_.RB == 1 && pause_click == false)
+        if (airjoy_data_.RT == 1 && pause_click == false)
         {
             pause_click = true;
             KFS_flag.pause_flag = !KFS_flag.pause_flag;
@@ -1134,7 +1134,7 @@ private:
                 KFS_Selection_Planning();
             }
         }
-        if (airjoy_data_.RB == 0)
+        if (airjoy_data_.RT == 0)
         {
             pause_click = false;
         }

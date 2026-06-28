@@ -108,10 +108,16 @@ public:
     {
         if (Is_End() == false)
         {
+            
+            err_end = _tool_Abs((point - bezier_curve_list[index_].Get_End_point()).magnitude());
+
             bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距禿
             distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
-
-            v_resultant_ = sp_.plan(distance_); // 速度规划器迡算当前盿标速度
+            
+            if(err_end<brake_distance*2)
+                v_resultant_ = sp_.plan(err_end); // 速度规划器迡算当前盿标速度
+            else
+                v_resultant_ = sp_.plan(distance_); // 速度规划器迡算当前盿标速度
             m_phase = sp_.getPhase();           // 获取当前速度规划阶濿
 
             if (tangent_lock == false)
@@ -119,8 +125,7 @@ public:
                 v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
             }
 
-            err_end = _tool_Abs((point - bezier_curve_list[index_].Get_End_point()).magnitude());
-
+           
             // 段切换条件：
             // 1) 近翿诿巿达到阈值可直接切濵；
             // 2) t 接近 1 仅作为辅助条件，必须同时离终点不远，避免“投影到段末竿但车体仍较远”时诿切濵〿
@@ -163,7 +168,8 @@ public:
                     {
                         tangent_lock = false;
                     }
-                    float temp = (bezier_curve_list[index_].Get_len() - params_[index_].startPos);
+                    brake_distance=params_[index_].startPos;
+                    float temp = (bezier_curve_list[index_].Get_len() - brake_distance);
                     if (tangent_lock == false)
                     {
                         if (temp > 0)
@@ -272,6 +278,8 @@ public:
 protected:
     bool tangent_lock = false;
     float dead = 0.05f;
+    float brake_distance=0.0f;
+
     int index_ = 0;
     BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // 储存各路段曲线
 
