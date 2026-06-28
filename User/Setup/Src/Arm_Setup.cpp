@@ -1407,6 +1407,7 @@ void ArmSetup::auto_stillnessTwo()
                     store_tar = 0x00;
                 if (manual_store(store_tar))
                 {
+                    auto_ctrl_.flag.is_up_catch = false;
                     auto_ctrl_.flag.back_time = TimeStamp::getInstance().getSeconds();
                     auto_ctrl_.flag.isbackdone = true;
 
@@ -1694,8 +1695,8 @@ bool ArmSetup::state_launchStillness(int targetKFS)
 
         if(auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1 && auto_ctrl_.targetKFS[2] != 0)
             auto_ctrl_.flag.canChassisStart = false;
-        else if(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.targetKFS[2] != 0)        
-            auto_ctrl_.flag.canChassisStart = false;
+        // else if(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.targetKFS[2] != 0)        
+        //     auto_ctrl_.flag.canChassisStart = false;
         else
             auto_ctrl_.flag.canChassisStart = true;                   // 机械臂已经伸展到可以移动的高度
 

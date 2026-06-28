@@ -246,12 +246,15 @@ void OmniChassis_Setup::loop()
                     v_plan();
                 else
                     Path_lock_point(curve.Get_Start_point());
+                chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+
             }
             else
             {
-                Path_lock_point(Path_end_point);
+                CHASSIS_MANUAL(1.6f, 1.6f, 3.0f);
+                chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
+
             }
-            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
         }
         else
         {
