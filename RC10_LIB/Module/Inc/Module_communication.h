@@ -7,6 +7,10 @@
 #define RING_BUF_SIZE 256
 #define DMA_BUF_SIZE  64
 
+#ifndef COMM_TX_BUSY_TIMEOUT_MS
+#define COMM_TX_BUSY_TIMEOUT_MS 50U
+#endif
+
 //测试通过 本机rx_drop_cnt累加
 #ifndef COMM_TEST_BLOCK_RX_PARSE
 // 置 1：停止消费 RX FIFO，但 DMA 接收回调仍继续写入。
@@ -227,6 +231,10 @@ namespace communication{
             return tx_error_cnt;
         }
 
+        uint16_t GetTxTimeoutRecoveryCnt() const {
+            return tx_timeout_recovery_cnt;
+        }
+
         uint16_t GetRxCrcErrorCnt() const {
             return rx_crc_error_cnt;
         }
@@ -337,6 +345,8 @@ namespace communication{
         comm_FIFO_t tx_fifo;
 
         volatile uint8_t tx_busy; // 发送忙碌标志
+        volatile uint32_t tx_busy_start_tick;
+        volatile uint16_t tx_timeout_recovery_cnt;
         volatile uint16_t tx_error_cnt;
         volatile uint16_t rx_crc_error_cnt;
         uint32_t joystick_frame_count;

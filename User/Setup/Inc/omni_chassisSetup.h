@@ -827,9 +827,9 @@ private:
             // 拐角无法处理防止撞车
             if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
             {
-                if (_tool_Abs(yaw - KFS_point.MF1_target_yaw_) > 10.0f)
+                if (_tool_Abs(yaw - KFS_point.MF1_target_yaw_) > 20.0f)
                 {
-                    if (robot_pos_.y > 2.7f || robot_pos_.y < 8.4f || robot_pos_.x > 0.8f || robot_pos_.x < 5.2f)
+                    if (robot_pos_.y > 2.7f && robot_pos_.y < 8.4f)
                         return false;
                 }
                 else
@@ -847,7 +847,7 @@ private:
                 // 左右两排且接下来不为终点
                 if (i != (index_exit - 1))
                 {
-                    //下一个点为拐点
+                    // 下一个点为拐点
                     if (KFS_KeyPoint_.mustPastMap[1] == 1 || KFS_KeyPoint_.mustPastMap[1] == 5 || KFS_KeyPoint_.mustPastMap[1] == 26 || KFS_KeyPoint_.mustPastMap[1] == 30)
                     {
 
@@ -873,9 +873,9 @@ private:
                             last_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[1]);
                         }
                     }
-                    else if (KFS_KeyPoint_.mustPastMap[1] == MF1_Point_)//下一个为KFS1
+                    else if (KFS_KeyPoint_.mustPastMap[1] == MF1_Point_) // 下一个为KFS1
                     {
-                         if (_tool_Abs(yaw - KFS_point.MF1_target_yaw_) < 10.0f)
+                        if (_tool_Abs(yaw - KFS_point.MF1_target_yaw_) < 10.0f)
                         {
                             // 角度差距小直接转当做无事发生
                             target_yaw = KFS_point.MF1_target_yaw_;

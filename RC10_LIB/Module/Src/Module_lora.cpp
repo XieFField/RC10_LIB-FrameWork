@@ -112,6 +112,12 @@ void Lora_communication::Init() {
 
     bsp_rx.SetCallback(RxCallback);
     bsp_rx.UART_Init();
+    // ReceiveToIdle DMA 默认会开启半传输中断。LoRa 使用 IDLE/满缓冲
+    // 作为一批数据的结束条件，HT 与后续 IDLE 的 Size 是累计值，若两次
+    // 都送入通信 FIFO，会重复写入前半段数据。
+    if (lora_rx_huart != nullptr && lora_rx_huart->hdmarx != nullptr) {
+        __HAL_DMA_DISABLE_IT(lora_rx_huart->hdmarx, DMA_IT_HT);
+    }
 }
 
 
@@ -237,22 +243,22 @@ void Lora_communication::Task_Process() {
         airjoy_data.left_y = 0.0f;
         airjoy_data.right_x = 0.0f;
         airjoy_data.right_y = 0.0f;
-//        airjoy_data.key = 0;
-//        airjoy_data.key_pressed_count = 0;
-//        airjoy_data.SWA = 1;
-//        airjoy_data.SWB = 1;
-//        airjoy_data.SWC = 1;
-//        airjoy_data.SWD = 1;
-//        airjoy_data.SWE = 1;
-//        airjoy_data.SWF = 1;
-//        airjoy_data.LB = 0;
-//        airjoy_data.RB = 0;
-//        airjoy_data.LT = 0;
-//        airjoy_data.RT = 0;
-//        airjoy_data.d_pad_up = 0;
-//        airjoy_data.d_pad_down = 0;
-//        airjoy_data.d_pad_left = 0;
-//        airjoy_data.d_pad_right = 0;
+        // airjoy_data.key = 0;
+        // airjoy_data.key_pressed_count = 0;
+        // airjoy_data.SWA = 1;
+        // airjoy_data.SWB = 1;
+        // airjoy_data.SWC = 1;
+        // airjoy_data.SWD = 1;
+        // airjoy_data.SWE = 1;
+        // airjoy_data.SWF = 1;
+        // airjoy_data.LB = 0;
+        // airjoy_data.RB = 0;
+        // airjoy_data.LT = 0;
+        // airjoy_data.RT = 0;
+        // airjoy_data.d_pad_up = 0;
+        // airjoy_data.d_pad_down = 0;
+        // airjoy_data.d_pad_left = 0;
+        // airjoy_data.d_pad_right = 0;
     }
     airjoy_data.link_lost = link_lost ? 1U : 0U;
 
@@ -260,6 +266,7 @@ void Lora_communication::Task_Process() {
     airjoy_data.rx_drop_cnt      = GetRxDropCnt();
     airjoy_data.tx_drop_cnt      = GetTxDropCnt();
     airjoy_data.tx_error_cnt     = GetTxErrorCnt();
+    airjoy_data.tx_timeout_recovery_cnt = GetTxTimeoutRecoveryCnt();
     airjoy_data.rx_crc_error_cnt = GetRxCrcErrorCnt();
 }
 
@@ -349,6 +356,7 @@ void Lora_communication::update_airjoy_data(RC10_AirJoy_Data_S * data)
     data->rx_drop_cnt      = airjoy_data.rx_drop_cnt;
     data->tx_drop_cnt      = airjoy_data.tx_drop_cnt;
     data->tx_error_cnt     = airjoy_data.tx_error_cnt;
+    data->tx_timeout_recovery_cnt = airjoy_data.tx_timeout_recovery_cnt;
     data->rx_crc_error_cnt = airjoy_data.rx_crc_error_cnt;
 
 }
@@ -375,6 +383,12 @@ void Lora_communication::EXTI_Prosess() {
 void Lora_communication::RxCallback(uint8_t* buf, uint16_t len) {
     (void)buf;
     if (s_instance) {
+        // 防御性过滤：HAL_UARTEx_ReceiveToIdle_DMA() 每次重新启动时可能
+        // 再次开启 HT。半传输回调的 len 是累计长度，不能与后续 IDLE/TC
+        // 回调重复写入 FIFO。
+        if (HAL_UARTEx_GetRxEventType(s_instance->lora_rx_huart) == HAL_UART_RXEVENT_HT) {
+            return;
+        }
         s_instance->Comm_RxDMAToRxBuffer(s_instance->lora_rx_huart, len);
     }
 }

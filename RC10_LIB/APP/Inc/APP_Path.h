@@ -113,12 +113,12 @@ public:
 
             v_resultant_ = sp_.plan(distance_); // 速度规划器迡算当前盿标速度
             m_phase = sp_.getPhase();           // 获取当前速度规划阶濿
-            
-            if(tangent_lock==false)
+
+            if (tangent_lock == false)
             {
                 v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
             }
-            
+
             err_end = _tool_Abs((point - bezier_curve_list[index_].Get_End_point()).magnitude());
 
             // 段切换条件：
@@ -138,45 +138,44 @@ public:
                 }
                 else
                 {
-                    //舵轮过弯特殊设计
-                    if(params_[index_].targetPos==1.0f)
+                    // 舵轮过弯特殊设计
+                    if (params_[index_].targetPos == 1.0f)
                     {
-                        tangent_lock=true;
-                        v_tangent_={1.0f,0.0f};
+                        tangent_lock = true;
+                        v_tangent_ = {1.0f, 0.0f};
                     }
-                    else if(params_[index_].targetPos==2.0f)
+                    else if (params_[index_].targetPos == 2.0f)
                     {
-                        tangent_lock=true;
-                        v_tangent_={-1.0f,0.0f};
+                        tangent_lock = true;
+                        v_tangent_ = {-1.0f, 0.0f};
                     }
-                    else if(params_[index_].targetPos==3.0f)
+                    else if (params_[index_].targetPos == 3.0f)
                     {
-                        tangent_lock=true;
-                        v_tangent_={0.0f,1.0f};
+                        tangent_lock = true;
+                        v_tangent_ = {0.0f, 1.0f};
                     }
-                    else if(params_[index_].targetPos==4.0f)
+                    else if (params_[index_].targetPos == 4.0f)
                     {
-                        tangent_lock=true;
-                        v_tangent_={0.0f,-1.0f};
-                    }
-                    else
-                    {
-                        tangent_lock=false;
-                    }
-                    float temp=(bezier_curve_list[index_].Get_len() - params_[index_].startPos);
-                    if( tangent_lock==false)
-                    {
-                        if(temp>0)
-                    {
-                        params_[index_].targetPos = temp;
+                        tangent_lock = true;
+                        v_tangent_ = {0.0f, -1.0f};
                     }
                     else
                     {
-                        params_[index_].targetPos = bezier_curve_list[index_].Get_len();
+                        tangent_lock = false;
                     }
-                        
+                    float temp = (bezier_curve_list[index_].Get_len() - params_[index_].startPos);
+                    if (tangent_lock == false)
+                    {
+                        if (temp > 0)
+                        {
+                            params_[index_].targetPos = temp;
+                        }
+                        else
+                        {
+                            params_[index_].targetPos = bezier_curve_list[index_].Get_len();
+                        }
                     }
-                    
+
                     params_[index_].startPos = 0.0f; // 设置起忋位罿
                     sp_.param_reset(params_[index_]);
                 }
@@ -195,7 +194,7 @@ public:
      */
     void plan_reset()
     {
-        tangent_lock=false;
+        tangent_lock = false;
         is_init = false; // 重置初忋化标志
 
         bezier_curve_num = 0; // 重置曲线数量
@@ -215,7 +214,7 @@ public:
      */
     void Reset()
     {
-        tangent_lock=false;
+        tangent_lock = false;
         index_ = 0;
         point_last_ = bezier_curve_list[index_].Get_Start_point(); // 重置上一丿点为起点
         m_phase = ACCEL_PHASE;
@@ -259,20 +258,19 @@ public:
     {
         return end_point;
     }
-    
+
     int Get_Index()
     {
         return index_;
     }
-    
+
     bool Get_Curve_Flag()
     {
         return tangent_lock;
     }
-    
 
 protected:
-    bool tangent_lock=false;
+    bool tangent_lock = false;
     float dead = 0.05f;
     int index_ = 0;
     BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // 储存各路段曲线
@@ -298,10 +296,6 @@ private:
     bool is_end = false;  // 昿否开姿
     bool is_init = false; // 昿否初始化
 };
-
-
-
-
 
 ///////////////////////////             前期测试产物                //////////////////////////////////////////
 /**
@@ -440,11 +434,10 @@ private:
 //     Vector2D end_point_ = Vector2D(0.0f, 0.0f);  // 终点
 // };
 
-
 // �?径（从静止启动到静�??�?
-//class Path
+// class Path
 //{
-//public:
+// public:
 //    /**
 //     * @brief 默�?�构造函�?
 //     */
@@ -548,14 +541,14 @@ private:
 //        return bezier_curve_list[index_];
 //    }
 
-//protected:
-//    float err_end = 0.0f; // �?�?�?�?
-//    float dead = 0.04f;
-//    Vector2D v_output_ = Vector2D(0.0f, 0.0f);
-//    // 旧代�?
-//    BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // 储存各路段曲�?
-//    SShapedPlanner1D sp_;                         // 一�? S 型速度规划�?
-//    float total_len = 0;                          // �?线总长�?
+// protected:
+//     float err_end = 0.0f; // �?�?�?�?
+//     float dead = 0.04f;
+//     Vector2D v_output_ = Vector2D(0.0f, 0.0f);
+//     // 旧代�?
+//     BezierCurve bezier_curve_list[MAX_CURVE_NUM]; // 储存各路段曲�?
+//     SShapedPlanner1D sp_;                         // 一�? S 型速度规划�?
+//     float total_len = 0;                          // �?线总长�?
 
 //    int index_ = 0;
 //    float total_ = 0.0f;
@@ -598,10 +591,10 @@ private:
 
 //    float current_curve_len = 0; // 当前曲线走过的长�?
 
-//private:
-//    /*---------------------------------状�?-------------------------------------*/
-//    bool is_end = false;   // �?否开�?
-//    bool is_start = false; // �?否结�?
+// private:
+//     /*---------------------------------状�?-------------------------------------*/
+//     bool is_end = false;   // �?否开�?
+//     bool is_start = false; // �?否结�?
 
 //    bool is_init = false; // �?否初始化
 
@@ -612,8 +605,6 @@ private:
 
 //    float last_smoothness; // 生成曲线时临时存放上一�?点的平滑程度
 //};
-
-
 
 // class Path_line
 //{

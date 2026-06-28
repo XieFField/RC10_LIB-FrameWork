@@ -291,6 +291,7 @@ void FSM_Controller::set_cmd_to_R2()
 
 void FSM_Controller::all_stop()
 {
+    combine_triggered_ = false;
     // 停止模式+目标设置模式
     chassis_setup_->setPathAutoStart(0); // 路径自动开始标志清零
     arm_setup_->set_Arm_autoStart(0);    // 自动流程标志清零
@@ -351,6 +352,7 @@ void FSM_Controller::manual_ctrl()
     chassis_setup_->setPathAutoStart(0); // 路径自动开始标志清零
     arm_setup_->set_Arm_autoStart(0);    // 自动流程标志清零
     weaponSage_setup_->setCBauto(false);
+    combine_triggered_ = false;
 #if !USE_RC10_AIRJOY
     switch (airjoy_data_.SWC)
     {
@@ -665,10 +667,19 @@ void FSM_Controller::auto_ctrl()
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x00) // 合体模式 上层IDLE
         {
-            arm_setup_->setArmStatus(ARM_COMBINE_IDLE);
+            if (!combine_triggered_)
+            {
+                arm_setup_->setArmStatus(ARM_IDLE);
+                if (airjoy_data_.d_pad_left == 1 || airjoy_data_.d_pad_right == 1 ||
+                    airjoy_data_.d_pad_up == 1 || airjoy_data_.d_pad_down == 1)
+                    combine_triggered_ = true;
+            }
+            else
+            {
+                arm_setup_->setArmStatus(ARM_COMBINE_IDLE);
+            }
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_COMBINE_MODE);
-
             chassis_setup_->setChassisStatus(SEMI_AUIO_CZ_FIT);
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x01 && airjoy_data_.SWD == 0x00) // 竞技场 机械臂模式
@@ -695,6 +706,7 @@ void FSM_Controller::auto_ctrl()
         }
         else
         {
+            combine_triggered_ = false;
             chassis_setup_->setChassisStatus(CHASSIS_MANUAL_CONTROL_CZ);
 
             chassis_setup_->setPathAutoStart(0); // 路径自动开始标志清零
@@ -705,6 +717,7 @@ void FSM_Controller::auto_ctrl()
 
     case 0x01:
     {
+        combine_triggered_ = false;
         if (airjoy_data_.SWB == 0x01) // 自动模式
         {
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_ARM_AUTO);
@@ -764,6 +777,7 @@ void FSM_Controller::auto_ctrl()
 
     case 0x02:
     {
+        combine_triggered_ = false;
         arm_setup_->setArmStatus(ARM_IDLE);
         if (airjoy_data_.SWB == 0x01) // 全自动
         {
