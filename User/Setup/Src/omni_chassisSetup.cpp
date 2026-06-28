@@ -179,6 +179,14 @@ void OmniChassis_Setup::loop()
         chassis_status_last_ = chassis_status_;
         break;
     }
+    case CHASSIS_MANUAL_CONTROL_D:
+    {
+        // 模式 C：全向速度控制，锁当前航向。
+        CHASSIS_MANUAL(0.8f, 0.8f);
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (0.0f * PI / 180.0f));
+        chassis_status_last_ = chassis_status_;
+        break;
+    }
     /////-----------------------------               一区            -----------------------------------/////
     case CHASSIS_AUTO_CONTROL_CB:
     {
@@ -201,6 +209,8 @@ void OmniChassis_Setup::loop()
         }
         else
         {
+            if((_tool_Abs(yaw - target_yaw) < 1.0f))
+            {
                 static bool end = false;
                 if (airjoy_data_.left_x > 0.9f)
                 {
@@ -227,6 +237,13 @@ void OmniChassis_Setup::loop()
                     Chassis_Target.yaw_rate = 0.0f;
 
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
+                
+            }
+            else
+            {
+                 Path_lock_point(Path_end_point);
+                 chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+            }
         }
         break;
     }

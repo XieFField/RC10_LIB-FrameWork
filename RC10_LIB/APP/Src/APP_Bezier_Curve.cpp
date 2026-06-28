@@ -178,9 +178,12 @@ float BezierCurve::Get_Nearest_Distance(const Vector2D point, float *t)
 			}
 			return v.magnitude(); // 线段长度接近 0，返回目标点到起点的距离
 		}
+        
+        float t_val=0.0f;
 
-		const float t_val = dot_vd / dot_dd; // 计算 t 值
+         t_val = dot_vd / dot_dd; // 计算 t 值
 
+        
 		if (t_val <= 0.0f)
 		{
 			if (t != nullptr)
@@ -195,7 +198,7 @@ float BezierCurve::Get_Nearest_Distance(const Vector2D point, float *t)
 			{
 				*t = 1.0f;
 			}
-			return (point - end_point).magnitude(); // t 大于 1，返回目标点到结束点的距离
+			return (point - start_point).magnitude(); // t 大于 1，返回目标点到结束点的距离
 		}
 
 		// 设置输出参数 t
@@ -285,7 +288,7 @@ float BezierCurve::Get_Nearest_Distance(const Vector2D point, float *t)
  */
 float BezierCurve::Get_Current_Len(float t)
 {
-	if (t <= 0.f)
+	if (t < 0.f)
 		return 0.f;
 	else if (t >= 1.f)
 		return len;
