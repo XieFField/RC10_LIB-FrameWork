@@ -55,7 +55,7 @@ typedef struct
     float store_ext_length_ = 0.0658f; // 存储时候伸展长度
 
     float up_20cm_lower_height_ = 0.2053f;
-    float new_store_height_outside_ = 0.0936f;
+    float new_store_height_outside_ = 0.094f;
     float new_store_ext_length_ = 0.065f;
 
     float stretch_Ratio_ = 0.0f;        // 伸展比率，伸展电机转一圈，伸展多少米   0.0942米(94.2mm)

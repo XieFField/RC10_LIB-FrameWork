@@ -222,18 +222,37 @@ void FSM_Controller::loop()
         }
 
         static bool is_LB_click = 0;
-        if (airjoy_data_.LB == 1 && is_LB_click == 0) //重新设置夹杆位置
+        static float cb_sum_x = 0.0f;
+        static float cb_sum_y = 0.0f;
+        static uint16_t cb_sample_cnt = 0;
+        static bool cb_collecting = false;
+
+        if (airjoy_data_.LB == 1 && is_LB_click == 0) // LB按下边沿 → 开始采集
         {
             is_LB_click = 1;
-            chassis_setup_->reset_CB_point(
-                Locate_Setup::getInstance()->get_RobotPos_inWorld().x,
-                Locate_Setup::getInstance()->get_RobotPos_inWorld().y
-            );
-
+            cb_collecting = true;
+            cb_sum_x = 0.0f;
+            cb_sum_y = 0.0f;
+            cb_sample_cnt = 0;
         }
         else if (airjoy_data_.LB == 0)
         {
             is_LB_click = 0;
+        }
+
+        if (cb_collecting)
+        {
+            cb_sum_x += Locate_Setup::getInstance()->get_RobotPos_inWorld().x;
+            cb_sum_y += Locate_Setup::getInstance()->get_RobotPos_inWorld().y;
+            cb_sample_cnt++;
+
+            if (cb_sample_cnt >= 300)
+            {
+                chassis_setup_->reset_CB_point(
+                    cb_sum_x / 300.0f,
+                    cb_sum_y / 300.0f);
+                cb_collecting = false;
+            }
         }
     }
     else if (robot_status_ == ALL_STOP && airjoy_data_.SWB == 0x00 && airjoy_data_.SWE == 0x00)

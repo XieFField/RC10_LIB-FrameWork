@@ -21,8 +21,6 @@ void ArmSetup::loop()
 //         {
 //             this->motor_pitch_->motorSetZero();
 //         }
-    
-    //	ArmstackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
 
     // pitch 电机首次使能：校准前确保电机已使能
     if ((motor_pitch_->getErrorNum() == 0x00 || !this->is_pitchEnable_))
@@ -40,11 +38,6 @@ void ArmSetup::loop()
         last_arm_status_ = arm_status_;
         return;
     }
-    //    else if(!calibration_seen_)
-    //    {
-    //        calibration_seen_ = true;
-    //        arm_status_ = ARM_CALIBRATE;
-    //    }
 
     if (test_store == 1)
         this->setStoreSuckerStatus_OutSide(SUCK);
@@ -779,8 +772,12 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
         if(kfs_index == 0x00)
         {
             if(auto_ctrl_.flag.is_up_catch && auto_ctrl_.start_to_autoctrl == 1)
-                target_rotate_angle
+                target_rotate_angle = 270.0f;
+            else
+                target_rotate_angle = 260.0f;
         }
+        else if(kfs_index == 0x01)
+            target_rotate_angle = 295.0f;
 
         if (this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.005f)
         {
@@ -813,13 +810,13 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             }
         }
 
-        if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 1.0f
+        if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 3.0f
             && kfs_index == 0x00 && !auto_ctrl_.flag.is_up_catch)
         {
             this->set_PitchAngle(0.0f); //吸盘放下
         }
 
-        if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 5.0f && kfs_index == 0x00
+        if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 270.0f) < 5.0f && kfs_index == 0x00
             && auto_ctrl_.flag.is_up_catch)
         {
 
@@ -1089,9 +1086,11 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 bool ArmSetup::combine_idle()
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    this->set_LaunchHeight(init_data_.max_launchHeight_);
     this->set_StretchLength(0.0f);
-    if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.1f)
+    if(this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
+        this->set_LaunchHeight(init_data_.max_launchHeight_);
+    
+    if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.2f)
         this->set_RotateAngle(358.0f);
 
     if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 358.0f) < 1.0f)
@@ -1525,15 +1524,45 @@ void ArmSetup::auto_stillnessTwo()
     }
 }
 
-// 流程函数 行进间拾取==============
+// 流程函数 拾取==============
 bool ArmSetup::state_to_waitStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-
+    
     float target_height = 0.0f;
     this->set_StretchLength(0.0f);
-    target_height = this->init_data_.max_launchCatch_Height_; // 直接伸展到最高，等待行进间拾取
-    if (isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_) || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 360.0f) < 2.0f || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 2.0f)
+    //target_height = this->init_data_.max_launchCatch_Height_; // 直接伸展到最高，等待行进间拾取
+    float kfs_h = GetKFSHeight(targetKFS);
+
+    float catch_offset = 0.0f;
+    if (auto_ctrl_.now_targetIndex == 0 
+        && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) != 0.2f 
+        && auto_ctrl_.kfs_num == TWO_OR_THREE)
+        catch_offset = -0.07f;
+    else if (auto_ctrl_.now_targetIndex == 1)
+        catch_offset = 0.00f;
+    else
+        catch_offset = 0.0f;
+
+    if(kfs_h == 0.2f)
+        target_height = this->init_data_.catch_40height;
+    else if(kfs_h == 0.4f)
+        target_height = this->init_data_.catch_60height + catch_offset;
+    else if(kfs_h == 0.6f)
+        target_height = this->init_data_.catch_60height + catch_offset + 0.4f;
+    else
+        target_height = this->init_data_.catch_60height;
+    
+    if (auto_ctrl_.flag.is_up_catch)
+    {
+        this->set_PitchAngle(0.0f); // pitch放下
+    }
+    else
+        this->set_PitchAngle(this->init_data_.pitch_lift_angle_); // pitch抬平
+
+    if (isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_) 
+        || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 360.0f) < 2.0f 
+        || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 2.0f)
         this->set_LaunchHeight(target_height); // 伸展到目标高度
     else
     {
@@ -1542,8 +1571,17 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
         this->set_RotateAngle(sanitized_angle); // 旋转到安全区域
     }
 
-    if (_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - target_height) < 0.01f)
+    if (_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - target_height) < 0.01f 
+        || MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
+                                        auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], 0.55f))
+    {
+        if(MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
+                                        auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], 0.20f))
+        {
+            this->set_RotateAngle(90.0f); // 旋转到目标角度
+        }
         return true;
+    }
     else
         return false;
 }
@@ -1551,12 +1589,6 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
 bool ArmSetup::state_alignStillness(int targetKFS)
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    if (auto_ctrl_.flag.is_up_catch)
-    {
-        this->set_PitchAngle(0.0f); // pitch放下
-    }
-    else
-        this->set_PitchAngle(this->init_data_.pitch_lift_angle_); // pitch抬平
 
     bool can_rotate = false;
     can_rotate = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
@@ -1596,10 +1628,11 @@ bool ArmSetup::state_lowerStillness(int targetKFS)
     else
         catch_offset = 0.0f;
     float kfs_h = GetKFSHeight(targetKFS);
+    
+    if (auto_ctrl_.flag.is_up_catch && kfs_h == 0.2f)
+        targetLowerHeight = this->init_data_.up_20cm_lower_height_;
     if (kfs_h == 0.2f)
         targetLowerHeight = init_data_.catch_20height;
-    else if (auto_ctrl_.flag.is_up_catch)
-        targetLowerHeight = this->init_data_.up_20cm_lower_height_;
     else if (kfs_h == 0.4f)
         targetLowerHeight = this->init_data_.catch_40height + catch_offset;
     else if (kfs_h == 0.6f)
