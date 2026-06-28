@@ -290,6 +290,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\ChassisOmni.CB_point.CB_Selection_pos</ItemText>
         </Ww>
+        <Ww>
+          <count>27</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>\\Frame_T\../User/Setup/Src/Setup_ConfigInit.cpp\ChassisOmni.path_param.up</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

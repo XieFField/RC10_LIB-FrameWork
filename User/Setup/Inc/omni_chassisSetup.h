@@ -52,9 +52,9 @@ typedef struct
 {
     //Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.2f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
     
-    Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.6f, .finalSpeed = 2.0f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
-	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.001f, .startPos = 0.067f, .targetPos = 0.0f, .deadzone = 0.001f};
-	Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.3f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.02f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
+	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 1.2f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
+	Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.3f, .maxJerk = 0.0f, .maxSpeed = 4.0f, .initialSpeed = 0.6f, .finalSpeed = 0.01f, .startPos = 0.02f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config curve = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.6f, .initialSpeed = 0.6f, .finalSpeed = 0.6f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};
@@ -81,24 +81,24 @@ typedef struct
 
 typedef struct
 {
-    float CB_FF_coefficient = 0.1f;
+    float CB_FF_coefficient = 1.0f;
     
     //float spin_y=1.0f;
-	float spin_y=0.88f;
+	float spin_y=0.86f;
     
     // 第数组第零为红场
-    Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.9f}};             // 夹杆起点。
+    Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.85f}};             // 夹杆起点。
     Vector2D CB_Selection_pos[2] = {{3.466f, 0.835f}, {2.455f, 0.835f}}; // 夹杆流程默认目标点。
 
     // 相机流程
     Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
 
     // 贴边流程
-    Vector2D CB_transition_pos[2] = {{3.539f, 1.01f}, {3.0f, 1.01f}};
+    Vector2D CB_transition_pos[2] = {{3.539f, 1.01f}, {3.0f, 1.04f}};
     //Vector2D CB_transition_pos[2] = {{3.539f, 1.1f}, {3.0f, 1.4f}};
 	
     // Vector2D CB_welt_pos[2] = {{3.3f, 0.5f}, {3.98f, 0.5f}};
-    Vector2D CB_welt_pos[2] = {{3.3f, 0.52f}, {3.98f, 0.52f}};
+    Vector2D CB_welt_pos[2] = {{3.3f, 0.52f}, {3.98f, 0.495f}};
 
 } CB_POINT;
 
@@ -367,7 +367,7 @@ public:
     bool GetEnd_flag()
     {
         // 读取夹杆退后流程完成标志。
-        if (WeaponSage_End == true && (_tool_Abs(yaw - target_yaw) < 5.0f))
+        if (WeaponSage_End == true && (_tool_Abs(yaw - target_yaw) < 7.0f))
         {
             return true;
         }
@@ -544,10 +544,17 @@ private:
         Vector2D tangent = path_line_.Get_Tangent_Vector();
         Vector2D tangent_dir = tangent.normalize();
         Vector2D normal_dir = tangent_dir.perpendicular();
-
+        Vector2D v_tangent={0.0f,0.0f};
         // 切向 = 前馈 + PID纠偏沿切向分量（PID不限幅，终点 planspeed=0 时保留切向纠偏）
-        Vector2D v_tangent = V.planspeed * V.FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
-
+        if(chassis_status_==CHASSIS_AUTO_CONTROL_CB)
+        {
+            v_tangent = V.planspeed *CB_point.CB_FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
+        }
+        else
+        {
+            v_tangent = V.planspeed * V.FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
+        }
+        
         if (v_tangent.magnitude() > V.planspeed.magnitude())
             v_tangent = v_tangent.normalize() * V.planspeed.magnitude();
 
@@ -1157,10 +1164,6 @@ private:
             V.corrVelocity = V.corrVelocity * V.spinodal_coefficient;
             // speed = speed * V.spinodal_coefficient;
             speed = V.corrVelocity + V.planspeed;
-        }
-        else if(CB_flag.FF_flag==true &&chassis_status_==CHASSIS_AUTO_CONTROL_CB)
-        {
-            speed = V.corrVelocity + V.planspeed*CB_point.CB_FF_coefficient;
         }
         else
         {
