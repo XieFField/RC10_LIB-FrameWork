@@ -655,7 +655,7 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
 	float current_wrist_pos= normalize_deg_0_360(current_pos_.wrist_pos_);
     if(abs(current_wrist_pos-180.0f)<0.5f) //如果手腕也调整到位了，进入等待底盘停稳的状态
     {
-		if(!auto_ctrl_.flag.is_prepared)
+		if(!auto_ctrl_.flag.is_prepared&&auto_ctrl_.flag.is_reach_start)
 		{
 			this->setArm_angle(0.0f);
 			this->setLaunch_angle(auto_ctrl_.launch_kp.launch_catch*initData_.max_launchHeight_);      //贴近目标杆
