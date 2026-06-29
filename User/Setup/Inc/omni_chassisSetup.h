@@ -58,7 +58,7 @@ typedef struct
 
     Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config curve = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.6f, .initialSpeed = 0.6f, .finalSpeed = 0.6f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};
-    Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
     
@@ -104,15 +104,17 @@ typedef struct
 
 typedef struct
 {
-    // 接收外部的KFS位置，如果没有变化则不对MF进行赋值
-    int8_t KFS1 = 0; // 目标点 1 编号。
-    int8_t KFS2 = 0; // 目标点 2 编号。
-    int8_t KFS3 = 0; // 目标点 3 编号。
-
+    float KFS_FF_coefficient = 0.0f;
+    
     // 内部的KFS位置，用于退出保存功能
     int8_t MF1 = 0; // 目标点 1 编号。
     int8_t MF2 = 0; // 目标点 2 编号。
     int8_t MF3 = 0; // 目标点 3 编号。
+    
+    // 接收外部的KFS位置，如果没有变化则不对MF进行赋值
+    int8_t KFS1 = 0; // 目标点 1 编号。
+    int8_t KFS2 = 0; // 目标点 2 编号。
+    int8_t KFS3 = 0; // 目标点 3 编号。
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
@@ -550,6 +552,10 @@ private:
         {
             v_tangent = V.planspeed *CB_point.CB_FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
         }
+        else if(chassis_status_==CHASSIS_AUTO_CONTROL_KFS)
+        {
+            v_tangent = V.planspeed *KFS_point.KFS_FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
+        }
         else
         {
             v_tangent = V.planspeed * V.FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
@@ -744,7 +750,7 @@ private:
 
         // 写入MF地图对应坐标
         Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(MF1_Point_);
-        if (MF_AutoCtrler::GetMFHeight(KFS_point.MF1) == 0.2f && MF3_Point_ != 0)
+        if (MF_AutoCtrler::GetMFHeight(KFS_point.MF1) == 0.2f && KFS_point.MF3 != 0)
         {
             if (KFS_point.MF1_target_yaw_ == 0.0f)
             {
