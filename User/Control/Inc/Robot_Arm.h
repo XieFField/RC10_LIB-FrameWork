@@ -372,7 +372,7 @@ private:
         .max_accel_ = 80000.0f,    //  (Motor Angle deg/s^2)
         .current_velocity_ = 0.0f, // 当前旋转电机速度 (Motor Angle deg/s)
         .ramp_target_ = 0.0f,
-        .filter_k_ = 200.0f // 越小越平滑 越大越快
+        .filter_k_ = 190.0f // 越小越平滑 越大越快
     };
 
     Fliter_Ramp_S strech_fliter_ramp_ = {

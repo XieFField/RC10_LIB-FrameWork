@@ -880,7 +880,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             this->setSuckerStatus(Sucker_Status_E::STOP); // 停止吸盘
             // if(this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
 
-            if (!is_return)
+            if (!is_return && !auto_ctrl_.flag.is_up_catch)
             {
                 this->set_LaunchHeight(init_data_.max_launchHeight_); // 提升到最高
                 if (this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
@@ -896,7 +896,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                     if (auto_ctrl_.target_lowerhigh[auto_ctrl_.now_targetIndex + 1] != init_data_.catch_20height)
                         target_out_height = auto_ctrl_.target_lowerhigh[auto_ctrl_.now_targetIndex + 1];
                     else
-                        target_out_height = this->init_data_.catch_40height - 0.02f;
+                        target_out_height = this->init_data_.catch_40height - 0.04f;
 
                     if (auto_ctrl_.flag.is_up_catch)
                     {
@@ -910,7 +910,10 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                             this->set_LaunchHeight(target_out_height);
                     }
 
-                    if (auto_ctrl_.start_to_autoctrl == 1 && MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition, auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], 0.55f) && this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
+                    if (auto_ctrl_.start_to_autoctrl == 1 
+                        && MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition, 
+                            auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], 
+                            0.55f) && this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
                         this->set_RotateAngle(90.0f);
                 }
                 else
@@ -1590,9 +1593,9 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
     else if (kfs_h == 0.2f && auto_ctrl_.flag.is_up_catch)
         target_height = this->init_data_.up_20cm_lower_height_ + 0.02f;
     else if (kfs_h == 0.4f)
-        target_height = this->init_data_.catch_60height + catch_offset;
+        target_height = this->init_data_.catch_40height + catch_offset;
     else if (kfs_h == 0.6f)
-        target_height = this->init_data_.catch_60height + catch_offset + 0.4f;
+        target_height = this->init_data_.catch_60height + catch_offset + 0.1f;
     else
         target_height = this->init_data_.catch_60height;
 
