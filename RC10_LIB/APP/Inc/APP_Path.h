@@ -70,9 +70,9 @@ public:
         return true;
     }
 
-    bool Add_Start_Point(Vector2D point_)
+    bool Add_Start_Point(Vector2D point_,float dead_=0.03f)
     {
-
+        dead = dead_;
         if (is_init == true)
             return false;
         point_last_ = point_;
@@ -111,7 +111,6 @@ public:
             
             err_end = _tool_Abs((point - bezier_curve_list[index_].Get_End_point()).magnitude());
             
-            
             bezier_curve_list[index_].Get_Nearest_Distance(point, &t_); // 获取点到曲线的最近距禿
             distance_ = bezier_curve_list[index_].Get_Current_Len(t_);
             
@@ -125,7 +124,6 @@ public:
             {
                 v_tangent_ = (bezier_curve_list[index_].Get_Tangent_Vector(t_)).normalize(); // 计算切线向量（单位向量）
             }
-
            
             // 段切换条件：
             // 1) 近翿诿巿达到阈值可直接切濵；
@@ -280,6 +278,7 @@ protected:
     bool tangent_lock = false;
     //float dead = 0.05f;
     float dead = 0.03f;
+
     float brake_distance=0.0f;
     float brake_coefficient=1.1f;
 

@@ -48,7 +48,6 @@ void OmniChassis_Setup::CB_Path_Check(void)
     {
         if (CB_point.CB_End_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_End_pos[RB_Flag].y == curve.Get_End_point().y && path_line_.Is_End() == false)
         {
-            CB_flag.FF_flag=true;
             CB_flag.Retreat_flag = true;
 			if(robot_pos_.y>CB_point.spin_y&&WeaponSage_Start == false)
 			{
@@ -61,7 +60,6 @@ void OmniChassis_Setup::CB_Path_Check(void)
         }
         else if (CB_flag.Retreat_flag == true)
         {
-            
             CB_flag.Retreat_flag = false;
             WeaponSage_End = true;
         }
@@ -104,7 +102,7 @@ void OmniChassis_Setup::CB_Selection_Planning(void)
     path_line_.plan_reset();
 
     // 夹杆路径
-    path_line_.Add_Start_Point(robot_pos_);
+    path_line_.Add_Start_Point(robot_pos_,0.02f);
     if (robot_pos_.y < CB_point.CB_Selection_pos[RB_Flag].y)
     {
         path_line_.Add_Point(CB_point.CB_Start_pos[RB_Flag], path_param.line);
@@ -275,7 +273,6 @@ void OmniChassis_Setup::loop()
             {
                 CHASSIS_MANUAL(1.6f, 1.6f, 3.0f);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
-
             }
         }
         else
