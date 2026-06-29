@@ -53,9 +53,6 @@ namespace WeaponSage_Setup
         bool is_wrist_start=false;
         float wrist_startTime=0.0f;
 
-        
-
-
         int target_poleIndex = 0; //0~3号索引的矛杆
         
         int8_t last_manual_claw_state = 0; // 0: open, 1: close
@@ -315,11 +312,15 @@ public:
 	
     
 	void SetServo_Angle(uint16_t angle);
+    void set_kfs_idle_arm_90(bool is_arm_90)
+    {
+        this->is_arm_90 = is_arm_90;
+    }
 protected:
     void loop() override;
 
 private:
-	
+	bool is_arm_90 = false;
 	bool omni_flag = false;
     WeaponSage_Setup::ctrl_status_S ctrl_status_;
     Debug_Printf debug_uart = Debug_Printf(&huart1);
