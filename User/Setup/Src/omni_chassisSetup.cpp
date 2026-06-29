@@ -104,7 +104,7 @@ void OmniChassis_Setup::CB_Selection_Planning(void)
     path_line_.plan_reset();
 
     // 夹杆路径
-    path_line_.Add_Start_Point(robot_pos_,0.02f);
+    path_line_.Add_Start_Point(robot_pos_,0.04f);
     if (robot_pos_.y < CB_point.CB_Selection_pos[RB_Flag].y)
     {
         path_line_.Add_Point(CB_point.CB_Start_pos[RB_Flag], path_param.line);
@@ -216,6 +216,7 @@ void OmniChassis_Setup::loop()
         {
             if((_tool_Abs(yaw - target_yaw) < 1.0f))
             {
+                /*
                 static bool end = false;
                 if (airjoy_data_.left_x > 0.9f)
                 {
@@ -242,7 +243,9 @@ void OmniChassis_Setup::loop()
                     Chassis_Target.yaw_rate = 0.0f;
 
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
-                
+                */
+                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f);
+                chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
             else
             {

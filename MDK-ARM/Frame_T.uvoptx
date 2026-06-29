@@ -310,6 +310,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>relocate_mid</ItemText>
         </Ww>
+        <Ww>
+          <count>31</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>dm_zero_____</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

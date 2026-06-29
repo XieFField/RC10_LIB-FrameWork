@@ -87,7 +87,7 @@ typedef struct
     
     // 第数组第零为红场
     Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.85f}};             // 夹杆起点。
-    Vector2D CB_Selection_pos[2] = {{3.466f, 0.835f}, {2.455f, 0.835f}}; // 夹杆流程默认目标点。
+    Vector2D CB_Selection_pos[2] = {{3.466f, 0.835f}, {2.452f, 0.795f}}; // 夹杆流程默认目标点。
 
     // 相机流程
     Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
@@ -926,6 +926,7 @@ private:
                         }
                         else if (last_vector.y == 8.6f)
                         {
+                            temp_vector.y=temp_vector.y- KFS_point.point_skew;
                             path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
                             path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
                             path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
@@ -994,6 +995,7 @@ private:
                     }
                     else if (last_vector.y == 8.6f)
                     {
+                        temp_vector.y=temp_vector.y- KFS_point.point_skew;
                         path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
                         path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
                         path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
