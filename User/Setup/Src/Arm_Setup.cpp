@@ -930,7 +930,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                             this->set_LaunchHeight(target_out_height);
                     }
 
-                    if (auto_ctrl_.start_to_autoctrl == 1 
+                    if (auto_ctrl_.start_to_autoctrl == 1 && this->get_currentJointStatus().launchJoint_Height_ > target_out_height - 0.03f
                         && MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition, 
                             auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex + 1], 
                             0.55f) && this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
