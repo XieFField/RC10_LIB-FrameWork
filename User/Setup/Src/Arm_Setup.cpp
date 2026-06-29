@@ -913,8 +913,8 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                 // else
                 
 
-                else if(this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
-                    this->set_RotateAngle(0.0f);
+//                else if(this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
+//                    this->set_RotateAngle(0.0f);
 
                 if(this->get_currentJointStatus().rotateJoint_angle_ > 350.0f)
                     this->store_state_ = store_state::outstate2;

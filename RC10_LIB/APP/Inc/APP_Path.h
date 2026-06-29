@@ -279,7 +279,7 @@ public:
 protected:
     bool tangent_lock = false;
     //float dead = 0.05f;
-    float dead = 0.02f;
+    float dead = 0.03f;
     float brake_distance=0.0f;
     float brake_coefficient=1.1f;
 
