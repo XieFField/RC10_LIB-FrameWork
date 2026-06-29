@@ -131,7 +131,9 @@ typedef struct{
         float back_time = 0.0f; //返回时长
         float target_high [3] = {0.0f, 0.0f, 0.0f}; //目标KFS高度
         bool is_up_catch = false;
+        bool canChassisStart_triggered = false;
     }flag;
+    float target_lowerhigh[3] = {0.0f, 0.0f, 0.0f}; //目标KFS拾取高度
 }ARM_AUTO_S;
 
 
@@ -272,6 +274,33 @@ public:
         auto_ctrl_.now_ChassisPosition.x = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0]-1].x;
         auto_ctrl_.now_ChassisPosition.y = MF_AutoCtrler::MapNum_RealPos[temp.MFroad[0]-1].y - 3.0f;
 #endif
+
+    float targetLowerHeight = 0.0f; // 目标kfs高度
+    float catch_offset = 0.0f;
+    for(int i = 0; i < 3; i++)
+    {
+        if (auto_ctrl_.now_targetIndex == 0 && GetKFSHeight(auto_ctrl_.targetKFS[auto_ctrl_.now_targetIndex]) != 0.2f && auto_ctrl_.kfs_num == TWO_OR_THREE)
+            // catch_offset = -0.07f;
+            catch_offset = -0.05f;
+        else if (auto_ctrl_.now_targetIndex == 1)
+            catch_offset = 0.00f;
+        else
+            catch_offset = 0.0f;
+        float kfs_h = GetKFSHeight(auto_ctrl_.targetKFS[i]);
+        
+        if (auto_ctrl_.flag.is_up_catch && kfs_h == 0.2f)
+            targetLowerHeight = this->init_data_.up_20cm_lower_height_;
+        if (kfs_h == 0.2f)
+            targetLowerHeight = init_data_.catch_20height;
+        else if (kfs_h == 0.4f)
+            targetLowerHeight = this->init_data_.catch_40height + catch_offset;
+        else if (kfs_h == 0.6f)
+            targetLowerHeight = this->init_data_.catch_60height + catch_offset;
+        else
+            targetLowerHeight = this->init_data_.max_launchCatch_Height_ + catch_offset;
+
+        auto_ctrl_.target_lowerhigh[i] = targetLowerHeight;
+    }
         return true;
     }
 
@@ -307,7 +336,21 @@ public:
         return auto_ctrl_.flag.canChassisStart;
     }
 
-    
+    void clearChassisStartFlag()
+    {
+        auto_ctrl_.flag.canChassisStart = false;
+    }
+
+    void pulseChassisStart()
+    {
+        if (!auto_ctrl_.flag.canChassisStart_triggered)
+        {
+            auto_ctrl_.flag.canChassisStart = true;
+            auto_ctrl_.flag.canChassisStart_triggered = true;
+        }
+    }
+
+
     enum class store_state{
         idle,
         laucnh_state,
