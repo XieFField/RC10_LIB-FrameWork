@@ -911,10 +911,11 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             }
             else if (is_return && this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
             {
+                this->set_PitchAngle(this->init_data_.pitch_lift_angle_); // 吸盘抬平
                 if (auto_ctrl_.start_to_autoctrl == 1 && kfs_index == 0x00)
                 {
                     if (auto_ctrl_.target_lowerhigh[auto_ctrl_.now_targetIndex + 1] != init_data_.catch_20height)
-                        target_out_height = auto_ctrl_.target_lowerhigh[auto_ctrl_.now_targetIndex + 1];
+                        target_out_height = auto_ctrl_.target_lowerhigh[auto_ctrl_.now_targetIndex + 1] + 0.02f;
                     else
                         target_out_height = this->init_data_.catch_40height - 0.04f;
 
@@ -929,12 +930,6 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                         if (this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
                             this->set_LaunchHeight(target_out_height);
                     }
-
-                    if (auto_ctrl_.start_to_autoctrl == 1 && this->get_currentJointStatus().launchJoint_Height_ > target_out_height - 0.03f
-                        && MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition, 
-                            auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex + 1], 
-                            0.55f) && this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
-                        this->set_RotateAngle(90.0f);
                 }
                 else
                 {
@@ -1938,7 +1933,7 @@ void ArmSetup::debug()
 }
 
 Arm_InitData_S arm_initData = {
-    .max_launchHeight_ = 0.435f,
+    .max_launchHeight_ = 0.415f,
     .max_launchCatch_Height_ = 0.32f,
     .max_stretchLength_ = 0.1288f,
     .arm_length_ = 0.6f,

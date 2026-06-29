@@ -48,6 +48,7 @@ void OmniChassis_Setup::CB_Path_Check(void)
     {
         if (CB_point.CB_End_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_End_pos[RB_Flag].y == curve.Get_End_point().y && path_line_.Is_End() == false)
         {
+            CB_flag.FF_flag=true;
             CB_flag.Retreat_flag = true;
 			if(robot_pos_.y>CB_point.spin_y&&WeaponSage_Start == false)
 			{
@@ -60,6 +61,7 @@ void OmniChassis_Setup::CB_Path_Check(void)
         }
         else if (CB_flag.Retreat_flag == true)
         {
+            
             CB_flag.Retreat_flag = false;
             WeaponSage_End = true;
         }
@@ -273,6 +275,7 @@ void OmniChassis_Setup::loop()
             {
                 CHASSIS_MANUAL(1.6f, 1.6f, 3.0f);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
+
             }
         }
         else

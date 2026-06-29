@@ -179,7 +179,7 @@ void Robot_WeaponSage_Setup::kfs_idle()
 {
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
     this->setLaunch_angle(initData_.max_launchHeight_);
-    if(current_pos_.launch_pos_ < initData_.max_launchHeight_-0.1f 
+    if(current_pos_.launch_pos_ > initData_.max_launchHeight_-0.1f 
         && is_arm_90)
     {
         this->setArm_angle(90.0f);

@@ -49,12 +49,14 @@ typedef struct
 } CHASSIS_TARGET;
 
 typedef struct
-{  
+{
+    //Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.2f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
+    
     Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
 	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 1.2f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
 	Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.3f, .maxJerk = 0.0f, .maxSpeed = 4.0f, .initialSpeed = 0.6f, .finalSpeed = 0.01f, .startPos = 0.02f, .targetPos = 0.0f, .deadzone = 0.001f};
 
-    Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.8f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config curve = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
 
@@ -79,6 +81,7 @@ typedef struct
 
 typedef struct
 {
+    
     //float spin_y=1.0f;
 	float spin_y=0.86f;
     
@@ -100,6 +103,7 @@ typedef struct
 
 typedef struct
 {
+    
     // 内部的KFS位置，用于退出保存功能
     int8_t MF1 = 0; // 目标点 1 编号。
     int8_t MF2 = 0; // 目标点 2 编号。
@@ -171,8 +175,12 @@ typedef struct
 
 typedef struct
 {
+    
     bool Selection_flag = false;
     bool Retreat_flag = false;
+    
+    bool FF_flag = false;
+    
 } CB_FLAG;
 
 typedef struct
@@ -537,14 +545,11 @@ private:
         Vector2D tangent_dir = tangent.normalize();
         Vector2D normal_dir = tangent_dir.perpendicular();
         Vector2D v_tangent={0.0f,0.0f};
-         
-        if (path_line_.Get_Curve_Flag() == true && chassis_status_==CHASSIS_AUTO_CONTROL_KFS)
-            V.corrVelocity = V.corrVelocity * V.spinodal_coefficient;
-
         // 切向 = 前馈 + PID纠偏沿切向分量（PID不限幅，终点 planspeed=0 时保留切向纠偏）
+
         v_tangent = V.planspeed * V.FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
 
-                
+        
         if (v_tangent.magnitude() > V.planspeed.magnitude())
             v_tangent = v_tangent.normalize() * V.planspeed.magnitude();
 
@@ -734,6 +739,7 @@ private:
 
         // 写入MF地图对应坐标
         Vector2D temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(MF1_Point_);
+        
         if (MF_AutoCtrler::GetMFHeight(KFS_point.MF1) == 0.2f && KFS_point.MF3 != 0)
         {
             if (KFS_point.MF1_target_yaw_ == 0.0f)
@@ -743,10 +749,6 @@ private:
             else if (KFS_point.MF1_target_yaw_ == 180.0f)
             {
                 KFS_point.MF1_pos_ = {temp_vector.x + KFS_point.point_skew, temp_vector.y};
-            }
-            else if (KFS_point.MF1_target_yaw_ == 90.0f)
-            {
-                KFS_point.MF1_pos_ = {temp_vector.x, temp_vector.y - KFS_point.point_skew};
             }
             else if (KFS_point.MF1_target_yaw_ == -90.0f)
             {
@@ -1044,8 +1046,13 @@ private:
     Vector2D spinodal_path(Vector2D last_vector, Vector2D temp_vector, int i, float spin_flag)
     {
         Vector2D forward_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i + 1]);
+        Vector2D vector=temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead);
+        if(vector.y==8.6f)
+        {
+            vector.y=vector.y-KFS_point.point_skew;
+        }
         // 拐点前偏移点
-        path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
+        path_line_.Add_Point(vector, path_param.start);
         /*
         1->(1,0)
         2->(-1,0)
@@ -1064,7 +1071,12 @@ private:
             path_param.curve.targetPos = 4.0f;
         else
             return Vector2D{0.0f, 0.0f};
-
+        
+            
+        if((temp_vector + (tangent_vector * KFS_point.coner_behind)).y==8.6f)
+        {
+            temp_vector.y= temp_vector.y - KFS_point.point_skew;
+        }
         // 拐点偏移
         temp_vector.y = temp_vector.y + spin_flag;
 
@@ -1148,9 +1160,17 @@ private:
         V.planspeed = path_line_.plan(robot_pos_);
         Path_correction();
         V.corrVelocity = V.PID_coefficient * V.corrVelocity;
-        
-        speed = v_limit();
 
+        if (path_line_.Get_Curve_Flag() == true && chassis_status_==CHASSIS_AUTO_CONTROL_KFS)
+        {
+            V.corrVelocity = V.corrVelocity * V.spinodal_coefficient;
+            // speed = speed * V.spinodal_coefficient;
+            speed = V.corrVelocity + V.planspeed;
+        }
+        else
+        {
+            speed = v_limit();
+        }
         Chassis_Target.VX = speed.x;
         Chassis_Target.VY = speed.y;
     }
@@ -1200,6 +1220,7 @@ private:
 
         CB_flag.Retreat_flag = false;
         CB_flag.Selection_flag = false;
+        CB_flag.FF_flag=false;
         
         curve.Rest();
     }
