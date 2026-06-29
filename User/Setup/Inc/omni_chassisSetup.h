@@ -49,9 +49,7 @@ typedef struct
 } CHASSIS_TARGET;
 
 typedef struct
-{
-    //Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.2f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
-    
+{  
     Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
 	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 1.2f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
 	Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.3f, .maxJerk = 0.0f, .maxSpeed = 4.0f, .initialSpeed = 0.6f, .finalSpeed = 0.01f, .startPos = 0.02f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -72,7 +70,7 @@ typedef struct
     Vector2D corrVelocity = {0.0f, 0.0f}; // 计算出的横向纠偏速度向量
 
     float PID_coefficient = 1.0f;
-    float FF_coefficient = 0.0f;
+    float FF_coefficient = 1.0f;
     float spinodal_coefficient = 1.2f;
 
     float v_normal_max = 0.5f;
@@ -81,8 +79,6 @@ typedef struct
 
 typedef struct
 {
-    float CB_FF_coefficient = 1.0f;
-    
     //float spin_y=1.0f;
 	float spin_y=0.86f;
     
@@ -104,8 +100,6 @@ typedef struct
 
 typedef struct
 {
-    float KFS_FF_coefficient = 1.0f;
-    
     // 内部的KFS位置，用于退出保存功能
     int8_t MF1 = 0; // 目标点 1 编号。
     int8_t MF2 = 0; // 目标点 2 编号。
@@ -177,12 +171,8 @@ typedef struct
 
 typedef struct
 {
-    
     bool Selection_flag = false;
     bool Retreat_flag = false;
-    
-    bool FF_flag = false;
-    
 } CB_FLAG;
 
 typedef struct
@@ -547,20 +537,14 @@ private:
         Vector2D tangent_dir = tangent.normalize();
         Vector2D normal_dir = tangent_dir.perpendicular();
         Vector2D v_tangent={0.0f,0.0f};
+         
+        if (path_line_.Get_Curve_Flag() == true && chassis_status_==CHASSIS_AUTO_CONTROL_KFS)
+            V.corrVelocity = V.corrVelocity * V.spinodal_coefficient;
+
         // 切向 = 前馈 + PID纠偏沿切向分量（PID不限幅，终点 planspeed=0 时保留切向纠偏）
-        if(chassis_status_==CHASSIS_AUTO_CONTROL_CB)
-        {
-            v_tangent = V.planspeed *CB_point.CB_FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
-        }
-        else if(chassis_status_==CHASSIS_AUTO_CONTROL_KFS)
-        {
-            v_tangent = V.planspeed *KFS_point.KFS_FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
-        }
-        else
-        {
-            v_tangent = V.planspeed * V.FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
-        }
-        
+        v_tangent = V.planspeed * V.FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
+
+                
         if (v_tangent.magnitude() > V.planspeed.magnitude())
             v_tangent = v_tangent.normalize() * V.planspeed.magnitude();
 
@@ -1164,17 +1148,9 @@ private:
         V.planspeed = path_line_.plan(robot_pos_);
         Path_correction();
         V.corrVelocity = V.PID_coefficient * V.corrVelocity;
+        
+        speed = v_limit();
 
-        if (path_line_.Get_Curve_Flag() == true && chassis_status_==CHASSIS_AUTO_CONTROL_KFS)
-        {
-            V.corrVelocity = V.corrVelocity * V.spinodal_coefficient;
-            // speed = speed * V.spinodal_coefficient;
-            speed = V.corrVelocity + V.planspeed;
-        }
-        else
-        {
-            speed = v_limit();
-        }
         Chassis_Target.VX = speed.x;
         Chassis_Target.VY = speed.y;
     }
@@ -1224,7 +1200,6 @@ private:
 
         CB_flag.Retreat_flag = false;
         CB_flag.Selection_flag = false;
-        CB_flag.FF_flag=false;
         
         curve.Rest();
     }
