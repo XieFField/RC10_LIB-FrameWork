@@ -368,7 +368,7 @@ private:
     // bool  time_initialized_ = false;
 
     Fliter_Ramp_S rotate_fliter_ramp_ = {
-        .ramp__maxspeed_ = 36000.0f,
+        .ramp__maxspeed_ = 45000.0f,
         .max_accel_ = 80000.0f,    //  (Motor Angle deg/s^2)
         .current_velocity_ = 0.0f, // 当前旋转电机速度 (Motor Angle deg/s)
         .ramp_target_ = 0.0f,
