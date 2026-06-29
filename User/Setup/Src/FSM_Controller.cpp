@@ -748,6 +748,7 @@ void FSM_Controller::auto_ctrl()
             chassis_setup_->setChassisStatus(CHASSIS_STOP);
 #endif
             arm_setup_->setArmStatus(ARM_AUTO_CONTROL);
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_KFS_IDLE);
             //arm_setup_->setArmStatus(ARM_IDLE);
             static uint8_t is_click = 0;
 
@@ -767,7 +768,7 @@ void FSM_Controller::auto_ctrl()
 #if !ARM_AUTO_DEBUG_NOCHASSIS
             if (arm_setup_->isArmAutoStart())
             {
-                weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_KFS_IDLE);
+                weaponSage_setup_->set_kfs_idle_arm_90(true);
                 // 判断是否可以进入伸展阶段
                 if (chassis_setup_->Get_Arm_Start_flag())
                 {
@@ -779,6 +780,10 @@ void FSM_Controller::auto_ctrl()
                     chassis_setup_->Receive_Arm_End_flag(false); // 上层已经完成拾取，通知底盘可以开始移动了
                     arm_setup_->clearChassisStartFlag();
                 }
+            }
+            else
+            {
+                weaponSage_setup_->set_kfs_idle_arm_90(false);
             }
 #endif
         }

@@ -434,7 +434,7 @@ void ArmSetup::manualControl()
         arm_ctrlStatus.last_manual_sucker = current_sucker_logical;
         arm_ctrlStatus.sucker_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_sucker_logical;
 
-        int8_t current_pitch_logical = (_tool_Abs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 1.0f) ? 1 : 0;
+        int8_t current_pitch_logical = (_tool_Abs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 30.0f) ? 1 : 0;
         arm_ctrlStatus.last_manual_pitch = current_pitch_logical;
         arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.scroll_wheel & 0x01) ^ current_pitch_logical;
 #else
@@ -447,7 +447,7 @@ void ArmSetup::manualControl()
         arm_ctrlStatus.last_manual_sucker = current_sucker_logical;
         arm_ctrlStatus.sucker_switch_offset = (airjoy_data_.SWD & 0x01) ^ current_sucker_logical;
 
-        int8_t current_pitch_logical = (_tool_Abs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 1.0f) ? 1 : 0;
+        int8_t current_pitch_logical = (_tool_Abs(this->get_currentJointStatus().suckerJoint_angle_ - 90.0f) < 30.0f) ? 1 : 0;
         arm_ctrlStatus.last_manual_pitch = current_pitch_logical;
         arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.SWC & 0x01) ^ current_pitch_logical;
 #endif
@@ -1606,7 +1606,9 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
     else
         this->set_PitchAngle(this->init_data_.pitch_lift_angle_); // pitch抬平
 
-    if (isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_) || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 360.0f) < 2.0f || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 2.0f)
+    if (isRotateAllowed(this->get_currentJointStatus().rotateJoint_angle_) 
+        || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 360.0f) < 2.0f 
+        || std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 2.0f)
         this->set_LaunchHeight(target_height); // 伸展到目标高度
     else
     {
@@ -1615,14 +1617,17 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
         this->set_RotateAngle(sanitized_angle); // 旋转到安全区域
     }
 
-    if (_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - target_height) < 0.01f || MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
-                                                                                                                              auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], 0.55f))
+    if (_tool_Abs(this->get_currentJointStatus().launchJoint_Height_ - target_height) < 0.01f 
+        || MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
+            auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], 
+            0.55f))
     {
-        if (MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
-                                         auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], 0.20f))
-        {
+        // if (MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
+        //                                  auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], 
+        //                                  0.20f))
+        // {
             this->set_RotateAngle(90.0f); // 旋转到目标角度
-        }
+        // }
         return true;
     }
     else
