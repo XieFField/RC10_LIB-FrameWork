@@ -53,7 +53,7 @@ typedef struct
     //Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.2f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
     
     Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
-	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 1.2f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
+	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 1.2f, .finalSpeed = 0.001f, .startPos = 0.09f, .targetPos = 0.0f, .deadzone = 0.001f};
 	Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.3f, .maxJerk = 0.0f, .maxSpeed = 4.0f, .initialSpeed = 0.6f, .finalSpeed = 0.01f, .startPos = 0.02f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -81,6 +81,7 @@ typedef struct
 
 typedef struct
 {
+    float cb_dead=0.05f;
     
     //float spin_y=1.0f;
 	float spin_y=0.86f;
@@ -103,6 +104,7 @@ typedef struct
 
 typedef struct
 {
+    float kfs_dead =0.05f;
     
     // 内部的KFS位置，用于退出保存功能
     int8_t MF1 = 0; // 目标点 1 编号。
@@ -822,7 +824,7 @@ private:
         path_line_.Reset();
         path_line_.plan_reset();
 
-        path_line_.Add_Start_Point(robot_pos_);
+        path_line_.Add_Start_Point(robot_pos_,KFS_point.kfs_dead);
 
         // 在梅林内的情况处理，如果需要在外面旋转会先生成路径，如果需要拿同左右同列的会退出
         if (MF_AutoCtrler::GetMapNumFromPos(robot_point_))
