@@ -168,7 +168,7 @@ float Kp_traverse=0.5f;
 void Robot_WeaponSage_Setup::test_point()
 {
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-    this->setArm_angle(90.0f);
+    this->setArm_angle(89.5f);
     this->setLaunch_angle(0.0f);
 }
 
@@ -182,7 +182,7 @@ void Robot_WeaponSage_Setup::kfs_idle()
     if(current_pos_.launch_pos_ > initData_.max_launchHeight_-0.1f 
         && is_arm_90)
     {
-        this->setArm_angle(90.0f);
+        this->setArm_angle(89.5f);
     }
 }
 
@@ -283,6 +283,7 @@ void Robot_WeaponSage_Setup::manualControl()
 	this->idle();
     if(last_weaponSage_status_ != WEAPONSAGE_MANUAL_CONTROL)
     {
+        this->setClawSpeedOutLimit(3000.0f);
         // 获取当前爪子实际位置，判定逻辑状态
         float current_claw_theta = fmax(fmax(current_pos_.claw_1_pos_,current_pos_.claw_2_pos_),current_pos_.claw_3_pos_); // 这里以claw_1为代表，假设三个爪子位置一致
         float current_arm_pos= this->get_CurrentPos().arm_pos_;
@@ -410,6 +411,7 @@ void Robot_WeaponSage_Setup::manualControl()
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
     if(last_weaponSage_status_ != WEAPONSAGE_MANUAL_CONTROL||manual_RC10_ctrlForgrip_.last_Dpad_acting_state!=0)
     {
+        this->setClawSpeedOutLimit(3000.0f);
 		//this->idle();
         // 获取当前爪子实际位置，判定逻辑状态
         float current_claw_theta = fmax(fmax(current_pos_.claw_1_pos_,current_pos_.claw_2_pos_),current_pos_.claw_3_pos_); // 以最大闭合角为为夹爪的角度进行计算；
@@ -528,6 +530,7 @@ void Robot_WeaponSage_Setup::idle()
 {
 	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
 	if(last_weaponSage_status_!=WEAPONSAGE_IDLE)
+		this->setClawSpeedOutLimit(3000.0f);
 	{
 		this->last_pos_ = this->get_CurrentPos();
 		this->target_pos_=this->last_pos_;
@@ -620,9 +623,9 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
     if(auto_ctrl_.auto_state_bool_S.is_matching&&auto_ctrl_.flag.is_prepared) //如果已经在对位了
     {
 
-		this->setArm_angle(90.0f);
+		this->setArm_angle(89.5f);
 		auto_ctrl_.flag.is_arm_reset=true;
-		if(abs(current_pos_.arm_pos_-90.f)<0.1)
+		if(abs(current_pos_.arm_pos_-89.5f)<1.0f)
 		{
 		    if (!auto_ctrl_.flag.is_clawed)
             {
@@ -675,8 +678,8 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
     if(auto_ctrl_.auto_state_bool_S.is_matching&&auto_ctrl_.flag.is_prepared) //如果已经在对位了
     {
 
-		this->setArm_angle(90.0f);
-		if(abs(current_pos_.arm_pos_-90.f)<1.0)
+		this->setArm_angle(89.5f);
+		if(abs(current_pos_.arm_pos_-89.5f)<1.0)
 		{
             if(!auto_ctrl_.flag.is_untight)
             {
@@ -684,6 +687,7 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
             }
             else
             {
+                auto_ctrl_.flag.is_catch = true;
                 if(!auto_ctrl_.flag.is_clawed)
                 {
                     this->setLaunch_angle(auto_ctrl_.launch_kp.launch_sage_untight*initData_.max_launchHeight_);      //抬高到安全高度,高度待调整
@@ -966,6 +970,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
             {
               auto_ctrl_.auto_state_bool_S.is_matching=false;
                 auto_ctrl_.auto_state_bool_S.dock_start=false;
+                auto_ctrl_.flag.is_catch = false;
                 auto_ctrl_.flag.is_prepared=false;
                 auto_ctrl_.flag.is_clawed=false;
                 auto_ctrl_.flag.is_catched=false;
@@ -1065,6 +1070,7 @@ void Robot_WeaponSage_Setup::autoControl()
             if(auto_ctrl_.auto_ctrl1)
             {
                 now_new_state_=WeaponSage_Setup::STATE_START_1;
+                auto_ctrl_.flag.is_catch = false;
                 auto_control_state_=1;
                 auto_ctrl_.flag.is_over = false;
                 auto_ctrl_.auto_state_bool_S.is_matching=false;
@@ -1465,8 +1471,8 @@ bool Robot_WeaponSage_Setup::Sage_to_high()
     }
     if(is_launch_ok)
     {
-        this->setArm_angle(90.0f);
-        if(abs(current_pos_.arm_pos_-90.0f)<0.1f)
+        this->setArm_angle(89.5f);
+        if(abs(current_pos_.arm_pos_-89.5f)<1.0f)
         {
             this->Close_TargetClaw_Untight();
             if(auto_ctrl_.flag.is_untight)
@@ -1517,8 +1523,8 @@ bool Robot_WeaponSage_Setup::Sage_to_low()
     }
     if(is_launch_ok)
     {
-        this->setArm_angle(90.0f);
-        if(abs(current_pos_.arm_pos_-90.0f)<0.1f)
+        this->setArm_angle(89.5f);
+        if(abs(current_pos_.arm_pos_-89.5f)<1.0f)
         {
 
             this->Close_TargetClaw_Untight();
@@ -1561,8 +1567,8 @@ int8_t untight_over_cnt = 0;
 float claw_close_time=0.4f;
 float claw_untight_time=0.4f;
 bool Robot_WeaponSage_Setup::Close_TargetClaw()
- {
-
+{
+    this->setClawSpeedOutLimit(3000.0f);
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
    
     auto_ctrl_.claw_flag[0]=ctrl_status_.is_claw_1_closed;
@@ -1618,6 +1624,7 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw()
 
 bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
 {
+    this->setClawSpeedOutLimit(4500.0f);
     auto_ctrl_.claw_flag[0]=ctrl_status_.is_claw_1_closed;
     auto_ctrl_.claw_flag[1]=ctrl_status_.is_claw_2_closed;
     auto_ctrl_.claw_flag[2]=ctrl_status_.is_claw_3_closed;
@@ -1664,7 +1671,9 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
 }
 
 bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight1()
+    
 {
+    this->setClawSpeedOutLimit(4500.0f);
     auto_ctrl_.claw_flag[0]=ctrl_status_.is_claw_1_closed;
     auto_ctrl_.claw_flag[1]=ctrl_status_.is_claw_2_closed;
     auto_ctrl_.claw_flag[2]=ctrl_status_.is_claw_3_closed;

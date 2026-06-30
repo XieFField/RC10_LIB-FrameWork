@@ -109,6 +109,7 @@ static constexpr float JIA_CHASSIS_HOMING_SEARCH_RPM_SIGN[4] = { -1.0f, 1.0f, -1
 #include "Module_lora.h"
 #include "APP_debugTool.h"
 #include "APP_PID.h"
+#include "Locate_Setup.h"
 
 namespace jia
 {

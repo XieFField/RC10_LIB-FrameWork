@@ -91,6 +91,10 @@ void Robot_WeaponSage::update()
 //		launch_Motor_->setTargetTotalAngle( target_pos_.launch_TotalAngle_);
 		launch_Motor_->setTargetTotalAngle( launch_fliter_ramp_.ramp_target_);
 		
+		if (claw_1_Motor_) claw_1_Motor_->set_speed_pid_output_limit(claw_speed_outlimit_);
+		if (claw_2_Motor_) claw_2_Motor_->set_speed_pid_output_limit(claw_speed_outlimit_);
+		if (claw_3_Motor_) claw_3_Motor_->set_speed_pid_output_limit(claw_speed_outlimit_);
+
 		claw_1_Motor_->setTargetTotalAngle(target_pos_.claw_1_TotalAngle_);
 		claw_2_Motor_->setTargetTotalAngle(target_pos_.claw_2_TotalAngle_);
 		claw_3_Motor_->setTargetTotalAngle(target_pos_.claw_3_TotalAngle_);

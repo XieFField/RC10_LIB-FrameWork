@@ -13,6 +13,17 @@ void OmniChassis_Setup::CB_Path_Check(void)
         pid_dead_flag = false;
         WeaponSage_Start = true;
     }
+    static bool back_flag=false;
+    if (CB_point.CB_Back_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_Back_pos[RB_Flag].y == curve.Get_End_point().y)
+    {
+        back_flag = true;
+    }
+    else if (back_flag == true)
+    {
+        back_flag = false;
+        pid_dead_flag = false;
+        WeaponSage_Back = true;
+    }
 
 #if !USE_RC10_AIRJOY
     if (airjoy_data_.SWA == 0x00)
@@ -110,6 +121,8 @@ void OmniChassis_Setup::CB_Selection_Planning(void)
         path_line_.Add_Point(CB_point.CB_Start_pos[RB_Flag], path_param.line);
     }
     path_line_.Add_Point(CB_point.CB_Selection_pos[RB_Flag], path_param.cb);
+    
+    path_line_.Add_Point(CB_point.CB_Back_pos[RB_Flag], path_param.cb);
 
 #if !USE_RC10_AIRJOY
     // 相机流程
@@ -151,7 +164,7 @@ void OmniChassis_Setup::loop()
 #else
     communication::Lora_communication::GetInstance()->update_airjoy_data(&airjoy_data_);
 #endif
-    yaw = Locate_Setup::getInstance()->get_yaw_from_position();
+    yaw = Locate_Setup::getInstance()->get_RobotPos_inWorld().yaw;
     Point3D ladar_data_ = Locate_Setup::getInstance()->get_RobotPos_inWorld();
     RB_Flag = MF_AutoCtrler::get_color();
     robot_pos_.x = ladar_data_.x;
@@ -206,7 +219,7 @@ void OmniChassis_Setup::loop()
         if (path_line_.Is_End() == false)
         {
             curve = path_line_.get_bezier_curve();
-            if (WeaponSage_Start == false && WeaponSage_End == false)
+            if (WeaponSage_Start == false && WeaponSage_End == false &&WeaponSage_Back== false )
                 v_plan();
             else
                 Path_lock_point(curve.Get_Start_point());
@@ -216,34 +229,6 @@ void OmniChassis_Setup::loop()
         {
             if((_tool_Abs(yaw - target_yaw) < 1.0f))
             {
-                /*
-                static bool end = false;
-                if (airjoy_data_.left_x > 0.9f)
-                {
-                    Chassis_Target.VX = 0.0f;
-                    end = true;
-                }
-                else if (airjoy_data_.left_x > 0.8f && airjoy_data_.left_x < 0.9f && end == false)
-                    Chassis_Target.VX = 2.0f;
-                else if (_tool_Abs(airjoy_data_.left_x) > 0.1f && end == false)
-                    Chassis_Target.VX = airjoy_data_.left_x * 1.5f * this->is_chassis_reverse_;
-                else
-                {
-                    Chassis_Target.VX = 0.0f;
-                    if (_tool_Abs(airjoy_data_.left_x) < 0.1f)
-                        end = false;
-                }
-                if (_tool_Abs(airjoy_data_.left_y) > 0.1f && end == false)
-                    Chassis_Target.VY = airjoy_data_.left_y * 1.5f * this->is_chassis_reverse_;
-                else
-                    Chassis_Target.VY = 0.0f;
-                if (_tool_Abs(airjoy_data_.right_x) > 0.1f)
-                    Chassis_Target.yaw_rate = airjoy_data_.right_x * 1.5f * (-1.0f);
-                else
-                    Chassis_Target.yaw_rate = 0.0f;
-
-                chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
-                */
                 CHASSIS_MANUAL(0.8f, 0.8f, 1.2f);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }

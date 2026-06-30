@@ -21,7 +21,7 @@ void Locate_Setup::update()
 	robot_pose_inWorld_.x = -ladpos_x + coordoffset.x_offset;
     robot_pose_inWorld_.y = -ladpos_y + coordoffset.y_offset;
     robot_pose_inWorld_.z = Lad_Data.z;
-    robot_pose_inWorld_.yaw = yaw_from_position_;
+    robot_pose_inWorld_.yaw = Lad_Data.yaw;
 
     float ladvel_x = Lad_Data.line_x * cos_neg90 - Lad_Data.line_y * sin_neg90;
     float ladvel_y = Lad_Data.line_x * sin_neg90 + Lad_Data.line_y * cos_neg90;
@@ -29,13 +29,14 @@ void Locate_Setup::update()
     robot_speed_inworld_.y = ladvel_y;
     robot_speed_inworld_.z = Lad_Data.line_z;
 
-    robot_speed_inworld_.yaw = dyaw_from_position_;
+    //robot_speed_inworld_.yaw = dyaw_from_position_;
+    // robot_speed_inworld_.yaw = Lad_Data.yaw;
 
-    if(relocate_imu_cnt < usb_handle->relocate_suceed_cnt)
-    {
-        HWT101CT::GetInstance(&huart1)->imu_relocate(Lad_Data.yaw);
-        relocate_imu_cnt++;
-    }
+    // if(relocate_imu_cnt < usb_handle->relocate_suceed_cnt)
+    // {
+    //     HWT101CT::GetInstance(&huart1)->imu_relocate(Lad_Data.yaw);
+    //     relocate_imu_cnt++;
+    // }
 }
 
 void Locate_Setup::lader_transform_caculate()

@@ -53,16 +53,16 @@ typedef struct
     //Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.2f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
     
     Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
-	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 1.2f, .finalSpeed = 0.001f, .startPos = 0.09f, .targetPos = 0.0f, .deadzone = 0.001f};
-	Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.3f, .maxJerk = 0.0f, .maxSpeed = 4.0f, .initialSpeed = 0.6f, .finalSpeed = 0.01f, .startPos = 0.02f, .targetPos = 0.0f, .deadzone = 0.001f};
+	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 1.2f, .finalSpeed = 0.2f, .startPos = 0.09f, .targetPos = 0.0f, .deadzone = 0.001f};
+	Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.3f, .maxJerk = 0.0f, .maxSpeed = 4.0f, .initialSpeed = 0.6f, .finalSpeed = 0.2f, .startPos = 0.02f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config curve = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};
-    Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.2f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
     
-	Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.001f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
+	Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.2f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
     
 } PATH_PARAM;
 
@@ -88,13 +88,16 @@ typedef struct
     
     // 第数组第零为红场
     Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.85f}};             // 夹杆起点。
-    Vector2D CB_Selection_pos[2] = {{3.466f, 0.835f}, {2.452f, 0.795f}}; // 夹杆流程默认目标点。
+    Vector2D CB_Selection_pos[2] = {{3.466f, 0.835f}, {2.452f, 0.79f}}; // 夹杆流程默认目标点。
+    
+    //后退点
+    Vector2D CB_Back_pos[2] = {{3.466f, 0.835f}, {2.452f, 0.805f}}; // 夹杆流程默认目标点。
 
     // 相机流程
     Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
 
     // 贴边流程
-    Vector2D CB_transition_pos[2] = {{3.539f, 1.01f}, {3.0f, 1.04f}};
+    Vector2D CB_transition_pos[2] = {{3.539f, 1.01f}, {3.0f, 1.1f}};
     //Vector2D CB_transition_pos[2] = {{3.539f, 1.1f}, {3.0f, 1.4f}};
 	
     // Vector2D CB_welt_pos[2] = {{3.3f, 0.5f}, {3.98f, 0.5f}};
@@ -250,6 +253,7 @@ private:
     //-----------------------------------通讯标志位-----------------------------------------//
     bool WeaponSage_Start = false; // 夹杆流程开始标志。
     bool WeaponSage_End = false;   // 夹杆流程完成标志。
+    bool WeaponSage_Back = false;   // 夹杆流程完成标志。
 
     bool Arm_Start = false; // 机械臂动作触发标志。
 
@@ -381,13 +385,19 @@ public:
 
     void ReceiveReach_flag(bool weapon_start)
     {
-        // 写入机械臂流程反馈标志。
+        // 写入夹杆流程反馈标志。
         WeaponSage_Start = weapon_start;
+    }
+    
+    void ReceiveBack_flag(bool weapon_back)
+    {
+        // 写入夹杆流程反馈标志。
+        WeaponSage_Back = weapon_back;
     }
 
     void ReceiveEnd_flag(bool weapon_end)
     {
-        // 写入机械臂流程反馈标志。
+        // 写入夹杆流程反馈标志。
         WeaponSage_End = weapon_end;
     }
 
@@ -1202,6 +1212,7 @@ private:
     {
         // 统一清空自动流程的阶段标志与旋转状态。
         WeaponSage_Start = false;
+        WeaponSage_Back=false;
         WeaponSage_End = false;
         Arm_Start = false;
         CZ_Arm = false;

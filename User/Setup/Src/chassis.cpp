@@ -5900,8 +5900,8 @@ namespace jia
                 // 4. 刷新轮反馈，并推进 steer fault / homing 状态机
                 // 5. 求解并下发模块命令
                 // 6. 刷新观测镜像 / trace，然后等待下一拍
-                input_hwt_rot_z_ = hwt->get_yaw_rad();
-                input_hwt_omega_z_ = hwt->get_yaw_speed_rad();
+                input_hwt_rot_z_ = Locate_Setup::getInstance()->get_RobotPos_inWorld().yaw * 3.1415926f / 180.0f;  
+                //input_hwt_omega_z_ = hwt->get_yaw_speed_rad();
 
                 // 常态同步手柄缓存：即使 debug_control_.common.enable 关闭，也保持 airjoy_data_ 实时更新。
                 // 便于通过调试器直接观察摇杆输入；不改变任何控制模式接管逻辑。
