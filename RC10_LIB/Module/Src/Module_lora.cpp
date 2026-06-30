@@ -3,7 +3,7 @@
 #include "main.h"
 #include <cmath>
 namespace {
-constexpr uint32_t LORA_LINK_TIMEOUT_MS = 200U;
+constexpr uint32_t LORA_LINK_TIMEOUT_MS = 350U;
 
 static inline float NormalizeJoystick(uint16_t raw, float center, float span, float deadzone = 0.05f, bool invert = false)
 {
@@ -364,8 +364,8 @@ void Lora_communication::update_airjoy_data(RC10_AirJoy_Data_S * data)
 /* ========== 定时器中断 ========== */
 void Lora_communication::Tim_It_Process() {
     timer_tick_count++;
-    if (timer_tick_count >= 15)
-    { // 计数达到 1ms 
+    if (timer_tick_count >= 100)
+    { // FSM任务以1ms为基准累计100次，每100ms发送一帧
         timer_tick_count = 0;
         Comm_SendAxisDataToTxBuffer(send_x, send_y, send_z,
         send_gripper_status, send_suction_cup_status, send_automatic_status,
