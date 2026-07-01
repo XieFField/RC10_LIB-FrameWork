@@ -718,11 +718,12 @@ void OmniChassis_Setup::CZ_ARM_Challenge_Path_Init(void)
             path_line_.Add_Start_Point(robot_pos_);
             path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
             path_line_.Add_Point(CZ_point.uphill_transitiont_pos[RB_Flag], path_param.cz);
+            path_line_.Add_Point({CZ_point.uphill_transitiont_pos_1[RB_Flag].x,CZ_point.uphill_transitiont_pos_1[RB_Flag].y+0.2f}, path_param.line);
             if(RB_Flag==true)
             {
                  path_param.curve.targetPos = 1.0f;
             }
-            path_line_.Add_Point(CZ_point.uphill_transitiont_pos_1[RB_Flag], path_param.curve);
+            path_line_.Add_Point({CZ_point.uphill_transitiont_pos_1[RB_Flag].x+(RB_Flag?(0.5f):(-0.5f)),CZ_point.uphill_transitiont_pos_1[RB_Flag].y}, path_param.curve);
             path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][RB_Flag], path_param.cz);
             path_param.curve.targetPos = 999.0f;
             Path_end_point = path_line_.Get_End_Point();
