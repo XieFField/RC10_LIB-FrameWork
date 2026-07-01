@@ -264,6 +264,9 @@ protected:
 		target_pos_.claw_1_pos_ = angle;
 	}
 
+    float claw_speed_outlimit_ = 3000.0f;
+    void setClawSpeedOutLimit(float limit) { claw_speed_outlimit_ = limit; }
+
     M3508 *launch_Motor_ = nullptr; // �??升电�??1，主电机
     M2006 *claw_1_Motor_ = nullptr; // 夹爪电机1，负责�?�器的夹取动�??
     M2006 *claw_2_Motor_ = nullptr; // 夹爪电机2，负责�?�器的夹取动�??
@@ -289,7 +292,7 @@ protected:
 	WeaponSage_InitData_S initData_;
 	
 	WeaponSage::Fliter_Ramp_S launch_fliter_ramp_ = {
-        .ramp__maxspeed_ = 2000000.0f,
+        .ramp__maxspeed_ = 1500000.0f,
         .max_accel_ = 4000000.0f, //  (Motor Angle deg/s^2)
         .current_velocity_ = 0.0f, // 记录当前 launch 速度
         .ramp_target_ = 0.0f, 

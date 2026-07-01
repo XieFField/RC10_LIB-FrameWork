@@ -70,7 +70,7 @@ public:
         return true;
     }
 
-    bool Add_Start_Point(Vector2D point_,float dead_=0.03f)
+    bool Add_Start_Point(Vector2D point_,float dead_=0.04f)
     {
         dead = dead_;
         if (is_init == true)
@@ -277,7 +277,7 @@ public:
 protected:
     bool tangent_lock = false;
     //float dead = 0.05f;
-    float dead = 0.03f;
+    float dead = 0.04f;
 
     float brake_distance=0.0f;
     float brake_coefficient=1.1f;

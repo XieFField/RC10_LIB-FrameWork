@@ -142,6 +142,7 @@ namespace WeaponSage_Setup
             bool is_prepared=false; //准�?�就�?，满足抓取条�?
 			bool is_arm_reset=false;
             bool is_over = false;
+            bool is_catch = false; //碰到杆了
             bool is_reach_armrotate=false;
         }flag;
         bool auto_ctrl1 = false;
@@ -276,6 +277,9 @@ public:
         ctrl_status_.is_claw_3_closed = claw_3;
     }
 
+    bool is_catch(){ return auto_ctrl_.flag.is_catch;}
+    
+
     bool Close_TargetClaw();
     bool Close_TargetClaw_Untight();
     bool Close_TargetClaw_Untight1();
@@ -316,11 +320,17 @@ public:
     {
         this->is_arm_90 = is_arm_90;
     }
+
+    void set_kfs_idle_active(bool active)
+    {
+        this->kfs_idle_active_ = active;
+    }
 protected:
     void loop() override;
 
 private:
 	bool is_arm_90 = false;
+	bool kfs_idle_active_ = false;
 	bool omni_flag = false;
     WeaponSage_Setup::ctrl_status_S ctrl_status_;
     Debug_Printf debug_uart = Debug_Printf(&huart1);

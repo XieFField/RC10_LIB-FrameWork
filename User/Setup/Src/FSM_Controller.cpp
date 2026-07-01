@@ -766,6 +766,12 @@ void FSM_Controller::auto_ctrl()
             }
 
 #if !ARM_AUTO_DEBUG_NOCHASSIS
+            static uint8_t prev_swf = 0xFF, prev_swb = 0xFF;
+            bool from_weapon_auto = (prev_swf == 0x02 && prev_swb == 0x01
+                                     && airjoy_data_.SWF == 0x01 && airjoy_data_.SWB == 0x01);
+            bool kfs_active = from_weapon_auto || arm_setup_->isArmAutoStart();
+            weaponSage_setup_->set_kfs_idle_active(kfs_active);
+
             if (arm_setup_->isArmAutoStart())
             {
                 weaponSage_setup_->set_kfs_idle_arm_90(true);
@@ -785,6 +791,9 @@ void FSM_Controller::auto_ctrl()
             {
                 weaponSage_setup_->set_kfs_idle_arm_90(false);
             }
+
+            prev_swf = airjoy_data_.SWF;
+            prev_swb = airjoy_data_.SWB;
 #endif
         }
         else if (airjoy_data_.SWB == 0x00) // 手操模式
@@ -845,6 +854,11 @@ void FSM_Controller::auto_ctrl()
             if (chassis_setup_->GetEnd_flag() == true)
             {
                 weaponSage_setup_->Get_OMNI_DS_flag(true);
+            }
+
+            if(weaponSage_setup_->is_catch() == true)
+            {
+                chassis_setup_->ReceiveBack_flag(false);
             }
         }
         else if (airjoy_data_.SWB == 0x00) // 半自动

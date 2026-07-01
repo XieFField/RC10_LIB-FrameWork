@@ -299,6 +299,12 @@ public:
     float getRPM() const override;
     float getAngle() const override;
     float getTotalAngle() const override;
+    void set_speed_pid_output_limit(float limit)
+    {
+        PID_Param_Config p = speed_pid_.get_params();
+        p.output_limit = limit;
+        speed_pid_.set_params(p, 0.0f);
+    }
     void reset_GearRatio(float reset_value)
     {
         GEAR_RATIO = reset_value;
