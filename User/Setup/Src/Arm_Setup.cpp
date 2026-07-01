@@ -439,6 +439,18 @@ bool ArmSetup::c3z_putdown_ctrl()
         }
     }
 
+    // right_y 微调 putdown_height（仅在无动作时，与 COMP_SEMI idle 逻辑一致）
+    if (c3z_ctrl_.c3z_acting == 0 && is_intarget_zone && std::fabs(airjoy_data_.right_y) > 0.8f)
+    {
+        float next_height = this->get_currentJointStatus().launchJoint_Height_;
+        if (airjoy_data_.right_y > 0.85f)
+            next_height += manual_control.launch_rate * 0.7f;
+        else if (airjoy_data_.right_y < -0.85f)
+            next_height -= manual_control.launch_rate * 0.7f;
+        init_data_.putdown_height_ = next_height;
+        this->set_LaunchHeight(next_height);
+    }
+
     return false;
 }
 
