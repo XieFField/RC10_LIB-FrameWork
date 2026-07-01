@@ -706,32 +706,35 @@ void OmniChassis_Setup::CZ_ARM_Challenge_Path_Init(void)
 
     static bool up_click = false;
     static bool down_click = false;
-    
-    if (robot_pos_.x < 0.0f || robot_pos_.x > 6.0f || robot_pos_.y > 10.0f || robot_pos_.y < 0.0f)
-    {
         if (flag == 1)
         {
-            CZ_flag.R1_RL_index=2;
-            flag = 0;
-            flag_reset();
-            path_line_.Add_Start_Point(robot_pos_);
-            path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
-            path_line_.Add_Point(CZ_point.uphill_transitiont_pos[RB_Flag], path_param.cz);
-            path_line_.Add_Point({CZ_point.uphill_transitiont_pos_1[RB_Flag].x,CZ_point.uphill_transitiont_pos_1[RB_Flag].y+0.2f}, path_param.line);
-            if(RB_Flag==true)
+            if (robot_pos_.x < 0.0f || robot_pos_.x > 6.0f || robot_pos_.y > 10.0f || robot_pos_.y < 0.0f)
+                return;
+            else
             {
-                 path_param.curve.targetPos = 1.0f;
+                CZ_flag.R1_RL_index=2;
+                flag = 0;
+                flag_reset();
+                path_line_.Reset();
+                path_line_.plan_reset();
+                path_line_.Add_Start_Point(robot_pos_);
+                path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
+                path_line_.Add_Point(CZ_point.uphill_transitiont_pos[RB_Flag], path_param.start);
+                path_line_.Add_Point({CZ_point.uphill_transitiont_pos_1[RB_Flag].x,CZ_point.uphill_transitiont_pos_1[RB_Flag].y+0.2f}, path_param.start);
+                if(RB_Flag==true)
+                {
+                    path_param.curve.targetPos = 1.0f;
+                }
+                else if(RB_Flag==false)
+                {
+                    path_param.curve.targetPos = 2.0f;
+                }
+                path_line_.Add_Point({CZ_point.uphill_transitiont_pos_1[RB_Flag].x+(RB_Flag?(0.5f):(-0.5f)),CZ_point.uphill_transitiont_pos_1[RB_Flag].y}, path_param.curve);
+                path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][RB_Flag], path_param.cz);
+                path_param.curve.targetPos = 999.0f;
+                Path_end_point = path_line_.Get_End_Point();   
             }
-            else if(RB_Flag==false)
-            {
-                 path_param.curve.targetPos = 2.0f;
-            }
-            path_line_.Add_Point({CZ_point.uphill_transitiont_pos_1[RB_Flag].x+(RB_Flag?(0.5f):(-0.5f)),CZ_point.uphill_transitiont_pos_1[RB_Flag].y}, path_param.curve);
-            path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][RB_Flag], path_param.cz);
-            path_param.curve.targetPos = 999.0f;
-            Path_end_point = path_line_.Get_End_Point();
         }
-    }
 
     // 上键放置物块
     if (airjoy_data_.d_pad_up == 1 && up_click == false)
@@ -832,6 +835,8 @@ void OmniChassis_Setup::CZ_Catch_Selection_Planning(void)
     target_yaw=-90.0f;
     CZ_flag.R1_RL_index=1;
     flag_reset();
+    path_line_.Reset();
+    path_line_.plan_reset();
     path_line_.Add_Start_Point(robot_pos_);
     path_line_.Add_Point(CZ_point.catch_pos[RB_Flag], path_param.cz);
     path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][RB_Flag], path_param.cz);

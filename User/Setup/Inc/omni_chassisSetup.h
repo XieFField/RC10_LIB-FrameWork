@@ -142,10 +142,10 @@ typedef struct
 typedef struct
 {
     Vector2D uphill_pos[2] = {{5.4f, 11.4f}, {0.6f, 11.4f}};
-    Vector2D uphill_transitiont_pos[2] = {{4.0f, 11.4f}, {2.0f, 11.4f}};
-    Vector2D uphill_transitiont_pos_1[2] = {{4.0f, 10.2f}, {2.0f, 10.2f}};
+    Vector2D uphill_transitiont_pos[2] = {{4.0f, 11.4f}, {2.06f, 11.27f}};
+    Vector2D uphill_transitiont_pos_1[2] = {{4.0f, 10.2f}, {2.78f, 10.4f}};
     
-    Vector2D catch_pos[2] = {{4.0f, 10.2f}, {2.0f, 10.2f}};
+    Vector2D catch_pos[2] = {{4.0f, 10.2f}, {5.2f, 10.99f}};
     
     float skew_yaw = 3.4f;
     // 下界10.02f上界是11.52f
@@ -154,7 +154,7 @@ typedef struct
     Vector2D fit_end_pos = {4.83f, 11.5f};
 
     // 左中右   或者   先后
-    float set_skew = 0.215f;
+    float set_skew = 0.28f;
     Vector2D R1_pos[3][2] = {{{1.465f, 11.318f}, {4.43f, 11.318f}}, {{1.465f, 10.765f}, {4.43f, 10.765f}}, {{1.465f, 10.195f}, {4.43f, 10.195f}}};
     Vector2D fit_pos[3][2] = {{{6.0f - fit_wait_pos.x, fit_wait_pos.y}, fit_wait_pos}, {{6.0f - fit_end_pos.x, fit_end_pos.y}, fit_end_pos}, {{6.0f - fit_transition_pos.x, fit_transition_pos.y}, fit_transition_pos}};
     Vector2D R2_pos[3][2] = {{{1.17f, 11.318f}, {4.83f, 11.318f}}, {{1.17f, 10.795f}, {4.83f, 10.795f}}, {{1.17f, 10.225f}, {4.83f, 10.225f}}};

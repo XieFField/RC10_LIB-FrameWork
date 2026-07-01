@@ -271,6 +271,8 @@ void ArmSetup::challenge_3zone(void)
             {
                 c3z_ctrl_.can_pickup = false;
                 c3z_ctrl_.can_putdown = false;
+                c3z_ctrl_.is_putdown_done = false;
+                c3z_ctrl_.is_pickup_done = false;
                 c3z_ctrl_.now_state = C3Z_PUTDOWN;
             }
             else
