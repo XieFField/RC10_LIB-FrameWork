@@ -3642,9 +3642,9 @@
       </Doc>
       <Doc>
         <Name>startup_stm32h723xx.s</Name>
-        <ColumnNumber>0</ColumnNumber>
+        <ColumnNumber>27</ColumnNumber>
         <TopLine>242</TopLine>
-        <CurrentLine>254</CurrentLine>
+        <CurrentLine>255</CurrentLine>
         <Folding>0</Folding>
         <ContractedFolders></ContractedFolders>
         <PaneID>0</PaneID>
@@ -3687,7 +3687,7 @@
       </Doc>
       <Doc>
         <Name>..\User\Setup\Src\Arm_Setup.cpp</Name>
-        <ColumnNumber>13</ColumnNumber>
+        <ColumnNumber>12</ColumnNumber>
         <TopLine>1893</TopLine>
         <CurrentLine>1910</CurrentLine>
         <Folding>1</Folding>
