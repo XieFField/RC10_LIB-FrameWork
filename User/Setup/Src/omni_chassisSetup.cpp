@@ -278,7 +278,7 @@ void OmniChassis_Setup::loop()
     //----------------------------------             CZ_新状态机              -----------------------------------//
     case CHASSIS_MANUAL_CONTROL_CZ:
     {
-        CHASSIS_MANUAL(1.0f, 1.0f, 2.0f, true);
+        CHASSIS_MANUAL(1.0f, 1.0f, 2.0f, true,true);
         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
         chassis_status_last_ = chassis_status_;
         break;
@@ -306,7 +306,7 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true);
+                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true,true);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
         }
@@ -340,7 +340,7 @@ void OmniChassis_Setup::loop()
                     CZ_flag.R1_FB_index = 0;
                     CZ_R1_Selection_Planning();
                 }
-                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f);
+                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f,true,true);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
         }
@@ -352,12 +352,12 @@ void OmniChassis_Setup::loop()
         mode_init();
         if (airjoy_data_.SWE == 0)
         {
-            CHASSIS_MANUAL(1.0f, 1.0f, 2.0f, true);
+            CHASSIS_MANUAL(1.0f, 1.0f, 2.0f, true,true);
             chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
         }
         else if (airjoy_data_.SWE == 1)
         {
-            CHASSIS_MANUAL(1.0f, 1.0f, 0.0f, false);
+            CHASSIS_MANUAL(1.0f, 1.0f, 0.0f, false,true);
             chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, target_yaw * PI / 180.0f);
         }
         break;
@@ -707,7 +707,42 @@ void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
 
     // 合体地点和等待地点的切换
     path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_Point(CZ_point.fit_pos[2][RB_Flag], path_param.line);
+    if(CZ_flag.fit_pos_index==0)
+    {
+        if(RB_Flag==1)
+        {
+            if(robot_pos_.x>CZ_point.fit_pos[2][1].x)
+            {
+                path_line_.Add_Point(CZ_point.fit_pos[2][RB_Flag], path_param.line);
+            }
+        }
+        else if(RB_Flag==0)
+        {
+            if(robot_pos_.x<CZ_point.fit_pos[2][0].x)
+            {
+                path_line_.Add_Point(CZ_point.fit_pos[2][RB_Flag], path_param.line);
+            }
+        }
+
+    }
+    else if(CZ_flag.fit_pos_index==1)
+    {
+        if(RB_Flag==1)
+        {
+            if(robot_pos_.x<CZ_point.fit_pos[2][1].x)
+            {
+                path_line_.Add_Point(CZ_point.fit_pos[2][1], path_param.line);
+            }
+        }
+        else if(RB_Flag==0)
+        {
+            if(robot_pos_.x>CZ_point.fit_pos[2][0].x)
+            {
+                path_line_.Add_Point(CZ_point.fit_pos[2][0], path_param.line);
+            }
+        }
+    }
+    
     path_line_.Add_End_Point(CZ_point.fit_pos[CZ_flag.fit_pos_index][RB_Flag], path_param.end);
     Path_end_point = path_line_.Get_End_Point();
 }

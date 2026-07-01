@@ -257,7 +257,7 @@ bool ArmSetup::manual_pickup()
 {
     static bool is_pick = false;
     static float pickup_start_time = 0.0f;
-    this->set_PitchAngle(0.0f);
+    this->set_PitchAngle(0.2f);
     this->setSuckerStatus(Sucker_Status_E::SUCK);
     this->set_RotateAngle(90.0f);
 
@@ -268,9 +268,9 @@ bool ArmSetup::manual_pickup()
 
     if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f)
     {
-        this->set_LaunchHeight(init_data_.pick_up_height_);
+        this->set_LaunchHeight(init_data_.pick_up_height_ - 0.005f);
 
-        if (std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.pick_up_height_) < 0.008f)
+        if (std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.pick_up_height_) < 0.01f)
         {
             is_pick = true;
             pickup_start_time = TimeStamp::getInstance().getSeconds();
@@ -282,6 +282,7 @@ bool ArmSetup::manual_pickup()
         this->set_LaunchHeight(init_data_.putdown_height_);
         if (std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.008f)
         {
+            this->set_PitchAngle(init_data_.pitch_lift_angle_);
             is_pick = false;
             pickup_start_time = 0.0f;
             return true;
@@ -300,7 +301,8 @@ bool ArmSetup::manual_putdown()
     static bool is_put = false;
     static float putdown_start_time = 0.0f;
 
-    if (std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.008f && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f && !is_put)
+    if (std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.008f 
+        && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f && !is_put)
     {
         arm_ctrlStatus.is_putdown_done = false;
         this->set_StretchLength(init_data_.max_stretchLength_);
@@ -790,7 +792,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             if (this->get_currentJointStatus().rotateJoint_angle_ > 255.0f && this->get_currentJointStatus().rotateJoint_angle_ < 350.0f)
             {
                 if (kfs_index == 0x01)
-                    this->set_PitchAngle(0.0f); // 吸盘放下
+                    this->set_PitchAngle(0.2f); // 吸盘放下
                 else if (kfs_index == 0x00)
                     this->set_PitchAngle(init_data_.pitch_lift_angle_ + 5.0f); // 吸盘抬平
 
@@ -818,7 +820,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
 
         if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 260.0f) < 3.0f && kfs_index == 0x00 && !auto_ctrl_.flag.is_up_catch)
         {
-            this->set_PitchAngle(0.0f); // 吸盘放下
+            this->set_PitchAngle(0.2f); // 吸盘放下
         }
 
         if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 263.0f) < 3.0f && kfs_index == 0x00 && auto_ctrl_.flag.is_up_catch)
@@ -1011,7 +1013,7 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
         //     this->set_LaunchHeight(this->init_data_.up_20cm_lower_height_);
 
         // if (kfs_index == 0x00)
-        this->set_PitchAngle(0.0f);
+        this->set_PitchAngle(0.2f);
         // else
         //     this->set_PitchAngle(init_data_.pitch_lift_angle_);
 
@@ -1618,7 +1620,7 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
 
     if (auto_ctrl_.flag.is_up_catch)
     {
-        this->set_PitchAngle(0.0f); // pitch放下
+        this->set_PitchAngle(0.2f); // pitch放下
     }
     else
         this->set_PitchAngle(this->init_data_.pitch_lift_angle_); // pitch抬平
@@ -1779,7 +1781,7 @@ bool ArmSetup::state_launchStillness(int targetKFS)
     {
         this->set_PitchAngle(this->init_data_.pitch_lift_angle_); // pitch抬平
 
-        if (auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1 && auto_ctrl_.targetKFS[2] != 0)
+        if (auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1)
             auto_ctrl_.flag.canChassisStart = false;
         // else if(auto_ctrl_.now_targetIndex == 0x00 && auto_ctrl_.targetKFS[2] != 0)
         //     auto_ctrl_.flag.canChassisStart = false;
@@ -1882,7 +1884,7 @@ void ArmSetup::idle()
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
-    if (last_arm_status_ != ARM_IDLE)
+    if (last_arm_status_ != ARM_IDLE && arm_status_ != ARM_COMP_SEMI_CONTROL)
     {
         last_joint_status_ = this->get_currentJointStatus();
         target_joint_status_ = last_joint_status_;
@@ -1892,28 +1894,51 @@ void ArmSetup::idle()
 
     if (arm_status_ == ARM_COMP_SEMI_CONTROL)
     {
-        this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
-        this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
-        this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
-        float next_height = this->get_currentJointStatus().launchJoint_Height_;
+        if(arm_ctrlStatus.is_store_acting == 0)
+        {
+            if (Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 10.1 && MF_AutoCtrler::get_color() == 1 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x > 1.7) // 蓝场
+            {
+                this->set_StretchLength(0.0f);
+                this->set_PitchAngle(init_data_.pitch_lift_angle_);
+                if (std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 5.0f)
+                    this->set_LaunchHeight(init_data_.putdown_height_);
 
+                if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.01f)
+                {
+                    this->set_RotateAngle(90.0f);
+                }
+            }
+            else if (Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 10.1 && MF_AutoCtrler::get_color() == 0 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x < 4.3) // 红场
+            {
+                this->set_StretchLength(0.0f);
+                this->set_PitchAngle(init_data_.pitch_lift_angle_);
+                if (std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 5.0f)
+                    this->set_LaunchHeight(init_data_.putdown_height_);
+
+                if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.putdown_height_) < 0.01f)
+                {
+                    this->set_RotateAngle(90.0f);
+                }
+            }
+        }
+        else
+        {
+            this->set_StretchLength(target_joint_status_.stretchJoint_Length_);
+            this->set_RotateAngle(target_joint_status_.rotateJoint_angle_);
+            this->set_PitchAngle(target_joint_status_.suckerJoint_angle_);
+        }
         if (std::fabs(airjoy_data_.right_y) > 0.8)
         {
+            float next_height = this->get_currentJointStatus().launchJoint_Height_;
             if (airjoy_data_.right_y > 0.85f)
                 next_height += manual_control.launch_rate * 0.7;
             else if (airjoy_data_.right_y < -0.85f)
                 next_height -= manual_control.launch_rate * 0.7;
-            else
-                next_height = this->get_currentJointStatus().launchJoint_Height_;
 
             target_joint_status_.launchJoint_Height_ = next_height;
-
-            init_data_.putdown_height_ = this->get_currentJointStatus().launchJoint_Height_;
+            init_data_.putdown_height_ = next_height;
+            this->set_LaunchHeight(next_height);
         }
-        else
-            target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // 保持不变
-
-        this->set_LaunchHeight(target_joint_status_.launchJoint_Height_);
     }
     else
     {
