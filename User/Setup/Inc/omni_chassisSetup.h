@@ -50,8 +50,6 @@ typedef struct
 
 typedef struct
 {
-    //Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.2f, .maxJerk = 0.0f, .maxSpeed = 3.0f, .initialSpeed = 0.6f, .finalSpeed = 0.001f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
-    
     Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
 	Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 1.2f, .finalSpeed = 0.2f, .startPos = 0.09f, .targetPos = 0.0f, .deadzone = 0.001f};
 	Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.3f, .maxJerk = 0.0f, .maxSpeed = 4.0f, .initialSpeed = 0.6f, .finalSpeed = 0.2f, .startPos = 0.02f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -61,8 +59,9 @@ typedef struct
     Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.1f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
-    
-	Speedplanner_1D_Param_Config R2 = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.2f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config cz = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.8f, .finalSpeed = 0.2f, .startPos = 0.04f, .targetPos = 0.0f, .deadzone = 0.001f};
+
+	Speedplanner_1D_Param_Config R2 = {.maxAcc = 0.5f, .maxDec = 0.5f, .maxJerk = 0.0f, .maxSpeed = 1.0f, .initialSpeed = 0.2f, .finalSpeed = 0.2f, .startPos = 0.04f, .targetPos = 0.0f, .deadzone = 0.001f};
     
 } PATH_PARAM;
 
@@ -83,7 +82,6 @@ typedef struct
 {
     float cb_dead=0.05f;
     
-    //float spin_y=1.0f;
 	float spin_y=0.86f;
     
     // 第数组第零为红场
@@ -98,9 +96,7 @@ typedef struct
 
     // 贴边流程
     Vector2D CB_transition_pos[2] = {{3.539f, 1.01f}, {3.0f, 1.1f}};
-    //Vector2D CB_transition_pos[2] = {{3.539f, 1.1f}, {3.0f, 1.4f}};
-	
-    // Vector2D CB_welt_pos[2] = {{3.3f, 0.5f}, {3.98f, 0.5f}};
+
     Vector2D CB_welt_pos[2] = {{3.3f, 0.52f}, {3.98f, 0.495f}};
 
 } CB_POINT;
@@ -146,6 +142,11 @@ typedef struct
 typedef struct
 {
     Vector2D uphill_pos[2] = {{5.4f, 11.4f}, {0.6f, 11.4f}};
+    Vector2D uphill_transitiont_pos[2] = {{4.0f, 11.4f}, {2.0f, 11.4f}};
+    Vector2D uphill_transitiont_pos_1[2] = {{4.0f, 10.2f}, {2.0f, 10.2f}};
+    
+    Vector2D catch_pos[2] = {{4.0f, 10.2f}, {2.0f, 10.2f}};
+    
     float skew_yaw = 3.4f;
     // 下界10.02f上界是11.52f
     Vector2D fit_wait_pos = {2.17f, 10.05f};
@@ -187,8 +188,6 @@ typedef struct
     
     bool Selection_flag = false;
     bool Retreat_flag = false;
-    
-    bool FF_flag = false;
     
 } CB_FLAG;
 
@@ -262,6 +261,7 @@ private:
     bool Arm_Start = false; // 机械臂动作触发标志。
 
     bool CZ_Arm = false; // 机械臂动作触发标志。
+    bool CZ_Catch = false; // 机械臂动作触发标志。
 
     bool RB_Flag = true; // 红蓝方标志位，默认true为蓝场
 
@@ -345,7 +345,10 @@ private:
     void CZ_FIT_R2_Selection_Planning(void);
 
     void CZ_ARM_Selection_Planning(void);
+    
+    void CZ_ARM_Challenge_Path_Init(void);
 	
+    void CZ_Catch_Selection_Planning(void);
 public:
     /**
      * @brief 设置路径自动开始标志
@@ -447,6 +450,26 @@ public:
     {
         // 写入机械臂流程反馈标志。
         CZ_Arm = CZ_end;
+    }
+    
+    
+    bool Get_CZ_Catch_flag()
+    {
+        // 读取机械臂触发标志。
+        if (pid_dead_flag == true && CZ_Catch == true)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    void Receive_CZ_Catch_flag(bool CZ_catch)
+    {
+        // 写入机械臂流程反馈标志。
+        CZ_Catch = CZ_catch;
     }
 
     void set_KFS(int8_t KFS1, int8_t KFS2, int8_t KFS3)
@@ -1245,6 +1268,7 @@ private:
         WeaponSage_End = false;
         Arm_Start = false;
         CZ_Arm = false;
+        CZ_Catch = false;
         pid_dead_flag = false;
 
         KFS_flag.MF1_flag = false;
@@ -1264,7 +1288,6 @@ private:
 
         CB_flag.Retreat_flag = false;
         CB_flag.Selection_flag = false;
-        CB_flag.FF_flag=false;
         
         curve.Rest();
     }
