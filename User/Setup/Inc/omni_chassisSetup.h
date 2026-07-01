@@ -332,7 +332,7 @@ private:
 
     void CZ_R1_Selection_Planning(void);
 
-    void CZ_R2_Selection_Planning(void);
+    //void CZ_R2_Selection_Planning(void);
 
     void CZ_FIT_Path_Init(void);
 
@@ -594,7 +594,6 @@ private:
 
         v_tangent = V.planspeed * V.FF_coefficient + V.corrVelocity.project_onto(tangent_dir);
 
-        
         if (v_tangent.magnitude() > V.planspeed.magnitude())
             v_tangent = v_tangent.normalize() * V.planspeed.magnitude();
 
@@ -1208,10 +1207,9 @@ private:
         Path_correction();
         V.corrVelocity = V.PID_coefficient * V.corrVelocity;
 
-        if (path_line_.Get_Curve_Flag() == true && chassis_status_==CHASSIS_AUTO_CONTROL_KFS)
+        if (path_line_.Get_Curve_Flag() == true && (chassis_status_==CHASSIS_AUTO_CONTROL_KFS||chassis_status_==SEMI_AUIO_CZ_ARM_Challenge))
         {
             V.corrVelocity = V.corrVelocity * V.spinodal_coefficient;
-            // speed = speed * V.spinodal_coefficient;
             speed = V.corrVelocity + V.planspeed;
         }
         else

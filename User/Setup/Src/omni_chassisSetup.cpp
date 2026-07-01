@@ -414,7 +414,6 @@ void OmniChassis_Setup::loop()
         break;
     }
 
-
     case CHASSIS_STOP:
     {
         target_yaw = yaw;
@@ -722,6 +721,10 @@ void OmniChassis_Setup::CZ_ARM_Challenge_Path_Init(void)
             if(RB_Flag==true)
             {
                  path_param.curve.targetPos = 1.0f;
+            }
+            else if(RB_Flag==false)
+            {
+                 path_param.curve.targetPos = 2.0f;
             }
             path_line_.Add_Point({CZ_point.uphill_transitiont_pos_1[RB_Flag].x+(RB_Flag?(0.5f):(-0.5f)),CZ_point.uphill_transitiont_pos_1[RB_Flag].y}, path_param.curve);
             path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][RB_Flag], path_param.cz);
