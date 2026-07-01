@@ -710,6 +710,17 @@ void FSM_Controller::auto_ctrl()
 
             #if CHALLENGE_3ZONE //挑战赛3区专用代码
             arm_setup_->setArmStatus(ARM_CHALLENGE_3ZONE);
+            static uint8_t is_click = 0;
+            if (airjoy_data_.LB == 1 && is_click == 0)
+            {
+                arm_setup_->set_c3z_start(true);
+                is_click = 1;
+            }
+            else if (airjoy_data_.LB == 0)
+            {
+                is_click = 0;
+            }
+
             #else
             arm_setup_->setArmStatus(ARM_COMP_SEMI_CONTROL);
             chassis_setup_->setChassisStatus(SEMI_AUIO_CZ_ARM);
