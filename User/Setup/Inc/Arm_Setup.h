@@ -42,6 +42,26 @@ typedef enum{
     OUTSIDE,
 }Store_MANUAL_E;
 
+typedef enum{
+    C3Z_DONE,
+    C3Z_PUTDOWN,
+    C3Z_PICKUP,
+    C3Z_PUTDOWN_NEXT,
+}ARM_C3Z_E;
+
+typedef struct{
+    bool is_c3z_start = false; //是否开始挑战赛3区流程
+    bool can_pickup = false; //是否可以拾取
+    bool can_putdown = false; //是否可以放下
+
+    bool is_putdown_done = false; //放下完成标志
+    bool is_pickup_done = false; //拾取完成标志
+
+    uint8_t c3z_acting = 0; //当前动作 0无动作 1放下 2拾取 3放下NEXT
+
+    ARM_C3Z_E now_state = C3Z_DONE; //当前状态
+}C3Z_S;
+
 typedef struct{
     bool init_flag = false;
     uint8_t debug_start = 0; //调试开始标志 == 1 开始调试
@@ -151,6 +171,21 @@ public:
     ArmSetup(Arm_InitData_S init_Data)
         : Robot_Arm(init_Data), RtosTask("ArmSetup", 1) 
     {
+    }
+
+    void set_c3z_start(bool start)
+    {
+        c3z_ctrl_.is_c3z_start = start;
+    }
+
+    void set_c3z_can_pickup(bool pickup)
+    {
+        c3z_ctrl_.can_pickup = pickup;
+    }
+
+    void set_c3z_can_putdown(bool putdown)
+    {
+        c3z_ctrl_.can_putdown = putdown;
     }
 
     bool isArmcalibrated() const
@@ -384,10 +419,15 @@ private:
 
     void arm_d_pad_ctrl(); //十字键统一处理
 
+    bool c3z_putdown_ctrl(); //挑战赛3区放下控制
+    bool c3z_pickup_ctrl(); //挑战赛3区拾取控制
+
     bool manual_store(uint8_t kfs_index); //存儲kfs
     bool manual_takeout(uint8_t kfs_index); //取出存储kfs
     bool manual_pickup(); //拾取地上的kfs
     bool manual_putdown(); //放下kfs
+
+    void challenge_3zone();
 
     bool test();
 
@@ -603,6 +643,7 @@ protected:
     Joint_Status_S target_joint_status_ = {0.0f, 0.0f, 0.0f, 0.0f};
 
     ARM_AUTO_S auto_ctrl_;
+    C3Z_S c3z_ctrl_;  //挑战赛3区专用
 
     struct {
         
