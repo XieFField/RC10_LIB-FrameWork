@@ -721,6 +721,29 @@ void FSM_Controller::auto_ctrl()
                 is_click = 0;
             }
 
+            if(arm_setup_->is_c3z_start())
+            {
+                if(arm_setup_->is_c3z_pickup_done()) //拾取完成
+                {
+                    chassis_setup_->Receive_CZ_Catch_flag(false);
+                }
+
+                if(arm_setup_->is_c3z_putdown_done()) //放下完成
+                {
+                    chassis_setup_->Receive_CZ_Arm_flag(false);
+                }
+
+                if(chassis_setup_->Get_CZ_Catch_flag()) //可以捡起
+                {
+                    arm_setup_->set_c3z_can_pickup(true);
+                }
+
+                if(chassis_setup_->Get_CZ_Arm_flag()) //可以放下
+                {
+                    arm_setup_->set_c3z_can_putdown(true);
+                }
+            }
+
             #else
             arm_setup_->setArmStatus(ARM_COMP_SEMI_CONTROL);
             chassis_setup_->setChassisStatus(SEMI_AUIO_CZ_ARM);

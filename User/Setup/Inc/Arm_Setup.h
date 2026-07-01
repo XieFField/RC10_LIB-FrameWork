@@ -188,6 +188,21 @@ public:
         c3z_ctrl_.can_putdown = putdown;
     }
 
+    bool is_c3z_pickup_done() const
+    {
+        return c3z_ctrl_.is_pickup_done;
+    }
+
+    bool is_c3z_putdown_done() const
+    {
+        return c3z_ctrl_.is_putdown_done;
+    }
+
+    bool is_c3z_start() const
+    {
+        return c3z_ctrl_.is_c3z_start;
+    }
+
     bool isArmcalibrated() const
     {
         if(arm_ctrlStatus.is_calibrating)
