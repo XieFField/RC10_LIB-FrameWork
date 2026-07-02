@@ -422,7 +422,7 @@ bool ArmSetup::c3z_putdown_ctrl()
         {
             c3z_ctrl_.is_putdown_done = false;
             this->set_StretchLength(init_data_.max_stretchLength_);
-            if (std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.max_stretchLength_) < 0.01f 
+            if (std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.max_stretchLength_) < 0.015f 
                 && c3z_ctrl_.can_putdown)
             {
                 this->setSuckerStatus(Sucker_Status_E::STOP);
@@ -431,8 +431,8 @@ bool ArmSetup::c3z_putdown_ctrl()
             }
         }
 
-        if (is_put && TimeStamp::getInstance().getSeconds() - putdown_start_time > 0.5f 
-            && putdown_start_time > 0.5f)
+        if (is_put && TimeStamp::getInstance().getSeconds() - putdown_start_time > 0.4f 
+            && putdown_start_time > 0.4f)
         {
             this->set_StretchLength(0.0f);
             if (std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - 0.0f) < 0.01f)
@@ -537,7 +537,7 @@ bool ArmSetup::manual_putdown()
     {
         arm_ctrlStatus.is_putdown_done = false;
         this->set_StretchLength(init_data_.max_stretchLength_);
-        if (std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.max_stretchLength_) < 0.01f 
+        if (std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.max_stretchLength_) < 0.015f 
             && arm_ctrlStatus.can_putdown)
         {
             this->setSuckerStatus(Sucker_Status_E::STOP);
@@ -546,7 +546,7 @@ bool ArmSetup::manual_putdown()
         }
     }
 
-    if (is_put && TimeStamp::getInstance().getSeconds() - putdown_start_time > 0.5f && putdown_start_time > 0.5f)
+    if (is_put && TimeStamp::getInstance().getSeconds() - putdown_start_time > 0.4f && putdown_start_time > 0.4f)
     {
         this->set_StretchLength(0.0f);
         if (std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - 0.0f) < 0.01f)
@@ -753,7 +753,31 @@ void ArmSetup::manualControl()
     }
     else
     {
-        target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_;
+        // 升降==
+        if (_tool_Abs(airjoy_data_.right_y) > 0.9f)
+        {
+            float next_height = this->get_currentJointStatus().launchJoint_Height_;
+            if (airjoy_data_.right_y > 0.9f)
+                next_height += manual_control.launch_rate * 0.3f;
+            else if (airjoy_data_.right_y < -0.9f)
+                next_height -= manual_control.launch_rate * 0.3f;
+            else
+                next_height = this->get_currentJointStatus().launchJoint_Height_;
+
+            // 下降刹车：只有下降前云台在0.0±3.0度时才激活
+            if (brake_active)
+            {
+                if (next_height > target_joint_status_.launchJoint_Height_)
+                    next_height = target_joint_status_.launchJoint_Height_; // 禁止抬升
+
+                if (next_height < init_data_.lock_height_)
+                    next_height = init_data_.lock_height_; // 禁止降到lock_h以下
+            }
+            target_joint_status_.launchJoint_Height_ = next_height;
+        }
+        else
+            target_joint_status_.launchJoint_Height_ = this->get_currentJointStatus().launchJoint_Height_; // 保持不变
+
         target_joint_status_.rotateJoint_angle_ = this->get_currentJointStatus().rotateJoint_angle_;
     }
 #endif
