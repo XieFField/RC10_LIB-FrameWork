@@ -99,6 +99,8 @@ typedef struct{
     uint8_t comp_takeout_now[2] = {0}; //当前取出位置 0 为初始即无，1为内，2为外
 
     bool is_putdown_done = false; //放下完成标志
+
+    bool pickup_stage1_ready = false; // 拾取预置位完成，等待第二次按下
 }arm_ctrl_status_S;
 
 
@@ -440,6 +442,7 @@ private:
     bool manual_store(uint8_t kfs_index); //存儲kfs
     bool manual_takeout(uint8_t kfs_index); //取出存储kfs
     bool manual_pickup(); //拾取地上的kfs
+    bool manual_pickup_preposition(); //拾取阶段1：预置位
     bool manual_putdown(); //放下kfs
 
     void challenge_3zone();

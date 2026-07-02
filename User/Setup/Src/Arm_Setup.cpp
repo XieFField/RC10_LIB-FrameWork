@@ -145,6 +145,7 @@ void ArmSetup::loop()
             arm_ctrlStatus.last_manual_store = 0;
             store_state_ = store_state::idle;
             arm_ctrlStatus.is_store_acting = 0;
+            arm_ctrlStatus.pickup_stage1_ready = false;
         }
         arm_d_pad_ctrl();
 #endif
@@ -158,6 +159,7 @@ void ArmSetup::loop()
             arm_ctrlStatus.last_manual_store = 0;
             store_state_ = store_state::idle;
             arm_ctrlStatus.is_store_acting = 0;
+            arm_ctrlStatus.pickup_stage1_ready = false;
         }
         else
         {
@@ -175,6 +177,7 @@ void ArmSetup::loop()
             arm_ctrlStatus.last_manual_store = 0;
             store_state_ = store_state::idle;
             arm_ctrlStatus.is_store_acting = 0;
+            arm_ctrlStatus.pickup_stage1_ready = false;
         }
         else
         {
@@ -192,6 +195,7 @@ void ArmSetup::loop()
             arm_ctrlStatus.last_manual_store = 0;
             store_state_ = store_state::idle;
             arm_ctrlStatus.is_store_acting = 0;
+            arm_ctrlStatus.pickup_stage1_ready = false;
         }
         arm_d_pad_ctrl();
 #endif
@@ -452,6 +456,30 @@ bool ArmSetup::c3z_putdown_ctrl()
         init_data_.putdown_height_ = next_height;
         this->set_LaunchHeight(next_height);
     }
+
+    return false;
+}
+
+bool ArmSetup::manual_pickup_preposition()
+{
+    this->set_PitchAngle(0.2f);
+    this->setSuckerStatus(Sucker_Status_E::SUCK);
+    this->set_StretchLength(0.0f);
+
+    // 先升到 putdown 安全高度
+    if (std::fabs(this->get_currentJointStatus().launchJoint_Height_
+                  - init_data_.putdown_height_) > 0.008f)
+    {
+        this->set_LaunchHeight(init_data_.putdown_height_);
+        return false;
+    }
+
+    // 高度到位后再转云台到 90°
+    this->set_LaunchHeight(init_data_.putdown_height_);
+    this->set_RotateAngle(90.0f);
+
+    if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f)
+        return true;
 
     return false;
 }
@@ -826,7 +854,8 @@ void ArmSetup::arm_d_pad_ctrl()
         {
             if (airjoy_data_.d_pad_down == 1 && is_d_pad_down_clicked == 0)
             {
-                arm_ctrlStatus.is_store_acting = 3;
+                arm_ctrlStatus.is_store_acting = 6;  // 进入拾取预置位
+                arm_ctrlStatus.pickup_stage1_ready = false;
                 is_d_pad_down_clicked = 1;
             }
             else if (airjoy_data_.d_pad_down == 0 && is_d_pad_down_clicked == 1)
@@ -876,6 +905,7 @@ void ArmSetup::arm_d_pad_ctrl()
     {
         if (manual_pickup())
         {
+            arm_ctrlStatus.pickup_stage1_ready = false;
             arm_ctrlStatus.is_store_acting = 0;
             target_joint_status_ = this->get_currentJointStatus();
         }
@@ -910,6 +940,35 @@ void ArmSetup::arm_d_pad_ctrl()
             arm_ctrlStatus.is_store_acting = 0;
             target_joint_status_ = this->get_currentJointStatus();
         }
+    }
+    else if (arm_ctrlStatus.is_store_acting == 6 && enable_pickup) // 拾取两段式
+    {
+        if (!arm_ctrlStatus.pickup_stage1_ready)
+        {
+            // --- 阶段1: 预置位 ---
+            if (manual_pickup_preposition())
+            {
+                arm_ctrlStatus.pickup_stage1_ready = true;
+                // keep is_store_acting = 6, waiting for second press
+            }
+        }
+        else
+        {
+            // --- 保持预置姿态，等待第二次按下 ---
+            this->set_PitchAngle(0.2f);
+            this->setSuckerStatus(Sucker_Status_E::SUCK);
+            this->set_StretchLength(0.0f);
+            this->set_LaunchHeight(init_data_.putdown_height_);
+            this->set_RotateAngle(90.0f);
+
+            // 第二次按下 D-pad 下 → 进入阶段2 执行拾取
+            if (airjoy_data_.d_pad_down == 1)
+            {
+                arm_ctrlStatus.is_store_acting = 3;
+                arm_ctrlStatus.pickup_stage1_ready = false;
+            }
+        }
+        arm_ctrlStatus.last_manual_store = 6;
     }
 #endif
 }
