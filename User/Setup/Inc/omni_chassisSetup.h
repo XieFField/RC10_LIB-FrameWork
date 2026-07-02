@@ -151,13 +151,14 @@ typedef struct
     // 下界10.02f上界是11.52f
     Vector2D fit_wait_pos = {2.17f, 10.05f};
     Vector2D fit_transition_pos = {3.0f, 11.5f};
-    Vector2D fit_end_pos = {4.83f, 11.5f};
+	
+    Vector2D fit_end_pos = {5.31f, 10.19f};
 
     // 左中右   或者   先后
     float set_skew = 0.35f;
     Vector2D R1_pos[3][2] = {{{1.465f, 11.318f}, {4.43f, 11.318f}}, {{1.465f, 10.765f}, {4.43f, 10.765f}}, {{1.465f, 10.195f}, {4.43f, 10.195f}}};
     Vector2D fit_pos[3][2] = {{{6.0f - fit_wait_pos.x, fit_wait_pos.y}, fit_wait_pos}, {{6.0f - fit_end_pos.x, fit_end_pos.y}, fit_end_pos}, {{6.0f - fit_transition_pos.x, fit_transition_pos.y}, fit_transition_pos}};
-    Vector2D R2_pos[3][2] = {{{1.17f, 11.318f}, {4.83f, 11.318f}}, {{1.17f, 10.795f}, {4.83f, 10.795f}}, {{1.17f, 10.225f}, {4.83f, 10.225f}}};
+    Vector2D R2_pos[3][2] = {{{1.17f, 11.318f}, {4.83f, 11.318f}}, {{1.17f, 10.795f}, {4.83f, 10.795f}}, {{1.17f, 10.225f}, {4.93f, 10.32f}}};
 
 } CZ_POINT;
 
@@ -315,8 +316,6 @@ private:
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;      // 当前底盘总状态机状态。
     CHASSIS_Status_E chassis_status_last_ = CHASSIS_STOP; // 当前底盘总状态机状态。（依旧是每个模式都赋值，用于进入自动模式时进行初始化）
 	
-	
-
 #if !USE_RC10_AIRJOY
     RmPocketData_t airjoy_data_; // 摇杆值为 -1 ~ 1
 #else
