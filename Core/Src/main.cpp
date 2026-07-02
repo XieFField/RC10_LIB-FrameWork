@@ -87,7 +87,7 @@ extern "C"
  * @retval int
  */
 int main(void)
-    {
+{
 
 
   /* USER CODE END 1 */

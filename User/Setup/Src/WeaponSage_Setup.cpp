@@ -287,7 +287,7 @@ void Robot_WeaponSage_Setup::manualControl()
 	this->idle();
     if(last_weaponSage_status_ != WEAPONSAGE_MANUAL_CONTROL)
     {
-        this->setClawSpeedOutLimit(3000.0f);
+        this->setClawSpeedOutLimit(3500.0f);
         // 获取当前爪子实际位置，判定逻辑状态
         float current_claw_theta = fmax(fmax(current_pos_.claw_1_pos_,current_pos_.claw_2_pos_),current_pos_.claw_3_pos_); // 这里以claw_1为代表，假设三个爪子位置一致
         float current_arm_pos= this->get_CurrentPos().arm_pos_;
@@ -415,14 +415,14 @@ void Robot_WeaponSage_Setup::manualControl()
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
     if(last_weaponSage_status_ != WEAPONSAGE_MANUAL_CONTROL||manual_RC10_ctrlForgrip_.last_Dpad_acting_state!=0)
     {
-        this->setClawSpeedOutLimit(3000.0f);
+        this->setClawSpeedOutLimit(3500.0f);
 		//this->idle();
         // 获取当前爪子实际位置，判定逻辑状态
         float current_claw_theta = fmax(fmax(current_pos_.claw_1_pos_,current_pos_.claw_2_pos_),current_pos_.claw_3_pos_); // 以最大闭合角为为夹爪的角度进行计算；
         float current_arm_pos= this->get_CurrentPos().arm_pos_;
         
         int8_t current_claw_logical = (current_claw_theta > initData_.max_clawAngle_ * 0.5f) ? 1 : 0;
-        int8_t current_arm_logical = (current_arm_pos > initData_.max_arm_angle_ * 0.5f) ? 1 : 0;
+        int8_t current_arm_logical = (abs(current_arm_pos) > initData_.max_arm_angle_ * 0.5f) ? 1 : 0;
 
         // 记录状态
         ctrl_status_.last_manual_claw_state = current_claw_logical;
@@ -533,11 +533,15 @@ void Robot_WeaponSage_Setup::manualControl()
 void Robot_WeaponSage_Setup::idle()
 {
 	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-	if(last_weaponSage_status_!=WEAPONSAGE_IDLE)
-		this->setClawSpeedOutLimit(3000.0f);
+	if(last_weaponSage_status_!=WEAPONSAGE_IDLE && last_weaponSage_status_ != WEAPONSAGE_AUTOCONTROL)
+		this->setClawSpeedOutLimit(3500.0f);
 	{
 		this->last_pos_ = this->get_CurrentPos();
-		this->target_pos_=this->last_pos_;
+		this->target_pos_.claw_1_pos_ = this->last_pos_.claw_1_pos_;
+        this->target_pos_.claw_2_pos_ = this->last_pos_.claw_2_pos_;
+        this->target_pos_.claw_3_pos_ = this->last_pos_.claw_3_pos_;
+        this->target_pos_.launch_pos_ = this->last_pos_.launch_pos_;
+        this->target_pos_.wrist_pos_ = this->last_pos_.wrist_pos_;
 		last_weaponSage_status_=WEAPONSAGE_IDLE;
 
 	}
@@ -988,7 +992,6 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                 now_new_state_=WeaponSage_Setup::STATE_START_1;
                 auto_ctrl_.auto_ctrl1=false;
                 auto_control_state_=0;
-                this->idle(); //进入idle状态
                 break;
             }
             default:
@@ -1108,7 +1111,6 @@ void Robot_WeaponSage_Setup::autoControl()
             }
             else
             {
-                this->idle();
                 auto_control_state_=0;
             }
             break;
@@ -1669,7 +1671,7 @@ float claw_close_time=0.4f;
 float claw_untight_time=0.4f;
 bool Robot_WeaponSage_Setup::Close_TargetClaw()
 {
-    this->setClawSpeedOutLimit(3000.0f);
+    this->setClawSpeedOutLimit(3500.0f);
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
    
     auto_ctrl_.claw_flag[0]=ctrl_status_.is_claw_1_closed;

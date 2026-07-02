@@ -644,7 +644,7 @@ void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
     path_line_.plan_reset();
 	// 合体地点和等待地点的切换
     path_line_.Add_Start_Point(robot_pos_);
-	if((_tool_Abs(yaw - 180.0f) > 10.0f)
+	if(_tool_Abs(yaw - 180.0f) > 10.0f)
 	{
 		
 	}
