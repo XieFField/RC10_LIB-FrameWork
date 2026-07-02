@@ -37,6 +37,8 @@ typedef struct
     float max_arm_rate_;
     float dock_height_;
     float wrist_protect_;
+	bool is_Arm_fast;
+	float min_arm_rate_;
     float claw_untight ;
     float wrist_gearRatio_; //手腕减速比，手腕电机转一圈，�??�??关节�??多少�?? 360度，直驱
     float launch_Ratio_; // �??升减速比，抬升电机转一圈，�??�??关节移动多少�??
@@ -182,7 +184,7 @@ public:
     bool setWrist_angle(float angle);
     bool setArm_angle(float angle);
     bool setLaunch_angle(float angle);
-
+	bool setArm_angle_slow(float angle);
 
 
     void setCtrlMode(WeaponSage::WeaponSage_CtrlMode_S mode)
@@ -333,6 +335,7 @@ protected:
 
         return current + step;
     }
+	float arm_speed_ =initData_.max_arm_rate_;
 };
 
 
