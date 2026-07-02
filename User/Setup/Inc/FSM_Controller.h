@@ -150,6 +150,8 @@ private:
     KSTarget_t last_KStarget = {0};
 
     uint8_t cmd_to_r2_cnt = 0;
+    float cmd_send_start_time_ = 0.0f;  // 当前 cmd 开始发送的时间戳（秒）
+    uint8_t last_recv_cmd_ = 0;         // 上一次收到的 cmd，用于检测变化
 };
 
 #endif

@@ -9,16 +9,16 @@ void FSM_Controller::loop()
     if (!init_flag_)
         return;
 
-    if (!test_led && test_led < 100)
-    {
-        Serial1Protocol::getInstance()->sendStop();
-        test_led = 101;
-    }
-    else if (test_led != 0 && test_led < 100)
-    {
-        Serial1Protocol::getInstance()->send_cmd_to_R2(test_led);
-        test_led = 101;
-    }
+    // if (!test_led && test_led < 100)
+    // {
+    //     Serial1Protocol::getInstance()->sendStop();
+    //     test_led = 101;
+    // }
+    // else if (test_led != 0 && test_led < 100)
+    // {
+    //     Serial1Protocol::getInstance()->send_cmd_to_R2(test_led);
+    //     test_led = 101;
+    // }
 
 #if !USE_RC10_AIRJOY
     CrsfReceiver::GetInstance(&huart7)->send_kfsandSpear(crsf_send_s.rsf_send_data.kfs1, crsf_send_s.rsf_send_data.kfs2,
@@ -283,6 +283,26 @@ void FSM_Controller::set_cmd_to_R2()
 {
     if (airjoy_data_.page != 0x01)
     {
+        // --- cmd 变化检测：新指令重置计时 ---
+        if (airjoy_data_.recv_command_command != last_recv_cmd_)
+        {
+            last_recv_cmd_ = airjoy_data_.recv_command_command;
+            cmd_send_start_time_ = (airjoy_data_.recv_command_command != 0)
+                ? TimeStamp::getInstance().getSeconds()
+                : 0.0f;
+        }
+
+        // --- 4 秒超时：自动停止 ---
+        if (cmd_send_start_time_ > 0.0f
+            && TimeStamp::getInstance().getSeconds() - cmd_send_start_time_ > 4.0f)
+        {
+            Serial1Protocol::getInstance()->sendStop();
+            send_cmd = SEND_NONE;
+            cmd_to_r2_cnt = airjoy_data_.recv_command_total_cnt; // 阻止后续发送
+            cmd_send_start_time_ = 0.0f;
+        }
+
+        // --- 原有发送逻辑不变 ---
         if(cmd_to_r2_cnt < airjoy_data_.recv_command_total_cnt)
         {
             if (airjoy_data_.recv_command_command != 0)
