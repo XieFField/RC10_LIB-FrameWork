@@ -482,7 +482,7 @@ private:
     void Path_lock_point(Vector2D lock_point)
     {
         float lock_err = (robot_pos_ - lock_point).magnitude();
-        if (airjoy_data_.SWA == 0x00 && chassis_status_ == CHASSIS_AUTO_CONTROL_CZ_R2)
+        if (chassis_status_ == SEMI_AUIO_CZ_FIT && (Path_end_point.x!=CZ_point.fit_end_pos[RB_Flag].x||Path_end_point.y!=CZ_point.fit_end_pos[RB_Flag].y))
         {
             speed = path_lock_r2.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
             pid_dead_flag = path_lock_r2.get_is_in_dead_zone();
