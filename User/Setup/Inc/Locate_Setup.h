@@ -112,7 +112,6 @@ public:
     }
 
     Point2D get_ArmPos_inWorld(){return arm_pose_inWorld_;}
-
     Point3D get_RobotPos_inWorld(){return robot_pose_inWorld_;}
     Point3D get_RobotSpeed_inWorld(){return robot_speed_inworld_;}
 //    Point3D get_LidarPos_inWorld(){return lidar_pose_inWorld_;}

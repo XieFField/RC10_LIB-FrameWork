@@ -705,9 +705,50 @@ void FSM_Controller::auto_ctrl()
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x01 && airjoy_data_.SWD == 0x00) // 竞技场 机械臂模式
         {
             weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
-            arm_setup_->setArmStatus(ARM_COMP_SEMI_CONTROL);
+
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_COMP_ARM);
 
+            #if CHALLENGE_3ZONE //挑战赛3区专用代码
+            arm_setup_->setArmStatus(ARM_CHALLENGE_3ZONE);
+            //arm_setup_->setArmStatus(ARM_IDLE);
+            chassis_setup_->setChassisStatus(SEMI_AUIO_CZ_ARM_Challenge);
+            static uint8_t is_click = 0;
+            if (airjoy_data_.LB == 1 && is_click == 0)
+            {
+                arm_setup_->set_c3z_start(true);
+                chassis_setup_->setPathAutoStart(1);
+                is_click = 1;
+            }
+            else if (airjoy_data_.LB == 0)
+            {
+                is_click = 0;
+            }
+
+            if(arm_setup_->is_c3z_start())
+            {
+                if(arm_setup_->is_c3z_pickup_done()) //拾取完成
+                {
+                    chassis_setup_->Receive_CZ_Catch_flag(false);
+                }
+
+                if(arm_setup_->is_c3z_putdown_done()) //放下完成
+                {
+                    chassis_setup_->Receive_CZ_Arm_flag(false);
+                }
+
+                if(chassis_setup_->Get_CZ_Catch_flag()) //可以捡起
+                {
+                    arm_setup_->set_c3z_can_pickup(true);
+                }
+
+                if(chassis_setup_->Get_CZ_Arm_flag()) //可以放下
+                {
+                    arm_setup_->set_c3z_can_putdown(true);
+                }
+            }
+
+            #else
+            arm_setup_->setArmStatus(ARM_COMP_SEMI_CONTROL);
             chassis_setup_->setChassisStatus(SEMI_AUIO_CZ_ARM);
             
             if (chassis_setup_->Get_CZ_Arm_flag())
@@ -715,6 +756,7 @@ void FSM_Controller::auto_ctrl()
 
             if(arm_setup_->is_putdown_done())
                 chassis_setup_->Receive_CZ_Arm_flag(false);
+            #endif  
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x01 && airjoy_data_.SWD == 0x01) // 竞技场 武器模式
         {

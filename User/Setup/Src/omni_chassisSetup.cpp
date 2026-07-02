@@ -59,7 +59,6 @@ void OmniChassis_Setup::CB_Path_Check(void)
     {
         if (CB_point.CB_End_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_End_pos[RB_Flag].y == curve.Get_End_point().y && path_line_.Is_End() == false)
         {
-            CB_flag.FF_flag=true;
             CB_flag.Retreat_flag = true;
 			if(robot_pos_.y>CB_point.spin_y&&WeaponSage_Start == false)
 			{
@@ -274,11 +273,10 @@ void OmniChassis_Setup::loop()
         break;
     }
 
-#if USE_RC10_AIRJOY
     //----------------------------------             CZ_新状态机              -----------------------------------//
     case CHASSIS_MANUAL_CONTROL_CZ:
     {
-        CHASSIS_MANUAL(1.0f, 1.0f, 2.0f, true);
+        CHASSIS_MANUAL(1.0f, 1.0f, 2.0f, true,true);
         chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
         chassis_status_last_ = chassis_status_;
         break;
@@ -306,7 +304,7 @@ void OmniChassis_Setup::loop()
             }
             else
             {
-                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true);
+                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true,true);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
         }
@@ -340,7 +338,7 @@ void OmniChassis_Setup::loop()
                     CZ_flag.R1_FB_index = 0;
                     CZ_R1_Selection_Planning();
                 }
-                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f);
+                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f,true,true);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
         }
@@ -348,86 +346,51 @@ void OmniChassis_Setup::loop()
     }
     case SEMI_AUIO_CZ_WEAPON:
     {
-
         mode_init();
         if (airjoy_data_.SWE == 0)
         {
-            CHASSIS_MANUAL(1.0f, 1.0f, 2.0f, true);
+            CHASSIS_MANUAL(1.0f, 1.0f, 2.0f, true,true);
             chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
         }
         else if (airjoy_data_.SWE == 1)
         {
-            CHASSIS_MANUAL(1.0f, 1.0f, 0.0f, false);
+            CHASSIS_MANUAL(1.0f, 1.0f, 0.0f, false,true);
             chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, target_yaw * PI / 180.0f);
         }
         break;
     }
-
-#else
-    //----------------------------------             CZ_R1              --------------------------------------//
-    case CHASSIS_AUTO_CONTROL_CZ_R1:
+    
+    case SEMI_AUIO_CZ_ARM_Challenge:
     {
-        static int far_flag = 0;
-        static int near_flag = 0;
         mode_init();
-
-        if (airjoy_data_.right_x > -0.05f)
-            far_flag = 1;
-        else if (far_flag > 0 && airjoy_data_.right_x < -0.80f && CZ_flag.R1_FB_index == 0)
+        CZ_ARM_Challenge_Path_Init();
+        
+        static bool catch_flag =false;
+        if (CZ_point.catch_pos[RB_Flag].x == curve.Get_End_point().x && CZ_point.catch_pos[RB_Flag].y == curve.Get_End_point().y)
         {
-            if (far_flag > 5)
-            {
-                if (CZ_flag.R1_RL_index < 2)
-                    CZ_flag.R1_RL_index++;
-                CZ_R1_Selection_Planning();
-                far_flag = 0;
-            }
-            else
-            {
-                far_flag++;
-            }
+            catch_flag = true;
         }
-        else if (CZ_flag.R1_FB_index == 1)
+        else if (catch_flag == true)
         {
-            far_flag = 0;
+            catch_flag = false;
+            pid_dead_flag = false;
+            CZ_Catch = true;
+        }
+        
+        if (CZ_point.R1_pos[1][RB_Flag].x == curve.Get_End_point().x && CZ_point.R1_pos[1][RB_Flag].y == curve.Get_End_point().y&&path_line_.Is_End() == true)
+        {
+            target_yaw=180.0f;
         }
 
-        if (airjoy_data_.right_x < 0.05f)
-            near_flag = 1;
-        else if (near_flag > 0 && airjoy_data_.right_x > 0.80f && CZ_flag.R1_FB_index == 0)
-        {
-            if (near_flag > 5)
-            {
-                if (CZ_flag.R1_RL_index > 0)
-                    CZ_flag.R1_RL_index--;
-                CZ_R1_Selection_Planning();
-                near_flag = 0;
-            }
-            else
-            {
-                near_flag++;
-            }
-        }
-        else if (CZ_flag.R1_FB_index == 1)
-        {
-            near_flag = 0;
-        }
-
-        if (flag == 1)
-        {
-            flag_reset();
-            CZ_flag.R1_FB_index = (CZ_flag.R1_FB_index + 1) % 2;
-            CZ_R1_Selection_Planning();
-            flag = 0;
-        }
-
+        
         if (path_line_.Is_End() == false)
         {
             curve = path_line_.get_bezier_curve();
-            if (true)
+            if (CZ_Catch == false)
                 v_plan();
             else
                 Path_lock_point(curve.Get_Start_point());
+            chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
         }
         else
         {
@@ -435,47 +398,22 @@ void OmniChassis_Setup::loop()
             if (pid_dead_flag == false)
             {
                 Path_lock_point(Path_end_point);
+                chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
             }
             else
             {
-                if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
-                    Chassis_Target.VY = (-airjoy_data_.left_x) * 0.6f * this->is_chassis_reverse_;
-                else
-                    Chassis_Target.VY = 0.0f;
-                Chassis_Target.VX = 0.0f;
+                if (CZ_Arm == false && CZ_flag.R1_FB_index == 1)
+                {
+                    CZ_flag.R1_FB_index = 0;
+                    CZ_R1_Selection_Planning();
+                }
+                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f,true,true);
+                chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
         }
-
-        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
         break;
     }
 
-    //----------------------------------             CZ_R2              --------------------------------------//
-    case CHASSIS_AUTO_CONTROL_CZ_R2:
-    {
-        mode_init();
-        if (flag == 1)
-        {
-            flag = 0;
-            CZ_R2_Selection_Planning();
-        }
-        if (path_line_.Is_End() == false)
-        {
-            curve = path_line_.get_bezier_curve();
-            if (true)
-                v_plan();
-            else
-                Path_lock_point(curve.Get_Start_point());
-        }
-        else
-        {
-            Path_lock_point(Path_end_point);
-        }
-
-        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
-        break;
-    }
-#endif
     case CHASSIS_STOP:
     {
         target_yaw = yaw;
@@ -707,7 +645,41 @@ void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
 
     // 合体地点和等待地点的切换
     path_line_.Add_Start_Point(robot_pos_);
-    path_line_.Add_Point(CZ_point.fit_pos[2][RB_Flag], path_param.line);
+    if(CZ_flag.fit_pos_index==0)
+    {
+        if(RB_Flag==1)
+        {
+            if(robot_pos_.x>CZ_point.fit_pos[2][1].x)
+            {
+                path_line_.Add_Point(CZ_point.fit_pos[2][RB_Flag], path_param.line);
+            }
+        }
+        else if(RB_Flag==0)
+        {
+            if(robot_pos_.x<CZ_point.fit_pos[2][0].x)
+            {
+                path_line_.Add_Point(CZ_point.fit_pos[2][RB_Flag], path_param.line);
+            }
+        }
+
+    }
+    else if(CZ_flag.fit_pos_index==1)
+    {
+        if(RB_Flag==1)
+        {
+            if(robot_pos_.x<CZ_point.fit_pos[2][1].x)
+            {
+                path_line_.Add_Point(CZ_point.fit_pos[2][1], path_param.line);
+            }
+        }
+        else if(RB_Flag==0)
+        {
+            if(robot_pos_.x>CZ_point.fit_pos[2][0].x)
+            {
+                path_line_.Add_Point(CZ_point.fit_pos[2][0], path_param.line);
+            }
+        }
+    }
     path_line_.Add_End_Point(CZ_point.fit_pos[CZ_flag.fit_pos_index][RB_Flag], path_param.end);
     Path_end_point = path_line_.Get_End_Point();
 }
@@ -726,8 +698,150 @@ void OmniChassis_Setup::CZ_FIT_R2_Selection_Planning(void)
     Path_end_point = path_line_.Get_End_Point();
 }
 
+void OmniChassis_Setup::CZ_ARM_Challenge_Path_Init(void)
+{
+    static int right_flag = 0;
+    static int left_flag = 0;
+    static bool first_flag = true;
 
+    static bool up_click = false;
+    static bool down_click = false;
+        if (flag == 1)
+        {
+            if (robot_pos_.x < 0.0f || robot_pos_.x > 6.0f || robot_pos_.y > 10.0f || robot_pos_.y < 0.0f)
+                return;
+            else
+            {
+                CZ_flag.R1_RL_index=2;
+                flag = 0;
+                flag_reset();
+                path_line_.Reset();
+                path_line_.plan_reset();
+                path_line_.Add_Start_Point(robot_pos_);
+                path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
+                path_line_.Add_Point(CZ_point.uphill_transitiont_pos[RB_Flag], path_param.start);
+                path_line_.Add_Point({CZ_point.uphill_transitiont_pos_1[RB_Flag].x,CZ_point.uphill_transitiont_pos_1[RB_Flag].y+0.2f}, path_param.start);
+                if(RB_Flag==true)
+                {
+                    path_param.curve.targetPos = 1.0f;
+                }
+                else if(RB_Flag==false)
+                {
+                    path_param.curve.targetPos = 2.0f;
+                }
+                path_line_.Add_Point({CZ_point.uphill_transitiont_pos_1[RB_Flag].x+(RB_Flag?(0.5f):(-0.5f)),CZ_point.uphill_transitiont_pos_1[RB_Flag].y}, path_param.curve);
+                path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][RB_Flag], path_param.cz);
+                path_param.curve.targetPos = 999.0f;
+                Path_end_point = path_line_.Get_End_Point();   
+            }
+        }
 
+    // 上键放置物块
+    if (airjoy_data_.d_pad_up == 1 && up_click == false)
+    {
+        up_click = true;
+        CZ_flag.R1_FB_index = 1;
+        CZ_R1_Selection_Planning();
+    }
+    else if (airjoy_data_.d_pad_up == 0)
+    {
+        up_click = false;
+    }
+
+    // 下键退回准备
+    if (airjoy_data_.d_pad_down == 1 && down_click == false)
+    {
+        down_click = true;
+        CZ_Catch_Selection_Planning();
+    }
+    else if (airjoy_data_.d_pad_down == 0)
+    {
+        down_click = false;
+    }
+
+    // 右摇杆往左拨,蓝场远，红场近
+    if (airjoy_data_.right_x > -0.05f)
+        right_flag = 1;
+    else if (right_flag > 0 && airjoy_data_.right_x < -0.80f && CZ_flag.R1_FB_index == 0)
+    {
+        if (right_flag > 5)
+        {
+            if (RB_Flag == true)
+            {
+                if (CZ_flag.R1_RL_index > 0)
+                    CZ_flag.R1_RL_index--;
+            }
+            else if (RB_Flag == false)
+            {
+                if (CZ_flag.R1_RL_index < 2)
+                    CZ_flag.R1_RL_index++;
+            }
+            CZ_R1_Selection_Planning();
+            right_flag = 0;
+        }
+        else
+        {
+            right_flag++;
+        }
+    }
+    else if (CZ_flag.R1_FB_index == 1)
+    {
+        right_flag = 0;
+    }
+
+    // 右摇杆往右拨,蓝场近，红场远
+    if (airjoy_data_.right_x < 0.05f)
+        left_flag = 1;
+    else if (left_flag > 0 && airjoy_data_.right_x > 0.80f && CZ_flag.R1_FB_index == 0)
+    {
+        if (left_flag > 5)
+        {
+            if (first_flag)
+            {
+                first_flag = false;
+                CZ_flag.R1_RL_index = 1;
+            }
+            else
+            {
+                if (RB_Flag == true)
+                {
+                    if (CZ_flag.R1_RL_index < 2)
+                        CZ_flag.R1_RL_index++;
+                }
+                else if (RB_Flag == false)
+                {
+                    if (CZ_flag.R1_RL_index > 0)
+                        CZ_flag.R1_RL_index--;
+                }
+            }
+            CZ_R1_Selection_Planning();
+            left_flag = 0;
+        }
+        else
+        {
+            left_flag++;
+        }
+    }
+    else if (CZ_flag.R1_FB_index == 1)
+    {
+        left_flag = 0;
+    }
+}
+
+void OmniChassis_Setup::CZ_Catch_Selection_Planning(void)
+{
+    if (robot_pos_.y < 10.02f || robot_pos_.y > 11.6f || robot_pos_.x < 0.0f || robot_pos_.x > 6.0f)
+        return;
+    target_yaw=-90.0f;
+    CZ_flag.R1_RL_index=1;
+    flag_reset();
+    path_line_.Reset();
+    path_line_.plan_reset();
+    path_line_.Add_Start_Point(robot_pos_);
+    path_line_.Add_Point(CZ_point.catch_pos[RB_Flag], path_param.cz);
+    path_line_.Add_End_Point(CZ_point.R1_pos[CZ_flag.R1_RL_index][RB_Flag], path_param.cz);
+    Path_end_point = path_line_.Get_End_Point();
+}
 
 /*
 void OmniChassis_Setup::CZ_R2_Selection_Planning(void)
@@ -753,5 +867,121 @@ void OmniChassis_Setup::CZ_R2_Selection_Planning(void)
 
     Path_end_point = path_line_.Get_End_Point();
 }
+
+
+#if USE_RC10_AIRJOY
+#else
+    //----------------------------------             CZ_R1              --------------------------------------//
+    case CHASSIS_AUTO_CONTROL_CZ_R1:
+    {
+        static int far_flag = 0;
+        static int near_flag = 0;
+        mode_init();
+
+        if (airjoy_data_.right_x > -0.05f)
+            far_flag = 1;
+        else if (far_flag > 0 && airjoy_data_.right_x < -0.80f && CZ_flag.R1_FB_index == 0)
+        {
+            if (far_flag > 5)
+            {
+                if (CZ_flag.R1_RL_index < 2)
+                    CZ_flag.R1_RL_index++;
+                CZ_R1_Selection_Planning();
+                far_flag = 0;
+            }
+            else
+            {
+                far_flag++;
+            }
+        }
+        else if (CZ_flag.R1_FB_index == 1)
+        {
+            far_flag = 0;
+        }
+
+        if (airjoy_data_.right_x < 0.05f)
+            near_flag = 1;
+        else if (near_flag > 0 && airjoy_data_.right_x > 0.80f && CZ_flag.R1_FB_index == 0)
+        {
+            if (near_flag > 5)
+            {
+                if (CZ_flag.R1_RL_index > 0)
+                    CZ_flag.R1_RL_index--;
+                CZ_R1_Selection_Planning();
+                near_flag = 0;
+            }
+            else
+            {
+                near_flag++;
+            }
+        }
+        else if (CZ_flag.R1_FB_index == 1)
+        {
+            near_flag = 0;
+        }
+
+        if (flag == 1)
+        {
+            flag_reset();
+            CZ_flag.R1_FB_index = (CZ_flag.R1_FB_index + 1) % 2;
+            CZ_R1_Selection_Planning();
+            flag = 0;
+        }
+
+        if (path_line_.Is_End() == false)
+        {
+            curve = path_line_.get_bezier_curve();
+            if (true)
+                v_plan();
+            else
+                Path_lock_point(curve.Get_Start_point());
+        }
+        else
+        {
+            // 锁点后切换为半手操
+            if (pid_dead_flag == false)
+            {
+                Path_lock_point(Path_end_point);
+            }
+            else
+            {
+                if (_tool_Abs(airjoy_data_.left_x) > 0.05f)
+                    Chassis_Target.VY = (-airjoy_data_.left_x) * 0.6f * this->is_chassis_reverse_;
+                else
+                    Chassis_Target.VY = 0.0f;
+                Chassis_Target.VX = 0.0f;
+            }
+        }
+
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+        break;
+    }
+
+    //----------------------------------             CZ_R2              --------------------------------------//
+    case CHASSIS_AUTO_CONTROL_CZ_R2:
+    {
+        mode_init();
+        if (flag == 1)
+        {
+            flag = 0;
+            CZ_R2_Selection_Planning();
+        }
+        if (path_line_.Is_End() == false)
+        {
+            curve = path_line_.get_bezier_curve();
+            if (true)
+                v_plan();
+            else
+                Path_lock_point(curve.Get_Start_point());
+        }
+        else
+        {
+            Path_lock_point(Path_end_point);
+        }
+
+        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+        break;
+    }
+#endif
 
 */

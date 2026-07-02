@@ -20,6 +20,7 @@ extern "C" {
 #include "APP_tool.h"
 
 #define USE_RC10_AIRJOY 1 //启用自制遥控器
+#define CHALLENGE_3ZONE 1 //挑战赛3区专用代码
 
 typedef enum{
     ALL_STOP, //STOP状态
@@ -74,6 +75,8 @@ typedef enum{
     ARM_DEBUG,
     ARM_CALIBRATE, //校准
 
+    ARM_CHALLENGE_3ZONE, //挑战赛3区专用代码
+
     ARM_COMBINE_IDLE, //合体待机
 }ARM_Status_E;
 
@@ -91,6 +94,8 @@ typedef enum{
     SEMI_AUIO_CZ_FIT,//三区合体模式
     SEMI_AUIO_CZ_ARM,//三区机械臂模式
     SEMI_AUIO_CZ_WEAPON,//三区武器模式
+    
+    SEMI_AUIO_CZ_ARM_Challenge,
     
     CHASSIS_AUTO_CONTROL_CZ_R1, //对抗区R1自身自动
     CHASSIS_AUTO_CONTROL_CZ_R2, //对抗区R2合体自动
