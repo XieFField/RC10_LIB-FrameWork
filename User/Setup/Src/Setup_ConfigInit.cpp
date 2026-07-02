@@ -102,6 +102,10 @@ dji_motor_Init();
 dji_motor_demo.init(&m2006_1);
 #endif
 
+#if DEBUG_EL05_MotorDemo
+    EL05_debug_demo_init();
+#endif
+
 /*============================== debug   speedplanner ===============================*/
 #if SPEEDPLANNER_DEMO_DEBUG
     speedplanner_demo.init();
@@ -124,6 +128,12 @@ Swerve_Task_Demo swerve_task_demo; // 轮式舵轮底盘调试任务实例
 
 void ALL_Setup_ConfigInit(void)
 {
+#if DEBUG_EL05_MotorDemo
+    TimeStamp::getInstance().init(&htim4);
+    debug_init();
+    return;
+#endif
+
     m_serial1->init(&huart2);
     HWT101CT* imu = HWT101CT::GetInstance(&huart1);
     imu->InitUART();
@@ -302,5 +312,3 @@ void CAN_Motor_Init(void)
 
     Weapon_Elbow.reset_controlFrequency(100); // 肘部电机降到 100Hz，减轻总线负载
 }
-
-

@@ -1442,6 +1442,16 @@
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\chassis.cpp</FilePath>
             </File>
+            <File>
+              <FileName>Motor_EL05_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\Motor_EL05_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>Motor_EL05_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\Motor_EL05_demo.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
