@@ -638,13 +638,21 @@ void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
 {
     if (robot_pos_.y < 10.02f || robot_pos_.y > 11.6f || robot_pos_.x < 0.0f || robot_pos_.x > 6.0f)
         return;
-    // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw = -90.0f;
-    path_line_.Reset();
+	
+	path_line_.Reset();
     path_line_.plan_reset();
-
-    // 合体地点和等待地点的切换
+	// 合体地点和等待地点的切换
     path_line_.Add_Start_Point(robot_pos_);
+	if((_tool_Abs(yaw - 180.0f) > 10.0f)
+	{
+		
+	}
+	else
+	{
+		target_yaw = 180.0f;
+	}
+	
+    
     if(CZ_flag.fit_pos_index==0)
     {
         if(RB_Flag==1)
@@ -680,6 +688,7 @@ void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
             }
         }
     }
+	
     path_line_.Add_End_Point(CZ_point.fit_pos[CZ_flag.fit_pos_index][RB_Flag], path_param.end);
     Path_end_point = path_line_.Get_End_Point();
 }
