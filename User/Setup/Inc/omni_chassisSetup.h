@@ -152,7 +152,7 @@ typedef struct
     // 下界10.02f上界是11.52f
     // Vector2D fit_wait_pos = {2.17f, 10.05f};
     // Vector2D fit_transition_pos = {3.0f, 11.5f};
-    Vector2D fit_end_pos[2] = {{6.0f - 5.31f, 10.19f}, {5.31f, 10.19f}};
+    Vector2D fit_end_pos[2] = {{6.0f - 5.31f, 10.19f}, {5.32f, 10.19f}};
 
     // 左中右   或者   先后
     float set_skew = 0.35f;

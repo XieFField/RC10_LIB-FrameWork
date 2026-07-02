@@ -238,8 +238,19 @@ void OmniChassis_Setup::loop()
     case SEMI_AUIO_CZ_FIT:
     {
         static bool yaw_lock = false;
+        static bool yaw_tra=false;
         mode_init();
         CZ_FIT_Path_Init();
+        if (CZ_point.R1_pos[2][RB_Flag].x == curve.Get_End_point().x && CZ_point.fit_end_pos[RB_Flag].y == curve.Get_End_point().y)
+        {
+            yaw_tra = true;
+        }
+        else if (yaw_tra == true)
+        {
+            yaw_tra = false;
+            target_yaw = 180.0f;
+        }
+        
         if (CZ_flag.fit_yaw_flag == true)
         {
             if (_tool_Abs(yaw - (-90.0f)) < 15.0f)
@@ -261,7 +272,7 @@ void OmniChassis_Setup::loop()
         else
         {
             // 锁点后切换为半手操
-            if (pid_dead_flag == false || yaw_lock == true)
+            if (pid_dead_flag == false || yaw_lock == true || (Path_end_point.x==CZ_point.fit_end_pos[RB_Flag].x&&Path_end_point.y==CZ_point.fit_end_pos[RB_Flag].y))
             {
                 if (_tool_Abs(yaw - (-90.0f)) < 1.0f)
                 {
@@ -607,7 +618,7 @@ void OmniChassis_Setup::CZ_FIT_R2_Selection_Planning(void)
     if (robot_pos_.y < 10.02f || robot_pos_.y > 11.6f || robot_pos_.x < 0.0f || robot_pos_.x > 6.0f)
         return;
     // 夹杆流程只规划起点到固定终点的简化路径。
-    if (_tool_Abs(yaw - (-90.0f)))
+    if (_tool_Abs(yaw - (-90.0f))<10.0f)
     {
         target_yaw = -90.0f;
     }
