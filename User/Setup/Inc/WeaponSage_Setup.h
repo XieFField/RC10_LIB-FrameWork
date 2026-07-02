@@ -93,7 +93,13 @@ namespace WeaponSage_Setup
         STATE_DONE_1,
     }auto_NEW_GRABstate_S;
 
-
+    typedef enum{
+        BCAK_STATE_START,
+        BACK_SAGE_ARM_MOVE,
+        BACK_WRIST_ADJUST,
+        BACK_CLAW_DOWN,
+        BACK_DONE,
+    }weapon_BACKstate_S;
     typedef struct{
         float last_right_stick_x = 0.0f;
         float last_right_stick_y = 0.0f;
@@ -355,7 +361,7 @@ private:
     float WristToClosest_negative(float current_angle);
     bool Sage_to_high();
     bool Sage_to_low();
-
+    bool Sage_back();
     
 	WeaponSage_Setup::auto_ctrl_S auto_ctrl_;
 
@@ -381,6 +387,7 @@ private:
 	
 	volatile float wrist_encoder_angle_ = 0.0f;
     WeaponSage_Setup::manual_RC10_ctrlForgrip_S manual_RC10_ctrlForgrip_;
+    WeaponSage_Setup::weapon_BACKstate_S now_back_state_ =WeaponSage_Setup::BCAK_STATE_START;
 };
 
 extern WeaponSage_InitData_S initData_;
