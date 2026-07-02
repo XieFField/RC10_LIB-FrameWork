@@ -1322,7 +1322,7 @@ bool Robot_WeaponSage_Setup::D_pad_acting()
         auto_ctrl_.flag.is_untight=false;
     }else if(manual_RC10_ctrlForgrip_.Dpad_acting_state==1)
     {
-        bool Sage_up_flag=Sage_to_high();
+        bool Sage_up_flag=Sage_back();
         
         if(Sage_up_flag)
         {
@@ -1557,6 +1557,82 @@ bool Robot_WeaponSage_Setup::Sage_to_low()
     return false;
 }
 
+
+bool Robot_WeaponSage_Setup::Sage_back()
+{
+    switch(now_back_state_)
+    {
+        case WeaponSage_Setup::BCAK_STATE_START:
+        {
+            
+            break;
+        }
+        case WeaponSage_Setup::BACK_SAGE_ARM_MOVE:
+        {
+            this->setArm_angle(0.0f);
+            if(abs(current_pos_.arm_pos_-0.0f)<1.0f)
+            {
+                this->Close_TargetClaw_Untight();
+                if(auto_ctrl_.flag.is_untight)
+                {
+                    this->setLaunch_angle(0.9*initData_.max_launchHeight_);
+                    if(abs(current_pos_.launch_pos_-0.9*initData_.max_launchHeight_)<0.02f)
+                    {
+                        now_back_state_=WeaponSage_Setup::BACK_WRIST_ADJUST;
+                        auto_ctrl_.flag.is_untight=false;
+                    }
+                }
+            }
+            break;
+        }
+        case WeaponSage_Setup::BACK_WRIST_ADJUST:
+        {
+            this->Close_TargetClaw();
+            if(auto_ctrl_.flag.is_clawed)
+            {
+                this->setLaunch_angle(initData_.max_launchHeight_);
+                if(abs(current_pos_.launch_pos_-initData_.max_launchHeight_)<0.02f)
+                {
+                    this->setWrist_angle(0.0f);
+                    float current_wrist=normalize_deg_0_360(current_pos_.wrist_pos_);
+                    if(abs(current_wrist-0.0f)<1.0f)
+                    {
+                        now_back_state_=WeaponSage_Setup::BACK_CLAW_DOWN;
+                        auto_ctrl_.flag.is_clawed=false;
+                    }
+                }
+            }
+            break;
+        }
+        case WeaponSage_Setup::BACK_CLAW_DOWN:
+        {
+            this->Close_TargetClaw_Untight1();
+            if(auto_ctrl_.flag.is_untight)
+            {
+                this->setLaunch_angle(0.1*initData_.max_launchHeight_);
+                if(abs(current_pos_.launch_pos_-0.1*initData_.max_launchHeight_)<0.02f)
+                {
+                    now_back_state_=WeaponSage_Setup::BACK_DONE;
+                    auto_ctrl_.flag.is_untight=false;
+                }
+            }
+            break;
+        }
+        case WeaponSage_Setup::BACK_DONE:
+        {
+            this->Close_TargetClaw();   
+            if(auto_ctrl_.flag.is_clawed)
+            {
+                auto_ctrl_.flag.is_clawed=false;
+                now_back_state_=WeaponSage_Setup::BCAK_STATE_START;
+                return true;
+                
+            }
+            break;
+        }
+
+    } 
+}
 
 int8_t close_time_cnt = 0;
 int8_t untight_time_cnt = 0;
