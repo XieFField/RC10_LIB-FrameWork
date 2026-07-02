@@ -1211,6 +1211,16 @@
               <FilePath>..\RC10_LIB\Motor\Src\Motor_DM.cpp</FilePath>
             </File>
             <File>
+              <FileName>Motor_EL05.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\RC10_LIB\Motor\Inc\Motor_EL05.h</FilePath>
+            </File>
+            <File>
+              <FileName>Motor_EL05.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\RC10_LIB\Motor\Src\Motor_EL05.cpp</FilePath>
+            </File>
+            <File>
               <FileName>Motor_GO.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\RC10_LIB\Motor\Src\Motor_GO.cpp</FilePath>
@@ -1482,6 +1492,16 @@
               <FileName>chassis.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\User\Setup\Src\chassis.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Motor_EL05_demo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\debug\Inc\Motor_EL05_demo.h</FilePath>
+            </File>
+            <File>
+              <FileName>Motor_EL05_demo.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\debug\Src\Motor_EL05_demo.cpp</FilePath>
             </File>
           </Files>
         </Group>

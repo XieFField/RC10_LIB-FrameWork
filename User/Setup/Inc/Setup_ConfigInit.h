@@ -29,6 +29,10 @@ extern "C" {
 #include "frame_demo.h"
 #endif
 
+#if DEBUG_EL05_MotorDemo
+#include "Motor_EL05_demo.h"
+#endif
+
 #include "Motor_VESC.h"
 #include <cstdint>
 #include "BSP_CANFrame.h"
@@ -111,4 +115,3 @@ int a = 0;
 
 
 #endif
-

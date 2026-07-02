@@ -10,6 +10,15 @@ suites:
       - jia_docs/tests/tdd/chassis_semantics/run_test.ps1
     purpose: 主底盘语义 doctest 宿主回归入口，使用 FULL_DEBUG 档编译多文件行为分片，覆盖 X-Park/debug9 等调试语义，并串联 app_utils_backend
     expected_result: pass
+  - id: host_cpp.el05_position_mode
+    kind: host_cpp
+    status: active
+    default_level: smoke
+    path: jia_docs/tests/host_cpp/el05_position_mode
+    command: powershell -ExecutionPolicy Bypass -File jia_docs/tests/host_cpp/el05_position_mode/run_test.ps1
+    aliases: []
+    purpose: EL05 私有扩展帧运控位置模式驱动回归，覆盖启动序列、主动反馈配置与 type 2 反馈解析
+    expected_result: pass
   - id: host_cpp.chassis_semantics.slim_smoke
     kind: host_cpp
     status: active
