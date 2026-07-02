@@ -154,7 +154,7 @@ typedef struct
     Vector2D fit_end_pos = {4.83f, 11.5f};
 
     // 左中右   或者   先后
-    float set_skew = 0.28f;
+    float set_skew = 0.35f;
     Vector2D R1_pos[3][2] = {{{1.465f, 11.318f}, {4.43f, 11.318f}}, {{1.465f, 10.765f}, {4.43f, 10.765f}}, {{1.465f, 10.195f}, {4.43f, 10.195f}}};
     Vector2D fit_pos[3][2] = {{{6.0f - fit_wait_pos.x, fit_wait_pos.y}, fit_wait_pos}, {{6.0f - fit_end_pos.x, fit_end_pos.y}, fit_end_pos}, {{6.0f - fit_transition_pos.x, fit_transition_pos.y}, fit_transition_pos}};
     Vector2D R2_pos[3][2] = {{{1.17f, 11.318f}, {4.83f, 11.318f}}, {{1.17f, 10.795f}, {4.83f, 10.795f}}, {{1.17f, 10.225f}, {4.83f, 10.225f}}};
@@ -1220,25 +1220,19 @@ private:
         Chassis_Target.VY = speed.y;
     }
     // 当需要所目标角时第四个参数给false
-    void CHASSIS_MANUAL(float vx_ratio, float vy_ratio, float yaw_ratio = 0.0f, bool yaw_update = true, bool CZ_flag = false)
+    void CHASSIS_MANUAL(float vx_ratio, float vy_ratio, float yaw_ratio = 0.0f, bool yaw_update = true)
     {
-        if (CZ_flag == false)
+        static bool transform_flag=false;
+        if(robot_pos_.y>10.0f && transform_flag==false && robot_pos_.x> (RB_Flag ? (2.25f) : 3.75f))
         {
-            if (_tool_Abs(airjoy_data_.left_x) > 0.1f)
-            Chassis_Target.VX = airjoy_data_.left_x * vx_ratio * this->is_chassis_reverse_;
-            else
-                Chassis_Target.VX = 0.0f;
-            if (_tool_Abs(airjoy_data_.left_y) > 0.1f)
-                Chassis_Target.VY = airjoy_data_.left_y * vy_ratio * this->is_chassis_reverse_;
-            else
-                Chassis_Target.VY = 0.0f;
-            if (_tool_Abs(airjoy_data_.right_x) > 0.1f)
-                Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio * (-1.0f);
-            else
-                Chassis_Target.yaw_rate = 0.0f;
+            transform_flag =true;
+        }
+        else if(robot_pos_.y<8.85f && transform_flag==true && robot_pos_.x< (RB_Flag ? (1.0f) : 5.0f))
+        {
+            transform_flag =false;
+        }
             
-        }        
-        else if (CZ_flag == true)
+        if (transform_flag)
         {
             if (_tool_Abs(airjoy_data_.left_x) > 0.1f)
                 Chassis_Target.VY = airjoy_data_.left_x * vy_ratio * this->is_chassis_reverse_ * (RB_Flag ? (-1) : 1);
@@ -1251,6 +1245,21 @@ private:
                 Chassis_Target.VX = 0.0f;
             if (_tool_Abs(airjoy_data_.right_x) > 0.1f)
                 Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio* (-1.0f);
+            else
+                Chassis_Target.yaw_rate = 0.0f;
+        }
+        else
+        {
+            if (_tool_Abs(airjoy_data_.left_x) > 0.1f)
+            Chassis_Target.VX = airjoy_data_.left_x * vx_ratio * this->is_chassis_reverse_;
+            else
+                Chassis_Target.VX = 0.0f;
+            if (_tool_Abs(airjoy_data_.left_y) > 0.1f)
+                Chassis_Target.VY = airjoy_data_.left_y * vy_ratio * this->is_chassis_reverse_;
+            else
+                Chassis_Target.VY = 0.0f;
+            if (_tool_Abs(airjoy_data_.right_x) > 0.1f)
+                Chassis_Target.yaw_rate = airjoy_data_.right_x * yaw_ratio * (-1.0f);
             else
                 Chassis_Target.yaw_rate = 0.0f;
         }

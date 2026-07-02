@@ -471,9 +471,9 @@ bool ArmSetup::manual_pickup()
 
     if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f)
     {
-        this->set_LaunchHeight(init_data_.pick_up_height_ - 0.005f);
+        this->set_LaunchHeight(init_data_.pick_up_height_);
 
-        if (std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.pick_up_height_) < 0.01f)
+        if (std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.pick_up_height_) < 0.01f && !is_pick)
         {
             is_pick = true;
             pickup_start_time = TimeStamp::getInstance().getSeconds();
