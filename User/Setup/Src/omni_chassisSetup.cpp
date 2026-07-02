@@ -271,12 +271,15 @@ void OmniChassis_Setup::loop()
         }
         else
         {
-            // 锁点后切换为半手操
             if (pid_dead_flag == false || yaw_lock == true || (Path_end_point.x==CZ_point.fit_end_pos[RB_Flag].x&&Path_end_point.y==CZ_point.fit_end_pos[RB_Flag].y))
             {
-                if (_tool_Abs(yaw - (-90.0f)) < 1.0f)
+                if(CZ_flag.fit_yaw_flag==true)
                 {
-                    yaw_lock = false;
+                    if (_tool_Abs(yaw - (-90.0f)) < 1.0f)
+                    {
+                        yaw_lock = false;
+                        CZ_flag.fit_yaw_flag=false;
+                    }   
                 }
                 Path_lock_point(Path_end_point);
                 chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
@@ -419,6 +422,7 @@ void OmniChassis_Setup::CZ_index_reset(void)
     CZ_flag.R2_pos_index = 2;
 }
 
+
 ///////////////////                  三区条件判断             ///////////////////////
 
 void OmniChassis_Setup::CZ_ARM_Path_Init(void)
@@ -526,6 +530,7 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
     {
         up_click = true;
         CZ_FIT_WAIT_Selection_Planning();
+        CZ_flag.R2_pos_index=2;
     }
     else if (airjoy_data_.d_pad_up == 0)
     {
@@ -602,7 +607,7 @@ void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
     path_line_.plan_reset();
     // 合体地点和等待地点的切换
     path_line_.Add_Start_Point(robot_pos_);
-    if (_tool_Abs(yaw - 180.0f) > 15.0f && (robot_pos_.x > 4.45f && RB_Flag == true) || (robot_pos_.x < 1.55f && RB_Flag == false))
+    if (_tool_Abs(_tool_Abs(yaw) - 180.0f) > 15.0f && ((robot_pos_.x > 4.70f && RB_Flag == true) || (robot_pos_.x < (6.0f-4.70f) && RB_Flag == false)))
     {
         path_line_.Add_Point({CZ_point.R1_pos[2][RB_Flag].x, CZ_point.fit_end_pos[RB_Flag].y}, path_param.cz);
     }
@@ -618,7 +623,7 @@ void OmniChassis_Setup::CZ_FIT_R2_Selection_Planning(void)
     if (robot_pos_.y < 10.02f || robot_pos_.y > 11.6f || robot_pos_.x < 0.0f || robot_pos_.x > 6.0f)
         return;
     // 夹杆流程只规划起点到固定终点的简化路径。
-    if (_tool_Abs(yaw - (-90.0f))<10.0f)
+    if (_tool_Abs(yaw - (-90.0f))<15.0f)
     {
         target_yaw = -90.0f;
     }

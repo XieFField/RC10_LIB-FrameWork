@@ -1438,9 +1438,9 @@ bool ArmSetup::combine_idle()
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
     this->set_StretchLength(0.0f);
     if (this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
-        this->set_LaunchHeight(init_data_.max_launchHeight_);
+        this->set_LaunchHeight(init_data_.putdown_height_);
 
-    if (this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.2f)
+    if (this->get_currentJointStatus().launchJoint_Height_ > init_data_.putdown_height_ - 0.2f)
         this->set_RotateAngle(358.0f);
 
     if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 358.0f) < 1.0f)
