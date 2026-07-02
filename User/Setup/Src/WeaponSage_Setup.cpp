@@ -171,7 +171,7 @@ float Kp_traverse=0.5f;
 void Robot_WeaponSage_Setup::test_point()
 {
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-    this->setArm_angle(lift_pitch);
+    this->setArm_angle_slow(lift_pitch);
     this->setLaunch_angle(0.0f);
 }
 
