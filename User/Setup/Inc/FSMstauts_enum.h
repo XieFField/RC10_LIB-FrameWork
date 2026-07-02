@@ -95,7 +95,7 @@ typedef enum{
     SEMI_AUIO_CZ_ARM,//三区机械臂模式
     SEMI_AUIO_CZ_WEAPON,//三区武器模式
     
-    SEMI_AUIO_CZ_ARM_Challenge,
+    SEMI_AUIO_CZ_ARM_Challenge,//三区竞技赛
     
     CHASSIS_AUTO_CONTROL_CZ_R1, //对抗区R1自身自动
     CHASSIS_AUTO_CONTROL_CZ_R2, //对抗区R2合体自动

@@ -438,6 +438,6 @@ PID_Param_Config path_lock_R2 = {
     .kd = 0.0f,
     .I_Outlimit = 0.0f, 
     .isIOutlimit = true, 
-    .output_limit = 0.1f,   
-    .deadband = 0.012f 
+    .output_limit = 0.15f,   
+    .deadband = 0.025f 
 };
