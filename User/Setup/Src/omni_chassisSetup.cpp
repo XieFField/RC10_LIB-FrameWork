@@ -237,6 +237,7 @@ void OmniChassis_Setup::loop()
     }
     case SEMI_AUIO_CZ_FIT:
     {
+        
         static bool yaw_lock = false;
         static bool yaw_tra=false;
         mode_init();
@@ -273,19 +274,36 @@ void OmniChassis_Setup::loop()
         {
             if (pid_dead_flag == false || yaw_lock == true || (Path_end_point.x==CZ_point.fit_end_pos[RB_Flag].x&&Path_end_point.y==CZ_point.fit_end_pos[RB_Flag].y))
             {
-                if(CZ_flag.fit_yaw_flag==true)
+                if((Path_end_point.x==CZ_point.fit_end_pos[RB_Flag].x&&Path_end_point.y==CZ_point.fit_end_pos[RB_Flag].y))
                 {
-                    if (_tool_Abs(yaw - (-90.0f)) < 1.0f)
-                    {
-                        yaw_lock = false;
-                        CZ_flag.fit_yaw_flag=false;
-                    }   
+                     if(pid_dead_flag)
+                        CZ_flag.dead_cnt++;
+                     if(CZ_flag.dead_cnt > 300)
+                        chassis.setIdlePostureMode(jia::FourSteerChassis::Chassis::IdlePostureMode::kXPark);
+                     else
+                     {
+                         Path_lock_point(Path_end_point);
+                         chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+                     }
                 }
-                Path_lock_point(Path_end_point);
-                chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+                else
+                {
+                        if(CZ_flag.fit_yaw_flag==true)
+                        {
+                            if (_tool_Abs(yaw - (-90.0f)) < 1.0f)
+                            {
+                                yaw_lock = false;
+                                CZ_flag.fit_yaw_flag=false;
+                            }   
+                        }
+                        Path_lock_point(Path_end_point);
+                        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+ 
+                }
             }
             else
             {
+                CZ_flag.dead_cnt = 0;
                 CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
@@ -315,6 +333,7 @@ void OmniChassis_Setup::loop()
             }
             else
             {
+                CZ_flag.dead_cnt = 0;
                 if (CZ_Arm == false && CZ_flag.R1_FB_index == 1)
                 {
                     CZ_flag.R1_FB_index = 0;
@@ -384,6 +403,7 @@ void OmniChassis_Setup::loop()
             }
             else
             {
+                CZ_flag.dead_cnt = 0;
                 if (CZ_Arm == false && CZ_flag.R1_FB_index == 1)
                 {
                     CZ_flag.R1_FB_index = 0;
@@ -417,6 +437,7 @@ void OmniChassis_Setup::loop()
 // 三区地图索引复位
 void OmniChassis_Setup::CZ_index_reset(void)
 {
+    CZ_flag.dead_cnt = 0;
     CZ_flag.R1_FB_index = 0;
     CZ_flag.R1_RL_index = 1;
     CZ_flag.R2_pos_index = 2;

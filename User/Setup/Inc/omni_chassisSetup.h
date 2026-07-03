@@ -189,6 +189,8 @@ typedef struct
 
 typedef struct
 {
+    int dead_cnt = 0;
+    
     bool fit_yaw_flag = false;
     // 远中近的索引
     int R1_RL_index = 1;
