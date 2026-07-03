@@ -190,7 +190,7 @@ typedef struct
 typedef struct
 {
     int dead_cnt = 0;
-    
+
     bool fit_yaw_flag = false;
     // 远中近的索引
     int R1_RL_index = 1;
@@ -264,6 +264,8 @@ private:
     bool RB_Flag = true; // 红蓝方标志位，默认true为蓝场
 
     bool pid_dead_flag = false; // pid完成标志
+
+    bool manual_transform_flag = false;
 
     int flag = 0; // 自动流程起始触发位（边沿触发）。
 
@@ -484,7 +486,7 @@ private:
     void Path_lock_point(Vector2D lock_point)
     {
         float lock_err = (robot_pos_ - lock_point).magnitude();
-        if (chassis_status_ == SEMI_AUIO_CZ_FIT && (Path_end_point.x!=CZ_point.fit_end_pos[RB_Flag].x||Path_end_point.y!=CZ_point.fit_end_pos[RB_Flag].y))
+        if (chassis_status_ == SEMI_AUIO_CZ_FIT && (Path_end_point.x != CZ_point.fit_end_pos[RB_Flag].x || Path_end_point.y != CZ_point.fit_end_pos[RB_Flag].y))
         {
             speed = path_lock_r2.pid_calc(0.0f, lock_err) * (robot_pos_ - lock_point).normalize();
             pid_dead_flag = path_lock_r2.get_is_in_dead_zone();
@@ -1260,6 +1262,13 @@ private:
         if (yaw_update)
             target_yaw = yaw;
     }
+
+    void chassis_manual_transform(void)
+    {
+        if (_tool_Abs(airjoy_data_.left_x) > 0.1f || _tool_Abs(airjoy_data_.left_y) > 0.1f || _tool_Abs(airjoy_data_.right_x) > 0.1f || _tool_Abs(airjoy_data_.right_y) > 0.1f)
+            manual_transform_flag = true;
+    }
+
     // 复位自动流程相关标志位。
     void flag_reset(void)
     {
@@ -1272,6 +1281,9 @@ private:
 
         CZ_Arm = false;
         CZ_Catch = false;
+
+        manual_transform_flag = false;
+
         pid_dead_flag = false;
 
         KFS_flag.MF1_flag = false;
