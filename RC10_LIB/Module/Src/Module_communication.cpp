@@ -100,7 +100,7 @@ namespace communication{
         rec_command_command = 0;
         rec_command_load1 = 0;
         rec_command_load2 = 0;
-        for (uint8_t i = 0; i < 9; ++i) {
+        for (uint8_t i = 0; i < COMM_COMMAND_COUNT; ++i) {
             recv_command_cnts[i] = 0;
         }
 
@@ -337,7 +337,7 @@ namespace communication{
                 rec_command_load1 = pCmdFrame->load1;
                 rec_command_load2 = pCmdFrame->load2;
                 // load1 即遥控器端该命令的累计发送次数，直接同步，避免三帧重复导致重复计数
-                if (pCmdFrame->command < 9U) {
+                if (pCmdFrame->command < COMM_COMMAND_COUNT) {
                     recv_command_cnts[pCmdFrame->command] = pCmdFrame->load1;
                 }
 
