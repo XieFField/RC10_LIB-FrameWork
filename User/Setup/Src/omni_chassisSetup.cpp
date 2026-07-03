@@ -414,7 +414,7 @@ void OmniChassis_Setup::loop()
                     CZ_flag.R1_FB_index = 0;
                     CZ_R1_Selection_Planning();
                 }
-                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true);
+                CHASSIS_MANUAL(1.0f, 1.0f, 1.0f, true);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
         }
@@ -696,7 +696,7 @@ void OmniChassis_Setup::CZ_ARM_Challenge_Path_Init(void)
             path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
             path_line_.Add_Point({CZ_point.uphill_transitiont_pos[RB_Flag].x + (RB_Flag ? (-0.2f) : (0.2f)), CZ_point.uphill_transitiont_pos[RB_Flag].y}, path_param.start);
             path_param.curve.targetPos = 4.0f;
-            path_line_.Add_Point({CZ_point.uphill_transitiont_pos[RB_Flag].x + (RB_Flag ? (0.2f) : (-0.2f)), CZ_point.uphill_transitiont_pos[RB_Flag].y - 0.4f}, path_param.curve);
+            path_line_.Add_Point({CZ_point.uphill_transitiont_pos[RB_Flag].x + (RB_Flag ? (0.3f) : (-0.3f)), CZ_point.uphill_transitiont_pos[RB_Flag].y - 0.5f}, path_param.curve);
             path_line_.Add_Point({CZ_point.uphill_transitiont_pos_1[RB_Flag].x, CZ_point.uphill_transitiont_pos_1[RB_Flag].y + 0.2f}, path_param.start);
             if (RB_Flag == true)
             {
