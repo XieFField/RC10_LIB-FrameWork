@@ -922,6 +922,11 @@ void FSM_Controller::auto_ctrl()
             {
                 chassis_setup_->ReceiveBack_flag(false);
             }
+
+            if(chassis_setup_->GetBack_flag() == true)
+            {
+                weaponSage_setup_->Set_Launch_Flag(true);
+            }
         }
         else if (airjoy_data_.SWB == 0x00) // 半自动
         {

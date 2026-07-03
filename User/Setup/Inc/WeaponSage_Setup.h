@@ -130,7 +130,8 @@ namespace WeaponSage_Setup
     typedef struct{
 
         struct{
-			bool is_matching = false;  
+			bool is_matching = false;
+            bool can_launch = false; // 底盘后撤步结束后才可以升起  
             bool dock_start = false;
 			bool arm_enable=false;
             bool launch_enable=false;
@@ -263,6 +264,11 @@ public:
 	void Set_End_Flag(bool flag)
     {
         omni_flag = flag;
+    }
+
+    void Set_Launch_Flag(bool flag)
+    {
+        auto_ctrl_.auto_state_bool_S.can_launch = flag;
     }
 
     void setCBauto(bool flag)

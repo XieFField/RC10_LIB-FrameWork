@@ -398,6 +398,18 @@ public:
         WeaponSage_Back = weapon_back;
     }
 
+    bool GetBack_flag()
+    {
+        if(WeaponSage_Back == true && (_tool_Abs(yaw - target_yaw) < 7.0f))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     void ReceiveEnd_flag(bool weapon_end)
     {
         // 写入夹杆流程反馈标志。

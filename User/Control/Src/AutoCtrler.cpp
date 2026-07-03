@@ -1085,6 +1085,11 @@ PathInformation_S PathInformation_calc(Point2D robotPos, int8_t MF1, int8_t MF2,
             result.sp_handling_KFS[i] = 1;
     }
 
+    for(int i = 0; i < 3; i++)
+    {
+        result.sp_handling_KFS[i] = 1;
+    }
+
     return result;
 }
 

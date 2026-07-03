@@ -696,7 +696,7 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
             else
             {
                 auto_ctrl_.flag.is_catch = true;
-                if(!auto_ctrl_.flag.is_clawed)
+                if(!auto_ctrl_.flag.is_clawed && auto_ctrl_.auto_state_bool_S.can_launch)
                 {
                     this->setLaunch_angle(auto_ctrl_.launch_kp.launch_sage_untight*initData_.max_launchHeight_);      //抬高到安全高度,高度待调整
                 }
@@ -991,6 +991,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                 auto_ctrl_.flag.is_reach_armrotate=false;
                 now_new_state_=WeaponSage_Setup::STATE_START_1;
                 auto_ctrl_.auto_ctrl1=false;
+                auto_ctrl_.flag.is_reach_start = false;
                 auto_control_state_=0;
                 break;
             }
@@ -1076,6 +1077,7 @@ void Robot_WeaponSage_Setup::autoControl()
         {
             if(auto_ctrl_.auto_ctrl1)
             {
+                auto_ctrl_.flag.is_reach_start = false;
                 now_new_state_=WeaponSage_Setup::STATE_START_1;
                 auto_ctrl_.flag.is_catch = false;
                 auto_control_state_=1;
