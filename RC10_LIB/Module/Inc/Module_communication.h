@@ -4,8 +4,8 @@
 
 #include "usart.h"
 
-#define RING_BUF_SIZE 256
-#define DMA_BUF_SIZE  64
+#define RING_BUF_SIZE 512
+#define DMA_BUF_SIZE  128
 #define COMM_COMMAND_COUNT 12U
 
 #ifndef COMM_TX_BUSY_TIMEOUT_MS
