@@ -446,15 +446,18 @@ void Robot_WeaponSage_Setup::manualControl()
     {
         if(_tool_Abs(airjoy_data_.right_y) < 0.1)
 			manual_RC10_ctrlForgrip_.changeTarget_state = false;
+
+        float launch_rate_ = Locate_Setup::getInstance()->get_RobotPos_inWorld().y < 3.0f ? 0.3f : 1.0f;
+
         if(airjoy_data_.right_y > 0.5f&&target_pos_.launch_pos_ <=initData_.max_launchHeight_)
         {
             
-            target_pos_.launch_pos_ += manual_RC10_ctrlForgrip_.weapon_launch_fastrate;			
+            target_pos_.launch_pos_ += manual_RC10_ctrlForgrip_.weapon_launch_fastrate * launch_rate_;			
         }
         else if(airjoy_data_.right_y < -0.5f)
         {
 
-            target_pos_.launch_pos_ -= manual_RC10_ctrlForgrip_.weapon_launch_fastrate;	
+            target_pos_.launch_pos_ -= manual_RC10_ctrlForgrip_.weapon_launch_fastrate * launch_rate_;	
         }
         else
             target_pos_.launch_pos_ = target_pos_.launch_pos_;

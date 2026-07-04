@@ -17,8 +17,8 @@ void OmniChassis_Setup::CB_Path_Check(void)
         pid_dead_flag = false;
         WeaponSage_Start = true;
     }
-
-    if (CB_point.CB_Back_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_Back_pos[RB_Flag].y == curve.Get_End_point().y)
+    
+    if (CB_point.CB_Selection_pos[RB_Flag].x == curve.Get_End_point().x && (CB_point.CB_Selection_pos[RB_Flag].y+CB_point.back_y) == curve.Get_End_point().y)
     {
         back_flag = true;
     }
@@ -90,13 +90,13 @@ void OmniChassis_Setup::CB_Selection_Planning(void)
         path_line_.Add_Point(CB_point.CB_Start_pos[RB_Flag], path_param.line);
     }
     path_line_.Add_Point(CB_point.CB_Selection_pos[RB_Flag], path_param.cb);
-
-    path_line_.Add_Point(CB_point.CB_Back_pos[RB_Flag], path_param.cb);
+    
+    path_line_.Add_Point({CB_point.CB_Selection_pos[RB_Flag].x,CB_point.CB_Selection_pos[RB_Flag].y+CB_point.back_y}, path_param.cb);
 
     // 相机流程
     if (airjoy_data_.SWC == 0x00)
     {
-        path_line_.Add_End_Point(CB_point.CB_End_pos[RB_Flag], path_param.end);
+        path_line_.Add_End_Point(CB_point.CB_End_pos[RB_Flag], path_param.cb);
     }
     else if (airjoy_data_.SWC == 0x01)
     {
@@ -637,7 +637,7 @@ void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
     path_line_.Add_Start_Point(robot_pos_);
     if (_tool_Abs(_tool_Abs(yaw) - 180.0f) > 15.0f && ((robot_pos_.x > 4.70f && RB_Flag == true) || (robot_pos_.x < (6.0f - 4.70f) && RB_Flag == false)))
     {
-        path_line_.Add_Point({CZ_point.R1_pos[2][RB_Flag].x, CZ_point.fit_end_pos[RB_Flag].y}, path_param.cz);
+        path_line_.Add_Point({CZ_point.R1_pos[2][RB_Flag].x, CZ_point.fit_end_pos[RB_Flag].y+0.2f}, path_param.cz);
     }
     else
     {
@@ -694,10 +694,10 @@ void OmniChassis_Setup::CZ_ARM_Challenge_Path_Init(void)
             path_line_.plan_reset();
             path_line_.Add_Start_Point(robot_pos_);
             path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
-            path_line_.Add_Point({CZ_point.uphill_transitiont_pos[RB_Flag].x + (RB_Flag ? (-0.2f) : (0.2f)), CZ_point.uphill_transitiont_pos[RB_Flag].y}, path_param.start);
+            path_line_.Add_Point({CZ_point.uphill_transitiont_pos[RB_Flag].x + (RB_Flag ? (-0.2f) : (0.2f)), CZ_point.uphill_transitiont_pos[RB_Flag].y}, path_param.line);
             path_param.curve.targetPos = 4.0f;
             path_line_.Add_Point({CZ_point.uphill_transitiont_pos[RB_Flag].x + (RB_Flag ? (0.3f) : (-0.3f)), CZ_point.uphill_transitiont_pos[RB_Flag].y - 0.5f}, path_param.curve);
-            path_line_.Add_Point({CZ_point.uphill_transitiont_pos_1[RB_Flag].x, CZ_point.uphill_transitiont_pos_1[RB_Flag].y + 0.2f}, path_param.start);
+            path_line_.Add_Point({CZ_point.uphill_transitiont_pos_1[RB_Flag].x, CZ_point.uphill_transitiont_pos_1[RB_Flag].y + 0.2f}, path_param.line);
             if (RB_Flag == true)
             {
                 path_param.curve.targetPos = 1.0f;

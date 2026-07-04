@@ -1068,7 +1068,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                 target_rotate_angle = 260.0f;
         }
         else if (kfs_index == 0x01)
-            target_rotate_angle = 295.0f;
+            target_rotate_angle = 300.0f;
         else
             target_rotate_angle = 0.0f;
 
@@ -1096,7 +1096,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
     {
         if ((auto_ctrl_.pathInfo.sp_handling_KFS[auto_ctrl_.now_targetIndex] == 1 && auto_ctrl_.start_to_autoctrl == 1))
         {
-            if (this->get_currentJointStatus().rotateJoint_angle_ > 250.0f && this->get_currentJointStatus().rotateJoint_angle_ < 340.0f)
+            if (this->get_currentJointStatus().rotateJoint_angle_ > 250.0f && this->get_currentJointStatus().rotateJoint_angle_ < 350.0f)
             {
                 if (auto_ctrl_.now_targetIndex == 0x00 && kfs_index == 0x00 && !auto_ctrl_.flag.is_up_catch) // 第一个顶存不能直接走
                     auto_ctrl_.flag.canChassisStart = false;
@@ -1116,7 +1116,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             this->set_LaunchHeight(init_data_.new_store_height_outside_); // 降低到存储高度
             this->set_StretchLength(init_data_.new_store_ext_length_);
         }
-        else if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 295.0f) < 1.0f 
+        else if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 300.0f) < 1.0f 
             && kfs_index == 0x01 
             && this->get_currentJointStatus().suckerJoint_angle_ < 0.2f)
         {
@@ -1138,7 +1138,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
 
         // if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.store_height_inside_) < 0.01f)
         if (std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.store_height_inside_) < 0.01f 
-            && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 295.0f) < 1.0f 
+            && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 300.0f) < 1.0f 
             && kfs_index == 0x01)
         {
             if (auto_ctrl_.start_to_autoctrl == 1)
@@ -1315,7 +1315,7 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
         if (kfs_index == 0x01)
             target_rotate = 260.0f; // 存储的目标旋转角度
         else if (kfs_index == 0x00)
-            target_rotate = 295.0f; // 存储的目标旋转角度
+            target_rotate = 300.0f; // 存储的目标旋转角度
 
         this->setSuckerStatus(Sucker_Status_E::SUCK);
 
