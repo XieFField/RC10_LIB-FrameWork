@@ -313,9 +313,9 @@ void Lora_communication::update_airjoy_data(RC10_AirJoy_Data_S * data)
     data->page = airjoy_data.page;
 
     data->left_x = airjoy_data.left_x;
-    data->left_y = airjoy_data.left_y;
+    data->left_y = airjoy_data.left_y - 0.05f;
     data->right_y = airjoy_data.right_x;
-    data->right_x = airjoy_data.right_y;
+    data->right_x = airjoy_data.right_y+ 0.05f;
 
     data->SWA = airjoy_data.SWA;
     data->SWB = airjoy_data.SWB;

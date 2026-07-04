@@ -299,6 +299,7 @@ void FSM_Controller::set_cmd_to_R2()
             Serial1Protocol::getInstance()->sendStop();
             send_cmd = SEND_NONE;
             cmd_to_r2_cnt = airjoy_data_.recv_command_total_cnt; // 阻止后续发送
+            last_recv_cmd_  = 0;
             cmd_send_start_time_ = 0.0f;
         }
 
@@ -309,7 +310,7 @@ void FSM_Controller::set_cmd_to_R2()
             {
                 Serial1Protocol::getInstance()->send_cmd_to_R2(airjoy_data_.recv_command_command);
 
-                if (airjoy_data_.recv_command_command < 0x08 && airjoy_data_.recv_command_command >= 0x00)
+                if (airjoy_data_.recv_command_command <= 0x0C && airjoy_data_.recv_command_command >= 0x00)
                     send_cmd = (SEND_CMD_TO_R2)airjoy_data_.recv_command_command;
                 cmd_to_r2_cnt++;
             }
@@ -910,7 +911,7 @@ void FSM_Controller::auto_ctrl()
             }
             if (weaponSage_setup_->Get_Catch_flag() == true)
             {
-                chassis_setup_->ReceiveReach_flag(false);
+                chassis_setup_->ReceiveBack_flag(false);
             }
 
             if (chassis_setup_->GetEnd_flag() == true)
@@ -920,7 +921,7 @@ void FSM_Controller::auto_ctrl()
 
             if(weaponSage_setup_->is_catch() == true)
             {
-                chassis_setup_->ReceiveBack_flag(false);
+                chassis_setup_->ReceiveReach_flag(false);
             }
 
             if(chassis_setup_->GetBack_flag() == true)

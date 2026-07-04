@@ -291,7 +291,12 @@ void CAN_Motor_Init(void)
     weapon_3508_speedPID.output_limit=15000.0f;
     weapon_2006_speedPID.output_limit=3000;
     weapon_2006_anglePID.output_limit=500;
+
+#if CHALEENGE_12ZONE
+    weapon_wrist_anglePID.output_limit=70.0f;
+#else
     weapon_wrist_anglePID.output_limit=100.0f;
+#endif
 	weapon_wrist_speedPID.output_limit=8000.0f;
 
     Weapon_Launch.pid_init(weapon_3508_speedPID, 0.0f, weapon_3508_anglePID, 0.0f);

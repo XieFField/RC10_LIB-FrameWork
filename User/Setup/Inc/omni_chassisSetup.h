@@ -83,13 +83,12 @@ typedef struct
     float cb_dead = 0.05f;
 
     float spin_y = 0.86f;
-
+    
     // 第数组第零为红场
     Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.85f}};           // 夹杆起点。
-    Vector2D CB_Selection_pos[2] = {{3.466f, 0.835f}, {2.488f, 0.79f}}; // 夹杆流程默认目标点。
+    Vector2D CB_Selection_pos[2] = {{3.466f, 0.79f}, {2.491f, 0.79f}}; // 夹杆流程默认目标点。
 
-    // 后退点
-    Vector2D CB_Back_pos[2] = {{3.466f, 0.835f}, {2.488f, 0.805f}}; // 夹杆流程默认目标点。
+    float back_y =0.02f;
 
     // 相机流程
     Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
@@ -147,15 +146,15 @@ typedef struct
 
     Vector2D catch_pos[2] = {{6.0f - 5.2f, 10.99f}, {5.2f, 10.99f}};
 
-    float skew_yaw = 3.0f;
+    float skew_yaw = 3.4f;
 
     // 下界10.02f上界是11.52f
     // Vector2D fit_wait_pos = {2.17f, 10.05f};
     // Vector2D fit_transition_pos = {3.0f, 11.5f};
-    Vector2D fit_end_pos[2] = {{6.0f - 5.31f, 10.19f}, {5.32f, 10.19f}};
+    Vector2D fit_end_pos[2] = {{6.0f - 5.39f, 10.19f}, {5.355f, 10.21f}};
 
     // 左中右   或者   先后
-    float set_skew = 0.31f;
+    float set_skew = 0.32f;
     Vector2D R1_pos[3][2] = {{{6.0f - 4.43f, 11.318f}, {4.43f, 11.318f}},
                              {{6.0f - 4.43f, 10.765f}, {4.43f, 10.765f}},
                              {{6.0f - 4.43f, 10.195f}, {4.43f, 10.195f}}};
@@ -364,8 +363,17 @@ public:
 
     bool GetReach_flag()
     {
+        static int num=0;
+        if(pid_dead_flag == true)
+        {
+            num++;
+        }
+        else
+        {
+            num=0;
+        }
         // 读取夹杆流程完成标志。
-        if (pid_dead_flag == true && WeaponSage_Start == true && (_tool_Abs(yaw - target_yaw) < 5.0f))
+        if (num >= 150 && WeaponSage_Start == true && (_tool_Abs(yaw - target_yaw) < 5.0f))
         {
             return true;
         }
@@ -1279,6 +1287,8 @@ private:
     {
         if (_tool_Abs(airjoy_data_.left_x) > 0.1f || _tool_Abs(airjoy_data_.left_y) > 0.1f || _tool_Abs(airjoy_data_.right_x) > 0.1f || _tool_Abs(airjoy_data_.right_y) > 0.1f)
             manual_transform_flag = true;
+        else
+            manual_transform_flag = false;
     }
 
     // 复位自动流程相关标志位。
