@@ -1729,7 +1729,7 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw()
         return false;
 }
 
-
+float claw_untight_1=18.0f;
 bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
 {
     this->setClawSpeedOutLimit(4500.0f);
@@ -1790,7 +1790,7 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight1()
 	{
 		if(auto_ctrl_.claw_flag[i])
 		{
-			target_claw_pos[i]=18.0f;
+			target_claw_pos[i]=claw_untight_1;
 		}
 		else
 		{
@@ -1884,7 +1884,7 @@ WeaponSage_InitData_S initData_=
 	.max_arm_rate_ =1080.0f,
 	.is_Arm_fast=false,
 	.min_arm_rate_=200.0f,
-	.dock_height_=0.065080245f,
+	.dock_height_=0.0825000245f,
     .wrist_protect_=0.174290136,
     .claw_untight = 27.0f,
     .wrist_gearRatio_ = 144.0f,

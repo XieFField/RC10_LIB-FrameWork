@@ -310,7 +310,7 @@ void FSM_Controller::set_cmd_to_R2()
             {
                 Serial1Protocol::getInstance()->send_cmd_to_R2(airjoy_data_.recv_command_command);
 
-                if (airjoy_data_.recv_command_command <= 0x0C && airjoy_data_.recv_command_command >= 0x00)
+                if (airjoy_data_.recv_command_command <= 0xFF && airjoy_data_.recv_command_command >= 0x00)
                     send_cmd = (SEND_CMD_TO_R2)airjoy_data_.recv_command_command;
                 cmd_to_r2_cnt++;
             }
@@ -321,7 +321,7 @@ void FSM_Controller::set_cmd_to_R2()
                 cmd_to_r2_cnt++;
             }
         }
-        if (airjoy_data_.recv_command_command < 0x08 && airjoy_data_.recv_command_command >= 0x00)
+        if (airjoy_data_.recv_command_command <= 0xFF && airjoy_data_.recv_command_command >= 0x00)
             now_cmd = (SEND_CMD_TO_R2)airjoy_data_.recv_command_command;
     }
     else

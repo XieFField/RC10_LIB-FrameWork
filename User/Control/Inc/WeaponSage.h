@@ -25,7 +25,7 @@ extern "C" {
 #include "APP_tool.h"
 #include "Motor_GO.h"
 #include "BSP_TimeStamp.h"
-
+#include "FSMstauts_enum.h"
 //初�?�化数据结构�??
 typedef struct 
 {
@@ -293,23 +293,26 @@ protected:
 
 	WeaponSage_InitData_S initData_;
 	
-	WeaponSage::Fliter_Ramp_S launch_fliter_ramp_ = {
+	
 
-        #if CHALEENGE_12ZONE
-        .ramp__maxspeed_ = 1000000.0f,
-        .max_accel_ = 1500000.0f, //  (Motor Angle deg/s^2)
+    #if CHALEENGE_12ZONE
+    WeaponSage::Fliter_Ramp_S launch_fliter_ramp_ = {
+        .ramp__maxspeed_ = 80000.0f,
+        .max_accel_ = 4000000.0f, //  (Motor Angle deg/s^2)
         .current_velocity_ = 0.0f, // 记录当前 launch 速度
         .ramp_target_ = 0.0f, 
         .filter_k_ = 850.0f // launch 滤波�?(平滑)系数，值越大响应越�?，越小越平滑
-        #else
+    };
+    #else
+    WeaponSage::Fliter_Ramp_S launch_fliter_ramp_ = {
         .ramp__maxspeed_ = 1500000.0f,
         .max_accel_ = 4000000.0f, //  (Motor Angle deg/s^2)
         .current_velocity_ = 0.0f, // 记录当前 launch 速度
         .ramp_target_ = 0.0f, 
         .filter_k_ = 850.0f // launch 滤波�?(平滑)系数，值越大响应越�?，越小越平滑
-        #endif
     };
-
+    #endif
+    
     
     float caculate_ramp_target(float current, float target, WeaponSage::Fliter_Ramp_S &ramp)
     {

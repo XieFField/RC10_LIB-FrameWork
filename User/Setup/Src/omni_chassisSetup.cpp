@@ -18,7 +18,7 @@ void OmniChassis_Setup::CB_Path_Check(void)
         WeaponSage_Start = true;
     }
     
-    if (CB_point.CB_Selection_pos[RB_Flag].x == curve.Get_End_point().x && (CB_point.CB_Selection_pos[RB_Flag].y+CB_point.back_y) == curve.Get_End_point().y)
+    if (CB_point.CB_Selection_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.back_y == curve.Get_End_point().y)
     {
         back_flag = true;
     }
@@ -91,7 +91,7 @@ void OmniChassis_Setup::CB_Selection_Planning(void)
     }
     path_line_.Add_Point(CB_point.CB_Selection_pos[RB_Flag], path_param.cb);
     
-    path_line_.Add_Point({CB_point.CB_Selection_pos[RB_Flag].x,CB_point.CB_Selection_pos[RB_Flag].y+CB_point.back_y}, path_param.cb);
+    path_line_.Add_Point({CB_point.CB_Selection_pos[RB_Flag].x,CB_point.back_y}, path_param.cb);
 
     // 相机流程
     if (airjoy_data_.SWC == 0x00)
