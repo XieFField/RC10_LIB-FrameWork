@@ -273,15 +273,30 @@ void OmniChassis_Setup::loop()
         {
             if ((Path_end_point.x == CZ_point.fit_end_pos[RB_Flag].x && Path_end_point.y == CZ_point.fit_end_pos[RB_Flag].y))
             {
-                if (pid_dead_flag)
-                    CZ_flag.dead_cnt++;
-                if (CZ_flag.dead_cnt > 300)
-                    chassis.setIdlePostureMode(jia::FourSteerChassis::Chassis::IdlePostureMode::kXPark);
-                else
+                chassis_manual_transform();
+                if(manual_transform_flag == true)
                 {
-                    Path_lock_point(Path_end_point);
+                    CZ_flag.dead_cnt = 500;
+                    CHASSIS_MANUAL(0.5f, 0.5f, 0.0f, true);
                     chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
                 }
+                else
+                {
+                    if (pid_dead_flag ==true&& CZ_flag.dead_cnt<400)
+                        CZ_flag.dead_cnt++;
+                    if (CZ_flag.dead_cnt > 300 && pid_dead_flag == true)
+                    {
+                        Chassis_Target={0.0f,0.0f,0.0f};
+                        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+                        chassis.setIdlePostureMode(jia::FourSteerChassis::Chassis::IdlePostureMode::kXPark);
+                    }
+                    else
+                    {
+                        Path_lock_point(Path_end_point);
+                        chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
+                    }
+                }
+                
             }
             else if (yaw_lock == true || manual_transform_flag == false)
             {

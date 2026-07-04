@@ -86,7 +86,7 @@ typedef struct
     
     // 第数组第零为红场
     Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.85f}};           // 夹杆起点。
-    Vector2D CB_Selection_pos[2] = {{3.466f, 0.835f}, {2.488f, 0.79f}}; // 夹杆流程默认目标点。
+    Vector2D CB_Selection_pos[2] = {{3.466f, 0.79f}, {2.491f, 0.79f}}; // 夹杆流程默认目标点。
 
     float back_y =0.02f;
 
@@ -151,10 +151,10 @@ typedef struct
     // 下界10.02f上界是11.52f
     // Vector2D fit_wait_pos = {2.17f, 10.05f};
     // Vector2D fit_transition_pos = {3.0f, 11.5f};
-    Vector2D fit_end_pos[2] = {{6.0f - 5.39f, 10.19f}, {5.39f, 10.19f}};
+    Vector2D fit_end_pos[2] = {{6.0f - 5.39f, 10.19f}, {5.355f, 10.21f}};
 
     // 左中右   或者   先后
-    float set_skew = 0.28f;
+    float set_skew = 0.32f;
     Vector2D R1_pos[3][2] = {{{6.0f - 4.43f, 11.318f}, {4.43f, 11.318f}},
                              {{6.0f - 4.43f, 10.765f}, {4.43f, 10.765f}},
                              {{6.0f - 4.43f, 10.195f}, {4.43f, 10.195f}}};
@@ -373,7 +373,7 @@ public:
             num=0;
         }
         // 读取夹杆流程完成标志。
-        if (num >= 200 && WeaponSage_Start == true && (_tool_Abs(yaw - target_yaw) < 5.0f))
+        if (num >= 150 && WeaponSage_Start == true && (_tool_Abs(yaw - target_yaw) < 5.0f))
         {
             return true;
         }
@@ -1287,6 +1287,8 @@ private:
     {
         if (_tool_Abs(airjoy_data_.left_x) > 0.1f || _tool_Abs(airjoy_data_.left_y) > 0.1f || _tool_Abs(airjoy_data_.right_x) > 0.1f || _tool_Abs(airjoy_data_.right_y) > 0.1f)
             manual_transform_flag = true;
+        else
+            manual_transform_flag = false;
     }
 
     // 复位自动流程相关标志位。
