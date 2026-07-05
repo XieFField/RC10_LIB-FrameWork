@@ -25,7 +25,7 @@ extern "C" {
 #include "APP_tool.h"
 #include "Motor_GO.h"
 #include "BSP_TimeStamp.h"
-
+#include "Motor_EL05.h"
 //初�?�化数据结构�??
 typedef struct 
 {
@@ -149,7 +149,7 @@ public:
     }
 
     
-    bool register_wrist_Motor(M2006* motor)
+    bool register_wrist_Motor(EL05_Motor* motor)
     { 
         wrist_Motor_ = motor; 
         if(wrist_Motor_ != nullptr)
@@ -230,6 +230,18 @@ public:
             arm_Motor_->motorSetZero();
     }
 
+    void Weapon_wrist_enable()
+    {
+        if(wrist_Motor_ != nullptr)
+            wrist_Motor_->motorEnable();
+    }
+
+    void weapon_wrist_setZero()
+    {
+        if(wrist_Motor_ != nullptr)
+            wrist_Motor_->motorSetZero();
+    }
+
     float NormalizeAngle(float* angle)
     {
         float normalized = fmodf(*angle, 360.0f);
@@ -239,7 +251,7 @@ public:
     }
 
     
-	void register_motors(M2006* claw_1_motor,M2006* claw_2_motor ,M2006* claw_3_motor, M3508* launch_motor ,M2006* wrist_motor, DM_Motor* arm_motor )
+	void register_motors(M2006* claw_1_motor,M2006* claw_2_motor ,M2006* claw_3_motor, M3508* launch_motor ,EL05_Motor* wrist_motor, DM_Motor* arm_motor )
 	{
 		register_launch_Motor(launch_motor);
 		register_claw_1_Motor(claw_1_motor);
@@ -273,7 +285,7 @@ protected:
     M2006 *claw_1_Motor_ = nullptr; // 夹爪电机1，负责�?�器的夹取动�??
     M2006 *claw_2_Motor_ = nullptr; // 夹爪电机2，负责�?�器的夹取动�??
     M2006 *claw_3_Motor_ = nullptr; // 夹爪电机3，负责�?�器的夹取动�??
-    M2006 *wrist_Motor_ = nullptr; // 手腕电机，负责�?�器的手腕动�??
+    EL05_Motor *wrist_Motor_ = nullptr; // 手腕电机，负责�?�器的手腕动�??
     DM_Motor *arm_Motor_ = nullptr; // 机�?�臂电机，负责�?�器的机械臂动作
 
     WeaponSage::WeaponSage_Pos_S target_pos_;

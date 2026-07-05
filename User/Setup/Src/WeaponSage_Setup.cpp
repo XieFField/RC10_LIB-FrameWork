@@ -60,6 +60,16 @@ void Robot_WeaponSage_Setup::loop()
 		Weapon_arm_enable();
 		auto_ctrl_.auto_state_bool_S.arm_enable=true;
 	}
+
+    if(this->wrist_Motor_->get_MotorState() !=0x02||!auto_ctrl_.auto_state_bool_S.wrist_enable)
+    {
+        this->Weapon_wrist_enable();
+        auto_ctrl_.auto_state_bool_S.wrist_enable=true;
+    }
+    {
+        this->Weapon_wrist_enable();
+        auto_ctrl_.auto_state_bool_S.wrist_enable=true;
+    }
 	
     
 /*如果本次状态不是对接自动DOCK而上次状态是DOCK把ARM打到水平（高优先级）*/
@@ -224,6 +234,11 @@ void Robot_WeaponSage_Setup::calibrate()
             this->Weapon_arm_enable();
             auto_ctrl_.auto_state_bool_S.arm_enable=true;
         }
+        if(!auto_ctrl_.auto_state_bool_S.el05_wrist_enable)
+        {
+            this->Weapon_wrist_enable();
+            auto_ctrl_.auto_state_bool_S.el05_wrist_enable=true;
+        }
         if(this->wrist_encoder_->get_encoder_raw()!=0)
        {
 			float relocate_wirst_angle = MotorTotalAngle_to_Realpos(wrist_encoder_angle_, WeaponSage::Motor_Type_E::Wrist_Motor);
@@ -232,7 +247,7 @@ void Robot_WeaponSage_Setup::calibrate()
 			angle_0_360 = adjust;
 		       float relocate_wrist_totalAngle =Realpos_to_MotorTotalAngle( adjust, WeaponSage::Motor_Type_E::Wrist_Motor);
 			relocate_wrist_totalAngle__ = relocate_wrist_totalAngle;
-            this->wrist_Motor_->relocate_totalAngle(relocate_wrist_totalAngle); 
+//            this->wrist_Motor_->relocate_totalAngle(relocate_wrist_totalAngle); 
         }
         if(ctrl_status_.now_times-ctrl_status_.calibrate_startTime >= 2.0f) // 2秒的校准时间
         {
@@ -556,13 +571,13 @@ float kp=0.0f;
 void Robot_WeaponSage_Setup::debug()
 {
 	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-	this->autoControl();
+//	this->autoControl();
 //	if(this->arm_Motor_->getErrorNum()==0x01)
 //	{
 //		this->setArm_angle(target_arm);
 //	}
 //	
-//	this->setWrist_angle(target_wrist);
+	this->setWrist_angle(target_wrist);
 //	this->setClaw_1_angle(target_claw_);
 //	this->setClaw_2_angle(target_claw_);
 //	this->setClaw_3_angle(target_claw_);
@@ -635,18 +650,13 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
             {
 		        this->Close_TargetClaw(); //夹取目标杆
             }
-            else
-            {
-                this->setLaunch_angle(auto_ctrl_.launch_kp.launch_untight*initData_.max_launchHeight_);      //抬高到安全高度,高度待调整
-            }
             
-            if(auto_ctrl_.flag.is_clawed && abs(current_pos_.launch_pos_-auto_ctrl_.launch_kp.launch_untight*initData_.max_launchHeight_)<0.02) //如果已经抬高到位了
-            {
+            
+            if(auto_ctrl_.flag.is_clawed )
                  auto_ctrl_.flag.is_catched=true; //完成抓取流程
                  auto_ctrl_.flag.is_clawed = false; //重置夹爪状态，准备下次使用
                  return true;
             }
-		}
     }
     return false;
     #else
@@ -1143,7 +1153,7 @@ void Robot_WeaponSage_Setup::stop()
     this->claw_3_Motor_->setTargetCurrent(0.0f);
     this->launch_Motor_->setTargetCurrent(0.0f);
 //    this->arm_Motor_->setTargetCurrent(0.0f);
-    this->wrist_Motor_->setTargetCurrent(0.0f);
+//    this->wrist_Motor_->setTargetCurrent(0.0f);
 }
 
 

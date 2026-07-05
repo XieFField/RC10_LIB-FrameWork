@@ -74,7 +74,7 @@ VESC_Motor U8_3(103, CAN1_Bus, 21); VESC_Motor U8_4(104, CAN1_Bus, 21);
                             /* 武器系统电机 */
 M2006 Weapon_Claw1(1, CAN2_Bus); M2006 Weapon_Claw2(2, CAN2_Bus); M2006 Weapon_Claw3(3, CAN2_Bus); 
 M3508 Weapon_Launch(4, CAN2_Bus);
-DM_Motor Weapon_Elbow(J4310_Type, 0x06, 0x06, CAN2_Bus); M2006 Weapon_Wrist(6, CAN3_Bus);
+DM_Motor Weapon_Elbow(J4310_Type, 0x06, 0x06, CAN2_Bus); EL05_Motor Weapon_Wrist(0x01U, 0xFDU, CAN3_Bus);
 
                             /* 机械臂电机 */
 #if !TEST_TEMP
@@ -229,12 +229,13 @@ void CAN_Motor_Init(void)
    CAN2_Bus->registerOIDEncoder(&oid_encoder); 
 
    CAN2_Bus->init();
+   CAN3_Bus->registerMotor(&Weapon_Wrist);
 
     // CAN3 总线初始化：注册机械臂电机
     DJIGroupCAN3_High.addMotor(&arm_launchMotor); DJIGroupCAN3_High.addMotor(&arm_rotateMotor);
     DJIGroupCAN3_High.addMotor(&arm_stretchMotor); 
 
-    DJIGroupCAN3_High.addMotor(&Weapon_Wrist);
+ 
 
     CAN3_Bus->registerMotor(&DJIGroupCAN3_High);
     CAN3_Bus->registerMotor(&arm_launchMotor); CAN3_Bus->registerMotor(&arm_rotateMotor);
@@ -308,7 +309,6 @@ void CAN_Motor_Init(void)
     Weapon_Claw1.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
     Weapon_Claw2.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
     Weapon_Claw3.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
-    Weapon_Wrist.pid_init(weapon_wrist_speedPID, 0.0f, weapon_wrist_anglePID, 0.0f);
-
+//    Weapon_Wrist.pid_init(weapon_wrist_speedPID, 0.0f, weapon_wrist_anglePID, 0.0f);
     Weapon_Elbow.reset_controlFrequency(100); // 肘部电机降到 100Hz，减轻总线负载
 }

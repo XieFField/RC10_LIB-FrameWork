@@ -169,7 +169,7 @@ std::size_t EL05_Motor::packCommand(CanFrame outFrames[], std::size_t maxFrames)
     return 1U;
 }
 
-void EL05_Motor::setTargetAngle(float angle_deg)
+void EL05_Motor::setTargetTotalAngle(float angle_deg)
 {
     target_angle_ = angle_deg;
     target_position_rad_ = angle_deg / kRadToDeg;

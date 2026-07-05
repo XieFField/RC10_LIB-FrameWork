@@ -19,7 +19,7 @@ public:
     void update() override;
     std::size_t packCommand(CanFrame outFrames[], std::size_t maxFrames) override;
 
-    void setTargetAngle(float angle_deg) override;
+    void setTargetTotalAngle(float angle_deg) override;
 
     void motorEnable();
     void motorDisable();
@@ -28,6 +28,10 @@ public:
     float getAngle() const override;
     float getRPM() const override;
     float getTorque() const;
+	uint8_t get_MotorState()
+	{
+		return mode_state_;
+	}
 
 private:
     enum class InitState : uint8_t
