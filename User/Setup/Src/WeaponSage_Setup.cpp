@@ -1732,7 +1732,7 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw()
 float claw_untight_1=18.0f;
 bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
 {
-    this->setClawSpeedOutLimit(4500.0f);
+    this->setClawSpeedOutLimit(8000.0f);
     auto_ctrl_.claw_flag[0]=ctrl_status_.is_claw_1_closed;
     auto_ctrl_.claw_flag[1]=ctrl_status_.is_claw_2_closed;
     auto_ctrl_.claw_flag[2]=ctrl_status_.is_claw_3_closed;
@@ -1781,7 +1781,7 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
 bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight1()
     
 {
-    this->setClawSpeedOutLimit(4500.0f);
+    this->setClawSpeedOutLimit(8000.0f);
     auto_ctrl_.claw_flag[0]=ctrl_status_.is_claw_1_closed;
     auto_ctrl_.claw_flag[1]=ctrl_status_.is_claw_2_closed;
     auto_ctrl_.claw_flag[2]=ctrl_status_.is_claw_3_closed;
