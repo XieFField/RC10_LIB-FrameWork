@@ -899,19 +899,21 @@ void FSM_Controller::auto_ctrl()
                 is_click = 0;
             }
 
-            if (weaponSage_setup_->is_auto_ctrl_over())
-            {
-                chassis_setup_->ReceiveEnd_flag(false);
-            }
-
             // 判断是否可以进行互相通讯
             if (chassis_setup_->GetReach_flag() == true)
             {
-                weaponSage_setup_->Get_OMNI_IM_flag(true);
+                weaponSage_setup_->Get_OMNI_IM_flag(true); //weapon写matching
             }
+
             if (weaponSage_setup_->Get_Catch_flag() == true)
             {
-                chassis_setup_->ReceiveBack_flag(false);
+                // chassis_setup_->ReceiveBack_flag(false);
+                chassis_setup_->ReceiveReach_flag(false); //三版： 夹紧提高，底盘后撤步
+            }
+
+            if(chassis_setup_->GetBack_flag() == true)
+            {
+                weaponSage_setup_->Set_Launch_Flag(true); //后撤步完成，第一次蹬地
             }
 
             if (chassis_setup_->GetEnd_flag() == true)
@@ -921,13 +923,18 @@ void FSM_Controller::auto_ctrl()
 
             if(weaponSage_setup_->is_catch() == true)
             {
-                chassis_setup_->ReceiveReach_flag(false);
+                // chassis_setup_->ReceiveReach_flag(false);
+                chassis_setup_->ReceiveBack_flag(false); //三版： 夹紧提高，底盘后撤旋转
             }
 
-            if(chassis_setup_->GetBack_flag() == true)
-            {
-                weaponSage_setup_->Set_Launch_Flag(true);
-            }
+            
+
+            
+            
+            // if (weaponSage_setup_->is_auto_ctrl_over())
+            // {
+            //     chassis_setup_->ReceiveEnd_flag(false);
+            // }
         }
         else if (airjoy_data_.SWB == 0x00) // 半自动
         {
