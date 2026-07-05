@@ -416,6 +416,21 @@ namespace communication{
         
     }
 
+    void Communication::Comm_SendHmiCommandToTxBuffer(uint8_t command, uint8_t load1, uint8_t load2)
+    {
+        HmiCommandFrame_t frame;
+        frame.header[0] = 0x55;
+        frame.header[1] = 0xEE;
+        frame.command = command;
+        frame.load1 = load1;
+        frame.load2 = load2;
+        frame.crc = MaybeCorruptTxCrc(crc8(reinterpret_cast<uint8_t*>(&frame) + 2,
+                                            sizeof(HmiCommandFrame_t) - 4));
+        frame.tail = 0xED;
+
+        Comm_SendAnyDataToTxBuffer(reinterpret_cast<const uint8_t*>(&frame), sizeof(frame));
+    }
+
     void Communication::Comm_SendAnyDataToTxBuffer(const uint8_t* data, uint16_t len)
     {
         if (data == NULL || len == 0) return;

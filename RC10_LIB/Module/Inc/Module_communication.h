@@ -92,6 +92,16 @@ namespace communication{
         uint8_t tail;      // e.g. 0xED
     } XYZFrame_t;
 
+    // Receiver-to-remote HMI command frame.
+    typedef struct {
+        uint8_t header[2]; // 0x55 0xEE
+        uint8_t command;
+        uint8_t load1;
+        uint8_t load2;
+        uint8_t crc;
+        uint8_t tail;      // 0xED
+    } HmiCommandFrame_t;
+
     #pragma pack(pop)
 
     class Communication {
@@ -163,6 +173,8 @@ namespace communication{
         void Comm_SendAxisDataToTxBuffer(uint16_t  x, uint16_t y, uint16_t z,
             uint8_t Gripper_Status, uint8_t Suction_Cup_Status,uint8_t Automatic_status, uint8_t mode, uint8_t command1, uint8_t command2,
             uint8_t KFS_want_place1, uint8_t KFS_want_place2, uint8_t spear, uint8_t KFS_Keepplace);
+
+        void Comm_SendHmiCommandToTxBuffer(uint8_t command, uint8_t load1, uint8_t load2);
 
         /**
          * @brief 纯虚函数：启动底层物理发送动作
