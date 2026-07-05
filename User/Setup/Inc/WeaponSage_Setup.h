@@ -32,7 +32,7 @@ extern "C" {
 #include "Module_lora.h"
 
 
-#define USE_NEW_AUTO 1
+#define USE_NEW_AUTO 0
 namespace WeaponSage_Setup
 {
     typedef struct{
@@ -144,7 +144,7 @@ namespace WeaponSage_Setup
             bool is_reach_start = false;
             bool is_clawed=false;
             bool is_untight=false;
-            bool is_catched=false;  //当夹�?到达安全高度视为已经完成抓取
+            bool is_catched=false;  //三版：已夹紧且抬高
             bool is_moved=false;
             bool is_prepared=false; //准�?�就�?，满足抓取条�?
 			bool is_arm_reset=false;
