@@ -297,7 +297,7 @@ protected:
 
     #if CHALEENGE_12ZONE
     WeaponSage::Fliter_Ramp_S launch_fliter_ramp_ = {
-        .ramp__maxspeed_ = 80000.0f,
+        .ramp__maxspeed_ = 160000.0f,
         .max_accel_ = 4000000.0f, //  (Motor Angle deg/s^2)
         .current_velocity_ = 0.0f, // 记录当前 launch 速度
         .ramp_target_ = 0.0f, 
@@ -305,7 +305,7 @@ protected:
     };
     #else
     WeaponSage::Fliter_Ramp_S launch_fliter_ramp_ = {
-        .ramp__maxspeed_ = 1500000.0f,
+        .ramp__maxspeed_ = 160000.0f,
         .max_accel_ = 4000000.0f, //  (Motor Angle deg/s^2)
         .current_velocity_ = 0.0f, // 记录当前 launch 速度
         .ramp_target_ = 0.0f, 

@@ -86,9 +86,9 @@ typedef struct
     
     // 第数组第零为红场
     Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.85f}};           // 夹杆起点。
-    Vector2D CB_Selection_pos[2] = {{3.466f, 0.79f}, {2.491f, 0.79f}}; // 夹杆流程默认目标点。
+    Vector2D CB_Selection_pos[2] = {{3.466f, 0.79f}, {2.495f, 0.79f}}; // 夹杆流程默认目标点。
 
-    float back_y =0.832f;
+    float back_y =0.925f;
 
     // 相机流程
     Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
