@@ -10,7 +10,7 @@ Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
 }
 
 float lift_pitch = -5.0f;
-float stend_up = -92.0f;
+float stend_up = -90.0f;
 
 uint32_t WeaponSagestackHighWaterMark = 0;
 uint8_t relocate_mid= 0;
