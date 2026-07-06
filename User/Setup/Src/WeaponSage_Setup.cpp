@@ -447,7 +447,15 @@ void Robot_WeaponSage_Setup::manualControl()
         if(_tool_Abs(airjoy_data_.right_y) < 0.1)
 			manual_RC10_ctrlForgrip_.changeTarget_state = false;
 
-        float launch_rate_ = Locate_Setup::getInstance()->get_RobotPos_inWorld().y < 3.0f ? 0.3f : 1.0f;
+        float x_line = MF_AutoCtrler::get_color() == 1 ? 3.8f : 2.2f;
+        bool is_slow = false;
+        if(MF_AutoCtrler::get_color() == 1)
+            is_slow = Locate_Setup::getInstance()->get_RobotPos_inWorld().x > x_line;
+        else
+            is_slow = Locate_Setup::getInstance()->get_RobotPos_inWorld().x < x_line;
+
+        float launch_rate_ = ((Locate_Setup::getInstance()->get_RobotPos_inWorld().y < 3.0f) 
+                                && (is_slow)) ? 0.3f : 1.0f;
 
         if(airjoy_data_.right_y > 0.5f&&target_pos_.launch_pos_ <=initData_.max_launchHeight_)
         {
@@ -1071,7 +1079,19 @@ void Robot_WeaponSage_Setup::autoControl()
             }
             else
 			{
+                this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);  
+                float next_height = this->current_pos_.launch_pos_ ;
 				// this->idle();
+                if(std::fabs(airjoy_data_.right_y) > 0.7f)
+                {
+                    if (airjoy_data_.right_y > 0.75f)
+                        next_height += manual_RC10_ctrlForgrip_.weapon_launch_fastrate * 0.3;
+                    else if (airjoy_data_.right_y < -0.75f)
+                        next_height -= manual_RC10_ctrlForgrip_.weapon_launch_fastrate * 0.3;
+                }
+
+                this->setLaunch_angle(next_height);
+
 				auto_control_state_=0;
 			}
             break;
@@ -1894,7 +1914,7 @@ WeaponSage_InitData_S initData_=
     .max_wrist_angle_ = 360.0f,
 	.max_arm_rate_ =200.0f,
 	.is_Arm_fast=false,
-	.min_arm_rate_=200.0f,
+	.min_arm_rate_=90.0f,
 	.dock_height_=0.0725000245f,
     .wrist_protect_=0.174290136,
     .claw_untight = 27.0f,

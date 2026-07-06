@@ -30,7 +30,7 @@ extern "C" {
 #include "Module_OIDEncoder.h"
 #include "tim.h"
 #include "Module_lora.h"
-
+#include "AutoCtrler.h"
 
 #define USE_NEW_AUTO 0
 namespace WeaponSage_Setup
