@@ -81,23 +81,30 @@ typedef struct
 typedef struct
 {
     float cb_dead = 0.04f;
+    float spin_y = 0.95f; // 退后到多少开始旋转
 
-    float spin_y = 0.95f;
+    Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.85f}}; // 夹杆起点。
 
-    // 第数组第零为红场
-    Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.85f}};          // 夹杆起点。
+#ifdef CB_SINGLE
+    int pole_index = 0;
+    float CB_Selection_pos_0_y = 0.79f;
+    float CB_Selection_pos_0_x[2] = {3.666f, 2.295f};
+#endif
+
     Vector2D CB_Selection_pos[2] = {{3.466f, 0.79f}, {2.495f, 0.79f}}; // 夹杆流程默认目标点。
-
-    float back_y = 0.925f;
+    float back_y = 0.925f;                                             // 退后点位的y坐标
 
     // 相机流程
     Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
 
     // 贴边流程
-    Vector2D CB_transition_pos[2] = {{3.539f, 1.01f}, {3.0f, 1.1f}};
+    Vector2D CB_transition_pos[2] = {{3.539f, 1.1f}, {3.0f, 1.1f}};
 
-    Vector2D CB_welt_pos[2] = {{3.3f, 0.52f}, {3.98f, 0.495f}};
-    
+    Vector2D CB_welt_pos[2] = {{3.3f, 0.495f}, {3.98f, 0.495f}};
+
+    // 回家流程
+    Vector2D home_transition_pos[2] = {{3.539f, 1.5f}, {2.8f, 1.5f}};
+    Vector2D home_pos[2] = {{5.5f, 0.5f}, {0.5f, 0.5f}};
 
 } CB_POINT;
 
@@ -109,11 +116,6 @@ typedef struct
     int8_t MF1 = 0; // 目标点 1 编号。
     int8_t MF2 = 0; // 目标点 2 编号。
     int8_t MF3 = 0; // 目标点 3 编号。
-
-    // 接收外部的KFS位置，如果没有变化则不对MF进行赋值
-    int8_t KFS1 = 0; // 目标点 1 编号。
-    int8_t KFS2 = 0; // 目标点 2 编号。
-    int8_t KFS3 = 0; // 目标点 3 编号。
 
     Vector2D MF1_pos_ = {0.0f, 0.0f};
     Vector2D MF2_pos_ = {0.0f, 0.0f};
@@ -136,6 +138,11 @@ typedef struct
 
     float coner_ahead = 0.2f;
     float coner_behind = 0.5f;
+
+    // 接收外部的KFS位置，如果没有变化则不对MF进行赋值
+    int8_t KFS1 = 0; // 目标点 1 编号。
+    int8_t KFS2 = 0; // 目标点 2 编号。
+    int8_t KFS3 = 0; // 目标点 3 编号。
 
 } KFS_POINT;
 
@@ -172,10 +179,6 @@ typedef struct
     bool spin_flag_0 = false; // 是否需要执行中途转向。
     bool spin_flag = false;   // 是否需要执行中途转向。
     bool spin_flag_2 = false; // 是否需要执行中途转向。
-
-    bool MF1_flag = false; // 进入 MF1 目标点标志。
-    bool MF2_flag = false; // 进入 MF2 目标点标志。
-    bool MF3_flag = false; // 进入 MF3 目标点标志。
 
     bool MF1_finish = false; // MF1 阶段已完成标志。
     bool MF2_finish = false; // MF2 阶段已完成标志。
@@ -245,12 +248,23 @@ public:
 
     void reset_CB_point(float x, float y)
     {
-        CB_point.CB_Selection_pos[MF_AutoCtrler::get_color()].x = x;
-        CB_point.CB_Selection_pos[MF_AutoCtrler::get_color()].y = y;
+#ifdef CB_SINGLE
+        CB_point.CB_Selection_pos_0_x[RB_Flag] = x;
+        CB_point.CB_Selection_pos_0_y = y;
+#else
+        CB_point.CB_Selection_pos[RB_Flag].x = x;
+        CB_point.CB_Selection_pos[RB_Flag].y = y;
+#endif
     }
 
+#ifdef CB_SINGLE
+    void reset_CB_index(int index)
+    {
+        CB_point.pole_index = index - 1;
+    }
+#endif
+
 private:
-    // Vector2D test_point = {3.0f, 2.0f};
     //-----------------------------------通讯标志位-----------------------------------------//
     bool WeaponSage_Start = false; // 夹杆流程开始标志。
     bool WeaponSage_End = false;   // 夹杆流程完成标志。
@@ -314,16 +328,16 @@ private:
     CHASSIS_Status_E chassis_status_ = CHASSIS_STOP;      // 当前底盘总状态机状态。
     CHASSIS_Status_E chassis_status_last_ = CHASSIS_STOP; // 当前底盘总状态机状态。（依旧是每个模式都赋值，用于进入自动模式时进行初始化）
 
-#if !USE_RC10_AIRJOY
-    RmPocketData_t airjoy_data_; // 摇杆值为 -1 ~ 1
-#else
     communication::RC10_AirJoy_Data_S airjoy_data_;
-#endif
 
     //-----------------------------------内部控制函数-----------------------------------------//
     void loop() override; // RTOS 主循环。
 
+    void CB_Path_Init(void);
+
     void CB_Selection_Planning(void); // 生成夹杆流程路径。
+
+    void CB_Home_Selection_Planning(void);
 
     void CB_Path_Check(void);
 
@@ -383,23 +397,11 @@ public:
             return false;
         }
     }
-
-    Vector2D test_pos={0.0f,0.0f};
-    float yaw_test=0.0f;
-    bool count=false;
-    
     bool GetEnd_flag()
     {
         // 读取夹杆退后流程完成标志。
         if (WeaponSage_End == true && (_tool_Abs(yaw - target_yaw) < 2.0f))
         {
-            if(count==false)
-            {
-                test_pos=robot_pos_;
-                yaw_test=yaw;
-                count=true;
-            }
-            
             return true;
         }
         else
@@ -422,7 +424,7 @@ public:
 
     bool GetBack_flag()
     {
-        if (WeaponSage_Back == true && (_tool_Abs(yaw - target_yaw) < 7.0f))
+        if (WeaponSage_Back == true && (_tool_Abs(yaw - target_yaw) < 2.0f))
         {
             return true;
         }
@@ -641,14 +643,18 @@ private:
 
     void KFS_Path_Check(void)
     {
+
+        static bool MF1_flag = false; // 进入 MF1 目标点标志。
+        static bool MF2_flag = false; // 进入 MF2 目标点标志。
+        static bool MF3_flag = false; // 进入 MF3 目标点标志。
         // KFS拾取判断MF1
         if (KFS_point.MF1_pos_.x == curve.Get_End_point().x && KFS_point.MF1_pos_.y == curve.Get_End_point().y)
         {
-            KFS_flag.MF1_flag = true;
+            MF1_flag = true;
         }
-        else if (KFS_flag.MF1_flag == true)
+        else if (MF1_flag == true)
         {
-            KFS_flag.MF1_flag = false;
+            MF1_flag = false;
             pid_dead_flag = false;
             Arm_Start = true;
             KFS_flag.MF1_finish = true;
@@ -657,11 +663,11 @@ private:
         // KFS拾取判断MF2
         if (KFS_point.MF2_pos_.x == curve.Get_End_point().x && KFS_point.MF2_pos_.y == curve.Get_End_point().y)
         {
-            KFS_flag.MF2_flag = true;
+            MF2_flag = true;
         }
-        else if (KFS_flag.MF2_flag == true)
+        else if (MF2_flag == true)
         {
-            KFS_flag.MF2_flag = false;
+            MF2_flag = false;
             pid_dead_flag = false;
             Arm_Start = true;
             KFS_flag.MF2_finish = true;
@@ -670,11 +676,11 @@ private:
         // KFS拾取判断MF3
         if (KFS_point.MF3_pos_.x == curve.Get_End_point().x && KFS_point.MF3_pos_.y == curve.Get_End_point().y)
         {
-            KFS_flag.MF3_flag = true;
+            MF3_flag = true;
         }
-        else if (KFS_flag.MF3_flag == true)
+        else if (MF3_flag == true)
         {
-            KFS_flag.MF3_flag = false;
+            MF3_flag = false;
             pid_dead_flag = false;
             Arm_Start = true;
             KFS_flag.MF3_finish = true;
@@ -1323,8 +1329,6 @@ private:
     // 复位自动流程相关标志位。
     void flag_reset(void)
     {
-        count = false;
-        
         // 统一清空自动流程的阶段标志与旋转状态。
         WeaponSage_Start = false;
         WeaponSage_Back = false;
@@ -1338,10 +1342,6 @@ private:
         manual_transform_flag = false;
 
         pid_dead_flag = false;
-
-        KFS_flag.MF1_flag = false;
-        KFS_flag.MF2_flag = false;
-        KFS_flag.MF3_flag = false;
 
         KFS_flag.spin_flag_0 = false;
         KFS_flag.spin_flag = false;
