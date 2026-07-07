@@ -1068,7 +1068,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                 target_rotate_angle = 260.0f;
         }
         else if (kfs_index == 0x01)
-            target_rotate_angle = 300.0f;
+            target_rotate_angle = 307.0f;
         else
             target_rotate_angle = 0.0f;
 
@@ -1116,9 +1116,9 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             this->set_LaunchHeight(init_data_.new_store_height_outside_); // 降低到存储高度
             this->set_StretchLength(init_data_.new_store_ext_length_);
         }
-        else if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 300.0f) < 1.0f 
+        else if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 307.0f) < 1.0f 
             && kfs_index == 0x01 
-            && this->get_currentJointStatus().suckerJoint_angle_ < 0.2f)
+            && this->get_currentJointStatus().suckerJoint_angle_ < 0.4f)
         {
             this->set_LaunchHeight(init_data_.store_height_inside_); // 降低到存储高度
         }
@@ -1126,7 +1126,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             && kfs_index == 0x00 
             && !auto_ctrl_.flag.is_up_catch 
             && !is_store 
-            && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 0.2f) // 侧吸顶存
+            && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - 0.0f) < 0.4f) // 侧吸顶存
         {
             if (this->get_currentJointStatus().stretchJoint_Length_ > init_data_.max_stretchLength_ - 0.01f)
             {
@@ -1138,7 +1138,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
 
         // if(std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.store_height_inside_) < 0.01f)
         if (std::fabs(this->get_currentJointStatus().launchJoint_Height_ - init_data_.store_height_inside_) < 0.01f 
-            && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 300.0f) < 1.0f 
+            && std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 307.0f) < 1.0f 
             && kfs_index == 0x01)
         {
             if (auto_ctrl_.start_to_autoctrl == 1)
@@ -1315,7 +1315,7 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
         if (kfs_index == 0x01)
             target_rotate = 260.0f; // 存储的目标旋转角度
         else if (kfs_index == 0x00)
-            target_rotate = 300.0f; // 存储的目标旋转角度
+            target_rotate = 307.0f; // 存储的目标旋转角度
 
         this->setSuckerStatus(Sucker_Status_E::SUCK);
 
@@ -1350,7 +1350,7 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
         {
             if (kfs_index == 0x01 && std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - init_data_.max_stretchLength_) < 0.01f)
             {
-                this->set_LaunchHeight(init_data_.store_height_inside_); // 降低到存储高度\
+                this->set_LaunchHeight(init_data_.store_height_inside_); // 降低到存储高度
 
                 this->store_state_ = store_state::outstate1;
             }
@@ -1421,7 +1421,8 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
                 this->set_PitchAngle(init_data_.pitch_lift_angle_); // 吸盘抬平
             }
 
-            if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - rotate_tar) < 0.4f && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 0.4f)
+            if (std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - rotate_tar) < 0.4f 
+                && std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 0.4f)
             {
                 this->store_state_ = store_state::idle;
                 return true;

@@ -1,6 +1,7 @@
 #include "omni_chassisSetup.h"
 extern Chassis chassis;
 
+
 void OmniChassis_Setup::CB_Path_Check(void)
 {
     static bool back_flag = false;
@@ -31,7 +32,7 @@ void OmniChassis_Setup::CB_Path_Check(void)
 
     if (airjoy_data_.SWC == 0x00)
     {
-        if (CB_point.CB_End_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_End_pos[RB_Flag].y == curve.Get_End_point().y && path_line_.Is_End() == false)
+        if ((CB_point.CB_End_pos[RB_Flag]-robot_pos_).magnitude()>0.02f || path_line_.Is_End() == false)
         {
             Retreat_flag = true;
             if (robot_pos_.y > CB_point.spin_y && WeaponSage_Start == false)
@@ -61,12 +62,13 @@ void OmniChassis_Setup::CB_Path_Check(void)
                     target_yaw = -90.0f;
             }
         }
-        if (CB_point.CB_welt_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.CB_welt_pos[RB_Flag].y == curve.Get_End_point().y && path_line_.Is_End() == false)
+        if ((CB_point.CB_welt_pos[RB_Flag]-robot_pos_).magnitude()>0.02f || path_line_.Is_End() == false)
         {
             Retreat_flag = true;
         }
         else if (Retreat_flag == true)
         {
+            
             Retreat_flag = false;
             WeaponSage_End = true;
         }

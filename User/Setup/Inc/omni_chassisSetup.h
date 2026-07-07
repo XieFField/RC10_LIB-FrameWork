@@ -80,7 +80,7 @@ typedef struct
 
 typedef struct
 {
-    float cb_dead = 0.05f;
+    float cb_dead = 0.04f;
 
     float spin_y = 0.95f;
     
@@ -97,6 +97,7 @@ typedef struct
     Vector2D CB_transition_pos[2] = {{3.539f, 1.01f}, {3.0f, 1.1f}};
 
     Vector2D CB_welt_pos[2] = {{3.3f, 0.52f}, {3.98f, 0.495f}};
+    
 
 } CB_POINT;
 
@@ -383,11 +384,22 @@ public:
         }
     }
 
+    Vector2D test_pos={0.0f,0.0f};
+    float yaw_test=0.0f;
+    bool count=false;
+    
     bool GetEnd_flag()
     {
         // 读取夹杆退后流程完成标志。
-        if (WeaponSage_End == true && (_tool_Abs(yaw - target_yaw) < 7.0f))
+        if (WeaponSage_End == true && (_tool_Abs(yaw - target_yaw) < 2.0f))
         {
+            if(count==false)
+            {
+                test_pos=robot_pos_;
+                yaw_test=yaw;
+                count=true;
+            }
+            
             return true;
         }
         else
@@ -1294,6 +1306,8 @@ private:
     // 复位自动流程相关标志位。
     void flag_reset(void)
     {
+        count = false;
+        
         // 统一清空自动流程的阶段标志与旋转状态。
         WeaponSage_Start = false;
         WeaponSage_Back = false;

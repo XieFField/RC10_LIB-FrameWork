@@ -1085,9 +1085,9 @@ void Robot_WeaponSage_Setup::autoControl()
                 if(std::fabs(airjoy_data_.right_y) > 0.7f)
                 {
                     if (airjoy_data_.right_y > 0.75f)
-                        next_height += manual_RC10_ctrlForgrip_.weapon_launch_fastrate * 0.3;
+                        next_height += 0.0052f*0.3f;
                     else if (airjoy_data_.right_y < -0.75f)
-                        next_height -= manual_RC10_ctrlForgrip_.weapon_launch_fastrate * 0.3;
+                        next_height -= 0.0052f*0.3f;
                 }
 
                 this->setLaunch_angle(next_height);
@@ -1712,7 +1712,7 @@ int8_t untight_over_cnt = 0;
 
 
 float claw_close_time=0.4f;
-float claw_untight_time=0.4f;
+float claw_untight_time=0.6f;
 bool Robot_WeaponSage_Setup::Close_TargetClaw()
 {
     this->setClawSpeedOutLimit(3500.0f);
@@ -1768,7 +1768,7 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw()
         return false;
 }
 
-float claw_untight_1=18.0f;
+float claw_untight_1=15.0f;
 bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight()
 {
     this->setClawSpeedOutLimit(8000.0f);
