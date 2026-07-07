@@ -83,12 +83,12 @@ typedef struct
     float cb_dead = 0.04f;
 
     float spin_y = 0.95f;
-
+    
     // 第数组第零为红场
-    Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.85f}};          // 夹杆起点。
+    Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.85f}};           // 夹杆起点。
     Vector2D CB_Selection_pos[2] = {{3.466f, 0.79f}, {2.495f, 0.79f}}; // 夹杆流程默认目标点。
 
-    float back_y = 0.925f;
+    float back_y =0.925f;
 
     // 相机流程
     Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
@@ -364,14 +364,14 @@ public:
 
     bool GetReach_flag()
     {
-        static int num = 0;
-        if (pid_dead_flag == true)
+        static int num=0;
+        if(pid_dead_flag == true)
         {
             num++;
         }
         else
         {
-            num = 0;
+            num=0;
         }
         // 读取夹杆流程完成标志。
         if (num >= 150 && WeaponSage_Start == true && (_tool_Abs(yaw - target_yaw) < 5.0f))
@@ -422,7 +422,7 @@ public:
 
     bool GetBack_flag()
     {
-        if (WeaponSage_Back == true && (_tool_Abs(yaw - target_yaw) < 7.0f))
+        if(WeaponSage_Back == true && (_tool_Abs(yaw - target_yaw) < 7.0f))
         {
             return true;
         }
@@ -884,7 +884,6 @@ private:
         // 写入路径点的临时变量
         Vector2D last_vector = robot_pos_;
         Vector2D spin_vector = {0.0f, 0.0f};
-        bool MF1_END = false;
         int temp_point = 0;
         int i = 0;
 
@@ -899,21 +898,8 @@ private:
         {
             i = 1;
             temp_point = KFS_KeyPoint_.mustPastMap[0];
-            // 启动的时候刚好在第一个KFS处
-            if (KFS_point.MF1_Point_ == temp_point)
-            {
-                if (_tool_Abs(yaw - KFS_point.MF1_target_yaw_) < 20.0f)
-                {
-                    MF1_END = true;
-                    path_line_.Add_Point(KFS_point.MF1_pos_, path_param.end);
-                }
-                else
-                {
-                    return false;
-                }
-            }
             // 拐角无法处理防止撞车
-            else if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
+            if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
             {
                 if (_tool_Abs(yaw - KFS_point.MF1_target_yaw_) > 20.0f)
                 {
@@ -987,77 +973,74 @@ private:
 
         // 写入起点到MF2路径点坐标（不包含MF2）
         bool FINSH = false;
-        if (MF1_END == false)
+        for (; i < (KFS_num == 1 ? index_exit : MF2_Index_); i++)
         {
-            for (; i < (KFS_num == 1 ? index_exit : MF2_Index_); i++)
+            if (KFS_num == 1)
             {
-                if (KFS_num == 1)
+                if (i == (index_exit - 1)) // 终点
                 {
-                    if (i == (index_exit - 1)) // 终点
+                    temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
+                    // 梅林自动规划后是否直接上三区
+                    if (KFS_flag.uphill_flag == false)
                     {
-                        temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(KFS_KeyPoint_.mustPastMap[i]);
-                        // 梅林自动规划后是否直接上三区
-                        if (KFS_flag.uphill_flag == false)
-                        {
-                            path_line_.Add_End_Point(temp_vector, path_param.end);
-                        }
-                        else if (KFS_flag.uphill_flag == true)
-                        {
-                            if ((last_vector.x == 0.6f && RB_Flag == true) || (last_vector.x == 5.4f && RB_Flag == false))
-                            {
-                                CZ_flag.R1_RL_index = 1;
-                                path_line_.Add_Point(temp_vector, path_param.start);
-                                path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
-                                path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
-                            }
-                            else if (last_vector.y == 8.6f)
-                            {
-                                CZ_flag.R1_RL_index = 1;
-                                temp_vector.y = temp_vector.y - KFS_point.point_skew;
-                                path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
-                                path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
-                                path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
-                                path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
-                            }
-                        }
-                        // 取末端点进行路径退出后的锁点pid
-                        Path_end_point = path_line_.Get_End_Point();
-                        return true;
+                        path_line_.Add_End_Point(temp_vector, path_param.end);
                     }
-                }
-                temp_point = KFS_KeyPoint_.mustPastMap[i];
-                temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
-                // 四个拐点的顺滑处理
-                if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
-                {
-                    float spin_delay = KFS_flag.spin_flag == true && (KFS_point.MF1_target_yaw_ == 180.0f || KFS_point.MF1_target_yaw_ == 0.0f);
-                    if (temp_point == 1 || temp_point == 5)
+                    else if (KFS_flag.uphill_flag == true)
                     {
-                        spin_delay *= (-1.0f);
-                    }
-                    spin_vector = spinodal_path(last_vector, temp_vector, i, (KFS_point.spin_skew * spin_delay));
-                    if (spin_vector.x == 0.0f && spin_vector.x == 0.0f)
-                        return false;
-                    if (spin_delay != 0)
-                    {
-                        if (FINSH == true)
+                        if ((last_vector.x == 0.6f && RB_Flag == true) || (last_vector.x == 5.4f && RB_Flag == false))
                         {
-                            KFS_point.spin_pos = spin_vector;
-                            FINSH = false;
+                            CZ_flag.R1_RL_index = 1;
+                            path_line_.Add_Point(temp_vector, path_param.start);
+                            path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
+                            path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
+                        }
+                        else if (last_vector.y == 8.6f)
+                        {
+                            CZ_flag.R1_RL_index = 1;
+                            temp_vector.y = temp_vector.y - KFS_point.point_skew;
+                            path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
+                            path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
+                            path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
+                            path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
                         }
                     }
+                    // 取末端点进行路径退出后的锁点pid
+                    Path_end_point = path_line_.Get_End_Point();
+                    return true;
                 }
-                else if (temp_point == KFS_point.MF1_Point_) // MF停止点
-                {
-                    path_line_.Add_Point(KFS_point.MF1_pos_, path_param.end);
-                    FINSH = true;
-                }
-                else // 衔接路径
-                {
-                    path_line_.Add_Point(temp_vector, path_param.start);
-                }
-                last_vector = temp_vector;
             }
+            temp_point = KFS_KeyPoint_.mustPastMap[i];
+            temp_vector = MF_AutoCtrler::MapCenterWorld_Vector2D(temp_point);
+            // 四个拐点的顺滑处理
+            if (temp_point == 1 || temp_point == 5 || temp_point == 26 || temp_point == 30)
+            {
+                float spin_delay = KFS_flag.spin_flag == true && (KFS_point.MF1_target_yaw_ == 180.0f || KFS_point.MF1_target_yaw_ == 0.0f);
+                if (temp_point == 1 || temp_point == 5)
+                {
+                    spin_delay *= (-1.0f);
+                }
+                spin_vector = spinodal_path(last_vector, temp_vector, i, (KFS_point.spin_skew * spin_delay));
+                if (spin_vector.x == 0.0f && spin_vector.x == 0.0f)
+                    return false;
+                if (spin_delay != 0)
+                {
+                    if (FINSH == true)
+                    {
+                        KFS_point.spin_pos = spin_vector;
+                        FINSH = false;
+                    }
+                }
+            }
+            else if (temp_point == KFS_point.MF1_Point_) // MF停止点
+            {
+                path_line_.Add_Point(KFS_point.MF1_pos_, path_param.end);
+                FINSH = true;
+            }
+            else // 衔接路径
+            {
+                path_line_.Add_Point(temp_vector, path_param.start);
+            }
+            last_vector = temp_vector;
         }
 
         // 写入MF2到终点路径点坐标
