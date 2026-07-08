@@ -362,7 +362,7 @@ void OmniChassis_Setup::loop()
             else
             {
                 CZ_flag.dead_cnt = 0;
-                CHASSIS_MANUAL(1.0f, 1.0f, 0.6f, true);
+                CHASSIS_MANUAL(1.0f, 1.0f, 1.2f, true);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
         }

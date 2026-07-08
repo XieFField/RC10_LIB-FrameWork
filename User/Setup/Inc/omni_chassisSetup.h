@@ -95,7 +95,7 @@ typedef struct
     float back_y = 0.925f;                                             // 退后点位的y坐标
 
     // 相机流程
-    Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
+    Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.285f}};
 
     // 贴边流程
     Vector2D CB_transition_pos[2] = {{3.539f, 1.1f}, {3.0f, 1.1f}};
@@ -159,7 +159,7 @@ typedef struct
     // 下界10.02f上界是11.52f
     // Vector2D fit_wait_pos = {2.17f, 10.05f};
     // Vector2D fit_transition_pos = {3.0f, 11.5f};
-    Vector2D fit_end_pos[2] = {{6.0f - 5.39f, 10.19f}, {5.355f, 10.21f}};
+    Vector2D fit_end_pos[2] = {{6.0f - 5.39f, 10.19f}, {5.355f, 10.24f}};
 
     // 左中右   或者   先后
     float set_skew = 0.32f;
