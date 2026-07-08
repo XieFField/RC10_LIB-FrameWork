@@ -88,7 +88,7 @@ typedef struct
 #ifdef CB_SINGLE
     int pole_index = 0;
     float CB_Selection_pos_0_y = 0.79f;
-    float CB_Selection_pos_0_x[2] = {3.666f, 2.295f};
+    float CB_Selection_pos_0_x[2] = {3.666f, 2.095f};
 #endif
 
     Vector2D CB_Selection_pos[2] = {{3.466f, 0.79f}, {2.495f, 0.79f}}; // 夹杆流程默认目标点。

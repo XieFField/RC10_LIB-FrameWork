@@ -406,7 +406,7 @@ PID_Param_Config lock_angle_pid_params = {
  .I_Outlimit = 1.0f,
  .isIOutlimit = true, 
  .output_limit = 3.0f,
- .deadband = 0.0f 
+ .deadband = 0.15f 
 };
 
 PID_Param_Config track_pid_params = {

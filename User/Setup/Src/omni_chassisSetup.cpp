@@ -113,6 +113,15 @@ void OmniChassis_Setup::CB_Path_Check(void)
             WeaponSage_End = true;
         }
     }
+    
+    
+    if (CB_point.home_pos[RB_Flag].x == curve.Get_End_point().x && CB_point.home_pos[RB_Flag].y == curve.Get_End_point().y)
+    {
+
+         target_yaw = 0.0f;
+    }
+    
+    
 }
 
 void OmniChassis_Setup::CB_Selection_Planning(void)
@@ -121,7 +130,6 @@ void OmniChassis_Setup::CB_Selection_Planning(void)
     if (robot_pos_.x < 0.0f || robot_pos_.x > 6.0f || robot_pos_.y > 2.8f || robot_pos_.y < 0.0f)
         return;
     // 夹杆流程只规划起点到固定终点的简化路径。
-    target_yaw = 0.0f;
     path_line_.Reset();
     path_line_.plan_reset();
 #ifdef CB_SINGLE
