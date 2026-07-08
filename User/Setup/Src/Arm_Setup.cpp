@@ -394,8 +394,8 @@ bool ArmSetup::c3z_putdown_ctrl()
     static float putdown_start_time = 0.0f;
     float x_line = MF_AutoCtrler::get_color() == 1 ? 1.7f : 4.3f;
     bool is_intarget_zone = Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 10.1 
-                            && (MF_AutoCtrler::get_color() == 1 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x > x_line)
-                            && (MF_AutoCtrler::get_color() == 0 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x < x_line);
+                            &&((MF_AutoCtrler::get_color() == 1 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x > x_line)
+                            || (MF_AutoCtrler::get_color() == 0 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x < x_line));
 
     if (is_intarget_zone) 
     {

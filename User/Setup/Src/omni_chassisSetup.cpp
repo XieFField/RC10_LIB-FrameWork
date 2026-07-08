@@ -440,7 +440,7 @@ void OmniChassis_Setup::loop()
         if (CZ_point.R1_pos[1][RB_Flag].x == curve.Get_End_point().x && CZ_point.R1_pos[1][RB_Flag].y == curve.Get_End_point().y && robot_pos_.y < 10.86f)
         {
 
-            target_yaw = 180.0f;
+            target_yaw = (RB_Flag ? 180.0f : 0.0f);
         }
 
         if (path_line_.Is_End() == false)
