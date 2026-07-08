@@ -85,25 +85,25 @@ typedef struct
 
     Vector2D CB_Start_pos[2] = {{5.0f, 0.85f}, {1.0f, 0.85f}}; // 夹杆起点。
 
-#ifdef CB_SINGLE
+#if CB_SINGLE
     int pole_index = 0;
-    float CB_Selection_pos_0_y = 0.79f;
-    float CB_Selection_pos_0_x[2] = {3.666f, 2.095f};
+    float CB_Selection_pos_0_y = 0.8f;
+    float CB_Selection_pos_0_x[2] = {3.90f, 2.095f};
 #endif
 
-    Vector2D CB_Selection_pos[2] = {{3.466f, 0.79f}, {2.495f, 0.79f}}; // 夹杆流程默认目标点。
+    Vector2D CB_Selection_pos[2] = {{3.50f, 0.79f}, {2.495f, 0.79f}}; // 夹杆流程默认目标点。
     float back_y = 0.925f;                                             // 退后点位的y坐标
 
     // 相机流程
-    Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
+    Vector2D CB_End_pos[2] = {{6.0f-2.461f, 1.085f}, {2.461f, 1.085f}};
 
     // 贴边流程
-    Vector2D CB_transition_pos[2] = {{3.539f, 1.1f}, {3.0f, 1.1f}};
+    Vector2D CB_transition_pos[2] = {{3.0, 1.25f}, {3.0f, 1.25f}};
 
-    Vector2D CB_welt_pos[2] = {{3.3f, 0.495f}, {3.98f, 0.495f}};
+    Vector2D CB_welt_pos[2] = {{2.1, 0.495f}, {3.98f, 0.495f}};
 
     // 回家流程
-    Vector2D home_transition_pos[2] = {{3.539f, 1.5f}, {2.8f, 1.5f}};
+    Vector2D home_transition_pos[2] = {{6.0f-2.6f, 1.5f}, {2.6f, 1.5f}};
     Vector2D home_pos[2] = {{6.0f-0.5f, 0.5f}, {0.5f, 0.5f}};
 
 } CB_POINT;
@@ -271,7 +271,7 @@ public:
 
     void reset_CB_point(float x, float y)
     {
-#ifdef CB_SINGLE
+#if CB_SINGLE
         CB_point.CB_Selection_pos_0_x[RB_Flag] = x;
         CB_point.CB_Selection_pos_0_y = y;
 #else
@@ -280,7 +280,7 @@ public:
 #endif
     }
 
-#ifdef CB_SINGLE
+#if CB_SINGLE
     void reset_CB_index(int index)
     {
         CB_point.pole_index = index - 1;
@@ -352,6 +352,10 @@ private:
     CHASSIS_Status_E chassis_status_last_ = CHASSIS_STOP; // 当前底盘总状态机状态。（依旧是每个模式都赋值，用于进入自动模式时进行初始化）
 
     communication::RC10_AirJoy_Data_S airjoy_data_;
+    
+    Vector2D cb_pos ={0.0f,0.0f};
+    float cb_yaw=0.0f;
+    bool cb=false;
 
     //-----------------------------------内部控制函数-----------------------------------------//
     void loop() override; // RTOS 主循环。
@@ -432,11 +436,19 @@ public:
         WeaponSage_Back = weapon_back;
     }
     
+    
+    
     bool GetEnd_flag()
     {
         // 读取夹杆退后流程完成标志。
-        if (WeaponSage_End == true && (_tool_Abs(yaw - target_yaw) < 2.0f))
+        if (WeaponSage_End == true && (_tool_Abs(yaw - target_yaw) < 1.0f))
         {
+            if(cb==false)
+            {
+                cb=true;
+                cb_yaw=yaw;
+                cb_pos=robot_pos_;
+            }
             return true;
         }
         else
@@ -1293,11 +1305,11 @@ private:
     void CHASSIS_MANUAL(float vx_ratio, float vy_ratio, float yaw_ratio = 0.0f, bool yaw_update = true)
     {
         static bool transform_flag = false;
-        if (robot_pos_.y > 10.0f && transform_flag == false && robot_pos_.x > (RB_Flag ? (2.25f) : 3.75f))
+        if (robot_pos_.y > 10.0f && transform_flag == false && (RB_Flag ? ( robot_pos_.x >2.25f) :  robot_pos_.x <3.75f))
         {
             transform_flag = true;
         }
-        else if (robot_pos_.y < 8.85f && transform_flag == true && robot_pos_.x < (RB_Flag ? (1.0f) : 5.0f))
+        else if (robot_pos_.y < 8.85f && transform_flag == true && (RB_Flag ? ( robot_pos_.x <1.0f) :  robot_pos_.x >5.0f))
         {
             transform_flag = false;
         }
@@ -1348,6 +1360,7 @@ private:
     // 复位自动流程相关标志位。
     void flag_reset(void)
     {
+        cb=false;
         // 统一清空自动流程的阶段标志与旋转状态。
         WeaponSage_Start = false;
         WeaponSage_Back = false;

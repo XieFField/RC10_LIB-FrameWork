@@ -308,6 +308,7 @@ extern PID_Param_Config omega_z_pid_init_config;
 extern PID_Param_Config rot_z_pid_init_config;
 
 extern CamZ_Param camera_z_ctrl_params;
+extern PID_Param_Config vesc_drive_speed_pid_params_3_special;
 #endif
 
 #endif

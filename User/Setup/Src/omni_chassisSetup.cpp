@@ -52,7 +52,7 @@ void OmniChassis_Setup::CB_Selection_Planning(void)
     target_yaw = 0.0f;
     path_line_.Reset();
     path_line_.plan_reset();
-#ifdef CB_SINGLE
+#if CB_SINGLE
     // 每次进入都挪杆
     CB_point.pole_index = (CB_point.pole_index + 1) % 4;
     CB_point.CB_Selection_pos[RB_Flag].x = CB_point.CB_Selection_pos_0_x[RB_Flag] + (RB_Flag ? 1.0f : (-1.0f)) * CB_point.pole_index * 0.2f;
@@ -113,7 +113,7 @@ void OmniChassis_Setup::CB_Path_Check(void)
 
     if (airjoy_data_.SWC == 0x00)
     {
-        if ((CB_point.CB_End_pos[RB_Flag] - robot_pos_).magnitude() > 0.02f || path_line_.Is_End() == false)
+        if ( path_line_.Is_End() == false)
         {
             Retreat_flag = true;
             if (robot_pos_.y > CB_point.spin_y && WeaponSage_Start == false)
@@ -137,7 +137,7 @@ void OmniChassis_Setup::CB_Path_Check(void)
                 target_yaw=(RB_Flag?90.0f:-90.0f);
             }
         }
-        if ((CB_point.CB_welt_pos[RB_Flag] - robot_pos_).magnitude() > 0.02f || path_line_.Is_End() == false)
+        if (path_line_.Is_End() == false)
         {
             Retreat_flag = true;
         }
