@@ -90,6 +90,7 @@ namespace communication{
         rec_joystick[3] = 2048;
         rec_send_key = 0;
         rec_page = 2;
+        rec_display_color = 1;
 
         
         rec_setting_command = 0;
@@ -119,7 +120,6 @@ namespace communication{
         rec_KFS2_place4=0;
         rec_KFSf_place1=0;
 
-        saved_color=1;
         // Communication_RX_DMA(rxhuart, dma_rx_buf, DMA_BUF_SIZE);
         // __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT); 
     }
@@ -239,6 +239,7 @@ namespace communication{
                 rec_joystick[3] = pFrame->ch4;
                 rec_send_key = pFrame->key;
                 rec_page = pFrame->page;
+                rec_display_color = pFrame->display_color;
 
                 // 将 FIFO 头部读取指针越过已经正确消费的这一帧
                 rx_fifo.head = p;

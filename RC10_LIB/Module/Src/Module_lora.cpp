@@ -169,7 +169,7 @@ void Lora_communication::Task_Process() {
         GetRecvCommandFrameData(send_chosen_command, send_chosen_command_cnt, _);
         airjoy_data.recv_command_command = send_chosen_command;
         airjoy_data.recv_command_cnt       = GetRecvCommandCnt(send_chosen_command);  // 当前单个命令的累计次数
-        airjoy_data.recv_command_total_cnt = GetRecvCommandTotalCnt();                // 0~11号命令的总和
+        airjoy_data.recv_command_total_cnt = GetRecvCommandTotalCnt();                // 0~15号命令的总和
 
         airjoy_data.page = GetPage();
 
