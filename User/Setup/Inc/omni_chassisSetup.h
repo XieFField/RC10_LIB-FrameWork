@@ -83,7 +83,7 @@ typedef struct
     float cb_dead = 0.04f;
     float spin_y = 0.95f; // 退后到多少开始旋转
 
-    Vector2D CB_Start_pos[2] = {{5.0f, 0.9f}, {1.0f, 0.85f}}; // 夹杆起点。
+    Vector2D CB_Start_pos[2] = {{5.0f, 0.85f}, {1.0f, 0.85f}}; // 夹杆起点。
 
 #ifdef CB_SINGLE
     int pole_index = 0;
@@ -95,7 +95,7 @@ typedef struct
     float back_y = 0.925f;                                             // 退后点位的y坐标
 
     // 相机流程
-    Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.285f}};
+    Vector2D CB_End_pos[2] = {{3.539f, 1.085f}, {2.461f, 1.085f}};
 
     // 贴边流程
     Vector2D CB_transition_pos[2] = {{3.539f, 1.1f}, {3.0f, 1.1f}};
@@ -104,7 +104,7 @@ typedef struct
 
     // 回家流程
     Vector2D home_transition_pos[2] = {{3.539f, 1.5f}, {2.8f, 1.5f}};
-    Vector2D home_pos[2] = {{5.5f, 0.5f}, {0.5f, 0.5f}};
+    Vector2D home_pos[2] = {{6.0f-0.5f, 0.5f}, {0.5f, 0.5f}};
 
 } CB_POINT;
 
@@ -159,7 +159,7 @@ typedef struct
     // 下界10.02f上界是11.52f
     // Vector2D fit_wait_pos = {2.17f, 10.05f};
     // Vector2D fit_transition_pos = {3.0f, 11.5f};
-    Vector2D fit_end_pos[2] = {{6.0f - 5.39f, 10.19f}, {5.355f, 10.24f}};
+    Vector2D fit_end_pos[2] = {{6.0f - 5.355f, 10.21f}, {5.355f, 10.21f}};
 
     // 左中右   或者   先后
     float set_skew = 0.32f;
@@ -244,6 +244,29 @@ public:
             this->is_chassis_reverse_ = 1.0f;
         else
             this->is_chassis_reverse_ = -1.0f;
+    }
+    
+    // 统一切换底盘状态
+    void setChassisStatus(CHASSIS_Status_E status)
+    {
+        // 最后写入底盘总状态。
+        chassis_status_ = status;
+    }
+    
+    void setPathAutoStart(uint8_t start)
+    {
+        if (start == 1)
+            flag = 1;
+        else
+            flag = 0;
+    }
+    
+    void set_KFS(int8_t KFS1, int8_t KFS2, int8_t KFS3)
+    {
+        // 更新自动规划目标点编号。
+        KFS_point.MF1 = KFS1;
+        KFS_point.MF2 = KFS2;
+        KFS_point.MF3 = KFS3;
     }
 
     void reset_CB_point(float x, float y)
@@ -362,20 +385,7 @@ private:
     void CZ_Catch_Selection_Planning(void);
 
 public:
-    /**
-     * @brief 设置路径自动开始标志
-     * @param start 1表示开始，0表示停止
-     * @param path_flagIndex 路径标志索引，0或1
-     */
-
-    void setPathAutoStart(uint8_t start)
-    {
-        if (start == 1)
-            flag = 1;
-        else
-            flag = 0;
-    }
-
+    //////////////////              一区标志位传递               /////////////////////
     bool GetReach_flag()
     {
         static int num = 0;
@@ -388,7 +398,7 @@ public:
             num = 0;
         }
         // 读取夹杆流程完成标志。
-        if (num >= 150 && WeaponSage_Start == true && (_tool_Abs(yaw - target_yaw) < 5.0f))
+        if (num >= 100 && WeaponSage_Start == true && (_tool_Abs(yaw - target_yaw) < 2.0f))
         {
             return true;
         }
@@ -397,6 +407,31 @@ public:
             return false;
         }
     }
+    
+    void ReceiveReach_flag(bool weapon_start)
+    {
+        // 写入夹杆流程反馈标志。
+        WeaponSage_Start = weapon_start;
+    }
+    
+    bool GetBack_flag()
+    {
+        if (WeaponSage_Back == true && (_tool_Abs(yaw - target_yaw) < 2.0f))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    
+    void ReceiveBack_flag(bool weapon_back)
+    {
+        // 写入夹杆流程反馈标志。
+        WeaponSage_Back = weapon_back;
+    }
+    
     bool GetEnd_flag()
     {
         // 读取夹杆退后流程完成标志。
@@ -409,36 +444,14 @@ public:
             return false;
         }
     }
-
-    void ReceiveReach_flag(bool weapon_start)
-    {
-        // 写入夹杆流程反馈标志。
-        WeaponSage_Start = weapon_start;
-    }
-
-    void ReceiveBack_flag(bool weapon_back)
-    {
-        // 写入夹杆流程反馈标志。
-        WeaponSage_Back = weapon_back;
-    }
-
-    bool GetBack_flag()
-    {
-        if (WeaponSage_Back == true && (_tool_Abs(yaw - target_yaw) < 2.0f))
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
+    
     void ReceiveEnd_flag(bool weapon_end)
     {
         // 写入夹杆流程反馈标志。
         WeaponSage_End = weapon_end;
     }
+    
+    //////////////////              二区标志位传递               /////////////////////
 
     bool Get_Arm_Start_flag()
     {
@@ -461,11 +474,22 @@ public:
         // 写入机械臂流程反馈标志。
         Arm_Start = arm_end;
     }
+    
+    //////////////////              三区标志位传递               /////////////////////
 
     bool Get_CZ_Arm_flag()
     {
+        static int num = 0;
+        if (pid_dead_flag == true)
+        {
+            num++;
+        }
+        else
+        {
+            num = 0;
+        }
         // 读取机械臂触发标志。
-        if (pid_dead_flag == true && CZ_Arm == true)
+        if (num >= 100 &&pid_dead_flag == true && CZ_Arm == true)
         {
             return true;
         }
@@ -483,8 +507,17 @@ public:
 
     bool Get_CZ_Catch_flag()
     {
+        static int num = 0;
+        if (pid_dead_flag == true)
+        {
+            num++;
+        }
+        else
+        {
+            num = 0;
+        }
         // 读取机械臂触发标志。
-        if (pid_dead_flag == true && CZ_Catch == true)
+        if (num >= 100 &&pid_dead_flag == true && CZ_Catch == true)
         {
             return true;
         }
@@ -500,21 +533,6 @@ public:
         CZ_Catch = CZ_catch;
     }
 
-    void set_KFS(int8_t KFS1, int8_t KFS2, int8_t KFS3)
-    {
-        // 更新自动规划目标点编号。
-        KFS_point.MF1 = KFS1;
-        KFS_point.MF2 = KFS2;
-        KFS_point.MF3 = KFS3;
-    }
-    // 统一切换底盘状态
-    void setChassisStatus(CHASSIS_Status_E status)
-    {
-        // 最后写入底盘总状态。
-        chassis_status_ = status;
-    }
-
-    // 写一些辅助函数和标志位函数
 private:
     //////////////////////////////////////////       路径纠偏      //////////////////////////////////////////////////////
     void Path_lock_point(Vector2D lock_point)
@@ -544,6 +562,25 @@ private:
             Chassis_Target.VX = speed.x;
             Chassis_Target.VY = speed.y;
         }
+    }
+    
+    void v_plan(void)
+    {
+        V.planspeed = path_line_.plan(robot_pos_);
+        Path_correction();
+        V.corrVelocity = V.PID_coefficient * V.corrVelocity;
+
+        if (path_line_.Get_Curve_Flag() == true && (chassis_status_ == CHASSIS_AUTO_CONTROL_KFS || chassis_status_ == SEMI_AUIO_CZ_ARM_Challenge))
+        {
+            V.corrVelocity = V.corrVelocity * V.spinodal_coefficient;
+            speed = V.corrVelocity + V.planspeed;
+        }
+        else
+        {
+            speed = v_limit();
+        }
+        Chassis_Target.VX = speed.x;
+        Chassis_Target.VY = speed.y;
     }
 
     void Path_correction(void)
@@ -1252,24 +1289,6 @@ private:
         }
     }
 
-    void v_plan(void)
-    {
-        V.planspeed = path_line_.plan(robot_pos_);
-        Path_correction();
-        V.corrVelocity = V.PID_coefficient * V.corrVelocity;
-
-        if (path_line_.Get_Curve_Flag() == true && (chassis_status_ == CHASSIS_AUTO_CONTROL_KFS || chassis_status_ == SEMI_AUIO_CZ_ARM_Challenge))
-        {
-            V.corrVelocity = V.corrVelocity * V.spinodal_coefficient;
-            speed = V.corrVelocity + V.planspeed;
-        }
-        else
-        {
-            speed = v_limit();
-        }
-        Chassis_Target.VX = speed.x;
-        Chassis_Target.VY = speed.y;
-    }
     // 当需要所目标角时第四个参数给false
     void CHASSIS_MANUAL(float vx_ratio, float vy_ratio, float yaw_ratio = 0.0f, bool yaw_update = true)
     {
