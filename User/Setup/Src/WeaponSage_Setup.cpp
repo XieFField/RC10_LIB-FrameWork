@@ -9,8 +9,8 @@ Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
 {
 }
 
-float lift_pitch = -5.0f;
-float stend_up = -90.0f;
+float lift_pitch = -12.0f;
+float stend_up = -96.0f;
 
 uint32_t WeaponSagestackHighWaterMark = 0;
 uint8_t relocate_mid= 0;
@@ -1918,7 +1918,7 @@ WeaponSage_InitData_S initData_=
     .launch_Ratio_ = 0.139989366256f,
     .claw_gearRatio_  =360.0f ,
     .arm_gearRatio_ = 360.0f,
-    .arm_kp = 40.0f,
-    .arm_kd = 0.5f,
-    .arm_tff = 0.0f,
+    .arm_kp = 22.0f,
+    .arm_kd = 10.0f,
+    .arm_tff = 0.8f,
 };
