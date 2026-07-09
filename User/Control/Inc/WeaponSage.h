@@ -27,6 +27,7 @@ extern "C" {
 #include "BSP_TimeStamp.h"
 #include "FSMstauts_enum.h"
 //初�?�化数据结构�??
+#define USE_ARM_MIT  1
 typedef struct 
 {
     /* data */
@@ -40,6 +41,9 @@ typedef struct
 	bool is_Arm_fast;
 	float min_arm_rate_;
     float claw_untight ;
+	float arm_kp;
+	float arm_kd;
+	float arm_tff;
     float wrist_gearRatio_; //手腕减速比，手腕电机转一圈，�??�??关节�??多少�?? 360度，直驱
     float launch_Ratio_; // �??升减速比，抬升电机转一圈，�??�??关节移动多少�??
     float claw_gearRatio_; // 夹爪减速比，夹�??电机�??一圈，�??�??关节移动多少�??
@@ -185,6 +189,7 @@ public:
     bool setArm_angle(float angle);
     bool setLaunch_angle(float angle);
 	bool setArm_angle_slow(float angle);
+
 
 
     void setCtrlMode(WeaponSage::WeaponSage_CtrlMode_S mode)

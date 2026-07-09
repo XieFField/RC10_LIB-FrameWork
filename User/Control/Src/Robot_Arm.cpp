@@ -118,8 +118,14 @@ void Robot_Arm::update()
         motor_launch_->setTargetTotalAngle(launch_fliter_ramp_.ramp_target_);
     }
     if (motor_pitch_ != nullptr)
+    {
+    #if MIT
+        motor_pitch_->setMIT(target_pitchMotorAngle, init_data_.max_pitchRPM_,init_data_.arm_kp,
+                            init_data_.arm_kd,init_data_.arm_tff);
+    #else
         motor_pitch_->setTargetTotalAngle(init_data_.max_pitchRPM_, target_pitchMotorAngle);
-
+    #endif
+    }
     if (sucker_status_ == SUCK)
     {
         HAL_GPIO_WritePin(init_data_.Sucker_GPIO_Port, init_data_.Sucker_GPIO_Pin, GPIO_PIN_SET);

@@ -39,6 +39,8 @@ extern "C"
 #include "Module_GPIO.h"
 #include "Motor_DM.h"
 
+#define MIT 0
+
 /**
  * @brief
  */
@@ -77,6 +79,10 @@ typedef struct
     float putdown_height_ = 0.24f;   // 放置高度
     float pitch_lift_angle_ = 91.0f; // 俯仰抬平角度
 
+    // float arm_kp;
+	// float arm_kd;
+	// float arm_tff;
+    // float arm_offset;
     GPIO_TypeDef *Sucker_GPIO_Port; // 吸盘GPIO控制端口
     uint16_t Sucker_GPIO_Pin;       // 吸盘GPIO控制引脚
 
