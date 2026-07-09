@@ -537,8 +537,8 @@ void Robot_WeaponSage_Setup::idle()
 {
 	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
 	if(last_weaponSage_status_!=WEAPONSAGE_IDLE && last_weaponSage_status_ != WEAPONSAGE_AUTOCONTROL)
-		this->setClawSpeedOutLimit(3500.0f);
 	{
+		this->setClawSpeedOutLimit(3500.0f);
 		this->last_pos_ = this->get_CurrentPos();
 		this->target_pos_.claw_1_pos_ = this->last_pos_.claw_1_pos_;
         this->target_pos_.claw_2_pos_ = this->last_pos_.claw_2_pos_;
