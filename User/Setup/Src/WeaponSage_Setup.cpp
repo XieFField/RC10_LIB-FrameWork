@@ -548,6 +548,18 @@ void Robot_WeaponSage_Setup::idle()
 		last_weaponSage_status_=WEAPONSAGE_IDLE;
 
 	}
+	if(last_pos_.claw_1_pos_>initData_.claw_untight)
+	{
+		target_pos_.claw_1_pos_= initData_.max_clawAngle_;
+	}
+    if(last_pos_.claw_2_pos_>initData_.claw_untight)
+	{
+		target_pos_.claw_2_pos_= initData_.max_clawAngle_;
+	}
+    if(last_pos_.claw_3_pos_>initData_.claw_untight)
+	{
+		target_pos_.claw_3_pos_= initData_.max_clawAngle_;
+	}
 	this->setLaunch_angle(target_pos_.launch_pos_);
     this->setClaw_1_angle(target_pos_.claw_1_pos_);
     this->setClaw_2_angle(target_pos_.claw_2_pos_);
