@@ -580,16 +580,16 @@ void Robot_WeaponSage_Setup::idle()
 float target_wrist= 0.0f;
 float target_arm = 0.0f;
 float target_claw_=0.0f;
-float kp=0.0f;
+
 void Robot_WeaponSage_Setup::debug()
 {
 	this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
-	this->autoControl();
-//	if(this->arm_Motor_->getErrorNum()==0x01)
-//	{
-//		this->setArm_angle(target_arm);
-//	}
-//	
+//	this->autoControl();
+	if(this->arm_Motor_->getErrorNum()==0x01)
+	{
+		this->setArm_angle_slow(target_arm);
+	}
+	
 //	this->setWrist_angle(target_wrist);
 //	this->setClaw_1_angle(target_claw_);
 //	this->setClaw_2_angle(target_claw_);
@@ -1917,5 +1917,8 @@ WeaponSage_InitData_S initData_=
     .wrist_gearRatio_ = 144.0f,
     .launch_Ratio_ = 0.139989366256f,
     .claw_gearRatio_  =360.0f ,
-    .arm_gearRatio_ = 360.0f
+    .arm_gearRatio_ = 360.0f,
+    .arm_kp = 40.0f,
+    .arm_kd = 0.5f,
+    .arm_tff = 0.0f,
 };

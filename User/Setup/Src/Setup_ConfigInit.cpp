@@ -305,7 +305,7 @@ void CAN_Motor_Init(void)
     Weapon_Claw3.pid_init(weapon_2006_speedPID, 0.0f, weapon_2006_anglePID, 0.0f);
     Weapon_Wrist.pid_init(weapon_wrist_speedPID, 0.0f, weapon_wrist_anglePID, 0.0f);
 
-    Weapon_Elbow.reset_controlFrequency(100); // 肘部电机降到 100Hz，减轻总线负载
+    Weapon_Elbow.reset_controlFrequency(1000); // 肘部电机降到 100Hz，减轻总线负载
 }
 
 

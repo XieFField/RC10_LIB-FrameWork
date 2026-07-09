@@ -99,7 +99,12 @@ void Robot_WeaponSage::update()
 		claw_2_Motor_->setTargetTotalAngle(target_pos_.claw_2_TotalAngle_);
 		claw_3_Motor_->setTargetTotalAngle(target_pos_.claw_3_TotalAngle_);
 		wrist_Motor_->setTargetTotalAngle( target_pos_.wrist_TotalAngle_);
+		#if !USE_ARM_MIT
 		arm_Motor_->setTargetTotalAngle(arm_speed_,target_pos_.arm_pos_);
+        #else
+        arm_Motor_->setMIT(target_pos_.arm_pos_,arm_speed_,initData_.arm_kp,
+                            initData_.arm_kd,initData_.arm_tff);
+        #endif
 	}
 }
 bool Robot_WeaponSage::setClaw_1_angle(float angle)
@@ -181,6 +186,8 @@ bool Robot_WeaponSage::setLaunch_angle(float angle)
     else
         return false;
 }
+
+
 
 
 float Robot_WeaponSage::Realpos_to_MotorTotalAngle(float real_pos, WeaponSage::Motor_Type_E motor_type)
