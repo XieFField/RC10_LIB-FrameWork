@@ -102,6 +102,7 @@ Lora_communication::Lora_communication(UART_HandleTypeDef* tx_huart, UART_Handle
     last_joystick_frame_count = 0;
     link_lost = true;
     airjoy_data.link_lost = 1;
+    airjoy_data.page = 2;
 }
 
 Lora_communication::~Lora_communication() {
@@ -118,6 +119,9 @@ void Lora_communication::Init() {
     if (lora_rx_huart != nullptr && lora_rx_huart->hdmarx != nullptr) {
         __HAL_DMA_DISABLE_IT(lora_rx_huart->hdmarx, DMA_IT_HT);
     }
+
+    // The remote is already powered; send this startup command exactly once.
+    Comm_SendHmiCommandToTxBuffer(2U, 0U, 0U);
 }
 
 
@@ -165,7 +169,7 @@ void Lora_communication::Task_Process() {
         GetRecvCommandFrameData(send_chosen_command, send_chosen_command_cnt, _);
         airjoy_data.recv_command_command = send_chosen_command;
         airjoy_data.recv_command_cnt       = GetRecvCommandCnt(send_chosen_command);  // 当前单个命令的累计次数
-        airjoy_data.recv_command_total_cnt = GetRecvCommandTotalCnt();                // 0~11号命令的总和
+        airjoy_data.recv_command_total_cnt = GetRecvCommandTotalCnt();                // 0~15号命令的总和
 
         airjoy_data.page = GetPage();
 
@@ -313,9 +317,9 @@ void Lora_communication::update_airjoy_data(RC10_AirJoy_Data_S * data)
     data->page = airjoy_data.page;
 
     data->left_x = airjoy_data.left_x;
-    data->left_y = airjoy_data.left_y - 0.05f;
+    data->left_y = airjoy_data.left_y;
     data->right_y = airjoy_data.right_x;
-    data->right_x = airjoy_data.right_y+ 0.05f;
+    data->right_x = airjoy_data.right_y;
 
     data->SWA = airjoy_data.SWA;
     data->SWB = airjoy_data.SWB;
