@@ -59,7 +59,7 @@ typedef struct{
     // ---- 串口屏命令帧 ----
     uint8_t recv_command_command;
     uint8_t recv_command_cnt;        // 当前命令的累计次数（单命令）
-    uint8_t recv_command_total_cnt;  // 全部 12 个命令 (0~11) 的计数器总和
+    uint8_t recv_command_total_cnt;  // 全部 16 个命令 (0~15) 的计数器总和
     uint8_t link_lost;
 
     // ---- 通信统计 -------

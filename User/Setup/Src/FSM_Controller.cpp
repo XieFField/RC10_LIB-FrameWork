@@ -264,8 +264,23 @@ void FSM_Controller::loop()
     {
         chassis_setup_->set_KFS(KStarget.KFS[0], KStarget.KFS[1], KStarget.KFS[2]);
         arm_setup_->set_TargetKFS(KStarget.KFS[0], KStarget.KFS[1], KStarget.KFS[2]);
+
+        #if CB_SINGLE
+        for(int i = 3; i > 0; i--)
+        {
+            if(KStarget.Spear[i-1] != 0)
+            {
+                chassis_setup_->reset_CB_index(i-1);
+                weaponSage_setup_->set_claw_flag(0,0,1);
+                break;
+            }
+            
+        }
+        
+        #else
         weaponSage_setup_->set_claw_flag(
             KStarget.Spear[0], KStarget.Spear[1], KStarget.Spear[2]);
+        #endif
     }
 
     last_KStarget = KStarget;

@@ -20,8 +20,9 @@ extern "C" {
 #include "APP_tool.h"
 
 #define USE_RC10_AIRJOY 1 //启用自制遥控器
-#define CHALLENGE_3ZONE 0 //挑战赛3区专用代码
+#define CHALLENGE_3ZONE 1 //挑战赛3区专用代码
 #define CHALEENGE_12ZONE 1 //挑战赛12区专用代码
+#define CB_SINGLE 0//单夹爪专用代码
 
 typedef enum{
     ALL_STOP, //STOP状态
@@ -64,7 +65,7 @@ typedef enum{
     SEND_PUT_DOWN_LOW_Mid = 0x07, //放置低位中
     
 }SEND_CMD_TO_R2;
-
+ 
 typedef enum{
     ARM_MANUAL_CONTROL, //手操 (十字键不包含放置模式)
     ARM_AUTO_CONTROL, //自动

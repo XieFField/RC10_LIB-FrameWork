@@ -232,7 +232,7 @@ public:
          this->setPitchReversed(false); //锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟?
         this->setStretchReversed(true); //锟斤拷展锟斤拷锟斤拷锟斤拷锟?
         this->setRotateReversed(false);
-        this->setLaunchReversed(true); //锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟?
+        this->setLaunchReversed(false); //锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟?
         start(osPriorityHigh-1, 512); 
         arm_ctrlStatus.init_flag = true;
     }
