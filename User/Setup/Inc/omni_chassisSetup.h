@@ -81,30 +81,30 @@ typedef struct
 typedef struct
 {
     float cb_dead = 0.04f;
-    float spin_y = 0.95f; // 退后到多少开始旋转
+    float spin_y = 0.98f; // 退后到多少开始旋转
 
-    Vector2D CB_Start_pos[2] = {{5.0f, 0.85f}, {1.0f, 0.85f}}; // 夹杆起点。
+    Vector2D CB_Start_pos[2] = {{5.0f, 0.86f}, {1.0f, 0.86f}}; // 夹杆起点。
 
 #if CB_SINGLE
     int pole_index = 0;
-    float CB_Selection_pos_0_y = 0.8f;
+    float CB_Selection_pos_0_y = 0.81f;
     float CB_Selection_pos_0_x[2] = {3.90f, 2.095f};
 #endif
 
-    Vector2D CB_Selection_pos[2] = {{3.50f, 0.79f}, {2.495f, 0.79f}}; // 夹杆流程默认目标点。
-    float back_y = 0.925f;                                             // 退后点位的y坐标
+    Vector2D CB_Selection_pos[2] = {{3.50f, 0.81f}, {2.495f, 0.81f}}; // 夹杆流程默认目标点。
+    float back_y = 0.935f;                                             // 退后点位的y坐标
 
     // 相机流程
-    Vector2D CB_End_pos[2] = {{6.0f-2.461f, 1.085f}, {2.461f, 1.085f}};
+    Vector2D CB_End_pos[2] = {{6.0f-2.461f, 1.105f}, {2.461f, 1.105f}};
 
     // 贴边流程
-    Vector2D CB_transition_pos[2] = {{3.0, 1.25f}, {3.0f, 1.25f}};
+    Vector2D CB_transition_pos[2] = {{3.0, 1.30f}, {3.0f, 1.30f}};
 
-    Vector2D CB_welt_pos[2] = {{2.1, 0.495f}, {3.98f, 0.495f}};
+    Vector2D CB_welt_pos[2] = {{2.1, 0.505f}, {3.98f, 0.505f}};
 
     // 回家流程
-    Vector2D home_transition_pos[2] = {{6.0f-2.6f, 1.5f}, {2.6f, 1.5f}};
-    Vector2D home_pos[2] = {{6.0f-0.5f, 0.5f}, {0.5f, 0.5f}};
+    Vector2D home_transition_pos[2] = {{6.0f-2.6f, 1.51f}, {2.6f, 1.51f}};
+    Vector2D home_pos[2] = {{6.0f-0.5f, 0.51f}, {0.5f, 0.51f}};
 
 } CB_POINT;
 

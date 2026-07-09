@@ -9,8 +9,8 @@ Robot_WeaponSage_Setup::Robot_WeaponSage_Setup(WeaponSage_InitData_S init_data)
 {
 }
 
-float lift_pitch = -12.0f;
-float stend_up = -96.0f;
+float lift_pitch = -28.0f;
+float stend_up = -110.0f;
 
 uint32_t WeaponSagestackHighWaterMark = 0;
 uint8_t relocate_mid= 0;
@@ -646,7 +646,7 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
 	float current_wrist_pos= normalize_deg_0_360(current_pos_.wrist_pos_);
     if(abs(current_wrist_pos-target_wrist_angle)<0.5f && !auto_ctrl_.flag.is_prepared && auto_ctrl_.flag.is_reach_start) //如果手腕也调整到位了，进入等待底盘停稳的状态
     {
-			this->setArm_angle(-90.0f);
+			this->setArm_angle(stend_up);
 			this->setLaunch_angle(0.0f);      //贴近目标杆
 			if(abs(current_pos_.launch_pos_-0.0f)<0.02f)
 			{	
@@ -659,9 +659,9 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
     if(auto_ctrl_.auto_state_bool_S.is_matching&&auto_ctrl_.flag.is_prepared) //如果已经在对位了
     {
 
-		this->setArm_angle(-0.1f);
+		this->setArm_angle(lift_pitch);
 		auto_ctrl_.flag.is_arm_reset=true;
-		if(abs(current_pos_.arm_pos_-0.1f)<1.0f)
+		if(abs(current_pos_.arm_pos_)<8.3f)
 		{
 		    if (!auto_ctrl_.flag.is_clawed)
             {
@@ -898,7 +898,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
             {   
 
                 this->setArm_angle(stend_up); //将arm打到竖直位置
-                if(abs(current_pos_.arm_pos_-stend_up)<1.0f) //如果已经调整到位了，进入下一个状态
+                if(abs(current_pos_.arm_pos_+92.0f)<3.0f) //如果已经调整到位了，进入下一个状态
                 {
                     now_state_ = WeaponSage_Setup::STATE_DONE;
                 }
@@ -1518,7 +1518,7 @@ bool Robot_WeaponSage_Setup::Sage_to_high()
     if(is_launch_ok)
     {
         this->setArm_angle(lift_pitch);
-        if(abs(current_pos_.arm_pos_+0.1f)<1.0f)
+        if(abs(current_pos_.arm_pos_+8.0f)<2.0f)
         {
             this->Close_TargetClaw_Untight();
             if(auto_ctrl_.flag.is_untight)
@@ -1570,7 +1570,7 @@ bool Robot_WeaponSage_Setup::Sage_to_low()
     if(is_launch_ok)
     {
         this->setArm_angle(lift_pitch);
-        if(abs(current_pos_.arm_pos_-lift_pitch)<1.0f)
+        if(abs(current_pos_.arm_pos_+8.0f)<2.0f)
         {
 
             this->Close_TargetClaw_Untight();
@@ -1620,7 +1620,7 @@ bool Robot_WeaponSage_Setup::Sage_back()
 			if(abs(current_pos_.launch_pos_-0.95*initData_.max_launchHeight_)<0.02)
 			{
 				this->setArm_angle_slow(lift_pitch);
-				if(abs(current_pos_.arm_pos_-lift_pitch)<1.0f)
+				if(abs(current_pos_.arm_pos_+8.0f)<2.0f)
                 {
                     this->Close_TargetClaw_Untight();
                     if(auto_ctrl_.flag.is_untight)
@@ -1870,7 +1870,7 @@ void Robot_WeaponSage_Setup::Judge_launch_status()
         auto_ctrl_.auto_state_bool_S.launch_enable=true;
     }else
     {
-        if(abs(current_pos_.arm_pos_)<0.1f)
+        if(abs(current_pos_.arm_pos_ + 8.0f)<2.0f)
         {
             auto_ctrl_.auto_state_bool_S.launch_enable=false;
         }else
@@ -1918,7 +1918,7 @@ WeaponSage_InitData_S initData_=
     .launch_Ratio_ = 0.139989366256f,
     .claw_gearRatio_  =360.0f ,
     .arm_gearRatio_ = 360.0f,
-    .arm_kp = 22.0f,
-    .arm_kd = 10.0f,
-    .arm_tff = 0.8f,
+    .arm_kp = 28.0f,
+    .arm_kd = 3.0f,
+    .arm_tff = 0.0f,
 };

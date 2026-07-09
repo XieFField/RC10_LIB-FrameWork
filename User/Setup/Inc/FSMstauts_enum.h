@@ -20,8 +20,8 @@ extern "C" {
 #include "APP_tool.h"
 
 #define USE_RC10_AIRJOY 1 //启用自制遥控器
-#define CHALLENGE_3ZONE 1 //挑战赛3区专用代码
-#define CHALEENGE_12ZONE 1 //挑战赛12区专用代码
+#define CHALLENGE_3ZONE 0 //挑战赛3区专用代码
+#define CHALEENGE_12ZONE 0 //挑战赛12区专用代码
 #define CB_SINGLE 0//单夹爪专用代码
 
 typedef enum{

@@ -260,6 +260,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>lift_pitch</ItemText>
         </Ww>
+        <Ww>
+          <count>21</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>dm_zero_____</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

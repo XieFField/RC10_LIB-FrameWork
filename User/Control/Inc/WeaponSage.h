@@ -318,6 +318,15 @@ protected:
     };
     #endif
     
+    WeaponSage::Fliter_Ramp_S arm_fliter_ramp_ = {
+        .ramp__maxspeed_ = 100000.0f,
+        .max_accel_ = 400000.0f, //  (Motor Angle deg/s^2)
+        .current_velocity_ = 0.0f, // 记录当前 launch 速度
+        .ramp_target_ = 0.0f, 
+        .filter_k_ = 600.0f // launch 滤波�?(平滑)系数，值越大响应越�?，越小越平滑
+    };
+
+
     
     float caculate_ramp_target(float current, float target, WeaponSage::Fliter_Ramp_S &ramp)
     {
