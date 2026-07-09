@@ -916,18 +916,18 @@ void FSM_Controller::auto_ctrl()
                 weaponSage_setup_->Set_Launch_Flag(true); //后撤步完成，第一次蹬地
             }
 
-            if (chassis_setup_->GetEnd_flag() == true)
-            {
-                weaponSage_setup_->Get_OMNI_DS_flag(true);
-            }
-
+            
             if(weaponSage_setup_->is_catch() == true)
             {
                 // chassis_setup_->ReceiveReach_flag(false);
                 chassis_setup_->ReceiveBack_flag(false); //三版： 夹紧提高，底盘后撤旋转
             }
 
-            
+            if (chassis_setup_->GetEnd_flag() == true)
+            {
+                weaponSage_setup_->Get_OMNI_DS_flag(true); //三版：：底盘到位，蹬地
+            }
+
 
             
             

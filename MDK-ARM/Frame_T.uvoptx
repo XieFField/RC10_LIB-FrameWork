@@ -230,6 +230,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>claw_untight_1</ItemText>
         </Ww>
+        <Ww>
+          <count>15</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>relocate_mid</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

@@ -585,6 +585,7 @@ void Robot_WeaponSage_Setup::debug()
      *        底盘停稳信号到达后夹取目标杆
      *        夹取完成后抬高到安全高度，完流程
      */
+    float cagtch_height = 0.05f;
 bool Robot_WeaponSage_Setup::autoControl_catch()
 {
     
@@ -647,11 +648,11 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
             
             if(auto_ctrl_.flag.is_clawed) //
             {
-                this->setLaunch_angle(0.01f);      //抬高到安全高度,高度待调整
+                this->setLaunch_angle(cagtch_height);      //抬高到安全高度,高度待调整
                 auto_ctrl_.flag.is_clawed = false; //重置夹爪状态，准备下次使用
             }
 
-            if(abs(current_pos_.launch_pos_-0.01f)<0.005f)
+            if(abs(current_pos_.launch_pos_-cagtch_height)<0.005f)
             {
                 auto_ctrl_.flag.is_catched=true; //完成抓取流程
                 return true;
@@ -766,7 +767,8 @@ void Robot_WeaponSage_Setup::autoControl_dock()
             {
               if(auto_ctrl_.auto_state_bool_S.dock_start || Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 0.9f)
                 {
-					now_new_state_ = WeaponSage_Setup::STATE_SAGE_ADJUST_1;
+					// now_new_state_ = WeaponSage_Setup::STATE_SAGE_ADJUST_1;
+                     now_state_ = WeaponSage_Setup::STATE_CLAW_ADJUST;
                 }
                 else
                 {
@@ -843,18 +845,18 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                 }
                 else //如果已经调整好爪子和升降了，进入下一个状态
                 {
+                    
                     this->Close_TargetClaw();
 
                     if(auto_ctrl_.flag.is_clawed)
                     {
-                        
-					
                         // this->setLaunch_angle(auto_ctrl_.launch_kp.launch_start*initData_.max_launchHeight_); //将arm打到竖直位置
                         this->setLaunch_angle(initData_.dock_height_); //将arm打到竖直位置
                         if(abs(current_pos_.launch_pos_ - initData_.dock_height_) < 0.01f)
 						{
 							auto_ctrl_.flag.is_over = true;
                             now_state_ = WeaponSage_Setup::STATE_ARM_MOVE;
+                            auto_ctrl_.flag.is_clawed=false;
                             
 						}
 						// if(abs(current_pos_.launch_pos_-auto_ctrl_.launch_kp.launch_start*initData_.max_launchHeight_)<0.5f)
@@ -905,6 +907,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                 auto_ctrl_.flag.is_prepared=false;
                 auto_ctrl_.flag.is_clawed=false;
                 auto_ctrl_.flag.is_catched=false;
+                auto_ctrl_.flag.is_catch = false;
                 auto_ctrl_.flag.is_reach_start=false;
                 auto_ctrl_.flag.is_reach_closedclaw=false;
                 auto_ctrl_.flag.is_reach_sagelowest=false;
@@ -915,8 +918,6 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                 now_state_=WeaponSage_Setup::STATE_START;
                 auto_ctrl_.auto_ctrl1=false;
                 auto_control_state_=0;
-
-                this->idle(); //进入idle状态
                 break;
             }
             default:
@@ -1043,6 +1044,7 @@ void Robot_WeaponSage_Setup::autoControl()
                 auto_ctrl_.flag.is_prepared=false;
                 auto_ctrl_.flag.is_clawed=false;
                 auto_ctrl_.flag.is_catched=false;
+                auto_ctrl_.flag.is_catch = false;
                 auto_ctrl_.flag.is_reach_start=false;
                 auto_ctrl_.flag.is_reach_closedclaw=false;
                 auto_ctrl_.flag.is_reach_sagelowest=false;
@@ -1069,7 +1071,7 @@ void Robot_WeaponSage_Setup::autoControl()
             }
             else
 			{
-				this->idle();
+				// this->idle();
 				auto_control_state_=0;
 			}
             break;
@@ -1845,14 +1847,6 @@ bool Robot_WeaponSage_Setup::Close_TargetClaw_Untight1()
 }
 
 
-
-
-
-
-
-
-
-
 void Robot_WeaponSage_Setup::Judge_launch_status()
 {
   if(current_pos_.launch_pos_>=target_pos_.launch_pos_)
@@ -1898,10 +1892,10 @@ WeaponSage_InitData_S initData_=
     .max_clawAngle_ = 40.0f,
     .max_arm_angle_ = 135.0f,
     .max_wrist_angle_ = 360.0f,
-	.max_arm_rate_ =1080.0f,
+	.max_arm_rate_ =200.0f,
 	.is_Arm_fast=false,
 	.min_arm_rate_=200.0f,
-	.dock_height_=0.0825000245f,
+	.dock_height_=0.0725000245f,
     .wrist_protect_=0.174290136,
     .claw_untight = 27.0f,
     .wrist_gearRatio_ = 144.0f,
