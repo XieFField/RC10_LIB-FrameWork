@@ -139,8 +139,10 @@ void PathPlanner::removeFromOpenList(AStarNode* node) {
 }
 
 // 设置地图数据 - 复制外部地图到内部缓冲区
-void PathPlanner::setMapData(const uint8_t* map_data) {
-    memcpy(map_data_, map_data, config_.map_width * config_.map_height * sizeof(uint8_t));
+void PathPlanner::setMapData(const uint8_t* map_data, uint32_t size) {
+    uint32_t expected_size = (uint32_t)config_.map_width * config_.map_height * sizeof(uint8_t);
+    if (map_data == nullptr || size < expected_size) return;
+    memcpy(map_data_, map_data, expected_size);
 }
 
 // 设置移动代价配置
