@@ -20,7 +20,7 @@ extern "C" {
 #include "APP_tool.h"
 
 #define USE_RC10_AIRJOY 1 //启用自制遥控器
-#define CHALLENGE_3ZONE 0 //挑战赛3区专用代码
+#define CHALLENGE_3ZONE 1 //挑战赛3区专用代
 #define CHALEENGE_12ZONE 0 //挑战赛12区专用代码
 #define CB_SINGLE 0//单夹爪专用代码
 
@@ -119,6 +119,7 @@ typedef enum{
     WEAPONSAGE_CALIBRATE, //校准模式
     WEAPONSAGE_KFS_IDLE, // KFS自动模式的待机状态
     WEAPONSAGE_TEST_POINT,
+    WEAPONSAGE_COMP_C3Z, //挑战赛3区上竞技场时候的状态
 }WeaponSage_Status_E;
 
 

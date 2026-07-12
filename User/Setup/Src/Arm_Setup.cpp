@@ -359,7 +359,7 @@ bool ArmSetup::c3z_pickup_ctrl()
     this->set_PitchAngle(0.2f);
     this->setSuckerStatus(Sucker_Status_E::SUCK);
     this->set_RotateAngle(90.0f);
-    this->set_StretchLength(0.0f);
+    this->set_StretchLength(0.01f);
     if(!c3z_ctrl_.can_pickup)
         this->set_LaunchHeight(init_data_.putdown_height_);
     else if(std::fabs(this->get_currentJointStatus().rotateJoint_angle_ - 90.0f) < 1.0f
@@ -400,7 +400,7 @@ bool ArmSetup::c3z_putdown_ctrl()
     if (is_intarget_zone) 
     {
         if(c3z_ctrl_.c3z_acting == 0)
-            this->set_StretchLength(0.0f);
+            this->set_StretchLength(0.01f);
         this->set_PitchAngle(init_data_.pitch_lift_angle_);
         if (std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 5.0f)
             this->set_LaunchHeight(init_data_.putdown_height_);
@@ -434,8 +434,8 @@ bool ArmSetup::c3z_putdown_ctrl()
         if (is_put && TimeStamp::getInstance().getSeconds() - putdown_start_time > 0.4f 
             && putdown_start_time > 0.4f)
         {
-            this->set_StretchLength(0.0f);
-            if (std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - 0.0f) < 0.01f)
+            this->set_StretchLength(0.01f);
+            if (std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - 0.01f) < 0.01f)
             {
                 is_put = false;
                 putdown_start_time = 0.0f;
@@ -464,7 +464,7 @@ bool ArmSetup::manual_pickup_preposition()
 {
     this->set_PitchAngle(0.2f);
     this->setSuckerStatus(Sucker_Status_E::SUCK);
-    this->set_StretchLength(0.0f);
+    this->set_StretchLength(0.01f);
 
     // 先升到 putdown 安全高度
     if (std::fabs(this->get_currentJointStatus().launchJoint_Height_
@@ -548,8 +548,8 @@ bool ArmSetup::manual_putdown()
 
     if (is_put && TimeStamp::getInstance().getSeconds() - putdown_start_time > 0.4f && putdown_start_time > 0.4f)
     {
-        this->set_StretchLength(0.0f);
-        if (std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - 0.0f) < 0.01f)
+        this->set_StretchLength(0.01f);
+        if (std::fabs(this->get_currentJointStatus().stretchJoint_Length_ - 0.01f) < 0.01f)
         {
             is_put = false;
             putdown_start_time = 0.0f;
@@ -673,7 +673,7 @@ void ArmSetup::manualControl()
         arm_ctrlStatus.pitch_switch_offset = (airjoy_data_.scroll_wheel & 0x01) ^ current_pitch_logical;
 #else
         float current_stretch = this->get_currentJointStatus().stretchJoint_Length_;
-        int8_t current_extend_logical = (current_stretch > 0.02f) ? 1 : 0;
+        int8_t current_extend_logical = (current_stretch > 0.04f) ? 1 : 0;
         arm_ctrlStatus.last_manual_extend = current_extend_logical;
         arm_ctrlStatus.extend_switch_offset = (airjoy_data_.SWB & 0x01) ^ current_extend_logical;
 
@@ -805,7 +805,7 @@ void ArmSetup::manualControl()
     arm_ctrlStatus.last_manual_extend = target_extend_logical;
 
     if (target_extend_logical == 0)
-        target_joint_status_.stretchJoint_Length_ = 0.0f; // 收回
+        target_joint_status_.stretchJoint_Length_ = 0.01f; // 收回
     else
         target_joint_status_.stretchJoint_Length_ = this->init_data_.max_stretchLength_; // 展开到最大位置
 
@@ -981,7 +981,7 @@ void ArmSetup::arm_d_pad_ctrl()
             // --- 保持预置姿态，等待第二次按下 ---
             this->set_PitchAngle(0.2f);
             this->setSuckerStatus(Sucker_Status_E::SUCK);
-            this->set_StretchLength(0.0f);
+            this->set_StretchLength(0.01f);
             this->set_LaunchHeight(init_data_.putdown_height_);
             this->set_RotateAngle(90.0f);
 
@@ -1032,7 +1032,7 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
             else if (kfs_index == 0x01)
                 this->setStoreSuckerStatus_InSide(Sucker_Status_E::SUCK);
 
-            this->set_StretchLength(0.0f); // 收回
+            this->set_StretchLength(0.01f); // 收回
         }
         else
         {
@@ -1186,19 +1186,19 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
                 this->set_LaunchHeight(init_data_.max_launchHeight_); // 提升到最高
                 if (this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
                 {
-                    this->set_StretchLength(0.0f); // 收回
+                    this->set_StretchLength(0.01f); // 收回
                     is_return = true;
                 }
             }
             else if(!is_return && auto_ctrl_.flag.is_up_catch)
             {
-                this->set_StretchLength(0.0f);
-                if(this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
+                this->set_StretchLength(0.01f);
+                if(this->get_currentJointStatus().stretchJoint_Length_ < 0.02f)
                 {
                     is_return = true;
                 }
             }
-            else if (is_return && this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
+            else if (is_return && this->get_currentJointStatus().stretchJoint_Length_ < 0.02f)
             {
                 this->set_PitchAngle(this->init_data_.pitch_lift_angle_); // 吸盘抬平
                 if (auto_ctrl_.start_to_autoctrl == 1 && kfs_index == 0x00)
@@ -1210,13 +1210,13 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
 
                     if (auto_ctrl_.flag.is_up_catch)
                     {
-                        this->set_StretchLength(0.0f); // 收回
-                        if (this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
+                        this->set_StretchLength(0.01f); // 收回
+                        if (this->get_currentJointStatus().stretchJoint_Length_ < 0.02f)
                             this->set_LaunchHeight(target_out_height); 
                     }
                     else
                     {
-                        if (this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
+                        if (this->get_currentJointStatus().stretchJoint_Length_ < 0.02f)
                             this->set_LaunchHeight(target_out_height);
                     }
                 }
@@ -1228,8 +1228,8 @@ bool ArmSetup::manual_store(uint8_t kfs_index)
 
                 if (this->get_currentJointStatus().launchJoint_Height_ > target_out_height - 0.01f)
                 {
-                    this->set_StretchLength(0.0f); // 收回
-                    if (this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
+                    this->set_StretchLength(0.01f); // 收回
+                    if (this->get_currentJointStatus().stretchJoint_Length_ < 0.02f)
                     {
                         if (auto_ctrl_.start_to_autoctrl == 1 
                             && MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
@@ -1304,7 +1304,7 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
         // else
         //     this->set_PitchAngle(init_data_.pitch_lift_angle_);
 
-        this->set_StretchLength(0.0f);
+        this->set_StretchLength(0.01f);
         this->store_state_ = store_state::rotate_state;
         break;
     }
@@ -1400,8 +1400,8 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
                 this->set_LaunchHeight(init_data_.max_launchHeight_); // 提升到最高
                 if (this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.01f)
                 {
-                    this->set_StretchLength(0.0f); // 收回
-                    if (this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
+                    this->set_StretchLength(0.01f); // 收回
+                    if (this->get_currentJointStatus().stretchJoint_Length_ < 0.02f)
                         store_state_ = store_state::outstate2;
                 }
             }
@@ -1437,8 +1437,8 @@ bool ArmSetup::manual_takeout(uint8_t kfs_index)
 bool ArmSetup::combine_idle()
 {
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
-    this->set_StretchLength(0.0f);
-    if (this->get_currentJointStatus().stretchJoint_Length_ < 0.01f)
+    this->set_StretchLength(0.01f);
+    if (this->get_currentJointStatus().stretchJoint_Length_ < 0.02f)
         this->set_LaunchHeight(init_data_.putdown_height_);
 
     if (this->get_currentJointStatus().launchJoint_Height_ > init_data_.putdown_height_ - 0.2f)
@@ -1544,7 +1544,7 @@ void ArmSetup::auto_stillnessOne()
         {
             if (Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 10.1 && MF_AutoCtrler::get_color() == 1 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x > 1.7) // 蓝场
             {
-                this->set_StretchLength(0.0f);
+                this->set_StretchLength(0.01f);
                 this->set_PitchAngle(init_data_.pitch_lift_angle_);
                 if (std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 5.0f)
                     this->set_LaunchHeight(init_data_.putdown_height_);
@@ -1556,7 +1556,7 @@ void ArmSetup::auto_stillnessOne()
             }
             else if (Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 10.1 && MF_AutoCtrler::get_color() == 0 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x < 4.3) // 红场
             {
-                this->set_StretchLength(0.0f);
+                this->set_StretchLength(0.01f);
                 this->set_PitchAngle(init_data_.pitch_lift_angle_);
                 if (std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 5.0f)
                     this->set_LaunchHeight(init_data_.putdown_height_);
@@ -1696,7 +1696,7 @@ void ArmSetup::auto_stillnessTwo()
                 && MF_AutoCtrler::get_color() == 1 
                 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x > 1.7) // 蓝场
             {
-                this->set_StretchLength(0.0f);
+                this->set_StretchLength(0.01f);
                 this->set_PitchAngle(init_data_.pitch_lift_angle_);
                 if (std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 5.0f)
                     this->set_LaunchHeight(init_data_.putdown_height_);
@@ -1710,7 +1710,7 @@ void ArmSetup::auto_stillnessTwo()
                 && MF_AutoCtrler::get_color() == 0 
                 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x < 4.3) // 红场
             {
-                this->set_StretchLength(0.0f);
+                this->set_StretchLength(0.01f);
                 this->set_PitchAngle(init_data_.pitch_lift_angle_);
                 if (std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 5.0f)
                     this->set_LaunchHeight(init_data_.putdown_height_);
@@ -1914,7 +1914,7 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
     this->set_controlMode(MANUAL_MOTOR_POSITION_MODE);
 
     float target_height = 0.0f;
-    this->set_StretchLength(0.0f);
+    this->set_StretchLength(0.01f);
     // target_height = this->init_data_.max_launchCatch_Height_; // 直接伸展到最高，等待行进间拾取
     float kfs_h = GetKFSHeight(targetKFS);
 
@@ -2055,7 +2055,7 @@ bool ArmSetup::state_extStillness(int targetKFS)
     const float now_s = TimeStamp::getInstance().getSeconds();
     if (auto_ctrl_.flag.isExtReach && (now_s - auto_ctrl_.flag.reach_finishTimeStore) >= 0.4f)
     {
-        this->set_StretchLength(0.0f); // 超过0.2秒后收回，准备行进间放置
+        this->set_StretchLength(0.01f); // 超过0.2秒后收回，准备行进间放置
         return true;
     }
 
@@ -2201,7 +2201,7 @@ void ArmSetup::idle()
                 && MF_AutoCtrler::get_color() == 1 
                 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x > 1.7) // 蓝场
             {
-                this->set_StretchLength(0.0f);
+                this->set_StretchLength(0.01f);
                 this->set_PitchAngle(init_data_.pitch_lift_angle_);
                 if (std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 5.0f)
                     this->set_LaunchHeight(init_data_.putdown_height_);
@@ -2213,7 +2213,7 @@ void ArmSetup::idle()
             }
             else if (Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 10.1 && MF_AutoCtrler::get_color() == 0 && Locate_Setup::getInstance()->get_RobotPos_inWorld().x < 4.3) // 红场
             {
-                this->set_StretchLength(0.0f);
+                this->set_StretchLength(0.01f);
                 this->set_PitchAngle(init_data_.pitch_lift_angle_);
                 if (std::fabs(this->get_currentJointStatus().suckerJoint_angle_ - init_data_.pitch_lift_angle_) < 5.0f)
                     this->set_LaunchHeight(init_data_.putdown_height_);
@@ -2263,7 +2263,7 @@ void ArmSetup::debug()
 Arm_InitData_S arm_initData = {
     .max_launchHeight_ = 0.415f,
     .max_launchCatch_Height_ = 0.32f,
-    .max_stretchLength_ = 0.1288f,
+    .max_stretchLength_ = 0.12f,
     .arm_length_ = 0.6f,
     .end_link_length_ = 0.08f,
 

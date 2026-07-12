@@ -51,7 +51,7 @@ typedef struct
 typedef struct
 {
     Speedplanner_1D_Param_Config line = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 0.6f, .finalSpeed = 1.2f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
-    Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 1.2f, .finalSpeed = 0.2f, .startPos = 0.08f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config cb = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 1.2f, .initialSpeed = 1.2f, .finalSpeed = 0.2f, .startPos = 0.085f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config speed = {.maxAcc = 20.0f, .maxDec = 1.3f, .maxJerk = 0.0f, .maxSpeed = 4.0f, .initialSpeed = 0.6f, .finalSpeed = 0.2f, .startPos = 0.02f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -87,11 +87,11 @@ typedef struct
 
 #if CB_SINGLE
     int pole_index = 0;
-    float CB_Selection_pos_0_y = 0.81f;
-    float CB_Selection_pos_0_x[2] = {3.90f, 2.095f};
+    float CB_Selection_pos_0_y = 0.83f;
+    float CB_Selection_pos_0_x[2] = {3.90f, 2.105f};
 #endif
 
-    Vector2D CB_Selection_pos[2] = {{3.50f, 0.81f}, {2.495f, 0.81f}}; // 夹杆流程默认目标点。
+    Vector2D CB_Selection_pos[2] = {{3.50f, 0.83f}, {2.505f, 0.83f}}; // 夹杆流程默认目标点。
     float back_y = 0.935f;                                             // 退后点位的y坐标
 
     // 相机流程
@@ -101,6 +101,8 @@ typedef struct
     Vector2D CB_transition_pos[2] = {{3.0, 1.30f}, {3.0f, 1.30f}};
 
     Vector2D CB_welt_pos[2] = {{2.1, 0.505f}, {3.98f, 0.505f}};
+    
+    float ad =0.15f;
 
     // 回家流程
     Vector2D home_transition_pos[2] = {{6.0f-2.6f, 1.51f}, {2.6f, 1.51f}};
@@ -159,7 +161,7 @@ typedef struct
     // 下界10.02f上界是11.52f
     // Vector2D fit_wait_pos = {2.17f, 10.05f};
     // Vector2D fit_transition_pos = {3.0f, 11.5f};
-    Vector2D fit_end_pos[2] = {{6.0f - 5.355f, 10.77f}, {5.355f, 10.22f}};
+    Vector2D fit_end_pos[2] = {{6.0f - 5.33f, 10.76f}, {5.33f, 10.263f}};
 
     // 左中右   或者   先后
     float set_skew = 0.32f;
@@ -193,6 +195,8 @@ typedef struct
 typedef struct
 {
     int dead_cnt = 0;
+    
+    bool fit_lock=false;
 
     bool fit_yaw_flag = false;
     // 远中近的索引
@@ -1385,6 +1389,8 @@ private:
 
         KFS_flag.get_spin_flag = false;
         KFS_flag.pause_flag = false;
+        
+        CZ_flag.fit_lock=false;
 
         curve.Rest();
     }

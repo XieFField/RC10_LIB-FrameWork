@@ -337,6 +337,7 @@ public:
     {
         this->kfs_idle_active_ = active;
     }
+    void seet_comp_c3z_start(bool is_start) { is_c3z_start = is_start; }
 protected:
     void loop() override;
 
@@ -348,6 +349,9 @@ private:
     Debug_Printf debug_uart = Debug_Printf(&huart1);
 
     void kfs_idle();
+    bool is_c3z_start = false;
+    void comp_c3z();
+
     void test_point();
 
     void manualControl();

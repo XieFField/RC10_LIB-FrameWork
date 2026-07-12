@@ -165,6 +165,13 @@ float traverse_rate=0.0002f;
 float weapon_launch_rate=0.0001f;
 float Kp_traverse=0.5f;
 
+void Robot_WeaponSage_Setup::comp_c3z()
+{
+     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
+    if(is_c3z_start)
+        this->setArm_angle_slow(lift_pitch);
+}
+
 /**
  * @brief 夹爪位置获取姿态
  */
@@ -183,7 +190,7 @@ void Robot_WeaponSage_Setup::kfs_idle()
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
     this->setLaunch_angle(initData_.max_launchHeight_);
     if(current_pos_.launch_pos_ > initData_.max_launchHeight_-0.1f 
-        && is_arm_90)
+        && Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 1.80f)
     {
         this->setArm_angle_slow(lift_pitch);
     }
@@ -644,7 +651,9 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
         this->setWrist_angle(target_wrist_angle);
 	}
 	float current_wrist_pos= normalize_deg_0_360(current_pos_.wrist_pos_);
-    if(abs(current_wrist_pos-target_wrist_angle)<0.5f && !auto_ctrl_.flag.is_prepared && auto_ctrl_.flag.is_reach_start) //如果手腕也调整到位了，进入等待底盘停稳的状态
+    if(abs(current_wrist_pos-target_wrist_angle)<0.5f 
+        && !auto_ctrl_.flag.is_prepared 
+        && auto_ctrl_.flag.is_reach_start) //如果手腕也调整到位了，进入等待底盘停稳的状态
     {
 			this->setArm_angle(stend_up);
 			this->setLaunch_angle(0.0f);      //贴近目标杆
@@ -659,9 +668,9 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
     if(auto_ctrl_.auto_state_bool_S.is_matching&&auto_ctrl_.flag.is_prepared) //如果已经在对位了
     {
 
-		this->setArm_angle(lift_pitch);
+		this->setArm_angle(lift_pitch + 13.0f);
 		auto_ctrl_.flag.is_arm_reset=true;
-		if(abs(current_pos_.arm_pos_)<8.3f)
+		if(abs(current_pos_.arm_pos_)<8.9f)
 		{
 		    if (!auto_ctrl_.flag.is_clawed)
             {
@@ -898,7 +907,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
             {   
 
                 this->setArm_angle(stend_up); //将arm打到竖直位置
-                if(abs(current_pos_.arm_pos_+92.0f)<3.0f) //如果已经调整到位了，进入下一个状态
+                if(abs(current_pos_.arm_pos_+92.0f)<2.0f) //如果已经调整到位了，进入下一个状态
                 {
                     now_state_ = WeaponSage_Setup::STATE_DONE;
                 }
@@ -1075,6 +1084,7 @@ void Robot_WeaponSage_Setup::autoControl()
             }
             else
 			{
+                this->setArm_angle(stend_up);
                 this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);  
                 float next_height = this->current_pos_.launch_pos_ ;
 				// this->idle();
@@ -1908,10 +1918,10 @@ WeaponSage_InitData_S initData_=
     .max_clawAngle_ = 40.0f,
     .max_arm_angle_ = 135.0f,
     .max_wrist_angle_ = 360.0f,
-	.max_arm_rate_ =200.0f,
+	.max_arm_rate_ =90.0f,
 	.is_Arm_fast=false,
 	.min_arm_rate_=90.0f,
-	.dock_height_=0.0725000245f,
+	.dock_height_=0.0545000245f,
     .wrist_protect_=0.174290136,
     .claw_untight = 27.0f,
     .wrist_gearRatio_ = 144.0f,

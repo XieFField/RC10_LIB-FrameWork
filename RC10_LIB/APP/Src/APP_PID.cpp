@@ -415,7 +415,7 @@ PID_Param_Config lock_angle_pid_params = {
  .kd = 0.002f,
  .I_Outlimit = 1.0f,
  .isIOutlimit = true, 
- .output_limit = 3.0f,
+ .output_limit = 2.5f,
  .deadband = 0.15f 
 };
 

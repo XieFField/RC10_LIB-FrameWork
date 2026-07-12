@@ -137,7 +137,7 @@ void OmniChassis_Setup::CB_Path_Check(void)
                 target_yaw=(RB_Flag?90.0f:-90.0f);
             }
         }
-        if (path_line_.Is_End() == false)
+        if (path_line_.Is_End() == false && (CB_point.CB_End_pos[RB_Flag] - robot_pos_).magnitude() > CB_point.ad)
         {
             Retreat_flag = true;
         }
@@ -225,7 +225,21 @@ void OmniChassis_Setup::loop()
         {
             if ((_tool_Abs(yaw - target_yaw) < 1.0f))
             {
-                CHASSIS_MANUAL(0.8f, 0.8f, 1.2f);
+                    if (_tool_Abs(airjoy_data_.left_x) > 0.1f)
+                        Chassis_Target.VX = airjoy_data_.left_x * 0.8f * this->is_chassis_reverse_;
+                    else
+                        Chassis_Target.VX = 0.0f;
+                    if (_tool_Abs(airjoy_data_.left_y) > 0.15f)
+                        Chassis_Target.VY = airjoy_data_.left_y * 0.6f * this->is_chassis_reverse_;
+                    else
+                        Chassis_Target.VY = 0.0f;
+                    if (_tool_Abs(airjoy_data_.right_x) > 0.3f)
+                        Chassis_Target.yaw_rate = airjoy_data_.right_x * 0.8 * (-1.0f);
+                    else
+                        Chassis_Target.yaw_rate = 0.0f;
+                    
+                    target_yaw = yaw;
+
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
             else
@@ -312,7 +326,7 @@ void OmniChassis_Setup::loop()
         }
         else
         {
-            if ((Path_end_point.x == CZ_point.fit_end_pos[RB_Flag].x && Path_end_point.y == CZ_point.fit_end_pos[RB_Flag].y))
+            if (((Path_end_point.x == CZ_point.fit_end_pos[RB_Flag].x && Path_end_point.y == CZ_point.fit_end_pos[RB_Flag].y))||CZ_flag.fit_lock==true)
             {
                 chassis_manual_transform();
                 if (manual_transform_flag == true)
@@ -325,7 +339,7 @@ void OmniChassis_Setup::loop()
                 {
                     if (pid_dead_flag == true && CZ_flag.dead_cnt < 400)
                         CZ_flag.dead_cnt++;
-                    if (CZ_flag.dead_cnt > 300 && pid_dead_flag == true)
+                    if (CZ_flag.dead_cnt > 300)
                     {
                         Chassis_Target = {0.0f, 0.0f, 0.0f};
                         chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
@@ -356,7 +370,7 @@ void OmniChassis_Setup::loop()
             else
             {
                 CZ_flag.dead_cnt = 0;
-                CHASSIS_MANUAL(1.0f, 1.0f, 1.2f, true);
+                CHASSIS_MANUAL(1.0f, 1.0f, 1.8f, true);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
         }
@@ -502,6 +516,7 @@ void OmniChassis_Setup::CZ_index_reset(void)
     CZ_flag.R1_FB_index = 0;
     CZ_flag.R1_RL_index = 1;
     CZ_flag.R2_pos_index = 2;
+    CZ_flag.fit_lock=false;
 }
 
 ///////////////////                  三区条件判断             ///////////////////////
@@ -610,6 +625,7 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
     if (airjoy_data_.d_pad_up == 1 && up_click == false)
     {
         up_click = true;
+        CZ_flag.fit_lock=false;
         CZ_FIT_WAIT_Selection_Planning();
         CZ_flag.R2_pos_index = 2;
     }
@@ -621,6 +637,8 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
     // 下键等待
     if (airjoy_data_.d_pad_down == 1 && down_click == false)
     {
+        CZ_flag.dead_cnt = 500;
+        CZ_flag.fit_lock=true;
         down_click = true;
     }
     else if (airjoy_data_.d_pad_down == 0)
@@ -631,6 +649,7 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
     // 蓝场左，红场右，拿远的
     if ((RB_Flag ? (airjoy_data_.d_pad_left == 1) : (airjoy_data_.d_pad_right == 1)) && far_click == false)
     {
+        CZ_flag.fit_lock=false;
         far_click = true;
         if (CZ_flag.R2_pos_index > 0)
             CZ_flag.R2_pos_index--;
@@ -644,6 +663,7 @@ void OmniChassis_Setup::CZ_FIT_Path_Init(void)
     // 蓝场右，红场左，拿近的
     if ((RB_Flag ? (airjoy_data_.d_pad_right == 1) : (airjoy_data_.d_pad_left == 1)) && near_click == false)
     {
+        CZ_flag.fit_lock=false;
         near_click = true;
         if (CZ_flag.R2_pos_index < 2)
             CZ_flag.R2_pos_index++;

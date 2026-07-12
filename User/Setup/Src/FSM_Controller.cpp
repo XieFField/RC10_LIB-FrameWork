@@ -753,6 +753,7 @@ void FSM_Controller::auto_ctrl()
             {
                 arm_setup_->set_c3z_start(true);
                 chassis_setup_->setPathAutoStart(1);
+                weaponSage_setup_->seet_comp_c3z_start(true);
                 is_click = 1;
             }
             else if (airjoy_data_.LB == 0)
