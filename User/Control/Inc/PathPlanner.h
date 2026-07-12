@@ -96,7 +96,7 @@ public:
                 uint16_t max_open_list_size, uint16_t max_path_length);
     
     // 设置地图数据 - 复制外部地图数据到内部缓冲区
-    void setMapData(const uint8_t* map_data);
+    void setMapData(const uint8_t* map_data, uint32_t size);
     
     // 设置配置参数 - 调整移动代价权重
     void setConfig(float diagonal_cost, float straight_cost);
