@@ -40,8 +40,8 @@ public:
             return;
 
         static const uint8_t justfloat_tail[4] = {0x00, 0x00, 0x80, 0x7F};
-        const uint16_t payload_size = (uint16_t)(sizeof(float) * data_size);
-        const uint16_t total_size = payload_size + sizeof(justfloat_tail);
+        const size_t payload_size = sizeof(float) * data_size;
+        const size_t total_size = payload_size + sizeof(justfloat_tail);
 
         if (total_size > SEND_BUF_SIZE)
             return;
@@ -49,7 +49,7 @@ public:
         memcpy(Sendbuf, data, payload_size);
         memcpy(Sendbuf + payload_size, justfloat_tail, sizeof(justfloat_tail));
 
-        HAL_UART_Transmit_DMA(huart_, Sendbuf, total_size);
+        HAL_UART_Transmit_DMA(huart_, Sendbuf, (uint16_t)total_size);
     }
 
     void printf_DMA(char *fmt, ...)
