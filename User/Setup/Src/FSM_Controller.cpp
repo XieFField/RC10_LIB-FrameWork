@@ -740,11 +740,12 @@ void FSM_Controller::auto_ctrl()
         }
         else if (airjoy_data_.SWB == 0x01 && airjoy_data_.SWC == 0x01 && airjoy_data_.SWD == 0x00) // 竞技场 机械臂模式
         {
-            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
+            
 
             communication::Lora_communication::GetInstance()->send_robot_mode(SEND_COMP_ARM);
 
             #if CHALLENGE_3ZONE //挑战赛3区专用代码
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_COMP_C3Z);
             arm_setup_->setArmStatus(ARM_CHALLENGE_3ZONE);
             //arm_setup_->setArmStatus(ARM_IDLE);
             chassis_setup_->setChassisStatus(SEMI_AUIO_CZ_ARM_Challenge);
@@ -787,7 +788,7 @@ void FSM_Controller::auto_ctrl()
             #else
             arm_setup_->setArmStatus(ARM_COMP_SEMI_CONTROL);
             chassis_setup_->setChassisStatus(SEMI_AUIO_CZ_ARM);
-            
+            weaponSage_setup_->setWeaponSageControlStatus(WEAPONSAGE_IDLE);
             if (chassis_setup_->Get_CZ_Arm_flag())
                 arm_setup_->can_putdown(1);
 

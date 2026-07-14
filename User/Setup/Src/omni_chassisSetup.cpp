@@ -137,7 +137,7 @@ void OmniChassis_Setup::CB_Path_Check(void)
                 target_yaw=(RB_Flag?90.0f:-90.0f);
             }
         }
-        if (path_line_.Is_End() == false && (CB_point.CB_End_pos[RB_Flag] - robot_pos_).magnitude() > CB_point.ad)
+        if (path_line_.Is_End() == false && (CB_point.CB_welt_pos[RB_Flag] - robot_pos_).magnitude() > CB_point.ad)
         {
             Retreat_flag = true;
         }
@@ -223,30 +223,22 @@ void OmniChassis_Setup::loop()
         }
         else
         {
-            if ((_tool_Abs(yaw - target_yaw) < 1.0f))
-            {
-                    if (_tool_Abs(airjoy_data_.left_x) > 0.1f)
-                        Chassis_Target.VX = airjoy_data_.left_x * 0.8f * this->is_chassis_reverse_;
-                    else
-                        Chassis_Target.VX = 0.0f;
-                    if (_tool_Abs(airjoy_data_.left_y) > 0.15f)
-                        Chassis_Target.VY = airjoy_data_.left_y * 0.6f * this->is_chassis_reverse_;
-                    else
-                        Chassis_Target.VY = 0.0f;
-                    if (_tool_Abs(airjoy_data_.right_x) > 0.3f)
-                        Chassis_Target.yaw_rate = airjoy_data_.right_x * 0.8 * (-1.0f);
-                    else
-                        Chassis_Target.yaw_rate = 0.0f;
-                    
-                    target_yaw = yaw;
+             if (_tool_Abs(airjoy_data_.left_x) > 0.1f)
+                 Chassis_Target.VX = airjoy_data_.left_x * 0.8f * this->is_chassis_reverse_;
+             else
+                 Chassis_Target.VX = 0.0f;
+             if (_tool_Abs(airjoy_data_.left_y) > 0.15f)
+                 Chassis_Target.VY = airjoy_data_.left_y * 0.6f * this->is_chassis_reverse_;
+             else
+                 Chassis_Target.VY = 0.0f;
+             if (_tool_Abs(airjoy_data_.right_x) > 0.3f)
+                 Chassis_Target.yaw_rate = airjoy_data_.right_x * 0.8 * (-1.0f);
+             else
+                 Chassis_Target.yaw_rate = 0.0f;
+             
+             target_yaw = yaw;
 
-                chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
-            }
-            else
-            {
-                Path_lock_point(Path_end_point);
-                chassis.setSpeed_LockToYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, (target_yaw * PI / 180.0f));
-            }
+             chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
         }
         break;
     }
@@ -308,7 +300,7 @@ void OmniChassis_Setup::loop()
 
         if (CZ_flag.fit_yaw_flag == true)
         {
-            if (_tool_Abs(yaw - (RB_Flag ? -90.0f : 90.0f)) < 20.0f)
+            if (_tool_Abs(yaw - (RB_Flag ? -90.0f : 90.0f)) < 10.0f)
             {
                 target_yaw = (RB_Flag ? -90.0f : 90.0f);
                 yaw_lock = true;
@@ -370,7 +362,7 @@ void OmniChassis_Setup::loop()
             else
             {
                 CZ_flag.dead_cnt = 0;
-                CHASSIS_MANUAL(1.0f, 1.0f, 1.8f, true);
+                CHASSIS_MANUAL(1.0f, 1.0f, 1.0f, true);
                 chassis.setSpeed_LockNowYaw(Chassis::Coordinate::kWorld, Chassis_Target.VX, Chassis_Target.VY, Chassis_Target.yaw_rate);
             }
         }
@@ -440,6 +432,7 @@ void OmniChassis_Setup::loop()
         CZ_ARM_Challenge_Path_Init();
 
         static bool catch_flag = false;
+        static bool yaw_flag = false;
         if (CZ_point.catch_pos[RB_Flag].x == curve.Get_End_point().x && CZ_point.catch_pos[RB_Flag].y == curve.Get_End_point().y)
         {
             catch_flag = true;
@@ -450,8 +443,13 @@ void OmniChassis_Setup::loop()
             pid_dead_flag = false;
             CZ_Catch = true;
         }
-
+        
         if (CZ_point.R1_pos[1][RB_Flag].x == curve.Get_End_point().x && CZ_point.R1_pos[1][RB_Flag].y == curve.Get_End_point().y && robot_pos_.y < 10.86f)
+        {
+
+            target_yaw = (RB_Flag ? 180.0f : 0.0f);
+        }
+        if (CZ_point.R1_pos[0][RB_Flag].x == curve.Get_End_point().x && CZ_point.R1_pos[0][RB_Flag].y == curve.Get_End_point().y )
         {
 
             target_yaw = (RB_Flag ? 180.0f : 0.0f);
@@ -710,7 +708,7 @@ void OmniChassis_Setup::CZ_FIT_WAIT_Selection_Planning(void)
     path_line_.plan_reset();
     // 合体地点
     path_line_.Add_Start_Point(robot_pos_);
-    if (_tool_Abs(_tool_Abs(yaw) - (RB_Flag ? 180.0f : 0.0f)) > 20.0f && (RB_Flag ? (robot_pos_.x > 4.70f) : (robot_pos_.x < (6.0f - 4.70f))))
+    if (_tool_Abs(_tool_Abs(yaw) - (RB_Flag ? 180.0f : 0.0f)) > 10.0f && (RB_Flag ? (robot_pos_.x > 4.70f) : (robot_pos_.x < (6.0f - 4.70f))))
     {
         path_line_.Add_Point({CZ_point.R1_pos[2][RB_Flag].x, CZ_point.fit_end_pos[RB_Flag].y + 0.2f}, path_param.cz);
     }

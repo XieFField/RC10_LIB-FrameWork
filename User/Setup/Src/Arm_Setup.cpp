@@ -1962,7 +1962,7 @@ bool ArmSetup::state_to_waitStillness(int targetKFS)
     {
         if (MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
                                          auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex], 
-                                         0.40f))
+                                         0.30f))
         {
             this->set_RotateAngle(90.0f); // 旋转到目标角度
         }
@@ -1979,7 +1979,7 @@ bool ArmSetup::state_alignStillness(int targetKFS)
     bool can_rotate = false;
     can_rotate = MF_AutoCtrler::isInTargetMap(auto_ctrl_.now_ChassisPosition,
                                               auto_ctrl_.pathInfo.MFroad[auto_ctrl_.now_targetIndex],
-                                              0.55f);
+                                              0.30f);
 
     if (can_rotate)
         this->set_RotateAngle(90.0f); // 旋转到目标角度
@@ -2261,7 +2261,7 @@ void ArmSetup::debug()
 }
 
 Arm_InitData_S arm_initData = {
-    .max_launchHeight_ = 0.415f,
+    .max_launchHeight_ = 0.43f,
     .max_launchCatch_Height_ = 0.32f,
     .max_stretchLength_ = 0.12f,
     .arm_length_ = 0.6f,

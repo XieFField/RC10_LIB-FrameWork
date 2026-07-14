@@ -141,6 +141,13 @@ void Robot_WeaponSage_Setup::loop()
         case WEAPONSAGE_TEST_POINT:
         {
             test_point();
+            break;
+        }
+
+        case WEAPONSAGE_COMP_C3Z:
+        {
+            comp_c3z();
+            break;
         }
         default:
             idle();
@@ -189,6 +196,9 @@ void Robot_WeaponSage_Setup::kfs_idle()
 {
     this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);
     this->setLaunch_angle(initData_.max_launchHeight_);
+    this->setClaw_1_angle(initData_.max_clawAngle_);
+    this->setClaw_2_angle(initData_.max_clawAngle_);
+    this->setClaw_3_angle(initData_.max_clawAngle_);
     if(current_pos_.launch_pos_ > initData_.max_launchHeight_-0.1f 
         && Locate_Setup::getInstance()->get_RobotPos_inWorld().y > 1.80f)
     {
@@ -789,6 +799,7 @@ bool Robot_WeaponSage_Setup::autoControl_catch()
  */
  
  float wrist_waitting_time=0.2f;
+ float arm_offset = 20.0f;
 void Robot_WeaponSage_Setup::autoControl_dock()
 {
     #if !USE_NEW_AUTO
@@ -815,6 +826,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                 if (!auto_ctrl_.flag.is_reach_closedclaw && auto_ctrl_.auto_state_bool_S.can_launch)
                 {
                     this->Close_TargetClaw_Untight1();
+                    this->setArm_angle_slow(lift_pitch - 6.0f);
                     if(auto_ctrl_.flag.is_untight) //如果已经调整好爪子了，进入下一个状态
                     {
 //                        if(!auto_ctrl_.is_sage_adjust_start)
@@ -865,6 +877,10 @@ void Robot_WeaponSage_Setup::autoControl_dock()
 			}				
             case WeaponSage_Setup::STATE_SAGE_ADJUST:
             {
+                if(ctrl_status_.is_claw_1_closed != 0 
+                    &&ctrl_status_.is_claw_2_closed != 0
+                    && ctrl_status_.is_claw_3_closed != 0 )
+                    this->setArm_angle_slow(lift_pitch + arm_offset);
 				if (!auto_ctrl_.flag.is_reach_sagelowest && auto_ctrl_.auto_state_bool_S.dock_start)
                 {
                     this->Close_TargetClaw_Untight();
@@ -1084,7 +1100,6 @@ void Robot_WeaponSage_Setup::autoControl()
             }
             else
 			{
-                this->setArm_angle(stend_up);
                 this->setCtrlMode(WeaponSage::Join_POSITION_CONTROL);  
                 float next_height = this->current_pos_.launch_pos_ ;
 				// this->idle();
@@ -1629,8 +1644,8 @@ bool Robot_WeaponSage_Setup::Sage_back()
             this->setLaunch_angle(0.95*initData_.max_launchHeight_);
 			if(abs(current_pos_.launch_pos_-0.95*initData_.max_launchHeight_)<0.02)
 			{
-				this->setArm_angle_slow(lift_pitch);
-				if(abs(current_pos_.arm_pos_+8.0f)<2.0f)
+				this->setArm_angle_slow(lift_pitch - 6.0f);
+				if(current_pos_.arm_pos_ > -15.0f)
                 {
                     this->Close_TargetClaw_Untight();
                     if(auto_ctrl_.flag.is_untight)
@@ -1652,17 +1667,29 @@ bool Robot_WeaponSage_Setup::Sage_back()
                 {
 					if(!wrist_first)
 					{
-						this->setWrist_angle(45.0f);
+                        if(MF_AutoCtrler::get_color() == 1)
+						    this->setWrist_angle(45.0f);
+                        else
+                            this->setWrist_angle(225.0f);
 						float current_first_pos=normalize_deg_0_360(current_pos_.wrist_pos_);
-						if(abs(current_first_pos-45.0f)<0.1f)
-						is_wrist_ok=true;
+						if(abs(current_first_pos-45.0f)<0.1f && MF_AutoCtrler::get_color() == 1)
+						    is_wrist_ok = true;
+                        else if(abs(current_first_pos-225.f)<0.1f && MF_AutoCtrler::get_color() == 0)
+                            is_wrist_ok = true;
 					}
                    
                     if(is_wrist_ok)
                     {
-						this->setWrist_angle(180.0f);
+                        if(MF_AutoCtrler::get_color() == 1)
+						    this->setWrist_angle(180.0f);
+                        else if(MF_AutoCtrler::get_color() == 0)
+                            this->setWrist_angle(0.0f);
 						 float current_wrist=normalize_deg_0_360(current_pos_.wrist_pos_);
-						if(abs(current_wrist-180.0f)<0.1f)
+						if((abs(current_wrist-180.0f)<0.1f && MF_AutoCtrler::get_color() == 1)
+                            || ((abs(current_wrist- 0.0f)<0.1f || abs(current_wrist- 360.0f)<0.1f) 
+                                && MF_AutoCtrler::get_color() == 0
+                                )
+                            )
 						{
 							now_back_state_=WeaponSage_Setup::BACK_CLAW_DOWN;
 							auto_ctrl_.flag.is_clawed=false;
@@ -1923,7 +1950,7 @@ WeaponSage_InitData_S initData_=
 	.min_arm_rate_=90.0f,
 	.dock_height_=0.0545000245f,
     .wrist_protect_=0.174290136,
-    .claw_untight = 27.0f,
+    .claw_untight = 18.0f,
     .wrist_gearRatio_ = 144.0f,
     .launch_Ratio_ = 0.139989366256f,
     .claw_gearRatio_  =360.0f ,

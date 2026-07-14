@@ -56,7 +56,7 @@ typedef struct
 
     Speedplanner_1D_Param_Config start = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.6f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config curve = {.maxAcc = 0.0f, .maxDec = 0.0f, .maxJerk = 0.0f, .maxSpeed = 0.8f, .initialSpeed = 0.8f, .finalSpeed = 0.8f, .startPos = 0.0f, .targetPos = 999.0f, .deadzone = 0.001f};
-    Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.1f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
+    Speedplanner_1D_Param_Config end = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.5f, .initialSpeed = 0.8f, .finalSpeed = 0.1f, .startPos = 0.06f, .targetPos = 0.0f, .deadzone = 0.001f};
 
     Speedplanner_1D_Param_Config up = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 2.0f, .finalSpeed = 0.6f, .startPos = 0.05f, .targetPos = 0.0f, .deadzone = 0.001f};
     Speedplanner_1D_Param_Config cz = {.maxAcc = 20.0f, .maxDec = 0.9f, .maxJerk = 0.0f, .maxSpeed = 2.0f, .initialSpeed = 0.8f, .finalSpeed = 0.2f, .startPos = 0.04f, .targetPos = 0.0f, .deadzone = 0.001f};
@@ -102,7 +102,7 @@ typedef struct
 
     Vector2D CB_welt_pos[2] = {{2.1, 0.505f}, {3.98f, 0.505f}};
     
-    float ad =0.15f;
+    float ad =0.2f;
 
     // 回家流程
     Vector2D home_transition_pos[2] = {{6.0f-2.6f, 1.51f}, {2.6f, 1.51f}};
@@ -135,7 +135,7 @@ typedef struct
     float MF2_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
     float MF3_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
 
-    float spin_skew = 0.1f;   // 旋转位置y轴偏移量
+    float spin_skew = 0.12f;   // 旋转位置y轴偏移量
     float point_skew = 0.06f; // 旋转位置y轴偏移量
 
     float coner_ahead = 0.2f;
@@ -156,7 +156,7 @@ typedef struct
 
     Vector2D catch_pos[2] = {{6.0f - 5.2f, 11.00f}, {5.2f, 11.00f}};
 
-    float skew_yaw = 3.4f;
+    float skew_yaw = 3.0f;
 
     // 下界10.02f上界是11.52f
     // Vector2D fit_wait_pos = {2.17f, 10.05f};
@@ -802,9 +802,9 @@ private:
         if (KFS_flag.uphill_flag == true)
         {
             // 上坡后旋转判断
-            if (CZ_point.uphill_pos[RB_Flag].x == curve.Get_Start_point().x && CZ_point.uphill_pos[RB_Flag].y == curve.Get_Start_point().y)
+            if (CZ_point.uphill_transitiont_pos[RB_Flag].x == curve.Get_Start_point().x && CZ_point.uphill_transitiont_pos[RB_Flag].y == curve.Get_Start_point().y)
             {
-                if (robot_pos_.x > CZ_point.skew_yaw)
+                if (RB_Flag?robot_pos_.x>CZ_point.skew_yaw:robot_pos_.x<6.0f-(CZ_point.skew_yaw))
                     target_yaw = RB_Flag ? 180.0f : 0.0f;
             }
         }
@@ -1067,6 +1067,7 @@ private:
                                 CZ_flag.R1_RL_index = 1;
                                 path_line_.Add_Point(temp_vector, path_param.start);
                                 path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
+                                path_line_.Add_Point({CZ_point.uphill_transitiont_pos[RB_Flag].x , CZ_point.uphill_transitiont_pos[RB_Flag].y}, path_param.line);
                                 path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
                             }
                             else if (last_vector.y == 8.6f)
@@ -1076,6 +1077,7 @@ private:
                                 path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
                                 path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
                                 path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
+                                path_line_.Add_Point({CZ_point.uphill_transitiont_pos[RB_Flag].x , CZ_point.uphill_transitiont_pos[RB_Flag].y}, path_param.line);
                                 path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
                             }
                         }
@@ -1139,6 +1141,7 @@ private:
                         CZ_flag.R1_RL_index = 1;
                         path_line_.Add_Point(temp_vector, path_param.start);
                         path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
+                        path_line_.Add_Point({CZ_point.uphill_transitiont_pos[RB_Flag].x , CZ_point.uphill_transitiont_pos[RB_Flag].y}, path_param.line);
                         path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
                     }
                     else if (last_vector.y == 8.6f)
@@ -1148,6 +1151,7 @@ private:
                         path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
                         path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
                         path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
+                        path_line_.Add_Point({CZ_point.uphill_transitiont_pos[RB_Flag].x , CZ_point.uphill_transitiont_pos[RB_Flag].y}, path_param.line);
                         path_line_.Add_End_Point(CZ_point.R1_pos[1][RB_Flag], path_param.end);
                     }
                 }
