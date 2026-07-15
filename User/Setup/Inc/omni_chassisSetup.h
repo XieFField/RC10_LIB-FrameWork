@@ -136,7 +136,7 @@ typedef struct
     float MF3_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
 
     float spin_skew = 0.12f;   // 旋转位置y轴偏移量
-    float point_skew = 0.08f; // 旋转位置y轴偏移量
+    float point_skew = 0.12f; // 旋转位置y轴偏移量
 
     float coner_ahead = 0.2f;
     float coner_behind = 0.5f;
