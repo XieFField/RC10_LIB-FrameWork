@@ -880,7 +880,7 @@ void Robot_WeaponSage_Setup::autoControl_dock()
                 if(ctrl_status_.is_claw_1_closed != 0 
                     &&ctrl_status_.is_claw_2_closed != 0
                     && ctrl_status_.is_claw_3_closed != 0 )
-                    this->setArm_angle_slow(lift_pitch + arm_offset);
+                    this->setArm_angle_slow(lift_pitch + arm_offset + 4.0f);
 				if (!auto_ctrl_.flag.is_reach_sagelowest && auto_ctrl_.auto_state_bool_S.dock_start)
                 {
                     this->Close_TargetClaw_Untight();
@@ -1644,7 +1644,7 @@ bool Robot_WeaponSage_Setup::Sage_back()
             this->setLaunch_angle(0.95*initData_.max_launchHeight_);
 			if(abs(current_pos_.launch_pos_-0.95*initData_.max_launchHeight_)<0.02)
 			{
-				this->setArm_angle_slow(lift_pitch - 6.0f);
+				this->setArm_angle_slow(lift_pitch + arm_offset);
 				if(current_pos_.arm_pos_ > -15.0f)
                 {
                     this->Close_TargetClaw_Untight();

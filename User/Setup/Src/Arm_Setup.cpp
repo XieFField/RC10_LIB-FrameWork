@@ -2108,7 +2108,14 @@ bool ArmSetup::state_backStillness(int targetKFS)
     if (_tool_Abs(this->get_currentJointStatus().rotateJoint_angle_ - 0.0f) < 10.0f)
     {
         pulseChassisStart();
-        return true;
+
+        this->set_LaunchHeight(init_data_.max_launchHeight_);
+        this->set_StretchLength(0.03f);
+        if(this->get_currentJointStatus().launchJoint_Height_ > init_data_.max_launchHeight_ - 0.015f)
+        {
+            this->set_PitchAngle(0.2f);
+            return true; 
+        }
     }
 
     else

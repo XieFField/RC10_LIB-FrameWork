@@ -98,11 +98,11 @@ typedef struct
     Vector2D CB_End_pos[2] = {{6.0f-2.461f, 1.105f}, {2.461f, 1.105f}};
 
     // 贴边流程
-    Vector2D CB_transition_pos[2] = {{3.0, 1.30f}, {3.0f, 1.30f}};
+    Vector2D CB_transition_pos[2] = {{3.0f, 1.30f}, {3.0f, 1.30f}};
 
-    Vector2D CB_welt_pos[2] = {{2.1, 0.505f}, {3.98f, 0.505f}};
+    Vector2D CB_welt_pos[2] = {{2.13f, 0.505f}, {3.95f, 0.505f}};
     
-    float ad =0.2f;
+    float ad =0.1f;
 
     // 回家流程
     Vector2D home_transition_pos[2] = {{6.0f-2.6f, 1.51f}, {2.6f, 1.51f}};
@@ -136,7 +136,7 @@ typedef struct
     float MF3_target_yaw_ = 0.0f; // 第二目标点对应目标朝向。
 
     float spin_skew = 0.12f;   // 旋转位置y轴偏移量
-    float point_skew = 0.06f; // 旋转位置y轴偏移量
+    float point_skew = 0.08f; // 旋转位置y轴偏移量
 
     float coner_ahead = 0.2f;
     float coner_behind = 0.5f;
@@ -1073,7 +1073,7 @@ private:
                             else if (last_vector.y == 8.6f)
                             {
                                 CZ_flag.R1_RL_index = 1;
-                                temp_vector.y = temp_vector.y - KFS_point.point_skew;
+                                temp_vector.y = temp_vector.y + KFS_point.point_skew;
                                 path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
                                 path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
                                 path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
@@ -1147,7 +1147,7 @@ private:
                     else if (last_vector.y == 8.6f)
                     {
                         CZ_flag.R1_RL_index = 1;
-                        temp_vector.y = temp_vector.y - KFS_point.point_skew;
+                        temp_vector.y = temp_vector.y + KFS_point.point_skew;
                         path_line_.Add_Point((temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead)), path_param.start);
                         path_line_.Add_Point((temp_vector + (Vector2D{0.0f, 1.0f} * KFS_point.coner_ahead)), path_param.curve);
                         path_line_.Add_Point(CZ_point.uphill_pos[RB_Flag], path_param.up);
@@ -1204,8 +1204,9 @@ private:
         Vector2D vector = temp_vector + ((last_vector - temp_vector).normalize() * KFS_point.coner_ahead);
         if (vector.y == 8.6f)
         {
-            vector.y = vector.y - KFS_point.point_skew;
+            vector.y = vector.y + KFS_point.point_skew;
         }
+        
         // 拐点前偏移点
         path_line_.Add_Point(vector, path_param.start);
         /*
@@ -1226,11 +1227,13 @@ private:
             path_param.curve.targetPos = 4.0f;
         else
             return Vector2D{0.0f, 0.0f};
-
+            
         if ((temp_vector + (tangent_vector * KFS_point.coner_behind)).y == 8.6f)
         {
-            temp_vector.y = temp_vector.y - KFS_point.point_skew;
+            temp_vector.y = temp_vector.y + KFS_point.point_skew;
         }
+
+        
         // 拐点偏移
         temp_vector.y = temp_vector.y + spin_flag;
 

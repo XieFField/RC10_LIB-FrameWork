@@ -143,7 +143,7 @@ void OmniChassis_Setup::CB_Path_Check(void)
         }
         else if (Retreat_flag == true)
         {
-
+            path_line_.plan_reset();
             Retreat_flag = false;
             WeaponSage_End = true;
         }
@@ -212,10 +212,10 @@ void OmniChassis_Setup::loop()
         mode_init();
         CB_Path_Init();
         CB_Path_Check();
-        if (path_line_.Is_End() == false)
+        if (path_line_.Is_End() == false )
         {
             curve = path_line_.get_bezier_curve();
-            if (WeaponSage_Start == false && WeaponSage_End == false && WeaponSage_Back == false)
+            if (WeaponSage_Start == false && WeaponSage_Back == false && WeaponSage_End == false)
                 v_plan();
             else
                 Path_lock_point(curve.Get_Start_point());
